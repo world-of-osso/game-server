@@ -1,0 +1,16 @@
+[package]
+name = "server"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+shared = { path = "../shared" }
+bevy = { version = "0.18", default-features = false, features = [
+    "bevy_log", "bevy_state",
+] }
+lightyear = "0.26"
+redb = "3"
+serde = { version = "1", features = ["derive"] }
+bitcode = "0.6"
+tokio = { version = "1", features = ["rt-multi-thread"] }
