@@ -22,6 +22,9 @@ pub struct InputChannel;
 /// Reliable ordered channel for server-to-client terrain loading commands.
 pub struct TerrainChannel;
 
+/// Reliable ordered channel for authentication and character management, bidirectional.
+pub struct AuthChannel;
+
 /// Chat message type.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub enum ChatType {
@@ -69,6 +72,76 @@ pub struct LoadTerrain {
     pub map_name: String,
     pub initial_tile_y: u32,
     pub initial_tile_x: u32,
+}
+
+/// Entry in the character list sent to the client.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct CharacterListEntry {
+    pub character_id: u64,
+    pub name: String,
+    pub level: u16,
+    pub race: u8,
+    pub class: u8,
+}
+
+/// Client sends after connecting to authenticate.
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct LoginRequest {
+    pub token: Option<String>,
+    pub username: String,
+}
+
+/// Server responds with auth result and character list.
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct LoginResponse {
+    pub success: bool,
+    pub token: String,
+    pub characters: Vec<CharacterListEntry>,
+    pub error: Option<String>,
+}
+
+/// Client requests creating a new character.
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct CreateCharacter {
+    pub name: String,
+    pub race: u8,
+    pub class: u8,
+}
+
+/// Server responds to character creation.
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct CreateCharacterResponse {
+    pub success: bool,
+    pub character: Option<CharacterListEntry>,
+    pub error: Option<String>,
+}
+
+/// Client requests deleting a character.
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct DeleteCharacter {
+    pub character_id: u64,
+}
+
+/// Server responds to character deletion.
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct DeleteCharacterResponse {
+    pub success: bool,
+    pub character_id: u64,
+    pub error: Option<String>,
+}
+
+/// Client selects a character to enter the world with.
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct SelectCharacter {
+    pub character_id: u64,
+}
+
+/// Server responds to character selection with world entry result.
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct EnterWorldResponse {
+    pub success: bool,
+    pub player_entity: Option<u64>,
+    pub error: Option<String>,
 }
 
 /// Client movement input sent each tick.
@@ -119,6 +192,22 @@ fn register_messages(app: &mut App) {
         .add_direction(NetworkDirection::ServerToClient);
     app.register_message::<LoadTerrain>()
         .add_direction(NetworkDirection::ServerToClient);
+    app.register_message::<LoginRequest>()
+        .add_direction(NetworkDirection::ClientToServer);
+    app.register_message::<LoginResponse>()
+        .add_direction(NetworkDirection::ServerToClient);
+    app.register_message::<CreateCharacter>()
+        .add_direction(NetworkDirection::ClientToServer);
+    app.register_message::<CreateCharacterResponse>()
+        .add_direction(NetworkDirection::ServerToClient);
+    app.register_message::<DeleteCharacter>()
+        .add_direction(NetworkDirection::ClientToServer);
+    app.register_message::<DeleteCharacterResponse>()
+        .add_direction(NetworkDirection::ServerToClient);
+    app.register_message::<SelectCharacter>()
+        .add_direction(NetworkDirection::ClientToServer);
+    app.register_message::<EnterWorldResponse>()
+        .add_direction(NetworkDirection::ServerToClient);
 }
 
 fn register_channels(app: &mut App) {
@@ -151,6 +240,12 @@ fn register_channels(app: &mut App) {
         ..default()
     })
     .add_direction(NetworkDirection::ServerToClient);
+
+    app.add_channel::<AuthChannel>(ChannelSettings {
+        mode: ChannelMode::OrderedReliable(default()),
+        ..default()
+    })
+    .add_direction(NetworkDirection::Bidirectional);
 }
 
 #[cfg(test)]

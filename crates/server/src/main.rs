@@ -1,3 +1,4 @@
+mod auth;
 mod combat;
 mod creature_ai;
 mod interest;

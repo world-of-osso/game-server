@@ -13,6 +13,7 @@ lightyear = { version = "0.26", features = ["server", "netcode", "replication", 
 redb = "3"
 serde = { version = "1", features = ["derive"] }
 bitcode = "0.6"
+uuid = { version = "1", features = ["v4"] }
 tokio = { version = "1", features = ["rt-multi-thread"] }
 rusqlite = { version = "0.35", features = ["bundled"] }
 
