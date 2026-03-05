@@ -1,5 +1,4 @@
 mod networking;
-#[allow(unused)]
 mod persistence;
 mod zones;
 mod world_data;
@@ -19,6 +18,7 @@ fn main() {
             tick_duration: Duration::from_secs_f64(1.0 / TICK_RATE_HZ),
         })
         .add_plugins(shared::ProtocolPlugin)
+        .add_plugins(persistence::PersistencePlugin)
         .add_plugins(networking::ServerNetworkPlugin)
         .add_plugins(world_data::WorldDataPlugin)
         .add_plugins(zones::ZonePlugin)

@@ -3,8 +3,10 @@ use core::net::{IpAddr, Ipv4Addr, SocketAddr};
 use lightyear::prelude::*;
 use lightyear::prelude::server::*;
 use shared::components::{Health, Player, Position};
-use shared::protocol::{InputChannel, PlayerInput};
+use shared::protocol::PlayerInput;
 use std::time::Duration;
+
+use crate::persistence::{self, CharacterData, ClientId, GameDatabase};
 
 const SERVER_PORT: u16 = 5000;
 
@@ -55,44 +57,77 @@ fn on_new_link(trigger: On<Add, LinkOf>, mut commands: Commands) {
 }
 
 /// When a client fully connects, spawn a player entity with replicated components.
+/// Loads saved data from the database if available, otherwise uses defaults.
 fn on_client_connected(
     trigger: On<Add, Connected>,
     query: Query<&RemoteId, With<ClientOf>>,
+    db: Option<Res<GameDatabase>>,
     mut commands: Commands,
 ) {
     let Ok(remote_id) = query.get(trigger.entity) else {
         return;
     };
-    let client_id = remote_id.0;
-    info!("Client connected: {client_id:?}");
+    let client_id = remote_id.0.to_bits();
+    info!("Client connected: {client_id}");
 
-    let name = format!("Player-{client_id:?}");
+    let saved = db.as_ref().and_then(|db| persistence::load_character(&db.db, client_id));
+    let (pos, health, name) = character_from_saved(saved, client_id);
+
     let player_entity = commands
-        .spawn((
-            Position { x: SPAWN_X, y: SPAWN_Y, z: SPAWN_Z },
-            Health { current: 100.0, max: 100.0 },
-            Player { name: name.clone() },
-            Replicate::default(),
-        ))
+        .spawn((pos, health, Player { name: name.clone() }, ClientId(client_id), Replicate::default()))
         .id();
     commands.entity(trigger.entity).insert(PlayerLink(player_entity));
-    info!("Spawned player entity '{name}' at ({SPAWN_X}, {SPAWN_Y}, {SPAWN_Z})");
+    info!("Spawned player '{name}' at ({}, {}, {})", pos.x, pos.y, pos.z);
 }
 
-/// When a client disconnects, despawn their player entity.
+/// Extract position/health/name from saved data, or use defaults.
+fn character_from_saved(saved: Option<CharacterData>, client_id: u64) -> (Position, Health, String) {
+    match saved {
+        Some(data) => (
+            Position { x: data.x, y: data.y, z: data.z },
+            Health { current: data.health, max: data.max_health },
+            data.name,
+        ),
+        None => (
+            Position { x: SPAWN_X, y: SPAWN_Y, z: SPAWN_Z },
+            Health { current: 100.0, max: 100.0 },
+            format!("Player-{client_id}"),
+        ),
+    }
+}
+
+/// When a client disconnects, save their data and despawn the player entity.
 fn on_client_disconnected(
     trigger: On<Remove, Connected>,
-    query: Query<(&RemoteId, Option<&PlayerLink>), With<ClientOf>>,
+    conn_query: Query<(&RemoteId, Option<&PlayerLink>), With<ClientOf>>,
+    player_query: Query<(&Position, &Health, &Player, &ClientId)>,
+    db: Option<Res<GameDatabase>>,
     mut commands: Commands,
 ) {
-    let Ok((remote_id, player_link)) = query.get(trigger.entity) else {
+    let Ok((remote_id, player_link)) = conn_query.get(trigger.entity) else {
         return;
     };
-    info!("Client disconnected: {:?}", remote_id.0);
+    let client_id = remote_id.0.to_bits();
+    info!("Client disconnected: {client_id}");
+
     if let Some(link) = player_link {
+        save_player_on_disconnect(&db, &player_query, link.0);
         commands.entity(link.0).despawn();
-        info!("Despawned player entity for client {:?}", remote_id.0);
+        info!("Despawned player entity for client {client_id}");
     }
+}
+
+/// Save player data to the database before disconnect.
+fn save_player_on_disconnect(
+    db: &Option<Res<GameDatabase>>,
+    player_query: &Query<(&Position, &Health, &Player, &ClientId)>,
+    entity: Entity,
+) {
+    let Some(db) = db.as_ref() else { return };
+    let Ok((pos, health, player, cid)) = player_query.get(entity) else { return };
+    let data = CharacterData::from_components(player, pos, health);
+    persistence::save_character(&db.db, cid.0, &data);
+    info!("Saved character data for client {}", cid.0);
 }
 
 /// Read PlayerInput messages from connected clients and apply movement to their Position.
