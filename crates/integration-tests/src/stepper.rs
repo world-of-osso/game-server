@@ -41,6 +41,15 @@ impl Stepper {
         stepper
     }
 
+    /// Create a stepper with two connected clients.
+    pub fn two_clients() -> Self {
+        let mut stepper = Self::new_server();
+        stepper.add_client();
+        stepper.add_client();
+        stepper.init();
+        stepper
+    }
+
     fn new_server() -> Self {
         let mut server_app = App::new();
         server_app.add_plugins((

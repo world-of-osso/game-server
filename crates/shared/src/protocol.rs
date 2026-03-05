@@ -3,7 +3,7 @@ use lightyear::prelude::*;
 use lightyear::prelude::{AppChannelExt, ChannelMode, ChannelSettings, NetworkDirection};
 use serde::{Deserialize, Serialize};
 
-use crate::components::{Health, Mana, ModelDisplay, Npc, Player, Position};
+use crate::components::{Health, Mana, ModelDisplay, MovementSpeed, Npc, Player, Position, Rotation};
 
 /// Unreliable movement position updates, server-to-client only.
 pub struct MovementChannel;
@@ -26,6 +26,8 @@ pub struct PlayerInput {
     pub facing_yaw: f32,
     /// Whether the player is jumping.
     pub jumping: bool,
+    /// Whether the player is running (vs walking).
+    pub running: bool,
 }
 
 /// Registers shared protocol: components for replication and channels.
@@ -41,6 +43,8 @@ impl Plugin for ProtocolPlugin {
         app.register_component::<Player>();
         app.register_component::<Npc>();
         app.register_component::<ModelDisplay>();
+        app.register_component::<Rotation>();
+        app.register_component::<MovementSpeed>();
 
         // Register messages
         app.register_message::<PlayerInput>()

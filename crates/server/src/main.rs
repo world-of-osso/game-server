@@ -1,3 +1,4 @@
+mod creature_ai;
 mod networking;
 mod persistence;
 mod zones;
@@ -22,6 +23,7 @@ fn main() {
         .add_plugins(networking::ServerNetworkPlugin)
         .add_plugins(world_data::WorldDataPlugin)
         .add_plugins(zones::ZonePlugin)
+        .add_plugins(creature_ai::CreatureAiPlugin)
         .add_systems(Startup, on_startup)
         .add_systems(FixedUpdate, tick_log)
         .run();

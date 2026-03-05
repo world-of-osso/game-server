@@ -2,6 +2,7 @@ use bevy::prelude::*;
 use lightyear::prelude::*;
 use shared::components::{Health, ModelDisplay, Npc, Position};
 
+use crate::creature_ai::{SpawnPoint, WanderPhase, WanderState, WaypointState};
 use crate::world_data::WorldData;
 
 /// Elwynn/Northshire spatial bounds for initial creature spawning.
@@ -39,13 +40,14 @@ fn spawn_elwynn_core(commands: &mut Commands, world_data: &WorldData, replicate:
         }
         let display_id = resolve_display_id(world_data, spawn.template_entry);
         let health = resolve_health(world_data, spawn.template_entry);
+        let speed_walk = resolve_speed_walk(world_data, spawn.template_entry);
         let bundle = creature_bundle(spawn, health, display_id);
 
+        let mut entity = commands.spawn(bundle);
         if replicate {
-            commands.spawn((bundle, Replicate::default()));
-        } else {
-            commands.spawn(bundle);
+            entity.insert(Replicate::default());
         }
+        insert_ai_components(&mut entity, spawn, speed_walk, world_data);
         count += 1;
     }
     count
@@ -95,10 +97,70 @@ fn resolve_health(world_data: &WorldData, template_entry: u32) -> f32 {
         .unwrap_or(100.0)
 }
 
+fn resolve_speed_walk(world_data: &WorldData, template_entry: u32) -> f32 {
+    world_data
+        .templates
+        .get(&template_entry)
+        .map(|t| t.speed_walk)
+        .unwrap_or(1.0)
+}
+
+fn insert_ai_components(
+    entity: &mut EntityCommands,
+    spawn: &crate::world_data::CreatureSpawn,
+    speed_walk: f32,
+    world_data: &WorldData,
+) {
+    let movement_type = spawn.movement_type;
+    if movement_type == 1 {
+        insert_wander(entity, spawn, speed_walk);
+    } else if movement_type == 2 {
+        insert_waypoint(entity, spawn, speed_walk, world_data);
+    }
+}
+
+fn insert_wander(
+    entity: &mut EntityCommands,
+    spawn: &crate::world_data::CreatureSpawn,
+    speed_walk: f32,
+) {
+    entity.insert(SpawnPoint {
+        x: spawn.position_x,
+        y: spawn.position_y,
+        z: spawn.position_z,
+        wander_distance: spawn.wander_distance,
+        speed_walk,
+    });
+    entity.insert(WanderState {
+        phase: WanderPhase::Idle,
+        target_x: spawn.position_x,
+        target_y: spawn.position_y,
+        idle_remaining: 1.0,
+        seed: spawn.guid,
+    });
+}
+
+fn insert_waypoint(
+    entity: &mut EntityCommands,
+    spawn: &crate::world_data::CreatureSpawn,
+    speed_walk: f32,
+    world_data: &WorldData,
+) {
+    if !world_data.waypoints.contains_key(&spawn.guid) {
+        return;
+    }
+    entity.insert(WaypointState {
+        creature_guid: spawn.guid,
+        current_index: 0,
+        delay_remaining: 0.0,
+        speed_walk,
+    });
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::world_data::{CreatureModelInfo, CreatureSpawn, CreatureTemplate, WaypointPath};
+    use crate::world_data::{CreatureModelInfo, CreatureSpawn, CreatureTemplate};
     use std::collections::HashMap;
 
     fn make_template(entry: u32, health_mod: f32, display_id: u32) -> CreatureTemplate {

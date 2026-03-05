@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use core::net::{IpAddr, Ipv4Addr, SocketAddr};
 use lightyear::prelude::*;
 use lightyear::prelude::server::*;
-use shared::components::{Health, Player, Position};
+use shared::components::{Health, MovementSpeed, Player, Position, Rotation};
 use shared::protocol::PlayerInput;
 use std::time::Duration;
 
@@ -19,8 +19,10 @@ const SPAWN_X: f32 = -8949.0;
 const SPAWN_Y: f32 = -132.0;
 const SPAWN_Z: f32 = 83.0;
 
-/// Movement speed in yards per second (matches WoW walk speed).
-const MOVE_SPEED: f32 = 2.5;
+/// Default run speed in yards per second (WoW run speed).
+const DEFAULT_RUN_SPEED: f32 = 7.0;
+/// Walk speed in yards per second.
+const DEFAULT_WALK_SPEED: f32 = 2.5;
 
 pub struct ServerNetworkPlugin;
 
@@ -73,8 +75,10 @@ fn on_client_connected(
     let saved = db.as_ref().and_then(|db| persistence::load_character(&db.db, client_id));
     let (pos, health, name) = character_from_saved(saved, client_id);
 
+    let rotation = Rotation { x: 0.0, y: 0.0, z: 0.0 };
+    let speed = MovementSpeed(DEFAULT_RUN_SPEED);
     let player_entity = commands
-        .spawn((pos, health, Player { name: name.clone() }, ClientId(client_id), Replicate::default()))
+        .spawn((pos, health, rotation, speed, Player { name: name.clone() }, ClientId(client_id), Replicate::default()))
         .id();
     commands.entity(trigger.entity).insert(PlayerLink(player_entity));
     info!("Spawned player '{name}' at ({}, {}, {})", pos.x, pos.y, pos.z);
@@ -133,7 +137,7 @@ fn save_player_on_disconnect(
 /// Read PlayerInput messages from connected clients and apply movement to their Position.
 fn process_player_inputs(
     mut receivers: Query<(&mut MessageReceiver<PlayerInput>, &PlayerLink)>,
-    mut players: Query<&mut Position, With<Player>>,
+    mut players: Query<(&mut Position, &mut Rotation, &mut MovementSpeed), With<Player>>,
     time: Res<Time>,
 ) {
     for (mut receiver, link) in receivers.iter_mut() {
@@ -147,23 +151,30 @@ fn process_player_inputs(
 fn apply_movement_input(
     input: &PlayerInput,
     player_entity: Entity,
-    players: &mut Query<&mut Position, With<Player>>,
+    players: &mut Query<(&mut Position, &mut Rotation, &mut MovementSpeed), With<Player>>,
     time: &Time,
 ) {
-    let dir_len = (input.direction[0].powi(2)
-        + input.direction[1].powi(2)
-        + input.direction[2].powi(2))
-    .sqrt();
+    let Ok((mut pos, mut rotation, mut speed)) = players.get_mut(player_entity) else {
+        return;
+    };
+    // Update rotation from client facing
+    rotation.y = input.facing_yaw;
+    // Update speed based on run/walk toggle
+    speed.0 = if input.running { DEFAULT_RUN_SPEED } else { DEFAULT_WALK_SPEED };
+
+    let dir_len = direction_length(&input.direction);
     if dir_len < 0.001 {
         return;
     }
-    let dt = time.delta_secs();
-    let scale = MOVE_SPEED * dt / dir_len;
-    if let Ok(mut pos) = players.get_mut(player_entity) {
-        pos.x += input.direction[0] * scale;
-        pos.y += input.direction[1] * scale;
-        pos.z += input.direction[2] * scale;
-    }
+    let scale = speed.0 * time.delta_secs() / dir_len;
+    pos.x += input.direction[0] * scale;
+    pos.y += input.direction[1] * scale;
+    pos.z += input.direction[2] * scale;
+}
+
+/// Compute the length of a 3D direction vector.
+fn direction_length(dir: &[f32; 3]) -> f32 {
+    (dir[0].powi(2) + dir[1].powi(2) + dir[2].powi(2)).sqrt()
 }
 
 #[cfg(test)]
@@ -176,6 +187,8 @@ mod tests {
         world
             .spawn((
                 Position { x, y, z },
+                Rotation { x: 0.0, y: 0.0, z: 0.0 },
+                MovementSpeed(DEFAULT_RUN_SPEED),
                 Player { name: "test".into() },
             ))
             .id()
@@ -186,6 +199,7 @@ mod tests {
             direction: [dx, dy, dz],
             facing_yaw: 0.0,
             jumping: false,
+            running: true,
         }
     }
 
@@ -210,7 +224,7 @@ mod tests {
 
         // Apply input targeting player_a only
         let _ = app.world_mut().run_system_once(
-            move |mut q: Query<&mut Position, With<Player>>, time: Res<Time>| {
+            move |mut q: Query<(&mut Position, &mut Rotation, &mut MovementSpeed), With<Player>>, time: Res<Time>| {
                 apply_movement_input(&input, player_a, &mut q, &time);
             },
         );
@@ -225,6 +239,46 @@ mod tests {
         assert_eq!(pos_b.y, 100.0, "player_b y should be unchanged");
     }
 
+    /// Verify that facing_yaw updates the player's Rotation.y.
+    #[test]
+    fn input_updates_rotation() {
+        let mut app = setup_app_with_time();
+        let player = spawn_player(app.world_mut(), 0.0, 0.0, 0.0);
+        let input = PlayerInput {
+            direction: [1.0, 0.0, 0.0],
+            facing_yaw: 1.5,
+            jumping: false,
+            running: true,
+        };
+        let _ = app.world_mut().run_system_once(
+            move |mut q: Query<(&mut Position, &mut Rotation, &mut MovementSpeed), With<Player>>, time: Res<Time>| {
+                apply_movement_input(&input, player, &mut q, &time);
+            },
+        );
+        let rot = *app.world().entity(player).get::<Rotation>().unwrap();
+        assert!((rot.y - 1.5).abs() < 1e-6, "rotation.y should be 1.5, got {}", rot.y);
+    }
+
+    /// Verify that running=false sets walk speed and moves slower.
+    #[test]
+    fn walk_speed_when_not_running() {
+        let mut app = setup_app_with_time();
+        let player = spawn_player(app.world_mut(), 0.0, 0.0, 0.0);
+        let input = PlayerInput {
+            direction: [1.0, 0.0, 0.0],
+            facing_yaw: 0.0,
+            jumping: false,
+            running: false,
+        };
+        let _ = app.world_mut().run_system_once(
+            move |mut q: Query<(&mut Position, &mut Rotation, &mut MovementSpeed), With<Player>>, time: Res<Time>| {
+                apply_movement_input(&input, player, &mut q, &time);
+            },
+        );
+        let speed = app.world().entity(player).get::<MovementSpeed>().unwrap();
+        assert!((speed.0 - DEFAULT_WALK_SPEED).abs() < 1e-6, "speed should be walk speed");
+    }
+
     /// Verify that zero-length direction is ignored.
     #[test]
     fn zero_direction_ignored() {
@@ -234,7 +288,7 @@ mod tests {
         let input = make_input(0.0, 0.0, 0.0);
 
         let _ = app.world_mut().run_system_once(
-            move |mut q: Query<&mut Position, With<Player>>, time: Res<Time>| {
+            move |mut q: Query<(&mut Position, &mut Rotation, &mut MovementSpeed), With<Player>>, time: Res<Time>| {
                 apply_movement_input(&input, player, &mut q, &time);
             },
         );
