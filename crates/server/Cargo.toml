@@ -9,8 +9,9 @@ shared = { path = "../shared" }
 bevy = { version = "0.18", default-features = false, features = [
     "bevy_log", "bevy_state",
 ] }
-lightyear = "0.26"
+lightyear = { version = "0.26", features = ["server", "netcode", "replication", "udp"] }
 redb = "3"
 serde = { version = "1", features = ["derive"] }
 bitcode = "0.6"
 tokio = { version = "1", features = ["rt-multi-thread"] }
+rusqlite = { version = "0.35", features = ["bundled"] }

@@ -25,4 +25,23 @@ crates/
 - `cargo test` — Run all tests
 - `./run-tests.sh` — cargo test + clippy
 - Edition 2024, rust-version 1.89
-- Bevy 0.18, lightyear 0.26, redb 3, bitcode 0.6
+- Bevy 0.18, lightyear 0.26, redb 3, bitcode 0.6, rusqlite 0.35
+
+## World Data (SQLite)
+
+Static read-only data from AzerothCore, loaded at server startup into `Res<WorldData>`.
+
+- **Database**: `data/world.db` (25MB) — regenerate with `scripts/import-azerothcore.sh`
+- **Source**: AzerothCore SQL dumps from `~/Repos/azerothcore/data/sql/base/db_world/`
+- **Module**: `crates/server/src/world_data.rs` — `WorldDataPlugin`, `WorldData` resource
+
+| Table | Rows | Purpose |
+|-------|------|---------|
+| `creature_template` | 29,947 | NPC definitions (name, level, faction, speeds, AI, flags) |
+| `creature` | 149,678 | Spawn instances (map, zone, x/y/z, respawn time, wander radius) |
+| `creature_template_model` | 40,213 | Display models per creature (DisplayID, scale, probability) |
+| `waypoint_data` | 144,657 | Patrol paths (ordered x/y/z points with delay) |
+
+**Movement types**: 0=idle, 1=random wander, 2=waypoint patrol
+
+This is **not** the persistence layer — redb handles mutable player data. SQLite is read-only static world data.

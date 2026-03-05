@@ -1,21 +1,27 @@
-#[allow(unused)]
 mod networking;
 #[allow(unused)]
 mod persistence;
 #[allow(unused)]
 mod zones;
+mod world_data;
 
 use bevy::prelude::*;
+use lightyear::prelude::server::ServerPlugins;
+use std::time::Duration;
 
 /// Server tick rate: 20Hz (50ms per tick).
 const TICK_RATE_HZ: f64 = 20.0;
 
 fn main() {
     App::new()
-        .add_plugins(MinimalPlugins.set(bevy::app::ScheduleRunnerPlugin::run_loop(
-            std::time::Duration::from_secs_f64(1.0 / TICK_RATE_HZ),
-        )))
+        .add_plugins(MinimalPlugins)
         .add_plugins(bevy::log::LogPlugin::default())
+        .add_plugins(ServerPlugins {
+            tick_duration: Duration::from_secs_f64(1.0 / TICK_RATE_HZ),
+        })
+        .add_plugins(shared::ProtocolPlugin)
+        .add_plugins(networking::ServerNetworkPlugin)
+        .add_plugins(world_data::WorldDataPlugin)
         .add_systems(Startup, on_startup)
         .add_systems(FixedUpdate, tick_log)
         .run();
