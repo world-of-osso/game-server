@@ -44,3 +44,8 @@ pub struct Npc {
 pub struct Zone {
     pub id: u32,
 }
+
+#[derive(Component, Reflect, Serialize, Deserialize, bitcode::Encode, bitcode::Decode, Debug, Clone, Copy, PartialEq)]
+pub struct ModelDisplay {
+    pub display_id: u32,
+}

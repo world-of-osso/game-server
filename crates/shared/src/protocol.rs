@@ -3,7 +3,7 @@ use lightyear::prelude::*;
 use lightyear::prelude::{AppChannelExt, ChannelMode, ChannelSettings, NetworkDirection};
 use serde::{Deserialize, Serialize};
 
-use crate::components::{Health, Mana, Player, Position};
+use crate::components::{Health, Mana, ModelDisplay, Npc, Player, Position};
 
 /// Unreliable movement position updates, server-to-client only.
 pub struct MovementChannel;
@@ -39,6 +39,8 @@ impl Plugin for ProtocolPlugin {
         app.register_component::<Health>();
         app.register_component::<Mana>();
         app.register_component::<Player>();
+        app.register_component::<Npc>();
+        app.register_component::<ModelDisplay>();
 
         // Register messages
         app.register_message::<PlayerInput>()

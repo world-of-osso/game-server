@@ -1,7 +1,6 @@
 mod networking;
 #[allow(unused)]
 mod persistence;
-#[allow(unused)]
 mod zones;
 mod world_data;
 
@@ -22,6 +21,7 @@ fn main() {
         .add_plugins(shared::ProtocolPlugin)
         .add_plugins(networking::ServerNetworkPlugin)
         .add_plugins(world_data::WorldDataPlugin)
+        .add_plugins(zones::ZonePlugin)
         .add_systems(Startup, on_startup)
         .add_systems(FixedUpdate, tick_log)
         .run();
