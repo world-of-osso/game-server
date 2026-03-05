@@ -3,7 +3,8 @@ use core::net::{IpAddr, Ipv4Addr, SocketAddr};
 use lightyear::prelude::server::*;
 use lightyear::prelude::*;
 use shared::components::{Health, MovementSpeed, Player, Position, Rotation};
-use shared::protocol::{ChatChannel, ChatMessage, PlayerInput, SetTarget};
+use shared::protocol::{ChatChannel, ChatMessage, LoadTerrain, PlayerInput, SetTarget, TerrainChannel};
+use std::collections::HashSet;
 use std::time::Duration;
 
 use crate::persistence::{self, CharacterData, ClientId, GameDatabase};
@@ -24,6 +25,12 @@ const SPAWN_X: f32 = -8949.0;
 const SPAWN_Y: f32 = -132.0;
 const SPAWN_Z: f32 = 83.0;
 
+/// Tracks which terrain tiles have been sent to a client.
+#[derive(Component, Default)]
+struct SentTiles {
+    tiles: HashSet<(u32, u32)>,
+}
+
 /// Default run speed in yards per second (WoW run speed).
 const DEFAULT_RUN_SPEED: f32 = 7.0;
 /// Walk speed in yards per second.
@@ -40,6 +47,7 @@ impl Plugin for ServerNetworkPlugin {
             apply_terrain_gravity.after(process_player_inputs),
         );
         app.add_systems(FixedUpdate, process_chat_messages);
+        app.add_systems(FixedUpdate, stream_terrain_tiles);
         app.add_systems(FixedUpdate, process_target_messages);
         app.add_observer(on_new_link);
         app.add_observer(on_client_connected);
@@ -76,6 +84,7 @@ fn on_new_link(trigger: On<Add, LinkOf>, mut commands: Commands) {
 fn on_client_connected(
     trigger: On<Add, Connected>,
     query: Query<&RemoteId, With<ClientOf>>,
+    mut senders: Query<&mut MessageSender<LoadTerrain>>,
     db: Option<Res<GameDatabase>>,
     mut commands: Commands,
 ) {
@@ -89,9 +98,39 @@ fn on_client_connected(
         .as_ref()
         .and_then(|db| persistence::load_character(&db.db, client_id));
     let player_entity = spawn_player_entity(&mut commands, saved, client_id);
+    // Seed SentTiles with the initial 3x3 grid around (32, 48)
+    let mut initial_tiles = HashSet::new();
+    for dy in -1i32..=1 {
+        for dx in -1i32..=1 {
+            let ty = (32i32 + dy).clamp(0, 63) as u32;
+            let tx = (48i32 + dx).clamp(0, 63) as u32;
+            initial_tiles.insert((ty, tx));
+        }
+    }
+
     commands
         .entity(trigger.entity)
-        .insert(PlayerLink(player_entity));
+        .insert((PlayerLink(player_entity), SentTiles { tiles: initial_tiles }));
+
+    send_load_terrain(trigger.entity, &mut senders);
+}
+
+/// Send the initial terrain loading command to a newly connected client.
+fn send_load_terrain(
+    connection: Entity,
+    senders: &mut Query<&mut MessageSender<LoadTerrain>>,
+) {
+    let Ok(mut sender) = senders.get_mut(connection) else {
+        warn!("No MessageSender<LoadTerrain> on connection entity");
+        return;
+    };
+    let msg = LoadTerrain {
+        map_name: "azeroth".into(),
+        initial_tile_y: 32,
+        initial_tile_x: 48,
+    };
+    sender.send::<TerrainChannel>(msg);
+    info!("Sent LoadTerrain: azeroth tile (32, 48)");
 }
 
 /// Spawn a player entity with all replicated components and return its Entity.
@@ -330,6 +369,39 @@ fn process_target_messages(
             if let Ok(mut combat_target) = targets.get_mut(link.0) {
                 combat_target.0 = target;
                 debug!("Player {:?} target set to {:?}", link.0, target);
+            }
+        }
+    }
+}
+
+const TILE_SIZE: f32 = 533.33;
+
+fn wow_to_tile(wow_x: f32, wow_y: f32) -> (u32, u32) {
+    let row = ((17066.67 - wow_x) / TILE_SIZE).floor() as i32;
+    let col = ((17066.67 - wow_y) / TILE_SIZE).floor() as i32;
+    (row.clamp(0, 63) as u32, col.clamp(0, 63) as u32)
+}
+
+fn stream_terrain_tiles(
+    mut conn_q: Query<(Entity, &PlayerLink, &mut SentTiles)>,
+    players: Query<&Position, With<Player>>,
+    mut senders: Query<&mut MessageSender<LoadTerrain>>,
+) {
+    for (conn_entity, link, mut sent) in conn_q.iter_mut() {
+        let Ok(pos) = players.get(link.0) else { continue };
+        let (tile_y, tile_x) = wow_to_tile(pos.x, pos.y);
+        for dy in -1i32..=1 {
+            for dx in -1i32..=1 {
+                let ty = (tile_y as i32 + dy).clamp(0, 63) as u32;
+                let tx = (tile_x as i32 + dx).clamp(0, 63) as u32;
+                if sent.tiles.insert((ty, tx)) {
+                    let Ok(mut sender) = senders.get_mut(conn_entity) else { continue };
+                    sender.send::<TerrainChannel>(LoadTerrain {
+                        map_name: "azeroth".into(),
+                        initial_tile_y: ty,
+                        initial_tile_x: tx,
+                    });
+                }
             }
         }
     }

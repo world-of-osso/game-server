@@ -4,7 +4,7 @@ use lightyear::prelude::{AppChannelExt, ChannelMode, ChannelSettings, NetworkDir
 use serde::{Deserialize, Serialize};
 
 use crate::components::{
-    Health, Mana, ModelDisplay, MovementSpeed, Npc, Player, Position, Rotation,
+    Health, Mana, ModelDisplay, MovementSpeed, Npc, Player, Position, Rotation, Zone,
 };
 
 /// Unreliable movement position updates, server-to-client only.
@@ -18,6 +18,9 @@ pub struct ChatChannel;
 
 /// Unreliable client-to-server channel for movement inputs.
 pub struct InputChannel;
+
+/// Reliable ordered channel for server-to-client terrain loading commands.
+pub struct TerrainChannel;
 
 /// Chat message type.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -60,6 +63,14 @@ pub struct CombatEvent {
     pub event_type: CombatEventType,
 }
 
+/// Server tells clients which terrain map and initial tile to load.
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct LoadTerrain {
+    pub map_name: String,
+    pub initial_tile_y: u32,
+    pub initial_tile_x: u32,
+}
+
 /// Client movement input sent each tick.
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct PlayerInput {
@@ -94,6 +105,7 @@ fn register_replicated_components(app: &mut App) {
     app.register_component::<ModelDisplay>();
     app.register_component::<Rotation>();
     app.register_component::<MovementSpeed>();
+    app.register_component::<Zone>();
 }
 
 fn register_messages(app: &mut App) {
@@ -104,6 +116,8 @@ fn register_messages(app: &mut App) {
     app.register_message::<SetTarget>()
         .add_direction(NetworkDirection::ClientToServer);
     app.register_message::<CombatEvent>()
+        .add_direction(NetworkDirection::ServerToClient);
+    app.register_message::<LoadTerrain>()
         .add_direction(NetworkDirection::ServerToClient);
 }
 
@@ -131,6 +145,12 @@ fn register_channels(app: &mut App) {
         ..default()
     })
     .add_direction(NetworkDirection::Bidirectional);
+
+    app.add_channel::<TerrainChannel>(ChannelSettings {
+        mode: ChannelMode::OrderedReliable(default()),
+        ..default()
+    })
+    .add_direction(NetworkDirection::ServerToClient);
 }
 
 #[cfg(test)]

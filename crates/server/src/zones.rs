@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use lightyear::prelude::*;
-use shared::components::{Health, ModelDisplay, Npc, Position};
+use shared::components::{Health, ModelDisplay, Npc, Position, Zone};
 
 use crate::creature_ai::{SpawnPoint, WanderPhase, WanderState, WaypointState};
 use crate::world_data::WorldData;
@@ -58,7 +58,7 @@ fn creature_bundle(
     spawn: &crate::world_data::CreatureSpawn,
     health: f32,
     display_id: u32,
-) -> (Position, Npc, Health, ModelDisplay) {
+) -> (Position, Npc, Health, ModelDisplay, Zone) {
     (
         Position {
             x: spawn.position_x,
@@ -73,6 +73,9 @@ fn creature_bundle(
             max: health,
         },
         ModelDisplay { display_id },
+        Zone {
+            id: spawn.zone_id as u32,
+        },
     )
 }
 
@@ -281,20 +284,20 @@ mod tests {
         app
     }
 
-    fn get_spawned(app: &mut App) -> Vec<(Position, Npc, Health, ModelDisplay)> {
+    fn get_spawned(app: &mut App) -> Vec<(Position, Npc, Health, ModelDisplay, Zone)> {
         let mut query = app
             .world_mut()
-            .query::<(&Position, &Npc, &Health, &ModelDisplay)>();
+            .query::<(&Position, &Npc, &Health, &ModelDisplay, &Zone)>();
         let mut results: Vec<_> = query
             .iter(app.world())
-            .map(|(p, n, h, m)| (*p, *n, *h, *m))
+            .map(|(p, n, h, m, z)| (*p, *n, *h, *m, *z))
             .collect();
-        results.sort_by_key(|(_, npc, _, _)| npc.template_id);
+        results.sort_by_key(|(_, npc, _, _, _)| npc.template_id);
         results
     }
 
     fn assert_creature(
-        c: &(Position, Npc, Health, ModelDisplay),
+        c: &(Position, Npc, Health, ModelDisplay, Zone),
         template_id: u32,
         x: f32,
         health: f32,
