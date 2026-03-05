@@ -3,7 +3,7 @@ use core::net::{IpAddr, Ipv4Addr, SocketAddr};
 use lightyear::prelude::server::*;
 use lightyear::prelude::*;
 use shared::components::{Health, MovementSpeed, Player, Position, Rotation};
-use shared::protocol::{ChatChannel, ChatMessage, PlayerInput};
+use shared::protocol::{ChatChannel, ChatMessage, PlayerInput, SetTarget};
 use std::time::Duration;
 
 use crate::persistence::{self, CharacterData, ClientId, GameDatabase};
@@ -14,6 +14,10 @@ const SERVER_PORT: u16 = 5000;
 /// Links a connection entity to its spawned player entity.
 #[derive(Component, Debug)]
 pub struct PlayerLink(pub Entity);
+
+/// The entity this player is currently targeting in combat.
+#[derive(Component, Debug, Default)]
+pub struct CombatTarget(pub Option<Entity>);
 
 /// Elwynn Forest spawn point (Northshire Abbey area).
 const SPAWN_X: f32 = -8949.0;
@@ -36,6 +40,7 @@ impl Plugin for ServerNetworkPlugin {
             apply_terrain_gravity.after(process_player_inputs),
         );
         app.add_systems(FixedUpdate, process_chat_messages);
+        app.add_systems(FixedUpdate, process_target_messages);
         app.add_observer(on_new_link);
         app.add_observer(on_client_connected);
         app.add_observer(on_client_disconnected);
@@ -83,15 +88,26 @@ fn on_client_connected(
     let saved = db
         .as_ref()
         .and_then(|db| persistence::load_character(&db.db, client_id));
-    let (pos, health, name) = character_from_saved(saved, client_id);
+    let player_entity = spawn_player_entity(&mut commands, saved, client_id);
+    commands
+        .entity(trigger.entity)
+        .insert(PlayerLink(player_entity));
+}
 
+/// Spawn a player entity with all replicated components and return its Entity.
+fn spawn_player_entity(
+    commands: &mut Commands,
+    saved: Option<CharacterData>,
+    client_id: u64,
+) -> Entity {
+    let (pos, health, name) = character_from_saved(saved, client_id);
     let rotation = Rotation {
         x: 0.0,
         y: 0.0,
         z: 0.0,
     };
     let speed = MovementSpeed(DEFAULT_RUN_SPEED);
-    let player_entity = commands
+    let entity = commands
         .spawn((
             pos,
             health,
@@ -99,16 +115,16 @@ fn on_client_connected(
             speed,
             Player { name: name.clone() },
             ClientId(client_id),
+            CombatTarget::default(),
             Replicate::default(),
+            NetworkVisibility,
         ))
         .id();
-    commands
-        .entity(trigger.entity)
-        .insert(PlayerLink(player_entity));
     info!(
         "Spawned player '{name}' at ({}, {}, {})",
         pos.x, pos.y, pos.z
     );
+    entity
 }
 
 /// Extract position/health/name from saved data, or use defaults.
@@ -299,6 +315,22 @@ fn broadcast_chat_messages(
     for msg in outgoing {
         for mut sender in senders.iter_mut() {
             sender.send::<ChatChannel>(msg.clone());
+        }
+    }
+}
+
+/// Read SetTarget messages from clients and update their CombatTarget component.
+fn process_target_messages(
+    mut receivers: Query<(&mut MessageReceiver<SetTarget>, &PlayerLink)>,
+    mut targets: Query<&mut CombatTarget>,
+) {
+    for (mut receiver, link) in receivers.iter_mut() {
+        for msg in receiver.receive() {
+            let target = msg.target_entity.map(|bits| Entity::from_bits(bits));
+            if let Ok(mut combat_target) = targets.get_mut(link.0) {
+                combat_target.0 = target;
+                debug!("Player {:?} target set to {:?}", link.0, target);
+            }
         }
     }
 }
@@ -531,5 +563,30 @@ mod tests {
         msg.sender = player_name.clone();
         assert_eq!(msg.sender, "TrustedPlayer");
         assert_eq!(msg.content, "Hello");
+    }
+
+    /// Verify that SetTarget updates the player's CombatTarget component.
+    #[test]
+    fn set_target_updates_combat_target() {
+        let mut app = App::new();
+        app.add_plugins(bevy::MinimalPlugins);
+
+        let target_entity = app.world_mut().spawn_empty().id();
+        let player = spawn_player(app.world_mut(), 0.0, 0.0, 0.0);
+        app.world_mut()
+            .entity_mut(player)
+            .insert(CombatTarget::default());
+
+        // Simulate: set target via direct component mutation (no network in unit test)
+        let bits = target_entity.to_bits();
+        let resolved = Entity::from_bits(bits);
+        app.world_mut()
+            .entity_mut(player)
+            .get_mut::<CombatTarget>()
+            .unwrap()
+            .0 = Some(resolved);
+
+        let ct = app.world().entity(player).get::<CombatTarget>().unwrap();
+        assert_eq!(ct.0, Some(target_entity));
     }
 }

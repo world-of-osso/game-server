@@ -1,4 +1,6 @@
+mod combat;
 mod creature_ai;
+mod interest;
 mod networking;
 mod persistence;
 mod terrain_height;
@@ -26,6 +28,8 @@ fn main() {
         .add_plugins(terrain_height::TerrainPlugin)
         .add_plugins(zones::ZonePlugin)
         .add_plugins(creature_ai::CreatureAiPlugin)
+        .add_plugins(combat::CombatPlugin)
+        .add_plugins(interest::InterestPlugin)
         .add_systems(Startup, on_startup)
         .add_systems(FixedUpdate, tick_log)
         .run();

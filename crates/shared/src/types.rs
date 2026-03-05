@@ -4,10 +4,18 @@ use serde::{Deserialize, Serialize};
 macro_rules! id_type {
     ($name:ident, $inner:ty) => {
         #[derive(
-            Debug, Clone, Copy, PartialEq, Eq, Hash,
-            Serialize, Deserialize,
-            Component, Reflect,
-            bitcode::Encode, bitcode::Decode,
+            Debug,
+            Clone,
+            Copy,
+            PartialEq,
+            Eq,
+            Hash,
+            Serialize,
+            Deserialize,
+            Component,
+            Reflect,
+            bitcode::Encode,
+            bitcode::Decode,
         )]
         pub struct $name(pub $inner);
     };

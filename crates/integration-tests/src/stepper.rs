@@ -82,8 +82,7 @@ impl Stepper {
 
         let mut client_app = Self::build_client_app(self.tick_duration);
         let client_entity = Self::spawn_client_entity(&mut client_app, crossbeam_client);
-        let client_of_entity =
-            self.spawn_client_of_entity(client_id, crossbeam_server);
+        let client_of_entity = self.spawn_client_of_entity(client_id, crossbeam_server);
 
         self.client_entities.push(client_entity);
         self.client_of_entities.push(client_of_entity);
@@ -120,11 +119,7 @@ impl Stepper {
             .id()
     }
 
-    fn spawn_client_of_entity(
-        &mut self,
-        client_id: usize,
-        crossbeam_io: CrossbeamIo,
-    ) -> Entity {
+    fn spawn_client_of_entity(&mut self, client_id: usize, crossbeam_io: CrossbeamIo) -> Entity {
         self.server_app
             .world_mut()
             .spawn((

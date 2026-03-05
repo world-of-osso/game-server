@@ -61,7 +61,10 @@ fn server_replicates_position_to_client() {
     stepper.tick_step(20);
 
     let found = find_replicated_position(stepper.client_world_mut(0));
-    assert!(found.is_some(), "Position component was not replicated to client");
+    assert!(
+        found.is_some(),
+        "Position component was not replicated to client"
+    );
     let replicated_pos = found.unwrap();
     assert_eq!(replicated_pos.x, 100.0);
     assert_eq!(replicated_pos.y, 200.0);
@@ -88,10 +91,7 @@ fn client_message_received_by_server() {
     send_player_input(&mut stepper, 0, input);
     stepper.tick_step(30);
 
-    let received = stepper
-        .server_app
-        .world()
-        .resource::<ReceivedInputs>();
+    let received = stepper.server_app.world().resource::<ReceivedInputs>();
     assert!(
         !received.0.is_empty(),
         "Server did not receive PlayerInput message from client"
@@ -140,11 +140,19 @@ fn multi_client_input_routes_independently() {
     // and link them via PlayerLink on the client_of entity.
     let player_a = stepper
         .server_world_mut()
-        .spawn(Position { x: 0.0, y: 0.0, z: 0.0 })
+        .spawn(Position {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+        })
         .id();
     let player_b = stepper
         .server_world_mut()
-        .spawn(Position { x: 0.0, y: 0.0, z: 0.0 })
+        .spawn(Position {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+        })
         .id();
 
     let client_of_0 = stepper.client_of_entities[0];
@@ -242,4 +250,3 @@ fn send_player_input(stepper: &mut Stepper, client_id: usize, input: PlayerInput
         .expect("Client should have MessageSender<PlayerInput>");
     sender.send::<InputChannel>(input);
 }
-

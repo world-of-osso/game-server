@@ -3,7 +3,9 @@ use lightyear::prelude::*;
 use lightyear::prelude::{AppChannelExt, ChannelMode, ChannelSettings, NetworkDirection};
 use serde::{Deserialize, Serialize};
 
-use crate::components::{Health, Mana, ModelDisplay, MovementSpeed, Npc, Player, Position, Rotation};
+use crate::components::{
+    Health, Mana, ModelDisplay, MovementSpeed, Npc, Player, Position, Rotation,
+};
 
 /// Unreliable movement position updates, server-to-client only.
 pub struct MovementChannel;
@@ -34,6 +36,30 @@ pub struct ChatMessage {
     pub channel: ChatType,
 }
 
+/// Client request to set (or clear) their combat target.
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct SetTarget {
+    /// Server entity bits of the target, or None to clear.
+    pub target_entity: Option<u64>,
+}
+
+/// Combat event type for damage/death/respawn notifications.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub enum CombatEventType {
+    MeleeDamage,
+    Death,
+    Respawn,
+}
+
+/// Combat event sent from server to clients.
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct CombatEvent {
+    pub attacker: u64,
+    pub target: u64,
+    pub damage: f32,
+    pub event_type: CombatEventType,
+}
+
 /// Client movement input sent each tick.
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct PlayerInput {
@@ -53,50 +79,58 @@ pub struct ProtocolPlugin;
 
 impl Plugin for ProtocolPlugin {
     fn build(&self, app: &mut App) {
-        // Register components for replication
-        app.register_component::<Position>();
-        app.register_component::<Health>();
-        app.register_component::<Mana>();
-        app.register_component::<Player>();
-        app.register_component::<Npc>();
-        app.register_component::<ModelDisplay>();
-        app.register_component::<Rotation>();
-        app.register_component::<MovementSpeed>();
-
-        // Register messages
-        app.register_message::<PlayerInput>()
-            .add_direction(NetworkDirection::ClientToServer);
-        app.register_message::<ChatMessage>()
-            .add_direction(NetworkDirection::Bidirectional);
-
-        // MovementChannel: unreliable, server-to-client only
-        app.add_channel::<MovementChannel>(ChannelSettings {
-            mode: ChannelMode::UnorderedUnreliable,
-            ..default()
-        })
-        .add_direction(NetworkDirection::ServerToClient);
-
-        // InputChannel: unreliable, client-to-server only
-        app.add_channel::<InputChannel>(ChannelSettings {
-            mode: ChannelMode::UnorderedUnreliable,
-            ..default()
-        })
-        .add_direction(NetworkDirection::ClientToServer);
-
-        // CombatChannel: reliable ordered, bidirectional
-        app.add_channel::<CombatChannel>(ChannelSettings {
-            mode: ChannelMode::OrderedReliable(default()),
-            ..default()
-        })
-        .add_direction(NetworkDirection::Bidirectional);
-
-        // ChatChannel: reliable ordered, bidirectional
-        app.add_channel::<ChatChannel>(ChannelSettings {
-            mode: ChannelMode::OrderedReliable(default()),
-            ..default()
-        })
-        .add_direction(NetworkDirection::Bidirectional);
+        register_replicated_components(app);
+        register_messages(app);
+        register_channels(app);
     }
+}
+
+fn register_replicated_components(app: &mut App) {
+    app.register_component::<Position>();
+    app.register_component::<Health>();
+    app.register_component::<Mana>();
+    app.register_component::<Player>();
+    app.register_component::<Npc>();
+    app.register_component::<ModelDisplay>();
+    app.register_component::<Rotation>();
+    app.register_component::<MovementSpeed>();
+}
+
+fn register_messages(app: &mut App) {
+    app.register_message::<PlayerInput>()
+        .add_direction(NetworkDirection::ClientToServer);
+    app.register_message::<ChatMessage>()
+        .add_direction(NetworkDirection::Bidirectional);
+    app.register_message::<SetTarget>()
+        .add_direction(NetworkDirection::ClientToServer);
+    app.register_message::<CombatEvent>()
+        .add_direction(NetworkDirection::ServerToClient);
+}
+
+fn register_channels(app: &mut App) {
+    app.add_channel::<MovementChannel>(ChannelSettings {
+        mode: ChannelMode::UnorderedUnreliable,
+        ..default()
+    })
+    .add_direction(NetworkDirection::ServerToClient);
+
+    app.add_channel::<InputChannel>(ChannelSettings {
+        mode: ChannelMode::UnorderedUnreliable,
+        ..default()
+    })
+    .add_direction(NetworkDirection::ClientToServer);
+
+    app.add_channel::<CombatChannel>(ChannelSettings {
+        mode: ChannelMode::OrderedReliable(default()),
+        ..default()
+    })
+    .add_direction(NetworkDirection::Bidirectional);
+
+    app.add_channel::<ChatChannel>(ChannelSettings {
+        mode: ChannelMode::OrderedReliable(default()),
+        ..default()
+    })
+    .add_direction(NetworkDirection::Bidirectional);
 }
 
 #[cfg(test)]
