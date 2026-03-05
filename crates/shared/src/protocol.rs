@@ -17,6 +17,23 @@ pub struct ChatChannel;
 /// Unreliable client-to-server channel for movement inputs.
 pub struct InputChannel;
 
+/// Chat message type.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub enum ChatType {
+    Say,
+    Yell,
+    Party,
+    Whisper(String),
+}
+
+/// A chat message sent between client and server.
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct ChatMessage {
+    pub sender: String,
+    pub content: String,
+    pub channel: ChatType,
+}
+
 /// Client movement input sent each tick.
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct PlayerInput {
@@ -49,6 +66,8 @@ impl Plugin for ProtocolPlugin {
         // Register messages
         app.register_message::<PlayerInput>()
             .add_direction(NetworkDirection::ClientToServer);
+        app.register_message::<ChatMessage>()
+            .add_direction(NetworkDirection::Bidirectional);
 
         // MovementChannel: unreliable, server-to-client only
         app.add_channel::<MovementChannel>(ChannelSettings {
@@ -77,5 +96,39 @@ impl Plugin for ProtocolPlugin {
             ..default()
         })
         .add_direction(NetworkDirection::Bidirectional);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn chat_type_serialization_round_trip() {
+        let types = vec![
+            ChatType::Say,
+            ChatType::Yell,
+            ChatType::Party,
+            ChatType::Whisper("TargetPlayer".into()),
+        ];
+        for ct in types {
+            let serialized = serde_json::to_string(&ct).unwrap();
+            let deserialized: ChatType = serde_json::from_str(&serialized).unwrap();
+            assert_eq!(ct, deserialized);
+        }
+    }
+
+    #[test]
+    fn chat_message_serialization_round_trip() {
+        let msg = ChatMessage {
+            sender: "Alice".into(),
+            content: "Hello world".into(),
+            channel: ChatType::Whisper("Bob".into()),
+        };
+        let serialized = serde_json::to_string(&msg).unwrap();
+        let deserialized: ChatMessage = serde_json::from_str(&serialized).unwrap();
+        assert_eq!(msg.sender, deserialized.sender);
+        assert_eq!(msg.content, deserialized.content);
+        assert_eq!(msg.channel, deserialized.channel);
     }
 }

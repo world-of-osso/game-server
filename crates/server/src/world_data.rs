@@ -88,7 +88,12 @@ pub fn load_world_data(path: &Path) -> WorldData {
         waypoints.len(),
     );
 
-    WorldData { templates, spawns, spawns_by_map, waypoints }
+    WorldData {
+        templates,
+        spawns,
+        spawns_by_map,
+        waypoints,
+    }
 }
 
 fn template_from_row(row: &Row) -> rusqlite::Result<CreatureTemplate> {
@@ -199,7 +204,8 @@ fn load_spawns(conn: &Connection) -> Vec<CreatureSpawn> {
         .query_map(params![], |row| spawn_from_row(row))
         .expect("Failed to query creature");
 
-    rows.map(|r| r.expect("Failed to read creature row")).collect()
+    rows.map(|r| r.expect("Failed to read creature row"))
+        .collect()
 }
 
 fn build_spawns_by_map(spawns: &[CreatureSpawn]) -> HashMap<u16, Vec<usize>> {
@@ -243,7 +249,10 @@ fn load_waypoints(conn: &Connection) -> HashMap<u32, WaypointPath> {
     for row in rows {
         let (guid, point) = row.expect("Failed to read waypoint_data row");
         map.entry(guid)
-            .or_insert_with(|| WaypointPath { creature_guid: guid, points: Vec::new() })
+            .or_insert_with(|| WaypointPath {
+                creature_guid: guid,
+                points: Vec::new(),
+            })
             .points
             .push(point);
     }

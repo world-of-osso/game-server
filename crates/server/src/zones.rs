@@ -282,7 +282,9 @@ mod tests {
     }
 
     fn get_spawned(app: &mut App) -> Vec<(Position, Npc, Health, ModelDisplay)> {
-        let mut query = app.world_mut().query::<(&Position, &Npc, &Health, &ModelDisplay)>();
+        let mut query = app
+            .world_mut()
+            .query::<(&Position, &Npc, &Health, &ModelDisplay)>();
         let mut results: Vec<_> = query
             .iter(app.world())
             .map(|(p, n, h, m)| (*p, *n, *h, *m))
@@ -293,7 +295,10 @@ mod tests {
 
     fn assert_creature(
         c: &(Position, Npc, Health, ModelDisplay),
-        template_id: u32, x: f32, health: f32, display: u32,
+        template_id: u32,
+        x: f32,
+        health: f32,
+        display: u32,
     ) {
         assert_eq!(c.1.template_id, template_id);
         assert_eq!(c.0.x, x);
@@ -333,9 +338,10 @@ mod tests {
 
     #[test]
     fn spawn_system_missing_template_uses_defaults() {
-        let mut app = run_spawn_system(
-            make_world_data(vec![], vec![make_spawn(99, -9000.0, 0.0, 0.0)]),
-        );
+        let mut app = run_spawn_system(make_world_data(
+            vec![],
+            vec![make_spawn(99, -9000.0, 0.0, 0.0)],
+        ));
         let results = get_spawned(&mut app);
         assert_eq!(results.len(), 1);
         assert_creature(&results[0], 99, -9000.0, 100.0, 0);

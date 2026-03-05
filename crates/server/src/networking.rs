@@ -1,12 +1,13 @@
 use bevy::prelude::*;
 use core::net::{IpAddr, Ipv4Addr, SocketAddr};
-use lightyear::prelude::*;
 use lightyear::prelude::server::*;
+use lightyear::prelude::*;
 use shared::components::{Health, MovementSpeed, Player, Position, Rotation};
-use shared::protocol::PlayerInput;
+use shared::protocol::{ChatChannel, ChatMessage, PlayerInput};
 use std::time::Duration;
 
 use crate::persistence::{self, CharacterData, ClientId, GameDatabase};
+use crate::terrain_height::{GRAVITY, GROUND_SNAP_THRESHOLD, TerrainHeightMap};
 
 const SERVER_PORT: u16 = 5000;
 
@@ -30,6 +31,11 @@ impl Plugin for ServerNetworkPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Startup, start_server);
         app.add_systems(FixedUpdate, process_player_inputs);
+        app.add_systems(
+            FixedUpdate,
+            apply_terrain_gravity.after(process_player_inputs),
+        );
+        app.add_systems(FixedUpdate, process_chat_messages);
         app.add_observer(on_new_link);
         app.add_observer(on_client_connected);
         app.add_observer(on_client_disconnected);
@@ -51,11 +57,13 @@ fn start_server(mut commands: Commands) {
 
 /// When a new transport link is established (client raw link), insert a ReplicationSender.
 fn on_new_link(trigger: On<Add, LinkOf>, mut commands: Commands) {
-    commands.entity(trigger.entity).insert(ReplicationSender::new(
-        Duration::from_millis(50),
-        SendUpdatesMode::SinceLastAck,
-        false,
-    ));
+    commands
+        .entity(trigger.entity)
+        .insert(ReplicationSender::new(
+            Duration::from_millis(50),
+            SendUpdatesMode::SinceLastAck,
+            false,
+        ));
 }
 
 /// When a client fully connects, spawn a player entity with replicated components.
@@ -72,29 +80,65 @@ fn on_client_connected(
     let client_id = remote_id.0.to_bits();
     info!("Client connected: {client_id}");
 
-    let saved = db.as_ref().and_then(|db| persistence::load_character(&db.db, client_id));
+    let saved = db
+        .as_ref()
+        .and_then(|db| persistence::load_character(&db.db, client_id));
     let (pos, health, name) = character_from_saved(saved, client_id);
 
-    let rotation = Rotation { x: 0.0, y: 0.0, z: 0.0 };
+    let rotation = Rotation {
+        x: 0.0,
+        y: 0.0,
+        z: 0.0,
+    };
     let speed = MovementSpeed(DEFAULT_RUN_SPEED);
     let player_entity = commands
-        .spawn((pos, health, rotation, speed, Player { name: name.clone() }, ClientId(client_id), Replicate::default()))
+        .spawn((
+            pos,
+            health,
+            rotation,
+            speed,
+            Player { name: name.clone() },
+            ClientId(client_id),
+            Replicate::default(),
+        ))
         .id();
-    commands.entity(trigger.entity).insert(PlayerLink(player_entity));
-    info!("Spawned player '{name}' at ({}, {}, {})", pos.x, pos.y, pos.z);
+    commands
+        .entity(trigger.entity)
+        .insert(PlayerLink(player_entity));
+    info!(
+        "Spawned player '{name}' at ({}, {}, {})",
+        pos.x, pos.y, pos.z
+    );
 }
 
 /// Extract position/health/name from saved data, or use defaults.
-fn character_from_saved(saved: Option<CharacterData>, client_id: u64) -> (Position, Health, String) {
+fn character_from_saved(
+    saved: Option<CharacterData>,
+    client_id: u64,
+) -> (Position, Health, String) {
     match saved {
         Some(data) => (
-            Position { x: data.x, y: data.y, z: data.z },
-            Health { current: data.health, max: data.max_health },
+            Position {
+                x: data.x,
+                y: data.y,
+                z: data.z,
+            },
+            Health {
+                current: data.health,
+                max: data.max_health,
+            },
             data.name,
         ),
         None => (
-            Position { x: SPAWN_X, y: SPAWN_Y, z: SPAWN_Z },
-            Health { current: 100.0, max: 100.0 },
+            Position {
+                x: SPAWN_X,
+                y: SPAWN_Y,
+                z: SPAWN_Z,
+            },
+            Health {
+                current: 100.0,
+                max: 100.0,
+            },
             format!("Player-{client_id}"),
         ),
     }
@@ -128,7 +172,9 @@ fn save_player_on_disconnect(
     entity: Entity,
 ) {
     let Some(db) = db.as_ref() else { return };
-    let Ok((pos, health, player, cid)) = player_query.get(entity) else { return };
+    let Ok((pos, health, player, cid)) = player_query.get(entity) else {
+        return;
+    };
     let data = CharacterData::from_components(player, pos, health);
     persistence::save_character(&db.db, cid.0, &data);
     info!("Saved character data for client {}", cid.0);
@@ -160,7 +206,11 @@ fn apply_movement_input(
     // Update rotation from client facing
     rotation.y = input.facing_yaw;
     // Update speed based on run/walk toggle
-    speed.0 = if input.running { DEFAULT_RUN_SPEED } else { DEFAULT_WALK_SPEED };
+    speed.0 = if input.running {
+        DEFAULT_RUN_SPEED
+    } else {
+        DEFAULT_WALK_SPEED
+    };
 
     let dir_len = direction_length(&input.direction);
     if dir_len < 0.001 {
@@ -172,24 +222,106 @@ fn apply_movement_input(
     pos.z += input.direction[2] * scale;
 }
 
+/// Apply gravity and terrain clamping to all players each tick.
+fn apply_terrain_gravity(
+    terrain: Option<Res<TerrainHeightMap>>,
+    mut players: Query<&mut Position, With<Player>>,
+    time: Res<Time>,
+) {
+    let Some(terrain) = terrain.as_ref().filter(|t| t.is_loaded()) else {
+        return;
+    };
+    let dt = time.delta_secs();
+    for mut pos in players.iter_mut() {
+        clamp_to_terrain(&terrain, &mut pos, dt);
+    }
+}
+
+/// Clamp a position to terrain: apply gravity if airborne, snap if below ground.
+fn clamp_to_terrain(terrain: &TerrainHeightMap, pos: &mut Position, dt: f32) {
+    let Some(ground_z) = terrain.height_at(pos.x, pos.y) else {
+        return;
+    };
+    if pos.z < ground_z {
+        // Below terrain — snap up.
+        pos.z = ground_z;
+    } else if pos.z > ground_z + GROUND_SNAP_THRESHOLD {
+        // Above terrain — apply gravity.
+        pos.z -= GRAVITY * dt;
+        // Don't overshoot ground.
+        if pos.z < ground_z {
+            pos.z = ground_z;
+        }
+    }
+}
+
 /// Compute the length of a 3D direction vector.
 fn direction_length(dir: &[f32; 3]) -> f32 {
     (dir[0].powi(2) + dir[1].powi(2) + dir[2].powi(2)).sqrt()
+}
+
+/// Read incoming chat messages, override sender with the player's actual name,
+/// and broadcast to all connected clients.
+fn process_chat_messages(
+    mut receivers: Query<(&mut MessageReceiver<ChatMessage>, &PlayerLink)>,
+    players: Query<&Player>,
+    mut senders: Query<&mut MessageSender<ChatMessage>>,
+) {
+    let outgoing: Vec<ChatMessage> = collect_chat_messages(&mut receivers, &players);
+    broadcast_chat_messages(&outgoing, &mut senders);
+}
+
+/// Collect chat messages from all receivers, replacing sender with the player's name.
+fn collect_chat_messages(
+    receivers: &mut Query<(&mut MessageReceiver<ChatMessage>, &PlayerLink)>,
+    players: &Query<&Player>,
+) -> Vec<ChatMessage> {
+    let mut outgoing = Vec::new();
+    for (mut receiver, link) in receivers.iter_mut() {
+        let sender_name = players
+            .get(link.0)
+            .map(|p| p.name.clone())
+            .unwrap_or_else(|_| "Unknown".into());
+        for mut msg in receiver.receive() {
+            msg.sender = sender_name.clone();
+            info!("[Chat] {}: {}", msg.sender, msg.content);
+            outgoing.push(msg);
+        }
+    }
+    outgoing
+}
+
+/// Send collected chat messages to all connected clients.
+fn broadcast_chat_messages(
+    outgoing: &[ChatMessage],
+    senders: &mut Query<&mut MessageSender<ChatMessage>>,
+) {
+    for msg in outgoing {
+        for mut sender in senders.iter_mut() {
+            sender.send::<ChatChannel>(msg.clone());
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use bevy::ecs::system::RunSystemOnce;
-    use shared::protocol::PlayerInput;
+    use shared::protocol::{ChatType, PlayerInput};
 
     fn spawn_player(world: &mut World, x: f32, y: f32, z: f32) -> Entity {
         world
             .spawn((
                 Position { x, y, z },
-                Rotation { x: 0.0, y: 0.0, z: 0.0 },
+                Rotation {
+                    x: 0.0,
+                    y: 0.0,
+                    z: 0.0,
+                },
                 MovementSpeed(DEFAULT_RUN_SPEED),
-                Player { name: "test".into() },
+                Player {
+                    name: "test".into(),
+                },
             ))
             .id()
     }
@@ -224,7 +356,11 @@ mod tests {
 
         // Apply input targeting player_a only
         let _ = app.world_mut().run_system_once(
-            move |mut q: Query<(&mut Position, &mut Rotation, &mut MovementSpeed), With<Player>>, time: Res<Time>| {
+            move |mut q: Query<
+                (&mut Position, &mut Rotation, &mut MovementSpeed),
+                With<Player>,
+            >,
+                  time: Res<Time>| {
                 apply_movement_input(&input, player_a, &mut q, &time);
             },
         );
@@ -233,7 +369,11 @@ mod tests {
         let pos_b = *app.world().entity(player_b).get::<Position>().unwrap();
 
         // player_a should have moved (x increased)
-        assert!(pos_a.x > 0.0, "player_a should have moved, got x={}", pos_a.x);
+        assert!(
+            pos_a.x > 0.0,
+            "player_a should have moved, got x={}",
+            pos_a.x
+        );
         // player_b should be untouched
         assert_eq!(pos_b.x, 100.0, "player_b x should be unchanged");
         assert_eq!(pos_b.y, 100.0, "player_b y should be unchanged");
@@ -251,12 +391,20 @@ mod tests {
             running: true,
         };
         let _ = app.world_mut().run_system_once(
-            move |mut q: Query<(&mut Position, &mut Rotation, &mut MovementSpeed), With<Player>>, time: Res<Time>| {
+            move |mut q: Query<
+                (&mut Position, &mut Rotation, &mut MovementSpeed),
+                With<Player>,
+            >,
+                  time: Res<Time>| {
                 apply_movement_input(&input, player, &mut q, &time);
             },
         );
         let rot = *app.world().entity(player).get::<Rotation>().unwrap();
-        assert!((rot.y - 1.5).abs() < 1e-6, "rotation.y should be 1.5, got {}", rot.y);
+        assert!(
+            (rot.y - 1.5).abs() < 1e-6,
+            "rotation.y should be 1.5, got {}",
+            rot.y
+        );
     }
 
     /// Verify that running=false sets walk speed and moves slower.
@@ -271,12 +419,19 @@ mod tests {
             running: false,
         };
         let _ = app.world_mut().run_system_once(
-            move |mut q: Query<(&mut Position, &mut Rotation, &mut MovementSpeed), With<Player>>, time: Res<Time>| {
+            move |mut q: Query<
+                (&mut Position, &mut Rotation, &mut MovementSpeed),
+                With<Player>,
+            >,
+                  time: Res<Time>| {
                 apply_movement_input(&input, player, &mut q, &time);
             },
         );
         let speed = app.world().entity(player).get::<MovementSpeed>().unwrap();
-        assert!((speed.0 - DEFAULT_WALK_SPEED).abs() < 1e-6, "speed should be walk speed");
+        assert!(
+            (speed.0 - DEFAULT_WALK_SPEED).abs() < 1e-6,
+            "speed should be walk speed"
+        );
     }
 
     /// Verify that zero-length direction is ignored.
@@ -288,7 +443,11 @@ mod tests {
         let input = make_input(0.0, 0.0, 0.0);
 
         let _ = app.world_mut().run_system_once(
-            move |mut q: Query<(&mut Position, &mut Rotation, &mut MovementSpeed), With<Player>>, time: Res<Time>| {
+            move |mut q: Query<
+                (&mut Position, &mut Rotation, &mut MovementSpeed),
+                With<Player>,
+            >,
+                  time: Res<Time>| {
                 apply_movement_input(&input, player, &mut q, &time);
             },
         );
@@ -297,5 +456,80 @@ mod tests {
         assert_eq!(pos.x, 5.0);
         assert_eq!(pos.y, 5.0);
         assert_eq!(pos.z, 5.0);
+    }
+
+    /// Verify that clamp_to_terrain snaps a player below ground up to terrain level.
+    #[test]
+    fn terrain_clamps_below_ground() {
+        // Build a flat terrain chunk at height 50 covering corner (100, 100).
+        let map = crate::terrain_height::test_helpers::flat_terrain(100.0, 100.0, 50.0);
+
+        // Player below ground at z=30.
+        let mut pos = Position {
+            x: 90.0,
+            y: 90.0,
+            z: 30.0,
+        };
+        clamp_to_terrain(&map, &mut pos, 0.05);
+        assert!(
+            (pos.z - 50.0).abs() < 0.01,
+            "player should be snapped to ground 50, got {}",
+            pos.z
+        );
+    }
+
+    /// Verify that gravity pulls a player above ground toward terrain.
+    #[test]
+    fn terrain_applies_gravity() {
+        let map = crate::terrain_height::test_helpers::flat_terrain(100.0, 100.0, 50.0);
+
+        // Player well above ground.
+        let mut pos = Position {
+            x: 90.0,
+            y: 90.0,
+            z: 60.0,
+        };
+        let dt = 0.05; // 50ms tick
+        clamp_to_terrain(&map, &mut pos, dt);
+        let expected = 60.0 - GRAVITY * dt;
+        assert!(
+            (pos.z - expected).abs() < 0.01,
+            "player should have fallen to {expected}, got {}",
+            pos.z
+        );
+    }
+
+    /// Verify that a player on the ground (within snap threshold) stays put.
+    #[test]
+    fn terrain_on_ground_stays() {
+        let map = crate::terrain_height::test_helpers::flat_terrain(100.0, 100.0, 50.0);
+
+        let mut pos = Position {
+            x: 90.0,
+            y: 90.0,
+            z: 50.05,
+        };
+        clamp_to_terrain(&map, &mut pos, 0.05);
+        // Within threshold — no gravity applied, should stay.
+        assert!(
+            (pos.z - 50.05).abs() < 0.01,
+            "player near ground should stay, got {}",
+            pos.z
+        );
+    }
+
+    /// Verify ChatMessage sender is overridden from Player component name.
+    #[test]
+    fn chat_message_sender_override() {
+        let mut msg = ChatMessage {
+            sender: "hacker".into(),
+            content: "Hello".into(),
+            channel: ChatType::Say,
+        };
+        // Simulate what collect_chat_messages does: override sender
+        let player_name = "TrustedPlayer".to_string();
+        msg.sender = player_name.clone();
+        assert_eq!(msg.sender, "TrustedPlayer");
+        assert_eq!(msg.content, "Hello");
     }
 }

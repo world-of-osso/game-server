@@ -71,8 +71,12 @@ pub fn save_character(db: &Database, client_id: u64, data: &CharacterData) {
     let bytes = bitcode::encode(data);
     let txn = db.begin_write().expect("Failed to begin write txn");
     {
-        let mut table = txn.open_table(CHARACTERS).expect("Failed to open characters table");
-        table.insert(client_id, bytes.as_slice()).expect("Failed to insert character");
+        let mut table = txn
+            .open_table(CHARACTERS)
+            .expect("Failed to open characters table");
+        table
+            .insert(client_id, bytes.as_slice())
+            .expect("Failed to insert character");
     }
     txn.commit().expect("Failed to commit character save");
 }
@@ -80,9 +84,13 @@ pub fn save_character(db: &Database, client_id: u64, data: &CharacterData) {
 /// Load a character from the database, if one exists for this client_id.
 pub fn load_character(db: &Database, client_id: u64) -> Option<CharacterData> {
     let txn = db.begin_read().expect("Failed to begin read txn");
-    let table = txn.open_table(CHARACTERS).expect("Failed to open characters table");
+    let table = txn
+        .open_table(CHARACTERS)
+        .expect("Failed to open characters table");
     let guard = table.get(client_id).expect("Failed to read character");
-    guard.map(|v| bitcode::decode::<CharacterData>(v.value()).expect("Failed to decode character data"))
+    guard.map(|v| {
+        bitcode::decode::<CharacterData>(v.value()).expect("Failed to decode character data")
+    })
 }
 
 /// Marker component linking a player entity to its client_id for periodic saves.
@@ -107,7 +115,10 @@ fn save_dirty_characters(
         let data = CharacterData::from_components(player, pos, health);
         save_character(&db.db, cid.0, &data);
     }
-    info!("Periodic save: {} characters written", players.iter().count());
+    info!(
+        "Periodic save: {} characters written",
+        players.iter().count()
+    );
 }
 
 #[cfg(test)]

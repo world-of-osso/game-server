@@ -82,7 +82,8 @@ fn tick_idle(state: &mut WanderState, dt: f32, spawn: &SpawnPoint) {
 
 fn tick_walk(pos: &mut Position, state: &mut WanderState, spawn: &SpawnPoint, dt: f32) {
     let speed = spawn.speed_walk * BASE_WALK_SPEED;
-    let (reached, new_x, new_y) = move_toward(pos.x, pos.y, state.target_x, state.target_y, speed * dt);
+    let (reached, new_x, new_y) =
+        move_toward(pos.x, pos.y, state.target_x, state.target_y, speed * dt);
     pos.x = new_x;
     pos.y = new_y;
     if reached {
@@ -148,7 +149,8 @@ fn tick_waypoint(pos: &mut Position, state: &mut WaypointState, path: &WaypointP
     }
     let point = &path.points[state.current_index % path.points.len()];
     let speed = state.speed_walk * BASE_WALK_SPEED;
-    let (reached, nx, ny) = move_toward(pos.x, pos.y, point.position_x, point.position_y, speed * dt);
+    let (reached, nx, ny) =
+        move_toward(pos.x, pos.y, point.position_x, point.position_y, speed * dt);
     pos.x = nx;
     pos.y = ny;
     if reached {
@@ -221,7 +223,10 @@ mod tests {
     fn random_idle_in_range() {
         for seed in 0..100 {
             let t = random_idle_secs(seed);
-            assert!(t >= IDLE_MIN_SECS && t <= IDLE_MAX_SECS, "seed {seed}: idle {t}");
+            assert!(
+                t >= IDLE_MIN_SECS && t <= IDLE_MAX_SECS,
+                "seed {seed}: idle {t}"
+            );
         }
     }
 

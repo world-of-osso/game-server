@@ -1,8 +1,9 @@
 mod creature_ai;
 mod networking;
 mod persistence;
-mod zones;
+mod terrain_height;
 mod world_data;
+mod zones;
 
 use bevy::prelude::*;
 use lightyear::prelude::server::ServerPlugins;
@@ -22,6 +23,7 @@ fn main() {
         .add_plugins(persistence::PersistencePlugin)
         .add_plugins(networking::ServerNetworkPlugin)
         .add_plugins(world_data::WorldDataPlugin)
+        .add_plugins(terrain_height::TerrainPlugin)
         .add_plugins(zones::ZonePlugin)
         .add_plugins(creature_ai::CreatureAiPlugin)
         .add_systems(Startup, on_startup)
