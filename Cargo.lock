@@ -2926,6 +2926,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "integration-tests"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "bitcode",
+ "lightyear",
+ "lightyear_crossbeam",
+ "lightyear_raw_connection",
+ "serde",
+ "shared",
+]
+
+[[package]]
 name = "inventory"
 version = "0.3.22"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3100,6 +3113,7 @@ dependencies = [
  "lightyear_avian3d",
  "lightyear_connection",
  "lightyear_core",
+ "lightyear_crossbeam",
  "lightyear_frame_interpolation",
  "lightyear_inputs",
  "lightyear_inputs_bei",
@@ -3224,6 +3238,22 @@ dependencies = [
  "lightyear_serde",
  "lightyear_utils",
  "serde",
+ "tracing",
+]
+
+[[package]]
+name = "lightyear_crossbeam"
+version = "0.26.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b9b353e8b692034c99e6f9a89cc3c95ec4f7d123b32622228ccf680b849855fd"
+dependencies = [
+ "aeronet_io",
+ "bevy_app",
+ "bevy_ecs",
+ "bytes",
+ "crossbeam-channel",
+ "lightyear_core",
+ "lightyear_link",
  "tracing",
 ]
 

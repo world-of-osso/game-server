@@ -1,0 +1,23 @@
+[package]
+name = "integration-tests"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+publish = false
+
+# No lib — this crate only contains integration tests
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+shared = { path = "../shared" }
+bevy = { version = "0.18", default-features = false, features = [
+    "bevy_log", "bevy_state",
+] }
+lightyear = { version = "0.26", features = [
+    "client", "server", "replication", "crossbeam", "raw_connection",
+] }
+lightyear_crossbeam = "0.26"
+lightyear_raw_connection = { version = "0.26", features = ["client", "server"] }
+serde = { version = "1", features = ["derive"] }
+bitcode = "0.6"

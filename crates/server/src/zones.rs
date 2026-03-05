@@ -19,9 +19,16 @@ impl Plugin for ZonePlugin {
 }
 
 fn spawn_elwynn_creatures(mut commands: Commands, world_data: Res<WorldData>) {
+    let count = spawn_elwynn_core(&mut commands, &world_data, true);
+    info!("Spawned {count} creatures in Elwynn Forest area");
+}
+
+/// Spawn creatures in Elwynn bounds. When `replicate` is true, adds `Replicate`
+/// component (requires lightyear plugins). Tests pass `false` to avoid that dependency.
+fn spawn_elwynn_core(commands: &mut Commands, world_data: &WorldData, replicate: bool) -> u32 {
     let Some(indices) = world_data.spawns_by_map.get(&0) else {
         warn!("No spawns found for map 0 (Eastern Kingdoms)");
-        return;
+        return 0;
     };
 
     let mut count = 0u32;
@@ -30,28 +37,41 @@ fn spawn_elwynn_creatures(mut commands: Commands, world_data: Res<WorldData>) {
         if !in_elwynn_bounds(spawn.position_x, spawn.position_y) {
             continue;
         }
-        let display_id = resolve_display_id(&world_data, spawn.template_entry);
-        let health = resolve_health(&world_data, spawn.template_entry);
+        let display_id = resolve_display_id(world_data, spawn.template_entry);
+        let health = resolve_health(world_data, spawn.template_entry);
+        let bundle = creature_bundle(spawn, health, display_id);
 
-        commands.spawn((
-            Position {
-                x: spawn.position_x,
-                y: spawn.position_y,
-                z: spawn.position_z,
-            },
-            Npc {
-                template_id: spawn.template_entry,
-            },
-            Health {
-                current: health,
-                max: health,
-            },
-            ModelDisplay { display_id },
-            Replicate::default(),
-        ));
+        if replicate {
+            commands.spawn((bundle, Replicate::default()));
+        } else {
+            commands.spawn(bundle);
+        }
         count += 1;
     }
-    info!("Spawned {count} creatures in Elwynn Forest area");
+    count
+}
+
+/// Core creature components without replication marker.
+fn creature_bundle(
+    spawn: &crate::world_data::CreatureSpawn,
+    health: f32,
+    display_id: u32,
+) -> (Position, Npc, Health, ModelDisplay) {
+    (
+        Position {
+            x: spawn.position_x,
+            y: spawn.position_y,
+            z: spawn.position_z,
+        },
+        Npc {
+            template_id: spawn.template_entry,
+        },
+        Health {
+            current: health,
+            max: health,
+        },
+        ModelDisplay { display_id },
+    )
 }
 
 fn in_elwynn_bounds(x: f32, y: f32) -> bool {
@@ -183,5 +203,79 @@ mod tests {
     fn health_missing_template() {
         let wd = make_world_data(vec![], vec![]);
         assert_eq!(resolve_health(&wd, 999), 100.0);
+    }
+
+    /// Test-only system: spawns creatures without `Replicate` (which requires lightyear plugins).
+    fn spawn_elwynn_test(mut commands: Commands, world_data: Res<WorldData>) {
+        spawn_elwynn_core(&mut commands, &world_data, false);
+    }
+
+    fn run_spawn_system(wd: WorldData) -> App {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        app.insert_resource(wd);
+        app.add_systems(PostStartup, spawn_elwynn_test);
+        app.update();
+        app
+    }
+
+    fn get_spawned(app: &mut App) -> Vec<(Position, Npc, Health, ModelDisplay)> {
+        let mut query = app.world_mut().query::<(&Position, &Npc, &Health, &ModelDisplay)>();
+        let mut results: Vec<_> = query
+            .iter(app.world())
+            .map(|(p, n, h, m)| (*p, *n, *h, *m))
+            .collect();
+        results.sort_by_key(|(_, npc, _, _)| npc.template_id);
+        results
+    }
+
+    fn assert_creature(
+        c: &(Position, Npc, Health, ModelDisplay),
+        template_id: u32, x: f32, health: f32, display: u32,
+    ) {
+        assert_eq!(c.1.template_id, template_id);
+        assert_eq!(c.0.x, x);
+        assert_eq!(c.2.current, health);
+        assert_eq!(c.2.max, health);
+        assert_eq!(c.3.display_id, display);
+    }
+
+    #[test]
+    fn spawn_system_creates_entities_in_bounds() {
+        let templates = vec![
+            make_template(1, 1.5, 1001),
+            make_template(2, 2.0, 1002),
+            make_template(3, 1.0, 1003),
+        ];
+        let spawns = vec![
+            make_spawn(1, -9000.0, -100.0, 50.0),
+            make_spawn(2, -8800.0, 0.0, 60.0),
+            make_spawn(3, -10000.0, 0.0, 70.0), // outside bounds
+        ];
+        let mut app = run_spawn_system(make_world_data(templates, spawns));
+        let results = get_spawned(&mut app);
+
+        assert_eq!(results.len(), 2, "only 2 of 3 spawns are in Elwynn bounds");
+        assert_creature(&results[0], 1, -9000.0, 150.0, 1001);
+        assert_creature(&results[1], 2, -8800.0, 200.0, 1002);
+    }
+
+    #[test]
+    fn spawn_system_no_map0_spawns() {
+        let templates = vec![make_template(1, 1.0, 100)];
+        let mut spawn = make_spawn(1, -9000.0, -100.0, 50.0);
+        spawn.map = 1; // not Eastern Kingdoms
+        let mut app = run_spawn_system(make_world_data(templates, vec![spawn]));
+        assert_eq!(get_spawned(&mut app).len(), 0);
+    }
+
+    #[test]
+    fn spawn_system_missing_template_uses_defaults() {
+        let mut app = run_spawn_system(
+            make_world_data(vec![], vec![make_spawn(99, -9000.0, 0.0, 0.0)]),
+        );
+        let results = get_spawned(&mut app);
+        assert_eq!(results.len(), 1);
+        assert_creature(&results[0], 99, -9000.0, 100.0, 0);
     }
 }
