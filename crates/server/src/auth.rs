@@ -476,7 +476,7 @@ pub fn spawn_player_entity(
             Player { name: data.name.clone() },
             ClientId(character_id),
             CombatTarget::default(),
-            Replicate::default(),
+            Replicate::new(ReplicationMode::SingleServer(NetworkTarget::All)),
             NetworkVisibility,
         ))
         .id();

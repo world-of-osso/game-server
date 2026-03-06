@@ -34,7 +34,7 @@ enum ChatCommands {
 #[derive(Parser, Clone)]
 struct AuthArgs {
     /// Server address
-    #[arg(short, long, default_value = "127.0.0.1:25565")]
+    #[arg(short, long, default_value = "127.0.0.1:5000")]
     server: SocketAddr,
     /// Username
     #[arg(short, long)]

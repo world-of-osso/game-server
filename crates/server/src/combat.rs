@@ -178,7 +178,7 @@ fn respawn_system(
         commands
             .entity(entity)
             .remove::<DeathState>()
-            .insert((Replicate::default(), NetworkVisibility));
+            .insert((Replicate::new(ReplicationMode::SingleServer(NetworkTarget::All)), NetworkVisibility));
         events.push(CombatEvent {
             attacker: 0,
             target: entity.to_bits(),

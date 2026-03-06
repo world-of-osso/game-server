@@ -71,9 +71,6 @@ struct StartTime(std::time::Instant);
 /// Build and run the headless CLI app. Blocks until exit.
 pub fn run(action: CliAction) {
     let mut app = App::new();
-    // TODO: MinimalPlugins causes netcode ChallengeResponseTimedOut — lightyear's UDP
-    // receive system doesn't read keepalive packets with headless MinimalPlugins.
-    // Need to investigate lightyear 0.26 headless client requirements.
     app.add_plugins(MinimalPlugins.set(bevy::app::ScheduleRunnerPlugin::run_loop(
         Duration::from_millis(10),
     )));
