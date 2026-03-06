@@ -901,17 +901,18 @@ fn save_dirty_characters(
 }
 
 #[cfg(test)]
+pub(crate) fn temp_database() -> Database {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("test.redb");
+    let db = Database::create(&path).unwrap();
+    create_tables(&db);
+    std::mem::forget(dir);
+    db
+}
+
+#[cfg(test)]
 mod tests {
     use super::*;
-
-    fn temp_database() -> Database {
-        let dir = tempfile::tempdir().unwrap();
-        let path = dir.path().join("test.redb");
-        let db = Database::create(&path).unwrap();
-        create_tables(&db);
-        std::mem::forget(dir);
-        db
-    }
 
     fn sample_data() -> CharacterData {
         CharacterData {
@@ -1091,5 +1092,33 @@ mod tests {
         let result = delete_character(&db, acct2, cid);
         assert!(result.is_err());
         assert!(result.unwrap_err().contains("does not belong"));
+    }
+
+    #[test]
+    fn character_guild_membership_round_trip() {
+        let db = temp_database();
+        let (account_id, _) = register_account(&db, "user1", "pass").unwrap();
+        let (character_id, _) = create_character(&db, account_id, "Guildy", 1, 1).unwrap();
+
+        set_character_guild_by_name(&db, "Guildy", 42, "Forty Two").unwrap();
+        let guild = load_character_guild(&db, character_id).expect("guild should exist");
+
+        assert_eq!(guild.guild_id, 42);
+        assert_eq!(guild.guild_name, "Forty Two");
+    }
+
+    #[test]
+    fn pending_guild_invite_is_consumed_once() {
+        let db = temp_database();
+        let (account_id, _) = register_account(&db, "user1", "pass").unwrap();
+        let (character_id, _) = create_character(&db, account_id, "Invitee", 1, 1).unwrap();
+
+        set_pending_guild_invite(&db, character_id, 7, "Lucky Seven", "Inviter");
+        let invite = take_pending_guild_invite(&db, character_id).expect("invite should exist");
+
+        assert_eq!(invite.guild_id, 7);
+        assert_eq!(invite.guild_name, "Lucky Seven");
+        assert_eq!(invite.inviter_name, "Inviter");
+        assert!(take_pending_guild_invite(&db, character_id).is_none());
     }
 }

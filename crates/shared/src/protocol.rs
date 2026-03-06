@@ -568,4 +568,105 @@ mod tests {
         assert_eq!(msg.content, deserialized.content);
         assert_eq!(msg.channel, deserialized.channel);
     }
+
+    #[test]
+    fn guild_invite_messages_round_trip() {
+        let invite = GuildInviteRequest {
+            target_character_name: "TargetOne".into(),
+        };
+        let encoded = serde_json::to_string(&invite).unwrap();
+        let decoded: GuildInviteRequest = serde_json::from_str(&encoded).unwrap();
+        assert_eq!(invite.target_character_name, decoded.target_character_name);
+
+        let invite_resp = GuildInviteResponse {
+            success: true,
+            error: None,
+        };
+        let encoded = serde_json::to_string(&invite_resp).unwrap();
+        let decoded: GuildInviteResponse = serde_json::from_str(&encoded).unwrap();
+        assert_eq!(invite_resp.success, decoded.success);
+        assert_eq!(invite_resp.error, decoded.error);
+
+        let accept_resp = GuildAcceptInviteResponse {
+            success: true,
+            guild_id: Some(3),
+            guild_name: Some("Raid Team".into()),
+            error: None,
+        };
+        let encoded = serde_json::to_string(&accept_resp).unwrap();
+        let decoded: GuildAcceptInviteResponse = serde_json::from_str(&encoded).unwrap();
+        assert_eq!(accept_resp.success, decoded.success);
+        assert_eq!(accept_resp.guild_id, decoded.guild_id);
+        assert_eq!(accept_resp.guild_name, decoded.guild_name);
+        assert_eq!(accept_resp.error, decoded.error);
+    }
+
+    #[test]
+    fn chat_history_response_round_trip() {
+        let resp = ChatHistoryResponse {
+            messages: vec![
+                ChatMessage {
+                    sender: "Alice".into(),
+                    content: "hello".into(),
+                    channel: ChatType::Say,
+                },
+                ChatMessage {
+                    sender: "Bob".into(),
+                    content: "guild hi".into(),
+                    channel: ChatType::Guild,
+                },
+            ],
+            error: None,
+        };
+        let encoded = serde_json::to_string(&resp).unwrap();
+        let decoded: ChatHistoryResponse = serde_json::from_str(&encoded).unwrap();
+        assert_eq!(resp.messages.len(), decoded.messages.len());
+        assert_eq!(resp.messages[0].sender, decoded.messages[0].sender);
+        assert_eq!(resp.messages[1].channel, decoded.messages[1].channel);
+        assert_eq!(resp.error, decoded.error);
+    }
+
+    #[test]
+    fn auction_search_results_round_trip() {
+        let msg = AuctionSearchResults {
+            query: AuctionSearchQuery {
+                text: "linen".into(),
+                page: 0,
+                page_size: 20,
+                min_level: Some(1),
+                max_level: Some(10),
+                quality: Some(1),
+                usable_only: false,
+                sort_field: AuctionSortField::Name,
+                sort_dir: AuctionSortDir::Asc,
+            },
+            total_results: 1,
+            results: vec![AuctionListingSummary {
+                auction_id: 7,
+                item: AuctionInventoryItem {
+                    item_guid: 12,
+                    item_id: 2589,
+                    name: "Linen Cloth".into(),
+                    quality: 1,
+                    required_level: 1,
+                    stack_count: 20,
+                    vendor_sell_price: 13,
+                },
+                owner_name: "Seller".into(),
+                stack_count: 20,
+                min_bid: 100,
+                current_bid: Some(125),
+                min_next_bid: 131,
+                buyout_price: Some(200),
+                time_left: AuctionTimeLeft::Long,
+            }],
+        };
+        let encoded = serde_json::to_string(&msg).unwrap();
+        let decoded: AuctionSearchResults = serde_json::from_str(&encoded).unwrap();
+        assert_eq!(decoded.query.text, "linen");
+        assert_eq!(decoded.total_results, 1);
+        assert_eq!(decoded.results[0].auction_id, 7);
+        assert_eq!(decoded.results[0].item.name, "Linen Cloth");
+        assert_eq!(decoded.results[0].time_left, AuctionTimeLeft::Long);
+    }
 }
