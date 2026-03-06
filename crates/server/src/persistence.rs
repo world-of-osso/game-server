@@ -1,4 +1,7 @@
+use argon2::password_hash::SaltString;
+use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
 use bevy::prelude::*;
+use rand::rngs::OsRng;
 use redb::{Database, ReadableDatabase, ReadableTable, TableDefinition};
 use shared::components::{Health, Player, Position};
 use std::path::Path;
@@ -17,6 +20,12 @@ const ACCOUNT_CHARACTERS: TableDefinition<u64, &[u8]> = TableDefinition::new("ac
 
 /// Character name uniqueness: name (&str) -> character_id (u64).
 const CHARACTER_NAMES: TableDefinition<&str, u64> = TableDefinition::new("character_names");
+
+/// Password hashes: account_id (u64) -> argon2 hash string (bytes).
+const PASSWORDS: TableDefinition<u64, &[u8]> = TableDefinition::new("passwords");
+
+/// Username to account_id mapping: username (&str) -> account_id (u64).
+const USERNAME_ACCOUNTS: TableDefinition<&str, u64> = TableDefinition::new("username_accounts");
 
 /// Auto-increment counters: key (&str) -> next_id (u64).
 const NEXT_IDS: TableDefinition<&str, u64> = TableDefinition::new("next_ids");
@@ -84,6 +93,8 @@ fn create_tables(db: &Database) {
     let _ = txn.open_table(ACCOUNTS);
     let _ = txn.open_table(ACCOUNT_CHARACTERS);
     let _ = txn.open_table(CHARACTER_NAMES);
+    let _ = txn.open_table(PASSWORDS);
+    let _ = txn.open_table(USERNAME_ACCOUNTS);
     let _ = txn.open_table(NEXT_IDS);
     txn.commit().expect("Failed to commit initial tables");
 }
@@ -132,18 +143,123 @@ pub fn next_id(db: &Database, key: &str) -> u64 {
     id
 }
 
-/// Lookup an account by token, or create a new one. Returns (account_id, token).
-pub fn lookup_or_create_account(
+/// Authenticate via token or username+password. Returns (account_id, token) or error.
+pub fn login_with_credentials(
     db: &Database,
     token: Option<&str>,
-    _username: &str,
-) -> (u64, String) {
+    username: &str,
+    password: &str,
+) -> Result<(u64, String), String> {
     if let Some(tok) = token {
-        if let Some(account_id) = find_account_by_token(db, tok) {
-            return (account_id, tok.to_string());
+        if !tok.is_empty() {
+            if let Some(account_id) = find_account_by_token(db, tok) {
+                return Ok((account_id, tok.to_string()));
+            }
         }
     }
-    create_new_account(db)
+    let account_id = find_account_by_username(db, username)
+        .ok_or_else(|| "Account not found — please register first".to_string())?;
+    verify_account_password(db, account_id, password)?;
+    let token = generate_token_for_account(db, account_id);
+    Ok((account_id, token))
+}
+
+/// Look up account_id by username.
+fn find_account_by_username(db: &Database, username: &str) -> Option<u64> {
+    let txn = db.begin_read().expect("Failed to begin read txn");
+    let table = txn
+        .open_table(USERNAME_ACCOUNTS)
+        .expect("Failed to open username_accounts");
+    match table.get(username).expect("Failed to read username") {
+        Some(guard) => Some(guard.value()),
+        None => None,
+    }
+}
+
+/// Verify password against stored argon2 hash.
+fn verify_account_password(db: &Database, account_id: u64, password: &str) -> Result<(), String> {
+    let txn = db.begin_read().expect("Failed to begin read txn");
+    let table = txn
+        .open_table(PASSWORDS)
+        .expect("Failed to open passwords");
+    let hash_bytes = table
+        .get(account_id)
+        .expect("Failed to read password hash")
+        .ok_or_else(|| "No password set for account".to_string())?;
+    let hash_str = std::str::from_utf8(hash_bytes.value())
+        .map_err(|_| "Corrupt password hash".to_string())?;
+    let parsed = PasswordHash::new(hash_str)
+        .map_err(|_| "Corrupt password hash".to_string())?;
+    Argon2::default()
+        .verify_password(password.as_bytes(), &parsed)
+        .map_err(|_| "Invalid password".to_string())
+}
+
+/// Generate and store a new token for an existing account.
+fn generate_token_for_account(db: &Database, account_id: u64) -> String {
+    let token = uuid::Uuid::new_v4().to_string();
+    let txn = db.begin_write().expect("Failed to begin write txn");
+    {
+        let mut table = txn.open_table(ACCOUNTS).expect("Failed to open accounts");
+        table
+            .insert(token.as_str(), account_id)
+            .expect("Failed to insert token");
+    }
+    txn.commit().expect("Failed to commit token");
+    token
+}
+
+/// Register a new account with username and password. Returns (account_id, token).
+pub fn register_account(
+    db: &Database,
+    username: &str,
+    password: &str,
+) -> Result<(u64, String), String> {
+    if find_account_by_username(db, username).is_some() {
+        return Err("Username already taken".to_string());
+    }
+    let hash = hash_password(password)?;
+    let account_id = next_id(db, "account");
+    let token = uuid::Uuid::new_v4().to_string();
+    store_new_account(db, account_id, username, &hash, &token);
+    Ok((account_id, token))
+}
+
+/// Hash a password with argon2.
+fn hash_password(password: &str) -> Result<String, String> {
+    let salt = SaltString::generate(&mut OsRng);
+    Argon2::default()
+        .hash_password(password.as_bytes(), &salt)
+        .map(|h| h.to_string())
+        .map_err(|e| format!("Failed to hash password: {e}"))
+}
+
+/// Store account, username mapping, password hash, and token in one transaction.
+fn store_new_account(
+    db: &Database,
+    account_id: u64,
+    username: &str,
+    hash: &str,
+    token: &str,
+) {
+    let txn = db.begin_write().expect("Failed to begin write txn");
+    {
+        let mut accounts = txn.open_table(ACCOUNTS).expect("open accounts");
+        accounts
+            .insert(token, account_id)
+            .expect("insert account token");
+        let mut usernames = txn
+            .open_table(USERNAME_ACCOUNTS)
+            .expect("open username_accounts");
+        usernames
+            .insert(username, account_id)
+            .expect("insert username mapping");
+        let mut passwords = txn.open_table(PASSWORDS).expect("open passwords");
+        passwords
+            .insert(account_id, hash.as_bytes())
+            .expect("insert password hash");
+    }
+    txn.commit().expect("Failed to commit account creation");
 }
 
 /// Find an existing account by token.
@@ -156,20 +272,6 @@ fn find_account_by_token(db: &Database, token: &str) -> Option<u64> {
     }
 }
 
-/// Create a new account with a fresh UUID token.
-fn create_new_account(db: &Database) -> (u64, String) {
-    let account_id = next_id(db, "account");
-    let token = uuid::Uuid::new_v4().to_string();
-    let txn = db.begin_write().expect("Failed to begin write txn");
-    {
-        let mut table = txn.open_table(ACCOUNTS).expect("Failed to open accounts");
-        table
-            .insert(token.as_str(), account_id)
-            .expect("Failed to insert account");
-    }
-    txn.commit().expect("Failed to commit account creation");
-    (account_id, token)
-}
 
 /// List all characters for an account.
 pub fn list_characters_for_account(db: &Database, account_id: u64) -> Vec<(u64, CharacterData)> {
@@ -404,20 +506,58 @@ mod tests {
     }
 
     #[test]
-    fn lookup_creates_account_then_finds_by_token() {
+    fn register_and_login_by_token() {
         let db = temp_database();
-        let (id1, token) = lookup_or_create_account(&db, None, "user1");
+        let (id1, token) = register_account(&db, "user1", "pass123").unwrap();
         assert!(id1 > 0);
 
-        let (id2, token2) = lookup_or_create_account(&db, Some(&token), "user1");
+        let (id2, token2) =
+            login_with_credentials(&db, Some(&token), "user1", "").unwrap();
         assert_eq!(id1, id2);
         assert_eq!(token, token2);
     }
 
     #[test]
+    fn login_with_password() {
+        let db = temp_database();
+        let (id1, _) = register_account(&db, "user1", "secret").unwrap();
+
+        let (id2, _) =
+            login_with_credentials(&db, None, "user1", "secret").unwrap();
+        assert_eq!(id1, id2);
+    }
+
+    #[test]
+    fn login_wrong_password_fails() {
+        let db = temp_database();
+        register_account(&db, "user1", "correct").unwrap();
+
+        let result = login_with_credentials(&db, None, "user1", "wrong");
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Invalid password"));
+    }
+
+    #[test]
+    fn login_unknown_user_fails() {
+        let db = temp_database();
+        let result = login_with_credentials(&db, None, "nobody", "pass");
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("not found"));
+    }
+
+    #[test]
+    fn register_duplicate_username_fails() {
+        let db = temp_database();
+        register_account(&db, "user1", "pass").unwrap();
+        let result = register_account(&db, "user1", "other");
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("already taken"));
+    }
+
+    #[test]
     fn create_and_list_characters() {
         let db = temp_database();
-        let (account_id, _) = lookup_or_create_account(&db, None, "user1");
+        let (account_id, _) = register_account(&db, "user1", "pass").unwrap();
 
         let (cid, data) = create_character(&db, account_id, "Hero", 1, 2).unwrap();
         assert_eq!(data.name, "Hero");
@@ -433,8 +573,8 @@ mod tests {
     #[test]
     fn create_character_rejects_duplicate_name() {
         let db = temp_database();
-        let (acct1, _) = lookup_or_create_account(&db, None, "user1");
-        let (acct2, _) = lookup_or_create_account(&db, None, "user2");
+        let (acct1, _) = register_account(&db, "user1", "pass").unwrap();
+        let (acct2, _) = register_account(&db, "user2", "pass").unwrap();
 
         create_character(&db, acct1, "UniqueHero", 1, 1).unwrap();
         let result = create_character(&db, acct2, "UniqueHero", 2, 2);
@@ -445,7 +585,7 @@ mod tests {
     #[test]
     fn delete_character_removes_from_all_tables() {
         let db = temp_database();
-        let (account_id, _) = lookup_or_create_account(&db, None, "user1");
+        let (account_id, _) = register_account(&db, "user1", "pass").unwrap();
         let (cid, _) = create_character(&db, account_id, "ToDelete", 1, 1).unwrap();
 
         delete_character(&db, account_id, cid).unwrap();
@@ -460,8 +600,8 @@ mod tests {
     #[test]
     fn delete_character_rejects_wrong_account() {
         let db = temp_database();
-        let (acct1, _) = lookup_or_create_account(&db, None, "user1");
-        let (acct2, _) = lookup_or_create_account(&db, None, "user2");
+        let (acct1, _) = register_account(&db, "user1", "pass").unwrap();
+        let (acct2, _) = register_account(&db, "user2", "pass").unwrap();
         let (cid, _) = create_character(&db, acct1, "MyChar", 1, 1).unwrap();
 
         let result = delete_character(&db, acct2, cid);

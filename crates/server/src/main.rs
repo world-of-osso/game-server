@@ -1,3 +1,4 @@
+mod admin_ipc;
 mod auth;
 mod combat;
 mod creature_ai;
@@ -31,6 +32,7 @@ fn main() {
         .add_plugins(creature_ai::CreatureAiPlugin)
         .add_plugins(combat::CombatPlugin)
         .add_plugins(interest::InterestPlugin)
+        .add_plugins(admin_ipc::AdminIpcPlugin)
         .add_systems(Startup, on_startup)
         .add_systems(FixedUpdate, tick_log)
         .run();
@@ -46,3 +48,4 @@ fn tick_log(time: Res<Time>, mut tick_count: Local<u64>) {
         info!("Tick {} (uptime: {:.0}s)", *tick_count, time.elapsed_secs());
     }
 }
+

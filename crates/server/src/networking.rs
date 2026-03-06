@@ -44,6 +44,7 @@ impl Plugin for ServerNetworkPlugin {
         app.add_systems(FixedUpdate, stream_terrain_tiles);
         app.add_systems(FixedUpdate, process_target_messages);
         app.add_systems(FixedUpdate, auth::process_login_requests);
+        app.add_systems(FixedUpdate, auth::process_register_requests);
         app.add_systems(FixedUpdate, auth::process_create_character);
         app.add_systems(FixedUpdate, auth::process_delete_character);
         app.add_systems(FixedUpdate, auth::process_select_character);

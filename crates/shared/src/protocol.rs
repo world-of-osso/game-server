@@ -89,6 +89,7 @@ pub struct CharacterListEntry {
 pub struct LoginRequest {
     pub token: Option<String>,
     pub username: String,
+    pub password: String,
 }
 
 /// Server responds with auth result and character list.
@@ -97,6 +98,21 @@ pub struct LoginResponse {
     pub success: bool,
     pub token: String,
     pub characters: Vec<CharacterListEntry>,
+    pub error: Option<String>,
+}
+
+/// Client sends to register a new account.
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct RegisterRequest {
+    pub username: String,
+    pub password: String,
+}
+
+/// Server responds to account registration.
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct RegisterResponse {
+    pub success: bool,
+    pub token: String,
     pub error: Option<String>,
 }
 
@@ -195,6 +211,10 @@ fn register_messages(app: &mut App) {
     app.register_message::<LoginRequest>()
         .add_direction(NetworkDirection::ClientToServer);
     app.register_message::<LoginResponse>()
+        .add_direction(NetworkDirection::ServerToClient);
+    app.register_message::<RegisterRequest>()
+        .add_direction(NetworkDirection::ClientToServer);
+    app.register_message::<RegisterResponse>()
         .add_direction(NetworkDirection::ServerToClient);
     app.register_message::<CreateCharacter>()
         .add_direction(NetworkDirection::ClientToServer);

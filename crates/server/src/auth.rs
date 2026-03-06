@@ -4,7 +4,7 @@ use shared::components::{Health, MovementSpeed, Player, Position, Rotation};
 use shared::protocol::{
     AuthChannel, CreateCharacter, CreateCharacterResponse, DeleteCharacter,
     DeleteCharacterResponse, EnterWorldResponse, LoadTerrain, LoginRequest, LoginResponse,
-    SelectCharacter,
+    RegisterRequest, RegisterResponse, SelectCharacter,
 };
 use std::collections::HashSet;
 
@@ -98,8 +98,16 @@ fn handle_login(
     commands: &mut Commands,
 ) {
     let token_ref = req.token.as_deref();
-    let (account_id, token) =
-        persistence::lookup_or_create_account(&db.db, token_ref, &req.username);
+    let result =
+        persistence::login_with_credentials(&db.db, token_ref, &req.username, &req.password);
+
+    let (account_id, token) = match result {
+        Ok(pair) => pair,
+        Err(e) => {
+            send_login_error(entity, senders, &e);
+            return;
+        }
+    };
 
     if !connected.0.insert(account_id) {
         send_login_error(entity, senders, "Account already logged in");
@@ -157,6 +165,77 @@ fn send_login_error(
         token: String::new(),
         characters: Vec::new(),
         error: Some(error.to_string()),
+    });
+}
+
+/// Process registration requests from pending-auth connections.
+pub fn process_register_requests(
+    mut receivers: Query<(Entity, &mut MessageReceiver<RegisterRequest>), With<PendingAuth>>,
+    db: Option<Res<GameDatabase>>,
+    mut connected: ResMut<ConnectedAccounts>,
+    mut reg_senders: Query<&mut MessageSender<RegisterResponse>>,
+    mut login_senders: Query<&mut MessageSender<LoginResponse>>,
+    mut commands: Commands,
+) {
+    let Some(db) = db.as_ref() else { return };
+    let reqs: Vec<_> = collect_register_requests(&mut receivers);
+    for (entity, req) in reqs {
+        handle_register(
+            entity, &req, db, &mut connected,
+            &mut reg_senders, &mut login_senders, &mut commands,
+        );
+    }
+}
+
+fn collect_register_requests(
+    receivers: &mut Query<(Entity, &mut MessageReceiver<RegisterRequest>), With<PendingAuth>>,
+) -> Vec<(Entity, RegisterRequest)> {
+    let mut out = Vec::new();
+    for (entity, mut receiver) in receivers.iter_mut() {
+        for req in receiver.receive() {
+            out.push((entity, req));
+        }
+    }
+    out
+}
+
+fn handle_register(
+    entity: Entity,
+    req: &RegisterRequest,
+    db: &GameDatabase,
+    connected: &mut ConnectedAccounts,
+    reg_senders: &mut Query<&mut MessageSender<RegisterResponse>>,
+    _login_senders: &mut Query<&mut MessageSender<LoginResponse>>,
+    commands: &mut Commands,
+) {
+    match persistence::register_account(&db.db, &req.username, &req.password) {
+        Ok((account_id, token)) => {
+            connected.0.insert(account_id);
+            send_register_response(entity, reg_senders, true, &token, None);
+            commands
+                .entity(entity)
+                .remove::<(PendingAuth, PendingAuthTimer)>()
+                .insert(Authenticated { account_id });
+            info!("Account {account_id} registered for '{}'", req.username);
+        }
+        Err(e) => {
+            send_register_response(entity, reg_senders, false, "", Some(&e));
+        }
+    }
+}
+
+fn send_register_response(
+    entity: Entity,
+    senders: &mut Query<&mut MessageSender<RegisterResponse>>,
+    success: bool,
+    token: &str,
+    error: Option<&str>,
+) {
+    let Ok(mut sender) = senders.get_mut(entity) else { return };
+    sender.send::<AuthChannel>(RegisterResponse {
+        success,
+        token: token.to_string(),
+        error: error.map(|s| s.to_string()),
     });
 }
 
