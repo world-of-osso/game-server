@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use core::net::{IpAddr, Ipv4Addr, SocketAddr};
 use lightyear::prelude::server::*;
 use lightyear::prelude::*;
-use shared::components::{GuildMembership, Health, MovementSpeed, Player, Position, Rotation};
+use shared::components::{GuildMembership, Health, MovementSpeed, Npc, Player, Position, Rotation};
 use shared::protocol::{
     AuthChannel, ChatChannel, ChatHistoryRequest, ChatHistoryResponse, ChatMessage, ChatType,
     GuildAcceptInviteRequest, GuildAcceptInviteResponse, GuildInviteRequest, GuildInviteResponse,
@@ -81,7 +81,27 @@ fn start_server(mut commands: Commands) {
 }
 
 /// When a new transport link is established, insert a ReplicationSender.
-fn on_new_link(trigger: On<Add, LinkOf>, mut commands: Commands) {
+fn on_new_link(
+    trigger: On<Add, LinkOf>,
+    mut commands: Commands,
+    links: Query<(Has<Connected>, Has<ClientOf>, Has<ReplicationSender>), With<LinkOf>>,
+    replicated: Query<(Entity, Has<Player>, Has<Npc>), With<Replicate>>,
+) {
+    let replicated_count = replicated.iter().count();
+    let replicated_players = replicated.iter().filter(|(_, has_player, _)| *has_player).count();
+    let replicated_npcs = replicated.iter().filter(|(_, _, has_npc)| *has_npc).count();
+    if let Ok((connected, client_of, sender)) = links.get(trigger.entity) {
+        debug!(
+            entity = ?trigger.entity,
+            connected,
+            client_of,
+            sender,
+            replicated_count,
+            replicated_players,
+            replicated_npcs,
+            "LinkOf inserted; adding ReplicationSender"
+        );
+    }
     commands
         .entity(trigger.entity)
         .insert(ReplicationSender::new(
@@ -94,14 +114,66 @@ fn on_new_link(trigger: On<Add, LinkOf>, mut commands: Commands) {
 /// When a client connects, mark as pending auth (no player entity yet).
 fn on_client_connected(
     trigger: On<Add, Connected>,
-    query: Query<&RemoteId, With<ClientOf>>,
+    query: Query<
+        (
+            &RemoteId,
+            Has<ClientOf>,
+            Has<LinkOf>,
+            Has<ReplicationSender>,
+            Has<MessageSender<LoadTerrain>>,
+            Has<MessageSender<ChatMessage>>,
+            Has<MessageSender<shared::protocol::LoginResponse>>,
+        ),
+        With<Connected>,
+    >,
+    replicated: Query<
+        (Entity, Has<Player>, Has<Npc>, Has<NetworkVisibility>, Has<ReplicationState>),
+        With<Replicate>,
+    >,
     time: Res<Time>,
     mut commands: Commands,
 ) {
-    let Ok(remote_id) = query.get(trigger.entity) else {
+    let Ok((
+        remote_id,
+        has_client_of,
+        has_link_of,
+        has_sender,
+        has_terrain_sender,
+        has_chat_sender,
+        has_auth_sender,
+    )) = query.get(trigger.entity)
+    else {
         return;
     };
     let client_id = remote_id.0.to_bits();
+    let replicated_count = replicated.iter().count();
+    let replicated_players = replicated.iter().filter(|(_, has_player, _, _, _)| *has_player).count();
+    let replicated_npcs = replicated.iter().filter(|(_, _, has_npc, _, _)| *has_npc).count();
+    let visible_replicated = replicated
+        .iter()
+        .filter(|(_, _, _, has_visibility, _)| *has_visibility)
+        .count();
+    let stateful_replicated = replicated
+        .iter()
+        .filter(|(_, _, _, _, has_state)| *has_state)
+        .count();
+
+    debug!(
+        entity = ?trigger.entity,
+        client_id,
+        has_client_of,
+        has_link_of,
+        has_sender,
+        has_terrain_sender,
+        has_chat_sender,
+        has_auth_sender,
+        replicated_count,
+        replicated_players,
+        replicated_npcs,
+        visible_replicated,
+        stateful_replicated,
+        "Client connected"
+    );
     info!("Client connected: {client_id} (pending auth)");
     let elapsed = time.elapsed_secs_f64();
     commands
