@@ -60,6 +60,9 @@ pub enum CliState {
 struct AuthToken(Option<String>);
 
 #[derive(Resource, Default)]
+struct AuthRequestSent(bool);
+
+#[derive(Resource, Default)]
 struct CharacterList(Vec<shared::protocol::CharacterListEntry>);
 
 #[derive(Resource, Default)]
@@ -95,6 +98,7 @@ pub fn run(action: CliAction) {
 fn register_resources(app: &mut App, action: &CliAction) {
     app.insert_resource(action.clone());
     app.insert_resource(AuthToken(load_auth_token()));
+    app.init_resource::<AuthRequestSent>();
     app.init_resource::<CharacterList>();
     app.init_resource::<SelectedCharacterId>();
     app.insert_resource(StartTime(std::time::Instant::now()));
@@ -102,6 +106,7 @@ fn register_resources(app: &mut App, action: &CliAction) {
 
 fn register_systems(app: &mut App) {
     app.add_systems(Startup, connect_to_server);
+    app.add_systems(FixedUpdate, send_auth_request_when_ready);
     app.add_systems(
         Update,
         (
@@ -177,8 +182,6 @@ fn on_connected(
     _trigger: On<Add, Connected>,
     action: Res<CliAction>,
     auth_token: Res<AuthToken>,
-    mut login_senders: Query<&mut MessageSender<LoginRequest>>,
-    mut register_senders: Query<&mut MessageSender<RegisterRequest>>,
     mut next_state: ResMut<NextState<CliState>>,
 ) {
     println!("[cli] Connected to {}", action.server);
@@ -186,22 +189,39 @@ fn on_connected(
         eprintln!("[cli] No auth token available. Pass --token or login first.");
         std::process::exit(1);
     }
-    match &action.command {
-        CliCommand::Register => {
-            send_register_request(&action, &mut register_senders);
-        }
-        _ => {
-            send_login_request(&action, &auth_token, &mut login_senders);
-        }
-    }
     next_state.set(CliState::Authenticating);
+}
+
+fn send_auth_request_when_ready(
+    state: Res<State<CliState>>,
+    action: Res<CliAction>,
+    auth_token: Res<AuthToken>,
+    mut sent: ResMut<AuthRequestSent>,
+    mut login_senders: Query<&mut MessageSender<LoginRequest>>,
+    mut register_senders: Query<&mut MessageSender<RegisterRequest>>,
+) {
+    if *state.get() != CliState::Authenticating {
+        return;
+    }
+    if sent.0 {
+        return;
+    }
+
+    let sent_now = match &action.command {
+        CliCommand::Register => send_register_request(&action, &mut register_senders),
+        _ => send_login_request(&action, &auth_token, &mut login_senders),
+    };
+
+    if sent_now {
+        sent.0 = true;
+    }
 }
 
 fn send_login_request(
     action: &CliAction,
     auth_token: &AuthToken,
     senders: &mut Query<&mut MessageSender<LoginRequest>>,
-) {
+) -> bool {
     let token = effective_token(action, auth_token);
     let (username, password) = if matches!(action.command, CliCommand::Login) {
         (
@@ -217,21 +237,30 @@ fn send_login_request(
         username,
         password,
     };
+    let mut sent_count = 0;
     for mut sender in senders.iter_mut() {
         sender.send::<AuthChannel>(request.clone());
+        sent_count += 1;
     }
+
+    if sent_count == 0 {
+        return false;
+    }
+
     if matches!(action.command, CliCommand::Login) {
         let username = action.username.as_deref().unwrap_or("<missing>");
         println!("[cli] Sent login request for '{username}'");
     } else {
         println!("[cli] Sent token login request");
     }
+
+    true
 }
 
 fn send_register_request(
     action: &CliAction,
     senders: &mut Query<&mut MessageSender<RegisterRequest>>,
-) {
+) -> bool {
     let Some(username) = action.username.as_ref() else {
         eprintln!("[register] Missing username");
         std::process::exit(1);
@@ -245,10 +274,19 @@ fn send_register_request(
         username: username.clone(),
         password: password.clone(),
     };
+    let mut sent_count = 0;
     for mut sender in senders.iter_mut() {
         sender.send::<AuthChannel>(request.clone());
+        sent_count += 1;
     }
+
+    if sent_count == 0 {
+        return false;
+    }
+
     println!("[cli] Sent register request for '{}'", username);
+
+    true
 }
 
 // -- Response handlers --

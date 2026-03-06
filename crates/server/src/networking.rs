@@ -40,15 +40,15 @@ impl Plugin for ServerNetworkPlugin {
             FixedUpdate,
             apply_terrain_gravity.after(process_player_inputs),
         );
-        app.add_systems(FixedUpdate, process_chat_messages);
         app.add_systems(FixedUpdate, stream_terrain_tiles);
-        app.add_systems(FixedUpdate, process_target_messages);
-        app.add_systems(FixedUpdate, auth::process_login_requests);
-        app.add_systems(FixedUpdate, auth::process_register_requests);
-        app.add_systems(FixedUpdate, auth::process_create_character);
-        app.add_systems(FixedUpdate, auth::process_delete_character);
-        app.add_systems(FixedUpdate, auth::process_select_character);
-        app.add_systems(FixedUpdate, auth::auth_timeout);
+        app.add_systems(Update, process_chat_messages);
+        app.add_systems(Update, process_target_messages);
+        app.add_systems(Update, auth::process_login_requests);
+        app.add_systems(Update, auth::process_register_requests);
+        app.add_systems(Update, auth::process_create_character);
+        app.add_systems(Update, auth::process_delete_character);
+        app.add_systems(Update, auth::process_select_character);
+        app.add_systems(Update, auth::auth_timeout);
         app.add_observer(on_new_link);
         app.add_observer(on_client_connected);
         app.add_observer(on_client_disconnected);
@@ -101,7 +101,11 @@ fn on_client_connected(
 fn on_client_disconnected(
     trigger: On<Remove, Connected>,
     conn_query: Query<
-        (Option<&PlayerLink>, Option<&Authenticated>, Option<&InWorld>),
+        (
+            Option<&PlayerLink>,
+            Option<&Authenticated>,
+            Option<&InWorld>,
+        ),
         With<ClientOf>,
     >,
     player_query: Query<(&Position, &Health, &Player, &ClientId)>,
@@ -141,10 +145,7 @@ fn save_and_despawn(
 }
 
 /// Send the initial terrain loading command to a client.
-pub fn send_load_terrain(
-    connection: Entity,
-    senders: &mut Query<&mut MessageSender<LoadTerrain>>,
-) {
+pub fn send_load_terrain(connection: Entity, senders: &mut Query<&mut MessageSender<LoadTerrain>>) {
     let Ok(mut sender) = senders.get_mut(connection) else {
         warn!("No MessageSender<LoadTerrain> on connection entity");
         return;
@@ -267,7 +268,10 @@ fn collect_chat_messages(
                 continue;
             }
             info!("[Chat] {}: {}", msg.sender, msg.content);
-            outgoing.push(CollectedChat { msg, sender_guild_id });
+            outgoing.push(CollectedChat {
+                msg,
+                sender_guild_id,
+            });
         }
     }
     outgoing
@@ -294,7 +298,11 @@ fn send_to_guild(
 ) {
     let Some(gid) = sender_guild_id else { return };
     for (link, mut sender) in conns.iter_mut() {
-        let is_same_guild = guilds.get(link.0).ok().flatten().is_some_and(|g| g.guild_id == gid);
+        let is_same_guild = guilds
+            .get(link.0)
+            .ok()
+            .flatten()
+            .is_some_and(|g| g.guild_id == gid);
         if is_same_guild {
             sender.send::<ChatChannel>(msg.clone());
         }
@@ -340,7 +348,9 @@ fn stream_terrain_tiles(
     mut senders: Query<&mut MessageSender<LoadTerrain>>,
 ) {
     for (conn_entity, link, mut sent) in conn_q.iter_mut() {
-        let Ok(pos) = players.get(link.0) else { continue };
+        let Ok(pos) = players.get(link.0) else {
+            continue;
+        };
         send_nearby_tiles(conn_entity, pos, &mut sent, &mut senders);
     }
 }
@@ -357,7 +367,9 @@ fn send_nearby_tiles(
             let ty = (tile_y as i32 + dy).clamp(0, 63) as u32;
             let tx = (tile_x as i32 + dx).clamp(0, 63) as u32;
             if sent.tiles.insert((ty, tx)) {
-                let Ok(mut sender) = senders.get_mut(conn_entity) else { continue };
+                let Ok(mut sender) = senders.get_mut(conn_entity) else {
+                    continue;
+                };
                 sender.send::<TerrainChannel>(LoadTerrain {
                     map_name: "azeroth".into(),
                     initial_tile_y: ty,
@@ -378,9 +390,15 @@ mod tests {
         world
             .spawn((
                 Position { x, y, z },
-                Rotation { x: 0.0, y: 0.0, z: 0.0 },
+                Rotation {
+                    x: 0.0,
+                    y: 0.0,
+                    z: 0.0,
+                },
                 MovementSpeed(DEFAULT_RUN_SPEED),
-                Player { name: "test".into() },
+                Player {
+                    name: "test".into(),
+                },
             ))
             .id()
     }
@@ -413,7 +431,8 @@ mod tests {
             move |mut q: Query<
                 (&mut Position, &mut Rotation, &mut MovementSpeed),
                 With<Player>,
-            >, time: Res<Time>| {
+            >,
+                  time: Res<Time>| {
                 apply_movement_input(&input, player_a, &mut q, &time);
             },
         );
@@ -439,7 +458,8 @@ mod tests {
             move |mut q: Query<
                 (&mut Position, &mut Rotation, &mut MovementSpeed),
                 With<Player>,
-            >, time: Res<Time>| {
+            >,
+                  time: Res<Time>| {
                 apply_movement_input(&input, player, &mut q, &time);
             },
         );
@@ -461,7 +481,8 @@ mod tests {
             move |mut q: Query<
                 (&mut Position, &mut Rotation, &mut MovementSpeed),
                 With<Player>,
-            >, time: Res<Time>| {
+            >,
+                  time: Res<Time>| {
                 apply_movement_input(&input, player, &mut q, &time);
             },
         );
@@ -479,7 +500,8 @@ mod tests {
             move |mut q: Query<
                 (&mut Position, &mut Rotation, &mut MovementSpeed),
                 With<Player>,
-            >, time: Res<Time>| {
+            >,
+                  time: Res<Time>| {
                 apply_movement_input(&input, player, &mut q, &time);
             },
         );
@@ -493,7 +515,11 @@ mod tests {
     #[test]
     fn terrain_clamps_below_ground() {
         let map = crate::terrain_height::test_helpers::flat_terrain(100.0, 100.0, 50.0);
-        let mut pos = Position { x: 90.0, y: 90.0, z: 30.0 };
+        let mut pos = Position {
+            x: 90.0,
+            y: 90.0,
+            z: 30.0,
+        };
         clamp_to_terrain(&map, &mut pos, 0.05);
         assert!((pos.z - 50.0).abs() < 0.01);
     }
@@ -501,7 +527,11 @@ mod tests {
     #[test]
     fn terrain_applies_gravity() {
         let map = crate::terrain_height::test_helpers::flat_terrain(100.0, 100.0, 50.0);
-        let mut pos = Position { x: 90.0, y: 90.0, z: 60.0 };
+        let mut pos = Position {
+            x: 90.0,
+            y: 90.0,
+            z: 60.0,
+        };
         let dt = 0.05;
         clamp_to_terrain(&map, &mut pos, dt);
         let expected = 60.0 - GRAVITY * dt;
@@ -511,7 +541,11 @@ mod tests {
     #[test]
     fn terrain_on_ground_stays() {
         let map = crate::terrain_height::test_helpers::flat_terrain(100.0, 100.0, 50.0);
-        let mut pos = Position { x: 90.0, y: 90.0, z: 50.05 };
+        let mut pos = Position {
+            x: 90.0,
+            y: 90.0,
+            z: 50.05,
+        };
         clamp_to_terrain(&map, &mut pos, 0.05);
         assert!((pos.z - 50.05).abs() < 0.01);
     }

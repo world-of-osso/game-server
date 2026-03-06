@@ -64,7 +64,7 @@ pub fn auth_timeout(
 
 /// Process login requests from pending-auth connections.
 pub fn process_login_requests(
-    mut receivers: Query<(Entity, &mut MessageReceiver<LoginRequest>), With<PendingAuth>>,
+    mut receivers: Query<(Entity, &mut MessageReceiver<LoginRequest>)>,
     db: Option<Res<GameDatabase>>,
     mut connected: ResMut<ConnectedAccounts>,
     mut senders: Query<&mut MessageSender<LoginResponse>>,
@@ -85,7 +85,7 @@ pub fn process_login_requests(
 }
 
 fn collect_login_requests(
-    receivers: &mut Query<(Entity, &mut MessageReceiver<LoginRequest>), With<PendingAuth>>,
+    receivers: &mut Query<(Entity, &mut MessageReceiver<LoginRequest>)>,
 ) -> Vec<(Entity, LoginRequest)> {
     let mut out = Vec::new();
     for (entity, mut receiver) in receivers.iter_mut() {
@@ -179,7 +179,7 @@ fn send_login_error(
 
 /// Process registration requests from pending-auth connections.
 pub fn process_register_requests(
-    mut receivers: Query<(Entity, &mut MessageReceiver<RegisterRequest>), With<PendingAuth>>,
+    mut receivers: Query<(Entity, &mut MessageReceiver<RegisterRequest>)>,
     db: Option<Res<GameDatabase>>,
     mut reg_senders: Query<&mut MessageSender<RegisterResponse>>,
 ) {
@@ -191,7 +191,7 @@ pub fn process_register_requests(
 }
 
 fn collect_register_requests(
-    receivers: &mut Query<(Entity, &mut MessageReceiver<RegisterRequest>), With<PendingAuth>>,
+    receivers: &mut Query<(Entity, &mut MessageReceiver<RegisterRequest>)>,
 ) -> Vec<(Entity, RegisterRequest)> {
     let mut out = Vec::new();
     for (entity, mut receiver) in receivers.iter_mut() {
