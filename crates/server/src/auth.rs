@@ -73,7 +73,14 @@ pub fn process_login_requests(
     let Some(db) = db.as_ref() else { return };
     let logins: Vec<_> = collect_login_requests(&mut receivers);
     for (entity, req) in logins {
-        handle_login(entity, &req, db, &mut connected, &mut senders, &mut commands);
+        handle_login(
+            entity,
+            &req,
+            db,
+            &mut connected,
+            &mut senders,
+            &mut commands,
+        );
     }
 }
 
@@ -124,9 +131,7 @@ fn handle_login(
     info!("Account {account_id} authenticated");
 }
 
-fn chars_to_entries(
-    chars: &[(u64, CharacterData)],
-) -> Vec<shared::protocol::CharacterListEntry> {
+fn chars_to_entries(chars: &[(u64, CharacterData)]) -> Vec<shared::protocol::CharacterListEntry> {
     chars
         .iter()
         .map(|(id, data)| shared::protocol::CharacterListEntry {
@@ -145,7 +150,9 @@ fn send_login_success(
     token: &str,
     characters: Vec<shared::protocol::CharacterListEntry>,
 ) {
-    let Ok(mut sender) = senders.get_mut(entity) else { return };
+    let Ok(mut sender) = senders.get_mut(entity) else {
+        return;
+    };
     sender.send::<AuthChannel>(LoginResponse {
         success: true,
         token: token.to_string(),
@@ -159,7 +166,9 @@ fn send_login_error(
     senders: &mut Query<&mut MessageSender<LoginResponse>>,
     error: &str,
 ) {
-    let Ok(mut sender) = senders.get_mut(entity) else { return };
+    let Ok(mut sender) = senders.get_mut(entity) else {
+        return;
+    };
     sender.send::<AuthChannel>(LoginResponse {
         success: false,
         token: String::new(),
@@ -172,18 +181,12 @@ fn send_login_error(
 pub fn process_register_requests(
     mut receivers: Query<(Entity, &mut MessageReceiver<RegisterRequest>), With<PendingAuth>>,
     db: Option<Res<GameDatabase>>,
-    mut connected: ResMut<ConnectedAccounts>,
     mut reg_senders: Query<&mut MessageSender<RegisterResponse>>,
-    mut login_senders: Query<&mut MessageSender<LoginResponse>>,
-    mut commands: Commands,
 ) {
     let Some(db) = db.as_ref() else { return };
     let reqs: Vec<_> = collect_register_requests(&mut receivers);
     for (entity, req) in reqs {
-        handle_register(
-            entity, &req, db, &mut connected,
-            &mut reg_senders, &mut login_senders, &mut commands,
-        );
+        handle_register(entity, &req, db, &mut reg_senders);
     }
 }
 
@@ -203,23 +206,18 @@ fn handle_register(
     entity: Entity,
     req: &RegisterRequest,
     db: &GameDatabase,
-    connected: &mut ConnectedAccounts,
     reg_senders: &mut Query<&mut MessageSender<RegisterResponse>>,
-    _login_senders: &mut Query<&mut MessageSender<LoginResponse>>,
-    commands: &mut Commands,
 ) {
-    match persistence::register_account(&db.db, &req.username, &req.password) {
-        Ok((account_id, token)) => {
-            connected.0.insert(account_id);
-            send_register_response(entity, reg_senders, true, &token, None);
-            commands
-                .entity(entity)
-                .remove::<(PendingAuth, PendingAuthTimer)>()
-                .insert(Authenticated { account_id });
-            info!("Account {account_id} registered for '{}'", req.username);
+    match persistence::request_registration(&db.db, &req.username, &req.password) {
+        Ok(()) => {
+            send_register_response(entity, reg_senders, false, "", true, None);
+            info!(
+                "Registration submitted for '{}' (pending approval)",
+                req.username
+            );
         }
         Err(e) => {
-            send_register_response(entity, reg_senders, false, "", Some(&e));
+            send_register_response(entity, reg_senders, false, "", false, Some(&e));
         }
     }
 }
@@ -229,19 +227,27 @@ fn send_register_response(
     senders: &mut Query<&mut MessageSender<RegisterResponse>>,
     success: bool,
     token: &str,
+    pending_approval: bool,
     error: Option<&str>,
 ) {
-    let Ok(mut sender) = senders.get_mut(entity) else { return };
+    let Ok(mut sender) = senders.get_mut(entity) else {
+        return;
+    };
     sender.send::<AuthChannel>(RegisterResponse {
         success,
         token: token.to_string(),
+        pending_approval,
         error: error.map(|s| s.to_string()),
     });
 }
 
 /// Process character creation requests from authenticated connections.
 pub fn process_create_character(
-    mut receivers: Query<(Entity, &Authenticated, &mut MessageReceiver<CreateCharacter>)>,
+    mut receivers: Query<(
+        Entity,
+        &Authenticated,
+        &mut MessageReceiver<CreateCharacter>,
+    )>,
     db: Option<Res<GameDatabase>>,
     mut senders: Query<&mut MessageSender<CreateCharacterResponse>>,
 ) {
@@ -253,7 +259,11 @@ pub fn process_create_character(
 }
 
 fn collect_create_requests(
-    receivers: &mut Query<(Entity, &Authenticated, &mut MessageReceiver<CreateCharacter>)>,
+    receivers: &mut Query<(
+        Entity,
+        &Authenticated,
+        &mut MessageReceiver<CreateCharacter>,
+    )>,
 ) -> Vec<(Entity, u64, CreateCharacter)> {
     let mut out = Vec::new();
     for (entity, auth, mut receiver) in receivers.iter_mut() {
@@ -271,7 +281,9 @@ fn handle_create(
     db: &GameDatabase,
     senders: &mut Query<&mut MessageSender<CreateCharacterResponse>>,
 ) {
-    let Ok(mut sender) = senders.get_mut(entity) else { return };
+    let Ok(mut sender) = senders.get_mut(entity) else {
+        return;
+    };
     match persistence::create_character(&db.db, account_id, &req.name, req.race, req.class) {
         Ok((cid, data)) => {
             let entry = shared::protocol::CharacterListEntry {
@@ -299,7 +311,11 @@ fn handle_create(
 
 /// Process character deletion requests from authenticated connections.
 pub fn process_delete_character(
-    mut receivers: Query<(Entity, &Authenticated, &mut MessageReceiver<DeleteCharacter>)>,
+    mut receivers: Query<(
+        Entity,
+        &Authenticated,
+        &mut MessageReceiver<DeleteCharacter>,
+    )>,
     db: Option<Res<GameDatabase>>,
     mut senders: Query<&mut MessageSender<DeleteCharacterResponse>>,
 ) {
@@ -311,7 +327,11 @@ pub fn process_delete_character(
 }
 
 fn collect_delete_requests(
-    receivers: &mut Query<(Entity, &Authenticated, &mut MessageReceiver<DeleteCharacter>)>,
+    receivers: &mut Query<(
+        Entity,
+        &Authenticated,
+        &mut MessageReceiver<DeleteCharacter>,
+    )>,
 ) -> Vec<(Entity, u64, DeleteCharacter)> {
     let mut out = Vec::new();
     for (entity, auth, mut receiver) in receivers.iter_mut() {
@@ -329,7 +349,9 @@ fn handle_delete(
     db: &GameDatabase,
     senders: &mut Query<&mut MessageSender<DeleteCharacterResponse>>,
 ) {
-    let Ok(mut sender) = senders.get_mut(entity) else { return };
+    let Ok(mut sender) = senders.get_mut(entity) else {
+        return;
+    };
     match persistence::delete_character(&db.db, account_id, req.character_id) {
         Ok(()) => {
             sender.send::<AuthChannel>(DeleteCharacterResponse {
@@ -351,7 +373,11 @@ fn handle_delete(
 /// Process character selection and world entry.
 pub fn process_select_character(
     mut receivers: Query<
-        (Entity, &Authenticated, &mut MessageReceiver<SelectCharacter>),
+        (
+            Entity,
+            &Authenticated,
+            &mut MessageReceiver<SelectCharacter>,
+        ),
         Without<InWorld>,
     >,
     db: Option<Res<GameDatabase>>,
@@ -363,15 +389,24 @@ pub fn process_select_character(
     let requests: Vec<_> = collect_select_requests(&mut receivers);
     for (entity, account_id, req) in requests {
         handle_select(
-            entity, account_id, &req, db,
-            &mut enter_senders, &mut terrain_senders, &mut commands,
+            entity,
+            account_id,
+            &req,
+            db,
+            &mut enter_senders,
+            &mut terrain_senders,
+            &mut commands,
         );
     }
 }
 
 fn collect_select_requests(
     receivers: &mut Query<
-        (Entity, &Authenticated, &mut MessageReceiver<SelectCharacter>),
+        (
+            Entity,
+            &Authenticated,
+            &mut MessageReceiver<SelectCharacter>,
+        ),
         Without<InWorld>,
     >,
 ) -> Vec<(Entity, u64, SelectCharacter)> {
@@ -405,7 +440,10 @@ fn handle_select(
     insert_world_components(commands, conn, player_entity, req.character_id);
     send_enter_success(conn, enter_senders, player_entity);
     send_load_terrain(conn, terrain_senders);
-    info!("Character {} entered world (account {})", req.character_id, account_id);
+    info!(
+        "Character {} entered world (account {})",
+        req.character_id, account_id
+    );
 }
 
 fn validate_ownership(db: &GameDatabase, account_id: u64, character_id: u64) -> bool {
@@ -429,7 +467,9 @@ fn insert_world_components(
     }
     commands.entity(conn).insert((
         PlayerLink(player_entity),
-        SentTiles { tiles: initial_tiles },
+        SentTiles {
+            tiles: initial_tiles,
+        },
         InWorld { character_id },
     ));
 }
@@ -439,7 +479,9 @@ fn send_enter_success(
     senders: &mut Query<&mut MessageSender<EnterWorldResponse>>,
     player_entity: Entity,
 ) {
-    let Ok(mut sender) = senders.get_mut(entity) else { return };
+    let Ok(mut sender) = senders.get_mut(entity) else {
+        return;
+    };
     sender.send::<AuthChannel>(EnterWorldResponse {
         success: true,
         player_entity: Some(player_entity.to_bits()),
@@ -452,7 +494,9 @@ fn send_enter_error(
     senders: &mut Query<&mut MessageSender<EnterWorldResponse>>,
     error: &str,
 ) {
-    let Ok(mut sender) = senders.get_mut(entity) else { return };
+    let Ok(mut sender) = senders.get_mut(entity) else {
+        return;
+    };
     sender.send::<AuthChannel>(EnterWorldResponse {
         success: false,
         player_entity: None,
@@ -466,20 +510,38 @@ pub fn spawn_player_entity(
     data: &CharacterData,
     character_id: u64,
 ) -> Entity {
-    let pos = Position { x: data.x, y: data.y, z: data.z };
-    let health = Health { current: data.health, max: data.max_health };
-    let rotation = Rotation { x: 0.0, y: 0.0, z: 0.0 };
+    let pos = Position {
+        x: data.x,
+        y: data.y,
+        z: data.z,
+    };
+    let health = Health {
+        current: data.health,
+        max: data.max_health,
+    };
+    let rotation = Rotation {
+        x: 0.0,
+        y: 0.0,
+        z: 0.0,
+    };
     let entity = commands
         .spawn((
-            pos, health, rotation,
+            pos,
+            health,
+            rotation,
             MovementSpeed(DEFAULT_RUN_SPEED),
-            Player { name: data.name.clone() },
+            Player {
+                name: data.name.clone(),
+            },
             ClientId(character_id),
             CombatTarget::default(),
             Replicate::new(ReplicationMode::SingleServer(NetworkTarget::All)),
             NetworkVisibility,
         ))
         .id();
-    info!("Spawned player '{}' at ({}, {}, {})", data.name, pos.x, pos.y, pos.z);
+    info!(
+        "Spawned player '{}' at ({}, {}, {})",
+        data.name, pos.x, pos.y, pos.z
+    );
     entity
 }

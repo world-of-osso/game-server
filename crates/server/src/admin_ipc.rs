@@ -13,6 +13,7 @@ const SOCKET_PATH: &str = "/tmp/game-server-admin.sock";
 #[derive(Debug, Serialize, Deserialize)]
 pub enum AdminRequest {
     CreateAccount { username: String, password: String },
+    ApproveRegistration { username: String },
     Ping,
 }
 
@@ -20,6 +21,7 @@ pub enum AdminRequest {
 #[derive(Debug, Serialize, Deserialize)]
 pub enum AdminResponse {
     AccountCreated { account_id: u64, token: String },
+    RegistrationApproved { account_id: u64, token: String },
     Pong,
     Error(String),
 }
@@ -143,6 +145,15 @@ fn dispatch(cmd: AdminCommand, db: &persistence::GameDatabase) {
         AdminRequest::CreateAccount { username, password } => {
             let response = match persistence::register_account(&db.db, &username, &password) {
                 Ok((account_id, token)) => AdminResponse::AccountCreated { account_id, token },
+                Err(e) => AdminResponse::Error(e),
+            };
+            let _ = cmd.respond.send(response);
+        }
+        AdminRequest::ApproveRegistration { username } => {
+            let response = match persistence::approve_registration(&db.db, &username) {
+                Ok((account_id, token)) => {
+                    AdminResponse::RegistrationApproved { account_id, token }
+                }
                 Err(e) => AdminResponse::Error(e),
             };
             let _ = cmd.respond.send(response);

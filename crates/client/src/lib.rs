@@ -24,6 +24,7 @@ const AUTH_TOKEN_PATH: &str = "data/auth_token";
 #[derive(Clone, Debug)]
 pub enum CliCommand {
     Login,
+    Status,
     Register,
     ChatSend(String),
     ChatListen,
@@ -35,8 +36,9 @@ pub enum CliCommand {
 pub struct CliAction {
     pub command: CliCommand,
     pub server: SocketAddr,
-    pub username: String,
-    pub password: String,
+    pub username: Option<String>,
+    pub password: Option<String>,
+    pub token: Option<String>,
 }
 
 // -- State machine --
@@ -72,9 +74,11 @@ struct StartTime(std::time::Instant);
 /// Build and run the headless CLI app. Blocks until exit.
 pub fn run(action: CliAction) {
     let mut app = App::new();
-    app.add_plugins(MinimalPlugins.set(bevy::app::ScheduleRunnerPlugin::run_loop(
-        Duration::from_millis(10),
-    )));
+    app.add_plugins(
+        MinimalPlugins.set(bevy::app::ScheduleRunnerPlugin::run_loop(
+            Duration::from_millis(10),
+        )),
+    );
     app.add_plugins(bevy::log::LogPlugin::default());
     app.add_plugins(bevy::state::app::StatesPlugin);
     app.add_plugins(ClientPlugins {
@@ -178,6 +182,10 @@ fn on_connected(
     mut next_state: ResMut<NextState<CliState>>,
 ) {
     println!("[cli] Connected to {}", action.server);
+    if needs_token(&action.command) && effective_token(&action, &auth_token).is_none() {
+        eprintln!("[cli] No auth token available. Pass --token or login first.");
+        std::process::exit(1);
+    }
     match &action.command {
         CliCommand::Register => {
             send_register_request(&action, &mut register_senders);
@@ -194,29 +202,53 @@ fn send_login_request(
     auth_token: &AuthToken,
     senders: &mut Query<&mut MessageSender<LoginRequest>>,
 ) {
+    let token = effective_token(action, auth_token);
+    let (username, password) = if matches!(action.command, CliCommand::Login) {
+        (
+            action.username.clone().unwrap_or_default(),
+            action.password.clone().unwrap_or_default(),
+        )
+    } else {
+        (String::new(), String::new())
+    };
+
     let request = LoginRequest {
-        token: auth_token.0.clone(),
-        username: action.username.clone(),
-        password: action.password.clone(),
+        token,
+        username,
+        password,
     };
     for mut sender in senders.iter_mut() {
         sender.send::<AuthChannel>(request.clone());
     }
-    println!("[cli] Sent login request for '{}'", action.username);
+    if matches!(action.command, CliCommand::Login) {
+        let username = action.username.as_deref().unwrap_or("<missing>");
+        println!("[cli] Sent login request for '{username}'");
+    } else {
+        println!("[cli] Sent token login request");
+    }
 }
 
 fn send_register_request(
     action: &CliAction,
     senders: &mut Query<&mut MessageSender<RegisterRequest>>,
 ) {
+    let Some(username) = action.username.as_ref() else {
+        eprintln!("[register] Missing username");
+        std::process::exit(1);
+    };
+    let Some(password) = action.password.as_ref() else {
+        eprintln!("[register] Missing password");
+        std::process::exit(1);
+    };
+
     let request = RegisterRequest {
-        username: action.username.clone(),
-        password: action.password.clone(),
+        username: username.clone(),
+        password: password.clone(),
     };
     for mut sender in senders.iter_mut() {
         sender.send::<AuthChannel>(request.clone());
     }
-    println!("[cli] Sent register request for '{}'", action.username);
+    println!("[cli] Sent register request for '{}'", username);
 }
 
 // -- Response handlers --
@@ -292,7 +324,7 @@ fn after_login(
     exit: &mut MessageWriter<AppExit>,
 ) {
     match &action.command {
-        CliCommand::Login => {
+        CliCommand::Login | CliCommand::Status => {
             next_state.set(CliState::Done);
             exit.write(AppExit::Success);
         }
@@ -335,11 +367,10 @@ fn receive_register_response(
                 save_auth_token(&resp.token);
                 auth_token.0 = Some(resp.token);
                 println!("[register] Success! Account created.");
+            } else if resp.pending_approval {
+                println!("[register] Registration submitted and pending admin approval.");
             } else {
-                eprintln!(
-                    "[register] Failed: {}",
-                    resp.error.unwrap_or_default()
-                );
+                eprintln!("[register] Failed: {}", resp.error.unwrap_or_default());
             }
             exit.write(AppExit::Success);
         }
@@ -387,7 +418,7 @@ fn send_chat_on_enter_world(
         _ => return,
     };
     let msg = ChatMessage {
-        sender: action.username.clone(),
+        sender: action.username.clone().unwrap_or_else(|| "cli".to_string()),
         content: text.clone(),
         channel,
     };
@@ -408,11 +439,18 @@ fn receive_chat_messages(
 ) {
     for mut receiver in receivers.iter_mut() {
         for msg in receiver.receive() {
-            let prefix = if msg.channel == ChatType::Guild { "Guild" } else { "chat" };
+            let prefix = if msg.channel == ChatType::Guild {
+                "Guild"
+            } else {
+                "chat"
+            };
             println!("[{prefix}] <{}> {}", msg.sender, msg.content);
             *received_count += 1;
             // For ChatSend/GuildChat, exit after receiving the echo
-            if matches!(action.command, CliCommand::ChatSend(_) | CliCommand::GuildChat(_)) {
+            if matches!(
+                action.command,
+                CliCommand::ChatSend(_) | CliCommand::GuildChat(_)
+            ) {
                 exit.write(AppExit::Success);
             }
         }
@@ -429,8 +467,7 @@ fn timeout_system(
 ) {
     let elapsed = start.0.elapsed().as_secs();
     // ChatListen stays connected indefinitely
-    if matches!(action.command, CliCommand::ChatListen) && *state.get() == CliState::InWorld
-    {
+    if matches!(action.command, CliCommand::ChatListen) && *state.get() == CliState::InWorld {
         return;
     }
     if elapsed > 10 {
@@ -447,4 +484,12 @@ fn rand_client_id() -> u64 {
         .duration_since(SystemTime::UNIX_EPOCH)
         .unwrap_or_default()
         .as_nanos() as u64
+}
+
+fn needs_token(command: &CliCommand) -> bool {
+    !matches!(command, CliCommand::Login | CliCommand::Register)
+}
+
+fn effective_token(action: &CliAction, auth_token: &AuthToken) -> Option<String> {
+    action.token.clone().or_else(|| auth_token.0.clone())
 }

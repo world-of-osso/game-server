@@ -115,6 +115,7 @@ pub struct RegisterRequest {
 pub struct RegisterResponse {
     pub success: bool,
     pub token: String,
+    pub pending_approval: bool,
     pub error: Option<String>,
 }
 

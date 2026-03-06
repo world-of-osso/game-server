@@ -27,6 +27,10 @@ const PASSWORDS: TableDefinition<u64, &[u8]> = TableDefinition::new("passwords")
 /// Username to account_id mapping: username (&str) -> account_id (u64).
 const USERNAME_ACCOUNTS: TableDefinition<&str, u64> = TableDefinition::new("username_accounts");
 
+/// Pending registrations: username (&str) -> argon2 hash string (bytes).
+const PENDING_REGISTRATIONS: TableDefinition<&str, &[u8]> =
+    TableDefinition::new("pending_registrations");
+
 /// Auto-increment counters: key (&str) -> next_id (u64).
 const NEXT_IDS: TableDefinition<&str, u64> = TableDefinition::new("next_ids");
 
@@ -95,6 +99,7 @@ fn create_tables(db: &Database) {
     let _ = txn.open_table(CHARACTER_NAMES);
     let _ = txn.open_table(PASSWORDS);
     let _ = txn.open_table(USERNAME_ACCOUNTS);
+    let _ = txn.open_table(PENDING_REGISTRATIONS);
     let _ = txn.open_table(NEXT_IDS);
     txn.commit().expect("Failed to commit initial tables");
 }
@@ -121,7 +126,9 @@ pub fn load_character(db: &Database, character_id: u64) -> Option<CharacterData>
         .open_table(CHARACTERS)
         .expect("Failed to open characters table");
     match table.get(character_id).expect("Failed to read character") {
-        Some(guard) => Some(bitcode::decode::<CharacterData>(guard.value()).expect("Failed to decode")),
+        Some(guard) => {
+            Some(bitcode::decode::<CharacterData>(guard.value()).expect("Failed to decode"))
+        }
         None => None,
     }
 }
@@ -157,8 +164,13 @@ pub fn login_with_credentials(
             }
         }
     }
-    let account_id = find_account_by_username(db, username)
-        .ok_or_else(|| "Account not found — please register first".to_string())?;
+    let account_id = find_account_by_username(db, username).ok_or_else(|| {
+        if is_username_pending(db, username) {
+            "Account pending admin approval".to_string()
+        } else {
+            "Account not found — please register first".to_string()
+        }
+    })?;
     verify_account_password(db, account_id, password)?;
     let token = generate_token_for_account(db, account_id);
     Ok((account_id, token))
@@ -179,17 +191,14 @@ fn find_account_by_username(db: &Database, username: &str) -> Option<u64> {
 /// Verify password against stored argon2 hash.
 fn verify_account_password(db: &Database, account_id: u64, password: &str) -> Result<(), String> {
     let txn = db.begin_read().expect("Failed to begin read txn");
-    let table = txn
-        .open_table(PASSWORDS)
-        .expect("Failed to open passwords");
+    let table = txn.open_table(PASSWORDS).expect("Failed to open passwords");
     let hash_bytes = table
         .get(account_id)
         .expect("Failed to read password hash")
         .ok_or_else(|| "No password set for account".to_string())?;
-    let hash_str = std::str::from_utf8(hash_bytes.value())
-        .map_err(|_| "Corrupt password hash".to_string())?;
-    let parsed = PasswordHash::new(hash_str)
-        .map_err(|_| "Corrupt password hash".to_string())?;
+    let hash_str =
+        std::str::from_utf8(hash_bytes.value()).map_err(|_| "Corrupt password hash".to_string())?;
+    let parsed = PasswordHash::new(hash_str).map_err(|_| "Corrupt password hash".to_string())?;
     Argon2::default()
         .verify_password(password.as_bytes(), &parsed)
         .map_err(|_| "Invalid password".to_string())
@@ -218,10 +227,79 @@ pub fn register_account(
     if find_account_by_username(db, username).is_some() {
         return Err("Username already taken".to_string());
     }
+    if is_username_pending(db, username) {
+        return Err("Username has a pending registration".to_string());
+    }
     let hash = hash_password(password)?;
     let account_id = next_id(db, "account");
     let token = uuid::Uuid::new_v4().to_string();
     store_new_account(db, account_id, username, &hash, &token);
+    Ok((account_id, token))
+}
+
+/// Store a registration request for later admin approval.
+pub fn request_registration(db: &Database, username: &str, password: &str) -> Result<(), String> {
+    if find_account_by_username(db, username).is_some() {
+        return Err("Username already taken".to_string());
+    }
+    if is_username_pending(db, username) {
+        return Err("Registration already pending approval".to_string());
+    }
+
+    let hash = hash_password(password)?;
+    let txn = db.begin_write().expect("Failed to begin write txn");
+    {
+        let mut pending = txn
+            .open_table(PENDING_REGISTRATIONS)
+            .expect("open pending_registrations");
+        pending
+            .insert(username, hash.as_bytes())
+            .expect("insert pending registration");
+    }
+    txn.commit().expect("Failed to commit pending registration");
+    Ok(())
+}
+
+/// Approve a pending registration and create an active account.
+pub fn approve_registration(db: &Database, username: &str) -> Result<(u64, String), String> {
+    if find_account_by_username(db, username).is_some() {
+        return Err("Username already approved".to_string());
+    }
+
+    let hash = load_pending_hash(db, username)
+        .ok_or_else(|| "No pending registration for username".to_string())?;
+
+    let account_id = next_id(db, "account");
+    let token = uuid::Uuid::new_v4().to_string();
+
+    let txn = db.begin_write().expect("Failed to begin write txn");
+    {
+        let mut accounts = txn.open_table(ACCOUNTS).expect("open accounts");
+        accounts
+            .insert(token.as_str(), account_id)
+            .expect("insert account token");
+
+        let mut usernames = txn
+            .open_table(USERNAME_ACCOUNTS)
+            .expect("open username_accounts");
+        usernames
+            .insert(username, account_id)
+            .expect("insert username mapping");
+
+        let mut passwords = txn.open_table(PASSWORDS).expect("open passwords");
+        passwords
+            .insert(account_id, hash.as_bytes())
+            .expect("insert password hash");
+
+        let mut pending = txn
+            .open_table(PENDING_REGISTRATIONS)
+            .expect("open pending_registrations");
+        pending
+            .remove(username)
+            .expect("remove pending registration");
+    }
+    txn.commit().expect("Failed to commit account approval");
+
     Ok((account_id, token))
 }
 
@@ -235,13 +313,7 @@ fn hash_password(password: &str) -> Result<String, String> {
 }
 
 /// Store account, username mapping, password hash, and token in one transaction.
-fn store_new_account(
-    db: &Database,
-    account_id: u64,
-    username: &str,
-    hash: &str,
-    token: &str,
-) {
+fn store_new_account(db: &Database, account_id: u64, username: &str, hash: &str, token: &str) {
     let txn = db.begin_write().expect("Failed to begin write txn");
     {
         let mut accounts = txn.open_table(ACCOUNTS).expect("open accounts");
@@ -272,6 +344,27 @@ fn find_account_by_token(db: &Database, token: &str) -> Option<u64> {
     }
 }
 
+fn is_username_pending(db: &Database, username: &str) -> bool {
+    let txn = db.begin_read().expect("Failed to begin read txn");
+    let table = txn
+        .open_table(PENDING_REGISTRATIONS)
+        .expect("Failed to open pending_registrations");
+    table
+        .get(username)
+        .expect("Failed to read pending username")
+        .is_some()
+}
+
+fn load_pending_hash(db: &Database, username: &str) -> Option<String> {
+    let txn = db.begin_read().expect("Failed to begin read txn");
+    let table = txn
+        .open_table(PENDING_REGISTRATIONS)
+        .expect("Failed to open pending_registrations");
+    let hash = table
+        .get(username)
+        .expect("Failed to read pending registration")?;
+    std::str::from_utf8(hash.value()).ok().map(str::to_owned)
+}
 
 /// List all characters for an account.
 pub fn list_characters_for_account(db: &Database, account_id: u64) -> Vec<(u64, CharacterData)> {
@@ -292,7 +385,9 @@ fn load_account_char_ids(db: &Database, account_id: u64) -> Vec<u64> {
         .open_table(ACCOUNT_CHARACTERS)
         .expect("Failed to open account_characters");
     match table.get(account_id).expect("Failed to read account chars") {
-        Some(guard) => bitcode::decode::<Vec<u64>>(guard.value()).expect("Failed to decode char ids"),
+        Some(guard) => {
+            bitcode::decode::<Vec<u64>>(guard.value()).expect("Failed to decode char ids")
+        }
         None => Vec::new(),
     }
 }
@@ -369,10 +464,7 @@ fn save_new_character(
 }
 
 /// Read character IDs from an open account_characters table.
-fn read_char_ids_from_table(
-    table: &redb::Table<u64, &[u8]>,
-    account_id: u64,
-) -> Vec<u64> {
+fn read_char_ids_from_table(table: &redb::Table<u64, &[u8]>, account_id: u64) -> Vec<u64> {
     match table.get(account_id).expect("read acct chars") {
         Some(guard) => bitcode::decode::<Vec<u64>>(guard.value()).expect("decode char ids"),
         None => Vec::new(),
@@ -380,11 +472,7 @@ fn read_char_ids_from_table(
 }
 
 /// Delete a character, validating account ownership first.
-pub fn delete_character(
-    db: &Database,
-    account_id: u64,
-    character_id: u64,
-) -> Result<(), String> {
+pub fn delete_character(db: &Database, account_id: u64, character_id: u64) -> Result<(), String> {
     let char_ids = load_account_char_ids(db, account_id);
     if !char_ids.contains(&character_id) {
         return Err("Character does not belong to this account".into());
@@ -404,7 +492,11 @@ fn remove_character(
     name: &str,
     char_ids: &[u64],
 ) {
-    let remaining: Vec<u64> = char_ids.iter().copied().filter(|&id| id != character_id).collect();
+    let remaining: Vec<u64> = char_ids
+        .iter()
+        .copied()
+        .filter(|&id| id != character_id)
+        .collect();
     let encoded = bitcode::encode(&remaining);
     let txn = db.begin_write().expect("Failed to begin write txn");
     {
@@ -511,8 +603,7 @@ mod tests {
         let (id1, token) = register_account(&db, "user1", "pass123").unwrap();
         assert!(id1 > 0);
 
-        let (id2, token2) =
-            login_with_credentials(&db, Some(&token), "user1", "").unwrap();
+        let (id2, token2) = login_with_credentials(&db, Some(&token), "user1", "").unwrap();
         assert_eq!(id1, id2);
         assert_eq!(token, token2);
     }
@@ -522,8 +613,7 @@ mod tests {
         let db = temp_database();
         let (id1, _) = register_account(&db, "user1", "secret").unwrap();
 
-        let (id2, _) =
-            login_with_credentials(&db, None, "user1", "secret").unwrap();
+        let (id2, _) = login_with_credentials(&db, None, "user1", "secret").unwrap();
         assert_eq!(id1, id2);
     }
 
@@ -552,6 +642,29 @@ mod tests {
         let result = register_account(&db, "user1", "other");
         assert!(result.is_err());
         assert!(result.unwrap_err().contains("already taken"));
+    }
+
+    #[test]
+    fn pending_registration_requires_approval_before_login() {
+        let db = temp_database();
+        request_registration(&db, "user1", "secret").unwrap();
+
+        let result = login_with_credentials(&db, None, "user1", "secret");
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("pending admin approval"));
+    }
+
+    #[test]
+    fn approve_registration_activates_account() {
+        let db = temp_database();
+        request_registration(&db, "user1", "secret").unwrap();
+
+        let (account_id, token) = approve_registration(&db, "user1").unwrap();
+        assert!(account_id > 0);
+        assert!(!token.is_empty());
+
+        let (login_id, _new_token) = login_with_credentials(&db, None, "user1", "secret").unwrap();
+        assert_eq!(account_id, login_id);
     }
 
     #[test]
