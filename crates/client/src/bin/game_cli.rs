@@ -19,8 +19,14 @@ enum Commands {
     /// Chat operations
     #[command(subcommand)]
     Chat(ChatCommands),
+    /// Invite another character to your guild
+    GuildInvite(GuildInviteArgs),
+    /// Accept your pending guild invitation
+    GuildAccept(TokenArgs),
     /// Send a guild chat message and exit
     GuildChat(ChatSendArgs),
+    /// Create a character for the authenticated account
+    CreateCharacter(CreateCharacterArgs),
     /// Show account status (uses token auth)
     Status(TokenArgs),
 }
@@ -31,6 +37,8 @@ enum ChatCommands {
     Send(ChatSendArgs),
     /// Listen for chat messages (stays connected)
     Listen(TokenArgs),
+    /// Show recent chat history
+    History(ChatHistoryArgs),
 }
 
 #[derive(Parser, Clone)]
@@ -82,6 +90,39 @@ struct ChatSendArgs {
     message: String,
 }
 
+#[derive(Parser, Clone)]
+struct CreateCharacterArgs {
+    #[command(flatten)]
+    auth: TokenArgs,
+    /// Character name
+    #[arg(short, long)]
+    name: String,
+    /// Race ID
+    #[arg(long, default_value_t = 1)]
+    race: u8,
+    /// Class ID
+    #[arg(long = "class", default_value_t = 1)]
+    class_id: u8,
+}
+
+#[derive(Parser, Clone)]
+struct GuildInviteArgs {
+    #[command(flatten)]
+    auth: TokenArgs,
+    /// Target character name
+    #[arg(long)]
+    target: String,
+}
+
+#[derive(Parser, Clone)]
+struct ChatHistoryArgs {
+    #[command(flatten)]
+    auth: TokenArgs,
+    /// Number of messages to return (max 100)
+    #[arg(long, default_value_t = 100)]
+    limit: u16,
+}
+
 fn main() {
     let cli = Cli::parse();
     let action = build_action(cli);
@@ -93,6 +134,27 @@ fn build_action(cli: Cli) -> CliAction {
         Commands::Login(args) => action_from_login(args, CliCommand::Login),
         Commands::Status(args) => action_from_token(args, CliCommand::Status),
         Commands::Register(args) => action_from_register(args, CliCommand::Register),
+        Commands::GuildInvite(args) => CliAction {
+            command: CliCommand::GuildInvite {
+                target: args.target,
+            },
+            server: args.auth.server.server,
+            username: None,
+            password: None,
+            token: args.auth.token,
+        },
+        Commands::GuildAccept(args) => action_from_token(args, CliCommand::GuildAccept),
+        Commands::CreateCharacter(args) => CliAction {
+            command: CliCommand::CreateCharacter {
+                name: args.name,
+                race: args.race,
+                class: args.class_id,
+            },
+            server: args.auth.server.server,
+            username: None,
+            password: None,
+            token: args.auth.token,
+        },
         Commands::Chat(ChatCommands::Send(args)) => CliAction {
             command: CliCommand::ChatSend(args.message),
             server: args.auth.server.server,
@@ -110,6 +172,15 @@ fn build_action(cli: Cli) -> CliAction {
         Commands::Chat(ChatCommands::Listen(args)) => {
             action_from_token(args, CliCommand::ChatListen)
         }
+        Commands::Chat(ChatCommands::History(args)) => CliAction {
+            command: CliCommand::ChatHistory {
+                limit: args.limit.min(100),
+            },
+            server: args.auth.server.server,
+            username: None,
+            password: None,
+            token: args.auth.token,
+        },
     }
 }
 

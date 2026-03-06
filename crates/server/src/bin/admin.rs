@@ -5,15 +5,36 @@ const SOCKET_PATH: &str = "/tmp/game-server-admin.sock";
 
 #[derive(Debug, Serialize, Deserialize)]
 enum AdminRequest {
-    CreateAccount { username: String, password: String },
-    ApproveRegistration { username: String },
+    CreateAccount {
+        username: String,
+        password: String,
+    },
+    ApproveRegistration {
+        username: String,
+    },
+    CreateGuild {
+        character_name: String,
+        guild_id: u32,
+        guild_name: String,
+    },
     Ping,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 enum AdminResponse {
-    AccountCreated { account_id: u64, token: String },
-    RegistrationApproved { account_id: u64, token: String },
+    AccountCreated {
+        account_id: u64,
+        token: String,
+    },
+    RegistrationApproved {
+        account_id: u64,
+        token: String,
+    },
+    GuildCreated {
+        character_id: u64,
+        guild_id: u32,
+        guild_name: String,
+    },
     Pong,
     Error(String),
 }
@@ -42,6 +63,7 @@ fn print_usage() {
     eprintln!("  game-server-admin ping");
     eprintln!("  game-server-admin create-account <username> <password>");
     eprintln!("  game-server-admin approve-registration <username>");
+    eprintln!("  game-server-admin create-guild <character_name> <guild_id> <guild_name>");
 }
 
 fn parse_request(args: &[String]) -> AdminRequest {
@@ -66,6 +88,27 @@ fn parse_request(args: &[String]) -> AdminRequest {
                 username: args[2].clone(),
             }
         }
+        "create-guild" => {
+            if args.len() < 5 {
+                eprintln!(
+                    "Usage: game-server-admin create-guild <character_name> <guild_id> <guild_name>"
+                );
+                std::process::exit(1);
+            }
+            let guild_id: u32 = match args[3].parse() {
+                Ok(v) => v,
+                Err(_) => {
+                    eprintln!("Invalid guild_id: {}", args[3]);
+                    std::process::exit(1);
+                }
+            };
+            let guild_name = args[4..].join(" ");
+            AdminRequest::CreateGuild {
+                character_name: args[2].clone(),
+                guild_id,
+                guild_name,
+            }
+        }
         other => {
             eprintln!("Unknown command: {other}");
             print_usage();
@@ -82,6 +125,15 @@ fn print_response(response: &AdminResponse) {
         }
         AdminResponse::RegistrationApproved { account_id, token } => {
             println!("Registration approved: id={account_id} token={token}");
+        }
+        AdminResponse::GuildCreated {
+            character_id,
+            guild_id,
+            guild_name,
+        } => {
+            println!(
+                "Guild assigned: character_id={character_id} guild_id={guild_id} guild_name={guild_name}"
+            );
         }
         AdminResponse::Error(e) => {
             eprintln!("Error: {e}");

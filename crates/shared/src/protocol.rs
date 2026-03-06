@@ -163,6 +163,45 @@ pub struct EnterWorldResponse {
     pub error: Option<String>,
 }
 
+/// Client requests inviting another character into their guild.
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct GuildInviteRequest {
+    pub target_character_name: String,
+}
+
+/// Server responds to guild invite request.
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct GuildInviteResponse {
+    pub success: bool,
+    pub error: Option<String>,
+}
+
+/// Client accepts their pending guild invitation.
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct GuildAcceptInviteRequest;
+
+/// Server responds to guild invitation acceptance.
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct GuildAcceptInviteResponse {
+    pub success: bool,
+    pub guild_id: Option<u32>,
+    pub guild_name: Option<String>,
+    pub error: Option<String>,
+}
+
+/// Client requests recent chat history.
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct ChatHistoryRequest {
+    pub limit: u16,
+}
+
+/// Server responds with recent chat history.
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct ChatHistoryResponse {
+    pub messages: Vec<ChatMessage>,
+    pub error: Option<String>,
+}
+
 /// Client movement input sent each tick.
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct PlayerInput {
@@ -231,6 +270,18 @@ fn register_messages(app: &mut App) {
     app.register_message::<SelectCharacter>()
         .add_direction(NetworkDirection::ClientToServer);
     app.register_message::<EnterWorldResponse>()
+        .add_direction(NetworkDirection::ServerToClient);
+    app.register_message::<GuildInviteRequest>()
+        .add_direction(NetworkDirection::ClientToServer);
+    app.register_message::<GuildInviteResponse>()
+        .add_direction(NetworkDirection::ServerToClient);
+    app.register_message::<GuildAcceptInviteRequest>()
+        .add_direction(NetworkDirection::ClientToServer);
+    app.register_message::<GuildAcceptInviteResponse>()
+        .add_direction(NetworkDirection::ServerToClient);
+    app.register_message::<ChatHistoryRequest>()
+        .add_direction(NetworkDirection::ClientToServer);
+    app.register_message::<ChatHistoryResponse>()
         .add_direction(NetworkDirection::ServerToClient);
 }
 

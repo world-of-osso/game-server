@@ -4,8 +4,11 @@ use lightyear::prelude::server::*;
 use lightyear::prelude::*;
 use shared::components::{GuildMembership, Health, MovementSpeed, Player, Position, Rotation};
 use shared::protocol::{
-    ChatChannel, ChatMessage, ChatType, LoadTerrain, PlayerInput, SetTarget, TerrainChannel,
+    AuthChannel, ChatChannel, ChatHistoryRequest, ChatHistoryResponse, ChatMessage, ChatType,
+    GuildAcceptInviteRequest, GuildAcceptInviteResponse, GuildInviteRequest, GuildInviteResponse,
+    LoadTerrain, PlayerInput, SetTarget, TerrainChannel,
 };
+use std::collections::VecDeque;
 use std::time::Duration;
 
 use crate::auth::{
@@ -24,6 +27,11 @@ pub struct PlayerLink(pub Entity);
 #[derive(Component, Debug, Default)]
 pub struct CombatTarget(pub Option<Entity>);
 
+#[derive(Resource, Default)]
+struct ChatHistoryBuffer {
+    entries: VecDeque<ChatMessage>,
+}
+
 /// Default run speed in yards per second (WoW run speed).
 const DEFAULT_RUN_SPEED: f32 = 7.0;
 /// Walk speed in yards per second.
@@ -34,6 +42,7 @@ pub struct ServerNetworkPlugin;
 impl Plugin for ServerNetworkPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<ConnectedAccounts>();
+        app.init_resource::<ChatHistoryBuffer>();
         app.add_systems(Startup, start_server);
         app.add_systems(FixedUpdate, process_player_inputs);
         app.add_systems(
@@ -42,6 +51,9 @@ impl Plugin for ServerNetworkPlugin {
         );
         app.add_systems(FixedUpdate, stream_terrain_tiles);
         app.add_systems(Update, process_chat_messages);
+        app.add_systems(Update, process_chat_history_requests);
+        app.add_systems(Update, process_guild_invites);
+        app.add_systems(Update, process_guild_accepts);
         app.add_systems(Update, process_target_messages);
         app.add_systems(Update, auth::process_login_requests);
         app.add_systems(Update, auth::process_register_requests);
@@ -244,9 +256,37 @@ fn process_chat_messages(
     players: Query<&Player>,
     guilds: Query<Option<&GuildMembership>>,
     mut conns: Query<(&PlayerLink, &mut MessageSender<ChatMessage>)>,
+    mut history: ResMut<ChatHistoryBuffer>,
 ) {
     let collected = collect_chat_messages(&mut receivers, &players, &guilds);
+    for chat in &collected {
+        history.entries.push_back(chat.msg.clone());
+        if history.entries.len() > 100 {
+            history.entries.pop_front();
+        }
+    }
     route_chat_messages(&collected, &mut conns, &guilds);
+}
+
+fn process_chat_history_requests(
+    mut receivers: Query<(&mut MessageReceiver<ChatHistoryRequest>, Entity), With<Authenticated>>,
+    history: Res<ChatHistoryBuffer>,
+    mut senders: Query<&mut MessageSender<ChatHistoryResponse>>,
+) {
+    for (mut receiver, conn_entity) in receivers.iter_mut() {
+        for req in receiver.receive() {
+            let limit = usize::from(req.limit.clamp(1, 100));
+            let start = history.entries.len().saturating_sub(limit);
+            let messages: Vec<ChatMessage> = history.entries.iter().skip(start).cloned().collect();
+            let Ok(mut sender) = senders.get_mut(conn_entity) else {
+                continue;
+            };
+            sender.send::<AuthChannel>(ChatHistoryResponse {
+                messages,
+                error: None,
+            });
+        }
+    }
 }
 
 fn collect_chat_messages(
@@ -315,6 +355,163 @@ fn broadcast_to_all(
 ) {
     for (_link, mut sender) in conns.iter_mut() {
         sender.send::<ChatChannel>(msg.clone());
+    }
+}
+
+fn process_guild_invites(
+    mut receivers: Query<
+        (
+            Entity,
+            &PlayerLink,
+            &mut MessageReceiver<GuildInviteRequest>,
+        ),
+        With<Authenticated>,
+    >,
+    players: Query<&Player>,
+    guilds: Query<&GuildMembership>,
+    char_ids: Query<&ClientId>,
+    db: Option<Res<GameDatabase>>,
+    mut senders: Query<&mut MessageSender<GuildInviteResponse>>,
+) {
+    let Some(db) = db else { return };
+    for (conn_entity, link, mut receiver) in receivers.iter_mut() {
+        for req in receiver.receive() {
+            let response = handle_guild_invite(&db, &players, &guilds, &char_ids, link.0, &req);
+            let Ok(mut sender) = senders.get_mut(conn_entity) else {
+                continue;
+            };
+            sender.send::<AuthChannel>(response);
+        }
+    }
+}
+
+fn handle_guild_invite(
+    db: &GameDatabase,
+    players: &Query<&Player>,
+    guilds: &Query<&GuildMembership>,
+    char_ids: &Query<&ClientId>,
+    inviter_entity: Entity,
+    req: &GuildInviteRequest,
+) -> GuildInviteResponse {
+    let Ok(inviter_player) = players.get(inviter_entity) else {
+        return GuildInviteResponse {
+            success: false,
+            error: Some("Inviter player entity missing".into()),
+        };
+    };
+    let Ok(inviter_guild) = guilds.get(inviter_entity) else {
+        return GuildInviteResponse {
+            success: false,
+            error: Some("You are not in a guild".into()),
+        };
+    };
+
+    let Some(target_character_id) =
+        persistence::find_character_id_by_name(&db.db, &req.target_character_name)
+    else {
+        return GuildInviteResponse {
+            success: false,
+            error: Some("Target character not found".into()),
+        };
+    };
+
+    if let Ok(inviter_char_id) = char_ids.get(inviter_entity)
+        && inviter_char_id.0 == target_character_id
+    {
+        return GuildInviteResponse {
+            success: false,
+            error: Some("Cannot invite yourself".into()),
+        };
+    }
+
+    persistence::set_pending_guild_invite(
+        &db.db,
+        target_character_id,
+        inviter_guild.guild_id,
+        &inviter_guild.guild_name,
+        &inviter_player.name,
+    );
+
+    GuildInviteResponse {
+        success: true,
+        error: None,
+    }
+}
+
+fn process_guild_accepts(
+    mut receivers: Query<
+        (
+            Entity,
+            &PlayerLink,
+            &mut MessageReceiver<GuildAcceptInviteRequest>,
+        ),
+        With<Authenticated>,
+    >,
+    char_ids: Query<&ClientId>,
+    db: Option<Res<GameDatabase>>,
+    mut commands: Commands,
+    mut senders: Query<&mut MessageSender<GuildAcceptInviteResponse>>,
+) {
+    let Some(db) = db else { return };
+    for (conn_entity, link, mut receiver) in receivers.iter_mut() {
+        for _ in receiver.receive() {
+            let response = handle_guild_accept(&db, &char_ids, &mut commands, link.0);
+            let Ok(mut sender) = senders.get_mut(conn_entity) else {
+                continue;
+            };
+            sender.send::<AuthChannel>(response);
+        }
+    }
+}
+
+fn handle_guild_accept(
+    db: &GameDatabase,
+    char_ids: &Query<&ClientId>,
+    commands: &mut Commands,
+    player_entity: Entity,
+) -> GuildAcceptInviteResponse {
+    let Ok(character_id) = char_ids.get(player_entity).map(|c| c.0) else {
+        return GuildAcceptInviteResponse {
+            success: false,
+            guild_id: None,
+            guild_name: None,
+            error: Some("Character id not found".into()),
+        };
+    };
+
+    let Some(invite) = persistence::take_pending_guild_invite(&db.db, character_id) else {
+        return GuildAcceptInviteResponse {
+            success: false,
+            guild_id: None,
+            guild_name: None,
+            error: Some("No pending guild invite".into()),
+        };
+    };
+
+    if let Err(err) = persistence::set_character_guild_by_id(
+        &db.db,
+        character_id,
+        invite.guild_id,
+        &invite.guild_name,
+    ) {
+        return GuildAcceptInviteResponse {
+            success: false,
+            guild_id: None,
+            guild_name: None,
+            error: Some(err),
+        };
+    }
+
+    commands.entity(player_entity).insert(GuildMembership {
+        guild_id: invite.guild_id,
+        guild_name: invite.guild_name.clone(),
+    });
+
+    GuildAcceptInviteResponse {
+        success: true,
+        guild_id: Some(invite.guild_id),
+        guild_name: Some(invite.guild_name),
+        error: None,
     }
 }
 

@@ -1,0 +1,56 @@
+CREATE TABLE IF NOT EXISTS chr_races (
+  id INTEGER PRIMARY KEY,
+  name TEXT NOT NULL,
+  client_prefix TEXT,
+  client_file_string TEXT,
+  faction_id INTEGER,
+  alliance INTEGER,
+  playable_race_bit INTEGER,
+  default_class_id INTEGER,
+  starting_level INTEGER,
+  source TEXT NOT NULL DEFAULT 'wago.tools/db2/ChrRaces'
+);
+
+DELETE FROM chr_races;
+
+INSERT INTO chr_races (
+  id,
+  name,
+  client_prefix,
+  client_file_string,
+  faction_id,
+  alliance,
+  playable_race_bit,
+  default_class_id,
+  starting_level,
+  source
+) VALUES
+  (1, 'Human', 'Hu', 'Human', 1, 0, 0, 1, 1, 'wago.tools/db2/ChrRaces'),
+  (2, 'Orc', 'Or', 'Orc', 2, 1, 1, 1, 1, 'wago.tools/db2/ChrRaces'),
+  (3, 'Dwarf', 'Dw', 'Dwarf', 3, 0, 2, 3, 1, 'wago.tools/db2/ChrRaces'),
+  (4, 'Night Elf', 'Ni', 'NightElf', 4, 0, 3, 11, 1, 'wago.tools/db2/ChrRaces'),
+  (5, 'Undead', 'Sc', 'Scourge', 5, 1, 4, 9, 1, 'wago.tools/db2/ChrRaces'),
+  (6, 'Tauren', 'Ta', 'Tauren', 6, 1, 5, 7, 1, 'wago.tools/db2/ChrRaces'),
+  (7, 'Gnome', 'Gn', 'Gnome', 115, 0, 6, 9, 1, 'wago.tools/db2/ChrRaces'),
+  (8, 'Troll', 'Tr', 'Troll', 116, 1, 7, 7, 1, 'wago.tools/db2/ChrRaces'),
+  (9, 'Goblin', 'Go', 'Goblin', 2204, 1, 8, 4, 1, 'wago.tools/db2/ChrRaces'),
+  (10, 'Blood Elf', 'Be', 'BloodElf', 1610, 1, 9, 8, 1, 'wago.tools/db2/ChrRaces'),
+  (11, 'Draenei', 'Dr', 'Draenei', 1629, 0, 10, 2, 1, 'wago.tools/db2/ChrRaces'),
+  (22, 'Worgen', 'Wo', 'Worgen', 2203, 0, 21, 4, 1, 'wago.tools/db2/ChrRaces'),
+  (24, 'Pandaren', 'Pa', 'Pandaren', 2395, 2, 23, 10, 1, 'wago.tools/db2/ChrRaces'),
+  (25, 'Pandaren (Alliance)', 'Pa', 'Pandaren', 2401, 0, 24, 10, 1, 'wago.tools/db2/ChrRaces'),
+  (26, 'Pandaren (Horde)', 'Pa', 'Pandaren', 2402, 1, 25, 10, 1, 'wago.tools/db2/ChrRaces'),
+  (27, 'Nightborne', 'Nb', 'Nightborne', 1610, 1, 26, 8, 10, 'wago.tools/db2/ChrRaces'),
+  (28, 'Highmountain Tauren', 'Ht', 'HighmountainTauren', 6, 1, 27, 3, 10, 'wago.tools/db2/ChrRaces'),
+  (29, 'Void Elf', 'Ve', 'VoidElf', 4, 0, 28, 8, 10, 'wago.tools/db2/ChrRaces'),
+  (30, 'Lightforged Draenei', 'Ld', 'LightforgedDraenei', 1629, 0, 29, 2, 10, 'wago.tools/db2/ChrRaces'),
+  (31, 'Zandalari Troll', 'Za', 'ZandalariTroll', 116, 1, 30, 7, 10, 'wago.tools/db2/ChrRaces'),
+  (32, 'Kul Tiran', 'Kt', 'KulTiran', 1, 0, 31, 1, 10, 'wago.tools/db2/ChrRaces'),
+  (34, 'Dark Iron Dwarf', 'Di', 'DarkIronDwarf', 3, 0, 11, 1, 10, 'wago.tools/db2/ChrRaces'),
+  (35, 'Vulpera', 'Vu', 'Vulpera', 2204, 1, 12, 4, 10, 'wago.tools/db2/ChrRaces'),
+  (36, 'Mag''har Orc', 'Mo', 'MagharOrc', 2, 1, 13, 1, 10, 'wago.tools/db2/ChrRaces'),
+  (37, 'Mechagnome', 'Mg', 'Mechagnome', 115, 0, 14, 1, 10, 'wago.tools/db2/ChrRaces'),
+  (52, 'Dracthyr (Alliance)', 'Dt', 'Dracthyr', 1, 0, 16, 13, 10, 'wago.tools/db2/ChrRaces'),
+  (70, 'Dracthyr (Horde)', 'Dt', 'Dracthyr', 2, 1, 15, 13, 10, 'wago.tools/db2/ChrRaces'),
+  (84, 'Earthen (Horde)', 'Ed', 'EarthenDwarf', 2, 1, 17, 1, 10, 'wago.tools/db2/ChrRaces'),
+  (85, 'Earthen (Alliance)', 'Ed', 'EarthenDwarf', 3, 0, 18, 1, 10, 'wago.tools/db2/ChrRaces');

@@ -12,16 +12,37 @@ const SOCKET_PATH: &str = "/tmp/game-server-admin.sock";
 /// IPC request from CLI to server.
 #[derive(Debug, Serialize, Deserialize)]
 pub enum AdminRequest {
-    CreateAccount { username: String, password: String },
-    ApproveRegistration { username: String },
+    CreateAccount {
+        username: String,
+        password: String,
+    },
+    ApproveRegistration {
+        username: String,
+    },
+    CreateGuild {
+        character_name: String,
+        guild_id: u32,
+        guild_name: String,
+    },
     Ping,
 }
 
 /// IPC response from server to CLI.
 #[derive(Debug, Serialize, Deserialize)]
 pub enum AdminResponse {
-    AccountCreated { account_id: u64, token: String },
-    RegistrationApproved { account_id: u64, token: String },
+    AccountCreated {
+        account_id: u64,
+        token: String,
+    },
+    RegistrationApproved {
+        account_id: u64,
+        token: String,
+    },
+    GuildCreated {
+        character_id: u64,
+        guild_id: u32,
+        guild_name: String,
+    },
     Pong,
     Error(String),
 }
@@ -154,6 +175,26 @@ fn dispatch(cmd: AdminCommand, db: &persistence::GameDatabase) {
                 Ok((account_id, token)) => {
                     AdminResponse::RegistrationApproved { account_id, token }
                 }
+                Err(e) => AdminResponse::Error(e),
+            };
+            let _ = cmd.respond.send(response);
+        }
+        AdminRequest::CreateGuild {
+            character_name,
+            guild_id,
+            guild_name,
+        } => {
+            let response = match persistence::set_character_guild_by_name(
+                &db.db,
+                &character_name,
+                guild_id,
+                &guild_name,
+            ) {
+                Ok(character_id) => AdminResponse::GuildCreated {
+                    character_id,
+                    guild_id,
+                    guild_name,
+                },
                 Err(e) => AdminResponse::Error(e),
             };
             let _ = cmd.respond.send(response);

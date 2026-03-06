@@ -11,7 +11,9 @@ use core::net::{IpAddr, Ipv4Addr, SocketAddr};
 use lightyear::prelude::client::*;
 use lightyear::prelude::*;
 use shared::protocol::{
-    AuthChannel, ChatChannel, ChatMessage, ChatType, EnterWorldResponse, LoginRequest,
+    AuthChannel, ChatChannel, ChatHistoryRequest, ChatHistoryResponse, ChatMessage, ChatType,
+    CreateCharacter, CreateCharacterResponse, EnterWorldResponse, GuildAcceptInviteRequest,
+    GuildAcceptInviteResponse, GuildInviteRequest, GuildInviteResponse, LoginRequest,
     LoginResponse, RegisterRequest, RegisterResponse, SelectCharacter,
 };
 
@@ -26,6 +28,10 @@ pub enum CliCommand {
     Login,
     Status,
     Register,
+    CreateCharacter { name: String, race: u8, class: u8 },
+    GuildInvite { target: String },
+    GuildAccept,
+    ChatHistory { limit: u16 },
     ChatSend(String),
     ChatListen,
     GuildChat(String),
@@ -112,9 +118,13 @@ fn register_systems(app: &mut App) {
         (
             receive_login_response,
             receive_register_response,
+            receive_create_character_response,
             receive_enter_world_response,
+            receive_guild_invite_response,
+            receive_guild_accept_response,
+            receive_chat_history_response,
             receive_chat_messages,
-            send_chat_on_enter_world,
+            send_action_on_enter_world,
             timeout_system,
         ),
     );
@@ -298,6 +308,8 @@ fn receive_login_response(
     mut next_state: ResMut<NextState<CliState>>,
     action: Res<CliAction>,
     mut senders: Query<&mut MessageSender<SelectCharacter>>,
+    mut create_senders: Query<&mut MessageSender<CreateCharacter>>,
+    mut history_senders: Query<&mut MessageSender<ChatHistoryRequest>>,
     mut exit: MessageWriter<AppExit>,
 ) {
     for mut receiver in receivers.iter_mut() {
@@ -309,6 +321,8 @@ fn receive_login_response(
                 &mut next_state,
                 &action,
                 &mut senders,
+                &mut create_senders,
+                &mut history_senders,
                 &mut exit,
             );
         }
@@ -322,6 +336,8 @@ fn handle_login_resp(
     next_state: &mut NextState<CliState>,
     action: &CliAction,
     senders: &mut Query<&mut MessageSender<SelectCharacter>>,
+    create_senders: &mut Query<&mut MessageSender<CreateCharacter>>,
+    history_senders: &mut Query<&mut MessageSender<ChatHistoryRequest>>,
     exit: &mut MessageWriter<AppExit>,
 ) {
     if !resp.success {
@@ -333,7 +349,15 @@ fn handle_login_resp(
     auth_token.0 = Some(resp.token);
     char_list.0 = resp.characters;
     print_characters(&char_list.0);
-    after_login(action, char_list, next_state, senders, exit);
+    after_login(
+        action,
+        char_list,
+        next_state,
+        senders,
+        create_senders,
+        history_senders,
+        exit,
+    );
 }
 
 fn print_characters(chars: &[shared::protocol::CharacterListEntry]) {
@@ -359,6 +383,8 @@ fn after_login(
     char_list: &CharacterList,
     next_state: &mut NextState<CliState>,
     senders: &mut Query<&mut MessageSender<SelectCharacter>>,
+    create_senders: &mut Query<&mut MessageSender<CreateCharacter>>,
+    history_senders: &mut Query<&mut MessageSender<ChatHistoryRequest>>,
     exit: &mut MessageWriter<AppExit>,
 ) {
     match &action.command {
@@ -366,10 +392,62 @@ fn after_login(
             next_state.set(CliState::Done);
             exit.write(AppExit::Success);
         }
+        CliCommand::CreateCharacter { name, race, class } => {
+            send_create_character_request(name, *race, *class, create_senders, exit);
+        }
+        CliCommand::ChatHistory { limit } => {
+            send_chat_history_request(*limit, history_senders, exit);
+        }
         CliCommand::ChatSend(_) | CliCommand::ChatListen | CliCommand::GuildChat(_) => {
             select_first_character(char_list, next_state, senders, exit);
         }
+        CliCommand::GuildInvite { .. } | CliCommand::GuildAccept => {
+            select_first_character(char_list, next_state, senders, exit);
+        }
         CliCommand::Register => unreachable!(),
+    }
+}
+
+fn send_chat_history_request(
+    limit: u16,
+    senders: &mut Query<&mut MessageSender<ChatHistoryRequest>>,
+    exit: &mut MessageWriter<AppExit>,
+) {
+    let req = ChatHistoryRequest { limit };
+    let mut sent = false;
+    for mut sender in senders.iter_mut() {
+        sender.send::<AuthChannel>(req.clone());
+        sent = true;
+    }
+    if !sent {
+        eprintln!("[history] Unable to send history request");
+        exit.write(AppExit::Error(1.try_into().unwrap()));
+    }
+}
+
+fn send_create_character_request(
+    name: &str,
+    race: u8,
+    class: u8,
+    senders: &mut Query<&mut MessageSender<CreateCharacter>>,
+    exit: &mut MessageWriter<AppExit>,
+) {
+    let request = CreateCharacter {
+        name: name.to_string(),
+        race,
+        class,
+    };
+    let mut sent = false;
+    for mut sender in senders.iter_mut() {
+        sender.send::<AuthChannel>(request.clone());
+        sent = true;
+    }
+
+    if sent {
+        println!("[cli] Requested character creation: '{name}'");
+    } else {
+        eprintln!("[cli] Unable to send create-character request");
+        exit.write(AppExit::Error(1.try_into().unwrap()));
     }
 }
 
@@ -415,6 +493,29 @@ fn receive_register_response(
     }
 }
 
+fn receive_create_character_response(
+    mut receivers: Query<&mut MessageReceiver<CreateCharacterResponse>>,
+    mut exit: MessageWriter<AppExit>,
+) {
+    for mut receiver in receivers.iter_mut() {
+        for resp in receiver.receive() {
+            if resp.success {
+                if let Some(ch) = resp.character {
+                    println!(
+                        "[create] Created character '{}' (id={}, race={}, class={})",
+                        ch.name, ch.character_id, ch.race, ch.class
+                    );
+                } else {
+                    println!("[create] Character created");
+                }
+            } else {
+                eprintln!("[create] Failed: {}", resp.error.unwrap_or_default());
+            }
+            exit.write(AppExit::Success);
+        }
+    }
+}
+
 fn receive_enter_world_response(
     mut receivers: Query<&mut MessageReceiver<EnterWorldResponse>>,
     mut selected: ResMut<SelectedCharacterId>,
@@ -440,33 +541,119 @@ fn receive_enter_world_response(
 
 // -- Chat systems --
 
-/// When entering InWorld with a ChatSend command, send the message and schedule exit.
-fn send_chat_on_enter_world(
+/// When entering InWorld with an action command, send it once.
+fn send_action_on_enter_world(
     state: Res<State<CliState>>,
     action: Res<CliAction>,
-    mut senders: Query<&mut MessageSender<ChatMessage>>,
+    mut chat_senders: Query<&mut MessageSender<ChatMessage>>,
+    mut invite_senders: Query<&mut MessageSender<GuildInviteRequest>>,
+    mut accept_senders: Query<&mut MessageSender<GuildAcceptInviteRequest>>,
     mut sent: Local<bool>,
 ) {
     if *state.get() != CliState::InWorld || *sent {
         return;
     }
-    let (text, channel) = match &action.command {
-        CliCommand::ChatSend(t) => (t, ChatType::Say),
-        CliCommand::GuildChat(t) => (t, ChatType::Guild),
+    match &action.command {
+        CliCommand::ChatSend(text) => {
+            let msg = ChatMessage {
+                sender: action.username.clone().unwrap_or_else(|| "cli".to_string()),
+                content: text.clone(),
+                channel: ChatType::Say,
+            };
+            for mut sender in chat_senders.iter_mut() {
+                sender.send::<ChatChannel>(msg.clone());
+            }
+            println!("[chat] Sent: {text}");
+        }
+        CliCommand::GuildChat(text) => {
+            let msg = ChatMessage {
+                sender: action.username.clone().unwrap_or_else(|| "cli".to_string()),
+                content: text.clone(),
+                channel: ChatType::Guild,
+            };
+            for mut sender in chat_senders.iter_mut() {
+                sender.send::<ChatChannel>(msg.clone());
+            }
+            println!("[chat] Sent: {text}");
+        }
+        CliCommand::GuildInvite { target } => {
+            let req = GuildInviteRequest {
+                target_character_name: target.clone(),
+            };
+            for mut sender in invite_senders.iter_mut() {
+                sender.send::<AuthChannel>(req.clone());
+            }
+            println!("[guild] Invite sent to '{target}'");
+        }
+        CliCommand::GuildAccept => {
+            for mut sender in accept_senders.iter_mut() {
+                sender.send::<AuthChannel>(GuildAcceptInviteRequest);
+            }
+            println!("[guild] Accept request sent");
+        }
         _ => return,
-    };
-    let msg = ChatMessage {
-        sender: action.username.clone().unwrap_or_else(|| "cli".to_string()),
-        content: text.clone(),
-        channel,
-    };
-    for mut sender in senders.iter_mut() {
-        sender.send::<ChatChannel>(msg.clone());
     }
-    println!("[chat] Sent: {text}");
     *sent = true;
-    // Give the server a moment to echo back, then exit on next timeout tick
-    // We don't exit immediately so we can see the echo
+}
+
+fn receive_guild_invite_response(
+    mut receivers: Query<&mut MessageReceiver<GuildInviteResponse>>,
+    mut exit: MessageWriter<AppExit>,
+) {
+    for mut receiver in receivers.iter_mut() {
+        for resp in receiver.receive() {
+            if resp.success {
+                println!("[guild] Invite queued");
+            } else {
+                eprintln!("[guild] Invite failed: {}", resp.error.unwrap_or_default());
+            }
+            exit.write(AppExit::Success);
+        }
+    }
+}
+
+fn receive_guild_accept_response(
+    mut receivers: Query<&mut MessageReceiver<GuildAcceptInviteResponse>>,
+    mut exit: MessageWriter<AppExit>,
+) {
+    for mut receiver in receivers.iter_mut() {
+        for resp in receiver.receive() {
+            if resp.success {
+                println!(
+                    "[guild] Joined guild '{}' ({})",
+                    resp.guild_name.unwrap_or_default(),
+                    resp.guild_id.unwrap_or_default()
+                );
+            } else {
+                eprintln!("[guild] Accept failed: {}", resp.error.unwrap_or_default());
+            }
+            exit.write(AppExit::Success);
+        }
+    }
+}
+
+fn receive_chat_history_response(
+    mut receivers: Query<&mut MessageReceiver<ChatHistoryResponse>>,
+    mut exit: MessageWriter<AppExit>,
+) {
+    for mut receiver in receivers.iter_mut() {
+        for resp in receiver.receive() {
+            if let Some(err) = resp.error {
+                eprintln!("[history] Failed: {err}");
+                exit.write(AppExit::Error(1.try_into().unwrap()));
+                continue;
+            }
+            for msg in resp.messages {
+                let prefix = if msg.channel == ChatType::Guild {
+                    "Guild"
+                } else {
+                    "chat"
+                };
+                println!("[{prefix}] <{}> {}", msg.sender, msg.content);
+            }
+            exit.write(AppExit::Success);
+        }
+    }
 }
 
 fn receive_chat_messages(

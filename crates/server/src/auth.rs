@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use lightyear::prelude::*;
-use shared::components::{Health, MovementSpeed, Player, Position, Rotation};
+use shared::components::{GuildMembership, Health, MovementSpeed, Player, Position, Rotation};
 use shared::protocol::{
     AuthChannel, CreateCharacter, CreateCharacterResponse, DeleteCharacter,
     DeleteCharacterResponse, EnterWorldResponse, LoadTerrain, LoginRequest, LoginResponse,
@@ -436,7 +436,8 @@ fn handle_select(
         send_enter_error(conn, enter_senders, "Character data missing");
         return;
     };
-    let player_entity = spawn_player_entity(commands, &data, req.character_id);
+    let guild = persistence::load_character_guild(&db.db, req.character_id);
+    let player_entity = spawn_player_entity(commands, &data, req.character_id, guild.as_ref());
     insert_world_components(commands, conn, player_entity, req.character_id);
     send_enter_success(conn, enter_senders, player_entity);
     send_load_terrain(conn, terrain_senders);
@@ -509,6 +510,7 @@ pub fn spawn_player_entity(
     commands: &mut Commands,
     data: &CharacterData,
     character_id: u64,
+    guild: Option<&GuildMembership>,
 ) -> Entity {
     let pos = Position {
         x: data.x,
@@ -539,6 +541,9 @@ pub fn spawn_player_entity(
             NetworkVisibility,
         ))
         .id();
+    if let Some(g) = guild {
+        commands.entity(entity).insert(g.clone());
+    }
     info!(
         "Spawned player '{}' at ({}, {}, {})",
         data.name, pos.x, pos.y, pos.z

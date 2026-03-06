@@ -3,7 +3,8 @@ use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
 use bevy::prelude::*;
 use rand::rngs::OsRng;
 use redb::{Database, ReadableDatabase, ReadableTable, TableDefinition};
-use shared::components::{Health, Player, Position};
+use rusqlite::{Connection, OpenFlags, params};
+use shared::components::{GuildMembership, Health, Player, Position};
 use std::path::Path;
 
 /// Character data table: character_id (u64) -> serialized CharacterData (bytes).
@@ -20,6 +21,13 @@ const ACCOUNT_CHARACTERS: TableDefinition<u64, &[u8]> = TableDefinition::new("ac
 
 /// Character name uniqueness: name (&str) -> character_id (u64).
 const CHARACTER_NAMES: TableDefinition<&str, u64> = TableDefinition::new("character_names");
+
+/// Character guild membership: character_id (u64) -> serialized GuildMembershipData.
+const CHARACTER_GUILDS: TableDefinition<u64, &[u8]> = TableDefinition::new("character_guilds");
+
+/// Pending guild invites: character_id (u64) -> serialized PendingGuildInviteData.
+const PENDING_GUILD_INVITES: TableDefinition<u64, &[u8]> =
+    TableDefinition::new("pending_guild_invites");
 
 /// Password hashes: account_id (u64) -> argon2 hash string (bytes).
 const PASSWORDS: TableDefinition<u64, &[u8]> = TableDefinition::new("passwords");
@@ -46,6 +54,19 @@ pub struct CharacterData {
     pub race: u8,
     pub class: u8,
     pub level: u16,
+}
+
+#[derive(bitcode::Encode, bitcode::Decode, Debug, Clone, PartialEq)]
+pub struct GuildMembershipData {
+    pub guild_id: u32,
+    pub guild_name: String,
+}
+
+#[derive(bitcode::Encode, bitcode::Decode, Debug, Clone, PartialEq)]
+pub struct PendingGuildInviteData {
+    pub guild_id: u32,
+    pub guild_name: String,
+    pub inviter_name: String,
 }
 
 impl CharacterData {
@@ -97,6 +118,8 @@ fn create_tables(db: &Database) {
     let _ = txn.open_table(ACCOUNTS);
     let _ = txn.open_table(ACCOUNT_CHARACTERS);
     let _ = txn.open_table(CHARACTER_NAMES);
+    let _ = txn.open_table(CHARACTER_GUILDS);
+    let _ = txn.open_table(PENDING_GUILD_INVITES);
     let _ = txn.open_table(PASSWORDS);
     let _ = txn.open_table(USERNAME_ACCOUNTS);
     let _ = txn.open_table(PENDING_REGISTRATIONS);
@@ -131,6 +154,126 @@ pub fn load_character(db: &Database, character_id: u64) -> Option<CharacterData>
         }
         None => None,
     }
+}
+
+pub fn load_character_guild(db: &Database, character_id: u64) -> Option<GuildMembership> {
+    let txn = db.begin_read().expect("Failed to begin read txn");
+    let table = txn
+        .open_table(CHARACTER_GUILDS)
+        .expect("Failed to open character_guilds table");
+    let Some(guard) = table
+        .get(character_id)
+        .expect("Failed to read character guild")
+    else {
+        return None;
+    };
+    let data = bitcode::decode::<GuildMembershipData>(guard.value()).expect("decode guild");
+    Some(GuildMembership {
+        guild_id: data.guild_id,
+        guild_name: data.guild_name,
+    })
+}
+
+pub fn set_character_guild_by_name(
+    db: &Database,
+    character_name: &str,
+    guild_id: u32,
+    guild_name: &str,
+) -> Result<u64, String> {
+    let character_id = find_character_id_by_name(db, character_name)
+        .ok_or_else(|| format!("Character '{character_name}' not found"))?;
+    set_character_guild_by_id(db, character_id, guild_id, guild_name)?;
+    Ok(character_id)
+}
+
+pub fn set_character_guild_by_id(
+    db: &Database,
+    character_id: u64,
+    guild_id: u32,
+    guild_name: &str,
+) -> Result<(), String> {
+    let guild = GuildMembershipData {
+        guild_id,
+        guild_name: guild_name.to_string(),
+    };
+    let encoded = bitcode::encode(&guild);
+    let write = db.begin_write().expect("Failed to begin write txn");
+    {
+        let mut table = write
+            .open_table(CHARACTER_GUILDS)
+            .expect("open character_guilds");
+        table
+            .insert(character_id, encoded.as_slice())
+            .expect("insert character guild");
+    }
+    write.commit().expect("Failed to commit character guild");
+    Ok(())
+}
+
+pub fn set_pending_guild_invite(
+    db: &Database,
+    character_id: u64,
+    guild_id: u32,
+    guild_name: &str,
+    inviter_name: &str,
+) {
+    let invite = PendingGuildInviteData {
+        guild_id,
+        guild_name: guild_name.to_string(),
+        inviter_name: inviter_name.to_string(),
+    };
+    let encoded = bitcode::encode(&invite);
+    let write = db.begin_write().expect("Failed to begin write txn");
+    {
+        let mut table = write
+            .open_table(PENDING_GUILD_INVITES)
+            .expect("open pending_guild_invites");
+        table
+            .insert(character_id, encoded.as_slice())
+            .expect("insert pending guild invite");
+    }
+    write
+        .commit()
+        .expect("Failed to commit pending guild invite");
+}
+
+pub fn take_pending_guild_invite(
+    db: &Database,
+    character_id: u64,
+) -> Option<PendingGuildInviteData> {
+    let write = db.begin_write().expect("Failed to begin write txn");
+    let invite = {
+        let mut table = write
+            .open_table(PENDING_GUILD_INVITES)
+            .expect("open pending_guild_invites");
+        let Some(raw) = table
+            .get(character_id)
+            .expect("read pending guild invite")
+            .map(|g| g.value().to_vec())
+        else {
+            return None;
+        };
+        let decoded = bitcode::decode::<PendingGuildInviteData>(&raw).expect("decode invite");
+        table
+            .remove(character_id)
+            .expect("remove pending guild invite");
+        decoded
+    };
+    write
+        .commit()
+        .expect("Failed to commit pending guild invite removal");
+    Some(invite)
+}
+
+pub fn find_character_id_by_name(db: &Database, character_name: &str) -> Option<u64> {
+    let txn = db.begin_read().expect("Failed to begin read txn");
+    let names = txn
+        .open_table(CHARACTER_NAMES)
+        .expect("Failed to open character_names");
+    names
+        .get(character_name)
+        .expect("Failed to read character name")
+        .map(|v| v.value())
 }
 
 /// Atomic increment for NEXT_IDS table. Returns the new ID (starts at 1).
@@ -401,10 +544,42 @@ pub fn create_character(
     class: u8,
 ) -> Result<(u64, CharacterData), String> {
     check_name_available(db, name)?;
+    validate_playable_race(race)?;
     let character_id = next_id(db, "character");
     let data = default_character_data(name, race, class);
     save_new_character(db, account_id, character_id, name, &data);
     Ok((character_id, data))
+}
+
+fn validate_playable_race(race: u8) -> Result<(), String> {
+    if let Ok(conn) = Connection::open_with_flags("data/world.db", OpenFlags::SQLITE_OPEN_READ_ONLY)
+        && let Ok(mut stmt) = conn.prepare("SELECT 1 FROM chr_races WHERE id = ?1 LIMIT 1")
+    {
+        let mut rows = stmt
+            .query(params![i64::from(race)])
+            .map_err(|e| format!("Failed to execute race query: {e}"))?;
+        return if rows
+            .next()
+            .map_err(|e| format!("Failed to read race query result: {e}"))?
+            .is_some()
+        {
+            Ok(())
+        } else {
+            Err(format!(
+                "Invalid race id {race}. See data/world.db table chr_races"
+            ))
+        };
+    }
+
+    const FALLBACK_PLAYABLE_RACES: &[u8] = &[
+        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 22, 24, 25, 26, 27, 28, 29, 30, 31, 32, 34, 35, 36, 37,
+        52, 70, 84, 85,
+    ];
+    if FALLBACK_PLAYABLE_RACES.contains(&race) {
+        Ok(())
+    } else {
+        Err(format!("Invalid race id {race}"))
+    }
 }
 
 /// Check that a character name is not already taken.
@@ -693,6 +868,16 @@ mod tests {
         let result = create_character(&db, acct2, "UniqueHero", 2, 2);
         assert!(result.is_err());
         assert!(result.unwrap_err().contains("already taken"));
+    }
+
+    #[test]
+    fn create_character_rejects_invalid_race() {
+        let db = temp_database();
+        let (account_id, _) = register_account(&db, "user1", "pass").unwrap();
+
+        let result = create_character(&db, account_id, "BadRace", 255, 1);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Invalid race id"));
     }
 
     #[test]
