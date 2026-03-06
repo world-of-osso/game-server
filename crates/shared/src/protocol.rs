@@ -4,7 +4,8 @@ use lightyear::prelude::{AppChannelExt, ChannelMode, ChannelSettings, NetworkDir
 use serde::{Deserialize, Serialize};
 
 use crate::components::{
-    Health, Mana, ModelDisplay, MovementSpeed, Npc, Player, Position, Rotation, Zone,
+    GuildMembership, Health, Mana, ModelDisplay, MovementSpeed, Npc, Player, Position, Rotation,
+    Zone,
 };
 
 /// Unreliable movement position updates, server-to-client only.
@@ -31,6 +32,7 @@ pub enum ChatType {
     Say,
     Yell,
     Party,
+    Guild,
     Whisper(String),
 }
 
@@ -195,6 +197,7 @@ fn register_replicated_components(app: &mut App) {
     app.register_component::<Rotation>();
     app.register_component::<MovementSpeed>();
     app.register_component::<Zone>();
+    app.register_component::<GuildMembership>();
 }
 
 fn register_messages(app: &mut App) {
@@ -278,6 +281,7 @@ mod tests {
             ChatType::Say,
             ChatType::Yell,
             ChatType::Party,
+            ChatType::Guild,
             ChatType::Whisper("TargetPlayer".into()),
         ];
         for ct in types {

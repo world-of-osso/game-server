@@ -147,3 +147,19 @@ pub struct Zone {
 pub struct ModelDisplay {
     pub display_id: u32,
 }
+
+#[derive(
+    Component,
+    Reflect,
+    Serialize,
+    Deserialize,
+    bitcode::Encode,
+    bitcode::Decode,
+    Debug,
+    Clone,
+    PartialEq,
+)]
+pub struct GuildMembership {
+    pub guild_id: u32,
+    pub guild_name: String,
+}

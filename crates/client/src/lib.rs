@@ -27,6 +27,7 @@ pub enum CliCommand {
     Register,
     ChatSend(String),
     ChatListen,
+    GuildChat(String),
 }
 
 /// Resource describing the CLI action to perform.
@@ -295,7 +296,7 @@ fn after_login(
             next_state.set(CliState::Done);
             exit.write(AppExit::Success);
         }
-        CliCommand::ChatSend(_) | CliCommand::ChatListen => {
+        CliCommand::ChatSend(_) | CliCommand::ChatListen | CliCommand::GuildChat(_) => {
             select_first_character(char_list, next_state, senders, exit);
         }
         CliCommand::Register => unreachable!(),
@@ -380,13 +381,15 @@ fn send_chat_on_enter_world(
     if *state.get() != CliState::InWorld || *sent {
         return;
     }
-    let CliCommand::ChatSend(ref text) = action.command else {
-        return;
+    let (text, channel) = match &action.command {
+        CliCommand::ChatSend(t) => (t, ChatType::Say),
+        CliCommand::GuildChat(t) => (t, ChatType::Guild),
+        _ => return,
     };
     let msg = ChatMessage {
         sender: action.username.clone(),
         content: text.clone(),
-        channel: ChatType::Say,
+        channel,
     };
     for mut sender in senders.iter_mut() {
         sender.send::<ChatChannel>(msg.clone());
@@ -405,10 +408,11 @@ fn receive_chat_messages(
 ) {
     for mut receiver in receivers.iter_mut() {
         for msg in receiver.receive() {
-            println!("[chat] <{}> {}", msg.sender, msg.content);
+            let prefix = if msg.channel == ChatType::Guild { "Guild" } else { "chat" };
+            println!("[{prefix}] <{}> {}", msg.sender, msg.content);
             *received_count += 1;
-            // For ChatSend, exit after receiving the echo
-            if matches!(action.command, CliCommand::ChatSend(_)) {
+            // For ChatSend/GuildChat, exit after receiving the echo
+            if matches!(action.command, CliCommand::ChatSend(_) | CliCommand::GuildChat(_)) {
                 exit.write(AppExit::Success);
             }
         }
@@ -425,8 +429,7 @@ fn timeout_system(
 ) {
     let elapsed = start.0.elapsed().as_secs();
     // ChatListen stays connected indefinitely
-    if matches!(action.command, CliCommand::ChatListen)
-        && *state.get() == CliState::InWorld
+    if matches!(action.command, CliCommand::ChatListen) && *state.get() == CliState::InWorld
     {
         return;
     }

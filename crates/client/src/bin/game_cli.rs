@@ -19,6 +19,8 @@ enum Commands {
     /// Chat operations
     #[command(subcommand)]
     Chat(ChatCommands),
+    /// Send a guild chat message and exit
+    GuildChat(ChatSendArgs),
     /// Show account status (alias for login)
     Status(AuthArgs),
 }
@@ -67,6 +69,12 @@ fn build_action(cli: Cli) -> CliAction {
         Commands::Register(args) => action_from_auth(args, CliCommand::Register),
         Commands::Chat(ChatCommands::Send(args)) => CliAction {
             command: CliCommand::ChatSend(args.message),
+            server: args.auth.server,
+            username: args.auth.username,
+            password: args.auth.password,
+        },
+        Commands::GuildChat(args) => CliAction {
+            command: CliCommand::GuildChat(args.message),
             server: args.auth.server,
             username: args.auth.username,
             password: args.auth.password,

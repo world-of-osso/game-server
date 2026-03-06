@@ -2,9 +2,9 @@ use bevy::prelude::*;
 use core::net::{IpAddr, Ipv4Addr, SocketAddr};
 use lightyear::prelude::server::*;
 use lightyear::prelude::*;
-use shared::components::{Health, MovementSpeed, Player, Position, Rotation};
+use shared::components::{GuildMembership, Health, MovementSpeed, Player, Position, Rotation};
 use shared::protocol::{
-    ChatChannel, ChatMessage, LoadTerrain, PlayerInput, SetTarget, TerrainChannel,
+    ChatChannel, ChatMessage, ChatType, LoadTerrain, PlayerInput, SetTarget, TerrainChannel,
 };
 use std::time::Duration;
 
@@ -231,43 +231,82 @@ fn direction_length(dir: &[f32; 3]) -> f32 {
     (dir[0].powi(2) + dir[1].powi(2) + dir[2].powi(2)).sqrt()
 }
 
-/// Read incoming chat messages and broadcast to all clients.
+/// A collected chat message with sender's guild context for routing.
+struct CollectedChat {
+    msg: ChatMessage,
+    sender_guild_id: Option<u32>,
+}
+
+/// Read incoming chat messages and route to appropriate clients.
 fn process_chat_messages(
     mut receivers: Query<(&mut MessageReceiver<ChatMessage>, &PlayerLink)>,
     players: Query<&Player>,
-    mut senders: Query<&mut MessageSender<ChatMessage>>,
+    guilds: Query<Option<&GuildMembership>>,
+    mut conns: Query<(&PlayerLink, &mut MessageSender<ChatMessage>)>,
 ) {
-    let outgoing: Vec<ChatMessage> = collect_chat_messages(&mut receivers, &players);
-    broadcast_chat_messages(&outgoing, &mut senders);
+    let collected = collect_chat_messages(&mut receivers, &players, &guilds);
+    route_chat_messages(&collected, &mut conns, &guilds);
 }
 
 fn collect_chat_messages(
     receivers: &mut Query<(&mut MessageReceiver<ChatMessage>, &PlayerLink)>,
     players: &Query<&Player>,
-) -> Vec<ChatMessage> {
+    guilds: &Query<Option<&GuildMembership>>,
+) -> Vec<CollectedChat> {
     let mut outgoing = Vec::new();
     for (mut receiver, link) in receivers.iter_mut() {
         let sender_name = players
             .get(link.0)
             .map(|p| p.name.clone())
             .unwrap_or_else(|_| "Unknown".into());
+        let sender_guild_id = guilds.get(link.0).ok().flatten().map(|g| g.guild_id);
         for mut msg in receiver.receive() {
             msg.sender = sender_name.clone();
+            if matches!(msg.channel, ChatType::Guild) && sender_guild_id.is_none() {
+                warn!("[Chat] {} sent guild message but has no guild", msg.sender);
+                continue;
+            }
             info!("[Chat] {}: {}", msg.sender, msg.content);
-            outgoing.push(msg);
+            outgoing.push(CollectedChat { msg, sender_guild_id });
         }
     }
     outgoing
 }
 
-fn broadcast_chat_messages(
-    outgoing: &[ChatMessage],
-    senders: &mut Query<&mut MessageSender<ChatMessage>>,
+fn route_chat_messages(
+    outgoing: &[CollectedChat],
+    conns: &mut Query<(&PlayerLink, &mut MessageSender<ChatMessage>)>,
+    guilds: &Query<Option<&GuildMembership>>,
 ) {
-    for msg in outgoing {
-        for mut sender in senders.iter_mut() {
+    for chat in outgoing {
+        match chat.msg.channel {
+            ChatType::Guild => send_to_guild(&chat.msg, chat.sender_guild_id, conns, guilds),
+            _ => broadcast_to_all(&chat.msg, &mut *conns),
+        }
+    }
+}
+
+fn send_to_guild(
+    msg: &ChatMessage,
+    sender_guild_id: Option<u32>,
+    conns: &mut Query<(&PlayerLink, &mut MessageSender<ChatMessage>)>,
+    guilds: &Query<Option<&GuildMembership>>,
+) {
+    let Some(gid) = sender_guild_id else { return };
+    for (link, mut sender) in conns.iter_mut() {
+        let is_same_guild = guilds.get(link.0).ok().flatten().is_some_and(|g| g.guild_id == gid);
+        if is_same_guild {
             sender.send::<ChatChannel>(msg.clone());
         }
+    }
+}
+
+fn broadcast_to_all(
+    msg: &ChatMessage,
+    conns: &mut Query<(&PlayerLink, &mut MessageSender<ChatMessage>)>,
+) {
+    for (_link, mut sender) in conns.iter_mut() {
+        sender.send::<ChatChannel>(msg.clone());
     }
 }
 
