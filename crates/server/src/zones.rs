@@ -45,7 +45,10 @@ fn spawn_elwynn_core(commands: &mut Commands, world_data: &WorldData, replicate:
 
         let mut entity = commands.spawn(bundle);
         if replicate {
-            entity.insert((Replicate::new(ReplicationMode::SingleServer(NetworkTarget::All)), NetworkVisibility));
+            entity.insert((
+                Replicate::new(ReplicationMode::SingleServer(NetworkTarget::All)),
+                NetworkVisibility,
+            ));
         }
         insert_ai_components(&mut entity, spawn, speed_walk, world_data);
         count += 1;

@@ -13,6 +13,12 @@ const CHARACTERS: TableDefinition<u64, &[u8]> = TableDefinition::new("characters
 /// Inventory table: PlayerId (u64) -> serialized inventory (bytes).
 const INVENTORIES: TableDefinition<u64, &[u8]> = TableDefinition::new("inventories");
 
+/// Active auction table: auction_id (u64) -> serialized auction data (bytes).
+const AUCTIONS: TableDefinition<u64, &[u8]> = TableDefinition::new("auctions");
+
+/// Mailbox table: character_id (u64) -> serialized Vec<MailEntryData>.
+const MAILBOXES: TableDefinition<u64, &[u8]> = TableDefinition::new("mailboxes");
+
 /// Account table: token (&str) -> account_id (u64).
 const ACCOUNTS: TableDefinition<&str, u64> = TableDefinition::new("accounts");
 
@@ -69,6 +75,46 @@ pub struct PendingGuildInviteData {
     pub inviter_name: String,
 }
 
+#[derive(bitcode::Encode, bitcode::Decode, Debug, Clone, PartialEq)]
+pub struct InventoryItemData {
+    pub item_guid: u64,
+    pub item_id: u32,
+    pub name: String,
+    pub quality: u8,
+    pub required_level: u16,
+    pub stack_count: u32,
+    pub vendor_sell_price: u32,
+}
+
+#[derive(bitcode::Encode, bitcode::Decode, Debug, Clone, PartialEq)]
+pub struct InventoryData {
+    pub gold: u32,
+    pub items: Vec<InventoryItemData>,
+}
+
+#[derive(bitcode::Encode, bitcode::Decode, Debug, Clone, PartialEq)]
+pub struct MailEntryData {
+    pub mail_id: u64,
+    pub subject: String,
+    pub body: String,
+    pub attached_money: u32,
+    pub attached_item: Option<InventoryItemData>,
+}
+
+#[derive(bitcode::Encode, bitcode::Decode, Debug, Clone, PartialEq)]
+pub struct AuctionData {
+    pub auction_id: u64,
+    pub seller_character_id: u64,
+    pub seller_name: String,
+    pub item: InventoryItemData,
+    pub stack_count: u32,
+    pub min_bid: u32,
+    pub current_bid: Option<u32>,
+    pub current_bidder_character_id: Option<u64>,
+    pub buyout_price: Option<u32>,
+    pub expires_at_unix_secs: u64,
+}
+
 impl CharacterData {
     pub fn from_components(player: &Player, pos: &Position, health: &Health) -> Self {
         Self {
@@ -115,6 +161,8 @@ fn create_tables(db: &Database) {
     let txn = db.begin_write().expect("Failed to begin write txn");
     let _ = txn.open_table(CHARACTERS);
     let _ = txn.open_table(INVENTORIES);
+    let _ = txn.open_table(AUCTIONS);
+    let _ = txn.open_table(MAILBOXES);
     let _ = txn.open_table(ACCOUNTS);
     let _ = txn.open_table(ACCOUNT_CHARACTERS);
     let _ = txn.open_table(CHARACTER_NAMES);
@@ -125,6 +173,108 @@ fn create_tables(db: &Database) {
     let _ = txn.open_table(PENDING_REGISTRATIONS);
     let _ = txn.open_table(NEXT_IDS);
     txn.commit().expect("Failed to commit initial tables");
+}
+
+pub fn load_inventory(db: &Database, character_id: u64) -> InventoryData {
+    let txn = db.begin_read().expect("Failed to begin read txn");
+    let table = txn
+        .open_table(INVENTORIES)
+        .expect("Failed to open inventories table");
+    match table.get(character_id).expect("Failed to read inventory") {
+        Some(guard) => bitcode::decode::<InventoryData>(guard.value()).expect("decode inventory"),
+        None => {
+            let inventory = default_inventory(db);
+            save_inventory(db, character_id, &inventory);
+            inventory
+        }
+    }
+}
+
+pub fn save_inventory(db: &Database, character_id: u64, inventory: &InventoryData) {
+    let bytes = bitcode::encode(inventory);
+    let txn = db.begin_write().expect("Failed to begin write txn");
+    {
+        let mut table = txn
+            .open_table(INVENTORIES)
+            .expect("Failed to open inventories table");
+        table
+            .insert(character_id, bytes.as_slice())
+            .expect("Failed to insert inventory");
+    }
+    txn.commit().expect("Failed to commit inventory save");
+}
+
+pub fn load_mailbox(db: &Database, character_id: u64) -> Vec<MailEntryData> {
+    let txn = db.begin_read().expect("Failed to begin read txn");
+    let table = txn
+        .open_table(MAILBOXES)
+        .expect("Failed to open mailboxes table");
+    match table.get(character_id).expect("Failed to read mailbox") {
+        Some(guard) => {
+            bitcode::decode::<Vec<MailEntryData>>(guard.value()).expect("decode mailbox")
+        }
+        None => Vec::new(),
+    }
+}
+
+pub fn save_mailbox(db: &Database, character_id: u64, mailbox: &[MailEntryData]) {
+    let bytes = bitcode::encode(mailbox);
+    let txn = db.begin_write().expect("Failed to begin write txn");
+    {
+        let mut table = txn
+            .open_table(MAILBOXES)
+            .expect("Failed to open mailboxes table");
+        table
+            .insert(character_id, bytes.as_slice())
+            .expect("Failed to insert mailbox");
+    }
+    txn.commit().expect("Failed to commit mailbox save");
+}
+
+pub fn append_mail(db: &Database, character_id: u64, mail: MailEntryData) {
+    let mut mailbox = load_mailbox(db, character_id);
+    mailbox.push(mail);
+    save_mailbox(db, character_id, &mailbox);
+}
+
+pub fn load_auctions(db: &Database) -> Vec<AuctionData> {
+    let txn = db.begin_read().expect("Failed to begin read txn");
+    let table = txn
+        .open_table(AUCTIONS)
+        .expect("Failed to open auctions table");
+    table
+        .iter()
+        .expect("Failed to iterate auctions")
+        .map(|row| {
+            let (_key, value) = row.expect("Failed to read auction row");
+            bitcode::decode::<AuctionData>(value.value()).expect("decode auction")
+        })
+        .collect()
+}
+
+pub fn save_auction(db: &Database, auction: &AuctionData) {
+    let bytes = bitcode::encode(auction);
+    let txn = db.begin_write().expect("Failed to begin write txn");
+    {
+        let mut table = txn
+            .open_table(AUCTIONS)
+            .expect("Failed to open auctions table");
+        table
+            .insert(auction.auction_id, bytes.as_slice())
+            .expect("Failed to insert auction");
+    }
+    txn.commit().expect("Failed to commit auction save");
+}
+
+pub fn delete_auction(db: &Database, auction_id: u64) {
+    let txn = db.begin_write().expect("Failed to begin write txn");
+    {
+        let mut table = txn
+            .open_table(AUCTIONS)
+            .expect("Failed to open auctions table");
+        table.remove(auction_id).expect("Failed to remove auction");
+    }
+    txn.commit().expect("Failed to commit auction delete");
 }
 
 /// Save a single character to the database.
@@ -548,6 +698,7 @@ pub fn create_character(
     let character_id = next_id(db, "character");
     let data = default_character_data(name, race, class);
     save_new_character(db, account_id, character_id, name, &data);
+    save_inventory(db, character_id, &default_inventory(db));
     Ok((character_id, data))
 }
 
@@ -636,6 +787,41 @@ fn save_new_character(
             .expect("insert acct chars");
     }
     txn.commit().expect("Failed to commit new character");
+}
+
+fn default_inventory(db: &Database) -> InventoryData {
+    InventoryData {
+        gold: 100_000,
+        items: vec![
+            InventoryItemData {
+                item_guid: next_id(db, "item_instance"),
+                item_id: 2589,
+                name: "Linen Cloth".to_string(),
+                quality: 1,
+                required_level: 1,
+                stack_count: 20,
+                vendor_sell_price: 13,
+            },
+            InventoryItemData {
+                item_guid: next_id(db, "item_instance"),
+                item_id: 2447,
+                name: "Peacebloom".to_string(),
+                quality: 1,
+                required_level: 1,
+                stack_count: 10,
+                vendor_sell_price: 10,
+            },
+            InventoryItemData {
+                item_guid: next_id(db, "item_instance"),
+                item_id: 2770,
+                name: "Copper Ore".to_string(),
+                quality: 1,
+                required_level: 1,
+                stack_count: 10,
+                vendor_sell_price: 25,
+            },
+        ],
+    }
 }
 
 /// Read character IDs from an open account_characters table.

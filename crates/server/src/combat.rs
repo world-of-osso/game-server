@@ -52,11 +52,15 @@ fn start_attack_system(
 ) {
     for (entity, target) in &query {
         if target.0.is_some() {
-            commands
-                .entity(entity)
-                .insert(AutoAttack { timer: 0.0, active: true });
+            commands.entity(entity).insert(AutoAttack {
+                timer: 0.0,
+                active: true,
+            });
         } else if let Ok(mut cmd) = commands.get_entity(entity) {
-            cmd.insert(AutoAttack { timer: 0.0, active: false });
+            cmd.insert(AutoAttack {
+                timer: 0.0,
+                active: false,
+            });
         }
     }
 }
@@ -162,7 +166,13 @@ fn death_system(
 /// Tick respawn timers and restore dead NPCs when ready.
 fn respawn_system(
     time: Res<Time>,
-    mut query: Query<(Entity, &mut DeathState, &mut Health, &SpawnPoint, &mut Position)>,
+    mut query: Query<(
+        Entity,
+        &mut DeathState,
+        &mut Health,
+        &SpawnPoint,
+        &mut Position,
+    )>,
     mut commands: Commands,
     mut senders: Query<&mut MessageSender<CombatEvent>>,
 ) {
@@ -175,10 +185,10 @@ fn respawn_system(
             continue;
         }
         respawn_entity(&mut health, &mut pos, spawn);
-        commands
-            .entity(entity)
-            .remove::<DeathState>()
-            .insert((Replicate::new(ReplicationMode::SingleServer(NetworkTarget::All)), NetworkVisibility));
+        commands.entity(entity).remove::<DeathState>().insert((
+            Replicate::new(ReplicationMode::SingleServer(NetworkTarget::All)),
+            NetworkVisibility,
+        ));
         events.push(CombatEvent {
             attacker: 0,
             target: entity.to_bits(),
@@ -199,10 +209,7 @@ fn respawn_entity(health: &mut Health, pos: &mut Position, spawn: &SpawnPoint) {
 }
 
 /// Send combat events to all connected clients.
-fn broadcast_events(
-    events: &[CombatEvent],
-    senders: &mut Query<&mut MessageSender<CombatEvent>>,
-) {
+fn broadcast_events(events: &[CombatEvent], senders: &mut Query<&mut MessageSender<CombatEvent>>) {
     if events.is_empty() {
         return;
     }
@@ -233,7 +240,13 @@ mod tests {
 
     fn spawn_target(app: &mut App, position: Position, hp: f32) -> Entity {
         app.world_mut()
-            .spawn((position, Health { current: hp, max: 100.0 }))
+            .spawn((
+                position,
+                Health {
+                    current: hp,
+                    max: 100.0,
+                },
+            ))
             .id()
     }
 
@@ -242,8 +255,13 @@ mod tests {
             .spawn((
                 position,
                 CombatTarget(Some(target)),
-                AutoAttack { timer: 0.0, active: true },
-                Player { name: "test".into() },
+                AutoAttack {
+                    timer: 0.0,
+                    active: true,
+                },
+                Player {
+                    name: "test".into(),
+                },
             ))
             .id()
     }
@@ -322,7 +340,10 @@ mod tests {
             .world_mut()
             .spawn((
                 pos(0.0, 0.0, 0.0),
-                Health { current: 0.0, max: 100.0 },
+                Health {
+                    current: 0.0,
+                    max: 100.0,
+                },
                 Npc { template_id: 1 },
             ))
             .id();
@@ -341,7 +362,10 @@ mod tests {
 
     #[test]
     fn test_respawn_restores_health() {
-        let mut health = Health { current: 0.0, max: 100.0 };
+        let mut health = Health {
+            current: 0.0,
+            max: 100.0,
+        };
         let mut position = pos(50.0, 50.0, 50.0);
         let spawn = SpawnPoint {
             x: 10.0,

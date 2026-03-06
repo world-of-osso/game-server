@@ -1,4 +1,5 @@
 mod admin_ipc;
+mod auction_house;
 mod auth;
 mod combat;
 mod creature_ai;
@@ -25,6 +26,7 @@ fn main() {
         })
         .add_plugins(shared::ProtocolPlugin)
         .add_plugins(persistence::PersistencePlugin)
+        .add_plugins(auction_house::AuctionHousePlugin)
         .add_plugins(networking::ServerNetworkPlugin)
         .add_plugins(world_data::WorldDataPlugin)
         .add_plugins(terrain_height::TerrainPlugin)
@@ -48,4 +50,3 @@ fn tick_log(time: Res<Time>, mut tick_count: Local<u64>) {
         info!("Tick {} (uptime: {:.0}s)", *tick_count, time.elapsed_secs());
     }
 }
-

@@ -53,9 +53,10 @@ fn server_replicates_position_to_client() {
         y: 200.0,
         z: 300.0,
     };
-    stepper
-        .server_world_mut()
-        .spawn((pos, Replicate::new(ReplicationMode::SingleServer(NetworkTarget::All))));
+    stepper.server_world_mut().spawn((
+        pos,
+        Replicate::new(ReplicationMode::SingleServer(NetworkTarget::All)),
+    ));
 
     // Tick enough times for replication to propagate
     stepper.tick_step(20);

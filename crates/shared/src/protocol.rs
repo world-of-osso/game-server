@@ -26,6 +26,9 @@ pub struct TerrainChannel;
 /// Reliable ordered channel for authentication and character management, bidirectional.
 pub struct AuthChannel;
 
+/// Reliable ordered channel for auction house operations, bidirectional.
+pub struct AuctionChannel;
+
 /// Chat message type.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub enum ChatType {
@@ -215,6 +218,173 @@ pub struct PlayerInput {
     pub running: bool,
 }
 
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+pub enum AuctionDuration {
+    Short,
+    Medium,
+    Long,
+}
+
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+pub enum AuctionTimeLeft {
+    Short,
+    Medium,
+    Long,
+    VeryLong,
+}
+
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+pub enum AuctionSortField {
+    Name,
+    MinBid,
+    Buyout,
+    TimeLeft,
+    Quality,
+    RequiredLevel,
+}
+
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+pub enum AuctionSortDir {
+    Asc,
+    Desc,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct AuctionInventoryItem {
+    pub item_guid: u64,
+    pub item_id: u32,
+    pub name: String,
+    pub quality: u8,
+    pub required_level: u16,
+    pub stack_count: u32,
+    pub vendor_sell_price: u32,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct AuctionListingSummary {
+    pub auction_id: u64,
+    pub item: AuctionInventoryItem,
+    pub owner_name: String,
+    pub stack_count: u32,
+    pub min_bid: u32,
+    pub current_bid: Option<u32>,
+    pub min_next_bid: u32,
+    pub buyout_price: Option<u32>,
+    pub time_left: AuctionTimeLeft,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct AuctionSearchQuery {
+    pub text: String,
+    pub page: u32,
+    pub page_size: u32,
+    pub min_level: Option<u16>,
+    pub max_level: Option<u16>,
+    pub quality: Option<u8>,
+    pub usable_only: bool,
+    pub sort_field: AuctionSortField,
+    pub sort_dir: AuctionSortDir,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct AuctionHouseOpened {
+    pub success: bool,
+    pub error: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct OpenAuctionHouse;
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct QueryAuctions {
+    pub query: AuctionSearchQuery,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct AuctionSearchResults {
+    pub query: AuctionSearchQuery,
+    pub total_results: u32,
+    pub results: Vec<AuctionListingSummary>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct PlaceBid {
+    pub auction_id: u64,
+    pub amount: u32,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct BuyoutAuction {
+    pub auction_id: u64,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct CreateAuction {
+    pub item_guid: u64,
+    pub stack_count: u32,
+    pub min_bid: u32,
+    pub buyout_price: Option<u32>,
+    pub duration: AuctionDuration,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct CancelAuction {
+    pub auction_id: u64,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct QueryOwnedAuctions;
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct QueryBidAuctions;
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct QueryAuctionInventory;
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct AuctionInventorySnapshot {
+    pub gold: u32,
+    pub items: Vec<AuctionInventoryItem>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct OwnedAuctionListResponse {
+    pub listings: Vec<AuctionListingSummary>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct BidAuctionListResponse {
+    pub listings: Vec<AuctionListingSummary>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct AuctionOperationResponse {
+    pub success: bool,
+    pub message: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct AuctionMailEntry {
+    pub mail_id: u64,
+    pub subject: String,
+    pub body: String,
+    pub attached_money: u32,
+    pub attached_item: Option<AuctionInventoryItem>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct QueryAuctionMailbox;
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct AuctionMailboxSnapshot {
+    pub entries: Vec<AuctionMailEntry>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct ClaimAuctionMail {
+    pub mail_id: u64,
+}
+
 /// Registers shared protocol: components for replication and channels.
 /// Must be added AFTER `ServerPlugins`/`ClientPlugins` but BEFORE any entity is spawned.
 pub struct ProtocolPlugin;
@@ -283,6 +453,42 @@ fn register_messages(app: &mut App) {
         .add_direction(NetworkDirection::ClientToServer);
     app.register_message::<ChatHistoryResponse>()
         .add_direction(NetworkDirection::ServerToClient);
+    app.register_message::<OpenAuctionHouse>()
+        .add_direction(NetworkDirection::ClientToServer);
+    app.register_message::<AuctionHouseOpened>()
+        .add_direction(NetworkDirection::ServerToClient);
+    app.register_message::<QueryAuctions>()
+        .add_direction(NetworkDirection::ClientToServer);
+    app.register_message::<AuctionSearchResults>()
+        .add_direction(NetworkDirection::ServerToClient);
+    app.register_message::<PlaceBid>()
+        .add_direction(NetworkDirection::ClientToServer);
+    app.register_message::<BuyoutAuction>()
+        .add_direction(NetworkDirection::ClientToServer);
+    app.register_message::<CreateAuction>()
+        .add_direction(NetworkDirection::ClientToServer);
+    app.register_message::<CancelAuction>()
+        .add_direction(NetworkDirection::ClientToServer);
+    app.register_message::<QueryOwnedAuctions>()
+        .add_direction(NetworkDirection::ClientToServer);
+    app.register_message::<OwnedAuctionListResponse>()
+        .add_direction(NetworkDirection::ServerToClient);
+    app.register_message::<QueryBidAuctions>()
+        .add_direction(NetworkDirection::ClientToServer);
+    app.register_message::<BidAuctionListResponse>()
+        .add_direction(NetworkDirection::ServerToClient);
+    app.register_message::<QueryAuctionInventory>()
+        .add_direction(NetworkDirection::ClientToServer);
+    app.register_message::<AuctionInventorySnapshot>()
+        .add_direction(NetworkDirection::ServerToClient);
+    app.register_message::<AuctionOperationResponse>()
+        .add_direction(NetworkDirection::ServerToClient);
+    app.register_message::<QueryAuctionMailbox>()
+        .add_direction(NetworkDirection::ClientToServer);
+    app.register_message::<AuctionMailboxSnapshot>()
+        .add_direction(NetworkDirection::ServerToClient);
+    app.register_message::<ClaimAuctionMail>()
+        .add_direction(NetworkDirection::ClientToServer);
 }
 
 fn register_channels(app: &mut App) {
@@ -317,6 +523,12 @@ fn register_channels(app: &mut App) {
     .add_direction(NetworkDirection::ServerToClient);
 
     app.add_channel::<AuthChannel>(ChannelSettings {
+        mode: ChannelMode::OrderedReliable(default()),
+        ..default()
+    })
+    .add_direction(NetworkDirection::Bidirectional);
+
+    app.add_channel::<AuctionChannel>(ChannelSettings {
         mode: ChannelMode::OrderedReliable(default()),
         ..default()
     })
