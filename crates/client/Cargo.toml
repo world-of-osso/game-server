@@ -6,3 +6,10 @@ rust-version.workspace = true
 
 [dependencies]
 shared = { path = "../shared" }
+bevy = { version = "0.18", default-features = false, features = ["bevy_log", "bevy_state"] }
+lightyear = { version = "0.26", features = ["client", "netcode", "replication", "udp"] }
+clap = { version = "4", features = ["derive"] }
+
+[[bin]]
+name = "game-cli"
+path = "src/bin/game_cli.rs"
