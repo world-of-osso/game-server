@@ -19,7 +19,9 @@ const TICK_RATE_HZ: f64 = 20.0;
 
 fn main() {
     App::new()
-        .add_plugins(MinimalPlugins)
+        .add_plugins(MinimalPlugins.set(bevy::app::ScheduleRunnerPlugin::run_loop(
+            Duration::from_secs_f64(1.0 / TICK_RATE_HZ),
+        )))
         .add_plugins(bevy::log::LogPlugin::default())
         .add_plugins(ServerPlugins {
             tick_duration: Duration::from_secs_f64(1.0 / TICK_RATE_HZ),
