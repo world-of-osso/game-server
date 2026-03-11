@@ -1,4 +1,3 @@
 /target
-/data/world.db
-/data/world.db-wal
-/data/world.db-shm
+/target-admin
+/data
