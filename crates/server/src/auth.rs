@@ -10,6 +10,7 @@ use std::collections::HashSet;
 
 use crate::networking::{CombatTarget, PlayerLink, send_load_terrain};
 use crate::persistence::{self, CharacterData, ClientId, GameDatabase};
+use crate::persistence_accounts;
 
 /// Default run speed in yards per second (WoW run speed).
 const DEFAULT_RUN_SPEED: f32 = 7.0;
@@ -106,7 +107,7 @@ fn handle_login(
 ) {
     let token_ref = req.token.as_deref();
     let result =
-        persistence::login_with_credentials(&db.db, token_ref, &req.username, &req.password);
+        persistence_accounts::login_with_credentials(&db.db, token_ref, &req.username, &req.password);
 
     let (account_id, token) = match result {
         Ok(pair) => pair,
@@ -208,7 +209,7 @@ fn handle_register(
     db: &GameDatabase,
     reg_senders: &mut Query<&mut MessageSender<RegisterResponse>>,
 ) {
-    match persistence::request_registration(&db.db, &req.username, &req.password) {
+    match persistence_accounts::request_registration(&db.db, &req.username, &req.password) {
         Ok(()) => {
             send_register_response(entity, reg_senders, false, "", true, None);
             info!(
@@ -505,6 +506,20 @@ fn send_enter_error(
     });
 }
 
+fn build_player_components(data: &CharacterData, character_id: u64) -> impl Bundle {
+    (
+        Position { x: data.x, y: data.y, z: data.z },
+        Health { current: data.health, max: data.max_health },
+        Rotation { x: 0.0, y: 0.0, z: 0.0 },
+        MovementSpeed(DEFAULT_RUN_SPEED),
+        Player { name: data.name.clone() },
+        ClientId(character_id),
+        CombatTarget::default(),
+        Replicate::new(ReplicationMode::SingleServer(NetworkTarget::All)),
+        NetworkVisibility,
+    )
+}
+
 /// Spawn a player entity with replicated components.
 pub fn spawn_player_entity(
     commands: &mut Commands,
@@ -512,41 +527,13 @@ pub fn spawn_player_entity(
     character_id: u64,
     guild: Option<&GuildMembership>,
 ) -> Entity {
-    let pos = Position {
-        x: data.x,
-        y: data.y,
-        z: data.z,
-    };
-    let health = Health {
-        current: data.health,
-        max: data.max_health,
-    };
-    let rotation = Rotation {
-        x: 0.0,
-        y: 0.0,
-        z: 0.0,
-    };
-    let entity = commands
-        .spawn((
-            pos,
-            health,
-            rotation,
-            MovementSpeed(DEFAULT_RUN_SPEED),
-            Player {
-                name: data.name.clone(),
-            },
-            ClientId(character_id),
-            CombatTarget::default(),
-            Replicate::new(ReplicationMode::SingleServer(NetworkTarget::All)),
-            NetworkVisibility,
-        ))
-        .id();
+    let entity = commands.spawn(build_player_components(data, character_id)).id();
     if let Some(g) = guild {
         commands.entity(entity).insert(g.clone());
     }
     info!(
         "Spawned player '{}' at ({}, {}, {})",
-        data.name, pos.x, pos.y, pos.z
+        data.name, data.x, data.y, data.z
     );
     entity
 }
