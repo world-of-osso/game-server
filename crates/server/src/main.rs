@@ -4,6 +4,7 @@ mod auth;
 mod combat;
 mod creature_ai;
 mod interest;
+mod messaging;
 mod networking;
 mod persistence;
 mod persistence_accounts;

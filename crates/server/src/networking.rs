@@ -2,22 +2,21 @@ use bevy::prelude::*;
 use core::net::{IpAddr, Ipv4Addr, SocketAddr};
 use lightyear::prelude::server::*;
 use lightyear::prelude::*;
-use shared::components::{GuildMembership, Health, MovementSpeed, Npc, Player, Position, Rotation};
-use shared::protocol::{
-    AuthChannel, ChatChannel, ChatHistoryRequest, ChatHistoryResponse, ChatMessage, ChatType,
-    GuildAcceptInviteRequest, GuildAcceptInviteResponse, GuildInviteRequest, GuildInviteResponse,
-    LoadTerrain, PlayerInput, SetTarget, TerrainChannel,
-};
+use shared::components::{Health, MovementSpeed, Npc, Player, Position, Rotation};
+use shared::protocol::{ChatMessage, LoadTerrain, PlayerInput, TerrainChannel};
 use std::collections::VecDeque;
 use std::time::Duration;
 
 use crate::auth::{
     self, Authenticated, ConnectedAccounts, InWorld, PendingAuth, PendingAuthTimer, SentTiles,
 };
+use crate::messaging;
 use crate::persistence::{self, CharacterData, ClientId, GameDatabase};
 use crate::terrain_height::{GRAVITY, GROUND_SNAP_THRESHOLD, TerrainHeightMap};
 
 const SERVER_PORT: u16 = 5000;
+const DEFAULT_RUN_SPEED: f32 = 7.0;
+const DEFAULT_WALK_SPEED: f32 = 2.5;
 
 /// Links a connection entity to its spawned player entity.
 #[derive(Component, Debug)]
@@ -28,14 +27,9 @@ pub struct PlayerLink(pub Entity);
 pub struct CombatTarget(pub Option<Entity>);
 
 #[derive(Resource, Default)]
-struct ChatHistoryBuffer {
-    entries: VecDeque<ChatMessage>,
+pub struct ChatHistoryBuffer {
+    pub entries: VecDeque<ChatMessage>,
 }
-
-/// Default run speed in yards per second (WoW run speed).
-const DEFAULT_RUN_SPEED: f32 = 7.0;
-/// Walk speed in yards per second.
-const DEFAULT_WALK_SPEED: f32 = 2.5;
 
 pub struct ServerNetworkPlugin;
 
@@ -50,11 +44,11 @@ impl Plugin for ServerNetworkPlugin {
             apply_terrain_gravity.after(process_player_inputs),
         );
         app.add_systems(FixedUpdate, stream_terrain_tiles);
-        app.add_systems(Update, process_chat_messages);
-        app.add_systems(Update, process_chat_history_requests);
-        app.add_systems(Update, process_guild_invites);
-        app.add_systems(Update, process_guild_accepts);
-        app.add_systems(Update, process_target_messages);
+        app.add_systems(Update, messaging::process_chat_messages);
+        app.add_systems(Update, messaging::process_chat_history_requests);
+        app.add_systems(Update, messaging::process_guild_invites);
+        app.add_systems(Update, messaging::process_guild_accepts);
+        app.add_systems(Update, messaging::process_target_messages);
         app.add_systems(Update, auth::process_login_requests);
         app.add_systems(Update, auth::process_register_requests);
         app.add_systems(Update, auth::process_create_character);
@@ -146,39 +140,50 @@ fn on_client_connected(
         return;
     };
     let client_id = remote_id.0.to_bits();
-    let replicated_count = replicated.iter().count();
-    let replicated_players = replicated.iter().filter(|(_, has_player, _, _, _)| *has_player).count();
-    let replicated_npcs = replicated.iter().filter(|(_, _, has_npc, _, _)| *has_npc).count();
-    let visible_replicated = replicated
-        .iter()
-        .filter(|(_, _, _, has_visibility, _)| *has_visibility)
-        .count();
-    let stateful_replicated = replicated
-        .iter()
-        .filter(|(_, _, _, _, has_state)| *has_state)
-        .count();
-
-    debug!(
-        entity = ?trigger.entity,
-        client_id,
+    log_replication_state(&replicated, client_id, &[
         has_client_of,
         has_link_of,
         has_sender,
         has_terrain_sender,
         has_chat_sender,
         has_auth_sender,
-        replicated_count,
-        replicated_players,
-        replicated_npcs,
-        visible_replicated,
-        stateful_replicated,
-        "Client connected"
-    );
+    ]);
     info!("Client connected: {client_id} (pending auth)");
     let elapsed = time.elapsed_secs_f64();
     commands
         .entity(trigger.entity)
         .insert((PendingAuth, PendingAuthTimer(elapsed)));
+}
+
+fn log_replication_state(
+    replicated: &Query<
+        (Entity, Has<Player>, Has<Npc>, Has<NetworkVisibility>, Has<ReplicationState>),
+        With<Replicate>,
+    >,
+    client_id: u64,
+    flags: &[bool; 6],
+) {
+    let replicated_count = replicated.iter().count();
+    let replicated_players = replicated.iter().filter(|(_, p, _, _, _)| *p).count();
+    let replicated_npcs = replicated.iter().filter(|(_, _, n, _, _)| *n).count();
+    let visible = replicated.iter().filter(|(_, _, _, v, _)| *v).count();
+    let stateful = replicated.iter().filter(|(_, _, _, _, s)| *s).count();
+
+    debug!(
+        client_id,
+        has_client_of = flags[0],
+        has_link_of = flags[1],
+        has_sender = flags[2],
+        has_terrain_sender = flags[3],
+        has_chat_sender = flags[4],
+        has_auth_sender = flags[5],
+        replicated_count,
+        replicated_players,
+        replicated_npcs,
+        visible,
+        stateful,
+        "Client connected"
+    );
 }
 
 /// When a client disconnects, save data and clean up.
@@ -224,7 +229,10 @@ fn save_and_despawn(
             info!("Saved character data for character_id {}", cid.0);
         }
     }
-    commands.entity(entity).despawn();
+    commands
+        .entity(entity)
+        .remove::<(Replicate, NetworkVisibility)>()
+        .despawn();
     info!("Despawned player entity {:?}", entity);
 }
 
@@ -314,293 +322,6 @@ fn clamp_to_terrain(terrain: &TerrainHeightMap, pos: &mut Position, dt: f32) {
 
 fn direction_length(dir: &[f32; 3]) -> f32 {
     (dir[0].powi(2) + dir[1].powi(2) + dir[2].powi(2)).sqrt()
-}
-
-/// A collected chat message with sender's guild context for routing.
-struct CollectedChat {
-    msg: ChatMessage,
-    sender_guild_id: Option<u32>,
-}
-
-/// Read incoming chat messages and route to appropriate clients.
-fn process_chat_messages(
-    mut receivers: Query<(&mut MessageReceiver<ChatMessage>, &PlayerLink)>,
-    players: Query<&Player>,
-    guilds: Query<Option<&GuildMembership>>,
-    mut conns: Query<(&PlayerLink, &mut MessageSender<ChatMessage>)>,
-    mut history: ResMut<ChatHistoryBuffer>,
-) {
-    let collected = collect_chat_messages(&mut receivers, &players, &guilds);
-    for chat in &collected {
-        history.entries.push_back(chat.msg.clone());
-        if history.entries.len() > 100 {
-            history.entries.pop_front();
-        }
-    }
-    route_chat_messages(&collected, &mut conns, &guilds);
-}
-
-fn process_chat_history_requests(
-    mut receivers: Query<(&mut MessageReceiver<ChatHistoryRequest>, Entity), With<Authenticated>>,
-    history: Res<ChatHistoryBuffer>,
-    mut senders: Query<&mut MessageSender<ChatHistoryResponse>>,
-) {
-    for (mut receiver, conn_entity) in receivers.iter_mut() {
-        for req in receiver.receive() {
-            let limit = usize::from(req.limit.clamp(1, 100));
-            let start = history.entries.len().saturating_sub(limit);
-            let messages: Vec<ChatMessage> = history.entries.iter().skip(start).cloned().collect();
-            let Ok(mut sender) = senders.get_mut(conn_entity) else {
-                continue;
-            };
-            sender.send::<AuthChannel>(ChatHistoryResponse {
-                messages,
-                error: None,
-            });
-        }
-    }
-}
-
-fn collect_chat_messages(
-    receivers: &mut Query<(&mut MessageReceiver<ChatMessage>, &PlayerLink)>,
-    players: &Query<&Player>,
-    guilds: &Query<Option<&GuildMembership>>,
-) -> Vec<CollectedChat> {
-    let mut outgoing = Vec::new();
-    for (mut receiver, link) in receivers.iter_mut() {
-        let sender_name = players
-            .get(link.0)
-            .map(|p| p.name.clone())
-            .unwrap_or_else(|_| "Unknown".into());
-        let sender_guild_id = guilds.get(link.0).ok().flatten().map(|g| g.guild_id);
-        for mut msg in receiver.receive() {
-            msg.sender = sender_name.clone();
-            if matches!(msg.channel, ChatType::Guild) && sender_guild_id.is_none() {
-                warn!("[Chat] {} sent guild message but has no guild", msg.sender);
-                continue;
-            }
-            info!("[Chat] {}: {}", msg.sender, msg.content);
-            outgoing.push(CollectedChat {
-                msg,
-                sender_guild_id,
-            });
-        }
-    }
-    outgoing
-}
-
-fn route_chat_messages(
-    outgoing: &[CollectedChat],
-    conns: &mut Query<(&PlayerLink, &mut MessageSender<ChatMessage>)>,
-    guilds: &Query<Option<&GuildMembership>>,
-) {
-    for chat in outgoing {
-        match chat.msg.channel {
-            ChatType::Guild => send_to_guild(&chat.msg, chat.sender_guild_id, conns, guilds),
-            _ => broadcast_to_all(&chat.msg, &mut *conns),
-        }
-    }
-}
-
-fn send_to_guild(
-    msg: &ChatMessage,
-    sender_guild_id: Option<u32>,
-    conns: &mut Query<(&PlayerLink, &mut MessageSender<ChatMessage>)>,
-    guilds: &Query<Option<&GuildMembership>>,
-) {
-    let Some(gid) = sender_guild_id else { return };
-    for (link, mut sender) in conns.iter_mut() {
-        let is_same_guild = guilds
-            .get(link.0)
-            .ok()
-            .flatten()
-            .is_some_and(|g| g.guild_id == gid);
-        if is_same_guild {
-            sender.send::<ChatChannel>(msg.clone());
-        }
-    }
-}
-
-fn broadcast_to_all(
-    msg: &ChatMessage,
-    conns: &mut Query<(&PlayerLink, &mut MessageSender<ChatMessage>)>,
-) {
-    for (_link, mut sender) in conns.iter_mut() {
-        sender.send::<ChatChannel>(msg.clone());
-    }
-}
-
-fn process_guild_invites(
-    mut receivers: Query<
-        (
-            Entity,
-            &PlayerLink,
-            &mut MessageReceiver<GuildInviteRequest>,
-        ),
-        With<Authenticated>,
-    >,
-    players: Query<&Player>,
-    guilds: Query<&GuildMembership>,
-    char_ids: Query<&ClientId>,
-    db: Option<Res<GameDatabase>>,
-    mut senders: Query<&mut MessageSender<GuildInviteResponse>>,
-) {
-    let Some(db) = db else { return };
-    for (conn_entity, link, mut receiver) in receivers.iter_mut() {
-        for req in receiver.receive() {
-            let response = handle_guild_invite(&db, &players, &guilds, &char_ids, link.0, &req);
-            let Ok(mut sender) = senders.get_mut(conn_entity) else {
-                continue;
-            };
-            sender.send::<AuthChannel>(response);
-        }
-    }
-}
-
-fn handle_guild_invite(
-    db: &GameDatabase,
-    players: &Query<&Player>,
-    guilds: &Query<&GuildMembership>,
-    char_ids: &Query<&ClientId>,
-    inviter_entity: Entity,
-    req: &GuildInviteRequest,
-) -> GuildInviteResponse {
-    let Ok(inviter_player) = players.get(inviter_entity) else {
-        return GuildInviteResponse {
-            success: false,
-            error: Some("Inviter player entity missing".into()),
-        };
-    };
-    let Ok(inviter_guild) = guilds.get(inviter_entity) else {
-        return GuildInviteResponse {
-            success: false,
-            error: Some("You are not in a guild".into()),
-        };
-    };
-
-    let Some(target_character_id) =
-        persistence::find_character_id_by_name(&db.db, &req.target_character_name)
-    else {
-        return GuildInviteResponse {
-            success: false,
-            error: Some("Target character not found".into()),
-        };
-    };
-
-    if let Ok(inviter_char_id) = char_ids.get(inviter_entity)
-        && inviter_char_id.0 == target_character_id
-    {
-        return GuildInviteResponse {
-            success: false,
-            error: Some("Cannot invite yourself".into()),
-        };
-    }
-
-    persistence::set_pending_guild_invite(
-        &db.db,
-        target_character_id,
-        inviter_guild.guild_id,
-        &inviter_guild.guild_name,
-        &inviter_player.name,
-    );
-
-    GuildInviteResponse {
-        success: true,
-        error: None,
-    }
-}
-
-fn process_guild_accepts(
-    mut receivers: Query<
-        (
-            Entity,
-            &PlayerLink,
-            &mut MessageReceiver<GuildAcceptInviteRequest>,
-        ),
-        With<Authenticated>,
-    >,
-    char_ids: Query<&ClientId>,
-    db: Option<Res<GameDatabase>>,
-    mut commands: Commands,
-    mut senders: Query<&mut MessageSender<GuildAcceptInviteResponse>>,
-) {
-    let Some(db) = db else { return };
-    for (conn_entity, link, mut receiver) in receivers.iter_mut() {
-        for _ in receiver.receive() {
-            let response = handle_guild_accept(&db, &char_ids, &mut commands, link.0);
-            let Ok(mut sender) = senders.get_mut(conn_entity) else {
-                continue;
-            };
-            sender.send::<AuthChannel>(response);
-        }
-    }
-}
-
-fn handle_guild_accept(
-    db: &GameDatabase,
-    char_ids: &Query<&ClientId>,
-    commands: &mut Commands,
-    player_entity: Entity,
-) -> GuildAcceptInviteResponse {
-    let Ok(character_id) = char_ids.get(player_entity).map(|c| c.0) else {
-        return GuildAcceptInviteResponse {
-            success: false,
-            guild_id: None,
-            guild_name: None,
-            error: Some("Character id not found".into()),
-        };
-    };
-
-    let Some(invite) = persistence::take_pending_guild_invite(&db.db, character_id) else {
-        return GuildAcceptInviteResponse {
-            success: false,
-            guild_id: None,
-            guild_name: None,
-            error: Some("No pending guild invite".into()),
-        };
-    };
-
-    if let Err(err) = persistence::set_character_guild_by_id(
-        &db.db,
-        character_id,
-        invite.guild_id,
-        &invite.guild_name,
-    ) {
-        return GuildAcceptInviteResponse {
-            success: false,
-            guild_id: None,
-            guild_name: None,
-            error: Some(err),
-        };
-    }
-
-    commands.entity(player_entity).insert(GuildMembership {
-        guild_id: invite.guild_id,
-        guild_name: invite.guild_name.clone(),
-    });
-
-    GuildAcceptInviteResponse {
-        success: true,
-        guild_id: Some(invite.guild_id),
-        guild_name: Some(invite.guild_name),
-        error: None,
-    }
-}
-
-/// Read SetTarget messages and update CombatTarget components.
-fn process_target_messages(
-    mut receivers: Query<(&mut MessageReceiver<SetTarget>, &PlayerLink)>,
-    mut targets: Query<&mut CombatTarget>,
-) {
-    for (mut receiver, link) in receivers.iter_mut() {
-        for msg in receiver.receive() {
-            let target = msg.target_entity.map(|bits| Entity::from_bits(bits));
-            if let Ok(mut combat_target) = targets.get_mut(link.0) {
-                combat_target.0 = target;
-                debug!("Player {:?} target set to {:?}", link.0, target);
-            }
-        }
-    }
 }
 
 const TILE_SIZE: f32 = 533.33;
