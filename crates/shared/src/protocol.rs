@@ -3,6 +3,8 @@ use lightyear::prelude::*;
 use lightyear::prelude::{AppChannelExt, ChannelMode, ChannelSettings, NetworkDirection};
 use serde::{Deserialize, Serialize};
 
+pub use crate::protocol_snapshots::*;
+
 use crate::components::{
     GuildMembership, Health, Mana, ModelDisplay, MovementSpeed, Npc, Player, Position, Rotation,
     Zone,
@@ -69,6 +71,30 @@ pub struct CombatEvent {
     pub target: u64,
     pub damage: f32,
     pub event_type: CombatEventType,
+}
+
+/// Client requests to start casting a spell.
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct SpellCastIntent {
+    pub spell_id: Option<u32>,
+    pub spell: String,
+    pub target_entity: Option<u64>,
+}
+
+/// Client requests to stop the current spell cast.
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct StopSpellCast;
+
+/// Client requests to invite a player to the group.
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct GroupInviteIntent {
+    pub name: String,
+}
+
+/// Client requests to uninvite a player from the group.
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct GroupUninviteIntent {
+    pub name: String,
 }
 
 /// Server tells clients which terrain map and initial tile to load.
@@ -411,6 +437,15 @@ fn register_replicated_components(app: &mut App) {
 }
 
 fn register_messages(app: &mut App) {
+    register_core_messages(app);
+    register_account_messages(app);
+    register_character_messages(app);
+    register_guild_and_chat_messages(app);
+    register_auction_messages(app);
+    crate::protocol_snapshots::register_snapshot_messages(app);
+}
+
+fn register_core_messages(app: &mut App) {
     app.register_message::<PlayerInput>()
         .add_direction(NetworkDirection::ClientToServer);
     app.register_message::<ChatMessage>()
@@ -419,8 +454,19 @@ fn register_messages(app: &mut App) {
         .add_direction(NetworkDirection::ClientToServer);
     app.register_message::<CombatEvent>()
         .add_direction(NetworkDirection::ServerToClient);
+    app.register_message::<SpellCastIntent>()
+        .add_direction(NetworkDirection::ClientToServer);
+    app.register_message::<StopSpellCast>()
+        .add_direction(NetworkDirection::ClientToServer);
+    app.register_message::<GroupInviteIntent>()
+        .add_direction(NetworkDirection::ClientToServer);
+    app.register_message::<GroupUninviteIntent>()
+        .add_direction(NetworkDirection::ClientToServer);
     app.register_message::<LoadTerrain>()
         .add_direction(NetworkDirection::ServerToClient);
+}
+
+fn register_account_messages(app: &mut App) {
     app.register_message::<LoginRequest>()
         .add_direction(NetworkDirection::ClientToServer);
     app.register_message::<LoginResponse>()
@@ -429,6 +475,9 @@ fn register_messages(app: &mut App) {
         .add_direction(NetworkDirection::ClientToServer);
     app.register_message::<RegisterResponse>()
         .add_direction(NetworkDirection::ServerToClient);
+}
+
+fn register_character_messages(app: &mut App) {
     app.register_message::<CreateCharacter>()
         .add_direction(NetworkDirection::ClientToServer);
     app.register_message::<CreateCharacterResponse>()
@@ -441,6 +490,9 @@ fn register_messages(app: &mut App) {
         .add_direction(NetworkDirection::ClientToServer);
     app.register_message::<EnterWorldResponse>()
         .add_direction(NetworkDirection::ServerToClient);
+}
+
+fn register_guild_and_chat_messages(app: &mut App) {
     app.register_message::<GuildInviteRequest>()
         .add_direction(NetworkDirection::ClientToServer);
     app.register_message::<GuildInviteResponse>()
@@ -453,6 +505,15 @@ fn register_messages(app: &mut App) {
         .add_direction(NetworkDirection::ClientToServer);
     app.register_message::<ChatHistoryResponse>()
         .add_direction(NetworkDirection::ServerToClient);
+}
+
+fn register_auction_messages(app: &mut App) {
+    register_auction_query_messages(app);
+    register_auction_action_messages(app);
+    register_auction_mail_messages(app);
+}
+
+fn register_auction_query_messages(app: &mut App) {
     app.register_message::<OpenAuctionHouse>()
         .add_direction(NetworkDirection::ClientToServer);
     app.register_message::<AuctionHouseOpened>()
@@ -461,14 +522,6 @@ fn register_messages(app: &mut App) {
         .add_direction(NetworkDirection::ClientToServer);
     app.register_message::<AuctionSearchResults>()
         .add_direction(NetworkDirection::ServerToClient);
-    app.register_message::<PlaceBid>()
-        .add_direction(NetworkDirection::ClientToServer);
-    app.register_message::<BuyoutAuction>()
-        .add_direction(NetworkDirection::ClientToServer);
-    app.register_message::<CreateAuction>()
-        .add_direction(NetworkDirection::ClientToServer);
-    app.register_message::<CancelAuction>()
-        .add_direction(NetworkDirection::ClientToServer);
     app.register_message::<QueryOwnedAuctions>()
         .add_direction(NetworkDirection::ClientToServer);
     app.register_message::<OwnedAuctionListResponse>()
@@ -481,8 +534,22 @@ fn register_messages(app: &mut App) {
         .add_direction(NetworkDirection::ClientToServer);
     app.register_message::<AuctionInventorySnapshot>()
         .add_direction(NetworkDirection::ServerToClient);
+}
+
+fn register_auction_action_messages(app: &mut App) {
+    app.register_message::<PlaceBid>()
+        .add_direction(NetworkDirection::ClientToServer);
+    app.register_message::<BuyoutAuction>()
+        .add_direction(NetworkDirection::ClientToServer);
+    app.register_message::<CreateAuction>()
+        .add_direction(NetworkDirection::ClientToServer);
+    app.register_message::<CancelAuction>()
+        .add_direction(NetworkDirection::ClientToServer);
     app.register_message::<AuctionOperationResponse>()
         .add_direction(NetworkDirection::ServerToClient);
+}
+
+fn register_auction_mail_messages(app: &mut App) {
     app.register_message::<QueryAuctionMailbox>()
         .add_direction(NetworkDirection::ClientToServer);
     app.register_message::<AuctionMailboxSnapshot>()
@@ -626,9 +693,8 @@ mod tests {
         assert_eq!(resp.error, decoded.error);
     }
 
-    #[test]
-    fn auction_search_results_round_trip() {
-        let msg = AuctionSearchResults {
+    fn sample_auction_search_results() -> AuctionSearchResults {
+        AuctionSearchResults {
             query: AuctionSearchQuery {
                 text: "linen".into(),
                 page: 0,
@@ -660,7 +726,12 @@ mod tests {
                 buyout_price: Some(200),
                 time_left: AuctionTimeLeft::Long,
             }],
-        };
+        }
+    }
+
+    #[test]
+    fn auction_search_results_round_trip() {
+        let msg = sample_auction_search_results();
         let encoded = serde_json::to_string(&msg).unwrap();
         let decoded: AuctionSearchResults = serde_json::from_str(&encoded).unwrap();
         assert_eq!(decoded.query.text, "linen");

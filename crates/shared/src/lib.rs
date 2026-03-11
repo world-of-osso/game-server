@@ -1,5 +1,6 @@
 pub mod components;
 pub mod protocol;
+pub mod protocol_snapshots;
 pub mod types;
 
 pub use components::GuildMembership;
