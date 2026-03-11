@@ -149,7 +149,12 @@ fn open_database(mut commands: Commands) {
     if let Some(parent) = path.parent() {
         std::fs::create_dir_all(parent).expect("Failed to create data directory");
     }
-    let db = Database::create(path).expect("Failed to open database");
+    let db = Database::create(path).unwrap_or_else(|e| match e {
+        redb::DatabaseError::DatabaseAlreadyOpen => panic!(
+            "{path:?} is locked by another process (another server or admin CLI running?)"
+        ),
+        _ => panic!("Failed to open database {path:?}: {e}"),
+    });
     create_tables(&db);
     info!("Database opened at {}", path.display());
     commands.insert_resource(GameDatabase { db });
