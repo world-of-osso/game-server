@@ -19,5 +19,5 @@ trap cleanup SIGINT SIGTERM
 # Watch for changes using cargo-watch
 # -c clears screen on each restart
 # -w watches directories
-# -x runs the command
-cargo watch -c -w crates -w Cargo.toml -x 'run --bin server'
+# -s runs a shell command (allows backoff on panic)
+cargo watch -c -w crates -w Cargo.toml -s 'cargo run --bin server || { echo ""; echo "Server exited with code $?. Waiting 20s before restart..."; sleep 20; }'

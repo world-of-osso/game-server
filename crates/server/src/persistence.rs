@@ -4,6 +4,8 @@ use rusqlite::{Connection, OpenFlags, params};
 use shared::components::{CharacterAppearance, GuildMembership, Health, Player, Position};
 use std::path::Path;
 
+pub use crate::persistence_types::*;
+
 /// Character data table: character_id (u64) -> serialized CharacterData (bytes).
 const CHARACTERS: TableDefinition<u64, &[u8]> = TableDefinition::new("characters");
 
@@ -46,123 +48,6 @@ pub(crate) const PENDING_REGISTRATIONS: TableDefinition<&str, &[u8]> =
 /// Auto-increment counters: key (&str) -> next_id (u64).
 pub(crate) const NEXT_IDS: TableDefinition<&str, u64> = TableDefinition::new("next_ids");
 
-/// Serializable character data for persistence.
-#[derive(bitcode::Encode, bitcode::Decode, Debug, Clone, PartialEq)]
-pub struct CharacterData {
-    pub name: String,
-    pub x: f32,
-    pub y: f32,
-    pub z: f32,
-    pub health: f32,
-    pub max_health: f32,
-    pub race: u8,
-    pub class: u8,
-    pub level: u16,
-    pub appearance: CharacterAppearance,
-}
-
-#[derive(bitcode::Decode)]
-struct LegacyCharacterDataV1 {
-    name: String,
-    x: f32,
-    y: f32,
-    z: f32,
-    health: f32,
-    max_health: f32,
-    race: u8,
-    class: u8,
-    level: u16,
-}
-
-#[derive(bitcode::Encode, bitcode::Decode, Debug, Clone, PartialEq)]
-pub struct GuildMembershipData {
-    pub guild_id: u32,
-    pub guild_name: String,
-}
-
-#[derive(bitcode::Encode, bitcode::Decode, Debug, Clone, PartialEq)]
-pub struct PendingGuildInviteData {
-    pub guild_id: u32,
-    pub guild_name: String,
-    pub inviter_name: String,
-}
-
-#[derive(bitcode::Encode, bitcode::Decode, Debug, Clone, PartialEq)]
-pub struct InventoryItemData {
-    pub item_guid: u64,
-    pub item_id: u32,
-    pub name: String,
-    pub quality: u8,
-    pub required_level: u16,
-    pub stack_count: u32,
-    pub vendor_sell_price: u32,
-}
-
-#[derive(bitcode::Encode, bitcode::Decode, Debug, Clone, PartialEq)]
-pub struct InventoryData {
-    pub gold: u32,
-    pub items: Vec<InventoryItemData>,
-}
-
-#[derive(bitcode::Encode, bitcode::Decode, Debug, Clone, PartialEq)]
-pub struct MailEntryData {
-    pub mail_id: u64,
-    pub subject: String,
-    pub body: String,
-    pub attached_money: u32,
-    pub attached_item: Option<InventoryItemData>,
-}
-
-#[derive(bitcode::Encode, bitcode::Decode, Debug, Clone, PartialEq)]
-pub struct AuctionData {
-    pub auction_id: u64,
-    pub seller_character_id: u64,
-    pub seller_name: String,
-    pub item: InventoryItemData,
-    pub stack_count: u32,
-    pub min_bid: u32,
-    pub current_bid: Option<u32>,
-    pub current_bidder_character_id: Option<u64>,
-    pub buyout_price: Option<u32>,
-    pub expires_at_unix_secs: u64,
-}
-
-impl CharacterData {
-    pub fn from_components(player: &Player, pos: &Position, health: &Health) -> Self {
-        Self {
-            name: player.name.clone(),
-            x: pos.x,
-            y: pos.y,
-            z: pos.z,
-            health: health.current,
-            max_health: health.max,
-            race: 1,
-            class: 1,
-            level: 1,
-            appearance: player.appearance,
-        }
-    }
-
-    fn decode_compatible(bytes: &[u8]) -> Result<Self, String> {
-        bitcode::decode::<CharacterData>(bytes).or_else(|_| {
-            bitcode::decode::<LegacyCharacterDataV1>(bytes)
-                .map(|legacy| Self {
-                    name: legacy.name,
-                    x: legacy.x,
-                    y: legacy.y,
-                    z: legacy.z,
-                    health: legacy.health,
-                    max_health: legacy.max_health,
-                    race: legacy.race,
-                    class: legacy.class,
-                    level: legacy.level,
-                    appearance: CharacterAppearance::default(),
-                })
-                .map_err(|e| format!("Failed to decode character data: {e}"))
-        })
-    }
-}
-
 /// Persistence plugin — manages redb database lifecycle and periodic saves.
 pub struct PersistencePlugin;
 
@@ -178,17 +63,43 @@ pub struct GameDatabase {
     pub db: Database,
 }
 
+fn try_open_database_once(path: &Path) -> Result<Database, redb::DatabaseError> {
+    Database::create(path)
+}
+
+fn open_database_with_retry(path: &Path) -> Database {
+    const MAX_RETRIES: u32 = 5;
+    const RETRY_DELAY_MS: u64 = 1000;
+
+    for attempt in 1..=MAX_RETRIES {
+        match try_open_database_once(path) {
+            Ok(db) => return db,
+            Err(redb::DatabaseError::DatabaseAlreadyOpen) => {
+                error!(
+                    "{path:?} is locked by another process (attempt {attempt}/{MAX_RETRIES}). \
+                     Retrying in {RETRY_DELAY_MS}ms..."
+                );
+                std::thread::sleep(std::time::Duration::from_millis(RETRY_DELAY_MS));
+            }
+            Err(e) => {
+                error!("Failed to open database {path:?}: {e}");
+                std::process::exit(1);
+            }
+        }
+    }
+    error!(
+        "Failed to open {path:?} after {MAX_RETRIES} attempts. \
+         Is another server or admin CLI running?"
+    );
+    std::process::exit(1);
+}
+
 fn open_database(mut commands: Commands) {
     let path = Path::new("data/game.redb");
     if let Some(parent) = path.parent() {
         std::fs::create_dir_all(parent).expect("Failed to create data directory");
     }
-    let db = Database::create(path).unwrap_or_else(|e| match e {
-        redb::DatabaseError::DatabaseAlreadyOpen => {
-            panic!("{path:?} is locked by another process (another server or admin CLI running?)")
-        }
-        _ => panic!("Failed to open database {path:?}: {e}"),
-    });
+    let db = open_database_with_retry(path);
     create_tables(&db);
     info!("Database opened at {}", path.display());
     commands.insert_resource(GameDatabase { db });
@@ -756,92 +667,5 @@ pub(crate) fn temp_database() -> Database {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use shared::components::CharacterAppearance;
-
-    #[derive(bitcode::Encode)]
-    struct LegacyCharacterData {
-        name: String,
-        x: f32,
-        y: f32,
-        z: f32,
-        health: f32,
-        max_health: f32,
-        race: u8,
-        class: u8,
-        level: u16,
-    }
-
-    fn sample_data() -> CharacterData {
-        CharacterData {
-            name: "TestPlayer".into(),
-            x: -8949.0,
-            y: -132.0,
-            z: 83.0,
-            health: 75.0,
-            max_health: 100.0,
-            race: 1,
-            class: 1,
-            level: 1,
-            appearance: CharacterAppearance::default(),
-        }
-    }
-
-    #[test]
-    fn character_data_round_trip() {
-        let db = temp_database();
-        let data = sample_data();
-        save_character(&db, 42, &data);
-        let loaded = load_character(&db, 42).expect("should find saved character");
-        assert_eq!(loaded, data);
-    }
-
-    #[test]
-    fn load_missing_character_returns_none() {
-        let db = temp_database();
-        assert!(load_character(&db, 999).is_none());
-    }
-
-    #[test]
-    fn save_overwrites_existing() {
-        let db = temp_database();
-        let mut data = sample_data();
-        save_character(&db, 1, &data);
-        data.x = 100.0;
-        data.health = 50.0;
-        save_character(&db, 1, &data);
-        let loaded = load_character(&db, 1).unwrap();
-        assert_eq!(loaded.x, 100.0);
-        assert_eq!(loaded.health, 50.0);
-    }
-
-    #[test]
-    fn load_character_decodes_legacy_records_with_default_appearance() {
-        let db = temp_database();
-        let legacy = LegacyCharacterData {
-            name: "Legacy".into(),
-            x: 1.0,
-            y: 2.0,
-            z: 3.0,
-            health: 90.0,
-            max_health: 100.0,
-            race: 1,
-            class: 1,
-            level: 7,
-        };
-
-        let bytes = bitcode::encode(&legacy);
-        let txn = db.begin_write().expect("begin write");
-        {
-            let mut table = txn.open_table(CHARACTERS).expect("open characters");
-            table.insert(99, bytes.as_slice()).expect("insert legacy");
-        }
-        txn.commit().expect("commit");
-
-        let loaded = load_character(&db, 99).expect("legacy character should load");
-        assert_eq!(loaded.name, "Legacy");
-        assert_eq!(loaded.level, 7);
-        assert_eq!(loaded.appearance, CharacterAppearance::default());
-    }
-}
+#[path = "persistence_tests.rs"]
+mod tests;

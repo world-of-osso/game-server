@@ -190,7 +190,7 @@ fn connect_to_server(mut commands: Commands, action: Res<CliAction>) {
     println!("[cli] Connecting to {}...", action.server);
 }
 
-fn on_link_established(trigger: On<Add, LinkOf>, mut commands: Commands) {
+fn on_link_established(trigger: On<Add, Connected>, mut commands: Commands) {
     commands
         .entity(trigger.entity)
         .insert(ReplicationReceiver::default());

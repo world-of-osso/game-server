@@ -8,6 +8,7 @@ mod messaging;
 mod networking;
 mod persistence;
 mod persistence_accounts;
+mod persistence_types;
 mod terrain_height;
 mod world_data;
 mod zones;
