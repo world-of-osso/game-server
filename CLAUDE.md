@@ -21,7 +21,7 @@ crates/
 
 ## Dev
 
-- `cargo run -p server` — Start server (binds to 0.0.0.0:5000)
+- `cargo run -p server --bin game-server` — Start server (binds to 0.0.0.0:5000)
 - `cargo test` — Run all tests
 - `./run-tests.sh` — cargo test + clippy
 - Edition 2024, rust-version 1.89

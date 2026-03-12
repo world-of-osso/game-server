@@ -21,6 +21,10 @@ peercred-ipc = { git = "https://github.com/Osso/peercred-ipc.git", tag = "v0.2.0
 rusqlite = { version = "0.35", features = ["bundled"] }
 
 [[bin]]
+name = "game-server"
+path = "src/main.rs"
+
+[[bin]]
 name = "game-server-admin"
 path = "src/bin/admin.rs"
 
