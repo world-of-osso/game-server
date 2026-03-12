@@ -58,6 +58,7 @@ pub fn auth_timeout(
     for (entity, timer) in pending.iter() {
         if now - timer.0 > AUTH_TIMEOUT_SECS {
             warn!("Auth timeout for {:?}, disconnecting", entity);
+            commands.entity(entity).remove::<PendingAuth>();
             commands.trigger(lightyear::prelude::Disconnect { entity });
         }
     }
