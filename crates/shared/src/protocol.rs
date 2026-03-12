@@ -6,8 +6,8 @@ use serde::{Deserialize, Serialize};
 pub use crate::protocol_snapshots::*;
 
 use crate::components::{
-    GuildMembership, Health, Mana, ModelDisplay, MovementSpeed, Npc, Player, Position, Rotation,
-    Zone,
+    CharacterAppearance, GuildMembership, Health, Mana, ModelDisplay, MovementSpeed, Npc, Player,
+    Position, Rotation, Zone,
 };
 
 /// Unreliable movement position updates, server-to-client only.
@@ -113,6 +113,7 @@ pub struct CharacterListEntry {
     pub level: u16,
     pub race: u8,
     pub class: u8,
+    pub appearance: CharacterAppearance,
 }
 
 /// Client sends after connecting to authenticate.
@@ -154,6 +155,7 @@ pub struct CreateCharacter {
     pub name: String,
     pub race: u8,
     pub class: u8,
+    pub appearance: CharacterAppearance,
 }
 
 /// Server responds to character creation.

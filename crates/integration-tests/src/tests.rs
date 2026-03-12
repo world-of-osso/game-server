@@ -136,103 +136,47 @@ fn process_player_inputs(
 #[test]
 fn multi_client_input_routes_independently() {
     let mut stepper = Stepper::two_clients();
+    let (player_a, player_b) = setup_two_player_entities(&mut stepper);
+    stepper.server_app.add_systems(Update, process_player_inputs);
+    send_player_input(&mut stepper, 0, input_x());
+    send_player_input(&mut stepper, 1, input_y());
+    stepper.tick_step(30);
+    assert_player_moved_in_x(&stepper, player_a);
+    assert_player_moved_in_y(&stepper, player_b);
+}
 
-    // Spawn a player entity for each client on the server,
-    // and link them via PlayerLink on the client_of entity.
-    let player_a = stepper
-        .server_world_mut()
-        .spawn(Position {
-            x: 0.0,
-            y: 0.0,
-            z: 0.0,
-        })
-        .id();
-    let player_b = stepper
-        .server_world_mut()
-        .spawn(Position {
-            x: 0.0,
-            y: 0.0,
-            z: 0.0,
-        })
-        .id();
-
+fn setup_two_player_entities(stepper: &mut Stepper) -> (Entity, Entity) {
+    let player_a = stepper.server_world_mut().spawn(Position::default()).id();
+    let player_b = stepper.server_world_mut().spawn(Position::default()).id();
     let client_of_0 = stepper.client_of_entities[0];
     let client_of_1 = stepper.client_of_entities[1];
-    stepper
-        .server_world_mut()
-        .entity_mut(client_of_0)
-        .insert(PlayerLink(player_a));
-    stepper
-        .server_world_mut()
-        .entity_mut(client_of_1)
-        .insert(PlayerLink(player_b));
+    stepper.server_world_mut().entity_mut(client_of_0).insert(PlayerLink(player_a));
+    stepper.server_world_mut().entity_mut(client_of_1).insert(PlayerLink(player_b));
+    (player_a, player_b)
+}
 
-    // Register the input processing system on the server
-    stepper
-        .server_app
-        .add_systems(Update, process_player_inputs);
+fn input_x() -> PlayerInput {
+    PlayerInput { direction: [1.0, 0.0, 0.0], facing_yaw: 0.0, jumping: false, running: false }
+}
 
-    // Client 0 sends input moving in +X, client 1 sends input moving in +Y
-    send_player_input(
-        &mut stepper,
-        0,
-        PlayerInput {
-            direction: [1.0, 0.0, 0.0],
-            facing_yaw: 0.0,
-            jumping: false,
-            running: false,
-        },
-    );
-    send_player_input(
-        &mut stepper,
-        1,
-        PlayerInput {
-            direction: [0.0, 1.0, 0.0],
-            facing_yaw: 0.0,
-            jumping: false,
-            running: false,
-        },
-    );
+fn input_y() -> PlayerInput {
+    PlayerInput { direction: [0.0, 1.0, 0.0], facing_yaw: 0.0, jumping: false, running: false }
+}
 
-    // Tick enough for messages to arrive and be processed
-    stepper.tick_step(30);
+fn assert_player_moved_in_x(stepper: &Stepper, player: Entity) {
+    let pos = get_server_position(stepper, player);
+    assert!(pos.x > 0.0, "player should have moved in +X, got x={}", pos.x);
+    assert!(pos.y.abs() < f32::EPSILON, "player should not have moved in Y, got y={}", pos.y);
+}
 
-    let pos_a = *stepper
-        .server_app
-        .world()
-        .entity(player_a)
-        .get::<Position>()
-        .expect("player_a should have Position");
-    let pos_b = *stepper
-        .server_app
-        .world()
-        .entity(player_b)
-        .get::<Position>()
-        .expect("player_b should have Position");
+fn assert_player_moved_in_y(stepper: &Stepper, player: Entity) {
+    let pos = get_server_position(stepper, player);
+    assert!(pos.y > 0.0, "player should have moved in +Y, got y={}", pos.y);
+    assert!(pos.x.abs() < f32::EPSILON, "player should not have moved in X, got x={}", pos.x);
+}
 
-    // Player A moved in +X only
-    assert!(
-        pos_a.x > 0.0,
-        "player_a should have moved in +X, got x={}",
-        pos_a.x
-    );
-    assert!(
-        pos_a.y.abs() < f32::EPSILON,
-        "player_a should not have moved in Y, got y={}",
-        pos_a.y
-    );
-
-    // Player B moved in +Y only
-    assert!(
-        pos_b.y > 0.0,
-        "player_b should have moved in +Y, got y={}",
-        pos_b.y
-    );
-    assert!(
-        pos_b.x.abs() < f32::EPSILON,
-        "player_b should not have moved in X, got x={}",
-        pos_b.x
-    );
+fn get_server_position(stepper: &Stepper, entity: Entity) -> Position {
+    *stepper.server_app.world().entity(entity).get::<Position>().expect("entity should have Position")
 }
 
 /// Query the client world for a Position component on a Replicated entity.

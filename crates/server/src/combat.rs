@@ -261,6 +261,7 @@ mod tests {
                 },
                 Player {
                     name: "test".into(),
+                    appearance: Default::default(),
                 },
             ))
             .id()

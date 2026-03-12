@@ -110,21 +110,34 @@ fn require_args(args: &[String], min: usize, usage: &str) {
 
 fn parse_create_account(args: &[String]) -> AdminRequest {
     require_args(args, 4, "create-account <username> <password>");
-    AdminRequest::CreateAccount { username: args[2].clone(), password: args[3].clone() }
+    AdminRequest::CreateAccount {
+        username: args[2].clone(),
+        password: args[3].clone(),
+    }
 }
 
 fn parse_approve_registration(args: &[String]) -> AdminRequest {
     require_args(args, 3, "approve-registration <username>");
-    AdminRequest::ApproveRegistration { username: args[2].clone() }
+    AdminRequest::ApproveRegistration {
+        username: args[2].clone(),
+    }
 }
 
 fn parse_create_guild(args: &[String]) -> AdminRequest {
-    require_args(args, 5, "create-guild <character_name> <guild_id> <guild_name>");
+    require_args(
+        args,
+        5,
+        "create-guild <character_name> <guild_id> <guild_name>",
+    );
     let guild_id: u32 = args[3].parse().unwrap_or_else(|_| {
         eprintln!("Invalid guild_id: {}", args[3]);
         std::process::exit(1);
     });
-    AdminRequest::CreateGuild { character_name: args[2].clone(), guild_id, guild_name: args[4..].join(" ") }
+    AdminRequest::CreateGuild {
+        character_name: args[2].clone(),
+        guild_id,
+        guild_name: args[4..].join(" "),
+    }
 }
 
 fn parse_set_level(args: &[String]) -> AdminRequest {
@@ -133,7 +146,10 @@ fn parse_set_level(args: &[String]) -> AdminRequest {
         eprintln!("Invalid level: {}", args[3]);
         std::process::exit(1);
     });
-    AdminRequest::SetLevel { character_name: args[2].clone(), level }
+    AdminRequest::SetLevel {
+        character_name: args[2].clone(),
+        level,
+    }
 }
 
 fn parse_set_credentials(args: &[String]) -> AdminRequest {
@@ -154,15 +170,25 @@ fn print_response(response: &AdminResponse) {
         AdminResponse::RegistrationApproved { account_id, token } => {
             println!("Registration approved: id={account_id} token={token}");
         }
-        AdminResponse::GuildCreated { character_id, guild_id, guild_name } => {
+        AdminResponse::GuildCreated {
+            character_id,
+            guild_id,
+            guild_name,
+        } => {
             println!(
                 "Guild assigned: character_id={character_id} guild_id={guild_id} guild_name={guild_name}"
             );
         }
-        AdminResponse::LevelSet { character_name, level } => {
+        AdminResponse::LevelSet {
+            character_name,
+            level,
+        } => {
             println!("Level set: {character_name} -> {level}");
         }
-        AdminResponse::CredentialsSet { account_id, username } => {
+        AdminResponse::CredentialsSet {
+            account_id,
+            username,
+        } => {
             println!("Credentials set: account_id={account_id} username={username}");
         }
         AdminResponse::Error(e) => {

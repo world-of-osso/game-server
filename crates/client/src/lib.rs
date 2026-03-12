@@ -10,6 +10,7 @@ use bevy::prelude::*;
 use core::net::{IpAddr, Ipv4Addr, SocketAddr};
 use lightyear::prelude::client::*;
 use lightyear::prelude::*;
+use shared::components::CharacterAppearance;
 use shared::protocol::{
     AuthChannel, ChatChannel, ChatHistoryRequest, ChatHistoryResponse, ChatMessage, ChatType,
     CreateCharacter, CreateCharacterResponse, EnterWorldResponse, GuildAcceptInviteRequest,
@@ -28,10 +29,19 @@ pub enum CliCommand {
     Login,
     Status,
     Register,
-    CreateCharacter { name: String, race: u8, class: u8 },
-    GuildInvite { target: String },
+    CreateCharacter {
+        name: String,
+        race: u8,
+        class: u8,
+        appearance: CharacterAppearance,
+    },
+    GuildInvite {
+        target: String,
+    },
     GuildAccept,
-    ChatHistory { limit: u16 },
+    ChatHistory {
+        limit: u16,
+    },
     ChatSend(String),
     ChatListen,
     GuildChat(String),
@@ -392,8 +402,13 @@ fn after_login(
             next_state.set(CliState::Done);
             exit.write(AppExit::Success);
         }
-        CliCommand::CreateCharacter { name, race, class } => {
-            send_create_character_request(name, *race, *class, create_senders, exit);
+        CliCommand::CreateCharacter {
+            name,
+            race,
+            class,
+            appearance,
+        } => {
+            send_create_character_request(name, *race, *class, *appearance, create_senders, exit);
         }
         CliCommand::ChatHistory { limit } => {
             send_chat_history_request(*limit, history_senders, exit);
@@ -429,6 +444,7 @@ fn send_create_character_request(
     name: &str,
     race: u8,
     class: u8,
+    appearance: CharacterAppearance,
     senders: &mut Query<&mut MessageSender<CreateCharacter>>,
     exit: &mut MessageWriter<AppExit>,
 ) {
@@ -436,6 +452,7 @@ fn send_create_character_request(
         name: name.to_string(),
         race,
         class,
+        appearance,
     };
     let mut sent = false;
     for mut sender in senders.iter_mut() {

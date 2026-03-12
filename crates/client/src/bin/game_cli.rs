@@ -2,6 +2,7 @@ use std::net::SocketAddr;
 
 use clap::{Parser, Subcommand};
 use client::{CliAction, CliCommand};
+use shared::components::CharacterAppearance;
 
 #[derive(Parser)]
 #[command(name = "game-cli", about = "Headless game server CLI client")]
@@ -103,6 +104,19 @@ struct CreateCharacterArgs {
     /// Class ID
     #[arg(long = "class", default_value_t = 1)]
     class_id: u8,
+    /// Sex (0=male, 1=female)
+    #[arg(long, default_value_t = 0)]
+    sex: u8,
+    #[arg(long, default_value_t = 0)]
+    skin_color: u8,
+    #[arg(long, default_value_t = 0)]
+    face: u8,
+    #[arg(long, default_value_t = 0)]
+    hair_style: u8,
+    #[arg(long, default_value_t = 0)]
+    hair_color: u8,
+    #[arg(long, default_value_t = 0)]
+    facial_style: u8,
 }
 
 #[derive(Parser, Clone)]
@@ -149,6 +163,14 @@ fn build_action(cli: Cli) -> CliAction {
                 name: args.name,
                 race: args.race,
                 class: args.class_id,
+                appearance: CharacterAppearance {
+                    sex: args.sex,
+                    skin_color: args.skin_color,
+                    face: args.face,
+                    hair_style: args.hair_style,
+                    hair_color: args.hair_color,
+                    facial_style: args.facial_style,
+                },
             },
             server: args.auth.server.server,
             username: None,

@@ -106,8 +106,12 @@ fn handle_login(
     commands: &mut Commands,
 ) {
     let token_ref = req.token.as_deref();
-    let result =
-        persistence_accounts::login_with_credentials(&db.db, token_ref, &req.username, &req.password);
+    let result = persistence_accounts::login_with_credentials(
+        &db.db,
+        token_ref,
+        &req.username,
+        &req.password,
+    );
 
     let (account_id, token) = match result {
         Ok(pair) => pair,
@@ -141,6 +145,7 @@ fn chars_to_entries(chars: &[(u64, CharacterData)]) -> Vec<shared::protocol::Cha
             level: data.level,
             race: data.race,
             class: data.class,
+            appearance: data.appearance,
         })
         .collect()
 }
@@ -285,7 +290,14 @@ fn handle_create(
     let Ok(mut sender) = senders.get_mut(entity) else {
         return;
     };
-    match persistence::create_character(&db.db, account_id, &req.name, req.race, req.class) {
+    match persistence::create_character_with_appearance(
+        &db.db,
+        account_id,
+        &req.name,
+        req.race,
+        req.class,
+        req.appearance,
+    ) {
         Ok((cid, data)) => {
             let entry = shared::protocol::CharacterListEntry {
                 character_id: cid,
@@ -293,6 +305,7 @@ fn handle_create(
                 level: data.level,
                 race: data.race,
                 class: data.class,
+                appearance: data.appearance,
             };
             sender.send::<AuthChannel>(CreateCharacterResponse {
                 success: true,
@@ -508,11 +521,25 @@ fn send_enter_error(
 
 fn build_player_components(data: &CharacterData, character_id: u64) -> impl Bundle {
     (
-        Position { x: data.x, y: data.y, z: data.z },
-        Health { current: data.health, max: data.max_health },
-        Rotation { x: 0.0, y: 0.0, z: 0.0 },
+        Position {
+            x: data.x,
+            y: data.y,
+            z: data.z,
+        },
+        Health {
+            current: data.health,
+            max: data.max_health,
+        },
+        Rotation {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+        },
         MovementSpeed(DEFAULT_RUN_SPEED),
-        Player { name: data.name.clone() },
+        Player {
+            name: data.name.clone(),
+            appearance: data.appearance,
+        },
         ClientId(character_id),
         CombatTarget::default(),
         Replicate::new(ReplicationMode::SingleServer(NetworkTarget::All)),
@@ -527,7 +554,9 @@ pub fn spawn_player_entity(
     character_id: u64,
     guild: Option<&GuildMembership>,
 ) -> Entity {
-    let entity = commands.spawn(build_player_components(data, character_id)).id();
+    let entity = commands
+        .spawn(build_player_components(data, character_id))
+        .id();
     if let Some(g) = guild {
         commands.entity(entity).insert(g.clone());
     }

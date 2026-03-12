@@ -1,4 +1,5 @@
 pub mod components;
+pub mod movement;
 pub mod protocol;
 pub mod protocol_snapshots;
 pub mod types;

@@ -179,22 +179,35 @@ fn poll_admin_ipc(
 fn dispatch(cmd: AdminCommand, db: &persistence::GameDatabase) {
     let response = match cmd.request {
         AdminRequest::Ping => AdminResponse::Pong,
-        AdminRequest::CreateAccount { username, password } => handle_create_account(db, &username, &password),
-        AdminRequest::ApproveRegistration { username } => handle_approve_registration(db, &username),
-        AdminRequest::CreateGuild { character_name, guild_id, guild_name } => {
-            handle_create_guild(db, &character_name, guild_id, &guild_name)
+        AdminRequest::CreateAccount { username, password } => {
+            handle_create_account(db, &username, &password)
         }
-        AdminRequest::SetLevel { character_name, level } => {
-            handle_set_level(db, &character_name, level)
+        AdminRequest::ApproveRegistration { username } => {
+            handle_approve_registration(db, &username)
         }
-        AdminRequest::SetCredentials { token, username, password } => {
-            handle_set_credentials(db, &token, &username, &password)
-        }
+        AdminRequest::CreateGuild {
+            character_name,
+            guild_id,
+            guild_name,
+        } => handle_create_guild(db, &character_name, guild_id, &guild_name),
+        AdminRequest::SetLevel {
+            character_name,
+            level,
+        } => handle_set_level(db, &character_name, level),
+        AdminRequest::SetCredentials {
+            token,
+            username,
+            password,
+        } => handle_set_credentials(db, &token, &username, &password),
     };
     let _ = cmd.respond.send(response);
 }
 
-fn handle_create_account(db: &persistence::GameDatabase, username: &str, password: &str) -> AdminResponse {
+fn handle_create_account(
+    db: &persistence::GameDatabase,
+    username: &str,
+    password: &str,
+) -> AdminResponse {
     match persistence_accounts::register_account(&db.db, username, password) {
         Ok((account_id, token)) => AdminResponse::AccountCreated { account_id, token },
         Err(e) => AdminResponse::Error(e),
@@ -208,9 +221,17 @@ fn handle_approve_registration(db: &persistence::GameDatabase, username: &str) -
     }
 }
 
-fn handle_set_credentials(db: &persistence::GameDatabase, token: &str, username: &str, password: &str) -> AdminResponse {
+fn handle_set_credentials(
+    db: &persistence::GameDatabase,
+    token: &str,
+    username: &str,
+    password: &str,
+) -> AdminResponse {
     match persistence_accounts::set_account_credentials(&db.db, token, username, password) {
-        Ok(account_id) => AdminResponse::CredentialsSet { account_id, username: username.to_owned() },
+        Ok(account_id) => AdminResponse::CredentialsSet {
+            account_id,
+            username: username.to_owned(),
+        },
         Err(e) => AdminResponse::Error(e),
     }
 }
@@ -224,12 +245,24 @@ fn handle_set_level(db: &persistence::GameDatabase, name: &str, level: u16) -> A
     };
     data.level = level;
     persistence::save_character(&db.db, char_id, &data);
-    AdminResponse::LevelSet { character_name: name.to_owned(), level }
+    AdminResponse::LevelSet {
+        character_name: name.to_owned(),
+        level,
+    }
 }
 
-fn handle_create_guild(db: &persistence::GameDatabase, name: &str, guild_id: u32, guild_name: &str) -> AdminResponse {
+fn handle_create_guild(
+    db: &persistence::GameDatabase,
+    name: &str,
+    guild_id: u32,
+    guild_name: &str,
+) -> AdminResponse {
     match persistence::set_character_guild_by_name(&db.db, name, guild_id, guild_name) {
-        Ok(character_id) => AdminResponse::GuildCreated { character_id, guild_id, guild_name: guild_name.to_owned() },
+        Ok(character_id) => AdminResponse::GuildCreated {
+            character_id,
+            guild_id,
+            guild_name: guild_name.to_owned(),
+        },
         Err(e) => AdminResponse::Error(e),
     }
 }

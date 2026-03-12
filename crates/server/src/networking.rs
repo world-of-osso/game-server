@@ -31,6 +31,11 @@ pub struct ChatHistoryBuffer {
     pub entries: VecDeque<ChatMessage>,
 }
 
+/// Marks an entity for deferred despawn (next frame), allowing lightyear to process
+/// the removal of Replicate/NetworkVisibility before the entity disappears.
+#[derive(Component)]
+struct PendingDespawn;
+
 pub struct ServerNetworkPlugin;
 
 impl Plugin for ServerNetworkPlugin {
@@ -38,6 +43,7 @@ impl Plugin for ServerNetworkPlugin {
         app.init_resource::<ConnectedAccounts>();
         app.init_resource::<ChatHistoryBuffer>();
         app.add_systems(Startup, start_server);
+        app.add_systems(PostUpdate, despawn_pending);
         app.add_systems(FixedUpdate, process_player_inputs);
         app.add_systems(
             FixedUpdate,
@@ -58,6 +64,7 @@ impl Plugin for ServerNetworkPlugin {
         app.add_observer(on_new_link);
         app.add_observer(on_client_connected);
         app.add_observer(on_client_disconnected);
+        app.add_observer(on_player_link_inserted);
     }
 }
 
@@ -82,7 +89,10 @@ fn on_new_link(
     replicated: Query<(Entity, Has<Player>, Has<Npc>), With<Replicate>>,
 ) {
     let replicated_count = replicated.iter().count();
-    let replicated_players = replicated.iter().filter(|(_, has_player, _)| *has_player).count();
+    let replicated_players = replicated
+        .iter()
+        .filter(|(_, has_player, _)| *has_player)
+        .count();
     let replicated_npcs = replicated.iter().filter(|(_, _, has_npc)| *has_npc).count();
     if let Ok((connected, client_of, sender)) = links.get(trigger.entity) {
         debug!(
@@ -121,7 +131,13 @@ fn on_client_connected(
         With<Connected>,
     >,
     replicated: Query<
-        (Entity, Has<Player>, Has<Npc>, Has<NetworkVisibility>, Has<ReplicationState>),
+        (
+            Entity,
+            Has<Player>,
+            Has<Npc>,
+            Has<NetworkVisibility>,
+            Has<ReplicationState>,
+        ),
         With<Replicate>,
     >,
     time: Res<Time>,
@@ -140,14 +156,18 @@ fn on_client_connected(
         return;
     };
     let client_id = remote_id.0.to_bits();
-    log_replication_state(&replicated, client_id, &[
-        has_client_of,
-        has_link_of,
-        has_sender,
-        has_terrain_sender,
-        has_chat_sender,
-        has_auth_sender,
-    ]);
+    log_replication_state(
+        &replicated,
+        client_id,
+        &[
+            has_client_of,
+            has_link_of,
+            has_sender,
+            has_terrain_sender,
+            has_chat_sender,
+            has_auth_sender,
+        ],
+    );
     info!("Client connected: {client_id} (pending auth)");
     let elapsed = time.elapsed_secs_f64();
     commands
@@ -157,7 +177,13 @@ fn on_client_connected(
 
 fn log_replication_state(
     replicated: &Query<
-        (Entity, Has<Player>, Has<Npc>, Has<NetworkVisibility>, Has<ReplicationState>),
+        (
+            Entity,
+            Has<Player>,
+            Has<Npc>,
+            Has<NetworkVisibility>,
+            Has<ReplicationState>,
+        ),
         With<Replicate>,
     >,
     client_id: u64,
@@ -232,8 +258,56 @@ fn save_and_despawn(
     commands
         .entity(entity)
         .remove::<(Replicate, NetworkVisibility)>()
-        .despawn();
-    info!("Despawned player entity {:?}", entity);
+        .insert(PendingDespawn);
+    info!("Removed replication for player entity {:?}, pending despawn", entity);
+}
+
+fn despawn_pending(mut commands: Commands, query: Query<Entity, With<PendingDespawn>>) {
+    for entity in &query {
+        commands.entity(entity).despawn();
+    }
+}
+
+/// When PlayerLink is inserted (player enters world), immediately grant visibility
+/// for all nearby replicated entities to this connection. Without this, entities
+/// stay invisible until the interest system's next tick (~500ms).
+fn on_player_link_inserted(
+    trigger: On<Add, PlayerLink>,
+    link_query: Query<&PlayerLink>,
+    positions: Query<&Position>,
+    mut vis_query: Query<(Entity, &Position, &mut ReplicationState), With<NetworkVisibility>>,
+) {
+    let conn_entity = trigger.entity;
+    let Ok(link) = link_query.get(conn_entity) else {
+        return;
+    };
+    let Ok(player_pos) = positions.get(link.0) else {
+        return;
+    };
+    // Grant visibility for the player's own entity
+    if let Ok(mut state) = vis_query.get_mut(link.0) {
+        state.2.gain_visibility(conn_entity);
+    }
+    // Grant visibility for all nearby entities
+    let mut count = 0u32;
+    for (entity, pos, mut state) in vis_query.iter_mut() {
+        if entity == link.0 {
+            continue;
+        }
+        let dx = pos.x - player_pos.x;
+        let dy = pos.y - player_pos.y;
+        let dz = pos.z - player_pos.z;
+        if dx * dx + dy * dy + dz * dz <= 100.0 * 100.0 {
+            state.gain_visibility(conn_entity);
+            count += 1;
+        }
+    }
+    info!(
+        conn = ?conn_entity,
+        player = ?link.0,
+        nearby = count,
+        "Granted immediate visibility for player + {count} nearby entities"
+    );
 }
 
 /// Send the initial terrain loading command to a client.
@@ -285,9 +359,20 @@ fn apply_movement_input(
         return;
     }
     let scale = speed.0 * time.delta_secs() / dir_len;
-    pos.x += input.direction[0] * scale;
-    pos.y += input.direction[1] * scale;
+    let new_x = pos.x + input.direction[0] * scale;
+    let new_y = pos.y + input.direction[1] * scale;
+    if !validate_move_distance(scale * dir_len, speed.0, time.delta_secs()) {
+        return;
+    }
+    pos.x = new_x;
+    pos.y = new_y;
     pos.z += input.direction[2] * scale;
+}
+
+/// Reject movement if distance exceeds max speed with tolerance.
+fn validate_move_distance(distance: f32, max_speed: f32, dt: f32) -> bool {
+    let max_distance = max_speed * dt * 1.5; // 50% tolerance for network jitter
+    distance <= max_distance
 }
 
 /// Apply gravity and terrain clamping to all players each tick.
@@ -388,6 +473,7 @@ mod tests {
                 MovementSpeed(DEFAULT_RUN_SPEED),
                 Player {
                     name: "test".into(),
+                    appearance: Default::default(),
                 },
             ))
             .id()

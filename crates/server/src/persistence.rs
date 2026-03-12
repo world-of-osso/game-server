@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use redb::{Database, ReadableDatabase, ReadableTable, TableDefinition};
 use rusqlite::{Connection, OpenFlags, params};
-use shared::components::{GuildMembership, Health, Player, Position};
+use shared::components::{CharacterAppearance, GuildMembership, Health, Player, Position};
 use std::path::Path;
 
 /// Character data table: character_id (u64) -> serialized CharacterData (bytes).
@@ -58,6 +58,20 @@ pub struct CharacterData {
     pub race: u8,
     pub class: u8,
     pub level: u16,
+    pub appearance: CharacterAppearance,
+}
+
+#[derive(bitcode::Decode)]
+struct LegacyCharacterDataV1 {
+    name: String,
+    x: f32,
+    y: f32,
+    z: f32,
+    health: f32,
+    max_health: f32,
+    race: u8,
+    class: u8,
+    level: u16,
 }
 
 #[derive(bitcode::Encode, bitcode::Decode, Debug, Clone, PartialEq)]
@@ -125,7 +139,27 @@ impl CharacterData {
             race: 1,
             class: 1,
             level: 1,
+            appearance: player.appearance,
         }
+    }
+
+    fn decode_compatible(bytes: &[u8]) -> Result<Self, String> {
+        bitcode::decode::<CharacterData>(bytes).or_else(|_| {
+            bitcode::decode::<LegacyCharacterDataV1>(bytes)
+                .map(|legacy| Self {
+                    name: legacy.name,
+                    x: legacy.x,
+                    y: legacy.y,
+                    z: legacy.z,
+                    health: legacy.health,
+                    max_health: legacy.max_health,
+                    race: legacy.race,
+                    class: legacy.class,
+                    level: legacy.level,
+                    appearance: CharacterAppearance::default(),
+                })
+                .map_err(|e| format!("Failed to decode character data: {e}"))
+        })
     }
 }
 
@@ -150,9 +184,9 @@ fn open_database(mut commands: Commands) {
         std::fs::create_dir_all(parent).expect("Failed to create data directory");
     }
     let db = Database::create(path).unwrap_or_else(|e| match e {
-        redb::DatabaseError::DatabaseAlreadyOpen => panic!(
-            "{path:?} is locked by another process (another server or admin CLI running?)"
-        ),
+        redb::DatabaseError::DatabaseAlreadyOpen => {
+            panic!("{path:?} is locked by another process (another server or admin CLI running?)")
+        }
         _ => panic!("Failed to open database {path:?}: {e}"),
     });
     create_tables(&db);
@@ -302,9 +336,9 @@ pub fn load_character(db: &Database, character_id: u64) -> Option<CharacterData>
         .open_table(CHARACTERS)
         .expect("Failed to open characters table");
     match table.get(character_id).expect("Failed to read character") {
-        Some(guard) => {
-            Some(bitcode::decode::<CharacterData>(guard.value()).expect("Failed to decode"))
-        }
+        Some(guard) => Some(
+            CharacterData::decode_compatible(guard.value()).expect("Failed to decode character"),
+        ),
         None => None,
     }
 }
@@ -480,10 +514,28 @@ pub fn create_character(
     race: u8,
     class: u8,
 ) -> Result<(u64, CharacterData), String> {
+    create_character_with_appearance(
+        db,
+        account_id,
+        name,
+        race,
+        class,
+        CharacterAppearance::default(),
+    )
+}
+
+pub fn create_character_with_appearance(
+    db: &Database,
+    account_id: u64,
+    name: &str,
+    race: u8,
+    class: u8,
+    appearance: CharacterAppearance,
+) -> Result<(u64, CharacterData), String> {
     check_name_available(db, name)?;
     validate_playable_race(race)?;
     let character_id = next_id(db, "character");
-    let data = default_character_data(name, race, class);
+    let data = default_character_data(name, race, class, appearance);
     save_new_character(db, account_id, character_id, name, &data);
     save_inventory(db, character_id, &default_inventory(db));
     Ok((character_id, data))
@@ -533,7 +585,12 @@ fn check_name_available(db: &Database, name: &str) -> Result<(), String> {
 }
 
 /// Build default CharacterData for a new character at Northshire spawn.
-fn default_character_data(name: &str, race: u8, class: u8) -> CharacterData {
+fn default_character_data(
+    name: &str,
+    race: u8,
+    class: u8,
+    appearance: CharacterAppearance,
+) -> CharacterData {
     CharacterData {
         name: name.to_string(),
         x: -8949.0,
@@ -544,6 +601,7 @@ fn default_character_data(name: &str, race: u8, class: u8) -> CharacterData {
         race,
         class,
         level: 1,
+        appearance,
     }
 }
 
@@ -700,6 +758,20 @@ pub(crate) fn temp_database() -> Database {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use shared::components::CharacterAppearance;
+
+    #[derive(bitcode::Encode)]
+    struct LegacyCharacterData {
+        name: String,
+        x: f32,
+        y: f32,
+        z: f32,
+        health: f32,
+        max_health: f32,
+        race: u8,
+        class: u8,
+        level: u16,
+    }
 
     fn sample_data() -> CharacterData {
         CharacterData {
@@ -712,6 +784,7 @@ mod tests {
             race: 1,
             class: 1,
             level: 1,
+            appearance: CharacterAppearance::default(),
         }
     }
 
@@ -741,5 +814,34 @@ mod tests {
         let loaded = load_character(&db, 1).unwrap();
         assert_eq!(loaded.x, 100.0);
         assert_eq!(loaded.health, 50.0);
+    }
+
+    #[test]
+    fn load_character_decodes_legacy_records_with_default_appearance() {
+        let db = temp_database();
+        let legacy = LegacyCharacterData {
+            name: "Legacy".into(),
+            x: 1.0,
+            y: 2.0,
+            z: 3.0,
+            health: 90.0,
+            max_health: 100.0,
+            race: 1,
+            class: 1,
+            level: 7,
+        };
+
+        let bytes = bitcode::encode(&legacy);
+        let txn = db.begin_write().expect("begin write");
+        {
+            let mut table = txn.open_table(CHARACTERS).expect("open characters");
+            table.insert(99, bytes.as_slice()).expect("insert legacy");
+        }
+        txn.commit().expect("commit");
+
+        let loaded = load_character(&db, 99).expect("legacy character should load");
+        assert_eq!(loaded.name, "Legacy");
+        assert_eq!(loaded.level, 7);
+        assert_eq!(loaded.appearance, CharacterAppearance::default());
     }
 }

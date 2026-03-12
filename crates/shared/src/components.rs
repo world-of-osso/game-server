@@ -2,6 +2,28 @@ use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
 #[derive(
+    Reflect,
+    Serialize,
+    Deserialize,
+    bitcode::Encode,
+    bitcode::Decode,
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    Default,
+)]
+pub struct CharacterAppearance {
+    pub sex: u8,
+    pub skin_color: u8,
+    pub face: u8,
+    pub hair_style: u8,
+    pub hair_color: u8,
+    pub facial_style: u8,
+}
+
+#[derive(
     Component,
     Reflect,
     Serialize,
@@ -98,6 +120,7 @@ pub struct MovementSpeed(pub f32);
 )]
 pub struct Player {
     pub name: String,
+    pub appearance: CharacterAppearance,
 }
 
 #[derive(

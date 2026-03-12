@@ -7,9 +7,8 @@ const UNIT_SIZE: f32 = CHUNK_SIZE / 8.0;
 /// Number of height floats per MCNK (9x9 outer + 8x8 inner).
 const MCVT_COUNT: usize = 145;
 
-/// Gravity in yards/s² (~2g for snappy game feel).
-pub const GRAVITY: f32 = 19.6;
-/// Small threshold before gravity kicks in (yards).
+pub use shared::movement::GRAVITY;
+/// Small threshold before gravity kicks in (yards). Stricter than client for validation.
 pub const GROUND_SNAP_THRESHOLD: f32 = 0.1;
 
 /// Per-chunk height data in WoW world coordinates.

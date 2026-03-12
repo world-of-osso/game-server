@@ -233,10 +233,16 @@ pub fn set_account_credentials(
     let hash = hash_password(password)?;
     let txn = db.begin_write().expect("Failed to begin write txn");
     {
-        let mut usernames = txn.open_table(USERNAME_ACCOUNTS).expect("open username_accounts");
-        usernames.insert(username, account_id).expect("insert username");
+        let mut usernames = txn
+            .open_table(USERNAME_ACCOUNTS)
+            .expect("open username_accounts");
+        usernames
+            .insert(username, account_id)
+            .expect("insert username");
         let mut passwords = txn.open_table(PASSWORDS).expect("open passwords");
-        passwords.insert(account_id, hash.as_bytes()).expect("insert password");
+        passwords
+            .insert(account_id, hash.as_bytes())
+            .expect("insert password");
     }
     txn.commit().expect("Failed to commit credentials");
     Ok(account_id)

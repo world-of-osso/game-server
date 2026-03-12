@@ -24,7 +24,7 @@ impl Plugin for InterestPlugin {
 /// Runs every `UPDATE_INTERVAL_TICKS` ticks. For each connection with a PlayerLink,
 /// checks distance from that player to all entities with NetworkVisibility.
 fn update_interest(
-    connections: Query<(Entity, &PlayerLink)>,
+    connections: Query<(Entity, &PlayerLink), With<ReplicationSender>>,
     positions: Query<&Position>,
     mut visibility_query: Query<
         (Entity, &Position, &mut ReplicationState),
@@ -42,6 +42,15 @@ fn update_interest(
         return;
     }
 
+    let vis_count = visibility_query.iter().count();
+    if *tick_count % (UPDATE_INTERVAL_TICKS * 10) == 0 {
+        info!(
+            "Interest update: {} players, {} visible entities",
+            players.len(),
+            vis_count
+        );
+    }
+
     for (_entity, entity_pos, mut state) in visibility_query.iter_mut() {
         update_entity_visibility(entity_pos, &mut state, &players);
     }
@@ -49,7 +58,7 @@ fn update_interest(
 
 /// Collect connection entity + player position pairs.
 fn collect_player_positions(
-    connections: &Query<(Entity, &PlayerLink)>,
+    connections: &Query<(Entity, &PlayerLink), With<ReplicationSender>>,
     positions: &Query<&Position>,
 ) -> Vec<(Entity, Position)> {
     connections
@@ -66,11 +75,8 @@ fn update_entity_visibility(
 ) {
     for &(conn_entity, player_pos) in players {
         let dist_sq = distance_squared(entity_pos, &player_pos);
-        // Skip self — player entities shouldn't filter themselves out.
-        if dist_sq < 0.001 {
-            continue;
-        }
-        if dist_sq <= INTEREST_RADIUS_SQ {
+        // Player's own entity (dist ≈ 0) is always visible.
+        if dist_sq < 0.001 || dist_sq <= INTEREST_RADIUS_SQ {
             state.gain_visibility(conn_entity);
         } else {
             state.lose_visibility(conn_entity);
