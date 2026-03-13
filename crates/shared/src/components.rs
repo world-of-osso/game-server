@@ -120,6 +120,8 @@ pub struct MovementSpeed(pub f32);
 )]
 pub struct Player {
     pub name: String,
+    pub race: u8,
+    pub class: u8,
     pub appearance: CharacterAppearance,
 }
 

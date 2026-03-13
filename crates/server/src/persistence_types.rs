@@ -83,11 +83,13 @@ pub struct AuctionData {
 
 impl CharacterData {
     pub fn from_components(player: &Player, pos: &Position, health: &Health) -> Self {
+        // Position is in Bevy space; convert to WoW coords for DB storage.
+        let (wx, wy, wz) = crate::terrain_height::bevy_to_wow(pos.x, pos.y, pos.z);
         Self {
             name: player.name.clone(),
-            x: pos.x,
-            y: pos.y,
-            z: pos.z,
+            x: wx,
+            y: wy,
+            z: wz,
             health: health.current,
             max_health: health.max,
             race: 1,

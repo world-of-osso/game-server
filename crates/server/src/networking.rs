@@ -9,6 +9,7 @@ use std::time::Duration;
 
 use crate::auth::{
     self, Authenticated, ConnectedAccounts, InWorld, PendingAuth, PendingAuthTimer, SentTiles,
+    clear_connected_account,
 };
 use crate::messaging;
 use crate::persistence::{self, CharacterData, ClientId, GameDatabase};
@@ -235,8 +236,14 @@ fn on_client_disconnected(
         save_and_despawn(&db, &player_query, link.0, in_world, &mut commands);
     }
     if let Some(auth) = auth {
-        connected.0.remove(&auth.account_id);
-        info!("Account {} logged out", auth.account_id);
+        if clear_connected_account(&mut connected, auth.account_id, trigger.entity) {
+            info!("Account {} logged out", auth.account_id);
+        } else {
+            debug!(
+                "Ignoring disconnect for replaced session {:?} on account {}",
+                trigger.entity, auth.account_id
+            );
+        }
     }
 }
 
@@ -259,7 +266,10 @@ fn save_and_despawn(
         .entity(entity)
         .remove::<(Replicate, NetworkVisibility)>()
         .insert(PendingDespawn);
-    info!("Removed replication for player entity {:?}, pending despawn", entity);
+    info!(
+        "Removed replication for player entity {:?}, pending despawn",
+        entity
+    );
 }
 
 fn despawn_pending(mut commands: Commands, query: Query<Entity, With<PendingDespawn>>) {
@@ -390,17 +400,17 @@ fn apply_terrain_gravity(
     }
 }
 
-/// Clamp a position to terrain: apply gravity if airborne, snap if below ground.
+/// Clamp a position (Bevy space) to terrain: apply gravity if airborne, snap if below ground.
 fn clamp_to_terrain(terrain: &TerrainHeightMap, pos: &mut Position, dt: f32) {
-    let Some(ground_z) = terrain.height_at(pos.x, pos.y) else {
+    let Some(ground_y) = terrain.height_at_bevy(pos.x, pos.z) else {
         return;
     };
-    if pos.z < ground_z {
-        pos.z = ground_z;
-    } else if pos.z > ground_z + GROUND_SNAP_THRESHOLD {
-        pos.z -= GRAVITY * dt;
-        if pos.z < ground_z {
-            pos.z = ground_z;
+    if pos.y < ground_y {
+        pos.y = ground_y;
+    } else if pos.y > ground_y + GROUND_SNAP_THRESHOLD {
+        pos.y -= GRAVITY * dt;
+        if pos.y < ground_y {
+            pos.y = ground_y;
         }
     }
 }
@@ -412,8 +422,8 @@ fn direction_length(dir: &[f32; 3]) -> f32 {
 const TILE_SIZE: f32 = 533.33;
 
 fn wow_to_tile(wow_x: f32, wow_y: f32) -> (u32, u32) {
-    let row = ((17066.67 - wow_x) / TILE_SIZE).floor() as i32;
-    let col = ((17066.67 - wow_y) / TILE_SIZE).floor() as i32;
+    let row = ((17066.67 - wow_y) / TILE_SIZE).floor() as i32;
+    let col = ((17066.67 - wow_x) / TILE_SIZE).floor() as i32;
     (row.clamp(0, 63) as u32, col.clamp(0, 63) as u32)
 }
 
@@ -436,7 +446,8 @@ fn send_nearby_tiles(
     sent: &mut SentTiles,
     senders: &mut Query<&mut MessageSender<LoadTerrain>>,
 ) {
-    let (tile_y, tile_x) = wow_to_tile(pos.x, pos.y);
+    let (wow_x, wow_y, _) = crate::terrain_height::bevy_to_wow(pos.x, pos.y, pos.z);
+    let (tile_y, tile_x) = wow_to_tile(wow_x, wow_y);
     for dy in -1i32..=1 {
         for dx in -1i32..=1 {
             let ty = (tile_y as i32 + dy).clamp(0, 63) as u32;
@@ -473,6 +484,8 @@ mod tests {
                 MovementSpeed(DEFAULT_RUN_SPEED),
                 Player {
                     name: "test".into(),
+                    race: 1,
+                    class: 1,
                     appearance: Default::default(),
                 },
             ))
@@ -590,14 +603,16 @@ mod tests {
 
     #[test]
     fn terrain_clamps_below_ground() {
+        // Terrain chunk at WoW corner (100, 100), height 50.
+        // Bevy pos: x=90 (wow_x=90), z=-90 (wow_y=90), y=30 (below ground_y=50).
         let map = crate::terrain_height::test_helpers::flat_terrain(100.0, 100.0, 50.0);
         let mut pos = Position {
             x: 90.0,
-            y: 90.0,
-            z: 30.0,
+            y: 30.0,
+            z: -90.0,
         };
         clamp_to_terrain(&map, &mut pos, 0.05);
-        assert!((pos.z - 50.0).abs() < 0.01);
+        assert!((pos.y - 50.0).abs() < 0.01);
     }
 
     #[test]
@@ -605,13 +620,13 @@ mod tests {
         let map = crate::terrain_height::test_helpers::flat_terrain(100.0, 100.0, 50.0);
         let mut pos = Position {
             x: 90.0,
-            y: 90.0,
-            z: 60.0,
+            y: 60.0,
+            z: -90.0,
         };
         let dt = 0.05;
         clamp_to_terrain(&map, &mut pos, dt);
         let expected = 60.0 - GRAVITY * dt;
-        assert!((pos.z - expected).abs() < 0.01);
+        assert!((pos.y - expected).abs() < 0.01);
     }
 
     #[test]
@@ -619,11 +634,11 @@ mod tests {
         let map = crate::terrain_height::test_helpers::flat_terrain(100.0, 100.0, 50.0);
         let mut pos = Position {
             x: 90.0,
-            y: 90.0,
-            z: 50.05,
+            y: 50.05,
+            z: -90.0,
         };
         clamp_to_terrain(&map, &mut pos, 0.05);
-        assert!((pos.z - 50.05).abs() < 0.01);
+        assert!((pos.y - 50.05).abs() < 0.01);
     }
 
     #[test]
@@ -659,5 +674,10 @@ mod tests {
 
         let ct = app.world().entity(player).get::<CombatTarget>().unwrap();
         assert_eq!(ct.0, Some(target_entity));
+    }
+
+    #[test]
+    fn known_elwynn_position_maps_to_existing_adt_tile() {
+        assert_eq!(wow_to_tile(-8949.0, -132.0), (32, 48));
     }
 }

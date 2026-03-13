@@ -261,6 +261,8 @@ mod tests {
                 },
                 Player {
                     name: "test".into(),
+                    race: 1,
+                    class: 1,
                     appearance: Default::default(),
                 },
             ))

@@ -6,9 +6,9 @@ use shared::protocol::{
     DeleteCharacterResponse, EnterWorldResponse, LoadTerrain, LoginRequest, LoginResponse,
     RegisterRequest, RegisterResponse, SelectCharacter,
 };
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
-use crate::networking::{CombatTarget, PlayerLink, send_load_terrain};
+use crate::networking::{send_load_terrain, CombatTarget, PlayerLink};
 use crate::persistence::{self, CharacterData, ClientId, GameDatabase};
 use crate::persistence_accounts;
 
@@ -38,9 +38,9 @@ pub struct InWorld {
     pub character_id: u64,
 }
 
-/// Prevents duplicate logins for the same account.
+/// Tracks the active connection for each authenticated account.
 #[derive(Resource, Default)]
-pub struct ConnectedAccounts(pub HashSet<u64>);
+pub struct ConnectedAccounts(pub HashMap<u64, Entity>);
 
 /// Tracks which terrain tiles have been sent to a client.
 #[derive(Component, Default)]
@@ -122,9 +122,11 @@ fn handle_login(
         }
     };
 
-    if !connected.0.insert(account_id) {
-        send_login_error(entity, senders, "Account already logged in");
-        return;
+    if let Some(previous) = replace_connected_account(connected, account_id, entity) {
+        info!(
+            "Account {account_id} re-authenticated on {entity:?}; disconnecting older session {previous:?}"
+        );
+        commands.trigger(lightyear::prelude::Disconnect { entity: previous });
     }
 
     let chars = persistence::list_characters_for_account(&db.db, account_id);
@@ -135,6 +137,31 @@ fn handle_login(
         .remove::<(PendingAuth, PendingAuthTimer)>()
         .insert(Authenticated { account_id });
     info!("Account {account_id} authenticated");
+}
+
+fn replace_connected_account(
+    connected: &mut ConnectedAccounts,
+    account_id: u64,
+    entity: Entity,
+) -> Option<Entity> {
+    connected
+        .0
+        .insert(account_id, entity)
+        .filter(|previous| *previous != entity)
+}
+
+pub(crate) fn clear_connected_account(
+    connected: &mut ConnectedAccounts,
+    account_id: u64,
+    entity: Entity,
+) -> bool {
+    match connected.0.get(&account_id).copied() {
+        Some(active) if active == entity => {
+            connected.0.remove(&account_id);
+            true
+        }
+        _ => false,
+    }
 }
 
 fn chars_to_entries(chars: &[(u64, CharacterData)]) -> Vec<shared::protocol::CharacterListEntry> {
@@ -182,6 +209,86 @@ fn send_login_error(
         characters: Vec::new(),
         error: Some(error.to_string()),
     });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn relogin_returns_previous_session_entity() {
+        let account_id = 42;
+        let first = Entity::from_bits(1);
+        let second = Entity::from_bits(2);
+        let mut connected = ConnectedAccounts::default();
+
+        assert_eq!(
+            replace_connected_account(&mut connected, account_id, first),
+            None
+        );
+        assert_eq!(
+            replace_connected_account(&mut connected, account_id, second),
+            Some(first)
+        );
+        assert_eq!(connected.0.get(&account_id), Some(&second));
+    }
+
+    #[test]
+    fn disconnect_cleanup_ignores_replaced_session() {
+        let account_id = 42;
+        let old = Entity::from_bits(1);
+        let current = Entity::from_bits(2);
+        let mut connected = ConnectedAccounts::default();
+
+        connected.0.insert(account_id, current);
+
+        assert!(!clear_connected_account(&mut connected, account_id, old));
+        assert_eq!(connected.0.get(&account_id), Some(&current));
+
+        assert!(clear_connected_account(&mut connected, account_id, current));
+        assert!(!connected.0.contains_key(&account_id));
+    }
+
+    #[test]
+    fn push_unique_select_request_keeps_first_request_per_connection() {
+        let entity = Entity::from_bits(1);
+        let account_id = 42;
+        let mut out = Vec::new();
+
+        assert!(push_unique_select_request(
+            &mut out,
+            entity,
+            account_id,
+            SelectCharacter { character_id: 10 },
+        ));
+        assert!(!push_unique_select_request(
+            &mut out,
+            entity,
+            account_id,
+            SelectCharacter { character_id: 11 },
+        ));
+        assert_eq!(out.len(), 1);
+        assert_eq!(out[0].2.character_id, 10);
+    }
+
+    #[test]
+    fn push_unique_select_request_allows_different_connections() {
+        let mut out = Vec::new();
+
+        assert!(push_unique_select_request(
+            &mut out,
+            Entity::from_bits(1),
+            42,
+            SelectCharacter { character_id: 10 },
+        ));
+        assert!(push_unique_select_request(
+            &mut out,
+            Entity::from_bits(2),
+            43,
+            SelectCharacter { character_id: 11 },
+        ));
+        assert_eq!(out.len(), 2);
+    }
 }
 
 /// Process registration requests from pending-auth connections.
@@ -398,11 +505,13 @@ pub fn process_select_character(
     db: Option<Res<GameDatabase>>,
     mut enter_senders: Query<&mut MessageSender<EnterWorldResponse>>,
     mut terrain_senders: Query<&mut MessageSender<LoadTerrain>>,
+    existing_players: Query<(Entity, &ClientId)>,
     mut commands: Commands,
 ) {
     let Some(db) = db.as_ref() else { return };
     let requests: Vec<_> = collect_select_requests(&mut receivers);
     for (entity, account_id, req) in requests {
+        despawn_stale_player(&existing_players, req.character_id, &mut commands);
         handle_select(
             entity,
             account_id,
@@ -428,10 +537,41 @@ fn collect_select_requests(
     let mut out = Vec::new();
     for (entity, auth, mut receiver) in receivers.iter_mut() {
         for req in receiver.receive() {
-            out.push((entity, auth.account_id, req));
+            if !push_unique_select_request(&mut out, entity, auth.account_id, req) {
+                warn!(
+                    "Ignoring duplicate SelectCharacter for connection {:?} in same tick",
+                    entity
+                );
+            }
         }
     }
     out
+}
+
+fn push_unique_select_request(
+    out: &mut Vec<(Entity, u64, SelectCharacter)>,
+    entity: Entity,
+    account_id: u64,
+    req: SelectCharacter,
+) -> bool {
+    if out.iter().any(|(existing, _, _)| *existing == entity) {
+        return false;
+    }
+    out.push((entity, account_id, req));
+    true
+}
+
+fn despawn_stale_player(
+    existing: &Query<(Entity, &ClientId)>,
+    character_id: u64,
+    commands: &mut Commands,
+) {
+    for (entity, cid) in existing.iter() {
+        if cid.0 == character_id {
+            warn!("Despawning stale player entity {entity:?} for character {character_id}");
+            commands.entity(entity).despawn();
+        }
+    }
 }
 
 fn handle_select(
@@ -521,11 +661,13 @@ fn send_enter_error(
 }
 
 fn build_player_components(data: &CharacterData, character_id: u64) -> impl Bundle {
+    // CharacterData stores WoW coords (from DB); convert to Bevy space for ECS.
+    let (bx, by, bz) = crate::terrain_height::wow_to_bevy(data.x, data.y, data.z);
     (
         Position {
-            x: data.x,
-            y: data.y,
-            z: data.z,
+            x: bx,
+            y: by,
+            z: bz,
         },
         Health {
             current: data.health,
@@ -539,6 +681,8 @@ fn build_player_components(data: &CharacterData, character_id: u64) -> impl Bund
         MovementSpeed(DEFAULT_RUN_SPEED),
         Player {
             name: data.name.clone(),
+            race: data.race,
+            class: data.class,
             appearance: data.appearance,
         },
         ClientId(character_id),

@@ -62,11 +62,17 @@ fn creature_bundle(
     health: f32,
     display_id: u32,
 ) -> (Position, Npc, Health, ModelDisplay, Zone) {
+    // Spawn data is WoW coords; convert to Bevy space for ECS.
+    let (bx, by, bz) = crate::terrain_height::wow_to_bevy(
+        spawn.position_x,
+        spawn.position_y,
+        spawn.position_z,
+    );
     (
         Position {
-            x: spawn.position_x,
-            y: spawn.position_y,
-            z: spawn.position_z,
+            x: bx,
+            y: by,
+            z: bz,
         },
         Npc {
             template_id: spawn.template_entry,
@@ -130,17 +136,22 @@ fn insert_wander(
     spawn: &crate::world_data::CreatureSpawn,
     speed_walk: f32,
 ) {
+    let (bx, by, bz) = crate::terrain_height::wow_to_bevy(
+        spawn.position_x,
+        spawn.position_y,
+        spawn.position_z,
+    );
     entity.insert(SpawnPoint {
-        x: spawn.position_x,
-        y: spawn.position_y,
-        z: spawn.position_z,
+        x: bx,
+        y: by,
+        z: bz,
         wander_distance: spawn.wander_distance,
         speed_walk,
     });
     entity.insert(WanderState {
         phase: WanderPhase::Idle,
-        target_x: spawn.position_x,
-        target_y: spawn.position_y,
+        target_x: bx,
+        target_z: bz,
         idle_remaining: 1.0,
         seed: spawn.guid,
     });
@@ -302,12 +313,13 @@ mod tests {
     fn assert_creature(
         c: &(Position, Npc, Health, ModelDisplay, Zone),
         template_id: u32,
-        x: f32,
+        wow_x: f32,
         health: f32,
         display: u32,
     ) {
         assert_eq!(c.1.template_id, template_id);
-        assert_eq!(c.0.x, x);
+        // Position is now Bevy space; wow_x maps to bevy_x unchanged.
+        assert_eq!(c.0.x, wow_x);
         assert_eq!(c.2.current, health);
         assert_eq!(c.2.max, health);
         assert_eq!(c.3.display_id, display);

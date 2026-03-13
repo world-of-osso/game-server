@@ -28,11 +28,12 @@ pub struct SpawnPoint {
 }
 
 /// State machine for random-wander creatures (movement_type=1).
+/// Coordinates are in Bevy space (X-right, Y-up, Z-back).
 #[derive(Component, Debug)]
 pub struct WanderState {
     pub phase: WanderPhase,
     pub target_x: f32,
-    pub target_y: f32,
+    pub target_z: f32,
     pub idle_remaining: f32,
     /// Simple counter incremented each tick, used for pseudo-random.
     pub seed: u32,
@@ -73,19 +74,20 @@ fn tick_idle(state: &mut WanderState, dt: f32, spawn: &SpawnPoint) {
     if state.idle_remaining > 0.0 {
         return;
     }
-    let (tx, ty) = pick_wander_point(spawn.x, spawn.y, spawn.wander_distance, state.seed);
+    // Wander in Bevy horizontal plane (x, z).
+    let (tx, tz) = pick_wander_point(spawn.x, spawn.z, spawn.wander_distance, state.seed);
     state.target_x = tx;
-    state.target_y = ty;
+    state.target_z = tz;
     state.phase = WanderPhase::Walking;
     state.seed = state.seed.wrapping_add(1);
 }
 
 fn tick_walk(pos: &mut Position, state: &mut WanderState, spawn: &SpawnPoint, dt: f32) {
     let speed = spawn.speed_walk * BASE_WALK_SPEED;
-    let (reached, new_x, new_y) =
-        move_toward(pos.x, pos.y, state.target_x, state.target_y, speed * dt);
+    let (reached, new_x, new_z) =
+        move_toward(pos.x, pos.z, state.target_x, state.target_z, speed * dt);
     pos.x = new_x;
-    pos.y = new_y;
+    pos.z = new_z;
     if reached {
         state.phase = WanderPhase::Idle;
         state.idle_remaining = random_idle_secs(state.seed);
@@ -148,13 +150,18 @@ fn tick_waypoint(pos: &mut Position, state: &mut WaypointState, path: &WaypointP
         return;
     }
     let point = &path.points[state.current_index % path.points.len()];
+    // Waypoint data is WoW coords; convert target to Bevy for movement.
+    let (tx, ty, tz) = crate::terrain_height::wow_to_bevy(
+        point.position_x,
+        point.position_y,
+        point.position_z,
+    );
     let speed = state.speed_walk * BASE_WALK_SPEED;
-    let (reached, nx, ny) =
-        move_toward(pos.x, pos.y, point.position_x, point.position_y, speed * dt);
+    let (reached, nx, nz) = move_toward(pos.x, pos.z, tx, tz, speed * dt);
     pos.x = nx;
-    pos.y = ny;
+    pos.z = nz;
     if reached {
-        pos.z = point.position_z;
+        pos.y = ty;
         advance_waypoint(state, point.delay as f32, path.points.len());
     }
 }

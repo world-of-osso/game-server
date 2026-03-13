@@ -1,5 +1,15 @@
 use bevy::prelude::*;
 
+/// Convert WoW coordinates (X-right, Y-forward, Z-up) to Bevy (X-right, Y-up, Z-back).
+pub(crate) fn wow_to_bevy(x: f32, y: f32, z: f32) -> (f32, f32, f32) {
+    (x, z, -y)
+}
+
+/// Convert Bevy coordinates (X-right, Y-up, Z-back) to WoW (X-right, Y-forward, Z-up).
+pub(crate) fn bevy_to_wow(bx: f32, by: f32, bz: f32) -> (f32, f32, f32) {
+    (bx, -bz, by)
+}
+
 /// Yards per MCNK chunk side (100/3).
 const CHUNK_SIZE: f32 = 100.0 / 3.0;
 /// Distance between outer grid vertices.
@@ -47,6 +57,16 @@ impl TerrainHeightMap {
                 && x >= c.corner_x - CHUNK_SIZE
                 && y <= c.corner_y
                 && y >= c.corner_y - CHUNK_SIZE
+        })
+    }
+
+    /// Look up terrain height for a position in Bevy space.
+    /// Converts Bevy→WoW for lookup, returns height in Bevy Y.
+    pub fn height_at_bevy(&self, bx: f32, bz: f32) -> Option<f32> {
+        let (wow_x, wow_y, _) = bevy_to_wow(bx, 0.0, bz);
+        self.height_at(wow_x, wow_y).map(|wow_z| {
+            let (_, bevy_y, _) = wow_to_bevy(0.0, 0.0, wow_z);
+            bevy_y
         })
     }
 
