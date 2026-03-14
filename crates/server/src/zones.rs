@@ -63,11 +63,8 @@ fn creature_bundle(
     display_id: u32,
 ) -> (Position, Npc, Health, ModelDisplay, Zone) {
     // Spawn data is WoW coords; convert to Bevy space for ECS.
-    let (bx, by, bz) = crate::terrain_height::wow_to_bevy(
-        spawn.position_x,
-        spawn.position_y,
-        spawn.position_z,
-    );
+    let (bx, by, bz) =
+        crate::terrain_height::wow_to_bevy(spawn.position_x, spawn.position_y, spawn.position_z);
     (
         Position {
             x: bx,
@@ -136,11 +133,8 @@ fn insert_wander(
     spawn: &crate::world_data::CreatureSpawn,
     speed_walk: f32,
 ) {
-    let (bx, by, bz) = crate::terrain_height::wow_to_bevy(
-        spawn.position_x,
-        spawn.position_y,
-        spawn.position_z,
-    );
+    let (bx, by, bz) =
+        crate::terrain_height::wow_to_bevy(spawn.position_x, spawn.position_y, spawn.position_z);
     entity.insert(SpawnPoint {
         x: bx,
         y: by,

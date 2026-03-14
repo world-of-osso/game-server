@@ -151,11 +151,8 @@ fn tick_waypoint(pos: &mut Position, state: &mut WaypointState, path: &WaypointP
     }
     let point = &path.points[state.current_index % path.points.len()];
     // Waypoint data is WoW coords; convert target to Bevy for movement.
-    let (tx, ty, tz) = crate::terrain_height::wow_to_bevy(
-        point.position_x,
-        point.position_y,
-        point.position_z,
-    );
+    let (tx, ty, tz) =
+        crate::terrain_height::wow_to_bevy(point.position_x, point.position_y, point.position_z);
     let speed = state.speed_walk * BASE_WALK_SPEED;
     let (reached, nx, nz) = move_toward(pos.x, pos.z, tx, tz, speed * dt);
     pos.x = nx;

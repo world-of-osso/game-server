@@ -8,7 +8,7 @@ use shared::protocol::{
 };
 use std::collections::{HashMap, HashSet};
 
-use crate::networking::{send_load_terrain, CombatTarget, PlayerLink};
+use crate::networking::{CombatTarget, PlayerLink, queue_player_despawn, send_load_terrain};
 use crate::persistence::{self, CharacterData, ClientId, GameDatabase};
 use crate::persistence_accounts;
 
@@ -214,6 +214,14 @@ fn send_login_error(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::panic::{AssertUnwindSafe, catch_unwind};
+
+    #[derive(Component)]
+    struct DeferredCleanupMarker;
+    #[derive(Component)]
+    struct ReplicationTag;
+    #[derive(Component)]
+    struct VisibilityTag;
 
     #[test]
     fn relogin_returns_previous_session_entity() {
@@ -288,6 +296,40 @@ mod tests {
             SelectCharacter { character_id: 11 },
         ));
         assert_eq!(out.len(), 2);
+    }
+
+    #[test]
+    fn stale_player_cleanup_does_not_panic_when_other_system_queues_deferred_cleanup() {
+        let mut app = App::new();
+        app.add_plugins(bevy::MinimalPlugins);
+
+        let character_id = 77;
+        let player = app
+            .world_mut()
+            .spawn((ClientId(character_id), ReplicationTag, VisibilityTag))
+            .id();
+
+        app.add_systems(
+            Update,
+            (
+                move |existing: Query<(Entity, &ClientId)>, mut commands: Commands| {
+                    despawn_stale_player(&existing, character_id, &mut commands);
+                },
+                move |mut commands: Commands| {
+                    commands
+                        .entity(player)
+                        .remove::<(ReplicationTag, VisibilityTag)>()
+                        .insert(DeferredCleanupMarker);
+                },
+            )
+                .chain(),
+        );
+
+        let result = catch_unwind(AssertUnwindSafe(|| app.update()));
+        assert!(
+            result.is_ok(),
+            "stale player cleanup should not queue an immediate despawn ahead of deferred cleanup"
+        );
     }
 }
 
@@ -569,7 +611,7 @@ fn despawn_stale_player(
     for (entity, cid) in existing.iter() {
         if cid.0 == character_id {
             warn!("Despawning stale player entity {entity:?} for character {character_id}");
-            commands.entity(entity).despawn();
+            queue_player_despawn(commands, entity);
         }
     }
 }
