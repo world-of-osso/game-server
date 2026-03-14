@@ -262,10 +262,16 @@ fn save_and_despawn(
             info!("Saved character data for character_id {}", cid.0);
         }
     }
+    queue_player_despawn(commands, entity);
+}
+
+pub(crate) fn queue_player_despawn(commands: &mut Commands, entity: Entity) {
     commands
         .entity(entity)
-        .remove::<(Replicate, NetworkVisibility)>()
-        .insert(PendingDespawn);
+        .queue_silenced(|mut entity: EntityWorldMut| {
+            entity.remove::<(Replicate, NetworkVisibility)>();
+            entity.insert(PendingDespawn);
+        });
     info!(
         "Removed replication for player entity {:?}, pending despawn",
         entity
@@ -274,7 +280,7 @@ fn save_and_despawn(
 
 fn despawn_pending(mut commands: Commands, query: Query<Entity, With<PendingDespawn>>) {
     for entity in &query {
-        commands.entity(entity).despawn();
+        commands.entity(entity).try_despawn();
     }
 }
 
@@ -470,7 +476,14 @@ fn send_nearby_tiles(
 mod tests {
     use super::*;
     use bevy::ecs::system::RunSystemOnce;
+    use std::panic::{AssertUnwindSafe, catch_unwind};
     use shared::protocol::{ChatType, PlayerInput};
+
+    #[derive(Component)]
+    struct ReplicationTag;
+
+    #[derive(Component)]
+    struct VisibilityTag;
 
     fn spawn_player(world: &mut World, x: f32, y: f32, z: f32) -> Entity {
         world
@@ -679,5 +692,27 @@ mod tests {
     #[test]
     fn known_elwynn_position_maps_to_existing_adt_tile() {
         assert_eq!(wow_to_tile(-8949.0, -132.0), (32, 48));
+    }
+
+    #[test]
+    fn deferred_player_despawn_ignores_entities_already_despawned() {
+        let mut app = App::new();
+        app.add_plugins(bevy::MinimalPlugins);
+
+        let player = app
+            .world_mut()
+            .spawn((ReplicationTag, VisibilityTag))
+            .id();
+
+        app.add_systems(Update, move |mut commands: Commands| {
+            commands.entity(player).despawn();
+            queue_player_despawn(&mut commands, player);
+        });
+
+        let result = catch_unwind(AssertUnwindSafe(|| app.update()));
+        assert!(
+            result.is_ok(),
+            "queue_player_despawn should ignore entities already despawned before cleanup flushes"
+        );
     }
 }
