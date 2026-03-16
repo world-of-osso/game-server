@@ -14,6 +14,14 @@ const SOCKET_PATH: &str = "/tmp/game-server-admin.sock";
 /// IPC request from CLI to server.
 #[derive(Debug, Serialize, Deserialize)]
 pub enum AdminRequest {
+    ListAccounts,
+    CheckAccount {
+        username: String,
+    },
+    CheckPassword {
+        username: String,
+        password: String,
+    },
     CreateAccount {
         username: String,
         password: String,
@@ -51,6 +59,20 @@ pub enum AdminRequest {
 /// IPC response from server to CLI.
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub enum AdminResponse {
+    AccountsListed {
+        accounts: Vec<AccountInfo>,
+    },
+    AccountChecked {
+        username: String,
+        exists: bool,
+        account_id: Option<u64>,
+        token_count: usize,
+        pending_registration: bool,
+    },
+    PasswordChecked {
+        username: String,
+        valid: bool,
+    },
     AccountCreated {
         account_id: u64,
         token: String,
@@ -84,6 +106,13 @@ pub enum AdminResponse {
     },
     Pong,
     Error(String),
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub struct AccountInfo {
+    pub username: String,
+    pub account_id: u64,
+    pub token_count: usize,
 }
 
 /// Internal command passed from IPC server thread to Bevy main loop.
@@ -205,6 +234,11 @@ fn dispatch(
 ) {
     let response = match cmd.request {
         AdminRequest::Ping => AdminResponse::Pong,
+        AdminRequest::ListAccounts => handle_list_accounts(db),
+        AdminRequest::CheckAccount { username } => handle_check_account(db, &username),
+        AdminRequest::CheckPassword { username, password } => {
+            handle_check_password(db, &username, &password)
+        }
         AdminRequest::CreateAccount { username, password } => {
             handle_create_account(db, &username, &password)
         }
@@ -237,6 +271,43 @@ fn dispatch(
         } => handle_set_appearance(db, &character_name, appearance),
     };
     let _ = cmd.respond.send(response);
+}
+
+fn handle_list_accounts(db: &persistence::GameDatabase) -> AdminResponse {
+    let accounts = persistence_accounts::list_accounts(&db.db)
+        .into_iter()
+        .map(|account| AccountInfo {
+            username: account.username,
+            account_id: account.account_id,
+            token_count: account.token_count,
+        })
+        .collect();
+    AdminResponse::AccountsListed { accounts }
+}
+
+fn handle_check_account(db: &persistence::GameDatabase, username: &str) -> AdminResponse {
+    let account = persistence_accounts::inspect_account(&db.db, username);
+    AdminResponse::AccountChecked {
+        username: account.username,
+        exists: account.exists,
+        account_id: account.account_id,
+        token_count: account.token_count,
+        pending_registration: account.pending_registration,
+    }
+}
+
+fn handle_check_password(
+    db: &persistence::GameDatabase,
+    username: &str,
+    password: &str,
+) -> AdminResponse {
+    match persistence_accounts::check_password(&db.db, username, password) {
+        Ok(valid) => AdminResponse::PasswordChecked {
+            username: username.to_owned(),
+            valid,
+        },
+        Err(err) => AdminResponse::Error(err),
+    }
 }
 
 fn handle_create_account(
@@ -403,5 +474,66 @@ mod tests {
         let pos = app.world().entity(live_entity).get::<Position>().unwrap();
         let (bx, by, bz) = crate::terrain_height::wow_to_bevy(-8920.5, -188.25, 97.75);
         assert_eq!((pos.x, pos.y, pos.z), (bx, by, bz));
+    }
+
+    #[test]
+    fn handle_check_account_reports_existing_user() {
+        let db = persistence::temp_database();
+        let (account_id, _token) =
+            persistence_accounts::register_account(&db, "admin", "admin").expect("account");
+        let game_db = persistence::GameDatabase { db };
+
+        let response = handle_check_account(&game_db, "admin");
+
+        assert!(matches!(
+            response,
+            AdminResponse::AccountChecked {
+                username,
+                exists: true,
+                account_id: Some(id),
+                token_count: 1,
+                pending_registration: false,
+            } if username == "admin" && id == account_id
+        ));
+    }
+
+    #[test]
+    fn handle_list_accounts_returns_all_accounts() {
+        let db = persistence::temp_database();
+        persistence_accounts::register_account(&db, "admin", "admin").expect("admin");
+        persistence_accounts::register_account(&db, "alice", "secret").expect("alice");
+        let game_db = persistence::GameDatabase { db };
+
+        let response = handle_list_accounts(&game_db);
+
+        assert!(matches!(
+            response,
+            AdminResponse::AccountsListed { accounts }
+                if accounts.len() == 2
+                    && accounts.iter().any(|account| account.username == "admin")
+                    && accounts.iter().any(|account| account.username == "alice")
+        ));
+    }
+
+    #[test]
+    fn handle_check_password_reports_validity() {
+        let db = persistence::temp_database();
+        persistence_accounts::register_account(&db, "admin", "admin").expect("admin");
+        let game_db = persistence::GameDatabase { db };
+
+        assert_eq!(
+            handle_check_password(&game_db, "admin", "admin"),
+            AdminResponse::PasswordChecked {
+                username: "admin".to_string(),
+                valid: true,
+            }
+        );
+        assert_eq!(
+            handle_check_password(&game_db, "admin", "wrong"),
+            AdminResponse::PasswordChecked {
+                username: "admin".to_string(),
+                valid: false,
+            }
+        );
     }
 }

@@ -1,10 +1,27 @@
 use argon2::password_hash::SaltString;
 use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
 use rand::rngs::OsRng;
-use redb::{Database, ReadableDatabase};
+use redb::{Database, ReadableDatabase, ReadableTable};
+use std::collections::HashMap;
 
 use super::persistence::{ACCOUNTS, PASSWORDS, PENDING_REGISTRATIONS, USERNAME_ACCOUNTS};
 use crate::persistence::next_id;
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AccountSummary {
+    pub username: String,
+    pub account_id: u64,
+    pub token_count: usize,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AccountInspection {
+    pub username: String,
+    pub exists: bool,
+    pub account_id: Option<u64>,
+    pub token_count: usize,
+    pub pending_registration: bool,
+}
 
 /// Authenticate via token or username+password. Returns (account_id, token) or error.
 pub fn login_with_credentials(
@@ -58,6 +75,17 @@ fn verify_account_password(db: &Database, account_id: u64, password: &str) -> Re
     Argon2::default()
         .verify_password(password.as_bytes(), &parsed)
         .map_err(|_| "Invalid password".to_string())
+}
+
+pub fn check_password(db: &Database, username: &str, password: &str) -> Result<bool, String> {
+    let Some(account_id) = find_account_by_username(db, username) else {
+        return Ok(false);
+    };
+    match verify_account_password(db, account_id, password) {
+        Ok(()) => Ok(true),
+        Err(err) if err == "Invalid password" => Ok(false),
+        Err(err) => Err(err),
+    }
 }
 
 /// Generate and store a new token for an existing account.
@@ -196,6 +224,63 @@ pub(crate) fn find_account_by_token(db: &Database, token: &str) -> Option<u64> {
         .map(|g| g.value())
 }
 
+pub fn list_accounts(db: &Database) -> Vec<AccountSummary> {
+    let token_counts = token_counts_by_account(db);
+    let txn = db.begin_read().expect("Failed to begin read txn");
+    let usernames = txn
+        .open_table(USERNAME_ACCOUNTS)
+        .expect("Failed to open username_accounts");
+
+    let mut accounts: Vec<_> = usernames
+        .iter()
+        .expect("Failed to iterate username_accounts")
+        .map(|row| {
+            let (username, account_id) = row.expect("Failed to read username_accounts row");
+            let username = username.value().to_string();
+            let account_id = account_id.value();
+            AccountSummary {
+                username,
+                account_id,
+                token_count: token_counts.get(&account_id).copied().unwrap_or(0),
+            }
+        })
+        .collect();
+    accounts.sort_by(|a, b| a.username.cmp(&b.username));
+    accounts
+}
+
+pub fn inspect_account(db: &Database, username: &str) -> AccountInspection {
+    let pending_registration = is_username_pending(db, username);
+    let Some(account_id) = find_account_by_username(db, username) else {
+        return AccountInspection {
+            username: username.to_string(),
+            exists: false,
+            account_id: None,
+            token_count: 0,
+            pending_registration,
+        };
+    };
+
+    AccountInspection {
+        username: username.to_string(),
+        exists: true,
+        account_id: Some(account_id),
+        token_count: token_counts_by_account(db).get(&account_id).copied().unwrap_or(0),
+        pending_registration,
+    }
+}
+
+fn token_counts_by_account(db: &Database) -> HashMap<u64, usize> {
+    let txn = db.begin_read().expect("Failed to begin read txn");
+    let accounts = txn.open_table(ACCOUNTS).expect("Failed to open accounts");
+    let mut counts = HashMap::new();
+    for row in accounts.iter().expect("Failed to iterate accounts") {
+        let (_token, account_id) = row.expect("Failed to read account row");
+        *counts.entry(account_id.value()).or_insert(0) += 1;
+    }
+    counts
+}
+
 fn is_username_pending(db: &Database, username: &str) -> bool {
     let txn = db.begin_read().expect("Failed to begin read txn");
     let table = txn
@@ -312,6 +397,77 @@ mod tests {
         let result = login_with_credentials(&db, None, "user1", "secret");
         assert!(result.is_err());
         assert!(result.unwrap_err().contains("pending admin approval"));
+    }
+
+    #[test]
+    fn list_accounts_returns_usernames_hashes_and_token_counts() {
+        let db = temp_database();
+        let (acct1, token1) = register_account(&db, "user1", "pass1").unwrap();
+        let (acct2, _token2) = register_account(&db, "user2", "pass2").unwrap();
+        let (_acct1_again, _new_token1) =
+            login_with_credentials(&db, None, "user1", "pass1").unwrap();
+
+        let accounts = list_accounts(&db);
+
+        assert_eq!(accounts.len(), 2);
+        assert_eq!(accounts[0].username, "user1");
+        assert_eq!(accounts[0].account_id, acct1);
+        assert_eq!(accounts[0].token_count, 2);
+        assert_eq!(accounts[1].username, "user2");
+        assert_eq!(accounts[1].account_id, acct2);
+        assert_eq!(accounts[1].token_count, 1);
+
+        assert!(find_account_by_token(&db, &token1).is_some());
+    }
+
+    #[test]
+    fn inspect_account_reports_missing_existing_and_pending_users() {
+        let db = temp_database();
+        let (account_id, _token) = register_account(&db, "user1", "pass1").unwrap();
+        request_registration(&db, "pending_user", "pass2").unwrap();
+
+        let existing = inspect_account(&db, "user1");
+        assert_eq!(
+            existing,
+            AccountInspection {
+                username: "user1".to_string(),
+                exists: true,
+                account_id: Some(account_id),
+                token_count: 1,
+                pending_registration: false,
+            }
+        );
+
+        assert_eq!(
+            inspect_account(&db, "missing"),
+            AccountInspection {
+                username: "missing".to_string(),
+                exists: false,
+                account_id: None,
+                token_count: 0,
+                pending_registration: false,
+            }
+        );
+        assert_eq!(
+            inspect_account(&db, "pending_user"),
+            AccountInspection {
+                username: "pending_user".to_string(),
+                exists: false,
+                account_id: None,
+                token_count: 0,
+                pending_registration: true,
+            }
+        );
+    }
+
+    #[test]
+    fn check_password_validates_existing_credentials() {
+        let db = temp_database();
+        register_account(&db, "admin", "admin").unwrap();
+
+        assert_eq!(check_password(&db, "admin", "admin").unwrap(), true);
+        assert_eq!(check_password(&db, "admin", "wrong").unwrap(), false);
+        assert_eq!(check_password(&db, "missing", "admin").unwrap(), false);
     }
 
     #[test]

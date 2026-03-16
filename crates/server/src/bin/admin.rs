@@ -6,6 +6,14 @@ const SOCKET_PATH: &str = "/tmp/game-server-admin.sock";
 
 #[derive(Debug, Serialize, Deserialize)]
 enum AdminRequest {
+    ListAccounts,
+    CheckAccount {
+        username: String,
+    },
+    CheckPassword {
+        username: String,
+        password: String,
+    },
     CreateAccount {
         username: String,
         password: String,
@@ -42,6 +50,20 @@ enum AdminRequest {
 
 #[derive(Debug, Serialize, Deserialize)]
 enum AdminResponse {
+    AccountsListed {
+        accounts: Vec<AccountInfo>,
+    },
+    AccountChecked {
+        username: String,
+        exists: bool,
+        account_id: Option<u64>,
+        token_count: usize,
+        pending_registration: bool,
+    },
+    PasswordChecked {
+        username: String,
+        valid: bool,
+    },
     AccountCreated {
         account_id: u64,
         token: String,
@@ -77,6 +99,13 @@ enum AdminResponse {
     Error(String),
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+struct AccountInfo {
+    username: String,
+    account_id: u64,
+    token_count: usize,
+}
+
 fn main() {
     let args: Vec<String> = std::env::args().collect();
     if args.len() < 2 {
@@ -99,6 +128,9 @@ fn main() {
 fn print_usage() {
     eprintln!("Usage:");
     eprintln!("  game-server-admin ping");
+    eprintln!("  game-server-admin list-accounts");
+    eprintln!("  game-server-admin check-account <username>");
+    eprintln!("  game-server-admin check-password <username> <password>");
     eprintln!("  game-server-admin create-account <username> <password>");
     eprintln!("  game-server-admin approve-registration <username>");
     eprintln!("  game-server-admin create-guild <character_name> <guild_id> <guild_name>");
@@ -113,6 +145,9 @@ fn print_usage() {
 fn parse_request(args: &[String]) -> AdminRequest {
     match args[1].as_str() {
         "ping" => AdminRequest::Ping,
+        "list-accounts" => AdminRequest::ListAccounts,
+        "check-account" => parse_check_account(args),
+        "check-password" => parse_check_password(args),
         "create-account" => parse_create_account(args),
         "approve-registration" => parse_approve_registration(args),
         "create-guild" => parse_create_guild(args),
@@ -125,6 +160,21 @@ fn parse_request(args: &[String]) -> AdminRequest {
             print_usage();
             std::process::exit(1);
         }
+    }
+}
+
+fn parse_check_account(args: &[String]) -> AdminRequest {
+    require_args(args, 3, "check-account <username>");
+    AdminRequest::CheckAccount {
+        username: args[2].clone(),
+    }
+}
+
+fn parse_check_password(args: &[String]) -> AdminRequest {
+    require_args(args, 4, "check-password <username> <password>");
+    AdminRequest::CheckPassword {
+        username: args[2].clone(),
+        password: args[3].clone(),
     }
 }
 
@@ -239,6 +289,40 @@ fn parse_u8_arg(name: &str, value: &str) -> u8 {
 fn print_response(response: &AdminResponse) {
     match response {
         AdminResponse::Pong => println!("pong"),
+        AdminResponse::AccountsListed { accounts } => {
+            if accounts.is_empty() {
+                println!("No accounts found.");
+                return;
+            }
+            for account in accounts {
+                println!(
+                    "username={} account_id={} token_count={}",
+                    account.username, account.account_id, account.token_count
+                );
+            }
+        }
+        AdminResponse::AccountChecked {
+            username,
+            exists,
+            account_id,
+            token_count,
+            pending_registration,
+        } => {
+            println!("username={username}");
+            println!("exists={exists}");
+            println!(
+                "account_id={}",
+                account_id
+                    .map(|id| id.to_string())
+                    .unwrap_or_else(|| "<none>".to_string())
+            );
+            println!("token_count={token_count}");
+            println!("pending_registration={pending_registration}");
+        }
+        AdminResponse::PasswordChecked { username, valid } => {
+            println!("username={username}");
+            println!("valid={valid}");
+        }
         AdminResponse::AccountCreated { account_id, token } => {
             println!("Account created: id={account_id} token={token}");
         }
@@ -354,6 +438,40 @@ mod tests {
                 && appearance.hair_style == 4
                 && appearance.hair_color == 5
                 && appearance.facial_style == 1
+        ));
+    }
+
+    #[test]
+    fn parse_check_account_request() {
+        let args = vec![
+            "game-server-admin".to_string(),
+            "check-account".to_string(),
+            "admin".to_string(),
+        ];
+
+        let request = parse_request(&args);
+
+        assert!(matches!(
+            request,
+            AdminRequest::CheckAccount { username } if username == "admin"
+        ));
+    }
+
+    #[test]
+    fn parse_check_password_request() {
+        let args = vec![
+            "game-server-admin".to_string(),
+            "check-password".to_string(),
+            "admin".to_string(),
+            "admin".to_string(),
+        ];
+
+        let request = parse_request(&args);
+
+        assert!(matches!(
+            request,
+            AdminRequest::CheckPassword { username, password }
+                if username == "admin" && password == "admin"
         ));
     }
 }
