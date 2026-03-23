@@ -114,6 +114,7 @@ pub struct CharacterListEntry {
     pub race: u8,
     pub class: u8,
     pub appearance: CharacterAppearance,
+    pub equipment_appearance: EquipmentAppearance,
 }
 
 /// Client sends after connecting to authenticate.

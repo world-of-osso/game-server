@@ -174,6 +174,7 @@ fn chars_to_entries(chars: &[(u64, CharacterData)]) -> Vec<shared::protocol::Cha
             race: data.race,
             class: data.class,
             appearance: data.appearance,
+            equipment_appearance: data.equipment_appearance.clone(),
         })
         .collect()
 }
@@ -456,6 +457,7 @@ fn handle_create(
                 race: data.race,
                 class: data.class,
                 appearance: data.appearance,
+                equipment_appearance: data.equipment_appearance,
             };
             sender.send::<AuthChannel>(CreateCharacterResponse {
                 success: true,
