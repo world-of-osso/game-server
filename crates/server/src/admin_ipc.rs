@@ -272,20 +272,28 @@ async fn handle_connection(mut conn: Connection, tx: mpsc::Sender<AdminCommand>)
 fn poll_admin_ipc(
     receiver: NonSend<mpsc::Receiver<AdminCommand>>,
     db: Option<Res<persistence::GameDatabase>>,
+    mut commands: Commands,
     mut players: Query<(&mut Position, &persistence::ClientId)>,
-    mut equipment_query: Query<(&mut EquipmentAppearance, &persistence::ClientId)>,
+    mut equipment_query: Query<(Entity, &mut EquipmentAppearance, &persistence::ClientId)>,
 ) {
     let Some(db) = db else { return };
     while let Ok(cmd) = receiver.try_recv() {
-        dispatch(cmd, &db, &mut players, &mut equipment_query);
+        dispatch(
+            cmd,
+            &db,
+            &mut commands,
+            &mut players,
+            &mut equipment_query,
+        );
     }
 }
 
 fn dispatch(
     cmd: AdminCommand,
     db: &persistence::GameDatabase,
+    commands: &mut Commands,
     players: &mut Query<(&mut Position, &persistence::ClientId)>,
-    equipment_query: &mut Query<(&mut EquipmentAppearance, &persistence::ClientId)>,
+    equipment_query: &mut Query<(Entity, &mut EquipmentAppearance, &persistence::ClientId)>,
 ) {
     let response = match cmd.request {
         AdminRequest::Ping => AdminResponse::Pong,
@@ -338,6 +346,7 @@ fn dispatch(
             display_info_id,
         } => handle_set_equipment_appearance(
             db,
+            commands,
             equipment_query,
             &character_name,
             &slot,
@@ -346,7 +355,7 @@ fn dispatch(
         AdminRequest::ClearEquipmentAppearance {
             character_name,
             slot,
-        } => handle_clear_equipment_appearance(db, equipment_query, &character_name, &slot),
+        } => handle_clear_equipment_appearance(db, commands, equipment_query, &character_name, &slot),
     };
     let _ = cmd.respond.send(response);
 }
@@ -562,7 +571,8 @@ fn handle_set_appearance(
 
 fn handle_set_equipment_appearance(
     db: &persistence::GameDatabase,
-    equipment_query: &mut Query<(&mut EquipmentAppearance, &persistence::ClientId)>,
+    commands: &mut Commands,
+    equipment_query: &mut Query<(Entity, &mut EquipmentAppearance, &persistence::ClientId)>,
     name: &str,
     slot_name: &str,
     display_info_id: u32,
@@ -582,9 +592,10 @@ fn handle_set_equipment_appearance(
     upsert_equipment_appearance_entry(&mut data.equipment_appearance, slot, display_info_id);
     persistence::save_character(&db.db, char_id, &data);
 
-    for (mut appearance, cid) in equipment_query.iter_mut() {
+    for (entity, mut appearance, cid) in equipment_query.iter_mut() {
         if cid.0 == char_id {
             upsert_equipment_appearance_entry(&mut appearance, slot, display_info_id);
+            commands.entity(entity).insert(appearance.clone());
         }
     }
 
@@ -597,7 +608,8 @@ fn handle_set_equipment_appearance(
 
 fn handle_clear_equipment_appearance(
     db: &persistence::GameDatabase,
-    equipment_query: &mut Query<(&mut EquipmentAppearance, &persistence::ClientId)>,
+    commands: &mut Commands,
+    equipment_query: &mut Query<(Entity, &mut EquipmentAppearance, &persistence::ClientId)>,
     name: &str,
     slot_name: &str,
 ) -> AdminResponse {
@@ -616,9 +628,10 @@ fn handle_clear_equipment_appearance(
     upsert_hidden_equipment_appearance_entry(&mut data.equipment_appearance, slot);
     persistence::save_character(&db.db, char_id, &data);
 
-    for (mut appearance, cid) in equipment_query.iter_mut() {
+    for (entity, mut appearance, cid) in equipment_query.iter_mut() {
         if cid.0 == char_id {
             upsert_hidden_equipment_appearance_entry(&mut appearance, slot);
+            commands.entity(entity).insert(appearance.clone());
         }
     }
 
@@ -889,12 +902,19 @@ mod tests {
         let game_db = persistence::GameDatabase { db };
         let mut world = World::new();
         let mut state = bevy::ecs::system::SystemState::<
-            Query<(&mut EquipmentAppearance, &persistence::ClientId)>,
+            (Commands, Query<(Entity, &mut EquipmentAppearance, &persistence::ClientId)>),
         >::new(&mut world);
-        let mut query = state.get_mut(&mut world);
+        let (mut commands, mut query) = state.get_mut(&mut world);
 
         let response =
-            handle_set_equipment_appearance(&game_db, &mut query, "Theron", "chest", 777);
+            handle_set_equipment_appearance(
+                &game_db,
+                &mut commands,
+                &mut query,
+                "Theron",
+                "chest",
+                777,
+            );
 
         assert_eq!(
             response,
@@ -923,11 +943,17 @@ mod tests {
         let game_db = persistence::GameDatabase { db };
         let mut world = World::new();
         let mut state = bevy::ecs::system::SystemState::<
-            Query<(&mut EquipmentAppearance, &persistence::ClientId)>,
+            (Commands, Query<(Entity, &mut EquipmentAppearance, &persistence::ClientId)>),
         >::new(&mut world);
-        let mut query = state.get_mut(&mut world);
+        let (mut commands, mut query) = state.get_mut(&mut world);
 
-        let response = handle_clear_equipment_appearance(&game_db, &mut query, "Theron", "feet");
+        let response = handle_clear_equipment_appearance(
+            &game_db,
+            &mut commands,
+            &mut query,
+            "Theron",
+            "feet",
+        );
 
         assert_eq!(
             response,
