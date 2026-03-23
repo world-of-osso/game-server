@@ -403,6 +403,43 @@ pub fn list_characters_for_account(db: &Database, account_id: u64) -> Vec<(u64, 
     result
 }
 
+/// Move all characters from one account to another. Returns the number of moved characters.
+pub fn move_characters_between_accounts(
+    db: &Database,
+    from_account_id: u64,
+    to_account_id: u64,
+) -> Result<usize, String> {
+    if from_account_id == to_account_id {
+        return Ok(0);
+    }
+
+    let from_ids = load_account_char_ids(db, from_account_id);
+    if from_ids.is_empty() {
+        return Ok(0);
+    }
+    let mut to_ids = load_account_char_ids(db, to_account_id);
+    for id in &from_ids {
+        if !to_ids.contains(id) {
+            to_ids.push(*id);
+        }
+    }
+    to_ids.sort_unstable();
+
+    let from_encoded = bitcode::encode(&Vec::<u64>::new());
+    let to_encoded = bitcode::encode(&to_ids);
+    let txn = db.begin_write().expect("Failed to begin write txn");
+    {
+        let mut acct = txn.open_table(ACCOUNT_CHARACTERS).expect("open acct chars");
+        acct.insert(from_account_id, from_encoded.as_slice())
+            .expect("clear source acct chars");
+        acct.insert(to_account_id, to_encoded.as_slice())
+            .expect("update target acct chars");
+    }
+    txn.commit()
+        .map_err(|e| format!("Failed to commit character move: {e}"))?;
+    Ok(from_ids.len())
+}
+
 /// Load the character ID list for an account.
 fn load_account_char_ids(db: &Database, account_id: u64) -> Vec<u64> {
     let txn = db.begin_read().expect("Failed to begin read txn");

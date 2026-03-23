@@ -7,6 +7,16 @@ const SOCKET_PATH: &str = "/tmp/game-server-admin.sock";
 #[derive(Debug, Serialize, Deserialize)]
 enum AdminRequest {
     ListAccounts,
+    ListCharacters {
+        username: Option<String>,
+    },
+    FindCharacter {
+        name: String,
+    },
+    MoveCharacters {
+        from_username: String,
+        to_username: String,
+    },
     CheckAccount {
         username: String,
     },
@@ -52,6 +62,17 @@ enum AdminRequest {
 enum AdminResponse {
     AccountsListed {
         accounts: Vec<AccountInfo>,
+    },
+    CharactersListed {
+        characters: Vec<CharacterInfo>,
+    },
+    CharacterFound {
+        character: Option<CharacterInfo>,
+    },
+    CharactersMoved {
+        from_username: String,
+        to_username: String,
+        moved_count: usize,
     },
     AccountChecked {
         username: String,
@@ -106,6 +127,17 @@ struct AccountInfo {
     token_count: usize,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+struct CharacterInfo {
+    username: String,
+    account_id: u64,
+    character_id: u64,
+    name: String,
+    level: u16,
+    race: u8,
+    class: u8,
+}
+
 fn main() {
     let args: Vec<String> = std::env::args().collect();
     if args.len() < 2 {
@@ -129,6 +161,9 @@ fn print_usage() {
     eprintln!("Usage:");
     eprintln!("  game-server-admin ping");
     eprintln!("  game-server-admin list-accounts");
+    eprintln!("  game-server-admin list-characters [username]");
+    eprintln!("  game-server-admin find-character <name>");
+    eprintln!("  game-server-admin move-characters <from_username> <to_username>");
     eprintln!("  game-server-admin check-account <username>");
     eprintln!("  game-server-admin check-password <username> <password>");
     eprintln!("  game-server-admin create-account <username> <password>");
@@ -146,6 +181,9 @@ fn parse_request(args: &[String]) -> AdminRequest {
     match args[1].as_str() {
         "ping" => AdminRequest::Ping,
         "list-accounts" => AdminRequest::ListAccounts,
+        "list-characters" => parse_list_characters(args),
+        "find-character" => parse_find_character(args),
+        "move-characters" => parse_move_characters(args),
         "check-account" => parse_check_account(args),
         "check-password" => parse_check_password(args),
         "create-account" => parse_create_account(args),
@@ -160,6 +198,27 @@ fn parse_request(args: &[String]) -> AdminRequest {
             print_usage();
             std::process::exit(1);
         }
+    }
+}
+
+fn parse_list_characters(args: &[String]) -> AdminRequest {
+    AdminRequest::ListCharacters {
+        username: args.get(2).cloned(),
+    }
+}
+
+fn parse_find_character(args: &[String]) -> AdminRequest {
+    require_args(args, 3, "find-character <name>");
+    AdminRequest::FindCharacter {
+        name: args[2].clone(),
+    }
+}
+
+fn parse_move_characters(args: &[String]) -> AdminRequest {
+    require_args(args, 4, "move-characters <from_username> <to_username>");
+    AdminRequest::MoveCharacters {
+        from_username: args[2].clone(),
+        to_username: args[3].clone(),
     }
 }
 
@@ -300,6 +359,49 @@ fn print_response(response: &AdminResponse) {
                     account.username, account.account_id, account.token_count
                 );
             }
+        }
+        AdminResponse::CharactersListed { characters } => {
+            if characters.is_empty() {
+                println!("No characters found.");
+                return;
+            }
+            for character in characters {
+                println!(
+                    "username={} account_id={} character_id={} name={} level={} race={} class={}",
+                    character.username,
+                    character.account_id,
+                    character.character_id,
+                    character.name,
+                    character.level,
+                    character.race,
+                    character.class
+                );
+            }
+        }
+        AdminResponse::CharacterFound { character } => {
+            if let Some(character) = character {
+                println!(
+                    "username={} account_id={} character_id={} name={} level={} race={} class={}",
+                    character.username,
+                    character.account_id,
+                    character.character_id,
+                    character.name,
+                    character.level,
+                    character.race,
+                    character.class
+                );
+            } else {
+                println!("Character not found.");
+            }
+        }
+        AdminResponse::CharactersMoved {
+            from_username,
+            to_username,
+            moved_count,
+        } => {
+            println!(
+                "Moved {moved_count} characters from {from_username} to {to_username}"
+            );
         }
         AdminResponse::AccountChecked {
             username,
@@ -472,6 +574,58 @@ mod tests {
             request,
             AdminRequest::CheckPassword { username, password }
                 if username == "admin" && password == "admin"
+        ));
+    }
+
+    #[test]
+    fn parse_list_characters_request_with_username() {
+        let args = vec![
+            "game-server-admin".to_string(),
+            "list-characters".to_string(),
+            "admin".to_string(),
+        ];
+
+        let request = parse_request(&args);
+
+        assert!(matches!(
+            request,
+            AdminRequest::ListCharacters { username } if username.as_deref() == Some("admin")
+        ));
+    }
+
+    #[test]
+    fn parse_find_character_request() {
+        let args = vec![
+            "game-server-admin".to_string(),
+            "find-character".to_string(),
+            "Theron".to_string(),
+        ];
+
+        let request = parse_request(&args);
+
+        assert!(matches!(
+            request,
+            AdminRequest::FindCharacter { name } if name == "Theron"
+        ));
+    }
+
+    #[test]
+    fn parse_move_characters_request() {
+        let args = vec![
+            "game-server-admin".to_string(),
+            "move-characters".to_string(),
+            "alice".to_string(),
+            "admin".to_string(),
+        ];
+
+        let request = parse_request(&args);
+
+        assert!(matches!(
+            request,
+            AdminRequest::MoveCharacters {
+                from_username,
+                to_username,
+            } if from_username == "alice" && to_username == "admin"
         ));
     }
 }

@@ -15,6 +15,16 @@ const SOCKET_PATH: &str = "/tmp/game-server-admin.sock";
 #[derive(Debug, Serialize, Deserialize)]
 pub enum AdminRequest {
     ListAccounts,
+    ListCharacters {
+        username: Option<String>,
+    },
+    FindCharacter {
+        name: String,
+    },
+    MoveCharacters {
+        from_username: String,
+        to_username: String,
+    },
     CheckAccount {
         username: String,
     },
@@ -61,6 +71,17 @@ pub enum AdminRequest {
 pub enum AdminResponse {
     AccountsListed {
         accounts: Vec<AccountInfo>,
+    },
+    CharactersListed {
+        characters: Vec<CharacterInfo>,
+    },
+    CharacterFound {
+        character: Option<CharacterInfo>,
+    },
+    CharactersMoved {
+        from_username: String,
+        to_username: String,
+        moved_count: usize,
     },
     AccountChecked {
         username: String,
@@ -113,6 +134,17 @@ pub struct AccountInfo {
     pub username: String,
     pub account_id: u64,
     pub token_count: usize,
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub struct CharacterInfo {
+    pub username: String,
+    pub account_id: u64,
+    pub character_id: u64,
+    pub name: String,
+    pub level: u16,
+    pub race: u8,
+    pub class: u8,
 }
 
 /// Internal command passed from IPC server thread to Bevy main loop.
@@ -235,6 +267,14 @@ fn dispatch(
     let response = match cmd.request {
         AdminRequest::Ping => AdminResponse::Pong,
         AdminRequest::ListAccounts => handle_list_accounts(db),
+        AdminRequest::ListCharacters { username } => {
+            handle_list_characters(db, username.as_deref())
+        }
+        AdminRequest::FindCharacter { name } => handle_find_character(db, &name),
+        AdminRequest::MoveCharacters {
+            from_username,
+            to_username,
+        } => handle_move_characters(db, &from_username, &to_username),
         AdminRequest::CheckAccount { username } => handle_check_account(db, &username),
         AdminRequest::CheckPassword { username, password } => {
             handle_check_password(db, &username, &password)
@@ -283,6 +323,74 @@ fn handle_list_accounts(db: &persistence::GameDatabase) -> AdminResponse {
         })
         .collect();
     AdminResponse::AccountsListed { accounts }
+}
+
+fn handle_list_characters(
+    db: &persistence::GameDatabase,
+    username_filter: Option<&str>,
+) -> AdminResponse {
+    let mut characters: Vec<_> = persistence_accounts::list_accounts(&db.db)
+        .into_iter()
+        .filter(|account| {
+            username_filter
+                .map(|username| account.username == username)
+                .unwrap_or(true)
+        })
+        .flat_map(|account| {
+            let username = account.username.clone();
+            persistence::list_characters_for_account(&db.db, account.account_id)
+                .into_iter()
+                .map(move |(character_id, data)| CharacterInfo {
+                    username: username.clone(),
+                    account_id: account.account_id,
+                    character_id,
+                    name: data.name,
+                    level: data.level,
+                    race: data.race,
+                    class: data.class,
+                })
+        })
+        .collect();
+    characters.sort_by(|a, b| {
+        a.username
+            .cmp(&b.username)
+            .then_with(|| a.name.cmp(&b.name))
+            .then_with(|| a.character_id.cmp(&b.character_id))
+    });
+    AdminResponse::CharactersListed { characters }
+}
+
+fn handle_find_character(db: &persistence::GameDatabase, name: &str) -> AdminResponse {
+    let character = match handle_list_characters(db, None) {
+        AdminResponse::CharactersListed { characters } => {
+            characters.into_iter().find(|character| character.name == name)
+        }
+        _ => None,
+    };
+    AdminResponse::CharacterFound { character }
+}
+
+fn handle_move_characters(
+    db: &persistence::GameDatabase,
+    from_username: &str,
+    to_username: &str,
+) -> AdminResponse {
+    let Some(from_account_id) = persistence_accounts::find_account_by_username(&db.db, from_username)
+    else {
+        return AdminResponse::Error(format!("account '{from_username}' not found"));
+    };
+    let Some(to_account_id) = persistence_accounts::find_account_by_username(&db.db, to_username)
+    else {
+        return AdminResponse::Error(format!("account '{to_username}' not found"));
+    };
+    match persistence::move_characters_between_accounts(&db.db, from_account_id, to_account_id) {
+        Ok(moved_count) => AdminResponse::CharactersMoved {
+            from_username: from_username.to_owned(),
+            to_username: to_username.to_owned(),
+            moved_count,
+        },
+        Err(err) => AdminResponse::Error(err),
+    }
 }
 
 fn handle_check_account(db: &persistence::GameDatabase, username: &str) -> AdminResponse {
@@ -535,5 +643,76 @@ mod tests {
                 valid: false,
             }
         );
+    }
+
+    #[test]
+    fn handle_list_characters_returns_account_characters() {
+        let db = persistence::temp_database();
+        let (account_id, _token) =
+            persistence_accounts::register_account(&db, "admin", "admin").expect("admin");
+        persistence::create_character(&db, account_id, "Theron", 1, 1).expect("character");
+        let game_db = persistence::GameDatabase { db };
+
+        let response = handle_list_characters(&game_db, Some("admin"));
+
+        assert!(matches!(
+            response,
+            AdminResponse::CharactersListed { characters }
+                if characters.len() == 1
+                    && characters[0].username == "admin"
+                    && characters[0].account_id == account_id
+                    && characters[0].name == "Theron"
+        ));
+    }
+
+    #[test]
+    fn handle_find_character_reports_owner() {
+        let db = persistence::temp_database();
+        let (account_id, _token) =
+            persistence_accounts::register_account(&db, "admin", "admin").expect("admin");
+        let (character_id, _data) =
+            persistence::create_character(&db, account_id, "Theron", 1, 1).expect("character");
+        let game_db = persistence::GameDatabase { db };
+
+        assert_eq!(
+            handle_find_character(&game_db, "Theron"),
+            AdminResponse::CharacterFound {
+                character: Some(CharacterInfo {
+                    username: "admin".to_string(),
+                    account_id,
+                    character_id,
+                    name: "Theron".to_string(),
+                    level: 1,
+                    race: 1,
+                    class: 1,
+                })
+            }
+        );
+    }
+
+    #[test]
+    fn handle_move_characters_moves_ownership_between_accounts() {
+        let db = persistence::temp_database();
+        let (from_account_id, _token) =
+            persistence_accounts::register_account(&db, "alice", "secret").expect("alice");
+        let (to_account_id, _token) =
+            persistence_accounts::register_account(&db, "admin", "admin").expect("admin");
+        persistence::create_character(&db, from_account_id, "Theron", 1, 1).expect("character");
+        persistence::create_character(&db, from_account_id, "Elara", 1, 1).expect("character");
+        let game_db = persistence::GameDatabase { db };
+
+        assert_eq!(
+            handle_move_characters(&game_db, "alice", "admin"),
+            AdminResponse::CharactersMoved {
+                from_username: "alice".to_string(),
+                to_username: "admin".to_string(),
+                moved_count: 2,
+            }
+        );
+        assert!(persistence::list_characters_for_account(&game_db.db, from_account_id).is_empty());
+        let moved = persistence::list_characters_for_account(&game_db.db, to_account_id);
+        assert_eq!(moved.len(), 2);
+        assert!(moved.iter().any(|(_, data)| data.name == "Theron"));
+        assert!(moved.iter().any(|(_, data)| data.name == "Elara"));
     }
 }
