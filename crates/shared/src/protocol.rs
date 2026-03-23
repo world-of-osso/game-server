@@ -6,8 +6,8 @@ use serde::{Deserialize, Serialize};
 pub use crate::protocol_snapshots::*;
 
 use crate::components::{
-    CharacterAppearance, GuildMembership, Health, Mana, ModelDisplay, MovementSpeed, Npc, Player,
-    Position, Rotation, Zone,
+    CharacterAppearance, EquipmentAppearance, GuildMembership, Health, Mana, ModelDisplay,
+    MovementSpeed, Npc, Player, Position, Rotation, Zone,
 };
 
 /// Unreliable movement position updates, server-to-client only.
@@ -436,6 +436,7 @@ fn register_replicated_components(app: &mut App) {
     app.register_component::<MovementSpeed>();
     app.register_component::<Zone>();
     app.register_component::<GuildMembership>();
+    app.register_component::<EquipmentAppearance>();
 }
 
 fn register_messages(app: &mut App) {
@@ -607,6 +608,7 @@ fn register_channels(app: &mut App) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::components::{EquipmentVisualSlot, EquippedAppearanceEntry};
 
     #[test]
     fn chat_type_serialization_round_trip() {
@@ -741,5 +743,35 @@ mod tests {
         assert_eq!(decoded.results[0].auction_id, 7);
         assert_eq!(decoded.results[0].item.name, "Linen Cloth");
         assert_eq!(decoded.results[0].time_left, AuctionTimeLeft::Long);
+    }
+
+    #[test]
+    fn equipment_appearance_round_trips() {
+        let snapshot = EquipmentAppearance {
+            entries: vec![
+                EquippedAppearanceEntry {
+                    slot: EquipmentVisualSlot::Head,
+                    item_id: Some(19019),
+                    display_info_id: Some(12345),
+                    inventory_type: 1,
+                    hidden: false,
+                },
+                EquippedAppearanceEntry {
+                    slot: EquipmentVisualSlot::MainHand,
+                    item_id: Some(17182),
+                    display_info_id: Some(54321),
+                    inventory_type: 21,
+                    hidden: false,
+                },
+            ],
+        };
+
+        let bitcode_encoded = bitcode::encode(&snapshot);
+        let bitcode_decoded: EquipmentAppearance = bitcode::decode(&bitcode_encoded).unwrap();
+        assert_eq!(bitcode_decoded, snapshot);
+
+        let json_encoded = serde_json::to_string(&snapshot).unwrap();
+        let json_decoded: EquipmentAppearance = serde_json::from_str(&json_encoded).unwrap();
+        assert_eq!(json_decoded, snapshot);
     }
 }

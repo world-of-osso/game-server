@@ -1,4 +1,4 @@
-use shared::components::{CharacterAppearance, Health, Player, Position};
+use shared::components::{CharacterAppearance, EquipmentAppearance, Health, Player, Position};
 
 /// Serializable character data for persistence.
 #[derive(bitcode::Encode, bitcode::Decode, Debug, Clone, PartialEq)]
@@ -13,6 +13,7 @@ pub struct CharacterData {
     pub class: u8,
     pub level: u16,
     pub appearance: CharacterAppearance,
+    pub equipment_appearance: EquipmentAppearance,
 }
 
 #[derive(bitcode::Decode)]
@@ -96,6 +97,7 @@ impl CharacterData {
             class: 1,
             level: 1,
             appearance: player.appearance,
+            equipment_appearance: EquipmentAppearance::default(),
         }
     }
 
@@ -113,6 +115,7 @@ impl CharacterData {
                     class: legacy.class,
                     level: legacy.level,
                     appearance: CharacterAppearance::default(),
+                    equipment_appearance: EquipmentAppearance::default(),
                 })
                 .map_err(|e| format!("Failed to decode character data: {e}"))
         })

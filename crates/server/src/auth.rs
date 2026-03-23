@@ -727,6 +727,7 @@ fn build_player_components(data: &CharacterData, character_id: u64) -> impl Bund
             class: data.class,
             appearance: data.appearance,
         },
+        data.equipment_appearance.clone(),
         ClientId(character_id),
         CombatTarget::default(),
         Replicate::new(ReplicationMode::SingleServer(NetworkTarget::All)),

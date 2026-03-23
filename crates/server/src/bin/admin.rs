@@ -55,6 +55,15 @@ enum AdminRequest {
         character_name: String,
         appearance: CharacterAppearance,
     },
+    SetEquipmentAppearance {
+        character_name: String,
+        slot: String,
+        display_info_id: u32,
+    },
+    ClearEquipmentAppearance {
+        character_name: String,
+        slot: String,
+    },
     Ping,
 }
 
@@ -116,6 +125,15 @@ enum AdminResponse {
         character_name: String,
         appearance: CharacterAppearance,
     },
+    EquipmentAppearanceSet {
+        character_name: String,
+        slot: String,
+        display_info_id: u32,
+    },
+    EquipmentAppearanceCleared {
+        character_name: String,
+        slot: String,
+    },
     Pong,
     Error(String),
 }
@@ -175,6 +193,10 @@ fn print_usage() {
     eprintln!(
         "  game-server-admin set-appearance <character_name> <sex> <skin_color> <face> <hair_style> <hair_color> <facial_style>"
     );
+    eprintln!(
+        "  game-server-admin set-equipment-appearance <character_name> <slot> <display_info_id>"
+    );
+    eprintln!("  game-server-admin clear-equipment-appearance <character_name> <slot>");
 }
 
 fn parse_request(args: &[String]) -> AdminRequest {
@@ -193,6 +215,8 @@ fn parse_request(args: &[String]) -> AdminRequest {
         "set-credentials" => parse_set_credentials(args),
         "set-position" => parse_set_position(args),
         "set-appearance" => parse_set_appearance(args),
+        "set-equipment-appearance" => parse_set_equipment_appearance(args),
+        "clear-equipment-appearance" => parse_clear_equipment_appearance(args),
         other => {
             eprintln!("Unknown command: {other}");
             print_usage();
@@ -234,6 +258,31 @@ fn parse_check_password(args: &[String]) -> AdminRequest {
     AdminRequest::CheckPassword {
         username: args[2].clone(),
         password: args[3].clone(),
+    }
+}
+
+fn parse_set_equipment_appearance(args: &[String]) -> AdminRequest {
+    require_args(
+        args,
+        5,
+        "set-equipment-appearance <character_name> <slot> <display_info_id>",
+    );
+    let display_info_id = args[4].parse().unwrap_or_else(|_| {
+        eprintln!("display_info_id must be a number");
+        std::process::exit(1);
+    });
+    AdminRequest::SetEquipmentAppearance {
+        character_name: args[2].clone(),
+        slot: args[3].clone(),
+        display_info_id,
+    }
+}
+
+fn parse_clear_equipment_appearance(args: &[String]) -> AdminRequest {
+    require_args(args, 4, "clear-equipment-appearance <character_name> <slot>");
+    AdminRequest::ClearEquipmentAppearance {
+        character_name: args[2].clone(),
+        slot: args[3].clone(),
     }
 }
 
@@ -474,6 +523,21 @@ fn print_response(response: &AdminResponse) {
                 appearance.facial_style
             );
         }
+        AdminResponse::EquipmentAppearanceSet {
+            character_name,
+            slot,
+            display_info_id,
+        } => {
+            println!(
+                "Equipment appearance set: {character_name} {slot} -> {display_info_id}"
+            );
+        }
+        AdminResponse::EquipmentAppearanceCleared {
+            character_name,
+            slot,
+        } => {
+            println!("Equipment appearance cleared: {character_name} {slot}");
+        }
         AdminResponse::Error(e) => {
             eprintln!("Error: {e}");
             std::process::exit(1);
@@ -626,6 +690,46 @@ mod tests {
                 from_username,
                 to_username,
             } if from_username == "alice" && to_username == "admin"
+        ));
+    }
+
+    #[test]
+    fn parse_set_equipment_appearance_request() {
+        let args = vec![
+            "game-server-admin".to_string(),
+            "set-equipment-appearance".to_string(),
+            "Theron".to_string(),
+            "chest".to_string(),
+            "777".to_string(),
+        ];
+
+        let request = parse_request(&args);
+
+        assert!(matches!(
+            request,
+            AdminRequest::SetEquipmentAppearance {
+                character_name,
+                slot,
+                display_info_id,
+            } if character_name == "Theron" && slot == "chest" && display_info_id == 777
+        ));
+    }
+
+    #[test]
+    fn parse_clear_equipment_appearance_request() {
+        let args = vec![
+            "game-server-admin".to_string(),
+            "clear-equipment-appearance".to_string(),
+            "Theron".to_string(),
+            "chest".to_string(),
+        ];
+
+        let request = parse_request(&args);
+
+        assert!(matches!(
+            request,
+            AdminRequest::ClearEquipmentAppearance { character_name, slot }
+                if character_name == "Theron" && slot == "chest"
         ));
     }
 }

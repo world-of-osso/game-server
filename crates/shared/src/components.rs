@@ -126,6 +126,71 @@ pub struct Player {
 }
 
 #[derive(
+    Reflect,
+    Serialize,
+    Deserialize,
+    bitcode::Encode,
+    bitcode::Decode,
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    Hash,
+)]
+pub enum EquipmentVisualSlot {
+    Head,
+    Shoulder,
+    Back,
+    Chest,
+    Shirt,
+    Tabard,
+    Wrist,
+    Hands,
+    Waist,
+    Legs,
+    Feet,
+    MainHand,
+    OffHand,
+}
+
+#[derive(
+    Reflect,
+    Serialize,
+    Deserialize,
+    bitcode::Encode,
+    bitcode::Decode,
+    Debug,
+    Clone,
+    PartialEq,
+    Eq,
+)]
+pub struct EquippedAppearanceEntry {
+    pub slot: EquipmentVisualSlot,
+    pub item_id: Option<u32>,
+    pub display_info_id: Option<u32>,
+    pub inventory_type: u8,
+    pub hidden: bool,
+}
+
+#[derive(
+    Component,
+    Reflect,
+    Serialize,
+    Deserialize,
+    bitcode::Encode,
+    bitcode::Decode,
+    Debug,
+    Clone,
+    PartialEq,
+    Eq,
+    Default,
+)]
+pub struct EquipmentAppearance {
+    pub entries: Vec<EquippedAppearanceEntry>,
+}
+
+#[derive(
     Component,
     Reflect,
     Serialize,

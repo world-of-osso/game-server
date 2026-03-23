@@ -4,7 +4,10 @@ use std::sync::mpsc;
 use bevy::prelude::*;
 use peercred_ipc::{Connection, Server};
 use serde::{Deserialize, Serialize};
-use shared::components::{CharacterAppearance, Position};
+use shared::components::{
+    CharacterAppearance, EquipmentAppearance, EquipmentVisualSlot, EquippedAppearanceEntry,
+    Position,
+};
 
 use crate::persistence;
 use crate::persistence_accounts;
@@ -62,6 +65,15 @@ pub enum AdminRequest {
     SetAppearance {
         character_name: String,
         appearance: CharacterAppearance,
+    },
+    SetEquipmentAppearance {
+        character_name: String,
+        slot: String,
+        display_info_id: u32,
+    },
+    ClearEquipmentAppearance {
+        character_name: String,
+        slot: String,
     },
     Ping,
 }
@@ -124,6 +136,15 @@ pub enum AdminResponse {
     AppearanceSet {
         character_name: String,
         appearance: CharacterAppearance,
+    },
+    EquipmentAppearanceSet {
+        character_name: String,
+        slot: String,
+        display_info_id: u32,
+    },
+    EquipmentAppearanceCleared {
+        character_name: String,
+        slot: String,
     },
     Pong,
     Error(String),
@@ -252,10 +273,11 @@ fn poll_admin_ipc(
     receiver: NonSend<mpsc::Receiver<AdminCommand>>,
     db: Option<Res<persistence::GameDatabase>>,
     mut players: Query<(&mut Position, &persistence::ClientId)>,
+    mut equipment_query: Query<(&mut EquipmentAppearance, &persistence::ClientId)>,
 ) {
     let Some(db) = db else { return };
     while let Ok(cmd) = receiver.try_recv() {
-        dispatch(cmd, &db, &mut players);
+        dispatch(cmd, &db, &mut players, &mut equipment_query);
     }
 }
 
@@ -263,6 +285,7 @@ fn dispatch(
     cmd: AdminCommand,
     db: &persistence::GameDatabase,
     players: &mut Query<(&mut Position, &persistence::ClientId)>,
+    equipment_query: &mut Query<(&mut EquipmentAppearance, &persistence::ClientId)>,
 ) {
     let response = match cmd.request {
         AdminRequest::Ping => AdminResponse::Pong,
@@ -309,6 +332,21 @@ fn dispatch(
             character_name,
             appearance,
         } => handle_set_appearance(db, &character_name, appearance),
+        AdminRequest::SetEquipmentAppearance {
+            character_name,
+            slot,
+            display_info_id,
+        } => handle_set_equipment_appearance(
+            db,
+            equipment_query,
+            &character_name,
+            &slot,
+            display_info_id,
+        ),
+        AdminRequest::ClearEquipmentAppearance {
+            character_name,
+            slot,
+        } => handle_clear_equipment_appearance(db, equipment_query, &character_name, &slot),
     };
     let _ = cmd.respond.send(response);
 }
@@ -522,6 +560,112 @@ fn handle_set_appearance(
     }
 }
 
+fn handle_set_equipment_appearance(
+    db: &persistence::GameDatabase,
+    equipment_query: &mut Query<(&mut EquipmentAppearance, &persistence::ClientId)>,
+    name: &str,
+    slot_name: &str,
+    display_info_id: u32,
+) -> AdminResponse {
+    let Some(slot) = parse_equipment_visual_slot(slot_name) else {
+        return AdminResponse::Error(format!(
+            "invalid equipment appearance slot '{slot_name}'"
+        ));
+    };
+    let Some(char_id) = persistence::find_character_id_by_name(&db.db, name) else {
+        return AdminResponse::Error(format!("character '{name}' not found"));
+    };
+    let Some(mut data) = persistence::load_character(&db.db, char_id) else {
+        return AdminResponse::Error(format!("character data for '{name}' not found"));
+    };
+
+    upsert_equipment_appearance_entry(&mut data.equipment_appearance, slot, display_info_id);
+    persistence::save_character(&db.db, char_id, &data);
+
+    for (mut appearance, cid) in equipment_query.iter_mut() {
+        if cid.0 == char_id {
+            upsert_equipment_appearance_entry(&mut appearance, slot, display_info_id);
+        }
+    }
+
+    AdminResponse::EquipmentAppearanceSet {
+        character_name: name.to_owned(),
+        slot: format!("{slot:?}"),
+        display_info_id,
+    }
+}
+
+fn handle_clear_equipment_appearance(
+    db: &persistence::GameDatabase,
+    equipment_query: &mut Query<(&mut EquipmentAppearance, &persistence::ClientId)>,
+    name: &str,
+    slot_name: &str,
+) -> AdminResponse {
+    let Some(slot) = parse_equipment_visual_slot(slot_name) else {
+        return AdminResponse::Error(format!(
+            "invalid equipment appearance slot '{slot_name}'"
+        ));
+    };
+    let Some(char_id) = persistence::find_character_id_by_name(&db.db, name) else {
+        return AdminResponse::Error(format!("character '{name}' not found"));
+    };
+    let Some(mut data) = persistence::load_character(&db.db, char_id) else {
+        return AdminResponse::Error(format!("character data for '{name}' not found"));
+    };
+
+    data.equipment_appearance.entries.retain(|entry| entry.slot != slot);
+    persistence::save_character(&db.db, char_id, &data);
+
+    for (mut appearance, cid) in equipment_query.iter_mut() {
+        if cid.0 == char_id {
+            appearance.entries.retain(|entry| entry.slot != slot);
+        }
+    }
+
+    AdminResponse::EquipmentAppearanceCleared {
+        character_name: name.to_owned(),
+        slot: format!("{slot:?}"),
+    }
+}
+
+fn upsert_equipment_appearance_entry(
+    appearance: &mut EquipmentAppearance,
+    slot: EquipmentVisualSlot,
+    display_info_id: u32,
+) {
+    if let Some(entry) = appearance.entries.iter_mut().find(|entry| entry.slot == slot) {
+        entry.display_info_id = Some(display_info_id);
+        entry.hidden = false;
+        return;
+    }
+    appearance.entries.push(EquippedAppearanceEntry {
+        slot,
+        item_id: None,
+        display_info_id: Some(display_info_id),
+        inventory_type: 0,
+        hidden: false,
+    });
+}
+
+fn parse_equipment_visual_slot(value: &str) -> Option<EquipmentVisualSlot> {
+    match value.to_ascii_lowercase().as_str() {
+        "head" => Some(EquipmentVisualSlot::Head),
+        "shoulder" | "shoulders" => Some(EquipmentVisualSlot::Shoulder),
+        "back" | "cloak" | "cape" => Some(EquipmentVisualSlot::Back),
+        "chest" => Some(EquipmentVisualSlot::Chest),
+        "shirt" => Some(EquipmentVisualSlot::Shirt),
+        "tabard" => Some(EquipmentVisualSlot::Tabard),
+        "wrist" | "wrists" | "bracers" => Some(EquipmentVisualSlot::Wrist),
+        "hands" | "hand" | "gloves" => Some(EquipmentVisualSlot::Hands),
+        "waist" | "belt" => Some(EquipmentVisualSlot::Waist),
+        "legs" | "pants" => Some(EquipmentVisualSlot::Legs),
+        "feet" | "boots" => Some(EquipmentVisualSlot::Feet),
+        "mainhand" | "main-hand" | "mh" => Some(EquipmentVisualSlot::MainHand),
+        "offhand" | "off-hand" | "oh" => Some(EquipmentVisualSlot::OffHand),
+        _ => None,
+    }
+}
+
 fn handle_create_guild(
     db: &persistence::GameDatabase,
     name: &str,
@@ -714,5 +858,39 @@ mod tests {
         assert_eq!(moved.len(), 2);
         assert!(moved.iter().any(|(_, data)| data.name == "Theron"));
         assert!(moved.iter().any(|(_, data)| data.name == "Elara"));
+    }
+
+    #[test]
+    fn handle_set_equipment_appearance_updates_character_data() {
+        let db = persistence::temp_database();
+        let (account_id, _token) =
+            persistence_accounts::register_account(&db, "admin", "admin").expect("admin");
+        persistence::create_character(&db, account_id, "Theron", 1, 1).expect("character");
+        let game_db = persistence::GameDatabase { db };
+        let mut world = World::new();
+        let mut state = bevy::ecs::system::SystemState::<
+            Query<(&mut EquipmentAppearance, &persistence::ClientId)>,
+        >::new(&mut world);
+        let mut query = state.get_mut(&mut world);
+
+        let response =
+            handle_set_equipment_appearance(&game_db, &mut query, "Theron", "chest", 777);
+
+        assert_eq!(
+            response,
+            AdminResponse::EquipmentAppearanceSet {
+                character_name: "Theron".to_string(),
+                slot: "Chest".to_string(),
+                display_info_id: 777,
+            }
+        );
+        let char_id = persistence::find_character_id_by_name(&game_db.db, "Theron").unwrap();
+        let data = persistence::load_character(&game_db.db, char_id).unwrap();
+        assert_eq!(data.equipment_appearance.entries.len(), 1);
+        assert_eq!(data.equipment_appearance.entries[0].slot, EquipmentVisualSlot::Chest);
+        assert_eq!(
+            data.equipment_appearance.entries[0].display_info_id,
+            Some(777)
+        );
     }
 }

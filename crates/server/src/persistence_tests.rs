@@ -1,5 +1,7 @@
 use super::*;
-use shared::components::CharacterAppearance;
+use shared::components::{
+    CharacterAppearance, EquipmentAppearance, EquipmentVisualSlot, EquippedAppearanceEntry,
+};
 
 #[derive(bitcode::Encode)]
 struct LegacyCharacterData {
@@ -26,6 +28,7 @@ fn sample_data() -> CharacterData {
         class: 1,
         level: 1,
         appearance: CharacterAppearance::default(),
+        equipment_appearance: EquipmentAppearance::default(),
     }
 }
 
@@ -84,4 +87,24 @@ fn load_character_decodes_legacy_records_with_default_appearance() {
     assert_eq!(loaded.name, "Legacy");
     assert_eq!(loaded.level, 7);
     assert_eq!(loaded.appearance, CharacterAppearance::default());
+}
+
+#[test]
+fn character_data_round_trip_preserves_equipment_appearance() {
+    let db = temp_database();
+    let mut data = sample_data();
+    data.equipment_appearance = EquipmentAppearance {
+        entries: vec![EquippedAppearanceEntry {
+            slot: EquipmentVisualSlot::Chest,
+            item_id: Some(6123),
+            display_info_id: Some(777),
+            inventory_type: 5,
+            hidden: false,
+        }],
+    };
+
+    save_character(&db, 42, &data);
+    let loaded = load_character(&db, 42).expect("should find saved character");
+
+    assert_eq!(loaded.equipment_appearance, data.equipment_appearance);
 }

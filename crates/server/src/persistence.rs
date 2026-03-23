@@ -550,6 +550,7 @@ fn default_character_data(
         class,
         level: 1,
         appearance,
+        equipment_appearance: Default::default(),
     }
 }
 
