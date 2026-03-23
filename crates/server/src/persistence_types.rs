@@ -29,6 +29,20 @@ pub(crate) struct LegacyCharacterDataV1 {
     pub level: u16,
 }
 
+#[derive(bitcode::Decode)]
+pub(crate) struct LegacyCharacterDataV2 {
+    pub name: String,
+    pub x: f32,
+    pub y: f32,
+    pub z: f32,
+    pub health: f32,
+    pub max_health: f32,
+    pub race: u8,
+    pub class: u8,
+    pub level: u16,
+    pub appearance: CharacterAppearance,
+}
+
 #[derive(bitcode::Encode, bitcode::Decode, Debug, Clone, PartialEq)]
 pub struct GuildMembershipData {
     pub guild_id: u32,
@@ -103,7 +117,7 @@ impl CharacterData {
 
     pub fn decode_compatible(bytes: &[u8]) -> Result<Self, String> {
         bitcode::decode::<CharacterData>(bytes).or_else(|_| {
-            bitcode::decode::<LegacyCharacterDataV1>(bytes)
+            bitcode::decode::<LegacyCharacterDataV2>(bytes)
                 .map(|legacy| Self {
                     name: legacy.name,
                     x: legacy.x,
@@ -114,8 +128,23 @@ impl CharacterData {
                     race: legacy.race,
                     class: legacy.class,
                     level: legacy.level,
-                    appearance: CharacterAppearance::default(),
+                    appearance: legacy.appearance,
                     equipment_appearance: EquipmentAppearance::default(),
+                })
+                .or_else(|_| {
+                    bitcode::decode::<LegacyCharacterDataV1>(bytes).map(|legacy| Self {
+                        name: legacy.name,
+                        x: legacy.x,
+                        y: legacy.y,
+                        z: legacy.z,
+                        health: legacy.health,
+                        max_health: legacy.max_health,
+                        race: legacy.race,
+                        class: legacy.class,
+                        level: legacy.level,
+                        appearance: CharacterAppearance::default(),
+                        equipment_appearance: EquipmentAppearance::default(),
+                    })
                 })
                 .map_err(|e| format!("Failed to decode character data: {e}"))
         })

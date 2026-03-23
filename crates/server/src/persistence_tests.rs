@@ -16,6 +16,20 @@ struct LegacyCharacterData {
     level: u16,
 }
 
+#[derive(bitcode::Encode)]
+struct LegacyCharacterDataV2 {
+    name: String,
+    x: f32,
+    y: f32,
+    z: f32,
+    health: f32,
+    max_health: f32,
+    race: u8,
+    class: u8,
+    level: u16,
+    appearance: CharacterAppearance,
+}
+
 fn sample_data() -> CharacterData {
     CharacterData {
         name: "TestPlayer".into(),
@@ -87,6 +101,44 @@ fn load_character_decodes_legacy_records_with_default_appearance() {
     assert_eq!(loaded.name, "Legacy");
     assert_eq!(loaded.level, 7);
     assert_eq!(loaded.appearance, CharacterAppearance::default());
+}
+
+#[test]
+fn load_character_decodes_previous_appearance_records_without_equipment() {
+    let db = temp_database();
+    let legacy = LegacyCharacterDataV2 {
+        name: "LegacyV2".into(),
+        x: 1.0,
+        y: 2.0,
+        z: 3.0,
+        health: 90.0,
+        max_health: 100.0,
+        race: 1,
+        class: 1,
+        level: 7,
+        appearance: CharacterAppearance {
+            sex: 0,
+            skin_color: 2,
+            face: 3,
+            hair_style: 4,
+            hair_color: 5,
+            facial_style: 6,
+        },
+    };
+
+    let bytes = bitcode::encode(&legacy);
+    let txn = db.begin_write().expect("begin write");
+    {
+        let mut table = txn.open_table(CHARACTERS).expect("open characters");
+        table.insert(100, bytes.as_slice()).expect("insert legacy");
+    }
+    txn.commit().expect("commit");
+
+    let loaded = load_character(&db, 100).expect("legacy v2 character should load");
+    assert_eq!(loaded.name, "LegacyV2");
+    assert_eq!(loaded.level, 7);
+    assert_eq!(loaded.appearance, legacy.appearance);
+    assert_eq!(loaded.equipment_appearance, EquipmentAppearance::default());
 }
 
 #[test]

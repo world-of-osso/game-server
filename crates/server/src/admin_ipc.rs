@@ -613,12 +613,12 @@ fn handle_clear_equipment_appearance(
         return AdminResponse::Error(format!("character data for '{name}' not found"));
     };
 
-    data.equipment_appearance.entries.retain(|entry| entry.slot != slot);
+    upsert_hidden_equipment_appearance_entry(&mut data.equipment_appearance, slot);
     persistence::save_character(&db.db, char_id, &data);
 
     for (mut appearance, cid) in equipment_query.iter_mut() {
         if cid.0 == char_id {
-            appearance.entries.retain(|entry| entry.slot != slot);
+            upsert_hidden_equipment_appearance_entry(&mut appearance, slot);
         }
     }
 
@@ -644,6 +644,26 @@ fn upsert_equipment_appearance_entry(
         display_info_id: Some(display_info_id),
         inventory_type: 0,
         hidden: false,
+    });
+}
+
+fn upsert_hidden_equipment_appearance_entry(
+    appearance: &mut EquipmentAppearance,
+    slot: EquipmentVisualSlot,
+) {
+    if let Some(entry) = appearance.entries.iter_mut().find(|entry| entry.slot == slot) {
+        entry.item_id = None;
+        entry.display_info_id = None;
+        entry.inventory_type = 0;
+        entry.hidden = true;
+        return;
+    }
+    appearance.entries.push(EquippedAppearanceEntry {
+        slot,
+        item_id: None,
+        display_info_id: None,
+        inventory_type: 0,
+        hidden: true,
     });
 }
 
@@ -892,5 +912,35 @@ mod tests {
             data.equipment_appearance.entries[0].display_info_id,
             Some(777)
         );
+    }
+
+    #[test]
+    fn handle_clear_equipment_appearance_marks_slot_hidden() {
+        let db = persistence::temp_database();
+        let (account_id, _token) =
+            persistence_accounts::register_account(&db, "admin", "admin").expect("admin");
+        persistence::create_character(&db, account_id, "Theron", 1, 1).expect("character");
+        let game_db = persistence::GameDatabase { db };
+        let mut world = World::new();
+        let mut state = bevy::ecs::system::SystemState::<
+            Query<(&mut EquipmentAppearance, &persistence::ClientId)>,
+        >::new(&mut world);
+        let mut query = state.get_mut(&mut world);
+
+        let response = handle_clear_equipment_appearance(&game_db, &mut query, "Theron", "feet");
+
+        assert_eq!(
+            response,
+            AdminResponse::EquipmentAppearanceCleared {
+                character_name: "Theron".to_string(),
+                slot: "Feet".to_string(),
+            }
+        );
+        let char_id = persistence::find_character_id_by_name(&game_db.db, "Theron").unwrap();
+        let data = persistence::load_character(&game_db.db, char_id).unwrap();
+        assert_eq!(data.equipment_appearance.entries.len(), 1);
+        assert_eq!(data.equipment_appearance.entries[0].slot, EquipmentVisualSlot::Feet);
+        assert_eq!(data.equipment_appearance.entries[0].display_info_id, None);
+        assert!(data.equipment_appearance.entries[0].hidden);
     }
 }
