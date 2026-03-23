@@ -134,6 +134,11 @@ pub struct LoginResponse {
     pub error: Option<String>,
 }
 
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct CharacterListUpdate {
+    pub character: CharacterListEntry,
+}
+
 /// Client sends to register a new account.
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct RegisterRequest {
@@ -489,6 +494,8 @@ fn register_character_messages(app: &mut App) {
     app.register_message::<DeleteCharacter>()
         .add_direction(NetworkDirection::ClientToServer);
     app.register_message::<DeleteCharacterResponse>()
+        .add_direction(NetworkDirection::ServerToClient);
+    app.register_message::<CharacterListUpdate>()
         .add_direction(NetworkDirection::ServerToClient);
     app.register_message::<SelectCharacter>()
         .add_direction(NetworkDirection::ClientToServer);

@@ -403,6 +403,22 @@ pub fn list_characters_for_account(db: &Database, account_id: u64) -> Vec<(u64, 
     result
 }
 
+pub fn find_account_id_for_character(db: &Database, character_id: u64) -> Option<u64> {
+    let txn = db.begin_read().expect("Failed to begin read txn");
+    let table = txn
+        .open_table(ACCOUNT_CHARACTERS)
+        .expect("Failed to open account_characters");
+    for row in table.iter().expect("Failed to iterate account_characters") {
+        let (account_id, encoded_ids) = row.expect("Failed to read account_characters row");
+        let ids =
+            bitcode::decode::<Vec<u64>>(encoded_ids.value()).expect("decode account character ids");
+        if ids.contains(&character_id) {
+            return Some(account_id.value());
+        }
+    }
+    None
+}
+
 /// Move all characters from one account to another. Returns the number of moved characters.
 pub fn move_characters_between_accounts(
     db: &Database,

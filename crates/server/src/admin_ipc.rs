@@ -2,12 +2,14 @@ use std::path::PathBuf;
 use std::sync::mpsc;
 
 use bevy::prelude::*;
+use lightyear::prelude::MessageSender;
 use peercred_ipc::{Connection, Server};
 use serde::{Deserialize, Serialize};
 use shared::components::{
     CharacterAppearance, EquipmentAppearance, EquipmentVisualSlot, EquippedAppearanceEntry,
     Position,
 };
+use shared::protocol::{AuthChannel, CharacterListUpdate, LoginResponse};
 
 use crate::persistence;
 use crate::persistence_accounts;
@@ -275,6 +277,11 @@ fn poll_admin_ipc(
     mut commands: Commands,
     mut players: Query<(&mut Position, &persistence::ClientId)>,
     mut equipment_query: Query<(Entity, &mut EquipmentAppearance, &persistence::ClientId)>,
+    authenticated_query: Query<
+        (Entity, &crate::auth::Authenticated),
+        With<MessageSender<LoginResponse>>,
+    >,
+    mut roster_update_senders: Query<&mut MessageSender<CharacterListUpdate>>,
 ) {
     let Some(db) = db else { return };
     while let Ok(cmd) = receiver.try_recv() {
@@ -284,6 +291,8 @@ fn poll_admin_ipc(
             &mut commands,
             &mut players,
             &mut equipment_query,
+            &authenticated_query,
+            &mut roster_update_senders,
         );
     }
 }
@@ -294,6 +303,11 @@ fn dispatch(
     commands: &mut Commands,
     players: &mut Query<(&mut Position, &persistence::ClientId)>,
     equipment_query: &mut Query<(Entity, &mut EquipmentAppearance, &persistence::ClientId)>,
+    authenticated_query: &Query<
+        (Entity, &crate::auth::Authenticated),
+        With<MessageSender<LoginResponse>>,
+    >,
+    roster_update_senders: &mut Query<&mut MessageSender<CharacterListUpdate>>,
 ) {
     let response = match cmd.request {
         AdminRequest::Ping => AdminResponse::Pong,
@@ -339,7 +353,13 @@ fn dispatch(
         AdminRequest::SetAppearance {
             character_name,
             appearance,
-        } => handle_set_appearance(db, &character_name, appearance),
+        } => handle_set_appearance(
+            db,
+            authenticated_query,
+            roster_update_senders,
+            &character_name,
+            appearance,
+        ),
         AdminRequest::SetEquipmentAppearance {
             character_name,
             slot,
@@ -348,6 +368,8 @@ fn dispatch(
             db,
             commands,
             equipment_query,
+            authenticated_query,
+            roster_update_senders,
             &character_name,
             &slot,
             display_info_id,
@@ -355,7 +377,15 @@ fn dispatch(
         AdminRequest::ClearEquipmentAppearance {
             character_name,
             slot,
-        } => handle_clear_equipment_appearance(db, commands, equipment_query, &character_name, &slot),
+        } => handle_clear_equipment_appearance(
+            db,
+            commands,
+            equipment_query,
+            authenticated_query,
+            roster_update_senders,
+            &character_name,
+            &slot,
+        ),
     };
     let _ = cmd.respond.send(response);
 }
@@ -551,6 +581,11 @@ fn handle_set_position(
 
 fn handle_set_appearance(
     db: &persistence::GameDatabase,
+    authenticated_query: &Query<
+        (Entity, &crate::auth::Authenticated),
+        With<MessageSender<LoginResponse>>,
+    >,
+    roster_update_senders: &mut Query<&mut MessageSender<CharacterListUpdate>>,
     name: &str,
     appearance: CharacterAppearance,
 ) -> AdminResponse {
@@ -562,6 +597,13 @@ fn handle_set_appearance(
     };
     data.appearance = appearance;
     persistence::save_character(&db.db, char_id, &data);
+    send_character_list_update(
+        db,
+        authenticated_query,
+        roster_update_senders,
+        char_id,
+        &data,
+    );
 
     AdminResponse::AppearanceSet {
         character_name: name.to_owned(),
@@ -573,6 +615,11 @@ fn handle_set_equipment_appearance(
     db: &persistence::GameDatabase,
     commands: &mut Commands,
     equipment_query: &mut Query<(Entity, &mut EquipmentAppearance, &persistence::ClientId)>,
+    authenticated_query: &Query<
+        (Entity, &crate::auth::Authenticated),
+        With<MessageSender<LoginResponse>>,
+    >,
+    roster_update_senders: &mut Query<&mut MessageSender<CharacterListUpdate>>,
     name: &str,
     slot_name: &str,
     display_info_id: u32,
@@ -591,6 +638,13 @@ fn handle_set_equipment_appearance(
 
     upsert_equipment_appearance_entry(&mut data.equipment_appearance, slot, display_info_id);
     persistence::save_character(&db.db, char_id, &data);
+    send_character_list_update(
+        db,
+        authenticated_query,
+        roster_update_senders,
+        char_id,
+        &data,
+    );
 
     for (entity, mut appearance, cid) in equipment_query.iter_mut() {
         if cid.0 == char_id {
@@ -610,6 +664,11 @@ fn handle_clear_equipment_appearance(
     db: &persistence::GameDatabase,
     commands: &mut Commands,
     equipment_query: &mut Query<(Entity, &mut EquipmentAppearance, &persistence::ClientId)>,
+    authenticated_query: &Query<
+        (Entity, &crate::auth::Authenticated),
+        With<MessageSender<LoginResponse>>,
+    >,
+    roster_update_senders: &mut Query<&mut MessageSender<CharacterListUpdate>>,
     name: &str,
     slot_name: &str,
 ) -> AdminResponse {
@@ -627,6 +686,13 @@ fn handle_clear_equipment_appearance(
 
     upsert_hidden_equipment_appearance_entry(&mut data.equipment_appearance, slot);
     persistence::save_character(&db.db, char_id, &data);
+    send_character_list_update(
+        db,
+        authenticated_query,
+        roster_update_senders,
+        char_id,
+        &data,
+    );
 
     for (entity, mut appearance, cid) in equipment_query.iter_mut() {
         if cid.0 == char_id {
@@ -638,6 +704,40 @@ fn handle_clear_equipment_appearance(
     AdminResponse::EquipmentAppearanceCleared {
         character_name: name.to_owned(),
         slot: format!("{slot:?}"),
+    }
+}
+
+fn send_character_list_update(
+    db: &persistence::GameDatabase,
+    authenticated_query: &Query<
+        (Entity, &crate::auth::Authenticated),
+        With<MessageSender<LoginResponse>>,
+    >,
+    roster_update_senders: &mut Query<&mut MessageSender<CharacterListUpdate>>,
+    character_id: u64,
+    data: &persistence::CharacterData,
+) {
+    let Some(account_id) = persistence::find_account_id_for_character(&db.db, character_id) else {
+        return;
+    };
+    let update = CharacterListUpdate {
+        character: shared::protocol::CharacterListEntry {
+            character_id,
+            name: data.name.clone(),
+            level: data.level,
+            race: data.race,
+            class: data.class,
+            appearance: data.appearance,
+            equipment_appearance: data.equipment_appearance.clone(),
+        },
+    };
+    for (entity, authenticated) in authenticated_query.iter() {
+        if authenticated.account_id != account_id {
+            continue;
+        }
+        if let Ok(mut sender) = roster_update_senders.get_mut(entity) {
+            sender.send::<AuthChannel>(update.clone());
+        }
     }
 }
 
