@@ -486,7 +486,7 @@ mod tests {
     #[test]
     fn set_account_credentials_links_username() {
         let db = temp_database();
-        let (account_id, token) = register_account(&db, "user1", "pass").unwrap();
+        let (account_id, _token) = register_account(&db, "user1", "pass").unwrap();
         // Link a second username to same account via token (simulates token-only account getting credentials)
         // First create a fresh token-only account by manually inserting
         let token2 = uuid::Uuid::new_v4().to_string();

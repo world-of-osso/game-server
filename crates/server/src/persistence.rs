@@ -471,6 +471,7 @@ fn load_account_char_ids(db: &Database, account_id: u64) -> Vec<u64> {
 }
 
 /// Create a new character for an account. Returns the character or an error.
+#[cfg(test)]
 pub fn create_character(
     db: &Database,
     account_id: u64,

@@ -3,6 +3,7 @@ use rusqlite::{Connection, OpenFlags, Row, params};
 use std::collections::HashMap;
 use std::path::Path;
 
+#[allow(dead_code)]
 pub struct CreatureTemplate {
     pub entry: u32,
     pub name: String,
@@ -26,12 +27,14 @@ pub struct CreatureTemplate {
     pub models: Vec<CreatureModelInfo>,
 }
 
+#[allow(dead_code)]
 pub struct CreatureModelInfo {
     pub display_id: u32,
     pub display_scale: f32,
     pub probability: f32,
 }
 
+#[allow(dead_code)]
 pub struct CreatureSpawn {
     pub guid: u32,
     pub template_entry: u32,
@@ -47,11 +50,13 @@ pub struct CreatureSpawn {
     pub movement_type: u8,
 }
 
+#[allow(dead_code)]
 pub struct WaypointPath {
     pub creature_guid: u32,
     pub points: Vec<WaypointPoint>,
 }
 
+#[allow(dead_code)]
 pub struct WaypointPoint {
     pub point: u32,
     pub position_x: f32,
