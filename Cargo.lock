@@ -5483,7 +5483,6 @@ dependencies = [
  "bitcode",
  "lightyear",
  "serde",
- "serde_json",
 ]
 
 [[package]]
