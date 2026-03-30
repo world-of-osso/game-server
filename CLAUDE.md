@@ -24,6 +24,7 @@ crates/
 - `cargo run -p server --bin game-server` — Start server (binds to 0.0.0.0:5000)
 - `cargo test` — Run all tests
 - `./run-tests.sh` — cargo test + clippy
+- `ssh sakuin /opt/game-server/game-server-admin <command>` — Admin CLI (runs on sakuin via IPC socket)
 - Edition 2024, rust-version 1.89
 - Bevy 0.18, lightyear 0.26, redb 3, bitcode 0.6, rusqlite 0.35
 

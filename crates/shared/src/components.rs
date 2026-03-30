@@ -18,6 +18,7 @@ pub struct CharacterAppearance {
     pub sex: u8,
     pub skin_color: u8,
     pub face: u8,
+    pub eye_color: u8,
     pub hair_style: u8,
     pub hair_color: u8,
     pub facial_style: u8,

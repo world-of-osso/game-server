@@ -112,6 +112,8 @@ struct CreateCharacterArgs {
     #[arg(long, default_value_t = 0)]
     face: u8,
     #[arg(long, default_value_t = 0)]
+    eye_color: u8,
+    #[arg(long, default_value_t = 0)]
     hair_style: u8,
     #[arg(long, default_value_t = 0)]
     hair_color: u8,
@@ -167,6 +169,7 @@ fn build_action(cli: Cli) -> CliAction {
                     sex: args.sex,
                     skin_color: args.skin_color,
                     face: args.face,
+                    eye_color: args.eye_color,
                     hair_style: args.hair_style,
                     hair_color: args.hair_color,
                     facial_style: args.facial_style,

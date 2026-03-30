@@ -191,7 +191,7 @@ fn print_usage() {
     eprintln!("  game-server-admin set-credentials <token> <username> <password>");
     eprintln!("  game-server-admin set-position <character_name> <x> <y> <z>");
     eprintln!(
-        "  game-server-admin set-appearance <character_name> <sex> <skin_color> <face> <hair_style> <hair_color> <facial_style>"
+        "  game-server-admin set-appearance <character_name> <sex> <skin_color> <face> <eye_color> <hair_style> <hair_color> <facial_style>"
     );
     eprintln!(
         "  game-server-admin set-equipment-appearance <character_name> <slot> <display_info_id>"
@@ -371,8 +371,8 @@ fn parse_set_position(args: &[String]) -> AdminRequest {
 fn parse_set_appearance(args: &[String]) -> AdminRequest {
     require_args(
         args,
-        9,
-        "set-appearance <character_name> <sex> <skin_color> <face> <hair_style> <hair_color> <facial_style>",
+        10,
+        "set-appearance <character_name> <sex> <skin_color> <face> <eye_color> <hair_style> <hair_color> <facial_style>",
     );
     AdminRequest::SetAppearance {
         character_name: args[2].clone(),
@@ -380,9 +380,10 @@ fn parse_set_appearance(args: &[String]) -> AdminRequest {
             sex: parse_u8_arg("sex", &args[3]),
             skin_color: parse_u8_arg("skin_color", &args[4]),
             face: parse_u8_arg("face", &args[5]),
-            hair_style: parse_u8_arg("hair_style", &args[6]),
-            hair_color: parse_u8_arg("hair_color", &args[7]),
-            facial_style: parse_u8_arg("facial_style", &args[8]),
+            eye_color: parse_u8_arg("eye_color", &args[6]),
+            hair_style: parse_u8_arg("hair_style", &args[7]),
+            hair_color: parse_u8_arg("hair_color", &args[8]),
+            facial_style: parse_u8_arg("facial_style", &args[9]),
         },
     }
 }
@@ -514,10 +515,11 @@ fn print_response(response: &AdminResponse) {
             appearance,
         } => {
             println!(
-                "Appearance set: {character_name} -> sex={} skin_color={} face={} hair_style={} hair_color={} facial_style={}",
+                "Appearance set: {character_name} -> sex={} skin_color={} face={} eye_color={} hair_style={} hair_color={} facial_style={}",
                 appearance.sex,
                 appearance.skin_color,
                 appearance.face,
+                appearance.eye_color,
                 appearance.hair_style,
                 appearance.hair_color,
                 appearance.facial_style
@@ -601,6 +603,7 @@ mod tests {
                 && appearance.sex == 0
                 && appearance.skin_color == 2
                 && appearance.face == 3
+                && appearance.eye_color == 0
                 && appearance.hair_style == 4
                 && appearance.hair_color == 5
                 && appearance.facial_style == 1

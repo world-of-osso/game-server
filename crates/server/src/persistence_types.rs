@@ -43,6 +43,45 @@ pub(crate) struct LegacyCharacterDataV2 {
     pub appearance: CharacterAppearance,
 }
 
+#[derive(bitcode::Decode)]
+pub(crate) struct LegacyCharacterAppearanceV1 {
+    pub sex: u8,
+    pub skin_color: u8,
+    pub face: u8,
+    pub hair_style: u8,
+    pub hair_color: u8,
+    pub facial_style: u8,
+}
+
+#[derive(bitcode::Decode)]
+pub(crate) struct LegacyCharacterDataV2AppearanceV1 {
+    pub name: String,
+    pub x: f32,
+    pub y: f32,
+    pub z: f32,
+    pub health: f32,
+    pub max_health: f32,
+    pub race: u8,
+    pub class: u8,
+    pub level: u16,
+    pub appearance: LegacyCharacterAppearanceV1,
+}
+
+#[derive(bitcode::Decode)]
+pub(crate) struct LegacyCharacterDataV3AppearanceV1 {
+    pub name: String,
+    pub x: f32,
+    pub y: f32,
+    pub z: f32,
+    pub health: f32,
+    pub max_health: f32,
+    pub race: u8,
+    pub class: u8,
+    pub level: u16,
+    pub appearance: LegacyCharacterAppearanceV1,
+    pub equipment_appearance: EquipmentAppearance,
+}
+
 #[derive(bitcode::Encode, bitcode::Decode, Debug, Clone, PartialEq)]
 pub struct GuildMembershipData {
     pub guild_id: u32,
@@ -116,37 +155,106 @@ impl CharacterData {
     }
 
     pub fn decode_compatible(bytes: &[u8]) -> Result<Self, String> {
-        bitcode::decode::<CharacterData>(bytes).or_else(|_| {
-            bitcode::decode::<LegacyCharacterDataV2>(bytes)
-                .map(|legacy| Self {
-                    name: legacy.name,
-                    x: legacy.x,
-                    y: legacy.y,
-                    z: legacy.z,
-                    health: legacy.health,
-                    max_health: legacy.max_health,
-                    race: legacy.race,
-                    class: legacy.class,
-                    level: legacy.level,
-                    appearance: legacy.appearance,
-                    equipment_appearance: EquipmentAppearance::default(),
-                })
-                .or_else(|_| {
-                    bitcode::decode::<LegacyCharacterDataV1>(bytes).map(|legacy| Self {
-                        name: legacy.name,
-                        x: legacy.x,
-                        y: legacy.y,
-                        z: legacy.z,
-                        health: legacy.health,
-                        max_health: legacy.max_health,
-                        race: legacy.race,
-                        class: legacy.class,
-                        level: legacy.level,
-                        appearance: CharacterAppearance::default(),
-                        equipment_appearance: EquipmentAppearance::default(),
-                    })
-                })
-                .map_err(|e| format!("Failed to decode character data: {e}"))
+        bitcode::decode::<CharacterData>(bytes)
+            .or_else(|_| decode_legacy_character_data(bytes))
+            .map_err(|e| format!("Failed to decode character data: {e}"))
+    }
+}
+
+fn decode_legacy_character_data(bytes: &[u8]) -> Result<CharacterData, bitcode::Error> {
+    bitcode::decode::<LegacyCharacterDataV2>(bytes)
+        .map(character_data_from_legacy_v2)
+        .or_else(|_| {
+            bitcode::decode::<LegacyCharacterDataV3AppearanceV1>(bytes)
+                .map(character_data_from_legacy_v3_appearance_v1)
         })
+        .or_else(|_| {
+            bitcode::decode::<LegacyCharacterDataV2AppearanceV1>(bytes)
+                .map(character_data_from_legacy_v2_appearance_v1)
+        })
+        .or_else(|_| bitcode::decode::<LegacyCharacterDataV1>(bytes).map(character_data_from_v1))
+}
+
+fn character_data_from_legacy_v2(legacy: LegacyCharacterDataV2) -> CharacterData {
+    CharacterData {
+        name: legacy.name,
+        x: legacy.x,
+        y: legacy.y,
+        z: legacy.z,
+        health: legacy.health,
+        max_health: legacy.max_health,
+        race: legacy.race,
+        class: legacy.class,
+        level: legacy.level,
+        appearance: legacy.appearance,
+        equipment_appearance: EquipmentAppearance::default(),
+    }
+}
+
+fn character_data_from_legacy_v2_appearance_v1(
+    legacy: LegacyCharacterDataV2AppearanceV1,
+) -> CharacterData {
+    CharacterData {
+        name: legacy.name,
+        x: legacy.x,
+        y: legacy.y,
+        z: legacy.z,
+        health: legacy.health,
+        max_health: legacy.max_health,
+        race: legacy.race,
+        class: legacy.class,
+        level: legacy.level,
+        appearance: CharacterAppearance {
+            sex: legacy.appearance.sex,
+            skin_color: legacy.appearance.skin_color,
+            face: legacy.appearance.face,
+            eye_color: 0,
+            hair_style: legacy.appearance.hair_style,
+            hair_color: legacy.appearance.hair_color,
+            facial_style: legacy.appearance.facial_style,
+        },
+        equipment_appearance: EquipmentAppearance::default(),
+    }
+}
+
+fn character_data_from_legacy_v3_appearance_v1(
+    legacy: LegacyCharacterDataV3AppearanceV1,
+) -> CharacterData {
+    CharacterData {
+        name: legacy.name,
+        x: legacy.x,
+        y: legacy.y,
+        z: legacy.z,
+        health: legacy.health,
+        max_health: legacy.max_health,
+        race: legacy.race,
+        class: legacy.class,
+        level: legacy.level,
+        appearance: CharacterAppearance {
+            sex: legacy.appearance.sex,
+            skin_color: legacy.appearance.skin_color,
+            face: legacy.appearance.face,
+            eye_color: 0,
+            hair_style: legacy.appearance.hair_style,
+            hair_color: legacy.appearance.hair_color,
+            facial_style: legacy.appearance.facial_style,
+        },
+        equipment_appearance: legacy.equipment_appearance,
+    }
+}
+
+fn character_data_from_v1(legacy: LegacyCharacterDataV1) -> CharacterData {
+    CharacterData {
+        name: legacy.name,
+        x: legacy.x,
+        y: legacy.y,
+        z: legacy.z,
+        health: legacy.health,
+        max_health: legacy.max_health,
+        race: legacy.race,
+        class: legacy.class,
+        level: legacy.level,
+        appearance: CharacterAppearance::default(),
+        equipment_appearance: EquipmentAppearance::default(),
     }
 }

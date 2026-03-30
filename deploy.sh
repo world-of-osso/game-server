@@ -9,7 +9,7 @@ echo "Building release..."
 cargo build --release -p server
 
 echo "Uploading binary..."
-scp target/release/server "${SERVER_HOST}:${SERVER_DIR}/server.new"
+scp target/release/game-server "${SERVER_HOST}:${SERVER_DIR}/server.new"
 ssh "$SERVER_HOST" "mv ${SERVER_DIR}/server.new ${SERVER_DIR}/server"
 
 echo "Uploading data..."
