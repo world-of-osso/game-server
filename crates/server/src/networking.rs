@@ -257,7 +257,9 @@ fn save_and_despawn(
 ) {
     if let (Some(db), Some(_)) = (db.as_ref(), in_world) {
         if let Ok((pos, health, player, cid)) = player_query.get(entity) {
-            let data = CharacterData::from_components(player, pos, health);
+            let mut data = persistence::load_character(&db.db, cid.0)
+                .unwrap_or_else(|| CharacterData::from_components(player, pos, health));
+            data.sync_live_components(player, pos, health);
             persistence::save_character(&db.db, cid.0, &data);
             info!("Saved character data for character_id {}", cid.0);
         }
@@ -476,8 +478,8 @@ fn send_nearby_tiles(
 mod tests {
     use super::*;
     use bevy::ecs::system::RunSystemOnce;
-    use std::panic::{AssertUnwindSafe, catch_unwind};
     use shared::protocol::{ChatType, PlayerInput};
+    use std::panic::{AssertUnwindSafe, catch_unwind};
 
     #[derive(Component)]
     struct ReplicationTag;
@@ -699,10 +701,7 @@ mod tests {
         let mut app = App::new();
         app.add_plugins(bevy::MinimalPlugins);
 
-        let player = app
-            .world_mut()
-            .spawn((ReplicationTag, VisibilityTag))
-            .id();
+        let player = app.world_mut().spawn((ReplicationTag, VisibilityTag)).id();
 
         app.add_systems(Update, move |mut commands: Commands| {
             commands.entity(player).despawn();

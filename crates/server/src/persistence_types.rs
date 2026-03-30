@@ -154,6 +154,18 @@ impl CharacterData {
         }
     }
 
+    pub fn sync_live_components(&mut self, player: &Player, pos: &Position, health: &Health) {
+        // Position is in Bevy space; convert to WoW coords for DB storage.
+        let (wx, wy, wz) = crate::terrain_height::bevy_to_wow(pos.x, pos.y, pos.z);
+        self.name = player.name.clone();
+        self.x = wx;
+        self.y = wy;
+        self.z = wz;
+        self.health = health.current;
+        self.max_health = health.max;
+        self.appearance = player.appearance;
+    }
+
     pub fn decode_compatible(bytes: &[u8]) -> Result<Self, String> {
         bitcode::decode::<CharacterData>(bytes)
             .or_else(|_| decode_legacy_character_data(bytes))

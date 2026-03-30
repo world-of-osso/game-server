@@ -271,7 +271,10 @@ fn load_character_decodes_previous_appearance_records_without_eye_color_but_with
     assert_eq!(loaded.name, "LegacyV3AppearanceV1");
     assert_eq!(loaded.appearance.eye_color, 0);
     assert_eq!(loaded.equipment_appearance.entries.len(), 1);
-    assert_eq!(loaded.equipment_appearance.entries[0].slot, EquipmentVisualSlot::Feet);
+    assert_eq!(
+        loaded.equipment_appearance.entries[0].slot,
+        EquipmentVisualSlot::Feet
+    );
     assert_eq!(
         loaded.equipment_appearance.entries[0].display_info_id,
         Some(154620)
@@ -296,4 +299,58 @@ fn character_data_round_trip_preserves_equipment_appearance() {
     let loaded = load_character(&db, 42).expect("should find saved character");
 
     assert_eq!(loaded.equipment_appearance, data.equipment_appearance);
+}
+
+#[test]
+fn sync_live_components_preserves_existing_equipment_appearance() {
+    let mut data = sample_data();
+    data.equipment_appearance = EquipmentAppearance {
+        entries: vec![EquippedAppearanceEntry {
+            slot: EquipmentVisualSlot::Chest,
+            item_id: None,
+            display_info_id: Some(175942),
+            inventory_type: 0,
+            hidden: false,
+        }],
+    };
+
+    let player = Player {
+        name: "Theron".into(),
+        race: 1,
+        class: 1,
+        appearance: CharacterAppearance {
+            sex: 0,
+            skin_color: 2,
+            face: 3,
+            eye_color: 4,
+            hair_style: 5,
+            hair_color: 6,
+            facial_style: 7,
+        },
+    };
+    let pos = Position {
+        x: 12.0,
+        y: 34.0,
+        z: 56.0,
+    };
+    let health = Health {
+        current: 80.0,
+        max: 100.0,
+    };
+
+    data.sync_live_components(&player, &pos, &health);
+
+    assert_eq!(data.name, "Theron");
+    assert_eq!(data.health, 80.0);
+    assert_eq!(data.max_health, 100.0);
+    assert_eq!(data.appearance, player.appearance);
+    assert_eq!(data.equipment_appearance.entries.len(), 1);
+    assert_eq!(
+        data.equipment_appearance.entries[0].slot,
+        EquipmentVisualSlot::Chest
+    );
+    assert_eq!(
+        data.equipment_appearance.entries[0].display_info_id,
+        Some(175942)
+    );
 }

@@ -439,9 +439,9 @@ fn handle_list_characters(
 
 fn handle_find_character(db: &persistence::GameDatabase, name: &str) -> AdminResponse {
     let character = match handle_list_characters(db, None) {
-        AdminResponse::CharactersListed { characters } => {
-            characters.into_iter().find(|character| character.name == name)
-        }
+        AdminResponse::CharactersListed { characters } => characters
+            .into_iter()
+            .find(|character| character.name == name),
         _ => None,
     };
     AdminResponse::CharacterFound { character }
@@ -452,7 +452,8 @@ fn handle_move_characters(
     from_username: &str,
     to_username: &str,
 ) -> AdminResponse {
-    let Some(from_account_id) = persistence_accounts::find_account_by_username(&db.db, from_username)
+    let Some(from_account_id) =
+        persistence_accounts::find_account_by_username(&db.db, from_username)
     else {
         return AdminResponse::Error(format!("account '{from_username}' not found"));
     };
@@ -625,9 +626,7 @@ fn handle_set_equipment_appearance(
     display_info_id: u32,
 ) -> AdminResponse {
     let Some(slot) = parse_equipment_visual_slot(slot_name) else {
-        return AdminResponse::Error(format!(
-            "invalid equipment appearance slot '{slot_name}'"
-        ));
+        return AdminResponse::Error(format!("invalid equipment appearance slot '{slot_name}'"));
     };
     let Some(char_id) = persistence::find_character_id_by_name(&db.db, name) else {
         return AdminResponse::Error(format!("character '{name}' not found"));
@@ -673,9 +672,7 @@ fn handle_clear_equipment_appearance(
     slot_name: &str,
 ) -> AdminResponse {
     let Some(slot) = parse_equipment_visual_slot(slot_name) else {
-        return AdminResponse::Error(format!(
-            "invalid equipment appearance slot '{slot_name}'"
-        ));
+        return AdminResponse::Error(format!("invalid equipment appearance slot '{slot_name}'"));
     };
     let Some(char_id) = persistence::find_character_id_by_name(&db.db, name) else {
         return AdminResponse::Error(format!("character '{name}' not found"));
@@ -746,7 +743,11 @@ fn upsert_equipment_appearance_entry(
     slot: EquipmentVisualSlot,
     display_info_id: u32,
 ) {
-    if let Some(entry) = appearance.entries.iter_mut().find(|entry| entry.slot == slot) {
+    if let Some(entry) = appearance
+        .entries
+        .iter_mut()
+        .find(|entry| entry.slot == slot)
+    {
         entry.display_info_id = Some(display_info_id);
         entry.hidden = false;
         return;
@@ -764,7 +765,11 @@ fn upsert_hidden_equipment_appearance_entry(
     appearance: &mut EquipmentAppearance,
     slot: EquipmentVisualSlot,
 ) {
-    if let Some(entry) = appearance.entries.iter_mut().find(|entry| entry.slot == slot) {
+    if let Some(entry) = appearance
+        .entries
+        .iter_mut()
+        .find(|entry| entry.slot == slot)
+    {
         entry.item_id = None;
         entry.display_info_id = None;
         entry.inventory_type = 0;
@@ -1001,20 +1006,25 @@ mod tests {
         persistence::create_character(&db, account_id, "Theron", 1, 1).expect("character");
         let game_db = persistence::GameDatabase { db };
         let mut world = World::new();
-        let mut state = bevy::ecs::system::SystemState::<
-            (Commands, Query<(Entity, &mut EquipmentAppearance, &persistence::ClientId)>),
-        >::new(&mut world);
-        let (mut commands, mut query) = state.get_mut(&mut world);
+        let mut state = bevy::ecs::system::SystemState::<(
+            Commands,
+            Query<(Entity, &mut EquipmentAppearance, &persistence::ClientId)>,
+            Query<(Entity, &crate::auth::Authenticated), With<MessageSender<LoginResponse>>>,
+            Query<&mut MessageSender<CharacterListUpdate>>,
+        )>::new(&mut world);
+        let (mut commands, mut query, authenticated_query, mut roster_update_senders) =
+            state.get_mut(&mut world);
 
-        let response =
-            handle_set_equipment_appearance(
-                &game_db,
-                &mut commands,
-                &mut query,
-                "Theron",
-                "chest",
-                777,
-            );
+        let response = handle_set_equipment_appearance(
+            &game_db,
+            &mut commands,
+            &mut query,
+            &authenticated_query,
+            &mut roster_update_senders,
+            "Theron",
+            "chest",
+            777,
+        );
 
         assert_eq!(
             response,
@@ -1027,7 +1037,10 @@ mod tests {
         let char_id = persistence::find_character_id_by_name(&game_db.db, "Theron").unwrap();
         let data = persistence::load_character(&game_db.db, char_id).unwrap();
         assert_eq!(data.equipment_appearance.entries.len(), 1);
-        assert_eq!(data.equipment_appearance.entries[0].slot, EquipmentVisualSlot::Chest);
+        assert_eq!(
+            data.equipment_appearance.entries[0].slot,
+            EquipmentVisualSlot::Chest
+        );
         assert_eq!(
             data.equipment_appearance.entries[0].display_info_id,
             Some(777)
@@ -1042,15 +1055,21 @@ mod tests {
         persistence::create_character(&db, account_id, "Theron", 1, 1).expect("character");
         let game_db = persistence::GameDatabase { db };
         let mut world = World::new();
-        let mut state = bevy::ecs::system::SystemState::<
-            (Commands, Query<(Entity, &mut EquipmentAppearance, &persistence::ClientId)>),
-        >::new(&mut world);
-        let (mut commands, mut query) = state.get_mut(&mut world);
+        let mut state = bevy::ecs::system::SystemState::<(
+            Commands,
+            Query<(Entity, &mut EquipmentAppearance, &persistence::ClientId)>,
+            Query<(Entity, &crate::auth::Authenticated), With<MessageSender<LoginResponse>>>,
+            Query<&mut MessageSender<CharacterListUpdate>>,
+        )>::new(&mut world);
+        let (mut commands, mut query, authenticated_query, mut roster_update_senders) =
+            state.get_mut(&mut world);
 
         let response = handle_clear_equipment_appearance(
             &game_db,
             &mut commands,
             &mut query,
+            &authenticated_query,
+            &mut roster_update_senders,
             "Theron",
             "feet",
         );
@@ -1065,7 +1084,10 @@ mod tests {
         let char_id = persistence::find_character_id_by_name(&game_db.db, "Theron").unwrap();
         let data = persistence::load_character(&game_db.db, char_id).unwrap();
         assert_eq!(data.equipment_appearance.entries.len(), 1);
-        assert_eq!(data.equipment_appearance.entries[0].slot, EquipmentVisualSlot::Feet);
+        assert_eq!(
+            data.equipment_appearance.entries[0].slot,
+            EquipmentVisualSlot::Feet
+        );
         assert_eq!(data.equipment_appearance.entries[0].display_info_id, None);
         assert!(data.equipment_appearance.entries[0].hidden);
     }
