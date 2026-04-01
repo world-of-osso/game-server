@@ -265,7 +265,10 @@ pub fn inspect_account(db: &Database, username: &str) -> AccountInspection {
         username: username.to_string(),
         exists: true,
         account_id: Some(account_id),
-        token_count: token_counts_by_account(db).get(&account_id).copied().unwrap_or(0),
+        token_count: token_counts_by_account(db)
+            .get(&account_id)
+            .copied()
+            .unwrap_or(0),
         pending_registration,
     }
 }

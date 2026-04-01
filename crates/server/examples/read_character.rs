@@ -13,7 +13,9 @@ const CHARACTERS: TableDefinition<u64, &[u8]> = TableDefinition::new("characters
 const CHARACTER_NAMES: TableDefinition<&str, u64> = TableDefinition::new("character_names");
 
 fn main() {
-    let name = std::env::args().nth(1).expect("usage: read_character <name>");
+    let name = std::env::args()
+        .nth(1)
+        .expect("usage: read_character <name>");
     let db_path = std::env::args()
         .nth(2)
         .unwrap_or_else(|| "data/game.redb".to_string());
