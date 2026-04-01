@@ -55,6 +55,7 @@ impl Plugin for PersistencePlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Startup, open_database);
         app.add_systems(FixedUpdate, save_dirty_characters);
+        app.add_systems(Last, flush_all_characters_on_exit);
     }
 }
 
@@ -693,7 +694,14 @@ const SAVE_INTERVAL_TICKS: u64 = 300;
 /// Periodically save all player data to the database.
 fn save_dirty_characters(
     db: Option<Res<GameDatabase>>,
-    players: Query<(&Position, &Health, &Player, &ClientId)>,
+    players: Query<
+        (&Position, &Health, &Player, &ClientId),
+        (
+            Or<(Changed<Position>, Changed<Health>, Changed<Player>)>,
+            With<Player>,
+            With<ClientId>,
+        ),
+    >,
     mut tick_count: Local<u64>,
 ) {
     *tick_count += 1;
@@ -701,14 +709,47 @@ fn save_dirty_characters(
         return;
     }
     let Some(db) = db else { return };
+    let mut saved_count = 0;
     for (pos, health, player, cid) in players.iter() {
         let data = CharacterData::from_components(player, pos, health);
         save_character(&db.db, cid.0, &data);
+        saved_count += 1;
+    }
+    if saved_count == 0 {
+        return;
     }
     info!(
         "Periodic save: {} characters written",
-        players.iter().count()
+        saved_count
     );
+}
+
+
+fn flush_all_characters_on_exit(
+    db: Option<Res<GameDatabase>>,
+    players: Query<(&Position, &Health, &Player, &ClientId)>,
+    mut exit_events: MessageReader<AppExit>,
+) {
+    let mut saw_exit = false;
+    for _ in exit_events.read() {
+        saw_exit = true;
+        break;
+    }
+    if !saw_exit {
+        return;
+    }
+
+    let Some(db) = db else { return };
+
+    let mut saved_count = 0usize;
+    for (pos, health, player, cid) in players.iter() {
+        let data = CharacterData::from_components(player, pos, health);
+        save_character(&db.db, cid.0, &data);
+        saved_count += 1;
+    }
+    if saved_count > 0 {
+        info!("Shutdown save: {} characters written", saved_count);
+    }
 }
 
 #[cfg(test)]

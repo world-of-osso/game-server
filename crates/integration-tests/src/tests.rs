@@ -148,8 +148,22 @@ fn multi_client_input_routes_independently() {
 }
 
 fn setup_two_player_entities(stepper: &mut Stepper) -> (Entity, Entity) {
-    let player_a = stepper.server_world_mut().spawn(Position::default()).id();
-    let player_b = stepper.server_world_mut().spawn(Position::default()).id();
+    let player_a = stepper
+        .server_world_mut()
+        .spawn(Position {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+        })
+        .id();
+    let player_b = stepper
+        .server_world_mut()
+        .spawn(Position {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+        })
+        .id();
     let client_of_0 = stepper.client_of_entities[0];
     let client_of_1 = stepper.client_of_entities[1];
     stepper

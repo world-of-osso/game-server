@@ -279,7 +279,11 @@ fn parse_set_equipment_appearance(args: &[String]) -> AdminRequest {
 }
 
 fn parse_clear_equipment_appearance(args: &[String]) -> AdminRequest {
-    require_args(args, 4, "clear-equipment-appearance <character_name> <slot>");
+    require_args(
+        args,
+        4,
+        "clear-equipment-appearance <character_name> <slot>",
+    );
     AdminRequest::ClearEquipmentAppearance {
         character_name: args[2].clone(),
         slot: args[3].clone(),
@@ -449,9 +453,7 @@ fn print_response(response: &AdminResponse) {
             to_username,
             moved_count,
         } => {
-            println!(
-                "Moved {moved_count} characters from {from_username} to {to_username}"
-            );
+            println!("Moved {moved_count} characters from {from_username} to {to_username}");
         }
         AdminResponse::AccountChecked {
             username,
@@ -530,9 +532,7 @@ fn print_response(response: &AdminResponse) {
             slot,
             display_info_id,
         } => {
-            println!(
-                "Equipment appearance set: {character_name} {slot} -> {display_info_id}"
-            );
+            println!("Equipment appearance set: {character_name} {slot} -> {display_info_id}");
         }
         AdminResponse::EquipmentAppearanceCleared {
             character_name,
@@ -590,6 +590,7 @@ mod tests {
             "4".to_string(),
             "5".to_string(),
             "1".to_string(),
+            "6".to_string(),
         ];
 
         let request = parse_request(&args);
@@ -603,10 +604,10 @@ mod tests {
                 && appearance.sex == 0
                 && appearance.skin_color == 2
                 && appearance.face == 3
-                && appearance.eye_color == 0
-                && appearance.hair_style == 4
-                && appearance.hair_color == 5
-                && appearance.facial_style == 1
+                && appearance.eye_color == 4
+                && appearance.hair_style == 5
+                && appearance.hair_color == 1
+                && appearance.facial_style == 6
         ));
     }
 
