@@ -276,6 +276,30 @@ pub struct UnitStats {
     pub spirit: f32,
 }
 
+#[derive(
+    Component,
+    Reflect,
+    Serialize,
+    Deserialize,
+    bitcode::Encode,
+    bitcode::Decode,
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Default,
+)]
+pub struct CombatRatings {
+    pub crit: f32,
+    pub haste: f32,
+    pub mastery: f32,
+    pub versatility: f32,
+    pub armor: f32,
+    pub dodge: f32,
+    pub parry: f32,
+    pub block: f32,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -302,5 +326,35 @@ mod tests {
         let encoded = bitcode::encode(&stats);
         let decoded: UnitStats = bitcode::decode(&encoded).unwrap();
         assert_eq!(stats, decoded);
+    }
+
+    #[test]
+    fn combat_ratings_default_is_zero() {
+        let ratings = CombatRatings::default();
+        assert_eq!(ratings.crit, 0.0);
+        assert_eq!(ratings.haste, 0.0);
+        assert_eq!(ratings.mastery, 0.0);
+        assert_eq!(ratings.versatility, 0.0);
+        assert_eq!(ratings.armor, 0.0);
+        assert_eq!(ratings.dodge, 0.0);
+        assert_eq!(ratings.parry, 0.0);
+        assert_eq!(ratings.block, 0.0);
+    }
+
+    #[test]
+    fn combat_ratings_roundtrip_bitcode() {
+        let ratings = CombatRatings {
+            crit: 25.0,
+            haste: 18.5,
+            mastery: 30.0,
+            versatility: 12.0,
+            armor: 1500.0,
+            dodge: 5.0,
+            parry: 8.0,
+            block: 10.0,
+        };
+        let encoded = bitcode::encode(&ratings);
+        let decoded: CombatRatings = bitcode::decode(&encoded).unwrap();
+        assert_eq!(ratings, decoded);
     }
 }
