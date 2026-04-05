@@ -358,6 +358,44 @@ pub struct ItemStatBlock {
     pub secondary: CombatRatings,
 }
 
+/// Effect type carried by an aura. Each aura can have one or more effects.
+///
+/// Subset of AzerothCore `SpellAuraDefines.h`, covering the combat-relevant
+/// effects needed for the Phase 4 aura system.
+#[derive(
+    Reflect,
+    Serialize,
+    Deserialize,
+    bitcode::Encode,
+    bitcode::Decode,
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+)]
+pub enum AuraEffect {
+    /// Increase damage dealt by a flat amount or percent.
+    ModDamageDone { percent: f32 },
+    /// Increase damage taken by a flat amount or percent.
+    ModDamageTaken { percent: f32 },
+    /// Absorb damage of a specific school. `remaining` tracks shield HP.
+    SchoolAbsorb { school: SpellSchool, remaining: f32 },
+    /// Periodic damage (DoT). Ticks every `interval` seconds for `damage` each.
+    PeriodicDamage { damage: f32, interval: f32 },
+    /// Periodic healing (HoT). Ticks every `interval` seconds for `heal` each.
+    PeriodicHeal { heal: f32, interval: f32 },
+    /// Modify a primary stat by a flat amount.
+    ModStat { stamina: f32, strength: f32, agility: f32, intellect: f32, spirit: f32 },
+    /// Modify melee/ranged attack speed (percent, e.g. 0.20 = 20% faster).
+    ModAttackSpeed { percent: f32 },
+    /// Modify spell cast speed (percent, e.g. 0.15 = 15% faster).
+    ModCastSpeed { percent: f32 },
+    /// Modify haste rating (flat addition to haste).
+    ModHaste { percent: f32 },
+    /// Modify crit chance (flat addition, e.g. 0.05 = 5%).
+    ModCritChance { percent: f32 },
+}
+
 /// A single buff or debuff active on a unit.
 ///
 /// Auras are stored as a `Vec<Aura>` inside the `Auras` component on each
@@ -387,6 +425,8 @@ pub struct Aura {
     pub stacks: u8,
     /// Maximum stacks allowed (1 = non-stacking).
     pub max_stacks: u8,
+    /// Up to 3 effects per aura (matches WoW's 3-effect-per-spell limit).
+    pub effects: [Option<AuraEffect>; 3],
 }
 
 /// Collection of active auras on a unit.
@@ -596,6 +636,11 @@ mod tests {
             remaining: 25.5,
             stacks: 2,
             max_stacks: 5,
+            effects: [
+                Some(AuraEffect::ModDamageDone { percent: 0.10 }),
+                Some(AuraEffect::ModCritChance { percent: 0.05 }),
+                None,
+            ],
         };
         let encoded = bitcode::encode(&aura);
         let decoded: Aura = bitcode::decode(&encoded).unwrap();
@@ -619,6 +664,14 @@ mod tests {
                     remaining: 8.0,
                     stacks: 1,
                     max_stacks: 1,
+                    effects: [
+                        Some(AuraEffect::PeriodicDamage {
+                            damage: 500.0,
+                            interval: 3.0,
+                        }),
+                        None,
+                        None,
+                    ],
                 },
                 Aura {
                     spell_id: 2,
@@ -627,12 +680,38 @@ mod tests {
                     remaining: 45.0,
                     stacks: 3,
                     max_stacks: 5,
+                    effects: [
+                        Some(AuraEffect::SchoolAbsorb {
+                            school: SpellSchool::Holy,
+                            remaining: 10000.0,
+                        }),
+                        None,
+                        None,
+                    ],
                 },
             ],
         };
         let encoded = bitcode::encode(&auras);
         let decoded: Auras = bitcode::decode(&encoded).unwrap();
         assert_eq!(auras, decoded);
+    }
+
+    #[test]
+    fn aura_effect_variants() {
+        // Verify all variants can be constructed
+        let effects: Vec<AuraEffect> = vec![
+            AuraEffect::ModDamageDone { percent: 0.1 },
+            AuraEffect::ModDamageTaken { percent: -0.2 },
+            AuraEffect::SchoolAbsorb { school: SpellSchool::Fire, remaining: 5000.0 },
+            AuraEffect::PeriodicDamage { damage: 100.0, interval: 3.0 },
+            AuraEffect::PeriodicHeal { heal: 200.0, interval: 2.0 },
+            AuraEffect::ModStat { stamina: 50.0, strength: 0.0, agility: 0.0, intellect: 0.0, spirit: 0.0 },
+            AuraEffect::ModAttackSpeed { percent: 0.2 },
+            AuraEffect::ModCastSpeed { percent: 0.15 },
+            AuraEffect::ModHaste { percent: 0.1 },
+            AuraEffect::ModCritChance { percent: 0.05 },
+        ];
+        assert_eq!(effects.len(), 10);
     }
 
     #[test]
