@@ -220,6 +220,23 @@ pub fn apply_secondary_dr(raw_value: f32, stat: RatingType) -> f32 {
     }
 }
 
+// --- Armor mitigation ---
+
+/// Physical damage reduction from armor against an attacker of the given level.
+///
+/// Formula: `armor / (armor + K(attacker_level))`
+/// Returns a fraction 0.0–1.0 (e.g. 0.30 = 30% damage reduction).
+/// Returns `None` for level 0 or > 80.
+///
+/// Source: SimC `expected_stat_t::armor_constant`.
+pub fn armor_mitigation(armor: f32, attacker_level: u8) -> Option<f32> {
+    if attacker_level == 0 || attacker_level > 80 {
+        return None;
+    }
+    let k = rating_data::ARMOR_CONSTANT[(attacker_level - 1) as usize];
+    Some(armor / (armor + k))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -596,5 +613,55 @@ mod tests {
                 "DR should reduce {raw}% to less, got {effective}%"
             );
         }
+    }
+
+    // --- Armor mitigation tests ---
+
+    #[test]
+    fn armor_mitigation_level_80() {
+        // K(80) = 880. 880 armor vs L80: 880 / (880 + 880) = 0.5
+        let dr = armor_mitigation(880.0, 80).unwrap();
+        assert!((dr - 0.5).abs() < 0.001);
+    }
+
+    #[test]
+    fn armor_mitigation_level_1() {
+        // K(1) = 116. 116 armor vs L1: 116 / (116 + 116) = 0.5
+        let dr = armor_mitigation(116.0, 1).unwrap();
+        assert!((dr - 0.5).abs() < 0.001);
+    }
+
+    #[test]
+    fn armor_mitigation_zero_armor() {
+        let dr = armor_mitigation(0.0, 80).unwrap();
+        assert_eq!(dr, 0.0);
+    }
+
+    #[test]
+    fn armor_mitigation_high_armor() {
+        // 8800 armor vs L80 (K=880): 8800 / (8800 + 880) = 0.9090...
+        let dr = armor_mitigation(8800.0, 80).unwrap();
+        assert!((dr - 0.9091).abs() < 0.001);
+    }
+
+    #[test]
+    fn armor_mitigation_invalid_level() {
+        assert_eq!(armor_mitigation(500.0, 0), None);
+        assert_eq!(armor_mitigation(500.0, 81), None);
+    }
+
+    #[test]
+    fn armor_mitigation_increases_with_armor() {
+        let low = armor_mitigation(200.0, 80).unwrap();
+        let high = armor_mitigation(2000.0, 80).unwrap();
+        assert!(high > low);
+    }
+
+    #[test]
+    fn armor_mitigation_decreases_vs_higher_level() {
+        // Same armor is less effective against higher-level attacker
+        let vs_low = armor_mitigation(500.0, 40).unwrap();
+        let vs_high = armor_mitigation(500.0, 80).unwrap();
+        assert!(vs_low > vs_high);
     }
 }

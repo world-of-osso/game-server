@@ -1,9 +1,12 @@
-// Auto-generated from SimC engine/dbc/generated/sc_scale_data.inc
-// __combat_ratings table, levels 1-80.
+// Auto-generated from SimC engine/dbc/generated/ data, levels 1-80.
 //
-// Raw table values. To get rating_per_percent:
+// Combat ratings (__combat_ratings, sc_scale_data.inc):
+//   Raw table values. To get rating_per_percent:
 //   most stats: value * 100.0
 //   mastery: value (mastery uses "points" not percent)
+//
+// Armor constant (expected_stat.inc, armor_constant field):
+//   K(level) for armor mitigation formula: DR = armor / (armor + K)
 
 #[rustfmt::skip]
 pub(crate) const DODGE_PARRY: [f64; 80] = [
@@ -103,5 +106,27 @@ pub(crate) const VERSATILITY: [f64; 80] = [
     55.0, 9.265736322, 9.4726711, 9.687384978, 9.910194833, //  70
     10.14143271, 60.0, 10.38144662, 10.63060134, 10.8892793, //  75
     11.15788153, 11.43682857, 65.0, 11.72656156, 12.0275433, //  80
+];
+
+/// K(level) for armor mitigation: `DR = armor / (armor + K)`.
+/// Source: SimC expected_stat.inc, `armor_constant` field.
+#[rustfmt::skip]
+pub(crate) const ARMOR_CONSTANT: [f32; 80] = [
+    116.0, 126.0, 137.0, 147.0, 158.0, //  5
+    168.0, 179.0, 189.0, 200.0, 210.0, // 10
+    221.0, 231.0, 242.0, 252.0, 263.0, // 15
+    273.0, 284.0, 294.0, 305.0, 315.0, // 20
+    320.0, 325.0, 330.0, 335.0, 339.0, // 25
+    343.0, 347.0, 352.0, 356.0, 361.0, // 30
+    366.0, 371.0, 377.0, 382.0, 388.0, // 35
+    394.0, 400.0, 406.0, 413.0, 420.0, // 40
+    427.0, 434.0, 442.0, 450.0, 458.0, // 45
+    467.0, 476.0, 485.0, 494.0, 504.0, // 50
+    514.0, 525.0, 536.0, 548.0, 559.0, // 55
+    572.0, 585.0, 598.0, 612.0, 626.0, // 60
+    641.0, 656.0, 672.0, 689.0, 706.0, // 65
+    723.0, 740.0, 758.0, 775.0, 793.0, // 70
+    803.0, 813.0, 823.0, 832.0, 840.0, // 75
+    848.0, 856.0, 864.0, 872.0, 880.0, // 80
 ];
 
