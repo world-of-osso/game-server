@@ -358,6 +358,41 @@ pub struct ItemStatBlock {
     pub secondary: CombatRatings,
 }
 
+/// Spell school for damage/healing classification.
+///
+/// In retail WoW, spell resistance per school is removed. Physical damage
+/// is mitigated by armor; magic schools have no resistance stat (only
+/// versatility provides damage reduction).
+#[derive(
+    Reflect,
+    Serialize,
+    Deserialize,
+    bitcode::Encode,
+    bitcode::Decode,
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    Hash,
+)]
+pub enum SpellSchool {
+    Physical,
+    Holy,
+    Fire,
+    Nature,
+    Frost,
+    Shadow,
+    Arcane,
+}
+
+impl SpellSchool {
+    /// Whether this school's damage is reduced by armor.
+    pub fn is_physical(self) -> bool {
+        self == Self::Physical
+    }
+}
+
 /// Weapon category for normalized speed lookup.
 ///
 /// WoW abilities use a fixed "normalized" speed instead of the actual weapon
@@ -494,6 +529,14 @@ mod tests {
         let encoded = bitcode::encode(&ratings);
         let decoded: CombatRatings = bitcode::decode(&encoded).unwrap();
         assert_eq!(ratings, decoded);
+    }
+
+    #[test]
+    fn spell_school_physical_check() {
+        assert!(SpellSchool::Physical.is_physical());
+        assert!(!SpellSchool::Fire.is_physical());
+        assert!(!SpellSchool::Holy.is_physical());
+        assert!(!SpellSchool::Shadow.is_physical());
     }
 
     #[test]
