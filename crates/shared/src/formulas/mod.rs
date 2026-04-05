@@ -251,6 +251,14 @@ pub fn ap_bonus_damage(attack_power: f32, weapon_speed: f32) -> f32 {
     (attack_power / AP_DIVISOR) * weapon_speed
 }
 
+/// Auto-attack damage for a single swing.
+///
+/// `weapon_roll` is a pre-rolled random value in `[min_damage, max_damage]`.
+/// Returns `weapon_roll + (AP / 14) * weapon_speed`.
+pub fn auto_attack_damage(weapon_roll: f32, attack_power: f32, weapon_speed: f32) -> f32 {
+    weapon_roll + ap_bonus_damage(attack_power, weapon_speed)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -709,5 +717,32 @@ mod tests {
         let slow = ap_bonus_damage(1000.0, 3.6);
         let fast = ap_bonus_damage(1000.0, 1.5);
         assert!(slow > fast, "slower weapons get more AP bonus per swing");
+    }
+
+    // --- Auto-attack damage tests ---
+
+    #[test]
+    fn auto_attack_min_roll() {
+        // min weapon roll 100, 1400 AP, 3.3 speed → 100 + 330 = 430
+        assert_eq!(auto_attack_damage(100.0, 1400.0, 3.3), 430.0);
+    }
+
+    #[test]
+    fn auto_attack_max_roll() {
+        // max weapon roll 200, 1400 AP, 3.3 speed → 200 + 330 = 530
+        assert_eq!(auto_attack_damage(200.0, 1400.0, 3.3), 530.0);
+    }
+
+    #[test]
+    fn auto_attack_zero_ap() {
+        // No AP, just weapon damage
+        assert_eq!(auto_attack_damage(150.0, 0.0, 2.6), 150.0);
+    }
+
+    #[test]
+    fn auto_attack_zero_weapon() {
+        // Unarmed: 0 weapon roll, AP still contributes
+        let bonus = ap_bonus_damage(1400.0, 2.0);
+        assert_eq!(auto_attack_damage(0.0, 1400.0, 2.0), bonus);
     }
 }
