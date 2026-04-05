@@ -95,6 +95,45 @@ pub fn hasted_gcd(haste_pct: f32) -> f32 {
     hasted_cast_time(BASE_GCD, haste_pct).max(MIN_GCD)
 }
 
+// --- DoT haste scaling ---
+
+/// Result of applying haste to a periodic (DoT/HoT) effect.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct HastePeriodicResult {
+    /// Tick interval after haste (seconds).
+    pub tick_interval: f32,
+    /// Total number of ticks (may be more than base due to haste).
+    pub num_ticks: u32,
+    /// Total duration after haste (seconds).
+    pub duration: f32,
+}
+
+/// Apply haste to a periodic effect (DoT/HoT).
+///
+/// In Pandaria+ WoW, haste reduces the tick interval and the total duration
+/// shortens proportionally — but if enough haste accumulates to fit an extra
+/// tick, it's added (keeping the original duration approximately the same).
+///
+/// `base_tick_interval`: time between ticks without haste (e.g. 3.0s).
+/// `base_num_ticks`: number of ticks without haste (e.g. 4 ticks).
+/// `haste_pct`: haste as a fraction (e.g. 0.25 for 25%).
+pub fn hasted_periodic(
+    base_tick_interval: f32,
+    base_num_ticks: u32,
+    haste_pct: f32,
+) -> HastePeriodicResult {
+    let hasted_tick = hasted_cast_time(base_tick_interval, haste_pct);
+    let base_duration = base_tick_interval * base_num_ticks as f32;
+    // Extra ticks fit when hasted duration would be shorter than base
+    let num_ticks = (base_duration / hasted_tick).round() as u32;
+    let num_ticks = num_ticks.max(1);
+    HastePeriodicResult {
+        tick_interval: hasted_tick,
+        num_ticks,
+        duration: hasted_tick * num_ticks as f32,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -248,5 +287,51 @@ mod tests {
     fn gcd_exactly_at_floor() {
         // 1.5 / (1 + 1.0) = 0.75, exactly at floor
         assert_eq!(hasted_gcd(1.0), 0.75);
+    }
+
+    // --- DoT haste scaling tests ---
+
+    #[test]
+    fn periodic_no_haste() {
+        // 3s tick, 4 ticks, 0% haste → unchanged
+        let r = hasted_periodic(3.0, 4, 0.0);
+        assert_eq!(r.tick_interval, 3.0);
+        assert_eq!(r.num_ticks, 4);
+        assert_eq!(r.duration, 12.0);
+    }
+
+    #[test]
+    fn periodic_haste_reduces_interval() {
+        // 3s tick, 4 ticks, 50% haste → 2s tick
+        let r = hasted_periodic(3.0, 4, 0.5);
+        assert!((r.tick_interval - 2.0).abs() < 0.001);
+    }
+
+    #[test]
+    fn periodic_haste_adds_extra_ticks() {
+        // 3s tick, 4 ticks (12s), 50% haste → 2s tick, 12/2=6 ticks
+        let r = hasted_periodic(3.0, 4, 0.5);
+        assert_eq!(r.num_ticks, 6);
+    }
+
+    #[test]
+    fn periodic_moderate_haste_no_extra_tick() {
+        // 3s tick, 4 ticks (12s), 10% haste → 2.727s tick, 12/2.727=4.4 → rounds to 4
+        let r = hasted_periodic(3.0, 4, 0.1);
+        assert_eq!(r.num_ticks, 4);
+    }
+
+    #[test]
+    fn periodic_haste_breakpoint_adds_tick() {
+        // 3s tick, 5 ticks (15s), 25% haste → 2.4s tick, 15/2.4=6.25 → rounds to 6
+        let r = hasted_periodic(3.0, 5, 0.25);
+        assert_eq!(r.num_ticks, 6);
+        assert!((r.tick_interval - 2.4).abs() < 0.001);
+    }
+
+    #[test]
+    fn periodic_minimum_one_tick() {
+        let r = hasted_periodic(3.0, 1, 0.0);
+        assert_eq!(r.num_ticks, 1);
     }
 }
