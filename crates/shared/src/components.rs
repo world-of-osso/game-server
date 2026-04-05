@@ -358,6 +358,42 @@ pub struct ItemStatBlock {
     pub secondary: CombatRatings,
 }
 
+/// Weapon category for normalized speed lookup.
+///
+/// WoW abilities use a fixed "normalized" speed instead of the actual weapon
+/// speed to prevent slow weapons from being disproportionately better for
+/// instant attacks. Ref: SimC `weapon_t`, Blizzard normalization rules.
+#[derive(
+    Reflect,
+    Serialize,
+    Deserialize,
+    bitcode::Encode,
+    bitcode::Decode,
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+)]
+pub enum WeaponType {
+    Dagger,
+    OneHand,
+    TwoHand,
+    Ranged,
+}
+
+impl WeaponType {
+    /// Normalized weapon speed in seconds, used by ability damage formulas.
+    pub fn normalized_speed(self) -> f32 {
+        match self {
+            Self::Dagger => 1.7,
+            Self::OneHand => 2.4,
+            Self::TwoHand => 3.3,
+            Self::Ranged => 2.8,
+        }
+    }
+}
+
 /// Weapon damage range and speed for an equipped weapon.
 ///
 /// `min_damage` / `max_damage` are the base weapon damage values from item data.
@@ -378,6 +414,7 @@ pub struct WeaponDamage {
     pub min_damage: f32,
     pub max_damage: f32,
     pub speed: f32,
+    pub weapon_type: WeaponType,
 }
 
 impl WeaponDamage {
@@ -393,6 +430,11 @@ impl WeaponDamage {
         } else {
             0.0
         }
+    }
+
+    /// Normalized speed for ability damage formulas.
+    pub fn normalized_speed(&self) -> f32 {
+        self.weapon_type.normalized_speed()
     }
 }
 
@@ -468,6 +510,7 @@ mod tests {
             min_damage: 100.0,
             max_damage: 200.0,
             speed: 2.6,
+            weapon_type: WeaponType::TwoHand,
         };
         assert_eq!(weapon.average_damage(), 150.0);
     }
@@ -478,6 +521,7 @@ mod tests {
             min_damage: 100.0,
             max_damage: 200.0,
             speed: 2.0,
+            weapon_type: WeaponType::OneHand,
         };
         assert_eq!(weapon.dps(), 75.0);
     }
@@ -488,6 +532,7 @@ mod tests {
             min_damage: 100.0,
             max_damage: 200.0,
             speed: 0.0,
+            weapon_type: WeaponType::OneHand,
         };
         assert_eq!(weapon.dps(), 0.0);
     }
@@ -498,9 +543,29 @@ mod tests {
             min_damage: 85.0,
             max_damage: 159.0,
             speed: 3.3,
+            weapon_type: WeaponType::TwoHand,
         };
         let encoded = bitcode::encode(&weapon);
         let decoded: WeaponDamage = bitcode::decode(&encoded).unwrap();
         assert_eq!(weapon, decoded);
+    }
+
+    #[test]
+    fn normalized_speed_values() {
+        assert_eq!(WeaponType::Dagger.normalized_speed(), 1.7);
+        assert_eq!(WeaponType::OneHand.normalized_speed(), 2.4);
+        assert_eq!(WeaponType::TwoHand.normalized_speed(), 3.3);
+        assert_eq!(WeaponType::Ranged.normalized_speed(), 2.8);
+    }
+
+    #[test]
+    fn weapon_normalized_speed_delegates() {
+        let weapon = WeaponDamage {
+            min_damage: 50.0,
+            max_damage: 100.0,
+            speed: 1.5,
+            weapon_type: WeaponType::Dagger,
+        };
+        assert_eq!(weapon.normalized_speed(), 1.7);
     }
 }
