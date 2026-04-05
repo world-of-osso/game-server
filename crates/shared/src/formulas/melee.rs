@@ -70,6 +70,25 @@ pub fn resolve_melee_outcome(chances: &MeleeHitChances, roll: u32) -> MeleeOutco
     MeleeOutcome::Hit
 }
 
+/// Base melee miss chance in hundredths of percent (3.00% = 300).
+const BASE_MISS_CHANCE: i32 = 300;
+/// Additional miss per level the target is above the attacker (1.00% = 100).
+const MISS_PER_LEVEL_DIFF: i32 = 100;
+
+/// Calculate melee miss chance based on attacker and target levels.
+///
+/// Returns a value in 0..=10000 (hundredths of percent) for use in
+/// `MeleeHitChances::miss`. Clamped to 0 minimum (can't go negative).
+///
+/// - Equal level: 3%
+/// - Target +1: 4%, +2: 5%, +3: 6%
+/// - Attacker higher: 2%, 1%, 0%
+pub fn miss_chance(attacker_level: u8, target_level: u8) -> u32 {
+    let level_diff = target_level as i32 - attacker_level as i32;
+    let chance = BASE_MISS_CHANCE + level_diff * MISS_PER_LEVEL_DIFF;
+    chance.max(0) as u32
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -200,5 +219,36 @@ mod tests {
         };
         // Total = 10000, so roll 9999 → crit (last slot)
         assert_eq!(resolve_melee_outcome(&c, 9999), MeleeOutcome::Crit);
+    }
+
+    // --- Miss chance tests ---
+
+    #[test]
+    fn miss_equal_level() {
+        assert_eq!(miss_chance(80, 80), 300); // 3%
+    }
+
+    #[test]
+    fn miss_target_higher() {
+        assert_eq!(miss_chance(80, 81), 400); // 4%
+        assert_eq!(miss_chance(80, 83), 600); // 6%
+    }
+
+    #[test]
+    fn miss_attacker_higher() {
+        assert_eq!(miss_chance(80, 79), 200); // 2%
+        assert_eq!(miss_chance(80, 78), 100); // 1%
+    }
+
+    #[test]
+    fn miss_clamps_to_zero() {
+        // attacker 10 levels above → would be -7%, clamped to 0
+        assert_eq!(miss_chance(80, 70), 0);
+    }
+
+    #[test]
+    fn miss_low_levels() {
+        assert_eq!(miss_chance(1, 1), 300);
+        assert_eq!(miss_chance(1, 3), 500);
     }
 }
