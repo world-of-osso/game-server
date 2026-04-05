@@ -1,4 +1,5 @@
 pub mod melee;
+pub mod spell;
 mod base_hp_data;
 mod base_mana_data;
 mod rating_data;
