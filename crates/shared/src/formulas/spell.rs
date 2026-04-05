@@ -50,6 +50,30 @@ pub fn apply_spell_crit(damage: f32, aura_modifier: f32) -> f32 {
     damage * spell_crit_multiplier(aura_modifier)
 }
 
+// --- Healing ---
+
+/// Result of applying a heal to a target.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct HealResult {
+    /// Effective healing applied (capped at missing health).
+    pub effective: f32,
+    /// Wasted healing beyond max health.
+    pub overheal: f32,
+}
+
+/// Apply healing to a health pool. Returns effective healing and overheal.
+///
+/// `heal_amount` is the raw heal (from `spell_damage` formula or similar).
+/// Health is clamped to `max`.
+pub fn apply_heal(current: f32, max: f32, heal_amount: f32) -> HealResult {
+    let missing = max - current;
+    let effective = heal_amount.min(missing).max(0.0);
+    HealResult {
+        effective,
+        overheal: (heal_amount - effective).max(0.0),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -122,5 +146,44 @@ mod tests {
         let spell = spell_crit_multiplier(0.0);
         let melee = super::super::melee::crit_damage_multiplier(0.0);
         assert!(spell < melee, "spell crit (1.5x) < melee crit (2.0x)");
+    }
+
+    // --- Healing tests ---
+
+    #[test]
+    fn heal_partial_missing() {
+        // 7000/10000 HP, heal 2000 → effective 2000, overheal 0
+        let r = apply_heal(7000.0, 10000.0, 2000.0);
+        assert_eq!(r.effective, 2000.0);
+        assert_eq!(r.overheal, 0.0);
+    }
+
+    #[test]
+    fn heal_with_overheal() {
+        // 9000/10000 HP, heal 2000 → effective 1000, overheal 1000
+        let r = apply_heal(9000.0, 10000.0, 2000.0);
+        assert_eq!(r.effective, 1000.0);
+        assert_eq!(r.overheal, 1000.0);
+    }
+
+    #[test]
+    fn heal_at_full_health() {
+        let r = apply_heal(10000.0, 10000.0, 5000.0);
+        assert_eq!(r.effective, 0.0);
+        assert_eq!(r.overheal, 5000.0);
+    }
+
+    #[test]
+    fn heal_zero_amount() {
+        let r = apply_heal(5000.0, 10000.0, 0.0);
+        assert_eq!(r.effective, 0.0);
+        assert_eq!(r.overheal, 0.0);
+    }
+
+    #[test]
+    fn heal_exact_to_full() {
+        let r = apply_heal(8000.0, 10000.0, 2000.0);
+        assert_eq!(r.effective, 2000.0);
+        assert_eq!(r.overheal, 0.0);
     }
 }
