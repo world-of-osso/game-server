@@ -254,3 +254,53 @@ pub struct GuildMembership {
     pub guild_id: u32,
     pub guild_name: String,
 }
+
+#[derive(
+    Component,
+    Reflect,
+    Serialize,
+    Deserialize,
+    bitcode::Encode,
+    bitcode::Decode,
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Default,
+)]
+pub struct UnitStats {
+    pub stamina: f32,
+    pub strength: f32,
+    pub agility: f32,
+    pub intellect: f32,
+    pub spirit: f32,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn unit_stats_default_is_zero() {
+        let stats = UnitStats::default();
+        assert_eq!(stats.stamina, 0.0);
+        assert_eq!(stats.strength, 0.0);
+        assert_eq!(stats.agility, 0.0);
+        assert_eq!(stats.intellect, 0.0);
+        assert_eq!(stats.spirit, 0.0);
+    }
+
+    #[test]
+    fn unit_stats_roundtrip_bitcode() {
+        let stats = UnitStats {
+            stamina: 150.0,
+            strength: 200.0,
+            agility: 80.0,
+            intellect: 50.0,
+            spirit: 60.0,
+        };
+        let encoded = bitcode::encode(&stats);
+        let decoded: UnitStats = bitcode::decode(&encoded).unwrap();
+        assert_eq!(stats, decoded);
+    }
+}
