@@ -358,6 +358,44 @@ pub struct ItemStatBlock {
     pub secondary: CombatRatings,
 }
 
+/// Weapon damage range and speed for an equipped weapon.
+///
+/// `min_damage` / `max_damage` are the base weapon damage values from item data.
+/// `speed` is the weapon swing interval in seconds (e.g. 2.6 for a 2H sword).
+#[derive(
+    Component,
+    Reflect,
+    Serialize,
+    Deserialize,
+    bitcode::Encode,
+    bitcode::Decode,
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+)]
+pub struct WeaponDamage {
+    pub min_damage: f32,
+    pub max_damage: f32,
+    pub speed: f32,
+}
+
+impl WeaponDamage {
+    /// Average damage per swing: `(min + max) / 2`.
+    pub fn average_damage(&self) -> f32 {
+        (self.min_damage + self.max_damage) / 2.0
+    }
+
+    /// Damage per second: `average_damage / speed`.
+    pub fn dps(&self) -> f32 {
+        if self.speed > 0.0 {
+            self.average_damage() / self.speed
+        } else {
+            0.0
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -422,5 +460,47 @@ mod tests {
         let encoded = bitcode::encode(&level);
         let decoded: Level = bitcode::decode(&encoded).unwrap();
         assert_eq!(level, decoded);
+    }
+
+    #[test]
+    fn weapon_damage_average() {
+        let weapon = WeaponDamage {
+            min_damage: 100.0,
+            max_damage: 200.0,
+            speed: 2.6,
+        };
+        assert_eq!(weapon.average_damage(), 150.0);
+    }
+
+    #[test]
+    fn weapon_damage_dps() {
+        let weapon = WeaponDamage {
+            min_damage: 100.0,
+            max_damage: 200.0,
+            speed: 2.0,
+        };
+        assert_eq!(weapon.dps(), 75.0);
+    }
+
+    #[test]
+    fn weapon_damage_dps_zero_speed() {
+        let weapon = WeaponDamage {
+            min_damage: 100.0,
+            max_damage: 200.0,
+            speed: 0.0,
+        };
+        assert_eq!(weapon.dps(), 0.0);
+    }
+
+    #[test]
+    fn weapon_damage_roundtrip_bitcode() {
+        let weapon = WeaponDamage {
+            min_damage: 85.0,
+            max_damage: 159.0,
+            speed: 3.3,
+        };
+        let encoded = bitcode::encode(&weapon);
+        let decoded: WeaponDamage = bitcode::decode(&encoded).unwrap();
+        assert_eq!(weapon, decoded);
     }
 }
