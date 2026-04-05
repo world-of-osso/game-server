@@ -223,6 +223,35 @@ pub fn parry_chance(class: u8, level: u8, parry_rating: f32) -> u32 {
     (pct * 100.0) as u32
 }
 
+// --- Critical strikes ---
+
+/// Base melee crit damage multiplier (200% = double damage).
+const BASE_MELEE_CRIT_MULTIPLIER: f32 = 2.0;
+
+/// Melee crit chance from the attacker's crit rating.
+///
+/// Converts crit rating → percent via level-scaled curve, then applies
+/// secondary stat DR. Returns value in 0..=10000 for `MeleeHitChances::crit`.
+pub fn crit_chance(level: u8, crit_rating: f32) -> u32 {
+    let raw_pct =
+        super::rating_to_percent(crit_rating, level, super::RatingType::Crit).unwrap_or(0.0);
+    let after_dr = super::apply_secondary_dr(raw_pct, super::RatingType::Crit);
+    (after_dr * 100.0) as u32
+}
+
+/// Melee critical strike damage multiplier.
+///
+/// Base is 2.0× (double damage). `aura_modifier` is an additive bonus from
+/// talents/buffs (e.g. 0.1 for a talent that adds 10% crit damage → 2.1×).
+pub fn crit_damage_multiplier(aura_modifier: f32) -> f32 {
+    BASE_MELEE_CRIT_MULTIPLIER + aura_modifier
+}
+
+/// Apply crit multiplier to a damage value.
+pub fn apply_crit(damage: f32, aura_modifier: f32) -> f32 {
+    damage * crit_damage_multiplier(aura_modifier)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -507,5 +536,47 @@ mod tests {
     fn glancing_multiplier_caps_at_3_levels() {
         // +5 levels still 0.7 (capped at 3)
         assert!((glancing_damage_multiplier(75, 80) - 0.7).abs() < 0.001);
+    }
+
+    // --- Critical strike tests ---
+
+    #[test]
+    fn crit_chance_zero_rating() {
+        assert_eq!(crit_chance(80, 0.0), 0);
+    }
+
+    #[test]
+    fn crit_chance_with_rating() {
+        let c = crit_chance(80, 1000.0);
+        assert!(c > 0, "should have some crit from 1000 rating");
+    }
+
+    #[test]
+    fn crit_chance_scales_with_rating() {
+        let low = crit_chance(80, 500.0);
+        let high = crit_chance(80, 2000.0);
+        assert!(high > low);
+    }
+
+    #[test]
+    fn crit_damage_base_multiplier() {
+        assert_eq!(crit_damage_multiplier(0.0), 2.0);
+    }
+
+    #[test]
+    fn crit_damage_with_aura_bonus() {
+        // Talent adding 10% crit damage
+        assert!((crit_damage_multiplier(0.1) - 2.1).abs() < 0.001);
+    }
+
+    #[test]
+    fn apply_crit_doubles_damage() {
+        assert_eq!(apply_crit(100.0, 0.0), 200.0);
+    }
+
+    #[test]
+    fn apply_crit_with_modifier() {
+        // 100 damage, 2.3x crit (0.3 aura bonus)
+        assert!((apply_crit(100.0, 0.3) - 230.0).abs() < 0.01);
     }
 }
