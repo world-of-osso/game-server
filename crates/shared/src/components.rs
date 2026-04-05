@@ -358,6 +358,54 @@ pub struct ItemStatBlock {
     pub secondary: CombatRatings,
 }
 
+/// A single buff or debuff active on a unit.
+///
+/// Auras are stored as a `Vec<Aura>` inside the `Auras` component on each
+/// entity. Each aura tracks its source spell, caster, remaining duration,
+/// and stack count.
+#[derive(
+    Reflect,
+    Serialize,
+    Deserialize,
+    bitcode::Encode,
+    bitcode::Decode,
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+)]
+pub struct Aura {
+    /// Spell ID that created this aura.
+    pub spell_id: u32,
+    /// Entity bits of the caster (for same-caster stacking rules).
+    pub caster: u64,
+    /// Total duration in seconds (for refresh logic).
+    pub duration: f32,
+    /// Time remaining in seconds. Ticks down each frame.
+    pub remaining: f32,
+    /// Current stack count.
+    pub stacks: u8,
+    /// Maximum stacks allowed (1 = non-stacking).
+    pub max_stacks: u8,
+}
+
+/// Collection of active auras on a unit.
+#[derive(
+    Component,
+    Reflect,
+    Serialize,
+    Deserialize,
+    bitcode::Encode,
+    bitcode::Decode,
+    Debug,
+    Clone,
+    PartialEq,
+    Default,
+)]
+pub struct Auras {
+    pub active: Vec<Aura>,
+}
+
 /// Spell school for damage/healing classification.
 ///
 /// In retail WoW, spell resistance per school is removed. Physical damage
@@ -537,6 +585,54 @@ mod tests {
         assert!(!SpellSchool::Fire.is_physical());
         assert!(!SpellSchool::Holy.is_physical());
         assert!(!SpellSchool::Shadow.is_physical());
+    }
+
+    #[test]
+    fn aura_roundtrip_bitcode() {
+        let aura = Aura {
+            spell_id: 12345,
+            caster: 99,
+            duration: 30.0,
+            remaining: 25.5,
+            stacks: 2,
+            max_stacks: 5,
+        };
+        let encoded = bitcode::encode(&aura);
+        let decoded: Aura = bitcode::decode(&encoded).unwrap();
+        assert_eq!(aura, decoded);
+    }
+
+    #[test]
+    fn auras_default_is_empty() {
+        let auras = Auras::default();
+        assert!(auras.active.is_empty());
+    }
+
+    #[test]
+    fn auras_collection_roundtrip_bitcode() {
+        let auras = Auras {
+            active: vec![
+                Aura {
+                    spell_id: 1,
+                    caster: 10,
+                    duration: 10.0,
+                    remaining: 8.0,
+                    stacks: 1,
+                    max_stacks: 1,
+                },
+                Aura {
+                    spell_id: 2,
+                    caster: 20,
+                    duration: 60.0,
+                    remaining: 45.0,
+                    stacks: 3,
+                    max_stacks: 5,
+                },
+            ],
+        };
+        let encoded = bitcode::encode(&auras);
+        let decoded: Auras = bitcode::decode(&encoded).unwrap();
+        assert_eq!(auras, decoded);
     }
 
     #[test]
