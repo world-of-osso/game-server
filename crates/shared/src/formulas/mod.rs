@@ -1,3 +1,4 @@
+pub mod melee;
 mod base_hp_data;
 mod base_mana_data;
 mod rating_data;
