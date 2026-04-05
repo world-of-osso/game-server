@@ -237,6 +237,20 @@ pub fn armor_mitigation(armor: f32, attacker_level: u8) -> Option<f32> {
     Some(armor / (armor + k))
 }
 
+// --- Attack power contribution ---
+
+/// The constant divisor in WoW's AP-to-damage formula.
+const AP_DIVISOR: f32 = 14.0;
+
+/// Bonus damage per swing from attack power.
+///
+/// Formula: `(AP / 14) * weapon_speed`.
+/// For auto-attacks, `weapon_speed` is the actual weapon speed.
+/// For abilities, use the normalized speed from `WeaponType::normalized_speed()`.
+pub fn ap_bonus_damage(attack_power: f32, weapon_speed: f32) -> f32 {
+    (attack_power / AP_DIVISOR) * weapon_speed
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -663,5 +677,37 @@ mod tests {
         let vs_low = armor_mitigation(500.0, 40).unwrap();
         let vs_high = armor_mitigation(500.0, 80).unwrap();
         assert!(vs_low > vs_high);
+    }
+
+    // --- AP contribution tests ---
+
+    #[test]
+    fn ap_bonus_with_2h_weapon() {
+        // 1400 AP, 3.3 speed: (1400/14) * 3.3 = 100 * 3.3 = 330
+        assert_eq!(ap_bonus_damage(1400.0, 3.3), 330.0);
+    }
+
+    #[test]
+    fn ap_bonus_with_1h_weapon() {
+        // 1400 AP, 2.4 speed: (1400/14) * 2.4 = 100 * 2.4 = 240
+        assert!((ap_bonus_damage(1400.0, 2.4) - 240.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn ap_bonus_with_dagger() {
+        // 1400 AP, 1.7 speed: (1400/14) * 1.7 = 100 * 1.7 = 170
+        assert!((ap_bonus_damage(1400.0, 1.7) - 170.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn ap_bonus_zero_ap() {
+        assert_eq!(ap_bonus_damage(0.0, 2.6), 0.0);
+    }
+
+    #[test]
+    fn ap_bonus_scales_with_speed() {
+        let slow = ap_bonus_damage(1000.0, 3.6);
+        let fast = ap_bonus_damage(1000.0, 1.5);
+        assert!(slow > fast, "slower weapons get more AP bonus per swing");
     }
 }
