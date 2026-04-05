@@ -1,6 +1,8 @@
 mod base_hp_data;
+mod base_mana_data;
 
 use base_hp_data::BASE_HP_TABLE;
+use base_mana_data::BASE_MANA_TABLE;
 
 /// Look up the base HP for a (class, level) pair from AzerothCore data.
 /// Returns `None` for invalid class/level combinations (e.g. DK below 55).
@@ -44,6 +46,49 @@ pub fn hp_from_stamina(stamina: f32, level: u8) -> f32 {
 /// Returns `None` if the class/level combination has no base HP data.
 pub fn max_health(class: u8, level: u8, stamina: f32) -> Option<f32> {
     base_hp(class, level).map(|base| base as f32 + hp_from_stamina(stamina, level))
+}
+
+// --- Mana formulas ---
+
+/// Look up the base mana for a (class, level) pair from AzerothCore data.
+/// Returns `None` for non-mana classes (Warrior, Rogue, DK) or invalid combos.
+pub fn base_mana(class: u8, level: u8) -> Option<u32> {
+    BASE_MANA_TABLE
+        .binary_search_by_key(&(class, level), |&(c, l, _)| (c, l))
+        .ok()
+        .map(|i| BASE_MANA_TABLE[i].2)
+}
+
+/// AzerothCore (WotLK): first 20 int = 1 mana each, above 20 = 15 mana each.
+/// Retail (70+): flat 20 mana per intellect.
+const RETAIL_MANA_PER_INT: f32 = 20.0;
+const WOTLK_MANA_PER_INT_BASE: f32 = 1.0;
+const WOTLK_MANA_PER_INT_ABOVE_20: f32 = 15.0;
+const WOTLK_INT_THRESHOLD: f32 = 20.0;
+const RETAIL_INT_LEVEL_THRESHOLD: u8 = 70;
+
+/// Calculate bonus mana from intellect.
+///
+/// - Below level 70: WotLK model (first 20 int = 1 mana, rest = 15 mana each)
+/// - Level 70+: retail model (flat 20 mana per intellect)
+pub fn mana_from_intellect(intellect: f32, level: u8) -> f32 {
+    if level >= RETAIL_INT_LEVEL_THRESHOLD {
+        return intellect * RETAIL_MANA_PER_INT;
+    }
+
+    if intellect <= WOTLK_INT_THRESHOLD {
+        intellect * WOTLK_MANA_PER_INT_BASE
+    } else {
+        let above_threshold = intellect - WOTLK_INT_THRESHOLD;
+        WOTLK_INT_THRESHOLD * WOTLK_MANA_PER_INT_BASE
+            + above_threshold * WOTLK_MANA_PER_INT_ABOVE_20
+    }
+}
+
+/// Calculate max mana: `base_mana(class, level) + mana_from_intellect(intellect, level)`.
+/// Returns `None` for non-mana classes or invalid class/level combinations.
+pub fn max_mana(class: u8, level: u8, intellect: f32) -> Option<f32> {
+    base_mana(class, level).map(|base| base as f32 + mana_from_intellect(intellect, level))
 }
 
 #[cfg(test)]
@@ -136,5 +181,74 @@ mod tests {
     fn hp_from_stamina_zero() {
         assert_eq!(hp_from_stamina(0.0, 1), 0.0);
         assert_eq!(hp_from_stamina(0.0, 80), 0.0);
+    }
+
+    // --- Mana tests ---
+
+    #[test]
+    fn paladin_level_1_base_mana() {
+        assert_eq!(base_mana(2, 1), Some(60));
+    }
+
+    #[test]
+    fn paladin_level_80_base_mana() {
+        assert_eq!(base_mana(2, 80), Some(4394));
+    }
+
+    #[test]
+    fn mage_level_70_base_mana() {
+        assert_eq!(base_mana(8, 70), Some(2241));
+    }
+
+    #[test]
+    fn warrior_has_no_mana() {
+        assert_eq!(base_mana(1, 1), None);
+        assert_eq!(base_mana(1, 80), None);
+    }
+
+    #[test]
+    fn rogue_has_no_mana() {
+        assert_eq!(base_mana(4, 1), None);
+        assert_eq!(base_mana(4, 80), None);
+    }
+
+    #[test]
+    fn mana_from_intellect_low_level_below_threshold() {
+        // 15 int at level 30: 15 * 1 = 15
+        assert_eq!(mana_from_intellect(15.0, 30), 15.0);
+    }
+
+    #[test]
+    fn mana_from_intellect_low_level_above_threshold() {
+        // 50 int at level 30: 20*1 + 30*15 = 470
+        assert_eq!(mana_from_intellect(50.0, 30), 470.0);
+    }
+
+    #[test]
+    fn mana_from_intellect_at_threshold_exact() {
+        assert_eq!(mana_from_intellect(20.0, 30), 20.0);
+    }
+
+    #[test]
+    fn mana_from_intellect_retail_level() {
+        // 100 int at level 70: 100 * 20 = 2000
+        assert_eq!(mana_from_intellect(100.0, 70), 2000.0);
+    }
+
+    #[test]
+    fn max_mana_paladin_level_80() {
+        // base 4394 + 98 int * 20 = 4394 + 1960 = 6354
+        assert_eq!(max_mana(2, 80, 98.0), Some(6354.0));
+    }
+
+    #[test]
+    fn max_mana_warrior_returns_none() {
+        assert_eq!(max_mana(1, 80, 100.0), None);
+    }
+
+    #[test]
+    fn mana_from_intellect_zero() {
+        assert_eq!(mana_from_intellect(0.0, 1), 0.0);
+        assert_eq!(mana_from_intellect(0.0, 80), 0.0);
     }
 }
