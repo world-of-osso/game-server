@@ -164,6 +164,62 @@ pub fn rating_to_percent(rating: f32, level: u8, stat: RatingType) -> Option<f32
     rating_per_percent(stat, level).map(|per_pct| rating / per_pct)
 }
 
+// --- Diminishing returns (Shadowlands+) ---
+
+/// Piecewise-linear curve breakpoints: (input, output).
+/// Source: SimC DBC curve 21024 (DIMINISHING_RETURN_SECONDARY_CR_CURVE).
+///
+/// For crit/haste/versatility the input/output are in percent (e.g. 30 = 30%).
+/// For mastery the input/output are in mastery points.
+const DR_SECONDARY_CURVE: &[(f32, f32)] = &[
+    (0.0, 0.0),
+    (30.0, 30.0),
+    (40.0, 39.0),
+    (50.0, 47.0),
+    (60.0, 54.0),
+    (80.0, 66.0),
+    (100.0, 76.0),
+    (200.0, 126.0),
+];
+
+/// Evaluate a piecewise-linear curve via linear interpolation.
+fn interpolate_curve(curve: &[(f32, f32)], input: f32) -> f32 {
+    if input <= curve[0].0 {
+        return curve[0].1;
+    }
+    let last = curve.len() - 1;
+    if input >= curve[last].0 {
+        return curve[last].1;
+    }
+    // Find the segment containing input
+    let upper_idx = curve.iter().position(|&(x, _)| x >= input).unwrap();
+    let lower = curve[upper_idx - 1];
+    let upper = curve[upper_idx];
+    let t = (input - lower.0) / (upper.0 - lower.0);
+    lower.1 + t * (upper.1 - lower.1)
+}
+
+/// Apply Shadowlands+ diminishing returns to a secondary stat percentage.
+///
+/// Affected stats: Crit, Haste, Mastery, Versatility.
+/// Dodge/Parry/Block use separate avoidance DR (not implemented here).
+///
+/// Input is the raw (pre-DR) percent from rating conversion.
+/// Returns the effective percent after DR.
+pub fn apply_secondary_dr(raw_value: f32, stat: RatingType) -> f32 {
+    match stat {
+        RatingType::Crit | RatingType::Haste | RatingType::Versatility => {
+            interpolate_curve(DR_SECONDARY_CURVE, raw_value)
+        }
+        RatingType::Mastery => {
+            // Mastery uses the same curve but input is mastery points directly
+            interpolate_curve(DR_SECONDARY_CURVE, raw_value)
+        }
+        // Dodge/Parry/Block have their own avoidance DR system
+        RatingType::Dodge | RatingType::Parry | RatingType::Block => raw_value,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -483,5 +539,62 @@ mod tests {
         let low = rating_per_percent(RatingType::Crit, 20).unwrap();
         let high = rating_per_percent(RatingType::Crit, 80).unwrap();
         assert!(high > low, "higher levels should require more rating per percent");
+    }
+
+    // --- Diminishing returns tests ---
+
+    #[test]
+    fn dr_below_threshold_is_identity() {
+        // Below 30%, no DR applies
+        assert_eq!(apply_secondary_dr(0.0, RatingType::Crit), 0.0);
+        assert_eq!(apply_secondary_dr(15.0, RatingType::Haste), 15.0);
+        assert_eq!(apply_secondary_dr(30.0, RatingType::Versatility), 30.0);
+    }
+
+    #[test]
+    fn dr_at_exact_breakpoints() {
+        assert_eq!(apply_secondary_dr(40.0, RatingType::Crit), 39.0);
+        assert_eq!(apply_secondary_dr(50.0, RatingType::Crit), 47.0);
+        assert_eq!(apply_secondary_dr(60.0, RatingType::Crit), 54.0);
+        assert_eq!(apply_secondary_dr(100.0, RatingType::Crit), 76.0);
+    }
+
+    #[test]
+    fn dr_interpolates_between_breakpoints() {
+        // Midpoint between (30, 30) and (40, 39) → input 35 → output 34.5
+        let result = apply_secondary_dr(35.0, RatingType::Crit);
+        assert!((result - 34.5).abs() < 0.001);
+    }
+
+    #[test]
+    fn dr_mastery_uses_same_curve() {
+        // 50 mastery points → 47 after DR
+        assert_eq!(apply_secondary_dr(50.0, RatingType::Mastery), 47.0);
+    }
+
+    #[test]
+    fn dr_dodge_parry_block_passthrough() {
+        // Avoidance stats not affected by secondary DR
+        assert_eq!(apply_secondary_dr(50.0, RatingType::Dodge), 50.0);
+        assert_eq!(apply_secondary_dr(50.0, RatingType::Parry), 50.0);
+        assert_eq!(apply_secondary_dr(50.0, RatingType::Block), 50.0);
+    }
+
+    #[test]
+    fn dr_clamps_above_max_curve() {
+        // Above 200 input, output capped at 126
+        assert_eq!(apply_secondary_dr(250.0, RatingType::Crit), 126.0);
+    }
+
+    #[test]
+    fn dr_reduces_effective_value() {
+        // Any value above 30% should be reduced
+        for raw in [35.0, 45.0, 60.0, 80.0, 100.0] {
+            let effective = apply_secondary_dr(raw, RatingType::Haste);
+            assert!(
+                effective < raw,
+                "DR should reduce {raw}% to less, got {effective}%"
+            );
+        }
     }
 }
