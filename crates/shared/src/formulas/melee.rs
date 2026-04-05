@@ -89,6 +89,45 @@ pub fn miss_chance(attacker_level: u8, target_level: u8) -> u32 {
     chance.max(0) as u32
 }
 
+// --- Glancing blows ---
+
+/// Maximum glancing blow chance (40% = 4000 in 0..10000 scale).
+const MAX_GLANCING_CHANCE: u32 = 4000;
+/// Max level difference for glancing damage reduction.
+const MAX_GLANCING_LEVEL_DIFF: i32 = 3;
+/// Damage reduction per level difference (10%).
+const GLANCING_REDUCTION_PER_LEVEL: f32 = 0.1;
+
+/// Glancing blow chance for auto-attacks vs higher-level mobs.
+///
+/// Returns 0 if the target is same level or lower (glancing can't happen).
+/// Otherwise `(10 + level_diff * 5) * 100`, capped at 4000 (40%).
+/// Value in 0..=10000 for `MeleeHitChances::glancing`.
+pub fn glancing_chance(attacker_level: u8, target_level: u8) -> u32 {
+    if target_level <= attacker_level {
+        return 0;
+    }
+    let level_diff = (target_level - attacker_level) as u32;
+    let chance = (10 + level_diff * 5) * 100;
+    chance.min(MAX_GLANCING_CHANCE)
+}
+
+/// Damage multiplier for a glancing blow.
+///
+/// `1.0 - min(level_diff, 3) * 0.1`:
+/// - +1 level: 0.9 (90% damage)
+/// - +2 levels: 0.8 (80% damage)
+/// - +3+ levels: 0.7 (70% damage)
+///
+/// Returns 1.0 if target is same level or lower (shouldn't glance).
+pub fn glancing_damage_multiplier(attacker_level: u8, target_level: u8) -> f32 {
+    if target_level <= attacker_level {
+        return 1.0;
+    }
+    let level_diff = (target_level as i32 - attacker_level as i32).min(MAX_GLANCING_LEVEL_DIFF);
+    1.0 - level_diff as f32 * GLANCING_REDUCTION_PER_LEVEL
+}
+
 // --- Dodge / Parry from ratings with avoidance DR ---
 
 /// Base dodge/parry chance before any rating (percent).
@@ -420,5 +459,53 @@ mod tests {
         // Total = 5.0 + 9.349 ≈ 14.349
         let result = avoidance_dr(5.0, 10.0, 88.0, 0.956);
         assert!((result - 14.349).abs() < 0.1);
+    }
+
+    // --- Glancing blow tests ---
+
+    #[test]
+    fn glancing_chance_equal_level() {
+        assert_eq!(glancing_chance(80, 80), 0);
+    }
+
+    #[test]
+    fn glancing_chance_attacker_higher() {
+        assert_eq!(glancing_chance(80, 79), 0);
+    }
+
+    #[test]
+    fn glancing_chance_target_1_above() {
+        // (10 + 1*5) * 100 = 1500
+        assert_eq!(glancing_chance(80, 81), 1500);
+    }
+
+    #[test]
+    fn glancing_chance_target_3_above() {
+        // (10 + 3*5) * 100 = 2500
+        assert_eq!(glancing_chance(80, 83), 2500);
+    }
+
+    #[test]
+    fn glancing_chance_caps_at_40_percent() {
+        // (10 + 10*5) * 100 = 6000, capped to 4000
+        assert_eq!(glancing_chance(70, 80), 4000);
+    }
+
+    #[test]
+    fn glancing_multiplier_equal_level() {
+        assert_eq!(glancing_damage_multiplier(80, 80), 1.0);
+    }
+
+    #[test]
+    fn glancing_multiplier_by_level_diff() {
+        assert!((glancing_damage_multiplier(80, 81) - 0.9).abs() < 0.001);
+        assert!((glancing_damage_multiplier(80, 82) - 0.8).abs() < 0.001);
+        assert!((glancing_damage_multiplier(80, 83) - 0.7).abs() < 0.001);
+    }
+
+    #[test]
+    fn glancing_multiplier_caps_at_3_levels() {
+        // +5 levels still 0.7 (capped at 3)
+        assert!((glancing_damage_multiplier(75, 80) - 0.7).abs() < 0.001);
     }
 }
