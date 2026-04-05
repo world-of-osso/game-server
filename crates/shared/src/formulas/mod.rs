@@ -271,6 +271,18 @@ pub fn ability_damage(base_value: f32, attack_power: f32, coefficient: f32) -> f
     base_value + attack_power * coefficient
 }
 
+/// Spell damage from spell power scaling.
+///
+/// `base_damage` is the spell's base effect value from spell data.
+/// `spell_power` is the caster's spell power stat.
+/// `coefficient` is the SP scaling coefficient (per-spell, from SimC `class_modules/`).
+///
+/// Example: Fireball might have base_damage=800 and coefficient=1.0,
+/// so with 3000 SP → 800 + (3000 * 1.0) = 3800.
+pub fn spell_damage(base_damage: f32, spell_power: f32, coefficient: f32) -> f32 {
+    base_damage + spell_power * coefficient
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -781,5 +793,28 @@ mod tests {
     fn ability_damage_zero_coefficient() {
         // Fixed damage ability (no AP scaling)
         assert_eq!(ability_damage(300.0, 5000.0, 0.0), 300.0);
+    }
+
+    // --- Spell damage tests ---
+
+    #[test]
+    fn spell_damage_with_coefficient() {
+        // Fireball: base 800, 3000 SP, coeff 1.0 → 800 + 3000 = 3800
+        assert_eq!(spell_damage(800.0, 3000.0, 1.0), 3800.0);
+    }
+
+    #[test]
+    fn spell_damage_zero_sp() {
+        assert_eq!(spell_damage(800.0, 0.0, 1.0), 800.0);
+    }
+
+    #[test]
+    fn spell_damage_zero_base() {
+        assert_eq!(spell_damage(0.0, 2000.0, 0.5), 1000.0);
+    }
+
+    #[test]
+    fn spell_damage_zero_coefficient() {
+        assert_eq!(spell_damage(500.0, 9000.0, 0.0), 500.0);
     }
 }
