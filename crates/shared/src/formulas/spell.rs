@@ -74,6 +74,27 @@ pub fn apply_heal(current: f32, max: f32, heal_amount: f32) -> HealResult {
     }
 }
 
+// --- Cast time / GCD ---
+
+/// Base global cooldown in seconds.
+const BASE_GCD: f32 = 1.5;
+/// Minimum GCD floor in seconds (haste cannot reduce below this).
+const MIN_GCD: f32 = 0.75;
+
+/// Apply haste to a cast time: `base_cast / (1 + haste_pct)`.
+///
+/// `haste_pct` is a fraction (e.g. 0.20 for 20% haste).
+pub fn hasted_cast_time(base_cast: f32, haste_pct: f32) -> f32 {
+    base_cast / (1.0 + haste_pct)
+}
+
+/// Calculate the global cooldown after haste, floored at 0.75s.
+///
+/// `haste_pct` is a fraction (e.g. 0.30 for 30% haste).
+pub fn hasted_gcd(haste_pct: f32) -> f32 {
+    hasted_cast_time(BASE_GCD, haste_pct).max(MIN_GCD)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -185,5 +206,47 @@ mod tests {
         let r = apply_heal(8000.0, 10000.0, 2000.0);
         assert_eq!(r.effective, 2000.0);
         assert_eq!(r.overheal, 0.0);
+    }
+
+    // --- Cast time / GCD tests ---
+
+    #[test]
+    fn cast_time_no_haste() {
+        assert_eq!(hasted_cast_time(2.0, 0.0), 2.0);
+    }
+
+    #[test]
+    fn cast_time_with_haste() {
+        // 2.0s / (1 + 0.25) = 1.6s
+        assert!((hasted_cast_time(2.0, 0.25) - 1.6).abs() < 0.001);
+    }
+
+    #[test]
+    fn cast_time_high_haste() {
+        // 2.0s / (1 + 1.0) = 1.0s
+        assert!((hasted_cast_time(2.0, 1.0) - 1.0).abs() < 0.001);
+    }
+
+    #[test]
+    fn gcd_no_haste() {
+        assert_eq!(hasted_gcd(0.0), 1.5);
+    }
+
+    #[test]
+    fn gcd_with_haste() {
+        // 1.5 / 1.3 ≈ 1.1538
+        assert!((hasted_gcd(0.3) - 1.1538).abs() < 0.001);
+    }
+
+    #[test]
+    fn gcd_floors_at_075() {
+        // 1.5 / (1 + 2.0) = 0.5, floored to 0.75
+        assert_eq!(hasted_gcd(2.0), 0.75);
+    }
+
+    #[test]
+    fn gcd_exactly_at_floor() {
+        // 1.5 / (1 + 1.0) = 0.75, exactly at floor
+        assert_eq!(hasted_gcd(1.0), 0.75);
     }
 }
