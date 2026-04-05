@@ -259,6 +259,17 @@ pub fn auto_attack_damage(weapon_roll: f32, attack_power: f32, weapon_speed: f32
     weapon_roll + ap_bonus_damage(attack_power, weapon_speed)
 }
 
+/// Ability (instant/cast) damage from spell data.
+///
+/// `base_value` is the spell's base effect value from spell data.
+/// `coefficient` is the AP scaling coefficient (per-spell, from spell data or SimC).
+///
+/// Example: Mortal Strike might have base_value=500 and coefficient=1.68,
+/// so with 2000 AP → 500 + (2000 * 1.68) = 3860.
+pub fn ability_damage(base_value: f32, attack_power: f32, coefficient: f32) -> f32 {
+    base_value + attack_power * coefficient
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -744,5 +755,30 @@ mod tests {
         // Unarmed: 0 weapon roll, AP still contributes
         let bonus = ap_bonus_damage(1400.0, 2.0);
         assert_eq!(auto_attack_damage(0.0, 1400.0, 2.0), bonus);
+    }
+
+    // --- Ability damage tests ---
+
+    #[test]
+    fn ability_damage_with_coefficient() {
+        // base 500, 2000 AP, coeff 1.68 → 500 + 3360 = 3860
+        assert_eq!(ability_damage(500.0, 2000.0, 1.68), 3860.0);
+    }
+
+    #[test]
+    fn ability_damage_zero_ap() {
+        assert_eq!(ability_damage(500.0, 0.0, 1.5), 500.0);
+    }
+
+    #[test]
+    fn ability_damage_zero_base() {
+        // Pure AP scaling (e.g. Execute at low base)
+        assert_eq!(ability_damage(0.0, 1000.0, 2.0), 2000.0);
+    }
+
+    #[test]
+    fn ability_damage_zero_coefficient() {
+        // Fixed damage ability (no AP scaling)
+        assert_eq!(ability_damage(300.0, 5000.0, 0.0), 300.0);
     }
 }
