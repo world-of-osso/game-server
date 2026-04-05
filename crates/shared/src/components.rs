@@ -1,3 +1,5 @@
+use std::ops::AddAssign;
+
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
@@ -276,6 +278,16 @@ pub struct UnitStats {
     pub spirit: f32,
 }
 
+impl AddAssign for UnitStats {
+    fn add_assign(&mut self, rhs: Self) {
+        self.stamina += rhs.stamina;
+        self.strength += rhs.strength;
+        self.agility += rhs.agility;
+        self.intellect += rhs.intellect;
+        self.spirit += rhs.spirit;
+    }
+}
+
 #[derive(
     Component,
     Reflect,
@@ -300,6 +312,19 @@ pub struct CombatRatings {
     pub block: f32,
 }
 
+impl AddAssign for CombatRatings {
+    fn add_assign(&mut self, rhs: Self) {
+        self.crit += rhs.crit;
+        self.haste += rhs.haste;
+        self.mastery += rhs.mastery;
+        self.versatility += rhs.versatility;
+        self.armor += rhs.armor;
+        self.dodge += rhs.dodge;
+        self.parry += rhs.parry;
+        self.block += rhs.block;
+    }
+}
+
 #[derive(
     Component,
     Reflect,
@@ -314,6 +339,24 @@ pub struct CombatRatings {
     Eq,
 )]
 pub struct Level(pub u8);
+
+/// Stat contribution from a single equipped item.
+#[derive(
+    Reflect,
+    Serialize,
+    Deserialize,
+    bitcode::Encode,
+    bitcode::Decode,
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Default,
+)]
+pub struct ItemStatBlock {
+    pub primary: UnitStats,
+    pub secondary: CombatRatings,
+}
 
 #[cfg(test)]
 mod tests {

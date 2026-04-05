@@ -4,6 +4,8 @@ mod base_mana_data;
 use base_hp_data::BASE_HP_TABLE;
 use base_mana_data::BASE_MANA_TABLE;
 
+use crate::components::{CombatRatings, ItemStatBlock, UnitStats};
+
 /// Look up the base HP for a (class, level) pair from AzerothCore data.
 /// Returns `None` for invalid class/level combinations (e.g. DK below 55).
 pub fn base_hp(class: u8, level: u8) -> Option<u32> {
@@ -89,6 +91,19 @@ pub fn mana_from_intellect(intellect: f32, level: u8) -> f32 {
 /// Returns `None` for non-mana classes or invalid class/level combinations.
 pub fn max_mana(class: u8, level: u8, intellect: f32) -> Option<f32> {
     base_mana(class, level).map(|base| base as f32 + mana_from_intellect(intellect, level))
+}
+
+// --- Equipment stat aggregation ---
+
+/// Sum stat contributions from all equipped items into aggregate UnitStats and CombatRatings.
+pub fn sum_equipment_stats(items: &[ItemStatBlock]) -> (UnitStats, CombatRatings) {
+    let mut primary = UnitStats::default();
+    let mut secondary = CombatRatings::default();
+    for item in items {
+        primary += item.primary;
+        secondary += item.secondary;
+    }
+    (primary, secondary)
 }
 
 #[cfg(test)]
@@ -250,5 +265,90 @@ mod tests {
     fn mana_from_intellect_zero() {
         assert_eq!(mana_from_intellect(0.0, 1), 0.0);
         assert_eq!(mana_from_intellect(0.0, 80), 0.0);
+    }
+
+    // --- Equipment stat aggregation tests ---
+
+    #[test]
+    fn sum_equipment_stats_empty() {
+        let (primary, secondary) = sum_equipment_stats(&[]);
+        assert_eq!(primary, UnitStats::default());
+        assert_eq!(secondary, CombatRatings::default());
+    }
+
+    #[test]
+    fn sum_equipment_stats_single_item() {
+        let chest = ItemStatBlock {
+            primary: UnitStats {
+                stamina: 50.0,
+                strength: 30.0,
+                ..Default::default()
+            },
+            secondary: CombatRatings {
+                crit: 20.0,
+                haste: 15.0,
+                ..Default::default()
+            },
+        };
+        let (primary, secondary) = sum_equipment_stats(&[chest]);
+        assert_eq!(primary.stamina, 50.0);
+        assert_eq!(primary.strength, 30.0);
+        assert_eq!(secondary.crit, 20.0);
+        assert_eq!(secondary.haste, 15.0);
+    }
+
+    #[test]
+    fn sum_equipment_stats_multiple_items() {
+        let helm = ItemStatBlock {
+            primary: UnitStats {
+                stamina: 40.0,
+                intellect: 35.0,
+                ..Default::default()
+            },
+            secondary: CombatRatings {
+                crit: 18.0,
+                mastery: 12.0,
+                ..Default::default()
+            },
+        };
+        let chest = ItemStatBlock {
+            primary: UnitStats {
+                stamina: 55.0,
+                intellect: 45.0,
+                spirit: 10.0,
+                ..Default::default()
+            },
+            secondary: CombatRatings {
+                haste: 25.0,
+                versatility: 20.0,
+                armor: 500.0,
+                ..Default::default()
+            },
+        };
+        let legs = ItemStatBlock {
+            primary: UnitStats {
+                stamina: 48.0,
+                intellect: 40.0,
+                ..Default::default()
+            },
+            secondary: CombatRatings {
+                crit: 22.0,
+                mastery: 15.0,
+                armor: 400.0,
+                ..Default::default()
+            },
+        };
+
+        let (primary, secondary) = sum_equipment_stats(&[helm, chest, legs]);
+
+        assert_eq!(primary.stamina, 143.0);
+        assert_eq!(primary.intellect, 120.0);
+        assert_eq!(primary.spirit, 10.0);
+        assert_eq!(primary.strength, 0.0);
+        assert_eq!(secondary.crit, 40.0);
+        assert_eq!(secondary.mastery, 27.0);
+        assert_eq!(secondary.haste, 25.0);
+        assert_eq!(secondary.versatility, 20.0);
+        assert_eq!(secondary.armor, 900.0);
     }
 }
