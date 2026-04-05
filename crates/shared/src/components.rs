@@ -300,6 +300,21 @@ pub struct CombatRatings {
     pub block: f32,
 }
 
+#[derive(
+    Component,
+    Reflect,
+    Serialize,
+    Deserialize,
+    bitcode::Encode,
+    bitcode::Decode,
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+)]
+pub struct Level(pub u8);
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -356,5 +371,13 @@ mod tests {
         let encoded = bitcode::encode(&ratings);
         let decoded: CombatRatings = bitcode::decode(&encoded).unwrap();
         assert_eq!(ratings, decoded);
+    }
+
+    #[test]
+    fn level_roundtrip_bitcode() {
+        let level = Level(70);
+        let encoded = bitcode::encode(&level);
+        let decoded: Level = bitcode::decode(&encoded).unwrap();
+        assert_eq!(level, decoded);
     }
 }
