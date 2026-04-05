@@ -1,6 +1,9 @@
 use bevy::prelude::*;
 use lightyear::prelude::*;
-use shared::components::{GuildMembership, Health, MovementSpeed, Player, Position, Rotation};
+use shared::components::{
+    CombatRatings, GuildMembership, Health, Level, Mana, MovementSpeed, Player, Position, Rotation,
+    UnitStats,
+};
 use shared::protocol::{
     AuthChannel, CreateCharacter, CreateCharacterResponse, DeleteCharacter,
     DeleteCharacterResponse, EnterWorldResponse, LoadTerrain, LoginRequest, LoginResponse,
@@ -729,6 +732,9 @@ fn build_player_components(data: &CharacterData, character_id: u64) -> impl Bund
             class: data.class,
             appearance: data.appearance,
         },
+        UnitStats::default(),
+        CombatRatings::default(),
+        Level(data.level as u8),
         data.equipment_appearance.clone(),
         ClientId(character_id),
         CombatTarget::default(),
@@ -747,6 +753,12 @@ pub fn spawn_player_entity(
     let entity = commands
         .spawn(build_player_components(data, character_id))
         .id();
+    if shared::formulas::base_mana(data.class, data.level as u8).is_some() {
+        commands.entity(entity).insert(Mana {
+            current: 0.0,
+            max: 0.0,
+        });
+    }
     if let Some(g) = guild {
         commands.entity(entity).insert(g.clone());
     }

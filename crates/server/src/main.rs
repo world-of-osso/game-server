@@ -9,6 +9,7 @@ mod networking;
 mod persistence;
 mod persistence_accounts;
 mod persistence_types;
+mod stats;
 mod terrain_height;
 mod world_data;
 mod zones;
@@ -39,6 +40,7 @@ fn main() {
         .add_plugins(terrain_height::TerrainPlugin)
         .add_plugins(zones::ZonePlugin)
         .add_plugins(creature_ai::CreatureAiPlugin)
+        .add_plugins(stats::StatsPlugin)
         .add_plugins(combat::CombatPlugin)
         .add_plugins(interest::InterestPlugin)
         .add_plugins(admin_ipc::AdminIpcPlugin)
