@@ -89,6 +89,101 @@ pub fn miss_chance(attacker_level: u8, target_level: u8) -> u32 {
     chance.max(0) as u32
 }
 
+// --- Dodge / Parry from ratings with avoidance DR ---
+
+/// Base dodge/parry chance before any rating (percent).
+const BASE_AVOIDANCE_PCT: f32 = 5.0;
+
+/// Per-class diminishing returns k-value.
+/// Index = class_id - 1. Ref: AzerothCore `m_diminishing_k`.
+/// Classes: 1=Warrior, 2=Paladin, 3=Hunter, 4=Rogue, 5=Priest,
+///          6=DK, 7=Shaman, 8=Mage, 9=Warlock, 10=unused, 11=Druid
+const AVOIDANCE_K: [f32; 11] = [
+    0.9560, // Warrior
+    0.9560, // Paladin
+    0.9880, // Hunter
+    0.9880, // Rogue
+    0.9830, // Priest
+    0.9560, // DK
+    0.9880, // Shaman
+    0.9830, // Mage
+    0.9830, // Warlock
+    0.0,    // unused
+    0.9720, // Druid
+];
+
+/// Per-class dodge cap. Index = class_id - 1.
+const DODGE_CAP: [f32; 11] = [
+    88.129_02,  // Warrior
+    88.129_02,  // Paladin
+    145.560_41, // Hunter
+    145.560_41, // Rogue
+    150.375_95, // Priest
+    88.129_02,  // DK
+    145.560_41, // Shaman
+    150.375_95, // Mage
+    150.375_95, // Warlock
+    0.0,        // unused
+    116.890_71, // Druid
+];
+
+/// Per-class parry cap. Index = class_id - 1. Zero = class cannot parry.
+const PARRY_CAP: [f32; 11] = [
+    47.003525,  // Warrior
+    47.003525,  // Paladin
+    145.560_41, // Hunter
+    145.560_41, // Rogue
+    0.0,        // Priest (can't parry)
+    47.003525,  // DK
+    145.560_41, // Shaman
+    0.0,        // Mage (can't parry)
+    0.0,        // Warlock (can't parry)
+    0.0,        // unused
+    0.0,        // Druid (can't parry)
+];
+
+/// Avoidance diminishing returns formula.
+///
+/// `effective = base + diminishing * cap / (diminishing + cap * k)`
+///
+/// Returns 0 if cap is 0 (class cannot dodge/parry).
+fn avoidance_dr(base: f32, diminishing_pct: f32, cap: f32, k: f32) -> f32 {
+    if cap <= 0.0 || diminishing_pct <= 0.0 {
+        return base.max(0.0);
+    }
+    let dr_portion = diminishing_pct * cap / (diminishing_pct + cap * k);
+    (base + dr_portion).max(0.0)
+}
+
+/// Calculate dodge chance from target's dodge rating.
+///
+/// Returns value in 0..=10000 (hundredths of percent) for `MeleeHitChances`.
+pub fn dodge_chance(class: u8, level: u8, dodge_rating: f32) -> u32 {
+    let idx = class.wrapping_sub(1) as usize;
+    if idx >= DODGE_CAP.len() || DODGE_CAP[idx] <= 0.0 {
+        return 0;
+    }
+    let rating_pct = super::rating_to_percent(dodge_rating, level, super::RatingType::Dodge)
+        .unwrap_or(0.0);
+    let pct = avoidance_dr(BASE_AVOIDANCE_PCT, rating_pct, DODGE_CAP[idx], AVOIDANCE_K[idx]);
+    (pct * 100.0) as u32
+}
+
+/// Calculate parry chance from target's parry rating.
+///
+/// Returns value in 0..=10000 (hundredths of percent) for `MeleeHitChances`.
+/// Returns 0 for classes that cannot parry (Priest, Mage, Warlock, Druid).
+pub fn parry_chance(class: u8, level: u8, parry_rating: f32) -> u32 {
+    let idx = class.wrapping_sub(1) as usize;
+    if idx >= PARRY_CAP.len() || PARRY_CAP[idx] <= 0.0 {
+        return 0;
+    }
+    let rating_pct = super::rating_to_percent(parry_rating, level, super::RatingType::Parry)
+        .unwrap_or(0.0);
+    let pct = avoidance_dr(BASE_AVOIDANCE_PCT, rating_pct, PARRY_CAP[idx], AVOIDANCE_K[idx]);
+    (pct * 100.0) as u32
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -250,5 +345,80 @@ mod tests {
     fn miss_low_levels() {
         assert_eq!(miss_chance(1, 1), 300);
         assert_eq!(miss_chance(1, 3), 500);
+    }
+
+    // --- Dodge/Parry tests ---
+
+    #[test]
+    fn dodge_base_with_zero_rating() {
+        // Warrior (class 1) with 0 dodge rating: just base 5%
+        let d = dodge_chance(1, 80, 0.0);
+        assert_eq!(d, 500); // 5.00%
+    }
+
+    #[test]
+    fn dodge_increases_with_rating() {
+        let low = dodge_chance(1, 80, 500.0);
+        let high = dodge_chance(1, 80, 2000.0);
+        assert!(high > low, "more rating = more dodge");
+        assert!(low > 500, "should exceed base 5%");
+    }
+
+    #[test]
+    fn dodge_diminishes_at_high_rating() {
+        // Marginal gain should decrease as rating increases
+        let at_1000 = dodge_chance(1, 80, 1000.0);
+        let at_2000 = dodge_chance(1, 80, 2000.0);
+        let at_3000 = dodge_chance(1, 80, 3000.0);
+        let gain_first = at_2000 - at_1000;
+        let gain_second = at_3000 - at_2000;
+        assert!(
+            gain_second < gain_first,
+            "diminishing returns: second 1000 rating ({gain_second}) should give less than first ({gain_first})"
+        );
+    }
+
+    #[test]
+    fn parry_base_for_warrior() {
+        let p = parry_chance(1, 80, 0.0);
+        assert_eq!(p, 500); // 5.00% base
+    }
+
+    #[test]
+    fn parry_zero_for_non_parry_class() {
+        // Priest (5), Mage (8), Warlock (9), Druid (11) can't parry
+        assert_eq!(parry_chance(5, 80, 1000.0), 0);
+        assert_eq!(parry_chance(8, 80, 1000.0), 0);
+        assert_eq!(parry_chance(9, 80, 1000.0), 0);
+        assert_eq!(parry_chance(11, 80, 1000.0), 0);
+    }
+
+    #[test]
+    fn parry_works_for_parry_classes() {
+        // Warrior(1), Paladin(2), DK(6) can parry
+        assert!(parry_chance(1, 80, 500.0) > 500);
+        assert!(parry_chance(2, 80, 500.0) > 500);
+        assert!(parry_chance(6, 80, 500.0) > 500);
+    }
+
+    #[test]
+    fn dodge_invalid_class_returns_zero() {
+        assert_eq!(dodge_chance(0, 80, 500.0), 0);
+        assert_eq!(dodge_chance(12, 80, 500.0), 0);
+    }
+
+    #[test]
+    fn avoidance_dr_formula_no_rating() {
+        // Pure base, no diminishing portion
+        assert_eq!(avoidance_dr(5.0, 0.0, 88.0, 0.956), 5.0);
+    }
+
+    #[test]
+    fn avoidance_dr_formula_with_rating() {
+        // 10% from rating, cap 88, k 0.956
+        // DR = 10 * 88 / (10 + 88 * 0.956) = 880 / 94.128 ≈ 9.349
+        // Total = 5.0 + 9.349 ≈ 14.349
+        let result = avoidance_dr(5.0, 10.0, 88.0, 0.956);
+        assert!((result - 14.349).abs() < 0.1);
     }
 }
