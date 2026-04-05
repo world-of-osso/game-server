@@ -32,6 +32,24 @@ pub fn resolve_spell_hit(miss_chance: u32, roll: u32) -> SpellOutcome {
     }
 }
 
+// --- Spell crit ---
+
+/// Base spell crit damage multiplier (150% = 1.5×, unlike melee's 2.0×).
+const BASE_SPELL_CRIT_MULTIPLIER: f32 = 1.5;
+
+/// Spell critical strike damage multiplier.
+///
+/// Base is 1.5× (50% bonus damage). `aura_modifier` is an additive bonus
+/// from talents/buffs (e.g. 0.1 for +10% crit damage → 1.6×).
+pub fn spell_crit_multiplier(aura_modifier: f32) -> f32 {
+    BASE_SPELL_CRIT_MULTIPLIER + aura_modifier
+}
+
+/// Apply spell crit multiplier to a damage value.
+pub fn apply_spell_crit(damage: f32, aura_modifier: f32) -> f32 {
+    damage * spell_crit_multiplier(aura_modifier)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -73,5 +91,36 @@ mod tests {
     #[test]
     fn spell_hit_zero_miss_always_hits() {
         assert_eq!(resolve_spell_hit(0, 0), SpellOutcome::Hit);
+    }
+
+    // --- Spell crit tests ---
+
+    #[test]
+    fn spell_crit_base_multiplier() {
+        assert_eq!(spell_crit_multiplier(0.0), 1.5);
+    }
+
+    #[test]
+    fn spell_crit_with_aura() {
+        assert!((spell_crit_multiplier(0.2) - 1.7).abs() < 0.001);
+    }
+
+    #[test]
+    fn apply_spell_crit_base() {
+        // 1000 damage * 1.5 = 1500
+        assert_eq!(apply_spell_crit(1000.0, 0.0), 1500.0);
+    }
+
+    #[test]
+    fn apply_spell_crit_with_modifier() {
+        // 1000 damage * 1.7 (0.2 aura) = 1700
+        assert!((apply_spell_crit(1000.0, 0.2) - 1700.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn spell_crit_lower_than_melee() {
+        let spell = spell_crit_multiplier(0.0);
+        let melee = super::super::melee::crit_damage_multiplier(0.0);
+        assert!(spell < melee, "spell crit (1.5x) < melee crit (2.0x)");
     }
 }
