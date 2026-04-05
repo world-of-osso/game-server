@@ -1,5 +1,6 @@
 mod base_hp_data;
 mod base_mana_data;
+mod rating_data;
 
 use base_hp_data::BASE_HP_TABLE;
 use base_mana_data::BASE_MANA_TABLE;
@@ -104,6 +105,63 @@ pub fn sum_equipment_stats(items: &[ItemStatBlock]) -> (UnitStats, CombatRatings
         secondary += item.secondary;
     }
     (primary, secondary)
+}
+
+// --- Rating-to-percent conversion ---
+
+/// Secondary stat types for rating conversion.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RatingType {
+    Crit,
+    Haste,
+    /// Mastery returns "mastery points", not percent. Each class has a
+    /// spec-specific coefficient that converts points to actual effect.
+    Mastery,
+    Versatility,
+    Dodge,
+    Parry,
+    Block,
+}
+
+/// Look up the raw combat rating divisor for a (stat, level) pair.
+/// Returns `None` for level 0 or level > 80.
+///
+/// Source: SimC `__combat_ratings` table (sc_scale_data.inc).
+fn raw_rating_divisor(stat: RatingType, level: u8) -> Option<f64> {
+    if level == 0 || level > 80 {
+        return None;
+    }
+    let idx = (level - 1) as usize;
+    let table = match stat {
+        RatingType::Dodge | RatingType::Parry => &rating_data::DODGE_PARRY,
+        RatingType::Block => &rating_data::BLOCK,
+        RatingType::Crit | RatingType::Mastery => &rating_data::CRIT_MASTERY,
+        RatingType::Haste => &rating_data::HASTE,
+        RatingType::Versatility => &rating_data::VERSATILITY,
+    };
+    Some(table[idx])
+}
+
+/// How much rating is needed for 1% (or 1 mastery point) at a given level.
+///
+/// For most stats: `raw_value * 100`.
+/// For mastery: `raw_value` (mastery uses "points", not percent directly).
+pub fn rating_per_percent(stat: RatingType, level: u8) -> Option<f32> {
+    raw_rating_divisor(stat, level).map(|raw| {
+        let multiplied = match stat {
+            RatingType::Mastery => raw,
+            _ => raw * 100.0,
+        };
+        multiplied as f32
+    })
+}
+
+/// Convert a combat rating value to a percentage (or mastery points).
+///
+/// `rating_to_percent(100.0, 80, RatingType::Crit)` = how much crit % 100 rating
+/// gives at level 80.
+pub fn rating_to_percent(rating: f32, level: u8, stat: RatingType) -> Option<f32> {
+    rating_per_percent(stat, level).map(|per_pct| rating / per_pct)
 }
 
 #[cfg(test)]
@@ -350,5 +408,80 @@ mod tests {
         assert_eq!(secondary.haste, 25.0);
         assert_eq!(secondary.versatility, 20.0);
         assert_eq!(secondary.armor, 900.0);
+    }
+
+    // --- Rating conversion tests ---
+
+    #[test]
+    fn rating_per_percent_crit_level_80() {
+        // raw 10.245685040 * 100 = 1024.568504
+        let per_pct = rating_per_percent(RatingType::Crit, 80).unwrap();
+        assert!((per_pct - 1024.5685).abs() < 0.01);
+    }
+
+    #[test]
+    fn rating_per_percent_haste_level_70() {
+        // raw 8.074973567 * 100 = 807.4973567
+        let per_pct = rating_per_percent(RatingType::Haste, 70).unwrap();
+        assert!((per_pct - 807.497).abs() < 0.01);
+    }
+
+    #[test]
+    fn rating_per_percent_mastery_no_multiply() {
+        // Mastery uses raw value (points, not percent): 10.245685040
+        let per_point = rating_per_percent(RatingType::Mastery, 80).unwrap();
+        assert!((per_point - 10.2457).abs() < 0.01);
+    }
+
+    #[test]
+    fn rating_per_percent_dodge_equals_parry() {
+        let dodge = rating_per_percent(RatingType::Dodge, 80).unwrap();
+        let parry = rating_per_percent(RatingType::Parry, 80).unwrap();
+        assert_eq!(dodge, parry);
+    }
+
+    #[test]
+    fn rating_to_percent_crit_100_at_80() {
+        // 100 / 1024.568504 ≈ 0.09760%
+        let pct = rating_to_percent(100.0, 80, RatingType::Crit).unwrap();
+        assert!((pct - 0.09760).abs() < 0.0001);
+    }
+
+    #[test]
+    fn rating_to_percent_mastery_100_at_80() {
+        // 100 / 10.245685 ≈ 9.760 mastery points
+        let points = rating_to_percent(100.0, 80, RatingType::Mastery).unwrap();
+        assert!((points - 9.760).abs() < 0.01);
+    }
+
+    #[test]
+    fn rating_to_percent_block_level_80() {
+        // raw 5.122915645 * 100 = 512.2915645
+        // 100 / 512.29 ≈ 0.19520%
+        let pct = rating_to_percent(100.0, 80, RatingType::Block).unwrap();
+        assert!((pct - 0.19520).abs() < 0.001);
+    }
+
+    #[test]
+    fn rating_conversion_level_0_returns_none() {
+        assert_eq!(rating_to_percent(100.0, 0, RatingType::Crit), None);
+    }
+
+    #[test]
+    fn rating_conversion_level_81_returns_none() {
+        assert_eq!(rating_to_percent(100.0, 81, RatingType::Crit), None);
+    }
+
+    #[test]
+    fn rating_to_percent_zero_rating() {
+        let pct = rating_to_percent(0.0, 80, RatingType::Crit).unwrap();
+        assert_eq!(pct, 0.0);
+    }
+
+    #[test]
+    fn higher_level_needs_more_rating() {
+        let low = rating_per_percent(RatingType::Crit, 20).unwrap();
+        let high = rating_per_percent(RatingType::Crit, 80).unwrap();
+        assert!(high > low, "higher levels should require more rating per percent");
     }
 }
