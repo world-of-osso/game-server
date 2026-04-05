@@ -252,6 +252,13 @@ pub fn apply_crit(damage: f32, aura_modifier: f32) -> f32 {
     damage * crit_damage_multiplier(aura_modifier)
 }
 
+// --- Block ---
+
+/// Apply block: subtract shield block value from damage, minimum 0.
+pub fn apply_block(damage: f32, block_value: f32) -> f32 {
+    (damage - block_value).max(0.0)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -578,5 +585,22 @@ mod tests {
     fn apply_crit_with_modifier() {
         // 100 damage, 2.3x crit (0.3 aura bonus)
         assert!((apply_crit(100.0, 0.3) - 230.0).abs() < 0.01);
+    }
+
+    // --- Block tests ---
+
+    #[test]
+    fn block_reduces_damage() {
+        assert_eq!(apply_block(500.0, 200.0), 300.0);
+    }
+
+    #[test]
+    fn block_clamps_to_zero() {
+        assert_eq!(apply_block(100.0, 500.0), 0.0);
+    }
+
+    #[test]
+    fn block_zero_block_value() {
+        assert_eq!(apply_block(500.0, 0.0), 500.0);
     }
 }
