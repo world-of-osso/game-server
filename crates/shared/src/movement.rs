@@ -45,4 +45,30 @@ mod tests {
     fn steep_slope_is_rejected() {
         assert!(!is_walkable_slope(1.732, 1.0)); // ~60°
     }
+
+    #[test]
+    fn slope_at_49_degrees_is_walkable() {
+        // tan(49°) ≈ 1.1504
+        let height = 49.0_f32.to_radians().tan();
+        assert!(is_walkable_slope(height, 1.0));
+    }
+
+    #[test]
+    fn slope_at_exactly_50_degrees_is_walkable() {
+        // tan(50°) ≈ 1.1918 — boundary, should pass (<=)
+        let height = 50.0_f32.to_radians().tan();
+        assert!(is_walkable_slope(height, 1.0));
+    }
+
+    #[test]
+    fn slope_at_51_degrees_is_rejected() {
+        // tan(51°) ≈ 1.2349
+        let height = 51.0_f32.to_radians().tan();
+        assert!(!is_walkable_slope(height, 1.0));
+    }
+
+    #[test]
+    fn vertical_slope_is_rejected() {
+        assert!(!is_walkable_slope(1000.0, 1.0)); // ~90°
+    }
 }
