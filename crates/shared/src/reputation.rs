@@ -407,6 +407,32 @@ fn collect_spillover(
     }).collect()
 }
 
+// --- Mob kill rep diminishing returns ---
+
+/// Grey-level threshold: mobs this many levels below the player give no rep.
+const GREY_LEVEL_DIFF: u8 = 8;
+
+/// Apply diminishing returns to mob kill rep based on level difference.
+///
+/// - Same level or higher: full rep.
+/// - 1–7 levels below: linear reduction (87.5% at -1, down to 12.5% at -7).
+/// - 8+ levels below (grey): zero rep.
+///
+/// `base_rep`: the unscaled rep amount from the mob.
+/// `player_level`: the player's current level.
+/// `mob_level`: the mob's level.
+pub fn diminished_mob_rep(base_rep: i32, player_level: u8, mob_level: u8) -> i32 {
+    if mob_level >= player_level {
+        return base_rep;
+    }
+    let diff = player_level - mob_level;
+    if diff >= GREY_LEVEL_DIFF {
+        return 0;
+    }
+    let scale = (GREY_LEVEL_DIFF - diff) as f32 / GREY_LEVEL_DIFF as f32;
+    (base_rep as f32 * scale) as i32
+}
+
 // --- Gated rewards ---
 
 /// Type of reward gated behind a reputation standing.

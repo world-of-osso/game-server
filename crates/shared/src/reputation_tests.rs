@@ -818,3 +818,54 @@ fn display_tracked_empty() {
     let rep = CharacterReputation::default();
     assert!(rep.display_tracked().is_empty());
 }
+
+// --- Mob kill rep diminishing returns ---
+
+#[test]
+fn dr_same_level_full_rep() {
+    assert_eq!(diminished_mob_rep(100, 60, 60), 100);
+}
+
+#[test]
+fn dr_higher_mob_full_rep() {
+    assert_eq!(diminished_mob_rep(100, 60, 65), 100);
+}
+
+#[test]
+fn dr_one_level_below() {
+    // 7/8 = 87.5% → 87
+    assert_eq!(diminished_mob_rep(100, 60, 59), 87);
+}
+
+#[test]
+fn dr_four_levels_below() {
+    // 4/8 = 50% → 50
+    assert_eq!(diminished_mob_rep(100, 60, 56), 50);
+}
+
+#[test]
+fn dr_seven_levels_below() {
+    // 1/8 = 12.5% → 12
+    assert_eq!(diminished_mob_rep(100, 60, 53), 12);
+}
+
+#[test]
+fn dr_eight_levels_below_grey() {
+    assert_eq!(diminished_mob_rep(100, 60, 52), 0);
+}
+
+#[test]
+fn dr_far_below_grey() {
+    assert_eq!(diminished_mob_rep(100, 60, 10), 0);
+}
+
+#[test]
+fn dr_small_rep_rounds_down() {
+    // 7 * (7/8) = 6.125 → 6
+    assert_eq!(diminished_mob_rep(7, 60, 59), 6);
+}
+
+#[test]
+fn dr_level_one_mob_vs_high_player() {
+    assert_eq!(diminished_mob_rep(100, 70, 1), 0);
+}
