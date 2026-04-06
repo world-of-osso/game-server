@@ -304,12 +304,50 @@ pub struct WeaponDamageData {
 }
 
 impl WeaponDamageData {
+    /// Average damage per hit: `(min + max) / 2`.
+    pub fn average_damage(&self) -> f32 {
+        (self.min_damage + self.max_damage) / 2.0
+    }
+
+    /// Damage per second: `average / speed`.
     pub fn dps(&self) -> f32 {
         if self.speed > 0.0 {
-            (self.min_damage + self.max_damage) / (2.0 * self.speed)
+            self.average_damage() / self.speed
         } else {
             0.0
         }
+    }
+
+    /// Convert to the runtime `WeaponDamage` component used by the combat system.
+    pub fn to_weapon_component(&self, subclass: WeaponSubclass) -> crate::components::WeaponDamage {
+        crate::components::WeaponDamage {
+            min_damage: self.min_damage,
+            max_damage: self.max_damage,
+            speed: self.speed,
+            weapon_type: subclass.to_weapon_type(),
+        }
+    }
+}
+
+impl WeaponSubclass {
+    /// Map weapon subclass to the combat system's `WeaponType` for normalized speed.
+    pub fn to_weapon_type(self) -> crate::components::WeaponType {
+        use crate::components::WeaponType;
+        match self {
+            Self::Dagger => WeaponType::Dagger,
+            Self::Axe2H | Self::Mace2H | Self::Sword2H | Self::Polearm | Self::Staff => {
+                WeaponType::TwoHand
+            }
+            _ => WeaponType::OneHand,
+        }
+    }
+
+    /// Whether this is a two-handed weapon.
+    pub fn is_two_handed(self) -> bool {
+        matches!(
+            self,
+            Self::Axe2H | Self::Mace2H | Self::Sword2H | Self::Polearm | Self::Staff
+        )
     }
 }
 
@@ -686,6 +724,58 @@ mod tests {
             speed: 0.0,
         };
         assert_eq!(wpn.dps(), 0.0);
+    }
+
+    #[test]
+    fn weapon_average_damage() {
+        let wpn = WeaponDamageData {
+            min_damage: 100.0,
+            max_damage: 200.0,
+            speed: 2.0,
+        };
+        assert_eq!(wpn.average_damage(), 150.0);
+    }
+
+    #[test]
+    fn weapon_to_component_dagger() {
+        let wpn = WeaponDamageData {
+            min_damage: 80.0,
+            max_damage: 120.0,
+            speed: 1.8,
+        };
+        let comp = wpn.to_weapon_component(WeaponSubclass::Dagger);
+        assert_eq!(comp.min_damage, 80.0);
+        assert_eq!(comp.speed, 1.8);
+        assert_eq!(comp.weapon_type, crate::components::WeaponType::Dagger);
+    }
+
+    #[test]
+    fn weapon_to_component_2h() {
+        let wpn = WeaponDamageData {
+            min_damage: 300.0,
+            max_damage: 500.0,
+            speed: 3.6,
+        };
+        let comp = wpn.to_weapon_component(WeaponSubclass::Sword2H);
+        assert_eq!(comp.weapon_type, crate::components::WeaponType::TwoHand);
+    }
+
+    #[test]
+    fn weapon_subclass_two_handed() {
+        assert!(WeaponSubclass::Axe2H.is_two_handed());
+        assert!(WeaponSubclass::Polearm.is_two_handed());
+        assert!(WeaponSubclass::Staff.is_two_handed());
+        assert!(!WeaponSubclass::Sword1H.is_two_handed());
+        assert!(!WeaponSubclass::Dagger.is_two_handed());
+    }
+
+    #[test]
+    fn weapon_subclass_to_weapon_type() {
+        use crate::components::WeaponType;
+        assert_eq!(WeaponSubclass::Dagger.to_weapon_type(), WeaponType::Dagger);
+        assert_eq!(WeaponSubclass::Sword1H.to_weapon_type(), WeaponType::OneHand);
+        assert_eq!(WeaponSubclass::Mace2H.to_weapon_type(), WeaponType::TwoHand);
+        assert_eq!(WeaponSubclass::Bow.to_weapon_type(), WeaponType::OneHand);
     }
 
     #[test]
