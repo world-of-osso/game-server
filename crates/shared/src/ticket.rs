@@ -4,6 +4,7 @@
 //! GMs claim, respond, and resolve tickets via admin IPC.
 //! Ref: AzerothCore `TicketMgr.cpp`.
 
+use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
 /// Ticket category for routing and prioritization.
@@ -132,7 +133,7 @@ pub enum TicketError {
 pub const MAX_DESCRIPTION_LEN: usize = 500;
 
 /// Manages all active tickets.
-#[derive(Debug, Clone, PartialEq, Default)]
+#[derive(Debug, Clone, PartialEq, Default, Resource)]
 pub struct TicketManager {
     tickets: Vec<Ticket>,
     next_id: u64,

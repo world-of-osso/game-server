@@ -469,3 +469,86 @@ pub(crate) fn handle_create_guild(
         Err(e) => AdminResponse::Error(e),
     }
 }
+
+// --- Ticket handlers ---
+
+fn ticket_to_info(t: &shared::ticket::Ticket) -> TicketInfo {
+    TicketInfo {
+        id: t.id,
+        player: t.player,
+        category: format!("{:?}", t.category),
+        description: t.description.clone(),
+        state: format!("{:?}", t.state),
+        priority: format!("{:?}", t.priority),
+        assigned_to: t.assigned_to.clone(),
+        response_count: t.responses.len(),
+        created_at: t.created_at,
+    }
+}
+
+pub(crate) fn handle_ticket_list(mgr: &shared::ticket::TicketManager) -> AdminResponse {
+    let tickets = mgr.queue().into_iter().map(ticket_to_info).collect();
+    AdminResponse::TicketListed { tickets }
+}
+
+pub(crate) fn handle_ticket_claim(
+    mgr: &mut shared::ticket::TicketManager,
+    ticket_id: u64,
+    gm_name: &str,
+) -> AdminResponse {
+    match mgr.assign(ticket_id, gm_name) {
+        Ok(()) => AdminResponse::TicketClaimed { ticket_id, gm_name: gm_name.to_string() },
+        Err(e) => AdminResponse::Error(format!("{e:?}")),
+    }
+}
+
+pub(crate) fn handle_ticket_claim_next(
+    mgr: &mut shared::ticket::TicketManager,
+    gm_name: &str,
+) -> AdminResponse {
+    match mgr.claim_next(gm_name) {
+        Ok(ticket_id) => AdminResponse::TicketClaimed { ticket_id, gm_name: gm_name.to_string() },
+        Err(e) => AdminResponse::Error(format!("{e:?}")),
+    }
+}
+
+pub(crate) fn handle_ticket_respond(
+    mgr: &mut shared::ticket::TicketManager,
+    ticket_id: u64,
+    gm_name: &str,
+    message: &str,
+    now: u64,
+) -> AdminResponse {
+    match mgr.respond(ticket_id, gm_name, message, now) {
+        Ok(()) => AdminResponse::TicketResponded { ticket_id },
+        Err(e) => AdminResponse::Error(format!("{e:?}")),
+    }
+}
+
+pub(crate) fn handle_ticket_resolve(
+    mgr: &mut shared::ticket::TicketManager,
+    ticket_id: u64,
+) -> AdminResponse {
+    match mgr.resolve(ticket_id) {
+        Ok(()) => AdminResponse::TicketResolved { ticket_id },
+        Err(e) => AdminResponse::Error(format!("{e:?}")),
+    }
+}
+
+pub(crate) fn handle_ticket_escalate(
+    mgr: &mut shared::ticket::TicketManager,
+    ticket_id: u64,
+) -> AdminResponse {
+    match mgr.escalate(ticket_id) {
+        Ok(()) => AdminResponse::TicketEscalated { ticket_id },
+        Err(e) => AdminResponse::Error(format!("{e:?}")),
+    }
+}
+
+pub(crate) fn handle_ticket_history(
+    mgr: &shared::ticket::TicketManager,
+    player_id: u64,
+) -> AdminResponse {
+    let tickets = mgr.player_history(player_id).into_iter().map(ticket_to_info).collect();
+    AdminResponse::TicketHistoryListed { player_id, tickets }
+}

@@ -50,6 +50,7 @@ fn main() {
         .add_plugins(spell_db::SpellDatabasePlugin)
         .add_plugins(interest::InterestPlugin)
         .add_plugins(admin_ipc::AdminIpcPlugin)
+        .init_resource::<shared::ticket::TicketManager>()
         .add_systems(Startup, on_startup)
         .add_systems(FixedUpdate, tick_log)
         .run();

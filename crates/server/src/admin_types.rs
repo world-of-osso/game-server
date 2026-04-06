@@ -68,6 +68,29 @@ pub enum AdminRequest {
         /// How many seconds of history to return (from now).
         last_seconds: f64,
     },
+    // --- Ticket commands ---
+    TicketList,
+    TicketClaim {
+        ticket_id: u64,
+        gm_name: String,
+    },
+    TicketClaimNext {
+        gm_name: String,
+    },
+    TicketRespond {
+        ticket_id: u64,
+        gm_name: String,
+        message: String,
+    },
+    TicketResolve {
+        ticket_id: u64,
+    },
+    TicketEscalate {
+        ticket_id: u64,
+    },
+    TicketHistory {
+        player_id: u64,
+    },
     Ping,
 }
 
@@ -143,6 +166,27 @@ pub enum AdminResponse {
         count: usize,
         entries: Vec<CombatLogSummary>,
     },
+    // --- Ticket responses ---
+    TicketListed {
+        tickets: Vec<TicketInfo>,
+    },
+    TicketClaimed {
+        ticket_id: u64,
+        gm_name: String,
+    },
+    TicketResponded {
+        ticket_id: u64,
+    },
+    TicketResolved {
+        ticket_id: u64,
+    },
+    TicketEscalated {
+        ticket_id: u64,
+    },
+    TicketHistoryListed {
+        player_id: u64,
+        tickets: Vec<TicketInfo>,
+    },
     Pong,
     Error(String),
 }
@@ -163,6 +207,20 @@ pub struct CharacterInfo {
     pub level: u16,
     pub race: u8,
     pub class: u8,
+}
+
+/// Summary of a ticket for IPC transport.
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub struct TicketInfo {
+    pub id: u64,
+    pub player: u64,
+    pub category: String,
+    pub description: String,
+    pub state: String,
+    pub priority: String,
+    pub assigned_to: Option<String>,
+    pub response_count: usize,
+    pub created_at: u64,
 }
 
 /// Summary of a combat log entry for IPC transport.

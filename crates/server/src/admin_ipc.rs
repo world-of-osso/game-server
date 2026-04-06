@@ -143,6 +143,7 @@ fn poll_admin_ipc(
     db: Option<Res<persistence::GameDatabase>>,
     time: Res<Time>,
     combat_log: Res<crate::combat::CombatLog>,
+    mut ticket_mgr: ResMut<shared::ticket::TicketManager>,
     mut queries: AdminQueries,
 ) {
     let Some(db) = db else { return };
@@ -150,6 +151,11 @@ fn poll_admin_ipc(
         // Handle combat log query without threading extra args through dispatch.
         if let AdminRequest::CombatLog { last_seconds } = &cmd.request {
             let response = handle_combat_log(&combat_log, &time, *last_seconds);
+            let _ = cmd.respond.send(response);
+            continue;
+        }
+        // Handle ticket commands without threading extra args through dispatch.
+        if let Some(response) = dispatch_ticket(&cmd.request, &time, &mut ticket_mgr) {
             let _ = cmd.respond.send(response);
             continue;
         }
@@ -162,6 +168,37 @@ fn poll_admin_ipc(
             &queries.authenticated,
             &mut queries.roster_senders,
         );
+    }
+}
+
+/// Dispatch ticket commands, returning Some if handled.
+fn dispatch_ticket(
+    request: &AdminRequest,
+    time: &Time,
+    ticket_mgr: &mut shared::ticket::TicketManager,
+) -> Option<AdminResponse> {
+    match request {
+        AdminRequest::TicketList => Some(handle_ticket_list(ticket_mgr)),
+        AdminRequest::TicketClaim { ticket_id, gm_name } => {
+            Some(handle_ticket_claim(ticket_mgr, *ticket_id, gm_name))
+        }
+        AdminRequest::TicketClaimNext { gm_name } => {
+            Some(handle_ticket_claim_next(ticket_mgr, gm_name))
+        }
+        AdminRequest::TicketRespond { ticket_id, gm_name, message } => {
+            let now = time.elapsed_secs_f64() as u64;
+            Some(handle_ticket_respond(ticket_mgr, *ticket_id, gm_name, message, now))
+        }
+        AdminRequest::TicketResolve { ticket_id } => {
+            Some(handle_ticket_resolve(ticket_mgr, *ticket_id))
+        }
+        AdminRequest::TicketEscalate { ticket_id } => {
+            Some(handle_ticket_escalate(ticket_mgr, *ticket_id))
+        }
+        AdminRequest::TicketHistory { player_id } => {
+            Some(handle_ticket_history(ticket_mgr, *player_id))
+        }
+        _ => None,
     }
 }
 
@@ -260,6 +297,14 @@ fn dispatch(
             &character_name,
             &slot,
         ),
+        // Ticket commands handled in dispatch_ticket before this function
+        AdminRequest::TicketList
+        | AdminRequest::TicketClaim { .. }
+        | AdminRequest::TicketClaimNext { .. }
+        | AdminRequest::TicketRespond { .. }
+        | AdminRequest::TicketResolve { .. }
+        | AdminRequest::TicketEscalate { .. }
+        | AdminRequest::TicketHistory { .. } => unreachable!(),
     };
     let _ = cmd.respond.send(response);
 }
