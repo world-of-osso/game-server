@@ -11,6 +11,7 @@ mod messaging;
 mod networking;
 mod persistence;
 mod persistence_accounts;
+mod persistence_character;
 mod persistence_types;
 mod spell_db;
 mod stats;
