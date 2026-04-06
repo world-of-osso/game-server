@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 use std::sync::mpsc;
 
+use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 use lightyear::prelude::MessageSender;
 use peercred_ipc::{Connection, Server};
@@ -77,6 +78,10 @@ pub enum AdminRequest {
         character_name: String,
         slot: String,
     },
+    CombatLog {
+        /// How many seconds of history to return (from now).
+        last_seconds: f64,
+    },
     Ping,
 }
 
@@ -148,6 +153,10 @@ pub enum AdminResponse {
         character_name: String,
         slot: String,
     },
+    CombatLogEntries {
+        count: usize,
+        entries: Vec<CombatLogSummary>,
+    },
     Pong,
     Error(String),
 }
@@ -168,6 +177,17 @@ pub struct CharacterInfo {
     pub level: u16,
     pub race: u8,
     pub class: u8,
+}
+
+/// Summary of a combat log entry for IPC transport.
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
+pub struct CombatLogSummary {
+    pub timestamp: f64,
+    pub event_type: String,
+    pub attacker: u64,
+    pub target: u64,
+    pub amount: f32,
+    pub spell_id: u32,
 }
 
 /// Internal command passed from IPC server thread to Bevy main loop.
@@ -270,29 +290,53 @@ async fn handle_connection(mut conn: Connection, tx: mpsc::Sender<AdminCommand>)
     }
 }
 
+/// Queries needed by the admin IPC dispatch loop.
+#[derive(SystemParam)]
+struct AdminQueries<'w, 's> {
+    commands: Commands<'w, 's>,
+    players: Query<'w, 's, (&'static mut Position, &'static persistence::ClientId)>,
+    equipment: Query<
+        'w,
+        's,
+        (
+            Entity,
+            &'static mut EquipmentAppearance,
+            &'static persistence::ClientId,
+        ),
+    >,
+    authenticated: Query<
+        'w,
+        's,
+        (Entity, &'static crate::auth::Authenticated),
+        With<MessageSender<LoginResponse>>,
+    >,
+    roster_senders: Query<'w, 's, &'static mut MessageSender<CharacterListUpdate>>,
+}
+
 /// Poll IPC commands each frame and dispatch them.
 fn poll_admin_ipc(
     receiver: NonSend<mpsc::Receiver<AdminCommand>>,
     db: Option<Res<persistence::GameDatabase>>,
-    mut commands: Commands,
-    mut players: Query<(&mut Position, &persistence::ClientId)>,
-    mut equipment_query: Query<(Entity, &mut EquipmentAppearance, &persistence::ClientId)>,
-    authenticated_query: Query<
-        (Entity, &crate::auth::Authenticated),
-        With<MessageSender<LoginResponse>>,
-    >,
-    mut roster_update_senders: Query<&mut MessageSender<CharacterListUpdate>>,
+    time: Res<Time>,
+    combat_log: Res<crate::combat::CombatLog>,
+    mut queries: AdminQueries,
 ) {
     let Some(db) = db else { return };
     while let Ok(cmd) = receiver.try_recv() {
+        // Handle combat log query without threading extra args through dispatch.
+        if let AdminRequest::CombatLog { last_seconds } = &cmd.request {
+            let response = handle_combat_log(&combat_log, &time, *last_seconds);
+            let _ = cmd.respond.send(response);
+            continue;
+        }
         dispatch(
             cmd,
             &db,
-            &mut commands,
-            &mut players,
-            &mut equipment_query,
-            &authenticated_query,
-            &mut roster_update_senders,
+            &mut queries.commands,
+            &mut queries.players,
+            &mut queries.equipment,
+            &queries.authenticated,
+            &mut queries.roster_senders,
         );
     }
 }
@@ -311,6 +355,10 @@ fn dispatch(
 ) {
     let response = match cmd.request {
         AdminRequest::Ping => AdminResponse::Pong,
+        AdminRequest::CombatLog { .. } => {
+            // Handled in poll_admin_ipc before dispatch is called
+            unreachable!()
+        }
         AdminRequest::ListAccounts => handle_list_accounts(db),
         AdminRequest::ListCharacters { username } => {
             handle_list_characters(db, username.as_deref())
@@ -390,6 +438,29 @@ fn dispatch(
         ),
     };
     let _ = cmd.respond.send(response);
+}
+
+fn handle_combat_log(
+    combat_log: &crate::combat::CombatLog,
+    time: &Time,
+    last_seconds: f64,
+) -> AdminResponse {
+    let now = time.elapsed_secs_f64();
+    let start = (now - last_seconds).max(0.0);
+    let entries: Vec<CombatLogSummary> = combat_log
+        .range(start, now)
+        .iter()
+        .map(|e| CombatLogSummary {
+            timestamp: e.timestamp,
+            event_type: format!("{:?}", e.event.event_type),
+            attacker: e.event.attacker,
+            target: e.event.target,
+            amount: e.event.amount,
+            spell_id: e.event.spell_id,
+        })
+        .collect();
+    let count = entries.len();
+    AdminResponse::CombatLogEntries { count, entries }
 }
 
 fn handle_list_accounts(db: &persistence::GameDatabase) -> AdminResponse {

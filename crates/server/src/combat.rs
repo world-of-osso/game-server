@@ -7,6 +7,8 @@ use shared::protocol::{CombatChannel, CombatEvent, CombatEventType};
 use crate::creature_ai::SpawnPoint;
 use crate::networking::CombatTarget;
 
+use std::collections::VecDeque;
+
 /// Melee attack range in yards.
 const MELEE_RANGE: f32 = 5.0;
 /// Seconds between auto-attack swings.
@@ -15,6 +17,53 @@ const AUTO_ATTACK_INTERVAL: f32 = 2.0;
 const BASE_DAMAGE: f32 = 10.0;
 /// Default respawn timer in seconds.
 const DEFAULT_RESPAWN_SECS: f32 = 60.0;
+
+/// Maximum number of combat log entries retained in memory.
+const COMBAT_LOG_CAPACITY: usize = 10_000;
+
+/// A timestamped combat event for server-side replay and debugging.
+#[derive(Debug, Clone)]
+pub struct CombatLogEntry {
+    /// Elapsed game time when the event occurred (seconds since server start).
+    pub timestamp: f64,
+    pub event: CombatEvent,
+}
+
+/// Server-side combat log resource. Stores a ring buffer of recent combat events
+/// for replay, debugging, and analytics. Oldest entries are evicted when capacity
+/// is reached.
+#[derive(Resource)]
+pub struct CombatLog {
+    entries: VecDeque<CombatLogEntry>,
+    capacity: usize,
+}
+
+impl Default for CombatLog {
+    fn default() -> Self {
+        Self {
+            entries: VecDeque::with_capacity(COMBAT_LOG_CAPACITY),
+            capacity: COMBAT_LOG_CAPACITY,
+        }
+    }
+}
+
+impl CombatLog {
+    /// Record a combat event with the current timestamp.
+    pub fn record(&mut self, timestamp: f64, event: CombatEvent) {
+        if self.entries.len() >= self.capacity {
+            self.entries.pop_front();
+        }
+        self.entries.push_back(CombatLogEntry { timestamp, event });
+    }
+
+    /// Get entries within a time range (inclusive).
+    pub fn range(&self, start: f64, end: f64) -> Vec<&CombatLogEntry> {
+        self.entries
+            .iter()
+            .filter(|e| e.timestamp >= start && e.timestamp <= end)
+            .collect()
+    }
+}
 
 type LivingNpcFilter = (With<Npc>, Without<DeathState>);
 
@@ -27,6 +76,7 @@ pub struct CombatPlugin;
 
 impl Plugin for CombatPlugin {
     fn build(&self, app: &mut App) {
+        app.init_resource::<CombatLog>();
         app.add_systems(
             FixedUpdate,
             (
@@ -79,8 +129,10 @@ fn auto_attack_system(
     mut attackers: Query<(Entity, &CombatTarget, &mut AutoAttack, &Position)>,
     mut targets: Query<(&Position, &mut Health)>,
     mut senders: Query<&mut MessageSender<CombatEvent>>,
+    mut combat_log: ResMut<CombatLog>,
 ) {
     let dt = time.delta_secs();
+    let elapsed = time.elapsed_secs_f64();
     let mut events = Vec::new();
 
     for (attacker_entity, combat_target, mut auto_attack, attacker_pos) in &mut attackers {
@@ -97,7 +149,7 @@ fn auto_attack_system(
         }
     }
 
-    broadcast_events(&events, &mut senders);
+    broadcast_events(&events, &mut senders, &mut combat_log, elapsed);
 }
 
 /// Attempt a swing if timer ready and target in range. Returns damage dealt.
@@ -147,10 +199,13 @@ fn build_damage_event(attacker: Entity, target: Entity, damage: f32) -> CombatEv
 
 /// Detect entities that just hit 0 HP and mark them dead.
 fn death_system(
+    time: Res<Time>,
     living: LivingNpcQuery,
     mut commands: Commands,
     mut senders: Query<&mut MessageSender<CombatEvent>>,
+    mut combat_log: ResMut<CombatLog>,
 ) {
+    let elapsed = time.elapsed_secs_f64();
     let mut events = Vec::new();
 
     for (entity, health) in &living.query {
@@ -170,7 +225,7 @@ fn death_system(
         });
     }
 
-    broadcast_events(&events, &mut senders);
+    broadcast_events(&events, &mut senders, &mut combat_log, elapsed);
 }
 
 /// Tick respawn timers and restore dead NPCs when ready.
@@ -185,8 +240,10 @@ fn respawn_system(
     )>,
     mut commands: Commands,
     mut senders: Query<&mut MessageSender<CombatEvent>>,
+    mut combat_log: ResMut<CombatLog>,
 ) {
     let dt = time.delta_secs();
+    let elapsed = time.elapsed_secs_f64();
     let mut events = Vec::new();
 
     for (entity, mut death, mut health, spawn, mut pos) in &mut query {
@@ -208,7 +265,7 @@ fn respawn_system(
         });
     }
 
-    broadcast_events(&events, &mut senders);
+    broadcast_events(&events, &mut senders, &mut combat_log, elapsed);
 }
 
 /// Restore health and position for a respawning entity.
@@ -219,12 +276,18 @@ fn respawn_entity(health: &mut Health, pos: &mut Position, spawn: &SpawnPoint) {
     pos.z = spawn.z;
 }
 
-/// Send combat events to all connected clients.
-fn broadcast_events(events: &[CombatEvent], senders: &mut Query<&mut MessageSender<CombatEvent>>) {
+/// Send combat events to all connected clients and record to combat log.
+fn broadcast_events(
+    events: &[CombatEvent],
+    senders: &mut Query<&mut MessageSender<CombatEvent>>,
+    combat_log: &mut CombatLog,
+    elapsed: f64,
+) {
     if events.is_empty() {
         return;
     }
     for event in events {
+        combat_log.record(elapsed, event.clone());
         for mut sender in senders.iter_mut() {
             sender.send::<CombatChannel>(event.clone());
         }
@@ -244,6 +307,7 @@ mod tests {
     fn setup_app() -> App {
         let mut app = App::new();
         app.add_plugins(bevy::MinimalPlugins);
+        app.init_resource::<CombatLog>();
         app.update();
         app.update();
         app
@@ -395,5 +459,65 @@ mod tests {
         assert_eq!(position.x, 10.0);
         assert_eq!(position.y, 20.0);
         assert_eq!(position.z, 30.0);
+    }
+
+    // --- Combat log tests ---
+
+    fn make_event(event_type: CombatEventType, amount: f32) -> CombatEvent {
+        CombatEvent {
+            attacker: 1,
+            target: 2,
+            amount,
+            spell_id: 0,
+            event_type,
+        }
+    }
+
+    #[test]
+    fn combat_log_records_and_retrieves() {
+        let mut log = CombatLog::default();
+        assert!(log.entries.is_empty());
+
+        log.record(1.0, make_event(CombatEventType::MeleeDamage, 100.0));
+        log.record(2.0, make_event(CombatEventType::Death, 0.0));
+
+        assert_eq!(log.entries.len(), 2);
+        assert_eq!(log.entries[0].timestamp, 1.0);
+        assert_eq!(log.entries[1].event.event_type, CombatEventType::Death);
+    }
+
+    #[test]
+    fn combat_log_evicts_oldest_at_capacity() {
+        let mut log = CombatLog {
+            entries: VecDeque::new(),
+            capacity: 3,
+        };
+        log.record(1.0, make_event(CombatEventType::MeleeDamage, 10.0));
+        log.record(2.0, make_event(CombatEventType::MeleeDamage, 20.0));
+        log.record(3.0, make_event(CombatEventType::MeleeDamage, 30.0));
+        log.record(4.0, make_event(CombatEventType::MeleeDamage, 40.0));
+
+        assert_eq!(log.entries.len(), 3);
+        assert_eq!(log.entries[0].timestamp, 2.0, "oldest entry should be evicted");
+    }
+
+    #[test]
+    fn combat_log_range_filters_by_time() {
+        let mut log = CombatLog::default();
+        log.record(1.0, make_event(CombatEventType::MeleeDamage, 10.0));
+        log.record(5.0, make_event(CombatEventType::SpellDamage, 20.0));
+        log.record(10.0, make_event(CombatEventType::Death, 0.0));
+
+        let range = log.range(4.0, 6.0);
+        assert_eq!(range.len(), 1);
+        assert_eq!(range[0].event.event_type, CombatEventType::SpellDamage);
+    }
+
+    #[test]
+    fn combat_log_clear_resets() {
+        let mut log = CombatLog::default();
+        log.record(1.0, make_event(CombatEventType::MeleeDamage, 10.0));
+        log.entries.clear();
+        assert!(log.entries.is_empty());
     }
 }
