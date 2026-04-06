@@ -157,6 +157,97 @@ pub fn group_kill_xp(creature_level: u8, members: &[GroupMemberXp]) -> Vec<Group
         .collect()
 }
 
+// --- Level-up ---
+
+/// Maximum player level.
+pub const MAX_LEVEL: u8 = 80;
+
+/// XP required to level up from `level` to `level + 1`.
+///
+/// Approximation of WoW's XP curve: `100 * level * (level + 5)`.
+/// Ref: AzerothCore XP table in `player_xp_for_level`.
+pub fn xp_to_level(level: u8) -> u32 {
+    if level == 0 || level >= MAX_LEVEL {
+        return 0;
+    }
+    100 * level as u32 * (level as u32 + 5)
+}
+
+/// Player XP tracking state.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct PlayerXp {
+    pub current_xp: u32,
+    pub level: u8,
+}
+
+/// What happened when XP was gained.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum XpGainResult {
+    /// XP gained, no level-up.
+    Gained,
+    /// Player leveled up (possibly multiple times).
+    LeveledUp { new_level: u8 },
+    /// Player is at max level, XP not applied.
+    AtMaxLevel,
+}
+
+impl PlayerXp {
+    pub fn new(level: u8) -> Self {
+        Self {
+            current_xp: 0,
+            level,
+        }
+    }
+
+    /// Add XP, triggering level-ups as needed. Handles multi-level gains.
+    ///
+    /// The caller is responsible for recalculating stats after a level-up
+    /// (update `Level` component → triggers `update_derived_stats`).
+    pub fn add_xp(&mut self, amount: u32) -> XpGainResult {
+        if self.level >= MAX_LEVEL {
+            return XpGainResult::AtMaxLevel;
+        }
+
+        self.current_xp += amount;
+        let starting_level = self.level;
+
+        loop {
+            let required = xp_to_level(self.level);
+            if required == 0 || self.current_xp < required {
+                break;
+            }
+            self.current_xp -= required;
+            self.level += 1;
+            if self.level >= MAX_LEVEL {
+                self.current_xp = 0;
+                break;
+            }
+        }
+
+        if self.level > starting_level {
+            XpGainResult::LeveledUp {
+                new_level: self.level,
+            }
+        } else {
+            XpGainResult::Gained
+        }
+    }
+
+    /// XP required for the current level.
+    pub fn xp_required(&self) -> u32 {
+        xp_to_level(self.level)
+    }
+
+    /// Progress through current level as 0.0–1.0.
+    pub fn progress(&self) -> f32 {
+        let req = self.xp_required();
+        if req == 0 {
+            return 1.0;
+        }
+        self.current_xp as f32 / req as f32
+    }
+}
+
 // --- Rested XP ---
 
 /// Rested XP accumulation rate: fraction of a level per 8 hours in a rest area.
@@ -390,6 +481,83 @@ mod tests {
     #[test]
     fn quest_xp_zero_base() {
         assert_eq!(quest_xp(0, 50, 50), 0);
+    }
+
+    // --- Level-up tests ---
+
+    #[test]
+    fn xp_to_level_1() {
+        assert_eq!(xp_to_level(1), 600); // 100 * 1 * 6
+    }
+
+    #[test]
+    fn xp_to_level_at_max() {
+        assert_eq!(xp_to_level(80), 0); // max level
+    }
+
+    #[test]
+    fn level_up_single() {
+        let mut xp = PlayerXp::new(1);
+        let result = xp.add_xp(600); // exactly enough for L1→L2
+        assert_eq!(result, XpGainResult::LeveledUp { new_level: 2 });
+        assert_eq!(xp.level, 2);
+        assert_eq!(xp.current_xp, 0);
+    }
+
+    #[test]
+    fn level_up_with_overflow() {
+        let mut xp = PlayerXp::new(1);
+        let result = xp.add_xp(700); // 600 needed, 100 overflow
+        assert_eq!(result, XpGainResult::LeveledUp { new_level: 2 });
+        assert_eq!(xp.current_xp, 100);
+    }
+
+    #[test]
+    fn level_up_multiple() {
+        let mut xp = PlayerXp::new(1);
+        // L1→2: 600, L2→3: 1400, total = 2000
+        let result = xp.add_xp(2000);
+        assert_eq!(result, XpGainResult::LeveledUp { new_level: 3 });
+        assert_eq!(xp.level, 3);
+        assert_eq!(xp.current_xp, 0);
+    }
+
+    #[test]
+    fn no_level_up() {
+        let mut xp = PlayerXp::new(1);
+        let result = xp.add_xp(100);
+        assert_eq!(result, XpGainResult::Gained);
+        assert_eq!(xp.level, 1);
+        assert_eq!(xp.current_xp, 100);
+    }
+
+    #[test]
+    fn max_level_rejects_xp() {
+        let mut xp = PlayerXp::new(80);
+        let result = xp.add_xp(10000);
+        assert_eq!(result, XpGainResult::AtMaxLevel);
+        assert_eq!(xp.current_xp, 0);
+    }
+
+    #[test]
+    fn level_up_caps_at_max() {
+        let mut xp = PlayerXp::new(79);
+        let result = xp.add_xp(999999);
+        assert_eq!(result, XpGainResult::LeveledUp { new_level: 80 });
+        assert_eq!(xp.current_xp, 0);
+    }
+
+    #[test]
+    fn progress_fraction() {
+        let mut xp = PlayerXp::new(1);
+        xp.current_xp = 300;
+        assert!((xp.progress() - 0.5).abs() < 0.01); // 300/600
+    }
+
+    #[test]
+    fn progress_at_max() {
+        let xp = PlayerXp::new(80);
+        assert_eq!(xp.progress(), 1.0);
     }
 
     // --- Rested XP tests ---
