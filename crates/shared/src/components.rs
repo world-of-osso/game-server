@@ -517,6 +517,9 @@ pub enum AuraEffect {
     /// Reduce cooldown of a specific spell by a flat amount (seconds).
     /// `spell_id` = 0 means all spells. Negative values increase cooldown.
     ModCooldown { spell_id: u32, reduction: f32 },
+    /// Modify movement speed. Negative = snare (e.g. -0.50 = 50% slow).
+    /// -1.0 = root (complete immobilization).
+    ModMovementSpeed { percent: f32 },
 }
 
 /// A single buff or debuff active on a unit.
@@ -869,6 +872,42 @@ impl Auras {
             })
             .sum();
         (base_cooldown - total_reduction).max(0.0)
+    }
+
+    /// Compute effective movement speed multiplier from all active auras.
+    ///
+    /// Snares (negative) use the strongest single snare (not multiplicative),
+    /// matching WoW behavior. Speed buffs (positive) stack additively.
+    /// A root (`percent = -1.0`) overrides everything → returns 0.0.
+    ///
+    /// Returns a multiplier (1.0 = normal, 0.5 = 50% speed, 0.0 = rooted).
+    pub fn movement_speed_multiplier(&self) -> f32 {
+        let mut strongest_snare: f32 = 0.0;
+        let mut total_buff: f32 = 0.0;
+        let mut rooted = false;
+
+        for effect in self.active.iter().flat_map(|a| a.effects.iter().flatten()) {
+            if let AuraEffect::ModMovementSpeed { percent } = effect {
+                if *percent <= -1.0 {
+                    rooted = true;
+                } else if *percent < 0.0 {
+                    strongest_snare = strongest_snare.min(*percent);
+                } else {
+                    total_buff += percent;
+                }
+            }
+        }
+
+        if rooted {
+            return 0.0;
+        }
+
+        (1.0 + strongest_snare + total_buff).max(0.0)
+    }
+
+    /// Whether the entity is rooted (cannot move at all).
+    pub fn is_rooted(&self) -> bool {
+        self.movement_speed_multiplier() == 0.0
     }
 
     /// Remove all auras (on death). Clears the entire active list.
@@ -2398,8 +2437,9 @@ mod tests {
             AuraEffect::ModCritChance { percent: 0.05 },
             AuraEffect::ModThreat { percent: 0.43 },
             AuraEffect::ModCooldown { spell_id: 100, reduction: 2.0 },
+            AuraEffect::ModMovementSpeed { percent: -0.50 },
         ];
-        assert_eq!(effects.len(), 12);
+        assert_eq!(effects.len(), 13);
     }
 
     // --- Aura stacking tests ---
@@ -4151,6 +4191,79 @@ mod tests {
         assert_eq!(auras.effective_cooldown(100, 10.0), 7.0);
         // spell 200: 10 - 1 = 9
         assert_eq!(auras.effective_cooldown(200, 10.0), 9.0);
+    }
+
+    // --- Movement speed modifier tests ---
+
+    fn make_speed_aura(spell_id: u32, caster: u64, percent: f32) -> Aura {
+        Aura {
+            spell_id,
+            caster,
+            duration: 10.0,
+            remaining: 10.0,
+            effects: [
+                Some(AuraEffect::ModMovementSpeed { percent }),
+                None,
+                None,
+            ],
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn speed_no_auras_normal() {
+        let auras = Auras::default();
+        assert_eq!(auras.movement_speed_multiplier(), 1.0);
+        assert!(!auras.is_rooted());
+    }
+
+    #[test]
+    fn speed_snare_50_percent() {
+        let mut auras = Auras::default();
+        auras.active.push(make_speed_aura(100, 1, -0.50));
+        assert!((auras.movement_speed_multiplier() - 0.50).abs() < 0.001);
+    }
+
+    #[test]
+    fn speed_root_is_zero() {
+        let mut auras = Auras::default();
+        auras.active.push(make_speed_aura(100, 1, -1.0));
+        assert_eq!(auras.movement_speed_multiplier(), 0.0);
+        assert!(auras.is_rooted());
+    }
+
+    #[test]
+    fn speed_strongest_snare_wins() {
+        let mut auras = Auras::default();
+        auras.active.push(make_speed_aura(100, 1, -0.30)); // 30% slow
+        auras.active.push(make_speed_aura(200, 2, -0.70)); // 70% slow
+        // Strongest snare: -0.70 → 30% speed
+        assert!((auras.movement_speed_multiplier() - 0.30).abs() < 0.001);
+    }
+
+    #[test]
+    fn speed_buff_stacks_additively() {
+        let mut auras = Auras::default();
+        auras.active.push(make_speed_aura(100, 1, 0.30)); // +30%
+        auras.active.push(make_speed_aura(200, 2, 0.20)); // +20%
+        assert!((auras.movement_speed_multiplier() - 1.50).abs() < 0.001);
+    }
+
+    #[test]
+    fn speed_buff_and_snare_combined() {
+        let mut auras = Auras::default();
+        auras.active.push(make_speed_aura(100, 1, -0.50)); // -50%
+        auras.active.push(make_speed_aura(200, 2, 0.20));  // +20%
+        // 1.0 + (-0.50) + 0.20 = 0.70
+        assert!((auras.movement_speed_multiplier() - 0.70).abs() < 0.001);
+    }
+
+    #[test]
+    fn speed_root_overrides_buff() {
+        let mut auras = Auras::default();
+        auras.active.push(make_speed_aura(100, 1, -1.0));  // root
+        auras.active.push(make_speed_aura(200, 2, 0.50));  // +50%
+        assert_eq!(auras.movement_speed_multiplier(), 0.0);
     }
 
     // --- Periodic tick tests ---
