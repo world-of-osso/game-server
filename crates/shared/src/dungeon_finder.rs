@@ -152,6 +152,55 @@ pub struct MatchResult {
     pub dps: Vec<u64>,
 }
 
+// --- Dungeon definitions and teleport ---
+
+/// A dungeon instance definition.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct DungeonDef {
+    pub id: u32,
+    pub name: String,
+    pub map_id: u16,
+    /// Entrance position where players are teleported.
+    pub entrance_x: f32,
+    pub entrance_y: f32,
+    pub entrance_z: f32,
+    pub min_level: u8,
+    pub max_level: u8,
+}
+
+/// A teleport order for a player entering a dungeon.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct TeleportOrder {
+    pub player: u64,
+    pub map_id: u16,
+    pub x: f32,
+    pub y: f32,
+    pub z: f32,
+}
+
+/// Generate teleport orders for all players in a match.
+///
+/// Returns one `TeleportOrder` per player (tank, healer, 3 DPS).
+/// The server applies these to move players to the dungeon entrance.
+pub fn teleport_orders(
+    match_result: &MatchResult,
+    dungeon: &DungeonDef,
+) -> Vec<TeleportOrder> {
+    let all_players = std::iter::once(match_result.tank)
+        .chain(std::iter::once(match_result.healer))
+        .chain(match_result.dps.iter().copied());
+
+    all_players
+        .map(|player| TeleportOrder {
+            player,
+            map_id: dungeon.map_id,
+            x: dungeon.entrance_x,
+            y: dungeon.entrance_y,
+            z: dungeon.entrance_z,
+        })
+        .collect()
+}
+
 /// (queue_entry_index, member_index_within_entry)
 type Slot = (usize, usize);
 
@@ -337,5 +386,48 @@ mod tests {
         let m = q.try_match().unwrap();
         // All overlap on dungeon 200
         assert_eq!(m.dungeon_id, 200);
+    }
+
+    // --- Teleport tests ---
+
+    fn test_dungeon() -> DungeonDef {
+        DungeonDef {
+            id: 100,
+            name: "Deadmines".into(),
+            map_id: 36,
+            entrance_x: -11208.0,
+            entrance_y: 1673.0,
+            entrance_z: 24.0,
+            min_level: 15,
+            max_level: 21,
+        }
+    }
+
+    #[test]
+    fn teleport_all_5_players() {
+        let m = MatchResult {
+            dungeon_id: 100,
+            tank: 1,
+            healer: 2,
+            dps: vec![3, 4, 5],
+        };
+        let dungeon = test_dungeon();
+        let orders = teleport_orders(&m, &dungeon);
+        assert_eq!(orders.len(), 5);
+        for order in &orders {
+            assert_eq!(order.map_id, 36);
+            assert_eq!(order.x, -11208.0);
+        }
+        let players: Vec<u64> = orders.iter().map(|o| o.player).collect();
+        assert!(players.contains(&1));
+        assert!(players.contains(&2));
+        assert!(players.contains(&5));
+    }
+
+    #[test]
+    fn dungeon_def_level_range() {
+        let d = test_dungeon();
+        assert_eq!(d.min_level, 15);
+        assert_eq!(d.max_level, 21);
     }
 }
