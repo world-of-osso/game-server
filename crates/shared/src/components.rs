@@ -232,6 +232,22 @@ impl Resources {
 )]
 pub struct MovementSpeed(pub f32);
 
+/// Vertical velocity in yards/sec (positive = upward).
+#[derive(
+    Component,
+    Reflect,
+    Serialize,
+    Deserialize,
+    bitcode::Encode,
+    bitcode::Decode,
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Default,
+)]
+pub struct VerticalVelocity(pub f32);
+
 #[derive(
     Component,
     Reflect,

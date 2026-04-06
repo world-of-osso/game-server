@@ -4,7 +4,7 @@ use core::net::{IpAddr, Ipv4Addr, SocketAddr};
 use lightyear::prelude::server::*;
 use lightyear::prelude::*;
 use shared::aura::Auras;
-use shared::components::{Health, MovementSpeed, Npc, Player, Position, Rotation};
+use shared::components::{Health, MovementSpeed, Npc, Player, Position, Rotation, VerticalVelocity};
 use shared::protocol::{ChatMessage, LoadTerrain, PlayerInput, TerrainChannel};
 use std::collections::VecDeque;
 use std::time::Duration;
@@ -22,6 +22,13 @@ const DEFAULT_RUN_SPEED: f32 = 7.0;
 const DEFAULT_WALK_SPEED: f32 = 2.5;
 
 type LinkStatusData = (Has<Connected>, Has<ClientOf>, Has<ReplicationSender>);
+type PlayerMovement = (
+    &'static mut Position,
+    &'static mut Rotation,
+    &'static mut MovementSpeed,
+    &'static mut VerticalVelocity,
+    Option<&'static Auras>,
+);
 type ConnInfoData = (
     &'static RemoteId,
     Has<ClientOf>,
@@ -355,10 +362,7 @@ pub fn send_load_terrain(connection: Entity, senders: &mut Query<&mut MessageSen
 /// Read PlayerInput messages and apply movement.
 fn process_player_inputs(
     mut receivers: Query<(&mut MessageReceiver<PlayerInput>, &PlayerLink)>,
-    mut players: Query<
-        (&mut Position, &mut Rotation, &mut MovementSpeed, Option<&Auras>),
-        With<Player>,
-    >,
+    mut players: Query<PlayerMovement, With<Player>>,
     time: Res<Time>,
 ) {
     for (mut receiver, link) in receivers.iter_mut() {
@@ -372,15 +376,17 @@ fn process_player_inputs(
 fn apply_movement_input(
     input: &PlayerInput,
     player_entity: Entity,
-    players: &mut Query<
-        (&mut Position, &mut Rotation, &mut MovementSpeed, Option<&Auras>),
-        With<Player>,
-    >,
+    players: &mut Query<PlayerMovement, With<Player>>,
     time: &Time,
 ) {
-    let Ok((mut pos, mut rotation, mut speed, auras)) = players.get_mut(player_entity) else {
+    let Ok((mut pos, mut rotation, mut speed, mut vert_vel, auras)) =
+        players.get_mut(player_entity)
+    else {
         return;
     };
+    if input.jumping && vert_vel.0 == 0.0 {
+        vert_vel.0 = shared::movement::JUMP_IMPULSE;
+    }
     rotation.y = input.facing_yaw;
     let base_speed = if input.running {
         DEFAULT_RUN_SPEED
@@ -413,26 +419,39 @@ fn validate_move_distance(distance: f32, max_speed: f32, dt: f32) -> bool {
 /// Apply gravity and terrain clamping to all players each tick.
 fn apply_terrain_gravity(
     terrain: Option<Res<TerrainHeightMap>>,
-    mut players: Query<&mut Position, With<Player>>,
+    mut players: Query<(&mut Position, &mut VerticalVelocity), With<Player>>,
     time: Res<Time>,
 ) {
     let Some(terrain) = terrain.as_ref().filter(|t| t.is_loaded()) else {
         return;
     };
     let dt = time.delta_secs();
-    for mut pos in players.iter_mut() {
-        clamp_to_terrain(terrain, &mut pos, dt);
+    for (mut pos, mut vert_vel) in players.iter_mut() {
+        clamp_to_terrain(terrain, &mut pos, &mut vert_vel, dt);
     }
 }
 
-/// Clamp a position (Bevy space) to terrain: apply gravity if airborne, snap if below ground.
-fn clamp_to_terrain(terrain: &TerrainHeightMap, pos: &mut Position, dt: f32) {
+/// Clamp a position (Bevy space) to terrain: apply vertical velocity and gravity.
+fn clamp_to_terrain(
+    terrain: &TerrainHeightMap,
+    pos: &mut Position,
+    vert_vel: &mut VerticalVelocity,
+    dt: f32,
+) {
     let Some(ground_y) = terrain.height_at_bevy(pos.x, pos.z) else {
         return;
     };
+
+    // Apply vertical velocity (jump impulse)
+    if vert_vel.0 != 0.0 {
+        pos.y += vert_vel.0 * dt;
+        vert_vel.0 -= GRAVITY * dt;
+    }
+
     if pos.y < ground_y {
         pos.y = ground_y;
-    } else if pos.y > ground_y + GROUND_SNAP_THRESHOLD {
+        vert_vel.0 = 0.0;
+    } else if vert_vel.0 == 0.0 && pos.y > ground_y + GROUND_SNAP_THRESHOLD {
         pos.y -= GRAVITY * dt;
         if pos.y < ground_y {
             pos.y = ground_y;
@@ -498,6 +517,7 @@ mod tests {
     use shared::protocol::{ChatType, PlayerInput};
     use std::panic::{AssertUnwindSafe, catch_unwind};
 
+
     #[derive(Component)]
     struct ReplicationTag;
 
@@ -514,6 +534,7 @@ mod tests {
                     z: 0.0,
                 },
                 MovementSpeed(DEFAULT_RUN_SPEED),
+                VerticalVelocity::default(),
                 Player {
                     name: "test".into(),
                     race: 1,
@@ -550,10 +571,7 @@ mod tests {
         let input = make_input(1.0, 0.0, 0.0);
 
         let _ = app.world_mut().run_system_once(
-            move |mut q: Query<
-                (&mut Position, &mut Rotation, &mut MovementSpeed, Option<&Auras>),
-                With<Player>,
-            >,
+            move |mut q: Query<PlayerMovement, With<Player>>,
                   time: Res<Time>| {
                 apply_movement_input(&input, player_a, &mut q, &time);
             },
@@ -577,10 +595,7 @@ mod tests {
             running: true,
         };
         let _ = app.world_mut().run_system_once(
-            move |mut q: Query<
-                (&mut Position, &mut Rotation, &mut MovementSpeed, Option<&Auras>),
-                With<Player>,
-            >,
+            move |mut q: Query<PlayerMovement, With<Player>>,
                   time: Res<Time>| {
                 apply_movement_input(&input, player, &mut q, &time);
             },
@@ -600,10 +615,7 @@ mod tests {
             running: false,
         };
         let _ = app.world_mut().run_system_once(
-            move |mut q: Query<
-                (&mut Position, &mut Rotation, &mut MovementSpeed, Option<&Auras>),
-                With<Player>,
-            >,
+            move |mut q: Query<PlayerMovement, With<Player>>,
                   time: Res<Time>| {
                 apply_movement_input(&input, player, &mut q, &time);
             },
@@ -626,10 +638,7 @@ mod tests {
         let captured_dt = std::sync::Arc::new(std::sync::Mutex::new(0.0_f32));
         let dt_clone = captured_dt.clone();
         let _ = app.world_mut().run_system_once(
-            move |mut q: Query<
-                (&mut Position, &mut Rotation, &mut MovementSpeed, Option<&Auras>),
-                With<Player>,
-            >,
+            move |mut q: Query<PlayerMovement, With<Player>>,
                   time: Res<Time>| {
                 *dt_clone.lock().unwrap() = time.delta_secs();
                 apply_movement_input(&input, player, &mut q, &time);
@@ -656,10 +665,7 @@ mod tests {
         let captured_dt = std::sync::Arc::new(std::sync::Mutex::new(0.0_f32));
         let dt_clone = captured_dt.clone();
         let _ = app.world_mut().run_system_once(
-            move |mut q: Query<
-                (&mut Position, &mut Rotation, &mut MovementSpeed, Option<&Auras>),
-                With<Player>,
-            >,
+            move |mut q: Query<PlayerMovement, With<Player>>,
                   time: Res<Time>| {
                 *dt_clone.lock().unwrap() = time.delta_secs();
                 apply_movement_input(&input, player, &mut q, &time);
@@ -706,10 +712,7 @@ mod tests {
         let captured_dt = std::sync::Arc::new(std::sync::Mutex::new(0.0_f32));
         let dt_clone = captured_dt.clone();
         let _ = app.world_mut().run_system_once(
-            move |mut q: Query<
-                (&mut Position, &mut Rotation, &mut MovementSpeed, Option<&Auras>),
-                With<Player>,
-            >,
+            move |mut q: Query<PlayerMovement, With<Player>>,
                   time: Res<Time>| {
                 *dt_clone.lock().unwrap() = time.delta_secs();
                 apply_movement_input(&input, player, &mut q, &time);
@@ -764,10 +767,7 @@ mod tests {
         let captured_dt2 = std::sync::Arc::new(std::sync::Mutex::new(0.0_f32));
         let dt_clone2 = captured_dt2.clone();
         let _ = app.world_mut().run_system_once(
-            move |mut q: Query<
-                (&mut Position, &mut Rotation, &mut MovementSpeed, Option<&Auras>),
-                With<Player>,
-            >,
+            move |mut q: Query<PlayerMovement, With<Player>>,
                   time: Res<Time>| {
                 *dt_clone2.lock().unwrap() = time.delta_secs();
                 apply_movement_input(&input2, player, &mut q, &time);
@@ -811,10 +811,7 @@ mod tests {
 
         let input = make_input(1.0, 0.0, 0.0);
         let _ = app.world_mut().run_system_once(
-            move |mut q: Query<
-                (&mut Position, &mut Rotation, &mut MovementSpeed, Option<&Auras>),
-                With<Player>,
-            >,
+            move |mut q: Query<PlayerMovement, With<Player>>,
                   time: Res<Time>| {
                 apply_movement_input(&input, player, &mut q, &time);
             },
@@ -835,10 +832,7 @@ mod tests {
         let input = make_input(0.0, 0.0, 0.0);
 
         let _ = app.world_mut().run_system_once(
-            move |mut q: Query<
-                (&mut Position, &mut Rotation, &mut MovementSpeed, Option<&Auras>),
-                With<Player>,
-            >,
+            move |mut q: Query<PlayerMovement, With<Player>>,
                   time: Res<Time>| {
                 apply_movement_input(&input, player, &mut q, &time);
             },
@@ -860,7 +854,7 @@ mod tests {
             y: 30.0,
             z: -90.0,
         };
-        clamp_to_terrain(&map, &mut pos, 0.05);
+        clamp_to_terrain(&map, &mut pos, &mut VerticalVelocity::default(), 0.05);
         assert!((pos.y - 50.0).abs() < 0.01);
     }
 
@@ -873,7 +867,7 @@ mod tests {
             z: -90.0,
         };
         let dt = 0.05;
-        clamp_to_terrain(&map, &mut pos, dt);
+        clamp_to_terrain(&map, &mut pos, &mut VerticalVelocity::default(), dt);
         let expected = 60.0 - GRAVITY * dt;
         assert!((pos.y - expected).abs() < 0.01);
     }
@@ -890,19 +884,19 @@ mod tests {
         let dt = 0.05;
 
         // First tick: falls by GRAVITY * dt
-        clamp_to_terrain(&map, &mut pos, dt);
+        clamp_to_terrain(&map, &mut pos, &mut VerticalVelocity::default(), dt);
         let after_one = 60.0 - GRAVITY * dt;
         assert!((pos.y - after_one).abs() < 0.01);
 
         // Second tick: falls further
-        clamp_to_terrain(&map, &mut pos, dt);
+        clamp_to_terrain(&map, &mut pos, &mut VerticalVelocity::default(), dt);
         let after_two = after_one - GRAVITY * dt;
         assert!((pos.y - after_two).abs() < 0.01);
         assert!(pos.y > ground_y, "still airborne");
 
         // Many ticks: eventually clamps to ground
         for _ in 0..200 {
-            clamp_to_terrain(&map, &mut pos, dt);
+            clamp_to_terrain(&map, &mut pos, &mut VerticalVelocity::default(), dt);
         }
         assert!(
             (pos.y - ground_y).abs() < 0.01,
@@ -911,7 +905,7 @@ mod tests {
         );
 
         // Once on ground, stays put
-        clamp_to_terrain(&map, &mut pos, dt);
+        clamp_to_terrain(&map, &mut pos, &mut VerticalVelocity::default(), dt);
         assert!((pos.y - ground_y).abs() < 0.01);
     }
 
@@ -923,7 +917,7 @@ mod tests {
             y: 50.05,
             z: -90.0,
         };
-        clamp_to_terrain(&map, &mut pos, 0.05);
+        clamp_to_terrain(&map, &mut pos, &mut VerticalVelocity::default(), 0.05);
         assert!((pos.y - 50.05).abs() < 0.01);
     }
 
@@ -935,30 +929,80 @@ mod tests {
 
         // Below ground: snaps up to ground
         let mut below = Position { x: 90.0, y: 48.0, z: -90.0 };
-        clamp_to_terrain(&map, &mut below, dt);
+        clamp_to_terrain(&map, &mut below, &mut VerticalVelocity::default(), dt);
         assert!((below.y - ground_y).abs() < 0.01, "below snaps to ground");
 
         // Exactly at ground: stays
         let mut exact = Position { x: 90.0, y: ground_y, z: -90.0 };
-        clamp_to_terrain(&map, &mut exact, dt);
+        clamp_to_terrain(&map, &mut exact, &mut VerticalVelocity::default(), dt);
         assert!((exact.y - ground_y).abs() < 0.01, "exact stays on ground");
 
         // Within threshold (ground + 0.29): no gravity, stays put
         let within_y = ground_y + GROUND_SNAP_THRESHOLD - 0.01;
         let mut within = Position { x: 90.0, y: within_y, z: -90.0 };
-        clamp_to_terrain(&map, &mut within, dt);
+        clamp_to_terrain(&map, &mut within, &mut VerticalVelocity::default(), dt);
         assert!((within.y - within_y).abs() < 0.01, "within threshold stays");
 
         // Just above threshold (ground + 10.0): gravity applies, doesn't clamp yet
         let above_y = ground_y + 10.0;
         let mut above = Position { x: 90.0, y: above_y, z: -90.0 };
-        clamp_to_terrain(&map, &mut above, dt);
+        clamp_to_terrain(&map, &mut above, &mut VerticalVelocity::default(), dt);
         let expected = above_y - GRAVITY * dt;
         assert!(
             (above.y - expected).abs() < 0.01,
             "above threshold falls: y={}, expected={expected}",
             above.y,
         );
+    }
+
+    #[test]
+    fn jump_impulse_and_landing() {
+        let ground_y = 50.0;
+        let map = crate::terrain_height::test_helpers::flat_terrain(100.0, 100.0, ground_y);
+        let mut pos = Position { x: 90.0, y: ground_y, z: -90.0 };
+        let mut vel = VerticalVelocity(shared::movement::JUMP_IMPULSE);
+        let dt = 0.05;
+
+        // First tick: impulse pushes upward
+        clamp_to_terrain(&map, &mut pos, &mut vel, dt);
+        let expected_y = ground_y + shared::movement::JUMP_IMPULSE * dt;
+        assert!(
+            (pos.y - expected_y).abs() < 0.1,
+            "after jump tick 1: y={}, expected ~{expected_y}",
+            pos.y,
+        );
+        assert!(pos.y > ground_y, "airborne after jump");
+
+        // Velocity decreases by gravity each tick
+        let expected_vel = shared::movement::JUMP_IMPULSE - GRAVITY * dt;
+        assert!(
+            (vel.0 - expected_vel).abs() < 0.1,
+            "vel={}, expected ~{expected_vel}",
+            vel.0,
+        );
+
+        // Continue ticking until landing
+        let mut peak_y = pos.y;
+        for _ in 0..200 {
+            clamp_to_terrain(&map, &mut pos, &mut vel, dt);
+            if pos.y > peak_y {
+                peak_y = pos.y;
+            }
+            if pos.y <= ground_y + 0.01 && vel.0 == 0.0 {
+                break;
+            }
+        }
+
+        // Reached a peak above ground
+        assert!(peak_y > ground_y + 1.0, "jumped to peak {peak_y}");
+
+        // Landed back on ground with velocity zeroed
+        assert!(
+            (pos.y - ground_y).abs() < 0.01,
+            "landed: y={}, ground={ground_y}",
+            pos.y,
+        );
+        assert_eq!(vel.0, 0.0, "velocity zeroed on landing");
     }
 
     #[test]

@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use lightyear::prelude::*;
 use shared::components::{
     CombatRatings, GuildMembership, Health, Level, Mana, MovementSpeed, Player, Position, Rotation,
-    UnitStats,
+    UnitStats, VerticalVelocity,
 };
 use shared::protocol::{
     AuthChannel, CreateCharacter, CreateCharacterResponse, DeleteCharacter,
@@ -342,6 +342,7 @@ fn build_player_components(data: &CharacterData, character_id: u64) -> impl Bund
             z: 0.0,
         },
         MovementSpeed(DEFAULT_RUN_SPEED),
+        VerticalVelocity::default(),
         Player {
             name: data.name.clone(),
             race: data.race,
