@@ -603,6 +603,41 @@ mod tests {
     }
 
     #[test]
+    fn walk_speed_moves_at_2_5_yards_per_sec() {
+        assert!((DEFAULT_WALK_SPEED - 2.5).abs() < 1e-6);
+        let mut app = setup_app_with_time();
+        let player = spawn_player(app.world_mut(), 0.0, 0.0, 0.0);
+        let input = PlayerInput {
+            direction: [1.0, 0.0, 0.0],
+            facing_yaw: 0.0,
+            jumping: false,
+            running: false,
+        };
+        let captured_dt = std::sync::Arc::new(std::sync::Mutex::new(0.0_f32));
+        let dt_clone = captured_dt.clone();
+        let _ = app.world_mut().run_system_once(
+            move |mut q: Query<
+                (&mut Position, &mut Rotation, &mut MovementSpeed),
+                With<Player>,
+            >,
+                  time: Res<Time>| {
+                *dt_clone.lock().unwrap() = time.delta_secs();
+                apply_movement_input(&input, player, &mut q, &time);
+            },
+        );
+        let dt = *captured_dt.lock().unwrap();
+        let pos = *app.world().entity(player).get::<Position>().unwrap();
+        let expected_x = DEFAULT_WALK_SPEED * dt;
+        assert!(
+            (pos.x - expected_x).abs() < 1e-6,
+            "walk moved {}, expected {} (2.5 * {dt})",
+            pos.x,
+            expected_x,
+        );
+        assert!((pos.y - 0.0).abs() < 1e-6, "y unchanged");
+    }
+
+    #[test]
     fn zero_direction_ignored() {
         let mut app = setup_app_with_time();
         let player = spawn_player(app.world_mut(), 5.0, 5.0, 5.0);
