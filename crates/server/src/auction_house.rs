@@ -1108,6 +1108,42 @@ mod tests {
     }
 
     #[test]
+    fn search_with_all_filters_combined() {
+        let mut state = AuctionHouseState::default();
+        state.auctions.insert(1, test_auction(1, "Iron Sword", 2, 20));
+        state.auctions.insert(2, test_auction(2, "Iron Shield", 3, 20));
+        state.auctions.insert(3, test_auction(3, "Iron Ore", 2, 5));
+        state.auctions.insert(4, test_auction(4, "Steel Sword", 2, 30));
+
+        // All three filters: name="iron" + quality=2 + level 10..=25
+        let mut query = text_query("iron");
+        query.quality = Some(2);
+        query.min_level = Some(10);
+        query.max_level = Some(25);
+        let r = search_auctions(&state.auctions, &query);
+        // Only Iron Sword matches (name=iron, quality=2, level=20)
+        // Iron Shield: quality=3 (miss), Iron Ore: level=5 (miss), Steel Sword: name miss
+        assert_eq!(r.total_results, 1);
+        assert_eq!(r.results[0].item.name, "Iron Sword");
+
+        // Relax level to include Iron Ore (level 5)
+        let mut query = text_query("iron");
+        query.quality = Some(2);
+        query.min_level = Some(1);
+        query.max_level = Some(25);
+        let r = search_auctions(&state.auctions, &query);
+        assert_eq!(r.total_results, 2);
+
+        // All filters match nothing
+        let mut query = text_query("iron");
+        query.quality = Some(4);
+        query.min_level = Some(10);
+        query.max_level = Some(25);
+        let r = search_auctions(&state.auctions, &query);
+        assert_eq!(r.total_results, 0);
+    }
+
+    #[test]
     fn faction_isolation_filters_auctions() {
         let mut state = AuctionHouseState::default();
         let mut alliance = test_auction(1, "Alliance Sword", 2, 10);
