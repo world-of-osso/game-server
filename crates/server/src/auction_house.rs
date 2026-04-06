@@ -451,6 +451,17 @@ fn place_bid(
 
     auction.current_bid = Some(amount);
     auction.current_bidder_character_id = Some(character_id);
+
+    // Bid meeting buyout price triggers immediate sale
+    if let Some(buyout) = auction.buyout_price
+        && amount >= buyout
+    {
+        let auction = state.auctions.remove(&auction_id).expect("auction present");
+        persistence::delete_auction(db, auction_id);
+        complete_sale(db, &auction, character_id, amount);
+        return ok("bid met buyout — auction sold");
+    }
+
     persistence::save_auction(db, auction);
     ok("bid placed")
 }
@@ -1336,6 +1347,47 @@ mod tests {
             persistence::load_inventory(&db, seller_id).items.len(),
             inv.items.len(),
         );
+    }
+
+    #[test]
+    fn bid_at_buyout_price_triggers_immediate_sale() {
+        let db = persistence::temp_database();
+        let (seller_id, _) =
+            persistence::create_character(&db, 1, "Seller", 1, 1).expect("seller");
+        let (buyer_id, _) =
+            persistence::create_character(&db, 2, "Buyer", 1, 1).expect("buyer");
+        let source_item = persistence::load_inventory(&db, seller_id).items[0].clone();
+        let mut state = AuctionHouseState::default();
+
+        create_auction(
+            &db,
+            &mut state,
+            seller_id,
+            &CreateAuction {
+                item_guid: source_item.item_guid,
+                stack_count: 1,
+                min_bid: 100,
+                buyout_price: Some(500),
+                duration: AuctionDuration::Medium,
+            },
+        );
+        let auction_id = *state.auctions.keys().next().expect("auction id");
+
+        let response = place_bid(&db, &mut state, buyer_id, auction_id, 500);
+        assert!(response.success);
+
+        // Auction removed (sale completed)
+        assert!(!state.auctions.contains_key(&auction_id));
+
+        // Buyer receives item, seller receives gold minus house cut
+        let buyer_mail = persistence::load_mailbox(&db, buyer_id);
+        assert_eq!(buyer_mail.len(), 1);
+        assert!(buyer_mail[0].attached_item.is_some());
+
+        let seller_mail = persistence::load_mailbox(&db, seller_id);
+        assert_eq!(seller_mail.len(), 1);
+        let expected_proceeds = 500 - (500 * HOUSE_CUT_BPS / 10_000);
+        assert_eq!(seller_mail[0].attached_money, expected_proceeds);
     }
 
     #[test]
