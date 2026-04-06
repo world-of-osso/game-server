@@ -514,6 +514,9 @@ pub enum AuraEffect {
     /// Modify threat generated (e.g. 0.43 = +43% threat for Righteous Fury).
     /// Tank stances/auras use positive values; threat reduction uses negative.
     ModThreat { percent: f32 },
+    /// Reduce cooldown of a specific spell by a flat amount (seconds).
+    /// `spell_id` = 0 means all spells. Negative values increase cooldown.
+    ModCooldown { spell_id: u32, reduction: f32 },
 }
 
 /// A single buff or debuff active on a unit.
@@ -846,6 +849,26 @@ impl Auras {
                 AuraEffect::ModThreat { percent } => acc * (1.0 + percent),
                 _ => acc,
             })
+    }
+
+    /// Compute the effective cooldown for a spell after CDR auras/talents.
+    ///
+    /// Sums all `ModCooldown` reductions that match the spell_id (or spell_id=0
+    /// for global CDR). Result is clamped to a minimum of 0.
+    pub fn effective_cooldown(&self, spell_id: u32, base_cooldown: f32) -> f32 {
+        let total_reduction: f32 = self
+            .active
+            .iter()
+            .flat_map(|a| a.effects.iter().flatten())
+            .filter_map(|e| match e {
+                AuraEffect::ModCooldown {
+                    spell_id: sid,
+                    reduction,
+                } if *sid == spell_id || *sid == 0 => Some(reduction),
+                _ => None,
+            })
+            .sum();
+        (base_cooldown - total_reduction).max(0.0)
     }
 
     /// Remove all auras (on death). Clears the entire active list.
@@ -2363,8 +2386,9 @@ mod tests {
             AuraEffect::ModHaste { percent: 0.1 },
             AuraEffect::ModCritChance { percent: 0.05 },
             AuraEffect::ModThreat { percent: 0.43 },
+            AuraEffect::ModCooldown { spell_id: 100, reduction: 2.0 },
         ];
-        assert_eq!(effects.len(), 11);
+        assert_eq!(effects.len(), 12);
     }
 
     // --- Aura stacking tests ---
@@ -4000,6 +4024,75 @@ mod tests {
         // Healer with 0.7x threat reduction heals 1000 → 1000 * 0.5 * 0.7 = 350
         table.add_heal_threat(1, 1000.0, 0.7);
         assert!((table.threat_for(1) - 350.0).abs() < 0.01);
+    }
+
+    // --- Cooldown reduction tests ---
+
+    fn make_cdr_aura(spell_id: u32, caster: u64, target_spell: u32, reduction: f32) -> Aura {
+        Aura {
+            spell_id,
+            caster,
+            duration: 60.0,
+            remaining: 60.0,
+            effects: [
+                Some(AuraEffect::ModCooldown {
+                    spell_id: target_spell,
+                    reduction,
+                }),
+                None,
+                None,
+            ],
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn cdr_no_auras_returns_base() {
+        let auras = Auras::default();
+        assert_eq!(auras.effective_cooldown(100, 10.0), 10.0);
+    }
+
+    #[test]
+    fn cdr_specific_spell_reduction() {
+        let mut auras = Auras::default();
+        auras.active.push(make_cdr_aura(1000, 1, 100, 2.0)); // -2s to spell 100
+        assert_eq!(auras.effective_cooldown(100, 10.0), 8.0);
+        assert_eq!(auras.effective_cooldown(200, 10.0), 10.0); // unaffected
+    }
+
+    #[test]
+    fn cdr_global_reduction() {
+        let mut auras = Auras::default();
+        auras.active.push(make_cdr_aura(1000, 1, 0, 1.0)); // -1s to ALL spells
+        assert_eq!(auras.effective_cooldown(100, 8.0), 7.0);
+        assert_eq!(auras.effective_cooldown(200, 5.0), 4.0);
+    }
+
+    #[test]
+    fn cdr_stacks_additively() {
+        let mut auras = Auras::default();
+        auras.active.push(make_cdr_aura(1000, 1, 100, 2.0));
+        auras.active.push(make_cdr_aura(1001, 1, 100, 1.5));
+        // 10 - 2 - 1.5 = 6.5
+        assert!((auras.effective_cooldown(100, 10.0) - 6.5).abs() < 0.001);
+    }
+
+    #[test]
+    fn cdr_clamps_to_zero() {
+        let mut auras = Auras::default();
+        auras.active.push(make_cdr_aura(1000, 1, 100, 20.0)); // more than CD
+        assert_eq!(auras.effective_cooldown(100, 8.0), 0.0);
+    }
+
+    #[test]
+    fn cdr_global_and_specific_stack() {
+        let mut auras = Auras::default();
+        auras.active.push(make_cdr_aura(1000, 1, 0, 1.0));   // -1s all
+        auras.active.push(make_cdr_aura(1001, 1, 100, 2.0));  // -2s to 100
+        // spell 100: 10 - 1 - 2 = 7
+        assert_eq!(auras.effective_cooldown(100, 10.0), 7.0);
+        // spell 200: 10 - 1 = 9
+        assert_eq!(auras.effective_cooldown(200, 10.0), 9.0);
     }
 
     // --- Periodic tick tests ---
