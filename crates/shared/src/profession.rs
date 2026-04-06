@@ -433,6 +433,122 @@ pub fn attempt_craft(
     }
 }
 
+// --- Profession specializations ---
+
+/// A profession specialization (e.g. Weaponsmith, Elixir Master).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct ProfessionSpec {
+    pub id: u32,
+    pub profession: Profession,
+    pub name: &'static str,
+    /// Minimum skill level to choose this specialization.
+    pub required_skill: u16,
+}
+
+/// All profession specializations.
+///
+/// Ref: AzerothCore specialization quests.
+pub const PROFESSION_SPECS: &[ProfessionSpec] = &[
+    // Blacksmithing
+    ProfessionSpec { id: 1, profession: Profession::Blacksmithing, name: "Weaponsmith", required_skill: 200 },
+    ProfessionSpec { id: 2, profession: Profession::Blacksmithing, name: "Armorsmith", required_skill: 200 },
+    // Leatherworking
+    ProfessionSpec { id: 3, profession: Profession::Leatherworking, name: "Elemental LW", required_skill: 225 },
+    ProfessionSpec { id: 4, profession: Profession::Leatherworking, name: "Dragonscale LW", required_skill: 225 },
+    ProfessionSpec { id: 5, profession: Profession::Leatherworking, name: "Tribal LW", required_skill: 225 },
+    // Alchemy
+    ProfessionSpec { id: 6, profession: Profession::Alchemy, name: "Elixir Master", required_skill: 325 },
+    ProfessionSpec { id: 7, profession: Profession::Alchemy, name: "Potion Master", required_skill: 325 },
+    ProfessionSpec { id: 8, profession: Profession::Alchemy, name: "Transmutation Master", required_skill: 325 },
+    // Engineering
+    ProfessionSpec { id: 9, profession: Profession::Engineering, name: "Gnomish Engineer", required_skill: 200 },
+    ProfessionSpec { id: 10, profession: Profession::Engineering, name: "Goblin Engineer", required_skill: 200 },
+    // Tailoring
+    ProfessionSpec { id: 11, profession: Profession::Tailoring, name: "Mooncloth Tailor", required_skill: 350 },
+    ProfessionSpec { id: 12, profession: Profession::Tailoring, name: "Shadoweave Tailor", required_skill: 350 },
+    ProfessionSpec { id: 13, profession: Profession::Tailoring, name: "Spellfire Tailor", required_skill: 350 },
+];
+
+/// Get available specializations for a profession.
+pub fn specs_for_profession(profession: Profession) -> Vec<&'static ProfessionSpec> {
+    PROFESSION_SPECS
+        .iter()
+        .filter(|s| s.profession == profession)
+        .collect()
+}
+
+/// Player's chosen profession specializations.
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+pub struct ChosenSpecs {
+    pub spec_ids: Vec<u32>,
+}
+
+/// Why choosing a specialization failed.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SpecError {
+    /// Already specialized in this profession.
+    AlreadySpecialized,
+    /// Skill too low to specialize.
+    SkillTooLow,
+    /// Spec not found.
+    InvalidSpec,
+}
+
+impl ChosenSpecs {
+    /// Choose a specialization. One per profession.
+    pub fn choose(
+        &mut self,
+        spec_id: u32,
+        profs: &PlayerProfessions,
+    ) -> Result<(), SpecError> {
+        let spec = PROFESSION_SPECS
+            .iter()
+            .find(|s| s.id == spec_id)
+            .ok_or(SpecError::InvalidSpec)?;
+
+        // Check if already specialized in this profession
+        let already = self.spec_ids.iter().any(|&id| {
+            PROFESSION_SPECS
+                .iter()
+                .any(|s| s.id == id && s.profession == spec.profession)
+        });
+        if already {
+            return Err(SpecError::AlreadySpecialized);
+        }
+
+        let skill = profs.get(spec.profession).ok_or(SpecError::SkillTooLow)?;
+        if skill.current < spec.required_skill {
+            return Err(SpecError::SkillTooLow);
+        }
+
+        self.spec_ids.push(spec_id);
+        Ok(())
+    }
+
+    /// Whether the player has a specific spec.
+    pub fn has_spec(&self, spec_id: u32) -> bool {
+        self.spec_ids.contains(&spec_id)
+    }
+
+    /// Get the player's spec for a profession, if any.
+    pub fn spec_for_profession(&self, profession: Profession) -> Option<&'static ProfessionSpec> {
+        self.spec_ids.iter().find_map(|&id| {
+            PROFESSION_SPECS
+                .iter()
+                .find(|s| s.id == id && s.profession == profession)
+        })
+    }
+
+    /// Drop a specialization (re-specialize).
+    pub fn drop_spec(&mut self, profession: Profession) {
+        self.spec_ids.retain(|&id| {
+            !PROFESSION_SPECS
+                .iter()
+                .any(|s| s.id == id && s.profession == profession)
+        });
+    }
+}
+
 // --- Recipe sources ---
 
 /// How a recipe is acquired.
@@ -827,6 +943,79 @@ mod tests {
         let missing = check_materials(&recipe, &inv);
         assert_eq!(missing.len(), 1);
         assert_eq!(missing[0], CraftMaterial { item_id: 100, count: 3 });
+    }
+
+    // --- Profession specialization tests ---
+
+    fn bs_profs(skill: u16) -> PlayerProfessions {
+        let mut profs = PlayerProfessions::default();
+        profs.learn(Profession::Blacksmithing).unwrap();
+        let s = profs.get_mut(Profession::Blacksmithing).unwrap();
+        s.current = skill;
+        s.max = 300;
+        profs
+    }
+
+    #[test]
+    fn specs_for_blacksmithing() {
+        let specs = specs_for_profession(Profession::Blacksmithing);
+        assert_eq!(specs.len(), 2);
+    }
+
+    #[test]
+    fn choose_spec() {
+        let profs = bs_profs(250);
+        let mut chosen = ChosenSpecs::default();
+        assert!(chosen.choose(1, &profs).is_ok()); // Weaponsmith
+        assert!(chosen.has_spec(1));
+        assert_eq!(
+            chosen.spec_for_profession(Profession::Blacksmithing).unwrap().name,
+            "Weaponsmith"
+        );
+    }
+
+    #[test]
+    fn choose_spec_skill_too_low() {
+        let profs = bs_profs(100); // need 200
+        let mut chosen = ChosenSpecs::default();
+        assert_eq!(chosen.choose(1, &profs), Err(SpecError::SkillTooLow));
+    }
+
+    #[test]
+    fn choose_spec_already_specialized() {
+        let profs = bs_profs(250);
+        let mut chosen = ChosenSpecs::default();
+        chosen.choose(1, &profs).unwrap(); // Weaponsmith
+        assert_eq!(chosen.choose(2, &profs), Err(SpecError::AlreadySpecialized));
+    }
+
+    #[test]
+    fn drop_and_respec() {
+        let profs = bs_profs(250);
+        let mut chosen = ChosenSpecs::default();
+        chosen.choose(1, &profs).unwrap();
+        chosen.drop_spec(Profession::Blacksmithing);
+        assert!(!chosen.has_spec(1));
+        assert!(chosen.choose(2, &profs).is_ok()); // Armorsmith now
+    }
+
+    #[test]
+    fn multiple_profession_specs() {
+        let mut profs = bs_profs(250);
+        profs.learn(Profession::Alchemy).unwrap();
+        let s = profs.get_mut(Profession::Alchemy).unwrap();
+        s.current = 350;
+        s.max = 450;
+
+        let mut chosen = ChosenSpecs::default();
+        chosen.choose(1, &profs).unwrap(); // Weaponsmith
+        chosen.choose(6, &profs).unwrap(); // Elixir Master
+        assert_eq!(chosen.spec_ids.len(), 2);
+    }
+
+    #[test]
+    fn total_spec_count() {
+        assert_eq!(PROFESSION_SPECS.len(), 13);
     }
 
     // --- Recipe source tests ---
