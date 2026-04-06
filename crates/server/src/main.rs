@@ -3,6 +3,7 @@ mod admin_ipc;
 mod admin_types;
 mod auction_house;
 mod auth;
+mod auth_character;
 mod combat;
 mod creature_ai;
 mod interest;
