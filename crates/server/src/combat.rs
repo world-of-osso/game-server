@@ -77,6 +77,7 @@ pub struct CombatPlugin;
 impl Plugin for CombatPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<CombatLog>();
+        app.init_resource::<shared::components::SpellBatch>();
         app.add_systems(
             FixedUpdate,
             (

@@ -1527,6 +1527,55 @@ impl SchoolLockouts {
     }
 }
 
+// --- Spell batching ---
+
+/// A queued spell cast awaiting batch processing.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct PendingSpellCast {
+    /// Caster entity bits.
+    pub caster: u64,
+    /// Target entity bits (0 for self-cast).
+    pub target: u64,
+    /// Spell ID to cast.
+    pub spell_id: u32,
+}
+
+/// Collects spell casts within a server tick for simultaneous resolution.
+///
+/// Spells queued during the same tick are processed together, allowing
+/// simultaneous events (e.g. two players killing each other). The server
+/// runs at a fixed tick rate (20Hz / 50ms by default via Bevy FixedUpdate),
+/// which acts as the natural batch window.
+///
+/// Ref: WoW spell batching — retail uses ~10ms batches, Classic used ~400ms.
+/// Our 50ms tick provides a middle ground.
+#[derive(Resource, Debug, Clone, Default)]
+pub struct SpellBatch {
+    pending: Vec<PendingSpellCast>,
+}
+
+impl SpellBatch {
+    /// Queue a spell cast for batch processing this tick.
+    pub fn queue(&mut self, cast: PendingSpellCast) {
+        self.pending.push(cast);
+    }
+
+    /// Drain all pending casts for processing. Returns them in queue order.
+    pub fn drain(&mut self) -> Vec<PendingSpellCast> {
+        std::mem::take(&mut self.pending)
+    }
+
+    /// Number of pending casts.
+    pub fn len(&self) -> usize {
+        self.pending.len()
+    }
+
+    /// Whether the batch is empty.
+    pub fn is_empty(&self) -> bool {
+        self.pending.is_empty()
+    }
+}
+
 // --- Spell projectiles ---
 
 /// Default projectile speed in yards per second (matches WoW's common spell speed).
@@ -2871,6 +2920,44 @@ mod tests {
         lockouts.tick(4.0);
         assert!(!lockouts.is_locked(SpellSchool::Fire)); // expired
         assert!(lockouts.is_locked(SpellSchool::Frost)); // 1s left
+    }
+
+    // --- Spell batching tests ---
+
+    #[test]
+    fn spell_batch_queue_and_drain() {
+        let mut batch = SpellBatch::default();
+        assert!(batch.is_empty());
+
+        batch.queue(PendingSpellCast { caster: 1, target: 2, spell_id: 133 });
+        batch.queue(PendingSpellCast { caster: 3, target: 4, spell_id: 116 });
+        assert_eq!(batch.len(), 2);
+
+        let drained = batch.drain();
+        assert_eq!(drained.len(), 2);
+        assert_eq!(drained[0].spell_id, 133);
+        assert_eq!(drained[1].spell_id, 116);
+        assert!(batch.is_empty());
+    }
+
+    #[test]
+    fn spell_batch_drain_clears() {
+        let mut batch = SpellBatch::default();
+        batch.queue(PendingSpellCast { caster: 1, target: 2, spell_id: 100 });
+        batch.drain();
+        batch.drain(); // second drain returns empty
+        assert!(batch.is_empty());
+    }
+
+    #[test]
+    fn spell_batch_preserves_order() {
+        let mut batch = SpellBatch::default();
+        for i in 0..5 {
+            batch.queue(PendingSpellCast { caster: 1, target: 2, spell_id: i });
+        }
+        let drained = batch.drain();
+        let ids: Vec<u32> = drained.iter().map(|c| c.spell_id).collect();
+        assert_eq!(ids, vec![0, 1, 2, 3, 4]);
     }
 
     // --- Spell projectile tests ---
