@@ -394,6 +394,9 @@ pub enum AuraEffect {
     ModHaste { percent: f32 },
     /// Modify crit chance (flat addition, e.g. 0.05 = 5%).
     ModCritChance { percent: f32 },
+    /// Modify threat generated (e.g. 0.43 = +43% threat for Righteous Fury).
+    /// Tank stances/auras use positive values; threat reduction uses negative.
+    ModThreat { percent: f32 },
 }
 
 /// A single buff or debuff active on a unit.
@@ -714,6 +717,20 @@ impl Auras {
             })
     }
 
+    /// Multiplicative threat modifier from all active `ModThreat` auras.
+    ///
+    /// Tank stances (e.g. Righteous Fury +43%, Defensive Stance +30%) stack
+    /// multiplicatively. Returns a multiplier (1.0 = no change).
+    pub fn threat_multiplier(&self) -> f32 {
+        self.active
+            .iter()
+            .flat_map(|a| a.effects.iter().flatten())
+            .fold(1.0, |acc, effect| match effect {
+                AuraEffect::ModThreat { percent } => acc * (1.0 + percent),
+                _ => acc,
+            })
+    }
+
     /// Remove all auras (on death). Clears the entire active list.
     pub fn clear_all(&mut self) {
         self.active.clear();
@@ -897,17 +914,20 @@ const MELEE_AGGRO_THRESHOLD: f32 = 1.10;
 const RANGED_AGGRO_THRESHOLD: f32 = 1.30;
 
 impl ThreatTable {
-    /// Add threat from damage (1:1 ratio).
-    pub fn add_damage_threat(&mut self, source: u64, damage: f32) {
-        self.add_threat(source, damage);
+    /// Add threat from damage (1:1 base ratio, scaled by `modifier`).
+    ///
+    /// `modifier` is the source entity's threat multiplier from auras
+    /// (e.g. 1.43 for Righteous Fury). Pass 1.0 for no modifier.
+    pub fn add_damage_threat(&mut self, source: u64, damage: f32, modifier: f32) {
+        self.add_threat(source, damage * modifier);
     }
 
-    /// Add threat from healing (0.5:1 ratio, pre-split by caller).
+    /// Add threat from healing (0.5:1 base ratio, scaled by `modifier`, pre-split by caller).
     ///
     /// `heal_amount` is the raw healing done. The caller is responsible for
     /// splitting across engaged mobs before calling this.
-    pub fn add_heal_threat(&mut self, source: u64, heal_amount: f32) {
-        self.add_threat(source, heal_amount * HEAL_THREAT_MULTIPLIER);
+    pub fn add_heal_threat(&mut self, source: u64, heal_amount: f32, modifier: f32) {
+        self.add_threat(source, heal_amount * HEAL_THREAT_MULTIPLIER * modifier);
     }
 
     /// Add a raw threat amount from a source entity.
@@ -1225,8 +1245,9 @@ mod tests {
             AuraEffect::ModCastSpeed { percent: 0.15 },
             AuraEffect::ModHaste { percent: 0.1 },
             AuraEffect::ModCritChance { percent: 0.05 },
+            AuraEffect::ModThreat { percent: 0.43 },
         ];
-        assert_eq!(effects.len(), 10);
+        assert_eq!(effects.len(), 11);
     }
 
     // --- Aura stacking tests ---
@@ -1761,22 +1782,22 @@ mod tests {
     #[test]
     fn threat_damage_adds_one_to_one() {
         let mut table = ThreatTable::default();
-        table.add_damage_threat(1, 500.0);
+        table.add_damage_threat(1, 500.0, 1.0);
         assert_eq!(table.threat_for(1), 500.0);
     }
 
     #[test]
     fn threat_heal_adds_half() {
         let mut table = ThreatTable::default();
-        table.add_heal_threat(1, 1000.0);
+        table.add_heal_threat(1, 1000.0, 1.0);
         assert_eq!(table.threat_for(1), 500.0);
     }
 
     #[test]
     fn threat_accumulates_from_same_source() {
         let mut table = ThreatTable::default();
-        table.add_damage_threat(1, 200.0);
-        table.add_damage_threat(1, 300.0);
+        table.add_damage_threat(1, 200.0, 1.0);
+        table.add_damage_threat(1, 300.0, 1.0);
         assert_eq!(table.threat_for(1), 500.0);
         assert_eq!(table.len(), 1);
     }
@@ -1784,9 +1805,9 @@ mod tests {
     #[test]
     fn threat_top_returns_highest() {
         let mut table = ThreatTable::default();
-        table.add_damage_threat(1, 100.0);
-        table.add_damage_threat(2, 500.0);
-        table.add_damage_threat(3, 200.0);
+        table.add_damage_threat(1, 100.0, 1.0);
+        table.add_damage_threat(2, 500.0, 1.0);
+        table.add_damage_threat(3, 200.0, 1.0);
         let top = table.top_threat().unwrap();
         assert_eq!(top.entity, 2);
         assert_eq!(top.threat, 500.0);
@@ -1801,8 +1822,8 @@ mod tests {
     #[test]
     fn threat_remove_entity() {
         let mut table = ThreatTable::default();
-        table.add_damage_threat(1, 100.0);
-        table.add_damage_threat(2, 200.0);
+        table.add_damage_threat(1, 100.0, 1.0);
+        table.add_damage_threat(2, 200.0, 1.0);
         table.remove(1);
         assert_eq!(table.len(), 1);
         assert_eq!(table.threat_for(1), 0.0);
@@ -1812,8 +1833,8 @@ mod tests {
     #[test]
     fn threat_reset_clears_all() {
         let mut table = ThreatTable::default();
-        table.add_damage_threat(1, 100.0);
-        table.add_damage_threat(2, 200.0);
+        table.add_damage_threat(1, 100.0, 1.0);
+        table.add_damage_threat(2, 200.0, 1.0);
         table.reset();
         assert!(table.is_empty());
     }
@@ -1829,47 +1850,47 @@ mod tests {
     #[test]
     fn aggro_no_current_target_picks_top() {
         let mut table = ThreatTable::default();
-        table.add_damage_threat(1, 100.0);
-        table.add_damage_threat(2, 200.0);
+        table.add_damage_threat(1, 100.0, 1.0);
+        table.add_damage_threat(2, 200.0, 1.0);
         assert_eq!(table.aggro_target(None, true), Some(2));
     }
 
     #[test]
     fn aggro_melee_needs_10_percent_to_swap() {
         let mut table = ThreatTable::default();
-        table.add_damage_threat(1, 1000.0); // current target
-        table.add_damage_threat(2, 1050.0); // 5% more — not enough
+        table.add_damage_threat(1, 1000.0, 1.0); // current target
+        table.add_damage_threat(2, 1050.0, 1.0); // 5% more — not enough
         assert_eq!(table.aggro_target(Some(1), true), Some(1));
     }
 
     #[test]
     fn aggro_melee_swaps_at_110_percent() {
         let mut table = ThreatTable::default();
-        table.add_damage_threat(1, 1000.0); // current target
-        table.add_damage_threat(2, 1100.0); // exactly 110%
+        table.add_damage_threat(1, 1000.0, 1.0); // current target
+        table.add_damage_threat(2, 1100.0, 1.0); // exactly 110%
         assert_eq!(table.aggro_target(Some(1), true), Some(2));
     }
 
     #[test]
     fn aggro_ranged_needs_30_percent_to_swap() {
         let mut table = ThreatTable::default();
-        table.add_damage_threat(1, 1000.0);
-        table.add_damage_threat(2, 1200.0); // 20% more — not enough for ranged
+        table.add_damage_threat(1, 1000.0, 1.0);
+        table.add_damage_threat(2, 1200.0, 1.0); // 20% more — not enough for ranged
         assert_eq!(table.aggro_target(Some(1), false), Some(1));
     }
 
     #[test]
     fn aggro_ranged_swaps_at_130_percent() {
         let mut table = ThreatTable::default();
-        table.add_damage_threat(1, 1000.0);
-        table.add_damage_threat(2, 1300.0); // exactly 130%
+        table.add_damage_threat(1, 1000.0, 1.0);
+        table.add_damage_threat(2, 1300.0, 1.0); // exactly 130%
         assert_eq!(table.aggro_target(Some(1), false), Some(2));
     }
 
     #[test]
     fn aggro_current_target_removed_picks_top() {
         let mut table = ThreatTable::default();
-        table.add_damage_threat(2, 500.0);
+        table.add_damage_threat(2, 500.0, 1.0);
         // Current target entity 1 not in table
         assert_eq!(table.aggro_target(Some(1), true), Some(2));
     }
@@ -1878,6 +1899,68 @@ mod tests {
     fn aggro_empty_table_returns_none() {
         let table = ThreatTable::default();
         assert_eq!(table.aggro_target(None, true), None);
+    }
+
+    // --- Threat modifier tests ---
+
+    fn make_threat_aura(spell_id: u32, caster: u64, percent: f32) -> Aura {
+        Aura {
+            spell_id,
+            caster,
+            duration: 60.0,
+            remaining: 60.0,
+            effects: [
+                Some(AuraEffect::ModThreat { percent }),
+                None,
+                None,
+            ],
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn threat_multiplier_no_auras() {
+        let auras = Auras::default();
+        assert_eq!(auras.threat_multiplier(), 1.0);
+    }
+
+    #[test]
+    fn threat_multiplier_righteous_fury() {
+        let mut auras = Auras::default();
+        auras.active.push(make_threat_aura(100, 1, 0.43)); // +43%
+        assert!((auras.threat_multiplier() - 1.43).abs() < 0.001);
+    }
+
+    #[test]
+    fn threat_multiplier_stacks_multiplicatively() {
+        let mut auras = Auras::default();
+        auras.active.push(make_threat_aura(100, 1, 0.30)); // +30%
+        auras.active.push(make_threat_aura(200, 1, 0.10)); // +10%
+        // 1.3 * 1.1 = 1.43
+        assert!((auras.threat_multiplier() - 1.43).abs() < 0.001);
+    }
+
+    #[test]
+    fn threat_multiplier_reduction() {
+        let mut auras = Auras::default();
+        auras.active.push(make_threat_aura(100, 1, -0.30)); // -30%
+        assert!((auras.threat_multiplier() - 0.70).abs() < 0.001);
+    }
+
+    #[test]
+    fn damage_threat_with_modifier() {
+        let mut table = ThreatTable::default();
+        // Tank with 1.43x threat modifier does 1000 damage → 1430 threat
+        table.add_damage_threat(1, 1000.0, 1.43);
+        assert!((table.threat_for(1) - 1430.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn heal_threat_with_modifier() {
+        let mut table = ThreatTable::default();
+        // Healer with 0.7x threat reduction heals 1000 → 1000 * 0.5 * 0.7 = 350
+        table.add_heal_threat(1, 1000.0, 0.7);
+        assert!((table.threat_for(1) - 350.0).abs() < 0.01);
     }
 
     // --- Periodic tick tests ---
