@@ -161,6 +161,130 @@ impl FactionRegistry {
     }
 }
 
+// --- Rep gains (per-character tracking) ---
+
+use std::collections::HashMap;
+
+/// Source of a reputation change.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum RepGainSource {
+    /// One-time quest completion reward.
+    QuestTurnIn,
+    /// Killing a mob associated with the faction.
+    MobKill,
+    /// Repeatable turn-in (e.g. cloth quartermaster, tokens).
+    RepeatableTurnIn,
+    /// Spillover from a related faction.
+    Spillover,
+    /// Direct GM/admin adjustment.
+    Admin,
+}
+
+/// Result of applying a reputation change.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct RepChangeResult {
+    /// Faction that changed.
+    pub faction_id: u32,
+    /// Rep value before the change.
+    pub old_value: i32,
+    /// Rep value after the change.
+    pub new_value: i32,
+    /// Standing before the change.
+    pub old_standing: Standing,
+    /// Standing after the change.
+    pub new_standing: Standing,
+}
+
+impl RepChangeResult {
+    /// Whether the standing tier changed.
+    pub fn tier_changed(&self) -> bool {
+        self.old_standing != self.new_standing
+    }
+
+    /// The actual amount gained (may differ from requested due to clamping).
+    pub fn actual_change(&self) -> i32 {
+        self.new_value - self.old_value
+    }
+}
+
+/// Per-character reputation tracker across all factions.
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+pub struct CharacterReputation {
+    /// faction_id → current reputation value.
+    values: HashMap<u32, i32>,
+}
+
+impl CharacterReputation {
+    /// Initialize reputation for a character based on their race.
+    pub fn new_for_race(registry: &FactionRegistry, race: u8) -> Self {
+        let mut values = HashMap::new();
+        for faction in registry.iter() {
+            values.insert(faction.id, faction.base_rep_for_race(race));
+        }
+        Self { values }
+    }
+
+    /// Get the raw reputation value for a faction.
+    /// Returns neutral if the faction hasn't been encountered.
+    pub fn get_value(&self, faction_id: u32) -> i32 {
+        self.values.get(&faction_id).copied().unwrap_or(REP_NEUTRAL)
+    }
+
+    /// Get the standing tier for a faction.
+    pub fn get_standing(&self, faction_id: u32) -> Standing {
+        standing_for_value(self.get_value(faction_id))
+    }
+
+    /// Apply a reputation gain or loss. Returns the change result.
+    pub fn modify_rep(
+        &mut self,
+        faction_id: u32,
+        amount: i32,
+        _source: RepGainSource,
+    ) -> RepChangeResult {
+        let old_value = self.get_value(faction_id);
+        let new_value = (old_value + amount).clamp(REP_MIN, REP_MAX);
+        self.values.insert(faction_id, new_value);
+        RepChangeResult {
+            faction_id,
+            old_value,
+            new_value,
+            old_standing: standing_for_value(old_value),
+            new_standing: standing_for_value(new_value),
+        }
+    }
+
+    /// Gain reputation with a faction (positive amount).
+    pub fn gain_rep(&mut self, faction_id: u32, amount: i32, source: RepGainSource) -> RepChangeResult {
+        self.modify_rep(faction_id, amount.abs(), source)
+    }
+
+    /// Lose reputation with a faction (negative amount).
+    pub fn lose_rep(&mut self, faction_id: u32, amount: i32, source: RepGainSource) -> RepChangeResult {
+        self.modify_rep(faction_id, -amount.abs(), source)
+    }
+
+    /// Set reputation to an exact value (admin/debug).
+    pub fn set_rep(&mut self, faction_id: u32, value: i32) {
+        self.values.insert(faction_id, value.clamp(REP_MIN, REP_MAX));
+    }
+
+    /// Number of tracked factions.
+    pub fn faction_count(&self) -> usize {
+        self.values.len()
+    }
+
+    /// All faction IDs this character has reputation with.
+    pub fn tracked_factions(&self) -> Vec<u32> {
+        self.values.keys().copied().collect()
+    }
+
+    /// Whether the character has reached a standing with a faction.
+    pub fn has_standing(&self, faction_id: u32, required: Standing) -> bool {
+        self.get_standing(faction_id) >= required
+    }
+}
+
 #[cfg(test)]
 #[path = "reputation_tests.rs"]
 mod tests;

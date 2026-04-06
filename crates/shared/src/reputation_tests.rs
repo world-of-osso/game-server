@@ -208,3 +208,168 @@ fn standing_order() {
     assert!(Standing::Neutral < Standing::Friendly);
     assert!(Standing::Friendly < Standing::Exalted);
 }
+
+// --- CharacterReputation ---
+
+fn sample_registry() -> FactionRegistry {
+    let mut reg = FactionRegistry::new();
+    reg.add(stormwind());
+    reg.add(orgrimmar());
+    reg
+}
+
+#[test]
+fn new_for_race_human() {
+    let reg = sample_registry();
+    let rep = CharacterReputation::new_for_race(&reg, HUMAN);
+
+    assert_eq!(rep.get_value(72), 21_000); // Stormwind: Friendly for humans
+    assert_eq!(rep.get_standing(72), Standing::Friendly);
+    assert_eq!(rep.get_value(76), 0); // Orgrimmar: Hated for humans
+    assert_eq!(rep.get_standing(76), Standing::Hated);
+    assert_eq!(rep.faction_count(), 2);
+}
+
+#[test]
+fn new_for_race_orc() {
+    let reg = sample_registry();
+    let rep = CharacterReputation::new_for_race(&reg, ORC);
+
+    assert_eq!(rep.get_standing(72), Standing::Hated);
+    assert_eq!(rep.get_standing(76), Standing::Friendly);
+}
+
+#[test]
+fn gain_rep_quest_turnin() {
+    let reg = sample_registry();
+    let mut rep = CharacterReputation::new_for_race(&reg, HUMAN);
+    let base = rep.get_value(72); // 21000
+
+    let result = rep.gain_rep(72, 500, RepGainSource::QuestTurnIn);
+    assert_eq!(result.old_value, base);
+    assert_eq!(result.new_value, base + 500);
+    assert_eq!(result.actual_change(), 500);
+    assert!(!result.tier_changed()); // Still Friendly
+}
+
+#[test]
+fn gain_rep_crosses_tier() {
+    let reg = sample_registry();
+    let mut rep = CharacterReputation::new_for_race(&reg, HUMAN);
+    // Human starts at 21000 (Friendly). Need 9000 more for Honored (30000).
+    let result = rep.gain_rep(72, 9_000, RepGainSource::MobKill);
+
+    assert_eq!(result.new_value, 30_000);
+    assert_eq!(result.old_standing, Standing::Friendly);
+    assert_eq!(result.new_standing, Standing::Honored);
+    assert!(result.tier_changed());
+}
+
+#[test]
+fn gain_rep_mob_kill() {
+    let reg = sample_registry();
+    let mut rep = CharacterReputation::new_for_race(&reg, HUMAN);
+
+    rep.gain_rep(72, 10, RepGainSource::MobKill);
+    assert_eq!(rep.get_value(72), 21_010);
+}
+
+#[test]
+fn gain_rep_repeatable_turnin() {
+    let reg = sample_registry();
+    let mut rep = CharacterReputation::new_for_race(&reg, HUMAN);
+
+    rep.gain_rep(72, 250, RepGainSource::RepeatableTurnIn);
+    rep.gain_rep(72, 250, RepGainSource::RepeatableTurnIn);
+    assert_eq!(rep.get_value(72), 21_500);
+}
+
+#[test]
+fn lose_rep() {
+    let reg = sample_registry();
+    let mut rep = CharacterReputation::new_for_race(&reg, HUMAN);
+
+    let result = rep.lose_rep(72, 1_000, RepGainSource::MobKill);
+    assert_eq!(result.new_value, 20_000);
+    assert_eq!(result.actual_change(), -1_000);
+}
+
+#[test]
+fn lose_rep_crosses_tier_down() {
+    let reg = sample_registry();
+    let mut rep = CharacterReputation::new_for_race(&reg, HUMAN);
+    // 21000 (Friendly) - 2000 = 19000 (Neutral)
+    let result = rep.lose_rep(72, 2_000, RepGainSource::MobKill);
+    assert_eq!(result.old_standing, Standing::Friendly);
+    assert_eq!(result.new_standing, Standing::Neutral);
+    assert!(result.tier_changed());
+}
+
+#[test]
+fn rep_clamps_at_max() {
+    let mut rep = CharacterReputation::default();
+    rep.set_rep(72, 80_000);
+    let result = rep.gain_rep(72, 10_000, RepGainSource::Admin);
+    assert_eq!(result.new_value, REP_MAX);
+    assert_eq!(result.actual_change(), REP_MAX - 80_000);
+}
+
+#[test]
+fn rep_clamps_at_min() {
+    let mut rep = CharacterReputation::default();
+    rep.set_rep(72, 1_000);
+    let result = rep.lose_rep(72, 5_000, RepGainSource::MobKill);
+    assert_eq!(result.new_value, REP_MIN);
+}
+
+#[test]
+fn unknown_faction_defaults_neutral() {
+    let rep = CharacterReputation::default();
+    assert_eq!(rep.get_value(999), REP_NEUTRAL);
+    assert_eq!(rep.get_standing(999), Standing::Neutral);
+}
+
+#[test]
+fn has_standing_check() {
+    let reg = sample_registry();
+    let rep = CharacterReputation::new_for_race(&reg, HUMAN);
+
+    // Stormwind at Friendly
+    assert!(rep.has_standing(72, Standing::Friendly));
+    assert!(rep.has_standing(72, Standing::Neutral));
+    assert!(!rep.has_standing(72, Standing::Honored));
+}
+
+#[test]
+fn set_rep_directly() {
+    let mut rep = CharacterReputation::default();
+    rep.set_rep(72, 42_000);
+    assert_eq!(rep.get_standing(72), Standing::Revered);
+}
+
+#[test]
+fn tracked_factions() {
+    let reg = sample_registry();
+    let rep = CharacterReputation::new_for_race(&reg, HUMAN);
+    let factions = rep.tracked_factions();
+    assert!(factions.contains(&72));
+    assert!(factions.contains(&76));
+}
+
+#[test]
+fn gain_rep_ensures_positive() {
+    let mut rep = CharacterReputation::default();
+    rep.set_rep(72, 20_000);
+    // gain_rep takes abs, so negative input still gains
+    let result = rep.gain_rep(72, -500, RepGainSource::QuestTurnIn);
+    assert_eq!(result.new_value, 20_500);
+}
+
+#[test]
+fn lose_rep_ensures_negative() {
+    let mut rep = CharacterReputation::default();
+    rep.set_rep(72, 20_000);
+    // lose_rep takes abs, so positive input still loses
+    let result = rep.lose_rep(72, 500, RepGainSource::MobKill);
+    assert_eq!(result.new_value, 19_500);
+}
