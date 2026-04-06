@@ -1,4 +1,5 @@
 use super::*;
+use crate::game_object_handlers::*;
 
 fn chest_template() -> GameObjectTemplate {
     GameObjectTemplate {
@@ -369,6 +370,50 @@ fn trap_on_non_trap_object_fails() {
 fn in_trap_radius_boundary() {
     assert!(in_trap_radius(0.0, 0.0, 0.0, 5.0, 0.0, 0.0, 5.0));
     assert!(!in_trap_radius(0.0, 0.0, 0.0, 5.01, 0.0, 0.0, 5.0));
+}
+
+// --- Quest objects ---
+
+fn quest_obj_template() -> GameObjectTemplate {
+    GameObjectTemplate {
+        id: 4001, object_type: GameObjectType::QuestObject, display_id: 800,
+        name: "Ancient Rune".to_string(), faction: 0, flags: GameObjectFlags::INTERACTABLE,
+    }
+}
+
+fn quest_data() -> QuestObjectData {
+    QuestObjectData { quest_id: 100, objective_index: 2 }
+}
+
+#[test]
+fn quest_object_completes_objective() {
+    let mut go = make_go(&quest_obj_template());
+    interact(&mut go).unwrap(); // Ready → InUse
+    let result = use_quest_object(&mut go, &quest_data(), true).unwrap();
+    assert_eq!(result.quest_id, 100);
+    assert_eq!(result.objective_index, 2);
+    assert_eq!(go.state, GameObjectState::Depleted);
+}
+
+#[test]
+fn quest_object_no_quest_fails() {
+    let mut go = make_go(&quest_obj_template());
+    interact(&mut go).unwrap();
+    assert_eq!(use_quest_object(&mut go, &quest_data(), false), Err(InteractionError::NotInteractable));
+    assert_eq!(go.state, GameObjectState::Ready); // Returned to ready
+}
+
+#[test]
+fn quest_object_not_in_use_fails() {
+    let mut go = make_go(&quest_obj_template());
+    assert_eq!(use_quest_object(&mut go, &quest_data(), true), Err(InteractionError::InUse));
+}
+
+#[test]
+fn quest_object_wrong_type_fails() {
+    let mut go = make_go(&chest_template());
+    interact(&mut go).unwrap();
+    assert_eq!(use_quest_object(&mut go, &quest_data(), true), Err(InteractionError::NotInteractable));
 }
 
 // --- Doors ---
