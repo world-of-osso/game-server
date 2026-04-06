@@ -22,6 +22,7 @@ pub mod protocol_snapshots;
 pub mod quest;
 pub mod spell_catalog;
 pub mod spell_data;
+pub mod trade;
 pub mod types;
 pub mod xp;
 
