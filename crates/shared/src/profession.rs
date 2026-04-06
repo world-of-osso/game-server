@@ -323,6 +323,114 @@ pub fn attempt_gather(
     GatherResult::Success { items, skilled_up }
 }
 
+// --- Crafting ---
+
+/// A material required to craft a recipe.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct CraftMaterial {
+    pub item_id: u32,
+    pub count: u16,
+}
+
+/// A crafting recipe.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Recipe {
+    /// Unique recipe ID.
+    pub id: u32,
+    /// Which profession this recipe belongs to.
+    pub profession: Profession,
+    /// Minimum skill to learn/use this recipe.
+    pub required_skill: u16,
+    /// Skill level where the recipe turns grey (no more skill-ups).
+    pub trivial_skill: u16,
+    /// Materials consumed on craft.
+    pub materials: Vec<CraftMaterial>,
+    /// Output item ID.
+    pub output_item_id: u32,
+    /// Output count.
+    pub output_count: u16,
+}
+
+/// Result of attempting to craft a recipe.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum CraftResult {
+    /// Successfully crafted.
+    Success {
+        output_item_id: u32,
+        output_count: u16,
+        skilled_up: bool,
+    },
+    /// Player doesn't have the required profession.
+    WrongProfession,
+    /// Skill too low for this recipe.
+    SkillTooLow,
+    /// Missing one or more materials.
+    MissingMaterials { missing: Vec<CraftMaterial> },
+}
+
+/// Check which materials the player is missing for a recipe.
+///
+/// `inventory_check` returns how many of each item_id the player has.
+pub fn check_materials(
+    recipe: &Recipe,
+    inventory_check: &dyn Fn(u32) -> u16,
+) -> Vec<CraftMaterial> {
+    recipe
+        .materials
+        .iter()
+        .filter_map(|mat| {
+            let have = inventory_check(mat.item_id);
+            if have >= mat.count {
+                None
+            } else {
+                Some(CraftMaterial {
+                    item_id: mat.item_id,
+                    count: mat.count - have,
+                })
+            }
+        })
+        .collect()
+}
+
+/// Attempt to craft a recipe.
+///
+/// `inventory_check` returns how many of each item_id the player has.
+/// `roll` is 0.0–1.0 for skill-up chance.
+///
+/// On success, the caller must consume materials and grant the output item.
+pub fn attempt_craft(
+    recipe: &Recipe,
+    profs: &mut PlayerProfessions,
+    inventory_check: &dyn Fn(u32) -> u16,
+    roll: f32,
+) -> CraftResult {
+    let Some(skill) = profs.get(recipe.profession) else {
+        return CraftResult::WrongProfession;
+    };
+    if skill.current < recipe.required_skill {
+        return CraftResult::SkillTooLow;
+    }
+
+    let missing = check_materials(recipe, inventory_check);
+    if !missing.is_empty() {
+        return CraftResult::MissingMaterials { missing };
+    }
+
+    let chance = skill_up_chance(skill.current, recipe.required_skill, recipe.trivial_skill);
+    let skilled_up = roll < chance;
+    if skilled_up
+        && let Some(s) = profs.get_mut(recipe.profession)
+    {
+        s.skill_up();
+    }
+
+    CraftResult::Success {
+        output_item_id: recipe.output_item_id,
+        output_count: recipe.output_count,
+        skilled_up,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -538,9 +646,113 @@ mod tests {
 
     #[test]
     fn skill_up_chance_values() {
-        assert_eq!(skill_up_chance(1, 1, 50), 1.0); // at required = 100%
-        assert_eq!(skill_up_chance(50, 1, 50), 0.0); // at trivial = 0%
+        assert_eq!(skill_up_chance(1, 1, 50), 1.0);
+        assert_eq!(skill_up_chance(50, 1, 50), 0.0);
         let mid = skill_up_chance(25, 1, 50);
         assert!(mid > 0.0 && mid < 1.0);
+    }
+
+    // --- Crafting tests ---
+
+    fn copper_bar_recipe() -> Recipe {
+        Recipe {
+            id: 2657,
+            profession: Profession::Mining,
+            required_skill: 1,
+            trivial_skill: 25,
+            materials: vec![CraftMaterial { item_id: 2770, count: 2 }], // 2 Copper Ore
+            output_item_id: 2840, // Copper Bar
+            output_count: 1,
+        }
+    }
+
+    #[test]
+    fn craft_success() {
+        let recipe = copper_bar_recipe();
+        let mut profs = mining_profs(10);
+        let inv = |id: u32| if id == 2770 { 10 } else { 0 };
+        let result = attempt_craft(&recipe, &mut profs, &inv, 0.5);
+        match result {
+            CraftResult::Success { output_item_id, output_count, .. } => {
+                assert_eq!(output_item_id, 2840);
+                assert_eq!(output_count, 1);
+            }
+            other => panic!("expected success, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn craft_wrong_profession() {
+        let recipe = copper_bar_recipe();
+        let mut profs = PlayerProfessions::default();
+        profs.learn(Profession::Herbalism).unwrap();
+        let inv = |_: u32| 99;
+        assert!(matches!(attempt_craft(&recipe, &mut profs, &inv, 0.0), CraftResult::WrongProfession));
+    }
+
+    #[test]
+    fn craft_skill_too_low() {
+        let mut recipe = copper_bar_recipe();
+        recipe.required_skill = 50;
+        let mut profs = mining_profs(10);
+        let inv = |_: u32| 99;
+        assert!(matches!(attempt_craft(&recipe, &mut profs, &inv, 0.0), CraftResult::SkillTooLow));
+    }
+
+    #[test]
+    fn craft_missing_materials() {
+        let recipe = copper_bar_recipe();
+        let mut profs = mining_profs(10);
+        let inv = |id: u32| if id == 2770 { 1 } else { 0 }; // only 1, need 2
+        let result = attempt_craft(&recipe, &mut profs, &inv, 0.0);
+        match result {
+            CraftResult::MissingMaterials { missing } => {
+                assert_eq!(missing.len(), 1);
+                assert_eq!(missing[0].item_id, 2770);
+                assert_eq!(missing[0].count, 1); // need 1 more
+            }
+            other => panic!("expected missing, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn craft_skill_up() {
+        let recipe = copper_bar_recipe();
+        let mut profs = mining_profs(5);
+        let inv = |_: u32| 99;
+        let result = attempt_craft(&recipe, &mut profs, &inv, 0.0); // roll=0 → skill up
+        match result {
+            CraftResult::Success { skilled_up, .. } => assert!(skilled_up),
+            other => panic!("expected success, got {other:?}"),
+        }
+        assert_eq!(profs.get(Profession::Mining).unwrap().current, 6);
+    }
+
+    #[test]
+    fn check_materials_all_present() {
+        let recipe = copper_bar_recipe();
+        let inv = |id: u32| if id == 2770 { 5 } else { 0 };
+        let missing = check_materials(&recipe, &inv);
+        assert!(missing.is_empty());
+    }
+
+    #[test]
+    fn check_materials_partial() {
+        let recipe = Recipe {
+            id: 1,
+            profession: Profession::Blacksmithing,
+            required_skill: 1,
+            trivial_skill: 50,
+            materials: vec![
+                CraftMaterial { item_id: 100, count: 5 },
+                CraftMaterial { item_id: 200, count: 3 },
+            ],
+            output_item_id: 300,
+            output_count: 1,
+        };
+        let inv = |id: u32| match id { 100 => 2, 200 => 3, _ => 0 };
+        let missing = check_materials(&recipe, &inv);
+        assert_eq!(missing.len(), 1);
+        assert_eq!(missing[0], CraftMaterial { item_id: 100, count: 3 });
     }
 }
