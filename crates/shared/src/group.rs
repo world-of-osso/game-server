@@ -208,6 +208,82 @@ impl Raid {
     }
 }
 
+// --- Group XP sharing ---
+
+use crate::xp::{self, GroupMemberXp};
+
+/// Info about a party/raid member for XP distribution.
+#[derive(Debug, Clone, Copy)]
+pub struct MemberInfo {
+    pub entity: u64,
+    pub level: u8,
+    pub distance_from_kill: f32,
+}
+
+/// Distribute kill XP among party members based on proximity and level.
+///
+/// Wraps `xp::group_kill_xp()` with party member lookups.
+/// Members beyond `GROUP_XP_RANGE` (100y) get 0 XP.
+pub fn party_kill_xp(
+    party: &Party,
+    creature_level: u8,
+    member_info: &[MemberInfo],
+) -> Vec<(u64, u32)> {
+    let members: Vec<GroupMemberXp> = party
+        .members
+        .iter()
+        .filter_map(|&entity| {
+            member_info
+                .iter()
+                .find(|m| m.entity == entity)
+                .map(|m| GroupMemberXp {
+                    level: m.level,
+                    distance: m.distance_from_kill,
+                })
+        })
+        .collect();
+
+    let shares = xp::group_kill_xp(creature_level, &members);
+
+    party
+        .members
+        .iter()
+        .zip(shares.iter())
+        .map(|(&entity, share)| (entity, share.xp))
+        .collect()
+}
+
+/// Distribute kill XP among raid members.
+///
+/// Same as party XP but uses all raid members across subgroups.
+pub fn raid_kill_xp(
+    raid: &Raid,
+    creature_level: u8,
+    member_info: &[MemberInfo],
+) -> Vec<(u64, u32)> {
+    let all_members: Vec<u64> = raid.all_members().collect();
+    let members: Vec<GroupMemberXp> = all_members
+        .iter()
+        .filter_map(|&entity| {
+            member_info
+                .iter()
+                .find(|m| m.entity == entity)
+                .map(|m| GroupMemberXp {
+                    level: m.level,
+                    distance: m.distance_from_kill,
+                })
+        })
+        .collect();
+
+    let shares = xp::group_kill_xp(creature_level, &members);
+
+    all_members
+        .iter()
+        .zip(shares.iter())
+        .map(|(&entity, share)| (entity, share.xp))
+        .collect()
+}
+
 // --- Shared threat ---
 
 use crate::components::ThreatTable;
@@ -423,6 +499,64 @@ mod tests {
         let party = Party::new(1);
         let mut raid = Raid::from_party(&party);
         assert_eq!(raid.add_member(1), Err(PartyError::AlreadyMember));
+    }
+
+    // --- Group XP sharing tests ---
+
+    #[test]
+    fn party_xp_equal_levels() {
+        let mut party = Party::new(1);
+        party.accept(2).unwrap();
+        let info = vec![
+            MemberInfo { entity: 1, level: 80, distance_from_kill: 5.0 },
+            MemberInfo { entity: 2, level: 80, distance_from_kill: 10.0 },
+        ];
+        let shares = party_kill_xp(&party, 80, &info);
+        assert_eq!(shares.len(), 2);
+        // Equal levels → equal shares
+        assert_eq!(shares[0].1, shares[1].1);
+        assert!(shares[0].1 > 0);
+    }
+
+    #[test]
+    fn party_xp_out_of_range_gets_zero() {
+        let mut party = Party::new(1);
+        party.accept(2).unwrap();
+        let info = vec![
+            MemberInfo { entity: 1, level: 80, distance_from_kill: 5.0 },
+            MemberInfo { entity: 2, level: 80, distance_from_kill: 200.0 }, // out of range
+        ];
+        let shares = party_kill_xp(&party, 80, &info);
+        assert!(shares[0].1 > 0);
+        assert_eq!(shares[1].1, 0);
+    }
+
+    #[test]
+    fn party_xp_level_weighted() {
+        let mut party = Party::new(1);
+        party.accept(2).unwrap();
+        let info = vec![
+            MemberInfo { entity: 1, level: 80, distance_from_kill: 5.0 },
+            MemberInfo { entity: 2, level: 40, distance_from_kill: 5.0 },
+        ];
+        let shares = party_kill_xp(&party, 80, &info);
+        assert!(shares[0].1 > shares[1].1); // higher level gets more
+    }
+
+    #[test]
+    fn raid_xp_distributes_across_subgroups() {
+        let mut party = Party::new(1);
+        party.accept(2).unwrap();
+        let mut raid = Raid::from_party(&party);
+        raid.add_member(3).unwrap();
+        let info = vec![
+            MemberInfo { entity: 1, level: 80, distance_from_kill: 5.0 },
+            MemberInfo { entity: 2, level: 80, distance_from_kill: 5.0 },
+            MemberInfo { entity: 3, level: 80, distance_from_kill: 5.0 },
+        ];
+        let shares = raid_kill_xp(&raid, 80, &info);
+        assert_eq!(shares.len(), 3);
+        assert!(shares.iter().all(|(_, xp)| *xp > 0));
     }
 
     // --- Shared threat tests ---
