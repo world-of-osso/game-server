@@ -195,6 +195,53 @@ impl WeaponDamageData {
     }
 }
 
+// --- Durability ---
+
+/// Fraction of max durability lost on each death.
+const DEATH_DURABILITY_LOSS: f32 = 0.10;
+/// Repair cost per point of durability (in copper) — base rate scaled by ilvl.
+const REPAIR_COST_PER_POINT_BASE: f32 = 0.5;
+
+/// Runtime durability state for a single equipped item.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct Durability {
+    pub current: u32,
+    pub max: u32,
+}
+
+impl Durability {
+    pub fn new(max: u32) -> Self {
+        Self { current: max, max }
+    }
+
+    /// Apply death durability loss (10% of max, rounded up).
+    pub fn apply_death_loss(&mut self) {
+        let loss = ((self.max as f32 * DEATH_DURABILITY_LOSS).ceil() as u32).min(self.current);
+        self.current -= loss;
+    }
+
+    /// Whether the item is broken (0 durability).
+    pub fn is_broken(&self) -> bool {
+        self.max > 0 && self.current == 0
+    }
+
+    /// Repair fully. Returns the cost in copper.
+    pub fn repair(&mut self, ilvl: u16) -> u32 {
+        let missing = self.max - self.current;
+        if missing == 0 {
+            return 0;
+        }
+        let cost = (missing as f32 * REPAIR_COST_PER_POINT_BASE * ilvl as f32) as u32;
+        self.current = self.max;
+        cost
+    }
+
+    /// Damage durability by a flat amount (e.g. from combat).
+    pub fn damage(&mut self, amount: u32) {
+        self.current = self.current.saturating_sub(amount);
+    }
+}
+
 // --- Inventory ---
 
 /// Default backpack size (16 slots, matching WoW).
@@ -588,5 +635,78 @@ mod tests {
         bag.slots[0] = InvSlot { item_id: 1, count: 1 };
         bag.slots[3] = InvSlot { item_id: 2, count: 5 };
         assert_eq!(bag.used_slots(), 2);
+    }
+
+    // --- Durability tests ---
+
+    #[test]
+    fn durability_new_is_full() {
+        let dur = Durability::new(100);
+        assert_eq!(dur.current, 100);
+        assert_eq!(dur.max, 100);
+        assert!(!dur.is_broken());
+    }
+
+    #[test]
+    fn durability_death_loss_10_percent() {
+        let mut dur = Durability::new(100);
+        dur.apply_death_loss();
+        assert_eq!(dur.current, 90); // 10% of 100 = 10
+    }
+
+    #[test]
+    fn durability_death_loss_rounds_up() {
+        let mut dur = Durability::new(75);
+        dur.apply_death_loss();
+        // 10% of 75 = 7.5, ceil = 8
+        assert_eq!(dur.current, 67);
+    }
+
+    #[test]
+    fn durability_death_loss_clamps_to_zero() {
+        let mut dur = Durability::new(5);
+        dur.current = 1;
+        dur.apply_death_loss(); // loss = ceil(0.5) = 1
+        assert_eq!(dur.current, 0);
+        assert!(dur.is_broken());
+    }
+
+    #[test]
+    fn durability_repair_cost() {
+        let mut dur = Durability::new(100);
+        dur.current = 50; // 50 missing
+        let cost = dur.repair(200); // ilvl 200
+        // 50 * 0.5 * 200 = 5000 copper
+        assert_eq!(cost, 5000);
+        assert_eq!(dur.current, 100);
+    }
+
+    #[test]
+    fn durability_repair_full_no_cost() {
+        let mut dur = Durability::new(100);
+        let cost = dur.repair(200);
+        assert_eq!(cost, 0);
+    }
+
+    #[test]
+    fn durability_damage_flat() {
+        let mut dur = Durability::new(100);
+        dur.damage(15);
+        assert_eq!(dur.current, 85);
+    }
+
+    #[test]
+    fn durability_damage_clamps_to_zero() {
+        let mut dur = Durability::new(100);
+        dur.damage(200);
+        assert_eq!(dur.current, 0);
+        assert!(dur.is_broken());
+    }
+
+    #[test]
+    fn durability_zero_max_not_broken() {
+        // Items with 0 max durability (consumables) are never "broken"
+        let dur = Durability::new(0);
+        assert!(!dur.is_broken());
     }
 }
