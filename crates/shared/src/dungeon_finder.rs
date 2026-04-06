@@ -108,6 +108,90 @@ impl DungeonQueue {
         let total: u64 = self.entries.iter().map(|e| now.saturating_sub(e.queued_at)).sum();
         total as f32 / self.entries.len() as f32
     }
+    /// Try to form a 1T+1H+3D group from queued entries with overlapping dungeons.
+    ///
+    /// Returns the matched entries (removed from queue) and the dungeon ID,
+    /// or `None` if no valid group can be formed.
+    pub fn try_match(&mut self) -> Option<MatchResult> {
+        // Find a common dungeon across candidates
+        let all_dungeons: Vec<u32> = self.entries
+            .iter()
+            .flat_map(|e| e.dungeon_ids.iter().copied())
+            .collect();
+
+        for dungeon_id in &all_dungeons {
+            let candidates: Vec<usize> = self.entries
+                .iter()
+                .enumerate()
+                .filter(|(_, e)| e.dungeon_ids.contains(dungeon_id))
+                .map(|(i, _)| i)
+                .collect();
+
+            if let Some(group) = find_composition(&self.entries, &candidates) {
+                let result = build_match(&self.entries, &group, *dungeon_id);
+                // Remove matched entries (reverse order to preserve indices)
+                let mut to_remove: Vec<usize> = group.iter().map(|&(idx, _)| idx).collect();
+                to_remove.sort_unstable();
+                to_remove.dedup();
+                for idx in to_remove.into_iter().rev() {
+                    self.entries.remove(idx);
+                }
+                return Some(result);
+            }
+        }
+        None
+    }
+}
+
+/// A successful dungeon match.
+#[derive(Debug, Clone, PartialEq)]
+pub struct MatchResult {
+    pub dungeon_id: u32,
+    pub tank: u64,
+    pub healer: u64,
+    pub dps: Vec<u64>,
+}
+
+/// (queue_entry_index, member_index_within_entry)
+type Slot = (usize, usize);
+
+/// Try to find 1T+1H+3D from candidates for a specific dungeon.
+fn find_composition(entries: &[QueueEntry], candidates: &[usize]) -> Option<Vec<Slot>> {
+    let mut tank: Option<Slot> = None;
+    let mut healer: Option<Slot> = None;
+    let mut dps: Vec<Slot> = Vec::new();
+
+    for &idx in candidates {
+        let entry = &entries[idx];
+        for (mi, role) in entry.roles.iter().enumerate() {
+            let slot = (idx, mi);
+            match role {
+                GroupRole::Tank if tank.is_none() => tank = Some(slot),
+                GroupRole::Healer if healer.is_none() => healer = Some(slot),
+                GroupRole::Dps if dps.len() < 3 => dps.push(slot),
+                // If tank/healer already filled, DPS can absorb extras
+                GroupRole::Tank | GroupRole::Healer if dps.len() < 3 => {}
+                _ => {}
+            }
+        }
+    }
+
+    let (Some(t), Some(h)) = (tank, healer) else {
+        return None;
+    };
+    if dps.len() != 3 {
+        return None;
+    }
+    let mut group = vec![t, h];
+    group.extend(dps);
+    Some(group)
+}
+
+fn build_match(entries: &[QueueEntry], group: &[Slot], dungeon_id: u32) -> MatchResult {
+    let tank = entries[group[0].0].members[group[0].1];
+    let healer = entries[group[1].0].members[group[1].1];
+    let dps = group[2..].iter().map(|&(ei, mi)| entries[ei].members[mi]).collect();
+    MatchResult { dungeon_id, tank, healer, dps }
 }
 
 #[cfg(test)]
@@ -177,5 +261,81 @@ mod tests {
         let avg = q.average_wait(400);
         // Player 1: 300s, Player 2: 200s → avg 250
         assert!((avg - 250.0).abs() < 0.01);
+    }
+
+    // --- Matchmaking tests ---
+
+    fn queue_5_players(q: &mut DungeonQueue) {
+        q.queue_solo(1, GroupRole::Tank, vec![100], 0).unwrap();
+        q.queue_solo(2, GroupRole::Healer, vec![100], 0).unwrap();
+        q.queue_solo(3, GroupRole::Dps, vec![100], 0).unwrap();
+        q.queue_solo(4, GroupRole::Dps, vec![100], 0).unwrap();
+        q.queue_solo(5, GroupRole::Dps, vec![100], 0).unwrap();
+    }
+
+    #[test]
+    fn match_1t_1h_3d() {
+        let mut q = DungeonQueue::default();
+        queue_5_players(&mut q);
+        let m = q.try_match().unwrap();
+        assert_eq!(m.dungeon_id, 100);
+        assert_eq!(m.tank, 1);
+        assert_eq!(m.healer, 2);
+        assert_eq!(m.dps.len(), 3);
+        assert!(q.is_empty()); // all removed
+    }
+
+    #[test]
+    fn no_match_missing_tank() {
+        let mut q = DungeonQueue::default();
+        q.queue_solo(1, GroupRole::Healer, vec![100], 0).unwrap();
+        q.queue_solo(2, GroupRole::Dps, vec![100], 0).unwrap();
+        q.queue_solo(3, GroupRole::Dps, vec![100], 0).unwrap();
+        q.queue_solo(4, GroupRole::Dps, vec![100], 0).unwrap();
+        assert!(q.try_match().is_none());
+    }
+
+    #[test]
+    fn no_match_missing_healer() {
+        let mut q = DungeonQueue::default();
+        q.queue_solo(1, GroupRole::Tank, vec![100], 0).unwrap();
+        q.queue_solo(2, GroupRole::Dps, vec![100], 0).unwrap();
+        q.queue_solo(3, GroupRole::Dps, vec![100], 0).unwrap();
+        q.queue_solo(4, GroupRole::Dps, vec![100], 0).unwrap();
+        assert!(q.try_match().is_none());
+    }
+
+    #[test]
+    fn no_match_different_dungeons() {
+        let mut q = DungeonQueue::default();
+        q.queue_solo(1, GroupRole::Tank, vec![100], 0).unwrap();
+        q.queue_solo(2, GroupRole::Healer, vec![200], 0).unwrap(); // different dungeon
+        q.queue_solo(3, GroupRole::Dps, vec![100], 0).unwrap();
+        q.queue_solo(4, GroupRole::Dps, vec![100], 0).unwrap();
+        q.queue_solo(5, GroupRole::Dps, vec![100], 0).unwrap();
+        assert!(q.try_match().is_none());
+    }
+
+    #[test]
+    fn match_removes_from_queue() {
+        let mut q = DungeonQueue::default();
+        queue_5_players(&mut q);
+        q.queue_solo(6, GroupRole::Dps, vec![200], 0).unwrap();
+        q.try_match();
+        assert_eq!(q.len(), 1); // player 6 remains
+        assert!(q.is_queued(6));
+    }
+
+    #[test]
+    fn match_overlapping_dungeons() {
+        let mut q = DungeonQueue::default();
+        q.queue_solo(1, GroupRole::Tank, vec![100, 200], 0).unwrap();
+        q.queue_solo(2, GroupRole::Healer, vec![200, 300], 0).unwrap();
+        q.queue_solo(3, GroupRole::Dps, vec![100, 200], 0).unwrap();
+        q.queue_solo(4, GroupRole::Dps, vec![200], 0).unwrap();
+        q.queue_solo(5, GroupRole::Dps, vec![200, 300], 0).unwrap();
+        let m = q.try_match().unwrap();
+        // All overlap on dungeon 200
+        assert_eq!(m.dungeon_id, 200);
     }
 }
