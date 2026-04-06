@@ -398,6 +398,93 @@ pub fn close_door(go: &mut GameObject) {
     }
 }
 
+// --- Traps ---
+
+/// Configuration for a trap game object.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct TrapData {
+    /// Spell ID applied to entities within trigger radius.
+    pub spell_id: u32,
+    /// Trigger radius in yards.
+    pub radius: f32,
+    /// Cooldown in seconds before the trap can trigger again (0 = one-shot, depletes).
+    pub cooldown: u32,
+}
+
+/// An entity affected by a trap trigger.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct TrapTarget {
+    pub entity: u64,
+    pub spell_id: u32,
+}
+
+/// Result of a trap triggering.
+#[derive(Debug, Clone, PartialEq)]
+pub struct TrapTriggerResult {
+    pub targets: Vec<TrapTarget>,
+    /// Whether the trap is now depleted (one-shot) or on cooldown.
+    pub depleted: bool,
+}
+
+/// Check if a position is within a trap's trigger radius.
+pub fn in_trap_radius(
+    trap_x: f32, trap_y: f32, trap_z: f32,
+    target_x: f32, target_y: f32, target_z: f32,
+    radius: f32,
+) -> bool {
+    let dx = trap_x - target_x;
+    let dy = trap_y - target_y;
+    let dz = trap_z - target_z;
+    dx * dx + dy * dy + dz * dz <= radius * radius
+}
+
+/// Trigger a trap, applying its spell to all nearby entities.
+///
+/// `nearby_entities`: (entity_id, x, y, z) of entities to check.
+/// Only entities within the trap's radius are affected.
+/// One-shot traps (cooldown=0) transition to Depleted.
+/// Cooldown traps set the TRIGGERED flag.
+pub fn trigger_trap(
+    go: &mut GameObject,
+    trap: &TrapData,
+    trap_pos: (f32, f32, f32),
+    nearby_entities: &[(u64, f32, f32, f32)],
+) -> Result<TrapTriggerResult, InteractionError> {
+    if go.object_type != GameObjectType::Trap {
+        return Err(InteractionError::NotInteractable);
+    }
+    if go.state != GameObjectState::Ready {
+        return Err(InteractionError::Depleted);
+    }
+    if go.flags.contains(GameObjectFlags::TRIGGERED) {
+        return Err(InteractionError::Depleted);
+    }
+
+    let targets: Vec<TrapTarget> = nearby_entities
+        .iter()
+        .filter(|(_, x, y, z)| in_trap_radius(trap_pos.0, trap_pos.1, trap_pos.2, *x, *y, *z, trap.radius))
+        .map(|(entity, _, _, _)| TrapTarget { entity: *entity, spell_id: trap.spell_id })
+        .collect();
+
+    if targets.is_empty() {
+        return Ok(TrapTriggerResult { targets, depleted: false });
+    }
+
+    let one_shot = trap.cooldown == 0;
+    if one_shot {
+        go.state = GameObjectState::Depleted;
+    } else {
+        go.flags.insert(GameObjectFlags::TRIGGERED);
+    }
+
+    Ok(TrapTriggerResult { targets, depleted: one_shot })
+}
+
+/// Reset a trap after its cooldown expires (clear TRIGGERED flag).
+pub fn reset_trap(go: &mut GameObject) {
+    go.flags.remove(GameObjectFlags::TRIGGERED);
+}
+
 // --- Gathering nodes ---
 
 /// An item yielded from gathering a node.

@@ -286,6 +286,91 @@ fn can_reuse_after_cancel() {
     assert!(interact(&mut go).is_ok());
 }
 
+// --- Traps ---
+
+fn trap_template() -> GameObjectTemplate {
+    GameObjectTemplate {
+        id: 5001, object_type: GameObjectType::Trap, display_id: 900,
+        name: "Bear Trap".to_string(), faction: 0, flags: GameObjectFlags::INTERACTABLE,
+    }
+}
+
+fn one_shot_trap() -> TrapData {
+    TrapData { spell_id: 100, radius: 5.0, cooldown: 0 }
+}
+
+fn cooldown_trap() -> TrapData {
+    TrapData { spell_id: 200, radius: 10.0, cooldown: 30 }
+}
+
+#[test]
+fn trap_triggers_nearby_entities() {
+    let mut go = make_go(&trap_template());
+    let nearby = [(1, 2.0, 0.0, 0.0), (2, 3.0, 0.0, 0.0), (3, 100.0, 0.0, 0.0)];
+    let result = trigger_trap(&mut go, &one_shot_trap(), (0.0, 0.0, 0.0), &nearby).unwrap();
+    assert_eq!(result.targets.len(), 2);
+    assert_eq!(result.targets[0].spell_id, 100);
+    assert!(result.depleted);
+    assert_eq!(go.state, GameObjectState::Depleted);
+}
+
+#[test]
+fn trap_no_targets_in_range() {
+    let mut go = make_go(&trap_template());
+    let far = [(1, 100.0, 100.0, 0.0)];
+    let result = trigger_trap(&mut go, &one_shot_trap(), (0.0, 0.0, 0.0), &far).unwrap();
+    assert!(result.targets.is_empty());
+    assert!(!result.depleted);
+    assert_eq!(go.state, GameObjectState::Ready); // Not consumed
+}
+
+#[test]
+fn trap_cooldown_not_depleted() {
+    let mut go = make_go(&trap_template());
+    let nearby = [(1, 1.0, 0.0, 0.0)];
+    let result = trigger_trap(&mut go, &cooldown_trap(), (0.0, 0.0, 0.0), &nearby).unwrap();
+    assert!(!result.depleted);
+    assert!(go.flags.contains(GameObjectFlags::TRIGGERED));
+    assert_eq!(go.state, GameObjectState::Ready); // Still ready, just on cooldown
+}
+
+#[test]
+fn trap_triggered_cannot_retrigger() {
+    let mut go = make_go(&trap_template());
+    let nearby = [(1, 1.0, 0.0, 0.0)];
+    trigger_trap(&mut go, &cooldown_trap(), (0.0, 0.0, 0.0), &nearby).unwrap();
+    assert_eq!(
+        trigger_trap(&mut go, &cooldown_trap(), (0.0, 0.0, 0.0), &nearby),
+        Err(InteractionError::Depleted)
+    );
+}
+
+#[test]
+fn trap_reset_allows_retrigger() {
+    let mut go = make_go(&trap_template());
+    let nearby = [(1, 1.0, 0.0, 0.0)];
+    trigger_trap(&mut go, &cooldown_trap(), (0.0, 0.0, 0.0), &nearby).unwrap();
+    reset_trap(&mut go);
+    assert!(!go.flags.contains(GameObjectFlags::TRIGGERED));
+    let result = trigger_trap(&mut go, &cooldown_trap(), (0.0, 0.0, 0.0), &nearby).unwrap();
+    assert_eq!(result.targets.len(), 1);
+}
+
+#[test]
+fn trap_on_non_trap_object_fails() {
+    let mut go = make_go(&chest_template());
+    assert_eq!(
+        trigger_trap(&mut go, &one_shot_trap(), (0.0, 0.0, 0.0), &[]),
+        Err(InteractionError::NotInteractable)
+    );
+}
+
+#[test]
+fn in_trap_radius_boundary() {
+    assert!(in_trap_radius(0.0, 0.0, 0.0, 5.0, 0.0, 0.0, 5.0));
+    assert!(!in_trap_radius(0.0, 0.0, 0.0, 5.01, 0.0, 0.0, 5.0));
+}
+
 // --- Doors ---
 
 fn unlocked_door_data() -> DoorData {
