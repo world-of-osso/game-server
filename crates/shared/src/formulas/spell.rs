@@ -76,8 +76,10 @@ pub fn apply_heal(current: f32, max: f32, heal_amount: f32) -> HealResult {
 
 // --- Cast time / GCD ---
 
-/// Base global cooldown in seconds.
+/// Base global cooldown in seconds (most classes).
 const BASE_GCD: f32 = 1.5;
+/// Base GCD for Rogues, Monks, and Demon Hunters (energy/melee classes).
+const SHORT_GCD: f32 = 1.0;
 /// Minimum GCD floor in seconds (haste cannot reduce below this).
 const MIN_GCD: f32 = 0.75;
 
@@ -89,10 +91,31 @@ pub fn hasted_cast_time(base_cast: f32, haste_pct: f32) -> f32 {
 }
 
 /// Calculate the global cooldown after haste, floored at 0.75s.
+/// Uses the standard 1.5s base GCD.
 ///
 /// `haste_pct` is a fraction (e.g. 0.30 for 30% haste).
 pub fn hasted_gcd(haste_pct: f32) -> f32 {
     hasted_cast_time(BASE_GCD, haste_pct).max(MIN_GCD)
+}
+
+/// Base GCD for a given class ID.
+///
+/// Rogues (4), Monks (10), and Demon Hunters (12) use 1.0s base.
+/// All other classes use 1.5s base.
+pub fn base_gcd_for_class(class_id: u8) -> f32 {
+    match class_id {
+        4 | 10 | 12 => SHORT_GCD,
+        _ => BASE_GCD,
+    }
+}
+
+/// Calculate the GCD for a specific class after haste, floored at 0.75s.
+///
+/// Rogues/Monks/DH start at 1.0s; all others at 1.5s.
+/// Haste reduces proportionally, minimum 0.75s.
+pub fn class_hasted_gcd(class_id: u8, haste_pct: f32) -> f32 {
+    let base = base_gcd_for_class(class_id);
+    hasted_cast_time(base, haste_pct).max(MIN_GCD)
 }
 
 // --- DoT haste scaling ---
@@ -287,6 +310,50 @@ mod tests {
     fn gcd_exactly_at_floor() {
         // 1.5 / (1 + 1.0) = 0.75, exactly at floor
         assert_eq!(hasted_gcd(1.0), 0.75);
+    }
+
+    // --- Class GCD tests ---
+
+    #[test]
+    fn base_gcd_standard_classes() {
+        // Warrior, Paladin, Mage, etc. = 1.5s
+        assert_eq!(base_gcd_for_class(1), 1.5);
+        assert_eq!(base_gcd_for_class(2), 1.5);
+        assert_eq!(base_gcd_for_class(8), 1.5);
+    }
+
+    #[test]
+    fn base_gcd_short_classes() {
+        // Rogue=4, Monk=10, DemonHunter=12 → 1.0s
+        assert_eq!(base_gcd_for_class(4), 1.0);
+        assert_eq!(base_gcd_for_class(10), 1.0);
+        assert_eq!(base_gcd_for_class(12), 1.0);
+    }
+
+    #[test]
+    fn class_hasted_gcd_rogue_no_haste() {
+        // Rogue base 1.0s, no haste → 1.0s
+        assert_eq!(class_hasted_gcd(4, 0.0), 1.0);
+    }
+
+    #[test]
+    fn class_hasted_gcd_rogue_with_haste() {
+        // Rogue 1.0 / (1 + 0.25) = 0.8s
+        let gcd = class_hasted_gcd(4, 0.25);
+        assert!((gcd - 0.8).abs() < 0.001);
+    }
+
+    #[test]
+    fn class_hasted_gcd_rogue_floors_at_075() {
+        // Rogue 1.0 / (1 + 1.0) = 0.5 → floored to 0.75
+        assert_eq!(class_hasted_gcd(4, 1.0), 0.75);
+    }
+
+    #[test]
+    fn class_hasted_gcd_mage_standard() {
+        // Mage 1.5 / (1 + 0.20) = 1.25s
+        let gcd = class_hasted_gcd(8, 0.20);
+        assert!((gcd - 1.25).abs() < 0.001);
     }
 
     // --- DoT haste scaling tests ---
