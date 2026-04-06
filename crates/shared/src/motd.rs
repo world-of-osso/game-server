@@ -12,7 +12,10 @@ pub const MAX_MOTD_LEN: usize = 500;
 /// Server Message of the Day.
 ///
 /// Displayed to every player on login. Stored as a Bevy resource.
-#[derive(Debug, Clone, PartialEq, Eq, Default, Resource, Serialize, Deserialize)]
+#[derive(
+    Debug, Clone, PartialEq, Eq, Default, Resource, Serialize, Deserialize,
+    bitcode::Encode, bitcode::Decode,
+)]
 pub struct Motd {
     /// The message text. Empty string means no MOTD.
     pub message: String,

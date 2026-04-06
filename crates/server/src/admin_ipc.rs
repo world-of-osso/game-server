@@ -161,7 +161,7 @@ fn poll_admin_ipc(
             continue;
         }
         // Handle MOTD commands.
-        if let Some(response) = dispatch_motd(&cmd.request, &time, &mut motd) {
+        if let Some(response) = dispatch_motd(&cmd.request, &time, &mut motd, &db) {
             let _ = cmd.respond.send(response);
             continue;
         }
@@ -213,6 +213,7 @@ fn dispatch_motd(
     request: &AdminRequest,
     time: &Time,
     motd: &mut shared::motd::Motd,
+    db: &persistence::GameDatabase,
 ) -> Option<AdminResponse> {
     match request {
         AdminRequest::GetMotd => Some(AdminResponse::MotdRetrieved {
@@ -222,13 +223,17 @@ fn dispatch_motd(
         AdminRequest::SetMotd { message } => {
             let now = time.elapsed_secs_f64() as u64;
             match motd.set(message, now) {
-                Ok(()) => Some(AdminResponse::MotdSet),
+                Ok(()) => {
+                    persistence::save_motd(&db.db, motd);
+                    Some(AdminResponse::MotdSet)
+                }
                 Err(e) => Some(AdminResponse::Error(format!("{e:?}"))),
             }
         }
         AdminRequest::ClearMotd => {
             let now = time.elapsed_secs_f64() as u64;
             motd.clear(now);
+            persistence::save_motd(&db.db, motd);
             Some(AdminResponse::MotdCleared)
         }
         _ => None,

@@ -52,6 +52,9 @@ pub(crate) const PENDING_REGISTRATIONS: TableDefinition<&str, &[u8]> =
 /// Auto-increment counters: key (&str) -> next_id (u64).
 pub(crate) const NEXT_IDS: TableDefinition<&str, u64> = TableDefinition::new("next_ids");
 
+/// Server settings: key (&str) -> value (&[u8]).
+const SERVER_SETTINGS: TableDefinition<&str, &[u8]> = TableDefinition::new("server_settings");
+
 /// Persistence plugin — manages redb database lifecycle and periodic saves.
 pub struct PersistencePlugin;
 
@@ -106,6 +109,11 @@ fn open_database(mut commands: Commands) {
     }
     let db = open_database_with_retry(path);
     create_tables(&db);
+    let motd = load_motd(&db);
+    if motd.is_set() {
+        info!("Loaded MOTD: {}", motd.message);
+    }
+    commands.insert_resource(motd);
     info!("Database opened at {}", path.display());
     commands.insert_resource(GameDatabase { db });
 }
@@ -125,6 +133,7 @@ pub(crate) fn create_tables(db: &Database) {
     let _ = txn.open_table(USERNAME_ACCOUNTS);
     let _ = txn.open_table(PENDING_REGISTRATIONS);
     let _ = txn.open_table(NEXT_IDS);
+    let _ = txn.open_table(SERVER_SETTINGS);
     txn.commit().expect("Failed to commit initial tables");
 }
 
@@ -245,6 +254,34 @@ pub fn next_id(db: &Database, key: &str) -> u64 {
     }
     txn.commit().expect("Failed to commit next_id");
     id
+}
+
+/// Load the MOTD from the database. Returns default if not set.
+pub fn load_motd(db: &Database) -> shared::motd::Motd {
+    let txn = db.begin_read().expect("Failed to begin read txn");
+    let table = match txn.open_table(SERVER_SETTINGS) {
+        Ok(t) => t,
+        Err(_) => return shared::motd::Motd::default(),
+    };
+    match table.get("motd").expect("Failed to read motd") {
+        Some(bytes) => bitcode::decode(bytes.value()).unwrap_or_default(),
+        None => shared::motd::Motd::default(),
+    }
+}
+
+/// Save the MOTD to the database.
+pub fn save_motd(db: &Database, motd: &shared::motd::Motd) {
+    let bytes = bitcode::encode(motd);
+    let txn = db.begin_write().expect("Failed to begin write txn");
+    {
+        let mut table = txn
+            .open_table(SERVER_SETTINGS)
+            .expect("Failed to open server_settings table");
+        table
+            .insert("motd", bytes.as_slice())
+            .expect("Failed to insert motd");
+    }
+    txn.commit().expect("Failed to commit motd save");
 }
 
 /// Marker component linking a player entity to its character_id for periodic saves.
