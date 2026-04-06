@@ -338,6 +338,42 @@ impl RestedXp {
     }
 }
 
+// --- Level scaling ---
+
+/// A zone's level scaling bracket.
+///
+/// In retail WoW, zones scale creature levels to the player's level
+/// within a min–max range. A level 25 player in a 10–60 zone sees
+/// level 25 creatures; a level 5 player sees level 10 (clamped to min).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ZoneLevelBracket {
+    pub min_level: u8,
+    pub max_level: u8,
+}
+
+impl ZoneLevelBracket {
+    pub fn new(min_level: u8, max_level: u8) -> Self {
+        Self { min_level, max_level }
+    }
+
+    /// Compute the effective creature level for a player in this zone.
+    ///
+    /// Clamps the player's level to the bracket range.
+    pub fn scaled_creature_level(&self, player_level: u8) -> u8 {
+        player_level.clamp(self.min_level, self.max_level)
+    }
+
+    /// Whether a player's level is within this zone's bracket.
+    pub fn is_in_range(&self, player_level: u8) -> bool {
+        player_level >= self.min_level && player_level <= self.max_level
+    }
+
+    /// Whether a player is above the zone's max level (outleveled).
+    pub fn is_outleveled(&self, player_level: u8) -> bool {
+        player_level > self.max_level
+    }
+}
+
 // --- Quest XP ---
 
 /// Number of levels above quest level before XP starts reducing.
@@ -448,6 +484,51 @@ mod tests {
     fn kill_xp_low_level_no_grey() {
         // Level 3 player: grey = 0, so level 1 creature is NOT grey
         assert!(kill_xp(3, 1) > 0);
+    }
+
+    // --- Level scaling tests ---
+
+    #[test]
+    fn scaling_within_bracket() {
+        let bracket = ZoneLevelBracket::new(10, 60);
+        assert_eq!(bracket.scaled_creature_level(25), 25);
+    }
+
+    #[test]
+    fn scaling_clamps_below_min() {
+        let bracket = ZoneLevelBracket::new(10, 60);
+        assert_eq!(bracket.scaled_creature_level(5), 10);
+    }
+
+    #[test]
+    fn scaling_clamps_above_max() {
+        let bracket = ZoneLevelBracket::new(10, 60);
+        assert_eq!(bracket.scaled_creature_level(80), 60);
+    }
+
+    #[test]
+    fn scaling_at_boundaries() {
+        let bracket = ZoneLevelBracket::new(10, 60);
+        assert_eq!(bracket.scaled_creature_level(10), 10);
+        assert_eq!(bracket.scaled_creature_level(60), 60);
+    }
+
+    #[test]
+    fn is_in_range_checks() {
+        let bracket = ZoneLevelBracket::new(20, 40);
+        assert!(!bracket.is_in_range(19));
+        assert!(bracket.is_in_range(20));
+        assert!(bracket.is_in_range(30));
+        assert!(bracket.is_in_range(40));
+        assert!(!bracket.is_in_range(41));
+    }
+
+    #[test]
+    fn is_outleveled_checks() {
+        let bracket = ZoneLevelBracket::new(10, 60);
+        assert!(!bracket.is_outleveled(50));
+        assert!(!bracket.is_outleveled(60));
+        assert!(bracket.is_outleveled(61));
     }
 
     // --- Quest XP tests ---
