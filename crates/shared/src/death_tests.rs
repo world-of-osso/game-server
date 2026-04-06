@@ -519,3 +519,61 @@ fn player_resurrect_no_sickness() {
     // Verify ResurrectSource::PlayerSpell gives no sickness
     assert!(apply_res_sickness(ResurrectSource::PlayerSpell, 60, 1000).is_none());
 }
+
+// --- Corpse despawn ---
+
+#[test]
+fn corpse_despawn_timer_starts() {
+    let mut tracker = CorpseDespawnTracker::new();
+    tracker.start_timer(100, 1000);
+    assert!(tracker.is_pending(100));
+    assert_eq!(tracker.pending_count(), 1);
+}
+
+#[test]
+fn corpse_despawns_after_5_minutes() {
+    let mut tracker = CorpseDespawnTracker::new();
+    tracker.start_timer(100, 1000);
+
+    // Not yet
+    assert!(tracker.collect_despawns(1000 + CORPSE_DESPAWN_SECS - 1).is_empty());
+    assert!(tracker.is_pending(100));
+
+    // Now
+    let despawned = tracker.collect_despawns(1000 + CORPSE_DESPAWN_SECS);
+    assert_eq!(despawned, vec![100]);
+    assert!(!tracker.is_pending(100));
+}
+
+#[test]
+fn multiple_corpse_despawns() {
+    let mut tracker = CorpseDespawnTracker::new();
+    tracker.start_timer(100, 1000);
+    tracker.start_timer(200, 1100);
+
+    let despawned = tracker.collect_despawns(1000 + CORPSE_DESPAWN_SECS);
+    assert_eq!(despawned.len(), 1);
+    assert_eq!(despawned[0], 100);
+    assert_eq!(tracker.pending_count(), 1);
+}
+
+#[test]
+fn cancel_corpse_despawn() {
+    let mut tracker = CorpseDespawnTracker::new();
+    tracker.start_timer(100, 1000);
+    tracker.cancel(100);
+    assert!(!tracker.is_pending(100));
+    assert!(tracker.collect_despawns(9999).is_empty());
+}
+
+#[test]
+fn restart_timer_replaces_old() {
+    let mut tracker = CorpseDespawnTracker::new();
+    tracker.start_timer(100, 1000);
+    tracker.start_timer(100, 2000); // dies again, new timer
+
+    // Old timer would have fired at 1300, new at 2300
+    assert!(tracker.collect_despawns(1000 + CORPSE_DESPAWN_SECS).is_empty());
+    let despawned = tracker.collect_despawns(2000 + CORPSE_DESPAWN_SECS);
+    assert_eq!(despawned, vec![100]);
+}

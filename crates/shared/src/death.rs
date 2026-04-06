@@ -525,6 +525,62 @@ pub fn cast_resurrect(
     })
 }
 
+// --- Corpse despawn ---
+
+/// Time in seconds before a corpse despawns after the player resurrects or releases.
+pub const CORPSE_DESPAWN_SECS: u64 = 300;
+
+/// A corpse awaiting despawn.
+#[derive(Debug, Clone, PartialEq)]
+pub struct CorpseDespawnTimer {
+    pub player: u64,
+    pub despawn_at: u64,
+}
+
+/// Tracks corpses pending despawn.
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct CorpseDespawnTracker {
+    pending: Vec<CorpseDespawnTimer>,
+}
+
+impl CorpseDespawnTracker {
+    pub fn new() -> Self {
+        Self { pending: Vec::new() }
+    }
+
+    /// Start the despawn timer for a corpse (called on resurrect or release).
+    pub fn start_timer(&mut self, player: u64, now: u64) {
+        self.pending.retain(|c| c.player != player);
+        self.pending.push(CorpseDespawnTimer { player, despawn_at: now + CORPSE_DESPAWN_SECS });
+    }
+
+    /// Collect all corpses whose despawn timer has elapsed.
+    pub fn collect_despawns(&mut self, now: u64) -> Vec<u64> {
+        let ready: Vec<u64> = self.pending
+            .iter()
+            .filter(|c| now >= c.despawn_at)
+            .map(|c| c.player)
+            .collect();
+        self.pending.retain(|c| now < c.despawn_at);
+        ready
+    }
+
+    /// Whether a player's corpse is pending despawn.
+    pub fn is_pending(&self, player: u64) -> bool {
+        self.pending.iter().any(|c| c.player == player)
+    }
+
+    /// Cancel a pending despawn (e.g. player dies again before corpse despawns).
+    pub fn cancel(&mut self, player: u64) {
+        self.pending.retain(|c| c.player != player);
+    }
+
+    /// Number of corpses pending despawn.
+    pub fn pending_count(&self) -> usize {
+        self.pending.len()
+    }
+}
+
 #[cfg(test)]
 #[path = "death_tests.rs"]
 mod tests;
