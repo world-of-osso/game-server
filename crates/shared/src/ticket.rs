@@ -25,6 +25,26 @@ pub enum TicketCategory {
     Other,
 }
 
+/// Priority level for queue ordering. Higher = handled first.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+pub enum TicketPriority {
+    /// Standard issues (bugs, quests, items, account, other).
+    Normal,
+    /// Time-sensitive issues (stuck characters).
+    High,
+    /// Safety issues (harassment, exploits).
+    Critical,
+}
+
+/// Default priority based on category.
+pub fn default_priority(category: TicketCategory) -> TicketPriority {
+    match category {
+        TicketCategory::Harassment => TicketPriority::Critical,
+        TicketCategory::Stuck => TicketPriority::High,
+        _ => TicketPriority::Normal,
+    }
+}
+
 /// Current state of a ticket.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum TicketState {
@@ -51,6 +71,8 @@ pub struct Ticket {
     pub description: String,
     /// Current ticket state.
     pub state: TicketState,
+    /// Queue priority (derived from category, can be overridden by GM).
+    pub priority: TicketPriority,
     /// Server timestamp when created.
     pub created_at: u64,
 }
@@ -109,6 +131,7 @@ impl TicketManager {
             id, player, category,
             description: description.to_string(),
             state: TicketState::Open,
+            priority: default_priority(category),
             created_at: now,
         });
         Ok(id)
@@ -139,6 +162,35 @@ impl TicketManager {
     /// All open tickets (not yet assigned).
     pub fn open_tickets(&self) -> Vec<&Ticket> {
         self.tickets.iter().filter(|t| t.state == TicketState::Open).collect()
+    }
+
+    /// Open tickets sorted by priority (highest first), then FIFO (oldest first).
+    pub fn queue(&self) -> Vec<&Ticket> {
+        let mut queue: Vec<&Ticket> = self.open_tickets();
+        queue.sort_by(|a, b| b.priority.cmp(&a.priority).then(a.created_at.cmp(&b.created_at)));
+        queue
+    }
+
+    /// The next ticket a GM should handle (highest priority, oldest).
+    pub fn next_in_queue(&self) -> Option<&Ticket> {
+        self.queue().into_iter().next()
+    }
+
+    /// Override a ticket's priority (GM escalation/de-escalation).
+    pub fn set_priority(&mut self, id: u64, priority: TicketPriority) -> Result<(), TicketError> {
+        let ticket = self.tickets.iter_mut().find(|t| t.id == id)
+            .ok_or(TicketError::NotFound)?;
+        ticket.priority = priority;
+        Ok(())
+    }
+
+    /// Count of open tickets per priority level.
+    pub fn queue_counts(&self) -> (usize, usize, usize) {
+        let open = self.open_tickets();
+        let normal = open.iter().filter(|t| t.priority == TicketPriority::Normal).count();
+        let high = open.iter().filter(|t| t.priority == TicketPriority::High).count();
+        let critical = open.iter().filter(|t| t.priority == TicketPriority::Critical).count();
+        (critical, high, normal)
     }
 }
 

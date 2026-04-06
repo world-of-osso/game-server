@@ -116,3 +116,117 @@ fn different_players_can_each_have_ticket() {
     mgr.create(300, TicketCategory::Bug, "Player 300", 1002).unwrap();
     assert_eq!(mgr.len(), 3);
 }
+
+// --- Priority and queue ---
+
+#[test]
+fn default_priorities() {
+    assert_eq!(default_priority(TicketCategory::Harassment), TicketPriority::Critical);
+    assert_eq!(default_priority(TicketCategory::Stuck), TicketPriority::High);
+    assert_eq!(default_priority(TicketCategory::Bug), TicketPriority::Normal);
+    assert_eq!(default_priority(TicketCategory::Quest), TicketPriority::Normal);
+    assert_eq!(default_priority(TicketCategory::Other), TicketPriority::Normal);
+}
+
+#[test]
+fn priority_ordering() {
+    assert!(TicketPriority::Critical > TicketPriority::High);
+    assert!(TicketPriority::High > TicketPriority::Normal);
+}
+
+#[test]
+fn queue_orders_by_priority_then_fifo() {
+    let mut mgr = TicketManager::new();
+    // Normal priority, oldest
+    mgr.create(100, TicketCategory::Bug, "Bug", 1000).unwrap();
+    // Critical priority, newer
+    mgr.create(200, TicketCategory::Harassment, "Harass", 1001).unwrap();
+    // High priority, newest
+    mgr.create(300, TicketCategory::Stuck, "Stuck", 1002).unwrap();
+
+    let queue = mgr.queue();
+    assert_eq!(queue.len(), 3);
+    // Critical first
+    assert_eq!(queue[0].player, 200);
+    assert_eq!(queue[0].priority, TicketPriority::Critical);
+    // High second
+    assert_eq!(queue[1].player, 300);
+    assert_eq!(queue[1].priority, TicketPriority::High);
+    // Normal last
+    assert_eq!(queue[2].player, 100);
+    assert_eq!(queue[2].priority, TicketPriority::Normal);
+}
+
+#[test]
+fn queue_fifo_within_same_priority() {
+    let mut mgr = TicketManager::new();
+    mgr.create(100, TicketCategory::Bug, "First bug", 1000).unwrap();
+    mgr.create(200, TicketCategory::Quest, "Quest issue", 1001).unwrap();
+    mgr.create(300, TicketCategory::Item, "Item problem", 1002).unwrap();
+
+    let queue = mgr.queue();
+    // All Normal priority — should be FIFO (oldest first)
+    assert_eq!(queue[0].player, 100);
+    assert_eq!(queue[1].player, 200);
+    assert_eq!(queue[2].player, 300);
+}
+
+#[test]
+fn next_in_queue_returns_highest_priority_oldest() {
+    let mut mgr = TicketManager::new();
+    mgr.create(100, TicketCategory::Bug, "Bug", 1000).unwrap();
+    mgr.create(200, TicketCategory::Stuck, "Stuck", 1001).unwrap();
+
+    let next = mgr.next_in_queue().unwrap();
+    assert_eq!(next.player, 200); // High priority
+}
+
+#[test]
+fn next_in_queue_empty() {
+    let mgr = TicketManager::new();
+    assert!(mgr.next_in_queue().is_none());
+}
+
+#[test]
+fn set_priority_override() {
+    let mut mgr = TicketManager::new();
+    let id = mgr.create(100, TicketCategory::Bug, "Bug", 1000).unwrap();
+    assert_eq!(mgr.get(id).unwrap().priority, TicketPriority::Normal);
+
+    mgr.set_priority(id, TicketPriority::Critical).unwrap();
+    assert_eq!(mgr.get(id).unwrap().priority, TicketPriority::Critical);
+}
+
+#[test]
+fn set_priority_not_found() {
+    let mut mgr = TicketManager::new();
+    assert_eq!(mgr.set_priority(999, TicketPriority::High), Err(TicketError::NotFound));
+}
+
+#[test]
+fn queue_counts() {
+    let mut mgr = TicketManager::new();
+    mgr.create(100, TicketCategory::Bug, "Bug", 1000).unwrap();
+    mgr.create(200, TicketCategory::Quest, "Quest", 1001).unwrap();
+    mgr.create(300, TicketCategory::Stuck, "Stuck", 1002).unwrap();
+    mgr.create(400, TicketCategory::Harassment, "Harass", 1003).unwrap();
+
+    let (critical, high, normal) = mgr.queue_counts();
+    assert_eq!(critical, 1);
+    assert_eq!(high, 1);
+    assert_eq!(normal, 2);
+}
+
+#[test]
+fn priority_override_affects_queue_order() {
+    let mut mgr = TicketManager::new();
+    let bug_id = mgr.create(100, TicketCategory::Bug, "Bug", 1000).unwrap();
+    mgr.create(200, TicketCategory::Quest, "Quest", 1001).unwrap();
+
+    // Elevate the bug to Critical
+    mgr.set_priority(bug_id, TicketPriority::Critical).unwrap();
+
+    let next = mgr.next_in_queue().unwrap();
+    assert_eq!(next.id, bug_id);
+    assert_eq!(next.priority, TicketPriority::Critical);
+}
