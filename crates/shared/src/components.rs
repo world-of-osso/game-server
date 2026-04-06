@@ -446,6 +446,67 @@ pub struct Auras {
     pub active: Vec<Aura>,
 }
 
+impl Aura {
+    /// Whether this aura has any periodic (DoT/HoT) effect.
+    ///
+    /// Periodic auras from different casters stack separately per caster,
+    /// matching WoW's SPELL_ATTR3_DOT_STACKING_RULE behavior.
+    pub fn has_periodic_effect(&self) -> bool {
+        self.effects.iter().flatten().any(|e| {
+            matches!(
+                e,
+                AuraEffect::PeriodicDamage { .. } | AuraEffect::PeriodicHeal { .. }
+            )
+        })
+    }
+}
+
+/// Result of attempting to apply an aura.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AuraApplyResult {
+    /// New aura was added to the active list.
+    Applied,
+    /// Existing aura from the same caster was refreshed (duration reset, stack incremented).
+    Refreshed,
+    /// Aura was rejected (non-periodic from a different caster already exists).
+    Rejected,
+}
+
+impl Auras {
+    /// Apply an aura, following WoW stacking rules:
+    ///
+    /// 1. **Same caster, same spell_id**: Refresh duration, increment stacks (up to max).
+    /// 2. **Different caster, periodic (DoT/HoT)**: Stack separately (new entry per caster).
+    /// 3. **Different caster, non-periodic**: Reject (keep existing aura).
+    ///
+    /// Ref: AzerothCore `_TryStackingOrRefreshingExistingAura()`.
+    pub fn apply(&mut self, aura: Aura) -> AuraApplyResult {
+        let existing = self
+            .active
+            .iter_mut()
+            .find(|a| a.spell_id == aura.spell_id && a.caster == aura.caster);
+
+        if let Some(existing) = existing {
+            existing.remaining = aura.duration;
+            existing.stacks = existing.stacks.saturating_add(1).min(existing.max_stacks);
+            return AuraApplyResult::Refreshed;
+        }
+
+        // Different caster (or first application): check if spell_id already present
+        let has_from_other_caster = self
+            .active
+            .iter()
+            .any(|a| a.spell_id == aura.spell_id);
+
+        if has_from_other_caster && !aura.has_periodic_effect() {
+            return AuraApplyResult::Rejected;
+        }
+
+        self.active.push(aura);
+        AuraApplyResult::Applied
+    }
+}
+
 /// Spell school for damage/healing classification.
 ///
 /// In retail WoW, spell resistance per school is removed. Physical damage
@@ -712,6 +773,134 @@ mod tests {
             AuraEffect::ModCritChance { percent: 0.05 },
         ];
         assert_eq!(effects.len(), 10);
+    }
+
+    // --- Aura stacking tests ---
+
+    fn make_aura(spell_id: u32, caster: u64, max_stacks: u8) -> Aura {
+        Aura {
+            spell_id,
+            caster,
+            duration: 10.0,
+            remaining: 10.0,
+            stacks: 1,
+            max_stacks,
+            effects: [None, None, None],
+        }
+    }
+
+    fn make_dot(spell_id: u32, caster: u64) -> Aura {
+        Aura {
+            spell_id,
+            caster,
+            duration: 15.0,
+            remaining: 15.0,
+            stacks: 1,
+            max_stacks: 1,
+            effects: [
+                Some(AuraEffect::PeriodicDamage {
+                    damage: 100.0,
+                    interval: 3.0,
+                }),
+                None,
+                None,
+            ],
+        }
+    }
+
+    #[test]
+    fn aura_has_periodic_effect_dot() {
+        let dot = make_dot(1, 10);
+        assert!(dot.has_periodic_effect());
+    }
+
+    #[test]
+    fn aura_has_periodic_effect_buff() {
+        let buff = make_aura(1, 10, 1);
+        assert!(!buff.has_periodic_effect());
+    }
+
+    #[test]
+    fn apply_aura_first_time() {
+        let mut auras = Auras::default();
+        let result = auras.apply(make_aura(100, 1, 3));
+        assert_eq!(result, AuraApplyResult::Applied);
+        assert_eq!(auras.active.len(), 1);
+    }
+
+    #[test]
+    fn apply_aura_same_caster_refreshes_duration() {
+        let mut auras = Auras::default();
+        auras.apply(make_aura(100, 1, 3));
+        // Simulate time passing
+        auras.active[0].remaining = 3.0;
+
+        let result = auras.apply(make_aura(100, 1, 3));
+        assert_eq!(result, AuraApplyResult::Refreshed);
+        assert_eq!(auras.active.len(), 1);
+        assert_eq!(auras.active[0].remaining, 10.0, "duration should reset");
+    }
+
+    #[test]
+    fn apply_aura_same_caster_increments_stacks() {
+        let mut auras = Auras::default();
+        auras.apply(make_aura(100, 1, 5));
+        assert_eq!(auras.active[0].stacks, 1);
+
+        auras.apply(make_aura(100, 1, 5));
+        assert_eq!(auras.active[0].stacks, 2);
+
+        auras.apply(make_aura(100, 1, 5));
+        assert_eq!(auras.active[0].stacks, 3);
+    }
+
+    #[test]
+    fn apply_aura_same_caster_caps_at_max_stacks() {
+        let mut auras = Auras::default();
+        auras.apply(make_aura(100, 1, 2));
+        auras.apply(make_aura(100, 1, 2));
+        auras.apply(make_aura(100, 1, 2));
+        assert_eq!(auras.active[0].stacks, 2, "should not exceed max_stacks");
+    }
+
+    #[test]
+    fn apply_aura_different_caster_non_periodic_rejected() {
+        let mut auras = Auras::default();
+        auras.apply(make_aura(100, 1, 1));
+        let result = auras.apply(make_aura(100, 2, 1));
+        assert_eq!(result, AuraApplyResult::Rejected);
+        assert_eq!(auras.active.len(), 1);
+        assert_eq!(auras.active[0].caster, 1, "original caster kept");
+    }
+
+    #[test]
+    fn apply_dot_different_casters_stack() {
+        let mut auras = Auras::default();
+        auras.apply(make_dot(200, 1));
+        let result = auras.apply(make_dot(200, 2));
+        assert_eq!(result, AuraApplyResult::Applied);
+        assert_eq!(auras.active.len(), 2, "DOTs from different casters stack");
+    }
+
+    #[test]
+    fn apply_dot_same_caster_refreshes() {
+        let mut auras = Auras::default();
+        auras.apply(make_dot(200, 1));
+        auras.active[0].remaining = 5.0;
+
+        let result = auras.apply(make_dot(200, 1));
+        assert_eq!(result, AuraApplyResult::Refreshed);
+        assert_eq!(auras.active.len(), 1);
+        assert_eq!(auras.active[0].remaining, 15.0);
+    }
+
+    #[test]
+    fn apply_different_spells_always_stack() {
+        let mut auras = Auras::default();
+        auras.apply(make_aura(100, 1, 1));
+        let result = auras.apply(make_aura(200, 1, 1));
+        assert_eq!(result, AuraApplyResult::Applied);
+        assert_eq!(auras.active.len(), 2);
     }
 
     #[test]
