@@ -111,6 +111,99 @@ pub struct SpellCost {
     pub amount: f32,
 }
 
+// --- Effect processing ---
+
+/// Caster stats snapshot for effect calculations.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct CasterStats {
+    pub attack_power: f32,
+    pub spell_power: f32,
+}
+
+/// Result of processing a single spell effect.
+///
+/// The server applies these to the game world; the client uses them for
+/// prediction and combat text display.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum EffectResult {
+    /// Deal damage to the target.
+    Damage { amount: f32 },
+    /// Heal the target.
+    Heal { amount: f32 },
+    /// Apply an aura (buff/debuff/DoT/HoT) to the target.
+    ApplyAura { aura_spell_id: u32 },
+    /// Restore a resource to the target.
+    Energize { resource: ResourceType, amount: f32 },
+    /// Dispel auras of the given school from the target.
+    Dispel { school: SpellSchool },
+    /// Interrupt the target's cast and lock out the school.
+    Interrupt { lockout_duration: f32 },
+}
+
+/// Process a single spell effect, returning what should happen.
+///
+/// `roll` is a random value in 0.0–1.0 used to pick within damage/heal ranges.
+///
+/// Ref: AzerothCore `Spell::EffectSchoolDMG`, `Spell::EffectHeal`, etc.
+pub fn process_effect(
+    effect: &SpellEffectDef,
+    caster: &CasterStats,
+    roll: f32,
+) -> EffectResult {
+    match *effect {
+        SpellEffectDef::SchoolDamage {
+            base_min,
+            base_max,
+            ap_coefficient,
+            sp_coefficient,
+        } => {
+            let base = base_min + (base_max - base_min) * roll;
+            let bonus = caster.attack_power * ap_coefficient
+                + caster.spell_power * sp_coefficient;
+            EffectResult::Damage {
+                amount: base + bonus,
+            }
+        }
+        SpellEffectDef::Heal {
+            base_min,
+            base_max,
+            ap_coefficient,
+            sp_coefficient,
+        } => {
+            let base = base_min + (base_max - base_min) * roll;
+            let bonus = caster.attack_power * ap_coefficient
+                + caster.spell_power * sp_coefficient;
+            EffectResult::Heal {
+                amount: base + bonus,
+            }
+        }
+        SpellEffectDef::ApplyAura { aura_spell_id } => {
+            EffectResult::ApplyAura { aura_spell_id }
+        }
+        SpellEffectDef::Energize { resource, amount } => {
+            EffectResult::Energize { resource, amount }
+        }
+        SpellEffectDef::Dispel { school } => EffectResult::Dispel { school },
+        SpellEffectDef::Interrupt { lockout_duration } => {
+            EffectResult::Interrupt { lockout_duration }
+        }
+    }
+}
+
+/// Process all effects of a spell, returning results for each non-None effect.
+pub fn process_spell_effects(
+    spell: &SpellData,
+    caster: &CasterStats,
+    roll: f32,
+) -> Vec<EffectResult> {
+    spell
+        .effects
+        .iter()
+        .flatten()
+        .map(|effect| process_effect(effect, caster, roll))
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -321,5 +414,153 @@ mod tests {
         let json = serde_json::to_string(&spell).unwrap();
         let decoded: SpellData = serde_json::from_str(&json).unwrap();
         assert_eq!(decoded, spell);
+    }
+
+    // --- Effect processing tests ---
+
+    fn test_caster() -> CasterStats {
+        CasterStats {
+            attack_power: 1000.0,
+            spell_power: 3000.0,
+        }
+    }
+
+    #[test]
+    fn process_school_damage_min_roll() {
+        let effect = SpellEffectDef::SchoolDamage {
+            base_min: 800.0,
+            base_max: 1000.0,
+            ap_coefficient: 0.0,
+            sp_coefficient: 1.0,
+        };
+        let result = process_effect(&effect, &test_caster(), 0.0);
+        // base_min + SP * coeff = 800 + 3000 * 1.0 = 3800
+        assert_eq!(result, EffectResult::Damage { amount: 3800.0 });
+    }
+
+    #[test]
+    fn process_school_damage_max_roll() {
+        let effect = SpellEffectDef::SchoolDamage {
+            base_min: 800.0,
+            base_max: 1000.0,
+            ap_coefficient: 0.0,
+            sp_coefficient: 1.0,
+        };
+        let result = process_effect(&effect, &test_caster(), 1.0);
+        // base_max + SP * coeff = 1000 + 3000 = 4000
+        assert_eq!(result, EffectResult::Damage { amount: 4000.0 });
+    }
+
+    #[test]
+    fn process_school_damage_with_ap() {
+        let effect = SpellEffectDef::SchoolDamage {
+            base_min: 500.0,
+            base_max: 500.0,
+            ap_coefficient: 1.68,
+            sp_coefficient: 0.0,
+        };
+        let result = process_effect(&effect, &test_caster(), 0.5);
+        // 500 + 1000 * 1.68 = 2180
+        assert_eq!(result, EffectResult::Damage { amount: 2180.0 });
+    }
+
+    #[test]
+    fn process_heal() {
+        let effect = SpellEffectDef::Heal {
+            base_min: 2000.0,
+            base_max: 2400.0,
+            ap_coefficient: 0.0,
+            sp_coefficient: 1.2,
+        };
+        let result = process_effect(&effect, &test_caster(), 0.5);
+        // base: 2000 + (400 * 0.5) = 2200, bonus: 3000 * 1.2 = 3600
+        assert_eq!(result, EffectResult::Heal { amount: 5800.0 });
+    }
+
+    #[test]
+    fn process_apply_aura() {
+        let effect = SpellEffectDef::ApplyAura { aura_spell_id: 42 };
+        let result = process_effect(&effect, &test_caster(), 0.0);
+        assert_eq!(result, EffectResult::ApplyAura { aura_spell_id: 42 });
+    }
+
+    #[test]
+    fn process_energize() {
+        let effect = SpellEffectDef::Energize {
+            resource: ResourceType::Rage,
+            amount: 20.0,
+        };
+        let result = process_effect(&effect, &test_caster(), 0.0);
+        assert_eq!(
+            result,
+            EffectResult::Energize {
+                resource: ResourceType::Rage,
+                amount: 20.0
+            }
+        );
+    }
+
+    #[test]
+    fn process_interrupt() {
+        let effect = SpellEffectDef::Interrupt {
+            lockout_duration: 5.0,
+        };
+        let result = process_effect(&effect, &test_caster(), 0.0);
+        assert_eq!(
+            result,
+            EffectResult::Interrupt {
+                lockout_duration: 5.0
+            }
+        );
+    }
+
+    #[test]
+    fn process_spell_effects_multi() {
+        let spell = SpellData {
+            id: 100,
+            name: "Multi".into(),
+            school: SpellSchool::Fire,
+            cast_time: 2.0,
+            cooldown: 0.0,
+            cost: None,
+            target: SpellTarget::Hostile,
+            range: 40.0,
+            cast_while_moving: false,
+            interruptible: true,
+            effects: [
+                Some(SpellEffectDef::SchoolDamage {
+                    base_min: 100.0,
+                    base_max: 100.0,
+                    ap_coefficient: 0.0,
+                    sp_coefficient: 0.5,
+                }),
+                Some(SpellEffectDef::ApplyAura { aura_spell_id: 200 }),
+                None,
+            ],
+        };
+        let results = process_spell_effects(&spell, &test_caster(), 0.5);
+        assert_eq!(results.len(), 2);
+        // 100 + 3000 * 0.5 = 1600
+        assert_eq!(results[0], EffectResult::Damage { amount: 1600.0 });
+        assert_eq!(results[1], EffectResult::ApplyAura { aura_spell_id: 200 });
+    }
+
+    #[test]
+    fn process_spell_no_effects() {
+        let spell = SpellData {
+            id: 1,
+            name: "Empty".into(),
+            school: SpellSchool::Physical,
+            cast_time: 0.0,
+            cooldown: 0.0,
+            cost: None,
+            target: SpellTarget::Self_,
+            range: 0.0,
+            cast_while_moving: false,
+            interruptible: false,
+            effects: [None, None, None],
+        };
+        let results = process_spell_effects(&spell, &test_caster(), 0.0);
+        assert!(results.is_empty());
     }
 }
