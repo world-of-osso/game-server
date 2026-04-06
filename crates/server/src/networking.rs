@@ -928,6 +928,40 @@ mod tests {
     }
 
     #[test]
+    fn ground_snap_within_threshold() {
+        let ground_y = 50.0;
+        let map = crate::terrain_height::test_helpers::flat_terrain(100.0, 100.0, ground_y);
+        let dt = 0.05;
+
+        // Below ground: snaps up to ground
+        let mut below = Position { x: 90.0, y: 48.0, z: -90.0 };
+        clamp_to_terrain(&map, &mut below, dt);
+        assert!((below.y - ground_y).abs() < 0.01, "below snaps to ground");
+
+        // Exactly at ground: stays
+        let mut exact = Position { x: 90.0, y: ground_y, z: -90.0 };
+        clamp_to_terrain(&map, &mut exact, dt);
+        assert!((exact.y - ground_y).abs() < 0.01, "exact stays on ground");
+
+        // Within threshold (ground + 0.29): no gravity, stays put
+        let within_y = ground_y + GROUND_SNAP_THRESHOLD - 0.01;
+        let mut within = Position { x: 90.0, y: within_y, z: -90.0 };
+        clamp_to_terrain(&map, &mut within, dt);
+        assert!((within.y - within_y).abs() < 0.01, "within threshold stays");
+
+        // Just above threshold (ground + 10.0): gravity applies, doesn't clamp yet
+        let above_y = ground_y + 10.0;
+        let mut above = Position { x: 90.0, y: above_y, z: -90.0 };
+        clamp_to_terrain(&map, &mut above, dt);
+        let expected = above_y - GRAVITY * dt;
+        assert!(
+            (above.y - expected).abs() < 0.01,
+            "above threshold falls: y={}, expected={expected}",
+            above.y,
+        );
+    }
+
+    #[test]
     fn chat_message_sender_override() {
         let mut msg = ChatMessage {
             sender: "hacker".into(),
