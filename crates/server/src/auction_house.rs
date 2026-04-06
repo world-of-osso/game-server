@@ -1815,6 +1815,44 @@ mod tests {
     }
 
     #[test]
+    fn bid_on_expired_auction_fails_gracefully() {
+        let db = persistence::temp_database();
+        let (seller_id, _) =
+            persistence::create_character(&db, 1, "Seller", 1, 1).expect("seller");
+        let (bidder_id, _) =
+            persistence::create_character(&db, 2, "Bidder", 1, 1).expect("bidder");
+        let source_item = persistence::load_inventory(&db, seller_id).items[0].clone();
+        let bidder_gold_before = persistence::load_inventory(&db, bidder_id).gold;
+        let mut state = AuctionHouseState::default();
+
+        create_auction(
+            &db,
+            &mut state,
+            seller_id,
+            &CreateAuction {
+                item_guid: source_item.item_guid,
+                stack_count: 1,
+                min_bid: 100,
+                buyout_price: Some(500),
+                duration: AuctionDuration::Short,
+            },
+        );
+        let auction_id = *state.auctions.keys().next().expect("auction id");
+
+        // Auction expires (removed from state) before bid arrives
+        state.auctions.remove(&auction_id);
+
+        let bid = place_bid(&db, &mut state, bidder_id, auction_id, 100);
+        assert!(!bid.success);
+
+        let buyout = buyout_auction(&db, &mut state, bidder_id, auction_id);
+        assert!(!buyout.success);
+
+        // Bidder gold unchanged
+        assert_eq!(persistence::load_inventory(&db, bidder_id).gold, bidder_gold_before);
+    }
+
+    #[test]
     fn expired_auction_with_bid_awards_winner_and_pays_seller() {
         let db = persistence::temp_database();
         let (seller_id, _) =
