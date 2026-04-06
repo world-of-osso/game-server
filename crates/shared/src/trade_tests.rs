@@ -647,3 +647,111 @@ fn bop_window_multiple_eligible() {
     assert!(window.is_eligible(202, 100));
     assert!(!window.is_eligible(999, 100));
 }
+
+// --- Trade logging ---
+
+fn sample_trade() -> CompletedTrade {
+    let mut init_offer = TradeOffer::default();
+    init_offer.set_item(0, sword()).unwrap();
+    let mut tgt_offer = TradeOffer::default();
+    tgt_offer.set_gold(50000);
+    CompletedTrade {
+        initiator: 100, target: 200,
+        initiator_offer: init_offer, target_offer: tgt_offer,
+    }
+}
+
+#[test]
+fn log_record_and_get() {
+    let mut log = TradeLog::new();
+    assert!(log.is_empty());
+
+    let id = log.record(&sample_trade(), 5000);
+    assert_eq!(id, 1);
+    assert_eq!(log.len(), 1);
+
+    let entry = log.get(id).unwrap();
+    assert_eq!(entry.initiator, 100);
+    assert_eq!(entry.target, 200);
+    assert_eq!(entry.completed_at, 5000);
+    assert_eq!(entry.initiator_offer.slots[0], Some(sword()));
+    assert_eq!(entry.target_offer.gold, 50000);
+}
+
+#[test]
+fn log_sequential_ids() {
+    let mut log = TradeLog::new();
+    let id1 = log.record(&sample_trade(), 1000);
+    let id2 = log.record(&sample_trade(), 2000);
+    assert_eq!(id1, 1);
+    assert_eq!(id2, 2);
+}
+
+#[test]
+fn log_get_nonexistent() {
+    let log = TradeLog::new();
+    assert!(log.get(999).is_none());
+}
+
+#[test]
+fn log_trades_for_player() {
+    let mut log = TradeLog::new();
+    log.record(&sample_trade(), 1000); // 100 ↔ 200
+
+    let mut other = sample_trade();
+    other.initiator = 300;
+    other.target = 100;
+    log.record(&other, 2000); // 300 ↔ 100
+
+    let mut unrelated = sample_trade();
+    unrelated.initiator = 400;
+    unrelated.target = 500;
+    log.record(&unrelated, 3000); // 400 ↔ 500
+
+    let player_100 = log.trades_for_player(100);
+    assert_eq!(player_100.len(), 2);
+
+    let player_500 = log.trades_for_player(500);
+    assert_eq!(player_500.len(), 1);
+
+    let player_999 = log.trades_for_player(999);
+    assert!(player_999.is_empty());
+}
+
+#[test]
+fn log_trades_in_range() {
+    let mut log = TradeLog::new();
+    log.record(&sample_trade(), 1000);
+    log.record(&sample_trade(), 2000);
+    log.record(&sample_trade(), 3000);
+
+    let range = log.trades_in_range(1500, 2500);
+    assert_eq!(range.len(), 1);
+    assert_eq!(range[0].completed_at, 2000);
+
+    let all = log.trades_in_range(0, 5000);
+    assert_eq!(all.len(), 3);
+}
+
+#[test]
+fn log_drain_before() {
+    let mut log = TradeLog::new();
+    log.record(&sample_trade(), 1000);
+    log.record(&sample_trade(), 2000);
+    log.record(&sample_trade(), 3000);
+
+    let old = log.drain_before(2500);
+    assert_eq!(old.len(), 2);
+    assert_eq!(log.len(), 1);
+    assert_eq!(log.get(3).unwrap().completed_at, 3000);
+}
+
+#[test]
+fn log_drain_none() {
+    let mut log = TradeLog::new();
+    log.record(&sample_trade(), 1000);
+
+    let old = log.drain_before(500);
+    assert!(old.is_empty());
+    assert_eq!(log.len(), 1);
+}

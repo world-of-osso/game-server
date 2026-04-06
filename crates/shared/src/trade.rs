@@ -189,6 +189,96 @@ pub struct CompletedTrade {
     pub target_offer: TradeOffer,
 }
 
+// --- Trade logging (dispute resolution) ---
+
+/// A permanent record of a completed trade.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct TradeLogEntry {
+    /// Sequential log ID.
+    pub id: u64,
+    /// Player who initiated the trade.
+    pub initiator: u64,
+    /// Player who accepted the trade request.
+    pub target: u64,
+    /// What the initiator gave.
+    pub initiator_offer: TradeOffer,
+    /// What the target gave.
+    pub target_offer: TradeOffer,
+    /// Server timestamp when the trade completed.
+    pub completed_at: u64,
+}
+
+/// Append-only trade log for server-side dispute resolution.
+///
+/// Records every completed trade with full item/gold details.
+/// The server persists this to disk; this struct is the in-memory buffer.
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct TradeLog {
+    entries: Vec<TradeLogEntry>,
+    next_id: u64,
+}
+
+impl TradeLog {
+    pub fn new() -> Self {
+        Self { entries: Vec::new(), next_id: 1 }
+    }
+
+    /// Record a completed trade. Returns the log entry ID.
+    pub fn record(&mut self, trade: &CompletedTrade, now: u64) -> u64 {
+        let id = self.next_id;
+        self.next_id += 1;
+        self.entries.push(TradeLogEntry {
+            id,
+            initiator: trade.initiator,
+            target: trade.target,
+            initiator_offer: trade.initiator_offer.clone(),
+            target_offer: trade.target_offer.clone(),
+            completed_at: now,
+        });
+        id
+    }
+
+    /// Find all trades involving a specific player.
+    pub fn trades_for_player(&self, player: u64) -> Vec<&TradeLogEntry> {
+        self.entries
+            .iter()
+            .filter(|e| e.initiator == player || e.target == player)
+            .collect()
+    }
+
+    /// Find all trades within a time range.
+    pub fn trades_in_range(&self, from: u64, to: u64) -> Vec<&TradeLogEntry> {
+        self.entries
+            .iter()
+            .filter(|e| e.completed_at >= from && e.completed_at <= to)
+            .collect()
+    }
+
+    /// Look up a specific trade by log ID.
+    pub fn get(&self, id: u64) -> Option<&TradeLogEntry> {
+        self.entries.iter().find(|e| e.id == id)
+    }
+
+    /// Total number of recorded trades.
+    pub fn len(&self) -> usize {
+        self.entries.len()
+    }
+
+    /// Whether the log is empty.
+    pub fn is_empty(&self) -> bool {
+        self.entries.is_empty()
+    }
+
+    /// Drain entries older than `before` timestamp for archival.
+    /// Returns the removed entries so the server can persist them.
+    pub fn drain_before(&mut self, before: u64) -> Vec<TradeLogEntry> {
+        let (old, recent): (Vec<_>, Vec<_>) =
+            self.entries.drain(..).partition(|e| e.completed_at < before);
+        self.entries = recent;
+        old
+    }
+}
+
 /// A pending or active trade session between two players.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct TradeSession {
