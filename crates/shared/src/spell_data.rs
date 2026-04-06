@@ -111,6 +111,94 @@ pub struct SpellCost {
     pub amount: f32,
 }
 
+// --- Cast validation ---
+
+/// Why a spell cast was rejected.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CastFailReason {
+    /// No target selected (for targeted spells).
+    NoTarget,
+    /// Target is out of range.
+    OutOfRange,
+    /// Target is not valid for this spell (hostile vs friendly mismatch).
+    InvalidTarget,
+    /// Not enough resource (mana, rage, energy, etc.).
+    NotEnoughResource,
+    /// Spell is on cooldown.
+    OnCooldown,
+    /// Caster is dead.
+    CasterDead,
+}
+
+/// Context needed to validate a cast attempt.
+#[derive(Debug, Clone, Copy)]
+pub struct CastContext {
+    /// Distance from caster to target in yards. Ignored for Self_ spells.
+    pub distance: f32,
+    /// Whether the target is friendly to the caster.
+    pub target_is_friendly: bool,
+    /// Whether a target entity exists.
+    pub has_target: bool,
+    /// Whether the caster is alive.
+    pub caster_alive: bool,
+    /// Current resource amount for the spell's cost type. `None` if no pool.
+    pub resource_available: Option<f32>,
+    /// Remaining cooldown in seconds (0.0 = ready).
+    pub cooldown_remaining: f32,
+}
+
+/// Effective melee range used when spell range is 0.
+const MELEE_RANGE: f32 = 5.0;
+
+/// Validate whether a spell can be cast. Returns `Ok(())` or the first
+/// failure reason.
+///
+/// Checks in order (matching WoW priority):
+/// 1. Caster alive
+/// 2. Target exists (for non-self spells)
+/// 3. Target validity (hostile/friendly match)
+/// 4. Range
+/// 5. Resource cost
+/// 6. Cooldown
+///
+/// Ref: AzerothCore `Spell::CheckCast()`.
+pub fn validate_cast(spell: &SpellData, ctx: &CastContext) -> Result<(), CastFailReason> {
+    if !ctx.caster_alive {
+        return Err(CastFailReason::CasterDead);
+    }
+
+    if spell.target != SpellTarget::Self_ {
+        if !ctx.has_target {
+            return Err(CastFailReason::NoTarget);
+        }
+        let target_ok = match spell.target {
+            SpellTarget::Hostile => !ctx.target_is_friendly,
+            SpellTarget::Friendly => ctx.target_is_friendly,
+            SpellTarget::Self_ => true,
+        };
+        if !target_ok {
+            return Err(CastFailReason::InvalidTarget);
+        }
+        let max_range = if spell.range > 0.0 { spell.range } else { MELEE_RANGE };
+        if ctx.distance > max_range {
+            return Err(CastFailReason::OutOfRange);
+        }
+    }
+
+    if let Some(cost) = &spell.cost {
+        let available = ctx.resource_available.unwrap_or(0.0);
+        if available < cost.amount {
+            return Err(CastFailReason::NotEnoughResource);
+        }
+    }
+
+    if ctx.cooldown_remaining > 0.0 {
+        return Err(CastFailReason::OnCooldown);
+    }
+
+    Ok(())
+}
+
 // --- Effect processing ---
 
 /// Caster stats snapshot for effect calculations.
@@ -562,5 +650,144 @@ mod tests {
         };
         let results = process_spell_effects(&spell, &test_caster(), 0.0);
         assert!(results.is_empty());
+    }
+
+    // --- Cast validation tests ---
+
+    fn valid_hostile_ctx() -> CastContext {
+        CastContext {
+            distance: 10.0,
+            target_is_friendly: false,
+            has_target: true,
+            caster_alive: true,
+            resource_available: Some(5000.0),
+            cooldown_remaining: 0.0,
+        }
+    }
+
+    fn fireball_spell() -> SpellData {
+        SpellData {
+            id: 133,
+            name: "Fireball".into(),
+            school: SpellSchool::Fire,
+            cast_time: 2.0,
+            cooldown: 0.0,
+            cost: Some(SpellCost {
+                resource: ResourceType::Mana,
+                amount: 3000.0,
+            }),
+            target: SpellTarget::Hostile,
+            range: 40.0,
+            cast_while_moving: false,
+            interruptible: true,
+            effects: [None, None, None],
+        }
+    }
+
+    #[test]
+    fn validate_cast_success() {
+        assert!(validate_cast(&fireball_spell(), &valid_hostile_ctx()).is_ok());
+    }
+
+    #[test]
+    fn validate_cast_dead_caster() {
+        let mut ctx = valid_hostile_ctx();
+        ctx.caster_alive = false;
+        assert_eq!(
+            validate_cast(&fireball_spell(), &ctx),
+            Err(CastFailReason::CasterDead)
+        );
+    }
+
+    #[test]
+    fn validate_cast_no_target() {
+        let mut ctx = valid_hostile_ctx();
+        ctx.has_target = false;
+        assert_eq!(
+            validate_cast(&fireball_spell(), &ctx),
+            Err(CastFailReason::NoTarget)
+        );
+    }
+
+    #[test]
+    fn validate_cast_friendly_target_for_hostile_spell() {
+        let mut ctx = valid_hostile_ctx();
+        ctx.target_is_friendly = true;
+        assert_eq!(
+            validate_cast(&fireball_spell(), &ctx),
+            Err(CastFailReason::InvalidTarget)
+        );
+    }
+
+    #[test]
+    fn validate_cast_out_of_range() {
+        let mut ctx = valid_hostile_ctx();
+        ctx.distance = 50.0;
+        assert_eq!(
+            validate_cast(&fireball_spell(), &ctx),
+            Err(CastFailReason::OutOfRange)
+        );
+    }
+
+    #[test]
+    fn validate_cast_melee_range_default() {
+        let ms = super::super::spell_catalog::mortal_strike(); // range=0.0 → 5y melee
+        let mut ctx = valid_hostile_ctx();
+        ctx.distance = 4.0;
+        assert!(validate_cast(&ms, &ctx).is_ok());
+        ctx.distance = 6.0;
+        assert_eq!(
+            validate_cast(&ms, &ctx),
+            Err(CastFailReason::OutOfRange)
+        );
+    }
+
+    #[test]
+    fn validate_cast_not_enough_resource() {
+        let mut ctx = valid_hostile_ctx();
+        ctx.resource_available = Some(1000.0); // need 3000
+        assert_eq!(
+            validate_cast(&fireball_spell(), &ctx),
+            Err(CastFailReason::NotEnoughResource)
+        );
+    }
+
+    #[test]
+    fn validate_cast_on_cooldown() {
+        let mut ctx = valid_hostile_ctx();
+        ctx.cooldown_remaining = 3.5;
+        assert_eq!(
+            validate_cast(&fireball_spell(), &ctx),
+            Err(CastFailReason::OnCooldown)
+        );
+    }
+
+    #[test]
+    fn validate_cast_self_spell_needs_no_target() {
+        let self_spell = SpellData {
+            id: 1,
+            name: "Buff".into(),
+            school: SpellSchool::Holy,
+            cast_time: 0.0,
+            cooldown: 0.0,
+            cost: None,
+            target: SpellTarget::Self_,
+            range: 0.0,
+            cast_while_moving: true,
+            interruptible: false,
+            effects: [None, None, None],
+        };
+        let mut ctx = valid_hostile_ctx();
+        ctx.has_target = false;
+        assert!(validate_cast(&self_spell, &ctx).is_ok());
+    }
+
+    #[test]
+    fn validate_cast_no_cost_spell_ignores_resources() {
+        let vr = super::super::spell_catalog::victory_rush(); // cost=None
+        let mut ctx = valid_hostile_ctx();
+        ctx.distance = 3.0; // melee range for Victory Rush
+        ctx.resource_available = None; // no resource pool — doesn't matter
+        assert!(validate_cast(&vr, &ctx).is_ok());
     }
 }
