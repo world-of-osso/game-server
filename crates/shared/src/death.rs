@@ -98,6 +98,106 @@ pub fn transition_state(
     }
 }
 
+// --- Release spirit / graveyards ---
+
+/// A graveyard location where ghosts spawn.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Graveyard {
+    /// Unique graveyard ID.
+    pub id: u32,
+    /// Zone ID this graveyard serves.
+    pub zone_id: u32,
+    /// Faction: 0=both, 1=Alliance, 2=Horde.
+    pub faction: u8,
+    /// Map ID.
+    pub map_id: u16,
+    /// Ghost spawn position.
+    pub x: f32,
+    pub y: f32,
+    pub z: f32,
+}
+
+/// Registry of graveyards, loaded from world data.
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct GraveyardRegistry {
+    graveyards: Vec<Graveyard>,
+}
+
+impl GraveyardRegistry {
+    pub fn new() -> Self {
+        Self { graveyards: Vec::new() }
+    }
+
+    pub fn add(&mut self, gy: Graveyard) {
+        self.graveyards.push(gy);
+    }
+
+    /// Find the nearest graveyard for a given position and faction.
+    /// `faction`: 0=neutral(any), 1=Alliance, 2=Horde.
+    pub fn nearest(
+        &self, map_id: u16, x: f32, y: f32, z: f32, faction: u8,
+    ) -> Option<&Graveyard> {
+        self.graveyards
+            .iter()
+            .filter(|g| g.map_id == map_id && (g.faction == 0 || g.faction == faction))
+            .min_by(|a, b| {
+                let da = dist_sq(x, y, z, a.x, a.y, a.z);
+                let db = dist_sq(x, y, z, b.x, b.y, b.z);
+                da.partial_cmp(&db).unwrap_or(std::cmp::Ordering::Equal)
+            })
+    }
+
+    pub fn len(&self) -> usize {
+        self.graveyards.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.graveyards.is_empty()
+    }
+}
+
+fn dist_sq(ax: f32, ay: f32, az: f32, bx: f32, by: f32, bz: f32) -> f32 {
+    let dx = ax - bx;
+    let dy = ay - by;
+    let dz = az - bz;
+    dx * dx + dy * dy + dz * dz
+}
+
+/// Result of releasing spirit.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ReleaseResult {
+    /// Graveyard the ghost spawns at.
+    pub graveyard_id: u32,
+    pub map_id: u16,
+    pub x: f32,
+    pub y: f32,
+    pub z: f32,
+}
+
+/// Release spirit: Dead → Ghost, teleport to nearest graveyard.
+///
+/// Returns the graveyard position for the server to teleport the player.
+pub fn release_spirit(
+    state: DeathState,
+    death_map: u16,
+    death_x: f32,
+    death_y: f32,
+    death_z: f32,
+    player_faction: u8,
+    graveyards: &GraveyardRegistry,
+) -> Result<ReleaseResult, DeathError> {
+    if state != DeathState::Dead {
+        return Err(DeathError::NotDead);
+    }
+    let gy = graveyards
+        .nearest(death_map, death_x, death_y, death_z, player_faction)
+        .ok_or(DeathError::NotDead)?; // no graveyard = can't release
+    Ok(ReleaseResult {
+        graveyard_id: gy.id, map_id: gy.map_id,
+        x: gy.x, y: gy.y, z: gy.z,
+    })
+}
+
 #[cfg(test)]
 #[path = "death_tests.rs"]
 mod tests;
