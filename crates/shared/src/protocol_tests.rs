@@ -100,6 +100,7 @@ fn sample_auction_search_results() -> AuctionSearchResults {
             usable_only: false,
             sort_field: AuctionSortField::Name,
             sort_dir: AuctionSortDir::Asc,
+            faction: 0,
         },
         total_results: 1,
         results: vec![AuctionListingSummary {

@@ -133,6 +133,8 @@ pub struct AuctionData {
     pub current_bidder_character_id: Option<u64>,
     pub buyout_price: Option<u32>,
     pub expires_at_unix_secs: u64,
+    /// 0 = neutral, 1 = Alliance, 2 = Horde
+    pub faction: u8,
 }
 
 impl CharacterData {

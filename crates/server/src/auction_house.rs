@@ -34,6 +34,15 @@ fn deposit_cost(vendor_sell_price: u32, stack_count: u32, duration: AuctionDurat
         .saturating_mul(multiplier)
 }
 
+/// Map race ID to auction faction: 1=Alliance, 2=Horde.
+fn faction_for_race(race: u8) -> u8 {
+    match race {
+        1 | 3 | 4 | 7 | 11 | 22 | 25 | 29 | 30 | 32 | 34 | 37 => 1, // Alliance
+        2 | 5 | 6 | 8 | 9 | 10 | 26 | 27 | 28 | 31 | 35 | 36 => 2, // Horde
+        _ => 0,                                                        // Neutral
+    }
+}
+
 #[derive(Resource, Default)]
 struct AuctionHouseState {
     initialized: bool,
@@ -403,6 +412,7 @@ fn create_auction(
         current_bidder_character_id: None,
         buyout_price: req.buyout_price,
         expires_at_unix_secs: unix_now() + duration_secs(req.duration),
+        faction: faction_for_race(character.race),
     };
     persistence::save_auction(db, &auction);
     state.auctions.insert(auction.auction_id, auction);
@@ -619,6 +629,9 @@ fn search_auctions(
                 .max_level
                 .is_none_or(|max| auction.item.required_level <= max)
         })
+        .filter(|auction| {
+            query.faction == 0 || auction.faction == 0 || auction.faction == query.faction
+        })
         .map(to_listing_summary)
         .collect();
 
@@ -790,6 +803,7 @@ mod tests {
             current_bidder_character_id: Some(2),
             buyout_price: Some(150),
             expires_at_unix_secs: unix_now() + 60,
+            faction: 0,
         };
         assert_eq!(min_next_bid(&auction), 105);
     }
@@ -895,6 +909,7 @@ mod tests {
             current_bidder_character_id: None,
             buyout_price: Some(200),
             expires_at_unix_secs: unix_now() + 3600,
+            faction: 0,
         }
     }
 
@@ -909,6 +924,7 @@ mod tests {
             usable_only: false,
             sort_field: AuctionSortField::Name,
             sort_dir: AuctionSortDir::Asc,
+            faction: 0,
         }
     }
 
@@ -1082,6 +1098,42 @@ mod tests {
     }
 
     #[test]
+    fn faction_isolation_filters_auctions() {
+        let mut state = AuctionHouseState::default();
+        let mut alliance = test_auction(1, "Alliance Sword", 2, 10);
+        alliance.faction = 1;
+        let mut horde = test_auction(2, "Horde Axe", 2, 10);
+        horde.faction = 2;
+        let mut neutral = test_auction(3, "Neutral Cloth", 1, 5);
+        neutral.faction = 0;
+        state.auctions.insert(1, alliance);
+        state.auctions.insert(2, horde);
+        state.auctions.insert(3, neutral);
+
+        // Alliance sees alliance + neutral (2 results)
+        let mut query = text_query("");
+        query.faction = 1;
+        let r = search_auctions(&state.auctions, &query);
+        assert_eq!(r.total_results, 2);
+        let names: Vec<&str> = r.results.iter().map(|l| l.item.name.as_str()).collect();
+        assert!(names.contains(&"Alliance Sword"));
+        assert!(names.contains(&"Neutral Cloth"));
+
+        // Horde sees horde + neutral (2 results)
+        let mut query = text_query("");
+        query.faction = 2;
+        let r = search_auctions(&state.auctions, &query);
+        assert_eq!(r.total_results, 2);
+        let names: Vec<&str> = r.results.iter().map(|l| l.item.name.as_str()).collect();
+        assert!(names.contains(&"Horde Axe"));
+        assert!(names.contains(&"Neutral Cloth"));
+
+        // Faction 0 (neutral/admin) sees all
+        let r = search_auctions(&state.auctions, &text_query(""));
+        assert_eq!(r.total_results, 3);
+    }
+
+    #[test]
     fn sort_by_price_time_remaining_and_name() {
         let mut state = AuctionHouseState::default();
 
@@ -1117,6 +1169,7 @@ mod tests {
                     usable_only: false,
                     sort_field: field,
                     sort_dir: dir,
+                    faction: 0,
                 },
             )
         };
@@ -1168,6 +1221,7 @@ mod tests {
                     usable_only: false,
                     sort_field: AuctionSortField::Name,
                     sort_dir: AuctionSortDir::Asc,
+                    faction: 0,
                 },
             )
         };

@@ -352,6 +352,8 @@ pub struct AuctionSearchQuery {
     pub usable_only: bool,
     pub sort_field: AuctionSortField,
     pub sort_dir: AuctionSortDir,
+    /// Filter by faction: 0 = neutral (show all), 1 = Alliance, 2 = Horde.
+    pub faction: u8,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
