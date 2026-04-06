@@ -255,6 +255,52 @@ pub fn ghost_visible(observer_state: DeathState, target_state: DeathState, targe
     }
 }
 
+// --- Corpse run ---
+
+/// Maximum distance (yards) from corpse to resurrect.
+pub const CORPSE_RESURRECT_RANGE: f32 = 30.0;
+
+/// Check if a ghost player is close enough to their corpse to resurrect.
+pub fn in_corpse_range(
+    player_x: f32, player_y: f32, player_z: f32,
+    corpse: &Corpse,
+) -> bool {
+    dist_sq(player_x, player_y, player_z, corpse.x, corpse.y, corpse.z)
+        <= CORPSE_RESURRECT_RANGE * CORPSE_RESURRECT_RANGE
+}
+
+/// Result of a corpse-run resurrection.
+#[derive(Debug, Clone, PartialEq)]
+pub struct CorpseResurrectResult {
+    /// Position to resurrect at (corpse location).
+    pub x: f32,
+    pub y: f32,
+    pub z: f32,
+    pub map_id: u16,
+}
+
+/// Attempt to resurrect at the player's corpse.
+///
+/// Ghost must be within 30 yards of the corpse on the same map.
+/// Transitions Ghost → Resurrecting (server then completes → Alive).
+pub fn resurrect_at_corpse(
+    state: DeathState,
+    player_x: f32, player_y: f32, player_z: f32,
+    player_map: u16,
+    corpse: &Corpse,
+) -> Result<CorpseResurrectResult, DeathError> {
+    if state != DeathState::Ghost {
+        return Err(DeathError::NotGhost);
+    }
+    if player_map != corpse.map_id {
+        return Err(DeathError::NotGhost);
+    }
+    if !in_corpse_range(player_x, player_y, player_z, corpse) {
+        return Err(DeathError::NotGhost);
+    }
+    Ok(CorpseResurrectResult { x: corpse.x, y: corpse.y, z: corpse.z, map_id: corpse.map_id })
+}
+
 #[cfg(test)]
 #[path = "death_tests.rs"]
 mod tests;

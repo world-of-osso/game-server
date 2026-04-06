@@ -235,3 +235,68 @@ fn living_sees_spirit_healer() {
     // Spirit healers are visible to everyone
     assert!(ghost_visible(DeathState::Alive, DeathState::Alive, true));
 }
+
+// --- Corpse run ---
+
+fn sample_corpse() -> Corpse {
+    Corpse { player: 100, map_id: 0, x: 100.0, y: 200.0, z: 50.0, created_at: 1000 }
+}
+
+#[test]
+fn in_corpse_range_close() {
+    let corpse = sample_corpse();
+    assert!(in_corpse_range(105.0, 200.0, 50.0, &corpse)); // 5 yards away
+}
+
+#[test]
+fn in_corpse_range_exact_boundary() {
+    let corpse = sample_corpse();
+    assert!(in_corpse_range(100.0 + CORPSE_RESURRECT_RANGE, 200.0, 50.0, &corpse));
+}
+
+#[test]
+fn in_corpse_range_too_far() {
+    let corpse = sample_corpse();
+    assert!(!in_corpse_range(100.0 + CORPSE_RESURRECT_RANGE + 0.1, 200.0, 50.0, &corpse));
+}
+
+#[test]
+fn resurrect_at_corpse_success() {
+    let corpse = sample_corpse();
+    let result = resurrect_at_corpse(DeathState::Ghost, 105.0, 200.0, 50.0, 0, &corpse).unwrap();
+    assert_eq!(result.x, 100.0);
+    assert_eq!(result.y, 200.0);
+    assert_eq!(result.z, 50.0);
+    assert_eq!(result.map_id, 0);
+}
+
+#[test]
+fn resurrect_at_corpse_not_ghost() {
+    let corpse = sample_corpse();
+    assert_eq!(
+        resurrect_at_corpse(DeathState::Alive, 100.0, 200.0, 50.0, 0, &corpse),
+        Err(DeathError::NotGhost)
+    );
+    assert_eq!(
+        resurrect_at_corpse(DeathState::Dead, 100.0, 200.0, 50.0, 0, &corpse),
+        Err(DeathError::NotGhost)
+    );
+}
+
+#[test]
+fn resurrect_at_corpse_too_far() {
+    let corpse = sample_corpse();
+    assert_eq!(
+        resurrect_at_corpse(DeathState::Ghost, 500.0, 500.0, 50.0, 0, &corpse),
+        Err(DeathError::NotGhost)
+    );
+}
+
+#[test]
+fn resurrect_at_corpse_wrong_map() {
+    let corpse = sample_corpse();
+    assert_eq!(
+        resurrect_at_corpse(DeathState::Ghost, 100.0, 200.0, 50.0, 1, &corpse),
+        Err(DeathError::NotGhost)
+    );
+}
