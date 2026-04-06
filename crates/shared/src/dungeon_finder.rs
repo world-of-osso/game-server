@@ -203,6 +203,87 @@ pub fn teleport_orders(
         .collect()
 }
 
+// --- Instance lockouts ---
+
+/// Instance difficulty / reset period.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum LockoutType {
+    /// Heroic dungeon: resets daily.
+    HeroicDaily,
+    /// Mythic dungeon or raid: resets weekly.
+    MythicWeekly,
+}
+
+/// Seconds per day.
+const DAY_SECS: u64 = 86400;
+/// Seconds per week.
+const WEEK_SECS: u64 = 604800;
+
+/// A single instance lockout for a player.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct InstanceLockout {
+    pub dungeon_id: u32,
+    pub lockout_type: LockoutType,
+    /// Timestamp when the lockout was acquired.
+    pub acquired_at: u64,
+}
+
+impl InstanceLockout {
+    /// Timestamp of the next reset for this lockout.
+    pub fn reset_at(&self) -> u64 {
+        let period = match self.lockout_type {
+            LockoutType::HeroicDaily => DAY_SECS,
+            LockoutType::MythicWeekly => WEEK_SECS,
+        };
+        let periods = self.acquired_at / period;
+        (periods + 1) * period
+    }
+
+    /// Whether this lockout has expired.
+    pub fn is_expired(&self, now: u64) -> bool {
+        now >= self.reset_at()
+    }
+}
+
+/// Per-player instance lockout tracker.
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+pub struct PlayerLockouts {
+    pub lockouts: Vec<InstanceLockout>,
+}
+
+impl PlayerLockouts {
+    /// Record completing an instance.
+    pub fn add(&mut self, dungeon_id: u32, lockout_type: LockoutType, now: u64) {
+        // Remove any existing lockout for this dungeon
+        self.lockouts.retain(|l| l.dungeon_id != dungeon_id);
+        self.lockouts.push(InstanceLockout {
+            dungeon_id,
+            lockout_type,
+            acquired_at: now,
+        });
+    }
+
+    /// Whether a player is locked out of a dungeon.
+    pub fn is_locked(&self, dungeon_id: u32, now: u64) -> bool {
+        self.lockouts
+            .iter()
+            .any(|l| l.dungeon_id == dungeon_id && !l.is_expired(now))
+    }
+
+    /// Remove expired lockouts.
+    pub fn cleanup(&mut self, now: u64) {
+        self.lockouts.retain(|l| !l.is_expired(now));
+    }
+
+    /// Get the reset time for a specific dungeon lockout (if active).
+    pub fn reset_time(&self, dungeon_id: u32, now: u64) -> Option<u64> {
+        self.lockouts
+            .iter()
+            .find(|l| l.dungeon_id == dungeon_id && !l.is_expired(now))
+            .map(|l| l.reset_at())
+    }
+}
+
 // --- Satchel rewards ---
 
 /// A satchel bonus for queuing as an in-demand role.
@@ -581,6 +662,64 @@ mod tests {
         tracker.apply(1, 10000); // expires 11800
         tracker.apply(1, 11000); // refreshes to 12800
         assert!(tracker.is_deserter(1, 12000));
+    }
+
+    // --- Lockout tests ---
+
+    #[test]
+    fn heroic_daily_lockout() {
+        let mut lockouts = PlayerLockouts::default();
+        let now = 100_000; // mid-day
+        lockouts.add(100, LockoutType::HeroicDaily, now);
+        assert!(lockouts.is_locked(100, now));
+        assert!(lockouts.is_locked(100, now + 1000)); // still same day
+    }
+
+    #[test]
+    fn heroic_resets_at_day_boundary() {
+        let mut lockouts = PlayerLockouts::default();
+        let now = 100_000;
+        lockouts.add(100, LockoutType::HeroicDaily, now);
+        let reset = lockouts.reset_time(100, now).unwrap();
+        // Next day boundary after 100000: ceil(100000/86400)*86400 = 2*86400 = 172800
+        assert_eq!(reset, 172_800);
+        assert!(!lockouts.is_locked(100, 172_800)); // expired at reset
+    }
+
+    #[test]
+    fn mythic_weekly_lockout() {
+        let mut lockouts = PlayerLockouts::default();
+        let now = 100_000;
+        lockouts.add(200, LockoutType::MythicWeekly, now);
+        assert!(lockouts.is_locked(200, now + 3 * DAY_SECS)); // 3 days later still locked
+    }
+
+    #[test]
+    fn mythic_resets_at_week_boundary() {
+        let mut lockouts = PlayerLockouts::default();
+        let now = 100_000;
+        lockouts.add(200, LockoutType::MythicWeekly, now);
+        let reset = lockouts.reset_time(200, now).unwrap();
+        assert_eq!(reset, WEEK_SECS); // first week boundary
+        assert!(!lockouts.is_locked(200, WEEK_SECS));
+    }
+
+    #[test]
+    fn different_dungeons_independent() {
+        let mut lockouts = PlayerLockouts::default();
+        lockouts.add(100, LockoutType::HeroicDaily, 50_000);
+        assert!(lockouts.is_locked(100, 50_000));
+        assert!(!lockouts.is_locked(200, 50_000)); // different dungeon
+    }
+
+    #[test]
+    fn cleanup_removes_expired() {
+        let mut lockouts = PlayerLockouts::default();
+        lockouts.add(100, LockoutType::HeroicDaily, 10_000);
+        lockouts.add(200, LockoutType::MythicWeekly, 10_000);
+        lockouts.cleanup(200_000); // heroic expired, mythic still active
+        assert_eq!(lockouts.lockouts.len(), 1);
+        assert_eq!(lockouts.lockouts[0].dungeon_id, 200);
     }
 
     // --- Satchel tests ---
