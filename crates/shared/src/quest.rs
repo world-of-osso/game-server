@@ -267,6 +267,79 @@ impl QuestProgress {
     }
 }
 
+// --- Per-player quest log ---
+
+/// Maximum number of active (non-turned-in) quests a player can hold.
+const MAX_ACTIVE_QUESTS: usize = 25;
+
+/// Per-player quest log tracking all active and completed quests.
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+pub struct QuestLog {
+    /// Active quests (Accepted/InProgress/Complete — not yet turned in).
+    pub active: Vec<QuestProgress>,
+    /// IDs of quests that have been turned in (for prerequisite checks).
+    pub completed: Vec<u32>,
+}
+
+impl QuestLog {
+    /// Accept a quest. Returns `false` if the log is full or quest already active.
+    pub fn accept(&mut self, quest: &QuestData) -> bool {
+        if self.active.len() >= MAX_ACTIVE_QUESTS {
+            return false;
+        }
+        if self.has_quest(quest.id) {
+            return false;
+        }
+        self.active.push(QuestProgress::new(quest));
+        true
+    }
+
+    /// Whether a quest is currently in the active log.
+    pub fn has_quest(&self, quest_id: u32) -> bool {
+        self.active.iter().any(|q| q.quest_id == quest_id)
+    }
+
+    /// Whether a quest has been completed (turned in).
+    pub fn is_completed(&self, quest_id: u32) -> bool {
+        self.completed.contains(&quest_id)
+    }
+
+    /// Get mutable progress for an active quest.
+    pub fn get_mut(&mut self, quest_id: u32) -> Option<&mut QuestProgress> {
+        self.active.iter_mut().find(|q| q.quest_id == quest_id)
+    }
+
+    /// Get progress for an active quest.
+    pub fn get(&self, quest_id: u32) -> Option<&QuestProgress> {
+        self.active.iter().find(|q| q.quest_id == quest_id)
+    }
+
+    /// Turn in a quest: move from active to completed. Returns `false` if not ready.
+    pub fn turn_in(&mut self, quest_id: u32) -> bool {
+        let Some(progress) = self.get_mut(quest_id) else {
+            return false;
+        };
+        if !progress.turn_in() {
+            return false;
+        }
+        self.completed.push(quest_id);
+        self.active.retain(|q| q.quest_id != quest_id);
+        true
+    }
+
+    /// Abandon a quest, removing it from the active log.
+    pub fn abandon(&mut self, quest_id: u32) -> bool {
+        let had = self.has_quest(quest_id);
+        self.active.retain(|q| q.quest_id != quest_id);
+        had
+    }
+
+    /// Number of active quests.
+    pub fn active_count(&self) -> usize {
+        self.active.len()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -519,7 +592,104 @@ mod tests {
         q.objectives.clear();
         let mut progress = QuestProgress::new(&q);
         progress.update_state();
-        // No objectives → immediately Complete
         assert_eq!(progress.state, QuestState::Complete);
+    }
+
+    // --- Quest log tests ---
+
+    fn second_quest() -> QuestData {
+        QuestData {
+            id: 200,
+            title: "Red Ridge".into(),
+            description: "Help the town.".into(),
+            objective_text: "Talk to the marshal.".into(),
+            objectives: vec![QuestObjective::Interact { target_id: 500 }],
+            rewards: vec![QuestReward::Xp(800)],
+            reward_choices: vec![],
+            required_level: 15,
+            suggested_level: 18,
+            prerequisites: vec![100],
+            quest_giver: 300,
+            turn_in_npc: 300,
+        }
+    }
+
+    #[test]
+    fn quest_log_accept() {
+        let mut log = QuestLog::default();
+        assert!(log.accept(&sample_quest()));
+        assert_eq!(log.active_count(), 1);
+        assert!(log.has_quest(100));
+    }
+
+    #[test]
+    fn quest_log_reject_duplicate() {
+        let mut log = QuestLog::default();
+        log.accept(&sample_quest());
+        assert!(!log.accept(&sample_quest()));
+        assert_eq!(log.active_count(), 1);
+    }
+
+    #[test]
+    fn quest_log_full_rejects() {
+        let mut log = QuestLog::default();
+        for i in 0..25 {
+            let mut q = sample_quest();
+            q.id = 1000 + i;
+            assert!(log.accept(&q));
+        }
+        assert!(!log.accept(&second_quest()));
+    }
+
+    #[test]
+    fn quest_log_turn_in_flow() {
+        let q = sample_quest();
+        let mut log = QuestLog::default();
+        log.accept(&q);
+
+        // Complete objectives
+        let obj = &q.objectives[0];
+        let progress = log.get_mut(100).unwrap();
+        progress.update_state();
+        for _ in 0..10 {
+            progress.objectives[0].record_kill(94, obj);
+        }
+        progress.update_state();
+
+        assert!(log.turn_in(100));
+        assert!(!log.has_quest(100));
+        assert!(log.is_completed(100));
+        assert_eq!(log.active_count(), 0);
+    }
+
+    #[test]
+    fn quest_log_cant_turn_in_incomplete() {
+        let mut log = QuestLog::default();
+        log.accept(&sample_quest());
+        log.get_mut(100).unwrap().update_state();
+        assert!(!log.turn_in(100));
+    }
+
+    #[test]
+    fn quest_log_abandon() {
+        let mut log = QuestLog::default();
+        log.accept(&sample_quest());
+        assert!(log.abandon(100));
+        assert!(!log.has_quest(100));
+        assert!(!log.is_completed(100));
+    }
+
+    #[test]
+    fn quest_log_completed_enables_prereq() {
+        let _q1 = sample_quest(); // id=100
+        let q2 = second_quest(); // prereq=[100]
+        let mut log = QuestLog::default();
+
+        // q2 needs q1 completed
+        assert!(!q2.prerequisites_met(&log.completed));
+
+        // Complete q1
+        log.completed.push(100);
+        assert!(q2.prerequisites_met(&log.completed));
     }
 }
