@@ -1,5 +1,6 @@
 pub mod components;
 pub mod formulas;
+pub mod group;
 pub mod item_data;
 pub mod loot;
 pub mod movement;
