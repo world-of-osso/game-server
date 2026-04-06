@@ -937,4 +937,139 @@ mod tests {
     fn spell_damage_zero_coefficient() {
         assert_eq!(spell_damage(500.0, 9000.0, 0.0), 500.0);
     }
+
+    // --- Integration: full combat round with gear ---
+    // Exercises the complete formula pipeline: gear stats → hit table → damage → armor
+
+    #[test]
+    fn full_combat_round_warrior_vs_mob() {
+        // L80 Warrior with 2H weapon attacking a L80 mob
+        let attacker_level: u8 = 80;
+        let attacker_class: u8 = 1; // Warrior
+        let target_level: u8 = 80;
+
+        // Gear: 2H sword + plate armor contributing stats
+        let weapon_min = 300.0_f32;
+        let weapon_max = 500.0_f32;
+        let weapon_speed = 3.3_f32;
+        let attack_power = 1200.0_f32;
+        let crit_rating = 400.0_f32;
+        let target_armor = 5000.0_f32;
+
+        // Step 1: Compute HP from stats
+        let stamina = 200.0_f32;
+        let max_hp = max_health(attacker_class, attacker_level, stamina).unwrap();
+        let expected_hp = 8121.0 + 200.0 * 20.0; // base + stam * 20 (retail)
+        assert!((max_hp - expected_hp).abs() < 0.01, "HP: {max_hp} != {expected_hp}");
+
+        // Step 2: Auto-attack damage range (before hit table)
+        let raw_min = auto_attack_damage(weapon_min, attack_power, weapon_speed);
+        let raw_max = auto_attack_damage(weapon_max, attack_power, weapon_speed);
+        // AP bonus: (1200/6) * 3.3 = 660
+        let ap_bonus = ap_bonus_damage(attack_power, weapon_speed);
+        assert!((ap_bonus - 660.0).abs() < 0.01);
+        assert!((raw_min - 960.0).abs() < 0.01, "raw min: {raw_min}");
+        assert!((raw_max - 1160.0).abs() < 0.01, "raw max: {raw_max}");
+
+        // Step 3: Build hit table
+        let miss = melee::miss_chance(attacker_level, target_level);
+        assert_eq!(miss, 300); // 3% at equal level
+        let dodge = melee::dodge_chance(attacker_class, attacker_level, 0.0);
+        assert_eq!(dodge, 500); // 5% base, no dodge rating
+        let glancing = melee::glancing_chance(attacker_level, target_level);
+        assert_eq!(glancing, 0); // 0% at equal level
+        let crit = melee::crit_chance(attacker_level, crit_rating);
+        assert!(crit > 0, "should have some crit from 400 rating");
+
+        let chances = melee::MeleeHitChances {
+            miss,
+            dodge,
+            parry: 0,
+            glancing,
+            block: 0,
+            crit,
+        };
+
+        // Step 4: Resolve outcomes for specific rolls
+        // Roll 0 = miss (first 300 of 10000)
+        assert_eq!(
+            melee::resolve_melee_outcome(&chances, 0),
+            melee::MeleeOutcome::Miss
+        );
+
+        // Roll 9999 = normal hit (past all avoidance + crit)
+        assert_eq!(
+            melee::resolve_melee_outcome(&chances, 9999),
+            melee::MeleeOutcome::Hit
+        );
+
+        // Step 5: Apply armor mitigation to a normal hit
+        let mid_damage = (raw_min + raw_max) / 2.0; // 1060
+        let armor_dr = armor_mitigation(target_armor, attacker_level).unwrap();
+        let expected_dr = 5000.0 / (5000.0 + 880.0); // K(80) = 880
+        assert!((armor_dr - expected_dr).abs() < 0.001);
+        let final_damage = mid_damage * (1.0 - armor_dr);
+        // 1060 * (1 - 0.8503) = 1060 * 0.1497 ≈ 158.7
+        assert!(
+            final_damage > 100.0 && final_damage < 200.0,
+            "final damage {final_damage} should be 100-200 after 5000 armor"
+        );
+
+        // Step 6: Crit path — double the pre-armor damage, then mitigate
+        let crit_damage = melee::apply_crit(mid_damage, 0.0); // 2.0x
+        assert!((crit_damage - mid_damage * 2.0).abs() < 0.01);
+        let crit_after_armor = crit_damage * (1.0 - armor_dr);
+        assert!(
+            crit_after_armor > final_damage,
+            "crit {crit_after_armor} > normal {final_damage}"
+        );
+        assert!(
+            (crit_after_armor - final_damage * 2.0).abs() < 1.0,
+            "crit should be ~2x normal hit"
+        );
+    }
+
+    #[test]
+    fn full_combat_round_rogue_vs_higher_level() {
+        // L78 Rogue with dagger attacking L80 mob — tests glancing blows
+        let attacker_level: u8 = 78;
+        let target_level: u8 = 80;
+
+        let weapon_min = 80.0_f32;
+        let weapon_max = 150.0_f32;
+        let weapon_speed = 1.7_f32;
+        let attack_power = 900.0_f32;
+        let target_armor = 3000.0_f32;
+
+        // Raw damage range
+        let raw_min = auto_attack_damage(weapon_min, attack_power, weapon_speed);
+        let raw_max = auto_attack_damage(weapon_max, attack_power, weapon_speed);
+        // AP bonus: (900/6) * 1.7 = 255
+        assert_eq!(raw_min, 335.0);
+        assert_eq!(raw_max, 405.0);
+
+        // Hit table vs +2 level mob
+        let miss = melee::miss_chance(attacker_level, target_level);
+        assert_eq!(miss, 500); // 3% + 2% = 5%
+        let glancing = melee::glancing_chance(attacker_level, target_level);
+        assert_eq!(glancing, 2000); // (10 + 2*5) * 100 = 2000 = 20%
+        let glancing_mult = melee::glancing_damage_multiplier(attacker_level, target_level);
+        assert!((glancing_mult - 0.8).abs() < 0.001); // 2 level diff = 80%
+
+        // Glancing blow damage after armor
+        let mid_damage = (raw_min + raw_max) / 2.0; // 370
+        let glancing_damage = mid_damage * glancing_mult; // 370 * 0.8 = 296
+        assert!((glancing_damage - 296.0).abs() < 0.01);
+
+        let armor_dr = armor_mitigation(target_armor, attacker_level).unwrap();
+        // K(78) = 864
+        let expected_dr = 3000.0 / (3000.0 + 864.0);
+        assert!((armor_dr - expected_dr).abs() < 0.001);
+        let final_glancing = glancing_damage * (1.0 - armor_dr);
+        // 296 * (1 - 0.7764) = 296 * 0.2236 ≈ 66.2
+        assert!(
+            final_glancing > 50.0 && final_glancing < 80.0,
+            "glancing after armor: {final_glancing}"
+        );
+    }
 }
