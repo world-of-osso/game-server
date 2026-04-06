@@ -831,3 +831,100 @@ fn scheduled_reset_cleans_group_index() {
     mgr.create_instance(&reg, 33, Difficulty::Heroic, 100, &[100], DAY_SECS + 1).unwrap();
     assert_eq!(mgr.len(), 1);
 }
+
+// --- Instance rate limiting ---
+
+#[test]
+fn rate_limiter_allows_up_to_five() {
+    let mut limiter = InstanceRateLimiter::new();
+    // First 4 entries: still under limit
+    for i in 0..4 {
+        limiter.record_entry(1, 1000 + i).unwrap();
+    }
+    assert!(limiter.can_enter(1, 1004));
+
+    // 5th entry: succeeds but hits the limit
+    limiter.record_entry(1, 1004).unwrap();
+    assert_eq!(limiter.recent_count(1, 1005), 5);
+    assert!(!limiter.can_enter(1, 1005));
+}
+
+#[test]
+fn rate_limiter_rejects_sixth() {
+    let mut limiter = InstanceRateLimiter::new();
+    for i in 0..5 {
+        limiter.record_entry(1, 1000 + i).unwrap();
+    }
+    assert_eq!(
+        limiter.record_entry(1, 1005),
+        Err(InstanceError::InstanceLimitReached)
+    );
+}
+
+#[test]
+fn rate_limiter_expires_after_one_hour() {
+    let mut limiter = InstanceRateLimiter::new();
+    for i in 0..5 {
+        limiter.record_entry(1, 1000 + i).unwrap(); // t=1000..1004
+    }
+    // 1 hour after the *last* entry (1004 + 3600 + 1 = 4605)
+    let after_hour = 4605;
+    assert!(limiter.can_enter(1, after_hour));
+    assert_eq!(limiter.recent_count(1, after_hour), 0);
+    limiter.record_entry(1, after_hour).unwrap();
+}
+
+#[test]
+fn rate_limiter_rolling_window() {
+    let mut limiter = InstanceRateLimiter::new();
+    // Enter 5 instances spread over 50 minutes
+    for i in 0..5 {
+        limiter.record_entry(1, i * 600).unwrap(); // 0, 600, 1200, 1800, 2400
+    }
+    // At t=3601, the first entry (t=0) has expired
+    assert!(limiter.can_enter(1, 3601));
+    assert_eq!(limiter.recent_count(1, 3601), 4);
+}
+
+#[test]
+fn rate_limiter_independent_accounts() {
+    let mut limiter = InstanceRateLimiter::new();
+    for i in 0..5 {
+        limiter.record_entry(1, 1000 + i).unwrap();
+    }
+    // Account 2 is unaffected
+    assert!(limiter.can_enter(2, 1005));
+    limiter.record_entry(2, 1005).unwrap();
+}
+
+#[test]
+fn rate_limiter_cooldown_remaining() {
+    let mut limiter = InstanceRateLimiter::new();
+    for i in 0..5 {
+        limiter.record_entry(1, 1000 + i).unwrap();
+    }
+    // Oldest entry at t=1000 expires at t=4600
+    assert_eq!(limiter.cooldown_remaining(1, 2000), 2600);
+    // Not at limit → 0
+    assert_eq!(limiter.cooldown_remaining(2, 2000), 0);
+}
+
+#[test]
+fn rate_limiter_cleanup() {
+    let mut limiter = InstanceRateLimiter::new();
+    limiter.record_entry(1, 1000).unwrap();
+    limiter.record_entry(2, 2000).unwrap();
+
+    // Well after both entries have expired (1h+ past the latest)
+    limiter.cleanup(6000);
+    assert_eq!(limiter.recent_count(1, 6000), 0);
+    assert_eq!(limiter.recent_count(2, 6000), 0);
+}
+
+#[test]
+fn rate_limiter_new_account_has_zero_count() {
+    let limiter = InstanceRateLimiter::new();
+    assert_eq!(limiter.recent_count(999, 1000), 0);
+    assert!(limiter.can_enter(999, 1000));
+    assert_eq!(limiter.cooldown_remaining(999, 1000), 0);
+}
