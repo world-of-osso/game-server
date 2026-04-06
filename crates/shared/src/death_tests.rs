@@ -177,3 +177,61 @@ fn graveyard_registry_len() {
     let gys = sample_graveyards();
     assert_eq!(gys.len(), 3);
 }
+
+// --- Ghost form ---
+
+#[test]
+fn ghost_restrictions_all_blocked() {
+    let actions = [
+        GhostRestriction::Combat, GhostRestriction::Loot,
+        GhostRestriction::Trade, GhostRestriction::QuestInteract,
+        GhostRestriction::UseObject, GhostRestriction::Mount,
+        GhostRestriction::Cast, GhostRestriction::Chat,
+    ];
+    for action in actions {
+        assert!(is_ghost_restricted(DeathState::Ghost, action));
+    }
+}
+
+#[test]
+fn alive_no_restrictions() {
+    assert!(!is_ghost_restricted(DeathState::Alive, GhostRestriction::Combat));
+    assert!(!is_ghost_restricted(DeathState::Alive, GhostRestriction::Trade));
+}
+
+#[test]
+fn dead_no_ghost_restrictions() {
+    // Dead (not yet released) is a different state — ghost restrictions don't apply
+    assert!(!is_ghost_restricted(DeathState::Dead, GhostRestriction::Combat));
+}
+
+#[test]
+fn living_sees_living() {
+    assert!(ghost_visible(DeathState::Alive, DeathState::Alive, false));
+}
+
+#[test]
+fn living_cannot_see_ghost() {
+    assert!(!ghost_visible(DeathState::Alive, DeathState::Ghost, false));
+}
+
+#[test]
+fn ghost_sees_ghost() {
+    assert!(ghost_visible(DeathState::Ghost, DeathState::Ghost, false));
+}
+
+#[test]
+fn ghost_sees_living() {
+    assert!(ghost_visible(DeathState::Ghost, DeathState::Alive, false));
+}
+
+#[test]
+fn ghost_sees_spirit_healer() {
+    assert!(ghost_visible(DeathState::Ghost, DeathState::Alive, true));
+}
+
+#[test]
+fn living_sees_spirit_healer() {
+    // Spirit healers are visible to everyone
+    assert!(ghost_visible(DeathState::Alive, DeathState::Alive, true));
+}

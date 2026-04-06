@@ -198,6 +198,63 @@ pub fn release_spirit(
     })
 }
 
+// --- Ghost form ---
+
+/// Actions that ghosts cannot perform.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum GhostRestriction {
+    Combat,
+    Loot,
+    Trade,
+    QuestInteract,
+    UseObject,
+    Mount,
+    Cast,
+    Chat,
+}
+
+/// Check if an action is blocked in ghost form.
+pub fn is_ghost_restricted(state: DeathState, action: GhostRestriction) -> bool {
+    if state != DeathState::Ghost {
+        return false;
+    }
+    // All listed actions are restricted for ghosts
+    matches!(
+        action,
+        GhostRestriction::Combat
+            | GhostRestriction::Loot
+            | GhostRestriction::Trade
+            | GhostRestriction::QuestInteract
+            | GhostRestriction::UseObject
+            | GhostRestriction::Mount
+            | GhostRestriction::Cast
+            | GhostRestriction::Chat
+    )
+}
+
+/// Visibility check: can observer see target?
+///
+/// - Ghosts are invisible to living players.
+/// - Ghosts can see other ghosts.
+/// - Living players can see other living players.
+/// - Spirit healers (NPCs) can see ghosts.
+pub fn ghost_visible(observer_state: DeathState, target_state: DeathState, target_is_spirit_healer: bool) -> bool {
+    match (observer_state, target_state) {
+        // Living sees living
+        (DeathState::Alive, DeathState::Alive) => true,
+        // Living cannot see ghosts
+        (DeathState::Alive, DeathState::Ghost) => false,
+        // Ghost sees ghosts
+        (DeathState::Ghost, DeathState::Ghost) => true,
+        // Ghost sees living (can navigate the world)
+        (DeathState::Ghost, DeathState::Alive) => true,
+        // Spirit healer is always visible to ghosts
+        _ if target_is_spirit_healer => true,
+        // Default: visible
+        _ => true,
+    }
+}
+
 #[cfg(test)]
 #[path = "death_tests.rs"]
 mod tests;
