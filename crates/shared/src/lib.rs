@@ -1,5 +1,9 @@
 pub mod achievement;
+pub mod aura;
+pub mod casting;
+pub mod class_spec;
 pub mod components;
+pub mod threat;
 pub mod dungeon_finder;
 pub mod formulas;
 pub mod group;
