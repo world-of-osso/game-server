@@ -201,6 +201,36 @@ impl Mailbox {
     }
 }
 
+/// Default mail expiry in days.
+pub const MAIL_EXPIRY_DAYS: u32 = 30;
+
+/// Create a return-to-sender mail from an expired mail.
+///
+/// The original sender becomes the recipient. Attachments and gold are
+/// preserved. The returned mail has a new ID and fresh 30-day expiry.
+/// Text-only mails (no attachments, no gold) are not returned.
+pub fn return_to_sender(expired: &Mail, new_id: u64, now: u64) -> Option<Mail> {
+    if expired.attachments.is_empty() && expired.gold == 0 {
+        return None; // nothing to return
+    }
+
+    Some(Mail {
+        id: new_id,
+        sender: "System".to_string(),
+        recipient: expired.sender.clone(),
+        subject: format!("Returned: {}", expired.subject),
+        body: String::new(),
+        attachments: expired.attachments.clone(),
+        gold: expired.gold,
+        cod: 0,
+        sent_at: now,
+        delivers_at: now, // returned mail is instant
+        expires_at: now + MAIL_EXPIRY_DAYS as u64 * 86400,
+        read: false,
+        collected: false,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -360,5 +390,62 @@ mod tests {
         let mut mb = Mailbox::default();
         mb.deliver(mail);
         assert_eq!(mb.delivered_mails(1000).len(), 1);
+    }
+
+    // --- Return to sender tests ---
+
+    #[test]
+    fn return_expired_mail_with_items() {
+        let original = test_mail(1); // has attachment + 500 gold
+        let returned = return_to_sender(&original, 100, 99999).unwrap();
+        assert_eq!(returned.recipient, "Alice"); // original sender
+        assert_eq!(returned.sender, "System");
+        assert_eq!(returned.subject, "Returned: Hello");
+        assert_eq!(returned.attachments.len(), 1);
+        assert_eq!(returned.gold, 500);
+        assert_eq!(returned.delivers_at, 99999); // instant
+        assert!(!returned.collected);
+    }
+
+    #[test]
+    fn return_text_only_returns_none() {
+        let text_mail = create_mail(NewMail {
+            id: 2, sender: "A".into(), recipient: "B".into(),
+            subject: "Hi".into(), body: "Text".into(),
+            attachments: vec![], gold: 0, cod: 0,
+            now: 1000, delivery_delay: 0, expiry_days: 30,
+        }).unwrap();
+        assert!(return_to_sender(&text_mail, 100, 99999).is_none());
+    }
+
+    #[test]
+    fn expire_and_return_full_flow() {
+        let mut sender_mb = Mailbox::default();
+        let mut recipient_mb = Mailbox::default();
+
+        // Send mail with items
+        let mail = test_mail(1); // delivers_at=4600, expires_at=4600+30*86400
+        recipient_mb.deliver(mail);
+
+        // Expire after 30 days
+        let expired = recipient_mb.expire(99999999);
+        assert_eq!(expired.len(), 1);
+
+        // Return to sender
+        for m in &expired {
+            if let Some(returned) = return_to_sender(m, 200, 99999999) {
+                sender_mb.deliver(returned);
+            }
+        }
+        assert_eq!(sender_mb.mails.len(), 1);
+        assert_eq!(sender_mb.mails[0].recipient, "Alice");
+    }
+
+    #[test]
+    fn returned_mail_has_30_day_expiry() {
+        let original = test_mail(1);
+        let now = 100000;
+        let returned = return_to_sender(&original, 100, now).unwrap();
+        assert_eq!(returned.expires_at, now + 30 * 86400);
     }
 }
