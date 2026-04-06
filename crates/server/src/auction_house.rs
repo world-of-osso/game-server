@@ -1038,6 +1038,40 @@ mod tests {
     }
 
     #[test]
+    fn search_returns_empty_for_non_matching_filters() {
+        let mut state = AuctionHouseState::default();
+        state.auctions.insert(1, test_auction(1, "Iron Sword", 2, 20));
+
+        // Non-matching quality
+        let mut query = text_query("");
+        query.quality = Some(4);
+        let r = search_auctions(&state.auctions, &query);
+        assert_eq!(r.total_results, 0);
+
+        // min_level above item level
+        let mut query = text_query("");
+        query.min_level = Some(30);
+        let r = search_auctions(&state.auctions, &query);
+        assert_eq!(r.total_results, 0);
+
+        // max_level below item level
+        let mut query = text_query("");
+        query.max_level = Some(10);
+        let r = search_auctions(&state.auctions, &query);
+        assert_eq!(r.total_results, 0);
+
+        // Non-matching text
+        let r = search_auctions(&state.auctions, &text_query("zzz"));
+        assert_eq!(r.total_results, 0);
+
+        // Combined: matching text but wrong quality
+        let mut query = text_query("iron");
+        query.quality = Some(4);
+        let r = search_auctions(&state.auctions, &query);
+        assert_eq!(r.total_results, 0);
+    }
+
+    #[test]
     fn sort_by_price_time_remaining_and_name() {
         let mut state = AuctionHouseState::default();
 
