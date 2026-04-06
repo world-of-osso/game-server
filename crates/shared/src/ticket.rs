@@ -96,6 +96,10 @@ pub enum TicketError {
     NotOpen,
     /// Ticket is not assigned (can't unassign).
     NotAssigned,
+    /// Ticket is already resolved.
+    AlreadyResolved,
+    /// Invalid state transition (e.g. resolving an Open ticket).
+    InvalidTransition,
 }
 
 /// Maximum description length in characters.
@@ -241,6 +245,44 @@ impl TicketManager {
         self.tickets.iter()
             .filter(|t| t.assigned_to.as_deref() == Some(gm_name))
             .collect()
+    }
+
+    /// Resolve a ticket. Only Assigned or Escalated tickets can be resolved.
+    pub fn resolve(&mut self, id: u64) -> Result<(), TicketError> {
+        let ticket = self.tickets.iter_mut().find(|t| t.id == id)
+            .ok_or(TicketError::NotFound)?;
+        match ticket.state {
+            TicketState::Resolved => Err(TicketError::AlreadyResolved),
+            TicketState::Assigned | TicketState::Escalated => {
+                ticket.state = TicketState::Resolved;
+                Ok(())
+            }
+            TicketState::Open => Err(TicketError::InvalidTransition),
+        }
+    }
+
+    /// Escalate a ticket. Only Assigned tickets can be escalated.
+    pub fn escalate(&mut self, id: u64) -> Result<(), TicketError> {
+        let ticket = self.tickets.iter_mut().find(|t| t.id == id)
+            .ok_or(TicketError::NotFound)?;
+        match ticket.state {
+            TicketState::Assigned => {
+                ticket.state = TicketState::Escalated;
+                Ok(())
+            }
+            TicketState::Resolved => Err(TicketError::AlreadyResolved),
+            _ => Err(TicketError::InvalidTransition),
+        }
+    }
+
+    /// All resolved tickets.
+    pub fn resolved_tickets(&self) -> Vec<&Ticket> {
+        self.tickets.iter().filter(|t| t.state == TicketState::Resolved).collect()
+    }
+
+    /// All escalated tickets.
+    pub fn escalated_tickets(&self) -> Vec<&Ticket> {
+        self.tickets.iter().filter(|t| t.state == TicketState::Escalated).collect()
     }
 }
 

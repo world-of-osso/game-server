@@ -325,3 +325,127 @@ fn assigned_to_lists_gm_tickets() {
     assert_eq!(alice_tickets.len(), 2);
     assert!(mgr.assigned_to("GM_Bob").is_empty());
 }
+
+// --- State transitions: resolve / escalate ---
+
+#[test]
+fn resolve_assigned_ticket() {
+    let mut mgr = TicketManager::new();
+    let id = mgr.create(100, TicketCategory::Bug, "Bug", 1000).unwrap();
+    mgr.assign(id, "GM_Alice").unwrap();
+    mgr.resolve(id).unwrap();
+
+    assert_eq!(mgr.get(id).unwrap().state, TicketState::Resolved);
+}
+
+#[test]
+fn resolve_open_ticket_fails() {
+    let mut mgr = TicketManager::new();
+    let id = mgr.create(100, TicketCategory::Bug, "Bug", 1000).unwrap();
+    assert_eq!(mgr.resolve(id), Err(TicketError::InvalidTransition));
+}
+
+#[test]
+fn resolve_already_resolved_fails() {
+    let mut mgr = TicketManager::new();
+    let id = mgr.create(100, TicketCategory::Bug, "Bug", 1000).unwrap();
+    mgr.assign(id, "GM_Alice").unwrap();
+    mgr.resolve(id).unwrap();
+    assert_eq!(mgr.resolve(id), Err(TicketError::AlreadyResolved));
+}
+
+#[test]
+fn resolve_escalated_ticket() {
+    let mut mgr = TicketManager::new();
+    let id = mgr.create(100, TicketCategory::Bug, "Bug", 1000).unwrap();
+    mgr.assign(id, "GM_Alice").unwrap();
+    mgr.escalate(id).unwrap();
+    mgr.resolve(id).unwrap();
+
+    assert_eq!(mgr.get(id).unwrap().state, TicketState::Resolved);
+}
+
+#[test]
+fn escalate_assigned_ticket() {
+    let mut mgr = TicketManager::new();
+    let id = mgr.create(100, TicketCategory::Bug, "Bug", 1000).unwrap();
+    mgr.assign(id, "GM_Alice").unwrap();
+    mgr.escalate(id).unwrap();
+
+    assert_eq!(mgr.get(id).unwrap().state, TicketState::Escalated);
+}
+
+#[test]
+fn escalate_open_ticket_fails() {
+    let mut mgr = TicketManager::new();
+    let id = mgr.create(100, TicketCategory::Bug, "Bug", 1000).unwrap();
+    assert_eq!(mgr.escalate(id), Err(TicketError::InvalidTransition));
+}
+
+#[test]
+fn escalate_resolved_ticket_fails() {
+    let mut mgr = TicketManager::new();
+    let id = mgr.create(100, TicketCategory::Bug, "Bug", 1000).unwrap();
+    mgr.assign(id, "GM_Alice").unwrap();
+    mgr.resolve(id).unwrap();
+    assert_eq!(mgr.escalate(id), Err(TicketError::AlreadyResolved));
+}
+
+#[test]
+fn resolved_ticket_frees_player() {
+    let mut mgr = TicketManager::new();
+    let id = mgr.create(100, TicketCategory::Bug, "Bug", 1000).unwrap();
+    mgr.assign(id, "GM_Alice").unwrap();
+    mgr.resolve(id).unwrap();
+
+    // Player can create a new ticket after resolution
+    mgr.create(100, TicketCategory::Quest, "New issue", 2000).unwrap();
+    assert_eq!(mgr.len(), 2);
+}
+
+#[test]
+fn resolved_tickets_list() {
+    let mut mgr = TicketManager::new();
+    let id = mgr.create(100, TicketCategory::Bug, "Bug", 1000).unwrap();
+    mgr.assign(id, "GM_Alice").unwrap();
+    mgr.resolve(id).unwrap();
+
+    assert_eq!(mgr.resolved_tickets().len(), 1);
+    assert!(mgr.open_tickets().is_empty());
+}
+
+#[test]
+fn escalated_tickets_list() {
+    let mut mgr = TicketManager::new();
+    let id = mgr.create(100, TicketCategory::Bug, "Bug", 1000).unwrap();
+    mgr.assign(id, "GM_Alice").unwrap();
+    mgr.escalate(id).unwrap();
+
+    assert_eq!(mgr.escalated_tickets().len(), 1);
+}
+
+#[test]
+fn full_lifecycle_open_assigned_resolved() {
+    let mut mgr = TicketManager::new();
+    let id = mgr.create(100, TicketCategory::Stuck, "I'm stuck", 1000).unwrap();
+    assert_eq!(mgr.get(id).unwrap().state, TicketState::Open);
+
+    mgr.assign(id, "GM_Alice").unwrap();
+    assert_eq!(mgr.get(id).unwrap().state, TicketState::Assigned);
+
+    mgr.resolve(id).unwrap();
+    assert_eq!(mgr.get(id).unwrap().state, TicketState::Resolved);
+}
+
+#[test]
+fn full_lifecycle_open_assigned_escalated_resolved() {
+    let mut mgr = TicketManager::new();
+    let id = mgr.create(100, TicketCategory::Harassment, "Harass", 1000).unwrap();
+
+    mgr.assign(id, "GM_Alice").unwrap();
+    mgr.escalate(id).unwrap();
+    assert_eq!(mgr.get(id).unwrap().state, TicketState::Escalated);
+
+    mgr.resolve(id).unwrap();
+    assert_eq!(mgr.get(id).unwrap().state, TicketState::Resolved);
+}
