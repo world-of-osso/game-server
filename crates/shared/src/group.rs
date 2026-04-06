@@ -208,6 +208,65 @@ impl Raid {
     }
 }
 
+// --- Shared threat ---
+
+use crate::components::ThreatTable;
+
+/// Apply damage threat from a group member to a mob's threat table.
+///
+/// The group member's threat is attributed directly (1:1 ratio × modifier).
+/// All group members share the same threat table on the mob.
+pub fn apply_group_damage_threat(
+    table: &mut ThreatTable,
+    source: u64,
+    damage: f32,
+    modifier: f32,
+) {
+    table.add_damage_threat(source, damage, modifier);
+}
+
+/// Apply healing threat from a group member, split across all engaged mobs.
+///
+/// Healing generates 0.5 threat per point healed, split equally among
+/// all mobs the group is fighting. Each mob's threat table gets
+/// `heal * 0.5 * modifier / num_mobs`.
+///
+/// Ref: AzerothCore ThreatMgr — healing threat is divided by engaged mob count.
+pub fn apply_group_heal_threat(
+    tables: &mut [&mut ThreatTable],
+    source: u64,
+    heal_amount: f32,
+    modifier: f32,
+) {
+    if tables.is_empty() {
+        return;
+    }
+    let per_mob = heal_amount / tables.len() as f32;
+    for table in tables {
+        table.add_heal_threat(source, per_mob, modifier);
+    }
+}
+
+/// Collect all unique mob entity IDs that any group member has threat on.
+///
+/// Used to determine which mobs to split healing threat across.
+/// `mob_threats` is a list of (mob_entity, threat_table) pairs.
+/// `group_members` is the list of player entity bits in the group.
+pub fn engaged_mobs(
+    mob_threats: &[(u64, &ThreatTable)],
+    group_members: &[u64],
+) -> Vec<u64> {
+    mob_threats
+        .iter()
+        .filter(|(_, table)| {
+            group_members
+                .iter()
+                .any(|&member| table.threat_for(member) > 0.0)
+        })
+        .map(|(entity, _)| *entity)
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -364,5 +423,60 @@ mod tests {
         let party = Party::new(1);
         let mut raid = Raid::from_party(&party);
         assert_eq!(raid.add_member(1), Err(PartyError::AlreadyMember));
+    }
+
+    // --- Shared threat tests ---
+
+    #[test]
+    fn group_damage_threat_shared_table() {
+        let mut table = ThreatTable::default();
+        // Two party members both damage the same mob
+        apply_group_damage_threat(&mut table, 1, 500.0, 1.0);
+        apply_group_damage_threat(&mut table, 2, 300.0, 1.0);
+        assert_eq!(table.threat_for(1), 500.0);
+        assert_eq!(table.threat_for(2), 300.0);
+        assert_eq!(table.top_threat().unwrap().entity, 1);
+    }
+
+    #[test]
+    fn group_heal_threat_split_across_mobs() {
+        let mut table1 = ThreatTable::default();
+        let mut table2 = ThreatTable::default();
+        // Healer heals 1000, split across 2 mobs
+        apply_group_heal_threat(
+            &mut [&mut table1, &mut table2],
+            3, 1000.0, 1.0,
+        );
+        // Each mob gets 500 heal → 500 * 0.5 = 250 threat
+        assert!((table1.threat_for(3) - 250.0).abs() < 0.01);
+        assert!((table2.threat_for(3) - 250.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn group_heal_no_mobs_no_crash() {
+        apply_group_heal_threat(&mut [], 1, 1000.0, 1.0);
+    }
+
+    #[test]
+    fn engaged_mobs_filters_by_group() {
+        let mut t1 = ThreatTable::default();
+        t1.add_damage_threat(1, 100.0, 1.0); // player 1 in group
+
+        let mut t2 = ThreatTable::default();
+        t2.add_damage_threat(99, 100.0, 1.0); // player 99 NOT in group
+
+        let mobs: Vec<(u64, &ThreatTable)> = vec![(10, &t1), (20, &t2)];
+        let group_members = vec![1, 2, 3];
+        let engaged = engaged_mobs(&mobs, &group_members);
+        assert_eq!(engaged, vec![10]); // only mob 10 is engaged by the group
+    }
+
+    #[test]
+    fn heal_threat_with_tank_modifier() {
+        let mut table = ThreatTable::default();
+        // Tank heals with 1.43x threat modifier
+        apply_group_heal_threat(&mut [&mut table], 1, 1000.0, 1.43);
+        // 1000 * 0.5 * 1.43 = 715
+        assert!((table.threat_for(1) - 715.0).abs() < 0.01);
     }
 }
