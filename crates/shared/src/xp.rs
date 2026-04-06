@@ -82,6 +82,41 @@ pub fn kill_xp(player_level: u8, creature_level: u8) -> u32 {
     base * (reduction_denom - diff) as u32 / reduction_denom as u32
 }
 
+// --- Quest XP ---
+
+/// Number of levels above quest level before XP starts reducing.
+const QUEST_XP_GRACE_LEVELS: u8 = 5;
+/// Number of levels above grace before quest XP reaches zero.
+const QUEST_XP_DECAY_LEVELS: u8 = 10;
+
+/// Calculate quest XP reward for a player.
+///
+/// - `base_xp`: the quest's fixed XP reward (from quest data).
+/// - `quest_level`: the quest's recommended level.
+/// - `player_level`: the player's current level.
+///
+/// If the player is within `QUEST_XP_GRACE_LEVELS` above the quest level,
+/// full XP is awarded. Beyond that, XP decays linearly over
+/// `QUEST_XP_DECAY_LEVELS`, reaching 0 when the player is 15+ levels above.
+///
+/// Players below the quest level always get full XP.
+///
+/// Ref: AzerothCore `Player::GetQuestRate()`, retail quest XP scaling.
+pub fn quest_xp(base_xp: u32, quest_level: u8, player_level: u8) -> u32 {
+    if base_xp == 0 {
+        return 0;
+    }
+    let over = player_level.saturating_sub(quest_level);
+    if over <= QUEST_XP_GRACE_LEVELS {
+        return base_xp;
+    }
+    let decay = over - QUEST_XP_GRACE_LEVELS;
+    if decay >= QUEST_XP_DECAY_LEVELS {
+        return 0;
+    }
+    base_xp * (QUEST_XP_DECAY_LEVELS - decay) as u32 / QUEST_XP_DECAY_LEVELS as u32
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -157,5 +192,52 @@ mod tests {
     fn kill_xp_low_level_no_grey() {
         // Level 3 player: grey = 0, so level 1 creature is NOT grey
         assert!(kill_xp(3, 1) > 0);
+    }
+
+    // --- Quest XP tests ---
+
+    #[test]
+    fn quest_xp_same_level() {
+        assert_eq!(quest_xp(1000, 50, 50), 1000);
+    }
+
+    #[test]
+    fn quest_xp_below_quest_level() {
+        // Player lower than quest — full XP
+        assert_eq!(quest_xp(1000, 50, 40), 1000);
+    }
+
+    #[test]
+    fn quest_xp_within_grace() {
+        // 5 levels above quest — still full XP
+        assert_eq!(quest_xp(1000, 50, 55), 1000);
+    }
+
+    #[test]
+    fn quest_xp_starts_decaying() {
+        // 6 levels above: 1 into decay zone → 1000 * 9/10 = 900
+        assert_eq!(quest_xp(1000, 50, 56), 900);
+    }
+
+    #[test]
+    fn quest_xp_mid_decay() {
+        // 10 levels above: 5 into decay → 1000 * 5/10 = 500
+        assert_eq!(quest_xp(1000, 50, 60), 500);
+    }
+
+    #[test]
+    fn quest_xp_fully_decayed() {
+        // 15 levels above: 10 into decay → 0
+        assert_eq!(quest_xp(1000, 50, 65), 0);
+    }
+
+    #[test]
+    fn quest_xp_way_over_level() {
+        assert_eq!(quest_xp(1000, 10, 80), 0);
+    }
+
+    #[test]
+    fn quest_xp_zero_base() {
+        assert_eq!(quest_xp(0, 50, 50), 0);
     }
 }
