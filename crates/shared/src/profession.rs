@@ -62,8 +62,98 @@ impl Profession {
 /// Maximum primary professions a player can have.
 pub const MAX_PRIMARY_PROFESSIONS: usize = 2;
 
-/// Maximum skill level per expansion tier.
-pub const MAX_SKILL_LEVEL: u16 = 450; // WotLK cap
+/// Maximum skill level (WotLK Grand Master).
+pub const MAX_SKILL_LEVEL: u16 = 450;
+
+/// Profession training tiers with skill caps and required character level.
+///
+/// Ref: AzerothCore profession trainer data.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum ProfessionTier {
+    Apprentice,
+    Journeyman,
+    Expert,
+    Artisan,
+    /// TBC tier.
+    Master,
+    /// WotLK tier.
+    GrandMaster,
+}
+
+/// Tier progression data: (tier, max_skill, required_char_level, required_skill).
+const TIER_DATA: &[(ProfessionTier, u16, u8, u16)] = &[
+    (ProfessionTier::Apprentice, 75, 5, 0),
+    (ProfessionTier::Journeyman, 150, 10, 50),
+    (ProfessionTier::Expert, 225, 20, 125),
+    (ProfessionTier::Artisan, 300, 35, 200),
+    (ProfessionTier::Master, 375, 50, 275),
+    (ProfessionTier::GrandMaster, 450, 65, 350),
+];
+
+impl ProfessionTier {
+    /// Skill cap for this tier.
+    pub fn max_skill(self) -> u16 {
+        TIER_DATA
+            .iter()
+            .find(|(t, _, _, _)| *t == self)
+            .map(|(_, max, _, _)| *max)
+            .unwrap_or(75)
+    }
+
+    /// Required character level to train this tier.
+    pub fn required_level(self) -> u8 {
+        TIER_DATA
+            .iter()
+            .find(|(t, _, _, _)| *t == self)
+            .map(|(_, _, lvl, _)| *lvl)
+            .unwrap_or(5)
+    }
+
+    /// Required skill level to train this tier.
+    pub fn required_skill(self) -> u16 {
+        TIER_DATA
+            .iter()
+            .find(|(t, _, _, _)| *t == self)
+            .map(|(_, _, _, skill)| *skill)
+            .unwrap_or(0)
+    }
+
+    /// All tiers in order.
+    pub fn all() -> &'static [ProfessionTier] {
+        &[
+            Self::Apprentice,
+            Self::Journeyman,
+            Self::Expert,
+            Self::Artisan,
+            Self::Master,
+            Self::GrandMaster,
+        ]
+    }
+
+    /// The next tier after this one, if any.
+    pub fn next(self) -> Option<ProfessionTier> {
+        let tiers = Self::all();
+        tiers
+            .iter()
+            .position(|&t| t == self)
+            .and_then(|i| tiers.get(i + 1).copied())
+    }
+}
+
+/// Determine which tier a skill can train next, given current skill and character level.
+/// Returns `None` if already at max tier or doesn't meet requirements.
+pub fn next_trainable_tier(
+    current_max: u16,
+    current_skill: u16,
+    player_level: u8,
+) -> Option<ProfessionTier> {
+    TIER_DATA
+        .iter()
+        .find(|(_, max, req_lvl, req_skill)| {
+            *max > current_max && player_level >= *req_lvl && current_skill >= *req_skill
+        })
+        .map(|(tier, _, _, _)| *tier)
+}
 
 /// A player's skill in a single profession.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -92,8 +182,8 @@ impl ProfessionSkill {
     }
 
     /// Unlock the next tier (raises max skill).
-    pub fn train_tier(&mut self, new_max: u16) {
-        self.max = new_max.min(MAX_SKILL_LEVEL);
+    pub fn train_tier(&mut self, tier: ProfessionTier) {
+        self.max = tier.max_skill();
     }
 }
 
@@ -219,10 +309,62 @@ mod tests {
     #[test]
     fn train_tier() {
         let mut skill = ProfessionSkill::new(Profession::Mining);
-        skill.train_tier(150); // journeyman
+        skill.train_tier(ProfessionTier::Journeyman);
         assert_eq!(skill.max, 150);
-        skill.train_tier(9999); // clamped
-        assert_eq!(skill.max, MAX_SKILL_LEVEL);
+        skill.train_tier(ProfessionTier::GrandMaster);
+        assert_eq!(skill.max, 450);
+    }
+
+    // --- Tier system tests ---
+
+    #[test]
+    fn tier_skill_caps() {
+        assert_eq!(ProfessionTier::Apprentice.max_skill(), 75);
+        assert_eq!(ProfessionTier::Journeyman.max_skill(), 150);
+        assert_eq!(ProfessionTier::Expert.max_skill(), 225);
+        assert_eq!(ProfessionTier::Artisan.max_skill(), 300);
+        assert_eq!(ProfessionTier::Master.max_skill(), 375);
+        assert_eq!(ProfessionTier::GrandMaster.max_skill(), 450);
+    }
+
+    #[test]
+    fn tier_required_levels() {
+        assert_eq!(ProfessionTier::Apprentice.required_level(), 5);
+        assert_eq!(ProfessionTier::Expert.required_level(), 20);
+        assert_eq!(ProfessionTier::GrandMaster.required_level(), 65);
+    }
+
+    #[test]
+    fn tier_next() {
+        assert_eq!(ProfessionTier::Apprentice.next(), Some(ProfessionTier::Journeyman));
+        assert_eq!(ProfessionTier::GrandMaster.next(), None);
+    }
+
+    #[test]
+    fn next_trainable_apprentice_to_journeyman() {
+        // Apprentice (max=75), skill=50, level=10 → can train Journeyman
+        let tier = next_trainable_tier(75, 50, 10);
+        assert_eq!(tier, Some(ProfessionTier::Journeyman));
+    }
+
+    #[test]
+    fn next_trainable_skill_too_low() {
+        // Max=75, skill=30, level=10 → need 50 skill for Journeyman
+        let tier = next_trainable_tier(75, 30, 10);
+        assert_eq!(tier, None);
+    }
+
+    #[test]
+    fn next_trainable_level_too_low() {
+        // Max=75, skill=50, level=5 → need level 10 for Journeyman
+        let tier = next_trainable_tier(75, 50, 5);
+        assert_eq!(tier, None);
+    }
+
+    #[test]
+    fn next_trainable_at_grand_master() {
+        let tier = next_trainable_tier(450, 450, 80);
+        assert_eq!(tier, None); // already max
     }
 
     #[test]
