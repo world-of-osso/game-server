@@ -449,3 +449,136 @@ fn full_lifecycle_open_assigned_escalated_resolved() {
     mgr.resolve(id).unwrap();
     assert_eq!(mgr.get(id).unwrap().state, TicketState::Resolved);
 }
+
+// --- Player notifications ---
+
+#[test]
+fn assign_notifies_player() {
+    let mut mgr = TicketManager::new();
+    let id = mgr.create(100, TicketCategory::Bug, "Bug", 1000).unwrap();
+    mgr.assign(id, "GM_Alice").unwrap();
+
+    let notifs = mgr.drain_notifications();
+    assert_eq!(notifs.len(), 1);
+    assert!(matches!(&notifs[0],
+        TicketNotification::Assigned { ticket_id, player, gm_name }
+        if *ticket_id == id && *player == 100 && gm_name == "GM_Alice"
+    ));
+}
+
+#[test]
+fn resolve_notifies_player() {
+    let mut mgr = TicketManager::new();
+    let id = mgr.create(100, TicketCategory::Bug, "Bug", 1000).unwrap();
+    mgr.assign(id, "GM_Alice").unwrap();
+    mgr.drain_notifications();
+
+    mgr.resolve(id).unwrap();
+    let notifs = mgr.drain_notifications();
+    assert_eq!(notifs.len(), 1);
+    assert!(matches!(&notifs[0],
+        TicketNotification::Resolved { ticket_id, player }
+        if *ticket_id == id && *player == 100
+    ));
+}
+
+#[test]
+fn escalate_notifies_player() {
+    let mut mgr = TicketManager::new();
+    let id = mgr.create(100, TicketCategory::Bug, "Bug", 1000).unwrap();
+    mgr.assign(id, "GM_Alice").unwrap();
+    mgr.drain_notifications();
+
+    mgr.escalate(id).unwrap();
+    let notifs = mgr.drain_notifications();
+    assert_eq!(notifs.len(), 1);
+    assert!(matches!(&notifs[0],
+        TicketNotification::Escalated { ticket_id, player }
+        if *ticket_id == id && *player == 100
+    ));
+}
+
+#[test]
+fn gm_respond_notifies_player() {
+    let mut mgr = TicketManager::new();
+    let id = mgr.create(100, TicketCategory::Bug, "Bug", 1000).unwrap();
+    mgr.assign(id, "GM_Alice").unwrap();
+    mgr.drain_notifications();
+
+    mgr.respond(id, "GM_Alice", "Working on your issue!", 2000).unwrap();
+
+    let notifs = mgr.drain_notifications();
+    assert_eq!(notifs.len(), 1);
+    assert!(matches!(&notifs[0],
+        TicketNotification::GmResponse { ticket_id, player, gm_name, message }
+        if *ticket_id == id && *player == 100 && gm_name == "GM_Alice"
+           && message == "Working on your issue!"
+    ));
+}
+
+#[test]
+fn respond_stores_on_ticket() {
+    let mut mgr = TicketManager::new();
+    let id = mgr.create(100, TicketCategory::Bug, "Bug", 1000).unwrap();
+    mgr.assign(id, "GM_Alice").unwrap();
+
+    mgr.respond(id, "GM_Alice", "First response", 2000).unwrap();
+    mgr.respond(id, "GM_Alice", "Follow-up", 3000).unwrap();
+
+    let ticket = mgr.get(id).unwrap();
+    assert_eq!(ticket.responses.len(), 2);
+    assert_eq!(ticket.responses[0].message, "First response");
+    assert_eq!(ticket.responses[1].message, "Follow-up");
+    assert_eq!(ticket.responses[0].timestamp, 2000);
+}
+
+#[test]
+fn respond_to_resolved_fails() {
+    let mut mgr = TicketManager::new();
+    let id = mgr.create(100, TicketCategory::Bug, "Bug", 1000).unwrap();
+    mgr.assign(id, "GM_Alice").unwrap();
+    mgr.resolve(id).unwrap();
+
+    assert_eq!(
+        mgr.respond(id, "GM_Alice", "Late reply", 5000),
+        Err(TicketError::AlreadyResolved)
+    );
+}
+
+#[test]
+fn respond_not_found() {
+    let mut mgr = TicketManager::new();
+    assert_eq!(
+        mgr.respond(999, "GM_Alice", "Hello", 1000),
+        Err(TicketError::NotFound)
+    );
+}
+
+#[test]
+fn drain_clears_notifications() {
+    let mut mgr = TicketManager::new();
+    let id = mgr.create(100, TicketCategory::Bug, "Bug", 1000).unwrap();
+    mgr.assign(id, "GM_Alice").unwrap();
+
+    let first = mgr.drain_notifications();
+    assert_eq!(first.len(), 1);
+
+    let second = mgr.drain_notifications();
+    assert!(second.is_empty());
+}
+
+#[test]
+fn full_lifecycle_notifications() {
+    let mut mgr = TicketManager::new();
+    let id = mgr.create(100, TicketCategory::Stuck, "Stuck", 1000).unwrap();
+
+    mgr.assign(id, "GM_Alice").unwrap();
+    mgr.respond(id, "GM_Alice", "Unsticking you now", 2000).unwrap();
+    mgr.resolve(id).unwrap();
+
+    let notifs = mgr.drain_notifications();
+    assert_eq!(notifs.len(), 3);
+    assert!(matches!(notifs[0], TicketNotification::Assigned { .. }));
+    assert!(matches!(notifs[1], TicketNotification::GmResponse { .. }));
+    assert!(matches!(notifs[2], TicketNotification::Resolved { .. }));
+}

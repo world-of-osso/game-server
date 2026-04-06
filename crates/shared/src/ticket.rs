@@ -58,6 +58,30 @@ pub enum TicketState {
     Escalated,
 }
 
+/// A GM response message on a ticket.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct TicketResponse {
+    /// GM who wrote the response.
+    pub gm_name: String,
+    /// Response text.
+    pub message: String,
+    /// Server timestamp.
+    pub timestamp: u64,
+}
+
+/// A notification for the player about their ticket.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum TicketNotification {
+    /// A GM has responded to the ticket.
+    GmResponse { ticket_id: u64, player: u64, gm_name: String, message: String },
+    /// Ticket has been assigned to a GM.
+    Assigned { ticket_id: u64, player: u64, gm_name: String },
+    /// Ticket has been resolved.
+    Resolved { ticket_id: u64, player: u64 },
+    /// Ticket has been escalated.
+    Escalated { ticket_id: u64, player: u64 },
+}
+
 /// A player-submitted support ticket.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Ticket {
@@ -75,6 +99,8 @@ pub struct Ticket {
     pub priority: TicketPriority,
     /// GM who claimed this ticket (None if unassigned).
     pub assigned_to: Option<String>,
+    /// GM responses on this ticket.
+    pub responses: Vec<TicketResponse>,
     /// Server timestamp when created.
     pub created_at: u64,
 }
@@ -110,11 +136,18 @@ pub const MAX_DESCRIPTION_LEN: usize = 500;
 pub struct TicketManager {
     tickets: Vec<Ticket>,
     next_id: u64,
+    /// Pending notifications for players. The server drains these each tick.
+    pub notifications: Vec<TicketNotification>,
 }
 
 impl TicketManager {
     pub fn new() -> Self {
-        Self { tickets: Vec::new(), next_id: 1 }
+        Self { tickets: Vec::new(), next_id: 1, notifications: Vec::new() }
+    }
+
+    /// Drain all pending notifications (server sends these to players).
+    pub fn drain_notifications(&mut self) -> Vec<TicketNotification> {
+        std::mem::take(&mut self.notifications)
     }
 
     /// Create a new ticket. One open ticket per player.
@@ -145,6 +178,7 @@ impl TicketManager {
             state: TicketState::Open,
             priority: default_priority(category),
             assigned_to: None,
+            responses: Vec::new(),
             created_at: now,
         });
         Ok(id)
@@ -218,6 +252,9 @@ impl TicketManager {
         }
         ticket.state = TicketState::Assigned;
         ticket.assigned_to = Some(gm_name.to_string());
+        self.notifications.push(TicketNotification::Assigned {
+            ticket_id: id, player: ticket.player, gm_name: gm_name.to_string(),
+        });
         Ok(())
     }
 
@@ -255,6 +292,9 @@ impl TicketManager {
             TicketState::Resolved => Err(TicketError::AlreadyResolved),
             TicketState::Assigned | TicketState::Escalated => {
                 ticket.state = TicketState::Resolved;
+                self.notifications.push(TicketNotification::Resolved {
+                    ticket_id: id, player: ticket.player,
+                });
                 Ok(())
             }
             TicketState::Open => Err(TicketError::InvalidTransition),
@@ -268,11 +308,40 @@ impl TicketManager {
         match ticket.state {
             TicketState::Assigned => {
                 ticket.state = TicketState::Escalated;
+                self.notifications.push(TicketNotification::Escalated {
+                    ticket_id: id, player: ticket.player,
+                });
                 Ok(())
             }
             TicketState::Resolved => Err(TicketError::AlreadyResolved),
             _ => Err(TicketError::InvalidTransition),
         }
+    }
+
+    /// GM responds to a ticket. Adds a response and notifies the player.
+    pub fn respond(
+        &mut self,
+        id: u64,
+        gm_name: &str,
+        message: &str,
+        now: u64,
+    ) -> Result<(), TicketError> {
+        let ticket = self.tickets.iter_mut().find(|t| t.id == id)
+            .ok_or(TicketError::NotFound)?;
+        if ticket.state == TicketState::Resolved {
+            return Err(TicketError::AlreadyResolved);
+        }
+        let player = ticket.player;
+        ticket.responses.push(TicketResponse {
+            gm_name: gm_name.to_string(),
+            message: message.to_string(),
+            timestamp: now,
+        });
+        self.notifications.push(TicketNotification::GmResponse {
+            ticket_id: id, player, gm_name: gm_name.to_string(),
+            message: message.to_string(),
+        });
+        Ok(())
     }
 
     /// All resolved tickets.
