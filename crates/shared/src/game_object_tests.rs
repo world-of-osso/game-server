@@ -286,6 +286,103 @@ fn can_reuse_after_cancel() {
     assert!(interact(&mut go).is_ok());
 }
 
+// --- Doors ---
+
+fn unlocked_door_data() -> DoorData {
+    DoorData { key_item_id: 0, lockpick_skill: 0, auto_close_secs: 0 }
+}
+
+fn keyed_door_data() -> DoorData {
+    DoorData { key_item_id: 5000, lockpick_skill: 100, auto_close_secs: 10 }
+}
+
+fn make_unlocked_door() -> GameObject {
+    let mut tmpl = door_template();
+    tmpl.flags.remove(GameObjectFlags::LOCKED);
+    make_go(&tmpl)
+}
+
+#[test]
+fn toggle_open_unlocked_door() {
+    let mut go = make_unlocked_door();
+    let result = toggle_door(&mut go, &unlocked_door_data(), false, 0).unwrap();
+    assert!(result.is_open);
+    assert_eq!(go.state, GameObjectState::InUse);
+}
+
+#[test]
+fn toggle_close_open_door() {
+    let mut go = make_unlocked_door();
+    toggle_door(&mut go, &unlocked_door_data(), false, 0).unwrap();
+    let result = toggle_door(&mut go, &unlocked_door_data(), false, 0).unwrap();
+    assert!(!result.is_open);
+    assert_eq!(go.state, GameObjectState::Ready);
+}
+
+#[test]
+fn toggle_locked_door_with_key() {
+    let mut go = make_go(&door_template()); // locked
+    let result = toggle_door(&mut go, &keyed_door_data(), true, 0).unwrap();
+    assert!(result.is_open);
+    assert!(!go.is_locked()); // lock cleared after use
+}
+
+#[test]
+fn toggle_locked_door_with_lockpick() {
+    let mut go = make_go(&door_template());
+    let result = toggle_door(&mut go, &keyed_door_data(), false, 100).unwrap();
+    assert!(result.is_open);
+}
+
+#[test]
+fn toggle_locked_door_no_key_fails() {
+    let mut go = make_go(&door_template());
+    assert_eq!(
+        toggle_door(&mut go, &keyed_door_data(), false, 50), // skill too low
+        Err(InteractionError::Locked)
+    );
+}
+
+#[test]
+fn toggle_locked_door_no_lockpick_skill_config() {
+    let mut go = make_go(&door_template());
+    let data = DoorData { key_item_id: 5000, lockpick_skill: 0, auto_close_secs: 0 };
+    // lockpick_skill=0 means can't be picked, need key
+    assert_eq!(toggle_door(&mut go, &data, false, 999), Err(InteractionError::Locked));
+}
+
+#[test]
+fn door_auto_close_timer() {
+    let mut go = make_unlocked_door();
+    let data = DoorData { key_item_id: 0, lockpick_skill: 0, auto_close_secs: 30 };
+    let result = toggle_door(&mut go, &data, false, 0).unwrap();
+    assert_eq!(result.auto_close_secs, 30);
+}
+
+#[test]
+fn close_door_auto() {
+    let mut go = make_unlocked_door();
+    toggle_door(&mut go, &unlocked_door_data(), false, 0).unwrap();
+    close_door(&mut go);
+    assert_eq!(go.state, GameObjectState::Ready);
+}
+
+#[test]
+fn close_door_already_closed_noop() {
+    let mut go = make_unlocked_door();
+    close_door(&mut go); // already Ready — no effect
+    assert_eq!(go.state, GameObjectState::Ready);
+}
+
+#[test]
+fn toggle_non_door_fails() {
+    let mut go = make_go(&chest_template());
+    assert_eq!(
+        toggle_door(&mut go, &unlocked_door_data(), false, 0),
+        Err(InteractionError::NotInteractable)
+    );
+}
+
 // --- Gathering nodes ---
 
 fn copper_gather_data() -> GatheringData {

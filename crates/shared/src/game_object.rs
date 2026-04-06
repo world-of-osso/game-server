@@ -329,6 +329,75 @@ pub fn cancel_interaction(go: &mut GameObject) -> Result<(), StateError> {
     go.cancel_use()
 }
 
+// --- Doors ---
+
+/// Configuration for a door game object.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct DoorData {
+    /// Item ID required to unlock (0 = no key required).
+    pub key_item_id: u32,
+    /// Lockpicking skill required (0 = cannot be picked).
+    pub lockpick_skill: u16,
+    /// Seconds before the door auto-closes (0 = stays open).
+    pub auto_close_secs: u32,
+}
+
+/// Result of toggling a door.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct DoorToggleResult {
+    /// Whether the door is now open.
+    pub is_open: bool,
+    /// Seconds until auto-close (0 = won't auto-close).
+    pub auto_close_secs: u32,
+}
+
+/// Toggle a door open or closed.
+///
+/// - If locked, requires the correct key item or sufficient lockpick skill.
+/// - Opens: sets IN_USE flag (door is open). Closes: clears it.
+/// - Doors don't use the Depleted/Respawning states — they toggle.
+pub fn toggle_door(
+    go: &mut GameObject,
+    door: &DoorData,
+    has_key: bool,
+    lockpick_skill: u16,
+) -> Result<DoorToggleResult, InteractionError> {
+    if go.object_type != GameObjectType::Door {
+        return Err(InteractionError::NotInteractable);
+    }
+    if !go.flags.contains(GameObjectFlags::INTERACTABLE) {
+        return Err(InteractionError::NotInteractable);
+    }
+
+    let is_open = go.state == GameObjectState::InUse;
+
+    if is_open {
+        // Close the door
+        go.state = GameObjectState::Ready;
+        return Ok(DoorToggleResult { is_open: false, auto_close_secs: 0 });
+    }
+
+    // Opening — check lock
+    if go.is_locked() {
+        let can_unlock = has_key
+            || (door.lockpick_skill > 0 && lockpick_skill >= door.lockpick_skill);
+        if !can_unlock {
+            return Err(InteractionError::Locked);
+        }
+        go.flags.remove(GameObjectFlags::LOCKED);
+    }
+
+    go.state = GameObjectState::InUse;
+    Ok(DoorToggleResult { is_open: true, auto_close_secs: door.auto_close_secs })
+}
+
+/// Auto-close a door (called by server timer). Sets back to Ready.
+pub fn close_door(go: &mut GameObject) {
+    if go.object_type == GameObjectType::Door && go.state == GameObjectState::InUse {
+        go.state = GameObjectState::Ready;
+    }
+}
+
 // --- Gathering nodes ---
 
 /// An item yielded from gathering a node.
