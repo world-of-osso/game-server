@@ -4,6 +4,7 @@ pub mod formulas;
 pub mod group;
 pub mod item_data;
 pub mod loot;
+pub mod mail;
 pub mod movement;
 pub mod navmesh;
 pub mod profession;
