@@ -386,3 +386,86 @@ fn get_nonexistent_spawn() {
     let mgr = SpawnManager::new();
     assert!(mgr.get(999).is_none());
 }
+
+// --- Respawn timer ---
+
+#[test]
+fn mark_despawned_and_respawn() {
+    let mut tracker = RespawnTracker::new();
+    tracker.mark_despawned(1, 300, 1000); // respawn at 1300
+
+    assert!(tracker.is_despawned(1));
+    assert_eq!(tracker.pending_count(), 1);
+
+    // Not ready yet
+    let ready = tracker.collect_respawns(1200);
+    assert!(ready.is_empty());
+    assert!(tracker.is_despawned(1));
+
+    // Now ready
+    let ready = tracker.collect_respawns(1300);
+    assert_eq!(ready, vec![1]);
+    assert!(!tracker.is_despawned(1));
+    assert_eq!(tracker.pending_count(), 0);
+}
+
+#[test]
+fn zero_respawn_time_ignored() {
+    let mut tracker = RespawnTracker::new();
+    tracker.mark_despawned(1, 0, 1000);
+    assert!(!tracker.is_despawned(1));
+    assert_eq!(tracker.pending_count(), 0);
+}
+
+#[test]
+fn multiple_respawns() {
+    let mut tracker = RespawnTracker::new();
+    tracker.mark_despawned(1, 60, 1000);  // respawn at 1060
+    tracker.mark_despawned(2, 120, 1000); // respawn at 1120
+    tracker.mark_despawned(3, 300, 1000); // respawn at 1300
+
+    let ready = tracker.collect_respawns(1100);
+    assert_eq!(ready.len(), 1); // only spawn 1
+    assert!(ready.contains(&1));
+
+    let ready = tracker.collect_respawns(1200);
+    assert_eq!(ready.len(), 1); // spawn 2
+    assert!(ready.contains(&2));
+
+    assert_eq!(tracker.pending_count(), 1); // spawn 3 still pending
+}
+
+#[test]
+fn time_remaining() {
+    let mut tracker = RespawnTracker::new();
+    tracker.mark_despawned(1, 300, 1000);
+
+    assert_eq!(tracker.time_remaining(1, 1000), 300);
+    assert_eq!(tracker.time_remaining(1, 1200), 100);
+    assert_eq!(tracker.time_remaining(1, 1300), 0);
+    assert_eq!(tracker.time_remaining(1, 1500), 0);
+    // Not tracked
+    assert_eq!(tracker.time_remaining(999, 1000), 0);
+}
+
+#[test]
+fn cancel_respawn() {
+    let mut tracker = RespawnTracker::new();
+    tracker.mark_despawned(1, 300, 1000);
+    tracker.cancel(1);
+    assert!(!tracker.is_despawned(1));
+    assert!(tracker.collect_respawns(2000).is_empty());
+}
+
+#[test]
+fn re_despawn_resets_timer() {
+    let mut tracker = RespawnTracker::new();
+    tracker.mark_despawned(1, 60, 1000);  // respawn at 1060
+    tracker.mark_despawned(1, 60, 1050);  // re-despawned, respawn at 1110
+
+    let ready = tracker.collect_respawns(1070);
+    assert!(ready.is_empty()); // old timer would have triggered, new one hasn't
+
+    let ready = tracker.collect_respawns(1110);
+    assert_eq!(ready, vec![1]);
+}

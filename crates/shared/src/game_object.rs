@@ -340,6 +340,73 @@ impl SpawnManager {
     }
 }
 
+// --- Respawn timer ---
+
+use std::collections::HashMap;
+
+/// Tracks despawned game objects awaiting respawn.
+///
+/// When an object is used/depleted, call `mark_despawned()`.
+/// Each tick, call `collect_respawns()` to get spawn IDs ready to respawn.
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct RespawnTracker {
+    /// spawn_id → timestamp when the object should respawn.
+    pending: HashMap<u64, u64>,
+}
+
+impl RespawnTracker {
+    pub fn new() -> Self {
+        Self { pending: HashMap::new() }
+    }
+
+    /// Mark a spawn as despawned. It will respawn after `respawn_time` seconds.
+    /// Does nothing if `respawn_time` is 0 (no respawn).
+    pub fn mark_despawned(&mut self, spawn_id: u64, respawn_time: u32, now: u64) {
+        if respawn_time == 0 {
+            return;
+        }
+        let respawn_at = now + respawn_time as u64;
+        self.pending.insert(spawn_id, respawn_at);
+    }
+
+    /// Collect all spawn IDs whose respawn timer has elapsed.
+    /// Removes them from the tracker.
+    pub fn collect_respawns(&mut self, now: u64) -> Vec<u64> {
+        let ready: Vec<u64> = self.pending
+            .iter()
+            .filter(|(_, respawn_at)| now >= **respawn_at)
+            .map(|(id, _)| *id)
+            .collect();
+        for &id in &ready {
+            self.pending.remove(&id);
+        }
+        ready
+    }
+
+    /// Whether a spawn is currently despawned and waiting to respawn.
+    pub fn is_despawned(&self, spawn_id: u64) -> bool {
+        self.pending.contains_key(&spawn_id)
+    }
+
+    /// Time remaining until respawn (0 if not despawned).
+    pub fn time_remaining(&self, spawn_id: u64, now: u64) -> u64 {
+        self.pending
+            .get(&spawn_id)
+            .map(|&at| at.saturating_sub(now))
+            .unwrap_or(0)
+    }
+
+    /// Number of objects awaiting respawn.
+    pub fn pending_count(&self) -> usize {
+        self.pending.len()
+    }
+
+    /// Cancel a pending respawn (e.g. spawn removed permanently).
+    pub fn cancel(&mut self, spawn_id: u64) {
+        self.pending.remove(&spawn_id);
+    }
+}
+
 #[cfg(test)]
 #[path = "game_object_tests.rs"]
 mod tests;
