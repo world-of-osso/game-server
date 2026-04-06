@@ -9,6 +9,7 @@ mod networking;
 mod persistence;
 mod persistence_accounts;
 mod persistence_types;
+mod spell_db;
 mod stats;
 mod terrain_height;
 mod world_data;
@@ -42,6 +43,7 @@ fn main() {
         .add_plugins(creature_ai::CreatureAiPlugin)
         .add_plugins(stats::StatsPlugin)
         .add_plugins(combat::CombatPlugin)
+        .add_plugins(spell_db::SpellDatabasePlugin)
         .add_plugins(interest::InterestPlugin)
         .add_plugins(admin_ipc::AdminIpcPlugin)
         .add_systems(Startup, on_startup)

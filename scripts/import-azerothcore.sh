@@ -19,8 +19,10 @@ CREATURE_TEMPLATE_SQL="$SQL_DIR/creature_template.sql"
 CREATURE_SQL="$SQL_DIR/creature.sql"
 CREATURE_TEMPLATE_MODEL_SQL="$SQL_DIR/creature_template_model.sql"
 WAYPOINT_DATA_SQL="$SQL_DIR/waypoint_data.sql"
+SPELL_DBC_SQL="$SQL_DIR/spell_dbc.sql"
+SPELL_BONUS_DATA_SQL="$SQL_DIR/spell_bonus_data.sql"
 
-for f in "$CREATURE_TEMPLATE_SQL" "$CREATURE_SQL" "$CREATURE_TEMPLATE_MODEL_SQL" "$WAYPOINT_DATA_SQL"; do
+for f in "$CREATURE_TEMPLATE_SQL" "$CREATURE_SQL" "$CREATURE_TEMPLATE_MODEL_SQL" "$WAYPOINT_DATA_SQL" "$SPELL_DBC_SQL" "$SPELL_BONUS_DATA_SQL"; do
     if [[ ! -f "$f" ]]; then
         echo "ERROR: Missing SQL file: $f" >&2
         exit 1
@@ -79,6 +81,8 @@ import_table "$CREATURE_TEMPLATE_SQL"       "creature_template"
 import_table "$CREATURE_SQL"                "creature"
 import_table "$CREATURE_TEMPLATE_MODEL_SQL" "creature_template_model"
 import_table "$WAYPOINT_DATA_SQL"           "waypoint_data"
+import_table "$SPELL_DBC_SQL"              "spell_dbc"
+import_table "$SPELL_BONUS_DATA_SQL"       "spell_bonus_data"
 
 rmdir --ignore-fail-on-non-empty "$TMP_DIR"
 
@@ -88,6 +92,8 @@ sqlite3 "$DB_PATH" \
     "SELECT 'creature_template: ' || COUNT(*) FROM creature_template;" \
     "SELECT 'creature: ' || COUNT(*) FROM creature;" \
     "SELECT 'creature_template_model: ' || COUNT(*) FROM creature_template_model;" \
-    "SELECT 'waypoint_data: ' || COUNT(*) FROM waypoint_data;"
+    "SELECT 'waypoint_data: ' || COUNT(*) FROM waypoint_data;" \
+    "SELECT 'spell_dbc: ' || COUNT(*) FROM spell_dbc;" \
+    "SELECT 'spell_bonus_data: ' || COUNT(*) FROM spell_bonus_data;"
 
 echo "Database written to: $DB_PATH"
