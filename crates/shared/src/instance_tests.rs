@@ -149,6 +149,8 @@ fn registry_rejects_no_difficulties() {
         instance_type: InstanceType::Dungeon,
         parent_map_id: 0,
         allow_mount: false,
+        entrance_pos: WorldPosition { map_id: 1, x: 0.0, y: 0.0, z: 0.0 },
+        exit_pos: WorldPosition { map_id: 0, x: 0.0, y: 0.0, z: 0.0 },
         difficulties: vec![],
     };
     assert_eq!(reg.add(bad), Err(InstanceError::NoDifficulties));

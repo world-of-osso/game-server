@@ -168,6 +168,15 @@ pub fn loot_variant_for_difficulty(
         .map(|c| c.loot_table_variant)
 }
 
+/// A world position: map ID + coordinates.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct WorldPosition {
+    pub map_id: u16,
+    pub x: f32,
+    pub y: f32,
+    pub z: f32,
+}
+
 /// Static template for an instanced map.
 ///
 /// Loaded at server startup. One per dungeon/raid.
@@ -185,6 +194,10 @@ pub struct InstanceTemplate {
     pub allow_mount: bool,
     /// Available difficulty configurations.
     pub difficulties: Vec<DifficultyConfig>,
+    /// Where players spawn inside the instance (entrance portal destination).
+    pub entrance_pos: WorldPosition,
+    /// Where players appear in the overworld when exiting (exit portal destination).
+    pub exit_pos: WorldPosition,
 }
 
 impl InstanceTemplate {
@@ -308,76 +321,57 @@ impl InstanceTemplateRegistry {
     }
 }
 
+fn difficulty_config(
+    difficulty: Difficulty,
+    max_players: u32,
+    reset_timer: ResetTimer,
+    health_mult: f32,
+    damage_mult: f32,
+    loot_variant: u32,
+) -> DifficultyConfig {
+    DifficultyConfig {
+        difficulty, max_players, reset_timer,
+        creature_health_multiplier: health_mult,
+        creature_damage_multiplier: damage_mult,
+        loot_table_variant: loot_variant,
+    }
+}
+
+fn placeholder_positions(map_id: u16, parent: u16) -> (WorldPosition, WorldPosition) {
+    (
+        WorldPosition { map_id, x: 0.0, y: 0.0, z: 0.0 },
+        WorldPosition { map_id: parent, x: 0.0, y: 0.0, z: 0.0 },
+    )
+}
+
 /// Helper to build a standard 5-player dungeon template.
+///
+/// Uses placeholder entrance/exit positions — real data comes from world DB.
 pub fn dungeon_template(map_id: u16, name: &str, parent_map_id: u16) -> InstanceTemplate {
+    let (entrance_pos, exit_pos) = placeholder_positions(map_id, parent_map_id);
     InstanceTemplate {
-        map_id,
-        name: name.to_string(),
-        instance_type: InstanceType::Dungeon,
-        parent_map_id,
-        allow_mount: false,
+        map_id, name: name.to_string(), instance_type: InstanceType::Dungeon,
+        parent_map_id, allow_mount: false, entrance_pos, exit_pos,
         difficulties: vec![
-            DifficultyConfig {
-                difficulty: Difficulty::Normal,
-                max_players: 5,
-                reset_timer: ResetTimer::None,
-                creature_health_multiplier: 1.0,
-                creature_damage_multiplier: 1.0,
-                loot_table_variant: 0,
-            },
-            DifficultyConfig {
-                difficulty: Difficulty::Heroic,
-                max_players: 5,
-                reset_timer: ResetTimer::Daily,
-                creature_health_multiplier: 2.0,
-                creature_damage_multiplier: 1.5,
-                loot_table_variant: 1,
-            },
-            DifficultyConfig {
-                difficulty: Difficulty::Mythic,
-                max_players: 5,
-                reset_timer: ResetTimer::Weekly,
-                creature_health_multiplier: 3.0,
-                creature_damage_multiplier: 2.0,
-                loot_table_variant: 2,
-            },
+            difficulty_config(Difficulty::Normal, 5, ResetTimer::None, 1.0, 1.0, 0),
+            difficulty_config(Difficulty::Heroic, 5, ResetTimer::Daily, 2.0, 1.5, 1),
+            difficulty_config(Difficulty::Mythic, 5, ResetTimer::Weekly, 3.0, 2.0, 2),
         ],
     }
 }
 
 /// Helper to build a standard raid template.
+///
+/// Uses placeholder entrance/exit positions — real data comes from world DB.
 pub fn raid_template(map_id: u16, name: &str, parent_map_id: u16) -> InstanceTemplate {
+    let (entrance_pos, exit_pos) = placeholder_positions(map_id, parent_map_id);
     InstanceTemplate {
-        map_id,
-        name: name.to_string(),
-        instance_type: InstanceType::Raid,
-        parent_map_id,
-        allow_mount: false,
+        map_id, name: name.to_string(), instance_type: InstanceType::Raid,
+        parent_map_id, allow_mount: false, entrance_pos, exit_pos,
         difficulties: vec![
-            DifficultyConfig {
-                difficulty: Difficulty::Normal,
-                max_players: 25,
-                reset_timer: ResetTimer::Weekly,
-                creature_health_multiplier: 1.0,
-                creature_damage_multiplier: 1.0,
-                loot_table_variant: 0,
-            },
-            DifficultyConfig {
-                difficulty: Difficulty::Heroic,
-                max_players: 25,
-                reset_timer: ResetTimer::Weekly,
-                creature_health_multiplier: 1.5,
-                creature_damage_multiplier: 1.3,
-                loot_table_variant: 1,
-            },
-            DifficultyConfig {
-                difficulty: Difficulty::Mythic,
-                max_players: 20,
-                reset_timer: ResetTimer::Weekly,
-                creature_health_multiplier: 2.5,
-                creature_damage_multiplier: 2.0,
-                loot_table_variant: 2,
-            },
+            difficulty_config(Difficulty::Normal, 25, ResetTimer::Weekly, 1.0, 1.0, 0),
+            difficulty_config(Difficulty::Heroic, 25, ResetTimer::Weekly, 1.5, 1.3, 1),
+            difficulty_config(Difficulty::Mythic, 20, ResetTimer::Weekly, 2.5, 2.0, 2),
         ],
     }
 }
