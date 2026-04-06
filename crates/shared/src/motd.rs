@@ -131,6 +131,40 @@ impl Autobroadcast {
     }
 }
 
+// --- Chat integration ---
+
+use crate::protocol::{ChatMessage, ChatType};
+
+/// Sender name used for server system messages.
+pub const SYSTEM_SENDER: &str = "[Server]";
+
+impl Motd {
+    /// Build a system chat message for login display.
+    /// Returns `None` if no MOTD is set.
+    pub fn as_chat_message(&self) -> Option<ChatMessage> {
+        if !self.is_set() {
+            return None;
+        }
+        Some(ChatMessage {
+            sender: SYSTEM_SENDER.to_string(),
+            content: self.message.clone(),
+            channel: ChatType::System,
+        })
+    }
+}
+
+impl Autobroadcast {
+    /// Check the timer and build a broadcast chat message if due.
+    pub fn tick_chat_message(&mut self, now: u64) -> Option<ChatMessage> {
+        let msg = self.should_broadcast(now)?;
+        Some(ChatMessage {
+            sender: SYSTEM_SENDER.to_string(),
+            content: msg.to_string(),
+            channel: ChatType::ServerBroadcast,
+        })
+    }
+}
+
 #[cfg(test)]
 #[path = "motd_tests.rs"]
 mod tests;

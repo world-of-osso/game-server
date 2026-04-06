@@ -39,6 +39,10 @@ pub enum ChatType {
     Party,
     Guild,
     Whisper(String),
+    /// Server system message (MOTD, announcements).
+    System,
+    /// Periodic server broadcast (autobroadcast).
+    ServerBroadcast,
 }
 
 /// A chat message sent between client and server.

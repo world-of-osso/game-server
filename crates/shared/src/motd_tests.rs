@@ -152,3 +152,57 @@ fn autobroadcast_remove_resets_index() {
     ab.remove_message(1);
     assert_eq!(ab.should_broadcast(20).unwrap(), "A");
 }
+
+// --- Chat integration ---
+
+use crate::protocol::ChatType;
+
+#[test]
+fn motd_as_chat_message() {
+    let mut motd = Motd::default();
+    motd.set("Welcome!", 1000).unwrap();
+
+    let msg = motd.as_chat_message().unwrap();
+    assert_eq!(msg.sender, SYSTEM_SENDER);
+    assert_eq!(msg.content, "Welcome!");
+    assert_eq!(msg.channel, ChatType::System);
+}
+
+#[test]
+fn motd_empty_no_chat_message() {
+    let motd = Motd::default();
+    assert!(motd.as_chat_message().is_none());
+}
+
+#[test]
+fn autobroadcast_tick_chat_message() {
+    let mut ab = Autobroadcast::new();
+    ab.add_message("Reminder!".to_string());
+    ab.enabled = true;
+    ab.interval = 60;
+
+    let msg = ab.tick_chat_message(60).unwrap();
+    assert_eq!(msg.sender, SYSTEM_SENDER);
+    assert_eq!(msg.content, "Reminder!");
+    assert_eq!(msg.channel, ChatType::ServerBroadcast);
+}
+
+#[test]
+fn autobroadcast_tick_not_due() {
+    let mut ab = Autobroadcast::new();
+    ab.add_message("Reminder!".to_string());
+    ab.enabled = true;
+    ab.interval = 60;
+
+    ab.tick_chat_message(60); // fires
+    assert!(ab.tick_chat_message(90).is_none()); // not due
+}
+
+#[test]
+fn autobroadcast_tick_disabled() {
+    let mut ab = Autobroadcast::new();
+    ab.add_message("Reminder!".to_string());
+    ab.interval = 60;
+    // Not enabled
+    assert!(ab.tick_chat_message(60).is_none());
+}
