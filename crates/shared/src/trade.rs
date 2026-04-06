@@ -584,6 +584,54 @@ impl TradeManager {
         self.player_index.contains_key(&player)
     }
 
+    /// Check if a specific trade session's players are still in range.
+    ///
+    /// Returns `Err(OutOfRange)` if they've moved apart. The server
+    /// should cancel the trade when this fails.
+    pub fn check_range(
+        &self,
+        player: u64,
+        pos_a: (f32, f32, f32),
+        pos_b: (f32, f32, f32),
+    ) -> Result<(), TradeError> {
+        if !self.is_trading(player) {
+            return Err(TradeError::NoActiveSession);
+        }
+        if in_trade_range(pos_a.0, pos_a.1, pos_a.2, pos_b.0, pos_b.1, pos_b.2) {
+            Ok(())
+        } else {
+            Err(TradeError::OutOfRange)
+        }
+    }
+
+    /// Enforce range on all active sessions. Cancels any where players
+    /// have moved out of range.
+    ///
+    /// `get_pos` resolves a player entity to their current position.
+    /// Returns cancelled session pairs `(initiator, target)` so the
+    /// server can notify both players.
+    pub fn enforce_range(
+        &mut self,
+        get_pos: impl Fn(u64) -> Option<(f32, f32, f32)>,
+    ) -> Vec<(u64, u64)> {
+        let out_of_range: Vec<u32> = self.sessions
+            .iter()
+            .filter(|(_, s)| {
+                let Some(a) = get_pos(s.initiator) else { return true };
+                let Some(b) = get_pos(s.target) else { return true };
+                !in_trade_range(a.0, a.1, a.2, b.0, b.1, b.2)
+            })
+            .map(|(&id, _)| id)
+            .collect();
+
+        out_of_range.iter().filter_map(|&id| {
+            let s = self.sessions.get(&id)?;
+            let pair = (s.initiator, s.target);
+            self.remove_session(id);
+            Some(pair)
+        }).collect()
+    }
+
     /// Remove expired pending requests (e.g. after a timeout).
     pub fn cleanup_expired(&mut self, now: u64, timeout_secs: u64) {
         let expired: Vec<u32> = self.sessions

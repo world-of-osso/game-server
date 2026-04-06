@@ -791,3 +791,92 @@ fn log_drain_none() {
     assert!(old.is_empty());
     assert_eq!(log.len(), 1);
 }
+
+// --- Range check during trade ---
+
+#[test]
+fn check_range_in_range_ok() {
+    let mgr = open_trade();
+    assert!(mgr.check_range(100, NEARBY, ALSO_NEARBY).is_ok());
+}
+
+#[test]
+fn check_range_out_of_range() {
+    let mgr = open_trade();
+    assert_eq!(mgr.check_range(100, NEARBY, FAR_AWAY), Err(TradeError::OutOfRange));
+}
+
+#[test]
+fn check_range_no_session() {
+    let mgr = TradeManager::new();
+    assert_eq!(mgr.check_range(100, NEARBY, ALSO_NEARBY), Err(TradeError::NoActiveSession));
+}
+
+#[test]
+fn enforce_range_cancels_out_of_range() {
+    let mut mgr = TradeManager::new();
+    mgr.initiate_trade(100, 200, NEARBY, ALSO_NEARBY, 1000).unwrap();
+    mgr.accept_trade(200).unwrap();
+    mgr.initiate_trade(300, 400, NEARBY, ALSO_NEARBY, 1001).unwrap();
+    mgr.accept_trade(400).unwrap();
+
+    // 100↔200 still nearby, 300↔400 moved apart
+    let cancelled = mgr.enforce_range(|player| match player {
+        100 => Some(NEARBY),
+        200 => Some(ALSO_NEARBY),
+        300 => Some(NEARBY),
+        400 => Some(FAR_AWAY),
+        _ => None,
+    });
+
+    assert_eq!(cancelled.len(), 1);
+    assert_eq!(cancelled[0], (300, 400));
+    assert!(mgr.is_trading(100));
+    assert!(!mgr.is_trading(300));
+    assert!(!mgr.is_trading(400));
+}
+
+#[test]
+fn enforce_range_missing_position_cancels() {
+    let mut mgr = open_trade();
+
+    // Player 200 has no position (disconnected?)
+    let cancelled = mgr.enforce_range(|player| match player {
+        100 => Some(NEARBY),
+        _ => None,
+    });
+
+    assert_eq!(cancelled.len(), 1);
+    assert_eq!(cancelled[0], (100, 200));
+    assert!(mgr.is_empty());
+}
+
+#[test]
+fn enforce_range_all_in_range_no_cancel() {
+    let mut mgr = open_trade();
+
+    let cancelled = mgr.enforce_range(|player| match player {
+        100 => Some(NEARBY),
+        200 => Some(ALSO_NEARBY),
+        _ => None,
+    });
+
+    assert!(cancelled.is_empty());
+    assert!(mgr.is_trading(100));
+}
+
+#[test]
+fn enforce_range_pending_also_checked() {
+    let mut mgr = TradeManager::new();
+    mgr.initiate_trade(100, 200, NEARBY, ALSO_NEARBY, 1000).unwrap();
+    // Still pending — should still be range-checked
+
+    let cancelled = mgr.enforce_range(|player| match player {
+        100 => Some(NEARBY),
+        200 => Some(FAR_AWAY),
+        _ => None,
+    });
+
+    assert_eq!(cancelled.len(), 1);
+    assert!(mgr.is_empty());
+}
