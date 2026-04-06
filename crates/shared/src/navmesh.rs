@@ -294,6 +294,110 @@ impl NavTile {
     }
 }
 
+// --- Chase behavior ---
+
+/// How often a chasing mob recalculates its path (seconds).
+const CHASE_REPATH_INTERVAL: f32 = 1.0;
+/// Distance threshold: if target moved less than this, skip repath.
+const CHASE_REPATH_THRESHOLD: f32 = 3.0;
+
+/// Chase state for a mob following a target.
+///
+/// The mob moves along waypoints toward the target. When the target moves
+/// significantly or the repath timer expires, the path is recalculated.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ChaseState {
+    /// Target entity bits.
+    pub target: u64,
+    /// Current path to follow.
+    pub path: Option<NavPath>,
+    /// Index of the next waypoint to move toward.
+    pub waypoint_index: usize,
+    /// Time until next path recalculation.
+    pub repath_timer: f32,
+    /// Last known target position (for movement detection).
+    pub last_target_pos: NavPoint,
+    /// Movement speed in yards/second.
+    pub speed: f32,
+}
+
+/// Result of a chase tick.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum ChaseTickResult {
+    /// Move toward this position this frame.
+    MoveTo(NavPoint),
+    /// Target reached (within melee range).
+    Reached,
+    /// No path to target (stuck or unreachable).
+    NoPath,
+    /// Need to recalculate path (target moved or timer expired).
+    NeedRepath,
+}
+
+impl ChaseState {
+    pub fn new(target: u64, target_pos: NavPoint, speed: f32) -> Self {
+        Self {
+            target,
+            path: None,
+            waypoint_index: 0,
+            repath_timer: 0.0,
+            last_target_pos: target_pos,
+            speed,
+        }
+    }
+
+    /// Set a new path to follow.
+    pub fn set_path(&mut self, path: NavPath, target_pos: NavPoint) {
+        self.path = Some(path);
+        self.waypoint_index = 0;
+        self.repath_timer = CHASE_REPATH_INTERVAL;
+        self.last_target_pos = target_pos;
+    }
+
+    /// Tick the chase state. Returns what the mob should do this frame.
+    ///
+    /// `current_pos`: mob's current position.
+    /// `target_pos`: target's current position.
+    /// `melee_range`: distance at which the mob considers itself "reached".
+    pub fn tick(
+        &mut self,
+        dt: f32,
+        current_pos: &NavPoint,
+        target_pos: &NavPoint,
+        melee_range: f32,
+    ) -> ChaseTickResult {
+        // Already in range?
+        if current_pos.distance_2d(target_pos) <= melee_range {
+            return ChaseTickResult::Reached;
+        }
+
+        // Check if repath needed
+        self.repath_timer -= dt;
+        let target_moved = target_pos.distance_2d(&self.last_target_pos) > CHASE_REPATH_THRESHOLD;
+        if self.path.is_none() || self.repath_timer <= 0.0 || target_moved {
+            return ChaseTickResult::NeedRepath;
+        }
+
+        // Follow current path
+        let path = self.path.as_ref().unwrap();
+        if self.waypoint_index >= path.waypoints.len() {
+            return ChaseTickResult::NeedRepath;
+        }
+
+        let wp = path.waypoints[self.waypoint_index];
+        let dist = current_pos.distance_2d(&wp);
+        if dist < self.speed * dt {
+            self.waypoint_index += 1;
+            if self.waypoint_index >= path.waypoints.len() {
+                return ChaseTickResult::Reached;
+            }
+            return ChaseTickResult::MoveTo(path.waypoints[self.waypoint_index]);
+        }
+
+        ChaseTickResult::MoveTo(wp)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -509,5 +613,60 @@ mod tests {
         let start = NavPoint::new(2.0, 0.0, 2.0);
         let end = NavPoint::new(22.0, 0.0, 2.0);
         assert!(tile.find_path(&start, &end).is_none());
+    }
+
+    // --- Chase tests ---
+
+    #[test]
+    fn chase_reached_when_in_range() {
+        let mut chase = ChaseState::new(1, NavPoint::new(5.0, 0.0, 5.0), 7.0);
+        chase.set_path(
+            NavPath { waypoints: vec![NavPoint::new(0.0, 0.0, 0.0), NavPoint::new(5.0, 0.0, 5.0)] },
+            NavPoint::new(5.0, 0.0, 5.0),
+        );
+        let result = chase.tick(0.016, &NavPoint::new(4.0, 0.0, 5.0), &NavPoint::new(5.0, 0.0, 5.0), 5.0);
+        assert_eq!(result, ChaseTickResult::Reached);
+    }
+
+    #[test]
+    fn chase_moves_toward_waypoint() {
+        let mut chase = ChaseState::new(1, NavPoint::new(20.0, 0.0, 0.0), 7.0);
+        chase.set_path(
+            NavPath { waypoints: vec![NavPoint::new(0.0, 0.0, 0.0), NavPoint::new(10.0, 0.0, 0.0), NavPoint::new(20.0, 0.0, 0.0)] },
+            NavPoint::new(20.0, 0.0, 0.0),
+        );
+        let result = chase.tick(0.016, &NavPoint::new(0.0, 0.0, 0.0), &NavPoint::new(20.0, 0.0, 0.0), 5.0);
+        assert!(matches!(result, ChaseTickResult::MoveTo(_)));
+    }
+
+    #[test]
+    fn chase_need_repath_no_path() {
+        let mut chase = ChaseState::new(1, NavPoint::new(20.0, 0.0, 0.0), 7.0);
+        let result = chase.tick(0.016, &NavPoint::new(0.0, 0.0, 0.0), &NavPoint::new(20.0, 0.0, 0.0), 5.0);
+        assert_eq!(result, ChaseTickResult::NeedRepath);
+    }
+
+    #[test]
+    fn chase_need_repath_target_moved() {
+        let mut chase = ChaseState::new(1, NavPoint::new(10.0, 0.0, 0.0), 7.0);
+        chase.set_path(
+            NavPath { waypoints: vec![NavPoint::new(0.0, 0.0, 0.0), NavPoint::new(10.0, 0.0, 0.0)] },
+            NavPoint::new(10.0, 0.0, 0.0),
+        );
+        // Target moved significantly
+        let result = chase.tick(0.016, &NavPoint::new(0.0, 0.0, 0.0), &NavPoint::new(20.0, 0.0, 0.0), 5.0);
+        assert_eq!(result, ChaseTickResult::NeedRepath);
+    }
+
+    #[test]
+    fn chase_need_repath_timer_expired() {
+        let mut chase = ChaseState::new(1, NavPoint::new(20.0, 0.0, 0.0), 7.0);
+        chase.set_path(
+            NavPath { waypoints: vec![NavPoint::new(0.0, 0.0, 0.0), NavPoint::new(20.0, 0.0, 0.0)] },
+            NavPoint::new(20.0, 0.0, 0.0),
+        );
+        // Tick past repath interval
+        let result = chase.tick(2.0, &NavPoint::new(0.0, 0.0, 0.0), &NavPoint::new(20.0, 0.0, 0.0), 5.0);
+        assert_eq!(result, ChaseTickResult::NeedRepath);
     }
 }
