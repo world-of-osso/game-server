@@ -235,6 +235,39 @@ mod tests {
     }
 
     #[test]
+    fn idle_creature_stays_at_spawn_point() {
+        use bevy::ecs::system::RunSystemOnce;
+        use shared::components::Npc;
+
+        let mut app = App::new();
+        app.add_plugins(bevy::MinimalPlugins);
+        app.update();
+        app.update();
+
+        // Spawn creature with no WanderState/WaypointState (movement_type=0)
+        let entity = app
+            .world_mut()
+            .spawn((
+                Position {
+                    x: 10.0,
+                    y: 20.0,
+                    z: 30.0,
+                },
+                Npc { template_id: 1 },
+            ))
+            .id();
+
+        // Run wander and waypoint systems — creature should be unaffected
+        let _ = app.world_mut().run_system_once(wander_system);
+        let _ = app.world_mut().run_system_once(waypoint_system);
+
+        let pos = *app.world().entity(entity).get::<Position>().unwrap();
+        assert_eq!(pos.x, 10.0);
+        assert_eq!(pos.y, 20.0);
+        assert_eq!(pos.z, 30.0);
+    }
+
+    #[test]
     fn advance_waypoint_wraps() {
         let mut state = WaypointState {
             creature_guid: 1,
