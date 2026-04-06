@@ -648,6 +648,85 @@ impl ForcedMoveState {
     }
 }
 
+// --- Charge / leap ---
+
+/// Type of direct-line movement.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DirectMoveType {
+    /// Charge: rush to a target (Warrior Charge). Stops at target.
+    Charge,
+    /// Leap: jump to a location (Heroic Leap). Lands at destination.
+    Leap,
+}
+
+/// State for a direct-line movement that ignores navmesh pathing.
+///
+/// The entity moves in a straight line from start to destination at
+/// a fixed speed. No pathfinding — passes through obstacles.
+/// The server validates the destination is on walkable ground.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct DirectMoveState {
+    pub move_type: DirectMoveType,
+    pub start: NavPoint,
+    pub destination: NavPoint,
+    pub speed: f32,
+    pub elapsed: f32,
+    pub total_time: f32,
+}
+
+impl DirectMoveState {
+    /// Create a charge toward a target entity's position.
+    pub fn charge(start: NavPoint, target: NavPoint, speed: f32) -> Self {
+        let dist = start.distance_2d(&target);
+        let total = if speed > 0.0 { dist / speed } else { 0.0 };
+        Self {
+            move_type: DirectMoveType::Charge,
+            start,
+            destination: target,
+            speed,
+            elapsed: 0.0,
+            total_time: total,
+        }
+    }
+
+    /// Create a leap to a ground location.
+    pub fn leap(start: NavPoint, destination: NavPoint, travel_time: f32) -> Self {
+        Self {
+            move_type: DirectMoveType::Leap,
+            start,
+            destination,
+            speed: 0.0,
+            elapsed: 0.0,
+            total_time: travel_time,
+        }
+    }
+
+    /// Current interpolated position along the direct line.
+    pub fn current_position(&self) -> NavPoint {
+        let t = if self.total_time > 0.0 {
+            (self.elapsed / self.total_time).min(1.0)
+        } else {
+            1.0
+        };
+        NavPoint::new(
+            self.start.x + (self.destination.x - self.start.x) * t,
+            self.start.y + (self.destination.y - self.start.y) * t,
+            self.start.z + (self.destination.z - self.start.z) * t,
+        )
+    }
+
+    /// Tick the movement. Returns `true` when the entity has arrived.
+    pub fn tick(&mut self, dt: f32) -> bool {
+        self.elapsed += dt;
+        self.elapsed >= self.total_time
+    }
+
+    /// Whether the movement is complete.
+    pub fn is_complete(&self) -> bool {
+        self.elapsed >= self.total_time
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1117,5 +1196,71 @@ mod tests {
 
         let south = forced_move_target(&tile, &origin, -std::f32::consts::FRAC_PI_2, 3.0);
         assert!(south.z < origin.z); // moved -Z
+    }
+
+    // --- Charge / leap tests ---
+
+    #[test]
+    fn charge_arrives_at_target() {
+        let mut charge = DirectMoveState::charge(
+            NavPoint::new(0.0, 0.0, 0.0),
+            NavPoint::new(20.0, 0.0, 0.0),
+            40.0, // 40 y/s → 0.5s to travel 20y
+        );
+        assert!(!charge.tick(0.3));
+        assert!(charge.tick(0.3)); // 0.6s > 0.5s
+        assert!(charge.is_complete());
+    }
+
+    #[test]
+    fn charge_interpolation_midway() {
+        let charge = DirectMoveState {
+            move_type: DirectMoveType::Charge,
+            start: NavPoint::new(0.0, 0.0, 0.0),
+            destination: NavPoint::new(20.0, 0.0, 0.0),
+            speed: 40.0,
+            elapsed: 0.25,
+            total_time: 0.5,
+        };
+        let pos = charge.current_position();
+        assert!((pos.x - 10.0).abs() < 0.01); // halfway
+    }
+
+    #[test]
+    fn leap_fixed_travel_time() {
+        let mut leap = DirectMoveState::leap(
+            NavPoint::new(0.0, 0.0, 0.0),
+            NavPoint::new(30.0, 10.0, 0.0),
+            0.8, // 0.8s travel
+        );
+        assert!(!leap.tick(0.5));
+        assert!(leap.tick(0.4));
+        let pos = leap.current_position();
+        assert!((pos.x - 30.0).abs() < 0.01);
+        assert!((pos.y - 10.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn charge_zero_distance_instant() {
+        let mut charge = DirectMoveState::charge(
+            NavPoint::new(5.0, 0.0, 5.0),
+            NavPoint::new(5.0, 0.0, 5.0),
+            40.0,
+        );
+        assert!(charge.tick(0.001)); // instant
+    }
+
+    #[test]
+    fn direct_move_position_at_completion() {
+        let mut charge = DirectMoveState::charge(
+            NavPoint::new(0.0, 0.0, 0.0),
+            NavPoint::new(10.0, 5.0, 10.0),
+            100.0,
+        );
+        charge.tick(10.0); // way past
+        let pos = charge.current_position();
+        // Clamped to t=1.0
+        assert!((pos.x - 10.0).abs() < 0.01);
+        assert!((pos.y - 5.0).abs() < 0.01);
     }
 }
