@@ -638,6 +638,35 @@ mod tests {
     }
 
     #[test]
+    fn run_speed_moves_at_7_0_yards_per_sec() {
+        assert!((DEFAULT_RUN_SPEED - 7.0).abs() < 1e-6);
+        let mut app = setup_app_with_time();
+        let player = spawn_player(app.world_mut(), 0.0, 0.0, 0.0);
+        let input = make_input(1.0, 0.0, 0.0); // running: true by default
+        let captured_dt = std::sync::Arc::new(std::sync::Mutex::new(0.0_f32));
+        let dt_clone = captured_dt.clone();
+        let _ = app.world_mut().run_system_once(
+            move |mut q: Query<
+                (&mut Position, &mut Rotation, &mut MovementSpeed),
+                With<Player>,
+            >,
+                  time: Res<Time>| {
+                *dt_clone.lock().unwrap() = time.delta_secs();
+                apply_movement_input(&input, player, &mut q, &time);
+            },
+        );
+        let dt = *captured_dt.lock().unwrap();
+        let pos = *app.world().entity(player).get::<Position>().unwrap();
+        let expected_x = DEFAULT_RUN_SPEED * dt;
+        assert!(
+            (pos.x - expected_x).abs() < 1e-6,
+            "run moved {}, expected {} (7.0 * {dt})",
+            pos.x,
+            expected_x,
+        );
+    }
+
+    #[test]
     fn zero_direction_ignored() {
         let mut app = setup_app_with_time();
         let player = spawn_player(app.world_mut(), 5.0, 5.0, 5.0);
