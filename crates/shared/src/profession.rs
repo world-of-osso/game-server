@@ -349,6 +349,8 @@ pub struct Recipe {
     pub output_item_id: u32,
     /// Output count.
     pub output_count: u16,
+    /// How this recipe is acquired (None = always known / from test data).
+    pub source: Option<RecipeSource>,
 }
 
 /// Result of attempting to craft a recipe.
@@ -428,6 +430,75 @@ pub fn attempt_craft(
         output_item_id: recipe.output_item_id,
         output_count: recipe.output_count,
         skilled_up,
+    }
+}
+
+// --- Recipe sources ---
+
+/// How a recipe is acquired.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum RecipeSource {
+    /// Learned from a profession trainer at the required skill level.
+    Trainer,
+    /// Learned from a recipe item (world drop, vendor, quest reward).
+    Item { item_id: u32 },
+    /// Discovered randomly while crafting other recipes in the profession.
+    Discovery { chance: u16 },
+}
+
+/// A player's known recipes for one profession.
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+pub struct KnownRecipes {
+    pub recipe_ids: Vec<u32>,
+}
+
+impl KnownRecipes {
+    /// Learn a recipe. Returns `false` if already known.
+    pub fn learn(&mut self, recipe_id: u32) -> bool {
+        if self.recipe_ids.contains(&recipe_id) {
+            return false;
+        }
+        self.recipe_ids.push(recipe_id);
+        true
+    }
+
+    /// Whether a recipe is known.
+    pub fn knows(&self, recipe_id: u32) -> bool {
+        self.recipe_ids.contains(&recipe_id)
+    }
+
+    /// Get all trainer recipes available at a skill level.
+    pub fn available_from_trainer(
+        recipes: &[Recipe],
+        skill: u16,
+    ) -> Vec<&Recipe> {
+        recipes
+            .iter()
+            .filter(|r| {
+                matches!(r.source, Some(RecipeSource::Trainer)) && r.required_skill <= skill
+            })
+            .collect()
+    }
+
+    /// Roll for a discovery while crafting. Returns the recipe ID if discovered.
+    ///
+    /// `discoverable` contains recipes with `RecipeSource::Discovery`.
+    /// `roll` is 0..10000 (hundredths of percent).
+    pub fn roll_discovery(
+        &mut self,
+        discoverable: &[Recipe],
+        roll: u16,
+    ) -> Option<u32> {
+        for recipe in discoverable {
+            if let Some(RecipeSource::Discovery { chance }) = recipe.source
+                && !self.knows(recipe.id)
+                && roll < chance
+            {
+                self.learn(recipe.id);
+                return Some(recipe.id);
+            }
+        }
+        None
     }
 }
 
@@ -660,9 +731,10 @@ mod tests {
             profession: Profession::Mining,
             required_skill: 1,
             trivial_skill: 25,
-            materials: vec![CraftMaterial { item_id: 2770, count: 2 }], // 2 Copper Ore
-            output_item_id: 2840, // Copper Bar
+            materials: vec![CraftMaterial { item_id: 2770, count: 2 }],
+            output_item_id: 2840,
             output_count: 1,
+            source: Some(RecipeSource::Trainer),
         }
     }
 
@@ -749,10 +821,74 @@ mod tests {
             ],
             output_item_id: 300,
             output_count: 1,
+            source: None,
         };
         let inv = |id: u32| match id { 100 => 2, 200 => 3, _ => 0 };
         let missing = check_materials(&recipe, &inv);
         assert_eq!(missing.len(), 1);
         assert_eq!(missing[0], CraftMaterial { item_id: 100, count: 3 });
+    }
+
+    // --- Recipe source tests ---
+
+    #[test]
+    fn learn_recipe() {
+        let mut known = KnownRecipes::default();
+        assert!(known.learn(100));
+        assert!(known.knows(100));
+        assert!(!known.learn(100)); // duplicate
+    }
+
+    #[test]
+    fn trainer_recipes_filtered_by_skill() {
+        let recipes = vec![
+            Recipe {
+                id: 1, profession: Profession::Mining, required_skill: 1,
+                trivial_skill: 25, materials: vec![], output_item_id: 100,
+                output_count: 1, source: Some(RecipeSource::Trainer),
+            },
+            Recipe {
+                id: 2, profession: Profession::Mining, required_skill: 50,
+                trivial_skill: 75, materials: vec![], output_item_id: 200,
+                output_count: 1, source: Some(RecipeSource::Trainer),
+            },
+            Recipe {
+                id: 3, profession: Profession::Mining, required_skill: 1,
+                trivial_skill: 25, materials: vec![], output_item_id: 300,
+                output_count: 1, source: Some(RecipeSource::Item { item_id: 999 }),
+            },
+        ];
+        let available = KnownRecipes::available_from_trainer(&recipes, 30);
+        assert_eq!(available.len(), 1); // only recipe 1 (trainer, skill ≤ 30)
+        assert_eq!(available[0].id, 1);
+    }
+
+    #[test]
+    fn discovery_roll() {
+        let discoverable = vec![Recipe {
+            id: 50, profession: Profession::Alchemy, required_skill: 300,
+            trivial_skill: 350, materials: vec![], output_item_id: 500,
+            output_count: 1, source: Some(RecipeSource::Discovery { chance: 100 }),
+        }];
+        let mut known = KnownRecipes::default();
+        // roll=50 < chance=100 → discovered
+        let found = known.roll_discovery(&discoverable, 50);
+        assert_eq!(found, Some(50));
+        assert!(known.knows(50));
+        // Can't discover again
+        let found2 = known.roll_discovery(&discoverable, 50);
+        assert_eq!(found2, None);
+    }
+
+    #[test]
+    fn discovery_high_roll_fails() {
+        let discoverable = vec![Recipe {
+            id: 50, profession: Profession::Alchemy, required_skill: 300,
+            trivial_skill: 350, materials: vec![], output_item_id: 500,
+            output_count: 1, source: Some(RecipeSource::Discovery { chance: 100 }),
+        }];
+        let mut known = KnownRecipes::default();
+        let found = known.roll_discovery(&discoverable, 200); // > 100
+        assert_eq!(found, None);
     }
 }
