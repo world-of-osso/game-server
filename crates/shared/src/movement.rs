@@ -24,6 +24,11 @@ pub const BACKPEDAL_MULTIPLIER: f32 = 0.6;
 /// Jump impulse velocity in yards/sec.
 pub const JUMP_IMPULSE: f32 = 9.0;
 
+/// Returns true if a mounted player should be dismounted (entering water).
+pub fn should_dismount(swimming: bool, mounted: bool) -> bool {
+    swimming && mounted
+}
+
 /// Minimum fall distance before damage applies (yards).
 pub const FALL_DAMAGE_THRESHOLD: f32 = 2.7;
 
@@ -124,5 +129,13 @@ mod tests {
         let at_65 = fall_damage_percent(65.0);
         assert!(at_60 < 1.0, "60yd not quite fatal: {at_60}");
         assert!((at_65 - 1.0).abs() < 0.05, "~65yd is fatal: {at_65}");
+    }
+
+    #[test]
+    fn dismount_on_entering_water() {
+        assert!(should_dismount(true, true));
+        assert!(!should_dismount(false, true));
+        assert!(!should_dismount(true, false));
+        assert!(!should_dismount(false, false));
     }
 }

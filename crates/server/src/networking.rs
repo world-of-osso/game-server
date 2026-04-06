@@ -4,7 +4,9 @@ use core::net::{IpAddr, Ipv4Addr, SocketAddr};
 use lightyear::prelude::server::*;
 use lightyear::prelude::*;
 use shared::aura::Auras;
-use shared::components::{Health, MovementSpeed, Npc, Player, Position, Rotation, VerticalVelocity};
+use shared::components::{
+    Health, Mounted, MovementSpeed, Npc, Player, Position, Rotation, VerticalVelocity,
+};
 use shared::protocol::{ChatMessage, LoadTerrain, PlayerInput, TerrainChannel};
 use std::collections::VecDeque;
 use std::time::Duration;
@@ -363,12 +365,17 @@ pub fn send_load_terrain(connection: Entity, senders: &mut Query<&mut MessageSen
 
 /// Read PlayerInput messages and apply movement.
 fn process_player_inputs(
+    mut commands: Commands,
     mut receivers: Query<(&mut MessageReceiver<PlayerInput>, &PlayerLink)>,
     mut players: Query<PlayerMovement, With<Player>>,
+    mounted: Query<Entity, (With<Player>, With<Mounted>)>,
     time: Res<Time>,
 ) {
     for (mut receiver, link) in receivers.iter_mut() {
         for input in receiver.receive() {
+            if input.swimming && mounted.contains(link.0) {
+                commands.entity(link.0).remove::<Mounted>();
+            }
             apply_movement_input(&input, link.0, &mut players, &time);
         }
     }

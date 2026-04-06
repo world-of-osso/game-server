@@ -248,6 +248,13 @@ pub struct MovementSpeed(pub f32);
 )]
 pub struct VerticalVelocity(pub f32);
 
+/// Player is currently mounted. Removed on dismount.
+#[derive(Component, Reflect, Serialize, Deserialize, bitcode::Encode, bitcode::Decode, Debug, Clone, PartialEq)]
+pub struct Mounted {
+    /// Display ID of the mount.
+    pub mount_display_id: u32,
+}
+
 #[derive(
     Component,
     Reflect,
