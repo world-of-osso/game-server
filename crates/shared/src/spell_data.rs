@@ -103,6 +103,14 @@ pub struct SpellData {
     pub effects: [Option<SpellEffectDef>; 3],
 }
 
+impl SpellData {
+    /// Whether this spell is instant (cast_time == 0).
+    /// Instant spells bypass the cast bar but still trigger the GCD.
+    pub fn is_instant(&self) -> bool {
+        self.cast_time <= 0.0
+    }
+}
+
 /// Resource cost for casting a spell.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct SpellCost {
@@ -126,6 +134,8 @@ pub enum CastFailReason {
     NotEnoughResource,
     /// Spell is on cooldown.
     OnCooldown,
+    /// Global cooldown is active.
+    OnGlobalCooldown,
     /// Caster is dead.
     CasterDead,
 }
@@ -145,6 +155,8 @@ pub struct CastContext {
     pub resource_available: Option<f32>,
     /// Remaining cooldown in seconds (0.0 = ready).
     pub cooldown_remaining: f32,
+    /// Remaining GCD in seconds (0.0 = ready).
+    pub gcd_remaining: f32,
 }
 
 /// Effective melee range used when spell range is 0.
@@ -155,16 +167,21 @@ const MELEE_RANGE: f32 = 5.0;
 ///
 /// Checks in order (matching WoW priority):
 /// 1. Caster alive
-/// 2. Target exists (for non-self spells)
-/// 3. Target validity (hostile/friendly match)
-/// 4. Range
-/// 5. Resource cost
-/// 6. Cooldown
+/// 2. GCD ready
+/// 3. Target exists (for non-self spells)
+/// 4. Target validity (hostile/friendly match)
+/// 5. Range
+/// 6. Resource cost
+/// 7. Cooldown
 ///
 /// Ref: AzerothCore `Spell::CheckCast()`.
 pub fn validate_cast(spell: &SpellData, ctx: &CastContext) -> Result<(), CastFailReason> {
     if !ctx.caster_alive {
         return Err(CastFailReason::CasterDead);
+    }
+
+    if ctx.gcd_remaining > 0.0 {
+        return Err(CastFailReason::OnGlobalCooldown);
     }
 
     if spell.target != SpellTarget::Self_ {
@@ -662,6 +679,7 @@ mod tests {
             caster_alive: true,
             resource_available: Some(5000.0),
             cooldown_remaining: 0.0,
+            gcd_remaining: 0.0,
         }
     }
 
@@ -789,5 +807,23 @@ mod tests {
         ctx.distance = 3.0; // melee range for Victory Rush
         ctx.resource_available = None; // no resource pool — doesn't matter
         assert!(validate_cast(&vr, &ctx).is_ok());
+    }
+
+    #[test]
+    fn validate_cast_on_gcd() {
+        let mut ctx = valid_hostile_ctx();
+        ctx.gcd_remaining = 0.8;
+        assert_eq!(
+            validate_cast(&fireball_spell(), &ctx),
+            Err(CastFailReason::OnGlobalCooldown)
+        );
+    }
+
+    #[test]
+    fn spell_is_instant() {
+        let ms = super::super::spell_catalog::mortal_strike();
+        assert!(ms.is_instant());
+        let fb = fireball_spell();
+        assert!(!fb.is_instant());
     }
 }

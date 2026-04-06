@@ -1403,6 +1403,48 @@ impl CastState {
     }
 }
 
+// --- Global cooldown ---
+
+/// Tracks the global cooldown (GCD) for an entity.
+///
+/// The GCD prevents casting any spell until it expires. Instant casts trigger
+/// the GCD but bypass the cast bar. The GCD duration is haste-scaled
+/// (base 1.5s, min 0.75s) — computed externally via `formulas::spell::hasted_gcd()`.
+///
+/// Ref: AzerothCore `Spell::TriggerGlobalCooldown()`.
+#[derive(Component, Debug, Clone, Copy, PartialEq)]
+pub struct GlobalCooldown {
+    /// Time remaining on the GCD (seconds).
+    pub remaining: f32,
+}
+
+impl Default for GlobalCooldown {
+    fn default() -> Self {
+        Self { remaining: 0.0 }
+    }
+}
+
+impl GlobalCooldown {
+    /// Start the GCD with a given duration.
+    pub fn trigger(&mut self, duration: f32) {
+        self.remaining = duration;
+    }
+
+    /// Whether the GCD is active (can't cast).
+    pub fn is_active(&self) -> bool {
+        self.remaining > 0.0
+    }
+
+    /// Tick the GCD timer. Returns `true` if GCD just expired this tick.
+    pub fn tick(&mut self, dt: f32) -> bool {
+        if self.remaining <= 0.0 {
+            return false;
+        }
+        self.remaining = (self.remaining - dt).max(0.0);
+        self.remaining <= 0.0
+    }
+}
+
 // --- School lockout ---
 
 /// Tracks spell school lockouts from interrupts.
