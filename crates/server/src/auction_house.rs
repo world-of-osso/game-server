@@ -1533,6 +1533,61 @@ mod tests {
     }
 
     #[test]
+    fn expired_auction_with_bid_awards_winner_and_pays_seller() {
+        let db = persistence::temp_database();
+        let (seller_id, _) =
+            persistence::create_character(&db, 1, "Seller", 1, 1).expect("seller");
+        let (bidder_id, _) =
+            persistence::create_character(&db, 2, "Bidder", 1, 1).expect("bidder");
+        let source_item = persistence::load_inventory(&db, seller_id).items[0].clone();
+        let mut state = AuctionHouseState::default();
+
+        create_auction(
+            &db,
+            &mut state,
+            seller_id,
+            &CreateAuction {
+                item_guid: source_item.item_guid,
+                stack_count: 2,
+                min_bid: 100,
+                buyout_price: Some(500),
+                duration: AuctionDuration::Short,
+            },
+        );
+        let auction_id = *state.auctions.keys().next().expect("auction id");
+        place_bid(&db, &mut state, bidder_id, auction_id, 200);
+
+        // Force expiry
+        state
+            .auctions
+            .get_mut(&auction_id)
+            .expect("auction")
+            .expires_at_unix_secs = 0;
+
+        // Replicate expire_auctions with-bid path
+        let auction = state.auctions.remove(&auction_id).expect("auction");
+        let winner_id = auction.current_bidder_character_id.expect("has bidder");
+        let winning_bid = auction.current_bid.unwrap_or(auction.min_bid);
+        persistence::delete_auction(&db, auction_id);
+        complete_sale(&db, &auction, winner_id, winning_bid);
+
+        // Seller receives gold minus house cut
+        let seller_mail = persistence::load_mailbox(&db, seller_id);
+        assert_eq!(seller_mail.len(), 1);
+        let expected_proceeds = 200 - (200 * HOUSE_CUT_BPS / 10_000);
+        assert_eq!(seller_mail[0].attached_money, expected_proceeds);
+        assert!(seller_mail[0].attached_item.is_none());
+
+        // Winner receives item
+        let bidder_mail = persistence::load_mailbox(&db, bidder_id);
+        assert_eq!(bidder_mail.len(), 1);
+        assert_eq!(bidder_mail[0].attached_money, 0);
+        let won_item = bidder_mail[0].attached_item.as_ref().expect("won item");
+        assert_eq!(won_item.item_id, source_item.item_id);
+        assert_eq!(won_item.stack_count, 2);
+    }
+
+    #[test]
     fn house_cut_deducted_on_successful_sale() {
         // Test multiple prices to verify 5% cut formula including truncation
         let cases: &[(u32, u32)] = &[
