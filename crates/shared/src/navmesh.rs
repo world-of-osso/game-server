@@ -46,9 +46,9 @@ pub struct NavPolygon {
     pub id: u32,
     /// Vertex indices into the tile's vertex list.
     pub vertices: Vec<u16>,
-    /// IDs of adjacent polygons (for graph traversal). One per edge.
-    /// 0 = no neighbor (boundary edge).
-    pub neighbors: Vec<u32>,
+    /// Indices of adjacent polygons (for graph traversal). One per edge.
+    /// `usize::MAX` = no neighbor (boundary edge).
+    pub neighbors: Vec<usize>,
     /// Surface flags (walkable, water, steep, etc.).
     pub flags: NavFlags,
 }
@@ -94,11 +94,12 @@ impl NavTile {
     ///
     /// This is a simplified point-in-polygon check; a real implementation
     /// would use a spatial index (grid or BVH).
-    pub fn find_polygon(&self, point: &NavPoint) -> Option<u32> {
+    /// Find the polygon index containing a point (2D projection, ignoring Y).
+    /// Returns the array index (not polygon ID) or None.
+    pub fn find_polygon(&self, point: &NavPoint) -> Option<usize> {
         self.polygons
             .iter()
-            .find(|poly| poly.flags.walkable && self.point_in_polygon(poly, point))
-            .map(|poly| poly.id)
+            .position(|poly| poly.flags.walkable && self.point_in_polygon(poly, point))
     }
 
     /// Simple 2D point-in-convex-polygon test using cross products.
@@ -126,8 +127,8 @@ impl NavTile {
     /// Returns None if outside all polygons.
     pub fn height_at(&self, x: f32, z: f32) -> Option<f32> {
         let point = NavPoint::new(x, 0.0, z);
-        let poly_id = self.find_polygon(&point)?;
-        let poly = &self.polygons[poly_id as usize];
+        let idx = self.find_polygon(&point)?;
+        let poly = &self.polygons[idx];
         if poly.vertices.is_empty() {
             return None;
         }
@@ -149,6 +150,150 @@ pub fn world_to_tile(x: f32, z: f32) -> (u16, u16) {
     (tile_x, tile_y)
 }
 
+// --- A* pathfinding ---
+
+use std::collections::BinaryHeap;
+use std::cmp::Ordering;
+
+/// A path result: sequence of world-space waypoints.
+#[derive(Debug, Clone, PartialEq)]
+pub struct NavPath {
+    pub waypoints: Vec<NavPoint>,
+}
+
+/// No-neighbor sentinel for navmesh polygon edges.
+pub const NO_NEIGHBOR: usize = usize::MAX;
+
+/// A* open-set entry.
+#[derive(Debug, Clone, Copy)]
+struct AStarNode {
+    index: usize,
+    f_cost: f32,
+}
+
+impl PartialEq for AStarNode {
+    fn eq(&self, other: &Self) -> bool {
+        self.index == other.index
+    }
+}
+impl Eq for AStarNode {}
+
+impl Ord for AStarNode {
+    fn cmp(&self, other: &Self) -> Ordering {
+        other.f_cost.partial_cmp(&self.f_cost).unwrap_or(Ordering::Equal)
+    }
+}
+
+impl PartialOrd for AStarNode {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl NavTile {
+    /// Compute the centroid (center point) of a polygon.
+    pub fn polygon_center(&self, poly: &NavPolygon) -> NavPoint {
+        let n = poly.vertices.len() as f32;
+        let (sx, sy, sz) = poly.vertices.iter().fold((0.0, 0.0, 0.0), |(x, y, z), &vi| {
+            let v = &self.vertices[vi as usize];
+            (x + v.x, y + v.y, z + v.z)
+        });
+        NavPoint::new(sx / n, sy / n, sz / n)
+    }
+
+    /// Find a path between two points using A* on the polygon graph.
+    ///
+    /// Returns a sequence of waypoints (polygon centers) from start to end.
+    /// Returns `None` if no path exists (disconnected polygons or points
+    /// outside the navmesh).
+    pub fn find_path(&self, start: &NavPoint, end: &NavPoint) -> Option<NavPath> {
+        let start_idx = self.find_polygon(start)?;
+        let end_idx = self.find_polygon(end)?;
+
+        if start_idx == end_idx {
+            return Some(NavPath { waypoints: vec![*start, *end] });
+        }
+
+        let came_from = self.astar_search(start_idx, end_idx, start)?;
+        Some(self.reconstruct_path(start, end, &came_from, start_idx, end_idx))
+    }
+
+    fn astar_search(&self, start: usize, end: usize, start_pos: &NavPoint) -> Option<Vec<usize>> {
+        let n = self.polygons.len();
+        let mut g = vec![f32::MAX; n];
+        let mut from = vec![NO_NEIGHBOR; n];
+        let mut closed = vec![false; n];
+        let goal = self.polygon_center(&self.polygons[end]);
+
+        g[start] = 0.0;
+        let mut open = BinaryHeap::new();
+        open.push(AStarNode { index: start, f_cost: start_pos.distance_2d(&goal) });
+
+        while let Some(cur) = open.pop() {
+            if cur.index == end {
+                return Some(from);
+            }
+            if closed[cur.index] {
+                continue;
+            }
+            closed[cur.index] = true;
+            self.expand_neighbors(cur.index, &mut g, &mut from, &closed, &mut open, &goal);
+        }
+        None
+    }
+
+    fn expand_neighbors(
+        &self,
+        ci: usize,
+        g: &mut [f32],
+        from: &mut [usize],
+        closed: &[bool],
+        open: &mut BinaryHeap<AStarNode>,
+        goal: &NavPoint,
+    ) {
+        let cc = self.polygon_center(&self.polygons[ci]);
+        for &ni in &self.polygons[ci].neighbors {
+            if ni == NO_NEIGHBOR || ni >= g.len() || closed[ni] || !self.polygons[ni].flags.walkable {
+                continue;
+            }
+            let nc = self.polygon_center(&self.polygons[ni]);
+            let tg = g[ci] + cc.distance_2d(&nc);
+            if tg < g[ni] {
+                g[ni] = tg;
+                from[ni] = ci;
+                open.push(AStarNode { index: ni, f_cost: tg + nc.distance_2d(goal) });
+            }
+        }
+    }
+
+    fn reconstruct_path(
+        &self,
+        start: &NavPoint,
+        end: &NavPoint,
+        from: &[usize],
+        start_idx: usize,
+        end_idx: usize,
+    ) -> NavPath {
+        let mut chain = vec![end_idx];
+        let mut cur = end_idx;
+        while cur != start_idx {
+            cur = from[cur];
+            if cur == NO_NEIGHBOR {
+                break;
+            }
+            chain.push(cur);
+        }
+        chain.reverse();
+
+        let mut waypoints = vec![*start];
+        for &idx in &chain[1..chain.len().saturating_sub(1)] {
+            waypoints.push(self.polygon_center(&self.polygons[idx]));
+        }
+        waypoints.push(*end);
+        NavPath { waypoints }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -168,7 +313,7 @@ mod tests {
             polygons: vec![NavPolygon {
                 id: 0,
                 vertices: vec![0, 1, 2, 3],
-                neighbors: vec![0, 0, 0, 0],
+                neighbors: vec![NO_NEIGHBOR, NO_NEIGHBOR, NO_NEIGHBOR, NO_NEIGHBOR],
                 flags: NavFlags {
                     walkable: true,
                     ..Default::default()
@@ -249,7 +394,7 @@ mod tests {
                 NavPolygon {
                     id: 0,
                     vertices: vec![0, 1, 2],
-                    neighbors: vec![0, 0, 0],
+                    neighbors: vec![NO_NEIGHBOR, NO_NEIGHBOR, NO_NEIGHBOR],
                     flags: NavFlags {
                         walkable: true,
                         water: true,
@@ -261,5 +406,108 @@ mod tests {
         let poly = tile.find_polygon(&NavPoint::new(3.0, 0.0, 3.0));
         assert_eq!(poly, Some(0));
         assert!(tile.polygons[0].flags.water);
+    }
+
+    // --- A* pathfinding tests ---
+
+    fn path_tile() -> NavTile {
+        // Three connected triangles in a line: poly 1 → 2 → 3
+        //   v0---v1---v3---v5
+        //   |  1  |  2  |  3 |
+        //   v2---v4---v6---v7
+        let w = NavFlags { walkable: true, ..Default::default() };
+        NavTile {
+            map_id: 0,
+            tile_x: 0,
+            tile_y: 0,
+            vertices: vec![
+                NavPoint::new(0.0, 0.0, 0.0),   // 0
+                NavPoint::new(10.0, 0.0, 0.0),  // 1
+                NavPoint::new(0.0, 0.0, 10.0),  // 2
+                NavPoint::new(20.0, 0.0, 0.0),  // 3
+                NavPoint::new(10.0, 0.0, 10.0), // 4
+                NavPoint::new(30.0, 0.0, 0.0),  // 5
+                NavPoint::new(20.0, 0.0, 10.0), // 6
+                NavPoint::new(30.0, 0.0, 10.0), // 7
+            ],
+            polygons: vec![
+                NavPolygon { id: 0, vertices: vec![0, 1, 4, 2], neighbors: vec![NO_NEIGHBOR, 1, NO_NEIGHBOR, NO_NEIGHBOR], flags: w },
+                NavPolygon { id: 1, vertices: vec![1, 3, 6, 4], neighbors: vec![NO_NEIGHBOR, 2, NO_NEIGHBOR, 0], flags: w },
+                NavPolygon { id: 2, vertices: vec![3, 5, 7, 6], neighbors: vec![NO_NEIGHBOR, NO_NEIGHBOR, NO_NEIGHBOR, 1], flags: w },
+            ],
+        }
+    }
+
+    #[test]
+    fn path_same_polygon() {
+        let tile = path_tile();
+        let start = NavPoint::new(2.0, 0.0, 5.0);
+        let end = NavPoint::new(8.0, 0.0, 5.0);
+        let path = tile.find_path(&start, &end).unwrap();
+        assert_eq!(path.waypoints.len(), 2);
+        assert_eq!(path.waypoints[0], start);
+        assert_eq!(path.waypoints[1], end);
+    }
+
+    #[test]
+    fn path_across_two_polygons() {
+        let tile = path_tile();
+        let start = NavPoint::new(2.0, 0.0, 5.0);
+        let end = NavPoint::new(15.0, 0.0, 5.0);
+        let path = tile.find_path(&start, &end).unwrap();
+        assert!(path.waypoints.len() >= 2);
+        assert_eq!(*path.waypoints.first().unwrap(), start);
+        assert_eq!(*path.waypoints.last().unwrap(), end);
+    }
+
+    #[test]
+    fn path_across_three_polygons() {
+        let tile = path_tile();
+        let start = NavPoint::new(2.0, 0.0, 5.0);
+        let end = NavPoint::new(28.0, 0.0, 5.0);
+        let path = tile.find_path(&start, &end).unwrap();
+        assert!(path.waypoints.len() >= 3);
+    }
+
+    #[test]
+    fn path_outside_returns_none() {
+        let tile = path_tile();
+        let outside = NavPoint::new(100.0, 0.0, 100.0);
+        assert!(tile.find_path(&NavPoint::new(5.0, 0.0, 5.0), &outside).is_none());
+    }
+
+    #[test]
+    fn path_no_connection_returns_none() {
+        // Two disconnected polygons (no neighbors)
+        let tile = NavTile {
+            map_id: 0,
+            tile_x: 0,
+            tile_y: 0,
+            vertices: vec![
+                NavPoint::new(0.0, 0.0, 0.0),
+                NavPoint::new(5.0, 0.0, 0.0),
+                NavPoint::new(0.0, 0.0, 5.0),
+                NavPoint::new(20.0, 0.0, 0.0),
+                NavPoint::new(25.0, 0.0, 0.0),
+                NavPoint::new(20.0, 0.0, 5.0),
+            ],
+            polygons: vec![
+                NavPolygon {
+                    id: 1,
+                    vertices: vec![0, 1, 2],
+                    neighbors: vec![NO_NEIGHBOR, NO_NEIGHBOR, NO_NEIGHBOR],
+                    flags: NavFlags { walkable: true, ..Default::default() },
+                },
+                NavPolygon {
+                    id: 2,
+                    vertices: vec![3, 4, 5],
+                    neighbors: vec![NO_NEIGHBOR, NO_NEIGHBOR, NO_NEIGHBOR],
+                    flags: NavFlags { walkable: true, ..Default::default() },
+                },
+            ],
+        };
+        let start = NavPoint::new(2.0, 0.0, 2.0);
+        let end = NavPoint::new(22.0, 0.0, 2.0);
+        assert!(tile.find_path(&start, &end).is_none());
     }
 }
