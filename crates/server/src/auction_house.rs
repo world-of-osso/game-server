@@ -20,6 +20,7 @@ use crate::persistence::{
 
 const MAX_PAGE_SIZE: u32 = 50;
 const HOUSE_CUT_BPS: u32 = 500;
+const MAX_AUCTIONS_PER_CHARACTER: usize = 50;
 
 /// Deposit = vendor_sell_price * stack_count * duration_multiplier.
 fn deposit_cost(vendor_sell_price: u32, stack_count: u32, duration: AuctionDuration) -> u32 {
@@ -348,6 +349,15 @@ fn create_auction(
         && buyout < req.min_bid
     {
         return err("buyout must be greater than or equal to minimum bid");
+    }
+
+    let active_count = state
+        .auctions
+        .values()
+        .filter(|a| a.seller_character_id == character_id)
+        .count();
+    if active_count >= MAX_AUCTIONS_PER_CHARACTER {
+        return err("maximum auction slots reached");
     }
 
     let Some(character) = persistence::load_character(db, character_id) else {
@@ -1381,6 +1391,37 @@ mod tests {
             persistence::load_inventory(&db, seller_id).items.len(),
             inv.items.len(),
         );
+    }
+
+    #[test]
+    fn max_auction_slots_per_character_enforced() {
+        let db = persistence::temp_database();
+        let (seller_id, _) =
+            persistence::create_character(&db, 1, "Seller", 1, 1).expect("seller");
+        let mut state = AuctionHouseState::default();
+
+        // Fill state with MAX_AUCTIONS_PER_CHARACTER auctions for this seller
+        for i in 1..=MAX_AUCTIONS_PER_CHARACTER {
+            let mut auction = test_auction(i as u64, "Item", 1, 1);
+            auction.seller_character_id = seller_id;
+            state.auctions.insert(i as u64, auction);
+        }
+
+        let source_item = persistence::load_inventory(&db, seller_id).items[0].clone();
+        let response = create_auction(
+            &db,
+            &mut state,
+            seller_id,
+            &CreateAuction {
+                item_guid: source_item.item_guid,
+                stack_count: 1,
+                min_bid: 10,
+                buyout_price: Some(100),
+                duration: AuctionDuration::Short,
+            },
+        );
+        assert!(!response.success);
+        assert_eq!(state.auctions.len(), MAX_AUCTIONS_PER_CHARACTER);
     }
 
     #[test]
