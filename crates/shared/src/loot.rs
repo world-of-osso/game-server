@@ -367,6 +367,33 @@ impl LootWindow {
     }
 }
 
+// --- Loot sparkle ---
+
+/// Marker indicating a corpse has loot available for a specific player.
+///
+/// The client uses this to render a sparkle/glow effect on the corpse.
+/// Added when a mob dies and has loot; removed when the corpse is fully
+/// looted or despawns.
+///
+/// In personal loot, each player may see different sparkles. In group loot,
+/// all eligible players see the sparkle until loot is claimed.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct LootSparkle {
+    /// Entity bits of the corpse.
+    pub corpse: u64,
+}
+
+/// Determine which corpses should show a loot sparkle for a player.
+///
+/// A corpse sparkles if its loot window has available items or unclaimed gold.
+pub fn sparkle_corpses(windows: &[(u64, &LootWindow)]) -> Vec<LootSparkle> {
+    windows
+        .iter()
+        .filter(|(_, w)| !w.is_fully_looted())
+        .map(|(entity, _)| LootSparkle { corpse: *entity })
+        .collect()
+}
+
 // --- AoE looting ---
 
 /// Default AoE loot radius in yards.
@@ -666,6 +693,47 @@ mod tests {
     fn loot_item_out_of_bounds() {
         let mut window = LootWindow::generate(1, &LootTable::default(), &[], &[], &[], 0);
         assert!(window.loot_item(99).is_none());
+    }
+
+    // --- Loot sparkle tests ---
+
+    #[test]
+    fn sparkle_on_unlooted_corpse() {
+        let w = make_simple_window(1, 100, 50);
+        let windows: Vec<(u64, &LootWindow)> = vec![(1, &w)];
+        let sparkles = sparkle_corpses(&windows);
+        assert_eq!(sparkles.len(), 1);
+        assert_eq!(sparkles[0].corpse, 1);
+    }
+
+    #[test]
+    fn no_sparkle_on_fully_looted() {
+        let mut w = make_simple_window(1, 100, 50);
+        w.loot_item(0);
+        w.loot_gold();
+        let windows: Vec<(u64, &LootWindow)> = vec![(1, &w)];
+        let sparkles = sparkle_corpses(&windows);
+        assert!(sparkles.is_empty());
+    }
+
+    #[test]
+    fn sparkle_mixed_looted_and_not() {
+        let w1 = make_simple_window(1, 100, 50);
+        let mut w2 = make_simple_window(2, 200, 30);
+        w2.loot_item(0);
+        w2.loot_gold();
+        let windows: Vec<(u64, &LootWindow)> = vec![(1, &w1), (2, &w2)];
+        let sparkles = sparkle_corpses(&windows);
+        assert_eq!(sparkles.len(), 1);
+        assert_eq!(sparkles[0].corpse, 1);
+    }
+
+    #[test]
+    fn sparkle_gold_only_corpse() {
+        let w = LootWindow::generate(1, &LootTable::default(), &[], &[], &[], 100);
+        let windows: Vec<(u64, &LootWindow)> = vec![(1, &w)];
+        let sparkles = sparkle_corpses(&windows);
+        assert_eq!(sparkles.len(), 1); // gold still available
     }
 
     // --- AoE loot tests ---
