@@ -879,6 +879,43 @@ mod tests {
     }
 
     #[test]
+    fn gravity_accumulates_until_landing() {
+        let ground_y = 50.0;
+        let map = crate::terrain_height::test_helpers::flat_terrain(100.0, 100.0, ground_y);
+        let mut pos = Position {
+            x: 90.0,
+            y: 60.0,
+            z: -90.0,
+        };
+        let dt = 0.05;
+
+        // First tick: falls by GRAVITY * dt
+        clamp_to_terrain(&map, &mut pos, dt);
+        let after_one = 60.0 - GRAVITY * dt;
+        assert!((pos.y - after_one).abs() < 0.01);
+
+        // Second tick: falls further
+        clamp_to_terrain(&map, &mut pos, dt);
+        let after_two = after_one - GRAVITY * dt;
+        assert!((pos.y - after_two).abs() < 0.01);
+        assert!(pos.y > ground_y, "still airborne");
+
+        // Many ticks: eventually clamps to ground
+        for _ in 0..200 {
+            clamp_to_terrain(&map, &mut pos, dt);
+        }
+        assert!(
+            (pos.y - ground_y).abs() < 0.01,
+            "landed at ground: y={}, ground={ground_y}",
+            pos.y,
+        );
+
+        // Once on ground, stays put
+        clamp_to_terrain(&map, &mut pos, dt);
+        assert!((pos.y - ground_y).abs() < 0.01);
+    }
+
+    #[test]
     fn terrain_on_ground_stays() {
         let map = crate::terrain_height::test_helpers::flat_terrain(100.0, 100.0, 50.0);
         let mut pos = Position {
