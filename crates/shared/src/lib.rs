@@ -3,6 +3,7 @@ pub mod aura;
 pub mod casting;
 pub mod class_spec;
 pub mod components;
+pub mod death;
 pub mod threat;
 pub mod dungeon_finder;
 pub mod formulas;
