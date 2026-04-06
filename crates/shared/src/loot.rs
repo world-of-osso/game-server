@@ -8,17 +8,31 @@
 
 use serde::{Deserialize, Serialize};
 
+/// Loot entry type — determines drop behavior.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum LootEntryType {
+    /// Normal drop: uses the entry's `chance` field.
+    Normal,
+    /// Rare/special drop: uses `chance` but flagged for UI highlight.
+    Rare,
+    /// Quest item: drops at 100% for eligible players, hidden for others.
+    Quest,
+}
+
 /// A single entry in a creature's loot table.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct LootEntry {
     /// Item ID that can drop.
     pub item_id: u32,
     /// Drop chance as a fraction (0.0–1.0). 1.0 = guaranteed.
+    /// Ignored for Quest entries (always 100% for eligible players).
     pub chance: f32,
     /// Minimum count per drop.
     pub min_count: u16,
     /// Maximum count per drop.
     pub max_count: u16,
+    /// Entry type: Normal, Rare, or Quest.
+    pub entry_type: LootEntryType,
 }
 
 /// Loot table for a creature or object.
@@ -34,42 +48,48 @@ pub struct LootDrop {
     pub count: u16,
 }
 
+/// Resolve whether a loot entry drops, given its type and a roll.
+fn entry_drops(entry: &LootEntry, roll: f32, eligible_quest_ids: &[u32]) -> bool {
+    match entry.entry_type {
+        LootEntryType::Quest => eligible_quest_ids.contains(&entry.item_id),
+        LootEntryType::Normal | LootEntryType::Rare => roll <= entry.chance,
+    }
+}
+
+/// Compute the drop count from an entry's min/max range.
+fn roll_count(entry: &LootEntry, count_roll: f32) -> u16 {
+    let range = entry.max_count - entry.min_count;
+    let count = entry.min_count + (range as f32 * count_roll) as u16;
+    count.min(entry.max_count)
+}
+
 impl LootTable {
     /// Roll the loot table to generate drops.
     ///
-    /// `rolls` is an iterator of random values in 0.0–1.0 (one per entry).
-    /// `count_roll` picks within min..=max for each successful drop.
+    /// - Normal/Rare entries: `rolls[i] <= chance` to drop.
+    /// - Quest entries: drop at 100% if `item_id` is in `eligible_quest_ids`.
     ///
-    /// Each entry is rolled independently — multiple items can drop.
-    pub fn roll(&self, rolls: &[f32], count_rolls: &[f32]) -> Vec<LootDrop> {
+    /// `rolls` and `count_rolls` are pre-generated random values in 0.0–1.0.
+    pub fn roll(
+        &self,
+        rolls: &[f32],
+        count_rolls: &[f32],
+        eligible_quest_ids: &[u32],
+    ) -> Vec<LootDrop> {
         self.entries
             .iter()
             .zip(rolls.iter())
             .zip(count_rolls.iter())
             .filter_map(|((entry, &roll), &count_roll)| {
-                if roll > entry.chance {
+                if !entry_drops(entry, roll, eligible_quest_ids) {
                     return None;
                 }
-                let range = entry.max_count - entry.min_count;
-                let count = entry.min_count + (range as f32 * count_roll) as u16;
-                let count = count.min(entry.max_count);
                 Some(LootDrop {
                     item_id: entry.item_id,
-                    count,
+                    count: roll_count(entry, count_roll),
                 })
             })
             .collect()
-    }
-
-    /// Roll with a single RNG source (simpler API for common use).
-    ///
-    /// Each entry gets `rolls[i]` for the drop check and `count_rolls[i]`
-    /// for the count within range.
-    pub fn roll_simple(&self, rng_values: &[f32]) -> Vec<LootDrop> {
-        // Use odd-indexed values for count rolls
-        let rolls: Vec<f32> = rng_values.iter().step_by(2).copied().collect();
-        let count_rolls: Vec<f32> = rng_values.iter().skip(1).step_by(2).copied().collect();
-        self.roll(&rolls, &count_rolls)
     }
 }
 
@@ -119,9 +139,10 @@ impl LootWindow {
         table: &LootTable,
         rolls: &[f32],
         count_rolls: &[f32],
+        eligible_quest_ids: &[u32],
         gold: u32,
     ) -> Self {
-        let drops = table.roll(rolls, count_rolls);
+        let drops = table.roll(rolls, count_rolls, eligible_quest_ids);
         let slots = drops
             .into_iter()
             .map(|d| LootSlot {
@@ -195,21 +216,24 @@ mod tests {
             entries: vec![
                 LootEntry {
                     item_id: 100,
-                    chance: 1.0, // guaranteed
+                    chance: 1.0,
                     min_count: 1,
                     max_count: 1,
+                    entry_type: LootEntryType::Normal,
                 },
                 LootEntry {
                     item_id: 200,
-                    chance: 0.5, // 50%
+                    chance: 0.5,
                     min_count: 1,
                     max_count: 3,
+                    entry_type: LootEntryType::Normal,
                 },
                 LootEntry {
                     item_id: 300,
-                    chance: 0.01, // 1% rare
+                    chance: 0.01,
                     min_count: 1,
                     max_count: 1,
+                    entry_type: LootEntryType::Rare,
                 },
             ],
         }
@@ -220,7 +244,7 @@ mod tests {
         let table = sample_table();
         let rolls = vec![0.5, 0.99, 0.99]; // only first entry passes
         let count_rolls = vec![0.0, 0.0, 0.0];
-        let drops = table.roll(&rolls, &count_rolls);
+        let drops = table.roll(&rolls, &count_rolls, &[]);
         assert_eq!(drops.len(), 1);
         assert_eq!(drops[0].item_id, 100);
     }
@@ -230,7 +254,7 @@ mod tests {
         let table = sample_table();
         let rolls = vec![0.5, 0.3, 0.005]; // all three pass
         let count_rolls = vec![0.0, 0.5, 0.0];
-        let drops = table.roll(&rolls, &count_rolls);
+        let drops = table.roll(&rolls, &count_rolls, &[]);
         assert_eq!(drops.len(), 3);
     }
 
@@ -241,7 +265,7 @@ mod tests {
         let rolls = vec![1.1, 0.9, 0.5]; // first > 1.0 technically, but 1.0 chance means <= check
         let count_rolls = vec![0.0; 3];
         // roll=1.1 > chance=1.0 → even guaranteed fails if roll > chance
-        let drops = table.roll(&rolls, &count_rolls);
+        let drops = table.roll(&rolls, &count_rolls, &[]);
         assert!(drops.is_empty());
     }
 
@@ -253,23 +277,23 @@ mod tests {
                 chance: 1.0,
                 min_count: 2,
                 max_count: 10,
+                entry_type: LootEntryType::Normal,
             }],
         };
-        // count_roll = 0.0 → min (2), 0.5 → 6, 1.0 → 10
-        let drops_min = table.roll(&[0.0], &[0.0]);
+        let drops_min = table.roll(&[0.0], &[0.0], &[]);
         assert_eq!(drops_min[0].count, 2);
 
-        let drops_mid = table.roll(&[0.0], &[0.5]);
-        assert_eq!(drops_mid[0].count, 6); // 2 + (8 * 0.5) = 6
+        let drops_mid = table.roll(&[0.0], &[0.5], &[]);
+        assert_eq!(drops_mid[0].count, 6);
 
-        let drops_max = table.roll(&[0.0], &[1.0]);
+        let drops_max = table.roll(&[0.0], &[1.0], &[]);
         assert_eq!(drops_max[0].count, 10);
     }
 
     #[test]
     fn empty_table_produces_no_drops() {
         let table = LootTable::default();
-        let drops = table.roll(&[], &[]);
+        let drops = table.roll(&[], &[], &[]);
         assert!(drops.is_empty());
     }
 
@@ -281,23 +305,24 @@ mod tests {
                 chance: 1.0,
                 min_count: 1,
                 max_count: 1,
+                entry_type: LootEntryType::Normal,
             }],
         };
-        let drops = table.roll(&[0.0], &[0.99]);
-        assert_eq!(drops[0].count, 1); // clamped to max
+        let drops = table.roll(&[0.0], &[0.99], &[]);
+        assert_eq!(drops[0].count, 1);
     }
 
     #[test]
     fn rare_item_drops_on_low_roll() {
         let table = LootTable {
             entries: vec![
-                LootEntry { item_id: 200, chance: 0.5, min_count: 1, max_count: 1 },
-                LootEntry { item_id: 300, chance: 0.01, min_count: 1, max_count: 1 },
+                LootEntry { item_id: 200, chance: 0.5, min_count: 1, max_count: 1, entry_type: LootEntryType::Normal },
+                LootEntry { item_id: 300, chance: 0.01, min_count: 1, max_count: 1, entry_type: LootEntryType::Rare },
             ],
         };
         let rolls = vec![0.99, 0.005]; // only rare passes
         let count_rolls = vec![0.0; 2];
-        let drops = table.roll(&rolls, &count_rolls);
+        let drops = table.roll(&rolls, &count_rolls, &[]);
         assert_eq!(drops.len(), 1);
         assert_eq!(drops[0].item_id, 300);
     }
@@ -309,7 +334,7 @@ mod tests {
         let table = sample_table();
         let rolls = vec![0.5, 0.3, 0.005]; // all three pass
         let count_rolls = vec![0.0, 0.0, 0.0];
-        let window = LootWindow::generate(42, &table, &rolls, &count_rolls, 500);
+        let window = LootWindow::generate(42, &table, &rolls, &count_rolls, &[], 500);
         assert_eq!(window.source, 42);
         assert_eq!(window.slots.len(), 3);
         assert_eq!(window.gold, 500);
@@ -322,7 +347,7 @@ mod tests {
         let table = sample_table();
         let rolls = vec![0.0; 3];
         let count_rolls = vec![0.0; 3];
-        let mut window = LootWindow::generate(1, &table, &rolls, &count_rolls, 0);
+        let mut window = LootWindow::generate(1, &table, &rolls, &count_rolls, &[], 0);
 
         let item = window.loot_item(0).unwrap();
         assert_eq!(item.item_id, 100);
@@ -334,7 +359,7 @@ mod tests {
 
     #[test]
     fn loot_gold_from_window() {
-        let mut window = LootWindow::generate(1, &LootTable::default(), &[], &[], 1000);
+        let mut window = LootWindow::generate(1, &LootTable::default(), &[], &[], &[], 1000);
         let gold = window.loot_gold().unwrap();
         assert_eq!(gold, 1000);
         assert!(window.loot_gold().is_none()); // already looted
@@ -348,9 +373,10 @@ mod tests {
                 chance: 1.0,
                 min_count: 1,
                 max_count: 1,
+                entry_type: LootEntryType::Normal,
             }],
         };
-        let mut window = LootWindow::generate(1, &table, &[0.0], &[0.0], 50);
+        let mut window = LootWindow::generate(1, &table, &[0.0], &[0.0], &[], 50);
         assert!(!window.is_fully_looted());
 
         window.loot_item(0);
@@ -362,13 +388,13 @@ mod tests {
 
     #[test]
     fn empty_loot_window_is_fully_looted() {
-        let window = LootWindow::generate(1, &LootTable::default(), &[], &[], 0);
+        let window = LootWindow::generate(1, &LootTable::default(), &[], &[], &[], 0);
         assert!(window.is_fully_looted());
     }
 
     #[test]
     fn loot_item_out_of_bounds() {
-        let mut window = LootWindow::generate(1, &LootTable::default(), &[], &[], 0);
+        let mut window = LootWindow::generate(1, &LootTable::default(), &[], &[], &[], 0);
         assert!(window.loot_item(99).is_none());
     }
 
@@ -379,5 +405,87 @@ mod tests {
         assert!(high > low);
         assert_eq!(low, 200); // 10 * 10 * 2
         assert_eq!(high, 12800); // 80 * 80 * 2
+    }
+
+    // --- Quality tier / quest item tests ---
+
+    #[test]
+    fn quest_item_drops_for_eligible() {
+        let table = LootTable {
+            entries: vec![LootEntry {
+                item_id: 9999,
+                chance: 0.0, // chance ignored for quest items
+                min_count: 1,
+                max_count: 1,
+                entry_type: LootEntryType::Quest,
+            }],
+        };
+        let drops = table.roll(&[0.99], &[0.0], &[9999]); // eligible
+        assert_eq!(drops.len(), 1);
+        assert_eq!(drops[0].item_id, 9999);
+    }
+
+    #[test]
+    fn quest_item_hidden_for_ineligible() {
+        let table = LootTable {
+            entries: vec![LootEntry {
+                item_id: 9999,
+                chance: 0.0,
+                min_count: 1,
+                max_count: 1,
+                entry_type: LootEntryType::Quest,
+            }],
+        };
+        let drops = table.roll(&[0.0], &[0.0], &[]); // not eligible
+        assert!(drops.is_empty());
+    }
+
+    #[test]
+    fn mixed_normal_and_quest_drops() {
+        let table = LootTable {
+            entries: vec![
+                LootEntry {
+                    item_id: 100,
+                    chance: 1.0,
+                    min_count: 1,
+                    max_count: 1,
+                    entry_type: LootEntryType::Normal,
+                },
+                LootEntry {
+                    item_id: 9999,
+                    chance: 0.0,
+                    min_count: 1,
+                    max_count: 1,
+                    entry_type: LootEntryType::Quest,
+                },
+            ],
+        };
+        // Eligible for quest
+        let drops = table.roll(&[0.5, 0.0], &[0.0, 0.0], &[9999]);
+        assert_eq!(drops.len(), 2);
+
+        // Not eligible — only normal item drops
+        let drops = table.roll(&[0.5, 0.0], &[0.0, 0.0], &[]);
+        assert_eq!(drops.len(), 1);
+        assert_eq!(drops[0].item_id, 100);
+    }
+
+    #[test]
+    fn rare_entry_type_still_uses_chance() {
+        let table = LootTable {
+            entries: vec![LootEntry {
+                item_id: 500,
+                chance: 0.01,
+                min_count: 1,
+                max_count: 1,
+                entry_type: LootEntryType::Rare,
+            }],
+        };
+        // High roll = no drop
+        let drops = table.roll(&[0.5], &[0.0], &[]);
+        assert!(drops.is_empty());
+        // Low roll = drops
+        let drops = table.roll(&[0.005], &[0.0], &[]);
+        assert_eq!(drops.len(), 1);
     }
 }
