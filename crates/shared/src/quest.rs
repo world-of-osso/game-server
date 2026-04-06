@@ -96,6 +96,101 @@ impl QuestData {
     }
 }
 
+// --- Objective progress tracking ---
+
+/// Progress on a single quest objective.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum ObjectiveProgress {
+    /// Kill objective: current / required count.
+    Kill { current: u16, required: u16 },
+    /// Collect objective: current / required count.
+    Collect { current: u16, required: u16 },
+    /// Interact: done or not.
+    Interact { done: bool },
+    /// Escort: done or not.
+    Escort { done: bool },
+    /// Reach location: done or not.
+    ReachLocation { done: bool },
+}
+
+impl ObjectiveProgress {
+    /// Create initial progress from a quest objective definition.
+    pub fn from_objective(obj: &QuestObjective) -> Self {
+        match *obj {
+            QuestObjective::Kill { count, .. } => Self::Kill { current: 0, required: count },
+            QuestObjective::Collect { count, .. } => Self::Collect { current: 0, required: count },
+            QuestObjective::Interact { .. } => Self::Interact { done: false },
+            QuestObjective::Escort { .. } => Self::Escort { done: false },
+            QuestObjective::ReachLocation { .. } => Self::ReachLocation { done: false },
+        }
+    }
+
+    /// Whether this objective is complete.
+    pub fn is_complete(&self) -> bool {
+        match *self {
+            Self::Kill { current, required } => current >= required,
+            Self::Collect { current, required } => current >= required,
+            Self::Interact { done } | Self::Escort { done } | Self::ReachLocation { done } => done,
+        }
+    }
+
+    /// Record a kill of a creature. Returns `true` if the count changed.
+    pub fn record_kill(&mut self, creature_id: u32, obj: &QuestObjective) -> bool {
+        if let (Self::Kill { current, required }, QuestObjective::Kill { creature_id: cid, .. }) = (self, obj)
+            && creature_id == *cid
+            && *current < *required
+        {
+            *current += 1;
+            return true;
+        }
+        false
+    }
+
+    /// Record collecting an item. Returns `true` if the count changed.
+    pub fn record_collect(&mut self, item_id: u32, count: u16, obj: &QuestObjective) -> bool {
+        if let (Self::Collect { current, required }, QuestObjective::Collect { item_id: iid, .. }) = (self, obj)
+            && item_id == *iid
+            && *current < *required
+        {
+            *current = (*current + count).min(*required);
+            return true;
+        }
+        false
+    }
+
+    /// Mark an interact/escort/reach objective as done.
+    pub fn mark_done(&mut self) {
+        match self {
+            Self::Interact { done } | Self::Escort { done } | Self::ReachLocation { done } => {
+                *done = true;
+            }
+            _ => {}
+        }
+    }
+}
+
+/// Per-quest progress for a player.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct QuestProgress {
+    pub quest_id: u32,
+    pub objectives: Vec<ObjectiveProgress>,
+}
+
+impl QuestProgress {
+    /// Create initial progress for a quest.
+    pub fn new(quest: &QuestData) -> Self {
+        Self {
+            quest_id: quest.id,
+            objectives: quest.objectives.iter().map(ObjectiveProgress::from_objective).collect(),
+        }
+    }
+
+    /// Whether all objectives are complete.
+    pub fn is_complete(&self) -> bool {
+        self.objectives.iter().all(|o| o.is_complete())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -197,5 +292,86 @@ mod tests {
         let json = serde_json::to_string(&q).unwrap();
         let decoded: QuestData = serde_json::from_str(&json).unwrap();
         assert_eq!(decoded, q);
+    }
+
+    // --- Objective progress tests ---
+
+    #[test]
+    fn kill_progress_tracks_count() {
+        let obj = QuestObjective::Kill { creature_id: 94, count: 3 };
+        let mut progress = ObjectiveProgress::from_objective(&obj);
+        assert!(!progress.is_complete());
+
+        assert!(progress.record_kill(94, &obj));
+        assert!(progress.record_kill(94, &obj));
+        assert!(!progress.is_complete());
+
+        assert!(progress.record_kill(94, &obj));
+        assert!(progress.is_complete());
+    }
+
+    #[test]
+    fn kill_wrong_creature_ignored() {
+        let obj = QuestObjective::Kill { creature_id: 94, count: 3 };
+        let mut progress = ObjectiveProgress::from_objective(&obj);
+        assert!(!progress.record_kill(999, &obj));
+    }
+
+    #[test]
+    fn kill_over_count_capped() {
+        let obj = QuestObjective::Kill { creature_id: 94, count: 2 };
+        let mut progress = ObjectiveProgress::from_objective(&obj);
+        progress.record_kill(94, &obj);
+        progress.record_kill(94, &obj);
+        assert!(!progress.record_kill(94, &obj)); // already at max
+    }
+
+    #[test]
+    fn collect_progress_tracks_count() {
+        let obj = QuestObjective::Collect { item_id: 50, count: 5 };
+        let mut progress = ObjectiveProgress::from_objective(&obj);
+        assert!(progress.record_collect(50, 3, &obj));
+        assert!(!progress.is_complete());
+        assert!(progress.record_collect(50, 3, &obj)); // clamped to 5
+        assert!(progress.is_complete());
+    }
+
+    #[test]
+    fn interact_mark_done() {
+        let obj = QuestObjective::Interact { target_id: 10 };
+        let mut progress = ObjectiveProgress::from_objective(&obj);
+        assert!(!progress.is_complete());
+        progress.mark_done();
+        assert!(progress.is_complete());
+    }
+
+    #[test]
+    fn escort_mark_done() {
+        let obj = QuestObjective::Escort { npc_id: 5 };
+        let mut progress = ObjectiveProgress::from_objective(&obj);
+        progress.mark_done();
+        assert!(progress.is_complete());
+    }
+
+    #[test]
+    fn reach_location_mark_done() {
+        let obj = QuestObjective::ReachLocation { x: 0.0, y: 0.0, z: 0.0, radius: 10.0 };
+        let mut progress = ObjectiveProgress::from_objective(&obj);
+        progress.mark_done();
+        assert!(progress.is_complete());
+    }
+
+    #[test]
+    fn quest_progress_complete_check() {
+        let q = sample_quest();
+        let mut progress = QuestProgress::new(&q);
+        assert!(!progress.is_complete());
+
+        // Complete the kill objective (10 kills)
+        let obj = &q.objectives[0];
+        for _ in 0..10 {
+            progress.objectives[0].record_kill(94, obj);
+        }
+        assert!(progress.is_complete());
     }
 }
