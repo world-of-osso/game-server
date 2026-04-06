@@ -157,6 +157,42 @@ fn cancel_nonexistent_fails() {
     assert_eq!(mgr.cancel_trade(100), Err(TradeError::NoActiveSession));
 }
 
+#[test]
+fn cancel_pending_by_target() {
+    let mut mgr = TradeManager::new();
+    mgr.initiate_trade(100, 200, NEARBY, ALSO_NEARBY, 1000).unwrap();
+
+    // Target cancels while still pending (before accepting)
+    let other = mgr.cancel_trade(200).unwrap();
+    assert_eq!(other, 100);
+    assert!(!mgr.is_trading(100));
+    assert!(!mgr.is_trading(200));
+}
+
+#[test]
+fn cancel_discards_offers() {
+    let mut mgr = open_trade();
+    mgr.set_item(100, 0, sword()).unwrap();
+    mgr.set_gold(200, 50000).unwrap();
+
+    mgr.cancel_trade(100).unwrap();
+    // Both players are free, no session remains
+    assert!(mgr.is_empty());
+    assert!(mgr.get_session(100).is_none());
+}
+
+#[test]
+fn cancel_after_one_confirm() {
+    let mut mgr = open_trade();
+    mgr.set_item(100, 0, sword()).unwrap();
+    mgr.confirm_trade(100).unwrap();
+
+    // Target cancels after initiator confirmed — trade aborted
+    let other = mgr.cancel_trade(200).unwrap();
+    assert_eq!(other, 100);
+    assert!(mgr.is_empty());
+}
+
 // --- Session lookup ---
 
 #[test]
