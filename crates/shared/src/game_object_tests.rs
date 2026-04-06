@@ -285,3 +285,104 @@ fn can_reuse_after_finish() {
     // Can interact again
     assert!(interact(&mut go).is_ok());
 }
+
+// --- Spawn system ---
+
+fn spawn_at(template_id: u32, map_id: u16, x: f32, respawn: u32) -> GameObjectSpawn {
+    GameObjectSpawn {
+        spawn_id: 0, template_id, map_id, x, y: 0.0, z: 0.0,
+        rotation: NO_ROTATION, origin: SpawnOrigin::Static, respawn_time: respawn,
+    }
+}
+
+#[test]
+fn add_static_spawn() {
+    let mut mgr = SpawnManager::new();
+    let id = mgr.add_static(spawn_at(1001, 0, 100.0, 300));
+
+    assert_eq!(id, 1);
+    let spawn = mgr.get(id).unwrap();
+    assert_eq!(spawn.template_id, 1001);
+    assert_eq!(spawn.map_id, 0);
+    assert_eq!(spawn.origin, SpawnOrigin::Static);
+    assert_eq!(spawn.respawn_time, 300);
+}
+
+#[test]
+fn add_dynamic_spawn() {
+    let mut mgr = SpawnManager::new();
+    let id = mgr.add_dynamic(spawn_at(2001, 1, 50.0, 0));
+
+    let spawn = mgr.get(id).unwrap();
+    assert_eq!(spawn.origin, SpawnOrigin::Dynamic);
+}
+
+#[test]
+fn sequential_spawn_ids() {
+    let mut mgr = SpawnManager::new();
+    let id1 = mgr.add_static(spawn_at(1001, 0, 0.0, 0));
+    let id2 = mgr.add_dynamic(spawn_at(2001, 0, 0.0, 0));
+    assert_eq!(id1, 1);
+    assert_eq!(id2, 2);
+}
+
+#[test]
+fn remove_dynamic_spawn() {
+    let mut mgr = SpawnManager::new();
+    mgr.add_static(spawn_at(1001, 0, 0.0, 0));
+    let dyn_id = mgr.add_dynamic(spawn_at(2001, 0, 0.0, 0));
+
+    assert!(mgr.remove_dynamic(dyn_id));
+    assert_eq!(mgr.len(), 1);
+    assert!(mgr.get(dyn_id).is_none());
+}
+
+#[test]
+fn cannot_remove_static_spawn() {
+    let mut mgr = SpawnManager::new();
+    let static_id = mgr.add_static(spawn_at(1001, 0, 0.0, 0));
+
+    assert!(!mgr.remove_dynamic(static_id));
+    assert_eq!(mgr.len(), 1);
+}
+
+#[test]
+fn spawns_for_map() {
+    let mut mgr = SpawnManager::new();
+    mgr.add_static(spawn_at(1001, 0, 0.0, 0));
+    mgr.add_static(spawn_at(1002, 0, 10.0, 0));
+    mgr.add_static(spawn_at(2001, 1, 0.0, 0));
+
+    assert_eq!(mgr.spawns_for_map(0).len(), 2);
+    assert_eq!(mgr.spawns_for_map(1).len(), 1);
+    assert!(mgr.spawns_for_map(99).is_empty());
+}
+
+#[test]
+fn spawns_for_template() {
+    let mut mgr = SpawnManager::new();
+    mgr.add_static(spawn_at(1001, 0, 0.0, 0));
+    mgr.add_static(spawn_at(1001, 0, 10.0, 0));
+    mgr.add_static(spawn_at(2001, 0, 0.0, 0));
+
+    assert_eq!(mgr.spawns_for_template(1001).len(), 2);
+    assert_eq!(mgr.spawns_for_template(2001).len(), 1);
+}
+
+#[test]
+fn spawn_counts() {
+    let mut mgr = SpawnManager::new();
+    mgr.add_static(spawn_at(1001, 0, 0.0, 0));
+    mgr.add_static(spawn_at(1002, 0, 0.0, 0));
+    mgr.add_dynamic(spawn_at(3001, 0, 0.0, 0));
+
+    let (statics, dynamics) = mgr.counts();
+    assert_eq!(statics, 2);
+    assert_eq!(dynamics, 1);
+}
+
+#[test]
+fn get_nonexistent_spawn() {
+    let mgr = SpawnManager::new();
+    assert!(mgr.get(999).is_none());
+}

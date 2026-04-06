@@ -238,6 +238,108 @@ pub fn finish_interaction(go: &mut GameObject) {
     go.flags.remove(GameObjectFlags::IN_USE);
 }
 
+// --- Spawn system ---
+
+/// How a game object spawn was created.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum SpawnOrigin {
+    /// Static spawn loaded from world.db at server startup.
+    Static,
+    /// Dynamic spawn created by a script or event at runtime.
+    Dynamic,
+}
+
+/// Definition of a game object spawn point.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct GameObjectSpawn {
+    /// Unique spawn ID.
+    pub spawn_id: u64,
+    /// Template ID to spawn.
+    pub template_id: u32,
+    /// Map ID where the object spawns.
+    pub map_id: u16,
+    /// World position.
+    pub x: f32,
+    pub y: f32,
+    pub z: f32,
+    /// Rotation quaternion.
+    pub rotation: [f32; 4],
+    /// How this spawn was created.
+    pub origin: SpawnOrigin,
+    /// Respawn time in seconds (0 = no respawn).
+    pub respawn_time: u32,
+}
+
+/// Manages game object spawn points.
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct SpawnManager {
+    spawns: Vec<GameObjectSpawn>,
+    next_spawn_id: u64,
+}
+
+impl SpawnManager {
+    pub fn new() -> Self {
+        Self { spawns: Vec::new(), next_spawn_id: 1 }
+    }
+
+    /// Load a static spawn from world data.
+    pub fn add_static(&mut self, spawn: GameObjectSpawn) -> u64 {
+        self.insert(spawn, SpawnOrigin::Static)
+    }
+
+    /// Create a dynamic spawn from a script or event.
+    pub fn add_dynamic(&mut self, spawn: GameObjectSpawn) -> u64 {
+        self.insert(spawn, SpawnOrigin::Dynamic)
+    }
+
+    fn insert(&mut self, mut spawn: GameObjectSpawn, origin: SpawnOrigin) -> u64 {
+        let id = self.next_spawn_id;
+        self.next_spawn_id += 1;
+        spawn.spawn_id = id;
+        spawn.origin = origin;
+        self.spawns.push(spawn);
+        id
+    }
+
+    /// Remove a spawn by ID. Only dynamic spawns can be removed.
+    pub fn remove_dynamic(&mut self, spawn_id: u64) -> bool {
+        let before = self.spawns.len();
+        self.spawns.retain(|s| !(s.spawn_id == spawn_id && s.origin == SpawnOrigin::Dynamic));
+        self.spawns.len() < before
+    }
+
+    /// Get a spawn by ID.
+    pub fn get(&self, spawn_id: u64) -> Option<&GameObjectSpawn> {
+        self.spawns.iter().find(|s| s.spawn_id == spawn_id)
+    }
+
+    /// All spawns for a given map.
+    pub fn spawns_for_map(&self, map_id: u16) -> Vec<&GameObjectSpawn> {
+        self.spawns.iter().filter(|s| s.map_id == map_id).collect()
+    }
+
+    /// All spawns of a given template.
+    pub fn spawns_for_template(&self, template_id: u32) -> Vec<&GameObjectSpawn> {
+        self.spawns.iter().filter(|s| s.template_id == template_id).collect()
+    }
+
+    /// Total number of spawns.
+    pub fn len(&self) -> usize {
+        self.spawns.len()
+    }
+
+    /// Whether there are no spawns.
+    pub fn is_empty(&self) -> bool {
+        self.spawns.is_empty()
+    }
+
+    /// Count of static vs dynamic spawns.
+    pub fn counts(&self) -> (usize, usize) {
+        let statics = self.spawns.iter().filter(|s| s.origin == SpawnOrigin::Static).count();
+        (statics, self.spawns.len() - statics)
+    }
+}
+
 #[cfg(test)]
 #[path = "game_object_tests.rs"]
 mod tests;
