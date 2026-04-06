@@ -415,11 +415,21 @@ fn place_bid(
     if let Some(prev_bidder) = auction.current_bidder_character_id
         && prev_bidder != character_id
     {
+        let refund = auction.current_bid.unwrap_or(0);
         let mut prev_inventory = persistence::load_inventory(db, prev_bidder);
-        prev_inventory.gold = prev_inventory
-            .gold
-            .saturating_add(auction.current_bid.unwrap_or(0));
+        prev_inventory.gold = prev_inventory.gold.saturating_add(refund);
         persistence::save_inventory(db, prev_bidder, &prev_inventory);
+        deliver_mail(
+            db,
+            prev_bidder,
+            "Outbid",
+            &format!(
+                "You have been outbid on {}. Your {} gold has been refunded.",
+                auction.item.name, refund
+            ),
+            0,
+            None,
+        );
     }
 
     auction.current_bid = Some(amount);
@@ -1272,6 +1282,51 @@ mod tests {
 
         // Gold unchanged
         assert_eq!(persistence::load_inventory(&db, buyer_id).gold, 499);
+    }
+
+    #[test]
+    fn outbid_sends_notification_mail_to_previous_bidder() {
+        let db = persistence::temp_database();
+        let (seller_id, _) =
+            persistence::create_character(&db, 1, "Seller", 1, 1).expect("seller");
+        let (bidder_a_id, _) =
+            persistence::create_character(&db, 2, "BidderA", 1, 1).expect("bidder a");
+        let (bidder_b_id, _) =
+            persistence::create_character(&db, 3, "BidderB", 1, 1).expect("bidder b");
+        let source_item = persistence::load_inventory(&db, seller_id).items[0].clone();
+        let mut state = AuctionHouseState::default();
+
+        create_auction(
+            &db,
+            &mut state,
+            seller_id,
+            &CreateAuction {
+                item_guid: source_item.item_guid,
+                stack_count: 1,
+                min_bid: 100,
+                buyout_price: Some(1000),
+                duration: AuctionDuration::Medium,
+            },
+        );
+        let auction_id = *state.auctions.keys().next().expect("auction id");
+
+        place_bid(&db, &mut state, bidder_a_id, auction_id, 100);
+        assert!(persistence::load_mailbox(&db, bidder_a_id).is_empty());
+
+        // BidderB outbids BidderA
+        let response = place_bid(&db, &mut state, bidder_b_id, auction_id, 105);
+        assert!(response.success);
+
+        // BidderA receives outbid notification mail
+        let mail_a = persistence::load_mailbox(&db, bidder_a_id);
+        assert_eq!(mail_a.len(), 1);
+        assert_eq!(mail_a[0].subject, "Outbid");
+        assert!(mail_a[0].body.contains(&source_item.name));
+        assert_eq!(mail_a[0].attached_money, 0);
+        assert!(mail_a[0].attached_item.is_none());
+
+        // BidderB has no mail yet
+        assert!(persistence::load_mailbox(&db, bidder_b_id).is_empty());
     }
 
     #[test]
