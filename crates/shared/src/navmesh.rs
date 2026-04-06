@@ -542,6 +542,112 @@ impl PatrolState {
     }
 }
 
+// --- Fear / knockback ---
+
+/// Type of forced movement.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ForcedMoveType {
+    /// Fear: run in a random direction, changing direction periodically.
+    Fear,
+    /// Knockback: single push in a fixed direction.
+    Knockback,
+}
+
+/// Compute a fear/knockback target point from an origin in a given direction.
+///
+/// `angle` is in radians (0 = +X, π/2 = +Z).
+/// `distance` is how far to push in yards.
+/// The result is clamped to the navmesh — if the target is outside all
+/// walkable polygons, it's pulled back to the navmesh boundary by
+/// binary-searching along the ray.
+pub fn forced_move_target(
+    tile: &NavTile,
+    origin: &NavPoint,
+    angle: f32,
+    distance: f32,
+) -> NavPoint {
+    let dx = angle.cos() * distance;
+    let dz = angle.sin() * distance;
+    let target = NavPoint::new(origin.x + dx, origin.y, origin.z + dz);
+
+    // If the target is on the navmesh, use it directly
+    if tile.find_polygon(&target).is_some() {
+        return target;
+    }
+
+    // Binary search to find the farthest walkable point along the ray
+    clamp_to_navmesh(tile, origin, &target)
+}
+
+/// Binary search along origin→target to find the farthest point on the navmesh.
+fn clamp_to_navmesh(tile: &NavTile, origin: &NavPoint, target: &NavPoint) -> NavPoint {
+    let mut lo = 0.0_f32;
+    let mut hi = 1.0_f32;
+    let mut best = *origin;
+
+    for _ in 0..8 {
+        let mid = (lo + hi) / 2.0;
+        let test = NavPoint::new(
+            origin.x + (target.x - origin.x) * mid,
+            origin.y,
+            origin.z + (target.z - origin.z) * mid,
+        );
+        if tile.find_polygon(&test).is_some() {
+            best = test;
+            lo = mid;
+        } else {
+            hi = mid;
+        }
+    }
+
+    best
+}
+
+/// State for an entity under forced movement (fear or knockback).
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct ForcedMoveState {
+    pub move_type: ForcedMoveType,
+    /// Target position to move toward.
+    pub target: NavPoint,
+    /// Time remaining on the effect (seconds).
+    pub duration: f32,
+    /// Movement speed during forced movement (yards/sec).
+    pub speed: f32,
+}
+
+impl ForcedMoveState {
+    /// Create a knockback: single push toward a fixed target.
+    pub fn knockback(target: NavPoint, duration: f32, speed: f32) -> Self {
+        Self {
+            move_type: ForcedMoveType::Knockback,
+            target,
+            duration,
+            speed,
+        }
+    }
+
+    /// Create a fear: run toward a random target, duration-limited.
+    pub fn fear(target: NavPoint, duration: f32, speed: f32) -> Self {
+        Self {
+            move_type: ForcedMoveType::Fear,
+            target,
+            duration,
+            speed,
+        }
+    }
+
+    /// Tick the forced movement. Returns `true` if the effect has expired.
+    pub fn tick(&mut self, dt: f32) -> bool {
+        self.duration -= dt;
+        self.duration <= 0.0
+    }
+
+    /// Whether the entity has reached its forced-move target.
+    pub fn reached_target(&self, current_pos: &NavPoint) -> bool {
+        current_pos.distance_2d(&self.target) < 1.0
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -953,5 +1059,63 @@ mod tests {
         let mut state = PatrolState::new(7.0);
         let result = state.tick(0.016, &NavPoint::new(0.0, 0.0, 0.0), &path);
         assert_eq!(result, PatrolTickResult::Waiting);
+    }
+
+    // --- Fear / knockback tests ---
+
+    #[test]
+    fn forced_move_target_on_navmesh() {
+        let tile = sample_tile(); // 0-10 x 0-10 square
+        let origin = NavPoint::new(5.0, 100.0, 5.0);
+        let target = forced_move_target(&tile, &origin, 0.0, 3.0); // +X
+        assert!((target.x - 8.0).abs() < 0.01);
+        assert!(tile.find_polygon(&target).is_some());
+    }
+
+    #[test]
+    fn forced_move_clamped_to_navmesh() {
+        let tile = sample_tile(); // 0-10 x 0-10
+        let origin = NavPoint::new(5.0, 100.0, 5.0);
+        // Push 50 yards — way outside the 10x10 tile
+        let target = forced_move_target(&tile, &origin, 0.0, 50.0);
+        // Should be clamped to somewhere within the navmesh
+        assert!(tile.find_polygon(&target).is_some());
+        assert!(target.x <= 10.0);
+    }
+
+    #[test]
+    fn knockback_state_expires() {
+        let target = NavPoint::new(10.0, 0.0, 0.0);
+        let mut state = ForcedMoveState::knockback(target, 0.5, 20.0);
+        assert!(!state.tick(0.3));
+        assert!(state.tick(0.3)); // expired
+    }
+
+    #[test]
+    fn fear_state_expires() {
+        let target = NavPoint::new(10.0, 0.0, 0.0);
+        let mut state = ForcedMoveState::fear(target, 3.0, 10.0);
+        assert!(!state.tick(2.0));
+        assert!(state.tick(1.5));
+    }
+
+    #[test]
+    fn forced_move_reached_target() {
+        let target = NavPoint::new(10.0, 0.0, 0.0);
+        let state = ForcedMoveState::knockback(target, 1.0, 20.0);
+        assert!(!state.reached_target(&NavPoint::new(5.0, 0.0, 0.0)));
+        assert!(state.reached_target(&NavPoint::new(10.0, 0.0, 0.0)));
+    }
+
+    #[test]
+    fn forced_move_different_angles() {
+        let tile = sample_tile();
+        let origin = NavPoint::new(5.0, 100.0, 5.0);
+
+        let north = forced_move_target(&tile, &origin, std::f32::consts::FRAC_PI_2, 3.0);
+        assert!(north.z > origin.z); // moved +Z
+
+        let south = forced_move_target(&tile, &origin, -std::f32::consts::FRAC_PI_2, 3.0);
+        assert!(south.z < origin.z); // moved -Z
     }
 }
