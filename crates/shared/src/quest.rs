@@ -75,6 +75,11 @@ pub struct QuestData {
     pub quest_giver: u32,
     /// NPC ID to turn in the quest (0 = same as giver).
     pub turn_in_npc: u32,
+    /// Quest ID automatically offered on turn-in (chain continuation). 0 = none.
+    pub next_quest_id: u32,
+    /// Exclusive group ID. Completing any quest in a group blocks the others.
+    /// 0 = no exclusive group.
+    pub exclusive_group: u32,
 }
 
 impl QuestData {
@@ -90,9 +95,28 @@ impl QuestData {
             .all(|req| completed_quests.contains(req))
     }
 
-    /// Whether a player can accept this quest.
-    pub fn can_accept(&self, player_level: u8, completed_quests: &[u32]) -> bool {
-        self.meets_level_req(player_level) && self.prerequisites_met(completed_quests)
+    /// Whether this quest is blocked by an exclusive group member being completed.
+    pub fn excluded_by(&self, completed_quests: &[u32], all_quests: &[QuestData]) -> bool {
+        if self.exclusive_group == 0 {
+            return false;
+        }
+        all_quests.iter().any(|q| {
+            q.id != self.id
+                && q.exclusive_group == self.exclusive_group
+                && completed_quests.contains(&q.id)
+        })
+    }
+
+    /// Whether a player can accept this quest (level + prereqs + not excluded).
+    pub fn can_accept(
+        &self,
+        player_level: u8,
+        completed_quests: &[u32],
+        all_quests: &[QuestData],
+    ) -> bool {
+        self.meets_level_req(player_level)
+            && self.prerequisites_met(completed_quests)
+            && !self.excluded_by(completed_quests, all_quests)
     }
 }
 
@@ -363,7 +387,7 @@ pub fn npc_quest_marker(
             && !log.has_quest(quest.id)
             && !log.is_completed(quest.id)
         {
-            let marker = if quest.can_accept(player_level, &log.completed) {
+            let marker = if quest.can_accept(player_level, &log.completed, quests) {
                 QuestMarker::Available
             } else if !quest.meets_level_req(player_level)
                 && quest.prerequisites_met(&log.completed)
@@ -493,6 +517,8 @@ mod tests {
             prerequisites: vec![50],
             quest_giver: 234,
             turn_in_npc: 234,
+            next_quest_id: 0,
+            exclusive_group: 0,
         }
     }
 
@@ -533,9 +559,9 @@ mod tests {
     #[test]
     fn can_accept_both_checks() {
         let q = sample_quest();
-        assert!(!q.can_accept(9, &[50]));   // too low level
-        assert!(!q.can_accept(10, &[]));     // prereq missing
-        assert!(q.can_accept(10, &[50]));    // both met
+        assert!(!q.can_accept(9, &[50], &[]));   // too low level
+        assert!(!q.can_accept(10, &[], &[]));     // prereq missing
+        assert!(q.can_accept(10, &[50], &[]));    // both met
     }
 
     #[test]
@@ -872,6 +898,8 @@ mod tests {
             prerequisites: vec![100],
             quest_giver: 300,
             turn_in_npc: 300,
+            next_quest_id: 0,
+            exclusive_group: 0,
         }
     }
 
@@ -952,5 +980,79 @@ mod tests {
         // Complete q1
         log.completed.push(100);
         assert!(q2.prerequisites_met(&log.completed));
+    }
+
+    // --- Quest chain and branching tests ---
+
+    #[test]
+    fn chain_next_quest_id() {
+        let mut q1 = sample_quest();
+        q1.next_quest_id = 200;
+        assert_eq!(q1.next_quest_id, 200);
+    }
+
+    #[test]
+    fn exclusive_group_blocks_alternatives() {
+        let mut q_alliance = sample_quest();
+        q_alliance.id = 300;
+        q_alliance.exclusive_group = 10;
+
+        let mut q_horde = sample_quest();
+        q_horde.id = 301;
+        q_horde.exclusive_group = 10;
+        q_horde.prerequisites.clear();
+
+        let all = vec![q_alliance.clone(), q_horde.clone()];
+
+        // Neither completed — both available
+        assert!(!q_alliance.excluded_by(&[], &all));
+        assert!(!q_horde.excluded_by(&[], &all));
+
+        // Complete alliance version — horde is blocked
+        let completed = vec![300];
+        assert!(!q_alliance.excluded_by(&completed, &all)); // self doesn't block self
+        assert!(q_horde.excluded_by(&completed, &all));
+    }
+
+    #[test]
+    fn can_accept_respects_exclusion() {
+        let mut q_a = sample_quest();
+        q_a.id = 400;
+        q_a.exclusive_group = 20;
+        q_a.prerequisites.clear();
+
+        let mut q_b = sample_quest();
+        q_b.id = 401;
+        q_b.exclusive_group = 20;
+        q_b.prerequisites.clear();
+
+        let all = vec![q_a.clone(), q_b.clone()];
+
+        assert!(q_b.can_accept(80, &[], &all));
+        assert!(!q_b.can_accept(80, &[400], &all)); // 400 completed, 401 blocked
+    }
+
+    #[test]
+    fn no_exclusive_group_not_blocked() {
+        let q = sample_quest(); // exclusive_group=0
+        assert!(!q.excluded_by(&[100, 200, 300], std::slice::from_ref(&q)));
+    }
+
+    #[test]
+    fn chain_prereq_flow() {
+        let mut q1 = sample_quest();
+        q1.id = 500;
+        q1.prerequisites.clear();
+        q1.next_quest_id = 501;
+
+        let mut q2 = sample_quest();
+        q2.id = 501;
+        q2.prerequisites = vec![500];
+
+        let all = vec![q1.clone(), q2.clone()];
+
+        // q2 not available until q1 done
+        assert!(!q2.can_accept(80, &[], &all));
+        assert!(q2.can_accept(80, &[500], &all));
     }
 }
