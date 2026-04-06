@@ -4,6 +4,7 @@
 //! instanced maps for dungeons and raids.
 //! Ref: AzerothCore `instance_template` table, `MapInstanced.cpp`, `InstanceSaveMgr.cpp`.
 
+use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
 /// Instance difficulty mode.
@@ -70,6 +71,37 @@ impl ResetTimer {
         }
         let periods = acquired_at / period;
         Some((periods + 1) * period)
+    }
+}
+
+/// ECS component tagging an entity as belonging to a specific instance.
+///
+/// Entities in the open world have no `InstanceId`. Entities inside a dungeon
+/// or raid (players, creatures, game objects) carry this component so the
+/// server can isolate them per-group.
+///
+/// Two groups in the same dungeon map get different `InstanceId` values,
+/// ensuring their creatures, loot, and combat are fully independent.
+#[derive(
+    Component, Reflect, Serialize, Deserialize, bitcode::Encode, bitcode::Decode,
+    Debug, Clone, Copy, PartialEq, Eq, Hash,
+)]
+pub struct InstanceId(pub u32);
+
+/// Open-world sentinel: entities without an `InstanceId` are in the open world.
+/// This constant is used in visibility checks when a player is not in any instance.
+pub const OPEN_WORLD: Option<InstanceId> = None;
+
+/// Check whether two entities share the same instance (or both are in open world).
+///
+/// Returns `true` if both are `None` (open world) or both are `Some` with the
+/// same instance ID. Used for visibility filtering — entities only see others
+/// in the same instance.
+pub fn same_instance(a: Option<&InstanceId>, b: Option<&InstanceId>) -> bool {
+    match (a, b) {
+        (None, None) => true,
+        (Some(a), Some(b)) => a.0 == b.0,
+        _ => false,
     }
 }
 
@@ -305,6 +337,9 @@ pub fn raid_template(map_id: u16, name: &str, parent_map_id: u16) -> InstanceTem
 use std::collections::HashMap;
 
 /// A live instance of a dungeon or raid map.
+///
+/// Each group gets an isolated copy with its own creatures and state.
+/// Entities spawned for this instance carry `InstanceId(instance_id)`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Instance {
     /// Unique instance ID (sequential, server-wide).
@@ -317,6 +352,8 @@ pub struct Instance {
     pub group_leader: u64,
     /// Players currently inside the instance.
     pub players: Vec<u64>,
+    /// Entity IDs of creatures/objects spawned for this instance.
+    pub spawned_entities: Vec<u64>,
     /// Server timestamp when created.
     pub created_at: u64,
 }
@@ -348,6 +385,23 @@ impl Instance {
     /// Whether the instance has no players inside.
     pub fn is_empty(&self) -> bool {
         self.players.is_empty()
+    }
+
+    /// Record a spawned entity (creature, game object) in this instance.
+    pub fn track_entity(&mut self, entity: u64) {
+        if !self.spawned_entities.contains(&entity) {
+            self.spawned_entities.push(entity);
+        }
+    }
+
+    /// Remove a tracked entity (e.g. on despawn).
+    pub fn untrack_entity(&mut self, entity: u64) {
+        self.spawned_entities.retain(|&e| e != entity);
+    }
+
+    /// The `InstanceId` component value for entities in this instance.
+    pub fn component_id(&self) -> InstanceId {
+        InstanceId(self.instance_id)
     }
 }
 
@@ -396,7 +450,8 @@ impl InstanceManager {
         let instance_id = self.allocate_id();
         let instance = Instance {
             instance_id, map_id, difficulty, group_leader,
-            players: members.to_vec(), created_at: now,
+            players: members.to_vec(), spawned_entities: Vec::new(),
+            created_at: now,
         };
         self.instances.insert(instance_id, instance);
         self.group_index.insert(key, instance_id);

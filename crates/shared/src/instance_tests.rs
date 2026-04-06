@@ -240,6 +240,7 @@ fn instance_add_remove_player() {
         difficulty: Difficulty::Normal,
         group_leader: 100,
         players: vec![100, 101],
+        spawned_entities: Vec::new(),
         created_at: 1000,
     };
     assert!(inst.contains_player(100));
@@ -266,6 +267,7 @@ fn instance_full_rejects_player() {
         difficulty: Difficulty::Normal,
         group_leader: 100,
         players: vec![100, 101, 102, 103, 104],
+        spawned_entities: Vec::new(),
         created_at: 1000,
     };
     assert_eq!(inst.add_player(105, 5), Err(InstanceError::InstanceFull));
@@ -279,6 +281,7 @@ fn instance_empty_after_all_leave() {
         difficulty: Difficulty::Normal,
         group_leader: 100,
         players: vec![100],
+        spawned_entities: Vec::new(),
         created_at: 1000,
     };
     assert!(!inst.is_empty());
@@ -454,4 +457,113 @@ fn manager_iter() {
     assert_eq!(map_ids.len(), 2);
     assert!(map_ids.contains(&33));
     assert!(map_ids.contains(&409));
+}
+
+// --- Per-group isolation ---
+
+#[test]
+fn same_instance_both_open_world() {
+    assert!(same_instance(None, None));
+}
+
+#[test]
+fn same_instance_both_in_same() {
+    let a = InstanceId(5);
+    let b = InstanceId(5);
+    assert!(same_instance(Some(&a), Some(&b)));
+}
+
+#[test]
+fn different_instance_ids() {
+    let a = InstanceId(1);
+    let b = InstanceId(2);
+    assert!(!same_instance(Some(&a), Some(&b)));
+}
+
+#[test]
+fn open_world_vs_instanced_not_visible() {
+    let inst = InstanceId(1);
+    assert!(!same_instance(None, Some(&inst)));
+    assert!(!same_instance(Some(&inst), None));
+}
+
+#[test]
+fn two_groups_get_separate_instances() {
+    let reg = sample_registry();
+    let mut mgr = InstanceManager::new();
+
+    let group_a = [100, 101, 102, 103, 104];
+    let group_b = [200, 201, 202, 203, 204];
+
+    let id_a = mgr.create_instance(&reg, 33, Difficulty::Normal, 100, &group_a, 1000).unwrap();
+    let id_b = mgr.create_instance(&reg, 33, Difficulty::Normal, 200, &group_b, 1001).unwrap();
+
+    // Different instance IDs for the same map
+    assert_ne!(id_a, id_b);
+
+    let inst_a = mgr.get(id_a).unwrap();
+    let inst_b = mgr.get(id_b).unwrap();
+
+    // Same map, but isolated
+    assert_eq!(inst_a.map_id, inst_b.map_id);
+    assert_ne!(inst_a.instance_id, inst_b.instance_id);
+
+    // Component IDs differ, so entities won't see each other
+    assert!(!same_instance(Some(&inst_a.component_id()), Some(&inst_b.component_id())));
+
+    // Players within the same instance share visibility
+    assert!(same_instance(Some(&inst_a.component_id()), Some(&inst_a.component_id())));
+}
+
+#[test]
+fn track_and_untrack_spawned_entities() {
+    let reg = sample_registry();
+    let mut mgr = InstanceManager::new();
+
+    let id = mgr.create_instance(&reg, 33, Difficulty::Normal, 100, &[100], 1000).unwrap();
+    let inst = mgr.get_mut(id).unwrap();
+
+    // Spawn creatures for this instance
+    inst.track_entity(5000);
+    inst.track_entity(5001);
+    inst.track_entity(5002);
+    assert_eq!(inst.spawned_entities.len(), 3);
+
+    // Duplicate tracking is a no-op
+    inst.track_entity(5000);
+    assert_eq!(inst.spawned_entities.len(), 3);
+
+    // Untrack on despawn
+    inst.untrack_entity(5001);
+    assert_eq!(inst.spawned_entities.len(), 2);
+    assert!(!inst.spawned_entities.contains(&5001));
+}
+
+#[test]
+fn component_id_matches_instance_id() {
+    let reg = sample_registry();
+    let mut mgr = InstanceManager::new();
+
+    let id = mgr.create_instance(&reg, 33, Difficulty::Normal, 100, &[100], 1000).unwrap();
+    let inst = mgr.get(id).unwrap();
+    assert_eq!(inst.component_id(), InstanceId(id));
+}
+
+#[test]
+fn destroyed_instance_entities_isolated_from_new() {
+    let reg = sample_registry();
+    let mut mgr = InstanceManager::new();
+
+    let id1 = mgr.create_instance(&reg, 33, Difficulty::Normal, 100, &[100], 1000).unwrap();
+    let comp1 = mgr.get(id1).unwrap().component_id();
+
+    mgr.destroy(id1);
+
+    // Same group creates a new instance — gets a new ID
+    let id2 = mgr.create_instance(&reg, 33, Difficulty::Normal, 100, &[100], 2000).unwrap();
+    let comp2 = mgr.get(id2).unwrap().component_id();
+
+    // Old entities (with comp1) won't match new instance
+    assert_ne!(comp1, comp2);
+    assert!(!same_instance(Some(&comp1), Some(&comp2)));
 }
