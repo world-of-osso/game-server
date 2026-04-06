@@ -284,6 +284,8 @@ pub struct PlayerInput {
     pub jumping: bool,
     /// Whether the player is running (vs walking).
     pub running: bool,
+    /// Whether the player is swimming.
+    pub swimming: bool,
 }
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]

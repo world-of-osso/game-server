@@ -20,6 +20,7 @@ use crate::terrain_height::{GRAVITY, GROUND_SNAP_THRESHOLD, TerrainHeightMap};
 const SERVER_PORT: u16 = 5000;
 const DEFAULT_RUN_SPEED: f32 = 7.0;
 const DEFAULT_WALK_SPEED: f32 = 2.5;
+const DEFAULT_SWIM_SPEED: f32 = shared::movement::SWIM_SPEED;
 
 type LinkStatusData = (Has<Connected>, Has<ClientOf>, Has<ReplicationSender>);
 type PlayerMovement = (
@@ -388,7 +389,9 @@ fn apply_movement_input(
         vert_vel.0 = shared::movement::JUMP_IMPULSE;
     }
     rotation.y = input.facing_yaw;
-    let base_speed = if input.running {
+    let base_speed = if input.swimming {
+        DEFAULT_SWIM_SPEED
+    } else if input.running {
         DEFAULT_RUN_SPEED
     } else {
         DEFAULT_WALK_SPEED
@@ -552,6 +555,7 @@ mod tests {
             facing_yaw: 0.0,
             jumping: false,
             running: true,
+            swimming: false,
         }
     }
 
@@ -593,6 +597,7 @@ mod tests {
             facing_yaw: 1.5,
             jumping: false,
             running: true,
+            swimming: false,
         };
         let _ = app.world_mut().run_system_once(
             move |mut q: Query<PlayerMovement, With<Player>>,
@@ -613,6 +618,7 @@ mod tests {
             facing_yaw: 0.0,
             jumping: false,
             running: false,
+            swimming: false,
         };
         let _ = app.world_mut().run_system_once(
             move |mut q: Query<PlayerMovement, With<Player>>,
@@ -634,6 +640,7 @@ mod tests {
             facing_yaw: 0.0,
             jumping: false,
             running: false,
+            swimming: false,
         };
         let captured_dt = std::sync::Arc::new(std::sync::Mutex::new(0.0_f32));
         let dt_clone = captured_dt.clone();
@@ -1005,6 +1012,47 @@ mod tests {
     }
 
     #[test]
+    fn swim_speed_differs_from_ground_speed() {
+        let mut app = setup_app_with_time();
+        let player = spawn_player(app.world_mut(), 0.0, 0.0, 0.0);
+        let input = PlayerInput {
+            direction: [1.0, 0.0, 0.0],
+            facing_yaw: 0.0,
+            jumping: false,
+            running: true,
+            swimming: true,
+        };
+        let captured_dt = std::sync::Arc::new(std::sync::Mutex::new(0.0_f32));
+        let dt_clone = captured_dt.clone();
+        let _ = app.world_mut().run_system_once(
+            move |mut q: Query<PlayerMovement, With<Player>>,
+                  time: Res<Time>| {
+                *dt_clone.lock().unwrap() = time.delta_secs();
+                apply_movement_input(&input, player, &mut q, &time);
+            },
+        );
+        let dt = *captured_dt.lock().unwrap();
+        let speed = app.world().entity(player).get::<MovementSpeed>().unwrap();
+        let pos = *app.world().entity(player).get::<Position>().unwrap();
+
+        // Swim speed is slower than run speed
+        assert!(
+            (speed.0 - DEFAULT_SWIM_SPEED).abs() < 1e-5,
+            "swim speed {}, expected {DEFAULT_SWIM_SPEED}",
+            speed.0,
+        );
+        assert!(speed.0 < DEFAULT_RUN_SPEED, "swim slower than run");
+        assert!(speed.0 > DEFAULT_WALK_SPEED, "swim faster than walk");
+
+        let expected_x = DEFAULT_SWIM_SPEED * dt;
+        assert!(
+            (pos.x - expected_x).abs() < 1e-5,
+            "swam {}, expected {expected_x}",
+            pos.x,
+        );
+    }
+
+    #[test]
     fn zero_direction_ignored() {
         let mut app = setup_app_with_time();
         let player = spawn_player(app.world_mut(), 5.0, 5.0, 5.0);
@@ -1039,6 +1087,7 @@ mod tests {
             facing_yaw: 0.0,
             jumping: false,
             running: true,
+            swimming: false,
         };
 
         let _ = app.world_mut().run_system_once(

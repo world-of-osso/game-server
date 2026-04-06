@@ -82,6 +82,7 @@ fn client_message_received_by_server() {
         facing_yaw: 0.0,
         jumping: false,
         running: false,
+        swimming: false,
     };
     // Register a system to collect messages before they get cleared in Last schedule
     stepper.server_app.init_resource::<ReceivedInputs>();
@@ -183,6 +184,7 @@ fn input_x() -> PlayerInput {
         facing_yaw: 0.0,
         jumping: false,
         running: false,
+        swimming: false,
     }
 }
 
@@ -192,6 +194,7 @@ fn input_y() -> PlayerInput {
         facing_yaw: 0.0,
         jumping: false,
         running: false,
+        swimming: false,
     }
 }
 

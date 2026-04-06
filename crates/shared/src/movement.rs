@@ -15,6 +15,9 @@ pub const RUN_SPEED: f32 = 7.0;
 /// Walk speed in yards/sec.
 pub const WALK_SPEED: f32 = 2.5;
 
+/// Swim speed in yards/sec (67.5% of run speed, WoW default).
+pub const SWIM_SPEED: f32 = 4.7222;
+
 /// Jump impulse velocity in yards/sec.
 pub const JUMP_IMPULSE: f32 = 9.0;
 
