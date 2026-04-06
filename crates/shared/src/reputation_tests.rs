@@ -369,10 +369,10 @@ fn set_rep_directly() {
 }
 
 #[test]
-fn tracked_factions() {
+fn all_factions_lists_known() {
     let reg = sample_registry();
     let rep = CharacterReputation::new_for_race(&reg, HUMAN);
-    let factions = rep.tracked_factions();
+    let factions = rep.all_factions();
     assert!(factions.contains(&72));
     assert!(factions.contains(&76));
 }
@@ -720,4 +720,101 @@ fn gain_dungeon_rep_outside_dungeon_no_redirect() {
         &mut rep, Some(76), 100, Some(&STORMWIND_TABARD), false, &reg,
     );
     assert_eq!(results[0].faction_id, 76);
+}
+
+// --- Tracked / watched factions ---
+
+#[test]
+fn track_and_untrack() {
+    let mut rep = CharacterReputation::default();
+    assert!(rep.tracked_factions().is_empty());
+
+    rep.track(72);
+    rep.track(76);
+    assert_eq!(rep.tracked_factions().len(), 2);
+    assert!(rep.is_tracked(72));
+
+    rep.untrack(72);
+    assert!(!rep.is_tracked(72));
+    assert_eq!(rep.tracked_factions().len(), 1);
+}
+
+#[test]
+fn track_duplicate_is_noop() {
+    let mut rep = CharacterReputation::default();
+    rep.track(72);
+    rep.track(72);
+    assert_eq!(rep.tracked_factions().len(), 1);
+}
+
+#[test]
+fn watch_faction() {
+    let mut rep = CharacterReputation::default();
+    rep.watch(72);
+
+    assert_eq!(rep.watched_faction(), Some(72));
+    // Watching auto-tracks
+    assert!(rep.is_tracked(72));
+}
+
+#[test]
+fn watch_replaces_previous() {
+    let mut rep = CharacterReputation::default();
+    rep.watch(72);
+    rep.watch(76);
+    assert_eq!(rep.watched_faction(), Some(76));
+    // Both still tracked
+    assert!(rep.is_tracked(72));
+    assert!(rep.is_tracked(76));
+}
+
+#[test]
+fn unwatch_clears() {
+    let mut rep = CharacterReputation::default();
+    rep.watch(72);
+    rep.unwatch();
+    assert_eq!(rep.watched_faction(), None);
+    // Still tracked after unwatching
+    assert!(rep.is_tracked(72));
+}
+
+#[test]
+fn untrack_watched_clears_watch() {
+    let mut rep = CharacterReputation::default();
+    rep.watch(72);
+    rep.untrack(72);
+    assert_eq!(rep.watched_faction(), None);
+    assert!(!rep.is_tracked(72));
+}
+
+#[test]
+fn display_entry_values() {
+    let reg = sample_registry();
+    let rep = CharacterReputation::new_for_race(&reg, HUMAN);
+
+    let entry = rep.display_entry(72);
+    assert_eq!(entry.faction_id, 72);
+    assert_eq!(entry.standing, Standing::Friendly);
+    assert_eq!(entry.value, 21_000);
+    assert_eq!(entry.progress, (0, 9_000)); // 21000 is start of Friendly
+}
+
+#[test]
+fn display_tracked_list() {
+    let reg = sample_registry();
+    let mut rep = CharacterReputation::new_for_race(&reg, HUMAN);
+    rep.track(72);
+    rep.track(76);
+
+    let entries = rep.display_tracked();
+    assert_eq!(entries.len(), 2);
+    assert_eq!(entries[0].faction_id, 72);
+    assert_eq!(entries[1].faction_id, 76);
+    assert_eq!(entries[1].standing, Standing::Hated);
+}
+
+#[test]
+fn display_tracked_empty() {
+    let rep = CharacterReputation::default();
+    assert!(rep.display_tracked().is_empty());
 }

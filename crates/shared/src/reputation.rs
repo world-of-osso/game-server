@@ -220,11 +220,25 @@ impl RepChangeResult {
     }
 }
 
+/// Display info for a faction in the reputation panel.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct FactionDisplayEntry {
+    pub faction_id: u32,
+    pub standing: Standing,
+    pub value: i32,
+    /// Progress within the current tier: (current, max).
+    pub progress: (i32, i32),
+}
+
 /// Per-character reputation tracker across all factions.
 #[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
 pub struct CharacterReputation {
     /// faction_id → current reputation value.
     values: HashMap<u32, i32>,
+    /// Factions shown in the reputation panel (player-selected).
+    tracked: Vec<u32>,
+    /// The single faction displayed on the XP/rep bar (if any).
+    watched: Option<u32>,
 }
 
 impl CharacterReputation {
@@ -234,7 +248,7 @@ impl CharacterReputation {
         for faction in registry.iter() {
             values.insert(faction.id, faction.base_rep_for_race(race));
         }
-        Self { values }
+        Self { values, tracked: Vec::new(), watched: None }
     }
 
     /// Get the raw reputation value for a faction.
@@ -287,14 +301,74 @@ impl CharacterReputation {
         self.values.len()
     }
 
-    /// All faction IDs this character has reputation with.
-    pub fn tracked_factions(&self) -> Vec<u32> {
+    /// All faction IDs this character has any reputation value for.
+    pub fn all_factions(&self) -> Vec<u32> {
         self.values.keys().copied().collect()
     }
 
     /// Whether the character has reached a standing with a faction.
     pub fn has_standing(&self, faction_id: u32, required: Standing) -> bool {
         self.get_standing(faction_id) >= required
+    }
+
+    // --- Tracked / watched factions (UI display) ---
+
+    /// Add a faction to the tracked list (shown in rep panel).
+    pub fn track(&mut self, faction_id: u32) {
+        if !self.tracked.contains(&faction_id) {
+            self.tracked.push(faction_id);
+        }
+    }
+
+    /// Remove a faction from the tracked list.
+    pub fn untrack(&mut self, faction_id: u32) {
+        self.tracked.retain(|&id| id != faction_id);
+        if self.watched == Some(faction_id) {
+            self.watched = None;
+        }
+    }
+
+    /// Whether a faction is in the tracked list.
+    pub fn is_tracked(&self, faction_id: u32) -> bool {
+        self.tracked.contains(&faction_id)
+    }
+
+    /// The tracked faction list.
+    pub fn tracked_factions(&self) -> &[u32] {
+        &self.tracked
+    }
+
+    /// Set the watched faction (shown on the rep/XP bar).
+    /// Automatically tracks it if not already tracked.
+    pub fn watch(&mut self, faction_id: u32) {
+        self.track(faction_id);
+        self.watched = Some(faction_id);
+    }
+
+    /// Clear the watched faction.
+    pub fn unwatch(&mut self) {
+        self.watched = None;
+    }
+
+    /// The currently watched faction, if any.
+    pub fn watched_faction(&self) -> Option<u32> {
+        self.watched
+    }
+
+    /// Build display entries for all tracked factions.
+    pub fn display_tracked(&self) -> Vec<FactionDisplayEntry> {
+        self.tracked.iter().map(|&id| self.display_entry(id)).collect()
+    }
+
+    /// Build a display entry for a single faction.
+    pub fn display_entry(&self, faction_id: u32) -> FactionDisplayEntry {
+        let value = self.get_value(faction_id);
+        FactionDisplayEntry {
+            faction_id,
+            standing: standing_for_value(value),
+            value,
+            progress: tier_progress(value),
+        }
     }
 
     /// Gain rep with spillover to allied/enemy factions.
