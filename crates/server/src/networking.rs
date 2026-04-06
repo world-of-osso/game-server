@@ -3,6 +3,7 @@ use bevy::prelude::*;
 use core::net::{IpAddr, Ipv4Addr, SocketAddr};
 use lightyear::prelude::server::*;
 use lightyear::prelude::*;
+use shared::aura::Auras;
 use shared::components::{Health, MovementSpeed, Npc, Player, Position, Rotation};
 use shared::protocol::{ChatMessage, LoadTerrain, PlayerInput, TerrainChannel};
 use std::collections::VecDeque;
@@ -354,7 +355,10 @@ pub fn send_load_terrain(connection: Entity, senders: &mut Query<&mut MessageSen
 /// Read PlayerInput messages and apply movement.
 fn process_player_inputs(
     mut receivers: Query<(&mut MessageReceiver<PlayerInput>, &PlayerLink)>,
-    mut players: Query<(&mut Position, &mut Rotation, &mut MovementSpeed), With<Player>>,
+    mut players: Query<
+        (&mut Position, &mut Rotation, &mut MovementSpeed, Option<&Auras>),
+        With<Player>,
+    >,
     time: Res<Time>,
 ) {
     for (mut receiver, link) in receivers.iter_mut() {
@@ -368,18 +372,23 @@ fn process_player_inputs(
 fn apply_movement_input(
     input: &PlayerInput,
     player_entity: Entity,
-    players: &mut Query<(&mut Position, &mut Rotation, &mut MovementSpeed), With<Player>>,
+    players: &mut Query<
+        (&mut Position, &mut Rotation, &mut MovementSpeed, Option<&Auras>),
+        With<Player>,
+    >,
     time: &Time,
 ) {
-    let Ok((mut pos, mut rotation, mut speed)) = players.get_mut(player_entity) else {
+    let Ok((mut pos, mut rotation, mut speed, auras)) = players.get_mut(player_entity) else {
         return;
     };
     rotation.y = input.facing_yaw;
-    speed.0 = if input.running {
+    let base_speed = if input.running {
         DEFAULT_RUN_SPEED
     } else {
         DEFAULT_WALK_SPEED
     };
+    let multiplier = auras.map_or(1.0, |a| a.movement_speed_multiplier());
+    speed.0 = base_speed * multiplier;
     let dir_len = direction_length(&input.direction);
     if dir_len < 0.001 {
         return;
@@ -511,6 +520,7 @@ mod tests {
                     class: 1,
                     appearance: Default::default(),
                 },
+                Auras::default(),
             ))
             .id()
     }
@@ -541,7 +551,7 @@ mod tests {
 
         let _ = app.world_mut().run_system_once(
             move |mut q: Query<
-                (&mut Position, &mut Rotation, &mut MovementSpeed),
+                (&mut Position, &mut Rotation, &mut MovementSpeed, Option<&Auras>),
                 With<Player>,
             >,
                   time: Res<Time>| {
@@ -568,7 +578,7 @@ mod tests {
         };
         let _ = app.world_mut().run_system_once(
             move |mut q: Query<
-                (&mut Position, &mut Rotation, &mut MovementSpeed),
+                (&mut Position, &mut Rotation, &mut MovementSpeed, Option<&Auras>),
                 With<Player>,
             >,
                   time: Res<Time>| {
@@ -591,7 +601,7 @@ mod tests {
         };
         let _ = app.world_mut().run_system_once(
             move |mut q: Query<
-                (&mut Position, &mut Rotation, &mut MovementSpeed),
+                (&mut Position, &mut Rotation, &mut MovementSpeed, Option<&Auras>),
                 With<Player>,
             >,
                   time: Res<Time>| {
@@ -617,7 +627,7 @@ mod tests {
         let dt_clone = captured_dt.clone();
         let _ = app.world_mut().run_system_once(
             move |mut q: Query<
-                (&mut Position, &mut Rotation, &mut MovementSpeed),
+                (&mut Position, &mut Rotation, &mut MovementSpeed, Option<&Auras>),
                 With<Player>,
             >,
                   time: Res<Time>| {
@@ -647,7 +657,7 @@ mod tests {
         let dt_clone = captured_dt.clone();
         let _ = app.world_mut().run_system_once(
             move |mut q: Query<
-                (&mut Position, &mut Rotation, &mut MovementSpeed),
+                (&mut Position, &mut Rotation, &mut MovementSpeed, Option<&Auras>),
                 With<Player>,
             >,
                   time: Res<Time>| {
@@ -667,6 +677,114 @@ mod tests {
     }
 
     #[test]
+    fn speed_modifiers_from_auras_apply_to_movement() {
+        use shared::aura::{Aura, AuraEffect};
+
+        let mut app = setup_app_with_time();
+        let player = spawn_player(app.world_mut(), 0.0, 0.0, 0.0);
+
+        // Apply a 50% snare aura
+        let snare = Aura {
+            spell_id: 1,
+            caster: 99,
+            duration: 10.0,
+            remaining: 10.0,
+            effects: [
+                Some(AuraEffect::ModMovementSpeed { percent: -0.50 }),
+                None,
+                None,
+            ],
+            ..Default::default()
+        };
+        app.world_mut()
+            .entity_mut(player)
+            .get_mut::<Auras>()
+            .unwrap()
+            .apply(snare);
+
+        let input = make_input(1.0, 0.0, 0.0); // running: true
+        let captured_dt = std::sync::Arc::new(std::sync::Mutex::new(0.0_f32));
+        let dt_clone = captured_dt.clone();
+        let _ = app.world_mut().run_system_once(
+            move |mut q: Query<
+                (&mut Position, &mut Rotation, &mut MovementSpeed, Option<&Auras>),
+                With<Player>,
+            >,
+                  time: Res<Time>| {
+                *dt_clone.lock().unwrap() = time.delta_secs();
+                apply_movement_input(&input, player, &mut q, &time);
+            },
+        );
+        let dt = *captured_dt.lock().unwrap();
+        let pos = *app.world().entity(player).get::<Position>().unwrap();
+        let speed = app.world().entity(player).get::<MovementSpeed>().unwrap();
+
+        // Speed should be base * 0.5
+        let expected_speed = DEFAULT_RUN_SPEED * 0.5;
+        assert!(
+            (speed.0 - expected_speed).abs() < 1e-6,
+            "speed {}, expected {expected_speed}",
+            speed.0,
+        );
+        // Position delta should reflect snared speed
+        let expected_x = expected_speed * dt;
+        assert!(
+            (pos.x - expected_x).abs() < 1e-6,
+            "moved {}, expected {expected_x}",
+            pos.x,
+        );
+
+        // Now add a 30% sprint buff on top of the 50% snare
+        let sprint = Aura {
+            spell_id: 2,
+            caster: 99,
+            duration: 10.0,
+            remaining: 10.0,
+            effects: [
+                Some(AuraEffect::ModMovementSpeed { percent: 0.30 }),
+                None,
+                None,
+            ],
+            ..Default::default()
+        };
+        app.world_mut()
+            .entity_mut(player)
+            .get_mut::<Auras>()
+            .unwrap()
+            .apply(sprint);
+
+        // Reset position
+        app.world_mut()
+            .entity_mut(player)
+            .get_mut::<Position>()
+            .unwrap()
+            .x = 0.0;
+
+        let input2 = make_input(1.0, 0.0, 0.0);
+        let captured_dt2 = std::sync::Arc::new(std::sync::Mutex::new(0.0_f32));
+        let dt_clone2 = captured_dt2.clone();
+        let _ = app.world_mut().run_system_once(
+            move |mut q: Query<
+                (&mut Position, &mut Rotation, &mut MovementSpeed, Option<&Auras>),
+                With<Player>,
+            >,
+                  time: Res<Time>| {
+                *dt_clone2.lock().unwrap() = time.delta_secs();
+                apply_movement_input(&input2, player, &mut q, &time);
+            },
+        );
+        let dt2 = *captured_dt2.lock().unwrap();
+        let pos2 = *app.world().entity(player).get::<Position>().unwrap();
+        // Combined: (1.0 - 0.50 + 0.30) = 0.80x
+        let expected_combined = DEFAULT_RUN_SPEED * 0.80 * dt2;
+        assert!(
+            (pos2.x - expected_combined).abs() < 1e-5,
+            "combined moved {}, expected {expected_combined}",
+            pos2.x,
+        );
+    }
+
+    #[test]
     fn zero_direction_ignored() {
         let mut app = setup_app_with_time();
         let player = spawn_player(app.world_mut(), 5.0, 5.0, 5.0);
@@ -674,7 +792,7 @@ mod tests {
 
         let _ = app.world_mut().run_system_once(
             move |mut q: Query<
-                (&mut Position, &mut Rotation, &mut MovementSpeed),
+                (&mut Position, &mut Rotation, &mut MovementSpeed, Option<&Auras>),
                 With<Player>,
             >,
                   time: Res<Time>| {
