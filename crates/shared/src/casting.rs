@@ -38,6 +38,8 @@ pub struct CastState {
     pub channel_tick_interval: f32,
     /// For channels: time accumulator for ticks.
     pub channel_tick_timer: f32,
+    /// Whether this spell allows movement while casting.
+    pub cast_while_moving: bool,
 }
 
 /// Result of ticking a cast bar by `dt` seconds.
@@ -66,6 +68,7 @@ impl CastState {
             pushback_count: 0,
             channel_tick_interval: 0.0,
             channel_tick_timer: 0.0,
+            cast_while_moving: false,
         }
     }
 
@@ -87,6 +90,7 @@ impl CastState {
             pushback_count: 0,
             channel_tick_interval: tick_interval,
             channel_tick_timer: 0.0,
+            cast_while_moving: false,
         }
     }
 

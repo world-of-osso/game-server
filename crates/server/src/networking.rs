@@ -29,6 +29,7 @@ type PlayerMovement = (
     &'static mut MovementSpeed,
     &'static mut VerticalVelocity,
     Option<&'static Auras>,
+    Option<&'static shared::casting::CastState>,
 );
 type ConnInfoData = (
     &'static RemoteId,
@@ -380,11 +381,18 @@ fn apply_movement_input(
     players: &mut Query<PlayerMovement, With<Player>>,
     time: &Time,
 ) {
-    let Ok((mut pos, mut rotation, mut speed, mut vert_vel, auras)) =
+    let Ok((mut pos, mut rotation, mut speed, mut vert_vel, auras, cast_state)) =
         players.get_mut(player_entity)
     else {
         return;
     };
+    // Block movement while casting (unless spell allows cast-while-moving)
+    if let Some(cast) = cast_state
+        && !cast.cast_while_moving
+    {
+        speed.0 = 0.0;
+        return;
+    }
     if input.jumping && vert_vel.0 == 0.0 {
         vert_vel.0 = shared::movement::JUMP_IMPULSE;
     }
@@ -1313,6 +1321,47 @@ mod tests {
             (normal_vel - snared_vel).abs() < 1e-5,
             "jump impulse unaffected by snare",
         );
+    }
+
+    #[test]
+    fn casting_blocks_movement_unless_cast_while_moving() {
+        use shared::casting::CastState;
+
+        let mut app = setup_app_with_time();
+        let casting_player = spawn_player(app.world_mut(), 0.0, 0.0, 0.0);
+        let cwm_player = spawn_player(app.world_mut(), 0.0, 0.0, 0.0);
+
+        // Non-cast-while-moving spell on first player
+        app.world_mut()
+            .entity_mut(casting_player)
+            .insert(CastState::normal(133, 1, 2.0, true));
+
+        // Cast-while-moving spell on second player
+        let mut cwm_cast = CastState::normal(100, 1, 2.0, true);
+        cwm_cast.cast_while_moving = true;
+        app.world_mut()
+            .entity_mut(cwm_player)
+            .insert(cwm_cast);
+
+        let input = make_input(1.0, 0.0, 0.0);
+        let input2 = make_input(1.0, 0.0, 0.0);
+        let _ = app.world_mut().run_system_once(
+            move |mut q: Query<PlayerMovement, With<Player>>,
+                  time: Res<Time>| {
+                apply_movement_input(&input, casting_player, &mut q, &time);
+                apply_movement_input(&input2, cwm_player, &mut q, &time);
+            },
+        );
+
+        // Normal caster: blocked
+        let casting_pos = app.world().entity(casting_player).get::<Position>().unwrap();
+        assert_eq!(casting_pos.x, 0.0, "casting player didn't move");
+        let casting_speed = app.world().entity(casting_player).get::<MovementSpeed>().unwrap();
+        assert_eq!(casting_speed.0, 0.0, "casting speed is zero");
+
+        // Cast-while-moving caster: moved normally
+        let cwm_pos = app.world().entity(cwm_player).get::<Position>().unwrap();
+        assert!(cwm_pos.x > 0.0, "cast-while-moving player moved");
     }
 
     #[test]
