@@ -397,11 +397,18 @@ fn apply_movement_input(
         DEFAULT_WALK_SPEED
     };
     let multiplier = auras.map_or(1.0, |a| a.movement_speed_multiplier());
-    speed.0 = base_speed * multiplier;
     let dir_len = direction_length(&input.direction);
     if dir_len < 0.001 {
+        speed.0 = base_speed * multiplier;
         return;
     }
+    let backpedal = is_backpedaling(input.facing_yaw, &input.direction, dir_len);
+    let backpedal_mult = if backpedal {
+        shared::movement::BACKPEDAL_MULTIPLIER
+    } else {
+        1.0
+    };
+    speed.0 = base_speed * multiplier * backpedal_mult;
     let scale = speed.0 * time.delta_secs() / dir_len;
     let new_x = pos.x + input.direction[0] * scale;
     let new_y = pos.y + input.direction[1] * scale;
@@ -411,6 +418,14 @@ fn apply_movement_input(
     pos.x = new_x;
     pos.y = new_y;
     pos.z += input.direction[2] * scale;
+}
+
+/// Check if movement direction is opposite to facing (backpedaling).
+fn is_backpedaling(facing_yaw: f32, direction: &[f32; 3], dir_len: f32) -> bool {
+    let face_x = facing_yaw.cos();
+    let face_y = facing_yaw.sin();
+    let dot = (direction[0] * face_x + direction[1] * face_y) / dir_len;
+    dot < -0.5 // More than 120° from facing
 }
 
 /// Reject movement if distance exceeds max speed with tolerance.
@@ -1008,6 +1023,62 @@ mod tests {
             (speed.0 - expected).abs() < 1e-5,
             "partial counter: speed {}, expected {expected}",
             speed.0,
+        );
+    }
+
+    #[test]
+    fn backward_movement_at_reduced_speed() {
+        let mut app = setup_app_with_time();
+        let fwd_player = spawn_player(app.world_mut(), 0.0, 0.0, 0.0);
+        let bwd_player = spawn_player(app.world_mut(), 0.0, 0.0, 0.0);
+
+        // Facing yaw=0 → forward is +X. Moving -X = backward.
+        let fwd_input = PlayerInput {
+            direction: [1.0, 0.0, 0.0],
+            facing_yaw: 0.0,
+            jumping: false,
+            running: true,
+            swimming: false,
+        };
+        let bwd_input = PlayerInput {
+            direction: [-1.0, 0.0, 0.0],
+            facing_yaw: 0.0,
+            jumping: false,
+            running: true,
+            swimming: false,
+        };
+
+        let _ = app.world_mut().run_system_once(
+            move |mut q: Query<PlayerMovement, With<Player>>,
+                  time: Res<Time>| {
+                apply_movement_input(&fwd_input, fwd_player, &mut q, &time);
+                apply_movement_input(&bwd_input, bwd_player, &mut q, &time);
+            },
+        );
+
+        let fwd_speed = app.world().entity(fwd_player).get::<MovementSpeed>().unwrap().0;
+        let bwd_speed = app.world().entity(bwd_player).get::<MovementSpeed>().unwrap().0;
+        let expected_bwd = DEFAULT_RUN_SPEED * shared::movement::BACKPEDAL_MULTIPLIER;
+
+        assert!(
+            (fwd_speed - DEFAULT_RUN_SPEED).abs() < 1e-5,
+            "forward at full speed: {fwd_speed}",
+        );
+        assert!(
+            (bwd_speed - expected_bwd).abs() < 1e-5,
+            "backward at 60%: {bwd_speed}, expected {expected_bwd}",
+        );
+
+        let fwd_pos = app.world().entity(fwd_player).get::<Position>().unwrap().x;
+        let bwd_pos = app.world().entity(bwd_player).get::<Position>().unwrap().x;
+        // Forward moved +X, backward moved -X at 60% distance
+        assert!(fwd_pos > 0.0);
+        assert!(bwd_pos < 0.0);
+        assert!(
+            (bwd_pos.abs() - fwd_pos * 0.6).abs() < 1e-5,
+            "backward distance {} vs forward {} * 0.6",
+            bwd_pos.abs(),
+            fwd_pos,
         );
     }
 

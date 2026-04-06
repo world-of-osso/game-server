@@ -18,6 +18,9 @@ pub const WALK_SPEED: f32 = 2.5;
 /// Swim speed in yards/sec (67.5% of run speed, WoW default).
 pub const SWIM_SPEED: f32 = 4.7222;
 
+/// Backward movement speed multiplier (WoW: ~60% of forward).
+pub const BACKPEDAL_MULTIPLIER: f32 = 0.6;
+
 /// Jump impulse velocity in yards/sec.
 pub const JUMP_IMPULSE: f32 = 9.0;
 
