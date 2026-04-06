@@ -1083,6 +1083,46 @@ mod tests {
     }
 
     #[test]
+    fn strafing_speed_matches_forward_speed() {
+        let mut app = setup_app_with_time();
+        let fwd_player = spawn_player(app.world_mut(), 0.0, 0.0, 0.0);
+        let strafe_player = spawn_player(app.world_mut(), 0.0, 0.0, 0.0);
+
+        // Facing yaw=0 → forward is +X. Strafe is +Y (perpendicular).
+        let fwd_input = make_input(1.0, 0.0, 0.0);
+        let strafe_input = PlayerInput {
+            direction: [0.0, 1.0, 0.0],
+            facing_yaw: 0.0,
+            jumping: false,
+            running: true,
+            swimming: false,
+        };
+
+        let _ = app.world_mut().run_system_once(
+            move |mut q: Query<PlayerMovement, With<Player>>,
+                  time: Res<Time>| {
+                apply_movement_input(&fwd_input, fwd_player, &mut q, &time);
+                apply_movement_input(&strafe_input, strafe_player, &mut q, &time);
+            },
+        );
+
+        let fwd_speed = app.world().entity(fwd_player).get::<MovementSpeed>().unwrap().0;
+        let strafe_speed = app.world().entity(strafe_player).get::<MovementSpeed>().unwrap().0;
+        assert!(
+            (fwd_speed - strafe_speed).abs() < 1e-5,
+            "strafe {strafe_speed} should match forward {fwd_speed}",
+        );
+
+        // Distance traveled should be the same
+        let fwd_dist = app.world().entity(fwd_player).get::<Position>().unwrap().x;
+        let strafe_dist = app.world().entity(strafe_player).get::<Position>().unwrap().y;
+        assert!(
+            (fwd_dist - strafe_dist).abs() < 1e-5,
+            "strafe distance {strafe_dist} should match forward {fwd_dist}",
+        );
+    }
+
+    #[test]
     fn swim_speed_differs_from_ground_speed() {
         let mut app = setup_app_with_time();
         let player = spawn_player(app.world_mut(), 0.0, 0.0, 0.0);
