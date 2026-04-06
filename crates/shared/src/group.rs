@@ -238,6 +238,71 @@ impl Raid {
     }
 }
 
+// --- Ready check ---
+
+/// Timeout for a ready check (seconds).
+const READY_CHECK_TIMEOUT: f32 = 30.0;
+
+/// A player's response to a ready check.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ReadyResponse {
+    Ready,
+    NotReady,
+    /// No response yet.
+    Pending,
+}
+
+/// An active ready check initiated by the group leader.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ReadyCheck {
+    pub responses: Vec<(u64, ReadyResponse)>,
+    pub time_remaining: f32,
+}
+
+impl ReadyCheck {
+    /// Start a ready check for the given members.
+    pub fn new(members: &[u64]) -> Self {
+        Self {
+            responses: members.iter().map(|&m| (m, ReadyResponse::Pending)).collect(),
+            time_remaining: READY_CHECK_TIMEOUT,
+        }
+    }
+
+    /// Record a player's response. Returns `false` if player not in the check.
+    pub fn respond(&mut self, player: u64, response: ReadyResponse) -> bool {
+        if let Some(entry) = self.responses.iter_mut().find(|(m, _)| *m == player) {
+            entry.1 = response;
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Tick the timer. Returns `true` if timed out.
+    pub fn tick(&mut self, dt: f32) -> bool {
+        self.time_remaining -= dt;
+        self.time_remaining <= 0.0
+    }
+
+    /// Whether all members have responded (no Pending left).
+    pub fn all_responded(&self) -> bool {
+        self.responses.iter().all(|(_, r)| *r != ReadyResponse::Pending)
+    }
+
+    /// Whether everyone responded Ready.
+    pub fn all_ready(&self) -> bool {
+        self.responses.iter().all(|(_, r)| *r == ReadyResponse::Ready)
+    }
+
+    /// Count of pending / ready / not-ready.
+    pub fn counts(&self) -> (usize, usize, usize) {
+        let pending = self.responses.iter().filter(|(_, r)| *r == ReadyResponse::Pending).count();
+        let ready = self.responses.iter().filter(|(_, r)| *r == ReadyResponse::Ready).count();
+        let not_ready = self.responses.iter().filter(|(_, r)| *r == ReadyResponse::NotReady).count();
+        (pending, ready, not_ready)
+    }
+}
+
 // --- Group XP sharing ---
 
 use crate::xp::{self, GroupMemberXp};
@@ -529,6 +594,53 @@ mod tests {
         let party = Party::new(1);
         let mut raid = Raid::from_party(&party);
         assert_eq!(raid.add_member(1), Err(PartyError::AlreadyMember));
+    }
+
+    // --- Ready check tests ---
+
+    #[test]
+    fn ready_check_all_ready() {
+        let mut check = ReadyCheck::new(&[1, 2, 3]);
+        assert!(!check.all_responded());
+        check.respond(1, ReadyResponse::Ready);
+        check.respond(2, ReadyResponse::Ready);
+        check.respond(3, ReadyResponse::Ready);
+        assert!(check.all_responded());
+        assert!(check.all_ready());
+    }
+
+    #[test]
+    fn ready_check_not_ready() {
+        let mut check = ReadyCheck::new(&[1, 2]);
+        check.respond(1, ReadyResponse::Ready);
+        check.respond(2, ReadyResponse::NotReady);
+        assert!(check.all_responded());
+        assert!(!check.all_ready());
+    }
+
+    #[test]
+    fn ready_check_timeout() {
+        let mut check = ReadyCheck::new(&[1, 2]);
+        check.respond(1, ReadyResponse::Ready);
+        assert!(!check.tick(20.0));
+        assert!(check.tick(15.0)); // 35s > 30s timeout
+    }
+
+    #[test]
+    fn ready_check_counts() {
+        let mut check = ReadyCheck::new(&[1, 2, 3, 4]);
+        check.respond(1, ReadyResponse::Ready);
+        check.respond(2, ReadyResponse::NotReady);
+        let (pending, ready, not_ready) = check.counts();
+        assert_eq!(pending, 2);
+        assert_eq!(ready, 1);
+        assert_eq!(not_ready, 1);
+    }
+
+    #[test]
+    fn ready_check_unknown_player() {
+        let mut check = ReadyCheck::new(&[1, 2]);
+        assert!(!check.respond(99, ReadyResponse::Ready));
     }
 
     // --- Group loot integration tests ---
