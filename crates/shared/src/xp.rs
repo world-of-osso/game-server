@@ -164,13 +164,27 @@ pub const MAX_LEVEL: u8 = 80;
 
 /// XP required to level up from `level` to `level + 1`.
 ///
-/// Approximation of WoW's XP curve: `100 * level * (level + 5)`.
-/// Ref: AzerothCore XP table in `player_xp_for_level`.
+/// Source: AzerothCore `player_xp_for_level` table (WotLK 3.3.5a).
+/// Index 0 = level 1→2, index 78 = level 79→80.
+const XP_TABLE: [u32; 79] = [
+    400,     900,     1400,    2100,    2800,    3600,    4500,    5400,    6500,    7600,    //  1-10
+    8700,    9800,    11000,   12300,   13600,   15000,   16400,   17800,   19300,   20800,   // 11-20
+    22400,   24000,   25500,   27200,   28900,   30500,   32200,   33900,   36300,   38800,   // 21-30
+    41600,   44600,   48000,   51400,   55000,   58700,   62400,   66200,   70200,   74300,   // 31-40
+    78500,   82800,   87100,   91600,   96300,   101000,  105800,  110700,  115700,  120900,  // 41-50
+    126100,  131500,  137000,  142500,  148200,  154000,  159900,  165800,  172000,  290000,  // 51-60
+    317000,  349000,  386000,  428000,  475000,  527000,  585000,  648000,  717000,  1523800, // 61-70
+    1539600, 1555700, 1571800, 1587900, 1604200, 1620700, 1637400, 1653900, 1670800,         // 71-79
+];
+
+/// XP required to level up from `level` to `level + 1`.
+///
+/// Returns 0 for level 0 or at/above max level.
 pub fn xp_to_level(level: u8) -> u32 {
     if level == 0 || level >= MAX_LEVEL {
         return 0;
     }
-    100 * level as u32 * (level as u32 + 5)
+    XP_TABLE[(level - 1) as usize]
 }
 
 /// Player XP tracking state.
@@ -487,7 +501,7 @@ mod tests {
 
     #[test]
     fn xp_to_level_1() {
-        assert_eq!(xp_to_level(1), 600); // 100 * 1 * 6
+        assert_eq!(xp_to_level(1), 400); // AzerothCore table
     }
 
     #[test]
@@ -496,9 +510,31 @@ mod tests {
     }
 
     #[test]
+    fn xp_curve_key_values() {
+        // Verify specific AzerothCore table values
+        assert_eq!(xp_to_level(10), 7600);
+        assert_eq!(xp_to_level(20), 20800);
+        assert_eq!(xp_to_level(40), 74300);
+        assert_eq!(xp_to_level(60), 290000);   // TBC jump
+        assert_eq!(xp_to_level(70), 1523800);  // WotLK jump
+        assert_eq!(xp_to_level(79), 1670800);
+    }
+
+    #[test]
+    fn xp_curve_monotonically_increasing() {
+        for level in 1..79u8 {
+            assert!(
+                xp_to_level(level + 1) >= xp_to_level(level),
+                "XP should increase: L{} ({}) < L{} ({})",
+                level, xp_to_level(level), level + 1, xp_to_level(level + 1)
+            );
+        }
+    }
+
+    #[test]
     fn level_up_single() {
         let mut xp = PlayerXp::new(1);
-        let result = xp.add_xp(600); // exactly enough for L1→L2
+        let result = xp.add_xp(400); // exactly L1→L2
         assert_eq!(result, XpGainResult::LeveledUp { new_level: 2 });
         assert_eq!(xp.level, 2);
         assert_eq!(xp.current_xp, 0);
@@ -507,7 +543,7 @@ mod tests {
     #[test]
     fn level_up_with_overflow() {
         let mut xp = PlayerXp::new(1);
-        let result = xp.add_xp(700); // 600 needed, 100 overflow
+        let result = xp.add_xp(500); // 400 needed, 100 overflow
         assert_eq!(result, XpGainResult::LeveledUp { new_level: 2 });
         assert_eq!(xp.current_xp, 100);
     }
@@ -515,8 +551,8 @@ mod tests {
     #[test]
     fn level_up_multiple() {
         let mut xp = PlayerXp::new(1);
-        // L1→2: 600, L2→3: 1400, total = 2000
-        let result = xp.add_xp(2000);
+        // L1→2: 400, L2→3: 900, total = 1300
+        let result = xp.add_xp(1300);
         assert_eq!(result, XpGainResult::LeveledUp { new_level: 3 });
         assert_eq!(xp.level, 3);
         assert_eq!(xp.current_xp, 0);
@@ -542,7 +578,7 @@ mod tests {
     #[test]
     fn level_up_caps_at_max() {
         let mut xp = PlayerXp::new(79);
-        let result = xp.add_xp(999999);
+        let result = xp.add_xp(2000000); // L79→80 needs 1670800
         assert_eq!(result, XpGainResult::LeveledUp { new_level: 80 });
         assert_eq!(xp.current_xp, 0);
     }
@@ -550,8 +586,8 @@ mod tests {
     #[test]
     fn progress_fraction() {
         let mut xp = PlayerXp::new(1);
-        xp.current_xp = 300;
-        assert!((xp.progress() - 0.5).abs() < 0.01); // 300/600
+        xp.current_xp = 200;
+        assert!((xp.progress() - 0.5).abs() < 0.01); // 200/400
     }
 
     #[test]
