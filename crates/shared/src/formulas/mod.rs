@@ -445,6 +445,54 @@ mod tests {
         assert_eq!(mana_from_intellect(0.0, 80), 0.0);
     }
 
+    // --- Cross-checks against AzerothCore SQL (player_class_stats) ---
+    // Source: ~/Repos/azerothcore/data/sql/base/db_world/player_class_stats.sql
+    // Formula ref: AzerothCore src/server/game/Entities/Unit/StatSystem.cpp
+    //   GetHealthBonusFromStamina: first 20 stam = 1 HP, above 20 = 10 HP each
+    //   GetManaBonusFromIntellect: first 20 int = 1 mana, above 20 = 15 mana each
+
+    #[test]
+    fn crosscheck_warrior_80_hp() {
+        // AzerothCore player_class_stats: class=1, level=80, basehp=8121
+        // Warrior has no base mana.
+        assert_eq!(base_hp(1, 80), Some(8121));
+        assert_eq!(base_mana(1, 80), None);
+
+        // With 100 stamina at L80 (retail model): 100 * 20 = 2000
+        // Total: 8121 + 2000 = 10121
+        assert_eq!(max_health(1, 80, 100.0), Some(10121.0));
+    }
+
+    #[test]
+    fn crosscheck_mage_70_hp_mana() {
+        // AzerothCore player_class_stats: class=8, level=70, basehp=3393, basemana=2241
+        assert_eq!(base_hp(8, 70), Some(3393));
+        assert_eq!(base_mana(8, 70), Some(2241));
+
+        // With 50 stamina at L70 (retail model): 50 * 20 = 1000
+        // Total HP: 3393 + 1000 = 4393
+        assert_eq!(max_health(8, 70, 50.0), Some(4393.0));
+
+        // With 150 intellect at L70 (retail model): 150 * 20 = 3000
+        // Total mana: 2241 + 3000 = 5241
+        assert_eq!(max_mana(8, 70, 150.0), Some(5241.0));
+    }
+
+    #[test]
+    fn crosscheck_paladin_1_hp_mana() {
+        // AzerothCore player_class_stats: class=2, level=1, basehp=28, basemana=60
+        assert_eq!(base_hp(2, 1), Some(28));
+        assert_eq!(base_mana(2, 1), Some(60));
+
+        // With 25 stamina at L1 (WotLK model): 20*1 + 5*10 = 70
+        // Total HP: 28 + 70 = 98
+        assert_eq!(max_health(2, 1, 25.0), Some(98.0));
+
+        // With 25 intellect at L1 (WotLK model): 20*1 + 5*15 = 95
+        // Total mana: 60 + 95 = 155
+        assert_eq!(max_mana(2, 1, 25.0), Some(155.0));
+    }
+
     // --- Equipment stat aggregation tests ---
 
     #[test]
