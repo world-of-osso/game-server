@@ -1185,6 +1185,67 @@ mod tests {
     }
 
     #[test]
+    fn root_expires_movement_resumes() {
+        use shared::aura::{Aura, AuraEffect};
+
+        let mut app = setup_app_with_time();
+        let player = spawn_player(app.world_mut(), 0.0, 0.0, 0.0);
+
+        // Apply root
+        let root = Aura {
+            spell_id: 1,
+            caster: 99,
+            duration: 10.0,
+            remaining: 10.0,
+            effects: [
+                Some(AuraEffect::ModMovementSpeed { percent: -1.0 }),
+                None,
+                None,
+            ],
+            ..Default::default()
+        };
+        {
+            let mut entity = app.world_mut().entity_mut(player);
+            let mut auras = entity.get_mut::<Auras>().unwrap();
+            auras.apply(root);
+        }
+
+        // Tick while rooted — no movement
+        let input = make_input(1.0, 0.0, 0.0);
+        let _ = app.world_mut().run_system_once(
+            move |mut q: Query<PlayerMovement, With<Player>>,
+                  time: Res<Time>| {
+                apply_movement_input(&input, player, &mut q, &time);
+            },
+        );
+        assert_eq!(app.world().entity(player).get::<Position>().unwrap().x, 0.0);
+        assert_eq!(app.world().entity(player).get::<MovementSpeed>().unwrap().0, 0.0);
+
+        // Root expires (remove aura)
+        {
+            let mut entity = app.world_mut().entity_mut(player);
+            let mut auras = entity.get_mut::<Auras>().unwrap();
+            auras.active.clear();
+        }
+
+        // Next tick — movement resumes at full run speed
+        let input2 = make_input(1.0, 0.0, 0.0);
+        let _ = app.world_mut().run_system_once(
+            move |mut q: Query<PlayerMovement, With<Player>>,
+                  time: Res<Time>| {
+                apply_movement_input(&input2, player, &mut q, &time);
+            },
+        );
+        let speed = app.world().entity(player).get::<MovementSpeed>().unwrap().0;
+        let pos = app.world().entity(player).get::<Position>().unwrap().x;
+        assert!(
+            (speed - DEFAULT_RUN_SPEED).abs() < 1e-5,
+            "speed restored: {speed}",
+        );
+        assert!(pos > 0.0, "player moved after root expired");
+    }
+
+    #[test]
     fn swim_speed_differs_from_ground_speed() {
         let mut app = setup_app_with_time();
         let player = spawn_player(app.world_mut(), 0.0, 0.0, 0.0);
