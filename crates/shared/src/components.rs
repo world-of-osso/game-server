@@ -1093,6 +1093,100 @@ impl Class {
     }
 }
 
+/// Combat role a specialization fills.
+#[derive(
+    Reflect, Serialize, Deserialize, bitcode::Encode, bitcode::Decode,
+    Debug, Clone, Copy, PartialEq, Eq, Hash,
+)]
+pub enum Role {
+    Tank,
+    Healer,
+    MeleeDps,
+    RangedDps,
+}
+
+/// Player specialization. Each class has 2–4 specs that determine abilities,
+/// passive bonuses, and role (tank/healer/DPS).
+///
+/// IDs match WoW's `ChrSpecialization.dbc` where practical.
+#[derive(
+    Reflect, Serialize, Deserialize, bitcode::Encode, bitcode::Decode,
+    Debug, Clone, Copy, PartialEq, Eq, Hash,
+)]
+pub struct Specialization {
+    pub id: u32,
+    pub name: &'static str,
+    pub class: Class,
+    pub role: Role,
+}
+
+/// All specializations, indexed by spec ID.
+/// Ref: WoW `ChrSpecialization.dbc` IDs.
+pub const SPECIALIZATIONS: &[Specialization] = &[
+    // Warrior
+    Specialization { id: 71,  name: "Arms",         class: Class::Warrior,      role: Role::MeleeDps },
+    Specialization { id: 72,  name: "Fury",         class: Class::Warrior,      role: Role::MeleeDps },
+    Specialization { id: 73,  name: "Protection",   class: Class::Warrior,      role: Role::Tank },
+    // Paladin
+    Specialization { id: 65,  name: "Holy",         class: Class::Paladin,      role: Role::Healer },
+    Specialization { id: 66,  name: "Protection",   class: Class::Paladin,      role: Role::Tank },
+    Specialization { id: 70,  name: "Retribution",  class: Class::Paladin,      role: Role::MeleeDps },
+    // Hunter
+    Specialization { id: 253, name: "Beast Mastery", class: Class::Hunter,      role: Role::RangedDps },
+    Specialization { id: 254, name: "Marksmanship", class: Class::Hunter,       role: Role::RangedDps },
+    Specialization { id: 255, name: "Survival",     class: Class::Hunter,       role: Role::MeleeDps },
+    // Rogue
+    Specialization { id: 259, name: "Assassination", class: Class::Rogue,       role: Role::MeleeDps },
+    Specialization { id: 260, name: "Outlaw",       class: Class::Rogue,        role: Role::MeleeDps },
+    Specialization { id: 261, name: "Subtlety",     class: Class::Rogue,        role: Role::MeleeDps },
+    // Priest
+    Specialization { id: 256, name: "Discipline",   class: Class::Priest,       role: Role::Healer },
+    Specialization { id: 257, name: "Holy",         class: Class::Priest,       role: Role::Healer },
+    Specialization { id: 258, name: "Shadow",       class: Class::Priest,       role: Role::RangedDps },
+    // Death Knight
+    Specialization { id: 250, name: "Blood",        class: Class::DeathKnight,  role: Role::Tank },
+    Specialization { id: 251, name: "Frost",        class: Class::DeathKnight,  role: Role::MeleeDps },
+    Specialization { id: 252, name: "Unholy",       class: Class::DeathKnight,  role: Role::MeleeDps },
+    // Shaman
+    Specialization { id: 262, name: "Elemental",    class: Class::Shaman,       role: Role::RangedDps },
+    Specialization { id: 263, name: "Enhancement",  class: Class::Shaman,       role: Role::MeleeDps },
+    Specialization { id: 264, name: "Restoration",  class: Class::Shaman,       role: Role::Healer },
+    // Mage
+    Specialization { id: 62,  name: "Arcane",       class: Class::Mage,         role: Role::RangedDps },
+    Specialization { id: 63,  name: "Fire",         class: Class::Mage,         role: Role::RangedDps },
+    Specialization { id: 64,  name: "Frost",        class: Class::Mage,         role: Role::RangedDps },
+    // Warlock
+    Specialization { id: 265, name: "Affliction",   class: Class::Warlock,      role: Role::RangedDps },
+    Specialization { id: 266, name: "Demonology",   class: Class::Warlock,      role: Role::RangedDps },
+    Specialization { id: 267, name: "Destruction",  class: Class::Warlock,      role: Role::RangedDps },
+    // Monk
+    Specialization { id: 268, name: "Brewmaster",   class: Class::Monk,         role: Role::Tank },
+    Specialization { id: 270, name: "Mistweaver",   class: Class::Monk,         role: Role::Healer },
+    Specialization { id: 269, name: "Windwalker",   class: Class::Monk,         role: Role::MeleeDps },
+    // Druid
+    Specialization { id: 102, name: "Balance",      class: Class::Druid,        role: Role::RangedDps },
+    Specialization { id: 103, name: "Feral",        class: Class::Druid,        role: Role::MeleeDps },
+    Specialization { id: 104, name: "Guardian",     class: Class::Druid,        role: Role::Tank },
+    Specialization { id: 105, name: "Restoration",  class: Class::Druid,        role: Role::Healer },
+    // Demon Hunter
+    Specialization { id: 577, name: "Havoc",        class: Class::DemonHunter,  role: Role::MeleeDps },
+    Specialization { id: 581, name: "Vengeance",    class: Class::DemonHunter,  role: Role::Tank },
+    // Evoker
+    Specialization { id: 1467, name: "Devastation", class: Class::Evoker,       role: Role::RangedDps },
+    Specialization { id: 1468, name: "Preservation", class: Class::Evoker,      role: Role::Healer },
+    Specialization { id: 1473, name: "Augmentation", class: Class::Evoker,      role: Role::RangedDps },
+];
+
+/// Look up a specialization by its ID.
+pub fn spec_by_id(id: u32) -> Option<&'static Specialization> {
+    SPECIALIZATIONS.iter().find(|s| s.id == id)
+}
+
+/// Get all specializations for a given class.
+pub fn specs_for_class(class: Class) -> Vec<&'static Specialization> {
+    SPECIALIZATIONS.iter().filter(|s| s.class == class).collect()
+}
+
 // --- Threat system ---
 
 /// Seconds of no combat activity before leaving combat.
@@ -2068,6 +2162,84 @@ mod tests {
         auras.tick_proc_cooldowns(3.0);
         let icd = auras.active[0].proc_def.as_ref().unwrap().icd_remaining;
         assert!((icd - 7.0).abs() < 0.01);
+    }
+
+    // --- Specialization tests ---
+
+    #[test]
+    fn spec_total_count() {
+        assert_eq!(SPECIALIZATIONS.len(), 39);
+    }
+
+    #[test]
+    fn spec_by_id_known() {
+        let arms = spec_by_id(71).unwrap();
+        assert_eq!(arms.name, "Arms");
+        assert_eq!(arms.class, Class::Warrior);
+        assert_eq!(arms.role, Role::MeleeDps);
+    }
+
+    #[test]
+    fn spec_by_id_unknown() {
+        assert!(spec_by_id(9999).is_none());
+    }
+
+    #[test]
+    fn specs_for_warrior() {
+        let specs = specs_for_class(Class::Warrior);
+        assert_eq!(specs.len(), 3);
+        let names: Vec<&str> = specs.iter().map(|s| s.name).collect();
+        assert!(names.contains(&"Arms"));
+        assert!(names.contains(&"Fury"));
+        assert!(names.contains(&"Protection"));
+    }
+
+    #[test]
+    fn specs_for_druid_has_4() {
+        let specs = specs_for_class(Class::Druid);
+        assert_eq!(specs.len(), 4);
+    }
+
+    #[test]
+    fn specs_for_demon_hunter_has_2() {
+        let specs = specs_for_class(Class::DemonHunter);
+        assert_eq!(specs.len(), 2);
+    }
+
+    #[test]
+    fn every_class_has_specs() {
+        for id in 1..=13 {
+            if let Some(class) = Class::from_id(id) {
+                let specs = specs_for_class(class);
+                assert!(
+                    specs.len() >= 2,
+                    "{class:?} has {} specs, expected >= 2",
+                    specs.len()
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn all_spec_ids_unique() {
+        let mut ids: Vec<u32> = SPECIALIZATIONS.iter().map(|s| s.id).collect();
+        ids.sort();
+        ids.dedup();
+        assert_eq!(ids.len(), SPECIALIZATIONS.len());
+    }
+
+    #[test]
+    fn tank_specs_exist() {
+        let tanks: Vec<_> = SPECIALIZATIONS.iter().filter(|s| s.role == Role::Tank).collect();
+        // Protection Warrior, Protection Paladin, Blood DK, Brewmaster, Guardian, Vengeance
+        assert_eq!(tanks.len(), 6);
+    }
+
+    #[test]
+    fn healer_specs_exist() {
+        let healers: Vec<_> = SPECIALIZATIONS.iter().filter(|s| s.role == Role::Healer).collect();
+        // Holy Paladin, Disc, Holy Priest, Resto Shaman, Mistweaver, Resto Druid, Preservation
+        assert_eq!(healers.len(), 7);
     }
 
     // --- Resource pool tests ---
