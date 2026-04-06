@@ -1594,6 +1594,108 @@ impl SpellCooldowns {
     }
 }
 
+// --- Charge-based abilities ---
+
+/// A charge-based ability with individual recharge timers.
+///
+/// Some spells have 2+ charges (e.g. Roll has 2, Fire Blast has 3 with talent).
+/// Using the ability consumes a charge. Charges recharge individually on a timer.
+/// The ability is usable as long as `charges > 0`.
+///
+/// Ref: AzerothCore `SpellHistory::HandleCooldowns()` charge handling.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct ChargeEntry {
+    pub spell_id: u32,
+    /// Current available charges.
+    pub charges: u8,
+    /// Maximum charges.
+    pub max_charges: u8,
+    /// Recharge time per charge in seconds.
+    pub recharge_time: f32,
+    /// Time accumulated toward the next charge (ticks up to recharge_time).
+    pub recharge_timer: f32,
+}
+
+impl ChargeEntry {
+    pub fn new(spell_id: u32, max_charges: u8, recharge_time: f32) -> Self {
+        Self {
+            spell_id,
+            charges: max_charges,
+            max_charges,
+            recharge_time,
+            recharge_timer: 0.0,
+        }
+    }
+
+    /// Use one charge. Returns `true` if a charge was available.
+    pub fn use_charge(&mut self) -> bool {
+        if self.charges == 0 {
+            return false;
+        }
+        self.charges -= 1;
+        // Start recharging if we just went below max
+        if self.charges < self.max_charges && self.recharge_timer == 0.0 {
+            self.recharge_timer = 0.0; // timer starts from 0
+        }
+        true
+    }
+
+    /// Tick the recharge timer. Restores charges as timers complete.
+    pub fn tick(&mut self, dt: f32) {
+        if self.charges >= self.max_charges {
+            self.recharge_timer = 0.0;
+            return;
+        }
+        self.recharge_timer += dt;
+        while self.recharge_timer >= self.recharge_time && self.charges < self.max_charges {
+            self.recharge_timer -= self.recharge_time;
+            self.charges += 1;
+        }
+        // If fully recharged, reset timer
+        if self.charges >= self.max_charges {
+            self.recharge_timer = 0.0;
+        }
+    }
+
+    /// Whether the ability can be used (has charges available).
+    pub fn available(&self) -> bool {
+        self.charges > 0
+    }
+}
+
+/// Component tracking all charge-based abilities on an entity.
+#[derive(Component, Debug, Clone, Default)]
+pub struct SpellCharges {
+    entries: Vec<ChargeEntry>,
+}
+
+impl SpellCharges {
+    /// Register a charge-based ability.
+    pub fn add(&mut self, entry: ChargeEntry) {
+        self.entries.push(entry);
+    }
+
+    /// Get a charge entry by spell ID.
+    pub fn get(&self, spell_id: u32) -> Option<&ChargeEntry> {
+        self.entries.iter().find(|e| e.spell_id == spell_id)
+    }
+
+    /// Use a charge of a spell. Returns `true` if successful.
+    pub fn use_charge(&mut self, spell_id: u32) -> bool {
+        self.entries
+            .iter_mut()
+            .find(|e| e.spell_id == spell_id)
+            .is_some_and(|e| e.use_charge())
+    }
+
+    /// Tick all recharge timers.
+    pub fn tick(&mut self, dt: f32) {
+        for entry in &mut self.entries {
+            entry.tick(dt);
+        }
+    }
+}
+
 // --- Spell batching ---
 
 /// A queued spell cast awaiting batch processing.
@@ -3059,6 +3161,88 @@ mod tests {
         cds.tick(5.0); // 5s left
         cds.start(133, 10.0); // restart
         assert!((cds.remaining(133) - 10.0).abs() < 0.001);
+    }
+
+    // --- Charge-based ability tests ---
+
+    #[test]
+    fn charge_starts_full() {
+        let entry = ChargeEntry::new(100, 2, 15.0);
+        assert_eq!(entry.charges, 2);
+        assert!(entry.available());
+    }
+
+    #[test]
+    fn charge_use_depletes() {
+        let mut entry = ChargeEntry::new(100, 2, 15.0);
+        assert!(entry.use_charge());
+        assert_eq!(entry.charges, 1);
+        assert!(entry.use_charge());
+        assert_eq!(entry.charges, 0);
+        assert!(!entry.available());
+        assert!(!entry.use_charge()); // no charges left
+    }
+
+    #[test]
+    fn charge_recharges_over_time() {
+        let mut entry = ChargeEntry::new(100, 2, 10.0);
+        entry.use_charge();
+        entry.use_charge();
+        assert_eq!(entry.charges, 0);
+
+        entry.tick(10.5); // one recharge
+        assert_eq!(entry.charges, 1);
+
+        entry.tick(10.0); // second recharge
+        assert_eq!(entry.charges, 2);
+    }
+
+    #[test]
+    fn charge_recharge_stops_at_max() {
+        let mut entry = ChargeEntry::new(100, 2, 10.0);
+        entry.use_charge(); // 1 charge left
+        entry.tick(15.0); // would recharge more than needed
+        assert_eq!(entry.charges, 2);
+        assert_eq!(entry.recharge_timer, 0.0);
+    }
+
+    #[test]
+    fn charge_partial_recharge_preserved() {
+        let mut entry = ChargeEntry::new(100, 3, 10.0);
+        entry.use_charge();
+        entry.use_charge(); // 1 charge left, 2 recharging
+
+        entry.tick(5.0); // halfway to first recharge
+        assert_eq!(entry.charges, 1);
+        assert!((entry.recharge_timer - 5.0).abs() < 0.001);
+
+        entry.tick(6.0); // 11s total → 1 recharge, 1s into next
+        assert_eq!(entry.charges, 2);
+        assert!((entry.recharge_timer - 1.0).abs() < 0.001);
+    }
+
+    #[test]
+    fn spell_charges_component() {
+        let mut charges = SpellCharges::default();
+        charges.add(ChargeEntry::new(100, 2, 15.0));
+        charges.add(ChargeEntry::new(200, 3, 10.0));
+
+        assert!(charges.use_charge(100));
+        assert_eq!(charges.get(100).unwrap().charges, 1);
+        assert!(!charges.use_charge(999)); // unknown spell
+    }
+
+    #[test]
+    fn spell_charges_tick_all() {
+        let mut charges = SpellCharges::default();
+        charges.add(ChargeEntry::new(100, 2, 10.0));
+        charges.add(ChargeEntry::new(200, 2, 5.0));
+        charges.use_charge(100);
+        charges.use_charge(200);
+
+        charges.tick(5.5);
+        assert_eq!(charges.get(100).unwrap().charges, 1); // 10s recharge, halfway
+        assert_eq!(charges.get(200).unwrap().charges, 2); // 5s recharge, done
     }
 
     // --- Spell batching tests ---
