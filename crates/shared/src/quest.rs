@@ -267,6 +267,54 @@ impl QuestProgress {
     }
 }
 
+// --- Reward claiming ---
+
+/// Collected rewards from a quest turn-in.
+///
+/// The server uses this to apply XP, gold, items, and reputation to the player.
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct ClaimedRewards {
+    pub xp: u32,
+    pub gold: u32,
+    pub items: Vec<(u32, u16)>,
+    pub reputation: Vec<(u32, i32)>,
+}
+
+/// Process quest rewards on turn-in.
+///
+/// `choice_index` selects which reward choice the player picks (if any).
+/// Returns `None` if the choice index is invalid.
+pub fn claim_rewards(quest: &QuestData, choice_index: Option<usize>) -> Option<ClaimedRewards> {
+    // Validate choice if there are choices
+    if !quest.reward_choices.is_empty() {
+        let idx = choice_index?;
+        if idx >= quest.reward_choices.len() {
+            return None;
+        }
+    }
+
+    let mut result = ClaimedRewards::default();
+
+    for reward in &quest.rewards {
+        match *reward {
+            QuestReward::Xp(amount) => result.xp += amount,
+            QuestReward::Gold(amount) => result.gold += amount,
+            QuestReward::Item { item_id, count } => result.items.push((item_id, count)),
+            QuestReward::Reputation { faction_id, amount } => {
+                result.reputation.push((faction_id, amount));
+            }
+        }
+    }
+
+    if let Some(idx) = choice_index
+        && let Some(choice) = quest.reward_choices.get(idx)
+    {
+        result.items.push((choice.item_id, choice.count));
+    }
+
+    Some(result)
+}
+
 // --- Per-player quest log ---
 
 /// Maximum number of active (non-turned-in) quests a player can hold.
@@ -593,6 +641,68 @@ mod tests {
         let mut progress = QuestProgress::new(&q);
         progress.update_state();
         assert_eq!(progress.state, QuestState::Complete);
+    }
+
+    // --- Reward claiming tests ---
+
+    #[test]
+    fn claim_rewards_basic() {
+        let q = sample_quest(); // rewards: Xp(1500), Gold(350), choices: 2 items
+        let rewards = claim_rewards(&q, Some(0)).unwrap();
+        assert_eq!(rewards.xp, 1500);
+        assert_eq!(rewards.gold, 350);
+        assert_eq!(rewards.items.len(), 1); // chosen item
+        assert_eq!(rewards.items[0].0, 2041);
+    }
+
+    #[test]
+    fn claim_rewards_second_choice() {
+        let q = sample_quest();
+        let rewards = claim_rewards(&q, Some(1)).unwrap();
+        assert_eq!(rewards.items[0].0, 2042);
+    }
+
+    #[test]
+    fn claim_rewards_invalid_choice() {
+        let q = sample_quest();
+        assert!(claim_rewards(&q, Some(5)).is_none()); // out of range
+    }
+
+    #[test]
+    fn claim_rewards_no_choice_required() {
+        let q = second_quest(); // no reward_choices
+        let rewards = claim_rewards(&q, None).unwrap();
+        assert_eq!(rewards.xp, 800);
+        assert!(rewards.items.is_empty());
+    }
+
+    #[test]
+    fn claim_rewards_must_choose_when_choices_exist() {
+        let q = sample_quest(); // has reward_choices
+        assert!(claim_rewards(&q, None).is_none());
+    }
+
+    #[test]
+    fn claim_rewards_with_reputation() {
+        let mut q = second_quest();
+        q.rewards.push(QuestReward::Reputation {
+            faction_id: 72,
+            amount: 250,
+        });
+        let rewards = claim_rewards(&q, None).unwrap();
+        assert_eq!(rewards.reputation.len(), 1);
+        assert_eq!(rewards.reputation[0], (72, 250));
+    }
+
+    #[test]
+    fn claim_rewards_with_guaranteed_item() {
+        let mut q = second_quest();
+        q.rewards.push(QuestReward::Item {
+            item_id: 5000,
+            count: 3,
+        });
+        let rewards = claim_rewards(&q, None).unwrap();
+        assert_eq!(rewards.items, vec![(5000, 3)]);
     }
 
     // --- Quest log tests ---
