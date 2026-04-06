@@ -367,6 +367,72 @@ impl LootWindow {
     }
 }
 
+// --- AoE looting ---
+
+/// Default AoE loot radius in yards.
+pub const AOE_LOOT_RADIUS: f32 = 50.0;
+
+/// A nearby corpse eligible for AoE looting.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct LootableCorpse {
+    /// Entity bits of the corpse.
+    pub entity: u64,
+    /// Distance from the player in yards.
+    pub distance: f32,
+}
+
+/// Result of AoE looting: items and gold collected from multiple corpses.
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct AoeLootResult {
+    /// Items collected from all corpses.
+    pub items: Vec<LootDrop>,
+    /// Total gold collected in copper.
+    pub gold: u32,
+    /// Entity bits of corpses that were fully looted (for despawn).
+    pub fully_looted: Vec<u64>,
+}
+
+/// Perform AoE loot: collect all available items and gold from loot windows
+/// of nearby corpses within `radius`.
+///
+/// Each window is looted completely (all items + gold). Returns the
+/// aggregate result. Windows that become fully looted are tracked for
+/// corpse despawn.
+pub fn aoe_loot(
+    windows: &mut [(u64, &mut LootWindow)],
+    player_distances: &[(u64, f32)],
+    radius: f32,
+) -> AoeLootResult {
+    let mut result = AoeLootResult::default();
+
+    let in_range: Vec<u64> = player_distances
+        .iter()
+        .filter(|(_, dist)| *dist <= radius)
+        .map(|(entity, _)| *entity)
+        .collect();
+
+    for (entity, window) in windows {
+        if !in_range.contains(entity) {
+            continue;
+        }
+        // Loot all available items
+        for i in 0..window.slots.len() {
+            if let Some(drop) = window.loot_item(i) {
+                result.items.push(drop);
+            }
+        }
+        // Loot gold
+        if let Some(gold) = window.loot_gold() {
+            result.gold += gold;
+        }
+        if window.is_fully_looted() {
+            result.fully_looted.push(*entity);
+        }
+    }
+
+    result
+}
+
 /// Creature type for gold drop scaling.
 ///
 /// Ref: AzerothCore `creature_template.rank`.
@@ -600,6 +666,68 @@ mod tests {
     fn loot_item_out_of_bounds() {
         let mut window = LootWindow::generate(1, &LootTable::default(), &[], &[], &[], 0);
         assert!(window.loot_item(99).is_none());
+    }
+
+    // --- AoE loot tests ---
+
+    fn make_simple_window(entity: u64, item_id: u32, gold: u32) -> LootWindow {
+        let table = LootTable {
+            entries: vec![LootEntry {
+                item_id,
+                chance: 1.0,
+                min_count: 1,
+                max_count: 1,
+                entry_type: LootEntryType::Normal,
+            }],
+        };
+        LootWindow::generate(entity, &table, &[0.0], &[0.0], &[], gold)
+    }
+
+    #[test]
+    fn aoe_loot_collects_nearby() {
+        let mut w1 = make_simple_window(1, 100, 50);
+        let mut w2 = make_simple_window(2, 200, 30);
+        let mut windows: Vec<(u64, &mut LootWindow)> = vec![(1, &mut w1), (2, &mut w2)];
+        let distances = vec![(1, 10.0), (2, 20.0)];
+
+        let result = aoe_loot(&mut windows, &distances, AOE_LOOT_RADIUS);
+        assert_eq!(result.items.len(), 2);
+        assert_eq!(result.gold, 80);
+        assert_eq!(result.fully_looted.len(), 2);
+    }
+
+    #[test]
+    fn aoe_loot_skips_out_of_range() {
+        let mut w1 = make_simple_window(1, 100, 50);
+        let mut w2 = make_simple_window(2, 200, 30);
+        let mut windows: Vec<(u64, &mut LootWindow)> = vec![(1, &mut w1), (2, &mut w2)];
+        let distances = vec![(1, 10.0), (2, 100.0)]; // w2 out of range
+
+        let result = aoe_loot(&mut windows, &distances, AOE_LOOT_RADIUS);
+        assert_eq!(result.items.len(), 1);
+        assert_eq!(result.items[0].item_id, 100);
+        assert_eq!(result.gold, 50);
+        assert_eq!(result.fully_looted, vec![1]);
+    }
+
+    #[test]
+    fn aoe_loot_empty_no_corpses() {
+        let result = aoe_loot(&mut [], &[], AOE_LOOT_RADIUS);
+        assert!(result.items.is_empty());
+        assert_eq!(result.gold, 0);
+    }
+
+    #[test]
+    fn aoe_loot_already_looted_skipped() {
+        let mut w1 = make_simple_window(1, 100, 50);
+        w1.loot_item(0); // pre-loot the item
+        w1.loot_gold();
+        let mut windows: Vec<(u64, &mut LootWindow)> = vec![(1, &mut w1)];
+        let distances = vec![(1, 5.0)];
+
+        let result = aoe_loot(&mut windows, &distances, AOE_LOOT_RADIUS);
+        assert!(result.items.is_empty());
+        assert_eq!(result.gold, 0);
     }
 
     // --- Currency drop tests ---
