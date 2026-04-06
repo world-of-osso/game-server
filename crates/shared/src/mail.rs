@@ -130,6 +130,27 @@ pub fn create_mail(params: NewMail) -> Result<Mail, MailError> {
     })
 }
 
+/// Result of collecting items/gold from a mail.
+#[derive(Debug, Clone, PartialEq)]
+pub struct CollectResult {
+    pub attachments: Vec<MailAttachment>,
+    /// Gold received by the collector.
+    pub gold: u32,
+    /// COD amount paid by the collector (0 if no COD).
+    pub cod_paid: u32,
+    /// Original sender name to receive COD payment (None if no COD).
+    pub cod_recipient: Option<String>,
+}
+
+/// Why collecting from a mail failed.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum CollectError {
+    NotFound,
+    AlreadyCollected,
+    /// Recipient doesn't have enough gold to pay the COD.
+    NotEnoughGoldForCod { required: u32 },
+}
+
 /// A player's mailbox.
 #[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
 pub struct Mailbox {
@@ -149,19 +170,43 @@ impl Mailbox {
         }
     }
 
-    /// Collect attachments and gold from a mail.
-    /// Returns `(attachments, gold)` or `None` if already collected or not found.
-    pub fn collect(&mut self, mail_id: u64) -> Option<(Vec<MailAttachment>, u32)> {
-        let mail = self.mails.iter_mut().find(|m| m.id == mail_id)?;
+    /// Result of collecting from a mail.
+    ///
+    /// If the mail has a COD, the recipient must pay before items are released.
+    /// The server sends the COD gold to the original sender via a new mail.
+    pub fn collect(
+        &mut self,
+        mail_id: u64,
+        recipient_gold: u32,
+    ) -> Result<CollectResult, CollectError> {
+        let mail = self.mails.iter_mut().find(|m| m.id == mail_id)
+            .ok_or(CollectError::NotFound)?;
         if mail.collected {
-            return None;
+            return Err(CollectError::AlreadyCollected);
         }
+        if mail.cod > 0 && recipient_gold < mail.cod {
+            return Err(CollectError::NotEnoughGoldForCod { required: mail.cod });
+        }
+
         mail.collected = true;
         mail.read = true;
         let attachments = std::mem::take(&mut mail.attachments);
         let gold = mail.gold;
+        let cod_paid = mail.cod;
+        let cod_recipient = if cod_paid > 0 {
+            Some(mail.sender.clone())
+        } else {
+            None
+        };
         mail.gold = 0;
-        Some((attachments, gold))
+        mail.cod = 0;
+
+        Ok(CollectResult {
+            attachments,
+            gold,
+            cod_paid,
+            cod_recipient,
+        })
     }
 
     /// Delete a mail (must be read and collected).
@@ -302,10 +347,10 @@ mod tests {
     fn mailbox_collect() {
         let mut mb = Mailbox::default();
         mb.deliver(test_mail(1));
-        let (items, gold) = mb.collect(1).unwrap();
-        assert_eq!(items.len(), 1);
-        assert_eq!(gold, 500);
-        assert!(mb.collect(1).is_none()); // already collected
+        let result = mb.collect(1, 9999).unwrap();
+        assert_eq!(result.attachments.len(), 1);
+        assert_eq!(result.gold, 500);
+        assert!(mb.collect(1, 9999).is_err()); // already collected
     }
 
     #[test]
@@ -313,7 +358,7 @@ mod tests {
         let mut mb = Mailbox::default();
         mb.deliver(test_mail(1));
         assert!(!mb.delete(1)); // not read/collected
-        mb.collect(1);
+        mb.collect(1, 9999).unwrap();
         assert!(mb.delete(1));
         assert!(mb.mails.is_empty());
     }
@@ -331,7 +376,7 @@ mod tests {
     fn mailbox_expire_keeps_collected() {
         let mut mb = Mailbox::default();
         mb.deliver(test_mail(1));
-        mb.collect(1);
+        mb.collect(1, 9999).unwrap();
         let expired = mb.expire(99999999);
         assert!(expired.is_empty());
         assert_eq!(mb.mails.len(), 1);
@@ -447,5 +492,50 @@ mod tests {
         let now = 100000;
         let returned = return_to_sender(&original, 100, now).unwrap();
         assert_eq!(returned.expires_at, now + 30 * 86400);
+    }
+
+    // --- COD tests ---
+
+    fn cod_mail(id: u64) -> Mail {
+        create_mail(NewMail {
+            id,
+            sender: "Seller".into(),
+            recipient: "Buyer".into(),
+            subject: "Your purchase".into(),
+            body: "".into(),
+            attachments: vec![MailAttachment { item_id: 500, count: 1 }],
+            gold: 0,
+            cod: 10000, // 1 gold COD
+            now: 1000,
+            delivery_delay: 0,
+            expiry_days: 3,
+        }).unwrap()
+    }
+
+    #[test]
+    fn cod_collect_pays_sender() {
+        let mut mb = Mailbox::default();
+        mb.deliver(cod_mail(1));
+        let result = mb.collect(1, 50000).unwrap(); // has enough gold
+        assert_eq!(result.cod_paid, 10000);
+        assert_eq!(result.cod_recipient, Some("Seller".into()));
+        assert_eq!(result.attachments.len(), 1);
+    }
+
+    #[test]
+    fn cod_collect_not_enough_gold() {
+        let mut mb = Mailbox::default();
+        mb.deliver(cod_mail(1));
+        let err = mb.collect(1, 5000).unwrap_err(); // not enough
+        assert_eq!(err, CollectError::NotEnoughGoldForCod { required: 10000 });
+    }
+
+    #[test]
+    fn no_cod_no_payment() {
+        let mut mb = Mailbox::default();
+        mb.deliver(test_mail(1)); // no COD
+        let result = mb.collect(1, 0).unwrap();
+        assert_eq!(result.cod_paid, 0);
+        assert_eq!(result.cod_recipient, None);
     }
 }
