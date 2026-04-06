@@ -367,6 +367,35 @@ impl Bag {
     pub fn used_slots(&self) -> usize {
         self.slots.iter().filter(|s| !s.is_empty()).count()
     }
+
+    /// Try to add `count` of `item_id` by stacking onto existing slots first,
+    /// then using empty slots. Returns the amount that could NOT be added.
+    pub fn add_stacking(&mut self, item_id: u32, mut count: u16, max_stack: u16) -> u16 {
+        // Stack onto existing partial stacks
+        for slot in &mut self.slots {
+            if count == 0 {
+                break;
+            }
+            if slot.item_id == item_id && slot.count < max_stack {
+                let space = max_stack - slot.count;
+                let add = count.min(space);
+                slot.count += add;
+                count -= add;
+            }
+        }
+        // Use empty slots for remaining
+        for slot in &mut self.slots {
+            if count == 0 {
+                break;
+            }
+            if slot.is_empty() {
+                let add = count.min(max_stack);
+                *slot = InvSlot { item_id, count: add };
+                count -= add;
+            }
+        }
+        count // leftover that didn't fit
+    }
 }
 
 /// Player inventory: backpack + bags + bank + equipped items.
@@ -397,22 +426,27 @@ impl Default for Inventory {
 }
 
 impl Inventory {
-    /// Try to add an item to the first available backpack or bag slot.
+    /// Try to add an item (non-stacking, max_stack=1).
     /// Returns `true` if the item was added.
     pub fn add_item(&mut self, item_id: u32, count: u16) -> bool {
-        // Try backpack first
-        if let Some(idx) = self.backpack.first_empty() {
-            self.backpack.slots[idx] = InvSlot { item_id, count };
-            return true;
+        self.add_item_stacking(item_id, count, 1) == 0
+    }
+
+    /// Add items with stacking support. Fills existing partial stacks first,
+    /// then uses empty slots. Returns the count that could NOT be added.
+    pub fn add_item_stacking(&mut self, item_id: u32, count: u16, max_stack: u16) -> u16 {
+        let remaining = self.backpack.add_stacking(item_id, count, max_stack);
+        if remaining == 0 {
+            return 0;
         }
-        // Then try each bag
+        let mut left = remaining;
         for bag in &mut self.bags {
-            if let Some(idx) = bag.first_empty() {
-                bag.slots[idx] = InvSlot { item_id, count };
-                return true;
+            left = bag.add_stacking(item_id, left, max_stack);
+            if left == 0 {
+                break;
             }
         }
-        false
+        left
     }
 
     /// Remove an item from any bag/backpack slot. Returns `true` if found and removed.
@@ -714,6 +748,77 @@ mod tests {
         bag.slots[0] = InvSlot { item_id: 1, count: 1 };
         bag.slots[3] = InvSlot { item_id: 2, count: 5 };
         assert_eq!(bag.used_slots(), 2);
+    }
+
+    // --- Stacking tests ---
+
+    #[test]
+    fn stacking_fills_existing_stack() {
+        let mut bag = Bag::new(4);
+        bag.slots[0] = InvSlot { item_id: 100, count: 15 };
+        let leftover = bag.add_stacking(100, 5, 20);
+        assert_eq!(leftover, 0);
+        assert_eq!(bag.slots[0].count, 20);
+        assert!(bag.slots[1].is_empty()); // didn't use a new slot
+    }
+
+    #[test]
+    fn stacking_overflow_to_new_slot() {
+        let mut bag = Bag::new(4);
+        bag.slots[0] = InvSlot { item_id: 100, count: 18 };
+        let leftover = bag.add_stacking(100, 5, 20);
+        assert_eq!(leftover, 0);
+        assert_eq!(bag.slots[0].count, 20); // filled to max
+        assert_eq!(bag.slots[1].count, 3);  // overflow
+    }
+
+    #[test]
+    fn stacking_no_room_returns_leftover() {
+        let mut bag = Bag::new(1);
+        bag.slots[0] = InvSlot { item_id: 100, count: 20 };
+        let leftover = bag.add_stacking(100, 5, 20);
+        assert_eq!(leftover, 5);
+    }
+
+    #[test]
+    fn stacking_multiple_partial_stacks() {
+        let mut bag = Bag::new(4);
+        bag.slots[0] = InvSlot { item_id: 100, count: 15 };
+        bag.slots[1] = InvSlot { item_id: 100, count: 10 };
+        let leftover = bag.add_stacking(100, 12, 20);
+        assert_eq!(leftover, 0);
+        assert_eq!(bag.slots[0].count, 20); // +5
+        assert_eq!(bag.slots[1].count, 17); // +7
+    }
+
+    #[test]
+    fn inventory_add_stacking_across_bags() {
+        let mut inv = Inventory::default();
+        // Fill backpack with 16 slots of partial stacks
+        for slot in &mut inv.backpack.slots {
+            *slot = InvSlot { item_id: 100, count: 18 };
+        }
+        inv.bags[0] = Bag::new(4);
+
+        // 40 potions: 16 slots * 2 space each = 32 in backpack, 8 overflow to bag
+        let leftover = inv.add_item_stacking(100, 40, 20);
+        assert_eq!(leftover, 0);
+        // Backpack slots should all be 20
+        assert!(inv.backpack.slots.iter().all(|s| s.count == 20));
+        // Bag should have the overflow
+        assert_eq!(inv.bags[0].slots[0].count, 8);
+    }
+
+    #[test]
+    fn inventory_add_stacking_returns_leftover() {
+        let mut inv = Inventory::default();
+        // Fill all backpack slots to max
+        for slot in &mut inv.backpack.slots {
+            *slot = InvSlot { item_id: 100, count: 20 };
+        }
+        // No bags
+        let leftover = inv.add_item_stacking(100, 5, 20);
+        assert_eq!(leftover, 5);
     }
 
     // --- Durability tests ---
