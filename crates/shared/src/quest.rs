@@ -315,6 +315,84 @@ pub fn claim_rewards(quest: &QuestData, choice_index: Option<usize>) -> Option<C
     Some(result)
 }
 
+// --- Quest giver markers ---
+
+/// Visual marker shown above an NPC's head.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum QuestMarker {
+    /// Yellow `!` — NPC has a quest available for the player.
+    Available,
+    /// Silver `!` — NPC has a quest the player can't accept yet (level too low).
+    AvailableLowLevel,
+    /// Yellow `?` — NPC can accept a completed quest turn-in.
+    TurnIn,
+    /// Silver `?` — NPC is the turn-in target but objectives aren't complete.
+    TurnInIncomplete,
+    /// No marker.
+    None,
+}
+
+/// Determine the quest marker for an NPC given the player's quest state.
+///
+/// Checks all quests the NPC offers or accepts, returning the highest-priority marker.
+/// Priority: TurnIn > TurnInIncomplete > Available > AvailableLowLevel > None.
+pub fn npc_quest_marker(
+    npc_id: u32,
+    quests: &[QuestData],
+    log: &QuestLog,
+    player_level: u8,
+) -> QuestMarker {
+    let mut best = QuestMarker::None;
+
+    for quest in quests {
+        // Check turn-in: this NPC accepts a quest the player has
+        let turn_in_npc = if quest.turn_in_npc == 0 { quest.quest_giver } else { quest.turn_in_npc };
+        if turn_in_npc == npc_id
+            && let Some(progress) = log.get(quest.id)
+        {
+            let marker = match progress.state {
+                QuestState::Complete => QuestMarker::TurnIn,
+                QuestState::InProgress | QuestState::Accepted => QuestMarker::TurnInIncomplete,
+                _ => QuestMarker::None,
+            };
+            best = higher_priority(best, marker);
+        }
+
+        // Check offer: this NPC offers a quest the player doesn't have
+        if quest.quest_giver == npc_id
+            && !log.has_quest(quest.id)
+            && !log.is_completed(quest.id)
+        {
+            let marker = if quest.can_accept(player_level, &log.completed) {
+                QuestMarker::Available
+            } else if !quest.meets_level_req(player_level)
+                && quest.prerequisites_met(&log.completed)
+            {
+                QuestMarker::AvailableLowLevel
+            } else {
+                QuestMarker::None
+            };
+            best = higher_priority(best, marker);
+        }
+    }
+
+    best
+}
+
+fn higher_priority(a: QuestMarker, b: QuestMarker) -> QuestMarker {
+    if priority(b) > priority(a) { b } else { a }
+}
+
+fn priority(m: QuestMarker) -> u8 {
+    match m {
+        QuestMarker::None => 0,
+        QuestMarker::AvailableLowLevel => 1,
+        QuestMarker::Available => 2,
+        QuestMarker::TurnInIncomplete => 3,
+        QuestMarker::TurnIn => 4,
+    }
+}
+
 // --- Per-player quest log ---
 
 /// Maximum number of active (non-turned-in) quests a player can hold.
@@ -703,6 +781,79 @@ mod tests {
         });
         let rewards = claim_rewards(&q, None).unwrap();
         assert_eq!(rewards.items, vec![(5000, 3)]);
+    }
+
+    // --- Quest marker tests ---
+
+    #[test]
+    fn marker_available_quest() {
+        let q = sample_quest(); // quest_giver=234, required_level=10, prereq=[50]
+        let mut log = QuestLog::default();
+        log.completed.push(50); // prereq met
+        let marker = npc_quest_marker(234, &[q], &log, 15);
+        assert_eq!(marker, QuestMarker::Available);
+    }
+
+    #[test]
+    fn marker_low_level() {
+        let q = sample_quest(); // required_level=10
+        let mut log = QuestLog::default();
+        log.completed.push(50);
+        let marker = npc_quest_marker(234, &[q], &log, 5); // too low
+        assert_eq!(marker, QuestMarker::AvailableLowLevel);
+    }
+
+    #[test]
+    fn marker_turn_in_complete() {
+        let q = sample_quest();
+        let mut log = QuestLog::default();
+        log.accept(&q);
+        log.get_mut(100).unwrap().state = QuestState::Complete;
+        let marker = npc_quest_marker(234, &[q], &log, 80);
+        assert_eq!(marker, QuestMarker::TurnIn);
+    }
+
+    #[test]
+    fn marker_turn_in_incomplete() {
+        let q = sample_quest();
+        let mut log = QuestLog::default();
+        log.accept(&q);
+        log.get_mut(100).unwrap().state = QuestState::InProgress;
+        let marker = npc_quest_marker(234, &[q], &log, 80);
+        assert_eq!(marker, QuestMarker::TurnInIncomplete);
+    }
+
+    #[test]
+    fn marker_none_for_unrelated_npc() {
+        let q = sample_quest(); // quest_giver=234
+        let log = QuestLog::default();
+        let marker = npc_quest_marker(999, &[q], &log, 80);
+        assert_eq!(marker, QuestMarker::None);
+    }
+
+    #[test]
+    fn marker_turn_in_beats_available() {
+        // NPC offers a new quest AND accepts a completed one → TurnIn wins
+        let q1 = sample_quest(); // giver=234
+        let mut q2 = second_quest();
+        q2.quest_giver = 234;
+        q2.prerequisites.clear();
+
+        let mut log = QuestLog::default();
+        log.accept(&q1);
+        log.get_mut(100).unwrap().state = QuestState::Complete;
+
+        let marker = npc_quest_marker(234, &[q1, q2], &log, 80);
+        assert_eq!(marker, QuestMarker::TurnIn);
+    }
+
+    #[test]
+    fn marker_already_completed_no_marker() {
+        let q = sample_quest();
+        let mut log = QuestLog::default();
+        log.completed.push(100); // already turned in
+        let marker = npc_quest_marker(234, &[q], &log, 80);
+        assert_eq!(marker, QuestMarker::None);
     }
 
     // --- Quest log tests ---
