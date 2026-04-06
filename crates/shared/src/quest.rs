@@ -42,6 +42,17 @@ pub struct QuestRewardChoice {
     pub count: u16,
 }
 
+/// How often a quest can be repeated.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum QuestRepeat {
+    /// One-time quest, cannot be repeated.
+    None,
+    /// Resets daily (server time, typically 3 AM).
+    Daily,
+    /// Resets weekly (Tuesday for US, Wednesday for EU).
+    Weekly,
+}
+
 /// Static quest definition.
 ///
 /// Immutable data loaded at startup from the quest database.
@@ -80,6 +91,8 @@ pub struct QuestData {
     /// Exclusive group ID. Completing any quest in a group blocks the others.
     /// 0 = no exclusive group.
     pub exclusive_group: u32,
+    /// How often this quest can be repeated.
+    pub repeat: QuestRepeat,
 }
 
 impl QuestData {
@@ -422,22 +435,64 @@ fn priority(m: QuestMarker) -> u8 {
 /// Maximum number of active (non-turned-in) quests a player can hold.
 const MAX_ACTIVE_QUESTS: usize = 25;
 
+/// Timestamp of when a repeatable quest was last completed.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct QuestCooldown {
+    pub quest_id: u32,
+    pub repeat: QuestRepeat,
+    /// Server timestamp (seconds since epoch) when the quest was completed.
+    pub completed_at: u64,
+}
+
+/// Seconds in a day (24h).
+const SECONDS_PER_DAY: u64 = 86400;
+/// Seconds in a week (7d).
+const SECONDS_PER_WEEK: u64 = 604800;
+
+impl QuestCooldown {
+    /// Whether this quest is available again given the current server time.
+    pub fn is_reset(&self, now: u64) -> bool {
+        match self.repeat {
+            QuestRepeat::None => false,
+            QuestRepeat::Daily => now >= self.next_reset(),
+            QuestRepeat::Weekly => now >= self.next_reset(),
+        }
+    }
+
+    /// Timestamp of the next reset.
+    pub fn next_reset(&self) -> u64 {
+        let period = match self.repeat {
+            QuestRepeat::None => return u64::MAX,
+            QuestRepeat::Daily => SECONDS_PER_DAY,
+            QuestRepeat::Weekly => SECONDS_PER_WEEK,
+        };
+        // Next period boundary after completion
+        let periods_elapsed = self.completed_at / period;
+        (periods_elapsed + 1) * period
+    }
+}
+
 /// Per-player quest log tracking all active and completed quests.
-#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct QuestLog {
     /// Active quests (Accepted/InProgress/Complete — not yet turned in).
     pub active: Vec<QuestProgress>,
     /// IDs of quests that have been turned in (for prerequisite checks).
     pub completed: Vec<u32>,
+    /// Cooldowns for repeatable quests.
+    pub cooldowns: Vec<QuestCooldown>,
 }
 
 impl QuestLog {
-    /// Accept a quest. Returns `false` if the log is full or quest already active.
+    /// Accept a quest. Returns `false` if the log is full, already active, or on cooldown.
     pub fn accept(&mut self, quest: &QuestData) -> bool {
         if self.active.len() >= MAX_ACTIVE_QUESTS {
             return false;
         }
         if self.has_quest(quest.id) {
+            return false;
+        }
+        if self.is_on_cooldown(quest.id) {
             return false;
         }
         self.active.push(QuestProgress::new(quest));
@@ -465,7 +520,7 @@ impl QuestLog {
     }
 
     /// Turn in a quest: move from active to completed. Returns `false` if not ready.
-    pub fn turn_in(&mut self, quest_id: u32) -> bool {
+    pub fn turn_in(&mut self, quest_id: u32, quest: &QuestData, now: u64) -> bool {
         let Some(progress) = self.get_mut(quest_id) else {
             return false;
         };
@@ -474,7 +529,38 @@ impl QuestLog {
         }
         self.completed.push(quest_id);
         self.active.retain(|q| q.quest_id != quest_id);
+
+        // Record cooldown for repeatable quests
+        if quest.repeat != QuestRepeat::None {
+            self.cooldowns.retain(|c| c.quest_id != quest_id);
+            self.cooldowns.push(QuestCooldown {
+                quest_id,
+                repeat: quest.repeat,
+                completed_at: now,
+            });
+        }
         true
+    }
+
+    /// Whether a repeatable quest is on cooldown (not yet reset).
+    pub fn is_on_cooldown(&self, quest_id: u32) -> bool {
+        // Cooldowns are only checked at accept time; actual reset is via process_resets
+        self.cooldowns.iter().any(|c| c.quest_id == quest_id)
+    }
+
+    /// Process daily/weekly resets. Removes expired cooldowns and their
+    /// completed entries so repeatable quests become available again.
+    pub fn process_resets(&mut self, now: u64) {
+        let reset_ids: Vec<u32> = self
+            .cooldowns
+            .iter()
+            .filter(|c| c.is_reset(now))
+            .map(|c| c.quest_id)
+            .collect();
+        for id in &reset_ids {
+            self.completed.retain(|q| q != id);
+        }
+        self.cooldowns.retain(|c| !c.is_reset(now));
     }
 
     /// Abandon a quest, removing it from the active log.
@@ -519,6 +605,7 @@ mod tests {
             turn_in_npc: 234,
             next_quest_id: 0,
             exclusive_group: 0,
+            repeat: QuestRepeat::None,
         }
     }
 
@@ -900,6 +987,7 @@ mod tests {
             turn_in_npc: 300,
             next_quest_id: 0,
             exclusive_group: 0,
+            repeat: QuestRepeat::None,
         }
     }
 
@@ -945,7 +1033,7 @@ mod tests {
         }
         progress.update_state();
 
-        assert!(log.turn_in(100));
+        assert!(log.turn_in(100, &q, 0));
         assert!(!log.has_quest(100));
         assert!(log.is_completed(100));
         assert_eq!(log.active_count(), 0);
@@ -953,10 +1041,11 @@ mod tests {
 
     #[test]
     fn quest_log_cant_turn_in_incomplete() {
+        let q = sample_quest();
         let mut log = QuestLog::default();
-        log.accept(&sample_quest());
+        log.accept(&q);
         log.get_mut(100).unwrap().update_state();
-        assert!(!log.turn_in(100));
+        assert!(!log.turn_in(100, &q, 0));
     }
 
     #[test]
@@ -1054,5 +1143,83 @@ mod tests {
         // q2 not available until q1 done
         assert!(!q2.can_accept(80, &[], &all));
         assert!(q2.can_accept(80, &[500], &all));
+    }
+
+    // --- Daily/weekly reset tests ---
+
+    #[test]
+    fn daily_quest_cooldown_and_reset() {
+        let mut q = sample_quest();
+        q.repeat = QuestRepeat::Daily;
+
+        let mut log = QuestLog::default();
+        log.accept(&q);
+        log.get_mut(100).unwrap().state = QuestState::Complete;
+
+        // Turn in at hour 12 of day 0 (43200s)
+        let noon = 43200;
+        assert!(log.turn_in(100, &q, noon));
+        assert!(log.is_on_cooldown(100));
+
+        // Can't re-accept while on cooldown
+        assert!(!log.accept(&q));
+
+        // Process resets at next day boundary (86400)
+        log.process_resets(86400);
+        assert!(!log.is_on_cooldown(100));
+        assert!(!log.is_completed(100)); // removed from completed
+        assert!(log.accept(&q)); // can accept again
+    }
+
+    #[test]
+    fn weekly_quest_not_reset_before_period() {
+        let mut q = sample_quest();
+        q.repeat = QuestRepeat::Weekly;
+
+        let mut log = QuestLog::default();
+        log.accept(&q);
+        log.get_mut(100).unwrap().state = QuestState::Complete;
+        assert!(log.turn_in(100, &q, 100000));
+
+        // 3 days later — not reset yet
+        log.process_resets(100000 + 3 * 86400);
+        assert!(log.is_on_cooldown(100));
+    }
+
+    #[test]
+    fn weekly_quest_resets_after_period() {
+        let mut q = sample_quest();
+        q.repeat = QuestRepeat::Weekly;
+
+        let mut log = QuestLog::default();
+        log.accept(&q);
+        log.get_mut(100).unwrap().state = QuestState::Complete;
+        assert!(log.turn_in(100, &q, 100000));
+
+        // 8 days later — reset
+        log.process_resets(100000 + 8 * 86400);
+        assert!(!log.is_on_cooldown(100));
+    }
+
+    #[test]
+    fn non_repeatable_no_cooldown() {
+        let q = sample_quest(); // repeat = None
+        let mut log = QuestLog::default();
+        log.accept(&q);
+        log.get_mut(100).unwrap().state = QuestState::Complete;
+        assert!(log.turn_in(100, &q, 0));
+        assert!(!log.is_on_cooldown(100)); // no cooldown for non-repeatable
+    }
+
+    #[test]
+    fn cooldown_next_reset_daily() {
+        let cd = QuestCooldown {
+            quest_id: 1,
+            repeat: QuestRepeat::Daily,
+            completed_at: 50000, // in the middle of day 0
+        };
+        assert_eq!(cd.next_reset(), 86400); // start of day 1
+        assert!(!cd.is_reset(50000));
+        assert!(cd.is_reset(86400));
     }
 }
