@@ -1466,6 +1466,56 @@ mod tests {
     }
 
     #[test]
+    fn concurrent_bids_respect_updated_minimum() {
+        let db = persistence::temp_database();
+        let (seller_id, _) =
+            persistence::create_character(&db, 1, "Seller", 1, 1).expect("seller");
+        let (bidder_a, _) =
+            persistence::create_character(&db, 2, "BidderA", 1, 1).expect("a");
+        let (bidder_b, _) =
+            persistence::create_character(&db, 3, "BidderB", 1, 1).expect("b");
+        let (bidder_c, _) =
+            persistence::create_character(&db, 4, "BidderC", 1, 1).expect("c");
+        let source_item = persistence::load_inventory(&db, seller_id).items[0].clone();
+        let mut state = AuctionHouseState::default();
+
+        create_auction(
+            &db,
+            &mut state,
+            seller_id,
+            &CreateAuction {
+                item_guid: source_item.item_guid,
+                stack_count: 1,
+                min_bid: 100,
+                buyout_price: Some(1000),
+                duration: AuctionDuration::Medium,
+            },
+        );
+        let auction_id = *state.auctions.keys().next().expect("auction id");
+
+        // A bids 100, B tries 100 (stale — min is now 105), C bids 105
+        let a = place_bid(&db, &mut state, bidder_a, auction_id, 100);
+        assert!(a.success);
+
+        let b_stale = place_bid(&db, &mut state, bidder_b, auction_id, 100);
+        assert!(!b_stale.success, "stale bid at old minimum rejected");
+
+        let c = place_bid(&db, &mut state, bidder_c, auction_id, 105);
+        assert!(c.success);
+
+        let auction = state.auctions.get(&auction_id).expect("auction");
+        assert_eq!(auction.current_bid, Some(105));
+        assert_eq!(auction.current_bidder_character_id, Some(bidder_c));
+
+        // A was refunded, B was never charged
+        let a_gold = persistence::load_inventory(&db, bidder_a).gold;
+        let b_gold = persistence::load_inventory(&db, bidder_b).gold;
+        let initial_gold = 100_000;
+        assert_eq!(a_gold, initial_gold, "A refunded");
+        assert_eq!(b_gold, initial_gold, "B never charged");
+    }
+
+    #[test]
     fn bid_at_buyout_price_triggers_immediate_sale() {
         let db = persistence::temp_database();
         let (seller_id, _) =
