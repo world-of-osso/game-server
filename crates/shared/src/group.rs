@@ -4,6 +4,8 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::loot::LootMode;
+
 /// Maximum party size.
 pub const MAX_PARTY_SIZE: usize = 5;
 /// Maximum raid size.
@@ -44,6 +46,10 @@ pub struct Party {
     pub leader: u64,
     /// All members including the leader.
     pub members: Vec<u64>,
+    /// Group loot distribution mode.
+    pub loot_mode: LootMode,
+    /// Round-robin loot rotation index.
+    pub loot_round_robin: usize,
 }
 
 impl Party {
@@ -52,6 +58,8 @@ impl Party {
         Self {
             leader,
             members: vec![leader],
+            loot_mode: LootMode::PersonalLoot,
+            loot_round_robin: 0,
         }
     }
 
@@ -116,6 +124,25 @@ impl Party {
     pub fn is_full(&self) -> bool {
         self.members.len() >= MAX_PARTY_SIZE
     }
+
+    /// Set the loot mode (only leader should call this).
+    pub fn set_loot_mode(&mut self, requester: u64, mode: LootMode) -> Result<(), PartyError> {
+        if requester != self.leader {
+            return Err(PartyError::NotLeader);
+        }
+        self.loot_mode = mode;
+        Ok(())
+    }
+
+    /// Get the next round-robin loot recipient and advance the rotation.
+    pub fn next_round_robin(&mut self) -> u64 {
+        if self.members.is_empty() {
+            return 0;
+        }
+        let member = self.members[self.loot_round_robin % self.members.len()];
+        self.loot_round_robin = (self.loot_round_robin + 1) % self.members.len();
+        member
+    }
 }
 
 // --- Raid ---
@@ -129,6 +156,8 @@ pub struct Raid {
     pub leader: u64,
     /// 8 subgroups, each holding up to 5 member entity bits.
     pub subgroups: [Vec<u64>; RAID_SUBGROUPS],
+    /// Group loot distribution mode.
+    pub loot_mode: LootMode,
 }
 
 impl Raid {
@@ -139,6 +168,7 @@ impl Raid {
         Self {
             leader: party.leader,
             subgroups,
+            loot_mode: party.loot_mode,
         }
     }
 
@@ -499,6 +529,42 @@ mod tests {
         let party = Party::new(1);
         let mut raid = Raid::from_party(&party);
         assert_eq!(raid.add_member(1), Err(PartyError::AlreadyMember));
+    }
+
+    // --- Group loot integration tests ---
+
+    #[test]
+    fn party_default_loot_mode_personal() {
+        let party = Party::new(1);
+        assert_eq!(party.loot_mode, LootMode::PersonalLoot);
+    }
+
+    #[test]
+    fn party_set_loot_mode_leader_only() {
+        let mut party = Party::new(1);
+        party.accept(2).unwrap();
+        assert!(party.set_loot_mode(1, LootMode::NeedBeforeGreed).is_ok());
+        assert_eq!(party.loot_mode, LootMode::NeedBeforeGreed);
+        assert_eq!(party.set_loot_mode(2, LootMode::FreeForAll), Err(PartyError::NotLeader));
+    }
+
+    #[test]
+    fn party_round_robin_rotates() {
+        let mut party = Party::new(1);
+        party.accept(2).unwrap();
+        party.accept(3).unwrap();
+        assert_eq!(party.next_round_robin(), 1);
+        assert_eq!(party.next_round_robin(), 2);
+        assert_eq!(party.next_round_robin(), 3);
+        assert_eq!(party.next_round_robin(), 1); // wraps
+    }
+
+    #[test]
+    fn raid_inherits_loot_mode() {
+        let mut party = Party::new(1);
+        party.set_loot_mode(1, LootMode::NeedBeforeGreed).unwrap();
+        let raid = Raid::from_party(&party);
+        assert_eq!(raid.loot_mode, LootMode::NeedBeforeGreed);
     }
 
     // --- Group XP sharing tests ---
