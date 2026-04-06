@@ -30,6 +30,8 @@ pub enum QueueError {
     NoDungeons,
     /// No roles selected.
     NoRoles,
+    /// Player has a deserter penalty.
+    Deserter,
 }
 
 /// The dungeon finder queue.
@@ -199,6 +201,48 @@ pub fn teleport_orders(
             z: dungeon.entrance_z,
         })
         .collect()
+}
+
+// --- Deserter penalty ---
+
+/// Deserter debuff duration in seconds (30 minutes).
+pub const DESERTER_DURATION: u64 = 1800;
+
+/// Tracks deserter penalties for players who leave dungeons early.
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct DeserterTracker {
+    /// (player_entity, expires_at_timestamp) pairs.
+    entries: Vec<(u64, u64)>,
+}
+
+impl DeserterTracker {
+    /// Apply a deserter penalty to a player.
+    pub fn apply(&mut self, player: u64, now: u64) {
+        let expires = now + DESERTER_DURATION;
+        if let Some(entry) = self.entries.iter_mut().find(|(p, _)| *p == player) {
+            entry.1 = expires;
+        } else {
+            self.entries.push((player, expires));
+        }
+    }
+
+    /// Whether a player has an active deserter penalty.
+    pub fn is_deserter(&self, player: u64, now: u64) -> bool {
+        self.entries.iter().any(|(p, exp)| *p == player && now < *exp)
+    }
+
+    /// Remaining deserter time in seconds (0 if not active).
+    pub fn remaining(&self, player: u64, now: u64) -> u64 {
+        self.entries
+            .iter()
+            .find(|(p, _)| *p == player)
+            .map_or(0, |(_, exp)| exp.saturating_sub(now))
+    }
+
+    /// Remove expired penalties.
+    pub fn cleanup(&mut self, now: u64) {
+        self.entries.retain(|(_, exp)| now < *exp);
+    }
 }
 
 /// (queue_entry_index, member_index_within_entry)
@@ -429,5 +473,50 @@ mod tests {
         let d = test_dungeon();
         assert_eq!(d.min_level, 15);
         assert_eq!(d.max_level, 21);
+    }
+
+    // --- Deserter tests ---
+
+    #[test]
+    fn deserter_applied_and_checked() {
+        let mut tracker = DeserterTracker::default();
+        tracker.apply(1, 10000);
+        assert!(tracker.is_deserter(1, 10000));
+        assert!(tracker.is_deserter(1, 11799)); // 1799s later, still active
+        assert!(!tracker.is_deserter(1, 11800)); // 1800s = expired
+    }
+
+    #[test]
+    fn deserter_remaining() {
+        let mut tracker = DeserterTracker::default();
+        tracker.apply(1, 10000);
+        assert_eq!(tracker.remaining(1, 10000), 1800);
+        assert_eq!(tracker.remaining(1, 10500), 1300);
+        assert_eq!(tracker.remaining(1, 12000), 0);
+    }
+
+    #[test]
+    fn deserter_not_active_for_others() {
+        let mut tracker = DeserterTracker::default();
+        tracker.apply(1, 10000);
+        assert!(!tracker.is_deserter(2, 10000));
+    }
+
+    #[test]
+    fn deserter_cleanup() {
+        let mut tracker = DeserterTracker::default();
+        tracker.apply(1, 10000);
+        tracker.apply(2, 11000);
+        tracker.cleanup(11800); // player 1 expired, player 2 still active
+        assert!(!tracker.is_deserter(1, 11800));
+        assert!(tracker.is_deserter(2, 11800));
+    }
+
+    #[test]
+    fn deserter_refresh_extends() {
+        let mut tracker = DeserterTracker::default();
+        tracker.apply(1, 10000); // expires 11800
+        tracker.apply(1, 11000); // refreshes to 12800
+        assert!(tracker.is_deserter(1, 12000));
     }
 }
