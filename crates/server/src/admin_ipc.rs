@@ -144,6 +144,7 @@ fn poll_admin_ipc(
     time: Res<Time>,
     combat_log: Res<crate::combat::CombatLog>,
     mut ticket_mgr: ResMut<shared::ticket::TicketManager>,
+    mut motd: ResMut<shared::motd::Motd>,
     mut queries: AdminQueries,
 ) {
     let Some(db) = db else { return };
@@ -156,6 +157,11 @@ fn poll_admin_ipc(
         }
         // Handle ticket commands without threading extra args through dispatch.
         if let Some(response) = dispatch_ticket(&cmd.request, &time, &mut ticket_mgr) {
+            let _ = cmd.respond.send(response);
+            continue;
+        }
+        // Handle MOTD commands.
+        if let Some(response) = dispatch_motd(&cmd.request, &time, &mut motd) {
             let _ = cmd.respond.send(response);
             continue;
         }
@@ -197,6 +203,33 @@ fn dispatch_ticket(
         }
         AdminRequest::TicketHistory { player_id } => {
             Some(handle_ticket_history(ticket_mgr, *player_id))
+        }
+        _ => None,
+    }
+}
+
+/// Dispatch MOTD commands, returning Some if handled.
+fn dispatch_motd(
+    request: &AdminRequest,
+    time: &Time,
+    motd: &mut shared::motd::Motd,
+) -> Option<AdminResponse> {
+    match request {
+        AdminRequest::GetMotd => Some(AdminResponse::MotdRetrieved {
+            message: motd.message.clone(),
+            updated_at: motd.updated_at,
+        }),
+        AdminRequest::SetMotd { message } => {
+            let now = time.elapsed_secs_f64() as u64;
+            match motd.set(message, now) {
+                Ok(()) => Some(AdminResponse::MotdSet),
+                Err(e) => Some(AdminResponse::Error(format!("{e:?}"))),
+            }
+        }
+        AdminRequest::ClearMotd => {
+            let now = time.elapsed_secs_f64() as u64;
+            motd.clear(now);
+            Some(AdminResponse::MotdCleared)
         }
         _ => None,
     }
@@ -297,14 +330,17 @@ fn dispatch(
             &character_name,
             &slot,
         ),
-        // Ticket commands handled in dispatch_ticket before this function
+        // Handled in dispatch_ticket / dispatch_motd before this function
         AdminRequest::TicketList
         | AdminRequest::TicketClaim { .. }
         | AdminRequest::TicketClaimNext { .. }
         | AdminRequest::TicketRespond { .. }
         | AdminRequest::TicketResolve { .. }
         | AdminRequest::TicketEscalate { .. }
-        | AdminRequest::TicketHistory { .. } => unreachable!(),
+        | AdminRequest::TicketHistory { .. }
+        | AdminRequest::GetMotd
+        | AdminRequest::SetMotd { .. }
+        | AdminRequest::ClearMotd => unreachable!(),
     };
     let _ = cmd.respond.send(response);
 }

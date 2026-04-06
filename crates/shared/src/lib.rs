@@ -14,6 +14,7 @@ pub mod instance_teleport;
 pub mod item_data;
 pub mod loot;
 pub mod mail;
+pub mod motd;
 pub mod movement;
 pub mod navmesh;
 pub mod profession;

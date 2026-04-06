@@ -91,6 +91,12 @@ pub enum AdminRequest {
     TicketHistory {
         player_id: u64,
     },
+    // --- MOTD commands ---
+    GetMotd,
+    SetMotd {
+        message: String,
+    },
+    ClearMotd,
     Ping,
 }
 
@@ -187,6 +193,13 @@ pub enum AdminResponse {
         player_id: u64,
         tickets: Vec<TicketInfo>,
     },
+    // --- MOTD responses ---
+    MotdRetrieved {
+        message: String,
+        updated_at: u64,
+    },
+    MotdSet,
+    MotdCleared,
     Pong,
     Error(String),
 }
