@@ -93,6 +93,78 @@ impl LootTable {
     }
 }
 
+// --- Group loot ---
+
+/// Group loot distribution mode.
+///
+/// Ref: AzerothCore `LootMethod` enum.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum LootMode {
+    /// Free for All — anyone can loot anything.
+    FreeForAll,
+    /// Round Robin — common items rotate between group members.
+    RoundRobin,
+    /// Need Before Greed — rare+ items trigger a roll window.
+    NeedBeforeGreed,
+    /// Personal Loot — each player gets their own independent roll (retail default).
+    PersonalLoot,
+}
+
+/// A player's roll choice on a need/greed item.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LootRollChoice {
+    Need,
+    Greed,
+    Pass,
+}
+
+/// Result of a need/greed roll for one player.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct LootRollEntry {
+    pub player_id: u64,
+    pub choice: LootRollChoice,
+    /// Random roll value (1–100) for tiebreaking within Need or Greed.
+    pub roll_value: u8,
+}
+
+/// Resolve a need/greed roll: highest Need wins, then highest Greed.
+/// Returns the winner's player_id, or None if everyone passed.
+pub fn resolve_need_greed(entries: &[LootRollEntry]) -> Option<u64> {
+    // Need rolls win over Greed
+    let best_need = entries
+        .iter()
+        .filter(|e| e.choice == LootRollChoice::Need)
+        .max_by_key(|e| e.roll_value);
+    if let Some(winner) = best_need {
+        return Some(winner.player_id);
+    }
+    // Then Greed
+    let best_greed = entries
+        .iter()
+        .filter(|e| e.choice == LootRollChoice::Greed)
+        .max_by_key(|e| e.roll_value);
+    best_greed.map(|w| w.player_id)
+}
+
+/// Assign a loot item based on the group's loot mode.
+///
+/// Returns the player_id who receives the item.
+/// - FFA/PersonalLoot: `looter` (whoever opened the corpse / the designated player).
+/// - RoundRobin: `round_robin_next` (rotated by the server).
+/// - NeedBeforeGreed: resolved from `roll_entries`.
+pub fn assign_loot(
+    mode: LootMode,
+    looter: u64,
+    round_robin_next: u64,
+    roll_entries: &[LootRollEntry],
+) -> Option<u64> {
+    match mode {
+        LootMode::FreeForAll | LootMode::PersonalLoot => Some(looter),
+        LootMode::RoundRobin => Some(round_robin_next),
+        LootMode::NeedBeforeGreed => resolve_need_greed(roll_entries),
+    }
+}
+
 // --- Loot window ---
 
 /// State of a single item in a loot window.
@@ -405,6 +477,72 @@ mod tests {
         assert!(high > low);
         assert_eq!(low, 200); // 10 * 10 * 2
         assert_eq!(high, 12800); // 80 * 80 * 2
+    }
+
+    // --- Group loot tests ---
+
+    #[test]
+    fn need_beats_greed() {
+        let entries = vec![
+            LootRollEntry { player_id: 1, choice: LootRollChoice::Greed, roll_value: 99 },
+            LootRollEntry { player_id: 2, choice: LootRollChoice::Need, roll_value: 10 },
+        ];
+        assert_eq!(resolve_need_greed(&entries), Some(2));
+    }
+
+    #[test]
+    fn highest_need_wins() {
+        let entries = vec![
+            LootRollEntry { player_id: 1, choice: LootRollChoice::Need, roll_value: 50 },
+            LootRollEntry { player_id: 2, choice: LootRollChoice::Need, roll_value: 80 },
+        ];
+        assert_eq!(resolve_need_greed(&entries), Some(2));
+    }
+
+    #[test]
+    fn greed_if_no_need() {
+        let entries = vec![
+            LootRollEntry { player_id: 1, choice: LootRollChoice::Greed, roll_value: 30 },
+            LootRollEntry { player_id: 2, choice: LootRollChoice::Greed, roll_value: 70 },
+            LootRollEntry { player_id: 3, choice: LootRollChoice::Pass, roll_value: 99 },
+        ];
+        assert_eq!(resolve_need_greed(&entries), Some(2));
+    }
+
+    #[test]
+    fn all_pass_returns_none() {
+        let entries = vec![
+            LootRollEntry { player_id: 1, choice: LootRollChoice::Pass, roll_value: 50 },
+            LootRollEntry { player_id: 2, choice: LootRollChoice::Pass, roll_value: 80 },
+        ];
+        assert_eq!(resolve_need_greed(&entries), None);
+    }
+
+    #[test]
+    fn assign_ffa_goes_to_looter() {
+        assert_eq!(assign_loot(LootMode::FreeForAll, 42, 0, &[]), Some(42));
+    }
+
+    #[test]
+    fn assign_round_robin() {
+        assert_eq!(assign_loot(LootMode::RoundRobin, 42, 7, &[]), Some(7));
+    }
+
+    #[test]
+    fn assign_personal_goes_to_looter() {
+        assert_eq!(assign_loot(LootMode::PersonalLoot, 42, 0, &[]), Some(42));
+    }
+
+    #[test]
+    fn assign_need_greed_uses_rolls() {
+        let rolls = vec![
+            LootRollEntry { player_id: 1, choice: LootRollChoice::Need, roll_value: 60 },
+            LootRollEntry { player_id: 2, choice: LootRollChoice::Greed, roll_value: 90 },
+        ];
+        assert_eq!(
+            assign_loot(LootMode::NeedBeforeGreed, 0, 0, &rolls),
+            Some(1)
+        );
     }
 
     // --- Quality tier / quest item tests ---
