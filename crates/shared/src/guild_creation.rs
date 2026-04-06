@@ -143,6 +143,44 @@ impl PetitionManager {
         self.petitions.iter().find(|p| p.owner == player)
     }
 
+    /// Sign a petition. Signer must not be guilded, not the owner,
+    /// and not already signed.
+    pub fn sign_petition(
+        &mut self,
+        petition_id: u64,
+        signer: u64,
+        signer_is_guilded: bool,
+    ) -> Result<usize, PetitionError> {
+        if signer_is_guilded {
+            return Err(PetitionError::AlreadyInGuild);
+        }
+        let petition = self.petitions.iter_mut().find(|p| p.id == petition_id)
+            .ok_or(PetitionError::NotFound)?;
+        if petition.owner == signer {
+            return Err(PetitionError::NotOwner); // Can't sign your own
+        }
+        if petition.has_signed(signer) {
+            return Err(PetitionError::AlreadySigned);
+        }
+        petition.signatures.push(signer);
+        Ok(petition.signatures.len())
+    }
+
+    /// Remove a signature from a petition.
+    pub fn unsign_petition(
+        &mut self,
+        petition_id: u64,
+        signer: u64,
+    ) -> Result<(), PetitionError> {
+        let petition = self.petitions.iter_mut().find(|p| p.id == petition_id)
+            .ok_or(PetitionError::NotFound)?;
+        if !petition.has_signed(signer) {
+            return Err(PetitionError::NotFound);
+        }
+        petition.signatures.retain(|&s| s != signer);
+        Ok(())
+    }
+
     /// Cancel a petition (owner only).
     pub fn cancel(&mut self, id: u64, player: u64) -> Result<(), PetitionError> {
         let petition = self.petitions.iter().find(|p| p.id == id)

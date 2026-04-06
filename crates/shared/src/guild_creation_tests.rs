@@ -132,3 +132,88 @@ fn sequential_ids() {
     assert_eq!(id1, 1);
     assert_eq!(id2, 2);
 }
+
+// --- Petition signing ---
+
+fn petition_with_owner(mgr: &mut PetitionManager) -> u64 {
+    mgr.purchase_charter(100, "Test Guild", 5000, false, 1000).unwrap()
+}
+
+#[test]
+fn sign_petition_success() {
+    let mut mgr = PetitionManager::new();
+    let id = petition_with_owner(&mut mgr);
+
+    let count = mgr.sign_petition(id, 200, false).unwrap();
+    assert_eq!(count, 1);
+
+    let petition = mgr.get(id).unwrap();
+    assert!(petition.has_signed(200));
+}
+
+#[test]
+fn sign_multiple_signatures() {
+    let mut mgr = PetitionManager::new();
+    let id = petition_with_owner(&mut mgr);
+
+    for i in 0..REQUIRED_SIGNATURES {
+        let signer = 200 + i as u64;
+        mgr.sign_petition(id, signer, false).unwrap();
+    }
+
+    let petition = mgr.get(id).unwrap();
+    assert_eq!(petition.signatures.len(), REQUIRED_SIGNATURES);
+    assert!(petition.has_enough_signatures());
+}
+
+#[test]
+fn sign_guilded_player_fails() {
+    let mut mgr = PetitionManager::new();
+    let id = petition_with_owner(&mut mgr);
+    assert_eq!(mgr.sign_petition(id, 200, true), Err(PetitionError::AlreadyInGuild));
+}
+
+#[test]
+fn sign_owner_fails() {
+    let mut mgr = PetitionManager::new();
+    let id = petition_with_owner(&mut mgr);
+    assert_eq!(mgr.sign_petition(id, 100, false), Err(PetitionError::NotOwner));
+}
+
+#[test]
+fn sign_already_signed_fails() {
+    let mut mgr = PetitionManager::new();
+    let id = petition_with_owner(&mut mgr);
+    mgr.sign_petition(id, 200, false).unwrap();
+    assert_eq!(mgr.sign_petition(id, 200, false), Err(PetitionError::AlreadySigned));
+}
+
+#[test]
+fn sign_nonexistent_petition_fails() {
+    let mut mgr = PetitionManager::new();
+    assert_eq!(mgr.sign_petition(999, 200, false), Err(PetitionError::NotFound));
+}
+
+#[test]
+fn unsign_petition() {
+    let mut mgr = PetitionManager::new();
+    let id = petition_with_owner(&mut mgr);
+    mgr.sign_petition(id, 200, false).unwrap();
+
+    mgr.unsign_petition(id, 200).unwrap();
+    assert!(!mgr.get(id).unwrap().has_signed(200));
+}
+
+#[test]
+fn unsign_not_signed_fails() {
+    let mut mgr = PetitionManager::new();
+    let id = petition_with_owner(&mut mgr);
+    assert_eq!(mgr.unsign_petition(id, 200), Err(PetitionError::NotFound));
+}
+
+#[test]
+fn not_enough_signatures_initially() {
+    let mut mgr = PetitionManager::new();
+    let id = petition_with_owner(&mut mgr);
+    assert!(!mgr.get(id).unwrap().has_enough_signatures());
+}
