@@ -1,4 +1,6 @@
+mod admin_handlers;
 mod admin_ipc;
+mod admin_types;
 mod auction_house;
 mod auth;
 mod combat;
