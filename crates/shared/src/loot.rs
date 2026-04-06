@@ -367,14 +367,48 @@ impl LootWindow {
     }
 }
 
-/// Estimate gold drop from creature level (copper).
+/// Creature type for gold drop scaling.
 ///
-/// Rough approximation: `level * level * 2` copper.
-/// Real values come from AzerothCore `creature_template.mingold/maxgold`.
-pub fn estimated_gold_drop(creature_level: u8, roll: f32) -> u32 {
-    let base = creature_level as u32 * creature_level as u32 * 2;
-    let variance = (base as f32 * 0.3 * roll) as u32;
-    base + variance
+/// Ref: AzerothCore `creature_template.rank`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum CreatureRank {
+    /// Normal mob — baseline gold.
+    Normal,
+    /// Elite mob — 3x gold.
+    Elite,
+    /// Rare mob — 2x gold.
+    Rare,
+    /// Rare elite — 5x gold.
+    RareElite,
+    /// Boss — 10x gold.
+    Boss,
+}
+
+impl CreatureRank {
+    /// Gold multiplier for this creature rank.
+    pub fn gold_multiplier(self) -> f32 {
+        match self {
+            Self::Normal => 1.0,
+            Self::Rare => 2.0,
+            Self::Elite => 3.0,
+            Self::RareElite => 5.0,
+            Self::Boss => 10.0,
+        }
+    }
+}
+
+/// Calculate gold drop in copper from creature level and rank.
+///
+/// Base: `level² × 2` copper for Normal mobs, scaled by rank multiplier.
+/// `roll` (0.0–1.0) adds ±30% variance.
+///
+/// Real values come from AzerothCore `creature_template.mingold/maxgold`;
+/// this provides a reasonable default when those aren't available.
+pub fn gold_drop(creature_level: u8, rank: CreatureRank, roll: f32) -> u32 {
+    let base = creature_level as f32 * creature_level as f32 * 2.0;
+    let scaled = base * rank.gold_multiplier();
+    let variance = scaled * 0.3 * roll;
+    (scaled + variance) as u32
 }
 
 #[cfg(test)]
@@ -568,13 +602,46 @@ mod tests {
         assert!(window.loot_item(99).is_none());
     }
 
+    // --- Currency drop tests ---
+
     #[test]
-    fn estimated_gold_scales_with_level() {
-        let low = estimated_gold_drop(10, 0.0);
-        let high = estimated_gold_drop(80, 0.0);
+    fn gold_scales_with_level() {
+        let low = gold_drop(10, CreatureRank::Normal, 0.0);
+        let high = gold_drop(80, CreatureRank::Normal, 0.0);
         assert!(high > low);
-        assert_eq!(low, 200); // 10 * 10 * 2
-        assert_eq!(high, 12800); // 80 * 80 * 2
+        assert_eq!(low, 200); // 10² × 2
+        assert_eq!(high, 12800); // 80² × 2
+    }
+
+    #[test]
+    fn gold_elite_3x_normal() {
+        let normal = gold_drop(50, CreatureRank::Normal, 0.0);
+        let elite = gold_drop(50, CreatureRank::Elite, 0.0);
+        assert_eq!(elite, normal * 3);
+    }
+
+    #[test]
+    fn gold_boss_10x_normal() {
+        let normal = gold_drop(50, CreatureRank::Normal, 0.0);
+        let boss = gold_drop(50, CreatureRank::Boss, 0.0);
+        assert_eq!(boss, normal * 10);
+    }
+
+    #[test]
+    fn gold_rare_2x_normal() {
+        let normal = gold_drop(50, CreatureRank::Normal, 0.0);
+        let rare = gold_drop(50, CreatureRank::Rare, 0.0);
+        assert_eq!(rare, normal * 2);
+    }
+
+    #[test]
+    fn gold_variance_with_roll() {
+        let min = gold_drop(50, CreatureRank::Normal, 0.0);
+        let max = gold_drop(50, CreatureRank::Normal, 1.0);
+        assert!(max > min);
+        // 30% variance: max ≈ min * 1.3
+        let ratio = max as f32 / min as f32;
+        assert!((ratio - 1.3).abs() < 0.05);
     }
 
     // --- Roll window tests ---
