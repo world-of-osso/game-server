@@ -826,6 +826,62 @@ mod tests {
     }
 
     #[test]
+    fn multiple_speed_buffs_stack_additively_on_movement() {
+        use shared::aura::{Aura, AuraEffect};
+
+        let mut app = setup_app_with_time();
+        let player = spawn_player(app.world_mut(), 0.0, 0.0, 0.0);
+
+        // Apply two speed buffs: +20% and +30% → 1.50x total
+        for (id, pct) in [(1u32, 0.20f32), (2, 0.30)] {
+            let buff = Aura {
+                spell_id: id,
+                caster: 99,
+                duration: 10.0,
+                remaining: 10.0,
+                effects: [
+                    Some(AuraEffect::ModMovementSpeed { percent: pct }),
+                    None,
+                    None,
+                ],
+                ..Default::default()
+            };
+            app.world_mut()
+                .entity_mut(player)
+                .get_mut::<Auras>()
+                .unwrap()
+                .apply(buff);
+        }
+
+        let input = make_input(1.0, 0.0, 0.0);
+        let captured_dt = std::sync::Arc::new(std::sync::Mutex::new(0.0_f32));
+        let dt_clone = captured_dt.clone();
+        let _ = app.world_mut().run_system_once(
+            move |mut q: Query<PlayerMovement, With<Player>>,
+                  time: Res<Time>| {
+                *dt_clone.lock().unwrap() = time.delta_secs();
+                apply_movement_input(&input, player, &mut q, &time);
+            },
+        );
+        let dt = *captured_dt.lock().unwrap();
+        let speed = app.world().entity(player).get::<MovementSpeed>().unwrap();
+        let pos = *app.world().entity(player).get::<Position>().unwrap();
+
+        let expected_speed = DEFAULT_RUN_SPEED * 1.50;
+        assert!(
+            (speed.0 - expected_speed).abs() < 1e-5,
+            "speed {}, expected {expected_speed}",
+            speed.0,
+        );
+        let expected_x = expected_speed * dt;
+        assert!(
+            (pos.x - expected_x).abs() < 1e-5,
+            "moved {}, expected {expected_x}",
+            pos.x,
+        );
+    }
+
+    #[test]
     fn zero_direction_ignored() {
         let mut app = setup_app_with_time();
         let player = spawn_player(app.world_mut(), 5.0, 5.0, 5.0);
