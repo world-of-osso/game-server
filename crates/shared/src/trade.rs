@@ -38,6 +38,8 @@ pub enum TradeError {
     InvalidSlot,
     /// Item is already in another slot of the same offer.
     ItemAlreadyOffered,
+    /// Player has not confirmed / already unconfirmed.
+    NotConfirmed,
 }
 
 /// State of a trade between two players.
@@ -118,6 +120,15 @@ impl TradeOffer {
     }
 }
 
+/// The result of a completed trade — both offers ready for the server to execute.
+#[derive(Debug, Clone, PartialEq)]
+pub struct CompletedTrade {
+    pub initiator: u64,
+    pub target: u64,
+    pub initiator_offer: TradeOffer,
+    pub target_offer: TradeOffer,
+}
+
 /// A pending or active trade session between two players.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct TradeSession {
@@ -133,6 +144,10 @@ pub struct TradeSession {
     pub initiator_offer: TradeOffer,
     /// Target's offered items and gold.
     pub target_offer: TradeOffer,
+    /// Whether the initiator has clicked "Accept".
+    pub initiator_accepted: bool,
+    /// Whether the target has clicked "Accept".
+    pub target_accepted: bool,
 }
 
 impl TradeSession {
@@ -172,6 +187,28 @@ impl TradeSession {
         } else {
             None
         }
+    }
+
+    /// Whether a player has accepted the current offer.
+    pub fn has_accepted(&self, player: u64) -> bool {
+        if player == self.initiator {
+            self.initiator_accepted
+        } else if player == self.target {
+            self.target_accepted
+        } else {
+            false
+        }
+    }
+
+    /// Whether both players have accepted.
+    pub fn both_accepted(&self) -> bool {
+        self.initiator_accepted && self.target_accepted
+    }
+
+    /// Reset both accept flags (called when either offer changes).
+    pub fn reset_accepts(&mut self) {
+        self.initiator_accepted = false;
+        self.target_accepted = false;
     }
 }
 
@@ -225,6 +262,7 @@ impl TradeManager {
             initiator, target, state: TradeState::Pending, created_at: now,
             initiator_offer: TradeOffer::default(),
             target_offer: TradeOffer::default(),
+            initiator_accepted: false, target_accepted: false,
         });
         Ok(session_id)
     }
@@ -294,34 +332,84 @@ impl TradeManager {
     }
 
     /// Set an item in a player's trade slot. Trade must be Open.
+    /// Resets both players' accept flags (offer changed).
     pub fn set_item(&mut self, player: u64, slot: usize, item: TradeItem) -> Result<(), TradeError> {
-        let session = self.get_session_mut(player).ok_or(TradeError::NoActiveSession)?;
-        if session.state != TradeState::Open {
-            return Err(TradeError::TradeNotOpen);
-        }
+        let session = self.require_open_session(player)?;
+        session.reset_accepts();
         let offer = session.offer_mut(player).ok_or(TradeError::NoActiveSession)?;
         offer.set_item(slot, item)
     }
 
     /// Clear an item slot in a player's trade offer.
+    /// Resets both players' accept flags.
     pub fn clear_item(&mut self, player: u64, slot: usize) -> Result<(), TradeError> {
-        let session = self.get_session_mut(player).ok_or(TradeError::NoActiveSession)?;
-        if session.state != TradeState::Open {
-            return Err(TradeError::TradeNotOpen);
-        }
+        let session = self.require_open_session(player)?;
+        session.reset_accepts();
         let offer = session.offer_mut(player).ok_or(TradeError::NoActiveSession)?;
         offer.clear_slot(slot)
     }
 
     /// Set the gold amount in a player's trade offer.
+    /// Resets both players' accept flags.
     pub fn set_gold(&mut self, player: u64, copper: u32) -> Result<(), TradeError> {
+        let session = self.require_open_session(player)?;
+        session.reset_accepts();
+        let offer = session.offer_mut(player).ok_or(TradeError::NoActiveSession)?;
+        offer.set_gold(copper);
+        Ok(())
+    }
+
+    /// Confirm (accept) the trade. Both players must confirm for it to complete.
+    ///
+    /// Returns `Some(CompletedTrade)` if both players have now accepted,
+    /// which means the server should execute the item/gold exchange.
+    /// The session is removed on completion.
+    pub fn confirm_trade(&mut self, player: u64) -> Result<Option<CompletedTrade>, TradeError> {
+        let session = self.require_open_session(player)?;
+        if player == session.initiator {
+            session.initiator_accepted = true;
+        } else {
+            session.target_accepted = true;
+        }
+
+        if !session.both_accepted() {
+            return Ok(None);
+        }
+
+        // Both accepted — complete the trade
+        let session_id = self.player_index[&player];
+        let session = self.sessions.remove(&session_id).unwrap();
+        self.player_index.remove(&session.initiator);
+        self.player_index.remove(&session.target);
+        Ok(Some(CompletedTrade {
+            initiator: session.initiator,
+            target: session.target,
+            initiator_offer: session.initiator_offer,
+            target_offer: session.target_offer,
+        }))
+    }
+
+    /// Withdraw acceptance (unconfirm). Only valid if the player has accepted.
+    pub fn unconfirm_trade(&mut self, player: u64) -> Result<(), TradeError> {
+        let session = self.require_open_session(player)?;
+        let accepted = session.has_accepted(player);
+        if !accepted {
+            return Err(TradeError::NotConfirmed);
+        }
+        if player == session.initiator {
+            session.initiator_accepted = false;
+        } else {
+            session.target_accepted = false;
+        }
+        Ok(())
+    }
+
+    fn require_open_session(&mut self, player: u64) -> Result<&mut TradeSession, TradeError> {
         let session = self.get_session_mut(player).ok_or(TradeError::NoActiveSession)?;
         if session.state != TradeState::Open {
             return Err(TradeError::TradeNotOpen);
         }
-        let offer = session.offer_mut(player).ok_or(TradeError::NoActiveSession)?;
-        offer.set_gold(copper);
-        Ok(())
+        Ok(session)
     }
 
     /// Get the active trade session for a player.

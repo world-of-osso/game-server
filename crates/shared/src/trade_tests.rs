@@ -164,6 +164,7 @@ fn session_involves_both_players() {
     let session = TradeSession {
         initiator: 100, target: 200, state: TradeState::Open, created_at: 1000,
         initiator_offer: TradeOffer::default(), target_offer: TradeOffer::default(),
+        initiator_accepted: false, target_accepted: false,
     };
     assert!(session.involves(100));
     assert!(session.involves(200));
@@ -175,6 +176,7 @@ fn session_other_player() {
     let session = TradeSession {
         initiator: 100, target: 200, state: TradeState::Open, created_at: 1000,
         initiator_offer: TradeOffer::default(), target_offer: TradeOffer::default(),
+        initiator_accepted: false, target_accepted: false,
     };
     assert_eq!(session.other_player(100), Some(200));
     assert_eq!(session.other_player(200), Some(100));
@@ -409,4 +411,141 @@ fn offer_access_by_player() {
     assert_eq!(session.offer(100).unwrap().item_count(), 1);
     assert_eq!(session.offer(200).unwrap().gold, 5000);
     assert!(session.offer(300).is_none());
+}
+
+// --- Mutual accept ---
+
+#[test]
+fn confirm_one_side_does_not_complete() {
+    let mut mgr = open_trade();
+    mgr.set_item(100, 0, sword()).unwrap();
+
+    let result = mgr.confirm_trade(100).unwrap();
+    assert!(result.is_none());
+
+    let session = mgr.get_session(100).unwrap();
+    assert!(session.has_accepted(100));
+    assert!(!session.has_accepted(200));
+    assert!(!session.both_accepted());
+}
+
+#[test]
+fn confirm_both_sides_completes_trade() {
+    let mut mgr = open_trade();
+    mgr.set_item(100, 0, sword()).unwrap();
+    mgr.set_gold(200, 5000).unwrap();
+
+    mgr.confirm_trade(100).unwrap();
+    let result = mgr.confirm_trade(200).unwrap();
+
+    let completed = result.unwrap();
+    assert_eq!(completed.initiator, 100);
+    assert_eq!(completed.target, 200);
+    assert_eq!(completed.initiator_offer.slots[0], Some(sword()));
+    assert_eq!(completed.target_offer.gold, 5000);
+
+    // Session removed after completion
+    assert!(!mgr.is_trading(100));
+    assert!(!mgr.is_trading(200));
+    assert!(mgr.is_empty());
+}
+
+#[test]
+fn confirm_empty_trade_completes() {
+    let mut mgr = open_trade();
+    mgr.confirm_trade(100).unwrap();
+    let result = mgr.confirm_trade(200).unwrap();
+    assert!(result.is_some());
+}
+
+#[test]
+fn modify_offer_resets_accepts() {
+    let mut mgr = open_trade();
+    mgr.confirm_trade(100).unwrap();
+    assert!(mgr.get_session(100).unwrap().has_accepted(100));
+
+    // Modifying the offer resets both accept flags
+    mgr.set_item(100, 0, sword()).unwrap();
+    let session = mgr.get_session(100).unwrap();
+    assert!(!session.has_accepted(100));
+    assert!(!session.has_accepted(200));
+}
+
+#[test]
+fn set_gold_resets_accepts() {
+    let mut mgr = open_trade();
+    mgr.confirm_trade(100).unwrap();
+    mgr.confirm_trade(200).unwrap(); // would complete but let's test gold reset
+    // Actually that completes... let me structure differently
+    let mut mgr = open_trade();
+    mgr.confirm_trade(100).unwrap();
+
+    mgr.set_gold(200, 1000).unwrap();
+    let session = mgr.get_session(100).unwrap();
+    assert!(!session.has_accepted(100));
+    assert!(!session.has_accepted(200));
+}
+
+#[test]
+fn clear_item_resets_accepts() {
+    let mut mgr = open_trade();
+    mgr.set_item(100, 0, sword()).unwrap();
+    mgr.confirm_trade(100).unwrap();
+
+    mgr.clear_item(100, 0).unwrap();
+    let session = mgr.get_session(100).unwrap();
+    assert!(!session.has_accepted(100));
+}
+
+#[test]
+fn unconfirm_withdraws_accept() {
+    let mut mgr = open_trade();
+    mgr.confirm_trade(100).unwrap();
+    assert!(mgr.get_session(100).unwrap().has_accepted(100));
+
+    mgr.unconfirm_trade(100).unwrap();
+    assert!(!mgr.get_session(100).unwrap().has_accepted(100));
+}
+
+#[test]
+fn unconfirm_without_accept_fails() {
+    let mut mgr = open_trade();
+    assert_eq!(mgr.unconfirm_trade(100), Err(TradeError::NotConfirmed));
+}
+
+#[test]
+fn confirm_pending_trade_fails() {
+    let mut mgr = TradeManager::new();
+    mgr.initiate_trade(100, 200, NEARBY, ALSO_NEARBY, 1000).unwrap();
+    assert_eq!(mgr.confirm_trade(100), Err(TradeError::TradeNotOpen));
+}
+
+#[test]
+fn confirm_no_session_fails() {
+    let mut mgr = TradeManager::new();
+    assert_eq!(mgr.confirm_trade(100), Err(TradeError::NoActiveSession));
+}
+
+#[test]
+fn reconfirm_after_modify_then_complete() {
+    let mut mgr = open_trade();
+    mgr.set_item(100, 0, sword()).unwrap();
+    mgr.confirm_trade(100).unwrap();
+    mgr.confirm_trade(200).unwrap(); // would complete, but 200 modifies
+
+    // Wait — both confirmed, so it completed. Let me restructure.
+    let mut mgr = open_trade();
+    mgr.set_item(100, 0, sword()).unwrap();
+    mgr.confirm_trade(100).unwrap();
+
+    // Target modifies their offer — resets accepts
+    mgr.set_gold(200, 1000).unwrap();
+    assert!(!mgr.get_session(100).unwrap().has_accepted(100));
+
+    // Both re-confirm
+    mgr.confirm_trade(100).unwrap();
+    let result = mgr.confirm_trade(200).unwrap();
+    let completed = result.unwrap();
+    assert_eq!(completed.initiator_offer.slots[0], Some(sword()));
+    assert_eq!(completed.target_offer.gold, 1000);
 }
