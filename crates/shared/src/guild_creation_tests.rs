@@ -217,3 +217,75 @@ fn not_enough_signatures_initially() {
     let id = petition_with_owner(&mut mgr);
     assert!(!mgr.get(id).unwrap().has_enough_signatures());
 }
+
+// --- Guild registration ---
+
+fn fully_signed_petition(mgr: &mut PetitionManager) -> u64 {
+    let id = petition_with_owner(mgr);
+    for i in 0..REQUIRED_SIGNATURES {
+        mgr.sign_petition(id, 200 + i as u64, false).unwrap();
+    }
+    id
+}
+
+#[test]
+fn submit_petition_creates_guild() {
+    let mut mgr = PetitionManager::new();
+    let id = fully_signed_petition(&mut mgr);
+
+    let guild = mgr.submit_petition(id, 100, 42).unwrap();
+    assert_eq!(guild.guild_id, 42);
+    assert_eq!(guild.guild_name, "Test Guild");
+    assert_eq!(guild.guild_master, 100);
+    assert_eq!(guild.founding_members.len(), REQUIRED_SIGNATURES);
+    assert!(guild.founding_members.contains(&200));
+
+    // Petition consumed
+    assert!(mgr.is_empty());
+}
+
+#[test]
+fn submit_reserves_guild_name() {
+    let mut mgr = PetitionManager::new();
+    let id = fully_signed_petition(&mut mgr);
+    mgr.submit_petition(id, 100, 42).unwrap();
+
+    // Name now taken
+    assert_eq!(
+        mgr.purchase_charter(300, "test guild", 5000, false, 2000),
+        Err(PetitionError::NameTaken)
+    );
+}
+
+#[test]
+fn submit_not_enough_signatures() {
+    let mut mgr = PetitionManager::new();
+    let id = petition_with_owner(&mut mgr);
+    mgr.sign_petition(id, 200, false).unwrap(); // only 1
+
+    assert_eq!(mgr.submit_petition(id, 100, 42), Err(PetitionError::NotEnoughSignatures));
+}
+
+#[test]
+fn submit_not_owner_fails() {
+    let mut mgr = PetitionManager::new();
+    let id = fully_signed_petition(&mut mgr);
+    assert_eq!(mgr.submit_petition(id, 999, 42), Err(PetitionError::NotOwner));
+}
+
+#[test]
+fn submit_not_found() {
+    let mut mgr = PetitionManager::new();
+    assert_eq!(mgr.submit_petition(999, 100, 42), Err(PetitionError::NotFound));
+}
+
+#[test]
+fn owner_can_create_new_petition_after_submit() {
+    let mut mgr = PetitionManager::new();
+    let id = fully_signed_petition(&mut mgr);
+    mgr.submit_petition(id, 100, 42).unwrap();
+
+    // Owner freed — but now guilded, so can't create another
+    // (in practice the server checks is_guilded; here we test the slot is free)
+    assert!(mgr.find_by_owner(100).is_none());
+}

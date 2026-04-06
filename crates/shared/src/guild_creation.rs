@@ -192,6 +192,35 @@ impl PetitionManager {
         Ok(())
     }
 
+    /// Submit a signed petition to create the guild.
+    ///
+    /// Validates enough signatures, then returns the guild info.
+    /// The petition is consumed and the guild name is reserved.
+    pub fn submit_petition(
+        &mut self,
+        petition_id: u64,
+        submitter: u64,
+        guild_id: u32,
+    ) -> Result<CreatedGuild, PetitionError> {
+        let petition = self.petitions.iter().find(|p| p.id == petition_id)
+            .ok_or(PetitionError::NotFound)?;
+        if petition.owner != submitter {
+            return Err(PetitionError::NotOwner);
+        }
+        if !petition.has_enough_signatures() {
+            return Err(PetitionError::NotEnoughSignatures);
+        }
+        let result = CreatedGuild {
+            guild_id,
+            guild_name: petition.guild_name.clone(),
+            guild_master: petition.owner,
+            founding_members: petition.signatures.clone(),
+        };
+        self.reserve_name(&result.guild_name);
+        self.petitions.retain(|p| p.id != petition_id);
+        Ok(result)
+    }
+
     /// Number of pending petitions.
     pub fn len(&self) -> usize {
         self.petitions.len()
@@ -201,6 +230,19 @@ impl PetitionManager {
     pub fn is_empty(&self) -> bool {
         self.petitions.is_empty()
     }
+}
+
+/// Result of successfully submitting a guild petition.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CreatedGuild {
+    /// Assigned guild ID.
+    pub guild_id: u32,
+    /// Guild name.
+    pub guild_name: String,
+    /// Player who becomes Guild Master.
+    pub guild_master: u64,
+    /// Players who signed (initial members).
+    pub founding_members: Vec<u64>,
 }
 
 #[cfg(test)]
