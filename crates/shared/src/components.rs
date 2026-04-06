@@ -1529,12 +1529,15 @@ impl SchoolLockouts {
 
 // --- Spell cooldowns ---
 
-/// Tracks per-spell cooldown timers on an entity.
+/// Tracks per-spell cooldown timers on an entity, with shared category support.
 ///
 /// When a spell is cast, its cooldown (from `SpellData::cooldown`) is started.
-/// The spell cannot be cast again until the cooldown expires.
+/// Spells with the same `category` share a cooldown — casting one puts all
+/// spells in that category on cooldown.
 ///
-/// Ref: AzerothCore `SpellHistory.cpp`.
+/// Category 0 means "no shared category" (spell has its own independent CD).
+///
+/// Ref: AzerothCore `SpellHistory.cpp`, `spell_category` DBC table.
 #[derive(Component, Debug, Clone, Default)]
 pub struct SpellCooldowns {
     entries: Vec<CooldownEntry>,
@@ -1543,23 +1546,57 @@ pub struct SpellCooldowns {
 #[derive(Debug, Clone, Copy)]
 struct CooldownEntry {
     spell_id: u32,
+    /// Shared cooldown category (0 = independent, no shared CD).
+    category: u32,
     remaining: f32,
 }
 
 impl SpellCooldowns {
-    /// Start a cooldown for a spell. If already on cooldown, resets to the new duration.
+    /// Start a cooldown for a spell (independent, no shared category).
     pub fn start(&mut self, spell_id: u32, duration: f32) {
+        self.start_with_category(spell_id, 0, duration);
+    }
+
+    /// Start a cooldown for a spell with a shared category.
+    ///
+    /// All spells in the same non-zero category are put on cooldown.
+    /// If a spell is already tracked, its timer is updated.
+    pub fn start_with_category(&mut self, spell_id: u32, category: u32, duration: f32) {
         if duration <= 0.0 {
             return;
         }
+        // Update or insert the triggering spell
         if let Some(entry) = self.entries.iter_mut().find(|e| e.spell_id == spell_id) {
             entry.remaining = duration;
+            entry.category = category;
         } else {
             self.entries.push(CooldownEntry {
                 spell_id,
+                category,
                 remaining: duration,
             });
         }
+        // Put all other spells in the same category on cooldown
+        if category != 0 {
+            for entry in &mut self.entries {
+                if entry.category == category && entry.spell_id != spell_id {
+                    entry.remaining = entry.remaining.max(duration);
+                }
+            }
+        }
+    }
+
+    /// Register a spell in a shared category without starting a cooldown.
+    /// This allows `start_with_category` on another spell to affect this one.
+    pub fn register_category(&mut self, spell_id: u32, category: u32) {
+        if self.entries.iter().any(|e| e.spell_id == spell_id) {
+            return;
+        }
+        self.entries.push(CooldownEntry {
+            spell_id,
+            category,
+            remaining: 0.0,
+        });
     }
 
     /// Get remaining cooldown for a spell (0.0 if ready).
@@ -1567,7 +1604,7 @@ impl SpellCooldowns {
         self.entries
             .iter()
             .find(|e| e.spell_id == spell_id)
-            .map_or(0.0, |e| e.remaining)
+            .map_or(0.0, |e| e.remaining.max(0.0))
     }
 
     /// Whether a spell is on cooldown.
@@ -1575,22 +1612,29 @@ impl SpellCooldowns {
         self.remaining(spell_id) > 0.0
     }
 
-    /// Tick all cooldown timers and remove expired ones.
+    /// Tick all cooldown timers and remove expired independent entries.
+    /// Category entries with 0 remaining are kept (for future shared triggers).
     pub fn tick(&mut self, dt: f32) {
         for entry in &mut self.entries {
             entry.remaining -= dt;
         }
-        self.entries.retain(|e| e.remaining > 0.0);
+        // Remove expired entries that have no category (independent CDs)
+        self.entries
+            .retain(|e| e.remaining > 0.0 || e.category != 0);
     }
 
     /// Reset a specific spell's cooldown (e.g. from a proc or talent).
     pub fn reset(&mut self, spell_id: u32) {
-        self.entries.retain(|e| e.spell_id != spell_id);
+        if let Some(entry) = self.entries.iter_mut().find(|e| e.spell_id == spell_id) {
+            entry.remaining = 0.0;
+        }
     }
 
     /// Clear all cooldowns (e.g. on arena start or GM command).
     pub fn clear_all(&mut self) {
-        self.entries.clear();
+        for entry in &mut self.entries {
+            entry.remaining = 0.0;
+        }
     }
 }
 
@@ -3161,6 +3205,65 @@ mod tests {
         cds.tick(5.0); // 5s left
         cds.start(133, 10.0); // restart
         assert!((cds.remaining(133) - 10.0).abs() < 0.001);
+    }
+
+    // --- Shared cooldown category tests ---
+
+    #[test]
+    fn shared_cd_triggers_category_members() {
+        let mut cds = SpellCooldowns::default();
+        // Two potions in category 1
+        cds.register_category(100, 1); // healing potion
+        cds.register_category(200, 1); // mana potion
+        cds.start_with_category(100, 1, 60.0);
+        assert!(cds.is_on_cooldown(100));
+        assert!(cds.is_on_cooldown(200)); // shared CD
+    }
+
+    #[test]
+    fn shared_cd_independent_unaffected() {
+        let mut cds = SpellCooldowns::default();
+        cds.register_category(100, 1);
+        cds.start(200, 8.0); // independent spell (category 0)
+        cds.start_with_category(100, 1, 60.0);
+        // 200 should still have its own 8s CD, not 60
+        assert!((cds.remaining(200) - 8.0).abs() < 0.001);
+    }
+
+    #[test]
+    fn shared_cd_different_categories_independent() {
+        let mut cds = SpellCooldowns::default();
+        cds.register_category(100, 1);
+        cds.register_category(200, 2); // different category
+        cds.start_with_category(100, 1, 60.0);
+        assert!(!cds.is_on_cooldown(200));
+    }
+
+    #[test]
+    fn shared_cd_category_tick_preserves_entries() {
+        let mut cds = SpellCooldowns::default();
+        cds.register_category(100, 1);
+        cds.register_category(200, 1);
+        cds.start_with_category(100, 1, 5.0);
+        cds.tick(6.0);
+        // Both expired but should remain registered for future triggers
+        assert!(!cds.is_on_cooldown(100));
+        assert!(!cds.is_on_cooldown(200));
+        // Can trigger again
+        cds.start_with_category(200, 1, 10.0);
+        assert!(cds.is_on_cooldown(100));
+        assert!(cds.is_on_cooldown(200));
+    }
+
+    #[test]
+    fn shared_cd_keeps_longer_existing() {
+        let mut cds = SpellCooldowns::default();
+        cds.register_category(100, 1);
+        cds.register_category(200, 1);
+        cds.start_with_category(100, 1, 60.0);
+        // Now trigger 200 with shorter CD — should NOT reduce 100
+        cds.start_with_category(200, 1, 10.0);
+        assert!(cds.remaining(100) >= 59.0); // still ~60
     }
 
     // --- Charge-based ability tests ---
