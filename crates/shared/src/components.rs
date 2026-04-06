@@ -1003,6 +1003,96 @@ impl SpellSchool {
     }
 }
 
+/// Player class, matching AzerothCore class IDs.
+///
+/// IDs follow WoW's `ChrClasses.dbc`: 1=Warrior through 13=Evoker.
+/// Note: 10 is unused (was Monk placeholder in some expansions).
+#[derive(
+    Reflect,
+    Serialize,
+    Deserialize,
+    bitcode::Encode,
+    bitcode::Decode,
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    Hash,
+)]
+#[repr(u8)]
+pub enum Class {
+    Warrior = 1,
+    Paladin = 2,
+    Hunter = 3,
+    Rogue = 4,
+    Priest = 5,
+    DeathKnight = 6,
+    Shaman = 7,
+    Mage = 8,
+    Warlock = 9,
+    Monk = 10,
+    Druid = 11,
+    DemonHunter = 12,
+    Evoker = 13,
+}
+
+impl Class {
+    /// Convert from a raw u8 class ID (as stored in DB / network protocol).
+    pub fn from_id(id: u8) -> Option<Self> {
+        match id {
+            1 => Some(Self::Warrior),
+            2 => Some(Self::Paladin),
+            3 => Some(Self::Hunter),
+            4 => Some(Self::Rogue),
+            5 => Some(Self::Priest),
+            6 => Some(Self::DeathKnight),
+            7 => Some(Self::Shaman),
+            8 => Some(Self::Mage),
+            9 => Some(Self::Warlock),
+            10 => Some(Self::Monk),
+            11 => Some(Self::Druid),
+            12 => Some(Self::DemonHunter),
+            13 => Some(Self::Evoker),
+            _ => None,
+        }
+    }
+
+    /// The raw u8 class ID.
+    pub fn id(self) -> u8 {
+        self as u8
+    }
+
+    /// Whether this class uses mana as a primary resource.
+    pub fn uses_mana(self) -> bool {
+        matches!(
+            self,
+            Self::Paladin
+                | Self::Hunter
+                | Self::Priest
+                | Self::Shaman
+                | Self::Mage
+                | Self::Warlock
+                | Self::Monk
+                | Self::Druid
+                | Self::Evoker
+        )
+    }
+
+    /// The primary resource type for this class.
+    pub fn primary_resource(self) -> crate::spell_data::ResourceType {
+        use crate::spell_data::ResourceType;
+        match self {
+            Self::Warrior => ResourceType::Rage,
+            Self::Rogue => ResourceType::Energy,
+            Self::DeathKnight => ResourceType::RunicPower,
+            Self::Hunter => ResourceType::Focus,
+            Self::DemonHunter => ResourceType::Energy,
+            _ => ResourceType::Mana,
+        }
+    }
+}
+
 // --- Threat system ---
 
 /// Seconds of no combat activity before leaving combat.
@@ -2067,6 +2157,70 @@ mod tests {
     fn resources_get_missing_returns_none() {
         let res = Resources::with_primary(ResourceType::Mana);
         assert!(res.get(ResourceType::Rage).is_none());
+    }
+
+    // --- Class enum tests ---
+
+    #[test]
+    fn class_from_id_valid() {
+        assert_eq!(Class::from_id(1), Some(Class::Warrior));
+        assert_eq!(Class::from_id(6), Some(Class::DeathKnight));
+        assert_eq!(Class::from_id(11), Some(Class::Druid));
+        assert_eq!(Class::from_id(13), Some(Class::Evoker));
+    }
+
+    #[test]
+    fn class_from_id_invalid() {
+        assert_eq!(Class::from_id(0), None);
+        assert_eq!(Class::from_id(14), None);
+        assert_eq!(Class::from_id(255), None);
+    }
+
+    #[test]
+    fn class_id_round_trip() {
+        for id in 1..=13 {
+            if let Some(class) = Class::from_id(id) {
+                assert_eq!(class.id(), id);
+            }
+        }
+    }
+
+    #[test]
+    fn class_uses_mana() {
+        assert!(!Class::Warrior.uses_mana());
+        assert!(!Class::Rogue.uses_mana());
+        assert!(!Class::DeathKnight.uses_mana());
+        assert!(Class::Paladin.uses_mana());
+        assert!(Class::Mage.uses_mana());
+        assert!(Class::Priest.uses_mana());
+        assert!(Class::Druid.uses_mana());
+    }
+
+    #[test]
+    fn class_primary_resource() {
+        use crate::spell_data::ResourceType;
+        assert_eq!(Class::Warrior.primary_resource(), ResourceType::Rage);
+        assert_eq!(Class::Rogue.primary_resource(), ResourceType::Energy);
+        assert_eq!(Class::DeathKnight.primary_resource(), ResourceType::RunicPower);
+        assert_eq!(Class::Hunter.primary_resource(), ResourceType::Focus);
+        assert_eq!(Class::Mage.primary_resource(), ResourceType::Mana);
+        assert_eq!(Class::DemonHunter.primary_resource(), ResourceType::Energy);
+    }
+
+    #[test]
+    fn class_all_13_variants() {
+        let classes: [Class; 13] = [
+            Class::Warrior, Class::Paladin, Class::Hunter, Class::Rogue,
+            Class::Priest, Class::DeathKnight, Class::Shaman, Class::Mage,
+            Class::Warlock, Class::Monk, Class::Druid, Class::DemonHunter,
+            Class::Evoker,
+        ];
+        assert_eq!(classes.len(), 13);
+        // All have unique IDs
+        let mut ids: Vec<u8> = classes.iter().map(|c| c.id()).collect();
+        ids.sort();
+        ids.dedup();
+        assert_eq!(ids.len(), 13);
     }
 
     // --- In-combat state tests ---
