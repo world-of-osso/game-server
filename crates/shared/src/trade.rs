@@ -10,6 +10,9 @@ use serde::{Deserialize, Serialize};
 /// Maximum distance (in yards) between players to initiate or maintain a trade.
 pub const TRADE_RANGE: f32 = 11.11;
 
+/// Maximum number of item slots per player in a trade window.
+pub const TRADE_SLOT_COUNT: usize = 6;
+
 /// Why a trade operation failed.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TradeError {
@@ -29,6 +32,12 @@ pub enum TradeError {
     PlayerDead,
     /// Player is in combat and cannot trade.
     PlayerInCombat,
+    /// Trade is not in Open state (still pending or already completed).
+    TradeNotOpen,
+    /// Slot index is out of range (must be 0–5).
+    InvalidSlot,
+    /// Item is already in another slot of the same offer.
+    ItemAlreadyOffered,
 }
 
 /// State of a trade between two players.
@@ -38,6 +47,75 @@ pub enum TradeState {
     Pending,
     /// Both players have the trade window open.
     Open,
+}
+
+/// An item placed in a trade slot.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct TradeItem {
+    /// Item entity or inventory ID.
+    pub item_id: u32,
+    /// Stack count being offered.
+    pub count: u16,
+}
+
+/// One player's offer in a trade: up to 6 items + gold.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct TradeOffer {
+    /// Item slots (6 total). `None` = empty slot.
+    pub slots: [Option<TradeItem>; TRADE_SLOT_COUNT],
+    /// Gold offered (in copper).
+    pub gold: u32,
+}
+
+impl Default for TradeOffer {
+    fn default() -> Self {
+        Self {
+            slots: [None; TRADE_SLOT_COUNT],
+            gold: 0,
+        }
+    }
+}
+
+impl TradeOffer {
+    /// Set an item in a slot. Returns error if slot index is invalid
+    /// or the item is already in another slot.
+    pub fn set_item(&mut self, slot: usize, item: TradeItem) -> Result<(), TradeError> {
+        if slot >= TRADE_SLOT_COUNT {
+            return Err(TradeError::InvalidSlot);
+        }
+        let already_offered = self.slots.iter().enumerate().any(|(i, s)| {
+            i != slot && s.is_some_and(|s| s.item_id == item.item_id)
+        });
+        if already_offered {
+            return Err(TradeError::ItemAlreadyOffered);
+        }
+        self.slots[slot] = Some(item);
+        Ok(())
+    }
+
+    /// Clear a slot.
+    pub fn clear_slot(&mut self, slot: usize) -> Result<(), TradeError> {
+        if slot >= TRADE_SLOT_COUNT {
+            return Err(TradeError::InvalidSlot);
+        }
+        self.slots[slot] = None;
+        Ok(())
+    }
+
+    /// Set the gold amount offered.
+    pub fn set_gold(&mut self, copper: u32) {
+        self.gold = copper;
+    }
+
+    /// Number of items offered (non-empty slots).
+    pub fn item_count(&self) -> usize {
+        self.slots.iter().filter(|s| s.is_some()).count()
+    }
+
+    /// Whether the offer is empty (no items, no gold).
+    pub fn is_empty(&self) -> bool {
+        self.gold == 0 && self.slots.iter().all(|s| s.is_none())
+    }
 }
 
 /// A pending or active trade session between two players.
@@ -51,6 +129,10 @@ pub struct TradeSession {
     pub state: TradeState,
     /// Server timestamp when the session was created.
     pub created_at: u64,
+    /// Initiator's offered items and gold.
+    pub initiator_offer: TradeOffer,
+    /// Target's offered items and gold.
+    pub target_offer: TradeOffer,
 }
 
 impl TradeSession {
@@ -65,6 +147,28 @@ impl TradeSession {
             Some(self.target)
         } else if player == self.target {
             Some(self.initiator)
+        } else {
+            None
+        }
+    }
+
+    /// Get a player's offer (read-only).
+    pub fn offer(&self, player: u64) -> Option<&TradeOffer> {
+        if player == self.initiator {
+            Some(&self.initiator_offer)
+        } else if player == self.target {
+            Some(&self.target_offer)
+        } else {
+            None
+        }
+    }
+
+    /// Get a mutable reference to a player's offer.
+    pub fn offer_mut(&mut self, player: u64) -> Option<&mut TradeOffer> {
+        if player == self.initiator {
+            Some(&mut self.initiator_offer)
+        } else if player == self.target {
+            Some(&mut self.target_offer)
         } else {
             None
         }
@@ -119,6 +223,8 @@ impl TradeManager {
         self.validate_initiation(initiator, target, pos_a, pos_b)?;
         let session_id = self.insert_session(TradeSession {
             initiator, target, state: TradeState::Pending, created_at: now,
+            initiator_offer: TradeOffer::default(),
+            target_offer: TradeOffer::default(),
         });
         Ok(session_id)
     }
@@ -187,10 +293,47 @@ impl TradeManager {
         Ok(other)
     }
 
+    /// Set an item in a player's trade slot. Trade must be Open.
+    pub fn set_item(&mut self, player: u64, slot: usize, item: TradeItem) -> Result<(), TradeError> {
+        let session = self.get_session_mut(player).ok_or(TradeError::NoActiveSession)?;
+        if session.state != TradeState::Open {
+            return Err(TradeError::TradeNotOpen);
+        }
+        let offer = session.offer_mut(player).ok_or(TradeError::NoActiveSession)?;
+        offer.set_item(slot, item)
+    }
+
+    /// Clear an item slot in a player's trade offer.
+    pub fn clear_item(&mut self, player: u64, slot: usize) -> Result<(), TradeError> {
+        let session = self.get_session_mut(player).ok_or(TradeError::NoActiveSession)?;
+        if session.state != TradeState::Open {
+            return Err(TradeError::TradeNotOpen);
+        }
+        let offer = session.offer_mut(player).ok_or(TradeError::NoActiveSession)?;
+        offer.clear_slot(slot)
+    }
+
+    /// Set the gold amount in a player's trade offer.
+    pub fn set_gold(&mut self, player: u64, copper: u32) -> Result<(), TradeError> {
+        let session = self.get_session_mut(player).ok_or(TradeError::NoActiveSession)?;
+        if session.state != TradeState::Open {
+            return Err(TradeError::TradeNotOpen);
+        }
+        let offer = session.offer_mut(player).ok_or(TradeError::NoActiveSession)?;
+        offer.set_gold(copper);
+        Ok(())
+    }
+
     /// Get the active trade session for a player.
     pub fn get_session(&self, player: u64) -> Option<&TradeSession> {
         let &session_id = self.player_index.get(&player)?;
         self.sessions.get(&session_id)
+    }
+
+    /// Get a mutable reference to a session by player.
+    fn get_session_mut(&mut self, player: u64) -> Option<&mut TradeSession> {
+        let &session_id = self.player_index.get(&player)?;
+        self.sessions.get_mut(&session_id)
     }
 
     /// Get the session ID for a player, if any.

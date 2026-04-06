@@ -162,8 +162,8 @@ fn cancel_nonexistent_fails() {
 #[test]
 fn session_involves_both_players() {
     let session = TradeSession {
-        initiator: 100, target: 200,
-        state: TradeState::Open, created_at: 1000,
+        initiator: 100, target: 200, state: TradeState::Open, created_at: 1000,
+        initiator_offer: TradeOffer::default(), target_offer: TradeOffer::default(),
     };
     assert!(session.involves(100));
     assert!(session.involves(200));
@@ -173,8 +173,8 @@ fn session_involves_both_players() {
 #[test]
 fn session_other_player() {
     let session = TradeSession {
-        initiator: 100, target: 200,
-        state: TradeState::Open, created_at: 1000,
+        initiator: 100, target: 200, state: TradeState::Open, created_at: 1000,
+        initiator_offer: TradeOffer::default(), target_offer: TradeOffer::default(),
     };
     assert_eq!(session.other_player(100), Some(200));
     assert_eq!(session.other_player(200), Some(100));
@@ -241,4 +241,172 @@ fn sequential_session_ids() {
     let id2 = mgr.initiate_trade(300, 400, NEARBY, ALSO_NEARBY, 2000).unwrap();
     assert_eq!(id1, 1);
     assert_eq!(id2, 2);
+}
+
+// --- TradeOffer ---
+
+fn sword() -> TradeItem {
+    TradeItem { item_id: 1001, count: 1 }
+}
+
+fn potion() -> TradeItem {
+    TradeItem { item_id: 2001, count: 5 }
+}
+
+#[test]
+fn offer_default_is_empty() {
+    let offer = TradeOffer::default();
+    assert!(offer.is_empty());
+    assert_eq!(offer.item_count(), 0);
+    assert_eq!(offer.gold, 0);
+}
+
+#[test]
+fn offer_set_item() {
+    let mut offer = TradeOffer::default();
+    offer.set_item(0, sword()).unwrap();
+    assert_eq!(offer.slots[0], Some(sword()));
+    assert_eq!(offer.item_count(), 1);
+    assert!(!offer.is_empty());
+}
+
+#[test]
+fn offer_set_multiple_slots() {
+    let mut offer = TradeOffer::default();
+    offer.set_item(0, sword()).unwrap();
+    offer.set_item(3, potion()).unwrap();
+    assert_eq!(offer.item_count(), 2);
+    assert_eq!(offer.slots[0], Some(sword()));
+    assert_eq!(offer.slots[3], Some(potion()));
+}
+
+#[test]
+fn offer_replace_item_in_same_slot() {
+    let mut offer = TradeOffer::default();
+    offer.set_item(0, sword()).unwrap();
+    offer.set_item(0, potion()).unwrap();
+    assert_eq!(offer.slots[0], Some(potion()));
+    assert_eq!(offer.item_count(), 1);
+}
+
+#[test]
+fn offer_invalid_slot() {
+    let mut offer = TradeOffer::default();
+    assert_eq!(offer.set_item(6, sword()), Err(TradeError::InvalidSlot));
+    assert_eq!(offer.clear_slot(6), Err(TradeError::InvalidSlot));
+}
+
+#[test]
+fn offer_duplicate_item_rejected() {
+    let mut offer = TradeOffer::default();
+    offer.set_item(0, sword()).unwrap();
+    assert_eq!(offer.set_item(1, sword()), Err(TradeError::ItemAlreadyOffered));
+}
+
+#[test]
+fn offer_clear_slot() {
+    let mut offer = TradeOffer::default();
+    offer.set_item(2, sword()).unwrap();
+    offer.clear_slot(2).unwrap();
+    assert!(offer.slots[2].is_none());
+    assert_eq!(offer.item_count(), 0);
+}
+
+#[test]
+fn offer_gold_only() {
+    let mut offer = TradeOffer::default();
+    offer.set_gold(50000);
+    assert_eq!(offer.gold, 50000);
+    assert!(!offer.is_empty());
+    assert_eq!(offer.item_count(), 0);
+}
+
+// --- Trade slots via TradeManager ---
+
+fn open_trade() -> TradeManager {
+    let mut mgr = TradeManager::new();
+    mgr.initiate_trade(100, 200, NEARBY, ALSO_NEARBY, 1000).unwrap();
+    mgr.accept_trade(200).unwrap();
+    mgr
+}
+
+#[test]
+fn manager_set_item() {
+    let mut mgr = open_trade();
+    mgr.set_item(100, 0, sword()).unwrap();
+
+    let session = mgr.get_session(100).unwrap();
+    assert_eq!(session.initiator_offer.slots[0], Some(sword()));
+    assert!(session.target_offer.is_empty());
+}
+
+#[test]
+fn manager_set_item_target_side() {
+    let mut mgr = open_trade();
+    mgr.set_item(200, 2, potion()).unwrap();
+
+    let session = mgr.get_session(200).unwrap();
+    assert_eq!(session.target_offer.slots[2], Some(potion()));
+    assert!(session.initiator_offer.is_empty());
+}
+
+#[test]
+fn manager_set_gold() {
+    let mut mgr = open_trade();
+    mgr.set_gold(100, 100_000).unwrap();
+
+    let session = mgr.get_session(100).unwrap();
+    assert_eq!(session.initiator_offer.gold, 100_000);
+}
+
+#[test]
+fn manager_clear_item() {
+    let mut mgr = open_trade();
+    mgr.set_item(100, 0, sword()).unwrap();
+    mgr.clear_item(100, 0).unwrap();
+
+    let session = mgr.get_session(100).unwrap();
+    assert!(session.initiator_offer.slots[0].is_none());
+}
+
+#[test]
+fn manager_set_item_pending_fails() {
+    let mut mgr = TradeManager::new();
+    mgr.initiate_trade(100, 200, NEARBY, ALSO_NEARBY, 1000).unwrap();
+    // Trade is still Pending, not Open
+    assert_eq!(mgr.set_item(100, 0, sword()), Err(TradeError::TradeNotOpen));
+}
+
+#[test]
+fn manager_set_item_no_session_fails() {
+    let mut mgr = TradeManager::new();
+    assert_eq!(mgr.set_item(100, 0, sword()), Err(TradeError::NoActiveSession));
+}
+
+#[test]
+fn both_players_fill_all_slots() {
+    let mut mgr = open_trade();
+    for slot in 0..TRADE_SLOT_COUNT {
+        let item = TradeItem { item_id: 1000 + slot as u32, count: 1 };
+        mgr.set_item(100, slot, item).unwrap();
+    }
+    for slot in 0..TRADE_SLOT_COUNT {
+        let item = TradeItem { item_id: 2000 + slot as u32, count: 1 };
+        mgr.set_item(200, slot, item).unwrap();
+    }
+    let session = mgr.get_session(100).unwrap();
+    assert_eq!(session.initiator_offer.item_count(), 6);
+    assert_eq!(session.target_offer.item_count(), 6);
+}
+
+#[test]
+fn offer_access_by_player() {
+    let mut mgr = open_trade();
+    mgr.set_item(100, 0, sword()).unwrap();
+    mgr.set_gold(200, 5000).unwrap();
+
+    let session = mgr.get_session(100).unwrap();
+    assert_eq!(session.offer(100).unwrap().item_count(), 1);
+    assert_eq!(session.offer(200).unwrap().gold, 5000);
+    assert!(session.offer(300).is_none());
 }
