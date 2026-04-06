@@ -418,6 +418,59 @@ pub fn accept_spirit_healer(ctx: &SpiritHealerContext) -> Result<SpiritHealerRes
     })
 }
 
+// --- Durability loss ---
+
+/// Durability loss on death (10% of max durability).
+pub const DEATH_DURABILITY_LOSS: f32 = 0.10;
+/// Additional durability loss when using spirit healer (25% of max).
+pub const SPIRIT_HEALER_DURABILITY_LOSS: f32 = 0.25;
+
+/// Durability state for a single equipment slot.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct Durability {
+    pub current: u32,
+    pub max: u32,
+}
+
+impl Durability {
+    /// Apply a percentage loss to max durability.
+    pub fn apply_loss(&mut self, fraction: f32) {
+        let loss = (self.max as f32 * fraction) as u32;
+        self.current = self.current.saturating_sub(loss);
+    }
+
+    /// Whether the item is broken (0 durability).
+    pub fn is_broken(&self) -> bool {
+        self.current == 0 && self.max > 0
+    }
+}
+
+/// Calculate durability loss for all equipped items on death.
+///
+/// Returns the total loss applied (sum of losses across all slots).
+pub fn apply_death_durability_loss(items: &mut [Durability]) -> u32 {
+    let mut total = 0;
+    for item in items.iter_mut() {
+        let loss = (item.max as f32 * DEATH_DURABILITY_LOSS) as u32;
+        item.current = item.current.saturating_sub(loss);
+        total += loss;
+    }
+    total
+}
+
+/// Calculate additional durability loss for spirit healer resurrection.
+///
+/// Applied on top of the death loss. Returns the additional loss.
+pub fn apply_spirit_healer_durability_loss(items: &mut [Durability]) -> u32 {
+    let mut total = 0;
+    for item in items.iter_mut() {
+        let loss = (item.max as f32 * SPIRIT_HEALER_DURABILITY_LOSS) as u32;
+        item.current = item.current.saturating_sub(loss);
+        total += loss;
+    }
+    total
+}
+
 #[cfg(test)]
 #[path = "death_tests.rs"]
 mod tests;

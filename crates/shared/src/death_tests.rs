@@ -403,3 +403,66 @@ fn spirit_healer_exact_range() {
     let ctx = healer_ctx(DeathState::Ghost, 60, (0.0, 0.0, 0.0), (SPIRIT_HEALER_RANGE, 0.0, 0.0));
     assert!(accept_spirit_healer(&ctx).is_ok());
 }
+
+// --- Durability loss ---
+
+#[test]
+fn death_durability_loss_10_percent() {
+    let mut items = [
+        Durability { current: 100, max: 100 },
+        Durability { current: 50, max: 200 },
+    ];
+    let total = apply_death_durability_loss(&mut items);
+    assert_eq!(items[0].current, 90);  // 100 - 10% of 100
+    assert_eq!(items[1].current, 30);  // 50 - 10% of 200 = 50 - 20
+    assert_eq!(total, 30);             // 10 + 20
+}
+
+#[test]
+fn spirit_healer_durability_loss_25_percent() {
+    let mut items = [Durability { current: 100, max: 100 }];
+    let total = apply_spirit_healer_durability_loss(&mut items);
+    assert_eq!(items[0].current, 75);
+    assert_eq!(total, 25);
+}
+
+#[test]
+fn combined_death_and_spirit_healer_loss() {
+    let mut items = [Durability { current: 100, max: 100 }];
+    apply_death_durability_loss(&mut items);          // 100 → 90
+    apply_spirit_healer_durability_loss(&mut items);  // 90 → 65
+    assert_eq!(items[0].current, 65);
+}
+
+#[test]
+fn durability_does_not_go_negative() {
+    let mut items = [Durability { current: 5, max: 100 }];
+    apply_death_durability_loss(&mut items); // 5 - 10 → 0
+    assert_eq!(items[0].current, 0);
+}
+
+#[test]
+fn broken_item() {
+    let d = Durability { current: 0, max: 100 };
+    assert!(d.is_broken());
+
+    let d = Durability { current: 1, max: 100 };
+    assert!(!d.is_broken());
+
+    // No max = not breakable
+    let d = Durability { current: 0, max: 0 };
+    assert!(!d.is_broken());
+}
+
+#[test]
+fn apply_loss_to_durability() {
+    let mut d = Durability { current: 80, max: 200 };
+    d.apply_loss(0.10);
+    assert_eq!(d.current, 60); // 80 - 20
+}
+
+#[test]
+fn empty_items_no_loss() {
+    let mut items: [Durability; 0] = [];
+    assert_eq!(apply_death_durability_loss(&mut items), 0);
+}
