@@ -763,6 +763,37 @@ mod tests {
         assert!(vs_low > vs_high);
     }
 
+    // --- Cross-check: armor K constants against SimC ---
+    // Source: SimC engine/dbc/generated/expected_stat.inc, field armor_constant
+    // Formula: mitigation = armor / (armor + K), same in both codebases
+
+    #[test]
+    fn crosscheck_armor_k_level_70() {
+        // SimC expected_stat.inc line 72: level 70, armor_constant = 793.0
+        // 10000 armor vs L70: 10000 / (10000 + 793) = 0.92654...
+        let dr = armor_mitigation(10000.0, 70).unwrap();
+        let expected = 10000.0 / (10000.0 + 793.0);
+        assert!((dr - expected).abs() < 0.0001);
+    }
+
+    #[test]
+    fn crosscheck_armor_k_level_80() {
+        // SimC expected_stat.inc line 82: level 80, armor_constant = 880.0
+        // 5000 armor vs L80: 5000 / (5000 + 880) = 0.85034...
+        let dr = armor_mitigation(5000.0, 80).unwrap();
+        let expected = 5000.0 / (5000.0 + 880.0);
+        assert!((dr - expected).abs() < 0.0001);
+    }
+
+    #[test]
+    fn crosscheck_armor_k_level_1() {
+        // SimC expected_stat.inc line 3: level 1, armor_constant = 116.0
+        // 300 armor vs L1: 300 / (300 + 116) = 0.72115...
+        let dr = armor_mitigation(300.0, 1).unwrap();
+        let expected = 300.0 / (300.0 + 116.0);
+        assert!((dr - expected).abs() < 0.0001);
+    }
+
     // --- AP contribution tests ---
 
     #[test]
