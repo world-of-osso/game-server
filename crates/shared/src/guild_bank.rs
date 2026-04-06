@@ -67,6 +67,10 @@ pub enum GuildBankError {
     InvalidSlot,
     /// Tab is full.
     TabFull,
+    /// Member doesn't have permission for this operation.
+    PermissionDenied,
+    /// Daily withdrawal limit reached.
+    DailyLimitReached,
 }
 
 /// The guild bank.
@@ -129,6 +133,97 @@ impl GuildBank {
         self.gold -= amount;
         Ok(amount)
     }
+}
+
+// --- Tab permissions ---
+
+/// Permissions for a guild rank on a specific tab.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub struct TabPermission {
+    /// Can see tab contents.
+    pub view: bool,
+    /// Can deposit items.
+    pub deposit: bool,
+    /// Can withdraw items.
+    pub withdraw: bool,
+    /// Maximum withdrawals per day (0 = unlimited for guild master).
+    pub daily_withdraw_limit: u32,
+}
+
+impl TabPermission {
+    /// Full access (guild master).
+    pub fn full() -> Self {
+        Self {
+            view: true,
+            deposit: true,
+            withdraw: true,
+            daily_withdraw_limit: 0, // unlimited
+        }
+    }
+
+    /// Deposit-only access (typical for new members).
+    pub fn deposit_only() -> Self {
+        Self {
+            view: true,
+            deposit: true,
+            withdraw: false,
+            daily_withdraw_limit: 0,
+        }
+    }
+}
+
+/// Per-rank permissions across all tabs.
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+pub struct RankPermissions {
+    /// Permission per tab index. Absent entries = no access.
+    pub tabs: Vec<TabPermission>,
+}
+
+/// Per-member daily withdrawal counter.
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub struct DailyWithdrawals {
+    /// (tab_index, count_today) pairs.
+    pub counts: Vec<(usize, u32)>,
+}
+
+impl DailyWithdrawals {
+    /// Get today's withdrawal count for a tab.
+    pub fn count_for(&self, tab: usize) -> u32 {
+        self.counts
+            .iter()
+            .find(|(t, _)| *t == tab)
+            .map_or(0, |(_, c)| *c)
+    }
+
+    /// Increment the withdrawal count for a tab.
+    pub fn increment(&mut self, tab: usize) {
+        if let Some(entry) = self.counts.iter_mut().find(|(t, _)| *t == tab) {
+            entry.1 += 1;
+        } else {
+            self.counts.push((tab, 1));
+        }
+    }
+
+    /// Reset all counters (called at daily reset).
+    pub fn reset(&mut self) {
+        self.counts.clear();
+    }
+}
+
+/// Check if a member can withdraw from a tab given permissions and daily limit.
+pub fn can_withdraw(
+    perm: &TabPermission,
+    daily: &DailyWithdrawals,
+    tab: usize,
+) -> bool {
+    if !perm.withdraw {
+        return false;
+    }
+    // daily_withdraw_limit == 0 means unlimited
+    if perm.daily_withdraw_limit == 0 {
+        return true;
+    }
+    daily.count_for(tab) < perm.daily_withdraw_limit
 }
 
 #[cfg(test)]
@@ -217,5 +312,75 @@ mod tests {
         bank.withdraw_gold(3000).unwrap();
         assert_eq!(bank.gold, 7000);
         assert_eq!(bank.withdraw_gold(99999), Err(GuildBankError::NotEnoughGold));
+    }
+
+    // --- Permission tests ---
+
+    #[test]
+    fn full_permission_allows_all() {
+        let perm = TabPermission::full();
+        let daily = DailyWithdrawals::default();
+        assert!(perm.view);
+        assert!(perm.deposit);
+        assert!(can_withdraw(&perm, &daily, 0));
+    }
+
+    #[test]
+    fn deposit_only_blocks_withdraw() {
+        let perm = TabPermission::deposit_only();
+        let daily = DailyWithdrawals::default();
+        assert!(perm.view);
+        assert!(perm.deposit);
+        assert!(!can_withdraw(&perm, &daily, 0));
+    }
+
+    #[test]
+    fn daily_limit_enforced() {
+        let perm = TabPermission {
+            view: true,
+            deposit: true,
+            withdraw: true,
+            daily_withdraw_limit: 3,
+        };
+        let mut daily = DailyWithdrawals::default();
+        assert!(can_withdraw(&perm, &daily, 0));
+        daily.increment(0);
+        daily.increment(0);
+        assert!(can_withdraw(&perm, &daily, 0)); // 2 < 3
+        daily.increment(0);
+        assert!(!can_withdraw(&perm, &daily, 0)); // 3 >= 3
+    }
+
+    #[test]
+    fn daily_reset_clears_counts() {
+        let mut daily = DailyWithdrawals::default();
+        daily.increment(0);
+        daily.increment(1);
+        daily.reset();
+        assert_eq!(daily.count_for(0), 0);
+        assert_eq!(daily.count_for(1), 0);
+    }
+
+    #[test]
+    fn unlimited_daily_always_allows() {
+        let perm = TabPermission {
+            withdraw: true,
+            daily_withdraw_limit: 0, // unlimited
+            ..Default::default()
+        };
+        let mut daily = DailyWithdrawals::default();
+        for _ in 0..100 {
+            daily.increment(0);
+        }
+        assert!(can_withdraw(&perm, &daily, 0));
+    }
+
+    #[test]
+    fn no_permission_blocks() {
+        let perm = TabPermission::default(); // all false
+        let daily = DailyWithdrawals::default();
+        assert!(!perm.view);
+        assert!(!perm.deposit);
+        assert!(!can_withdraw(&perm, &daily, 0));
     }
 }
