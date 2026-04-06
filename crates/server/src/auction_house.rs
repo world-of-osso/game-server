@@ -384,6 +384,14 @@ fn create_auction(
     if req.stack_count > source.stack_count {
         return err("requested stack exceeds available stack");
     }
+    if source.unique_auction
+        && state
+            .auctions
+            .values()
+            .any(|a| a.item.item_id == source.item_id)
+    {
+        return err("unique item already listed on the auction house");
+    }
     let deposit = deposit_cost(source.vendor_sell_price, req.stack_count, req.duration);
     if deposit > 0 && inventory.gold < deposit {
         return err("not enough gold for auction deposit");
@@ -796,6 +804,7 @@ mod tests {
                 required_level: 1,
                 stack_count: 5,
                 vendor_sell_price: 1,
+                unique_auction: false,
             },
             stack_count: 5,
             min_bid: 100,
@@ -902,6 +911,7 @@ mod tests {
                 required_level,
                 stack_count: 1,
                 vendor_sell_price: 1,
+                unique_auction: false,
             },
             stack_count: 1,
             min_bid: 100,
@@ -1850,6 +1860,55 @@ mod tests {
 
         // Bidder gold unchanged
         assert_eq!(persistence::load_inventory(&db, bidder_id).gold, bidder_gold_before);
+    }
+
+    #[test]
+    fn unique_item_prevents_duplicate_listing() {
+        let db = persistence::temp_database();
+        let (seller_id, _) =
+            persistence::create_character(&db, 1, "Seller", 1, 1).expect("seller");
+        let mut state = AuctionHouseState::default();
+
+        // Mark the first item as unique_auction
+        let mut inv = persistence::load_inventory(&db, seller_id);
+        inv.items[0].unique_auction = true;
+        // Give extra stack so we can try listing twice
+        inv.items[0].stack_count = 10;
+        persistence::save_inventory(&db, seller_id, &inv);
+
+        let item = persistence::load_inventory(&db, seller_id).items[0].clone();
+
+        // First listing succeeds
+        let first = create_auction(
+            &db,
+            &mut state,
+            seller_id,
+            &CreateAuction {
+                item_guid: item.item_guid,
+                stack_count: 3,
+                min_bid: 100,
+                buyout_price: Some(500),
+                duration: AuctionDuration::Short,
+            },
+        );
+        assert!(first.success);
+
+        // Second listing of same item_id rejected
+        let remaining = persistence::load_inventory(&db, seller_id).items[0].clone();
+        let second = create_auction(
+            &db,
+            &mut state,
+            seller_id,
+            &CreateAuction {
+                item_guid: remaining.item_guid,
+                stack_count: 2,
+                min_bid: 50,
+                buyout_price: Some(200),
+                duration: AuctionDuration::Short,
+            },
+        );
+        assert!(!second.success);
+        assert_eq!(state.auctions.len(), 1);
     }
 
     #[test]

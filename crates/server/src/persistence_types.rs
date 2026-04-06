@@ -104,6 +104,8 @@ pub struct InventoryItemData {
     pub required_level: u16,
     pub stack_count: u32,
     pub vendor_sell_price: u32,
+    /// Only one of this item_id may be listed on the auction house at a time.
+    pub unique_auction: bool,
 }
 
 #[derive(bitcode::Encode, bitcode::Decode, Debug, Clone, PartialEq)]

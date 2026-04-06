@@ -372,6 +372,7 @@ pub(crate) fn default_inventory(db: &Database) -> InventoryData {
                 required_level: 1,
                 stack_count: 20,
                 vendor_sell_price: 13,
+                unique_auction: false,
             },
             InventoryItemData {
                 item_guid: next_id(db, "item_instance"),
@@ -381,6 +382,7 @@ pub(crate) fn default_inventory(db: &Database) -> InventoryData {
                 required_level: 1,
                 stack_count: 10,
                 vendor_sell_price: 10,
+                unique_auction: false,
             },
             InventoryItemData {
                 item_guid: next_id(db, "item_instance"),
@@ -390,6 +392,7 @@ pub(crate) fn default_inventory(db: &Database) -> InventoryData {
                 required_level: 1,
                 stack_count: 10,
                 vendor_sell_price: 25,
+                unique_auction: false,
             },
         ],
     }
