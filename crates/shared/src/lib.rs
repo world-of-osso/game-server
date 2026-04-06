@@ -8,6 +8,7 @@ pub mod dungeon_finder;
 pub mod formulas;
 pub mod group;
 pub mod guild_bank;
+pub mod instance;
 pub mod item_data;
 pub mod loot;
 pub mod mail;
