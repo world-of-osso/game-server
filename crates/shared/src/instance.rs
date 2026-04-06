@@ -1,8 +1,8 @@
-//! Instance template data for dungeons and raids.
+//! Instance template data and runtime instance management.
 //!
-//! Defines the static configuration for instanced maps: player limits,
-//! reset timers, and difficulty modes.
-//! Ref: AzerothCore `instance_template` table, `InstanceSaveMgr.cpp`.
+//! Static configuration (templates) and runtime creation/tracking of
+//! instanced maps for dungeons and raids.
+//! Ref: AzerothCore `instance_template` table, `MapInstanced.cpp`, `InstanceSaveMgr.cpp`.
 
 use serde::{Deserialize, Serialize};
 
@@ -135,7 +135,7 @@ impl InstanceTemplate {
     }
 }
 
-/// Why an instance template lookup or validation failed.
+/// Why an instance operation failed.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum InstanceError {
     /// No template found for this map ID.
@@ -146,6 +146,12 @@ pub enum InstanceError {
     TooManyPlayers,
     /// No difficulties configured.
     NoDifficulties,
+    /// No active instance with this ID.
+    InstanceNotFound,
+    /// Group already has an active instance for this map+difficulty.
+    AlreadyExists,
+    /// Instance has no remaining player slots.
+    InstanceFull,
 }
 
 /// Registry of all instance templates, indexed by map ID.
@@ -290,6 +296,201 @@ pub fn raid_template(map_id: u16, name: &str, parent_map_id: u16) -> InstanceTem
                 loot_table_variant: 2,
             },
         ],
+    }
+}
+
+// --- Runtime instance management ---
+// Ref: AzerothCore `MapInstanced::CreateInstanceForPlayer`
+
+use std::collections::HashMap;
+
+/// A live instance of a dungeon or raid map.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Instance {
+    /// Unique instance ID (sequential, server-wide).
+    pub instance_id: u32,
+    /// Map ID linking to the template.
+    pub map_id: u16,
+    /// Difficulty this instance was created at.
+    pub difficulty: Difficulty,
+    /// Group leader entity ID that owns this instance.
+    pub group_leader: u64,
+    /// Players currently inside the instance.
+    pub players: Vec<u64>,
+    /// Server timestamp when created.
+    pub created_at: u64,
+}
+
+impl Instance {
+    /// Whether a player is inside this instance.
+    pub fn contains_player(&self, player: u64) -> bool {
+        self.players.contains(&player)
+    }
+
+    /// Add a player to the instance. Returns error if full.
+    pub fn add_player(&mut self, player: u64, max_players: u32) -> Result<(), InstanceError> {
+        if self.players.len() as u32 >= max_players {
+            return Err(InstanceError::InstanceFull);
+        }
+        if !self.contains_player(player) {
+            self.players.push(player);
+        }
+        Ok(())
+    }
+
+    /// Remove a player from the instance. Returns true if they were present.
+    pub fn remove_player(&mut self, player: u64) -> bool {
+        let before = self.players.len();
+        self.players.retain(|&p| p != player);
+        self.players.len() < before
+    }
+
+    /// Whether the instance has no players inside.
+    pub fn is_empty(&self) -> bool {
+        self.players.is_empty()
+    }
+}
+
+/// Manages all active instances. Handles creation, lookup, and cleanup.
+///
+/// Ref: AzerothCore `MapInstanced` + `InstanceSaveMgr`.
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct InstanceManager {
+    /// Active instances by instance ID.
+    instances: HashMap<u32, Instance>,
+    /// Maps (group_leader, map_id, difficulty) → instance_id for fast lookup.
+    group_index: HashMap<(u64, u16, Difficulty), u32>,
+    /// Next instance ID to assign.
+    next_id: u32,
+}
+
+impl InstanceManager {
+    pub fn new() -> Self {
+        Self {
+            instances: HashMap::new(),
+            group_index: HashMap::new(),
+            next_id: 1,
+        }
+    }
+
+    /// Create a new instance for a group entering a dungeon/raid.
+    ///
+    /// Validates against the template registry, then spawns the instance.
+    /// The group leader and members are added as initial players.
+    pub fn create_instance(
+        &mut self,
+        registry: &InstanceTemplateRegistry,
+        map_id: u16,
+        difficulty: Difficulty,
+        group_leader: u64,
+        members: &[u64],
+        now: u64,
+    ) -> Result<u32, InstanceError> {
+        registry.validate_entry(map_id, difficulty, members.len() as u32)?;
+
+        let key = (group_leader, map_id, difficulty);
+        if self.group_index.contains_key(&key) {
+            return Err(InstanceError::AlreadyExists);
+        }
+
+        let instance_id = self.allocate_id();
+        let instance = Instance {
+            instance_id, map_id, difficulty, group_leader,
+            players: members.to_vec(), created_at: now,
+        };
+        self.instances.insert(instance_id, instance);
+        self.group_index.insert(key, instance_id);
+        Ok(instance_id)
+    }
+
+    fn allocate_id(&mut self) -> u32 {
+        let id = self.next_id;
+        self.next_id += 1;
+        id
+    }
+
+    /// Look up an active instance by ID.
+    pub fn get(&self, instance_id: u32) -> Option<&Instance> {
+        self.instances.get(&instance_id)
+    }
+
+    /// Look up a mutable reference to an active instance.
+    pub fn get_mut(&mut self, instance_id: u32) -> Option<&mut Instance> {
+        self.instances.get_mut(&instance_id)
+    }
+
+    /// Find the instance a group already has for a given map+difficulty.
+    pub fn find_group_instance(
+        &self,
+        group_leader: u64,
+        map_id: u16,
+        difficulty: Difficulty,
+    ) -> Option<u32> {
+        self.group_index
+            .get(&(group_leader, map_id, difficulty))
+            .copied()
+    }
+
+    /// Get or create an instance for a group.
+    ///
+    /// If the group already has an instance for this map+difficulty, returns it.
+    /// Otherwise creates a new one.
+    pub fn get_or_create(
+        &mut self,
+        registry: &InstanceTemplateRegistry,
+        map_id: u16,
+        difficulty: Difficulty,
+        group_leader: u64,
+        members: &[u64],
+        now: u64,
+    ) -> Result<u32, InstanceError> {
+        if let Some(id) = self.find_group_instance(group_leader, map_id, difficulty) {
+            return Ok(id);
+        }
+        self.create_instance(registry, map_id, difficulty, group_leader, members, now)
+    }
+
+    /// Destroy an instance by ID. Returns the removed instance, if found.
+    pub fn destroy(&mut self, instance_id: u32) -> Option<Instance> {
+        let instance = self.instances.remove(&instance_id)?;
+        let key = (instance.group_leader, instance.map_id, instance.difficulty);
+        self.group_index.remove(&key);
+        Some(instance)
+    }
+
+    /// Remove all empty instances (no players remaining).
+    pub fn cleanup_empty(&mut self) -> Vec<Instance> {
+        let empty_ids: Vec<u32> = self
+            .instances
+            .iter()
+            .filter(|(_, inst)| inst.is_empty())
+            .map(|(&id, _)| id)
+            .collect();
+
+        empty_ids.iter().filter_map(|&id| self.destroy(id)).collect()
+    }
+
+    /// Number of active instances.
+    pub fn len(&self) -> usize {
+        self.instances.len()
+    }
+
+    /// Whether there are no active instances.
+    pub fn is_empty(&self) -> bool {
+        self.instances.is_empty()
+    }
+
+    /// Find which instance a player is currently in.
+    pub fn find_player_instance(&self, player: u64) -> Option<u32> {
+        self.instances
+            .iter()
+            .find(|(_, inst)| inst.contains_player(player))
+            .map(|(&id, _)| id)
+    }
+
+    /// Iterate over all active instances.
+    pub fn iter(&self) -> impl Iterator<Item = (&u32, &Instance)> {
+        self.instances.iter()
     }
 }
 
