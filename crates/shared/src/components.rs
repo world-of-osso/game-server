@@ -1279,6 +1279,130 @@ pub fn effective_mastery(spec_id: u32, mastery_points: f32) -> f32 {
         .unwrap_or(0.0)
 }
 
+// --- Cast bar ---
+
+/// Whether a cast is a normal cast or a channeled spell.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum CastType {
+    /// Normal cast: bar fills up, spell fires on completion.
+    Normal,
+    /// Channel: spell fires immediately, effects tick during the channel.
+    Channel,
+}
+
+/// Active spell cast on an entity (cast bar / channel in progress).
+///
+/// Added as a component when a cast begins, removed on completion,
+/// interruption, or cancellation.
+#[derive(Component, Debug, Clone, PartialEq)]
+pub struct CastState {
+    /// Spell being cast.
+    pub spell_id: u32,
+    /// Target entity bits (0 for self-cast).
+    pub target: u64,
+    /// Total cast/channel duration in seconds (after haste).
+    pub duration: f32,
+    /// Time elapsed so far.
+    pub elapsed: f32,
+    /// Normal or channeled cast.
+    pub cast_type: CastType,
+    /// Whether the cast can be interrupted by damage.
+    pub interruptible: bool,
+    /// Number of pushbacks applied (max 2 for normal casts).
+    pub pushback_count: u8,
+    /// For channels: tick interval in seconds.
+    pub channel_tick_interval: f32,
+    /// For channels: time accumulator for ticks.
+    pub channel_tick_timer: f32,
+}
+
+/// Result of ticking a cast bar by `dt` seconds.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum CastTickResult {
+    /// Cast still in progress, no action needed.
+    InProgress,
+    /// Normal cast completed — apply spell effects.
+    Completed,
+    /// Channel tick fired — apply one tick of channel effects.
+    ChannelTick,
+    /// Channel finished (elapsed >= duration).
+    ChannelComplete,
+}
+
+impl CastState {
+    /// Create a new normal (non-channel) cast.
+    pub fn normal(spell_id: u32, target: u64, duration: f32, interruptible: bool) -> Self {
+        Self {
+            spell_id,
+            target,
+            duration,
+            elapsed: 0.0,
+            cast_type: CastType::Normal,
+            interruptible,
+            pushback_count: 0,
+            channel_tick_interval: 0.0,
+            channel_tick_timer: 0.0,
+        }
+    }
+
+    /// Create a new channeled cast.
+    pub fn channel(
+        spell_id: u32,
+        target: u64,
+        duration: f32,
+        tick_interval: f32,
+        interruptible: bool,
+    ) -> Self {
+        Self {
+            spell_id,
+            target,
+            duration,
+            elapsed: 0.0,
+            cast_type: CastType::Channel,
+            interruptible,
+            pushback_count: 0,
+            channel_tick_interval: tick_interval,
+            channel_tick_timer: 0.0,
+        }
+    }
+
+    /// Advance the cast by `dt` seconds. Returns what happened.
+    pub fn tick(&mut self, dt: f32) -> CastTickResult {
+        self.elapsed += dt;
+
+        match self.cast_type {
+            CastType::Normal => {
+                if self.elapsed >= self.duration {
+                    CastTickResult::Completed
+                } else {
+                    CastTickResult::InProgress
+                }
+            }
+            CastType::Channel => {
+                if self.elapsed >= self.duration {
+                    return CastTickResult::ChannelComplete;
+                }
+                if self.channel_tick_interval > 0.0 {
+                    self.channel_tick_timer += dt;
+                    if self.channel_tick_timer >= self.channel_tick_interval {
+                        self.channel_tick_timer -= self.channel_tick_interval;
+                        return CastTickResult::ChannelTick;
+                    }
+                }
+                CastTickResult::InProgress
+            }
+        }
+    }
+
+    /// Progress as a fraction 0.0–1.0.
+    pub fn progress(&self) -> f32 {
+        if self.duration <= 0.0 {
+            return 1.0;
+        }
+        (self.elapsed / self.duration).min(1.0)
+    }
+}
+
 // --- Talent system ---
 
 /// A talent definition. Talents are passive bonuses that apply aura effects
@@ -2388,6 +2512,65 @@ mod tests {
         let healers: Vec<_> = SPECIALIZATIONS.iter().filter(|s| s.role == Role::Healer).collect();
         // Holy Paladin, Disc, Holy Priest, Resto Shaman, Mistweaver, Resto Druid, Preservation
         assert_eq!(healers.len(), 7);
+    }
+
+    // --- Cast bar tests ---
+
+    #[test]
+    fn normal_cast_in_progress() {
+        let mut cast = CastState::normal(133, 1, 2.0, true);
+        assert_eq!(cast.tick(0.5), CastTickResult::InProgress);
+        assert!((cast.progress() - 0.25).abs() < 0.01);
+    }
+
+    #[test]
+    fn normal_cast_completes() {
+        let mut cast = CastState::normal(133, 1, 2.0, true);
+        cast.tick(1.5);
+        assert_eq!(cast.tick(0.6), CastTickResult::Completed);
+    }
+
+    #[test]
+    fn normal_cast_instant_completes_immediately() {
+        let mut cast = CastState::normal(100, 1, 0.0, false);
+        assert_eq!(cast.tick(0.016), CastTickResult::Completed);
+    }
+
+    #[test]
+    fn channel_ticks_during_duration() {
+        let mut cast = CastState::channel(5143, 1, 4.0, 1.0, true);
+        assert_eq!(cast.tick(0.5), CastTickResult::InProgress);
+        assert_eq!(cast.tick(0.6), CastTickResult::ChannelTick); // 1.1s total
+    }
+
+    #[test]
+    fn channel_multiple_ticks() {
+        let mut cast = CastState::channel(5143, 1, 6.0, 2.0, true);
+        assert_eq!(cast.tick(1.5), CastTickResult::InProgress);
+        assert_eq!(cast.tick(0.6), CastTickResult::ChannelTick); // tick at 2.1s
+        assert_eq!(cast.tick(1.5), CastTickResult::InProgress);
+        assert_eq!(cast.tick(0.6), CastTickResult::ChannelTick); // tick at 4.2s
+    }
+
+    #[test]
+    fn channel_completes_after_duration() {
+        let mut cast = CastState::channel(5143, 1, 3.0, 1.0, true);
+        cast.tick(1.5);
+        cast.tick(1.0); // tick at ~1s
+        assert_eq!(cast.tick(1.0), CastTickResult::ChannelComplete);
+    }
+
+    #[test]
+    fn cast_progress_clamped() {
+        let mut cast = CastState::normal(133, 1, 2.0, true);
+        cast.tick(5.0);
+        assert_eq!(cast.progress(), 1.0);
+    }
+
+    #[test]
+    fn cast_progress_zero_duration() {
+        let cast = CastState::normal(100, 1, 0.0, false);
+        assert_eq!(cast.progress(), 1.0);
     }
 
     // --- Mastery tests ---
