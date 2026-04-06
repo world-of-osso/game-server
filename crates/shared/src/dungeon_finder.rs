@@ -203,6 +203,69 @@ pub fn teleport_orders(
         .collect()
 }
 
+// --- Satchel rewards ---
+
+/// A satchel bonus for queuing as an in-demand role.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SatchelReward {
+    /// Gold bonus in copper.
+    pub gold: u32,
+    /// Bonus item (e.g. Satchel of Exotic Mysteries).
+    pub item_id: u32,
+}
+
+/// Default satchel reward.
+pub const DEFAULT_SATCHEL: SatchelReward = SatchelReward {
+    gold: 500_000, // 50g
+    item_id: 54516, // Satchel of Exotic Mysteries
+};
+
+/// Determine which roles are in demand based on current queue composition.
+///
+/// A role is "in demand" if the queue has significantly fewer of that role
+/// than needed. Standard ratio: 1T:1H:3D per group → tanks and healers
+/// are in demand when their count per DPS is below threshold.
+pub fn in_demand_roles(queue: &DungeonQueue) -> Vec<GroupRole> {
+    let mut tanks = 0u32;
+    let mut healers = 0u32;
+    let mut dps = 0u32;
+
+    for entry in &queue.entries {
+        for role in &entry.roles {
+            match role {
+                GroupRole::Tank => tanks += 1,
+                GroupRole::Healer => healers += 1,
+                GroupRole::Dps => dps += 1,
+            }
+        }
+    }
+
+    let mut demand = Vec::new();
+    // Need 1 tank per 3 DPS; in demand if ratio is worse
+    if dps > 0 && tanks * 3 < dps {
+        demand.push(GroupRole::Tank);
+    }
+    // Need 1 healer per 3 DPS
+    if dps > 0 && healers * 3 < dps {
+        demand.push(GroupRole::Healer);
+    }
+    // If queue is empty, both tank and healer are in demand
+    if queue.is_empty() {
+        demand.push(GroupRole::Tank);
+        demand.push(GroupRole::Healer);
+    }
+    demand
+}
+
+/// Check if a player's role qualifies for a satchel reward.
+pub fn satchel_for_role(role: GroupRole, demand: &[GroupRole]) -> Option<SatchelReward> {
+    if demand.contains(&role) {
+        Some(DEFAULT_SATCHEL)
+    } else {
+        None
+    }
+}
+
 // --- Deserter penalty ---
 
 /// Deserter debuff duration in seconds (30 minutes).
@@ -518,5 +581,50 @@ mod tests {
         tracker.apply(1, 10000); // expires 11800
         tracker.apply(1, 11000); // refreshes to 12800
         assert!(tracker.is_deserter(1, 12000));
+    }
+
+    // --- Satchel tests ---
+
+    #[test]
+    fn tank_in_demand_with_many_dps() {
+        let mut q = DungeonQueue::default();
+        for i in 1..=10 {
+            q.queue_solo(i, GroupRole::Dps, vec![100], 0).unwrap();
+        }
+        let demand = in_demand_roles(&q);
+        assert!(demand.contains(&GroupRole::Tank));
+        assert!(demand.contains(&GroupRole::Healer));
+    }
+
+    #[test]
+    fn no_demand_when_balanced() {
+        let mut q = DungeonQueue::default();
+        q.queue_solo(1, GroupRole::Tank, vec![100], 0).unwrap();
+        q.queue_solo(2, GroupRole::Healer, vec![100], 0).unwrap();
+        q.queue_solo(3, GroupRole::Dps, vec![100], 0).unwrap();
+        let demand = in_demand_roles(&q);
+        assert!(!demand.contains(&GroupRole::Dps));
+    }
+
+    #[test]
+    fn empty_queue_both_in_demand() {
+        let q = DungeonQueue::default();
+        let demand = in_demand_roles(&q);
+        assert!(demand.contains(&GroupRole::Tank));
+        assert!(demand.contains(&GroupRole::Healer));
+    }
+
+    #[test]
+    fn satchel_for_in_demand_role() {
+        let demand = vec![GroupRole::Tank];
+        assert!(satchel_for_role(GroupRole::Tank, &demand).is_some());
+        assert!(satchel_for_role(GroupRole::Dps, &demand).is_none());
+    }
+
+    #[test]
+    fn satchel_reward_values() {
+        let reward = satchel_for_role(GroupRole::Tank, &[GroupRole::Tank]).unwrap();
+        assert_eq!(reward.gold, 500_000);
+        assert_eq!(reward.item_id, 54516);
     }
 }
