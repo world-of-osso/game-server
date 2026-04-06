@@ -21,6 +21,18 @@ use crate::persistence::{
 const MAX_PAGE_SIZE: u32 = 50;
 const HOUSE_CUT_BPS: u32 = 500;
 
+/// Deposit = vendor_sell_price * stack_count * duration_multiplier.
+fn deposit_cost(vendor_sell_price: u32, stack_count: u32, duration: AuctionDuration) -> u32 {
+    let multiplier = match duration {
+        AuctionDuration::Short => 1,
+        AuctionDuration::Medium => 2,
+        AuctionDuration::Long => 4,
+    };
+    vendor_sell_price
+        .saturating_mul(stack_count)
+        .saturating_mul(multiplier)
+}
+
 #[derive(Resource, Default)]
 struct AuctionHouseState {
     initialized: bool,
@@ -353,6 +365,11 @@ fn create_auction(
     if req.stack_count > source.stack_count {
         return err("requested stack exceeds available stack");
     }
+    let deposit = deposit_cost(source.vendor_sell_price, req.stack_count, req.duration);
+    if deposit > 0 && inventory.gold < deposit {
+        return err("not enough gold for auction deposit");
+    }
+    inventory.gold -= deposit;
 
     if inventory.items[index].stack_count == req.stack_count {
         inventory.items.remove(index);
@@ -1209,7 +1226,6 @@ mod tests {
         let (seller_id, _) =
             persistence::create_character(&db, 1, "Seller", 1, 1).expect("seller");
         let source_item = persistence::load_inventory(&db, seller_id).items[0].clone();
-        let seller_gold_before = persistence::load_inventory(&db, seller_id).gold;
         let mut state = AuctionHouseState::default();
 
         create_auction(
@@ -1225,6 +1241,8 @@ mod tests {
             },
         );
         let auction_id = *state.auctions.keys().next().expect("auction id");
+        // Capture gold after deposit deducted
+        let seller_gold_after_create = persistence::load_inventory(&db, seller_id).gold;
 
         // Bid on own auction rejected
         let bid_response = place_bid(&db, &mut state, seller_id, auction_id, 100);
@@ -1236,9 +1254,9 @@ mod tests {
         assert!(!buyout_response.success);
         assert!(state.auctions.contains_key(&auction_id));
 
-        // Gold unchanged
+        // Gold unchanged after failed bid/buyout attempts
         let seller_gold_after = persistence::load_inventory(&db, seller_id).gold;
-        assert_eq!(seller_gold_after, seller_gold_before);
+        assert_eq!(seller_gold_after, seller_gold_after_create);
     }
 
     #[test]
@@ -1281,6 +1299,42 @@ mod tests {
         assert_eq!(
             state.auctions.get(&auction_id).unwrap().current_bid,
             Some(100),
+        );
+    }
+
+    #[test]
+    fn create_auction_rejected_with_insufficient_deposit() {
+        let db = persistence::temp_database();
+        let (seller_id, _) =
+            persistence::create_character(&db, 1, "Seller", 1, 1).expect("seller");
+        let source_item = persistence::load_inventory(&db, seller_id).items[0].clone();
+        let mut state = AuctionHouseState::default();
+
+        // Drain seller gold to just below the deposit cost
+        let deposit = deposit_cost(source_item.vendor_sell_price, 1, AuctionDuration::Long);
+        let mut inv = persistence::load_inventory(&db, seller_id);
+        inv.gold = deposit - 1;
+        persistence::save_inventory(&db, seller_id, &inv);
+
+        let response = create_auction(
+            &db,
+            &mut state,
+            seller_id,
+            &CreateAuction {
+                item_guid: source_item.item_guid,
+                stack_count: 1,
+                min_bid: 10,
+                buyout_price: Some(100),
+                duration: AuctionDuration::Long,
+            },
+        );
+        assert!(!response.success);
+        assert!(state.auctions.is_empty());
+        // Gold and inventory unchanged
+        assert_eq!(persistence::load_inventory(&db, seller_id).gold, deposit - 1);
+        assert_eq!(
+            persistence::load_inventory(&db, seller_id).items.len(),
+            inv.items.len(),
         );
     }
 
@@ -1530,6 +1584,7 @@ mod tests {
         let buyer_gold_before = persistence::load_inventory(&db, buyer_id).gold;
         let buyer_item_count_before = persistence::load_inventory(&db, buyer_id).items.len();
         let mut state = AuctionHouseState::default();
+        let deposit = deposit_cost(source_item.vendor_sell_price, 3, AuctionDuration::Medium);
 
         create_auction(
             &db,
@@ -1568,7 +1623,7 @@ mod tests {
         assert!(buyer_claim.success);
         assert_eq!(
             persistence::load_inventory(&db, seller_id).gold,
-            seller_gold_before + 190
+            seller_gold_before - deposit + 190
         );
         assert_eq!(
             persistence::load_inventory(&db, buyer_id).gold,
