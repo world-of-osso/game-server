@@ -395,6 +395,55 @@ pub fn upcoming_rewards<'a>(
         .collect()
 }
 
+// --- Tabard championing ---
+
+/// A faction tabard that can be worn to champion a faction in dungeons.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct FactionTabard {
+    /// Item ID of the tabard.
+    pub item_id: u32,
+    /// Faction this tabard champions.
+    pub faction_id: u32,
+}
+
+/// Resolve which faction receives dungeon mob kill rep.
+///
+/// If the player is wearing a champion tabard, rep is redirected to the
+/// tabard's faction. Otherwise, returns the original faction (if any).
+///
+/// `equipped_tabard` should be the faction tabard the player is wearing,
+/// or `None` if they have no faction tabard equipped.
+/// `in_dungeon` must be true for championing to apply.
+pub fn resolve_champion_faction(
+    original_faction: Option<u32>,
+    equipped_tabard: Option<&FactionTabard>,
+    in_dungeon: bool,
+) -> Option<u32> {
+    if in_dungeon && let Some(tabard) = equipped_tabard {
+        return Some(tabard.faction_id);
+    }
+    original_faction
+}
+
+/// Apply a dungeon mob kill rep gain, respecting tabard championing.
+///
+/// If championing, the gain goes to the tabard's faction instead of the
+/// mob's native faction. Spillover still applies to the receiving faction.
+pub fn gain_dungeon_rep(
+    rep: &mut CharacterReputation,
+    mob_faction: Option<u32>,
+    amount: i32,
+    equipped_tabard: Option<&FactionTabard>,
+    in_dungeon: bool,
+    registry: &FactionRegistry,
+) -> Vec<RepChangeResult> {
+    let target = resolve_champion_faction(mob_faction, equipped_tabard, in_dungeon);
+    let Some(faction_id) = target else {
+        return Vec::new();
+    };
+    rep.gain_rep_with_spillover(faction_id, amount, RepGainSource::MobKill, registry)
+}
+
 #[cfg(test)]
 #[path = "reputation_tests.rs"]
 mod tests;

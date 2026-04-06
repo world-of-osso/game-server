@@ -607,3 +607,117 @@ fn no_rewards_for_unknown_faction() {
     let available = available_rewards(&rewards, 999, &rep);
     assert!(available.is_empty());
 }
+
+// --- Tabard championing ---
+
+const STORMWIND_TABARD: FactionTabard = FactionTabard { item_id: 45574, faction_id: 72 };
+
+#[test]
+fn champion_redirects_rep_in_dungeon() {
+    assert_eq!(
+        resolve_champion_faction(Some(999), Some(&STORMWIND_TABARD), true),
+        Some(72)
+    );
+}
+
+#[test]
+fn champion_ignored_outside_dungeon() {
+    // Outside dungeon, tabard doesn't redirect
+    assert_eq!(
+        resolve_champion_faction(Some(999), Some(&STORMWIND_TABARD), false),
+        Some(999)
+    );
+}
+
+#[test]
+fn no_tabard_uses_original_faction() {
+    assert_eq!(
+        resolve_champion_faction(Some(72), None, true),
+        Some(72)
+    );
+}
+
+#[test]
+fn no_tabard_no_faction() {
+    assert_eq!(
+        resolve_champion_faction(None, None, true),
+        None
+    );
+}
+
+#[test]
+fn champion_overrides_mob_faction() {
+    // Mob gives rep to faction 999, but tabard redirects to Stormwind
+    assert_eq!(
+        resolve_champion_faction(Some(999), Some(&STORMWIND_TABARD), true),
+        Some(72)
+    );
+}
+
+#[test]
+fn gain_dungeon_rep_with_tabard() {
+    let reg = sample_registry();
+    let mut rep = CharacterReputation::new_for_race(&reg, HUMAN);
+    let sw_before = rep.get_value(72);
+
+    let results = gain_dungeon_rep(
+        &mut rep, Some(999), 100, Some(&STORMWIND_TABARD), true, &reg,
+    );
+
+    // Rep went to Stormwind (72), not the mob's faction (999)
+    assert!(!results.is_empty());
+    assert_eq!(results[0].faction_id, 72);
+    assert_eq!(rep.get_value(72), sw_before + 100);
+}
+
+#[test]
+fn gain_dungeon_rep_without_tabard() {
+    let reg = sample_registry();
+    let mut rep = CharacterReputation::new_for_race(&reg, HUMAN);
+
+    // No tabard — rep goes to the mob's native faction
+    let results = gain_dungeon_rep(
+        &mut rep, Some(72), 100, None, true, &reg,
+    );
+    assert_eq!(results[0].faction_id, 72);
+}
+
+#[test]
+fn gain_dungeon_rep_no_faction_mob() {
+    let reg = sample_registry();
+    let mut rep = CharacterReputation::new_for_race(&reg, HUMAN);
+
+    // Mob has no faction, no tabard → no rep gain
+    let results = gain_dungeon_rep(&mut rep, None, 100, None, true, &reg);
+    assert!(results.is_empty());
+}
+
+#[test]
+fn gain_dungeon_rep_tabard_with_spillover() {
+    let reg = sample_registry();
+    let mut rep = CharacterReputation::new_for_race(&reg, HUMAN);
+    let if_before = rep.get_value(IRONFORGE_ID);
+
+    // Stormwind tabard → gain goes to SW, spillover to Ironforge
+    let results = gain_dungeon_rep(
+        &mut rep, Some(999), 1000, Some(&STORMWIND_TABARD), true, &reg,
+    );
+
+    // Primary + spillover results
+    assert!(results.len() > 1);
+    let if_result = results.iter().find(|r| r.faction_id == IRONFORGE_ID).unwrap();
+    assert_eq!(rep.get_value(IRONFORGE_ID), if_before + 250);
+    assert_eq!(if_result.actual_change(), 250);
+}
+
+#[test]
+fn gain_dungeon_rep_outside_dungeon_no_redirect() {
+    let reg = sample_registry();
+    let mut rep = CharacterReputation::new_for_race(&reg, HUMAN);
+
+    // Outside dungeon — tabard ignored, rep goes to mob's faction
+    let results = gain_dungeon_rep(
+        &mut rep, Some(76), 100, Some(&STORMWIND_TABARD), false, &reg,
+    );
+    assert_eq!(results[0].faction_id, 76);
+}
