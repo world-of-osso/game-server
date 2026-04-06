@@ -55,3 +55,100 @@ fn set_empty_string() {
     motd.set("", 1000).unwrap();
     assert!(!motd.is_set());
 }
+
+// --- Autobroadcast ---
+
+#[test]
+fn autobroadcast_default_disabled() {
+    let ab = Autobroadcast::new();
+    assert!(!ab.enabled);
+    assert!(ab.messages.is_empty());
+    assert_eq!(ab.interval, DEFAULT_BROADCAST_INTERVAL);
+}
+
+#[test]
+fn autobroadcast_disabled_never_fires() {
+    let mut ab = Autobroadcast::new();
+    ab.add_message("Hello".to_string());
+    // Not enabled
+    assert!(ab.should_broadcast(10000).is_none());
+}
+
+#[test]
+fn autobroadcast_empty_never_fires() {
+    let mut ab = Autobroadcast::new();
+    ab.enabled = true;
+    // No messages
+    assert!(ab.should_broadcast(10000).is_none());
+}
+
+#[test]
+fn autobroadcast_fires_after_interval() {
+    let mut ab = Autobroadcast::new();
+    ab.add_message("Server restarting soon!".to_string());
+    ab.enabled = true;
+    ab.interval = 60;
+
+    // First call: fires immediately (last_broadcast=0, now=60)
+    let msg = ab.should_broadcast(60).unwrap();
+    assert_eq!(msg, "Server restarting soon!");
+
+    // Too early
+    assert!(ab.should_broadcast(100).is_none());
+
+    // After interval
+    let msg = ab.should_broadcast(120).unwrap();
+    assert_eq!(msg, "Server restarting soon!");
+}
+
+#[test]
+fn autobroadcast_cycles_messages() {
+    let mut ab = Autobroadcast::new();
+    ab.add_message("First".to_string());
+    ab.add_message("Second".to_string());
+    ab.add_message("Third".to_string());
+    ab.enabled = true;
+    ab.interval = 10;
+
+    assert_eq!(ab.should_broadcast(10).unwrap(), "First");
+    assert_eq!(ab.should_broadcast(20).unwrap(), "Second");
+    assert_eq!(ab.should_broadcast(30).unwrap(), "Third");
+    // Wraps around
+    assert_eq!(ab.should_broadcast(40).unwrap(), "First");
+}
+
+#[test]
+fn autobroadcast_add_remove() {
+    let mut ab = Autobroadcast::new();
+    ab.add_message("A".to_string());
+    ab.add_message("B".to_string());
+    ab.add_message("C".to_string());
+    assert_eq!(ab.message_count(), 3);
+
+    let removed = ab.remove_message(1).unwrap();
+    assert_eq!(removed, "B");
+    assert_eq!(ab.message_count(), 2);
+    assert_eq!(ab.messages[0], "A");
+    assert_eq!(ab.messages[1], "C");
+}
+
+#[test]
+fn autobroadcast_remove_out_of_bounds() {
+    let mut ab = Autobroadcast::new();
+    assert!(ab.remove_message(0).is_none());
+}
+
+#[test]
+fn autobroadcast_remove_resets_index() {
+    let mut ab = Autobroadcast::new();
+    ab.add_message("A".to_string());
+    ab.add_message("B".to_string());
+    ab.enabled = true;
+    ab.interval = 10;
+
+    // Advance to index 1
+    ab.should_broadcast(10);
+    // Remove "B" (index 1) — next_index was 1, now only 1 message, wraps to 0
+    ab.remove_message(1);
+    assert_eq!(ab.should_broadcast(20).unwrap(), "A");
+}

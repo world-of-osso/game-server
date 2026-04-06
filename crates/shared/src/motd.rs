@@ -53,6 +53,84 @@ impl Motd {
     }
 }
 
+// --- Autobroadcast ---
+
+/// Default autobroadcast interval in seconds.
+pub const DEFAULT_BROADCAST_INTERVAL: u64 = 900; // 15 minutes
+
+/// Periodic server-wide message broadcaster.
+///
+/// Cycles through a list of messages at a configurable interval.
+/// The server checks `should_broadcast()` each tick and sends the
+/// returned message to all players.
+#[derive(
+    Debug, Clone, PartialEq, Eq, Default, Resource, Serialize, Deserialize,
+    bitcode::Encode, bitcode::Decode,
+)]
+pub struct Autobroadcast {
+    /// Messages to cycle through.
+    pub messages: Vec<String>,
+    /// Seconds between broadcasts.
+    pub interval: u64,
+    /// Whether broadcasting is enabled.
+    pub enabled: bool,
+    /// Index of the next message to send.
+    next_index: usize,
+    /// Timestamp of the last broadcast.
+    last_broadcast: u64,
+}
+
+impl Autobroadcast {
+    /// Create a new autobroadcast with default interval, disabled.
+    pub fn new() -> Self {
+        Self {
+            messages: Vec::new(),
+            interval: DEFAULT_BROADCAST_INTERVAL,
+            enabled: false,
+            next_index: 0,
+            last_broadcast: 0,
+        }
+    }
+
+    /// Add a message to the rotation.
+    pub fn add_message(&mut self, message: String) {
+        self.messages.push(message);
+    }
+
+    /// Remove a message by index. Returns the removed message.
+    pub fn remove_message(&mut self, index: usize) -> Option<String> {
+        if index >= self.messages.len() {
+            return None;
+        }
+        let removed = self.messages.remove(index);
+        if self.next_index >= self.messages.len() && !self.messages.is_empty() {
+            self.next_index = 0;
+        }
+        Some(removed)
+    }
+
+    /// Check if it's time to broadcast. Returns the message if so.
+    ///
+    /// Call this each server tick with the current timestamp.
+    pub fn should_broadcast(&mut self, now: u64) -> Option<&str> {
+        if !self.enabled || self.messages.is_empty() {
+            return None;
+        }
+        if now.saturating_sub(self.last_broadcast) < self.interval {
+            return None;
+        }
+        self.last_broadcast = now;
+        let msg = &self.messages[self.next_index];
+        self.next_index = (self.next_index + 1) % self.messages.len();
+        Some(msg)
+    }
+
+    /// Number of messages in the rotation.
+    pub fn message_count(&self) -> usize {
+        self.messages.len()
+    }
+}
+
 #[cfg(test)]
 #[path = "motd_tests.rs"]
 mod tests;
