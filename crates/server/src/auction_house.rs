@@ -1951,6 +1951,49 @@ mod tests {
     }
 
     #[test]
+    fn auction_snapshot_independent_of_inventory_changes() {
+        let db = persistence::temp_database();
+        let (seller_id, _) =
+            persistence::create_character(&db, 1, "Seller", 1, 1).expect("seller");
+        let source_item = persistence::load_inventory(&db, seller_id).items[0].clone();
+        let mut state = AuctionHouseState::default();
+
+        create_auction(
+            &db,
+            &mut state,
+            seller_id,
+            &CreateAuction {
+                item_guid: source_item.item_guid,
+                stack_count: 1,
+                min_bid: 100,
+                buyout_price: Some(500),
+                duration: AuctionDuration::Short,
+            },
+        );
+        let auction = state.auctions.values().next().expect("auction");
+        let snapshotted_name = auction.item.name.clone();
+        let snapshotted_quality = auction.item.quality;
+
+        // Modify the remaining inventory item's name and quality
+        let mut inv = persistence::load_inventory(&db, seller_id);
+        if let Some(item) = inv.items.iter_mut().find(|i| i.item_id == source_item.item_id) {
+            item.name = "MODIFIED".into();
+            item.quality = 5;
+        }
+        persistence::save_inventory(&db, seller_id, &inv);
+
+        // Auction snapshot is unchanged
+        let auction = state.auctions.values().next().expect("auction");
+        assert_eq!(auction.item.name, snapshotted_name);
+        assert_eq!(auction.item.quality, snapshotted_quality);
+
+        // Search returns original stats
+        let results = search_auctions(&state.auctions, &text_query(&snapshotted_name));
+        assert_eq!(results.total_results, 1);
+        assert_eq!(results.results[0].item.name, snapshotted_name);
+    }
+
+    #[test]
     fn gold_overflow_saturates_at_max() {
         let db = persistence::temp_database();
         let (seller_id, _) =
