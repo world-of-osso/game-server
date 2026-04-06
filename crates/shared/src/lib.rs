@@ -1,6 +1,7 @@
 pub mod components;
 pub mod formulas;
 pub mod item_data;
+pub mod loot;
 pub mod movement;
 pub mod protocol;
 pub mod protocol_snapshots;
