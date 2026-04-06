@@ -23,6 +23,7 @@ pub mod quest;
 pub mod reputation;
 pub mod spell_catalog;
 pub mod spell_data;
+pub mod ticket;
 pub mod trade;
 pub mod types;
 pub mod xp;
