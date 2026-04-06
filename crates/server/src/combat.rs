@@ -139,7 +139,8 @@ fn build_damage_event(attacker: Entity, target: Entity, damage: f32) -> CombatEv
     CombatEvent {
         attacker: attacker.to_bits(),
         target: target.to_bits(),
-        damage,
+        amount: damage,
+        spell_id: 0,
         event_type: CombatEventType::MeleeDamage,
     }
 }
@@ -163,7 +164,8 @@ fn death_system(
         events.push(CombatEvent {
             attacker: 0,
             target: entity.to_bits(),
-            damage: 0.0,
+            amount: 0.0,
+            spell_id: 0,
             event_type: CombatEventType::Death,
         });
     }
@@ -200,7 +202,8 @@ fn respawn_system(
         events.push(CombatEvent {
             attacker: 0,
             target: entity.to_bits(),
-            damage: 0.0,
+            amount: 0.0,
+            spell_id: 0,
             event_type: CombatEventType::Respawn,
         });
     }

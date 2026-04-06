@@ -56,11 +56,38 @@ pub struct SetTarget {
     pub target_entity: Option<u64>,
 }
 
-/// Combat event type for damage/death/respawn notifications.
+/// Combat event type for damage/death/respawn/avoidance notifications.
+///
+/// Ref: WoW combat log COMBAT_LOG_EVENT types.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub enum CombatEventType {
+    /// Melee auto-attack damage (white hit).
     MeleeDamage,
+    /// Direct spell damage (e.g. Fireball, Mortal Strike).
+    SpellDamage,
+    /// Direct spell healing (e.g. Flash Heal).
+    SpellHeal,
+    /// Periodic damage tick (DoT).
+    PeriodicDamage,
+    /// Periodic healing tick (HoT).
+    PeriodicHeal,
+    /// Damage absorbed by a shield.
+    Absorb,
+    /// Melee or spell miss.
+    Miss,
+    /// Target dodged the attack.
+    Dodge,
+    /// Target parried the attack.
+    Parry,
+    /// Target blocked the attack (damage still dealt, reduced by block value).
+    Block,
+    /// Critical strike (melee or spell).
+    CriticalHit,
+    /// Spell cast was interrupted (school lockout).
+    Interrupt,
+    /// Unit died.
     Death,
+    /// Unit respawned.
     Respawn,
 }
 
@@ -69,7 +96,10 @@ pub enum CombatEventType {
 pub struct CombatEvent {
     pub attacker: u64,
     pub target: u64,
-    pub damage: f32,
+    /// Damage dealt, healing done, or amount absorbed. Context depends on `event_type`.
+    pub amount: f32,
+    /// Spell ID for spell-related events (0 for melee/death/respawn).
+    pub spell_id: u32,
     pub event_type: CombatEventType,
 }
 
@@ -781,5 +811,49 @@ mod tests {
         let json_encoded = serde_json::to_string(&snapshot).unwrap();
         let json_decoded: EquipmentAppearance = serde_json::from_str(&json_encoded).unwrap();
         assert_eq!(json_decoded, snapshot);
+    }
+
+    #[test]
+    fn combat_event_type_all_variants_serialize() {
+        let variants = vec![
+            CombatEventType::MeleeDamage,
+            CombatEventType::SpellDamage,
+            CombatEventType::SpellHeal,
+            CombatEventType::PeriodicDamage,
+            CombatEventType::PeriodicHeal,
+            CombatEventType::Absorb,
+            CombatEventType::Miss,
+            CombatEventType::Dodge,
+            CombatEventType::Parry,
+            CombatEventType::Block,
+            CombatEventType::CriticalHit,
+            CombatEventType::Interrupt,
+            CombatEventType::Death,
+            CombatEventType::Respawn,
+        ];
+        for v in &variants {
+            let json = serde_json::to_string(v).unwrap();
+            let decoded: CombatEventType = serde_json::from_str(&json).unwrap();
+            assert_eq!(*v, decoded);
+        }
+        assert_eq!(variants.len(), 14);
+    }
+
+    #[test]
+    fn combat_event_round_trip() {
+        let event = CombatEvent {
+            attacker: 42,
+            target: 99,
+            amount: 1500.0,
+            spell_id: 12345,
+            event_type: CombatEventType::SpellDamage,
+        };
+        let json = serde_json::to_string(&event).unwrap();
+        let decoded: CombatEvent = serde_json::from_str(&json).unwrap();
+        assert_eq!(decoded.attacker, 42);
+        assert_eq!(decoded.target, 99);
+        assert_eq!(decoded.amount, 1500.0);
+        assert_eq!(decoded.spell_id, 12345);
+        assert_eq!(decoded.event_type, CombatEventType::SpellDamage);
     }
 }
