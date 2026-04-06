@@ -891,6 +891,10 @@ pub struct ThreatEntry {
 
 /// Threat multiplier for healing (0.5 threat per point healed).
 const HEAL_THREAT_MULTIPLIER: f32 = 0.5;
+/// Aggro swap threshold for melee (must exceed current target by 10%).
+const MELEE_AGGRO_THRESHOLD: f32 = 1.10;
+/// Aggro swap threshold for ranged (must exceed current target by 30%).
+const RANGED_AGGRO_THRESHOLD: f32 = 1.30;
 
 impl ThreatTable {
     /// Add threat from damage (1:1 ratio).
@@ -951,6 +955,42 @@ impl ThreatTable {
     /// Number of entities with threat.
     pub fn len(&self) -> usize {
         self.entries.len()
+    }
+
+    /// Determine the aggro target, accounting for swap thresholds.
+    ///
+    /// A challenger only takes aggro from the `current_target` if their threat
+    /// exceeds the current target's threat by a threshold:
+    /// - **Melee** (≤ 5 yards): must exceed by 10% (`is_melee = true`)
+    /// - **Ranged** (> 5 yards): must exceed by 30% (`is_melee = false`)
+    ///
+    /// If `current_target` is `None` (first engagement) or has been removed
+    /// from the threat table, the highest-threat entity wins unconditionally.
+    ///
+    /// Ref: AzerothCore `ThreatMgr::SelectVictim()`.
+    pub fn aggro_target(&self, current_target: Option<u64>, is_melee: bool) -> Option<u64> {
+        let top = self.top_threat()?;
+
+        let Some(current) = current_target else {
+            return Some(top.entity);
+        };
+
+        let current_threat = self.threat_for(current);
+        if current_threat <= 0.0 {
+            return Some(top.entity);
+        }
+
+        let threshold = if is_melee {
+            MELEE_AGGRO_THRESHOLD
+        } else {
+            RANGED_AGGRO_THRESHOLD
+        };
+
+        if top.threat >= current_threat * threshold {
+            Some(top.entity)
+        } else {
+            Some(current)
+        }
     }
 }
 
@@ -1782,6 +1822,62 @@ mod tests {
     fn threat_unknown_entity_returns_zero() {
         let table = ThreatTable::default();
         assert_eq!(table.threat_for(999), 0.0);
+    }
+
+    // --- Aggro swap tests ---
+
+    #[test]
+    fn aggro_no_current_target_picks_top() {
+        let mut table = ThreatTable::default();
+        table.add_damage_threat(1, 100.0);
+        table.add_damage_threat(2, 200.0);
+        assert_eq!(table.aggro_target(None, true), Some(2));
+    }
+
+    #[test]
+    fn aggro_melee_needs_10_percent_to_swap() {
+        let mut table = ThreatTable::default();
+        table.add_damage_threat(1, 1000.0); // current target
+        table.add_damage_threat(2, 1050.0); // 5% more — not enough
+        assert_eq!(table.aggro_target(Some(1), true), Some(1));
+    }
+
+    #[test]
+    fn aggro_melee_swaps_at_110_percent() {
+        let mut table = ThreatTable::default();
+        table.add_damage_threat(1, 1000.0); // current target
+        table.add_damage_threat(2, 1100.0); // exactly 110%
+        assert_eq!(table.aggro_target(Some(1), true), Some(2));
+    }
+
+    #[test]
+    fn aggro_ranged_needs_30_percent_to_swap() {
+        let mut table = ThreatTable::default();
+        table.add_damage_threat(1, 1000.0);
+        table.add_damage_threat(2, 1200.0); // 20% more — not enough for ranged
+        assert_eq!(table.aggro_target(Some(1), false), Some(1));
+    }
+
+    #[test]
+    fn aggro_ranged_swaps_at_130_percent() {
+        let mut table = ThreatTable::default();
+        table.add_damage_threat(1, 1000.0);
+        table.add_damage_threat(2, 1300.0); // exactly 130%
+        assert_eq!(table.aggro_target(Some(1), false), Some(2));
+    }
+
+    #[test]
+    fn aggro_current_target_removed_picks_top() {
+        let mut table = ThreatTable::default();
+        table.add_damage_threat(2, 500.0);
+        // Current target entity 1 not in table
+        assert_eq!(table.aggro_target(Some(1), true), Some(2));
+    }
+
+    #[test]
+    fn aggro_empty_table_returns_none() {
+        let table = ThreatTable::default();
+        assert_eq!(table.aggro_target(None, true), None);
     }
 
     // --- Periodic tick tests ---
