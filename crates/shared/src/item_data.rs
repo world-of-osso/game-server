@@ -366,6 +366,51 @@ pub fn estimated_vendor_price(ilvl: u16, quality: ItemQuality) -> u32 {
     (ilvl as f32 * quality.vendor_price_multiplier() * 100.0) as u32
 }
 
+// --- Set bonuses ---
+
+use crate::components::AuraEffect;
+
+/// A set bonus that activates when N pieces of a set are equipped.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SetBonus {
+    /// Number of pieces required (e.g. 2 or 4).
+    pub required_pieces: u8,
+    /// Passive aura effects granted by this bonus.
+    pub effects: Vec<AuraEffect>,
+}
+
+/// Definition of an item set (e.g. Tier 10 Warrior).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ItemSetDef {
+    /// Unique set ID.
+    pub id: u32,
+    /// Display name.
+    pub name: String,
+    /// Item IDs that belong to this set.
+    pub item_ids: Vec<u32>,
+    /// Bonuses at various piece thresholds.
+    pub bonuses: Vec<SetBonus>,
+}
+
+/// Determine which set bonuses are active given the equipped item IDs.
+///
+/// Returns the aura effects from all set bonuses whose piece threshold is met.
+pub fn active_set_bonuses(sets: &[ItemSetDef], equipped_item_ids: &[u32]) -> Vec<AuraEffect> {
+    sets.iter()
+        .flat_map(|set| {
+            let count = set
+                .item_ids
+                .iter()
+                .filter(|id| equipped_item_ids.contains(id))
+                .count() as u8;
+            set.bonuses
+                .iter()
+                .filter(move |b| count >= b.required_pieces)
+                .flat_map(|b| b.effects.iter().copied())
+        })
+        .collect()
+}
+
 // --- Durability ---
 
 /// Fraction of max durability lost on each death.
@@ -895,6 +940,70 @@ mod tests {
         bag.slots[0] = InvSlot { item_id: 1, count: 1 };
         bag.slots[3] = InvSlot { item_id: 2, count: 5 };
         assert_eq!(bag.used_slots(), 2);
+    }
+
+    // --- Set bonus tests ---
+
+    fn sample_set() -> ItemSetDef {
+        ItemSetDef {
+            id: 1,
+            name: "Sanctified Lightsworn".into(),
+            item_ids: vec![51231, 51232, 51233, 51234, 51235],
+            bonuses: vec![
+                SetBonus {
+                    required_pieces: 2,
+                    effects: vec![AuraEffect::ModCritChance { percent: 0.05 }],
+                },
+                SetBonus {
+                    required_pieces: 4,
+                    effects: vec![AuraEffect::ModDamageDone { percent: 0.10 }],
+                },
+            ],
+        }
+    }
+
+    #[test]
+    fn set_bonus_none_with_zero_pieces() {
+        let sets = vec![sample_set()];
+        let effects = active_set_bonuses(&sets, &[99999]);
+        assert!(effects.is_empty());
+    }
+
+    #[test]
+    fn set_bonus_none_with_one_piece() {
+        let sets = vec![sample_set()];
+        let effects = active_set_bonuses(&sets, &[51231]);
+        assert!(effects.is_empty());
+    }
+
+    #[test]
+    fn set_bonus_2pc_active() {
+        let sets = vec![sample_set()];
+        let effects = active_set_bonuses(&sets, &[51231, 51232]);
+        assert_eq!(effects.len(), 1);
+        assert_eq!(effects[0], AuraEffect::ModCritChance { percent: 0.05 });
+    }
+
+    #[test]
+    fn set_bonus_4pc_includes_2pc() {
+        let sets = vec![sample_set()];
+        let effects = active_set_bonuses(&sets, &[51231, 51232, 51233, 51234]);
+        assert_eq!(effects.len(), 2); // both 2pc and 4pc
+        assert!(effects.contains(&AuraEffect::ModCritChance { percent: 0.05 }));
+        assert!(effects.contains(&AuraEffect::ModDamageDone { percent: 0.10 }));
+    }
+
+    #[test]
+    fn set_bonus_5pc_still_gets_both() {
+        let sets = vec![sample_set()];
+        let effects = active_set_bonuses(&sets, &[51231, 51232, 51233, 51234, 51235]);
+        assert_eq!(effects.len(), 2);
+    }
+
+    #[test]
+    fn set_bonus_no_sets_defined() {
+        let effects = active_set_bonuses(&[], &[51231, 51232]);
+        assert!(effects.is_empty());
     }
 
     // --- Quality tier tests ---
