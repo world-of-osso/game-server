@@ -1194,6 +1194,44 @@ mod tests {
     }
 
     #[test]
+    fn bid_on_own_auction_rejected() {
+        let db = persistence::temp_database();
+        let (seller_id, _) =
+            persistence::create_character(&db, 1, "Seller", 1, 1).expect("seller");
+        let source_item = persistence::load_inventory(&db, seller_id).items[0].clone();
+        let seller_gold_before = persistence::load_inventory(&db, seller_id).gold;
+        let mut state = AuctionHouseState::default();
+
+        create_auction(
+            &db,
+            &mut state,
+            seller_id,
+            &CreateAuction {
+                item_guid: source_item.item_guid,
+                stack_count: 1,
+                min_bid: 100,
+                buyout_price: Some(500),
+                duration: AuctionDuration::Medium,
+            },
+        );
+        let auction_id = *state.auctions.keys().next().expect("auction id");
+
+        // Bid on own auction rejected
+        let bid_response = place_bid(&db, &mut state, seller_id, auction_id, 100);
+        assert!(!bid_response.success);
+        assert!(state.auctions.get(&auction_id).unwrap().current_bid.is_none());
+
+        // Buyout own auction also rejected
+        let buyout_response = buyout_auction(&db, &mut state, seller_id, auction_id);
+        assert!(!buyout_response.success);
+        assert!(state.auctions.contains_key(&auction_id));
+
+        // Gold unchanged
+        let seller_gold_after = persistence::load_inventory(&db, seller_id).gold;
+        assert_eq!(seller_gold_after, seller_gold_before);
+    }
+
+    #[test]
     fn expired_auction_without_bid_returns_item_to_seller() {
         let db = persistence::temp_database();
         let (seller_id, _) =
