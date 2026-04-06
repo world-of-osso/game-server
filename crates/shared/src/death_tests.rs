@@ -364,3 +364,42 @@ fn should_apply_sickness_checks() {
     assert!(!should_apply_sickness(ResurrectSource::PlayerSpell, 60));
     assert!(!should_apply_sickness(ResurrectSource::SpiritHealer, 5));
 }
+
+// --- Spirit healer ---
+
+fn healer_ctx(state: DeathState, level: u8, player: (f32, f32, f32), healer: (f32, f32, f32)) -> SpiritHealerContext {
+    SpiritHealerContext { state, player_level: level, player_pos: player, healer_pos: healer, healer_map: 0, now: 1000 }
+}
+
+#[test]
+fn spirit_healer_resurrects_ghost() {
+    let ctx = healer_ctx(DeathState::Ghost, 60, (10.0, 10.0, 0.0), (15.0, 10.0, 0.0));
+    let result = accept_spirit_healer(&ctx).unwrap();
+    assert_eq!(result.x, 15.0);
+    assert!(result.sickness.is_some());
+    assert_eq!(result.sickness.unwrap().expires_at, 1000 + RES_SICKNESS_DURATION);
+}
+
+#[test]
+fn spirit_healer_low_level_no_sickness() {
+    let ctx = healer_ctx(DeathState::Ghost, 5, (10.0, 10.0, 0.0), (15.0, 10.0, 0.0));
+    assert!(accept_spirit_healer(&ctx).unwrap().sickness.is_none());
+}
+
+#[test]
+fn spirit_healer_not_ghost_fails() {
+    let ctx = healer_ctx(DeathState::Alive, 60, (0.0, 0.0, 0.0), (0.0, 0.0, 0.0));
+    assert_eq!(accept_spirit_healer(&ctx), Err(DeathError::NotGhost));
+}
+
+#[test]
+fn spirit_healer_out_of_range() {
+    let ctx = healer_ctx(DeathState::Ghost, 60, (0.0, 0.0, 0.0), (100.0, 100.0, 0.0));
+    assert_eq!(accept_spirit_healer(&ctx), Err(DeathError::NotGhost));
+}
+
+#[test]
+fn spirit_healer_exact_range() {
+    let ctx = healer_ctx(DeathState::Ghost, 60, (0.0, 0.0, 0.0), (SPIRIT_HEALER_RANGE, 0.0, 0.0));
+    assert!(accept_spirit_healer(&ctx).is_ok());
+}

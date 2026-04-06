@@ -366,6 +366,58 @@ pub fn apply_res_sickness(
     }
 }
 
+// --- Spirit healer ---
+
+/// NPC flag identifying a spirit healer.
+pub const NPC_FLAG_SPIRIT_HEALER: u32 = 0x0800;
+
+/// Maximum distance to interact with a spirit healer (yards).
+pub const SPIRIT_HEALER_RANGE: f32 = 20.0;
+
+/// Result of accepting a spirit healer resurrection.
+#[derive(Debug, Clone, PartialEq)]
+pub struct SpiritHealerResult {
+    /// Position to resurrect at (graveyard / spirit healer location).
+    pub x: f32,
+    pub y: f32,
+    pub z: f32,
+    pub map_id: u16,
+    /// Resurrection sickness debuff (None if low level).
+    pub sickness: Option<ResSickness>,
+}
+
+/// Context for a spirit healer interaction.
+pub struct SpiritHealerContext {
+    pub state: DeathState,
+    pub player_level: u8,
+    pub player_pos: (f32, f32, f32),
+    pub healer_pos: (f32, f32, f32),
+    pub healer_map: u16,
+    pub now: u64,
+}
+
+/// Accept resurrection from a spirit healer NPC.
+///
+/// Player must be a Ghost within range of the spirit healer.
+/// Applies resurrection sickness for players at level 10+.
+pub fn accept_spirit_healer(ctx: &SpiritHealerContext) -> Result<SpiritHealerResult, DeathError> {
+    if ctx.state != DeathState::Ghost {
+        return Err(DeathError::NotGhost);
+    }
+    let range_sq = dist_sq(
+        ctx.player_pos.0, ctx.player_pos.1, ctx.player_pos.2,
+        ctx.healer_pos.0, ctx.healer_pos.1, ctx.healer_pos.2,
+    );
+    if range_sq > SPIRIT_HEALER_RANGE * SPIRIT_HEALER_RANGE {
+        return Err(DeathError::NotGhost);
+    }
+    let sickness = apply_res_sickness(ResurrectSource::SpiritHealer, ctx.player_level, ctx.now);
+    Ok(SpiritHealerResult {
+        x: ctx.healer_pos.0, y: ctx.healer_pos.1, z: ctx.healer_pos.2,
+        map_id: ctx.healer_map, sickness,
+    })
+}
+
 #[cfg(test)]
 #[path = "death_tests.rs"]
 mod tests;
