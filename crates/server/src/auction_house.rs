@@ -827,6 +827,29 @@ mod tests {
         );
     }
 
+    fn test_auction(id: u64, name: &str, quality: u8, required_level: u16) -> AuctionData {
+        AuctionData {
+            auction_id: id,
+            seller_character_id: 1,
+            seller_name: "Seller".into(),
+            item: InventoryItemData {
+                item_guid: id,
+                item_id: id as u32,
+                name: name.into(),
+                quality,
+                required_level,
+                stack_count: 1,
+                vendor_sell_price: 1,
+            },
+            stack_count: 1,
+            min_bid: 100,
+            current_bid: None,
+            current_bidder_character_id: None,
+            buyout_price: Some(200),
+            expires_at_unix_secs: unix_now() + 3600,
+        }
+    }
+
     fn text_query(text: &str) -> AuctionSearchQuery {
         AuctionSearchQuery {
             text: text.into(),
@@ -924,6 +947,56 @@ mod tests {
         assert!(raise.success);
         let auction = state.auctions.get(&auction_id).expect("auction");
         assert_eq!(auction.current_bid, Some(105));
+    }
+
+    #[test]
+    fn search_filters_by_name_quality_and_level_range() {
+        let mut state = AuctionHouseState::default();
+        state.auctions.insert(1, test_auction(1, "Iron Sword", 2, 10));
+        state.auctions.insert(2, test_auction(2, "Steel Sword", 3, 30));
+        state.auctions.insert(3, test_auction(3, "Linen Cloth", 1, 5));
+        state.auctions.insert(4, test_auction(4, "Iron Ore", 1, 1));
+
+        // Filter by name: "sword" matches 2
+        let results = search_auctions(&state.auctions, &text_query("sword"));
+        assert_eq!(results.total_results, 2);
+
+        // Filter by name: "iron" matches Iron Sword + Iron Ore
+        let results = search_auctions(&state.auctions, &text_query("iron"));
+        assert_eq!(results.total_results, 2);
+
+        // Filter by quality: rare (3) matches only Steel Sword
+        let mut query = text_query("");
+        query.quality = Some(3);
+        let results = search_auctions(&state.auctions, &query);
+        assert_eq!(results.total_results, 1);
+        assert_eq!(results.results[0].item.name, "Steel Sword");
+
+        // Filter by min_level: >= 10 matches Iron Sword (10) + Steel Sword (30)
+        let mut query = text_query("");
+        query.min_level = Some(10);
+        let results = search_auctions(&state.auctions, &query);
+        assert_eq!(results.total_results, 2);
+
+        // Filter by max_level: <= 5 matches Linen Cloth (5) + Iron Ore (1)
+        let mut query = text_query("");
+        query.max_level = Some(5);
+        let results = search_auctions(&state.auctions, &query);
+        assert_eq!(results.total_results, 2);
+
+        // Combined: name "iron" + level range 1..=10
+        let mut query = text_query("iron");
+        query.min_level = Some(1);
+        query.max_level = Some(10);
+        let results = search_auctions(&state.auctions, &query);
+        assert_eq!(results.total_results, 2);
+
+        // Combined: name "sword" + quality >= 3
+        let mut query = text_query("sword");
+        query.quality = Some(3);
+        let results = search_auctions(&state.auctions, &query);
+        assert_eq!(results.total_results, 1);
+        assert_eq!(results.results[0].item.name, "Steel Sword");
     }
 
     #[test]
