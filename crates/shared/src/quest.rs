@@ -169,25 +169,101 @@ impl ObjectiveProgress {
     }
 }
 
+/// Quest lifecycle state.
+///
+/// ```text
+/// Available → Accepted → InProgress → Complete → TurnedIn
+///                ↑______________|
+///          (objectives not yet done stay InProgress)
+/// ```
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum QuestState {
+    /// Quest is available but not yet accepted.
+    Available,
+    /// Quest was just accepted (transitions to InProgress on first tick).
+    Accepted,
+    /// Objectives are being worked on.
+    InProgress,
+    /// All objectives complete, ready to turn in.
+    Complete,
+    /// Quest has been turned in and rewards claimed.
+    TurnedIn,
+}
+
 /// Per-quest progress for a player.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct QuestProgress {
     pub quest_id: u32,
+    pub state: QuestState,
     pub objectives: Vec<ObjectiveProgress>,
 }
 
 impl QuestProgress {
-    /// Create initial progress for a quest.
+    /// Create initial progress when accepting a quest.
     pub fn new(quest: &QuestData) -> Self {
         Self {
             quest_id: quest.id,
+            state: QuestState::Accepted,
             objectives: quest.objectives.iter().map(ObjectiveProgress::from_objective).collect(),
         }
     }
 
     /// Whether all objectives are complete.
-    pub fn is_complete(&self) -> bool {
+    pub fn objectives_complete(&self) -> bool {
         self.objectives.iter().all(|o| o.is_complete())
+    }
+
+    /// Update the state based on objective progress.
+    ///
+    /// Call after any objective update. Transitions:
+    /// - Accepted → InProgress (always, on first update)
+    /// - InProgress → Complete (when all objectives done)
+    pub fn update_state(&mut self) {
+        match self.state {
+            QuestState::Accepted => {
+                self.state = if self.objectives_complete() {
+                    QuestState::Complete
+                } else {
+                    QuestState::InProgress
+                };
+            }
+            QuestState::InProgress => {
+                if self.objectives_complete() {
+                    self.state = QuestState::Complete;
+                }
+            }
+            _ => {}
+        }
+    }
+
+    /// Turn in the quest. Returns `true` if successful (was Complete).
+    pub fn turn_in(&mut self) -> bool {
+        if self.state == QuestState::Complete {
+            self.state = QuestState::TurnedIn;
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Abandon the quest, resetting to Available.
+    pub fn abandon(&mut self) {
+        self.state = QuestState::Available;
+        for obj in &mut self.objectives {
+            *obj = match *obj {
+                ObjectiveProgress::Kill { required, .. } => {
+                    ObjectiveProgress::Kill { current: 0, required }
+                }
+                ObjectiveProgress::Collect { required, .. } => {
+                    ObjectiveProgress::Collect { current: 0, required }
+                }
+                ObjectiveProgress::Interact { .. } => ObjectiveProgress::Interact { done: false },
+                ObjectiveProgress::Escort { .. } => ObjectiveProgress::Escort { done: false },
+                ObjectiveProgress::ReachLocation { .. } => {
+                    ObjectiveProgress::ReachLocation { done: false }
+                }
+            };
+        }
     }
 }
 
@@ -365,13 +441,85 @@ mod tests {
     fn quest_progress_complete_check() {
         let q = sample_quest();
         let mut progress = QuestProgress::new(&q);
-        assert!(!progress.is_complete());
+        assert!(!progress.objectives_complete());
 
-        // Complete the kill objective (10 kills)
         let obj = &q.objectives[0];
         for _ in 0..10 {
             progress.objectives[0].record_kill(94, obj);
         }
-        assert!(progress.is_complete());
+        assert!(progress.objectives_complete());
+    }
+
+    // --- Quest state tests ---
+
+    #[test]
+    fn quest_state_accepted_to_in_progress() {
+        let q = sample_quest();
+        let mut progress = QuestProgress::new(&q);
+        assert_eq!(progress.state, QuestState::Accepted);
+
+        progress.update_state();
+        assert_eq!(progress.state, QuestState::InProgress);
+    }
+
+    #[test]
+    fn quest_state_in_progress_to_complete() {
+        let q = sample_quest();
+        let mut progress = QuestProgress::new(&q);
+        progress.update_state(); // → InProgress
+
+        let obj = &q.objectives[0];
+        for _ in 0..10 {
+            progress.objectives[0].record_kill(94, obj);
+        }
+        progress.update_state();
+        assert_eq!(progress.state, QuestState::Complete);
+    }
+
+    #[test]
+    fn quest_state_turn_in() {
+        let q = sample_quest();
+        let mut progress = QuestProgress::new(&q);
+        progress.state = QuestState::Complete;
+        assert!(progress.turn_in());
+        assert_eq!(progress.state, QuestState::TurnedIn);
+    }
+
+    #[test]
+    fn quest_state_cant_turn_in_incomplete() {
+        let q = sample_quest();
+        let mut progress = QuestProgress::new(&q);
+        progress.update_state(); // → InProgress
+        assert!(!progress.turn_in());
+        assert_eq!(progress.state, QuestState::InProgress);
+    }
+
+    #[test]
+    fn quest_state_abandon_resets() {
+        let q = sample_quest();
+        let mut progress = QuestProgress::new(&q);
+        progress.update_state();
+
+        let obj = &q.objectives[0];
+        for _ in 0..5 {
+            progress.objectives[0].record_kill(94, obj);
+        }
+
+        progress.abandon();
+        assert_eq!(progress.state, QuestState::Available);
+        assert!(!progress.objectives[0].is_complete());
+        if let ObjectiveProgress::Kill { current, .. } = progress.objectives[0] {
+            assert_eq!(current, 0);
+        }
+    }
+
+    #[test]
+    fn quest_instant_complete_no_objectives() {
+        let mut q = sample_quest();
+        q.objectives.clear();
+        let mut progress = QuestProgress::new(&q);
+        progress.update_state();
+        // No objectives → immediately Complete
+        assert_eq!(progress.state, QuestState::Complete);
     }
 }
