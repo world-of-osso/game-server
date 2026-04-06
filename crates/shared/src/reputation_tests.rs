@@ -8,6 +8,8 @@ const NIGHT_ELF: u8 = 4;
 const UNDEAD: u8 = 5;
 const TAUREN: u8 = 6;
 
+const IRONFORGE_ID: u32 = 47;
+
 fn stormwind() -> FactionData {
     FactionData {
         id: 72,
@@ -19,6 +21,10 @@ fn stormwind() -> FactionData {
             (ORC, 0),            // Hated
             (UNDEAD, 0),         // Hated
             (TAUREN, 6_000),     // Hostile
+        ],
+        spillover: vec![
+            SpilloverRule { faction_id: IRONFORGE_ID, rate: 0.25 },  // Allied
+            SpilloverRule { faction_id: 76, rate: -0.5 },            // Enemy: Orgrimmar
         ],
     }
 }
@@ -34,6 +40,20 @@ fn orgrimmar() -> FactionData {
             (HUMAN, 0),          // Hated
             (DWARF, 0),          // Hated
         ],
+        spillover: vec![],
+    }
+}
+
+fn ironforge() -> FactionData {
+    FactionData {
+        id: IRONFORGE_ID,
+        name: "Ironforge".to_string(),
+        base_standing: vec![
+            (HUMAN, 21_000),
+            (DWARF, 21_000),
+            (ORC, 0),
+        ],
+        spillover: vec![],
     }
 }
 
@@ -215,6 +235,7 @@ fn sample_registry() -> FactionRegistry {
     let mut reg = FactionRegistry::new();
     reg.add(stormwind());
     reg.add(orgrimmar());
+    reg.add(ironforge());
     reg
 }
 
@@ -227,7 +248,7 @@ fn new_for_race_human() {
     assert_eq!(rep.get_standing(72), Standing::Friendly);
     assert_eq!(rep.get_value(76), 0); // Orgrimmar: Hated for humans
     assert_eq!(rep.get_standing(76), Standing::Hated);
-    assert_eq!(rep.faction_count(), 2);
+    assert_eq!(rep.faction_count(), 3);
 }
 
 #[test]
@@ -372,4 +393,102 @@ fn lose_rep_ensures_negative() {
     // lose_rep takes abs, so positive input still loses
     let result = rep.lose_rep(72, 500, RepGainSource::MobKill);
     assert_eq!(result.new_value, 19_500);
+}
+
+// --- Spillover ---
+
+#[test]
+fn spillover_allied_faction() {
+    let reg = sample_registry();
+    let mut rep = CharacterReputation::new_for_race(&reg, HUMAN);
+    let ironforge_before = rep.get_value(IRONFORGE_ID);
+
+    // Gain 1000 rep with Stormwind → 25% spillover to Ironforge
+    let results = rep.gain_rep_with_spillover(72, 1000, RepGainSource::QuestTurnIn, &reg);
+
+    assert_eq!(results.len(), 3); // primary + Ironforge + Orgrimmar
+    assert_eq!(results[0].faction_id, 72);
+    assert_eq!(results[0].actual_change(), 1000);
+
+    // Ironforge gets 25% = 250
+    let ironforge_result = results.iter().find(|r| r.faction_id == IRONFORGE_ID).unwrap();
+    assert_eq!(ironforge_result.actual_change(), 250);
+    assert_eq!(rep.get_value(IRONFORGE_ID), ironforge_before + 250);
+}
+
+#[test]
+fn spillover_enemy_faction() {
+    let reg = sample_registry();
+    let mut rep = CharacterReputation::new_for_race(&reg, ORC);
+    // Orc starts Stormwind=Hated(0), Org=Friendly(21000), Ironforge=Hated(0)
+    // Set Stormwind to Neutral so we can gain it, and Org is high enough to lose
+    rep.set_rep(72, REP_NEUTRAL);
+    let org_before = rep.get_value(76); // 21000
+
+    // Gain 1000 rep with Stormwind → -50% spillover to Orgrimmar
+    let results = rep.gain_rep_with_spillover(72, 1000, RepGainSource::QuestTurnIn, &reg);
+
+    let org_result = results.iter().find(|r| r.faction_id == 76).unwrap();
+    assert_eq!(org_result.actual_change(), -500);
+    assert_eq!(rep.get_value(76), org_before - 500);
+}
+
+#[test]
+fn spillover_enemy_clamps_at_zero() {
+    let reg = sample_registry();
+    let mut rep = CharacterReputation::new_for_race(&reg, HUMAN);
+    // Org starts at 0 (Hated) for humans
+    assert_eq!(rep.get_value(76), 0);
+
+    // Gaining Stormwind rep tries to reduce Org by 500, but already at 0
+    let results = rep.gain_rep_with_spillover(72, 1000, RepGainSource::MobKill, &reg);
+    let org_result = results.iter().find(|r| r.faction_id == 76).unwrap();
+    assert_eq!(org_result.new_value, REP_MIN);
+}
+
+#[test]
+fn no_spillover_rules_no_cascade() {
+    let reg = sample_registry();
+    let mut rep = CharacterReputation::new_for_race(&reg, ORC);
+
+    // Orgrimmar has no spillover rules
+    let results = rep.gain_rep_with_spillover(76, 500, RepGainSource::QuestTurnIn, &reg);
+    assert_eq!(results.len(), 1); // primary only
+    assert_eq!(results[0].faction_id, 76);
+}
+
+#[test]
+fn spillover_uses_spillover_source() {
+    let reg = sample_registry();
+    let mut rep = CharacterReputation::new_for_race(&reg, HUMAN);
+
+    let results = rep.gain_rep_with_spillover(72, 1000, RepGainSource::QuestTurnIn, &reg);
+
+    // Primary uses the original source
+    assert_eq!(results[0].faction_id, 72);
+    // Spillover results exist for allied/enemy factions
+    assert!(results.len() > 1);
+}
+
+#[test]
+fn spillover_small_amount_rounds_down() {
+    let reg = sample_registry();
+    let mut rep = CharacterReputation::new_for_race(&reg, HUMAN);
+    let ironforge_before = rep.get_value(IRONFORGE_ID);
+
+    // 3 * 0.25 = 0.75 → truncated to 0
+    let results = rep.gain_rep_with_spillover(72, 3, RepGainSource::MobKill, &reg);
+    let ironforge_result = results.iter().find(|r| r.faction_id == IRONFORGE_ID).unwrap();
+    assert_eq!(ironforge_result.actual_change(), 0);
+    assert_eq!(rep.get_value(IRONFORGE_ID), ironforge_before);
+}
+
+#[test]
+fn spillover_unknown_faction_no_cascade() {
+    let reg = sample_registry();
+    let mut rep = CharacterReputation::default();
+
+    // Faction 999 not in registry → no spillover
+    let results = rep.gain_rep_with_spillover(999, 1000, RepGainSource::QuestTurnIn, &reg);
+    assert_eq!(results.len(), 1);
 }

@@ -89,6 +89,17 @@ pub fn tier_progress(rep: i32) -> (i32, i32) {
     (clamped - tier_start, tier_end - tier_start)
 }
 
+/// A spillover rule: gaining rep with one faction affects another.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct SpilloverRule {
+    /// Target faction that receives the spillover.
+    pub faction_id: u32,
+    /// Fraction of the original gain applied to this faction.
+    /// Positive = allied (e.g. 0.25 = 25% of the gain).
+    /// Negative = enemy (e.g. -0.5 = lose 50% of the gain as rep).
+    pub rate: f32,
+}
+
 /// Static definition of a faction.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct FactionData {
@@ -99,6 +110,8 @@ pub struct FactionData {
     /// Base reputation value per player race (indexed by race ID).
     /// Races not in the map start at neutral (12,000).
     pub base_standing: Vec<(u8, i32)>,
+    /// Spillover rules: rep changes with this faction cascade to others.
+    pub spillover: Vec<SpilloverRule>,
 }
 
 impl FactionData {
@@ -283,6 +296,41 @@ impl CharacterReputation {
     pub fn has_standing(&self, faction_id: u32, required: Standing) -> bool {
         self.get_standing(faction_id) >= required
     }
+
+    /// Gain rep with spillover to allied/enemy factions.
+    ///
+    /// Applies the primary gain, then cascades to each spillover target
+    /// at the configured rate. Returns all changes (primary first).
+    pub fn gain_rep_with_spillover(
+        &mut self,
+        faction_id: u32,
+        amount: i32,
+        source: RepGainSource,
+        registry: &FactionRegistry,
+    ) -> Vec<RepChangeResult> {
+        let primary = self.gain_rep(faction_id, amount, source);
+        let spillovers = collect_spillover(registry, faction_id, amount);
+        let mut results = vec![primary];
+        for (target_id, spill_amount) in spillovers {
+            results.push(self.modify_rep(target_id, spill_amount, RepGainSource::Spillover));
+        }
+        results
+    }
+}
+
+/// Compute spillover amounts for a faction gain.
+fn collect_spillover(
+    registry: &FactionRegistry,
+    faction_id: u32,
+    amount: i32,
+) -> Vec<(u32, i32)> {
+    let Some(faction) = registry.get(faction_id) else {
+        return Vec::new();
+    };
+    faction.spillover.iter().map(|rule| {
+        let spill_amount = (amount as f32 * rule.rate) as i32;
+        (rule.faction_id, spill_amount)
+    }).collect()
 }
 
 #[cfg(test)]
