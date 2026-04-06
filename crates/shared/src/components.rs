@@ -427,6 +427,14 @@ pub struct Aura {
     pub max_stacks: u8,
     /// Up to 3 effects per aura (matches WoW's 3-effect-per-spell limit).
     pub effects: [Option<AuraEffect>; 3],
+    /// Time accumulator for periodic effects. Fires a tick when >= `tick_interval`.
+    pub tick_timer: f32,
+    /// Haste-adjusted tick interval (computed at application, Pandaria+ snapshot).
+    pub tick_interval: f32,
+    /// Snapshotted caster spell power at application time.
+    pub snapshot_spell_power: f32,
+    /// Snapshotted caster attack power at application time.
+    pub snapshot_attack_power: f32,
 }
 
 /// Collection of active auras on a unit.
@@ -446,6 +454,33 @@ pub struct Auras {
     pub active: Vec<Aura>,
 }
 
+impl Default for Aura {
+    fn default() -> Self {
+        Self {
+            spell_id: 0,
+            caster: 0,
+            duration: 0.0,
+            remaining: 0.0,
+            stacks: 1,
+            max_stacks: 1,
+            effects: [None, None, None],
+            tick_timer: 0.0,
+            tick_interval: 0.0,
+            snapshot_spell_power: 0.0,
+            snapshot_attack_power: 0.0,
+        }
+    }
+}
+
+/// A single periodic tick event produced by [`Aura::tick_periodic`].
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum PeriodicTick {
+    /// DoT tick: deal this much damage.
+    Damage(f32),
+    /// HoT tick: heal this much.
+    Heal(f32),
+}
+
 impl Aura {
     /// Whether this aura has any periodic (DoT/HoT) effect.
     ///
@@ -458,6 +493,40 @@ impl Aura {
                 AuraEffect::PeriodicDamage { .. } | AuraEffect::PeriodicHeal { .. }
             )
         })
+    }
+
+    /// Advance the periodic tick timer by `dt` seconds.
+    ///
+    /// Returns a `PeriodicTick` each time the timer crosses the tick interval.
+    /// Typically fires 0 or 1 times per frame, but can fire multiple if `dt`
+    /// is large (e.g. catch-up after lag).
+    ///
+    /// Damage/heal values use the **snapshotted** stats from application time
+    /// (Pandaria+ model: caster stats are locked in when the aura is applied).
+    pub fn tick_periodic(&mut self, dt: f32) -> Vec<PeriodicTick> {
+        if self.tick_interval <= 0.0 {
+            return Vec::new();
+        }
+
+        self.tick_timer += dt;
+        let mut ticks = Vec::new();
+
+        while self.tick_timer >= self.tick_interval {
+            self.tick_timer -= self.tick_interval;
+            for effect in self.effects.iter().flatten() {
+                match *effect {
+                    AuraEffect::PeriodicDamage { damage, .. } => {
+                        ticks.push(PeriodicTick::Damage(damage));
+                    }
+                    AuraEffect::PeriodicHeal { heal, .. } => {
+                        ticks.push(PeriodicTick::Heal(heal));
+                    }
+                    _ => {}
+                }
+            }
+        }
+
+        ticks
     }
 }
 
@@ -535,6 +604,21 @@ impl Auras {
         self.active
             .retain(|a| !(a.spell_id == spell_id && a.caster == caster));
         self.active.len() < before
+    }
+
+    /// Tick periodic effects on all active auras.
+    ///
+    /// Returns `(caster_entity_bits, PeriodicTick)` pairs for each tick fired.
+    pub fn tick_all_periodic(&mut self, dt: f32) -> Vec<(u64, PeriodicTick)> {
+        self.active
+            .iter_mut()
+            .flat_map(|aura| {
+                let caster = aura.caster;
+                aura.tick_periodic(dt)
+                    .into_iter()
+                    .map(move |tick| (caster, tick))
+            })
+            .collect()
     }
 
     /// Remove all auras (on death). Clears the entire active list.
@@ -738,6 +822,7 @@ mod tests {
                 Some(AuraEffect::ModCritChance { percent: 0.05 }),
                 None,
             ],
+            ..Default::default()
         };
         let encoded = bitcode::encode(&aura);
         let decoded: Aura = bitcode::decode(&encoded).unwrap();
@@ -759,8 +844,6 @@ mod tests {
                     caster: 10,
                     duration: 10.0,
                     remaining: 8.0,
-                    stacks: 1,
-                    max_stacks: 1,
                     effects: [
                         Some(AuraEffect::PeriodicDamage {
                             damage: 500.0,
@@ -769,6 +852,8 @@ mod tests {
                         None,
                         None,
                     ],
+                    tick_interval: 3.0,
+                    ..Default::default()
                 },
                 Aura {
                     spell_id: 2,
@@ -785,6 +870,7 @@ mod tests {
                         None,
                         None,
                     ],
+                    ..Default::default()
                 },
             ],
         };
@@ -819,9 +905,8 @@ mod tests {
             caster,
             duration: 10.0,
             remaining: 10.0,
-            stacks: 1,
             max_stacks,
-            effects: [None, None, None],
+            ..Default::default()
         }
     }
 
@@ -831,8 +916,6 @@ mod tests {
             caster,
             duration: 15.0,
             remaining: 15.0,
-            stacks: 1,
-            max_stacks: 1,
             effects: [
                 Some(AuraEffect::PeriodicDamage {
                     damage: 100.0,
@@ -841,6 +924,8 @@ mod tests {
                 None,
                 None,
             ],
+            tick_interval: 3.0,
+            ..Default::default()
         }
     }
 
@@ -1020,6 +1105,134 @@ mod tests {
         auras.apply(make_aura(300, 3, 5));
         auras.clear_all();
         assert!(auras.active.is_empty());
+    }
+
+    // --- Periodic tick tests ---
+
+    fn make_dot_with_interval(spell_id: u32, caster: u64, damage: f32, interval: f32) -> Aura {
+        Aura {
+            spell_id,
+            caster,
+            duration: 15.0,
+            remaining: 15.0,
+            effects: [
+                Some(AuraEffect::PeriodicDamage { damage, interval }),
+                None,
+                None,
+            ],
+            tick_interval: interval,
+            ..Default::default()
+        }
+    }
+
+    fn make_hot(spell_id: u32, caster: u64, heal: f32, interval: f32) -> Aura {
+        Aura {
+            spell_id,
+            caster,
+            duration: 12.0,
+            remaining: 12.0,
+            effects: [
+                Some(AuraEffect::PeriodicHeal { heal, interval }),
+                None,
+                None,
+            ],
+            tick_interval: interval,
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn periodic_tick_fires_at_interval() {
+        let mut dot = make_dot_with_interval(100, 1, 200.0, 3.0);
+        // Not enough time yet
+        let ticks = dot.tick_periodic(2.0);
+        assert!(ticks.is_empty());
+        // Cross the threshold
+        let ticks = dot.tick_periodic(1.5);
+        assert_eq!(ticks, vec![PeriodicTick::Damage(200.0)]);
+    }
+
+    #[test]
+    fn periodic_tick_fires_multiple_on_catchup() {
+        let mut dot = make_dot_with_interval(100, 1, 150.0, 2.0);
+        // 5 seconds = 2 full ticks (at 2s and 4s), 1s remainder
+        let ticks = dot.tick_periodic(5.0);
+        assert_eq!(ticks, vec![PeriodicTick::Damage(150.0), PeriodicTick::Damage(150.0)]);
+        assert!((dot.tick_timer - 1.0).abs() < 0.001);
+    }
+
+    #[test]
+    fn periodic_hot_produces_heal_ticks() {
+        let mut hot = make_hot(200, 1, 500.0, 2.0);
+        let ticks = hot.tick_periodic(2.5);
+        assert_eq!(ticks, vec![PeriodicTick::Heal(500.0)]);
+    }
+
+    #[test]
+    fn periodic_no_tick_if_interval_zero() {
+        let mut aura = make_aura(100, 1, 1);
+        // tick_interval defaults to 0.0 for non-periodic auras
+        let ticks = aura.tick_periodic(10.0);
+        assert!(ticks.is_empty());
+    }
+
+    #[test]
+    fn tick_all_periodic_aggregates_across_auras() {
+        let mut auras = Auras::default();
+        auras.active.push(make_dot_with_interval(100, 1, 100.0, 2.0));
+        auras.active.push(make_hot(200, 2, 300.0, 2.0));
+
+        let ticks = auras.tick_all_periodic(2.5);
+        assert_eq!(ticks.len(), 2);
+        assert_eq!(ticks[0], (1, PeriodicTick::Damage(100.0)));
+        assert_eq!(ticks[1], (2, PeriodicTick::Heal(300.0)));
+    }
+
+    #[test]
+    fn snapshot_stats_preserved_on_aura() {
+        // Pandaria+ model: caster stats are snapshotted at application time
+        let aura = Aura {
+            spell_id: 100,
+            caster: 1,
+            duration: 15.0,
+            remaining: 15.0,
+            effects: [
+                Some(AuraEffect::PeriodicDamage { damage: 200.0, interval: 3.0 }),
+                None,
+                None,
+            ],
+            tick_interval: 3.0,
+            snapshot_spell_power: 3500.0,
+            snapshot_attack_power: 1200.0,
+            ..Default::default()
+        };
+        // Snapshot values are stored and retrievable
+        assert_eq!(aura.snapshot_spell_power, 3500.0);
+        assert_eq!(aura.snapshot_attack_power, 1200.0);
+    }
+
+    #[test]
+    fn haste_reduces_tick_interval_at_application() {
+        // Haste is applied when computing tick_interval before creating the aura.
+        // 3s base tick, 50% haste → 2s tick interval
+        use crate::formulas::spell::hasted_periodic;
+        let haste = hasted_periodic(3.0, 4, 0.5);
+        let aura = Aura {
+            spell_id: 100,
+            caster: 1,
+            duration: haste.duration,
+            remaining: haste.duration,
+            effects: [
+                Some(AuraEffect::PeriodicDamage { damage: 100.0, interval: 3.0 }),
+                None,
+                None,
+            ],
+            tick_interval: haste.tick_interval,
+            ..Default::default()
+        };
+        assert!((aura.tick_interval - 2.0).abs() < 0.001);
+        // 6 ticks in 12s instead of 4 ticks
+        assert_eq!(haste.num_ticks, 6);
     }
 
     #[test]
