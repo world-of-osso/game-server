@@ -289,3 +289,40 @@ fn owner_can_create_new_petition_after_submit() {
     // (in practice the server checks is_guilded; here we test the slot is free)
     assert!(mgr.find_by_owner(100).is_none());
 }
+
+// --- Guild tabard ---
+
+fn sample_design() -> GuildTabardDesign {
+    GuildTabardDesign { icon: 5, icon_color: 2, border: 3, border_color: 1, background_color: 7 }
+}
+
+#[test]
+fn register_tabard_success() {
+    let design = register_tabard(sample_design(), 100, 100, 200_000).unwrap();
+    assert_eq!(design.icon, 5);
+    assert_eq!(design.icon_color, 2);
+    assert_eq!(design.border, 3);
+    assert_eq!(design.border_color, 1);
+    assert_eq!(design.background_color, 7);
+}
+
+#[test]
+fn register_tabard_exact_cost() {
+    assert!(register_tabard(sample_design(), 100, 100, TABARD_COST).is_ok());
+}
+
+#[test]
+fn register_tabard_insufficient_funds() {
+    assert_eq!(
+        register_tabard(sample_design(), 100, 100, TABARD_COST - 1),
+        Err(TabardError::InsufficientFunds)
+    );
+}
+
+#[test]
+fn register_tabard_not_guild_master() {
+    assert_eq!(
+        register_tabard(sample_design(), 200, 100, 200_000),
+        Err(TabardError::NotGuildMaster)
+    );
+}

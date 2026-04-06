@@ -245,6 +245,54 @@ pub struct CreatedGuild {
     pub founding_members: Vec<u64>,
 }
 
+// --- Guild tabard ---
+
+/// Cost to register a guild tabard design (in copper). 10 gold = 100,000 copper.
+pub const TABARD_COST: u32 = 100_000;
+
+/// A guild tabard design.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct GuildTabardDesign {
+    /// Emblem icon ID.
+    pub icon: u8,
+    /// Emblem icon color index.
+    pub icon_color: u8,
+    /// Border style ID.
+    pub border: u8,
+    /// Border color index.
+    pub border_color: u8,
+    /// Background color index.
+    pub background_color: u8,
+}
+
+/// Why a tabard operation failed.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TabardError {
+    /// Player doesn't have enough gold.
+    InsufficientFunds,
+    /// Player is not the guild master.
+    NotGuildMaster,
+}
+
+/// Validate and create a tabard design.
+///
+/// Only the guild master can register a tabard. Costs 10 gold.
+/// Returns the design for the server to store on the guild.
+pub fn register_tabard(
+    design: GuildTabardDesign,
+    player: u64,
+    guild_master: u64,
+    player_gold: u32,
+) -> Result<GuildTabardDesign, TabardError> {
+    if player != guild_master {
+        return Err(TabardError::NotGuildMaster);
+    }
+    if player_gold < TABARD_COST {
+        return Err(TabardError::InsufficientFunds);
+    }
+    Ok(design)
+}
+
 #[cfg(test)]
 #[path = "guild_creation_tests.rs"]
 mod tests;
