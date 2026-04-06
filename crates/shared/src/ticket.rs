@@ -196,6 +196,29 @@ impl TicketManager {
         })
     }
 
+    /// Full ticket history for a player (all states), newest first.
+    pub fn player_history(&self, player: u64) -> Vec<&Ticket> {
+        let mut history: Vec<&Ticket> = self.tickets.iter()
+            .filter(|t| t.player == player)
+            .collect();
+        history.sort_by(|a, b| b.created_at.cmp(&a.created_at));
+        history
+    }
+
+    /// Resolved tickets for a player, newest first.
+    pub fn player_resolved_history(&self, player: u64) -> Vec<&Ticket> {
+        let mut history: Vec<&Ticket> = self.tickets.iter()
+            .filter(|t| t.player == player && t.state == TicketState::Resolved)
+            .collect();
+        history.sort_by(|a, b| b.created_at.cmp(&a.created_at));
+        history
+    }
+
+    /// Total ticket count for a player.
+    pub fn player_ticket_count(&self, player: u64) -> usize {
+        self.tickets.iter().filter(|t| t.player == player).count()
+    }
+
     /// Number of tickets in the system.
     pub fn len(&self) -> usize {
         self.tickets.len()

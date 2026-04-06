@@ -582,3 +582,83 @@ fn full_lifecycle_notifications() {
     assert!(matches!(notifs[1], TicketNotification::GmResponse { .. }));
     assert!(matches!(notifs[2], TicketNotification::Resolved { .. }));
 }
+
+// --- Ticket history ---
+
+#[test]
+fn player_history_all_tickets() {
+    let mut mgr = TicketManager::new();
+    let id1 = mgr.create(100, TicketCategory::Bug, "First bug", 1000).unwrap();
+    mgr.assign(id1, "GM_Alice").unwrap();
+    mgr.resolve(id1).unwrap();
+
+    let id2 = mgr.create(100, TicketCategory::Quest, "Quest issue", 2000).unwrap();
+    mgr.assign(id2, "GM_Bob").unwrap();
+    mgr.resolve(id2).unwrap();
+
+    let id3 = mgr.create(100, TicketCategory::Stuck, "Stuck again", 3000).unwrap();
+
+    let history = mgr.player_history(100);
+    assert_eq!(history.len(), 3);
+    // Newest first
+    assert_eq!(history[0].id, id3);
+    assert_eq!(history[1].id, id2);
+    assert_eq!(history[2].id, id1);
+}
+
+#[test]
+fn player_history_empty() {
+    let mgr = TicketManager::new();
+    assert!(mgr.player_history(100).is_empty());
+}
+
+#[test]
+fn player_history_only_own_tickets() {
+    let mut mgr = TicketManager::new();
+    mgr.create(100, TicketCategory::Bug, "Player 100", 1000).unwrap();
+    mgr.create(200, TicketCategory::Bug, "Player 200", 1001).unwrap();
+
+    let history = mgr.player_history(100);
+    assert_eq!(history.len(), 1);
+    assert_eq!(history[0].player, 100);
+}
+
+#[test]
+fn player_resolved_history() {
+    let mut mgr = TicketManager::new();
+    let id1 = mgr.create(100, TicketCategory::Bug, "Resolved bug", 1000).unwrap();
+    mgr.assign(id1, "GM").unwrap();
+    mgr.resolve(id1).unwrap();
+
+    // Open ticket (not in resolved history)
+    mgr.create(100, TicketCategory::Quest, "Open quest", 2000).unwrap();
+
+    let resolved = mgr.player_resolved_history(100);
+    assert_eq!(resolved.len(), 1);
+    assert_eq!(resolved[0].id, id1);
+}
+
+#[test]
+fn player_ticket_count() {
+    let mut mgr = TicketManager::new();
+    let id1 = mgr.create(100, TicketCategory::Bug, "Bug", 1000).unwrap();
+    mgr.assign(id1, "GM").unwrap();
+    mgr.resolve(id1).unwrap();
+    mgr.create(100, TicketCategory::Quest, "Quest", 2000).unwrap();
+
+    assert_eq!(mgr.player_ticket_count(100), 2);
+    assert_eq!(mgr.player_ticket_count(200), 0);
+}
+
+#[test]
+fn history_includes_responses() {
+    let mut mgr = TicketManager::new();
+    let id = mgr.create(100, TicketCategory::Bug, "Bug", 1000).unwrap();
+    mgr.assign(id, "GM_Alice").unwrap();
+    mgr.respond(id, "GM_Alice", "Fixed!", 2000).unwrap();
+    mgr.resolve(id).unwrap();
+
+    let history = mgr.player_history(100);
+    assert_eq!(history[0].responses.len(), 1);
+    assert_eq!(history[0].responses[0].message, "Fixed!");
+}
