@@ -195,6 +195,157 @@ impl WeaponDamageData {
     }
 }
 
+// --- Inventory ---
+
+/// Default backpack size (16 slots, matching WoW).
+const BACKPACK_SIZE: usize = 16;
+/// Number of bag slots (4, matching WoW).
+const BAG_SLOT_COUNT: usize = 4;
+/// Default bank size (28 base slots).
+const BANK_SIZE: usize = 28;
+
+/// Number of equipped item slots.
+const EQUIP_SLOT_COUNT: usize = 18;
+
+/// An inventory slot that may hold an item (by ID) and stack count.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub struct InvSlot {
+    /// Item ID (0 = empty).
+    pub item_id: u32,
+    /// Stack count (1 for equipment, >1 for consumables).
+    pub count: u16,
+}
+
+impl InvSlot {
+    pub fn is_empty(&self) -> bool {
+        self.item_id == 0
+    }
+}
+
+/// A bag with a fixed number of slots.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Bag {
+    pub slots: Vec<InvSlot>,
+}
+
+impl Bag {
+    pub fn new(size: usize) -> Self {
+        Self {
+            slots: vec![InvSlot::default(); size],
+        }
+    }
+
+    /// Find the first empty slot index, if any.
+    pub fn first_empty(&self) -> Option<usize> {
+        self.slots.iter().position(|s| s.is_empty())
+    }
+
+    /// Number of occupied slots.
+    pub fn used_slots(&self) -> usize {
+        self.slots.iter().filter(|s| !s.is_empty()).count()
+    }
+}
+
+/// Player inventory: backpack + bags + bank + equipped items.
+///
+/// - Backpack: 16 fixed slots (always available)
+/// - Bags: 4 bag slots, each with variable size (0 if no bag equipped)
+/// - Bank: 28 base slots
+/// - Equipped: one slot per EquipSlot
+///
+/// Ref: AzerothCore `Player.cpp` inventory handling.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Inventory {
+    pub backpack: Bag,
+    pub bags: [Bag; BAG_SLOT_COUNT],
+    pub bank: Bag,
+    pub equipped: [InvSlot; EQUIP_SLOT_COUNT],
+}
+
+impl Default for Inventory {
+    fn default() -> Self {
+        Self {
+            backpack: Bag::new(BACKPACK_SIZE),
+            bags: std::array::from_fn(|_| Bag::new(0)),
+            bank: Bag::new(BANK_SIZE),
+            equipped: [InvSlot::default(); EQUIP_SLOT_COUNT],
+        }
+    }
+}
+
+impl Inventory {
+    /// Try to add an item to the first available backpack or bag slot.
+    /// Returns `true` if the item was added.
+    pub fn add_item(&mut self, item_id: u32, count: u16) -> bool {
+        // Try backpack first
+        if let Some(idx) = self.backpack.first_empty() {
+            self.backpack.slots[idx] = InvSlot { item_id, count };
+            return true;
+        }
+        // Then try each bag
+        for bag in &mut self.bags {
+            if let Some(idx) = bag.first_empty() {
+                bag.slots[idx] = InvSlot { item_id, count };
+                return true;
+            }
+        }
+        false
+    }
+
+    /// Remove an item from any bag/backpack slot. Returns `true` if found and removed.
+    pub fn remove_item(&mut self, item_id: u32) -> bool {
+        if let Some(slot) = self.backpack.slots.iter_mut().find(|s| s.item_id == item_id) {
+            *slot = InvSlot::default();
+            return true;
+        }
+        for bag in &mut self.bags {
+            if let Some(slot) = bag.slots.iter_mut().find(|s| s.item_id == item_id) {
+                *slot = InvSlot::default();
+                return true;
+            }
+        }
+        false
+    }
+
+    /// Equip an item in a slot (by EquipSlot index 0–17).
+    /// Returns the previously equipped item_id (0 if empty).
+    pub fn equip(&mut self, slot_index: usize, item_id: u32) -> u32 {
+        if slot_index >= EQUIP_SLOT_COUNT {
+            return 0;
+        }
+        let prev = self.equipped[slot_index].item_id;
+        self.equipped[slot_index] = InvSlot {
+            item_id,
+            count: 1,
+        };
+        prev
+    }
+
+    /// Unequip an item from a slot. Returns the item_id (0 if empty).
+    pub fn unequip(&mut self, slot_index: usize) -> u32 {
+        if slot_index >= EQUIP_SLOT_COUNT {
+            return 0;
+        }
+        let prev = self.equipped[slot_index].item_id;
+        self.equipped[slot_index] = InvSlot::default();
+        prev
+    }
+
+    /// Get the equipped item in a slot.
+    pub fn equipped_item(&self, slot_index: usize) -> Option<u32> {
+        self.equipped
+            .get(slot_index)
+            .and_then(|s| if s.is_empty() { None } else { Some(s.item_id) })
+    }
+
+    /// Total free slots across backpack and bags.
+    pub fn free_slots(&self) -> usize {
+        let backpack_free = self.backpack.slots.iter().filter(|s| s.is_empty()).count();
+        let bag_free: usize = self.bags.iter().map(|b| b.slots.iter().filter(|s| s.is_empty()).count()).sum();
+        backpack_free + bag_free
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -342,5 +493,100 @@ mod tests {
         let json = serde_json::to_string(&item).unwrap();
         let decoded: ItemData = serde_json::from_str(&json).unwrap();
         assert_eq!(decoded, item);
+    }
+
+    // --- Inventory tests ---
+
+    #[test]
+    fn inventory_default_sizes() {
+        let inv = Inventory::default();
+        assert_eq!(inv.backpack.slots.len(), 16);
+        assert_eq!(inv.bags.len(), 4);
+        assert_eq!(inv.bank.slots.len(), 28);
+        assert_eq!(inv.equipped.len(), 18);
+        assert_eq!(inv.free_slots(), 16); // bags have 0 slots by default
+    }
+
+    #[test]
+    fn inventory_add_item_to_backpack() {
+        let mut inv = Inventory::default();
+        assert!(inv.add_item(12345, 1));
+        assert_eq!(inv.backpack.slots[0].item_id, 12345);
+        assert_eq!(inv.free_slots(), 15);
+    }
+
+    #[test]
+    fn inventory_add_overflows_to_bags() {
+        let mut inv = Inventory::default();
+        inv.bags[0] = Bag::new(8); // equip an 8-slot bag
+        // Fill backpack
+        for i in 1..=16 {
+            assert!(inv.add_item(i, 1));
+        }
+        assert_eq!(inv.free_slots(), 8); // only bag space left
+        assert!(inv.add_item(17, 1));
+        assert_eq!(inv.bags[0].slots[0].item_id, 17);
+    }
+
+    #[test]
+    fn inventory_add_full_returns_false() {
+        let mut inv = Inventory::default();
+        for i in 1..=16 {
+            inv.add_item(i, 1);
+        }
+        assert!(!inv.add_item(100, 1)); // backpack full, no bags
+    }
+
+    #[test]
+    fn inventory_remove_item() {
+        let mut inv = Inventory::default();
+        inv.add_item(100, 1);
+        inv.add_item(200, 1);
+        assert!(inv.remove_item(100));
+        assert!(inv.backpack.slots[0].is_empty());
+        assert_eq!(inv.backpack.slots[1].item_id, 200);
+    }
+
+    #[test]
+    fn inventory_remove_nonexistent_returns_false() {
+        let mut inv = Inventory::default();
+        assert!(!inv.remove_item(999));
+    }
+
+    #[test]
+    fn inventory_equip_and_unequip() {
+        let mut inv = Inventory::default();
+        let prev = inv.equip(0, 51231); // equip helm in slot 0
+        assert_eq!(prev, 0);
+        assert_eq!(inv.equipped_item(0), Some(51231));
+
+        let prev = inv.unequip(0);
+        assert_eq!(prev, 51231);
+        assert_eq!(inv.equipped_item(0), None);
+    }
+
+    #[test]
+    fn inventory_equip_swap() {
+        let mut inv = Inventory::default();
+        inv.equip(0, 100);
+        let prev = inv.equip(0, 200); // swap
+        assert_eq!(prev, 100);
+        assert_eq!(inv.equipped_item(0), Some(200));
+    }
+
+    #[test]
+    fn inventory_equip_out_of_bounds() {
+        let mut inv = Inventory::default();
+        let prev = inv.equip(99, 100);
+        assert_eq!(prev, 0);
+    }
+
+    #[test]
+    fn bag_used_slots() {
+        let mut bag = Bag::new(8);
+        assert_eq!(bag.used_slots(), 0);
+        bag.slots[0] = InvSlot { item_id: 1, count: 1 };
+        bag.slots[3] = InvSlot { item_id: 2, count: 5 };
+        assert_eq!(bag.used_slots(), 2);
     }
 }
