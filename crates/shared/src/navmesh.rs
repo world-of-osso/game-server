@@ -332,6 +332,8 @@ pub enum ChaseTickResult {
     NoPath,
     /// Need to recalculate path (target moved or timer expired).
     NeedRepath,
+    /// Mob exceeded leash distance — should evade (return to spawn, reset).
+    Leashed,
 }
 
 impl ChaseState {
@@ -395,6 +397,69 @@ impl ChaseState {
         }
 
         ChaseTickResult::MoveTo(wp)
+    }
+
+    /// Tick with leash check: if the mob is too far from spawn, return Leashed.
+    ///
+    /// `spawn_origin`: the mob's spawn point.
+    /// `max_leash_distance`: maximum distance from spawn before evading.
+    ///
+    /// On `Leashed`, the server should: clear threat, restore HP, return to spawn.
+    pub fn tick_with_leash(
+        &mut self,
+        dt: f32,
+        current_pos: &NavPoint,
+        target_pos: &NavPoint,
+        melee_range: f32,
+        spawn_origin: &NavPoint,
+        max_leash_distance: f32,
+    ) -> ChaseTickResult {
+        if current_pos.distance_2d(spawn_origin) > max_leash_distance {
+            return ChaseTickResult::Leashed;
+        }
+        self.tick(dt, current_pos, target_pos, melee_range)
+    }
+}
+
+/// State for a mob returning to its spawn point after evading.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ReturnToSpawn {
+    pub path: Option<NavPath>,
+    pub waypoint_index: usize,
+    pub speed: f32,
+}
+
+impl ReturnToSpawn {
+    pub fn new(speed: f32) -> Self {
+        Self {
+            path: None,
+            waypoint_index: 0,
+            speed,
+        }
+    }
+
+    /// Set the return path.
+    pub fn set_path(&mut self, path: NavPath) {
+        self.path = Some(path);
+        self.waypoint_index = 0;
+    }
+
+    /// Tick the return movement. Returns the next position to move toward,
+    /// or `None` if the mob has reached its spawn point.
+    pub fn tick(&mut self, dt: f32, current_pos: &NavPoint) -> Option<NavPoint> {
+        let path = self.path.as_ref()?;
+        if self.waypoint_index >= path.waypoints.len() {
+            return None;
+        }
+        let wp = path.waypoints[self.waypoint_index];
+        if current_pos.distance_2d(&wp) < self.speed * dt {
+            self.waypoint_index += 1;
+            if self.waypoint_index >= path.waypoints.len() {
+                return None; // arrived
+            }
+            return Some(path.waypoints[self.waypoint_index]);
+        }
+        Some(wp)
     }
 }
 
@@ -668,5 +733,72 @@ mod tests {
         // Tick past repath interval
         let result = chase.tick(2.0, &NavPoint::new(0.0, 0.0, 0.0), &NavPoint::new(20.0, 0.0, 0.0), 5.0);
         assert_eq!(result, ChaseTickResult::NeedRepath);
+    }
+
+    // --- Leash tests ---
+
+    #[test]
+    fn leash_triggers_when_too_far() {
+        let mut chase = ChaseState::new(1, NavPoint::new(50.0, 0.0, 0.0), 7.0);
+        chase.set_path(
+            NavPath { waypoints: vec![NavPoint::new(45.0, 0.0, 0.0), NavPoint::new(50.0, 0.0, 0.0)] },
+            NavPoint::new(50.0, 0.0, 0.0),
+        );
+        let spawn = NavPoint::new(0.0, 0.0, 0.0);
+        let current = NavPoint::new(45.0, 0.0, 0.0); // 45y from spawn
+        let result = chase.tick_with_leash(
+            0.016, &current, &NavPoint::new(50.0, 0.0, 0.0), 5.0, &spawn, 40.0,
+        );
+        assert_eq!(result, ChaseTickResult::Leashed);
+    }
+
+    #[test]
+    fn leash_does_not_trigger_within_range() {
+        let mut chase = ChaseState::new(1, NavPoint::new(30.0, 0.0, 0.0), 7.0);
+        chase.set_path(
+            NavPath { waypoints: vec![NavPoint::new(20.0, 0.0, 0.0), NavPoint::new(30.0, 0.0, 0.0)] },
+            NavPoint::new(30.0, 0.0, 0.0),
+        );
+        let spawn = NavPoint::new(0.0, 0.0, 0.0);
+        let current = NavPoint::new(20.0, 0.0, 0.0); // 20y from spawn, within 40y leash
+        let result = chase.tick_with_leash(
+            0.016, &current, &NavPoint::new(30.0, 0.0, 0.0), 5.0, &spawn, 40.0,
+        );
+        assert!(matches!(result, ChaseTickResult::MoveTo(_)));
+    }
+
+    #[test]
+    fn return_to_spawn_follows_path() {
+        let mut ret = ReturnToSpawn::new(7.0);
+        ret.set_path(NavPath {
+            waypoints: vec![
+                NavPoint::new(30.0, 0.0, 0.0),
+                NavPoint::new(15.0, 0.0, 0.0),
+                NavPoint::new(0.0, 0.0, 0.0),
+            ],
+        });
+        let pos = NavPoint::new(30.0, 0.0, 0.0);
+        let next = ret.tick(0.016, &pos);
+        assert!(next.is_some());
+    }
+
+    #[test]
+    fn return_to_spawn_arrives() {
+        let mut ret = ReturnToSpawn::new(100.0); // very fast
+        ret.set_path(NavPath {
+            waypoints: vec![NavPoint::new(1.0, 0.0, 0.0), NavPoint::new(0.0, 0.0, 0.0)],
+        });
+        let pos = NavPoint::new(0.5, 0.0, 0.0);
+        // First tick advances past first waypoint
+        ret.tick(0.016, &pos);
+        // Second tick from near spawn
+        let result = ret.tick(0.016, &NavPoint::new(0.1, 0.0, 0.0));
+        assert!(result.is_none()); // arrived
+    }
+
+    #[test]
+    fn return_to_spawn_no_path() {
+        let mut ret = ReturnToSpawn::new(7.0);
+        assert!(ret.tick(0.016, &NavPoint::new(10.0, 0.0, 0.0)).is_none());
     }
 }
