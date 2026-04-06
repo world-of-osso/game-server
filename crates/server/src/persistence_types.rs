@@ -137,6 +137,8 @@ pub struct AuctionData {
     pub expires_at_unix_secs: u64,
     /// 0 = neutral, 1 = Alliance, 2 = Horde
     pub faction: u8,
+    /// Deposit paid on listing, refunded on successful sale.
+    pub deposit: u32,
 }
 
 impl CharacterData {

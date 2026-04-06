@@ -421,6 +421,7 @@ fn create_auction(
         buyout_price: req.buyout_price,
         expires_at_unix_secs: unix_now() + duration_secs(req.duration),
         faction: faction_for_race(character.race),
+        deposit,
     };
     persistence::save_auction(db, &auction);
     state.auctions.insert(auction.auction_id, auction);
@@ -576,7 +577,9 @@ fn complete_sale(
     sale_price: u32,
 ) {
     let seller_cut = sale_price.saturating_mul(HOUSE_CUT_BPS) / 10_000;
-    let seller_proceeds = sale_price.saturating_sub(seller_cut);
+    let seller_proceeds = sale_price
+        .saturating_sub(seller_cut)
+        .saturating_add(auction.deposit);
     deliver_mail(
         db,
         auction.seller_character_id,
@@ -813,6 +816,7 @@ mod tests {
             buyout_price: Some(150),
             expires_at_unix_secs: unix_now() + 60,
             faction: 0,
+            deposit: 0,
         };
         assert_eq!(min_next_bid(&auction), 105);
     }
@@ -920,6 +924,7 @@ mod tests {
             buyout_price: Some(200),
             expires_at_unix_secs: unix_now() + 3600,
             faction: 0,
+            deposit: 0,
         }
     }
 
@@ -1652,7 +1657,8 @@ mod tests {
 
         let seller_mail = persistence::load_mailbox(&db, seller_id);
         assert_eq!(seller_mail.len(), 1);
-        let expected_proceeds = 500 - (500 * HOUSE_CUT_BPS / 10_000);
+        let dep = deposit_cost(source_item.vendor_sell_price, 1, AuctionDuration::Medium);
+        let expected_proceeds = 500 - (500 * HOUSE_CUT_BPS / 10_000) + dep;
         assert_eq!(seller_mail[0].attached_money, expected_proceeds);
     }
 
@@ -1899,6 +1905,52 @@ mod tests {
     }
 
     #[test]
+    fn deposit_refunded_on_successful_sale() {
+        let db = persistence::temp_database();
+        let (seller_id, _) =
+            persistence::create_character(&db, 1, "Seller", 1, 1).expect("seller");
+        let (buyer_id, _) =
+            persistence::create_character(&db, 2, "Buyer", 1, 1).expect("buyer");
+        let source_item = persistence::load_inventory(&db, seller_id).items[0].clone();
+        let seller_gold_before = persistence::load_inventory(&db, seller_id).gold;
+        let mut state = AuctionHouseState::default();
+
+        let deposit = deposit_cost(source_item.vendor_sell_price, 1, AuctionDuration::Long);
+        assert!(deposit > 0, "test needs non-zero deposit");
+
+        create_auction(
+            &db,
+            &mut state,
+            seller_id,
+            &CreateAuction {
+                item_guid: source_item.item_guid,
+                stack_count: 1,
+                min_bid: 100,
+                buyout_price: Some(500),
+                duration: AuctionDuration::Long,
+            },
+        );
+        // Deposit deducted
+        let after_list = persistence::load_inventory(&db, seller_id).gold;
+        assert_eq!(after_list, seller_gold_before - deposit);
+
+        let auction_id = *state.auctions.keys().next().expect("auction id");
+        buyout_auction(&db, &mut state, buyer_id, auction_id);
+
+        // Seller mail includes proceeds + deposit refund
+        let mail = persistence::load_mailbox(&db, seller_id);
+        let sale_proceeds = 500 - (500 * HOUSE_CUT_BPS / 10_000);
+        assert_eq!(mail[0].attached_money, sale_proceeds + deposit);
+
+        // After claiming, seller has original gold - deposit + proceeds + deposit = original + proceeds
+        claim_mail(&db, seller_id, mail[0].mail_id);
+        assert_eq!(
+            persistence::load_inventory(&db, seller_id).gold,
+            seller_gold_before + sale_proceeds,
+        );
+    }
+
+    #[test]
     fn gold_overflow_saturates_at_max() {
         let db = persistence::temp_database();
         let (seller_id, _) =
@@ -2006,10 +2058,11 @@ mod tests {
         persistence::delete_auction(&db, auction_id);
         complete_sale(&db, &auction, winner_id, winning_bid);
 
-        // Seller receives gold minus house cut
+        // Seller receives gold minus house cut plus deposit refund
         let seller_mail = persistence::load_mailbox(&db, seller_id);
         assert_eq!(seller_mail.len(), 1);
-        let expected_proceeds = 200 - (200 * HOUSE_CUT_BPS / 10_000);
+        let dep = deposit_cost(source_item.vendor_sell_price, 2, AuctionDuration::Short);
+        let expected_proceeds = 200 - (200 * HOUSE_CUT_BPS / 10_000) + dep;
         assert_eq!(seller_mail[0].attached_money, expected_proceeds);
         assert!(seller_mail[0].attached_item.is_none());
 
@@ -2025,13 +2078,16 @@ mod tests {
     #[test]
     fn house_cut_deducted_on_successful_sale() {
         // Test multiple prices to verify 5% cut formula including truncation
+        // Expected = price - (price * 500 / 10000) + deposit
+        // deposit = vendor_sell_price(13) * stack_count(1) * short_mult(1) = 13
+        let deposit = 13_u32;
         let cases: &[(u32, u32)] = &[
-            (200, 190),  // 200 - 10 = 190
-            (1000, 950), // 1000 - 50 = 950
-            (1, 1),      // 1 * 500 / 10000 = 0, seller keeps all
-            (19, 19),    // 19 * 500 / 10000 = 0, truncated to 0
-            (20, 19),    // 20 * 500 / 10000 = 1
-            (33, 32),    // 33 * 500 / 10000 = 1
+            (200, 190 + deposit),
+            (1000, 950 + deposit),
+            (1, 1 + deposit),
+            (19, 19 + deposit),
+            (20, 19 + deposit),
+            (33, 32 + deposit),
         ];
 
         for &(buyout_price, expected_proceeds) in cases {
@@ -2109,10 +2165,11 @@ mod tests {
         assert_eq!(buyer_item.item_id, source_item.item_id);
         assert_eq!(buyer_item.stack_count, 2);
 
-        // Seller receives gold minus 5% house cut via mail
+        // Seller receives gold minus house cut plus deposit refund
         let seller_mail = persistence::load_mailbox(&db, seller_id);
         assert_eq!(seller_mail.len(), 1);
-        let expected_gold = 300 - (300 * HOUSE_CUT_BPS / 10_000);
+        let deposit = deposit_cost(source_item.vendor_sell_price, 2, AuctionDuration::Medium);
+        let expected_gold = 300 - (300 * HOUSE_CUT_BPS / 10_000) + deposit;
         assert_eq!(seller_mail[0].attached_money, expected_gold);
     }
 
@@ -2149,7 +2206,7 @@ mod tests {
         let buyer_mail = persistence::load_mailbox(&db, buyer_id);
         assert_eq!(seller_mail.len(), 1);
         assert_eq!(buyer_mail.len(), 1);
-        assert_eq!(seller_mail[0].attached_money, 190);
+        assert_eq!(seller_mail[0].attached_money, 190 + deposit);
         assert_eq!(
             buyer_mail[0]
                 .attached_item
@@ -2165,7 +2222,7 @@ mod tests {
         assert!(buyer_claim.success);
         assert_eq!(
             persistence::load_inventory(&db, seller_id).gold,
-            seller_gold_before - deposit + 190
+            seller_gold_before + 190
         );
         assert_eq!(
             persistence::load_inventory(&db, buyer_id).gold,
