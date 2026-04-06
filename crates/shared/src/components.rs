@@ -869,6 +869,91 @@ impl SpellSchool {
     }
 }
 
+// --- Threat system ---
+
+/// Per-mob threat table tracking aggro from each entity.
+///
+/// Damage generates 1:1 threat. Healing generates 0.5 threat per point healed,
+/// split equally across all mobs the healer is engaged with (tracked externally).
+///
+/// Ref: AzerothCore `ThreatMgr.cpp`.
+#[derive(Component, Debug, Clone, Default)]
+pub struct ThreatTable {
+    entries: Vec<ThreatEntry>,
+}
+
+/// A single threat entry: who is threatening and how much.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct ThreatEntry {
+    pub entity: u64,
+    pub threat: f32,
+}
+
+/// Threat multiplier for healing (0.5 threat per point healed).
+const HEAL_THREAT_MULTIPLIER: f32 = 0.5;
+
+impl ThreatTable {
+    /// Add threat from damage (1:1 ratio).
+    pub fn add_damage_threat(&mut self, source: u64, damage: f32) {
+        self.add_threat(source, damage);
+    }
+
+    /// Add threat from healing (0.5:1 ratio, pre-split by caller).
+    ///
+    /// `heal_amount` is the raw healing done. The caller is responsible for
+    /// splitting across engaged mobs before calling this.
+    pub fn add_heal_threat(&mut self, source: u64, heal_amount: f32) {
+        self.add_threat(source, heal_amount * HEAL_THREAT_MULTIPLIER);
+    }
+
+    /// Add a raw threat amount from a source entity.
+    pub fn add_threat(&mut self, source: u64, amount: f32) {
+        if let Some(entry) = self.entries.iter_mut().find(|e| e.entity == source) {
+            entry.threat += amount;
+        } else {
+            self.entries.push(ThreatEntry {
+                entity: source,
+                threat: amount,
+            });
+        }
+    }
+
+    /// Get the current top-threat entity (aggro target).
+    pub fn top_threat(&self) -> Option<&ThreatEntry> {
+        self.entries
+            .iter()
+            .max_by(|a, b| a.threat.partial_cmp(&b.threat).unwrap())
+    }
+
+    /// Get the threat value for a specific entity.
+    pub fn threat_for(&self, entity: u64) -> f32 {
+        self.entries
+            .iter()
+            .find(|e| e.entity == entity)
+            .map_or(0.0, |e| e.threat)
+    }
+
+    /// Remove an entity from the threat table (on death or leave combat).
+    pub fn remove(&mut self, entity: u64) {
+        self.entries.retain(|e| e.entity != entity);
+    }
+
+    /// Clear all threat (mob reset / evade).
+    pub fn reset(&mut self) {
+        self.entries.clear();
+    }
+
+    /// Whether any entity has threat on this mob.
+    pub fn is_empty(&self) -> bool {
+        self.entries.is_empty()
+    }
+
+    /// Number of entities with threat.
+    pub fn len(&self) -> usize {
+        self.entries.len()
+    }
+}
+
 /// Weapon category for normalized speed lookup.
 ///
 /// WoW abilities use a fixed "normalized" speed instead of the actual weapon
@@ -1629,6 +1714,74 @@ mod tests {
         auras.tick_proc_cooldowns(3.0);
         let icd = auras.active[0].proc_def.as_ref().unwrap().icd_remaining;
         assert!((icd - 7.0).abs() < 0.01);
+    }
+
+    // --- Threat table tests ---
+
+    #[test]
+    fn threat_damage_adds_one_to_one() {
+        let mut table = ThreatTable::default();
+        table.add_damage_threat(1, 500.0);
+        assert_eq!(table.threat_for(1), 500.0);
+    }
+
+    #[test]
+    fn threat_heal_adds_half() {
+        let mut table = ThreatTable::default();
+        table.add_heal_threat(1, 1000.0);
+        assert_eq!(table.threat_for(1), 500.0);
+    }
+
+    #[test]
+    fn threat_accumulates_from_same_source() {
+        let mut table = ThreatTable::default();
+        table.add_damage_threat(1, 200.0);
+        table.add_damage_threat(1, 300.0);
+        assert_eq!(table.threat_for(1), 500.0);
+        assert_eq!(table.len(), 1);
+    }
+
+    #[test]
+    fn threat_top_returns_highest() {
+        let mut table = ThreatTable::default();
+        table.add_damage_threat(1, 100.0);
+        table.add_damage_threat(2, 500.0);
+        table.add_damage_threat(3, 200.0);
+        let top = table.top_threat().unwrap();
+        assert_eq!(top.entity, 2);
+        assert_eq!(top.threat, 500.0);
+    }
+
+    #[test]
+    fn threat_top_empty_returns_none() {
+        let table = ThreatTable::default();
+        assert!(table.top_threat().is_none());
+    }
+
+    #[test]
+    fn threat_remove_entity() {
+        let mut table = ThreatTable::default();
+        table.add_damage_threat(1, 100.0);
+        table.add_damage_threat(2, 200.0);
+        table.remove(1);
+        assert_eq!(table.len(), 1);
+        assert_eq!(table.threat_for(1), 0.0);
+        assert_eq!(table.threat_for(2), 200.0);
+    }
+
+    #[test]
+    fn threat_reset_clears_all() {
+        let mut table = ThreatTable::default();
+        table.add_damage_threat(1, 100.0);
+        table.add_damage_threat(2, 200.0);
+        table.reset();
+        assert!(table.is_empty());
+    }
+
+    #[test]
+    fn threat_unknown_entity_returns_zero() {
+        let table = ThreatTable::default();
+        assert_eq!(table.threat_for(999), 0.0);
     }
 
     // --- Periodic tick tests ---
