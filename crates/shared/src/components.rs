@@ -505,6 +505,42 @@ impl Auras {
         self.active.push(aura);
         AuraApplyResult::Applied
     }
+
+    /// Tick all aura durations by `dt` seconds and remove expired ones.
+    ///
+    /// Returns the number of auras that expired this tick.
+    pub fn tick_and_expire(&mut self, dt: f32) -> usize {
+        for aura in &mut self.active {
+            aura.remaining -= dt;
+        }
+        let before = self.active.len();
+        self.active.retain(|a| a.remaining > 0.0);
+        before - self.active.len()
+    }
+
+    /// Remove auras by spell_id (dispel). Removes all instances regardless of caster.
+    ///
+    /// Returns the number of auras removed.
+    pub fn dispel(&mut self, spell_id: u32) -> usize {
+        let before = self.active.len();
+        self.active.retain(|a| a.spell_id != spell_id);
+        before - self.active.len()
+    }
+
+    /// Cancel an aura by spell_id from a specific caster (player self-cancel).
+    ///
+    /// Returns `true` if an aura was removed.
+    pub fn cancel(&mut self, spell_id: u32, caster: u64) -> bool {
+        let before = self.active.len();
+        self.active
+            .retain(|a| !(a.spell_id == spell_id && a.caster == caster));
+        self.active.len() < before
+    }
+
+    /// Remove all auras (on death). Clears the entire active list.
+    pub fn clear_all(&mut self) {
+        self.active.clear();
+    }
 }
 
 /// Spell school for damage/healing classification.
@@ -901,6 +937,89 @@ mod tests {
         let result = auras.apply(make_aura(200, 1, 1));
         assert_eq!(result, AuraApplyResult::Applied);
         assert_eq!(auras.active.len(), 2);
+    }
+
+    // --- Aura removal tests ---
+
+    #[test]
+    fn tick_expires_aura_at_zero() {
+        let mut auras = Auras::default();
+        auras.apply(make_aura(100, 1, 1)); // 10s duration
+        let expired = auras.tick_and_expire(10.1);
+        assert_eq!(expired, 1);
+        assert!(auras.active.is_empty());
+    }
+
+    #[test]
+    fn tick_does_not_expire_with_time_left() {
+        let mut auras = Auras::default();
+        auras.apply(make_aura(100, 1, 1));
+        let expired = auras.tick_and_expire(5.0);
+        assert_eq!(expired, 0);
+        assert_eq!(auras.active.len(), 1);
+        assert!((auras.active[0].remaining - 5.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn tick_expires_some_keeps_others() {
+        let mut auras = Auras::default();
+        auras.apply(make_aura(100, 1, 1)); // 10s
+        auras.apply(make_dot(200, 2)); // 15s
+        let expired = auras.tick_and_expire(12.0);
+        assert_eq!(expired, 1);
+        assert_eq!(auras.active.len(), 1);
+        assert_eq!(auras.active[0].spell_id, 200, "DOT should survive");
+    }
+
+    #[test]
+    fn dispel_removes_all_instances_of_spell() {
+        let mut auras = Auras::default();
+        auras.apply(make_dot(200, 1));
+        auras.apply(make_dot(200, 2)); // different caster DOT
+        auras.apply(make_aura(300, 1, 1));
+        let removed = auras.dispel(200);
+        assert_eq!(removed, 2);
+        assert_eq!(auras.active.len(), 1);
+        assert_eq!(auras.active[0].spell_id, 300);
+    }
+
+    #[test]
+    fn dispel_nonexistent_spell_removes_nothing() {
+        let mut auras = Auras::default();
+        auras.apply(make_aura(100, 1, 1));
+        let removed = auras.dispel(999);
+        assert_eq!(removed, 0);
+        assert_eq!(auras.active.len(), 1);
+    }
+
+    #[test]
+    fn cancel_removes_specific_caster_aura() {
+        let mut auras = Auras::default();
+        auras.apply(make_dot(200, 1));
+        auras.apply(make_dot(200, 2));
+        let removed = auras.cancel(200, 1);
+        assert!(removed);
+        assert_eq!(auras.active.len(), 1);
+        assert_eq!(auras.active[0].caster, 2, "other caster's DOT kept");
+    }
+
+    #[test]
+    fn cancel_wrong_caster_returns_false() {
+        let mut auras = Auras::default();
+        auras.apply(make_aura(100, 1, 1));
+        let removed = auras.cancel(100, 999);
+        assert!(!removed);
+        assert_eq!(auras.active.len(), 1);
+    }
+
+    #[test]
+    fn clear_all_removes_everything() {
+        let mut auras = Auras::default();
+        auras.apply(make_aura(100, 1, 1));
+        auras.apply(make_dot(200, 2));
+        auras.apply(make_aura(300, 3, 5));
+        auras.clear_all();
+        assert!(auras.active.is_empty());
     }
 
     #[test]
