@@ -157,6 +157,82 @@ pub fn group_kill_xp(creature_level: u8, members: &[GroupMemberXp]) -> Vec<Group
         .collect()
 }
 
+// --- Rested XP ---
+
+/// Rested XP accumulation rate: fraction of a level per 8 hours in a rest area.
+const RESTED_RATE_PER_8H: f32 = 0.05;
+/// Maximum rested XP as a fraction of 1.5 levels.
+const RESTED_MAX_LEVELS: f32 = 1.5;
+
+/// Rested XP state for a player.
+///
+/// Accumulates while in a rest area (city/inn) or logged off.
+/// When active, kill XP is doubled until the rested pool is depleted.
+/// Cap: 1.5 levels worth of XP.
+///
+/// Ref: AzerothCore `Player::SetRestBonus()`, `GetXPRestBonus()`.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct RestedXp {
+    /// Current rested XP pool.
+    pub amount: u32,
+    /// Maximum rested XP (1.5 levels of XP, recalculated on level-up).
+    pub max: u32,
+    /// Whether the player is currently in a rest area.
+    pub in_rest_area: bool,
+}
+
+impl RestedXp {
+    /// Create a new rested XP tracker for a given XP-to-level value.
+    pub fn new(xp_to_level: u32) -> Self {
+        Self {
+            amount: 0,
+            max: (xp_to_level as f32 * RESTED_MAX_LEVELS) as u32,
+            in_rest_area: false,
+        }
+    }
+
+    /// Update the max when the player levels up.
+    pub fn update_max(&mut self, xp_to_level: u32) {
+        self.max = (xp_to_level as f32 * RESTED_MAX_LEVELS) as u32;
+        self.amount = self.amount.min(self.max);
+    }
+
+    /// Accumulate rested XP from time spent in a rest area.
+    ///
+    /// `hours` is real time spent resting (in city/inn or logged off in rest area).
+    pub fn accumulate(&mut self, hours: f32, xp_to_level: u32) {
+        let gain_per_8h = xp_to_level as f32 * RESTED_RATE_PER_8H;
+        let gained = (gain_per_8h * hours / 8.0) as u32;
+        self.amount = (self.amount + gained).min(self.max);
+    }
+
+    /// Apply rested bonus to a kill XP amount.
+    ///
+    /// Returns `(total_xp, rested_consumed)`. Total XP is up to 2x the base,
+    /// limited by available rested pool.
+    pub fn apply_bonus(&mut self, base_xp: u32) -> (u32, u32) {
+        if self.amount == 0 {
+            return (base_xp, 0);
+        }
+        let bonus = base_xp.min(self.amount);
+        self.amount -= bonus;
+        (base_xp + bonus, bonus)
+    }
+
+    /// Whether the player has any rested XP.
+    pub fn is_rested(&self) -> bool {
+        self.amount > 0
+    }
+
+    /// Rested XP as a fraction of the current level (0.0–1.5).
+    pub fn rested_levels(&self, xp_to_level: u32) -> f32 {
+        if xp_to_level == 0 {
+            return 0.0;
+        }
+        self.amount as f32 / xp_to_level as f32
+    }
+}
+
 // --- Quest XP ---
 
 /// Number of levels above quest level before XP starts reducing.
@@ -314,6 +390,75 @@ mod tests {
     #[test]
     fn quest_xp_zero_base() {
         assert_eq!(quest_xp(0, 50, 50), 0);
+    }
+
+    // --- Rested XP tests ---
+
+    #[test]
+    fn rested_new_starts_empty() {
+        let rested = RestedXp::new(10000);
+        assert_eq!(rested.amount, 0);
+        assert_eq!(rested.max, 15000); // 1.5 * 10000
+        assert!(!rested.is_rested());
+    }
+
+    #[test]
+    fn rested_accumulate_in_rest_area() {
+        let mut rested = RestedXp::new(10000);
+        rested.accumulate(8.0, 10000); // 8 hours = 5% of level
+        assert_eq!(rested.amount, 500); // 10000 * 0.05
+        assert!(rested.is_rested());
+    }
+
+    #[test]
+    fn rested_caps_at_max() {
+        let mut rested = RestedXp::new(10000);
+        rested.accumulate(1000.0, 10000); // way more than needed
+        assert_eq!(rested.amount, 15000); // capped at 1.5 levels
+    }
+
+    #[test]
+    fn rested_apply_bonus_doubles_xp() {
+        let mut rested = RestedXp::new(10000);
+        rested.amount = 500;
+        let (total, consumed) = rested.apply_bonus(200);
+        assert_eq!(total, 400); // 200 base + 200 bonus
+        assert_eq!(consumed, 200);
+        assert_eq!(rested.amount, 300); // 500 - 200
+    }
+
+    #[test]
+    fn rested_bonus_limited_by_pool() {
+        let mut rested = RestedXp::new(10000);
+        rested.amount = 100;
+        let (total, consumed) = rested.apply_bonus(500);
+        assert_eq!(total, 600); // 500 + 100 (only 100 available)
+        assert_eq!(consumed, 100);
+        assert_eq!(rested.amount, 0);
+    }
+
+    #[test]
+    fn rested_no_bonus_when_empty() {
+        let mut rested = RestedXp::new(10000);
+        let (total, consumed) = rested.apply_bonus(500);
+        assert_eq!(total, 500);
+        assert_eq!(consumed, 0);
+    }
+
+    #[test]
+    fn rested_levels_fraction() {
+        let mut rested = RestedXp::new(10000);
+        rested.amount = 5000;
+        assert!((rested.rested_levels(10000) - 0.5).abs() < 0.001);
+    }
+
+    #[test]
+    fn rested_update_max_on_level_up() {
+        let mut rested = RestedXp::new(10000);
+        rested.amount = 15000; // at cap
+        rested.update_max(20000); // level up
+        assert_eq!(rested.max, 30000);
+        assert_eq!(rested.amount, 15000); // still within new cap
     }
 
     // --- Group XP tests ---
