@@ -293,6 +293,54 @@ pub fn register_tabard(
     Ok(design)
 }
 
+// --- Guild charter NPC ---
+
+/// NPC flags indicating this vendor sells guild charters.
+pub const NPC_FLAG_GUILD_CHARTER: u32 = 0x0200;
+
+/// Maximum interaction distance with a charter NPC (yards).
+pub const CHARTER_NPC_RANGE: f32 = 10.0;
+
+/// Why an NPC charter interaction failed.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CharterNpcError {
+    /// NPC doesn't sell guild charters.
+    NotCharterVendor,
+    /// Player is too far from the NPC.
+    OutOfRange,
+    /// Charter purchase validation failed.
+    Purchase(PetitionError),
+}
+
+/// Context for a charter NPC interaction.
+pub struct CharterNpcContext<'a> {
+    pub npc_flags: u32,
+    pub distance_squared: f32,
+    pub player: u64,
+    pub guild_name: &'a str,
+    pub player_gold: u32,
+    pub is_guilded: bool,
+    pub now: u64,
+}
+
+/// Attempt to purchase a guild charter from an NPC vendor.
+///
+/// Validates the NPC is a charter vendor, the player is in range,
+/// then delegates to `PetitionManager::purchase_charter`.
+pub fn buy_charter_from_npc(
+    mgr: &mut PetitionManager,
+    ctx: &CharterNpcContext<'_>,
+) -> Result<u64, CharterNpcError> {
+    if ctx.npc_flags & NPC_FLAG_GUILD_CHARTER == 0 {
+        return Err(CharterNpcError::NotCharterVendor);
+    }
+    if ctx.distance_squared > CHARTER_NPC_RANGE * CHARTER_NPC_RANGE {
+        return Err(CharterNpcError::OutOfRange);
+    }
+    mgr.purchase_charter(ctx.player, ctx.guild_name, ctx.player_gold, ctx.is_guilded, ctx.now)
+        .map_err(CharterNpcError::Purchase)
+}
+
 #[cfg(test)]
 #[path = "guild_creation_tests.rs"]
 mod tests;

@@ -326,3 +326,57 @@ fn register_tabard_not_guild_master() {
         Err(TabardError::NotGuildMaster)
     );
 }
+
+// --- Guild charter NPC ---
+
+const CLOSE_DIST_SQ: f32 = 25.0; // 5 yards squared
+const FAR_DIST_SQ: f32 = 400.0; // 20 yards squared
+
+fn npc_ctx<'a>(flags: u32, dist_sq: f32, gold: u32, name: &'a str) -> CharterNpcContext<'a> {
+    CharterNpcContext {
+        npc_flags: flags, distance_squared: dist_sq,
+        player: 100, guild_name: name, player_gold: gold,
+        is_guilded: false, now: 1000,
+    }
+}
+
+#[test]
+fn buy_charter_from_npc_success() {
+    let mut mgr = PetitionManager::new();
+    let id = buy_charter_from_npc(&mut mgr, &npc_ctx(NPC_FLAG_GUILD_CHARTER, CLOSE_DIST_SQ, 5000, "New Guild")).unwrap();
+    assert_eq!(mgr.get(id).unwrap().guild_name, "New Guild");
+}
+
+#[test]
+fn buy_charter_not_charter_vendor() {
+    let mut mgr = PetitionManager::new();
+    assert_eq!(
+        buy_charter_from_npc(&mut mgr, &npc_ctx(0, CLOSE_DIST_SQ, 5000, "Guild")),
+        Err(CharterNpcError::NotCharterVendor)
+    );
+}
+
+#[test]
+fn buy_charter_out_of_range() {
+    let mut mgr = PetitionManager::new();
+    assert_eq!(
+        buy_charter_from_npc(&mut mgr, &npc_ctx(NPC_FLAG_GUILD_CHARTER, FAR_DIST_SQ, 5000, "Guild")),
+        Err(CharterNpcError::OutOfRange)
+    );
+}
+
+#[test]
+fn buy_charter_npc_passes_purchase_errors() {
+    let mut mgr = PetitionManager::new();
+    assert_eq!(
+        buy_charter_from_npc(&mut mgr, &npc_ctx(NPC_FLAG_GUILD_CHARTER, CLOSE_DIST_SQ, 0, "Guild")),
+        Err(CharterNpcError::Purchase(PetitionError::InsufficientFunds))
+    );
+}
+
+#[test]
+fn buy_charter_npc_at_exact_range() {
+    let mut mgr = PetitionManager::new();
+    let exact = CHARTER_NPC_RANGE * CHARTER_NPC_RANGE;
+    assert!(buy_charter_from_npc(&mut mgr, &npc_ctx(NPC_FLAG_GUILD_CHARTER, exact, 5000, "Guild")).is_ok());
+}
