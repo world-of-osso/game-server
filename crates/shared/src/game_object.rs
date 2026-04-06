@@ -154,6 +154,90 @@ impl GameObjectRegistry {
     }
 }
 
+// --- Interaction system ---
+
+/// Why an interaction failed.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum InteractionError {
+    /// Object is not interactable.
+    NotInteractable,
+    /// Object is currently in use by another player.
+    InUse,
+    /// Object is locked and the player has no key.
+    Locked,
+    /// Object is depleted (e.g. already looted, gathered).
+    Depleted,
+    /// Player doesn't have the required skill.
+    MissingSkill,
+    /// Player is too far from the object.
+    OutOfRange,
+}
+
+/// The result of interacting with a game object.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum InteractionResult {
+    /// Open a loot window for this chest.
+    LootChest { template_id: u32 },
+    /// Toggle a door open or closed.
+    ToggleDoor { template_id: u32, now_open: bool },
+    /// Begin gathering from a node.
+    GatherNode { template_id: u32, node_type: GameObjectType },
+    /// Complete a quest objective.
+    QuestObjective { template_id: u32 },
+    /// Trigger a trap effect.
+    TriggerTrap { template_id: u32 },
+    /// Open the mailbox UI.
+    OpenMailbox,
+    /// Access a crafting station (forge, anvil).
+    UseCraftingStation { template_id: u32, station_type: GameObjectType },
+}
+
+/// Validate and process a player interaction with a game object.
+///
+/// Checks flags (interactable, locked, in-use) then dispatches to
+/// the type-specific handler. Returns the interaction result for
+/// the server to execute.
+pub fn interact(go: &mut GameObject) -> Result<InteractionResult, InteractionError> {
+    validate_interaction(go)?;
+    go.flags.insert(GameObjectFlags::IN_USE);
+    dispatch_interaction(go)
+}
+
+fn validate_interaction(go: &GameObject) -> Result<(), InteractionError> {
+    if !go.is_interactable() {
+        return Err(InteractionError::NotInteractable);
+    }
+    if go.is_in_use() {
+        return Err(InteractionError::InUse);
+    }
+    if go.is_locked() {
+        return Err(InteractionError::Locked);
+    }
+    Ok(())
+}
+
+fn dispatch_interaction(go: &GameObject) -> Result<InteractionResult, InteractionError> {
+    let id = go.template_id;
+    match go.object_type {
+        GameObjectType::Chest => Ok(InteractionResult::LootChest { template_id: id }),
+        GameObjectType::Door => Ok(InteractionResult::ToggleDoor { template_id: id, now_open: true }),
+        GameObjectType::MiningNode | GameObjectType::HerbNode => {
+            Ok(InteractionResult::GatherNode { template_id: id, node_type: go.object_type })
+        }
+        GameObjectType::QuestObject => Ok(InteractionResult::QuestObjective { template_id: id }),
+        GameObjectType::Trap => Ok(InteractionResult::TriggerTrap { template_id: id }),
+        GameObjectType::Mailbox => Ok(InteractionResult::OpenMailbox),
+        GameObjectType::Forge | GameObjectType::Anvil => {
+            Ok(InteractionResult::UseCraftingStation { template_id: id, station_type: go.object_type })
+        }
+    }
+}
+
+/// Release the object after use (clear IN_USE flag).
+pub fn finish_interaction(go: &mut GameObject) {
+    go.flags.remove(GameObjectFlags::IN_USE);
+}
+
 #[cfg(test)]
 #[path = "game_object_tests.rs"]
 mod tests;
