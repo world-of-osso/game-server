@@ -927,6 +927,55 @@ mod tests {
     }
 
     #[test]
+    fn buyout_transfers_item_and_deducts_gold() {
+        let db = persistence::temp_database();
+        let (seller_id, _) =
+            persistence::create_character(&db, 1, "Seller", 1, 1).expect("seller");
+        let (buyer_id, _) =
+            persistence::create_character(&db, 2, "Buyer", 1, 1).expect("buyer");
+        let source_item = persistence::load_inventory(&db, seller_id).items[0].clone();
+        let buyer_gold_before = persistence::load_inventory(&db, buyer_id).gold;
+        let mut state = AuctionHouseState::default();
+
+        create_auction(
+            &db,
+            &mut state,
+            seller_id,
+            &CreateAuction {
+                item_guid: source_item.item_guid,
+                stack_count: 2,
+                min_bid: 50,
+                buyout_price: Some(300),
+                duration: AuctionDuration::Medium,
+            },
+        );
+        let auction_id = *state.auctions.keys().next().expect("auction id");
+
+        let response = buyout_auction(&db, &mut state, buyer_id, auction_id);
+        assert!(response.success);
+
+        // Auction removed from state
+        assert!(!state.auctions.contains_key(&auction_id));
+
+        // Buyer gold deducted by buyout price
+        let buyer_gold_after = persistence::load_inventory(&db, buyer_id).gold;
+        assert_eq!(buyer_gold_after, buyer_gold_before - 300);
+
+        // Buyer receives item via mail
+        let buyer_mail = persistence::load_mailbox(&db, buyer_id);
+        assert_eq!(buyer_mail.len(), 1);
+        let buyer_item = buyer_mail[0].attached_item.as_ref().expect("item in mail");
+        assert_eq!(buyer_item.item_id, source_item.item_id);
+        assert_eq!(buyer_item.stack_count, 2);
+
+        // Seller receives gold minus 5% house cut via mail
+        let seller_mail = persistence::load_mailbox(&db, seller_id);
+        assert_eq!(seller_mail.len(), 1);
+        let expected_gold = 300 - (300 * HOUSE_CUT_BPS / 10_000);
+        assert_eq!(seller_mail[0].attached_money, expected_gold);
+    }
+
+    #[test]
     fn buyout_and_claim_mail_delivers_item_and_gold() {
         let db = persistence::temp_database();
         let (seller_id, _) = persistence::create_character(&db, 1, "Seller", 1, 1).expect("seller");
