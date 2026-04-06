@@ -82,6 +82,81 @@ pub fn kill_xp(player_level: u8, creature_level: u8) -> u32 {
     base * (reduction_denom - diff) as u32 / reduction_denom as u32
 }
 
+// --- Group XP ---
+
+/// Maximum distance (yards) from the kill to receive group XP.
+pub const GROUP_XP_RANGE: f32 = 100.0;
+
+/// Group XP bonus multiplier by number of nearby members.
+///
+/// Ref: AzerothCore group XP bonus — compensates for the split so
+/// grouping is beneficial rather than punishing.
+fn group_bonus_multiplier(nearby_count: u8) -> f32 {
+    match nearby_count {
+        0 | 1 => 1.0,
+        2 => 1.0,
+        3 => 1.166,
+        4 => 1.3,
+        5 => 1.4,
+        _ => 1.4, // cap at 5-man party bonus
+    }
+}
+
+/// A nearby group member eligible for XP.
+#[derive(Debug, Clone, Copy)]
+pub struct GroupMemberXp {
+    /// Player level.
+    pub level: u8,
+    /// Distance from the kill in yards.
+    pub distance: f32,
+}
+
+/// Result of group XP distribution for one player.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct GroupXpShare {
+    pub level: u8,
+    pub xp: u32,
+}
+
+/// Calculate group XP shares from a kill.
+///
+/// XP is split among nearby members (within `GROUP_XP_RANGE`) weighted by
+/// level, then multiplied by the group bonus. Out-of-range members get 0.
+///
+/// Ref: AzerothCore `Group::GroupRate`, level-weighted distribution.
+pub fn group_kill_xp(creature_level: u8, members: &[GroupMemberXp]) -> Vec<GroupXpShare> {
+    let nearby: Vec<&GroupMemberXp> = members
+        .iter()
+        .filter(|m| m.distance <= GROUP_XP_RANGE)
+        .collect();
+
+    if nearby.is_empty() {
+        return members
+            .iter()
+            .map(|m| GroupXpShare { level: m.level, xp: 0 })
+            .collect();
+    }
+
+    // Use the highest level in range for base XP calculation
+    let max_level = nearby.iter().map(|m| m.level).max().unwrap();
+    let base = kill_xp(max_level, creature_level);
+
+    let total_levels: u32 = nearby.iter().map(|m| m.level as u32).sum();
+    let bonus = group_bonus_multiplier(nearby.len() as u8);
+    let pool = (base as f32 * bonus) as u32;
+
+    members
+        .iter()
+        .map(|m| {
+            if m.distance > GROUP_XP_RANGE {
+                return GroupXpShare { level: m.level, xp: 0 };
+            }
+            let share = pool * m.level as u32 / total_levels;
+            GroupXpShare { level: m.level, xp: share }
+        })
+        .collect()
+}
+
 // --- Quest XP ---
 
 /// Number of levels above quest level before XP starts reducing.
@@ -239,5 +314,76 @@ mod tests {
     #[test]
     fn quest_xp_zero_base() {
         assert_eq!(quest_xp(0, 50, 50), 0);
+    }
+
+    // --- Group XP tests ---
+
+    #[test]
+    fn group_xp_solo_gets_full() {
+        let members = vec![GroupMemberXp { level: 80, distance: 5.0 }];
+        let shares = group_kill_xp(80, &members);
+        assert_eq!(shares.len(), 1);
+        assert_eq!(shares[0].xp, kill_xp(80, 80)); // no bonus, no split
+    }
+
+    #[test]
+    fn group_xp_two_equal_split() {
+        let members = vec![
+            GroupMemberXp { level: 80, distance: 5.0 },
+            GroupMemberXp { level: 80, distance: 10.0 },
+        ];
+        let shares = group_kill_xp(80, &members);
+        // 2 members, 1.0x bonus, equal levels → each gets half
+        let base = kill_xp(80, 80);
+        assert_eq!(shares[0].xp, base / 2);
+        assert_eq!(shares[1].xp, base / 2);
+    }
+
+    #[test]
+    fn group_xp_three_member_bonus() {
+        let members = vec![
+            GroupMemberXp { level: 80, distance: 5.0 },
+            GroupMemberXp { level: 80, distance: 5.0 },
+            GroupMemberXp { level: 80, distance: 5.0 },
+        ];
+        let shares = group_kill_xp(80, &members);
+        let base = kill_xp(80, 80);
+        // 3 members, 1.166x bonus → pool = base * 1.166, each gets pool/3
+        let pool = (base as f32 * 1.166) as u32;
+        let expected_each = pool / 3;
+        assert_eq!(shares[0].xp, expected_each);
+    }
+
+    #[test]
+    fn group_xp_level_weighted() {
+        let members = vec![
+            GroupMemberXp { level: 80, distance: 5.0 },
+            GroupMemberXp { level: 40, distance: 5.0 },
+        ];
+        let shares = group_kill_xp(80, &members);
+        // Level 80 should get more than level 40
+        assert!(shares[0].xp > shares[1].xp);
+        // 80/(80+40) = 2/3, 40/(80+40) = 1/3
+        assert_eq!(shares[0].xp, shares[1].xp * 2);
+    }
+
+    #[test]
+    fn group_xp_out_of_range_gets_zero() {
+        let members = vec![
+            GroupMemberXp { level: 80, distance: 5.0 },
+            GroupMemberXp { level: 80, distance: 200.0 }, // out of range
+        ];
+        let shares = group_kill_xp(80, &members);
+        assert!(shares[0].xp > 0);
+        assert_eq!(shares[1].xp, 0);
+    }
+
+    #[test]
+    fn group_xp_all_out_of_range() {
+        let members = vec![
+            GroupMemberXp { level: 80, distance: 200.0 },
+        ];
+        let shares = group_kill_xp(80, &members);
+        assert_eq!(shares[0].xp, 0);
     }
 }
