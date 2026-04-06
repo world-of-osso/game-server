@@ -165,6 +165,104 @@ pub fn assign_loot(
     }
 }
 
+// --- Need/greed roll window ---
+
+/// Seconds players have to choose Need/Greed/Pass before auto-pass.
+const ROLL_WINDOW_TIMEOUT: f32 = 60.0;
+
+/// Tracks a per-item need/greed roll in progress.
+///
+/// Created when a rare+ item drops in NeedBeforeGreed mode.
+/// Each eligible player must respond (Need/Greed/Pass) or be auto-passed
+/// after the timeout. Players who can't equip the item are auto-passed immediately.
+#[derive(Debug, Clone, PartialEq)]
+pub struct RollWindow {
+    /// The item being rolled on.
+    pub item: LootDrop,
+    /// Players who are eligible to roll (not auto-passed).
+    pub pending_players: Vec<u64>,
+    /// Completed roll responses.
+    pub responses: Vec<LootRollEntry>,
+    /// Time remaining before auto-pass for non-respondents.
+    pub time_remaining: f32,
+}
+
+impl RollWindow {
+    /// Create a roll window for an item.
+    ///
+    /// `eligible_players` are those in range. `can_equip` filters who can
+    /// Need — players who can't equip are auto-passed immediately.
+    pub fn new(item: LootDrop, group_players: &[u64], can_equip: &[u64]) -> Self {
+        let mut pending = Vec::new();
+        let mut responses = Vec::new();
+        for &player in group_players {
+            if can_equip.contains(&player) {
+                pending.push(player);
+            } else {
+                responses.push(LootRollEntry {
+                    player_id: player,
+                    choice: LootRollChoice::Pass,
+                    roll_value: 0,
+                });
+            }
+        }
+        Self {
+            item,
+            pending_players: pending,
+            responses,
+            time_remaining: ROLL_WINDOW_TIMEOUT,
+        }
+    }
+
+    /// Record a player's choice. Returns `true` if accepted.
+    pub fn respond(&mut self, player_id: u64, choice: LootRollChoice, roll_value: u8) -> bool {
+        let Some(idx) = self.pending_players.iter().position(|&p| p == player_id) else {
+            return false;
+        };
+        self.pending_players.swap_remove(idx);
+        self.responses.push(LootRollEntry {
+            player_id,
+            choice,
+            roll_value,
+        });
+        true
+    }
+
+    /// Tick the timer. Auto-passes remaining players if time expires.
+    /// Returns `true` if the roll is complete (all responded or timed out).
+    pub fn tick(&mut self, dt: f32) -> bool {
+        if self.pending_players.is_empty() {
+            return true;
+        }
+        self.time_remaining -= dt;
+        if self.time_remaining <= 0.0 {
+            self.auto_pass_remaining();
+            return true;
+        }
+        false
+    }
+
+    /// Whether all players have responded.
+    pub fn is_complete(&self) -> bool {
+        self.pending_players.is_empty()
+    }
+
+    /// Resolve the winner. Only valid when complete.
+    pub fn resolve(&self) -> Option<u64> {
+        resolve_need_greed(&self.responses)
+    }
+
+    fn auto_pass_remaining(&mut self) {
+        for player_id in self.pending_players.drain(..) {
+            self.responses.push(LootRollEntry {
+                player_id,
+                choice: LootRollChoice::Pass,
+                roll_value: 0,
+            });
+        }
+    }
+}
+
 // --- Loot window ---
 
 /// State of a single item in a loot window.
@@ -477,6 +575,74 @@ mod tests {
         assert!(high > low);
         assert_eq!(low, 200); // 10 * 10 * 2
         assert_eq!(high, 12800); // 80 * 80 * 2
+    }
+
+    // --- Roll window tests ---
+
+    #[test]
+    fn roll_window_auto_passes_non_equippable() {
+        let item = LootDrop { item_id: 100, count: 1 };
+        let window = RollWindow::new(item, &[1, 2, 3], &[1, 3]); // 2 can't equip
+        assert_eq!(window.pending_players, vec![1, 3]);
+        assert_eq!(window.responses.len(), 1); // player 2 auto-passed
+        assert_eq!(window.responses[0].player_id, 2);
+        assert_eq!(window.responses[0].choice, LootRollChoice::Pass);
+    }
+
+    #[test]
+    fn roll_window_respond_and_complete() {
+        let item = LootDrop { item_id: 100, count: 1 };
+        let mut window = RollWindow::new(item, &[1, 2], &[1, 2]);
+        assert!(!window.is_complete());
+
+        assert!(window.respond(1, LootRollChoice::Need, 80));
+        assert!(!window.is_complete());
+
+        assert!(window.respond(2, LootRollChoice::Greed, 90));
+        assert!(window.is_complete());
+
+        assert_eq!(window.resolve(), Some(1)); // Need beats Greed
+    }
+
+    #[test]
+    fn roll_window_reject_duplicate_response() {
+        let item = LootDrop { item_id: 100, count: 1 };
+        let mut window = RollWindow::new(item, &[1], &[1]);
+        assert!(window.respond(1, LootRollChoice::Need, 50));
+        assert!(!window.respond(1, LootRollChoice::Greed, 99)); // already responded
+    }
+
+    #[test]
+    fn roll_window_timeout_auto_passes() {
+        let item = LootDrop { item_id: 100, count: 1 };
+        let mut window = RollWindow::new(item, &[1, 2, 3], &[1, 2, 3]);
+        window.respond(1, LootRollChoice::Need, 50);
+
+        // Tick past timeout
+        let complete = window.tick(61.0);
+        assert!(complete);
+        assert!(window.is_complete());
+        // Players 2 and 3 auto-passed
+        assert_eq!(window.responses.len(), 3);
+        assert_eq!(window.resolve(), Some(1)); // only Need roller
+    }
+
+    #[test]
+    fn roll_window_tick_not_expired() {
+        let item = LootDrop { item_id: 100, count: 1 };
+        let mut window = RollWindow::new(item, &[1, 2], &[1, 2]);
+        let complete = window.tick(30.0);
+        assert!(!complete);
+        assert_eq!(window.pending_players.len(), 2);
+    }
+
+    #[test]
+    fn roll_window_all_pass_returns_none() {
+        let item = LootDrop { item_id: 100, count: 1 };
+        let mut window = RollWindow::new(item, &[1, 2], &[1, 2]);
+        window.respond(1, LootRollChoice::Pass, 0);
+        window.respond(2, LootRollChoice::Pass, 0);
+        assert_eq!(window.resolve(), None);
     }
 
     // --- Group loot tests ---
