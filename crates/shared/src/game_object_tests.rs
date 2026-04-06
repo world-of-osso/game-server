@@ -286,6 +286,119 @@ fn can_reuse_after_cancel() {
     assert!(interact(&mut go).is_ok());
 }
 
+// --- Gathering nodes ---
+
+fn copper_gather_data() -> GatheringData {
+    GatheringData {
+        required_skill: 1,
+        trivial_skill: 50,
+        yields: vec![
+            GatherYield { item_id: 2770, min_count: 1, max_count: 3 },
+        ],
+        skill_gain: 1,
+    }
+}
+
+fn herb_gather_data() -> GatheringData {
+    GatheringData {
+        required_skill: 1,
+        trivial_skill: 25,
+        yields: vec![
+            GatherYield { item_id: 2447, min_count: 1, max_count: 2 },
+            GatherYield { item_id: 2448, min_count: 0, max_count: 1 },
+        ],
+        skill_gain: 1,
+    }
+}
+
+#[test]
+fn gather_mining_node_success() {
+    let mut go = make_go(&mining_template());
+    interact(&mut go).unwrap(); // Ready → InUse
+
+    let result = gather_node(&mut go, &copper_gather_data(), 10, 0.5).unwrap();
+    assert_eq!(result.items.len(), 1);
+    assert_eq!(result.items[0].0, 2770); // Copper Ore
+    assert_eq!(result.items[0].1, 2);    // min 1 + (2 * 0.5) = 2
+    assert_eq!(result.skill_gained, 1);  // skill 10 < trivial 50
+    assert_eq!(go.state, GameObjectState::Depleted);
+}
+
+#[test]
+fn gather_herb_node_multiple_yields() {
+    let tmpl = GameObjectTemplate {
+        id: 3002, object_type: GameObjectType::HerbNode, display_id: 701,
+        name: "Peacebloom".to_string(), faction: 0, flags: GameObjectFlags::INTERACTABLE,
+    };
+    let mut go = make_go(&tmpl);
+    interact(&mut go).unwrap();
+
+    let result = gather_node(&mut go, &herb_gather_data(), 5, 1.0).unwrap();
+    assert_eq!(result.items.len(), 2);
+    assert_eq!(result.items[0], (2447, 2)); // max
+    assert_eq!(result.items[1], (2448, 1)); // max
+}
+
+#[test]
+fn gather_insufficient_skill() {
+    let mut go = make_go(&mining_template());
+    interact(&mut go).unwrap();
+
+    let result = gather_node(&mut go, &copper_gather_data(), 0, 0.5);
+    assert_eq!(result, Err(InteractionError::MissingSkill));
+    // Object returned to Ready after failed gather
+    assert_eq!(go.state, GameObjectState::Ready);
+}
+
+#[test]
+fn gather_trivial_no_skill_gain() {
+    let mut go = make_go(&mining_template());
+    interact(&mut go).unwrap();
+
+    // Skill 100 >= trivial 50, no skill gain
+    let result = gather_node(&mut go, &copper_gather_data(), 100, 0.5).unwrap();
+    assert_eq!(result.skill_gained, 0);
+}
+
+#[test]
+fn gather_min_roll() {
+    let mut go = make_go(&mining_template());
+    interact(&mut go).unwrap();
+
+    let result = gather_node(&mut go, &copper_gather_data(), 10, 0.0).unwrap();
+    assert_eq!(result.items[0].1, 1); // min_count
+}
+
+#[test]
+fn gather_max_roll() {
+    let mut go = make_go(&mining_template());
+    interact(&mut go).unwrap();
+
+    let result = gather_node(&mut go, &copper_gather_data(), 10, 1.0).unwrap();
+    assert_eq!(result.items[0].1, 3); // max_count
+}
+
+#[test]
+fn gather_non_node_fails() {
+    let mut go = make_go(&chest_template());
+    interact(&mut go).unwrap();
+
+    assert_eq!(
+        gather_node(&mut go, &copper_gather_data(), 10, 0.5),
+        Err(InteractionError::NotInteractable)
+    );
+}
+
+#[test]
+fn gather_not_in_use_fails() {
+    let mut go = make_go(&mining_template());
+    // Don't call interact() — still Ready
+    assert_eq!(
+        gather_node(&mut go, &copper_gather_data(), 10, 0.5),
+        Err(InteractionError::InUse)
+    );
+}
+
 // --- State machine ---
 
 #[test]

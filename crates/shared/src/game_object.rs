@@ -329,6 +329,73 @@ pub fn cancel_interaction(go: &mut GameObject) -> Result<(), StateError> {
     go.cancel_use()
 }
 
+// --- Gathering nodes ---
+
+/// An item yielded from gathering a node.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct GatherYield {
+    pub item_id: u32,
+    pub min_count: u16,
+    pub max_count: u16,
+}
+
+/// Gathering configuration for a mining/herb node.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct GatheringData {
+    /// Minimum skill level required to gather.
+    pub required_skill: u16,
+    /// Skill level at which gathering is guaranteed (no fail).
+    pub trivial_skill: u16,
+    /// Items yielded on successful gather.
+    pub yields: Vec<GatherYield>,
+    /// Skill points gained on gather (0 if trivial).
+    pub skill_gain: u16,
+}
+
+/// Result of a successful gather.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct GatherResult {
+    pub items: Vec<(u32, u16)>,
+    pub skill_gained: u16,
+}
+
+/// Attempt to gather from a node.
+///
+/// Checks skill requirement, rolls yield counts, transitions the
+/// object to Depleted. `count_roll` is a 0.0–1.0 random value for
+/// determining stack sizes within min/max range.
+pub fn gather_node(
+    go: &mut GameObject,
+    data: &GatheringData,
+    player_skill: u16,
+    count_roll: f32,
+) -> Result<GatherResult, InteractionError> {
+    if !matches!(go.object_type, GameObjectType::MiningNode | GameObjectType::HerbNode) {
+        return Err(InteractionError::NotInteractable);
+    }
+    if go.state != GameObjectState::InUse {
+        return Err(InteractionError::InUse);
+    }
+    if player_skill < data.required_skill {
+        go.cancel_use().ok();
+        return Err(InteractionError::MissingSkill);
+    }
+
+    let items = roll_yields(&data.yields, count_roll);
+    let skill_gained = if player_skill < data.trivial_skill { data.skill_gain } else { 0 };
+
+    go.deplete().ok();
+    Ok(GatherResult { items, skill_gained })
+}
+
+fn roll_yields(yields: &[GatherYield], count_roll: f32) -> Vec<(u32, u16)> {
+    yields.iter().map(|y| {
+        let range = y.max_count - y.min_count;
+        let count = y.min_count + (range as f32 * count_roll) as u16;
+        (y.item_id, count.min(y.max_count))
+    }).collect()
+}
+
 // --- Spawn system ---
 
 /// How a game object spawn was created.
