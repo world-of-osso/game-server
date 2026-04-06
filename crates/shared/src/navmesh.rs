@@ -463,6 +463,85 @@ impl ReturnToSpawn {
     }
 }
 
+// --- Patrol paths ---
+
+/// A waypoint in a patrol path with an optional delay.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct PatrolWaypoint {
+    pub position: NavPoint,
+    /// Seconds to wait at this waypoint before moving to the next.
+    pub delay: f32,
+}
+
+/// A predefined patrol path that a creature follows in a loop.
+///
+/// Loaded from AzerothCore `waypoint_data` table. The creature walks
+/// from waypoint to waypoint, pausing at each for the specified delay,
+/// then loops back to the start.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct PatrolPath {
+    pub waypoints: Vec<PatrolWaypoint>,
+}
+
+/// State for a creature following a patrol path.
+#[derive(Debug, Clone, PartialEq)]
+pub struct PatrolState {
+    /// Current waypoint index.
+    pub index: usize,
+    /// Remaining delay at current waypoint (0 = moving).
+    pub delay_remaining: f32,
+    /// Movement speed in yards/second.
+    pub speed: f32,
+}
+
+/// What the patrol system should do this frame.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum PatrolTickResult {
+    /// Move toward this position.
+    MoveTo(NavPoint),
+    /// Waiting at a waypoint.
+    Waiting,
+}
+
+impl PatrolState {
+    pub fn new(speed: f32) -> Self {
+        Self {
+            index: 0,
+            delay_remaining: 0.0,
+            speed,
+        }
+    }
+
+    /// Tick the patrol. Returns whether to move or wait.
+    pub fn tick(&mut self, dt: f32, current_pos: &NavPoint, path: &PatrolPath) -> PatrolTickResult {
+        if path.waypoints.is_empty() {
+            return PatrolTickResult::Waiting;
+        }
+
+        // Waiting at current waypoint
+        if self.delay_remaining > 0.0 {
+            self.delay_remaining -= dt;
+            return PatrolTickResult::Waiting;
+        }
+
+        let wp = &path.waypoints[self.index];
+        let dist = current_pos.distance_2d(&wp.position);
+
+        // Reached current waypoint — start delay and advance
+        if dist < self.speed * dt {
+            self.delay_remaining = wp.delay;
+            self.index = (self.index + 1) % path.waypoints.len();
+            if self.delay_remaining > 0.0 {
+                return PatrolTickResult::Waiting;
+            }
+            // No delay: immediately head to next
+            return PatrolTickResult::MoveTo(path.waypoints[self.index].position);
+        }
+
+        PatrolTickResult::MoveTo(wp.position)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -800,5 +879,79 @@ mod tests {
     fn return_to_spawn_no_path() {
         let mut ret = ReturnToSpawn::new(7.0);
         assert!(ret.tick(0.016, &NavPoint::new(10.0, 0.0, 0.0)).is_none());
+    }
+
+    // --- Patrol tests ---
+
+    fn sample_patrol() -> PatrolPath {
+        PatrolPath {
+            waypoints: vec![
+                PatrolWaypoint { position: NavPoint::new(0.0, 0.0, 0.0), delay: 2.0 },
+                PatrolWaypoint { position: NavPoint::new(10.0, 0.0, 0.0), delay: 0.0 },
+                PatrolWaypoint { position: NavPoint::new(10.0, 0.0, 10.0), delay: 1.0 },
+            ],
+        }
+    }
+
+    #[test]
+    fn patrol_moves_toward_waypoint() {
+        let path = sample_patrol();
+        let mut state = PatrolState::new(7.0);
+        let pos = NavPoint::new(5.0, 0.0, 0.0);
+        let result = state.tick(0.016, &pos, &path);
+        assert!(matches!(result, PatrolTickResult::MoveTo(_)));
+    }
+
+    #[test]
+    fn patrol_waits_at_waypoint() {
+        let path = sample_patrol();
+        let mut state = PatrolState::new(100.0); // very fast
+        let pos = NavPoint::new(0.0, 0.0, 0.0); // at waypoint 0
+        let result = state.tick(0.016, &pos, &path);
+        // Reached wp0 (delay=2s), should wait
+        assert_eq!(result, PatrolTickResult::Waiting);
+        assert_eq!(state.index, 1); // advanced to next
+    }
+
+    #[test]
+    fn patrol_resumes_after_delay() {
+        let path = sample_patrol();
+        let mut state = PatrolState::new(100.0);
+        let pos = NavPoint::new(0.0, 0.0, 0.0);
+        state.tick(0.016, &pos, &path); // reach wp0, start 2s delay
+        state.tick(2.1, &pos, &path); // delay expired
+        let result = state.tick(0.016, &pos, &path);
+        // Should now move toward wp1
+        assert!(matches!(result, PatrolTickResult::MoveTo(_)));
+    }
+
+    #[test]
+    fn patrol_no_delay_skips_wait() {
+        let path = sample_patrol();
+        let mut state = PatrolState::new(100.0);
+        state.index = 1; // at wp1 which has delay=0
+        let pos = NavPoint::new(10.0, 0.0, 0.0);
+        let result = state.tick(0.016, &pos, &path);
+        // No delay → immediately MoveTo next
+        assert!(matches!(result, PatrolTickResult::MoveTo(_)));
+        assert_eq!(state.index, 2);
+    }
+
+    #[test]
+    fn patrol_loops_back_to_start() {
+        let path = sample_patrol();
+        let mut state = PatrolState::new(100.0);
+        state.index = 2; // at wp2 (last)
+        let pos = NavPoint::new(10.0, 0.0, 10.0);
+        state.tick(0.016, &pos, &path); // reach wp2, delay=1s
+        assert_eq!(state.index, 0); // wrapped to 0
+    }
+
+    #[test]
+    fn patrol_empty_path_waits() {
+        let path = PatrolPath { waypoints: vec![] };
+        let mut state = PatrolState::new(7.0);
+        let result = state.tick(0.016, &NavPoint::new(0.0, 0.0, 0.0), &path);
+        assert_eq!(result, PatrolTickResult::Waiting);
     }
 }
