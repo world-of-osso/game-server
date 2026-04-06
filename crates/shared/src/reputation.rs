@@ -333,6 +333,68 @@ fn collect_spillover(
     }).collect()
 }
 
+// --- Gated rewards ---
+
+/// Type of reward gated behind a reputation standing.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum GatedRewardType {
+    /// A vendor item unlocked at this standing.
+    VendorItem,
+    /// A crafting recipe unlocked at this standing.
+    Recipe,
+    /// An enchantment or enchant formula.
+    Enchant,
+    /// A tabard or cosmetic.
+    Tabard,
+    /// A mount.
+    Mount,
+}
+
+/// A reward gated behind a faction standing requirement.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct GatedReward {
+    /// Item or recipe ID.
+    pub item_id: u32,
+    /// Faction that gates this reward.
+    pub faction_id: u32,
+    /// Minimum standing required to purchase/learn.
+    pub required_standing: Standing,
+    /// What kind of reward this is.
+    pub reward_type: GatedRewardType,
+    /// Cost in copper (0 if free or learned automatically).
+    pub cost: u32,
+}
+
+/// Check if a character can access a gated reward.
+pub fn can_access_reward(reward: &GatedReward, rep: &CharacterReputation) -> bool {
+    rep.has_standing(reward.faction_id, reward.required_standing)
+}
+
+/// Filter a list of rewards to those accessible at current standing.
+pub fn available_rewards<'a>(
+    rewards: &'a [GatedReward],
+    faction_id: u32,
+    rep: &CharacterReputation,
+) -> Vec<&'a GatedReward> {
+    rewards
+        .iter()
+        .filter(|r| r.faction_id == faction_id && can_access_reward(r, rep))
+        .collect()
+}
+
+/// Find rewards that will unlock at the next standing tier.
+pub fn upcoming_rewards<'a>(
+    rewards: &'a [GatedReward],
+    faction_id: u32,
+    rep: &CharacterReputation,
+) -> Vec<&'a GatedReward> {
+    let current = rep.get_standing(faction_id);
+    rewards
+        .iter()
+        .filter(|r| r.faction_id == faction_id && r.required_standing > current)
+        .collect()
+}
+
 #[cfg(test)]
 #[path = "reputation_tests.rs"]
 mod tests;

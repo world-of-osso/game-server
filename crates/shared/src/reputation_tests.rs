@@ -492,3 +492,118 @@ fn spillover_unknown_faction_no_cascade() {
     let results = rep.gain_rep_with_spillover(999, 1000, RepGainSource::QuestTurnIn, &reg);
     assert_eq!(results.len(), 1);
 }
+
+// --- Gated rewards ---
+
+fn sample_rewards() -> Vec<GatedReward> {
+    vec![
+        GatedReward {
+            item_id: 5001, faction_id: 72,
+            required_standing: Standing::Friendly,
+            reward_type: GatedRewardType::VendorItem, cost: 10_000,
+        },
+        GatedReward {
+            item_id: 5002, faction_id: 72,
+            required_standing: Standing::Honored,
+            reward_type: GatedRewardType::Recipe, cost: 50_000,
+        },
+        GatedReward {
+            item_id: 5003, faction_id: 72,
+            required_standing: Standing::Revered,
+            reward_type: GatedRewardType::Tabard, cost: 100_000,
+        },
+        GatedReward {
+            item_id: 5004, faction_id: 72,
+            required_standing: Standing::Exalted,
+            reward_type: GatedRewardType::Mount, cost: 500_000,
+        },
+        GatedReward {
+            item_id: 6001, faction_id: 76,
+            required_standing: Standing::Honored,
+            reward_type: GatedRewardType::Enchant, cost: 30_000,
+        },
+    ]
+}
+
+#[test]
+fn can_access_at_required_standing() {
+    let reg = sample_registry();
+    let rep = CharacterReputation::new_for_race(&reg, HUMAN);
+    let rewards = sample_rewards();
+
+    // Human is Friendly with Stormwind (21000)
+    assert!(can_access_reward(&rewards[0], &rep)); // Friendly: yes
+    assert!(!can_access_reward(&rewards[1], &rep)); // Honored: no
+}
+
+#[test]
+fn can_access_above_required_standing() {
+    let reg = sample_registry();
+    let mut rep = CharacterReputation::new_for_race(&reg, HUMAN);
+    rep.set_rep(72, 42_000); // Revered
+
+    let rewards = sample_rewards();
+    assert!(can_access_reward(&rewards[0], &rep)); // Friendly: yes
+    assert!(can_access_reward(&rewards[1], &rep)); // Honored: yes
+    assert!(can_access_reward(&rewards[2], &rep)); // Revered: yes
+    assert!(!can_access_reward(&rewards[3], &rep)); // Exalted: no
+}
+
+#[test]
+fn available_rewards_filters_by_standing() {
+    let reg = sample_registry();
+    let mut rep = CharacterReputation::new_for_race(&reg, HUMAN);
+    rep.set_rep(72, 30_000); // Honored
+
+    let rewards = sample_rewards();
+    let available = available_rewards(&rewards, 72, &rep);
+
+    assert_eq!(available.len(), 2); // Friendly + Honored
+    assert_eq!(available[0].item_id, 5001);
+    assert_eq!(available[1].item_id, 5002);
+}
+
+#[test]
+fn available_rewards_filters_by_faction() {
+    let reg = sample_registry();
+    let mut rep = CharacterReputation::new_for_race(&reg, HUMAN);
+    rep.set_rep(76, 30_000); // Honored with Orgrimmar
+
+    let rewards = sample_rewards();
+    // Only Orgrimmar rewards
+    let available = available_rewards(&rewards, 76, &rep);
+    assert_eq!(available.len(), 1);
+    assert_eq!(available[0].item_id, 6001);
+}
+
+#[test]
+fn upcoming_rewards_shows_next_unlocks() {
+    let reg = sample_registry();
+    let rep = CharacterReputation::new_for_race(&reg, HUMAN);
+    // Friendly (21000) with Stormwind
+
+    let rewards = sample_rewards();
+    let upcoming = upcoming_rewards(&rewards, 72, &rep);
+
+    assert_eq!(upcoming.len(), 3); // Honored, Revered, Exalted
+    assert_eq!(upcoming[0].required_standing, Standing::Honored);
+}
+
+#[test]
+fn upcoming_rewards_empty_at_exalted() {
+    let mut rep = CharacterReputation::default();
+    rep.set_rep(72, 63_000); // Exalted
+
+    let rewards = sample_rewards();
+    let upcoming = upcoming_rewards(&rewards, 72, &rep);
+    assert!(upcoming.is_empty());
+}
+
+#[test]
+fn no_rewards_for_unknown_faction() {
+    let rep = CharacterReputation::default();
+    let rewards = sample_rewards();
+
+    let available = available_rewards(&rewards, 999, &rep);
+    assert!(available.is_empty());
+}
