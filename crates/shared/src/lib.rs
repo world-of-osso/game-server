@@ -6,6 +6,7 @@ pub mod components;
 pub mod threat;
 pub mod dungeon_finder;
 pub mod formulas;
+pub mod game_object;
 pub mod group;
 pub mod guild_bank;
 pub mod instance;
