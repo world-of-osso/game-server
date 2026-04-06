@@ -930,6 +930,81 @@ mod tests {
     }
 
     #[test]
+    fn sprint_partially_counters_snare() {
+        use shared::aura::{Aura, AuraEffect};
+
+        let mut app = setup_app_with_time();
+        let player = spawn_player(app.world_mut(), 0.0, 0.0, 0.0);
+
+        let make_aura = |id, pct| Aura {
+            spell_id: id,
+            caster: 99,
+            duration: 10.0,
+            remaining: 10.0,
+            effects: [
+                Some(AuraEffect::ModMovementSpeed { percent: pct }),
+                None,
+                None,
+            ],
+            ..Default::default()
+        };
+
+        // -70% snare + +70% sprint → (1.0 - 0.70 + 0.70) = 1.0x (normal speed)
+        {
+            let mut entity = app.world_mut().entity_mut(player);
+            let mut auras = entity.get_mut::<Auras>().unwrap();
+            auras.apply(make_aura(1, -0.70));
+            auras.apply(make_aura(2, 0.70));
+        }
+
+        let input = make_input(1.0, 0.0, 0.0);
+        let _ = app.world_mut().run_system_once(
+            move |mut q: Query<PlayerMovement, With<Player>>,
+                  time: Res<Time>| {
+                apply_movement_input(&input, player, &mut q, &time);
+            },
+        );
+
+        let speed = app.world().entity(player).get::<MovementSpeed>().unwrap();
+        assert!(
+            (speed.0 - DEFAULT_RUN_SPEED).abs() < 1e-5,
+            "sprint cancels snare: speed {}, expected {}",
+            speed.0,
+            DEFAULT_RUN_SPEED,
+        );
+
+        // -70% snare + +30% sprint → (1.0 - 0.70 + 0.30) = 0.60x
+        app.world_mut()
+            .entity_mut(player)
+            .get_mut::<Position>()
+            .unwrap()
+            .x = 0.0;
+        // Replace sprint with weaker one
+        {
+            let mut entity = app.world_mut().entity_mut(player);
+            let mut auras = entity.get_mut::<Auras>().unwrap();
+            auras.active.retain(|a| a.spell_id != 2);
+            auras.apply(make_aura(3, 0.30));
+        }
+
+        let input2 = make_input(1.0, 0.0, 0.0);
+        let _ = app.world_mut().run_system_once(
+            move |mut q: Query<PlayerMovement, With<Player>>,
+                  time: Res<Time>| {
+                apply_movement_input(&input2, player, &mut q, &time);
+            },
+        );
+
+        let speed = app.world().entity(player).get::<MovementSpeed>().unwrap();
+        let expected = DEFAULT_RUN_SPEED * 0.60;
+        assert!(
+            (speed.0 - expected).abs() < 1e-5,
+            "partial counter: speed {}, expected {expected}",
+            speed.0,
+        );
+    }
+
+    #[test]
     fn zero_direction_ignored() {
         let mut app = setup_app_with_time();
         let player = spawn_player(app.world_mut(), 5.0, 5.0, 5.0);
