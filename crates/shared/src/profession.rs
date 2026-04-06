@@ -239,6 +239,90 @@ impl PlayerProfessions {
     }
 }
 
+// --- Gathering ---
+
+/// A gatherable world node (ore vein, herb, etc).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct GatherNode {
+    /// Which gathering profession this requires.
+    pub profession: Profession,
+    /// Minimum skill to gather from this node.
+    pub required_skill: u16,
+    /// Skill level where gathering becomes guaranteed (no fail).
+    pub trivial_skill: u16,
+    /// Items yielded on success: (item_id, min_count, max_count).
+    pub yields: Vec<(u32, u16, u16)>,
+    /// Respawn time in seconds (0 = one-time like skinning).
+    pub respawn_secs: u32,
+}
+
+/// Result of attempting to gather from a node.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum GatherResult {
+    /// Successfully gathered items.
+    Success { items: Vec<(u32, u16)>, skilled_up: bool },
+    /// Skill too low to gather this node.
+    SkillTooLow,
+    /// Player doesn't have the required profession.
+    WrongProfession,
+}
+
+/// Skill-up chance based on current skill vs node difficulty.
+///
+/// - Below required: impossible (caught before this)
+/// - Required..trivial: 100% chance → linear decay to 0%
+/// - At or above trivial: 0% skill-up chance
+fn skill_up_chance(current_skill: u16, required: u16, trivial: u16) -> f32 {
+    if current_skill >= trivial {
+        return 0.0;
+    }
+    if trivial <= required {
+        return 1.0;
+    }
+    let range = (trivial - required) as f32;
+    let progress = (current_skill - required) as f32;
+    1.0 - progress / range
+}
+
+/// Attempt to gather from a node.
+///
+/// `roll` is 0.0–1.0 for skill-up chance.
+/// `count_rolls` maps to each yield entry for picking count within range.
+pub fn attempt_gather(
+    node: &GatherNode,
+    profs: &mut PlayerProfessions,
+    roll: f32,
+    count_rolls: &[f32],
+) -> GatherResult {
+    let Some(skill) = profs.get(node.profession) else {
+        return GatherResult::WrongProfession;
+    };
+    if skill.current < node.required_skill {
+        return GatherResult::SkillTooLow;
+    }
+
+    let chance = skill_up_chance(skill.current, node.required_skill, node.trivial_skill);
+    let skilled_up = roll < chance;
+    if skilled_up
+        && let Some(s) = profs.get_mut(node.profession)
+    {
+        s.skill_up();
+    }
+
+    let items: Vec<(u32, u16)> = node
+        .yields
+        .iter()
+        .zip(count_rolls.iter().chain(std::iter::repeat(&0.5)))
+        .map(|(&(item_id, min, max), &cr)| {
+            let range = max - min;
+            let count = min + (range as f32 * cr) as u16;
+            (item_id, count.min(max))
+        })
+        .collect();
+
+    GatherResult::Success { items, skilled_up }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -373,7 +457,90 @@ mod tests {
         profs.learn(Profession::Mining).unwrap();
         profs.unlearn(Profession::Mining);
         assert!(!profs.knows(Profession::Mining));
-        // Can learn a new one now
         assert!(profs.learn(Profession::Skinning).is_ok());
+    }
+
+    // --- Gathering tests ---
+
+    fn copper_vein() -> GatherNode {
+        GatherNode {
+            profession: Profession::Mining,
+            required_skill: 1,
+            trivial_skill: 50,
+            yields: vec![(2770, 1, 3)], // Copper Ore
+            respawn_secs: 300,
+        }
+    }
+
+    fn mining_profs(skill: u16) -> PlayerProfessions {
+        let mut profs = PlayerProfessions::default();
+        profs.learn(Profession::Mining).unwrap();
+        let s = profs.get_mut(Profession::Mining).unwrap();
+        s.current = skill;
+        s.max = 75;
+        profs
+    }
+
+    #[test]
+    fn gather_success() {
+        let node = copper_vein();
+        let mut profs = mining_profs(10);
+        let result = attempt_gather(&node, &mut profs, 0.5, &[0.5]);
+        match result {
+            GatherResult::Success { items, .. } => {
+                assert_eq!(items.len(), 1);
+                assert_eq!(items[0].0, 2770);
+                assert!(items[0].1 >= 1 && items[0].1 <= 3);
+            }
+            _ => panic!("expected success"),
+        }
+    }
+
+    #[test]
+    fn gather_skill_too_low() {
+        let mut node = copper_vein();
+        node.required_skill = 50;
+        let mut profs = mining_profs(10);
+        assert_eq!(attempt_gather(&node, &mut profs, 0.0, &[]), GatherResult::SkillTooLow);
+    }
+
+    #[test]
+    fn gather_wrong_profession() {
+        let node = copper_vein();
+        let mut profs = PlayerProfessions::default();
+        profs.learn(Profession::Herbalism).unwrap();
+        assert_eq!(attempt_gather(&node, &mut profs, 0.0, &[]), GatherResult::WrongProfession);
+    }
+
+    #[test]
+    fn gather_skill_up_at_low_skill() {
+        let node = copper_vein(); // required=1, trivial=50
+        let mut profs = mining_profs(5);
+        // roll=0.0 → always skill up (chance is high at skill 5)
+        let result = attempt_gather(&node, &mut profs, 0.0, &[0.0]);
+        match result {
+            GatherResult::Success { skilled_up, .. } => assert!(skilled_up),
+            _ => panic!("expected success"),
+        }
+        assert_eq!(profs.get(Profession::Mining).unwrap().current, 6);
+    }
+
+    #[test]
+    fn gather_no_skill_up_at_trivial() {
+        let node = copper_vein();
+        let mut profs = mining_profs(50); // at trivial
+        let result = attempt_gather(&node, &mut profs, 0.0, &[0.0]);
+        match result {
+            GatherResult::Success { skilled_up, .. } => assert!(!skilled_up),
+            _ => panic!("expected success"),
+        }
+    }
+
+    #[test]
+    fn skill_up_chance_values() {
+        assert_eq!(skill_up_chance(1, 1, 50), 1.0); // at required = 100%
+        assert_eq!(skill_up_chance(50, 1, 50), 0.0); // at trivial = 0%
+        let mid = skill_up_chance(25, 1, 50);
+        assert!(mid > 0.0 && mid < 1.0);
     }
 }
