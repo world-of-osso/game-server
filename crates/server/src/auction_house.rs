@@ -1899,6 +1899,26 @@ mod tests {
     }
 
     #[test]
+    fn gold_overflow_saturates_at_max() {
+        let db = persistence::temp_database();
+        let (seller_id, _) =
+            persistence::create_character(&db, 1, "Seller", 1, 1).expect("seller");
+
+        // Set seller gold near u32::MAX
+        let mut inv = persistence::load_inventory(&db, seller_id);
+        inv.gold = u32::MAX - 10;
+        persistence::save_inventory(&db, seller_id, &inv);
+
+        // Claim mail with 100 gold — should saturate, not wrap
+        deliver_mail(&db, seller_id, "Test", "gold overflow", 100, None);
+        let mail = persistence::load_mailbox(&db, seller_id);
+        claim_mail(&db, seller_id, mail[0].mail_id);
+
+        let final_gold = persistence::load_inventory(&db, seller_id).gold;
+        assert_eq!(final_gold, u32::MAX, "gold saturates at u32::MAX");
+    }
+
+    #[test]
     fn unique_item_prevents_duplicate_listing() {
         let db = persistence::temp_database();
         let (seller_id, _) =
