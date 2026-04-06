@@ -1246,6 +1246,76 @@ mod tests {
     }
 
     #[test]
+    fn jump_while_snared_reduces_horizontal_distance() {
+        use shared::aura::{Aura, AuraEffect};
+
+        let mut app = setup_app_with_time();
+        let normal = spawn_player(app.world_mut(), 0.0, 0.0, 0.0);
+        let snared = spawn_player(app.world_mut(), 0.0, 0.0, 0.0);
+
+        // Apply 50% snare to second player
+        {
+            let mut entity = app.world_mut().entity_mut(snared);
+            let mut auras = entity.get_mut::<Auras>().unwrap();
+            auras.apply(Aura {
+                spell_id: 1,
+                caster: 99,
+                duration: 10.0,
+                remaining: 10.0,
+                effects: [
+                    Some(AuraEffect::ModMovementSpeed { percent: -0.50 }),
+                    None,
+                    None,
+                ],
+                ..Default::default()
+            });
+        }
+
+        // Both jump while moving forward
+        let normal_input = PlayerInput {
+            direction: [1.0, 0.0, 0.0],
+            facing_yaw: 0.0,
+            jumping: true,
+            running: true,
+            swimming: false,
+        };
+        let snared_input = PlayerInput {
+            direction: [1.0, 0.0, 0.0],
+            facing_yaw: 0.0,
+            jumping: true,
+            running: true,
+            swimming: false,
+        };
+
+        let _ = app.world_mut().run_system_once(
+            move |mut q: Query<PlayerMovement, With<Player>>,
+                  time: Res<Time>| {
+                apply_movement_input(&normal_input, normal, &mut q, &time);
+                apply_movement_input(&snared_input, snared, &mut q, &time);
+            },
+        );
+
+        let normal_x = app.world().entity(normal).get::<Position>().unwrap().x;
+        let snared_x = app.world().entity(snared).get::<Position>().unwrap().x;
+
+        assert!(normal_x > 0.0, "normal moved forward");
+        assert!(snared_x > 0.0, "snared moved forward");
+        assert!(
+            (snared_x - normal_x * 0.5).abs() < 1e-5,
+            "snared horizontal {snared_x} should be 50% of normal {normal_x}",
+        );
+
+        // Both got jump impulse
+        let normal_vel = app.world().entity(normal).get::<VerticalVelocity>().unwrap().0;
+        let snared_vel = app.world().entity(snared).get::<VerticalVelocity>().unwrap().0;
+        assert!(normal_vel > 0.0, "normal jumping");
+        assert!(
+            (normal_vel - snared_vel).abs() < 1e-5,
+            "jump impulse unaffected by snare",
+        );
+    }
+
+    #[test]
     fn swim_speed_differs_from_ground_speed() {
         let mut app = setup_app_with_time();
         let player = spawn_player(app.world_mut(), 0.0, 0.0, 0.0);
