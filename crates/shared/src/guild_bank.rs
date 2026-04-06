@@ -226,6 +226,73 @@ pub fn can_withdraw(
     daily.count_for(tab) < perm.daily_withdraw_limit
 }
 
+// --- Guild repair ---
+
+/// Per-member daily repair spending from guild funds.
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub struct DailyRepairSpending {
+    /// (player_name, copper_spent_today) pairs.
+    entries: Vec<(String, u32)>,
+}
+
+impl DailyRepairSpending {
+    /// Get today's repair spending for a player.
+    pub fn spent_by(&self, player: &str) -> u32 {
+        self.entries
+            .iter()
+            .find(|(p, _)| p == player)
+            .map_or(0, |(_, s)| *s)
+    }
+
+    /// Record a repair charge.
+    pub fn add(&mut self, player: &str, amount: u32) {
+        if let Some(entry) = self.entries.iter_mut().find(|(p, _)| p == player) {
+            entry.1 += amount;
+        } else {
+            self.entries.push((player.to_string(), amount));
+        }
+    }
+
+    /// Reset all spending (daily reset).
+    pub fn reset(&mut self) {
+        self.entries.clear();
+    }
+}
+
+/// Attempt to repair from guild funds.
+///
+/// `repair_cost`: total repair cost in copper.
+/// `daily_limit`: max copper this rank can spend per day (0 = unlimited).
+///
+/// Returns the amount actually paid from guild funds, or an error.
+pub fn repair_from_guild(
+    bank: &mut GuildBank,
+    spending: &mut DailyRepairSpending,
+    player: &str,
+    repair_cost: u32,
+    daily_limit: u32,
+) -> Result<u32, GuildBankError> {
+    let already_spent = spending.spent_by(player);
+    let remaining_allowance = if daily_limit == 0 {
+        u32::MAX
+    } else {
+        daily_limit.saturating_sub(already_spent)
+    };
+
+    if remaining_allowance == 0 {
+        return Err(GuildBankError::DailyLimitReached);
+    }
+
+    let pay = repair_cost.min(remaining_allowance);
+    if bank.gold < pay {
+        return Err(GuildBankError::NotEnoughGold);
+    }
+
+    bank.gold -= pay;
+    spending.add(player, pay);
+    Ok(pay)
+}
+
 // --- Transaction log ---
 
 /// Type of guild bank transaction.
@@ -511,5 +578,57 @@ mod tests {
     fn log_invalid_tab_empty() {
         let log = TransactionLog::new(1);
         assert!(log.tab_log(99).is_empty());
+    }
+
+    // --- Guild repair tests ---
+
+    #[test]
+    fn repair_from_guild_success() {
+        let mut bank = GuildBank { gold: 100_000, ..Default::default() };
+        let mut spending = DailyRepairSpending::default();
+        let paid = repair_from_guild(&mut bank, &mut spending, "Alice", 5000, 10000).unwrap();
+        assert_eq!(paid, 5000);
+        assert_eq!(bank.gold, 95_000);
+        assert_eq!(spending.spent_by("Alice"), 5000);
+    }
+
+    #[test]
+    fn repair_daily_limit_caps() {
+        let mut bank = GuildBank { gold: 100_000, ..Default::default() };
+        let mut spending = DailyRepairSpending::default();
+        // Limit is 3000, repair costs 5000 → only pays 3000
+        let paid = repair_from_guild(&mut bank, &mut spending, "Alice", 5000, 3000).unwrap();
+        assert_eq!(paid, 3000);
+        // Second repair — no allowance left
+        let err = repair_from_guild(&mut bank, &mut spending, "Alice", 1000, 3000);
+        assert_eq!(err, Err(GuildBankError::DailyLimitReached));
+    }
+
+    #[test]
+    fn repair_unlimited_daily() {
+        let mut bank = GuildBank { gold: 100_000, ..Default::default() };
+        let mut spending = DailyRepairSpending::default();
+        // daily_limit = 0 means unlimited
+        repair_from_guild(&mut bank, &mut spending, "Alice", 50_000, 0).unwrap();
+        repair_from_guild(&mut bank, &mut spending, "Alice", 50_000, 0).unwrap();
+        assert_eq!(bank.gold, 0);
+    }
+
+    #[test]
+    fn repair_not_enough_guild_gold() {
+        let mut bank = GuildBank { gold: 100, ..Default::default() };
+        let mut spending = DailyRepairSpending::default();
+        let err = repair_from_guild(&mut bank, &mut spending, "Alice", 5000, 10000);
+        assert_eq!(err, Err(GuildBankError::NotEnoughGold));
+    }
+
+    #[test]
+    fn repair_spending_reset() {
+        let mut spending = DailyRepairSpending::default();
+        spending.add("Alice", 5000);
+        spending.add("Bob", 3000);
+        spending.reset();
+        assert_eq!(spending.spent_by("Alice"), 0);
+        assert_eq!(spending.spent_by("Bob"), 0);
     }
 }
