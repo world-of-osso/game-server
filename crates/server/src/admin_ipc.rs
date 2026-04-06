@@ -114,6 +114,16 @@ async fn handle_connection(mut conn: Connection, tx: mpsc::Sender<AdminCommand>)
     }
 }
 
+/// Resources needed by the admin IPC early-dispatch handlers.
+#[derive(SystemParam)]
+struct AdminResources<'w> {
+    time: Res<'w, Time>,
+    combat_log: Res<'w, crate::combat::CombatLog>,
+    ticket_mgr: ResMut<'w, shared::ticket::TicketManager>,
+    motd: ResMut<'w, shared::motd::Motd>,
+    autobroadcast: ResMut<'w, shared::motd::Autobroadcast>,
+}
+
 /// Queries needed by the admin IPC dispatch loop.
 #[derive(SystemParam)]
 struct AdminQueries<'w, 's> {
@@ -141,27 +151,12 @@ struct AdminQueries<'w, 's> {
 fn poll_admin_ipc(
     receiver: NonSend<mpsc::Receiver<AdminCommand>>,
     db: Option<Res<persistence::GameDatabase>>,
-    time: Res<Time>,
-    combat_log: Res<crate::combat::CombatLog>,
-    mut ticket_mgr: ResMut<shared::ticket::TicketManager>,
-    mut motd: ResMut<shared::motd::Motd>,
+    mut res: AdminResources,
     mut queries: AdminQueries,
 ) {
     let Some(db) = db else { return };
     while let Ok(cmd) = receiver.try_recv() {
-        // Handle combat log query without threading extra args through dispatch.
-        if let AdminRequest::CombatLog { last_seconds } = &cmd.request {
-            let response = handle_combat_log(&combat_log, &time, *last_seconds);
-            let _ = cmd.respond.send(response);
-            continue;
-        }
-        // Handle ticket commands without threading extra args through dispatch.
-        if let Some(response) = dispatch_ticket(&cmd.request, &time, &mut ticket_mgr) {
-            let _ = cmd.respond.send(response);
-            continue;
-        }
-        // Handle MOTD commands.
-        if let Some(response) = dispatch_motd(&cmd.request, &time, &mut motd, &db) {
+        if let Some(response) = dispatch_resource_commands(&cmd.request, &db, &mut res) {
             let _ = cmd.respond.send(response);
             continue;
         }
@@ -175,6 +170,27 @@ fn poll_admin_ipc(
             &mut queries.roster_senders,
         );
     }
+}
+
+/// Handle commands that only need resources (no ECS queries).
+fn dispatch_resource_commands(
+    request: &AdminRequest,
+    db: &persistence::GameDatabase,
+    res: &mut AdminResources,
+) -> Option<AdminResponse> {
+    if let AdminRequest::CombatLog { last_seconds } = request {
+        return Some(handle_combat_log(&res.combat_log, &res.time, *last_seconds));
+    }
+    if let Some(r) = dispatch_ticket(request, &res.time, &mut res.ticket_mgr) {
+        return Some(r);
+    }
+    if let Some(r) = dispatch_motd(request, &res.time, &mut res.motd, db) {
+        return Some(r);
+    }
+    if let Some(r) = dispatch_autobroadcast(request, &mut res.autobroadcast) {
+        return Some(r);
+    }
+    None
 }
 
 /// Dispatch ticket commands, returning Some if handled.
@@ -235,6 +251,41 @@ fn dispatch_motd(
             motd.clear(now);
             persistence::save_motd(&db.db, motd);
             Some(AdminResponse::MotdCleared)
+        }
+        _ => None,
+    }
+}
+
+/// Dispatch autobroadcast commands, returning Some if handled.
+fn dispatch_autobroadcast(
+    request: &AdminRequest,
+    ab: &mut shared::motd::Autobroadcast,
+) -> Option<AdminResponse> {
+    match request {
+        AdminRequest::BroadcastList => Some(AdminResponse::BroadcastListed {
+            messages: ab.messages.clone(),
+            interval: ab.interval,
+            enabled: ab.enabled,
+        }),
+        AdminRequest::BroadcastAdd { message } => {
+            ab.add_message(message.clone());
+            Some(AdminResponse::BroadcastAdded { index: ab.message_count() - 1 })
+        }
+        AdminRequest::BroadcastRemove { index } => match ab.remove_message(*index) {
+            Some(msg) => Some(AdminResponse::BroadcastRemoved { message: msg }),
+            None => Some(AdminResponse::Error("Index out of range".into())),
+        },
+        AdminRequest::BroadcastSetInterval { seconds } => {
+            ab.interval = *seconds;
+            Some(AdminResponse::BroadcastIntervalSet { seconds: *seconds })
+        }
+        AdminRequest::BroadcastEnable => {
+            ab.enabled = true;
+            Some(AdminResponse::BroadcastEnabled)
+        }
+        AdminRequest::BroadcastDisable => {
+            ab.enabled = false;
+            Some(AdminResponse::BroadcastDisabled)
         }
         _ => None,
     }
@@ -335,7 +386,7 @@ fn dispatch(
             &character_name,
             &slot,
         ),
-        // Handled in dispatch_ticket / dispatch_motd before this function
+        // Handled in early-dispatch functions before this match
         AdminRequest::TicketList
         | AdminRequest::TicketClaim { .. }
         | AdminRequest::TicketClaimNext { .. }
@@ -345,7 +396,13 @@ fn dispatch(
         | AdminRequest::TicketHistory { .. }
         | AdminRequest::GetMotd
         | AdminRequest::SetMotd { .. }
-        | AdminRequest::ClearMotd => unreachable!(),
+        | AdminRequest::ClearMotd
+        | AdminRequest::BroadcastList
+        | AdminRequest::BroadcastAdd { .. }
+        | AdminRequest::BroadcastRemove { .. }
+        | AdminRequest::BroadcastSetInterval { .. }
+        | AdminRequest::BroadcastEnable
+        | AdminRequest::BroadcastDisable => unreachable!(),
     };
     let _ = cmd.respond.send(response);
 }

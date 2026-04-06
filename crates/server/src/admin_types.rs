@@ -97,6 +97,19 @@ pub enum AdminRequest {
         message: String,
     },
     ClearMotd,
+    // --- Autobroadcast commands ---
+    BroadcastList,
+    BroadcastAdd {
+        message: String,
+    },
+    BroadcastRemove {
+        index: usize,
+    },
+    BroadcastSetInterval {
+        seconds: u64,
+    },
+    BroadcastEnable,
+    BroadcastDisable,
     Ping,
 }
 
@@ -200,6 +213,23 @@ pub enum AdminResponse {
     },
     MotdSet,
     MotdCleared,
+    // --- Autobroadcast responses ---
+    BroadcastListed {
+        messages: Vec<String>,
+        interval: u64,
+        enabled: bool,
+    },
+    BroadcastAdded {
+        index: usize,
+    },
+    BroadcastRemoved {
+        message: String,
+    },
+    BroadcastIntervalSet {
+        seconds: u64,
+    },
+    BroadcastEnabled,
+    BroadcastDisabled,
     Pong,
     Error(String),
 }
