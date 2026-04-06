@@ -1401,7 +1401,40 @@ impl CastState {
         }
         (self.elapsed / self.duration).min(1.0)
     }
+
+    /// Apply spell pushback from taking damage during a cast.
+    ///
+    /// - **Normal cast**: extends duration by 0.5s (max 2 pushbacks).
+    /// - **Channel**: reduces remaining duration by 25% of total (max 2).
+    /// - Non-interruptible casts ignore pushback entirely.
+    ///
+    /// Returns `true` if pushback was applied.
+    ///
+    /// Ref: AzerothCore `Spell::DelayedChannel()`, retail pushback rules.
+    pub fn apply_pushback(&mut self) -> bool {
+        if !self.interruptible || self.pushback_count >= MAX_PUSHBACKS {
+            return false;
+        }
+        self.pushback_count += 1;
+        match self.cast_type {
+            CastType::Normal => {
+                self.duration += PUSHBACK_DELAY;
+            }
+            CastType::Channel => {
+                let reduction = self.duration * CHANNEL_PUSHBACK_FRACTION;
+                self.duration = (self.duration - reduction).max(self.elapsed);
+            }
+        }
+        true
+    }
 }
+
+/// Maximum pushbacks per cast before the caster becomes immune.
+const MAX_PUSHBACKS: u8 = 2;
+/// Normal cast pushback: extends cast time by this many seconds.
+const PUSHBACK_DELAY: f32 = 0.5;
+/// Channel pushback: reduces remaining channel by this fraction of total.
+const CHANNEL_PUSHBACK_FRACTION: f32 = 0.25;
 
 // --- Global cooldown ---
 
@@ -2734,6 +2767,56 @@ mod tests {
     fn cast_progress_zero_duration() {
         let cast = CastState::normal(100, 1, 0.0, false);
         assert_eq!(cast.progress(), 1.0);
+    }
+
+    #[test]
+    fn pushback_extends_normal_cast() {
+        let mut cast = CastState::normal(133, 1, 2.0, true);
+        cast.tick(1.0);
+        assert!(cast.apply_pushback());
+        assert!((cast.duration - 2.5).abs() < 0.001);
+    }
+
+    #[test]
+    fn pushback_max_two() {
+        let mut cast = CastState::normal(133, 1, 2.0, true);
+        assert!(cast.apply_pushback()); // 2.5s
+        assert!(cast.apply_pushback()); // 3.0s
+        assert!(!cast.apply_pushback()); // rejected
+        assert!((cast.duration - 3.0).abs() < 0.001);
+    }
+
+    #[test]
+    fn pushback_non_interruptible_ignored() {
+        let mut cast = CastState::normal(100, 1, 2.0, false);
+        assert!(!cast.apply_pushback());
+        assert!((cast.duration - 2.0).abs() < 0.001);
+    }
+
+    #[test]
+    fn pushback_channel_reduces_duration() {
+        let mut cast = CastState::channel(5143, 1, 4.0, 1.0, true);
+        cast.tick(0.5);
+        assert!(cast.apply_pushback());
+        // 4.0 - (4.0 * 0.25) = 3.0
+        assert!((cast.duration - 3.0).abs() < 0.001);
+    }
+
+    #[test]
+    fn pushback_channel_max_two() {
+        let mut cast = CastState::channel(5143, 1, 4.0, 1.0, true);
+        assert!(cast.apply_pushback()); // 3.0s
+        assert!(cast.apply_pushback()); // 3.0 - 0.75 = 2.25s (25% of 3.0)
+        assert!(!cast.apply_pushback());
+    }
+
+    #[test]
+    fn pushback_channel_never_below_elapsed() {
+        let mut cast = CastState::channel(5143, 1, 2.0, 0.5, true);
+        cast.tick(1.8); // almost done
+        assert!(cast.apply_pushback());
+        // 2.0 - 0.5 = 1.5, but elapsed=1.8, so clamped to 1.8
+        assert!(cast.duration >= cast.elapsed);
     }
 
     // --- School lockout tests ---
