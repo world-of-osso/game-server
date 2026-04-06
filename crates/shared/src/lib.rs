@@ -1,3 +1,4 @@
+pub mod achievement;
 pub mod components;
 pub mod formulas;
 pub mod group;
