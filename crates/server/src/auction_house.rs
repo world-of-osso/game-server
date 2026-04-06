@@ -1232,6 +1232,49 @@ mod tests {
     }
 
     #[test]
+    fn insufficient_gold_for_bid_and_buyout() {
+        let db = persistence::temp_database();
+        let (seller_id, _) =
+            persistence::create_character(&db, 1, "Seller", 1, 1).expect("seller");
+        let (buyer_id, _) =
+            persistence::create_character(&db, 2, "Buyer", 1, 1).expect("buyer");
+        let source_item = persistence::load_inventory(&db, seller_id).items[0].clone();
+        let mut state = AuctionHouseState::default();
+
+        create_auction(
+            &db,
+            &mut state,
+            seller_id,
+            &CreateAuction {
+                item_guid: source_item.item_guid,
+                stack_count: 1,
+                min_bid: 500,
+                buyout_price: Some(1000),
+                duration: AuctionDuration::Medium,
+            },
+        );
+        let auction_id = *state.auctions.keys().next().expect("auction id");
+
+        // Drain buyer gold to 499
+        let mut buyer_inv = persistence::load_inventory(&db, buyer_id);
+        buyer_inv.gold = 499;
+        persistence::save_inventory(&db, buyer_id, &buyer_inv);
+
+        // Bid at min_bid (500) fails — only have 499
+        let bid_response = place_bid(&db, &mut state, buyer_id, auction_id, 500);
+        assert!(!bid_response.success);
+        assert!(state.auctions.get(&auction_id).unwrap().current_bid.is_none());
+
+        // Buyout (1000) also fails
+        let buyout_response = buyout_auction(&db, &mut state, buyer_id, auction_id);
+        assert!(!buyout_response.success);
+        assert!(state.auctions.contains_key(&auction_id));
+
+        // Gold unchanged
+        assert_eq!(persistence::load_inventory(&db, buyer_id).gold, 499);
+    }
+
+    #[test]
     fn expired_auction_without_bid_returns_item_to_seller() {
         let db = persistence::temp_database();
         let (seller_id, _) =
