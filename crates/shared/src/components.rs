@@ -927,6 +927,53 @@ impl InCombat {
     }
 }
 
+/// Default leash distance in yards (mob resets if this far from spawn).
+const DEFAULT_LEASH_DISTANCE: f32 = 40.0;
+
+/// Leash configuration for a mob. When the mob moves beyond `max_distance`
+/// from its spawn point, or its target is unreachable, it evades (resets).
+///
+/// Ref: AzerothCore `CreatureAI::EnterEvadeMode()`.
+#[derive(Component, Debug, Clone)]
+pub struct LeashConfig {
+    /// Maximum distance from spawn before evading (yards).
+    pub max_distance: f32,
+    /// Spawn origin (x, y, z) to measure distance from.
+    pub origin_x: f32,
+    pub origin_y: f32,
+    pub origin_z: f32,
+}
+
+impl LeashConfig {
+    /// Create a leash config with the default distance.
+    pub fn new(origin_x: f32, origin_y: f32, origin_z: f32) -> Self {
+        Self {
+            max_distance: DEFAULT_LEASH_DISTANCE,
+            origin_x,
+            origin_y,
+            origin_z,
+        }
+    }
+
+    /// Check if a position is beyond the leash distance from the spawn origin.
+    pub fn should_evade(&self, x: f32, y: f32, z: f32) -> bool {
+        let dx = x - self.origin_x;
+        let dy = y - self.origin_y;
+        let dz = z - self.origin_z;
+        let dist_sq = dx * dx + dy * dy + dz * dz;
+        dist_sq > self.max_distance * self.max_distance
+    }
+}
+
+/// Result of an evade check — what the mob should do on reset.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum EvadeReason {
+    /// Mob exceeded its leash distance from spawn.
+    LeashDistance,
+    /// Target is unreachable (no path, stuck, etc).
+    TargetUnreachable,
+}
+
 /// Per-mob threat table tracking aggro from each entity.
 ///
 /// Damage generates 1:1 threat. Healing generates 0.5 threat per point healed,
@@ -1847,6 +1894,48 @@ mod tests {
     fn in_combat_tick_returns_true_at_zero() {
         let mut combat = InCombat::default();
         assert!(combat.tick(6.0)); // exactly at boundary
+    }
+
+    // --- Evade/leash tests ---
+
+    #[test]
+    fn leash_within_range_no_evade() {
+        let leash = LeashConfig::new(100.0, 0.0, 100.0);
+        assert!(!leash.should_evade(110.0, 0.0, 110.0)); // ~14 yards
+    }
+
+    #[test]
+    fn leash_at_boundary_no_evade() {
+        let leash = LeashConfig::new(0.0, 0.0, 0.0);
+        // Exactly 40 yards along X — not beyond (must exceed, not equal)
+        assert!(!leash.should_evade(40.0, 0.0, 0.0));
+    }
+
+    #[test]
+    fn leash_beyond_range_evades() {
+        let leash = LeashConfig::new(0.0, 0.0, 0.0);
+        assert!(leash.should_evade(41.0, 0.0, 0.0)); // > 40 yards
+    }
+
+    #[test]
+    fn leash_diagonal_distance() {
+        let leash = LeashConfig::new(0.0, 0.0, 0.0);
+        // 30, 0, 30 → sqrt(900+900) ≈ 42.4 yards → evade
+        assert!(leash.should_evade(30.0, 0.0, 30.0));
+    }
+
+    #[test]
+    fn leash_custom_distance() {
+        let mut leash = LeashConfig::new(0.0, 0.0, 0.0);
+        leash.max_distance = 100.0;
+        assert!(!leash.should_evade(80.0, 0.0, 0.0));
+        assert!(leash.should_evade(101.0, 0.0, 0.0));
+    }
+
+    #[test]
+    fn leash_default_distance_is_40() {
+        let leash = LeashConfig::new(0.0, 0.0, 0.0);
+        assert_eq!(leash.max_distance, 40.0);
     }
 
     // --- Threat table tests ---
