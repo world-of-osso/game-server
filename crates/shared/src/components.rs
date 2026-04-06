@@ -1187,6 +1187,62 @@ pub fn specs_for_class(class: Class) -> Vec<&'static Specialization> {
     SPECIALIZATIONS.iter().filter(|s| s.class == class).collect()
 }
 
+// --- Talent system ---
+
+/// A talent definition. Talents are passive bonuses that apply aura effects
+/// when selected. Each talent belongs to a spec and grants one or more
+/// `AuraEffect`s as a permanent passive aura.
+///
+/// Ref: WoW talent trees — key talents modify combat behavior
+/// (e.g. +10% crit, +20% damage to Mortal Strike, threat reduction).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct TalentDef {
+    /// Unique talent ID.
+    pub id: u32,
+    /// Display name.
+    pub name: String,
+    /// Which spec this talent belongs to (0 = class-wide).
+    pub spec_id: u32,
+    /// The passive aura effects this talent grants.
+    pub effects: Vec<AuraEffect>,
+}
+
+/// Component tracking a player's selected talents.
+///
+/// Selected talents are converted into permanent passive auras on the entity.
+/// When talents change (respec), old auras are removed and new ones applied.
+#[derive(Component, Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+pub struct SelectedTalents {
+    pub talent_ids: Vec<u32>,
+}
+
+impl SelectedTalents {
+    /// Build passive auras from selected talents.
+    ///
+    /// Each talent becomes a permanent aura (duration=0 means infinite) with
+    /// the talent's effects. The server applies these as persistent auras.
+    pub fn build_passive_auras(&self, talent_defs: &[TalentDef]) -> Vec<Aura> {
+        self.talent_ids
+            .iter()
+            .filter_map(|id| talent_defs.iter().find(|t| t.id == *id))
+            .map(|talent| {
+                let mut effects: [Option<AuraEffect>; 3] = [None, None, None];
+                for (i, effect) in talent.effects.iter().take(3).enumerate() {
+                    effects[i] = Some(*effect);
+                }
+                Aura {
+                    spell_id: talent.id,
+                    caster: 0, // self-applied
+                    duration: 0.0, // permanent (never expires)
+                    remaining: f32::MAX,
+                    effects,
+                    ..Default::default()
+                }
+            })
+            .collect()
+    }
+}
+
 // --- Threat system ---
 
 /// Seconds of no combat activity before leaving combat.
@@ -2240,6 +2296,95 @@ mod tests {
         let healers: Vec<_> = SPECIALIZATIONS.iter().filter(|s| s.role == Role::Healer).collect();
         // Holy Paladin, Disc, Holy Priest, Resto Shaman, Mistweaver, Resto Druid, Preservation
         assert_eq!(healers.len(), 7);
+    }
+
+    // --- Talent system tests ---
+
+    fn sample_talents() -> Vec<TalentDef> {
+        vec![
+            TalentDef {
+                id: 1001,
+                name: "Impale".into(),
+                spec_id: 71, // Arms
+                effects: vec![AuraEffect::ModCritChance { percent: 0.10 }],
+            },
+            TalentDef {
+                id: 1002,
+                name: "Deep Wounds".into(),
+                spec_id: 71,
+                effects: vec![AuraEffect::ModDamageDone { percent: 0.05 }],
+            },
+            TalentDef {
+                id: 1003,
+                name: "Warbringer".into(),
+                spec_id: 73, // Protection
+                effects: vec![AuraEffect::ModThreat { percent: 0.10 }],
+            },
+        ]
+    }
+
+    #[test]
+    fn build_passive_auras_from_talents() {
+        let defs = sample_talents();
+        let selected = SelectedTalents {
+            talent_ids: vec![1001, 1002],
+        };
+        let auras = selected.build_passive_auras(&defs);
+        assert_eq!(auras.len(), 2);
+        assert_eq!(auras[0].spell_id, 1001);
+        assert_eq!(auras[0].remaining, f32::MAX); // permanent
+        assert_eq!(
+            auras[0].effects[0],
+            Some(AuraEffect::ModCritChance { percent: 0.10 })
+        );
+    }
+
+    #[test]
+    fn build_passive_auras_skips_unknown() {
+        let defs = sample_talents();
+        let selected = SelectedTalents {
+            talent_ids: vec![1001, 9999], // 9999 not in defs
+        };
+        let auras = selected.build_passive_auras(&defs);
+        assert_eq!(auras.len(), 1);
+    }
+
+    #[test]
+    fn build_passive_auras_empty() {
+        let defs = sample_talents();
+        let selected = SelectedTalents::default();
+        let auras = selected.build_passive_auras(&defs);
+        assert!(auras.is_empty());
+    }
+
+    #[test]
+    fn talent_aura_integrates_with_damage_multiplier() {
+        let defs = sample_talents();
+        let selected = SelectedTalents {
+            talent_ids: vec![1002], // +5% damage done
+        };
+        let passive_auras = selected.build_passive_auras(&defs);
+
+        let mut auras = Auras::default();
+        for aura in passive_auras {
+            auras.apply(aura);
+        }
+        assert!((auras.damage_done_multiplier() - 1.05).abs() < 0.001);
+    }
+
+    #[test]
+    fn talent_aura_integrates_with_threat_multiplier() {
+        let defs = sample_talents();
+        let selected = SelectedTalents {
+            talent_ids: vec![1003], // +10% threat
+        };
+        let passive_auras = selected.build_passive_auras(&defs);
+
+        let mut auras = Auras::default();
+        for aura in passive_auras {
+            auras.apply(aura);
+        }
+        assert!((auras.threat_multiplier() - 1.10).abs() < 0.001);
     }
 
     // --- Resource pool tests ---
