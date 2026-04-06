@@ -1403,6 +1403,55 @@ impl CastState {
     }
 }
 
+// --- School lockout ---
+
+/// Tracks spell school lockouts from interrupts.
+///
+/// When a cast is interrupted, the spell's school is locked out for a duration.
+/// The caster cannot cast any spell of that school until the lockout expires.
+///
+/// Ref: AzerothCore `Spell::TriggerGlobalCooldown()` / interrupt handling.
+#[derive(Component, Debug, Clone, Default)]
+pub struct SchoolLockouts {
+    entries: Vec<SchoolLockoutEntry>,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct SchoolLockoutEntry {
+    school: SpellSchool,
+    remaining: f32,
+}
+
+impl SchoolLockouts {
+    /// Apply a school lockout from an interrupt.
+    pub fn lock(&mut self, school: SpellSchool, duration: f32) {
+        if let Some(entry) = self.entries.iter_mut().find(|e| e.school == school) {
+            // Refresh if new lockout is longer
+            if duration > entry.remaining {
+                entry.remaining = duration;
+            }
+        } else {
+            self.entries.push(SchoolLockoutEntry {
+                school,
+                remaining: duration,
+            });
+        }
+    }
+
+    /// Check if a school is currently locked out.
+    pub fn is_locked(&self, school: SpellSchool) -> bool {
+        self.entries.iter().any(|e| e.school == school && e.remaining > 0.0)
+    }
+
+    /// Tick all lockout timers and remove expired ones.
+    pub fn tick(&mut self, dt: f32) {
+        for entry in &mut self.entries {
+            entry.remaining -= dt;
+        }
+        self.entries.retain(|e| e.remaining > 0.0);
+    }
+}
+
 // --- Talent system ---
 
 /// A talent definition. Talents are passive bonuses that apply aura effects
@@ -2571,6 +2620,60 @@ mod tests {
     fn cast_progress_zero_duration() {
         let cast = CastState::normal(100, 1, 0.0, false);
         assert_eq!(cast.progress(), 1.0);
+    }
+
+    // --- School lockout tests ---
+
+    #[test]
+    fn lockout_initially_empty() {
+        let lockouts = SchoolLockouts::default();
+        assert!(!lockouts.is_locked(SpellSchool::Fire));
+    }
+
+    #[test]
+    fn lockout_blocks_school() {
+        let mut lockouts = SchoolLockouts::default();
+        lockouts.lock(SpellSchool::Fire, 5.0);
+        assert!(lockouts.is_locked(SpellSchool::Fire));
+        assert!(!lockouts.is_locked(SpellSchool::Frost));
+    }
+
+    #[test]
+    fn lockout_expires_after_tick() {
+        let mut lockouts = SchoolLockouts::default();
+        lockouts.lock(SpellSchool::Shadow, 3.0);
+        lockouts.tick(2.0);
+        assert!(lockouts.is_locked(SpellSchool::Shadow));
+        lockouts.tick(1.5);
+        assert!(!lockouts.is_locked(SpellSchool::Shadow));
+    }
+
+    #[test]
+    fn lockout_refresh_keeps_longer() {
+        let mut lockouts = SchoolLockouts::default();
+        lockouts.lock(SpellSchool::Fire, 3.0);
+        lockouts.lock(SpellSchool::Fire, 5.0); // longer, should refresh
+        lockouts.tick(3.5);
+        assert!(lockouts.is_locked(SpellSchool::Fire)); // 5.0 - 3.5 = 1.5 left
+    }
+
+    #[test]
+    fn lockout_refresh_ignores_shorter() {
+        let mut lockouts = SchoolLockouts::default();
+        lockouts.lock(SpellSchool::Fire, 5.0);
+        lockouts.lock(SpellSchool::Fire, 2.0); // shorter, should not reduce
+        lockouts.tick(4.5);
+        assert!(lockouts.is_locked(SpellSchool::Fire)); // 5.0 - 4.5 = 0.5 left
+    }
+
+    #[test]
+    fn lockout_multiple_schools() {
+        let mut lockouts = SchoolLockouts::default();
+        lockouts.lock(SpellSchool::Fire, 3.0);
+        lockouts.lock(SpellSchool::Frost, 5.0);
+        lockouts.tick(4.0);
+        assert!(!lockouts.is_locked(SpellSchool::Fire)); // expired
+        assert!(lockouts.is_locked(SpellSchool::Frost)); // 1s left
     }
 
     // --- Mastery tests ---
