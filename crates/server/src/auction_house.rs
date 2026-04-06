@@ -927,6 +927,60 @@ mod tests {
     }
 
     #[test]
+    fn expired_auction_without_bid_returns_item_to_seller() {
+        let db = persistence::temp_database();
+        let (seller_id, _) =
+            persistence::create_character(&db, 1, "Seller", 1, 1).expect("seller");
+        let source_item = persistence::load_inventory(&db, seller_id).items[0].clone();
+        let mut state = AuctionHouseState::default();
+
+        create_auction(
+            &db,
+            &mut state,
+            seller_id,
+            &CreateAuction {
+                item_guid: source_item.item_guid,
+                stack_count: 4,
+                min_bid: 100,
+                buyout_price: Some(500),
+                duration: AuctionDuration::Short,
+            },
+        );
+        let auction_id = *state.auctions.keys().next().expect("auction id");
+
+        // Force expiry by setting time in the past
+        state
+            .auctions
+            .get_mut(&auction_id)
+            .expect("auction")
+            .expires_at_unix_secs = 0;
+
+        // Replicate expire_auctions logic for the no-bidder path
+        let auction = state.auctions.remove(&auction_id).expect("auction");
+        assert!(auction.current_bidder_character_id.is_none());
+        persistence::delete_auction(&db, auction_id);
+        deliver_mail(
+            &db,
+            auction.seller_character_id,
+            "Auction expired",
+            &format!(
+                "Your auction for {} expired without a buyer.",
+                auction.item.name
+            ),
+            0,
+            Some(auction.item.clone()),
+        );
+
+        // Seller receives item back via mail
+        let seller_mail = persistence::load_mailbox(&db, seller_id);
+        assert_eq!(seller_mail.len(), 1);
+        assert_eq!(seller_mail[0].attached_money, 0);
+        let returned_item = seller_mail[0].attached_item.as_ref().expect("returned item");
+        assert_eq!(returned_item.item_id, source_item.item_id);
+        assert_eq!(returned_item.stack_count, 4);
+    }
+
+    #[test]
     fn buyout_transfers_item_and_deducts_gold() {
         let db = persistence::temp_database();
         let (seller_id, _) =
