@@ -226,6 +226,82 @@ pub fn can_withdraw(
     daily.count_for(tab) < perm.daily_withdraw_limit
 }
 
+// --- Transaction log ---
+
+/// Type of guild bank transaction.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum TransactionType {
+    DepositItem { tab: usize, slot: usize, item_id: u32, count: u16 },
+    WithdrawItem { tab: usize, slot: usize, item_id: u32, count: u16 },
+    DepositGold { amount: u32 },
+    WithdrawGold { amount: u32 },
+    RepairFromGuild { amount: u32 },
+    TabPurchased { tab: usize },
+}
+
+/// A single transaction log entry.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Transaction {
+    /// Character name who performed the action.
+    pub player: String,
+    /// What happened.
+    pub action: TransactionType,
+    /// Server timestamp.
+    pub timestamp: u64,
+}
+
+/// Maximum log entries per tab (WoW keeps ~25 per tab).
+const MAX_LOG_PER_TAB: usize = 25;
+/// Maximum money log entries.
+const MAX_MONEY_LOG: usize = 25;
+
+/// Guild bank transaction log.
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+pub struct TransactionLog {
+    /// Per-tab item transaction logs.
+    pub item_logs: Vec<Vec<Transaction>>,
+    /// Money transaction log (deposits, withdrawals, repairs).
+    pub money_log: Vec<Transaction>,
+}
+
+impl TransactionLog {
+    /// Initialize with the given number of tabs.
+    pub fn new(tab_count: usize) -> Self {
+        Self {
+            item_logs: vec![Vec::new(); tab_count],
+            money_log: Vec::new(),
+        }
+    }
+
+    /// Add a tab log when a new tab is purchased.
+    pub fn add_tab(&mut self) {
+        self.item_logs.push(Vec::new());
+    }
+
+    /// Record an item transaction for a tab.
+    pub fn log_item(&mut self, tab: usize, entry: Transaction) {
+        if let Some(log) = self.item_logs.get_mut(tab) {
+            log.push(entry);
+            if log.len() > MAX_LOG_PER_TAB {
+                log.remove(0);
+            }
+        }
+    }
+
+    /// Record a money transaction.
+    pub fn log_money(&mut self, entry: Transaction) {
+        self.money_log.push(entry);
+        if self.money_log.len() > MAX_MONEY_LOG {
+            self.money_log.remove(0);
+        }
+    }
+
+    /// Get the item log for a tab.
+    pub fn tab_log(&self, tab: usize) -> &[Transaction] {
+        self.item_logs.get(tab).map_or(&[], |v| v.as_slice())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -377,10 +453,63 @@ mod tests {
 
     #[test]
     fn no_permission_blocks() {
-        let perm = TabPermission::default(); // all false
+        let perm = TabPermission::default();
         let daily = DailyWithdrawals::default();
         assert!(!perm.view);
         assert!(!perm.deposit);
         assert!(!can_withdraw(&perm, &daily, 0));
+    }
+
+    // --- Transaction log tests ---
+
+    #[test]
+    fn log_item_transaction() {
+        let mut log = TransactionLog::new(1);
+        log.log_item(0, Transaction {
+            player: "Alice".into(),
+            action: TransactionType::DepositItem { tab: 0, slot: 0, item_id: 100, count: 5 },
+            timestamp: 1000,
+        });
+        assert_eq!(log.tab_log(0).len(), 1);
+        assert_eq!(log.tab_log(0)[0].player, "Alice");
+    }
+
+    #[test]
+    fn log_money_transaction() {
+        let mut log = TransactionLog::new(0);
+        log.log_money(Transaction {
+            player: "Bob".into(),
+            action: TransactionType::DepositGold { amount: 5000 },
+            timestamp: 2000,
+        });
+        assert_eq!(log.money_log.len(), 1);
+    }
+
+    #[test]
+    fn log_evicts_oldest() {
+        let mut log = TransactionLog::new(1);
+        for i in 0..30 {
+            log.log_item(0, Transaction {
+                player: format!("P{i}"),
+                action: TransactionType::DepositItem { tab: 0, slot: 0, item_id: 1, count: 1 },
+                timestamp: i as u64,
+            });
+        }
+        assert_eq!(log.tab_log(0).len(), 25); // capped
+        assert_eq!(log.tab_log(0)[0].player, "P5"); // oldest 5 evicted
+    }
+
+    #[test]
+    fn log_add_tab() {
+        let mut log = TransactionLog::new(1);
+        log.add_tab();
+        assert_eq!(log.item_logs.len(), 2);
+        assert!(log.tab_log(1).is_empty());
+    }
+
+    #[test]
+    fn log_invalid_tab_empty() {
+        let log = TransactionLog::new(1);
+        assert!(log.tab_log(99).is_empty());
     }
 }
