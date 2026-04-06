@@ -301,6 +301,71 @@ pub fn resurrect_at_corpse(
     Ok(CorpseResurrectResult { x: corpse.x, y: corpse.y, z: corpse.z, map_id: corpse.map_id })
 }
 
+// --- Resurrection sickness ---
+
+/// Duration of resurrection sickness in seconds (10 minutes).
+pub const RES_SICKNESS_DURATION: u64 = 600;
+
+/// Stat/damage reduction while resurrection sickness is active (75% reduction).
+pub const RES_SICKNESS_PENALTY: f32 = 0.25;
+
+/// Minimum player level to receive resurrection sickness.
+/// Below this level, no sickness is applied (retail: level 10).
+pub const RES_SICKNESS_MIN_LEVEL: u8 = 10;
+
+/// How a player was resurrected — determines if sickness applies.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ResurrectSource {
+    /// Walked back to corpse — no sickness.
+    CorpseRun,
+    /// Used spirit healer NPC — sickness applies.
+    SpiritHealer,
+    /// Resurrected by another player's spell — no sickness.
+    PlayerSpell,
+}
+
+/// Resurrection sickness debuff state.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct ResSickness {
+    /// Timestamp when the debuff expires.
+    pub expires_at: u64,
+}
+
+impl ResSickness {
+    /// Whether the debuff is still active.
+    pub fn is_active(&self, now: u64) -> bool {
+        now < self.expires_at
+    }
+
+    /// Seconds remaining.
+    pub fn remaining(&self, now: u64) -> u64 {
+        self.expires_at.saturating_sub(now)
+    }
+
+    /// Apply the stat penalty to a base value.
+    pub fn apply_penalty(&self, base: f32, now: u64) -> f32 {
+        if self.is_active(now) { base * RES_SICKNESS_PENALTY } else { base }
+    }
+}
+
+/// Determine if resurrection sickness should be applied.
+pub fn should_apply_sickness(source: ResurrectSource, player_level: u8) -> bool {
+    source == ResurrectSource::SpiritHealer && player_level >= RES_SICKNESS_MIN_LEVEL
+}
+
+/// Create a resurrection sickness debuff if applicable.
+pub fn apply_res_sickness(
+    source: ResurrectSource,
+    player_level: u8,
+    now: u64,
+) -> Option<ResSickness> {
+    if should_apply_sickness(source, player_level) {
+        Some(ResSickness { expires_at: now + RES_SICKNESS_DURATION })
+    } else {
+        None
+    }
+}
+
 #[cfg(test)]
 #[path = "death_tests.rs"]
 mod tests;

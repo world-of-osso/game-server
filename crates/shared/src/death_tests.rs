@@ -300,3 +300,67 @@ fn resurrect_at_corpse_wrong_map() {
         Err(DeathError::NotGhost)
     );
 }
+
+// --- Resurrection sickness ---
+
+#[test]
+fn spirit_healer_gives_sickness() {
+    let sickness = apply_res_sickness(ResurrectSource::SpiritHealer, 60, 1000);
+    assert!(sickness.is_some());
+    let s = sickness.unwrap();
+    assert_eq!(s.expires_at, 1000 + RES_SICKNESS_DURATION);
+}
+
+#[test]
+fn corpse_run_no_sickness() {
+    assert!(apply_res_sickness(ResurrectSource::CorpseRun, 60, 1000).is_none());
+}
+
+#[test]
+fn player_spell_no_sickness() {
+    assert!(apply_res_sickness(ResurrectSource::PlayerSpell, 60, 1000).is_none());
+}
+
+#[test]
+fn low_level_no_sickness() {
+    // Level 9 < min level 10 — no sickness even from spirit healer
+    assert!(apply_res_sickness(ResurrectSource::SpiritHealer, 9, 1000).is_none());
+}
+
+#[test]
+fn min_level_gets_sickness() {
+    assert!(apply_res_sickness(ResurrectSource::SpiritHealer, RES_SICKNESS_MIN_LEVEL, 1000).is_some());
+}
+
+#[test]
+fn sickness_is_active() {
+    let s = ResSickness { expires_at: 2000 };
+    assert!(s.is_active(1500));
+    assert!(!s.is_active(2000));
+    assert!(!s.is_active(2500));
+}
+
+#[test]
+fn sickness_remaining() {
+    let s = ResSickness { expires_at: 2000 };
+    assert_eq!(s.remaining(1500), 500);
+    assert_eq!(s.remaining(2000), 0);
+    assert_eq!(s.remaining(3000), 0);
+}
+
+#[test]
+fn sickness_stat_penalty() {
+    let s = ResSickness { expires_at: 2000 };
+    // Active: 75% reduction (25% of base)
+    assert_eq!(s.apply_penalty(100.0, 1500), 25.0);
+    // Expired: full value
+    assert_eq!(s.apply_penalty(100.0, 2500), 100.0);
+}
+
+#[test]
+fn should_apply_sickness_checks() {
+    assert!(should_apply_sickness(ResurrectSource::SpiritHealer, 60));
+    assert!(!should_apply_sickness(ResurrectSource::CorpseRun, 60));
+    assert!(!should_apply_sickness(ResurrectSource::PlayerSpell, 60));
+    assert!(!should_apply_sickness(ResurrectSource::SpiritHealer, 5));
+}
