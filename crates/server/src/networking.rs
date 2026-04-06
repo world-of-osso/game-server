@@ -785,6 +785,50 @@ mod tests {
     }
 
     #[test]
+    fn root_prevents_movement() {
+        use shared::aura::{Aura, AuraEffect};
+
+        let mut app = setup_app_with_time();
+        let player = spawn_player(app.world_mut(), 10.0, 20.0, 30.0);
+
+        let root = Aura {
+            spell_id: 1,
+            caster: 99,
+            duration: 10.0,
+            remaining: 10.0,
+            effects: [
+                Some(AuraEffect::ModMovementSpeed { percent: -1.0 }),
+                None,
+                None,
+            ],
+            ..Default::default()
+        };
+        app.world_mut()
+            .entity_mut(player)
+            .get_mut::<Auras>()
+            .unwrap()
+            .apply(root);
+
+        let input = make_input(1.0, 0.0, 0.0);
+        let _ = app.world_mut().run_system_once(
+            move |mut q: Query<
+                (&mut Position, &mut Rotation, &mut MovementSpeed, Option<&Auras>),
+                With<Player>,
+            >,
+                  time: Res<Time>| {
+                apply_movement_input(&input, player, &mut q, &time);
+            },
+        );
+
+        let pos = *app.world().entity(player).get::<Position>().unwrap();
+        assert_eq!(pos.x, 10.0, "x unchanged while rooted");
+        assert_eq!(pos.y, 20.0, "y unchanged while rooted");
+        assert_eq!(pos.z, 30.0, "z unchanged while rooted");
+        let speed = app.world().entity(player).get::<MovementSpeed>().unwrap();
+        assert_eq!(speed.0, 0.0, "speed is zero when rooted");
+    }
+
+    #[test]
     fn zero_direction_ignored() {
         let mut app = setup_app_with_time();
         let player = spawn_player(app.world_mut(), 5.0, 5.0, 5.0);
