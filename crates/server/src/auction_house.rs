@@ -1064,6 +1064,63 @@ mod tests {
     }
 
     #[test]
+    fn pagination_respects_page_boundaries() {
+        let mut state = AuctionHouseState::default();
+        let total = 75;
+        for i in 1..=total {
+            state
+                .auctions
+                .insert(i, test_auction(i, &format!("Item {i:03}"), 1, 1));
+        }
+
+        let page = |page_num: u32, page_size: u32| {
+            search_auctions(
+                &state.auctions,
+                &AuctionSearchQuery {
+                    text: String::new(),
+                    page: page_num,
+                    page_size,
+                    min_level: None,
+                    max_level: None,
+                    quality: None,
+                    usable_only: false,
+                    sort_field: AuctionSortField::Name,
+                    sort_dir: AuctionSortDir::Asc,
+                },
+            )
+        };
+
+        // Default page size clamped to MAX_PAGE_SIZE (50)
+        let r = page(0, 50);
+        assert_eq!(r.total_results, 75);
+        assert_eq!(r.results.len(), 50);
+
+        // Second page gets remaining 25
+        let r = page(1, 50);
+        assert_eq!(r.total_results, 75);
+        assert_eq!(r.results.len(), 25);
+
+        // Third page is empty
+        let r = page(2, 50);
+        assert_eq!(r.total_results, 75);
+        assert_eq!(r.results.len(), 0);
+
+        // Page size > MAX_PAGE_SIZE clamped to 50
+        let r = page(0, 100);
+        assert_eq!(r.results.len(), 50);
+
+        // Smaller page size works
+        let r = page(0, 10);
+        assert_eq!(r.results.len(), 10);
+        let r = page(7, 10);
+        assert_eq!(r.results.len(), 5); // 75 - 70 = 5
+
+        // Page size 0 clamped to 1
+        let r = page(0, 0);
+        assert_eq!(r.results.len(), 1);
+    }
+
+    #[test]
     fn expired_auction_without_bid_returns_item_to_seller() {
         let db = persistence::temp_database();
         let (seller_id, _) =
