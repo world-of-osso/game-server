@@ -906,11 +906,22 @@ pub enum ProcTrigger {
     OnDamageTaken,
 }
 
+/// What happens when a proc fires.
+#[derive(
+    Reflect, Serialize, Deserialize, bitcode::Encode, bitcode::Decode,
+    Debug, Clone, Copy, PartialEq,
+)]
+pub enum ProcAction {
+    /// Apply a spell (buff, damage, etc.).
+    ApplySpell { spell_id: u32 },
+    /// Reset the cooldown of a specific spell.
+    ResetCooldown { spell_id: u32 },
+}
+
 /// A proc definition attached to an aura.
 ///
 /// When the trigger event fires, the proc rolls against `chance` (0.0–1.0).
-/// If successful and ICD has elapsed, it produces a `ProcResult` containing
-/// the `spell_id` to apply.
+/// If successful and ICD has elapsed, it produces a `ProcResult`.
 ///
 /// Ref: AzerothCore `SpellProcEntry`, `HandleProc()`.
 #[derive(
@@ -933,19 +944,19 @@ pub struct ProcDef {
     pub icd: f32,
     /// Time remaining on the internal cooldown (ticks down each frame).
     pub icd_remaining: f32,
-    /// Spell ID to apply when the proc fires.
-    pub triggered_spell_id: u32,
+    /// What happens when the proc fires.
+    pub action: ProcAction,
 }
 
-/// A proc that fired, ready for the server to apply the triggered spell.
+/// A proc that fired, ready for the server to act on.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct ProcResult {
     /// The aura's spell_id that caused the proc.
     pub source_spell_id: u32,
     /// The caster entity bits of the source aura.
     pub caster: u64,
-    /// The spell to apply as a result of the proc.
-    pub triggered_spell_id: u32,
+    /// What the server should do.
+    pub action: ProcAction,
 }
 
 impl Auras {
@@ -982,7 +993,7 @@ impl Auras {
             results.push(ProcResult {
                 source_spell_id: aura.spell_id,
                 caster: aura.caster,
-                triggered_spell_id: proc_def.triggered_spell_id,
+                action: proc_def.action,
             });
             proc_def.icd_remaining = proc_def.icd;
         }
@@ -2820,7 +2831,7 @@ mod tests {
                 chance,
                 icd,
                 icd_remaining: 0.0,
-                triggered_spell_id: triggered,
+                action: ProcAction::ApplySpell { spell_id: triggered },
             }),
             ..Default::default()
         }
@@ -2833,7 +2844,7 @@ mod tests {
         let results = auras.check_procs(ProcTrigger::OnCrit, 0.5);
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].source_spell_id, 100);
-        assert_eq!(results[0].triggered_spell_id, 999);
+        assert_eq!(results[0].action, ProcAction::ApplySpell { spell_id: 999 });
     }
 
     #[test]
@@ -2916,6 +2927,53 @@ mod tests {
         auras.tick_proc_cooldowns(3.0);
         let icd = auras.active[0].proc_def.as_ref().unwrap().icd_remaining;
         assert!((icd - 7.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn proc_cooldown_reset() {
+        // Aura procs ResetCooldown on crit
+        let aura = Aura {
+            spell_id: 500,
+            caster: 1,
+            duration: 60.0,
+            remaining: 60.0,
+            effects: [None, None, None],
+            proc_def: Some(ProcDef {
+                trigger: ProcTrigger::OnCrit,
+                chance: 1.0,
+                icd: 0.0,
+                icd_remaining: 0.0,
+                action: ProcAction::ResetCooldown { spell_id: 47486 },
+            }),
+            ..Default::default()
+        };
+        let mut auras = Auras::default();
+        auras.active.push(aura);
+
+        let results = auras.check_procs(ProcTrigger::OnCrit, 0.0);
+        assert_eq!(results.len(), 1);
+        assert_eq!(
+            results[0].action,
+            ProcAction::ResetCooldown { spell_id: 47486 }
+        );
+
+        // Server would then call: cooldowns.reset(47486);
+        let mut cds = SpellCooldowns::default();
+        cds.start(47486, 6.0); // Mortal Strike on 6s CD
+        assert!(cds.is_on_cooldown(47486));
+
+        // Apply the proc result
+        if let ProcAction::ResetCooldown { spell_id } = results[0].action {
+            cds.reset(spell_id);
+        }
+        assert!(!cds.is_on_cooldown(47486));
+    }
+
+    #[test]
+    fn proc_action_variants() {
+        let apply = ProcAction::ApplySpell { spell_id: 100 };
+        let reset = ProcAction::ResetCooldown { spell_id: 200 };
+        assert_ne!(apply, reset);
     }
 
     // --- Specialization tests ---
