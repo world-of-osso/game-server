@@ -1000,6 +1000,70 @@ mod tests {
     }
 
     #[test]
+    fn sort_by_price_time_remaining_and_name() {
+        let mut state = AuctionHouseState::default();
+
+        let mut a = test_auction(1, "Copper Ore", 1, 1);
+        a.min_bid = 50;
+        a.buyout_price = Some(300);
+        a.expires_at_unix_secs = unix_now() + 10; // Short (≤60s)
+
+        let mut b = test_auction(2, "Iron Ore", 2, 10);
+        b.min_bid = 200;
+        b.buyout_price = Some(100);
+        b.expires_at_unix_secs = unix_now() + 3600 * 5; // Long (≤6hr)
+
+        let mut c = test_auction(3, "Arcane Dust", 1, 5);
+        c.min_bid = 100;
+        c.buyout_price = Some(200);
+        c.expires_at_unix_secs = unix_now() + 300; // Medium (≤30min)
+
+        state.auctions.insert(1, a);
+        state.auctions.insert(2, b);
+        state.auctions.insert(3, c);
+
+        let sort = |field, dir| {
+            search_auctions(
+                &state.auctions,
+                &AuctionSearchQuery {
+                    text: String::new(),
+                    page: 0,
+                    page_size: 50,
+                    min_level: None,
+                    max_level: None,
+                    quality: None,
+                    usable_only: false,
+                    sort_field: field,
+                    sort_dir: dir,
+                },
+            )
+        };
+        let names = |r: AuctionSearchResults| -> Vec<String> {
+            r.results.into_iter().map(|l| l.item.name).collect()
+        };
+
+        // Sort by name ascending
+        let r = sort(AuctionSortField::Name, AuctionSortDir::Asc);
+        assert_eq!(names(r), ["Arcane Dust", "Copper Ore", "Iron Ore"]);
+
+        // Sort by name descending
+        let r = sort(AuctionSortField::Name, AuctionSortDir::Desc);
+        assert_eq!(names(r), ["Iron Ore", "Copper Ore", "Arcane Dust"]);
+
+        // Sort by min_bid ascending: 50, 100, 200
+        let r = sort(AuctionSortField::MinBid, AuctionSortDir::Asc);
+        assert_eq!(names(r), ["Copper Ore", "Arcane Dust", "Iron Ore"]);
+
+        // Sort by buyout ascending: 100, 200, 300
+        let r = sort(AuctionSortField::Buyout, AuctionSortDir::Asc);
+        assert_eq!(names(r), ["Iron Ore", "Arcane Dust", "Copper Ore"]);
+
+        // Sort by time remaining ascending: Short, Medium, Long
+        let r = sort(AuctionSortField::TimeLeft, AuctionSortDir::Asc);
+        assert_eq!(names(r), ["Copper Ore", "Arcane Dust", "Iron Ore"]);
+    }
+
+    #[test]
     fn expired_auction_without_bid_returns_item_to_seller() {
         let db = persistence::temp_database();
         let (seller_id, _) =
