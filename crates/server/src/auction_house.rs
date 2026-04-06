@@ -981,6 +981,51 @@ mod tests {
     }
 
     #[test]
+    fn house_cut_deducted_on_successful_sale() {
+        // Test multiple prices to verify 5% cut formula including truncation
+        let cases: &[(u32, u32)] = &[
+            (200, 190),  // 200 - 10 = 190
+            (1000, 950), // 1000 - 50 = 950
+            (1, 1),      // 1 * 500 / 10000 = 0, seller keeps all
+            (19, 19),    // 19 * 500 / 10000 = 0, truncated to 0
+            (20, 19),    // 20 * 500 / 10000 = 1
+            (33, 32),    // 33 * 500 / 10000 = 1
+        ];
+
+        for &(buyout_price, expected_proceeds) in cases {
+            let db = persistence::temp_database();
+            let (seller_id, _) =
+                persistence::create_character(&db, 1, "Seller", 1, 1).expect("seller");
+            let (buyer_id, _) =
+                persistence::create_character(&db, 2, "Buyer", 1, 1).expect("buyer");
+            let source_item = persistence::load_inventory(&db, seller_id).items[0].clone();
+            let mut state = AuctionHouseState::default();
+
+            create_auction(
+                &db,
+                &mut state,
+                seller_id,
+                &CreateAuction {
+                    item_guid: source_item.item_guid,
+                    stack_count: 1,
+                    min_bid: 1,
+                    buyout_price: Some(buyout_price),
+                    duration: AuctionDuration::Short,
+                },
+            );
+            let auction_id = *state.auctions.keys().next().expect("auction id");
+            buyout_auction(&db, &mut state, buyer_id, auction_id);
+
+            let seller_mail = persistence::load_mailbox(&db, seller_id);
+            assert_eq!(
+                seller_mail[0].attached_money, expected_proceeds,
+                "buyout={buyout_price}: expected {expected_proceeds}, got {}",
+                seller_mail[0].attached_money,
+            );
+        }
+    }
+
+    #[test]
     fn buyout_transfers_item_and_deducts_gold() {
         let db = persistence::temp_database();
         let (seller_id, _) =
