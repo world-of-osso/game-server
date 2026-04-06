@@ -1242,6 +1242,49 @@ mod tests {
     }
 
     #[test]
+    fn bid_only_auction_rejects_buyout() {
+        let db = persistence::temp_database();
+        let (seller_id, _) =
+            persistence::create_character(&db, 1, "Seller", 1, 1).expect("seller");
+        let (buyer_id, _) =
+            persistence::create_character(&db, 2, "Buyer", 1, 1).expect("buyer");
+        let source_item = persistence::load_inventory(&db, seller_id).items[0].clone();
+        let mut state = AuctionHouseState::default();
+
+        let response = create_auction(
+            &db,
+            &mut state,
+            seller_id,
+            &CreateAuction {
+                item_guid: source_item.item_guid,
+                stack_count: 1,
+                min_bid: 100,
+                buyout_price: None,
+                duration: AuctionDuration::Medium,
+            },
+        );
+        assert!(response.success);
+        let auction_id = *state.auctions.keys().next().expect("auction id");
+
+        // Search shows no buyout price
+        let results = search_auctions(&state.auctions, &text_query(""));
+        assert_eq!(results.results[0].buyout_price, None);
+
+        // Buyout is rejected
+        let buyout = buyout_auction(&db, &mut state, buyer_id, auction_id);
+        assert!(!buyout.success);
+        assert!(state.auctions.contains_key(&auction_id));
+
+        // Bidding still works
+        let bid = place_bid(&db, &mut state, buyer_id, auction_id, 100);
+        assert!(bid.success);
+        assert_eq!(
+            state.auctions.get(&auction_id).unwrap().current_bid,
+            Some(100),
+        );
+    }
+
+    #[test]
     fn insufficient_gold_for_bid_and_buyout() {
         let db = persistence::temp_database();
         let (seller_id, _) =
