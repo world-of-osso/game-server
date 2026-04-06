@@ -268,6 +268,61 @@ mod tests {
     }
 
     #[test]
+    fn wander_creature_moves_within_radius() {
+        use bevy::ecs::system::RunSystemOnce;
+
+        let spawn_x = 50.0;
+        let spawn_z = 80.0;
+        let radius = 5.0;
+
+        let mut app = App::new();
+        app.add_plugins(bevy::MinimalPlugins);
+        app.update();
+        app.update();
+
+        let entity = app
+            .world_mut()
+            .spawn((
+                Position {
+                    x: spawn_x,
+                    y: 0.0,
+                    z: spawn_z,
+                },
+                SpawnPoint {
+                    x: spawn_x,
+                    y: 0.0,
+                    z: spawn_z,
+                    wander_distance: radius,
+                    speed_walk: 1.0,
+                },
+                WanderState {
+                    phase: WanderPhase::Idle,
+                    target_x: 0.0,
+                    target_z: 0.0,
+                    idle_remaining: 0.0, // triggers walk immediately
+                    seed: 42,
+                },
+            ))
+            .id();
+
+        // Run many ticks to let the creature wander and return multiple times
+        for _ in 0..500 {
+            let _ = app.world_mut().run_system_once(wander_system);
+        }
+
+        let pos = *app.world().entity(entity).get::<Position>().unwrap();
+        let dx = pos.x - spawn_x;
+        let dz = pos.z - spawn_z;
+        let dist = (dx * dx + dz * dz).sqrt();
+        assert!(
+            dist <= radius + 0.1,
+            "creature at ({}, {}) is {dist:.2} from spawn, exceeds radius {radius}",
+            pos.x,
+            pos.z,
+        );
+    }
+
+    #[test]
     fn advance_waypoint_wraps() {
         let mut state = WaypointState {
             creature_guid: 1,
