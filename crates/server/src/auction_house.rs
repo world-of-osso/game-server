@@ -1753,6 +1753,68 @@ mod tests {
     }
 
     #[test]
+    fn relist_after_expired_auction() {
+        let db = persistence::temp_database();
+        let (seller_id, _) =
+            persistence::create_character(&db, 1, "Seller", 1, 1).expect("seller");
+        let source_item = persistence::load_inventory(&db, seller_id).items[0].clone();
+        let mut state = AuctionHouseState::default();
+
+        // Create and expire auction (no bids → item returned via mail)
+        create_auction(
+            &db,
+            &mut state,
+            seller_id,
+            &CreateAuction {
+                item_guid: source_item.item_guid,
+                stack_count: 2,
+                min_bid: 100,
+                buyout_price: Some(500),
+                duration: AuctionDuration::Short,
+            },
+        );
+        let auction_id = *state.auctions.keys().next().expect("auction id");
+        state.auctions.get_mut(&auction_id).unwrap().expires_at_unix_secs = 0;
+        let auction = state.auctions.remove(&auction_id).unwrap();
+        persistence::delete_auction(&db, auction_id);
+        deliver_mail(
+            &db,
+            seller_id,
+            "Auction expired",
+            "expired",
+            0,
+            Some(auction.item),
+        );
+
+        // Claim mail to get item back in inventory
+        let mail = persistence::load_mailbox(&db, seller_id);
+        let claim = claim_mail(&db, seller_id, mail[0].mail_id);
+        assert!(claim.success);
+
+        // Re-list the returned item
+        let inv = persistence::load_inventory(&db, seller_id);
+        let relisted_item = inv
+            .items
+            .iter()
+            .find(|i| i.item_id == source_item.item_id && i.stack_count >= 2)
+            .expect("returned item in inventory");
+        let relist = create_auction(
+            &db,
+            &mut state,
+            seller_id,
+            &CreateAuction {
+                item_guid: relisted_item.item_guid,
+                stack_count: 2,
+                min_bid: 200,
+                buyout_price: Some(1000),
+                duration: AuctionDuration::Medium,
+            },
+        );
+        assert!(relist.success);
+        assert_eq!(state.auctions.len(), 1);
+    }
+
+    #[test]
     fn expired_auction_with_bid_awards_winner_and_pays_seller() {
         let db = persistence::temp_database();
         let (seller_id, _) =
