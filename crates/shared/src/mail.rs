@@ -276,6 +276,64 @@ pub fn return_to_sender(expired: &Mail, new_id: u64, now: u64) -> Option<Mail> {
     })
 }
 
+// --- Auction House mail ---
+
+const AH_SENDER: &str = "Auction House";
+
+/// AH cut on sold items (5%).
+const AH_CUT_PERCENT: f32 = 0.05;
+
+fn ah_mail(id: u64, recipient: &str, subject: String, gold: u32, attachments: Vec<MailAttachment>, now: u64) -> Mail {
+    Mail {
+        id,
+        sender: AH_SENDER.to_string(),
+        recipient: recipient.to_string(),
+        subject,
+        body: String::new(),
+        attachments,
+        gold,
+        cod: 0,
+        sent_at: now,
+        delivers_at: now, // AH mail is instant
+        expires_at: now + MAIL_EXPIRY_DAYS as u64 * 86400,
+        read: false,
+        collected: false,
+    }
+}
+
+/// Create an AH mail for a successful sale (gold to seller, minus AH cut).
+pub fn ah_sold_mail(id: u64, seller: &str, item_name: &str, sale_price: u32, now: u64) -> Mail {
+    let cut = (sale_price as f32 * AH_CUT_PERCENT) as u32;
+    let payout = sale_price.saturating_sub(cut);
+    ah_mail(id, seller, format!("Auction successful: {item_name}"), payout, vec![], now)
+}
+
+/// Create an AH mail for an expired auction (item returned to seller).
+pub fn ah_expired_mail(id: u64, seller: &str, item_id: u32, count: u16, now: u64) -> Mail {
+    ah_mail(
+        id, seller, "Auction expired".into(), 0,
+        vec![MailAttachment { item_id, count }], now,
+    )
+}
+
+/// Create an AH mail for an outbid notification (no attachments, just info).
+pub fn ah_outbid_mail(id: u64, bidder: &str, item_name: &str, bid_refund: u32, now: u64) -> Mail {
+    ah_mail(id, bidder, format!("Outbid on {item_name}"), bid_refund, vec![], now)
+}
+
+/// Create an AH mail for a won auction (item to buyer).
+pub fn ah_won_mail(id: u64, buyer: &str, item_id: u32, count: u16, now: u64) -> Mail {
+    ah_mail(
+        id, buyer, "Auction won".into(), 0,
+        vec![MailAttachment { item_id, count }], now,
+    )
+}
+
+/// Calculate the AH cut from a sale price.
+pub fn ah_cut(sale_price: u32) -> u32 {
+    (sale_price as f32 * AH_CUT_PERCENT) as u32
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -533,9 +591,53 @@ mod tests {
     #[test]
     fn no_cod_no_payment() {
         let mut mb = Mailbox::default();
-        mb.deliver(test_mail(1)); // no COD
+        mb.deliver(test_mail(1));
         let result = mb.collect(1, 0).unwrap();
         assert_eq!(result.cod_paid, 0);
         assert_eq!(result.cod_recipient, None);
+    }
+
+    // --- AH mail tests ---
+
+    #[test]
+    fn ah_sold_mail_with_cut() {
+        let mail = ah_sold_mail(1, "Seller", "Thunderfury", 100000, 5000);
+        assert_eq!(mail.sender, "Auction House");
+        assert_eq!(mail.recipient, "Seller");
+        assert_eq!(mail.gold, 95000); // 100000 - 5% cut
+        assert!(mail.attachments.is_empty());
+        assert_eq!(mail.delivers_at, 5000); // instant
+    }
+
+    #[test]
+    fn ah_expired_returns_item() {
+        let mail = ah_expired_mail(2, "Seller", 12345, 3, 5000);
+        assert_eq!(mail.recipient, "Seller");
+        assert_eq!(mail.attachments.len(), 1);
+        assert_eq!(mail.attachments[0].item_id, 12345);
+        assert_eq!(mail.attachments[0].count, 3);
+        assert_eq!(mail.gold, 0);
+    }
+
+    #[test]
+    fn ah_outbid_refunds_gold() {
+        let mail = ah_outbid_mail(3, "Bidder", "Sword", 5000, 1000);
+        assert_eq!(mail.recipient, "Bidder");
+        assert_eq!(mail.gold, 5000);
+        assert!(mail.attachments.is_empty());
+    }
+
+    #[test]
+    fn ah_won_delivers_item() {
+        let mail = ah_won_mail(4, "Buyer", 500, 1, 1000);
+        assert_eq!(mail.recipient, "Buyer");
+        assert_eq!(mail.attachments.len(), 1);
+        assert_eq!(mail.attachments[0].item_id, 500);
+    }
+
+    #[test]
+    fn ah_cut_calculation() {
+        assert_eq!(ah_cut(100000), 5000); // 5%
+        assert_eq!(ah_cut(0), 0);
     }
 }
