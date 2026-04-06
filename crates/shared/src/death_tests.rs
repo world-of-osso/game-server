@@ -466,3 +466,56 @@ fn empty_items_no_loss() {
     let mut items: [Durability; 0] = [];
     assert_eq!(apply_death_durability_loss(&mut items), 0);
 }
+
+// --- Player resurrect spells ---
+
+#[test]
+fn cast_resurrect_on_dead() {
+    let result = cast_resurrect(
+        DeathState::Dead, 10000.0, 5000.0,
+        (100.0, 200.0, 50.0), (110.0, 200.0, 50.0),
+    ).unwrap();
+    assert_eq!(result.restored_hp, 3500.0);
+    assert_eq!(result.restored_mana, 1750.0);
+    assert_eq!(result.x, 100.0);
+}
+
+#[test]
+fn cast_resurrect_on_ghost() {
+    let result = cast_resurrect(
+        DeathState::Ghost, 8000.0, 4000.0,
+        (50.0, 50.0, 0.0), (55.0, 50.0, 0.0),
+    );
+    assert!(result.is_ok());
+}
+
+#[test]
+fn cast_resurrect_on_alive_fails() {
+    assert_eq!(
+        cast_resurrect(DeathState::Alive, 10000.0, 5000.0, (0.0, 0.0, 0.0), (0.0, 0.0, 0.0)),
+        Err(DeathError::AlreadyAlive)
+    );
+}
+
+#[test]
+fn cast_resurrect_out_of_range() {
+    assert_eq!(
+        cast_resurrect(DeathState::Dead, 10000.0, 5000.0, (0.0, 0.0, 0.0), (500.0, 500.0, 0.0)),
+        Err(DeathError::NotDead)
+    );
+}
+
+#[test]
+fn cast_resurrect_exact_range() {
+    let result = cast_resurrect(
+        DeathState::Dead, 10000.0, 5000.0,
+        (0.0, 0.0, 0.0), (RESURRECT_SPELL_RANGE, 0.0, 0.0),
+    );
+    assert!(result.is_ok());
+}
+
+#[test]
+fn player_resurrect_no_sickness() {
+    // Verify ResurrectSource::PlayerSpell gives no sickness
+    assert!(apply_res_sickness(ResurrectSource::PlayerSpell, 60, 1000).is_none());
+}

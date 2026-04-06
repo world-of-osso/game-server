@@ -471,6 +471,60 @@ pub fn apply_spirit_healer_durability_loss(items: &mut [Durability]) -> u32 {
     total
 }
 
+// --- Player resurrect spells ---
+
+/// Maximum range for a player resurrect spell (yards).
+pub const RESURRECT_SPELL_RANGE: f32 = 40.0;
+
+/// Percentage of max HP restored by a resurrect spell.
+pub const RESURRECT_HP_PERCENT: f32 = 0.35;
+
+/// Percentage of max mana restored by a resurrect spell.
+pub const RESURRECT_MANA_PERCENT: f32 = 0.35;
+
+/// Result of a player casting a resurrect spell on a dead player.
+#[derive(Debug, Clone, PartialEq)]
+pub struct PlayerResurrectResult {
+    /// HP to restore (35% of max).
+    pub restored_hp: f32,
+    /// Mana to restore (35% of max).
+    pub restored_mana: f32,
+    /// Position to resurrect at (caster or target location).
+    pub x: f32,
+    pub y: f32,
+    pub z: f32,
+}
+
+/// Cast a resurrect spell on a dead or ghost player.
+///
+/// - No resurrection sickness.
+/// - No additional durability loss.
+/// - Target must be Dead or Ghost.
+/// - Caster must be within range.
+pub fn cast_resurrect(
+    target_state: DeathState,
+    target_max_hp: f32,
+    target_max_mana: f32,
+    target_pos: (f32, f32, f32),
+    caster_pos: (f32, f32, f32),
+) -> Result<PlayerResurrectResult, DeathError> {
+    if !matches!(target_state, DeathState::Dead | DeathState::Ghost) {
+        return Err(DeathError::AlreadyAlive);
+    }
+    let range_sq = dist_sq(
+        caster_pos.0, caster_pos.1, caster_pos.2,
+        target_pos.0, target_pos.1, target_pos.2,
+    );
+    if range_sq > RESURRECT_SPELL_RANGE * RESURRECT_SPELL_RANGE {
+        return Err(DeathError::NotDead);
+    }
+    Ok(PlayerResurrectResult {
+        restored_hp: target_max_hp * RESURRECT_HP_PERCENT,
+        restored_mana: target_max_mana * RESURRECT_MANA_PERCENT,
+        x: target_pos.0, y: target_pos.1, z: target_pos.2,
+    })
+}
+
 #[cfg(test)]
 #[path = "death_tests.rs"]
 mod tests;
