@@ -845,6 +845,44 @@ mod tests {
     }
 
     #[test]
+    fn server_normalizes_direction_preventing_speed_hack() {
+        // Even if a hacked client sends an oversized direction vector,
+        // the server normalizes it, so the player moves at the same speed
+        // as a client sending a unit vector.
+        let mut app = setup_app_with_time();
+        let normal_player = spawn_player(app.world_mut(), 0.0, 0.0, 0.0);
+        let hack_player = spawn_player(app.world_mut(), 0.0, 0.0, 0.0);
+
+        let normal_input = make_input(1.0, 0.0, 0.0);
+        // "Hacked" client sends direction with magnitude 10
+        let hack_input = PlayerInput {
+            direction: [10.0, 0.0, 0.0],
+            facing_yaw: 0.0,
+            jumping: false,
+            running: true,
+        };
+
+        let _ = app.world_mut().run_system_once(
+            move |mut q: Query<PlayerMovement, With<Player>>,
+                  time: Res<Time>| {
+                apply_movement_input(&normal_input, normal_player, &mut q, &time);
+                apply_movement_input(&hack_input, hack_player, &mut q, &time);
+            },
+        );
+
+        let normal_pos = *app.world().entity(normal_player).get::<Position>().unwrap();
+        let hack_pos = *app.world().entity(hack_player).get::<Position>().unwrap();
+
+        // Both players moved the same distance
+        assert!(
+            (normal_pos.x - hack_pos.x).abs() < 1e-6,
+            "normal={}, hack={} — should match",
+            normal_pos.x,
+            hack_pos.x,
+        );
+    }
+
+    #[test]
     fn terrain_clamps_below_ground() {
         // Terrain chunk at WoW corner (100, 100), height 50.
         // Bevy pos: x=90 (wow_x=90), z=-90 (wow_y=90), y=30 (below ground_y=50).
