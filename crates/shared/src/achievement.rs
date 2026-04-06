@@ -225,6 +225,34 @@ impl CharacterAchievements {
             self.total_points += achievement.points as u32;
         }
     }
+
+    /// List completed achievement IDs that are Feats of Strength.
+    pub fn completed_feats(&self, all_achievements: &[AchievementData]) -> Vec<u32> {
+        self.progress
+            .iter()
+            .filter(|p| p.completed)
+            .filter(|p| {
+                all_achievements
+                    .iter()
+                    .any(|a| a.id == p.achievement_id && a.feat_of_strength)
+            })
+            .map(|p| p.achievement_id)
+            .collect()
+    }
+
+    /// List completed achievement IDs that are NOT Feats of Strength.
+    pub fn completed_normal(&self, all_achievements: &[AchievementData]) -> Vec<u32> {
+        self.progress
+            .iter()
+            .filter(|p| p.completed)
+            .filter(|p| {
+                all_achievements
+                    .iter()
+                    .any(|a| a.id == p.achievement_id && !a.feat_of_strength)
+            })
+            .map(|p| p.achievement_id)
+            .collect()
+    }
 }
 
 impl AccountAchievements {
@@ -633,5 +661,70 @@ mod tests {
         let acct = AccountAchievements::default();
         assert_eq!(combined_points(&char_ach, &acct), 0);
         assert_eq!(completed_count(&char_ach, &acct), 0);
+    }
+
+    // --- Feats of Strength tests ---
+
+    fn feat_achievement() -> AchievementData {
+        AchievementData {
+            id: 2336,
+            name: "Realm First! Level 80".into(),
+            description: "First to reach 80.".into(),
+            criteria: vec![AchievementCriteria::ReachLevel { level: 80 }],
+            points: 0,
+            reward: Some(AchievementReward::Title("the Supreme".into())),
+            account_wide: false,
+            feat_of_strength: true,
+        }
+    }
+
+    #[test]
+    fn feat_completes_with_zero_points() {
+        let feat = feat_achievement();
+        let normal = sample_achievement(); // 10 pts
+        let mut char_ach = CharacterAchievements::default();
+        let mut acct = AccountAchievements::default();
+
+        // Complete both
+        let p = char_ach.get_or_create(&normal);
+        p.record_level(80, &normal);
+        try_complete(&normal, &mut char_ach, &mut acct);
+
+        let p = char_ach.get_or_create(&feat);
+        p.record_level(80, &feat);
+        try_complete(&feat, &mut char_ach, &mut acct);
+
+        assert_eq!(char_ach.total_points, 10); // only normal
+        assert!(char_ach.is_completed(feat.id));
+    }
+
+    #[test]
+    fn feats_listed_separately() {
+        let feat = feat_achievement();
+        let normal = sample_achievement();
+        let all = vec![normal.clone(), feat.clone()];
+
+        let mut char_ach = CharacterAchievements::default();
+        let mut acct = AccountAchievements::default();
+
+        let p = char_ach.get_or_create(&normal);
+        p.record_level(80, &normal);
+        try_complete(&normal, &mut char_ach, &mut acct);
+
+        let p = char_ach.get_or_create(&feat);
+        p.record_level(80, &feat);
+        try_complete(&feat, &mut char_ach, &mut acct);
+
+        let feats = char_ach.completed_feats(&all);
+        let normals = char_ach.completed_normal(&all);
+        assert_eq!(feats, vec![2336]);
+        assert_eq!(normals, vec![46]);
+    }
+
+    #[test]
+    fn no_feats_when_none_completed() {
+        let char_ach = CharacterAchievements::default();
+        assert!(char_ach.completed_feats(&[]).is_empty());
+        assert!(char_ach.completed_normal(&[]).is_empty());
     }
 }
