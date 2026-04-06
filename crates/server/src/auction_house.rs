@@ -1121,6 +1121,79 @@ mod tests {
     }
 
     #[test]
+    fn cancel_own_auction_returns_item_via_mail() {
+        let db = persistence::temp_database();
+        let (seller_id, _) =
+            persistence::create_character(&db, 1, "Seller", 1, 1).expect("seller");
+        let (other_id, _) =
+            persistence::create_character(&db, 2, "Other", 1, 1).expect("other");
+        let source_item = persistence::load_inventory(&db, seller_id).items[0].clone();
+        let mut state = AuctionHouseState::default();
+
+        create_auction(
+            &db,
+            &mut state,
+            seller_id,
+            &CreateAuction {
+                item_guid: source_item.item_guid,
+                stack_count: 3,
+                min_bid: 100,
+                buyout_price: Some(500),
+                duration: AuctionDuration::Medium,
+            },
+        );
+        let auction_id = *state.auctions.keys().next().expect("auction id");
+
+        // Non-owner cannot cancel
+        let denied = cancel_auction(&db, &mut state, other_id, auction_id);
+        assert!(!denied.success);
+        assert!(state.auctions.contains_key(&auction_id));
+
+        // Owner cancels successfully
+        let response = cancel_auction(&db, &mut state, seller_id, auction_id);
+        assert!(response.success);
+        assert!(!state.auctions.contains_key(&auction_id));
+
+        // Item returned via mail
+        let seller_mail = persistence::load_mailbox(&db, seller_id);
+        assert_eq!(seller_mail.len(), 1);
+        assert_eq!(seller_mail[0].attached_money, 0);
+        let returned_item = seller_mail[0].attached_item.as_ref().expect("returned item");
+        assert_eq!(returned_item.item_id, source_item.item_id);
+        assert_eq!(returned_item.stack_count, 3);
+    }
+
+    #[test]
+    fn cancel_auction_with_bids_rejected() {
+        let db = persistence::temp_database();
+        let (seller_id, _) =
+            persistence::create_character(&db, 1, "Seller", 1, 1).expect("seller");
+        let (bidder_id, _) =
+            persistence::create_character(&db, 2, "Bidder", 1, 1).expect("bidder");
+        let source_item = persistence::load_inventory(&db, seller_id).items[0].clone();
+        let mut state = AuctionHouseState::default();
+
+        create_auction(
+            &db,
+            &mut state,
+            seller_id,
+            &CreateAuction {
+                item_guid: source_item.item_guid,
+                stack_count: 1,
+                min_bid: 100,
+                buyout_price: Some(500),
+                duration: AuctionDuration::Medium,
+            },
+        );
+        let auction_id = *state.auctions.keys().next().expect("auction id");
+        place_bid(&db, &mut state, bidder_id, auction_id, 100);
+
+        let response = cancel_auction(&db, &mut state, seller_id, auction_id);
+        assert!(!response.success);
+        assert!(state.auctions.contains_key(&auction_id));
+    }
+
+    #[test]
     fn expired_auction_without_bid_returns_item_to_seller() {
         let db = persistence::temp_database();
         let (seller_id, _) =
