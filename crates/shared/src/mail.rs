@@ -32,6 +32,8 @@ pub struct Mail {
     pub cod: u32,
     /// Server timestamp when sent (seconds since epoch).
     pub sent_at: u64,
+    /// Server timestamp when the mail becomes available to the recipient.
+    pub delivers_at: u64,
     /// Server timestamp when the mail expires.
     pub expires_at: u64,
     /// Whether the mail has been read.
@@ -46,6 +48,25 @@ const MAIL_SEND_COST: u32 = 30;
 const MAIL_ATTACHMENT_COST: u32 = 30;
 /// Maximum attachments per mail.
 pub const MAX_ATTACHMENTS: usize = 12;
+
+/// Delivery delay for mails with items or gold (1 hour in seconds).
+const ITEM_DELIVERY_DELAY: u64 = 3600;
+
+/// Compute the delivery delay for a mail.
+///
+/// - Same account: instant (0 delay).
+/// - Text only (no items, no gold): instant.
+/// - Items or gold: 1 hour delay.
+pub fn delivery_delay(has_attachments: bool, has_gold: bool, same_account: bool) -> u64 {
+    if same_account {
+        return 0;
+    }
+    if has_attachments || has_gold {
+        ITEM_DELIVERY_DELAY
+    } else {
+        0
+    }
+}
 
 /// Why sending a mail failed.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -89,7 +110,8 @@ pub fn create_mail(params: NewMail) -> Result<Mail, MailError> {
         return Err(MailError::TooManyAttachments);
     }
 
-    let expires_at = params.now + params.delivery_delay + params.expiry_days as u64 * 86400;
+    let delivers_at = params.now + params.delivery_delay;
+    let expires_at = delivers_at + params.expiry_days as u64 * 86400;
 
     Ok(Mail {
         id: params.id,
@@ -101,6 +123,7 @@ pub fn create_mail(params: NewMail) -> Result<Mail, MailError> {
         gold: params.gold,
         cod: params.cod,
         sent_at: params.now,
+        delivers_at,
         expires_at,
         read: false,
         collected: false,
@@ -163,6 +186,18 @@ impl Mailbox {
     /// Count of unread mails.
     pub fn unread_count(&self) -> usize {
         self.mails.iter().filter(|m| !m.read).count()
+    }
+
+    /// Mails that have been delivered (delivery delay elapsed).
+    pub fn delivered_mails(&self, now: u64) -> Vec<&Mail> {
+        self.mails.iter().filter(|m| now >= m.delivers_at).collect()
+    }
+
+    /// Whether a specific mail is delivered and accessible.
+    pub fn is_delivered(&self, mail_id: u64, now: u64) -> bool {
+        self.mails
+            .iter()
+            .any(|m| m.id == mail_id && now >= m.delivers_at)
     }
 }
 
@@ -266,9 +301,64 @@ mod tests {
     fn mailbox_expire_keeps_collected() {
         let mut mb = Mailbox::default();
         mb.deliver(test_mail(1));
-        mb.collect(1); // collected mails don't expire
+        mb.collect(1);
         let expired = mb.expire(99999999);
         assert!(expired.is_empty());
         assert_eq!(mb.mails.len(), 1);
+    }
+
+    // --- Delivery delay tests ---
+
+    #[test]
+    fn delay_items_1_hour() {
+        assert_eq!(delivery_delay(true, false, false), 3600);
+    }
+
+    #[test]
+    fn delay_gold_1_hour() {
+        assert_eq!(delivery_delay(false, true, false), 3600);
+    }
+
+    #[test]
+    fn delay_text_only_instant() {
+        assert_eq!(delivery_delay(false, false, false), 0);
+    }
+
+    #[test]
+    fn delay_same_account_instant() {
+        assert_eq!(delivery_delay(true, true, true), 0);
+    }
+
+    #[test]
+    fn mail_not_visible_before_delivery() {
+        let mut mb = Mailbox::default();
+        let mail = test_mail(1); // delivers_at = 1000 + 3600 = 4600
+        mb.deliver(mail);
+
+        assert!(mb.delivered_mails(2000).is_empty()); // before delivery
+        assert!(!mb.is_delivered(1, 2000));
+
+        assert_eq!(mb.delivered_mails(5000).len(), 1); // after delivery
+        assert!(mb.is_delivered(1, 5000));
+    }
+
+    #[test]
+    fn instant_mail_visible_immediately() {
+        let mail = create_mail(NewMail {
+            id: 2,
+            sender: "Alice".into(),
+            recipient: "Bob".into(),
+            subject: "Hi".into(),
+            body: "Text only".into(),
+            attachments: vec![],
+            gold: 0,
+            cod: 0,
+            now: 1000,
+            delivery_delay: 0, // instant
+            expiry_days: 30,
+        }).unwrap();
+        let mut mb = Mailbox::default();
+        mb.deliver(mail);
+        assert_eq!(mb.delivered_mails(1000).len(), 1);
     }
 }
