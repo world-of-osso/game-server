@@ -238,6 +238,60 @@ impl Raid {
     }
 }
 
+// --- Role assignment ---
+
+/// Group role for dungeon/raid finder and UI display.
+///
+/// Separate from `components::Role` (which is per-spec). This is the
+/// player's chosen role for the current group activity.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum GroupRole {
+    Tank,
+    Healer,
+    Dps,
+}
+
+/// Per-member role assignments for a group.
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct RoleAssignments {
+    entries: Vec<(u64, GroupRole)>,
+}
+
+impl RoleAssignments {
+    /// Assign a role to a member. Overwrites any previous role.
+    pub fn assign(&mut self, player: u64, role: GroupRole) {
+        if let Some(entry) = self.entries.iter_mut().find(|(m, _)| *m == player) {
+            entry.1 = role;
+        } else {
+            self.entries.push((player, role));
+        }
+    }
+
+    /// Get a member's assigned role.
+    pub fn role_of(&self, player: u64) -> Option<GroupRole> {
+        self.entries.iter().find(|(m, _)| *m == player).map(|(_, r)| *r)
+    }
+
+    /// Remove a member's role (e.g. when they leave the group).
+    pub fn remove(&mut self, player: u64) {
+        self.entries.retain(|(m, _)| *m != player);
+    }
+
+    /// Count of each role.
+    pub fn counts(&self) -> (usize, usize, usize) {
+        let tanks = self.entries.iter().filter(|(_, r)| *r == GroupRole::Tank).count();
+        let healers = self.entries.iter().filter(|(_, r)| *r == GroupRole::Healer).count();
+        let dps = self.entries.iter().filter(|(_, r)| *r == GroupRole::Dps).count();
+        (tanks, healers, dps)
+    }
+
+    /// Whether the group has the standard 1T/1H/3D composition.
+    pub fn has_standard_composition(&self) -> bool {
+        let (tanks, healers, _) = self.counts();
+        tanks >= 1 && healers >= 1
+    }
+}
+
 // --- Ready check ---
 
 /// Timeout for a ready check (seconds).
@@ -594,6 +648,63 @@ mod tests {
         let party = Party::new(1);
         let mut raid = Raid::from_party(&party);
         assert_eq!(raid.add_member(1), Err(PartyError::AlreadyMember));
+    }
+
+    // --- Role assignment tests ---
+
+    #[test]
+    fn role_assign_and_query() {
+        let mut roles = RoleAssignments::default();
+        roles.assign(1, GroupRole::Tank);
+        roles.assign(2, GroupRole::Healer);
+        roles.assign(3, GroupRole::Dps);
+        assert_eq!(roles.role_of(1), Some(GroupRole::Tank));
+        assert_eq!(roles.role_of(2), Some(GroupRole::Healer));
+        assert_eq!(roles.role_of(99), None);
+    }
+
+    #[test]
+    fn role_overwrite() {
+        let mut roles = RoleAssignments::default();
+        roles.assign(1, GroupRole::Dps);
+        roles.assign(1, GroupRole::Tank);
+        assert_eq!(roles.role_of(1), Some(GroupRole::Tank));
+    }
+
+    #[test]
+    fn role_remove() {
+        let mut roles = RoleAssignments::default();
+        roles.assign(1, GroupRole::Tank);
+        roles.remove(1);
+        assert_eq!(roles.role_of(1), None);
+    }
+
+    #[test]
+    fn role_counts() {
+        let mut roles = RoleAssignments::default();
+        roles.assign(1, GroupRole::Tank);
+        roles.assign(2, GroupRole::Healer);
+        roles.assign(3, GroupRole::Dps);
+        roles.assign(4, GroupRole::Dps);
+        roles.assign(5, GroupRole::Dps);
+        assert_eq!(roles.counts(), (1, 1, 3));
+    }
+
+    #[test]
+    fn role_standard_composition() {
+        let mut roles = RoleAssignments::default();
+        roles.assign(1, GroupRole::Tank);
+        roles.assign(2, GroupRole::Healer);
+        roles.assign(3, GroupRole::Dps);
+        assert!(roles.has_standard_composition());
+    }
+
+    #[test]
+    fn role_no_tank_not_standard() {
+        let mut roles = RoleAssignments::default();
+        roles.assign(1, GroupRole::Healer);
+        roles.assign(2, GroupRole::Dps);
+        assert!(!roles.has_standard_composition());
     }
 
     // --- Ready check tests ---
