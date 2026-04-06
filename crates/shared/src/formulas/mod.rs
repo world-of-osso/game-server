@@ -241,22 +241,25 @@ pub fn armor_mitigation(armor: f32, attacker_level: u8) -> Option<f32> {
 
 // --- Attack power contribution ---
 
-/// The constant divisor in WoW's AP-to-damage formula.
-const AP_DIVISOR: f32 = 14.0;
+/// Weapon power coefficient — converts AP to per-swing damage.
+///
+/// Source: SimC `WEAPON_POWER_COEFFICIENT = 6` (engine/action/attack.hpp).
+/// Classic/WotLK used 14; retail uses 6.
+const WEAPON_POWER_COEFFICIENT: f32 = 6.0;
 
 /// Bonus damage per swing from attack power.
 ///
-/// Formula: `(AP / 14) * weapon_speed`.
+/// Formula: `(AP / 6) * weapon_speed`.
 /// For auto-attacks, `weapon_speed` is the actual weapon speed.
 /// For abilities, use the normalized speed from `WeaponType::normalized_speed()`.
 pub fn ap_bonus_damage(attack_power: f32, weapon_speed: f32) -> f32 {
-    (attack_power / AP_DIVISOR) * weapon_speed
+    (attack_power / WEAPON_POWER_COEFFICIENT) * weapon_speed
 }
 
 /// Auto-attack damage for a single swing.
 ///
 /// `weapon_roll` is a pre-rolled random value in `[min_damage, max_damage]`.
-/// Returns `weapon_roll + (AP / 14) * weapon_speed`.
+/// Returns `weapon_roll + (AP / 6) * weapon_speed`.
 pub fn auto_attack_damage(weapon_roll: f32, attack_power: f32, weapon_speed: f32) -> f32 {
     weapon_roll + ap_bonus_damage(attack_power, weapon_speed)
 }
@@ -764,20 +767,20 @@ mod tests {
 
     #[test]
     fn ap_bonus_with_2h_weapon() {
-        // 1400 AP, 3.3 speed: (1400/14) * 3.3 = 100 * 3.3 = 330
-        assert_eq!(ap_bonus_damage(1400.0, 3.3), 330.0);
+        // 1200 AP, 3.3 speed: (1200/6) * 3.3 = 200 * 3.3 = 660
+        assert_eq!(ap_bonus_damage(1200.0, 3.3), 660.0);
     }
 
     #[test]
     fn ap_bonus_with_1h_weapon() {
-        // 1400 AP, 2.4 speed: (1400/14) * 2.4 = 100 * 2.4 = 240
-        assert!((ap_bonus_damage(1400.0, 2.4) - 240.0).abs() < 0.01);
+        // 1200 AP, 2.4 speed: (1200/6) * 2.4 = 200 * 2.4 = 480
+        assert!((ap_bonus_damage(1200.0, 2.4) - 480.0).abs() < 0.01);
     }
 
     #[test]
     fn ap_bonus_with_dagger() {
-        // 1400 AP, 1.7 speed: (1400/14) * 1.7 = 100 * 1.7 = 170
-        assert!((ap_bonus_damage(1400.0, 1.7) - 170.0).abs() < 0.01);
+        // 1200 AP, 1.7 speed: (1200/6) * 1.7 = 200 * 1.7 = 340
+        assert!((ap_bonus_damage(1200.0, 1.7) - 340.0).abs() < 0.01);
     }
 
     #[test]
@@ -796,14 +799,14 @@ mod tests {
 
     #[test]
     fn auto_attack_min_roll() {
-        // min weapon roll 100, 1400 AP, 3.3 speed → 100 + 330 = 430
-        assert_eq!(auto_attack_damage(100.0, 1400.0, 3.3), 430.0);
+        // min weapon roll 100, 1200 AP, 3.3 speed → 100 + 660 = 760
+        assert_eq!(auto_attack_damage(100.0, 1200.0, 3.3), 760.0);
     }
 
     #[test]
     fn auto_attack_max_roll() {
-        // max weapon roll 200, 1400 AP, 3.3 speed → 200 + 330 = 530
-        assert_eq!(auto_attack_damage(200.0, 1400.0, 3.3), 530.0);
+        // max weapon roll 200, 1200 AP, 3.3 speed → 200 + 660 = 860
+        assert_eq!(auto_attack_damage(200.0, 1200.0, 3.3), 860.0);
     }
 
     #[test]
@@ -815,8 +818,45 @@ mod tests {
     #[test]
     fn auto_attack_zero_weapon() {
         // Unarmed: 0 weapon roll, AP still contributes
-        let bonus = ap_bonus_damage(1400.0, 2.0);
-        assert_eq!(auto_attack_damage(0.0, 1400.0, 2.0), bonus);
+        let bonus = ap_bonus_damage(1200.0, 2.0);
+        assert_eq!(auto_attack_damage(0.0, 1200.0, 2.0), bonus);
+    }
+
+    // --- Cross-check: auto-attack damage against SimC ---
+    // Source: SimC engine/action/attack.hpp WEAPON_POWER_COEFFICIENT = 6
+    // Source: SimC engine/player/weapon.hpp normalized speeds: 1.7, 2.4, 3.3
+    // Formula: damage = random(min, max) + (AP / 6) * weapon_speed
+
+    #[test]
+    fn crosscheck_auto_attack_2h_warrior() {
+        // 2H sword (3.3 speed), 600 AP, weapon rolls 300-500
+        // AP bonus: (600 / 6) * 3.3 = 100 * 3.3 = 330
+        // Min total: 300 + 330 = 630
+        // Max total: 500 + 330 = 830
+        assert_eq!(auto_attack_damage(300.0, 600.0, 3.3), 630.0);
+        assert_eq!(auto_attack_damage(500.0, 600.0, 3.3), 830.0);
+    }
+
+    #[test]
+    fn crosscheck_auto_attack_1h_rogue() {
+        // Dagger (1.7 speed), 900 AP, weapon rolls 80-150
+        // AP bonus: (900 / 6) * 1.7 = 150 * 1.7 = 255
+        // Min total: 80 + 255 = 335
+        // Max total: 150 + 255 = 405
+        assert_eq!(auto_attack_damage(80.0, 900.0, 1.7), 335.0);
+        assert_eq!(auto_attack_damage(150.0, 900.0, 1.7), 405.0);
+    }
+
+    #[test]
+    fn crosscheck_normalized_ap_bonus() {
+        // SimC normalized speeds match our WeaponType constants
+        // With 600 AP:
+        // Dagger (1.7): (600/6) * 1.7 = 170
+        // 1H (2.4):     (600/6) * 2.4 = 240
+        // 2H (3.3):     (600/6) * 3.3 = 330
+        assert!((ap_bonus_damage(600.0, 1.7) - 170.0).abs() < 0.01);
+        assert!((ap_bonus_damage(600.0, 2.4) - 240.0).abs() < 0.01);
+        assert!((ap_bonus_damage(600.0, 3.3) - 330.0).abs() < 0.01);
     }
 
     // --- Ability damage tests ---
