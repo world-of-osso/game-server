@@ -1,12 +1,54 @@
 use bevy::prelude::*;
-use shared::components::{Health, Level, Mana, Player, UnitStats};
+use shared::components::{CombatRatings, Health, ItemStatBlock, Level, Mana, Player, UnitStats};
 use shared::formulas;
+
+/// Component holding the stat blocks of all equipped items.
+///
+/// When this changes (equip/unequip), `update_stats_from_equipment` recomputes
+/// `UnitStats` and `CombatRatings`, which then triggers `update_derived_stats`
+/// to recalculate HP/mana.
+#[derive(Component, Debug, Clone, Default, PartialEq)]
+pub struct EquippedItems {
+    pub items: Vec<ItemStatBlock>,
+}
+
+/// Base stats for a character (without gear). Set once at character creation
+/// or level-up. Equipment stats are added on top by `update_stats_from_equipment`.
+#[derive(Component, Debug, Clone, Copy, Default, PartialEq)]
+pub struct BaseStats {
+    pub primary: UnitStats,
+    pub secondary: CombatRatings,
+}
 
 pub struct StatsPlugin;
 
 impl Plugin for StatsPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(FixedUpdate, update_derived_stats);
+        app.add_systems(
+            FixedUpdate,
+            (update_stats_from_equipment, update_derived_stats).chain(),
+        );
+    }
+}
+
+/// When equipped items change, recompute UnitStats = base + gear.
+fn update_stats_from_equipment(
+    mut query: Query<
+        (
+            &BaseStats,
+            &EquippedItems,
+            &mut UnitStats,
+            &mut CombatRatings,
+        ),
+        Changed<EquippedItems>,
+    >,
+) {
+    for (base, equipped, mut stats, mut ratings) in &mut query {
+        let (gear_primary, gear_secondary) = formulas::sum_equipment_stats(&equipped.items);
+        *stats = base.primary;
+        *stats += gear_primary;
+        *ratings = base.secondary;
+        *ratings += gear_secondary;
     }
 }
 
@@ -158,5 +200,132 @@ mod tests {
                 || (max_after_second - max_after_first).abs() < 0.01,
             "system should only run on Changed<UnitStats|Level>"
         );
+    }
+
+    fn spawn_player_with_gear(
+        world: &mut World,
+        class: u8,
+        level: u8,
+        base_stamina: f32,
+        items: Vec<ItemStatBlock>,
+    ) -> Entity {
+        world
+            .spawn((
+                Player {
+                    name: "Test".into(),
+                    race: 1,
+                    class,
+                    appearance: Default::default(),
+                },
+                BaseStats {
+                    primary: UnitStats {
+                        stamina: base_stamina,
+                        ..Default::default()
+                    },
+                    secondary: CombatRatings::default(),
+                },
+                UnitStats::default(),
+                CombatRatings::default(),
+                EquippedItems { items },
+                Level(level),
+                Health {
+                    current: 100.0,
+                    max: 100.0,
+                },
+            ))
+            .id()
+    }
+
+    #[test]
+    fn equip_recalculates_stats() {
+        let mut world = World::new();
+        let gear = vec![ItemStatBlock {
+            primary: UnitStats {
+                stamina: 50.0,
+                ..Default::default()
+            },
+            secondary: CombatRatings::default(),
+        }];
+        let entity = spawn_player_with_gear(&mut world, 1, 80, 100.0, gear);
+
+        world.run_system_once(update_stats_from_equipment).unwrap();
+
+        let stats = world.get::<UnitStats>(entity).unwrap();
+        // base 100 + gear 50 = 150
+        assert!((stats.stamina - 150.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn equip_triggers_health_recalc() {
+        let mut world = World::new();
+        let gear = vec![ItemStatBlock {
+            primary: UnitStats {
+                stamina: 50.0,
+                ..Default::default()
+            },
+            secondary: CombatRatings::default(),
+        }];
+        let entity = spawn_player_with_gear(&mut world, 1, 80, 100.0, gear);
+
+        // Run both systems in chain
+        world.run_system_once(update_stats_from_equipment).unwrap();
+        world.run_system_once(update_derived_stats).unwrap();
+
+        let health = world.get::<Health>(entity).unwrap();
+        // Warrior L80: base_hp 8121 + 150 stam * 20 = 11121
+        assert!((health.max - 11121.0).abs() < 1.0);
+    }
+
+    #[test]
+    fn unequip_reduces_stats() {
+        let mut world = World::new();
+        let gear = vec![ItemStatBlock {
+            primary: UnitStats {
+                stamina: 80.0,
+                ..Default::default()
+            },
+            secondary: CombatRatings::default(),
+        }];
+        let entity = spawn_player_with_gear(&mut world, 1, 80, 100.0, gear);
+
+        world.run_system_once(update_stats_from_equipment).unwrap();
+        let stamina_with_gear = world.get::<UnitStats>(entity).unwrap().stamina;
+        assert!((stamina_with_gear - 180.0).abs() < 0.01);
+
+        // Unequip: clear items
+        world.get_mut::<EquippedItems>(entity).unwrap().items.clear();
+        world.run_system_once(update_stats_from_equipment).unwrap();
+
+        let stamina_without = world.get::<UnitStats>(entity).unwrap().stamina;
+        assert!((stamina_without - 100.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn equip_aggregates_secondary_ratings() {
+        let mut world = World::new();
+        let gear = vec![
+            ItemStatBlock {
+                primary: UnitStats::default(),
+                secondary: CombatRatings {
+                    crit: 50.0,
+                    ..Default::default()
+                },
+            },
+            ItemStatBlock {
+                primary: UnitStats::default(),
+                secondary: CombatRatings {
+                    crit: 30.0,
+                    haste: 20.0,
+                    ..Default::default()
+                },
+            },
+        ];
+        let entity = spawn_player_with_gear(&mut world, 1, 80, 100.0, gear);
+
+        world.run_system_once(update_stats_from_equipment).unwrap();
+
+        let ratings = world.get::<CombatRatings>(entity).unwrap();
+        assert!((ratings.crit - 80.0).abs() < 0.01);
+        assert!((ratings.haste - 20.0).abs() < 0.01);
     }
 }
