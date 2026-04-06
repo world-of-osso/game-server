@@ -1123,6 +1123,68 @@ mod tests {
     }
 
     #[test]
+    fn speed_recalculates_when_aura_removed() {
+        use shared::aura::{Aura, AuraEffect};
+
+        let mut app = setup_app_with_time();
+        let player = spawn_player(app.world_mut(), 0.0, 0.0, 0.0);
+
+        // Apply 50% snare
+        let snare = Aura {
+            spell_id: 1,
+            caster: 99,
+            duration: 10.0,
+            remaining: 10.0,
+            effects: [
+                Some(AuraEffect::ModMovementSpeed { percent: -0.50 }),
+                None,
+                None,
+            ],
+            ..Default::default()
+        };
+        {
+            let mut entity = app.world_mut().entity_mut(player);
+            let mut auras = entity.get_mut::<Auras>().unwrap();
+            auras.apply(snare);
+        }
+
+        // First tick: snared at 50%
+        let input = make_input(1.0, 0.0, 0.0);
+        let _ = app.world_mut().run_system_once(
+            move |mut q: Query<PlayerMovement, With<Player>>,
+                  time: Res<Time>| {
+                apply_movement_input(&input, player, &mut q, &time);
+            },
+        );
+        let snared_speed = app.world().entity(player).get::<MovementSpeed>().unwrap().0;
+        assert!(
+            (snared_speed - DEFAULT_RUN_SPEED * 0.5).abs() < 1e-5,
+            "snared: {snared_speed}",
+        );
+
+        // Remove the snare
+        {
+            let mut entity = app.world_mut().entity_mut(player);
+            let mut auras = entity.get_mut::<Auras>().unwrap();
+            auras.active.clear();
+        }
+
+        // Second tick: back to full speed
+        let input2 = make_input(1.0, 0.0, 0.0);
+        let _ = app.world_mut().run_system_once(
+            move |mut q: Query<PlayerMovement, With<Player>>,
+                  time: Res<Time>| {
+                apply_movement_input(&input2, player, &mut q, &time);
+            },
+        );
+        let restored_speed = app.world().entity(player).get::<MovementSpeed>().unwrap().0;
+        assert!(
+            (restored_speed - DEFAULT_RUN_SPEED).abs() < 1e-5,
+            "restored: {restored_speed}, expected {DEFAULT_RUN_SPEED}",
+        );
+    }
+
+    #[test]
     fn swim_speed_differs_from_ground_speed() {
         let mut app = setup_app_with_time();
         let player = spawn_player(app.world_mut(), 0.0, 0.0, 0.0);
