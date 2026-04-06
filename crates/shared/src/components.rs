@@ -435,6 +435,8 @@ pub struct Aura {
     pub snapshot_spell_power: f32,
     /// Snapshotted caster attack power at application time.
     pub snapshot_attack_power: f32,
+    /// Optional proc definition. If set, this aura can trigger procs.
+    pub proc_def: Option<ProcDef>,
 }
 
 /// Collection of active auras on a unit.
@@ -468,6 +470,7 @@ impl Default for Aura {
             tick_interval: 0.0,
             snapshot_spell_power: 0.0,
             snapshot_attack_power: 0.0,
+            proc_def: None,
         }
     }
 }
@@ -714,6 +717,120 @@ impl Auras {
     /// Remove all auras (on death). Clears the entire active list.
     pub fn clear_all(&mut self) {
         self.active.clear();
+    }
+}
+
+// --- Proc system ---
+
+/// Combat events that can trigger a proc.
+///
+/// Ref: AzerothCore `PROC_FLAG_*` in `SpellMgr.h`.
+#[derive(
+    Reflect,
+    Serialize,
+    Deserialize,
+    bitcode::Encode,
+    bitcode::Decode,
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    Hash,
+)]
+pub enum ProcTrigger {
+    /// Any successful melee or spell hit.
+    OnHit,
+    /// A critical strike (melee or spell).
+    OnCrit,
+    /// Healing done (direct or periodic).
+    OnHeal,
+    /// Damage taken (melee or spell).
+    OnDamageTaken,
+}
+
+/// A proc definition attached to an aura.
+///
+/// When the trigger event fires, the proc rolls against `chance` (0.0–1.0).
+/// If successful and ICD has elapsed, it produces a `ProcResult` containing
+/// the `spell_id` to apply.
+///
+/// Ref: AzerothCore `SpellProcEntry`, `HandleProc()`.
+#[derive(
+    Reflect,
+    Serialize,
+    Deserialize,
+    bitcode::Encode,
+    bitcode::Decode,
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+)]
+pub struct ProcDef {
+    /// Which event can trigger this proc.
+    pub trigger: ProcTrigger,
+    /// Probability of firing (0.0–1.0). 1.0 = always.
+    pub chance: f32,
+    /// Internal cooldown in seconds. 0.0 = no ICD.
+    pub icd: f32,
+    /// Time remaining on the internal cooldown (ticks down each frame).
+    pub icd_remaining: f32,
+    /// Spell ID to apply when the proc fires.
+    pub triggered_spell_id: u32,
+}
+
+/// A proc that fired, ready for the server to apply the triggered spell.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct ProcResult {
+    /// The aura's spell_id that caused the proc.
+    pub source_spell_id: u32,
+    /// The caster entity bits of the source aura.
+    pub caster: u64,
+    /// The spell to apply as a result of the proc.
+    pub triggered_spell_id: u32,
+}
+
+impl Auras {
+    /// Tick ICD timers on all auras by `dt` seconds.
+    pub fn tick_proc_cooldowns(&mut self, dt: f32) {
+        for aura in &mut self.active {
+            if let Some(ref mut proc_def) = aura.proc_def {
+                proc_def.icd_remaining = (proc_def.icd_remaining - dt).max(0.0);
+            }
+        }
+    }
+
+    /// Check all auras for procs matching the given event.
+    ///
+    /// `roll` is a random value in 0.0–1.0 (caller provides RNG).
+    /// Returns procs that fired. Each fired proc starts its ICD.
+    pub fn check_procs(&mut self, event: ProcTrigger, roll: f32) -> Vec<ProcResult> {
+        let mut results = Vec::new();
+
+        for aura in &mut self.active {
+            let Some(ref mut proc_def) = aura.proc_def else {
+                continue;
+            };
+            if proc_def.trigger != event {
+                continue;
+            }
+            if proc_def.icd_remaining > 0.0 {
+                continue;
+            }
+            if roll > proc_def.chance {
+                continue;
+            }
+
+            results.push(ProcResult {
+                source_spell_id: aura.spell_id,
+                caster: aura.caster,
+                triggered_spell_id: proc_def.triggered_spell_id,
+            });
+            proc_def.icd_remaining = proc_def.icd;
+        }
+
+        results
     }
 }
 
@@ -1396,6 +1513,122 @@ mod tests {
         auras.active.push(make_shield(200, 1, SpellSchool::Fire, 500.0));
         assert_eq!(auras.damage_done_multiplier(), 1.0);
         assert_eq!(auras.damage_taken_multiplier(), 1.0);
+    }
+
+    // --- Proc system tests ---
+
+    fn make_proc_aura(spell_id: u32, caster: u64, trigger: ProcTrigger, chance: f32, icd: f32, triggered: u32) -> Aura {
+        Aura {
+            spell_id,
+            caster,
+            duration: 60.0,
+            remaining: 60.0,
+            effects: [
+                Some(AuraEffect::ModCritChance { percent: 0.05 }),
+                None,
+                None,
+            ],
+            proc_def: Some(ProcDef {
+                trigger,
+                chance,
+                icd,
+                icd_remaining: 0.0,
+                triggered_spell_id: triggered,
+            }),
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn proc_fires_on_matching_event() {
+        let mut auras = Auras::default();
+        auras.active.push(make_proc_aura(100, 1, ProcTrigger::OnCrit, 1.0, 0.0, 999));
+        let results = auras.check_procs(ProcTrigger::OnCrit, 0.5);
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].source_spell_id, 100);
+        assert_eq!(results[0].triggered_spell_id, 999);
+    }
+
+    #[test]
+    fn proc_ignores_wrong_event() {
+        let mut auras = Auras::default();
+        auras.active.push(make_proc_aura(100, 1, ProcTrigger::OnCrit, 1.0, 0.0, 999));
+        let results = auras.check_procs(ProcTrigger::OnHit, 0.5);
+        assert!(results.is_empty());
+    }
+
+    #[test]
+    fn proc_fails_roll() {
+        let mut auras = Auras::default();
+        // 30% chance, roll 0.5 → fails
+        auras.active.push(make_proc_aura(100, 1, ProcTrigger::OnHit, 0.3, 0.0, 999));
+        let results = auras.check_procs(ProcTrigger::OnHit, 0.5);
+        assert!(results.is_empty());
+    }
+
+    #[test]
+    fn proc_passes_roll() {
+        let mut auras = Auras::default();
+        // 30% chance, roll 0.2 → passes
+        auras.active.push(make_proc_aura(100, 1, ProcTrigger::OnHit, 0.3, 0.0, 999));
+        let results = auras.check_procs(ProcTrigger::OnHit, 0.2);
+        assert_eq!(results.len(), 1);
+    }
+
+    #[test]
+    fn proc_icd_prevents_refire() {
+        let mut auras = Auras::default();
+        auras.active.push(make_proc_aura(100, 1, ProcTrigger::OnHit, 1.0, 10.0, 999));
+
+        // First hit: fires, starts ICD
+        let results = auras.check_procs(ProcTrigger::OnHit, 0.0);
+        assert_eq!(results.len(), 1);
+
+        // Immediate second hit: blocked by ICD
+        let results = auras.check_procs(ProcTrigger::OnHit, 0.0);
+        assert!(results.is_empty());
+    }
+
+    #[test]
+    fn proc_icd_expires_after_tick() {
+        let mut auras = Auras::default();
+        auras.active.push(make_proc_aura(100, 1, ProcTrigger::OnHit, 1.0, 5.0, 999));
+
+        // Fire once
+        auras.check_procs(ProcTrigger::OnHit, 0.0);
+
+        // Tick 5.1 seconds — ICD should expire
+        auras.tick_proc_cooldowns(5.1);
+
+        let results = auras.check_procs(ProcTrigger::OnHit, 0.0);
+        assert_eq!(results.len(), 1);
+    }
+
+    #[test]
+    fn proc_multiple_auras_checked() {
+        let mut auras = Auras::default();
+        auras.active.push(make_proc_aura(100, 1, ProcTrigger::OnHit, 1.0, 0.0, 999));
+        auras.active.push(make_proc_aura(200, 2, ProcTrigger::OnHit, 1.0, 0.0, 888));
+        let results = auras.check_procs(ProcTrigger::OnHit, 0.0);
+        assert_eq!(results.len(), 2);
+    }
+
+    #[test]
+    fn proc_no_proc_def_skipped() {
+        let mut auras = Auras::default();
+        auras.active.push(make_aura(100, 1, 1)); // no proc_def
+        let results = auras.check_procs(ProcTrigger::OnHit, 0.0);
+        assert!(results.is_empty());
+    }
+
+    #[test]
+    fn tick_proc_cooldowns_decrements() {
+        let mut auras = Auras::default();
+        auras.active.push(make_proc_aura(100, 1, ProcTrigger::OnHit, 1.0, 10.0, 999));
+        auras.check_procs(ProcTrigger::OnHit, 0.0); // fire, start ICD=10
+        auras.tick_proc_cooldowns(3.0);
+        let icd = auras.active[0].proc_def.as_ref().unwrap().icd_remaining;
+        assert!((icd - 7.0).abs() < 0.01);
     }
 
     // --- Periodic tick tests ---
