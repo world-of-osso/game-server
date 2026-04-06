@@ -5,6 +5,7 @@ pub mod item_data;
 pub mod loot;
 pub mod movement;
 pub mod navmesh;
+pub mod profession;
 pub mod protocol;
 pub mod protocol_snapshots;
 pub mod quest;
