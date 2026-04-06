@@ -882,6 +882,54 @@ mod tests {
     }
 
     #[test]
+    fn speed_floor_prevents_full_immobilization_from_snare() {
+        use shared::aura::{Aura, AuraEffect};
+
+        let mut app = setup_app_with_time();
+        let player = spawn_player(app.world_mut(), 0.0, 0.0, 0.0);
+
+        // Apply a massive -95% snare — should be clamped to 10% minimum
+        let snare = Aura {
+            spell_id: 1,
+            caster: 99,
+            duration: 10.0,
+            remaining: 10.0,
+            effects: [
+                Some(AuraEffect::ModMovementSpeed { percent: -0.95 }),
+                None,
+                None,
+            ],
+            ..Default::default()
+        };
+        app.world_mut()
+            .entity_mut(player)
+            .get_mut::<Auras>()
+            .unwrap()
+            .apply(snare);
+
+        let input = make_input(1.0, 0.0, 0.0);
+        let _ = app.world_mut().run_system_once(
+            move |mut q: Query<PlayerMovement, With<Player>>,
+                  time: Res<Time>| {
+                apply_movement_input(&input, player, &mut q, &time);
+            },
+        );
+
+        let speed = app.world().entity(player).get::<MovementSpeed>().unwrap();
+        let pos = *app.world().entity(player).get::<Position>().unwrap();
+
+        // Speed floored at 10% of base
+        let expected_speed = DEFAULT_RUN_SPEED * 0.1;
+        assert!(
+            (speed.0 - expected_speed).abs() < 1e-5,
+            "speed {}, expected {expected_speed} (10% floor)",
+            speed.0,
+        );
+        // Player still moved
+        assert!(pos.x > 0.0, "snared player still moves");
+    }
+
+    #[test]
     fn zero_direction_ignored() {
         let mut app = setup_app_with_time();
         let player = spawn_player(app.world_mut(), 5.0, 5.0, 5.0);

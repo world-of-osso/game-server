@@ -430,7 +430,8 @@ impl Auras {
             return 0.0;
         }
 
-        (1.0 + strongest_snare + total_buff).max(0.0)
+        // Minimum 10% speed for snares (only roots reach 0)
+        (1.0 + strongest_snare + total_buff).clamp(0.1, f32::MAX)
     }
 
     /// Whether the entity is rooted (cannot move at all).
