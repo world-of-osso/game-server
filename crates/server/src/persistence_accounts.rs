@@ -30,12 +30,11 @@ pub fn login_with_credentials(
     username: &str,
     password: &str,
 ) -> Result<(u64, String), String> {
-    if let Some(tok) = token {
-        if !tok.is_empty() {
-            if let Some(account_id) = find_account_by_token(db, tok) {
-                return Ok((account_id, tok.to_string()));
-            }
-        }
+    if let Some(tok) = token
+        && !tok.is_empty()
+        && let Some(account_id) = find_account_by_token(db, tok)
+    {
+        return Ok((account_id, tok.to_string()));
     }
     let account_id = find_account_by_username(db, username).ok_or_else(|| {
         if is_username_pending(db, username) {
@@ -468,9 +467,9 @@ mod tests {
         let db = temp_database();
         register_account(&db, "admin", "admin").unwrap();
 
-        assert_eq!(check_password(&db, "admin", "admin").unwrap(), true);
-        assert_eq!(check_password(&db, "admin", "wrong").unwrap(), false);
-        assert_eq!(check_password(&db, "missing", "admin").unwrap(), false);
+        assert!(check_password(&db, "admin", "admin").unwrap());
+        assert!(!check_password(&db, "admin", "wrong").unwrap());
+        assert!(!check_password(&db, "missing", "admin").unwrap());
     }
 
     #[test]

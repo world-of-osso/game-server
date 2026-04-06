@@ -219,7 +219,7 @@ mod tests {
     fn lcg_produces_values_in_range() {
         for seed in 0..1000 {
             let v = lcg_float(seed);
-            assert!(v >= 0.0 && v < 1.0, "seed {seed}: value {v} out of range");
+            assert!((0.0..1.0).contains(&v), "seed {seed}: value {v} out of range");
         }
     }
 
@@ -228,7 +228,7 @@ mod tests {
         for seed in 0..100 {
             let t = random_idle_secs(seed);
             assert!(
-                t >= IDLE_MIN_SECS && t <= IDLE_MAX_SECS,
+                (IDLE_MIN_SECS..=IDLE_MAX_SECS).contains(&t),
                 "seed {seed}: idle {t}"
             );
         }

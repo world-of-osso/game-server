@@ -137,7 +137,7 @@ fn load_templates(conn: &Connection) -> HashMap<u32, CreatureTemplate> {
         .expect("Failed to prepare creature_template query");
 
     let rows = stmt
-        .query_map(params![], |row| template_from_row(row))
+        .query_map(params![], template_from_row)
         .expect("Failed to query creature_template");
 
     let mut map = HashMap::new();
@@ -206,7 +206,7 @@ fn load_spawns(conn: &Connection) -> Vec<CreatureSpawn> {
         .expect("Failed to prepare creature query");
 
     let rows = stmt
-        .query_map(params![], |row| spawn_from_row(row))
+        .query_map(params![], spawn_from_row)
         .expect("Failed to query creature");
 
     rows.map(|r| r.expect("Failed to read creature row"))
@@ -247,7 +247,7 @@ fn load_waypoints(conn: &Connection) -> HashMap<u32, WaypointPath> {
         .expect("Failed to prepare waypoint_data query");
 
     let rows = stmt
-        .query_map(params![], |row| waypoint_point_from_row(row))
+        .query_map(params![], waypoint_point_from_row)
         .expect("Failed to query waypoint_data");
 
     let mut map: HashMap<u32, WaypointPath> = HashMap::new();

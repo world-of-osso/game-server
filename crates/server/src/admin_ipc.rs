@@ -370,9 +370,11 @@ fn dispatch(
             equipment_query,
             authenticated_query,
             roster_update_senders,
-            &character_name,
-            &slot,
-            display_info_id,
+            EquipmentAppearanceRequest {
+                name: &character_name,
+                slot_name: &slot,
+                display_info_id,
+            },
         ),
         AdminRequest::ClearEquipmentAppearance {
             character_name,
@@ -580,6 +582,12 @@ fn handle_set_position(
     }
 }
 
+struct EquipmentAppearanceRequest<'a> {
+    name: &'a str,
+    slot_name: &'a str,
+    display_info_id: u32,
+}
+
 fn handle_set_appearance(
     db: &persistence::GameDatabase,
     authenticated_query: &Query<
@@ -621,10 +629,9 @@ fn handle_set_equipment_appearance(
         With<MessageSender<LoginResponse>>,
     >,
     roster_update_senders: &mut Query<&mut MessageSender<CharacterListUpdate>>,
-    name: &str,
-    slot_name: &str,
-    display_info_id: u32,
+    req: EquipmentAppearanceRequest<'_>,
 ) -> AdminResponse {
+    let EquipmentAppearanceRequest { name, slot_name, display_info_id } = req;
     let Some(slot) = parse_equipment_visual_slot(slot_name) else {
         return AdminResponse::Error(format!("invalid equipment appearance slot '{slot_name}'"));
     };
@@ -1021,9 +1028,11 @@ mod tests {
             &mut query,
             &authenticated_query,
             &mut roster_update_senders,
-            "Theron",
-            "chest",
-            777,
+            EquipmentAppearanceRequest {
+                name: "Theron",
+                slot_name: "chest",
+                display_info_id: 777,
+            },
         );
 
         assert_eq!(

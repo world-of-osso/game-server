@@ -6,6 +6,7 @@
 use std::time::Duration;
 
 use bevy::app::AppExit;
+use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 use core::net::{IpAddr, Ipv4Addr, SocketAddr};
 use lightyear::prelude::client::*;
@@ -311,16 +312,21 @@ fn send_register_request(
 
 // -- Response handlers --
 
+#[derive(SystemParam)]
+struct LoginSenders<'w, 's> {
+    senders: Query<'w, 's, &'static mut MessageSender<SelectCharacter>>,
+    create_senders: Query<'w, 's, &'static mut MessageSender<CreateCharacter>>,
+    history_senders: Query<'w, 's, &'static mut MessageSender<ChatHistoryRequest>>,
+    exit: MessageWriter<'w, AppExit>,
+}
+
 fn receive_login_response(
     mut receivers: Query<&mut MessageReceiver<LoginResponse>>,
     mut auth_token: ResMut<AuthToken>,
     mut char_list: ResMut<CharacterList>,
     mut next_state: ResMut<NextState<CliState>>,
     action: Res<CliAction>,
-    mut senders: Query<&mut MessageSender<SelectCharacter>>,
-    mut create_senders: Query<&mut MessageSender<CreateCharacter>>,
-    mut history_senders: Query<&mut MessageSender<ChatHistoryRequest>>,
-    mut exit: MessageWriter<AppExit>,
+    mut login_senders: LoginSenders,
 ) {
     for mut receiver in receivers.iter_mut() {
         for resp in receiver.receive() {
@@ -330,10 +336,7 @@ fn receive_login_response(
                 &mut char_list,
                 &mut next_state,
                 &action,
-                &mut senders,
-                &mut create_senders,
-                &mut history_senders,
-                &mut exit,
+                &mut login_senders,
             );
         }
     }
@@ -345,14 +348,11 @@ fn handle_login_resp(
     char_list: &mut CharacterList,
     next_state: &mut NextState<CliState>,
     action: &CliAction,
-    senders: &mut Query<&mut MessageSender<SelectCharacter>>,
-    create_senders: &mut Query<&mut MessageSender<CreateCharacter>>,
-    history_senders: &mut Query<&mut MessageSender<ChatHistoryRequest>>,
-    exit: &mut MessageWriter<AppExit>,
+    login_senders: &mut LoginSenders,
 ) {
     if !resp.success {
         eprintln!("[login] Failed: {}", resp.error.unwrap_or_default());
-        exit.write(AppExit::Error(1.try_into().unwrap()));
+        login_senders.exit.write(AppExit::Error(1.try_into().unwrap()));
         return;
     }
     save_auth_token(&resp.token);
@@ -363,10 +363,10 @@ fn handle_login_resp(
         action,
         char_list,
         next_state,
-        senders,
-        create_senders,
-        history_senders,
-        exit,
+        &mut login_senders.senders,
+        &mut login_senders.create_senders,
+        &mut login_senders.history_senders,
+        &mut login_senders.exit,
     );
 }
 

@@ -282,7 +282,7 @@ pub fn process_target_messages(
 ) {
     for (mut receiver, link) in receivers.iter_mut() {
         for msg in receiver.receive() {
-            let target = msg.target_entity.map(|bits| Entity::from_bits(bits));
+            let target = msg.target_entity.map(Entity::from_bits);
             if let Ok(mut combat_target) = targets.get_mut(link.0) {
                 combat_target.0 = target;
                 debug!("Player {:?} target set to {:?}", link.0, target);

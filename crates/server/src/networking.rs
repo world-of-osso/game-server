@@ -1,3 +1,4 @@
+use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 use core::net::{IpAddr, Ipv4Addr, SocketAddr};
 use lightyear::prelude::server::*;
@@ -18,6 +19,49 @@ use crate::terrain_height::{GRAVITY, GROUND_SNAP_THRESHOLD, TerrainHeightMap};
 const SERVER_PORT: u16 = 5000;
 const DEFAULT_RUN_SPEED: f32 = 7.0;
 const DEFAULT_WALK_SPEED: f32 = 2.5;
+
+type LinkStatusData = (Has<Connected>, Has<ClientOf>, Has<ReplicationSender>);
+type ConnInfoData = (
+    &'static RemoteId,
+    Has<ClientOf>,
+    Has<LinkOf>,
+    Has<ReplicationSender>,
+    Has<MessageSender<LoadTerrain>>,
+    Has<MessageSender<ChatMessage>>,
+    Has<MessageSender<shared::protocol::LoginResponse>>,
+);
+type ReplicatedData = (
+    Entity,
+    Has<Player>,
+    Has<Npc>,
+    Has<NetworkVisibility>,
+    Has<ReplicationState>,
+);
+type DisconnectData = (
+    Option<&'static PlayerLink>,
+    Option<&'static Authenticated>,
+    Option<&'static InWorld>,
+);
+
+#[derive(SystemParam)]
+struct LinkStatusQuery<'w, 's> {
+    query: Query<'w, 's, LinkStatusData, With<LinkOf>>,
+}
+
+#[derive(SystemParam)]
+struct ConnInfoQuery<'w, 's> {
+    query: Query<'w, 's, ConnInfoData, With<Connected>>,
+}
+
+#[derive(SystemParam)]
+struct ReplicatedQuery<'w, 's> {
+    query: Query<'w, 's, ReplicatedData, With<Replicate>>,
+}
+
+#[derive(SystemParam)]
+struct DisconnectQuery<'w, 's> {
+    query: Query<'w, 's, DisconnectData, With<ClientOf>>,
+}
 
 /// Links a connection entity to its spawned player entity.
 #[derive(Component, Debug)]
@@ -86,7 +130,7 @@ fn start_server(mut commands: Commands) {
 fn on_new_link(
     trigger: On<Add, LinkOf>,
     mut commands: Commands,
-    links: Query<(Has<Connected>, Has<ClientOf>, Has<ReplicationSender>), With<LinkOf>>,
+    links: LinkStatusQuery,
     replicated: Query<(Entity, Has<Player>, Has<Npc>), With<Replicate>>,
 ) {
     let replicated_count = replicated.iter().count();
@@ -95,7 +139,7 @@ fn on_new_link(
         .filter(|(_, has_player, _)| *has_player)
         .count();
     let replicated_npcs = replicated.iter().filter(|(_, _, has_npc)| *has_npc).count();
-    if let Ok((connected, client_of, sender)) = links.get(trigger.entity) {
+    if let Ok((connected, client_of, sender)) = links.query.get(trigger.entity) {
         debug!(
             entity = ?trigger.entity,
             connected,
@@ -119,28 +163,8 @@ fn on_new_link(
 /// When a client connects, mark as pending auth (no player entity yet).
 fn on_client_connected(
     trigger: On<Add, Connected>,
-    query: Query<
-        (
-            &RemoteId,
-            Has<ClientOf>,
-            Has<LinkOf>,
-            Has<ReplicationSender>,
-            Has<MessageSender<LoadTerrain>>,
-            Has<MessageSender<ChatMessage>>,
-            Has<MessageSender<shared::protocol::LoginResponse>>,
-        ),
-        With<Connected>,
-    >,
-    replicated: Query<
-        (
-            Entity,
-            Has<Player>,
-            Has<Npc>,
-            Has<NetworkVisibility>,
-            Has<ReplicationState>,
-        ),
-        With<Replicate>,
-    >,
+    query: ConnInfoQuery,
+    replicated: ReplicatedQuery,
     time: Res<Time>,
     mut commands: Commands,
 ) {
@@ -152,7 +176,7 @@ fn on_client_connected(
         has_terrain_sender,
         has_chat_sender,
         has_auth_sender,
-    )) = query.get(trigger.entity)
+    )) = query.query.get(trigger.entity)
     else {
         return;
     };
@@ -177,24 +201,15 @@ fn on_client_connected(
 }
 
 fn log_replication_state(
-    replicated: &Query<
-        (
-            Entity,
-            Has<Player>,
-            Has<Npc>,
-            Has<NetworkVisibility>,
-            Has<ReplicationState>,
-        ),
-        With<Replicate>,
-    >,
+    replicated: &ReplicatedQuery,
     client_id: u64,
     flags: &[bool; 6],
 ) {
-    let replicated_count = replicated.iter().count();
-    let replicated_players = replicated.iter().filter(|(_, p, _, _, _)| *p).count();
-    let replicated_npcs = replicated.iter().filter(|(_, _, n, _, _)| *n).count();
-    let visible = replicated.iter().filter(|(_, _, _, v, _)| *v).count();
-    let stateful = replicated.iter().filter(|(_, _, _, _, s)| *s).count();
+    let replicated_count = replicated.query.iter().count();
+    let replicated_players = replicated.query.iter().filter(|(_, p, _, _, _)| *p).count();
+    let replicated_npcs = replicated.query.iter().filter(|(_, _, n, _, _)| *n).count();
+    let visible = replicated.query.iter().filter(|(_, _, _, v, _)| *v).count();
+    let stateful = replicated.query.iter().filter(|(_, _, _, _, s)| *s).count();
 
     debug!(
         client_id,
@@ -216,20 +231,13 @@ fn log_replication_state(
 /// When a client disconnects, save data and clean up.
 fn on_client_disconnected(
     trigger: On<Remove, Connected>,
-    conn_query: Query<
-        (
-            Option<&PlayerLink>,
-            Option<&Authenticated>,
-            Option<&InWorld>,
-        ),
-        With<ClientOf>,
-    >,
+    conn_query: DisconnectQuery,
     player_query: Query<(&Position, &Health, &Player, &ClientId)>,
     db: Option<Res<GameDatabase>>,
     mut connected: ResMut<ConnectedAccounts>,
     mut commands: Commands,
 ) {
-    let Ok((player_link, auth, in_world)) = conn_query.get(trigger.entity) else {
+    let Ok((player_link, auth, in_world)) = conn_query.query.get(trigger.entity) else {
         return;
     };
     if let Some(link) = player_link {
@@ -255,14 +263,14 @@ fn save_and_despawn(
     in_world: Option<&InWorld>,
     commands: &mut Commands,
 ) {
-    if let (Some(db), Some(_)) = (db.as_ref(), in_world) {
-        if let Ok((pos, health, player, cid)) = player_query.get(entity) {
-            let mut data = persistence::load_character(&db.db, cid.0)
-                .unwrap_or_else(|| CharacterData::from_components(player, pos, health));
-            data.sync_live_components(player, pos, health);
-            persistence::save_character(&db.db, cid.0, &data);
-            info!("Saved character data for character_id {}", cid.0);
-        }
+    if let (Some(db), Some(_)) = (db.as_ref(), in_world)
+        && let Ok((pos, health, player, cid)) = player_query.get(entity)
+    {
+        let mut data = persistence::load_character(&db.db, cid.0)
+            .unwrap_or_else(|| CharacterData::from_components(player, pos, health));
+        data.sync_live_components(player, pos, health);
+        persistence::save_character(&db.db, cid.0, &data);
+        info!("Saved character data for character_id {}", cid.0);
     }
     queue_player_despawn(commands, entity);
 }
@@ -404,7 +412,7 @@ fn apply_terrain_gravity(
     };
     let dt = time.delta_secs();
     for mut pos in players.iter_mut() {
-        clamp_to_terrain(&terrain, &mut pos, dt);
+        clamp_to_terrain(terrain, &mut pos, dt);
     }
 }
 

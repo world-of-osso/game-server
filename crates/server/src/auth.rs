@@ -215,128 +215,6 @@ fn send_login_error(
     });
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::panic::{AssertUnwindSafe, catch_unwind};
-
-    #[derive(Component)]
-    struct DeferredCleanupMarker;
-    #[derive(Component)]
-    struct ReplicationTag;
-    #[derive(Component)]
-    struct VisibilityTag;
-
-    #[test]
-    fn relogin_returns_previous_session_entity() {
-        let account_id = 42;
-        let first = Entity::from_bits(1);
-        let second = Entity::from_bits(2);
-        let mut connected = ConnectedAccounts::default();
-
-        assert_eq!(
-            replace_connected_account(&mut connected, account_id, first),
-            None
-        );
-        assert_eq!(
-            replace_connected_account(&mut connected, account_id, second),
-            Some(first)
-        );
-        assert_eq!(connected.0.get(&account_id), Some(&second));
-    }
-
-    #[test]
-    fn disconnect_cleanup_ignores_replaced_session() {
-        let account_id = 42;
-        let old = Entity::from_bits(1);
-        let current = Entity::from_bits(2);
-        let mut connected = ConnectedAccounts::default();
-
-        connected.0.insert(account_id, current);
-
-        assert!(!clear_connected_account(&mut connected, account_id, old));
-        assert_eq!(connected.0.get(&account_id), Some(&current));
-
-        assert!(clear_connected_account(&mut connected, account_id, current));
-        assert!(!connected.0.contains_key(&account_id));
-    }
-
-    #[test]
-    fn push_unique_select_request_keeps_first_request_per_connection() {
-        let entity = Entity::from_bits(1);
-        let account_id = 42;
-        let mut out = Vec::new();
-
-        assert!(push_unique_select_request(
-            &mut out,
-            entity,
-            account_id,
-            SelectCharacter { character_id: 10 },
-        ));
-        assert!(!push_unique_select_request(
-            &mut out,
-            entity,
-            account_id,
-            SelectCharacter { character_id: 11 },
-        ));
-        assert_eq!(out.len(), 1);
-        assert_eq!(out[0].2.character_id, 10);
-    }
-
-    #[test]
-    fn push_unique_select_request_allows_different_connections() {
-        let mut out = Vec::new();
-
-        assert!(push_unique_select_request(
-            &mut out,
-            Entity::from_bits(1),
-            42,
-            SelectCharacter { character_id: 10 },
-        ));
-        assert!(push_unique_select_request(
-            &mut out,
-            Entity::from_bits(2),
-            43,
-            SelectCharacter { character_id: 11 },
-        ));
-        assert_eq!(out.len(), 2);
-    }
-
-    #[test]
-    fn stale_player_cleanup_does_not_panic_when_other_system_queues_deferred_cleanup() {
-        let mut app = App::new();
-        app.add_plugins(bevy::MinimalPlugins);
-
-        let character_id = 77;
-        let player = app
-            .world_mut()
-            .spawn((ClientId(character_id), ReplicationTag, VisibilityTag))
-            .id();
-
-        app.add_systems(
-            Update,
-            (
-                move |existing: Query<(Entity, &ClientId)>, mut commands: Commands| {
-                    despawn_stale_player(&existing, character_id, &mut commands);
-                },
-                move |mut commands: Commands| {
-                    commands
-                        .entity(player)
-                        .remove::<(ReplicationTag, VisibilityTag)>()
-                        .insert(DeferredCleanupMarker);
-                },
-            )
-                .chain(),
-        );
-
-        let result = catch_unwind(AssertUnwindSafe(|| app.update()));
-        assert!(
-            result.is_ok(),
-            "stale player cleanup should not queue an immediate despawn ahead of deferred cleanup"
-        );
-    }
-}
-
 /// Process registration requests from pending-auth connections.
 pub fn process_register_requests(
     mut receivers: Query<(Entity, &mut MessageReceiver<RegisterRequest>)>,
@@ -767,4 +645,126 @@ pub fn spawn_player_entity(
         data.name, data.x, data.y, data.z
     );
     entity
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::panic::{AssertUnwindSafe, catch_unwind};
+
+    #[derive(Component)]
+    struct DeferredCleanupMarker;
+    #[derive(Component)]
+    struct ReplicationTag;
+    #[derive(Component)]
+    struct VisibilityTag;
+
+    #[test]
+    fn relogin_returns_previous_session_entity() {
+        let account_id = 42;
+        let first = Entity::from_bits(1);
+        let second = Entity::from_bits(2);
+        let mut connected = ConnectedAccounts::default();
+
+        assert_eq!(
+            replace_connected_account(&mut connected, account_id, first),
+            None
+        );
+        assert_eq!(
+            replace_connected_account(&mut connected, account_id, second),
+            Some(first)
+        );
+        assert_eq!(connected.0.get(&account_id), Some(&second));
+    }
+
+    #[test]
+    fn disconnect_cleanup_ignores_replaced_session() {
+        let account_id = 42;
+        let old = Entity::from_bits(1);
+        let current = Entity::from_bits(2);
+        let mut connected = ConnectedAccounts::default();
+
+        connected.0.insert(account_id, current);
+
+        assert!(!clear_connected_account(&mut connected, account_id, old));
+        assert_eq!(connected.0.get(&account_id), Some(&current));
+
+        assert!(clear_connected_account(&mut connected, account_id, current));
+        assert!(!connected.0.contains_key(&account_id));
+    }
+
+    #[test]
+    fn push_unique_select_request_keeps_first_request_per_connection() {
+        let entity = Entity::from_bits(1);
+        let account_id = 42;
+        let mut out = Vec::new();
+
+        assert!(push_unique_select_request(
+            &mut out,
+            entity,
+            account_id,
+            SelectCharacter { character_id: 10 },
+        ));
+        assert!(!push_unique_select_request(
+            &mut out,
+            entity,
+            account_id,
+            SelectCharacter { character_id: 11 },
+        ));
+        assert_eq!(out.len(), 1);
+        assert_eq!(out[0].2.character_id, 10);
+    }
+
+    #[test]
+    fn push_unique_select_request_allows_different_connections() {
+        let mut out = Vec::new();
+
+        assert!(push_unique_select_request(
+            &mut out,
+            Entity::from_bits(1),
+            42,
+            SelectCharacter { character_id: 10 },
+        ));
+        assert!(push_unique_select_request(
+            &mut out,
+            Entity::from_bits(2),
+            43,
+            SelectCharacter { character_id: 11 },
+        ));
+        assert_eq!(out.len(), 2);
+    }
+
+    #[test]
+    fn stale_player_cleanup_does_not_panic_when_other_system_queues_deferred_cleanup() {
+        let mut app = App::new();
+        app.add_plugins(bevy::MinimalPlugins);
+
+        let character_id = 77;
+        let player = app
+            .world_mut()
+            .spawn((ClientId(character_id), ReplicationTag, VisibilityTag))
+            .id();
+
+        app.add_systems(
+            Update,
+            (
+                move |existing: Query<(Entity, &ClientId)>, mut commands: Commands| {
+                    despawn_stale_player(&existing, character_id, &mut commands);
+                },
+                move |mut commands: Commands| {
+                    commands
+                        .entity(player)
+                        .remove::<(ReplicationTag, VisibilityTag)>()
+                        .insert(DeferredCleanupMarker);
+                },
+            )
+                .chain(),
+        );
+
+        let result = catch_unwind(AssertUnwindSafe(|| app.update()));
+        assert!(
+            result.is_ok(),
+            "stale player cleanup should not queue an immediate despawn ahead of deferred cleanup"
+        );
+    }
 }

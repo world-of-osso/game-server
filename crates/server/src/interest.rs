@@ -33,7 +33,7 @@ fn update_interest(
     mut tick_count: Local<u64>,
 ) {
     *tick_count += 1;
-    if *tick_count % UPDATE_INTERVAL_TICKS != 0 {
+    if !(*tick_count).is_multiple_of(UPDATE_INTERVAL_TICKS) {
         return;
     }
 
@@ -43,7 +43,7 @@ fn update_interest(
     }
 
     let vis_count = visibility_query.iter().count();
-    if *tick_count % (UPDATE_INTERVAL_TICKS * 10) == 0 {
+    if (*tick_count).is_multiple_of(UPDATE_INTERVAL_TICKS * 10) {
         info!(
             "Interest update: {} players, {} visible entities",
             players.len(),

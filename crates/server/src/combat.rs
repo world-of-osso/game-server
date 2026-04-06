@@ -1,3 +1,4 @@
+use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 use lightyear::prelude::*;
 use shared::components::{Health, Npc, Position};
@@ -14,6 +15,13 @@ const AUTO_ATTACK_INTERVAL: f32 = 2.0;
 const BASE_DAMAGE: f32 = 10.0;
 /// Default respawn timer in seconds.
 const DEFAULT_RESPAWN_SECS: f32 = 60.0;
+
+type LivingNpcFilter = (With<Npc>, Without<DeathState>);
+
+#[derive(SystemParam)]
+struct LivingNpcQuery<'w, 's> {
+    query: Query<'w, 's, (Entity, &'static Health), LivingNpcFilter>,
+}
 
 pub struct CombatPlugin;
 
@@ -138,13 +146,13 @@ fn build_damage_event(attacker: Entity, target: Entity, damage: f32) -> CombatEv
 
 /// Detect entities that just hit 0 HP and mark them dead.
 fn death_system(
-    query: Query<(Entity, &Health), (With<Npc>, Without<DeathState>)>,
+    living: LivingNpcQuery,
     mut commands: Commands,
     mut senders: Query<&mut MessageSender<CombatEvent>>,
 ) {
     let mut events = Vec::new();
 
-    for (entity, health) in &query {
+    for (entity, health) in &living.query {
         if health.current > 0.0 {
             continue;
         }

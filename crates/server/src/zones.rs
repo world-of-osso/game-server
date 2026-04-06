@@ -86,7 +86,7 @@ fn creature_bundle(
 }
 
 fn in_elwynn_bounds(x: f32, y: f32) -> bool {
-    x >= SPAWN_MIN_X && x <= SPAWN_MAX_X && y >= SPAWN_MIN_Y && y <= SPAWN_MAX_Y
+    (SPAWN_MIN_X..=SPAWN_MAX_X).contains(&x) && (SPAWN_MIN_Y..=SPAWN_MAX_Y).contains(&y)
 }
 
 fn resolve_display_id(world_data: &WorldData, template_entry: u32) -> u32 {

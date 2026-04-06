@@ -1,3 +1,4 @@
+use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 use redb::{Database, ReadableDatabase, ReadableTable, TableDefinition};
 use rusqlite::{Connection, OpenFlags, params};
@@ -247,12 +248,12 @@ pub fn load_character(db: &Database, character_id: u64) -> Option<CharacterData>
     let table = txn
         .open_table(CHARACTERS)
         .expect("Failed to open characters table");
-    match table.get(character_id).expect("Failed to read character") {
-        Some(guard) => Some(
-            CharacterData::decode_compatible(guard.value()).expect("Failed to decode character"),
-        ),
-        None => None,
-    }
+    table
+        .get(character_id)
+        .expect("Failed to read character")
+        .map(|guard| {
+            CharacterData::decode_compatible(guard.value()).expect("Failed to decode character")
+        })
 }
 
 pub fn load_character_guild(db: &Database, character_id: u64) -> Option<GuildMembership> {
@@ -260,12 +261,9 @@ pub fn load_character_guild(db: &Database, character_id: u64) -> Option<GuildMem
     let table = txn
         .open_table(CHARACTER_GUILDS)
         .expect("Failed to open character_guilds table");
-    let Some(guard) = table
+    let guard = table
         .get(character_id)
-        .expect("Failed to read character guild")
-    else {
-        return None;
-    };
+        .expect("Failed to read character guild")?;
     let data = bitcode::decode::<GuildMembershipData>(guard.value()).expect("decode guild");
     Some(GuildMembership {
         guild_id: data.guild_id,
@@ -345,13 +343,10 @@ pub fn take_pending_guild_invite(
         let mut table = write
             .open_table(PENDING_GUILD_INVITES)
             .expect("open pending_guild_invites");
-        let Some(raw) = table
+        let raw = table
             .get(character_id)
             .expect("read pending guild invite")
-            .map(|g| g.value().to_vec())
-        else {
-            return None;
-        };
+            .map(|g| g.value().to_vec())?;
         let decoded = bitcode::decode::<PendingGuildInviteData>(&raw).expect("decode invite");
         table
             .remove(character_id)
@@ -691,26 +686,31 @@ pub struct ClientId(pub u64);
 /// Save interval in ticks (300 ticks at 20Hz = 15 seconds).
 const SAVE_INTERVAL_TICKS: u64 = 300;
 
+type DirtyPlayerData = (&'static Position, &'static Health, &'static Player, &'static ClientId);
+type DirtyPlayerFilter = (
+    Or<(Changed<Position>, Changed<Health>, Changed<Player>)>,
+    With<Player>,
+    With<ClientId>,
+);
+
+#[derive(SystemParam)]
+struct DirtyPlayersQuery<'w, 's> {
+    query: Query<'w, 's, DirtyPlayerData, DirtyPlayerFilter>,
+}
+
 /// Periodically save all player data to the database.
 fn save_dirty_characters(
     db: Option<Res<GameDatabase>>,
-    players: Query<
-        (&Position, &Health, &Player, &ClientId),
-        (
-            Or<(Changed<Position>, Changed<Health>, Changed<Player>)>,
-            With<Player>,
-            With<ClientId>,
-        ),
-    >,
+    players: DirtyPlayersQuery,
     mut tick_count: Local<u64>,
 ) {
     *tick_count += 1;
-    if *tick_count % SAVE_INTERVAL_TICKS != 0 {
+    if !(*tick_count).is_multiple_of(SAVE_INTERVAL_TICKS) {
         return;
     }
     let Some(db) = db else { return };
     let mut saved_count = 0;
-    for (pos, health, player, cid) in players.iter() {
+    for (pos, health, player, cid) in players.query.iter() {
         let data = CharacterData::from_components(player, pos, health);
         save_character(&db.db, cid.0, &data);
         saved_count += 1;
@@ -730,12 +730,7 @@ fn flush_all_characters_on_exit(
     players: Query<(&Position, &Health, &Player, &ClientId)>,
     mut exit_events: MessageReader<AppExit>,
 ) {
-    let mut saw_exit = false;
-    for _ in exit_events.read() {
-        saw_exit = true;
-        break;
-    }
-    if !saw_exit {
+    if exit_events.read().next().is_none() {
         return;
     }
 
