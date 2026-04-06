@@ -73,6 +73,8 @@ pub struct Ticket {
     pub state: TicketState,
     /// Queue priority (derived from category, can be overridden by GM).
     pub priority: TicketPriority,
+    /// GM who claimed this ticket (None if unassigned).
+    pub assigned_to: Option<String>,
     /// Server timestamp when created.
     pub created_at: u64,
 }
@@ -88,6 +90,12 @@ pub enum TicketError {
     DescriptionTooLong,
     /// No ticket found with this ID.
     NotFound,
+    /// Ticket is already assigned to a GM.
+    AlreadyAssigned,
+    /// Ticket is not in a claimable state (not Open).
+    NotOpen,
+    /// Ticket is not assigned (can't unassign).
+    NotAssigned,
 }
 
 /// Maximum description length in characters.
@@ -132,6 +140,7 @@ impl TicketManager {
             description: description.to_string(),
             state: TicketState::Open,
             priority: default_priority(category),
+            assigned_to: None,
             created_at: now,
         });
         Ok(id)
@@ -191,6 +200,47 @@ impl TicketManager {
         let high = open.iter().filter(|t| t.priority == TicketPriority::High).count();
         let critical = open.iter().filter(|t| t.priority == TicketPriority::Critical).count();
         (critical, high, normal)
+    }
+
+    /// GM claims a ticket. Moves it from Open → Assigned.
+    pub fn assign(&mut self, id: u64, gm_name: &str) -> Result<(), TicketError> {
+        let ticket = self.tickets.iter_mut().find(|t| t.id == id)
+            .ok_or(TicketError::NotFound)?;
+        if ticket.state != TicketState::Open {
+            return Err(TicketError::NotOpen);
+        }
+        if ticket.assigned_to.is_some() {
+            return Err(TicketError::AlreadyAssigned);
+        }
+        ticket.state = TicketState::Assigned;
+        ticket.assigned_to = Some(gm_name.to_string());
+        Ok(())
+    }
+
+    /// Release a ticket back to the queue. Moves Assigned → Open.
+    pub fn unassign(&mut self, id: u64) -> Result<(), TicketError> {
+        let ticket = self.tickets.iter_mut().find(|t| t.id == id)
+            .ok_or(TicketError::NotFound)?;
+        if ticket.assigned_to.is_none() {
+            return Err(TicketError::NotAssigned);
+        }
+        ticket.state = TicketState::Open;
+        ticket.assigned_to = None;
+        Ok(())
+    }
+
+    /// Claim the next ticket from the queue for a GM.
+    pub fn claim_next(&mut self, gm_name: &str) -> Result<u64, TicketError> {
+        let id = self.next_in_queue().ok_or(TicketError::NotFound)?.id;
+        self.assign(id, gm_name)?;
+        Ok(id)
+    }
+
+    /// All tickets assigned to a specific GM.
+    pub fn assigned_to(&self, gm_name: &str) -> Vec<&Ticket> {
+        self.tickets.iter()
+            .filter(|t| t.assigned_to.as_deref() == Some(gm_name))
+            .collect()
     }
 }
 

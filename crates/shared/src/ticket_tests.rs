@@ -230,3 +230,98 @@ fn priority_override_affects_queue_order() {
     assert_eq!(next.id, bug_id);
     assert_eq!(next.priority, TicketPriority::Critical);
 }
+
+// --- GM assignment ---
+
+#[test]
+fn assign_ticket() {
+    let mut mgr = TicketManager::new();
+    let id = mgr.create(100, TicketCategory::Bug, "Bug", 1000).unwrap();
+
+    mgr.assign(id, "GM_Alice").unwrap();
+    let ticket = mgr.get(id).unwrap();
+    assert_eq!(ticket.state, TicketState::Assigned);
+    assert_eq!(ticket.assigned_to.as_deref(), Some("GM_Alice"));
+}
+
+#[test]
+fn assign_removes_from_queue() {
+    let mut mgr = TicketManager::new();
+    let id = mgr.create(100, TicketCategory::Bug, "Bug", 1000).unwrap();
+    mgr.create(200, TicketCategory::Quest, "Quest", 1001).unwrap();
+
+    mgr.assign(id, "GM_Alice").unwrap();
+    // Assigned ticket should not appear in the open queue
+    let queue = mgr.queue();
+    assert_eq!(queue.len(), 1);
+    assert_eq!(queue[0].player, 200);
+}
+
+#[test]
+fn assign_already_assigned_fails() {
+    let mut mgr = TicketManager::new();
+    let id = mgr.create(100, TicketCategory::Bug, "Bug", 1000).unwrap();
+    mgr.assign(id, "GM_Alice").unwrap();
+
+    assert_eq!(mgr.assign(id, "GM_Bob"), Err(TicketError::NotOpen));
+}
+
+#[test]
+fn assign_not_found() {
+    let mut mgr = TicketManager::new();
+    assert_eq!(mgr.assign(999, "GM_Alice"), Err(TicketError::NotFound));
+}
+
+#[test]
+fn unassign_returns_to_queue() {
+    let mut mgr = TicketManager::new();
+    let id = mgr.create(100, TicketCategory::Bug, "Bug", 1000).unwrap();
+    mgr.assign(id, "GM_Alice").unwrap();
+    mgr.unassign(id).unwrap();
+
+    let ticket = mgr.get(id).unwrap();
+    assert_eq!(ticket.state, TicketState::Open);
+    assert!(ticket.assigned_to.is_none());
+
+    // Back in queue
+    assert_eq!(mgr.queue().len(), 1);
+}
+
+#[test]
+fn unassign_not_assigned_fails() {
+    let mut mgr = TicketManager::new();
+    let id = mgr.create(100, TicketCategory::Bug, "Bug", 1000).unwrap();
+    assert_eq!(mgr.unassign(id), Err(TicketError::NotAssigned));
+}
+
+#[test]
+fn claim_next_assigns_highest_priority() {
+    let mut mgr = TicketManager::new();
+    mgr.create(100, TicketCategory::Bug, "Bug", 1000).unwrap();
+    let stuck_id = mgr.create(200, TicketCategory::Stuck, "Stuck", 1001).unwrap();
+
+    let claimed = mgr.claim_next("GM_Alice").unwrap();
+    assert_eq!(claimed, stuck_id); // High priority
+    assert_eq!(mgr.get(stuck_id).unwrap().assigned_to.as_deref(), Some("GM_Alice"));
+}
+
+#[test]
+fn claim_next_empty_queue_fails() {
+    let mut mgr = TicketManager::new();
+    assert_eq!(mgr.claim_next("GM_Alice"), Err(TicketError::NotFound));
+}
+
+#[test]
+fn assigned_to_lists_gm_tickets() {
+    let mut mgr = TicketManager::new();
+    let id1 = mgr.create(100, TicketCategory::Bug, "Bug 1", 1000).unwrap();
+    let id2 = mgr.create(200, TicketCategory::Bug, "Bug 2", 1001).unwrap();
+    mgr.create(300, TicketCategory::Bug, "Bug 3", 1002).unwrap();
+
+    mgr.assign(id1, "GM_Alice").unwrap();
+    mgr.assign(id2, "GM_Alice").unwrap();
+
+    let alice_tickets = mgr.assigned_to("GM_Alice");
+    assert_eq!(alice_tickets.len(), 2);
+    assert!(mgr.assigned_to("GM_Bob").is_empty());
+}
