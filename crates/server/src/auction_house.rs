@@ -1994,6 +1994,31 @@ mod tests {
     }
 
     #[test]
+    fn empty_auction_house_search_returns_gracefully() {
+        let state = AuctionHouseState::default();
+
+        // Empty text query on empty house
+        let r = search_auctions(&state.auctions, &text_query(""));
+        assert_eq!(r.total_results, 0);
+        assert!(r.results.is_empty());
+
+        // Filtered query on empty house
+        let mut query = text_query("sword");
+        query.quality = Some(3);
+        query.min_level = Some(10);
+        let r = search_auctions(&state.auctions, &query);
+        assert_eq!(r.total_results, 0);
+        assert!(r.results.is_empty());
+
+        // Pagination on empty house
+        let mut query = text_query("");
+        query.page = 5;
+        let r = search_auctions(&state.auctions, &query);
+        assert_eq!(r.total_results, 0);
+        assert!(r.results.is_empty());
+    }
+
+    #[test]
     fn gold_overflow_saturates_at_max() {
         let db = persistence::temp_database();
         let (seller_id, _) =
