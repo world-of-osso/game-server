@@ -49,9 +49,9 @@ pub enum ResetTimer {
 }
 
 /// Seconds per day.
-const DAY_SECS: u64 = 86_400;
+pub const DAY_SECS: u64 = 86_400;
 /// Seconds per week.
-const WEEK_SECS: u64 = 604_800;
+pub const WEEK_SECS: u64 = 604_800;
 
 impl ResetTimer {
     /// Duration in seconds, or 0 for no lockout.
@@ -119,6 +119,53 @@ pub struct DifficultyConfig {
     pub creature_damage_multiplier: f32,
     /// Loot table suffix/variant ID for this difficulty.
     pub loot_table_variant: u32,
+}
+
+/// Base creature stats before difficulty scaling.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct CreatureBaseStats {
+    pub health: f32,
+    pub damage_min: f32,
+    pub damage_max: f32,
+}
+
+/// Creature stats after difficulty scaling has been applied.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct ScaledCreatureStats {
+    pub health: f32,
+    pub damage_min: f32,
+    pub damage_max: f32,
+    pub loot_table_variant: u32,
+}
+
+/// Apply difficulty multipliers to base creature stats.
+///
+/// Used when spawning creatures inside an instance — the server reads
+/// base stats from the creature template, then scales them by the
+/// instance's difficulty config.
+pub fn scale_creature_stats(base: &CreatureBaseStats, config: &DifficultyConfig) -> ScaledCreatureStats {
+    ScaledCreatureStats {
+        health: base.health * config.creature_health_multiplier,
+        damage_min: base.damage_min * config.creature_damage_multiplier,
+        damage_max: base.damage_max * config.creature_damage_multiplier,
+        loot_table_variant: config.loot_table_variant,
+    }
+}
+
+/// Select the loot table variant for a given difficulty.
+///
+/// Each difficulty has a `loot_table_variant` ID. The server uses this
+/// to pick from difficulty-specific loot tables (e.g. variant 0 = normal
+/// drops, variant 1 = heroic drops with higher ilvl, variant 2 = mythic).
+///
+/// Returns `None` if the difficulty is not supported by the template.
+pub fn loot_variant_for_difficulty(
+    template: &InstanceTemplate,
+    difficulty: Difficulty,
+) -> Option<u32> {
+    template
+        .difficulty_config(difficulty)
+        .map(|c| c.loot_table_variant)
 }
 
 /// Static template for an instanced map.
@@ -547,154 +594,27 @@ impl InstanceManager {
     pub fn iter(&self) -> impl Iterator<Item = (&u32, &Instance)> {
         self.instances.iter()
     }
-}
 
-// --- Instance save / lockout (per-character) ---
-// Ref: AzerothCore `InstanceSaveMgr.cpp`, `InstancePlayerBind`
-
-/// A character's saved binding to a specific instance.
-///
-/// Created when a boss is killed in a lockout-tracked difficulty.
-/// Prevents re-entering a fresh instance until the lockout expires.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct InstanceSave {
-    /// Map ID of the instance.
-    pub map_id: u16,
-    /// Difficulty the lockout applies to.
-    pub difficulty: Difficulty,
-    /// The specific instance ID the character is bound to.
-    pub instance_id: u32,
-    /// Bitmask of completed boss encounters (bit N = encounter N).
-    pub completed_encounters: u32,
-    /// Timestamp when the lockout was first acquired.
-    pub acquired_at: u64,
-    /// Reset timer inherited from the difficulty config.
-    pub reset_timer: ResetTimer,
-}
-
-impl InstanceSave {
-    /// Timestamp when this lockout expires.
-    pub fn expires_at(&self) -> Option<u64> {
-        self.reset_timer.next_reset(self.acquired_at)
-    }
-
-    /// Whether this lockout has expired.
-    pub fn is_expired(&self, now: u64) -> bool {
-        self.expires_at().is_some_and(|t| now >= t)
-    }
-
-    /// Record a boss kill (encounter index 0-31).
-    pub fn complete_encounter(&mut self, encounter_index: u8) {
-        self.completed_encounters |= 1 << encounter_index;
-    }
-
-    /// Whether a specific encounter has been completed.
-    pub fn is_encounter_done(&self, encounter_index: u8) -> bool {
-        self.completed_encounters & (1 << encounter_index) != 0
-    }
-
-    /// Number of completed encounters.
-    pub fn completed_count(&self) -> u32 {
-        self.completed_encounters.count_ones()
-    }
-}
-
-/// Per-character instance lockout tracker.
-///
-/// Each character has their own lockouts independent of group.
-/// A character locked to heroic Shadowfang Keep cannot enter a fresh
-/// heroic Shadowfang Keep until the daily reset, but can enter normal.
-#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
-pub struct CharacterLockouts {
-    saves: Vec<InstanceSave>,
-}
-
-impl CharacterLockouts {
-    /// Bind a character to an instance after a boss kill.
-    ///
-    /// If already bound to the same map+difficulty, updates the encounter mask.
-    /// Otherwise creates a new save.
-    pub fn bind(
-        &mut self,
-        map_id: u16,
-        difficulty: Difficulty,
+    /// Get the difficulty config for a running instance.
+    pub fn difficulty_config<'a>(
+        &self,
         instance_id: u32,
-        encounter_index: u8,
-        reset_timer: ResetTimer,
-        now: u64,
-    ) {
-        if let Some(save) = self.find_mut(map_id, difficulty) {
-            save.complete_encounter(encounter_index);
-            return;
-        }
-        let mut save = InstanceSave {
-            map_id,
-            difficulty,
-            instance_id,
-            completed_encounters: 0,
-            acquired_at: now,
-            reset_timer,
-        };
-        save.complete_encounter(encounter_index);
-        self.saves.push(save);
+        registry: &'a InstanceTemplateRegistry,
+    ) -> Option<&'a DifficultyConfig> {
+        let inst = self.get(instance_id)?;
+        let tmpl = registry.get(inst.map_id)?;
+        tmpl.difficulty_config(inst.difficulty)
     }
 
-    /// Check if a character is locked out of a map at a given difficulty.
-    pub fn is_locked(&self, map_id: u16, difficulty: Difficulty, now: u64) -> bool {
-        self.saves
-            .iter()
-            .any(|s| s.map_id == map_id && s.difficulty == difficulty && !s.is_expired(now))
-    }
-
-    /// Get the active save for a map+difficulty, if any.
-    pub fn find(&self, map_id: u16, difficulty: Difficulty) -> Option<&InstanceSave> {
-        self.saves
-            .iter()
-            .find(|s| s.map_id == map_id && s.difficulty == difficulty)
-    }
-
-    fn find_mut(&mut self, map_id: u16, difficulty: Difficulty) -> Option<&mut InstanceSave> {
-        self.saves
-            .iter_mut()
-            .find(|s| s.map_id == map_id && s.difficulty == difficulty)
-    }
-
-    /// Get the instance ID a character is bound to for a map+difficulty.
-    ///
-    /// Used to rejoin the same instance after disconnect/relog.
-    pub fn bound_instance(&self, map_id: u16, difficulty: Difficulty, now: u64) -> Option<u32> {
-        self.find(map_id, difficulty)
-            .filter(|s| !s.is_expired(now))
-            .map(|s| s.instance_id)
-    }
-
-    /// Remove all expired lockouts.
-    pub fn cleanup(&mut self, now: u64) {
-        self.saves.retain(|s| !s.is_expired(now));
-    }
-
-    /// All active (non-expired) lockouts.
-    pub fn active_lockouts(&self, now: u64) -> Vec<&InstanceSave> {
-        self.saves.iter().filter(|s| !s.is_expired(now)).collect()
-    }
-
-    /// Next reset time across all active lockouts, or `None` if no lockouts.
-    pub fn next_reset(&self, now: u64) -> Option<u64> {
-        self.saves
-            .iter()
-            .filter(|s| !s.is_expired(now))
-            .filter_map(|s| s.expires_at())
-            .min()
-    }
-
-    /// Total number of saves (including expired).
-    pub fn len(&self) -> usize {
-        self.saves.len()
-    }
-
-    /// Whether the character has no saves.
-    pub fn is_empty(&self) -> bool {
-        self.saves.is_empty()
+    /// Scale creature stats for a running instance's difficulty.
+    pub fn scale_creature(
+        &self,
+        instance_id: u32,
+        registry: &InstanceTemplateRegistry,
+        base: &CreatureBaseStats,
+    ) -> Option<ScaledCreatureStats> {
+        let config = self.difficulty_config(instance_id, registry)?;
+        Some(scale_creature_stats(base, config))
     }
 }
 
