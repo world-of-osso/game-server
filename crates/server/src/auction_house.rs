@@ -883,6 +883,50 @@ mod tests {
     }
 
     #[test]
+    fn bid_recorded_and_underbid_rejected() {
+        let db = persistence::temp_database();
+        let (seller_id, _) =
+            persistence::create_character(&db, 1, "Seller", 1, 1).expect("seller");
+        let (bidder_id, _) =
+            persistence::create_character(&db, 2, "Bidder", 1, 1).expect("bidder");
+        let source_item = persistence::load_inventory(&db, seller_id).items[0].clone();
+        let mut state = AuctionHouseState::default();
+        create_auction(
+            &db,
+            &mut state,
+            seller_id,
+            &CreateAuction {
+                item_guid: source_item.item_guid,
+                stack_count: 2,
+                min_bid: 100,
+                buyout_price: Some(500),
+                duration: AuctionDuration::Medium,
+            },
+        );
+        let auction_id = *state.auctions.keys().next().expect("auction id");
+
+        // First bid at min_bid succeeds
+        let first = place_bid(&db, &mut state, bidder_id, auction_id, 100);
+        assert!(first.success);
+        let auction = state.auctions.get(&auction_id).expect("auction");
+        assert_eq!(auction.current_bid, Some(100));
+        assert_eq!(auction.current_bidder_character_id, Some(bidder_id));
+
+        // Bid below min_next_bid (105 = 100 + 5%) is rejected
+        let low_bid = place_bid(&db, &mut state, bidder_id, auction_id, 104);
+        assert!(!low_bid.success);
+        // Current bid unchanged
+        let auction = state.auctions.get(&auction_id).expect("auction");
+        assert_eq!(auction.current_bid, Some(100));
+
+        // Bid at exactly min_next_bid succeeds
+        let raise = place_bid(&db, &mut state, bidder_id, auction_id, 105);
+        assert!(raise.success);
+        let auction = state.auctions.get(&auction_id).expect("auction");
+        assert_eq!(auction.current_bid, Some(105));
+    }
+
+    #[test]
     fn buyout_and_claim_mail_delivers_item_and_gold() {
         let db = persistence::temp_database();
         let (seller_id, _) = persistence::create_character(&db, 1, "Seller", 1, 1).expect("seller");
