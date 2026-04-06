@@ -70,6 +70,19 @@ pub struct GameObjectTemplate {
     pub flags: GameObjectFlags,
 }
 
+/// Lifecycle state of a game object.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum GameObjectState {
+    /// Available for interaction.
+    Ready,
+    /// Currently being used by a player.
+    InUse,
+    /// Consumed/looted/gathered — waiting for respawn or removal.
+    Depleted,
+    /// Despawned, timer running until it reappears.
+    Respawning,
+}
+
 /// ECS component for a spawned game object in the world.
 #[derive(Component, Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct GameObject {
@@ -85,6 +98,15 @@ pub struct GameObject {
     pub faction: u32,
     /// Current flags.
     pub flags: GameObjectFlags,
+    /// Lifecycle state.
+    pub state: GameObjectState,
+}
+
+/// Why a state transition is invalid.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum StateError {
+    /// Transition not allowed from the current state.
+    InvalidTransition { from: GameObjectState, to: GameObjectState },
 }
 
 impl GameObject {
@@ -97,12 +119,14 @@ impl GameObject {
             rotation,
             faction: template.faction,
             flags: template.flags,
+            state: GameObjectState::Ready,
         }
     }
 
     /// Whether the object can be interacted with.
     pub fn is_interactable(&self) -> bool {
         self.flags.contains(GameObjectFlags::INTERACTABLE)
+            && self.state == GameObjectState::Ready
     }
 
     /// Whether the object is locked (requires a key).
@@ -112,7 +136,66 @@ impl GameObject {
 
     /// Whether the object is currently in use by a player.
     pub fn is_in_use(&self) -> bool {
-        self.flags.contains(GameObjectFlags::IN_USE)
+        self.state == GameObjectState::InUse
+    }
+
+    // --- State transitions ---
+
+    /// Ready → InUse: a player starts interacting.
+    pub fn begin_use(&mut self) -> Result<(), StateError> {
+        self.transition(GameObjectState::InUse)
+    }
+
+    /// InUse → Depleted: interaction complete (looted, gathered).
+    pub fn deplete(&mut self) -> Result<(), StateError> {
+        if self.state != GameObjectState::InUse {
+            return Err(StateError::InvalidTransition {
+                from: self.state, to: GameObjectState::Depleted,
+            });
+        }
+        self.state = GameObjectState::Depleted;
+        Ok(())
+    }
+
+    /// Depleted → Respawning: server starts the respawn timer.
+    pub fn begin_respawn(&mut self) -> Result<(), StateError> {
+        if self.state != GameObjectState::Depleted {
+            return Err(StateError::InvalidTransition {
+                from: self.state, to: GameObjectState::Respawning,
+            });
+        }
+        self.state = GameObjectState::Respawning;
+        Ok(())
+    }
+
+    /// Respawning → Ready: respawn timer elapsed, object reappears.
+    pub fn respawn(&mut self) -> Result<(), StateError> {
+        if self.state != GameObjectState::Respawning {
+            return Err(StateError::InvalidTransition {
+                from: self.state, to: GameObjectState::Ready,
+            });
+        }
+        self.state = GameObjectState::Ready;
+        Ok(())
+    }
+
+    /// InUse → Ready: interaction cancelled (e.g. player walked away).
+    pub fn cancel_use(&mut self) -> Result<(), StateError> {
+        if self.state != GameObjectState::InUse {
+            return Err(StateError::InvalidTransition {
+                from: self.state, to: GameObjectState::Ready,
+            });
+        }
+        self.state = GameObjectState::Ready;
+        Ok(())
+    }
+
+    fn transition(&mut self, to: GameObjectState) -> Result<(), StateError> {
+        if self.state != GameObjectState::Ready {
+            return Err(StateError::InvalidTransition { from: self.state, to });
+        }
+        self.state = to;
+        Ok(())
     }
 }
 
@@ -194,21 +277,24 @@ pub enum InteractionResult {
 
 /// Validate and process a player interaction with a game object.
 ///
-/// Checks flags (interactable, locked, in-use) then dispatches to
-/// the type-specific handler. Returns the interaction result for
-/// the server to execute.
+/// Checks state and flags, transitions Ready → InUse, then dispatches
+/// to the type-specific handler.
 pub fn interact(go: &mut GameObject) -> Result<InteractionResult, InteractionError> {
     validate_interaction(go)?;
-    go.flags.insert(GameObjectFlags::IN_USE);
+    go.begin_use().map_err(|_| InteractionError::InUse)?;
     dispatch_interaction(go)
 }
 
 fn validate_interaction(go: &GameObject) -> Result<(), InteractionError> {
-    if !go.is_interactable() {
+    if !go.flags.contains(GameObjectFlags::INTERACTABLE) {
         return Err(InteractionError::NotInteractable);
     }
-    if go.is_in_use() {
-        return Err(InteractionError::InUse);
+    if go.state != GameObjectState::Ready {
+        return match go.state {
+            GameObjectState::InUse => Err(InteractionError::InUse),
+            GameObjectState::Depleted | GameObjectState::Respawning => Err(InteractionError::Depleted),
+            GameObjectState::Ready => unreachable!(),
+        };
     }
     if go.is_locked() {
         return Err(InteractionError::Locked);
@@ -233,9 +319,14 @@ fn dispatch_interaction(go: &GameObject) -> Result<InteractionResult, Interactio
     }
 }
 
-/// Release the object after use (clear IN_USE flag).
-pub fn finish_interaction(go: &mut GameObject) {
-    go.flags.remove(GameObjectFlags::IN_USE);
+/// Complete interaction: InUse → Depleted (for consumable objects like chests/nodes).
+pub fn deplete_object(go: &mut GameObject) -> Result<(), StateError> {
+    go.deplete()
+}
+
+/// Cancel interaction: InUse → Ready (player walked away).
+pub fn cancel_interaction(go: &mut GameObject) -> Result<(), StateError> {
+    go.cancel_use()
 }
 
 // --- Spawn system ---

@@ -269,21 +269,91 @@ fn interact_in_use_fails() {
 }
 
 #[test]
-fn finish_interaction_clears_in_use() {
+fn cancel_interaction_returns_to_ready() {
     let mut go = make_go(&chest_template());
     interact(&mut go).unwrap();
     assert!(go.is_in_use());
-    finish_interaction(&mut go);
+    cancel_interaction(&mut go).unwrap();
     assert!(!go.is_in_use());
+    assert_eq!(go.state, GameObjectState::Ready);
 }
 
 #[test]
-fn can_reuse_after_finish() {
+fn can_reuse_after_cancel() {
     let mut go = make_go(&chest_template());
     interact(&mut go).unwrap();
-    finish_interaction(&mut go);
-    // Can interact again
+    cancel_interaction(&mut go).unwrap();
     assert!(interact(&mut go).is_ok());
+}
+
+// --- State machine ---
+
+#[test]
+fn full_lifecycle_ready_inuse_depleted_respawning_ready() {
+    let mut go = make_go(&chest_template());
+    assert_eq!(go.state, GameObjectState::Ready);
+
+    go.begin_use().unwrap();
+    assert_eq!(go.state, GameObjectState::InUse);
+
+    go.deplete().unwrap();
+    assert_eq!(go.state, GameObjectState::Depleted);
+
+    go.begin_respawn().unwrap();
+    assert_eq!(go.state, GameObjectState::Respawning);
+
+    go.respawn().unwrap();
+    assert_eq!(go.state, GameObjectState::Ready);
+}
+
+#[test]
+fn cannot_use_depleted_object() {
+    let mut go = make_go(&chest_template());
+    go.begin_use().unwrap();
+    go.deplete().unwrap();
+    assert_eq!(interact(&mut go), Err(InteractionError::Depleted));
+}
+
+#[test]
+fn cannot_use_respawning_object() {
+    let mut go = make_go(&chest_template());
+    go.begin_use().unwrap();
+    go.deplete().unwrap();
+    go.begin_respawn().unwrap();
+    assert_eq!(interact(&mut go), Err(InteractionError::Depleted));
+}
+
+#[test]
+fn invalid_transition_deplete_from_ready() {
+    let mut go = make_go(&chest_template());
+    assert!(go.deplete().is_err());
+}
+
+#[test]
+fn invalid_transition_respawn_from_inuse() {
+    let mut go = make_go(&chest_template());
+    go.begin_use().unwrap();
+    assert!(go.respawn().is_err());
+}
+
+#[test]
+fn invalid_transition_begin_respawn_from_ready() {
+    let mut go = make_go(&chest_template());
+    assert!(go.begin_respawn().is_err());
+}
+
+#[test]
+fn cancel_use_from_inuse() {
+    let mut go = make_go(&chest_template());
+    go.begin_use().unwrap();
+    go.cancel_use().unwrap();
+    assert_eq!(go.state, GameObjectState::Ready);
+}
+
+#[test]
+fn cancel_use_from_ready_fails() {
+    let mut go = make_go(&chest_template());
+    assert!(go.cancel_use().is_err());
 }
 
 // --- Spawn system ---
