@@ -888,6 +888,45 @@ impl SpellSchool {
 
 // --- Threat system ---
 
+/// Seconds of no combat activity before leaving combat.
+const COMBAT_IDLE_TIMEOUT: f32 = 6.0;
+
+/// Tracks whether an entity is currently in combat.
+///
+/// Enter combat on damage dealt/taken or threat generated.
+/// Exit combat after 6 seconds of no activity (idle timer expires).
+#[derive(Component, Debug, Clone)]
+pub struct InCombat {
+    /// Time remaining until combat drops (resets on each combat action).
+    pub idle_timer: f32,
+}
+
+impl Default for InCombat {
+    fn default() -> Self {
+        Self {
+            idle_timer: COMBAT_IDLE_TIMEOUT,
+        }
+    }
+}
+
+impl InCombat {
+    /// Reset the idle timer (called on any combat action).
+    pub fn refresh(&mut self) {
+        self.idle_timer = COMBAT_IDLE_TIMEOUT;
+    }
+
+    /// Tick the idle timer. Returns `true` if combat should end (timer expired).
+    pub fn tick(&mut self, dt: f32) -> bool {
+        self.idle_timer -= dt;
+        self.idle_timer <= 0.0
+    }
+
+    /// Whether the entity is still in combat.
+    pub fn active(&self) -> bool {
+        self.idle_timer > 0.0
+    }
+}
+
 /// Per-mob threat table tracking aggro from each entity.
 ///
 /// Damage generates 1:1 threat. Healing generates 0.5 threat per point healed,
@@ -1775,6 +1814,39 @@ mod tests {
         auras.tick_proc_cooldowns(3.0);
         let icd = auras.active[0].proc_def.as_ref().unwrap().icd_remaining;
         assert!((icd - 7.0).abs() < 0.01);
+    }
+
+    // --- In-combat state tests ---
+
+    #[test]
+    fn in_combat_default_is_active() {
+        let combat = InCombat::default();
+        assert!(combat.active());
+        assert!((combat.idle_timer - 6.0).abs() < 0.001);
+    }
+
+    #[test]
+    fn in_combat_expires_after_6s() {
+        let mut combat = InCombat::default();
+        assert!(!combat.tick(5.0)); // 1s left
+        assert!(combat.active());
+        assert!(combat.tick(1.5)); // expired
+        assert!(!combat.active());
+    }
+
+    #[test]
+    fn in_combat_refresh_resets_timer() {
+        let mut combat = InCombat::default();
+        combat.tick(5.0); // 1s left
+        combat.refresh();
+        assert!((combat.idle_timer - 6.0).abs() < 0.001);
+        assert!(!combat.tick(5.0)); // still 1s left after refresh
+    }
+
+    #[test]
+    fn in_combat_tick_returns_true_at_zero() {
+        let mut combat = InCombat::default();
+        assert!(combat.tick(6.0)); // exactly at boundary
     }
 
     // --- Threat table tests ---
