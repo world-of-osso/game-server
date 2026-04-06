@@ -532,3 +532,32 @@ fn direct_move_position_at_completion() {
     assert!((pos.x - 10.0).abs() < 0.01);
     assert!((pos.y - 5.0).abs() < 0.01);
 }
+
+#[test]
+fn charge_follows_straight_line_ignoring_pathing() {
+    // Charge from (0,0,0) to (100,0,50) — a diagonal path that would
+    // normally require pathfinding around obstacles. DirectMoveState
+    // ignores navmesh entirely: every intermediate position must lie
+    // on the exact straight line between start and destination.
+    let start = NavPoint::new(0.0, 0.0, 0.0);
+    let dest = NavPoint::new(100.0, 0.0, 50.0);
+    let mut charge = DirectMoveState::charge(start, dest, 50.0);
+    let total = charge.total_time;
+
+    // Sample 10 intermediate positions
+    for i in 1..=10 {
+        let fraction = i as f32 / 10.0;
+        charge.elapsed = total * fraction;
+        let pos = charge.current_position();
+        let expected_x = 100.0 * fraction;
+        let expected_z = 50.0 * fraction;
+        assert!(
+            (pos.x - expected_x).abs() < 0.01 && (pos.z - expected_z).abs() < 0.01,
+            "at {fraction:.1}: ({}, {}) != ({expected_x}, {expected_z})",
+            pos.x,
+            pos.z,
+        );
+        // Y stays 0 — no vertical detour
+        assert!((pos.y - 0.0).abs() < 0.01);
+    }
+}
