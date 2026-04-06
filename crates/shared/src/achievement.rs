@@ -266,11 +266,28 @@ pub fn try_complete(
         return false;
     }
 
-    character.add_points(achievement);
     if achievement.account_wide {
         account.complete(achievement);
+    } else {
+        character.add_points(achievement);
     }
     true
+}
+
+/// Combined achievement point total for display (character + account).
+///
+/// Character points include per-character achievements only.
+/// Account points include account-wide achievements.
+/// The combined total is what shows on the player's profile.
+pub fn combined_points(character: &CharacterAchievements, account: &AccountAchievements) -> u32 {
+    character.total_points + account.total_points
+}
+
+/// Count of completed achievements across both scopes.
+pub fn completed_count(character: &CharacterAchievements, account: &AccountAchievements) -> usize {
+    let char_count = character.progress.iter().filter(|p| p.completed).count();
+    let acct_count = account.completed_ids.len();
+    char_count + acct_count
 }
 
 #[cfg(test)]
@@ -556,12 +573,65 @@ mod tests {
 
     #[test]
     fn incomplete_does_not_complete() {
-        let a = sample_achievement(); // need level 80
+        let a = sample_achievement();
         let mut char_ach = CharacterAchievements::default();
         let mut acct = AccountAchievements::default();
         let p = char_ach.get_or_create(&a);
-        p.record_level(50, &a); // not enough
+        p.record_level(50, &a);
         assert!(!try_complete(&a, &mut char_ach, &mut acct));
         assert!(!char_ach.is_completed(a.id));
+    }
+
+    // --- Cumulative points tests ---
+
+    #[test]
+    fn combined_points_sums_both_scopes() {
+        let char_only = sample_achievement(); // 10 pts, per-character
+        let acct_wide = account_wide_achievement(); // 10 pts, account-wide
+
+        let mut char_ach = CharacterAchievements::default();
+        let mut acct = AccountAchievements::default();
+
+        // Complete character achievement
+        let p = char_ach.get_or_create(&char_only);
+        p.record_level(80, &char_only);
+        try_complete(&char_only, &mut char_ach, &mut acct);
+
+        // Complete account-wide achievement
+        let p = char_ach.get_or_create(&acct_wide);
+        p.record_level(80, &acct_wide);
+        try_complete(&acct_wide, &mut char_ach, &mut acct);
+
+        assert_eq!(char_ach.total_points, 10); // per-char only
+        assert_eq!(acct.total_points, 10); // account-wide only
+        assert_eq!(combined_points(&char_ach, &acct), 20);
+    }
+
+    #[test]
+    fn completed_count_both_scopes() {
+        let char_only = sample_achievement();
+        let acct_wide = account_wide_achievement();
+
+        let mut char_ach = CharacterAchievements::default();
+        let mut acct = AccountAchievements::default();
+
+        let p = char_ach.get_or_create(&char_only);
+        p.record_level(80, &char_only);
+        try_complete(&char_only, &mut char_ach, &mut acct);
+
+        let p = char_ach.get_or_create(&acct_wide);
+        p.record_level(80, &acct_wide);
+        try_complete(&acct_wide, &mut char_ach, &mut acct);
+
+        assert_eq!(completed_count(&char_ach, &acct), 3);
+        // 2 in character progress (both completed) + 1 in account completed_ids
+    }
+
+    #[test]
+    fn zero_points_when_empty() {
+        let char_ach = CharacterAchievements::default();
+        let acct = AccountAchievements::default();
+        assert_eq!(combined_points(&char_ach, &acct), 0);
+        assert_eq!(completed_count(&char_ach, &acct), 0);
     }
 }
