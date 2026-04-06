@@ -7,11 +7,69 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
+use crate::item_data::BoundState;
+
 /// Maximum distance (in yards) between players to initiate or maintain a trade.
 pub const TRADE_RANGE: f32 = 11.11;
 
 /// Maximum number of item slots per player in a trade window.
 pub const TRADE_SLOT_COUNT: usize = 6;
+
+/// Duration (seconds) after group loot pickup during which a BoP item
+/// can be traded to eligible group members who were present for the kill.
+pub const BOP_TRADE_WINDOW_SECS: u64 = 7200; // 2 hours
+
+/// Tracks the group-loot trade window for a BoP item.
+///
+/// When a BoP item is looted via group loot, the winner can trade it
+/// to other eligible group members within 2 hours.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct BopTradeWindow {
+    /// Timestamp when the item was looted.
+    pub looted_at: u64,
+    /// Entity IDs of group members eligible to receive this item.
+    pub eligible_players: Vec<u64>,
+}
+
+impl BopTradeWindow {
+    /// Whether the trade window has expired.
+    pub fn is_expired(&self, now: u64) -> bool {
+        now.saturating_sub(self.looted_at) >= BOP_TRADE_WINDOW_SECS
+    }
+
+    /// Whether a player is eligible to receive this item.
+    pub fn is_eligible(&self, player: u64, now: u64) -> bool {
+        !self.is_expired(now) && self.eligible_players.contains(&player)
+    }
+
+    /// Seconds remaining in the trade window (0 if expired).
+    pub fn remaining(&self, now: u64) -> u64 {
+        (self.looted_at + BOP_TRADE_WINDOW_SECS).saturating_sub(now)
+    }
+}
+
+/// Check whether an item can be placed in a trade offer.
+///
+/// - Unbound items: always tradeable.
+/// - Bound items: only if a `BopTradeWindow` is active and the trade
+///   target is in the eligible list.
+pub fn validate_trade_binding(
+    bound_state: &BoundState,
+    bop_window: Option<&BopTradeWindow>,
+    trade_target: u64,
+    now: u64,
+) -> Result<(), TradeError> {
+    if bound_state.is_tradeable() {
+        return Ok(());
+    }
+    // Item is bound — check for group loot trade window
+    let window = bop_window.ok_or(TradeError::ItemSoulbound)?;
+    if window.is_eligible(trade_target, now) {
+        Ok(())
+    } else {
+        Err(TradeError::ItemSoulbound)
+    }
+}
 
 /// Why a trade operation failed.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -40,6 +98,8 @@ pub enum TradeError {
     ItemAlreadyOffered,
     /// Player has not confirmed / already unconfirmed.
     NotConfirmed,
+    /// Item is soulbound and cannot be traded.
+    ItemSoulbound,
 }
 
 /// State of a trade between two players.

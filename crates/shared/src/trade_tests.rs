@@ -549,3 +549,101 @@ fn reconfirm_after_modify_then_complete() {
     assert_eq!(completed.initiator_offer.slots[0], Some(sword()));
     assert_eq!(completed.target_offer.gold, 1000);
 }
+
+// --- BoP validation ---
+
+#[test]
+fn unbound_item_always_tradeable() {
+    let result = validate_trade_binding(&BoundState::Unbound, None, 200, 1000);
+    assert!(result.is_ok());
+}
+
+#[test]
+fn bound_item_without_window_rejected() {
+    let bound = BoundState::Bound { character_id: 100 };
+    assert_eq!(
+        validate_trade_binding(&bound, None, 200, 1000),
+        Err(TradeError::ItemSoulbound)
+    );
+}
+
+#[test]
+fn bound_item_with_valid_window_accepted() {
+    let bound = BoundState::Bound { character_id: 100 };
+    let window = BopTradeWindow {
+        looted_at: 1000,
+        eligible_players: vec![200, 201, 202],
+    };
+    let result = validate_trade_binding(&bound, Some(&window), 200, 2000);
+    assert!(result.is_ok());
+}
+
+#[test]
+fn bound_item_ineligible_player_rejected() {
+    let bound = BoundState::Bound { character_id: 100 };
+    let window = BopTradeWindow {
+        looted_at: 1000,
+        eligible_players: vec![200, 201],
+    };
+    // Player 300 was not in the group
+    assert_eq!(
+        validate_trade_binding(&bound, Some(&window), 300, 2000),
+        Err(TradeError::ItemSoulbound)
+    );
+}
+
+#[test]
+fn bound_item_expired_window_rejected() {
+    let bound = BoundState::Bound { character_id: 100 };
+    let window = BopTradeWindow {
+        looted_at: 1000,
+        eligible_players: vec![200],
+    };
+    // 2h + 1s after loot
+    let after_window = 1000 + BOP_TRADE_WINDOW_SECS;
+    assert_eq!(
+        validate_trade_binding(&bound, Some(&window), 200, after_window),
+        Err(TradeError::ItemSoulbound)
+    );
+}
+
+#[test]
+fn bop_window_just_before_expiry() {
+    let window = BopTradeWindow {
+        looted_at: 1000,
+        eligible_players: vec![200],
+    };
+    let just_before = 1000 + BOP_TRADE_WINDOW_SECS - 1;
+    assert!(window.is_eligible(200, just_before));
+    assert!(!window.is_expired(just_before));
+    assert_eq!(window.remaining(just_before), 1);
+}
+
+#[test]
+fn bop_window_remaining_after_expiry() {
+    let window = BopTradeWindow {
+        looted_at: 1000,
+        eligible_players: vec![200],
+    };
+    assert_eq!(window.remaining(1000 + BOP_TRADE_WINDOW_SECS + 100), 0);
+}
+
+#[test]
+fn bop_window_is_expired() {
+    let window = BopTradeWindow {
+        looted_at: 0,
+        eligible_players: vec![200],
+    };
+    assert!(!window.is_expired(BOP_TRADE_WINDOW_SECS - 1));
+    assert!(window.is_expired(BOP_TRADE_WINDOW_SECS));
+}
+
+#[test]
+fn bop_window_multiple_eligible() {
+    let window = BopTradeWindow {
+        looted_at: 0,
+        eligible_players: vec![200, 201, 202, 203, 204],
+    };
+    assert!(window.is_eligible(202, 100));
+    assert!(!window.is_eligible(999, 100));
+}
