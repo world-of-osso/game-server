@@ -1452,6 +1452,78 @@ impl SchoolLockouts {
     }
 }
 
+// --- Spell projectiles ---
+
+/// Default projectile speed in yards per second (matches WoW's common spell speed).
+const DEFAULT_PROJECTILE_SPEED: f32 = 24.0;
+
+/// An in-flight spell projectile traveling toward a target.
+///
+/// Created when a spell with travel time finishes casting. The projectile
+/// travels at a fixed speed; effects apply on impact (remaining <= 0).
+///
+/// Ref: AzerothCore `Spell::m_spellSpeed`, projectile travel in `Spell::Update()`.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct SpellProjectile {
+    /// The spell that was cast.
+    pub spell_id: u32,
+    /// Caster entity bits (for effect attribution).
+    pub caster: u64,
+    /// Target entity bits.
+    pub target: u64,
+    /// Time remaining until impact (seconds).
+    pub remaining: f32,
+}
+
+impl SpellProjectile {
+    /// Create a projectile from distance and speed.
+    ///
+    /// `distance` is caster-to-target in yards. `speed` is yards/sec
+    /// (0.0 uses the default 24 y/s).
+    pub fn new(spell_id: u32, caster: u64, target: u64, distance: f32, speed: f32) -> Self {
+        let effective_speed = if speed > 0.0 { speed } else { DEFAULT_PROJECTILE_SPEED };
+        Self {
+            spell_id,
+            caster,
+            target,
+            remaining: distance / effective_speed,
+        }
+    }
+
+    /// Tick the projectile by `dt` seconds. Returns `true` if it has impacted.
+    pub fn tick(&mut self, dt: f32) -> bool {
+        self.remaining -= dt;
+        self.remaining <= 0.0
+    }
+}
+
+/// Collection of in-flight projectiles on the server.
+///
+/// Each frame, tick all projectiles and collect impacts for effect application.
+#[derive(Component, Debug, Clone, Default)]
+pub struct SpellProjectiles {
+    pub active: Vec<SpellProjectile>,
+}
+
+impl SpellProjectiles {
+    /// Add a new in-flight projectile.
+    pub fn launch(&mut self, projectile: SpellProjectile) {
+        self.active.push(projectile);
+    }
+
+    /// Tick all projectiles, returning those that impacted this frame.
+    /// Impacted projectiles are removed from the active list.
+    pub fn tick_and_collect_impacts(&mut self, dt: f32) -> Vec<SpellProjectile> {
+        for proj in &mut self.active {
+            proj.remaining -= dt;
+        }
+        let (impacted, still_flying): (Vec<_>, Vec<_>) =
+            self.active.drain(..).partition(|p| p.remaining <= 0.0);
+        self.active = still_flying;
+        impacted
+    }
+}
+
 // --- Talent system ---
 
 /// A talent definition. Talents are passive bonuses that apply aura effects
@@ -2674,6 +2746,57 @@ mod tests {
         lockouts.tick(4.0);
         assert!(!lockouts.is_locked(SpellSchool::Fire)); // expired
         assert!(lockouts.is_locked(SpellSchool::Frost)); // 1s left
+    }
+
+    // --- Spell projectile tests ---
+
+    #[test]
+    fn projectile_travel_time_from_distance() {
+        let proj = SpellProjectile::new(133, 1, 2, 48.0, 24.0);
+        assert!((proj.remaining - 2.0).abs() < 0.001); // 48y / 24y/s = 2s
+    }
+
+    #[test]
+    fn projectile_default_speed() {
+        let proj = SpellProjectile::new(133, 1, 2, 24.0, 0.0);
+        assert!((proj.remaining - 1.0).abs() < 0.001); // 24y / 24y/s default
+    }
+
+    #[test]
+    fn projectile_tick_impacts() {
+        let mut proj = SpellProjectile::new(133, 1, 2, 24.0, 24.0);
+        assert!(!proj.tick(0.5));
+        assert!(proj.tick(0.6)); // 1.1s total > 1.0s travel
+    }
+
+    #[test]
+    fn projectiles_collect_impacts() {
+        let mut projs = SpellProjectiles::default();
+        projs.launch(SpellProjectile::new(133, 1, 2, 24.0, 24.0)); // 1s travel
+        projs.launch(SpellProjectile::new(116, 1, 3, 72.0, 24.0)); // 3s travel
+
+        let impacts = projs.tick_and_collect_impacts(1.5);
+        assert_eq!(impacts.len(), 1);
+        assert_eq!(impacts[0].spell_id, 133);
+        assert_eq!(projs.active.len(), 1); // frostbolt still flying
+    }
+
+    #[test]
+    fn projectiles_all_impact() {
+        let mut projs = SpellProjectiles::default();
+        projs.launch(SpellProjectile::new(100, 1, 2, 12.0, 24.0)); // 0.5s
+        projs.launch(SpellProjectile::new(200, 1, 3, 24.0, 24.0)); // 1.0s
+
+        let impacts = projs.tick_and_collect_impacts(2.0);
+        assert_eq!(impacts.len(), 2);
+        assert!(projs.active.is_empty());
+    }
+
+    #[test]
+    fn projectiles_empty_no_impacts() {
+        let mut projs = SpellProjectiles::default();
+        let impacts = projs.tick_and_collect_impacts(1.0);
+        assert!(impacts.is_empty());
     }
 
     // --- Mastery tests ---
