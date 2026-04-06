@@ -77,6 +77,48 @@ impl ItemQuality {
             _ => None,
         }
     }
+
+    /// Stat budget multiplier relative to item level.
+    ///
+    /// Higher quality items get more stats per ilvl. These approximate
+    /// WoW's per-quality scaling from AzerothCore `RandPropPoints.dbc`.
+    pub fn stat_budget_multiplier(self) -> f32 {
+        match self {
+            Self::Poor => 0.5,
+            Self::Common => 1.0,
+            Self::Uncommon => 1.0,
+            Self::Rare => 1.2,
+            Self::Epic => 1.5,
+            Self::Legendary => 1.8,
+        }
+    }
+
+    /// Vendor sell price multiplier relative to item level.
+    ///
+    /// Quality increases vendor value. Base price is `ilvl * slot_factor`;
+    /// this multiplier scales it by quality tier.
+    pub fn vendor_price_multiplier(self) -> f32 {
+        match self {
+            Self::Poor => 0.1,
+            Self::Common => 0.5,
+            Self::Uncommon => 1.0,
+            Self::Rare => 2.5,
+            Self::Epic => 5.0,
+            Self::Legendary => 10.0,
+        }
+    }
+
+    /// Display name color (WoW convention).
+    pub fn color_name(self) -> &'static str {
+        match self {
+            Self::Poor => "gray",
+            Self::Common => "white",
+            Self::Uncommon => "green",
+            Self::Rare => "blue",
+            Self::Epic => "purple",
+            Self::Legendary => "orange",
+        }
+    }
 }
 
 /// Item class (broad category).
@@ -269,6 +311,21 @@ impl WeaponDamageData {
             0.0
         }
     }
+}
+
+/// Estimate total stat budget points for an item.
+///
+/// `ilvl * quality_multiplier` gives the total stat points available
+/// to distribute across primary and secondary stats.
+pub fn stat_budget(ilvl: u16, quality: ItemQuality) -> f32 {
+    ilvl as f32 * quality.stat_budget_multiplier()
+}
+
+/// Estimate vendor sell price in copper for an item.
+///
+/// `ilvl * quality_multiplier * 100` (base rate 100 copper per ilvl at Uncommon).
+pub fn estimated_vendor_price(ilvl: u16, quality: ItemQuality) -> u32 {
+    (ilvl as f32 * quality.vendor_price_multiplier() * 100.0) as u32
 }
 
 // --- Durability ---
@@ -748,6 +805,52 @@ mod tests {
         bag.slots[0] = InvSlot { item_id: 1, count: 1 };
         bag.slots[3] = InvSlot { item_id: 2, count: 5 };
         assert_eq!(bag.used_slots(), 2);
+    }
+
+    // --- Quality tier tests ---
+
+    #[test]
+    fn quality_stat_budget_scales_with_tier() {
+        let uncommon = stat_budget(200, ItemQuality::Uncommon);
+        let rare = stat_budget(200, ItemQuality::Rare);
+        let epic = stat_budget(200, ItemQuality::Epic);
+        assert!(rare > uncommon);
+        assert!(epic > rare);
+        assert!((uncommon - 200.0).abs() < 0.01); // 1.0x
+        assert!((rare - 240.0).abs() < 0.01);     // 1.2x
+        assert!((epic - 300.0).abs() < 0.01);     // 1.5x
+    }
+
+    #[test]
+    fn quality_vendor_price_scales() {
+        let common = estimated_vendor_price(100, ItemQuality::Common);
+        let rare = estimated_vendor_price(100, ItemQuality::Rare);
+        let epic = estimated_vendor_price(100, ItemQuality::Epic);
+        assert!(rare > common);
+        assert!(epic > rare);
+        assert_eq!(common, 5000);   // 100 * 0.5 * 100
+        assert_eq!(rare, 25000);    // 100 * 2.5 * 100
+        assert_eq!(epic, 50000);    // 100 * 5.0 * 100
+    }
+
+    #[test]
+    fn quality_poor_has_lowest_budget() {
+        let poor = stat_budget(200, ItemQuality::Poor);
+        assert!((poor - 100.0).abs() < 0.01); // 0.5x
+    }
+
+    #[test]
+    fn quality_legendary_highest_budget() {
+        let legendary = stat_budget(200, ItemQuality::Legendary);
+        assert!((legendary - 360.0).abs() < 0.01); // 1.8x
+    }
+
+    #[test]
+    fn quality_color_names() {
+        assert_eq!(ItemQuality::Poor.color_name(), "gray");
+        assert_eq!(ItemQuality::Rare.color_name(), "blue");
+        assert_eq!(ItemQuality::Epic.color_name(), "purple");
+        assert_eq!(ItemQuality::Legendary.color_name(), "orange");
     }
 
     // --- Stacking tests ---
