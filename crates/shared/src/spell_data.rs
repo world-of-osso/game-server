@@ -138,6 +138,8 @@ pub enum CastFailReason {
     OnGlobalCooldown,
     /// Caster is dead.
     CasterDead,
+    /// Caster is moving and the spell requires standing still.
+    CantCastWhileMoving,
 }
 
 /// Context needed to validate a cast attempt.
@@ -157,6 +159,8 @@ pub struct CastContext {
     pub cooldown_remaining: f32,
     /// Remaining GCD in seconds (0.0 = ready).
     pub gcd_remaining: f32,
+    /// Whether the caster is currently moving.
+    pub caster_moving: bool,
 }
 
 /// Effective melee range used when spell range is 0.
@@ -168,11 +172,12 @@ const MELEE_RANGE: f32 = 5.0;
 /// Checks in order (matching WoW priority):
 /// 1. Caster alive
 /// 2. GCD ready
-/// 3. Target exists (for non-self spells)
-/// 4. Target validity (hostile/friendly match)
-/// 5. Range
-/// 6. Resource cost
-/// 7. Cooldown
+/// 3. Moving check (non-instant, non-cast-while-moving)
+/// 4. Target exists (for non-self spells)
+/// 5. Target validity (hostile/friendly match)
+/// 6. Range
+/// 7. Resource cost
+/// 8. Cooldown
 ///
 /// Ref: AzerothCore `Spell::CheckCast()`.
 pub fn validate_cast(spell: &SpellData, ctx: &CastContext) -> Result<(), CastFailReason> {
@@ -182,6 +187,10 @@ pub fn validate_cast(spell: &SpellData, ctx: &CastContext) -> Result<(), CastFai
 
     if ctx.gcd_remaining > 0.0 {
         return Err(CastFailReason::OnGlobalCooldown);
+    }
+
+    if ctx.caster_moving && !spell.is_instant() && !spell.cast_while_moving {
+        return Err(CastFailReason::CantCastWhileMoving);
     }
 
     if spell.target != SpellTarget::Self_ {
@@ -680,6 +689,7 @@ mod tests {
             resource_available: Some(5000.0),
             cooldown_remaining: 0.0,
             gcd_remaining: 0.0,
+            caster_moving: false,
         }
     }
 
@@ -825,5 +835,42 @@ mod tests {
         assert!(ms.is_instant());
         let fb = fireball_spell();
         assert!(!fb.is_instant());
+    }
+
+    #[test]
+    fn validate_cast_moving_blocks_non_instant() {
+        let mut ctx = valid_hostile_ctx();
+        ctx.caster_moving = true;
+        // Fireball: cast_time=2.0, cast_while_moving=false → blocked
+        assert_eq!(
+            validate_cast(&fireball_spell(), &ctx),
+            Err(CastFailReason::CantCastWhileMoving)
+        );
+    }
+
+    #[test]
+    fn validate_cast_moving_allows_instant() {
+        let ms = super::super::spell_catalog::mortal_strike(); // instant
+        let mut ctx = valid_hostile_ctx();
+        ctx.caster_moving = true;
+        ctx.distance = 3.0;
+        assert!(validate_cast(&ms, &ctx).is_ok());
+    }
+
+    #[test]
+    fn validate_cast_moving_allows_cast_while_moving_flag() {
+        let mut spell = fireball_spell();
+        spell.cast_while_moving = true; // e.g. Scorch with talent
+        let mut ctx = valid_hostile_ctx();
+        ctx.caster_moving = true;
+        assert!(validate_cast(&spell, &ctx).is_ok());
+    }
+
+    #[test]
+    fn validate_cast_stationary_ignores_flag() {
+        let mut ctx = valid_hostile_ctx();
+        ctx.caster_moving = false;
+        // Fireball with cast_while_moving=false, but caster is stationary → ok
+        assert!(validate_cast(&fireball_spell(), &ctx).is_ok());
     }
 }
