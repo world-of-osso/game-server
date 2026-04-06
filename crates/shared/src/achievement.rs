@@ -182,6 +182,97 @@ impl AchievementProgress {
     }
 }
 
+// --- Achievement tracker ---
+
+/// Per-character achievement tracking.
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+pub struct CharacterAchievements {
+    pub progress: Vec<AchievementProgress>,
+    pub total_points: u32,
+}
+
+/// Account-wide achievement tracking (shared across all characters).
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+pub struct AccountAchievements {
+    pub completed_ids: Vec<u32>,
+    pub total_points: u32,
+}
+
+impl CharacterAchievements {
+    /// Get or create progress for an achievement.
+    pub fn get_or_create(&mut self, achievement: &AchievementData) -> &mut AchievementProgress {
+        let pos = self.progress.iter().position(|p| p.achievement_id == achievement.id);
+        if pos.is_none() {
+            self.progress.push(AchievementProgress::new(achievement));
+        }
+        self.progress
+            .iter_mut()
+            .find(|p| p.achievement_id == achievement.id)
+            .unwrap()
+    }
+
+    /// Whether an achievement is completed.
+    pub fn is_completed(&self, achievement_id: u32) -> bool {
+        self.progress
+            .iter()
+            .any(|p| p.achievement_id == achievement_id && p.completed)
+    }
+
+    /// Add points for a newly completed achievement.
+    /// Called after `update_completion()` returns true.
+    pub fn add_points(&mut self, achievement: &AchievementData) {
+        if !achievement.feat_of_strength {
+            self.total_points += achievement.points as u32;
+        }
+    }
+}
+
+impl AccountAchievements {
+    /// Record an account-wide achievement as completed.
+    pub fn complete(&mut self, achievement: &AchievementData) {
+        if self.completed_ids.contains(&achievement.id) {
+            return;
+        }
+        self.completed_ids.push(achievement.id);
+        if !achievement.feat_of_strength {
+            self.total_points += achievement.points as u32;
+        }
+    }
+
+    /// Whether an achievement is completed account-wide.
+    pub fn is_completed(&self, achievement_id: u32) -> bool {
+        self.completed_ids.contains(&achievement_id)
+    }
+}
+
+/// Determine if an achievement should be checked against character or account scope.
+///
+/// Returns `true` if the achievement was newly completed and should trigger rewards.
+pub fn try_complete(
+    achievement: &AchievementData,
+    character: &mut CharacterAchievements,
+    account: &mut AccountAchievements,
+) -> bool {
+    if achievement.account_wide {
+        if account.is_completed(achievement.id) {
+            return false;
+        }
+    } else if character.is_completed(achievement.id) {
+        return false;
+    }
+
+    let progress = character.get_or_create(achievement);
+    if !progress.update_completion() {
+        return false;
+    }
+
+    character.add_points(achievement);
+    if achievement.account_wide {
+        account.complete(achievement);
+    }
+    true
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -381,6 +472,96 @@ mod tests {
         let mut progress = AchievementProgress::new(&a);
         progress.record_level(80, &a);
         assert!(progress.update_completion());
-        assert!(!progress.update_completion()); // already done
+        assert!(!progress.update_completion());
+    }
+
+    // --- Tracker tests ---
+
+    fn account_wide_achievement() -> AchievementData {
+        AchievementData {
+            id: 2000,
+            name: "Account Level 80".into(),
+            description: "Any character reaches 80.".into(),
+            criteria: vec![AchievementCriteria::ReachLevel { level: 80 }],
+            points: 10,
+            reward: None,
+            account_wide: true,
+            feat_of_strength: false,
+        }
+    }
+
+    #[test]
+    fn character_achievement_tracks_points() {
+        let a = sample_achievement(); // 10 points
+        let mut char_ach = CharacterAchievements::default();
+        let mut acct = AccountAchievements::default();
+
+        let progress = char_ach.get_or_create(&a);
+        progress.record_level(80, &a);
+        assert!(try_complete(&a, &mut char_ach, &mut acct));
+        assert_eq!(char_ach.total_points, 10);
+        assert!(char_ach.is_completed(a.id));
+    }
+
+    #[test]
+    fn account_wide_shared() {
+        let a = account_wide_achievement();
+        let mut char1 = CharacterAchievements::default();
+        let mut acct = AccountAchievements::default();
+
+        let progress = char1.get_or_create(&a);
+        progress.record_level(80, &a);
+        assert!(try_complete(&a, &mut char1, &mut acct));
+        assert!(acct.is_completed(a.id));
+        assert_eq!(acct.total_points, 10);
+
+        // Second character shouldn't re-complete
+        let mut char2 = CharacterAchievements::default();
+        let progress2 = char2.get_or_create(&a);
+        progress2.record_level(80, &a);
+        assert!(!try_complete(&a, &mut char2, &mut acct));
+    }
+
+    #[test]
+    fn per_character_not_shared() {
+        let a = sample_achievement(); // account_wide: false
+        let mut char1 = CharacterAchievements::default();
+        let mut char2 = CharacterAchievements::default();
+        let mut acct = AccountAchievements::default();
+
+        let p1 = char1.get_or_create(&a);
+        p1.record_level(80, &a);
+        try_complete(&a, &mut char1, &mut acct);
+
+        // Second character can still earn it
+        let p2 = char2.get_or_create(&a);
+        p2.record_level(80, &a);
+        assert!(try_complete(&a, &mut char2, &mut acct));
+    }
+
+    #[test]
+    fn feat_of_strength_no_points() {
+        let a = AchievementData {
+            id: 99, name: "Feat".into(), description: "".into(),
+            criteria: vec![AchievementCriteria::ReachLevel { level: 1 }],
+            points: 0, reward: None, account_wide: false, feat_of_strength: true,
+        };
+        let mut char_ach = CharacterAchievements::default();
+        let mut acct = AccountAchievements::default();
+        let p = char_ach.get_or_create(&a);
+        p.record_level(1, &a);
+        try_complete(&a, &mut char_ach, &mut acct);
+        assert_eq!(char_ach.total_points, 0);
+    }
+
+    #[test]
+    fn incomplete_does_not_complete() {
+        let a = sample_achievement(); // need level 80
+        let mut char_ach = CharacterAchievements::default();
+        let mut acct = AccountAchievements::default();
+        let p = char_ach.get_or_create(&a);
+        p.record_level(50, &a); // not enough
+        assert!(!try_complete(&a, &mut char_ach, &mut acct));
+        assert!(!char_ach.is_completed(a.id));
     }
 }
