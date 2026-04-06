@@ -1527,6 +1527,73 @@ impl SchoolLockouts {
     }
 }
 
+// --- Spell cooldowns ---
+
+/// Tracks per-spell cooldown timers on an entity.
+///
+/// When a spell is cast, its cooldown (from `SpellData::cooldown`) is started.
+/// The spell cannot be cast again until the cooldown expires.
+///
+/// Ref: AzerothCore `SpellHistory.cpp`.
+#[derive(Component, Debug, Clone, Default)]
+pub struct SpellCooldowns {
+    entries: Vec<CooldownEntry>,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct CooldownEntry {
+    spell_id: u32,
+    remaining: f32,
+}
+
+impl SpellCooldowns {
+    /// Start a cooldown for a spell. If already on cooldown, resets to the new duration.
+    pub fn start(&mut self, spell_id: u32, duration: f32) {
+        if duration <= 0.0 {
+            return;
+        }
+        if let Some(entry) = self.entries.iter_mut().find(|e| e.spell_id == spell_id) {
+            entry.remaining = duration;
+        } else {
+            self.entries.push(CooldownEntry {
+                spell_id,
+                remaining: duration,
+            });
+        }
+    }
+
+    /// Get remaining cooldown for a spell (0.0 if ready).
+    pub fn remaining(&self, spell_id: u32) -> f32 {
+        self.entries
+            .iter()
+            .find(|e| e.spell_id == spell_id)
+            .map_or(0.0, |e| e.remaining)
+    }
+
+    /// Whether a spell is on cooldown.
+    pub fn is_on_cooldown(&self, spell_id: u32) -> bool {
+        self.remaining(spell_id) > 0.0
+    }
+
+    /// Tick all cooldown timers and remove expired ones.
+    pub fn tick(&mut self, dt: f32) {
+        for entry in &mut self.entries {
+            entry.remaining -= dt;
+        }
+        self.entries.retain(|e| e.remaining > 0.0);
+    }
+
+    /// Reset a specific spell's cooldown (e.g. from a proc or talent).
+    pub fn reset(&mut self, spell_id: u32) {
+        self.entries.retain(|e| e.spell_id != spell_id);
+    }
+
+    /// Clear all cooldowns (e.g. on arena start or GM command).
+    pub fn clear_all(&mut self) {
+        self.entries.clear();
+    }
+}
+
 // --- Spell batching ---
 
 /// A queued spell cast awaiting batch processing.
@@ -2920,6 +2987,78 @@ mod tests {
         lockouts.tick(4.0);
         assert!(!lockouts.is_locked(SpellSchool::Fire)); // expired
         assert!(lockouts.is_locked(SpellSchool::Frost)); // 1s left
+    }
+
+    // --- Spell cooldown tests ---
+
+    #[test]
+    fn cooldown_initially_ready() {
+        let cds = SpellCooldowns::default();
+        assert!(!cds.is_on_cooldown(133));
+        assert_eq!(cds.remaining(133), 0.0);
+    }
+
+    #[test]
+    fn cooldown_start_and_check() {
+        let mut cds = SpellCooldowns::default();
+        cds.start(133, 8.0);
+        assert!(cds.is_on_cooldown(133));
+        assert_eq!(cds.remaining(133), 8.0);
+        assert!(!cds.is_on_cooldown(200)); // other spell unaffected
+    }
+
+    #[test]
+    fn cooldown_ticks_down() {
+        let mut cds = SpellCooldowns::default();
+        cds.start(133, 5.0);
+        cds.tick(3.0);
+        assert!((cds.remaining(133) - 2.0).abs() < 0.001);
+        assert!(cds.is_on_cooldown(133));
+    }
+
+    #[test]
+    fn cooldown_expires() {
+        let mut cds = SpellCooldowns::default();
+        cds.start(133, 5.0);
+        cds.tick(5.5);
+        assert!(!cds.is_on_cooldown(133));
+        assert_eq!(cds.remaining(133), 0.0);
+    }
+
+    #[test]
+    fn cooldown_reset_specific() {
+        let mut cds = SpellCooldowns::default();
+        cds.start(100, 10.0);
+        cds.start(200, 15.0);
+        cds.reset(100);
+        assert!(!cds.is_on_cooldown(100));
+        assert!(cds.is_on_cooldown(200));
+    }
+
+    #[test]
+    fn cooldown_clear_all() {
+        let mut cds = SpellCooldowns::default();
+        cds.start(100, 10.0);
+        cds.start(200, 15.0);
+        cds.clear_all();
+        assert!(!cds.is_on_cooldown(100));
+        assert!(!cds.is_on_cooldown(200));
+    }
+
+    #[test]
+    fn cooldown_start_zero_duration_ignored() {
+        let mut cds = SpellCooldowns::default();
+        cds.start(133, 0.0);
+        assert!(!cds.is_on_cooldown(133));
+    }
+
+    #[test]
+    fn cooldown_restart_resets_timer() {
+        let mut cds = SpellCooldowns::default();
+        cds.start(133, 10.0);
+        cds.tick(5.0); // 5s left
+        cds.start(133, 10.0); // restart
+        assert!((cds.remaining(133) - 10.0).abs() < 0.001);
     }
 
     // --- Spell batching tests ---
