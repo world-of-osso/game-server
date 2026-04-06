@@ -131,6 +131,80 @@ pub enum ItemSubclass {
     None,
 }
 
+/// When an item becomes soulbound to a character.
+///
+/// Ref: AzerothCore `ItemTemplate::Bonding`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum BindingType {
+    /// Never binds — freely tradeable.
+    None,
+    /// Bind on Pickup — soulbound the moment it enters inventory.
+    BindOnPickup,
+    /// Bind on Equip — soulbound when first equipped.
+    BindOnEquip,
+    /// Bind on Use — soulbound when first used (consumables, quest items).
+    BindOnUse,
+}
+
+/// Runtime binding state of an item instance.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum BoundState {
+    /// Item is not yet bound (can be traded/sold on AH).
+    Unbound,
+    /// Item is soulbound to a specific character.
+    Bound { character_id: u64 },
+}
+
+impl BoundState {
+    /// Check if the item is bound to a specific character.
+    pub fn is_bound_to(&self, character_id: u64) -> bool {
+        matches!(self, Self::Bound { character_id: id } if *id == character_id)
+    }
+
+    /// Check if the item is tradeable (not bound).
+    pub fn is_tradeable(&self) -> bool {
+        matches!(self, Self::Unbound)
+    }
+
+    /// Bind the item to a character. Returns the new state.
+    pub fn bind(character_id: u64) -> Self {
+        Self::Bound { character_id }
+    }
+}
+
+/// Determine the binding state after a pickup/equip/use event.
+///
+/// Returns the new `BoundState` given the item's binding type and current state.
+pub fn resolve_binding(
+    binding: BindingType,
+    current: BoundState,
+    event: BindingEvent,
+    character_id: u64,
+) -> BoundState {
+    if !matches!(current, BoundState::Unbound) {
+        return current; // already bound, no change
+    }
+    let should_bind = matches!(
+        (binding, event),
+        (BindingType::BindOnPickup, BindingEvent::Pickup)
+            | (BindingType::BindOnEquip, BindingEvent::Equip)
+            | (BindingType::BindOnUse, BindingEvent::Use)
+    );
+    if should_bind {
+        BoundState::Bound { character_id }
+    } else {
+        current
+    }
+}
+
+/// Events that can trigger binding.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BindingEvent {
+    Pickup,
+    Equip,
+    Use,
+}
+
 /// Static definition of an item.
 ///
 /// Immutable data loaded at startup. Runtime state (durability, enchants,
@@ -167,6 +241,8 @@ pub struct ItemData {
     pub sell_price: u32,
     /// Max stack size (1 for equipment, higher for consumables).
     pub max_stack: u16,
+    /// Binding type (BoP, BoE, BoU, or None).
+    pub binding: BindingType,
 }
 
 /// Stat contributions from an item.
@@ -425,6 +501,7 @@ mod tests {
             buy_price: 0,
             sell_price: 173728,
             max_stack: 1,
+            binding: BindingType::BindOnPickup,
         };
         assert_eq!(item.id, 51231);
         assert_eq!(item.quality, ItemQuality::Epic);
@@ -464,6 +541,7 @@ mod tests {
             buy_price: 0,
             sell_price: 524534,
             max_stack: 1,
+            binding: BindingType::BindOnPickup,
         };
         assert_eq!(item.quality, ItemQuality::Legendary);
         assert!(item.weapon_damage.is_some());
@@ -536,6 +614,7 @@ mod tests {
             buy_price: 10000,
             sell_price: 2500,
             max_stack: 1,
+            binding: BindingType::BindOnPickup,
         };
         let json = serde_json::to_string(&item).unwrap();
         let decoded: ItemData = serde_json::from_str(&json).unwrap();
@@ -708,5 +787,86 @@ mod tests {
         // Items with 0 max durability (consumables) are never "broken"
         let dur = Durability::new(0);
         assert!(!dur.is_broken());
+    }
+
+    // --- Binding tests ---
+
+    #[test]
+    fn bop_binds_on_pickup() {
+        let state = resolve_binding(
+            BindingType::BindOnPickup,
+            BoundState::Unbound,
+            BindingEvent::Pickup,
+            42,
+        );
+        assert_eq!(state, BoundState::Bound { character_id: 42 });
+    }
+
+    #[test]
+    fn boe_does_not_bind_on_pickup() {
+        let state = resolve_binding(
+            BindingType::BindOnEquip,
+            BoundState::Unbound,
+            BindingEvent::Pickup,
+            42,
+        );
+        assert_eq!(state, BoundState::Unbound);
+    }
+
+    #[test]
+    fn boe_binds_on_equip() {
+        let state = resolve_binding(
+            BindingType::BindOnEquip,
+            BoundState::Unbound,
+            BindingEvent::Equip,
+            42,
+        );
+        assert_eq!(state, BoundState::Bound { character_id: 42 });
+    }
+
+    #[test]
+    fn bou_binds_on_use() {
+        let state = resolve_binding(
+            BindingType::BindOnUse,
+            BoundState::Unbound,
+            BindingEvent::Use,
+            42,
+        );
+        assert_eq!(state, BoundState::Bound { character_id: 42 });
+    }
+
+    #[test]
+    fn no_binding_never_binds() {
+        let state = resolve_binding(
+            BindingType::None,
+            BoundState::Unbound,
+            BindingEvent::Equip,
+            42,
+        );
+        assert_eq!(state, BoundState::Unbound);
+    }
+
+    #[test]
+    fn already_bound_stays_bound() {
+        let already = BoundState::Bound { character_id: 10 };
+        let state = resolve_binding(
+            BindingType::BindOnEquip,
+            already,
+            BindingEvent::Equip,
+            42,
+        );
+        assert_eq!(state, BoundState::Bound { character_id: 10 });
+    }
+
+    #[test]
+    fn bound_state_helpers() {
+        let unbound = BoundState::Unbound;
+        assert!(unbound.is_tradeable());
+        assert!(!unbound.is_bound_to(1));
+
+        let bound = BoundState::bind(42);
+        assert!(!bound.is_tradeable());
+        assert!(bound.is_bound_to(42));
+        assert!(!bound.is_bound_to(99));
     }
 }
