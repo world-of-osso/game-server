@@ -20,6 +20,7 @@ pub mod profession;
 pub mod protocol;
 pub mod protocol_snapshots;
 pub mod quest;
+pub mod reputation;
 pub mod spell_catalog;
 pub mod spell_data;
 pub mod trade;
