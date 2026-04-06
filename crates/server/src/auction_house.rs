@@ -827,6 +827,61 @@ mod tests {
         );
     }
 
+    fn text_query(text: &str) -> AuctionSearchQuery {
+        AuctionSearchQuery {
+            text: text.into(),
+            page: 0,
+            page_size: 50,
+            min_level: None,
+            max_level: None,
+            quality: None,
+            usable_only: false,
+            sort_field: AuctionSortField::Name,
+            sort_dir: AuctionSortDir::Asc,
+        }
+    }
+
+    #[test]
+    fn create_auction_appears_in_search_results() {
+        let db = persistence::temp_database();
+        let (seller_id, _) =
+            persistence::create_character(&db, 1, "Seller", 1, 1).expect("character");
+        let source_item = persistence::load_inventory(&db, seller_id).items[0].clone();
+        let mut state = AuctionHouseState::default();
+
+        let response = create_auction(
+            &db,
+            &mut state,
+            seller_id,
+            &CreateAuction {
+                item_guid: source_item.item_guid,
+                stack_count: 3,
+                min_bid: 100,
+                buyout_price: Some(200),
+                duration: AuctionDuration::Medium,
+            },
+        );
+        assert!(response.success);
+
+        let results = search_auctions(&state.auctions, &text_query(""));
+        assert_eq!(results.total_results, 1);
+        assert_eq!(results.results.len(), 1);
+        let listing = &results.results[0];
+        assert_eq!(listing.item.name, source_item.name);
+        assert_eq!(listing.stack_count, 3);
+        assert_eq!(listing.min_bid, 100);
+        assert_eq!(listing.buyout_price, Some(200));
+        assert_eq!(listing.owner_name, "Seller");
+
+        let name_prefix = &source_item.name[..3].to_ascii_lowercase();
+        let name_results = search_auctions(&state.auctions, &text_query(name_prefix));
+        assert_eq!(name_results.total_results, 1);
+
+        let empty_results = search_auctions(&state.auctions, &text_query("zzz_nonexistent_item"));
+        assert_eq!(empty_results.total_results, 0);
+        assert!(empty_results.results.is_empty());
+    }
+
     #[test]
     fn buyout_and_claim_mail_delivers_item_and_gold() {
         let db = persistence::temp_database();
