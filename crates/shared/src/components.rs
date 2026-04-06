@@ -1187,6 +1187,98 @@ pub fn specs_for_class(class: Class) -> Vec<&'static Specialization> {
     SPECIALIZATIONS.iter().filter(|s| s.class == class).collect()
 }
 
+// --- Mastery system ---
+
+/// Per-spec mastery definition: a description plus a coefficient that converts
+/// mastery points (from rating) into an actual effect percentage.
+///
+/// Example: Arms Warrior mastery "Striking" has coefficient 2.0, so 8 mastery
+/// points → 16% bonus damage to Mortal Strike/Colossus Smash.
+///
+/// Ref: SimC `player_t::composite_mastery_value()`.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct MasteryDef {
+    pub spec_id: u32,
+    pub name: &'static str,
+    /// Multiplier applied to mastery points to get the effect percentage.
+    /// e.g. 2.0 means 1 mastery point = 2% bonus.
+    pub coefficient: f32,
+}
+
+/// Per-spec mastery coefficients. Each spec has a unique mastery bonus.
+/// Coefficients are from SimC / WoW game data.
+pub const MASTERY_DEFS: &[MasteryDef] = &[
+    // Warrior
+    MasteryDef { spec_id: 71,   name: "Striking",          coefficient: 2.00 },
+    MasteryDef { spec_id: 72,   name: "Unshackled Fury",   coefficient: 1.40 },
+    MasteryDef { spec_id: 73,   name: "Critical Block",    coefficient: 1.50 },
+    // Paladin
+    MasteryDef { spec_id: 65,   name: "Lightbringer",      coefficient: 1.50 },
+    MasteryDef { spec_id: 66,   name: "Divine Bulwark",    coefficient: 1.00 },
+    MasteryDef { spec_id: 70,   name: "Hand of Light",     coefficient: 1.75 },
+    // Hunter
+    MasteryDef { spec_id: 253,  name: "Master of Beasts",  coefficient: 1.80 },
+    MasteryDef { spec_id: 254,  name: "Sniper Training",   coefficient: 0.63 },
+    MasteryDef { spec_id: 255,  name: "Spirit Bond",       coefficient: 1.00 },
+    // Rogue
+    MasteryDef { spec_id: 259,  name: "Potent Assassin",   coefficient: 1.80 },
+    MasteryDef { spec_id: 260,  name: "Main Gauche",       coefficient: 2.00 },
+    MasteryDef { spec_id: 261,  name: "Executioner",       coefficient: 2.20 },
+    // Priest
+    MasteryDef { spec_id: 256,  name: "Absolution",        coefficient: 1.20 },
+    MasteryDef { spec_id: 257,  name: "Echo of Light",     coefficient: 1.25 },
+    MasteryDef { spec_id: 258,  name: "Shadow Weaving",    coefficient: 2.00 },
+    // Death Knight
+    MasteryDef { spec_id: 250,  name: "Blood Shield",      coefficient: 2.00 },
+    MasteryDef { spec_id: 251,  name: "Frozen Heart",      coefficient: 2.00 },
+    MasteryDef { spec_id: 252,  name: "Dreadblade",        coefficient: 1.80 },
+    // Shaman
+    MasteryDef { spec_id: 262,  name: "Elemental Overload", coefficient: 1.88 },
+    MasteryDef { spec_id: 263,  name: "Enhanced Elements",  coefficient: 2.00 },
+    MasteryDef { spec_id: 264,  name: "Deep Healing",       coefficient: 3.00 },
+    // Mage
+    MasteryDef { spec_id: 62,   name: "Savant",            coefficient: 1.20 },
+    MasteryDef { spec_id: 63,   name: "Ignite",            coefficient: 0.75 },
+    MasteryDef { spec_id: 64,   name: "Icicles",           coefficient: 2.25 },
+    // Warlock
+    MasteryDef { spec_id: 265,  name: "Potent Afflictions", coefficient: 2.50 },
+    MasteryDef { spec_id: 266,  name: "Master Demonologist", coefficient: 1.80 },
+    MasteryDef { spec_id: 267,  name: "Chaotic Energies",  coefficient: 1.50 },
+    // Monk
+    MasteryDef { spec_id: 268,  name: "Elusive Brawler",   coefficient: 1.00 },
+    MasteryDef { spec_id: 270,  name: "Gust of Mists",     coefficient: 1.40 },
+    MasteryDef { spec_id: 269,  name: "Combo Strikes",     coefficient: 1.25 },
+    // Druid
+    MasteryDef { spec_id: 102,  name: "Astral Invocation", coefficient: 1.10 },
+    MasteryDef { spec_id: 103,  name: "Razor Claws",       coefficient: 2.00 },
+    MasteryDef { spec_id: 104,  name: "Nature's Guardian",  coefficient: 1.00 },
+    MasteryDef { spec_id: 105,  name: "Harmony",            coefficient: 1.25 },
+    // Demon Hunter
+    MasteryDef { spec_id: 577,  name: "Demonic Presence",  coefficient: 1.80 },
+    MasteryDef { spec_id: 581,  name: "Fel Blood",         coefficient: 2.00 },
+    // Evoker
+    MasteryDef { spec_id: 1467, name: "Giantkiller",       coefficient: 1.80 },
+    MasteryDef { spec_id: 1468, name: "Life-Binder's Bond", coefficient: 1.20 },
+    MasteryDef { spec_id: 1473, name: "Timewalker",         coefficient: 1.00 },
+];
+
+/// Look up the mastery definition for a spec.
+pub fn mastery_for_spec(spec_id: u32) -> Option<&'static MasteryDef> {
+    MASTERY_DEFS.iter().find(|m| m.spec_id == spec_id)
+}
+
+/// Calculate the effective mastery bonus percentage for a spec.
+///
+/// `mastery_points` comes from `rating_to_percent(rating, level, Mastery)` +
+/// `apply_secondary_dr()`. The coefficient converts points to an effect %.
+///
+/// Example: 10 mastery points × 2.0 coefficient = 20% bonus.
+pub fn effective_mastery(spec_id: u32, mastery_points: f32) -> f32 {
+    mastery_for_spec(spec_id)
+        .map(|def| mastery_points * def.coefficient)
+        .unwrap_or(0.0)
+}
+
 // --- Talent system ---
 
 /// A talent definition. Talents are passive bonuses that apply aura effects
@@ -2296,6 +2388,68 @@ mod tests {
         let healers: Vec<_> = SPECIALIZATIONS.iter().filter(|s| s.role == Role::Healer).collect();
         // Holy Paladin, Disc, Holy Priest, Resto Shaman, Mistweaver, Resto Druid, Preservation
         assert_eq!(healers.len(), 7);
+    }
+
+    // --- Mastery tests ---
+
+    #[test]
+    fn mastery_for_known_spec() {
+        let m = mastery_for_spec(71).unwrap(); // Arms Warrior
+        assert_eq!(m.name, "Striking");
+        assert_eq!(m.coefficient, 2.0);
+    }
+
+    #[test]
+    fn mastery_for_unknown_spec() {
+        assert!(mastery_for_spec(9999).is_none());
+    }
+
+    #[test]
+    fn effective_mastery_arms_warrior() {
+        // 10 mastery points × 2.0 = 20% bonus
+        let bonus = effective_mastery(71, 10.0);
+        assert!((bonus - 20.0).abs() < 0.001);
+    }
+
+    #[test]
+    fn effective_mastery_frost_mage() {
+        // 8 mastery points × 2.25 = 18% icicle damage
+        let bonus = effective_mastery(64, 8.0);
+        assert!((bonus - 18.0).abs() < 0.001);
+    }
+
+    #[test]
+    fn effective_mastery_unknown_spec_returns_zero() {
+        assert_eq!(effective_mastery(9999, 10.0), 0.0);
+    }
+
+    #[test]
+    fn every_spec_has_mastery() {
+        for spec in SPECIALIZATIONS {
+            assert!(
+                mastery_for_spec(spec.id).is_some(),
+                "spec {} ({}) has no mastery",
+                spec.id,
+                spec.name
+            );
+        }
+    }
+
+    #[test]
+    fn mastery_defs_count_matches_specs() {
+        assert_eq!(MASTERY_DEFS.len(), SPECIALIZATIONS.len());
+    }
+
+    #[test]
+    fn mastery_integrates_with_rating_system() {
+        use crate::formulas::{apply_secondary_dr, rating_to_percent, RatingType};
+        // 500 mastery rating at level 80 → some mastery points → coefficient
+        let raw_points =
+            rating_to_percent(500.0, 80, RatingType::Mastery).unwrap();
+        let after_dr = apply_secondary_dr(raw_points, RatingType::Mastery);
+        let bonus = effective_mastery(71, after_dr); // Arms, coeff 2.0
+        assert!(bonus > 0.0, "should produce positive mastery bonus");
+        assert!(bonus > after_dr, "coeff 2.0 should amplify points");
     }
 
     // --- Talent system tests ---
