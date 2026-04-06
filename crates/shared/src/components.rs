@@ -679,6 +679,38 @@ impl Auras {
         damage
     }
 
+    /// Multiplicative damage-done modifier from all active `ModDamageDone` auras.
+    ///
+    /// Each aura contributes `(1 + percent)` as a factor. Multiple auras stack
+    /// multiplicatively: two +10% buffs → 1.1 × 1.1 = 1.21×.
+    ///
+    /// Returns a multiplier to apply to outgoing damage (1.0 = no change).
+    pub fn damage_done_multiplier(&self) -> f32 {
+        self.active
+            .iter()
+            .flat_map(|a| a.effects.iter().flatten())
+            .fold(1.0, |acc, effect| match effect {
+                AuraEffect::ModDamageDone { percent } => acc * (1.0 + percent),
+                _ => acc,
+            })
+    }
+
+    /// Multiplicative damage-taken modifier from all active `ModDamageTaken` auras.
+    ///
+    /// Each aura contributes `(1 + percent)` as a factor. A +20% damage taken
+    /// debuff uses `percent = 0.20`, a -10% reduction uses `percent = -0.10`.
+    ///
+    /// Returns a multiplier to apply to incoming damage (1.0 = no change).
+    pub fn damage_taken_multiplier(&self) -> f32 {
+        self.active
+            .iter()
+            .flat_map(|a| a.effects.iter().flatten())
+            .fold(1.0, |acc, effect| match effect {
+                AuraEffect::ModDamageTaken { percent } => acc * (1.0 + percent),
+                _ => acc,
+            })
+    }
+
     /// Remove all auras (on death). Clears the entire active list.
     pub fn clear_all(&mut self) {
         self.active.clear();
@@ -1271,6 +1303,99 @@ mod tests {
         // Shield depleted, but buff preserved
         assert_eq!(auras.active.len(), 1);
         assert_eq!(auras.active[0].spell_id, 300);
+    }
+
+    // --- Damage modifier tests ---
+
+    fn make_damage_done_buff(spell_id: u32, caster: u64, percent: f32) -> Aura {
+        Aura {
+            spell_id,
+            caster,
+            duration: 30.0,
+            remaining: 30.0,
+            effects: [
+                Some(AuraEffect::ModDamageDone { percent }),
+                None,
+                None,
+            ],
+            ..Default::default()
+        }
+    }
+
+    fn make_damage_taken_debuff(spell_id: u32, caster: u64, percent: f32) -> Aura {
+        Aura {
+            spell_id,
+            caster,
+            duration: 30.0,
+            remaining: 30.0,
+            effects: [
+                Some(AuraEffect::ModDamageTaken { percent }),
+                None,
+                None,
+            ],
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn damage_done_no_auras() {
+        let auras = Auras::default();
+        assert_eq!(auras.damage_done_multiplier(), 1.0);
+    }
+
+    #[test]
+    fn damage_done_single_buff() {
+        let mut auras = Auras::default();
+        auras.active.push(make_damage_done_buff(100, 1, 0.10));
+        assert!((auras.damage_done_multiplier() - 1.10).abs() < 0.001);
+    }
+
+    #[test]
+    fn damage_done_multiplicative_stacking() {
+        let mut auras = Auras::default();
+        auras.active.push(make_damage_done_buff(100, 1, 0.10)); // +10%
+        auras.active.push(make_damage_done_buff(200, 2, 0.20)); // +20%
+        // 1.1 * 1.2 = 1.32, NOT 1.3 (additive)
+        assert!((auras.damage_done_multiplier() - 1.32).abs() < 0.001);
+    }
+
+    #[test]
+    fn damage_done_negative_reduces() {
+        let mut auras = Auras::default();
+        auras.active.push(make_damage_done_buff(100, 1, -0.20)); // -20%
+        assert!((auras.damage_done_multiplier() - 0.80).abs() < 0.001);
+    }
+
+    #[test]
+    fn damage_taken_single_debuff() {
+        let mut auras = Auras::default();
+        auras.active.push(make_damage_taken_debuff(100, 1, 0.20)); // +20% taken
+        assert!((auras.damage_taken_multiplier() - 1.20).abs() < 0.001);
+    }
+
+    #[test]
+    fn damage_taken_reduction() {
+        let mut auras = Auras::default();
+        auras.active.push(make_damage_taken_debuff(100, 1, -0.10)); // -10%
+        assert!((auras.damage_taken_multiplier() - 0.90).abs() < 0.001);
+    }
+
+    #[test]
+    fn damage_taken_multiplicative_stacking() {
+        let mut auras = Auras::default();
+        auras.active.push(make_damage_taken_debuff(100, 1, -0.10)); // -10%
+        auras.active.push(make_damage_taken_debuff(200, 2, -0.20)); // -20%
+        // 0.9 * 0.8 = 0.72
+        assert!((auras.damage_taken_multiplier() - 0.72).abs() < 0.001);
+    }
+
+    #[test]
+    fn damage_modifiers_ignore_other_effects() {
+        let mut auras = Auras::default();
+        auras.active.push(make_dot(100, 1)); // periodic, not a modifier
+        auras.active.push(make_shield(200, 1, SpellSchool::Fire, 500.0));
+        assert_eq!(auras.damage_done_multiplier(), 1.0);
+        assert_eq!(auras.damage_taken_multiplier(), 1.0);
     }
 
     // --- Periodic tick tests ---
