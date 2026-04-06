@@ -1425,6 +1425,47 @@ mod tests {
     }
 
     #[test]
+    fn duration_tiers_set_correct_expiry() {
+        // Unit test for duration_secs
+        assert_eq!(duration_secs(AuctionDuration::Short), 30 * 60);
+        assert_eq!(duration_secs(AuctionDuration::Medium), 2 * 60 * 60);
+        assert_eq!(duration_secs(AuctionDuration::Long), 8 * 60 * 60);
+
+        // Integration: create_auction sets expires_at correctly
+        let db = persistence::temp_database();
+        let (seller_id, _) =
+            persistence::create_character(&db, 1, "Seller", 1, 1).expect("seller");
+        let now = unix_now();
+
+        for (duration, expected_secs) in [
+            (AuctionDuration::Short, 30 * 60),
+            (AuctionDuration::Medium, 2 * 60 * 60),
+            (AuctionDuration::Long, 8 * 60 * 60),
+        ] {
+            let source_item = persistence::load_inventory(&db, seller_id).items[0].clone();
+            let mut state = AuctionHouseState::default();
+            create_auction(
+                &db,
+                &mut state,
+                seller_id,
+                &CreateAuction {
+                    item_guid: source_item.item_guid,
+                    stack_count: 1,
+                    min_bid: 10,
+                    buyout_price: Some(100),
+                    duration,
+                },
+            );
+            let auction = state.auctions.values().next().expect("auction");
+            let diff = auction.expires_at_unix_secs.abs_diff(now + expected_secs);
+            assert!(
+                diff <= 2,
+                "{duration:?}: expiry off by {diff}s (expected ~{expected_secs}s from now)",
+            );
+        }
+    }
+
+    #[test]
     fn bid_at_buyout_price_triggers_immediate_sale() {
         let db = persistence::temp_database();
         let (seller_id, _) =
