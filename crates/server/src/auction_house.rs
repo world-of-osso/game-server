@@ -2019,6 +2019,48 @@ mod tests {
     }
 
     #[test]
+    fn seller_offline_auction_still_completes() {
+        // Seller creates auction, then "goes offline" (no further interaction).
+        // Buyer buys out — seller receives gold via mail, claimable on next login.
+        let db = persistence::temp_database();
+        let (seller_id, _) =
+            persistence::create_character(&db, 1, "Seller", 1, 1).expect("seller");
+        let (buyer_id, _) =
+            persistence::create_character(&db, 2, "Buyer", 1, 1).expect("buyer");
+        let source_item = persistence::load_inventory(&db, seller_id).items[0].clone();
+        let mut state = AuctionHouseState::default();
+
+        create_auction(
+            &db,
+            &mut state,
+            seller_id,
+            &CreateAuction {
+                item_guid: source_item.item_guid,
+                stack_count: 1,
+                min_bid: 100,
+                buyout_price: Some(500),
+                duration: AuctionDuration::Medium,
+            },
+        );
+        let auction_id = *state.auctions.keys().next().expect("auction id");
+
+        // Seller is offline — buyer buys out without seller involvement
+        let response = buyout_auction(&db, &mut state, buyer_id, auction_id);
+        assert!(response.success);
+
+        // Seller's mail is persisted — available on next login
+        let seller_mail = persistence::load_mailbox(&db, seller_id);
+        assert_eq!(seller_mail.len(), 1);
+        assert!(seller_mail[0].attached_money > 0);
+
+        // Seller claims mail on next login
+        let seller_gold_before_claim = persistence::load_inventory(&db, seller_id).gold;
+        claim_mail(&db, seller_id, seller_mail[0].mail_id);
+        let seller_gold_after_claim = persistence::load_inventory(&db, seller_id).gold;
+        assert!(seller_gold_after_claim > seller_gold_before_claim);
+    }
+
+    #[test]
     fn gold_overflow_saturates_at_max() {
         let db = persistence::temp_database();
         let (seller_id, _) =
