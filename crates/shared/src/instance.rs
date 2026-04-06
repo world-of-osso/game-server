@@ -231,6 +231,10 @@ pub enum InstanceError {
     AlreadyExists,
     /// Instance has no remaining player slots.
     InstanceFull,
+    /// Cannot reset: players are still inside.
+    PlayersStillInside,
+    /// Only the group leader can reset the instance.
+    NotGroupLeader,
 }
 
 /// Registry of all instance templates, indexed by map ID.
@@ -450,6 +454,19 @@ impl Instance {
     pub fn component_id(&self) -> InstanceId {
         InstanceId(self.instance_id)
     }
+
+    /// Scheduled reset timestamp for this instance, based on its difficulty's
+    /// reset timer. Returns `None` for instances with no lockout (normal dungeons).
+    pub fn reset_at(&self, registry: &InstanceTemplateRegistry) -> Option<u64> {
+        let tmpl = registry.get(self.map_id)?;
+        let config = tmpl.difficulty_config(self.difficulty)?;
+        config.reset_timer.next_reset(self.created_at)
+    }
+
+    /// Whether the scheduled reset time has passed.
+    pub fn is_expired(&self, registry: &InstanceTemplateRegistry, now: u64) -> bool {
+        self.reset_at(registry).is_some_and(|t| now >= t)
+    }
 }
 
 /// Manages all active instances. Handles creation, lookup, and cleanup.
@@ -615,6 +632,45 @@ impl InstanceManager {
     ) -> Option<ScaledCreatureStats> {
         let config = self.difficulty_config(instance_id, registry)?;
         Some(scale_creature_stats(base, config))
+    }
+
+    /// Manual reset by the group leader.
+    ///
+    /// Destroys the instance so the group can start a fresh run.
+    /// Fails if players are still inside or the requester isn't the leader.
+    pub fn leader_reset(
+        &mut self,
+        instance_id: u32,
+        requester: u64,
+    ) -> Result<Instance, InstanceError> {
+        let inst = self.instances.get(&instance_id)
+            .ok_or(InstanceError::InstanceNotFound)?;
+        if inst.group_leader != requester {
+            return Err(InstanceError::NotGroupLeader);
+        }
+        if !inst.is_empty() {
+            return Err(InstanceError::PlayersStillInside);
+        }
+        self.destroy(instance_id).ok_or(InstanceError::InstanceNotFound)
+    }
+
+    /// Destroy all instances whose scheduled reset timer has expired.
+    ///
+    /// Called periodically by the server tick. Returns destroyed instances
+    /// so the server can despawn their entities.
+    pub fn scheduled_reset(
+        &mut self,
+        registry: &InstanceTemplateRegistry,
+        now: u64,
+    ) -> Vec<Instance> {
+        let expired_ids: Vec<u32> = self
+            .instances
+            .iter()
+            .filter(|(_, inst)| inst.is_expired(registry, now))
+            .map(|(&id, _)| id)
+            .collect();
+
+        expired_ids.iter().filter_map(|&id| self.destroy(id)).collect()
     }
 }
 

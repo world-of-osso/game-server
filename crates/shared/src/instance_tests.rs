@@ -667,3 +667,165 @@ fn manager_difficulty_config() {
     assert_eq!(config.max_players, 20);
     assert_eq!(config.creature_health_multiplier, 2.5);
 }
+
+// --- Instance reset ---
+
+#[test]
+fn leader_reset_empty_instance() {
+    let reg = sample_registry();
+    let mut mgr = InstanceManager::new();
+
+    let id = mgr.create_instance(&reg, 33, Difficulty::Heroic, 100, &[100], 1000).unwrap();
+    // Player leaves
+    mgr.get_mut(id).unwrap().remove_player(100);
+
+    let removed = mgr.leader_reset(id, 100).unwrap();
+    assert_eq!(removed.instance_id, id);
+    assert!(mgr.is_empty());
+}
+
+#[test]
+fn leader_reset_fails_with_players_inside() {
+    let reg = sample_registry();
+    let mut mgr = InstanceManager::new();
+
+    let id = mgr.create_instance(&reg, 33, Difficulty::Heroic, 100, &[100, 101], 1000).unwrap();
+    assert_eq!(
+        mgr.leader_reset(id, 100),
+        Err(InstanceError::PlayersStillInside)
+    );
+}
+
+#[test]
+fn leader_reset_fails_for_non_leader() {
+    let reg = sample_registry();
+    let mut mgr = InstanceManager::new();
+
+    let id = mgr.create_instance(&reg, 33, Difficulty::Heroic, 100, &[100], 1000).unwrap();
+    mgr.get_mut(id).unwrap().remove_player(100);
+
+    assert_eq!(
+        mgr.leader_reset(id, 200),
+        Err(InstanceError::NotGroupLeader)
+    );
+}
+
+#[test]
+fn leader_reset_unknown_instance() {
+    let mut mgr = InstanceManager::new();
+    assert_eq!(
+        mgr.leader_reset(999, 100),
+        Err(InstanceError::InstanceNotFound)
+    );
+}
+
+#[test]
+fn leader_reset_allows_new_instance() {
+    let reg = sample_registry();
+    let mut mgr = InstanceManager::new();
+
+    let id1 = mgr.create_instance(&reg, 33, Difficulty::Heroic, 100, &[100], 1000).unwrap();
+    mgr.get_mut(id1).unwrap().remove_player(100);
+    mgr.leader_reset(id1, 100).unwrap();
+
+    // Can create a fresh instance for the same map+difficulty
+    let id2 = mgr.create_instance(&reg, 33, Difficulty::Heroic, 100, &[100], 2000).unwrap();
+    assert_ne!(id1, id2);
+}
+
+#[test]
+fn instance_reset_at_heroic_daily() {
+    let reg = sample_registry();
+    let mut mgr = InstanceManager::new();
+
+    let id = mgr.create_instance(&reg, 33, Difficulty::Heroic, 100, &[100], 1000).unwrap();
+    let inst = mgr.get(id).unwrap();
+
+    // Heroic dungeon: daily reset
+    assert_eq!(inst.reset_at(&reg), Some(DAY_SECS));
+    assert!(!inst.is_expired(&reg, DAY_SECS - 1));
+    assert!(inst.is_expired(&reg, DAY_SECS));
+}
+
+#[test]
+fn instance_reset_at_normal_none() {
+    let reg = sample_registry();
+    let mut mgr = InstanceManager::new();
+
+    let id = mgr.create_instance(&reg, 33, Difficulty::Normal, 100, &[100], 1000).unwrap();
+    let inst = mgr.get(id).unwrap();
+
+    // Normal dungeon: no scheduled reset
+    assert_eq!(inst.reset_at(&reg), None);
+    assert!(!inst.is_expired(&reg, u64::MAX));
+}
+
+#[test]
+fn instance_reset_at_raid_weekly() {
+    let reg = sample_registry();
+    let mut mgr = InstanceManager::new();
+
+    let id = mgr.create_instance(&reg, 409, Difficulty::Mythic, 100, &[100], 1000).unwrap();
+    let inst = mgr.get(id).unwrap();
+
+    assert_eq!(inst.reset_at(&reg), Some(WEEK_SECS));
+}
+
+#[test]
+fn scheduled_reset_destroys_expired() {
+    let reg = sample_registry();
+    let mut mgr = InstanceManager::new();
+
+    // Heroic dungeon (daily reset) and mythic raid (weekly reset)
+    let heroic_id = mgr.create_instance(&reg, 33, Difficulty::Heroic, 100, &[100], 1000).unwrap();
+    let mythic_id = mgr.create_instance(&reg, 409, Difficulty::Mythic, 200, &[200], 1000).unwrap();
+
+    // After daily reset but before weekly
+    let destroyed = mgr.scheduled_reset(&reg, DAY_SECS);
+    assert_eq!(destroyed.len(), 1);
+    assert_eq!(destroyed[0].instance_id, heroic_id);
+
+    // Mythic raid still alive
+    assert!(mgr.get(mythic_id).is_some());
+    assert_eq!(mgr.len(), 1);
+}
+
+#[test]
+fn scheduled_reset_destroys_all_expired() {
+    let reg = sample_registry();
+    let mut mgr = InstanceManager::new();
+
+    mgr.create_instance(&reg, 33, Difficulty::Heroic, 100, &[100], 1000).unwrap();
+    mgr.create_instance(&reg, 409, Difficulty::Mythic, 200, &[200], 1000).unwrap();
+
+    // After weekly reset — both expired
+    let destroyed = mgr.scheduled_reset(&reg, WEEK_SECS);
+    assert_eq!(destroyed.len(), 2);
+    assert!(mgr.is_empty());
+}
+
+#[test]
+fn scheduled_reset_skips_normal_dungeons() {
+    let reg = sample_registry();
+    let mut mgr = InstanceManager::new();
+
+    mgr.create_instance(&reg, 33, Difficulty::Normal, 100, &[100], 1000).unwrap();
+
+    // Normal dungeons have no reset timer — should never be auto-destroyed
+    let destroyed = mgr.scheduled_reset(&reg, u64::MAX);
+    assert!(destroyed.is_empty());
+    assert_eq!(mgr.len(), 1);
+}
+
+#[test]
+fn scheduled_reset_cleans_group_index() {
+    let reg = sample_registry();
+    let mut mgr = InstanceManager::new();
+
+    mgr.create_instance(&reg, 33, Difficulty::Heroic, 100, &[100], 1000).unwrap();
+    mgr.scheduled_reset(&reg, DAY_SECS);
+
+    // Group can create a new instance after scheduled reset
+    mgr.create_instance(&reg, 33, Difficulty::Heroic, 100, &[100], DAY_SECS + 1).unwrap();
+    assert_eq!(mgr.len(), 1);
+}
