@@ -323,6 +323,57 @@ mod tests {
     }
 
     #[test]
+    fn wander_creature_returns_to_idle_after_walk() {
+        let spawn_x = 50.0;
+        let spawn_z = 80.0;
+        let radius = 5.0;
+
+        let spawn = SpawnPoint {
+            x: spawn_x,
+            y: 0.0,
+            z: spawn_z,
+            wander_distance: radius,
+            speed_walk: 1.0,
+        };
+
+        // Start walking toward a target within radius
+        let mut pos = Position {
+            x: spawn_x,
+            y: 0.0,
+            z: spawn_z,
+        };
+        let mut state = WanderState {
+            phase: WanderPhase::Walking,
+            target_x: spawn_x + 3.0,
+            target_z: spawn_z + 2.0,
+            idle_remaining: 0.0,
+            seed: 42,
+        };
+
+        // Simulate ticks at fixed dt until creature reaches target
+        let dt = 0.05;
+        for _ in 0..500 {
+            tick_walk(&mut pos, &mut state, &spawn, dt);
+            if state.phase == WanderPhase::Idle {
+                break;
+            }
+        }
+
+        assert_eq!(state.phase, WanderPhase::Idle, "returned to idle");
+        assert!(state.idle_remaining > 0.0, "idle timer set");
+
+        let dx = pos.x - spawn_x;
+        let dz = pos.z - spawn_z;
+        let dist = (dx * dx + dz * dz).sqrt();
+        assert!(
+            dist <= radius + 0.1,
+            "creature at ({}, {}) is {dist:.2} from spawn, within radius {radius}",
+            pos.x,
+            pos.z,
+        );
+    }
+
+    #[test]
     fn advance_waypoint_wraps() {
         let mut state = WaypointState {
             creature_guid: 1,
