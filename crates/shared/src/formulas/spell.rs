@@ -90,6 +90,14 @@ pub fn hasted_cast_time(base_cast: f32, haste_pct: f32) -> f32 {
     base_cast / (1.0 + haste_pct)
 }
 
+/// Calculate auto-attack swing timer after haste.
+///
+/// `base_speed` is the weapon speed in seconds (e.g. 3.3 for a 2H sword).
+/// `haste_pct` is a fraction (e.g. 0.30 for 30% haste).
+pub fn hasted_swing_timer(base_speed: f32, haste_pct: f32) -> f32 {
+    hasted_cast_time(base_speed, haste_pct)
+}
+
 /// Calculate the global cooldown after haste, floored at 0.75s.
 /// Uses the standard 1.5s base GCD.
 ///
@@ -354,6 +362,34 @@ mod tests {
         // Mage 1.5 / (1 + 0.20) = 1.25s
         let gcd = class_hasted_gcd(8, 0.20);
         assert!((gcd - 1.25).abs() < 0.001);
+    }
+
+    // --- Auto-attack swing timer haste tests ---
+
+    #[test]
+    fn swing_timer_no_haste() {
+        // 3.3s weapon, 0% haste → 3.3s
+        assert!((hasted_swing_timer(3.3, 0.0) - 3.3).abs() < 0.001);
+    }
+
+    #[test]
+    fn swing_timer_30_percent_haste() {
+        // 3.3s weapon, 30% haste → 3.3 / 1.3 ≈ 2.538s
+        let timer = hasted_swing_timer(3.3, 0.30);
+        assert!((timer - 2.538).abs() < 0.01, "got {timer}");
+    }
+
+    #[test]
+    fn swing_timer_dagger_with_haste() {
+        // 1.7s dagger, 25% haste → 1.7 / 1.25 = 1.36s
+        let timer = hasted_swing_timer(1.7, 0.25);
+        assert!((timer - 1.36).abs() < 0.01, "got {timer}");
+    }
+
+    #[test]
+    fn swing_timer_high_haste() {
+        // 2.4s 1H sword, 100% haste → 2.4 / 2.0 = 1.2s
+        assert!((hasted_swing_timer(2.4, 1.0) - 1.2).abs() < 0.001);
     }
 
     // --- DoT haste scaling tests ---
