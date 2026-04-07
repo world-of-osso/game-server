@@ -107,6 +107,12 @@ pub fn register_account(
     username: &str,
     password: &str,
 ) -> Result<(u64, String), String> {
+    if username.trim().is_empty() {
+        return Err("Username cannot be empty".to_string());
+    }
+    if password.is_empty() {
+        return Err("Password cannot be empty".to_string());
+    }
     if find_account_by_username(db, username).is_some() {
         return Err("Username already taken".to_string());
     }
@@ -636,6 +642,19 @@ mod tests {
         // Guild defaults to none
         let guild = load_character_guild(&db, cid);
         assert!(guild.is_none(), "no guild by default");
+    }
+
+    #[test]
+    fn register_empty_username_rejected() {
+        let db = temp_database();
+        assert!(register_account(&db, "", "pass").is_err());
+        assert!(register_account(&db, "  ", "pass").is_err());
+    }
+
+    #[test]
+    fn register_empty_password_rejected() {
+        let db = temp_database();
+        assert!(register_account(&db, "user1", "").is_err());
     }
 
     #[test]
