@@ -200,4 +200,31 @@ mod tests {
         update_entity_visibility(&pos(99.99, 0.0, 0.0), &mut state, &players);
         assert_visible(&state, conn, "99.99yd should be visible");
     }
+
+    #[test]
+    fn teleport_removes_old_area_adds_new_area() {
+        let conn = Entity::from_bits(1);
+
+        // Entity near old position (0,0,0)
+        let mut old_entity_state = ReplicationState::default();
+        // Entity near new position (500,0,0)
+        let mut new_entity_state = ReplicationState::default();
+
+        let old_entity_pos = pos(50.0, 0.0, 0.0);
+        let new_entity_pos = pos(520.0, 0.0, 0.0);
+
+        // Player at old position — old entity visible, new entity culled
+        let players_old = vec![(conn, pos(0.0, 0.0, 0.0))];
+        update_entity_visibility(&old_entity_pos, &mut old_entity_state, &players_old);
+        update_entity_visibility(&new_entity_pos, &mut new_entity_state, &players_old);
+        assert_visible(&old_entity_state, conn, "old entity visible before teleport");
+        assert_not_visible(&new_entity_state, conn, "new entity culled before teleport");
+
+        // Player teleports to (500,0,0) — old entity culled, new entity visible
+        let players_new = vec![(conn, pos(500.0, 0.0, 0.0))];
+        update_entity_visibility(&old_entity_pos, &mut old_entity_state, &players_new);
+        update_entity_visibility(&new_entity_pos, &mut new_entity_state, &players_new);
+        assert_not_visible(&old_entity_state, conn, "old entity culled after teleport");
+        assert_visible(&new_entity_state, conn, "new entity visible after teleport");
+    }
 }
