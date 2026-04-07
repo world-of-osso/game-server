@@ -450,4 +450,29 @@ mod tests {
             elapsed.as_millis(),
         );
     }
+
+    #[test]
+    fn repeated_update_with_unchanged_positions_is_idempotent() {
+        let (mut state, conn) = make_state_and_conn();
+        let players = vec![(conn, pos(0.0, 0.0, 0.0))];
+        let entity_pos = pos(50.0, 0.0, 0.0);
+
+        // First update: gains visibility
+        update_entity_visibility(&entity_pos, &mut state, &players);
+        assert_visible(&state, conn, "visible after first update");
+
+        // Repeated updates with same positions: stays visible, no flip-flop
+        for _ in 0..10 {
+            update_entity_visibility(&entity_pos, &mut state, &players);
+            assert_visible(&state, conn, "still visible on repeated update");
+        }
+
+        // Same for an out-of-range entity: stays culled
+        let mut far_state = ReplicationState::default();
+        let far_pos = pos(200.0, 0.0, 0.0);
+        for _ in 0..10 {
+            update_entity_visibility(&far_pos, &mut far_state, &players);
+            assert_not_visible(&far_state, conn, "still culled on repeated update");
+        }
+    }
 }
