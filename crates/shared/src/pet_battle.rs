@@ -162,6 +162,8 @@ impl PetJournal {
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct PetSpecies {
     pub id: u32,
+    /// Pet family (determines type effectiveness).
+    pub family: PetFamily,
     /// Base health at level 1, Common quality.
     pub base_health: f32,
     /// Base power (attack) at level 1, Common quality.
@@ -217,6 +219,114 @@ pub fn compute_stats(species: &PetSpecies, level: u8, quality: PetQuality) -> Pe
     }
 }
 
+// -- Pet Families & Type Effectiveness --
+
+/// Pet family (10 families, matching WoW pet battle types).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum PetFamily {
+    Aquatic,
+    Beast,
+    Critter,
+    Dragonkin,
+    Elemental,
+    Flying,
+    Humanoid,
+    Magic,
+    Mechanical,
+    Undead,
+}
+
+/// Damage multiplier for an attacking family against a defending family.
+///
+/// Returns 1.5 for strong, 0.67 for weak, 1.0 for neutral.
+/// WoW pet battle type chart (simplified):
+/// - Beast → Critter (strong), Flying (weak)
+/// - Critter → Undead (strong), Beast (weak)
+/// - Dragonkin → Magic (strong), Undead (weak)
+/// - Elemental → Mechanical (strong), Critter (weak)
+/// - Flying → Aquatic (strong), Dragonkin (weak)
+/// - Humanoid → Dragonkin (strong), Beast (weak)
+/// - Magic → Flying (strong), Mechanical (weak)
+/// - Mechanical → Beast (strong), Elemental (weak)
+/// - Aquatic → Elemental (strong), Magic (weak)
+/// - Undead → Humanoid (strong), Aquatic (weak)
+pub fn type_effectiveness(attacker: PetFamily, defender: PetFamily) -> f32 {
+    use PetFamily::*;
+    match (attacker, defender) {
+        (Beast, Critter)
+        | (Critter, Undead)
+        | (Dragonkin, Magic)
+        | (Elemental, Mechanical)
+        | (Flying, Aquatic)
+        | (Humanoid, Dragonkin)
+        | (Magic, Flying)
+        | (Mechanical, Beast)
+        | (Aquatic, Elemental)
+        | (Undead, Humanoid) => 1.5,
+
+        (Beast, Flying)
+        | (Critter, Beast)
+        | (Dragonkin, Undead)
+        | (Elemental, Critter)
+        | (Flying, Dragonkin)
+        | (Humanoid, Beast)
+        | (Magic, Mechanical)
+        | (Mechanical, Elemental)
+        | (Aquatic, Magic)
+        | (Undead, Aquatic) => 0.67,
+
+        _ => 1.0,
+    }
+}
+
+// -- Pet Abilities --
+
+/// Maximum abilities a pet can know.
+pub const MAX_ABILITIES: usize = 6;
+/// Number of active ability slots in battle.
+pub const ACTIVE_SLOTS: usize = 3;
+
+/// A pet ability definition.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct PetAbility {
+    pub id: u32,
+    pub name: String,
+    /// Base damage (scaled by power in combat).
+    pub base_damage: u32,
+    /// Family type of this ability (determines type effectiveness).
+    pub family: PetFamily,
+    /// Cooldown in turns (0 = no cooldown).
+    pub cooldown: u8,
+}
+
+/// A pet's ability loadout: 6 known abilities, 3 active slots.
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+pub struct AbilityLoadout {
+    /// All known abilities (up to 6).
+    pub known: Vec<PetAbility>,
+    /// Indices into `known` for the 3 active battle slots.
+    pub active_slots: [usize; ACTIVE_SLOTS],
+}
+
+impl AbilityLoadout {
+    /// Get the ability in a given active slot (0–2).
+    pub fn active_ability(&self, slot: u8) -> Option<&PetAbility> {
+        let idx = *self.active_slots.get(slot as usize)?;
+        self.known.get(idx)
+    }
+}
+
+/// Calculate ability damage: `(base_damage + power) * type_effectiveness`.
+pub fn ability_damage(
+    ability: &PetAbility,
+    attacker_power: u32,
+    defender_family: PetFamily,
+) -> u32 {
+    let raw = ability.base_damage + attacker_power;
+    let effectiveness = type_effectiveness(ability.family, defender_family);
+    (raw as f32 * effectiveness).round() as u32
+}
+
 // -- Battle System --
 
 /// Number of pets per team in a battle.
@@ -226,14 +336,29 @@ pub const TEAM_SIZE: usize = 3;
 #[derive(Debug, Clone, PartialEq)]
 pub struct BattlePet {
     pub stats: PetStats,
+    pub family: PetFamily,
+    pub abilities: AbilityLoadout,
     pub current_health: u32,
 }
 
 impl BattlePet {
+    /// Create a battle pet with default (no abilities, Beast family).
     pub fn new(stats: PetStats) -> Self {
         Self {
             current_health: stats.health,
             stats,
+            family: PetFamily::Beast,
+            abilities: AbilityLoadout::default(),
+        }
+    }
+
+    /// Create a battle pet with family and abilities.
+    pub fn with_family(stats: PetStats, family: PetFamily, abilities: AbilityLoadout) -> Self {
+        Self {
+            current_health: stats.health,
+            stats,
+            family,
+            abilities,
         }
     }
 
@@ -401,14 +526,22 @@ impl PetBattle {
 
     fn execute_action(&mut self, side: BattleSide, action: TurnAction) -> Vec<TurnEvent> {
         match action {
-            TurnAction::UseAbility(_slot) => {
-                let power = self.team(side).active_pet().stats.power;
+            TurnAction::UseAbility(slot) => {
+                let attacker = self.team(side).active_pet();
+                let attacker_power = attacker.stats.power;
+                let defender_family = self.team(side.opposite()).active_pet().family;
+
+                let damage = match attacker.abilities.active_ability(slot) {
+                    Some(ability) => ability_damage(ability, attacker_power, defender_family),
+                    None => attacker_power, // fallback: raw power if no ability
+                };
+
                 let target = self.team_mut(side.opposite());
-                target.active_pet_mut().take_damage(power);
+                target.active_pet_mut().take_damage(damage);
                 let fainted = !target.active_pet().is_alive();
                 vec![TurnEvent {
                     side,
-                    damage: power,
+                    damage,
                     target_fainted: fainted,
                 }]
             }
