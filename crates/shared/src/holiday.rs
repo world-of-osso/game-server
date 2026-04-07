@@ -399,6 +399,78 @@ pub fn available_bosses<'a>(
         .collect()
 }
 
+// -- Event Rewards --
+
+/// Category of an event reward.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum RewardCategory {
+    /// Cosmetic armor/weapon appearance.
+    Cosmetic,
+    /// Toy (usable item with fun effect).
+    Toy,
+    /// Mount.
+    Mount,
+    /// Achievement.
+    Achievement,
+    /// Currency (e.g. event tokens).
+    Currency,
+}
+
+/// A reward obtainable during a holiday event.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct EventReward {
+    pub id: u32,
+    pub name: String,
+    pub event_id: u32,
+    pub category: RewardCategory,
+    /// Item ID for Cosmetic/Toy/Mount, achievement ID for Achievement,
+    /// currency amount for Currency.
+    pub value: u32,
+}
+
+/// Tracks which event rewards a player has claimed (account-wide).
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct RewardTracker {
+    /// (player_id, reward_id) pairs.
+    claimed: Vec<(u64, u32)>,
+}
+
+impl RewardTracker {
+    pub fn is_claimed(&self, player: u64, reward_id: u32) -> bool {
+        self.claimed.iter().any(|&(p, r)| p == player && r == reward_id)
+    }
+
+    /// Claim a reward. Returns false if already claimed.
+    pub fn claim(&mut self, player: u64, reward_id: u32) -> bool {
+        if self.is_claimed(player, reward_id) {
+            return false;
+        }
+        self.claimed.push((player, reward_id));
+        true
+    }
+
+    /// Count of rewards claimed by a player.
+    pub fn claimed_count(&self, player: u64) -> usize {
+        self.claimed.iter().filter(|&&(p, _)| p == player).count()
+    }
+}
+
+/// Get unclaimed rewards available to a player during active events.
+pub fn available_rewards<'a>(
+    rewards: &'a [EventReward],
+    activation: &EventActivation,
+    tracker: &RewardTracker,
+    player: u64,
+    date: MonthDay,
+) -> Vec<&'a EventReward> {
+    let active_ids = activation.active_event_ids(date);
+    rewards
+        .iter()
+        .filter(|r| active_ids.contains(&r.event_id))
+        .filter(|r| !tracker.is_claimed(player, r.id))
+        .collect()
+}
+
 #[cfg(test)]
 #[path = "holiday_tests.rs"]
 mod tests;

@@ -411,3 +411,109 @@
         let avail = available_bosses(&bosses, &activation, &lockouts, 1, 60, today);
         assert!(!avail.iter().any(|b| b.id == 1), "locked boss should not appear");
     }
+
+    // -- Reward tests --
+
+    fn brewfest_mount() -> EventReward {
+        EventReward {
+            id: 1,
+            name: "Brewfest Ram".into(),
+            event_id: 6,
+            category: RewardCategory::Mount,
+            value: 9001,
+        }
+    }
+
+    fn brewfest_toy() -> EventReward {
+        EventReward {
+            id: 2,
+            name: "Brewfest Pony Keg".into(),
+            event_id: 6,
+            category: RewardCategory::Toy,
+            value: 9002,
+        }
+    }
+
+    fn hallows_achievement() -> EventReward {
+        EventReward {
+            id: 3,
+            name: "Hallowed Be Thy Name".into(),
+            event_id: 7,
+            category: RewardCategory::Achievement,
+            value: 500,
+        }
+    }
+
+    #[test]
+    fn reward_claim_and_check() {
+        let mut tracker = RewardTracker::default();
+        assert!(!tracker.is_claimed(1, 1));
+        assert!(tracker.claim(1, 1));
+        assert!(tracker.is_claimed(1, 1));
+    }
+
+    #[test]
+    fn reward_cannot_claim_twice() {
+        let mut tracker = RewardTracker::default();
+        tracker.claim(1, 1);
+        assert!(!tracker.claim(1, 1));
+    }
+
+    #[test]
+    fn reward_different_player_independent() {
+        let mut tracker = RewardTracker::default();
+        tracker.claim(1, 1);
+        assert!(!tracker.is_claimed(2, 1));
+    }
+
+    #[test]
+    fn reward_claimed_count() {
+        let mut tracker = RewardTracker::default();
+        tracker.claim(1, 1);
+        tracker.claim(1, 2);
+        tracker.claim(2, 1);
+        assert_eq!(tracker.claimed_count(1), 2);
+        assert_eq!(tracker.claimed_count(2), 1);
+        assert_eq!(tracker.claimed_count(3), 0);
+    }
+
+    #[test]
+    fn available_rewards_active_event() {
+        let rewards = vec![brewfest_mount(), brewfest_toy(), hallows_achievement()];
+        let activation = EventActivation::default();
+        let tracker = RewardTracker::default();
+        // During Brewfest
+        let avail = available_rewards(&rewards, &activation, &tracker, 1, MonthDay::new(9, 25));
+        assert_eq!(avail.len(), 2);
+        assert!(avail.iter().all(|r| r.event_id == 6));
+    }
+
+    #[test]
+    fn available_rewards_excludes_claimed() {
+        let rewards = vec![brewfest_mount(), brewfest_toy()];
+        let activation = EventActivation::default();
+        let mut tracker = RewardTracker::default();
+        tracker.claim(1, 1); // claimed mount
+        let avail = available_rewards(&rewards, &activation, &tracker, 1, MonthDay::new(9, 25));
+        assert_eq!(avail.len(), 1);
+        assert_eq!(avail[0].id, 2);
+    }
+
+    #[test]
+    fn available_rewards_inactive_event_empty() {
+        let rewards = vec![brewfest_mount()];
+        let activation = EventActivation::default();
+        let tracker = RewardTracker::default();
+        let avail = available_rewards(&rewards, &activation, &tracker, 1, MonthDay::new(8, 15));
+        assert!(avail.is_empty());
+    }
+
+    #[test]
+    fn available_rewards_multiple_categories() {
+        let rewards = vec![brewfest_mount(), brewfest_toy(), hallows_achievement()];
+        let activation = EventActivation::default();
+        let tracker = RewardTracker::default();
+        // During Hallow's End
+        let avail = available_rewards(&rewards, &activation, &tracker, 1, MonthDay::new(10, 25));
+        assert!(avail.iter().any(|r| r.category == RewardCategory::Achievement));
+    }
