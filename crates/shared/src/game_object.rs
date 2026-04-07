@@ -143,55 +143,35 @@ impl GameObject {
 
     /// Ready → InUse: a player starts interacting.
     pub fn begin_use(&mut self) -> Result<(), StateError> {
-        self.transition(GameObjectState::InUse)
+        self.transition(GameObjectState::Ready, GameObjectState::InUse)
     }
 
     /// InUse → Depleted: interaction complete (looted, gathered).
     pub fn deplete(&mut self) -> Result<(), StateError> {
-        if self.state != GameObjectState::InUse {
-            return Err(StateError::InvalidTransition {
-                from: self.state, to: GameObjectState::Depleted,
-            });
-        }
-        self.state = GameObjectState::Depleted;
-        Ok(())
+        self.transition(GameObjectState::InUse, GameObjectState::Depleted)
     }
 
     /// Depleted → Respawning: server starts the respawn timer.
     pub fn begin_respawn(&mut self) -> Result<(), StateError> {
-        if self.state != GameObjectState::Depleted {
-            return Err(StateError::InvalidTransition {
-                from: self.state, to: GameObjectState::Respawning,
-            });
-        }
-        self.state = GameObjectState::Respawning;
-        Ok(())
+        self.transition(GameObjectState::Depleted, GameObjectState::Respawning)
     }
 
     /// Respawning → Ready: respawn timer elapsed, object reappears.
     pub fn respawn(&mut self) -> Result<(), StateError> {
-        if self.state != GameObjectState::Respawning {
-            return Err(StateError::InvalidTransition {
-                from: self.state, to: GameObjectState::Ready,
-            });
-        }
-        self.state = GameObjectState::Ready;
-        Ok(())
+        self.transition(GameObjectState::Respawning, GameObjectState::Ready)
     }
 
     /// InUse → Ready: interaction cancelled (e.g. player walked away).
     pub fn cancel_use(&mut self) -> Result<(), StateError> {
-        if self.state != GameObjectState::InUse {
-            return Err(StateError::InvalidTransition {
-                from: self.state, to: GameObjectState::Ready,
-            });
-        }
-        self.state = GameObjectState::Ready;
-        Ok(())
+        self.transition(GameObjectState::InUse, GameObjectState::Ready)
     }
 
-    fn transition(&mut self, to: GameObjectState) -> Result<(), StateError> {
-        if self.state != GameObjectState::Ready {
+    fn transition(
+        &mut self,
+        from: GameObjectState,
+        to: GameObjectState,
+    ) -> Result<(), StateError> {
+        if self.state != from {
             return Err(StateError::InvalidTransition { from: self.state, to });
         }
         self.state = to;
