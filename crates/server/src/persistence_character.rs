@@ -197,7 +197,7 @@ pub fn move_characters_between_accounts(
     }
     let mut to_ids = load_account_char_ids(db, to_account_id);
     for id in &from_ids {
-        if !to_ids.contains(id) {
+        if !to_ids.contains(id) { // bounded: max 10 characters per account
             to_ids.push(*id);
         }
     }

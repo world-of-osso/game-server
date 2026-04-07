@@ -565,17 +565,13 @@ pub enum RecipeSource {
 /// A player's known recipes for one profession.
 #[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
 pub struct KnownRecipes {
-    pub recipe_ids: Vec<u32>,
+    pub recipe_ids: std::collections::HashSet<u32>,
 }
 
 impl KnownRecipes {
     /// Learn a recipe. Returns `false` if already known.
     pub fn learn(&mut self, recipe_id: u32) -> bool {
-        if self.recipe_ids.contains(&recipe_id) {
-            return false;
-        }
-        self.recipe_ids.push(recipe_id);
-        true
+        self.recipe_ids.insert(recipe_id)
     }
 
     /// Whether a recipe is known.

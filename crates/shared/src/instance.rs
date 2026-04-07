@@ -381,7 +381,7 @@ pub fn raid_template(map_id: u16, name: &str, parent_map_id: u16) -> InstanceTem
 // --- Runtime instance management ---
 // Ref: AzerothCore `MapInstanced::CreateInstanceForPlayer`
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 /// A live instance of a dungeon or raid map.
 ///
@@ -400,7 +400,7 @@ pub struct Instance {
     /// Players currently inside the instance.
     pub players: Vec<u64>,
     /// Entity IDs of creatures/objects spawned for this instance.
-    pub spawned_entities: Vec<u64>,
+    pub spawned_entities: HashSet<u64>,
     /// Server timestamp when created.
     pub created_at: u64,
 }
@@ -416,7 +416,7 @@ impl Instance {
         if self.players.len() as u32 >= max_players {
             return Err(InstanceError::InstanceFull);
         }
-        if !self.contains_player(player) {
+        if !self.contains_player(player) { // bounded: max_players (5-40)
             self.players.push(player);
         }
         Ok(())
@@ -436,14 +436,12 @@ impl Instance {
 
     /// Record a spawned entity (creature, game object) in this instance.
     pub fn track_entity(&mut self, entity: u64) {
-        if !self.spawned_entities.contains(&entity) {
-            self.spawned_entities.push(entity);
-        }
+        self.spawned_entities.insert(entity);
     }
 
     /// Remove a tracked entity (e.g. on despawn).
     pub fn untrack_entity(&mut self, entity: u64) {
-        self.spawned_entities.retain(|&e| e != entity);
+        self.spawned_entities.remove(&entity);
     }
 
     /// The `InstanceId` component value for entities in this instance.
@@ -510,7 +508,7 @@ impl InstanceManager {
         let instance_id = self.allocate_id();
         let instance = Instance {
             instance_id, map_id, difficulty, group_leader,
-            players: members.to_vec(), spawned_entities: Vec::new(),
+            players: members.to_vec(), spawned_entities: HashSet::new(),
             created_at: now,
         };
         self.instances.insert(instance_id, instance);

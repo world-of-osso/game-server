@@ -315,7 +315,7 @@ impl CharacterReputation {
 
     /// Add a faction to the tracked list (shown in rep panel).
     pub fn track(&mut self, faction_id: u32) {
-        if !self.tracked.contains(&faction_id) {
+        if !self.tracked.contains(&faction_id) { // bounded: ~20 tracked factions
             self.tracked.push(faction_id);
         }
     }

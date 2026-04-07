@@ -1,4 +1,5 @@
 use super::*;
+use std::collections::HashSet;
 
 fn sample_dungeon() -> InstanceTemplate {
     dungeon_template(33, "Shadowfang Keep", 0)
@@ -242,7 +243,7 @@ fn instance_add_remove_player() {
         difficulty: Difficulty::Normal,
         group_leader: 100,
         players: vec![100, 101],
-        spawned_entities: Vec::new(),
+        spawned_entities: HashSet::new(),
         created_at: 1000,
     };
     assert!(inst.contains_player(100));
@@ -269,7 +270,7 @@ fn instance_full_rejects_player() {
         difficulty: Difficulty::Normal,
         group_leader: 100,
         players: vec![100, 101, 102, 103, 104],
-        spawned_entities: Vec::new(),
+        spawned_entities: HashSet::new(),
         created_at: 1000,
     };
     assert_eq!(inst.add_player(105, 5), Err(InstanceError::InstanceFull));
@@ -283,7 +284,7 @@ fn instance_empty_after_all_leave() {
         difficulty: Difficulty::Normal,
         group_leader: 100,
         players: vec![100],
-        spawned_entities: Vec::new(),
+        spawned_entities: HashSet::new(),
         created_at: 1000,
     };
     assert!(!inst.is_empty());
