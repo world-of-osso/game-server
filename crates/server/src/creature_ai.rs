@@ -374,6 +374,29 @@ mod tests {
     }
 
     #[test]
+    fn wander_targets_respect_boundary_across_spawns() {
+        // Verify all wander targets stay within radius for varied centers and radii
+        let cases = [
+            (0.0, 0.0, 3.0),
+            (100.0, -200.0, 10.0),
+            (-50.0, 50.0, 1.0),
+            (999.0, 999.0, 20.0),
+        ];
+        for (cx, cz, radius) in cases {
+            for seed in 0..200 {
+                let (px, pz) = pick_wander_point(cx, cz, radius, seed);
+                let dx = px - cx;
+                let dz = pz - cz;
+                let dist = (dx * dx + dz * dz).sqrt();
+                assert!(
+                    dist <= radius + 0.01,
+                    "center=({cx},{cz}) r={radius} seed={seed}: dist {dist:.3}",
+                );
+            }
+        }
+    }
+
+    #[test]
     fn waypoint_creature_follows_path_in_order() {
         use crate::world_data::{WaypointPath, WaypointPoint};
 
