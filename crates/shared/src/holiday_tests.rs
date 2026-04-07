@@ -517,3 +517,129 @@
         let avail = available_rewards(&rewards, &activation, &tracker, 1, MonthDay::new(10, 25));
         assert!(avail.iter().any(|r| r.category == RewardCategory::Achievement));
     }
+
+    // -- Integration tests: full pipeline --
+
+    #[test]
+    fn full_pipeline_date_activates_quests_bosses_rewards() {
+        let quests = vec![brewfest_quest(), hallows_quest()];
+        let bosses = all_event_bosses();
+        let rewards = vec![brewfest_mount(), hallows_achievement()];
+        let activation = EventActivation::default();
+        let quest_tracker = DailyQuestTracker::default();
+        let lockouts = BossLockoutTracker::default();
+        let reward_tracker = RewardTracker::default();
+
+        // During Brewfest (Sep 25)
+        let date = MonthDay::new(9, 25);
+
+        let avail_quests = available_event_quests(&quests, &activation, &quest_tracker, 1, date);
+        assert_eq!(avail_quests.len(), 1);
+        assert_eq!(avail_quests[0].name, "Bark for the Barkers");
+
+        let avail_bosses = available_bosses(&bosses, &activation, &lockouts, 1, 60, date);
+        assert!(avail_bosses.iter().any(|b| b.name == "Coren Direbrew"));
+        assert!(!avail_bosses.iter().any(|b| b.name == "Headless Horseman"));
+
+        let avail_rewards = available_rewards(&rewards, &activation, &reward_tracker, 1, date);
+        assert_eq!(avail_rewards.len(), 1);
+        assert_eq!(avail_rewards[0].name, "Brewfest Ram");
+    }
+
+    #[test]
+    fn date_change_swaps_available_content() {
+        let quests = vec![brewfest_quest(), hallows_quest()];
+        let activation = EventActivation::default();
+        let tracker = DailyQuestTracker::default();
+
+        // Brewfest active
+        let bf_quests = available_event_quests(&quests, &activation, &tracker, 1, MonthDay::new(9, 25));
+        assert_eq!(bf_quests.len(), 1);
+        assert_eq!(bf_quests[0].event_id, 6);
+
+        // Switch to Hallow's End
+        let he_quests = available_event_quests(&quests, &activation, &tracker, 1, MonthDay::new(10, 25));
+        assert_eq!(he_quests.len(), 1);
+        assert_eq!(he_quests[0].event_id, 7);
+
+        // Neither active
+        let none = available_event_quests(&quests, &activation, &tracker, 1, MonthDay::new(8, 15));
+        assert!(none.is_empty());
+    }
+
+    #[test]
+    fn quest_completion_then_daily_reset_cycle() {
+        let quests = vec![brewfest_quest(), brewfest_quest_2()];
+        let activation = EventActivation::default();
+        let mut tracker = DailyQuestTracker::default();
+        let day1 = MonthDay::new(9, 25);
+
+        // Day 1: complete both quests
+        tracker.complete(1, 100, day1);
+        tracker.complete(1, 101, day1);
+        let avail = available_event_quests(&quests, &activation, &tracker, 1, day1);
+        assert!(avail.is_empty(), "all done for today");
+
+        // Day 2: reset, quests available again
+        let day2 = MonthDay::new(9, 26);
+        tracker.daily_reset(day2);
+        let avail = available_event_quests(&quests, &activation, &tracker, 1, day2);
+        assert_eq!(avail.len(), 2, "quests reset for new day");
+    }
+
+    #[test]
+    fn boss_kill_lockout_then_reset() {
+        let bosses = all_event_bosses();
+        let activation = EventActivation::default();
+        let mut lockouts = BossLockoutTracker::default();
+        let day1 = MonthDay::new(10, 25);
+
+        // Kill Headless Horseman
+        lockouts.record_kill(1, 1, day1);
+        let avail = available_bosses(&bosses, &activation, &lockouts, 1, 60, day1);
+        assert!(!avail.iter().any(|b| b.id == 1));
+
+        // Next day: reset, boss available again
+        let day2 = MonthDay::new(10, 26);
+        lockouts.daily_reset(day2);
+        let avail = available_bosses(&bosses, &activation, &lockouts, 1, 60, day2);
+        assert!(avail.iter().any(|b| b.id == 1));
+    }
+
+    #[test]
+    fn reward_claim_persists_across_days() {
+        let rewards = vec![brewfest_mount()];
+        let activation = EventActivation::default();
+        let mut tracker = RewardTracker::default();
+
+        // Claim mount on day 1
+        tracker.claim(1, 1);
+        let avail = available_rewards(&rewards, &activation, &tracker, 1, MonthDay::new(9, 25));
+        assert!(avail.is_empty());
+
+        // Still claimed on day 2 (rewards don't reset daily)
+        let avail = available_rewards(&rewards, &activation, &tracker, 1, MonthDay::new(9, 26));
+        assert!(avail.is_empty());
+    }
+
+    #[test]
+    fn force_override_enables_off_season_content() {
+        let quests = vec![brewfest_quest()];
+        let bosses = all_event_bosses();
+        let rewards = vec![brewfest_mount()];
+        let mut activation = EventActivation::default();
+        let quest_tracker = DailyQuestTracker::default();
+        let lockouts = BossLockoutTracker::default();
+        let reward_tracker = RewardTracker::default();
+
+        // August: nothing active
+        let date = MonthDay::new(8, 15);
+        assert!(available_event_quests(&quests, &activation, &quest_tracker, 1, date).is_empty());
+
+        // Admin forces Brewfest on
+        activation.set_override(6, EventOverride::ForceOn);
+        assert_eq!(available_event_quests(&quests, &activation, &quest_tracker, 1, date).len(), 1);
+        assert!(available_bosses(&bosses, &activation, &lockouts, 1, 60, date)
+            .iter().any(|b| b.name == "Coren Direbrew"));
+        assert_eq!(available_rewards(&rewards, &activation, &reward_tracker, 1, date).len(), 1);
+    }
