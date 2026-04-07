@@ -580,6 +580,19 @@ mod tests {
     }
 
     #[test]
+    fn create_character_rejects_special_characters() {
+        let db = temp_database();
+        let (account_id, _) = register_account(&db, "user1", "pass").unwrap();
+        assert!(create_character(&db, account_id, "Hero!", 1, 1).is_err());
+        assert!(create_character(&db, account_id, "Hero 1", 1, 1).is_err());
+        assert!(create_character(&db, account_id, "Héro", 1, 1).is_err());
+        assert!(create_character(&db, account_id, "My-Hero", 1, 1).is_err());
+        assert!(create_character(&db, account_id, "Hero123", 1, 1).is_err());
+        // Pure letters accepted
+        assert!(create_character(&db, account_id, "Arthas", 1, 1).is_ok());
+    }
+
+    #[test]
     fn delete_character_removes_from_all_tables() {
         let db = temp_database();
         let (account_id, _) = register_account(&db, "user1", "pass").unwrap();

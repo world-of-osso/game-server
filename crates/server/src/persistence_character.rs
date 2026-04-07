@@ -264,6 +264,9 @@ pub fn create_character_with_appearance(
     if trimmed.len() > 12 {
         return Err("Character name must be at most 12 characters".to_string());
     }
+    if !trimmed.chars().all(|c| c.is_ascii_alphabetic()) {
+        return Err("Character name must contain only letters".to_string());
+    }
     check_name_available(db, name)?;
     validate_playable_race(race)?;
     let character_id = next_id(db, "character");
