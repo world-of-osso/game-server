@@ -24,6 +24,7 @@ pub mod mail;
 pub mod motd;
 pub mod movement;
 pub mod navmesh;
+pub mod pet_battle;
 pub mod profession;
 pub mod protocol;
 pub mod protocol_snapshots;
