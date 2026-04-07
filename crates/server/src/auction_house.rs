@@ -455,6 +455,15 @@ fn create_auction(
     ok("auction created")
 }
 
+/// Gold already held by the auction house from a previous bid by this character.
+fn previous_bid_credit(auction: &AuctionData, character_id: u64) -> u32 {
+    if auction.current_bidder_character_id == Some(character_id) {
+        auction.current_bid.unwrap_or(0)
+    } else {
+        0
+    }
+}
+
 /// Refund the previous bidder's gold and send outbid notification mail.
 fn refund_previous_bidder(db: &redb::Database, auction: &AuctionData, new_bidder: u64) {
     let Some(prev_bidder) = auction.current_bidder_character_id else {
@@ -498,12 +507,8 @@ fn place_bid(
         return err("bid is below the minimum next bid");
     }
     let mut bidder_inventory = persistence::load_inventory(db, character_id);
-    let previous_bid = if auction.current_bidder_character_id == Some(character_id) {
-        auction.current_bid.unwrap_or(0)
-    } else {
-        0
-    };
-    let additional = amount.saturating_sub(previous_bid);
+    let credit = previous_bid_credit(auction, character_id);
+    let additional = amount.saturating_sub(credit);
     if bidder_inventory.gold < additional {
         return err("not enough gold");
     }
@@ -548,12 +553,8 @@ fn buyout_auction(
     };
 
     let mut buyer_inventory = persistence::load_inventory(db, character_id);
-    let previous_bid = if auction.current_bidder_character_id == Some(character_id) {
-        auction.current_bid.unwrap_or(0)
-    } else {
-        0
-    };
-    let additional = price.saturating_sub(previous_bid);
+    let credit = previous_bid_credit(&auction, character_id);
+    let additional = price.saturating_sub(credit);
     if buyer_inventory.gold < additional {
         state.auctions.insert(auction_id, auction);
         return err("not enough gold");
@@ -610,9 +611,9 @@ fn complete_sale(
     buyer_character_id: u64,
     sale_price: u32,
 ) {
-    let seller_cut = sale_price.saturating_mul(HOUSE_CUT_BPS) / 10_000;
+    let house_fee = sale_price.saturating_mul(HOUSE_CUT_BPS) / 10_000;
     let seller_proceeds = sale_price
-        .saturating_sub(seller_cut)
+        .saturating_sub(house_fee)
         .saturating_add(auction.deposit);
     deliver_mail(
         db,
@@ -780,13 +781,17 @@ fn min_next_bid(auction: &AuctionData) -> u32 {
     }
 }
 
+const TIME_LEFT_SHORT_SECS: u64 = 60;
+const TIME_LEFT_MEDIUM_SECS: u64 = 60 * 30;
+const TIME_LEFT_LONG_SECS: u64 = 60 * 60 * 6;
+
 fn time_left(expires_at_unix_secs: u64) -> AuctionTimeLeft {
     let remaining = expires_at_unix_secs.saturating_sub(unix_now());
-    if remaining <= 60 {
+    if remaining <= TIME_LEFT_SHORT_SECS {
         AuctionTimeLeft::Short
-    } else if remaining <= 60 * 30 {
+    } else if remaining <= TIME_LEFT_MEDIUM_SECS {
         AuctionTimeLeft::Medium
-    } else if remaining <= 60 * 60 * 6 {
+    } else if remaining <= TIME_LEFT_LONG_SECS {
         AuctionTimeLeft::Long
     } else {
         AuctionTimeLeft::VeryLong
