@@ -408,4 +408,217 @@ mod tests {
     fn range_40y() {
         assert_eq!(range_from_index(5), 40.0);
     }
+
+    // --- Loading tests ---
+
+    fn test_db() -> Connection {
+        let conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch(
+            "CREATE TABLE spell_dbc (
+                ID INTEGER PRIMARY KEY, SpellName TEXT, SchoolMask INTEGER,
+                CastingTimeIndex INTEGER, RecoveryTime INTEGER,
+                PowerType INTEGER, ManaCost INTEGER, RangeIndex INTEGER,
+                InterruptFlags INTEGER,
+                Effect_1 INTEGER, Effect_2 INTEGER, Effect_3 INTEGER,
+                EffectBasePoints_1 INTEGER, EffectBasePoints_2 INTEGER, EffectBasePoints_3 INTEGER,
+                ImplicitTargetA_1 INTEGER
+            );
+            CREATE TABLE spell_bonus_data (
+                entry INTEGER PRIMARY KEY, direct_bonus REAL, dot_bonus REAL,
+                ap_bonus REAL, ap_dot_bonus REAL
+            );",
+        )
+        .unwrap();
+        conn
+    }
+
+    fn insert_spell(conn: &Connection, id: u32, name: &str, school: u32, effect: u32, base: i32) {
+        conn.execute(
+            "INSERT INTO spell_dbc VALUES (?1, ?2, ?3, 0, 0, 0, 0, 5, 0, ?4, 0, 0, ?5, 0, 0, 6)",
+            rusqlite::params![id, name, school, effect, base],
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn load_empty_db() {
+        let conn = test_db();
+        let db = load_spell_database(&conn);
+        assert!(db.is_empty());
+        assert_eq!(db.len(), 0);
+    }
+
+    #[test]
+    fn load_single_spell() {
+        let conn = test_db();
+        insert_spell(&conn, 585, "Smite", 0x02, 2, 200);
+        let db = load_spell_database(&conn);
+        assert_eq!(db.len(), 1);
+        let spell = db.get(585).unwrap();
+        assert_eq!(spell.name, "Smite");
+        assert_eq!(spell.school, SpellSchool::Holy);
+    }
+
+    #[test]
+    fn load_spell_with_bonus_data() {
+        let conn = test_db();
+        insert_spell(&conn, 585, "Smite", 0x02, 2, 200);
+        conn.execute(
+            "INSERT INTO spell_bonus_data VALUES (585, 0.7143, 0.0, 0.0, 0.0)",
+            [],
+        )
+        .unwrap();
+        let db = load_spell_database(&conn);
+        let spell = db.get(585).unwrap();
+        match &spell.effects[0] {
+            Some(SpellEffectDef::SchoolDamage { sp_coefficient, .. }) => {
+                assert!((sp_coefficient - 0.7143).abs() < 0.001);
+            }
+            other => panic!("expected SchoolDamage, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn load_spell_without_bonus_data_has_zero_coefficients() {
+        let conn = test_db();
+        insert_spell(&conn, 100, "NoBonus", 0x01, 2, 50);
+        let db = load_spell_database(&conn);
+        let spell = db.get(100).unwrap();
+        match &spell.effects[0] {
+            Some(SpellEffectDef::SchoolDamage { ap_coefficient, sp_coefficient, .. }) => {
+                assert_eq!(*ap_coefficient, 0.0);
+                assert_eq!(*sp_coefficient, 0.0);
+            }
+            other => panic!("expected SchoolDamage, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn load_multiple_spells() {
+        let conn = test_db();
+        insert_spell(&conn, 1, "Spell1", 0x01, 2, 10);
+        insert_spell(&conn, 2, "Spell2", 0x20, 10, 500);
+        insert_spell(&conn, 3, "Spell3", 0x10, 2, 100);
+        let db = load_spell_database(&conn);
+        assert_eq!(db.len(), 3);
+        assert_eq!(db.get(1).unwrap().school, SpellSchool::Physical);
+        assert_eq!(db.get(2).unwrap().school, SpellSchool::Shadow);
+        assert_eq!(db.get(3).unwrap().school, SpellSchool::Arcane);
+    }
+
+    #[test]
+    fn load_spell_heal_effect() {
+        let conn = test_db();
+        // effect type 10 = heal, target 1 = self
+        conn.execute(
+            "INSERT INTO spell_dbc VALUES (1, 'Heal', 2, 3, 0, 0, 200, 0, 1, 10, 0, 0, 800, 0, 0, 1)",
+            [],
+        )
+        .unwrap();
+        let db = load_spell_database(&conn);
+        let spell = db.get(1).unwrap();
+        assert!(matches!(spell.effects[0], Some(SpellEffectDef::Heal { .. })));
+        assert_eq!(spell.target, SpellTarget::Self_);
+        assert_eq!(spell.cast_time, 1.5); // CastingTimeIndex 3
+        assert!(spell.interruptible); // InterruptFlags & 0x01
+    }
+
+    #[test]
+    fn load_spell_with_mana_cost() {
+        let conn = test_db();
+        // PowerType=0 (mana), ManaCost=300
+        conn.execute(
+            "INSERT INTO spell_dbc VALUES (1, 'Costly', 1, 0, 0, 0, 300, 0, 0, 2, 0, 0, 100, 0, 0, 6)",
+            [],
+        )
+        .unwrap();
+        let db = load_spell_database(&conn);
+        let spell = db.get(1).unwrap();
+        let cost = spell.cost.as_ref().unwrap();
+        assert_eq!(cost.resource, ResourceType::Mana);
+        assert_eq!(cost.amount, 300.0);
+    }
+
+    #[test]
+    fn load_spell_with_cooldown() {
+        let conn = test_db();
+        // RecoveryTime=8000 (8000ms = 8s)
+        conn.execute(
+            "INSERT INTO spell_dbc VALUES (1, 'CD', 1, 0, 8000, 0, 0, 0, 0, 2, 0, 0, 50, 0, 0, 6)",
+            [],
+        )
+        .unwrap();
+        let db = load_spell_database(&conn);
+        assert_eq!(db.get(1).unwrap().cooldown, 8.0);
+    }
+
+    #[test]
+    fn load_spell_zero_cost_is_none() {
+        let conn = test_db();
+        insert_spell(&conn, 1, "Free", 0x01, 2, 50);
+        let db = load_spell_database(&conn);
+        assert!(db.get(1).unwrap().cost.is_none());
+    }
+
+    #[test]
+    fn load_spell_empty_name_excluded() {
+        let conn = test_db();
+        insert_spell(&conn, 1, "Valid", 0x01, 2, 10);
+        conn.execute(
+            "INSERT INTO spell_dbc VALUES (2, '', 1, 0, 0, 0, 0, 0, 0, 2, 0, 0, 10, 0, 0, 6)",
+            [],
+        )
+        .unwrap();
+        let db = load_spell_database(&conn);
+        assert_eq!(db.len(), 1);
+        assert!(db.get(2).is_none());
+    }
+
+    #[test]
+    fn load_spell_unsupported_effect_is_none() {
+        let conn = test_db();
+        // Effect type 999 = unsupported
+        conn.execute(
+            "INSERT INTO spell_dbc VALUES (1, 'Weird', 1, 0, 0, 0, 0, 0, 0, 999, 0, 0, 0, 0, 0, 6)",
+            [],
+        )
+        .unwrap();
+        let db = load_spell_database(&conn);
+        let spell = db.get(1).unwrap();
+        assert!(spell.effects[0].is_none());
+    }
+
+    #[test]
+    fn load_spell_range_from_index() {
+        let conn = test_db();
+        // RangeIndex=5 → 40y
+        insert_spell(&conn, 1, "Ranged", 0x01, 2, 10);
+        let db = load_spell_database(&conn);
+        assert_eq!(db.get(1).unwrap().range, 40.0);
+    }
+
+    #[test]
+    fn load_bonus_data_ap_coefficient() {
+        let conn = test_db();
+        insert_spell(&conn, 1, "Strike", 0x01, 2, 100);
+        conn.execute(
+            "INSERT INTO spell_bonus_data VALUES (1, 0.0, 0.0, 0.5, 0.0)",
+            [],
+        )
+        .unwrap();
+        let db = load_spell_database(&conn);
+        match &db.get(1).unwrap().effects[0] {
+            Some(SpellEffectDef::SchoolDamage { ap_coefficient, .. }) => {
+                assert!((ap_coefficient - 0.5).abs() < 0.001);
+            }
+            other => panic!("expected SchoolDamage, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn get_missing_spell_returns_none() {
+        let conn = test_db();
+        let db = load_spell_database(&conn);
+        assert!(db.get(99999).is_none());
+    }
 }
