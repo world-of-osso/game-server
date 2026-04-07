@@ -436,6 +436,67 @@ mod tests {
     }
 
     #[test]
+    fn waypoint_creature_pauses_at_delay() {
+        use crate::world_data::{WaypointPath, WaypointPoint};
+
+        let path = WaypointPath {
+            creature_guid: 1,
+            points: vec![
+                WaypointPoint {
+                    point: 0,
+                    position_x: 10.0,
+                    position_y: 0.0,
+                    position_z: 0.0,
+                    orientation: None,
+                    delay: 3, // 3 second pause
+                    move_type: 0,
+                },
+                WaypointPoint {
+                    point: 1,
+                    position_x: 20.0,
+                    position_y: 0.0,
+                    position_z: 0.0,
+                    orientation: None,
+                    delay: 0,
+                    move_type: 0,
+                },
+            ],
+        };
+
+        // Start at wp 0, which will be immediately reached
+        let mut pos = Position { x: 10.0, y: 0.0, z: 0.0 };
+        let mut state = WaypointState {
+            creature_guid: 1,
+            current_index: 0,
+            delay_remaining: 0.0,
+            speed_walk: 1.0,
+        };
+        let dt = 0.5;
+
+        // First tick: reaches wp 0, advances to wp 1 with 3s delay
+        tick_waypoint(&mut pos, &mut state, &path, dt);
+        assert_eq!(state.current_index, 1);
+        assert!((state.delay_remaining - 3.0).abs() < 0.01, "delay set to 3s");
+
+        // Tick during delay: creature doesn't move
+        let pos_before = pos;
+        tick_waypoint(&mut pos, &mut state, &path, dt);
+        assert_eq!(pos.x, pos_before.x, "no movement during delay");
+        assert!(state.delay_remaining > 0.0, "still delaying");
+
+        // Burn through remaining delay
+        for _ in 0..10 {
+            tick_waypoint(&mut pos, &mut state, &path, dt);
+        }
+        assert!(state.delay_remaining <= 0.0, "delay expired");
+
+        // Now creature should be moving toward wp 1 (x=20)
+        let pos_after_delay = pos.x;
+        tick_waypoint(&mut pos, &mut state, &path, dt);
+        assert!(pos.x > pos_after_delay, "moving toward wp 1 after delay");
+    }
+
+    #[test]
     fn advance_waypoint_wraps() {
         let mut state = WaypointState {
             creature_guid: 1,
