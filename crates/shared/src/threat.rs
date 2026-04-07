@@ -538,6 +538,29 @@ mod tests {
     }
 
     #[test]
+    fn multiple_targets_creature_attacks_highest_threat() {
+        let mut table = ThreatTable::default();
+        table.add_damage_threat(1, 100.0, 1.0); // tank
+        table.add_damage_threat(2, 80.0, 1.0);  // dps1
+        table.add_damage_threat(3, 60.0, 1.0);  // dps2
+        table.add_damage_threat(4, 40.0, 1.0);  // healer
+
+        // Initial target: highest threat (entity 1)
+        let target = table.aggro_target(None, true).unwrap();
+        assert_eq!(target, 1);
+
+        // DPS1 overtakes tank (needs >110%)
+        table.add_damage_threat(2, 40.0, 1.0); // now 120 vs 100
+        let target = table.aggro_target(Some(1), true).unwrap();
+        assert_eq!(target, 2, "dps1 at 120 > 110% of tank's 100");
+
+        // Healer generates threat via healing (different source)
+        table.add_heal_threat(4, 600.0, 1.0); // 600 * 0.5 = 300, total 340
+        let target = table.aggro_target(Some(2), true).unwrap();
+        assert_eq!(target, 4, "healer at 340 > 110% of dps1's 120");
+    }
+
+    #[test]
     fn aggro_empty_table_returns_none() {
         let table = ThreatTable::default();
         assert_eq!(table.aggro_target(None, true), None);
