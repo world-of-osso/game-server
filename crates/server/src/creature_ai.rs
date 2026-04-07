@@ -54,14 +54,44 @@ pub struct WaypointState {
     pub speed_walk: f32,
 }
 
+/// High-level creature behavior state. Overrides wander/waypoint when non-idle.
+#[derive(Component, Debug, Clone, PartialEq, Default)]
+pub enum CreatureState {
+    /// Normal behavior — wander or waypoint patrol runs as usual.
+    #[default]
+    Idle,
+    /// Chasing a threat target. Wander/waypoint AI pauses.
+    /// `target` is the u64 entity ID from the ThreatTable.
+    #[cfg_attr(not(test), expect(dead_code, reason = "used by chase system (next PLAN item)"))]
+    Pursuing { target: u64 },
+    /// Returning to spawn point after evade. Wander/waypoint AI pauses.
+    #[cfg_attr(not(test), expect(dead_code, reason = "used by return-to-spawn after evade (PLAN item)"))]
+    Returning,
+}
+
+impl CreatureState {
+    /// Whether normal wander/waypoint AI should run.
+    pub fn is_idle(&self) -> bool {
+        *self == Self::Idle
+    }
+}
+
 // -- Wander logic --
 
 fn wander_system(
     time: Res<Time>,
-    mut query: Query<(&mut Position, &SpawnPoint, &mut WanderState)>,
+    mut query: Query<(
+        &mut Position,
+        &SpawnPoint,
+        &mut WanderState,
+        Option<&CreatureState>,
+    )>,
 ) {
     let dt = time.delta_secs();
-    for (mut pos, spawn, mut state) in &mut query {
+    for (mut pos, spawn, mut state, creature_state) in &mut query {
+        if matches!(creature_state, Some(s) if !s.is_idle()) {
+            continue;
+        }
         match state.phase {
             WanderPhase::Idle => tick_idle(&mut state, dt, spawn),
             WanderPhase::Walking => tick_walk(&mut pos, &mut state, spawn, dt),
@@ -130,10 +160,13 @@ pub fn move_toward(x: f32, y: f32, tx: f32, ty: f32, step: f32) -> (bool, f32, f
 fn waypoint_system(
     time: Res<Time>,
     world_data: Res<WorldData>,
-    mut query: Query<(&mut Position, &mut WaypointState)>,
+    mut query: Query<(&mut Position, &mut WaypointState, Option<&CreatureState>)>,
 ) {
     let dt = time.delta_secs();
-    for (mut pos, mut state) in &mut query {
+    for (mut pos, mut state, creature_state) in &mut query {
+        if matches!(creature_state, Some(s) if !s.is_idle()) {
+            continue;
+        }
         let Some(path) = world_data.waypoints.get(&state.creature_guid) else {
             continue;
         };
@@ -219,7 +252,10 @@ mod tests {
     fn lcg_produces_values_in_range() {
         for seed in 0..1000 {
             let v = lcg_float(seed);
-            assert!((0.0..1.0).contains(&v), "seed {seed}: value {v} out of range");
+            assert!(
+                (0.0..1.0).contains(&v),
+                "seed {seed}: value {v} out of range"
+            );
         }
     }
 
@@ -333,7 +369,11 @@ mod tests {
             wander_distance: 0.0,
             speed_walk: 1.0,
         };
-        let mut pos = Position { x: spawn_x, y: 0.0, z: spawn_z };
+        let mut pos = Position {
+            x: spawn_x,
+            y: 0.0,
+            z: spawn_z,
+        };
         let mut state = WanderState {
             phase: WanderPhase::Idle,
             target_x: 0.0,
@@ -438,11 +478,8 @@ mod tests {
         let mut best_idx = 0;
         let mut best_dist = f32::MAX;
         for (i, wp) in path.points.iter().enumerate() {
-            let (bx, _by, bz) = crate::terrain_height::wow_to_bevy(
-                wp.position_x,
-                wp.position_y,
-                wp.position_z,
-            );
+            let (bx, _by, bz) =
+                crate::terrain_height::wow_to_bevy(wp.position_x, wp.position_y, wp.position_z);
             let dx = pos.x - bx;
             let dz = pos.z - bz;
             let dist_sq = dx * dx + dz * dz;
@@ -471,28 +508,44 @@ mod tests {
         let path = WaypointPath {
             creature_guid: 1,
             points: vec![
-                make_wp(0.0, 0.0, 0.0),   // Bevy: (0, 0, 0)
-                make_wp(20.0, 0.0, 0.0),  // Bevy: (20, 0, 0)
-                make_wp(40.0, 0.0, 0.0),  // Bevy: (40, 0, 0)
-                make_wp(60.0, 0.0, 0.0),  // Bevy: (60, 0, 0)
+                make_wp(0.0, 0.0, 0.0),  // Bevy: (0, 0, 0)
+                make_wp(20.0, 0.0, 0.0), // Bevy: (20, 0, 0)
+                make_wp(40.0, 0.0, 0.0), // Bevy: (40, 0, 0)
+                make_wp(60.0, 0.0, 0.0), // Bevy: (60, 0, 0)
             ],
         };
 
         // Creature chased a player to (35, 0, 0) — nearest wp is #2 (40, 0, 0)
-        let pos = Position { x: 35.0, y: 0.0, z: 0.0 };
+        let pos = Position {
+            x: 35.0,
+            y: 0.0,
+            z: 0.0,
+        };
         let idx = nearest_waypoint(&pos, &path);
         assert_eq!(idx, 2, "nearest to x=35 is wp 2 at x=40");
 
         // Near the start
-        let pos = Position { x: 3.0, y: 0.0, z: 0.0 };
+        let pos = Position {
+            x: 3.0,
+            y: 0.0,
+            z: 0.0,
+        };
         assert_eq!(nearest_waypoint(&pos, &path), 0);
 
         // Near the end
-        let pos = Position { x: 55.0, y: 0.0, z: 0.0 };
+        let pos = Position {
+            x: 55.0,
+            y: 0.0,
+            z: 0.0,
+        };
         assert_eq!(nearest_waypoint(&pos, &path), 3);
 
         // Exactly on a waypoint
-        let pos = Position { x: 20.0, y: 0.0, z: 0.0 };
+        let pos = Position {
+            x: 20.0,
+            y: 0.0,
+            z: 0.0,
+        };
         assert_eq!(nearest_waypoint(&pos, &path), 1);
     }
 
@@ -587,7 +640,11 @@ mod tests {
         };
 
         // Start at wp 0, which will be immediately reached
-        let mut pos = Position { x: 10.0, y: 0.0, z: 0.0 };
+        let mut pos = Position {
+            x: 10.0,
+            y: 0.0,
+            z: 0.0,
+        };
         let mut state = WaypointState {
             creature_guid: 1,
             current_index: 0,
@@ -599,7 +656,10 @@ mod tests {
         // First tick: reaches wp 0, advances to wp 1 with 3s delay
         tick_waypoint(&mut pos, &mut state, &path, dt);
         assert_eq!(state.current_index, 1);
-        assert!((state.delay_remaining - 3.0).abs() < 0.01, "delay set to 3s");
+        assert!(
+            (state.delay_remaining - 3.0).abs() < 0.01,
+            "delay set to 3s"
+        );
 
         // Tick during delay: creature doesn't move
         let pos_before = pos;
@@ -630,5 +690,212 @@ mod tests {
         advance_waypoint(&mut state, 2.0, 4);
         assert_eq!(state.current_index, 0); // wraps from 3 -> 0
         assert_eq!(state.delay_remaining, 2.0);
+    }
+
+    #[test]
+    fn creature_state_default_is_idle() {
+        assert_eq!(CreatureState::default(), CreatureState::Idle);
+    }
+
+    #[test]
+    fn pursuing_pauses_wander() {
+        use bevy::ecs::system::RunSystemOnce;
+
+        let mut app = App::new();
+        app.add_plugins(bevy::MinimalPlugins);
+        app.update();
+        app.update();
+
+        let entity = app
+            .world_mut()
+            .spawn((
+                Position {
+                    x: 50.0,
+                    y: 0.0,
+                    z: 80.0,
+                },
+                SpawnPoint {
+                    x: 50.0,
+                    y: 0.0,
+                    z: 80.0,
+                    wander_distance: 5.0,
+                    speed_walk: 1.0,
+                },
+                WanderState {
+                    phase: WanderPhase::Idle,
+                    target_x: 0.0,
+                    target_z: 0.0,
+                    idle_remaining: 0.0,
+                    seed: 42,
+                },
+                CreatureState::Pursuing { target: 1 },
+            ))
+            .id();
+
+        for _ in 0..10 {
+            let _ = app.world_mut().run_system_once(wander_system);
+        }
+
+        let pos = *app.world().entity(entity).get::<Position>().unwrap();
+        assert_eq!(pos.x, 50.0);
+        assert_eq!(pos.z, 80.0);
+    }
+
+    #[test]
+    fn returning_pauses_wander() {
+        use bevy::ecs::system::RunSystemOnce;
+
+        let mut app = App::new();
+        app.add_plugins(bevy::MinimalPlugins);
+        app.update();
+        app.update();
+
+        let entity = app
+            .world_mut()
+            .spawn((
+                Position {
+                    x: 50.0,
+                    y: 0.0,
+                    z: 80.0,
+                },
+                SpawnPoint {
+                    x: 50.0,
+                    y: 0.0,
+                    z: 80.0,
+                    wander_distance: 5.0,
+                    speed_walk: 1.0,
+                },
+                WanderState {
+                    phase: WanderPhase::Idle,
+                    target_x: 0.0,
+                    target_z: 0.0,
+                    idle_remaining: 0.0,
+                    seed: 42,
+                },
+                CreatureState::Returning,
+            ))
+            .id();
+
+        for _ in 0..10 {
+            let _ = app.world_mut().run_system_once(wander_system);
+        }
+
+        let pos = *app.world().entity(entity).get::<Position>().unwrap();
+        assert_eq!(pos.x, 50.0);
+        assert_eq!(pos.z, 80.0);
+    }
+
+    #[test]
+    fn idle_state_allows_wander() {
+        use bevy::ecs::system::RunSystemOnce;
+
+        let mut app = App::new();
+        app.add_plugins(bevy::MinimalPlugins);
+        app.update();
+        app.update();
+
+        let entity = app
+            .world_mut()
+            .spawn((
+                Position {
+                    x: 50.0,
+                    y: 0.0,
+                    z: 80.0,
+                },
+                SpawnPoint {
+                    x: 50.0,
+                    y: 0.0,
+                    z: 80.0,
+                    wander_distance: 5.0,
+                    speed_walk: 1.0,
+                },
+                WanderState {
+                    phase: WanderPhase::Idle,
+                    target_x: 0.0,
+                    target_z: 0.0,
+                    idle_remaining: 0.0,
+                    seed: 42,
+                },
+                CreatureState::Idle,
+            ))
+            .id();
+
+        let _ = app.world_mut().run_system_once(wander_system);
+
+        let wander = app.world().entity(entity).get::<WanderState>().unwrap();
+        assert_eq!(
+            wander.phase,
+            WanderPhase::Walking,
+            "idle_remaining=0 should have triggered a walk transition"
+        );
+    }
+
+    #[test]
+    fn pursuing_pauses_waypoint() {
+        use crate::world_data::{WaypointPath, WaypointPoint};
+        use bevy::ecs::system::RunSystemOnce;
+        use std::collections::HashMap;
+
+        let make_wp = |x, y, z| WaypointPoint {
+            point: 0,
+            position_x: x,
+            position_y: y,
+            position_z: z,
+            orientation: None,
+            delay: 0,
+            move_type: 0,
+        };
+
+        let mut waypoints = HashMap::new();
+        waypoints.insert(
+            1u32,
+            WaypointPath {
+                creature_guid: 1,
+                points: vec![make_wp(10.0, 0.0, 0.0), make_wp(20.0, 0.0, 0.0)],
+            },
+        );
+        let world_data = WorldData {
+            templates: HashMap::new(),
+            spawns: vec![],
+            spawns_by_map: HashMap::new(),
+            waypoints,
+        };
+
+        let mut app = App::new();
+        app.add_plugins(bevy::MinimalPlugins);
+        app.insert_resource(world_data);
+        app.update();
+        app.update();
+
+        let entity = app
+            .world_mut()
+            .spawn((
+                Position {
+                    x: 10.0,
+                    y: 0.0,
+                    z: 0.0,
+                },
+                WaypointState {
+                    creature_guid: 1,
+                    current_index: 0,
+                    delay_remaining: 0.0,
+                    speed_walk: 1.0,
+                },
+                CreatureState::Pursuing { target: 1 },
+            ))
+            .id();
+
+        for _ in 0..10 {
+            let _ = app.world_mut().run_system_once(waypoint_system);
+        }
+
+        let state = app.world().entity(entity).get::<WaypointState>().unwrap();
+        assert_eq!(
+            state.current_index, 0,
+            "waypoint index should not advance while pursuing"
+        );
+        let pos = *app.world().entity(entity).get::<Position>().unwrap();
+        assert_eq!(pos.x, 10.0);
+        assert_eq!(pos.z, 0.0);
     }
 }
