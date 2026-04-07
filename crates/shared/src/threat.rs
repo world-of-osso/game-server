@@ -288,6 +288,36 @@ mod tests {
     }
 
     #[test]
+    fn combat_state_enters_on_damage_and_refreshes() {
+        // Simulate: entity not in combat → deals damage → enters combat
+        let mut attacker_combat: Option<InCombat> = None;
+        let mut target_combat: Option<InCombat> = None;
+
+        // Before damage: no combat state
+        assert!(attacker_combat.is_none());
+        assert!(target_combat.is_none());
+
+        // Damage dealt → both enter combat
+        attacker_combat = Some(InCombat::default());
+        target_combat = Some(InCombat::default());
+        assert!(attacker_combat.as_ref().unwrap().active());
+        assert!(target_combat.as_ref().unwrap().active());
+
+        // Time passes (5s) — still in combat
+        let attacker = attacker_combat.as_mut().unwrap();
+        assert!(!attacker.tick(5.0));
+        assert!(attacker.active());
+
+        // More damage dealt → timer refreshes
+        attacker.refresh();
+        assert!((attacker.idle_timer - 6.0).abs() < 0.001, "timer refreshed to 6s");
+
+        // 6s of no activity → exits combat
+        assert!(attacker.tick(6.5));
+        assert!(!attacker.active());
+    }
+
+    #[test]
     fn aggro_range_scales_with_level_difference() {
         // Mob 5 levels above player: 20 + 5 = 25yd
         assert!(should_aggro(24.0, 15, 10));
