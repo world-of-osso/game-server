@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
 
+use crate::item_data::{ItemData, ItemSubclass};
+
 /// Account-wide collection of learned item appearances.
 ///
 /// Each appearance is identified by its `display_info_id` (u32). Once an item
@@ -43,9 +45,80 @@ impl AppearanceCollection {
     }
 }
 
+// -- Transmog validation --
+
+/// Reason a transmogrification was rejected.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TransmogError {
+    /// Equipped item has no visual slot (ring, trinket, neck).
+    NoVisualSlot,
+    /// Appearance source has no visual slot.
+    SourceNoVisualSlot,
+    /// Item classes don't match (e.g. armor → weapon).
+    ClassMismatch,
+    /// Armor subclasses don't match (e.g. plate → cloth).
+    ArmorTypeMismatch,
+    /// Weapon subclasses don't match (e.g. sword → axe).
+    WeaponTypeMismatch,
+    /// Appearance not learned in the collection.
+    AppearanceNotLearned,
+}
+
+/// Validate whether a transmog appearance can be applied to an equipped item.
+///
+/// Rules (matching WoW):
+/// - Both items must have a visual slot
+/// - Item class must match (armor↔armor, weapon↔weapon)
+/// - Armor subclass must match (plate↔plate, leather↔leather, etc.)
+/// - Weapon subclass must match (sword1h↔sword1h, axe2h↔axe2h, etc.)
+/// - Appearance must be learned in the account's collection
+pub fn validate_transmog(
+    equipped: &ItemData,
+    source: &ItemData,
+    collection: &AppearanceCollection,
+    source_display_id: u32,
+) -> Result<(), TransmogError> {
+    if equipped.slot.and_then(|s| s.to_visual_slot()).is_none() {
+        return Err(TransmogError::NoVisualSlot);
+    }
+    if source.slot.and_then(|s| s.to_visual_slot()).is_none() {
+        return Err(TransmogError::SourceNoVisualSlot);
+    }
+    validate_class_match(equipped, source)?;
+    if !collection.has(source_display_id) {
+        return Err(TransmogError::AppearanceNotLearned);
+    }
+    Ok(())
+}
+
+fn validate_class_match(equipped: &ItemData, source: &ItemData) -> Result<(), TransmogError> {
+    match (&equipped.subclass, &source.subclass) {
+        (ItemSubclass::Armor(a), ItemSubclass::Armor(b)) => {
+            if a != b {
+                return Err(TransmogError::ArmorTypeMismatch);
+            }
+        }
+        (ItemSubclass::Weapon(a), ItemSubclass::Weapon(b)) => {
+            if a != b {
+                return Err(TransmogError::WeaponTypeMismatch);
+            }
+        }
+        _ => {
+            if equipped.class != source.class {
+                return Err(TransmogError::ClassMismatch);
+            }
+            if equipped.subclass != source.subclass {
+                return Err(TransmogError::ClassMismatch);
+            }
+        }
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::item_data::*;
 
     #[test]
     fn empty_collection() {
@@ -115,5 +188,158 @@ mod tests {
         let json = serde_json::to_string(&collection).unwrap();
         let restored: AppearanceCollection = serde_json::from_str(&json).unwrap();
         assert_eq!(collection, restored);
+    }
+
+    // -- Transmog rule tests --
+
+    fn make_item(slot: Option<EquipSlot>, class: ItemClass, subclass: ItemSubclass) -> ItemData {
+        ItemData {
+            id: 1,
+            name: "Test".into(),
+            slot,
+            ilvl: 100,
+            quality: ItemQuality::Rare,
+            stats: ItemStats::default(),
+            required_level: 1,
+            class,
+            subclass,
+            weapon_damage: None,
+            armor: 0,
+            buy_price: 0,
+            sell_price: 100,
+            max_stack: 1,
+            binding: BindingType::BindOnPickup,
+        }
+    }
+
+    fn plate_chest() -> ItemData {
+        make_item(
+            Some(EquipSlot::Chest),
+            ItemClass::Armor,
+            ItemSubclass::Armor(ArmorSubclass::Plate),
+        )
+    }
+
+    fn leather_chest() -> ItemData {
+        make_item(
+            Some(EquipSlot::Chest),
+            ItemClass::Armor,
+            ItemSubclass::Armor(ArmorSubclass::Leather),
+        )
+    }
+
+    fn sword_1h() -> ItemData {
+        make_item(
+            Some(EquipSlot::MainHand),
+            ItemClass::Weapon,
+            ItemSubclass::Weapon(WeaponSubclass::Sword1H),
+        )
+    }
+
+    fn axe_1h() -> ItemData {
+        make_item(
+            Some(EquipSlot::MainHand),
+            ItemClass::Weapon,
+            ItemSubclass::Weapon(WeaponSubclass::Axe1H),
+        )
+    }
+
+    fn learned(id: u32) -> AppearanceCollection {
+        let mut c = AppearanceCollection::default();
+        c.learn(id);
+        c
+    }
+
+    #[test]
+    fn transmog_same_armor_type_ok() {
+        let equipped = plate_chest();
+        let source = plate_chest();
+        let collection = learned(500);
+        assert_eq!(validate_transmog(&equipped, &source, &collection, 500), Ok(()));
+    }
+
+    #[test]
+    fn transmog_armor_type_mismatch() {
+        let equipped = plate_chest();
+        let source = leather_chest();
+        let collection = learned(500);
+        assert_eq!(
+            validate_transmog(&equipped, &source, &collection, 500),
+            Err(TransmogError::ArmorTypeMismatch)
+        );
+    }
+
+    #[test]
+    fn transmog_same_weapon_type_ok() {
+        let equipped = sword_1h();
+        let source = sword_1h();
+        let collection = learned(600);
+        assert_eq!(validate_transmog(&equipped, &source, &collection, 600), Ok(()));
+    }
+
+    #[test]
+    fn transmog_weapon_type_mismatch() {
+        let equipped = sword_1h();
+        let source = axe_1h();
+        let collection = learned(600);
+        assert_eq!(
+            validate_transmog(&equipped, &source, &collection, 600),
+            Err(TransmogError::WeaponTypeMismatch)
+        );
+    }
+
+    #[test]
+    fn transmog_class_mismatch_armor_to_weapon() {
+        let equipped = plate_chest();
+        let source = sword_1h();
+        let collection = learned(600);
+        assert_eq!(
+            validate_transmog(&equipped, &source, &collection, 600),
+            Err(TransmogError::ClassMismatch)
+        );
+    }
+
+    #[test]
+    fn transmog_no_visual_slot_ring() {
+        let ring = make_item(Some(EquipSlot::Finger), ItemClass::Armor, ItemSubclass::None);
+        let source = plate_chest();
+        let collection = learned(500);
+        assert_eq!(
+            validate_transmog(&ring, &source, &collection, 500),
+            Err(TransmogError::NoVisualSlot)
+        );
+    }
+
+    #[test]
+    fn transmog_source_no_visual_slot() {
+        let equipped = plate_chest();
+        let trinket = make_item(Some(EquipSlot::Trinket), ItemClass::Armor, ItemSubclass::None);
+        let collection = learned(500);
+        assert_eq!(
+            validate_transmog(&equipped, &trinket, &collection, 500),
+            Err(TransmogError::SourceNoVisualSlot)
+        );
+    }
+
+    #[test]
+    fn transmog_appearance_not_learned() {
+        let equipped = plate_chest();
+        let source = plate_chest();
+        let collection = AppearanceCollection::default();
+        assert_eq!(
+            validate_transmog(&equipped, &source, &collection, 500),
+            Err(TransmogError::AppearanceNotLearned)
+        );
+    }
+
+    #[test]
+    fn transmog_no_equip_slot() {
+        let no_slot = make_item(None, ItemClass::Consumable, ItemSubclass::None);
+        let source = plate_chest();
+        let collection = learned(500);
+        assert_eq!(
+            validate_transmog(&no_slot, &source, &collection, 500),
+            Err(TransmogError::NoVisualSlot)
+        );
     }
 }
