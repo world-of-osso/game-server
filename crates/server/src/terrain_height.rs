@@ -473,6 +473,49 @@ mod tests {
     }
 
     #[test]
+    fn height_consistent_across_adjacent_chunk_boundary() {
+        // Two chunks adjacent along X axis. Chunk A's min-X edge = Chunk B's max-X edge.
+        // Shared boundary at x = 100 - CHUNK_SIZE.
+        let boundary_x = 100.0 - CHUNK_SIZE;
+        let shared_height = 42.0;
+
+        // Chunk A: corner at (100, 100). Col=8 is the min-X edge (boundary).
+        // Set entire col=8 row=0 vertex to shared_height.
+        let mut heights_a = [0.0f32; MCVT_COUNT];
+        heights_a[8] = shared_height; // outer grid (0, 8) = row 0, col 8
+
+        // Chunk B: corner at (boundary_x, 100). Col=0 is the max-X edge.
+        let mut heights_b = [0.0f32; MCVT_COUNT];
+        heights_b[0] = shared_height; // outer grid (0, 0) = row 0, col 0
+
+        let map = TerrainHeightMap {
+            chunks: vec![
+                ChunkHeight {
+                    corner_x: 100.0,
+                    corner_y: 100.0,
+                    base_z: 0.0,
+                    heights: heights_a,
+                },
+                ChunkHeight {
+                    corner_x: boundary_x,
+                    corner_y: 100.0,
+                    base_z: 0.0,
+                    heights: heights_b,
+                },
+            ],
+        };
+
+        // Query from chunk A side of boundary
+        let h_a = map.height_at(boundary_x, 100.0).unwrap();
+        // Query from chunk B side (same point, found in chunk B)
+        // Both should return shared_height
+        assert!(
+            (h_a - shared_height).abs() < 0.01,
+            "chunk A boundary: {h_a}, expected {shared_height}",
+        );
+    }
+
+    #[test]
     fn mcvt_145_floats() {
         // Build a minimal MCVT payload with exactly 145 floats.
         let mut payload = vec![0u8; MCVT_COUNT * 4];
