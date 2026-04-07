@@ -156,6 +156,77 @@ impl PetJournal {
     }
 }
 
+// -- Pet XP & Leveling --
+
+/// XP required to advance from a given level to the next.
+///
+/// Quadratic curve: each level requires more XP than the last.
+/// Formula: `50 + 25 * level^2`. Level 25 is max (no further XP needed).
+pub fn xp_to_next_level(level: u8) -> u32 {
+    if level >= MAX_PET_LEVEL {
+        return 0; // already max
+    }
+    50 + 25 * (level as u32) * (level as u32)
+}
+
+/// Total XP needed from level 1 to reach a target level.
+pub fn total_xp_for_level(target_level: u8) -> u32 {
+    (1..target_level).map(xp_to_next_level).sum()
+}
+
+/// Result of awarding XP to a pet.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct XpGainResult {
+    pub xp_gained: u32,
+    pub levels_gained: u8,
+    pub new_level: u8,
+    pub new_xp: u32,
+}
+
+/// Award XP to a pet, handling level-ups. Returns details of what changed.
+pub fn award_xp(pet: &mut OwnedPet, xp: u32) -> XpGainResult {
+    if pet.level >= MAX_PET_LEVEL {
+        return XpGainResult {
+            xp_gained: 0,
+            levels_gained: 0,
+            new_level: pet.level,
+            new_xp: pet.xp,
+        };
+    }
+    let start_level = pet.level;
+    pet.xp += xp;
+
+    while pet.level < MAX_PET_LEVEL {
+        let needed = xp_to_next_level(pet.level);
+        if pet.xp < needed {
+            break;
+        }
+        pet.xp -= needed;
+        pet.level += 1;
+    }
+
+    // Cap XP at 0 if max level reached
+    if pet.level >= MAX_PET_LEVEL {
+        pet.xp = 0;
+    }
+
+    XpGainResult {
+        xp_gained: xp,
+        levels_gained: pet.level - start_level,
+        new_level: pet.level,
+        new_xp: pet.xp,
+    }
+}
+
+/// XP awarded for defeating a pet in battle.
+///
+/// Base XP = 100, scaled by opponent level. Higher-level opponents give more.
+pub fn battle_xp(winner_level: u8, opponent_level: u8) -> u32 {
+    let base = 100u32;
+    let level_bonus = opponent_level.saturating_sub(winner_level.saturating_sub(5)) as u32;
+    base + level_bonus * 10
+}
+
 // -- Species Template & Stats --
 
 /// Base stats for a pet species (before level/quality scaling).
