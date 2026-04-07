@@ -32,6 +32,9 @@ struct ChunkHeight {
     base_z: f32,
     /// 145 height floats from MCVT (9x9 outer + 8x8 inner grid).
     heights: [f32; MCVT_COUNT],
+    /// Water surface height (None = no water in this chunk).
+    #[cfg_attr(not(test), allow(dead_code))]
+    water_level: Option<f32>,
 }
 
 /// Bevy resource holding parsed ADT terrain heightmaps for server-side collision.
@@ -68,6 +71,15 @@ impl TerrainHeightMap {
             let (_, bevy_y, _) = wow_to_bevy(0.0, 0.0, wow_z);
             bevy_y
         })
+    }
+
+    #[cfg(test)]
+    /// Look up water surface height at a WoW world position.
+    ///
+    /// Returns `None` if outside loaded terrain or chunk has no water.
+    pub fn water_height_at(&self, x: f32, y: f32) -> Option<f32> {
+        let chunk = self.find_chunk(x, y)?;
+        chunk.water_level
     }
 
     /// Returns true if any terrain data is loaded.
@@ -169,6 +181,7 @@ fn parse_mcnk_height(payload: &[u8]) -> Result<ChunkHeight, String> {
         corner_y: pos_y,
         base_z: pos_z,
         heights,
+                water_level: None,
     })
 }
 
@@ -270,6 +283,7 @@ pub mod test_helpers {
                 corner_y,
                 base_z: height,
                 heights: [0.0; MCVT_COUNT],
+                water_level: None,
             }],
         }
     }
@@ -305,6 +319,7 @@ mod tests {
                 corner_y: 100.0,
                 base_z: 50.0,
                 heights,
+                water_level: None,
             }],
         };
 
@@ -423,12 +438,14 @@ mod tests {
                     corner_y: 100.0,
                     base_z: 50.0,
                     heights: [0.0; MCVT_COUNT],
+                    water_level: None,
                 },
                 ChunkHeight {
                     corner_x: 100.0 - CHUNK_SIZE,
                     corner_y: 100.0,
                     base_z: 80.0,
                     heights: [0.0; MCVT_COUNT],
+                    water_level: None,
                 },
             ],
         };
@@ -459,6 +476,7 @@ mod tests {
                 corner_y: 100.0,
                 base_z: 100.0,
                 heights,
+                water_level: None,
             }],
         };
 
@@ -495,12 +513,14 @@ mod tests {
                     corner_y: 100.0,
                     base_z: 0.0,
                     heights: heights_a,
+                    water_level: None,
                 },
                 ChunkHeight {
                     corner_x: boundary_x,
                     corner_y: 100.0,
                     base_z: 0.0,
                     heights: heights_b,
+                    water_level: None,
                 },
             ],
         };
@@ -531,10 +551,37 @@ mod tests {
                 corner_y: 100.0,
                 base_z: -10.0,
                 heights,
+                water_level: None,
             }],
         };
         let h = map.height_at(100.0, 100.0).unwrap();
         assert!((h - (-15.0)).abs() < 0.01, "base -10 + offset -5 = -15: got {h}");
+    }
+
+    #[test]
+    fn water_surface_height_separate_from_terrain() {
+        let map = TerrainHeightMap {
+            chunks: vec![ChunkHeight {
+                corner_x: 100.0,
+                corner_y: 100.0,
+                base_z: -20.0, // terrain is underwater
+                heights: [0.0; MCVT_COUNT],
+                water_level: Some(5.0), // water surface at 5.0
+            }],
+        };
+
+        let terrain = map.height_at(95.0, 95.0).unwrap();
+        let water = map.water_height_at(95.0, 95.0).unwrap();
+        assert!((terrain - (-20.0)).abs() < 0.01, "terrain: {terrain}");
+        assert!((water - 5.0).abs() < 0.01, "water surface: {water}");
+        assert!(water > terrain, "water above terrain");
+
+        // Chunk without water returns None for water_height
+        let dry_map = test_helpers::flat_terrain(100.0, 100.0, 50.0);
+        assert!(dry_map.water_height_at(95.0, 95.0).is_none());
+
+        // Outside loaded area returns None for both
+        assert!(map.water_height_at(200.0, 200.0).is_none());
     }
 
     #[test]
@@ -571,6 +618,7 @@ mod tests {
                     corner_y: 100.0 - row as f32 * CHUNK_SIZE,
                     base_z: 50.0,
                     heights: [0.0; MCVT_COUNT],
+                    water_level: None,
                 });
             }
         }
