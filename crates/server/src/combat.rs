@@ -468,6 +468,53 @@ mod tests {
     }
 
     #[test]
+    fn auto_attack_stops_when_out_of_melee_range() {
+        let mut app = setup_app();
+        let target = spawn_target(&mut app, pos(1.0, 0.0, 0.0), 100.0);
+        let attacker = spawn_attacker(&mut app, pos(0.0, 0.0, 0.0), target);
+
+        // In range: swing connects
+        run_attack_tick(&mut app);
+        assert_eq!(
+            app.world().entity(target).get::<Health>().unwrap().current,
+            90.0,
+        );
+
+        // Move target out of melee range (>5yd)
+        app.world_mut()
+            .entity_mut(target)
+            .get_mut::<Position>()
+            .unwrap()
+            .x = 100.0;
+
+        // Expire timer and try again — out of range, no damage
+        app.world_mut()
+            .entity_mut(attacker)
+            .get_mut::<AutoAttack>()
+            .unwrap()
+            .timer = 0.0;
+        run_attack_tick(&mut app);
+        assert_eq!(
+            app.world().entity(target).get::<Health>().unwrap().current,
+            90.0,
+            "no damage when out of range",
+        );
+
+        // Move target back in range — swing resumes
+        app.world_mut()
+            .entity_mut(target)
+            .get_mut::<Position>()
+            .unwrap()
+            .x = 1.0;
+        run_attack_tick(&mut app);
+        assert_eq!(
+            app.world().entity(target).get::<Health>().unwrap().current,
+            80.0,
+            "swing resumes when back in range",
+        );
+    }
+
+    #[test]
     fn test_death_at_zero_hp() {
         let mut app = App::new();
         app.add_plugins(bevy::MinimalPlugins);
