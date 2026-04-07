@@ -454,6 +454,106 @@ pub fn calculate_rating(
     )
 }
 
+// -- Season Tracking --
+
+/// A player's arena statistics for one season and bracket.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SeasonStats {
+    pub player: u64,
+    pub season: u32,
+    pub bracket: ArenaBracket,
+    pub current_rating: u32,
+    pub highest_rating: u32,
+    pub wins: u32,
+    pub losses: u32,
+}
+
+impl SeasonStats {
+    /// Create fresh stats for a player entering a new season.
+    pub fn new(player: u64, season: u32, bracket: ArenaBracket) -> Self {
+        Self {
+            player,
+            season,
+            bracket,
+            current_rating: DEFAULT_RATING,
+            highest_rating: DEFAULT_RATING,
+            wins: 0,
+            losses: 0,
+        }
+    }
+
+    /// Record a win with a rating change.
+    pub fn record_win(&mut self, new_rating: u32) {
+        self.wins += 1;
+        self.current_rating = new_rating;
+        self.highest_rating = self.highest_rating.max(new_rating);
+    }
+
+    /// Record a loss with a rating change.
+    pub fn record_loss(&mut self, new_rating: u32) {
+        self.losses += 1;
+        self.current_rating = new_rating;
+    }
+
+    /// Total games played.
+    pub fn games_played(&self) -> u32 {
+        self.wins + self.losses
+    }
+
+    /// Win rate as a fraction (0.0–1.0). Returns 0.0 if no games played.
+    pub fn win_rate(&self) -> f32 {
+        let total = self.games_played();
+        if total == 0 {
+            return 0.0;
+        }
+        self.wins as f32 / total as f32
+    }
+}
+
+/// Per-player season stats collection (all brackets, all seasons).
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+pub struct PlayerSeasonHistory {
+    pub entries: Vec<SeasonStats>,
+}
+
+impl PlayerSeasonHistory {
+    /// Get or create stats for a player/season/bracket.
+    pub fn get_or_create(
+        &mut self,
+        player: u64,
+        season: u32,
+        bracket: ArenaBracket,
+    ) -> &mut SeasonStats {
+        let exists = self.entries.iter().any(|e| {
+            e.player == player && e.season == season && e.bracket == bracket
+        });
+        if !exists {
+            self.entries.push(SeasonStats::new(player, season, bracket));
+        }
+        self.entries
+            .iter_mut()
+            .find(|e| e.player == player && e.season == season && e.bracket == bracket)
+            .unwrap()
+    }
+
+    /// Get stats for a player/season/bracket (read-only).
+    pub fn get(
+        &self,
+        player: u64,
+        season: u32,
+        bracket: ArenaBracket,
+    ) -> Option<&SeasonStats> {
+        self.entries.iter().find(|e| {
+            e.player == player && e.season == season && e.bracket == bracket
+        })
+    }
+
+    /// All entries for a specific player across seasons and brackets.
+    pub fn for_player(&self, player: u64) -> Vec<&SeasonStats> {
+        self.entries.iter().filter(|e| e.player == player).collect()
+    }
+}
+
 #[cfg(test)]
 #[path = "arena_tests.rs"]
 mod tests;

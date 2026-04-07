@@ -518,3 +518,109 @@ fn rating_large_gap_winner_gains_almost_nothing() {
     let (winner, _) = calculate_rating(2000, 1000);
     assert!(winner.change <= 1, "change was {}", winner.change);
 }
+
+// -- Season tracking tests --
+
+#[test]
+fn season_stats_new() {
+    let stats = SeasonStats::new(1, 1, ArenaBracket::TwoVTwo);
+    assert_eq!(stats.current_rating, 1500);
+    assert_eq!(stats.highest_rating, 1500);
+    assert_eq!(stats.wins, 0);
+    assert_eq!(stats.losses, 0);
+    assert_eq!(stats.games_played(), 0);
+}
+
+#[test]
+fn season_stats_record_win() {
+    let mut stats = SeasonStats::new(1, 1, ArenaBracket::TwoVTwo);
+    stats.record_win(1516);
+    assert_eq!(stats.wins, 1);
+    assert_eq!(stats.current_rating, 1516);
+    assert_eq!(stats.highest_rating, 1516);
+    assert_eq!(stats.games_played(), 1);
+}
+
+#[test]
+fn season_stats_record_loss() {
+    let mut stats = SeasonStats::new(1, 1, ArenaBracket::TwoVTwo);
+    stats.record_loss(1484);
+    assert_eq!(stats.losses, 1);
+    assert_eq!(stats.current_rating, 1484);
+    assert_eq!(stats.highest_rating, 1500); // unchanged
+}
+
+#[test]
+fn season_stats_highest_rating_tracked() {
+    let mut stats = SeasonStats::new(1, 1, ArenaBracket::TwoVTwo);
+    stats.record_win(1600);
+    stats.record_loss(1570);
+    stats.record_win(1590);
+    assert_eq!(stats.highest_rating, 1600);
+    assert_eq!(stats.current_rating, 1590);
+}
+
+#[test]
+fn season_stats_win_rate() {
+    let mut stats = SeasonStats::new(1, 1, ArenaBracket::TwoVTwo);
+    assert_eq!(stats.win_rate(), 0.0); // no games
+    stats.record_win(1516);
+    stats.record_win(1532);
+    stats.record_loss(1516);
+    assert!((stats.win_rate() - 2.0 / 3.0).abs() < 0.01);
+}
+
+#[test]
+fn history_get_or_create() {
+    let mut history = PlayerSeasonHistory::default();
+    let stats = history.get_or_create(1, 1, ArenaBracket::TwoVTwo);
+    stats.record_win(1516);
+
+    // Second call returns same entry
+    let stats = history.get_or_create(1, 1, ArenaBracket::TwoVTwo);
+    assert_eq!(stats.wins, 1);
+    assert_eq!(history.entries.len(), 1);
+}
+
+#[test]
+fn history_different_brackets_separate() {
+    let mut history = PlayerSeasonHistory::default();
+    history.get_or_create(1, 1, ArenaBracket::TwoVTwo).record_win(1516);
+    history.get_or_create(1, 1, ArenaBracket::ThreeVThree).record_loss(1484);
+
+    assert_eq!(history.entries.len(), 2);
+    let two = history.get(1, 1, ArenaBracket::TwoVTwo).unwrap();
+    assert_eq!(two.wins, 1);
+    let three = history.get(1, 1, ArenaBracket::ThreeVThree).unwrap();
+    assert_eq!(three.losses, 1);
+}
+
+#[test]
+fn history_different_seasons_separate() {
+    let mut history = PlayerSeasonHistory::default();
+    history.get_or_create(1, 1, ArenaBracket::TwoVTwo).record_win(1600);
+    history.get_or_create(1, 2, ArenaBracket::TwoVTwo); // new season, fresh stats
+
+    let s1 = history.get(1, 1, ArenaBracket::TwoVTwo).unwrap();
+    assert_eq!(s1.current_rating, 1600);
+    let s2 = history.get(1, 2, ArenaBracket::TwoVTwo).unwrap();
+    assert_eq!(s2.current_rating, 1500); // fresh
+}
+
+#[test]
+fn history_for_player() {
+    let mut history = PlayerSeasonHistory::default();
+    history.get_or_create(1, 1, ArenaBracket::TwoVTwo);
+    history.get_or_create(1, 1, ArenaBracket::ThreeVThree);
+    history.get_or_create(2, 1, ArenaBracket::TwoVTwo);
+
+    assert_eq!(history.for_player(1).len(), 2);
+    assert_eq!(history.for_player(2).len(), 1);
+    assert_eq!(history.for_player(99).len(), 0);
+}
+
+#[test]
+fn history_get_nonexistent() {
+    let history = PlayerSeasonHistory::default();
+    assert!(history.get(1, 1, ArenaBracket::TwoVTwo).is_none());
+}
