@@ -431,3 +431,302 @@ fn overwrite_preserves_latest() {
     assert_eq!(loaded.x, 999.0);
     assert_eq!(loaded.name, data.name);
 }
+
+// ---------------------------------------------------------------------------
+// 5. World data import verification (requires data/world.db)
+// ---------------------------------------------------------------------------
+
+fn world_db_path() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../data/world.db")
+}
+
+fn world_db_conn() -> rusqlite::Connection {
+    let path = world_db_path();
+    rusqlite::Connection::open_with_flags(
+        &path,
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap_or_else(|e| panic!("Failed to open {}: {e}", path.display()))
+}
+
+fn table_count(conn: &rusqlite::Connection, table: &str) -> u64 {
+    conn.query_row(&format!("SELECT COUNT(*) FROM {table}"), [], |r| r.get(0))
+        .unwrap()
+}
+
+#[test]
+#[ignore] // requires data/world.db (not in git)
+fn world_db_creature_template_row_count() {
+    let conn = world_db_conn();
+    let count = table_count(&conn, "creature_template");
+    assert!(
+        count >= 29_000,
+        "creature_template has {count} rows, expected >= 29,000"
+    );
+}
+
+#[test]
+#[ignore]
+fn world_db_creature_row_count() {
+    let conn = world_db_conn();
+    let count = table_count(&conn, "creature");
+    assert!(
+        count >= 140_000,
+        "creature has {count} rows, expected >= 140,000"
+    );
+}
+
+#[test]
+#[ignore]
+fn world_db_creature_template_model_row_count() {
+    let conn = world_db_conn();
+    let count = table_count(&conn, "creature_template_model");
+    assert!(
+        count >= 40_000,
+        "creature_template_model has {count} rows, expected >= 40,000"
+    );
+}
+
+#[test]
+#[ignore]
+fn world_db_waypoint_data_row_count() {
+    let conn = world_db_conn();
+    let count = table_count(&conn, "waypoint_data");
+    assert!(
+        count >= 140_000,
+        "waypoint_data has {count} rows, expected >= 140,000"
+    );
+}
+
+#[test]
+#[ignore]
+fn world_db_hogger_exists() {
+    let conn = world_db_conn();
+    let name: String = conn
+        .query_row(
+            "SELECT name FROM creature_template WHERE entry = 448",
+            [],
+            |r| r.get(0),
+        )
+        .expect("Hogger (entry 448) missing from creature_template");
+    assert_eq!(name, "Hogger");
+}
+
+#[test]
+#[ignore]
+fn world_db_hogger_has_spawn() {
+    let conn = world_db_conn();
+    let count: u64 = conn
+        .query_row(
+            "SELECT COUNT(*) FROM creature WHERE id1 = 448",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert!(count >= 1, "Hogger has no spawns in creature table");
+}
+
+#[test]
+#[ignore]
+fn world_db_hogger_has_model() {
+    let conn = world_db_conn();
+    let count: u64 = conn
+        .query_row(
+            "SELECT COUNT(*) FROM creature_template_model WHERE CreatureID = 448",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert!(count >= 1, "Hogger has no models in creature_template_model");
+}
+
+#[test]
+#[ignore]
+fn world_db_templates_mostly_have_names() {
+    let conn = world_db_conn();
+    let nameless: u64 = conn
+        .query_row(
+            "SELECT COUNT(*) FROM creature_template WHERE name = '' OR name IS NULL",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap();
+    // AzerothCore has a few placeholder entries with empty names
+    assert!(
+        nameless <= 5,
+        "{nameless} creature templates have empty names (expected <= 5)"
+    );
+}
+
+#[test]
+#[ignore]
+fn world_db_spawns_reference_valid_templates() {
+    let conn = world_db_conn();
+    let orphans: u64 = conn
+        .query_row(
+            "SELECT COUNT(*) FROM creature c
+             WHERE NOT EXISTS (SELECT 1 FROM creature_template t WHERE t.entry = c.id1)",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert_eq!(
+        orphans, 0,
+        "{orphans} creature spawns reference non-existent templates"
+    );
+}
+
+#[test]
+#[ignore]
+fn world_db_waypoints_have_ordered_points() {
+    let conn = world_db_conn();
+    // Verify waypoint points within each path are in ascending order
+    // (AzerothCore paths don't always start at 1, but points must be monotonic)
+    let disordered: u64 = conn
+        .query_row(
+            "SELECT COUNT(*) FROM (
+                SELECT id, point,
+                       LAG(point) OVER (PARTITION BY id ORDER BY point) AS prev
+                FROM waypoint_data
+            ) WHERE prev IS NOT NULL AND point <= prev",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert_eq!(
+        disordered, 0,
+        "{disordered} waypoint points are out of order within their path"
+    );
+}
+
+#[test]
+#[ignore]
+fn world_db_multiple_maps_present() {
+    let conn = world_db_conn();
+    let map_count: u64 = conn
+        .query_row(
+            "SELECT COUNT(DISTINCT map) FROM creature",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap();
+    // AzerothCore has spawns across Eastern Kingdoms (0), Kalimdor (1), Outland (530), Northrend (571), etc.
+    assert!(
+        map_count >= 4,
+        "only {map_count} distinct maps, expected >= 4"
+    );
+}
+
+#[test]
+#[ignore]
+fn world_db_has_all_expected_tables() {
+    let conn = world_db_conn();
+    let tables: Vec<String> = conn
+        .prepare("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")
+        .unwrap()
+        .query_map([], |r| r.get(0))
+        .unwrap()
+        .map(|r| r.unwrap())
+        .collect();
+    let required = [
+        "creature",
+        "creature_template",
+        "creature_template_model",
+        "spell_bonus_data",
+        "spell_dbc",
+        "waypoint_data",
+    ];
+    for name in required {
+        assert!(
+            tables.contains(&name.to_string()),
+            "missing table: {name} (found: {tables:?})"
+        );
+    }
+}
+
+#[test]
+#[ignore]
+fn world_db_spell_dbc_row_count() {
+    let conn = world_db_conn();
+    let count = table_count(&conn, "spell_dbc");
+    // AzerothCore spell_dbc subset has ~4,400+ spell entries
+    assert!(
+        count >= 4_000,
+        "spell_dbc has {count} rows, expected >= 4,000"
+    );
+}
+
+#[test]
+#[ignore]
+fn world_db_spell_bonus_data_row_count() {
+    let conn = world_db_conn();
+    let count = table_count(&conn, "spell_bonus_data");
+    // AzerothCore spell_bonus_data has ~1,200+ coefficient entries
+    assert!(
+        count >= 1_000,
+        "spell_bonus_data has {count} rows, expected >= 1,000"
+    );
+}
+
+#[test]
+#[ignore]
+fn world_db_spell_dbc_has_known_spells() {
+    let conn = world_db_conn();
+    // Verify at least one well-known spell exists
+    let name: String = conn
+        .query_row(
+            "SELECT Name_Lang_enUS FROM spell_dbc WHERE ID = 84",
+            [],
+            |r| r.get(0),
+        )
+        .expect("spell ID 84 missing from spell_dbc");
+    assert_eq!(name, "Low Health");
+}
+
+#[test]
+#[ignore]
+fn world_db_spell_bonus_data_has_coefficients() {
+    let conn = world_db_conn();
+    // Verify at least one entry has non-zero coefficients
+    let count: u64 = conn
+        .query_row(
+            "SELECT COUNT(*) FROM spell_bonus_data
+             WHERE direct_bonus != 0 OR dot_bonus != 0 OR ap_bonus != 0 OR ap_dot_bonus != 0",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert!(
+        count >= 50,
+        "only {count} spell_bonus_data entries with non-zero coefficients"
+    );
+}
+
+#[test]
+#[ignore]
+fn world_db_loads_spells_through_spell_database() {
+    let conn = world_db_conn();
+    let db = crate::spell_db::load_spell_database(&conn);
+    assert!(!db.is_empty(), "no spells loaded");
+    assert!(db.len() >= 4_000, "only {} spells loaded", db.len());
+    // Verify a known spell loaded
+    let spell = db.get(84).expect("spell 84 not in SpellDatabase");
+    assert_eq!(spell.name, "Low Health");
+}
+
+#[test]
+#[ignore]
+fn world_db_loads_through_world_data() {
+    let path = world_db_path();
+    let data = crate::world_data::load_world_data(&path);
+    assert!(!data.templates.is_empty(), "no templates loaded");
+    assert!(!data.spawns.is_empty(), "no spawns loaded");
+    assert!(!data.spawns_by_map.is_empty(), "no map index built");
+    assert!(!data.waypoints.is_empty(), "no waypoints loaded");
+    // Verify Hogger loaded correctly
+    let hogger = data.templates.get(&448).expect("Hogger template missing");
+    assert_eq!(hogger.name, "Hogger");
+    assert!(hogger.min_level >= 10);
+    assert!(!hogger.models.is_empty(), "Hogger has no models");
+}

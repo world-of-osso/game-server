@@ -203,13 +203,13 @@ fn build_spell_data(r: SpellRow, bonus: &HashMap<u32, (f32, f32, f32, f32)>) -> 
 }
 
 const SPELL_DBC_QUERY: &str =
-    "SELECT ID, SpellName, SchoolMask, CastingTimeIndex, RecoveryTime,
+    "SELECT ID, Name_Lang_enUS, SchoolMask, CastingTimeIndex, RecoveryTime,
             PowerType, ManaCost, RangeIndex, InterruptFlags,
             Effect_1, Effect_2, Effect_3,
             EffectBasePoints_1, EffectBasePoints_2, EffectBasePoints_3,
             ImplicitTargetA_1
      FROM spell_dbc
-     WHERE SpellName != ''";
+     WHERE Name_Lang_enUS != ''";
 
 /// Load spells from world.db into a SpellDatabase.
 pub fn load_spell_database(conn: &Connection) -> SpellDatabase {
@@ -415,7 +415,7 @@ mod tests {
         let conn = Connection::open_in_memory().unwrap();
         conn.execute_batch(
             "CREATE TABLE spell_dbc (
-                ID INTEGER PRIMARY KEY, SpellName TEXT, SchoolMask INTEGER,
+                ID INTEGER PRIMARY KEY, Name_Lang_enUS TEXT, SchoolMask INTEGER,
                 CastingTimeIndex INTEGER, RecoveryTime INTEGER,
                 PowerType INTEGER, ManaCost INTEGER, RangeIndex INTEGER,
                 InterruptFlags INTEGER,
