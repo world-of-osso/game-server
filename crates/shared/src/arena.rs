@@ -121,6 +121,168 @@ impl ArenaTeam {
     }
 }
 
+// -- Arena Queue --
+
+/// Maximum rating difference for a match (widens over time in real implementation).
+const MAX_RATING_DIFF: u32 = 150;
+
+/// A team queued for an arena match.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ArenaQueueEntry {
+    /// Arena team ID.
+    pub team_id: u64,
+    /// Team rating at time of queuing.
+    pub rating: u32,
+    /// Bracket.
+    pub bracket: ArenaBracket,
+    /// Active players for this match (subset of roster, exactly bracket team_size).
+    pub players: Vec<u64>,
+    /// Server timestamp when queued.
+    pub queued_at: u64,
+}
+
+/// Why joining the arena queue failed.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ArenaQueueError {
+    /// Team is already queued.
+    AlreadyQueued,
+    /// Not enough players specified (need exactly bracket team_size).
+    WrongPlayerCount,
+    /// A listed player is not on the team roster.
+    PlayerNotOnRoster,
+}
+
+/// A successful arena match — two teams paired by rating.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ArenaMatch {
+    pub bracket: ArenaBracket,
+    pub team_a_id: u64,
+    pub team_a_players: Vec<u64>,
+    pub team_a_rating: u32,
+    pub team_b_id: u64,
+    pub team_b_players: Vec<u64>,
+    pub team_b_rating: u32,
+}
+
+/// Arena matchmaking queue.
+///
+/// Teams queue by bracket. Matchmaking pairs teams with similar ratings
+/// (within `MAX_RATING_DIFF`).
+#[derive(Debug, Clone, Default)]
+pub struct ArenaQueue {
+    entries: Vec<ArenaQueueEntry>,
+}
+
+impl ArenaQueue {
+    /// Queue a team for arena. `players` must be exactly `bracket.team_size()`
+    /// members from the team's roster.
+    pub fn join(
+        &mut self,
+        team: &ArenaTeam,
+        players: Vec<u64>,
+        now: u64,
+    ) -> Result<(), ArenaQueueError> {
+        if self.is_queued(team.id) {
+            return Err(ArenaQueueError::AlreadyQueued);
+        }
+        if players.len() != team.bracket.team_size() {
+            return Err(ArenaQueueError::WrongPlayerCount);
+        }
+        if !players.iter().all(|p| team.roster.contains(p)) {
+            return Err(ArenaQueueError::PlayerNotOnRoster);
+        }
+        self.entries.push(ArenaQueueEntry {
+            team_id: team.id,
+            rating: team.rating,
+            bracket: team.bracket,
+            players,
+            queued_at: now,
+        });
+        Ok(())
+    }
+
+    /// Remove a team from the queue.
+    pub fn leave(&mut self, team_id: u64) -> bool {
+        let had = self.entries.iter().any(|e| e.team_id == team_id);
+        self.entries.retain(|e| e.team_id != team_id);
+        had
+    }
+
+    /// Whether a team is currently queued.
+    pub fn is_queued(&self, team_id: u64) -> bool {
+        self.entries.iter().any(|e| e.team_id == team_id)
+    }
+
+    pub fn len(&self) -> usize {
+        self.entries.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.entries.is_empty()
+    }
+
+    /// Try to form a match in the given bracket.
+    ///
+    /// Finds two teams with rating difference ≤ `MAX_RATING_DIFF`.
+    /// Returns the matched pair (removed from queue), or `None`.
+    pub fn try_match(&mut self, bracket: ArenaBracket) -> Option<ArenaMatch> {
+        let candidates: Vec<usize> = self
+            .entries
+            .iter()
+            .enumerate()
+            .filter(|(_, e)| e.bracket == bracket)
+            .map(|(i, _)| i)
+            .collect();
+
+        let pair = find_closest_pair(&self.entries, &candidates)?;
+        let (idx_a, idx_b) = pair;
+
+        let a = &self.entries[idx_a];
+        let b = &self.entries[idx_b];
+        let result = ArenaMatch {
+            bracket,
+            team_a_id: a.team_id,
+            team_a_players: a.players.clone(),
+            team_a_rating: a.rating,
+            team_b_id: b.team_id,
+            team_b_players: b.players.clone(),
+            team_b_rating: b.rating,
+        };
+
+        // Remove in reverse index order
+        let (first, second) = if idx_a > idx_b {
+            (idx_a, idx_b)
+        } else {
+            (idx_b, idx_a)
+        };
+        self.entries.remove(first);
+        self.entries.remove(second);
+
+        Some(result)
+    }
+}
+
+/// Find the closest-rated pair of teams within `MAX_RATING_DIFF`.
+fn find_closest_pair(entries: &[ArenaQueueEntry], candidates: &[usize]) -> Option<(usize, usize)> {
+    if candidates.len() < 2 {
+        return None;
+    }
+    let mut best: Option<(usize, usize, u32)> = None;
+    for (i, &idx_a) in candidates.iter().enumerate() {
+        for &idx_b in &candidates[i + 1..] {
+            let diff = entries[idx_a].rating.abs_diff(entries[idx_b].rating);
+            if diff > MAX_RATING_DIFF {
+                continue;
+            }
+            let is_closer = best.is_none_or(|(_, _, d)| diff < d);
+            if is_closer {
+                best = Some((idx_a, idx_b, diff));
+            }
+        }
+    }
+    best.map(|(a, b, _)| (a, b))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -254,5 +416,156 @@ mod tests {
         let json = serde_json::to_string(&team).unwrap();
         let restored: ArenaTeam = serde_json::from_str(&json).unwrap();
         assert_eq!(team, restored);
+    }
+
+    // -- Queue tests --
+
+    fn make_2v2_team(id: u64, p1: u64, p2: u64, rating: u32) -> ArenaTeam {
+        let mut team = ArenaTeam::new(id, format!("Team{id}"), ArenaBracket::TwoVTwo, p1).unwrap();
+        team.add_member(p2).unwrap();
+        team.rating = rating;
+        team
+    }
+
+    #[test]
+    fn queue_join() {
+        let mut q = ArenaQueue::default();
+        let team = make_2v2_team(1, 10, 20, 1500);
+        q.join(&team, vec![10, 20], 100).unwrap();
+        assert!(q.is_queued(1));
+        assert_eq!(q.len(), 1);
+    }
+
+    #[test]
+    fn queue_already_queued() {
+        let mut q = ArenaQueue::default();
+        let team = make_2v2_team(1, 10, 20, 1500);
+        q.join(&team, vec![10, 20], 100).unwrap();
+        assert_eq!(q.join(&team, vec![10, 20], 101), Err(ArenaQueueError::AlreadyQueued));
+    }
+
+    #[test]
+    fn queue_wrong_player_count() {
+        let mut q = ArenaQueue::default();
+        let team = make_2v2_team(1, 10, 20, 1500);
+        assert_eq!(q.join(&team, vec![10], 100), Err(ArenaQueueError::WrongPlayerCount));
+        assert_eq!(q.join(&team, vec![10, 20, 30], 100), Err(ArenaQueueError::WrongPlayerCount));
+    }
+
+    #[test]
+    fn queue_player_not_on_roster() {
+        let mut q = ArenaQueue::default();
+        let team = make_2v2_team(1, 10, 20, 1500);
+        assert_eq!(q.join(&team, vec![10, 99], 100), Err(ArenaQueueError::PlayerNotOnRoster));
+    }
+
+    #[test]
+    fn queue_leave() {
+        let mut q = ArenaQueue::default();
+        let team = make_2v2_team(1, 10, 20, 1500);
+        q.join(&team, vec![10, 20], 100).unwrap();
+        assert!(q.leave(1));
+        assert!(!q.is_queued(1));
+        assert!(q.is_empty());
+    }
+
+    #[test]
+    fn match_close_ratings() {
+        let mut q = ArenaQueue::default();
+        let t1 = make_2v2_team(1, 10, 20, 1500);
+        let t2 = make_2v2_team(2, 30, 40, 1550);
+        q.join(&t1, vec![10, 20], 100).unwrap();
+        q.join(&t2, vec![30, 40], 100).unwrap();
+
+        let m = q.try_match(ArenaBracket::TwoVTwo).unwrap();
+        assert_eq!(m.bracket, ArenaBracket::TwoVTwo);
+        let ids = [m.team_a_id, m.team_b_id];
+        assert!(ids.contains(&1));
+        assert!(ids.contains(&2));
+        assert!(q.is_empty());
+    }
+
+    #[test]
+    fn match_ratings_too_far_apart() {
+        let mut q = ArenaQueue::default();
+        let t1 = make_2v2_team(1, 10, 20, 1500);
+        let t2 = make_2v2_team(2, 30, 40, 1700); // 200 diff > 150 max
+        q.join(&t1, vec![10, 20], 100).unwrap();
+        q.join(&t2, vec![30, 40], 100).unwrap();
+
+        assert!(q.try_match(ArenaBracket::TwoVTwo).is_none());
+        assert_eq!(q.len(), 2); // both still queued
+    }
+
+    #[test]
+    fn match_picks_closest_pair() {
+        let mut q = ArenaQueue::default();
+        let t1 = make_2v2_team(1, 10, 20, 1500);
+        let t2 = make_2v2_team(2, 30, 40, 1600);
+        let t3 = make_2v2_team(3, 50, 60, 1510); // closest to t1
+        q.join(&t1, vec![10, 20], 100).unwrap();
+        q.join(&t2, vec![30, 40], 100).unwrap();
+        q.join(&t3, vec![50, 60], 100).unwrap();
+
+        let m = q.try_match(ArenaBracket::TwoVTwo).unwrap();
+        let ids = [m.team_a_id, m.team_b_id];
+        assert!(ids.contains(&1), "team 1 (1500) should match");
+        assert!(ids.contains(&3), "team 3 (1510) should match as closest");
+        assert_eq!(q.len(), 1); // team 2 remains
+        assert!(q.is_queued(2));
+    }
+
+    #[test]
+    fn match_wrong_bracket_ignored() {
+        let mut q = ArenaQueue::default();
+        let t1 = make_2v2_team(1, 10, 20, 1500);
+        let t2 = make_2v2_team(2, 30, 40, 1500);
+        q.join(&t1, vec![10, 20], 100).unwrap();
+        q.join(&t2, vec![30, 40], 100).unwrap();
+
+        // Try matching 3v3 — no entries in that bracket
+        assert!(q.try_match(ArenaBracket::ThreeVThree).is_none());
+        assert_eq!(q.len(), 2); // 2v2 entries untouched
+    }
+
+    #[test]
+    fn match_preserves_player_lists() {
+        let mut q = ArenaQueue::default();
+        let t1 = make_2v2_team(1, 10, 20, 1500);
+        let t2 = make_2v2_team(2, 30, 40, 1500);
+        q.join(&t1, vec![10, 20], 100).unwrap();
+        q.join(&t2, vec![30, 40], 100).unwrap();
+
+        let m = q.try_match(ArenaBracket::TwoVTwo).unwrap();
+        let all_players: Vec<u64> = m.team_a_players.iter()
+            .chain(&m.team_b_players)
+            .copied()
+            .collect();
+        assert_eq!(all_players.len(), 4);
+        for p in [10, 20, 30, 40] {
+            assert!(all_players.contains(&p), "player {p} should be in match");
+        }
+    }
+
+    #[test]
+    fn match_at_exact_boundary() {
+        let mut q = ArenaQueue::default();
+        let t1 = make_2v2_team(1, 10, 20, 1500);
+        let t2 = make_2v2_team(2, 30, 40, 1650); // exactly 150 diff
+        q.join(&t1, vec![10, 20], 100).unwrap();
+        q.join(&t2, vec![30, 40], 100).unwrap();
+
+        assert!(q.try_match(ArenaBracket::TwoVTwo).is_some());
+    }
+
+    #[test]
+    fn match_just_over_boundary() {
+        let mut q = ArenaQueue::default();
+        let t1 = make_2v2_team(1, 10, 20, 1500);
+        let t2 = make_2v2_team(2, 30, 40, 1651); // 151 diff > 150
+        q.join(&t1, vec![10, 20], 100).unwrap();
+        q.join(&t2, vec![30, 40], 100).unwrap();
+
+        assert!(q.try_match(ArenaBracket::TwoVTwo).is_none());
     }
 }
