@@ -356,4 +356,21 @@ mod tests {
         let interval_secs = UPDATE_INTERVAL_TICKS as f64 / tick_rate_hz;
         assert!((interval_secs - 0.5).abs() < 0.001);
     }
+
+    #[test]
+    fn dead_entity_still_visible_for_corpse_loot() {
+        // Visibility is distance-only — death state doesn't affect it.
+        // A dead NPC at 30yd should still be visible for looting.
+        let (mut state, conn) = make_state_and_conn();
+        let players = vec![(conn, pos(0.0, 0.0, 0.0))];
+        let dead_npc_pos = pos(30.0, 0.0, 0.0);
+
+        // Entity is within range → visible regardless of alive/dead
+        update_entity_visibility(&dead_npc_pos, &mut state, &players);
+        assert_visible(&state, conn, "dead NPC at 30yd still visible");
+
+        // Re-check after another update (corpse stays visible)
+        update_entity_visibility(&dead_npc_pos, &mut state, &players);
+        assert_visible(&state, conn, "dead NPC remains visible on re-check");
+    }
 }
