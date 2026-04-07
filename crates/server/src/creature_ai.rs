@@ -17,7 +17,11 @@ impl Plugin for CreatureAiPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(
             FixedUpdate,
-            (wander_system, waypoint_system, (chase_system, leash_check_system).chain()),
+            (
+                wander_system,
+                waypoint_system,
+                (chase_system, leash_check_system, return_to_spawn_system).chain(),
+            ),
         );
     }
 }
@@ -266,6 +270,28 @@ fn leash_check_system(mut query: LeashQuery) {
         }
         if let Some(mut health) = health {
             health.current = health.max;
+        }
+    }
+}
+
+/// Walk returning creatures back to their spawn point, then transition to Idle.
+fn return_to_spawn_system(
+    time: Res<Time>,
+    mut query: Query<(&mut Position, &SpawnPoint, &mut CreatureState)>,
+) {
+    let dt = time.delta_secs();
+    for (mut pos, spawn, mut state) in &mut query {
+        if *state != CreatureState::Returning {
+            continue;
+        }
+        let speed = spawn.speed_walk * BASE_WALK_SPEED;
+        let (reached, new_x, new_z) =
+            move_toward(pos.x, pos.z, spawn.x, spawn.z, speed * dt);
+        pos.x = new_x;
+        pos.z = new_z;
+        if reached {
+            pos.y = spawn.y;
+            *state = CreatureState::Idle;
         }
     }
 }
@@ -1233,5 +1259,120 @@ mod tests {
 
         let state = app.world().entity(creature).get::<CreatureState>().unwrap();
         assert_eq!(*state, CreatureState::Idle, "idle creature should not be affected by leash");
+    }
+
+    // -- Return-to-spawn tests --
+
+    #[test]
+    fn return_moves_toward_spawn() {
+        use bevy::ecs::system::RunSystemOnce;
+
+        let mut app = App::new();
+        app.add_plugins(bevy::MinimalPlugins);
+        app.update();
+        app.update();
+
+        let creature = app
+            .world_mut()
+            .spawn((
+                Position { x: 30.0, y: 0.0, z: 0.0 },
+                SpawnPoint { x: 0.0, y: 0.0, z: 0.0, wander_distance: 5.0, speed_walk: 1.0 },
+                CreatureState::Returning,
+            ))
+            .id();
+
+        let _ = app.world_mut().run_system_once(return_to_spawn_system);
+
+        let pos = *app.world().entity(creature).get::<Position>().unwrap();
+        assert!(pos.x < 30.0, "creature should have moved toward spawn");
+        assert!(pos.x > 0.0, "creature should not have reached spawn in one tick");
+    }
+
+    #[test]
+    fn return_transitions_to_idle_at_spawn() {
+        use bevy::ecs::system::RunSystemOnce;
+
+        let mut app = App::new();
+        app.add_plugins(bevy::MinimalPlugins);
+        app.update();
+        app.update();
+
+        // Place creature very close to spawn so it reaches in one tick
+        let creature = app
+            .world_mut()
+            .spawn((
+                Position { x: 0.005, y: 5.0, z: 0.0 },
+                SpawnPoint { x: 0.0, y: 0.0, z: 0.0, wander_distance: 5.0, speed_walk: 1.0 },
+                CreatureState::Returning,
+            ))
+            .id();
+
+        let _ = app.world_mut().run_system_once(return_to_spawn_system);
+
+        let state = app.world().entity(creature).get::<CreatureState>().unwrap();
+        assert_eq!(*state, CreatureState::Idle, "should be idle after reaching spawn");
+        let pos = *app.world().entity(creature).get::<Position>().unwrap();
+        assert_eq!(pos.y, 0.0, "y should snap to spawn height on arrival");
+    }
+
+    #[test]
+    fn return_ignores_idle_creatures() {
+        use bevy::ecs::system::RunSystemOnce;
+
+        let mut app = App::new();
+        app.add_plugins(bevy::MinimalPlugins);
+        app.update();
+        app.update();
+
+        let creature = app
+            .world_mut()
+            .spawn((
+                Position { x: 30.0, y: 0.0, z: 0.0 },
+                SpawnPoint { x: 0.0, y: 0.0, z: 0.0, wander_distance: 5.0, speed_walk: 1.0 },
+                CreatureState::Idle,
+            ))
+            .id();
+
+        let _ = app.world_mut().run_system_once(return_to_spawn_system);
+
+        let pos = *app.world().entity(creature).get::<Position>().unwrap();
+        assert_eq!(pos.x, 30.0, "idle creature should not move");
+    }
+
+    #[test]
+    fn return_respects_walk_speed() {
+        use bevy::ecs::system::RunSystemOnce;
+
+        let mut app = App::new();
+        app.add_plugins(bevy::MinimalPlugins);
+        app.update();
+        app.update();
+
+        let slow = app
+            .world_mut()
+            .spawn((
+                Position { x: 50.0, y: 0.0, z: 0.0 },
+                SpawnPoint { x: 0.0, y: 0.0, z: 0.0, wander_distance: 5.0, speed_walk: 1.0 },
+                CreatureState::Returning,
+            ))
+            .id();
+
+        let fast = app
+            .world_mut()
+            .spawn((
+                Position { x: 50.0, y: 0.0, z: 0.0 },
+                SpawnPoint { x: 0.0, y: 0.0, z: 0.0, wander_distance: 5.0, speed_walk: 2.0 },
+                CreatureState::Returning,
+            ))
+            .id();
+
+        let _ = app.world_mut().run_system_once(return_to_spawn_system);
+
+        let slow_pos = app.world().entity(slow).get::<Position>().unwrap().x;
+        let fast_pos = app.world().entity(fast).get::<Position>().unwrap().x;
+        assert!(
+            fast_pos < slow_pos,
+            "faster creature should be closer to spawn: fast={fast_pos}, slow={slow_pos}"
+        );
     }
 }
