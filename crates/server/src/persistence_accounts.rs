@@ -614,6 +614,31 @@ mod tests {
     }
 
     #[test]
+    fn character_load_populates_all_fields() {
+        let db = temp_database();
+        let (account_id, _) = register_account(&db, "user1", "pass").unwrap();
+        let (cid, _) = create_character(&db, account_id, "FullLoad", 1, 2).unwrap();
+
+        let data = load_character(&db, cid).unwrap();
+        assert_eq!(data.name, "FullLoad");
+        assert_eq!(data.race, 1);
+        assert_eq!(data.class, 2);
+        assert_eq!(data.level, 1);
+        assert!(data.max_health > 0.0, "max_health populated");
+        // Position should be set to starting zone
+        assert!(data.x != 0.0 || data.y != 0.0 || data.z != 0.0, "position set");
+
+        // Inventory should have starter items
+        let inv = crate::persistence::load_inventory(&db, cid);
+        assert!(!inv.items.is_empty(), "starter items present");
+        assert!(inv.gold > 0, "starter gold present");
+
+        // Guild defaults to none
+        let guild = load_character_guild(&db, cid);
+        assert!(guild.is_none(), "no guild by default");
+    }
+
+    #[test]
     fn set_credentials_enables_password_login() {
         let db = temp_database();
         let (_, _token) = register_account(&db, "tokenuser", "oldpass").unwrap();
