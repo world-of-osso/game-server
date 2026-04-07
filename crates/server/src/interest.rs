@@ -227,4 +227,25 @@ mod tests {
         assert_not_visible(&old_entity_state, conn, "old entity culled after teleport");
         assert_visible(&new_entity_state, conn, "new entity visible after teleport");
     }
+
+    #[test]
+    fn npc_spawn_appears_to_all_nearby_players() {
+        let player_a = Entity::from_bits(1);
+        let player_b = Entity::from_bits(2);
+        let player_c = Entity::from_bits(3);
+
+        let players = vec![
+            (player_a, pos(10.0, 0.0, 0.0)),  // 40yd from NPC
+            (player_b, pos(80.0, 0.0, 0.0)),  // 30yd from NPC
+            (player_c, pos(300.0, 0.0, 0.0)), // 250yd from NPC — out of range
+        ];
+
+        // NPC spawns at (50, 0, 0)
+        let mut state = ReplicationState::default();
+        update_entity_visibility(&pos(50.0, 0.0, 0.0), &mut state, &players);
+
+        assert_visible(&state, player_a, "player A within range");
+        assert_visible(&state, player_b, "player B within range");
+        assert_not_visible(&state, player_c, "player C out of range");
+    }
 }
