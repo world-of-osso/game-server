@@ -450,6 +450,31 @@ fn create_auction(
     ok("auction created")
 }
 
+/// Refund the previous bidder's gold and send outbid notification mail.
+fn refund_previous_bidder(db: &redb::Database, auction: &AuctionData, new_bidder: u64) {
+    let Some(prev_bidder) = auction.current_bidder_character_id else {
+        return;
+    };
+    if prev_bidder == new_bidder {
+        return;
+    }
+    let refund = auction.current_bid.unwrap_or(0);
+    let mut prev_inventory = persistence::load_inventory(db, prev_bidder);
+    prev_inventory.gold = prev_inventory.gold.saturating_add(refund);
+    persistence::save_inventory(db, prev_bidder, &prev_inventory);
+    deliver_mail(
+        db,
+        prev_bidder,
+        "Outbid",
+        &format!(
+            "You have been outbid on {}. Your {} gold has been refunded.",
+            auction.item.name, refund
+        ),
+        0,
+        None,
+    );
+}
+
 fn place_bid(
     db: &redb::Database,
     state: &mut AuctionHouseState,
@@ -480,25 +505,7 @@ fn place_bid(
     bidder_inventory.gold -= additional;
     persistence::save_inventory(db, character_id, &bidder_inventory);
 
-    if let Some(prev_bidder) = auction.current_bidder_character_id
-        && prev_bidder != character_id
-    {
-        let refund = auction.current_bid.unwrap_or(0);
-        let mut prev_inventory = persistence::load_inventory(db, prev_bidder);
-        prev_inventory.gold = prev_inventory.gold.saturating_add(refund);
-        persistence::save_inventory(db, prev_bidder, &prev_inventory);
-        deliver_mail(
-            db,
-            prev_bidder,
-            "Outbid",
-            &format!(
-                "You have been outbid on {}. Your {} gold has been refunded.",
-                auction.item.name, refund
-            ),
-            0,
-            None,
-        );
-    }
+    refund_previous_bidder(db, auction, character_id);
 
     auction.current_bid = Some(amount);
     auction.current_bidder_character_id = Some(character_id);
