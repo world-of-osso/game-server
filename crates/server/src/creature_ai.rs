@@ -1375,4 +1375,172 @@ mod tests {
             "faster creature should be closer to spawn: fast={fast_pos}, slow={slow_pos}"
         );
     }
+
+    // -- Integration tests: full chase → leash → return pipeline --
+
+    /// Build an app with creature AI systems registered and time advancing.
+    /// Uses FixedUpdate at 20Hz (0.05s timestep) like the real server.
+    fn ai_test_app() -> App {
+        use bevy::time::TimeUpdateStrategy;
+        use std::collections::HashMap;
+
+        let mut app = App::new();
+        app.add_plugins(bevy::MinimalPlugins);
+        app.insert_resource(TimeUpdateStrategy::ManualDuration(
+            std::time::Duration::from_millis(50),
+        ));
+        // waypoint_system requires WorldData resource
+        app.insert_resource(WorldData {
+            templates: HashMap::new(),
+            spawns: vec![],
+            spawns_by_map: HashMap::new(),
+            waypoints: HashMap::new(),
+        });
+        app.add_systems(
+            FixedUpdate,
+            (
+                wander_system,
+                waypoint_system,
+                (chase_system, leash_check_system, return_to_spawn_system).chain(),
+            ),
+        );
+        // Prime the app so Time resource is initialized
+        app.update();
+        app
+    }
+
+    #[test]
+    fn chase_reaches_target_over_multiple_ticks() {
+        let mut app = ai_test_app();
+
+        let target = app
+            .world_mut()
+            .spawn(Position { x: 10.0, y: 0.0, z: 0.0 })
+            .id();
+
+        let chaser = app
+            .world_mut()
+            .spawn((
+                Position { x: 0.0, y: 0.0, z: 0.0 },
+                SpawnPoint { x: 0.0, y: 0.0, z: 0.0, wander_distance: 5.0, speed_walk: 1.0 },
+                CreatureState::Pursuing { target: target.to_bits() },
+            ))
+            .id();
+
+        // speed = 2.5 units/s, dt = 0.05s → 0.125 units/tick, need ~80 ticks for 10 units
+        for _ in 0..200 {
+            app.update();
+            let pos = *app.world().entity(chaser).get::<Position>().unwrap();
+            if (pos.x - 10.0).abs() < 0.2 {
+                break;
+            }
+        }
+
+        let pos = *app.world().entity(chaser).get::<Position>().unwrap();
+        assert!(
+            (pos.x - 10.0).abs() < 0.2,
+            "creature should have reached target at x=10, got x={}",
+            pos.x
+        );
+    }
+
+    #[test]
+    fn chase_then_leash_evade() {
+        let mut app = ai_test_app();
+
+        // Target 60 units away — creature will chase past 40yd leash
+        let target = app
+            .world_mut()
+            .spawn(Position { x: 60.0, y: 0.0, z: 0.0 })
+            .id();
+
+        let mut threat = ThreatTable::default();
+        threat.add_damage_threat(target.to_bits(), 100.0, 1.0);
+
+        let chaser = app
+            .world_mut()
+            .spawn((
+                Position { x: 0.0, y: 0.0, z: 0.0 },
+                SpawnPoint { x: 0.0, y: 0.0, z: 0.0, wander_distance: 5.0, speed_walk: 1.0 },
+                CreatureState::Pursuing { target: target.to_bits() },
+                threat,
+                Health { current: 50.0, max: 100.0 },
+            ))
+            .id();
+
+        // Run until evade triggers
+        for _ in 0..1000 {
+            app.update();
+            let state = app.world().entity(chaser).get::<CreatureState>().unwrap();
+            if *state == CreatureState::Returning {
+                break;
+            }
+        }
+
+        let state = app.world().entity(chaser).get::<CreatureState>().unwrap();
+        assert_eq!(*state, CreatureState::Returning, "should have evaded");
+
+        let threat = app.world().entity(chaser).get::<ThreatTable>().unwrap();
+        assert!(threat.is_empty(), "threat should be cleared on evade");
+
+        let health = app.world().entity(chaser).get::<Health>().unwrap();
+        assert_eq!(health.current, 100.0, "health should be restored on evade");
+    }
+
+    #[test]
+    fn full_pipeline_pursue_evade_return_idle() {
+        let mut app = ai_test_app();
+
+        // Target far away — creature will chase, exceed leash, evade, walk back
+        let target = app
+            .world_mut()
+            .spawn(Position { x: 80.0, y: 0.0, z: 0.0 })
+            .id();
+
+        let chaser = app
+            .world_mut()
+            .spawn((
+                Position { x: 0.0, y: 0.0, z: 0.0 },
+                SpawnPoint { x: 0.0, y: 0.0, z: 0.0, wander_distance: 5.0, speed_walk: 1.0 },
+                CreatureState::Pursuing { target: target.to_bits() },
+                Health { current: 60.0, max: 100.0 },
+            ))
+            .id();
+
+        // Phase 1: Chase until leash evade
+        let mut evaded = false;
+        for _ in 0..1000 {
+            app.update();
+            if *app.world().entity(chaser).get::<CreatureState>().unwrap()
+                == CreatureState::Returning
+            {
+                evaded = true;
+                break;
+            }
+        }
+        assert!(evaded, "creature should have evaded after exceeding leash");
+
+        // return_to_spawn runs in same frame after leash evade, so creature
+        // has already taken one step back from beyond-40 toward spawn
+        let evade_x = app.world().entity(chaser).get::<Position>().unwrap().x;
+        assert!(evade_x > 39.0, "evade pos should be near leash boundary: x={evade_x}");
+
+        // Phase 2: Return to spawn until idle
+        let mut returned = false;
+        for _ in 0..2000 {
+            app.update();
+            if *app.world().entity(chaser).get::<CreatureState>().unwrap() == CreatureState::Idle {
+                returned = true;
+                break;
+            }
+        }
+        assert!(returned, "creature should have returned to idle at spawn");
+
+        let final_pos = *app.world().entity(chaser).get::<Position>().unwrap();
+        assert!(
+            final_pos.x.abs() < 0.1,
+            "creature should be at spawn x=0, got x={}",
+            final_pos.x
+        );
+    }
 }
