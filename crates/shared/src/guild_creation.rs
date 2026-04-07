@@ -4,6 +4,8 @@
 //! players, then submit the petition to create the guild.
 //! Ref: AzerothCore `Guild.cpp`, `PetitionHandler.cpp`.
 
+use std::collections::HashSet;
+
 use serde::{Deserialize, Serialize};
 
 /// Cost of a guild charter in copper (10 silver = 1000 copper).
@@ -70,21 +72,18 @@ impl Petition {
 pub struct PetitionManager {
     petitions: Vec<Petition>,
     /// Taken guild names (lowercase for case-insensitive check).
-    taken_names: Vec<String>,
+    taken_names: HashSet<String>,
     next_id: u64,
 }
 
 impl PetitionManager {
     pub fn new() -> Self {
-        Self { petitions: Vec::new(), taken_names: Vec::new(), next_id: 1 }
+        Self { petitions: Vec::new(), taken_names: HashSet::new(), next_id: 1 }
     }
 
     /// Register an existing guild name as taken (loaded from DB).
     pub fn reserve_name(&mut self, name: &str) {
-        let lower = name.to_lowercase();
-        if !self.taken_names.contains(&lower) {
-            self.taken_names.push(lower);
-        }
+        self.taken_names.insert(name.to_lowercase());
     }
 
     /// Purchase a guild charter. Validates funds, guild membership, and name.

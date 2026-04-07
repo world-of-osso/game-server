@@ -432,7 +432,7 @@ pub fn aoe_loot(
 ) -> AoeLootResult {
     let mut result = AoeLootResult::default();
 
-    let in_range: Vec<u64> = player_distances
+    let in_range: std::collections::HashSet<u64> = player_distances
         .iter()
         .filter(|(_, dist)| *dist <= radius)
         .map(|(entity, _)| *entity)

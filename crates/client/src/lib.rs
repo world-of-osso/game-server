@@ -518,20 +518,19 @@ fn receive_create_character_response(
 ) {
     for mut receiver in receivers.iter_mut() {
         for resp in receiver.receive() {
-            if resp.success {
-                if let Some(ch) = resp.character {
-                    println!(
-                        "[create] Created character '{}' (id={}, race={}, class={})",
-                        ch.name, ch.character_id, ch.race, ch.class
-                    );
-                } else {
-                    println!("[create] Character created");
-                }
-                exit.write(AppExit::Success);
-            } else {
+            if !resp.success {
                 eprintln!("[create] Failed: {}", resp.error.unwrap_or_default());
                 exit.write(AppExit::Error(1.try_into().unwrap()));
+                continue;
             }
+            match resp.character {
+                Some(ch) => println!(
+                    "[create] Created character '{}' (id={}, race={}, class={})",
+                    ch.name, ch.character_id, ch.race, ch.class
+                ),
+                None => println!("[create] Character created"),
+            }
+            exit.write(AppExit::Success);
         }
     }
 }

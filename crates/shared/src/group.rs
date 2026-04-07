@@ -82,7 +82,7 @@ impl Party {
         if self.members.len() >= MAX_PARTY_SIZE {
             return Err(PartyError::Full);
         }
-        if self.members.contains(&player) {
+        if self.members.contains(&player) { // bounded: max 5 members
             return Err(PartyError::AlreadyMember);
         }
         self.members.push(player);

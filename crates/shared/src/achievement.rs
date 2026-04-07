@@ -194,7 +194,7 @@ pub struct CharacterAchievements {
 /// Account-wide achievement tracking (shared across all characters).
 #[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
 pub struct AccountAchievements {
-    pub completed_ids: Vec<u32>,
+    pub completed_ids: Vec<u32>, // bounded: ~2000 achievements max
     pub total_points: u32,
 }
 
