@@ -268,6 +268,46 @@ fn chase_need_repath_timer_expired() {
     assert_eq!(result, ChaseTickResult::NeedRepath);
 }
 
+#[test]
+fn chase_recalculates_path_when_target_moves() {
+    let mob_pos = NavPoint::new(0.0, 0.0, 0.0);
+    let initial_target = NavPoint::new(20.0, 0.0, 0.0);
+    let mut chase = ChaseState::new(1, initial_target, 7.0);
+
+    // Set initial path toward target at (20, 0, 0)
+    chase.set_path(
+        NavPath {
+            waypoints: vec![NavPoint::new(10.0, 0.0, 0.0), initial_target],
+        },
+        initial_target,
+    );
+
+    // First tick: follows path normally
+    let result = chase.tick(0.1, &mob_pos, &initial_target, 5.0);
+    assert_eq!(result, ChaseTickResult::MoveTo(NavPoint::new(10.0, 0.0, 0.0)));
+
+    // Target moves significantly to (20, 0, 30)
+    let new_target = NavPoint::new(20.0, 0.0, 30.0);
+    let result = chase.tick(0.1, &mob_pos, &new_target, 5.0);
+    assert_eq!(result, ChaseTickResult::NeedRepath, "target moved → repath");
+
+    // Caller provides new path to updated target
+    chase.set_path(
+        NavPath {
+            waypoints: vec![NavPoint::new(10.0, 0.0, 15.0), new_target],
+        },
+        new_target,
+    );
+
+    // Now follows new path toward updated position
+    let result = chase.tick(0.1, &mob_pos, &new_target, 5.0);
+    assert_eq!(
+        result,
+        ChaseTickResult::MoveTo(NavPoint::new(10.0, 0.0, 15.0)),
+        "follows new path after repath",
+    );
+}
+
 // --- Leash tests ---
 
 #[test]
