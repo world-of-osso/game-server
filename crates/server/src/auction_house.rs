@@ -355,12 +355,7 @@ struct ValidatedAuction {
     deposit: u32,
 }
 
-fn validate_create_auction(
-    db: &redb::Database,
-    state: &AuctionHouseState,
-    character_id: u64,
-    req: &CreateAuction,
-) -> Result<ValidatedAuction, AuctionOperationResponse> {
+fn validate_auction_request(req: &CreateAuction) -> Result<(), AuctionOperationResponse> {
     if req.stack_count == 0 {
         return Err(err("stack count must be greater than zero"));
     }
@@ -372,6 +367,16 @@ fn validate_create_auction(
     {
         return Err(err("buyout must be greater than or equal to minimum bid"));
     }
+    Ok(())
+}
+
+fn validate_create_auction(
+    db: &redb::Database,
+    state: &AuctionHouseState,
+    character_id: u64,
+    req: &CreateAuction,
+) -> Result<ValidatedAuction, AuctionOperationResponse> {
+    validate_auction_request(req)?;
     let active_count = state
         .auctions
         .values()
