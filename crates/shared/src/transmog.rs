@@ -522,4 +522,175 @@ mod tests {
             .unwrap();
         assert_eq!(legs.display_info_id, Some(200));
     }
+
+    // -- Integration tests --
+
+    #[test]
+    fn full_transmog_workflow() {
+        // 1. Learn an appearance
+        let mut collection = AppearanceCollection::default();
+        assert!(collection.learn(500));
+
+        // 2. Validate transmog (plate chest → plate chest appearance)
+        let equipped = plate_chest();
+        let source = plate_chest();
+        assert_eq!(
+            validate_transmog(&equipped, &source, &collection, 500),
+            Ok(())
+        );
+
+        // 3. Calculate cost
+        let cost = transmog_cost(&source);
+        assert!(cost >= 100);
+
+        // 4. Apply transmog
+        let mut appearance = EquipmentAppearance::default();
+        apply_transmog(&mut appearance, EquipmentVisualSlot::Chest, 500);
+        let entry = appearance
+            .entries
+            .iter()
+            .find(|e| e.slot == EquipmentVisualSlot::Chest)
+            .unwrap();
+        assert_eq!(entry.display_info_id, Some(500));
+
+        // 5. Remove transmog
+        remove_transmog(&mut appearance, EquipmentVisualSlot::Chest);
+        let entry = appearance
+            .entries
+            .iter()
+            .find(|e| e.slot == EquipmentVisualSlot::Chest)
+            .unwrap();
+        assert_eq!(entry.display_info_id, None);
+    }
+
+    #[test]
+    fn validate_rejects_then_learn_allows() {
+        let equipped = plate_chest();
+        let source = plate_chest();
+        let mut collection = AppearanceCollection::default();
+
+        // Not learned yet — rejected
+        assert_eq!(
+            validate_transmog(&equipped, &source, &collection, 500),
+            Err(TransmogError::AppearanceNotLearned)
+        );
+
+        // Learn it — now accepted
+        collection.learn(500);
+        assert_eq!(
+            validate_transmog(&equipped, &source, &collection, 500),
+            Ok(())
+        );
+    }
+
+    #[test]
+    fn all_armor_subclasses_match_themselves() {
+        let collection = learned(500);
+        let subclasses = [
+            ArmorSubclass::Cloth,
+            ArmorSubclass::Leather,
+            ArmorSubclass::Mail,
+            ArmorSubclass::Plate,
+            ArmorSubclass::Shield,
+        ];
+        for sub in subclasses {
+            let item = make_item(
+                Some(EquipSlot::Chest),
+                ItemClass::Armor,
+                ItemSubclass::Armor(sub),
+            );
+            assert_eq!(
+                validate_transmog(&item, &item, &collection, 500),
+                Ok(()),
+                "{sub:?} should match itself"
+            );
+        }
+    }
+
+    #[test]
+    fn all_armor_subclasses_reject_cross_type() {
+        let collection = learned(500);
+        let plate = make_item(
+            Some(EquipSlot::Chest),
+            ItemClass::Armor,
+            ItemSubclass::Armor(ArmorSubclass::Plate),
+        );
+        let others = [
+            ArmorSubclass::Cloth,
+            ArmorSubclass::Leather,
+            ArmorSubclass::Mail,
+            ArmorSubclass::Shield,
+        ];
+        for sub in others {
+            let other = make_item(
+                Some(EquipSlot::Chest),
+                ItemClass::Armor,
+                ItemSubclass::Armor(sub),
+            );
+            assert_eq!(
+                validate_transmog(&plate, &other, &collection, 500),
+                Err(TransmogError::ArmorTypeMismatch),
+                "plate should not mog {sub:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn weapon_2h_types_match() {
+        let collection = learned(700);
+        let sword2h = make_item(
+            Some(EquipSlot::TwoHand),
+            ItemClass::Weapon,
+            ItemSubclass::Weapon(WeaponSubclass::Sword2H),
+        );
+        assert_eq!(
+            validate_transmog(&sword2h, &sword2h, &collection, 700),
+            Ok(())
+        );
+    }
+
+    #[test]
+    fn weapon_2h_cross_type_rejected() {
+        let collection = learned(700);
+        let sword2h = make_item(
+            Some(EquipSlot::TwoHand),
+            ItemClass::Weapon,
+            ItemSubclass::Weapon(WeaponSubclass::Sword2H),
+        );
+        let axe2h = make_item(
+            Some(EquipSlot::TwoHand),
+            ItemClass::Weapon,
+            ItemSubclass::Weapon(WeaponSubclass::Axe2H),
+        );
+        assert_eq!(
+            validate_transmog(&sword2h, &axe2h, &collection, 700),
+            Err(TransmogError::WeaponTypeMismatch)
+        );
+    }
+
+    #[test]
+    fn multi_slot_transmog_independent() {
+        let mut appearance = EquipmentAppearance::default();
+
+        // Apply to multiple slots
+        apply_transmog(&mut appearance, EquipmentVisualSlot::Head, 100);
+        apply_transmog(&mut appearance, EquipmentVisualSlot::Chest, 200);
+        apply_transmog(&mut appearance, EquipmentVisualSlot::Legs, 300);
+        assert_eq!(appearance.entries.len(), 3);
+
+        // Remove one — others untouched
+        remove_transmog(&mut appearance, EquipmentVisualSlot::Chest);
+        assert_eq!(
+            appearance.entries.iter().find(|e| e.slot == EquipmentVisualSlot::Head).unwrap().display_info_id,
+            Some(100)
+        );
+        assert_eq!(
+            appearance.entries.iter().find(|e| e.slot == EquipmentVisualSlot::Chest).unwrap().display_info_id,
+            None
+        );
+        assert_eq!(
+            appearance.entries.iter().find(|e| e.slot == EquipmentVisualSlot::Legs).unwrap().display_info_id,
+            Some(300)
+        );
+    }
 }
