@@ -125,6 +125,19 @@ const MELEE_AGGRO_THRESHOLD: f32 = 1.10;
 /// Aggro swap threshold for ranged (must exceed current target by 30%).
 const RANGED_AGGRO_THRESHOLD: f32 = 1.30;
 
+/// Radius within which linked mobs join combat when one aggros (yards).
+const GROUP_AGGRO_RADIUS: f32 = 10.0;
+
+/// Check if a linked mob should join combat when a nearby mob aggros.
+///
+/// Mobs within `GROUP_AGGRO_RADIUS` of the aggroing mob will also enter combat.
+pub fn should_group_aggro(mob_x: f32, mob_z: f32, aggro_x: f32, aggro_z: f32) -> bool {
+    let dx = mob_x - aggro_x;
+    let dz = mob_z - aggro_z;
+    let dist_sq = dx * dx + dz * dz;
+    dist_sq <= GROUP_AGGRO_RADIUS * GROUP_AGGRO_RADIUS
+}
+
 impl ThreatTable {
     /// Add threat from damage (1:1 base ratio, scaled by `modifier`).
     ///
@@ -501,6 +514,27 @@ mod tests {
         table.add_damage_threat(tank, 1000.0, 1.0);
         current_target = table.aggro_target(Some(current_target), true).unwrap();
         assert_eq!(current_target, tank, "tank reclaims with 1500 vs 560");
+    }
+
+    #[test]
+    fn group_aggro_nearby_mobs_join_combat() {
+        let aggro_x = 100.0;
+        let aggro_z = 100.0;
+
+        // Mob within 10yd → joins
+        assert!(should_group_aggro(105.0, 103.0, aggro_x, aggro_z));
+
+        // Mob at exactly 10yd → joins
+        assert!(should_group_aggro(110.0, 100.0, aggro_x, aggro_z));
+
+        // Mob beyond 10yd → does not join
+        assert!(!should_group_aggro(111.0, 100.0, aggro_x, aggro_z));
+
+        // Mob far away → does not join
+        assert!(!should_group_aggro(200.0, 200.0, aggro_x, aggro_z));
+
+        // Same position → joins
+        assert!(should_group_aggro(aggro_x, aggro_z, aggro_x, aggro_z));
     }
 
     #[test]
