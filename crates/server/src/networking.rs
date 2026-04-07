@@ -20,6 +20,8 @@ use crate::persistence::{self, CharacterData, ClientId, GameDatabase};
 use crate::terrain_height::{GRAVITY, GROUND_SNAP_THRESHOLD, TerrainHeightMap};
 
 const SERVER_PORT: u16 = 5000;
+/// Squared radius for immediate visibility grant on world entry (matches interest system).
+const INITIAL_VISIBILITY_RADIUS_SQ: f32 = 100.0 * 100.0;
 const DEFAULT_RUN_SPEED: f32 = 7.0;
 const DEFAULT_WALK_SPEED: f32 = 2.5;
 const DEFAULT_SWIM_SPEED: f32 = shared::movement::SWIM_SPEED;
@@ -335,7 +337,7 @@ fn on_player_link_inserted(
         let dx = pos.x - player_pos.x;
         let dy = pos.y - player_pos.y;
         let dz = pos.z - player_pos.z;
-        if dx * dx + dy * dy + dz * dz <= 100.0 * 100.0 {
+        if dx * dx + dy * dy + dz * dz <= INITIAL_VISIBILITY_RADIUS_SQ {
             state.gain_visibility(conn_entity);
             count += 1;
         }
@@ -504,10 +506,12 @@ fn direction_length(dir: &[f32; 3]) -> f32 {
 }
 
 const TILE_SIZE: f32 = 533.33;
+/// WoW map origin offset (32 tiles * TILE_SIZE).
+const MAP_ORIGIN: f32 = 17066.67;
 
 fn wow_to_tile(wow_x: f32, wow_y: f32) -> (u32, u32) {
-    let row = ((17066.67 - wow_y) / TILE_SIZE).floor() as i32;
-    let col = ((17066.67 - wow_x) / TILE_SIZE).floor() as i32;
+    let row = ((MAP_ORIGIN - wow_y) / TILE_SIZE).floor() as i32;
+    let col = ((MAP_ORIGIN - wow_x) / TILE_SIZE).floor() as i32;
     (row.clamp(0, 63) as u32, col.clamp(0, 63) as u32)
 }
 
