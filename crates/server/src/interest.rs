@@ -347,4 +347,13 @@ mod tests {
         // Stealthed entity at 11yd: hidden
         assert!(!should_be_visible(11.0 * 11.0, true));
     }
+
+    #[test]
+    fn update_interval_is_half_second_at_20hz() {
+        // FixedUpdate runs at 20Hz (50ms per tick). 10 ticks = 500ms = 0.5s.
+        assert_eq!(UPDATE_INTERVAL_TICKS, 10);
+        let tick_rate_hz = 20.0_f64;
+        let interval_secs = UPDATE_INTERVAL_TICKS as f64 / tick_rate_hz;
+        assert!((interval_secs - 0.5).abs() < 0.001);
+    }
 }
