@@ -561,6 +561,41 @@ mod tests {
     }
 
     #[test]
+    fn height_query_1000_lookups_under_threshold() {
+        // 16 chunks in a 4x4 grid
+        let mut chunks = Vec::new();
+        for row in 0..4 {
+            for col in 0..4 {
+                chunks.push(ChunkHeight {
+                    corner_x: 100.0 - col as f32 * CHUNK_SIZE,
+                    corner_y: 100.0 - row as f32 * CHUNK_SIZE,
+                    base_z: 50.0,
+                    heights: [0.0; MCVT_COUNT],
+                });
+            }
+        }
+        let map = TerrainHeightMap { chunks };
+
+        let start = std::time::Instant::now();
+        let mut hit = 0;
+        for i in 0..1000 {
+            let x = 100.0 - (i as f32 * 0.1) % (CHUNK_SIZE * 4.0);
+            let y = 100.0 - (i as f32 * 0.07) % (CHUNK_SIZE * 4.0);
+            if map.height_at(x, y).is_some() {
+                hit += 1;
+            }
+        }
+        let elapsed = start.elapsed();
+
+        assert!(hit > 0, "some lookups hit terrain");
+        assert!(
+            elapsed.as_millis() < 100,
+            "1000 lookups across 16 chunks took {}ms (should be <100ms)",
+            elapsed.as_millis(),
+        );
+    }
+
+    #[test]
     fn mcvt_145_floats() {
         // Build a minimal MCVT payload with exactly 145 floats.
         let mut payload = vec![0u8; MCVT_COUNT * 4];
