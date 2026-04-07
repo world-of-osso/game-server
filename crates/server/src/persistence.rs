@@ -365,3 +365,7 @@ pub(crate) fn temp_database() -> Database {
 #[cfg(test)]
 #[path = "persistence_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "startup_tests.rs"]
+mod startup_tests;
