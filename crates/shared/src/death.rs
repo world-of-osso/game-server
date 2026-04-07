@@ -445,30 +445,29 @@ impl Durability {
     }
 }
 
-/// Calculate durability loss for all equipped items on death.
-///
-/// Returns the total loss applied (sum of losses across all slots).
-pub fn apply_death_durability_loss(items: &mut [Durability]) -> u32 {
+/// Apply a fractional durability loss to all items, returning total loss.
+fn apply_durability_loss(items: &mut [Durability], fraction: f32) -> u32 {
     let mut total = 0;
     for item in items.iter_mut() {
-        let loss = (item.max as f32 * DEATH_DURABILITY_LOSS) as u32;
+        let loss = (item.max as f32 * fraction) as u32;
         item.current = item.current.saturating_sub(loss);
         total += loss;
     }
     total
 }
 
+/// Calculate durability loss for all equipped items on death.
+///
+/// Returns the total loss applied (sum of losses across all slots).
+pub fn apply_death_durability_loss(items: &mut [Durability]) -> u32 {
+    apply_durability_loss(items, DEATH_DURABILITY_LOSS)
+}
+
 /// Calculate additional durability loss for spirit healer resurrection.
 ///
 /// Applied on top of the death loss. Returns the additional loss.
 pub fn apply_spirit_healer_durability_loss(items: &mut [Durability]) -> u32 {
-    let mut total = 0;
-    for item in items.iter_mut() {
-        let loss = (item.max as f32 * SPIRIT_HEALER_DURABILITY_LOSS) as u32;
-        item.current = item.current.saturating_sub(loss);
-        total += loss;
-    }
-    total
+    apply_durability_loss(items, SPIRIT_HEALER_DURABILITY_LOSS)
 }
 
 // --- Player resurrect spells ---
