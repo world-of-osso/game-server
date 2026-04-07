@@ -285,7 +285,7 @@ pub(crate) fn handle_set_equipment_appearance(
         return AdminResponse::Error(format!("character data for '{name}' not found"));
     };
 
-    upsert_equipment_appearance_entry(&mut data.equipment_appearance, slot, display_info_id);
+    show_equipment_appearance(&mut data.equipment_appearance, slot, display_info_id);
     persistence::save_character(&db.db, char_id, &data);
     send_character_list_update(
         db,
@@ -297,7 +297,7 @@ pub(crate) fn handle_set_equipment_appearance(
 
     for (entity, mut appearance, cid) in equipment_query.iter_mut() {
         if cid.0 == char_id {
-            upsert_equipment_appearance_entry(&mut appearance, slot, display_info_id);
+            show_equipment_appearance(&mut appearance, slot, display_info_id);
             commands.entity(entity).insert(appearance.clone());
         }
     }
@@ -331,7 +331,7 @@ pub(crate) fn handle_clear_equipment_appearance(
         return AdminResponse::Error(format!("character data for '{name}' not found"));
     };
 
-    upsert_hidden_equipment_appearance_entry(&mut data.equipment_appearance, slot);
+    hide_equipment_appearance(&mut data.equipment_appearance, slot);
     persistence::save_character(&db.db, char_id, &data);
     send_character_list_update(
         db,
@@ -343,7 +343,7 @@ pub(crate) fn handle_clear_equipment_appearance(
 
     for (entity, mut appearance, cid) in equipment_query.iter_mut() {
         if cid.0 == char_id {
-            upsert_hidden_equipment_appearance_entry(&mut appearance, slot);
+            hide_equipment_appearance(&mut appearance, slot);
             commands.entity(entity).insert(appearance.clone());
         }
     }
@@ -388,51 +388,45 @@ fn send_character_list_update(
     }
 }
 
-fn upsert_equipment_appearance_entry(
+/// Find the entry for this slot, or create a blank one if missing.
+fn find_or_create_slot(
+    appearance: &mut EquipmentAppearance,
+    slot: EquipmentVisualSlot,
+) -> &mut EquippedAppearanceEntry {
+    let exists = appearance.entries.iter().any(|e| e.slot == slot);
+    if !exists {
+        appearance.entries.push(EquippedAppearanceEntry {
+            slot,
+            item_id: None,
+            display_info_id: None,
+            inventory_type: 0,
+            hidden: false,
+        });
+    }
+    appearance.entries.iter_mut().find(|e| e.slot == slot).unwrap()
+}
+
+/// Set a slot to show a specific item appearance.
+fn show_equipment_appearance(
     appearance: &mut EquipmentAppearance,
     slot: EquipmentVisualSlot,
     display_info_id: u32,
 ) {
-    if let Some(entry) = appearance
-        .entries
-        .iter_mut()
-        .find(|entry| entry.slot == slot)
-    {
-        entry.display_info_id = Some(display_info_id);
-        entry.hidden = false;
-        return;
-    }
-    appearance.entries.push(EquippedAppearanceEntry {
-        slot,
-        item_id: None,
-        display_info_id: Some(display_info_id),
-        inventory_type: 0,
-        hidden: false,
-    });
+    let entry = find_or_create_slot(appearance, slot);
+    entry.display_info_id = Some(display_info_id);
+    entry.hidden = false;
 }
 
-fn upsert_hidden_equipment_appearance_entry(
+/// Set a slot to hidden (transmog: hide this slot).
+fn hide_equipment_appearance(
     appearance: &mut EquipmentAppearance,
     slot: EquipmentVisualSlot,
 ) {
-    if let Some(entry) = appearance
-        .entries
-        .iter_mut()
-        .find(|entry| entry.slot == slot)
-    {
-        entry.item_id = None;
-        entry.display_info_id = None;
-        entry.inventory_type = 0;
-        entry.hidden = true;
-        return;
-    }
-    appearance.entries.push(EquippedAppearanceEntry {
-        slot,
-        item_id: None,
-        display_info_id: None,
-        inventory_type: 0,
-        hidden: true,
-    });
+    let entry = find_or_create_slot(appearance, slot);
+    entry.item_id = None;
+    entry.display_info_id = None;
+    entry.inventory_type = 0;
+    entry.hidden = true;
 }
 
 fn parse_equipment_visual_slot(value: &str) -> Option<EquipmentVisualSlot> {
