@@ -374,6 +374,68 @@ mod tests {
     }
 
     #[test]
+    fn waypoint_creature_follows_path_in_order() {
+        use crate::world_data::{WaypointPath, WaypointPoint};
+
+        let make_wp = |x, y, z| WaypointPoint {
+            point: 0,
+            position_x: x,
+            position_y: y,
+            position_z: z,
+            orientation: None,
+            delay: 0,
+            move_type: 0,
+        };
+
+        let path = WaypointPath {
+            creature_guid: 1,
+            points: vec![
+                make_wp(10.0, 0.0, 0.0), // Bevy: (10, 0, 0)
+                make_wp(20.0, 0.0, 0.0), // Bevy: (20, 0, 0)
+                make_wp(30.0, 0.0, 0.0), // Bevy: (30, 0, 0)
+            ],
+        };
+
+        // Start at first waypoint in Bevy coords
+        let mut pos = Position {
+            x: 10.0,
+            y: 0.0,
+            z: 0.0,
+        };
+        let mut state = WaypointState {
+            creature_guid: 1,
+            current_index: 0,
+            delay_remaining: 0.0,
+            speed_walk: 1.0,
+        };
+        let dt = 0.1;
+
+        // Walk to waypoint 0 (already there) → advances to 1
+        tick_waypoint(&mut pos, &mut state, &path, dt);
+        assert_eq!(state.current_index, 1, "advanced past wp 0");
+
+        // Walk toward waypoint 1 (x=20)
+        for _ in 0..500 {
+            if state.current_index != 1 {
+                break;
+            }
+            tick_waypoint(&mut pos, &mut state, &path, dt);
+        }
+        assert_eq!(state.current_index, 2, "advanced past wp 1");
+        assert!((pos.x - 20.0).abs() < 0.5, "reached wp 1 at x=20");
+
+        // Walk toward waypoint 2 (x=30)
+        for _ in 0..500 {
+            if state.current_index != 2 {
+                break;
+            }
+            tick_waypoint(&mut pos, &mut state, &path, dt);
+        }
+        assert_eq!(state.current_index, 0, "wrapped back to wp 0");
+        assert!((pos.x - 30.0).abs() < 0.5, "reached wp 2 at x=30");
+    }
+
+    #[test]
     fn advance_waypoint_wraps() {
         let mut state = WaypointState {
             creature_guid: 1,
