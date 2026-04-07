@@ -446,6 +446,33 @@ mod tests {
     }
 
     #[test]
+    fn height_at_exact_vertex_no_interpolation() {
+        let mut heights = [0.0f32; MCVT_COUNT];
+        // Set vertex at outer grid (0,0) to 25.0
+        heights[0] = 25.0;
+        // Set vertex at outer grid (0,4) to 15.0 (midway along first row)
+        heights[4] = 15.0;
+
+        let map = TerrainHeightMap {
+            chunks: vec![ChunkHeight {
+                corner_x: 100.0,
+                corner_y: 100.0,
+                base_z: 100.0,
+                heights,
+            }],
+        };
+
+        // Exact vertex (0,0) at chunk corner → 100 + 25 = 125
+        let h = map.height_at(100.0, 100.0).unwrap();
+        assert!((h - 125.0).abs() < 0.01, "vertex (0,0): got {h}");
+
+        // Exact vertex (0,4) at 4 units along X → 100 + 15 = 115
+        let x = 100.0 - UNIT_SIZE * 4.0;
+        let h = map.height_at(x, 100.0).unwrap();
+        assert!((h - 115.0).abs() < 0.01, "vertex (0,4): got {h}");
+    }
+
+    #[test]
     fn mcvt_145_floats() {
         // Build a minimal MCVT payload with exactly 145 floats.
         let mut payload = vec![0u8; MCVT_COUNT * 4];
