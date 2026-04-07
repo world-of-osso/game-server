@@ -222,6 +222,73 @@ impl EventActivation {
     }
 }
 
+// -- Event Quests --
+
+/// A daily quest tied to a holiday event.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct EventQuest {
+    pub id: u32,
+    pub name: String,
+    /// Which holiday event this quest belongs to.
+    pub event_id: u32,
+    /// XP reward on completion.
+    pub xp_reward: u32,
+    /// Gold reward in copper.
+    pub gold_reward: u32,
+    /// Item reward IDs (if any).
+    pub item_rewards: Vec<u32>,
+}
+
+/// Per-player daily quest completion tracking.
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct DailyQuestTracker {
+    /// (player_id, quest_id, day_ordinal) — completed dailies.
+    completions: Vec<(u64, u32, u16)>,
+}
+
+impl DailyQuestTracker {
+    /// Whether a player has completed a daily quest today.
+    pub fn is_completed(&self, player: u64, quest_id: u32, today: MonthDay) -> bool {
+        let day = today.ordinal();
+        self.completions
+            .iter()
+            .any(|&(p, q, d)| p == player && q == quest_id && d == day)
+    }
+
+    /// Mark a daily quest as completed. Returns false if already done today.
+    pub fn complete(&mut self, player: u64, quest_id: u32, today: MonthDay) -> bool {
+        if self.is_completed(player, quest_id, today) {
+            return false;
+        }
+        self.completions.push((player, quest_id, today.ordinal()));
+        true
+    }
+
+    /// Reset all completions for a new day (call on daily reset).
+    pub fn daily_reset(&mut self, new_day: MonthDay) {
+        let day = new_day.ordinal();
+        self.completions.retain(|&(_, _, d)| d == day);
+    }
+}
+
+/// Get available event quests for a player on a given date.
+///
+/// Returns quests whose event is active and the player hasn't completed today.
+pub fn available_event_quests<'a>(
+    all_quests: &'a [EventQuest],
+    activation: &EventActivation,
+    tracker: &DailyQuestTracker,
+    player: u64,
+    date: MonthDay,
+) -> Vec<&'a EventQuest> {
+    let active_ids = activation.active_event_ids(date);
+    all_quests
+        .iter()
+        .filter(|q| active_ids.contains(&q.event_id))
+        .filter(|q| !tracker.is_completed(player, q.id, date))
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -400,5 +467,152 @@ mod tests {
         let date = MonthDay::new(10, 25);
         assert!(activation.is_active(&bf, date)); // forced on
         assert!(!activation.is_active(&he, date)); // forced off despite in range
+    }
+
+    // -- Quest tests --
+
+    fn brewfest_quest() -> EventQuest {
+        EventQuest {
+            id: 100,
+            name: "Bark for the Barkers".into(),
+            event_id: 6, // Brewfest
+            xp_reward: 500,
+            gold_reward: 1000,
+            item_rewards: vec![],
+        }
+    }
+
+    fn brewfest_quest_2() -> EventQuest {
+        EventQuest {
+            id: 101,
+            name: "This One Time".into(),
+            event_id: 6,
+            xp_reward: 300,
+            gold_reward: 500,
+            item_rewards: vec![42],
+        }
+    }
+
+    fn hallows_quest() -> EventQuest {
+        EventQuest {
+            id: 200,
+            name: "Trick or Treat".into(),
+            event_id: 7, // Hallow's End
+            xp_reward: 400,
+            gold_reward: 800,
+            item_rewards: vec![],
+        }
+    }
+
+    #[test]
+    fn daily_complete_and_check() {
+        let mut tracker = DailyQuestTracker::default();
+        let today = MonthDay::new(9, 25);
+        assert!(!tracker.is_completed(1, 100, today));
+        assert!(tracker.complete(1, 100, today));
+        assert!(tracker.is_completed(1, 100, today));
+    }
+
+    #[test]
+    fn daily_cannot_complete_twice() {
+        let mut tracker = DailyQuestTracker::default();
+        let today = MonthDay::new(9, 25);
+        tracker.complete(1, 100, today);
+        assert!(!tracker.complete(1, 100, today));
+    }
+
+    #[test]
+    fn daily_different_player_independent() {
+        let mut tracker = DailyQuestTracker::default();
+        let today = MonthDay::new(9, 25);
+        tracker.complete(1, 100, today);
+        assert!(!tracker.is_completed(2, 100, today));
+    }
+
+    #[test]
+    fn daily_different_quest_independent() {
+        let mut tracker = DailyQuestTracker::default();
+        let today = MonthDay::new(9, 25);
+        tracker.complete(1, 100, today);
+        assert!(!tracker.is_completed(1, 101, today));
+    }
+
+    #[test]
+    fn daily_different_day_resets() {
+        let mut tracker = DailyQuestTracker::default();
+        tracker.complete(1, 100, MonthDay::new(9, 25));
+        // Next day — not completed
+        assert!(!tracker.is_completed(1, 100, MonthDay::new(9, 26)));
+    }
+
+    #[test]
+    fn daily_reset_clears_old() {
+        let mut tracker = DailyQuestTracker::default();
+        tracker.complete(1, 100, MonthDay::new(9, 25));
+        tracker.daily_reset(MonthDay::new(9, 26));
+        assert!(!tracker.is_completed(1, 100, MonthDay::new(9, 25)));
+    }
+
+    #[test]
+    fn available_quests_active_event() {
+        let quests = vec![brewfest_quest(), brewfest_quest_2(), hallows_quest()];
+        let activation = EventActivation::default();
+        let tracker = DailyQuestTracker::default();
+        // During Brewfest (Sep 25): only Brewfest quests available
+        let available = available_event_quests(
+            &quests,
+            &activation,
+            &tracker,
+            1,
+            MonthDay::new(9, 25),
+        );
+        assert_eq!(available.len(), 2);
+        assert!(available.iter().all(|q| q.event_id == 6));
+    }
+
+    #[test]
+    fn available_quests_excludes_completed() {
+        let quests = vec![brewfest_quest(), brewfest_quest_2()];
+        let activation = EventActivation::default();
+        let mut tracker = DailyQuestTracker::default();
+        let today = MonthDay::new(9, 25);
+        tracker.complete(1, 100, today);
+
+        let available = available_event_quests(&quests, &activation, &tracker, 1, today);
+        assert_eq!(available.len(), 1);
+        assert_eq!(available[0].id, 101);
+    }
+
+    #[test]
+    fn available_quests_inactive_event_empty() {
+        let quests = vec![brewfest_quest()];
+        let activation = EventActivation::default();
+        let tracker = DailyQuestTracker::default();
+        // Mid-August: Brewfest not active
+        let available = available_event_quests(
+            &quests,
+            &activation,
+            &tracker,
+            1,
+            MonthDay::new(8, 15),
+        );
+        assert!(available.is_empty());
+    }
+
+    #[test]
+    fn available_quests_forced_event() {
+        let quests = vec![brewfest_quest()];
+        let mut activation = EventActivation::default();
+        activation.set_override(6, EventOverride::ForceOn);
+        let tracker = DailyQuestTracker::default();
+        // Force-active in August
+        let available = available_event_quests(
+            &quests,
+            &activation,
+            &tracker,
+            1,
+            MonthDay::new(8, 15),
+        );
+        assert_eq!(available.len(), 1);
     }
 }
