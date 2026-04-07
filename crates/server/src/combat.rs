@@ -411,6 +411,38 @@ mod tests {
     }
 
     #[test]
+    fn auto_attack_fires_at_correct_interval() {
+        let mut app = setup_app();
+        let target = spawn_target(&mut app, pos(1.0, 0.0, 0.0), 100.0);
+        let attacker = spawn_attacker(&mut app, pos(0.0, 0.0, 0.0), target);
+
+        // First tick: timer=0, swings immediately → damage dealt, timer resets to 2.0
+        run_attack_tick(&mut app);
+        let hp_after_first = app.world().entity(target).get::<Health>().unwrap().current;
+        assert_eq!(hp_after_first, 90.0, "first swing deals damage");
+
+        // Second tick: timer > 0 (just reset to 2.0), no swing
+        run_attack_tick(&mut app);
+        let hp_after_second = app.world().entity(target).get::<Health>().unwrap().current;
+        assert_eq!(hp_after_second, 90.0, "no swing during cooldown");
+
+        // Manually expire the timer to simulate 2s passing
+        app.world_mut()
+            .entity_mut(attacker)
+            .get_mut::<AutoAttack>()
+            .unwrap()
+            .timer = 0.0;
+
+        // Third tick: timer expired, swings again
+        run_attack_tick(&mut app);
+        let hp_after_third = app.world().entity(target).get::<Health>().unwrap().current;
+        assert_eq!(hp_after_third, 80.0, "second swing after interval");
+
+        // Verify interval constant
+        assert_eq!(AUTO_ATTACK_INTERVAL, 2.0, "interval is 2 seconds");
+    }
+
+    #[test]
     fn test_death_at_zero_hp() {
         let mut app = App::new();
         app.add_plugins(bevy::MinimalPlugins);
