@@ -269,4 +269,28 @@ mod tests {
         assert_not_visible(&state, player_a, "A lost NPC after despawn");
         assert_not_visible(&state, player_b, "B lost NPC after despawn");
     }
+
+    #[test]
+    fn two_players_move_toward_each_other_both_gain_visibility() {
+        let conn_a = Entity::from_bits(1);
+        let conn_b = Entity::from_bits(2);
+
+        // Player A's entity state (visible to B?) and B's entity state (visible to A?)
+        let mut state_a = ReplicationState::default();
+        let mut state_b = ReplicationState::default();
+
+        // Players start 200yd apart — neither visible to the other
+        let players_far = vec![(conn_a, pos(0.0, 0.0, 0.0)), (conn_b, pos(200.0, 0.0, 0.0))];
+        update_entity_visibility(&pos(0.0, 0.0, 0.0), &mut state_a, &players_far);
+        update_entity_visibility(&pos(200.0, 0.0, 0.0), &mut state_b, &players_far);
+        assert_not_visible(&state_a, conn_b, "A not visible to B when far");
+        assert_not_visible(&state_b, conn_a, "B not visible to A when far");
+
+        // Both move toward center — now 50yd apart
+        let players_close = vec![(conn_a, pos(75.0, 0.0, 0.0)), (conn_b, pos(125.0, 0.0, 0.0))];
+        update_entity_visibility(&pos(75.0, 0.0, 0.0), &mut state_a, &players_close);
+        update_entity_visibility(&pos(125.0, 0.0, 0.0), &mut state_b, &players_close);
+        assert_visible(&state_a, conn_b, "A visible to B after approach");
+        assert_visible(&state_b, conn_a, "B visible to A after approach");
+    }
 }
