@@ -302,3 +302,5 @@ pub fn spell_damage(base_damage: f32, spell_power: f32, coefficient: f32) -> f32
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod combat_tests;
