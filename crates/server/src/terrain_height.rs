@@ -338,6 +338,30 @@ mod tests {
     }
 
     #[test]
+    fn height_at_chunk_center_matches_expected() {
+        let corner_x = 100.0;
+        let corner_y = 100.0;
+        let base_height = 75.0;
+        let map = test_helpers::flat_terrain(corner_x, corner_y, base_height);
+
+        // Center of chunk: corner minus half chunk size
+        let center_x = corner_x - CHUNK_SIZE / 2.0;
+        let center_y = corner_y - CHUNK_SIZE / 2.0;
+        let h = map.height_at(center_x, center_y).unwrap();
+        assert!(
+            (h - base_height).abs() < 0.01,
+            "chunk center height {h}, expected {base_height}",
+        );
+
+        // Also verify the corner itself
+        let h_corner = map.height_at(corner_x, corner_y).unwrap();
+        assert!(
+            (h_corner - base_height).abs() < 0.01,
+            "chunk corner height {h_corner}, expected {base_height}",
+        );
+    }
+
+    #[test]
     fn mcvt_145_floats() {
         // Build a minimal MCVT payload with exactly 145 floats.
         let mut payload = vec![0u8; MCVT_COUNT * 4];
