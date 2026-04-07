@@ -169,6 +169,9 @@ fn try_swing(
     if !in_melee_range(attacker_pos, target_pos) {
         return 0.0;
     }
+    if health.current <= 0.0 {
+        return 0.0;
+    }
     let damage = BASE_DAMAGE;
     health.current = (health.current - damage).max(0.0);
     auto_attack.timer = AUTO_ATTACK_INTERVAL;
@@ -440,6 +443,28 @@ mod tests {
 
         // Verify interval constant
         assert_eq!(AUTO_ATTACK_INTERVAL, 2.0, "interval is 2 seconds");
+    }
+
+    #[test]
+    fn auto_attack_stops_when_target_dies() {
+        let mut app = setup_app();
+        let target = spawn_target(&mut app, pos(1.0, 0.0, 0.0), 10.0); // 10 HP = dies in 1 hit
+        let attacker = spawn_attacker(&mut app, pos(0.0, 0.0, 0.0), target);
+
+        // First swing kills the target
+        run_attack_tick(&mut app);
+        let hp = app.world().entity(target).get::<Health>().unwrap().current;
+        assert_eq!(hp, 0.0, "target is dead");
+
+        // Expire timer and try again — no further damage (target is dead)
+        app.world_mut()
+            .entity_mut(attacker)
+            .get_mut::<AutoAttack>()
+            .unwrap()
+            .timer = 0.0;
+        run_attack_tick(&mut app);
+        let hp = app.world().entity(target).get::<Health>().unwrap().current;
+        assert_eq!(hp, 0.0, "no damage dealt to dead target");
     }
 
     #[test]
