@@ -153,4 +153,30 @@ mod tests {
         update_entity_visibility(&entity_pos, &mut state, &[(conn, pos(30.0, 0.0, 0.0))]);
         assert_visible(&state, conn, "should be visible when player moves close");
     }
+
+    #[test]
+    fn many_entities_only_nearby_replicated() {
+        let conn = Entity::from_bits(1);
+        let players = vec![(conn, pos(0.0, 0.0, 0.0))];
+
+        // 20 entities at varied distances
+        let distances: Vec<f32> = (0..20).map(|i| i as f32 * 15.0).collect(); // 0, 15, 30, ..., 285
+        let mut visible_count = 0;
+        let mut culled_count = 0;
+
+        for &dist in &distances {
+            let mut state = ReplicationState::default();
+            let entity_pos = pos(dist, 0.0, 0.0);
+            update_entity_visibility(&entity_pos, &mut state, &players);
+            if state.is_visible(conn) {
+                visible_count += 1;
+            } else {
+                culled_count += 1;
+            }
+        }
+
+        // Entities at 0..=100yd visible (0,15,30,45,60,75,90 = 7), at 105+ culled (13)
+        assert_eq!(visible_count, 7, "7 entities within 100yd");
+        assert_eq!(culled_count, 13, "13 entities beyond 100yd");
+    }
 }
