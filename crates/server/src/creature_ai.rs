@@ -396,6 +396,69 @@ mod tests {
         }
     }
 
+    /// Find the nearest waypoint index to resume patrol after combat.
+    fn nearest_waypoint(pos: &Position, path: &crate::world_data::WaypointPath) -> usize {
+        let mut best_idx = 0;
+        let mut best_dist = f32::MAX;
+        for (i, wp) in path.points.iter().enumerate() {
+            let (bx, _by, bz) = crate::terrain_height::wow_to_bevy(
+                wp.position_x,
+                wp.position_y,
+                wp.position_z,
+            );
+            let dx = pos.x - bx;
+            let dz = pos.z - bz;
+            let dist_sq = dx * dx + dz * dz;
+            if dist_sq < best_dist {
+                best_dist = dist_sq;
+                best_idx = i;
+            }
+        }
+        best_idx
+    }
+
+    #[test]
+    fn patrol_returns_to_nearest_waypoint_after_combat() {
+        use crate::world_data::{WaypointPath, WaypointPoint};
+
+        let make_wp = |x, y, z| WaypointPoint {
+            point: 0,
+            position_x: x,
+            position_y: y,
+            position_z: z,
+            orientation: None,
+            delay: 0,
+            move_type: 0,
+        };
+
+        let path = WaypointPath {
+            creature_guid: 1,
+            points: vec![
+                make_wp(0.0, 0.0, 0.0),   // Bevy: (0, 0, 0)
+                make_wp(20.0, 0.0, 0.0),  // Bevy: (20, 0, 0)
+                make_wp(40.0, 0.0, 0.0),  // Bevy: (40, 0, 0)
+                make_wp(60.0, 0.0, 0.0),  // Bevy: (60, 0, 0)
+            ],
+        };
+
+        // Creature chased a player to (35, 0, 0) — nearest wp is #2 (40, 0, 0)
+        let pos = Position { x: 35.0, y: 0.0, z: 0.0 };
+        let idx = nearest_waypoint(&pos, &path);
+        assert_eq!(idx, 2, "nearest to x=35 is wp 2 at x=40");
+
+        // Near the start
+        let pos = Position { x: 3.0, y: 0.0, z: 0.0 };
+        assert_eq!(nearest_waypoint(&pos, &path), 0);
+
+        // Near the end
+        let pos = Position { x: 55.0, y: 0.0, z: 0.0 };
+        assert_eq!(nearest_waypoint(&pos, &path), 3);
+
+        // Exactly on a waypoint
+        let pos = Position { x: 20.0, y: 0.0, z: 0.0 };
+        assert_eq!(nearest_waypoint(&pos, &path), 1);
+    }
+
     #[test]
     fn waypoint_creature_follows_path_in_order() {
         use crate::world_data::{WaypointPath, WaypointPoint};
