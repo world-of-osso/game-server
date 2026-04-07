@@ -423,6 +423,21 @@ mod tests {
     }
 
     #[test]
+    fn account_ids_are_unique_across_rapid_creates() {
+        let db = temp_database();
+        let mut ids = std::collections::HashSet::new();
+        for i in 0..20 {
+            let name = format!("user{i}");
+            let (account_id, _) = register_account(&db, &name, "pass").unwrap();
+            assert!(
+                ids.insert(account_id),
+                "duplicate account_id {account_id} at iteration {i}",
+            );
+        }
+        assert_eq!(ids.len(), 20);
+    }
+
+    #[test]
     fn register_duplicate_username_fails() {
         let db = temp_database();
         register_account(&db, "user1", "pass").unwrap();
