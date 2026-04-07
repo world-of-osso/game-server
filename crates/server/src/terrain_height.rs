@@ -414,6 +414,38 @@ mod tests {
     }
 
     #[test]
+    fn multiple_chunks_loaded_and_routed_correctly() {
+        // Two adjacent chunks with different base heights
+        let map = TerrainHeightMap {
+            chunks: vec![
+                ChunkHeight {
+                    corner_x: 100.0,
+                    corner_y: 100.0,
+                    base_z: 50.0,
+                    heights: [0.0; MCVT_COUNT],
+                },
+                ChunkHeight {
+                    corner_x: 100.0 - CHUNK_SIZE,
+                    corner_y: 100.0,
+                    base_z: 80.0,
+                    heights: [0.0; MCVT_COUNT],
+                },
+            ],
+        };
+
+        // Query in first chunk → height 50
+        let h1 = map.height_at(95.0, 95.0).unwrap();
+        assert!((h1 - 50.0).abs() < 0.01, "chunk 1: got {h1}");
+
+        // Query in second chunk → height 80
+        let h2 = map.height_at(95.0 - CHUNK_SIZE, 95.0).unwrap();
+        assert!((h2 - 80.0).abs() < 0.01, "chunk 2: got {h2}");
+
+        // Query outside both → None
+        assert!(map.height_at(200.0, 200.0).is_none());
+    }
+
+    #[test]
     fn mcvt_145_floats() {
         // Build a minimal MCVT payload with exactly 145 floats.
         let mut payload = vec![0u8; MCVT_COUNT * 4];
