@@ -327,6 +327,24 @@ mod tests {
     }
 
     #[test]
+    fn leash_evade_clears_threat_table() {
+        let leash = LeashConfig::new(100.0, 0.0, 100.0);
+        let mut threat = ThreatTable::default();
+        threat.add_damage_threat(1, 500.0, 1.0);
+        threat.add_damage_threat(2, 300.0, 1.0);
+        assert!(!threat.is_empty());
+
+        // Creature at 41yd from spawn — should evade
+        let creature_x = 141.0;
+        assert!(leash.should_evade(creature_x, 0.0, 100.0));
+
+        // On evade: reset threat table
+        threat.reset();
+        assert!(threat.is_empty());
+        assert!(threat.top_threat().is_none());
+    }
+
+    #[test]
     fn threat_damage_adds_one_to_one() {
         let mut table = ThreatTable::default();
         table.add_damage_threat(1, 500.0, 1.0);
