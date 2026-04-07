@@ -476,6 +476,34 @@ mod tests {
     }
 
     #[test]
+    fn threat_swap_scenario_tank_loses_aggro() {
+        let mut table = ThreatTable::default();
+        let tank = 1_u64;
+        let dps = 2_u64;
+
+        // Tank establishes initial threat
+        table.add_damage_threat(tank, 500.0, 1.0);
+        let mut current_target = table.aggro_target(None, true).unwrap();
+        assert_eq!(current_target, tank);
+
+        // DPS does high damage but not enough to swap (needs 110%)
+        table.add_damage_threat(dps, 540.0, 1.0);
+        current_target = table.aggro_target(Some(current_target), true).unwrap();
+        assert_eq!(current_target, tank, "DPS at 540 vs tank 500: no swap");
+
+        // DPS continues — exceeds 110% threshold
+        table.add_damage_threat(dps, 20.0, 1.0);
+        // DPS now at 560, tank at 500 → 560/500 = 1.12 > 1.10
+        current_target = table.aggro_target(Some(current_target), true).unwrap();
+        assert_eq!(current_target, dps, "DPS at 560 vs tank 500: swap!");
+
+        // Tank taunts back (massive threat)
+        table.add_damage_threat(tank, 1000.0, 1.0);
+        current_target = table.aggro_target(Some(current_target), true).unwrap();
+        assert_eq!(current_target, tank, "tank reclaims with 1500 vs 560");
+    }
+
+    #[test]
     fn aggro_empty_table_returns_none() {
         let table = ThreatTable::default();
         assert_eq!(table.aggro_target(None, true), None);
