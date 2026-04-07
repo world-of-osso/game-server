@@ -394,40 +394,26 @@ pub(crate) fn save_new_character(
     txn.commit().expect("Failed to commit new character");
 }
 
+fn starter_item(db: &Database, item_id: u32, name: &str, count: u32, price: u32) -> InventoryItemData {
+    InventoryItemData {
+        item_guid: next_id(db, "item_instance"),
+        item_id,
+        name: name.to_string(),
+        quality: 1,
+        required_level: 1,
+        stack_count: count,
+        vendor_sell_price: price,
+        unique_auction: false,
+    }
+}
+
 pub(crate) fn default_inventory(db: &Database) -> InventoryData {
     InventoryData {
         gold: 100_000,
         items: vec![
-            InventoryItemData {
-                item_guid: next_id(db, "item_instance"),
-                item_id: 2589,
-                name: "Linen Cloth".to_string(),
-                quality: 1,
-                required_level: 1,
-                stack_count: 20,
-                vendor_sell_price: 13,
-                unique_auction: false,
-            },
-            InventoryItemData {
-                item_guid: next_id(db, "item_instance"),
-                item_id: 2447,
-                name: "Peacebloom".to_string(),
-                quality: 1,
-                required_level: 1,
-                stack_count: 10,
-                vendor_sell_price: 10,
-                unique_auction: false,
-            },
-            InventoryItemData {
-                item_guid: next_id(db, "item_instance"),
-                item_id: 2770,
-                name: "Copper Ore".to_string(),
-                quality: 1,
-                required_level: 1,
-                stack_count: 10,
-                vendor_sell_price: 25,
-                unique_auction: false,
-            },
+            starter_item(db, 2589, "Linen Cloth", 20, 13),
+            starter_item(db, 2447, "Peacebloom", 10, 10),
+            starter_item(db, 2770, "Copper Ore", 10, 25),
         ],
     }
 }
