@@ -403,6 +403,26 @@ mod tests {
     }
 
     #[test]
+    fn password_stored_as_argon2_hash_not_plaintext() {
+        let db = temp_database();
+        let (account_id, _) = register_account(&db, "user1", "mysecret").unwrap();
+
+        // Read raw hash from PASSWORDS table
+        let txn = db.begin_read().unwrap();
+        let table = txn.open_table(PASSWORDS).unwrap();
+        let stored = table.get(account_id).unwrap().unwrap();
+        let hash_str = std::str::from_utf8(stored.value()).unwrap();
+
+        // Must not be plaintext
+        assert_ne!(hash_str, "mysecret");
+        // Must be argon2 format ($argon2...)
+        assert!(
+            hash_str.starts_with("$argon2"),
+            "hash should be argon2 format, got: {hash_str}",
+        );
+    }
+
+    #[test]
     fn register_duplicate_username_fails() {
         let db = temp_database();
         register_account(&db, "user1", "pass").unwrap();
