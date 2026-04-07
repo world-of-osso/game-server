@@ -336,50 +336,42 @@ impl Auras {
         damage
     }
 
-    /// Multiplicative damage-done modifier from all active `ModDamageDone` auras.
+    /// Multiplicative modifier from all auras matching `extract`.
     ///
-    /// Each aura contributes `(1 + percent)` as a factor. Multiple auras stack
-    /// multiplicatively: two +10% buffs → 1.1 × 1.1 = 1.21×.
-    ///
-    /// Returns a multiplier to apply to outgoing damage (1.0 = no change).
-    pub fn damage_done_multiplier(&self) -> f32 {
+    /// Each matching effect contributes `(1 + percent)` as a factor, stacking
+    /// multiplicatively (e.g. two +10% → 1.1 × 1.1 = 1.21×).
+    fn multiplicative_modifier(&self, extract: fn(&AuraEffect) -> Option<f32>) -> f32 {
         self.active
             .iter()
             .flat_map(|a| a.effects.iter().flatten())
-            .fold(1.0, |acc, effect| match effect {
-                AuraEffect::ModDamageDone { percent } => acc * (1.0 + percent),
-                _ => acc,
+            .fold(1.0, |acc, effect| match extract(effect) {
+                Some(percent) => acc * (1.0 + percent),
+                None => acc,
             })
+    }
+
+    /// Multiplicative damage-done modifier from all active `ModDamageDone` auras.
+    pub fn damage_done_multiplier(&self) -> f32 {
+        self.multiplicative_modifier(|e| match e {
+            AuraEffect::ModDamageDone { percent } => Some(*percent),
+            _ => None,
+        })
     }
 
     /// Multiplicative damage-taken modifier from all active `ModDamageTaken` auras.
-    ///
-    /// Each aura contributes `(1 + percent)` as a factor. A +20% damage taken
-    /// debuff uses `percent = 0.20`, a -10% reduction uses `percent = -0.10`.
-    ///
-    /// Returns a multiplier to apply to incoming damage (1.0 = no change).
     pub fn damage_taken_multiplier(&self) -> f32 {
-        self.active
-            .iter()
-            .flat_map(|a| a.effects.iter().flatten())
-            .fold(1.0, |acc, effect| match effect {
-                AuraEffect::ModDamageTaken { percent } => acc * (1.0 + percent),
-                _ => acc,
-            })
+        self.multiplicative_modifier(|e| match e {
+            AuraEffect::ModDamageTaken { percent } => Some(*percent),
+            _ => None,
+        })
     }
 
     /// Multiplicative threat modifier from all active `ModThreat` auras.
-    ///
-    /// Tank stances (e.g. Righteous Fury +43%, Defensive Stance +30%) stack
-    /// multiplicatively. Returns a multiplier (1.0 = no change).
     pub fn threat_multiplier(&self) -> f32 {
-        self.active
-            .iter()
-            .flat_map(|a| a.effects.iter().flatten())
-            .fold(1.0, |acc, effect| match effect {
-                AuraEffect::ModThreat { percent } => acc * (1.0 + percent),
-                _ => acc,
-            })
+        self.multiplicative_modifier(|e| match e {
+            AuraEffect::ModThreat { percent } => Some(*percent),
+            _ => None,
+        })
     }
 
     /// Compute the effective cooldown for a spell after CDR auras/talents.
