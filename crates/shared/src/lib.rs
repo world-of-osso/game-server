@@ -31,6 +31,7 @@ pub mod spell_catalog;
 pub mod spell_data;
 pub mod ticket;
 pub mod trade;
+pub mod transmog;
 pub mod types;
 pub mod warbank;
 pub mod xp;
