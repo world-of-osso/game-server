@@ -462,6 +462,41 @@ mod tests {
         assert_eq!(position.z, 30.0);
     }
 
+    #[test]
+    fn respawn_timer_counts_down_then_restores() {
+        let spawn = SpawnPoint {
+            x: 10.0,
+            y: 20.0,
+            z: 30.0,
+            wander_distance: 0.0,
+            speed_walk: 1.0,
+        };
+        let mut health = Health {
+            current: 0.0,
+            max: 500.0,
+        };
+        let mut position = pos(99.0, 99.0, 99.0);
+        let mut death = DeathState {
+            respawn_timer: DEFAULT_RESPAWN_SECS,
+        };
+
+        // Tick 50 seconds — still dead
+        death.respawn_timer -= 50.0;
+        assert!(death.respawn_timer > 0.0, "timer not expired at 50s");
+        assert_eq!(health.current, 0.0, "still dead");
+
+        // Tick remaining 10s — timer expires
+        death.respawn_timer -= 10.0;
+        assert!(death.respawn_timer <= 0.0, "timer expired at 60s");
+
+        // Respawn
+        respawn_entity(&mut health, &mut position, &spawn);
+        assert_eq!(health.current, 500.0, "health restored to max");
+        assert_eq!(position.x, 10.0, "returned to spawn x");
+        assert_eq!(position.y, 20.0, "returned to spawn y");
+        assert_eq!(position.z, 30.0, "returned to spawn z");
+    }
+
     // --- Combat log tests ---
 
     fn make_event(event_type: CombatEventType, amount: f32) -> CombatEvent {
