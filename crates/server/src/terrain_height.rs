@@ -608,6 +608,54 @@ mod tests {
     }
 
     #[test]
+    fn adt_hole_returns_none_for_missing_chunk() {
+        // 2x2 grid with a hole: chunks at (0,0), (0,1), (1,1) but NOT (1,0)
+        let map = TerrainHeightMap {
+            chunks: vec![
+                ChunkHeight {
+                    corner_x: 100.0,
+                    corner_y: 100.0,
+                    base_z: 50.0,
+                    heights: [0.0; MCVT_COUNT],
+                    water_level: None,
+                },
+                ChunkHeight {
+                    corner_x: 100.0,
+                    corner_y: 100.0 - CHUNK_SIZE,
+                    base_z: 50.0,
+                    heights: [0.0; MCVT_COUNT],
+                    water_level: None,
+                },
+                ChunkHeight {
+                    corner_x: 100.0 - CHUNK_SIZE,
+                    corner_y: 100.0 - CHUNK_SIZE,
+                    base_z: 50.0,
+                    heights: [0.0; MCVT_COUNT],
+                    water_level: None,
+                },
+                // Hole: no chunk at (100 - CHUNK_SIZE, 100)
+            ],
+        };
+
+        // Present chunks return height
+        assert!(map.height_at(95.0, 95.0).is_some(), "chunk (0,0)");
+        assert!(
+            map.height_at(95.0, 95.0 - CHUNK_SIZE).is_some(),
+            "chunk (0,1)",
+        );
+        assert!(
+            map.height_at(95.0 - CHUNK_SIZE, 95.0 - CHUNK_SIZE).is_some(),
+            "chunk (1,1)",
+        );
+
+        // Hole: no ground
+        assert!(
+            map.height_at(95.0 - CHUNK_SIZE, 95.0).is_none(),
+            "hole at (1,0) should return None",
+        );
+    }
+
+    #[test]
     fn height_query_1000_lookups_under_threshold() {
         // 16 chunks in a 4x4 grid
         let mut chunks = Vec::new();
