@@ -346,77 +346,95 @@ fn claim_mail(db: &redb::Database, character_id: u64, mail_id: u64) -> AuctionOp
     ok("mail claimed")
 }
 
-fn create_auction(
+/// Validated inputs for creating an auction.
+struct ValidatedAuction {
+    character_name: String,
+    race: u8,
+    source: InventoryItemData,
+    item_index: usize,
+    deposit: u32,
+}
+
+fn validate_create_auction(
     db: &redb::Database,
-    state: &mut AuctionHouseState,
+    state: &AuctionHouseState,
     character_id: u64,
     req: &CreateAuction,
-) -> AuctionOperationResponse {
+) -> Result<ValidatedAuction, AuctionOperationResponse> {
     if req.stack_count == 0 {
-        return err("stack count must be greater than zero");
+        return Err(err("stack count must be greater than zero"));
     }
     if req.min_bid == 0 {
-        return err("minimum bid must be greater than zero");
+        return Err(err("minimum bid must be greater than zero"));
     }
     if let Some(buyout) = req.buyout_price
         && buyout < req.min_bid
     {
-        return err("buyout must be greater than or equal to minimum bid");
+        return Err(err("buyout must be greater than or equal to minimum bid"));
     }
-
     let active_count = state
         .auctions
         .values()
         .filter(|a| a.seller_character_id == character_id)
         .count();
     if active_count >= MAX_AUCTIONS_PER_CHARACTER {
-        return err("maximum auction slots reached");
+        return Err(err("maximum auction slots reached"));
     }
-
     let Some(character) = persistence::load_character(db, character_id) else {
-        return err("character not found");
+        return Err(err("character not found"));
     };
-    let mut inventory = persistence::load_inventory(db, character_id);
-    let Some(index) = inventory
-        .items
-        .iter()
-        .position(|item| item.item_guid == req.item_guid)
-    else {
-        return err("item not found in inventory");
+    let inventory = persistence::load_inventory(db, character_id);
+    let Some(index) = inventory.items.iter().position(|i| i.item_guid == req.item_guid) else {
+        return Err(err("item not found in inventory"));
     };
     let source = inventory.items[index].clone();
     if req.stack_count > source.stack_count {
-        return err("requested stack exceeds available stack");
+        return Err(err("requested stack exceeds available stack"));
     }
-    if source.unique_auction
-        && state
-            .auctions
-            .values()
-            .any(|a| a.item.item_id == source.item_id)
-    {
-        return err("unique item already listed on the auction house");
+    if source.unique_auction && state.auctions.values().any(|a| a.item.item_id == source.item_id) {
+        return Err(err("unique item already listed on the auction house"));
     }
     let deposit = deposit_cost(source.vendor_sell_price, req.stack_count, req.duration);
     if deposit > 0 && inventory.gold < deposit {
-        return err("not enough gold for auction deposit");
+        return Err(err("not enough gold for auction deposit"));
     }
-    inventory.gold -= deposit;
+    Ok(ValidatedAuction {
+        character_name: character.name,
+        race: character.race,
+        source,
+        item_index: index,
+        deposit,
+    })
+}
 
-    if inventory.items[index].stack_count == req.stack_count {
-        inventory.items.remove(index);
+fn create_auction(
+    db: &redb::Database,
+    state: &mut AuctionHouseState,
+    character_id: u64,
+    req: &CreateAuction,
+) -> AuctionOperationResponse {
+    let validated = match validate_create_auction(db, state, character_id, req) {
+        Ok(v) => v,
+        Err(e) => return e,
+    };
+
+    let mut inventory = persistence::load_inventory(db, character_id);
+    inventory.gold -= validated.deposit;
+    if inventory.items[validated.item_index].stack_count == req.stack_count {
+        inventory.items.remove(validated.item_index);
     } else {
-        inventory.items[index].stack_count -= req.stack_count;
+        inventory.items[validated.item_index].stack_count -= req.stack_count;
     }
     persistence::save_inventory(db, character_id, &inventory);
 
     let auction = AuctionData {
         auction_id: persistence::next_id(db, "auction"),
         seller_character_id: character_id,
-        seller_name: character.name,
+        seller_name: validated.character_name,
         item: InventoryItemData {
             item_guid: persistence::next_id(db, "item_instance"),
             stack_count: req.stack_count,
-            ..source
+            ..validated.source
         },
         stack_count: req.stack_count,
         min_bid: req.min_bid,
@@ -424,8 +442,8 @@ fn create_auction(
         current_bidder_character_id: None,
         buyout_price: req.buyout_price,
         expires_at_unix_secs: unix_now() + duration_secs(req.duration),
-        faction: faction_for_race(character.race),
-        deposit,
+        faction: faction_for_race(validated.race),
+        deposit: validated.deposit,
     };
     persistence::save_auction(db, &auction);
     state.auctions.insert(auction.auction_id, auction);
