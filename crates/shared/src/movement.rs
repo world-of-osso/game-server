@@ -45,6 +45,21 @@ pub fn fall_damage_percent(fall_distance: f32) -> f32 {
     (excess * excess * 0.00025).min(1.0)
 }
 
+/// WMO group flags for indoor/outdoor detection.
+/// Ref: WoW WMO format — group header flags field.
+pub const WMO_FLAG_OUTDOOR: u32 = 0x08;
+pub const WMO_FLAG_INDOOR: u32 = 0x2000;
+
+/// Determine if a WMO area is indoors based on group flags.
+///
+/// If INDOOR flag is set → indoors. If OUTDOOR flag is set → outdoors.
+/// If neither or both → default to outdoor.
+pub fn is_indoor(wmo_group_flags: u32) -> bool {
+    let indoor = wmo_group_flags & WMO_FLAG_INDOOR != 0;
+    let outdoor = wmo_group_flags & WMO_FLAG_OUTDOOR != 0;
+    indoor && !outdoor
+}
+
 /// Check if a slope is walkable given height difference and horizontal distance.
 pub fn is_walkable_slope(height_diff: f32, horizontal_dist: f32) -> bool {
     if horizontal_dist < 0.001 {
@@ -137,5 +152,26 @@ mod tests {
         assert!(!should_dismount(false, true));
         assert!(!should_dismount(true, false));
         assert!(!should_dismount(false, false));
+    }
+
+    #[test]
+    fn wmo_indoor_outdoor_detection() {
+        // Indoor flag only → indoor
+        assert!(is_indoor(WMO_FLAG_INDOOR));
+
+        // Outdoor flag only → outdoor
+        assert!(!is_indoor(WMO_FLAG_OUTDOOR));
+
+        // Both flags → outdoor wins
+        assert!(!is_indoor(WMO_FLAG_INDOOR | WMO_FLAG_OUTDOOR));
+
+        // Neither flag → default outdoor
+        assert!(!is_indoor(0));
+
+        // Indoor with other flags set → still indoor
+        assert!(is_indoor(WMO_FLAG_INDOOR | 0x01));
+
+        // Outdoor with other flags → still outdoor
+        assert!(!is_indoor(WMO_FLAG_OUTDOOR | 0x01));
     }
 }
