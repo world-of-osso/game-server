@@ -3,6 +3,7 @@ pub mod aura;
 pub mod casting;
 pub mod class_spec;
 pub mod components;
+pub mod currency;
 pub mod death;
 pub mod threat;
 pub mod dungeon_finder;
@@ -31,6 +32,7 @@ pub mod spell_data;
 pub mod ticket;
 pub mod trade;
 pub mod types;
+pub mod warbank;
 pub mod xp;
 
 pub use components::GuildMembership;
