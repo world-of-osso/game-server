@@ -475,4 +475,16 @@ mod tests {
             assert_not_visible(&far_state, conn, "still culled on repeated update");
         }
     }
+
+    #[test]
+    fn enemy_faction_corpse_still_visible_for_looting() {
+        // Visibility is distance-only — faction doesn't affect it.
+        // An enemy faction corpse at 20yd should be visible for looting.
+        let (mut state, conn) = make_state_and_conn();
+        let players = vec![(conn, pos(0.0, 0.0, 0.0))];
+        let enemy_corpse_pos = pos(20.0, 0.0, 0.0);
+
+        update_entity_visibility(&enemy_corpse_pos, &mut state, &players);
+        assert_visible(&state, conn, "enemy corpse within range is visible");
+    }
 }
