@@ -85,6 +85,14 @@ fn update_entity_visibility(
 }
 
 #[cfg(test)]
+/// Check if entities in different instances should be invisible to each other.
+///
+/// Entities must share the same instance_id to be visible. Instance 0 = open world.
+fn same_instance(entity_instance: u32, player_instance: u32) -> bool {
+    entity_instance == player_instance
+}
+
+#[cfg(test)]
 /// Check if an entity should be visible considering distance and stealth.
 ///
 /// Stealthed entities are hidden unless the observer is within detection range
@@ -372,5 +380,17 @@ mod tests {
         // Re-check after another update (corpse stays visible)
         update_entity_visibility(&dead_npc_pos, &mut state, &players);
         assert_visible(&state, conn, "dead NPC remains visible on re-check");
+    }
+
+    #[test]
+    fn instance_boundary_entities_in_different_instances_invisible() {
+        // Same instance: visible
+        assert!(same_instance(0, 0), "both open world");
+        assert!(same_instance(42, 42), "same dungeon instance");
+
+        // Different instances: invisible
+        assert!(!same_instance(1, 2), "different dungeon instances");
+        assert!(!same_instance(0, 1), "open world vs dungeon");
+        assert!(!same_instance(100, 200), "different raid instances");
     }
 }
