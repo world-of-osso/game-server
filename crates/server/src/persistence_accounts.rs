@@ -389,6 +389,20 @@ mod tests {
     }
 
     #[test]
+    fn login_with_invalid_token_rejected() {
+        let db = temp_database();
+        register_account(&db, "user1", "pass").unwrap();
+
+        // Invalid token, no username/password → falls through to username lookup, fails
+        let result = login_with_credentials(&db, Some("bogus-token-12345"), "", "");
+        assert!(result.is_err());
+
+        // Invalid token with wrong username also fails
+        let result = login_with_credentials(&db, Some("fake"), "nobody", "wrong");
+        assert!(result.is_err());
+    }
+
+    #[test]
     fn register_duplicate_username_fails() {
         let db = temp_database();
         register_account(&db, "user1", "pass").unwrap();
