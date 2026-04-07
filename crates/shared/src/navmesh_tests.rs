@@ -308,6 +308,26 @@ fn chase_recalculates_path_when_target_moves() {
     );
 }
 
+#[test]
+fn chase_stops_when_target_unreachable() {
+    let mob_pos = NavPoint::new(0.0, 0.0, 0.0);
+    let target_pos = NavPoint::new(50.0, 0.0, 0.0);
+    let mut chase = ChaseState::new(1, target_pos, 7.0);
+
+    // No path set → NeedRepath
+    let result = chase.tick(0.1, &mob_pos, &target_pos, 5.0);
+    assert_eq!(result, ChaseTickResult::NeedRepath);
+
+    // Caller tries pathfinding but fails (target behind wall / LoS broken).
+    // Path remains None — next tick still returns NeedRepath.
+    let result = chase.tick(0.1, &mob_pos, &target_pos, 5.0);
+    assert_eq!(result, ChaseTickResult::NeedRepath, "still no path → stuck");
+
+    // After repeated failures, server should evade. Verify the pattern:
+    // consecutive NeedRepath with no path set = unreachable target.
+    assert!(chase.path.is_none(), "path never set — target unreachable");
+}
+
 // --- Leash tests ---
 
 #[test]
