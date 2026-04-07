@@ -182,6 +182,17 @@ impl ThreatTable {
             .map_or(0.0, |e| e.threat)
     }
 
+    /// Get the top-threat entity, skipping any that are crowd-controlled.
+    ///
+    /// CC'd targets keep their threat but are not valid aggro targets until
+    /// the CC expires.
+    pub fn top_threat_excluding(&self, cc_entities: &[u64]) -> Option<&ThreatEntry> {
+        self.entries
+            .iter()
+            .filter(|e| !cc_entities.contains(&e.entity))
+            .max_by(|a, b| a.threat.partial_cmp(&b.threat).unwrap())
+    }
+
     /// Remove an entity from the threat table (on death or leave combat).
     pub fn remove(&mut self, entity: u64) {
         self.entries.retain(|e| e.entity != entity);
@@ -585,6 +596,26 @@ mod tests {
         // Both have consistent threat values
         assert_eq!(mob_a.threat_for(player1), mob_b.threat_for(player1));
         assert_eq!(mob_a.threat_for(player2), mob_b.threat_for(player2));
+    }
+
+    #[test]
+    fn creature_ignores_crowd_controlled_targets() {
+        let mut table = ThreatTable::default();
+        table.add_damage_threat(1, 500.0, 1.0); // highest threat
+        table.add_damage_threat(2, 300.0, 1.0);
+        table.add_damage_threat(3, 100.0, 1.0);
+
+        // Normal: target entity 1 (highest)
+        assert_eq!(table.top_threat_excluding(&[]).unwrap().entity, 1);
+
+        // Entity 1 is CC'd → skip to entity 2
+        assert_eq!(table.top_threat_excluding(&[1]).unwrap().entity, 2);
+
+        // Entities 1 and 2 CC'd → skip to entity 3
+        assert_eq!(table.top_threat_excluding(&[1, 2]).unwrap().entity, 3);
+
+        // All CC'd → no valid target
+        assert!(table.top_threat_excluding(&[1, 2, 3]).is_none());
     }
 
     #[test]
