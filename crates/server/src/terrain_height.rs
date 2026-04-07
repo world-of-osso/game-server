@@ -538,6 +538,29 @@ mod tests {
     }
 
     #[test]
+    fn large_coordinate_values_no_overflow() {
+        // WoW map range is roughly ±17066 on each axis
+        let map = test_helpers::flat_terrain(17000.0, 17000.0, 500.0);
+
+        // Within chunk at extreme coordinates
+        let h = map.height_at(16990.0, 16990.0).unwrap();
+        assert!((h - 500.0).abs() < 0.01, "large coords: got {h}");
+
+        // Outside at extreme values — returns None, no panic
+        assert!(map.height_at(100_000.0, 100_000.0).is_none());
+        assert!(map.height_at(-100_000.0, -100_000.0).is_none());
+        assert!(map.height_at(f32::MAX, 0.0).is_none());
+        assert!(map.height_at(0.0, f32::MIN).is_none());
+
+        // Coordinate conversion round-trips at large values
+        let (bx, by, bz) = wow_to_bevy(17000.0, -17000.0, 500.0);
+        let (rx, ry, rz) = bevy_to_wow(bx, by, bz);
+        assert!((rx - 17000.0).abs() < 1e-3);
+        assert!((ry - (-17000.0)).abs() < 1e-3);
+        assert!((rz - 500.0).abs() < 1e-3);
+    }
+
+    #[test]
     fn mcvt_145_floats() {
         // Build a minimal MCVT payload with exactly 145 floats.
         let mut payload = vec![0u8; MCVT_COUNT * 4];
