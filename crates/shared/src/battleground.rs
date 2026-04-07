@@ -120,6 +120,196 @@ pub fn template_by_id(id: u32) -> Option<BgTemplate> {
     all_templates().into_iter().find(|t| t.id == id)
 }
 
+// -- BG Queue --
+
+/// A player or group queued for a battleground.
+#[derive(Debug, Clone, PartialEq)]
+pub struct BgQueueEntry {
+    /// Leader entity bits (solo player or group leader).
+    pub leader: u64,
+    /// All member entity bits.
+    pub members: Vec<u64>,
+    /// Level of each member (index matches `members`).
+    pub levels: Vec<u8>,
+    /// Battleground type ID.
+    pub bg_id: u32,
+    /// Server timestamp when queued.
+    pub queued_at: u64,
+}
+
+/// Why joining the BG queue failed.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BgQueueError {
+    /// Player already in the queue.
+    AlreadyQueued,
+    /// Unknown battleground ID.
+    UnknownBg,
+    /// Player level outside the BG's bracket.
+    OutOfBracket,
+    /// Group has no members.
+    EmptyGroup,
+}
+
+/// A successful battleground match — two teams ready to enter.
+#[derive(Debug, Clone, PartialEq)]
+pub struct BgMatch {
+    pub bg_id: u32,
+    pub team_a: Vec<u64>,
+    pub team_b: Vec<u64>,
+}
+
+/// Battleground matchmaking queue.
+///
+/// Players join for a specific BG type. Matchmaking fills two teams from
+/// queued entries, ignoring roles (unlike dungeon finder). Players are
+/// assigned to teams in queue order until both teams reach `team_size`.
+#[derive(Debug, Clone, Default)]
+pub struct BgQueue {
+    entries: Vec<BgQueueEntry>,
+}
+
+impl BgQueue {
+    /// Queue a solo player.
+    pub fn join_solo(
+        &mut self,
+        player: u64,
+        level: u8,
+        bg_id: u32,
+        now: u64,
+    ) -> Result<(), BgQueueError> {
+        self.join_group(player, vec![player], vec![level], bg_id, now)
+    }
+
+    /// Queue a group of players.
+    pub fn join_group(
+        &mut self,
+        leader: u64,
+        members: Vec<u64>,
+        levels: Vec<u8>,
+        bg_id: u32,
+        now: u64,
+    ) -> Result<(), BgQueueError> {
+        if members.is_empty() {
+            return Err(BgQueueError::EmptyGroup);
+        }
+        let Some(tmpl) = template_by_id(bg_id) else {
+            return Err(BgQueueError::UnknownBg);
+        };
+        if !levels.iter().all(|&lvl| tmpl.bracket.contains(lvl)) {
+            return Err(BgQueueError::OutOfBracket);
+        }
+        if self.is_queued(leader) {
+            return Err(BgQueueError::AlreadyQueued);
+        }
+        self.entries.push(BgQueueEntry {
+            leader,
+            members,
+            levels,
+            bg_id,
+            queued_at: now,
+        });
+        Ok(())
+    }
+
+    /// Remove a player/group from the queue.
+    pub fn leave(&mut self, leader: u64) -> bool {
+        let had = self.entries.iter().any(|e| e.leader == leader);
+        self.entries.retain(|e| e.leader != leader);
+        had
+    }
+
+    /// Whether a player is already queued (as leader or member).
+    pub fn is_queued(&self, player: u64) -> bool {
+        self.entries
+            .iter()
+            .any(|e| e.members.contains(&player))
+    }
+
+    /// Number of entries in the queue.
+    pub fn len(&self) -> usize {
+        self.entries.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.entries.is_empty()
+    }
+
+    /// Try to form a match for a given BG type.
+    ///
+    /// Collects queued players for the BG until both teams reach
+    /// `min_players_per_team`. Players are assigned alternately to balance
+    /// team sizes. Returns `None` if not enough players.
+    pub fn try_match(&mut self, bg_id: u32) -> Option<BgMatch> {
+        let tmpl = template_by_id(bg_id)?;
+        let candidate_indices = self.candidates_for(bg_id);
+
+        let total_players: usize = candidate_indices
+            .iter()
+            .map(|&i| self.entries[i].members.len())
+            .sum();
+        let min = tmpl.min_players_per_team as usize;
+        if total_players < min * 2 {
+            return None;
+        }
+
+        let (team_a, team_b, used) =
+            fill_teams(&self.entries, &candidate_indices, tmpl.team_size as usize);
+        if team_a.len() < min || team_b.len() < min {
+            return None;
+        }
+
+        remove_indices(&mut self.entries, &used);
+        Some(BgMatch { bg_id, team_a, team_b })
+    }
+
+    fn candidates_for(&self, bg_id: u32) -> Vec<usize> {
+        self.entries
+            .iter()
+            .enumerate()
+            .filter(|(_, e)| e.bg_id == bg_id)
+            .map(|(i, _)| i)
+            .collect()
+    }
+}
+
+/// Assign queued entries alternately to two teams up to `target` size each.
+fn fill_teams(
+    entries: &[BgQueueEntry],
+    candidates: &[usize],
+    target: usize,
+) -> (Vec<u64>, Vec<u64>, Vec<usize>) {
+    let mut team_a = Vec::new();
+    let mut team_b = Vec::new();
+    let mut used = Vec::new();
+
+    for &idx in candidates {
+        let members = &entries[idx].members;
+        let can_fit_a = team_a.len() + members.len() <= target;
+        let can_fit_b = team_b.len() + members.len() <= target;
+        let assign_to_a = can_fit_a && (team_a.len() <= team_b.len() || !can_fit_b);
+
+        if assign_to_a {
+            team_a.extend(members);
+            used.push(idx);
+        } else if can_fit_b {
+            team_b.extend(members);
+            used.push(idx);
+        }
+        if team_a.len() >= target && team_b.len() >= target {
+            break;
+        }
+    }
+    (team_a, team_b, used)
+}
+
+fn remove_indices<T>(vec: &mut Vec<T>, indices: &[usize]) {
+    let mut sorted = indices.to_vec();
+    sorted.sort_unstable();
+    for idx in sorted.into_iter().rev() {
+        vec.remove(idx);
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -222,5 +412,136 @@ mod tests {
         let json = serde_json::to_string(&wsg).unwrap();
         let restored: BgTemplate = serde_json::from_str(&json).unwrap();
         assert_eq!(wsg, restored);
+    }
+
+    // -- Queue tests --
+
+    #[test]
+    fn join_solo_and_is_queued() {
+        let mut q = BgQueue::default();
+        assert!(q.join_solo(1, 30, 1, 100).is_ok());
+        assert!(q.is_queued(1));
+        assert_eq!(q.len(), 1);
+    }
+
+    #[test]
+    fn join_solo_already_queued() {
+        let mut q = BgQueue::default();
+        q.join_solo(1, 30, 1, 100).unwrap();
+        assert_eq!(q.join_solo(1, 30, 1, 101), Err(BgQueueError::AlreadyQueued));
+    }
+
+    #[test]
+    fn join_unknown_bg() {
+        let mut q = BgQueue::default();
+        assert_eq!(q.join_solo(1, 30, 999, 100), Err(BgQueueError::UnknownBg));
+    }
+
+    #[test]
+    fn join_out_of_bracket() {
+        let mut q = BgQueue::default();
+        // WSG bracket is 10-60
+        assert_eq!(q.join_solo(1, 5, 1, 100), Err(BgQueueError::OutOfBracket));
+        assert_eq!(q.join_solo(1, 61, 1, 100), Err(BgQueueError::OutOfBracket));
+    }
+
+    #[test]
+    fn join_group() {
+        let mut q = BgQueue::default();
+        q.join_group(1, vec![1, 2, 3], vec![30, 30, 30], 1, 100).unwrap();
+        assert!(q.is_queued(1));
+        assert!(q.is_queued(2));
+        assert!(q.is_queued(3));
+        assert_eq!(q.len(), 1);
+    }
+
+    #[test]
+    fn join_empty_group() {
+        let mut q = BgQueue::default();
+        assert_eq!(
+            q.join_group(1, vec![], vec![], 1, 100),
+            Err(BgQueueError::EmptyGroup)
+        );
+    }
+
+    #[test]
+    fn leave_queue() {
+        let mut q = BgQueue::default();
+        q.join_solo(1, 30, 1, 100).unwrap();
+        assert!(q.leave(1));
+        assert!(!q.is_queued(1));
+        assert!(q.is_empty());
+    }
+
+    #[test]
+    fn leave_not_queued() {
+        let mut q = BgQueue::default();
+        assert!(!q.leave(999));
+    }
+
+    #[test]
+    fn match_not_enough_players() {
+        let mut q = BgQueue::default();
+        // WSG needs 5 per team min (10 total), only queue 8
+        for i in 1..=8 {
+            q.join_solo(i, 30, 1, 100).unwrap();
+        }
+        assert!(q.try_match(1).is_none());
+        assert_eq!(q.len(), 8); // entries preserved
+    }
+
+    #[test]
+    fn match_forms_two_teams() {
+        let mut q = BgQueue::default();
+        // WSG: 10v10, min 5 per team. Queue 10 solo players.
+        for i in 1..=10 {
+            q.join_solo(i, 30, 1, 100).unwrap();
+        }
+        let m = q.try_match(1).unwrap();
+        assert_eq!(m.bg_id, 1);
+        assert_eq!(m.team_a.len(), 5);
+        assert_eq!(m.team_b.len(), 5);
+
+        // All 10 players should be in one of the teams
+        let mut all: Vec<u64> = m.team_a.iter().chain(&m.team_b).copied().collect();
+        all.sort();
+        assert_eq!(all, (1..=10).collect::<Vec<u64>>());
+
+        // Queue should have 0 entries left
+        assert!(q.is_empty());
+    }
+
+    #[test]
+    fn match_with_groups() {
+        let mut q = BgQueue::default();
+        // Queue 2 groups of 3 + 4 solos = 10 players for WSG
+        q.join_group(1, vec![1, 2, 3], vec![30, 30, 30], 1, 100).unwrap();
+        q.join_group(4, vec![4, 5, 6], vec![30, 30, 30], 1, 100).unwrap();
+        for i in 7..=10 {
+            q.join_solo(i, 30, 1, 100).unwrap();
+        }
+        let m = q.try_match(1).unwrap();
+        let total = m.team_a.len() + m.team_b.len();
+        assert_eq!(total, 10);
+    }
+
+    #[test]
+    fn match_different_bg_types_independent() {
+        let mut q = BgQueue::default();
+        // 10 for WSG, 8 for AB (not enough for AB which needs 16 min)
+        for i in 1..=10 {
+            q.join_solo(i, 30, 1, 100).unwrap();
+        }
+        for i in 11..=18 {
+            q.join_solo(i, 30, 2, 100).unwrap();
+        }
+        assert!(q.try_match(1).is_some()); // WSG ok
+        assert!(q.try_match(2).is_none()); // AB needs 16
+    }
+
+    #[test]
+    fn match_unknown_bg_returns_none() {
+        let mut q = BgQueue::default();
+        assert!(q.try_match(999).is_none());
     }
 }
