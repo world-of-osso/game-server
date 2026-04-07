@@ -115,6 +115,19 @@ fn validate_class_match(equipped: &ItemData, source: &ItemData) -> Result<(), Tr
     Ok(())
 }
 
+// -- Transmog cost --
+
+/// Minimum transmog cost in copper (1 silver).
+const MIN_TRANSMOG_COST: u32 = 100;
+
+/// Transmog cost in copper, based on the source item's vendor sell price.
+///
+/// WoW charges the vendor sell price of the appearance item, with a floor
+/// of 1 silver to prevent free transmogs on worthless items.
+pub fn transmog_cost(source: &ItemData) -> u32 {
+    source.sell_price.max(MIN_TRANSMOG_COST)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -341,5 +354,35 @@ mod tests {
             validate_transmog(&no_slot, &source, &collection, 500),
             Err(TransmogError::NoVisualSlot)
         );
+    }
+
+    // -- Cost tests --
+
+    #[test]
+    fn cost_uses_sell_price() {
+        let mut item = plate_chest();
+        item.sell_price = 5000;
+        assert_eq!(transmog_cost(&item), 5000);
+    }
+
+    #[test]
+    fn cost_floors_at_one_silver() {
+        let mut item = plate_chest();
+        item.sell_price = 0;
+        assert_eq!(transmog_cost(&item), 100);
+    }
+
+    #[test]
+    fn cost_floor_at_low_price() {
+        let mut item = plate_chest();
+        item.sell_price = 50;
+        assert_eq!(transmog_cost(&item), 100);
+    }
+
+    #[test]
+    fn cost_exactly_one_silver() {
+        let mut item = plate_chest();
+        item.sell_price = 100;
+        assert_eq!(transmog_cost(&item), 100);
     }
 }
