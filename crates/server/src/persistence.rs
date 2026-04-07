@@ -316,7 +316,9 @@ fn save_dirty_characters(
     let Some(db) = db else { return };
     let mut saved_count = 0;
     for (pos, health, player, cid) in players.query.iter() {
-        let data = CharacterData::from_components(player, pos, health);
+        let mut data = load_character(&db.db, cid.0)
+            .unwrap_or_else(|| CharacterData::from_components(player, pos, health));
+        data.sync_live_components(player, pos, health);
         save_character(&db.db, cid.0, &data);
         saved_count += 1;
     }
@@ -339,7 +341,9 @@ fn flush_all_characters_on_exit(
 
     let mut saved_count = 0usize;
     for (pos, health, player, cid) in players.iter() {
-        let data = CharacterData::from_components(player, pos, health);
+        let mut data = load_character(&db.db, cid.0)
+            .unwrap_or_else(|| CharacterData::from_components(player, pos, health));
+        data.sync_live_components(player, pos, health);
         save_character(&db.db, cid.0, &data);
         saved_count += 1;
     }
