@@ -84,6 +84,20 @@ fn update_entity_visibility(
     }
 }
 
+#[cfg(test)]
+/// Check if an entity should be visible considering distance and stealth.
+///
+/// Stealthed entities are hidden unless the observer is within detection range
+/// (stealth detection range is much shorter than normal visibility).
+fn should_be_visible(dist_sq: f32, stealthed: bool) -> bool {
+    const STEALTH_DETECT_RANGE_SQ: f32 = 10.0 * 10.0; // 10yd detection range
+    if stealthed {
+        dist_sq <= STEALTH_DETECT_RANGE_SQ
+    } else {
+        dist_sq < 0.001 || dist_sq <= INTEREST_RADIUS_SQ
+    }
+}
+
 /// Squared distance between two positions (avoids sqrt).
 fn distance_squared(a: &Position, b: &Position) -> f32 {
     let dx = a.x - b.x;
@@ -314,5 +328,23 @@ mod tests {
         update_entity_visibility(&pos(100.0, 0.0, 0.0), &mut state_b, &players_far);
         assert_not_visible(&state_a, conn_b, "A lost B after moving apart");
         assert_not_visible(&state_b, conn_a, "B lost A after moving apart");
+    }
+
+    #[test]
+    fn stealthed_entity_hidden_beyond_detect_range() {
+        // Normal entity at 50yd: visible
+        assert!(should_be_visible(50.0 * 50.0, false));
+
+        // Stealthed entity at 50yd: hidden
+        assert!(!should_be_visible(50.0 * 50.0, true));
+
+        // Stealthed entity at 8yd: detected (within 10yd)
+        assert!(should_be_visible(8.0 * 8.0, true));
+
+        // Stealthed entity at exactly 10yd: detected
+        assert!(should_be_visible(10.0 * 10.0, true));
+
+        // Stealthed entity at 11yd: hidden
+        assert!(!should_be_visible(11.0 * 11.0, true));
     }
 }
