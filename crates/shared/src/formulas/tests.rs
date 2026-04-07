@@ -588,6 +588,28 @@ fn crosscheck_auto_attack_1h_rogue() {
 }
 
 #[test]
+fn offhand_damage_is_50_percent_of_mainhand() {
+    // Same weapon roll, AP, speed — offhand should be exactly 50%
+    let mh = auto_attack_damage(200.0, 1200.0, 2.4);
+    let oh = offhand_auto_attack_damage(200.0, 1200.0, 2.4);
+    assert!((oh - mh * 0.5).abs() < 0.01, "oh={oh}, mh={mh}");
+}
+
+#[test]
+fn offhand_damage_dagger_with_ap() {
+    // Dagger (1.7), 900 AP, roll 80
+    // MH: 80 + (900/6)*1.7 = 80 + 255 = 335
+    // OH: 335 * 0.5 = 167.5
+    let oh = offhand_auto_attack_damage(80.0, 900.0, 1.7);
+    assert!((oh - 167.5).abs() < 0.01, "got {oh}");
+}
+
+#[test]
+fn offhand_multiplier_constant_is_half() {
+    assert_eq!(OFFHAND_DAMAGE_MULTIPLIER, 0.5);
+}
+
+#[test]
 fn crosscheck_normalized_ap_bonus() {
     // SimC normalized speeds match our WeaponType constants
     // With 600 AP:

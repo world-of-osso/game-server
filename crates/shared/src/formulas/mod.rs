@@ -264,6 +264,18 @@ pub fn auto_attack_damage(weapon_roll: f32, attack_power: f32, weapon_speed: f32
     weapon_roll + ap_bonus_damage(attack_power, weapon_speed)
 }
 
+/// Off-hand damage penalty (WoW: 50% of main-hand).
+pub const OFFHAND_DAMAGE_MULTIPLIER: f32 = 0.5;
+
+/// Auto-attack damage for an off-hand weapon (50% penalty).
+pub fn offhand_auto_attack_damage(
+    weapon_roll: f32,
+    attack_power: f32,
+    weapon_speed: f32,
+) -> f32 {
+    auto_attack_damage(weapon_roll, attack_power, weapon_speed) * OFFHAND_DAMAGE_MULTIPLIER
+}
+
 /// Ability (instant/cast) damage from spell data.
 ///
 /// `base_value` is the spell's base effect value from spell data.
