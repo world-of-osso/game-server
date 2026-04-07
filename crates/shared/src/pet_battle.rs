@@ -327,6 +327,64 @@ pub fn ability_damage(
     (raw as f32 * effectiveness).round() as u32
 }
 
+// -- Wild Pet Capture --
+
+/// Base trap chance at full health.
+const TRAP_BASE_CHANCE: f32 = 0.20;
+/// Maximum trap chance at 1 HP.
+const TRAP_MAX_CHANCE: f32 = 0.95;
+
+/// Compute the capture chance for a wild pet based on its remaining health.
+///
+/// Scales linearly from `TRAP_BASE_CHANCE` (20%) at full health to
+/// `TRAP_MAX_CHANCE` (95%) at near-zero health. A dead pet cannot be captured.
+pub fn capture_chance(current_health: u32, max_health: u32) -> f32 {
+    if current_health == 0 || max_health == 0 {
+        return 0.0;
+    }
+    let health_pct = current_health as f32 / max_health as f32;
+    let range = TRAP_MAX_CHANCE - TRAP_BASE_CHANCE;
+    TRAP_BASE_CHANCE + range * (1.0 - health_pct)
+}
+
+/// Result of a trap attempt.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CaptureResult {
+    /// Pet was captured successfully.
+    Captured,
+    /// Trap failed — pet dodged.
+    Failed,
+    /// Cannot trap — pet is dead.
+    Dead,
+    /// Cannot trap — not a wild pet battle.
+    NotWild,
+}
+
+/// Attempt to capture the opponent's active pet.
+///
+/// `roll` is a random value in [0.0, 1.0). Capture succeeds if `roll < capture_chance`.
+/// The battle ends immediately on successful capture.
+pub fn attempt_capture(battle: &mut PetBattle, roll: f32) -> CaptureResult {
+    if !battle.is_wild {
+        return CaptureResult::NotWild;
+    }
+    if battle.phase != BattlePhase::SelectAction {
+        return CaptureResult::Failed;
+    }
+    let target = battle.opponent.active_pet();
+    if !target.is_alive() {
+        return CaptureResult::Dead;
+    }
+    let chance = capture_chance(target.current_health, target.stats.health);
+    if roll < chance {
+        battle.phase = BattlePhase::Ended;
+        battle.outcome = Some(BattleOutcome::PlayerWins);
+        CaptureResult::Captured
+    } else {
+        CaptureResult::Failed
+    }
+}
+
 // -- Battle System --
 
 /// Number of pets per team in a battle.
@@ -467,10 +525,12 @@ pub struct PetBattle {
     pub phase: BattlePhase,
     pub turn: u32,
     pub outcome: Option<BattleOutcome>,
+    /// Whether this is a wild pet battle (allows trapping).
+    pub is_wild: bool,
 }
 
 impl PetBattle {
-    /// Create a new battle from two teams of `BattlePet`s.
+    /// Create a new PvP/NPC battle (not wild — no trapping).
     pub fn new(player_pets: Vec<BattlePet>, opponent_pets: Vec<BattlePet>) -> Self {
         Self {
             player: BattleTeam::new(player_pets),
@@ -478,6 +538,19 @@ impl PetBattle {
             phase: BattlePhase::SelectAction,
             turn: 1,
             outcome: None,
+            is_wild: false,
+        }
+    }
+
+    /// Create a wild pet battle (allows trapping).
+    pub fn new_wild(player_pets: Vec<BattlePet>, wild_pets: Vec<BattlePet>) -> Self {
+        Self {
+            player: BattleTeam::new(player_pets),
+            opponent: BattleTeam::new(wild_pets),
+            phase: BattlePhase::SelectAction,
+            turn: 1,
+            outcome: None,
+            is_wild: true,
         }
     }
 
