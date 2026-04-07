@@ -515,6 +515,19 @@ mod tests {
     }
 
     #[test]
+    fn overkill_damage_clamps_to_zero() {
+        let mut app = setup_app();
+        // Target has only 3 HP but BASE_DAMAGE is 10
+        let target = spawn_target(&mut app, pos(1.0, 0.0, 0.0), 3.0);
+        spawn_attacker(&mut app, pos(0.0, 0.0, 0.0), target);
+
+        run_attack_tick(&mut app);
+
+        let hp = app.world().entity(target).get::<Health>().unwrap().current;
+        assert_eq!(hp, 0.0, "HP clamped to 0, not negative");
+    }
+
+    #[test]
     fn test_death_at_zero_hp() {
         let mut app = App::new();
         app.add_plugins(bevy::MinimalPlugins);
