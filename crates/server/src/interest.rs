@@ -293,4 +293,26 @@ mod tests {
         assert_visible(&state_a, conn_b, "A visible to B after approach");
         assert_visible(&state_b, conn_a, "B visible to A after approach");
     }
+
+    #[test]
+    fn two_players_move_apart_both_lose_visibility() {
+        let conn_a = Entity::from_bits(1);
+        let conn_b = Entity::from_bits(2);
+        let mut state_a = ReplicationState::default();
+        let mut state_b = ReplicationState::default();
+
+        // Start 20yd apart — both visible
+        let players_close = vec![(conn_a, pos(0.0, 0.0, 0.0)), (conn_b, pos(20.0, 0.0, 0.0))];
+        update_entity_visibility(&pos(0.0, 0.0, 0.0), &mut state_a, &players_close);
+        update_entity_visibility(&pos(20.0, 0.0, 0.0), &mut state_b, &players_close);
+        assert_visible(&state_a, conn_b, "A visible to B when close");
+        assert_visible(&state_b, conn_a, "B visible to A when close");
+
+        // Move 200yd apart — both lose visibility
+        let players_far = vec![(conn_a, pos(-100.0, 0.0, 0.0)), (conn_b, pos(100.0, 0.0, 0.0))];
+        update_entity_visibility(&pos(-100.0, 0.0, 0.0), &mut state_a, &players_far);
+        update_entity_visibility(&pos(100.0, 0.0, 0.0), &mut state_b, &players_far);
+        assert_not_visible(&state_a, conn_b, "A lost B after moving apart");
+        assert_not_visible(&state_b, conn_a, "B lost A after moving apart");
+    }
 }
