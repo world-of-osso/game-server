@@ -362,6 +362,33 @@ mod tests {
     }
 
     #[test]
+    fn height_at_chunk_boundary_edges() {
+        let corner_x = 100.0;
+        let corner_y = 100.0;
+        let map = test_helpers::flat_terrain(corner_x, corner_y, 50.0);
+
+        // Top-left corner (max x, max y) — inside
+        assert!(map.height_at(corner_x, corner_y).is_some(), "top-left corner");
+
+        // Bottom-right corner (min x, min y) — inside
+        let min_x = corner_x - CHUNK_SIZE;
+        let min_y = corner_y - CHUNK_SIZE;
+        assert!(map.height_at(min_x, min_y).is_some(), "bottom-right corner");
+
+        // Just outside each edge — None
+        assert!(map.height_at(corner_x + 0.01, corner_y).is_none(), "past max x");
+        assert!(map.height_at(corner_x, corner_y + 0.01).is_none(), "past max y");
+        assert!(map.height_at(min_x - 0.01, corner_y).is_none(), "past min x");
+        assert!(map.height_at(corner_x, min_y - 0.01).is_none(), "past min y");
+
+        // All boundary positions return same flat height
+        assert!((map.height_at(corner_x, corner_y).unwrap() - 50.0).abs() < 0.01);
+        assert!((map.height_at(min_x, min_y).unwrap() - 50.0).abs() < 0.01);
+        assert!((map.height_at(corner_x, min_y).unwrap() - 50.0).abs() < 0.01);
+        assert!((map.height_at(min_x, corner_y).unwrap() - 50.0).abs() < 0.01);
+    }
+
+    #[test]
     fn mcvt_145_floats() {
         // Build a minimal MCVT payload with exactly 145 floats.
         let mut payload = vec![0u8; MCVT_COUNT * 4];
