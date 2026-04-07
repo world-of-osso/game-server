@@ -156,6 +156,67 @@ impl PetJournal {
     }
 }
 
+// -- Species Template & Stats --
+
+/// Base stats for a pet species (before level/quality scaling).
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct PetSpecies {
+    pub id: u32,
+    /// Base health at level 1, Common quality.
+    pub base_health: f32,
+    /// Base power (attack) at level 1, Common quality.
+    pub base_power: f32,
+    /// Base speed at level 1, Common quality.
+    pub base_speed: f32,
+}
+
+/// Computed combat stats for a pet at a specific level and quality.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct PetStats {
+    pub health: u32,
+    pub power: u32,
+    pub speed: u32,
+}
+
+/// Quality stat multiplier. Higher quality → better stats.
+///
+/// WoW pet battle quality multipliers (approximate):
+/// Poor=0.9, Common=1.0, Uncommon=1.1, Rare=1.2, Epic=1.3, Legendary=1.4
+fn quality_multiplier(quality: PetQuality) -> f32 {
+    match quality {
+        PetQuality::Poor => 0.9,
+        PetQuality::Common => 1.0,
+        PetQuality::Uncommon => 1.1,
+        PetQuality::Rare => 1.2,
+        PetQuality::Epic => 1.3,
+        PetQuality::Legendary => 1.4,
+    }
+}
+
+/// Level scaling factor. Stats scale linearly from 1.0 at level 1 to 5.0 at level 25.
+fn level_multiplier(level: u8) -> f32 {
+    let clamped = level.clamp(1, MAX_PET_LEVEL);
+    1.0 + (clamped - 1) as f32 * (4.0 / 24.0)
+}
+
+/// Compute effective stats for a pet given its species, level, and quality.
+///
+/// Formula: `stat = round(base * level_multiplier * quality_multiplier)`
+///
+/// - Level scales linearly: 1.0× at level 1, 5.0× at level 25
+/// - Quality adds a percentage bonus per tier
+/// - Health gets a +5 × level bonus (pets are tankier than raw stats)
+pub fn compute_stats(species: &PetSpecies, level: u8, quality: PetQuality) -> PetStats {
+    let lvl = level_multiplier(level);
+    let qual = quality_multiplier(quality);
+    let health_bonus = 5.0 * level.clamp(1, MAX_PET_LEVEL) as f32;
+    PetStats {
+        health: (species.base_health * lvl * qual + health_bonus).round() as u32,
+        power: (species.base_power * lvl * qual).round() as u32,
+        speed: (species.base_speed * lvl * qual).round() as u32,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -312,5 +373,115 @@ mod tests {
         journal.remove(id1).unwrap();
         // Can add again
         journal.add(100, 1, PetQuality::Common).unwrap();
+    }
+
+    // -- Stat calculation tests --
+
+    fn test_species() -> PetSpecies {
+        PetSpecies {
+            id: 1,
+            base_health: 100.0,
+            base_power: 20.0,
+            base_speed: 20.0,
+        }
+    }
+
+    #[test]
+    fn level_multiplier_at_level_1() {
+        assert!((level_multiplier(1) - 1.0).abs() < 0.001);
+    }
+
+    #[test]
+    fn level_multiplier_at_level_25() {
+        assert!((level_multiplier(25) - 5.0).abs() < 0.001);
+    }
+
+    #[test]
+    fn level_multiplier_mid_level() {
+        // Level 13 is midpoint: 1 + 12 * (4/24) = 1 + 2.0 = 3.0
+        assert!((level_multiplier(13) - 3.0).abs() < 0.001);
+    }
+
+    #[test]
+    fn stats_level1_common() {
+        let species = test_species();
+        let stats = compute_stats(&species, 1, PetQuality::Common);
+        // health = 100 * 1.0 * 1.0 + 5 = 105
+        assert_eq!(stats.health, 105);
+        // power = 20 * 1.0 * 1.0 = 20
+        assert_eq!(stats.power, 20);
+        assert_eq!(stats.speed, 20);
+    }
+
+    #[test]
+    fn stats_level25_common() {
+        let species = test_species();
+        let stats = compute_stats(&species, 25, PetQuality::Common);
+        // health = 100 * 5.0 * 1.0 + 125 = 625
+        assert_eq!(stats.health, 625);
+        // power = 20 * 5.0 * 1.0 = 100
+        assert_eq!(stats.power, 100);
+        assert_eq!(stats.speed, 100);
+    }
+
+    #[test]
+    fn stats_rare_better_than_common() {
+        let species = test_species();
+        let common = compute_stats(&species, 25, PetQuality::Common);
+        let rare = compute_stats(&species, 25, PetQuality::Rare);
+        assert!(rare.health > common.health);
+        assert!(rare.power > common.power);
+        assert!(rare.speed > common.speed);
+    }
+
+    #[test]
+    fn stats_higher_level_better() {
+        let species = test_species();
+        let low = compute_stats(&species, 1, PetQuality::Common);
+        let high = compute_stats(&species, 25, PetQuality::Common);
+        assert!(high.health > low.health);
+        assert!(high.power > low.power);
+    }
+
+    #[test]
+    fn stats_quality_ordering() {
+        let species = test_species();
+        let qualities = [
+            PetQuality::Poor,
+            PetQuality::Common,
+            PetQuality::Uncommon,
+            PetQuality::Rare,
+            PetQuality::Epic,
+            PetQuality::Legendary,
+        ];
+        for pair in qualities.windows(2) {
+            let lower = compute_stats(&species, 25, pair[0]);
+            let higher = compute_stats(&species, 25, pair[1]);
+            assert!(
+                higher.power > lower.power,
+                "{:?} should have more power than {:?}",
+                pair[1],
+                pair[0],
+            );
+        }
+    }
+
+    #[test]
+    fn stats_poor_quality_penalty() {
+        let species = test_species();
+        let poor = compute_stats(&species, 25, PetQuality::Poor);
+        let common = compute_stats(&species, 25, PetQuality::Common);
+        assert!(poor.power < common.power);
+    }
+
+    #[test]
+    fn stats_level25_rare_concrete() {
+        let species = test_species();
+        let stats = compute_stats(&species, 25, PetQuality::Rare);
+        // health = 100 * 5.0 * 1.2 + 125 = 725
+        assert_eq!(stats.health, 725);
+        // power = 20 * 5.0 * 1.2 = 120
+        assert_eq!(stats.power, 120);
+        assert_eq!(stats.speed, 120);
     }
 }
