@@ -302,27 +302,31 @@ fn expire_auctions(db: Option<Res<GameDatabase>>, mut state: ResMut<AuctionHouse
         let Some(auction) = state.auctions.remove(&auction_id) else {
             continue;
         };
-        persistence::delete_auction(&db.db, auction_id);
-        if let Some(winner_id) = auction.current_bidder_character_id {
-            complete_sale(
-                &db.db,
-                &auction,
-                winner_id,
-                auction.current_bid.unwrap_or(auction.min_bid),
-            );
-        } else {
-            deliver_mail(
-                &db.db,
-                auction.seller_character_id,
-                "Auction expired",
-                &format!(
-                    "Your auction for {} expired without a buyer.",
-                    auction.item.name
-                ),
-                0,
-                Some(auction.item.clone()),
-            );
-        }
+        expire_single_auction(&db.db, auction_id, &auction);
+    }
+}
+
+fn expire_single_auction(db: &redb::Database, auction_id: u64, auction: &AuctionData) {
+    persistence::delete_auction(db, auction_id);
+    if let Some(winner_id) = auction.current_bidder_character_id {
+        complete_sale(
+            db,
+            auction,
+            winner_id,
+            auction.current_bid.unwrap_or(auction.min_bid),
+        );
+    } else {
+        deliver_mail(
+            db,
+            auction.seller_character_id,
+            "Auction expired",
+            &format!(
+                "Your auction for {} expired without a buyer.",
+                auction.item.name
+            ),
+            0,
+            Some(auction.item.clone()),
+        );
     }
 }
 
