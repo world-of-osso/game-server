@@ -345,6 +345,24 @@ mod tests {
     }
 
     #[test]
+    fn leash_evade_resets_health_to_full() {
+        use crate::components::Health;
+
+        let leash = LeashConfig::new(0.0, 0.0, 0.0);
+        let mut health = Health {
+            current: 300.0,
+            max: 1000.0,
+        };
+
+        // Creature beyond leash
+        assert!(leash.should_evade(41.0, 0.0, 0.0));
+
+        // On evade: restore to full
+        health.current = health.max;
+        assert_eq!(health.current, 1000.0);
+    }
+
+    #[test]
     fn threat_damage_adds_one_to_one() {
         let mut table = ThreatTable::default();
         table.add_damage_threat(1, 500.0, 1.0);
