@@ -209,6 +209,18 @@ fn character_data_from_legacy_v2(legacy: LegacyCharacterDataV2) -> CharacterData
     }
 }
 
+fn upgrade_appearance_v1(a: LegacyCharacterAppearanceV1) -> CharacterAppearance {
+    CharacterAppearance {
+        sex: a.sex,
+        skin_color: a.skin_color,
+        face: a.face,
+        eye_color: 0,
+        hair_style: a.hair_style,
+        hair_color: a.hair_color,
+        facial_style: a.facial_style,
+    }
+}
+
 fn character_data_from_legacy_v2_appearance_v1(
     legacy: LegacyCharacterDataV2AppearanceV1,
 ) -> CharacterData {
@@ -222,15 +234,7 @@ fn character_data_from_legacy_v2_appearance_v1(
         race: legacy.race,
         class: legacy.class,
         level: legacy.level,
-        appearance: CharacterAppearance {
-            sex: legacy.appearance.sex,
-            skin_color: legacy.appearance.skin_color,
-            face: legacy.appearance.face,
-            eye_color: 0,
-            hair_style: legacy.appearance.hair_style,
-            hair_color: legacy.appearance.hair_color,
-            facial_style: legacy.appearance.facial_style,
-        },
+        appearance: upgrade_appearance_v1(legacy.appearance),
         equipment_appearance: EquipmentAppearance::default(),
     }
 }
@@ -248,15 +252,7 @@ fn character_data_from_legacy_v3_appearance_v1(
         race: legacy.race,
         class: legacy.class,
         level: legacy.level,
-        appearance: CharacterAppearance {
-            sex: legacy.appearance.sex,
-            skin_color: legacy.appearance.skin_color,
-            face: legacy.appearance.face,
-            eye_color: 0,
-            hair_style: legacy.appearance.hair_style,
-            hair_color: legacy.appearance.hair_color,
-            facial_style: legacy.appearance.facial_style,
-        },
+        appearance: upgrade_appearance_v1(legacy.appearance),
         equipment_appearance: legacy.equipment_appearance,
     }
 }
