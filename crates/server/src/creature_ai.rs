@@ -13,7 +13,7 @@ pub struct CreatureAiPlugin;
 
 impl Plugin for CreatureAiPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(FixedUpdate, (wander_system, waypoint_system));
+        app.add_systems(FixedUpdate, (wander_system, waypoint_system, chase_system));
     }
 }
 
@@ -62,7 +62,7 @@ pub enum CreatureState {
     Idle,
     /// Chasing a threat target. Wander/waypoint AI pauses.
     /// `target` is the u64 entity ID from the ThreatTable.
-    #[cfg_attr(not(test), expect(dead_code, reason = "used by chase system (next PLAN item)"))]
+    #[cfg_attr(not(test), expect(dead_code, reason = "constructed by combat system (upcoming PLAN item)"))]
     Pursuing { target: u64 },
     /// Returning to spawn point after evade. Wander/waypoint AI pauses.
     #[cfg_attr(not(test), expect(dead_code, reason = "used by return-to-spawn after evade (PLAN item)"))]
@@ -199,6 +199,31 @@ fn tick_waypoint(pos: &mut Position, state: &mut WaypointState, path: &WaypointP
 fn advance_waypoint(state: &mut WaypointState, delay_secs: f32, path_len: usize) {
     state.delay_remaining = delay_secs;
     state.current_index = (state.current_index + 1) % path_len;
+}
+
+// -- Chase logic --
+
+/// Move pursuing creatures toward their target each tick.
+fn chase_system(
+    time: Res<Time>,
+    mut chasers: Query<(&mut Position, &SpawnPoint, &CreatureState)>,
+    targets: Query<&Position, Without<SpawnPoint>>,
+) {
+    let dt = time.delta_secs();
+    for (mut pos, spawn, state) in &mut chasers {
+        let CreatureState::Pursuing { target } = *state else {
+            continue;
+        };
+        let target_entity = Entity::from_bits(target);
+        let Ok(target_pos) = targets.get(target_entity) else {
+            continue; // target despawned or invalid
+        };
+        let speed = spawn.speed_walk * BASE_WALK_SPEED;
+        let (_reached, new_x, new_z) =
+            move_toward(pos.x, pos.z, target_pos.x, target_pos.z, speed * dt);
+        pos.x = new_x;
+        pos.z = new_z;
+    }
 }
 
 #[cfg(test)]
@@ -897,5 +922,136 @@ mod tests {
         let pos = *app.world().entity(entity).get::<Position>().unwrap();
         assert_eq!(pos.x, 10.0);
         assert_eq!(pos.z, 0.0);
+    }
+
+    #[test]
+    fn chase_moves_toward_target() {
+        use bevy::ecs::system::RunSystemOnce;
+
+        let mut app = App::new();
+        app.add_plugins(bevy::MinimalPlugins);
+        app.update();
+        app.update();
+
+        let target_entity = app
+            .world_mut()
+            .spawn(Position { x: 30.0, y: 0.0, z: 0.0 })
+            .id();
+
+        let chaser = app
+            .world_mut()
+            .spawn((
+                Position { x: 0.0, y: 0.0, z: 0.0 },
+                SpawnPoint { x: 0.0, y: 0.0, z: 0.0, wander_distance: 5.0, speed_walk: 1.0 },
+                CreatureState::Pursuing { target: target_entity.to_bits() },
+            ))
+            .id();
+
+        let _ = app.world_mut().run_system_once(chase_system);
+
+        let pos = *app.world().entity(chaser).get::<Position>().unwrap();
+        assert!(pos.x > 0.0, "creature should have moved toward target");
+        assert_eq!(pos.z, 0.0, "no z movement when target is along x axis");
+    }
+
+    #[test]
+    fn chase_respects_walk_speed() {
+        use bevy::ecs::system::RunSystemOnce;
+
+        let mut app = App::new();
+        app.add_plugins(bevy::MinimalPlugins);
+        app.update();
+        app.update();
+
+        let target_entity = app
+            .world_mut()
+            .spawn(Position { x: 100.0, y: 0.0, z: 0.0 })
+            .id();
+        let target_bits = target_entity.to_bits();
+
+        let chaser1 = app
+            .world_mut()
+            .spawn((
+                Position { x: 0.0, y: 0.0, z: 0.0 },
+                SpawnPoint { x: 0.0, y: 0.0, z: 0.0, wander_distance: 5.0, speed_walk: 1.0 },
+                CreatureState::Pursuing { target: target_bits },
+            ))
+            .id();
+
+        let chaser2 = app
+            .world_mut()
+            .spawn((
+                Position { x: 0.0, y: 0.0, z: 0.0 },
+                SpawnPoint { x: 0.0, y: 0.0, z: 0.0, wander_distance: 5.0, speed_walk: 2.0 },
+                CreatureState::Pursuing { target: target_bits },
+            ))
+            .id();
+
+        let _ = app.world_mut().run_system_once(chase_system);
+
+        let pos1 = *app.world().entity(chaser1).get::<Position>().unwrap();
+        let pos2 = *app.world().entity(chaser2).get::<Position>().unwrap();
+        assert!(
+            pos2.x > pos1.x,
+            "faster creature (speed_walk=2) should move further: {} vs {}",
+            pos2.x,
+            pos1.x
+        );
+    }
+
+    #[test]
+    fn chase_stops_when_idle() {
+        use bevy::ecs::system::RunSystemOnce;
+
+        let mut app = App::new();
+        app.add_plugins(bevy::MinimalPlugins);
+        app.update();
+        app.update();
+
+        let _target = app
+            .world_mut()
+            .spawn(Position { x: 30.0, y: 0.0, z: 0.0 })
+            .id();
+
+        let creature = app
+            .world_mut()
+            .spawn((
+                Position { x: 0.0, y: 0.0, z: 0.0 },
+                SpawnPoint { x: 0.0, y: 0.0, z: 0.0, wander_distance: 5.0, speed_walk: 1.0 },
+                CreatureState::Idle,
+            ))
+            .id();
+
+        let _ = app.world_mut().run_system_once(chase_system);
+
+        let pos = *app.world().entity(creature).get::<Position>().unwrap();
+        assert_eq!(pos.x, 0.0, "idle creature should not move");
+        assert_eq!(pos.z, 0.0, "idle creature should not move");
+    }
+
+    #[test]
+    fn chase_handles_despawned_target() {
+        use bevy::ecs::system::RunSystemOnce;
+
+        let mut app = App::new();
+        app.add_plugins(bevy::MinimalPlugins);
+        app.update();
+        app.update();
+
+        let creature = app
+            .world_mut()
+            .spawn((
+                Position { x: 5.0, y: 0.0, z: 5.0 },
+                SpawnPoint { x: 5.0, y: 0.0, z: 5.0, wander_distance: 5.0, speed_walk: 1.0 },
+                CreatureState::Pursuing { target: u64::MAX },
+            ))
+            .id();
+
+        // Should not panic
+        let _ = app.world_mut().run_system_once(chase_system);
+
+        let pos = *app.world().entity(creature).get::<Position>().unwrap();
+        assert_eq!(pos.x, 5.0, "position unchanged for invalid target");
+        assert_eq!(pos.z, 5.0, "position unchanged for invalid target");
     }
 }
