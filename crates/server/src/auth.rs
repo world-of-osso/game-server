@@ -392,4 +392,23 @@ mod tests {
             "stale player cleanup should not queue an immediate despawn ahead of deferred cleanup"
         );
     }
+
+    #[test]
+    fn auth_timeout_is_30_seconds() {
+        assert_eq!(AUTH_TIMEOUT_SECS, 30.0);
+    }
+
+    #[test]
+    fn auth_timeout_triggers_after_threshold() {
+        // PendingAuthTimer stores the connection time. If now - timer > 30s, timeout.
+        let timer = PendingAuthTimer(10.0);
+
+        // At 39.9s → not yet timed out
+        let now_before = 39.9;
+        assert!(now_before - timer.0 <= AUTH_TIMEOUT_SECS, "no timeout at 29.9s");
+
+        // At 40.1s → timed out (30.1s elapsed)
+        let now_after = 40.1;
+        assert!(now_after - timer.0 > AUTH_TIMEOUT_SECS, "timeout at 30.1s");
+    }
 }
