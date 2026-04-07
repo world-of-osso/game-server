@@ -421,4 +421,33 @@ mod tests {
         assert!(!phases_overlap(1, 2), "phase 1 vs phase 2");
         assert!(!phases_overlap(0b1100, 0b0011), "disjoint masks");
     }
+
+    #[test]
+    fn large_entity_count_performance_bounded() {
+        let players: Vec<(Entity, Position)> = (0..10)
+            .map(|i| (Entity::from_bits(i + 1), pos(i as f32 * 200.0, 0.0, 0.0)))
+            .collect();
+
+        let start = std::time::Instant::now();
+        let mut visible_count = 0;
+
+        for i in 0..500 {
+            let mut state = ReplicationState::default();
+            let entity_pos = pos(i as f32 * 2.0, 0.0, 0.0);
+            update_entity_visibility(&entity_pos, &mut state, &players);
+            for &(conn, _) in &players {
+                if state.is_visible(conn) {
+                    visible_count += 1;
+                }
+            }
+        }
+
+        let elapsed = start.elapsed();
+        assert!(visible_count > 0, "some entities visible");
+        assert!(
+            elapsed.as_millis() < 500,
+            "500 entities x 10 players took {}ms (should be <500ms)",
+            elapsed.as_millis(),
+        );
+    }
 }
