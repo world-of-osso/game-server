@@ -323,6 +323,43 @@ mod tests {
     }
 
     #[test]
+    fn wander_zero_radius_stays_at_spawn() {
+        let spawn_x = 50.0;
+        let spawn_z = 80.0;
+        let spawn = SpawnPoint {
+            x: spawn_x,
+            y: 0.0,
+            z: spawn_z,
+            wander_distance: 0.0,
+            speed_walk: 1.0,
+        };
+        let mut pos = Position { x: spawn_x, y: 0.0, z: spawn_z };
+        let mut state = WanderState {
+            phase: WanderPhase::Idle,
+            target_x: 0.0,
+            target_z: 0.0,
+            idle_remaining: 0.0,
+            seed: 42,
+        };
+        let dt = 0.1;
+
+        // Run many ticks — idle expires, picks target at center, walks there (0 dist)
+        for _ in 0..200 {
+            match state.phase {
+                WanderPhase::Idle => tick_idle(&mut state, dt, &spawn),
+                WanderPhase::Walking => tick_walk(&mut pos, &mut state, &spawn, dt),
+            }
+        }
+
+        assert!(
+            (pos.x - spawn_x).abs() < 0.01 && (pos.z - spawn_z).abs() < 0.01,
+            "creature at ({}, {}), expected ({spawn_x}, {spawn_z})",
+            pos.x,
+            pos.z,
+        );
+    }
+
+    #[test]
     fn wander_creature_returns_to_idle_after_walk() {
         let spawn_x = 50.0;
         let spawn_z = 80.0;
