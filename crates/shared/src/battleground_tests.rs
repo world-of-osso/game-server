@@ -676,3 +676,108 @@ fn rewards_loser_still_gets_marks() {
     assert!(loser.marks > 0, "losers should still get marks");
     assert!(loser.honor > 0, "losers should still get honor");
 }
+
+// -- Deserter penalty tests --
+
+#[test]
+fn deserter_applied_and_checked() {
+    let mut tracker = BgDeserterTracker::default();
+    tracker.apply(1, 10000);
+    assert!(tracker.is_deserter(1, 10000));
+    assert!(tracker.is_deserter(1, 10899)); // 899s later, still active
+    assert!(!tracker.is_deserter(1, 10900)); // 900s = expired
+}
+
+#[test]
+fn deserter_remaining_time() {
+    let mut tracker = BgDeserterTracker::default();
+    tracker.apply(1, 10000);
+    assert_eq!(tracker.remaining(1, 10000), 900);
+    assert_eq!(tracker.remaining(1, 10500), 400);
+    assert_eq!(tracker.remaining(1, 10900), 0);
+    assert_eq!(tracker.remaining(2, 10000), 0); // not a deserter
+}
+
+#[test]
+fn deserter_not_active_for_others() {
+    let mut tracker = BgDeserterTracker::default();
+    tracker.apply(1, 10000);
+    assert!(!tracker.is_deserter(2, 10000));
+}
+
+#[test]
+fn deserter_cleanup_removes_expired() {
+    let mut tracker = BgDeserterTracker::default();
+    tracker.apply(1, 10000);
+    tracker.apply(2, 10500);
+    tracker.cleanup(10900);
+    assert!(!tracker.is_deserter(1, 10900)); // expired
+    assert!(tracker.is_deserter(2, 10900)); // still active until 11400
+}
+
+#[test]
+fn deserter_refresh_extends() {
+    let mut tracker = BgDeserterTracker::default();
+    tracker.apply(1, 10000); // expires at 10900
+    tracker.apply(1, 10500); // extends to 11400
+    assert!(tracker.is_deserter(1, 11000));
+    assert!(!tracker.is_deserter(1, 11400));
+}
+
+#[test]
+fn leave_bg_applies_deserter() {
+    let (mut inst, _) = wsg_instance();
+    inst.start();
+    let mut tracker = BgDeserterTracker::default();
+
+    assert!(leave_bg(&mut inst, &mut tracker, 1, 5000));
+    assert!(tracker.is_deserter(1, 5000));
+    assert!(!inst.team_a_players.contains(&1));
+    assert_eq!(inst.team_a_players.len(), 4); // was 5, now 4
+}
+
+#[test]
+fn leave_bg_team_b_player() {
+    let (mut inst, _) = wsg_instance();
+    inst.start();
+    let mut tracker = BgDeserterTracker::default();
+
+    assert!(leave_bg(&mut inst, &mut tracker, 6, 5000));
+    assert!(tracker.is_deserter(6, 5000));
+    assert!(!inst.team_b_players.contains(&6));
+}
+
+#[test]
+fn leave_bg_not_in_match() {
+    let (mut inst, _) = wsg_instance();
+    inst.start();
+    let mut tracker = BgDeserterTracker::default();
+
+    assert!(!leave_bg(&mut inst, &mut tracker, 99, 5000));
+    assert!(!tracker.is_deserter(99, 5000));
+}
+
+#[test]
+fn leave_bg_not_in_progress() {
+    let (mut inst, _) = wsg_instance();
+    // Still waiting — leaving shouldn't apply deserter
+    let mut tracker = BgDeserterTracker::default();
+
+    assert!(!leave_bg(&mut inst, &mut tracker, 1, 5000));
+    assert!(!tracker.is_deserter(1, 5000));
+}
+
+#[test]
+fn deserter_blocks_queue_join() {
+    let mut q = BgQueue::default();
+    let mut tracker = BgDeserterTracker::default();
+    tracker.apply(1, 10000);
+
+    assert_eq!(
+        q.join_solo_checked(1, 30, 1, 10000, &tracker),
+        Err(BgQueueError::Deserter)
+    );
+
+    // After penalty expires, can join again
+    assert!(q.join_solo_checked(1, 30, 1, 10900, &tracker).is_ok());
+}
