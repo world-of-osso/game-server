@@ -106,6 +106,20 @@ pub struct ThreatEntry {
 
 /// Threat multiplier for healing (0.5 threat per point healed).
 const HEAL_THREAT_MULTIPLIER: f32 = 0.5;
+/// Base aggro radius in yards (WoW default for equal-level mobs).
+const BASE_AGGRO_RADIUS: f32 = 20.0;
+
+/// Check if an NPC should aggro a player based on distance and level difference.
+///
+/// Aggro radius scales with level difference: +1 yard per mob level above
+/// player, -1 yard per mob level below player (min 5 yards).
+/// Returns `true` if the player is within aggro range.
+pub fn should_aggro(distance: f32, mob_level: u16, player_level: u16) -> bool {
+    let level_diff = mob_level as f32 - player_level as f32;
+    let radius = (BASE_AGGRO_RADIUS + level_diff).max(5.0);
+    distance <= radius
+}
+
 /// Aggro swap threshold for melee (must exceed current target by 10%).
 const MELEE_AGGRO_THRESHOLD: f32 = 1.10;
 /// Aggro swap threshold for ranged (must exceed current target by 30%).
@@ -239,6 +253,33 @@ mod tests {
         combat.refresh();
         assert!((combat.idle_timer - 6.0).abs() < 0.001);
         assert!(!combat.tick(5.0));
+    }
+
+    #[test]
+    fn aggro_within_range_equal_level() {
+        // Equal level: 20yd radius
+        assert!(should_aggro(19.0, 10, 10));
+        assert!(should_aggro(20.0, 10, 10));
+        assert!(!should_aggro(21.0, 10, 10));
+    }
+
+    #[test]
+    fn aggro_range_scales_with_level_difference() {
+        // Mob 5 levels above player: 20 + 5 = 25yd
+        assert!(should_aggro(24.0, 15, 10));
+        assert!(!should_aggro(26.0, 15, 10));
+
+        // Mob 10 levels below player: 20 - 10 = 10yd
+        assert!(should_aggro(9.0, 5, 15));
+        assert!(!should_aggro(11.0, 5, 15));
+    }
+
+    #[test]
+    fn aggro_range_has_minimum_5_yards() {
+        // Mob 30 levels below: 20 - 30 = -10, clamped to 5yd
+        assert!(should_aggro(4.0, 1, 31));
+        assert!(should_aggro(5.0, 1, 31));
+        assert!(!should_aggro(6.0, 1, 31));
     }
 
     #[test]
