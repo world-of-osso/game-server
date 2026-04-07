@@ -629,6 +629,14 @@ mod tests {
     }
 
     #[test]
+    fn delete_nonexistent_character_returns_error() {
+        let db = temp_database();
+        let (account_id, _) = register_account(&db, "user1", "pass").unwrap();
+        let result = delete_character(&db, account_id, 99999);
+        assert!(result.is_err());
+    }
+
+    #[test]
     fn character_guild_membership_round_trip() {
         let db = temp_database();
         let (account_id, _) = register_account(&db, "user1", "pass").unwrap();
