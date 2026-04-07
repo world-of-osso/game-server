@@ -154,18 +154,12 @@ fn build_action(cli: Cli) -> CliAction {
         Commands::Register(args) => {
             action_from_credentials(args.server.server, args.username, args.password, CliCommand::Register)
         }
-        Commands::GuildInvite(args) => CliAction {
-            command: CliCommand::GuildInvite {
-                target: args.target,
-            },
-            server: args.auth.server.server,
-            username: None,
-            password: None,
-            token: args.auth.token,
-        },
+        Commands::GuildInvite(args) => {
+            action_from_token(args.auth, CliCommand::GuildInvite { target: args.target })
+        }
         Commands::GuildAccept(args) => action_from_token(args, CliCommand::GuildAccept),
-        Commands::CreateCharacter(args) => CliAction {
-            command: CliCommand::CreateCharacter {
+        Commands::CreateCharacter(args) => {
+            let command = CliCommand::CreateCharacter {
                 name: args.name,
                 race: args.race,
                 class: args.class_id,
@@ -178,38 +172,21 @@ fn build_action(cli: Cli) -> CliAction {
                     hair_color: args.hair_color,
                     facial_style: args.facial_style,
                 },
-            },
-            server: args.auth.server.server,
-            username: None,
-            password: None,
-            token: args.auth.token,
-        },
-        Commands::Chat(ChatCommands::Send(args)) => CliAction {
-            command: CliCommand::ChatSend(args.message),
-            server: args.auth.server.server,
-            username: None,
-            password: None,
-            token: args.auth.token,
-        },
-        Commands::GuildChat(args) => CliAction {
-            command: CliCommand::GuildChat(args.message),
-            server: args.auth.server.server,
-            username: None,
-            password: None,
-            token: args.auth.token,
-        },
+            };
+            action_from_token(args.auth, command)
+        }
+        Commands::Chat(ChatCommands::Send(args)) => {
+            action_from_token(args.auth, CliCommand::ChatSend(args.message))
+        }
+        Commands::GuildChat(args) => {
+            action_from_token(args.auth, CliCommand::GuildChat(args.message))
+        }
         Commands::Chat(ChatCommands::Listen(args)) => {
             action_from_token(args, CliCommand::ChatListen)
         }
-        Commands::Chat(ChatCommands::History(args)) => CliAction {
-            command: CliCommand::ChatHistory {
-                limit: args.limit.min(100),
-            },
-            server: args.auth.server.server,
-            username: None,
-            password: None,
-            token: args.auth.token,
-        },
+        Commands::Chat(ChatCommands::History(args)) => {
+            action_from_token(args.auth, CliCommand::ChatHistory { limit: args.limit.min(100) })
+        }
     }
 }
 
