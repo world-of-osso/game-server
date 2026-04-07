@@ -2,6 +2,8 @@ use redb::{Database, ReadableDatabase, ReadableTable};
 use rusqlite::{Connection, OpenFlags, params};
 use shared::components::{CharacterAppearance, GuildMembership};
 
+const MAX_CHARACTERS_PER_ACCOUNT: usize = 10;
+
 use crate::persistence::{
     ACCOUNT_CHARACTERS, CHARACTER_GUILDS, CHARACTER_NAMES, CHARACTERS, PENDING_GUILD_INVITES,
 };
@@ -266,6 +268,9 @@ pub fn create_character_with_appearance(
     }
     if !trimmed.chars().all(|c| c.is_ascii_alphabetic()) {
         return Err("Character name must contain only letters".to_string());
+    }
+    if list_characters_for_account(db, account_id).len() >= MAX_CHARACTERS_PER_ACCOUNT {
+        return Err("Maximum characters per account reached".to_string());
     }
     check_name_available(db, name)?;
     validate_playable_race(race)?;

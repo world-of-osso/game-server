@@ -593,6 +593,20 @@ mod tests {
     }
 
     #[test]
+    fn max_characters_per_account_enforced() {
+        let db = temp_database();
+        let (account_id, _) = register_account(&db, "user1", "pass").unwrap();
+        for i in 0..10 {
+            let name = format!("Hero{}", (b'a' + i) as char);
+            create_character(&db, account_id, &name, 1, 1).unwrap();
+        }
+        let result = create_character(&db, account_id, "Eleventh", 1, 1);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Maximum characters"));
+        assert_eq!(list_characters_for_account(&db, account_id).len(), 10);
+    }
+
+    #[test]
     fn delete_character_removes_from_all_tables() {
         let db = temp_database();
         let (account_id, _) = register_account(&db, "user1", "pass").unwrap();
