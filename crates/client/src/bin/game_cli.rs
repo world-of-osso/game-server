@@ -147,9 +147,13 @@ fn main() {
 
 fn build_action(cli: Cli) -> CliAction {
     match cli.command {
-        Commands::Login(args) => action_from_login(args, CliCommand::Login),
+        Commands::Login(args) => {
+            action_from_credentials(args.server.server, args.username, args.password, CliCommand::Login)
+        }
         Commands::Status(args) => action_from_token(args, CliCommand::Status),
-        Commands::Register(args) => action_from_register(args, CliCommand::Register),
+        Commands::Register(args) => {
+            action_from_credentials(args.server.server, args.username, args.password, CliCommand::Register)
+        }
         Commands::GuildInvite(args) => CliAction {
             command: CliCommand::GuildInvite {
                 target: args.target,
@@ -209,22 +213,17 @@ fn build_action(cli: Cli) -> CliAction {
     }
 }
 
-fn action_from_login(args: LoginArgs, command: CliCommand) -> CliAction {
+fn action_from_credentials(
+    server: SocketAddr,
+    username: String,
+    password: String,
+    command: CliCommand,
+) -> CliAction {
     CliAction {
         command,
-        server: args.server.server,
-        username: Some(args.username),
-        password: Some(args.password),
-        token: None,
-    }
-}
-
-fn action_from_register(args: RegisterArgs, command: CliCommand) -> CliAction {
-    CliAction {
-        command,
-        server: args.server.server,
-        username: Some(args.username),
-        password: Some(args.password),
+        server,
+        username: Some(username),
+        password: Some(password),
         token: None,
     }
 }
