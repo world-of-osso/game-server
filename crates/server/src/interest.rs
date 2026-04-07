@@ -85,6 +85,15 @@ fn update_entity_visibility(
 }
 
 #[cfg(test)]
+/// Check if two entities share a phase (bitmask overlap).
+///
+/// WoW phases are bitmasks: entity is visible if `entity_phase & player_phase != 0`.
+/// Phase 0 is treated as "all phases" (always visible).
+fn phases_overlap(entity_phase: u32, player_phase: u32) -> bool {
+    entity_phase == 0 || player_phase == 0 || (entity_phase & player_phase) != 0
+}
+
+#[cfg(test)]
 /// Check if entities in different instances should be invisible to each other.
 ///
 /// Entities must share the same instance_id to be visible. Instance 0 = open world.
@@ -392,5 +401,24 @@ mod tests {
         assert!(!same_instance(1, 2), "different dungeon instances");
         assert!(!same_instance(0, 1), "open world vs dungeon");
         assert!(!same_instance(100, 200), "different raid instances");
+    }
+
+    #[test]
+    fn phase_system_different_phase_invisible() {
+        // Phase 0 = all phases (always visible)
+        assert!(phases_overlap(0, 1), "phase 0 entity visible to all");
+        assert!(phases_overlap(1, 0), "all-phase player sees everything");
+
+        // Same phase: visible
+        assert!(phases_overlap(1, 1));
+        assert!(phases_overlap(0b1010, 0b1010));
+
+        // Overlapping bits: visible
+        assert!(phases_overlap(0b1100, 0b0110), "share bit 2");
+
+        // No overlap: invisible
+        assert!(!phases_overlap(0b1000, 0b0001), "no shared bits");
+        assert!(!phases_overlap(1, 2), "phase 1 vs phase 2");
+        assert!(!phases_overlap(0b1100, 0b0011), "disjoint masks");
     }
 }
