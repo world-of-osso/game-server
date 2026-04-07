@@ -516,6 +516,28 @@ mod tests {
     }
 
     #[test]
+    fn negative_terrain_height_underwater() {
+        let map = test_helpers::flat_terrain(100.0, 100.0, -25.0);
+
+        let h = map.height_at(95.0, 95.0).unwrap();
+        assert!((h - (-25.0)).abs() < 0.01, "underwater height: got {h}");
+
+        // Negative offset on negative base
+        let mut heights = [0.0f32; MCVT_COUNT];
+        heights[0] = -5.0;
+        let map = TerrainHeightMap {
+            chunks: vec![ChunkHeight {
+                corner_x: 100.0,
+                corner_y: 100.0,
+                base_z: -10.0,
+                heights,
+            }],
+        };
+        let h = map.height_at(100.0, 100.0).unwrap();
+        assert!((h - (-15.0)).abs() < 0.01, "base -10 + offset -5 = -15: got {h}");
+    }
+
+    #[test]
     fn mcvt_145_floats() {
         // Build a minimal MCVT payload with exactly 145 floats.
         let mut payload = vec![0u8; MCVT_COUNT * 4];
