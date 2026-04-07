@@ -427,3 +427,94 @@ fn alive_lists_track_eliminations() {
     assert_eq!(inst.team_a_alive, vec![20]);
     assert_eq!(inst.team_b_alive, vec![30, 40]);
 }
+
+// -- Rating tests --
+
+#[test]
+fn expected_score_equal_ratings() {
+    let e = expected_score(1500, 1500);
+    assert!((e - 0.5).abs() < 0.001);
+}
+
+#[test]
+fn expected_score_higher_rated_favored() {
+    let e = expected_score(1600, 1400);
+    assert!(e > 0.5);
+    assert!(e < 1.0);
+}
+
+#[test]
+fn expected_score_lower_rated_underdog() {
+    let e = expected_score(1400, 1600);
+    assert!(e < 0.5);
+    assert!(e > 0.0);
+}
+
+#[test]
+fn expected_scores_symmetric() {
+    let e_a = expected_score(1500, 1600);
+    let e_b = expected_score(1600, 1500);
+    assert!((e_a + e_b - 1.0).abs() < 0.001);
+}
+
+#[test]
+fn rating_equal_teams() {
+    let (winner, loser) = calculate_rating(1500, 1500);
+    // Equal teams: winner gains 16, loser loses 16 (K/2)
+    assert_eq!(winner.change, 16);
+    assert_eq!(loser.change, -16);
+    assert_eq!(winner.new_rating, 1516);
+    assert_eq!(loser.new_rating, 1484);
+}
+
+#[test]
+fn rating_upset_rewards_more() {
+    // Lower-rated team beats higher-rated team
+    let (winner, loser) = calculate_rating(1400, 1600);
+    // Underdog win: larger gain
+    assert!(winner.change > 16);
+    // Favored loss: larger loss
+    assert!(loser.change < -16);
+}
+
+#[test]
+fn rating_expected_win_rewards_less() {
+    // Higher-rated team beats lower-rated team
+    let (winner, loser) = calculate_rating(1600, 1400);
+    // Expected win: smaller gain
+    assert!(winner.change < 16);
+    assert!(winner.change > 0);
+    // Expected loss: smaller loss
+    assert!(loser.change > -16);
+    assert!(loser.change < 0);
+}
+
+#[test]
+fn rating_never_goes_negative() {
+    // Equal ratings, loser with very low rating
+    let (_, loser) = calculate_rating(16, 16);
+    // loser loses 16 points: 16 - 16 = 0
+    assert_eq!(loser.new_rating, 0);
+    assert!(loser.change < 0);
+}
+
+#[test]
+fn rating_preserves_old_rating() {
+    let (winner, loser) = calculate_rating(1500, 1500);
+    assert_eq!(winner.old_rating, 1500);
+    assert_eq!(loser.old_rating, 1500);
+}
+
+#[test]
+fn rating_changes_are_opposite_sign() {
+    let (winner, loser) = calculate_rating(1500, 1500);
+    assert!(winner.change > 0);
+    assert!(loser.change < 0);
+}
+
+#[test]
+fn rating_large_gap_winner_gains_almost_nothing() {
+    // 2000 vs 1000: overwhelming favorite wins
+    let (winner, _) = calculate_rating(2000, 1000);
+    assert!(winner.change <= 1, "change was {}", winner.change);
+}

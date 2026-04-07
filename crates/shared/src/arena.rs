@@ -400,6 +400,60 @@ impl ArenaInstance {
     }
 }
 
+// -- Elo Rating --
+
+/// K-factor: maximum rating change per match.
+const K_FACTOR: f32 = 32.0;
+/// Minimum rating floor (can't drop below this).
+const MIN_RATING: u32 = 0;
+
+/// Expected win probability for `rating_a` against `rating_b`.
+///
+/// Standard Elo formula: E = 1 / (1 + 10^((Rb - Ra) / 400)).
+pub fn expected_score(rating_a: u32, rating_b: u32) -> f32 {
+    let diff = rating_b as f32 - rating_a as f32;
+    1.0 / (1.0 + 10.0_f32.powf(diff / 400.0))
+}
+
+/// Rating adjustment after a match result.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct RatingAdjustment {
+    pub old_rating: u32,
+    pub new_rating: u32,
+    pub change: i32,
+}
+
+/// Calculate rating adjustments for both teams after an arena match.
+///
+/// `winner_rating`/`loser_rating` are the team ratings before the match.
+/// Returns (winner_adjustment, loser_adjustment).
+pub fn calculate_rating(
+    winner_rating: u32,
+    loser_rating: u32,
+) -> (RatingAdjustment, RatingAdjustment) {
+    let expected_win = expected_score(winner_rating, loser_rating);
+    let expected_lose = 1.0 - expected_win;
+
+    let winner_delta = (K_FACTOR * (1.0 - expected_win)).round() as i32;
+    let loser_delta = (K_FACTOR * (0.0 - expected_lose)).round() as i32;
+
+    let winner_new = (winner_rating as i32 + winner_delta).max(MIN_RATING as i32) as u32;
+    let loser_new = (loser_rating as i32 + loser_delta).max(MIN_RATING as i32) as u32;
+
+    (
+        RatingAdjustment {
+            old_rating: winner_rating,
+            new_rating: winner_new,
+            change: winner_delta,
+        },
+        RatingAdjustment {
+            old_rating: loser_rating,
+            new_rating: loser_new,
+            change: loser_delta,
+        },
+    )
+}
+
 #[cfg(test)]
 #[path = "arena_tests.rs"]
 mod tests;
