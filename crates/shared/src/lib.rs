@@ -1,4 +1,5 @@
 pub mod achievement;
+pub mod battleground;
 pub mod aura;
 pub mod casting;
 pub mod class_spec;
