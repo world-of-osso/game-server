@@ -60,6 +60,17 @@ pub fn is_indoor(wmo_group_flags: u32) -> bool {
     indoor && !outdoor
 }
 
+/// Calculate water depth at a position.
+///
+/// Returns 0.0 if no water or terrain is above water.
+/// `water_surface` and `terrain_height` are both in world Z.
+pub fn water_depth(water_surface: Option<f32>, terrain_height: f32) -> f32 {
+    match water_surface {
+        Some(ws) if ws > terrain_height => ws - terrain_height,
+        _ => 0.0,
+    }
+}
+
 /// Check if a slope is walkable given height difference and horizontal distance.
 pub fn is_walkable_slope(height_diff: f32, horizontal_dist: f32) -> bool {
     if horizontal_dist < 0.001 {
@@ -173,5 +184,23 @@ mod tests {
 
         // Outdoor with other flags → still outdoor
         assert!(!is_indoor(WMO_FLAG_OUTDOOR | 0x01));
+    }
+
+    #[test]
+    fn water_depth_calculation() {
+        // Submerged: water at 10, terrain at -5 → depth 15
+        assert!((water_depth(Some(10.0), -5.0) - 15.0).abs() < 0.01);
+
+        // Shallow: water at 5, terrain at 3 → depth 2
+        assert!((water_depth(Some(5.0), 3.0) - 2.0).abs() < 0.01);
+
+        // Terrain above water: water at 5, terrain at 8 → depth 0
+        assert_eq!(water_depth(Some(5.0), 8.0), 0.0);
+
+        // Terrain at water level → depth 0
+        assert_eq!(water_depth(Some(5.0), 5.0), 0.0);
+
+        // No water → depth 0
+        assert_eq!(water_depth(None, -20.0), 0.0);
     }
 }
