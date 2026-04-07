@@ -217,271 +217,252 @@ pub fn compute_stats(species: &PetSpecies, level: u8, quality: PetQuality) -> Pe
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+// -- Battle System --
 
-    #[test]
-    fn quality_from_id() {
-        assert_eq!(PetQuality::from_id(0), Some(PetQuality::Poor));
-        assert_eq!(PetQuality::from_id(3), Some(PetQuality::Rare));
-        assert_eq!(PetQuality::from_id(5), Some(PetQuality::Legendary));
-        assert_eq!(PetQuality::from_id(6), None);
-    }
+/// Number of pets per team in a battle.
+pub const TEAM_SIZE: usize = 3;
 
-    #[test]
-    fn add_pet() {
-        let mut journal = PetJournal::default();
-        let id = journal.add(100, 1, PetQuality::Common).unwrap();
-        assert_eq!(journal.count(), 1);
-        let pet = journal.get(id).unwrap();
-        assert_eq!(pet.species_id, 100);
-        assert_eq!(pet.level, 1);
-        assert_eq!(pet.quality, PetQuality::Common);
-        assert!(pet.custom_name.is_none());
-    }
+/// A pet's state during a battle.
+#[derive(Debug, Clone, PartialEq)]
+pub struct BattlePet {
+    pub stats: PetStats,
+    pub current_health: u32,
+}
 
-    #[test]
-    fn add_pet_clamps_level() {
-        let mut journal = PetJournal::default();
-        let id = journal.add(1, 50, PetQuality::Rare).unwrap();
-        assert_eq!(journal.get(id).unwrap().level, 25); // clamped to max
-
-        let id2 = journal.add(2, 0, PetQuality::Rare).unwrap();
-        assert_eq!(journal.get(id2).unwrap().level, 1); // clamped to min
-    }
-
-    #[test]
-    fn add_pet_unique_ids() {
-        let mut journal = PetJournal::default();
-        let id1 = journal.add(100, 1, PetQuality::Common).unwrap();
-        let id2 = journal.add(100, 1, PetQuality::Common).unwrap();
-        assert_ne!(id1, id2);
-    }
-
-    #[test]
-    fn species_limit() {
-        let mut journal = PetJournal::default();
-        journal.add(100, 1, PetQuality::Common).unwrap();
-        journal.add(100, 1, PetQuality::Uncommon).unwrap();
-        journal.add(100, 1, PetQuality::Rare).unwrap();
-        assert_eq!(
-            journal.add(100, 1, PetQuality::Epic),
-            Err(PetJournalError::SpeciesLimitReached)
-        );
-        // Different species still works
-        journal.add(200, 1, PetQuality::Common).unwrap();
-    }
-
-    #[test]
-    fn remove_pet() {
-        let mut journal = PetJournal::default();
-        let id = journal.add(100, 1, PetQuality::Common).unwrap();
-        journal.remove(id).unwrap();
-        assert_eq!(journal.count(), 0);
-        assert!(journal.get(id).is_none());
-    }
-
-    #[test]
-    fn remove_nonexistent() {
-        let mut journal = PetJournal::default();
-        assert_eq!(journal.remove(999), Err(PetJournalError::PetNotFound));
-    }
-
-    #[test]
-    fn rename_pet() {
-        let mut journal = PetJournal::default();
-        let id = journal.add(100, 1, PetQuality::Common).unwrap();
-        journal.rename(id, "Fluffy".into()).unwrap();
-        assert_eq!(
-            journal.get(id).unwrap().custom_name,
-            Some("Fluffy".into())
-        );
-    }
-
-    #[test]
-    fn rename_empty_fails() {
-        let mut journal = PetJournal::default();
-        let id = journal.add(100, 1, PetQuality::Common).unwrap();
-        assert_eq!(journal.rename(id, "".into()), Err(PetJournalError::EmptyName));
-    }
-
-    #[test]
-    fn rename_nonexistent() {
-        let mut journal = PetJournal::default();
-        assert_eq!(
-            journal.rename(999, "Test".into()),
-            Err(PetJournalError::PetNotFound)
-        );
-    }
-
-    #[test]
-    fn unique_species_count() {
-        let mut journal = PetJournal::default();
-        journal.add(100, 1, PetQuality::Common).unwrap();
-        journal.add(100, 1, PetQuality::Rare).unwrap();
-        journal.add(200, 1, PetQuality::Common).unwrap();
-        assert_eq!(journal.unique_species(), 2);
-    }
-
-    #[test]
-    fn by_species() {
-        let mut journal = PetJournal::default();
-        journal.add(100, 1, PetQuality::Common).unwrap();
-        journal.add(200, 5, PetQuality::Rare).unwrap();
-        journal.add(100, 10, PetQuality::Uncommon).unwrap();
-        let species_100 = journal.by_species(100);
-        assert_eq!(species_100.len(), 2);
-        assert!(species_100.iter().all(|p| p.species_id == 100));
-    }
-
-    #[test]
-    fn highest_level_empty() {
-        let journal = PetJournal::default();
-        assert_eq!(journal.highest_level(), 0);
-    }
-
-    #[test]
-    fn highest_level() {
-        let mut journal = PetJournal::default();
-        journal.add(100, 5, PetQuality::Common).unwrap();
-        journal.add(200, 25, PetQuality::Rare).unwrap();
-        journal.add(300, 10, PetQuality::Common).unwrap();
-        assert_eq!(journal.highest_level(), 25);
-    }
-
-    #[test]
-    fn serialization_round_trip() {
-        let mut journal = PetJournal::default();
-        journal.add(100, 5, PetQuality::Rare).unwrap();
-        journal.add(200, 10, PetQuality::Epic).unwrap();
-
-        let json = serde_json::to_string(&journal).unwrap();
-        let restored: PetJournal = serde_json::from_str(&json).unwrap();
-        assert_eq!(journal, restored);
-    }
-
-    #[test]
-    fn remove_frees_species_slot() {
-        let mut journal = PetJournal::default();
-        let id1 = journal.add(100, 1, PetQuality::Common).unwrap();
-        journal.add(100, 1, PetQuality::Common).unwrap();
-        journal.add(100, 1, PetQuality::Common).unwrap();
-        // Full on species 100
-        assert!(journal.add(100, 1, PetQuality::Common).is_err());
-        // Release one
-        journal.remove(id1).unwrap();
-        // Can add again
-        journal.add(100, 1, PetQuality::Common).unwrap();
-    }
-
-    // -- Stat calculation tests --
-
-    fn test_species() -> PetSpecies {
-        PetSpecies {
-            id: 1,
-            base_health: 100.0,
-            base_power: 20.0,
-            base_speed: 20.0,
+impl BattlePet {
+    pub fn new(stats: PetStats) -> Self {
+        Self {
+            current_health: stats.health,
+            stats,
         }
     }
 
-    #[test]
-    fn level_multiplier_at_level_1() {
-        assert!((level_multiplier(1) - 1.0).abs() < 0.001);
+    pub fn is_alive(&self) -> bool {
+        self.current_health > 0
     }
 
-    #[test]
-    fn level_multiplier_at_level_25() {
-        assert!((level_multiplier(25) - 5.0).abs() < 0.001);
-    }
-
-    #[test]
-    fn level_multiplier_mid_level() {
-        // Level 13 is midpoint: 1 + 12 * (4/24) = 1 + 2.0 = 3.0
-        assert!((level_multiplier(13) - 3.0).abs() < 0.001);
-    }
-
-    #[test]
-    fn stats_level1_common() {
-        let species = test_species();
-        let stats = compute_stats(&species, 1, PetQuality::Common);
-        // health = 100 * 1.0 * 1.0 + 5 = 105
-        assert_eq!(stats.health, 105);
-        // power = 20 * 1.0 * 1.0 = 20
-        assert_eq!(stats.power, 20);
-        assert_eq!(stats.speed, 20);
-    }
-
-    #[test]
-    fn stats_level25_common() {
-        let species = test_species();
-        let stats = compute_stats(&species, 25, PetQuality::Common);
-        // health = 100 * 5.0 * 1.0 + 125 = 625
-        assert_eq!(stats.health, 625);
-        // power = 20 * 5.0 * 1.0 = 100
-        assert_eq!(stats.power, 100);
-        assert_eq!(stats.speed, 100);
-    }
-
-    #[test]
-    fn stats_rare_better_than_common() {
-        let species = test_species();
-        let common = compute_stats(&species, 25, PetQuality::Common);
-        let rare = compute_stats(&species, 25, PetQuality::Rare);
-        assert!(rare.health > common.health);
-        assert!(rare.power > common.power);
-        assert!(rare.speed > common.speed);
-    }
-
-    #[test]
-    fn stats_higher_level_better() {
-        let species = test_species();
-        let low = compute_stats(&species, 1, PetQuality::Common);
-        let high = compute_stats(&species, 25, PetQuality::Common);
-        assert!(high.health > low.health);
-        assert!(high.power > low.power);
-    }
-
-    #[test]
-    fn stats_quality_ordering() {
-        let species = test_species();
-        let qualities = [
-            PetQuality::Poor,
-            PetQuality::Common,
-            PetQuality::Uncommon,
-            PetQuality::Rare,
-            PetQuality::Epic,
-            PetQuality::Legendary,
-        ];
-        for pair in qualities.windows(2) {
-            let lower = compute_stats(&species, 25, pair[0]);
-            let higher = compute_stats(&species, 25, pair[1]);
-            assert!(
-                higher.power > lower.power,
-                "{:?} should have more power than {:?}",
-                pair[1],
-                pair[0],
-            );
-        }
-    }
-
-    #[test]
-    fn stats_poor_quality_penalty() {
-        let species = test_species();
-        let poor = compute_stats(&species, 25, PetQuality::Poor);
-        let common = compute_stats(&species, 25, PetQuality::Common);
-        assert!(poor.power < common.power);
-    }
-
-    #[test]
-    fn stats_level25_rare_concrete() {
-        let species = test_species();
-        let stats = compute_stats(&species, 25, PetQuality::Rare);
-        // health = 100 * 5.0 * 1.2 + 125 = 725
-        assert_eq!(stats.health, 725);
-        // power = 20 * 5.0 * 1.2 = 120
-        assert_eq!(stats.power, 120);
-        assert_eq!(stats.speed, 120);
+    pub fn take_damage(&mut self, amount: u32) {
+        self.current_health = self.current_health.saturating_sub(amount);
     }
 }
+
+/// Which side of the battle.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BattleSide {
+    Player,
+    Opponent,
+}
+
+/// An action selected for a turn.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TurnAction {
+    /// Use an ability (index into the pet's ability list, 0-2).
+    UseAbility(u8),
+    /// Swap to a different pet (index into the team, 0-2).
+    Swap(u8),
+    /// Pass the turn (do nothing).
+    Pass,
+}
+
+/// Phase of the pet battle.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BattlePhase {
+    /// Waiting for both sides to choose actions.
+    SelectAction,
+    /// Battle is over.
+    Ended,
+}
+
+/// Outcome of a pet battle.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BattleOutcome {
+    PlayerWins,
+    OpponentWins,
+}
+
+/// What happened in a single turn resolution step.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TurnEvent {
+    pub side: BattleSide,
+    pub damage: u32,
+    pub target_fainted: bool,
+}
+
+/// One side's team state.
+#[derive(Debug, Clone, PartialEq)]
+pub struct BattleTeam {
+    pub pets: Vec<BattlePet>,
+    pub active: usize,
+    pub action: Option<TurnAction>,
+}
+
+impl BattleTeam {
+    pub fn new(pets: Vec<BattlePet>) -> Self {
+        Self {
+            pets,
+            active: 0,
+            action: None,
+        }
+    }
+
+    pub fn active_pet(&self) -> &BattlePet {
+        &self.pets[self.active]
+    }
+
+    pub fn active_pet_mut(&mut self) -> &mut BattlePet {
+        &mut self.pets[self.active]
+    }
+
+    /// Whether any pet on this team is still alive.
+    pub fn has_alive(&self) -> bool {
+        self.pets.iter().any(|p| p.is_alive())
+    }
+
+    /// Auto-swap to the next alive pet. Returns false if none alive.
+    pub fn auto_swap_if_fainted(&mut self) -> bool {
+        if self.active_pet().is_alive() {
+            return true;
+        }
+        let next = self.pets.iter().position(|p| p.is_alive());
+        match next {
+            Some(idx) => {
+                self.active = idx;
+                true
+            }
+            None => false,
+        }
+    }
+}
+
+/// A pet battle instance (3v3 turn-based).
+#[derive(Debug, Clone, PartialEq)]
+pub struct PetBattle {
+    pub player: BattleTeam,
+    pub opponent: BattleTeam,
+    pub phase: BattlePhase,
+    pub turn: u32,
+    pub outcome: Option<BattleOutcome>,
+}
+
+impl PetBattle {
+    /// Create a new battle from two teams of `BattlePet`s.
+    pub fn new(player_pets: Vec<BattlePet>, opponent_pets: Vec<BattlePet>) -> Self {
+        Self {
+            player: BattleTeam::new(player_pets),
+            opponent: BattleTeam::new(opponent_pets),
+            phase: BattlePhase::SelectAction,
+            turn: 1,
+            outcome: None,
+        }
+    }
+
+    /// Submit an action for one side. When both sides have acted, resolve the turn.
+    pub fn submit_action(&mut self, side: BattleSide, action: TurnAction) -> Vec<TurnEvent> {
+        if self.phase != BattlePhase::SelectAction {
+            return vec![];
+        }
+        match side {
+            BattleSide::Player => self.player.action = Some(action),
+            BattleSide::Opponent => self.opponent.action = Some(action),
+        }
+        if self.player.action.is_some() && self.opponent.action.is_some() {
+            return self.resolve_turn();
+        }
+        vec![]
+    }
+
+    fn resolve_turn(&mut self) -> Vec<TurnEvent> {
+        let p_action = self.player.action.take().unwrap();
+        let o_action = self.opponent.action.take().unwrap();
+
+        let p_speed = self.player.active_pet().stats.speed;
+        let o_speed = self.opponent.active_pet().stats.speed;
+        let player_first = p_speed >= o_speed;
+
+        let mut events = Vec::new();
+        let (first_side, first_action, second_side, second_action) = if player_first {
+            (BattleSide::Player, p_action, BattleSide::Opponent, o_action)
+        } else {
+            (BattleSide::Opponent, o_action, BattleSide::Player, p_action)
+        };
+
+        events.extend(self.execute_action(first_side, first_action));
+        self.check_faints();
+        if self.phase == BattlePhase::Ended {
+            return events;
+        }
+
+        events.extend(self.execute_action(second_side, second_action));
+        self.check_faints();
+
+        self.turn += 1;
+        events
+    }
+
+    fn execute_action(&mut self, side: BattleSide, action: TurnAction) -> Vec<TurnEvent> {
+        match action {
+            TurnAction::UseAbility(_slot) => {
+                let power = self.team(side).active_pet().stats.power;
+                let target = self.team_mut(side.opposite());
+                target.active_pet_mut().take_damage(power);
+                let fainted = !target.active_pet().is_alive();
+                vec![TurnEvent {
+                    side,
+                    damage: power,
+                    target_fainted: fainted,
+                }]
+            }
+            TurnAction::Swap(idx) => {
+                let team = self.team_mut(side);
+                let idx = idx as usize;
+                if idx < team.pets.len() && team.pets[idx].is_alive() {
+                    team.active = idx;
+                }
+                vec![]
+            }
+            TurnAction::Pass => vec![],
+        }
+    }
+
+    fn check_faints(&mut self) {
+        self.player.auto_swap_if_fainted();
+        self.opponent.auto_swap_if_fainted();
+        if !self.player.has_alive() {
+            self.end(BattleOutcome::OpponentWins);
+        } else if !self.opponent.has_alive() {
+            self.end(BattleOutcome::PlayerWins);
+        }
+    }
+
+    fn end(&mut self, outcome: BattleOutcome) {
+        self.phase = BattlePhase::Ended;
+        self.outcome = Some(outcome);
+    }
+
+    fn team(&self, side: BattleSide) -> &BattleTeam {
+        match side {
+            BattleSide::Player => &self.player,
+            BattleSide::Opponent => &self.opponent,
+        }
+    }
+
+    fn team_mut(&mut self, side: BattleSide) -> &mut BattleTeam {
+        match side {
+            BattleSide::Player => &mut self.player,
+            BattleSide::Opponent => &mut self.opponent,
+        }
+    }
+}
+
+impl BattleSide {
+    fn opposite(self) -> Self {
+        match self {
+            Self::Player => Self::Opponent,
+            Self::Opponent => Self::Player,
+        }
+    }
+}
+
+#[cfg(test)]
+#[path = "pet_battle_tests.rs"]
+mod tests;
