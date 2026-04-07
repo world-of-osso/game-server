@@ -651,7 +651,10 @@ mod tests {
         log.record(4.0, make_event(CombatEventType::MeleeDamage, 40.0));
 
         assert_eq!(log.entries.len(), 3);
-        assert_eq!(log.entries[0].timestamp, 2.0, "oldest entry should be evicted");
+        assert_eq!(
+            log.entries[0].timestamp, 2.0,
+            "oldest entry should be evicted"
+        );
     }
 
     #[test]

@@ -5,9 +5,9 @@ use shared::protocol::{
 };
 use std::collections::{HashMap, HashSet};
 
+pub use crate::auth_character::*;
 use crate::persistence::{self, CharacterData, GameDatabase};
 use crate::persistence_accounts;
-pub use crate::auth_character::*;
 
 /// Auth timeout in seconds.
 const AUTH_TIMEOUT_SECS: f64 = 30.0;
@@ -405,7 +405,10 @@ mod tests {
 
         // At 39.9s → not yet timed out
         let now_before = 39.9;
-        assert!(now_before - timer.0 <= AUTH_TIMEOUT_SECS, "no timeout at 29.9s");
+        assert!(
+            now_before - timer.0 <= AUTH_TIMEOUT_SECS,
+            "no timeout at 29.9s"
+        );
 
         // At 40.1s → timed out (30.1s elapsed)
         let now_after = 40.1;

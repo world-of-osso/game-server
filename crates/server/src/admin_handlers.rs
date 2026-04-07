@@ -116,7 +116,10 @@ pub(crate) fn handle_move_characters(
     }
 }
 
-pub(crate) fn handle_check_account(db: &persistence::GameDatabase, username: &str) -> AdminResponse {
+pub(crate) fn handle_check_account(
+    db: &persistence::GameDatabase,
+    username: &str,
+) -> AdminResponse {
     let account = persistence_accounts::inspect_account(&db.db, username);
     AdminResponse::AccountChecked {
         username: account.username,
@@ -152,7 +155,10 @@ pub(crate) fn handle_create_account(
     }
 }
 
-pub(crate) fn handle_approve_registration(db: &persistence::GameDatabase, username: &str) -> AdminResponse {
+pub(crate) fn handle_approve_registration(
+    db: &persistence::GameDatabase,
+    username: &str,
+) -> AdminResponse {
     match persistence_accounts::approve_registration(&db.db, username) {
         Ok((account_id, token)) => AdminResponse::RegistrationApproved { account_id, token },
         Err(e) => AdminResponse::Error(e),
@@ -174,7 +180,11 @@ pub(crate) fn handle_set_credentials(
     }
 }
 
-pub(crate) fn handle_set_level(db: &persistence::GameDatabase, name: &str, level: u16) -> AdminResponse {
+pub(crate) fn handle_set_level(
+    db: &persistence::GameDatabase,
+    name: &str,
+    level: u16,
+) -> AdminResponse {
     let Some(char_id) = persistence::find_character_id_by_name(&db.db, name) else {
         return AdminResponse::Error(format!("character '{name}' not found"));
     };
@@ -274,7 +284,11 @@ pub(crate) fn handle_set_equipment_appearance(
     roster_update_senders: &mut Query<&mut MessageSender<CharacterListUpdate>>,
     req: EquipmentAppearanceRequest<'_>,
 ) -> AdminResponse {
-    let EquipmentAppearanceRequest { name, slot_name, display_info_id } = req;
+    let EquipmentAppearanceRequest {
+        name,
+        slot_name,
+        display_info_id,
+    } = req;
     let Some(slot) = parse_equipment_visual_slot(slot_name) else {
         return AdminResponse::Error(format!("invalid equipment appearance slot '{slot_name}'"));
     };
@@ -403,7 +417,11 @@ fn find_or_create_slot(
             hidden: false,
         });
     }
-    appearance.entries.iter_mut().find(|e| e.slot == slot).unwrap()
+    appearance
+        .entries
+        .iter_mut()
+        .find(|e| e.slot == slot)
+        .unwrap()
 }
 
 /// Set a slot to show a specific item appearance.
@@ -418,10 +436,7 @@ fn show_equipment_appearance(
 }
 
 /// Set a slot to hidden (transmog: hide this slot).
-fn hide_equipment_appearance(
-    appearance: &mut EquipmentAppearance,
-    slot: EquipmentVisualSlot,
-) {
+fn hide_equipment_appearance(appearance: &mut EquipmentAppearance, slot: EquipmentVisualSlot) {
     let entry = find_or_create_slot(appearance, slot);
     entry.item_id = None;
     entry.display_info_id = None;
@@ -491,7 +506,10 @@ pub(crate) fn handle_ticket_claim(
     gm_name: &str,
 ) -> AdminResponse {
     match mgr.assign(ticket_id, gm_name) {
-        Ok(()) => AdminResponse::TicketClaimed { ticket_id, gm_name: gm_name.to_string() },
+        Ok(()) => AdminResponse::TicketClaimed {
+            ticket_id,
+            gm_name: gm_name.to_string(),
+        },
         Err(e) => AdminResponse::Error(format!("{e:?}")),
     }
 }
@@ -501,7 +519,10 @@ pub(crate) fn handle_ticket_claim_next(
     gm_name: &str,
 ) -> AdminResponse {
     match mgr.claim_next(gm_name) {
-        Ok(ticket_id) => AdminResponse::TicketClaimed { ticket_id, gm_name: gm_name.to_string() },
+        Ok(ticket_id) => AdminResponse::TicketClaimed {
+            ticket_id,
+            gm_name: gm_name.to_string(),
+        },
         Err(e) => AdminResponse::Error(format!("{e:?}")),
     }
 }
@@ -543,6 +564,10 @@ pub(crate) fn handle_ticket_history(
     mgr: &shared::ticket::TicketManager,
     player_id: u64,
 ) -> AdminResponse {
-    let tickets = mgr.player_history(player_id).into_iter().map(ticket_to_info).collect();
+    let tickets = mgr
+        .player_history(player_id)
+        .into_iter()
+        .map(ticket_to_info)
+        .collect();
     AdminResponse::TicketHistoryListed { player_id, tickets }
 }

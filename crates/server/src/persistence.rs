@@ -291,7 +291,12 @@ pub struct ClientId(pub u64);
 /// Save interval in ticks (300 ticks at 20Hz = 15 seconds).
 const SAVE_INTERVAL_TICKS: u64 = 300;
 
-type DirtyPlayerData = (&'static Position, &'static Health, &'static Player, &'static ClientId);
+type DirtyPlayerData = (
+    &'static Position,
+    &'static Health,
+    &'static Player,
+    &'static ClientId,
+);
 type DirtyPlayerFilter = (
     Or<(Changed<Position>, Changed<Health>, Changed<Player>)>,
     With<Player>,

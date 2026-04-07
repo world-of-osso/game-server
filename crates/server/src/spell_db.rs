@@ -10,9 +10,7 @@ use std::collections::HashMap;
 use bevy::prelude::*;
 use rusqlite::Connection;
 use shared::components::SpellSchool;
-use shared::spell_data::{
-    ResourceType, SpellCost, SpellData, SpellEffectDef, SpellTarget,
-};
+use shared::spell_data::{ResourceType, SpellCost, SpellData, SpellEffectDef, SpellTarget};
 
 const WORLD_DB_PATH: &str = "data/world.db";
 
@@ -120,17 +118,19 @@ fn map_effect(
 /// Determine spell target type from AzerothCore ImplicitTargetA values.
 fn target_from_implicit(target_a: u32) -> SpellTarget {
     match target_a {
-        1 => SpellTarget::Self_,           // TARGET_UNIT_CASTER
+        1 => SpellTarget::Self_,              // TARGET_UNIT_CASTER
         5 | 21 | 25 => SpellTarget::Friendly, // TARGET_UNIT_TARGET_ALLY variants
         6 | 15 | 16 => SpellTarget::Hostile,  // TARGET_UNIT_TARGET_ENEMY variants
-        _ => SpellTarget::Hostile,         // default to hostile for unknown
+        _ => SpellTarget::Hostile,            // default to hostile for unknown
     }
 }
 
 /// Load spell coefficients from spell_bonus_data table.
 fn load_bonus_data(conn: &Connection) -> HashMap<u32, (f32, f32, f32, f32)> {
     let mut stmt = conn
-        .prepare("SELECT entry, direct_bonus, dot_bonus, ap_bonus, ap_dot_bonus FROM spell_bonus_data")
+        .prepare(
+            "SELECT entry, direct_bonus, dot_bonus, ap_bonus, ap_dot_bonus FROM spell_bonus_data",
+        )
         .expect("Failed to prepare spell_bonus_data query");
     let rows = stmt
         .query_map([], |row| {
@@ -167,10 +167,8 @@ fn cast_time_from_index(idx: u32) -> f32 {
 
 /// Convert a SpellRow + bonus coefficients into a SpellData.
 fn build_spell_data(r: SpellRow, bonus: &HashMap<u32, (f32, f32, f32, f32)>) -> SpellData {
-    let (sp_direct, _sp_dot, ap_direct, _ap_dot) = bonus
-        .get(&r.id)
-        .copied()
-        .unwrap_or((0.0, 0.0, 0.0, 0.0));
+    let (sp_direct, _sp_dot, ap_direct, _ap_dot) =
+        bonus.get(&r.id).copied().unwrap_or((0.0, 0.0, 0.0, 0.0));
 
     let effects = [
         map_effect(r.effect[0], r.base_points[0], ap_direct, sp_direct),
@@ -215,7 +213,9 @@ const SPELL_DBC_QUERY: &str =
 pub fn load_spell_database(conn: &Connection) -> SpellDatabase {
     let bonus = load_bonus_data(conn);
 
-    let mut stmt = conn.prepare(SPELL_DBC_QUERY).expect("Failed to prepare spell_dbc query");
+    let mut stmt = conn
+        .prepare(SPELL_DBC_QUERY)
+        .expect("Failed to prepare spell_dbc query");
     let rows = stmt
         .query_map([], |row| {
             Ok(SpellRow {
@@ -247,14 +247,14 @@ pub fn load_spell_database(conn: &Connection) -> SpellDatabase {
 /// Approximate range from RangeIndex. Common values from SpellRange.dbc.
 fn range_from_index(idx: u32) -> f32 {
     match idx {
-        0 | 1 => 0.0,   // self / melee
-        2 => 5.0,        // melee (5y)
+        0 | 1 => 0.0, // self / melee
+        2 => 5.0,     // melee (5y)
         3 => 20.0,
         4 => 30.0,
-        5 | 6 => 40.0,   // most offensive spells
+        5 | 6 => 40.0, // most offensive spells
         7 => 10.0,
         8 => 45.0,
-        _ => 30.0,        // reasonable default
+        _ => 30.0, // reasonable default
     }
 }
 
@@ -485,7 +485,11 @@ mod tests {
         let db = load_spell_database(&conn);
         let spell = db.get(100).unwrap();
         match &spell.effects[0] {
-            Some(SpellEffectDef::SchoolDamage { ap_coefficient, sp_coefficient, .. }) => {
+            Some(SpellEffectDef::SchoolDamage {
+                ap_coefficient,
+                sp_coefficient,
+                ..
+            }) => {
                 assert_eq!(*ap_coefficient, 0.0);
                 assert_eq!(*sp_coefficient, 0.0);
             }
@@ -517,7 +521,10 @@ mod tests {
         .unwrap();
         let db = load_spell_database(&conn);
         let spell = db.get(1).unwrap();
-        assert!(matches!(spell.effects[0], Some(SpellEffectDef::Heal { .. })));
+        assert!(matches!(
+            spell.effects[0],
+            Some(SpellEffectDef::Heal { .. })
+        ));
         assert_eq!(spell.target, SpellTarget::Self_);
         assert_eq!(spell.cast_time, 1.5); // CastingTimeIndex 3
         assert!(spell.interruptible); // InterruptFlags & 0x01

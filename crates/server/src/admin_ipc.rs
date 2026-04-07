@@ -207,9 +207,15 @@ fn dispatch_ticket(
         AdminRequest::TicketClaimNext { gm_name } => {
             Some(handle_ticket_claim_next(ticket_mgr, gm_name))
         }
-        AdminRequest::TicketRespond { ticket_id, gm_name, message } => {
+        AdminRequest::TicketRespond {
+            ticket_id,
+            gm_name,
+            message,
+        } => {
             let now = time.elapsed_secs_f64() as u64;
-            Some(handle_ticket_respond(ticket_mgr, *ticket_id, gm_name, message, now))
+            Some(handle_ticket_respond(
+                ticket_mgr, *ticket_id, gm_name, message, now,
+            ))
         }
         AdminRequest::TicketResolve { ticket_id } => {
             Some(handle_ticket_resolve(ticket_mgr, *ticket_id))
@@ -269,7 +275,9 @@ fn dispatch_autobroadcast(
         }),
         AdminRequest::BroadcastAdd { message } => {
             ab.add_message(message.clone());
-            Some(AdminResponse::BroadcastAdded { index: ab.message_count() - 1 })
+            Some(AdminResponse::BroadcastAdded {
+                index: ab.message_count() - 1,
+            })
         }
         AdminRequest::BroadcastRemove { index } => match ab.remove_message(*index) {
             Some(msg) => Some(AdminResponse::BroadcastRemoved { message: msg }),

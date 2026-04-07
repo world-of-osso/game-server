@@ -248,7 +248,11 @@ mod tests {
         let players_old = vec![(conn, pos(0.0, 0.0, 0.0))];
         update_entity_visibility(&old_entity_pos, &mut old_entity_state, &players_old);
         update_entity_visibility(&new_entity_pos, &mut new_entity_state, &players_old);
-        assert_visible(&old_entity_state, conn, "old entity visible before teleport");
+        assert_visible(
+            &old_entity_state,
+            conn,
+            "old entity visible before teleport",
+        );
         assert_not_visible(&new_entity_state, conn, "new entity culled before teleport");
 
         // Player teleports to (500,0,0) — old entity culled, new entity visible
@@ -318,7 +322,10 @@ mod tests {
         assert_not_visible(&state_b, conn_a, "B not visible to A when far");
 
         // Both move toward center — now 50yd apart
-        let players_close = vec![(conn_a, pos(75.0, 0.0, 0.0)), (conn_b, pos(125.0, 0.0, 0.0))];
+        let players_close = vec![
+            (conn_a, pos(75.0, 0.0, 0.0)),
+            (conn_b, pos(125.0, 0.0, 0.0)),
+        ];
         update_entity_visibility(&pos(75.0, 0.0, 0.0), &mut state_a, &players_close);
         update_entity_visibility(&pos(125.0, 0.0, 0.0), &mut state_b, &players_close);
         assert_visible(&state_a, conn_b, "A visible to B after approach");
@@ -340,7 +347,10 @@ mod tests {
         assert_visible(&state_b, conn_a, "B visible to A when close");
 
         // Move 200yd apart — both lose visibility
-        let players_far = vec![(conn_a, pos(-100.0, 0.0, 0.0)), (conn_b, pos(100.0, 0.0, 0.0))];
+        let players_far = vec![
+            (conn_a, pos(-100.0, 0.0, 0.0)),
+            (conn_b, pos(100.0, 0.0, 0.0)),
+        ];
         update_entity_visibility(&pos(-100.0, 0.0, 0.0), &mut state_a, &players_far);
         update_entity_visibility(&pos(100.0, 0.0, 0.0), &mut state_b, &players_far);
         assert_not_visible(&state_a, conn_b, "A lost B after moving apart");

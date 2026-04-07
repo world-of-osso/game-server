@@ -214,11 +214,7 @@ fn on_client_connected(
         .insert((PendingAuth, PendingAuthTimer(elapsed)));
 }
 
-fn log_replication_state(
-    replicated: &ReplicatedQuery,
-    client_id: u64,
-    flags: &[bool; 6],
-) {
+fn log_replication_state(replicated: &ReplicatedQuery, client_id: u64, flags: &[bool; 6]) {
     let replicated_count = replicated.query.iter().count();
     let replicated_players = replicated.query.iter().filter(|(_, p, _, _, _)| *p).count();
     let replicated_npcs = replicated.query.iter().filter(|(_, _, n, _, _)| *n).count();
@@ -436,11 +432,12 @@ fn compute_movement_speed(
         DEFAULT_WALK_SPEED
     };
     let aura_mult = auras.map_or(1.0, |a| a.movement_speed_multiplier());
-    let backpedal_mult = if dir_len > 0.001 && is_backpedaling(input.facing_yaw, &input.direction, dir_len) {
-        shared::movement::BACKPEDAL_MULTIPLIER
-    } else {
-        1.0
-    };
+    let backpedal_mult =
+        if dir_len > 0.001 && is_backpedaling(input.facing_yaw, &input.direction, dir_len) {
+            shared::movement::BACKPEDAL_MULTIPLIER
+        } else {
+            1.0
+        };
     base * aura_mult * backpedal_mult
 }
 

@@ -181,7 +181,7 @@ fn parse_mcnk_height(payload: &[u8]) -> Result<ChunkHeight, String> {
         corner_y: pos_y,
         base_z: pos_z,
         heights,
-                water_level: None,
+        water_level: None,
     })
 }
 
@@ -292,4 +292,3 @@ pub mod test_helpers {
 #[cfg(test)]
 #[path = "terrain_height_tests.rs"]
 mod tests;
-

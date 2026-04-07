@@ -228,7 +228,11 @@ macro_rules! upgrade_legacy {
 }
 
 fn character_data_from_v1(legacy: LegacyCharacterDataV1) -> CharacterData {
-    upgrade_legacy!(legacy, CharacterAppearance::default(), EquipmentAppearance::default())
+    upgrade_legacy!(
+        legacy,
+        CharacterAppearance::default(),
+        EquipmentAppearance::default()
+    )
 }
 
 fn character_data_from_legacy_v2(legacy: LegacyCharacterDataV2) -> CharacterData {
@@ -238,11 +242,19 @@ fn character_data_from_legacy_v2(legacy: LegacyCharacterDataV2) -> CharacterData
 fn character_data_from_legacy_v2_appearance_v1(
     legacy: LegacyCharacterDataV2AppearanceV1,
 ) -> CharacterData {
-    upgrade_legacy!(legacy, upgrade_appearance_v1(legacy.appearance), EquipmentAppearance::default())
+    upgrade_legacy!(
+        legacy,
+        upgrade_appearance_v1(legacy.appearance),
+        EquipmentAppearance::default()
+    )
 }
 
 fn character_data_from_legacy_v3_appearance_v1(
     legacy: LegacyCharacterDataV3AppearanceV1,
 ) -> CharacterData {
-    upgrade_legacy!(legacy, upgrade_appearance_v1(legacy.appearance), legacy.equipment_appearance)
+    upgrade_legacy!(
+        legacy,
+        upgrade_appearance_v1(legacy.appearance),
+        legacy.equipment_appearance
+    )
 }

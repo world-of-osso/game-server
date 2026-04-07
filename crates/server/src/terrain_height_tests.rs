@@ -90,7 +90,10 @@ fn height_at_chunk_boundary_edges() {
     let map = test_helpers::flat_terrain(corner_x, corner_y, 50.0);
 
     // Top-left corner (max x, max y) — inside
-    assert!(map.height_at(corner_x, corner_y).is_some(), "top-left corner");
+    assert!(
+        map.height_at(corner_x, corner_y).is_some(),
+        "top-left corner"
+    );
 
     // Bottom-right corner (min x, min y) — inside
     let min_x = corner_x - CHUNK_SIZE;
@@ -98,10 +101,22 @@ fn height_at_chunk_boundary_edges() {
     assert!(map.height_at(min_x, min_y).is_some(), "bottom-right corner");
 
     // Just outside each edge — None
-    assert!(map.height_at(corner_x + 0.01, corner_y).is_none(), "past max x");
-    assert!(map.height_at(corner_x, corner_y + 0.01).is_none(), "past max y");
-    assert!(map.height_at(min_x - 0.01, corner_y).is_none(), "past min x");
-    assert!(map.height_at(corner_x, min_y - 0.01).is_none(), "past min y");
+    assert!(
+        map.height_at(corner_x + 0.01, corner_y).is_none(),
+        "past max x"
+    );
+    assert!(
+        map.height_at(corner_x, corner_y + 0.01).is_none(),
+        "past max y"
+    );
+    assert!(
+        map.height_at(min_x - 0.01, corner_y).is_none(),
+        "past min x"
+    );
+    assert!(
+        map.height_at(corner_x, min_y - 0.01).is_none(),
+        "past min y"
+    );
 
     // All boundary positions return same flat height
     assert!((map.height_at(corner_x, corner_y).unwrap() - 50.0).abs() < 0.01);
@@ -262,7 +277,10 @@ fn negative_terrain_height_underwater() {
         }],
     };
     let h = map.height_at(100.0, 100.0).unwrap();
-    assert!((h - (-15.0)).abs() < 0.01, "base -10 + offset -5 = -15: got {h}");
+    assert!(
+        (h - (-15.0)).abs() < 0.01,
+        "base -10 + offset -5 = -15: got {h}"
+    );
 }
 
 #[test]
@@ -351,7 +369,8 @@ fn adt_hole_returns_none_for_missing_chunk() {
         "chunk (0,1)",
     );
     assert!(
-        map.height_at(95.0 - CHUNK_SIZE, 95.0 - CHUNK_SIZE).is_some(),
+        map.height_at(95.0 - CHUNK_SIZE, 95.0 - CHUNK_SIZE)
+            .is_some(),
         "chunk (1,1)",
     );
 

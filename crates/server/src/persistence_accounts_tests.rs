@@ -1,8 +1,8 @@
 use super::*;
 use crate::persistence::{
     create_character, delete_character, list_characters_for_account, load_character,
-    load_character_guild, save_character, set_character_guild_by_name,
-    set_pending_guild_invite, take_pending_guild_invite, temp_database,
+    load_character_guild, save_character, set_character_guild_by_name, set_pending_guild_invite,
+    take_pending_guild_invite, temp_database,
 };
 
 #[test]
@@ -116,8 +116,7 @@ fn list_accounts_returns_usernames_hashes_and_token_counts() {
     let db = temp_database();
     let (acct1, token1) = register_account(&db, "user1", "pass1").unwrap();
     let (acct2, _token2) = register_account(&db, "user2", "pass2").unwrap();
-    let (_acct1_again, _new_token1) =
-        login_with_credentials(&db, None, "user1", "pass1").unwrap();
+    let (_acct1_again, _new_token1) = login_with_credentials(&db, None, "user1", "pass1").unwrap();
 
     let accounts = list_accounts(&db);
 
@@ -354,7 +353,10 @@ fn character_creation_assigns_starting_position_per_race() {
     let (_, data_orc) = create_character(&db, account_id, "OrcWarrior", 2, 1).unwrap();
     assert!((data_orc.x - (-618.0)).abs() < 1.0, "orc x");
     assert!((data_orc.y - (-4251.0)).abs() < 1.0, "orc y");
-    assert!((data_orc.x - data_human.x).abs() > 100.0, "different start zones");
+    assert!(
+        (data_orc.x - data_human.x).abs() > 100.0,
+        "different start zones"
+    );
 
     // Night Elf (race 4) starts at Shadowglen
     let (_, data_nelf) = create_character(&db, account_id, "ElfDruid", 4, 1).unwrap();
@@ -415,7 +417,10 @@ fn character_load_populates_all_fields() {
     assert_eq!(data.level, 1);
     assert!(data.max_health > 0.0, "max_health populated");
     // Position should be set to starting zone
-    assert!(data.x != 0.0 || data.y != 0.0 || data.z != 0.0, "position set");
+    assert!(
+        data.x != 0.0 || data.y != 0.0 || data.z != 0.0,
+        "position set"
+    );
 
     // Inventory should have starter items
     let inv = crate::persistence::load_inventory(&db, cid);

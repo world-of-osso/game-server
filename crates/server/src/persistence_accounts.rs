@@ -344,4 +344,3 @@ pub fn set_account_credentials(
 #[cfg(test)]
 #[path = "persistence_accounts_tests.rs"]
 mod tests;
-

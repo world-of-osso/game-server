@@ -38,8 +38,8 @@ fn deposit_cost(vendor_sell_price: u32, stack_count: u32, duration: AuctionDurat
 fn faction_for_race(race: u8) -> u8 {
     match race {
         1 | 3 | 4 | 7 | 11 | 22 | 25 | 29 | 30 | 32 | 34 | 37 => 1, // Alliance
-        2 | 5 | 6 | 8 | 9 | 10 | 26 | 27 | 28 | 31 | 35 | 36 => 2, // Horde
-        _ => 0,                                                        // Neutral
+        2 | 5 | 6 | 8 | 9 | 10 | 26 | 27 | 28 | 31 | 35 | 36 => 2,  // Horde
+        _ => 0,                                                     // Neutral
     }
 }
 
@@ -389,14 +389,23 @@ fn validate_create_auction(
         return Err(err("character not found"));
     };
     let inventory = persistence::load_inventory(db, character_id);
-    let Some(index) = inventory.items.iter().position(|i| i.item_guid == req.item_guid) else {
+    let Some(index) = inventory
+        .items
+        .iter()
+        .position(|i| i.item_guid == req.item_guid)
+    else {
         return Err(err("item not found in inventory"));
     };
     let source = inventory.items[index].clone();
     if req.stack_count > source.stack_count {
         return Err(err("requested stack exceeds available stack"));
     }
-    if source.unique_auction && state.auctions.values().any(|a| a.item.item_id == source.item_id) {
+    if source.unique_auction
+        && state
+            .auctions
+            .values()
+            .any(|a| a.item.item_id == source.item_id)
+    {
         return Err(err("unique item already listed on the auction house"));
     }
     let deposit = deposit_cost(source.vendor_sell_price, req.stack_count, req.duration);

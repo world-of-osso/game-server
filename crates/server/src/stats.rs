@@ -64,7 +64,11 @@ type StatsFilter = Or<(Changed<UnitStats>, Changed<Level>)>;
 
 /// Compute new current value preserving the current-to-max ratio.
 fn rescaled_current(current: f32, old_max: f32, new_max: f32) -> f32 {
-    let ratio = if old_max > 0.0 { current / old_max } else { 1.0 };
+    let ratio = if old_max > 0.0 {
+        current / old_max
+    } else {
+        1.0
+    };
     (new_max * ratio).min(new_max)
 }
 
@@ -96,26 +100,34 @@ mod tests {
     use bevy::ecs::system::RunSystemOnce;
     use shared::components::CombatRatings;
 
-    fn spawn_player(world: &mut World, class: u8, level: u8, stamina: f32, intellect: f32) -> Entity {
-        world.spawn((
-            Player {
-                name: "Test".into(),
-                race: 1,
-                class,
-                appearance: Default::default(),
-            },
-            UnitStats {
-                stamina,
-                intellect,
-                ..Default::default()
-            },
-            CombatRatings::default(),
-            Level(level),
-            Health {
-                current: 100.0,
-                max: 100.0,
-            },
-        )).id()
+    fn spawn_player(
+        world: &mut World,
+        class: u8,
+        level: u8,
+        stamina: f32,
+        intellect: f32,
+    ) -> Entity {
+        world
+            .spawn((
+                Player {
+                    name: "Test".into(),
+                    race: 1,
+                    class,
+                    appearance: Default::default(),
+                },
+                UnitStats {
+                    stamina,
+                    intellect,
+                    ..Default::default()
+                },
+                CombatRatings::default(),
+                Level(level),
+                Health {
+                    current: 100.0,
+                    max: 100.0,
+                },
+            ))
+            .id()
     }
 
     #[test]
@@ -293,7 +305,11 @@ mod tests {
         assert!((stamina_with_gear - 180.0).abs() < 0.01);
 
         // Unequip: clear items
-        world.get_mut::<EquippedItems>(entity).unwrap().items.clear();
+        world
+            .get_mut::<EquippedItems>(entity)
+            .unwrap()
+            .items
+            .clear();
         world.run_system_once(update_stats_from_equipment).unwrap();
 
         let stamina_without = world.get::<UnitStats>(entity).unwrap().stamina;

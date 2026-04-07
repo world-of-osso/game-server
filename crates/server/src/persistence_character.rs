@@ -197,7 +197,8 @@ pub fn move_characters_between_accounts(
     }
     let mut to_ids = load_account_char_ids(db, to_account_id);
     for id in &from_ids {
-        if !to_ids.contains(id) { // bounded: max 10 characters per account
+        if !to_ids.contains(id) {
+            // bounded: max 10 characters per account
             to_ids.push(*id);
         }
     }
@@ -302,8 +303,8 @@ pub(crate) fn validate_playable_race(race: u8) -> Result<(), String> {
     }
 
     const FALLBACK_PLAYABLE_RACES: &[u8] = &[
-        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 22, 24, 25, 26, 27, 28, 29, 30, 31, 32, 34, 35, 36,
-        37, 52, 70, 84, 85,
+        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 22, 24, 25, 26, 27, 28, 29, 30, 31, 32, 34, 35, 36, 37,
+        52, 70, 84, 85,
     ];
     if FALLBACK_PLAYABLE_RACES.contains(&race) {
         Ok(())
@@ -328,18 +329,18 @@ fn check_name_available(db: &Database, name: &str) -> Result<(), String> {
 /// Starting position per race (WoW coordinates).
 fn starting_position(race: u8) -> (f32, f32, f32) {
     match race {
-        1 => (-8949.0, -132.0, 83.0),    // Human — Northshire
-        2 => (-618.0, -4251.0, 38.0),    // Orc — Valley of Trials
-        3 => (-6240.0, 331.0, 383.0),    // Dwarf — Coldridge Valley
-        4 => (10311.0, 832.0, 1326.0),   // Night Elf — Shadowglen
-        5 => (1676.0, 1677.0, 121.0),    // Undead — Deathknell
-        6 => (-2917.0, -257.0, 53.0),    // Tauren — Red Cloud Mesa
-        7 => (-6240.0, 331.0, 383.0),    // Gnome — Coldridge Valley (shared)
-        8 => (-618.0, -4251.0, 38.0),    // Troll — Valley of Trials (shared)
-        10 => (10349.0, -6357.0, 33.0),  // Blood Elf — Sunstrider Isle
+        1 => (-8949.0, -132.0, 83.0),     // Human — Northshire
+        2 => (-618.0, -4251.0, 38.0),     // Orc — Valley of Trials
+        3 => (-6240.0, 331.0, 383.0),     // Dwarf — Coldridge Valley
+        4 => (10311.0, 832.0, 1326.0),    // Night Elf — Shadowglen
+        5 => (1676.0, 1677.0, 121.0),     // Undead — Deathknell
+        6 => (-2917.0, -257.0, 53.0),     // Tauren — Red Cloud Mesa
+        7 => (-6240.0, 331.0, 383.0),     // Gnome — Coldridge Valley (shared)
+        8 => (-618.0, -4251.0, 38.0),     // Troll — Valley of Trials (shared)
+        10 => (10349.0, -6357.0, 33.0),   // Blood Elf — Sunstrider Isle
         11 => (-3961.0, -13931.0, 100.0), // Draenei — Crash Site
-        22 => (-1451.0, 1403.0, 35.0),   // Worgen — Gilneas
-        _ => (-8949.0, -132.0, 83.0),    // Fallback to Human start
+        22 => (-1451.0, 1403.0, 35.0),    // Worgen — Gilneas
+        _ => (-8949.0, -132.0, 83.0),     // Fallback to Human start
     }
 }
 
@@ -394,7 +395,13 @@ pub(crate) fn save_new_character(
     txn.commit().expect("Failed to commit new character");
 }
 
-fn starter_item(db: &Database, item_id: u32, name: &str, count: u32, price: u32) -> InventoryItemData {
+fn starter_item(
+    db: &Database,
+    item_id: u32,
+    name: &str,
+    count: u32,
+    price: u32,
+) -> InventoryItemData {
     InventoryItemData {
         item_guid: next_id(db, "item_instance"),
         item_id,

@@ -154,8 +154,7 @@ fn text_query(text: &str) -> AuctionSearchQuery {
 #[test]
 fn create_auction_appears_in_search_results() {
     let db = persistence::temp_database();
-    let (seller_id, _) =
-        persistence::create_character(&db, 1, "Seller", 1, 1).expect("character");
+    let (seller_id, _) = persistence::create_character(&db, 1, "Seller", 1, 1).expect("character");
     let source_item = persistence::load_inventory(&db, seller_id).items[0].clone();
     let mut state = AuctionHouseState::default();
 
@@ -195,10 +194,8 @@ fn create_auction_appears_in_search_results() {
 #[test]
 fn bid_recorded_and_underbid_rejected() {
     let db = persistence::temp_database();
-    let (seller_id, _) =
-        persistence::create_character(&db, 1, "Seller", 1, 1).expect("seller");
-    let (bidder_id, _) =
-        persistence::create_character(&db, 2, "Bidder", 1, 1).expect("bidder");
+    let (seller_id, _) = persistence::create_character(&db, 1, "Seller", 1, 1).expect("seller");
+    let (bidder_id, _) = persistence::create_character(&db, 2, "Bidder", 1, 1).expect("bidder");
     let source_item = persistence::load_inventory(&db, seller_id).items[0].clone();
     let mut state = AuctionHouseState::default();
     create_auction(
@@ -239,9 +236,15 @@ fn bid_recorded_and_underbid_rejected() {
 #[test]
 fn search_filters_by_name_quality_and_level_range() {
     let mut state = AuctionHouseState::default();
-    state.auctions.insert(1, test_auction(1, "Iron Sword", 2, 10));
-    state.auctions.insert(2, test_auction(2, "Steel Sword", 3, 30));
-    state.auctions.insert(3, test_auction(3, "Linen Cloth", 1, 5));
+    state
+        .auctions
+        .insert(1, test_auction(1, "Iron Sword", 2, 10));
+    state
+        .auctions
+        .insert(2, test_auction(2, "Steel Sword", 3, 30));
+    state
+        .auctions
+        .insert(3, test_auction(3, "Linen Cloth", 1, 5));
     state.auctions.insert(4, test_auction(4, "Iron Ore", 1, 1));
 
     // Filter by name: "sword" matches 2
@@ -289,7 +292,9 @@ fn search_filters_by_name_quality_and_level_range() {
 #[test]
 fn search_returns_empty_for_non_matching_filters() {
     let mut state = AuctionHouseState::default();
-    state.auctions.insert(1, test_auction(1, "Iron Sword", 2, 20));
+    state
+        .auctions
+        .insert(1, test_auction(1, "Iron Sword", 2, 20));
 
     // Non-matching quality
     let mut query = text_query("");
@@ -323,10 +328,16 @@ fn search_returns_empty_for_non_matching_filters() {
 #[test]
 fn search_with_all_filters_combined() {
     let mut state = AuctionHouseState::default();
-    state.auctions.insert(1, test_auction(1, "Iron Sword", 2, 20));
-    state.auctions.insert(2, test_auction(2, "Iron Shield", 3, 20));
+    state
+        .auctions
+        .insert(1, test_auction(1, "Iron Sword", 2, 20));
+    state
+        .auctions
+        .insert(2, test_auction(2, "Iron Shield", 3, 20));
     state.auctions.insert(3, test_auction(3, "Iron Ore", 2, 5));
-    state.auctions.insert(4, test_auction(4, "Steel Sword", 2, 30));
+    state
+        .auctions
+        .insert(4, test_auction(4, "Steel Sword", 2, 30));
 
     // All three filters: name="iron" + quality=2 + level 10..=25
     let mut query = text_query("iron");
@@ -518,10 +529,8 @@ fn pagination_respects_page_boundaries() {
 #[test]
 fn cancel_own_auction_returns_item_via_mail() {
     let db = persistence::temp_database();
-    let (seller_id, _) =
-        persistence::create_character(&db, 1, "Seller", 1, 1).expect("seller");
-    let (other_id, _) =
-        persistence::create_character(&db, 2, "Other", 1, 1).expect("other");
+    let (seller_id, _) = persistence::create_character(&db, 1, "Seller", 1, 1).expect("seller");
+    let (other_id, _) = persistence::create_character(&db, 2, "Other", 1, 1).expect("other");
     let source_item = persistence::load_inventory(&db, seller_id).items[0].clone();
     let mut state = AuctionHouseState::default();
 
@@ -553,7 +562,10 @@ fn cancel_own_auction_returns_item_via_mail() {
     let seller_mail = persistence::load_mailbox(&db, seller_id);
     assert_eq!(seller_mail.len(), 1);
     assert_eq!(seller_mail[0].attached_money, 0);
-    let returned_item = seller_mail[0].attached_item.as_ref().expect("returned item");
+    let returned_item = seller_mail[0]
+        .attached_item
+        .as_ref()
+        .expect("returned item");
     assert_eq!(returned_item.item_id, source_item.item_id);
     assert_eq!(returned_item.stack_count, 3);
 }
@@ -561,10 +573,8 @@ fn cancel_own_auction_returns_item_via_mail() {
 #[test]
 fn cancel_auction_with_bids_rejected() {
     let db = persistence::temp_database();
-    let (seller_id, _) =
-        persistence::create_character(&db, 1, "Seller", 1, 1).expect("seller");
-    let (bidder_id, _) =
-        persistence::create_character(&db, 2, "Bidder", 1, 1).expect("bidder");
+    let (seller_id, _) = persistence::create_character(&db, 1, "Seller", 1, 1).expect("seller");
+    let (bidder_id, _) = persistence::create_character(&db, 2, "Bidder", 1, 1).expect("bidder");
     let source_item = persistence::load_inventory(&db, seller_id).items[0].clone();
     let mut state = AuctionHouseState::default();
 
@@ -591,8 +601,7 @@ fn cancel_auction_with_bids_rejected() {
 #[test]
 fn bid_on_own_auction_rejected() {
     let db = persistence::temp_database();
-    let (seller_id, _) =
-        persistence::create_character(&db, 1, "Seller", 1, 1).expect("seller");
+    let (seller_id, _) = persistence::create_character(&db, 1, "Seller", 1, 1).expect("seller");
     let source_item = persistence::load_inventory(&db, seller_id).items[0].clone();
     let mut state = AuctionHouseState::default();
 
@@ -615,7 +624,14 @@ fn bid_on_own_auction_rejected() {
     // Bid on own auction rejected
     let bid_response = place_bid(&db, &mut state, seller_id, auction_id, 100);
     assert!(!bid_response.success);
-    assert!(state.auctions.get(&auction_id).unwrap().current_bid.is_none());
+    assert!(
+        state
+            .auctions
+            .get(&auction_id)
+            .unwrap()
+            .current_bid
+            .is_none()
+    );
 
     // Buyout own auction also rejected
     let buyout_response = buyout_auction(&db, &mut state, seller_id, auction_id);
@@ -630,10 +646,8 @@ fn bid_on_own_auction_rejected() {
 #[test]
 fn bid_only_auction_rejects_buyout() {
     let db = persistence::temp_database();
-    let (seller_id, _) =
-        persistence::create_character(&db, 1, "Seller", 1, 1).expect("seller");
-    let (buyer_id, _) =
-        persistence::create_character(&db, 2, "Buyer", 1, 1).expect("buyer");
+    let (seller_id, _) = persistence::create_character(&db, 1, "Seller", 1, 1).expect("seller");
+    let (buyer_id, _) = persistence::create_character(&db, 2, "Buyer", 1, 1).expect("buyer");
     let source_item = persistence::load_inventory(&db, seller_id).items[0].clone();
     let mut state = AuctionHouseState::default();
 
@@ -673,8 +687,7 @@ fn bid_only_auction_rejects_buyout() {
 #[test]
 fn create_auction_rejected_with_insufficient_deposit() {
     let db = persistence::temp_database();
-    let (seller_id, _) =
-        persistence::create_character(&db, 1, "Seller", 1, 1).expect("seller");
+    let (seller_id, _) = persistence::create_character(&db, 1, "Seller", 1, 1).expect("seller");
     let source_item = persistence::load_inventory(&db, seller_id).items[0].clone();
     let mut state = AuctionHouseState::default();
 
@@ -699,7 +712,10 @@ fn create_auction_rejected_with_insufficient_deposit() {
     assert!(!response.success);
     assert!(state.auctions.is_empty());
     // Gold and inventory unchanged
-    assert_eq!(persistence::load_inventory(&db, seller_id).gold, deposit - 1);
+    assert_eq!(
+        persistence::load_inventory(&db, seller_id).gold,
+        deposit - 1
+    );
     assert_eq!(
         persistence::load_inventory(&db, seller_id).items.len(),
         inv.items.len(),
@@ -709,8 +725,7 @@ fn create_auction_rejected_with_insufficient_deposit() {
 #[test]
 fn max_auction_slots_per_character_enforced() {
     let db = persistence::temp_database();
-    let (seller_id, _) =
-        persistence::create_character(&db, 1, "Seller", 1, 1).expect("seller");
+    let (seller_id, _) = persistence::create_character(&db, 1, "Seller", 1, 1).expect("seller");
     let mut state = AuctionHouseState::default();
 
     // Fill state with MAX_AUCTIONS_PER_CHARACTER auctions for this seller
@@ -746,8 +761,7 @@ fn duration_tiers_set_correct_expiry() {
 
     // Integration: create_auction sets expires_at correctly
     let db = persistence::temp_database();
-    let (seller_id, _) =
-        persistence::create_character(&db, 1, "Seller", 1, 1).expect("seller");
+    let (seller_id, _) = persistence::create_character(&db, 1, "Seller", 1, 1).expect("seller");
     let now = unix_now();
 
     for (duration, expected_secs) in [
@@ -781,14 +795,10 @@ fn duration_tiers_set_correct_expiry() {
 #[test]
 fn concurrent_bids_respect_updated_minimum() {
     let db = persistence::temp_database();
-    let (seller_id, _) =
-        persistence::create_character(&db, 1, "Seller", 1, 1).expect("seller");
-    let (bidder_a, _) =
-        persistence::create_character(&db, 2, "BidderA", 1, 1).expect("a");
-    let (bidder_b, _) =
-        persistence::create_character(&db, 3, "BidderB", 1, 1).expect("b");
-    let (bidder_c, _) =
-        persistence::create_character(&db, 4, "BidderC", 1, 1).expect("c");
+    let (seller_id, _) = persistence::create_character(&db, 1, "Seller", 1, 1).expect("seller");
+    let (bidder_a, _) = persistence::create_character(&db, 2, "BidderA", 1, 1).expect("a");
+    let (bidder_b, _) = persistence::create_character(&db, 3, "BidderB", 1, 1).expect("b");
+    let (bidder_c, _) = persistence::create_character(&db, 4, "BidderC", 1, 1).expect("c");
     let source_item = persistence::load_inventory(&db, seller_id).items[0].clone();
     let mut state = AuctionHouseState::default();
 
@@ -831,10 +841,8 @@ fn concurrent_bids_respect_updated_minimum() {
 #[test]
 fn bid_at_buyout_price_triggers_immediate_sale() {
     let db = persistence::temp_database();
-    let (seller_id, _) =
-        persistence::create_character(&db, 1, "Seller", 1, 1).expect("seller");
-    let (buyer_id, _) =
-        persistence::create_character(&db, 2, "Buyer", 1, 1).expect("buyer");
+    let (seller_id, _) = persistence::create_character(&db, 1, "Seller", 1, 1).expect("seller");
+    let (buyer_id, _) = persistence::create_character(&db, 2, "Buyer", 1, 1).expect("buyer");
     let source_item = persistence::load_inventory(&db, seller_id).items[0].clone();
     let mut state = AuctionHouseState::default();
 
@@ -873,10 +881,8 @@ fn bid_at_buyout_price_triggers_immediate_sale() {
 #[test]
 fn insufficient_gold_for_bid_and_buyout() {
     let db = persistence::temp_database();
-    let (seller_id, _) =
-        persistence::create_character(&db, 1, "Seller", 1, 1).expect("seller");
-    let (buyer_id, _) =
-        persistence::create_character(&db, 2, "Buyer", 1, 1).expect("buyer");
+    let (seller_id, _) = persistence::create_character(&db, 1, "Seller", 1, 1).expect("seller");
+    let (buyer_id, _) = persistence::create_character(&db, 2, "Buyer", 1, 1).expect("buyer");
     let source_item = persistence::load_inventory(&db, seller_id).items[0].clone();
     let mut state = AuctionHouseState::default();
 
@@ -902,7 +908,14 @@ fn insufficient_gold_for_bid_and_buyout() {
     // Bid at min_bid (500) fails — only have 499
     let bid_response = place_bid(&db, &mut state, buyer_id, auction_id, 500);
     assert!(!bid_response.success);
-    assert!(state.auctions.get(&auction_id).unwrap().current_bid.is_none());
+    assert!(
+        state
+            .auctions
+            .get(&auction_id)
+            .unwrap()
+            .current_bid
+            .is_none()
+    );
 
     // Buyout (1000) also fails
     let buyout_response = buyout_auction(&db, &mut state, buyer_id, auction_id);
@@ -916,8 +929,7 @@ fn insufficient_gold_for_bid_and_buyout() {
 #[test]
 fn outbid_sends_notification_mail_to_previous_bidder() {
     let db = persistence::temp_database();
-    let (seller_id, _) =
-        persistence::create_character(&db, 1, "Seller", 1, 1).expect("seller");
+    let (seller_id, _) = persistence::create_character(&db, 1, "Seller", 1, 1).expect("seller");
     let (bidder_a_id, _) =
         persistence::create_character(&db, 2, "BidderA", 1, 1).expect("bidder a");
     let (bidder_b_id, _) =
@@ -961,8 +973,7 @@ fn outbid_sends_notification_mail_to_previous_bidder() {
 #[test]
 fn expired_auction_without_bid_returns_item_to_seller() {
     let db = persistence::temp_database();
-    let (seller_id, _) =
-        persistence::create_character(&db, 1, "Seller", 1, 1).expect("seller");
+    let (seller_id, _) = persistence::create_character(&db, 1, "Seller", 1, 1).expect("seller");
     let source_item = persistence::load_inventory(&db, seller_id).items[0].clone();
     let mut state = AuctionHouseState::default();
 
@@ -1007,7 +1018,10 @@ fn expired_auction_without_bid_returns_item_to_seller() {
     let seller_mail = persistence::load_mailbox(&db, seller_id);
     assert_eq!(seller_mail.len(), 1);
     assert_eq!(seller_mail[0].attached_money, 0);
-    let returned_item = seller_mail[0].attached_item.as_ref().expect("returned item");
+    let returned_item = seller_mail[0]
+        .attached_item
+        .as_ref()
+        .expect("returned item");
     assert_eq!(returned_item.item_id, source_item.item_id);
     assert_eq!(returned_item.stack_count, 4);
 }
@@ -1015,8 +1029,7 @@ fn expired_auction_without_bid_returns_item_to_seller() {
 #[test]
 fn relist_after_expired_auction() {
     let db = persistence::temp_database();
-    let (seller_id, _) =
-        persistence::create_character(&db, 1, "Seller", 1, 1).expect("seller");
+    let (seller_id, _) = persistence::create_character(&db, 1, "Seller", 1, 1).expect("seller");
     let source_item = persistence::load_inventory(&db, seller_id).items[0].clone();
     let mut state = AuctionHouseState::default();
 
@@ -1034,7 +1047,11 @@ fn relist_after_expired_auction() {
         },
     );
     let auction_id = *state.auctions.keys().next().expect("auction id");
-    state.auctions.get_mut(&auction_id).unwrap().expires_at_unix_secs = 0;
+    state
+        .auctions
+        .get_mut(&auction_id)
+        .unwrap()
+        .expires_at_unix_secs = 0;
     let auction = state.auctions.remove(&auction_id).unwrap();
     persistence::delete_auction(&db, auction_id);
     deliver_mail(
@@ -1077,10 +1094,8 @@ fn relist_after_expired_auction() {
 #[test]
 fn bid_on_expired_auction_fails_gracefully() {
     let db = persistence::temp_database();
-    let (seller_id, _) =
-        persistence::create_character(&db, 1, "Seller", 1, 1).expect("seller");
-    let (bidder_id, _) =
-        persistence::create_character(&db, 2, "Bidder", 1, 1).expect("bidder");
+    let (seller_id, _) = persistence::create_character(&db, 1, "Seller", 1, 1).expect("seller");
+    let (bidder_id, _) = persistence::create_character(&db, 2, "Bidder", 1, 1).expect("bidder");
     let source_item = persistence::load_inventory(&db, seller_id).items[0].clone();
     let bidder_gold_before = persistence::load_inventory(&db, bidder_id).gold;
     let mut state = AuctionHouseState::default();
@@ -1109,16 +1124,17 @@ fn bid_on_expired_auction_fails_gracefully() {
     assert!(!buyout.success);
 
     // Bidder gold unchanged
-    assert_eq!(persistence::load_inventory(&db, bidder_id).gold, bidder_gold_before);
+    assert_eq!(
+        persistence::load_inventory(&db, bidder_id).gold,
+        bidder_gold_before
+    );
 }
 
 #[test]
 fn deposit_refunded_on_successful_sale() {
     let db = persistence::temp_database();
-    let (seller_id, _) =
-        persistence::create_character(&db, 1, "Seller", 1, 1).expect("seller");
-    let (buyer_id, _) =
-        persistence::create_character(&db, 2, "Buyer", 1, 1).expect("buyer");
+    let (seller_id, _) = persistence::create_character(&db, 1, "Seller", 1, 1).expect("seller");
+    let (buyer_id, _) = persistence::create_character(&db, 2, "Buyer", 1, 1).expect("buyer");
     let source_item = persistence::load_inventory(&db, seller_id).items[0].clone();
     let seller_gold_before = persistence::load_inventory(&db, seller_id).gold;
     let mut state = AuctionHouseState::default();
@@ -1161,8 +1177,7 @@ fn deposit_refunded_on_successful_sale() {
 #[test]
 fn auction_snapshot_independent_of_inventory_changes() {
     let db = persistence::temp_database();
-    let (seller_id, _) =
-        persistence::create_character(&db, 1, "Seller", 1, 1).expect("seller");
+    let (seller_id, _) = persistence::create_character(&db, 1, "Seller", 1, 1).expect("seller");
     let source_item = persistence::load_inventory(&db, seller_id).items[0].clone();
     let mut state = AuctionHouseState::default();
 
@@ -1184,7 +1199,11 @@ fn auction_snapshot_independent_of_inventory_changes() {
 
     // Modify the remaining inventory item's name and quality
     let mut inv = persistence::load_inventory(&db, seller_id);
-    if let Some(item) = inv.items.iter_mut().find(|i| i.item_id == source_item.item_id) {
+    if let Some(item) = inv
+        .items
+        .iter_mut()
+        .find(|i| i.item_id == source_item.item_id)
+    {
         item.name = "MODIFIED".into();
         item.quality = 5;
     }
@@ -1231,10 +1250,8 @@ fn seller_offline_auction_still_completes() {
     // Seller creates auction, then "goes offline" (no further interaction).
     // Buyer buys out — seller receives gold via mail, claimable on next login.
     let db = persistence::temp_database();
-    let (seller_id, _) =
-        persistence::create_character(&db, 1, "Seller", 1, 1).expect("seller");
-    let (buyer_id, _) =
-        persistence::create_character(&db, 2, "Buyer", 1, 1).expect("buyer");
+    let (seller_id, _) = persistence::create_character(&db, 1, "Seller", 1, 1).expect("seller");
+    let (buyer_id, _) = persistence::create_character(&db, 2, "Buyer", 1, 1).expect("buyer");
     let source_item = persistence::load_inventory(&db, seller_id).items[0].clone();
     let mut state = AuctionHouseState::default();
 
@@ -1271,8 +1288,7 @@ fn seller_offline_auction_still_completes() {
 #[test]
 fn gold_overflow_saturates_at_max() {
     let db = persistence::temp_database();
-    let (seller_id, _) =
-        persistence::create_character(&db, 1, "Seller", 1, 1).expect("seller");
+    let (seller_id, _) = persistence::create_character(&db, 1, "Seller", 1, 1).expect("seller");
 
     // Set seller gold near u32::MAX
     let mut inv = persistence::load_inventory(&db, seller_id);
@@ -1291,8 +1307,7 @@ fn gold_overflow_saturates_at_max() {
 #[test]
 fn unique_item_prevents_duplicate_listing() {
     let db = persistence::temp_database();
-    let (seller_id, _) =
-        persistence::create_character(&db, 1, "Seller", 1, 1).expect("seller");
+    let (seller_id, _) = persistence::create_character(&db, 1, "Seller", 1, 1).expect("seller");
     let mut state = AuctionHouseState::default();
 
     // Mark the first item as unique_auction
@@ -1340,10 +1355,8 @@ fn unique_item_prevents_duplicate_listing() {
 #[test]
 fn expired_auction_with_bid_awards_winner_and_pays_seller() {
     let db = persistence::temp_database();
-    let (seller_id, _) =
-        persistence::create_character(&db, 1, "Seller", 1, 1).expect("seller");
-    let (bidder_id, _) =
-        persistence::create_character(&db, 2, "Bidder", 1, 1).expect("bidder");
+    let (seller_id, _) = persistence::create_character(&db, 1, "Seller", 1, 1).expect("seller");
+    let (bidder_id, _) = persistence::create_character(&db, 2, "Bidder", 1, 1).expect("bidder");
     let source_item = persistence::load_inventory(&db, seller_id).items[0].clone();
     let mut state = AuctionHouseState::default();
 
@@ -1410,10 +1423,8 @@ fn house_cut_deducted_on_successful_sale() {
 
     for &(buyout_price, expected_proceeds) in cases {
         let db = persistence::temp_database();
-        let (seller_id, _) =
-            persistence::create_character(&db, 1, "Seller", 1, 1).expect("seller");
-        let (buyer_id, _) =
-            persistence::create_character(&db, 2, "Buyer", 1, 1).expect("buyer");
+        let (seller_id, _) = persistence::create_character(&db, 1, "Seller", 1, 1).expect("seller");
+        let (buyer_id, _) = persistence::create_character(&db, 2, "Buyer", 1, 1).expect("buyer");
         let source_item = persistence::load_inventory(&db, seller_id).items[0].clone();
         let mut state = AuctionHouseState::default();
 
@@ -1444,10 +1455,8 @@ fn house_cut_deducted_on_successful_sale() {
 #[test]
 fn buyout_transfers_item_and_deducts_gold() {
     let db = persistence::temp_database();
-    let (seller_id, _) =
-        persistence::create_character(&db, 1, "Seller", 1, 1).expect("seller");
-    let (buyer_id, _) =
-        persistence::create_character(&db, 2, "Buyer", 1, 1).expect("buyer");
+    let (seller_id, _) = persistence::create_character(&db, 1, "Seller", 1, 1).expect("seller");
+    let (buyer_id, _) = persistence::create_character(&db, 2, "Buyer", 1, 1).expect("buyer");
     let source_item = persistence::load_inventory(&db, seller_id).items[0].clone();
     let buyer_gold_before = persistence::load_inventory(&db, buyer_id).gold;
     let mut state = AuctionHouseState::default();

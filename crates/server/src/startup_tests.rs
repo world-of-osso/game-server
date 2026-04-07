@@ -437,17 +437,13 @@ fn overwrite_preserves_latest() {
 // ---------------------------------------------------------------------------
 
 fn world_db_path() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../../data/world.db")
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/world.db")
 }
 
 fn world_db_conn() -> rusqlite::Connection {
     let path = world_db_path();
-    rusqlite::Connection::open_with_flags(
-        &path,
-        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
-    )
-    .unwrap_or_else(|e| panic!("Failed to open {}: {e}", path.display()))
+    rusqlite::Connection::open_with_flags(&path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
+        .unwrap_or_else(|e| panic!("Failed to open {}: {e}", path.display()))
 }
 
 fn table_count(conn: &rusqlite::Connection, table: &str) -> u64 {
@@ -518,11 +514,9 @@ fn world_db_hogger_exists() {
 fn world_db_hogger_has_spawn() {
     let conn = world_db_conn();
     let count: u64 = conn
-        .query_row(
-            "SELECT COUNT(*) FROM creature WHERE id1 = 448",
-            [],
-            |r| r.get(0),
-        )
+        .query_row("SELECT COUNT(*) FROM creature WHERE id1 = 448", [], |r| {
+            r.get(0)
+        })
         .unwrap();
     assert!(count >= 1, "Hogger has no spawns in creature table");
 }
@@ -538,7 +532,10 @@ fn world_db_hogger_has_model() {
             |r| r.get(0),
         )
         .unwrap();
-    assert!(count >= 1, "Hogger has no models in creature_template_model");
+    assert!(
+        count >= 1,
+        "Hogger has no models in creature_template_model"
+    );
 }
 
 #[test]
@@ -605,11 +602,7 @@ fn world_db_waypoints_have_ordered_points() {
 fn world_db_multiple_maps_present() {
     let conn = world_db_conn();
     let map_count: u64 = conn
-        .query_row(
-            "SELECT COUNT(DISTINCT map) FROM creature",
-            [],
-            |r| r.get(0),
-        )
+        .query_row("SELECT COUNT(DISTINCT map) FROM creature", [], |r| r.get(0))
         .unwrap();
     // AzerothCore has spawns across Eastern Kingdoms (0), Kalimdor (1), Outland (530), Northrend (571), etc.
     assert!(
