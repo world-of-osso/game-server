@@ -193,22 +193,6 @@ fn decode_legacy_character_data(bytes: &[u8]) -> Result<CharacterData, bitcode::
         .or_else(|_| bitcode::decode::<LegacyCharacterDataV1>(bytes).map(character_data_from_v1))
 }
 
-fn character_data_from_legacy_v2(legacy: LegacyCharacterDataV2) -> CharacterData {
-    CharacterData {
-        name: legacy.name,
-        x: legacy.x,
-        y: legacy.y,
-        z: legacy.z,
-        health: legacy.health,
-        max_health: legacy.max_health,
-        race: legacy.race,
-        class: legacy.class,
-        level: legacy.level,
-        appearance: legacy.appearance,
-        equipment_appearance: EquipmentAppearance::default(),
-    }
-}
-
 fn upgrade_appearance_v1(a: LegacyCharacterAppearanceV1) -> CharacterAppearance {
     CharacterAppearance {
         sex: a.sex,
@@ -221,54 +205,44 @@ fn upgrade_appearance_v1(a: LegacyCharacterAppearanceV1) -> CharacterAppearance 
     }
 }
 
+/// All legacy structs share the same 9 core fields; this macro evaluates
+/// appearance/equip expressions first, then moves fields out of the struct.
+macro_rules! upgrade_legacy {
+    ($legacy:ident, $appearance:expr, $equip:expr) => {{
+        let appearance = $appearance;
+        let equip = $equip;
+        CharacterData {
+            name: $legacy.name,
+            x: $legacy.x,
+            y: $legacy.y,
+            z: $legacy.z,
+            health: $legacy.health,
+            max_health: $legacy.max_health,
+            race: $legacy.race,
+            class: $legacy.class,
+            level: $legacy.level,
+            appearance,
+            equipment_appearance: equip,
+        }
+    }};
+}
+
+fn character_data_from_v1(legacy: LegacyCharacterDataV1) -> CharacterData {
+    upgrade_legacy!(legacy, CharacterAppearance::default(), EquipmentAppearance::default())
+}
+
+fn character_data_from_legacy_v2(legacy: LegacyCharacterDataV2) -> CharacterData {
+    upgrade_legacy!(legacy, legacy.appearance, EquipmentAppearance::default())
+}
+
 fn character_data_from_legacy_v2_appearance_v1(
     legacy: LegacyCharacterDataV2AppearanceV1,
 ) -> CharacterData {
-    CharacterData {
-        name: legacy.name,
-        x: legacy.x,
-        y: legacy.y,
-        z: legacy.z,
-        health: legacy.health,
-        max_health: legacy.max_health,
-        race: legacy.race,
-        class: legacy.class,
-        level: legacy.level,
-        appearance: upgrade_appearance_v1(legacy.appearance),
-        equipment_appearance: EquipmentAppearance::default(),
-    }
+    upgrade_legacy!(legacy, upgrade_appearance_v1(legacy.appearance), EquipmentAppearance::default())
 }
 
 fn character_data_from_legacy_v3_appearance_v1(
     legacy: LegacyCharacterDataV3AppearanceV1,
 ) -> CharacterData {
-    CharacterData {
-        name: legacy.name,
-        x: legacy.x,
-        y: legacy.y,
-        z: legacy.z,
-        health: legacy.health,
-        max_health: legacy.max_health,
-        race: legacy.race,
-        class: legacy.class,
-        level: legacy.level,
-        appearance: upgrade_appearance_v1(legacy.appearance),
-        equipment_appearance: legacy.equipment_appearance,
-    }
-}
-
-fn character_data_from_v1(legacy: LegacyCharacterDataV1) -> CharacterData {
-    CharacterData {
-        name: legacy.name,
-        x: legacy.x,
-        y: legacy.y,
-        z: legacy.z,
-        health: legacy.health,
-        max_health: legacy.max_health,
-        race: legacy.race,
-        class: legacy.class,
-        level: legacy.level,
-        appearance: CharacterAppearance::default(),
-        equipment_appearance: EquipmentAppearance::default(),
-    }
+    upgrade_legacy!(legacy, upgrade_appearance_v1(legacy.appearance), legacy.equipment_appearance)
 }
