@@ -226,32 +226,32 @@ impl CharacterAchievements {
         }
     }
 
-    /// List completed achievement IDs that are Feats of Strength.
-    pub fn completed_feats(&self, all_achievements: &[AchievementData]) -> Vec<u32> {
+    /// List completed achievement IDs matching a predicate on the definition.
+    fn completed_matching(
+        &self,
+        all_achievements: &[AchievementData],
+        predicate: fn(&AchievementData) -> bool,
+    ) -> Vec<u32> {
         self.progress
             .iter()
             .filter(|p| p.completed)
             .filter(|p| {
                 all_achievements
                     .iter()
-                    .any(|a| a.id == p.achievement_id && a.feat_of_strength)
+                    .any(|a| a.id == p.achievement_id && predicate(a))
             })
             .map(|p| p.achievement_id)
             .collect()
     }
 
+    /// List completed achievement IDs that are Feats of Strength.
+    pub fn completed_feats(&self, all_achievements: &[AchievementData]) -> Vec<u32> {
+        self.completed_matching(all_achievements, |a| a.feat_of_strength)
+    }
+
     /// List completed achievement IDs that are NOT Feats of Strength.
     pub fn completed_normal(&self, all_achievements: &[AchievementData]) -> Vec<u32> {
-        self.progress
-            .iter()
-            .filter(|p| p.completed)
-            .filter(|p| {
-                all_achievements
-                    .iter()
-                    .any(|a| a.id == p.achievement_id && !a.feat_of_strength)
-            })
-            .map(|p| p.achievement_id)
-            .collect()
+        self.completed_matching(all_achievements, |a| !a.feat_of_strength)
     }
 }
 
