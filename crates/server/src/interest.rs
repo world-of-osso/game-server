@@ -179,4 +179,25 @@ mod tests {
         assert_eq!(visible_count, 7, "7 entities within 100yd");
         assert_eq!(culled_count, 13, "13 entities beyond 100yd");
     }
+
+    #[test]
+    fn entity_at_exactly_100yd_boundary() {
+        let conn = Entity::from_bits(1);
+        let players = vec![(conn, pos(0.0, 0.0, 0.0))];
+
+        // Exactly 100yd — visible (<=)
+        let mut state = ReplicationState::default();
+        update_entity_visibility(&pos(100.0, 0.0, 0.0), &mut state, &players);
+        assert_visible(&state, conn, "exactly 100yd should be visible");
+
+        // Just over 100yd — culled
+        let mut state = ReplicationState::default();
+        update_entity_visibility(&pos(100.01, 0.0, 0.0), &mut state, &players);
+        assert_not_visible(&state, conn, "100.01yd should be culled");
+
+        // Just under 100yd — visible
+        let mut state = ReplicationState::default();
+        update_entity_visibility(&pos(99.99, 0.0, 0.0), &mut state, &players);
+        assert_visible(&state, conn, "99.99yd should be visible");
+    }
 }
