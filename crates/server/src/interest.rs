@@ -248,4 +248,25 @@ mod tests {
         assert_visible(&state, player_b, "player B within range");
         assert_not_visible(&state, player_c, "player C out of range");
     }
+
+    #[test]
+    fn npc_despawn_removed_from_all_observers() {
+        let player_a = Entity::from_bits(1);
+        let player_b = Entity::from_bits(2);
+        let players = vec![
+            (player_a, pos(0.0, 0.0, 0.0)),
+            (player_b, pos(30.0, 0.0, 0.0)),
+        ];
+
+        // NPC visible to both players
+        let mut state = ReplicationState::default();
+        update_entity_visibility(&pos(10.0, 0.0, 0.0), &mut state, &players);
+        assert_visible(&state, player_a, "A sees NPC");
+        assert_visible(&state, player_b, "B sees NPC");
+
+        // NPC despawns (simulated by moving far away)
+        update_entity_visibility(&pos(9999.0, 0.0, 0.0), &mut state, &players);
+        assert_not_visible(&state, player_a, "A lost NPC after despawn");
+        assert_not_visible(&state, player_b, "B lost NPC after despawn");
+    }
 }
