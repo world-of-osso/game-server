@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
 
+use crate::components::{EquipmentAppearance, EquipmentVisualSlot, EquippedAppearanceEntry};
 use crate::item_data::{ItemData, ItemSubclass};
 
 /// Account-wide collection of learned item appearances.
@@ -126,6 +127,53 @@ const MIN_TRANSMOG_COST: u32 = 100;
 /// of 1 silver to prevent free transmogs on worthless items.
 pub fn transmog_cost(source: &ItemData) -> u32 {
     source.sell_price.max(MIN_TRANSMOG_COST)
+}
+
+// -- Apply / remove transmog --
+
+/// Apply a transmog appearance to an equipment slot.
+///
+/// Sets the `display_info_id` on the matching slot entry, creating the entry
+/// if it doesn't exist. Does not validate rules or deduct gold — call
+/// `validate_transmog` and `transmog_cost` first.
+pub fn apply_transmog(
+    appearance: &mut EquipmentAppearance,
+    slot: EquipmentVisualSlot,
+    display_info_id: u32,
+) {
+    let entry = find_or_create_entry(appearance, slot);
+    entry.display_info_id = Some(display_info_id);
+}
+
+/// Remove a transmog from an equipment slot, reverting to the item's base look.
+///
+/// Clears the `display_info_id` on the matching slot entry. No-op if the slot
+/// has no entry or no transmog applied.
+pub fn remove_transmog(appearance: &mut EquipmentAppearance, slot: EquipmentVisualSlot) {
+    if let Some(entry) = appearance.entries.iter_mut().find(|e| e.slot == slot) {
+        entry.display_info_id = None;
+    }
+}
+
+fn find_or_create_entry(
+    appearance: &mut EquipmentAppearance,
+    slot: EquipmentVisualSlot,
+) -> &mut EquippedAppearanceEntry {
+    let exists = appearance.entries.iter().any(|e| e.slot == slot);
+    if !exists {
+        appearance.entries.push(EquippedAppearanceEntry {
+            slot,
+            item_id: None,
+            display_info_id: None,
+            inventory_type: 0,
+            hidden: false,
+        });
+    }
+    appearance
+        .entries
+        .iter_mut()
+        .find(|e| e.slot == slot)
+        .unwrap()
 }
 
 #[cfg(test)]
@@ -384,5 +432,94 @@ mod tests {
         let mut item = plate_chest();
         item.sell_price = 100;
         assert_eq!(transmog_cost(&item), 100);
+    }
+
+    // -- Apply / remove tests --
+
+    use crate::components::{EquipmentAppearance, EquipmentVisualSlot};
+
+    #[test]
+    fn apply_transmog_sets_display_id() {
+        let mut appearance = EquipmentAppearance::default();
+        apply_transmog(&mut appearance, EquipmentVisualSlot::Chest, 999);
+
+        let entry = appearance
+            .entries
+            .iter()
+            .find(|e| e.slot == EquipmentVisualSlot::Chest)
+            .unwrap();
+        assert_eq!(entry.display_info_id, Some(999));
+    }
+
+    #[test]
+    fn apply_transmog_overwrites_existing() {
+        let mut appearance = EquipmentAppearance::default();
+        apply_transmog(&mut appearance, EquipmentVisualSlot::Chest, 100);
+        apply_transmog(&mut appearance, EquipmentVisualSlot::Chest, 200);
+
+        let entry = appearance
+            .entries
+            .iter()
+            .find(|e| e.slot == EquipmentVisualSlot::Chest)
+            .unwrap();
+        assert_eq!(entry.display_info_id, Some(200));
+        // Should not duplicate the entry
+        let chest_count = appearance
+            .entries
+            .iter()
+            .filter(|e| e.slot == EquipmentVisualSlot::Chest)
+            .count();
+        assert_eq!(chest_count, 1);
+    }
+
+    #[test]
+    fn apply_transmog_different_slots() {
+        let mut appearance = EquipmentAppearance::default();
+        apply_transmog(&mut appearance, EquipmentVisualSlot::Chest, 100);
+        apply_transmog(&mut appearance, EquipmentVisualSlot::Legs, 200);
+        assert_eq!(appearance.entries.len(), 2);
+    }
+
+    #[test]
+    fn remove_transmog_clears_display_id() {
+        let mut appearance = EquipmentAppearance::default();
+        apply_transmog(&mut appearance, EquipmentVisualSlot::Chest, 999);
+        remove_transmog(&mut appearance, EquipmentVisualSlot::Chest);
+
+        let entry = appearance
+            .entries
+            .iter()
+            .find(|e| e.slot == EquipmentVisualSlot::Chest)
+            .unwrap();
+        assert_eq!(entry.display_info_id, None);
+    }
+
+    #[test]
+    fn remove_transmog_no_entry_is_noop() {
+        let mut appearance = EquipmentAppearance::default();
+        remove_transmog(&mut appearance, EquipmentVisualSlot::Head);
+        assert!(appearance.entries.is_empty());
+    }
+
+    #[test]
+    fn remove_transmog_only_affects_target_slot() {
+        let mut appearance = EquipmentAppearance::default();
+        apply_transmog(&mut appearance, EquipmentVisualSlot::Chest, 100);
+        apply_transmog(&mut appearance, EquipmentVisualSlot::Legs, 200);
+        remove_transmog(&mut appearance, EquipmentVisualSlot::Chest);
+
+        let chest = appearance
+            .entries
+            .iter()
+            .find(|e| e.slot == EquipmentVisualSlot::Chest)
+            .unwrap();
+        assert_eq!(chest.display_info_id, None);
+
+        let legs = appearance
+            .entries
+            .iter()
+            .find(|e| e.slot == EquipmentVisualSlot::Legs)
+            .unwrap();
+        assert_eq!(legs.display_info_id, Some(200));
     }
 }
