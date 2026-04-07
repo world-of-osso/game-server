@@ -673,4 +673,38 @@ mod tests {
         log.entries.clear();
         assert!(log.entries.is_empty());
     }
+
+    #[test]
+    fn combat_log_records_all_event_types() {
+        let mut log = CombatLog::default();
+        let all_types = [
+            CombatEventType::MeleeDamage,
+            CombatEventType::SpellDamage,
+            CombatEventType::SpellHeal,
+            CombatEventType::PeriodicDamage,
+            CombatEventType::PeriodicHeal,
+            CombatEventType::Absorb,
+            CombatEventType::Miss,
+            CombatEventType::Dodge,
+            CombatEventType::Parry,
+            CombatEventType::Block,
+            CombatEventType::CriticalHit,
+            CombatEventType::Interrupt,
+            CombatEventType::Death,
+            CombatEventType::Respawn,
+        ];
+
+        for (i, event_type) in all_types.iter().enumerate() {
+            log.record(i as f64, make_event(event_type.clone(), i as f32));
+        }
+
+        assert_eq!(log.entries.len(), all_types.len());
+        for (i, event_type) in all_types.iter().enumerate() {
+            assert_eq!(
+                &log.entries[i].event.event_type, event_type,
+                "entry {i} should be {event_type:?}",
+            );
+            assert_eq!(log.entries[i].event.amount, i as f32);
+        }
+    }
 }
