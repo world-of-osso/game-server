@@ -158,6 +158,70 @@ pub fn active_events(date: MonthDay) -> Vec<HolidayEvent> {
         .collect()
 }
 
+// -- Event Activation --
+
+/// Admin override for an event's activation state.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum EventOverride {
+    /// Follow the calendar date range.
+    Auto,
+    /// Force-enable regardless of date.
+    ForceOn,
+    /// Force-disable regardless of date.
+    ForceOff,
+}
+
+/// Tracks which events are currently active on the server.
+///
+/// By default, events activate/deactivate based on the calendar.
+/// Admins can override individual events with `ForceOn`/`ForceOff`.
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct EventActivation {
+    overrides: Vec<(u32, EventOverride)>,
+}
+
+impl EventActivation {
+    /// Set an admin override for an event.
+    pub fn set_override(&mut self, event_id: u32, state: EventOverride) {
+        if let Some(entry) = self.overrides.iter_mut().find(|(id, _)| *id == event_id) {
+            entry.1 = state;
+        } else {
+            self.overrides.push((event_id, state));
+        }
+    }
+
+    /// Clear an override, returning the event to calendar-based activation.
+    pub fn clear_override(&mut self, event_id: u32) {
+        self.overrides.retain(|(id, _)| *id != event_id);
+    }
+
+    /// Get the override state for an event (None = no override).
+    pub fn get_override(&self, event_id: u32) -> Option<EventOverride> {
+        self.overrides
+            .iter()
+            .find(|(id, _)| *id == event_id)
+            .map(|(_, state)| *state)
+    }
+
+    /// Whether an event is currently active, considering overrides and date.
+    pub fn is_active(&self, event: &HolidayEvent, current_date: MonthDay) -> bool {
+        match self.get_override(event.id) {
+            Some(EventOverride::ForceOn) => true,
+            Some(EventOverride::ForceOff) => false,
+            Some(EventOverride::Auto) | None => event.date_range.contains(current_date),
+        }
+    }
+
+    /// All currently active events, considering overrides.
+    pub fn active_event_ids(&self, current_date: MonthDay) -> Vec<u32> {
+        all_events()
+            .iter()
+            .filter(|e| self.is_active(e, current_date))
+            .map(|e| e.id)
+            .collect()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -253,5 +317,88 @@ mod tests {
         let json = serde_json::to_string(&event).unwrap();
         let restored: HolidayEvent = serde_json::from_str(&json).unwrap();
         assert_eq!(event, restored);
+    }
+
+    // -- Activation tests --
+
+    #[test]
+    fn activation_default_follows_calendar() {
+        let activation = EventActivation::default();
+        let bf = brewfest();
+        assert!(activation.is_active(&bf, MonthDay::new(9, 25)));
+        assert!(!activation.is_active(&bf, MonthDay::new(8, 15)));
+    }
+
+    #[test]
+    fn activation_force_on_overrides_date() {
+        let mut activation = EventActivation::default();
+        let bf = brewfest();
+        activation.set_override(bf.id, EventOverride::ForceOn);
+        // Active even outside date range
+        assert!(activation.is_active(&bf, MonthDay::new(3, 1)));
+    }
+
+    #[test]
+    fn activation_force_off_overrides_date() {
+        let mut activation = EventActivation::default();
+        let bf = brewfest();
+        activation.set_override(bf.id, EventOverride::ForceOff);
+        // Inactive even during date range
+        assert!(!activation.is_active(&bf, MonthDay::new(9, 25)));
+    }
+
+    #[test]
+    fn activation_auto_override_same_as_no_override() {
+        let mut activation = EventActivation::default();
+        let bf = brewfest();
+        activation.set_override(bf.id, EventOverride::Auto);
+        assert!(activation.is_active(&bf, MonthDay::new(9, 25)));
+        assert!(!activation.is_active(&bf, MonthDay::new(8, 15)));
+    }
+
+    #[test]
+    fn activation_clear_override() {
+        let mut activation = EventActivation::default();
+        let bf = brewfest();
+        activation.set_override(bf.id, EventOverride::ForceOff);
+        assert!(!activation.is_active(&bf, MonthDay::new(9, 25)));
+
+        activation.clear_override(bf.id);
+        assert!(activation.is_active(&bf, MonthDay::new(9, 25)));
+    }
+
+    #[test]
+    fn activation_override_update() {
+        let mut activation = EventActivation::default();
+        activation.set_override(6, EventOverride::ForceOn);
+        activation.set_override(6, EventOverride::ForceOff);
+        assert_eq!(activation.get_override(6), Some(EventOverride::ForceOff));
+    }
+
+    #[test]
+    fn activation_active_event_ids() {
+        let mut activation = EventActivation::default();
+        // Mid-August: no events naturally active
+        let date = MonthDay::new(8, 15);
+        assert!(activation.active_event_ids(date).is_empty());
+
+        // Force-enable Brewfest
+        activation.set_override(6, EventOverride::ForceOn);
+        let ids = activation.active_event_ids(date);
+        assert_eq!(ids, vec![6]);
+    }
+
+    #[test]
+    fn activation_multiple_overrides_independent() {
+        let mut activation = EventActivation::default();
+        activation.set_override(6, EventOverride::ForceOn);
+        activation.set_override(7, EventOverride::ForceOff);
+
+        let bf = brewfest();
+        let he = hallows_end();
+        // During Hallow's End date range
+        let date = MonthDay::new(10, 25);
+        assert!(activation.is_active(&bf, date)); // forced on
+        assert!(!activation.is_active(&he, date)); // forced off despite in range
     }
 }
