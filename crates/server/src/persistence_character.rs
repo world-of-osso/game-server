@@ -257,6 +257,13 @@ pub fn create_character_with_appearance(
     class: u8,
     appearance: CharacterAppearance,
 ) -> Result<(u64, CharacterData), String> {
+    let trimmed = name.trim();
+    if trimmed.len() < 2 {
+        return Err("Character name must be at least 2 characters".to_string());
+    }
+    if trimmed.len() > 12 {
+        return Err("Character name must be at most 12 characters".to_string());
+    }
     check_name_available(db, name)?;
     validate_playable_race(race)?;
     let character_id = next_id(db, "character");

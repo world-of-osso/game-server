@@ -561,6 +561,25 @@ mod tests {
     }
 
     #[test]
+    fn create_character_rejects_name_too_short() {
+        let db = temp_database();
+        let (account_id, _) = register_account(&db, "user1", "pass").unwrap();
+        assert!(create_character(&db, account_id, "A", 1, 1).is_err());
+        assert!(create_character(&db, account_id, "", 1, 1).is_err());
+        // Exactly 2 chars should succeed
+        assert!(create_character(&db, account_id, "Ab", 1, 1).is_ok());
+    }
+
+    #[test]
+    fn create_character_rejects_name_too_long() {
+        let db = temp_database();
+        let (account_id, _) = register_account(&db, "user1", "pass").unwrap();
+        assert!(create_character(&db, account_id, "Abcdefghijklm", 1, 1).is_err()); // 13 chars
+        // Exactly 12 chars should succeed
+        assert!(create_character(&db, account_id, "Abcdefghijkl", 1, 1).is_ok());
+    }
+
+    #[test]
     fn delete_character_removes_from_all_tables() {
         let db = temp_database();
         let (account_id, _) = register_account(&db, "user1", "pass").unwrap();
