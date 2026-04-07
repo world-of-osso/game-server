@@ -404,26 +404,11 @@ fn apply_movement_input(
         vert_vel.0 = shared::movement::JUMP_IMPULSE;
     }
     rotation.y = input.facing_yaw;
-    let base_speed = if input.swimming {
-        DEFAULT_SWIM_SPEED
-    } else if input.running {
-        DEFAULT_RUN_SPEED
-    } else {
-        DEFAULT_WALK_SPEED
-    };
-    let multiplier = auras.map_or(1.0, |a| a.movement_speed_multiplier());
     let dir_len = direction_length(&input.direction);
+    speed.0 = compute_movement_speed(input, auras, dir_len);
     if dir_len < 0.001 {
-        speed.0 = base_speed * multiplier;
         return;
     }
-    let backpedal = is_backpedaling(input.facing_yaw, &input.direction, dir_len);
-    let backpedal_mult = if backpedal {
-        shared::movement::BACKPEDAL_MULTIPLIER
-    } else {
-        1.0
-    };
-    speed.0 = base_speed * multiplier * backpedal_mult;
     let scale = speed.0 * time.delta_secs() / dir_len;
     let new_x = pos.x + input.direction[0] * scale;
     let new_y = pos.y + input.direction[1] * scale;
@@ -433,6 +418,28 @@ fn apply_movement_input(
     pos.x = new_x;
     pos.y = new_y;
     pos.z += input.direction[2] * scale;
+}
+
+/// Compute effective movement speed from input, auras, and direction.
+fn compute_movement_speed(
+    input: &PlayerInput,
+    auras: Option<&shared::aura::Auras>,
+    dir_len: f32,
+) -> f32 {
+    let base = if input.swimming {
+        DEFAULT_SWIM_SPEED
+    } else if input.running {
+        DEFAULT_RUN_SPEED
+    } else {
+        DEFAULT_WALK_SPEED
+    };
+    let aura_mult = auras.map_or(1.0, |a| a.movement_speed_multiplier());
+    let backpedal_mult = if dir_len > 0.001 && is_backpedaling(input.facing_yaw, &input.direction, dir_len) {
+        shared::movement::BACKPEDAL_MULTIPLIER
+    } else {
+        1.0
+    };
+    base * aura_mult * backpedal_mult
 }
 
 /// Check if movement direction is opposite to facing (backpedaling).
