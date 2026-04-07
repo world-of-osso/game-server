@@ -88,40 +88,48 @@ fn chat_history_response_round_trip() {
     assert_eq!(resp.error, decoded.error);
 }
 
+fn sample_auction_query() -> AuctionSearchQuery {
+    AuctionSearchQuery {
+        text: "linen".into(),
+        page: 0,
+        page_size: 20,
+        min_level: Some(1),
+        max_level: Some(10),
+        quality: Some(1),
+        usable_only: false,
+        sort_field: AuctionSortField::Name,
+        sort_dir: AuctionSortDir::Asc,
+        faction: 0,
+    }
+}
+
+fn sample_auction_listing() -> AuctionListingSummary {
+    AuctionListingSummary {
+        auction_id: 7,
+        item: AuctionInventoryItem {
+            item_guid: 12,
+            item_id: 2589,
+            name: "Linen Cloth".into(),
+            quality: 1,
+            required_level: 1,
+            stack_count: 20,
+            vendor_sell_price: 13,
+        },
+        owner_name: "Seller".into(),
+        stack_count: 20,
+        min_bid: 100,
+        current_bid: Some(125),
+        min_next_bid: 131,
+        buyout_price: Some(200),
+        time_left: AuctionTimeLeft::Long,
+    }
+}
+
 fn sample_auction_search_results() -> AuctionSearchResults {
     AuctionSearchResults {
-        query: AuctionSearchQuery {
-            text: "linen".into(),
-            page: 0,
-            page_size: 20,
-            min_level: Some(1),
-            max_level: Some(10),
-            quality: Some(1),
-            usable_only: false,
-            sort_field: AuctionSortField::Name,
-            sort_dir: AuctionSortDir::Asc,
-            faction: 0,
-        },
+        query: sample_auction_query(),
         total_results: 1,
-        results: vec![AuctionListingSummary {
-            auction_id: 7,
-            item: AuctionInventoryItem {
-                item_guid: 12,
-                item_id: 2589,
-                name: "Linen Cloth".into(),
-                quality: 1,
-                required_level: 1,
-                stack_count: 20,
-                vendor_sell_price: 13,
-            },
-            owner_name: "Seller".into(),
-            stack_count: 20,
-            min_bid: 100,
-            current_bid: Some(125),
-            min_next_bid: 131,
-            buyout_price: Some(200),
-            time_left: AuctionTimeLeft::Long,
-        }],
+        results: vec![sample_auction_listing()],
     }
 }
 
