@@ -561,6 +561,33 @@ mod tests {
     }
 
     #[test]
+    fn linked_creatures_share_threat() {
+        // Two linked mobs: when one is attacked, both gain threat
+        let mut mob_a = ThreatTable::default();
+        let mut mob_b = ThreatTable::default();
+
+        let player1 = 1_u64;
+        let player2 = 2_u64;
+
+        // Player1 attacks mob_a — propagate threat to mob_b
+        let damage = 500.0;
+        mob_a.add_damage_threat(player1, damage, 1.0);
+        mob_b.add_damage_threat(player1, damage, 1.0); // linked propagation
+
+        // Player2 attacks mob_b — propagate to mob_a
+        mob_b.add_damage_threat(player2, 300.0, 1.0);
+        mob_a.add_damage_threat(player2, 300.0, 1.0); // linked propagation
+
+        // Both mobs should target player1 (highest threat)
+        assert_eq!(mob_a.aggro_target(None, true), Some(player1));
+        assert_eq!(mob_b.aggro_target(None, true), Some(player1));
+
+        // Both have consistent threat values
+        assert_eq!(mob_a.threat_for(player1), mob_b.threat_for(player1));
+        assert_eq!(mob_a.threat_for(player2), mob_b.threat_for(player2));
+    }
+
+    #[test]
     fn aggro_empty_table_returns_none() {
         let table = ThreatTable::default();
         assert_eq!(table.aggro_target(None, true), None);
