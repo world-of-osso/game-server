@@ -504,6 +504,8 @@ fn receive_register_response(
                 println!("[register] Registration submitted and pending admin approval.");
             } else {
                 eprintln!("[register] Failed: {}", resp.error.unwrap_or_default());
+                exit.write(AppExit::Error(1.try_into().unwrap()));
+                continue;
             }
             exit.write(AppExit::Success);
         }
@@ -525,10 +527,11 @@ fn receive_create_character_response(
                 } else {
                     println!("[create] Character created");
                 }
+                exit.write(AppExit::Success);
             } else {
                 eprintln!("[create] Failed: {}", resp.error.unwrap_or_default());
+                exit.write(AppExit::Error(1.try_into().unwrap()));
             }
-            exit.write(AppExit::Success);
         }
     }
 }
@@ -621,10 +624,11 @@ fn receive_guild_invite_response(
         for resp in receiver.receive() {
             if resp.success {
                 println!("[guild] Invite queued");
+                exit.write(AppExit::Success);
             } else {
                 eprintln!("[guild] Invite failed: {}", resp.error.unwrap_or_default());
+                exit.write(AppExit::Error(1.try_into().unwrap()));
             }
-            exit.write(AppExit::Success);
         }
     }
 }
@@ -641,10 +645,11 @@ fn receive_guild_accept_response(
                     resp.guild_name.unwrap_or_default(),
                     resp.guild_id.unwrap_or_default()
                 );
+                exit.write(AppExit::Success);
             } else {
                 eprintln!("[guild] Accept failed: {}", resp.error.unwrap_or_default());
+                exit.write(AppExit::Error(1.try_into().unwrap()));
             }
-            exit.write(AppExit::Success);
         }
     }
 }
