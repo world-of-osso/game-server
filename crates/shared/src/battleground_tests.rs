@@ -600,3 +600,79 @@ fn kills_deplete_reinforcements_to_zero() {
     assert_eq!(inst.phase, BgPhase::Ended);
     assert_eq!(inst.outcome, Some(BgOutcome::Winner(BgTeam::A)));
 }
+
+// -- Reward distribution tests --
+
+#[test]
+fn rewards_none_when_not_ended() {
+    let (inst, _) = wsg_instance();
+    assert!(distribute_rewards(&inst).is_none()); // still Waiting
+}
+
+#[test]
+fn rewards_winner_gets_more() {
+    let (mut inst, tmpl) = wsg_instance();
+    inst.start();
+    inst.add_score(BgTeam::A, 3, &tmpl); // A wins
+
+    let dist = distribute_rewards(&inst).unwrap();
+    let a_reward = dist.rewards.iter().find(|(p, _)| *p == 1).unwrap().1;
+    let b_reward = dist.rewards.iter().find(|(p, _)| *p == 6).unwrap().1;
+
+    assert_eq!(a_reward.honor, 150);
+    assert_eq!(a_reward.marks, 3);
+    assert_eq!(b_reward.honor, 50);
+    assert_eq!(b_reward.marks, 1);
+}
+
+#[test]
+fn rewards_team_b_wins() {
+    let (mut inst, tmpl) = wsg_instance();
+    inst.start();
+    inst.add_score(BgTeam::B, 3, &tmpl);
+
+    let dist = distribute_rewards(&inst).unwrap();
+    let a_reward = dist.rewards.iter().find(|(p, _)| *p == 1).unwrap().1;
+    let b_reward = dist.rewards.iter().find(|(p, _)| *p == 6).unwrap().1;
+
+    assert_eq!(a_reward.honor, 50);
+    assert_eq!(b_reward.honor, 150);
+}
+
+#[test]
+fn rewards_draw() {
+    let (mut inst, tmpl) = wsg_instance();
+    inst.start();
+    inst.tick(tmpl.max_duration_secs, &tmpl); // timeout → draw
+
+    let dist = distribute_rewards(&inst).unwrap();
+    let a_reward = dist.rewards.iter().find(|(p, _)| *p == 1).unwrap().1;
+    let b_reward = dist.rewards.iter().find(|(p, _)| *p == 6).unwrap().1;
+
+    assert_eq!(a_reward.honor, 75);
+    assert_eq!(a_reward.marks, 2);
+    assert_eq!(b_reward.honor, 75);
+    assert_eq!(b_reward.marks, 2);
+}
+
+#[test]
+fn rewards_all_players_included() {
+    let (mut inst, tmpl) = wsg_instance();
+    inst.start();
+    inst.add_score(BgTeam::A, 3, &tmpl);
+
+    let dist = distribute_rewards(&inst).unwrap();
+    assert_eq!(dist.rewards.len(), 10); // 5 per team
+}
+
+#[test]
+fn rewards_loser_still_gets_marks() {
+    let (mut inst, tmpl) = wsg_instance();
+    inst.start();
+    inst.add_score(BgTeam::A, 3, &tmpl);
+
+    let dist = distribute_rewards(&inst).unwrap();
+    let loser = dist.rewards.iter().find(|(p, _)| *p == 6).unwrap().1;
+    assert!(loser.marks > 0, "losers should still get marks");
+    assert!(loser.honor > 0, "losers should still get honor");
+}

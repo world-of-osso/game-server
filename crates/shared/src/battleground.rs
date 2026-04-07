@@ -636,6 +636,72 @@ pub fn on_kill_reinforcement(instance: &mut BgInstance, victim_team: BgTeam) {
     instance.deduct_reinforcements(victim_team, REINFORCEMENT_LOSS_PER_KILL);
 }
 
+// -- Scoring & Rewards --
+
+/// Honor currency ID (matches `currency.rs` ALL_CURRENCIES).
+pub const HONOR_CURRENCY_ID: u32 = 1;
+
+/// Base honor awarded to the winning team.
+const WINNER_HONOR: u32 = 150;
+/// Base honor awarded to the losing team.
+const LOSER_HONOR: u32 = 50;
+/// Honor for a draw (both teams).
+const DRAW_HONOR: u32 = 75;
+/// Marks awarded to the winning team.
+const WINNER_MARKS: u32 = 3;
+/// Marks awarded to the losing team.
+const LOSER_MARKS: u32 = 1;
+/// Marks for a draw.
+const DRAW_MARKS: u32 = 2;
+
+/// Rewards for a single player after a battleground ends.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct BgReward {
+    pub honor: u32,
+    pub marks: u32,
+}
+
+/// Per-player reward list for a completed battleground.
+#[derive(Debug, Clone, PartialEq)]
+pub struct BgRewardDistribution {
+    pub rewards: Vec<(u64, BgReward)>,
+}
+
+/// Compute rewards for all players in a finished battleground.
+///
+/// Winners get more honor and marks than losers. Draws get an
+/// intermediate amount. Returns `None` if the match hasn't ended.
+pub fn distribute_rewards(instance: &BgInstance) -> Option<BgRewardDistribution> {
+    let outcome = instance.outcome?;
+    if instance.phase != BgPhase::Ended {
+        return None;
+    }
+
+    let (reward_a, reward_b) = match outcome {
+        BgOutcome::Winner(BgTeam::A) => (
+            BgReward { honor: WINNER_HONOR, marks: WINNER_MARKS },
+            BgReward { honor: LOSER_HONOR, marks: LOSER_MARKS },
+        ),
+        BgOutcome::Winner(BgTeam::B) => (
+            BgReward { honor: LOSER_HONOR, marks: LOSER_MARKS },
+            BgReward { honor: WINNER_HONOR, marks: WINNER_MARKS },
+        ),
+        BgOutcome::Draw => (
+            BgReward { honor: DRAW_HONOR, marks: DRAW_MARKS },
+            BgReward { honor: DRAW_HONOR, marks: DRAW_MARKS },
+        ),
+    };
+
+    let mut rewards = Vec::new();
+    for &player in &instance.team_a_players {
+        rewards.push((player, reward_a));
+    }
+    for &player in &instance.team_b_players {
+        rewards.push((player, reward_b));
+    }
+    Some(BgRewardDistribution { rewards })
+}
+
 #[cfg(test)]
 #[path = "battleground_tests.rs"]
 mod tests;
