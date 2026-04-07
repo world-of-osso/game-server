@@ -325,17 +325,36 @@ fn check_name_available(db: &Database, name: &str) -> Result<(), String> {
 }
 
 /// Build default CharacterData for a new character at Northshire spawn.
+/// Starting position per race (WoW coordinates).
+fn starting_position(race: u8) -> (f32, f32, f32) {
+    match race {
+        1 => (-8949.0, -132.0, 83.0),    // Human — Northshire
+        2 => (-618.0, -4251.0, 38.0),    // Orc — Valley of Trials
+        3 => (-6240.0, 331.0, 383.0),    // Dwarf — Coldridge Valley
+        4 => (10311.0, 832.0, 1326.0),   // Night Elf — Shadowglen
+        5 => (1676.0, 1677.0, 121.0),    // Undead — Deathknell
+        6 => (-2917.0, -257.0, 53.0),    // Tauren — Red Cloud Mesa
+        7 => (-6240.0, 331.0, 383.0),    // Gnome — Coldridge Valley (shared)
+        8 => (-618.0, -4251.0, 38.0),    // Troll — Valley of Trials (shared)
+        10 => (10349.0, -6357.0, 33.0),  // Blood Elf — Sunstrider Isle
+        11 => (-3961.0, -13931.0, 100.0), // Draenei — Crash Site
+        22 => (-1451.0, 1403.0, 35.0),   // Worgen — Gilneas
+        _ => (-8949.0, -132.0, 83.0),    // Fallback to Human start
+    }
+}
+
 fn default_character_data(
     name: &str,
     race: u8,
     class: u8,
     appearance: CharacterAppearance,
 ) -> CharacterData {
+    let (x, y, z) = starting_position(race);
     CharacterData {
         name: name.to_string(),
-        x: -8949.0,
-        y: -132.0,
-        z: 83.0,
+        x,
+        y,
+        z,
         health: 100.0,
         max_health: 100.0,
         race,

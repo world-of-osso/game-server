@@ -651,6 +651,31 @@ mod tests {
     }
 
     #[test]
+    fn character_creation_assigns_starting_position_per_race() {
+        let db = temp_database();
+        let (account_id, _) = register_account(&db, "user1", "pass").unwrap();
+
+        // Human (race 1) starts at Northshire
+        let (cid_human, data_human) = create_character(&db, account_id, "HumanHero", 1, 1).unwrap();
+        assert!((data_human.x - (-8949.0)).abs() < 1.0, "human x");
+        assert!((data_human.y - (-132.0)).abs() < 1.0, "human y");
+
+        // Orc (race 2) starts at Valley of Trials — different from Human
+        let (_, data_orc) = create_character(&db, account_id, "OrcWarrior", 2, 1).unwrap();
+        assert!((data_orc.x - (-618.0)).abs() < 1.0, "orc x");
+        assert!((data_orc.y - (-4251.0)).abs() < 1.0, "orc y");
+        assert!((data_orc.x - data_human.x).abs() > 100.0, "different start zones");
+
+        // Night Elf (race 4) starts at Shadowglen
+        let (_, data_nelf) = create_character(&db, account_id, "ElfDruid", 4, 1).unwrap();
+        assert!((data_nelf.x - 10311.0).abs() < 1.0, "night elf x");
+
+        // Persisted position matches
+        let loaded = load_character(&db, cid_human).unwrap();
+        assert!((loaded.x - data_human.x).abs() < 0.01);
+    }
+
+    #[test]
     fn character_guild_membership_round_trip() {
         let db = temp_database();
         let (account_id, _) = register_account(&db, "user1", "pass").unwrap();
