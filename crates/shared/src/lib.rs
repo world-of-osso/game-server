@@ -1,4 +1,5 @@
 pub mod achievement;
+pub mod arena;
 pub mod battleground;
 pub mod aura;
 pub mod casting;
