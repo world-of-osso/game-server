@@ -377,41 +377,18 @@ fn validate_create_auction(
     req: &CreateAuction,
 ) -> Result<ValidatedAuction, AuctionOperationResponse> {
     validate_auction_request(req)?;
-    let active_count = state
-        .auctions
-        .values()
-        .filter(|a| a.seller_character_id == character_id)
-        .count();
-    if active_count >= MAX_AUCTIONS_PER_CHARACTER {
-        return Err(err("maximum auction slots reached"));
-    }
+    validate_auction_slot_limit(state, character_id)?;
     let Some(character) = persistence::load_character(db, character_id) else {
         return Err(err("character not found"));
     };
     let inventory = persistence::load_inventory(db, character_id);
-    let Some(index) = inventory
-        .items
-        .iter()
-        .position(|i| i.item_guid == req.item_guid)
-    else {
-        return Err(err("item not found in inventory"));
-    };
-    let source = inventory.items[index].clone();
+    let (index, source) = find_auction_source_item(&inventory, req)?;
     if req.stack_count > source.stack_count {
         return Err(err("requested stack exceeds available stack"));
     }
-    if source.unique_auction
-        && state
-            .auctions
-            .values()
-            .any(|a| a.item.item_id == source.item_id)
-    {
-        return Err(err("unique item already listed on the auction house"));
-    }
+    validate_unique_auction_listing(state, &source)?;
     let deposit = deposit_cost(source.vendor_sell_price, req.stack_count, req.duration);
-    if deposit > 0 && inventory.gold < deposit {
-        return Err(err("not enough gold for auction deposit"));
-    }
+    validate_auction_deposit(&inventory, deposit)?;
     Ok(ValidatedAuction {
         character_name: character.name,
         race: character.race,
@@ -419,6 +396,60 @@ fn validate_create_auction(
         item_index: index,
         deposit,
     })
+}
+
+fn validate_auction_slot_limit(
+    state: &AuctionHouseState,
+    character_id: u64,
+) -> Result<(), AuctionOperationResponse> {
+    let active_count = state
+        .auctions
+        .values()
+        .filter(|auction| auction.seller_character_id == character_id)
+        .count();
+    if active_count >= MAX_AUCTIONS_PER_CHARACTER {
+        return Err(err("maximum auction slots reached"));
+    }
+    Ok(())
+}
+
+fn find_auction_source_item(
+    inventory: &InventoryData,
+    req: &CreateAuction,
+) -> Result<(usize, InventoryItemData), AuctionOperationResponse> {
+    let Some(index) = inventory
+        .items
+        .iter()
+        .position(|item| item.item_guid == req.item_guid)
+    else {
+        return Err(err("item not found in inventory"));
+    };
+    Ok((index, inventory.items[index].clone()))
+}
+
+fn validate_unique_auction_listing(
+    state: &AuctionHouseState,
+    source: &InventoryItemData,
+) -> Result<(), AuctionOperationResponse> {
+    if source.unique_auction
+        && state
+            .auctions
+            .values()
+            .any(|auction| auction.item.item_id == source.item_id)
+    {
+        return Err(err("unique item already listed on the auction house"));
+    }
+    Ok(())
+}
+
+fn validate_auction_deposit(
+    inventory: &InventoryData,
+    deposit: u32,
+) -> Result<(), AuctionOperationResponse> {
+    if deposit > 0 && inventory.gold < deposit {
+        return Err(err("not enough gold for auction deposit"));
+    }
+    Ok(())
 }
 
 fn create_auction(
