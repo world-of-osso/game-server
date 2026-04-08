@@ -7,6 +7,9 @@ use crate::components::{CharacterAppearance, EquipmentAppearance};
 pub enum EmoteKind {
     Dance,
     Wave,
+    Sit,
+    Sleep,
+    Kneel,
 }
 
 /// Chat message type.

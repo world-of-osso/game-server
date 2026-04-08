@@ -14,8 +14,22 @@ use crate::persistence::{self, ClientId, GameDatabase};
 
 #[derive(SystemParam)]
 pub(crate) struct ChatSystemQueries<'w, 's> {
-    receivers: Query<'w, 's, (&'static mut MessageReceiver<ChatMessage>, &'static PlayerLink)>,
-    emote_receivers: Query<'w, 's, (&'static mut MessageReceiver<EmoteIntent>, &'static PlayerLink)>,
+    receivers: Query<
+        'w,
+        's,
+        (
+            &'static mut MessageReceiver<ChatMessage>,
+            &'static PlayerLink,
+        ),
+    >,
+    emote_receivers: Query<
+        'w,
+        's,
+        (
+            &'static mut MessageReceiver<EmoteIntent>,
+            &'static PlayerLink,
+        ),
+    >,
     players: Query<'w, 's, &'static shared::components::Player>,
     guilds: Query<'w, 's, Option<&'static GuildMembership>>,
     presences: Query<
@@ -309,6 +323,9 @@ fn emote_chat_text(emote: EmoteKind) -> &'static str {
     match emote {
         EmoteKind::Dance => "dances.",
         EmoteKind::Wave => "waves.",
+        EmoteKind::Sit => "sits down.",
+        EmoteKind::Sleep => "falls asleep.",
+        EmoteKind::Kneel => "kneels.",
     }
 }
 
@@ -319,71 +336,10 @@ fn chat_message_emote(msg: &ChatMessage) -> Option<EmoteKind> {
     match msg.content.trim().to_ascii_lowercase().as_str() {
         "/dance" => Some(EmoteKind::Dance),
         "/wave" => Some(EmoteKind::Wave),
+        "/sit" => Some(EmoteKind::Sit),
+        "/sleep" => Some(EmoteKind::Sleep),
+        "/kneel" => Some(EmoteKind::Kneel),
         _ => None,
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::collections::VecDeque;
-
-    fn say_message(sender: &str, content: &str) -> ChatMessage {
-        ChatMessage {
-            sender: sender.into(),
-            content: content.into(),
-            channel: ChatType::Say,
-        }
-    }
-
-    #[test]
-    fn sender_is_ignored_matches_case_insensitively() {
-        let ignored = vec!["Alice".to_string()];
-
-        assert!(sender_is_ignored("alice", Some(&ignored)));
-        assert!(!sender_is_ignored("Bob", Some(&ignored)));
-    }
-
-    #[test]
-    fn history_for_connection_filters_ignored_senders() {
-        let history = ChatHistoryBuffer {
-            entries: VecDeque::from([
-                say_message("Alice", "first"),
-                say_message("Bob", "second"),
-                say_message("Alice", "third"),
-            ]),
-        };
-        let ignored = vec!["alice".to_string()];
-
-        let filtered = history_for_connection(&history, 10, Some(&ignored));
-
-        assert_eq!(filtered.len(), 1);
-        assert_eq!(filtered[0].sender, "Bob");
-        assert_eq!(filtered[0].content, "second");
-    }
-
-    #[test]
-    fn emote_chat_message_uses_social_text() {
-        let dance = emote_chat_message("Alice", EmoteKind::Dance);
-        assert_eq!(dance.sender, "Alice");
-        assert_eq!(dance.channel, ChatType::Emote);
-        assert_eq!(dance.content, "dances.");
-
-        let wave = emote_chat_message("Bob", EmoteKind::Wave);
-        assert_eq!(wave.content, "waves.");
-    }
-
-    #[test]
-    fn chat_message_emote_parses_supported_slash_commands() {
-        assert_eq!(
-            chat_message_emote(&say_message("Alice", "/dance")),
-            Some(EmoteKind::Dance)
-        );
-        assert_eq!(
-            chat_message_emote(&say_message("Alice", " /wave ")),
-            Some(EmoteKind::Wave)
-        );
-        assert_eq!(chat_message_emote(&say_message("Alice", "hello")), None);
     }
 }
 
@@ -548,5 +504,90 @@ pub fn process_target_messages(
                 debug!("Player {:?} target set to {:?}", link.0, target);
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::VecDeque;
+
+    fn say_message(sender: &str, content: &str) -> ChatMessage {
+        ChatMessage {
+            sender: sender.into(),
+            content: content.into(),
+            channel: ChatType::Say,
+        }
+    }
+
+    #[test]
+    fn sender_is_ignored_matches_case_insensitively() {
+        let ignored = vec!["Alice".to_string()];
+
+        assert!(sender_is_ignored("alice", Some(&ignored)));
+        assert!(!sender_is_ignored("Bob", Some(&ignored)));
+    }
+
+    #[test]
+    fn history_for_connection_filters_ignored_senders() {
+        let history = ChatHistoryBuffer {
+            entries: VecDeque::from([
+                say_message("Alice", "first"),
+                say_message("Bob", "second"),
+                say_message("Alice", "third"),
+            ]),
+        };
+        let ignored = vec!["alice".to_string()];
+
+        let filtered = history_for_connection(&history, 10, Some(&ignored));
+
+        assert_eq!(filtered.len(), 1);
+        assert_eq!(filtered[0].sender, "Bob");
+        assert_eq!(filtered[0].content, "second");
+    }
+
+    #[test]
+    fn emote_chat_message_uses_social_text() {
+        let dance = emote_chat_message("Alice", EmoteKind::Dance);
+        assert_eq!(dance.sender, "Alice");
+        assert_eq!(dance.channel, ChatType::Emote);
+        assert_eq!(dance.content, "dances.");
+
+        let wave = emote_chat_message("Bob", EmoteKind::Wave);
+        assert_eq!(wave.content, "waves.");
+
+        let sit = emote_chat_message("Cara", EmoteKind::Sit);
+        assert_eq!(sit.content, "sits down.");
+
+        let sleep = emote_chat_message("Dane", EmoteKind::Sleep);
+        assert_eq!(sleep.content, "falls asleep.");
+
+        let kneel = emote_chat_message("Eli", EmoteKind::Kneel);
+        assert_eq!(kneel.content, "kneels.");
+    }
+
+    #[test]
+    fn chat_message_emote_parses_supported_slash_commands() {
+        assert_eq!(
+            chat_message_emote(&say_message("Alice", "/dance")),
+            Some(EmoteKind::Dance)
+        );
+        assert_eq!(
+            chat_message_emote(&say_message("Alice", " /wave ")),
+            Some(EmoteKind::Wave)
+        );
+        assert_eq!(
+            chat_message_emote(&say_message("Alice", "/sit")),
+            Some(EmoteKind::Sit)
+        );
+        assert_eq!(
+            chat_message_emote(&say_message("Alice", "/sleep")),
+            Some(EmoteKind::Sleep)
+        );
+        assert_eq!(
+            chat_message_emote(&say_message("Alice", "/kneel")),
+            Some(EmoteKind::Kneel)
+        );
+        assert_eq!(chat_message_emote(&say_message("Alice", "hello")), None);
     }
 }

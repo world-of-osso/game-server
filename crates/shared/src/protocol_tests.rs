@@ -93,7 +93,7 @@ fn chat_history_response_round_trip() {
 #[test]
 fn emote_messages_round_trip() {
     let intent = EmoteIntent {
-        emote: EmoteKind::Dance,
+        emote: EmoteKind::Sit,
     };
     let encoded = serde_json::to_string(&intent).unwrap();
     let decoded: EmoteIntent = serde_json::from_str(&encoded).unwrap();
@@ -102,7 +102,7 @@ fn emote_messages_round_trip() {
     let event = EmoteEvent {
         player_entity: 77,
         sender: "Alice".into(),
-        emote: EmoteKind::Wave,
+        emote: EmoteKind::Sleep,
     };
     let encoded = serde_json::to_string(&event).unwrap();
     let decoded: EmoteEvent = serde_json::from_str(&encoded).unwrap();
