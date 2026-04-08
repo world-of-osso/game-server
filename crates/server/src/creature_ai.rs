@@ -71,7 +71,13 @@ pub enum CreatureState {
     Idle,
     /// Chasing a threat target. Wander/waypoint AI pauses.
     /// `target` is the u64 entity ID from the ThreatTable.
-    #[cfg_attr(not(test), expect(dead_code, reason = "constructed by combat system (upcoming PLAN item)"))]
+    #[cfg_attr(
+        not(test),
+        expect(
+            dead_code,
+            reason = "retained for threat-driven chase transitions exercised in tests"
+        )
+    )]
     Pursuing { target: u64 },
     /// Returning to spawn point after evade. Wander/waypoint AI pauses.
     Returning,
@@ -285,8 +291,7 @@ fn return_to_spawn_system(
             continue;
         }
         let speed = spawn.speed_walk * BASE_WALK_SPEED;
-        let (reached, new_x, new_z) =
-            move_toward(pos.x, pos.z, spawn.x, spawn.z, speed * dt);
+        let (reached, new_x, new_z) = move_toward(pos.x, pos.z, spawn.x, spawn.z, speed * dt);
         pos.x = new_x;
         pos.z = new_z;
         if reached {
@@ -295,7 +300,6 @@ fn return_to_spawn_system(
         }
     }
 }
-
 
 #[cfg(test)]
 #[path = "creature_ai_tests.rs"]

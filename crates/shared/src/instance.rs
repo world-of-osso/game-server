@@ -83,8 +83,18 @@ impl ResetTimer {
 /// Two groups in the same dungeon map get different `InstanceId` values,
 /// ensuring their creatures, loot, and combat are fully independent.
 #[derive(
-    Component, Reflect, Serialize, Deserialize, bitcode::Encode, bitcode::Decode,
-    Debug, Clone, Copy, PartialEq, Eq, Hash,
+    Component,
+    Reflect,
+    Serialize,
+    Deserialize,
+    bitcode::Encode,
+    bitcode::Decode,
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    Hash,
 )]
 pub struct InstanceId(pub u32);
 
@@ -143,7 +153,10 @@ pub struct ScaledCreatureStats {
 /// Used when spawning creatures inside an instance — the server reads
 /// base stats from the creature template, then scales them by the
 /// instance's difficulty config.
-pub fn scale_creature_stats(base: &CreatureBaseStats, config: &DifficultyConfig) -> ScaledCreatureStats {
+pub fn scale_creature_stats(
+    base: &CreatureBaseStats,
+    config: &DifficultyConfig,
+) -> ScaledCreatureStats {
     ScaledCreatureStats {
         health: base.health * config.creature_health_multiplier,
         damage_min: base.damage_min * config.creature_damage_multiplier,
@@ -203,7 +216,9 @@ pub struct InstanceTemplate {
 impl InstanceTemplate {
     /// Get configuration for a specific difficulty, if supported.
     pub fn difficulty_config(&self, difficulty: Difficulty) -> Option<&DifficultyConfig> {
-        self.difficulties.iter().find(|d| d.difficulty == difficulty)
+        self.difficulties
+            .iter()
+            .find(|d| d.difficulty == difficulty)
     }
 
     /// Whether this template supports the given difficulty.
@@ -332,28 +347,45 @@ fn difficulty_config(
     loot_variant: u32,
 ) -> DifficultyConfig {
     DifficultyConfig {
-        difficulty, max_players, reset_timer,
+        difficulty,
+        max_players,
+        reset_timer,
         creature_health_multiplier: health_mult,
         creature_damage_multiplier: damage_mult,
         loot_table_variant: loot_variant,
     }
 }
 
-fn placeholder_positions(map_id: u16, parent: u16) -> (WorldPosition, WorldPosition) {
+fn default_instance_positions(map_id: u16, parent_map_id: u16) -> (WorldPosition, WorldPosition) {
     (
-        WorldPosition { map_id, x: 0.0, y: 0.0, z: 0.0 },
-        WorldPosition { map_id: parent, x: 0.0, y: 0.0, z: 0.0 },
+        WorldPosition {
+            map_id,
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+        },
+        WorldPosition {
+            map_id: parent_map_id,
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+        },
     )
 }
 
 /// Helper to build a standard 5-player dungeon template.
 ///
-/// Uses placeholder entrance/exit positions — real data comes from world DB.
+/// Uses deterministic default entrance/exit positions until world DB overrides are wired in.
 pub fn dungeon_template(map_id: u16, name: &str, parent_map_id: u16) -> InstanceTemplate {
-    let (entrance_pos, exit_pos) = placeholder_positions(map_id, parent_map_id);
+    let (entrance_pos, exit_pos) = default_instance_positions(map_id, parent_map_id);
     InstanceTemplate {
-        map_id, name: name.to_string(), instance_type: InstanceType::Dungeon,
-        parent_map_id, allow_mount: false, entrance_pos, exit_pos,
+        map_id,
+        name: name.to_string(),
+        instance_type: InstanceType::Dungeon,
+        parent_map_id,
+        allow_mount: false,
+        entrance_pos,
+        exit_pos,
         difficulties: vec![
             difficulty_config(Difficulty::Normal, 5, ResetTimer::None, 1.0, 1.0, 0),
             difficulty_config(Difficulty::Heroic, 5, ResetTimer::Daily, 2.0, 1.5, 1),
@@ -364,12 +396,17 @@ pub fn dungeon_template(map_id: u16, name: &str, parent_map_id: u16) -> Instance
 
 /// Helper to build a standard raid template.
 ///
-/// Uses placeholder entrance/exit positions — real data comes from world DB.
+/// Uses deterministic default entrance/exit positions until world DB overrides are wired in.
 pub fn raid_template(map_id: u16, name: &str, parent_map_id: u16) -> InstanceTemplate {
-    let (entrance_pos, exit_pos) = placeholder_positions(map_id, parent_map_id);
+    let (entrance_pos, exit_pos) = default_instance_positions(map_id, parent_map_id);
     InstanceTemplate {
-        map_id, name: name.to_string(), instance_type: InstanceType::Raid,
-        parent_map_id, allow_mount: false, entrance_pos, exit_pos,
+        map_id,
+        name: name.to_string(),
+        instance_type: InstanceType::Raid,
+        parent_map_id,
+        allow_mount: false,
+        entrance_pos,
+        exit_pos,
         difficulties: vec![
             difficulty_config(Difficulty::Normal, 25, ResetTimer::Weekly, 1.0, 1.0, 0),
             difficulty_config(Difficulty::Heroic, 25, ResetTimer::Weekly, 1.5, 1.3, 1),
@@ -416,7 +453,8 @@ impl Instance {
         if self.players.len() as u32 >= max_players {
             return Err(InstanceError::InstanceFull);
         }
-        if !self.contains_player(player) { // bounded: max_players (5-40)
+        if !self.contains_player(player) {
+            // bounded: max_players (5-40)
             self.players.push(player);
         }
         Ok(())
@@ -507,8 +545,12 @@ impl InstanceManager {
 
         let instance_id = self.allocate_id();
         let instance = Instance {
-            instance_id, map_id, difficulty, group_leader,
-            players: members.to_vec(), spawned_entities: HashSet::new(),
+            instance_id,
+            map_id,
+            difficulty,
+            group_leader,
+            players: members.to_vec(),
+            spawned_entities: HashSet::new(),
             created_at: now,
         };
         self.instances.insert(instance_id, instance);
@@ -580,7 +622,10 @@ impl InstanceManager {
             .map(|(&id, _)| id)
             .collect();
 
-        empty_ids.iter().filter_map(|&id| self.destroy(id)).collect()
+        empty_ids
+            .iter()
+            .filter_map(|&id| self.destroy(id))
+            .collect()
     }
 
     /// Number of active instances.
@@ -637,7 +682,9 @@ impl InstanceManager {
         instance_id: u32,
         requester: u64,
     ) -> Result<Instance, InstanceError> {
-        let inst = self.instances.get(&instance_id)
+        let inst = self
+            .instances
+            .get(&instance_id)
             .ok_or(InstanceError::InstanceNotFound)?;
         if inst.group_leader != requester {
             return Err(InstanceError::NotGroupLeader);
@@ -645,7 +692,8 @@ impl InstanceManager {
         if !inst.is_empty() {
             return Err(InstanceError::PlayersStillInside);
         }
-        self.destroy(instance_id).ok_or(InstanceError::InstanceNotFound)
+        self.destroy(instance_id)
+            .ok_or(InstanceError::InstanceNotFound)
     }
 
     /// Destroy all instances whose scheduled reset timer has expired.
@@ -664,7 +712,10 @@ impl InstanceManager {
             .map(|(&id, _)| id)
             .collect();
 
-        expired_ids.iter().filter_map(|&id| self.destroy(id)).collect()
+        expired_ids
+            .iter()
+            .filter_map(|&id| self.destroy(id))
+            .collect()
     }
 }
 
@@ -688,7 +739,9 @@ pub struct InstanceRateLimiter {
 
 impl InstanceRateLimiter {
     pub fn new() -> Self {
-        Self { entries: HashMap::new() }
+        Self {
+            entries: HashMap::new(),
+        }
     }
 
     /// Check if an account can enter a new instance.
