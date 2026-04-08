@@ -701,23 +701,7 @@ fn search_auctions(
     let needle = query.text.to_ascii_lowercase();
     let mut listings: Vec<_> = auctions
         .values()
-        .filter(|auction| {
-            needle.is_empty() || auction.item.name.to_ascii_lowercase().contains(&needle)
-        })
-        .filter(|auction| query.quality.is_none_or(|q| auction.item.quality == q))
-        .filter(|auction| {
-            query
-                .min_level
-                .is_none_or(|min| auction.item.required_level >= min)
-        })
-        .filter(|auction| {
-            query
-                .max_level
-                .is_none_or(|max| auction.item.required_level <= max)
-        })
-        .filter(|auction| {
-            query.faction == 0 || auction.faction == 0 || auction.faction == query.faction
-        })
+        .filter(|auction| matches_search_query(auction, query, &needle))
         .map(to_listing_summary)
         .collect();
 
@@ -727,14 +711,51 @@ fn search_auctions(
     }
 
     let total_results = listings.len() as u32;
-    let page_size = query.page_size.clamp(1, MAX_PAGE_SIZE) as usize;
-    let start = query.page as usize * page_size;
-    let results = listings.into_iter().skip(start).take(page_size).collect();
+    let results = paged_listings(listings, query);
     AuctionSearchResults {
         query: query.clone(),
         total_results,
         results,
     }
+}
+
+fn matches_search_query(auction: &AuctionData, query: &AuctionSearchQuery, needle: &str) -> bool {
+    name_matches(auction, needle)
+        && quality_matches(auction, query)
+        && level_matches(auction, query)
+        && faction_matches(auction, query)
+}
+
+fn name_matches(auction: &AuctionData, needle: &str) -> bool {
+    needle.is_empty() || auction.item.name.to_ascii_lowercase().contains(needle)
+}
+
+fn quality_matches(auction: &AuctionData, query: &AuctionSearchQuery) -> bool {
+    query
+        .quality
+        .is_none_or(|quality| auction.item.quality == quality)
+}
+
+fn level_matches(auction: &AuctionData, query: &AuctionSearchQuery) -> bool {
+    query
+        .min_level
+        .is_none_or(|min_level| auction.item.required_level >= min_level)
+        && query
+            .max_level
+            .is_none_or(|max_level| auction.item.required_level <= max_level)
+}
+
+fn faction_matches(auction: &AuctionData, query: &AuctionSearchQuery) -> bool {
+    query.faction == 0 || auction.faction == 0 || auction.faction == query.faction
+}
+
+fn paged_listings(
+    listings: Vec<AuctionListingSummary>,
+    query: &AuctionSearchQuery,
+) -> Vec<AuctionListingSummary> {
+    let page_size = query.page_size.clamp(1, MAX_PAGE_SIZE) as usize;
+    let start = query.page as usize * page_size;
+    listings.into_iter().skip(start).take(page_size).collect()
 }
 
 fn compare_listing(
