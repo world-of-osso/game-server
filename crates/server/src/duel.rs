@@ -79,45 +79,84 @@ fn process_duel_challenges(
             continue;
         };
         for request in receiver.receive() {
-            let Some(target_entity) = request.target_entity.map(Entity::from_bits) else {
-                send_duel_error(conn_entity, &mut senders, "no duel target selected");
-                continue;
-            };
-            let Ok((_, target, _, _)) = players.get(target_entity) else {
-                send_duel_error(conn_entity, &mut senders, "duel target is not a player");
-                continue;
-            };
-            match state.start_pending(challenger_entity, target_entity) {
-                Ok(()) => {
-                    send_duel_snapshot_to_player(
-                        challenger_entity,
-                        &connections,
-                        &mut senders,
-                        DuelSnapshot {
-                            phase: DuelPhaseSnapshot::PendingOutgoing,
-                            opponent_name: target.name.clone(),
-                            boundary: None,
-                            result: None,
-                        },
-                        Some(format!("duel request sent to {}", target.name)),
-                    );
-                    send_duel_snapshot_to_player(
-                        target_entity,
-                        &connections,
-                        &mut senders,
-                        DuelSnapshot {
-                            phase: DuelPhaseSnapshot::PendingIncoming,
-                            opponent_name: challenger.name.clone(),
-                            boundary: None,
-                            result: None,
-                        },
-                        Some(format!("{} has challenged you to a duel", challenger.name)),
-                    );
-                }
-                Err(error) => send_duel_error(conn_entity, &mut senders, error),
-            }
+            handle_duel_challenge_request(
+                conn_entity,
+                request,
+                challenger_entity,
+                challenger,
+                &players,
+                &connections,
+                &mut state,
+                &mut senders,
+            );
         }
     }
+}
+
+fn handle_duel_challenge_request(
+    conn_entity: Entity,
+    request: InitiateDuel,
+    challenger_entity: Entity,
+    challenger: &Player,
+    players: &PlayerQuery,
+    connections: &ConnectionQuery,
+    state: &mut DuelServerState,
+    senders: &mut Query<&mut MessageSender<DuelStateUpdate>>,
+) {
+    let Some(target_entity) = request.target_entity.map(Entity::from_bits) else {
+        send_duel_error(conn_entity, senders, "no duel target selected");
+        return;
+    };
+    let Ok((_, target, _, _)) = players.get(target_entity) else {
+        send_duel_error(conn_entity, senders, "duel target is not a player");
+        return;
+    };
+    if let Err(error) = state.start_pending(challenger_entity, target_entity) {
+        send_duel_error(conn_entity, senders, error);
+        return;
+    }
+    send_pending_challenge_snapshots(
+        challenger_entity,
+        challenger,
+        target_entity,
+        target,
+        connections,
+        senders,
+    );
+}
+
+fn send_pending_challenge_snapshots(
+    challenger_entity: Entity,
+    challenger: &Player,
+    target_entity: Entity,
+    target: &Player,
+    connections: &ConnectionQuery,
+    senders: &mut Query<&mut MessageSender<DuelStateUpdate>>,
+) {
+    send_duel_snapshot_to_player(
+        challenger_entity,
+        connections,
+        senders,
+        DuelSnapshot {
+            phase: DuelPhaseSnapshot::PendingOutgoing,
+            opponent_name: target.name.clone(),
+            boundary: None,
+            result: None,
+        },
+        Some(format!("duel request sent to {}", target.name)),
+    );
+    send_duel_snapshot_to_player(
+        target_entity,
+        connections,
+        senders,
+        DuelSnapshot {
+            phase: DuelPhaseSnapshot::PendingIncoming,
+            opponent_name: challenger.name.clone(),
+            boundary: None,
+            result: None,
+        },
+        Some(format!("{} has challenged you to a duel", challenger.name)),
+    );
 }
 
 fn process_duel_accepts(
