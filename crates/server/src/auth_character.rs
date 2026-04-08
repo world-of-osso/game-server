@@ -266,6 +266,7 @@ fn handle_select(
         state.achievements,
         state.world_map,
         state.friends,
+        state.ignore_list,
         state.collections,
         crate::currency::PlayerCurrencies(state.currencies),
         state.reputation,
@@ -290,6 +291,7 @@ struct SelectedCharacterState {
     achievements: crate::achievement::PlayerAchievementState,
     world_map: crate::world_map::PlayerWorldMapState,
     friends: crate::friends::PlayerFriendsState,
+    ignore_list: crate::ignore_list::PlayerIgnoreListState,
     collections: crate::collection::PlayerCollectionState,
     currencies: shared::currency::CurrencyWallet,
     reputation: shared::reputation::CharacterReputation,
@@ -306,6 +308,7 @@ fn load_selected_character_state(
         achievements: persistence::load_achievements(&db.db, character_id),
         world_map: persistence::load_world_map(&db.db, character_id),
         friends: persistence::load_friends(&db.db, character_id),
+        ignore_list: persistence::load_ignore_list(&db.db, character_id),
         collections: persistence::load_collections(&db.db, character_id),
         currencies: persistence::load_currencies(&db.db, character_id),
         reputation: persistence::load_reputation(&db.db, character_id, || {
@@ -415,6 +418,7 @@ pub fn spawn_player_entity(
     achievements: crate::achievement::PlayerAchievementState,
     world_map: crate::world_map::PlayerWorldMapState,
     friends: crate::friends::PlayerFriendsState,
+    ignore_list: crate::ignore_list::PlayerIgnoreListState,
     collections: crate::collection::PlayerCollectionState,
     currencies: crate::currency::PlayerCurrencies,
     reputation: shared::reputation::CharacterReputation,
@@ -426,6 +430,7 @@ pub fn spawn_player_entity(
     commands.entity(entity).insert(achievements);
     commands.entity(entity).insert(world_map);
     commands.entity(entity).insert(friends);
+    commands.entity(entity).insert(ignore_list);
     commands.entity(entity).insert(collections.clone());
     commands.entity(entity).insert(currencies);
     commands.entity(entity).insert(reputation);

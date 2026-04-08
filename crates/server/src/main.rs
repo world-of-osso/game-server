@@ -11,6 +11,7 @@ mod creature_ai;
 mod currency;
 mod duel;
 mod friends;
+mod ignore_list;
 mod inspect;
 mod interest;
 mod messaging;
@@ -66,6 +67,7 @@ fn add_game_plugins(app: &mut App) {
         .add_plugins(collection::CollectionPlugin)
         .add_plugins(currency::CurrencyPlugin)
         .add_plugins(friends::FriendsPlugin)
+        .add_plugins(ignore_list::IgnoreListPlugin)
         .add_plugins(profession::ProfessionPlugin)
         .add_plugins(reputation::ReputationPlugin)
         .add_plugins(world_map::WorldMapPlugin)

@@ -33,6 +33,9 @@ const WORLD_MAPS: TableDefinition<u64, &[u8]> = TableDefinition::new("world_maps
 /// Friends table: PlayerId (u64) -> serialized friends state (bytes).
 const FRIENDS: TableDefinition<u64, &[u8]> = TableDefinition::new("friends");
 
+/// Ignore list table: PlayerId (u64) -> serialized ignore state (bytes).
+const IGNORE_LISTS: TableDefinition<u64, &[u8]> = TableDefinition::new("ignore_lists");
+
 /// Collection table: PlayerId (u64) -> serialized collection state (bytes).
 const COLLECTIONS: TableDefinition<u64, &[u8]> = TableDefinition::new("collections");
 
@@ -151,6 +154,7 @@ pub(crate) fn create_tables(db: &Database) {
     let _ = txn.open_table(ACHIEVEMENTS);
     let _ = txn.open_table(WORLD_MAPS);
     let _ = txn.open_table(FRIENDS);
+    let _ = txn.open_table(IGNORE_LISTS);
     let _ = txn.open_table(COLLECTIONS);
     let _ = txn.open_table(AUCTIONS);
     let _ = txn.open_table(MAILBOXES);
@@ -402,6 +406,45 @@ pub fn save_friends(db: &Database, character_id: u64, state: &crate::friends::Pl
             .expect("Failed to insert friends");
     }
     txn.commit().expect("Failed to commit friends save");
+}
+
+pub fn load_ignore_list(
+    db: &Database,
+    character_id: u64,
+) -> crate::ignore_list::PlayerIgnoreListState {
+    let txn = db.begin_read().expect("Failed to begin read txn");
+    let table = txn
+        .open_table(IGNORE_LISTS)
+        .expect("Failed to open ignore list table");
+    match table.get(character_id).expect("Failed to read ignore list") {
+        Some(guard) => {
+            serde_json::from_slice::<crate::ignore_list::PlayerIgnoreListState>(guard.value())
+                .expect("decode ignore list")
+        }
+        None => {
+            let state = crate::ignore_list::PlayerIgnoreListState::default();
+            save_ignore_list(db, character_id, &state);
+            state
+        }
+    }
+}
+
+pub fn save_ignore_list(
+    db: &Database,
+    character_id: u64,
+    state: &crate::ignore_list::PlayerIgnoreListState,
+) {
+    let bytes = serde_json::to_vec(state).expect("encode ignore list");
+    let txn = db.begin_write().expect("Failed to begin write txn");
+    {
+        let mut table = txn
+            .open_table(IGNORE_LISTS)
+            .expect("Failed to open ignore list table");
+        table
+            .insert(character_id, bytes.as_slice())
+            .expect("Failed to insert ignore list");
+    }
+    txn.commit().expect("Failed to commit ignore list save");
 }
 
 pub fn load_collections(

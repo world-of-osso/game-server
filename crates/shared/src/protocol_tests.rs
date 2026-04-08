@@ -176,6 +176,21 @@ fn equipment_appearance_round_trips() {
 }
 
 #[test]
+fn ignore_list_state_update_round_trip() {
+    let update = IgnoreListStateUpdate {
+        snapshot: Some(IgnoreListSnapshot {
+            names: vec!["Alice".into(), "Bob".into()],
+        }),
+        message: Some("ignore list updated".into()),
+        error: None,
+    };
+
+    let encoded = serde_json::to_string(&update).unwrap();
+    let decoded: IgnoreListStateUpdate = serde_json::from_str(&encoded).unwrap();
+    assert_eq!(update, decoded);
+}
+
+#[test]
 fn combat_event_type_all_variants_serialize() {
     let variants = vec![
         CombatEventType::MeleeDamage,

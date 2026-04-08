@@ -208,6 +208,11 @@ pub struct FriendsSnapshot {
     pub entries: Vec<FriendCharacterSnapshot>,
 }
 
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct IgnoreListSnapshot {
+    pub names: Vec<String>,
+}
+
 pub fn register_snapshot_messages(app: &mut App) {
     app.register_message::<QuestLogSnapshot>()
         .add_direction(NetworkDirection::ServerToClient);
@@ -232,5 +237,7 @@ pub fn register_snapshot_messages(app: &mut App) {
     app.register_message::<WorldMapSnapshot>()
         .add_direction(NetworkDirection::ServerToClient);
     app.register_message::<FriendsSnapshot>()
+        .add_direction(NetworkDirection::ServerToClient);
+    app.register_message::<IgnoreListSnapshot>()
         .add_direction(NetworkDirection::ServerToClient);
 }
