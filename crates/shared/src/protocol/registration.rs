@@ -42,6 +42,10 @@ fn register_core_messages(app: &mut App) {
         .add_direction(NetworkDirection::ClientToServer);
     app.register_message::<StopSpellCast>()
         .add_direction(NetworkDirection::ClientToServer);
+    app.register_message::<EmoteIntent>()
+        .add_direction(NetworkDirection::ClientToServer);
+    app.register_message::<EmoteEvent>()
+        .add_direction(NetworkDirection::ServerToClient);
     app.register_message::<GroupInviteIntent>()
         .add_direction(NetworkDirection::ClientToServer);
     app.register_message::<GroupUninviteIntent>()

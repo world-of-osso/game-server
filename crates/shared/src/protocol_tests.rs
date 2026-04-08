@@ -10,6 +10,7 @@ fn chat_type_serialization_round_trip() {
         ChatType::Party,
         ChatType::Guild,
         ChatType::Whisper("TargetPlayer".into()),
+        ChatType::Emote,
     ];
     for ct in types {
         let serialized = serde_json::to_string(&ct).unwrap();
@@ -87,6 +88,25 @@ fn chat_history_response_round_trip() {
     assert_eq!(resp.messages[0].sender, decoded.messages[0].sender);
     assert_eq!(resp.messages[1].channel, decoded.messages[1].channel);
     assert_eq!(resp.error, decoded.error);
+}
+
+#[test]
+fn emote_messages_round_trip() {
+    let intent = EmoteIntent {
+        emote: EmoteKind::Dance,
+    };
+    let encoded = serde_json::to_string(&intent).unwrap();
+    let decoded: EmoteIntent = serde_json::from_str(&encoded).unwrap();
+    assert_eq!(intent, decoded);
+
+    let event = EmoteEvent {
+        player_entity: 77,
+        sender: "Alice".into(),
+        emote: EmoteKind::Wave,
+    };
+    let encoded = serde_json::to_string(&event).unwrap();
+    let decoded: EmoteEvent = serde_json::from_str(&encoded).unwrap();
+    assert_eq!(event, decoded);
 }
 
 fn sample_auction_query() -> AuctionSearchQuery {

@@ -2,8 +2,9 @@ use bevy::prelude::*;
 use lightyear::prelude::*;
 use shared::components::GuildMembership;
 use shared::protocol::{
-    AuthChannel, ChatChannel, ChatMessage, ChatType, GuildAcceptInviteRequest,
-    GuildAcceptInviteResponse, GuildInviteRequest, GuildInviteResponse, SetTarget,
+    AuthChannel, ChatChannel, ChatMessage, ChatType, EmoteEvent, EmoteIntent, EmoteKind,
+    GuildAcceptInviteRequest, GuildAcceptInviteResponse, GuildInviteRequest, GuildInviteResponse,
+    SetTarget,
 };
 
 use crate::ignore_list::PlayerIgnoreListState;
@@ -12,20 +13,36 @@ use crate::persistence::{self, ClientId, GameDatabase};
 
 pub fn process_chat_messages(
     mut receivers: Query<(&mut MessageReceiver<ChatMessage>, &PlayerLink)>,
+    mut emote_receivers: Query<(&mut MessageReceiver<EmoteIntent>, &PlayerLink)>,
     players: Query<&shared::components::Player>,
     guilds: Query<Option<&GuildMembership>>,
     ignore_lists: Query<Option<&PlayerIgnoreListState>>,
-    mut conns: Query<(&PlayerLink, &mut MessageSender<ChatMessage>)>,
+    mut chat_senders: Query<(&PlayerLink, &mut MessageSender<ChatMessage>)>,
+    mut emote_senders: Query<(&PlayerLink, &mut MessageSender<EmoteEvent>)>,
     mut history: ResMut<ChatHistoryBuffer>,
 ) {
     let collected = collect_chat_messages(&mut receivers, &players, &guilds);
+    let (collected, mut collected_emotes) = split_chat_emotes(collected);
+    collected_emotes.extend(collect_emote_messages(&mut emote_receivers, &players));
     for chat in &collected {
         history.entries.push_back(chat.msg.clone());
         if history.entries.len() > 100 {
             history.entries.pop_front();
         }
     }
-    route_chat_messages(&collected, &mut conns, &guilds, &ignore_lists);
+    for emote in &collected_emotes {
+        history.entries.push_back(emote.chat.clone());
+        if history.entries.len() > 100 {
+            history.entries.pop_front();
+        }
+    }
+    route_chat_messages(&collected, &mut chat_senders, &guilds, &ignore_lists);
+    route_emote_messages(
+        &collected_emotes,
+        &mut chat_senders,
+        &mut emote_senders,
+        &ignore_lists,
+    );
 }
 
 pub fn process_chat_history_requests(
@@ -60,7 +77,13 @@ pub fn process_chat_history_requests(
 
 struct CollectedChat {
     msg: ChatMessage,
+    sender_entity: Entity,
     sender_guild_id: Option<u32>,
+}
+
+struct CollectedEmote {
+    chat: ChatMessage,
+    event: EmoteEvent,
 }
 
 fn collect_chat_messages(
@@ -84,7 +107,53 @@ fn collect_chat_messages(
             info!("[Chat] {}: {}", msg.sender, msg.content);
             outgoing.push(CollectedChat {
                 msg,
+                sender_entity: link.0,
                 sender_guild_id,
+            });
+        }
+    }
+    outgoing
+}
+
+fn split_chat_emotes(collected: Vec<CollectedChat>) -> (Vec<CollectedChat>, Vec<CollectedEmote>) {
+    let mut chat_messages = Vec::new();
+    let mut emotes = Vec::new();
+    for chat in collected {
+        let Some(emote) = chat_message_emote(&chat.msg) else {
+            chat_messages.push(chat);
+            continue;
+        };
+        emotes.push(CollectedEmote {
+            chat: emote_chat_message(&chat.msg.sender, emote),
+            event: EmoteEvent {
+                player_entity: chat.sender_entity.to_bits(),
+                sender: chat.msg.sender,
+                emote,
+            },
+        });
+    }
+    (chat_messages, emotes)
+}
+
+fn collect_emote_messages(
+    receivers: &mut Query<(&mut MessageReceiver<EmoteIntent>, &PlayerLink)>,
+    players: &Query<&shared::components::Player>,
+) -> Vec<CollectedEmote> {
+    let mut outgoing = Vec::new();
+    for (mut receiver, link) in receivers.iter_mut() {
+        let sender_name = players
+            .get(link.0)
+            .map(|p| p.name.clone())
+            .unwrap_or_else(|_| "Unknown".into());
+        for intent in receiver.receive() {
+            info!("[Emote] {} {:?}", sender_name, intent.emote);
+            outgoing.push(CollectedEmote {
+                chat: emote_chat_message(&sender_name, intent.emote),
+                event: EmoteEvent {
+                    player_entity: link.0.to_bits(),
+                    sender: sender_name.clone(),
+                    emote: intent.emote,
+                },
             });
         }
     }
@@ -103,6 +172,28 @@ fn route_chat_messages(
                 send_to_guild(&chat.msg, chat.sender_guild_id, conns, guilds, ignore_lists)
             }
             _ => broadcast_to_all(&chat.msg, &mut *conns, ignore_lists),
+        }
+    }
+}
+
+fn route_emote_messages(
+    outgoing: &[CollectedEmote],
+    chat_senders: &mut Query<(&PlayerLink, &mut MessageSender<ChatMessage>)>,
+    emote_senders: &mut Query<(&PlayerLink, &mut MessageSender<EmoteEvent>)>,
+    ignore_lists: &Query<Option<&PlayerIgnoreListState>>,
+) {
+    for emote in outgoing {
+        for (link, mut chat_sender) in chat_senders.iter_mut() {
+            if !recipient_accepts_message(link.0, &emote.event.sender, ignore_lists) {
+                continue;
+            }
+            chat_sender.send::<ChatChannel>(emote.chat.clone());
+        }
+        for (link, mut emote_sender) in emote_senders.iter_mut() {
+            if !recipient_accepts_message(link.0, &emote.event.sender, ignore_lists) {
+                continue;
+            }
+            emote_sender.send::<ChatChannel>(emote.event.clone());
         }
     }
 }
@@ -188,6 +279,32 @@ fn sender_is_ignored(sender_name: &str, ignored_names: Option<&[String]>) -> boo
         .any(|ignored| ignored.eq_ignore_ascii_case(sender_name))
 }
 
+fn emote_chat_message(sender: &str, emote: EmoteKind) -> ChatMessage {
+    ChatMessage {
+        sender: sender.into(),
+        content: emote_chat_text(emote).into(),
+        channel: ChatType::Emote,
+    }
+}
+
+fn emote_chat_text(emote: EmoteKind) -> &'static str {
+    match emote {
+        EmoteKind::Dance => "dances.",
+        EmoteKind::Wave => "waves.",
+    }
+}
+
+fn chat_message_emote(msg: &ChatMessage) -> Option<EmoteKind> {
+    if !matches!(msg.channel, ChatType::Say) {
+        return None;
+    }
+    match msg.content.trim().to_ascii_lowercase().as_str() {
+        "/dance" => Some(EmoteKind::Dance),
+        "/wave" => Some(EmoteKind::Wave),
+        _ => None,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -225,6 +342,30 @@ mod tests {
         assert_eq!(filtered.len(), 1);
         assert_eq!(filtered[0].sender, "Bob");
         assert_eq!(filtered[0].content, "second");
+    }
+
+    #[test]
+    fn emote_chat_message_uses_social_text() {
+        let dance = emote_chat_message("Alice", EmoteKind::Dance);
+        assert_eq!(dance.sender, "Alice");
+        assert_eq!(dance.channel, ChatType::Emote);
+        assert_eq!(dance.content, "dances.");
+
+        let wave = emote_chat_message("Bob", EmoteKind::Wave);
+        assert_eq!(wave.content, "waves.");
+    }
+
+    #[test]
+    fn chat_message_emote_parses_supported_slash_commands() {
+        assert_eq!(
+            chat_message_emote(&say_message("Alice", "/dance")),
+            Some(EmoteKind::Dance)
+        );
+        assert_eq!(
+            chat_message_emote(&say_message("Alice", " /wave ")),
+            Some(EmoteKind::Wave)
+        );
+        assert_eq!(chat_message_emote(&say_message("Alice", "hello")), None);
     }
 }
 

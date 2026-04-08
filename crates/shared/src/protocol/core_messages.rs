@@ -2,6 +2,13 @@ use serde::{Deserialize, Serialize};
 
 use crate::components::{CharacterAppearance, EquipmentAppearance};
 
+/// Social emote animation kind.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+pub enum EmoteKind {
+    Dance,
+    Wave,
+}
+
 /// Chat message type.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub enum ChatType {
@@ -10,6 +17,7 @@ pub enum ChatType {
     Party,
     Guild,
     Whisper(String),
+    Emote,
     /// Server system message (MOTD, announcements).
     System,
     /// Periodic server broadcast (autobroadcast).
@@ -84,6 +92,20 @@ pub struct GroupInviteIntent {
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct GroupUninviteIntent {
     pub name: String,
+}
+
+/// Client requests a social emote animation and chat broadcast.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct EmoteIntent {
+    pub emote: EmoteKind,
+}
+
+/// Server broadcasts a social emote animation for a player entity.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct EmoteEvent {
+    pub player_entity: u64,
+    pub sender: String,
+    pub emote: EmoteKind,
 }
 
 /// Server tells clients which terrain map and initial tile to load.
