@@ -23,6 +23,7 @@ pub(super) fn register_messages(app: &mut App) {
     register_lfg_messages(app);
     register_pvp_messages(app);
     register_barber_shop_messages(app);
+    register_death_messages(app);
     register_collection_messages(app);
     register_currency_messages(app);
     crate::protocol_snapshots::register_snapshot_messages(app);
@@ -276,6 +277,19 @@ fn register_barber_shop_messages(app: &mut App) {
         .add_direction(NetworkDirection::ServerToClient);
 }
 
+fn register_death_messages(app: &mut App) {
+    app.register_message::<QueryDeathStatus>()
+        .add_direction(NetworkDirection::ClientToServer);
+    app.register_message::<ReleaseSpirit>()
+        .add_direction(NetworkDirection::ClientToServer);
+    app.register_message::<ResurrectAtCorpse>()
+        .add_direction(NetworkDirection::ClientToServer);
+    app.register_message::<AcceptSpiritHealerResurrection>()
+        .add_direction(NetworkDirection::ClientToServer);
+    app.register_message::<DeathStateUpdate>()
+        .add_direction(NetworkDirection::ServerToClient);
+}
+
 fn register_collection_messages(app: &mut App) {
     app.register_message::<SummonMount>()
         .add_direction(NetworkDirection::ClientToServer);
@@ -339,6 +353,7 @@ fn register_bidirectional_channels(app: &mut App) {
     add_reliable_channel::<LfgChannel>(app, NetworkDirection::Bidirectional);
     add_reliable_channel::<PvpChannel>(app, NetworkDirection::Bidirectional);
     add_reliable_channel::<BarberShopChannel>(app, NetworkDirection::Bidirectional);
+    add_reliable_channel::<DeathChannel>(app, NetworkDirection::Bidirectional);
     add_reliable_channel::<CollectionChannel>(app, NetworkDirection::Bidirectional);
     add_reliable_channel::<CurrencyChannel>(app, NetworkDirection::Bidirectional);
 }

@@ -498,6 +498,25 @@ pub struct BarberShopStateUpdate {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct QueryDeathStatus;
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct ReleaseSpirit;
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct ResurrectAtCorpse;
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct AcceptSpiritHealerResurrection;
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct DeathStateUpdate {
+    pub snapshot: Option<DeathSnapshot>,
+    pub message: Option<String>,
+    pub error: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct SummonMount {
     pub mount_id: u32,
 }

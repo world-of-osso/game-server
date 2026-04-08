@@ -228,6 +228,35 @@ fn lfg_state_update_round_trip() {
 }
 
 #[test]
+fn death_state_update_round_trip() {
+    let update = DeathStateUpdate {
+        snapshot: Some(DeathSnapshot {
+            state: DeathStateSnapshot::Ghost,
+            corpse: Some(DeathPositionSnapshot {
+                map_id: 0,
+                x: 1.0,
+                y: 2.0,
+                z: 3.0,
+            }),
+            graveyard: Some(DeathPositionSnapshot {
+                map_id: 0,
+                x: 4.0,
+                y: 5.0,
+                z: 6.0,
+            }),
+            can_resurrect_at_corpse: true,
+            spirit_healer_available: false,
+        }),
+        message: Some("released spirit".into()),
+        error: None,
+    };
+
+    let encoded = serde_json::to_string(&update).unwrap();
+    let decoded: DeathStateUpdate = serde_json::from_str(&encoded).unwrap();
+    assert_eq!(update, decoded);
+}
+
+#[test]
 fn pvp_state_update_round_trip() {
     let update = PvpStateUpdate {
         snapshot: Some(PvpSnapshot {

@@ -295,6 +295,31 @@ pub struct BarberShopSnapshot {
     pub gold: u32,
 }
 
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub enum DeathStateSnapshot {
+    Alive,
+    Dead,
+    Ghost,
+    Resurrecting,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct DeathPositionSnapshot {
+    pub map_id: u16,
+    pub x: f32,
+    pub y: f32,
+    pub z: f32,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct DeathSnapshot {
+    pub state: DeathStateSnapshot,
+    pub corpse: Option<DeathPositionSnapshot>,
+    pub graveyard: Option<DeathPositionSnapshot>,
+    pub can_resurrect_at_corpse: bool,
+    pub spirit_healer_available: bool,
+}
+
 pub fn register_snapshot_messages(app: &mut App) {
     register_server_snapshot::<QuestLogSnapshot>(app);
     register_server_snapshot::<GroupRosterSnapshot>(app);
@@ -312,6 +337,7 @@ pub fn register_snapshot_messages(app: &mut App) {
     register_server_snapshot::<LfgSnapshot>(app);
     register_server_snapshot::<PvpSnapshot>(app);
     register_server_snapshot::<BarberShopSnapshot>(app);
+    register_server_snapshot::<DeathSnapshot>(app);
 }
 
 fn register_server_snapshot<M>(app: &mut App)

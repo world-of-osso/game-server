@@ -63,3 +63,6 @@ pub struct InspectChannel;
 
 /// Reliable ordered channel for duel operations, bidirectional.
 pub struct DuelChannel;
+
+/// Reliable ordered channel for death and respawn operations, bidirectional.
+pub struct DeathChannel;
