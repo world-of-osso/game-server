@@ -222,12 +222,7 @@ fn process_resurrect_at_corpse_requests(
                 );
                 continue;
             };
-            match resurrect_player_at_corpse(
-                &mut position,
-                &mut health,
-                mana,
-                &mut death_state,
-            ) {
+            match resurrect_player_at_corpse(&mut position, &mut health, mana, &mut death_state) {
                 Ok(message) => {
                     let name = player.map(|p| p.name.as_str()).unwrap_or("player");
                     send_update(
