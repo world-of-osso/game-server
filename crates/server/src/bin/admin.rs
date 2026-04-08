@@ -2,7 +2,7 @@ use peercred_ipc::Client;
 use serde::{Deserialize, Serialize};
 use shared::components::CharacterAppearance;
 
-#[path = "admin/admin_output.rs"]
+#[path = "../admin_output.rs"]
 mod admin_output;
 
 use admin_output::print_response;
