@@ -141,6 +141,18 @@ pub struct ProfessionRecipeSnapshot {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct CurrencySnapshot {
+    pub entries: Vec<CurrencyEntrySnapshot>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct CurrencyEntrySnapshot {
+    pub id: u32,
+    pub name: String,
+    pub amount: u64,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct ReputationSnapshot {
     pub entries: Vec<ReputationEntrySnapshot>,
 }
@@ -165,6 +177,8 @@ pub fn register_snapshot_messages(app: &mut App) {
     app.register_message::<CollectionSnapshot>()
         .add_direction(NetworkDirection::ServerToClient);
     app.register_message::<ProfessionSnapshot>()
+        .add_direction(NetworkDirection::ServerToClient);
+    app.register_message::<CurrencySnapshot>()
         .add_direction(NetworkDirection::ServerToClient);
     app.register_message::<ReputationSnapshot>()
         .add_direction(NetworkDirection::ServerToClient);

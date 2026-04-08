@@ -23,13 +23,55 @@ pub struct CurrencyDef {
 
 /// All known currency definitions.
 pub const ALL_CURRENCIES: &[CurrencyDef] = &[
-    CurrencyDef { id: 1, name: "Honor",              cap: 15_000, weekly_cap:     0, account_wide: false },
-    CurrencyDef { id: 2, name: "Conquest",           cap:      0, weekly_cap:   550, account_wide: false },
-    CurrencyDef { id: 3, name: "Justice Points",     cap:  4_000, weekly_cap:     0, account_wide: false },
-    CurrencyDef { id: 4, name: "Valor Points",       cap:  4_000, weekly_cap: 1_000, account_wide: false },
-    CurrencyDef { id: 5, name: "Champion's Seal",    cap:      0, weekly_cap:     0, account_wide: false },
-    CurrencyDef { id: 6, name: "Epicurean's Award",  cap:      0, weekly_cap:     0, account_wide: false },
-    CurrencyDef { id: 7, name: "Timewarped Badge",   cap:      0, weekly_cap:     0, account_wide: true  },
+    CurrencyDef {
+        id: 1,
+        name: "Honor",
+        cap: 15_000,
+        weekly_cap: 0,
+        account_wide: false,
+    },
+    CurrencyDef {
+        id: 2,
+        name: "Conquest",
+        cap: 0,
+        weekly_cap: 550,
+        account_wide: false,
+    },
+    CurrencyDef {
+        id: 3,
+        name: "Justice Points",
+        cap: 4_000,
+        weekly_cap: 0,
+        account_wide: false,
+    },
+    CurrencyDef {
+        id: 4,
+        name: "Valor Points",
+        cap: 4_000,
+        weekly_cap: 1_000,
+        account_wide: false,
+    },
+    CurrencyDef {
+        id: 5,
+        name: "Champion's Seal",
+        cap: 0,
+        weekly_cap: 0,
+        account_wide: false,
+    },
+    CurrencyDef {
+        id: 6,
+        name: "Epicurean's Award",
+        cap: 0,
+        weekly_cap: 0,
+        account_wide: false,
+    },
+    CurrencyDef {
+        id: 7,
+        name: "Timewarped Badge",
+        cap: 0,
+        weekly_cap: 0,
+        account_wide: true,
+    },
 ];
 
 /// Look up a currency definition by ID.
@@ -68,12 +110,18 @@ pub struct CurrencyWallet {
 impl CurrencyWallet {
     /// Current amount of a currency (0 if not present).
     pub fn get(&self, id: u32) -> u32 {
-        self.entries.iter().find(|e| e.id == id).map_or(0, |e| e.amount)
+        self.entries
+            .iter()
+            .find(|e| e.id == id)
+            .map_or(0, |e| e.amount)
     }
 
     /// Amount earned this week for a currency (0 if not present).
     pub fn week_earned(&self, id: u32) -> u32 {
-        self.entries.iter().find(|e| e.id == id).map_or(0, |e| e.week_earned)
+        self.entries
+            .iter()
+            .find(|e| e.id == id)
+            .map_or(0, |e| e.week_earned)
     }
 
     /// Add currency, respecting cap and weekly cap.
@@ -137,7 +185,11 @@ impl CurrencyWallet {
         if let Some(pos) = self.entries.iter().position(|e| e.id == id) {
             return &mut self.entries[pos];
         }
-        self.entries.push(CurrencyEntry { id, amount: 0, week_earned: 0 });
+        self.entries.push(CurrencyEntry {
+            id,
+            amount: 0,
+            week_earned: 0,
+        });
         self.entries.last_mut().unwrap()
     }
 }
@@ -146,11 +198,21 @@ impl CurrencyWallet {
 mod tests {
     use super::*;
 
-    fn honor() -> &'static CurrencyDef { currency_by_id(1).unwrap() }
-    fn conquest() -> &'static CurrencyDef { currency_by_id(2).unwrap() }
-    fn justice() -> &'static CurrencyDef { currency_by_id(3).unwrap() }
-    fn valor() -> &'static CurrencyDef { currency_by_id(4).unwrap() }
-    fn champion_seal() -> &'static CurrencyDef { currency_by_id(5).unwrap() }
+    fn honor() -> &'static CurrencyDef {
+        currency_by_id(1).unwrap()
+    }
+    fn conquest() -> &'static CurrencyDef {
+        currency_by_id(2).unwrap()
+    }
+    fn justice() -> &'static CurrencyDef {
+        currency_by_id(3).unwrap()
+    }
+    fn valor() -> &'static CurrencyDef {
+        currency_by_id(4).unwrap()
+    }
+    fn champion_seal() -> &'static CurrencyDef {
+        currency_by_id(5).unwrap()
+    }
 
     #[test]
     fn get_unknown_returns_zero() {
@@ -345,7 +407,10 @@ mod tests {
         assert!(def.account_wide);
         // All others should not be account-wide.
         for id in 1..=6 {
-            assert!(!currency_by_id(id).unwrap().account_wide, "id {id} should not be account_wide");
+            assert!(
+                !currency_by_id(id).unwrap().account_wide,
+                "id {id} should not be account_wide"
+            );
         }
     }
 

@@ -5438,6 +5438,7 @@ dependencies = [
  "redb",
  "rusqlite",
  "serde",
+ "serde_json",
  "shared",
  "tempfile",
  "tokio",

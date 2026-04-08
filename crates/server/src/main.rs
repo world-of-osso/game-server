@@ -6,6 +6,7 @@ mod auth;
 mod auth_character;
 mod combat;
 mod creature_ai;
+mod currency;
 mod duel;
 mod inspect;
 mod interest;
@@ -57,6 +58,7 @@ fn add_game_plugins(app: &mut App) {
     app.add_plugins(shared::ProtocolPlugin)
         .add_plugins(persistence::PersistencePlugin)
         .add_plugins(auction_house::AuctionHousePlugin)
+        .add_plugins(currency::CurrencyPlugin)
         .add_plugins(profession::ProfessionPlugin)
         .add_plugins(reputation::ReputationPlugin)
         .add_plugins(duel::DuelPlugin)

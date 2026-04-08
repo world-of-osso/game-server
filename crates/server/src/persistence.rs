@@ -21,6 +21,9 @@ const PROFESSIONS: TableDefinition<u64, &[u8]> = TableDefinition::new("professio
 /// Reputation table: PlayerId (u64) -> serialized reputation state (bytes).
 const REPUTATIONS: TableDefinition<u64, &[u8]> = TableDefinition::new("reputations");
 
+/// Currency table: PlayerId (u64) -> serialized currency wallet (bytes).
+const CURRENCIES: TableDefinition<u64, &[u8]> = TableDefinition::new("currencies");
+
 /// Active auction table: auction_id (u64) -> serialized auction data (bytes).
 const AUCTIONS: TableDefinition<u64, &[u8]> = TableDefinition::new("auctions");
 
@@ -132,6 +135,7 @@ pub(crate) fn create_tables(db: &Database) {
     let _ = txn.open_table(INVENTORIES);
     let _ = txn.open_table(PROFESSIONS);
     let _ = txn.open_table(REPUTATIONS);
+    let _ = txn.open_table(CURRENCIES);
     let _ = txn.open_table(AUCTIONS);
     let _ = txn.open_table(MAILBOXES);
     let _ = txn.open_table(ACCOUNTS);
@@ -240,6 +244,40 @@ pub fn save_reputation(db: &Database, character_id: u64, reputation: &CharacterR
             .expect("Failed to insert reputation");
     }
     txn.commit().expect("Failed to commit reputation save");
+}
+
+pub fn load_currencies(db: &Database, character_id: u64) -> shared::currency::CurrencyWallet {
+    let txn = db.begin_read().expect("Failed to begin read txn");
+    let table = txn
+        .open_table(CURRENCIES)
+        .expect("Failed to open currencies table");
+    match table.get(character_id).expect("Failed to read currencies") {
+        Some(guard) => serde_json::from_slice::<shared::currency::CurrencyWallet>(guard.value())
+            .expect("decode currencies"),
+        None => {
+            let wallet = shared::currency::CurrencyWallet::default();
+            save_currencies(db, character_id, &wallet);
+            wallet
+        }
+    }
+}
+
+pub fn save_currencies(
+    db: &Database,
+    character_id: u64,
+    wallet: &shared::currency::CurrencyWallet,
+) {
+    let bytes = serde_json::to_vec(wallet).expect("encode currencies");
+    let txn = db.begin_write().expect("Failed to begin write txn");
+    {
+        let mut table = txn
+            .open_table(CURRENCIES)
+            .expect("Failed to open currencies table");
+        table
+            .insert(character_id, bytes.as_slice())
+            .expect("Failed to insert currencies");
+    }
+    txn.commit().expect("Failed to commit currencies save");
 }
 
 fn default_professions() -> PlayerProfessions {

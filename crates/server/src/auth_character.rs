@@ -30,7 +30,7 @@ pub fn process_create_character(
     mut senders: Query<&mut MessageSender<CreateCharacterResponse>>,
 ) {
     let Some(db) = db.as_ref() else { return };
-    let requests: Vec<_> = collect_create_requests(&mut receivers);
+    let requests = collect_create_requests(&mut receivers);
     for (entity, account_id, req) in requests {
         handle_create(entity, account_id, &req, db, &mut senders);
     }
@@ -43,13 +43,7 @@ pub(crate) fn collect_create_requests(
         &mut MessageReceiver<CreateCharacter>,
     )>,
 ) -> Vec<(Entity, u64, CreateCharacter)> {
-    let mut out = Vec::new();
-    for (entity, auth, mut receiver) in receivers.iter_mut() {
-        for req in receiver.receive() {
-            out.push((entity, auth.account_id, req));
-        }
-    }
-    out
+    collect_account_requests(receivers)
 }
 
 fn handle_create(
@@ -107,7 +101,7 @@ pub fn process_delete_character(
     mut senders: Query<&mut MessageSender<DeleteCharacterResponse>>,
 ) {
     let Some(db) = db.as_ref() else { return };
-    let requests: Vec<_> = collect_delete_requests(&mut receivers);
+    let requests = collect_delete_requests(&mut receivers);
     for (entity, account_id, req) in requests {
         handle_delete(entity, account_id, &req, db, &mut senders);
     }
@@ -120,6 +114,12 @@ pub(crate) fn collect_delete_requests(
         &mut MessageReceiver<DeleteCharacter>,
     )>,
 ) -> Vec<(Entity, u64, DeleteCharacter)> {
+    collect_account_requests(receivers)
+}
+
+fn collect_account_requests<M: lightyear::prelude::Message>(
+    receivers: &mut Query<(Entity, &Authenticated, &mut MessageReceiver<M>)>,
+) -> Vec<(Entity, u64, M)> {
     let mut out = Vec::new();
     for (entity, auth, mut receiver) in receivers.iter_mut() {
         for req in receiver.receive() {
@@ -258,6 +258,7 @@ fn handle_select(
     };
     let guild = persistence::load_character_guild(&db.db, req.character_id);
     let professions = persistence::load_professions(&db.db, req.character_id);
+    let currencies = persistence::load_currencies(&db.db, req.character_id);
     let reputation = persistence::load_reputation(&db.db, req.character_id, || {
         shared::reputation::CharacterReputation::new_for_race(
             &default_faction_registry(),
@@ -270,6 +271,7 @@ fn handle_select(
         req.character_id,
         guild.as_ref(),
         professions,
+        crate::currency::PlayerCurrencies(currencies),
         reputation,
     );
     insert_world_components(commands, conn, player_entity, req.character_id);
@@ -384,12 +386,14 @@ pub fn spawn_player_entity(
     character_id: u64,
     guild: Option<&GuildMembership>,
     professions: PlayerProfessions,
+    currencies: crate::currency::PlayerCurrencies,
     reputation: shared::reputation::CharacterReputation,
 ) -> Entity {
     let entity = commands
         .spawn(build_player_components(data, character_id))
         .id();
     commands.entity(entity).insert(professions);
+    commands.entity(entity).insert(currencies);
     commands.entity(entity).insert(reputation);
     if shared::formulas::base_mana(data.class, data.level as u8).is_some() {
         commands.entity(entity).insert(Mana {
