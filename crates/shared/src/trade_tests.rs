@@ -34,7 +34,9 @@ fn range_boundary() {
 #[test]
 fn initiate_trade_success() {
     let mut mgr = TradeManager::new();
-    let id = mgr.initiate_trade(100, 200, NEARBY, ALSO_NEARBY, 1000).unwrap();
+    let id = mgr
+        .initiate_trade(100, 200, NEARBY, ALSO_NEARBY, 1000)
+        .unwrap();
 
     assert_eq!(id, 1);
     assert!(mgr.is_trading(100));
@@ -68,7 +70,8 @@ fn cannot_trade_out_of_range() {
 #[test]
 fn cannot_trade_when_already_trading() {
     let mut mgr = TradeManager::new();
-    mgr.initiate_trade(100, 200, NEARBY, ALSO_NEARBY, 1000).unwrap();
+    mgr.initiate_trade(100, 200, NEARBY, ALSO_NEARBY, 1000)
+        .unwrap();
 
     // Initiator already in a trade
     assert_eq!(
@@ -87,7 +90,9 @@ fn cannot_trade_when_already_trading() {
 #[test]
 fn accept_trade_opens_window() {
     let mut mgr = TradeManager::new();
-    let id = mgr.initiate_trade(100, 200, NEARBY, ALSO_NEARBY, 1000).unwrap();
+    let id = mgr
+        .initiate_trade(100, 200, NEARBY, ALSO_NEARBY, 1000)
+        .unwrap();
 
     let accepted_id = mgr.accept_trade(200).unwrap();
     assert_eq!(accepted_id, id);
@@ -99,7 +104,8 @@ fn accept_trade_opens_window() {
 #[test]
 fn only_target_can_accept() {
     let mut mgr = TradeManager::new();
-    mgr.initiate_trade(100, 200, NEARBY, ALSO_NEARBY, 1000).unwrap();
+    mgr.initiate_trade(100, 200, NEARBY, ALSO_NEARBY, 1000)
+        .unwrap();
 
     // Initiator cannot accept their own request
     assert_eq!(mgr.accept_trade(100), Err(TradeError::NoPendingRequest));
@@ -114,7 +120,8 @@ fn accept_nonexistent_fails() {
 #[test]
 fn decline_removes_session() {
     let mut mgr = TradeManager::new();
-    mgr.initiate_trade(100, 200, NEARBY, ALSO_NEARBY, 1000).unwrap();
+    mgr.initiate_trade(100, 200, NEARBY, ALSO_NEARBY, 1000)
+        .unwrap();
 
     mgr.decline_trade(200).unwrap();
     assert!(!mgr.is_trading(100));
@@ -133,7 +140,8 @@ fn decline_nonexistent_fails() {
 #[test]
 fn cancel_by_initiator() {
     let mut mgr = TradeManager::new();
-    mgr.initiate_trade(100, 200, NEARBY, ALSO_NEARBY, 1000).unwrap();
+    mgr.initiate_trade(100, 200, NEARBY, ALSO_NEARBY, 1000)
+        .unwrap();
 
     let other = mgr.cancel_trade(100).unwrap();
     assert_eq!(other, 200);
@@ -143,7 +151,8 @@ fn cancel_by_initiator() {
 #[test]
 fn cancel_by_target() {
     let mut mgr = TradeManager::new();
-    mgr.initiate_trade(100, 200, NEARBY, ALSO_NEARBY, 1000).unwrap();
+    mgr.initiate_trade(100, 200, NEARBY, ALSO_NEARBY, 1000)
+        .unwrap();
     mgr.accept_trade(200).unwrap();
 
     let other = mgr.cancel_trade(200).unwrap();
@@ -160,7 +169,8 @@ fn cancel_nonexistent_fails() {
 #[test]
 fn cancel_pending_by_target() {
     let mut mgr = TradeManager::new();
-    mgr.initiate_trade(100, 200, NEARBY, ALSO_NEARBY, 1000).unwrap();
+    mgr.initiate_trade(100, 200, NEARBY, ALSO_NEARBY, 1000)
+        .unwrap();
 
     // Target cancels while still pending (before accepting)
     let other = mgr.cancel_trade(200).unwrap();
@@ -198,9 +208,14 @@ fn cancel_after_one_confirm() {
 #[test]
 fn session_involves_both_players() {
     let session = TradeSession {
-        initiator: 100, target: 200, state: TradeState::Open, created_at: 1000,
-        initiator_offer: TradeOffer::default(), target_offer: TradeOffer::default(),
-        initiator_accepted: false, target_accepted: false,
+        initiator: 100,
+        target: 200,
+        state: TradeState::Open,
+        created_at: 1000,
+        initiator_offer: TradeOffer::default(),
+        target_offer: TradeOffer::default(),
+        initiator_accepted: false,
+        target_accepted: false,
     };
     assert!(session.involves(100));
     assert!(session.involves(200));
@@ -210,9 +225,14 @@ fn session_involves_both_players() {
 #[test]
 fn session_other_player() {
     let session = TradeSession {
-        initiator: 100, target: 200, state: TradeState::Open, created_at: 1000,
-        initiator_offer: TradeOffer::default(), target_offer: TradeOffer::default(),
-        initiator_accepted: false, target_accepted: false,
+        initiator: 100,
+        target: 200,
+        state: TradeState::Open,
+        created_at: 1000,
+        initiator_offer: TradeOffer::default(),
+        target_offer: TradeOffer::default(),
+        initiator_accepted: false,
+        target_accepted: false,
     };
     assert_eq!(session.other_player(100), Some(200));
     assert_eq!(session.other_player(200), Some(100));
@@ -222,7 +242,9 @@ fn session_other_player() {
 #[test]
 fn get_session_id() {
     let mut mgr = TradeManager::new();
-    let id = mgr.initiate_trade(100, 200, NEARBY, ALSO_NEARBY, 1000).unwrap();
+    let id = mgr
+        .initiate_trade(100, 200, NEARBY, ALSO_NEARBY, 1000)
+        .unwrap();
 
     assert_eq!(mgr.get_session_id(100), Some(id));
     assert_eq!(mgr.get_session_id(200), Some(id));
@@ -234,8 +256,10 @@ fn get_session_id() {
 #[test]
 fn cleanup_expired_pending() {
     let mut mgr = TradeManager::new();
-    mgr.initiate_trade(100, 200, NEARBY, ALSO_NEARBY, 1000).unwrap();
-    mgr.initiate_trade(300, 400, NEARBY, ALSO_NEARBY, 2000).unwrap();
+    mgr.initiate_trade(100, 200, NEARBY, ALSO_NEARBY, 1000)
+        .unwrap();
+    mgr.initiate_trade(300, 400, NEARBY, ALSO_NEARBY, 2000)
+        .unwrap();
 
     // 30-second timeout: first request expired, second still valid
     mgr.cleanup_expired(1031, 30);
@@ -248,7 +272,8 @@ fn cleanup_expired_pending() {
 #[test]
 fn cleanup_does_not_remove_open_sessions() {
     let mut mgr = TradeManager::new();
-    mgr.initiate_trade(100, 200, NEARBY, ALSO_NEARBY, 1000).unwrap();
+    mgr.initiate_trade(100, 200, NEARBY, ALSO_NEARBY, 1000)
+        .unwrap();
     mgr.accept_trade(200).unwrap();
 
     // Open session should not be cleaned up even if old
@@ -262,11 +287,13 @@ fn cleanup_does_not_remove_open_sessions() {
 #[test]
 fn can_retrade_after_cancel() {
     let mut mgr = TradeManager::new();
-    mgr.initiate_trade(100, 200, NEARBY, ALSO_NEARBY, 1000).unwrap();
+    mgr.initiate_trade(100, 200, NEARBY, ALSO_NEARBY, 1000)
+        .unwrap();
     mgr.cancel_trade(100).unwrap();
 
     // Both players free to initiate new trades
-    mgr.initiate_trade(100, 300, NEARBY, ALSO_NEARBY, 2000).unwrap();
+    mgr.initiate_trade(100, 300, NEARBY, ALSO_NEARBY, 2000)
+        .unwrap();
     assert!(mgr.is_trading(100));
     assert!(mgr.is_trading(300));
 }
@@ -274,9 +301,13 @@ fn can_retrade_after_cancel() {
 #[test]
 fn sequential_session_ids() {
     let mut mgr = TradeManager::new();
-    let id1 = mgr.initiate_trade(100, 200, NEARBY, ALSO_NEARBY, 1000).unwrap();
+    let id1 = mgr
+        .initiate_trade(100, 200, NEARBY, ALSO_NEARBY, 1000)
+        .unwrap();
     mgr.cancel_trade(100).unwrap();
-    let id2 = mgr.initiate_trade(300, 400, NEARBY, ALSO_NEARBY, 2000).unwrap();
+    let id2 = mgr
+        .initiate_trade(300, 400, NEARBY, ALSO_NEARBY, 2000)
+        .unwrap();
     assert_eq!(id1, 1);
     assert_eq!(id2, 2);
 }
@@ -284,11 +315,17 @@ fn sequential_session_ids() {
 // --- TradeOffer ---
 
 fn sword() -> TradeItem {
-    TradeItem { item_id: 1001, count: 1 }
+    TradeItem {
+        item_guid: 1001,
+        count: 1,
+    }
 }
 
 fn potion() -> TradeItem {
-    TradeItem { item_id: 2001, count: 5 }
+    TradeItem {
+        item_guid: 2001,
+        count: 5,
+    }
 }
 
 #[test]
@@ -338,7 +375,10 @@ fn offer_invalid_slot() {
 fn offer_duplicate_item_rejected() {
     let mut offer = TradeOffer::default();
     offer.set_item(0, sword()).unwrap();
-    assert_eq!(offer.set_item(1, sword()), Err(TradeError::ItemAlreadyOffered));
+    assert_eq!(
+        offer.set_item(1, sword()),
+        Err(TradeError::ItemAlreadyOffered)
+    );
 }
 
 #[test]
@@ -363,7 +403,8 @@ fn offer_gold_only() {
 
 fn open_trade() -> TradeManager {
     let mut mgr = TradeManager::new();
-    mgr.initiate_trade(100, 200, NEARBY, ALSO_NEARBY, 1000).unwrap();
+    mgr.initiate_trade(100, 200, NEARBY, ALSO_NEARBY, 1000)
+        .unwrap();
     mgr.accept_trade(200).unwrap();
     mgr
 }
@@ -410,7 +451,8 @@ fn manager_clear_item() {
 #[test]
 fn manager_set_item_pending_fails() {
     let mut mgr = TradeManager::new();
-    mgr.initiate_trade(100, 200, NEARBY, ALSO_NEARBY, 1000).unwrap();
+    mgr.initiate_trade(100, 200, NEARBY, ALSO_NEARBY, 1000)
+        .unwrap();
     // Trade is still Pending, not Open
     assert_eq!(mgr.set_item(100, 0, sword()), Err(TradeError::TradeNotOpen));
 }
@@ -418,18 +460,27 @@ fn manager_set_item_pending_fails() {
 #[test]
 fn manager_set_item_no_session_fails() {
     let mut mgr = TradeManager::new();
-    assert_eq!(mgr.set_item(100, 0, sword()), Err(TradeError::NoActiveSession));
+    assert_eq!(
+        mgr.set_item(100, 0, sword()),
+        Err(TradeError::NoActiveSession)
+    );
 }
 
 #[test]
 fn both_players_fill_all_slots() {
     let mut mgr = open_trade();
     for slot in 0..TRADE_SLOT_COUNT {
-        let item = TradeItem { item_id: 1000 + slot as u32, count: 1 };
+        let item = TradeItem {
+            item_guid: 1000 + slot as u64,
+            count: 1,
+        };
         mgr.set_item(100, slot, item).unwrap();
     }
     for slot in 0..TRADE_SLOT_COUNT {
-        let item = TradeItem { item_id: 2000 + slot as u32, count: 1 };
+        let item = TradeItem {
+            item_guid: 2000 + slot as u64,
+            count: 1,
+        };
         mgr.set_item(200, slot, item).unwrap();
     }
     let session = mgr.get_session(100).unwrap();
@@ -552,7 +603,8 @@ fn unconfirm_without_accept_fails() {
 #[test]
 fn confirm_pending_trade_fails() {
     let mut mgr = TradeManager::new();
-    mgr.initiate_trade(100, 200, NEARBY, ALSO_NEARBY, 1000).unwrap();
+    mgr.initiate_trade(100, 200, NEARBY, ALSO_NEARBY, 1000)
+        .unwrap();
     assert_eq!(mgr.confirm_trade(100), Err(TradeError::TradeNotOpen));
 }
 

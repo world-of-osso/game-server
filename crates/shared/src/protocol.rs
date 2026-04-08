@@ -31,6 +31,9 @@ pub struct AuthChannel;
 /// Reliable ordered channel for auction house operations, bidirectional.
 pub struct AuctionChannel;
 
+/// Reliable ordered channel for trade operations, bidirectional.
+pub struct TradeChannel;
+
 /// Chat message type.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub enum ChatType {
@@ -457,6 +460,78 @@ pub struct ClaimAuctionMail {
     pub mail_id: u64,
 }
 
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+pub enum TradePhase {
+    PendingOutgoing,
+    PendingIncoming,
+    Open,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct TradeItemSnapshot {
+    pub item_guid: u64,
+    pub item_id: u32,
+    pub name: String,
+    pub quality: u8,
+    pub stack_count: u32,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct TradePartySnapshot {
+    pub name: String,
+    pub accepted: bool,
+    pub gold: u32,
+    pub slots: Vec<Option<TradeItemSnapshot>>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct TradeSnapshot {
+    pub phase: TradePhase,
+    pub player: TradePartySnapshot,
+    pub other: TradePartySnapshot,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct InitiateTrade {
+    pub target_name: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct AcceptTrade;
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct DeclineTrade;
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct CancelTrade;
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct SetTradeItem {
+    pub slot: u8,
+    pub item_guid: u64,
+    pub stack_count: u16,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct ClearTradeItem {
+    pub slot: u8,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct SetTradeMoney {
+    pub copper: u32,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct ConfirmTrade;
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct TradeStateUpdate {
+    pub trade: Option<TradeSnapshot>,
+    pub message: Option<String>,
+    pub error: Option<String>,
+}
+
 /// Registers shared protocol: components for replication and channels.
 /// Must be added AFTER `ServerPlugins`/`ClientPlugins` but BEFORE any entity is spawned.
 pub struct ProtocolPlugin;
@@ -489,6 +564,7 @@ fn register_messages(app: &mut App) {
     register_character_messages(app);
     register_guild_and_chat_messages(app);
     register_auction_messages(app);
+    register_trade_messages(app);
     crate::protocol_snapshots::register_snapshot_messages(app);
 }
 
@@ -607,6 +683,27 @@ fn register_auction_mail_messages(app: &mut App) {
         .add_direction(NetworkDirection::ClientToServer);
 }
 
+fn register_trade_messages(app: &mut App) {
+    app.register_message::<InitiateTrade>()
+        .add_direction(NetworkDirection::ClientToServer);
+    app.register_message::<AcceptTrade>()
+        .add_direction(NetworkDirection::ClientToServer);
+    app.register_message::<DeclineTrade>()
+        .add_direction(NetworkDirection::ClientToServer);
+    app.register_message::<CancelTrade>()
+        .add_direction(NetworkDirection::ClientToServer);
+    app.register_message::<SetTradeItem>()
+        .add_direction(NetworkDirection::ClientToServer);
+    app.register_message::<ClearTradeItem>()
+        .add_direction(NetworkDirection::ClientToServer);
+    app.register_message::<SetTradeMoney>()
+        .add_direction(NetworkDirection::ClientToServer);
+    app.register_message::<ConfirmTrade>()
+        .add_direction(NetworkDirection::ClientToServer);
+    app.register_message::<TradeStateUpdate>()
+        .add_direction(NetworkDirection::ServerToClient);
+}
+
 fn register_channels(app: &mut App) {
     app.add_channel::<MovementChannel>(ChannelSettings {
         mode: ChannelMode::UnorderedUnreliable,
@@ -649,8 +746,13 @@ fn register_channels(app: &mut App) {
         ..default()
     })
     .add_direction(NetworkDirection::Bidirectional);
-}
 
+    app.add_channel::<TradeChannel>(ChannelSettings {
+        mode: ChannelMode::OrderedReliable(default()),
+        ..default()
+    })
+    .add_direction(NetworkDirection::Bidirectional);
+}
 
 #[cfg(test)]
 #[path = "protocol_tests.rs"]

@@ -114,8 +114,8 @@ pub enum TradeState {
 /// An item placed in a trade slot.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TradeItem {
-    /// Item entity or inventory ID.
-    pub item_id: u32,
+    /// Unique inventory item GUID.
+    pub item_guid: u64,
     /// Stack count being offered.
     pub count: u16,
 }
@@ -145,9 +145,11 @@ impl TradeOffer {
         if slot >= TRADE_SLOT_COUNT {
             return Err(TradeError::InvalidSlot);
         }
-        let already_offered = self.slots.iter().enumerate().any(|(i, s)| {
-            i != slot && s.is_some_and(|s| s.item_id == item.item_id)
-        });
+        let already_offered = self
+            .slots
+            .iter()
+            .enumerate()
+            .any(|(i, s)| i != slot && s.is_some_and(|s| s.item_guid == item.item_guid));
         if already_offered {
             return Err(TradeError::ItemAlreadyOffered);
         }
@@ -220,7 +222,10 @@ pub struct TradeLog {
 
 impl TradeLog {
     pub fn new() -> Self {
-        Self { entries: Vec::new(), next_id: 1 }
+        Self {
+            entries: Vec::new(),
+            next_id: 1,
+        }
     }
 
     /// Record a completed trade. Returns the log entry ID.
@@ -272,8 +277,10 @@ impl TradeLog {
     /// Drain entries older than `before` timestamp for archival.
     /// Returns the removed entries so the server can persist them.
     pub fn drain_before(&mut self, before: u64) -> Vec<TradeLogEntry> {
-        let (old, recent): (Vec<_>, Vec<_>) =
-            self.entries.drain(..).partition(|e| e.completed_at < before);
+        let (old, recent): (Vec<_>, Vec<_>) = self
+            .entries
+            .drain(..)
+            .partition(|e| e.completed_at < before);
         self.entries = recent;
         old
     }
@@ -409,23 +416,29 @@ impl TradeManager {
     ) -> Result<u32, TradeError> {
         self.validate_initiation(initiator, target, pos_a, pos_b)?;
         let session_id = self.insert_session(TradeSession {
-            initiator, target, state: TradeState::Pending, created_at: now,
+            initiator,
+            target,
+            state: TradeState::Pending,
+            created_at: now,
             initiator_offer: TradeOffer::default(),
             target_offer: TradeOffer::default(),
-            initiator_accepted: false, target_accepted: false,
+            initiator_accepted: false,
+            target_accepted: false,
         });
         Ok(session_id)
     }
 
     fn validate_initiation(
-        &self, initiator: u64, target: u64,
-        pos_a: (f32, f32, f32), pos_b: (f32, f32, f32),
+        &self,
+        initiator: u64,
+        target: u64,
+        pos_a: (f32, f32, f32),
+        pos_b: (f32, f32, f32),
     ) -> Result<(), TradeError> {
         if initiator == target {
             return Err(TradeError::CannotTradeWithSelf);
         }
-        if self.player_index.contains_key(&initiator)
-            || self.player_index.contains_key(&target) {
+        if self.player_index.contains_key(&initiator) || self.player_index.contains_key(&target) {
             return Err(TradeError::AlreadyTrading);
         }
         if !in_trade_range(pos_a.0, pos_a.1, pos_a.2, pos_b.0, pos_b.1, pos_b.2) {
@@ -445,9 +458,13 @@ impl TradeManager {
 
     /// Accept a pending trade request, opening the trade window.
     pub fn accept_trade(&mut self, target: u64) -> Result<u32, TradeError> {
-        let &session_id = self.player_index.get(&target)
+        let &session_id = self
+            .player_index
+            .get(&target)
             .ok_or(TradeError::NoPendingRequest)?;
-        let session = self.sessions.get_mut(&session_id)
+        let session = self
+            .sessions
+            .get_mut(&session_id)
             .ok_or(TradeError::NoPendingRequest)?;
         if session.target != target || session.state != TradeState::Pending {
             return Err(TradeError::NoPendingRequest);
@@ -458,9 +475,13 @@ impl TradeManager {
 
     /// Decline a pending trade request.
     pub fn decline_trade(&mut self, target: u64) -> Result<(), TradeError> {
-        let &session_id = self.player_index.get(&target)
+        let &session_id = self
+            .player_index
+            .get(&target)
             .ok_or(TradeError::NoPendingRequest)?;
-        let session = self.sessions.get(&session_id)
+        let session = self
+            .sessions
+            .get(&session_id)
             .ok_or(TradeError::NoPendingRequest)?;
         if session.target != target || session.state != TradeState::Pending {
             return Err(TradeError::NoPendingRequest);
@@ -471,11 +492,16 @@ impl TradeManager {
 
     /// Cancel an active or pending trade (either player can cancel).
     pub fn cancel_trade(&mut self, player: u64) -> Result<u64, TradeError> {
-        let &session_id = self.player_index.get(&player)
+        let &session_id = self
+            .player_index
+            .get(&player)
             .ok_or(TradeError::NoActiveSession)?;
-        let session = self.sessions.get(&session_id)
+        let session = self
+            .sessions
+            .get(&session_id)
             .ok_or(TradeError::NoActiveSession)?;
-        let other = session.other_player(player)
+        let other = session
+            .other_player(player)
             .ok_or(TradeError::NoActiveSession)?;
         self.remove_session(session_id);
         Ok(other)
@@ -483,10 +509,17 @@ impl TradeManager {
 
     /// Set an item in a player's trade slot. Trade must be Open.
     /// Resets both players' accept flags (offer changed).
-    pub fn set_item(&mut self, player: u64, slot: usize, item: TradeItem) -> Result<(), TradeError> {
+    pub fn set_item(
+        &mut self,
+        player: u64,
+        slot: usize,
+        item: TradeItem,
+    ) -> Result<(), TradeError> {
         let session = self.require_open_session(player)?;
         session.reset_accepts();
-        let offer = session.offer_mut(player).ok_or(TradeError::NoActiveSession)?;
+        let offer = session
+            .offer_mut(player)
+            .ok_or(TradeError::NoActiveSession)?;
         offer.set_item(slot, item)
     }
 
@@ -495,7 +528,9 @@ impl TradeManager {
     pub fn clear_item(&mut self, player: u64, slot: usize) -> Result<(), TradeError> {
         let session = self.require_open_session(player)?;
         session.reset_accepts();
-        let offer = session.offer_mut(player).ok_or(TradeError::NoActiveSession)?;
+        let offer = session
+            .offer_mut(player)
+            .ok_or(TradeError::NoActiveSession)?;
         offer.clear_slot(slot)
     }
 
@@ -504,7 +539,9 @@ impl TradeManager {
     pub fn set_gold(&mut self, player: u64, copper: u32) -> Result<(), TradeError> {
         let session = self.require_open_session(player)?;
         session.reset_accepts();
-        let offer = session.offer_mut(player).ok_or(TradeError::NoActiveSession)?;
+        let offer = session
+            .offer_mut(player)
+            .ok_or(TradeError::NoActiveSession)?;
         offer.set_gold(copper);
         Ok(())
     }
@@ -555,7 +592,9 @@ impl TradeManager {
     }
 
     fn require_open_session(&mut self, player: u64) -> Result<&mut TradeSession, TradeError> {
-        let session = self.get_session_mut(player).ok_or(TradeError::NoActiveSession)?;
+        let session = self
+            .get_session_mut(player)
+            .ok_or(TradeError::NoActiveSession)?;
         if session.state != TradeState::Open {
             return Err(TradeError::TradeNotOpen);
         }
@@ -614,29 +653,40 @@ impl TradeManager {
         &mut self,
         get_pos: impl Fn(u64) -> Option<(f32, f32, f32)>,
     ) -> Vec<(u64, u64)> {
-        let out_of_range: Vec<u32> = self.sessions
+        let out_of_range: Vec<u32> = self
+            .sessions
             .iter()
             .filter(|(_, s)| {
-                let Some(a) = get_pos(s.initiator) else { return true };
-                let Some(b) = get_pos(s.target) else { return true };
+                let Some(a) = get_pos(s.initiator) else {
+                    return true;
+                };
+                let Some(b) = get_pos(s.target) else {
+                    return true;
+                };
                 !in_trade_range(a.0, a.1, a.2, b.0, b.1, b.2)
             })
             .map(|(&id, _)| id)
             .collect();
 
-        out_of_range.iter().filter_map(|&id| {
-            let s = self.sessions.get(&id)?;
-            let pair = (s.initiator, s.target);
-            self.remove_session(id);
-            Some(pair)
-        }).collect()
+        out_of_range
+            .iter()
+            .filter_map(|&id| {
+                let s = self.sessions.get(&id)?;
+                let pair = (s.initiator, s.target);
+                self.remove_session(id);
+                Some(pair)
+            })
+            .collect()
     }
 
     /// Remove expired pending requests (e.g. after a timeout).
     pub fn cleanup_expired(&mut self, now: u64, timeout_secs: u64) {
-        let expired: Vec<u32> = self.sessions
+        let expired: Vec<u32> = self
+            .sessions
             .iter()
-            .filter(|(_, s)| s.state == TradeState::Pending && now.saturating_sub(s.created_at) > timeout_secs)
+            .filter(|(_, s)| {
+                s.state == TradeState::Pending && now.saturating_sub(s.created_at) > timeout_secs
+            })
             .map(|(&id, _)| id)
             .collect();
         for id in expired {
