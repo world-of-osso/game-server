@@ -1,4 +1,5 @@
 use super::*;
+use crate::trade::trade_support::build_trade_party_snapshot;
 
 fn trade_offer(item_guid: u64, count: u16, gold: u32) -> TradeOffer {
     let mut offer = TradeOffer::default();
