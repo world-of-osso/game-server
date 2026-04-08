@@ -58,6 +58,9 @@ pub struct IgnoreChannel;
 /// Reliable ordered channel for LFG updates, bidirectional.
 pub struct LfgChannel;
 
+/// Reliable ordered channel for barber shop updates, bidirectional.
+pub struct BarberShopChannel;
+
 /// Reliable ordered channel for collection updates, bidirectional.
 pub struct CollectionChannel;
 
@@ -784,6 +787,21 @@ pub struct LfgStateUpdate {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct QueryBarberShopStatus;
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct ApplyBarberShopChanges {
+    pub appearance: CharacterAppearance,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct BarberShopStateUpdate {
+    pub snapshot: Option<BarberShopSnapshot>,
+    pub message: Option<String>,
+    pub error: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct SummonMount {
     pub mount_id: u32,
 }
@@ -868,6 +886,7 @@ fn register_messages(app: &mut App) {
     register_friends_messages(app);
     register_ignore_messages(app);
     register_lfg_messages(app);
+    register_barber_shop_messages(app);
     register_collection_messages(app);
     register_currency_messages(app);
     crate::protocol_snapshots::register_snapshot_messages(app);
@@ -1099,6 +1118,15 @@ fn register_lfg_messages(app: &mut App) {
         .add_direction(NetworkDirection::ServerToClient);
 }
 
+fn register_barber_shop_messages(app: &mut App) {
+    app.register_message::<QueryBarberShopStatus>()
+        .add_direction(NetworkDirection::ClientToServer);
+    app.register_message::<ApplyBarberShopChanges>()
+        .add_direction(NetworkDirection::ClientToServer);
+    app.register_message::<BarberShopStateUpdate>()
+        .add_direction(NetworkDirection::ServerToClient);
+}
+
 fn register_collection_messages(app: &mut App) {
     app.register_message::<SummonMount>()
         .add_direction(NetworkDirection::ClientToServer);
@@ -1160,6 +1188,7 @@ fn register_bidirectional_channels(app: &mut App) {
     add_reliable_channel::<FriendsChannel>(app, NetworkDirection::Bidirectional);
     add_reliable_channel::<IgnoreChannel>(app, NetworkDirection::Bidirectional);
     add_reliable_channel::<LfgChannel>(app, NetworkDirection::Bidirectional);
+    add_reliable_channel::<BarberShopChannel>(app, NetworkDirection::Bidirectional);
     add_reliable_channel::<CollectionChannel>(app, NetworkDirection::Bidirectional);
     add_reliable_channel::<CurrencyChannel>(app, NetworkDirection::Bidirectional);
 }

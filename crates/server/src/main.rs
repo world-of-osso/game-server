@@ -5,6 +5,7 @@ mod admin_types;
 mod auction_house;
 mod auth;
 mod auth_character;
+mod barber_shop;
 mod collection;
 mod combat;
 mod creature_ai;
@@ -65,6 +66,7 @@ fn add_game_plugins(app: &mut App) {
         .add_plugins(persistence::PersistencePlugin)
         .add_plugins(achievement::AchievementPlugin)
         .add_plugins(auction_house::AuctionHousePlugin)
+        .add_plugins(barber_shop::BarberShopPlugin)
         .add_plugins(collection::CollectionPlugin)
         .add_plugins(currency::CurrencyPlugin)
         .add_plugins(friends::FriendsPlugin)

@@ -227,6 +227,30 @@ fn lfg_state_update_round_trip() {
 }
 
 #[test]
+fn barber_shop_state_update_round_trip() {
+    let update = BarberShopStateUpdate {
+        snapshot: Some(BarberShopSnapshot {
+            appearance: CharacterAppearance {
+                sex: 0,
+                skin_color: 2,
+                face: 3,
+                eye_color: 4,
+                hair_style: 5,
+                hair_color: 6,
+                facial_style: 1,
+            },
+            gold: 87_500,
+        }),
+        message: Some("barber shop ready".into()),
+        error: None,
+    };
+
+    let encoded = serde_json::to_string(&update).unwrap();
+    let decoded: BarberShopStateUpdate = serde_json::from_str(&encoded).unwrap();
+    assert_eq!(update, decoded);
+}
+
+#[test]
 fn combat_event_type_all_variants_serialize() {
     let variants = vec![
         CombatEventType::MeleeDamage,
