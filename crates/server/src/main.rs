@@ -15,6 +15,7 @@ mod persistence_character;
 mod persistence_types;
 mod spell_db;
 mod stats;
+mod talent;
 mod terrain_height;
 mod trade;
 mod world_data;
@@ -41,6 +42,7 @@ fn main() {
         .add_plugins(shared::ProtocolPlugin)
         .add_plugins(persistence::PersistencePlugin)
         .add_plugins(auction_house::AuctionHousePlugin)
+        .add_plugins(talent::TalentPlugin)
         .add_plugins(trade::TradePlugin)
         .add_plugins(networking::ServerNetworkPlugin)
         .add_plugins(world_data::WorldDataPlugin)

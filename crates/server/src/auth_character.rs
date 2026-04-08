@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use lightyear::prelude::*;
 use shared::components::{
     CombatRatings, GuildMembership, Health, Level, Mana, MovementSpeed, Player, Position, Rotation,
-    UnitStats, VerticalVelocity,
+    SelectedTalents, UnitStats, VerticalVelocity,
 };
 use shared::protocol::{
     AuthChannel, CreateCharacter, CreateCharacterResponse, DeleteCharacter,
@@ -353,6 +353,7 @@ fn build_player_components(data: &CharacterData, character_id: u64) -> impl Bund
         CombatRatings::default(),
         Level(data.level as u8),
         data.equipment_appearance.clone(),
+        SelectedTalents::default(),
         ClientId(character_id),
         CombatTarget::default(),
         Replicate::new(ReplicationMode::SingleServer(NetworkTarget::All)),

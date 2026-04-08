@@ -34,6 +34,9 @@ pub struct AuctionChannel;
 /// Reliable ordered channel for trade operations, bidirectional.
 pub struct TradeChannel;
 
+/// Reliable ordered channel for talent operations, bidirectional.
+pub struct TalentChannel;
+
 /// Chat message type.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub enum ChatType {
@@ -532,6 +535,46 @@ pub struct TradeStateUpdate {
     pub error: Option<String>,
 }
 
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct QueryTalents;
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct ApplyTalentChoice {
+    pub talent_id: u32,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct ResetTalents;
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct TalentSpecTabSnapshot {
+    pub name: String,
+    pub active: bool,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct TalentNodeSnapshot {
+    pub talent_id: u32,
+    pub name: String,
+    pub points_spent: u8,
+    pub max_points: u8,
+    pub active: bool,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct TalentSnapshot {
+    pub spec_tabs: Vec<TalentSpecTabSnapshot>,
+    pub talents: Vec<TalentNodeSnapshot>,
+    pub points_remaining: u16,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct TalentStateUpdate {
+    pub snapshot: Option<TalentSnapshot>,
+    pub message: Option<String>,
+    pub error: Option<String>,
+}
+
 /// Registers shared protocol: components for replication and channels.
 /// Must be added AFTER `ServerPlugins`/`ClientPlugins` but BEFORE any entity is spawned.
 pub struct ProtocolPlugin;
@@ -565,6 +608,7 @@ fn register_messages(app: &mut App) {
     register_guild_and_chat_messages(app);
     register_auction_messages(app);
     register_trade_messages(app);
+    register_talent_messages(app);
     crate::protocol_snapshots::register_snapshot_messages(app);
 }
 
@@ -704,6 +748,17 @@ fn register_trade_messages(app: &mut App) {
         .add_direction(NetworkDirection::ServerToClient);
 }
 
+fn register_talent_messages(app: &mut App) {
+    app.register_message::<QueryTalents>()
+        .add_direction(NetworkDirection::ClientToServer);
+    app.register_message::<ApplyTalentChoice>()
+        .add_direction(NetworkDirection::ClientToServer);
+    app.register_message::<ResetTalents>()
+        .add_direction(NetworkDirection::ClientToServer);
+    app.register_message::<TalentStateUpdate>()
+        .add_direction(NetworkDirection::ServerToClient);
+}
+
 fn register_channels(app: &mut App) {
     app.add_channel::<MovementChannel>(ChannelSettings {
         mode: ChannelMode::UnorderedUnreliable,
@@ -748,6 +803,12 @@ fn register_channels(app: &mut App) {
     .add_direction(NetworkDirection::Bidirectional);
 
     app.add_channel::<TradeChannel>(ChannelSettings {
+        mode: ChannelMode::OrderedReliable(default()),
+        ..default()
+    })
+    .add_direction(NetworkDirection::Bidirectional);
+
+    app.add_channel::<TalentChannel>(ChannelSettings {
         mode: ChannelMode::OrderedReliable(default()),
         ..default()
     })
