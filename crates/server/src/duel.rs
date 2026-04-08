@@ -212,42 +212,69 @@ fn process_duel_declines(
                 send_duel_error(conn_entity, &mut senders, "duel opponent is missing");
                 continue;
             };
-            let self_message = if was_target {
-                "duel declined"
-            } else {
-                "duel request cancelled"
-            };
-            let other_message = if was_target {
-                format!("{} declined your duel request", player.name)
-            } else {
-                format!("{} cancelled the duel request", player.name)
-            };
-            send_duel_snapshot_to_player(
+            let (self_message, other_message) = decline_messages(was_target, &player.name);
+            send_decline_snapshots(
                 link.0,
-                &connections,
-                &mut senders,
-                DuelSnapshot {
-                    phase: DuelPhaseSnapshot::Completed,
-                    opponent_name: other_player.name.clone(),
-                    boundary: None,
-                    result: Some(DuelResultSnapshot::Declined),
-                },
-                Some(self_message.into()),
-            );
-            send_duel_snapshot_to_player(
+                &other_player.name,
                 other,
+                &player.name,
                 &connections,
                 &mut senders,
-                DuelSnapshot {
-                    phase: DuelPhaseSnapshot::Completed,
-                    opponent_name: player.name.clone(),
-                    boundary: None,
-                    result: Some(DuelResultSnapshot::Declined),
-                },
-                Some(other_message),
+                self_message,
+                other_message,
             );
         }
     }
+}
+
+fn decline_messages(was_target: bool, player_name: &str) -> (&'static str, String) {
+    if was_target {
+        (
+            "duel declined",
+            format!("{player_name} declined your duel request"),
+        )
+    } else {
+        (
+            "duel request cancelled",
+            format!("{player_name} cancelled the duel request"),
+        )
+    }
+}
+
+fn send_decline_snapshots(
+    self_entity: Entity,
+    self_opponent_name: &str,
+    other_entity: Entity,
+    other_opponent_name: &str,
+    connections: &ConnectionQuery,
+    senders: &mut Query<&mut MessageSender<DuelStateUpdate>>,
+    self_message: &str,
+    other_message: String,
+) {
+    send_duel_snapshot_to_player(
+        self_entity,
+        connections,
+        senders,
+        DuelSnapshot {
+            phase: DuelPhaseSnapshot::Completed,
+            opponent_name: self_opponent_name.into(),
+            boundary: None,
+            result: Some(DuelResultSnapshot::Declined),
+        },
+        Some(self_message.into()),
+    );
+    send_duel_snapshot_to_player(
+        other_entity,
+        connections,
+        senders,
+        DuelSnapshot {
+            phase: DuelPhaseSnapshot::Completed,
+            opponent_name: other_opponent_name.into(),
+            boundary: None,
+            result: Some(DuelResultSnapshot::Declined),
+        },
+        Some(other_message),
+    );
 }
 
 fn enforce_duel_outcomes(
