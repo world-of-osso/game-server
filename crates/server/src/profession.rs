@@ -253,40 +253,49 @@ fn tick_pending_gather_casts(
         if pending.remaining_secs > 0.0 {
             continue;
         }
-        let mut inventory = persistence::load_inventory(&db.db, pending.character_id);
-        let outcome = complete_gather(
-            pending.node_id,
-            &mut professions,
-            &mut inventory,
-            &db.db,
-            rand::random::<f32>(),
-            &[rand::random::<f32>()],
-        );
-        match outcome {
-            Ok(result) => {
-                persistence::save_inventory(&db.db, pending.character_id, &inventory);
-                persistence::save_professions(&db.db, pending.character_id, &professions);
-                send_profession_update(
-                    pending.conn_entity,
-                    &build_profession_snapshot(&professions, &inventory),
-                    Some(result.message),
-                    result.skill_up,
-                    None,
-                    &mut senders,
-                );
-            }
-            Err(error) => {
-                send_profession_error(
-                    pending.conn_entity,
-                    pending.character_id,
-                    db.as_ref(),
-                    Some(&professions),
-                    &mut senders,
-                    &error,
-                );
-            }
-        }
+        resolve_completed_gather(&pending, &mut professions, db.as_ref(), &mut senders);
         commands.entity(player_entity).remove::<PendingGatherCast>();
+    }
+}
+
+fn resolve_completed_gather(
+    pending: &PendingGatherCast,
+    professions: &mut PlayerProfessions,
+    db: &GameDatabase,
+    senders: &mut Query<&mut MessageSender<ProfessionStateUpdate>>,
+) {
+    let mut inventory = persistence::load_inventory(&db.db, pending.character_id);
+    let outcome = complete_gather(
+        pending.node_id,
+        professions,
+        &mut inventory,
+        &db.db,
+        rand::random::<f32>(),
+        &[rand::random::<f32>()],
+    );
+    match outcome {
+        Ok(result) => {
+            persistence::save_inventory(&db.db, pending.character_id, &inventory);
+            persistence::save_professions(&db.db, pending.character_id, professions);
+            send_profession_update(
+                pending.conn_entity,
+                &build_profession_snapshot(professions, &inventory),
+                Some(result.message),
+                result.skill_up,
+                None,
+                senders,
+            );
+        }
+        Err(error) => {
+            send_profession_error(
+                pending.conn_entity,
+                pending.character_id,
+                db,
+                Some(professions),
+                senders,
+                &error,
+            );
+        }
     }
 }
 
