@@ -568,34 +568,12 @@ fn build_trade_snapshot(
     session: &shared::trade::TradeSession,
     players: &PlayerQuery,
 ) -> TradeSnapshot {
-    let viewer_is_initiator = viewer_id == session.initiator;
-    let player_id = if viewer_is_initiator {
-        session.initiator
-    } else {
-        session.target
-    };
-    let other_id = if viewer_is_initiator {
-        session.target
-    } else {
-        session.initiator
-    };
+    let viewer_is_initiator = is_initiator_view(viewer_id, session);
+    let (player_id, other_id) = trade_party_ids(session, viewer_is_initiator);
     let player_name_value = player_name(players, player_id);
     let other_name_value = player_name(players, other_id);
-    let phase = match session.state {
-        shared::trade::TradeState::Pending if viewer_is_initiator => TradePhase::PendingOutgoing,
-        shared::trade::TradeState::Pending => TradePhase::PendingIncoming,
-        shared::trade::TradeState::Open => TradePhase::Open,
-    };
-    let player_offer = if viewer_is_initiator {
-        &session.initiator_offer
-    } else {
-        &session.target_offer
-    };
-    let other_offer = if viewer_is_initiator {
-        &session.target_offer
-    } else {
-        &session.initiator_offer
-    };
+    let phase = trade_phase_for_viewer(session, viewer_is_initiator);
+    let (player_offer, other_offer) = trade_offers_for_viewer(session, viewer_is_initiator);
     TradeSnapshot {
         phase,
         player: build_trade_party_snapshot(
@@ -612,6 +590,40 @@ fn build_trade_snapshot(
             session.has_accepted(other_id),
             other_offer,
         ),
+    }
+}
+
+fn is_initiator_view(viewer_id: u64, session: &shared::trade::TradeSession) -> bool {
+    viewer_id == session.initiator
+}
+
+fn trade_party_ids(session: &shared::trade::TradeSession, viewer_is_initiator: bool) -> (u64, u64) {
+    if viewer_is_initiator {
+        (session.initiator, session.target)
+    } else {
+        (session.target, session.initiator)
+    }
+}
+
+fn trade_phase_for_viewer(
+    session: &shared::trade::TradeSession,
+    viewer_is_initiator: bool,
+) -> TradePhase {
+    match session.state {
+        shared::trade::TradeState::Pending if viewer_is_initiator => TradePhase::PendingOutgoing,
+        shared::trade::TradeState::Pending => TradePhase::PendingIncoming,
+        shared::trade::TradeState::Open => TradePhase::Open,
+    }
+}
+
+fn trade_offers_for_viewer<'a>(
+    session: &'a shared::trade::TradeSession,
+    viewer_is_initiator: bool,
+) -> (&'a TradeOffer, &'a TradeOffer) {
+    if viewer_is_initiator {
+        (&session.initiator_offer, &session.target_offer)
+    } else {
+        (&session.target_offer, &session.initiator_offer)
     }
 }
 
