@@ -1,6 +1,7 @@
 use redb::{Database, ReadableDatabase, ReadableTable};
 use rusqlite::{Connection, OpenFlags, params};
 use shared::components::{CharacterAppearance, GuildMembership};
+use std::collections::BTreeSet;
 
 const MAX_CHARACTERS_PER_ACCOUNT: usize = 10;
 
@@ -196,10 +197,11 @@ pub fn move_characters_between_accounts(
         return Ok(0);
     }
     let mut to_ids = load_account_char_ids(db, to_account_id);
-    for id in &from_ids {
-        if !to_ids.contains(id) {
-            // bounded: max 10 characters per account
-            to_ids.push(*id);
+    // Keep deterministic ordering while avoiding repeated linear contains checks.
+    let mut seen: BTreeSet<u64> = to_ids.iter().copied().collect();
+    for id in from_ids.iter().copied() {
+        if seen.insert(id) {
+            to_ids.push(id);
         }
     }
     to_ids.sort_unstable();
