@@ -55,6 +55,9 @@ pub struct FriendsChannel;
 /// Reliable ordered channel for ignore list updates, bidirectional.
 pub struct IgnoreChannel;
 
+/// Reliable ordered channel for LFG updates, bidirectional.
+pub struct LfgChannel;
+
 /// Reliable ordered channel for collection updates, bidirectional.
 pub struct CollectionChannel;
 
@@ -757,6 +760,30 @@ pub struct IgnoreListStateUpdate {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct QueryLfgStatus;
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct QueueForLfg {
+    pub role: GroupRoleSnapshot,
+    pub dungeon_ids: Vec<u32>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct DequeueFromLfg;
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct RespondToLfgRoleCheck {
+    pub accepted: bool,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct LfgStateUpdate {
+    pub snapshot: Option<LfgSnapshot>,
+    pub message: Option<String>,
+    pub error: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct SummonMount {
     pub mount_id: u32,
 }
@@ -840,6 +867,7 @@ fn register_messages(app: &mut App) {
     register_world_map_messages(app);
     register_friends_messages(app);
     register_ignore_messages(app);
+    register_lfg_messages(app);
     register_collection_messages(app);
     register_currency_messages(app);
     crate::protocol_snapshots::register_snapshot_messages(app);
@@ -1058,6 +1086,19 @@ fn register_ignore_messages(app: &mut App) {
         .add_direction(NetworkDirection::ServerToClient);
 }
 
+fn register_lfg_messages(app: &mut App) {
+    app.register_message::<QueryLfgStatus>()
+        .add_direction(NetworkDirection::ClientToServer);
+    app.register_message::<QueueForLfg>()
+        .add_direction(NetworkDirection::ClientToServer);
+    app.register_message::<DequeueFromLfg>()
+        .add_direction(NetworkDirection::ClientToServer);
+    app.register_message::<RespondToLfgRoleCheck>()
+        .add_direction(NetworkDirection::ClientToServer);
+    app.register_message::<LfgStateUpdate>()
+        .add_direction(NetworkDirection::ServerToClient);
+}
+
 fn register_collection_messages(app: &mut App) {
     app.register_message::<SummonMount>()
         .add_direction(NetworkDirection::ClientToServer);
@@ -1118,6 +1159,7 @@ fn register_bidirectional_channels(app: &mut App) {
     add_reliable_channel::<WorldMapChannel>(app, NetworkDirection::Bidirectional);
     add_reliable_channel::<FriendsChannel>(app, NetworkDirection::Bidirectional);
     add_reliable_channel::<IgnoreChannel>(app, NetworkDirection::Bidirectional);
+    add_reliable_channel::<LfgChannel>(app, NetworkDirection::Bidirectional);
     add_reliable_channel::<CollectionChannel>(app, NetworkDirection::Bidirectional);
     add_reliable_channel::<CurrencyChannel>(app, NetworkDirection::Bidirectional);
 }

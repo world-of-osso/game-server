@@ -191,6 +191,42 @@ fn ignore_list_state_update_round_trip() {
 }
 
 #[test]
+fn lfg_state_update_round_trip() {
+    let update = LfgStateUpdate {
+        snapshot: Some(LfgSnapshot {
+            queued: true,
+            selected_role: Some(GroupRoleSnapshot::Tank),
+            dungeon_ids: vec![100],
+            queue_size: 3,
+            average_wait_secs: 42,
+            in_demand_roles: vec![GroupRoleSnapshot::Healer],
+            role_check: Some(LfgRoleCheckSnapshot {
+                dungeon_id: 100,
+                dungeon_name: "Deadmines".into(),
+                assigned_role: GroupRoleSnapshot::Tank,
+                accepted_count: 2,
+                total_count: 5,
+            }),
+            match_found: Some(LfgMatchFoundSnapshot {
+                dungeon_id: 100,
+                dungeon_name: "Deadmines".into(),
+                assigned_role: GroupRoleSnapshot::Tank,
+                members: vec![LfgMatchMemberSnapshot {
+                    name: "Theron".into(),
+                    role: GroupRoleSnapshot::Tank,
+                }],
+            }),
+        }),
+        message: Some("role check started".into()),
+        error: None,
+    };
+
+    let encoded = serde_json::to_string(&update).unwrap();
+    let decoded: LfgStateUpdate = serde_json::from_str(&encoded).unwrap();
+    assert_eq!(update, decoded);
+}
+
+#[test]
 fn combat_event_type_all_variants_serialize() {
     let variants = vec![
         CombatEventType::MeleeDamage,

@@ -431,6 +431,7 @@ pub fn spawn_player_entity(
     commands.entity(entity).insert(world_map);
     commands.entity(entity).insert(friends);
     commands.entity(entity).insert(ignore_list);
+    commands.entity(entity).insert(crate::lfg::PlayerLfgState::default());
     commands.entity(entity).insert(collections.clone());
     commands.entity(entity).insert(currencies);
     commands.entity(entity).insert(reputation);
