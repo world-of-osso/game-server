@@ -5,7 +5,7 @@ pub use crate::protocol_snapshots::*;
 
 use crate::components::{
     CombatStatus, EquipmentAppearance, GuildMembership, Health, Mana, ModelDisplay, Mounted,
-    MovementSpeed, Npc, Player, Position, Rotation, Zone,
+    MovementSpeed, Npc, Player, Position, PresenceStatus, Rotation, Zone,
 };
 
 mod channels;
@@ -44,6 +44,7 @@ fn register_replicated_components(app: &mut App) {
     app.register_component::<Mounted>();
     app.register_component::<Zone>();
     app.register_component::<GuildMembership>();
+    app.register_component::<PresenceStatus>();
     app.register_component::<EquipmentAppearance>();
 }
 

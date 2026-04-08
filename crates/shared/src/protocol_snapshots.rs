@@ -215,7 +215,7 @@ pub struct FriendCharacterSnapshot {
     pub level: u16,
     pub class_name: String,
     pub area: String,
-    pub online: bool,
+    pub presence: crate::components::PresenceStatus,
     pub note: String,
 }
 

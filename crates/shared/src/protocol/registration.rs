@@ -237,6 +237,8 @@ fn register_friends_messages(app: &mut App) {
         .add_direction(NetworkDirection::ClientToServer);
     app.register_message::<RemoveFriend>()
         .add_direction(NetworkDirection::ClientToServer);
+    app.register_message::<SetPresenceStatus>()
+        .add_direction(NetworkDirection::ClientToServer);
     app.register_message::<FriendsStateUpdate>()
         .add_direction(NetworkDirection::ServerToClient);
 }

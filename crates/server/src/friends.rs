@@ -4,10 +4,10 @@ use bevy::prelude::*;
 use lightyear::prelude::Message as NetMessage;
 use lightyear::prelude::*;
 use serde::{Deserialize, Serialize};
-use shared::components::{Level, Player, Zone};
+use shared::components::{Level, Player, PresenceStatus, Zone};
 use shared::protocol::{
     AddFriend, FriendCharacterSnapshot, FriendsChannel, FriendsSnapshot, FriendsStateUpdate,
-    QueryFriends, RemoveFriend,
+    QueryFriends, RemoveFriend, SetPresenceStatus,
 };
 
 use crate::auth::{Authenticated, InWorld};
@@ -35,7 +35,30 @@ struct FriendPresence {
     level: u16,
     class_name: String,
     area: String,
-    online: bool,
+    presence: PresenceStatus,
+}
+
+const AUTO_AFK_SECS: f32 = 300.0;
+
+#[derive(Component, Debug, Clone, Copy, PartialEq)]
+pub struct PresenceTracker {
+    idle_secs: f32,
+    manual: Option<ManualPresence>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ManualPresence {
+    Afk,
+    Dnd,
+}
+
+impl Default for PresenceTracker {
+    fn default() -> Self {
+        Self {
+            idle_secs: 0.0,
+            manual: None,
+        }
+    }
 }
 
 pub struct FriendsPlugin;
@@ -49,6 +72,8 @@ impl Plugin for FriendsPlugin {
                 process_query_requests,
                 process_add_requests,
                 process_remove_requests,
+                process_presence_requests,
+                tick_auto_afk,
                 sync_online_status_updates,
             )
                 .chain(),
@@ -60,7 +85,7 @@ fn send_initial_friends_snapshot(
     mut commands: Commands,
     connections: Query<(Entity, &PlayerLink, &InWorld), (With<Authenticated>, Added<InWorld>)>,
     mut friends_q: Query<&mut PlayerFriendsState>,
-    online_players: Query<(&Player, &Level, Option<&Zone>)>,
+    online_players: Query<(&Player, &Level, Option<&Zone>, Option<&PresenceStatus>)>,
     db: Option<Res<GameDatabase>>,
     mut senders: Query<&mut MessageSender<FriendsStateUpdate>>,
 ) {
@@ -72,6 +97,9 @@ fn send_initial_friends_snapshot(
             continue;
         };
         sanitize_duplicates(&mut friends);
+        commands
+            .entity(link.0)
+            .insert((PresenceStatus::Online, PresenceTracker::default()));
         let snapshot = build_friends_snapshot(&db.db, &friends, &online);
         send_friends_update(
             conn_entity,
@@ -92,7 +120,7 @@ fn process_query_requests(
         With<Authenticated>,
     >,
     friends_q: Query<&PlayerFriendsState>,
-    online_players: Query<(&Player, &Level, Option<&Zone>)>,
+    online_players: Query<(&Player, &Level, Option<&Zone>, Option<&PresenceStatus>)>,
     db: Option<Res<GameDatabase>>,
     mut senders: Query<&mut MessageSender<FriendsStateUpdate>>,
 ) {
@@ -132,7 +160,7 @@ fn process_add_requests(
     >,
     mut friends_q: Query<&mut PlayerFriendsState>,
     players: Query<&Player>,
-    online_players: Query<(&Player, &Level, Option<&Zone>)>,
+    online_players: Query<(&Player, &Level, Option<&Zone>, Option<&PresenceStatus>)>,
     db: Option<Res<GameDatabase>>,
     mut senders: Query<&mut MessageSender<FriendsStateUpdate>>,
 ) {
@@ -164,7 +192,7 @@ fn process_remove_requests(
         With<Authenticated>,
     >,
     mut friends_q: Query<&mut PlayerFriendsState>,
-    online_players: Query<(&Player, &Level, Option<&Zone>)>,
+    online_players: Query<(&Player, &Level, Option<&Zone>, Option<&PresenceStatus>)>,
     db: Option<Res<GameDatabase>>,
     mut senders: Query<&mut MessageSender<FriendsStateUpdate>>,
 ) {
@@ -219,10 +247,47 @@ fn process_mutation_requests<R, F>(
     }
 }
 
+fn process_presence_requests(
+    mut receivers: Query<
+        (Entity, &PlayerLink, &mut MessageReceiver<SetPresenceStatus>),
+        With<Authenticated>,
+    >,
+    friends_q: Query<&PlayerFriendsState>,
+    mut presence_q: Query<(&mut PresenceStatus, &mut PresenceTracker), With<Player>>,
+    online_players: Query<(&Player, &Level, Option<&Zone>, Option<&PresenceStatus>)>,
+    db: Option<Res<GameDatabase>>,
+    mut senders: Query<&mut MessageSender<FriendsStateUpdate>>,
+) {
+    let Some(db) = db else { return };
+    let online = collect_online_players(&online_players);
+    for (conn_entity, link, mut receiver) in &mut receivers {
+        let requests: Vec<_> = receiver.receive().collect();
+        if requests.is_empty() {
+            continue;
+        }
+        let Ok(friends) = friends_q.get(link.0) else {
+            send_friends_error(conn_entity, &mut senders, "friends unavailable for player");
+            continue;
+        };
+        for request in requests {
+            let result = set_presence(link.0, request.status, &mut presence_q);
+            let snapshot = build_friends_snapshot(&db.db, friends, &online);
+            match result {
+                Ok(message) => {
+                    send_friends_update(conn_entity, snapshot, Some(message), None, &mut senders);
+                }
+                Err(error) => {
+                    send_friends_update(conn_entity, snapshot, None, Some(error), &mut senders);
+                }
+            }
+        }
+    }
+}
+
 fn sync_online_status_updates(
     connections: Query<(Entity, &PlayerLink), With<Authenticated>>,
     mut friends_q: Query<(&PlayerFriendsState, &mut FriendsSnapshotTracker)>,
-    online_players: Query<(&Player, &Level, Option<&Zone>)>,
+    online_players: Query<(&Player, &Level, Option<&Zone>, Option<&PresenceStatus>)>,
     db: Option<Res<GameDatabase>>,
     mut senders: Query<&mut MessageSender<FriendsStateUpdate>>,
 ) {
@@ -244,6 +309,23 @@ fn sync_online_status_updates(
             None,
             &mut senders,
         );
+    }
+}
+
+fn tick_auto_afk(
+    time: Res<Time>,
+    mut players: Query<(&mut PresenceStatus, &mut PresenceTracker), With<Player>>,
+) {
+    for (mut status, mut tracker) in &mut players {
+        if tracker.manual.is_some() {
+            continue;
+        }
+        tracker.idle_secs += time.delta_secs();
+        *status = if tracker.idle_secs >= AUTO_AFK_SECS {
+            PresenceStatus::Afk
+        } else {
+            PresenceStatus::Online
+        };
     }
 }
 
@@ -309,11 +391,11 @@ fn sort_records(friends: &mut PlayerFriendsState) {
 }
 
 fn collect_online_players(
-    players: &Query<(&Player, &Level, Option<&Zone>)>,
+    players: &Query<(&Player, &Level, Option<&Zone>, Option<&PresenceStatus>)>,
 ) -> HashMap<String, FriendPresence> {
     players
         .iter()
-        .map(|(player, level, zone)| {
+        .map(|(player, level, zone, presence)| {
             (
                 player.name.to_ascii_lowercase(),
                 FriendPresence {
@@ -322,7 +404,7 @@ fn collect_online_players(
                     area: zone
                         .map(|zone| format!("Zone {}", zone.id))
                         .unwrap_or_else(|| "Unknown".into()),
-                    online: true,
+                    presence: presence.copied().unwrap_or(PresenceStatus::Online),
                 },
             )
         })
@@ -339,7 +421,11 @@ fn build_friends_snapshot(
         .iter()
         .filter_map(|entry| build_friend_snapshot(db, entry, online))
         .collect();
-    entries.sort_by(|a, b| b.online.cmp(&a.online).then(a.name.cmp(&b.name)));
+    entries.sort_by(|a, b| {
+        presence_sort_key(b.presence)
+            .cmp(&presence_sort_key(a.presence))
+            .then(a.name.cmp(&b.name))
+    });
     FriendsSnapshot { entries }
 }
 
@@ -354,7 +440,7 @@ fn build_friend_snapshot(
             level: presence.level,
             class_name: presence.class_name.clone(),
             area: presence.area.clone(),
-            online: presence.online,
+            presence: presence.presence,
             note: record.note.clone(),
         });
     }
@@ -365,9 +451,60 @@ fn build_friend_snapshot(
         level: character.level,
         class_name: class_name_from_id(character.class),
         area: "Unknown".into(),
-        online: false,
+        presence: PresenceStatus::Offline,
         note: record.note.clone(),
     })
+}
+
+pub fn mark_player_activity(
+    player_entity: Entity,
+    players: &mut Query<(&mut PresenceStatus, &mut PresenceTracker), With<Player>>,
+) {
+    let Ok((mut status, mut tracker)) = players.get_mut(player_entity) else {
+        return;
+    };
+    tracker.idle_secs = 0.0;
+    match tracker.manual {
+        Some(ManualPresence::Dnd) => {
+            *status = PresenceStatus::Dnd;
+        }
+        Some(ManualPresence::Afk) => {
+            tracker.manual = None;
+            *status = PresenceStatus::Online;
+        }
+        None => {
+            *status = PresenceStatus::Online;
+        }
+    }
+}
+
+fn set_presence(
+    player_entity: Entity,
+    requested: PresenceStatus,
+    players: &mut Query<(&mut PresenceStatus, &mut PresenceTracker), With<Player>>,
+) -> Result<String, String> {
+    let Ok((mut status, mut tracker)) = players.get_mut(player_entity) else {
+        return Err("presence unavailable for player".into());
+    };
+    tracker.idle_secs = 0.0;
+    tracker.manual = match requested {
+        PresenceStatus::Online | PresenceStatus::Offline => None,
+        PresenceStatus::Afk => Some(ManualPresence::Afk),
+        PresenceStatus::Dnd => Some(ManualPresence::Dnd),
+    };
+    *status = match requested {
+        PresenceStatus::Offline => PresenceStatus::Online,
+        other => other,
+    };
+    Ok(format!(
+        "presence set to {}",
+        match *status {
+            PresenceStatus::Online => "online",
+            PresenceStatus::Afk => "afk",
+            PresenceStatus::Dnd => "dnd",
+            PresenceStatus::Offline => "offline",
+        }
+    ))
 }
 
 fn class_name_from_id(class_id: u8) -> String {
@@ -388,6 +525,15 @@ fn class_name_from_id(class_id: u8) -> String {
         _ => "Unknown",
     }
     .into()
+}
+
+fn presence_sort_key(presence: PresenceStatus) -> u8 {
+    match presence {
+        PresenceStatus::Online => 3,
+        PresenceStatus::Afk => 2,
+        PresenceStatus::Dnd => 1,
+        PresenceStatus::Offline => 0,
+    }
 }
 
 fn send_friends_update(
@@ -425,6 +571,15 @@ fn send_friends_error(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn test_player(name: &str) -> Player {
+        Player {
+            name: name.into(),
+            race: 1,
+            class: 8,
+            appearance: Default::default(),
+        }
+    }
 
     fn friend(name: &str) -> FriendRecord {
         FriendRecord {
@@ -490,5 +645,129 @@ mod tests {
 
         let loaded = crate::persistence::load_friends(&db, 42);
         assert_eq!(loaded, state);
+    }
+
+    #[test]
+    fn set_presence_tracks_manual_afk_and_resets_idle() {
+        let mut app = App::new();
+        let player_entity = app.world_mut().spawn((test_player("Theron"),)).id();
+        app.world_mut().entity_mut(player_entity).insert((
+            PresenceStatus::Online,
+            PresenceTracker {
+                idle_secs: 42.0,
+                manual: None,
+            },
+        ));
+
+        let mut apply_presence = IntoSystem::into_system(
+            move |mut players: Query<(&mut PresenceStatus, &mut PresenceTracker), With<Player>>| {
+                set_presence(player_entity, PresenceStatus::Afk, &mut players)
+            },
+        );
+        apply_presence.initialize(app.world_mut());
+        let message = apply_presence.run((), app.world_mut()).unwrap().unwrap();
+        assert_eq!(message, "presence set to afk");
+
+        let mut query = app
+            .world_mut()
+            .query::<(&Player, &PresenceStatus, &PresenceTracker)>();
+        let (_, status, tracker) = query
+            .iter(app.world())
+            .find(|(player, _, _)| player.name == "Theron")
+            .unwrap();
+        assert_eq!(*status, PresenceStatus::Afk);
+        assert_eq!(tracker.idle_secs, 0.0);
+        assert_eq!(tracker.manual, Some(ManualPresence::Afk));
+    }
+
+    #[test]
+    fn player_activity_clears_manual_afk_but_preserves_dnd() {
+        let mut app = App::new();
+        let afk_entity = app.world_mut().spawn((test_player("Theron"),)).id();
+        let dnd_entity = app.world_mut().spawn((test_player("Jaina"),)).id();
+
+        app.world_mut().entity_mut(afk_entity).insert((
+            PresenceStatus::Afk,
+            PresenceTracker {
+                idle_secs: 180.0,
+                manual: Some(ManualPresence::Afk),
+            },
+        ));
+        app.world_mut().entity_mut(dnd_entity).insert((
+            PresenceStatus::Dnd,
+            PresenceTracker {
+                idle_secs: 240.0,
+                manual: Some(ManualPresence::Dnd),
+            },
+        ));
+
+        let mut mark_activity = IntoSystem::into_system(
+            move |mut players: Query<(&mut PresenceStatus, &mut PresenceTracker), With<Player>>| {
+                mark_player_activity(afk_entity, &mut players);
+                mark_player_activity(dnd_entity, &mut players);
+            },
+        );
+        mark_activity.initialize(app.world_mut());
+        let _ = mark_activity.run((), app.world_mut());
+
+        let mut query = app
+            .world_mut()
+            .query::<(&Player, &PresenceStatus, &PresenceTracker)>();
+        let mut states = query
+            .iter(app.world())
+            .map(|(player, status, tracker)| (player.name.clone(), *status, *tracker))
+            .collect::<Vec<_>>();
+        states.sort_by(|a, b| a.0.cmp(&b.0));
+
+        assert_eq!(states[0].0, "Jaina");
+        assert_eq!(states[0].1, PresenceStatus::Dnd);
+        assert_eq!(states[0].2.idle_secs, 0.0);
+        assert_eq!(states[0].2.manual, Some(ManualPresence::Dnd));
+
+        assert_eq!(states[1].0, "Theron");
+        assert_eq!(states[1].1, PresenceStatus::Online);
+        assert_eq!(states[1].2.idle_secs, 0.0);
+        assert_eq!(states[1].2.manual, None);
+    }
+
+    #[test]
+    fn auto_afk_promotes_idle_players_without_manual_presence() {
+        let mut app = App::new();
+        app.init_resource::<Time>();
+        app.world_mut().spawn((
+            test_player("Theron"),
+            PresenceStatus::Online,
+            PresenceTracker::default(),
+        ));
+        app.world_mut().spawn((
+            test_player("Jaina"),
+            PresenceStatus::Dnd,
+            PresenceTracker {
+                idle_secs: AUTO_AFK_SECS,
+                manual: Some(ManualPresence::Dnd),
+            },
+        ));
+
+        app.world_mut()
+            .resource_mut::<Time>()
+            .advance_by(std::time::Duration::from_secs_f32(AUTO_AFK_SECS + 1.0));
+        app.add_systems(Update, tick_auto_afk);
+        app.update();
+
+        let mut query = app
+            .world_mut()
+            .query::<(&Player, &PresenceStatus, &PresenceTracker)>();
+        let mut states = query
+            .iter(app.world())
+            .map(|(player, status, tracker)| (player.name.clone(), *status, *tracker))
+            .collect::<Vec<_>>();
+        states.sort_by(|a, b| a.0.cmp(&b.0));
+
+        assert_eq!(states[0].0, "Jaina");
+        assert_eq!(states[0].1, PresenceStatus::Dnd);
+        assert_eq!(states[0].2.manual, Some(ManualPresence::Dnd));
+        assert_eq!(states[1].0, "Theron");
+        assert_eq!(states[1].1, PresenceStatus::Afk);
+        assert_eq!(states[1].2.manual, None);
     }
 }

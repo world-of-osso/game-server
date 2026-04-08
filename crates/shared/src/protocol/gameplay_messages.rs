@@ -415,6 +415,11 @@ pub struct RemoveFriend {
     pub name: String,
 }
 
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+pub struct SetPresenceStatus {
+    pub status: crate::components::PresenceStatus,
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct FriendsStateUpdate {
     pub snapshot: Option<FriendsSnapshot>,

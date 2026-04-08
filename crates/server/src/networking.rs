@@ -384,11 +384,19 @@ fn process_player_inputs(
     mut commands: Commands,
     mut receivers: Query<(&mut MessageReceiver<PlayerInput>, &PlayerLink)>,
     mut players: Query<PlayerMovement, With<Player>>,
+    mut presence_q: Query<
+        (
+            &mut shared::components::PresenceStatus,
+            &mut crate::friends::PresenceTracker,
+        ),
+        With<Player>,
+    >,
     mounted: Query<Entity, (With<Player>, With<Mounted>)>,
     time: Res<Time>,
 ) {
     for (mut receiver, link) in receivers.iter_mut() {
         for input in receiver.receive() {
+            crate::friends::mark_player_activity(link.0, &mut presence_q);
             if input.swimming && mounted.contains(link.0) {
                 commands.entity(link.0).remove::<Mounted>();
             }

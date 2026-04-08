@@ -16,6 +16,13 @@ pub fn process_chat_messages(
     mut emote_receivers: Query<(&mut MessageReceiver<EmoteIntent>, &PlayerLink)>,
     players: Query<&shared::components::Player>,
     guilds: Query<Option<&GuildMembership>>,
+    mut presences: Query<
+        (
+            &mut shared::components::PresenceStatus,
+            &mut crate::friends::PresenceTracker,
+        ),
+        With<shared::components::Player>,
+    >,
     ignore_lists: Query<Option<&PlayerIgnoreListState>>,
     mut chat_senders: Query<(&PlayerLink, &mut MessageSender<ChatMessage>)>,
     mut emote_senders: Query<(&PlayerLink, &mut MessageSender<EmoteEvent>)>,
@@ -25,12 +32,14 @@ pub fn process_chat_messages(
     let (collected, mut collected_emotes) = split_chat_emotes(collected);
     collected_emotes.extend(collect_emote_messages(&mut emote_receivers, &players));
     for chat in &collected {
+        crate::friends::mark_player_activity(chat.sender_entity, &mut presences);
         history.entries.push_back(chat.msg.clone());
         if history.entries.len() > 100 {
             history.entries.pop_front();
         }
     }
     for emote in &collected_emotes {
+        crate::friends::mark_player_activity(emote.player_entity, &mut presences);
         history.entries.push_back(emote.chat.clone());
         if history.entries.len() > 100 {
             history.entries.pop_front();
@@ -84,6 +93,7 @@ struct CollectedChat {
 struct CollectedEmote {
     chat: ChatMessage,
     event: EmoteEvent,
+    player_entity: Entity,
 }
 
 fn collect_chat_messages(
@@ -130,6 +140,7 @@ fn split_chat_emotes(collected: Vec<CollectedChat>) -> (Vec<CollectedChat>, Vec<
                 sender: chat.msg.sender,
                 emote,
             },
+            player_entity: chat.sender_entity,
         });
     }
     (chat_messages, emotes)
@@ -154,6 +165,7 @@ fn collect_emote_messages(
                     sender: sender_name.clone(),
                     emote: intent.emote,
                 },
+                player_entity: link.0,
             });
         }
     }
