@@ -5,16 +5,15 @@ Uses a full `code-index index --full` refresh unless `--skip-index` is passed.
 
 ## Summary
 
-- Rust files under `crates/`: `199`
-- Indexed files: `202`
-- Symbols: `4819`
-- References: `25197`
-- Resolution: `8088 / 25197` resolved, `3977` ambiguous, `13132` unresolved
-- Raw `dead-code` output: `2262`
-- Raw `untested` output: `415`
-- Filtered production `dead-code` candidates: `662`
-- Filtered production `untested` candidates: `401`
-- Production dead-code entries contradicted by textual references: `12`
+- Rust files under `crates/`: `201`
+- Indexed files: `204`
+- Symbols: `4838`
+- References: `25419`
+- Raw `dead-code` output: `2133`
+- Raw `untested` output: `97`
+- Filtered production `dead-code` candidates: `545`
+- Filtered production `untested` candidates: `88`
+- Production dead-code entries contradicted by textual references: `1`
 
 ## Interpretation
 
@@ -22,29 +21,20 @@ The raw Rust `dead-code` output is still too noisy for deletion work. The filter
 
 ## Contradicted Dead-Code Examples
 
-- `auth_timeout` in `crates/server/src/auth.rs:45`
-- `process_login_requests` in `crates/server/src/auth.rs:61`
-- `process_register_requests` in `crates/server/src/auth.rs:209`
-- `process_create_character` in `crates/server/src/auth_character.rs:22`
-- `process_delete_character` in `crates/server/src/auth_character.rs:93`
-- `process_select_character` in `crates/server/src/auth_character.rs:160`
-- `process_chat_messages` in `crates/server/src/messaging.rs:12`
-- `process_chat_history_requests` in `crates/server/src/messaging.rs:30`
-- `process_guild_invites` in `crates/server/src/messaging.rs:230`
-- `process_guild_accepts` in `crates/server/src/messaging.rs:310`
+- `deplete_object` in `crates/shared/src/game_object_handlers.rs:281`
 
 ## Top Untested Production Hotspots
 
-- `crates/client/src/lib.rs` — `31`
-- `crates/server/src/duel.rs` — `23`
-- `crates/server/src/pvp.rs` — `19`
-- `crates/server/src/trade_support.rs` — `18`
-- `crates/server/src/auction_house/handlers.rs` — `17`
-- `crates/server/src/auth_character.rs` — `17`
-- `crates/server/src/admin_handlers.rs` — `15`
-- `crates/server/src/death.rs` — `15`
-- `crates/server/src/lfg.rs` — `14`
-- `crates/server/src/friends.rs` — `13`
+- `crates/client/src/response_handlers.rs` — `17`
+- `crates/client/src/auth_flow.rs` — `15`
+- `crates/server/src/admin_output.rs` — `12`
+- `crates/server/src/main.rs` — `6`
+- `crates/client/src/chat_actions.rs` — `5`
+- `crates/server/src/persistence_types.rs` — `5`
+- `crates/client/src/lib.rs` — `4`
+- `crates/server/src/auction_house/queries.rs` — `4`
+- `crates/server/src/world_data.rs` — `3`
+- `crates/server/src/death.rs` — `2`
 
 ## Public Dead-Code Shortlist For Manual Review
 
