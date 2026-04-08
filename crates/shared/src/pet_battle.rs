@@ -142,12 +142,18 @@ impl PetJournal {
 
     /// Count how many of a specific species are owned.
     pub fn count_species(&self, species_id: u32) -> usize {
-        self.pets.iter().filter(|p| p.species_id == species_id).count()
+        self.pets
+            .iter()
+            .filter(|p| p.species_id == species_id)
+            .count()
     }
 
     /// All pets of a given species.
     pub fn by_species(&self, species_id: u32) -> Vec<&OwnedPet> {
-        self.pets.iter().filter(|p| p.species_id == species_id).collect()
+        self.pets
+            .iter()
+            .filter(|p| p.species_id == species_id)
+            .collect()
     }
 
     /// Highest-level pet in the journal.
@@ -715,7 +721,6 @@ impl PetBattle {
         self.phase = BattlePhase::Ended;
         self.outcome = Some(outcome);
     }
-
     fn team(&self, side: BattleSide) -> &BattleTeam {
         match side {
             BattleSide::Player => &self.player,
