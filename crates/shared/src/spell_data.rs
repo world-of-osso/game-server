@@ -2,8 +2,8 @@
 //!
 //! Each spell has an ID, name, school, cast time, cooldown, resource cost,
 //! up to 3 effects, and AP/SP scaling coefficients. This data comes from
-//! AzerothCore `spell_dbc` as a baseline, overlaid with retail values from
-//! SimC `engine/dbc/`.
+//! retail WoW DB2 tables (SpellName, SpellMisc, SpellEffect, SpellPower)
+//! imported into world.db.
 
 use serde::{Deserialize, Serialize};
 

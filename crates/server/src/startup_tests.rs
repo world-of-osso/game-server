@@ -623,8 +623,14 @@ fn world_db_has_all_expected_tables() {
         "creature",
         "creature_template",
         "creature_template_model",
-        "spell_bonus_data",
-        "spell_dbc",
+        "spell_cast_times",
+        "spell_cooldowns",
+        "spell_duration",
+        "spell_effect",
+        "spell_misc",
+        "spell_name",
+        "spell_power",
+        "spell_range",
         "waypoint_data",
     ];
     for name in required {
@@ -637,59 +643,55 @@ fn world_db_has_all_expected_tables() {
 
 #[test]
 #[ignore]
-fn world_db_spell_dbc_row_count() {
+fn world_db_spell_name_row_count() {
     let conn = world_db_conn();
-    let count = table_count(&conn, "spell_dbc");
-    // AzerothCore spell_dbc subset has ~4,400+ spell entries
+    let count = table_count(&conn, "spell_name");
     assert!(
-        count >= 4_000,
-        "spell_dbc has {count} rows, expected >= 4,000"
+        count >= 300_000,
+        "spell_name has {count} rows, expected >= 300,000"
     );
 }
 
 #[test]
 #[ignore]
-fn world_db_spell_bonus_data_row_count() {
+fn world_db_spell_effect_row_count() {
     let conn = world_db_conn();
-    let count = table_count(&conn, "spell_bonus_data");
-    // AzerothCore spell_bonus_data has ~1,200+ coefficient entries
+    let count = table_count(&conn, "spell_effect");
     assert!(
-        count >= 1_000,
-        "spell_bonus_data has {count} rows, expected >= 1,000"
+        count >= 500_000,
+        "spell_effect has {count} rows, expected >= 500,000"
     );
 }
 
 #[test]
 #[ignore]
-fn world_db_spell_dbc_has_known_spells() {
+fn world_db_spell_has_known_spells() {
     let conn = world_db_conn();
-    // Verify at least one well-known spell exists
     let name: String = conn
         .query_row(
-            "SELECT Name_Lang_enUS FROM spell_dbc WHERE ID = 84",
+            "SELECT Name_lang FROM spell_name WHERE ID = 12294",
             [],
             |r| r.get(0),
         )
-        .expect("spell ID 84 missing from spell_dbc");
-    assert_eq!(name, "Low Health");
+        .expect("Mortal Strike (12294) missing from spell_name");
+    assert_eq!(name, "Mortal Strike");
 }
 
 #[test]
 #[ignore]
-fn world_db_spell_bonus_data_has_coefficients() {
+fn world_db_spell_effect_has_coefficients() {
     let conn = world_db_conn();
-    // Verify at least one entry has non-zero coefficients
     let count: u64 = conn
         .query_row(
-            "SELECT COUNT(*) FROM spell_bonus_data
-             WHERE direct_bonus != 0 OR dot_bonus != 0 OR ap_bonus != 0 OR ap_dot_bonus != 0",
+            "SELECT COUNT(*) FROM spell_effect
+             WHERE BonusCoefficientFromAP != 0 OR EffectBonusCoefficient != 0",
             [],
             |r| r.get(0),
         )
         .unwrap();
     assert!(
-        count >= 50,
-        "only {count} spell_bonus_data entries with non-zero coefficients"
+        count >= 1_000,
+        "only {count} spell_effect entries with non-zero coefficients"
     );
 }
 
@@ -699,10 +701,10 @@ fn world_db_loads_spells_through_spell_database() {
     let conn = world_db_conn();
     let db = crate::spell_db::load_spell_database(&conn);
     assert!(!db.is_empty(), "no spells loaded");
-    assert!(db.len() >= 4_000, "only {} spells loaded", db.len());
-    // Verify a known spell loaded
-    let spell = db.get(84).expect("spell 84 not in SpellDatabase");
-    assert_eq!(spell.name, "Low Health");
+    assert!(db.len() >= 300_000, "only {} spells loaded", db.len());
+    let spell = db.get(12294).expect("Mortal Strike not in SpellDatabase");
+    assert_eq!(spell.name, "Mortal Strike");
+    assert_eq!(spell.school, shared::components::SpellSchool::Physical);
 }
 
 #[test]

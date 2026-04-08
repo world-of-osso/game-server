@@ -1,9 +1,8 @@
 #!/usr/bin/env bash
-# Import AzerothCore MySQL dumps into SQLite world.db.
+# Import AzerothCore MySQL dumps + retail spell CSVs into SQLite world.db.
 #
-# Uses hardcoded DDL (no MySQL→SQLite DDL parsing) + streaming INSERT extraction.
-# INSERT data is filtered with awk (state machine), backtick-stripped, and
-# MySQL \' escapes converted to SQLite '' before loading.
+# Creature data: AzerothCore MySQL dump → awk extraction → SQLite INSERT
+# Spell data: Retail DB2 CSVs (from game-engine/data/) → sqlite3 .import
 #
 # Usage: ./scripts/import-azerothcore.sh [path/to/azerothcore/data/sql/base/db_world]
 set -euo pipefail
@@ -14,17 +13,25 @@ DB_PATH="$PROJECT_DIR/data/world.db"
 TMP_DIR="$PROJECT_DIR/data/import_tmp"
 
 SQL_DIR="${1:-/home/osso/Repos/azerothcore/data/sql/base/db_world}"
+SPELL_CSV_DIR="${SPELL_CSV_DIR:-$PROJECT_DIR/../game-engine/data}"
 
 CREATURE_TEMPLATE_SQL="$SQL_DIR/creature_template.sql"
 CREATURE_SQL="$SQL_DIR/creature.sql"
 CREATURE_TEMPLATE_MODEL_SQL="$SQL_DIR/creature_template_model.sql"
 WAYPOINT_DATA_SQL="$SQL_DIR/waypoint_data.sql"
-SPELL_DBC_SQL="$SQL_DIR/spell_dbc.sql"
-SPELL_BONUS_DATA_SQL="$SQL_DIR/spell_bonus_data.sql"
 
-for f in "$CREATURE_TEMPLATE_SQL" "$CREATURE_SQL" "$CREATURE_TEMPLATE_MODEL_SQL" "$WAYPOINT_DATA_SQL" "$SPELL_DBC_SQL" "$SPELL_BONUS_DATA_SQL"; do
+for f in "$CREATURE_TEMPLATE_SQL" "$CREATURE_SQL" "$CREATURE_TEMPLATE_MODEL_SQL" "$WAYPOINT_DATA_SQL"; do
     if [[ ! -f "$f" ]]; then
         echo "ERROR: Missing SQL file: $f" >&2
+        exit 1
+    fi
+done
+
+SPELL_CSVS=(SpellName Spell SpellMisc SpellEffect SpellPower SpellCastTimes SpellRange SpellCooldowns SpellDuration)
+SPELL_TABLES=(spell_name spell spell_misc spell_effect spell_power spell_cast_times spell_range spell_cooldowns spell_duration)
+for csv in "${SPELL_CSVS[@]}"; do
+    if [[ ! -f "$SPELL_CSV_DIR/$csv.csv" ]]; then
+        echo "ERROR: Missing CSV file: $SPELL_CSV_DIR/$csv.csv" >&2
         exit 1
     fi
 done
@@ -41,11 +48,8 @@ if [[ ! -f "$SCHEMA_SQL" ]]; then
 fi
 sqlite3 "$DB_PATH" ".read $SCHEMA_SQL"
 
-# Extract INSERT data from a MySQL dump file.
-# - State machine: emits lines between INSERT INTO and UNLOCK TABLES
-# - Strips backticks from INSERT INTO header line
-# - Skips /*!...*/ comment lines inside data blocks
-# - Converts MySQL \' escape sequences to SQLite '' syntax
+# --- AzerothCore MySQL dump import (creatures/waypoints) ---
+
 extract_inserts() {
     local sql_file="$1"
     local out_file="$2"
@@ -81,8 +85,23 @@ import_table "$CREATURE_TEMPLATE_SQL"       "creature_template"
 import_table "$CREATURE_SQL"                "creature"
 import_table "$CREATURE_TEMPLATE_MODEL_SQL" "creature_template_model"
 import_table "$WAYPOINT_DATA_SQL"           "waypoint_data"
-import_table "$SPELL_DBC_SQL"              "spell_dbc"
-import_table "$SPELL_BONUS_DATA_SQL"       "spell_bonus_data"
+
+# --- Retail spell CSV import ---
+
+import_spell_csv() {
+    local csv_file="$1"
+    local table_name="$2"
+    echo "  Importing $table_name from $(basename "$csv_file") ..."
+    sqlite3 "$DB_PATH" <<EOF
+.mode csv
+.import --skip 1 $csv_file $table_name
+EOF
+    echo "  Done: $table_name"
+}
+
+for i in "${!SPELL_CSVS[@]}"; do
+    import_spell_csv "$SPELL_CSV_DIR/${SPELL_CSVS[$i]}.csv" "${SPELL_TABLES[$i]}"
+done
 
 rmdir --ignore-fail-on-non-empty "$TMP_DIR"
 
@@ -93,7 +112,14 @@ sqlite3 "$DB_PATH" \
     "SELECT 'creature: ' || COUNT(*) FROM creature;" \
     "SELECT 'creature_template_model: ' || COUNT(*) FROM creature_template_model;" \
     "SELECT 'waypoint_data: ' || COUNT(*) FROM waypoint_data;" \
-    "SELECT 'spell_dbc: ' || COUNT(*) FROM spell_dbc;" \
-    "SELECT 'spell_bonus_data: ' || COUNT(*) FROM spell_bonus_data;"
+    "SELECT 'spell_name: ' || COUNT(*) FROM spell_name;" \
+    "SELECT 'spell: ' || COUNT(*) FROM spell;" \
+    "SELECT 'spell_misc: ' || COUNT(*) FROM spell_misc;" \
+    "SELECT 'spell_effect: ' || COUNT(*) FROM spell_effect;" \
+    "SELECT 'spell_power: ' || COUNT(*) FROM spell_power;" \
+    "SELECT 'spell_cast_times: ' || COUNT(*) FROM spell_cast_times;" \
+    "SELECT 'spell_range: ' || COUNT(*) FROM spell_range;" \
+    "SELECT 'spell_cooldowns: ' || COUNT(*) FROM spell_cooldowns;" \
+    "SELECT 'spell_duration: ' || COUNT(*) FROM spell_duration;"
 
 echo "Database written to: $DB_PATH"
