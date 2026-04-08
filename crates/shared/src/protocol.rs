@@ -43,6 +43,9 @@ pub struct ProfessionChannel;
 /// Reliable ordered channel for reputation updates, bidirectional.
 pub struct ReputationChannel;
 
+/// Reliable ordered channel for achievement updates, bidirectional.
+pub struct AchievementChannel;
+
 /// Reliable ordered channel for collection updates, bidirectional.
 pub struct CollectionChannel;
 
@@ -690,6 +693,14 @@ pub struct ReputationStateUpdate {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct AchievementStateUpdate {
+    pub snapshot: Option<AchievementSnapshot>,
+    pub completed: Option<AchievementToastSnapshot>,
+    pub message: Option<String>,
+    pub error: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct SummonMount {
     pub mount_id: u32,
 }
@@ -769,6 +780,7 @@ fn register_messages(app: &mut App) {
     register_duel_messages(app);
     register_profession_messages(app);
     register_reputation_messages(app);
+    register_achievement_messages(app);
     register_collection_messages(app);
     register_currency_messages(app);
     crate::protocol_snapshots::register_snapshot_messages(app);
@@ -955,6 +967,11 @@ fn register_reputation_messages(app: &mut App) {
         .add_direction(NetworkDirection::ServerToClient);
 }
 
+fn register_achievement_messages(app: &mut App) {
+    app.register_message::<AchievementStateUpdate>()
+        .add_direction(NetworkDirection::ServerToClient);
+}
+
 fn register_collection_messages(app: &mut App) {
     app.register_message::<SummonMount>()
         .add_direction(NetworkDirection::ClientToServer);
@@ -1011,6 +1028,7 @@ fn register_bidirectional_channels(app: &mut App) {
     add_reliable_channel::<DuelChannel>(app, NetworkDirection::Bidirectional);
     add_reliable_channel::<ProfessionChannel>(app, NetworkDirection::Bidirectional);
     add_reliable_channel::<ReputationChannel>(app, NetworkDirection::Bidirectional);
+    add_reliable_channel::<AchievementChannel>(app, NetworkDirection::Bidirectional);
     add_reliable_channel::<CollectionChannel>(app, NetworkDirection::Bidirectional);
     add_reliable_channel::<CurrencyChannel>(app, NetworkDirection::Bidirectional);
 }

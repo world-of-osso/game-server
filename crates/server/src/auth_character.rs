@@ -256,25 +256,17 @@ fn handle_select(
         send_enter_error(conn, enter_senders, "Character data missing");
         return;
     };
-    let guild = persistence::load_character_guild(&db.db, req.character_id);
-    let professions = persistence::load_professions(&db.db, req.character_id);
-    let collections = persistence::load_collections(&db.db, req.character_id);
-    let currencies = persistence::load_currencies(&db.db, req.character_id);
-    let reputation = persistence::load_reputation(&db.db, req.character_id, || {
-        shared::reputation::CharacterReputation::new_for_race(
-            &default_faction_registry(),
-            data.race,
-        )
-    });
+    let state = load_selected_character_state(db, req.character_id, data.race);
     let player_entity = spawn_player_entity(
         commands,
         &data,
         req.character_id,
-        guild.as_ref(),
-        professions,
-        collections,
-        crate::currency::PlayerCurrencies(currencies),
-        reputation,
+        state.guild.as_ref(),
+        state.professions,
+        state.achievements,
+        state.collections,
+        crate::currency::PlayerCurrencies(state.currencies),
+        state.reputation,
     );
     insert_world_components(commands, conn, player_entity, req.character_id);
     send_enter_success(conn, enter_senders, player_entity);
@@ -288,6 +280,32 @@ fn handle_select(
 fn validate_ownership(db: &GameDatabase, account_id: u64, character_id: u64) -> bool {
     let chars = persistence::list_characters_for_account(&db.db, account_id);
     chars.iter().any(|(id, _)| *id == character_id)
+}
+
+struct SelectedCharacterState {
+    guild: Option<GuildMembership>,
+    professions: PlayerProfessions,
+    achievements: crate::achievement::PlayerAchievementState,
+    collections: crate::collection::PlayerCollectionState,
+    currencies: shared::currency::CurrencyWallet,
+    reputation: shared::reputation::CharacterReputation,
+}
+
+fn load_selected_character_state(
+    db: &GameDatabase,
+    character_id: u64,
+    race: u8,
+) -> SelectedCharacterState {
+    SelectedCharacterState {
+        guild: persistence::load_character_guild(&db.db, character_id),
+        professions: persistence::load_professions(&db.db, character_id),
+        achievements: persistence::load_achievements(&db.db, character_id),
+        collections: persistence::load_collections(&db.db, character_id),
+        currencies: persistence::load_currencies(&db.db, character_id),
+        reputation: persistence::load_reputation(&db.db, character_id, || {
+            shared::reputation::CharacterReputation::new_for_race(&default_faction_registry(), race)
+        }),
+    }
 }
 
 fn insert_world_components(
@@ -388,6 +406,7 @@ pub fn spawn_player_entity(
     character_id: u64,
     guild: Option<&GuildMembership>,
     professions: PlayerProfessions,
+    achievements: crate::achievement::PlayerAchievementState,
     collections: crate::collection::PlayerCollectionState,
     currencies: crate::currency::PlayerCurrencies,
     reputation: shared::reputation::CharacterReputation,
@@ -396,6 +415,7 @@ pub fn spawn_player_entity(
         .spawn(build_player_components(data, character_id))
         .id();
     commands.entity(entity).insert(professions);
+    commands.entity(entity).insert(achievements);
     commands.entity(entity).insert(collections.clone());
     commands.entity(entity).insert(currencies);
     commands.entity(entity).insert(reputation);

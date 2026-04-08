@@ -1,3 +1,4 @@
+mod achievement;
 mod admin_handlers;
 mod admin_ipc;
 mod admin_types;
@@ -58,6 +59,7 @@ fn add_runtime_plugins(app: &mut App) {
 fn add_game_plugins(app: &mut App) {
     app.add_plugins(shared::ProtocolPlugin)
         .add_plugins(persistence::PersistencePlugin)
+        .add_plugins(achievement::AchievementPlugin)
         .add_plugins(auction_house::AuctionHousePlugin)
         .add_plugins(collection::CollectionPlugin)
         .add_plugins(currency::CurrencyPlugin)

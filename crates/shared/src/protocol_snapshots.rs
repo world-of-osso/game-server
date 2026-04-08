@@ -167,6 +167,27 @@ pub struct ReputationEntrySnapshot {
     pub value: i32,
 }
 
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct AchievementSnapshot {
+    pub earned_ids: Vec<u32>,
+    pub progress: Vec<AchievementProgressSnapshot>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct AchievementProgressSnapshot {
+    pub achievement_id: u32,
+    pub current: u32,
+    pub required: u32,
+    pub completed: bool,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct AchievementToastSnapshot {
+    pub achievement_id: u32,
+    pub name: String,
+    pub points: u32,
+}
+
 pub fn register_snapshot_messages(app: &mut App) {
     app.register_message::<QuestLogSnapshot>()
         .add_direction(NetworkDirection::ServerToClient);
@@ -183,5 +204,9 @@ pub fn register_snapshot_messages(app: &mut App) {
     app.register_message::<CurrencySnapshot>()
         .add_direction(NetworkDirection::ServerToClient);
     app.register_message::<ReputationSnapshot>()
+        .add_direction(NetworkDirection::ServerToClient);
+    app.register_message::<AchievementSnapshot>()
+        .add_direction(NetworkDirection::ServerToClient);
+    app.register_message::<AchievementToastSnapshot>()
         .add_direction(NetworkDirection::ServerToClient);
 }

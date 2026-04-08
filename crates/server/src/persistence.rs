@@ -24,6 +24,9 @@ const REPUTATIONS: TableDefinition<u64, &[u8]> = TableDefinition::new("reputatio
 /// Currency table: PlayerId (u64) -> serialized currency wallet (bytes).
 const CURRENCIES: TableDefinition<u64, &[u8]> = TableDefinition::new("currencies");
 
+/// Achievement table: PlayerId (u64) -> serialized achievement state (bytes).
+const ACHIEVEMENTS: TableDefinition<u64, &[u8]> = TableDefinition::new("achievements");
+
 /// Collection table: PlayerId (u64) -> serialized collection state (bytes).
 const COLLECTIONS: TableDefinition<u64, &[u8]> = TableDefinition::new("collections");
 
@@ -139,6 +142,7 @@ pub(crate) fn create_tables(db: &Database) {
     let _ = txn.open_table(PROFESSIONS);
     let _ = txn.open_table(REPUTATIONS);
     let _ = txn.open_table(CURRENCIES);
+    let _ = txn.open_table(ACHIEVEMENTS);
     let _ = txn.open_table(COLLECTIONS);
     let _ = txn.open_table(AUCTIONS);
     let _ = txn.open_table(MAILBOXES);
@@ -282,6 +286,48 @@ pub fn save_currencies(
             .expect("Failed to insert currencies");
     }
     txn.commit().expect("Failed to commit currencies save");
+}
+
+pub fn load_achievements(
+    db: &Database,
+    character_id: u64,
+) -> crate::achievement::PlayerAchievementState {
+    let txn = db.begin_read().expect("Failed to begin read txn");
+    let table = txn
+        .open_table(ACHIEVEMENTS)
+        .expect("Failed to open achievements table");
+    match table
+        .get(character_id)
+        .expect("Failed to read achievements")
+    {
+        Some(guard) => {
+            serde_json::from_slice::<crate::achievement::PlayerAchievementState>(guard.value())
+                .expect("decode achievements")
+        }
+        None => {
+            let state = crate::achievement::PlayerAchievementState::default();
+            save_achievements(db, character_id, &state);
+            state
+        }
+    }
+}
+
+pub fn save_achievements(
+    db: &Database,
+    character_id: u64,
+    state: &crate::achievement::PlayerAchievementState,
+) {
+    let bytes = serde_json::to_vec(state).expect("encode achievements");
+    let txn = db.begin_write().expect("Failed to begin write txn");
+    {
+        let mut table = txn
+            .open_table(ACHIEVEMENTS)
+            .expect("Failed to open achievements table");
+        table
+            .insert(character_id, bytes.as_slice())
+            .expect("Failed to insert achievements");
+    }
+    txn.commit().expect("Failed to commit achievements save");
 }
 
 pub fn load_collections(
