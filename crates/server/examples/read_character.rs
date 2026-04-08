@@ -1,13 +1,6 @@
 use redb::{ReadableDatabase, TableDefinition};
-
-mod terrain_height {
-    pub fn bevy_to_wow(x: f32, y: f32, z: f32) -> (f32, f32, f32) {
-        (x, y, z)
-    }
-}
-
-#[path = "../src/persistence_types.rs"]
-mod persistence_types;
+#[path = "../src/character_data.rs"]
+mod character_data;
 
 const CHARACTERS: TableDefinition<u64, &[u8]> = TableDefinition::new("characters");
 const CHARACTER_NAMES: TableDefinition<&str, u64> = TableDefinition::new("character_names");
@@ -35,7 +28,7 @@ fn main() {
         std::process::exit(1);
     };
 
-    let data = persistence_types::CharacterData::decode_compatible(raw.value()).expect("decode");
+    let data = character_data::CharacterData::decode_compatible(raw.value()).expect("decode");
     println!("character_id={character_id}");
     println!("name={}", data.name);
     println!("appearance={:?}", data.appearance);

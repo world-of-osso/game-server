@@ -17,24 +17,12 @@ fn test_world_data(template: CreatureTemplate) -> WorldData {
 fn test_template(entry: u32, faction: u16, min_level: u8, max_level: u8) -> CreatureTemplate {
     CreatureTemplate {
         entry,
-        name: format!("Creature-{entry}"),
-        subname: None,
         min_level,
         max_level,
         faction,
         npc_flags: 0,
         speed_walk: 1.0,
-        speed_run: 1.0,
-        scale: 1.0,
-        rank: 0,
-        unit_class: 1,
-        unit_flags: 0,
-        creature_type: 1,
         health_modifier: 1.0,
-        mana_modifier: 0.0,
-        ai_name: String::new(),
-        movement_type: 0,
-        flags_extra: 0,
         models: Vec::new(),
     }
 }

@@ -5,17 +5,13 @@ fn patrol_returns_to_nearest_waypoint_after_combat() {
     use crate::world_data::{WaypointPath, WaypointPoint};
 
     let make_wp = |x, y, z| WaypointPoint {
-        point: 0,
         position_x: x,
         position_y: y,
         position_z: z,
-        orientation: None,
         delay: 0,
-        move_type: 0,
     };
 
     let path = WaypointPath {
-        creature_guid: 1,
         points: vec![
             make_wp(0.0, 0.0, 0.0),
             make_wp(20.0, 0.0, 0.0),
@@ -75,17 +71,13 @@ fn waypoint_creature_follows_path_in_order() {
     use crate::world_data::{WaypointPath, WaypointPoint};
 
     let make_wp = |x, y, z| WaypointPoint {
-        point: 0,
         position_x: x,
         position_y: y,
         position_z: z,
-        orientation: None,
         delay: 0,
-        move_type: 0,
     };
 
     let path = WaypointPath {
-        creature_guid: 1,
         points: vec![
             make_wp(10.0, 0.0, 0.0),
             make_wp(20.0, 0.0, 0.0),
@@ -131,25 +123,18 @@ fn waypoint_creature_pauses_at_delay() {
     use crate::world_data::{WaypointPath, WaypointPoint};
 
     let path = WaypointPath {
-        creature_guid: 1,
         points: vec![
             WaypointPoint {
-                point: 0,
                 position_x: 10.0,
                 position_y: 0.0,
                 position_z: 0.0,
-                orientation: None,
                 delay: 3,
-                move_type: 0,
             },
             WaypointPoint {
-                point: 1,
                 position_x: 20.0,
                 position_y: 0.0,
                 position_z: 0.0,
-                orientation: None,
                 delay: 0,
-                move_type: 0,
             },
         ],
     };

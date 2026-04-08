@@ -75,14 +75,13 @@ fn world_data_loads_from_sqlite() {
     assert!(world.templates.contains_key(&2));
 
     let wolf = &world.templates[&1];
-    assert_eq!(wolf.name, "Wolf");
     assert_eq!(wolf.min_level, 3);
     assert_eq!(wolf.max_level, 4);
 
     let waypoints = &world.waypoints[&10];
     assert_eq!(waypoints.points.len(), 2);
-    assert_eq!(waypoints.points[0].point, 1);
-    assert_eq!(waypoints.points[1].point, 2);
+    assert_eq!(waypoints.points[0].position_x, 1.0);
+    assert_eq!(waypoints.points[1].position_x, 4.0);
 }
 
 #[test]
@@ -157,15 +156,13 @@ fn world_data_waypoints_grouped_by_creature() {
     let world = crate::world_data::load_world_data(&path);
 
     let path1 = &world.waypoints[&1];
-    assert_eq!(path1.creature_guid, 1);
     assert_eq!(path1.points.len(), 3);
-    assert_eq!(path1.points[0].point, 1);
-    assert_eq!(path1.points[2].point, 3);
+    assert_eq!(path1.points[0].position_x, 0.0);
+    assert_eq!(path1.points[2].position_x, 2.0);
 
     let path2 = &world.waypoints[&2];
-    assert_eq!(path2.creature_guid, 2);
     assert_eq!(path2.points.len(), 2);
-    assert_eq!(path2.points[0].point, 1);
+    assert_eq!(path2.points[0].position_x, 5.0);
 }
 
 // ---------------------------------------------------------------------------
@@ -717,9 +714,7 @@ fn world_db_loads_through_world_data() {
     assert!(!data.spawns.is_empty(), "no spawns loaded");
     assert!(!data.spawns_by_map.is_empty(), "no map index built");
     assert!(!data.waypoints.is_empty(), "no waypoints loaded");
-    // Verify Hogger loaded correctly
     let hogger = data.templates.get(&448).expect("Hogger template missing");
-    assert_eq!(hogger.name, "Hogger");
     assert!(hogger.min_level >= 10);
     assert!(!hogger.models.is_empty(), "Hogger has no models");
 }

@@ -177,29 +177,13 @@ mod tests {
     fn make_template(entry: u32, health_mod: f32, display_id: u32) -> CreatureTemplate {
         CreatureTemplate {
             entry,
-            name: format!("Creature-{entry}"),
-            subname: None,
             min_level: 1,
             max_level: 1,
             faction: 0,
             npc_flags: 0,
             speed_walk: 1.0,
-            speed_run: 1.14,
-            scale: 1.0,
-            rank: 0,
-            unit_class: 1,
-            unit_flags: 0,
-            creature_type: 1,
             health_modifier: health_mod,
-            mana_modifier: 1.0,
-            ai_name: String::new(),
-            movement_type: 0,
-            flags_extra: 0,
-            models: vec![CreatureModelInfo {
-                display_id,
-                display_scale: 1.0,
-                probability: 1.0,
-            }],
+            models: vec![CreatureModelInfo { display_id }],
         }
     }
 
@@ -226,12 +210,9 @@ mod tests {
             template_entry: entry,
             map: 0,
             zone_id: 0,
-            area_id: 0,
             position_x: x,
             position_y: y,
             position_z: z,
-            orientation: 0.0,
-            respawn_time_secs: 300,
             wander_distance: 0.0,
             movement_type: 0,
         }

@@ -145,20 +145,16 @@ fn pursuing_pauses_waypoint() {
     use std::collections::HashMap;
 
     let make_wp = |x, y, z| WaypointPoint {
-        point: 0,
         position_x: x,
         position_y: y,
         position_z: z,
-        orientation: None,
         delay: 0,
-        move_type: 0,
     };
 
     let mut waypoints = HashMap::new();
     waypoints.insert(
         1u32,
         WaypointPath {
-            creature_guid: 1,
             points: vec![make_wp(10.0, 0.0, 0.0), make_wp(20.0, 0.0, 0.0)],
         },
     );
