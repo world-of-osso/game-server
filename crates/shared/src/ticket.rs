@@ -74,9 +74,18 @@ pub struct TicketResponse {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TicketNotification {
     /// A GM has responded to the ticket.
-    GmResponse { ticket_id: u64, player: u64, gm_name: String, message: String },
+    GmResponse {
+        ticket_id: u64,
+        player: u64,
+        gm_name: String,
+        message: String,
+    },
     /// Ticket has been assigned to a GM.
-    Assigned { ticket_id: u64, player: u64, gm_name: String },
+    Assigned {
+        ticket_id: u64,
+        player: u64,
+        gm_name: String,
+    },
     /// Ticket has been resolved.
     Resolved { ticket_id: u64, player: u64 },
     /// Ticket has been escalated.
@@ -143,7 +152,11 @@ pub struct TicketManager {
 
 impl TicketManager {
     pub fn new() -> Self {
-        Self { tickets: Vec::new(), next_id: 1, notifications: Vec::new() }
+        Self {
+            tickets: Vec::new(),
+            next_id: 1,
+            notifications: Vec::new(),
+        }
     }
 
     /// Drain all pending notifications (server sends these to players).
@@ -166,7 +179,11 @@ impl TicketManager {
             return Err(TicketError::DescriptionTooLong);
         }
         let has_open = self.tickets.iter().any(|t| {
-            t.player == player && matches!(t.state, TicketState::Open | TicketState::Assigned | TicketState::Escalated)
+            t.player == player
+                && matches!(
+                    t.state,
+                    TicketState::Open | TicketState::Assigned | TicketState::Escalated
+                )
         });
         if has_open {
             return Err(TicketError::AlreadyHasTicket);
@@ -174,7 +191,9 @@ impl TicketManager {
         let id = self.next_id;
         self.next_id += 1;
         self.tickets.push(Ticket {
-            id, player, category,
+            id,
+            player,
+            category,
             description: description.to_string(),
             state: TicketState::Open,
             priority: default_priority(category),
@@ -192,23 +211,24 @@ impl TicketManager {
 
     /// Find a player's active (non-resolved) ticket.
     pub fn find_player_ticket(&self, player: u64) -> Option<&Ticket> {
-        self.tickets.iter().find(|t| {
-            t.player == player && !matches!(t.state, TicketState::Resolved)
-        })
+        self.tickets
+            .iter()
+            .find(|t| t.player == player && !matches!(t.state, TicketState::Resolved))
     }
 
     /// Full ticket history for a player (all states), newest first.
     pub fn player_history(&self, player: u64) -> Vec<&Ticket> {
-        let mut history: Vec<&Ticket> = self.tickets.iter()
-            .filter(|t| t.player == player)
-            .collect();
+        let mut history: Vec<&Ticket> =
+            self.tickets.iter().filter(|t| t.player == player).collect();
         history.sort_by(|a, b| b.created_at.cmp(&a.created_at));
         history
     }
 
     /// Resolved tickets for a player, newest first.
     pub fn player_resolved_history(&self, player: u64) -> Vec<&Ticket> {
-        let mut history: Vec<&Ticket> = self.tickets.iter()
+        let mut history: Vec<&Ticket> = self
+            .tickets
+            .iter()
             .filter(|t| t.player == player && t.state == TicketState::Resolved)
             .collect();
         history.sort_by(|a, b| b.created_at.cmp(&a.created_at));
@@ -232,13 +252,20 @@ impl TicketManager {
 
     /// All open tickets (not yet assigned).
     pub fn open_tickets(&self) -> Vec<&Ticket> {
-        self.tickets.iter().filter(|t| t.state == TicketState::Open).collect()
+        self.tickets
+            .iter()
+            .filter(|t| t.state == TicketState::Open)
+            .collect()
     }
 
     /// Open tickets sorted by priority (highest first), then FIFO (oldest first).
     pub fn queue(&self) -> Vec<&Ticket> {
         let mut queue: Vec<&Ticket> = self.open_tickets();
-        queue.sort_by(|a, b| b.priority.cmp(&a.priority).then(a.created_at.cmp(&b.created_at)));
+        queue.sort_by(|a, b| {
+            b.priority
+                .cmp(&a.priority)
+                .then(a.created_at.cmp(&b.created_at))
+        });
         queue
     }
 
@@ -249,7 +276,10 @@ impl TicketManager {
 
     /// Override a ticket's priority (GM escalation/de-escalation).
     pub fn set_priority(&mut self, id: u64, priority: TicketPriority) -> Result<(), TicketError> {
-        let ticket = self.tickets.iter_mut().find(|t| t.id == id)
+        let ticket = self
+            .tickets
+            .iter_mut()
+            .find(|t| t.id == id)
             .ok_or(TicketError::NotFound)?;
         ticket.priority = priority;
         Ok(())
@@ -258,15 +288,27 @@ impl TicketManager {
     /// Count of open tickets per priority level.
     pub fn queue_counts(&self) -> (usize, usize, usize) {
         let open = self.open_tickets();
-        let normal = open.iter().filter(|t| t.priority == TicketPriority::Normal).count();
-        let high = open.iter().filter(|t| t.priority == TicketPriority::High).count();
-        let critical = open.iter().filter(|t| t.priority == TicketPriority::Critical).count();
+        let normal = open
+            .iter()
+            .filter(|t| t.priority == TicketPriority::Normal)
+            .count();
+        let high = open
+            .iter()
+            .filter(|t| t.priority == TicketPriority::High)
+            .count();
+        let critical = open
+            .iter()
+            .filter(|t| t.priority == TicketPriority::Critical)
+            .count();
         (critical, high, normal)
     }
 
     /// GM claims a ticket. Moves it from Open → Assigned.
     pub fn assign(&mut self, id: u64, gm_name: &str) -> Result<(), TicketError> {
-        let ticket = self.tickets.iter_mut().find(|t| t.id == id)
+        let ticket = self
+            .tickets
+            .iter_mut()
+            .find(|t| t.id == id)
             .ok_or(TicketError::NotFound)?;
         if ticket.state != TicketState::Open {
             return Err(TicketError::NotOpen);
@@ -277,14 +319,19 @@ impl TicketManager {
         ticket.state = TicketState::Assigned;
         ticket.assigned_to = Some(gm_name.to_string());
         self.notifications.push(TicketNotification::Assigned {
-            ticket_id: id, player: ticket.player, gm_name: gm_name.to_string(),
+            ticket_id: id,
+            player: ticket.player,
+            gm_name: gm_name.to_string(),
         });
         Ok(())
     }
 
     /// Release a ticket back to the queue. Moves Assigned → Open.
     pub fn unassign(&mut self, id: u64) -> Result<(), TicketError> {
-        let ticket = self.tickets.iter_mut().find(|t| t.id == id)
+        let ticket = self
+            .tickets
+            .iter_mut()
+            .find(|t| t.id == id)
             .ok_or(TicketError::NotFound)?;
         if ticket.assigned_to.is_none() {
             return Err(TicketError::NotAssigned);
@@ -303,21 +350,26 @@ impl TicketManager {
 
     /// All tickets assigned to a specific GM.
     pub fn assigned_to(&self, gm_name: &str) -> Vec<&Ticket> {
-        self.tickets.iter()
+        self.tickets
+            .iter()
             .filter(|t| t.assigned_to.as_deref() == Some(gm_name))
             .collect()
     }
 
     /// Resolve a ticket. Only Assigned or Escalated tickets can be resolved.
     pub fn resolve(&mut self, id: u64) -> Result<(), TicketError> {
-        let ticket = self.tickets.iter_mut().find(|t| t.id == id)
+        let ticket = self
+            .tickets
+            .iter_mut()
+            .find(|t| t.id == id)
             .ok_or(TicketError::NotFound)?;
         match ticket.state {
             TicketState::Resolved => Err(TicketError::AlreadyResolved),
             TicketState::Assigned | TicketState::Escalated => {
                 ticket.state = TicketState::Resolved;
                 self.notifications.push(TicketNotification::Resolved {
-                    ticket_id: id, player: ticket.player,
+                    ticket_id: id,
+                    player: ticket.player,
                 });
                 Ok(())
             }
@@ -327,13 +379,17 @@ impl TicketManager {
 
     /// Escalate a ticket. Only Assigned tickets can be escalated.
     pub fn escalate(&mut self, id: u64) -> Result<(), TicketError> {
-        let ticket = self.tickets.iter_mut().find(|t| t.id == id)
+        let ticket = self
+            .tickets
+            .iter_mut()
+            .find(|t| t.id == id)
             .ok_or(TicketError::NotFound)?;
         match ticket.state {
             TicketState::Assigned => {
                 ticket.state = TicketState::Escalated;
                 self.notifications.push(TicketNotification::Escalated {
-                    ticket_id: id, player: ticket.player,
+                    ticket_id: id,
+                    player: ticket.player,
                 });
                 Ok(())
             }
@@ -350,7 +406,10 @@ impl TicketManager {
         message: &str,
         now: u64,
     ) -> Result<(), TicketError> {
-        let ticket = self.tickets.iter_mut().find(|t| t.id == id)
+        let ticket = self
+            .tickets
+            .iter_mut()
+            .find(|t| t.id == id)
             .ok_or(TicketError::NotFound)?;
         if ticket.state == TicketState::Resolved {
             return Err(TicketError::AlreadyResolved);
@@ -362,7 +421,9 @@ impl TicketManager {
             timestamp: now,
         });
         self.notifications.push(TicketNotification::GmResponse {
-            ticket_id: id, player, gm_name: gm_name.to_string(),
+            ticket_id: id,
+            player,
+            gm_name: gm_name.to_string(),
             message: message.to_string(),
         });
         Ok(())
@@ -370,12 +431,18 @@ impl TicketManager {
 
     /// All resolved tickets.
     pub fn resolved_tickets(&self) -> Vec<&Ticket> {
-        self.tickets.iter().filter(|t| t.state == TicketState::Resolved).collect()
+        self.tickets
+            .iter()
+            .filter(|t| t.state == TicketState::Resolved)
+            .collect()
     }
 
     /// All escalated tickets.
     pub fn escalated_tickets(&self) -> Vec<&Ticket> {
-        self.tickets.iter().filter(|t| t.state == TicketState::Escalated).collect()
+        self.tickets
+            .iter()
+            .filter(|t| t.state == TicketState::Escalated)
+            .collect()
     }
 }
 

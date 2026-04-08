@@ -82,7 +82,8 @@ impl Party {
         if self.members.len() >= MAX_PARTY_SIZE {
             return Err(PartyError::Full);
         }
-        if self.members.contains(&player) { // bounded: max 5 members
+        if self.members.contains(&player) {
+            // bounded: max 5 members
             return Err(PartyError::AlreadyMember);
         }
         self.members.push(player);
@@ -269,7 +270,10 @@ impl RoleAssignments {
 
     /// Get a member's assigned role.
     pub fn role_of(&self, player: u64) -> Option<GroupRole> {
-        self.entries.iter().find(|(m, _)| *m == player).map(|(_, r)| *r)
+        self.entries
+            .iter()
+            .find(|(m, _)| *m == player)
+            .map(|(_, r)| *r)
     }
 
     /// Remove a member's role (e.g. when they leave the group).
@@ -279,9 +283,21 @@ impl RoleAssignments {
 
     /// Count of each role.
     pub fn counts(&self) -> (usize, usize, usize) {
-        let tanks = self.entries.iter().filter(|(_, r)| *r == GroupRole::Tank).count();
-        let healers = self.entries.iter().filter(|(_, r)| *r == GroupRole::Healer).count();
-        let dps = self.entries.iter().filter(|(_, r)| *r == GroupRole::Dps).count();
+        let tanks = self
+            .entries
+            .iter()
+            .filter(|(_, r)| *r == GroupRole::Tank)
+            .count();
+        let healers = self
+            .entries
+            .iter()
+            .filter(|(_, r)| *r == GroupRole::Healer)
+            .count();
+        let dps = self
+            .entries
+            .iter()
+            .filter(|(_, r)| *r == GroupRole::Dps)
+            .count();
         (tanks, healers, dps)
     }
 
@@ -317,7 +333,10 @@ impl ReadyCheck {
     /// Start a ready check for the given members.
     pub fn new(members: &[u64]) -> Self {
         Self {
-            responses: members.iter().map(|&m| (m, ReadyResponse::Pending)).collect(),
+            responses: members
+                .iter()
+                .map(|&m| (m, ReadyResponse::Pending))
+                .collect(),
             time_remaining: READY_CHECK_TIMEOUT,
         }
     }
@@ -340,19 +359,35 @@ impl ReadyCheck {
 
     /// Whether all members have responded (no Pending left).
     pub fn all_responded(&self) -> bool {
-        self.responses.iter().all(|(_, r)| *r != ReadyResponse::Pending)
+        self.responses
+            .iter()
+            .all(|(_, r)| *r != ReadyResponse::Pending)
     }
 
     /// Whether everyone responded Ready.
     pub fn all_ready(&self) -> bool {
-        self.responses.iter().all(|(_, r)| *r == ReadyResponse::Ready)
+        self.responses
+            .iter()
+            .all(|(_, r)| *r == ReadyResponse::Ready)
     }
 
     /// Count of pending / ready / not-ready.
     pub fn counts(&self) -> (usize, usize, usize) {
-        let pending = self.responses.iter().filter(|(_, r)| *r == ReadyResponse::Pending).count();
-        let ready = self.responses.iter().filter(|(_, r)| *r == ReadyResponse::Ready).count();
-        let not_ready = self.responses.iter().filter(|(_, r)| *r == ReadyResponse::NotReady).count();
+        let pending = self
+            .responses
+            .iter()
+            .filter(|(_, r)| *r == ReadyResponse::Pending)
+            .count();
+        let ready = self
+            .responses
+            .iter()
+            .filter(|(_, r)| *r == ReadyResponse::Ready)
+            .count();
+        let not_ready = self
+            .responses
+            .iter()
+            .filter(|(_, r)| *r == ReadyResponse::NotReady)
+            .count();
         (pending, ready, not_ready)
     }
 }
@@ -441,12 +476,7 @@ use crate::components::ThreatTable;
 ///
 /// The group member's threat is attributed directly (1:1 ratio × modifier).
 /// All group members share the same threat table on the mob.
-pub fn apply_group_damage_threat(
-    table: &mut ThreatTable,
-    source: u64,
-    damage: f32,
-    modifier: f32,
-) {
+pub fn apply_group_damage_threat(table: &mut ThreatTable, source: u64, damage: f32, modifier: f32) {
     table.add_damage_threat(source, damage, modifier);
 }
 
@@ -477,10 +507,7 @@ pub fn apply_group_heal_threat(
 /// Used to determine which mobs to split healing threat across.
 /// `mob_threats` is a list of (mob_entity, threat_table) pairs.
 /// `group_members` is the list of player entity bits in the group.
-pub fn engaged_mobs(
-    mob_threats: &[(u64, &ThreatTable)],
-    group_members: &[u64],
-) -> Vec<u64> {
+pub fn engaged_mobs(mob_threats: &[(u64, &ThreatTable)], group_members: &[u64]) -> Vec<u64> {
     mob_threats
         .iter()
         .filter(|(_, table)| {
@@ -491,7 +518,6 @@ pub fn engaged_mobs(
         .map(|(entity, _)| *entity)
         .collect()
 }
-
 
 #[cfg(test)]
 #[path = "group_tests.rs"]

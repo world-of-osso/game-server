@@ -310,7 +310,10 @@ mod tests {
 
         // More damage dealt → timer refreshes
         attacker.refresh();
-        assert!((attacker.idle_timer - 6.0).abs() < 0.001, "timer refreshed to 6s");
+        assert!(
+            (attacker.idle_timer - 6.0).abs() < 0.001,
+            "timer refreshed to 6s"
+        );
 
         // 6s of no activity → exits combat
         assert!(attacker.tick(6.5));
@@ -582,9 +585,9 @@ mod tests {
     fn multiple_targets_creature_attacks_highest_threat() {
         let mut table = ThreatTable::default();
         table.add_damage_threat(1, 100.0, 1.0); // tank
-        table.add_damage_threat(2, 80.0, 1.0);  // dps1
-        table.add_damage_threat(3, 60.0, 1.0);  // dps2
-        table.add_damage_threat(4, 40.0, 1.0);  // healer
+        table.add_damage_threat(2, 80.0, 1.0); // dps1
+        table.add_damage_threat(3, 60.0, 1.0); // dps2
+        table.add_damage_threat(4, 40.0, 1.0); // healer
 
         // Initial target: highest threat (entity 1)
         let target = table.aggro_target(None, true).unwrap();

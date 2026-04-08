@@ -197,9 +197,7 @@ fn spell_data_serialization_round_trip() {
                 ap_coefficient: 0.0,
                 sp_coefficient: 0.8,
             }),
-            Some(SpellEffectDef::ApplyAura {
-                aura_spell_id: 200,
-            }),
+            Some(SpellEffectDef::ApplyAura { aura_spell_id: 200 }),
             None,
         ],
     };
@@ -442,10 +440,7 @@ fn validate_cast_melee_range_default() {
     ctx.distance = 4.0;
     assert!(validate_cast(&ms, &ctx).is_ok());
     ctx.distance = 6.0;
-    assert_eq!(
-        validate_cast(&ms, &ctx),
-        Err(CastFailReason::OutOfRange)
-    );
+    assert_eq!(validate_cast(&ms, &ctx), Err(CastFailReason::OutOfRange));
 }
 
 #[test]

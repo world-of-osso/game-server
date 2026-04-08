@@ -105,8 +105,20 @@ fn single_count_item() {
 fn rare_item_drops_on_low_roll() {
     let table = LootTable {
         entries: vec![
-            LootEntry { item_id: 200, chance: 0.5, min_count: 1, max_count: 1, entry_type: LootEntryType::Normal },
-            LootEntry { item_id: 300, chance: 0.01, min_count: 1, max_count: 1, entry_type: LootEntryType::Rare },
+            LootEntry {
+                item_id: 200,
+                chance: 0.5,
+                min_count: 1,
+                max_count: 1,
+                entry_type: LootEntryType::Normal,
+            },
+            LootEntry {
+                item_id: 300,
+                chance: 0.01,
+                min_count: 1,
+                max_count: 1,
+                entry_type: LootEntryType::Rare,
+            },
         ],
     };
     let rolls = vec![0.99, 0.005]; // only rare passes
@@ -336,7 +348,10 @@ fn gold_variance_with_roll() {
 
 #[test]
 fn roll_window_auto_passes_non_equippable() {
-    let item = LootDrop { item_id: 100, count: 1 };
+    let item = LootDrop {
+        item_id: 100,
+        count: 1,
+    };
     let window = RollWindow::new(item, &[1, 2, 3], &[1, 3]); // 2 can't equip
     assert_eq!(window.pending_players, vec![1, 3]);
     assert_eq!(window.responses.len(), 1); // player 2 auto-passed
@@ -346,7 +361,10 @@ fn roll_window_auto_passes_non_equippable() {
 
 #[test]
 fn roll_window_respond_and_complete() {
-    let item = LootDrop { item_id: 100, count: 1 };
+    let item = LootDrop {
+        item_id: 100,
+        count: 1,
+    };
     let mut window = RollWindow::new(item, &[1, 2], &[1, 2]);
     assert!(!window.is_complete());
 
@@ -361,7 +379,10 @@ fn roll_window_respond_and_complete() {
 
 #[test]
 fn roll_window_reject_duplicate_response() {
-    let item = LootDrop { item_id: 100, count: 1 };
+    let item = LootDrop {
+        item_id: 100,
+        count: 1,
+    };
     let mut window = RollWindow::new(item, &[1], &[1]);
     assert!(window.respond(1, LootRollChoice::Need, 50));
     assert!(!window.respond(1, LootRollChoice::Greed, 99)); // already responded
@@ -369,7 +390,10 @@ fn roll_window_reject_duplicate_response() {
 
 #[test]
 fn roll_window_timeout_auto_passes() {
-    let item = LootDrop { item_id: 100, count: 1 };
+    let item = LootDrop {
+        item_id: 100,
+        count: 1,
+    };
     let mut window = RollWindow::new(item, &[1, 2, 3], &[1, 2, 3]);
     window.respond(1, LootRollChoice::Need, 50);
 
@@ -384,7 +408,10 @@ fn roll_window_timeout_auto_passes() {
 
 #[test]
 fn roll_window_tick_not_expired() {
-    let item = LootDrop { item_id: 100, count: 1 };
+    let item = LootDrop {
+        item_id: 100,
+        count: 1,
+    };
     let mut window = RollWindow::new(item, &[1, 2], &[1, 2]);
     let complete = window.tick(30.0);
     assert!(!complete);
@@ -393,7 +420,10 @@ fn roll_window_tick_not_expired() {
 
 #[test]
 fn roll_window_all_pass_returns_none() {
-    let item = LootDrop { item_id: 100, count: 1 };
+    let item = LootDrop {
+        item_id: 100,
+        count: 1,
+    };
     let mut window = RollWindow::new(item, &[1, 2], &[1, 2]);
     window.respond(1, LootRollChoice::Pass, 0);
     window.respond(2, LootRollChoice::Pass, 0);
@@ -405,8 +435,16 @@ fn roll_window_all_pass_returns_none() {
 #[test]
 fn need_beats_greed() {
     let entries = vec![
-        LootRollEntry { player_id: 1, choice: LootRollChoice::Greed, roll_value: 99 },
-        LootRollEntry { player_id: 2, choice: LootRollChoice::Need, roll_value: 10 },
+        LootRollEntry {
+            player_id: 1,
+            choice: LootRollChoice::Greed,
+            roll_value: 99,
+        },
+        LootRollEntry {
+            player_id: 2,
+            choice: LootRollChoice::Need,
+            roll_value: 10,
+        },
     ];
     assert_eq!(resolve_need_greed(&entries), Some(2));
 }
@@ -414,8 +452,16 @@ fn need_beats_greed() {
 #[test]
 fn highest_need_wins() {
     let entries = vec![
-        LootRollEntry { player_id: 1, choice: LootRollChoice::Need, roll_value: 50 },
-        LootRollEntry { player_id: 2, choice: LootRollChoice::Need, roll_value: 80 },
+        LootRollEntry {
+            player_id: 1,
+            choice: LootRollChoice::Need,
+            roll_value: 50,
+        },
+        LootRollEntry {
+            player_id: 2,
+            choice: LootRollChoice::Need,
+            roll_value: 80,
+        },
     ];
     assert_eq!(resolve_need_greed(&entries), Some(2));
 }
@@ -423,9 +469,21 @@ fn highest_need_wins() {
 #[test]
 fn greed_if_no_need() {
     let entries = vec![
-        LootRollEntry { player_id: 1, choice: LootRollChoice::Greed, roll_value: 30 },
-        LootRollEntry { player_id: 2, choice: LootRollChoice::Greed, roll_value: 70 },
-        LootRollEntry { player_id: 3, choice: LootRollChoice::Pass, roll_value: 99 },
+        LootRollEntry {
+            player_id: 1,
+            choice: LootRollChoice::Greed,
+            roll_value: 30,
+        },
+        LootRollEntry {
+            player_id: 2,
+            choice: LootRollChoice::Greed,
+            roll_value: 70,
+        },
+        LootRollEntry {
+            player_id: 3,
+            choice: LootRollChoice::Pass,
+            roll_value: 99,
+        },
     ];
     assert_eq!(resolve_need_greed(&entries), Some(2));
 }
@@ -433,8 +491,16 @@ fn greed_if_no_need() {
 #[test]
 fn all_pass_returns_none() {
     let entries = vec![
-        LootRollEntry { player_id: 1, choice: LootRollChoice::Pass, roll_value: 50 },
-        LootRollEntry { player_id: 2, choice: LootRollChoice::Pass, roll_value: 80 },
+        LootRollEntry {
+            player_id: 1,
+            choice: LootRollChoice::Pass,
+            roll_value: 50,
+        },
+        LootRollEntry {
+            player_id: 2,
+            choice: LootRollChoice::Pass,
+            roll_value: 80,
+        },
     ];
     assert_eq!(resolve_need_greed(&entries), None);
 }
@@ -457,8 +523,16 @@ fn assign_personal_goes_to_looter() {
 #[test]
 fn assign_need_greed_uses_rolls() {
     let rolls = vec![
-        LootRollEntry { player_id: 1, choice: LootRollChoice::Need, roll_value: 60 },
-        LootRollEntry { player_id: 2, choice: LootRollChoice::Greed, roll_value: 90 },
+        LootRollEntry {
+            player_id: 1,
+            choice: LootRollChoice::Need,
+            roll_value: 60,
+        },
+        LootRollEntry {
+            player_id: 2,
+            choice: LootRollChoice::Greed,
+            roll_value: 90,
+        },
     ];
     assert_eq!(
         assign_loot(LootMode::NeedBeforeGreed, 0, 0, &rolls),

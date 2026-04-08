@@ -5,8 +5,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::game_object::{
-    GameObjectFlags, GameObjectState, GameObjectType, GameObject, InteractionError,
-    StateError,
+    GameObject, GameObjectFlags, GameObjectState, GameObjectType, InteractionError, StateError,
 };
 
 // --- Doors ---
@@ -45,12 +44,15 @@ pub fn toggle_door(
 
     if go.state == GameObjectState::InUse {
         go.state = GameObjectState::Ready;
-        return Ok(DoorToggleResult { is_open: false, auto_close_secs: 0 });
+        return Ok(DoorToggleResult {
+            is_open: false,
+            auto_close_secs: 0,
+        });
     }
 
     if go.is_locked() {
-        let can_unlock = has_key
-            || (door.lockpick_skill > 0 && lockpick_skill >= door.lockpick_skill);
+        let can_unlock =
+            has_key || (door.lockpick_skill > 0 && lockpick_skill >= door.lockpick_skill);
         if !can_unlock {
             return Err(InteractionError::Locked);
         }
@@ -58,7 +60,10 @@ pub fn toggle_door(
     }
 
     go.state = GameObjectState::InUse;
-    Ok(DoorToggleResult { is_open: true, auto_close_secs: door.auto_close_secs })
+    Ok(DoorToggleResult {
+        is_open: true,
+        auto_close_secs: door.auto_close_secs,
+    })
 }
 
 /// Auto-close a door (called by server timer).
@@ -95,8 +100,12 @@ pub struct TrapTriggerResult {
 
 /// Check if a position is within a trap's trigger radius.
 pub fn in_trap_radius(
-    trap_x: f32, trap_y: f32, trap_z: f32,
-    target_x: f32, target_y: f32, target_z: f32,
+    trap_x: f32,
+    trap_y: f32,
+    trap_z: f32,
+    target_x: f32,
+    target_y: f32,
+    target_z: f32,
     radius: f32,
 ) -> bool {
     let dx = trap_x - target_x;
@@ -124,12 +133,20 @@ pub fn trigger_trap(
 
     let targets: Vec<TrapTarget> = nearby_entities
         .iter()
-        .filter(|(_, x, y, z)| in_trap_radius(trap_pos.0, trap_pos.1, trap_pos.2, *x, *y, *z, trap.radius))
-        .map(|(entity, _, _, _)| TrapTarget { entity: *entity, spell_id: trap.spell_id })
+        .filter(|(_, x, y, z)| {
+            in_trap_radius(trap_pos.0, trap_pos.1, trap_pos.2, *x, *y, *z, trap.radius)
+        })
+        .map(|(entity, _, _, _)| TrapTarget {
+            entity: *entity,
+            spell_id: trap.spell_id,
+        })
         .collect();
 
     if targets.is_empty() {
-        return Ok(TrapTriggerResult { targets, depleted: false });
+        return Ok(TrapTriggerResult {
+            targets,
+            depleted: false,
+        });
     }
 
     let one_shot = trap.cooldown == 0;
@@ -139,7 +156,10 @@ pub fn trigger_trap(
         go.flags.insert(GameObjectFlags::TRIGGERED);
     }
 
-    Ok(TrapTriggerResult { targets, depleted: one_shot })
+    Ok(TrapTriggerResult {
+        targets,
+        depleted: one_shot,
+    })
 }
 
 /// Reset a trap after its cooldown expires.
@@ -180,7 +200,10 @@ pub fn use_quest_object(
         return Err(InteractionError::NotInteractable);
     }
     go.deplete().ok();
-    Ok(QuestObjectResult { quest_id: data.quest_id, objective_index: data.objective_index })
+    Ok(QuestObjectResult {
+        quest_id: data.quest_id,
+        objective_index: data.objective_index,
+    })
 }
 
 // --- Gathering nodes ---
@@ -216,7 +239,10 @@ pub fn gather_node(
     player_skill: u16,
     count_roll: f32,
 ) -> Result<GatherResult, InteractionError> {
-    if !matches!(go.object_type, GameObjectType::MiningNode | GameObjectType::HerbNode) {
+    if !matches!(
+        go.object_type,
+        GameObjectType::MiningNode | GameObjectType::HerbNode
+    ) {
         return Err(InteractionError::NotInteractable);
     }
     if go.state != GameObjectState::InUse {
@@ -228,18 +254,28 @@ pub fn gather_node(
     }
 
     let items = roll_yields(&data.yields, count_roll);
-    let skill_gained = if player_skill < data.trivial_skill { data.skill_gain } else { 0 };
+    let skill_gained = if player_skill < data.trivial_skill {
+        data.skill_gain
+    } else {
+        0
+    };
 
     go.deplete().ok();
-    Ok(GatherResult { items, skill_gained })
+    Ok(GatherResult {
+        items,
+        skill_gained,
+    })
 }
 
 fn roll_yields(yields: &[GatherYield], count_roll: f32) -> Vec<(u32, u16)> {
-    yields.iter().map(|y| {
-        let range = y.max_count - y.min_count;
-        let count = y.min_count + (range as f32 * count_roll) as u16;
-        (y.item_id, count.min(y.max_count))
-    }).collect()
+    yields
+        .iter()
+        .map(|y| {
+            let range = y.max_count - y.min_count;
+            let count = y.min_count + (range as f32 * count_roll) as u16;
+            (y.item_id, count.min(y.max_count))
+        })
+        .collect()
 }
 
 /// Complete interaction: InUse → Depleted.

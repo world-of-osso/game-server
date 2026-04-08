@@ -1,6 +1,6 @@
 use crate::instance::{
-    dungeon_template, raid_template, Difficulty, InstanceError, InstanceManager,
-    InstanceTemplateRegistry, WorldPosition,
+    Difficulty, InstanceError, InstanceManager, InstanceTemplateRegistry, WorldPosition,
+    dungeon_template, raid_template,
 };
 
 use super::*;
@@ -8,13 +8,33 @@ use super::*;
 fn sample_registry() -> InstanceTemplateRegistry {
     let mut reg = InstanceTemplateRegistry::new();
     let mut dungeon = dungeon_template(33, "Shadowfang Keep", 0);
-    dungeon.entrance_pos = WorldPosition { map_id: 33, x: 100.0, y: 200.0, z: 50.0 };
-    dungeon.exit_pos = WorldPosition { map_id: 0, x: -500.0, y: 300.0, z: 10.0 };
+    dungeon.entrance_pos = WorldPosition {
+        map_id: 33,
+        x: 100.0,
+        y: 200.0,
+        z: 50.0,
+    };
+    dungeon.exit_pos = WorldPosition {
+        map_id: 0,
+        x: -500.0,
+        y: 300.0,
+        z: 10.0,
+    };
     reg.add(dungeon).unwrap();
 
     let mut raid = raid_template(409, "Molten Core", 230);
-    raid.entrance_pos = WorldPosition { map_id: 409, x: 0.0, y: 0.0, z: 0.0 };
-    raid.exit_pos = WorldPosition { map_id: 230, x: -100.0, y: -200.0, z: 30.0 };
+    raid.entrance_pos = WorldPosition {
+        map_id: 409,
+        x: 0.0,
+        y: 0.0,
+        z: 0.0,
+    };
+    raid.exit_pos = WorldPosition {
+        map_id: 230,
+        x: -100.0,
+        y: -200.0,
+        z: 30.0,
+    };
     reg.add(raid).unwrap();
     reg
 }
@@ -22,7 +42,9 @@ fn sample_registry() -> InstanceTemplateRegistry {
 fn setup() -> (InstanceTemplateRegistry, InstanceManager, u32) {
     let reg = sample_registry();
     let mut mgr = InstanceManager::new();
-    let id = mgr.create_instance(&reg, 33, Difficulty::Normal, 100, &[100, 101, 102], 1000).unwrap();
+    let id = mgr
+        .create_instance(&reg, 33, Difficulty::Normal, 100, &[100, 101, 102], 1000)
+        .unwrap();
     (reg, mgr, id)
 }
 
@@ -92,7 +114,12 @@ fn exit_unknown_instance_fails() {
 #[test]
 fn hearthstone_teleports_to_hearth() {
     let (_, mgr, id) = setup();
-    let hearth = WorldPosition { map_id: 0, x: 1000.0, y: 2000.0, z: 100.0 };
+    let hearth = WorldPosition {
+        map_id: 0,
+        x: 1000.0,
+        y: 2000.0,
+        z: 100.0,
+    };
     let order = hearthstone_out(id, &mgr, 100, hearth).unwrap();
 
     assert_eq!(order.player, 100);
@@ -106,7 +133,12 @@ fn hearthstone_teleports_to_hearth() {
 #[test]
 fn hearthstone_player_not_in_instance_fails() {
     let (_, mgr, id) = setup();
-    let hearth = WorldPosition { map_id: 0, x: 0.0, y: 0.0, z: 0.0 };
+    let hearth = WorldPosition {
+        map_id: 0,
+        x: 0.0,
+        y: 0.0,
+        z: 0.0,
+    };
     assert_eq!(
         hearthstone_out(id, &mgr, 999, hearth),
         Err(InstanceError::InstanceNotFound)
@@ -133,7 +165,9 @@ fn evacuate_moves_all_players_out() {
 fn evacuate_empty_instance_returns_empty() {
     let reg = sample_registry();
     let mut mgr = InstanceManager::new();
-    let id = mgr.create_instance(&reg, 33, Difficulty::Normal, 100, &[100], 1000).unwrap();
+    let id = mgr
+        .create_instance(&reg, 33, Difficulty::Normal, 100, &[100], 1000)
+        .unwrap();
     mgr.get_mut(id).unwrap().remove_player(100);
 
     let orders = evacuate_instance(id, &mgr, &reg).unwrap();
@@ -175,7 +209,9 @@ fn resolve_returns_none_for_different_difficulty() {
 fn enter_raid_uses_raid_entrance() {
     let reg = sample_registry();
     let mut mgr = InstanceManager::new();
-    let id = mgr.create_instance(&reg, 409, Difficulty::Normal, 200, &[200], 1000).unwrap();
+    let id = mgr
+        .create_instance(&reg, 409, Difficulty::Normal, 200, &[200], 1000)
+        .unwrap();
 
     let orders = enter_instance(id, &mgr, &reg, &[200]).unwrap();
     assert_eq!(orders[0].destination.map_id, 409);

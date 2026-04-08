@@ -1,4 +1,4 @@
-use crate::instance::{Difficulty, ResetTimer, DAY_SECS, WEEK_SECS};
+use crate::instance::{DAY_SECS, Difficulty, ResetTimer, WEEK_SECS};
 
 use super::*;
 
@@ -135,10 +135,16 @@ fn bound_instance_for_rejoin() {
     let mut lockouts = CharacterLockouts::default();
     lockouts.bind(33, Difficulty::Heroic, 42, 0, ResetTimer::Daily, 1000);
 
-    assert_eq!(lockouts.bound_instance(33, Difficulty::Heroic, 1000), Some(42));
+    assert_eq!(
+        lockouts.bound_instance(33, Difficulty::Heroic, 1000),
+        Some(42)
+    );
     assert_eq!(lockouts.bound_instance(33, Difficulty::Normal, 1000), None);
     // Expired lockout returns None
-    assert_eq!(lockouts.bound_instance(33, Difficulty::Heroic, DAY_SECS), None);
+    assert_eq!(
+        lockouts.bound_instance(33, Difficulty::Heroic, DAY_SECS),
+        None
+    );
 }
 
 #[test]

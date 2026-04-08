@@ -133,7 +133,10 @@ pub fn group_kill_xp(creature_level: u8, members: &[GroupMemberXp]) -> Vec<Group
     if nearby.is_empty() {
         return members
             .iter()
-            .map(|m| GroupXpShare { level: m.level, xp: 0 })
+            .map(|m| GroupXpShare {
+                level: m.level,
+                xp: 0,
+            })
             .collect();
     }
 
@@ -149,10 +152,16 @@ pub fn group_kill_xp(creature_level: u8, members: &[GroupMemberXp]) -> Vec<Group
         .iter()
         .map(|m| {
             if m.distance > GROUP_XP_RANGE {
-                return GroupXpShare { level: m.level, xp: 0 };
+                return GroupXpShare {
+                    level: m.level,
+                    xp: 0,
+                };
             }
             let share = pool * m.level as u32 / total_levels;
-            GroupXpShare { level: m.level, xp: share }
+            GroupXpShare {
+                level: m.level,
+                xp: share,
+            }
         })
         .collect()
 }
@@ -167,14 +176,14 @@ pub const MAX_LEVEL: u8 = 80;
 /// Source: AzerothCore `player_xp_for_level` table (WotLK 3.3.5a).
 /// Index 0 = level 1→2, index 78 = level 79→80.
 const XP_TABLE: [u32; 79] = [
-    400,     900,     1400,    2100,    2800,    3600,    4500,    5400,    6500,    7600,    //  1-10
-    8700,    9800,    11000,   12300,   13600,   15000,   16400,   17800,   19300,   20800,   // 11-20
-    22400,   24000,   25500,   27200,   28900,   30500,   32200,   33900,   36300,   38800,   // 21-30
-    41600,   44600,   48000,   51400,   55000,   58700,   62400,   66200,   70200,   74300,   // 31-40
-    78500,   82800,   87100,   91600,   96300,   101000,  105800,  110700,  115700,  120900,  // 41-50
-    126100,  131500,  137000,  142500,  148200,  154000,  159900,  165800,  172000,  290000,  // 51-60
-    317000,  349000,  386000,  428000,  475000,  527000,  585000,  648000,  717000,  1523800, // 61-70
-    1539600, 1555700, 1571800, 1587900, 1604200, 1620700, 1637400, 1653900, 1670800,         // 71-79
+    400, 900, 1400, 2100, 2800, 3600, 4500, 5400, 6500, 7600, //  1-10
+    8700, 9800, 11000, 12300, 13600, 15000, 16400, 17800, 19300, 20800, // 11-20
+    22400, 24000, 25500, 27200, 28900, 30500, 32200, 33900, 36300, 38800, // 21-30
+    41600, 44600, 48000, 51400, 55000, 58700, 62400, 66200, 70200, 74300, // 31-40
+    78500, 82800, 87100, 91600, 96300, 101000, 105800, 110700, 115700, 120900, // 41-50
+    126100, 131500, 137000, 142500, 148200, 154000, 159900, 165800, 172000, 290000, // 51-60
+    317000, 349000, 386000, 428000, 475000, 527000, 585000, 648000, 717000, 1523800, // 61-70
+    1539600, 1555700, 1571800, 1587900, 1604200, 1620700, 1637400, 1653900, 1670800, // 71-79
 ];
 
 /// XP required to level up from `level` to `level + 1`.
@@ -353,7 +362,10 @@ pub struct ZoneLevelBracket {
 
 impl ZoneLevelBracket {
     pub fn new(min_level: u8, max_level: u8) -> Self {
-        Self { min_level, max_level }
+        Self {
+            min_level,
+            max_level,
+        }
     }
 
     /// Compute the effective creature level for a player in this zone.
@@ -408,7 +420,6 @@ pub fn quest_xp(base_xp: u32, quest_level: u8, player_level: u8) -> u32 {
     }
     base_xp * (QUEST_XP_DECAY_LEVELS - decay) as u32 / QUEST_XP_DECAY_LEVELS as u32
 }
-
 
 #[cfg(test)]
 #[path = "xp_tests.rs"]

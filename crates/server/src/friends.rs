@@ -1,8 +1,8 @@
 use std::collections::{BTreeMap, HashMap};
 
 use bevy::prelude::*;
-use lightyear::prelude::*;
 use lightyear::prelude::Message as NetMessage;
+use lightyear::prelude::*;
 use serde::{Deserialize, Serialize};
 use shared::components::{Level, Player, Zone};
 use shared::protocol::{

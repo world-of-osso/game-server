@@ -111,7 +111,10 @@ fn full_combat_round_warrior_vs_mob() {
 
     let max_hp = max_health(attacker_class, attacker_level, stamina).unwrap();
     let expected_hp = 8121.0 + 200.0 * 20.0;
-    assert!((max_hp - expected_hp).abs() < 0.01, "HP: {max_hp} != {expected_hp}");
+    assert!(
+        (max_hp - expected_hp).abs() < 0.01,
+        "HP: {max_hp} != {expected_hp}"
+    );
 
     let raw_min = auto_attack_damage(weapon_min, attack_power, weapon_speed);
     let raw_max = auto_attack_damage(weapon_max, attack_power, weapon_speed);
@@ -130,15 +133,29 @@ fn full_combat_round_warrior_vs_mob() {
     assert!(crit > 0);
 
     let chances = melee::MeleeHitChances {
-        miss, dodge, parry: 0, glancing, block: 0, crit,
+        miss,
+        dodge,
+        parry: 0,
+        glancing,
+        block: 0,
+        crit,
     };
-    assert_eq!(melee::resolve_melee_outcome(&chances, 0), melee::MeleeOutcome::Miss);
-    assert_eq!(melee::resolve_melee_outcome(&chances, 9999), melee::MeleeOutcome::Hit);
+    assert_eq!(
+        melee::resolve_melee_outcome(&chances, 0),
+        melee::MeleeOutcome::Miss
+    );
+    assert_eq!(
+        melee::resolve_melee_outcome(&chances, 9999),
+        melee::MeleeOutcome::Hit
+    );
 
     let mid_damage = (raw_min + raw_max) / 2.0;
     let armor_dr = armor_mitigation(target_armor, attacker_level).unwrap();
     let final_damage = mid_damage * (1.0 - armor_dr);
-    assert!(final_damage > 100.0 && final_damage < 200.0, "final: {final_damage}");
+    assert!(
+        final_damage > 100.0 && final_damage < 200.0,
+        "final: {final_damage}"
+    );
 
     let crit_damage = melee::apply_crit(mid_damage, 0.0);
     assert!((crit_damage - mid_damage * 2.0).abs() < 0.01);
@@ -174,5 +191,8 @@ fn full_combat_round_rogue_vs_higher_level() {
 
     let armor_dr = armor_mitigation(target_armor, attacker_level).unwrap();
     let final_glancing = glancing_damage * (1.0 - armor_dr);
-    assert!(final_glancing > 50.0 && final_glancing < 80.0, "glancing: {final_glancing}");
+    assert!(
+        final_glancing > 50.0 && final_glancing < 80.0,
+        "glancing: {final_glancing}"
+    );
 }

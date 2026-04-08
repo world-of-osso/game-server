@@ -272,7 +272,10 @@ fn party_set_loot_mode_leader_only() {
     party.accept(2).unwrap();
     assert!(party.set_loot_mode(1, LootMode::NeedBeforeGreed).is_ok());
     assert_eq!(party.loot_mode, LootMode::NeedBeforeGreed);
-    assert_eq!(party.set_loot_mode(2, LootMode::FreeForAll), Err(PartyError::NotLeader));
+    assert_eq!(
+        party.set_loot_mode(2, LootMode::FreeForAll),
+        Err(PartyError::NotLeader)
+    );
 }
 
 #[test]
@@ -301,8 +304,16 @@ fn party_xp_equal_levels() {
     let mut party = Party::new(1);
     party.accept(2).unwrap();
     let info = vec![
-        MemberInfo { entity: 1, level: 80, distance_from_kill: 5.0 },
-        MemberInfo { entity: 2, level: 80, distance_from_kill: 10.0 },
+        MemberInfo {
+            entity: 1,
+            level: 80,
+            distance_from_kill: 5.0,
+        },
+        MemberInfo {
+            entity: 2,
+            level: 80,
+            distance_from_kill: 10.0,
+        },
     ];
     let shares = party_kill_xp(&party, 80, &info);
     assert_eq!(shares.len(), 2);
@@ -316,8 +327,16 @@ fn party_xp_out_of_range_gets_zero() {
     let mut party = Party::new(1);
     party.accept(2).unwrap();
     let info = vec![
-        MemberInfo { entity: 1, level: 80, distance_from_kill: 5.0 },
-        MemberInfo { entity: 2, level: 80, distance_from_kill: 200.0 }, // out of range
+        MemberInfo {
+            entity: 1,
+            level: 80,
+            distance_from_kill: 5.0,
+        },
+        MemberInfo {
+            entity: 2,
+            level: 80,
+            distance_from_kill: 200.0,
+        }, // out of range
     ];
     let shares = party_kill_xp(&party, 80, &info);
     assert!(shares[0].1 > 0);
@@ -329,8 +348,16 @@ fn party_xp_level_weighted() {
     let mut party = Party::new(1);
     party.accept(2).unwrap();
     let info = vec![
-        MemberInfo { entity: 1, level: 80, distance_from_kill: 5.0 },
-        MemberInfo { entity: 2, level: 40, distance_from_kill: 5.0 },
+        MemberInfo {
+            entity: 1,
+            level: 80,
+            distance_from_kill: 5.0,
+        },
+        MemberInfo {
+            entity: 2,
+            level: 40,
+            distance_from_kill: 5.0,
+        },
     ];
     let shares = party_kill_xp(&party, 80, &info);
     assert!(shares[0].1 > shares[1].1); // higher level gets more
@@ -343,9 +370,21 @@ fn raid_xp_distributes_across_subgroups() {
     let mut raid = Raid::from_party(&party);
     raid.add_member(3).unwrap();
     let info = vec![
-        MemberInfo { entity: 1, level: 80, distance_from_kill: 5.0 },
-        MemberInfo { entity: 2, level: 80, distance_from_kill: 5.0 },
-        MemberInfo { entity: 3, level: 80, distance_from_kill: 5.0 },
+        MemberInfo {
+            entity: 1,
+            level: 80,
+            distance_from_kill: 5.0,
+        },
+        MemberInfo {
+            entity: 2,
+            level: 80,
+            distance_from_kill: 5.0,
+        },
+        MemberInfo {
+            entity: 3,
+            level: 80,
+            distance_from_kill: 5.0,
+        },
     ];
     let shares = raid_kill_xp(&raid, 80, &info);
     assert_eq!(shares.len(), 3);
@@ -370,10 +409,7 @@ fn group_heal_threat_split_across_mobs() {
     let mut table1 = ThreatTable::default();
     let mut table2 = ThreatTable::default();
     // Healer heals 1000, split across 2 mobs
-    apply_group_heal_threat(
-        &mut [&mut table1, &mut table2],
-        3, 1000.0, 1.0,
-    );
+    apply_group_heal_threat(&mut [&mut table1, &mut table2], 3, 1000.0, 1.0);
     // Each mob gets 500 heal → 500 * 0.5 = 250 threat
     assert!((table1.threat_for(3) - 250.0).abs() < 0.01);
     assert!((table2.threat_for(3) - 250.0).abs() < 0.01);

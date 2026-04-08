@@ -1,8 +1,8 @@
-pub mod melee;
-pub mod spell;
 mod base_hp_data;
 mod base_mana_data;
+pub mod melee;
 mod rating_data;
+pub mod spell;
 
 use base_hp_data::BASE_HP_TABLE;
 use base_mana_data::BASE_MANA_TABLE;
@@ -42,8 +42,7 @@ pub fn hp_from_stamina(stamina: f32, level: u8) -> f32 {
         stamina * WOTLK_HP_PER_STAM_BASE
     } else {
         let above_threshold = stamina - WOTLK_STAM_THRESHOLD;
-        WOTLK_STAM_THRESHOLD * WOTLK_HP_PER_STAM_BASE
-            + above_threshold * WOTLK_HP_PER_STAM_ABOVE_20
+        WOTLK_STAM_THRESHOLD * WOTLK_HP_PER_STAM_BASE + above_threshold * WOTLK_HP_PER_STAM_ABOVE_20
     }
 }
 
@@ -268,11 +267,7 @@ pub fn auto_attack_damage(weapon_roll: f32, attack_power: f32, weapon_speed: f32
 pub const OFFHAND_DAMAGE_MULTIPLIER: f32 = 0.5;
 
 /// Auto-attack damage for an off-hand weapon (50% penalty).
-pub fn offhand_auto_attack_damage(
-    weapon_roll: f32,
-    attack_power: f32,
-    weapon_speed: f32,
-) -> f32 {
+pub fn offhand_auto_attack_damage(weapon_roll: f32, attack_power: f32, weapon_speed: f32) -> f32 {
     auto_attack_damage(weapon_roll, attack_power, weapon_speed) * OFFHAND_DAMAGE_MULTIPLIER
 }
 
@@ -299,8 +294,7 @@ pub fn spell_damage(base_damage: f32, spell_power: f32, coefficient: f32) -> f32
     base_damage + spell_power * coefficient
 }
 
-
-#[cfg(test)]
-mod tests;
 #[cfg(test)]
 mod combat_tests;
+#[cfg(test)]
+mod tests;

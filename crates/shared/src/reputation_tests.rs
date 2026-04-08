@@ -23,8 +23,14 @@ fn stormwind() -> FactionData {
             (TAUREN, 6_000),     // Hostile
         ],
         spillover: vec![
-            SpilloverRule { faction_id: IRONFORGE_ID, rate: 0.25 },  // Allied
-            SpilloverRule { faction_id: 76, rate: -0.5 },            // Enemy: Orgrimmar
+            SpilloverRule {
+                faction_id: IRONFORGE_ID,
+                rate: 0.25,
+            }, // Allied
+            SpilloverRule {
+                faction_id: 76,
+                rate: -0.5,
+            }, // Enemy: Orgrimmar
         ],
     }
 }
@@ -34,11 +40,11 @@ fn orgrimmar() -> FactionData {
         id: 76,
         name: "Orgrimmar".to_string(),
         base_standing: vec![
-            (ORC, 21_000),       // Friendly
-            (TAUREN, 21_000),    // Friendly
-            (UNDEAD, 12_000),    // Neutral
-            (HUMAN, 0),          // Hated
-            (DWARF, 0),          // Hated
+            (ORC, 21_000),    // Friendly
+            (TAUREN, 21_000), // Friendly
+            (UNDEAD, 12_000), // Neutral
+            (HUMAN, 0),       // Hated
+            (DWARF, 0),       // Hated
         ],
         spillover: vec![],
     }
@@ -48,11 +54,7 @@ fn ironforge() -> FactionData {
     FactionData {
         id: IRONFORGE_ID,
         name: "Ironforge".to_string(),
-        base_standing: vec![
-            (HUMAN, 21_000),
-            (DWARF, 21_000),
-            (ORC, 0),
-        ],
+        base_standing: vec![(HUMAN, 21_000), (DWARF, 21_000), (ORC, 0)],
         spillover: vec![],
     }
 }
@@ -411,7 +413,10 @@ fn spillover_allied_faction() {
     assert_eq!(results[0].actual_change(), 1000);
 
     // Ironforge gets 25% = 250
-    let ironforge_result = results.iter().find(|r| r.faction_id == IRONFORGE_ID).unwrap();
+    let ironforge_result = results
+        .iter()
+        .find(|r| r.faction_id == IRONFORGE_ID)
+        .unwrap();
     assert_eq!(ironforge_result.actual_change(), 250);
     assert_eq!(rep.get_value(IRONFORGE_ID), ironforge_before + 250);
 }
@@ -478,7 +483,10 @@ fn spillover_small_amount_rounds_down() {
 
     // 3 * 0.25 = 0.75 → truncated to 0
     let results = rep.gain_rep_with_spillover(72, 3, RepGainSource::MobKill, &reg);
-    let ironforge_result = results.iter().find(|r| r.faction_id == IRONFORGE_ID).unwrap();
+    let ironforge_result = results
+        .iter()
+        .find(|r| r.faction_id == IRONFORGE_ID)
+        .unwrap();
     assert_eq!(ironforge_result.actual_change(), 0);
     assert_eq!(rep.get_value(IRONFORGE_ID), ironforge_before);
 }

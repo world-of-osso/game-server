@@ -202,9 +202,14 @@ pub fn dodge_chance(class: u8, level: u8, dodge_rating: f32) -> u32 {
     if idx >= DODGE_CAP.len() || DODGE_CAP[idx] <= 0.0 {
         return 0;
     }
-    let rating_pct = super::rating_to_percent(dodge_rating, level, super::RatingType::Dodge)
-        .unwrap_or(0.0);
-    let pct = avoidance_dr(BASE_AVOIDANCE_PCT, rating_pct, DODGE_CAP[idx], AVOIDANCE_K[idx]);
+    let rating_pct =
+        super::rating_to_percent(dodge_rating, level, super::RatingType::Dodge).unwrap_or(0.0);
+    let pct = avoidance_dr(
+        BASE_AVOIDANCE_PCT,
+        rating_pct,
+        DODGE_CAP[idx],
+        AVOIDANCE_K[idx],
+    );
     (pct * 100.0) as u32
 }
 
@@ -217,9 +222,14 @@ pub fn parry_chance(class: u8, level: u8, parry_rating: f32) -> u32 {
     if idx >= PARRY_CAP.len() || PARRY_CAP[idx] <= 0.0 {
         return 0;
     }
-    let rating_pct = super::rating_to_percent(parry_rating, level, super::RatingType::Parry)
-        .unwrap_or(0.0);
-    let pct = avoidance_dr(BASE_AVOIDANCE_PCT, rating_pct, PARRY_CAP[idx], AVOIDANCE_K[idx]);
+    let rating_pct =
+        super::rating_to_percent(parry_rating, level, super::RatingType::Parry).unwrap_or(0.0);
+    let pct = avoidance_dr(
+        BASE_AVOIDANCE_PCT,
+        rating_pct,
+        PARRY_CAP[idx],
+        AVOIDANCE_K[idx],
+    );
     (pct * 100.0) as u32
 }
 
@@ -265,12 +275,12 @@ mod tests {
 
     fn default_chances() -> MeleeHitChances {
         MeleeHitChances {
-            miss: 300,    // 3%
-            dodge: 500,   // 5%
-            parry: 500,   // 5%
+            miss: 300,  // 3%
+            dodge: 500, // 5%
+            parry: 500, // 5%
             glancing: 0,
             block: 0,
-            crit: 1000,   // 10%
+            crit: 1000, // 10%
         }
     }
 

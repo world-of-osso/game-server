@@ -13,8 +13,16 @@ pub const MAX_MOTD_LEN: usize = 500;
 ///
 /// Displayed to every player on login. Stored as a Bevy resource.
 #[derive(
-    Debug, Clone, PartialEq, Eq, Default, Resource, Serialize, Deserialize,
-    bitcode::Encode, bitcode::Decode,
+    Debug,
+    Clone,
+    PartialEq,
+    Eq,
+    Default,
+    Resource,
+    Serialize,
+    Deserialize,
+    bitcode::Encode,
+    bitcode::Decode,
 )]
 pub struct Motd {
     /// The message text. Empty string means no MOTD.
@@ -64,8 +72,16 @@ pub const DEFAULT_BROADCAST_INTERVAL: u64 = 900; // 15 minutes
 /// The server checks `should_broadcast()` each tick and sends the
 /// returned message to all players.
 #[derive(
-    Debug, Clone, PartialEq, Eq, Default, Resource, Serialize, Deserialize,
-    bitcode::Encode, bitcode::Decode,
+    Debug,
+    Clone,
+    PartialEq,
+    Eq,
+    Default,
+    Resource,
+    Serialize,
+    Deserialize,
+    bitcode::Encode,
+    bitcode::Decode,
 )]
 pub struct Autobroadcast {
     /// Messages to cycle through.

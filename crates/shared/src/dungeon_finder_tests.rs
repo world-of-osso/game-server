@@ -12,10 +12,13 @@ fn queue_solo() {
 fn queue_group() {
     let mut q = DungeonQueue::default();
     q.queue_group(
-        1, vec![1, 2, 3],
+        1,
+        vec![1, 2, 3],
         vec![GroupRole::Tank, GroupRole::Healer, GroupRole::Dps],
-        vec![100], 1000,
-    ).unwrap();
+        vec![100],
+        1000,
+    )
+    .unwrap();
     assert!(q.is_queued(1));
     assert!(q.is_queued(2));
     assert!(q.is_queued(3));
@@ -132,7 +135,8 @@ fn match_removes_from_queue() {
 fn match_overlapping_dungeons() {
     let mut q = DungeonQueue::default();
     q.queue_solo(1, GroupRole::Tank, vec![100, 200], 0).unwrap();
-    q.queue_solo(2, GroupRole::Healer, vec![200, 300], 0).unwrap();
+    q.queue_solo(2, GroupRole::Healer, vec![200, 300], 0)
+        .unwrap();
     q.queue_solo(3, GroupRole::Dps, vec![100, 200], 0).unwrap();
     q.queue_solo(4, GroupRole::Dps, vec![200], 0).unwrap();
     q.queue_solo(5, GroupRole::Dps, vec![200, 300], 0).unwrap();

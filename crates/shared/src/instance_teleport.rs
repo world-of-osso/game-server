@@ -39,7 +39,9 @@ pub fn enter_instance(
     registry: &InstanceTemplateRegistry,
     players: &[u64],
 ) -> Result<Vec<InstanceTeleport>, InstanceError> {
-    let inst = manager.get(instance_id).ok_or(InstanceError::InstanceNotFound)?;
+    let inst = manager
+        .get(instance_id)
+        .ok_or(InstanceError::InstanceNotFound)?;
     let tmpl = registry.get(inst.map_id).ok_or(InstanceError::UnknownMap)?;
 
     let orders = players
@@ -63,7 +65,9 @@ pub fn exit_instance(
     registry: &InstanceTemplateRegistry,
     player: u64,
 ) -> Result<InstanceTeleport, InstanceError> {
-    let inst = manager.get(instance_id).ok_or(InstanceError::InstanceNotFound)?;
+    let inst = manager
+        .get(instance_id)
+        .ok_or(InstanceError::InstanceNotFound)?;
     if !inst.contains_player(player) {
         return Err(InstanceError::InstanceNotFound);
     }
@@ -86,7 +90,9 @@ pub fn hearthstone_out(
     player: u64,
     hearth_pos: WorldPosition,
 ) -> Result<InstanceTeleport, InstanceError> {
-    let inst = manager.get(instance_id).ok_or(InstanceError::InstanceNotFound)?;
+    let inst = manager
+        .get(instance_id)
+        .ok_or(InstanceError::InstanceNotFound)?;
     if !inst.contains_player(player) {
         return Err(InstanceError::InstanceNotFound);
     }
@@ -107,7 +113,9 @@ pub fn evacuate_instance(
     manager: &InstanceManager,
     registry: &InstanceTemplateRegistry,
 ) -> Result<Vec<InstanceTeleport>, InstanceError> {
-    let inst = manager.get(instance_id).ok_or(InstanceError::InstanceNotFound)?;
+    let inst = manager
+        .get(instance_id)
+        .ok_or(InstanceError::InstanceNotFound)?;
     let tmpl = registry.get(inst.map_id).ok_or(InstanceError::UnknownMap)?;
 
     let orders = inst

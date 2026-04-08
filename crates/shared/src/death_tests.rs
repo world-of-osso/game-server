@@ -37,37 +37,58 @@ fn on_death_creates_corpse() {
 
 #[test]
 fn alive_to_dead() {
-    assert_eq!(transition_state(DeathState::Alive, DeathState::Dead), Ok(DeathState::Dead));
+    assert_eq!(
+        transition_state(DeathState::Alive, DeathState::Dead),
+        Ok(DeathState::Dead)
+    );
 }
 
 #[test]
 fn dead_to_ghost() {
-    assert_eq!(transition_state(DeathState::Dead, DeathState::Ghost), Ok(DeathState::Ghost));
+    assert_eq!(
+        transition_state(DeathState::Dead, DeathState::Ghost),
+        Ok(DeathState::Ghost)
+    );
 }
 
 #[test]
 fn dead_to_resurrecting() {
-    assert_eq!(transition_state(DeathState::Dead, DeathState::Resurrecting), Ok(DeathState::Resurrecting));
+    assert_eq!(
+        transition_state(DeathState::Dead, DeathState::Resurrecting),
+        Ok(DeathState::Resurrecting)
+    );
 }
 
 #[test]
 fn ghost_to_resurrecting() {
-    assert_eq!(transition_state(DeathState::Ghost, DeathState::Resurrecting), Ok(DeathState::Resurrecting));
+    assert_eq!(
+        transition_state(DeathState::Ghost, DeathState::Resurrecting),
+        Ok(DeathState::Resurrecting)
+    );
 }
 
 #[test]
 fn resurrecting_to_alive() {
-    assert_eq!(transition_state(DeathState::Resurrecting, DeathState::Alive), Ok(DeathState::Alive));
+    assert_eq!(
+        transition_state(DeathState::Resurrecting, DeathState::Alive),
+        Ok(DeathState::Alive)
+    );
 }
 
 #[test]
 fn alive_to_alive_fails() {
-    assert_eq!(transition_state(DeathState::Alive, DeathState::Alive), Err(DeathError::AlreadyAlive));
+    assert_eq!(
+        transition_state(DeathState::Alive, DeathState::Alive),
+        Err(DeathError::AlreadyAlive)
+    );
 }
 
 #[test]
 fn dead_to_dead_fails() {
-    assert_eq!(transition_state(DeathState::Dead, DeathState::Dead), Err(DeathError::AlreadyDead));
+    assert_eq!(
+        transition_state(DeathState::Dead, DeathState::Dead),
+        Err(DeathError::AlreadyDead)
+    );
 }
 
 #[test]
@@ -114,16 +135,31 @@ fn death_direct_resurrect_lifecycle() {
 fn sample_graveyards() -> GraveyardRegistry {
     let mut reg = GraveyardRegistry::new();
     reg.add(Graveyard {
-        id: 1, zone_id: 12, faction: 0, map_id: 0,
-        x: 100.0, y: 200.0, z: 50.0,
+        id: 1,
+        zone_id: 12,
+        faction: 0,
+        map_id: 0,
+        x: 100.0,
+        y: 200.0,
+        z: 50.0,
     });
     reg.add(Graveyard {
-        id: 2, zone_id: 12, faction: 1, map_id: 0, // Alliance only
-        x: 500.0, y: 500.0, z: 50.0,
+        id: 2,
+        zone_id: 12,
+        faction: 1,
+        map_id: 0, // Alliance only
+        x: 500.0,
+        y: 500.0,
+        z: 50.0,
     });
     reg.add(Graveyard {
-        id: 3, zone_id: 14, faction: 0, map_id: 1, // Different map
-        x: 0.0, y: 0.0, z: 0.0,
+        id: 3,
+        zone_id: 14,
+        faction: 0,
+        map_id: 1, // Different map
+        x: 0.0,
+        y: 0.0,
+        z: 0.0,
     });
     reg
 }
@@ -162,8 +198,14 @@ fn release_spirit_different_map() {
 #[test]
 fn release_spirit_not_dead_fails() {
     let gys = sample_graveyards();
-    assert_eq!(release_spirit(DeathState::Alive, 0, 0.0, 0.0, 0.0, 0, &gys), Err(DeathError::NotDead));
-    assert_eq!(release_spirit(DeathState::Ghost, 0, 0.0, 0.0, 0.0, 0, &gys), Err(DeathError::NotDead));
+    assert_eq!(
+        release_spirit(DeathState::Alive, 0, 0.0, 0.0, 0.0, 0, &gys),
+        Err(DeathError::NotDead)
+    );
+    assert_eq!(
+        release_spirit(DeathState::Ghost, 0, 0.0, 0.0, 0.0, 0, &gys),
+        Err(DeathError::NotDead)
+    );
 }
 
 #[test]
@@ -183,10 +225,14 @@ fn graveyard_registry_len() {
 #[test]
 fn ghost_restrictions_all_blocked() {
     let actions = [
-        GhostRestriction::Combat, GhostRestriction::Loot,
-        GhostRestriction::Trade, GhostRestriction::QuestInteract,
-        GhostRestriction::UseObject, GhostRestriction::Mount,
-        GhostRestriction::Cast, GhostRestriction::Chat,
+        GhostRestriction::Combat,
+        GhostRestriction::Loot,
+        GhostRestriction::Trade,
+        GhostRestriction::QuestInteract,
+        GhostRestriction::UseObject,
+        GhostRestriction::Mount,
+        GhostRestriction::Cast,
+        GhostRestriction::Chat,
     ];
     for action in actions {
         assert!(is_ghost_restricted(DeathState::Ghost, action));
@@ -195,14 +241,23 @@ fn ghost_restrictions_all_blocked() {
 
 #[test]
 fn alive_no_restrictions() {
-    assert!(!is_ghost_restricted(DeathState::Alive, GhostRestriction::Combat));
-    assert!(!is_ghost_restricted(DeathState::Alive, GhostRestriction::Trade));
+    assert!(!is_ghost_restricted(
+        DeathState::Alive,
+        GhostRestriction::Combat
+    ));
+    assert!(!is_ghost_restricted(
+        DeathState::Alive,
+        GhostRestriction::Trade
+    ));
 }
 
 #[test]
 fn dead_no_ghost_restrictions() {
     // Dead (not yet released) is a different state — ghost restrictions don't apply
-    assert!(!is_ghost_restricted(DeathState::Dead, GhostRestriction::Combat));
+    assert!(!is_ghost_restricted(
+        DeathState::Dead,
+        GhostRestriction::Combat
+    ));
 }
 
 #[test]
@@ -239,7 +294,14 @@ fn living_sees_spirit_healer() {
 // --- Corpse run ---
 
 fn sample_corpse() -> Corpse {
-    Corpse { player: 100, map_id: 0, x: 100.0, y: 200.0, z: 50.0, created_at: 1000 }
+    Corpse {
+        player: 100,
+        map_id: 0,
+        x: 100.0,
+        y: 200.0,
+        z: 50.0,
+        created_at: 1000,
+    }
 }
 
 #[test]
@@ -251,13 +313,23 @@ fn in_corpse_range_close() {
 #[test]
 fn in_corpse_range_exact_boundary() {
     let corpse = sample_corpse();
-    assert!(in_corpse_range(100.0 + CORPSE_RESURRECT_RANGE, 200.0, 50.0, &corpse));
+    assert!(in_corpse_range(
+        100.0 + CORPSE_RESURRECT_RANGE,
+        200.0,
+        50.0,
+        &corpse
+    ));
 }
 
 #[test]
 fn in_corpse_range_too_far() {
     let corpse = sample_corpse();
-    assert!(!in_corpse_range(100.0 + CORPSE_RESURRECT_RANGE + 0.1, 200.0, 50.0, &corpse));
+    assert!(!in_corpse_range(
+        100.0 + CORPSE_RESURRECT_RANGE + 0.1,
+        200.0,
+        50.0,
+        &corpse
+    ));
 }
 
 #[test]
@@ -329,7 +401,9 @@ fn low_level_no_sickness() {
 
 #[test]
 fn min_level_gets_sickness() {
-    assert!(apply_res_sickness(ResurrectSource::SpiritHealer, RES_SICKNESS_MIN_LEVEL, 1000).is_some());
+    assert!(
+        apply_res_sickness(ResurrectSource::SpiritHealer, RES_SICKNESS_MIN_LEVEL, 1000).is_some()
+    );
 }
 
 #[test]
@@ -367,8 +441,20 @@ fn should_apply_sickness_checks() {
 
 // --- Spirit healer ---
 
-fn healer_ctx(state: DeathState, level: u8, player: (f32, f32, f32), healer: (f32, f32, f32)) -> SpiritHealerContext {
-    SpiritHealerContext { state, player_level: level, player_pos: player, healer_pos: healer, healer_map: 0, now: 1000 }
+fn healer_ctx(
+    state: DeathState,
+    level: u8,
+    player: (f32, f32, f32),
+    healer: (f32, f32, f32),
+) -> SpiritHealerContext {
+    SpiritHealerContext {
+        state,
+        player_level: level,
+        player_pos: player,
+        healer_pos: healer,
+        healer_map: 0,
+        now: 1000,
+    }
 }
 
 #[test]
@@ -377,7 +463,10 @@ fn spirit_healer_resurrects_ghost() {
     let result = accept_spirit_healer(&ctx).unwrap();
     assert_eq!(result.x, 15.0);
     assert!(result.sickness.is_some());
-    assert_eq!(result.sickness.unwrap().expires_at, 1000 + RES_SICKNESS_DURATION);
+    assert_eq!(
+        result.sickness.unwrap().expires_at,
+        1000 + RES_SICKNESS_DURATION
+    );
 }
 
 #[test]
@@ -400,7 +489,12 @@ fn spirit_healer_out_of_range() {
 
 #[test]
 fn spirit_healer_exact_range() {
-    let ctx = healer_ctx(DeathState::Ghost, 60, (0.0, 0.0, 0.0), (SPIRIT_HEALER_RANGE, 0.0, 0.0));
+    let ctx = healer_ctx(
+        DeathState::Ghost,
+        60,
+        (0.0, 0.0, 0.0),
+        (SPIRIT_HEALER_RANGE, 0.0, 0.0),
+    );
     assert!(accept_spirit_healer(&ctx).is_ok());
 }
 
@@ -409,18 +503,27 @@ fn spirit_healer_exact_range() {
 #[test]
 fn death_durability_loss_10_percent() {
     let mut items = [
-        Durability { current: 100, max: 100 },
-        Durability { current: 50, max: 200 },
+        Durability {
+            current: 100,
+            max: 100,
+        },
+        Durability {
+            current: 50,
+            max: 200,
+        },
     ];
     let total = apply_death_durability_loss(&mut items);
-    assert_eq!(items[0].current, 90);  // 100 - 10% of 100
-    assert_eq!(items[1].current, 30);  // 50 - 10% of 200 = 50 - 20
-    assert_eq!(total, 30);             // 10 + 20
+    assert_eq!(items[0].current, 90); // 100 - 10% of 100
+    assert_eq!(items[1].current, 30); // 50 - 10% of 200 = 50 - 20
+    assert_eq!(total, 30); // 10 + 20
 }
 
 #[test]
 fn spirit_healer_durability_loss_25_percent() {
-    let mut items = [Durability { current: 100, max: 100 }];
+    let mut items = [Durability {
+        current: 100,
+        max: 100,
+    }];
     let total = apply_spirit_healer_durability_loss(&mut items);
     assert_eq!(items[0].current, 75);
     assert_eq!(total, 25);
@@ -428,25 +531,37 @@ fn spirit_healer_durability_loss_25_percent() {
 
 #[test]
 fn combined_death_and_spirit_healer_loss() {
-    let mut items = [Durability { current: 100, max: 100 }];
-    apply_death_durability_loss(&mut items);          // 100 → 90
-    apply_spirit_healer_durability_loss(&mut items);  // 90 → 65
+    let mut items = [Durability {
+        current: 100,
+        max: 100,
+    }];
+    apply_death_durability_loss(&mut items); // 100 → 90
+    apply_spirit_healer_durability_loss(&mut items); // 90 → 65
     assert_eq!(items[0].current, 65);
 }
 
 #[test]
 fn durability_does_not_go_negative() {
-    let mut items = [Durability { current: 5, max: 100 }];
+    let mut items = [Durability {
+        current: 5,
+        max: 100,
+    }];
     apply_death_durability_loss(&mut items); // 5 - 10 → 0
     assert_eq!(items[0].current, 0);
 }
 
 #[test]
 fn broken_item() {
-    let d = Durability { current: 0, max: 100 };
+    let d = Durability {
+        current: 0,
+        max: 100,
+    };
     assert!(d.is_broken());
 
-    let d = Durability { current: 1, max: 100 };
+    let d = Durability {
+        current: 1,
+        max: 100,
+    };
     assert!(!d.is_broken());
 
     // No max = not breakable
@@ -456,7 +571,10 @@ fn broken_item() {
 
 #[test]
 fn apply_loss_to_durability() {
-    let mut d = Durability { current: 80, max: 200 };
+    let mut d = Durability {
+        current: 80,
+        max: 200,
+    };
     d.apply_loss(0.10);
     assert_eq!(d.current, 60); // 80 - 20
 }
@@ -472,9 +590,13 @@ fn empty_items_no_loss() {
 #[test]
 fn cast_resurrect_on_dead() {
     let result = cast_resurrect(
-        DeathState::Dead, 10000.0, 5000.0,
-        (100.0, 200.0, 50.0), (110.0, 200.0, 50.0),
-    ).unwrap();
+        DeathState::Dead,
+        10000.0,
+        5000.0,
+        (100.0, 200.0, 50.0),
+        (110.0, 200.0, 50.0),
+    )
+    .unwrap();
     assert_eq!(result.restored_hp, 3500.0);
     assert_eq!(result.restored_mana, 1750.0);
     assert_eq!(result.x, 100.0);
@@ -483,8 +605,11 @@ fn cast_resurrect_on_dead() {
 #[test]
 fn cast_resurrect_on_ghost() {
     let result = cast_resurrect(
-        DeathState::Ghost, 8000.0, 4000.0,
-        (50.0, 50.0, 0.0), (55.0, 50.0, 0.0),
+        DeathState::Ghost,
+        8000.0,
+        4000.0,
+        (50.0, 50.0, 0.0),
+        (55.0, 50.0, 0.0),
     );
     assert!(result.is_ok());
 }
@@ -492,7 +617,13 @@ fn cast_resurrect_on_ghost() {
 #[test]
 fn cast_resurrect_on_alive_fails() {
     assert_eq!(
-        cast_resurrect(DeathState::Alive, 10000.0, 5000.0, (0.0, 0.0, 0.0), (0.0, 0.0, 0.0)),
+        cast_resurrect(
+            DeathState::Alive,
+            10000.0,
+            5000.0,
+            (0.0, 0.0, 0.0),
+            (0.0, 0.0, 0.0)
+        ),
         Err(DeathError::AlreadyAlive)
     );
 }
@@ -500,7 +631,13 @@ fn cast_resurrect_on_alive_fails() {
 #[test]
 fn cast_resurrect_out_of_range() {
     assert_eq!(
-        cast_resurrect(DeathState::Dead, 10000.0, 5000.0, (0.0, 0.0, 0.0), (500.0, 500.0, 0.0)),
+        cast_resurrect(
+            DeathState::Dead,
+            10000.0,
+            5000.0,
+            (0.0, 0.0, 0.0),
+            (500.0, 500.0, 0.0)
+        ),
         Err(DeathError::NotDead)
     );
 }
@@ -508,8 +645,11 @@ fn cast_resurrect_out_of_range() {
 #[test]
 fn cast_resurrect_exact_range() {
     let result = cast_resurrect(
-        DeathState::Dead, 10000.0, 5000.0,
-        (0.0, 0.0, 0.0), (RESURRECT_SPELL_RANGE, 0.0, 0.0),
+        DeathState::Dead,
+        10000.0,
+        5000.0,
+        (0.0, 0.0, 0.0),
+        (RESURRECT_SPELL_RANGE, 0.0, 0.0),
     );
     assert!(result.is_ok());
 }
@@ -536,7 +676,11 @@ fn corpse_despawns_after_5_minutes() {
     tracker.start_timer(100, 1000);
 
     // Not yet
-    assert!(tracker.collect_despawns(1000 + CORPSE_DESPAWN_SECS - 1).is_empty());
+    assert!(
+        tracker
+            .collect_despawns(1000 + CORPSE_DESPAWN_SECS - 1)
+            .is_empty()
+    );
     assert!(tracker.is_pending(100));
 
     // Now
@@ -573,7 +717,11 @@ fn restart_timer_replaces_old() {
     tracker.start_timer(100, 2000); // dies again, new timer
 
     // Old timer would have fired at 1300, new at 2300
-    assert!(tracker.collect_despawns(1000 + CORPSE_DESPAWN_SECS).is_empty());
+    assert!(
+        tracker
+            .collect_despawns(1000 + CORPSE_DESPAWN_SECS)
+            .is_empty()
+    );
     let despawned = tracker.collect_despawns(2000 + CORPSE_DESPAWN_SECS);
     assert_eq!(despawned, vec![100]);
 }

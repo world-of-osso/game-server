@@ -203,7 +203,10 @@ mod tests {
     #[test]
     fn deposit_and_withdraw() {
         let mut bank = Warbank::new();
-        let item = InvSlot { item_id: 100, count: 5 };
+        let item = InvSlot {
+            item_id: 100,
+            count: 5,
+        };
         bank.deposit(0, 0, item).unwrap();
         assert_eq!(bank.tabs[0].slots[0], item);
 
@@ -215,7 +218,10 @@ mod tests {
     #[test]
     fn deposit_invalid_tab() {
         let mut bank = Warbank::new();
-        let item = InvSlot { item_id: 1, count: 1 };
+        let item = InvSlot {
+            item_id: 1,
+            count: 1,
+        };
         assert_eq!(bank.deposit(1, 0, item), Err(WarbankError::InvalidTab));
     }
 
@@ -247,7 +253,10 @@ mod tests {
     #[test]
     fn first_empty_slot() {
         let mut bank = Warbank::new();
-        let item = InvSlot { item_id: 42, count: 1 };
+        let item = InvSlot {
+            item_id: 42,
+            count: 1,
+        };
         bank.deposit(0, 0, item).unwrap();
         bank.deposit(0, 1, item).unwrap();
         let first = bank.tabs[0].first_empty().unwrap();
@@ -257,7 +266,10 @@ mod tests {
     #[test]
     fn first_empty_slot_none_when_full() {
         let mut bank = Warbank::new();
-        let item = InvSlot { item_id: 1, count: 1 };
+        let item = InvSlot {
+            item_id: 1,
+            count: 1,
+        };
         for slot in 0..SLOTS_PER_TAB {
             bank.deposit(0, slot, item).unwrap();
         }
@@ -268,8 +280,14 @@ mod tests {
     #[test]
     fn deposit_invalid_slot() {
         let mut bank = Warbank::new();
-        let item = InvSlot { item_id: 1, count: 1 };
-        assert_eq!(bank.deposit(0, SLOTS_PER_TAB, item), Err(WarbankError::InvalidSlot));
+        let item = InvSlot {
+            item_id: 1,
+            count: 1,
+        };
+        assert_eq!(
+            bank.deposit(0, SLOTS_PER_TAB, item),
+            Err(WarbankError::InvalidSlot)
+        );
         assert_eq!(bank.deposit(0, 999, item), Err(WarbankError::InvalidSlot));
     }
 
@@ -282,14 +300,23 @@ mod tests {
     #[test]
     fn withdraw_invalid_slot() {
         let mut bank = Warbank::new();
-        assert_eq!(bank.withdraw(0, SLOTS_PER_TAB), Err(WarbankError::InvalidSlot));
+        assert_eq!(
+            bank.withdraw(0, SLOTS_PER_TAB),
+            Err(WarbankError::InvalidSlot)
+        );
     }
 
     #[test]
     fn deposit_overwrites_existing_item() {
         let mut bank = Warbank::new();
-        let item_a = InvSlot { item_id: 10, count: 1 };
-        let item_b = InvSlot { item_id: 20, count: 3 };
+        let item_a = InvSlot {
+            item_id: 10,
+            count: 1,
+        };
+        let item_b = InvSlot {
+            item_id: 20,
+            count: 3,
+        };
         bank.deposit(0, 0, item_a).unwrap();
         bank.deposit(0, 0, item_b).unwrap();
         assert_eq!(bank.tabs[0].slots[0], item_b);
@@ -334,7 +361,10 @@ mod tests {
         let mut bank = Warbank::new();
         bank.deposit_gold(999_999_999);
         bank.purchase_tab("T2".into()).unwrap();
-        let item = InvSlot { item_id: 42, count: 1 };
+        let item = InvSlot {
+            item_id: 42,
+            count: 1,
+        };
         bank.deposit(0, 0, item).unwrap();
         assert!(bank.tabs[1].slots[0].is_empty());
     }
@@ -359,7 +389,10 @@ mod tests {
     fn serde_round_trip() {
         let mut bank = Warbank::new();
         bank.deposit_gold(50_000);
-        let item = InvSlot { item_id: 77, count: 20 };
+        let item = InvSlot {
+            item_id: 77,
+            count: 20,
+        };
         bank.deposit(0, 5, item).unwrap();
 
         let json = serde_json::to_string(&bank).unwrap();

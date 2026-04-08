@@ -183,8 +183,8 @@ fn xp_curve_key_values() {
     assert_eq!(xp_to_level(10), 7600);
     assert_eq!(xp_to_level(20), 20800);
     assert_eq!(xp_to_level(40), 74300);
-    assert_eq!(xp_to_level(60), 290000);   // TBC jump
-    assert_eq!(xp_to_level(70), 1523800);  // WotLK jump
+    assert_eq!(xp_to_level(60), 290000); // TBC jump
+    assert_eq!(xp_to_level(70), 1523800); // WotLK jump
     assert_eq!(xp_to_level(79), 1670800);
 }
 
@@ -194,7 +194,10 @@ fn xp_curve_monotonically_increasing() {
         assert!(
             xp_to_level(level + 1) >= xp_to_level(level),
             "XP should increase: L{} ({}) < L{} ({})",
-            level, xp_to_level(level), level + 1, xp_to_level(level + 1)
+            level,
+            xp_to_level(level),
+            level + 1,
+            xp_to_level(level + 1)
         );
     }
 }
@@ -337,7 +340,10 @@ fn rested_update_max_on_level_up() {
 
 #[test]
 fn group_xp_solo_gets_full() {
-    let members = vec![GroupMemberXp { level: 80, distance: 5.0 }];
+    let members = vec![GroupMemberXp {
+        level: 80,
+        distance: 5.0,
+    }];
     let shares = group_kill_xp(80, &members);
     assert_eq!(shares.len(), 1);
     assert_eq!(shares[0].xp, kill_xp(80, 80)); // no bonus, no split
@@ -346,8 +352,14 @@ fn group_xp_solo_gets_full() {
 #[test]
 fn group_xp_two_equal_split() {
     let members = vec![
-        GroupMemberXp { level: 80, distance: 5.0 },
-        GroupMemberXp { level: 80, distance: 10.0 },
+        GroupMemberXp {
+            level: 80,
+            distance: 5.0,
+        },
+        GroupMemberXp {
+            level: 80,
+            distance: 10.0,
+        },
     ];
     let shares = group_kill_xp(80, &members);
     // 2 members, 1.0x bonus, equal levels → each gets half
@@ -359,9 +371,18 @@ fn group_xp_two_equal_split() {
 #[test]
 fn group_xp_three_member_bonus() {
     let members = vec![
-        GroupMemberXp { level: 80, distance: 5.0 },
-        GroupMemberXp { level: 80, distance: 5.0 },
-        GroupMemberXp { level: 80, distance: 5.0 },
+        GroupMemberXp {
+            level: 80,
+            distance: 5.0,
+        },
+        GroupMemberXp {
+            level: 80,
+            distance: 5.0,
+        },
+        GroupMemberXp {
+            level: 80,
+            distance: 5.0,
+        },
     ];
     let shares = group_kill_xp(80, &members);
     let base = kill_xp(80, 80);
@@ -374,8 +395,14 @@ fn group_xp_three_member_bonus() {
 #[test]
 fn group_xp_level_weighted() {
     let members = vec![
-        GroupMemberXp { level: 80, distance: 5.0 },
-        GroupMemberXp { level: 40, distance: 5.0 },
+        GroupMemberXp {
+            level: 80,
+            distance: 5.0,
+        },
+        GroupMemberXp {
+            level: 40,
+            distance: 5.0,
+        },
     ];
     let shares = group_kill_xp(80, &members);
     // Level 80 should get more than level 40
@@ -387,8 +414,14 @@ fn group_xp_level_weighted() {
 #[test]
 fn group_xp_out_of_range_gets_zero() {
     let members = vec![
-        GroupMemberXp { level: 80, distance: 5.0 },
-        GroupMemberXp { level: 80, distance: 200.0 }, // out of range
+        GroupMemberXp {
+            level: 80,
+            distance: 5.0,
+        },
+        GroupMemberXp {
+            level: 80,
+            distance: 200.0,
+        }, // out of range
     ];
     let shares = group_kill_xp(80, &members);
     assert!(shares[0].xp > 0);
@@ -397,9 +430,10 @@ fn group_xp_out_of_range_gets_zero() {
 
 #[test]
 fn group_xp_all_out_of_range() {
-    let members = vec![
-        GroupMemberXp { level: 80, distance: 200.0 },
-    ];
+    let members = vec![GroupMemberXp {
+        level: 80,
+        distance: 200.0,
+    }];
     let shares = group_kill_xp(80, &members);
     assert_eq!(shares[0].xp, 0);
 }

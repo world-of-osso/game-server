@@ -152,8 +152,8 @@ pub fn world_to_tile(x: f32, z: f32) -> (u16, u16) {
 
 // --- A* pathfinding ---
 
-use std::collections::BinaryHeap;
 use std::cmp::Ordering;
+use std::collections::BinaryHeap;
 
 /// A path result: sequence of world-space waypoints.
 #[derive(Debug, Clone, PartialEq)]
@@ -180,7 +180,10 @@ impl Eq for AStarNode {}
 
 impl Ord for AStarNode {
     fn cmp(&self, other: &Self) -> Ordering {
-        other.f_cost.partial_cmp(&self.f_cost).unwrap_or(Ordering::Equal)
+        other
+            .f_cost
+            .partial_cmp(&self.f_cost)
+            .unwrap_or(Ordering::Equal)
     }
 }
 
@@ -194,10 +197,13 @@ impl NavTile {
     /// Compute the centroid (center point) of a polygon.
     pub fn polygon_center(&self, poly: &NavPolygon) -> NavPoint {
         let n = poly.vertices.len() as f32;
-        let (sx, sy, sz) = poly.vertices.iter().fold((0.0, 0.0, 0.0), |(x, y, z), &vi| {
-            let v = &self.vertices[vi as usize];
-            (x + v.x, y + v.y, z + v.z)
-        });
+        let (sx, sy, sz) = poly
+            .vertices
+            .iter()
+            .fold((0.0, 0.0, 0.0), |(x, y, z), &vi| {
+                let v = &self.vertices[vi as usize];
+                (x + v.x, y + v.y, z + v.z)
+            });
         NavPoint::new(sx / n, sy / n, sz / n)
     }
 
@@ -211,7 +217,9 @@ impl NavTile {
         let end_idx = self.find_polygon(end)?;
 
         if start_idx == end_idx {
-            return Some(NavPath { waypoints: vec![*start, *end] });
+            return Some(NavPath {
+                waypoints: vec![*start, *end],
+            });
         }
 
         let came_from = self.astar_search(start_idx, end_idx, start)?;
@@ -227,7 +235,10 @@ impl NavTile {
 
         g[start] = 0.0;
         let mut open = BinaryHeap::new();
-        open.push(AStarNode { index: start, f_cost: start_pos.distance_2d(&goal) });
+        open.push(AStarNode {
+            index: start,
+            f_cost: start_pos.distance_2d(&goal),
+        });
 
         while let Some(cur) = open.pop() {
             if cur.index == end {
@@ -253,7 +264,8 @@ impl NavTile {
     ) {
         let cc = self.polygon_center(&self.polygons[ci]);
         for &ni in &self.polygons[ci].neighbors {
-            if ni == NO_NEIGHBOR || ni >= g.len() || closed[ni] || !self.polygons[ni].flags.walkable {
+            if ni == NO_NEIGHBOR || ni >= g.len() || closed[ni] || !self.polygons[ni].flags.walkable
+            {
                 continue;
             }
             let nc = self.polygon_center(&self.polygons[ni]);
@@ -261,7 +273,10 @@ impl NavTile {
             if tg < g[ni] {
                 g[ni] = tg;
                 from[ni] = ci;
-                open.push(AStarNode { index: ni, f_cost: tg + nc.distance_2d(goal) });
+                open.push(AStarNode {
+                    index: ni,
+                    f_cost: tg + nc.distance_2d(goal),
+                });
             }
         }
     }
@@ -726,7 +741,6 @@ impl DirectMoveState {
         self.elapsed >= self.total_time
     }
 }
-
 
 #[cfg(test)]
 #[path = "navmesh_tests.rs"]

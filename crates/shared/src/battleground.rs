@@ -148,6 +148,10 @@ pub enum BgQueueError {
     OutOfBracket,
     /// Group has no members.
     EmptyGroup,
+    /// Group members and level entries do not align.
+    LevelCountMismatch,
+    /// Group listed the same player more than once.
+    DuplicatePlayer,
     /// Player has an active deserter penalty.
     Deserter,
 }
@@ -209,13 +213,19 @@ impl BgQueue {
         if members.is_empty() {
             return Err(BgQueueError::EmptyGroup);
         }
+        if members.len() != levels.len() {
+            return Err(BgQueueError::LevelCountMismatch);
+        }
         let Some(tmpl) = template_by_id(bg_id) else {
             return Err(BgQueueError::UnknownBg);
         };
         if !levels.iter().all(|&lvl| tmpl.bracket.contains(lvl)) {
             return Err(BgQueueError::OutOfBracket);
         }
-        if self.is_queued(leader) {
+        if has_duplicate_members(&members) {
+            return Err(BgQueueError::DuplicatePlayer);
+        }
+        if members.iter().any(|&member| self.is_queued(member)) {
             return Err(BgQueueError::AlreadyQueued);
         }
         self.entries.push(BgQueueEntry {
@@ -237,9 +247,7 @@ impl BgQueue {
 
     /// Whether a player is already queued (as leader or member).
     pub fn is_queued(&self, player: u64) -> bool {
-        self.entries
-            .iter()
-            .any(|e| e.members.contains(&player))
+        self.entries.iter().any(|e| e.members.contains(&player))
     }
 
     /// Number of entries in the queue.
@@ -276,7 +284,11 @@ impl BgQueue {
         }
 
         remove_indices(&mut self.entries, &used);
-        Some(BgMatch { bg_id, team_a, team_b })
+        Some(BgMatch {
+            bg_id,
+            team_a,
+            team_b,
+        })
     }
 
     fn candidates_for(&self, bg_id: u32) -> Vec<usize> {
@@ -287,6 +299,11 @@ impl BgQueue {
             .map(|(i, _)| i)
             .collect()
     }
+}
+
+fn has_duplicate_members(members: &[u64]) -> bool {
+    let mut seen = std::collections::BTreeSet::new();
+    members.iter().any(|member| !seen.insert(*member))
 }
 
 /// Assign queued entries alternately to two teams up to `target` size each.
@@ -384,8 +401,14 @@ impl BgInstance {
             phase: BgPhase::Waiting,
             team_a_players: bg_match.team_a.clone(),
             team_b_players: bg_match.team_b.clone(),
-            score_a: TeamScore { score: 0, reinforcements: tmpl.starting_reinforcements },
-            score_b: TeamScore { score: 0, reinforcements: tmpl.starting_reinforcements },
+            score_a: TeamScore {
+                score: 0,
+                reinforcements: tmpl.starting_reinforcements,
+            },
+            score_b: TeamScore {
+                score: 0,
+                reinforcements: tmpl.starting_reinforcements,
+            },
             elapsed_secs: 0,
             outcome: None,
         }
@@ -497,29 +520,47 @@ pub fn distribute_rewards(instance: &BgInstance) -> Option<BgRewardDistribution>
         return None;
     }
 
-    let (reward_a, reward_b) = match outcome {
-        BgOutcome::Winner(BgTeam::A) => (
-            BgReward { honor: WINNER_HONOR, marks: WINNER_MARKS },
-            BgReward { honor: LOSER_HONOR, marks: LOSER_MARKS },
-        ),
-        BgOutcome::Winner(BgTeam::B) => (
-            BgReward { honor: LOSER_HONOR, marks: LOSER_MARKS },
-            BgReward { honor: WINNER_HONOR, marks: WINNER_MARKS },
-        ),
-        BgOutcome::Draw => (
-            BgReward { honor: DRAW_HONOR, marks: DRAW_MARKS },
-            BgReward { honor: DRAW_HONOR, marks: DRAW_MARKS },
-        ),
-    };
-
-    let mut rewards = Vec::new();
-    for &player in &instance.team_a_players {
-        rewards.push((player, reward_a));
-    }
-    for &player in &instance.team_b_players {
-        rewards.push((player, reward_b));
-    }
+    let (reward_a, reward_b) = team_rewards(outcome);
+    let mut rewards = team_reward_entries(&instance.team_a_players, reward_a);
+    rewards.extend(team_reward_entries(&instance.team_b_players, reward_b));
     Some(BgRewardDistribution { rewards })
+}
+
+fn team_rewards(outcome: BgOutcome) -> (BgReward, BgReward) {
+    match outcome {
+        BgOutcome::Winner(BgTeam::A) => (winner_reward(), loser_reward()),
+        BgOutcome::Winner(BgTeam::B) => (loser_reward(), winner_reward()),
+        BgOutcome::Draw => (draw_reward(), draw_reward()),
+    }
+}
+
+fn winner_reward() -> BgReward {
+    BgReward {
+        honor: WINNER_HONOR,
+        marks: WINNER_MARKS,
+    }
+}
+
+fn loser_reward() -> BgReward {
+    BgReward {
+        honor: LOSER_HONOR,
+        marks: LOSER_MARKS,
+    }
+}
+
+fn draw_reward() -> BgReward {
+    BgReward {
+        honor: DRAW_HONOR,
+        marks: DRAW_MARKS,
+    }
+}
+
+fn team_reward_entries(players: &[u64], reward: BgReward) -> Vec<(u64, BgReward)> {
+    players
+        .iter()
+        .copied()
+        .map(|player| (player, reward))
+        .collect()
 }
 
 // -- Deserter Penalty --
@@ -547,7 +588,9 @@ impl BgDeserterTracker {
 
     /// Whether a player has an active deserter penalty.
     pub fn is_deserter(&self, player: u64, now: u64) -> bool {
-        self.entries.iter().any(|(p, exp)| *p == player && now < *exp)
+        self.entries
+            .iter()
+            .any(|(p, exp)| *p == player && now < *exp)
     }
 
     /// Remaining deserter time in seconds (0 if not active).

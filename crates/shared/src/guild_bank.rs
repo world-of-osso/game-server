@@ -93,7 +93,11 @@ impl GuildBank {
     }
 
     /// Purchase a new tab. Deducts gold from the guild bank.
-    pub fn purchase_tab(&mut self, name: String, guild_gold: &mut u32) -> Result<usize, GuildBankError> {
+    pub fn purchase_tab(
+        &mut self,
+        name: String,
+        guild_gold: &mut u32,
+    ) -> Result<usize, GuildBankError> {
         let cost = self.next_tab_cost().ok_or(GuildBankError::MaxTabsReached)?;
         if *guild_gold < cost {
             return Err(GuildBankError::NotEnoughGold);
@@ -104,7 +108,12 @@ impl GuildBank {
     }
 
     /// Deposit an item into a specific tab and slot.
-    pub fn deposit(&mut self, tab: usize, slot: usize, item: InvSlot) -> Result<(), GuildBankError> {
+    pub fn deposit(
+        &mut self,
+        tab: usize,
+        slot: usize,
+        item: InvSlot,
+    ) -> Result<(), GuildBankError> {
         let tab = self.tabs.get_mut(tab).ok_or(GuildBankError::InvalidTab)?;
         let dest = tab.slots.get_mut(slot).ok_or(GuildBankError::InvalidSlot)?;
         *dest = item;
@@ -211,11 +220,7 @@ impl DailyWithdrawals {
 }
 
 /// Check if a member can withdraw from a tab given permissions and daily limit.
-pub fn can_withdraw(
-    perm: &TabPermission,
-    daily: &DailyWithdrawals,
-    tab: usize,
-) -> bool {
+pub fn can_withdraw(perm: &TabPermission, daily: &DailyWithdrawals, tab: usize) -> bool {
     if !perm.withdraw {
         return false;
     }
@@ -298,12 +303,30 @@ pub fn repair_from_guild(
 /// Type of guild bank transaction.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum TransactionType {
-    DepositItem { tab: usize, slot: usize, item_id: u32, count: u16 },
-    WithdrawItem { tab: usize, slot: usize, item_id: u32, count: u16 },
-    DepositGold { amount: u32 },
-    WithdrawGold { amount: u32 },
-    RepairFromGuild { amount: u32 },
-    TabPurchased { tab: usize },
+    DepositItem {
+        tab: usize,
+        slot: usize,
+        item_id: u32,
+        count: u16,
+    },
+    WithdrawItem {
+        tab: usize,
+        slot: usize,
+        item_id: u32,
+        count: u16,
+    },
+    DepositGold {
+        amount: u32,
+    },
+    WithdrawGold {
+        amount: u32,
+    },
+    RepairFromGuild {
+        amount: u32,
+    },
+    TabPurchased {
+        tab: usize,
+    },
 }
 
 /// A single transaction log entry.
@@ -431,7 +454,10 @@ mod tests {
         let mut gold = 2_000_000;
         bank.purchase_tab("T".into(), &mut gold).unwrap();
 
-        let item = InvSlot { item_id: 100, count: 5 };
+        let item = InvSlot {
+            item_id: 100,
+            count: 5,
+        };
         bank.deposit(0, 0, item).unwrap();
         assert_eq!(bank.tabs[0].slots[0], item);
 
@@ -443,7 +469,10 @@ mod tests {
     #[test]
     fn deposit_invalid_tab() {
         let mut bank = GuildBank::default();
-        let item = InvSlot { item_id: 1, count: 1 };
+        let item = InvSlot {
+            item_id: 1,
+            count: 1,
+        };
         assert_eq!(bank.deposit(0, 0, item), Err(GuildBankError::InvalidTab));
     }
 
@@ -454,7 +483,10 @@ mod tests {
         assert_eq!(bank.gold, 10000);
         bank.withdraw_gold(3000).unwrap();
         assert_eq!(bank.gold, 7000);
-        assert_eq!(bank.withdraw_gold(99999), Err(GuildBankError::NotEnoughGold));
+        assert_eq!(
+            bank.withdraw_gold(99999),
+            Err(GuildBankError::NotEnoughGold)
+        );
     }
 
     // --- Permission tests ---
@@ -532,11 +564,19 @@ mod tests {
     #[test]
     fn log_item_transaction() {
         let mut log = TransactionLog::new(1);
-        log.log_item(0, Transaction {
-            player: "Alice".into(),
-            action: TransactionType::DepositItem { tab: 0, slot: 0, item_id: 100, count: 5 },
-            timestamp: 1000,
-        });
+        log.log_item(
+            0,
+            Transaction {
+                player: "Alice".into(),
+                action: TransactionType::DepositItem {
+                    tab: 0,
+                    slot: 0,
+                    item_id: 100,
+                    count: 5,
+                },
+                timestamp: 1000,
+            },
+        );
         assert_eq!(log.tab_log(0).len(), 1);
         assert_eq!(log.tab_log(0)[0].player, "Alice");
     }
@@ -556,11 +596,19 @@ mod tests {
     fn log_evicts_oldest() {
         let mut log = TransactionLog::new(1);
         for i in 0..30 {
-            log.log_item(0, Transaction {
-                player: format!("P{i}"),
-                action: TransactionType::DepositItem { tab: 0, slot: 0, item_id: 1, count: 1 },
-                timestamp: i as u64,
-            });
+            log.log_item(
+                0,
+                Transaction {
+                    player: format!("P{i}"),
+                    action: TransactionType::DepositItem {
+                        tab: 0,
+                        slot: 0,
+                        item_id: 1,
+                        count: 1,
+                    },
+                    timestamp: i as u64,
+                },
+            );
         }
         assert_eq!(log.tab_log(0).len(), 25); // capped
         assert_eq!(log.tab_log(0)[0].player, "P5"); // oldest 5 evicted
@@ -584,7 +632,10 @@ mod tests {
 
     #[test]
     fn repair_from_guild_success() {
-        let mut bank = GuildBank { gold: 100_000, ..Default::default() };
+        let mut bank = GuildBank {
+            gold: 100_000,
+            ..Default::default()
+        };
         let mut spending = DailyRepairSpending::default();
         let paid = repair_from_guild(&mut bank, &mut spending, "Alice", 5000, 10000).unwrap();
         assert_eq!(paid, 5000);
@@ -594,7 +645,10 @@ mod tests {
 
     #[test]
     fn repair_daily_limit_caps() {
-        let mut bank = GuildBank { gold: 100_000, ..Default::default() };
+        let mut bank = GuildBank {
+            gold: 100_000,
+            ..Default::default()
+        };
         let mut spending = DailyRepairSpending::default();
         // Limit is 3000, repair costs 5000 → only pays 3000
         let paid = repair_from_guild(&mut bank, &mut spending, "Alice", 5000, 3000).unwrap();
@@ -606,7 +660,10 @@ mod tests {
 
     #[test]
     fn repair_unlimited_daily() {
-        let mut bank = GuildBank { gold: 100_000, ..Default::default() };
+        let mut bank = GuildBank {
+            gold: 100_000,
+            ..Default::default()
+        };
         let mut spending = DailyRepairSpending::default();
         // daily_limit = 0 means unlimited
         repair_from_guild(&mut bank, &mut spending, "Alice", 50_000, 0).unwrap();
@@ -616,7 +673,10 @@ mod tests {
 
     #[test]
     fn repair_not_enough_guild_gold() {
-        let mut bank = GuildBank { gold: 100, ..Default::default() };
+        let mut bank = GuildBank {
+            gold: 100,
+            ..Default::default()
+        };
         let mut spending = DailyRepairSpending::default();
         let err = repair_from_guild(&mut bank, &mut spending, "Alice", 5000, 10000);
         assert_eq!(err, Err(GuildBankError::NotEnoughGold));

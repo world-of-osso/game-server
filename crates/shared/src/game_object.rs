@@ -106,7 +106,10 @@ pub struct GameObject {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum StateError {
     /// Transition not allowed from the current state.
-    InvalidTransition { from: GameObjectState, to: GameObjectState },
+    InvalidTransition {
+        from: GameObjectState,
+        to: GameObjectState,
+    },
 }
 
 impl GameObject {
@@ -125,8 +128,7 @@ impl GameObject {
 
     /// Whether the object can be interacted with.
     pub fn is_interactable(&self) -> bool {
-        self.flags.contains(GameObjectFlags::INTERACTABLE)
-            && self.state == GameObjectState::Ready
+        self.flags.contains(GameObjectFlags::INTERACTABLE) && self.state == GameObjectState::Ready
     }
 
     /// Whether the object is locked (requires a key).
@@ -166,13 +168,12 @@ impl GameObject {
         self.transition(GameObjectState::InUse, GameObjectState::Ready)
     }
 
-    fn transition(
-        &mut self,
-        from: GameObjectState,
-        to: GameObjectState,
-    ) -> Result<(), StateError> {
+    fn transition(&mut self, from: GameObjectState, to: GameObjectState) -> Result<(), StateError> {
         if self.state != from {
-            return Err(StateError::InvalidTransition { from: self.state, to });
+            return Err(StateError::InvalidTransition {
+                from: self.state,
+                to,
+            });
         }
         self.state = to;
         Ok(())
@@ -187,7 +188,9 @@ pub struct GameObjectRegistry {
 
 impl GameObjectRegistry {
     pub fn new() -> Self {
-        Self { templates: Vec::new() }
+        Self {
+            templates: Vec::new(),
+        }
     }
 
     /// Register a template.
@@ -203,7 +206,10 @@ impl GameObjectRegistry {
 
     /// All templates of a given type.
     pub fn by_type(&self, object_type: GameObjectType) -> Vec<&GameObjectTemplate> {
-        self.templates.iter().filter(|t| t.object_type == object_type).collect()
+        self.templates
+            .iter()
+            .filter(|t| t.object_type == object_type)
+            .collect()
     }
 
     /// Number of registered templates.
@@ -244,7 +250,10 @@ pub enum InteractionResult {
     /// Toggle a door open or closed.
     ToggleDoor { template_id: u32, now_open: bool },
     /// Begin gathering from a node.
-    GatherNode { template_id: u32, node_type: GameObjectType },
+    GatherNode {
+        template_id: u32,
+        node_type: GameObjectType,
+    },
     /// Complete a quest objective.
     QuestObjective { template_id: u32 },
     /// Trigger a trap effect.
@@ -252,7 +261,10 @@ pub enum InteractionResult {
     /// Open the mailbox UI.
     OpenMailbox,
     /// Access a crafting station (forge, anvil).
-    UseCraftingStation { template_id: u32, station_type: GameObjectType },
+    UseCraftingStation {
+        template_id: u32,
+        station_type: GameObjectType,
+    },
 }
 
 /// Validate and process a player interaction with a game object.
@@ -272,7 +284,9 @@ fn validate_interaction(go: &GameObject) -> Result<(), InteractionError> {
     if go.state != GameObjectState::Ready {
         return match go.state {
             GameObjectState::InUse => Err(InteractionError::InUse),
-            GameObjectState::Depleted | GameObjectState::Respawning => Err(InteractionError::Depleted),
+            GameObjectState::Depleted | GameObjectState::Respawning => {
+                Err(InteractionError::Depleted)
+            }
             GameObjectState::Ready => unreachable!(),
         };
     }
@@ -286,15 +300,24 @@ fn dispatch_interaction(go: &GameObject) -> Result<InteractionResult, Interactio
     let id = go.template_id;
     match go.object_type {
         GameObjectType::Chest => Ok(InteractionResult::LootChest { template_id: id }),
-        GameObjectType::Door => Ok(InteractionResult::ToggleDoor { template_id: id, now_open: true }),
+        GameObjectType::Door => Ok(InteractionResult::ToggleDoor {
+            template_id: id,
+            now_open: true,
+        }),
         GameObjectType::MiningNode | GameObjectType::HerbNode => {
-            Ok(InteractionResult::GatherNode { template_id: id, node_type: go.object_type })
+            Ok(InteractionResult::GatherNode {
+                template_id: id,
+                node_type: go.object_type,
+            })
         }
         GameObjectType::QuestObject => Ok(InteractionResult::QuestObjective { template_id: id }),
         GameObjectType::Trap => Ok(InteractionResult::TriggerTrap { template_id: id }),
         GameObjectType::Mailbox => Ok(InteractionResult::OpenMailbox),
         GameObjectType::Forge | GameObjectType::Anvil => {
-            Ok(InteractionResult::UseCraftingStation { template_id: id, station_type: go.object_type })
+            Ok(InteractionResult::UseCraftingStation {
+                template_id: id,
+                station_type: go.object_type,
+            })
         }
     }
 }
@@ -340,7 +363,10 @@ pub struct SpawnManager {
 
 impl SpawnManager {
     pub fn new() -> Self {
-        Self { spawns: Vec::new(), next_spawn_id: 1 }
+        Self {
+            spawns: Vec::new(),
+            next_spawn_id: 1,
+        }
     }
 
     /// Load a static spawn from world data.
@@ -365,7 +391,8 @@ impl SpawnManager {
     /// Remove a spawn by ID. Only dynamic spawns can be removed.
     pub fn remove_dynamic(&mut self, spawn_id: u64) -> bool {
         let before = self.spawns.len();
-        self.spawns.retain(|s| !(s.spawn_id == spawn_id && s.origin == SpawnOrigin::Dynamic));
+        self.spawns
+            .retain(|s| !(s.spawn_id == spawn_id && s.origin == SpawnOrigin::Dynamic));
         self.spawns.len() < before
     }
 
@@ -381,7 +408,10 @@ impl SpawnManager {
 
     /// All spawns of a given template.
     pub fn spawns_for_template(&self, template_id: u32) -> Vec<&GameObjectSpawn> {
-        self.spawns.iter().filter(|s| s.template_id == template_id).collect()
+        self.spawns
+            .iter()
+            .filter(|s| s.template_id == template_id)
+            .collect()
     }
 
     /// Total number of spawns.
@@ -396,7 +426,11 @@ impl SpawnManager {
 
     /// Count of static vs dynamic spawns.
     pub fn counts(&self) -> (usize, usize) {
-        let statics = self.spawns.iter().filter(|s| s.origin == SpawnOrigin::Static).count();
+        let statics = self
+            .spawns
+            .iter()
+            .filter(|s| s.origin == SpawnOrigin::Static)
+            .count();
         (statics, self.spawns.len() - statics)
     }
 }
@@ -417,7 +451,9 @@ pub struct RespawnTracker {
 
 impl RespawnTracker {
     pub fn new() -> Self {
-        Self { pending: HashMap::new() }
+        Self {
+            pending: HashMap::new(),
+        }
     }
 
     /// Mark a spawn as despawned. It will respawn after `respawn_time` seconds.
@@ -433,7 +469,8 @@ impl RespawnTracker {
     /// Collect all spawn IDs whose respawn timer has elapsed.
     /// Removes them from the tracker.
     pub fn collect_respawns(&mut self, now: u64) -> Vec<u64> {
-        let ready: Vec<u64> = self.pending
+        let ready: Vec<u64> = self
+            .pending
             .iter()
             .filter(|(_, respawn_at)| now >= **respawn_at)
             .map(|(id, _)| *id)

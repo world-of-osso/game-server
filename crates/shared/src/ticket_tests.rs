@@ -3,7 +3,9 @@ use super::*;
 #[test]
 fn create_ticket() {
     let mut mgr = TicketManager::new();
-    let id = mgr.create(100, TicketCategory::Bug, "NPCs won't talk to me", 1000).unwrap();
+    let id = mgr
+        .create(100, TicketCategory::Bug, "NPCs won't talk to me", 1000)
+        .unwrap();
 
     assert_eq!(id, 1);
     assert_eq!(mgr.len(), 1);
@@ -19,8 +21,12 @@ fn create_ticket() {
 #[test]
 fn create_sequential_ids() {
     let mut mgr = TicketManager::new();
-    let id1 = mgr.create(100, TicketCategory::Bug, "Issue 1", 1000).unwrap();
-    let id2 = mgr.create(200, TicketCategory::Quest, "Issue 2", 1001).unwrap();
+    let id1 = mgr
+        .create(100, TicketCategory::Bug, "Issue 1", 1000)
+        .unwrap();
+    let id2 = mgr
+        .create(200, TicketCategory::Quest, "Issue 2", 1001)
+        .unwrap();
     assert_eq!(id1, 1);
     assert_eq!(id2, 2);
 }
@@ -28,7 +34,8 @@ fn create_sequential_ids() {
 #[test]
 fn one_ticket_per_player() {
     let mut mgr = TicketManager::new();
-    mgr.create(100, TicketCategory::Bug, "First issue", 1000).unwrap();
+    mgr.create(100, TicketCategory::Bug, "First issue", 1000)
+        .unwrap();
 
     assert_eq!(
         mgr.create(100, TicketCategory::Quest, "Second issue", 1001),
@@ -71,7 +78,9 @@ fn get_nonexistent() {
 #[test]
 fn find_player_ticket() {
     let mut mgr = TicketManager::new();
-    let id = mgr.create(100, TicketCategory::Stuck, "I'm stuck", 1000).unwrap();
+    let id = mgr
+        .create(100, TicketCategory::Stuck, "I'm stuck", 1000)
+        .unwrap();
 
     let ticket = mgr.find_player_ticket(100).unwrap();
     assert_eq!(ticket.id, id);
@@ -82,8 +91,10 @@ fn find_player_ticket() {
 #[test]
 fn open_tickets_list() {
     let mut mgr = TicketManager::new();
-    mgr.create(100, TicketCategory::Bug, "Bug report", 1000).unwrap();
-    mgr.create(200, TicketCategory::Harassment, "Player harassment", 1001).unwrap();
+    mgr.create(100, TicketCategory::Bug, "Bug report", 1000)
+        .unwrap();
+    mgr.create(200, TicketCategory::Harassment, "Player harassment", 1001)
+        .unwrap();
 
     let open = mgr.open_tickets();
     assert_eq!(open.len(), 2);
@@ -103,7 +114,8 @@ fn all_categories_accepted() {
     ];
     for (i, cat) in categories.iter().enumerate() {
         let player = 100 + i as u64;
-        mgr.create(player, *cat, "Test ticket", 1000 + i as u64).unwrap();
+        mgr.create(player, *cat, "Test ticket", 1000 + i as u64)
+            .unwrap();
     }
     assert_eq!(mgr.len(), 7);
 }
@@ -111,9 +123,12 @@ fn all_categories_accepted() {
 #[test]
 fn different_players_can_each_have_ticket() {
     let mut mgr = TicketManager::new();
-    mgr.create(100, TicketCategory::Bug, "Player 100", 1000).unwrap();
-    mgr.create(200, TicketCategory::Bug, "Player 200", 1001).unwrap();
-    mgr.create(300, TicketCategory::Bug, "Player 300", 1002).unwrap();
+    mgr.create(100, TicketCategory::Bug, "Player 100", 1000)
+        .unwrap();
+    mgr.create(200, TicketCategory::Bug, "Player 200", 1001)
+        .unwrap();
+    mgr.create(300, TicketCategory::Bug, "Player 300", 1002)
+        .unwrap();
     assert_eq!(mgr.len(), 3);
 }
 
@@ -121,11 +136,26 @@ fn different_players_can_each_have_ticket() {
 
 #[test]
 fn default_priorities() {
-    assert_eq!(default_priority(TicketCategory::Harassment), TicketPriority::Critical);
-    assert_eq!(default_priority(TicketCategory::Stuck), TicketPriority::High);
-    assert_eq!(default_priority(TicketCategory::Bug), TicketPriority::Normal);
-    assert_eq!(default_priority(TicketCategory::Quest), TicketPriority::Normal);
-    assert_eq!(default_priority(TicketCategory::Other), TicketPriority::Normal);
+    assert_eq!(
+        default_priority(TicketCategory::Harassment),
+        TicketPriority::Critical
+    );
+    assert_eq!(
+        default_priority(TicketCategory::Stuck),
+        TicketPriority::High
+    );
+    assert_eq!(
+        default_priority(TicketCategory::Bug),
+        TicketPriority::Normal
+    );
+    assert_eq!(
+        default_priority(TicketCategory::Quest),
+        TicketPriority::Normal
+    );
+    assert_eq!(
+        default_priority(TicketCategory::Other),
+        TicketPriority::Normal
+    );
 }
 
 #[test]
@@ -140,9 +170,11 @@ fn queue_orders_by_priority_then_fifo() {
     // Normal priority, oldest
     mgr.create(100, TicketCategory::Bug, "Bug", 1000).unwrap();
     // Critical priority, newer
-    mgr.create(200, TicketCategory::Harassment, "Harass", 1001).unwrap();
+    mgr.create(200, TicketCategory::Harassment, "Harass", 1001)
+        .unwrap();
     // High priority, newest
-    mgr.create(300, TicketCategory::Stuck, "Stuck", 1002).unwrap();
+    mgr.create(300, TicketCategory::Stuck, "Stuck", 1002)
+        .unwrap();
 
     let queue = mgr.queue();
     assert_eq!(queue.len(), 3);
@@ -160,9 +192,12 @@ fn queue_orders_by_priority_then_fifo() {
 #[test]
 fn queue_fifo_within_same_priority() {
     let mut mgr = TicketManager::new();
-    mgr.create(100, TicketCategory::Bug, "First bug", 1000).unwrap();
-    mgr.create(200, TicketCategory::Quest, "Quest issue", 1001).unwrap();
-    mgr.create(300, TicketCategory::Item, "Item problem", 1002).unwrap();
+    mgr.create(100, TicketCategory::Bug, "First bug", 1000)
+        .unwrap();
+    mgr.create(200, TicketCategory::Quest, "Quest issue", 1001)
+        .unwrap();
+    mgr.create(300, TicketCategory::Item, "Item problem", 1002)
+        .unwrap();
 
     let queue = mgr.queue();
     // All Normal priority — should be FIFO (oldest first)
@@ -175,7 +210,8 @@ fn queue_fifo_within_same_priority() {
 fn next_in_queue_returns_highest_priority_oldest() {
     let mut mgr = TicketManager::new();
     mgr.create(100, TicketCategory::Bug, "Bug", 1000).unwrap();
-    mgr.create(200, TicketCategory::Stuck, "Stuck", 1001).unwrap();
+    mgr.create(200, TicketCategory::Stuck, "Stuck", 1001)
+        .unwrap();
 
     let next = mgr.next_in_queue().unwrap();
     assert_eq!(next.player, 200); // High priority
@@ -200,16 +236,22 @@ fn set_priority_override() {
 #[test]
 fn set_priority_not_found() {
     let mut mgr = TicketManager::new();
-    assert_eq!(mgr.set_priority(999, TicketPriority::High), Err(TicketError::NotFound));
+    assert_eq!(
+        mgr.set_priority(999, TicketPriority::High),
+        Err(TicketError::NotFound)
+    );
 }
 
 #[test]
 fn queue_counts() {
     let mut mgr = TicketManager::new();
     mgr.create(100, TicketCategory::Bug, "Bug", 1000).unwrap();
-    mgr.create(200, TicketCategory::Quest, "Quest", 1001).unwrap();
-    mgr.create(300, TicketCategory::Stuck, "Stuck", 1002).unwrap();
-    mgr.create(400, TicketCategory::Harassment, "Harass", 1003).unwrap();
+    mgr.create(200, TicketCategory::Quest, "Quest", 1001)
+        .unwrap();
+    mgr.create(300, TicketCategory::Stuck, "Stuck", 1002)
+        .unwrap();
+    mgr.create(400, TicketCategory::Harassment, "Harass", 1003)
+        .unwrap();
 
     let (critical, high, normal) = mgr.queue_counts();
     assert_eq!(critical, 1);
@@ -221,7 +263,8 @@ fn queue_counts() {
 fn priority_override_affects_queue_order() {
     let mut mgr = TicketManager::new();
     let bug_id = mgr.create(100, TicketCategory::Bug, "Bug", 1000).unwrap();
-    mgr.create(200, TicketCategory::Quest, "Quest", 1001).unwrap();
+    mgr.create(200, TicketCategory::Quest, "Quest", 1001)
+        .unwrap();
 
     // Elevate the bug to Critical
     mgr.set_priority(bug_id, TicketPriority::Critical).unwrap();
@@ -248,7 +291,8 @@ fn assign_ticket() {
 fn assign_removes_from_queue() {
     let mut mgr = TicketManager::new();
     let id = mgr.create(100, TicketCategory::Bug, "Bug", 1000).unwrap();
-    mgr.create(200, TicketCategory::Quest, "Quest", 1001).unwrap();
+    mgr.create(200, TicketCategory::Quest, "Quest", 1001)
+        .unwrap();
 
     mgr.assign(id, "GM_Alice").unwrap();
     // Assigned ticket should not appear in the open queue
@@ -298,11 +342,16 @@ fn unassign_not_assigned_fails() {
 fn claim_next_assigns_highest_priority() {
     let mut mgr = TicketManager::new();
     mgr.create(100, TicketCategory::Bug, "Bug", 1000).unwrap();
-    let stuck_id = mgr.create(200, TicketCategory::Stuck, "Stuck", 1001).unwrap();
+    let stuck_id = mgr
+        .create(200, TicketCategory::Stuck, "Stuck", 1001)
+        .unwrap();
 
     let claimed = mgr.claim_next("GM_Alice").unwrap();
     assert_eq!(claimed, stuck_id); // High priority
-    assert_eq!(mgr.get(stuck_id).unwrap().assigned_to.as_deref(), Some("GM_Alice"));
+    assert_eq!(
+        mgr.get(stuck_id).unwrap().assigned_to.as_deref(),
+        Some("GM_Alice")
+    );
 }
 
 #[test]
@@ -399,7 +448,8 @@ fn resolved_ticket_frees_player() {
     mgr.resolve(id).unwrap();
 
     // Player can create a new ticket after resolution
-    mgr.create(100, TicketCategory::Quest, "New issue", 2000).unwrap();
+    mgr.create(100, TicketCategory::Quest, "New issue", 2000)
+        .unwrap();
     assert_eq!(mgr.len(), 2);
 }
 
@@ -427,7 +477,9 @@ fn escalated_tickets_list() {
 #[test]
 fn full_lifecycle_open_assigned_resolved() {
     let mut mgr = TicketManager::new();
-    let id = mgr.create(100, TicketCategory::Stuck, "I'm stuck", 1000).unwrap();
+    let id = mgr
+        .create(100, TicketCategory::Stuck, "I'm stuck", 1000)
+        .unwrap();
     assert_eq!(mgr.get(id).unwrap().state, TicketState::Open);
 
     mgr.assign(id, "GM_Alice").unwrap();
@@ -440,7 +492,9 @@ fn full_lifecycle_open_assigned_resolved() {
 #[test]
 fn full_lifecycle_open_assigned_escalated_resolved() {
     let mut mgr = TicketManager::new();
-    let id = mgr.create(100, TicketCategory::Harassment, "Harass", 1000).unwrap();
+    let id = mgr
+        .create(100, TicketCategory::Harassment, "Harass", 1000)
+        .unwrap();
 
     mgr.assign(id, "GM_Alice").unwrap();
     mgr.escalate(id).unwrap();
@@ -505,7 +559,8 @@ fn gm_respond_notifies_player() {
     mgr.assign(id, "GM_Alice").unwrap();
     mgr.drain_notifications();
 
-    mgr.respond(id, "GM_Alice", "Working on your issue!", 2000).unwrap();
+    mgr.respond(id, "GM_Alice", "Working on your issue!", 2000)
+        .unwrap();
 
     let notifs = mgr.drain_notifications();
     assert_eq!(notifs.len(), 1);
@@ -570,10 +625,13 @@ fn drain_clears_notifications() {
 #[test]
 fn full_lifecycle_notifications() {
     let mut mgr = TicketManager::new();
-    let id = mgr.create(100, TicketCategory::Stuck, "Stuck", 1000).unwrap();
+    let id = mgr
+        .create(100, TicketCategory::Stuck, "Stuck", 1000)
+        .unwrap();
 
     mgr.assign(id, "GM_Alice").unwrap();
-    mgr.respond(id, "GM_Alice", "Unsticking you now", 2000).unwrap();
+    mgr.respond(id, "GM_Alice", "Unsticking you now", 2000)
+        .unwrap();
     mgr.resolve(id).unwrap();
 
     let notifs = mgr.drain_notifications();
@@ -588,15 +646,21 @@ fn full_lifecycle_notifications() {
 #[test]
 fn player_history_all_tickets() {
     let mut mgr = TicketManager::new();
-    let id1 = mgr.create(100, TicketCategory::Bug, "First bug", 1000).unwrap();
+    let id1 = mgr
+        .create(100, TicketCategory::Bug, "First bug", 1000)
+        .unwrap();
     mgr.assign(id1, "GM_Alice").unwrap();
     mgr.resolve(id1).unwrap();
 
-    let id2 = mgr.create(100, TicketCategory::Quest, "Quest issue", 2000).unwrap();
+    let id2 = mgr
+        .create(100, TicketCategory::Quest, "Quest issue", 2000)
+        .unwrap();
     mgr.assign(id2, "GM_Bob").unwrap();
     mgr.resolve(id2).unwrap();
 
-    let id3 = mgr.create(100, TicketCategory::Stuck, "Stuck again", 3000).unwrap();
+    let id3 = mgr
+        .create(100, TicketCategory::Stuck, "Stuck again", 3000)
+        .unwrap();
 
     let history = mgr.player_history(100);
     assert_eq!(history.len(), 3);
@@ -615,8 +679,10 @@ fn player_history_empty() {
 #[test]
 fn player_history_only_own_tickets() {
     let mut mgr = TicketManager::new();
-    mgr.create(100, TicketCategory::Bug, "Player 100", 1000).unwrap();
-    mgr.create(200, TicketCategory::Bug, "Player 200", 1001).unwrap();
+    mgr.create(100, TicketCategory::Bug, "Player 100", 1000)
+        .unwrap();
+    mgr.create(200, TicketCategory::Bug, "Player 200", 1001)
+        .unwrap();
 
     let history = mgr.player_history(100);
     assert_eq!(history.len(), 1);
@@ -626,12 +692,15 @@ fn player_history_only_own_tickets() {
 #[test]
 fn player_resolved_history() {
     let mut mgr = TicketManager::new();
-    let id1 = mgr.create(100, TicketCategory::Bug, "Resolved bug", 1000).unwrap();
+    let id1 = mgr
+        .create(100, TicketCategory::Bug, "Resolved bug", 1000)
+        .unwrap();
     mgr.assign(id1, "GM").unwrap();
     mgr.resolve(id1).unwrap();
 
     // Open ticket (not in resolved history)
-    mgr.create(100, TicketCategory::Quest, "Open quest", 2000).unwrap();
+    mgr.create(100, TicketCategory::Quest, "Open quest", 2000)
+        .unwrap();
 
     let resolved = mgr.player_resolved_history(100);
     assert_eq!(resolved.len(), 1);
@@ -644,7 +713,8 @@ fn player_ticket_count() {
     let id1 = mgr.create(100, TicketCategory::Bug, "Bug", 1000).unwrap();
     mgr.assign(id1, "GM").unwrap();
     mgr.resolve(id1).unwrap();
-    mgr.create(100, TicketCategory::Quest, "Quest", 2000).unwrap();
+    mgr.create(100, TicketCategory::Quest, "Quest", 2000)
+        .unwrap();
 
     assert_eq!(mgr.player_ticket_count(100), 2);
     assert_eq!(mgr.player_ticket_count(200), 0);

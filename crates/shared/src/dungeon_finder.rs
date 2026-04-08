@@ -107,7 +107,11 @@ impl DungeonQueue {
         if self.entries.is_empty() {
             return 0.0;
         }
-        let total: u64 = self.entries.iter().map(|e| now.saturating_sub(e.queued_at)).sum();
+        let total: u64 = self
+            .entries
+            .iter()
+            .map(|e| now.saturating_sub(e.queued_at))
+            .sum();
         total as f32 / self.entries.len() as f32
     }
     /// Try to form a 1T+1H+3D group from queued entries with overlapping dungeons.
@@ -116,13 +120,15 @@ impl DungeonQueue {
     /// or `None` if no valid group can be formed.
     pub fn try_match(&mut self) -> Option<MatchResult> {
         // Find a common dungeon across candidates
-        let all_dungeons: Vec<u32> = self.entries
+        let all_dungeons: Vec<u32> = self
+            .entries
             .iter()
             .flat_map(|e| e.dungeon_ids.iter().copied())
             .collect();
 
         for dungeon_id in &all_dungeons {
-            let candidates: Vec<usize> = self.entries
+            let candidates: Vec<usize> = self
+                .entries
                 .iter()
                 .enumerate()
                 .filter(|(_, e)| e.dungeon_ids.contains(dungeon_id))
@@ -184,10 +190,7 @@ pub struct TeleportOrder {
 ///
 /// Returns one `TeleportOrder` per player (tank, healer, 3 DPS).
 /// The server applies these to move players to the dungeon entrance.
-pub fn teleport_orders(
-    match_result: &MatchResult,
-    dungeon: &DungeonDef,
-) -> Vec<TeleportOrder> {
+pub fn teleport_orders(match_result: &MatchResult, dungeon: &DungeonDef) -> Vec<TeleportOrder> {
     let all_players = std::iter::once(match_result.tank)
         .chain(std::iter::once(match_result.healer))
         .chain(match_result.dps.iter().copied());
@@ -297,7 +300,7 @@ pub struct SatchelReward {
 
 /// Default satchel reward.
 pub const DEFAULT_SATCHEL: SatchelReward = SatchelReward {
-    gold: 500_000, // 50g
+    gold: 500_000,  // 50g
     item_id: 54516, // Satchel of Exotic Mysteries
 };
 
@@ -372,7 +375,9 @@ impl DeserterTracker {
 
     /// Whether a player has an active deserter penalty.
     pub fn is_deserter(&self, player: u64, now: u64) -> bool {
-        self.entries.iter().any(|(p, exp)| *p == player && now < *exp)
+        self.entries
+            .iter()
+            .any(|(p, exp)| *p == player && now < *exp)
     }
 
     /// Remaining deserter time in seconds (0 if not active).
@@ -427,10 +432,17 @@ fn find_composition(entries: &[QueueEntry], candidates: &[usize]) -> Option<Vec<
 fn build_match(entries: &[QueueEntry], group: &[Slot], dungeon_id: u32) -> MatchResult {
     let tank = entries[group[0].0].members[group[0].1];
     let healer = entries[group[1].0].members[group[1].1];
-    let dps = group[2..].iter().map(|&(ei, mi)| entries[ei].members[mi]).collect();
-    MatchResult { dungeon_id, tank, healer, dps }
+    let dps = group[2..]
+        .iter()
+        .map(|&(ei, mi)| entries[ei].members[mi])
+        .collect();
+    MatchResult {
+        dungeon_id,
+        tank,
+        healer,
+        dps,
+    }
 }
-
 
 #[cfg(test)]
 #[path = "dungeon_finder_tests.rs"]

@@ -3,7 +3,9 @@ use super::*;
 #[test]
 fn purchase_charter_success() {
     let mut mgr = PetitionManager::new();
-    let id = mgr.purchase_charter(100, "Test Guild", 5000, false, 1000).unwrap();
+    let id = mgr
+        .purchase_charter(100, "Test Guild", 5000, false, 1000)
+        .unwrap();
 
     assert_eq!(id, 1);
     let petition = mgr.get(id).unwrap();
@@ -17,7 +19,10 @@ fn purchase_charter_success() {
 fn purchase_costs_10_silver() {
     let mut mgr = PetitionManager::new();
     // Exactly 10 silver (1000 copper) — should succeed
-    assert!(mgr.purchase_charter(100, "Guild", CHARTER_COST, false, 1000).is_ok());
+    assert!(
+        mgr.purchase_charter(100, "Guild", CHARTER_COST, false, 1000)
+            .is_ok()
+    );
 }
 
 #[test]
@@ -41,7 +46,8 @@ fn purchase_already_guilded() {
 #[test]
 fn purchase_already_has_petition() {
     let mut mgr = PetitionManager::new();
-    mgr.purchase_charter(100, "First Guild", 5000, false, 1000).unwrap();
+    mgr.purchase_charter(100, "First Guild", 5000, false, 1000)
+        .unwrap();
     assert_eq!(
         mgr.purchase_charter(100, "Second Guild", 5000, false, 1001),
         Err(PetitionError::AlreadyHasPetition)
@@ -87,7 +93,8 @@ fn purchase_name_taken_by_existing_guild() {
 #[test]
 fn purchase_name_taken_by_pending_petition() {
     let mut mgr = PetitionManager::new();
-    mgr.purchase_charter(100, "Cool Guild", 5000, false, 1000).unwrap();
+    mgr.purchase_charter(100, "Cool Guild", 5000, false, 1000)
+        .unwrap();
     assert_eq!(
         mgr.purchase_charter(200, "cool guild", 5000, false, 1001),
         Err(PetitionError::NameTaken)
@@ -97,7 +104,8 @@ fn purchase_name_taken_by_pending_petition() {
 #[test]
 fn find_by_owner() {
     let mut mgr = PetitionManager::new();
-    mgr.purchase_charter(100, "Guild", 5000, false, 1000).unwrap();
+    mgr.purchase_charter(100, "Guild", 5000, false, 1000)
+        .unwrap();
     assert!(mgr.find_by_owner(100).is_some());
     assert!(mgr.find_by_owner(200).is_none());
 }
@@ -105,7 +113,9 @@ fn find_by_owner() {
 #[test]
 fn cancel_petition() {
     let mut mgr = PetitionManager::new();
-    let id = mgr.purchase_charter(100, "Guild", 5000, false, 1000).unwrap();
+    let id = mgr
+        .purchase_charter(100, "Guild", 5000, false, 1000)
+        .unwrap();
     mgr.cancel(id, 100).unwrap();
     assert!(mgr.is_empty());
 }
@@ -113,7 +123,9 @@ fn cancel_petition() {
 #[test]
 fn cancel_not_owner_fails() {
     let mut mgr = PetitionManager::new();
-    let id = mgr.purchase_charter(100, "Guild", 5000, false, 1000).unwrap();
+    let id = mgr
+        .purchase_charter(100, "Guild", 5000, false, 1000)
+        .unwrap();
     assert_eq!(mgr.cancel(id, 200), Err(PetitionError::NotOwner));
 }
 
@@ -126,9 +138,13 @@ fn cancel_not_found() {
 #[test]
 fn sequential_ids() {
     let mut mgr = PetitionManager::new();
-    let id1 = mgr.purchase_charter(100, "Guild A", 5000, false, 1000).unwrap();
+    let id1 = mgr
+        .purchase_charter(100, "Guild A", 5000, false, 1000)
+        .unwrap();
     mgr.cancel(id1, 100).unwrap();
-    let id2 = mgr.purchase_charter(200, "Guild B", 5000, false, 1001).unwrap();
+    let id2 = mgr
+        .purchase_charter(200, "Guild B", 5000, false, 1001)
+        .unwrap();
     assert_eq!(id1, 1);
     assert_eq!(id2, 2);
 }
@@ -136,7 +152,8 @@ fn sequential_ids() {
 // --- Petition signing ---
 
 fn petition_with_owner(mgr: &mut PetitionManager) -> u64 {
-    mgr.purchase_charter(100, "Test Guild", 5000, false, 1000).unwrap()
+    mgr.purchase_charter(100, "Test Guild", 5000, false, 1000)
+        .unwrap()
 }
 
 #[test]
@@ -170,14 +187,20 @@ fn sign_multiple_signatures() {
 fn sign_guilded_player_fails() {
     let mut mgr = PetitionManager::new();
     let id = petition_with_owner(&mut mgr);
-    assert_eq!(mgr.sign_petition(id, 200, true), Err(PetitionError::AlreadyInGuild));
+    assert_eq!(
+        mgr.sign_petition(id, 200, true),
+        Err(PetitionError::AlreadyInGuild)
+    );
 }
 
 #[test]
 fn sign_owner_fails() {
     let mut mgr = PetitionManager::new();
     let id = petition_with_owner(&mut mgr);
-    assert_eq!(mgr.sign_petition(id, 100, false), Err(PetitionError::NotOwner));
+    assert_eq!(
+        mgr.sign_petition(id, 100, false),
+        Err(PetitionError::NotOwner)
+    );
 }
 
 #[test]
@@ -185,13 +208,19 @@ fn sign_already_signed_fails() {
     let mut mgr = PetitionManager::new();
     let id = petition_with_owner(&mut mgr);
     mgr.sign_petition(id, 200, false).unwrap();
-    assert_eq!(mgr.sign_petition(id, 200, false), Err(PetitionError::AlreadySigned));
+    assert_eq!(
+        mgr.sign_petition(id, 200, false),
+        Err(PetitionError::AlreadySigned)
+    );
 }
 
 #[test]
 fn sign_nonexistent_petition_fails() {
     let mut mgr = PetitionManager::new();
-    assert_eq!(mgr.sign_petition(999, 200, false), Err(PetitionError::NotFound));
+    assert_eq!(
+        mgr.sign_petition(999, 200, false),
+        Err(PetitionError::NotFound)
+    );
 }
 
 #[test]
@@ -263,20 +292,29 @@ fn submit_not_enough_signatures() {
     let id = petition_with_owner(&mut mgr);
     mgr.sign_petition(id, 200, false).unwrap(); // only 1
 
-    assert_eq!(mgr.submit_petition(id, 100, 42), Err(PetitionError::NotEnoughSignatures));
+    assert_eq!(
+        mgr.submit_petition(id, 100, 42),
+        Err(PetitionError::NotEnoughSignatures)
+    );
 }
 
 #[test]
 fn submit_not_owner_fails() {
     let mut mgr = PetitionManager::new();
     let id = fully_signed_petition(&mut mgr);
-    assert_eq!(mgr.submit_petition(id, 999, 42), Err(PetitionError::NotOwner));
+    assert_eq!(
+        mgr.submit_petition(id, 999, 42),
+        Err(PetitionError::NotOwner)
+    );
 }
 
 #[test]
 fn submit_not_found() {
     let mut mgr = PetitionManager::new();
-    assert_eq!(mgr.submit_petition(999, 100, 42), Err(PetitionError::NotFound));
+    assert_eq!(
+        mgr.submit_petition(999, 100, 42),
+        Err(PetitionError::NotFound)
+    );
 }
 
 #[test]
@@ -293,7 +331,13 @@ fn owner_can_create_new_petition_after_submit() {
 // --- Guild tabard ---
 
 fn sample_design() -> GuildTabardDesign {
-    GuildTabardDesign { icon: 5, icon_color: 2, border: 3, border_color: 1, background_color: 7 }
+    GuildTabardDesign {
+        icon: 5,
+        icon_color: 2,
+        border: 3,
+        border_color: 1,
+        background_color: 7,
+    }
 }
 
 #[test]
@@ -334,16 +378,24 @@ const FAR_DIST_SQ: f32 = 400.0; // 20 yards squared
 
 fn npc_ctx<'a>(flags: u32, dist_sq: f32, gold: u32, name: &'a str) -> CharterNpcContext<'a> {
     CharterNpcContext {
-        npc_flags: flags, distance_squared: dist_sq,
-        player: 100, guild_name: name, player_gold: gold,
-        is_guilded: false, now: 1000,
+        npc_flags: flags,
+        distance_squared: dist_sq,
+        player: 100,
+        guild_name: name,
+        player_gold: gold,
+        is_guilded: false,
+        now: 1000,
     }
 }
 
 #[test]
 fn buy_charter_from_npc_success() {
     let mut mgr = PetitionManager::new();
-    let id = buy_charter_from_npc(&mut mgr, &npc_ctx(NPC_FLAG_GUILD_CHARTER, CLOSE_DIST_SQ, 5000, "New Guild")).unwrap();
+    let id = buy_charter_from_npc(
+        &mut mgr,
+        &npc_ctx(NPC_FLAG_GUILD_CHARTER, CLOSE_DIST_SQ, 5000, "New Guild"),
+    )
+    .unwrap();
     assert_eq!(mgr.get(id).unwrap().guild_name, "New Guild");
 }
 
@@ -360,7 +412,10 @@ fn buy_charter_not_charter_vendor() {
 fn buy_charter_out_of_range() {
     let mut mgr = PetitionManager::new();
     assert_eq!(
-        buy_charter_from_npc(&mut mgr, &npc_ctx(NPC_FLAG_GUILD_CHARTER, FAR_DIST_SQ, 5000, "Guild")),
+        buy_charter_from_npc(
+            &mut mgr,
+            &npc_ctx(NPC_FLAG_GUILD_CHARTER, FAR_DIST_SQ, 5000, "Guild")
+        ),
         Err(CharterNpcError::OutOfRange)
     );
 }
@@ -369,7 +424,10 @@ fn buy_charter_out_of_range() {
 fn buy_charter_npc_passes_purchase_errors() {
     let mut mgr = PetitionManager::new();
     assert_eq!(
-        buy_charter_from_npc(&mut mgr, &npc_ctx(NPC_FLAG_GUILD_CHARTER, CLOSE_DIST_SQ, 0, "Guild")),
+        buy_charter_from_npc(
+            &mut mgr,
+            &npc_ctx(NPC_FLAG_GUILD_CHARTER, CLOSE_DIST_SQ, 0, "Guild")
+        ),
         Err(CharterNpcError::Purchase(PetitionError::InsufficientFunds))
     );
 }
@@ -378,5 +436,11 @@ fn buy_charter_npc_passes_purchase_errors() {
 fn buy_charter_npc_at_exact_range() {
     let mut mgr = PetitionManager::new();
     let exact = CHARTER_NPC_RANGE * CHARTER_NPC_RANGE;
-    assert!(buy_charter_from_npc(&mut mgr, &npc_ctx(NPC_FLAG_GUILD_CHARTER, exact, 5000, "Guild")).is_ok());
+    assert!(
+        buy_charter_from_npc(
+            &mut mgr,
+            &npc_ctx(NPC_FLAG_GUILD_CHARTER, exact, 5000, "Guild")
+        )
+        .is_ok()
+    );
 }

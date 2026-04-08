@@ -366,8 +366,16 @@ fn spell_batch_queue_and_drain() {
     let mut batch = SpellBatch::default();
     assert!(batch.is_empty());
 
-    batch.queue(PendingSpellCast { caster: 1, target: 2, spell_id: 133 });
-    batch.queue(PendingSpellCast { caster: 3, target: 4, spell_id: 116 });
+    batch.queue(PendingSpellCast {
+        caster: 1,
+        target: 2,
+        spell_id: 133,
+    });
+    batch.queue(PendingSpellCast {
+        caster: 3,
+        target: 4,
+        spell_id: 116,
+    });
     assert_eq!(batch.len(), 2);
 
     let drained = batch.drain();
@@ -380,7 +388,11 @@ fn spell_batch_queue_and_drain() {
 #[test]
 fn spell_batch_drain_clears() {
     let mut batch = SpellBatch::default();
-    batch.queue(PendingSpellCast { caster: 1, target: 2, spell_id: 100 });
+    batch.queue(PendingSpellCast {
+        caster: 1,
+        target: 2,
+        spell_id: 100,
+    });
     batch.drain();
     batch.drain();
     assert!(batch.is_empty());
@@ -390,7 +402,11 @@ fn spell_batch_drain_clears() {
 fn spell_batch_preserves_order() {
     let mut batch = SpellBatch::default();
     for i in 0..5 {
-        batch.queue(PendingSpellCast { caster: 1, target: 2, spell_id: i });
+        batch.queue(PendingSpellCast {
+            caster: 1,
+            target: 2,
+            spell_id: i,
+        });
     }
     let drained = batch.drain();
     let ids: Vec<u32> = drained.iter().map(|c| c.spell_id).collect();

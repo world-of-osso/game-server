@@ -182,43 +182,73 @@ fn interact_door_toggles() {
     tmpl.flags.remove(GameObjectFlags::LOCKED); // unlock it
     let mut go = make_go(&tmpl);
     let result = interact(&mut go).unwrap();
-    assert!(matches!(result, InteractionResult::ToggleDoor { now_open: true, .. }));
+    assert!(matches!(
+        result,
+        InteractionResult::ToggleDoor { now_open: true, .. }
+    ));
 }
 
 #[test]
 fn interact_mining_node_gathers() {
     let mut go = make_go(&mining_template());
     let result = interact(&mut go).unwrap();
-    assert!(matches!(result, InteractionResult::GatherNode { node_type: GameObjectType::MiningNode, .. }));
+    assert!(matches!(
+        result,
+        InteractionResult::GatherNode {
+            node_type: GameObjectType::MiningNode,
+            ..
+        }
+    ));
 }
 
 #[test]
 fn interact_herb_node() {
     let tmpl = GameObjectTemplate {
-        id: 3002, object_type: GameObjectType::HerbNode, display_id: 701,
-        name: "Peacebloom".to_string(), faction: 0, flags: GameObjectFlags::INTERACTABLE,
+        id: 3002,
+        object_type: GameObjectType::HerbNode,
+        display_id: 701,
+        name: "Peacebloom".to_string(),
+        faction: 0,
+        flags: GameObjectFlags::INTERACTABLE,
     };
     let mut go = make_go(&tmpl);
     let result = interact(&mut go).unwrap();
-    assert!(matches!(result, InteractionResult::GatherNode { node_type: GameObjectType::HerbNode, .. }));
+    assert!(matches!(
+        result,
+        InteractionResult::GatherNode {
+            node_type: GameObjectType::HerbNode,
+            ..
+        }
+    ));
 }
 
 #[test]
 fn interact_quest_object() {
     let tmpl = GameObjectTemplate {
-        id: 4001, object_type: GameObjectType::QuestObject, display_id: 800,
-        name: "Ancient Rune".to_string(), faction: 0, flags: GameObjectFlags::INTERACTABLE,
+        id: 4001,
+        object_type: GameObjectType::QuestObject,
+        display_id: 800,
+        name: "Ancient Rune".to_string(),
+        faction: 0,
+        flags: GameObjectFlags::INTERACTABLE,
     };
     let mut go = make_go(&tmpl);
     let result = interact(&mut go).unwrap();
-    assert_eq!(result, InteractionResult::QuestObjective { template_id: 4001 });
+    assert_eq!(
+        result,
+        InteractionResult::QuestObjective { template_id: 4001 }
+    );
 }
 
 #[test]
 fn interact_trap_triggers() {
     let tmpl = GameObjectTemplate {
-        id: 5001, object_type: GameObjectType::Trap, display_id: 900,
-        name: "Bear Trap".to_string(), faction: 0, flags: GameObjectFlags::INTERACTABLE,
+        id: 5001,
+        object_type: GameObjectType::Trap,
+        display_id: 900,
+        name: "Bear Trap".to_string(),
+        faction: 0,
+        flags: GameObjectFlags::INTERACTABLE,
     };
     let mut go = make_go(&tmpl);
     let result = interact(&mut go).unwrap();
@@ -228,8 +258,12 @@ fn interact_trap_triggers() {
 #[test]
 fn interact_mailbox_opens() {
     let tmpl = GameObjectTemplate {
-        id: 6001, object_type: GameObjectType::Mailbox, display_id: 1000,
-        name: "Mailbox".to_string(), faction: 0, flags: GameObjectFlags::INTERACTABLE,
+        id: 6001,
+        object_type: GameObjectType::Mailbox,
+        display_id: 1000,
+        name: "Mailbox".to_string(),
+        faction: 0,
+        flags: GameObjectFlags::INTERACTABLE,
     };
     let mut go = make_go(&tmpl);
     assert_eq!(interact(&mut go).unwrap(), InteractionResult::OpenMailbox);
@@ -238,19 +272,33 @@ fn interact_mailbox_opens() {
 #[test]
 fn interact_forge() {
     let tmpl = GameObjectTemplate {
-        id: 7001, object_type: GameObjectType::Forge, display_id: 1100,
-        name: "Forge".to_string(), faction: 0, flags: GameObjectFlags::INTERACTABLE,
+        id: 7001,
+        object_type: GameObjectType::Forge,
+        display_id: 1100,
+        name: "Forge".to_string(),
+        faction: 0,
+        flags: GameObjectFlags::INTERACTABLE,
     };
     let mut go = make_go(&tmpl);
     let result = interact(&mut go).unwrap();
-    assert!(matches!(result, InteractionResult::UseCraftingStation { station_type: GameObjectType::Forge, .. }));
+    assert!(matches!(
+        result,
+        InteractionResult::UseCraftingStation {
+            station_type: GameObjectType::Forge,
+            ..
+        }
+    ));
 }
 
 #[test]
 fn interact_not_interactable() {
     let tmpl = GameObjectTemplate {
-        id: 1001, object_type: GameObjectType::Chest, display_id: 500,
-        name: "Broken Chest".to_string(), faction: 0, flags: GameObjectFlags::default(),
+        id: 1001,
+        object_type: GameObjectType::Chest,
+        display_id: 500,
+        name: "Broken Chest".to_string(),
+        faction: 0,
+        flags: GameObjectFlags::default(),
     };
     let mut go = make_go(&tmpl);
     assert_eq!(interact(&mut go), Err(InteractionError::NotInteractable));
@@ -291,17 +339,29 @@ fn can_reuse_after_cancel() {
 
 fn trap_template() -> GameObjectTemplate {
     GameObjectTemplate {
-        id: 5001, object_type: GameObjectType::Trap, display_id: 900,
-        name: "Bear Trap".to_string(), faction: 0, flags: GameObjectFlags::INTERACTABLE,
+        id: 5001,
+        object_type: GameObjectType::Trap,
+        display_id: 900,
+        name: "Bear Trap".to_string(),
+        faction: 0,
+        flags: GameObjectFlags::INTERACTABLE,
     }
 }
 
 fn one_shot_trap() -> TrapData {
-    TrapData { spell_id: 100, radius: 5.0, cooldown: 0 }
+    TrapData {
+        spell_id: 100,
+        radius: 5.0,
+        cooldown: 0,
+    }
 }
 
 fn cooldown_trap() -> TrapData {
-    TrapData { spell_id: 200, radius: 10.0, cooldown: 30 }
+    TrapData {
+        spell_id: 200,
+        radius: 10.0,
+        cooldown: 30,
+    }
 }
 
 #[test]
@@ -376,13 +436,20 @@ fn in_trap_radius_boundary() {
 
 fn quest_obj_template() -> GameObjectTemplate {
     GameObjectTemplate {
-        id: 4001, object_type: GameObjectType::QuestObject, display_id: 800,
-        name: "Ancient Rune".to_string(), faction: 0, flags: GameObjectFlags::INTERACTABLE,
+        id: 4001,
+        object_type: GameObjectType::QuestObject,
+        display_id: 800,
+        name: "Ancient Rune".to_string(),
+        faction: 0,
+        flags: GameObjectFlags::INTERACTABLE,
     }
 }
 
 fn quest_data() -> QuestObjectData {
-    QuestObjectData { quest_id: 100, objective_index: 2 }
+    QuestObjectData {
+        quest_id: 100,
+        objective_index: 2,
+    }
 }
 
 #[test]
@@ -399,31 +466,48 @@ fn quest_object_completes_objective() {
 fn quest_object_no_quest_fails() {
     let mut go = make_go(&quest_obj_template());
     interact(&mut go).unwrap();
-    assert_eq!(use_quest_object(&mut go, &quest_data(), false), Err(InteractionError::NotInteractable));
+    assert_eq!(
+        use_quest_object(&mut go, &quest_data(), false),
+        Err(InteractionError::NotInteractable)
+    );
     assert_eq!(go.state, GameObjectState::Ready); // Returned to ready
 }
 
 #[test]
 fn quest_object_not_in_use_fails() {
     let mut go = make_go(&quest_obj_template());
-    assert_eq!(use_quest_object(&mut go, &quest_data(), true), Err(InteractionError::InUse));
+    assert_eq!(
+        use_quest_object(&mut go, &quest_data(), true),
+        Err(InteractionError::InUse)
+    );
 }
 
 #[test]
 fn quest_object_wrong_type_fails() {
     let mut go = make_go(&chest_template());
     interact(&mut go).unwrap();
-    assert_eq!(use_quest_object(&mut go, &quest_data(), true), Err(InteractionError::NotInteractable));
+    assert_eq!(
+        use_quest_object(&mut go, &quest_data(), true),
+        Err(InteractionError::NotInteractable)
+    );
 }
 
 // --- Doors ---
 
 fn unlocked_door_data() -> DoorData {
-    DoorData { key_item_id: 0, lockpick_skill: 0, auto_close_secs: 0 }
+    DoorData {
+        key_item_id: 0,
+        lockpick_skill: 0,
+        auto_close_secs: 0,
+    }
 }
 
 fn keyed_door_data() -> DoorData {
-    DoorData { key_item_id: 5000, lockpick_skill: 100, auto_close_secs: 10 }
+    DoorData {
+        key_item_id: 5000,
+        lockpick_skill: 100,
+        auto_close_secs: 10,
+    }
 }
 
 fn make_unlocked_door() -> GameObject {
@@ -476,15 +560,26 @@ fn toggle_locked_door_no_key_fails() {
 #[test]
 fn toggle_locked_door_no_lockpick_skill_config() {
     let mut go = make_go(&door_template());
-    let data = DoorData { key_item_id: 5000, lockpick_skill: 0, auto_close_secs: 0 };
+    let data = DoorData {
+        key_item_id: 5000,
+        lockpick_skill: 0,
+        auto_close_secs: 0,
+    };
     // lockpick_skill=0 means can't be picked, need key
-    assert_eq!(toggle_door(&mut go, &data, false, 999), Err(InteractionError::Locked));
+    assert_eq!(
+        toggle_door(&mut go, &data, false, 999),
+        Err(InteractionError::Locked)
+    );
 }
 
 #[test]
 fn door_auto_close_timer() {
     let mut go = make_unlocked_door();
-    let data = DoorData { key_item_id: 0, lockpick_skill: 0, auto_close_secs: 30 };
+    let data = DoorData {
+        key_item_id: 0,
+        lockpick_skill: 0,
+        auto_close_secs: 30,
+    };
     let result = toggle_door(&mut go, &data, false, 0).unwrap();
     assert_eq!(result.auto_close_secs, 30);
 }
@@ -519,9 +614,11 @@ fn copper_gather_data() -> GatheringData {
     GatheringData {
         required_skill: 1,
         trivial_skill: 50,
-        yields: vec![
-            GatherYield { item_id: 2770, min_count: 1, max_count: 3 },
-        ],
+        yields: vec![GatherYield {
+            item_id: 2770,
+            min_count: 1,
+            max_count: 3,
+        }],
         skill_gain: 1,
     }
 }
@@ -531,8 +628,16 @@ fn herb_gather_data() -> GatheringData {
         required_skill: 1,
         trivial_skill: 25,
         yields: vec![
-            GatherYield { item_id: 2447, min_count: 1, max_count: 2 },
-            GatherYield { item_id: 2448, min_count: 0, max_count: 1 },
+            GatherYield {
+                item_id: 2447,
+                min_count: 1,
+                max_count: 2,
+            },
+            GatherYield {
+                item_id: 2448,
+                min_count: 0,
+                max_count: 1,
+            },
         ],
         skill_gain: 1,
     }
@@ -546,16 +651,20 @@ fn gather_mining_node_success() {
     let result = gather_node(&mut go, &copper_gather_data(), 10, 0.5).unwrap();
     assert_eq!(result.items.len(), 1);
     assert_eq!(result.items[0].0, 2770); // Copper Ore
-    assert_eq!(result.items[0].1, 2);    // min 1 + (2 * 0.5) = 2
-    assert_eq!(result.skill_gained, 1);  // skill 10 < trivial 50
+    assert_eq!(result.items[0].1, 2); // min 1 + (2 * 0.5) = 2
+    assert_eq!(result.skill_gained, 1); // skill 10 < trivial 50
     assert_eq!(go.state, GameObjectState::Depleted);
 }
 
 #[test]
 fn gather_herb_node_multiple_yields() {
     let tmpl = GameObjectTemplate {
-        id: 3002, object_type: GameObjectType::HerbNode, display_id: 701,
-        name: "Peacebloom".to_string(), faction: 0, flags: GameObjectFlags::INTERACTABLE,
+        id: 3002,
+        object_type: GameObjectType::HerbNode,
+        display_id: 701,
+        name: "Peacebloom".to_string(),
+        faction: 0,
+        flags: GameObjectFlags::INTERACTABLE,
     };
     let mut go = make_go(&tmpl);
     interact(&mut go).unwrap();

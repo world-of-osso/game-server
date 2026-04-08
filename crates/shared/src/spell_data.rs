@@ -47,10 +47,7 @@ pub enum SpellEffectDef {
         aura_spell_id: u32,
     },
     /// Energize: restore resource to the caster or target.
-    Energize {
-        resource: ResourceType,
-        amount: f32,
-    },
+    Energize { resource: ResourceType, amount: f32 },
     /// Dispel auras of a specific school from the target.
     Dispel { school: SpellSchool },
     /// Interrupt the target's current cast and lock out the school.
@@ -205,7 +202,11 @@ pub fn validate_cast(spell: &SpellData, ctx: &CastContext) -> Result<(), CastFai
         if !target_ok {
             return Err(CastFailReason::InvalidTarget);
         }
-        let max_range = if spell.range > 0.0 { spell.range } else { MELEE_RANGE };
+        let max_range = if spell.range > 0.0 {
+            spell.range
+        } else {
+            MELEE_RANGE
+        };
         if ctx.distance > max_range {
             return Err(CastFailReason::OutOfRange);
         }
@@ -259,11 +260,7 @@ pub enum EffectResult {
 /// `roll` is a random value in 0.0–1.0 used to pick within damage/heal ranges.
 ///
 /// Ref: AzerothCore `Spell::EffectSchoolDMG`, `Spell::EffectHeal`, etc.
-pub fn process_effect(
-    effect: &SpellEffectDef,
-    caster: &CasterStats,
-    roll: f32,
-) -> EffectResult {
+pub fn process_effect(effect: &SpellEffectDef, caster: &CasterStats, roll: f32) -> EffectResult {
     match *effect {
         SpellEffectDef::SchoolDamage {
             base_min,
@@ -272,8 +269,7 @@ pub fn process_effect(
             sp_coefficient,
         } => {
             let base = base_min + (base_max - base_min) * roll;
-            let bonus = caster.attack_power * ap_coefficient
-                + caster.spell_power * sp_coefficient;
+            let bonus = caster.attack_power * ap_coefficient + caster.spell_power * sp_coefficient;
             EffectResult::Damage {
                 amount: base + bonus,
             }
@@ -285,15 +281,12 @@ pub fn process_effect(
             sp_coefficient,
         } => {
             let base = base_min + (base_max - base_min) * roll;
-            let bonus = caster.attack_power * ap_coefficient
-                + caster.spell_power * sp_coefficient;
+            let bonus = caster.attack_power * ap_coefficient + caster.spell_power * sp_coefficient;
             EffectResult::Heal {
                 amount: base + bonus,
             }
         }
-        SpellEffectDef::ApplyAura { aura_spell_id } => {
-            EffectResult::ApplyAura { aura_spell_id }
-        }
+        SpellEffectDef::ApplyAura { aura_spell_id } => EffectResult::ApplyAura { aura_spell_id },
         SpellEffectDef::Energize { resource, amount } => {
             EffectResult::Energize { resource, amount }
         }
@@ -317,7 +310,6 @@ pub fn process_spell_effects(
         .map(|effect| process_effect(effect, caster, roll))
         .collect()
 }
-
 
 #[cfg(test)]
 #[path = "spell_data_tests.rs"]

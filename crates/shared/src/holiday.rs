@@ -319,7 +319,9 @@ impl BossLockoutTracker {
     /// Whether a player has already killed this boss today.
     pub fn is_locked(&self, player: u64, boss_id: u32, today: MonthDay) -> bool {
         let day = today.ordinal();
-        self.kills.iter().any(|&(p, b, d)| p == player && b == boss_id && d == day)
+        self.kills
+            .iter()
+            .any(|&(p, b, d)| p == player && b == boss_id && d == day)
     }
 
     /// Record a boss kill. Returns false if already killed today.
@@ -437,7 +439,9 @@ pub struct RewardTracker {
 
 impl RewardTracker {
     pub fn is_claimed(&self, player: u64, reward_id: u32) -> bool {
-        self.claimed.iter().any(|&(p, r)| p == player && r == reward_id)
+        self.claimed
+            .iter()
+            .any(|&(p, r)| p == player && r == reward_id)
     }
 
     /// Claim a reward. Returns false if already claimed.

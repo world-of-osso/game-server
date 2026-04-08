@@ -316,7 +316,10 @@ mod tests {
         let equipped = plate_chest();
         let source = plate_chest();
         let collection = learned(500);
-        assert_eq!(validate_transmog(&equipped, &source, &collection, 500), Ok(()));
+        assert_eq!(
+            validate_transmog(&equipped, &source, &collection, 500),
+            Ok(())
+        );
     }
 
     #[test]
@@ -335,7 +338,10 @@ mod tests {
         let equipped = sword_1h();
         let source = sword_1h();
         let collection = learned(600);
-        assert_eq!(validate_transmog(&equipped, &source, &collection, 600), Ok(()));
+        assert_eq!(
+            validate_transmog(&equipped, &source, &collection, 600),
+            Ok(())
+        );
     }
 
     #[test]
@@ -362,7 +368,11 @@ mod tests {
 
     #[test]
     fn transmog_no_visual_slot_ring() {
-        let ring = make_item(Some(EquipSlot::Finger), ItemClass::Armor, ItemSubclass::None);
+        let ring = make_item(
+            Some(EquipSlot::Finger),
+            ItemClass::Armor,
+            ItemSubclass::None,
+        );
         let source = plate_chest();
         let collection = learned(500);
         assert_eq!(
@@ -374,7 +384,11 @@ mod tests {
     #[test]
     fn transmog_source_no_visual_slot() {
         let equipped = plate_chest();
-        let trinket = make_item(Some(EquipSlot::Trinket), ItemClass::Armor, ItemSubclass::None);
+        let trinket = make_item(
+            Some(EquipSlot::Trinket),
+            ItemClass::Armor,
+            ItemSubclass::None,
+        );
         let collection = learned(500);
         assert_eq!(
             validate_transmog(&equipped, &trinket, &collection, 500),
@@ -681,15 +695,30 @@ mod tests {
         // Remove one — others untouched
         remove_transmog(&mut appearance, EquipmentVisualSlot::Chest);
         assert_eq!(
-            appearance.entries.iter().find(|e| e.slot == EquipmentVisualSlot::Head).unwrap().display_info_id,
+            appearance
+                .entries
+                .iter()
+                .find(|e| e.slot == EquipmentVisualSlot::Head)
+                .unwrap()
+                .display_info_id,
             Some(100)
         );
         assert_eq!(
-            appearance.entries.iter().find(|e| e.slot == EquipmentVisualSlot::Chest).unwrap().display_info_id,
+            appearance
+                .entries
+                .iter()
+                .find(|e| e.slot == EquipmentVisualSlot::Chest)
+                .unwrap()
+                .display_info_id,
             None
         );
         assert_eq!(
-            appearance.entries.iter().find(|e| e.slot == EquipmentVisualSlot::Legs).unwrap().display_info_id,
+            appearance
+                .entries
+                .iter()
+                .find(|e| e.slot == EquipmentVisualSlot::Legs)
+                .unwrap()
+                .display_info_id,
             Some(300)
         );
     }

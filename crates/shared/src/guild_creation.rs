@@ -78,7 +78,11 @@ pub struct PetitionManager {
 
 impl PetitionManager {
     pub fn new() -> Self {
-        Self { petitions: Vec::new(), taken_names: HashSet::new(), next_id: 1 }
+        Self {
+            petitions: Vec::new(),
+            taken_names: HashSet::new(),
+            next_id: 1,
+        }
     }
 
     /// Register an existing guild name as taken (loaded from DB).
@@ -99,14 +103,21 @@ impl PetitionManager {
         let id = self.next_id;
         self.next_id += 1;
         self.petitions.push(Petition {
-            id, owner: player, guild_name: guild_name.to_string(),
-            signatures: Vec::new(), created_at: now,
+            id,
+            owner: player,
+            guild_name: guild_name.to_string(),
+            signatures: Vec::new(),
+            created_at: now,
         });
         Ok(id)
     }
 
     fn validate_purchase(
-        &self, player: u64, name: &str, gold: u32, is_guilded: bool,
+        &self,
+        player: u64,
+        name: &str,
+        gold: u32,
+        is_guilded: bool,
     ) -> Result<(), PetitionError> {
         if is_guilded {
             return Err(PetitionError::AlreadyInGuild);
@@ -129,7 +140,10 @@ impl PetitionManager {
     fn is_name_taken(&self, name: &str) -> bool {
         let lower = name.to_lowercase();
         self.taken_names.contains(&lower)
-            || self.petitions.iter().any(|p| p.guild_name.to_lowercase() == lower)
+            || self
+                .petitions
+                .iter()
+                .any(|p| p.guild_name.to_lowercase() == lower)
     }
 
     /// Look up a petition by ID.
@@ -153,7 +167,10 @@ impl PetitionManager {
         if signer_is_guilded {
             return Err(PetitionError::AlreadyInGuild);
         }
-        let petition = self.petitions.iter_mut().find(|p| p.id == petition_id)
+        let petition = self
+            .petitions
+            .iter_mut()
+            .find(|p| p.id == petition_id)
             .ok_or(PetitionError::NotFound)?;
         if petition.owner == signer {
             return Err(PetitionError::NotOwner); // Can't sign your own
@@ -166,12 +183,11 @@ impl PetitionManager {
     }
 
     /// Remove a signature from a petition.
-    pub fn unsign_petition(
-        &mut self,
-        petition_id: u64,
-        signer: u64,
-    ) -> Result<(), PetitionError> {
-        let petition = self.petitions.iter_mut().find(|p| p.id == petition_id)
+    pub fn unsign_petition(&mut self, petition_id: u64, signer: u64) -> Result<(), PetitionError> {
+        let petition = self
+            .petitions
+            .iter_mut()
+            .find(|p| p.id == petition_id)
             .ok_or(PetitionError::NotFound)?;
         if !petition.has_signed(signer) {
             return Err(PetitionError::NotFound);
@@ -182,7 +198,10 @@ impl PetitionManager {
 
     /// Cancel a petition (owner only).
     pub fn cancel(&mut self, id: u64, player: u64) -> Result<(), PetitionError> {
-        let petition = self.petitions.iter().find(|p| p.id == id)
+        let petition = self
+            .petitions
+            .iter()
+            .find(|p| p.id == id)
             .ok_or(PetitionError::NotFound)?;
         if petition.owner != player {
             return Err(PetitionError::NotOwner);
@@ -201,7 +220,10 @@ impl PetitionManager {
         submitter: u64,
         guild_id: u32,
     ) -> Result<CreatedGuild, PetitionError> {
-        let petition = self.petitions.iter().find(|p| p.id == petition_id)
+        let petition = self
+            .petitions
+            .iter()
+            .find(|p| p.id == petition_id)
             .ok_or(PetitionError::NotFound)?;
         if petition.owner != submitter {
             return Err(PetitionError::NotOwner);
@@ -336,8 +358,14 @@ pub fn buy_charter_from_npc(
     if ctx.distance_squared > CHARTER_NPC_RANGE * CHARTER_NPC_RANGE {
         return Err(CharterNpcError::OutOfRange);
     }
-    mgr.purchase_charter(ctx.player, ctx.guild_name, ctx.player_gold, ctx.is_guilded, ctx.now)
-        .map_err(CharterNpcError::Purchase)
+    mgr.purchase_charter(
+        ctx.player,
+        ctx.guild_name,
+        ctx.player_gold,
+        ctx.is_guilded,
+        ctx.now,
+    )
+    .map_err(CharterNpcError::Purchase)
 }
 
 #[cfg(test)]

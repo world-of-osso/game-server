@@ -148,7 +148,9 @@ pub enum CollectError {
     NotFound,
     AlreadyCollected,
     /// Recipient doesn't have enough gold to pay the COD.
-    NotEnoughGoldForCod { required: u32 },
+    NotEnoughGoldForCod {
+        required: u32,
+    },
 }
 
 /// A player's mailbox.
@@ -179,7 +181,10 @@ impl Mailbox {
         mail_id: u64,
         recipient_gold: u32,
     ) -> Result<CollectResult, CollectError> {
-        let mail = self.mails.iter_mut().find(|m| m.id == mail_id)
+        let mail = self
+            .mails
+            .iter_mut()
+            .find(|m| m.id == mail_id)
             .ok_or(CollectError::NotFound)?;
         if mail.collected {
             return Err(CollectError::AlreadyCollected);
@@ -211,7 +216,10 @@ impl Mailbox {
 
     /// Delete a mail (must be read and collected).
     pub fn delete(&mut self, mail_id: u64) -> bool {
-        let can_delete = self.mails.iter().any(|m| m.id == mail_id && m.read && m.collected);
+        let can_delete = self
+            .mails
+            .iter()
+            .any(|m| m.id == mail_id && m.read && m.collected);
         if can_delete {
             self.mails.retain(|m| m.id != mail_id);
         }
@@ -283,7 +291,14 @@ const AH_SENDER: &str = "Auction House";
 /// AH cut on sold items (5%).
 const AH_CUT_PERCENT: f32 = 0.05;
 
-fn ah_mail(id: u64, recipient: &str, subject: String, gold: u32, attachments: Vec<MailAttachment>, now: u64) -> Mail {
+fn ah_mail(
+    id: u64,
+    recipient: &str,
+    subject: String,
+    gold: u32,
+    attachments: Vec<MailAttachment>,
+    now: u64,
+) -> Mail {
     Mail {
         id,
         sender: AH_SENDER.to_string(),
@@ -305,27 +320,49 @@ fn ah_mail(id: u64, recipient: &str, subject: String, gold: u32, attachments: Ve
 pub fn ah_sold_mail(id: u64, seller: &str, item_name: &str, sale_price: u32, now: u64) -> Mail {
     let cut = (sale_price as f32 * AH_CUT_PERCENT) as u32;
     let payout = sale_price.saturating_sub(cut);
-    ah_mail(id, seller, format!("Auction successful: {item_name}"), payout, vec![], now)
+    ah_mail(
+        id,
+        seller,
+        format!("Auction successful: {item_name}"),
+        payout,
+        vec![],
+        now,
+    )
 }
 
 /// Create an AH mail for an expired auction (item returned to seller).
 pub fn ah_expired_mail(id: u64, seller: &str, item_id: u32, count: u16, now: u64) -> Mail {
     ah_mail(
-        id, seller, "Auction expired".into(), 0,
-        vec![MailAttachment { item_id, count }], now,
+        id,
+        seller,
+        "Auction expired".into(),
+        0,
+        vec![MailAttachment { item_id, count }],
+        now,
     )
 }
 
 /// Create an AH mail for an outbid notification (no attachments, just info).
 pub fn ah_outbid_mail(id: u64, bidder: &str, item_name: &str, bid_refund: u32, now: u64) -> Mail {
-    ah_mail(id, bidder, format!("Outbid on {item_name}"), bid_refund, vec![], now)
+    ah_mail(
+        id,
+        bidder,
+        format!("Outbid on {item_name}"),
+        bid_refund,
+        vec![],
+        now,
+    )
 }
 
 /// Create an AH mail for a won auction (item to buyer).
 pub fn ah_won_mail(id: u64, buyer: &str, item_id: u32, count: u16, now: u64) -> Mail {
     ah_mail(
-        id, buyer, "Auction won".into(), 0,
-        vec![MailAttachment { item_id, count }], now,
+        id,
+        buyer,
+        "Auction won".into(),
+        0,
+        vec![MailAttachment { item_id, count }],
+        now,
     )
 }
 
@@ -345,13 +382,17 @@ mod tests {
             recipient: "Bob".into(),
             subject: "Hello".into(),
             body: "Hi Bob!".into(),
-            attachments: vec![MailAttachment { item_id: 100, count: 5 }],
+            attachments: vec![MailAttachment {
+                item_id: 100,
+                count: 5,
+            }],
             gold: 500,
             cod: 0,
             now: 1000,
             delivery_delay: 3600,
             expiry_days: 30,
-        }).unwrap()
+        })
+        .unwrap()
     }
 
     #[test]
@@ -368,20 +409,41 @@ mod tests {
     #[test]
     fn create_mail_self_rejected() {
         let result = create_mail(NewMail {
-            id: 1, sender: "Alice".into(), recipient: "Alice".into(),
-            subject: "".into(), body: "".into(), attachments: vec![],
-            gold: 0, cod: 0, now: 0, delivery_delay: 0, expiry_days: 30,
+            id: 1,
+            sender: "Alice".into(),
+            recipient: "Alice".into(),
+            subject: "".into(),
+            body: "".into(),
+            attachments: vec![],
+            gold: 0,
+            cod: 0,
+            now: 0,
+            delivery_delay: 0,
+            expiry_days: 30,
         });
         assert_eq!(result, Err(MailError::SelfMail));
     }
 
     #[test]
     fn create_mail_too_many_attachments() {
-        let attachments: Vec<_> = (0..13).map(|i| MailAttachment { item_id: i, count: 1 }).collect();
+        let attachments: Vec<_> = (0..13)
+            .map(|i| MailAttachment {
+                item_id: i,
+                count: 1,
+            })
+            .collect();
         let result = create_mail(NewMail {
-            id: 1, sender: "A".into(), recipient: "B".into(),
-            subject: "".into(), body: "".into(), attachments,
-            gold: 0, cod: 0, now: 0, delivery_delay: 0, expiry_days: 30,
+            id: 1,
+            sender: "A".into(),
+            recipient: "B".into(),
+            subject: "".into(),
+            body: "".into(),
+            attachments,
+            gold: 0,
+            cod: 0,
+            now: 0,
+            delivery_delay: 0,
+            expiry_days: 30,
         });
         assert_eq!(result, Err(MailError::TooManyAttachments));
     }
@@ -489,7 +551,8 @@ mod tests {
             now: 1000,
             delivery_delay: 0, // instant
             expiry_days: 30,
-        }).unwrap();
+        })
+        .unwrap();
         let mut mb = Mailbox::default();
         mb.deliver(mail);
         assert_eq!(mb.delivered_mails(1000).len(), 1);
@@ -513,11 +576,19 @@ mod tests {
     #[test]
     fn return_text_only_returns_none() {
         let text_mail = create_mail(NewMail {
-            id: 2, sender: "A".into(), recipient: "B".into(),
-            subject: "Hi".into(), body: "Text".into(),
-            attachments: vec![], gold: 0, cod: 0,
-            now: 1000, delivery_delay: 0, expiry_days: 30,
-        }).unwrap();
+            id: 2,
+            sender: "A".into(),
+            recipient: "B".into(),
+            subject: "Hi".into(),
+            body: "Text".into(),
+            attachments: vec![],
+            gold: 0,
+            cod: 0,
+            now: 1000,
+            delivery_delay: 0,
+            expiry_days: 30,
+        })
+        .unwrap();
         assert!(return_to_sender(&text_mail, 100, 99999).is_none());
     }
 
@@ -561,13 +632,17 @@ mod tests {
             recipient: "Buyer".into(),
             subject: "Your purchase".into(),
             body: "".into(),
-            attachments: vec![MailAttachment { item_id: 500, count: 1 }],
+            attachments: vec![MailAttachment {
+                item_id: 500,
+                count: 1,
+            }],
             gold: 0,
             cod: 10000, // 1 gold COD
             now: 1000,
             delivery_delay: 0,
             expiry_days: 3,
-        }).unwrap()
+        })
+        .unwrap()
     }
 
     #[test]

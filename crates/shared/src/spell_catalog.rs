@@ -8,9 +8,7 @@
 //! spell_dbc + spell_bonus_data instead.
 
 use crate::components::SpellSchool;
-use crate::spell_data::{
-    ResourceType, SpellCost, SpellData, SpellEffectDef, SpellTarget,
-};
+use crate::spell_data::{ResourceType, SpellCost, SpellData, SpellEffectDef, SpellTarget};
 
 /// Mortal Strike (Rank 8) — Arms Warrior's main attack.
 /// Spell ID 47486. 30 rage, instant, 6s CD. Deals weapon damage + AP scaling.
@@ -181,7 +179,7 @@ pub fn warrior_abilities() -> Vec<SpellData> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::spell_data::{process_spell_effects, CasterStats, EffectResult};
+    use crate::spell_data::{CasterStats, EffectResult, process_spell_effects};
 
     fn warrior_stats() -> CasterStats {
         CasterStats {
@@ -252,7 +250,7 @@ mod tests {
         assert!(ids.contains(&47486)); // Mortal Strike
         assert!(ids.contains(&47471)); // Execute
         assert!(ids.contains(&47488)); // Shield Slam
-        assert!(ids.contains(&1680));  // Whirlwind
+        assert!(ids.contains(&1680)); // Whirlwind
         assert!(ids.contains(&34428)); // Victory Rush
     }
 

@@ -171,7 +171,10 @@ fn weapon_subclass_two_handed() {
 fn weapon_subclass_to_weapon_type() {
     use crate::components::WeaponType;
     assert_eq!(WeaponSubclass::Dagger.to_weapon_type(), WeaponType::Dagger);
-    assert_eq!(WeaponSubclass::Sword1H.to_weapon_type(), WeaponType::OneHand);
+    assert_eq!(
+        WeaponSubclass::Sword1H.to_weapon_type(),
+        WeaponType::OneHand
+    );
     assert_eq!(WeaponSubclass::Mace2H.to_weapon_type(), WeaponType::TwoHand);
     assert_eq!(WeaponSubclass::Bow.to_weapon_type(), WeaponType::OneHand);
 }
@@ -290,8 +293,14 @@ fn inventory_equip_out_of_bounds() {
 fn bag_used_slots() {
     let mut bag = Bag::new(8);
     assert_eq!(bag.used_slots(), 0);
-    bag.slots[0] = InvSlot { item_id: 1, count: 1 };
-    bag.slots[3] = InvSlot { item_id: 2, count: 5 };
+    bag.slots[0] = InvSlot {
+        item_id: 1,
+        count: 1,
+    };
+    bag.slots[3] = InvSlot {
+        item_id: 2,
+        count: 5,
+    };
     assert_eq!(bag.used_slots(), 2);
 }
 
@@ -369,8 +378,8 @@ fn quality_stat_budget_scales_with_tier() {
     assert!(rare > uncommon);
     assert!(epic > rare);
     assert!((uncommon - 200.0).abs() < 0.01); // 1.0x
-    assert!((rare - 240.0).abs() < 0.01);     // 1.2x
-    assert!((epic - 300.0).abs() < 0.01);     // 1.5x
+    assert!((rare - 240.0).abs() < 0.01); // 1.2x
+    assert!((epic - 300.0).abs() < 0.01); // 1.5x
 }
 
 #[test]
@@ -380,9 +389,9 @@ fn quality_vendor_price_scales() {
     let epic = estimated_vendor_price(100, ItemQuality::Epic);
     assert!(rare > common);
     assert!(epic > rare);
-    assert_eq!(common, 5000);   // 100 * 0.5 * 100
-    assert_eq!(rare, 25000);    // 100 * 2.5 * 100
-    assert_eq!(epic, 50000);    // 100 * 5.0 * 100
+    assert_eq!(common, 5000); // 100 * 0.5 * 100
+    assert_eq!(rare, 25000); // 100 * 2.5 * 100
+    assert_eq!(epic, 50000); // 100 * 5.0 * 100
 }
 
 #[test]
@@ -410,7 +419,10 @@ fn quality_color_names() {
 #[test]
 fn stacking_fills_existing_stack() {
     let mut bag = Bag::new(4);
-    bag.slots[0] = InvSlot { item_id: 100, count: 15 };
+    bag.slots[0] = InvSlot {
+        item_id: 100,
+        count: 15,
+    };
     let leftover = bag.add_stacking(100, 5, 20);
     assert_eq!(leftover, 0);
     assert_eq!(bag.slots[0].count, 20);
@@ -420,17 +432,23 @@ fn stacking_fills_existing_stack() {
 #[test]
 fn stacking_overflow_to_new_slot() {
     let mut bag = Bag::new(4);
-    bag.slots[0] = InvSlot { item_id: 100, count: 18 };
+    bag.slots[0] = InvSlot {
+        item_id: 100,
+        count: 18,
+    };
     let leftover = bag.add_stacking(100, 5, 20);
     assert_eq!(leftover, 0);
     assert_eq!(bag.slots[0].count, 20); // filled to max
-    assert_eq!(bag.slots[1].count, 3);  // overflow
+    assert_eq!(bag.slots[1].count, 3); // overflow
 }
 
 #[test]
 fn stacking_no_room_returns_leftover() {
     let mut bag = Bag::new(1);
-    bag.slots[0] = InvSlot { item_id: 100, count: 20 };
+    bag.slots[0] = InvSlot {
+        item_id: 100,
+        count: 20,
+    };
     let leftover = bag.add_stacking(100, 5, 20);
     assert_eq!(leftover, 5);
 }
@@ -438,8 +456,14 @@ fn stacking_no_room_returns_leftover() {
 #[test]
 fn stacking_multiple_partial_stacks() {
     let mut bag = Bag::new(4);
-    bag.slots[0] = InvSlot { item_id: 100, count: 15 };
-    bag.slots[1] = InvSlot { item_id: 100, count: 10 };
+    bag.slots[0] = InvSlot {
+        item_id: 100,
+        count: 15,
+    };
+    bag.slots[1] = InvSlot {
+        item_id: 100,
+        count: 10,
+    };
     let leftover = bag.add_stacking(100, 12, 20);
     assert_eq!(leftover, 0);
     assert_eq!(bag.slots[0].count, 20); // +5
@@ -451,7 +475,10 @@ fn inventory_add_stacking_across_bags() {
     let mut inv = Inventory::default();
     // Fill backpack with 16 slots of partial stacks
     for slot in &mut inv.backpack.slots {
-        *slot = InvSlot { item_id: 100, count: 18 };
+        *slot = InvSlot {
+            item_id: 100,
+            count: 18,
+        };
     }
     inv.bags[0] = Bag::new(4);
 
@@ -469,7 +496,10 @@ fn inventory_add_stacking_returns_leftover() {
     let mut inv = Inventory::default();
     // Fill all backpack slots to max
     for slot in &mut inv.backpack.slots {
-        *slot = InvSlot { item_id: 100, count: 20 };
+        *slot = InvSlot {
+            item_id: 100,
+            count: 20,
+        };
     }
     // No bags
     let leftover = inv.add_item_stacking(100, 5, 20);
@@ -609,12 +639,7 @@ fn no_binding_never_binds() {
 #[test]
 fn already_bound_stays_bound() {
     let already = BoundState::Bound { character_id: 10 };
-    let state = resolve_binding(
-        BindingType::BindOnEquip,
-        already,
-        BindingEvent::Equip,
-        42,
-    );
+    let state = resolve_binding(BindingType::BindOnEquip, already, BindingEvent::Equip, 42);
     assert_eq!(state, BoundState::Bound { character_id: 10 });
 }
 

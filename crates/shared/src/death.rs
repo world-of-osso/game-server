@@ -52,17 +52,17 @@ pub fn check_death(current_hp: f32) -> bool {
 /// 1. Set the player's `DeathState` to `Dead`
 /// 2. Spawn the corpse entity at the death location
 /// 3. Disable player interactions (combat, looting, trading, etc.)
-pub fn on_death(
-    player: u64,
-    map_id: u16,
-    x: f32,
-    y: f32,
-    z: f32,
-    now: u64,
-) -> DeathResult {
+pub fn on_death(player: u64, map_id: u16, x: f32, y: f32, z: f32, now: u64) -> DeathResult {
     DeathResult {
         player,
-        corpse: Corpse { player, map_id, x, y, z, created_at: now },
+        corpse: Corpse {
+            player,
+            map_id,
+            x,
+            y,
+            z,
+            created_at: now,
+        },
     }
 }
 
@@ -80,10 +80,7 @@ pub enum DeathError {
 }
 
 /// Validate and transition death state.
-pub fn transition_state(
-    current: DeathState,
-    to: DeathState,
-) -> Result<DeathState, DeathError> {
+pub fn transition_state(current: DeathState, to: DeathState) -> Result<DeathState, DeathError> {
     match (current, to) {
         (DeathState::Alive, DeathState::Dead) => Ok(DeathState::Dead),
         (DeathState::Dead, DeathState::Ghost) => Ok(DeathState::Ghost),
@@ -125,7 +122,9 @@ pub struct GraveyardRegistry {
 
 impl GraveyardRegistry {
     pub fn new() -> Self {
-        Self { graveyards: Vec::new() }
+        Self {
+            graveyards: Vec::new(),
+        }
     }
 
     pub fn add(&mut self, gy: Graveyard) {
@@ -134,9 +133,7 @@ impl GraveyardRegistry {
 
     /// Find the nearest graveyard for a given position and faction.
     /// `faction`: 0=neutral(any), 1=Alliance, 2=Horde.
-    pub fn nearest(
-        &self, map_id: u16, x: f32, y: f32, z: f32, faction: u8,
-    ) -> Option<&Graveyard> {
+    pub fn nearest(&self, map_id: u16, x: f32, y: f32, z: f32, faction: u8) -> Option<&Graveyard> {
         self.graveyards
             .iter()
             .filter(|g| g.map_id == map_id && (g.faction == 0 || g.faction == faction))
@@ -193,8 +190,11 @@ pub fn release_spirit(
         .nearest(death_map, death_x, death_y, death_z, player_faction)
         .ok_or(DeathError::NotDead)?; // no graveyard = can't release
     Ok(ReleaseResult {
-        graveyard_id: gy.id, map_id: gy.map_id,
-        x: gy.x, y: gy.y, z: gy.z,
+        graveyard_id: gy.id,
+        map_id: gy.map_id,
+        x: gy.x,
+        y: gy.y,
+        z: gy.z,
     })
 }
 
@@ -238,7 +238,11 @@ pub fn is_ghost_restricted(state: DeathState, action: GhostRestriction) -> bool 
 /// - Ghosts can see other ghosts.
 /// - Living players can see other living players.
 /// - Spirit healers (NPCs) can see ghosts.
-pub fn ghost_visible(observer_state: DeathState, target_state: DeathState, target_is_spirit_healer: bool) -> bool {
+pub fn ghost_visible(
+    observer_state: DeathState,
+    target_state: DeathState,
+    target_is_spirit_healer: bool,
+) -> bool {
     match (observer_state, target_state) {
         // Living sees living
         (DeathState::Alive, DeathState::Alive) => true,
@@ -261,10 +265,7 @@ pub fn ghost_visible(observer_state: DeathState, target_state: DeathState, targe
 pub const CORPSE_RESURRECT_RANGE: f32 = 30.0;
 
 /// Check if a ghost player is close enough to their corpse to resurrect.
-pub fn in_corpse_range(
-    player_x: f32, player_y: f32, player_z: f32,
-    corpse: &Corpse,
-) -> bool {
+pub fn in_corpse_range(player_x: f32, player_y: f32, player_z: f32, corpse: &Corpse) -> bool {
     dist_sq(player_x, player_y, player_z, corpse.x, corpse.y, corpse.z)
         <= CORPSE_RESURRECT_RANGE * CORPSE_RESURRECT_RANGE
 }
@@ -285,7 +286,9 @@ pub struct CorpseResurrectResult {
 /// Transitions Ghost → Resurrecting (server then completes → Alive).
 pub fn resurrect_at_corpse(
     state: DeathState,
-    player_x: f32, player_y: f32, player_z: f32,
+    player_x: f32,
+    player_y: f32,
+    player_z: f32,
     player_map: u16,
     corpse: &Corpse,
 ) -> Result<CorpseResurrectResult, DeathError> {
@@ -298,7 +301,12 @@ pub fn resurrect_at_corpse(
     if !in_corpse_range(player_x, player_y, player_z, corpse) {
         return Err(DeathError::NotGhost);
     }
-    Ok(CorpseResurrectResult { x: corpse.x, y: corpse.y, z: corpse.z, map_id: corpse.map_id })
+    Ok(CorpseResurrectResult {
+        x: corpse.x,
+        y: corpse.y,
+        z: corpse.z,
+        map_id: corpse.map_id,
+    })
 }
 
 // --- Resurrection sickness ---
@@ -344,7 +352,11 @@ impl ResSickness {
 
     /// Apply the stat penalty to a base value.
     pub fn apply_penalty(&self, base: f32, now: u64) -> f32 {
-        if self.is_active(now) { base * RES_SICKNESS_PENALTY } else { base }
+        if self.is_active(now) {
+            base * RES_SICKNESS_PENALTY
+        } else {
+            base
+        }
     }
 }
 
@@ -360,7 +372,9 @@ pub fn apply_res_sickness(
     now: u64,
 ) -> Option<ResSickness> {
     if should_apply_sickness(source, player_level) {
-        Some(ResSickness { expires_at: now + RES_SICKNESS_DURATION })
+        Some(ResSickness {
+            expires_at: now + RES_SICKNESS_DURATION,
+        })
     } else {
         None
     }
@@ -405,16 +419,23 @@ pub fn accept_spirit_healer(ctx: &SpiritHealerContext) -> Result<SpiritHealerRes
         return Err(DeathError::NotGhost);
     }
     let range_sq = dist_sq(
-        ctx.player_pos.0, ctx.player_pos.1, ctx.player_pos.2,
-        ctx.healer_pos.0, ctx.healer_pos.1, ctx.healer_pos.2,
+        ctx.player_pos.0,
+        ctx.player_pos.1,
+        ctx.player_pos.2,
+        ctx.healer_pos.0,
+        ctx.healer_pos.1,
+        ctx.healer_pos.2,
     );
     if range_sq > SPIRIT_HEALER_RANGE * SPIRIT_HEALER_RANGE {
         return Err(DeathError::NotGhost);
     }
     let sickness = apply_res_sickness(ResurrectSource::SpiritHealer, ctx.player_level, ctx.now);
     Ok(SpiritHealerResult {
-        x: ctx.healer_pos.0, y: ctx.healer_pos.1, z: ctx.healer_pos.2,
-        map_id: ctx.healer_map, sickness,
+        x: ctx.healer_pos.0,
+        y: ctx.healer_pos.1,
+        z: ctx.healer_pos.2,
+        map_id: ctx.healer_map,
+        sickness,
     })
 }
 
@@ -511,8 +532,12 @@ pub fn cast_resurrect(
         return Err(DeathError::AlreadyAlive);
     }
     let range_sq = dist_sq(
-        caster_pos.0, caster_pos.1, caster_pos.2,
-        target_pos.0, target_pos.1, target_pos.2,
+        caster_pos.0,
+        caster_pos.1,
+        caster_pos.2,
+        target_pos.0,
+        target_pos.1,
+        target_pos.2,
     );
     if range_sq > RESURRECT_SPELL_RANGE * RESURRECT_SPELL_RANGE {
         return Err(DeathError::NotDead);
@@ -520,7 +545,9 @@ pub fn cast_resurrect(
     Ok(PlayerResurrectResult {
         restored_hp: target_max_hp * RESURRECT_HP_PERCENT,
         restored_mana: target_max_mana * RESURRECT_MANA_PERCENT,
-        x: target_pos.0, y: target_pos.1, z: target_pos.2,
+        x: target_pos.0,
+        y: target_pos.1,
+        z: target_pos.2,
     })
 }
 
@@ -544,18 +571,24 @@ pub struct CorpseDespawnTracker {
 
 impl CorpseDespawnTracker {
     pub fn new() -> Self {
-        Self { pending: Vec::new() }
+        Self {
+            pending: Vec::new(),
+        }
     }
 
     /// Start the despawn timer for a corpse (called on resurrect or release).
     pub fn start_timer(&mut self, player: u64, now: u64) {
         self.pending.retain(|c| c.player != player);
-        self.pending.push(CorpseDespawnTimer { player, despawn_at: now + CORPSE_DESPAWN_SECS });
+        self.pending.push(CorpseDespawnTimer {
+            player,
+            despawn_at: now + CORPSE_DESPAWN_SECS,
+        });
     }
 
     /// Collect all corpses whose despawn timer has elapsed.
     pub fn collect_despawns(&mut self, now: u64) -> Vec<u64> {
-        let ready: Vec<u64> = self.pending
+        let ready: Vec<u64> = self
+            .pending
             .iter()
             .filter(|c| now >= c.despawn_at)
             .map(|c| c.player)

@@ -3,8 +3,14 @@ use super::*;
 #[test]
 fn profession_categories() {
     assert_eq!(Profession::Mining.category(), ProfessionCategory::Gathering);
-    assert_eq!(Profession::Blacksmithing.category(), ProfessionCategory::Crafting);
-    assert_eq!(Profession::Cooking.category(), ProfessionCategory::Secondary);
+    assert_eq!(
+        Profession::Blacksmithing.category(),
+        ProfessionCategory::Crafting
+    );
+    assert_eq!(
+        Profession::Cooking.category(),
+        ProfessionCategory::Secondary
+    );
     assert!(Profession::Mining.is_primary());
     assert!(!Profession::Cooking.is_primary());
 }
@@ -26,7 +32,10 @@ fn learn_profession() {
 fn learn_duplicate_rejected() {
     let mut profs = PlayerProfessions::default();
     profs.learn(Profession::Mining).unwrap();
-    assert_eq!(profs.learn(Profession::Mining), Err(ProfessionError::AlreadyKnown));
+    assert_eq!(
+        profs.learn(Profession::Mining),
+        Err(ProfessionError::AlreadyKnown)
+    );
 }
 
 #[test]
@@ -34,7 +43,10 @@ fn max_two_primary() {
     let mut profs = PlayerProfessions::default();
     profs.learn(Profession::Mining).unwrap();
     profs.learn(Profession::Herbalism).unwrap();
-    assert_eq!(profs.learn(Profession::Skinning), Err(ProfessionError::TooManyPrimary));
+    assert_eq!(
+        profs.learn(Profession::Skinning),
+        Err(ProfessionError::TooManyPrimary)
+    );
 }
 
 #[test]
@@ -93,7 +105,10 @@ fn tier_required_levels() {
 
 #[test]
 fn tier_next() {
-    assert_eq!(ProfessionTier::Apprentice.next(), Some(ProfessionTier::Journeyman));
+    assert_eq!(
+        ProfessionTier::Apprentice.next(),
+        Some(ProfessionTier::Journeyman)
+    );
     assert_eq!(ProfessionTier::GrandMaster.next(), None);
 }
 
@@ -174,7 +189,10 @@ fn gather_skill_too_low() {
     let mut node = copper_vein();
     node.required_skill = 50;
     let mut profs = mining_profs(10);
-    assert_eq!(attempt_gather(&node, &mut profs, 0.0, &[]), GatherResult::SkillTooLow);
+    assert_eq!(
+        attempt_gather(&node, &mut profs, 0.0, &[]),
+        GatherResult::SkillTooLow
+    );
 }
 
 #[test]
@@ -182,7 +200,10 @@ fn gather_wrong_profession() {
     let node = copper_vein();
     let mut profs = PlayerProfessions::default();
     profs.learn(Profession::Herbalism).unwrap();
-    assert_eq!(attempt_gather(&node, &mut profs, 0.0, &[]), GatherResult::WrongProfession);
+    assert_eq!(
+        attempt_gather(&node, &mut profs, 0.0, &[]),
+        GatherResult::WrongProfession
+    );
 }
 
 #[test]
@@ -225,7 +246,10 @@ fn copper_bar_recipe() -> Recipe {
         profession: Profession::Mining,
         required_skill: 1,
         trivial_skill: 25,
-        materials: vec![CraftMaterial { item_id: 2770, count: 2 }],
+        materials: vec![CraftMaterial {
+            item_id: 2770,
+            count: 2,
+        }],
         output_item_id: 2840,
         output_count: 1,
         source: Some(RecipeSource::Trainer),
@@ -239,7 +263,11 @@ fn craft_success() {
     let inv = |id: u32| if id == 2770 { 10 } else { 0 };
     let result = attempt_craft(&recipe, &mut profs, &inv, 0.5);
     match result {
-        CraftResult::Success { output_item_id, output_count, .. } => {
+        CraftResult::Success {
+            output_item_id,
+            output_count,
+            ..
+        } => {
             assert_eq!(output_item_id, 2840);
             assert_eq!(output_count, 1);
         }
@@ -253,7 +281,10 @@ fn craft_wrong_profession() {
     let mut profs = PlayerProfessions::default();
     profs.learn(Profession::Herbalism).unwrap();
     let inv = |_: u32| 99;
-    assert!(matches!(attempt_craft(&recipe, &mut profs, &inv, 0.0), CraftResult::WrongProfession));
+    assert!(matches!(
+        attempt_craft(&recipe, &mut profs, &inv, 0.0),
+        CraftResult::WrongProfession
+    ));
 }
 
 #[test]
@@ -262,7 +293,10 @@ fn craft_skill_too_low() {
     recipe.required_skill = 50;
     let mut profs = mining_profs(10);
     let inv = |_: u32| 99;
-    assert!(matches!(attempt_craft(&recipe, &mut profs, &inv, 0.0), CraftResult::SkillTooLow));
+    assert!(matches!(
+        attempt_craft(&recipe, &mut profs, &inv, 0.0),
+        CraftResult::SkillTooLow
+    ));
 }
 
 #[test]
@@ -310,17 +344,33 @@ fn check_materials_partial() {
         required_skill: 1,
         trivial_skill: 50,
         materials: vec![
-            CraftMaterial { item_id: 100, count: 5 },
-            CraftMaterial { item_id: 200, count: 3 },
+            CraftMaterial {
+                item_id: 100,
+                count: 5,
+            },
+            CraftMaterial {
+                item_id: 200,
+                count: 3,
+            },
         ],
         output_item_id: 300,
         output_count: 1,
         source: None,
     };
-    let inv = |id: u32| match id { 100 => 2, 200 => 3, _ => 0 };
+    let inv = |id: u32| match id {
+        100 => 2,
+        200 => 3,
+        _ => 0,
+    };
     let missing = check_materials(&recipe, &inv);
     assert_eq!(missing.len(), 1);
-    assert_eq!(missing[0], CraftMaterial { item_id: 100, count: 3 });
+    assert_eq!(
+        missing[0],
+        CraftMaterial {
+            item_id: 100,
+            count: 3
+        }
+    );
 }
 
 // --- Profession specialization tests ---
@@ -347,7 +397,10 @@ fn choose_spec() {
     assert!(chosen.choose(1, &profs).is_ok()); // Weaponsmith
     assert!(chosen.has_spec(1));
     assert_eq!(
-        chosen.spec_for_profession(Profession::Blacksmithing).unwrap().name,
+        chosen
+            .spec_for_profession(Profession::Blacksmithing)
+            .unwrap()
+            .name,
         "Weaponsmith"
     );
 }
@@ -410,19 +463,34 @@ fn learn_recipe() {
 fn trainer_recipes_filtered_by_skill() {
     let recipes = vec![
         Recipe {
-            id: 1, profession: Profession::Mining, required_skill: 1,
-            trivial_skill: 25, materials: vec![], output_item_id: 100,
-            output_count: 1, source: Some(RecipeSource::Trainer),
+            id: 1,
+            profession: Profession::Mining,
+            required_skill: 1,
+            trivial_skill: 25,
+            materials: vec![],
+            output_item_id: 100,
+            output_count: 1,
+            source: Some(RecipeSource::Trainer),
         },
         Recipe {
-            id: 2, profession: Profession::Mining, required_skill: 50,
-            trivial_skill: 75, materials: vec![], output_item_id: 200,
-            output_count: 1, source: Some(RecipeSource::Trainer),
+            id: 2,
+            profession: Profession::Mining,
+            required_skill: 50,
+            trivial_skill: 75,
+            materials: vec![],
+            output_item_id: 200,
+            output_count: 1,
+            source: Some(RecipeSource::Trainer),
         },
         Recipe {
-            id: 3, profession: Profession::Mining, required_skill: 1,
-            trivial_skill: 25, materials: vec![], output_item_id: 300,
-            output_count: 1, source: Some(RecipeSource::Item { item_id: 999 }),
+            id: 3,
+            profession: Profession::Mining,
+            required_skill: 1,
+            trivial_skill: 25,
+            materials: vec![],
+            output_item_id: 300,
+            output_count: 1,
+            source: Some(RecipeSource::Item { item_id: 999 }),
         },
     ];
     let available = KnownRecipes::available_from_trainer(&recipes, 30);
@@ -433,9 +501,14 @@ fn trainer_recipes_filtered_by_skill() {
 #[test]
 fn discovery_roll() {
     let discoverable = vec![Recipe {
-        id: 50, profession: Profession::Alchemy, required_skill: 300,
-        trivial_skill: 350, materials: vec![], output_item_id: 500,
-        output_count: 1, source: Some(RecipeSource::Discovery { chance: 100 }),
+        id: 50,
+        profession: Profession::Alchemy,
+        required_skill: 300,
+        trivial_skill: 350,
+        materials: vec![],
+        output_item_id: 500,
+        output_count: 1,
+        source: Some(RecipeSource::Discovery { chance: 100 }),
     }];
     let mut known = KnownRecipes::default();
     // roll=50 < chance=100 → discovered
@@ -450,9 +523,14 @@ fn discovery_roll() {
 #[test]
 fn discovery_high_roll_fails() {
     let discoverable = vec![Recipe {
-        id: 50, profession: Profession::Alchemy, required_skill: 300,
-        trivial_skill: 350, materials: vec![], output_item_id: 500,
-        output_count: 1, source: Some(RecipeSource::Discovery { chance: 100 }),
+        id: 50,
+        profession: Profession::Alchemy,
+        required_skill: 300,
+        trivial_skill: 350,
+        materials: vec![],
+        output_item_id: 500,
+        output_count: 1,
+        source: Some(RecipeSource::Discovery { chance: 100 }),
     }];
     let mut known = KnownRecipes::default();
     let found = known.roll_discovery(&discoverable, 200); // > 100

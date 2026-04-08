@@ -362,7 +362,10 @@ fn rating_to_percent_zero_rating() {
 fn higher_level_needs_more_rating() {
     let low = rating_per_percent(RatingType::Crit, 20).unwrap();
     let high = rating_per_percent(RatingType::Crit, 80).unwrap();
-    assert!(high > low, "higher levels should require more rating per percent");
+    assert!(
+        high > low,
+        "higher levels should require more rating per percent"
+    );
 }
 
 // --- Diminishing returns tests ---

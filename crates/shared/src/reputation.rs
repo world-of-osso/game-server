@@ -449,11 +449,7 @@ impl CharacterReputation {
     }
 
     fn push_tracked_faction(&mut self, faction_id: u32) {
-        if self
-            .tracked
-            .iter()
-            .any(|&tracked_id| tracked_id == faction_id)
-        {
+        if self.tracked.contains(&faction_id) {
             return;
         }
         // bounded: ~20 tracked factions, preserve UI order

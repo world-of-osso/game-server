@@ -154,8 +154,14 @@ impl ObjectiveProgress {
     /// Create initial progress from a quest objective definition.
     pub fn from_objective(obj: &QuestObjective) -> Self {
         match *obj {
-            QuestObjective::Kill { count, .. } => Self::Kill { current: 0, required: count },
-            QuestObjective::Collect { count, .. } => Self::Collect { current: 0, required: count },
+            QuestObjective::Kill { count, .. } => Self::Kill {
+                current: 0,
+                required: count,
+            },
+            QuestObjective::Collect { count, .. } => Self::Collect {
+                current: 0,
+                required: count,
+            },
             QuestObjective::Interact { .. } => Self::Interact { done: false },
             QuestObjective::Escort { .. } => Self::Escort { done: false },
             QuestObjective::ReachLocation { .. } => Self::ReachLocation { done: false },
@@ -173,7 +179,12 @@ impl ObjectiveProgress {
 
     /// Record a kill of a creature. Returns `true` if the count changed.
     pub fn record_kill(&mut self, creature_id: u32, obj: &QuestObjective) -> bool {
-        if let (Self::Kill { current, required }, QuestObjective::Kill { creature_id: cid, .. }) = (self, obj)
+        if let (
+            Self::Kill { current, required },
+            QuestObjective::Kill {
+                creature_id: cid, ..
+            },
+        ) = (self, obj)
             && creature_id == *cid
             && *current < *required
         {
@@ -185,7 +196,8 @@ impl ObjectiveProgress {
 
     /// Record collecting an item. Returns `true` if the count changed.
     pub fn record_collect(&mut self, item_id: u32, count: u16, obj: &QuestObjective) -> bool {
-        if let (Self::Collect { current, required }, QuestObjective::Collect { item_id: iid, .. }) = (self, obj)
+        if let (Self::Collect { current, required }, QuestObjective::Collect { item_id: iid, .. }) =
+            (self, obj)
             && item_id == *iid
             && *current < *required
         {
@@ -241,7 +253,11 @@ impl QuestProgress {
         Self {
             quest_id: quest.id,
             state: QuestState::Accepted,
-            objectives: quest.objectives.iter().map(ObjectiveProgress::from_objective).collect(),
+            objectives: quest
+                .objectives
+                .iter()
+                .map(ObjectiveProgress::from_objective)
+                .collect(),
         }
     }
 
@@ -288,12 +304,14 @@ impl QuestProgress {
         self.state = QuestState::Available;
         for obj in &mut self.objectives {
             *obj = match *obj {
-                ObjectiveProgress::Kill { required, .. } => {
-                    ObjectiveProgress::Kill { current: 0, required }
-                }
-                ObjectiveProgress::Collect { required, .. } => {
-                    ObjectiveProgress::Collect { current: 0, required }
-                }
+                ObjectiveProgress::Kill { required, .. } => ObjectiveProgress::Kill {
+                    current: 0,
+                    required,
+                },
+                ObjectiveProgress::Collect { required, .. } => ObjectiveProgress::Collect {
+                    current: 0,
+                    required,
+                },
                 ObjectiveProgress::Interact { .. } => ObjectiveProgress::Interact { done: false },
                 ObjectiveProgress::Escort { .. } => ObjectiveProgress::Escort { done: false },
                 ObjectiveProgress::ReachLocation { .. } => {
@@ -383,7 +401,11 @@ pub fn npc_quest_marker(
 
     for quest in quests {
         // Check turn-in: this NPC accepts a quest the player has
-        let turn_in_npc = if quest.turn_in_npc == 0 { quest.quest_giver } else { quest.turn_in_npc };
+        let turn_in_npc = if quest.turn_in_npc == 0 {
+            quest.quest_giver
+        } else {
+            quest.turn_in_npc
+        };
         if turn_in_npc == npc_id
             && let Some(progress) = log.get(quest.id)
         {
@@ -396,10 +418,7 @@ pub fn npc_quest_marker(
         }
 
         // Check offer: this NPC offers a quest the player doesn't have
-        if quest.quest_giver == npc_id
-            && !log.has_quest(quest.id)
-            && !log.is_completed(quest.id)
-        {
+        if quest.quest_giver == npc_id && !log.has_quest(quest.id) && !log.is_completed(quest.id) {
             let marker = if quest.can_accept(player_level, &log.completed, quests) {
                 QuestMarker::Available
             } else if !quest.meets_level_req(player_level)
@@ -575,7 +594,6 @@ impl QuestLog {
         self.active.len()
     }
 }
-
 
 #[cfg(test)]
 #[path = "quest_tests.rs"]

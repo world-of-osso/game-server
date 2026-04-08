@@ -243,7 +243,9 @@ impl SchoolLockouts {
 
     /// Check if a school is currently locked out.
     pub fn is_locked(&self, school: SpellSchool) -> bool {
-        self.entries.iter().any(|e| e.school == school && e.remaining > 0.0)
+        self.entries
+            .iter()
+            .any(|e| e.school == school && e.remaining > 0.0)
     }
 
     /// Tick all lockout timers and remove expired ones.
@@ -546,7 +548,11 @@ impl SpellProjectile {
     /// `distance` is caster-to-target in yards. `speed` is yards/sec
     /// (0.0 uses the default 24 y/s).
     pub fn new(spell_id: u32, caster: u64, target: u64, distance: f32, speed: f32) -> Self {
-        let effective_speed = if speed > 0.0 { speed } else { DEFAULT_PROJECTILE_SPEED };
+        let effective_speed = if speed > 0.0 {
+            speed
+        } else {
+            DEFAULT_PROJECTILE_SPEED
+        };
         Self {
             spell_id,
             caster,
@@ -588,7 +594,6 @@ impl SpellProjectiles {
         impacted
     }
 }
-
 
 #[cfg(test)]
 #[path = "casting_tests.rs"]

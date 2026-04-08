@@ -10,13 +10,16 @@ fn sample_quest() -> QuestData {
             creature_id: 94,
             count: 10,
         }],
-        rewards: vec![
-            QuestReward::Xp(1500),
-            QuestReward::Gold(350),
-        ],
+        rewards: vec![QuestReward::Xp(1500), QuestReward::Gold(350)],
         reward_choices: vec![
-            QuestRewardChoice { item_id: 2041, count: 1 },
-            QuestRewardChoice { item_id: 2042, count: 1 },
+            QuestRewardChoice {
+                item_id: 2041,
+                count: 1,
+            },
+            QuestRewardChoice {
+                item_id: 2042,
+                count: 1,
+            },
         ],
         required_level: 10,
         suggested_level: 14,
@@ -66,19 +69,30 @@ fn prerequisites_met_with_completed() {
 #[test]
 fn can_accept_both_checks() {
     let q = sample_quest();
-    assert!(!q.can_accept(9, &[50], &[]));   // too low level
-    assert!(!q.can_accept(10, &[], &[]));     // prereq missing
-    assert!(q.can_accept(10, &[50], &[]));    // both met
+    assert!(!q.can_accept(9, &[50], &[])); // too low level
+    assert!(!q.can_accept(10, &[], &[])); // prereq missing
+    assert!(q.can_accept(10, &[50], &[])); // both met
 }
 
 #[test]
 fn objective_variants() {
     let objs: [QuestObjective; 5] = [
-        QuestObjective::Kill { creature_id: 1, count: 5 },
-        QuestObjective::Collect { item_id: 2, count: 3 },
+        QuestObjective::Kill {
+            creature_id: 1,
+            count: 5,
+        },
+        QuestObjective::Collect {
+            item_id: 2,
+            count: 3,
+        },
         QuestObjective::Interact { target_id: 3 },
         QuestObjective::Escort { npc_id: 4 },
-        QuestObjective::ReachLocation { x: 1.0, y: 2.0, z: 3.0, radius: 10.0 },
+        QuestObjective::ReachLocation {
+            x: 1.0,
+            y: 2.0,
+            z: 3.0,
+            radius: 10.0,
+        },
     ];
     assert_eq!(objs.len(), 5);
 }
@@ -88,8 +102,14 @@ fn reward_variants() {
     let rewards: [QuestReward; 4] = [
         QuestReward::Xp(1000),
         QuestReward::Gold(500),
-        QuestReward::Item { item_id: 100, count: 1 },
-        QuestReward::Reputation { faction_id: 72, amount: 250 },
+        QuestReward::Item {
+            item_id: 100,
+            count: 1,
+        },
+        QuestReward::Reputation {
+            faction_id: 72,
+            amount: 250,
+        },
     ];
     assert_eq!(rewards.len(), 4);
 }
@@ -106,7 +126,10 @@ fn quest_serialization_round_trip() {
 
 #[test]
 fn kill_progress_tracks_count() {
-    let obj = QuestObjective::Kill { creature_id: 94, count: 3 };
+    let obj = QuestObjective::Kill {
+        creature_id: 94,
+        count: 3,
+    };
     let mut progress = ObjectiveProgress::from_objective(&obj);
     assert!(!progress.is_complete());
 
@@ -120,14 +143,20 @@ fn kill_progress_tracks_count() {
 
 #[test]
 fn kill_wrong_creature_ignored() {
-    let obj = QuestObjective::Kill { creature_id: 94, count: 3 };
+    let obj = QuestObjective::Kill {
+        creature_id: 94,
+        count: 3,
+    };
     let mut progress = ObjectiveProgress::from_objective(&obj);
     assert!(!progress.record_kill(999, &obj));
 }
 
 #[test]
 fn kill_over_count_capped() {
-    let obj = QuestObjective::Kill { creature_id: 94, count: 2 };
+    let obj = QuestObjective::Kill {
+        creature_id: 94,
+        count: 2,
+    };
     let mut progress = ObjectiveProgress::from_objective(&obj);
     progress.record_kill(94, &obj);
     progress.record_kill(94, &obj);
@@ -136,7 +165,10 @@ fn kill_over_count_capped() {
 
 #[test]
 fn collect_progress_tracks_count() {
-    let obj = QuestObjective::Collect { item_id: 50, count: 5 };
+    let obj = QuestObjective::Collect {
+        item_id: 50,
+        count: 5,
+    };
     let mut progress = ObjectiveProgress::from_objective(&obj);
     assert!(progress.record_collect(50, 3, &obj));
     assert!(!progress.is_complete());
@@ -163,7 +195,12 @@ fn escort_mark_done() {
 
 #[test]
 fn reach_location_mark_done() {
-    let obj = QuestObjective::ReachLocation { x: 0.0, y: 0.0, z: 0.0, radius: 10.0 };
+    let obj = QuestObjective::ReachLocation {
+        x: 0.0,
+        y: 0.0,
+        z: 0.0,
+        radius: 10.0,
+    };
     let mut progress = ObjectiveProgress::from_objective(&obj);
     progress.mark_done();
     assert!(progress.is_complete());

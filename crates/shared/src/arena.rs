@@ -121,7 +121,7 @@ impl ArenaTeam {
     }
 
     fn has_member(&self, player: u64) -> bool {
-        self.roster.iter().any(|&member| member == player)
+        self.roster.contains(&player)
     }
 
     /// Number of players on the roster.
