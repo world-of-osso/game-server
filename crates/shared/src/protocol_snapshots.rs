@@ -118,12 +118,20 @@ pub struct CollectionPetSnapshot {
 
 // -- Profession snapshots --
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct ProfessionSnapshot {
+    pub skills: Vec<ProfessionSkillSnapshot>,
     pub recipes: Vec<ProfessionRecipeSnapshot>,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct ProfessionSkillSnapshot {
+    pub profession: String,
+    pub current: u16,
+    pub max: u16,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct ProfessionRecipeSnapshot {
     pub spell_id: u32,
     pub profession: String,

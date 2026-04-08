@@ -13,6 +13,7 @@ mod persistence;
 mod persistence_accounts;
 mod persistence_character;
 mod persistence_types;
+mod profession;
 mod spell_db;
 mod stats;
 mod talent;
@@ -42,6 +43,7 @@ fn main() {
         .add_plugins(shared::ProtocolPlugin)
         .add_plugins(persistence::PersistencePlugin)
         .add_plugins(auction_house::AuctionHousePlugin)
+        .add_plugins(profession::ProfessionPlugin)
         .add_plugins(talent::TalentPlugin)
         .add_plugins(trade::TradePlugin)
         .add_plugins(networking::ServerNetworkPlugin)

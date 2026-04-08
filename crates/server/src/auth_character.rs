@@ -4,6 +4,7 @@ use shared::components::{
     CombatRatings, GuildMembership, Health, Level, Mana, MovementSpeed, Player, Position, Rotation,
     SelectedTalents, UnitStats, VerticalVelocity,
 };
+use shared::profession::PlayerProfessions;
 use shared::protocol::{
     AuthChannel, CreateCharacter, CreateCharacterResponse, DeleteCharacter,
     DeleteCharacterResponse, EnterWorldResponse, LoadTerrain, SelectCharacter,
@@ -255,7 +256,14 @@ fn handle_select(
         return;
     };
     let guild = persistence::load_character_guild(&db.db, req.character_id);
-    let player_entity = spawn_player_entity(commands, &data, req.character_id, guild.as_ref());
+    let professions = persistence::load_professions(&db.db, req.character_id);
+    let player_entity = spawn_player_entity(
+        commands,
+        &data,
+        req.character_id,
+        guild.as_ref(),
+        professions,
+    );
     insert_world_components(commands, conn, player_entity, req.character_id);
     send_enter_success(conn, enter_senders, player_entity);
     send_load_terrain(conn, terrain_senders);
@@ -367,10 +375,12 @@ pub fn spawn_player_entity(
     data: &CharacterData,
     character_id: u64,
     guild: Option<&GuildMembership>,
+    professions: PlayerProfessions,
 ) -> Entity {
     let entity = commands
         .spawn(build_player_components(data, character_id))
         .id();
+    commands.entity(entity).insert(professions);
     if shared::formulas::base_mana(data.class, data.level as u8).is_some() {
         commands.entity(entity).insert(Mana {
             current: 0.0,

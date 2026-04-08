@@ -2,6 +2,7 @@ use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 use redb::{Database, ReadableDatabase, ReadableTable, TableDefinition};
 use shared::components::{Health, Player, Position};
+use shared::profession::{PlayerProfessions, Profession};
 use std::path::Path;
 
 pub use crate::persistence_character::*;
@@ -12,6 +13,9 @@ pub(crate) const CHARACTERS: TableDefinition<u64, &[u8]> = TableDefinition::new(
 
 /// Inventory table: PlayerId (u64) -> serialized inventory (bytes).
 const INVENTORIES: TableDefinition<u64, &[u8]> = TableDefinition::new("inventories");
+
+/// Profession table: PlayerId (u64) -> serialized profession state (bytes).
+const PROFESSIONS: TableDefinition<u64, &[u8]> = TableDefinition::new("professions");
 
 /// Active auction table: auction_id (u64) -> serialized auction data (bytes).
 const AUCTIONS: TableDefinition<u64, &[u8]> = TableDefinition::new("auctions");
@@ -122,6 +126,7 @@ pub(crate) fn create_tables(db: &Database) {
     let txn = db.begin_write().expect("Failed to begin write txn");
     let _ = txn.open_table(CHARACTERS);
     let _ = txn.open_table(INVENTORIES);
+    let _ = txn.open_table(PROFESSIONS);
     let _ = txn.open_table(AUCTIONS);
     let _ = txn.open_table(MAILBOXES);
     let _ = txn.open_table(ACCOUNTS);
@@ -164,6 +169,46 @@ pub fn save_inventory(db: &Database, character_id: u64, inventory: &InventoryDat
             .expect("Failed to insert inventory");
     }
     txn.commit().expect("Failed to commit inventory save");
+}
+
+pub fn load_professions(db: &Database, character_id: u64) -> PlayerProfessions {
+    let txn = db.begin_read().expect("Failed to begin read txn");
+    let table = txn
+        .open_table(PROFESSIONS)
+        .expect("Failed to open professions table");
+    match table.get(character_id).expect("Failed to read professions") {
+        Some(guard) => {
+            bitcode::decode::<PlayerProfessions>(guard.value()).expect("decode professions")
+        }
+        None => {
+            let professions = default_professions();
+            save_professions(db, character_id, &professions);
+            professions
+        }
+    }
+}
+
+pub fn save_professions(db: &Database, character_id: u64, professions: &PlayerProfessions) {
+    let bytes = bitcode::encode(professions);
+    let txn = db.begin_write().expect("Failed to begin write txn");
+    {
+        let mut table = txn
+            .open_table(PROFESSIONS)
+            .expect("Failed to open professions table");
+        table
+            .insert(character_id, bytes.as_slice())
+            .expect("Failed to insert professions");
+    }
+    txn.commit().expect("Failed to commit professions save");
+}
+
+fn default_professions() -> PlayerProfessions {
+    let mut professions = PlayerProfessions::default();
+    professions.learn(Profession::Mining).expect("learn Mining");
+    professions
+        .learn(Profession::Blacksmithing)
+        .expect("learn Blacksmithing");
+    professions
 }
 
 pub fn load_mailbox(db: &Database, character_id: u64) -> Vec<MailEntryData> {

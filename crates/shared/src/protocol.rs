@@ -37,6 +37,9 @@ pub struct TradeChannel;
 /// Reliable ordered channel for talent operations, bidirectional.
 pub struct TalentChannel;
 
+/// Reliable ordered channel for profession operations, bidirectional.
+pub struct ProfessionChannel;
+
 /// Chat message type.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub enum ChatType {
@@ -575,6 +578,27 @@ pub struct TalentStateUpdate {
     pub error: Option<String>,
 }
 
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct QueryProfessions;
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct CraftProfessionRecipe {
+    pub recipe_id: u32,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct GatherProfessionNode {
+    pub node_id: u32,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct ProfessionStateUpdate {
+    pub snapshot: Option<ProfessionSnapshot>,
+    pub message: Option<String>,
+    pub skill_up: Option<ProfessionSkillSnapshot>,
+    pub error: Option<String>,
+}
+
 /// Registers shared protocol: components for replication and channels.
 /// Must be added AFTER `ServerPlugins`/`ClientPlugins` but BEFORE any entity is spawned.
 pub struct ProtocolPlugin;
@@ -609,6 +633,7 @@ fn register_messages(app: &mut App) {
     register_auction_messages(app);
     register_trade_messages(app);
     register_talent_messages(app);
+    register_profession_messages(app);
     crate::protocol_snapshots::register_snapshot_messages(app);
 }
 
@@ -759,6 +784,17 @@ fn register_talent_messages(app: &mut App) {
         .add_direction(NetworkDirection::ServerToClient);
 }
 
+fn register_profession_messages(app: &mut App) {
+    app.register_message::<QueryProfessions>()
+        .add_direction(NetworkDirection::ClientToServer);
+    app.register_message::<CraftProfessionRecipe>()
+        .add_direction(NetworkDirection::ClientToServer);
+    app.register_message::<GatherProfessionNode>()
+        .add_direction(NetworkDirection::ClientToServer);
+    app.register_message::<ProfessionStateUpdate>()
+        .add_direction(NetworkDirection::ServerToClient);
+}
+
 fn register_channels(app: &mut App) {
     app.add_channel::<MovementChannel>(ChannelSettings {
         mode: ChannelMode::UnorderedUnreliable,
@@ -809,6 +845,12 @@ fn register_channels(app: &mut App) {
     .add_direction(NetworkDirection::Bidirectional);
 
     app.add_channel::<TalentChannel>(ChannelSettings {
+        mode: ChannelMode::OrderedReliable(default()),
+        ..default()
+    })
+    .add_direction(NetworkDirection::Bidirectional);
+
+    app.add_channel::<ProfessionChannel>(ChannelSettings {
         mode: ChannelMode::OrderedReliable(default()),
         ..default()
     })

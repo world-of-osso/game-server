@@ -2,10 +2,22 @@
 //!
 //! Ref: AzerothCore `SkillLineAbility.dbc`, profession skill system.
 
+use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
 /// Profession category.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    Hash,
+    Serialize,
+    Deserialize,
+    bitcode::Encode,
+    bitcode::Decode,
+)]
 pub enum ProfessionCategory {
     Gathering,
     Crafting,
@@ -13,7 +25,18 @@ pub enum ProfessionCategory {
 }
 
 /// All WoW professions.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    Hash,
+    Serialize,
+    Deserialize,
+    bitcode::Encode,
+    bitcode::Decode,
+)]
 pub enum Profession {
     // Gathering
     Mining,
@@ -50,11 +73,19 @@ impl Profession {
     /// All profession variants.
     pub fn all() -> &'static [Profession] {
         &[
-            Self::Mining, Self::Herbalism, Self::Skinning,
-            Self::Blacksmithing, Self::Leatherworking, Self::Tailoring,
-            Self::Engineering, Self::Alchemy, Self::Enchanting,
-            Self::Jewelcrafting, Self::Inscription,
-            Self::Cooking, Self::Fishing,
+            Self::Mining,
+            Self::Herbalism,
+            Self::Skinning,
+            Self::Blacksmithing,
+            Self::Leatherworking,
+            Self::Tailoring,
+            Self::Engineering,
+            Self::Alchemy,
+            Self::Enchanting,
+            Self::Jewelcrafting,
+            Self::Inscription,
+            Self::Cooking,
+            Self::Fishing,
         ]
     }
 }
@@ -68,7 +99,9 @@ pub const MAX_SKILL_LEVEL: u16 = 450;
 /// Profession training tiers with skill caps and required character level.
 ///
 /// Ref: AzerothCore profession trainer data.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, bitcode::Encode, bitcode::Decode,
+)]
 pub enum ProfessionTier {
     Apprentice,
     Journeyman,
@@ -156,7 +189,9 @@ pub fn next_trainable_tier(
 }
 
 /// A player's skill in a single profession.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, bitcode::Encode, bitcode::Decode,
+)]
 pub struct ProfessionSkill {
     pub profession: Profession,
     pub current: u16,
@@ -188,7 +223,17 @@ impl ProfessionSkill {
 }
 
 /// A player's learned professions.
-#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+#[derive(
+    Component,
+    Debug,
+    Clone,
+    PartialEq,
+    Default,
+    Serialize,
+    Deserialize,
+    bitcode::Encode,
+    bitcode::Decode,
+)]
 pub struct PlayerProfessions {
     pub skills: Vec<ProfessionSkill>,
 }
@@ -209,7 +254,11 @@ impl PlayerProfessions {
             return Err(ProfessionError::AlreadyKnown);
         }
         if profession.is_primary() {
-            let primary_count = self.skills.iter().filter(|s| s.profession.is_primary()).count();
+            let primary_count = self
+                .skills
+                .iter()
+                .filter(|s| s.profession.is_primary())
+                .count();
             if primary_count >= MAX_PRIMARY_PROFESSIONS {
                 return Err(ProfessionError::TooManyPrimary);
             }
@@ -260,7 +309,10 @@ pub struct GatherNode {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum GatherResult {
     /// Successfully gathered items.
-    Success { items: Vec<(u32, u16)>, skilled_up: bool },
+    Success {
+        items: Vec<(u32, u16)>,
+        skilled_up: bool,
+    },
     /// Skill too low to gather this node.
     SkillTooLow,
     /// Player doesn't have the required profession.
@@ -303,9 +355,7 @@ pub fn attempt_gather(
 
     let chance = skill_up_chance(skill.current, node.required_skill, node.trivial_skill);
     let skilled_up = roll < chance;
-    if skilled_up
-        && let Some(s) = profs.get_mut(node.profession)
-    {
+    if skilled_up && let Some(s) = profs.get_mut(node.profession) {
         s.skill_up();
     }
 
@@ -420,9 +470,7 @@ pub fn attempt_craft(
 
     let chance = skill_up_chance(skill.current, recipe.required_skill, recipe.trivial_skill);
     let skilled_up = roll < chance;
-    if skilled_up
-        && let Some(s) = profs.get_mut(recipe.profession)
-    {
+    if skilled_up && let Some(s) = profs.get_mut(recipe.profession) {
         s.skill_up();
     }
 
@@ -450,23 +498,88 @@ pub struct ProfessionSpec {
 /// Ref: AzerothCore specialization quests.
 pub const PROFESSION_SPECS: &[ProfessionSpec] = &[
     // Blacksmithing
-    ProfessionSpec { id: 1, profession: Profession::Blacksmithing, name: "Weaponsmith", required_skill: 200 },
-    ProfessionSpec { id: 2, profession: Profession::Blacksmithing, name: "Armorsmith", required_skill: 200 },
+    ProfessionSpec {
+        id: 1,
+        profession: Profession::Blacksmithing,
+        name: "Weaponsmith",
+        required_skill: 200,
+    },
+    ProfessionSpec {
+        id: 2,
+        profession: Profession::Blacksmithing,
+        name: "Armorsmith",
+        required_skill: 200,
+    },
     // Leatherworking
-    ProfessionSpec { id: 3, profession: Profession::Leatherworking, name: "Elemental LW", required_skill: 225 },
-    ProfessionSpec { id: 4, profession: Profession::Leatherworking, name: "Dragonscale LW", required_skill: 225 },
-    ProfessionSpec { id: 5, profession: Profession::Leatherworking, name: "Tribal LW", required_skill: 225 },
+    ProfessionSpec {
+        id: 3,
+        profession: Profession::Leatherworking,
+        name: "Elemental LW",
+        required_skill: 225,
+    },
+    ProfessionSpec {
+        id: 4,
+        profession: Profession::Leatherworking,
+        name: "Dragonscale LW",
+        required_skill: 225,
+    },
+    ProfessionSpec {
+        id: 5,
+        profession: Profession::Leatherworking,
+        name: "Tribal LW",
+        required_skill: 225,
+    },
     // Alchemy
-    ProfessionSpec { id: 6, profession: Profession::Alchemy, name: "Elixir Master", required_skill: 325 },
-    ProfessionSpec { id: 7, profession: Profession::Alchemy, name: "Potion Master", required_skill: 325 },
-    ProfessionSpec { id: 8, profession: Profession::Alchemy, name: "Transmutation Master", required_skill: 325 },
+    ProfessionSpec {
+        id: 6,
+        profession: Profession::Alchemy,
+        name: "Elixir Master",
+        required_skill: 325,
+    },
+    ProfessionSpec {
+        id: 7,
+        profession: Profession::Alchemy,
+        name: "Potion Master",
+        required_skill: 325,
+    },
+    ProfessionSpec {
+        id: 8,
+        profession: Profession::Alchemy,
+        name: "Transmutation Master",
+        required_skill: 325,
+    },
     // Engineering
-    ProfessionSpec { id: 9, profession: Profession::Engineering, name: "Gnomish Engineer", required_skill: 200 },
-    ProfessionSpec { id: 10, profession: Profession::Engineering, name: "Goblin Engineer", required_skill: 200 },
+    ProfessionSpec {
+        id: 9,
+        profession: Profession::Engineering,
+        name: "Gnomish Engineer",
+        required_skill: 200,
+    },
+    ProfessionSpec {
+        id: 10,
+        profession: Profession::Engineering,
+        name: "Goblin Engineer",
+        required_skill: 200,
+    },
     // Tailoring
-    ProfessionSpec { id: 11, profession: Profession::Tailoring, name: "Mooncloth Tailor", required_skill: 350 },
-    ProfessionSpec { id: 12, profession: Profession::Tailoring, name: "Shadoweave Tailor", required_skill: 350 },
-    ProfessionSpec { id: 13, profession: Profession::Tailoring, name: "Spellfire Tailor", required_skill: 350 },
+    ProfessionSpec {
+        id: 11,
+        profession: Profession::Tailoring,
+        name: "Mooncloth Tailor",
+        required_skill: 350,
+    },
+    ProfessionSpec {
+        id: 12,
+        profession: Profession::Tailoring,
+        name: "Shadoweave Tailor",
+        required_skill: 350,
+    },
+    ProfessionSpec {
+        id: 13,
+        profession: Profession::Tailoring,
+        name: "Spellfire Tailor",
+        required_skill: 350,
+    },
 ];
 
 /// Get available specializations for a profession.
@@ -496,11 +609,7 @@ pub enum SpecError {
 
 impl ChosenSpecs {
     /// Choose a specialization. One per profession.
-    pub fn choose(
-        &mut self,
-        spec_id: u32,
-        profs: &PlayerProfessions,
-    ) -> Result<(), SpecError> {
+    pub fn choose(&mut self, spec_id: u32, profs: &PlayerProfessions) -> Result<(), SpecError> {
         let spec = PROFESSION_SPECS
             .iter()
             .find(|s| s.id == spec_id)
@@ -580,10 +689,7 @@ impl KnownRecipes {
     }
 
     /// Get all trainer recipes available at a skill level.
-    pub fn available_from_trainer(
-        recipes: &[Recipe],
-        skill: u16,
-    ) -> Vec<&Recipe> {
+    pub fn available_from_trainer(recipes: &[Recipe], skill: u16) -> Vec<&Recipe> {
         recipes
             .iter()
             .filter(|r| {
@@ -596,11 +702,7 @@ impl KnownRecipes {
     ///
     /// `discoverable` contains recipes with `RecipeSource::Discovery`.
     /// `roll` is 0..10000 (hundredths of percent).
-    pub fn roll_discovery(
-        &mut self,
-        discoverable: &[Recipe],
-        roll: u16,
-    ) -> Option<u32> {
+    pub fn roll_discovery(&mut self, discoverable: &[Recipe], roll: u16) -> Option<u32> {
         for recipe in discoverable {
             if let Some(RecipeSource::Discovery { chance }) = recipe.source
                 && !self.knows(recipe.id)
@@ -613,7 +715,6 @@ impl KnownRecipes {
         None
     }
 }
-
 
 #[cfg(test)]
 #[path = "profession_tests.rs"]
