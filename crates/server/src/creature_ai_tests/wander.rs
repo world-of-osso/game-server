@@ -1,0 +1,193 @@
+use super::*;
+
+#[test]
+fn idle_creature_stays_at_spawn_point() {
+    use bevy::ecs::system::RunSystemOnce;
+    use shared::components::Npc;
+
+    let mut app = App::new();
+    app.add_plugins(bevy::MinimalPlugins);
+    app.update();
+    app.update();
+
+    let entity = app
+        .world_mut()
+        .spawn((
+            Position {
+                x: 10.0,
+                y: 20.0,
+                z: 30.0,
+            },
+            Npc { template_id: 1 },
+        ))
+        .id();
+
+    let _ = app.world_mut().run_system_once(wander_system);
+    let _ = app.world_mut().run_system_once(waypoint_system);
+
+    let pos = *app.world().entity(entity).get::<Position>().unwrap();
+    assert_eq!(pos.x, 10.0);
+    assert_eq!(pos.y, 20.0);
+    assert_eq!(pos.z, 30.0);
+}
+
+#[test]
+fn wander_creature_moves_within_radius() {
+    use bevy::ecs::system::RunSystemOnce;
+
+    let spawn_x = 50.0;
+    let spawn_z = 80.0;
+    let radius = 5.0;
+
+    let mut app = App::new();
+    app.add_plugins(bevy::MinimalPlugins);
+    app.update();
+    app.update();
+
+    let entity = app
+        .world_mut()
+        .spawn((
+            Position {
+                x: spawn_x,
+                y: 0.0,
+                z: spawn_z,
+            },
+            SpawnPoint {
+                x: spawn_x,
+                y: 0.0,
+                z: spawn_z,
+                wander_distance: radius,
+                speed_walk: 1.0,
+            },
+            WanderState {
+                phase: WanderPhase::Idle,
+                target_x: 0.0,
+                target_z: 0.0,
+                idle_remaining: 0.0,
+                seed: 42,
+            },
+        ))
+        .id();
+
+    for _ in 0..500 {
+        let _ = app.world_mut().run_system_once(wander_system);
+    }
+
+    let pos = *app.world().entity(entity).get::<Position>().unwrap();
+    let dx = pos.x - spawn_x;
+    let dz = pos.z - spawn_z;
+    let dist = (dx * dx + dz * dz).sqrt();
+    assert!(
+        dist <= radius + 0.1,
+        "creature at ({}, {}) is {dist:.2} from spawn, exceeds radius {radius}",
+        pos.x,
+        pos.z,
+    );
+}
+
+#[test]
+fn wander_zero_radius_stays_at_spawn() {
+    let spawn_x = 50.0;
+    let spawn_z = 80.0;
+    let spawn = SpawnPoint {
+        x: spawn_x,
+        y: 0.0,
+        z: spawn_z,
+        wander_distance: 0.0,
+        speed_walk: 1.0,
+    };
+    let mut pos = Position {
+        x: spawn_x,
+        y: 0.0,
+        z: spawn_z,
+    };
+    let mut state = WanderState {
+        phase: WanderPhase::Idle,
+        target_x: 0.0,
+        target_z: 0.0,
+        idle_remaining: 0.0,
+        seed: 42,
+    };
+
+    for _ in 0..200 {
+        match state.phase {
+            WanderPhase::Idle => tick_idle(&mut state, 0.1, &spawn),
+            WanderPhase::Walking => tick_walk(&mut pos, &mut state, &spawn, 0.1),
+        }
+    }
+
+    assert!(
+        (pos.x - spawn_x).abs() < 0.01 && (pos.z - spawn_z).abs() < 0.01,
+        "creature at ({}, {}), expected ({spawn_x}, {spawn_z})",
+        pos.x,
+        pos.z,
+    );
+}
+
+#[test]
+fn wander_creature_returns_to_idle_after_walk() {
+    let spawn_x = 50.0;
+    let spawn_z = 80.0;
+    let radius = 5.0;
+    let spawn = SpawnPoint {
+        x: spawn_x,
+        y: 0.0,
+        z: spawn_z,
+        wander_distance: radius,
+        speed_walk: 1.0,
+    };
+    let mut pos = Position {
+        x: spawn_x,
+        y: 0.0,
+        z: spawn_z,
+    };
+    let mut state = WanderState {
+        phase: WanderPhase::Walking,
+        target_x: spawn_x + 3.0,
+        target_z: spawn_z + 2.0,
+        idle_remaining: 0.0,
+        seed: 42,
+    };
+
+    for _ in 0..500 {
+        tick_walk(&mut pos, &mut state, &spawn, 0.05);
+        if state.phase == WanderPhase::Idle {
+            break;
+        }
+    }
+
+    assert_eq!(state.phase, WanderPhase::Idle, "returned to idle");
+    assert!(state.idle_remaining > 0.0, "idle timer set");
+
+    let dx = pos.x - spawn_x;
+    let dz = pos.z - spawn_z;
+    let dist = (dx * dx + dz * dz).sqrt();
+    assert!(
+        dist <= radius + 0.1,
+        "creature at ({}, {}) is {dist:.2} from spawn, within radius {radius}",
+        pos.x,
+        pos.z,
+    );
+}
+
+#[test]
+fn wander_targets_respect_boundary_across_spawns() {
+    let cases = [
+        (0.0, 0.0, 3.0),
+        (100.0, -200.0, 10.0),
+        (-50.0, 50.0, 1.0),
+        (999.0, 999.0, 20.0),
+    ];
+    for (cx, cz, radius) in cases {
+        for seed in 0..200 {
+            let (px, pz) = pick_wander_point(cx, cz, radius, seed);
+            let dx = px - cx;
+            let dz = pz - cz;
+            let dist = (dx * dx + dz * dz).sqrt();
+            assert!(
+                dist <= radius + 0.01,
+                "center=({cx},{cz}) r={radius} seed={seed}: dist {dist:.3}",
+            );
+        }
+    }
+}
