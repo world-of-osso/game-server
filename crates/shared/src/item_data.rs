@@ -7,7 +7,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::components::{CombatRatings, EquipmentVisualSlot, UnitStats};
+use crate::components::{CombatRatings, EquipmentVisualSlot, UnitStats, weapon_damage_per_second};
 
 /// Equipment slot for an item (matches AzerothCore `InventoryType`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -311,11 +311,7 @@ impl WeaponDamageData {
 
     /// Damage per second: `average / speed`.
     pub fn dps(&self) -> f32 {
-        if self.speed > 0.0 {
-            self.average_damage() / self.speed
-        } else {
-            0.0
-        }
+        weapon_damage_per_second(self.average_damage(), self.speed)
     }
 
     /// Convert to the runtime `WeaponDamage` component used by the combat system.
@@ -530,7 +526,10 @@ impl Bag {
             }
             if slot.is_empty() {
                 let add = count.min(max_stack);
-                *slot = InvSlot { item_id, count: add };
+                *slot = InvSlot {
+                    item_id,
+                    count: add,
+                };
                 count -= add;
             }
         }
@@ -591,7 +590,12 @@ impl Inventory {
 
     /// Remove an item from any bag/backpack slot. Returns `true` if found and removed.
     pub fn remove_item(&mut self, item_id: u32) -> bool {
-        if let Some(slot) = self.backpack.slots.iter_mut().find(|s| s.item_id == item_id) {
+        if let Some(slot) = self
+            .backpack
+            .slots
+            .iter_mut()
+            .find(|s| s.item_id == item_id)
+        {
             *slot = InvSlot::default();
             return true;
         }
@@ -611,10 +615,7 @@ impl Inventory {
             return 0;
         }
         let prev = self.equipped[slot_index].item_id;
-        self.equipped[slot_index] = InvSlot {
-            item_id,
-            count: 1,
-        };
+        self.equipped[slot_index] = InvSlot { item_id, count: 1 };
         prev
     }
 
@@ -638,11 +639,14 @@ impl Inventory {
     /// Total free slots across backpack and bags.
     pub fn free_slots(&self) -> usize {
         let backpack_free = self.backpack.slots.iter().filter(|s| s.is_empty()).count();
-        let bag_free: usize = self.bags.iter().map(|b| b.slots.iter().filter(|s| s.is_empty()).count()).sum();
+        let bag_free: usize = self
+            .bags
+            .iter()
+            .map(|b| b.slots.iter().filter(|s| s.is_empty()).count())
+            .sum();
         backpack_free + bag_free
     }
 }
-
 
 #[cfg(test)]
 #[path = "item_data_tests.rs"]
