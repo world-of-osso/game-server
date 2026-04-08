@@ -348,35 +348,19 @@ fn process_clear_item_requests(
     mut senders: Query<&mut MessageSender<TradeStateUpdate>>,
 ) {
     let Some(db) = db else { return };
-    for (conn_entity, link, mut receiver) in &mut receivers {
-        let Ok((_, _, _, client_id)) = players.get(link.0) else {
-            send_trade_error(
-                conn_entity,
-                &mut senders,
-                "trade is unavailable: local player entity missing",
-            );
-            continue;
-        };
-        for req in receiver.receive() {
-            match trade.manager.clear_item(client_id.0, usize::from(req.slot)) {
-                Ok(()) => {
-                    if let Some(session) = trade.manager.get_session(client_id.0) {
-                        broadcast_trade_state(
-                            &db.db,
-                            session,
-                            &players,
-                            &connections,
-                            &mut senders,
-                            None,
-                        );
-                    }
-                }
-                Err(error) => {
-                    send_trade_error(conn_entity, &mut senders, trade_error_message(error));
-                }
-            }
-        }
-    }
+    process_trade_offer_updates(
+        &mut receivers,
+        &players,
+        &connections,
+        db.as_ref(),
+        &mut trade.manager,
+        &mut senders,
+        |_, client_id, req, manager| {
+            manager
+                .clear_item(client_id, usize::from(req.slot))
+                .map_err(|error| trade_error_message(error).to_string())
+        },
+    );
 }
 
 fn process_set_money_requests(
@@ -391,37 +375,54 @@ fn process_set_money_requests(
     mut senders: Query<&mut MessageSender<TradeStateUpdate>>,
 ) {
     let Some(db) = db else { return };
-    for (conn_entity, link, mut receiver) in &mut receivers {
+    process_trade_offer_updates(
+        &mut receivers,
+        &players,
+        &connections,
+        db.as_ref(),
+        &mut trade.manager,
+        &mut senders,
+        |db, client_id, req, manager| {
+            let inventory = persistence::load_inventory(db, client_id);
+            if inventory.gold < req.copper {
+                return Err("not enough gold for trade".into());
+            }
+            manager
+                .set_gold(client_id, req.copper)
+                .map_err(|error| trade_error_message(error).to_string())
+        },
+    );
+}
+
+fn process_trade_offer_updates<R, F>(
+    receivers: &mut Query<(Entity, &PlayerLink, &mut MessageReceiver<R>), With<Authenticated>>,
+    players: &PlayerQuery,
+    connections: &ConnectionQuery,
+    db: &GameDatabase,
+    manager: &mut TradeManager,
+    senders: &mut Query<&mut MessageSender<TradeStateUpdate>>,
+    mut apply: F,
+) where
+    R: lightyear::prelude::Message,
+    F: FnMut(&redb::Database, u64, &R, &mut TradeManager) -> Result<(), String>,
+{
+    for (conn_entity, link, mut receiver) in receivers.iter_mut() {
         let Ok((_, _, _, client_id)) = players.get(link.0) else {
             send_trade_error(
                 conn_entity,
-                &mut senders,
+                senders,
                 "trade is unavailable: local player entity missing",
             );
             continue;
         };
         for req in receiver.receive() {
-            let inventory = persistence::load_inventory(&db.db, client_id.0);
-            if inventory.gold < req.copper {
-                send_trade_error(conn_entity, &mut senders, "not enough gold for trade");
-                continue;
-            }
-            match trade.manager.set_gold(client_id.0, req.copper) {
+            match apply(&db.db, client_id.0, &req, manager) {
                 Ok(()) => {
-                    if let Some(session) = trade.manager.get_session(client_id.0) {
-                        broadcast_trade_state(
-                            &db.db,
-                            session,
-                            &players,
-                            &connections,
-                            &mut senders,
-                            None,
-                        );
+                    if let Some(session) = manager.get_session(client_id.0) {
+                        broadcast_trade_state(&db.db, session, players, connections, senders, None);
                     }
                 }
-                Err(error) => {
-                    send_trade_error(conn_entity, &mut senders, trade_error_message(error));
-                }
+                Err(error) => send_trade_error(conn_entity, senders, &error),
             }
         }
     }
