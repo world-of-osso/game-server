@@ -193,6 +193,21 @@ pub struct WorldMapSnapshot {
     pub discovered_zone_ids: Vec<u32>,
 }
 
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct FriendCharacterSnapshot {
+    pub name: String,
+    pub level: u16,
+    pub class_name: String,
+    pub area: String,
+    pub online: bool,
+    pub note: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct FriendsSnapshot {
+    pub entries: Vec<FriendCharacterSnapshot>,
+}
+
 pub fn register_snapshot_messages(app: &mut App) {
     app.register_message::<QuestLogSnapshot>()
         .add_direction(NetworkDirection::ServerToClient);
@@ -215,5 +230,7 @@ pub fn register_snapshot_messages(app: &mut App) {
     app.register_message::<AchievementToastSnapshot>()
         .add_direction(NetworkDirection::ServerToClient);
     app.register_message::<WorldMapSnapshot>()
+        .add_direction(NetworkDirection::ServerToClient);
+    app.register_message::<FriendsSnapshot>()
         .add_direction(NetworkDirection::ServerToClient);
 }

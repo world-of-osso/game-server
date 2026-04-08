@@ -49,6 +49,9 @@ pub struct AchievementChannel;
 /// Reliable ordered channel for world map updates, bidirectional.
 pub struct WorldMapChannel;
 
+/// Reliable ordered channel for friends updates, bidirectional.
+pub struct FriendsChannel;
+
 /// Reliable ordered channel for collection updates, bidirectional.
 pub struct CollectionChannel;
 
@@ -711,6 +714,26 @@ pub struct WorldMapStateUpdate {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct QueryFriends;
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct AddFriend {
+    pub name: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct RemoveFriend {
+    pub name: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct FriendsStateUpdate {
+    pub snapshot: Option<FriendsSnapshot>,
+    pub message: Option<String>,
+    pub error: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct SummonMount {
     pub mount_id: u32,
 }
@@ -792,6 +815,7 @@ fn register_messages(app: &mut App) {
     register_reputation_messages(app);
     register_achievement_messages(app);
     register_world_map_messages(app);
+    register_friends_messages(app);
     register_collection_messages(app);
     register_currency_messages(app);
     crate::protocol_snapshots::register_snapshot_messages(app);
@@ -988,6 +1012,17 @@ fn register_world_map_messages(app: &mut App) {
         .add_direction(NetworkDirection::ServerToClient);
 }
 
+fn register_friends_messages(app: &mut App) {
+    app.register_message::<QueryFriends>()
+        .add_direction(NetworkDirection::ClientToServer);
+    app.register_message::<AddFriend>()
+        .add_direction(NetworkDirection::ClientToServer);
+    app.register_message::<RemoveFriend>()
+        .add_direction(NetworkDirection::ClientToServer);
+    app.register_message::<FriendsStateUpdate>()
+        .add_direction(NetworkDirection::ServerToClient);
+}
+
 fn register_collection_messages(app: &mut App) {
     app.register_message::<SummonMount>()
         .add_direction(NetworkDirection::ClientToServer);
@@ -1046,6 +1081,7 @@ fn register_bidirectional_channels(app: &mut App) {
     add_reliable_channel::<ReputationChannel>(app, NetworkDirection::Bidirectional);
     add_reliable_channel::<AchievementChannel>(app, NetworkDirection::Bidirectional);
     add_reliable_channel::<WorldMapChannel>(app, NetworkDirection::Bidirectional);
+    add_reliable_channel::<FriendsChannel>(app, NetworkDirection::Bidirectional);
     add_reliable_channel::<CollectionChannel>(app, NetworkDirection::Bidirectional);
     add_reliable_channel::<CurrencyChannel>(app, NetworkDirection::Bidirectional);
 }
