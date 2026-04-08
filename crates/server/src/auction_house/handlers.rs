@@ -108,8 +108,7 @@ pub(super) fn process_claim_mail_requests(
     db: Option<Res<GameDatabase>>,
     mut senders: Query<&mut MessageSender<AuctionOperationResponse>>,
 ) {
-    let Some(db) = db else { return };
-    process_in_world_requests(&mut receivers, &mut senders, |character_id, req| {
+    process_operation_requests(&mut receivers, db, &mut senders, |db, character_id, req| {
         claim_mail(&db.db, character_id, req.mail_id)
     });
 }
@@ -120,8 +119,7 @@ pub(super) fn process_create_requests(
     mut state: ResMut<AuctionHouseState>,
     mut senders: Query<&mut MessageSender<AuctionOperationResponse>>,
 ) {
-    let Some(db) = db else { return };
-    process_in_world_requests(&mut receivers, &mut senders, |character_id, req| {
+    process_operation_requests(&mut receivers, db, &mut senders, |db, character_id, req| {
         create_auction(&db.db, &mut state, character_id, &req)
     });
 }
@@ -235,6 +233,21 @@ fn process_in_world_requests<M, R, F>(
             send_auction_message(senders, entity, response);
         }
     }
+}
+
+fn process_operation_requests<M, F>(
+    receivers: &mut Query<(Entity, &InWorld, &mut MessageReceiver<M>)>,
+    db: Option<Res<GameDatabase>>,
+    senders: &mut Query<&mut MessageSender<AuctionOperationResponse>>,
+    mut build_response: F,
+) where
+    M: lightyear::prelude::Message,
+    F: FnMut(&GameDatabase, u64, M) -> AuctionOperationResponse,
+{
+    let Some(db) = db else { return };
+    process_in_world_requests(receivers, senders, |character_id, req| {
+        build_response(&db, character_id, req)
+    });
 }
 
 fn send_auction_message<M>(senders: &mut Query<&mut MessageSender<M>>, entity: Entity, message: M)
