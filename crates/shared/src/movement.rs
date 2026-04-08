@@ -21,6 +21,9 @@ pub const SWIM_SPEED: f32 = 4.7222;
 /// Backward movement speed multiplier (WoW: ~60% of forward).
 pub const BACKPEDAL_MULTIPLIER: f32 = 0.6;
 
+/// Strafing movement speed multiplier.
+pub const STRAFE_MULTIPLIER: f32 = 0.8;
+
 /// Jump impulse velocity in yards/sec.
 pub const JUMP_IMPULSE: f32 = 9.0;
 

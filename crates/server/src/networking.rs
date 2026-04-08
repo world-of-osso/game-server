@@ -450,21 +450,29 @@ fn compute_movement_speed(
         DEFAULT_WALK_SPEED
     };
     let aura_mult = auras.map_or(1.0, |a| a.movement_speed_multiplier());
-    let backpedal_mult =
-        if dir_len > 0.001 && is_backpedaling(input.facing_yaw, &input.direction, dir_len) {
-            shared::movement::BACKPEDAL_MULTIPLIER
-        } else {
-            1.0
-        };
-    base * aura_mult * backpedal_mult
+    let direction_mult = movement_speed_multiplier(input.facing_yaw, &input.direction, dir_len);
+    base * aura_mult * direction_mult
 }
 
-/// Check if movement direction is opposite to facing (backpedaling).
-fn is_backpedaling(facing_yaw: f32, direction: &[f32; 3], dir_len: f32) -> bool {
-    let face_x = facing_yaw.cos();
-    let face_y = facing_yaw.sin();
-    let dot = (direction[0] * face_x + direction[1] * face_y) / dir_len;
-    dot < -0.5 // More than 120° from facing
+fn movement_speed_multiplier(facing_yaw: f32, direction: &[f32; 3], dir_len: f32) -> f32 {
+    if dir_len <= 0.001 {
+        return 1.0;
+    }
+
+    let dot = facing_alignment(facing_yaw, direction, dir_len);
+    if dot < -0.5 {
+        shared::movement::BACKPEDAL_MULTIPLIER
+    } else if dot.abs() < 0.5 {
+        shared::movement::STRAFE_MULTIPLIER
+    } else {
+        1.0
+    }
+}
+
+fn facing_alignment(facing_yaw: f32, direction: &[f32; 3], dir_len: f32) -> f32 {
+    let face_x = facing_yaw.sin();
+    let face_z = facing_yaw.cos();
+    (direction[0] * face_x + direction[2] * face_z) / dir_len
 }
 
 /// Reject movement if distance exceeds max speed with tolerance.

@@ -422,14 +422,14 @@ fn backward_movement_at_reduced_speed() {
     let bwd_player = spawn_player(app.world_mut(), 0.0, 0.0, 0.0);
 
     let fwd_input = PlayerInput {
-        direction: [1.0, 0.0, 0.0],
+        direction: [0.0, 0.0, 1.0],
         facing_yaw: 0.0,
         jumping: false,
         running: true,
         swimming: false,
     };
     let bwd_input = PlayerInput {
-        direction: [-1.0, 0.0, 0.0],
+        direction: [0.0, 0.0, -1.0],
         facing_yaw: 0.0,
         jumping: false,
         running: true,
@@ -466,8 +466,8 @@ fn backward_movement_at_reduced_speed() {
         "backward at 60%: {bwd_speed}, expected {expected_bwd}",
     );
 
-    let fwd_pos = app.world().entity(fwd_player).get::<Position>().unwrap().x;
-    let bwd_pos = app.world().entity(bwd_player).get::<Position>().unwrap().x;
+    let fwd_pos = app.world().entity(fwd_player).get::<Position>().unwrap().z;
+    let bwd_pos = app.world().entity(bwd_player).get::<Position>().unwrap().z;
     assert!(fwd_pos > 0.0);
     assert!(bwd_pos < 0.0);
     assert!(
@@ -479,14 +479,28 @@ fn backward_movement_at_reduced_speed() {
 }
 
 #[test]
-fn strafing_speed_matches_forward_speed() {
+fn strafing_speed_is_reduced_but_faster_than_backpedal() {
     let mut app = setup_app_with_time();
     let fwd_player = spawn_player(app.world_mut(), 0.0, 0.0, 0.0);
     let strafe_player = spawn_player(app.world_mut(), 0.0, 0.0, 0.0);
+    let backpedal_player = spawn_player(app.world_mut(), 0.0, 0.0, 0.0);
 
-    let fwd_input = make_input(1.0, 0.0, 0.0);
+    let fwd_input = PlayerInput {
+        direction: [0.0, 0.0, 1.0],
+        facing_yaw: 0.0,
+        jumping: false,
+        running: true,
+        swimming: false,
+    };
     let strafe_input = PlayerInput {
-        direction: [0.0, 1.0, 0.0],
+        direction: [1.0, 0.0, 0.0],
+        facing_yaw: 0.0,
+        jumping: false,
+        running: true,
+        swimming: false,
+    };
+    let backpedal_input = PlayerInput {
+        direction: [0.0, 0.0, -1.0],
         facing_yaw: 0.0,
         jumping: false,
         running: true,
@@ -497,6 +511,7 @@ fn strafing_speed_matches_forward_speed() {
         move |mut q: Query<PlayerMovement, With<Player>>, time: Res<Time>| {
             apply_movement_input(&fwd_input, fwd_player, &mut q, &time);
             apply_movement_input(&strafe_input, strafe_player, &mut q, &time);
+            apply_movement_input(&backpedal_input, backpedal_player, &mut q, &time);
         },
     );
 
@@ -512,20 +527,37 @@ fn strafing_speed_matches_forward_speed() {
         .get::<MovementSpeed>()
         .unwrap()
         .0;
+    let backpedal_speed = app
+        .world()
+        .entity(backpedal_player)
+        .get::<MovementSpeed>()
+        .unwrap()
+        .0;
+    let expected_strafe = DEFAULT_RUN_SPEED * shared::movement::STRAFE_MULTIPLIER;
     assert!(
-        (fwd_speed - strafe_speed).abs() < 1e-5,
-        "strafe {strafe_speed} should match forward {fwd_speed}",
+        (strafe_speed - expected_strafe).abs() < 1e-5,
+        "strafe {strafe_speed} should be reduced to {expected_strafe}",
     );
+    assert!(strafe_speed < fwd_speed);
+    assert!(strafe_speed > backpedal_speed);
 
-    let fwd_dist = app.world().entity(fwd_player).get::<Position>().unwrap().x;
+    let fwd_dist = app.world().entity(fwd_player).get::<Position>().unwrap().z;
     let strafe_dist = app
         .world()
         .entity(strafe_player)
         .get::<Position>()
         .unwrap()
-        .y;
+        .x;
+    let backpedal_dist = app
+        .world()
+        .entity(backpedal_player)
+        .get::<Position>()
+        .unwrap()
+        .z
+        .abs();
     assert!(
-        (fwd_dist - strafe_dist).abs() < 1e-5,
-        "strafe distance {strafe_dist} should match forward {fwd_dist}",
+        (strafe_dist - fwd_dist * shared::movement::STRAFE_MULTIPLIER).abs() < 1e-5,
+        "strafe distance {strafe_dist} should be reduced from forward {fwd_dist}",
     );
+    assert!(strafe_dist > backpedal_dist);
 }
