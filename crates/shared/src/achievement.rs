@@ -3,6 +3,7 @@
 //! Ref: AzerothCore `AchievementMgr.cpp`, `Achievement.dbc`.
 
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeSet;
 
 /// What a player must do to earn an achievement.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -66,8 +67,14 @@ impl CriteriaProgress {
     /// Create initial progress from a criteria definition.
     pub fn from_criteria(criteria: &AchievementCriteria) -> Self {
         match criteria {
-            AchievementCriteria::Kill { count, .. } => Self::Counter { current: 0, required: *count },
-            AchievementCriteria::CollectItem { count, .. } => Self::Counter { current: 0, required: *count },
+            AchievementCriteria::Kill { count, .. } => Self::Counter {
+                current: 0,
+                required: *count,
+            },
+            AchievementCriteria::CollectItem { count, .. } => Self::Counter {
+                current: 0,
+                required: *count,
+            },
             AchievementCriteria::CompleteQuest { .. }
             | AchievementCriteria::ReachLevel { .. }
             | AchievementCriteria::VisitArea { .. } => Self::Done(false),
@@ -109,7 +116,11 @@ impl AchievementProgress {
     pub fn new(achievement: &AchievementData) -> Self {
         Self {
             achievement_id: achievement.id,
-            criteria: achievement.criteria.iter().map(CriteriaProgress::from_criteria).collect(),
+            criteria: achievement
+                .criteria
+                .iter()
+                .map(CriteriaProgress::from_criteria)
+                .collect(),
             completed: false,
         }
     }
@@ -129,7 +140,9 @@ impl AchievementProgress {
     /// Record a creature kill. Updates matching Kill criteria.
     pub fn record_kill(&mut self, creature_id: u32, achievement: &AchievementData) {
         for (progress, criteria) in self.criteria.iter_mut().zip(&achievement.criteria) {
-            if let AchievementCriteria::Kill { creature_id: cid, .. } = criteria
+            if let AchievementCriteria::Kill {
+                creature_id: cid, ..
+            } = criteria
                 && *cid == creature_id
             {
                 progress.increment(1);
@@ -194,14 +207,17 @@ pub struct CharacterAchievements {
 /// Account-wide achievement tracking (shared across all characters).
 #[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
 pub struct AccountAchievements {
-    pub completed_ids: Vec<u32>, // bounded: ~2000 achievements max
+    pub completed_ids: BTreeSet<u32>,
     pub total_points: u32,
 }
 
 impl CharacterAchievements {
     /// Get or create progress for an achievement.
     pub fn get_or_create(&mut self, achievement: &AchievementData) -> &mut AchievementProgress {
-        let pos = self.progress.iter().position(|p| p.achievement_id == achievement.id);
+        let pos = self
+            .progress
+            .iter()
+            .position(|p| p.achievement_id == achievement.id);
         if pos.is_none() {
             self.progress.push(AchievementProgress::new(achievement));
         }
@@ -258,10 +274,9 @@ impl CharacterAchievements {
 impl AccountAchievements {
     /// Record an account-wide achievement as completed.
     pub fn complete(&mut self, achievement: &AchievementData) {
-        if self.completed_ids.contains(&achievement.id) {
+        if !self.completed_ids.insert(achievement.id) {
             return;
         }
-        self.completed_ids.push(achievement.id);
         if !achievement.feat_of_strength {
             self.total_points += achievement.points as u32;
         }
@@ -351,10 +366,22 @@ mod tests {
             name: "For the Alliance!".into(),
             description: "Slay the leaders of the Horde.".into(),
             criteria: vec![
-                AchievementCriteria::Kill { creature_id: 1, count: 1 },
-                AchievementCriteria::Kill { creature_id: 2, count: 1 },
-                AchievementCriteria::Kill { creature_id: 3, count: 1 },
-                AchievementCriteria::Kill { creature_id: 4, count: 1 },
+                AchievementCriteria::Kill {
+                    creature_id: 1,
+                    count: 1,
+                },
+                AchievementCriteria::Kill {
+                    creature_id: 2,
+                    count: 1,
+                },
+                AchievementCriteria::Kill {
+                    creature_id: 3,
+                    count: 1,
+                },
+                AchievementCriteria::Kill {
+                    creature_id: 4,
+                    count: 1,
+                },
             ],
             points: 20,
             reward: Some(AchievementReward::Title("of the Alliance".into())),
@@ -384,10 +411,16 @@ mod tests {
     #[test]
     fn criteria_all_variants() {
         let criteria: [AchievementCriteria; 5] = [
-            AchievementCriteria::Kill { creature_id: 1, count: 10 },
+            AchievementCriteria::Kill {
+                creature_id: 1,
+                count: 10,
+            },
             AchievementCriteria::CompleteQuest { quest_id: 100 },
             AchievementCriteria::ReachLevel { level: 80 },
-            AchievementCriteria::CollectItem { item_id: 50, count: 100 },
+            AchievementCriteria::CollectItem {
+                item_id: 50,
+                count: 100,
+            },
             AchievementCriteria::VisitArea { area_id: 1 },
         ];
         assert_eq!(criteria.len(), 5);
@@ -397,7 +430,10 @@ mod tests {
     fn reward_all_variants() {
         let rewards: [AchievementReward; 3] = [
             AchievementReward::Title("Champion".into()),
-            AchievementReward::Item { item_id: 100, count: 1 },
+            AchievementReward::Item {
+                item_id: 100,
+                count: 1,
+            },
             AchievementReward::Spell { spell_id: 200 },
         ];
         assert_eq!(rewards.len(), 3);
@@ -416,9 +452,17 @@ mod tests {
     #[test]
     fn kill_criteria_tracks_count() {
         let a = AchievementData {
-            id: 1, name: "Kill 5 Wolves".into(), description: "".into(),
-            criteria: vec![AchievementCriteria::Kill { creature_id: 10, count: 5 }],
-            points: 10, reward: None, account_wide: false, feat_of_strength: false,
+            id: 1,
+            name: "Kill 5 Wolves".into(),
+            description: "".into(),
+            criteria: vec![AchievementCriteria::Kill {
+                creature_id: 10,
+                count: 5,
+            }],
+            points: 10,
+            reward: None,
+            account_wide: false,
+            feat_of_strength: false,
         };
         let mut progress = AchievementProgress::new(&a);
         assert!(!progress.completed);
@@ -437,9 +481,17 @@ mod tests {
     #[test]
     fn kill_wrong_creature_ignored() {
         let a = AchievementData {
-            id: 1, name: "".into(), description: "".into(),
-            criteria: vec![AchievementCriteria::Kill { creature_id: 10, count: 1 }],
-            points: 5, reward: None, account_wide: false, feat_of_strength: false,
+            id: 1,
+            name: "".into(),
+            description: "".into(),
+            criteria: vec![AchievementCriteria::Kill {
+                creature_id: 10,
+                count: 1,
+            }],
+            points: 5,
+            reward: None,
+            account_wide: false,
+            feat_of_strength: false,
         };
         let mut progress = AchievementProgress::new(&a);
         progress.record_kill(99, &a); // wrong creature
@@ -459,9 +511,14 @@ mod tests {
     #[test]
     fn quest_criteria() {
         let a = AchievementData {
-            id: 1, name: "".into(), description: "".into(),
+            id: 1,
+            name: "".into(),
+            description: "".into(),
             criteria: vec![AchievementCriteria::CompleteQuest { quest_id: 100 }],
-            points: 5, reward: None, account_wide: false, feat_of_strength: false,
+            points: 5,
+            reward: None,
+            account_wide: false,
+            feat_of_strength: false,
         };
         let mut progress = AchievementProgress::new(&a);
         progress.record_quest(100, &a);
@@ -471,9 +528,14 @@ mod tests {
     #[test]
     fn visit_criteria() {
         let a = AchievementData {
-            id: 1, name: "".into(), description: "".into(),
+            id: 1,
+            name: "".into(),
+            description: "".into(),
             criteria: vec![AchievementCriteria::VisitArea { area_id: 42 }],
-            points: 5, reward: None, account_wide: false, feat_of_strength: false,
+            points: 5,
+            reward: None,
+            account_wide: false,
+            feat_of_strength: false,
         };
         let mut progress = AchievementProgress::new(&a);
         progress.record_visit(42, &a);
@@ -483,9 +545,17 @@ mod tests {
     #[test]
     fn collect_criteria() {
         let a = AchievementData {
-            id: 1, name: "".into(), description: "".into(),
-            criteria: vec![AchievementCriteria::CollectItem { item_id: 50, count: 10 }],
-            points: 5, reward: None, account_wide: false, feat_of_strength: false,
+            id: 1,
+            name: "".into(),
+            description: "".into(),
+            criteria: vec![AchievementCriteria::CollectItem {
+                item_id: 50,
+                count: 10,
+            }],
+            points: 5,
+            reward: None,
+            account_wide: false,
+            feat_of_strength: false,
         };
         let mut progress = AchievementProgress::new(&a);
         progress.record_collect(50, 7, &a);
@@ -497,12 +567,23 @@ mod tests {
     #[test]
     fn multi_criteria_all_required() {
         let a = AchievementData {
-            id: 614, name: "For the Alliance!".into(), description: "".into(),
+            id: 614,
+            name: "For the Alliance!".into(),
+            description: "".into(),
             criteria: vec![
-                AchievementCriteria::Kill { creature_id: 1, count: 1 },
-                AchievementCriteria::Kill { creature_id: 2, count: 1 },
+                AchievementCriteria::Kill {
+                    creature_id: 1,
+                    count: 1,
+                },
+                AchievementCriteria::Kill {
+                    creature_id: 2,
+                    count: 1,
+                },
             ],
-            points: 20, reward: None, account_wide: false, feat_of_strength: false,
+            points: 20,
+            reward: None,
+            account_wide: false,
+            feat_of_strength: false,
         };
         let mut progress = AchievementProgress::new(&a);
         progress.record_kill(1, &a);
@@ -587,9 +668,14 @@ mod tests {
     #[test]
     fn feat_of_strength_no_points() {
         let a = AchievementData {
-            id: 99, name: "Feat".into(), description: "".into(),
+            id: 99,
+            name: "Feat".into(),
+            description: "".into(),
             criteria: vec![AchievementCriteria::ReachLevel { level: 1 }],
-            points: 0, reward: None, account_wide: false, feat_of_strength: true,
+            points: 0,
+            reward: None,
+            account_wide: false,
+            feat_of_strength: true,
         };
         let mut char_ach = CharacterAchievements::default();
         let mut acct = AccountAchievements::default();

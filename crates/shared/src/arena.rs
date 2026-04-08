@@ -63,7 +63,12 @@ pub enum ArenaTeamError {
 
 impl ArenaTeam {
     /// Create a new arena team with the captain as the sole member.
-    pub fn new(id: u64, name: String, bracket: ArenaBracket, captain: u64) -> Result<Self, ArenaTeamError> {
+    pub fn new(
+        id: u64,
+        name: String,
+        bracket: ArenaBracket,
+        captain: u64,
+    ) -> Result<Self, ArenaTeamError> {
         if name.is_empty() {
             return Err(ArenaTeamError::EmptyName);
         }
@@ -82,7 +87,7 @@ impl ArenaTeam {
         if self.roster.len() >= MAX_ROSTER_SIZE {
             return Err(ArenaTeamError::RosterFull);
         }
-        if self.roster.contains(&player) {
+        if self.has_member(player) {
             return Err(ArenaTeamError::AlreadyOnRoster);
         }
         self.roster.push(player);
@@ -94,7 +99,7 @@ impl ArenaTeam {
         if player == self.captain {
             return Err(ArenaTeamError::CannotRemoveCaptain);
         }
-        if !self.roster.contains(&player) {
+        if !self.has_member(player) {
             return Err(ArenaTeamError::NotOnRoster);
         }
         self.roster.retain(|&p| p != player);
@@ -108,11 +113,15 @@ impl ArenaTeam {
 
     /// Transfer captaincy to another roster member.
     pub fn set_captain(&mut self, new_captain: u64) -> Result<(), ArenaTeamError> {
-        if !self.roster.contains(&new_captain) {
+        if !self.has_member(new_captain) {
             return Err(ArenaTeamError::NotOnRoster);
         }
         self.captain = new_captain;
         Ok(())
+    }
+
+    fn has_member(&self, player: u64) -> bool {
+        self.roster.iter().any(|&member| member == player)
     }
 
     /// Number of players on the roster.
@@ -148,6 +157,8 @@ pub enum ArenaQueueError {
     AlreadyQueued,
     /// Not enough players specified (need exactly bracket team_size).
     WrongPlayerCount,
+    /// The same player was listed more than once for the queued match.
+    DuplicatePlayer,
     /// A listed player is not on the team roster.
     PlayerNotOnRoster,
 }
@@ -188,7 +199,10 @@ impl ArenaQueue {
         if players.len() != team.bracket.team_size() {
             return Err(ArenaQueueError::WrongPlayerCount);
         }
-        if !players.iter().all(|p| team.roster.contains(p)) {
+        if has_duplicate_players(&players) {
+            return Err(ArenaQueueError::DuplicatePlayer);
+        }
+        if !players_on_roster(team, &players) {
             return Err(ArenaQueueError::PlayerNotOnRoster);
         }
         self.entries.push(ArenaQueueEntry {
@@ -260,6 +274,15 @@ impl ArenaQueue {
 
         Some(result)
     }
+}
+
+fn has_duplicate_players(players: &[u64]) -> bool {
+    let mut seen = std::collections::BTreeSet::new();
+    players.iter().any(|player| !seen.insert(*player))
+}
+
+fn players_on_roster(team: &ArenaTeam, players: &[u64]) -> bool {
+    players.iter().all(|player| team.has_member(*player))
 }
 
 /// Find the closest-rated pair of teams within `MAX_RATING_DIFF`.
@@ -524,9 +547,10 @@ impl PlayerSeasonHistory {
         season: u32,
         bracket: ArenaBracket,
     ) -> &mut SeasonStats {
-        let exists = self.entries.iter().any(|e| {
-            e.player == player && e.season == season && e.bracket == bracket
-        });
+        let exists = self
+            .entries
+            .iter()
+            .any(|e| e.player == player && e.season == season && e.bracket == bracket);
         if !exists {
             self.entries.push(SeasonStats::new(player, season, bracket));
         }
@@ -537,15 +561,10 @@ impl PlayerSeasonHistory {
     }
 
     /// Get stats for a player/season/bracket (read-only).
-    pub fn get(
-        &self,
-        player: u64,
-        season: u32,
-        bracket: ArenaBracket,
-    ) -> Option<&SeasonStats> {
-        self.entries.iter().find(|e| {
-            e.player == player && e.season == season && e.bracket == bracket
-        })
+    pub fn get(&self, player: u64, season: u32, bracket: ArenaBracket) -> Option<&SeasonStats> {
+        self.entries
+            .iter()
+            .find(|e| e.player == player && e.season == season && e.bracket == bracket)
     }
 
     /// All entries for a specific player across seasons and brackets.
