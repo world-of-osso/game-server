@@ -40,6 +40,9 @@ pub struct TalentChannel;
 /// Reliable ordered channel for profession operations, bidirectional.
 pub struct ProfessionChannel;
 
+/// Reliable ordered channel for reputation updates, bidirectional.
+pub struct ReputationChannel;
+
 /// Reliable ordered channel for inspect operations, bidirectional.
 pub struct InspectChannel;
 
@@ -673,6 +676,13 @@ pub struct ProfessionStateUpdate {
     pub error: Option<String>,
 }
 
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct ReputationStateUpdate {
+    pub snapshot: Option<ReputationSnapshot>,
+    pub message: Option<String>,
+    pub error: Option<String>,
+}
+
 /// Registers shared protocol: components for replication and channels.
 /// Must be added AFTER `ServerPlugins`/`ClientPlugins` but BEFORE any entity is spawned.
 pub struct ProtocolPlugin;
@@ -707,6 +717,7 @@ fn register_messages(app: &mut App) {
     register_auction_messages(app);
     register_trade_messages(app);
     register_talent_messages(app);
+    register_reputation_messages(app);
     register_inspect_messages(app);
     register_duel_messages(app);
     register_profession_messages(app);
@@ -889,6 +900,11 @@ fn register_profession_messages(app: &mut App) {
         .add_direction(NetworkDirection::ServerToClient);
 }
 
+fn register_reputation_messages(app: &mut App) {
+    app.register_message::<ReputationStateUpdate>()
+        .add_direction(NetworkDirection::ServerToClient);
+}
+
 fn register_channels(app: &mut App) {
     app.add_channel::<MovementChannel>(ChannelSettings {
         mode: ChannelMode::UnorderedUnreliable,
@@ -957,6 +973,12 @@ fn register_channels(app: &mut App) {
     .add_direction(NetworkDirection::Bidirectional);
 
     app.add_channel::<ProfessionChannel>(ChannelSettings {
+        mode: ChannelMode::OrderedReliable(default()),
+        ..default()
+    })
+    .add_direction(NetworkDirection::Bidirectional);
+
+    app.add_channel::<ReputationChannel>(ChannelSettings {
         mode: ChannelMode::OrderedReliable(default()),
         ..default()
     })

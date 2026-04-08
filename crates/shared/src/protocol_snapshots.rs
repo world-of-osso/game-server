@@ -140,6 +140,19 @@ pub struct ProfessionRecipeSnapshot {
     pub cooldown: Option<String>,
 }
 
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct ReputationSnapshot {
+    pub entries: Vec<ReputationEntrySnapshot>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct ReputationEntrySnapshot {
+    pub faction_id: u32,
+    pub faction_name: String,
+    pub standing: String,
+    pub value: i32,
+}
+
 pub fn register_snapshot_messages(app: &mut App) {
     app.register_message::<QuestLogSnapshot>()
         .add_direction(NetworkDirection::ServerToClient);
@@ -152,5 +165,7 @@ pub fn register_snapshot_messages(app: &mut App) {
     app.register_message::<CollectionSnapshot>()
         .add_direction(NetworkDirection::ServerToClient);
     app.register_message::<ProfessionSnapshot>()
+        .add_direction(NetworkDirection::ServerToClient);
+    app.register_message::<ReputationSnapshot>()
         .add_direction(NetworkDirection::ServerToClient);
 }

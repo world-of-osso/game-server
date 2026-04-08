@@ -4,13 +4,14 @@
 //! through quest turn-ins, mob kills, and repeatable activities.
 //! Ref: AzerothCore `ReputationMgr.cpp`, `FactionEntry`.
 
+use bevy::prelude::Component;
 use serde::{Deserialize, Serialize};
 
 /// Standing tiers with their numeric thresholds.
 ///
 /// Each tier spans a range of reputation points. The total range
 /// from Hated to Exalted is 84,000 points (retail WoW values).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, bitcode::Encode, bitcode::Decode)]
 pub enum Standing {
     Hated,
     Hostile,
@@ -90,7 +91,7 @@ pub fn tier_progress(rep: i32) -> (i32, i32) {
 }
 
 /// A spillover rule: gaining rep with one faction affects another.
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, bitcode::Encode, bitcode::Decode)]
 pub struct SpilloverRule {
     /// Target faction that receives the spillover.
     pub faction_id: u32,
@@ -101,7 +102,7 @@ pub struct SpilloverRule {
 }
 
 /// Static definition of a faction.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, bitcode::Encode, bitcode::Decode)]
 pub struct FactionData {
     /// Unique faction ID.
     pub id: u32,
@@ -231,7 +232,7 @@ pub struct FactionDisplayEntry {
 }
 
 /// Per-character reputation tracker across all factions.
-#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+#[derive(Component, Debug, Clone, PartialEq, Default, Serialize, Deserialize, bitcode::Encode, bitcode::Decode)]
 pub struct CharacterReputation {
     /// faction_id → current reputation value.
     values: HashMap<u32, i32>,
@@ -239,6 +240,39 @@ pub struct CharacterReputation {
     tracked: Vec<u32>,
     /// The single faction displayed on the XP/rep bar (if any).
     watched: Option<u32>,
+}
+
+/// Minimal built-in faction registry used by the gameplay server today.
+pub fn default_faction_registry() -> FactionRegistry {
+    let mut registry = FactionRegistry::new();
+    registry.add(FactionData {
+        id: 72,
+        name: "Stormwind".to_string(),
+        base_standing: vec![(1, 21_000), (2, 0)],
+        spillover: vec![
+            SpilloverRule {
+                faction_id: 47,
+                rate: 0.25,
+            },
+            SpilloverRule {
+                faction_id: 76,
+                rate: -0.5,
+            },
+        ],
+    });
+    registry.add(FactionData {
+        id: 76,
+        name: "Orgrimmar".to_string(),
+        base_standing: vec![(2, 21_000), (1, 0)],
+        spillover: Vec::new(),
+    });
+    registry.add(FactionData {
+        id: 47,
+        name: "Ironforge".to_string(),
+        base_standing: vec![(1, 21_000), (2, 0)],
+        spillover: Vec::new(),
+    });
+    registry
 }
 
 impl CharacterReputation {

@@ -16,6 +16,7 @@ mod persistence_accounts;
 mod persistence_character;
 mod persistence_types;
 mod profession;
+mod reputation;
 mod spell_db;
 mod stats;
 mod talent;
@@ -57,6 +58,7 @@ fn add_game_plugins(app: &mut App) {
         .add_plugins(persistence::PersistencePlugin)
         .add_plugins(auction_house::AuctionHousePlugin)
         .add_plugins(profession::ProfessionPlugin)
+        .add_plugins(reputation::ReputationPlugin)
         .add_plugins(duel::DuelPlugin)
         .add_plugins(inspect::InspectPlugin)
         .add_plugins(talent::TalentPlugin)

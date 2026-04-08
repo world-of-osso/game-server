@@ -3,6 +3,7 @@ use bevy::prelude::*;
 use redb::{Database, ReadableDatabase, ReadableTable, TableDefinition};
 use shared::components::{Health, Player, Position};
 use shared::profession::{PlayerProfessions, Profession};
+use shared::reputation::CharacterReputation;
 use std::path::Path;
 
 pub use crate::persistence_character::*;
@@ -16,6 +17,9 @@ const INVENTORIES: TableDefinition<u64, &[u8]> = TableDefinition::new("inventori
 
 /// Profession table: PlayerId (u64) -> serialized profession state (bytes).
 const PROFESSIONS: TableDefinition<u64, &[u8]> = TableDefinition::new("professions");
+
+/// Reputation table: PlayerId (u64) -> serialized reputation state (bytes).
+const REPUTATIONS: TableDefinition<u64, &[u8]> = TableDefinition::new("reputations");
 
 /// Active auction table: auction_id (u64) -> serialized auction data (bytes).
 const AUCTIONS: TableDefinition<u64, &[u8]> = TableDefinition::new("auctions");
@@ -127,6 +131,7 @@ pub(crate) fn create_tables(db: &Database) {
     let _ = txn.open_table(CHARACTERS);
     let _ = txn.open_table(INVENTORIES);
     let _ = txn.open_table(PROFESSIONS);
+    let _ = txn.open_table(REPUTATIONS);
     let _ = txn.open_table(AUCTIONS);
     let _ = txn.open_table(MAILBOXES);
     let _ = txn.open_table(ACCOUNTS);
@@ -200,6 +205,41 @@ pub fn save_professions(db: &Database, character_id: u64, professions: &PlayerPr
             .expect("Failed to insert professions");
     }
     txn.commit().expect("Failed to commit professions save");
+}
+
+pub fn load_reputation(
+    db: &Database,
+    character_id: u64,
+    default: impl FnOnce() -> CharacterReputation,
+) -> CharacterReputation {
+    let txn = db.begin_read().expect("Failed to begin read txn");
+    let table = txn
+        .open_table(REPUTATIONS)
+        .expect("Failed to open reputations table");
+    match table.get(character_id).expect("Failed to read reputation") {
+        Some(guard) => {
+            bitcode::decode::<CharacterReputation>(guard.value()).expect("decode reputation")
+        }
+        None => {
+            let reputation = default();
+            save_reputation(db, character_id, &reputation);
+            reputation
+        }
+    }
+}
+
+pub fn save_reputation(db: &Database, character_id: u64, reputation: &CharacterReputation) {
+    let bytes = bitcode::encode(reputation);
+    let txn = db.begin_write().expect("Failed to begin write txn");
+    {
+        let mut table = txn
+            .open_table(REPUTATIONS)
+            .expect("Failed to open reputations table");
+        table
+            .insert(character_id, bytes.as_slice())
+            .expect("Failed to insert reputation");
+    }
+    txn.commit().expect("Failed to commit reputation save");
 }
 
 fn default_professions() -> PlayerProfessions {

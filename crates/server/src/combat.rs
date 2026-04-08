@@ -103,6 +103,10 @@ pub struct DeathState {
     pub respawn_timer: f32,
 }
 
+/// Tracks the last entity that dealt damage to a target.
+#[derive(Component, Debug, Clone, Copy)]
+pub struct LastDamager(pub Entity);
+
 /// When CombatTarget changes to Some(entity), activate auto-attack.
 /// When None, deactivate.
 fn start_attack_system(
@@ -128,9 +132,10 @@ fn start_attack_system(
 fn auto_attack_system(
     time: Res<Time>,
     mut attackers: Query<(Entity, &CombatTarget, &mut AutoAttack, &Position)>,
-    mut targets: Query<(&Position, &mut Health)>,
+    mut targets: Query<(&Position, &mut Health, Option<&mut LastDamager>)>,
     mut senders: Query<&mut MessageSender<CombatEvent>>,
     mut combat_log: ResMut<CombatLog>,
+    mut commands: Commands,
 ) {
     let dt = time.delta_secs();
     let elapsed = time.elapsed_secs_f64();
@@ -144,7 +149,14 @@ fn auto_attack_system(
             continue;
         };
         auto_attack.timer -= dt;
-        let damage = try_swing(attacker_pos, &mut targets, target_entity, &mut auto_attack);
+        let damage = try_swing(
+            attacker_entity,
+            attacker_pos,
+            &mut targets,
+            target_entity,
+            &mut auto_attack,
+            &mut commands,
+        );
         if damage > 0.0 {
             events.push(build_damage_event(attacker_entity, target_entity, damage));
         }
@@ -155,15 +167,17 @@ fn auto_attack_system(
 
 /// Attempt a swing if timer ready and target in range. Returns damage dealt.
 fn try_swing(
+    attacker_entity: Entity,
     attacker_pos: &Position,
-    targets: &mut Query<(&Position, &mut Health)>,
+    targets: &mut Query<(&Position, &mut Health, Option<&mut LastDamager>)>,
     target_entity: Entity,
     auto_attack: &mut AutoAttack,
+    commands: &mut Commands,
 ) -> f32 {
     if auto_attack.timer > 0.0 {
         return 0.0;
     }
-    let Ok((target_pos, mut health)) = targets.get_mut(target_entity) else {
+    let Ok((target_pos, mut health, last_damager)) = targets.get_mut(target_entity) else {
         return 0.0;
     };
     if !in_melee_range(attacker_pos, target_pos) {
@@ -174,6 +188,13 @@ fn try_swing(
     }
     let damage = BASE_DAMAGE;
     health.current = (health.current - damage).max(0.0);
+    if let Some(mut last_damager) = last_damager {
+        last_damager.0 = attacker_entity;
+    } else {
+        commands
+            .entity(target_entity)
+            .insert(LastDamager(attacker_entity));
+    }
     auto_attack.timer = AUTO_ATTACK_INTERVAL;
     damage
 }
@@ -260,6 +281,7 @@ fn respawn_system(
             Replicate::new(ReplicationMode::SingleServer(NetworkTarget::All)),
             NetworkVisibility,
         ));
+        commands.entity(entity).remove::<LastDamager>();
         events.push(CombatEvent {
             attacker: 0,
             target: entity.to_bits(),
@@ -352,16 +374,17 @@ mod tests {
     fn run_attack_tick(app: &mut App) {
         let _ = app.world_mut().run_system_once(
             |time: Res<Time>,
+             mut commands: Commands,
              mut attackers: Query<(Entity, &CombatTarget, &mut AutoAttack, &Position)>,
-             mut targets: Query<(&Position, &mut Health)>| {
+             mut targets: Query<(&Position, &mut Health, Option<&mut LastDamager>)>| {
                 let dt = time.delta_secs();
-                for (_, combat_target, mut aa, apos) in &mut attackers {
+                for (attacker, combat_target, mut aa, apos) in &mut attackers {
                     if !aa.active {
                         continue;
                     }
                     let Some(te) = combat_target.0 else { continue };
                     aa.timer -= dt;
-                    try_swing(apos, &mut targets, te, &mut aa);
+                    try_swing(attacker, apos, &mut targets, te, &mut aa, &mut commands);
                 }
             },
         );

@@ -9,6 +9,7 @@ use shared::protocol::{
     AuthChannel, CreateCharacter, CreateCharacterResponse, DeleteCharacter,
     DeleteCharacterResponse, EnterWorldResponse, LoadTerrain, SelectCharacter,
 };
+use shared::reputation::default_faction_registry;
 use std::collections::HashSet;
 
 use crate::auth::{Authenticated, InWorld, SentTiles};
@@ -257,12 +258,19 @@ fn handle_select(
     };
     let guild = persistence::load_character_guild(&db.db, req.character_id);
     let professions = persistence::load_professions(&db.db, req.character_id);
+    let reputation = persistence::load_reputation(&db.db, req.character_id, || {
+        shared::reputation::CharacterReputation::new_for_race(
+            &default_faction_registry(),
+            data.race,
+        )
+    });
     let player_entity = spawn_player_entity(
         commands,
         &data,
         req.character_id,
         guild.as_ref(),
         professions,
+        reputation,
     );
     insert_world_components(commands, conn, player_entity, req.character_id);
     send_enter_success(conn, enter_senders, player_entity);
@@ -376,11 +384,13 @@ pub fn spawn_player_entity(
     character_id: u64,
     guild: Option<&GuildMembership>,
     professions: PlayerProfessions,
+    reputation: shared::reputation::CharacterReputation,
 ) -> Entity {
     let entity = commands
         .spawn(build_player_components(data, character_id))
         .id();
     commands.entity(entity).insert(professions);
+    commands.entity(entity).insert(reputation);
     if shared::formulas::base_mana(data.class, data.level as u8).is_some() {
         commands.entity(entity).insert(Mana {
             current: 0.0,

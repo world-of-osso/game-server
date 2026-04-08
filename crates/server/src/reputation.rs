@@ -1,0 +1,225 @@
+use bevy::prelude::*;
+use lightyear::prelude::*;
+use shared::components::{Level, Npc};
+use shared::protocol::{
+    ReputationChannel, ReputationEntrySnapshot, ReputationSnapshot, ReputationStateUpdate,
+};
+use shared::reputation::{
+    CharacterReputation, FactionRegistry, RepChangeResult, RepGainSource, default_faction_registry,
+    diminished_mob_rep,
+};
+
+use crate::auth::{Authenticated, InWorld};
+use crate::combat::{DeathState, LastDamager};
+use crate::networking::PlayerLink;
+use crate::persistence::{self, GameDatabase};
+use crate::world_data::WorldData;
+
+const BASE_MOB_KILL_REP: i32 = 10;
+
+#[derive(Resource, Clone)]
+struct ReputationRegistry(FactionRegistry);
+
+pub struct ReputationPlugin;
+
+impl Plugin for ReputationPlugin {
+    fn build(&self, app: &mut App) {
+        app.insert_resource(ReputationRegistry(default_faction_registry()));
+        app.add_systems(Update, send_initial_reputation_snapshot);
+        app.add_systems(PostUpdate, process_npc_kill_reputation);
+    }
+}
+
+fn send_initial_reputation_snapshot(
+    connections: Query<(Entity, &PlayerLink), (With<Authenticated>, Added<InWorld>)>,
+    reputations: Query<&CharacterReputation>,
+    registry: Res<ReputationRegistry>,
+    mut senders: Query<&mut MessageSender<ReputationStateUpdate>>,
+) {
+    for (conn_entity, link) in &connections {
+        let Ok(reputation) = reputations.get(link.0) else {
+            send_reputation_error(
+                conn_entity,
+                &mut senders,
+                "reputation unavailable for player",
+            );
+            continue;
+        };
+        send_reputation_update(
+            conn_entity,
+            reputation,
+            &registry.0,
+            Some("reputation loaded".into()),
+            None,
+            &mut senders,
+        );
+    }
+}
+
+fn process_npc_kill_reputation(
+    killed_npcs: Query<(&Npc, &LastDamager), Added<DeathState>>,
+    mut players: Query<(&Level, &mut CharacterReputation)>,
+    connections: Query<(Entity, &PlayerLink, &InWorld), With<Authenticated>>,
+    world_data: Res<WorldData>,
+    registry: Res<ReputationRegistry>,
+    db: Option<Res<GameDatabase>>,
+    mut senders: Query<&mut MessageSender<ReputationStateUpdate>>,
+) {
+    let Some(db) = db else { return };
+    for (npc, last_damager) in &killed_npcs {
+        let Ok((level, mut reputation)) = players.get_mut(last_damager.0) else {
+            continue;
+        };
+        let Some(snapshot_message) = apply_npc_kill_reputation(
+            &mut reputation,
+            level.0,
+            npc.template_id,
+            &world_data,
+            &registry.0,
+        ) else {
+            continue;
+        };
+        let Some((conn_entity, character_id)) = connection_for_player(&connections, last_damager.0)
+        else {
+            continue;
+        };
+        persistence::save_reputation(&db.db, character_id, &reputation);
+        send_reputation_update(
+            conn_entity,
+            &reputation,
+            &registry.0,
+            Some(snapshot_message),
+            None,
+            &mut senders,
+        );
+    }
+}
+
+fn connection_for_player(
+    connections: &Query<(Entity, &PlayerLink, &InWorld), With<Authenticated>>,
+    player_entity: Entity,
+) -> Option<(Entity, u64)> {
+    connections
+        .iter()
+        .find_map(|(conn_entity, link, in_world)| {
+            (link.0 == player_entity).then_some((conn_entity, in_world.character_id))
+        })
+}
+
+fn apply_npc_kill_reputation(
+    reputation: &mut CharacterReputation,
+    player_level: u8,
+    template_id: u32,
+    world_data: &WorldData,
+    registry: &FactionRegistry,
+) -> Option<String> {
+    let template = world_data.templates.get(&template_id)?;
+    let faction_id = u32::from(template.faction);
+    registry.get(faction_id)?;
+    let mob_level = template.max_level.max(template.min_level);
+    let amount = diminished_mob_rep(BASE_MOB_KILL_REP, player_level, mob_level);
+    if amount <= 0 {
+        return None;
+    }
+    let changes =
+        reputation.gain_rep_with_spillover(faction_id, amount, RepGainSource::MobKill, registry);
+    if changes.is_empty() {
+        return None;
+    }
+    Some(format_change_message(&changes, registry))
+}
+
+fn format_change_message(changes: &[RepChangeResult], registry: &FactionRegistry) -> String {
+    let primary = changes[0];
+    let faction_name = registry
+        .get(primary.faction_id)
+        .map(|faction| faction.name.as_str())
+        .unwrap_or("Unknown");
+    let direction = if primary.actual_change() >= 0 {
+        "gained"
+    } else {
+        "lost"
+    };
+    let mut message = format!(
+        "{} {} reputation with {}",
+        direction,
+        primary.actual_change().abs(),
+        faction_name
+    );
+    let spillovers = changes
+        .iter()
+        .skip(1)
+        .filter(|change| change.actual_change() != 0)
+        .map(|change| {
+            let name = registry
+                .get(change.faction_id)
+                .map(|faction| faction.name.as_str())
+                .unwrap_or("Unknown");
+            format!("{:+} {}", change.actual_change(), name)
+        })
+        .collect::<Vec<_>>();
+    if !spillovers.is_empty() {
+        message.push_str(" (spillover ");
+        message.push_str(&spillovers.join(", "));
+        message.push(')');
+    }
+    message
+}
+
+fn send_reputation_update(
+    conn_entity: Entity,
+    reputation: &CharacterReputation,
+    registry: &FactionRegistry,
+    message: Option<String>,
+    error: Option<String>,
+    senders: &mut Query<&mut MessageSender<ReputationStateUpdate>>,
+) {
+    let Ok(mut sender) = senders.get_mut(conn_entity) else {
+        return;
+    };
+    sender.send::<ReputationChannel>(ReputationStateUpdate {
+        snapshot: Some(build_reputation_snapshot(reputation, registry)),
+        message,
+        error,
+    });
+}
+
+fn send_reputation_error(
+    conn_entity: Entity,
+    senders: &mut Query<&mut MessageSender<ReputationStateUpdate>>,
+    error: impl Into<String>,
+) {
+    let Ok(mut sender) = senders.get_mut(conn_entity) else {
+        return;
+    };
+    sender.send::<ReputationChannel>(ReputationStateUpdate {
+        snapshot: None,
+        message: None,
+        error: Some(error.into()),
+    });
+}
+
+fn build_reputation_snapshot(
+    reputation: &CharacterReputation,
+    registry: &FactionRegistry,
+) -> ReputationSnapshot {
+    let mut entries = reputation
+        .all_factions()
+        .into_iter()
+        .filter_map(|faction_id| {
+            let faction = registry.get(faction_id)?;
+            Some(ReputationEntrySnapshot {
+                faction_id,
+                faction_name: faction.name.clone(),
+                standing: format!("{:?}", reputation.get_standing(faction_id)),
+                value: reputation.get_value(faction_id),
+            })
+        })
+        .collect::<Vec<_>>();
+    entries.sort_by(|a, b| a.faction_name.cmp(&b.faction_name));
+    ReputationSnapshot { entries }
+}
+
+#[cfg(test)]
+#[path = "reputation_tests.rs"]
+mod tests;
