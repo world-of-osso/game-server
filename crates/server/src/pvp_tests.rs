@@ -1,4 +1,5 @@
 use super::*;
+use crate::pvp::pvp_support::build_pvp_snapshot;
 use shared::protocol::{PvpQueueKindSnapshot, PvpQueueSnapshot};
 
 #[test]
