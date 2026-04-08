@@ -182,35 +182,59 @@ fn process_decline_requests(
             continue;
         };
         for _ in receiver.receive() {
-            let other_id = trade
-                .manager
-                .get_session(client_id.0)
-                .and_then(|session| session.other_player(client_id.0));
-            match trade.manager.decline_trade(client_id.0) {
-                Ok(()) => {
-                    send_trade_message(
-                        conn_entity,
-                        &mut senders,
-                        None,
-                        Some("trade declined".into()),
-                    );
-                    if let Some(other_id) = other_id {
-                        send_trade_message_to_other(
-                            client_id.0,
-                            other_id,
-                            &connections,
-                            &players,
-                            &mut senders,
-                            Some("trade request declined".into()),
-                        );
-                    }
-                }
-                Err(error) => {
-                    send_trade_error(conn_entity, &mut senders, trade_error_message(error));
-                }
+            if let Err(error) = handle_decline_request(
+                conn_entity,
+                client_id.0,
+                &players,
+                &connections,
+                &mut trade.manager,
+                &mut senders,
+            ) {
+                send_trade_error(conn_entity, &mut senders, trade_error_message(error));
             }
         }
     }
+}
+
+fn handle_decline_request(
+    conn_entity: Entity,
+    client_id: u64,
+    players: &PlayerQuery,
+    connections: &ConnectionQuery,
+    manager: &mut TradeManager,
+    senders: &mut Query<&mut MessageSender<TradeStateUpdate>>,
+) -> Result<(), shared::trade::TradeError> {
+    let other_id = decline_target(manager, client_id);
+    manager.decline_trade(client_id)?;
+    send_trade_message(conn_entity, senders, None, Some("trade declined".into()));
+    notify_other_declined_trade(client_id, other_id, players, connections, senders);
+    Ok(())
+}
+
+fn decline_target(manager: &TradeManager, client_id: u64) -> Option<u64> {
+    manager
+        .get_session(client_id)
+        .and_then(|session| session.other_player(client_id))
+}
+
+fn notify_other_declined_trade(
+    client_id: u64,
+    other_id: Option<u64>,
+    players: &PlayerQuery,
+    connections: &ConnectionQuery,
+    senders: &mut Query<&mut MessageSender<TradeStateUpdate>>,
+) {
+    let Some(other_id) = other_id else {
+        return;
+    };
+    send_trade_message_to_other(
+        client_id,
+        other_id,
+        connections,
+        players,
+        senders,
+        Some("trade request declined".into()),
+    );
 }
 
 fn process_cancel_requests(
