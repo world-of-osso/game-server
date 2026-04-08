@@ -1,3 +1,5 @@
+#![allow(clippy::type_complexity, clippy::too_many_arguments)]
+
 mod achievement;
 mod admin_handlers;
 mod admin_ipc;

@@ -102,10 +102,10 @@ fn trade_phase_for_viewer(
     }
 }
 
-fn trade_offers_for_viewer<'a>(
-    session: &'a shared::trade::TradeSession,
+fn trade_offers_for_viewer(
+    session: &shared::trade::TradeSession,
     viewer_is_initiator: bool,
-) -> (&'a TradeOffer, &'a TradeOffer) {
+) -> (&TradeOffer, &TradeOffer) {
     if viewer_is_initiator {
         (&session.initiator_offer, &session.target_offer)
     } else {
