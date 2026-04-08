@@ -264,6 +264,7 @@ fn handle_select(
         state.guild.as_ref(),
         state.professions,
         state.achievements,
+        state.pvp,
         state.world_map,
         state.friends,
         state.ignore_list,
@@ -289,6 +290,7 @@ struct SelectedCharacterState {
     guild: Option<GuildMembership>,
     professions: PlayerProfessions,
     achievements: crate::achievement::PlayerAchievementState,
+    pvp: crate::pvp::PlayerPvpState,
     world_map: crate::world_map::PlayerWorldMapState,
     friends: crate::friends::PlayerFriendsState,
     ignore_list: crate::ignore_list::PlayerIgnoreListState,
@@ -306,6 +308,7 @@ fn load_selected_character_state(
         guild: persistence::load_character_guild(&db.db, character_id),
         professions: persistence::load_professions(&db.db, character_id),
         achievements: persistence::load_achievements(&db.db, character_id),
+        pvp: crate::pvp::PlayerPvpState::from_progress(persistence::load_pvp(&db.db, character_id)),
         world_map: persistence::load_world_map(&db.db, character_id),
         friends: persistence::load_friends(&db.db, character_id),
         ignore_list: persistence::load_ignore_list(&db.db, character_id),
@@ -416,6 +419,7 @@ pub fn spawn_player_entity(
     guild: Option<&GuildMembership>,
     professions: PlayerProfessions,
     achievements: crate::achievement::PlayerAchievementState,
+    pvp: crate::pvp::PlayerPvpState,
     world_map: crate::world_map::PlayerWorldMapState,
     friends: crate::friends::PlayerFriendsState,
     ignore_list: crate::ignore_list::PlayerIgnoreListState,
@@ -428,6 +432,7 @@ pub fn spawn_player_entity(
         .id();
     commands.entity(entity).insert(professions);
     commands.entity(entity).insert(achievements);
+    commands.entity(entity).insert(pvp);
     commands.entity(entity).insert(world_map);
     commands.entity(entity).insert(friends);
     commands.entity(entity).insert(ignore_list);

@@ -23,6 +23,7 @@ mod persistence_accounts;
 mod persistence_character;
 mod persistence_types;
 mod profession;
+mod pvp;
 mod reputation;
 mod spell_db;
 mod stats;
@@ -72,6 +73,7 @@ fn add_game_plugins(app: &mut App) {
         .add_plugins(friends::FriendsPlugin)
         .add_plugins(ignore_list::IgnoreListPlugin)
         .add_plugins(lfg::LfgPlugin)
+        .add_plugins(pvp::PvpPlugin)
         .add_plugins(profession::ProfessionPlugin)
         .add_plugins(reputation::ReputationPlugin)
         .add_plugins(world_map::WorldMapPlugin)

@@ -27,6 +27,9 @@ const CURRENCIES: TableDefinition<u64, &[u8]> = TableDefinition::new("currencies
 /// Achievement table: PlayerId (u64) -> serialized achievement state (bytes).
 const ACHIEVEMENTS: TableDefinition<u64, &[u8]> = TableDefinition::new("achievements");
 
+/// PVP table: PlayerId (u64) -> serialized pvp state (bytes).
+const PVP_STATES: TableDefinition<u64, &[u8]> = TableDefinition::new("pvp_states");
+
 /// World map table: PlayerId (u64) -> serialized world map discovery state (bytes).
 const WORLD_MAPS: TableDefinition<u64, &[u8]> = TableDefinition::new("world_maps");
 
@@ -340,6 +343,36 @@ pub fn save_achievements(
             .expect("Failed to insert achievements");
     }
     txn.commit().expect("Failed to commit achievements save");
+}
+
+pub fn load_pvp(db: &Database, character_id: u64) -> crate::pvp::PlayerPvpProgress {
+    let txn = db.begin_read().expect("Failed to begin read txn");
+    let table = txn
+        .open_table(PVP_STATES)
+        .expect("Failed to open pvp table");
+    match table.get(character_id).expect("Failed to read pvp state") {
+        Some(guard) => serde_json::from_slice::<crate::pvp::PlayerPvpProgress>(guard.value())
+            .expect("decode pvp state"),
+        None => {
+            let state = crate::pvp::PlayerPvpProgress::default();
+            save_pvp(db, character_id, &state);
+            state
+        }
+    }
+}
+
+pub fn save_pvp(db: &Database, character_id: u64, state: &crate::pvp::PlayerPvpProgress) {
+    let bytes = serde_json::to_vec(state).expect("encode pvp state");
+    let txn = db.begin_write().expect("Failed to begin write txn");
+    {
+        let mut table = txn
+            .open_table(PVP_STATES)
+            .expect("Failed to open pvp table");
+        table
+            .insert(character_id, bytes.as_slice())
+            .expect("Failed to insert pvp state");
+    }
+    txn.commit().expect("Failed to commit pvp save");
 }
 
 pub fn load_world_map(db: &Database, character_id: u64) -> crate::world_map::PlayerWorldMapState {

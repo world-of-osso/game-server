@@ -1,0 +1,123 @@
+use bevy::prelude::*;
+use lightyear::prelude::*;
+use shared::battleground::BgQueueError;
+use shared::protocol::{
+    PvpBracketSnapshot, PvpBracketStatsSnapshot, PvpChannel, PvpQueueKindSnapshot,
+    PvpQueueSnapshot, PvpSnapshot, PvpStateUpdate,
+};
+
+use crate::auth::{Authenticated, InWorld};
+use crate::networking::PlayerLink;
+use crate::pvp::{PlayerPvpQueue, PlayerPvpState};
+
+pub(super) fn connection_for_character(
+    connections: &Query<(Entity, &PlayerLink, &InWorld), With<Authenticated>>,
+    character_id: u64,
+) -> Option<(Entity, Entity)> {
+    connections
+        .iter()
+        .find_map(|(conn_entity, link, in_world)| {
+            (in_world.character_id == character_id).then_some((conn_entity, link.0))
+        })
+}
+
+pub(super) fn send_pvp_update(
+    conn_entity: Entity,
+    state: &PlayerPvpState,
+    message: Option<String>,
+    error: Option<String>,
+    senders: &mut Query<&mut MessageSender<PvpStateUpdate>>,
+) {
+    let Ok(mut sender) = senders.get_mut(conn_entity) else {
+        return;
+    };
+    sender.send::<PvpChannel>(PvpStateUpdate {
+        snapshot: Some(build_pvp_snapshot(state)),
+        message,
+        error,
+    });
+}
+
+pub(super) fn send_pvp_error(
+    conn_entity: Entity,
+    senders: &mut Query<&mut MessageSender<PvpStateUpdate>>,
+    error: impl Into<String>,
+) {
+    let Ok(mut sender) = senders.get_mut(conn_entity) else {
+        return;
+    };
+    sender.send::<PvpChannel>(PvpStateUpdate {
+        snapshot: None,
+        message: None,
+        error: Some(error.into()),
+    });
+}
+
+pub(super) fn build_pvp_snapshot(state: &PlayerPvpState) -> PvpSnapshot {
+    PvpSnapshot {
+        honor: state.progress.honor,
+        honor_max: state.progress.honor_max,
+        conquest: state.progress.conquest,
+        conquest_max: state.progress.conquest_max,
+        brackets: state
+            .progress
+            .brackets
+            .iter()
+            .cloned()
+            .map(|entry| PvpBracketStatsSnapshot {
+                bracket: entry.bracket,
+                rating: entry.rating,
+                season_wins: entry.season_wins,
+                season_losses: entry.season_losses,
+                weekly_wins: entry.weekly_wins,
+                weekly_losses: entry.weekly_losses,
+            })
+            .collect(),
+        queue: state.queue.as_ref().map(build_queue_snapshot),
+    }
+}
+
+fn build_queue_snapshot(queue: &PlayerPvpQueue) -> PvpQueueSnapshot {
+    PvpQueueSnapshot {
+        kind: match queue {
+            PlayerPvpQueue::Battleground {
+                battleground_id,
+                name,
+            } => PvpQueueKindSnapshot::Battleground {
+                battleground_id: *battleground_id,
+                name: name.clone(),
+            },
+            PlayerPvpQueue::RatedBracket { bracket } => PvpQueueKindSnapshot::RatedBracket {
+                bracket: bracket.clone(),
+            },
+        },
+    }
+}
+
+pub(super) fn queue_label(queue: &PlayerPvpQueue) -> String {
+    match queue {
+        PlayerPvpQueue::Battleground { name, .. } => name.clone(),
+        PlayerPvpQueue::RatedBracket { bracket } => bracket_label(bracket).into(),
+    }
+}
+
+pub(super) fn bracket_label(bracket: &PvpBracketSnapshot) -> &'static str {
+    match bracket {
+        PvpBracketSnapshot::Arena2v2 => "2v2 arena",
+        PvpBracketSnapshot::Arena3v3 => "3v3 arena",
+        PvpBracketSnapshot::RatedBattleground => "rated battleground",
+        PvpBracketSnapshot::SoloShuffle => "solo shuffle",
+    }
+}
+
+pub(super) fn format_bg_queue_error(error: BgQueueError) -> String {
+    match error {
+        BgQueueError::AlreadyQueued => "already queued for battleground".into(),
+        BgQueueError::UnknownBg => "unknown battleground".into(),
+        BgQueueError::OutOfBracket => "player level is outside this battleground bracket".into(),
+        BgQueueError::EmptyGroup => "empty battleground group".into(),
+        BgQueueError::LevelCountMismatch => "battleground level count mismatch".into(),
+        BgQueueError::DuplicatePlayer => "duplicate battleground player".into(),
+        BgQueueError::Deserter => "player has deserter".into(),
+    }
+}

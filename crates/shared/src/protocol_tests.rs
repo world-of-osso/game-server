@@ -1,4 +1,5 @@
 use super::*;
+use crate::components::CharacterAppearance;
 use crate::components::{EquipmentVisualSlot, EquippedAppearanceEntry};
 
 #[test]
@@ -223,6 +224,48 @@ fn lfg_state_update_round_trip() {
 
     let encoded = serde_json::to_string(&update).unwrap();
     let decoded: LfgStateUpdate = serde_json::from_str(&encoded).unwrap();
+    assert_eq!(update, decoded);
+}
+
+#[test]
+fn pvp_state_update_round_trip() {
+    let update = PvpStateUpdate {
+        snapshot: Some(PvpSnapshot {
+            honor: 750,
+            honor_max: 15_000,
+            conquest: 120,
+            conquest_max: 1_800,
+            brackets: vec![
+                PvpBracketStatsSnapshot {
+                    bracket: PvpBracketSnapshot::Arena2v2,
+                    rating: 1516,
+                    season_wins: 1,
+                    season_losses: 0,
+                    weekly_wins: 1,
+                    weekly_losses: 0,
+                },
+                PvpBracketStatsSnapshot {
+                    bracket: PvpBracketSnapshot::RatedBattleground,
+                    rating: 1500,
+                    season_wins: 0,
+                    season_losses: 0,
+                    weekly_wins: 0,
+                    weekly_losses: 0,
+                },
+            ],
+            queue: Some(PvpQueueSnapshot {
+                kind: PvpQueueKindSnapshot::Battleground {
+                    battleground_id: 1,
+                    name: "Warsong Gulch".into(),
+                },
+            }),
+        }),
+        message: Some("queued for Warsong Gulch".into()),
+        error: None,
+    };
+
+    let encoded = serde_json::to_string(&update).unwrap();
+    let decoded: PvpStateUpdate = serde_json::from_str(&encoded).unwrap();
     assert_eq!(update, decoded);
 }
 
