@@ -1,3 +1,4 @@
+use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 use lightyear::prelude::*;
 use shared::components::GuildMembership;
@@ -11,46 +12,51 @@ use crate::ignore_list::PlayerIgnoreListState;
 use crate::networking::{ChatHistoryBuffer, CombatTarget, PlayerLink};
 use crate::persistence::{self, ClientId, GameDatabase};
 
-pub fn process_chat_messages(
-    mut receivers: Query<(&mut MessageReceiver<ChatMessage>, &PlayerLink)>,
-    mut emote_receivers: Query<(&mut MessageReceiver<EmoteIntent>, &PlayerLink)>,
-    players: Query<&shared::components::Player>,
-    guilds: Query<Option<&GuildMembership>>,
-    mut presences: Query<
+#[derive(SystemParam)]
+pub(crate) struct ChatSystemQueries<'w, 's> {
+    receivers: Query<'w, 's, (&'static mut MessageReceiver<ChatMessage>, &'static PlayerLink)>,
+    emote_receivers: Query<'w, 's, (&'static mut MessageReceiver<EmoteIntent>, &'static PlayerLink)>,
+    players: Query<'w, 's, &'static shared::components::Player>,
+    guilds: Query<'w, 's, Option<&'static GuildMembership>>,
+    presences: Query<
+        'w,
+        's,
         (
-            &mut shared::components::PresenceStatus,
-            &mut crate::friends::PresenceTracker,
+            &'static mut shared::components::PresenceStatus,
+            &'static mut crate::friends::PresenceTracker,
         ),
         With<shared::components::Player>,
     >,
-    ignore_lists: Query<Option<&PlayerIgnoreListState>>,
-    mut chat_senders: Query<(&PlayerLink, &mut MessageSender<ChatMessage>)>,
-    mut emote_senders: Query<(&PlayerLink, &mut MessageSender<EmoteEvent>)>,
-    mut history: ResMut<ChatHistoryBuffer>,
-) {
-    let collected = collect_chat_messages(&mut receivers, &players, &guilds);
+    ignore_lists: Query<'w, 's, Option<&'static PlayerIgnoreListState>>,
+    chat_senders: Query<'w, 's, (&'static PlayerLink, &'static mut MessageSender<ChatMessage>)>,
+    emote_senders: Query<'w, 's, (&'static PlayerLink, &'static mut MessageSender<EmoteEvent>)>,
+    history: ResMut<'w, ChatHistoryBuffer>,
+}
+
+pub fn process_chat_messages(mut q: ChatSystemQueries) {
+    let collected = collect_chat_messages(&mut q.receivers, &q.players, &q.guilds);
     let (collected, mut collected_emotes) = split_chat_emotes(collected);
-    collected_emotes.extend(collect_emote_messages(&mut emote_receivers, &players));
+    collected_emotes.extend(collect_emote_messages(&mut q.emote_receivers, &q.players));
     for chat in &collected {
-        crate::friends::mark_player_activity(chat.sender_entity, &mut presences);
-        history.entries.push_back(chat.msg.clone());
-        if history.entries.len() > 100 {
-            history.entries.pop_front();
+        crate::friends::mark_player_activity(chat.sender_entity, &mut q.presences);
+        q.history.entries.push_back(chat.msg.clone());
+        if q.history.entries.len() > 100 {
+            q.history.entries.pop_front();
         }
     }
     for emote in &collected_emotes {
-        crate::friends::mark_player_activity(emote.player_entity, &mut presences);
-        history.entries.push_back(emote.chat.clone());
-        if history.entries.len() > 100 {
-            history.entries.pop_front();
+        crate::friends::mark_player_activity(emote.player_entity, &mut q.presences);
+        q.history.entries.push_back(emote.chat.clone());
+        if q.history.entries.len() > 100 {
+            q.history.entries.pop_front();
         }
     }
-    route_chat_messages(&collected, &mut chat_senders, &guilds, &ignore_lists);
+    route_chat_messages(&collected, &mut q.chat_senders, &q.guilds, &q.ignore_lists);
     route_emote_messages(
         &collected_emotes,
-        &mut chat_senders,
-        &mut emote_senders,
-        &ignore_lists,
+        &mut q.chat_senders,
+        &mut q.emote_senders,
+        &q.ignore_lists,
     );
 }
 

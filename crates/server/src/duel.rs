@@ -80,10 +80,12 @@ fn process_duel_challenges(
         };
         for request in receiver.receive() {
             handle_duel_challenge_request(
-                conn_entity,
                 request,
-                challenger_entity,
-                challenger,
+                DuelChallengeInfo {
+                    conn_entity,
+                    challenger_entity,
+                    challenger,
+                },
                 &players,
                 &connections,
                 &mut state,
@@ -93,31 +95,35 @@ fn process_duel_challenges(
     }
 }
 
-fn handle_duel_challenge_request(
+struct DuelChallengeInfo<'a> {
     conn_entity: Entity,
-    request: InitiateDuel,
     challenger_entity: Entity,
-    challenger: &Player,
+    challenger: &'a Player,
+}
+
+fn handle_duel_challenge_request(
+    request: InitiateDuel,
+    info: DuelChallengeInfo<'_>,
     players: &PlayerQuery,
     connections: &ConnectionQuery,
     state: &mut DuelServerState,
     senders: &mut Query<&mut MessageSender<DuelStateUpdate>>,
 ) {
     let Some(target_entity) = request.target_entity.map(Entity::from_bits) else {
-        send_duel_error(conn_entity, senders, "no duel target selected");
+        send_duel_error(info.conn_entity, senders, "no duel target selected");
         return;
     };
     let Ok((_, target, _, _)) = players.get(target_entity) else {
-        send_duel_error(conn_entity, senders, "duel target is not a player");
+        send_duel_error(info.conn_entity, senders, "duel target is not a player");
         return;
     };
-    if let Err(error) = state.start_pending(challenger_entity, target_entity) {
-        send_duel_error(conn_entity, senders, error);
+    if let Err(error) = state.start_pending(info.challenger_entity, target_entity) {
+        send_duel_error(info.conn_entity, senders, error);
         return;
     }
     send_pending_challenge_snapshots(
-        challenger_entity,
-        challenger,
+        info.challenger_entity,
+        info.challenger,
         target_entity,
         target,
         connections,
@@ -214,14 +220,10 @@ fn process_duel_declines(
             };
             let (self_message, other_message) = decline_messages(was_target, &player.name);
             send_decline_snapshots(
-                link.0,
-                &other_player.name,
-                other,
-                &player.name,
+                DuelDeclineInfo { entity: link.0, opponent_name: &other_player.name, message: self_message.to_owned() },
+                DuelDeclineInfo { entity: other, opponent_name: &player.name, message: other_message },
                 &connections,
                 &mut senders,
-                self_message,
-                other_message,
             );
         }
     }
@@ -241,39 +243,41 @@ fn decline_messages(was_target: bool, player_name: &str) -> (&'static str, Strin
     }
 }
 
+struct DuelDeclineInfo<'a> {
+    entity: Entity,
+    opponent_name: &'a str,
+    message: String,
+}
+
 fn send_decline_snapshots(
-    self_entity: Entity,
-    self_opponent_name: &str,
-    other_entity: Entity,
-    other_opponent_name: &str,
+    self_info: DuelDeclineInfo<'_>,
+    other_info: DuelDeclineInfo<'_>,
     connections: &ConnectionQuery,
     senders: &mut Query<&mut MessageSender<DuelStateUpdate>>,
-    self_message: &str,
-    other_message: String,
 ) {
     send_duel_snapshot_to_player(
-        self_entity,
+        self_info.entity,
         connections,
         senders,
         DuelSnapshot {
             phase: DuelPhaseSnapshot::Completed,
-            opponent_name: self_opponent_name.into(),
+            opponent_name: self_info.opponent_name.into(),
             boundary: None,
             result: Some(DuelResultSnapshot::Declined),
         },
-        Some(self_message.into()),
+        Some(self_info.message),
     );
     send_duel_snapshot_to_player(
-        other_entity,
+        other_info.entity,
         connections,
         senders,
         DuelSnapshot {
             phase: DuelPhaseSnapshot::Completed,
-            opponent_name: other_opponent_name.into(),
+            opponent_name: other_info.opponent_name.into(),
             boundary: None,
             result: Some(DuelResultSnapshot::Declined),
         },
-        Some(other_message),
+        Some(other_info.message),
     );
 }
 
@@ -344,11 +348,7 @@ fn send_duel_resolution(
     };
     match resolution {
         DuelResolution::WinLoss { winner, loser } => send_win_loss_resolution(
-            duel,
-            winner,
-            loser,
-            challenger,
-            target,
+            DuelResolutionInfo { duel, winner, loser, challenger, target },
             players,
             connections,
             senders,
@@ -359,31 +359,35 @@ fn send_duel_resolution(
     }
 }
 
-fn send_win_loss_resolution(
+struct DuelResolutionInfo<'a> {
     duel: ActiveDuel,
     winner: Entity,
     loser: Entity,
-    challenger: &Player,
-    target: &Player,
+    challenger: &'a Player,
+    target: &'a Player,
+}
+
+fn send_win_loss_resolution(
+    info: DuelResolutionInfo<'_>,
     players: &PlayerQuery,
     connections: &ConnectionQuery,
     senders: &mut Query<&mut MessageSender<DuelStateUpdate>>,
 ) {
-    let winner_name = player_name(players, winner);
-    let loser_name = player_name(players, loser);
+    let winner_name = player_name(players, info.winner);
+    let loser_name = player_name(players, info.loser);
     let result_message = format!("{winner_name} won the duel against {loser_name}");
     send_duel_result_to_player(
-        duel.challenger,
-        duel_result_for_player(duel.challenger, winner),
-        target.name.clone(),
+        info.duel.challenger,
+        duel_result_for_player(info.duel.challenger, info.winner),
+        info.target.name.clone(),
         result_message.clone(),
         connections,
         senders,
     );
     send_duel_result_to_player(
-        duel.target,
-        duel_result_for_player(duel.target, winner),
-        challenger.name.clone(),
+        info.duel.target,
+        duel_result_for_player(info.duel.target, info.winner),
+        info.challenger.name.clone(),
         result_message,
         connections,
         senders,

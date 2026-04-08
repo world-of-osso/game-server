@@ -243,8 +243,11 @@ pub fn default_collection_state() -> PlayerCollectionState {
     }
 }
 
+type NewInWorldLink<'w, 's> =
+    Query<'w, 's, (Entity, &'static PlayerLink), (With<Authenticated>, Added<InWorld>)>;
+
 fn send_initial_collection_state(
-    connections: Query<(Entity, &PlayerLink), (With<Authenticated>, Added<InWorld>)>,
+    connections: NewInWorldLink,
     collections: Query<&PlayerCollectionState>,
     mut senders: Query<&mut MessageSender<CollectionStateUpdate>>,
 ) {

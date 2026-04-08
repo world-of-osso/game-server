@@ -489,19 +489,23 @@ fn validate_move_distance(distance: f32, max_speed: f32, dt: f32) -> bool {
     distance <= max_distance
 }
 
+type GravityPlayerData<'w, 's> = Query<
+    'w,
+    's,
+    (
+        &'static mut Position,
+        &'static mut VerticalVelocity,
+        &'static mut FallTracker,
+        &'static mut Health,
+        Option<&'static crate::death::PlayerDeathState>,
+    ),
+    With<Player>,
+>;
+
 /// Apply gravity and terrain clamping to all players each tick.
 pub(crate) fn apply_terrain_gravity(
     terrain: Option<Res<TerrainHeightMap>>,
-    mut players: Query<
-        (
-            &mut Position,
-            &mut VerticalVelocity,
-            &mut FallTracker,
-            &mut Health,
-            Option<&crate::death::PlayerDeathState>,
-        ),
-        With<Player>,
-    >,
+    mut players: GravityPlayerData,
     time: Res<Time>,
 ) {
     let Some(terrain) = terrain.as_ref().filter(|t| t.is_loaded()) else {

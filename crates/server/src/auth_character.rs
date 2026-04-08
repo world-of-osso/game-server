@@ -262,15 +262,17 @@ fn handle_select(
         &data,
         req.character_id,
         state.guild.as_ref(),
-        state.professions,
-        state.achievements,
-        state.pvp,
-        state.world_map,
-        state.friends,
-        state.ignore_list,
-        state.collections,
-        crate::currency::PlayerCurrencies(state.currencies),
-        state.reputation,
+        PlayerInitState {
+            professions: state.professions,
+            achievements: state.achievements,
+            pvp: state.pvp,
+            world_map: state.world_map,
+            friends: state.friends,
+            ignore_list: state.ignore_list,
+            collections: state.collections,
+            currencies: crate::currency::PlayerCurrencies(state.currencies),
+            reputation: state.reputation,
+        },
     );
     insert_world_components(commands, conn, player_entity, req.character_id);
     send_enter_success(conn, enter_senders, player_entity);
@@ -411,21 +413,25 @@ fn build_player_components(data: &CharacterData, character_id: u64) -> impl Bund
     )
 }
 
+pub struct PlayerInitState {
+    pub professions: PlayerProfessions,
+    pub achievements: crate::achievement::PlayerAchievementState,
+    pub pvp: crate::pvp::PlayerPvpState,
+    pub world_map: crate::world_map::PlayerWorldMapState,
+    pub friends: crate::friends::PlayerFriendsState,
+    pub ignore_list: crate::ignore_list::PlayerIgnoreListState,
+    pub collections: crate::collection::PlayerCollectionState,
+    pub currencies: crate::currency::PlayerCurrencies,
+    pub reputation: shared::reputation::CharacterReputation,
+}
+
 /// Spawn a player entity with replicated components.
 pub fn spawn_player_entity(
     commands: &mut Commands,
     data: &CharacterData,
     character_id: u64,
     guild: Option<&GuildMembership>,
-    professions: PlayerProfessions,
-    achievements: crate::achievement::PlayerAchievementState,
-    pvp: crate::pvp::PlayerPvpState,
-    world_map: crate::world_map::PlayerWorldMapState,
-    friends: crate::friends::PlayerFriendsState,
-    ignore_list: crate::ignore_list::PlayerIgnoreListState,
-    collections: crate::collection::PlayerCollectionState,
-    currencies: crate::currency::PlayerCurrencies,
-    reputation: shared::reputation::CharacterReputation,
+    init: PlayerInitState,
 ) -> Entity {
     let entity = commands
         .spawn(build_player_components(data, character_id))
@@ -434,19 +440,19 @@ pub fn spawn_player_entity(
     commands
         .entity(entity)
         .insert(crate::networking::FallTracker::grounded(by));
-    commands.entity(entity).insert(professions);
-    commands.entity(entity).insert(achievements);
-    commands.entity(entity).insert(pvp);
-    commands.entity(entity).insert(world_map);
-    commands.entity(entity).insert(friends);
-    commands.entity(entity).insert(ignore_list);
+    commands.entity(entity).insert(init.professions);
+    commands.entity(entity).insert(init.achievements);
+    commands.entity(entity).insert(init.pvp);
+    commands.entity(entity).insert(init.world_map);
+    commands.entity(entity).insert(init.friends);
+    commands.entity(entity).insert(init.ignore_list);
     commands
         .entity(entity)
         .insert(crate::lfg::PlayerLfgState::default());
-    commands.entity(entity).insert(collections.clone());
-    commands.entity(entity).insert(currencies);
-    commands.entity(entity).insert(reputation);
-    if let Some(mount_display_id) = collections.active_mount_display_id() {
+    commands.entity(entity).insert(init.collections.clone());
+    commands.entity(entity).insert(init.currencies);
+    commands.entity(entity).insert(init.reputation);
+    if let Some(mount_display_id) = init.collections.active_mount_display_id() {
         commands.entity(entity).insert((
             shared::components::Mounted { mount_display_id },
             MovementSpeed(crate::collection::movement_speed_for_mount(true)),

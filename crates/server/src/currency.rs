@@ -23,8 +23,11 @@ impl Plugin for CurrencyPlugin {
     }
 }
 
+type NewInWorldLink<'w, 's> =
+    Query<'w, 's, (Entity, &'static PlayerLink), (With<Authenticated>, Added<InWorld>)>;
+
 fn send_initial_currency_snapshot(
-    connections: Query<(Entity, &PlayerLink), (With<Authenticated>, Added<InWorld>)>,
+    connections: NewInWorldLink,
     currencies: Query<&PlayerCurrencies>,
     mut senders: Query<&mut MessageSender<CurrencyStateUpdate>>,
 ) {

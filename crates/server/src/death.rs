@@ -96,8 +96,11 @@ fn build_graveyard_registry(world_data: &WorldData) -> GraveyardRegistry {
     graveyards
 }
 
+type NewInWorldLink<'w, 's> =
+    Query<'w, 's, (Entity, &'static PlayerLink), (With<Authenticated>, Added<InWorld>)>;
+
 fn send_initial_death_snapshot(
-    connections: Query<(Entity, &PlayerLink), (With<Authenticated>, Added<InWorld>)>,
+    connections: NewInWorldLink,
     players: Query<(&Position, Option<&PlayerDeathState>)>,
     mut senders: Query<&mut MessageSender<DeathStateUpdate>>,
 ) {
@@ -198,16 +201,20 @@ fn process_release_spirit_requests(
     }
 }
 
+type ResurrectReceiver<'w, 's> = Query<
+    'w,
+    's,
+    (
+        Entity,
+        &'static PlayerLink,
+        Option<&'static Player>,
+        &'static mut MessageReceiver<ResurrectAtCorpse>,
+    ),
+    With<Authenticated>,
+>;
+
 fn process_resurrect_at_corpse_requests(
-    mut receivers: Query<
-        (
-            Entity,
-            &PlayerLink,
-            Option<&Player>,
-            &mut MessageReceiver<ResurrectAtCorpse>,
-        ),
-        With<Authenticated>,
-    >,
+    mut receivers: ResurrectReceiver,
     mut players: Query<(
         &mut Position,
         &mut Health,
@@ -254,6 +261,18 @@ fn process_resurrect_at_corpse_requests(
     }
 }
 
+type SpiritHealerPlayerData<'w, 's> = Query<
+    'w,
+    's,
+    (
+        &'static mut Position,
+        &'static mut Health,
+        Option<&'static mut Mana>,
+        Option<&'static Level>,
+        &'static mut PlayerDeathState,
+    ),
+>;
+
 fn process_spirit_healer_requests(
     mut receivers: Query<
         (
@@ -263,13 +282,7 @@ fn process_spirit_healer_requests(
         ),
         With<Authenticated>,
     >,
-    mut players: Query<(
-        &mut Position,
-        &mut Health,
-        Option<&mut Mana>,
-        Option<&Level>,
-        &mut PlayerDeathState,
-    )>,
+    mut players: SpiritHealerPlayerData,
     time: Res<Time>,
     mut senders: Query<&mut MessageSender<DeathStateUpdate>>,
 ) {
@@ -364,17 +377,21 @@ fn process_stuck_escape_requests(
     }
 }
 
+type DeathDetectionQuery<'w, 's> = Query<
+    'w,
+    's,
+    (
+        Entity,
+        &'static Position,
+        &'static mut Health,
+        Option<&'static mut PlayerDeathState>,
+        &'static crate::persistence::ClientId,
+    ),
+    With<Player>,
+>;
+
 fn detect_player_deaths(
-    mut players: Query<
-        (
-            Entity,
-            &Position,
-            &mut Health,
-            Option<&mut PlayerDeathState>,
-            &crate::persistence::ClientId,
-        ),
-        With<Player>,
-    >,
+    mut players: DeathDetectionQuery,
     connections: Query<(Entity, &PlayerLink), With<Authenticated>>,
     time: Res<Time>,
     mut commands: Commands,

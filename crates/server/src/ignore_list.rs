@@ -33,8 +33,11 @@ impl Plugin for IgnoreListPlugin {
     }
 }
 
+type NewInWorldConnection<'w, 's> =
+    Query<'w, 's, (Entity, &'static PlayerLink, &'static InWorld), (With<Authenticated>, Added<InWorld>)>;
+
 fn send_initial_ignore_list(
-    connections: Query<(Entity, &PlayerLink, &InWorld), (With<Authenticated>, Added<InWorld>)>,
+    connections: NewInWorldConnection,
     mut ignore_q: Query<&mut PlayerIgnoreListState>,
     mut senders: Query<&mut MessageSender<IgnoreListStateUpdate>>,
 ) {

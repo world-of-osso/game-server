@@ -30,8 +30,11 @@ impl Plugin for ReputationPlugin {
     }
 }
 
+type NewInWorldLink<'w, 's> =
+    Query<'w, 's, (Entity, &'static PlayerLink), (With<Authenticated>, Added<InWorld>)>;
+
 fn send_initial_reputation_snapshot(
-    connections: Query<(Entity, &PlayerLink), (With<Authenticated>, Added<InWorld>)>,
+    connections: NewInWorldLink,
     reputations: Query<&CharacterReputation>,
     registry: Res<ReputationRegistry>,
     mut senders: Query<&mut MessageSender<ReputationStateUpdate>>,

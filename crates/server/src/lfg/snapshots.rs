@@ -95,15 +95,19 @@ fn build_match_found_snapshot(player_state: &PlayerLfgState) -> Option<LfgMatchF
         })
 }
 
+pub(super) struct SnapshotOptions {
+    pub(super) message: Option<String>,
+    pub(super) error: Option<String>,
+    pub(super) now: u64,
+}
+
 pub(super) fn send_snapshot_to_player(
     player_entity: Entity,
     player_state: &PlayerLfgState,
     state: &LfgServerState,
     connections: &Query<(Entity, &PlayerLink), With<Authenticated>>,
     senders: &mut Query<&mut MessageSender<LfgStateUpdate>>,
-    message: Option<String>,
-    error: Option<String>,
-    now: u64,
+    opts: SnapshotOptions,
 ) {
     let Some(conn_entity) = connection_entity_for_player(player_entity, connections) else {
         return;
@@ -116,10 +120,10 @@ pub(super) fn send_snapshot_to_player(
             player_entity,
             player_state,
             &state.queue,
-            now,
+            opts.now,
         )),
-        message,
-        error,
+        message: opts.message,
+        error: opts.error,
     });
 }
 
@@ -138,9 +142,11 @@ pub(super) fn send_snapshot_update(
         state,
         connections,
         senders,
-        update.message,
-        update.error,
-        now,
+        SnapshotOptions {
+            message: update.message,
+            error: update.error,
+            now,
+        },
     );
 }
 

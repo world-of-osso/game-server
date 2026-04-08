@@ -17,11 +17,15 @@ pub(super) fn initialize_auction_state(
     state.initialized = true;
 }
 
+type OpenAuctionReceiver<'w, 's> = Query<
+    'w,
+    's,
+    (Entity, &'static mut MessageReceiver<OpenAuctionHouse>),
+    (With<Authenticated>, With<InWorld>),
+>;
+
 pub(super) fn process_open_requests(
-    mut receivers: Query<
-        (Entity, &mut MessageReceiver<OpenAuctionHouse>),
-        (With<Authenticated>, With<InWorld>),
-    >,
+    mut receivers: OpenAuctionReceiver,
     mut senders: Query<&mut MessageSender<AuctionHouseOpened>>,
 ) {
     process_entity_requests(&mut receivers, &mut senders, |_| AuctionHouseOpened {

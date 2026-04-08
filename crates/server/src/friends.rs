@@ -81,9 +81,12 @@ impl Plugin for FriendsPlugin {
     }
 }
 
+type NewInWorldConnection<'w, 's> =
+    Query<'w, 's, (Entity, &'static PlayerLink, &'static InWorld), (With<Authenticated>, Added<InWorld>)>;
+
 fn send_initial_friends_snapshot(
     mut commands: Commands,
-    connections: Query<(Entity, &PlayerLink, &InWorld), (With<Authenticated>, Added<InWorld>)>,
+    connections: NewInWorldConnection,
     mut friends_q: Query<&mut PlayerFriendsState>,
     online_players: Query<(&Player, &Level, Option<&Zone>, Option<&PresenceStatus>)>,
     db: Option<Res<GameDatabase>>,
@@ -247,19 +250,27 @@ fn process_mutation_requests<R, F>(
     }
 }
 
+type PresenceParamSet<'w, 's> = ParamSet<
+    'w,
+    's,
+    (
+        Query<'static, 'static, (&'static mut PresenceStatus, &'static mut PresenceTracker), With<Player>>,
+        Query<'static, 'static, (&'static Player, &'static Level, Option<&'static Zone>, Option<&'static PresenceStatus>)>,
+    ),
+>;
+
 fn process_presence_requests(
     mut receivers: Query<
         (Entity, &PlayerLink, &mut MessageReceiver<SetPresenceStatus>),
         With<Authenticated>,
     >,
     friends_q: Query<&PlayerFriendsState>,
-    mut presence_q: Query<(&mut PresenceStatus, &mut PresenceTracker), With<Player>>,
-    online_players: Query<(&Player, &Level, Option<&Zone>, Option<&PresenceStatus>)>,
+    mut presence_set: PresenceParamSet,
     db: Option<Res<GameDatabase>>,
     mut senders: Query<&mut MessageSender<FriendsStateUpdate>>,
 ) {
     let Some(db) = db else { return };
-    let online = collect_online_players(&online_players);
+    let online = collect_online_players(&presence_set.p1());
     for (conn_entity, link, mut receiver) in &mut receivers {
         let requests: Vec<_> = receiver.receive().collect();
         if requests.is_empty() {
@@ -270,7 +281,7 @@ fn process_presence_requests(
             continue;
         };
         for request in requests {
-            let result = set_presence(link.0, request.status, &mut presence_q);
+            let result = set_presence(link.0, request.status, &mut presence_set.p0());
             let snapshot = build_friends_snapshot(&db.db, friends, &online);
             match result {
                 Ok(message) => {
@@ -769,5 +780,12 @@ mod tests {
         assert_eq!(states[1].0, "Theron");
         assert_eq!(states[1].1, PresenceStatus::Afk);
         assert_eq!(states[1].2.manual, None);
+    }
+
+    #[test]
+    fn process_presence_requests_system_initializes_without_conflict() {
+        let mut app = App::new();
+        app.add_systems(Update, process_presence_requests);
+        app.update();
     }
 }

@@ -18,8 +18,8 @@ use self::request_handlers::{
     handle_dequeue_request, handle_queue_request, process_player_lfg_requests,
 };
 use self::snapshots::{
-    SnapshotUpdate, player_name, player_snapshot, send_error, send_snapshot_to_player,
-    send_snapshot_update,
+    SnapshotOptions, SnapshotUpdate, player_name, player_snapshot, send_error,
+    send_snapshot_to_player, send_snapshot_update,
 };
 
 #[derive(Component, Debug, Clone, PartialEq, Eq, Default)]
@@ -110,9 +110,11 @@ fn process_lfg_status_queries(
             &state,
             &connections,
             &mut senders,
-            Some("lfg status refreshed".into()),
-            None,
-            current_seconds(&time),
+            SnapshotOptions {
+                message: Some("lfg status refreshed".into()),
+                error: None,
+                now: current_seconds(&time),
+            },
         );
     }
 }
@@ -306,9 +308,11 @@ fn finalize_match(
             state,
             connections,
             senders,
-            Some(format!("match found for {dungeon_name}")),
-            None,
-            now,
+            SnapshotOptions {
+                message: Some(format!("match found for {dungeon_name}")),
+                error: None,
+                now,
+            },
         );
     }
 }
@@ -340,9 +344,11 @@ fn cancel_role_check(
             state,
             connections,
             senders,
-            Some(format!("{decliner_name} declined the role check")),
-            None,
-            now,
+            SnapshotOptions {
+                message: Some(format!("{decliner_name} declined the role check")),
+                error: None,
+                now,
+            },
         );
     }
 }
@@ -388,9 +394,11 @@ fn broadcast_role_check_progress(
             state,
             connections,
             senders,
-            Some(message.clone()),
-            None,
-            now,
+            SnapshotOptions {
+                message: Some(message.clone()),
+                error: None,
+                now,
+            },
         );
     }
 }

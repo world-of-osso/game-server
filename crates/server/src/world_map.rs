@@ -30,8 +30,11 @@ impl Plugin for WorldMapPlugin {
     }
 }
 
+type NewInWorldConnection<'w, 's> =
+    Query<'w, 's, (Entity, &'static PlayerLink, &'static InWorld), (With<Authenticated>, Added<InWorld>)>;
+
 fn send_initial_world_map_snapshot(
-    connections: Query<(Entity, &PlayerLink, &InWorld), (With<Authenticated>, Added<InWorld>)>,
+    connections: NewInWorldConnection,
     mut world_maps: Query<(&Zone, &mut PlayerWorldMapState)>,
     db: Option<Res<GameDatabase>>,
     mut senders: Query<&mut MessageSender<WorldMapStateUpdate>>,

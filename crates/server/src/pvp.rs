@@ -126,8 +126,11 @@ impl Plugin for PvpPlugin {
     }
 }
 
+type NewInWorldLink<'w, 's> =
+    Query<'w, 's, (Entity, &'static PlayerLink), (With<Authenticated>, Added<InWorld>)>;
+
 fn send_initial_pvp_snapshot(
-    connections: Query<(Entity, &PlayerLink), (With<Authenticated>, Added<InWorld>)>,
+    connections: NewInWorldLink,
     players: Query<&PlayerPvpState>,
     mut senders: Query<&mut MessageSender<PvpStateUpdate>>,
 ) {
@@ -476,14 +479,12 @@ fn resolve_rated_matches(
             second_player.name.clone()
         };
         apply_rated_result(
-            winner,
-            loser,
+            RatedParticipant { entry: winner, name: winner_name },
+            RatedParticipant { entry: loser, name: loser_name },
             players,
             connections,
             db,
             senders,
-            winner_name,
-            loser_name,
         );
     }
 }
@@ -527,60 +528,38 @@ fn decide_winner<'a>(
     }
 }
 
+struct RatedParticipant<'a> {
+    entry: &'a RatedQueueEntry,
+    name: String,
+}
+
+struct RatedReward {
+    honor: u32,
+    conquest: u32,
+    new_rating: u32,
+    message: String,
+}
+
 fn apply_rated_result(
-    winner: &RatedQueueEntry,
-    loser: &RatedQueueEntry,
+    winner: RatedParticipant<'_>,
+    loser: RatedParticipant<'_>,
     players: &mut Query<(&shared::components::Player, &mut PlayerPvpState)>,
     connections: &Query<(Entity, &PlayerLink, &InWorld), With<Authenticated>>,
     db: &GameDatabase,
     senders: &mut Query<&mut MessageSender<PvpStateUpdate>>,
-    winner_name: String,
-    loser_name: String,
 ) {
     let winner_old = players
-        .get(winner.player_entity)
-        .map(|(_, state)| state.progress.bracket_rating(&winner.bracket))
+        .get(winner.entry.player_entity)
+        .map(|(_, state)| state.progress.bracket_rating(&winner.entry.bracket))
         .unwrap_or(DEFAULT_RATING);
     let loser_old = players
-        .get(loser.player_entity)
-        .map(|(_, state)| state.progress.bracket_rating(&loser.bracket))
+        .get(loser.entry.player_entity)
+        .map(|(_, state)| state.progress.bracket_rating(&loser.entry.bracket))
         .unwrap_or(DEFAULT_RATING);
     let (winner_adj, loser_adj) = calculate_rating(winner_old, loser_old);
 
-    apply_winner_result(
-        winner,
-        players,
-        connections,
-        db,
-        senders,
-        winner_name.clone(),
-        loser_name.clone(),
-        winner_adj,
-    );
-    apply_loser_result(
-        loser,
-        players,
-        connections,
-        db,
-        senders,
-        loser_name,
-        winner_name,
-        loser_adj,
-    );
-}
-
-fn apply_winner_result(
-    winner: &RatedQueueEntry,
-    players: &mut Query<(&shared::components::Player, &mut PlayerPvpState)>,
-    connections: &Query<(Entity, &PlayerLink, &InWorld), With<Authenticated>>,
-    db: &GameDatabase,
-    senders: &mut Query<&mut MessageSender<PvpStateUpdate>>,
-    winner_name: String,
-    loser_name: String,
-    adjustment: shared::arena::RatingAdjustment,
-) {
     apply_rated_player_result(
-        winner,
+        winner.entry,
         players,
         connections,
         db,
@@ -588,35 +567,23 @@ fn apply_winner_result(
         RatedReward {
             honor: WINNER_HONOR,
             conquest: WINNER_CONQUEST,
-            new_rating: adjustment.new_rating,
+            new_rating: winner_adj.new_rating,
+            message: format!(
+                "{} defeated {} in {} ({} -> {})",
+                winner.name,
+                loser.name,
+                bracket_label(&winner.entry.bracket),
+                winner_adj.old_rating,
+                winner_adj.new_rating
+            ),
         },
         |bracket| {
             bracket.season_wins += 1;
             bracket.weekly_wins += 1;
         },
-        format!(
-            "{} defeated {} in {} ({} -> {})",
-            winner_name,
-            loser_name,
-            bracket_label(&winner.bracket),
-            adjustment.old_rating,
-            adjustment.new_rating
-        ),
     );
-}
-
-fn apply_loser_result(
-    loser: &RatedQueueEntry,
-    players: &mut Query<(&shared::components::Player, &mut PlayerPvpState)>,
-    connections: &Query<(Entity, &PlayerLink, &InWorld), With<Authenticated>>,
-    db: &GameDatabase,
-    senders: &mut Query<&mut MessageSender<PvpStateUpdate>>,
-    loser_name: String,
-    winner_name: String,
-    adjustment: shared::arena::RatingAdjustment,
-) {
     apply_rated_player_result(
-        loser,
+        loser.entry,
         players,
         connections,
         db,
@@ -624,27 +591,21 @@ fn apply_loser_result(
         RatedReward {
             honor: LOSER_HONOR,
             conquest: LOSER_CONQUEST,
-            new_rating: adjustment.new_rating,
+            new_rating: loser_adj.new_rating,
+            message: format!(
+                "{} lost to {} in {} ({} -> {})",
+                loser.name,
+                winner.name,
+                bracket_label(&loser.entry.bracket),
+                loser_adj.old_rating,
+                loser_adj.new_rating
+            ),
         },
         |bracket| {
             bracket.season_losses += 1;
             bracket.weekly_losses += 1;
         },
-        format!(
-            "{} lost to {} in {} ({} -> {})",
-            loser_name,
-            winner_name,
-            bracket_label(&loser.bracket),
-            adjustment.old_rating,
-            adjustment.new_rating
-        ),
     );
-}
-
-struct RatedReward {
-    honor: u32,
-    conquest: u32,
-    new_rating: u32,
 }
 
 fn apply_rated_player_result<F>(
@@ -655,7 +616,6 @@ fn apply_rated_player_result<F>(
     senders: &mut Query<&mut MessageSender<PvpStateUpdate>>,
     reward: RatedReward,
     update_record: F,
-    message: String,
 ) where
     F: FnOnce(&mut PlayerPvpBracketState),
 {
@@ -669,7 +629,7 @@ fn apply_rated_player_result<F>(
     apply_rated_currency_rewards(&mut state.progress, reward.honor, reward.conquest);
     state.queue = None;
     persistence::save_pvp(&db.db, entry.character_id, &state.progress);
-    send_rated_result_update(connections, entry.character_id, &state, senders, message);
+    send_rated_result_update(connections, entry.character_id, &state, senders, reward.message);
 }
 
 fn apply_rated_currency_rewards(progress: &mut PlayerPvpProgress, honor: u32, conquest: u32) {
