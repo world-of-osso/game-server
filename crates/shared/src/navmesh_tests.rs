@@ -92,18 +92,16 @@ fn tile_with_water_and_walkable() {
             NavPoint::new(10.0, 50.0, 0.0),
             NavPoint::new(10.0, 50.0, 10.0),
         ],
-        polygons: vec![
-            NavPolygon {
-                id: 0,
-                vertices: vec![0, 1, 2],
-                neighbors: vec![NO_NEIGHBOR, NO_NEIGHBOR, NO_NEIGHBOR],
-                flags: NavFlags {
-                    walkable: true,
-                    water: true,
-                    ..Default::default()
-                },
+        polygons: vec![NavPolygon {
+            id: 0,
+            vertices: vec![0, 1, 2],
+            neighbors: vec![NO_NEIGHBOR, NO_NEIGHBOR, NO_NEIGHBOR],
+            flags: NavFlags {
+                walkable: true,
+                water: true,
+                ..Default::default()
             },
-        ],
+        }],
     };
     let poly = tile.find_polygon(&NavPoint::new(3.0, 0.0, 3.0));
     assert_eq!(poly, Some(0));
@@ -112,31 +110,56 @@ fn tile_with_water_and_walkable() {
 
 // --- A* pathfinding tests ---
 
+fn walkable_nav_flags() -> NavFlags {
+    NavFlags {
+        walkable: true,
+        ..Default::default()
+    }
+}
+
+fn path_tile_vertices() -> Vec<NavPoint> {
+    vec![
+        NavPoint::new(0.0, 0.0, 0.0),   // 0
+        NavPoint::new(10.0, 0.0, 0.0),  // 1
+        NavPoint::new(0.0, 0.0, 10.0),  // 2
+        NavPoint::new(20.0, 0.0, 0.0),  // 3
+        NavPoint::new(10.0, 0.0, 10.0), // 4
+        NavPoint::new(30.0, 0.0, 0.0),  // 5
+        NavPoint::new(20.0, 0.0, 10.0), // 6
+        NavPoint::new(30.0, 0.0, 10.0), // 7
+    ]
+}
+
+fn path_tile_polygons(flags: NavFlags) -> Vec<NavPolygon> {
+    vec![
+        NavPolygon {
+            id: 0,
+            vertices: vec![0, 1, 4, 2],
+            neighbors: vec![NO_NEIGHBOR, 1, NO_NEIGHBOR, NO_NEIGHBOR],
+            flags,
+        },
+        NavPolygon {
+            id: 1,
+            vertices: vec![1, 3, 6, 4],
+            neighbors: vec![NO_NEIGHBOR, 2, NO_NEIGHBOR, 0],
+            flags,
+        },
+        NavPolygon {
+            id: 2,
+            vertices: vec![3, 5, 7, 6],
+            neighbors: vec![NO_NEIGHBOR, NO_NEIGHBOR, NO_NEIGHBOR, 1],
+            flags,
+        },
+    ]
+}
+
 fn path_tile() -> NavTile {
-    // Three connected triangles in a line: poly 1 → 2 → 3
-    //   v0---v1---v3---v5
-    //   |  1  |  2  |  3 |
-    //   v2---v4---v6---v7
-    let w = NavFlags { walkable: true, ..Default::default() };
     NavTile {
         map_id: 0,
         tile_x: 0,
         tile_y: 0,
-        vertices: vec![
-            NavPoint::new(0.0, 0.0, 0.0),   // 0
-            NavPoint::new(10.0, 0.0, 0.0),  // 1
-            NavPoint::new(0.0, 0.0, 10.0),  // 2
-            NavPoint::new(20.0, 0.0, 0.0),  // 3
-            NavPoint::new(10.0, 0.0, 10.0), // 4
-            NavPoint::new(30.0, 0.0, 0.0),  // 5
-            NavPoint::new(20.0, 0.0, 10.0), // 6
-            NavPoint::new(30.0, 0.0, 10.0), // 7
-        ],
-        polygons: vec![
-            NavPolygon { id: 0, vertices: vec![0, 1, 4, 2], neighbors: vec![NO_NEIGHBOR, 1, NO_NEIGHBOR, NO_NEIGHBOR], flags: w },
-            NavPolygon { id: 1, vertices: vec![1, 3, 6, 4], neighbors: vec![NO_NEIGHBOR, 2, NO_NEIGHBOR, 0], flags: w },
-            NavPolygon { id: 2, vertices: vec![3, 5, 7, 6], neighbors: vec![NO_NEIGHBOR, NO_NEIGHBOR, NO_NEIGHBOR, 1], flags: w },
-        ],
+        vertices: path_tile_vertices(),
+        polygons: path_tile_polygons(walkable_nav_flags()),
     }
 }
 
@@ -175,7 +198,10 @@ fn path_across_three_polygons() {
 fn path_outside_returns_none() {
     let tile = path_tile();
     let outside = NavPoint::new(100.0, 0.0, 100.0);
-    assert!(tile.find_path(&NavPoint::new(5.0, 0.0, 5.0), &outside).is_none());
+    assert!(
+        tile.find_path(&NavPoint::new(5.0, 0.0, 5.0), &outside)
+            .is_none()
+    );
 }
 
 #[test]
@@ -198,13 +224,19 @@ fn path_no_connection_returns_none() {
                 id: 1,
                 vertices: vec![0, 1, 2],
                 neighbors: vec![NO_NEIGHBOR, NO_NEIGHBOR, NO_NEIGHBOR],
-                flags: NavFlags { walkable: true, ..Default::default() },
+                flags: NavFlags {
+                    walkable: true,
+                    ..Default::default()
+                },
             },
             NavPolygon {
                 id: 2,
                 vertices: vec![3, 4, 5],
                 neighbors: vec![NO_NEIGHBOR, NO_NEIGHBOR, NO_NEIGHBOR],
-                flags: NavFlags { walkable: true, ..Default::default() },
+                flags: NavFlags {
+                    walkable: true,
+                    ..Default::default()
+                },
             },
         ],
     };
@@ -219,10 +251,17 @@ fn path_no_connection_returns_none() {
 fn chase_reached_when_in_range() {
     let mut chase = ChaseState::new(1, NavPoint::new(5.0, 0.0, 5.0), 7.0);
     chase.set_path(
-        NavPath { waypoints: vec![NavPoint::new(0.0, 0.0, 0.0), NavPoint::new(5.0, 0.0, 5.0)] },
+        NavPath {
+            waypoints: vec![NavPoint::new(0.0, 0.0, 0.0), NavPoint::new(5.0, 0.0, 5.0)],
+        },
         NavPoint::new(5.0, 0.0, 5.0),
     );
-    let result = chase.tick(0.016, &NavPoint::new(4.0, 0.0, 5.0), &NavPoint::new(5.0, 0.0, 5.0), 5.0);
+    let result = chase.tick(
+        0.016,
+        &NavPoint::new(4.0, 0.0, 5.0),
+        &NavPoint::new(5.0, 0.0, 5.0),
+        5.0,
+    );
     assert_eq!(result, ChaseTickResult::Reached);
 }
 
@@ -230,17 +269,33 @@ fn chase_reached_when_in_range() {
 fn chase_moves_toward_waypoint() {
     let mut chase = ChaseState::new(1, NavPoint::new(20.0, 0.0, 0.0), 7.0);
     chase.set_path(
-        NavPath { waypoints: vec![NavPoint::new(0.0, 0.0, 0.0), NavPoint::new(10.0, 0.0, 0.0), NavPoint::new(20.0, 0.0, 0.0)] },
+        NavPath {
+            waypoints: vec![
+                NavPoint::new(0.0, 0.0, 0.0),
+                NavPoint::new(10.0, 0.0, 0.0),
+                NavPoint::new(20.0, 0.0, 0.0),
+            ],
+        },
         NavPoint::new(20.0, 0.0, 0.0),
     );
-    let result = chase.tick(0.016, &NavPoint::new(0.0, 0.0, 0.0), &NavPoint::new(20.0, 0.0, 0.0), 5.0);
+    let result = chase.tick(
+        0.016,
+        &NavPoint::new(0.0, 0.0, 0.0),
+        &NavPoint::new(20.0, 0.0, 0.0),
+        5.0,
+    );
     assert!(matches!(result, ChaseTickResult::MoveTo(_)));
 }
 
 #[test]
 fn chase_need_repath_no_path() {
     let mut chase = ChaseState::new(1, NavPoint::new(20.0, 0.0, 0.0), 7.0);
-    let result = chase.tick(0.016, &NavPoint::new(0.0, 0.0, 0.0), &NavPoint::new(20.0, 0.0, 0.0), 5.0);
+    let result = chase.tick(
+        0.016,
+        &NavPoint::new(0.0, 0.0, 0.0),
+        &NavPoint::new(20.0, 0.0, 0.0),
+        5.0,
+    );
     assert_eq!(result, ChaseTickResult::NeedRepath);
 }
 
@@ -248,11 +303,18 @@ fn chase_need_repath_no_path() {
 fn chase_need_repath_target_moved() {
     let mut chase = ChaseState::new(1, NavPoint::new(10.0, 0.0, 0.0), 7.0);
     chase.set_path(
-        NavPath { waypoints: vec![NavPoint::new(0.0, 0.0, 0.0), NavPoint::new(10.0, 0.0, 0.0)] },
+        NavPath {
+            waypoints: vec![NavPoint::new(0.0, 0.0, 0.0), NavPoint::new(10.0, 0.0, 0.0)],
+        },
         NavPoint::new(10.0, 0.0, 0.0),
     );
     // Target moved significantly
-    let result = chase.tick(0.016, &NavPoint::new(0.0, 0.0, 0.0), &NavPoint::new(20.0, 0.0, 0.0), 5.0);
+    let result = chase.tick(
+        0.016,
+        &NavPoint::new(0.0, 0.0, 0.0),
+        &NavPoint::new(20.0, 0.0, 0.0),
+        5.0,
+    );
     assert_eq!(result, ChaseTickResult::NeedRepath);
 }
 
@@ -260,11 +322,18 @@ fn chase_need_repath_target_moved() {
 fn chase_need_repath_timer_expired() {
     let mut chase = ChaseState::new(1, NavPoint::new(20.0, 0.0, 0.0), 7.0);
     chase.set_path(
-        NavPath { waypoints: vec![NavPoint::new(0.0, 0.0, 0.0), NavPoint::new(20.0, 0.0, 0.0)] },
+        NavPath {
+            waypoints: vec![NavPoint::new(0.0, 0.0, 0.0), NavPoint::new(20.0, 0.0, 0.0)],
+        },
         NavPoint::new(20.0, 0.0, 0.0),
     );
     // Tick past repath interval
-    let result = chase.tick(2.0, &NavPoint::new(0.0, 0.0, 0.0), &NavPoint::new(20.0, 0.0, 0.0), 5.0);
+    let result = chase.tick(
+        2.0,
+        &NavPoint::new(0.0, 0.0, 0.0),
+        &NavPoint::new(20.0, 0.0, 0.0),
+        5.0,
+    );
     assert_eq!(result, ChaseTickResult::NeedRepath);
 }
 
@@ -284,7 +353,10 @@ fn chase_recalculates_path_when_target_moves() {
 
     // First tick: follows path normally
     let result = chase.tick(0.1, &mob_pos, &initial_target, 5.0);
-    assert_eq!(result, ChaseTickResult::MoveTo(NavPoint::new(10.0, 0.0, 0.0)));
+    assert_eq!(
+        result,
+        ChaseTickResult::MoveTo(NavPoint::new(10.0, 0.0, 0.0))
+    );
 
     // Target moves significantly to (20, 0, 30)
     let new_target = NavPoint::new(20.0, 0.0, 30.0);
@@ -334,13 +406,20 @@ fn chase_stops_when_target_unreachable() {
 fn leash_triggers_when_too_far() {
     let mut chase = ChaseState::new(1, NavPoint::new(50.0, 0.0, 0.0), 7.0);
     chase.set_path(
-        NavPath { waypoints: vec![NavPoint::new(45.0, 0.0, 0.0), NavPoint::new(50.0, 0.0, 0.0)] },
+        NavPath {
+            waypoints: vec![NavPoint::new(45.0, 0.0, 0.0), NavPoint::new(50.0, 0.0, 0.0)],
+        },
         NavPoint::new(50.0, 0.0, 0.0),
     );
     let spawn = NavPoint::new(0.0, 0.0, 0.0);
     let current = NavPoint::new(45.0, 0.0, 0.0); // 45y from spawn
     let result = chase.tick_with_leash(
-        0.016, &current, &NavPoint::new(50.0, 0.0, 0.0), 5.0, &spawn, 40.0,
+        0.016,
+        &current,
+        &NavPoint::new(50.0, 0.0, 0.0),
+        5.0,
+        &spawn,
+        40.0,
     );
     assert_eq!(result, ChaseTickResult::Leashed);
 }
@@ -349,13 +428,20 @@ fn leash_triggers_when_too_far() {
 fn leash_does_not_trigger_within_range() {
     let mut chase = ChaseState::new(1, NavPoint::new(30.0, 0.0, 0.0), 7.0);
     chase.set_path(
-        NavPath { waypoints: vec![NavPoint::new(20.0, 0.0, 0.0), NavPoint::new(30.0, 0.0, 0.0)] },
+        NavPath {
+            waypoints: vec![NavPoint::new(20.0, 0.0, 0.0), NavPoint::new(30.0, 0.0, 0.0)],
+        },
         NavPoint::new(30.0, 0.0, 0.0),
     );
     let spawn = NavPoint::new(0.0, 0.0, 0.0);
     let current = NavPoint::new(20.0, 0.0, 0.0); // 20y from spawn, within 40y leash
     let result = chase.tick_with_leash(
-        0.016, &current, &NavPoint::new(30.0, 0.0, 0.0), 5.0, &spawn, 40.0,
+        0.016,
+        &current,
+        &NavPoint::new(30.0, 0.0, 0.0),
+        5.0,
+        &spawn,
+        40.0,
     );
     assert!(matches!(result, ChaseTickResult::MoveTo(_)));
 }
@@ -400,9 +486,18 @@ fn return_to_spawn_no_path() {
 fn sample_patrol() -> PatrolPath {
     PatrolPath {
         waypoints: vec![
-            PatrolWaypoint { position: NavPoint::new(0.0, 0.0, 0.0), delay: 2.0 },
-            PatrolWaypoint { position: NavPoint::new(10.0, 0.0, 0.0), delay: 0.0 },
-            PatrolWaypoint { position: NavPoint::new(10.0, 0.0, 10.0), delay: 1.0 },
+            PatrolWaypoint {
+                position: NavPoint::new(0.0, 0.0, 0.0),
+                delay: 2.0,
+            },
+            PatrolWaypoint {
+                position: NavPoint::new(10.0, 0.0, 0.0),
+                delay: 0.0,
+            },
+            PatrolWaypoint {
+                position: NavPoint::new(10.0, 0.0, 10.0),
+                delay: 1.0,
+            },
         ],
     }
 }
