@@ -10,8 +10,8 @@ use shared::protocol::{
 };
 
 use self::pvp_support::{
-    bracket_label, build_pvp_snapshot, connection_for_character, format_bg_queue_error,
-    queue_label, send_pvp_error, send_pvp_update,
+    bracket_label, connection_for_character, format_bg_queue_error, queue_label, send_pvp_error,
+    send_pvp_update,
 };
 use crate::auth::{Authenticated, InWorld};
 use crate::networking::PlayerLink;

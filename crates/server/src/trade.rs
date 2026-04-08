@@ -5,7 +5,7 @@ use shared::protocol::{
     AcceptTrade, CancelTrade, ClearTradeItem, ConfirmTrade, DeclineTrade, InitiateTrade,
     SetTradeItem, SetTradeMoney, TradeStateUpdate,
 };
-use shared::trade::{CompletedTrade, TRADE_SLOT_COUNT, TradeItem, TradeManager, TradeOffer};
+use shared::trade::{TradeItem, TradeManager};
 
 use self::trade_support::{
     broadcast_trade_state, execute_completed_trade, find_player_by_character_id,
