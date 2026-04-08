@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use lightyear::prelude::*;
 use serde::{Deserialize, Serialize};
-use shared::components::Mounted;
+use shared::components::{Mounted, MovementSpeed};
 use shared::protocol::{
     CollectionChannel, CollectionMountSnapshot, CollectionPetSnapshot, CollectionSnapshot,
     CollectionStateUpdate, DismissMount, DismissPet, SummonMount, SummonPet,
@@ -97,6 +97,14 @@ impl PlayerCollectionState {
             .iter()
             .find(|mount| mount.active)
             .map(|mount| mount.mount_id)
+    }
+}
+
+pub(crate) fn movement_speed_for_mount(mounted: bool) -> f32 {
+    if mounted {
+        shared::movement::RUN_SPEED * 2.0
+    } else {
+        shared::movement::RUN_SPEED
     }
 }
 
@@ -310,10 +318,16 @@ fn apply_mount_state_change(
         Some(MountStateChange::Mounted(mount_display_id)) => {
             commands
                 .entity(player_entity)
-                .insert(Mounted { mount_display_id });
+                .insert((
+                    Mounted { mount_display_id },
+                    MovementSpeed(movement_speed_for_mount(true)),
+                ));
         }
         Some(MountStateChange::Dismissed) => {
-            commands.entity(player_entity).remove::<Mounted>();
+            commands
+                .entity(player_entity)
+                .remove::<Mounted>()
+                .insert(MovementSpeed(movement_speed_for_mount(false)));
         }
         None => {}
     }
