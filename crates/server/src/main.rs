@@ -26,6 +26,7 @@ mod persistence_types;
 mod profession;
 mod pvp;
 mod reputation;
+mod rest;
 mod spell_db;
 mod stats;
 mod talent;
@@ -79,6 +80,7 @@ fn add_game_plugins(app: &mut App) {
         .add_plugins(profession::ProfessionPlugin)
         .add_plugins(reputation::ReputationPlugin)
         .add_plugins(world_map::WorldMapPlugin)
+        .add_plugins(rest::RestPlugin)
         .add_plugins(duel::DuelPlugin)
         .add_plugins(inspect::InspectPlugin)
         .add_plugins(talent::TalentPlugin)

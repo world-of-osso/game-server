@@ -396,6 +396,13 @@ pub struct WorldMapStateUpdate {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct RestStateUpdate {
+    pub snapshot: Option<RestSnapshot>,
+    pub message: Option<String>,
+    pub error: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct QueryFriends;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]

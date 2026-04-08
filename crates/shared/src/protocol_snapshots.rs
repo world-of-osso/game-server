@@ -196,6 +196,20 @@ pub struct WorldMapSnapshot {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub enum RestAreaKindSnapshot {
+    City,
+    Inn,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct RestSnapshot {
+    pub in_rest_area: bool,
+    pub rest_area_kind: Option<RestAreaKindSnapshot>,
+    pub rested_xp: u32,
+    pub rested_xp_max: u32,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct FriendCharacterSnapshot {
     pub name: String,
     pub level: u16,
@@ -332,6 +346,7 @@ pub fn register_snapshot_messages(app: &mut App) {
     register_server_snapshot::<AchievementSnapshot>(app);
     register_server_snapshot::<AchievementToastSnapshot>(app);
     register_server_snapshot::<WorldMapSnapshot>(app);
+    register_server_snapshot::<RestSnapshot>(app);
     register_server_snapshot::<FriendsSnapshot>(app);
     register_server_snapshot::<IgnoreListSnapshot>(app);
     register_server_snapshot::<LfgSnapshot>(app);

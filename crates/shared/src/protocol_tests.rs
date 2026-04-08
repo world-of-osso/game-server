@@ -277,6 +277,24 @@ fn death_state_update_round_trip() {
 }
 
 #[test]
+fn rest_state_update_round_trip() {
+    let update = RestStateUpdate {
+        snapshot: Some(RestSnapshot {
+            in_rest_area: true,
+            rest_area_kind: Some(RestAreaKindSnapshot::Inn),
+            rested_xp: 240,
+            rested_xp_max: 600,
+        }),
+        message: Some("rest state updated".into()),
+        error: None,
+    };
+
+    let encoded = serde_json::to_string(&update).unwrap();
+    let decoded: RestStateUpdate = serde_json::from_str(&encoded).unwrap();
+    assert_eq!(update, decoded);
+}
+
+#[test]
 fn pvp_state_update_round_trip() {
     let update = PvpStateUpdate {
         snapshot: Some(PvpSnapshot {

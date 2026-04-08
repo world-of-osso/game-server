@@ -37,6 +37,9 @@ pub struct AchievementChannel;
 /// Reliable ordered channel for world map updates, bidirectional.
 pub struct WorldMapChannel;
 
+/// Reliable ordered channel for resting state updates, bidirectional.
+pub struct RestChannel;
+
 /// Reliable ordered channel for friends updates, bidirectional.
 pub struct FriendsChannel;
 

@@ -18,6 +18,7 @@ pub(super) fn register_messages(app: &mut App) {
     register_reputation_messages(app);
     register_achievement_messages(app);
     register_world_map_messages(app);
+    register_rest_messages(app);
     register_friends_messages(app);
     register_ignore_messages(app);
     register_lfg_messages(app);
@@ -224,6 +225,11 @@ fn register_world_map_messages(app: &mut App) {
         .add_direction(NetworkDirection::ServerToClient);
 }
 
+fn register_rest_messages(app: &mut App) {
+    app.register_message::<RestStateUpdate>()
+        .add_direction(NetworkDirection::ServerToClient);
+}
+
 fn register_friends_messages(app: &mut App) {
     app.register_message::<QueryFriends>()
         .add_direction(NetworkDirection::ClientToServer);
@@ -352,6 +358,7 @@ fn register_bidirectional_channels(app: &mut App) {
     add_reliable_channel::<ReputationChannel>(app, NetworkDirection::Bidirectional);
     add_reliable_channel::<AchievementChannel>(app, NetworkDirection::Bidirectional);
     add_reliable_channel::<WorldMapChannel>(app, NetworkDirection::Bidirectional);
+    add_reliable_channel::<RestChannel>(app, NetworkDirection::ServerToClient);
     add_reliable_channel::<FriendsChannel>(app, NetworkDirection::Bidirectional);
     add_reliable_channel::<IgnoreChannel>(app, NetworkDirection::Bidirectional);
     add_reliable_channel::<LfgChannel>(app, NetworkDirection::Bidirectional);
