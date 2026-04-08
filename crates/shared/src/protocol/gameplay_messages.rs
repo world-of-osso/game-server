@@ -521,6 +521,9 @@ pub struct ResurrectAtCorpse;
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct AcceptSpiritHealerResurrection;
 
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct UseStuckEscape;
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct DeathStateUpdate {
     pub snapshot: Option<DeathSnapshot>,

@@ -298,6 +298,8 @@ fn register_death_messages(app: &mut App) {
         .add_direction(NetworkDirection::ClientToServer);
     app.register_message::<AcceptSpiritHealerResurrection>()
         .add_direction(NetworkDirection::ClientToServer);
+    app.register_message::<UseStuckEscape>()
+        .add_direction(NetworkDirection::ClientToServer);
     app.register_message::<DeathStateUpdate>()
         .add_direction(NetworkDirection::ServerToClient);
 }

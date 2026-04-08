@@ -9,6 +9,7 @@ use shared::death::{
 use shared::protocol::{
     AcceptSpiritHealerResurrection, DeathChannel, DeathPositionSnapshot, DeathSnapshot,
     DeathStateSnapshot, DeathStateUpdate, QueryDeathStatus, ReleaseSpirit, ResurrectAtCorpse,
+    UseStuckEscape,
 };
 
 use crate::auth::{Authenticated, InWorld};
@@ -52,6 +53,7 @@ impl Plugin for DeathPlugin {
         app.add_systems(Update, process_release_spirit_requests);
         app.add_systems(Update, process_resurrect_at_corpse_requests);
         app.add_systems(Update, process_spirit_healer_requests);
+        app.add_systems(Update, process_stuck_escape_requests);
         app.add_systems(
             FixedUpdate,
             detect_player_deaths.after(crate::networking::apply_terrain_gravity),
@@ -317,6 +319,51 @@ fn process_spirit_healer_requests(
     }
 }
 
+fn process_stuck_escape_requests(
+    mut receivers: Query<
+        (Entity, &PlayerLink, &mut MessageReceiver<UseStuckEscape>),
+        With<Authenticated>,
+    >,
+    mut players: Query<(&mut Position, Option<&PlayerDeathState>)>,
+    state: Res<DeathServerState>,
+    mut senders: Query<&mut MessageSender<DeathStateUpdate>>,
+) {
+    for (conn_entity, link, mut receiver) in &mut receivers {
+        for _ in receiver.receive() {
+            let Ok((mut position, death_state)) = players.get_mut(link.0) else {
+                send_error(
+                    conn_entity,
+                    &mut senders,
+                    "death state unavailable for player",
+                );
+                continue;
+            };
+            match use_stuck_escape(&mut position, death_state, &state.graveyards) {
+                Ok(message) => {
+                    send_update(
+                        conn_entity,
+                        &position,
+                        death_state.cloned().unwrap_or_default(),
+                        Some(message),
+                        None,
+                        &mut senders,
+                    );
+                }
+                Err(error) => {
+                    send_update(
+                        conn_entity,
+                        &position,
+                        death_state.cloned().unwrap_or_default(),
+                        None,
+                        Some(error),
+                        &mut senders,
+                    );
+                }
+            }
+        }
+    }
+}
+
 fn detect_player_deaths(
     mut players: Query<
         (
@@ -414,6 +461,26 @@ fn release_spirit_for_player(
     position.y = result.y;
     position.z = result.z;
     Ok("released spirit".into())
+}
+
+fn use_stuck_escape(
+    position: &mut Position,
+    death_state: Option<&PlayerDeathState>,
+    graveyards: &GraveyardRegistry,
+) -> Result<String, String> {
+    if death_state
+        .as_ref()
+        .is_some_and(|state| state.state != DeathState::Alive)
+    {
+        return Err("stuck escape is unavailable while dead".into());
+    }
+    let graveyard = graveyards
+        .nearest(WORLD_MAP_ID, position.x, position.y, position.z, 0)
+        .ok_or_else(|| "unable to find a safe graveyard".to_string())?;
+    position.x = graveyard.x;
+    position.y = graveyard.y;
+    position.z = graveyard.z;
+    Ok("stuck escape used".into())
 }
 
 fn resurrect_player_at_corpse(
@@ -676,5 +743,59 @@ mod tests {
 
         assert_eq!(snapshot.state, DeathStateSnapshot::Ghost);
         assert!(snapshot.spirit_healer_available);
+    }
+
+    #[test]
+    fn stuck_escape_teleports_alive_player_to_nearest_graveyard() {
+        let mut position = Position {
+            x: 90.0,
+            y: 5.0,
+            z: 0.0,
+        };
+        let mut graveyards = GraveyardRegistry::new();
+        graveyards.add(Graveyard {
+            id: 1,
+            zone_id: 12,
+            faction: 0,
+            map_id: WORLD_MAP_ID,
+            x: 10.0,
+            y: 0.0,
+            z: 0.0,
+        });
+        graveyards.add(Graveyard {
+            id: 2,
+            zone_id: 12,
+            faction: 0,
+            map_id: WORLD_MAP_ID,
+            x: 100.0,
+            y: 0.0,
+            z: 0.0,
+        });
+
+        let message = use_stuck_escape(&mut position, None, &graveyards).expect("stuck escape");
+
+        assert_eq!(message, "stuck escape used");
+        assert_eq!(position.x, 100.0);
+        assert_eq!(position.y, 0.0);
+        assert_eq!(position.z, 0.0);
+    }
+
+    #[test]
+    fn stuck_escape_rejects_dead_players() {
+        let mut position = Position {
+            x: 1.0,
+            y: 2.0,
+            z: 3.0,
+        };
+        let death_state = PlayerDeathState {
+            state: DeathState::Ghost,
+            corpse: None,
+            graveyard: None,
+        };
+
+        let error = use_stuck_escape(&mut position, Some(&death_state), &GraveyardRegistry::new())
+            .expect_err("dead players cannot use stuck escape");
+
+        assert_eq!(error, "stuck escape is unavailable while dead");
     }
 }
