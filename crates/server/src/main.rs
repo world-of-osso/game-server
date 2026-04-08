@@ -6,6 +6,7 @@ mod auth;
 mod auth_character;
 mod combat;
 mod creature_ai;
+mod inspect;
 mod interest;
 mod messaging;
 mod networking;
@@ -44,6 +45,7 @@ fn main() {
         .add_plugins(persistence::PersistencePlugin)
         .add_plugins(auction_house::AuctionHousePlugin)
         .add_plugins(profession::ProfessionPlugin)
+        .add_plugins(inspect::InspectPlugin)
         .add_plugins(talent::TalentPlugin)
         .add_plugins(trade::TradePlugin)
         .add_plugins(networking::ServerNetworkPlugin)

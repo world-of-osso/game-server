@@ -350,7 +350,7 @@ fn reset_talents(selected: &mut SelectedTalents) -> bool {
     had_any
 }
 
-fn build_talent_snapshot(selected: &SelectedTalents) -> TalentSnapshot {
+pub(crate) fn build_talent_snapshot(selected: &SelectedTalents) -> TalentSnapshot {
     let active_spec = TALENT_DEFS
         .iter()
         .filter(|talent| selected.talent_ids.contains(&talent.id))

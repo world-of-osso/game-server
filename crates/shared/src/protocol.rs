@@ -40,6 +40,9 @@ pub struct TalentChannel;
 /// Reliable ordered channel for profession operations, bidirectional.
 pub struct ProfessionChannel;
 
+/// Reliable ordered channel for inspect operations, bidirectional.
+pub struct InspectChannel;
+
 /// Chat message type.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub enum ChatType {
@@ -579,6 +582,25 @@ pub struct TalentStateUpdate {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct QueryInspectTarget {
+    pub target_entity: Option<u64>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct InspectSnapshot {
+    pub target_name: String,
+    pub equipment_appearance: EquipmentAppearance,
+    pub talents: TalentSnapshot,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct InspectStateUpdate {
+    pub snapshot: Option<InspectSnapshot>,
+    pub message: Option<String>,
+    pub error: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct QueryProfessions;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
@@ -633,6 +655,7 @@ fn register_messages(app: &mut App) {
     register_auction_messages(app);
     register_trade_messages(app);
     register_talent_messages(app);
+    register_inspect_messages(app);
     register_profession_messages(app);
     crate::protocol_snapshots::register_snapshot_messages(app);
 }
@@ -784,6 +807,13 @@ fn register_talent_messages(app: &mut App) {
         .add_direction(NetworkDirection::ServerToClient);
 }
 
+fn register_inspect_messages(app: &mut App) {
+    app.register_message::<QueryInspectTarget>()
+        .add_direction(NetworkDirection::ClientToServer);
+    app.register_message::<InspectStateUpdate>()
+        .add_direction(NetworkDirection::ServerToClient);
+}
+
 fn register_profession_messages(app: &mut App) {
     app.register_message::<QueryProfessions>()
         .add_direction(NetworkDirection::ClientToServer);
@@ -845,6 +875,12 @@ fn register_channels(app: &mut App) {
     .add_direction(NetworkDirection::Bidirectional);
 
     app.add_channel::<TalentChannel>(ChannelSettings {
+        mode: ChannelMode::OrderedReliable(default()),
+        ..default()
+    })
+    .add_direction(NetworkDirection::Bidirectional);
+
+    app.add_channel::<InspectChannel>(ChannelSettings {
         mode: ChannelMode::OrderedReliable(default()),
         ..default()
     })
