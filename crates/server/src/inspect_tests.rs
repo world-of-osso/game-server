@@ -21,7 +21,7 @@ fn build_inspect_snapshot_includes_equipment_and_talents() {
         }],
     };
     let talents = shared::class_spec::SelectedTalents {
-        talent_ids: vec![101],
+        talent_ids: [101].into_iter().collect(),
     };
 
     let snapshot = build_inspect_snapshot(&target, &equipment_appearance, &talents);

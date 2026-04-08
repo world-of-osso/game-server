@@ -11,7 +11,20 @@ use serde::{Deserialize, Serialize};
 ///
 /// Each tier spans a range of reputation points. The total range
 /// from Hated to Exalted is 84,000 points (retail WoW values).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, bitcode::Encode, bitcode::Decode)]
+#[derive(
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Hash,
+    Serialize,
+    Deserialize,
+    bitcode::Encode,
+    bitcode::Decode,
+)]
 pub enum Standing {
     Hated,
     Hostile,
@@ -91,7 +104,9 @@ pub fn tier_progress(rep: i32) -> (i32, i32) {
 }
 
 /// A spillover rule: gaining rep with one faction affects another.
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, bitcode::Encode, bitcode::Decode)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Serialize, Deserialize, bitcode::Encode, bitcode::Decode,
+)]
 pub struct SpilloverRule {
     /// Target faction that receives the spillover.
     pub faction_id: u32,
@@ -140,7 +155,9 @@ pub struct FactionRegistry {
 
 impl FactionRegistry {
     pub fn new() -> Self {
-        Self { factions: Vec::new() }
+        Self {
+            factions: Vec::new(),
+        }
     }
 
     /// Register a faction.
@@ -232,7 +249,17 @@ pub struct FactionDisplayEntry {
 }
 
 /// Per-character reputation tracker across all factions.
-#[derive(Component, Debug, Clone, PartialEq, Default, Serialize, Deserialize, bitcode::Encode, bitcode::Decode)]
+#[derive(
+    Component,
+    Debug,
+    Clone,
+    PartialEq,
+    Default,
+    Serialize,
+    Deserialize,
+    bitcode::Encode,
+    bitcode::Decode,
+)]
 pub struct CharacterReputation {
     /// faction_id → current reputation value.
     values: HashMap<u32, i32>,
@@ -282,7 +309,11 @@ impl CharacterReputation {
         for faction in registry.iter() {
             values.insert(faction.id, faction.base_rep_for_race(race));
         }
-        Self { values, tracked: Vec::new(), watched: None }
+        Self {
+            values,
+            tracked: Vec::new(),
+            watched: None,
+        }
     }
 
     /// Get the raw reputation value for a faction.
@@ -316,18 +347,29 @@ impl CharacterReputation {
     }
 
     /// Gain reputation with a faction (positive amount).
-    pub fn gain_rep(&mut self, faction_id: u32, amount: i32, source: RepGainSource) -> RepChangeResult {
+    pub fn gain_rep(
+        &mut self,
+        faction_id: u32,
+        amount: i32,
+        source: RepGainSource,
+    ) -> RepChangeResult {
         self.modify_rep(faction_id, amount.abs(), source)
     }
 
     /// Lose reputation with a faction (negative amount).
-    pub fn lose_rep(&mut self, faction_id: u32, amount: i32, source: RepGainSource) -> RepChangeResult {
+    pub fn lose_rep(
+        &mut self,
+        faction_id: u32,
+        amount: i32,
+        source: RepGainSource,
+    ) -> RepChangeResult {
         self.modify_rep(faction_id, -amount.abs(), source)
     }
 
     /// Set reputation to an exact value (admin/debug).
     pub fn set_rep(&mut self, faction_id: u32, value: i32) {
-        self.values.insert(faction_id, value.clamp(REP_MIN, REP_MAX));
+        self.values
+            .insert(faction_id, value.clamp(REP_MIN, REP_MAX));
     }
 
     /// Number of tracked factions.
@@ -349,9 +391,7 @@ impl CharacterReputation {
 
     /// Add a faction to the tracked list (shown in rep panel).
     pub fn track(&mut self, faction_id: u32) {
-        if !self.tracked.contains(&faction_id) { // bounded: ~20 tracked factions
-            self.tracked.push(faction_id);
-        }
+        self.push_tracked_faction(faction_id);
     }
 
     /// Remove a faction from the tracked list.
@@ -391,7 +431,10 @@ impl CharacterReputation {
 
     /// Build display entries for all tracked factions.
     pub fn display_tracked(&self) -> Vec<FactionDisplayEntry> {
-        self.tracked.iter().map(|&id| self.display_entry(id)).collect()
+        self.tracked
+            .iter()
+            .map(|&id| self.display_entry(id))
+            .collect()
     }
 
     /// Build a display entry for a single faction.
@@ -403,6 +446,18 @@ impl CharacterReputation {
             value,
             progress: tier_progress(value),
         }
+    }
+
+    fn push_tracked_faction(&mut self, faction_id: u32) {
+        if self
+            .tracked
+            .iter()
+            .any(|&tracked_id| tracked_id == faction_id)
+        {
+            return;
+        }
+        // bounded: ~20 tracked factions, preserve UI order
+        self.tracked.push(faction_id);
     }
 
     /// Gain rep with spillover to allied/enemy factions.
@@ -427,18 +482,18 @@ impl CharacterReputation {
 }
 
 /// Compute spillover amounts for a faction gain.
-fn collect_spillover(
-    registry: &FactionRegistry,
-    faction_id: u32,
-    amount: i32,
-) -> Vec<(u32, i32)> {
+fn collect_spillover(registry: &FactionRegistry, faction_id: u32, amount: i32) -> Vec<(u32, i32)> {
     let Some(faction) = registry.get(faction_id) else {
         return Vec::new();
     };
-    faction.spillover.iter().map(|rule| {
-        let spill_amount = (amount as f32 * rule.rate) as i32;
-        (rule.faction_id, spill_amount)
-    }).collect()
+    faction
+        .spillover
+        .iter()
+        .map(|rule| {
+            let spill_amount = (amount as f32 * rule.rate) as i32;
+            (rule.faction_id, spill_amount)
+        })
+        .collect()
 }
 
 // --- Mob kill rep diminishing returns ---

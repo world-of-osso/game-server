@@ -193,22 +193,10 @@ impl RollWindow {
     /// `eligible_players` are those in range. `can_equip` filters who can
     /// Need — players who can't equip are auto-passed immediately.
     pub fn new(item: LootDrop, group_players: &[u64], can_equip: &[u64]) -> Self {
-        let mut pending = Vec::new();
-        let mut responses = Vec::new();
-        for &player in group_players {
-            if can_equip.contains(&player) {
-                pending.push(player);
-            } else {
-                responses.push(LootRollEntry {
-                    player_id: player,
-                    choice: LootRollChoice::Pass,
-                    roll_value: 0,
-                });
-            }
-        }
+        let (pending_players, responses) = partition_roll_players(group_players, can_equip);
         Self {
             item,
-            pending_players: pending,
+            pending_players,
             responses,
             time_remaining: ROLL_WINDOW_TIMEOUT,
         }
@@ -260,6 +248,29 @@ impl RollWindow {
                 roll_value: 0,
             });
         }
+    }
+}
+
+fn partition_roll_players(
+    group_players: &[u64],
+    can_equip: &[u64],
+) -> (Vec<u64>, Vec<LootRollEntry>) {
+    let (pending_players, auto_passed_players): (Vec<_>, Vec<_>) = group_players
+        .iter()
+        .copied()
+        .partition(|player_id| can_equip.contains(player_id));
+    let responses = auto_passed_players
+        .into_iter()
+        .map(auto_pass_entry)
+        .collect();
+    (pending_players, responses)
+}
+
+fn auto_pass_entry(player_id: u64) -> LootRollEntry {
+    LootRollEntry {
+        player_id,
+        choice: LootRollChoice::Pass,
+        roll_value: 0,
     }
 }
 
@@ -503,7 +514,6 @@ pub fn gold_drop(creature_level: u8, rank: CreatureRank, roll: f32) -> u32 {
     let variance = scaled * 0.3 * roll;
     (scaled + variance) as u32
 }
-
 
 #[cfg(test)]
 #[path = "loot_tests.rs"]

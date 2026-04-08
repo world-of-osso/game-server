@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeSet;
 
 use crate::aura::{Aura, AuraEffect};
 
@@ -95,8 +96,17 @@ impl Class {
 
 /// Combat role a specialization fills.
 #[derive(
-    Reflect, Serialize, Deserialize, bitcode::Encode, bitcode::Decode,
-    Debug, Clone, Copy, PartialEq, Eq, Hash,
+    Reflect,
+    Serialize,
+    Deserialize,
+    bitcode::Encode,
+    bitcode::Decode,
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    Hash,
 )]
 pub enum Role {
     Tank,
@@ -110,8 +120,17 @@ pub enum Role {
 ///
 /// IDs match WoW's `ChrSpecialization.dbc` where practical.
 #[derive(
-    Reflect, Serialize, Deserialize, bitcode::Encode, bitcode::Decode,
-    Debug, Clone, Copy, PartialEq, Eq, Hash,
+    Reflect,
+    Serialize,
+    Deserialize,
+    bitcode::Encode,
+    bitcode::Decode,
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    Hash,
 )]
 pub struct Specialization {
     pub id: u32,
@@ -124,57 +143,252 @@ pub struct Specialization {
 /// Ref: WoW `ChrSpecialization.dbc` IDs.
 pub const SPECIALIZATIONS: &[Specialization] = &[
     // Warrior
-    Specialization { id: 71,  name: "Arms",         class: Class::Warrior,      role: Role::MeleeDps },
-    Specialization { id: 72,  name: "Fury",         class: Class::Warrior,      role: Role::MeleeDps },
-    Specialization { id: 73,  name: "Protection",   class: Class::Warrior,      role: Role::Tank },
+    Specialization {
+        id: 71,
+        name: "Arms",
+        class: Class::Warrior,
+        role: Role::MeleeDps,
+    },
+    Specialization {
+        id: 72,
+        name: "Fury",
+        class: Class::Warrior,
+        role: Role::MeleeDps,
+    },
+    Specialization {
+        id: 73,
+        name: "Protection",
+        class: Class::Warrior,
+        role: Role::Tank,
+    },
     // Paladin
-    Specialization { id: 65,  name: "Holy",         class: Class::Paladin,      role: Role::Healer },
-    Specialization { id: 66,  name: "Protection",   class: Class::Paladin,      role: Role::Tank },
-    Specialization { id: 70,  name: "Retribution",  class: Class::Paladin,      role: Role::MeleeDps },
+    Specialization {
+        id: 65,
+        name: "Holy",
+        class: Class::Paladin,
+        role: Role::Healer,
+    },
+    Specialization {
+        id: 66,
+        name: "Protection",
+        class: Class::Paladin,
+        role: Role::Tank,
+    },
+    Specialization {
+        id: 70,
+        name: "Retribution",
+        class: Class::Paladin,
+        role: Role::MeleeDps,
+    },
     // Hunter
-    Specialization { id: 253, name: "Beast Mastery", class: Class::Hunter,      role: Role::RangedDps },
-    Specialization { id: 254, name: "Marksmanship", class: Class::Hunter,       role: Role::RangedDps },
-    Specialization { id: 255, name: "Survival",     class: Class::Hunter,       role: Role::MeleeDps },
+    Specialization {
+        id: 253,
+        name: "Beast Mastery",
+        class: Class::Hunter,
+        role: Role::RangedDps,
+    },
+    Specialization {
+        id: 254,
+        name: "Marksmanship",
+        class: Class::Hunter,
+        role: Role::RangedDps,
+    },
+    Specialization {
+        id: 255,
+        name: "Survival",
+        class: Class::Hunter,
+        role: Role::MeleeDps,
+    },
     // Rogue
-    Specialization { id: 259, name: "Assassination", class: Class::Rogue,       role: Role::MeleeDps },
-    Specialization { id: 260, name: "Outlaw",       class: Class::Rogue,        role: Role::MeleeDps },
-    Specialization { id: 261, name: "Subtlety",     class: Class::Rogue,        role: Role::MeleeDps },
+    Specialization {
+        id: 259,
+        name: "Assassination",
+        class: Class::Rogue,
+        role: Role::MeleeDps,
+    },
+    Specialization {
+        id: 260,
+        name: "Outlaw",
+        class: Class::Rogue,
+        role: Role::MeleeDps,
+    },
+    Specialization {
+        id: 261,
+        name: "Subtlety",
+        class: Class::Rogue,
+        role: Role::MeleeDps,
+    },
     // Priest
-    Specialization { id: 256, name: "Discipline",   class: Class::Priest,       role: Role::Healer },
-    Specialization { id: 257, name: "Holy",         class: Class::Priest,       role: Role::Healer },
-    Specialization { id: 258, name: "Shadow",       class: Class::Priest,       role: Role::RangedDps },
+    Specialization {
+        id: 256,
+        name: "Discipline",
+        class: Class::Priest,
+        role: Role::Healer,
+    },
+    Specialization {
+        id: 257,
+        name: "Holy",
+        class: Class::Priest,
+        role: Role::Healer,
+    },
+    Specialization {
+        id: 258,
+        name: "Shadow",
+        class: Class::Priest,
+        role: Role::RangedDps,
+    },
     // Death Knight
-    Specialization { id: 250, name: "Blood",        class: Class::DeathKnight,  role: Role::Tank },
-    Specialization { id: 251, name: "Frost",        class: Class::DeathKnight,  role: Role::MeleeDps },
-    Specialization { id: 252, name: "Unholy",       class: Class::DeathKnight,  role: Role::MeleeDps },
+    Specialization {
+        id: 250,
+        name: "Blood",
+        class: Class::DeathKnight,
+        role: Role::Tank,
+    },
+    Specialization {
+        id: 251,
+        name: "Frost",
+        class: Class::DeathKnight,
+        role: Role::MeleeDps,
+    },
+    Specialization {
+        id: 252,
+        name: "Unholy",
+        class: Class::DeathKnight,
+        role: Role::MeleeDps,
+    },
     // Shaman
-    Specialization { id: 262, name: "Elemental",    class: Class::Shaman,       role: Role::RangedDps },
-    Specialization { id: 263, name: "Enhancement",  class: Class::Shaman,       role: Role::MeleeDps },
-    Specialization { id: 264, name: "Restoration",  class: Class::Shaman,       role: Role::Healer },
+    Specialization {
+        id: 262,
+        name: "Elemental",
+        class: Class::Shaman,
+        role: Role::RangedDps,
+    },
+    Specialization {
+        id: 263,
+        name: "Enhancement",
+        class: Class::Shaman,
+        role: Role::MeleeDps,
+    },
+    Specialization {
+        id: 264,
+        name: "Restoration",
+        class: Class::Shaman,
+        role: Role::Healer,
+    },
     // Mage
-    Specialization { id: 62,  name: "Arcane",       class: Class::Mage,         role: Role::RangedDps },
-    Specialization { id: 63,  name: "Fire",         class: Class::Mage,         role: Role::RangedDps },
-    Specialization { id: 64,  name: "Frost",        class: Class::Mage,         role: Role::RangedDps },
+    Specialization {
+        id: 62,
+        name: "Arcane",
+        class: Class::Mage,
+        role: Role::RangedDps,
+    },
+    Specialization {
+        id: 63,
+        name: "Fire",
+        class: Class::Mage,
+        role: Role::RangedDps,
+    },
+    Specialization {
+        id: 64,
+        name: "Frost",
+        class: Class::Mage,
+        role: Role::RangedDps,
+    },
     // Warlock
-    Specialization { id: 265, name: "Affliction",   class: Class::Warlock,      role: Role::RangedDps },
-    Specialization { id: 266, name: "Demonology",   class: Class::Warlock,      role: Role::RangedDps },
-    Specialization { id: 267, name: "Destruction",  class: Class::Warlock,      role: Role::RangedDps },
+    Specialization {
+        id: 265,
+        name: "Affliction",
+        class: Class::Warlock,
+        role: Role::RangedDps,
+    },
+    Specialization {
+        id: 266,
+        name: "Demonology",
+        class: Class::Warlock,
+        role: Role::RangedDps,
+    },
+    Specialization {
+        id: 267,
+        name: "Destruction",
+        class: Class::Warlock,
+        role: Role::RangedDps,
+    },
     // Monk
-    Specialization { id: 268, name: "Brewmaster",   class: Class::Monk,         role: Role::Tank },
-    Specialization { id: 270, name: "Mistweaver",   class: Class::Monk,         role: Role::Healer },
-    Specialization { id: 269, name: "Windwalker",   class: Class::Monk,         role: Role::MeleeDps },
+    Specialization {
+        id: 268,
+        name: "Brewmaster",
+        class: Class::Monk,
+        role: Role::Tank,
+    },
+    Specialization {
+        id: 270,
+        name: "Mistweaver",
+        class: Class::Monk,
+        role: Role::Healer,
+    },
+    Specialization {
+        id: 269,
+        name: "Windwalker",
+        class: Class::Monk,
+        role: Role::MeleeDps,
+    },
     // Druid
-    Specialization { id: 102, name: "Balance",      class: Class::Druid,        role: Role::RangedDps },
-    Specialization { id: 103, name: "Feral",        class: Class::Druid,        role: Role::MeleeDps },
-    Specialization { id: 104, name: "Guardian",     class: Class::Druid,        role: Role::Tank },
-    Specialization { id: 105, name: "Restoration",  class: Class::Druid,        role: Role::Healer },
+    Specialization {
+        id: 102,
+        name: "Balance",
+        class: Class::Druid,
+        role: Role::RangedDps,
+    },
+    Specialization {
+        id: 103,
+        name: "Feral",
+        class: Class::Druid,
+        role: Role::MeleeDps,
+    },
+    Specialization {
+        id: 104,
+        name: "Guardian",
+        class: Class::Druid,
+        role: Role::Tank,
+    },
+    Specialization {
+        id: 105,
+        name: "Restoration",
+        class: Class::Druid,
+        role: Role::Healer,
+    },
     // Demon Hunter
-    Specialization { id: 577, name: "Havoc",        class: Class::DemonHunter,  role: Role::MeleeDps },
-    Specialization { id: 581, name: "Vengeance",    class: Class::DemonHunter,  role: Role::Tank },
+    Specialization {
+        id: 577,
+        name: "Havoc",
+        class: Class::DemonHunter,
+        role: Role::MeleeDps,
+    },
+    Specialization {
+        id: 581,
+        name: "Vengeance",
+        class: Class::DemonHunter,
+        role: Role::Tank,
+    },
     // Evoker
-    Specialization { id: 1467, name: "Devastation", class: Class::Evoker,       role: Role::RangedDps },
-    Specialization { id: 1468, name: "Preservation", class: Class::Evoker,      role: Role::Healer },
-    Specialization { id: 1473, name: "Augmentation", class: Class::Evoker,      role: Role::RangedDps },
+    Specialization {
+        id: 1467,
+        name: "Devastation",
+        class: Class::Evoker,
+        role: Role::RangedDps,
+    },
+    Specialization {
+        id: 1468,
+        name: "Preservation",
+        class: Class::Evoker,
+        role: Role::Healer,
+    },
+    Specialization {
+        id: 1473,
+        name: "Augmentation",
+        class: Class::Evoker,
+        role: Role::RangedDps,
+    },
 ];
 
 /// Look up a specialization by its ID.
@@ -184,7 +398,10 @@ pub fn spec_by_id(id: u32) -> Option<&'static Specialization> {
 
 /// Get all specializations for a given class.
 pub fn specs_for_class(class: Class) -> Vec<&'static Specialization> {
-    SPECIALIZATIONS.iter().filter(|s| s.class == class).collect()
+    SPECIALIZATIONS
+        .iter()
+        .filter(|s| s.class == class)
+        .collect()
 }
 
 // --- Mastery system ---
@@ -209,57 +426,213 @@ pub struct MasteryDef {
 /// Coefficients are from SimC / WoW game data.
 pub const MASTERY_DEFS: &[MasteryDef] = &[
     // Warrior
-    MasteryDef { spec_id: 71,   name: "Striking",          coefficient: 2.00 },
-    MasteryDef { spec_id: 72,   name: "Unshackled Fury",   coefficient: 1.40 },
-    MasteryDef { spec_id: 73,   name: "Critical Block",    coefficient: 1.50 },
+    MasteryDef {
+        spec_id: 71,
+        name: "Striking",
+        coefficient: 2.00,
+    },
+    MasteryDef {
+        spec_id: 72,
+        name: "Unshackled Fury",
+        coefficient: 1.40,
+    },
+    MasteryDef {
+        spec_id: 73,
+        name: "Critical Block",
+        coefficient: 1.50,
+    },
     // Paladin
-    MasteryDef { spec_id: 65,   name: "Lightbringer",      coefficient: 1.50 },
-    MasteryDef { spec_id: 66,   name: "Divine Bulwark",    coefficient: 1.00 },
-    MasteryDef { spec_id: 70,   name: "Hand of Light",     coefficient: 1.75 },
+    MasteryDef {
+        spec_id: 65,
+        name: "Lightbringer",
+        coefficient: 1.50,
+    },
+    MasteryDef {
+        spec_id: 66,
+        name: "Divine Bulwark",
+        coefficient: 1.00,
+    },
+    MasteryDef {
+        spec_id: 70,
+        name: "Hand of Light",
+        coefficient: 1.75,
+    },
     // Hunter
-    MasteryDef { spec_id: 253,  name: "Master of Beasts",  coefficient: 1.80 },
-    MasteryDef { spec_id: 254,  name: "Sniper Training",   coefficient: 0.63 },
-    MasteryDef { spec_id: 255,  name: "Spirit Bond",       coefficient: 1.00 },
+    MasteryDef {
+        spec_id: 253,
+        name: "Master of Beasts",
+        coefficient: 1.80,
+    },
+    MasteryDef {
+        spec_id: 254,
+        name: "Sniper Training",
+        coefficient: 0.63,
+    },
+    MasteryDef {
+        spec_id: 255,
+        name: "Spirit Bond",
+        coefficient: 1.00,
+    },
     // Rogue
-    MasteryDef { spec_id: 259,  name: "Potent Assassin",   coefficient: 1.80 },
-    MasteryDef { spec_id: 260,  name: "Main Gauche",       coefficient: 2.00 },
-    MasteryDef { spec_id: 261,  name: "Executioner",       coefficient: 2.20 },
+    MasteryDef {
+        spec_id: 259,
+        name: "Potent Assassin",
+        coefficient: 1.80,
+    },
+    MasteryDef {
+        spec_id: 260,
+        name: "Main Gauche",
+        coefficient: 2.00,
+    },
+    MasteryDef {
+        spec_id: 261,
+        name: "Executioner",
+        coefficient: 2.20,
+    },
     // Priest
-    MasteryDef { spec_id: 256,  name: "Absolution",        coefficient: 1.20 },
-    MasteryDef { spec_id: 257,  name: "Echo of Light",     coefficient: 1.25 },
-    MasteryDef { spec_id: 258,  name: "Shadow Weaving",    coefficient: 2.00 },
+    MasteryDef {
+        spec_id: 256,
+        name: "Absolution",
+        coefficient: 1.20,
+    },
+    MasteryDef {
+        spec_id: 257,
+        name: "Echo of Light",
+        coefficient: 1.25,
+    },
+    MasteryDef {
+        spec_id: 258,
+        name: "Shadow Weaving",
+        coefficient: 2.00,
+    },
     // Death Knight
-    MasteryDef { spec_id: 250,  name: "Blood Shield",      coefficient: 2.00 },
-    MasteryDef { spec_id: 251,  name: "Frozen Heart",      coefficient: 2.00 },
-    MasteryDef { spec_id: 252,  name: "Dreadblade",        coefficient: 1.80 },
+    MasteryDef {
+        spec_id: 250,
+        name: "Blood Shield",
+        coefficient: 2.00,
+    },
+    MasteryDef {
+        spec_id: 251,
+        name: "Frozen Heart",
+        coefficient: 2.00,
+    },
+    MasteryDef {
+        spec_id: 252,
+        name: "Dreadblade",
+        coefficient: 1.80,
+    },
     // Shaman
-    MasteryDef { spec_id: 262,  name: "Elemental Overload", coefficient: 1.88 },
-    MasteryDef { spec_id: 263,  name: "Enhanced Elements",  coefficient: 2.00 },
-    MasteryDef { spec_id: 264,  name: "Deep Healing",       coefficient: 3.00 },
+    MasteryDef {
+        spec_id: 262,
+        name: "Elemental Overload",
+        coefficient: 1.88,
+    },
+    MasteryDef {
+        spec_id: 263,
+        name: "Enhanced Elements",
+        coefficient: 2.00,
+    },
+    MasteryDef {
+        spec_id: 264,
+        name: "Deep Healing",
+        coefficient: 3.00,
+    },
     // Mage
-    MasteryDef { spec_id: 62,   name: "Savant",            coefficient: 1.20 },
-    MasteryDef { spec_id: 63,   name: "Ignite",            coefficient: 0.75 },
-    MasteryDef { spec_id: 64,   name: "Icicles",           coefficient: 2.25 },
+    MasteryDef {
+        spec_id: 62,
+        name: "Savant",
+        coefficient: 1.20,
+    },
+    MasteryDef {
+        spec_id: 63,
+        name: "Ignite",
+        coefficient: 0.75,
+    },
+    MasteryDef {
+        spec_id: 64,
+        name: "Icicles",
+        coefficient: 2.25,
+    },
     // Warlock
-    MasteryDef { spec_id: 265,  name: "Potent Afflictions", coefficient: 2.50 },
-    MasteryDef { spec_id: 266,  name: "Master Demonologist", coefficient: 1.80 },
-    MasteryDef { spec_id: 267,  name: "Chaotic Energies",  coefficient: 1.50 },
+    MasteryDef {
+        spec_id: 265,
+        name: "Potent Afflictions",
+        coefficient: 2.50,
+    },
+    MasteryDef {
+        spec_id: 266,
+        name: "Master Demonologist",
+        coefficient: 1.80,
+    },
+    MasteryDef {
+        spec_id: 267,
+        name: "Chaotic Energies",
+        coefficient: 1.50,
+    },
     // Monk
-    MasteryDef { spec_id: 268,  name: "Elusive Brawler",   coefficient: 1.00 },
-    MasteryDef { spec_id: 270,  name: "Gust of Mists",     coefficient: 1.40 },
-    MasteryDef { spec_id: 269,  name: "Combo Strikes",     coefficient: 1.25 },
+    MasteryDef {
+        spec_id: 268,
+        name: "Elusive Brawler",
+        coefficient: 1.00,
+    },
+    MasteryDef {
+        spec_id: 270,
+        name: "Gust of Mists",
+        coefficient: 1.40,
+    },
+    MasteryDef {
+        spec_id: 269,
+        name: "Combo Strikes",
+        coefficient: 1.25,
+    },
     // Druid
-    MasteryDef { spec_id: 102,  name: "Astral Invocation", coefficient: 1.10 },
-    MasteryDef { spec_id: 103,  name: "Razor Claws",       coefficient: 2.00 },
-    MasteryDef { spec_id: 104,  name: "Nature's Guardian",  coefficient: 1.00 },
-    MasteryDef { spec_id: 105,  name: "Harmony",            coefficient: 1.25 },
+    MasteryDef {
+        spec_id: 102,
+        name: "Astral Invocation",
+        coefficient: 1.10,
+    },
+    MasteryDef {
+        spec_id: 103,
+        name: "Razor Claws",
+        coefficient: 2.00,
+    },
+    MasteryDef {
+        spec_id: 104,
+        name: "Nature's Guardian",
+        coefficient: 1.00,
+    },
+    MasteryDef {
+        spec_id: 105,
+        name: "Harmony",
+        coefficient: 1.25,
+    },
     // Demon Hunter
-    MasteryDef { spec_id: 577,  name: "Demonic Presence",  coefficient: 1.80 },
-    MasteryDef { spec_id: 581,  name: "Fel Blood",         coefficient: 2.00 },
+    MasteryDef {
+        spec_id: 577,
+        name: "Demonic Presence",
+        coefficient: 1.80,
+    },
+    MasteryDef {
+        spec_id: 581,
+        name: "Fel Blood",
+        coefficient: 2.00,
+    },
     // Evoker
-    MasteryDef { spec_id: 1467, name: "Giantkiller",       coefficient: 1.80 },
-    MasteryDef { spec_id: 1468, name: "Life-Binder's Bond", coefficient: 1.20 },
-    MasteryDef { spec_id: 1473, name: "Timewalker",         coefficient: 1.00 },
+    MasteryDef {
+        spec_id: 1467,
+        name: "Giantkiller",
+        coefficient: 1.80,
+    },
+    MasteryDef {
+        spec_id: 1468,
+        name: "Life-Binder's Bond",
+        coefficient: 1.20,
+    },
+    MasteryDef {
+        spec_id: 1473,
+        name: "Timewalker",
+        coefficient: 1.00,
+    },
 ];
 
 /// Look up the mastery definition for a spec.
@@ -305,10 +678,14 @@ pub struct TalentDef {
 /// When talents change (respec), old auras are removed and new ones applied.
 #[derive(Component, Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
 pub struct SelectedTalents {
-    pub talent_ids: Vec<u32>,
+    pub talent_ids: BTreeSet<u32>,
 }
 
 impl SelectedTalents {
+    pub fn select(&mut self, talent_id: u32) -> bool {
+        self.talent_ids.insert(talent_id)
+    }
+
     /// Build passive auras from selected talents.
     ///
     /// Each talent becomes a permanent aura (duration=0 means infinite) with
@@ -324,7 +701,7 @@ impl SelectedTalents {
                 }
                 Aura {
                     spell_id: talent.id,
-                    caster: 0, // self-applied
+                    caster: 0,     // self-applied
                     duration: 0.0, // permanent (never expires)
                     remaining: f32::MAX,
                     effects,
@@ -404,13 +781,19 @@ mod tests {
 
     #[test]
     fn tank_specs_exist() {
-        let tanks: Vec<_> = SPECIALIZATIONS.iter().filter(|s| s.role == Role::Tank).collect();
+        let tanks: Vec<_> = SPECIALIZATIONS
+            .iter()
+            .filter(|s| s.role == Role::Tank)
+            .collect();
         assert_eq!(tanks.len(), 6);
     }
 
     #[test]
     fn healer_specs_exist() {
-        let healers: Vec<_> = SPECIALIZATIONS.iter().filter(|s| s.role == Role::Healer).collect();
+        let healers: Vec<_> = SPECIALIZATIONS
+            .iter()
+            .filter(|s| s.role == Role::Healer)
+            .collect();
         assert_eq!(healers.len(), 7);
     }
 
@@ -462,9 +845,8 @@ mod tests {
 
     #[test]
     fn mastery_integrates_with_rating_system() {
-        use crate::formulas::{apply_secondary_dr, rating_to_percent, RatingType};
-        let raw_points =
-            rating_to_percent(500.0, 80, RatingType::Mastery).unwrap();
+        use crate::formulas::{RatingType, apply_secondary_dr, rating_to_percent};
+        let raw_points = rating_to_percent(500.0, 80, RatingType::Mastery).unwrap();
         let after_dr = apply_secondary_dr(raw_points, RatingType::Mastery);
         let bonus = effective_mastery(71, after_dr);
         assert!(bonus > 0.0, "should produce positive mastery bonus");
@@ -498,7 +880,7 @@ mod tests {
     fn build_passive_auras_from_talents() {
         let defs = sample_talents();
         let selected = SelectedTalents {
-            talent_ids: vec![1001, 1002],
+            talent_ids: [1001, 1002].into_iter().collect(),
         };
         let auras = selected.build_passive_auras(&defs);
         assert_eq!(auras.len(), 2);
@@ -514,7 +896,7 @@ mod tests {
     fn build_passive_auras_skips_unknown() {
         let defs = sample_talents();
         let selected = SelectedTalents {
-            talent_ids: vec![1001, 9999],
+            talent_ids: [1001, 9999].into_iter().collect(),
         };
         let auras = selected.build_passive_auras(&defs);
         assert_eq!(auras.len(), 1);
@@ -532,7 +914,7 @@ mod tests {
     fn talent_aura_integrates_with_damage_multiplier() {
         let defs = sample_talents();
         let selected = SelectedTalents {
-            talent_ids: vec![1002],
+            talent_ids: [1002].into_iter().collect(),
         };
         let passive_auras = selected.build_passive_auras(&defs);
 
@@ -547,7 +929,7 @@ mod tests {
     fn talent_aura_integrates_with_threat_multiplier() {
         let defs = sample_talents();
         let selected = SelectedTalents {
-            talent_ids: vec![1003],
+            talent_ids: [1003].into_iter().collect(),
         };
         let passive_auras = selected.build_passive_auras(&defs);
 
@@ -598,7 +980,10 @@ mod tests {
         use crate::spell_data::ResourceType;
         assert_eq!(Class::Warrior.primary_resource(), ResourceType::Rage);
         assert_eq!(Class::Rogue.primary_resource(), ResourceType::Energy);
-        assert_eq!(Class::DeathKnight.primary_resource(), ResourceType::RunicPower);
+        assert_eq!(
+            Class::DeathKnight.primary_resource(),
+            ResourceType::RunicPower
+        );
         assert_eq!(Class::Hunter.primary_resource(), ResourceType::Focus);
         assert_eq!(Class::Mage.primary_resource(), ResourceType::Mana);
         assert_eq!(Class::DemonHunter.primary_resource(), ResourceType::Energy);
@@ -607,9 +992,18 @@ mod tests {
     #[test]
     fn class_all_13_variants() {
         let classes: [Class; 13] = [
-            Class::Warrior, Class::Paladin, Class::Hunter, Class::Rogue,
-            Class::Priest, Class::DeathKnight, Class::Shaman, Class::Mage,
-            Class::Warlock, Class::Monk, Class::Druid, Class::DemonHunter,
+            Class::Warrior,
+            Class::Paladin,
+            Class::Hunter,
+            Class::Rogue,
+            Class::Priest,
+            Class::DeathKnight,
+            Class::Shaman,
+            Class::Mage,
+            Class::Warlock,
+            Class::Monk,
+            Class::Druid,
+            Class::DemonHunter,
             Class::Evoker,
         ];
         assert_eq!(classes.len(), 13);

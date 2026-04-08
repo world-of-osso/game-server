@@ -43,6 +43,9 @@ pub struct ProfessionChannel;
 /// Reliable ordered channel for reputation updates, bidirectional.
 pub struct ReputationChannel;
 
+/// Reliable ordered channel for currency updates, bidirectional.
+pub struct CurrencyChannel;
+
 /// Reliable ordered channel for inspect operations, bidirectional.
 pub struct InspectChannel;
 
@@ -683,6 +686,25 @@ pub struct ReputationStateUpdate {
     pub error: Option<String>,
 }
 
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct EarnCurrency {
+    pub currency_id: u32,
+    pub amount: u32,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct SpendCurrency {
+    pub currency_id: u32,
+    pub amount: u32,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct CurrencyStateUpdate {
+    pub snapshot: Option<CurrencySnapshot>,
+    pub message: Option<String>,
+    pub error: Option<String>,
+}
+
 /// Registers shared protocol: components for replication and channels.
 /// Must be added AFTER `ServerPlugins`/`ClientPlugins` but BEFORE any entity is spawned.
 pub struct ProtocolPlugin;
@@ -717,10 +739,11 @@ fn register_messages(app: &mut App) {
     register_auction_messages(app);
     register_trade_messages(app);
     register_talent_messages(app);
-    register_reputation_messages(app);
     register_inspect_messages(app);
     register_duel_messages(app);
     register_profession_messages(app);
+    register_reputation_messages(app);
+    register_currency_messages(app);
     crate::protocol_snapshots::register_snapshot_messages(app);
 }
 
@@ -905,84 +928,59 @@ fn register_reputation_messages(app: &mut App) {
         .add_direction(NetworkDirection::ServerToClient);
 }
 
+fn register_currency_messages(app: &mut App) {
+    app.register_message::<EarnCurrency>()
+        .add_direction(NetworkDirection::ClientToServer);
+    app.register_message::<SpendCurrency>()
+        .add_direction(NetworkDirection::ClientToServer);
+    app.register_message::<CurrencyStateUpdate>()
+        .add_direction(NetworkDirection::ServerToClient);
+}
+
 fn register_channels(app: &mut App) {
-    app.add_channel::<MovementChannel>(ChannelSettings {
-        mode: ChannelMode::UnorderedUnreliable,
-        ..default()
-    })
-    .add_direction(NetworkDirection::ServerToClient);
+    register_unreliable_channels(app);
+    register_server_channels(app);
+    register_bidirectional_channels(app);
+}
 
-    app.add_channel::<InputChannel>(ChannelSettings {
-        mode: ChannelMode::UnorderedUnreliable,
-        ..default()
-    })
-    .add_direction(NetworkDirection::ClientToServer);
+fn register_unreliable_channels(app: &mut App) {
+    add_channel::<MovementChannel>(
+        app,
+        ChannelMode::UnorderedUnreliable,
+        NetworkDirection::ServerToClient,
+    );
+    add_channel::<InputChannel>(
+        app,
+        ChannelMode::UnorderedUnreliable,
+        NetworkDirection::ClientToServer,
+    );
+}
 
-    app.add_channel::<CombatChannel>(ChannelSettings {
-        mode: ChannelMode::OrderedReliable(default()),
-        ..default()
-    })
-    .add_direction(NetworkDirection::Bidirectional);
+fn register_server_channels(app: &mut App) {
+    add_reliable_channel::<TerrainChannel>(app, NetworkDirection::ServerToClient);
+}
 
-    app.add_channel::<ChatChannel>(ChannelSettings {
-        mode: ChannelMode::OrderedReliable(default()),
-        ..default()
-    })
-    .add_direction(NetworkDirection::Bidirectional);
+fn register_bidirectional_channels(app: &mut App) {
+    add_reliable_channel::<CombatChannel>(app, NetworkDirection::Bidirectional);
+    add_reliable_channel::<ChatChannel>(app, NetworkDirection::Bidirectional);
+    add_reliable_channel::<AuthChannel>(app, NetworkDirection::Bidirectional);
+    add_reliable_channel::<AuctionChannel>(app, NetworkDirection::Bidirectional);
+    add_reliable_channel::<TradeChannel>(app, NetworkDirection::Bidirectional);
+    add_reliable_channel::<TalentChannel>(app, NetworkDirection::Bidirectional);
+    add_reliable_channel::<InspectChannel>(app, NetworkDirection::Bidirectional);
+    add_reliable_channel::<DuelChannel>(app, NetworkDirection::Bidirectional);
+    add_reliable_channel::<ProfessionChannel>(app, NetworkDirection::Bidirectional);
+    add_reliable_channel::<ReputationChannel>(app, NetworkDirection::Bidirectional);
+    add_reliable_channel::<CurrencyChannel>(app, NetworkDirection::Bidirectional);
+}
 
-    app.add_channel::<TerrainChannel>(ChannelSettings {
-        mode: ChannelMode::OrderedReliable(default()),
-        ..default()
-    })
-    .add_direction(NetworkDirection::ServerToClient);
+fn add_reliable_channel<C: Channel>(app: &mut App, direction: NetworkDirection) {
+    add_channel::<C>(app, ChannelMode::OrderedReliable(default()), direction);
+}
 
-    app.add_channel::<AuthChannel>(ChannelSettings {
-        mode: ChannelMode::OrderedReliable(default()),
-        ..default()
-    })
-    .add_direction(NetworkDirection::Bidirectional);
-
-    app.add_channel::<AuctionChannel>(ChannelSettings {
-        mode: ChannelMode::OrderedReliable(default()),
-        ..default()
-    })
-    .add_direction(NetworkDirection::Bidirectional);
-
-    app.add_channel::<TradeChannel>(ChannelSettings {
-        mode: ChannelMode::OrderedReliable(default()),
-        ..default()
-    })
-    .add_direction(NetworkDirection::Bidirectional);
-
-    app.add_channel::<TalentChannel>(ChannelSettings {
-        mode: ChannelMode::OrderedReliable(default()),
-        ..default()
-    })
-    .add_direction(NetworkDirection::Bidirectional);
-
-    app.add_channel::<InspectChannel>(ChannelSettings {
-        mode: ChannelMode::OrderedReliable(default()),
-        ..default()
-    })
-    .add_direction(NetworkDirection::Bidirectional);
-
-    app.add_channel::<DuelChannel>(ChannelSettings {
-        mode: ChannelMode::OrderedReliable(default()),
-        ..default()
-    })
-    .add_direction(NetworkDirection::Bidirectional);
-
-    app.add_channel::<ProfessionChannel>(ChannelSettings {
-        mode: ChannelMode::OrderedReliable(default()),
-        ..default()
-    })
-    .add_direction(NetworkDirection::Bidirectional);
-
-    app.add_channel::<ReputationChannel>(ChannelSettings {
-        mode: ChannelMode::OrderedReliable(default()),
-        ..default()
-    })
-    .add_direction(NetworkDirection::Bidirectional);
+fn add_channel<C: Channel>(app: &mut App, mode: ChannelMode, direction: NetworkDirection) {
+    app.add_channel::<C>(ChannelSettings { mode, ..default() })
+        .add_direction(direction);
 }
 
 #[cfg(test)]

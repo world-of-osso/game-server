@@ -8,15 +8,7 @@ use crate::components::SpellSchool;
 /// Subset of AzerothCore `SpellAuraDefines.h`, covering the combat-relevant
 /// effects needed for the Phase 4 aura system.
 #[derive(
-    Reflect,
-    Serialize,
-    Deserialize,
-    bitcode::Encode,
-    bitcode::Decode,
-    Debug,
-    Clone,
-    Copy,
-    PartialEq,
+    Reflect, Serialize, Deserialize, bitcode::Encode, bitcode::Decode, Debug, Clone, Copy, PartialEq,
 )]
 pub enum AuraEffect {
     /// Increase damage dealt by a flat amount or percent.
@@ -30,7 +22,13 @@ pub enum AuraEffect {
     /// Periodic healing (HoT). Ticks every `interval` seconds for `heal` each.
     PeriodicHeal { heal: f32, interval: f32 },
     /// Modify a primary stat by a flat amount.
-    ModStat { stamina: f32, strength: f32, agility: f32, intellect: f32, spirit: f32 },
+    ModStat {
+        stamina: f32,
+        strength: f32,
+        agility: f32,
+        intellect: f32,
+        spirit: f32,
+    },
     /// Modify melee/ranged attack speed (percent, e.g. 0.20 = 20% faster).
     ModAttackSpeed { percent: f32 },
     /// Modify spell cast speed (percent, e.g. 0.15 = 15% faster).
@@ -56,15 +54,7 @@ pub enum AuraEffect {
 /// entity. Each aura tracks its source spell, caster, remaining duration,
 /// and stack count.
 #[derive(
-    Reflect,
-    Serialize,
-    Deserialize,
-    bitcode::Encode,
-    bitcode::Decode,
-    Debug,
-    Clone,
-    Copy,
-    PartialEq,
+    Reflect, Serialize, Deserialize, bitcode::Encode, bitcode::Decode, Debug, Clone, Copy, PartialEq,
 )]
 pub struct Aura {
     /// Spell ID that created this aura.
@@ -219,10 +209,7 @@ impl Auras {
         }
 
         // Different caster (or first application): check if spell_id already present
-        let has_from_other_caster = self
-            .active
-            .iter()
-            .any(|a| a.spell_id == aura.spell_id);
+        let has_from_other_caster = self.active.iter().any(|a| a.spell_id == aura.spell_id);
 
         if has_from_other_caster && !aura.has_periodic_effect() {
             return AuraApplyResult::Rejected;
@@ -292,48 +279,63 @@ impl Auras {
             return 0.0;
         }
 
-        // Collect indices of matching absorb effects, sorted weakest first
-        let mut absorbs: Vec<(usize, usize, f32)> = self
+        let absorbs = self.matching_absorbs(school);
+        self.consume_absorbs(&absorbs, &mut damage);
+        self.remove_depleted_auras();
+
+        damage
+    }
+
+    fn matching_absorbs(&self, school: SpellSchool) -> Vec<(usize, usize, f32)> {
+        let mut absorbs: Vec<_> = self
             .active
             .iter()
             .enumerate()
-            .flat_map(|(ai, aura)| {
-                aura.effects.iter().enumerate().filter_map(move |(ei, eff)| {
-                    if let Some(AuraEffect::SchoolAbsorb {
-                        school: s,
-                        remaining,
-                    }) = eff
-                        && *s == school
-                    {
-                        return Some((ai, ei, *remaining));
-                    }
-                    None
-                })
+            .flat_map(|(aura_idx, aura)| {
+                aura.effects
+                    .iter()
+                    .enumerate()
+                    .filter_map(move |(effect_idx, effect)| {
+                        let Some(AuraEffect::SchoolAbsorb {
+                            school: absorb_school,
+                            remaining,
+                        }) = effect
+                        else {
+                            return None;
+                        };
+                        (*absorb_school == school).then_some((aura_idx, effect_idx, *remaining))
+                    })
             })
             .collect();
+        absorbs.sort_by(|left, right| left.2.partial_cmp(&right.2).unwrap());
+        absorbs
+    }
 
-        absorbs.sort_by(|a, b| a.2.partial_cmp(&b.2).unwrap());
-
-        for (aura_idx, effect_idx, _) in absorbs {
-            if damage <= 0.0 {
-                break;
+    fn consume_absorbs(&mut self, absorbs: &[(usize, usize, f32)], damage: &mut f32) {
+        for &(aura_idx, effect_idx, _) in absorbs {
+            if *damage <= 0.0 {
+                return;
             }
-            let effect = &mut self.active[aura_idx].effects[effect_idx];
-            if let Some(AuraEffect::SchoolAbsorb { remaining, .. }) = effect {
-                let absorbed = damage.min(*remaining);
-                *remaining -= absorbed;
-                damage -= absorbed;
-                if *remaining <= 0.0 {
-                    self.active[aura_idx].effects[effect_idx] = None;
-                }
-            }
+            self.consume_absorb_effect(aura_idx, effect_idx, damage);
         }
+    }
 
-        // Remove auras whose only effects were absorbs that are now depleted.
-        // An aura is removed if it had absorb effects and now has no effects left.
-        self.active.retain(|a| a.effects.iter().any(|e| e.is_some()));
+    fn consume_absorb_effect(&mut self, aura_idx: usize, effect_idx: usize, damage: &mut f32) {
+        let effect = &mut self.active[aura_idx].effects[effect_idx];
+        let Some(AuraEffect::SchoolAbsorb { remaining, .. }) = effect else {
+            return;
+        };
 
-        damage
+        let absorbed = damage.min(*remaining);
+        *remaining -= absorbed;
+        *damage -= absorbed;
+        if *remaining <= 0.0 {
+            self.active[aura_idx].effects[effect_idx] = None;
+        }
+    }
+
+    fn remove_depleted_auras(&mut self) {
+        self.active.retain(has_active_effects);
     }
 
     /// Multiplicative modifier from all auras matching `extract`.
@@ -437,6 +439,10 @@ impl Auras {
     }
 }
 
+fn has_active_effects(aura: &Aura) -> bool {
+    aura.effects.iter().any(|effect| effect.is_some())
+}
+
 // --- Proc system ---
 
 /// Combat events that can trigger a proc.
@@ -468,8 +474,7 @@ pub enum ProcTrigger {
 
 /// What happens when a proc fires.
 #[derive(
-    Reflect, Serialize, Deserialize, bitcode::Encode, bitcode::Decode,
-    Debug, Clone, Copy, PartialEq,
+    Reflect, Serialize, Deserialize, bitcode::Encode, bitcode::Decode, Debug, Clone, Copy, PartialEq,
 )]
 pub enum ProcAction {
     /// Apply a spell (buff, damage, etc.).
@@ -485,15 +490,7 @@ pub enum ProcAction {
 ///
 /// Ref: AzerothCore `SpellProcEntry`, `HandleProc()`.
 #[derive(
-    Reflect,
-    Serialize,
-    Deserialize,
-    bitcode::Encode,
-    bitcode::Decode,
-    Debug,
-    Clone,
-    Copy,
-    PartialEq,
+    Reflect, Serialize, Deserialize, bitcode::Encode, bitcode::Decode, Debug, Clone, Copy, PartialEq,
 )]
 pub struct ProcDef {
     /// Which event can trigger this proc.
@@ -561,7 +558,6 @@ impl Auras {
         results
     }
 }
-
 
 #[cfg(test)]
 #[path = "aura_tests.rs"]

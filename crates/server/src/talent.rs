@@ -337,11 +337,7 @@ fn is_known_talent(talent_id: u32) -> bool {
 }
 
 fn apply_talent_choice(selected: &mut SelectedTalents, talent_id: u32) -> bool {
-    if selected.talent_ids.contains(&talent_id) {
-        return false;
-    }
-    selected.talent_ids.push(talent_id);
-    true
+    selected.select(talent_id)
 }
 
 fn reset_talents(selected: &mut SelectedTalents) -> bool {
@@ -351,7 +347,18 @@ fn reset_talents(selected: &mut SelectedTalents) -> bool {
 }
 
 pub(crate) fn build_talent_snapshot(selected: &SelectedTalents) -> TalentSnapshot {
-    let active_spec = TALENT_DEFS
+    let active_spec = active_spec_tab(selected);
+    let talents = talent_node_snapshots(selected);
+    let points_spent = selected.talent_ids.len() as u16;
+    TalentSnapshot {
+        spec_tabs: spec_tab_snapshots(active_spec),
+        talents,
+        points_remaining: MAX_TALENT_POINTS.saturating_sub(points_spent),
+    }
+}
+
+fn active_spec_tab(selected: &SelectedTalents) -> usize {
+    TALENT_DEFS
         .iter()
         .filter(|talent| selected.talent_ids.contains(&talent.id))
         .fold([0usize; SPEC_TABS.len()], |mut counts, talent| {
@@ -362,8 +369,11 @@ pub(crate) fn build_talent_snapshot(selected: &SelectedTalents) -> TalentSnapsho
         .enumerate()
         .max_by_key(|(_, count)| **count)
         .map(|(index, _)| index)
-        .unwrap_or(0);
-    let talents = TALENT_DEFS
+        .unwrap_or(0)
+}
+
+fn talent_node_snapshots(selected: &SelectedTalents) -> Vec<TalentNodeSnapshot> {
+    TALENT_DEFS
         .iter()
         .map(|talent| {
             let active = selected.talent_ids.contains(&talent.id);
@@ -375,20 +385,18 @@ pub(crate) fn build_talent_snapshot(selected: &SelectedTalents) -> TalentSnapsho
                 active,
             }
         })
-        .collect();
-    let points_spent = selected.talent_ids.len() as u16;
-    TalentSnapshot {
-        spec_tabs: SPEC_TABS
-            .iter()
-            .enumerate()
-            .map(|(index, name)| TalentSpecTabSnapshot {
-                name: (*name).to_string(),
-                active: index == active_spec,
-            })
-            .collect(),
-        talents,
-        points_remaining: MAX_TALENT_POINTS.saturating_sub(points_spent),
-    }
+        .collect()
+}
+
+fn spec_tab_snapshots(active_spec: usize) -> Vec<TalentSpecTabSnapshot> {
+    SPEC_TABS
+        .iter()
+        .enumerate()
+        .map(|(index, name)| TalentSpecTabSnapshot {
+            name: (*name).to_string(),
+            active: index == active_spec,
+        })
+        .collect()
 }
 
 #[cfg(test)]
