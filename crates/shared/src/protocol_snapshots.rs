@@ -1,6 +1,7 @@
 use crate::components::CharacterAppearance;
 use bevy::prelude::*;
 use lightyear::prelude::*;
+use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 
 // -- Quest snapshots --
@@ -249,6 +250,45 @@ pub struct LfgSnapshot {
     pub match_found: Option<LfgMatchFoundSnapshot>,
 }
 
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash)]
+pub enum PvpBracketSnapshot {
+    Arena2v2,
+    Arena3v3,
+    RatedBattleground,
+    SoloShuffle,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct PvpBracketStatsSnapshot {
+    pub bracket: PvpBracketSnapshot,
+    pub rating: u32,
+    pub season_wins: u32,
+    pub season_losses: u32,
+    pub weekly_wins: u32,
+    pub weekly_losses: u32,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub enum PvpQueueKindSnapshot {
+    Battleground { battleground_id: u32, name: String },
+    RatedBracket { bracket: PvpBracketSnapshot },
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct PvpQueueSnapshot {
+    pub kind: PvpQueueKindSnapshot,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct PvpSnapshot {
+    pub honor: u32,
+    pub honor_max: u32,
+    pub conquest: u32,
+    pub conquest_max: u32,
+    pub brackets: Vec<PvpBracketStatsSnapshot>,
+    pub queue: Option<PvpQueueSnapshot>,
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct BarberShopSnapshot {
     pub appearance: CharacterAppearance,
@@ -256,34 +296,28 @@ pub struct BarberShopSnapshot {
 }
 
 pub fn register_snapshot_messages(app: &mut App) {
-    app.register_message::<QuestLogSnapshot>()
-        .add_direction(NetworkDirection::ServerToClient);
-    app.register_message::<GroupRosterSnapshot>()
-        .add_direction(NetworkDirection::ServerToClient);
-    app.register_message::<GroupCommandResponse>()
-        .add_direction(NetworkDirection::ServerToClient);
-    app.register_message::<CombatLogSnapshot>()
-        .add_direction(NetworkDirection::ServerToClient);
-    app.register_message::<CollectionSnapshot>()
-        .add_direction(NetworkDirection::ServerToClient);
-    app.register_message::<ProfessionSnapshot>()
-        .add_direction(NetworkDirection::ServerToClient);
-    app.register_message::<CurrencySnapshot>()
-        .add_direction(NetworkDirection::ServerToClient);
-    app.register_message::<ReputationSnapshot>()
-        .add_direction(NetworkDirection::ServerToClient);
-    app.register_message::<AchievementSnapshot>()
-        .add_direction(NetworkDirection::ServerToClient);
-    app.register_message::<AchievementToastSnapshot>()
-        .add_direction(NetworkDirection::ServerToClient);
-    app.register_message::<WorldMapSnapshot>()
-        .add_direction(NetworkDirection::ServerToClient);
-    app.register_message::<FriendsSnapshot>()
-        .add_direction(NetworkDirection::ServerToClient);
-    app.register_message::<IgnoreListSnapshot>()
-        .add_direction(NetworkDirection::ServerToClient);
-    app.register_message::<LfgSnapshot>()
-        .add_direction(NetworkDirection::ServerToClient);
-    app.register_message::<BarberShopSnapshot>()
+    register_server_snapshot::<QuestLogSnapshot>(app);
+    register_server_snapshot::<GroupRosterSnapshot>(app);
+    register_server_snapshot::<GroupCommandResponse>(app);
+    register_server_snapshot::<CombatLogSnapshot>(app);
+    register_server_snapshot::<CollectionSnapshot>(app);
+    register_server_snapshot::<ProfessionSnapshot>(app);
+    register_server_snapshot::<CurrencySnapshot>(app);
+    register_server_snapshot::<ReputationSnapshot>(app);
+    register_server_snapshot::<AchievementSnapshot>(app);
+    register_server_snapshot::<AchievementToastSnapshot>(app);
+    register_server_snapshot::<WorldMapSnapshot>(app);
+    register_server_snapshot::<FriendsSnapshot>(app);
+    register_server_snapshot::<IgnoreListSnapshot>(app);
+    register_server_snapshot::<LfgSnapshot>(app);
+    register_server_snapshot::<PvpSnapshot>(app);
+    register_server_snapshot::<BarberShopSnapshot>(app);
+}
+
+fn register_server_snapshot<M>(app: &mut App)
+where
+    M: lightyear::prelude::Message + Serialize + DeserializeOwned,
+{
+    app.register_message::<M>()
         .add_direction(NetworkDirection::ServerToClient);
 }
