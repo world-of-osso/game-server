@@ -430,6 +430,10 @@ pub fn spawn_player_entity(
     let entity = commands
         .spawn(build_player_components(data, character_id))
         .id();
+    let (_, by, _) = crate::terrain_height::wow_to_bevy(data.x, data.y, data.z);
+    commands
+        .entity(entity)
+        .insert(crate::networking::FallTracker::grounded(by));
     commands.entity(entity).insert(professions);
     commands.entity(entity).insert(achievements);
     commands.entity(entity).insert(pvp);

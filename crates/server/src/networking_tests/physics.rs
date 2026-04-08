@@ -329,7 +329,20 @@ fn terrain_clamps_below_ground() {
         y: 30.0,
         z: -90.0,
     };
-    clamp_to_terrain(&map, &mut pos, &mut VerticalVelocity::default(), 0.05);
+    let mut vel = VerticalVelocity::default();
+    let mut fall_tracker = FallTracker::grounded(pos.y);
+    let mut health = Health {
+        current: 100.0,
+        max: 100.0,
+    };
+    clamp_to_terrain(
+        &map,
+        &mut pos,
+        &mut vel,
+        &mut fall_tracker,
+        &mut health,
+        0.05,
+    );
     assert!((pos.y - 50.0).abs() < 0.01);
 }
 
@@ -342,7 +355,13 @@ fn terrain_applies_gravity() {
         z: -90.0,
     };
     let dt = 0.05;
-    clamp_to_terrain(&map, &mut pos, &mut VerticalVelocity::default(), dt);
+    let mut vel = VerticalVelocity::default();
+    let mut fall_tracker = FallTracker::grounded(pos.y);
+    let mut health = Health {
+        current: 100.0,
+        max: 100.0,
+    };
+    clamp_to_terrain(&map, &mut pos, &mut vel, &mut fall_tracker, &mut health, dt);
     let expected = 60.0 - GRAVITY * dt;
     assert!((pos.y - expected).abs() < 0.01);
 }
@@ -357,18 +376,24 @@ fn gravity_accumulates_until_landing() {
         z: -90.0,
     };
     let dt = 0.05;
+    let mut health = Health {
+        current: 100.0,
+        max: 100.0,
+    };
+    let mut vel = VerticalVelocity::default();
+    let mut fall_tracker = FallTracker::grounded(pos.y);
 
-    clamp_to_terrain(&map, &mut pos, &mut VerticalVelocity::default(), dt);
+    clamp_to_terrain(&map, &mut pos, &mut vel, &mut fall_tracker, &mut health, dt);
     let after_one = 60.0 - GRAVITY * dt;
     assert!((pos.y - after_one).abs() < 0.01);
 
-    clamp_to_terrain(&map, &mut pos, &mut VerticalVelocity::default(), dt);
+    clamp_to_terrain(&map, &mut pos, &mut vel, &mut fall_tracker, &mut health, dt);
     let after_two = after_one - GRAVITY * dt;
     assert!((pos.y - after_two).abs() < 0.01);
     assert!(pos.y > ground_y, "still airborne");
 
     for _ in 0..200 {
-        clamp_to_terrain(&map, &mut pos, &mut VerticalVelocity::default(), dt);
+        clamp_to_terrain(&map, &mut pos, &mut vel, &mut fall_tracker, &mut health, dt);
     }
     assert!(
         (pos.y - ground_y).abs() < 0.01,
@@ -376,7 +401,7 @@ fn gravity_accumulates_until_landing() {
         pos.y,
     );
 
-    clamp_to_terrain(&map, &mut pos, &mut VerticalVelocity::default(), dt);
+    clamp_to_terrain(&map, &mut pos, &mut vel, &mut fall_tracker, &mut health, dt);
     assert!((pos.y - ground_y).abs() < 0.01);
 }
 
@@ -388,7 +413,20 @@ fn terrain_on_ground_stays() {
         y: 50.05,
         z: -90.0,
     };
-    clamp_to_terrain(&map, &mut pos, &mut VerticalVelocity::default(), 0.05);
+    let mut vel = VerticalVelocity::default();
+    let mut fall_tracker = FallTracker::grounded(pos.y);
+    let mut health = Health {
+        current: 100.0,
+        max: 100.0,
+    };
+    clamp_to_terrain(
+        &map,
+        &mut pos,
+        &mut vel,
+        &mut fall_tracker,
+        &mut health,
+        0.05,
+    );
     assert!((pos.y - 50.05).abs() < 0.01);
 }
 
@@ -403,7 +441,20 @@ fn ground_snap_within_threshold() {
         y: 48.0,
         z: -90.0,
     };
-    clamp_to_terrain(&map, &mut below, &mut VerticalVelocity::default(), dt);
+    let mut below_vel = VerticalVelocity::default();
+    let mut below_fall = FallTracker::grounded(below.y);
+    let mut below_health = Health {
+        current: 100.0,
+        max: 100.0,
+    };
+    clamp_to_terrain(
+        &map,
+        &mut below,
+        &mut below_vel,
+        &mut below_fall,
+        &mut below_health,
+        dt,
+    );
     assert!((below.y - ground_y).abs() < 0.01, "below snaps to ground");
 
     let mut exact = Position {
@@ -411,7 +462,20 @@ fn ground_snap_within_threshold() {
         y: ground_y,
         z: -90.0,
     };
-    clamp_to_terrain(&map, &mut exact, &mut VerticalVelocity::default(), dt);
+    let mut exact_vel = VerticalVelocity::default();
+    let mut exact_fall = FallTracker::grounded(exact.y);
+    let mut exact_health = Health {
+        current: 100.0,
+        max: 100.0,
+    };
+    clamp_to_terrain(
+        &map,
+        &mut exact,
+        &mut exact_vel,
+        &mut exact_fall,
+        &mut exact_health,
+        dt,
+    );
     assert!((exact.y - ground_y).abs() < 0.01, "exact stays on ground");
 
     let within_y = ground_y + GROUND_SNAP_THRESHOLD - 0.01;
@@ -420,7 +484,20 @@ fn ground_snap_within_threshold() {
         y: within_y,
         z: -90.0,
     };
-    clamp_to_terrain(&map, &mut within, &mut VerticalVelocity::default(), dt);
+    let mut within_vel = VerticalVelocity::default();
+    let mut within_fall = FallTracker::grounded(within.y);
+    let mut within_health = Health {
+        current: 100.0,
+        max: 100.0,
+    };
+    clamp_to_terrain(
+        &map,
+        &mut within,
+        &mut within_vel,
+        &mut within_fall,
+        &mut within_health,
+        dt,
+    );
     assert!((within.y - within_y).abs() < 0.01, "within threshold stays");
 
     let above_y = ground_y + 10.0;
@@ -429,7 +506,20 @@ fn ground_snap_within_threshold() {
         y: above_y,
         z: -90.0,
     };
-    clamp_to_terrain(&map, &mut above, &mut VerticalVelocity::default(), dt);
+    let mut above_vel = VerticalVelocity::default();
+    let mut above_fall = FallTracker::grounded(above.y);
+    let mut above_health = Health {
+        current: 100.0,
+        max: 100.0,
+    };
+    clamp_to_terrain(
+        &map,
+        &mut above,
+        &mut above_vel,
+        &mut above_fall,
+        &mut above_health,
+        dt,
+    );
     let expected = above_y - GRAVITY * dt;
     assert!(
         (above.y - expected).abs() < 0.01,
@@ -448,9 +538,14 @@ fn jump_impulse_and_landing() {
         z: -90.0,
     };
     let mut vel = VerticalVelocity(shared::movement::JUMP_IMPULSE);
+    let mut fall_tracker = FallTracker::grounded(pos.y);
+    let mut health = Health {
+        current: 100.0,
+        max: 100.0,
+    };
     let dt = 0.05;
 
-    clamp_to_terrain(&map, &mut pos, &mut vel, dt);
+    clamp_to_terrain(&map, &mut pos, &mut vel, &mut fall_tracker, &mut health, dt);
     let expected_y = ground_y + shared::movement::JUMP_IMPULSE * dt;
     assert!(
         (pos.y - expected_y).abs() < 0.1,
@@ -468,7 +563,7 @@ fn jump_impulse_and_landing() {
 
     let mut peak_y = pos.y;
     for _ in 0..200 {
-        clamp_to_terrain(&map, &mut pos, &mut vel, dt);
+        clamp_to_terrain(&map, &mut pos, &mut vel, &mut fall_tracker, &mut health, dt);
         if pos.y > peak_y {
             peak_y = pos.y;
         }
@@ -484,4 +579,98 @@ fn jump_impulse_and_landing() {
         pos.y,
     );
     assert_eq!(vel.0, 0.0, "velocity zeroed on landing");
+}
+
+#[test]
+fn short_fall_does_not_deal_damage() {
+    let ground_y = 50.0;
+    let map = crate::terrain_height::test_helpers::flat_terrain(100.0, 100.0, ground_y);
+    let mut pos = Position {
+        x: 90.0,
+        y: ground_y + shared::movement::FALL_DAMAGE_THRESHOLD - 0.1,
+        z: -90.0,
+    };
+    let mut vel = VerticalVelocity::default();
+    let mut fall_tracker = FallTracker::grounded(pos.y);
+    let mut health = Health {
+        current: 100.0,
+        max: 100.0,
+    };
+    let dt = 0.05;
+
+    for _ in 0..200 {
+        clamp_to_terrain(&map, &mut pos, &mut vel, &mut fall_tracker, &mut health, dt);
+        if pos.y <= ground_y + 0.01 && vel.0 == 0.0 {
+            break;
+        }
+    }
+
+    assert_eq!(health.current, 100.0);
+}
+
+#[test]
+fn long_fall_deals_damage_on_landing_once() {
+    let ground_y = 50.0;
+    let map = crate::terrain_height::test_helpers::flat_terrain(100.0, 100.0, ground_y);
+    let start_y = ground_y + 20.0;
+    let mut pos = Position {
+        x: 90.0,
+        y: start_y,
+        z: -90.0,
+    };
+    let mut vel = VerticalVelocity::default();
+    let mut fall_tracker = FallTracker::grounded(pos.y);
+    let mut health = Health {
+        current: 100.0,
+        max: 100.0,
+    };
+    let expected_damage = 100.0 * shared::movement::fall_damage_percent(start_y - ground_y);
+    let dt = 0.05;
+
+    for _ in 0..400 {
+        clamp_to_terrain(&map, &mut pos, &mut vel, &mut fall_tracker, &mut health, dt);
+        if pos.y <= ground_y + 0.01 && vel.0 == 0.0 {
+            break;
+        }
+    }
+
+    assert!(
+        (health.current - (100.0 - expected_damage)).abs() < 0.05,
+        "health={}, expected_damage={expected_damage}",
+        health.current,
+    );
+
+    let landed_health = health.current;
+    clamp_to_terrain(&map, &mut pos, &mut vel, &mut fall_tracker, &mut health, dt);
+    assert_eq!(
+        health.current, landed_health,
+        "damage should not repeat after landing"
+    );
+}
+
+#[test]
+fn lethal_fall_reduces_health_to_zero() {
+    let ground_y = 50.0;
+    let map = crate::terrain_height::test_helpers::flat_terrain(100.0, 100.0, ground_y);
+    let mut pos = Position {
+        x: 90.0,
+        y: ground_y + 70.0,
+        z: -90.0,
+    };
+    let mut vel = VerticalVelocity::default();
+    let mut fall_tracker = FallTracker::grounded(pos.y);
+    let mut health = Health {
+        current: 100.0,
+        max: 100.0,
+    };
+    let dt = 0.05;
+
+    for _ in 0..800 {
+        clamp_to_terrain(&map, &mut pos, &mut vel, &mut fall_tracker, &mut health, dt);
+        if pos.y <= ground_y + 0.01 && vel.0 == 0.0 {
+            break;
+        }
+    }
+
+    assert_eq!(health.current, 0.0);
 }

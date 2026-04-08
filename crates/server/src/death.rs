@@ -52,7 +52,10 @@ impl Plugin for DeathPlugin {
         app.add_systems(Update, process_release_spirit_requests);
         app.add_systems(Update, process_resurrect_at_corpse_requests);
         app.add_systems(Update, process_spirit_healer_requests);
-        app.add_systems(FixedUpdate, detect_player_deaths);
+        app.add_systems(
+            FixedUpdate,
+            detect_player_deaths.after(crate::networking::apply_terrain_gravity),
+        );
     }
 }
 

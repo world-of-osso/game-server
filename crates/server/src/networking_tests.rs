@@ -13,6 +13,10 @@ fn spawn_player(world: &mut World, x: f32, y: f32, z: f32) -> Entity {
     world
         .spawn((
             Position { x, y, z },
+            Health {
+                current: 100.0,
+                max: 100.0,
+            },
             Rotation {
                 x: 0.0,
                 y: 0.0,
@@ -20,6 +24,7 @@ fn spawn_player(world: &mut World, x: f32, y: f32, z: f32) -> Entity {
             },
             MovementSpeed(DEFAULT_RUN_SPEED),
             VerticalVelocity::default(),
+            FallTracker::grounded(y),
             Player {
                 name: "test".into(),
                 race: 1,

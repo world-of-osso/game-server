@@ -7,6 +7,7 @@ use shared::aura::Auras;
 use shared::components::{
     Health, Mounted, MovementSpeed, Npc, Player, Position, Rotation, VerticalVelocity,
 };
+use shared::death::DeathState;
 use shared::protocol::{ChatMessage, LoadTerrain, PlayerInput, TerrainChannel};
 use std::collections::VecDeque;
 use std::time::Duration;
@@ -84,6 +85,23 @@ pub struct PlayerLink(pub Entity);
 /// The entity this player is currently targeting in combat.
 #[derive(Component, Debug, Default)]
 pub struct CombatTarget(pub Option<Entity>);
+
+#[derive(Component, Debug, Clone, Copy)]
+pub(crate) struct FallTracker {
+    peak_y: f32,
+    last_y: f32,
+    airborne: bool,
+}
+
+impl FallTracker {
+    pub(crate) fn grounded(y: f32) -> Self {
+        Self {
+            peak_y: y,
+            last_y: y,
+            airborne: false,
+        }
+    }
+}
 
 #[derive(Resource, Default)]
 pub struct ChatHistoryBuffer {
@@ -456,17 +474,42 @@ fn validate_move_distance(distance: f32, max_speed: f32, dt: f32) -> bool {
 }
 
 /// Apply gravity and terrain clamping to all players each tick.
-fn apply_terrain_gravity(
+pub(crate) fn apply_terrain_gravity(
     terrain: Option<Res<TerrainHeightMap>>,
-    mut players: Query<(&mut Position, &mut VerticalVelocity), With<Player>>,
+    mut players: Query<
+        (
+            &mut Position,
+            &mut VerticalVelocity,
+            &mut FallTracker,
+            &mut Health,
+            Option<&crate::death::PlayerDeathState>,
+        ),
+        With<Player>,
+    >,
     time: Res<Time>,
 ) {
     let Some(terrain) = terrain.as_ref().filter(|t| t.is_loaded()) else {
         return;
     };
     let dt = time.delta_secs();
-    for (mut pos, mut vert_vel) in players.iter_mut() {
-        clamp_to_terrain(terrain, &mut pos, &mut vert_vel, dt);
+    for (mut pos, mut vert_vel, mut fall_tracker, mut health, death_state) in players.iter_mut() {
+        if death_state
+            .as_ref()
+            .is_some_and(|state| state.state != DeathState::Alive)
+        {
+            fall_tracker.last_y = pos.y;
+            fall_tracker.peak_y = pos.y;
+            fall_tracker.airborne = false;
+            continue;
+        }
+        clamp_to_terrain(
+            terrain,
+            &mut pos,
+            &mut vert_vel,
+            &mut fall_tracker,
+            &mut health,
+            dt,
+        );
     }
 }
 
@@ -475,6 +518,8 @@ fn clamp_to_terrain(
     terrain: &TerrainHeightMap,
     pos: &mut Position,
     vert_vel: &mut VerticalVelocity,
+    fall_tracker: &mut FallTracker,
+    health: &mut Health,
     dt: f32,
 ) {
     let Some(ground_y) = terrain.height_at_bevy(pos.x, pos.z) else {
@@ -496,6 +541,37 @@ fn clamp_to_terrain(
             pos.y = ground_y;
         }
     }
+
+    apply_fall_damage_on_landing(fall_tracker, pos.y, ground_y, vert_vel.0, health);
+}
+
+fn apply_fall_damage_on_landing(
+    fall_tracker: &mut FallTracker,
+    current_y: f32,
+    ground_y: f32,
+    vertical_velocity: f32,
+    health: &mut Health,
+) {
+    let now_airborne = current_y > ground_y + GROUND_SNAP_THRESHOLD || vertical_velocity > 0.0;
+    if !fall_tracker.airborne && now_airborne {
+        fall_tracker.airborne = true;
+        fall_tracker.peak_y = fall_tracker.last_y.max(current_y).max(ground_y);
+    } else if fall_tracker.airborne {
+        fall_tracker.peak_y = fall_tracker.peak_y.max(fall_tracker.last_y).max(current_y);
+    }
+
+    let landed = fall_tracker.airborne && vertical_velocity == 0.0 && current_y <= ground_y;
+    if landed {
+        let fall_distance = (fall_tracker.peak_y - ground_y).max(0.0);
+        let damage = health.max * shared::movement::fall_damage_percent(fall_distance);
+        if damage > 0.0 {
+            health.current = (health.current - damage).max(0.0);
+        }
+        fall_tracker.airborne = false;
+        fall_tracker.peak_y = ground_y;
+    }
+
+    fall_tracker.last_y = current_y;
 }
 
 fn direction_length(dir: &[f32; 3]) -> f32 {
