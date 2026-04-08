@@ -141,8 +141,8 @@ fn multi_client_input_routes_independently() {
     stepper
         .server_app
         .add_systems(Update, process_player_inputs);
-    send_player_input(&mut stepper, 0, input_x());
-    send_player_input(&mut stepper, 1, input_y());
+    send_player_input(&mut stepper, 0, input_direction([1.0, 0.0, 0.0]));
+    send_player_input(&mut stepper, 1, input_direction([0.0, 1.0, 0.0]));
     stepper.tick_step(30);
     assert_player_moved_in_x(&stepper, player_a);
     assert_player_moved_in_y(&stepper, player_b);
@@ -178,19 +178,9 @@ fn setup_two_player_entities(stepper: &mut Stepper) -> (Entity, Entity) {
     (player_a, player_b)
 }
 
-fn input_x() -> PlayerInput {
+fn input_direction(direction: [f32; 3]) -> PlayerInput {
     PlayerInput {
-        direction: [1.0, 0.0, 0.0],
-        facing_yaw: 0.0,
-        jumping: false,
-        running: false,
-        swimming: false,
-    }
-}
-
-fn input_y() -> PlayerInput {
-    PlayerInput {
-        direction: [0.0, 1.0, 0.0],
+        direction,
         facing_yaw: 0.0,
         jumping: false,
         running: false,
