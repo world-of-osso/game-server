@@ -1,7 +1,7 @@
 use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 use lightyear::prelude::*;
-use shared::components::{Health, Npc, Position};
+use shared::components::{CombatStatus, Health, Npc, Position};
 use shared::protocol::{CombatChannel, CombatEvent, CombatEventType};
 
 use crate::creature_ai::SpawnPoint;
@@ -17,6 +17,7 @@ const AUTO_ATTACK_INTERVAL: f32 = 2.0;
 const BASE_DAMAGE: f32 = 10.0;
 /// Default respawn timer in seconds.
 const DEFAULT_RESPAWN_SECS: f32 = 60.0;
+const COMBAT_GRACE_SECS: f64 = 5.0;
 
 /// Maximum number of combat log entries retained in memory.
 const COMBAT_LOG_CAPACITY: usize = 10_000;
@@ -83,6 +84,7 @@ impl Plugin for CombatPlugin {
             (
                 start_attack_system,
                 auto_attack_system,
+                maintain_in_combat_state_system,
                 death_system,
                 respawn_system,
             ),
@@ -107,18 +109,28 @@ pub struct DeathState {
 #[derive(Component, Debug, Clone, Copy)]
 pub struct LastDamager(pub Entity);
 
+#[derive(Component, Debug, Clone, Copy)]
+struct CombatState {
+    expires_at: f64,
+}
+
 /// When CombatTarget changes to Some(entity), activate auto-attack.
 /// When None, deactivate.
 fn start_attack_system(
     query: Query<(Entity, &CombatTarget), Changed<CombatTarget>>,
     mut commands: Commands,
+    time: Res<Time>,
 ) {
+    let combat_expires_at = time.elapsed_secs_f64() + COMBAT_GRACE_SECS;
     for (entity, target) in &query {
         if target.0.is_some() {
-            commands.entity(entity).insert(AutoAttack {
-                timer: 0.0,
-                active: true,
-            });
+            commands.entity(entity).insert((
+                AutoAttack {
+                    timer: 0.0,
+                    active: true,
+                },
+                active_combat_state(combat_expires_at),
+            ));
         } else if let Ok(mut cmd) = commands.get_entity(entity) {
             cmd.insert(AutoAttack {
                 timer: 0.0,
@@ -139,6 +151,7 @@ fn auto_attack_system(
 ) {
     let dt = time.delta_secs();
     let elapsed = time.elapsed_secs_f64();
+    let combat_expires_at = elapsed + COMBAT_GRACE_SECS;
     let mut events = Vec::new();
 
     for (attacker_entity, combat_target, mut auto_attack, attacker_pos) in &mut attackers {
@@ -158,11 +171,42 @@ fn auto_attack_system(
             &mut commands,
         );
         if damage > 0.0 {
+            refresh_combat_state(&mut commands, attacker_entity, combat_expires_at);
+            refresh_combat_state(&mut commands, target_entity, combat_expires_at);
             events.push(build_damage_event(attacker_entity, target_entity, damage));
         }
     }
 
     broadcast_events(&events, &mut senders, &mut combat_log, elapsed);
+}
+
+fn maintain_in_combat_state_system(
+    time: Res<Time>,
+    mut query: Query<(
+        Entity,
+        &mut CombatState,
+        Option<&CombatTarget>,
+        Option<&AutoAttack>,
+    )>,
+    mut commands: Commands,
+) {
+    let combat_expires_at = time.elapsed_secs_f64() + COMBAT_GRACE_SECS;
+    let now = time.elapsed_secs_f64();
+    for (entity, mut combat_state, combat_target, auto_attack) in &mut query {
+        let actively_engaged = combat_target.and_then(|target| target.0).is_some()
+            && auto_attack.is_some_and(|auto_attack| auto_attack.active);
+        if actively_engaged {
+            combat_state.expires_at = combat_expires_at;
+            refresh_combat_state(&mut commands, entity, combat_expires_at);
+            continue;
+        }
+        if now >= combat_state.expires_at {
+            commands
+                .entity(entity)
+                .insert(CombatStatus(false))
+                .remove::<CombatState>();
+        }
+    }
 }
 
 /// Attempt a swing if timer ready and target in range. Returns damage dealt.
@@ -220,6 +264,16 @@ fn build_damage_event(attacker: Entity, target: Entity, damage: f32) -> CombatEv
         spell_id: 0,
         event_type: CombatEventType::MeleeDamage,
     }
+}
+
+fn active_combat_state(expires_at: f64) -> (CombatState, CombatStatus) {
+    (CombatState { expires_at }, CombatStatus(true))
+}
+
+fn refresh_combat_state(commands: &mut Commands, entity: Entity, expires_at: f64) {
+    commands
+        .entity(entity)
+        .insert(active_combat_state(expires_at));
 }
 
 /// Detect entities that just hit 0 HP and mark them dead.
@@ -370,6 +424,12 @@ mod tests {
             .id()
     }
 
+    fn run_maintain_combat_state_tick(app: &mut App) {
+        let _ = app
+            .world_mut()
+            .run_system_once(maintain_in_combat_state_system);
+    }
+
     /// Run auto-attack logic without needing lightyear MessageSender.
     fn run_attack_tick(app: &mut App) {
         let _ = app.world_mut().run_system_once(
@@ -378,13 +438,19 @@ mod tests {
              mut attackers: Query<(Entity, &CombatTarget, &mut AutoAttack, &Position)>,
              mut targets: Query<(&Position, &mut Health, Option<&mut LastDamager>)>| {
                 let dt = time.delta_secs();
+                let combat_expires_at = time.elapsed_secs_f64() + COMBAT_GRACE_SECS;
                 for (attacker, combat_target, mut aa, apos) in &mut attackers {
                     if !aa.active {
                         continue;
                     }
                     let Some(te) = combat_target.0 else { continue };
                     aa.timer -= dt;
-                    try_swing(attacker, apos, &mut targets, te, &mut aa, &mut commands);
+                    let damage =
+                        try_swing(attacker, apos, &mut targets, te, &mut aa, &mut commands);
+                    if damage > 0.0 {
+                        refresh_combat_state(&mut commands, attacker, combat_expires_at);
+                        refresh_combat_state(&mut commands, te, combat_expires_at);
+                    }
                 }
             },
         );
@@ -534,6 +600,60 @@ mod tests {
             app.world().entity(target).get::<Health>().unwrap().current,
             80.0,
             "swing resumes when back in range",
+        );
+    }
+
+    #[test]
+    fn entering_combat_sets_replicated_flag() {
+        let mut app = setup_app();
+        let target = spawn_target(&mut app, pos(1.0, 0.0, 0.0), 100.0);
+        let attacker = spawn_attacker(&mut app, pos(0.0, 0.0, 0.0), target);
+
+        run_attack_tick(&mut app);
+
+        let combat = app
+            .world()
+            .entity(attacker)
+            .get::<CombatStatus>()
+            .copied()
+            .expect("combat flag should exist after dealing damage");
+        assert!(combat.0);
+    }
+
+    #[test]
+    fn combat_flag_expires_after_grace_period_once_target_is_cleared() {
+        let mut app = setup_app();
+        let target = spawn_target(&mut app, pos(1.0, 0.0, 0.0), 100.0);
+        let attacker = spawn_attacker(&mut app, pos(0.0, 0.0, 0.0), target);
+
+        run_attack_tick(&mut app);
+        app.world_mut()
+            .entity_mut(attacker)
+            .insert(CombatTarget(None));
+        let _ = app.world_mut().run_system_once(start_attack_system);
+
+        app.world_mut()
+            .resource_mut::<Time>()
+            .advance_by(std::time::Duration::from_secs_f64(COMBAT_GRACE_SECS - 1.0));
+        run_maintain_combat_state_tick(&mut app);
+        assert!(
+            app.world()
+                .entity(attacker)
+                .get::<CombatStatus>()
+                .is_some_and(|flag| flag.0),
+            "combat flag should stay active during grace period"
+        );
+
+        app.world_mut()
+            .resource_mut::<Time>()
+            .advance_by(std::time::Duration::from_secs_f64(2.0));
+        run_maintain_combat_state_tick(&mut app);
+        assert!(
+            app.world()
+                .entity(attacker)
+                .get::<CombatStatus>()
+                .is_some_and(|flag| !flag.0),
+            "combat flag should clear after grace period"
         );
     }
 

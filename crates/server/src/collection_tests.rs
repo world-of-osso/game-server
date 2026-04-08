@@ -1,5 +1,6 @@
 use super::*;
 use crate::persistence;
+use shared::components::CombatStatus;
 
 #[test]
 fn summon_mount_marks_only_selected_mount_active() {
@@ -122,4 +123,19 @@ fn movement_speed_for_mount_doubles_run_speed() {
         movement_speed_for_mount(true),
         shared::movement::RUN_SPEED * 2.0
     );
+}
+
+#[test]
+fn summon_mount_is_blocked_while_in_combat() {
+    let error = combat_locked_request_error::<SummonMount>(CombatStatus(true).0)
+        .expect("mounts should be blocked during combat");
+
+    assert_eq!(error, "cannot mount while in combat");
+}
+
+#[test]
+fn dismiss_mount_is_not_blocked_while_in_combat() {
+    let error = combat_locked_request_error::<DismissMount>(CombatStatus(true).0);
+
+    assert_eq!(error, None);
 }

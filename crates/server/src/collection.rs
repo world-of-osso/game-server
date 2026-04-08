@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use lightyear::prelude::*;
 use serde::{Deserialize, Serialize};
-use shared::components::{Mounted, MovementSpeed};
+use shared::components::{CombatStatus, Mounted, MovementSpeed};
 use shared::protocol::{
     CollectionChannel, CollectionMountSnapshot, CollectionPetSnapshot, CollectionSnapshot,
     CollectionStateUpdate, DismissMount, DismissPet, SummonMount, SummonPet,
@@ -144,6 +144,10 @@ impl CollectionChange {
 }
 
 trait CollectionRequest: lightyear::prelude::Message {
+    fn combat_error() -> Option<&'static str> {
+        None
+    }
+
     fn apply(
         collection: &mut PlayerCollectionState,
         request: &Self,
@@ -151,6 +155,10 @@ trait CollectionRequest: lightyear::prelude::Message {
 }
 
 impl CollectionRequest for SummonMount {
+    fn combat_error() -> Option<&'static str> {
+        Some("cannot mount while in combat")
+    }
+
     fn apply(
         collection: &mut PlayerCollectionState,
         request: &Self,
@@ -266,12 +274,18 @@ fn process_collection_requests<R: CollectionRequest>(
         With<Authenticated>,
     >,
     mut collections: Query<&mut PlayerCollectionState>,
+    combat_flags: Query<&CombatStatus>,
     db: Option<Res<GameDatabase>>,
     mut senders: Query<&mut MessageSender<CollectionStateUpdate>>,
 ) {
     let Some(db) = db else { return };
     for (conn_entity, link, in_world, mut receiver) in receivers.iter_mut() {
         for request in receiver.receive() {
+            let in_combat = combat_flags.get(link.0).is_ok_and(|combat| combat.0);
+            if let Some(error) = combat_locked_request_error::<R>(in_combat) {
+                send_collection_error(conn_entity, &mut senders, error);
+                continue;
+            }
             let result = collections
                 .get_mut(link.0)
                 .map_err(|_| "collections unavailable for player".to_string())
@@ -283,6 +297,13 @@ fn process_collection_requests<R: CollectionRequest>(
             apply_collection_change(&mut commands, conn_entity, link.0, result, &mut senders);
         }
     }
+}
+
+fn combat_locked_request_error<R: CollectionRequest>(in_combat: bool) -> Option<&'static str> {
+    if in_combat {
+        return R::combat_error();
+    }
+    None
 }
 
 fn apply_collection_change(

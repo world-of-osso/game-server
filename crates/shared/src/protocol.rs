@@ -4,8 +4,8 @@ use lightyear::prelude::AppComponentExt;
 pub use crate::protocol_snapshots::*;
 
 use crate::components::{
-    EquipmentAppearance, GuildMembership, Health, Mana, ModelDisplay, Mounted, MovementSpeed, Npc,
-    Player, Position, Rotation, Zone,
+    CombatStatus, EquipmentAppearance, GuildMembership, Health, Mana, ModelDisplay, Mounted,
+    MovementSpeed, Npc, Player, Position, Rotation, Zone,
 };
 
 mod channels;
@@ -40,6 +40,7 @@ fn register_replicated_components(app: &mut App) {
     app.register_component::<ModelDisplay>();
     app.register_component::<Rotation>();
     app.register_component::<MovementSpeed>();
+    app.register_component::<CombatStatus>();
     app.register_component::<Mounted>();
     app.register_component::<Zone>();
     app.register_component::<GuildMembership>();
