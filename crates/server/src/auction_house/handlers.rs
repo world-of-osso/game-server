@@ -1,3 +1,5 @@
+use bevy::ecs::query::QueryFilter;
+
 use super::*;
 
 pub(super) fn initialize_auction_state(
