@@ -67,7 +67,7 @@ pub fn process_login_requests(
     mut commands: Commands,
 ) {
     let Some(db) = db.as_ref() else { return };
-    let logins: Vec<_> = collect_login_requests(&mut receivers);
+    let logins = collect_pending_auth_requests(&mut receivers);
     for (entity, req) in logins {
         handle_login(
             entity,
@@ -80,9 +80,9 @@ pub fn process_login_requests(
     }
 }
 
-fn collect_login_requests(
-    receivers: &mut Query<(Entity, &mut MessageReceiver<LoginRequest>)>,
-) -> Vec<(Entity, LoginRequest)> {
+fn collect_pending_auth_requests<M: lightyear::prelude::Message>(
+    receivers: &mut Query<(Entity, &mut MessageReceiver<M>)>,
+) -> Vec<(Entity, M)> {
     let mut out = Vec::new();
     for (entity, mut receiver) in receivers.iter_mut() {
         for req in receiver.receive() {
@@ -213,22 +213,10 @@ pub fn process_register_requests(
     mut reg_senders: Query<&mut MessageSender<RegisterResponse>>,
 ) {
     let Some(db) = db.as_ref() else { return };
-    let reqs: Vec<_> = collect_register_requests(&mut receivers);
+    let reqs = collect_pending_auth_requests(&mut receivers);
     for (entity, req) in reqs {
         handle_register(entity, &req, db, &mut reg_senders);
     }
-}
-
-fn collect_register_requests(
-    receivers: &mut Query<(Entity, &mut MessageReceiver<RegisterRequest>)>,
-) -> Vec<(Entity, RegisterRequest)> {
-    let mut out = Vec::new();
-    for (entity, mut receiver) in receivers.iter_mut() {
-        for req in receiver.receive() {
-            out.push((entity, req));
-        }
-    }
-    out
 }
 
 fn handle_register(
