@@ -6,6 +6,7 @@ mod auth;
 mod auth_character;
 mod combat;
 mod creature_ai;
+mod duel;
 mod inspect;
 mod interest;
 mod messaging;
@@ -31,20 +32,32 @@ use std::time::Duration;
 const TICK_RATE_HZ: f64 = 20.0;
 
 fn main() {
-    App::new()
-        .add_plugins(
-            MinimalPlugins.set(bevy::app::ScheduleRunnerPlugin::run_loop(
-                Duration::from_secs_f64(1.0 / TICK_RATE_HZ),
-            )),
-        )
-        .add_plugins(bevy::log::LogPlugin::default())
-        .add_plugins(ServerPlugins {
-            tick_duration: Duration::from_secs_f64(1.0 / TICK_RATE_HZ),
-        })
-        .add_plugins(shared::ProtocolPlugin)
+    let mut app = App::new();
+    add_runtime_plugins(&mut app);
+    add_game_plugins(&mut app);
+    register_server_resources(&mut app);
+    register_server_systems(&mut app);
+    app.run();
+}
+
+fn add_runtime_plugins(app: &mut App) {
+    app.add_plugins(
+        MinimalPlugins.set(bevy::app::ScheduleRunnerPlugin::run_loop(
+            Duration::from_secs_f64(1.0 / TICK_RATE_HZ),
+        )),
+    )
+    .add_plugins(bevy::log::LogPlugin::default())
+    .add_plugins(ServerPlugins {
+        tick_duration: Duration::from_secs_f64(1.0 / TICK_RATE_HZ),
+    });
+}
+
+fn add_game_plugins(app: &mut App) {
+    app.add_plugins(shared::ProtocolPlugin)
         .add_plugins(persistence::PersistencePlugin)
         .add_plugins(auction_house::AuctionHousePlugin)
         .add_plugins(profession::ProfessionPlugin)
+        .add_plugins(duel::DuelPlugin)
         .add_plugins(inspect::InspectPlugin)
         .add_plugins(talent::TalentPlugin)
         .add_plugins(trade::TradePlugin)
@@ -57,13 +70,18 @@ fn main() {
         .add_plugins(combat::CombatPlugin)
         .add_plugins(spell_db::SpellDatabasePlugin)
         .add_plugins(interest::InterestPlugin)
-        .add_plugins(admin_ipc::AdminIpcPlugin)
-        .init_resource::<shared::ticket::TicketManager>()
-        .init_resource::<shared::motd::Autobroadcast>()
+        .add_plugins(admin_ipc::AdminIpcPlugin);
+}
+
+fn register_server_resources(app: &mut App) {
+    app.init_resource::<shared::ticket::TicketManager>()
+        .init_resource::<shared::motd::Autobroadcast>();
+}
+
+fn register_server_systems(app: &mut App) {
+    app.add_systems(Startup, on_startup)
         // Motd loaded from redb in PersistencePlugin startup
-        .add_systems(Startup, on_startup)
-        .add_systems(FixedUpdate, tick_log)
-        .run();
+        .add_systems(FixedUpdate, tick_log);
 }
 
 fn on_startup() {
