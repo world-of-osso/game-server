@@ -343,62 +343,90 @@ fn send_duel_resolution(
         return;
     };
     match resolution {
-        DuelResolution::WinLoss { winner, loser } => {
-            let winner_name = players
-                .get(winner)
-                .map(|(_, player, _, _)| player.name.clone())
-                .unwrap_or_else(|_| "Unknown".into());
-            let loser_name = players
-                .get(loser)
-                .map(|(_, player, _, _)| player.name.clone())
-                .unwrap_or_else(|_| "Unknown".into());
-            send_duel_result_to_player(
-                duel.challenger,
-                if duel.challenger == winner {
-                    DuelResultSnapshot::Won
-                } else {
-                    DuelResultSnapshot::Lost
-                },
-                if duel.challenger == winner {
-                    target.name.clone()
-                } else {
-                    target.name.clone()
-                },
-                format!("{winner_name} won the duel against {loser_name}"),
-                connections,
-                senders,
-            );
-            send_duel_result_to_player(
-                duel.target,
-                if duel.target == winner {
-                    DuelResultSnapshot::Won
-                } else {
-                    DuelResultSnapshot::Lost
-                },
-                challenger.name.clone(),
-                format!("{winner_name} won the duel against {loser_name}"),
-                connections,
-                senders,
-            );
-        }
+        DuelResolution::WinLoss { winner, loser } => send_win_loss_resolution(
+            duel,
+            winner,
+            loser,
+            challenger,
+            target,
+            players,
+            connections,
+            senders,
+        ),
         DuelResolution::Cancelled => {
-            send_duel_result_to_player(
-                duel.challenger,
-                DuelResultSnapshot::Cancelled,
-                target.name.clone(),
-                "duel cancelled".into(),
-                connections,
-                senders,
-            );
-            send_duel_result_to_player(
-                duel.target,
-                DuelResultSnapshot::Cancelled,
-                challenger.name.clone(),
-                "duel cancelled".into(),
-                connections,
-                senders,
-            );
+            send_cancelled_resolution(duel, challenger, target, connections, senders)
         }
+    }
+}
+
+fn send_win_loss_resolution(
+    duel: ActiveDuel,
+    winner: Entity,
+    loser: Entity,
+    challenger: &Player,
+    target: &Player,
+    players: &PlayerQuery,
+    connections: &ConnectionQuery,
+    senders: &mut Query<&mut MessageSender<DuelStateUpdate>>,
+) {
+    let winner_name = player_name(players, winner);
+    let loser_name = player_name(players, loser);
+    let result_message = format!("{winner_name} won the duel against {loser_name}");
+    send_duel_result_to_player(
+        duel.challenger,
+        duel_result_for_player(duel.challenger, winner),
+        target.name.clone(),
+        result_message.clone(),
+        connections,
+        senders,
+    );
+    send_duel_result_to_player(
+        duel.target,
+        duel_result_for_player(duel.target, winner),
+        challenger.name.clone(),
+        result_message,
+        connections,
+        senders,
+    );
+}
+
+fn send_cancelled_resolution(
+    duel: ActiveDuel,
+    challenger: &Player,
+    target: &Player,
+    connections: &ConnectionQuery,
+    senders: &mut Query<&mut MessageSender<DuelStateUpdate>>,
+) {
+    send_duel_result_to_player(
+        duel.challenger,
+        DuelResultSnapshot::Cancelled,
+        target.name.clone(),
+        "duel cancelled".into(),
+        connections,
+        senders,
+    );
+    send_duel_result_to_player(
+        duel.target,
+        DuelResultSnapshot::Cancelled,
+        challenger.name.clone(),
+        "duel cancelled".into(),
+        connections,
+        senders,
+    );
+}
+
+fn player_name(players: &PlayerQuery, entity: Entity) -> String {
+    players
+        .get(entity)
+        .map(|(_, player, _, _)| player.name.clone())
+        .unwrap_or_else(|_| "Unknown".into())
+}
+
+fn duel_result_for_player(player_entity: Entity, winner: Entity) -> DuelResultSnapshot {
+    if player_entity == winner {
+        DuelResultSnapshot::Won
+    } else {
+        DuelResultSnapshot::Lost
     }
 }
 
