@@ -320,6 +320,13 @@ struct LoginSenders<'w, 's> {
     exit: MessageWriter<'w, AppExit>,
 }
 
+#[derive(SystemParam)]
+struct EnterWorldSenders<'w, 's> {
+    chat_senders: Query<'w, 's, &'static mut MessageSender<ChatMessage>>,
+    invite_senders: Query<'w, 's, &'static mut MessageSender<GuildInviteRequest>>,
+    accept_senders: Query<'w, 's, &'static mut MessageSender<GuildAcceptInviteRequest>>,
+}
+
 fn receive_login_response(
     mut receivers: Query<&mut MessageReceiver<LoginResponse>>,
     mut auth_token: ResMut<AuthToken>,
@@ -352,7 +359,9 @@ fn handle_login_resp(
 ) {
     if !resp.success {
         eprintln!("[login] Failed: {}", resp.error.unwrap_or_default());
-        login_senders.exit.write(AppExit::Error(1.try_into().unwrap()));
+        login_senders
+            .exit
+            .write(AppExit::Error(1.try_into().unwrap()));
         return;
     }
     save_auth_token(&resp.token);
@@ -564,55 +573,76 @@ fn receive_enter_world_response(
 fn send_action_on_enter_world(
     state: Res<State<CliState>>,
     action: Res<CliAction>,
-    mut chat_senders: Query<&mut MessageSender<ChatMessage>>,
-    mut invite_senders: Query<&mut MessageSender<GuildInviteRequest>>,
-    mut accept_senders: Query<&mut MessageSender<GuildAcceptInviteRequest>>,
+    mut senders: EnterWorldSenders,
     mut sent: Local<bool>,
 ) {
     if *state.get() != CliState::InWorld || *sent {
         return;
     }
-    match &action.command {
-        CliCommand::ChatSend(text) => {
-            let msg = ChatMessage {
-                sender: action.username.clone().unwrap_or_else(|| "cli".to_string()),
-                content: text.clone(),
-                channel: ChatType::Say,
-            };
-            for mut sender in chat_senders.iter_mut() {
-                sender.send::<ChatChannel>(msg.clone());
-            }
-            println!("[chat] Sent: {text}");
-        }
-        CliCommand::GuildChat(text) => {
-            let msg = ChatMessage {
-                sender: action.username.clone().unwrap_or_else(|| "cli".to_string()),
-                content: text.clone(),
-                channel: ChatType::Guild,
-            };
-            for mut sender in chat_senders.iter_mut() {
-                sender.send::<ChatChannel>(msg.clone());
-            }
-            println!("[chat] Sent: {text}");
-        }
-        CliCommand::GuildInvite { target } => {
-            let req = GuildInviteRequest {
-                target_character_name: target.clone(),
-            };
-            for mut sender in invite_senders.iter_mut() {
-                sender.send::<AuthChannel>(req.clone());
-            }
-            println!("[guild] Invite sent to '{target}'");
-        }
-        CliCommand::GuildAccept => {
-            for mut sender in accept_senders.iter_mut() {
-                sender.send::<AuthChannel>(GuildAcceptInviteRequest);
-            }
-            println!("[guild] Accept request sent");
-        }
-        _ => return,
+    if !dispatch_enter_world_action(&action, &mut senders) {
+        return;
     }
     *sent = true;
+}
+
+fn dispatch_enter_world_action(action: &CliAction, senders: &mut EnterWorldSenders) -> bool {
+    match &action.command {
+        CliCommand::ChatSend(text) => {
+            send_chat_command(&mut senders.chat_senders, action, text, ChatType::Say);
+            true
+        }
+        CliCommand::GuildChat(text) => {
+            send_chat_command(&mut senders.chat_senders, action, text, ChatType::Guild);
+            true
+        }
+        CliCommand::GuildInvite { target } => {
+            send_guild_invite(&mut senders.invite_senders, target);
+            true
+        }
+        CliCommand::GuildAccept => {
+            send_guild_accept(&mut senders.accept_senders);
+            true
+        }
+        _ => false,
+    }
+}
+
+fn send_chat_command(
+    senders: &mut Query<&mut MessageSender<ChatMessage>>,
+    action: &CliAction,
+    text: &str,
+    channel: ChatType,
+) {
+    let msg = ChatMessage {
+        sender: cli_sender_name(action),
+        content: text.to_string(),
+        channel,
+    };
+    for mut sender in senders.iter_mut() {
+        sender.send::<ChatChannel>(msg.clone());
+    }
+    println!("[chat] Sent: {text}");
+}
+
+fn send_guild_invite(senders: &mut Query<&mut MessageSender<GuildInviteRequest>>, target: &str) {
+    let req = GuildInviteRequest {
+        target_character_name: target.to_string(),
+    };
+    for mut sender in senders.iter_mut() {
+        sender.send::<AuthChannel>(req.clone());
+    }
+    println!("[guild] Invite sent to '{target}'");
+}
+
+fn send_guild_accept(senders: &mut Query<&mut MessageSender<GuildAcceptInviteRequest>>) {
+    for mut sender in senders.iter_mut() {
+        sender.send::<AuthChannel>(GuildAcceptInviteRequest);
+    }
+    println!("[guild] Accept request sent");
+}
+
+fn cli_sender_name(action: &CliAction) -> String {
+    action.username.clone().unwrap_or_else(|| "cli".to_string())
 }
 
 fn receive_guild_invite_response(

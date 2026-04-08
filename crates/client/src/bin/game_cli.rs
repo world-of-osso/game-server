@@ -147,46 +147,83 @@ fn main() {
 
 fn build_action(cli: Cli) -> CliAction {
     match cli.command {
-        Commands::Login(args) => {
-            action_from_credentials(args.server.server, args.username, args.password, CliCommand::Login)
-        }
+        Commands::Login(args) => login_action(args),
         Commands::Status(args) => action_from_token(args, CliCommand::Status),
-        Commands::Register(args) => {
-            action_from_credentials(args.server.server, args.username, args.password, CliCommand::Register)
-        }
-        Commands::GuildInvite(args) => {
-            action_from_token(args.auth, CliCommand::GuildInvite { target: args.target })
-        }
+        Commands::Register(args) => register_action(args),
+        Commands::GuildInvite(args) => guild_invite_action(args),
         Commands::GuildAccept(args) => action_from_token(args, CliCommand::GuildAccept),
-        Commands::CreateCharacter(args) => {
-            let command = CliCommand::CreateCharacter {
-                name: args.name,
-                race: args.race,
-                class: args.class_id,
-                appearance: CharacterAppearance {
-                    sex: args.sex,
-                    skin_color: args.skin_color,
-                    face: args.face,
-                    eye_color: args.eye_color,
-                    hair_style: args.hair_style,
-                    hair_color: args.hair_color,
-                    facial_style: args.facial_style,
-                },
-            };
-            action_from_token(args.auth, command)
-        }
-        Commands::Chat(ChatCommands::Send(args)) => {
-            action_from_token(args.auth, CliCommand::ChatSend(args.message))
-        }
+        Commands::CreateCharacter(args) => create_character_action(args),
+        Commands::Chat(chat) => chat_action(chat),
         Commands::GuildChat(args) => {
             action_from_token(args.auth, CliCommand::GuildChat(args.message))
         }
-        Commands::Chat(ChatCommands::Listen(args)) => {
-            action_from_token(args, CliCommand::ChatListen)
+    }
+}
+
+fn login_action(args: LoginArgs) -> CliAction {
+    action_from_credentials(
+        args.server.server,
+        args.username,
+        args.password,
+        CliCommand::Login,
+    )
+}
+
+fn register_action(args: RegisterArgs) -> CliAction {
+    action_from_credentials(
+        args.server.server,
+        args.username,
+        args.password,
+        CliCommand::Register,
+    )
+}
+
+fn guild_invite_action(args: GuildInviteArgs) -> CliAction {
+    action_from_token(
+        args.auth,
+        CliCommand::GuildInvite {
+            target: args.target,
+        },
+    )
+}
+
+fn create_character_action(args: CreateCharacterArgs) -> CliAction {
+    let appearance = character_appearance(&args);
+    action_from_token(
+        args.auth,
+        CliCommand::CreateCharacter {
+            name: args.name,
+            race: args.race,
+            class: args.class_id,
+            appearance,
+        },
+    )
+}
+
+fn character_appearance(args: &CreateCharacterArgs) -> CharacterAppearance {
+    CharacterAppearance {
+        sex: args.sex,
+        skin_color: args.skin_color,
+        face: args.face,
+        eye_color: args.eye_color,
+        hair_style: args.hair_style,
+        hair_color: args.hair_color,
+        facial_style: args.facial_style,
+    }
+}
+
+fn chat_action(chat: ChatCommands) -> CliAction {
+    match chat {
+        ChatCommands::Send(args) => {
+            action_from_token(args.auth, CliCommand::ChatSend(args.message))
         }
-        Commands::Chat(ChatCommands::History(args)) => {
-            action_from_token(args.auth, CliCommand::ChatHistory { limit: args.limit.min(100) })
-        }
+        ChatCommands::Listen(args) => action_from_token(args, CliCommand::ChatListen),
+        ChatCommands::History(args) => action_from_token(
+            args.auth,
+            CliCommand::ChatHistory {
+                limit: args.limit.min(100),
+            },
+        ),
     }
 }
 
