@@ -130,10 +130,15 @@ pub(super) fn process_bid_requests(
     mut state: ResMut<AuctionHouseState>,
     mut senders: Query<&mut MessageSender<AuctionOperationResponse>>,
 ) {
-    let Some(db) = db else { return };
-    process_in_world_requests(&mut receivers, &mut senders, |character_id, req| {
-        place_bid(&db.db, &mut state, character_id, req.auction_id, req.amount)
-    });
+    process_stateful_operation_requests(
+        &mut receivers,
+        db,
+        &mut state,
+        &mut senders,
+        |db, state, character_id, req| {
+            place_bid(&db.db, state, character_id, req.auction_id, req.amount)
+        },
+    );
 }
 
 pub(super) fn process_buyout_requests(
@@ -142,10 +147,13 @@ pub(super) fn process_buyout_requests(
     mut state: ResMut<AuctionHouseState>,
     mut senders: Query<&mut MessageSender<AuctionOperationResponse>>,
 ) {
-    let Some(db) = db else { return };
-    process_in_world_requests(&mut receivers, &mut senders, |character_id, req| {
-        buyout_auction(&db.db, &mut state, character_id, req.auction_id)
-    });
+    process_stateful_operation_requests(
+        &mut receivers,
+        db,
+        &mut state,
+        &mut senders,
+        |db, state, character_id, req| buyout_auction(&db.db, state, character_id, req.auction_id),
+    );
 }
 
 pub(super) fn process_cancel_requests(
@@ -154,10 +162,13 @@ pub(super) fn process_cancel_requests(
     mut state: ResMut<AuctionHouseState>,
     mut senders: Query<&mut MessageSender<AuctionOperationResponse>>,
 ) {
-    let Some(db) = db else { return };
-    process_in_world_requests(&mut receivers, &mut senders, |character_id, req| {
-        cancel_auction(&db.db, &mut state, character_id, req.auction_id)
-    });
+    process_stateful_operation_requests(
+        &mut receivers,
+        db,
+        &mut state,
+        &mut senders,
+        |db, state, character_id, req| cancel_auction(&db.db, state, character_id, req.auction_id),
+    );
 }
 
 pub(super) fn expire_auctions(db: Option<Res<GameDatabase>>, mut state: ResMut<AuctionHouseState>) {
@@ -247,6 +258,22 @@ fn process_operation_requests<M, F>(
     let Some(db) = db else { return };
     process_in_world_requests(receivers, senders, |character_id, req| {
         build_response(&db, character_id, req)
+    });
+}
+
+fn process_stateful_operation_requests<M, F>(
+    receivers: &mut Query<(Entity, &InWorld, &mut MessageReceiver<M>)>,
+    db: Option<Res<GameDatabase>>,
+    state: &mut AuctionHouseState,
+    senders: &mut Query<&mut MessageSender<AuctionOperationResponse>>,
+    mut build_response: F,
+) where
+    M: lightyear::prelude::Message,
+    F: FnMut(&GameDatabase, &mut AuctionHouseState, u64, M) -> AuctionOperationResponse,
+{
+    let Some(db) = db else { return };
+    process_in_world_requests(receivers, senders, |character_id, req| {
+        build_response(&db, state, character_id, req)
     });
 }
 
