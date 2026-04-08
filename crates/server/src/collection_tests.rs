@@ -114,3 +114,12 @@ fn dismiss_mount_clears_active_mount() {
     assert_eq!(message, "dismissed Swift Brown Steed");
     assert!(!collection.mounts[0].active);
 }
+
+#[test]
+fn movement_speed_for_mount_doubles_run_speed() {
+    assert_eq!(movement_speed_for_mount(false), shared::movement::RUN_SPEED);
+    assert_eq!(
+        movement_speed_for_mount(true),
+        shared::movement::RUN_SPEED * 2.0
+    );
+}
