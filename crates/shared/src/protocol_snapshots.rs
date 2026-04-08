@@ -96,24 +96,26 @@ pub enum CombatLogEventKindSnapshot {
 
 // -- Collection snapshots --
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct CollectionSnapshot {
     pub mounts: Vec<CollectionMountSnapshot>,
     pub pets: Vec<CollectionPetSnapshot>,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct CollectionMountSnapshot {
     pub mount_id: u32,
     pub name: String,
     pub known: bool,
+    pub active: bool,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct CollectionPetSnapshot {
     pub pet_id: u32,
     pub name: String,
     pub known: bool,
+    pub active: bool,
 }
 
 // -- Profession snapshots --

@@ -43,6 +43,9 @@ pub struct ProfessionChannel;
 /// Reliable ordered channel for reputation updates, bidirectional.
 pub struct ReputationChannel;
 
+/// Reliable ordered channel for collection updates, bidirectional.
+pub struct CollectionChannel;
+
 /// Reliable ordered channel for currency updates, bidirectional.
 pub struct CurrencyChannel;
 
@@ -687,6 +690,29 @@ pub struct ReputationStateUpdate {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct SummonMount {
+    pub mount_id: u32,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct DismissMount;
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct SummonPet {
+    pub pet_id: u32,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct DismissPet;
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct CollectionStateUpdate {
+    pub snapshot: Option<CollectionSnapshot>,
+    pub message: Option<String>,
+    pub error: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct EarnCurrency {
     pub currency_id: u32,
     pub amount: u32,
@@ -743,6 +769,7 @@ fn register_messages(app: &mut App) {
     register_duel_messages(app);
     register_profession_messages(app);
     register_reputation_messages(app);
+    register_collection_messages(app);
     register_currency_messages(app);
     crate::protocol_snapshots::register_snapshot_messages(app);
 }
@@ -928,6 +955,19 @@ fn register_reputation_messages(app: &mut App) {
         .add_direction(NetworkDirection::ServerToClient);
 }
 
+fn register_collection_messages(app: &mut App) {
+    app.register_message::<SummonMount>()
+        .add_direction(NetworkDirection::ClientToServer);
+    app.register_message::<DismissMount>()
+        .add_direction(NetworkDirection::ClientToServer);
+    app.register_message::<SummonPet>()
+        .add_direction(NetworkDirection::ClientToServer);
+    app.register_message::<DismissPet>()
+        .add_direction(NetworkDirection::ClientToServer);
+    app.register_message::<CollectionStateUpdate>()
+        .add_direction(NetworkDirection::ServerToClient);
+}
+
 fn register_currency_messages(app: &mut App) {
     app.register_message::<EarnCurrency>()
         .add_direction(NetworkDirection::ClientToServer);
@@ -971,6 +1011,7 @@ fn register_bidirectional_channels(app: &mut App) {
     add_reliable_channel::<DuelChannel>(app, NetworkDirection::Bidirectional);
     add_reliable_channel::<ProfessionChannel>(app, NetworkDirection::Bidirectional);
     add_reliable_channel::<ReputationChannel>(app, NetworkDirection::Bidirectional);
+    add_reliable_channel::<CollectionChannel>(app, NetworkDirection::Bidirectional);
     add_reliable_channel::<CurrencyChannel>(app, NetworkDirection::Bidirectional);
 }
 

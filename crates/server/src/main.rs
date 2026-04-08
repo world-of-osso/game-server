@@ -4,6 +4,7 @@ mod admin_types;
 mod auction_house;
 mod auth;
 mod auth_character;
+mod collection;
 mod combat;
 mod creature_ai;
 mod currency;
@@ -58,6 +59,7 @@ fn add_game_plugins(app: &mut App) {
     app.add_plugins(shared::ProtocolPlugin)
         .add_plugins(persistence::PersistencePlugin)
         .add_plugins(auction_house::AuctionHousePlugin)
+        .add_plugins(collection::CollectionPlugin)
         .add_plugins(currency::CurrencyPlugin)
         .add_plugins(profession::ProfessionPlugin)
         .add_plugins(reputation::ReputationPlugin)

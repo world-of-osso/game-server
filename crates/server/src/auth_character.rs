@@ -258,6 +258,7 @@ fn handle_select(
     };
     let guild = persistence::load_character_guild(&db.db, req.character_id);
     let professions = persistence::load_professions(&db.db, req.character_id);
+    let collections = persistence::load_collections(&db.db, req.character_id);
     let currencies = persistence::load_currencies(&db.db, req.character_id);
     let reputation = persistence::load_reputation(&db.db, req.character_id, || {
         shared::reputation::CharacterReputation::new_for_race(
@@ -271,6 +272,7 @@ fn handle_select(
         req.character_id,
         guild.as_ref(),
         professions,
+        collections,
         crate::currency::PlayerCurrencies(currencies),
         reputation,
     );
@@ -386,6 +388,7 @@ pub fn spawn_player_entity(
     character_id: u64,
     guild: Option<&GuildMembership>,
     professions: PlayerProfessions,
+    collections: crate::collection::PlayerCollectionState,
     currencies: crate::currency::PlayerCurrencies,
     reputation: shared::reputation::CharacterReputation,
 ) -> Entity {
@@ -393,8 +396,14 @@ pub fn spawn_player_entity(
         .spawn(build_player_components(data, character_id))
         .id();
     commands.entity(entity).insert(professions);
+    commands.entity(entity).insert(collections.clone());
     commands.entity(entity).insert(currencies);
     commands.entity(entity).insert(reputation);
+    if let Some(mount_display_id) = collections.active_mount_display_id() {
+        commands
+            .entity(entity)
+            .insert(shared::components::Mounted { mount_display_id });
+    }
     if shared::formulas::base_mana(data.class, data.level as u8).is_some() {
         commands.entity(entity).insert(Mana {
             current: 0.0,
