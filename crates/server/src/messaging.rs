@@ -6,6 +6,7 @@ use shared::protocol::{
     GuildAcceptInviteResponse, GuildInviteRequest, GuildInviteResponse, SetTarget,
 };
 
+use crate::ignore_list::PlayerIgnoreListState;
 use crate::networking::{ChatHistoryBuffer, CombatTarget, PlayerLink};
 use crate::persistence::{self, ClientId, GameDatabase};
 
@@ -13,6 +14,7 @@ pub fn process_chat_messages(
     mut receivers: Query<(&mut MessageReceiver<ChatMessage>, &PlayerLink)>,
     players: Query<&shared::components::Player>,
     guilds: Query<Option<&GuildMembership>>,
+    ignore_lists: Query<Option<&PlayerIgnoreListState>>,
     mut conns: Query<(&PlayerLink, &mut MessageSender<ChatMessage>)>,
     mut history: ResMut<ChatHistoryBuffer>,
 ) {
@@ -23,7 +25,7 @@ pub fn process_chat_messages(
             history.entries.pop_front();
         }
     }
-    route_chat_messages(&collected, &mut conns, &guilds);
+    route_chat_messages(&collected, &mut conns, &guilds, &ignore_lists);
 }
 
 pub fn process_chat_history_requests(
@@ -34,14 +36,17 @@ pub fn process_chat_history_requests(
         ),
         With<crate::auth::Authenticated>,
     >,
+    player_links: Query<&PlayerLink>,
+    ignore_lists: Query<Option<&PlayerIgnoreListState>>,
     history: Res<ChatHistoryBuffer>,
     mut senders: Query<&mut MessageSender<shared::protocol::ChatHistoryResponse>>,
 ) {
     for (mut receiver, conn_entity) in receivers.iter_mut() {
         for req in receiver.receive() {
             let limit = usize::from(req.limit.clamp(1, 100));
-            let start = history.entries.len().saturating_sub(limit);
-            let messages: Vec<ChatMessage> = history.entries.iter().skip(start).cloned().collect();
+            let ignored_names =
+                ignored_names_for_connection(conn_entity, &player_links, &ignore_lists);
+            let messages = history_for_connection(&history, limit, ignored_names.as_deref());
             let Ok(mut sender) = senders.get_mut(conn_entity) else {
                 continue;
             };
@@ -90,11 +95,14 @@ fn route_chat_messages(
     outgoing: &[CollectedChat],
     conns: &mut Query<(&PlayerLink, &mut MessageSender<ChatMessage>)>,
     guilds: &Query<Option<&GuildMembership>>,
+    ignore_lists: &Query<Option<&PlayerIgnoreListState>>,
 ) {
     for chat in outgoing {
         match chat.msg.channel {
-            ChatType::Guild => send_to_guild(&chat.msg, chat.sender_guild_id, conns, guilds),
-            _ => broadcast_to_all(&chat.msg, &mut *conns),
+            ChatType::Guild => {
+                send_to_guild(&chat.msg, chat.sender_guild_id, conns, guilds, ignore_lists)
+            }
+            _ => broadcast_to_all(&chat.msg, &mut *conns, ignore_lists),
         }
     }
 }
@@ -104,6 +112,7 @@ fn send_to_guild(
     sender_guild_id: Option<u32>,
     conns: &mut Query<(&PlayerLink, &mut MessageSender<ChatMessage>)>,
     guilds: &Query<Option<&GuildMembership>>,
+    ignore_lists: &Query<Option<&PlayerIgnoreListState>>,
 ) {
     let Some(gid) = sender_guild_id else { return };
     for (link, mut sender) in conns.iter_mut() {
@@ -112,7 +121,7 @@ fn send_to_guild(
             .ok()
             .flatten()
             .is_some_and(|g| g.guild_id == gid);
-        if is_same_guild {
+        if is_same_guild && recipient_accepts_message(link.0, &msg.sender, ignore_lists) {
             sender.send::<ChatChannel>(msg.clone());
         }
     }
@@ -121,9 +130,101 @@ fn send_to_guild(
 fn broadcast_to_all(
     msg: &ChatMessage,
     conns: &mut Query<(&PlayerLink, &mut MessageSender<ChatMessage>)>,
+    ignore_lists: &Query<Option<&PlayerIgnoreListState>>,
 ) {
-    for (_link, mut sender) in conns.iter_mut() {
+    for (link, mut sender) in conns.iter_mut() {
+        if !recipient_accepts_message(link.0, &msg.sender, ignore_lists) {
+            continue;
+        }
         sender.send::<ChatChannel>(msg.clone());
+    }
+}
+
+fn ignored_names_for_connection(
+    conn_entity: Entity,
+    player_links: &Query<&PlayerLink>,
+    ignore_lists: &Query<Option<&PlayerIgnoreListState>>,
+) -> Option<Vec<String>> {
+    let link = player_links.get(conn_entity).ok()?;
+    let ignore_list = ignore_lists.get(link.0).ok().flatten()?;
+    Some(ignore_list.names.clone())
+}
+
+fn history_for_connection(
+    history: &ChatHistoryBuffer,
+    limit: usize,
+    ignored_names: Option<&[String]>,
+) -> Vec<ChatMessage> {
+    history
+        .entries
+        .iter()
+        .filter(|message| !sender_is_ignored(&message.sender, ignored_names))
+        .rev()
+        .take(limit)
+        .cloned()
+        .collect::<Vec<_>>()
+        .into_iter()
+        .rev()
+        .collect()
+}
+
+fn recipient_accepts_message(
+    recipient_player: Entity,
+    sender_name: &str,
+    ignore_lists: &Query<Option<&PlayerIgnoreListState>>,
+) -> bool {
+    let ignored_names = ignore_lists
+        .get(recipient_player)
+        .ok()
+        .flatten()
+        .map(|ignore_list| ignore_list.names.as_slice());
+    !sender_is_ignored(sender_name, ignored_names)
+}
+
+fn sender_is_ignored(sender_name: &str, ignored_names: Option<&[String]>) -> bool {
+    ignored_names
+        .unwrap_or_default()
+        .iter()
+        .any(|ignored| ignored.eq_ignore_ascii_case(sender_name))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::VecDeque;
+
+    fn say_message(sender: &str, content: &str) -> ChatMessage {
+        ChatMessage {
+            sender: sender.into(),
+            content: content.into(),
+            channel: ChatType::Say,
+        }
+    }
+
+    #[test]
+    fn sender_is_ignored_matches_case_insensitively() {
+        let ignored = vec!["Alice".to_string()];
+
+        assert!(sender_is_ignored("alice", Some(&ignored)));
+        assert!(!sender_is_ignored("Bob", Some(&ignored)));
+    }
+
+    #[test]
+    fn history_for_connection_filters_ignored_senders() {
+        let history = ChatHistoryBuffer {
+            entries: VecDeque::from([
+                say_message("Alice", "first"),
+                say_message("Bob", "second"),
+                say_message("Alice", "third"),
+            ]),
+        };
+        let ignored = vec!["alice".to_string()];
+
+        let filtered = history_for_connection(&history, 10, Some(&ignored));
+
+        assert_eq!(filtered.len(), 1);
+        assert_eq!(filtered[0].sender, "Bob");
+        assert_eq!(filtered[0].content, "second");
     }
 }
 

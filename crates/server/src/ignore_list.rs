@@ -3,8 +3,8 @@ use lightyear::prelude::*;
 use serde::{Deserialize, Serialize};
 use shared::components::Player;
 use shared::protocol::{
-    AddIgnore as AddIgnoreRequest, IgnoreChannel, IgnoreListSnapshot, IgnoreListStateUpdate,
-    QueryIgnoreList, RemoveIgnore as RemoveIgnoreRequest,
+    AddIgnore, IgnoreChannel, IgnoreListSnapshot, IgnoreListStateUpdate, QueryIgnoreList,
+    RemoveIgnore,
 };
 
 use crate::auth::{Authenticated, InWorld};
@@ -98,7 +98,7 @@ fn process_add_requests(
             Entity,
             &PlayerLink,
             &InWorld,
-            &mut MessageReceiver<AddIgnoreRequest>,
+            &mut MessageReceiver<AddIgnore>,
         ),
         With<Authenticated>,
     >,
@@ -128,7 +128,7 @@ fn process_remove_requests(
             Entity,
             &PlayerLink,
             &InWorld,
-            &mut MessageReceiver<RemoveIgnoreRequest>,
+            &mut MessageReceiver<RemoveIgnore>,
         ),
         With<Authenticated>,
     >,
