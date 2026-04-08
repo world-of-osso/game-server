@@ -1,6 +1,5 @@
 use redb::{ReadableDatabase, TableDefinition};
 
-#[allow(dead_code)]
 mod terrain_height {
     pub fn bevy_to_wow(x: f32, y: f32, z: f32) -> (f32, f32, f32) {
         (x, y, z)
@@ -8,7 +7,6 @@ mod terrain_height {
 }
 
 #[path = "../src/persistence_types.rs"]
-#[allow(dead_code)]
 mod persistence_types;
 
 const CHARACTERS: TableDefinition<u64, &[u8]> = TableDefinition::new("characters");
