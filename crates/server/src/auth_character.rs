@@ -264,6 +264,7 @@ fn handle_select(
         state.guild.as_ref(),
         state.professions,
         state.achievements,
+        state.world_map,
         state.collections,
         crate::currency::PlayerCurrencies(state.currencies),
         state.reputation,
@@ -286,6 +287,7 @@ struct SelectedCharacterState {
     guild: Option<GuildMembership>,
     professions: PlayerProfessions,
     achievements: crate::achievement::PlayerAchievementState,
+    world_map: crate::world_map::PlayerWorldMapState,
     collections: crate::collection::PlayerCollectionState,
     currencies: shared::currency::CurrencyWallet,
     reputation: shared::reputation::CharacterReputation,
@@ -300,6 +302,7 @@ fn load_selected_character_state(
         guild: persistence::load_character_guild(&db.db, character_id),
         professions: persistence::load_professions(&db.db, character_id),
         achievements: persistence::load_achievements(&db.db, character_id),
+        world_map: persistence::load_world_map(&db.db, character_id),
         collections: persistence::load_collections(&db.db, character_id),
         currencies: persistence::load_currencies(&db.db, character_id),
         reputation: persistence::load_reputation(&db.db, character_id, || {
@@ -407,6 +410,7 @@ pub fn spawn_player_entity(
     guild: Option<&GuildMembership>,
     professions: PlayerProfessions,
     achievements: crate::achievement::PlayerAchievementState,
+    world_map: crate::world_map::PlayerWorldMapState,
     collections: crate::collection::PlayerCollectionState,
     currencies: crate::currency::PlayerCurrencies,
     reputation: shared::reputation::CharacterReputation,
@@ -416,6 +420,7 @@ pub fn spawn_player_entity(
         .id();
     commands.entity(entity).insert(professions);
     commands.entity(entity).insert(achievements);
+    commands.entity(entity).insert(world_map);
     commands.entity(entity).insert(collections.clone());
     commands.entity(entity).insert(currencies);
     commands.entity(entity).insert(reputation);

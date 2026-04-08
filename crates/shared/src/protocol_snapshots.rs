@@ -188,6 +188,11 @@ pub struct AchievementToastSnapshot {
     pub points: u32,
 }
 
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct WorldMapSnapshot {
+    pub discovered_zone_ids: Vec<u32>,
+}
+
 pub fn register_snapshot_messages(app: &mut App) {
     app.register_message::<QuestLogSnapshot>()
         .add_direction(NetworkDirection::ServerToClient);
@@ -208,5 +213,7 @@ pub fn register_snapshot_messages(app: &mut App) {
     app.register_message::<AchievementSnapshot>()
         .add_direction(NetworkDirection::ServerToClient);
     app.register_message::<AchievementToastSnapshot>()
+        .add_direction(NetworkDirection::ServerToClient);
+    app.register_message::<WorldMapSnapshot>()
         .add_direction(NetworkDirection::ServerToClient);
 }

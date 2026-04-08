@@ -26,6 +26,7 @@ mod talent;
 mod terrain_height;
 mod trade;
 mod world_data;
+mod world_map;
 mod zones;
 
 use bevy::prelude::*;
@@ -65,6 +66,7 @@ fn add_game_plugins(app: &mut App) {
         .add_plugins(currency::CurrencyPlugin)
         .add_plugins(profession::ProfessionPlugin)
         .add_plugins(reputation::ReputationPlugin)
+        .add_plugins(world_map::WorldMapPlugin)
         .add_plugins(duel::DuelPlugin)
         .add_plugins(inspect::InspectPlugin)
         .add_plugins(talent::TalentPlugin)

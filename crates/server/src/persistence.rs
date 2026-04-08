@@ -27,6 +27,9 @@ const CURRENCIES: TableDefinition<u64, &[u8]> = TableDefinition::new("currencies
 /// Achievement table: PlayerId (u64) -> serialized achievement state (bytes).
 const ACHIEVEMENTS: TableDefinition<u64, &[u8]> = TableDefinition::new("achievements");
 
+/// World map table: PlayerId (u64) -> serialized world map discovery state (bytes).
+const WORLD_MAPS: TableDefinition<u64, &[u8]> = TableDefinition::new("world_maps");
+
 /// Collection table: PlayerId (u64) -> serialized collection state (bytes).
 const COLLECTIONS: TableDefinition<u64, &[u8]> = TableDefinition::new("collections");
 
@@ -143,6 +146,7 @@ pub(crate) fn create_tables(db: &Database) {
     let _ = txn.open_table(REPUTATIONS);
     let _ = txn.open_table(CURRENCIES);
     let _ = txn.open_table(ACHIEVEMENTS);
+    let _ = txn.open_table(WORLD_MAPS);
     let _ = txn.open_table(COLLECTIONS);
     let _ = txn.open_table(AUCTIONS);
     let _ = txn.open_table(MAILBOXES);
@@ -328,6 +332,42 @@ pub fn save_achievements(
             .expect("Failed to insert achievements");
     }
     txn.commit().expect("Failed to commit achievements save");
+}
+
+pub fn load_world_map(db: &Database, character_id: u64) -> crate::world_map::PlayerWorldMapState {
+    let txn = db.begin_read().expect("Failed to begin read txn");
+    let table = txn
+        .open_table(WORLD_MAPS)
+        .expect("Failed to open world_maps table");
+    match table.get(character_id).expect("Failed to read world map") {
+        Some(guard) => {
+            serde_json::from_slice::<crate::world_map::PlayerWorldMapState>(guard.value())
+                .expect("decode world map")
+        }
+        None => {
+            let state = crate::world_map::PlayerWorldMapState::default();
+            save_world_map(db, character_id, &state);
+            state
+        }
+    }
+}
+
+pub fn save_world_map(
+    db: &Database,
+    character_id: u64,
+    state: &crate::world_map::PlayerWorldMapState,
+) {
+    let bytes = serde_json::to_vec(state).expect("encode world map");
+    let txn = db.begin_write().expect("Failed to begin write txn");
+    {
+        let mut table = txn
+            .open_table(WORLD_MAPS)
+            .expect("Failed to open world_maps table");
+        table
+            .insert(character_id, bytes.as_slice())
+            .expect("Failed to insert world map");
+    }
+    txn.commit().expect("Failed to commit world map save");
 }
 
 pub fn load_collections(
