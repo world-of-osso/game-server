@@ -316,12 +316,10 @@ fn apply_mount_state_change(
 ) {
     match mount_state {
         Some(MountStateChange::Mounted(mount_display_id)) => {
-            commands
-                .entity(player_entity)
-                .insert((
-                    Mounted { mount_display_id },
-                    MovementSpeed(movement_speed_for_mount(true)),
-                ));
+            commands.entity(player_entity).insert((
+                Mounted { mount_display_id },
+                MovementSpeed(movement_speed_for_mount(true)),
+            ));
         }
         Some(MountStateChange::Dismissed) => {
             commands

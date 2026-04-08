@@ -443,12 +443,10 @@ pub fn spawn_player_entity(
     commands.entity(entity).insert(currencies);
     commands.entity(entity).insert(reputation);
     if let Some(mount_display_id) = collections.active_mount_display_id() {
-        commands
-            .entity(entity)
-            .insert((
-                shared::components::Mounted { mount_display_id },
-                MovementSpeed(crate::collection::movement_speed_for_mount(true)),
-            ));
+        commands.entity(entity).insert((
+            shared::components::Mounted { mount_display_id },
+            MovementSpeed(crate::collection::movement_speed_for_mount(true)),
+        ));
     }
     if shared::formulas::base_mana(data.class, data.level as u8).is_some() {
         commands.entity(entity).insert(Mana {
