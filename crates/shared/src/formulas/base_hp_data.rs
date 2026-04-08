@@ -1,12 +1,5 @@
-// Auto-generated from AzerothCore player_class_stats table.
-// Source: ~/Repos/azerothcore/data/sql/base/db_world/player_class_stats.sql
-//
-// Format: (class_id, level, base_hp)
-// Classes: 1=Warrior, 2=Paladin, 3=Hunter, 4=Rogue, 5=Priest,
-//          6=DeathKnight (55-80), 7=Shaman, 8=Mage, 9=Warlock, 11=Druid
-
-#[rustfmt::skip]
-pub(crate) const BASE_HP_TABLE: &[(u8, u8, u32)] = &[
+// Auto-generated from AzerothCore `player_class_stats.sql`; rows are `(class_id, level, base_hp)` for 1=Warrior, 2=Paladin, 3=Hunter, 4=Rogue, 5=Priest, 6=DeathKnight (55-80), 7=Shaman, 8=Mage, 9=Warlock, and 11=Druid.
+#[rustfmt::skip] pub(crate) const BASE_HP_TABLE: &[(u8, u8, u32)] = &[
     (1, 1, 20),
     (1, 2, 29),
     (1, 3, 38),
