@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use shared::components::{Health, Level, Mana, Player, Position};
 use shared::death::{
     Corpse, DeathState, Graveyard, GraveyardRegistry, SpiritHealerContext, accept_spirit_healer,
-    in_corpse_range, on_death, release_spirit, resurrect_at_corpse,
+    in_corpse_range, on_death, resurrect_at_corpse,
 };
 use shared::protocol::{
     AcceptSpiritHealerResurrection, DeathChannel, DeathPositionSnapshot, DeathSnapshot,
@@ -97,6 +97,42 @@ fn build_graveyard_registry(world_data: &WorldData) -> GraveyardRegistry {
     graveyards
 }
 
+fn faction_for_race(race: u8) -> u8 {
+    match race {
+        1 | 3 | 4 | 7 | 11 | 22 | 25 | 29 | 30 | 32 | 34 | 37 => 1,
+        2 | 5 | 6 | 8 | 9 | 10 | 26 | 27 | 28 | 31 | 35 | 36 => 2,
+        _ => 0,
+    }
+}
+
+fn lookup_graveyard(
+    graveyards: &GraveyardRegistry,
+    map_id: u16,
+    x: f32,
+    y: f32,
+    z: f32,
+    player_race: u8,
+) -> Option<Graveyard> {
+    graveyards
+        .nearest(map_id, x, y, z, faction_for_race(player_race))
+        .cloned()
+}
+
+fn lookup_corpse_graveyard(
+    corpse: &Corpse,
+    player_race: u8,
+    graveyards: &GraveyardRegistry,
+) -> Option<Graveyard> {
+    lookup_graveyard(
+        graveyards,
+        corpse.map_id,
+        corpse.x,
+        corpse.y,
+        corpse.z,
+        player_race,
+    )
+}
+
 type NewInWorldLink<'w, 's> =
     Query<'w, 's, (Entity, &'static PlayerLink), (With<Authenticated>, Added<InWorld>)>;
 
@@ -162,13 +198,13 @@ fn process_release_spirit_requests(
         (Entity, &PlayerLink, &mut MessageReceiver<ReleaseSpirit>),
         With<Authenticated>,
     >,
-    mut players: Query<(&mut Position, &mut PlayerDeathState)>,
+    mut players: Query<(&mut Position, &mut PlayerDeathState, &Player)>,
     state: Res<DeathServerState>,
     mut senders: Query<&mut MessageSender<DeathStateUpdate>>,
 ) {
     for (conn_entity, link, mut receiver) in &mut receivers {
         for _ in receiver.receive() {
-            let Ok((mut position, mut death_state)) = players.get_mut(link.0) else {
+            let Ok((mut position, mut death_state, player)) = players.get_mut(link.0) else {
                 send_error(
                     conn_entity,
                     &mut senders,
@@ -176,7 +212,12 @@ fn process_release_spirit_requests(
                 );
                 continue;
             };
-            match release_spirit_for_player(&mut position, &mut death_state, &state.graveyards) {
+            match release_spirit_for_player(
+                &mut position,
+                &mut death_state,
+                player.race,
+                &state.graveyards,
+            ) {
                 Ok(message) => {
                     send_update(
                         conn_entity,
@@ -235,29 +276,49 @@ fn process_resurrect_at_corpse_requests(
                 );
                 continue;
             };
-            match resurrect_player_at_corpse(&mut position, &mut health, mana, &mut death_state) {
-                Ok(message) => {
-                    let name = player.map(|p| p.name.as_str()).unwrap_or("player");
-                    send_update(
-                        conn_entity,
-                        &position,
-                        death_state.clone(),
-                        Some(format!("{name} {message}")),
-                        None,
-                        &mut senders,
-                    );
-                }
-                Err(error) => {
-                    send_update(
-                        conn_entity,
-                        &position,
-                        death_state.clone(),
-                        None,
-                        Some(error),
-                        &mut senders,
-                    );
-                }
-            }
+            let result =
+                resurrect_player_at_corpse(&mut position, &mut health, mana, &mut death_state);
+            send_resurrect_response(
+                conn_entity,
+                &position,
+                player,
+                result,
+                &death_state,
+                &mut senders,
+            );
+        }
+    }
+}
+
+fn send_resurrect_response(
+    conn_entity: Entity,
+    position: &Position,
+    player: Option<&Player>,
+    result: Result<String, String>,
+    death_state: &PlayerDeathState,
+    senders: &mut Query<&mut MessageSender<DeathStateUpdate>>,
+) {
+    match result {
+        Ok(message) => {
+            let name = player.map(|p| p.name.as_str()).unwrap_or("player");
+            send_update(
+                conn_entity,
+                position,
+                death_state.clone(),
+                Some(format!("{name} {message}")),
+                None,
+                senders,
+            );
+        }
+        Err(error) => {
+            send_update(
+                conn_entity,
+                position,
+                death_state.clone(),
+                None,
+                Some(error),
+                senders,
+            );
         }
     }
 }
@@ -340,13 +401,13 @@ fn process_stuck_escape_requests(
         (Entity, &PlayerLink, &mut MessageReceiver<UseStuckEscape>),
         With<Authenticated>,
     >,
-    mut players: Query<(&mut Position, Option<&PlayerDeathState>)>,
+    mut players: Query<(&mut Position, Option<&PlayerDeathState>, &Player)>,
     state: Res<DeathServerState>,
     mut senders: Query<&mut MessageSender<DeathStateUpdate>>,
 ) {
     for (conn_entity, link, mut receiver) in &mut receivers {
         for _ in receiver.receive() {
-            let Ok((mut position, death_state)) = players.get_mut(link.0) else {
+            let Ok((mut position, death_state, player)) = players.get_mut(link.0) else {
                 send_error(
                     conn_entity,
                     &mut senders,
@@ -354,7 +415,7 @@ fn process_stuck_escape_requests(
                 );
                 continue;
             };
-            match use_stuck_escape(&mut position, death_state, &state.graveyards) {
+            match use_stuck_escape(&mut position, death_state, player.race, &state.graveyards) {
                 Ok(message) => {
                     send_update(
                         conn_entity,
@@ -390,6 +451,7 @@ type DeathDetectionQuery<'w, 's> = Query<
         Option<&'static mut EquippedDurability>,
         Option<&'static mut PlayerDeathState>,
         &'static crate::persistence::ClientId,
+        &'static Player,
     ),
     With<Player>,
 >;
@@ -397,12 +459,15 @@ type DeathDetectionQuery<'w, 's> = Query<
 fn detect_player_deaths(
     mut players: DeathDetectionQuery,
     connections: Query<(Entity, &PlayerLink), With<Authenticated>>,
+    state: Res<DeathServerState>,
     time: Res<Time>,
     mut commands: Commands,
     mut senders: Query<&mut MessageSender<DeathStateUpdate>>,
 ) {
     let now = current_seconds(&time);
-    for (player_entity, position, mut health, durability, death_state, client_id) in &mut players {
+    for (player_entity, position, mut health, durability, death_state, client_id, player) in
+        &mut players
+    {
         if health.current > 0.0 {
             continue;
         }
@@ -421,11 +486,7 @@ fn detect_player_deaths(
             position.z,
             now,
         );
-        let death_state = PlayerDeathState {
-            state: DeathState::Dead,
-            corpse: Some(result.corpse),
-            graveyard: None,
-        };
+        let death_state = build_player_death_state(result.corpse, player.race, &state.graveyards);
         if let Some(mut durability) = durability {
             crate::durability::apply_death_loss(&mut durability);
         }
@@ -443,6 +504,18 @@ fn detect_player_deaths(
     }
 }
 
+fn build_player_death_state(
+    corpse: Corpse,
+    player_race: u8,
+    graveyards: &GraveyardRegistry,
+) -> PlayerDeathState {
+    PlayerDeathState {
+        state: DeathState::Dead,
+        graveyard: lookup_corpse_graveyard(&corpse, player_race, graveyards),
+        corpse: Some(corpse),
+    }
+}
+
 fn connection_for_player(
     player_entity: Entity,
     connections: &Query<(Entity, &PlayerLink), With<Authenticated>>,
@@ -455,41 +528,33 @@ fn connection_for_player(
 fn release_spirit_for_player(
     position: &mut Position,
     death_state: &mut PlayerDeathState,
+    player_race: u8,
     graveyards: &GraveyardRegistry,
 ) -> Result<String, String> {
+    if death_state.state != DeathState::Dead {
+        return Err("unable to release spirit here".to_string());
+    }
     let corpse = death_state
         .corpse
         .as_ref()
         .ok_or_else(|| "corpse is unavailable".to_string())?;
-    let result = release_spirit(
-        death_state.state,
-        corpse.map_id,
-        corpse.x,
-        corpse.y,
-        corpse.z,
-        0,
-        graveyards,
-    )
-    .map_err(|_| "unable to release spirit here".to_string())?;
+    let graveyard = death_state
+        .graveyard
+        .clone()
+        .or_else(|| lookup_corpse_graveyard(corpse, player_race, graveyards))
+        .ok_or_else(|| "unable to release spirit here".to_string())?;
     death_state.state = DeathState::Ghost;
-    death_state.graveyard = Some(Graveyard {
-        id: result.graveyard_id,
-        zone_id: 0,
-        faction: 0,
-        map_id: result.map_id,
-        x: result.x,
-        y: result.y,
-        z: result.z,
-    });
-    position.x = result.x;
-    position.y = result.y;
-    position.z = result.z;
+    death_state.graveyard = Some(graveyard.clone());
+    position.x = graveyard.x;
+    position.y = graveyard.y;
+    position.z = graveyard.z;
     Ok("released spirit".into())
 }
 
 fn use_stuck_escape(
     position: &mut Position,
     death_state: Option<&PlayerDeathState>,
+    player_race: u8,
     graveyards: &GraveyardRegistry,
 ) -> Result<String, String> {
     if death_state
@@ -498,9 +563,15 @@ fn use_stuck_escape(
     {
         return Err("stuck escape is unavailable while dead".into());
     }
-    let graveyard = graveyards
-        .nearest(WORLD_MAP_ID, position.x, position.y, position.z, 0)
-        .ok_or_else(|| "unable to find a safe graveyard".to_string())?;
+    let graveyard = lookup_graveyard(
+        graveyards,
+        WORLD_MAP_ID,
+        position.x,
+        position.y,
+        position.z,
+        player_race,
+    )
+    .ok_or_else(|| "unable to find a safe graveyard".to_string())?;
     position.x = graveyard.x;
     position.y = graveyard.y;
     position.z = graveyard.z;
@@ -665,6 +736,11 @@ fn current_seconds(time: &Time) -> u64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use shared::death::DeathResult;
+
+    fn death_result_at(x: f32, y: f32, z: f32) -> DeathResult {
+        on_death(1, WORLD_MAP_ID, x, y, z, 5)
+    }
 
     #[test]
     fn build_graveyard_registry_uses_spirit_healer_spawns() {
@@ -702,6 +778,74 @@ mod tests {
         let registry = build_graveyard_registry(&world_data);
 
         assert_eq!(registry.len(), 1);
+    }
+
+    #[test]
+    fn lookup_corpse_graveyard_returns_nearest_match_for_death_location() {
+        let corpse = death_result_at(90.0, 5.0, 0.0).corpse;
+        let mut graveyards = GraveyardRegistry::new();
+        graveyards.add(Graveyard {
+            id: 1,
+            zone_id: 12,
+            faction: 0,
+            map_id: WORLD_MAP_ID,
+            x: 10.0,
+            y: 0.0,
+            z: 0.0,
+        });
+        graveyards.add(Graveyard {
+            id: 2,
+            zone_id: 12,
+            faction: 0,
+            map_id: WORLD_MAP_ID,
+            x: 100.0,
+            y: 0.0,
+            z: 0.0,
+        });
+
+        let graveyard =
+            lookup_corpse_graveyard(&corpse, 1, &graveyards).expect("nearest graveyard");
+
+        assert_eq!(graveyard.id, 2);
+        assert_eq!(graveyard.x, 100.0);
+    }
+
+    #[test]
+    fn release_spirit_uses_precomputed_graveyard_lookup() {
+        let mut position = Position {
+            x: 90.0,
+            y: 5.0,
+            z: 0.0,
+        };
+        let graveyard = Graveyard {
+            id: 2,
+            zone_id: 12,
+            faction: 0,
+            map_id: WORLD_MAP_ID,
+            x: 100.0,
+            y: 0.0,
+            z: 0.0,
+        };
+        let mut death_state = PlayerDeathState {
+            state: DeathState::Dead,
+            corpse: Some(death_result_at(90.0, 5.0, 0.0).corpse),
+            graveyard: Some(graveyard.clone()),
+        };
+
+        let message = release_spirit_for_player(
+            &mut position,
+            &mut death_state,
+            1,
+            &GraveyardRegistry::new(),
+        )
+        .expect("release spirit");
+
+        assert_eq!(message, "released spirit");
+        assert_eq!(death_state.state, DeathState::Ghost);
+        assert_eq!(death_state.graveyard, Some(graveyard));
+        assert_eq!(position.x, 100.0);
+        assert_eq!(position.y, 0.0);
+        assert_eq!(position.z, 0.0);
     }
 
     #[test]
@@ -800,7 +944,7 @@ mod tests {
             z: 0.0,
         });
 
-        let message = use_stuck_escape(&mut position, None, &graveyards).expect("stuck escape");
+        let message = use_stuck_escape(&mut position, None, 1, &graveyards).expect("stuck escape");
 
         assert_eq!(message, "stuck escape used");
         assert_eq!(position.x, 100.0);
@@ -821,8 +965,13 @@ mod tests {
             graveyard: None,
         };
 
-        let error = use_stuck_escape(&mut position, Some(&death_state), &GraveyardRegistry::new())
-            .expect_err("dead players cannot use stuck escape");
+        let error = use_stuck_escape(
+            &mut position,
+            Some(&death_state),
+            1,
+            &GraveyardRegistry::new(),
+        )
+        .expect_err("dead players cannot use stuck escape");
 
         assert_eq!(error, "stuck escape is unavailable while dead");
     }
