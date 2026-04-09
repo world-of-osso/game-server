@@ -308,17 +308,21 @@ fn load_selected_character_state(
     character_id: u64,
     race: u8,
 ) -> SelectedCharacterState {
+    let currencies = persistence::load_currencies(&db.db, character_id);
+    let mut pvp = persistence::load_pvp(&db.db, character_id);
+    crate::pvp::sync_progress_currencies_from_wallet(&mut pvp, &currencies);
+
     SelectedCharacterState {
         gold: persistence::load_inventory(&db.db, character_id).gold,
         guild: persistence::load_character_guild(&db.db, character_id),
         professions: persistence::load_professions(&db.db, character_id),
         achievements: persistence::load_achievements(&db.db, character_id),
-        pvp: crate::pvp::PlayerPvpState::from_progress(persistence::load_pvp(&db.db, character_id)),
+        pvp: crate::pvp::PlayerPvpState::from_progress(pvp),
         world_map: persistence::load_world_map(&db.db, character_id),
         friends: persistence::load_friends(&db.db, character_id),
         ignore_list: persistence::load_ignore_list(&db.db, character_id),
         collections: persistence::load_collections(&db.db, character_id),
-        currencies: persistence::load_currencies(&db.db, character_id),
+        currencies,
         reputation: persistence::load_reputation(&db.db, character_id, || {
             shared::reputation::CharacterReputation::new_for_race(&default_faction_registry(), race)
         }),

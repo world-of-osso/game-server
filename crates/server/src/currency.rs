@@ -72,6 +72,7 @@ fn process_currency_requests<R: CurrencyRequest>(
         With<Authenticated>,
     >,
     mut currencies: Query<&mut PlayerCurrencies>,
+    mut pvp_states: Query<&mut crate::pvp::PlayerPvpState>,
     db: Option<Res<GameDatabase>>,
     mut senders: Query<&mut MessageSender<CurrencyStateUpdate>>,
 ) {
@@ -79,11 +80,14 @@ fn process_currency_requests<R: CurrencyRequest>(
     for (conn_entity, link, in_world, mut receiver) in receivers.iter_mut() {
         for request in receiver.receive() {
             handle_currency_request(
-                conn_entity,
-                link.0,
-                in_world.character_id,
+                CurrencyRequestTarget {
+                    conn_entity,
+                    player_entity: link.0,
+                    character_id: in_world.character_id,
+                },
                 &request,
                 &mut currencies,
+                &mut pvp_states,
                 &db,
                 &mut senders,
             );
@@ -91,26 +95,43 @@ fn process_currency_requests<R: CurrencyRequest>(
     }
 }
 
-fn handle_currency_request<R: CurrencyRequest>(
+struct CurrencyRequestTarget {
     conn_entity: Entity,
     player_entity: Entity,
     character_id: u64,
+}
+
+fn handle_currency_request<R: CurrencyRequest>(
+    target: CurrencyRequestTarget,
     request: &R,
     currencies: &mut Query<&mut PlayerCurrencies>,
+    pvp_states: &mut Query<&mut crate::pvp::PlayerPvpState>,
     db: &GameDatabase,
     senders: &mut Query<&mut MessageSender<CurrencyStateUpdate>>,
 ) {
-    let Ok(mut wallet) = currencies.get_mut(player_entity) else {
-        send_currency_error(conn_entity, senders, "currencies unavailable for player");
+    let Ok(mut wallet) = currencies.get_mut(target.player_entity) else {
+        send_currency_error(
+            target.conn_entity,
+            senders,
+            "currencies unavailable for player",
+        );
         return;
     };
     match R::apply(&mut wallet.0, request) {
         Ok(message) => {
-            persistence::save_currencies(&db.db, character_id, &wallet.0);
-            send_currency_update(conn_entity, &wallet.0, Some(message), None, senders);
+            persistence::save_currencies(&db.db, target.character_id, &wallet.0);
+            if let Ok(mut pvp_state) = pvp_states.get_mut(target.player_entity)
+                && crate::pvp::sync_progress_currencies_from_wallet(
+                    &mut pvp_state.progress,
+                    &wallet.0,
+                )
+            {
+                persistence::save_pvp(&db.db, target.character_id, &pvp_state.progress);
+            }
+            send_currency_update(target.conn_entity, &wallet.0, Some(message), None, senders);
         }
         Err(error) => {
-            send_currency_update(conn_entity, &wallet.0, None, Some(error), senders);
+            send_currency_update(target.conn_entity, &wallet.0, None, Some(error), senders);
         }
     }
 }
@@ -165,7 +186,7 @@ pub(crate) fn build_currency_snapshot(wallet: &CurrencyWallet) -> CurrencySnapsh
     CurrencySnapshot { entries }
 }
 
-fn send_currency_update(
+pub(crate) fn send_currency_update(
     conn_entity: Entity,
     wallet: &CurrencyWallet,
     message: Option<String>,

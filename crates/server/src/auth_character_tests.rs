@@ -1,7 +1,8 @@
 use bevy::prelude::*;
 use shared::components::{CharacterAppearance, Gold, Player};
+use shared::currency::currency_by_id;
 
-use crate::auth_character::sync_player_gold_from_inventory;
+use crate::auth_character::{load_selected_character_state, sync_player_gold_from_inventory};
 use crate::persistence::{self, ClientId, GameDatabase, InventoryData};
 
 fn test_db() -> GameDatabase {
@@ -50,4 +51,28 @@ fn sync_player_gold_from_inventory_updates_replicated_gold_component() {
         .get::<Gold>()
         .expect("gold component");
     assert_eq!(gold.0, 12_345);
+}
+
+#[test]
+fn load_selected_character_state_syncs_pvp_currencies_from_wallet() {
+    let db = test_db();
+    let character_id = 55;
+    let mut wallet = shared::currency::CurrencyWallet::default();
+    wallet.add(1, 420, currency_by_id(1).unwrap()).unwrap();
+    wallet.add(2, 80, currency_by_id(2).unwrap()).unwrap();
+    persistence::save_currencies(&db.db, character_id, &wallet);
+
+    let pvp = crate::pvp::PlayerPvpProgress {
+        honor: 12,
+        conquest: 7,
+        ..Default::default()
+    };
+    persistence::save_pvp(&db.db, character_id, &pvp);
+
+    let state = load_selected_character_state(&db, character_id, 1);
+
+    assert_eq!(state.currencies.get(1), 420);
+    assert_eq!(state.currencies.get(2), 80);
+    assert_eq!(state.pvp.progress.honor, 420);
+    assert_eq!(state.pvp.progress.conquest, 80);
 }

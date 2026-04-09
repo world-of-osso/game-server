@@ -1,5 +1,6 @@
 use super::*;
 use crate::pvp::pvp_support::build_pvp_snapshot;
+use shared::currency::{CurrencyWallet, currency_by_id};
 use shared::protocol::{PvpQueueKindSnapshot, PvpQueueSnapshot};
 
 #[test]
@@ -92,4 +93,31 @@ fn build_snapshot_reflects_queue_kind() {
             }
         })
     ));
+}
+
+#[test]
+fn sync_progress_currencies_from_wallet_uses_wallet_amounts() {
+    let mut progress = PlayerPvpProgress::default();
+    let mut wallet = CurrencyWallet::default();
+    wallet.add(1, 275, currency_by_id(1).unwrap()).unwrap();
+    wallet.add(2, 120, currency_by_id(2).unwrap()).unwrap();
+
+    let changed = sync_progress_currencies_from_wallet(&mut progress, &wallet);
+
+    assert!(changed);
+    assert_eq!(progress.honor, 275);
+    assert_eq!(progress.conquest, 120);
+}
+
+#[test]
+fn apply_rated_currency_rewards_updates_wallet_and_progress() {
+    let mut progress = PlayerPvpProgress::default();
+    let mut wallet = CurrencyWallet::default();
+
+    apply_rated_currency_rewards(&mut progress, &mut wallet, 150, 100);
+
+    assert_eq!(wallet.get(1), 150);
+    assert_eq!(wallet.get(2), 100);
+    assert_eq!(progress.honor, 150);
+    assert_eq!(progress.conquest, 100);
 }
