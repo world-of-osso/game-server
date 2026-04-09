@@ -1,4 +1,11 @@
-use shared::components::{CharacterAppearance, EquipmentAppearance};
+use shared::components::{CharacterAppearance, EquipmentAppearance, EquipmentVisualSlot};
+
+#[derive(bitcode::Encode, bitcode::Decode, Debug, Clone, PartialEq, Eq)]
+pub struct DurabilityEntryData {
+    pub slot: EquipmentVisualSlot,
+    pub current: u32,
+    pub max: u32,
+}
 
 #[derive(bitcode::Encode, bitcode::Decode, Debug, Clone, PartialEq)]
 pub struct CharacterData {
@@ -13,6 +20,7 @@ pub struct CharacterData {
     pub level: u16,
     pub appearance: CharacterAppearance,
     pub equipment_appearance: EquipmentAppearance,
+    pub durability: Vec<DurabilityEntryData>,
 }
 
 #[derive(bitcode::Decode)]
@@ -81,6 +89,21 @@ struct LegacyCharacterDataV3AppearanceV1 {
     equipment_appearance: EquipmentAppearance,
 }
 
+#[derive(bitcode::Decode)]
+struct LegacyCharacterDataV4 {
+    name: String,
+    x: f32,
+    y: f32,
+    z: f32,
+    health: f32,
+    max_health: f32,
+    race: u8,
+    class: u8,
+    level: u16,
+    appearance: CharacterAppearance,
+    equipment_appearance: EquipmentAppearance,
+}
+
 impl CharacterData {
     pub fn decode_compatible(bytes: &[u8]) -> Result<Self, String> {
         bitcode::decode::<CharacterData>(bytes)
@@ -92,6 +115,7 @@ impl CharacterData {
 fn decode_legacy_character_data(bytes: &[u8]) -> Result<CharacterData, bitcode::Error> {
     bitcode::decode::<LegacyCharacterDataV2>(bytes)
         .map(character_data_from_legacy_v2)
+        .or_else(|_| bitcode::decode::<LegacyCharacterDataV4>(bytes).map(character_data_from_v4))
         .or_else(|_| {
             bitcode::decode::<LegacyCharacterDataV3AppearanceV1>(bytes)
                 .map(character_data_from_legacy_v3_appearance_v1)
@@ -131,6 +155,7 @@ macro_rules! upgrade_legacy {
             level: $legacy.level,
             appearance,
             equipment_appearance,
+            durability: Vec::new(),
         }
     }};
 }
@@ -165,4 +190,8 @@ fn character_data_from_legacy_v3_appearance_v1(
         upgrade_appearance_v1(legacy.appearance),
         legacy.equipment_appearance
     )
+}
+
+fn character_data_from_v4(legacy: LegacyCharacterDataV4) -> CharacterData {
+    upgrade_legacy!(legacy, legacy.appearance, legacy.equipment_appearance)
 }

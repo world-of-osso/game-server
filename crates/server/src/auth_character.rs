@@ -445,6 +445,9 @@ pub fn spawn_player_entity(
         .entity(entity)
         .insert(crate::networking::FallTracker::grounded(by));
     commands.entity(entity).insert(Gold(init.gold));
+    commands
+        .entity(entity)
+        .insert(crate::durability::load_equipped_durability(data));
     commands.entity(entity).insert(init.professions);
     commands.entity(entity).insert(init.achievements);
     commands.entity(entity).insert(init.pvp);

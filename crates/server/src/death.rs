@@ -13,6 +13,7 @@ use shared::protocol::{
 };
 
 use crate::auth::{Authenticated, InWorld};
+use crate::durability::EquippedDurability;
 use crate::networking::PlayerLink;
 use crate::world_data::WorldData;
 
@@ -269,6 +270,7 @@ type SpiritHealerPlayerData<'w, 's> = Query<
         &'static mut Health,
         Option<&'static mut Mana>,
         Option<&'static Level>,
+        Option<&'static mut EquippedDurability>,
         &'static mut PlayerDeathState,
     ),
 >;
@@ -289,7 +291,7 @@ fn process_spirit_healer_requests(
     let now = current_seconds(&time);
     for (conn_entity, link, mut receiver) in &mut receivers {
         for _ in receiver.receive() {
-            let Ok((mut position, mut health, mana, level, mut death_state)) =
+            let Ok((mut position, mut health, mana, level, durability, mut death_state)) =
                 players.get_mut(link.0)
             else {
                 send_error(
@@ -303,6 +305,7 @@ fn process_spirit_healer_requests(
                 &mut position,
                 &mut health,
                 mana,
+                durability,
                 &mut death_state,
                 level.map(|level| level.0).unwrap_or_default(),
                 now,
@@ -384,6 +387,7 @@ type DeathDetectionQuery<'w, 's> = Query<
         Entity,
         &'static Position,
         &'static mut Health,
+        Option<&'static mut EquippedDurability>,
         Option<&'static mut PlayerDeathState>,
         &'static crate::persistence::ClientId,
     ),
@@ -398,7 +402,7 @@ fn detect_player_deaths(
     mut senders: Query<&mut MessageSender<DeathStateUpdate>>,
 ) {
     let now = current_seconds(&time);
-    for (player_entity, position, mut health, death_state, client_id) in &mut players {
+    for (player_entity, position, mut health, durability, death_state, client_id) in &mut players {
         if health.current > 0.0 {
             continue;
         }
@@ -422,6 +426,9 @@ fn detect_player_deaths(
             corpse: Some(result.corpse),
             graveyard: None,
         };
+        if let Some(mut durability) = durability {
+            crate::durability::apply_death_loss(&mut durability);
+        }
         commands.entity(player_entity).insert(death_state.clone());
         if let Some(conn_entity) = connection_for_player(player_entity, &connections) {
             send_update(
@@ -530,6 +537,7 @@ fn resurrect_at_spirit_healer(
     position: &mut Position,
     health: &mut Health,
     mana: Option<Mut<Mana>>,
+    durability: Option<Mut<EquippedDurability>>,
     death_state: &mut PlayerDeathState,
     level: u8,
     now: u64,
@@ -550,6 +558,9 @@ fn resurrect_at_spirit_healer(
     position.x = result.x;
     position.y = result.y;
     position.z = result.z;
+    if let Some(mut durability) = durability {
+        crate::durability::apply_spirit_healer_loss(&mut durability);
+    }
     complete_resurrection(health, mana, death_state);
     Ok("accepted spirit healer resurrection".into())
 }

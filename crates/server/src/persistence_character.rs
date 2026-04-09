@@ -365,6 +365,7 @@ fn default_character_data(
         level: 1,
         appearance,
         equipment_appearance: Default::default(),
+        durability: Vec::new(),
     }
 }
 

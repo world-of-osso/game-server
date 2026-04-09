@@ -82,6 +82,7 @@ fn sample_data() -> CharacterData {
         level: 1,
         appearance: CharacterAppearance::default(),
         equipment_appearance: EquipmentAppearance::default(),
+        durability: Vec::new(),
     }
 }
 

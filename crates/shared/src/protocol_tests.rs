@@ -277,6 +277,35 @@ fn death_state_update_round_trip() {
 }
 
 #[test]
+fn durability_state_update_round_trip() {
+    let update = DurabilityStateUpdate {
+        snapshot: Some(DurabilitySnapshot {
+            total_repair_cost: 1_250,
+            slots: vec![
+                DurabilitySlotSnapshot {
+                    slot: EquipmentVisualSlot::Head,
+                    current: 72,
+                    max: 80,
+                    repair_cost: 400,
+                },
+                DurabilitySlotSnapshot {
+                    slot: EquipmentVisualSlot::Chest,
+                    current: 45,
+                    max: 100,
+                    repair_cost: 850,
+                },
+            ],
+        }),
+        message: Some("durability updated".into()),
+        error: None,
+    };
+
+    let encoded = serde_json::to_string(&update).unwrap();
+    let decoded: DurabilityStateUpdate = serde_json::from_str(&encoded).unwrap();
+    assert_eq!(update, decoded);
+}
+
+#[test]
 fn rest_state_update_round_trip() {
     let update = RestStateUpdate {
         snapshot: Some(RestSnapshot {

@@ -3,7 +3,7 @@ use shared::components::{EquipmentAppearance, Health, Player, Position};
 #[path = "character_data.rs"]
 mod character_data;
 
-pub use character_data::CharacterData;
+pub use character_data::{CharacterData, DurabilityEntryData};
 
 #[derive(bitcode::Encode, bitcode::Decode, Debug, Clone, PartialEq)]
 pub struct GuildMembershipData {
@@ -80,6 +80,7 @@ impl CharacterData {
             level: 1,
             appearance: player.appearance,
             equipment_appearance: EquipmentAppearance::default(),
+            durability: Vec::new(),
         }
     }
 

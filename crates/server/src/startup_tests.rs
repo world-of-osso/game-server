@@ -378,6 +378,7 @@ fn full_character_data() -> CharacterData {
             facial_style: 1,
         },
         equipment_appearance: EquipmentAppearance::default(),
+        durability: Vec::new(),
     }
 }
 

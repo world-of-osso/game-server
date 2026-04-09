@@ -69,3 +69,6 @@ pub struct DuelChannel;
 
 /// Reliable ordered channel for death and respawn operations, bidirectional.
 pub struct DeathChannel;
+
+/// Reliable ordered channel for equipment durability updates, bidirectional.
+pub struct DurabilityChannel;

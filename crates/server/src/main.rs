@@ -12,6 +12,7 @@ mod creature_ai;
 mod currency;
 mod death;
 mod duel;
+mod durability;
 mod friends;
 mod ignore_list;
 mod inspect;
@@ -72,6 +73,7 @@ fn add_game_plugins(app: &mut App) {
         .add_plugins(barber_shop::BarberShopPlugin)
         .add_plugins(collection::CollectionPlugin)
         .add_plugins(currency::CurrencyPlugin)
+        .add_plugins(durability::DurabilityPlugin)
         .add_plugins(death::DeathPlugin)
         .add_plugins(friends::FriendsPlugin)
         .add_plugins(ignore_list::IgnoreListPlugin)
