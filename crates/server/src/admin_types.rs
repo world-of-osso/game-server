@@ -28,6 +28,17 @@ pub enum AdminRequest {
         username: String,
         password: String,
     },
+    KickAccount {
+        username: String,
+        reason: Option<String>,
+    },
+    BanAccount {
+        username: String,
+        reason: Option<String>,
+    },
+    UnbanAccount {
+        username: String,
+    },
     ApproveRegistration {
         username: String,
     },
@@ -136,6 +147,8 @@ pub enum AdminResponse {
         account_id: Option<u64>,
         token_count: usize,
         pending_registration: bool,
+        banned: bool,
+        ban_reason: Option<String>,
     },
     PasswordChecked {
         username: String,
@@ -144,6 +157,18 @@ pub enum AdminResponse {
     AccountCreated {
         account_id: u64,
         token: String,
+    },
+    AccountKicked {
+        username: String,
+        disconnected: bool,
+    },
+    AccountBanned {
+        username: String,
+        disconnected: bool,
+        reason: String,
+    },
+    AccountUnbanned {
+        username: String,
     },
     RegistrationApproved {
         account_id: u64,

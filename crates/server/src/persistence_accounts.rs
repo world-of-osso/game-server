@@ -4,7 +4,9 @@ use rand::rngs::OsRng;
 use redb::{Database, ReadableDatabase, ReadableTable};
 use std::collections::HashMap;
 
-use super::persistence::{ACCOUNTS, PASSWORDS, PENDING_REGISTRATIONS, USERNAME_ACCOUNTS};
+use super::persistence::{
+    ACCOUNTS, BANNED_ACCOUNTS, PASSWORDS, PENDING_REGISTRATIONS, USERNAME_ACCOUNTS,
+};
 use crate::persistence::next_id;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -21,6 +23,8 @@ pub struct AccountInspection {
     pub account_id: Option<u64>,
     pub token_count: usize,
     pub pending_registration: bool,
+    pub banned: bool,
+    pub ban_reason: Option<String>,
 }
 
 /// Authenticate via token or username+password. Returns (account_id, token) or error.
@@ -34,6 +38,7 @@ pub fn login_with_credentials(
         && !tok.is_empty()
         && let Some(account_id) = find_account_by_token(db, tok)
     {
+        ensure_account_not_banned(db, account_id)?;
         return Ok((account_id, tok.to_string()));
     }
     let account_id = find_account_by_username(db, username).ok_or_else(|| {
@@ -43,9 +48,18 @@ pub fn login_with_credentials(
             "Account not found — please register first".to_string()
         }
     })?;
+    ensure_account_not_banned(db, account_id)?;
     verify_account_password(db, account_id, password)?;
     let token = generate_token_for_account(db, account_id);
     Ok((account_id, token))
+}
+
+fn ensure_account_not_banned(db: &Database, account_id: u64) -> Result<(), String> {
+    if let Some(reason) = ban_reason_for_account(db, account_id) {
+        Err(format!("Account banned: {reason}"))
+    } else {
+        Ok(())
+    }
 }
 
 /// Look up account_id by username.
@@ -161,6 +175,55 @@ pub fn approve_registration(db: &Database, username: &str) -> Result<(u64, Strin
     Ok((account_id, token))
 }
 
+pub fn ban_account(db: &Database, username: &str, reason: &str) -> Result<u64, String> {
+    let Some(account_id) = find_account_by_username(db, username) else {
+        return Err(format!("account '{username}' not found"));
+    };
+    let reason = reason.trim();
+    if reason.is_empty() {
+        return Err("Ban reason cannot be empty".to_string());
+    }
+    let txn = db.begin_write().expect("Failed to begin write txn");
+    {
+        let mut table = txn
+            .open_table(BANNED_ACCOUNTS)
+            .expect("open banned_accounts");
+        table
+            .insert(account_id, reason.as_bytes())
+            .expect("insert ban reason");
+    }
+    txn.commit().expect("Failed to commit account ban");
+    Ok(account_id)
+}
+
+pub fn unban_account(db: &Database, username: &str) -> Result<u64, String> {
+    let Some(account_id) = find_account_by_username(db, username) else {
+        return Err(format!("account '{username}' not found"));
+    };
+    let txn = db.begin_write().expect("Failed to begin write txn");
+    {
+        let mut table = txn
+            .open_table(BANNED_ACCOUNTS)
+            .expect("open banned_accounts");
+        table.remove(account_id).expect("remove ban reason");
+    }
+    txn.commit().expect("Failed to commit account unban");
+    Ok(account_id)
+}
+
+pub fn ban_reason_for_account(db: &Database, account_id: u64) -> Option<String> {
+    let txn = db.begin_read().expect("Failed to begin read txn");
+    let table = txn
+        .open_table(BANNED_ACCOUNTS)
+        .expect("Failed to open banned_accounts");
+    table
+        .get(account_id)
+        .expect("Failed to read banned account")
+        .map(|reason| {
+            String::from_utf8(reason.value().to_vec()).expect("ban reason should be valid UTF-8")
+        })
+}
+
 fn write_approved_account(db: &Database, username: &str, account_id: u64, token: &str, hash: &str) {
     let txn = db.begin_write().expect("Failed to begin write txn");
     {
@@ -263,8 +326,11 @@ pub fn inspect_account(db: &Database, username: &str) -> AccountInspection {
             account_id: None,
             token_count: 0,
             pending_registration,
+            banned: false,
+            ban_reason: None,
         };
     };
+    let ban_reason = ban_reason_for_account(db, account_id);
 
     AccountInspection {
         username: username.to_string(),
@@ -275,6 +341,8 @@ pub fn inspect_account(db: &Database, username: &str) -> AccountInspection {
             .copied()
             .unwrap_or(0),
         pending_registration,
+        banned: ban_reason.is_some(),
+        ban_reason,
     }
 }
 

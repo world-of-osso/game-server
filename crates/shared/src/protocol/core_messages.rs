@@ -149,6 +149,13 @@ pub struct LoginResponse {
     pub error: Option<String>,
 }
 
+/// Server tells the client it is being disconnected intentionally.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct ForcedDisconnect {
+    pub message: String,
+    pub reconnect_allowed: bool,
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct CharacterListUpdate {
     pub character: CharacterListEntry,

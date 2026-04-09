@@ -33,6 +33,17 @@ enum AdminRequest {
         username: String,
         password: String,
     },
+    KickAccount {
+        username: String,
+        reason: Option<String>,
+    },
+    BanAccount {
+        username: String,
+        reason: Option<String>,
+    },
+    UnbanAccount {
+        username: String,
+    },
     ApproveRegistration {
         username: String,
     },
@@ -94,6 +105,8 @@ enum AdminResponse {
         account_id: Option<u64>,
         token_count: usize,
         pending_registration: bool,
+        banned: bool,
+        ban_reason: Option<String>,
     },
     PasswordChecked {
         username: String,
@@ -102,6 +115,18 @@ enum AdminResponse {
     AccountCreated {
         account_id: u64,
         token: String,
+    },
+    AccountKicked {
+        username: String,
+        disconnected: bool,
+    },
+    AccountBanned {
+        username: String,
+        disconnected: bool,
+        reason: String,
+    },
+    AccountUnbanned {
+        username: String,
     },
     RegistrationApproved {
         account_id: u64,
@@ -190,6 +215,9 @@ fn print_usage() {
     eprintln!("  game-server-admin check-account <username>");
     eprintln!("  game-server-admin check-password <username> <password>");
     eprintln!("  game-server-admin create-account <username> <password>");
+    eprintln!("  game-server-admin kick-account <username> [reason]");
+    eprintln!("  game-server-admin ban-account <username> [reason]");
+    eprintln!("  game-server-admin unban-account <username>");
     eprintln!("  game-server-admin approve-registration <username>");
     eprintln!("  game-server-admin create-guild <character_name> <guild_id> <guild_name>");
     eprintln!("  game-server-admin set-level <character_name> <level>");
@@ -214,6 +242,9 @@ fn parse_request(args: &[String]) -> AdminRequest {
         "check-account" => parse_check_account(args),
         "check-password" => parse_check_password(args),
         "create-account" => parse_create_account(args),
+        "kick-account" => parse_kick_account(args),
+        "ban-account" => parse_ban_account(args),
+        "unban-account" => parse_unban_account(args),
         "approve-registration" => parse_approve_registration(args),
         "create-guild" => parse_create_guild(args),
         "set-level" => parse_set_level(args),
@@ -302,11 +333,39 @@ fn require_args(args: &[String], min: usize, usage: &str) {
     }
 }
 
+fn optional_reason_arg(args: &[String], start: usize) -> Option<String> {
+    let reason = args.get(start..).unwrap_or(&[]).join(" ");
+    (!reason.trim().is_empty()).then_some(reason)
+}
+
 fn parse_create_account(args: &[String]) -> AdminRequest {
     require_args(args, 4, "create-account <username> <password>");
     AdminRequest::CreateAccount {
         username: args[2].clone(),
         password: args[3].clone(),
+    }
+}
+
+fn parse_kick_account(args: &[String]) -> AdminRequest {
+    require_args(args, 3, "kick-account <username> [reason]");
+    AdminRequest::KickAccount {
+        username: args[2].clone(),
+        reason: optional_reason_arg(args, 3),
+    }
+}
+
+fn parse_ban_account(args: &[String]) -> AdminRequest {
+    require_args(args, 3, "ban-account <username> [reason]");
+    AdminRequest::BanAccount {
+        username: args[2].clone(),
+        reason: optional_reason_arg(args, 3),
+    }
+}
+
+fn parse_unban_account(args: &[String]) -> AdminRequest {
+    require_args(args, 3, "unban-account <username>");
+    AdminRequest::UnbanAccount {
+        username: args[2].clone(),
     }
 }
 

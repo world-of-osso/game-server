@@ -221,6 +221,17 @@ fn auction_search_results_round_trip() {
 }
 
 #[test]
+fn forced_disconnect_round_trip() {
+    let notice = ForcedDisconnect {
+        message: "You were kicked: testing".to_string(),
+        reconnect_allowed: false,
+    };
+    let encoded = serde_json::to_string(&notice).unwrap();
+    let decoded: ForcedDisconnect = serde_json::from_str(&encoded).unwrap();
+    assert_eq!(decoded, notice);
+}
+
+#[test]
 fn equipment_appearance_round_trips() {
     let snapshot = EquipmentAppearance {
         entries: vec![

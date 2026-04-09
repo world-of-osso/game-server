@@ -112,6 +112,19 @@ fn pending_registration_requires_approval_before_login() {
 }
 
 #[test]
+fn banned_account_is_rejected_for_password_and_token_login() {
+    let db = temp_database();
+    let (_account_id, token) = register_account(&db, "user1", "secret").unwrap();
+    ban_account(&db, "user1", "cheating").unwrap();
+
+    let password_login = login_with_credentials(&db, None, "user1", "secret");
+    assert_eq!(password_login.unwrap_err(), "Account banned: cheating");
+
+    let token_login = login_with_credentials(&db, Some(&token), "user1", "");
+    assert_eq!(token_login.unwrap_err(), "Account banned: cheating");
+}
+
+#[test]
 fn list_accounts_returns_usernames_hashes_and_token_counts() {
     let db = temp_database();
     let (acct1, token1) = register_account(&db, "user1", "pass1").unwrap();
@@ -146,6 +159,8 @@ fn inspect_account_reports_missing_existing_and_pending_users() {
             account_id: Some(account_id),
             token_count: 1,
             pending_registration: false,
+            banned: false,
+            ban_reason: None,
         }
     );
 
@@ -157,6 +172,8 @@ fn inspect_account_reports_missing_existing_and_pending_users() {
             account_id: None,
             token_count: 0,
             pending_registration: false,
+            banned: false,
+            ban_reason: None,
         }
     );
     assert_eq!(
@@ -167,8 +184,40 @@ fn inspect_account_reports_missing_existing_and_pending_users() {
             account_id: None,
             token_count: 0,
             pending_registration: true,
+            banned: false,
+            ban_reason: None,
         }
     );
+}
+
+#[test]
+fn inspect_account_reports_ban_state() {
+    let db = temp_database();
+    let (account_id, _token) = register_account(&db, "user1", "pass1").unwrap();
+    ban_account(&db, "user1", "toxicity").unwrap();
+
+    assert_eq!(
+        inspect_account(&db, "user1"),
+        AccountInspection {
+            username: "user1".to_string(),
+            exists: true,
+            account_id: Some(account_id),
+            token_count: 1,
+            pending_registration: false,
+            banned: true,
+            ban_reason: Some("toxicity".to_string()),
+        }
+    );
+}
+
+#[test]
+fn unban_account_restores_login() {
+    let db = temp_database();
+    register_account(&db, "user1", "secret").unwrap();
+    ban_account(&db, "user1", "appeal pending").unwrap();
+    unban_account(&db, "user1").unwrap();
+
+    let (_account_id, _token) = login_with_credentials(&db, None, "user1", "secret").unwrap();
 }
 
 #[test]

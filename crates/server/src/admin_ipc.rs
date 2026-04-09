@@ -11,6 +11,7 @@ use shared::protocol::{CharacterListUpdate, LoginResponse};
 use crate::admin_handlers::*;
 use crate::admin_types::*;
 use crate::persistence;
+use crate::persistence_accounts;
 
 const SOCKET_PATH: &str = "/tmp/game-server-admin.sock";
 
@@ -299,6 +300,47 @@ fn dispatch_autobroadcast(
     }
 }
 
+fn queue_account_disconnect(
+    commands: &mut Commands,
+    authenticated_query: &Query<
+        (Entity, &crate::auth::Authenticated),
+        With<MessageSender<LoginResponse>>,
+    >,
+    account_id: u64,
+    message: &str,
+) -> bool {
+    let Some(entity) = authenticated_query
+        .iter()
+        .find_map(|(entity, auth)| (auth.account_id == account_id).then_some(entity))
+    else {
+        return false;
+    };
+    crate::auth::queue_forced_disconnect(commands, entity, message, false);
+    true
+}
+
+fn kick_message(reason: Option<String>) -> String {
+    match reason
+        .as_deref()
+        .map(str::trim)
+        .filter(|reason| !reason.is_empty())
+    {
+        Some(reason) => format!("You were kicked: {reason}"),
+        None => "You were kicked by an administrator.".to_string(),
+    }
+}
+
+fn ban_reason(reason: Option<String>) -> String {
+    match reason
+        .as_deref()
+        .map(str::trim)
+        .filter(|reason| !reason.is_empty())
+    {
+        Some(reason) => reason.to_string(),
+        None => "Banned by an administrator.".to_string(),
+    }
+}
+
 fn dispatch(
     cmd: AdminCommand,
     db: &persistence::GameDatabase,
@@ -332,6 +374,49 @@ fn dispatch(
         }
         AdminRequest::CreateAccount { username, password } => {
             handle_create_account(db, &username, &password)
+        }
+        AdminRequest::KickAccount { username, reason } => {
+            match persistence_accounts::find_account_by_username(&db.db, &username) {
+                Some(account_id) => {
+                    let message = kick_message(reason);
+                    let disconnected = queue_account_disconnect(
+                        commands,
+                        authenticated_query,
+                        account_id,
+                        &message,
+                    );
+                    AdminResponse::AccountKicked {
+                        username,
+                        disconnected,
+                    }
+                }
+                None => AdminResponse::Error(format!("account '{username}' not found")),
+            }
+        }
+        AdminRequest::BanAccount { username, reason } => {
+            let reason = ban_reason(reason);
+            match persistence_accounts::ban_account(&db.db, &username, &reason) {
+                Ok(account_id) => {
+                    let disconnected = queue_account_disconnect(
+                        commands,
+                        authenticated_query,
+                        account_id,
+                        &format!("Account banned: {reason}"),
+                    );
+                    AdminResponse::AccountBanned {
+                        username,
+                        disconnected,
+                        reason,
+                    }
+                }
+                Err(error) => AdminResponse::Error(error),
+            }
+        }
+        AdminRequest::UnbanAccount { username } => {
+            match persistence_accounts::unban_account(&db.db, &username) {
+                Ok(_) => AdminResponse::AccountUnbanned { username },
+                Err(error) => AdminResponse::Error(error),
+            }
         }
         AdminRequest::ApproveRegistration { username } => {
             handle_approve_registration(db, &username)
@@ -480,6 +565,8 @@ mod tests {
                 account_id: Some(id),
                 token_count: 1,
                 pending_registration: false,
+                banned: false,
+                ban_reason: None,
             } if username == "admin" && id == account_id
         ));
     }

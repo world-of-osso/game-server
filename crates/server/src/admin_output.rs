@@ -34,12 +34,16 @@ fn print_account_response(response: &AdminResponse) -> bool {
             account_id,
             token_count,
             pending_registration,
+            banned,
+            ban_reason,
         } => print_account_check(
             username,
             *exists,
             *account_id,
             *token_count,
             *pending_registration,
+            *banned,
+            ban_reason.as_deref(),
         ),
         AdminResponse::PasswordChecked { username, valid } => {
             println!("username={username}");
@@ -47,6 +51,24 @@ fn print_account_response(response: &AdminResponse) -> bool {
         }
         AdminResponse::AccountCreated { account_id, token } => {
             println!("Account created: id={account_id} token={token}");
+        }
+        AdminResponse::AccountKicked {
+            username,
+            disconnected,
+        } => {
+            println!("Account kicked: username={username} disconnected={disconnected}");
+        }
+        AdminResponse::AccountBanned {
+            username,
+            disconnected,
+            reason,
+        } => {
+            println!(
+                "Account banned: username={username} disconnected={disconnected} reason={reason}"
+            );
+        }
+        AdminResponse::AccountUnbanned { username } => {
+            println!("Account unbanned: username={username}");
         }
         AdminResponse::RegistrationApproved { account_id, token } => {
             println!("Registration approved: id={account_id} token={token}");
@@ -168,6 +190,8 @@ fn print_account_check(
     account_id: Option<u64>,
     token_count: usize,
     pending_registration: bool,
+    banned: bool,
+    ban_reason: Option<&str>,
 ) {
     println!("username={username}");
     println!("exists={exists}");
@@ -179,6 +203,8 @@ fn print_account_check(
     );
     println!("token_count={token_count}");
     println!("pending_registration={pending_registration}");
+    println!("banned={banned}");
+    println!("ban_reason={}", ban_reason.unwrap_or("<none>"));
 }
 
 fn print_guild_created(character_id: u64, guild_id: u32, guild_name: &str) {

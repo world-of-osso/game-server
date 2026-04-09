@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use lightyear::prelude::*;
 use shared::protocol::{
-    AuthChannel, LoginRequest, LoginResponse, RegisterRequest, RegisterResponse,
+    AuthChannel, ForcedDisconnect, LoginRequest, LoginResponse, RegisterRequest, RegisterResponse,
 };
 use std::collections::{HashMap, HashSet};
 
@@ -11,6 +11,7 @@ use crate::persistence_accounts;
 
 /// Auth timeout in seconds.
 const AUTH_TIMEOUT_SECS: f64 = 30.0;
+const FORCED_DISCONNECT_GRACE_SECS: f64 = 0.2;
 
 /// Marker for unauthenticated connections.
 #[derive(Component, Debug)]
@@ -24,6 +25,13 @@ pub struct PendingAuthTimer(pub f64);
 #[derive(Component, Debug)]
 pub struct Authenticated {
     pub account_id: u64,
+}
+
+/// Server-authored disconnect that should be delivered to the client before the socket closes.
+#[derive(Component, Debug, Clone)]
+pub struct PendingForcedDisconnect {
+    pub notice: ForcedDisconnect,
+    pub sent_at: Option<f64>,
 }
 
 /// Marker for connections that have entered the world.
@@ -42,6 +50,21 @@ pub struct SentTiles {
     pub tiles: HashSet<(u32, u32)>,
 }
 
+pub fn queue_forced_disconnect(
+    commands: &mut Commands,
+    entity: Entity,
+    message: impl Into<String>,
+    reconnect_allowed: bool,
+) {
+    commands.entity(entity).insert(PendingForcedDisconnect {
+        notice: ForcedDisconnect {
+            message: message.into(),
+            reconnect_allowed,
+        },
+        sent_at: None,
+    });
+}
+
 /// Disconnect clients that haven't authenticated within the timeout.
 pub fn auth_timeout(
     pending: Query<(Entity, &PendingAuthTimer), With<PendingAuth>>,
@@ -53,8 +76,32 @@ pub fn auth_timeout(
         if now - timer.0 > AUTH_TIMEOUT_SECS {
             warn!("Auth timeout for {:?}, disconnecting", entity);
             commands.entity(entity).remove::<PendingAuth>();
-            commands.trigger(lightyear::prelude::Disconnect { entity });
+            queue_forced_disconnect(&mut commands, entity, "Authentication timed out.", true);
         }
+    }
+}
+
+pub fn deliver_forced_disconnects(
+    time: Res<Time>,
+    mut query: Query<(
+        Entity,
+        &mut PendingForcedDisconnect,
+        &mut MessageSender<ForcedDisconnect>,
+    )>,
+    mut commands: Commands,
+) {
+    let now = time.elapsed_secs_f64();
+    for (entity, mut pending, mut sender) in &mut query {
+        if pending.sent_at.is_none() {
+            sender.send::<AuthChannel>(pending.notice.clone());
+            pending.sent_at = Some(now);
+            continue;
+        }
+        if now - pending.sent_at.unwrap_or(now) < FORCED_DISCONNECT_GRACE_SECS {
+            continue;
+        }
+        commands.entity(entity).remove::<PendingForcedDisconnect>();
+        commands.trigger(lightyear::prelude::Disconnect { entity });
     }
 }
 
@@ -120,7 +167,12 @@ fn handle_login(
         info!(
             "Account {account_id} re-authenticated on {entity:?}; disconnecting older session {previous:?}"
         );
-        commands.trigger(lightyear::prelude::Disconnect { entity: previous });
+        queue_forced_disconnect(
+            commands,
+            previous,
+            "This account connected from another session.",
+            false,
+        );
     }
 
     let chars = persistence::list_characters_for_account(&db.db, account_id);

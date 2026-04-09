@@ -86,6 +86,10 @@ pub(crate) const USERNAME_ACCOUNTS: TableDefinition<&str, u64> =
 pub(crate) const PENDING_REGISTRATIONS: TableDefinition<&str, &[u8]> =
     TableDefinition::new("pending_registrations");
 
+/// Banned accounts: account_id (u64) -> UTF-8 ban reason (bytes).
+pub(crate) const BANNED_ACCOUNTS: TableDefinition<u64, &[u8]> =
+    TableDefinition::new("banned_accounts");
+
 /// Auto-increment counters: key (&str) -> next_id (u64).
 pub(crate) const NEXT_IDS: TableDefinition<&str, u64> = TableDefinition::new("next_ids");
 
@@ -177,6 +181,7 @@ pub(crate) fn create_tables(db: &Database) {
     let _ = txn.open_table(PASSWORDS);
     let _ = txn.open_table(USERNAME_ACCOUNTS);
     let _ = txn.open_table(PENDING_REGISTRATIONS);
+    let _ = txn.open_table(BANNED_ACCOUNTS);
     let _ = txn.open_table(NEXT_IDS);
     let _ = txn.open_table(SERVER_SETTINGS);
     txn.commit().expect("Failed to commit initial tables");

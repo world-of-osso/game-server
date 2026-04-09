@@ -127,6 +127,8 @@ pub(crate) fn handle_check_account(
         account_id: account.account_id,
         token_count: account.token_count,
         pending_registration: account.pending_registration,
+        banned: account.banned,
+        ban_reason: account.ban_reason,
     }
 }
 

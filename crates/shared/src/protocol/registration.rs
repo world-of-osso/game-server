@@ -63,6 +63,8 @@ fn register_account_messages(app: &mut App) {
         .add_direction(NetworkDirection::ClientToServer);
     app.register_message::<LoginResponse>()
         .add_direction(NetworkDirection::ServerToClient);
+    app.register_message::<ForcedDisconnect>()
+        .add_direction(NetworkDirection::ServerToClient);
     app.register_message::<RegisterRequest>()
         .add_direction(NetworkDirection::ClientToServer);
     app.register_message::<RegisterResponse>()
