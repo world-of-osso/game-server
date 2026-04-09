@@ -212,6 +212,27 @@ fn ignore_list_state_update_round_trip() {
 }
 
 #[test]
+fn who_state_update_round_trip() {
+    let update = WhoStateUpdate {
+        snapshot: Some(WhoSnapshot {
+            query: "ther".into(),
+            entries: vec![WhoCharacterSnapshot {
+                name: "Theron".into(),
+                level: 12,
+                class_name: "Paladin".into(),
+                area: "Elwynn Forest".into(),
+            }],
+        }),
+        message: Some("who: 1 result(s)".into()),
+        error: None,
+    };
+
+    let encoded = serde_json::to_string(&update).unwrap();
+    let decoded: WhoStateUpdate = serde_json::from_str(&encoded).unwrap();
+    assert_eq!(update, decoded);
+}
+
+#[test]
 fn lfg_state_update_round_trip() {
     let update = LfgStateUpdate {
         snapshot: Some(LfgSnapshot {

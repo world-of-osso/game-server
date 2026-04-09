@@ -33,6 +33,7 @@ mod stats;
 mod talent;
 mod terrain_height;
 mod trade;
+mod who;
 mod world_data;
 mod world_map;
 mod zones;
@@ -76,6 +77,7 @@ fn add_game_plugins(app: &mut App) {
         .add_plugins(durability::DurabilityPlugin)
         .add_plugins(death::DeathPlugin)
         .add_plugins(friends::FriendsPlugin)
+        .add_plugins(who::WhoPlugin)
         .add_plugins(ignore_list::IgnoreListPlugin)
         .add_plugins(lfg::LfgPlugin)
         .add_plugins(pvp::PvpPlugin)

@@ -428,6 +428,18 @@ pub struct FriendsStateUpdate {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct QueryWho {
+    pub query: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct WhoStateUpdate {
+    pub snapshot: Option<WhoSnapshot>,
+    pub message: Option<String>,
+    pub error: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct QueryIgnoreList;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
