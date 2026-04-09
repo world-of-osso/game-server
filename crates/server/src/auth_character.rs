@@ -1,8 +1,8 @@
 use bevy::prelude::*;
 use lightyear::prelude::*;
 use shared::components::{
-    CombatRatings, GuildMembership, Health, Level, Mana, MovementSpeed, Player, Position, Rotation,
-    SelectedTalents, UnitStats, VerticalVelocity,
+    CombatRatings, Gold, GuildMembership, Health, Level, Mana, MovementSpeed, Player, Position,
+    Rotation, SelectedTalents, UnitStats, VerticalVelocity,
 };
 use shared::profession::PlayerProfessions;
 use shared::protocol::{
@@ -263,6 +263,7 @@ fn handle_select(
         req.character_id,
         state.guild.as_ref(),
         PlayerInitState {
+            gold: state.gold,
             professions: state.professions,
             achievements: state.achievements,
             pvp: state.pvp,
@@ -289,6 +290,7 @@ fn validate_ownership(db: &GameDatabase, account_id: u64, character_id: u64) -> 
 }
 
 struct SelectedCharacterState {
+    gold: u32,
     guild: Option<GuildMembership>,
     professions: PlayerProfessions,
     achievements: crate::achievement::PlayerAchievementState,
@@ -307,6 +309,7 @@ fn load_selected_character_state(
     race: u8,
 ) -> SelectedCharacterState {
     SelectedCharacterState {
+        gold: persistence::load_inventory(&db.db, character_id).gold,
         guild: persistence::load_character_guild(&db.db, character_id),
         professions: persistence::load_professions(&db.db, character_id),
         achievements: persistence::load_achievements(&db.db, character_id),
@@ -414,6 +417,7 @@ fn build_player_components(data: &CharacterData, character_id: u64) -> impl Bund
 }
 
 pub struct PlayerInitState {
+    pub gold: u32,
     pub professions: PlayerProfessions,
     pub achievements: crate::achievement::PlayerAchievementState,
     pub pvp: crate::pvp::PlayerPvpState,
@@ -440,6 +444,7 @@ pub fn spawn_player_entity(
     commands
         .entity(entity)
         .insert(crate::networking::FallTracker::grounded(by));
+    commands.entity(entity).insert(Gold(init.gold));
     commands.entity(entity).insert(init.professions);
     commands.entity(entity).insert(init.achievements);
     commands.entity(entity).insert(init.pvp);
@@ -473,3 +478,20 @@ pub fn spawn_player_entity(
     );
     entity
 }
+
+pub fn sync_player_gold_from_inventory(
+    db: Option<Res<crate::persistence::GameDatabase>>,
+    mut players: Query<(&crate::persistence::ClientId, &mut Gold), With<Player>>,
+) {
+    let Some(db) = db.as_ref() else { return };
+    for (character_id, mut gold) in &mut players {
+        let live_gold = crate::persistence::load_inventory(&db.db, character_id.0).gold;
+        if gold.0 != live_gold {
+            gold.0 = live_gold;
+        }
+    }
+}
+
+#[cfg(test)]
+#[path = "auth_character_tests.rs"]
+mod tests;

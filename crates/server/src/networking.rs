@@ -137,6 +137,7 @@ impl Plugin for ServerNetworkPlugin {
         app.add_systems(Update, auth::process_create_character);
         app.add_systems(Update, auth::process_delete_character);
         app.add_systems(Update, auth::process_select_character);
+        app.add_systems(Update, auth::sync_player_gold_from_inventory);
         app.add_systems(Update, auth::auth_timeout);
         app.add_observer(on_new_link);
         app.add_observer(on_client_connected);

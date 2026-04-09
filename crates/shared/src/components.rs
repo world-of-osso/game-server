@@ -104,6 +104,22 @@ pub struct Mana {
     pub max: f32,
 }
 
+#[derive(
+    Component,
+    Reflect,
+    Serialize,
+    Deserialize,
+    bitcode::Encode,
+    bitcode::Decode,
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    Default,
+)]
+pub struct Gold(pub u32);
+
 /// A single resource pool (current/max) for a specific resource type.
 ///
 /// Each class has a primary resource (Rage for Warriors, Energy for Rogues,
