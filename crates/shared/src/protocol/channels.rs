@@ -46,6 +46,9 @@ pub struct FriendsChannel;
 /// Reliable ordered channel for who-list updates, bidirectional.
 pub struct WhoChannel;
 
+/// Reliable ordered channel for calendar updates, bidirectional.
+pub struct CalendarChannel;
+
 /// Reliable ordered channel for ignore list updates, bidirectional.
 pub struct IgnoreChannel;
 

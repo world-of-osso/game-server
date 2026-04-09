@@ -440,6 +440,30 @@ pub struct WhoStateUpdate {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct QueryCalendar;
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct ScheduleCalendarEvent {
+    pub title: String,
+    pub starts_at_unix_secs: u64,
+    pub max_signups: u8,
+    pub is_raid: bool,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct RespondCalendarSignup {
+    pub event_id: u64,
+    pub status: CalendarSignupStatusSnapshot,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct CalendarStateUpdate {
+    pub snapshot: Option<CalendarSnapshot>,
+    pub message: Option<String>,
+    pub error: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct QueryIgnoreList;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]

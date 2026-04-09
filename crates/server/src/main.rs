@@ -6,6 +6,7 @@ mod auction_house;
 mod auth;
 mod auth_character;
 mod barber_shop;
+mod calendar;
 mod collection;
 mod combat;
 mod creature_ai;
@@ -72,6 +73,7 @@ fn add_game_plugins(app: &mut App) {
         .add_plugins(achievement::AchievementPlugin)
         .add_plugins(auction_house::AuctionHousePlugin)
         .add_plugins(barber_shop::BarberShopPlugin)
+        .add_plugins(calendar::CalendarPlugin)
         .add_plugins(collection::CollectionPlugin)
         .add_plugins(currency::CurrencyPlugin)
         .add_plugins(durability::DurabilityPlugin)

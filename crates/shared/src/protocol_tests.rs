@@ -233,6 +233,32 @@ fn who_state_update_round_trip() {
 }
 
 #[test]
+fn calendar_state_update_round_trip() {
+    let update = CalendarStateUpdate {
+        snapshot: Some(CalendarSnapshot {
+            events: vec![CalendarEventSnapshot {
+                event_id: 7,
+                title: "Karazhan".into(),
+                organizer_name: "Theron".into(),
+                starts_at_unix_secs: 1_710_000_000,
+                max_signups: 10,
+                is_raid: true,
+                signups: vec![CalendarSignupSnapshot {
+                    character_name: "Alice".into(),
+                    status: CalendarSignupStatusSnapshot::Confirmed,
+                }],
+            }],
+        }),
+        message: Some("calendar updated".into()),
+        error: None,
+    };
+
+    let encoded = serde_json::to_string(&update).unwrap();
+    let decoded: CalendarStateUpdate = serde_json::from_str(&encoded).unwrap();
+    assert_eq!(update, decoded);
+}
+
+#[test]
 fn lfg_state_update_round_trip() {
     let update = LfgStateUpdate {
         snapshot: Some(LfgSnapshot {

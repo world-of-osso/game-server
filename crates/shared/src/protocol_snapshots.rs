@@ -238,6 +238,35 @@ pub struct WhoSnapshot {
     pub entries: Vec<WhoCharacterSnapshot>,
 }
 
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+pub enum CalendarSignupStatusSnapshot {
+    Confirmed,
+    Tentative,
+    Declined,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct CalendarSignupSnapshot {
+    pub character_name: String,
+    pub status: CalendarSignupStatusSnapshot,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct CalendarEventSnapshot {
+    pub event_id: u64,
+    pub title: String,
+    pub organizer_name: String,
+    pub starts_at_unix_secs: u64,
+    pub max_signups: u8,
+    pub is_raid: bool,
+    pub signups: Vec<CalendarSignupSnapshot>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct CalendarSnapshot {
+    pub events: Vec<CalendarEventSnapshot>,
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct IgnoreListSnapshot {
     pub names: Vec<String>,
@@ -377,6 +406,7 @@ pub fn register_snapshot_messages(app: &mut App) {
     register_server_snapshot::<RestSnapshot>(app);
     register_server_snapshot::<FriendsSnapshot>(app);
     register_server_snapshot::<WhoSnapshot>(app);
+    register_server_snapshot::<CalendarSnapshot>(app);
     register_server_snapshot::<IgnoreListSnapshot>(app);
     register_server_snapshot::<LfgSnapshot>(app);
     register_server_snapshot::<PvpSnapshot>(app);
