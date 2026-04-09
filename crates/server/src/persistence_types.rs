@@ -18,6 +18,17 @@ pub struct PendingGuildInviteData {
     pub inviter_name: String,
 }
 
+#[derive(bitcode::Encode, bitcode::Decode, Debug, Clone, PartialEq, Default)]
+pub struct GuildProfileData {
+    pub motd: String,
+    pub info_text: String,
+}
+
+#[derive(bitcode::Encode, bitcode::Decode, Debug, Clone, PartialEq, Default)]
+pub struct GuildMemberNoteData {
+    pub officer_note: String,
+}
+
 #[derive(bitcode::Encode, bitcode::Decode, Debug, Clone, PartialEq)]
 pub struct InventoryItemData {
     pub item_guid: u64,

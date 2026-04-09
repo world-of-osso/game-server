@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::components::{CharacterAppearance, EquipmentAppearance};
+use crate::protocol_snapshots::GuildSnapshot;
 
 /// Social emote animation kind.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
@@ -237,6 +238,32 @@ pub struct GuildAcceptInviteResponse {
     pub success: bool,
     pub guild_id: Option<u32>,
     pub guild_name: Option<String>,
+    pub error: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct QueryGuild;
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct SetGuildMotd {
+    pub text: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct SetGuildInfo {
+    pub text: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct SetGuildOfficerNote {
+    pub character_name: String,
+    pub note: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct GuildStateUpdate {
+    pub guild: Option<GuildSnapshot>,
+    pub message: Option<String>,
     pub error: Option<String>,
 }
 

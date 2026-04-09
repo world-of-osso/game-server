@@ -67,6 +67,14 @@ pub(crate) const CHARACTER_GUILDS: TableDefinition<u64, &[u8]> =
 pub(crate) const PENDING_GUILD_INVITES: TableDefinition<u64, &[u8]> =
     TableDefinition::new("pending_guild_invites");
 
+/// Guild profile data: guild_id (u32) -> serialized GuildProfileData.
+pub(crate) const GUILD_PROFILES: TableDefinition<u32, &[u8]> =
+    TableDefinition::new("guild_profiles");
+
+/// Guild officer notes: character_id (u64) -> serialized GuildMemberNoteData.
+pub(crate) const GUILD_MEMBER_NOTES: TableDefinition<u64, &[u8]> =
+    TableDefinition::new("guild_member_notes");
+
 /// Password hashes: account_id (u64) -> argon2 hash string (bytes).
 pub(crate) const PASSWORDS: TableDefinition<u64, &[u8]> = TableDefinition::new("passwords");
 

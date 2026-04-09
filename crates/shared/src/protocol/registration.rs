@@ -95,6 +95,16 @@ fn register_guild_and_chat_messages(app: &mut App) {
         .add_direction(NetworkDirection::ClientToServer);
     app.register_message::<GuildAcceptInviteResponse>()
         .add_direction(NetworkDirection::ServerToClient);
+    app.register_message::<QueryGuild>()
+        .add_direction(NetworkDirection::ClientToServer);
+    app.register_message::<SetGuildMotd>()
+        .add_direction(NetworkDirection::ClientToServer);
+    app.register_message::<SetGuildInfo>()
+        .add_direction(NetworkDirection::ClientToServer);
+    app.register_message::<SetGuildOfficerNote>()
+        .add_direction(NetworkDirection::ClientToServer);
+    app.register_message::<GuildStateUpdate>()
+        .add_direction(NetworkDirection::ServerToClient);
     app.register_message::<ChatHistoryRequest>()
         .add_direction(NetworkDirection::ClientToServer);
     app.register_message::<ChatHistoryResponse>()
@@ -392,6 +402,7 @@ fn register_bidirectional_channels(app: &mut App) {
     add_reliable_channel::<WorldMapChannel>(app, NetworkDirection::Bidirectional);
     add_reliable_channel::<RestChannel>(app, NetworkDirection::ServerToClient);
     add_reliable_channel::<FriendsChannel>(app, NetworkDirection::Bidirectional);
+    add_reliable_channel::<GuildChannel>(app, NetworkDirection::Bidirectional);
     add_reliable_channel::<WhoChannel>(app, NetworkDirection::Bidirectional);
     add_reliable_channel::<CalendarChannel>(app, NetworkDirection::Bidirectional);
     add_reliable_channel::<IgnoreChannel>(app, NetworkDirection::Bidirectional);

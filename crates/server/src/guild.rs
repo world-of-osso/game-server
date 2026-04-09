@@ -1,0 +1,545 @@
+use std::collections::BTreeMap;
+
+use bevy::prelude::*;
+use lightyear::prelude::{MessageReceiver, MessageSender};
+use shared::components::{GuildMembership, Player};
+use shared::protocol::{
+    GuildChannel, GuildMemberSnapshot, GuildSnapshot, GuildStateUpdate, QueryGuild, SetGuildInfo,
+    SetGuildMotd, SetGuildOfficerNote,
+};
+
+use crate::auth::{Authenticated, InWorld};
+use crate::networking::PlayerLink;
+use crate::persistence::GameDatabase;
+use crate::persistence_character::{
+    GuildMemberRecord, find_character_id_by_name, list_guild_members, load_guild_member_note,
+    load_guild_profile, save_guild_member_note, save_guild_profile,
+};
+use crate::persistence_types::GuildMemberNoteData;
+use shared::components::Level;
+
+type NewConnections<'w, 's> = Query<
+    'w,
+    's,
+    (Entity, &'static PlayerLink),
+    (With<Authenticated>, With<InWorld>, Added<InWorld>),
+>;
+type ActiveConnections<'w, 's> =
+    Query<'w, 's, (Entity, &'static PlayerLink), (With<Authenticated>, With<InWorld>)>;
+type GuildMemberships<'w, 's> = Query<'w, 's, &'static GuildMembership>;
+type OnlinePlayers<'w, 's> = Query<
+    'w,
+    's,
+    (
+        &'static Player,
+        &'static Level,
+        Option<&'static GuildMembership>,
+    ),
+>;
+type GuildSenders<'w, 's> = Query<'w, 's, &'static mut MessageSender<GuildStateUpdate>>;
+type GuildQueryReceivers<'w, 's> = Query<
+    'w,
+    's,
+    (
+        Entity,
+        &'static PlayerLink,
+        &'static mut MessageReceiver<QueryGuild>,
+    ),
+    (With<Authenticated>, With<InWorld>),
+>;
+type GuildMotdReceivers<'w, 's> = Query<
+    'w,
+    's,
+    (
+        Entity,
+        &'static PlayerLink,
+        &'static mut MessageReceiver<SetGuildMotd>,
+    ),
+    (With<Authenticated>, With<InWorld>),
+>;
+type GuildInfoReceivers<'w, 's> = Query<
+    'w,
+    's,
+    (
+        Entity,
+        &'static PlayerLink,
+        &'static mut MessageReceiver<SetGuildInfo>,
+    ),
+    (With<Authenticated>, With<InWorld>),
+>;
+type GuildOfficerNoteReceivers<'w, 's> = Query<
+    'w,
+    's,
+    (
+        Entity,
+        &'static PlayerLink,
+        &'static mut MessageReceiver<SetGuildOfficerNote>,
+    ),
+    (With<Authenticated>, With<InWorld>),
+>;
+
+#[derive(Clone)]
+struct GuildUpdateMeta {
+    message: Option<String>,
+    error: Option<String>,
+}
+
+pub struct GuildPlugin;
+
+impl Plugin for GuildPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_systems(
+            Update,
+            (
+                send_initial_guild_state,
+                process_query_requests,
+                process_set_motd_requests,
+                process_set_info_requests,
+                process_set_officer_note_requests,
+            )
+                .chain(),
+        );
+    }
+}
+
+fn send_initial_guild_state(
+    db: Res<GameDatabase>,
+    connections: NewConnections,
+    guilds: GuildMemberships,
+    online_players: OnlinePlayers,
+    mut senders: GuildSenders,
+) {
+    for (conn_entity, link) in &connections {
+        let Ok(guild) = guilds.get(link.0) else {
+            continue;
+        };
+        send_guild_update(
+            conn_entity,
+            Some(build_guild_snapshot(&db.db, guild, &online_players)),
+            Some("guild loaded".into()),
+            None,
+            &mut senders,
+        );
+    }
+}
+
+fn process_query_requests(
+    db: Res<GameDatabase>,
+    mut receivers: GuildQueryReceivers,
+    guilds: GuildMemberships,
+    online_players: OnlinePlayers,
+    mut senders: GuildSenders,
+) {
+    for (conn_entity, link, mut receiver) in &mut receivers {
+        let mut saw_request = false;
+        for _ in receiver.receive() {
+            saw_request = true;
+        }
+        if !saw_request {
+            continue;
+        }
+        let Ok(guild) = guilds.get(link.0) else {
+            send_guild_update(
+                conn_entity,
+                None,
+                None,
+                Some("not in a guild".into()),
+                &mut senders,
+            );
+            continue;
+        };
+        send_guild_update(
+            conn_entity,
+            Some(build_guild_snapshot(&db.db, guild, &online_players)),
+            Some("guild refreshed".into()),
+            None,
+            &mut senders,
+        );
+    }
+}
+
+fn process_set_motd_requests(
+    db: Res<GameDatabase>,
+    mut receivers: GuildMotdReceivers,
+    connections: ActiveConnections,
+    guilds: GuildMemberships,
+    online_players: OnlinePlayers,
+    mut senders: GuildSenders,
+) {
+    for (conn_entity, link, mut receiver) in &mut receivers {
+        let requests: Vec<_> = receiver.receive().collect();
+        if requests.is_empty() {
+            continue;
+        }
+        let Ok(guild) = guilds.get(link.0) else {
+            send_guild_update(
+                conn_entity,
+                None,
+                None,
+                Some("not in a guild".into()),
+                &mut senders,
+            );
+            continue;
+        };
+        for request in requests {
+            let mut profile = load_guild_profile(&db.db, guild.guild_id);
+            profile.motd = request.text.trim().to_string();
+            save_guild_profile(&db.db, guild.guild_id, &profile);
+            broadcast_guild_update(
+                &db.db,
+                &connections,
+                &guilds,
+                &online_players,
+                guild,
+                GuildUpdateMeta {
+                    message: Some("guild motd updated".into()),
+                    error: None,
+                },
+                &mut senders,
+            );
+        }
+    }
+}
+
+fn process_set_info_requests(
+    db: Res<GameDatabase>,
+    mut receivers: GuildInfoReceivers,
+    connections: ActiveConnections,
+    guilds: GuildMemberships,
+    online_players: OnlinePlayers,
+    mut senders: GuildSenders,
+) {
+    for (conn_entity, link, mut receiver) in &mut receivers {
+        let requests: Vec<_> = receiver.receive().collect();
+        if requests.is_empty() {
+            continue;
+        }
+        let Ok(guild) = guilds.get(link.0) else {
+            send_guild_update(
+                conn_entity,
+                None,
+                None,
+                Some("not in a guild".into()),
+                &mut senders,
+            );
+            continue;
+        };
+        for request in requests {
+            let mut profile = load_guild_profile(&db.db, guild.guild_id);
+            profile.info_text = request.text.trim().to_string();
+            save_guild_profile(&db.db, guild.guild_id, &profile);
+            broadcast_guild_update(
+                &db.db,
+                &connections,
+                &guilds,
+                &online_players,
+                guild,
+                GuildUpdateMeta {
+                    message: Some("guild info updated".into()),
+                    error: None,
+                },
+                &mut senders,
+            );
+        }
+    }
+}
+
+fn process_set_officer_note_requests(
+    db: Res<GameDatabase>,
+    mut receivers: GuildOfficerNoteReceivers,
+    connections: ActiveConnections,
+    guilds: GuildMemberships,
+    online_players: OnlinePlayers,
+    mut senders: GuildSenders,
+) {
+    for (conn_entity, link, mut receiver) in &mut receivers {
+        let requests: Vec<_> = receiver.receive().collect();
+        if requests.is_empty() {
+            continue;
+        }
+        let Ok(guild) = guilds.get(link.0) else {
+            send_guild_update(
+                conn_entity,
+                None,
+                None,
+                Some("not in a guild".into()),
+                &mut senders,
+            );
+            continue;
+        };
+        for request in requests {
+            match update_officer_note(&db.db, guild, request) {
+                Ok(message) => broadcast_guild_update(
+                    &db.db,
+                    &connections,
+                    &guilds,
+                    &online_players,
+                    guild,
+                    GuildUpdateMeta {
+                        message: Some(message),
+                        error: None,
+                    },
+                    &mut senders,
+                ),
+                Err(error) => send_guild_update(
+                    conn_entity,
+                    Some(build_guild_snapshot(&db.db, guild, &online_players)),
+                    None,
+                    Some(error),
+                    &mut senders,
+                ),
+            }
+        }
+    }
+}
+
+fn update_officer_note(
+    db: &redb::Database,
+    guild: &GuildMembership,
+    request: SetGuildOfficerNote,
+) -> Result<String, String> {
+    let Some(character_id) = find_character_id_by_name(db, &request.character_name) else {
+        return Err(format!(
+            "guild member not found: {}",
+            request.character_name
+        ));
+    };
+    let members = list_guild_members(db, guild.guild_id);
+    if !members
+        .iter()
+        .any(|member| member.character_id == character_id)
+    {
+        return Err(format!(
+            "guild member not found in {}: {}",
+            guild.guild_name, request.character_name
+        ));
+    }
+    save_guild_member_note(
+        db,
+        character_id,
+        &GuildMemberNoteData {
+            officer_note: request.note.trim().to_string(),
+        },
+    );
+    Ok(format!(
+        "guild officer note updated: {}",
+        request.character_name
+    ))
+}
+
+fn broadcast_guild_update(
+    db: &redb::Database,
+    connections: &ActiveConnections,
+    guilds: &GuildMemberships,
+    online_players: &OnlinePlayers,
+    guild: &GuildMembership,
+    meta: GuildUpdateMeta,
+    senders: &mut GuildSenders,
+) {
+    let snapshot = build_guild_snapshot(db, guild, online_players);
+    for (conn_entity, link) in connections.iter() {
+        let Ok(target_guild) = guilds.get(link.0) else {
+            continue;
+        };
+        if target_guild.guild_id != guild.guild_id {
+            continue;
+        }
+        send_guild_update(
+            conn_entity,
+            Some(snapshot.clone()),
+            meta.message.clone(),
+            meta.error.clone(),
+            senders,
+        );
+    }
+}
+
+fn build_guild_snapshot(
+    db: &redb::Database,
+    guild: &GuildMembership,
+    online_players: &OnlinePlayers,
+) -> GuildSnapshot {
+    let profile = load_guild_profile(db, guild.guild_id);
+    let online = online_member_map(online_players, guild.guild_id);
+    let members = list_guild_members(db, guild.guild_id)
+        .into_iter()
+        .map(|member| build_member_snapshot(db, member, &online))
+        .collect();
+    GuildSnapshot {
+        guild_id: guild.guild_id,
+        guild_name: guild.guild_name.clone(),
+        motd: profile.motd,
+        info_text: profile.info_text,
+        members,
+    }
+}
+
+fn build_member_snapshot(
+    db: &redb::Database,
+    member: GuildMemberRecord,
+    online: &BTreeMap<String, OnlineMemberState>,
+) -> GuildMemberSnapshot {
+    let online_state = online.get(&member.name);
+    let officer_note = load_guild_member_note(db, member.character_id).officer_note;
+    GuildMemberSnapshot {
+        character_name: member.name.clone(),
+        level: online_state
+            .map(|state| state.level)
+            .unwrap_or(member.level),
+        class_name: online_state
+            .map(|state| state.class_name.clone())
+            .unwrap_or_else(|| class_name_from_id(member.class_id)),
+        rank_name: "Member".into(),
+        is_online: online_state.is_some(),
+        officer_note,
+        last_online: if online_state.is_some() {
+            "Online".into()
+        } else {
+            "Offline".into()
+        },
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct OnlineMemberState {
+    level: u16,
+    class_name: String,
+}
+
+fn online_member_map(
+    players: &OnlinePlayers,
+    guild_id: u32,
+) -> BTreeMap<String, OnlineMemberState> {
+    players
+        .iter()
+        .filter_map(|(player, level, guild)| {
+            let guild = guild?;
+            (guild.guild_id == guild_id).then(|| {
+                (
+                    player.name.clone(),
+                    OnlineMemberState {
+                        level: level.0 as u16,
+                        class_name: class_name_from_id(player.class),
+                    },
+                )
+            })
+        })
+        .collect()
+}
+
+fn send_guild_update(
+    conn_entity: Entity,
+    guild: Option<GuildSnapshot>,
+    message: Option<String>,
+    error: Option<String>,
+    senders: &mut GuildSenders,
+) {
+    let Ok(mut sender) = senders.get_mut(conn_entity) else {
+        return;
+    };
+    sender.send::<GuildChannel>(GuildStateUpdate {
+        guild,
+        message,
+        error,
+    });
+}
+
+fn class_name_from_id(class_id: u8) -> String {
+    match class_id {
+        1 => "Warrior",
+        2 => "Paladin",
+        3 => "Hunter",
+        4 => "Rogue",
+        5 => "Priest",
+        6 => "Death Knight",
+        7 => "Shaman",
+        8 => "Mage",
+        9 => "Warlock",
+        10 => "Monk",
+        11 => "Druid",
+        12 => "Demon Hunter",
+        13 => "Evoker",
+        _ => "Unknown",
+    }
+    .into()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::persistence_types::GuildProfileData;
+
+    #[test]
+    fn update_officer_note_rejects_target_outside_guild() {
+        let db = crate::persistence::temp_database();
+        let (alice_id, _) =
+            crate::persistence_character::create_character(&db, 1, "Alice", 1, 5).unwrap();
+        let (bob_id, _) =
+            crate::persistence_character::create_character(&db, 2, "Bob", 1, 8).unwrap();
+        crate::persistence_character::set_character_guild_by_id(&db, alice_id, 7, "Raid Team")
+            .unwrap();
+        crate::persistence_character::set_character_guild_by_id(&db, bob_id, 9, "Other Team")
+            .unwrap();
+
+        let error = update_officer_note(
+            &db,
+            &GuildMembership {
+                guild_id: 7,
+                guild_name: "Raid Team".into(),
+            },
+            SetGuildOfficerNote {
+                character_name: "Bob".into(),
+                note: "Bench".into(),
+            },
+        )
+        .expect_err("target should not be in guild");
+
+        assert_eq!(error, "guild member not found in Raid Team: Bob");
+    }
+
+    #[test]
+    fn build_guild_snapshot_uses_profile_and_online_state() {
+        let db = crate::persistence::temp_database();
+        let (alice_id, _) =
+            crate::persistence_character::create_character(&db, 1, "Alice", 1, 5).unwrap();
+        crate::persistence_character::set_character_guild_by_id(&db, alice_id, 7, "Raid Team")
+            .unwrap();
+        save_guild_profile(
+            &db,
+            7,
+            &GuildProfileData {
+                motd: "Bring flasks".into(),
+                info_text: "Wed/Sun raids".into(),
+            },
+        );
+        save_guild_member_note(
+            &db,
+            alice_id,
+            &GuildMemberNoteData {
+                officer_note: "Reliable healer".into(),
+            },
+        );
+
+        let profile = load_guild_profile(&db, 7);
+        let member = list_guild_members(&db, 7)
+            .pop()
+            .expect("member should exist");
+        let snapshot = build_member_snapshot(
+            &db,
+            member,
+            &BTreeMap::from([(
+                "Alice".into(),
+                OnlineMemberState {
+                    level: 60,
+                    class_name: "Priest".into(),
+                },
+            )]),
+        );
+
+        assert_eq!(profile.motd, "Bring flasks");
+        assert_eq!(profile.info_text, "Wed/Sun raids");
+        assert!(snapshot.is_online);
+        assert_eq!(snapshot.officer_note, "Reliable healer");
+        assert_eq!(snapshot.class_name, "Priest");
+    }
+}

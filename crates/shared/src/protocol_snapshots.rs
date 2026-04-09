@@ -225,6 +225,26 @@ pub struct FriendsSnapshot {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct GuildMemberSnapshot {
+    pub character_name: String,
+    pub level: u16,
+    pub class_name: String,
+    pub rank_name: String,
+    pub is_online: bool,
+    pub officer_note: String,
+    pub last_online: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct GuildSnapshot {
+    pub guild_id: u32,
+    pub guild_name: String,
+    pub motd: String,
+    pub info_text: String,
+    pub members: Vec<GuildMemberSnapshot>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct WhoCharacterSnapshot {
     pub name: String,
     pub level: u16,
@@ -405,6 +425,7 @@ pub fn register_snapshot_messages(app: &mut App) {
     register_server_snapshot::<WorldMapSnapshot>(app);
     register_server_snapshot::<RestSnapshot>(app);
     register_server_snapshot::<FriendsSnapshot>(app);
+    register_server_snapshot::<GuildSnapshot>(app);
     register_server_snapshot::<WhoSnapshot>(app);
     register_server_snapshot::<CalendarSnapshot>(app);
     register_server_snapshot::<IgnoreListSnapshot>(app);

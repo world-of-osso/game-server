@@ -15,6 +15,7 @@ mod death;
 mod duel;
 mod durability;
 mod friends;
+mod guild;
 mod ignore_list;
 mod inspect;
 mod interest;
@@ -79,6 +80,7 @@ fn add_game_plugins(app: &mut App) {
         .add_plugins(durability::DurabilityPlugin)
         .add_plugins(death::DeathPlugin)
         .add_plugins(friends::FriendsPlugin)
+        .add_plugins(guild::GuildPlugin)
         .add_plugins(who::WhoPlugin)
         .add_plugins(ignore_list::IgnoreListPlugin)
         .add_plugins(lfg::LfgPlugin)

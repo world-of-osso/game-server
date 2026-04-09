@@ -63,6 +63,60 @@ fn guild_invite_messages_round_trip() {
     assert_eq!(accept_resp.guild_id, decoded.guild_id);
     assert_eq!(accept_resp.guild_name, decoded.guild_name);
     assert_eq!(accept_resp.error, decoded.error);
+
+    let query = QueryGuild;
+    let encoded = serde_json::to_string(&query).unwrap();
+    let _: QueryGuild = serde_json::from_str(&encoded).unwrap();
+
+    let set_motd = SetGuildMotd {
+        text: "Raid tonight".into(),
+    };
+    let encoded = serde_json::to_string(&set_motd).unwrap();
+    let decoded: SetGuildMotd = serde_json::from_str(&encoded).unwrap();
+    assert_eq!(set_motd.text, decoded.text);
+
+    let set_info = SetGuildInfo {
+        text: "Wed/Sun raids".into(),
+    };
+    let encoded = serde_json::to_string(&set_info).unwrap();
+    let decoded: SetGuildInfo = serde_json::from_str(&encoded).unwrap();
+    assert_eq!(set_info.text, decoded.text);
+
+    let set_note = SetGuildOfficerNote {
+        character_name: "Alice".into(),
+        note: "Reliable healer".into(),
+    };
+    let encoded = serde_json::to_string(&set_note).unwrap();
+    let decoded: SetGuildOfficerNote = serde_json::from_str(&encoded).unwrap();
+    assert_eq!(set_note.character_name, decoded.character_name);
+    assert_eq!(set_note.note, decoded.note);
+
+    let state = GuildStateUpdate {
+        guild: Some(GuildSnapshot {
+            guild_id: 3,
+            guild_name: "Raid Team".into(),
+            motd: "Bring flasks".into(),
+            info_text: "Wed/Sun raids".into(),
+            members: vec![GuildMemberSnapshot {
+                character_name: "Alice".into(),
+                level: 60,
+                class_name: "Priest".into(),
+                rank_name: "Member".into(),
+                is_online: true,
+                officer_note: "Reliable healer".into(),
+                last_online: "Online".into(),
+            }],
+        }),
+        message: Some("guild updated".into()),
+        error: None,
+    };
+    let encoded = serde_json::to_string(&state).unwrap();
+    let decoded: GuildStateUpdate = serde_json::from_str(&encoded).unwrap();
+    assert_eq!(state.message, decoded.message);
+    assert_eq!(
+        state.guild.as_ref().unwrap().motd,
+        decoded.guild.as_ref().unwrap().motd
+    );
 }
 
 #[test]

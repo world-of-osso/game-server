@@ -6,10 +6,20 @@ use std::collections::BTreeSet;
 const MAX_CHARACTERS_PER_ACCOUNT: usize = 10;
 
 use crate::persistence::{
-    ACCOUNT_CHARACTERS, CHARACTER_GUILDS, CHARACTER_NAMES, CHARACTERS, PENDING_GUILD_INVITES,
+    ACCOUNT_CHARACTERS, CHARACTER_GUILDS, CHARACTER_NAMES, CHARACTERS, GUILD_MEMBER_NOTES,
+    GUILD_PROFILES, PENDING_GUILD_INVITES,
 };
 use crate::persistence::{next_id, save_inventory};
 use crate::persistence_types::*;
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct GuildMemberRecord {
+    pub character_id: u64,
+    pub name: String,
+    pub level: u16,
+    pub class_id: u8,
+    pub guild_name: String,
+}
 
 /// Save a single character to the database.
 pub fn save_character(db: &Database, character_id: u64, data: &CharacterData) {
@@ -141,6 +151,98 @@ pub fn take_pending_guild_invite(
         .commit()
         .expect("Failed to commit pending guild invite removal");
     Some(invite)
+}
+
+pub fn load_guild_profile(db: &Database, guild_id: u32) -> GuildProfileData {
+    let txn = db.begin_read().expect("Failed to begin read txn");
+    let Ok(table) = txn.open_table(GUILD_PROFILES) else {
+        return GuildProfileData::default();
+    };
+    table
+        .get(guild_id)
+        .expect("Failed to read guild profile")
+        .map(|guard| {
+            bitcode::decode::<GuildProfileData>(guard.value()).expect("decode guild profile")
+        })
+        .unwrap_or_default()
+}
+
+pub fn save_guild_profile(db: &Database, guild_id: u32, profile: &GuildProfileData) {
+    let encoded = bitcode::encode(profile);
+    let write = db.begin_write().expect("Failed to begin write txn");
+    {
+        let mut table = write
+            .open_table(GUILD_PROFILES)
+            .expect("open guild_profiles");
+        table
+            .insert(guild_id, encoded.as_slice())
+            .expect("insert guild profile");
+    }
+    write.commit().expect("Failed to commit guild profile");
+}
+
+pub fn load_guild_member_note(db: &Database, character_id: u64) -> GuildMemberNoteData {
+    let txn = db.begin_read().expect("Failed to begin read txn");
+    let Ok(table) = txn.open_table(GUILD_MEMBER_NOTES) else {
+        return GuildMemberNoteData::default();
+    };
+    table
+        .get(character_id)
+        .expect("Failed to read guild member note")
+        .map(|guard| {
+            bitcode::decode::<GuildMemberNoteData>(guard.value()).expect("decode guild member note")
+        })
+        .unwrap_or_default()
+}
+
+pub fn save_guild_member_note(db: &Database, character_id: u64, note: &GuildMemberNoteData) {
+    let encoded = bitcode::encode(note);
+    let write = db.begin_write().expect("Failed to begin write txn");
+    {
+        let mut table = write
+            .open_table(GUILD_MEMBER_NOTES)
+            .expect("open guild_member_notes");
+        table
+            .insert(character_id, encoded.as_slice())
+            .expect("insert guild member note");
+    }
+    write.commit().expect("Failed to commit guild member note");
+}
+
+pub fn list_guild_members(db: &Database, guild_id: u32) -> Vec<GuildMemberRecord> {
+    let txn = db.begin_read().expect("Failed to begin read txn");
+    let guilds = txn
+        .open_table(CHARACTER_GUILDS)
+        .expect("Failed to open character_guilds table");
+    let characters = txn
+        .open_table(CHARACTERS)
+        .expect("Failed to open characters table");
+    let mut members = Vec::new();
+    for row in guilds.iter().expect("Failed to iterate character_guilds") {
+        let (character_id, encoded_guild) = row.expect("Failed to read character_guilds row");
+        let guild =
+            bitcode::decode::<GuildMembershipData>(encoded_guild.value()).expect("decode guild");
+        if guild.guild_id != guild_id {
+            continue;
+        }
+        let Some(encoded_character) = characters
+            .get(character_id.value())
+            .expect("Failed to read character")
+        else {
+            continue;
+        };
+        let character = CharacterData::decode_compatible(encoded_character.value())
+            .expect("Failed to decode character");
+        members.push(GuildMemberRecord {
+            character_id: character_id.value(),
+            name: character.name,
+            level: character.level,
+            class_id: character.class,
+            guild_name: guild.guild_name,
+        });
+    }
+    members.sort_by(|left, right| left.name.cmp(&right.name));
+    members
 }
 
 pub fn find_character_id_by_name(db: &Database, character_name: &str) -> Option<u64> {
