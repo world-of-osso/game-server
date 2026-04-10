@@ -1,10 +1,8 @@
-use std::path::PathBuf;
 use std::sync::mpsc;
 
 use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 use lightyear::prelude::MessageSender;
-use peercred_ipc::{Connection, Server};
 use shared::components::{EquipmentAppearance, Position};
 use shared::protocol::{CharacterListUpdate, LoginResponse};
 
@@ -13,24 +11,12 @@ use crate::admin_types::*;
 use crate::persistence;
 use crate::persistence_accounts;
 
-const SOCKET_PATH: &str = "/tmp/game-server-admin.sock";
+#[path = "admin_ipc_server.rs"]
+mod admin_ipc_server;
 
-/// Internal command passed from IPC server thread to Bevy main loop.
-struct AdminCommand {
-    request: AdminRequest,
-    respond: mpsc::Sender<AdminResponse>,
-}
+use self::admin_ipc_server::{AdminCommand, init};
 
-/// RAII guard that removes the socket file on drop.
-struct SocketGuard {
-    path: PathBuf,
-}
-
-impl Drop for SocketGuard {
-    fn drop(&mut self) {
-        let _ = std::fs::remove_file(&self.path);
-    }
-}
+pub(super) const SOCKET_PATH: &str = "/tmp/game-server-admin.sock";
 
 pub struct AdminIpcPlugin;
 
@@ -41,77 +27,6 @@ impl Plugin for AdminIpcPlugin {
         app.insert_non_send_resource(receiver)
             .insert_non_send_resource(guard)
             .add_systems(Update, poll_admin_ipc);
-    }
-}
-
-/// Spawn the IPC server on a tokio runtime in a background thread.
-fn init() -> (mpsc::Receiver<AdminCommand>, SocketGuard) {
-    let path = PathBuf::from(SOCKET_PATH);
-
-    // Remove stale socket from a previous run.
-    let _ = std::fs::remove_file(&path);
-
-    let (tx, rx) = mpsc::channel();
-    let sock = path.clone();
-    std::thread::spawn(move || {
-        let rt = tokio::runtime::Builder::new_current_thread()
-            .enable_all()
-            .build()
-            .expect("tokio runtime");
-        rt.block_on(serve(sock, tx));
-    });
-
-    (rx, SocketGuard { path })
-}
-
-async fn serve(path: PathBuf, tx: mpsc::Sender<AdminCommand>) {
-    let server = match Server::bind(&path) {
-        Ok(s) => s,
-        Err(e) => {
-            eprintln!("admin ipc: bind failed: {e}");
-            return;
-        }
-    };
-
-    loop {
-        let (conn, _caller) = match server.accept().await {
-            Ok(pair) => pair,
-            Err(e) => {
-                eprintln!("admin ipc: accept error: {e}");
-                continue;
-            }
-        };
-        let tx = tx.clone();
-        tokio::spawn(handle_connection(conn, tx));
-    }
-}
-
-async fn handle_connection(mut conn: Connection, tx: mpsc::Sender<AdminCommand>) {
-    let request: AdminRequest = match conn.read().await {
-        Ok(r) => r,
-        Err(e) => {
-            eprintln!("admin ipc: read error: {e}");
-            return;
-        }
-    };
-
-    let (resp_tx, resp_rx) = mpsc::channel();
-    let cmd = AdminCommand {
-        request,
-        respond: resp_tx,
-    };
-
-    if tx.send(cmd).is_err() {
-        return;
-    }
-
-    let response = match resp_rx.recv() {
-        Ok(r) => r,
-        Err(_) => AdminResponse::Error("internal: channel closed".into()),
-    };
-
-    if let Err(e) = conn.write(&response).await {
-        eprintln!("admin ipc: write error: {e}");
     }
 }
 
