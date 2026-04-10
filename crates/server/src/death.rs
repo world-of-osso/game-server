@@ -468,25 +468,17 @@ fn detect_player_deaths(
     for (player_entity, position, mut health, durability, death_state, client_id, player) in
         &mut players
     {
-        if health.current > 0.0 {
-            continue;
-        }
-        if death_state
-            .as_ref()
-            .is_some_and(|state| state.state != DeathState::Alive)
-        {
+        if !should_process_player_death(&health, death_state.as_deref()) {
             continue;
         }
         health.current = 0.0;
-        let result = on_death(
+        let death_state = build_detected_player_death_state(
             client_id.0,
-            WORLD_MAP_ID,
-            position.x,
-            position.y,
-            position.z,
+            position,
+            player.race,
+            &state.graveyards,
             now,
         );
-        let death_state = build_player_death_state(result.corpse, player.race, &state.graveyards);
         if let Some(mut durability) = durability {
             crate::durability::apply_death_loss(&mut durability);
         }
@@ -502,6 +494,28 @@ fn detect_player_deaths(
             );
         }
     }
+}
+
+fn should_process_player_death(health: &Health, death_state: Option<&PlayerDeathState>) -> bool {
+    health.current <= 0.0 && death_state.is_none_or(|state| state.state == DeathState::Alive)
+}
+
+fn build_detected_player_death_state(
+    client_id: u64,
+    position: &Position,
+    player_race: u8,
+    graveyards: &GraveyardRegistry,
+    now: u64,
+) -> PlayerDeathState {
+    let result = on_death(
+        client_id,
+        WORLD_MAP_ID,
+        position.x,
+        position.y,
+        position.z,
+        now,
+    );
+    build_player_death_state(result.corpse, player_race, graveyards)
 }
 
 fn build_player_death_state(
