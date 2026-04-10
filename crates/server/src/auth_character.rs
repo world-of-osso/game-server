@@ -447,6 +447,90 @@ pub struct PlayerInitState {
     pub reputation: shared::reputation::CharacterReputation,
 }
 
+fn insert_player_spawn_components(
+    commands: &mut Commands,
+    entity: Entity,
+    data: &CharacterData,
+    init: PlayerInitState,
+) -> crate::collection::PlayerCollectionState {
+    let (_, by, _) = crate::terrain_height::wow_to_bevy(data.x, data.y, data.z);
+    commands
+        .entity(entity)
+        .insert(crate::networking::FallTracker::grounded(by));
+    commands
+        .entity(entity)
+        .insert(crate::durability::load_equipped_durability(data));
+    insert_player_init_state(commands, entity, init)
+}
+
+fn insert_player_init_state(
+    commands: &mut Commands,
+    entity: Entity,
+    init: PlayerInitState,
+) -> crate::collection::PlayerCollectionState {
+    let PlayerInitState {
+        gold,
+        professions,
+        achievements,
+        pvp,
+        world_map,
+        friends,
+        ignore_list,
+        collections,
+        currencies,
+        reputation,
+    } = init;
+    commands.entity(entity).insert(Gold(gold));
+    commands.entity(entity).insert(professions);
+    commands.entity(entity).insert(achievements);
+    commands.entity(entity).insert(pvp);
+    commands.entity(entity).insert(world_map);
+    commands.entity(entity).insert(friends);
+    commands.entity(entity).insert(ignore_list);
+    commands
+        .entity(entity)
+        .insert(crate::lfg::PlayerLfgState::default());
+    commands.entity(entity).insert(collections.clone());
+    commands.entity(entity).insert(currencies);
+    commands.entity(entity).insert(reputation);
+    collections
+}
+
+fn insert_spawn_mount_state(
+    commands: &mut Commands,
+    entity: Entity,
+    collections: &crate::collection::PlayerCollectionState,
+) {
+    let Some(mount_display_id) = collections.active_mount_display_id() else {
+        return;
+    };
+    commands.entity(entity).insert((
+        shared::components::Mounted { mount_display_id },
+        MovementSpeed(crate::collection::movement_speed_for_mount(true)),
+    ));
+}
+
+fn insert_spawn_mana_state(commands: &mut Commands, entity: Entity, data: &CharacterData) {
+    if shared::formulas::base_mana(data.class, data.level as u8).is_none() {
+        return;
+    }
+    commands.entity(entity).insert(Mana {
+        current: 0.0,
+        max: 0.0,
+    });
+}
+
+fn insert_spawn_guild_membership(
+    commands: &mut Commands,
+    entity: Entity,
+    guild: Option<&GuildMembership>,
+) {
+    let Some(guild) = guild else {
+        return;
+    };
+    commands.entity(entity).insert(guild.clone());
+}
+
 /// Spawn a player entity with replicated components.
 pub fn spawn_player_entity(
     commands: &mut Commands,
@@ -458,41 +542,10 @@ pub fn spawn_player_entity(
     let entity = commands
         .spawn(build_player_components(data, character_id))
         .id();
-    let (_, by, _) = crate::terrain_height::wow_to_bevy(data.x, data.y, data.z);
-    commands
-        .entity(entity)
-        .insert(crate::networking::FallTracker::grounded(by));
-    commands.entity(entity).insert(Gold(init.gold));
-    commands
-        .entity(entity)
-        .insert(crate::durability::load_equipped_durability(data));
-    commands.entity(entity).insert(init.professions);
-    commands.entity(entity).insert(init.achievements);
-    commands.entity(entity).insert(init.pvp);
-    commands.entity(entity).insert(init.world_map);
-    commands.entity(entity).insert(init.friends);
-    commands.entity(entity).insert(init.ignore_list);
-    commands
-        .entity(entity)
-        .insert(crate::lfg::PlayerLfgState::default());
-    commands.entity(entity).insert(init.collections.clone());
-    commands.entity(entity).insert(init.currencies);
-    commands.entity(entity).insert(init.reputation);
-    if let Some(mount_display_id) = init.collections.active_mount_display_id() {
-        commands.entity(entity).insert((
-            shared::components::Mounted { mount_display_id },
-            MovementSpeed(crate::collection::movement_speed_for_mount(true)),
-        ));
-    }
-    if shared::formulas::base_mana(data.class, data.level as u8).is_some() {
-        commands.entity(entity).insert(Mana {
-            current: 0.0,
-            max: 0.0,
-        });
-    }
-    if let Some(g) = guild {
-        commands.entity(entity).insert(g.clone());
-    }
+    let collections = insert_player_spawn_components(commands, entity, data, init);
+    insert_spawn_mount_state(commands, entity, &collections);
+    insert_spawn_mana_state(commands, entity, data);
+    insert_spawn_guild_membership(commands, entity, guild);
     info!(
         "Spawned player '{}' at ({}, {}, {})",
         data.name, data.x, data.y, data.z
