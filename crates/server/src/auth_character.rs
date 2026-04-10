@@ -382,19 +382,27 @@ fn send_enter_error(
     });
 }
 
-fn build_player_components(data: &CharacterData, character_id: u64) -> impl Bundle {
+fn persisted_player_position(data: &CharacterData) -> Position {
     // CharacterData stores WoW coords (from DB); convert to Bevy space for ECS.
     let (bx, by, bz) = crate::terrain_height::wow_to_bevy(data.x, data.y, data.z);
+    Position {
+        x: bx,
+        y: by,
+        z: bz,
+    }
+}
+
+fn build_player_identity(data: &CharacterData) -> Player {
+    Player {
+        name: data.name.clone(),
+        race: data.race,
+        class: data.class,
+        appearance: data.appearance,
+    }
+}
+
+fn build_player_runtime_components(character_id: u64, level: u16) -> impl Bundle {
     (
-        Position {
-            x: bx,
-            y: by,
-            z: bz,
-        },
-        Health {
-            current: data.health,
-            max: data.max_health,
-        },
         Rotation {
             x: 0.0,
             y: 0.0,
@@ -402,21 +410,27 @@ fn build_player_components(data: &CharacterData, character_id: u64) -> impl Bund
         },
         MovementSpeed(DEFAULT_RUN_SPEED),
         VerticalVelocity::default(),
-        Player {
-            name: data.name.clone(),
-            race: data.race,
-            class: data.class,
-            appearance: data.appearance,
-        },
         UnitStats::default(),
         CombatRatings::default(),
-        Level(data.level as u8),
-        data.equipment_appearance.clone(),
+        Level(level as u8),
         SelectedTalents::default(),
         ClientId(character_id),
         CombatTarget::default(),
         Replicate::new(ReplicationMode::SingleServer(NetworkTarget::All)),
         NetworkVisibility,
+    )
+}
+
+fn build_player_components(data: &CharacterData, character_id: u64) -> impl Bundle {
+    (
+        persisted_player_position(data),
+        Health {
+            current: data.health,
+            max: data.max_health,
+        },
+        build_player_identity(data),
+        data.equipment_appearance.clone(),
+        build_player_runtime_components(character_id, data.level),
     )
 }
 
