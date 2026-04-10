@@ -212,33 +212,50 @@ fn process_release_spirit_requests(
                 );
                 continue;
             };
-            match release_spirit_for_player(
+            let result = release_spirit_for_player(
                 &mut position,
                 &mut death_state,
                 player.race,
                 &state.graveyards,
-            ) {
-                Ok(message) => {
-                    send_update(
-                        conn_entity,
-                        &position,
-                        death_state.clone(),
-                        Some(message),
-                        None,
-                        &mut senders,
-                    );
-                }
-                Err(error) => {
-                    send_update(
-                        conn_entity,
-                        &position,
-                        death_state.clone(),
-                        None,
-                        Some(error),
-                        &mut senders,
-                    );
-                }
-            }
+            );
+            send_release_spirit_result(
+                conn_entity,
+                &position,
+                death_state.clone(),
+                result,
+                &mut senders,
+            );
+        }
+    }
+}
+
+fn send_release_spirit_result(
+    conn_entity: Entity,
+    position: &Position,
+    death_state: PlayerDeathState,
+    result: Result<String, String>,
+    senders: &mut Query<&mut MessageSender<DeathStateUpdate>>,
+) {
+    match result {
+        Ok(message) => {
+            send_update(
+                conn_entity,
+                position,
+                death_state,
+                Some(message),
+                None,
+                senders,
+            );
+        }
+        Err(error) => {
+            send_update(
+                conn_entity,
+                position,
+                death_state,
+                None,
+                Some(error),
+                senders,
+            );
         }
     }
 }
