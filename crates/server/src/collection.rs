@@ -289,14 +289,13 @@ fn process_collection_requests<R: CollectionRequest>(
                 send_collection_error(conn_entity, &mut senders, error);
                 continue;
             }
-            let result = collections
-                .get_mut(link.0)
-                .map_err(|_| "collections unavailable for player".to_string())
-                .and_then(|mut collection| {
-                    let change = R::apply(&mut collection, &request)?;
-                    persistence::save_collections(&db.db, in_world.character_id, &collection);
-                    Ok((change, collection.clone()))
-                });
+            let result = apply_request_and_save(
+                &mut collections,
+                link.0,
+                in_world.character_id,
+                &request,
+                db.as_ref(),
+            );
             apply_collection_change(&mut commands, conn_entity, link.0, result, &mut senders);
         }
     }
@@ -307,6 +306,30 @@ fn combat_locked_request_error<R: CollectionRequest>(in_combat: bool) -> Option<
         return R::combat_error();
     }
     None
+}
+
+fn apply_request_and_save<R: CollectionRequest>(
+    collections: &mut Query<&mut PlayerCollectionState>,
+    player_entity: Entity,
+    character_id: u64,
+    request: &R,
+    db: &GameDatabase,
+) -> Result<(CollectionChange, PlayerCollectionState), String> {
+    let (change, snapshot) = apply_collection_request(collections, player_entity, request)?;
+    persistence::save_collections(&db.db, character_id, &snapshot);
+    Ok((change, snapshot))
+}
+
+fn apply_collection_request<R: CollectionRequest>(
+    collections: &mut Query<&mut PlayerCollectionState>,
+    player_entity: Entity,
+    request: &R,
+) -> Result<(CollectionChange, PlayerCollectionState), String> {
+    let mut collection = collections
+        .get_mut(player_entity)
+        .map_err(|_| "collections unavailable for player".to_string())?;
+    let change = R::apply(&mut collection, request)?;
+    Ok((change, collection.clone()))
 }
 
 fn apply_collection_change(
