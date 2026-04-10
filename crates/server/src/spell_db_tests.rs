@@ -143,38 +143,37 @@ fn create_spell_misc_table(conn: &Connection) {
     .unwrap();
 }
 
+const SPELL_EFFECT_TABLE_SCHEMA: &str = "CREATE TABLE spell_effect (
+    ID INTEGER PRIMARY KEY, EffectAura INTEGER DEFAULT 0,
+    DifficultyID INTEGER NOT NULL DEFAULT 0,
+    EffectIndex INTEGER NOT NULL DEFAULT 0,
+    Effect INTEGER NOT NULL DEFAULT 0,
+    EffectAmplitude REAL DEFAULT 0, EffectAttributes INTEGER DEFAULT 0,
+    EffectAuraPeriod INTEGER DEFAULT 0,
+    EffectBonusCoefficient REAL NOT NULL DEFAULT 0,
+    EffectChainAmplitude REAL DEFAULT 0, EffectChainTargets INTEGER DEFAULT 0,
+    EffectItemType INTEGER DEFAULT 0, EffectMechanic INTEGER DEFAULT 0,
+    EffectPointsPerResource REAL DEFAULT 0, EffectPos_facing REAL DEFAULT 0,
+    EffectRealPointsPerLevel REAL DEFAULT 0,
+    EffectTriggerSpell INTEGER DEFAULT 0,
+    BonusCoefficientFromAP REAL NOT NULL DEFAULT 0,
+    PvpMultiplier REAL DEFAULT 0, Coefficient REAL DEFAULT 0,
+    Variance REAL DEFAULT 0, ResourceCoefficient REAL DEFAULT 0,
+    GroupSizeBasePointsCoefficient REAL DEFAULT 0,
+    EffectBasePointsF REAL NOT NULL DEFAULT 0,
+    ScalingClass INTEGER DEFAULT 0,
+    Node__Field_12_0_0_63534_001 INTEGER DEFAULT 0,
+    EffectMiscValue_0 INTEGER DEFAULT 0, EffectMiscValue_1 INTEGER DEFAULT 0,
+    EffectRadiusIndex_0 INTEGER DEFAULT 0, EffectRadiusIndex_1 INTEGER DEFAULT 0,
+    EffectSpellClassMask_0 INTEGER DEFAULT 0, EffectSpellClassMask_1 INTEGER DEFAULT 0,
+    EffectSpellClassMask_2 INTEGER DEFAULT 0, EffectSpellClassMask_3 INTEGER DEFAULT 0,
+    ImplicitTarget_0 INTEGER NOT NULL DEFAULT 0,
+    ImplicitTarget_1 INTEGER DEFAULT 0,
+    SpellID INTEGER NOT NULL DEFAULT 0
+);";
+
 fn create_spell_effect_table(conn: &Connection) {
-    conn.execute_batch(
-        "CREATE TABLE spell_effect (
-            ID INTEGER PRIMARY KEY, EffectAura INTEGER DEFAULT 0,
-            DifficultyID INTEGER NOT NULL DEFAULT 0,
-            EffectIndex INTEGER NOT NULL DEFAULT 0,
-            Effect INTEGER NOT NULL DEFAULT 0,
-            EffectAmplitude REAL DEFAULT 0, EffectAttributes INTEGER DEFAULT 0,
-            EffectAuraPeriod INTEGER DEFAULT 0,
-            EffectBonusCoefficient REAL NOT NULL DEFAULT 0,
-            EffectChainAmplitude REAL DEFAULT 0, EffectChainTargets INTEGER DEFAULT 0,
-            EffectItemType INTEGER DEFAULT 0, EffectMechanic INTEGER DEFAULT 0,
-            EffectPointsPerResource REAL DEFAULT 0, EffectPos_facing REAL DEFAULT 0,
-            EffectRealPointsPerLevel REAL DEFAULT 0,
-            EffectTriggerSpell INTEGER DEFAULT 0,
-            BonusCoefficientFromAP REAL NOT NULL DEFAULT 0,
-            PvpMultiplier REAL DEFAULT 0, Coefficient REAL DEFAULT 0,
-            Variance REAL DEFAULT 0, ResourceCoefficient REAL DEFAULT 0,
-            GroupSizeBasePointsCoefficient REAL DEFAULT 0,
-            EffectBasePointsF REAL NOT NULL DEFAULT 0,
-            ScalingClass INTEGER DEFAULT 0,
-            Node__Field_12_0_0_63534_001 INTEGER DEFAULT 0,
-            EffectMiscValue_0 INTEGER DEFAULT 0, EffectMiscValue_1 INTEGER DEFAULT 0,
-            EffectRadiusIndex_0 INTEGER DEFAULT 0, EffectRadiusIndex_1 INTEGER DEFAULT 0,
-            EffectSpellClassMask_0 INTEGER DEFAULT 0, EffectSpellClassMask_1 INTEGER DEFAULT 0,
-            EffectSpellClassMask_2 INTEGER DEFAULT 0, EffectSpellClassMask_3 INTEGER DEFAULT 0,
-            ImplicitTarget_0 INTEGER NOT NULL DEFAULT 0,
-            ImplicitTarget_1 INTEGER DEFAULT 0,
-            SpellID INTEGER NOT NULL DEFAULT 0
-        );",
-    )
-    .unwrap();
+    execute_schema(conn, SPELL_EFFECT_TABLE_SCHEMA);
 }
 
 fn create_spell_power_table(conn: &Connection) {
@@ -192,6 +191,10 @@ fn create_spell_power_table(conn: &Connection) {
         );",
     )
     .unwrap();
+}
+
+fn execute_schema(conn: &Connection, schema: &str) {
+    conn.execute_batch(schema).unwrap();
 }
 
 fn create_spell_lookup_tables(conn: &Connection) {
