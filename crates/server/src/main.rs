@@ -71,28 +71,40 @@ fn add_runtime_plugins(app: &mut App) {
 fn add_game_plugins(app: &mut App) {
     app.add_plugins(shared::ProtocolPlugin)
         .add_plugins(persistence::PersistencePlugin)
-        .add_plugins(achievement::AchievementPlugin)
-        .add_plugins(auction_house::AuctionHousePlugin)
-        .add_plugins(barber_shop::BarberShopPlugin)
+        .add_plugins(achievement::AchievementPlugin);
+    add_social_plugins(app);
+    add_progression_plugins(app);
+    add_world_plugins(app);
+}
+
+fn add_social_plugins(app: &mut App) {
+    app.add_plugins(barber_shop::BarberShopPlugin)
         .add_plugins(calendar::CalendarPlugin)
-        .add_plugins(collection::CollectionPlugin)
-        .add_plugins(currency::CurrencyPlugin)
-        .add_plugins(durability::DurabilityPlugin)
-        .add_plugins(death::DeathPlugin)
         .add_plugins(friends::FriendsPlugin)
         .add_plugins(guild::GuildPlugin)
         .add_plugins(who::WhoPlugin)
         .add_plugins(ignore_list::IgnoreListPlugin)
         .add_plugins(lfg::LfgPlugin)
+        .add_plugins(duel::DuelPlugin)
+        .add_plugins(inspect::InspectPlugin)
+        .add_plugins(trade::TradePlugin);
+}
+
+fn add_progression_plugins(app: &mut App) {
+    app.add_plugins(auction_house::AuctionHousePlugin)
+        .add_plugins(collection::CollectionPlugin)
+        .add_plugins(currency::CurrencyPlugin)
+        .add_plugins(durability::DurabilityPlugin)
+        .add_plugins(death::DeathPlugin)
         .add_plugins(pvp::PvpPlugin)
         .add_plugins(profession::ProfessionPlugin)
         .add_plugins(reputation::ReputationPlugin)
-        .add_plugins(world_map::WorldMapPlugin)
         .add_plugins(rest::RestPlugin)
-        .add_plugins(duel::DuelPlugin)
-        .add_plugins(inspect::InspectPlugin)
-        .add_plugins(talent::TalentPlugin)
-        .add_plugins(trade::TradePlugin)
+        .add_plugins(talent::TalentPlugin);
+}
+
+fn add_world_plugins(app: &mut App) {
+    app.add_plugins(world_map::WorldMapPlugin)
         .add_plugins(networking::ServerNetworkPlugin)
         .add_plugins(world_data::WorldDataPlugin)
         .add_plugins(terrain_height::TerrainPlugin)
