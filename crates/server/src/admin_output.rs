@@ -27,57 +27,66 @@ fn print_listing_response(response: &AdminResponse) -> bool {
 }
 
 fn print_account_response(response: &AdminResponse) -> bool {
+    if print_account_check_response(response) || print_simple_account_response(response) {
+        return true;
+    }
+
     match response {
-        AdminResponse::AccountChecked {
-            username,
-            exists,
-            account_id,
-            token_count,
-            pending_registration,
-            banned,
-            ban_reason,
-        } => print_account_check(
-            username,
-            *exists,
-            *account_id,
-            *token_count,
-            *pending_registration,
-            *banned,
-            ban_reason.as_deref(),
-        ),
-        AdminResponse::PasswordChecked { username, valid } => {
-            println!("username={username}");
-            println!("valid={valid}");
-        }
-        AdminResponse::AccountCreated { account_id, token } => {
-            println!("Account created: id={account_id} token={token}");
-        }
         AdminResponse::AccountKicked {
             username,
             disconnected,
-        } => {
-            println!("Account kicked: username={username} disconnected={disconnected}");
-        }
+        } => print_account_kicked(username, *disconnected),
         AdminResponse::AccountBanned {
             username,
             disconnected,
             reason,
-        } => {
-            println!(
-                "Account banned: username={username} disconnected={disconnected} reason={reason}"
-            );
-        }
-        AdminResponse::AccountUnbanned { username } => {
-            println!("Account unbanned: username={username}");
-        }
-        AdminResponse::RegistrationApproved { account_id, token } => {
-            println!("Registration approved: id={account_id} token={token}");
-        }
+        } => print_account_banned(username, *disconnected, reason),
+        AdminResponse::AccountUnbanned { username } => print_account_unbanned(username),
         AdminResponse::CredentialsSet {
             account_id,
             username,
-        } => {
-            println!("Credentials set: account_id={account_id} username={username}");
+        } => print_credentials_set(*account_id, username),
+        _ => return false,
+    }
+    true
+}
+
+fn print_account_check_response(response: &AdminResponse) -> bool {
+    let AdminResponse::AccountChecked {
+        username,
+        exists,
+        account_id,
+        token_count,
+        pending_registration,
+        banned,
+        ban_reason,
+    } = response
+    else {
+        return false;
+    };
+
+    print_account_check(
+        username,
+        *exists,
+        *account_id,
+        *token_count,
+        *pending_registration,
+        *banned,
+        ban_reason.as_deref(),
+    );
+    true
+}
+
+fn print_simple_account_response(response: &AdminResponse) -> bool {
+    match response {
+        AdminResponse::PasswordChecked { username, valid } => {
+            print_password_check(username, *valid);
+        }
+        AdminResponse::AccountCreated { account_id, token } => {
+            print_account_created(*account_id, token);
+        }
+        AdminResponse::RegistrationApproved { account_id, token } => {
+            print_registration_approved(*account_id, token);
         }
         _ => return false,
     }
@@ -205,6 +214,35 @@ fn print_account_check(
     println!("pending_registration={pending_registration}");
     println!("banned={banned}");
     println!("ban_reason={}", ban_reason.unwrap_or("<none>"));
+}
+
+fn print_password_check(username: &str, valid: bool) {
+    println!("username={username}");
+    println!("valid={valid}");
+}
+
+fn print_account_created(account_id: u64, token: &str) {
+    println!("Account created: id={account_id} token={token}");
+}
+
+fn print_account_kicked(username: &str, disconnected: bool) {
+    println!("Account kicked: username={username} disconnected={disconnected}");
+}
+
+fn print_account_banned(username: &str, disconnected: bool, reason: &str) {
+    println!("Account banned: username={username} disconnected={disconnected} reason={reason}");
+}
+
+fn print_account_unbanned(username: &str) {
+    println!("Account unbanned: username={username}");
+}
+
+fn print_registration_approved(account_id: u64, token: &str) {
+    println!("Registration approved: id={account_id} token={token}");
+}
+
+fn print_credentials_set(account_id: u64, username: &str) {
+    println!("Credentials set: account_id={account_id} username={username}");
 }
 
 fn print_guild_created(character_id: u64, guild_id: u32, guild_name: &str) {
