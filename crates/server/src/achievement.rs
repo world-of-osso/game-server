@@ -85,8 +85,12 @@ impl Plugin for AchievementPlugin {
     }
 }
 
-type NewInWorldConnection<'w, 's> =
-    Query<'w, 's, (Entity, &'static PlayerLink, &'static InWorld), (With<Authenticated>, Added<InWorld>)>;
+type NewInWorldConnection<'w, 's> = Query<
+    'w,
+    's,
+    (Entity, &'static PlayerLink, &'static InWorld),
+    (With<Authenticated>, Added<InWorld>),
+>;
 
 fn send_initial_achievement_snapshot(
     mut commands: Commands,

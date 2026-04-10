@@ -23,8 +23,12 @@ impl Plugin for BarberShopPlugin {
     }
 }
 
-type NewInWorldConnection<'w, 's> =
-    Query<'w, 's, (Entity, &'static PlayerLink, &'static InWorld), (With<Authenticated>, Added<InWorld>)>;
+type NewInWorldConnection<'w, 's> = Query<
+    'w,
+    's,
+    (Entity, &'static PlayerLink, &'static InWorld),
+    (With<Authenticated>, Added<InWorld>),
+>;
 
 fn send_initial_barber_shop_snapshot(
     connections: NewInWorldConnection,

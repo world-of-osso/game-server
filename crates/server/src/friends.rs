@@ -81,8 +81,12 @@ impl Plugin for FriendsPlugin {
     }
 }
 
-type NewInWorldConnection<'w, 's> =
-    Query<'w, 's, (Entity, &'static PlayerLink, &'static InWorld), (With<Authenticated>, Added<InWorld>)>;
+type NewInWorldConnection<'w, 's> = Query<
+    'w,
+    's,
+    (Entity, &'static PlayerLink, &'static InWorld),
+    (With<Authenticated>, Added<InWorld>),
+>;
 
 fn send_initial_friends_snapshot(
     mut commands: Commands,
@@ -254,8 +258,22 @@ type PresenceParamSet<'w, 's> = ParamSet<
     'w,
     's,
     (
-        Query<'static, 'static, (&'static mut PresenceStatus, &'static mut PresenceTracker), With<Player>>,
-        Query<'static, 'static, (&'static Player, &'static Level, Option<&'static Zone>, Option<&'static PresenceStatus>)>,
+        Query<
+            'static,
+            'static,
+            (&'static mut PresenceStatus, &'static mut PresenceTracker),
+            With<Player>,
+        >,
+        Query<
+            'static,
+            'static,
+            (
+                &'static Player,
+                &'static Level,
+                Option<&'static Zone>,
+                Option<&'static PresenceStatus>,
+            ),
+        >,
     ),
 >;
 

@@ -220,8 +220,16 @@ fn process_duel_declines(
             };
             let (self_message, other_message) = decline_messages(was_target, &player.name);
             send_decline_snapshots(
-                DuelDeclineInfo { entity: link.0, opponent_name: &other_player.name, message: self_message.to_owned() },
-                DuelDeclineInfo { entity: other, opponent_name: &player.name, message: other_message },
+                DuelDeclineInfo {
+                    entity: link.0,
+                    opponent_name: &other_player.name,
+                    message: self_message.to_owned(),
+                },
+                DuelDeclineInfo {
+                    entity: other,
+                    opponent_name: &player.name,
+                    message: other_message,
+                },
                 &connections,
                 &mut senders,
             );
@@ -348,7 +356,13 @@ fn send_duel_resolution(
     };
     match resolution {
         DuelResolution::WinLoss { winner, loser } => send_win_loss_resolution(
-            DuelResolutionInfo { duel, winner, loser, challenger, target },
+            DuelResolutionInfo {
+                duel,
+                winner,
+                loser,
+                challenger,
+                target,
+            },
             players,
             connections,
             senders,
