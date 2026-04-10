@@ -514,11 +514,27 @@ mod tests {
 
     // --- Loading tests ---
 
-    fn test_db() -> Connection {
-        let conn = Connection::open_in_memory().unwrap();
+    fn create_spell_test_schema(conn: &Connection) {
+        create_spell_name_table(conn);
+        create_spell_misc_table(conn);
+        create_spell_effect_table(conn);
+        create_spell_power_table(conn);
+        create_spell_lookup_tables(conn);
+    }
+
+    fn create_spell_name_table(conn: &Connection) {
         conn.execute_batch(
-            "CREATE TABLE spell_name (ID INTEGER PRIMARY KEY, Name_lang TEXT NOT NULL DEFAULT '');
-             CREATE TABLE spell_misc (
+            "CREATE TABLE spell_name (
+                ID INTEGER PRIMARY KEY,
+                Name_lang TEXT NOT NULL DEFAULT ''
+            );",
+        )
+        .unwrap();
+    }
+
+    fn create_spell_misc_table(conn: &Connection) {
+        conn.execute_batch(
+            "CREATE TABLE spell_misc (
                 ID INTEGER PRIMARY KEY, Attributes_0 INTEGER NOT NULL DEFAULT 0,
                 Attributes_1 INTEGER DEFAULT 0, Attributes_2 INTEGER DEFAULT 0,
                 Attributes_3 INTEGER DEFAULT 0, Attributes_4 INTEGER DEFAULT 0,
@@ -542,8 +558,14 @@ mod tests {
                 SpellVisualScript INTEGER DEFAULT 0,
                 ActiveSpellVisualScript INTEGER DEFAULT 0,
                 SpellID INTEGER NOT NULL DEFAULT 0
-             );
-             CREATE TABLE spell_effect (
+            );",
+        )
+        .unwrap();
+    }
+
+    fn create_spell_effect_table(conn: &Connection) {
+        conn.execute_batch(
+            "CREATE TABLE spell_effect (
                 ID INTEGER PRIMARY KEY, EffectAura INTEGER DEFAULT 0,
                 DifficultyID INTEGER NOT NULL DEFAULT 0,
                 EffectIndex INTEGER NOT NULL DEFAULT 0,
@@ -570,8 +592,14 @@ mod tests {
                 ImplicitTarget_0 INTEGER NOT NULL DEFAULT 0,
                 ImplicitTarget_1 INTEGER DEFAULT 0,
                 SpellID INTEGER NOT NULL DEFAULT 0
-             );
-             CREATE TABLE spell_power (
+            );",
+        )
+        .unwrap();
+    }
+
+    fn create_spell_power_table(conn: &Connection) {
+        conn.execute_batch(
+            "CREATE TABLE spell_power (
                 ID INTEGER PRIMARY KEY, OrderIndex INTEGER NOT NULL DEFAULT 0,
                 ManaCost INTEGER NOT NULL DEFAULT 0,
                 ManaCostPerLevel INTEGER DEFAULT 0, ManaPerSecond INTEGER DEFAULT 0,
@@ -581,22 +609,64 @@ mod tests {
                 PowerType INTEGER NOT NULL DEFAULT 0,
                 RequiredAuraSpellID INTEGER DEFAULT 0, OptionalCost INTEGER DEFAULT 0,
                 SpellID INTEGER NOT NULL DEFAULT 0
-             );
-             CREATE TABLE spell_cast_times (ID INTEGER PRIMARY KEY, Base INTEGER NOT NULL DEFAULT 0, Minimum INTEGER NOT NULL DEFAULT 0);
-             CREATE TABLE spell_range (ID INTEGER PRIMARY KEY, DisplayName_lang TEXT DEFAULT '', DisplayNameShort_lang TEXT DEFAULT '', Flags INTEGER DEFAULT 0, RangeMin_0 REAL DEFAULT 0, RangeMin_1 REAL DEFAULT 0, RangeMax_0 REAL NOT NULL DEFAULT 0, RangeMax_1 REAL DEFAULT 0);
-             CREATE TABLE spell_cooldowns (ID INTEGER PRIMARY KEY, DifficultyID INTEGER NOT NULL DEFAULT 0, CategoryRecoveryTime INTEGER DEFAULT 0, RecoveryTime INTEGER DEFAULT 0, StartRecoveryTime INTEGER DEFAULT 0, AuraSpellID INTEGER DEFAULT 0, SpellID INTEGER NOT NULL DEFAULT 0);
-             CREATE TABLE spell_duration (ID INTEGER PRIMARY KEY, Duration INTEGER NOT NULL DEFAULT 0, MaxDuration INTEGER DEFAULT 0, DurationPerResource INTEGER DEFAULT 0);
-             -- Seed lookup data used by tests
-             INSERT INTO spell_cast_times VALUES (1, 0, 0);      -- instant
-             INSERT INTO spell_cast_times VALUES (4, 1000, 1000); -- 1.0s
-             INSERT INTO spell_cast_times VALUES (5, 1500, 1500); -- 1.5s
-             INSERT INTO spell_cast_times VALUES (14, 3000, 3000); -- 3.0s
-             INSERT INTO spell_range VALUES (1, 'Self', 'Self', 0, 0, 0, 0, 0);     -- self
-             INSERT INTO spell_range VALUES (2, 'Melee', 'Melee', 0, 0, 0, 5, 5);   -- melee
-             INSERT INTO spell_range VALUES (5, 'Long', 'Long', 0, 0, 0, 40, 40);   -- 40y
-             ;",
+            );",
         )
         .unwrap();
+    }
+
+    fn create_spell_lookup_tables(conn: &Connection) {
+        conn.execute_batch(
+            "CREATE TABLE spell_cast_times (
+                ID INTEGER PRIMARY KEY,
+                Base INTEGER NOT NULL DEFAULT 0,
+                Minimum INTEGER NOT NULL DEFAULT 0
+            );
+            CREATE TABLE spell_range (
+                ID INTEGER PRIMARY KEY,
+                DisplayName_lang TEXT DEFAULT '',
+                DisplayNameShort_lang TEXT DEFAULT '',
+                Flags INTEGER DEFAULT 0,
+                RangeMin_0 REAL DEFAULT 0,
+                RangeMin_1 REAL DEFAULT 0,
+                RangeMax_0 REAL NOT NULL DEFAULT 0,
+                RangeMax_1 REAL DEFAULT 0
+            );
+            CREATE TABLE spell_cooldowns (
+                ID INTEGER PRIMARY KEY,
+                DifficultyID INTEGER NOT NULL DEFAULT 0,
+                CategoryRecoveryTime INTEGER DEFAULT 0,
+                RecoveryTime INTEGER DEFAULT 0,
+                StartRecoveryTime INTEGER DEFAULT 0,
+                AuraSpellID INTEGER DEFAULT 0,
+                SpellID INTEGER NOT NULL DEFAULT 0
+            );
+            CREATE TABLE spell_duration (
+                ID INTEGER PRIMARY KEY,
+                Duration INTEGER NOT NULL DEFAULT 0,
+                MaxDuration INTEGER DEFAULT 0,
+                DurationPerResource INTEGER DEFAULT 0
+            );",
+        )
+        .unwrap();
+    }
+
+    fn seed_spell_test_lookups(conn: &Connection) {
+        conn.execute_batch(
+            "INSERT INTO spell_cast_times VALUES (1, 0, 0);
+            INSERT INTO spell_cast_times VALUES (4, 1000, 1000);
+            INSERT INTO spell_cast_times VALUES (5, 1500, 1500);
+            INSERT INTO spell_cast_times VALUES (14, 3000, 3000);
+            INSERT INTO spell_range VALUES (1, 'Self', 'Self', 0, 0, 0, 0, 0);
+            INSERT INTO spell_range VALUES (2, 'Melee', 'Melee', 0, 0, 0, 5, 5);
+            INSERT INTO spell_range VALUES (5, 'Long', 'Long', 0, 0, 0, 40, 40);",
+        )
+        .unwrap();
+    }
+
+    fn test_db() -> Connection {
+        let conn = Connection::open_in_memory().unwrap();
+        create_spell_test_schema(&conn);
+        seed_spell_test_lookups(&conn);
         conn
     }
 
