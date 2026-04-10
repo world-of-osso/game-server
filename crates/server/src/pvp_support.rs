@@ -207,21 +207,39 @@ pub(super) fn apply_single_rated_result(
         reward.conquest,
     );
     state.queue = None;
-    persistence::save_pvp(&db.db, entry.character_id, &state.progress);
-    persistence::save_currencies(&db.db, entry.character_id, &currencies.0);
-    send_rated_result_update(
+    persist_rated_result(db, entry.character_id, &state.progress, &currencies.0);
+    send_rated_result_notifications(
         connections,
         entry.character_id,
         &state,
-        senders,
-        reward.message,
-    );
-    send_rated_currency_update(
-        connections,
-        entry.character_id,
         &currencies.0,
+        reward.message,
+        senders,
         currency_senders,
     );
+}
+
+fn persist_rated_result(
+    db: &GameDatabase,
+    character_id: u64,
+    progress: &PlayerPvpProgress,
+    wallet: &CurrencyWallet,
+) {
+    persistence::save_pvp(&db.db, character_id, progress);
+    persistence::save_currencies(&db.db, character_id, wallet);
+}
+
+fn send_rated_result_notifications(
+    connections: &Query<(Entity, &PlayerLink, &InWorld), With<Authenticated>>,
+    character_id: u64,
+    state: &PlayerPvpState,
+    wallet: &CurrencyWallet,
+    message: String,
+    senders: &mut Query<&mut MessageSender<PvpStateUpdate>>,
+    currency_senders: &mut Query<&mut MessageSender<CurrencyStateUpdate>>,
+) {
+    send_rated_result_update(connections, character_id, state, senders, message);
+    send_rated_currency_update(connections, character_id, wallet, currency_senders);
 }
 
 fn update_rated_bracket(
