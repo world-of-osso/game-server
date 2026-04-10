@@ -1,5 +1,5 @@
 use super::*;
-use crate::pvp::pvp_support::build_pvp_snapshot;
+use crate::pvp::pvp_support::{apply_rated_currency_rewards, build_pvp_snapshot};
 use shared::currency::{CurrencyWallet, currency_by_id};
 use shared::protocol::{PvpQueueKindSnapshot, PvpQueueSnapshot};
 

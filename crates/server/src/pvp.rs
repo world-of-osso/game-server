@@ -11,12 +11,13 @@ use shared::protocol::{
 };
 
 use self::pvp_support::{
-    bracket_label, connection_for_character, format_bg_queue_error, queue_label, send_pvp_error,
-    send_pvp_update,
+    RatedParticipant, apply_single_rated_result, bracket_label, build_rated_reward,
+    connection_for_character, current_seconds, default_brackets, format_bg_queue_error,
+    queue_label, send_pvp_error, send_pvp_update,
 };
 use crate::auth::{Authenticated, InWorld};
 use crate::networking::PlayerLink;
-use crate::persistence::{self, GameDatabase};
+use crate::persistence::GameDatabase;
 
 #[path = "pvp_support.rs"]
 mod pvp_support;
@@ -592,24 +593,6 @@ fn decide_winner<'a>(
     }
 }
 
-struct RatedParticipant<'a> {
-    entry: &'a RatedQueueEntry,
-    name: String,
-}
-
-struct RatedReward {
-    honor: u32,
-    conquest: u32,
-    new_rating: u32,
-    message: String,
-    outcome: RatedMatchOutcome,
-}
-
-enum RatedMatchOutcome {
-    Winner,
-    Loser,
-}
-
 fn apply_rated_result(
     winner: RatedParticipant<'_>,
     loser: RatedParticipant<'_>,
@@ -633,14 +616,14 @@ fn apply_rated_result(
         .unwrap_or(DEFAULT_RATING);
     let (winner_adj, loser_adj) = calculate_rating(winner_old, loser_old);
     apply_single_rated_result(
-        winner.entry,
         build_rated_reward(
-            RatedMatchOutcome::Winner,
+            pvp_support::RatedMatchOutcome::Winner,
             &winner,
             &loser,
             winner_adj.old_rating,
             winner_adj.new_rating,
         ),
+        winner.entry,
         players,
         connections,
         db,
@@ -648,177 +631,20 @@ fn apply_rated_result(
         currency_senders,
     );
     apply_single_rated_result(
-        loser.entry,
         build_rated_reward(
-            RatedMatchOutcome::Loser,
+            pvp_support::RatedMatchOutcome::Loser,
             &loser,
             &winner,
             loser_adj.old_rating,
             loser_adj.new_rating,
         ),
+        loser.entry,
         players,
         connections,
         db,
         senders,
         currency_senders,
     );
-}
-
-fn build_rated_reward(
-    outcome: RatedMatchOutcome,
-    participant: &RatedParticipant<'_>,
-    opponent: &RatedParticipant<'_>,
-    old_rating: u32,
-    new_rating: u32,
-) -> RatedReward {
-    let bracket = bracket_label(&participant.entry.bracket);
-    match outcome {
-        RatedMatchOutcome::Winner => RatedReward {
-            honor: WINNER_HONOR,
-            conquest: WINNER_CONQUEST,
-            new_rating,
-            message: format!(
-                "{} defeated {} in {} ({} -> {})",
-                participant.name, opponent.name, bracket, old_rating, new_rating
-            ),
-            outcome,
-        },
-        RatedMatchOutcome::Loser => RatedReward {
-            honor: LOSER_HONOR,
-            conquest: LOSER_CONQUEST,
-            new_rating,
-            message: format!(
-                "{} lost to {} in {} ({} -> {})",
-                participant.name, opponent.name, bracket, old_rating, new_rating
-            ),
-            outcome,
-        },
-    }
-}
-
-fn apply_single_rated_result(
-    entry: &RatedQueueEntry,
-    reward: RatedReward,
-    players: &mut Query<(
-        &shared::components::Player,
-        &mut PlayerPvpState,
-        &mut crate::currency::PlayerCurrencies,
-    )>,
-    connections: &Query<(Entity, &PlayerLink, &InWorld), With<Authenticated>>,
-    db: &GameDatabase,
-    senders: &mut Query<&mut MessageSender<PvpStateUpdate>>,
-    currency_senders: &mut Query<&mut MessageSender<CurrencyStateUpdate>>,
-) {
-    let Ok((_player, mut state, mut currencies)) = players.get_mut(entry.player_entity) else {
-        return;
-    };
-
-    update_rated_bracket(
-        state.progress.bracket_mut(entry.bracket.clone()),
-        reward.new_rating,
-        reward.outcome,
-    );
-    apply_rated_currency_rewards(
-        &mut state.progress,
-        &mut currencies.0,
-        reward.honor,
-        reward.conquest,
-    );
-    state.queue = None;
-    persistence::save_pvp(&db.db, entry.character_id, &state.progress);
-    persistence::save_currencies(&db.db, entry.character_id, &currencies.0);
-    send_rated_result_update(
-        connections,
-        entry.character_id,
-        &state,
-        senders,
-        reward.message,
-    );
-    send_rated_currency_update(
-        connections,
-        entry.character_id,
-        &currencies.0,
-        currency_senders,
-    );
-}
-
-fn update_rated_bracket(
-    bracket: &mut PlayerPvpBracketState,
-    new_rating: u32,
-    outcome: RatedMatchOutcome,
-) {
-    bracket.rating = new_rating;
-    match outcome {
-        RatedMatchOutcome::Winner => {
-            bracket.season_wins += 1;
-            bracket.weekly_wins += 1;
-        }
-        RatedMatchOutcome::Loser => {
-            bracket.season_losses += 1;
-            bracket.weekly_losses += 1;
-        }
-    }
-}
-
-fn apply_rated_currency_rewards(
-    progress: &mut PlayerPvpProgress,
-    wallet: &mut CurrencyWallet,
-    honor: u32,
-    conquest: u32,
-) {
-    let _ = crate::currency::earn_currency(wallet, HONOR_CURRENCY_ID, honor);
-    let _ = crate::currency::earn_currency(wallet, CONQUEST_CURRENCY_ID, conquest);
-    sync_progress_currencies_from_wallet(progress, wallet);
-}
-
-fn send_rated_result_update(
-    connections: &Query<(Entity, &PlayerLink, &InWorld), With<Authenticated>>,
-    character_id: u64,
-    state: &PlayerPvpState,
-    senders: &mut Query<&mut MessageSender<PvpStateUpdate>>,
-    message: String,
-) {
-    let Some((conn_entity, _player_entity)) = connection_for_character(connections, character_id)
-    else {
-        return;
-    };
-    send_pvp_update(conn_entity, state, Some(message), None, senders);
-}
-
-fn send_rated_currency_update(
-    connections: &Query<(Entity, &PlayerLink, &InWorld), With<Authenticated>>,
-    character_id: u64,
-    wallet: &CurrencyWallet,
-    senders: &mut Query<&mut MessageSender<CurrencyStateUpdate>>,
-) {
-    let Some((conn_entity, _player_entity)) = connection_for_character(connections, character_id)
-    else {
-        return;
-    };
-    crate::currency::send_currency_update(conn_entity, wallet, None, None, senders);
-}
-
-fn default_brackets() -> Vec<PlayerPvpBracketState> {
-    [
-        PvpBracketSnapshot::Arena2v2,
-        PvpBracketSnapshot::Arena3v3,
-        PvpBracketSnapshot::RatedBattleground,
-        PvpBracketSnapshot::SoloShuffle,
-    ]
-    .into_iter()
-    .map(|bracket| PlayerPvpBracketState {
-        bracket,
-        rating: DEFAULT_RATING,
-        season_wins: 0,
-        season_losses: 0,
-        weekly_wins: 0,
-        weekly_losses: 0,
-    })
-    .collect()
-}
-
-fn current_seconds(time: &Time) -> u64 {
-    time.elapsed_secs_f64().floor() as u64
 }
 
 #[cfg(test)]
