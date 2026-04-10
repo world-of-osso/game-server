@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/shared", "crates/server", "crates/client", "crates/integration-tests"]
+members = ["crates/server", "crates/client", "crates/integration-tests"]
 
 [workspace.package]
 edition = "2024"
@@ -11,4 +11,4 @@ rust-version = "1.89"
 opt-level = 2
 
 [patch."https://github.com/world-of-osso/shared-protocol.git"]
-shared = { path = "crates/shared" }
+shared = { path = "../shared-protocol" }
