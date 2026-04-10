@@ -1,11 +1,14 @@
-use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 use redb::{Database, ReadableDatabase, ReadableTable, TableDefinition};
-use shared::components::{Health, Player, Position};
 use shared::profession::{PlayerProfessions, Profession};
 use shared::reputation::CharacterReputation;
 use std::path::Path;
 
+#[path = "persistence_runtime.rs"]
+mod persistence_runtime;
+
+pub use self::persistence_runtime::ClientId;
+use self::persistence_runtime::{flush_all_characters_on_exit, save_dirty_characters};
 pub use crate::persistence_character::*;
 pub use crate::persistence_types::*;
 
@@ -657,79 +660,6 @@ pub fn save_motd(db: &Database, motd: &shared::motd::Motd) {
             .expect("Failed to insert motd");
     }
     txn.commit().expect("Failed to commit motd save");
-}
-
-/// Marker component linking a player entity to its character_id for periodic saves.
-#[derive(Component, Debug)]
-pub struct ClientId(pub u64);
-
-/// Save interval in ticks (300 ticks at 20Hz = 15 seconds).
-const SAVE_INTERVAL_TICKS: u64 = 300;
-
-type DirtyPlayerData = (
-    &'static Position,
-    &'static Health,
-    &'static Player,
-    &'static ClientId,
-);
-type DirtyPlayerFilter = (
-    Or<(Changed<Position>, Changed<Health>, Changed<Player>)>,
-    With<Player>,
-    With<ClientId>,
-);
-
-#[derive(SystemParam)]
-struct DirtyPlayersQuery<'w, 's> {
-    query: Query<'w, 's, DirtyPlayerData, DirtyPlayerFilter>,
-}
-
-/// Periodically save all player data to the database.
-fn save_dirty_characters(
-    db: Option<Res<GameDatabase>>,
-    players: DirtyPlayersQuery,
-    mut tick_count: Local<u64>,
-) {
-    *tick_count += 1;
-    if !(*tick_count).is_multiple_of(SAVE_INTERVAL_TICKS) {
-        return;
-    }
-    let Some(db) = db else { return };
-    let mut saved_count = 0;
-    for (pos, health, player, cid) in players.query.iter() {
-        let mut data = load_character(&db.db, cid.0)
-            .unwrap_or_else(|| CharacterData::from_components(player, pos, health));
-        data.sync_live_components(player, pos, health);
-        save_character(&db.db, cid.0, &data);
-        saved_count += 1;
-    }
-    if saved_count == 0 {
-        return;
-    }
-    info!("Periodic save: {} characters written", saved_count);
-}
-
-fn flush_all_characters_on_exit(
-    db: Option<Res<GameDatabase>>,
-    players: Query<(&Position, &Health, &Player, &ClientId)>,
-    mut exit_events: MessageReader<AppExit>,
-) {
-    if exit_events.read().next().is_none() {
-        return;
-    }
-
-    let Some(db) = db else { return };
-
-    let mut saved_count = 0usize;
-    for (pos, health, player, cid) in players.iter() {
-        let mut data = load_character(&db.db, cid.0)
-            .unwrap_or_else(|| CharacterData::from_components(player, pos, health));
-        data.sync_live_components(player, pos, health);
-        save_character(&db.db, cid.0, &data);
-        saved_count += 1;
-    }
-    if saved_count > 0 {
-        info!("Shutdown save: {} characters written", saved_count);
-    }
 }
 
 #[cfg(test)]

@@ -1,6 +1,7 @@
 use super::*;
 use shared::components::{
-    CharacterAppearance, EquipmentAppearance, EquipmentVisualSlot, EquippedAppearanceEntry,
+    CharacterAppearance, EquipmentAppearance, EquipmentVisualSlot, EquippedAppearanceEntry, Health,
+    Player, Position,
 };
 
 #[derive(bitcode::Encode)]
