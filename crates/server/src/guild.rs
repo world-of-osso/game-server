@@ -258,39 +258,76 @@ fn process_set_officer_note_requests(
             continue;
         }
         let Ok(guild) = guilds.get(link.0) else {
-            send_guild_update(
-                conn_entity,
-                None,
-                None,
-                Some("not in a guild".into()),
-                &mut senders,
-            );
+            send_not_in_guild_error(conn_entity, &mut senders);
             continue;
         };
         for request in requests {
             match update_officer_note(&db.db, guild, request) {
-                Ok(message) => broadcast_guild_update(
+                Ok(message) => broadcast_officer_note_update(
                     &db.db,
                     &connections,
                     &guilds,
                     &online_players,
                     guild,
-                    GuildUpdateMeta {
-                        message: Some(message),
-                        error: None,
-                    },
+                    message,
                     &mut senders,
                 ),
-                Err(error) => send_guild_update(
+                Err(error) => send_officer_note_error(
+                    &db.db,
+                    &online_players,
+                    guild,
                     conn_entity,
-                    Some(build_guild_snapshot(&db.db, guild, &online_players)),
-                    None,
-                    Some(error),
+                    error,
                     &mut senders,
                 ),
             }
         }
     }
+}
+
+fn send_not_in_guild_error(conn_entity: Entity, senders: &mut GuildSenders) {
+    send_guild_update(
+        conn_entity,
+        None,
+        None,
+        Some("not in a guild".into()),
+        senders,
+    );
+}
+
+fn broadcast_officer_note_update(
+    db: &redb::Database,
+    connections: &ActiveConnections,
+    guilds: &GuildMemberships,
+    online_players: &OnlinePlayers,
+    guild: &GuildMembership,
+    message: String,
+    senders: &mut GuildSenders,
+) {
+    broadcast_guild_update(
+        db,
+        connections,
+        guilds,
+        online_players,
+        guild,
+        GuildUpdateMeta {
+            message: Some(message),
+            error: None,
+        },
+        senders,
+    );
+}
+
+fn send_officer_note_error(
+    db: &redb::Database,
+    online_players: &OnlinePlayers,
+    guild: &GuildMembership,
+    conn_entity: Entity,
+    error: String,
+    senders: &mut GuildSenders,
+) {
+    let snapshot = build_guild_snapshot(db, guild, online_players);
+    send_guild_update(conn_entity, Some(snapshot), None, Some(error), senders);
 }
 
 fn update_officer_note(
