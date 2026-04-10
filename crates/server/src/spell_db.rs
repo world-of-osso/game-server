@@ -14,6 +14,7 @@ use shared::components::SpellSchool;
 use shared::spell_data::{ResourceType, SpellCost, SpellData, SpellEffectDef, SpellTarget};
 
 const WORLD_DB_PATH: &str = "data/world.db";
+const SPELL_ATTR0_CASTABLE_WHILE_MOVING: u32 = 0x10000000;
 
 /// Runtime spell database loaded from world.db at startup.
 #[derive(Resource, Debug)]
@@ -191,6 +192,23 @@ struct EffectRow {
     implicit_target_0: u32,
 }
 
+struct SpellLookups {
+    cast_times: HashMap<u32, f32>,
+    ranges: HashMap<u32, f32>,
+    cooldowns: HashMap<u32, f32>,
+    effects: HashMap<u32, Vec<EffectRow>>,
+    power_costs: HashMap<u32, (i32, u32)>,
+}
+
+struct SpellRow {
+    id: u32,
+    name: String,
+    school_mask: u32,
+    cast_time_idx: u32,
+    range_idx: u32,
+    attributes_0: u32,
+}
+
 /// Load effects grouped by SpellID. Returns map of SpellID → sorted effects.
 fn load_effects(conn: &Connection) -> HashMap<u32, Vec<EffectRow>> {
     let mut stmt = conn
@@ -255,19 +273,21 @@ fn load_power_costs(conn: &Connection) -> HashMap<u32, (i32, u32)> {
     map
 }
 
-/// Load spells from world.db into a SpellDatabase.
-pub fn load_spell_database(conn: &Connection) -> SpellDatabase {
-    let cast_times = load_cast_times(conn);
-    let ranges = load_ranges(conn);
-    let cooldowns = load_cooldowns(conn);
-    let effects = load_effects(conn);
-    let power_costs = load_power_costs(conn);
+fn load_spell_lookups(conn: &Connection) -> SpellLookups {
+    SpellLookups {
+        cast_times: load_cast_times(conn),
+        ranges: load_ranges(conn),
+        cooldowns: load_cooldowns(conn),
+        effects: load_effects(conn),
+        power_costs: load_power_costs(conn),
+    }
+}
 
-    // Join spell_name + spell_misc (DifficultyID=0) to get base spell data
+fn load_spell_rows(conn: &Connection) -> Vec<SpellRow> {
     let mut stmt = conn
         .prepare(
             "SELECT n.ID, n.Name_lang, m.SchoolMask, m.CastingTimeIndex, m.RangeIndex,
-                    m.Attributes_0, m.Speed
+                    m.Attributes_0
              FROM spell_name n
              INNER JOIN spell_misc m ON m.SpellID = n.ID AND m.DifficultyID = 0
              WHERE n.Name_lang != ''",
@@ -276,76 +296,88 @@ pub fn load_spell_database(conn: &Connection) -> SpellDatabase {
 
     let rows = stmt
         .query_map([], |row| {
-            Ok((
-                row.get::<_, u32>(0)?,    // ID
-                row.get::<_, String>(1)?, // Name
-                row.get::<_, u32>(2)?,    // SchoolMask
-                row.get::<_, u32>(3)?,    // CastingTimeIndex
-                row.get::<_, u32>(4)?,    // RangeIndex
-                row.get::<_, i64>(5)?,    // Attributes_0 (signed in DB)
-                row.get::<_, f64>(6)?,    // Speed
-            ))
+            Ok(SpellRow {
+                id: row.get(0)?,
+                name: row.get(1)?,
+                school_mask: row.get(2)?,
+                cast_time_idx: row.get(3)?,
+                range_idx: row.get(4)?,
+                attributes_0: row.get::<_, i64>(5)? as u32,
+            })
         })
         .expect("Failed to query spells");
 
-    let mut spells = HashMap::new();
-    for row in rows {
-        let (id, name, school_mask, cast_time_idx, range_idx, attributes_0_raw, _speed) =
-            row.unwrap();
-        let attributes_0 = attributes_0_raw as u32;
+    rows.map(|row| row.unwrap()).collect()
+}
 
-        // Build effects array (up to 3)
-        let mut spell_effects: [Option<SpellEffectDef>; 3] = [None, None, None];
-        let mut target = SpellTarget::Hostile;
+fn build_spell_effects(
+    effect_rows: Option<&Vec<EffectRow>>,
+) -> ([Option<SpellEffectDef>; 3], SpellTarget) {
+    let mut spell_effects: [Option<SpellEffectDef>; 3] = [None, None, None];
+    let mut target = SpellTarget::Hostile;
 
-        if let Some(effect_rows) = effects.get(&id) {
-            for er in effect_rows.iter().take(3) {
-                let idx = er.effect_index as usize;
-                if idx < 3 {
-                    spell_effects[idx] =
-                        map_effect(er.effect_type, er.base_points, er.ap_coeff, er.sp_coeff);
-                }
-                // Use first effect's target for the spell target
-                if er.effect_index == 0 {
-                    target = target_from_implicit(er.implicit_target_0);
-                }
+    if let Some(effect_rows) = effect_rows {
+        for effect in effect_rows.iter().take(3) {
+            let idx = effect.effect_index as usize;
+            if idx < 3 {
+                spell_effects[idx] = map_effect(
+                    effect.effect_type,
+                    effect.base_points,
+                    effect.ap_coeff,
+                    effect.sp_coeff,
+                );
+            }
+            if effect.effect_index == 0 {
+                target = target_from_implicit(effect.implicit_target_0);
             }
         }
+    }
 
-        // Power cost
-        let cost = power_costs.get(&id).and_then(|&(pt, amount)| {
+    (spell_effects, target)
+}
+
+fn load_spell_cost(lookups: &SpellLookups, spell_id: u32) -> Option<SpellCost> {
+    lookups
+        .power_costs
+        .get(&spell_id)
+        .and_then(|&(pt, amount)| {
             power_type(pt).map(|resource| SpellCost {
                 resource,
                 amount: amount as f32,
             })
-        });
+        })
+}
 
-        // SPELL_ATTR0_CASTABLE_WHILE_MOVING = 0x10000000 (bit 28)
-        let cast_while_moving = attributes_0 & 0x10000000 != 0;
-        let cast_time = cast_times.get(&cast_time_idx).copied().unwrap_or(0.0);
-        let range = ranges.get(&range_idx).copied().unwrap_or(30.0);
-        let cooldown = cooldowns.get(&id).copied().unwrap_or(0.0);
-        // Instant spells are always interruptible=false; cast-time spells default to true
-        let interruptible = cast_time > 0.0;
+fn build_spell_data(row: SpellRow, lookups: &SpellLookups) -> SpellData {
+    let (effects, target) = build_spell_effects(lookups.effects.get(&row.id));
+    let cast_time = lookups
+        .cast_times
+        .get(&row.cast_time_idx)
+        .copied()
+        .unwrap_or(0.0);
 
-        spells.insert(
-            id,
-            SpellData {
-                id,
-                name,
-                school: school_from_mask(school_mask),
-                cast_time,
-                cooldown,
-                cost,
-                target,
-                range,
-                cast_while_moving,
-                interruptible,
-                effects: spell_effects,
-            },
-        );
+    SpellData {
+        id: row.id,
+        name: row.name,
+        school: school_from_mask(row.school_mask),
+        cast_time,
+        cooldown: lookups.cooldowns.get(&row.id).copied().unwrap_or(0.0),
+        cost: load_spell_cost(lookups, row.id),
+        target,
+        range: lookups.ranges.get(&row.range_idx).copied().unwrap_or(30.0),
+        cast_while_moving: row.attributes_0 & SPELL_ATTR0_CASTABLE_WHILE_MOVING != 0,
+        interruptible: cast_time > 0.0,
+        effects,
     }
+}
 
+/// Load spells from world.db into a SpellDatabase.
+pub fn load_spell_database(conn: &Connection) -> SpellDatabase {
+    let lookups = load_spell_lookups(conn);
+    let spells = load_spell_rows(conn)
+        .into_iter()
+        .map(|row| (row.id, build_spell_data(row, &lookups)))
+        .collect();
     SpellDatabase { spells }
 }
 
@@ -582,8 +614,7 @@ mod tests {
         .unwrap();
     }
 
-    fn insert_effect(
-        conn: &Connection,
+    struct EffectInsert {
         effect_id: u32,
         spell_id: u32,
         index: u32,
@@ -592,20 +623,22 @@ mod tests {
         sp_coeff: f32,
         ap_coeff: f32,
         target: u32,
-    ) {
+    }
+
+    fn insert_effect(conn: &Connection, effect: EffectInsert) {
         conn.execute(
             "INSERT INTO spell_effect (ID, DifficultyID, EffectIndex, Effect, EffectBasePointsF,
              EffectBonusCoefficient, BonusCoefficientFromAP, ImplicitTarget_0, SpellID)
              VALUES (?1, 0, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
             rusqlite::params![
-                effect_id,
-                index,
-                effect_type,
-                base_points,
-                sp_coeff,
-                ap_coeff,
-                target,
-                spell_id
+                effect.effect_id,
+                effect.index,
+                effect.effect_type,
+                effect.base_points,
+                effect.sp_coeff,
+                effect.ap_coeff,
+                effect.target,
+                effect.spell_id
             ],
         )
         .unwrap();
@@ -623,7 +656,19 @@ mod tests {
     fn load_single_spell() {
         let conn = test_db();
         insert_spell(&conn, 585, "Smite", 0x02);
-        insert_effect(&conn, 1, 585, 0, 2, 200.0, 0.7, 0.0, 6);
+        insert_effect(
+            &conn,
+            EffectInsert {
+                effect_id: 1,
+                spell_id: 585,
+                index: 0,
+                effect_type: 2,
+                base_points: 200.0,
+                sp_coeff: 0.7,
+                ap_coeff: 0.0,
+                target: 6,
+            },
+        );
         let db = load_spell_database(&conn);
         assert_eq!(db.len(), 1);
         let spell = db.get(585).unwrap();
@@ -635,7 +680,19 @@ mod tests {
     fn load_spell_with_ap_coefficient() {
         let conn = test_db();
         insert_spell(&conn, 12294, "Mortal Strike", 0x01);
-        insert_effect(&conn, 1, 12294, 0, 2, 0.0, 0.0, 5.8, 6);
+        insert_effect(
+            &conn,
+            EffectInsert {
+                effect_id: 1,
+                spell_id: 12294,
+                index: 0,
+                effect_type: 2,
+                base_points: 0.0,
+                sp_coeff: 0.0,
+                ap_coeff: 5.8,
+                target: 6,
+            },
+        );
         let db = load_spell_database(&conn);
         let spell = db.get(12294).unwrap();
         match &spell.effects[0] {
@@ -650,7 +707,19 @@ mod tests {
     fn load_spell_with_sp_coefficient() {
         let conn = test_db();
         insert_spell(&conn, 585, "Smite", 0x02);
-        insert_effect(&conn, 1, 585, 0, 2, 200.0, 0.7143, 0.0, 6);
+        insert_effect(
+            &conn,
+            EffectInsert {
+                effect_id: 1,
+                spell_id: 585,
+                index: 0,
+                effect_type: 2,
+                base_points: 200.0,
+                sp_coeff: 0.7143,
+                ap_coeff: 0.0,
+                target: 6,
+            },
+        );
         let db = load_spell_database(&conn);
         let spell = db.get(585).unwrap();
         match &spell.effects[0] {
@@ -695,7 +764,19 @@ mod tests {
             [],
         )
         .unwrap();
-        insert_effect(&conn, 1, 1, 0, 10, 800.0, 0.0, 0.0, 1);
+        insert_effect(
+            &conn,
+            EffectInsert {
+                effect_id: 1,
+                spell_id: 1,
+                index: 0,
+                effect_type: 10,
+                base_points: 800.0,
+                sp_coeff: 0.0,
+                ap_coeff: 0.0,
+                target: 1,
+            },
+        );
         let db = load_spell_database(&conn);
         let spell = db.get(1).unwrap();
         assert!(matches!(
@@ -750,7 +831,19 @@ mod tests {
     fn load_spell_unsupported_effect_is_none() {
         let conn = test_db();
         insert_spell(&conn, 1, "Weird", 0x01);
-        insert_effect(&conn, 1, 1, 0, 999, 0.0, 0.0, 0.0, 6);
+        insert_effect(
+            &conn,
+            EffectInsert {
+                effect_id: 1,
+                spell_id: 1,
+                index: 0,
+                effect_type: 999,
+                base_points: 0.0,
+                sp_coeff: 0.0,
+                ap_coeff: 0.0,
+                target: 6,
+            },
+        );
         let db = load_spell_database(&conn);
         let spell = db.get(1).unwrap();
         assert!(spell.effects[0].is_none());
@@ -818,7 +911,19 @@ mod tests {
             "INSERT INTO spell_misc (ID, DifficultyID, CastingTimeIndex, RangeIndex, SchoolMask, Speed, Attributes_0, SpellID)
              VALUES (999, 1, 1, 1, 0x20, 0, 0, 1)", [],
         ).unwrap();
-        insert_effect(&conn, 1, 1, 0, 2, 100.0, 0.0, 0.0, 6);
+        insert_effect(
+            &conn,
+            EffectInsert {
+                effect_id: 1,
+                spell_id: 1,
+                index: 0,
+                effect_type: 2,
+                base_points: 100.0,
+                sp_coeff: 0.0,
+                ap_coeff: 0.0,
+                target: 6,
+            },
+        );
         // Insert difficulty effect — should be ignored
         conn.execute(
             "INSERT INTO spell_effect (ID, DifficultyID, EffectIndex, Effect, EffectBasePointsF,
