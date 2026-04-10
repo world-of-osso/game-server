@@ -197,40 +197,39 @@ fn execute_schema(conn: &Connection, schema: &str) {
     conn.execute_batch(schema).unwrap();
 }
 
+const SPELL_LOOKUP_TABLES_SCHEMA: &str = "CREATE TABLE spell_cast_times (
+    ID INTEGER PRIMARY KEY,
+    Base INTEGER NOT NULL DEFAULT 0,
+    Minimum INTEGER NOT NULL DEFAULT 0
+);
+CREATE TABLE spell_range (
+    ID INTEGER PRIMARY KEY,
+    DisplayName_lang TEXT DEFAULT '',
+    DisplayNameShort_lang TEXT DEFAULT '',
+    Flags INTEGER DEFAULT 0,
+    RangeMin_0 REAL DEFAULT 0,
+    RangeMin_1 REAL DEFAULT 0,
+    RangeMax_0 REAL NOT NULL DEFAULT 0,
+    RangeMax_1 REAL DEFAULT 0
+);
+CREATE TABLE spell_cooldowns (
+    ID INTEGER PRIMARY KEY,
+    DifficultyID INTEGER NOT NULL DEFAULT 0,
+    CategoryRecoveryTime INTEGER DEFAULT 0,
+    RecoveryTime INTEGER DEFAULT 0,
+    StartRecoveryTime INTEGER DEFAULT 0,
+    AuraSpellID INTEGER DEFAULT 0,
+    SpellID INTEGER NOT NULL DEFAULT 0
+);
+CREATE TABLE spell_duration (
+    ID INTEGER PRIMARY KEY,
+    Duration INTEGER NOT NULL DEFAULT 0,
+    MaxDuration INTEGER DEFAULT 0,
+    DurationPerResource INTEGER DEFAULT 0
+);";
+
 fn create_spell_lookup_tables(conn: &Connection) {
-    conn.execute_batch(
-        "CREATE TABLE spell_cast_times (
-            ID INTEGER PRIMARY KEY,
-            Base INTEGER NOT NULL DEFAULT 0,
-            Minimum INTEGER NOT NULL DEFAULT 0
-        );
-        CREATE TABLE spell_range (
-            ID INTEGER PRIMARY KEY,
-            DisplayName_lang TEXT DEFAULT '',
-            DisplayNameShort_lang TEXT DEFAULT '',
-            Flags INTEGER DEFAULT 0,
-            RangeMin_0 REAL DEFAULT 0,
-            RangeMin_1 REAL DEFAULT 0,
-            RangeMax_0 REAL NOT NULL DEFAULT 0,
-            RangeMax_1 REAL DEFAULT 0
-        );
-        CREATE TABLE spell_cooldowns (
-            ID INTEGER PRIMARY KEY,
-            DifficultyID INTEGER NOT NULL DEFAULT 0,
-            CategoryRecoveryTime INTEGER DEFAULT 0,
-            RecoveryTime INTEGER DEFAULT 0,
-            StartRecoveryTime INTEGER DEFAULT 0,
-            AuraSpellID INTEGER DEFAULT 0,
-            SpellID INTEGER NOT NULL DEFAULT 0
-        );
-        CREATE TABLE spell_duration (
-            ID INTEGER PRIMARY KEY,
-            Duration INTEGER NOT NULL DEFAULT 0,
-            MaxDuration INTEGER DEFAULT 0,
-            DurationPerResource INTEGER DEFAULT 0
-        );",
-    )
-    .unwrap();
+    execute_schema(conn, SPELL_LOOKUP_TABLES_SCHEMA);
 }
 
 fn seed_spell_test_lookups(conn: &Connection) {
