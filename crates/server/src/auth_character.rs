@@ -257,23 +257,13 @@ fn handle_select(
         return;
     };
     let state = load_selected_character_state(db, req.character_id, data.race);
+    let guild = state.guild.clone();
     let player_entity = spawn_player_entity(
         commands,
         &data,
         req.character_id,
-        state.guild.as_ref(),
-        PlayerInitState {
-            gold: state.gold,
-            professions: state.professions,
-            achievements: state.achievements,
-            pvp: state.pvp,
-            world_map: state.world_map,
-            friends: state.friends,
-            ignore_list: state.ignore_list,
-            collections: state.collections,
-            currencies: crate::currency::PlayerCurrencies(state.currencies),
-            reputation: state.reputation,
-        },
+        guild.as_ref(),
+        build_player_init_state(state),
     );
     insert_world_components(commands, conn, player_entity, req.character_id);
     send_enter_success(conn, enter_senders, player_entity);
@@ -282,6 +272,21 @@ fn handle_select(
         "Character {} entered world (account {})",
         req.character_id, account_id
     );
+}
+
+fn build_player_init_state(state: SelectedCharacterState) -> PlayerInitState {
+    PlayerInitState {
+        gold: state.gold,
+        professions: state.professions,
+        achievements: state.achievements,
+        pvp: state.pvp,
+        world_map: state.world_map,
+        friends: state.friends,
+        ignore_list: state.ignore_list,
+        collections: state.collections,
+        currencies: crate::currency::PlayerCurrencies(state.currencies),
+        reputation: state.reputation,
+    }
 }
 
 fn validate_ownership(db: &GameDatabase, account_id: u64, character_id: u64) -> bool {
