@@ -2,6 +2,10 @@
 
 Bevy 0.18 authoritative game server for the WoW project (Lightyear networking, redb auth/characters, SQLite world data).
 
+## Wiki
+
+LLM-maintained knowledge base at `docs/wiki/`. See `docs/wiki/SCHEMA.md` for conventions and workflows. Read `docs/wiki/index.md` first when answering questions about the project.
+
 ## Data
 
 - `data/world.db` (SQLite) stores world/reference data loaded at runtime (creature templates, creature spawns, waypoint data).
