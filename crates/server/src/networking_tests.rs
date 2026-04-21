@@ -37,9 +37,14 @@ fn spawn_player(world: &mut World, x: f32, y: f32, z: f32) -> Entity {
 }
 
 fn make_input(dx: f32, dy: f32, dz: f32) -> PlayerInput {
+    let facing_yaw = if dx.abs() > f32::EPSILON || dz.abs() > f32::EPSILON {
+        dx.atan2(dz)
+    } else {
+        0.0
+    };
     PlayerInput {
         direction: [dx, dy, dz],
-        facing_yaw: 0.0,
+        facing_yaw,
         jumping: false,
         running: true,
         swimming: false,

@@ -238,7 +238,7 @@ fn swim_speed_differs_from_ground_speed() {
     let player = spawn_player(app.world_mut(), 0.0, 0.0, 0.0);
     let input = PlayerInput {
         direction: [1.0, 0.0, 0.0],
-        facing_yaw: 0.0,
+        facing_yaw: std::f32::consts::FRAC_PI_2,
         jumping: false,
         running: true,
         swimming: true,
@@ -298,7 +298,7 @@ fn server_normalizes_direction_preventing_speed_hack() {
     let normal_input = make_input(1.0, 0.0, 0.0);
     let hack_input = PlayerInput {
         direction: [10.0, 0.0, 0.0],
-        facing_yaw: 0.0,
+        facing_yaw: std::f32::consts::FRAC_PI_2,
         jumping: false,
         running: true,
         swimming: false,

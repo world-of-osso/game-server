@@ -46,7 +46,7 @@ fn walk_speed_when_not_running() {
     let player = spawn_player(app.world_mut(), 0.0, 0.0, 0.0);
     let input = PlayerInput {
         direction: [1.0, 0.0, 0.0],
-        facing_yaw: 0.0,
+        facing_yaw: std::f32::consts::FRAC_PI_2,
         jumping: false,
         running: false,
         swimming: false,
@@ -67,7 +67,7 @@ fn walk_speed_moves_at_2_5_yards_per_sec() {
     let player = spawn_player(app.world_mut(), 0.0, 0.0, 0.0);
     let input = PlayerInput {
         direction: [1.0, 0.0, 0.0],
-        facing_yaw: 0.0,
+        facing_yaw: std::f32::consts::FRAC_PI_2,
         jumping: false,
         running: false,
         swimming: false,
