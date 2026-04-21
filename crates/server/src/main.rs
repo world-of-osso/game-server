@@ -14,6 +14,7 @@ mod currency;
 mod death;
 mod duel;
 mod durability;
+mod faction;
 mod friends;
 mod guild;
 mod ignore_list;

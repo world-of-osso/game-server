@@ -14,12 +14,20 @@ use shared::protocol::{
 
 use crate::auth::{Authenticated, InWorld};
 use crate::durability::EquippedDurability;
+use crate::faction::faction_for_race;
 use crate::networking::PlayerLink;
 use crate::world_data::WorldData;
 
 const WORLD_MAP_ID: u16 = 0;
 const GHOST_RESURRECT_HEALTH_PCT: f32 = 0.5;
 const GHOST_RESURRECT_MANA_PCT: f32 = 0.5;
+
+#[path = "death_support.rs"]
+mod support;
+
+#[cfg(test)]
+use self::support::build_snapshot;
+use self::support::{current_seconds, send_error, send_update};
 
 #[derive(Component, Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct PlayerDeathState {
@@ -95,14 +103,6 @@ fn build_graveyard_registry(world_data: &WorldData) -> GraveyardRegistry {
         });
     }
     graveyards
-}
-
-fn faction_for_race(race: u8) -> u8 {
-    match race {
-        1 | 3 | 4 | 7 | 11 | 22 | 25 | 29 | 30 | 32 | 34 | 37 => 1,
-        2 | 5 | 6 | 8 | 9 | 10 | 26 | 27 | 28 | 31 | 35 | 36 => 2,
-        _ => 0,
-    }
 }
 
 fn lookup_graveyard(
@@ -679,89 +679,6 @@ fn complete_resurrection(
     if let Some(mana) = mana.as_mut() {
         mana.current = mana.max * GHOST_RESURRECT_MANA_PCT;
     }
-}
-
-fn send_update(
-    conn_entity: Entity,
-    position: &Position,
-    death_state: PlayerDeathState,
-    message: Option<String>,
-    error: Option<String>,
-    senders: &mut Query<&mut MessageSender<DeathStateUpdate>>,
-) {
-    let Ok(mut sender) = senders.get_mut(conn_entity) else {
-        return;
-    };
-    sender.send::<DeathChannel>(DeathStateUpdate {
-        snapshot: Some(build_snapshot(position, &death_state)),
-        message,
-        error,
-    });
-}
-
-fn send_error(
-    conn_entity: Entity,
-    senders: &mut Query<&mut MessageSender<DeathStateUpdate>>,
-    error: &str,
-) {
-    let Ok(mut sender) = senders.get_mut(conn_entity) else {
-        return;
-    };
-    sender.send::<DeathChannel>(DeathStateUpdate {
-        snapshot: None,
-        message: None,
-        error: Some(error.into()),
-    });
-}
-
-fn build_snapshot(position: &Position, death_state: &PlayerDeathState) -> DeathSnapshot {
-    DeathSnapshot {
-        state: map_state_snapshot(death_state.state),
-        corpse: death_state.corpse.as_ref().map(snapshot_from_corpse),
-        graveyard: death_state.graveyard.as_ref().map(snapshot_from_graveyard),
-        can_resurrect_at_corpse: death_state
-            .corpse
-            .as_ref()
-            .is_some_and(|corpse| in_corpse_range(position.x, position.y, position.z, corpse)),
-        spirit_healer_available: death_state.graveyard.as_ref().is_some_and(|graveyard| {
-            let dx = position.x - graveyard.x;
-            let dy = position.y - graveyard.y;
-            let dz = position.z - graveyard.z;
-            dx * dx + dy * dy + dz * dz
-                <= shared::death::SPIRIT_HEALER_RANGE * shared::death::SPIRIT_HEALER_RANGE
-        }),
-    }
-}
-
-fn map_state_snapshot(state: DeathState) -> DeathStateSnapshot {
-    match state {
-        DeathState::Alive => DeathStateSnapshot::Alive,
-        DeathState::Dead => DeathStateSnapshot::Dead,
-        DeathState::Ghost => DeathStateSnapshot::Ghost,
-        DeathState::Resurrecting => DeathStateSnapshot::Resurrecting,
-    }
-}
-
-fn snapshot_from_corpse(corpse: &Corpse) -> DeathPositionSnapshot {
-    DeathPositionSnapshot {
-        map_id: corpse.map_id,
-        x: corpse.x,
-        y: corpse.y,
-        z: corpse.z,
-    }
-}
-
-fn snapshot_from_graveyard(graveyard: &Graveyard) -> DeathPositionSnapshot {
-    DeathPositionSnapshot {
-        map_id: graveyard.map_id,
-        x: graveyard.x,
-        y: graveyard.y,
-        z: graveyard.z,
-    }
-}
-
-fn current_seconds(time: &Time) -> u64 {
-    time.elapsed_secs_f64().floor() as u64
 }
 
 #[cfg(test)]

@@ -15,7 +15,7 @@ use crate::persistence_character::{
     GuildMemberRecord, find_character_id_by_name, list_guild_members, load_guild_member_note,
     load_guild_profile, save_guild_member_note, save_guild_profile,
 };
-use crate::persistence_types::GuildMemberNoteData;
+use crate::persistence_types::{GuildMemberNoteData, GuildProfileData};
 use shared::components::Level;
 
 type NewConnections<'w, 's> = Query<
@@ -47,41 +47,40 @@ type GuildQueryReceivers<'w, 's> = Query<
     ),
     (With<Authenticated>, With<InWorld>),
 >;
-type GuildMotdReceivers<'w, 's> = Query<
+type GuildProfileReceivers<'w, 's, Message> = Query<
     'w,
     's,
     (
         Entity,
         &'static PlayerLink,
-        &'static mut MessageReceiver<SetGuildMotd>,
+        &'static mut MessageReceiver<Message>,
     ),
     (With<Authenticated>, With<InWorld>),
 >;
-type GuildInfoReceivers<'w, 's> = Query<
-    'w,
-    's,
-    (
-        Entity,
-        &'static PlayerLink,
-        &'static mut MessageReceiver<SetGuildInfo>,
-    ),
-    (With<Authenticated>, With<InWorld>),
->;
-type GuildOfficerNoteReceivers<'w, 's> = Query<
-    'w,
-    's,
-    (
-        Entity,
-        &'static PlayerLink,
-        &'static mut MessageReceiver<SetGuildOfficerNote>,
-    ),
-    (With<Authenticated>, With<InWorld>),
->;
+type GuildMotdReceivers<'w, 's> = GuildProfileReceivers<'w, 's, SetGuildMotd>;
+type GuildInfoReceivers<'w, 's> = GuildProfileReceivers<'w, 's, SetGuildInfo>;
+type GuildOfficerNoteReceivers<'w, 's> = GuildProfileReceivers<'w, 's, SetGuildOfficerNote>;
 
 #[derive(Clone)]
 struct GuildUpdateMeta {
     message: Option<String>,
     error: Option<String>,
+}
+
+trait GuildProfileTextRequest {
+    fn trimmed_text(&self) -> String;
+}
+
+impl GuildProfileTextRequest for SetGuildMotd {
+    fn trimmed_text(&self) -> String {
+        self.text.trim().to_string()
+    }
+}
+
+impl GuildProfileTextRequest for SetGuildInfo {
+    fn trimmed_text(&self) -> String {
+        self.text.trim().to_string()
+    }
 }
 
 pub struct GuildPlugin;
@@ -93,8 +92,7 @@ impl Plugin for GuildPlugin {
             (
                 send_initial_guild_state,
                 process_query_requests,
-                process_set_motd_requests,
-                process_set_info_requests,
+                process_profile_text_updates,
                 process_set_officer_note_requests,
             )
                 .chain(),
@@ -158,87 +156,80 @@ fn process_query_requests(
     }
 }
 
-fn process_set_motd_requests(
+fn process_profile_text_updates(
     db: Res<GameDatabase>,
-    mut receivers: GuildMotdReceivers,
+    mut motd_receivers: GuildMotdReceivers,
+    mut info_receivers: GuildInfoReceivers,
     connections: ActiveConnections,
     guilds: GuildMemberships,
     online_players: OnlinePlayers,
     mut senders: GuildSenders,
 ) {
-    for (conn_entity, link, mut receiver) in &mut receivers {
-        let requests: Vec<_> = receiver.receive().collect();
-        if requests.is_empty() {
-            continue;
-        }
-        let Ok(guild) = guilds.get(link.0) else {
-            send_guild_update(
-                conn_entity,
-                None,
-                None,
-                Some("not in a guild".into()),
-                &mut senders,
-            );
-            continue;
-        };
-        for request in requests {
-            let mut profile = load_guild_profile(&db.db, guild.guild_id);
-            profile.motd = request.text.trim().to_string();
-            save_guild_profile(&db.db, guild.guild_id, &profile);
-            broadcast_guild_update(
-                &db.db,
-                &connections,
-                &guilds,
-                &online_players,
-                guild,
-                GuildUpdateMeta {
-                    message: Some("guild motd updated".into()),
-                    error: None,
-                },
-                &mut senders,
-            );
-        }
-    }
+    process_profile_text_requests(
+        &db.db,
+        &mut motd_receivers,
+        &connections,
+        &guilds,
+        &online_players,
+        &mut senders,
+        |profile, text| {
+            profile.motd = text;
+            "guild motd updated"
+        },
+    );
+    process_profile_text_requests(
+        &db.db,
+        &mut info_receivers,
+        &connections,
+        &guilds,
+        &online_players,
+        &mut senders,
+        |profile, text| {
+            profile.info_text = text;
+            "guild info updated"
+        },
+    );
 }
 
-fn process_set_info_requests(
-    db: Res<GameDatabase>,
-    mut receivers: GuildInfoReceivers,
-    connections: ActiveConnections,
-    guilds: GuildMemberships,
-    online_players: OnlinePlayers,
-    mut senders: GuildSenders,
-) {
-    for (conn_entity, link, mut receiver) in &mut receivers {
-        let requests: Vec<_> = receiver.receive().collect();
+fn process_profile_text_requests<Request, Apply>(
+    db: &redb::Database,
+    receivers: &mut GuildProfileReceivers<Request>,
+    connections: &ActiveConnections,
+    guilds: &GuildMemberships,
+    online_players: &OnlinePlayers,
+    senders: &mut GuildSenders,
+    apply: Apply,
+) where
+    Request: GuildProfileTextRequest + Send + Sync + 'static,
+    Apply: Fn(&mut GuildProfileData, String) -> &'static str,
+{
+    for (conn_entity, link, mut receiver) in receivers.iter_mut() {
+        let requests: Vec<_> = receiver
+            .receive()
+            .map(|request: Request| request.trimmed_text())
+            .collect();
         if requests.is_empty() {
             continue;
         }
         let Ok(guild) = guilds.get(link.0) else {
-            send_guild_update(
-                conn_entity,
-                None,
-                None,
-                Some("not in a guild".into()),
-                &mut senders,
-            );
+            send_not_in_guild_error(conn_entity, senders);
             continue;
         };
-        for request in requests {
-            let mut profile = load_guild_profile(&db.db, guild.guild_id);
-            profile.info_text = request.text.trim().to_string();
-            save_guild_profile(&db.db, guild.guild_id, &profile);
+        for text in requests {
+            let mut profile = load_guild_profile(db, guild.guild_id);
+            let success_message = apply(&mut profile, text);
+            save_guild_profile(db, guild.guild_id, &profile);
             broadcast_guild_update(
-                &db.db,
-                &connections,
-                &guilds,
-                &online_players,
+                db,
+                connections,
+                guilds,
+                online_players,
                 guild,
                 GuildUpdateMeta {
-                    message: Some("guild info updated".into()),
+                    message: Some(success_message.into()),
                     error: None,
                 },
-                &mut senders,
+                senders,
             );
         }
     }

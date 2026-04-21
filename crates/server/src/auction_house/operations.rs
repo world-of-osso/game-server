@@ -1,4 +1,5 @@
 use super::*;
+use crate::faction::faction_for_race;
 
 /// Deposit = vendor_sell_price * stack_count * duration_multiplier.
 pub(super) fn deposit_cost(
@@ -14,15 +15,6 @@ pub(super) fn deposit_cost(
     vendor_sell_price
         .saturating_mul(stack_count)
         .saturating_mul(multiplier)
-}
-
-/// Map race ID to auction faction: 1=Alliance, 2=Horde.
-fn faction_for_race(race: u8) -> u8 {
-    match race {
-        1 | 3 | 4 | 7 | 11 | 22 | 25 | 29 | 30 | 32 | 34 | 37 => 1,
-        2 | 5 | 6 | 8 | 9 | 10 | 26 | 27 | 28 | 31 | 35 | 36 => 2,
-        _ => 0,
-    }
 }
 
 pub(super) fn claim_mail(
