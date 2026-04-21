@@ -20,7 +20,7 @@ use crate::messaging;
 use crate::persistence::{self, CharacterData, ClientId, GameDatabase};
 use crate::terrain_height::{GRAVITY, GROUND_SNAP_THRESHOLD, TerrainHeightMap};
 
-const SERVER_PORT: u16 = 5000;
+const DEFAULT_SERVER_PORT: u16 = 5000;
 /// Squared radius for immediate visibility grant on world entry (matches interest system).
 const INITIAL_VISIBILITY_RADIUS_SQ: f32 = 100.0 * 100.0;
 const DEFAULT_RUN_SPEED: f32 = 7.0;
@@ -148,7 +148,7 @@ impl Plugin for ServerNetworkPlugin {
 }
 
 fn start_server(mut commands: Commands) {
-    let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), SERVER_PORT);
+    let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), server_port());
     let entity = commands
         .spawn((
             LocalAddr(addr),
@@ -158,6 +158,21 @@ fn start_server(mut commands: Commands) {
         .id();
     commands.trigger(Start { entity });
     info!("Server listening on {addr}");
+}
+
+fn server_port() -> u16 {
+    match std::env::var("GAME_SERVER_PORT") {
+        Ok(value) => match value.parse::<u16>() {
+            Ok(0) | Err(_) => {
+                warn!(
+                    "Invalid GAME_SERVER_PORT={value:?}; falling back to default {DEFAULT_SERVER_PORT}"
+                );
+                DEFAULT_SERVER_PORT
+            }
+            Ok(port) => port,
+        },
+        Err(_) => DEFAULT_SERVER_PORT,
+    }
 }
 
 /// When a new transport link is established, insert a ReplicationSender.

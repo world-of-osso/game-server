@@ -3,6 +3,13 @@ use shared::components::{
     CharacterAppearance, EquipmentAppearance, EquipmentVisualSlot, EquippedAppearanceEntry, Health,
     Player, Position,
 };
+use std::path::PathBuf;
+use std::sync::{Mutex, OnceLock};
+
+fn env_lock() -> &'static Mutex<()> {
+    static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+    LOCK.get_or_init(|| Mutex::new(()))
+}
 
 #[derive(bitcode::Encode)]
 struct LegacyCharacterData {
@@ -177,6 +184,21 @@ fn save_overwrites_existing() {
     let loaded = load_character(&db, 1).unwrap();
     assert_eq!(loaded.x, 100.0);
     assert_eq!(loaded.health, 50.0);
+}
+
+#[test]
+fn game_database_path_defaults_to_project_data_file() {
+    let _guard = env_lock().lock().unwrap();
+    unsafe { std::env::remove_var("GAME_SERVER_DB_PATH") };
+    assert_eq!(game_database_path(), PathBuf::from("data/game.redb"));
+}
+
+#[test]
+fn game_database_path_uses_env_override() {
+    let _guard = env_lock().lock().unwrap();
+    unsafe { std::env::set_var("GAME_SERVER_DB_PATH", "/tmp/custom.redb") };
+    assert_eq!(game_database_path(), PathBuf::from("/tmp/custom.redb"));
+    unsafe { std::env::remove_var("GAME_SERVER_DB_PATH") };
 }
 
 #[test]

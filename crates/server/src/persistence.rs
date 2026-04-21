@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use redb::{Database, ReadableDatabase, ReadableTable, TableDefinition};
 use shared::profession::{PlayerProfessions, Profession};
 use shared::reputation::CharacterReputation;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 #[path = "persistence_runtime.rs"]
 mod persistence_runtime;
@@ -147,11 +147,11 @@ fn open_database_with_retry(path: &Path) -> Database {
 }
 
 fn open_database(mut commands: Commands) {
-    let path = Path::new("data/game.redb");
+    let path = game_database_path();
     if let Some(parent) = path.parent() {
         std::fs::create_dir_all(parent).expect("Failed to create data directory");
     }
-    let db = open_database_with_retry(path);
+    let db = open_database_with_retry(&path);
     create_tables(&db);
     let motd = load_motd(&db);
     if motd.is_set() {
@@ -160,6 +160,12 @@ fn open_database(mut commands: Commands) {
     commands.insert_resource(motd);
     info!("Database opened at {}", path.display());
     commands.insert_resource(GameDatabase { db });
+}
+
+fn game_database_path() -> PathBuf {
+    std::env::var_os("GAME_SERVER_DB_PATH")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| PathBuf::from("data/game.redb"))
 }
 
 pub(crate) fn create_tables(db: &Database) {
