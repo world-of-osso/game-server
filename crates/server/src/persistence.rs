@@ -176,6 +176,7 @@ pub(crate) fn create_tables(db: &Database) {
     let _ = txn.open_table(REPUTATIONS);
     let _ = txn.open_table(CURRENCIES);
     let _ = txn.open_table(ACHIEVEMENTS);
+    let _ = txn.open_table(PVP_STATES);
     let _ = txn.open_table(WORLD_MAPS);
     let _ = txn.open_table(FRIENDS);
     let _ = txn.open_table(IGNORE_LISTS);

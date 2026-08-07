@@ -159,6 +159,21 @@ fn legacy_appearance_v1_with_equipment_record() -> LegacyCharacterDataV3Appearan
 }
 
 #[test]
+fn legacy_database_migrates_missing_pvp_state_table() {
+    let file = tempfile::NamedTempFile::new().unwrap();
+    let db = redb::Database::create(file.path()).unwrap();
+    {
+        let txn = db.begin_write().unwrap();
+        txn.open_table(CHARACTERS).unwrap();
+        txn.commit().unwrap();
+    }
+
+    create_tables(&db);
+
+    assert_eq!(load_pvp(&db, 42), crate::pvp::PlayerPvpProgress::default());
+}
+
+#[test]
 fn character_data_round_trip() {
     let db = temp_database();
     let data = sample_data();
