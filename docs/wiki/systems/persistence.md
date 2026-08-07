@@ -19,8 +19,15 @@ Pure Rust, ACID, embedded B-tree. No external server process. Tables:
 | `mail` | `MailId` | MailData |
 | `auctions` | `AuctionId` | AuctionData |
 | `guilds` | `GuildId` | GuildData |
+| `pvp_states` | `CharacterId` | PlayerPvpProgress |
 
 File: `data/game.redb`
+
+## Legacy Database Incident: Missing `pvp_states`
+
+On August 7, 2026, an existing `data/game.redb` database lacked the `pvp_states` table because `create_tables()` did not open `PVP_STATES`. Character selection then panicked while loading PvP state with `TableDoesNotExist("pvp_states")`. The documented `run-dev.sh` loop restarted the server after the panic; the client repeatedly re-entered `InWorld`, eventually triggering repeated GPU resource allocation and a downstream GPU out-of-memory failure. The rendering failure was a consequence of the server restart loop, not the root cause.
+
+Commit `ec5ff52` fixed the migration path by adding `PVP_STATES` to `create_tables()`. It also added a regression test that creates a legacy database without the table, runs `create_tables()`, and verifies `load_pvp()` returns the default state.
 
 ## Save Triggers
 
@@ -47,7 +54,8 @@ Read-only at runtime. Loaded into `Res<WorldData>` and `Res<SpellDatabase>` at s
 
 - [ARCHITECTURE.md](../../../ARCHITECTURE.md) — "Persistence Strategy" section
 - [AGENTS.md](../../../AGENTS.md) — redb file path (`data/game.redb`)
-- [crates/server/src/persistence.rs](../../../crates/server/src/persistence.rs) — save systems
+- [crates/server/src/persistence.rs](../../../crates/server/src/persistence.rs) — table creation and save/load systems
+- [crates/server/src/persistence_tests.rs](../../../crates/server/src/persistence_tests.rs) — legacy-database migration regression test added by `ec5ff52`
 
 ## See Also
 
