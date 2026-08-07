@@ -29,6 +29,10 @@ On August 7, 2026, an existing `data/game.redb` database lacked the `pvp_states`
 
 Commit `ec5ff52` fixed the migration path by adding `PVP_STATES` to `create_tables()`. It also added a regression test that creates a legacy database without the table, runs `create_tables()`, and verifies `load_pvp()` returns the default state.
 
+## Legacy Inventory Encoding Incident
+
+Production inventory rows for characters 6 and 7 used the pre-April 6, 2026 `InventoryItemData` encoding, which lacks `unique_auction`. Commit `01eaf52` made startup eagerly rewrite those legacy bytes to the current encoding, setting `unique_auction` to `false`. If inventory bytes match neither the current encoding nor a known legacy encoding, startup now fails explicitly; it does not install a permanent load-time fallback.
+
 ## Save Triggers
 
 Character data is written to redb on:
