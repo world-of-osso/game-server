@@ -18,6 +18,23 @@ pub(crate) const CHARACTERS: TableDefinition<u64, &[u8]> = TableDefinition::new(
 /// Inventory table: PlayerId (u64) -> serialized inventory (bytes).
 const INVENTORIES: TableDefinition<u64, &[u8]> = TableDefinition::new("inventories");
 
+#[derive(bitcode::Decode)]
+struct LegacyInventoryItemData {
+    item_guid: u64,
+    item_id: u32,
+    name: String,
+    quality: u8,
+    required_level: u16,
+    stack_count: u32,
+    vendor_sell_price: u32,
+}
+
+#[derive(bitcode::Decode)]
+struct LegacyInventoryData {
+    gold: u32,
+    items: Vec<LegacyInventoryItemData>,
+}
+
 /// Profession table: PlayerId (u64) -> serialized profession state (bytes).
 const PROFESSIONS: TableDefinition<u64, &[u8]> = TableDefinition::new("professions");
 
@@ -195,6 +212,91 @@ pub(crate) fn create_tables(db: &Database) {
     let _ = txn.open_table(NEXT_IDS);
     let _ = txn.open_table(SERVER_SETTINGS);
     txn.commit().expect("Failed to commit initial tables");
+    migrate_legacy_inventories(db);
+}
+
+fn migrate_legacy_inventories(db: &Database) {
+    let migrations = collect_legacy_inventory_migrations(db);
+    if migrations.is_empty() {
+        return;
+    }
+
+    let migrated_count = migrations.len();
+    persist_inventory_migrations(db, &migrations);
+    info!("Migrated {migrated_count} legacy inventory records");
+}
+
+fn collect_legacy_inventory_migrations(db: &Database) -> Vec<(u64, Vec<u8>)> {
+    let txn = db
+        .begin_read()
+        .expect("Failed to begin inventory migration read");
+    let table = txn
+        .open_table(INVENTORIES)
+        .expect("Failed to open inventories table for migration");
+    let rows = table
+        .iter()
+        .expect("Failed to iterate inventories for migration");
+
+    rows.filter_map(|row| {
+        let (key, value) = row.expect("Failed to read inventory migration row");
+        let character_id = key.value();
+        encode_current_inventory_if_legacy(value.value())
+            .unwrap_or_else(|error| {
+                panic!("Failed to migrate inventory for character {character_id}: {error}")
+            })
+            .map(|bytes| (character_id, bytes))
+    })
+    .collect()
+}
+
+fn encode_current_inventory_if_legacy(bytes: &[u8]) -> Result<Option<Vec<u8>>, String> {
+    match bitcode::decode::<InventoryData>(bytes) {
+        Ok(_) => Ok(None),
+        Err(current_error) => {
+            let legacy = bitcode::decode::<LegacyInventoryData>(bytes).map_err(|legacy_error| {
+                format!("current decode {current_error:?}; legacy decode {legacy_error:?}")
+            })?;
+            let current = inventory_data_from_legacy(legacy);
+            Ok(Some(bitcode::encode(&current)))
+        }
+    }
+}
+
+fn inventory_data_from_legacy(legacy: LegacyInventoryData) -> InventoryData {
+    InventoryData {
+        gold: legacy.gold,
+        items: legacy
+            .items
+            .into_iter()
+            .map(|item| InventoryItemData {
+                item_guid: item.item_guid,
+                item_id: item.item_id,
+                name: item.name,
+                quality: item.quality,
+                required_level: item.required_level,
+                stack_count: item.stack_count,
+                vendor_sell_price: item.vendor_sell_price,
+                unique_auction: false,
+            })
+            .collect(),
+    }
+}
+
+fn persist_inventory_migrations(db: &Database, migrations: &[(u64, Vec<u8>)]) {
+    let txn = db
+        .begin_write()
+        .expect("Failed to begin inventory migration write");
+    {
+        let mut table = txn
+            .open_table(INVENTORIES)
+            .expect("Failed to open inventories table for migration");
+        for (character_id, bytes) in migrations {
+            table
+                .insert(*character_id, bytes.as_slice())
+                .expect("Failed to write migrated inventory");
+        }
+    }
+    txn.commit().expect("Failed to commit inventory migration");
 }
 
 pub fn load_inventory(db: &Database, character_id: u64) -> InventoryData {

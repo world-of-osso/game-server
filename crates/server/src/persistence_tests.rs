@@ -77,6 +77,23 @@ struct LegacyCharacterDataV3AppearanceV1 {
     equipment_appearance: EquipmentAppearance,
 }
 
+#[derive(bitcode::Encode)]
+struct LegacyInventoryItemData {
+    item_guid: u64,
+    item_id: u32,
+    name: String,
+    quality: u8,
+    required_level: u16,
+    stack_count: u32,
+    vendor_sell_price: u32,
+}
+
+#[derive(bitcode::Encode)]
+struct LegacyInventoryData {
+    gold: u32,
+    items: Vec<LegacyInventoryItemData>,
+}
+
 fn sample_data() -> CharacterData {
     CharacterData {
         name: "TestPlayer".into(),
@@ -156,6 +173,58 @@ fn legacy_appearance_v1_with_equipment_record() -> LegacyCharacterDataV3Appearan
             }],
         },
     }
+}
+
+#[test]
+fn legacy_inventory_is_rewritten_during_startup() {
+    let file = tempfile::NamedTempFile::new().unwrap();
+    let db = redb::Database::create(file.path()).unwrap();
+    let legacy = LegacyInventoryData {
+        gold: 42_000,
+        items: vec![LegacyInventoryItemData {
+            item_guid: 7,
+            item_id: 2589,
+            name: "Linen Cloth".into(),
+            quality: 1,
+            required_level: 1,
+            stack_count: 20,
+            vendor_sell_price: 13,
+        }],
+    };
+    let legacy_bytes = bitcode::encode(&legacy);
+    {
+        let txn = db.begin_write().unwrap();
+        {
+            let mut table = txn.open_table(INVENTORIES).unwrap();
+            table.insert(42, legacy_bytes.as_slice()).unwrap();
+        }
+        txn.commit().unwrap();
+    }
+
+    create_tables(&db);
+
+    let stored_bytes = {
+        let txn = db.begin_read().unwrap();
+        let table = txn.open_table(INVENTORIES).unwrap();
+        table.get(42).unwrap().unwrap().value().to_vec()
+    };
+    let stored: InventoryData = bitcode::decode(&stored_bytes).unwrap();
+    assert_eq!(
+        stored,
+        InventoryData {
+            gold: 42_000,
+            items: vec![InventoryItemData {
+                item_guid: 7,
+                item_id: 2589,
+                name: "Linen Cloth".into(),
+                quality: 1,
+                required_level: 1,
+                stack_count: 20,
+                vendor_sell_price: 13,
+                unique_auction: false,
+            }],
+        }
+    );
 }
 
 #[test]
