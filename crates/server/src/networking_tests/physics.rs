@@ -321,6 +321,80 @@ fn server_normalizes_direction_preventing_speed_hack() {
     );
 }
 
+fn component_last_changed<T: Component>(
+    app: &App,
+    entity: Entity,
+) -> bevy::ecs::change_detection::Tick {
+    app.world()
+        .entity(entity)
+        .get_ref::<T>()
+        .unwrap()
+        .last_changed()
+}
+
+#[test]
+fn grounded_gravity_does_not_dirty_unchanged_player_state() {
+    let mut app = setup_app_with_time();
+    app.insert_resource(crate::terrain_height::test_helpers::flat_terrain(
+        100.0, 100.0, 50.0,
+    ));
+    let player = spawn_player(app.world_mut(), 90.0, 50.0, -90.0);
+    app.update();
+
+    let position_tick = component_last_changed::<Position>(&app, player);
+    let velocity_tick = component_last_changed::<VerticalVelocity>(&app, player);
+    let tracker_tick = component_last_changed::<FallTracker>(&app, player);
+    let health_tick = component_last_changed::<Health>(&app, player);
+
+    app.world_mut()
+        .run_system_once(apply_terrain_gravity)
+        .unwrap();
+
+    assert_eq!(
+        component_last_changed::<Position>(&app, player),
+        position_tick
+    );
+    assert_eq!(
+        component_last_changed::<VerticalVelocity>(&app, player),
+        velocity_tick
+    );
+    assert_eq!(
+        component_last_changed::<FallTracker>(&app, player),
+        tracker_tick
+    );
+    assert_eq!(component_last_changed::<Health>(&app, player), health_tick);
+}
+
+#[test]
+fn gravity_system_applies_real_falling_state_changes_only() {
+    let mut app = setup_app_with_time();
+    app.insert_resource(crate::terrain_height::test_helpers::flat_terrain(
+        100.0, 100.0, 50.0,
+    ));
+    let player = spawn_player(app.world_mut(), 90.0, 60.0, -90.0);
+    app.update();
+
+    let position_tick = component_last_changed::<Position>(&app, player);
+    let tracker_tick = component_last_changed::<FallTracker>(&app, player);
+    let health_tick = component_last_changed::<Health>(&app, player);
+
+    app.world_mut()
+        .run_system_once(apply_terrain_gravity)
+        .unwrap();
+
+    let position = app.world().entity(player).get::<Position>().unwrap();
+    assert!(position.y < 60.0);
+    assert_ne!(
+        component_last_changed::<Position>(&app, player),
+        position_tick
+    );
+    assert_ne!(
+        component_last_changed::<FallTracker>(&app, player),
+        tracker_tick
+    );
+    assert_eq!(component_last_changed::<Health>(&app, player), health_tick);
+}
+
 #[test]
 fn terrain_clamps_below_ground() {
     let map = crate::terrain_height::test_helpers::flat_terrain(100.0, 100.0, 50.0);

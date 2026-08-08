@@ -86,7 +86,7 @@ pub struct PlayerLink(pub Entity);
 #[derive(Component, Debug, Default)]
 pub struct CombatTarget(pub Option<Entity>);
 
-#[derive(Component, Debug, Clone, Copy)]
+#[derive(Component, Debug, Clone, Copy, PartialEq)]
 pub(crate) struct FallTracker {
     peak_y: f32,
     last_y: f32,
@@ -537,15 +537,44 @@ pub(crate) fn apply_terrain_gravity(
     };
     let dt = time.delta_secs();
     for (mut pos, mut vert_vel, mut fall_tracker, mut health, death_state) in players.iter_mut() {
-        if death_state
-            .as_ref()
-            .is_some_and(|state| state.state != DeathState::Alive)
-        {
-            fall_tracker.last_y = pos.y;
-            fall_tracker.peak_y = pos.y;
-            fall_tracker.airborne = false;
-            continue;
+        let (next_pos, next_vert_vel, next_fall_tracker, next_health) = calculate_gravity_state(
+            terrain,
+            *pos,
+            *vert_vel,
+            *fall_tracker,
+            *health,
+            death_state,
+            dt,
+        );
+        if *pos != next_pos {
+            *pos = next_pos;
         }
+        if *vert_vel != next_vert_vel {
+            *vert_vel = next_vert_vel;
+        }
+        if *fall_tracker != next_fall_tracker {
+            *fall_tracker = next_fall_tracker;
+        }
+        if *health != next_health {
+            *health = next_health;
+        }
+    }
+}
+
+fn calculate_gravity_state(
+    terrain: &TerrainHeightMap,
+    mut pos: Position,
+    mut vert_vel: VerticalVelocity,
+    mut fall_tracker: FallTracker,
+    mut health: Health,
+    death_state: Option<&crate::death::PlayerDeathState>,
+    dt: f32,
+) -> (Position, VerticalVelocity, FallTracker, Health) {
+    if death_state.is_some_and(|state| state.state != DeathState::Alive) {
+        fall_tracker.last_y = pos.y;
+        fall_tracker.peak_y = pos.y;
+        fall_tracker.airborne = false;
+    } else {
         clamp_to_terrain(
             terrain,
             &mut pos,
@@ -555,6 +584,7 @@ pub(crate) fn apply_terrain_gravity(
             dt,
         );
     }
+    (pos, vert_vel, fall_tracker, health)
 }
 
 /// Clamp a position (Bevy space) to terrain: apply vertical velocity and gravity.
