@@ -41,6 +41,113 @@ fn input_updates_rotation() {
 }
 
 #[test]
+fn identical_input_does_not_dirty_rotation_or_speed_but_real_changes_do() {
+    let mut app = setup_app_with_time();
+    let player = spawn_player(app.world_mut(), 0.0, 0.0, 0.0);
+    let first_input = PlayerInput {
+        direction: [0.0, 0.0, 0.0],
+        facing_yaw: 0.0,
+        jumping: false,
+        running: true,
+        swimming: false,
+    };
+
+    let _ = app.world_mut().run_system_once(
+        move |mut q: Query<PlayerMovement, With<Player>>, time: Res<Time>| {
+            apply_movement_input(&first_input, player, &mut q, &time);
+        },
+    );
+    let rotation_tick_after_first = app
+        .world()
+        .entity(player)
+        .get_ref::<Rotation>()
+        .unwrap()
+        .last_changed();
+    let speed_tick_after_first = app
+        .world()
+        .entity(player)
+        .get_ref::<MovementSpeed>()
+        .unwrap()
+        .last_changed();
+
+    app.update();
+
+    let second_input = PlayerInput {
+        direction: [0.0, 0.0, 0.0],
+        facing_yaw: 0.0,
+        jumping: false,
+        running: true,
+        swimming: false,
+    };
+    let _ = app.world_mut().run_system_once(
+        move |mut q: Query<PlayerMovement, With<Player>>, time: Res<Time>| {
+            apply_movement_input(&second_input, player, &mut q, &time);
+        },
+    );
+    let rotation_tick_after_second = app
+        .world()
+        .entity(player)
+        .get_ref::<Rotation>()
+        .unwrap()
+        .last_changed();
+    let speed_tick_after_second = app
+        .world()
+        .entity(player)
+        .get_ref::<MovementSpeed>()
+        .unwrap()
+        .last_changed();
+
+    assert_eq!(
+        rotation_tick_after_second, rotation_tick_after_first,
+        "identical input must not dirty Rotation"
+    );
+    assert_eq!(
+        speed_tick_after_second, speed_tick_after_first,
+        "identical input must not dirty MovementSpeed"
+    );
+
+    app.update();
+
+    let changed_input = PlayerInput {
+        direction: [0.0, 0.0, 0.0],
+        facing_yaw: 1.5,
+        jumping: false,
+        running: false,
+        swimming: false,
+    };
+    let _ = app.world_mut().run_system_once(
+        move |mut q: Query<PlayerMovement, With<Player>>, time: Res<Time>| {
+            apply_movement_input(&changed_input, player, &mut q, &time);
+        },
+    );
+    let rotation_tick_after_change = app
+        .world()
+        .entity(player)
+        .get_ref::<Rotation>()
+        .unwrap()
+        .last_changed();
+    let speed_tick_after_change = app
+        .world()
+        .entity(player)
+        .get_ref::<MovementSpeed>()
+        .unwrap()
+        .last_changed();
+    let rotation = app.world().entity(player).get::<Rotation>().unwrap();
+    let speed = app.world().entity(player).get::<MovementSpeed>().unwrap();
+
+    assert_ne!(
+        rotation_tick_after_change, rotation_tick_after_second,
+        "changed yaw must dirty Rotation"
+    );
+    assert_ne!(
+        speed_tick_after_change, speed_tick_after_second,
+        "changed movement mode must dirty MovementSpeed"
+    );
+    assert!((rotation.y - 1.5).abs() < 1e-6);
+    assert!((speed.0 - DEFAULT_WALK_SPEED).abs() < 1e-6);
+}
+
+#[test]
 fn walk_speed_when_not_running() {
     let mut app = setup_app_with_time();
     let player = spawn_player(app.world_mut(), 0.0, 0.0, 0.0);

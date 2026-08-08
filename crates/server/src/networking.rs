@@ -438,15 +438,22 @@ fn apply_movement_input(
     if let Some(cast) = cast_state
         && !cast.cast_while_moving
     {
-        speed.0 = 0.0;
+        if speed.0 != 0.0 {
+            speed.0 = 0.0;
+        }
         return;
     }
     if input.jumping && vert_vel.0 == 0.0 {
         vert_vel.0 = shared::movement::JUMP_IMPULSE;
     }
-    rotation.y = input.facing_yaw;
+    if rotation.y != input.facing_yaw {
+        rotation.y = input.facing_yaw;
+    }
     let dir_len = direction_length(&input.direction);
-    speed.0 = compute_movement_speed(input, auras, dir_len);
+    let desired_speed = compute_movement_speed(input, auras, dir_len);
+    if speed.0 != desired_speed {
+        speed.0 = desired_speed;
+    }
     if dir_len < 0.001 {
         return;
     }
