@@ -1,3 +1,6 @@
+use std::collections::{HashMap, HashSet};
+use std::sync::Mutex;
+
 use bevy::prelude::*;
 use lightyear::prelude::*;
 use shared::components::Position;
@@ -8,63 +11,298 @@ use crate::networking::PlayerLink;
 const INTEREST_RADIUS: f32 = 100.0;
 /// Squared interest radius for distance comparison without sqrt.
 const INTEREST_RADIUS_SQ: f32 = INTEREST_RADIUS * INTEREST_RADIUS;
-/// How many ticks between interest updates (at 20Hz, 10 ticks = 0.5s).
-const UPDATE_INTERVAL_TICKS: u64 = 10;
+const INTEREST_BUCKET_SIZE: f32 = INTEREST_RADIUS;
+
+type InterestBucket = (i32, i32);
+
+#[derive(Resource, Default)]
+pub(crate) struct InterestDirtyQueue(Mutex<HashSet<Entity>>);
+
+impl InterestDirtyQueue {
+    pub(crate) fn mark(&self, entity: Entity) {
+        self.0
+            .lock()
+            .expect("interest dirty queue poisoned")
+            .insert(entity);
+    }
+
+    fn drain(&self) -> Vec<Entity> {
+        self.0
+            .lock()
+            .expect("interest dirty queue poisoned")
+            .drain()
+            .collect()
+    }
+}
+
+pub(crate) fn mark_interest_position_changed(queue: Option<&InterestDirtyQueue>, entity: Entity) {
+    if let Some(queue) = queue {
+        queue.mark(entity);
+    }
+}
+
+#[derive(Clone)]
+struct InterestObserver {
+    player: Entity,
+    position: Position,
+    visible: HashSet<Entity>,
+}
+
+#[derive(Resource, Default)]
+struct InterestIndex {
+    buckets: HashMap<InterestBucket, HashSet<Entity>>,
+    target_buckets: HashMap<Entity, InterestBucket>,
+    target_positions: HashMap<Entity, Position>,
+    observers: HashMap<Entity, InterestObserver>,
+    connection_by_player: HashMap<Entity, Entity>,
+    dirty_targets: HashSet<Entity>,
+    dirty_observers: HashSet<Entity>,
+}
+
+impl InterestIndex {
+    fn add_target(&mut self, entity: Entity, position: Position) {
+        let bucket = interest_bucket(&position);
+        self.buckets.entry(bucket).or_default().insert(entity);
+        self.target_buckets.insert(entity, bucket);
+        self.target_positions.insert(entity, position);
+        self.dirty_targets.insert(entity);
+    }
+
+    fn remove_target(&mut self, entity: Entity) {
+        if let Some(bucket) = self.target_buckets.remove(&entity) {
+            let remove_bucket = self.buckets.get_mut(&bucket).is_some_and(|entities| {
+                entities.remove(&entity);
+                entities.is_empty()
+            });
+            if remove_bucket {
+                self.buckets.remove(&bucket);
+            }
+        }
+        self.target_positions.remove(&entity);
+        self.dirty_targets.remove(&entity);
+        for observer in self.observers.values_mut() {
+            observer.visible.remove(&entity);
+        }
+    }
+
+    fn add_observer(&mut self, connection: Entity, player: Entity, position: Position) {
+        self.connection_by_player.insert(player, connection);
+        self.observers.insert(
+            connection,
+            InterestObserver {
+                player,
+                position,
+                visible: HashSet::new(),
+            },
+        );
+        self.dirty_observers.insert(connection);
+    }
+
+    fn remove_observer(&mut self, connection: Entity) {
+        if let Some(observer) = self.observers.remove(&connection) {
+            self.connection_by_player.remove(&observer.player);
+        }
+        self.dirty_observers.remove(&connection);
+    }
+
+    fn update_position(&mut self, entity: Entity, position: Position) {
+        if self.target_positions.contains_key(&entity) {
+            self.update_target_position(entity, position);
+        }
+        if let Some(&connection) = self.connection_by_player.get(&entity) {
+            if let Some(observer) = self.observers.get_mut(&connection) {
+                observer.position = position;
+                self.dirty_observers.insert(connection);
+            }
+        }
+    }
+
+    fn update_target_position(&mut self, entity: Entity, position: Position) {
+        let next_bucket = interest_bucket(&position);
+        let previous_bucket = self.target_buckets.insert(entity, next_bucket);
+        if previous_bucket != Some(next_bucket) {
+            if let Some(previous_bucket) = previous_bucket {
+                let remove_bucket =
+                    self.buckets
+                        .get_mut(&previous_bucket)
+                        .is_some_and(|entities| {
+                            entities.remove(&entity);
+                            entities.is_empty()
+                        });
+                if remove_bucket {
+                    self.buckets.remove(&previous_bucket);
+                }
+            }
+            self.buckets.entry(next_bucket).or_default().insert(entity);
+        }
+        self.target_positions.insert(entity, position);
+        self.dirty_targets.insert(entity);
+    }
+
+    fn nearby_targets(&self, position: &Position) -> HashSet<Entity> {
+        let (bucket_x, bucket_z) = interest_bucket(position);
+        let mut candidates = HashSet::new();
+        for dz in -1..=1 {
+            for dx in -1..=1 {
+                if let Some(entities) = self.buckets.get(&(bucket_x + dx, bucket_z + dz)) {
+                    candidates.extend(entities.iter().copied());
+                }
+            }
+        }
+        candidates
+    }
+}
 
 pub struct InterestPlugin;
 
 impl Plugin for InterestPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(FixedUpdate, update_interest);
+        app.init_resource::<InterestDirtyQueue>()
+            .init_resource::<InterestIndex>()
+            .add_observer(on_network_visibility_added)
+            .add_observer(on_network_visibility_removed)
+            .add_observer(on_player_link_added)
+            .add_observer(on_player_link_removed)
+            .add_systems(FixedUpdate, update_interest);
     }
 }
 
-/// Update network visibility for all replicated entities based on distance to each player.
-///
-/// Runs every `UPDATE_INTERVAL_TICKS` ticks. For each connection with a PlayerLink,
-/// checks distance from that player to all entities with NetworkVisibility.
-fn update_interest(
-    connections: Query<(Entity, &PlayerLink), With<ReplicationSender>>,
+fn on_network_visibility_added(
+    trigger: On<Add, NetworkVisibility>,
     positions: Query<&Position>,
-    mut visibility_query: Query<
-        (Entity, &Position, &mut ReplicationState),
-        With<NetworkVisibility>,
-    >,
-    mut tick_count: Local<u64>,
+    mut index: ResMut<InterestIndex>,
 ) {
-    *tick_count += 1;
-    if !(*tick_count).is_multiple_of(UPDATE_INTERVAL_TICKS) {
-        return;
-    }
-
-    let players: Vec<(Entity, Position)> = collect_player_positions(&connections, &positions);
-    if players.is_empty() {
-        return;
-    }
-
-    let vis_count = visibility_query.iter().count();
-    if (*tick_count).is_multiple_of(UPDATE_INTERVAL_TICKS * 10) {
-        info!(
-            "Interest update: {} players, {} visible entities",
-            players.len(),
-            vis_count
-        );
-    }
-
-    for (_entity, entity_pos, mut state) in visibility_query.iter_mut() {
-        update_entity_visibility(entity_pos, &mut state, &players);
+    if let Ok(position) = positions.get(trigger.entity) {
+        index.add_target(trigger.entity, *position);
     }
 }
 
-/// Collect connection entity + player position pairs.
-fn collect_player_positions(
-    connections: &Query<(Entity, &PlayerLink), With<ReplicationSender>>,
-    positions: &Query<&Position>,
-) -> Vec<(Entity, Position)> {
-    connections
+fn on_network_visibility_removed(
+    trigger: On<Remove, NetworkVisibility>,
+    mut index: ResMut<InterestIndex>,
+) {
+    index.remove_target(trigger.entity);
+}
+
+fn on_player_link_added(
+    trigger: On<Add, PlayerLink>,
+    links: Query<&PlayerLink>,
+    positions: Query<&Position>,
+    mut index: ResMut<InterestIndex>,
+) {
+    let Ok(link) = links.get(trigger.entity) else {
+        return;
+    };
+    let Ok(position) = positions.get(link.0) else {
+        return;
+    };
+    index.add_observer(trigger.entity, link.0, *position);
+}
+
+fn on_player_link_removed(trigger: On<Remove, PlayerLink>, mut index: ResMut<InterestIndex>) {
+    index.remove_observer(trigger.entity);
+}
+
+fn update_interest(
+    positions: Query<&Position>,
+    dirty_queue: Res<InterestDirtyQueue>,
+    mut index: ResMut<InterestIndex>,
+    mut visibility_query: Query<(&Position, &mut ReplicationState), With<NetworkVisibility>>,
+) {
+    for entity in dirty_queue.drain() {
+        if let Ok(position) = positions.get(entity) {
+            index.update_position(entity, *position);
+        }
+    }
+
+    let dirty_observers = index.dirty_observers.drain().collect::<Vec<_>>();
+    for connection in dirty_observers {
+        update_observer_visibility(connection, &mut index, &mut visibility_query);
+    }
+
+    let dirty_targets = index.dirty_targets.drain().collect::<Vec<_>>();
+    for entity in dirty_targets {
+        update_target_visibility(entity, &mut index, &mut visibility_query);
+    }
+}
+
+fn update_observer_visibility(
+    connection: Entity,
+    index: &mut InterestIndex,
+    visibility_query: &mut Query<(&Position, &mut ReplicationState), With<NetworkVisibility>>,
+) {
+    let Some(observer) = index.observers.get(&connection).cloned() else {
+        return;
+    };
+    let mut candidates = index.nearby_targets(&observer.position);
+    candidates.extend(observer.visible.iter().copied());
+    let mut visible = HashSet::new();
+
+    for entity in candidates {
+        let Ok((position, mut state)) = visibility_query.get_mut(entity) else {
+            continue;
+        };
+        let should_be_visible =
+            distance_squared(position, &observer.position) <= INTEREST_RADIUS_SQ;
+        if should_be_visible {
+            visible.insert(entity);
+            if !state.is_visible(connection) {
+                state.gain_visibility(connection);
+            }
+        } else if state.is_visible(connection) {
+            state.lose_visibility(connection);
+        }
+    }
+
+    if let Some(current) = index.observers.get_mut(&connection) {
+        current.visible = visible;
+    }
+}
+
+fn update_target_visibility(
+    entity: Entity,
+    index: &mut InterestIndex,
+    visibility_query: &mut Query<(&Position, &mut ReplicationState), With<NetworkVisibility>>,
+) {
+    let Some(position) = index.target_positions.get(&entity).copied() else {
+        return;
+    };
+    let observers = index
+        .observers
         .iter()
-        .filter_map(|(conn_entity, link)| positions.get(link.0).ok().map(|pos| (conn_entity, *pos)))
-        .collect()
+        .map(|(&connection, observer)| (connection, observer.position))
+        .collect::<Vec<_>>();
+    let Ok((_position, mut state)) = visibility_query.get_mut(entity) else {
+        index.dirty_targets.insert(entity);
+        return;
+    };
+
+    for (connection, observer_position) in observers {
+        let should_be_visible =
+            distance_squared(&position, &observer_position) <= INTEREST_RADIUS_SQ;
+        if should_be_visible {
+            if !state.is_visible(connection) {
+                state.gain_visibility(connection);
+            }
+            if let Some(observer) = index.observers.get_mut(&connection) {
+                observer.visible.insert(entity);
+            }
+        } else {
+            if state.is_visible(connection) {
+                state.lose_visibility(connection);
+            }
+            if let Some(observer) = index.observers.get_mut(&connection) {
+                observer.visible.remove(&entity);
+            }
+        }
+    }
+}
+
+fn interest_bucket(position: &Position) -> InterestBucket {
+    (
+        (position.x / INTEREST_BUCKET_SIZE).floor() as i32,
+        (position.z / INTEREST_BUCKET_SIZE).floor() as i32,
+    )
 }
 
 /// Update visibility of a single entity for all players.
@@ -131,6 +369,42 @@ mod tests {
         (ReplicationState::default(), Entity::from_bits(1))
     }
 
+    fn setup_interest_app() -> App {
+        let mut app = App::new();
+        app.add_plugins(bevy::MinimalPlugins);
+        app.add_plugins(lightyear::prelude::server::ServerPlugins {
+            tick_duration: std::time::Duration::from_millis(50),
+        });
+        app.add_plugins(InterestPlugin);
+        app
+    }
+
+    fn spawn_interest_observer(app: &mut App, position: Position) -> Entity {
+        let player = app.world_mut().spawn(position).id();
+        app.world_mut()
+            .spawn((
+                PlayerLink(player),
+                ReplicationSender::new(
+                    std::time::Duration::from_millis(50),
+                    SendUpdatesMode::SinceLastAck,
+                    false,
+                ),
+            ))
+            .id()
+    }
+
+    fn spawn_interest_target(app: &mut App, position: Position) -> Entity {
+        app.world_mut()
+            .spawn((position, NetworkVisibility, ReplicationState::default()))
+            .id()
+    }
+
+    fn run_fixed_ticks(app: &mut App, ticks: usize) {
+        for _ in 0..ticks {
+            app.world_mut().run_schedule(FixedUpdate);
+        }
+    }
+
     fn pos(x: f32, y: f32, z: f32) -> Position {
         Position { x, y, z }
     }
@@ -141,6 +415,244 @@ mod tests {
 
     fn assert_not_visible(state: &ReplicationState, conn: Entity, msg: &str) {
         assert!(!state.is_visible(conn), "{msg}");
+    }
+
+    #[test]
+    fn new_nearby_entity_is_visible_on_next_fixed_tick() {
+        let mut app = setup_interest_app();
+        let connection = spawn_interest_observer(&mut app, pos(0.0, 0.0, 0.0));
+        let target = spawn_interest_target(&mut app, pos(50.0, 0.0, 0.0));
+
+        run_fixed_ticks(&mut app, 1);
+
+        assert!(
+            app.world()
+                .entity(target)
+                .get::<ReplicationState>()
+                .unwrap()
+                .is_visible(connection),
+            "a newly visible entity must not wait for a recurring global scan"
+        );
+    }
+
+    #[test]
+    fn unchanged_interest_ticks_do_not_dirty_visibility() {
+        let mut app = setup_interest_app();
+        let connection = spawn_interest_observer(&mut app, pos(0.0, 0.0, 0.0));
+        let target = spawn_interest_target(&mut app, pos(50.0, 0.0, 0.0));
+        run_fixed_ticks(&mut app, 1);
+        assert!(
+            app.world()
+                .entity(target)
+                .get::<ReplicationState>()
+                .unwrap()
+                .is_visible(connection)
+        );
+        let visibility_tick = app
+            .world()
+            .entity(target)
+            .get_ref::<ReplicationState>()
+            .unwrap()
+            .last_changed();
+
+        run_fixed_ticks(&mut app, 10);
+
+        assert_eq!(
+            app.world()
+                .entity(target)
+                .get_ref::<ReplicationState>()
+                .unwrap()
+                .last_changed(),
+            visibility_tick,
+            "unchanged fixed ticks must not re-evaluate and dirty replication visibility"
+        );
+    }
+
+    #[test]
+    fn dirty_target_crosses_exact_radius_within_same_bucket() {
+        let mut app = setup_interest_app();
+        let connection = spawn_interest_observer(&mut app, pos(50.0, 0.0, 0.0));
+        let target = spawn_interest_target(&mut app, pos(150.01, 0.0, 0.0));
+        run_fixed_ticks(&mut app, 1);
+        assert!(
+            !app.world()
+                .entity(target)
+                .get::<ReplicationState>()
+                .unwrap()
+                .is_visible(connection)
+        );
+
+        app.world_mut()
+            .entity_mut(target)
+            .insert(pos(149.99, 0.0, 0.0));
+        app.world().resource::<InterestDirtyQueue>().mark(target);
+        run_fixed_ticks(&mut app, 1);
+        assert!(
+            app.world()
+                .entity(target)
+                .get::<ReplicationState>()
+                .unwrap()
+                .is_visible(connection)
+        );
+
+        app.world_mut()
+            .entity_mut(target)
+            .insert(pos(150.01, 0.0, 0.0));
+        app.world().resource::<InterestDirtyQueue>().mark(target);
+        run_fixed_ticks(&mut app, 1);
+        assert!(
+            !app.world()
+                .entity(target)
+                .get::<ReplicationState>()
+                .unwrap()
+                .is_visible(connection)
+        );
+    }
+
+    #[test]
+    fn dirty_observer_movement_updates_only_its_visibility() {
+        let mut app = setup_interest_app();
+        let player_a = app.world_mut().spawn(pos(0.0, 0.0, 0.0)).id();
+        let connection_a = app
+            .world_mut()
+            .spawn((
+                PlayerLink(player_a),
+                ReplicationSender::new(
+                    std::time::Duration::from_millis(50),
+                    SendUpdatesMode::SinceLastAck,
+                    false,
+                ),
+            ))
+            .id();
+        let player_b = app.world_mut().spawn(pos(300.0, 0.0, 0.0)).id();
+        let connection_b = app
+            .world_mut()
+            .spawn((
+                PlayerLink(player_b),
+                ReplicationSender::new(
+                    std::time::Duration::from_millis(50),
+                    SendUpdatesMode::SinceLastAck,
+                    false,
+                ),
+            ))
+            .id();
+        let target = spawn_interest_target(&mut app, pos(50.0, 0.0, 0.0));
+        run_fixed_ticks(&mut app, 1);
+        let state = app
+            .world()
+            .entity(target)
+            .get::<ReplicationState>()
+            .unwrap();
+        assert!(state.is_visible(connection_a));
+        assert!(!state.is_visible(connection_b));
+
+        app.world_mut()
+            .entity_mut(player_b)
+            .insert(pos(100.0, 0.0, 0.0));
+        app.world().resource::<InterestDirtyQueue>().mark(player_b);
+        run_fixed_ticks(&mut app, 1);
+        let state = app
+            .world()
+            .entity(target)
+            .get::<ReplicationState>()
+            .unwrap();
+        assert!(state.is_visible(connection_a));
+        assert!(state.is_visible(connection_b));
+
+        app.world_mut()
+            .entity_mut(player_a)
+            .insert(pos(200.0, 0.0, 0.0));
+        app.world().resource::<InterestDirtyQueue>().mark(player_a);
+        run_fixed_ticks(&mut app, 1);
+        let state = app
+            .world()
+            .entity(target)
+            .get::<ReplicationState>()
+            .unwrap();
+        assert!(!state.is_visible(connection_a));
+        assert!(state.is_visible(connection_b));
+    }
+
+    #[test]
+    fn visibility_removal_and_readd_do_not_leave_stale_range_state() {
+        let mut app = setup_interest_app();
+        let connection = spawn_interest_observer(&mut app, pos(0.0, 0.0, 0.0));
+        let target = spawn_interest_target(&mut app, pos(50.0, 0.0, 0.0));
+        run_fixed_ticks(&mut app, 1);
+        assert!(
+            app.world()
+                .entity(target)
+                .get::<ReplicationState>()
+                .unwrap()
+                .is_visible(connection)
+        );
+
+        app.world_mut()
+            .entity_mut(target)
+            .remove::<NetworkVisibility>();
+        app.world_mut()
+            .entity_mut(target)
+            .insert(pos(500.0, 0.0, 0.0));
+        app.world_mut().entity_mut(target).insert(NetworkVisibility);
+        run_fixed_ticks(&mut app, 1);
+
+        assert!(
+            !app.world()
+                .entity(target)
+                .get::<ReplicationState>()
+                .unwrap()
+                .is_visible(connection)
+        );
+    }
+
+    #[test]
+    fn reconnect_uses_fresh_observer_visibility() {
+        let mut app = setup_interest_app();
+        let player = app.world_mut().spawn(pos(0.0, 0.0, 0.0)).id();
+        let first_connection = app
+            .world_mut()
+            .spawn((
+                PlayerLink(player),
+                ReplicationSender::new(
+                    std::time::Duration::from_millis(50),
+                    SendUpdatesMode::SinceLastAck,
+                    false,
+                ),
+            ))
+            .id();
+        let target = spawn_interest_target(&mut app, pos(50.0, 0.0, 0.0));
+        run_fixed_ticks(&mut app, 1);
+        assert!(
+            app.world()
+                .entity(target)
+                .get::<ReplicationState>()
+                .unwrap()
+                .is_visible(first_connection)
+        );
+
+        app.world_mut()
+            .entity_mut(first_connection)
+            .remove::<PlayerLink>();
+        let second_connection = app
+            .world_mut()
+            .spawn((
+                PlayerLink(player),
+                ReplicationSender::new(
+                    std::time::Duration::from_millis(50),
+                    SendUpdatesMode::SinceLastAck,
+                    false,
+                ),
+            ))
+            .id();
+        run_fixed_ticks(&mut app, 1);
+
+        assert!(
+            app.world()
+                .entity(target)
+                .get::<ReplicationState>()
+                .unwrap()
+                .is_visible(second_connection)
+        );
     }
 
     #[test]
@@ -373,15 +885,6 @@ mod tests {
 
         // Stealthed entity at 11yd: hidden
         assert!(!should_be_visible(11.0 * 11.0, true));
-    }
-
-    #[test]
-    fn update_interval_is_half_second_at_20hz() {
-        // FixedUpdate runs at 20Hz (50ms per tick). 10 ticks = 500ms = 0.5s.
-        assert_eq!(UPDATE_INTERVAL_TICKS, 10);
-        let tick_rate_hz = 20.0_f64;
-        let interval_secs = UPDATE_INTERVAL_TICKS as f64 / tick_rate_hz;
-        assert!((interval_secs - 0.5).abs() < 0.001);
     }
 
     #[test]

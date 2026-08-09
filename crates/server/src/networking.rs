@@ -16,6 +16,7 @@ use crate::auth::{
     self, Authenticated, ConnectedAccounts, InWorld, PendingAuth, PendingAuthTimer, SentTiles,
     clear_connected_account,
 };
+use crate::interest::{InterestDirtyQueue, mark_interest_position_changed};
 use crate::messaging;
 use crate::persistence::{self, CharacterData, ClientId, GameDatabase};
 use crate::terrain_height::{GRAVITY, GROUND_SNAP_THRESHOLD, TerrainHeightMap};
@@ -410,6 +411,7 @@ fn process_player_inputs(
     >,
     mounted: Query<Entity, (With<Player>, With<Mounted>)>,
     time: Res<Time>,
+    dirty_queue: Option<Res<InterestDirtyQueue>>,
 ) {
     for (mut receiver, link) in receivers.iter_mut() {
         for input in receiver.receive() {
@@ -417,7 +419,9 @@ fn process_player_inputs(
             if input.swimming && mounted.contains(link.0) {
                 commands.entity(link.0).remove::<Mounted>();
             }
-            apply_movement_input(&input, link.0, &mut players, &time);
+            if apply_movement_input(&input, link.0, &mut players, &time) {
+                mark_interest_position_changed(dirty_queue.as_deref(), link.0);
+            }
         }
     }
 }
@@ -428,11 +432,11 @@ fn apply_movement_input(
     player_entity: Entity,
     players: &mut Query<PlayerMovement, With<Player>>,
     time: &Time,
-) {
+) -> bool {
     let Ok((mut pos, mut rotation, mut speed, mut vert_vel, auras, cast_state)) =
         players.get_mut(player_entity)
     else {
-        return;
+        return false;
     };
     // Block movement while casting (unless spell allows cast-while-moving)
     if let Some(cast) = cast_state
@@ -441,7 +445,7 @@ fn apply_movement_input(
         if speed.0 != 0.0 {
             speed.0 = 0.0;
         }
-        return;
+        return false;
     }
     if input.jumping && vert_vel.0 == 0.0 {
         vert_vel.0 = shared::movement::JUMP_IMPULSE;
@@ -455,7 +459,7 @@ fn apply_movement_input(
         speed.0 = desired_speed;
     }
     if dir_len < 0.001 {
-        return;
+        return false;
     }
     let scale = speed.0 * time.delta_secs() / dir_len;
     let next_position = Position {
@@ -464,11 +468,13 @@ fn apply_movement_input(
         z: pos.z + input.direction[2] * scale,
     };
     if !validate_move_distance(scale * dir_len, speed.0, time.delta_secs()) {
-        return;
+        return false;
     }
-    if *pos != next_position {
-        *pos = next_position;
+    if *pos == next_position {
+        return false;
     }
+    *pos = next_position;
+    true
 }
 
 /// Compute effective movement speed from input, auras, and direction.
@@ -520,6 +526,7 @@ type GravityPlayerData<'w, 's> = Query<
     'w,
     's,
     (
+        Entity,
         &'static mut Position,
         &'static mut VerticalVelocity,
         &'static mut FallTracker,
@@ -534,12 +541,15 @@ pub(crate) fn apply_terrain_gravity(
     terrain: Option<Res<TerrainHeightMap>>,
     mut players: GravityPlayerData,
     time: Res<Time>,
+    dirty_queue: Option<Res<InterestDirtyQueue>>,
 ) {
     let Some(terrain) = terrain.as_ref().filter(|t| t.is_loaded()) else {
         return;
     };
     let dt = time.delta_secs();
-    for (mut pos, mut vert_vel, mut fall_tracker, mut health, death_state) in players.iter_mut() {
+    for (entity, mut pos, mut vert_vel, mut fall_tracker, mut health, death_state) in
+        players.iter_mut()
+    {
         let (next_pos, next_vert_vel, next_fall_tracker, next_health) = calculate_gravity_state(
             terrain,
             *pos,
@@ -551,6 +561,7 @@ pub(crate) fn apply_terrain_gravity(
         );
         if *pos != next_pos {
             *pos = next_pos;
+            mark_interest_position_changed(dirty_queue.as_deref(), entity);
         }
         if *vert_vel != next_vert_vel {
             *vert_vel = next_vert_vel;

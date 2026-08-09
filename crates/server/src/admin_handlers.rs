@@ -203,7 +203,8 @@ pub(crate) fn handle_set_level(
 
 pub(crate) fn handle_set_position(
     db: &persistence::GameDatabase,
-    players: &mut Query<(&mut Position, &persistence::ClientId)>,
+    players: &mut Query<(Entity, &mut Position, &persistence::ClientId)>,
+    interest_dirty: Option<&crate::interest::InterestDirtyQueue>,
     name: &str,
     x: f32,
     y: f32,
@@ -221,11 +222,15 @@ pub(crate) fn handle_set_position(
     persistence::save_character(&db.db, char_id, &data);
 
     let (bx, by, bz) = crate::terrain_height::wow_to_bevy(x, y, z);
-    for (mut pos, cid) in players.iter_mut() {
-        if cid.0 == char_id {
-            pos.x = bx;
-            pos.y = by;
-            pos.z = bz;
+    let next_position = Position {
+        x: bx,
+        y: by,
+        z: bz,
+    };
+    for (entity, mut pos, cid) in players.iter_mut() {
+        if cid.0 == char_id && *pos != next_position {
+            *pos = next_position;
+            crate::interest::mark_interest_position_changed(interest_dirty, entity);
         }
     }
 

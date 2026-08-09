@@ -15,6 +15,7 @@ use shared::protocol::{
 use crate::auth::{Authenticated, InWorld};
 use crate::durability::EquippedDurability;
 use crate::faction::faction_for_race;
+use crate::interest::{InterestDirtyQueue, mark_interest_position_changed};
 use crate::networking::PlayerLink;
 use crate::world_data::WorldData;
 
@@ -200,6 +201,7 @@ fn process_release_spirit_requests(
     >,
     mut players: Query<(&mut Position, &mut PlayerDeathState, &Player)>,
     state: Res<DeathServerState>,
+    dirty_queue: Option<Res<InterestDirtyQueue>>,
     mut senders: Query<&mut MessageSender<DeathStateUpdate>>,
 ) {
     for (conn_entity, link, mut receiver) in &mut receivers {
@@ -218,6 +220,9 @@ fn process_release_spirit_requests(
                 player.race,
                 &state.graveyards,
             );
+            if result.is_ok() {
+                mark_interest_position_changed(dirty_queue.as_deref(), link.0);
+            }
             send_release_spirit_result(
                 conn_entity,
                 &position,
@@ -280,6 +285,7 @@ fn process_resurrect_at_corpse_requests(
         Option<&mut Mana>,
         &mut PlayerDeathState,
     )>,
+    dirty_queue: Option<Res<InterestDirtyQueue>>,
     mut senders: Query<&mut MessageSender<DeathStateUpdate>>,
 ) {
     for (conn_entity, link, player, mut receiver) in &mut receivers {
@@ -295,6 +301,9 @@ fn process_resurrect_at_corpse_requests(
             };
             let result =
                 resurrect_player_at_corpse(&mut position, &mut health, mana, &mut death_state);
+            if result.is_ok() {
+                mark_interest_position_changed(dirty_queue.as_deref(), link.0);
+            }
             send_resurrect_response(
                 conn_entity,
                 &position,
@@ -364,6 +373,7 @@ fn process_spirit_healer_requests(
     >,
     mut players: SpiritHealerPlayerData,
     time: Res<Time>,
+    dirty_queue: Option<Res<InterestDirtyQueue>>,
     mut senders: Query<&mut MessageSender<DeathStateUpdate>>,
 ) {
     let now = current_seconds(&time);
@@ -389,6 +399,7 @@ fn process_spirit_healer_requests(
                 now,
             ) {
                 Ok(message) => {
+                    mark_interest_position_changed(dirty_queue.as_deref(), link.0);
                     send_update(
                         conn_entity,
                         &position,
@@ -420,6 +431,7 @@ fn process_stuck_escape_requests(
     >,
     mut players: Query<(&mut Position, Option<&PlayerDeathState>, &Player)>,
     state: Res<DeathServerState>,
+    dirty_queue: Option<Res<InterestDirtyQueue>>,
     mut senders: Query<&mut MessageSender<DeathStateUpdate>>,
 ) {
     for (conn_entity, link, mut receiver) in &mut receivers {
@@ -434,6 +446,7 @@ fn process_stuck_escape_requests(
             };
             match use_stuck_escape(&mut position, death_state, player.race, &state.graveyards) {
                 Ok(message) => {
+                    mark_interest_position_changed(dirty_queue.as_deref(), link.0);
                     send_update(
                         conn_entity,
                         &position,

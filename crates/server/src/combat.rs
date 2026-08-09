@@ -4,6 +4,7 @@ use shared::components::{CombatStatus, Health, Npc, Position};
 use shared::protocol::{CombatChannel, CombatEvent, CombatEventType};
 
 use crate::creature_ai::SpawnPoint;
+use crate::interest::{InterestDirtyQueue, mark_interest_position_changed};
 use crate::networking::CombatTarget;
 
 use std::collections::VecDeque;
@@ -311,6 +312,7 @@ fn respawn_system(
         &mut Position,
     )>,
     mut commands: Commands,
+    dirty_queue: Option<Res<InterestDirtyQueue>>,
     mut senders: Query<&mut MessageSender<CombatEvent>>,
     mut combat_log: ResMut<CombatLog>,
 ) {
@@ -329,6 +331,7 @@ fn respawn_system(
         }
         if *pos != next_position {
             *pos = next_position;
+            mark_interest_position_changed(dirty_queue.as_deref(), entity);
         }
         commands.entity(entity).remove::<DeathState>().insert((
             Replicate::new(ReplicationMode::SingleServer(NetworkTarget::All)),

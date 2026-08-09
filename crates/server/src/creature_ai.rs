@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 use shared::components::{Health, Position, ThreatTable};
 
+use crate::interest::{InterestDirtyQueue, mark_interest_position_changed};
 use crate::world_data::{WaypointPath, WorldData};
 
 /// Walk speed in world-units per second (base WoW walk speed).
@@ -94,7 +95,9 @@ impl CreatureState {
 
 fn wander_system(
     time: Res<Time>,
+    dirty_queue: Option<Res<InterestDirtyQueue>>,
     mut query: Query<(
+        Entity,
         &mut Position,
         &SpawnPoint,
         &mut WanderState,
@@ -102,7 +105,7 @@ fn wander_system(
     )>,
 ) {
     let dt = time.delta_secs();
-    for (mut pos, spawn, mut state, creature_state) in &mut query {
+    for (entity, mut pos, spawn, mut state, creature_state) in &mut query {
         if matches!(creature_state, Some(s) if !s.is_idle()) {
             continue;
         }
@@ -112,6 +115,7 @@ fn wander_system(
                 let next_position = tick_walk(*pos, &mut state, spawn, dt);
                 if *pos != next_position {
                     *pos = next_position;
+                    mark_interest_position_changed(dirty_queue.as_deref(), entity);
                 }
             }
         }
@@ -190,10 +194,16 @@ pub fn move_toward(x: f32, y: f32, tx: f32, ty: f32, step: f32) -> (bool, f32, f
 fn waypoint_system(
     time: Res<Time>,
     world_data: Res<WorldData>,
-    mut query: Query<(&mut Position, &mut WaypointState, Option<&CreatureState>)>,
+    dirty_queue: Option<Res<InterestDirtyQueue>>,
+    mut query: Query<(
+        Entity,
+        &mut Position,
+        &mut WaypointState,
+        Option<&CreatureState>,
+    )>,
 ) {
     let dt = time.delta_secs();
-    for (mut pos, mut state, creature_state) in &mut query {
+    for (entity, mut pos, mut state, creature_state) in &mut query {
         if matches!(creature_state, Some(s) if !s.is_idle()) {
             continue;
         }
@@ -206,6 +216,7 @@ fn waypoint_system(
         let next_position = tick_waypoint(*pos, &mut state, path, dt);
         if *pos != next_position {
             *pos = next_position;
+            mark_interest_position_changed(dirty_queue.as_deref(), entity);
         }
     }
 }
@@ -245,11 +256,12 @@ fn advance_waypoint(state: &mut WaypointState, delay_secs: f32, path_len: usize)
 /// Move pursuing creatures toward their target each tick.
 fn chase_system(
     time: Res<Time>,
-    mut chasers: Query<(&mut Position, &SpawnPoint, &CreatureState)>,
+    dirty_queue: Option<Res<InterestDirtyQueue>>,
+    mut chasers: Query<(Entity, &mut Position, &SpawnPoint, &CreatureState)>,
     targets: Query<&Position, Without<SpawnPoint>>,
 ) {
     let dt = time.delta_secs();
-    for (mut pos, spawn, state) in &mut chasers {
+    for (entity, mut pos, spawn, state) in &mut chasers {
         let CreatureState::Pursuing { target } = *state else {
             continue;
         };
@@ -267,6 +279,7 @@ fn chase_system(
         };
         if *pos != next_position {
             *pos = next_position;
+            mark_interest_position_changed(dirty_queue.as_deref(), entity);
         }
     }
 }
@@ -314,10 +327,11 @@ fn leash_check_system(mut query: LeashQuery) {
 /// Walk returning creatures back to their spawn point, then transition to Idle.
 fn return_to_spawn_system(
     time: Res<Time>,
-    mut query: Query<(&mut Position, &SpawnPoint, &mut CreatureState)>,
+    dirty_queue: Option<Res<InterestDirtyQueue>>,
+    mut query: Query<(Entity, &mut Position, &SpawnPoint, &mut CreatureState)>,
 ) {
     let dt = time.delta_secs();
-    for (mut pos, spawn, mut state) in &mut query {
+    for (entity, mut pos, spawn, mut state) in &mut query {
         if *state != CreatureState::Returning {
             continue;
         }
@@ -330,6 +344,7 @@ fn return_to_spawn_system(
         };
         if *pos != next_position {
             *pos = next_position;
+            mark_interest_position_changed(dirty_queue.as_deref(), entity);
         }
         if reached {
             *state = CreatureState::Idle;

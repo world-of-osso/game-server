@@ -38,13 +38,22 @@ struct AdminResources<'w> {
     ticket_mgr: ResMut<'w, shared::ticket::TicketManager>,
     motd: ResMut<'w, shared::motd::Motd>,
     autobroadcast: ResMut<'w, shared::motd::Autobroadcast>,
+    interest_dirty: Option<Res<'w, crate::interest::InterestDirtyQueue>>,
 }
 
 /// Queries needed by the admin IPC dispatch loop.
 #[derive(SystemParam)]
 struct AdminQueries<'w, 's> {
     commands: Commands<'w, 's>,
-    players: Query<'w, 's, (&'static mut Position, &'static persistence::ClientId)>,
+    players: Query<
+        'w,
+        's,
+        (
+            Entity,
+            &'static mut Position,
+            &'static persistence::ClientId,
+        ),
+    >,
     equipment: Query<
         'w,
         's,
@@ -81,6 +90,7 @@ fn poll_admin_ipc(
             &db,
             &mut queries.commands,
             &mut queries.players,
+            res.interest_dirty.as_deref(),
             &mut queries.equipment,
             &queries.authenticated,
             &mut queries.roster_senders,
@@ -260,7 +270,8 @@ fn dispatch(
     cmd: AdminCommand,
     db: &persistence::GameDatabase,
     commands: &mut Commands,
-    players: &mut Query<(&mut Position, &persistence::ClientId)>,
+    players: &mut Query<(Entity, &mut Position, &persistence::ClientId)>,
+    interest_dirty: Option<&crate::interest::InterestDirtyQueue>,
     equipment_query: &mut Query<(Entity, &mut EquipmentAppearance, &persistence::ClientId)>,
     authenticated_query: &Query<
         (Entity, &crate::auth::Authenticated),
@@ -355,7 +366,7 @@ fn dispatch(
             x,
             y,
             z,
-        } => handle_set_position(db, players, &character_name, x, y, z),
+        } => handle_set_position(db, players, interest_dirty, &character_name, x, y, z),
         AdminRequest::SetAppearance {
             character_name,
             appearance,
@@ -441,10 +452,13 @@ mod tests {
             ))
             .id();
         let mut system_state =
-            SystemState::<Query<(&mut Position, &persistence::ClientId)>>::new(app.world_mut());
+            SystemState::<Query<(Entity, &mut Position, &persistence::ClientId)>>::new(
+                app.world_mut(),
+            );
         let mut query = system_state.get_mut(app.world_mut());
 
-        let response = handle_set_position(&game_db, &mut query, "Mover", -8920.5, -188.25, 97.75);
+        let response =
+            handle_set_position(&game_db, &mut query, None, "Mover", -8920.5, -188.25, 97.75);
 
         assert_eq!(
             response,
