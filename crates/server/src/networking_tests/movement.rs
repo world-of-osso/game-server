@@ -316,6 +316,62 @@ fn speed_modifiers_from_auras_apply_to_movement() {
 }
 
 #[test]
+fn zero_effective_speed_does_not_dirty_position() {
+    use shared::aura::{Aura, AuraEffect};
+
+    let mut app = setup_app_with_time();
+    let player = spawn_player(app.world_mut(), 10.0, 20.0, 30.0);
+    let root = Aura {
+        spell_id: 1,
+        caster: 99,
+        duration: 10.0,
+        remaining: 10.0,
+        effects: [
+            Some(AuraEffect::ModMovementSpeed { percent: -1.0 }),
+            None,
+            None,
+        ],
+        ..Default::default()
+    };
+    app.world_mut()
+        .entity_mut(player)
+        .get_mut::<Auras>()
+        .unwrap()
+        .apply(root);
+    app.update();
+
+    let initial_position = *app.world().entity(player).get::<Position>().unwrap();
+    let initial_position_tick = app
+        .world()
+        .entity(player)
+        .get_ref::<Position>()
+        .unwrap()
+        .last_changed();
+    let input = make_input(1.0, 0.0, 0.0);
+
+    let _ = app.world_mut().run_system_once(
+        move |mut q: Query<PlayerMovement, With<Player>>, time: Res<Time>| {
+            apply_movement_input(&input, player, &mut q, &time);
+        },
+    );
+
+    assert_eq!(
+        *app.world().entity(player).get::<Position>().unwrap(),
+        initial_position,
+        "zero effective speed must not move the player"
+    );
+    assert_eq!(
+        app.world()
+            .entity(player)
+            .get_ref::<Position>()
+            .unwrap()
+            .last_changed(),
+        initial_position_tick,
+        "zero effective speed must not dirty Position"
+    );
+}
+
+#[test]
 fn root_prevents_movement() {
     use shared::aura::{Aura, AuraEffect};
 

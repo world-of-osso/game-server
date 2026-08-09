@@ -458,14 +458,17 @@ fn apply_movement_input(
         return;
     }
     let scale = speed.0 * time.delta_secs() / dir_len;
-    let new_x = pos.x + input.direction[0] * scale;
-    let new_y = pos.y + input.direction[1] * scale;
+    let next_position = Position {
+        x: pos.x + input.direction[0] * scale,
+        y: pos.y + input.direction[1] * scale,
+        z: pos.z + input.direction[2] * scale,
+    };
     if !validate_move_distance(scale * dir_len, speed.0, time.delta_secs()) {
         return;
     }
-    pos.x = new_x;
-    pos.y = new_y;
-    pos.z += input.direction[2] * scale;
+    if *pos != next_position {
+        *pos = next_position;
+    }
 }
 
 /// Compute effective movement speed from input, auras, and direction.
