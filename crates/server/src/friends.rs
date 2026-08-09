@@ -350,11 +350,14 @@ fn tick_auto_afk(
             continue;
         }
         tracker.idle_secs += time.delta_secs();
-        *status = if tracker.idle_secs >= AUTO_AFK_SECS {
+        let desired = if tracker.idle_secs >= AUTO_AFK_SECS {
             PresenceStatus::Afk
         } else {
             PresenceStatus::Online
         };
+        if *status != desired {
+            *status = desired;
+        }
     }
 }
 

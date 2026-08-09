@@ -200,6 +200,41 @@ fn auto_afk_promotes_idle_players_without_manual_presence() {
 }
 
 #[test]
+fn auto_afk_does_not_dirty_unchanged_online_presence() {
+    let mut app = App::new();
+    app.init_resource::<Time>();
+    let player = app
+        .world_mut()
+        .spawn((
+            test_player("Theron"),
+            PresenceStatus::Online,
+            PresenceTracker::default(),
+        ))
+        .id();
+    app.add_systems(Update, tick_auto_afk);
+
+    app.update();
+    let first_tick = app
+        .world()
+        .entity(player)
+        .get_ref::<PresenceStatus>()
+        .unwrap()
+        .last_changed();
+
+    app.update();
+
+    assert_eq!(
+        app.world()
+            .entity(player)
+            .get_ref::<PresenceStatus>()
+            .unwrap()
+            .last_changed(),
+        first_tick,
+        "unchanged Online presence must not advance its change tick"
+    );
+}
+
+#[test]
 fn process_presence_requests_system_initializes_without_conflict() {
     let mut app = App::new();
     app.add_systems(Update, process_presence_requests);
