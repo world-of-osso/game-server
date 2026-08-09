@@ -48,6 +48,7 @@ pub struct ConnectedAccounts(pub HashMap<u64, Entity>);
 #[derive(Component, Default)]
 pub struct SentTiles {
     pub tiles: HashSet<(u32, u32)>,
+    pub last_tile: Option<(u32, u32)>,
 }
 
 pub fn queue_forced_disconnect(

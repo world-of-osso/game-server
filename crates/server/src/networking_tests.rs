@@ -65,3 +65,5 @@ mod misc;
 mod movement;
 #[path = "networking_tests/physics.rs"]
 mod physics;
+#[path = "networking_tests/terrain.rs"]
+mod terrain;

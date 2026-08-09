@@ -352,6 +352,7 @@ fn insert_world_components(
         PlayerLink(player_entity),
         SentTiles {
             tiles: initial_tiles,
+            last_tile: None,
         },
         InWorld { character_id },
     ));

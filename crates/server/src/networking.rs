@@ -674,18 +674,26 @@ fn stream_terrain_tiles(
         let Ok(pos) = players.get(link.0) else {
             continue;
         };
-        send_nearby_tiles(conn_entity, pos, &mut sent, &mut senders);
+        let current_tile = position_tile(pos);
+        if sent.last_tile == Some(current_tile) {
+            continue;
+        }
+        sent.last_tile = Some(current_tile);
+        send_nearby_tiles(conn_entity, current_tile, &mut sent, &mut senders);
     }
+}
+
+fn position_tile(pos: &Position) -> (u32, u32) {
+    let (wow_x, wow_y, _) = crate::terrain_height::bevy_to_wow(pos.x, pos.y, pos.z);
+    wow_to_tile(wow_x, wow_y)
 }
 
 fn send_nearby_tiles(
     conn_entity: Entity,
-    pos: &Position,
+    (tile_y, tile_x): (u32, u32),
     sent: &mut SentTiles,
     senders: &mut Query<&mut MessageSender<LoadTerrain>>,
 ) {
-    let (wow_x, wow_y, _) = crate::terrain_height::bevy_to_wow(pos.x, pos.y, pos.z);
-    let (tile_y, tile_x) = wow_to_tile(wow_x, wow_y);
     for dy in -1i32..=1 {
         for dx in -1i32..=1 {
             let ty = (tile_y as i32 + dy).clamp(0, 63) as u32;
