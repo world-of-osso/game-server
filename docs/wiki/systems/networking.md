@@ -26,6 +26,10 @@ Lightyear handles:
 
 The server's Lightyear `0.26.4` sender runs every 50 ms with `SinceLastAck`. The client compares decoded replicated components and suppresses equal ECS replacement only after serialization, batching, transport, delivery, and deserialization. First-wave fixes cover NPC movement, player displacement, presence, combat status, movement state, and gravity; second-wave commits `1c139e9`, `e13e09e`, `057dd17`, and `41feebb` cover equal derived stats, respawn state, equipment appearance, and guild membership. `f84ee17` adds independent clear-path coverage for the equipment guard, while `945eb0f` rules out unchanged Gold synchronization as already guarded. See [[semantic-noop-replication]] for the coverage matrix; no CPU, bandwidth, or wire-count improvement is claimed.
 
+## Terrain Streaming
+
+Each connection keeps both the set of terrain tiles already sent and the last player tile evaluated by the streaming system. Initial world entry and reconnect begin with no last tile, forcing one evaluation. Later fixed ticks compare the current tile first; movement within the same tile skips the 3×3 neighborhood loop, while boundary crossings and teleports evaluate the destination neighborhood. Existing `SentTiles` membership continues to suppress duplicate `LoadTerrain` messages. See [[recurring-loop-elimination]].
+
 ## Client → Server Inputs
 
 Clients send input events, never raw state. The server validates and applies; the client predicts locally:
@@ -61,6 +65,7 @@ The `CombatChannel` carries `CombatEvent` structs (attacker, target, amount, spe
 - [ARCHITECTURE.md](../../../ARCHITECTURE.md) — "Networking with Lightyear" section
 - [crates/server/src/networking.rs](../../../crates/server/src/networking.rs) — server plugin, channel types, interest radius
 - [crates/server/src/combat.rs](../../../crates/server/src/combat.rs) — authoritative NPC damage/death transition and combat events
+- [crates/server/src/networking.rs](../../../crates/server/src/networking.rs) — terrain streaming and tile-transition gating
 - [CLAUDE.md](../../../CLAUDE.md) — dependency versions
 
 ## See Also
@@ -68,3 +73,4 @@ The `CombatChannel` carries `CombatEvent` structs (attacker, target, amount, spe
 - [[tick-model]] — replication runs at step 6 of the 20Hz tick pipeline
 - [[zone-architecture]] — zone transfers are transparent to clients via despawn/respawn
 - [[combat]] — CombatEvent broadcast over CombatChannel
+- [[recurring-loop-elimination]] — removal of recurring replication and streaming scans
