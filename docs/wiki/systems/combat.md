@@ -1,18 +1,30 @@
 # Combat
 
-Combat logic is split across two crates: `shared/src/formulas/` holds pure combat math (melee hit table, stat conversions, spell formulas), and `server/src/combat.rs` runs the live ECS systems (auto-attack, death, respawn).
+Combat logic is split across two crates: `shared/src/formulas/` holds pure combat math (melee hit table, stat conversions, spell formulas), and `server/src/combat.rs` runs the live ECS systems (auto-attack, direct NPC death transition, respawn).
 
 ## Server Systems (`CombatPlugin`)
 
 Runs in `FixedUpdate`. Systems in order:
 
 1. `start_attack_system` — reacts to `Changed<CombatTarget>`; inserts `AutoAttack` and `CombatState`
-2. `auto_attack_system` — ticks swing timers, checks melee range (5 yards), applies `BASE_DAMAGE`, emits `CombatEvent`
+2. `auto_attack_system` — ticks swing timers, checks melee range (5 yards), applies `BASE_DAMAGE`, emits damage events, and handles lethal NPC transitions
 3. `maintain_in_combat_state_system` — expires `CombatState` after 5s of no engagement
-4. `death_system` — detects HP ≤ 0, inserts `DeathState`, removes `Replicate`
-5. `respawn_system` — ticks `DeathState.respawn_timer` (default 60s), restores HP and position to `SpawnPoint`, re-adds `Replicate`
+4. `respawn_system` — ticks `DeathState.respawn_timer` (default 60s), restores HP and position to `SpawnPoint`, re-adds `Replicate` and `NetworkVisibility`
 
-All combat events are broadcast over `CombatChannel` (reliable ordered) and logged to a server-side `CombatLog` ring buffer (capacity 10,000 entries).
+All combat events are broadcast over `CombatChannel` (reliable ordered) and logged to a server-side `CombatLog` ring buffer (capacity 10,000 entries). Melee damage, NPC death, and NPC respawn events retain this broadcast and logging path.
+
+## NPC Death Transition (`c8762ed`)
+
+NPC death is handled at the sole authoritative NPC damage boundary: `try_swing`, called by `auto_attack_system`. After damage is clamped to zero, a lethal NPC result immediately inserts `DeathState` and removes `Replicate`; the same swing emits both the melee-damage and death `CombatEvent` values. The former 20 Hz scan over every living NPC was removed.
+
+The transition contract is explicit:
+
+- Nonlethal damage lowers health while leaving the NPC alive and replicated.
+- Lethal damage marks the NPC dead, removes replication, and emits a death event.
+- An NPC that starts at zero health without an authoritative damage transition is not discovered by a global poll.
+- Future NPC damage writers must route through the same authoritative death transition rather than adding another health scan.
+
+Coverage in `combat_tests.rs` includes `nonlethal_auto_attack_keeps_npc_alive_and_replicated`, `lethal_auto_attack_produces_death_state_replication_removal_and_event`, and `zero_health_without_damage_transition_is_not_discovered_by_death_poll`. Respawn semantics remain unchanged: `respawn_system` restores health and spawn position, re-adds replication and visibility, removes `LastDamager`, and emits the existing `Respawn` event.
 
 ## Melee Hit Table (`shared/src/formulas/melee.rs`)
 
@@ -48,7 +60,8 @@ Key formulas:
 
 ## Sources
 
-- [crates/server/src/combat.rs](../../../crates/server/src/combat.rs) — CombatPlugin, auto-attack, death/respawn
+- [crates/server/src/combat.rs](../../../crates/server/src/combat.rs) — CombatPlugin, auto-attack, direct NPC death transition, respawn
+- [crates/server/src/combat_tests.rs](../../../crates/server/src/combat_tests.rs) — nonlethal, lethal, zero-without-transition, and respawn behavior coverage
 - [crates/shared/src/formulas/melee.rs](../../../crates/shared/src/formulas/melee.rs) — hit table, avoidance DR
 - [crates/shared/src/formulas/spell.rs](../../../crates/shared/src/formulas/spell.rs) — spell miss, crit, haste, DoT
 - [crates/shared/src/formulas/mod.rs](../../../crates/shared/src/formulas/mod.rs) — HP, mana, armor, rating conversion

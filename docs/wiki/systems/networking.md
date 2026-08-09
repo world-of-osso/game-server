@@ -50,7 +50,7 @@ enum PlayerInput {
 | Inventory | Reliable ordered | Item moves, loot, trade |
 | Terrain | Reliable ordered | Map tile load commands |
 
-The `CombatChannel` carries `CombatEvent` structs (attacker, target, amount, spell_id, event_type). These are also written to the server-side `CombatLog` ring buffer (capacity 10,000 entries).
+The `CombatChannel` carries `CombatEvent` structs (attacker, target, amount, spell_id, event_type), including melee damage, NPC death, and NPC respawn events. These are also written to the server-side `CombatLog` ring buffer (capacity 10,000 entries). The NPC death transition remains authoritative at the server damage boundary; networking carries its resulting event and replication lifecycle.
 
 ## Serialization
 
@@ -60,6 +60,7 @@ The `CombatChannel` carries `CombatEvent` structs (attacker, target, amount, spe
 
 - [ARCHITECTURE.md](../../../ARCHITECTURE.md) — "Networking with Lightyear" section
 - [crates/server/src/networking.rs](../../../crates/server/src/networking.rs) — server plugin, channel types, interest radius
+- [crates/server/src/combat.rs](../../../crates/server/src/combat.rs) — authoritative NPC damage/death transition and combat events
 - [CLAUDE.md](../../../CLAUDE.md) — dependency versions
 
 ## See Also

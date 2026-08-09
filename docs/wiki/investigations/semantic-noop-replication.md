@@ -58,6 +58,14 @@ First-wave fixes remain preserved:
 
 Second-wave fixes are listed above. They preserve real movement, combat, presence, stat, respawn, equipment, guild, and gold transitions without changing protocol semantics.
 
+## Subsequent NPC Death Transition (`c8762ed`)
+
+Commit `c8762ed` removed the 20 Hz all-living-NPC health scan. NPC death is now handled directly at the sole authoritative NPC damage boundary, `try_swing`, called by `auto_attack_system`: after damage is clamped, a lethal NPC result inserts `DeathState`, removes `Replicate`, and emits the existing `Death` `CombatEvent` alongside the melee-damage event.
+
+Coverage distinguishes the transition boundaries: nonlethal damage leaves the NPC alive and replicated; lethal damage preserves death-state, replication-removal, and event behavior; and a zero-health NPC without an authoritative damage transition is intentionally not discovered by a global poll. Respawn semantics remain unchanged: `respawn_system` restores health and spawn position, re-adds replication/visibility, removes `LastDamager`, and emits `Respawn` over the existing combat-event path.
+
+Future NPC damage writers must route through the same authoritative death transition. Adding another health scan would reintroduce the removed polling model and could diverge death-state, replication, or event behavior.
+
 ## Coverage Status
 
 | Boundary / writer | Status |
@@ -74,6 +82,7 @@ Second-wave fixes are listed above. They preserve real movement, combat, presenc
 | Player `Rotation`/`MovementSpeed` normal input | Ruled out by `2927382` |
 | Gravity-derived replicated state | Ruled out by `ae81c65` |
 | Spawn-only `Npc`, `ModelDisplay`, and `Zone` | Ruled out for steady-state writes |
+| NPC death transition at the authoritative melee damage boundary | Confirmed in `c8762ed`; all-living-NPC health scan removed; nonlethal, lethal, and zero-without-transition behavior covered |
 | Admin teleport `Position`, manual presence requests, mount-triggered speed, and other event-driven writers | Remaining unproven; no speculative changes made |
 | Lightyear serialized-update boundary | Blocked: no direct integration assertion distinguishes zero emitted updates from client equality suppression |
 | Live component update frequency and bytes | Unmeasured: no bounded per-component serialized-update or bandwidth capture was completed |
@@ -87,7 +96,7 @@ Second-wave fixes are listed above. They preserve real movement, combat, presenc
 - [presence system](../../../crates/server/src/friends.rs) — Online/Afk synchronization
 - [combat system](../../../crates/server/src/combat.rs) — active combat state maintenance
 - [dependency versions](../../../Cargo.lock) — Lightyear `0.26.4` lockfile resolution
-- `game-server` commits `86d73f5`, `74edc39`, `f33c95a`, `bd31161`, `1c139e9`, `e13e09e`, `057dd17`, `41feebb`, `945eb0f`, and `f84ee17` — no-op guards, ruled-out Gold coverage, and regression tests
+- `game-server` commits `86d73f5`, `74edc39`, `f33c95a`, `bd31161`, `1c139e9`, `e13e09e`, `057dd17`, `41feebb`, `945eb0f`, `f84ee17`, and `c8762ed` — no-op guards, direct NPC death transition, ruled-out Gold coverage, and regression tests
 - Local Lightyear `0.26.4` sender/receiver source — tick-only sender selection and client equality suppression
 
 ## See Also
@@ -95,3 +104,4 @@ Second-wave fixes are listed above. They preserve real movement, combat, presenc
 - [[networking]] — replication configuration and transport model
 - [[tick-model]] — 20 Hz server schedule and replication stage
 - [[creature-ai]] — NPC movement states and writer paths
+- [[combat]] — authoritative damage, death, respawn, and CombatEvent semantics

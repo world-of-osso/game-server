@@ -9,10 +9,12 @@ Each tick runs these stages in order:
 1. **Receive & apply client inputs** — `PlayerInput` messages (Move, CastSpell, Interact, Jump, StopMove) are dequeued and applied to player entities
 2. **AI systems** — `wander_system`, `waypoint_system`, `chase_system`, `leash_check_system`, `return_to_spawn_system` run in parallel where independent
 3. **Movement validation** — server-authoritative position update; applies gravity, terrain snapping, speed limits
-4. **Combat resolution** — `start_attack_system`, `auto_attack_system`, `death_system`, `respawn_system`
+4. **Combat resolution** — `start_attack_system`, `auto_attack_system` (including the direct NPC death transition), `respawn_system`
 5. **Zone transition checks** — entities crossing zone boundaries are handed off via events
 6. **Lightyear replication** — delta-compressed changed components sent to clients
 7. **Persistence flush** — every N ticks (every 5 minutes), dirty entities written to redb
+
+NPC death is not a separate all-living-NPC health poll. The authoritative melee damage boundary handles the lethal transition when `try_swing` reduces an NPC to zero health; respawn remains a state-bounded timer query.
 
 ## Zone-Parallel Scheduling
 
@@ -31,6 +33,7 @@ AzerothCore uses a ~1ms main loop and manually batches work. Bevy's `FixedUpdate
 
 - [ARCHITECTURE.md](../../../ARCHITECTURE.md) — "Server Tick Model" section
 - [crates/server/src/main.rs](../../../crates/server/src/main.rs) — `FixedUpdate` app setup
+- [crates/server/src/combat.rs](../../../crates/server/src/combat.rs) — direct NPC death transition and state-bounded respawn
 
 ## See Also
 
