@@ -54,6 +54,61 @@ fn sync_player_gold_from_inventory_updates_replicated_gold_component() {
 }
 
 #[test]
+fn sync_player_gold_from_inventory_preserves_equal_replicated_gold_tick() {
+    let db = test_db();
+    persistence::save_inventory(
+        &db.db,
+        42,
+        &InventoryData {
+            gold: 12_345,
+            items: Vec::new(),
+        },
+    );
+
+    let mut app = App::new();
+    app.insert_resource(db);
+    app.add_systems(Update, sync_player_gold_from_inventory);
+    let player = app
+        .world_mut()
+        .spawn((
+            Player {
+                name: "Thrall".into(),
+                race: 2,
+                class: 7,
+                appearance: CharacterAppearance::default(),
+            },
+            ClientId(42),
+            Gold(12_345),
+        ))
+        .id();
+
+    app.update();
+    let tick_before = app
+        .world()
+        .entity(player)
+        .get_ref::<Gold>()
+        .expect("gold component")
+        .last_changed();
+    app.update();
+
+    let gold = app
+        .world()
+        .entity(player)
+        .get::<Gold>()
+        .expect("gold component");
+    assert_eq!(gold.0, 12_345);
+    assert_eq!(
+        app.world()
+            .entity(player)
+            .get_ref::<Gold>()
+            .expect("gold component")
+            .last_changed(),
+        tick_before,
+        "equal inventory gold must not dirty the replicated component"
+    );
+}
+
+#[test]
 fn load_selected_character_state_syncs_pvp_currencies_from_wallet() {
     let db = test_db();
     let character_id = 55;
