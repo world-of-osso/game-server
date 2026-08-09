@@ -1,6 +1,6 @@
 # Tick Model
 
-The server runs at 20 Hz using Bevy's `FixedUpdate` schedule — one tick every 50ms. All game logic is gated to this schedule for deterministic, ordered execution.
+The server's core simulation runs at 20 Hz using Bevy's `FixedUpdate` schedule — one tick every 50ms. Systems that do not require tick-rate work use explicit lower-frequency or state-driven gates.
 
 ## Tick Pipeline
 
@@ -15,6 +15,10 @@ Each tick runs these stages in order:
 7. **Persistence flush** — every N ticks (every 5 minutes), dirty entities written to redb
 
 NPC death is not a separate all-living-NPC health poll. The authoritative melee damage boundary handles the lethal transition when `try_swing` reduces an NPC to zero health; respawn remains a state-bounded timer query.
+
+## Lower-Frequency Gates
+
+Auction expiration is registered in `FixedUpdate` but runs immediately once and then at most once per second. Sub-second ticks skip `expire_auctions` entirely; expiration, sale completion, persistence, and auction-mail behavior remain unchanged. See [[recurring-loop-elimination]].
 
 ## Zone-Parallel Scheduling
 
@@ -34,6 +38,7 @@ AzerothCore uses a ~1ms main loop and manually batches work. Bevy's `FixedUpdate
 - [ARCHITECTURE.md](../../../ARCHITECTURE.md) — "Server Tick Model" section
 - [crates/server/src/main.rs](../../../crates/server/src/main.rs) — `FixedUpdate` app setup
 - [crates/server/src/combat.rs](../../../crates/server/src/combat.rs) — direct NPC death transition and state-bounded respawn
+- [crates/server/src/auction_house.rs](../../../crates/server/src/auction_house.rs) — one-second auction expiration gate
 
 ## See Also
 
@@ -42,3 +47,4 @@ AzerothCore uses a ~1ms main loop and manually batches work. Bevy's `FixedUpdate
 - [[creature-ai]] — AI systems run in step 2
 - [[persistence]] — flush runs at step 7
 - [[ecs-storage]] — `Changed<T>` makes step 7 cheap
+- [[recurring-loop-elimination]] — recurring scans replaced by cadence, state, or event boundaries
