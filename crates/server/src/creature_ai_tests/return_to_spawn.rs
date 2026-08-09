@@ -75,6 +75,67 @@ fn return_transitions_to_idle_at_spawn() {
 }
 
 #[test]
+fn return_at_spawn_does_not_dirty_position() {
+    use bevy::ecs::system::RunSystemOnce;
+
+    let mut app = App::new();
+    app.add_plugins(bevy::MinimalPlugins);
+    app.update();
+    app.update();
+
+    let position = Position {
+        x: 5.0,
+        y: 2.0,
+        z: -3.0,
+    };
+    let creature = app
+        .world_mut()
+        .spawn((
+            position,
+            SpawnPoint {
+                x: position.x,
+                y: position.y,
+                z: position.z,
+                wander_distance: 5.0,
+                speed_walk: 1.0,
+            },
+            CreatureState::Returning,
+        ))
+        .id();
+    app.update();
+
+    let tick_before = app
+        .world()
+        .entity(creature)
+        .get_ref::<Position>()
+        .unwrap()
+        .last_changed();
+
+    app.world_mut()
+        .run_system_once(return_to_spawn_system)
+        .unwrap();
+
+    assert_eq!(
+        *app.world().entity(creature).get::<Position>().unwrap(),
+        position
+    );
+    assert_eq!(
+        app.world()
+            .entity(creature)
+            .get_ref::<Position>()
+            .unwrap()
+            .last_changed(),
+        tick_before,
+        "returning at the existing spawn position must not dirty Position"
+    );
+    assert_eq!(
+        *app.world().entity(creature).get::<CreatureState>().unwrap(),
+        CreatureState::Idle,
+        "arrival must still complete the return state"
+    );
+}
+
+#[test]
 fn return_ignores_idle_creatures() {
     use bevy::ecs::system::RunSystemOnce;
 

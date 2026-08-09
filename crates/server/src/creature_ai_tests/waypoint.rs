@@ -96,14 +96,14 @@ fn waypoint_creature_follows_path_in_order() {
         speed_walk: 1.0,
     };
 
-    tick_waypoint(&mut pos, &mut state, &path, 0.1);
+    pos = tick_waypoint(pos, &mut state, &path, 0.1);
     assert_eq!(state.current_index, 1, "advanced past wp 0");
 
     for _ in 0..500 {
         if state.current_index != 1 {
             break;
         }
-        tick_waypoint(&mut pos, &mut state, &path, 0.1);
+        pos = tick_waypoint(pos, &mut state, &path, 0.1);
     }
     assert_eq!(state.current_index, 2, "advanced past wp 1");
     assert!((pos.x - 20.0).abs() < 0.5, "reached wp 1 at x=20");
@@ -112,7 +112,7 @@ fn waypoint_creature_follows_path_in_order() {
         if state.current_index != 2 {
             break;
         }
-        tick_waypoint(&mut pos, &mut state, &path, 0.1);
+        pos = tick_waypoint(pos, &mut state, &path, 0.1);
     }
     assert_eq!(state.current_index, 0, "wrapped back to wp 0");
     assert!((pos.x - 30.0).abs() < 0.5, "reached wp 2 at x=30");
@@ -150,7 +150,7 @@ fn waypoint_creature_pauses_at_delay() {
         speed_walk: 1.0,
     };
 
-    tick_waypoint(&mut pos, &mut state, &path, 0.5);
+    pos = tick_waypoint(pos, &mut state, &path, 0.5);
     assert_eq!(state.current_index, 1);
     assert!(
         (state.delay_remaining - 3.0).abs() < 0.01,
@@ -158,18 +158,86 @@ fn waypoint_creature_pauses_at_delay() {
     );
 
     let pos_before = pos;
-    tick_waypoint(&mut pos, &mut state, &path, 0.5);
+    pos = tick_waypoint(pos, &mut state, &path, 0.5);
     assert_eq!(pos.x, pos_before.x, "no movement during delay");
     assert!(state.delay_remaining > 0.0, "still delaying");
 
     for _ in 0..10 {
-        tick_waypoint(&mut pos, &mut state, &path, 0.5);
+        pos = tick_waypoint(pos, &mut state, &path, 0.5);
     }
     assert!(state.delay_remaining <= 0.0, "delay expired");
 
     let pos_after_delay = pos.x;
-    tick_waypoint(&mut pos, &mut state, &path, 0.5);
+    pos = tick_waypoint(pos, &mut state, &path, 0.5);
     assert!(pos.x > pos_after_delay, "moving toward wp 1 after delay");
+}
+
+#[test]
+fn waypoint_at_current_position_does_not_dirty_position() {
+    use crate::world_data::{WaypointPath, WaypointPoint};
+    use bevy::ecs::system::RunSystemOnce;
+    use std::collections::HashMap;
+
+    let path = WaypointPath {
+        points: vec![WaypointPoint {
+            position_x: 0.0,
+            position_y: 0.0,
+            position_z: 0.0,
+            delay: 0,
+        }],
+    };
+    let mut app = App::new();
+    app.add_plugins(bevy::MinimalPlugins);
+    app.insert_resource(WorldData {
+        templates: HashMap::new(),
+        spawns: vec![],
+        spawns_by_map: HashMap::new(),
+        waypoints: HashMap::from([(7, path)]),
+    });
+    app.update();
+    app.update();
+
+    let position = Position {
+        x: 0.0,
+        y: 0.0,
+        z: 0.0,
+    };
+    let entity = app
+        .world_mut()
+        .spawn((
+            position,
+            WaypointState {
+                creature_guid: 7,
+                current_index: 0,
+                delay_remaining: 0.0,
+                speed_walk: 1.0,
+            },
+        ))
+        .id();
+    app.update();
+
+    let tick_before = app
+        .world()
+        .entity(entity)
+        .get_ref::<Position>()
+        .unwrap()
+        .last_changed();
+
+    app.world_mut().run_system_once(waypoint_system).unwrap();
+
+    assert_eq!(
+        *app.world().entity(entity).get::<Position>().unwrap(),
+        position
+    );
+    assert_eq!(
+        app.world()
+            .entity(entity)
+            .get_ref::<Position>()
+            .unwrap()
+            .last_changed(),
+        tick_before,
+        "an unchanged waypoint target and height must not dirty Position"
+    );
 }
 
 #[test]

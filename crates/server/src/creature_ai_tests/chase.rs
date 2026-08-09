@@ -47,6 +47,61 @@ fn chase_moves_toward_target() {
 }
 
 #[test]
+fn chase_at_target_does_not_dirty_position() {
+    use bevy::ecs::system::RunSystemOnce;
+
+    let mut app = App::new();
+    app.add_plugins(bevy::MinimalPlugins);
+    app.update();
+    app.update();
+
+    let target_position = Position {
+        x: 10.0,
+        y: 0.0,
+        z: -4.0,
+    };
+    let target = app.world_mut().spawn(target_position).id();
+    let chaser = app
+        .world_mut()
+        .spawn((
+            target_position,
+            SpawnPoint {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+                wander_distance: 5.0,
+                speed_walk: 1.0,
+            },
+            CreatureState::Pursuing {
+                target: target.to_bits(),
+            },
+        ))
+        .id();
+
+    app.update();
+
+    let position_before = *app.world().entity(chaser).get::<Position>().unwrap();
+    let tick_before = app
+        .world()
+        .entity(chaser)
+        .get_ref::<Position>()
+        .unwrap()
+        .last_changed();
+
+    app.world_mut().run_system_once(chase_system).unwrap();
+
+    let position_after = *app.world().entity(chaser).get::<Position>().unwrap();
+    let tick_after = app
+        .world()
+        .entity(chaser)
+        .get_ref::<Position>()
+        .unwrap()
+        .last_changed();
+    assert_eq!(position_after, position_before);
+    assert_eq!(tick_after, tick_before);
+}
+
+#[test]
 fn chase_respects_walk_speed() {
     use bevy::ecs::system::RunSystemOnce;
 

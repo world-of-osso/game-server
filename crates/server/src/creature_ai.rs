@@ -108,7 +108,12 @@ fn wander_system(
         }
         match state.phase {
             WanderPhase::Idle => tick_idle(&mut state, dt, spawn),
-            WanderPhase::Walking => tick_walk(&mut pos, &mut state, spawn, dt),
+            WanderPhase::Walking => {
+                let next_position = tick_walk(*pos, &mut state, spawn, dt);
+                if *pos != next_position {
+                    *pos = next_position;
+                }
+            }
         }
     }
 }
@@ -126,17 +131,28 @@ fn tick_idle(state: &mut WanderState, dt: f32, spawn: &SpawnPoint) {
     state.seed = state.seed.wrapping_add(1);
 }
 
-fn tick_walk(pos: &mut Position, state: &mut WanderState, spawn: &SpawnPoint, dt: f32) {
+fn tick_walk(
+    mut position: Position,
+    state: &mut WanderState,
+    spawn: &SpawnPoint,
+    dt: f32,
+) -> Position {
     let speed = spawn.speed_walk * BASE_WALK_SPEED;
-    let (reached, new_x, new_z) =
-        move_toward(pos.x, pos.z, state.target_x, state.target_z, speed * dt);
-    pos.x = new_x;
-    pos.z = new_z;
+    let (reached, new_x, new_z) = move_toward(
+        position.x,
+        position.z,
+        state.target_x,
+        state.target_z,
+        speed * dt,
+    );
+    position.x = new_x;
+    position.z = new_z;
     if reached {
         state.phase = WanderPhase::Idle;
         state.idle_remaining = random_idle_secs(state.seed);
         state.seed = state.seed.wrapping_add(1);
     }
+    position
 }
 
 /// Pick a random point within `radius` of (cx, cy) using a simple LCG.
@@ -187,27 +203,36 @@ fn waypoint_system(
         if path.points.is_empty() {
             continue;
         }
-        tick_waypoint(&mut pos, &mut state, path, dt);
+        let next_position = tick_waypoint(*pos, &mut state, path, dt);
+        if *pos != next_position {
+            *pos = next_position;
+        }
     }
 }
 
-fn tick_waypoint(pos: &mut Position, state: &mut WaypointState, path: &WaypointPath, dt: f32) {
+fn tick_waypoint(
+    mut position: Position,
+    state: &mut WaypointState,
+    path: &WaypointPath,
+    dt: f32,
+) -> Position {
     if state.delay_remaining > 0.0 {
         state.delay_remaining -= dt;
-        return;
+        return position;
     }
     let point = &path.points[state.current_index % path.points.len()];
     // Waypoint data is WoW coords; convert target to Bevy for movement.
     let (tx, ty, tz) =
         crate::terrain_height::wow_to_bevy(point.position_x, point.position_y, point.position_z);
     let speed = state.speed_walk * BASE_WALK_SPEED;
-    let (reached, nx, nz) = move_toward(pos.x, pos.z, tx, tz, speed * dt);
-    pos.x = nx;
-    pos.z = nz;
+    let (reached, nx, nz) = move_toward(position.x, position.z, tx, tz, speed * dt);
+    position.x = nx;
+    position.z = nz;
     if reached {
-        pos.y = ty;
+        position.y = ty;
         advance_waypoint(state, point.delay as f32, path.points.len());
     }
+    position
 }
 
 fn advance_waypoint(state: &mut WaypointState, delay_secs: f32, path_len: usize) {
@@ -235,8 +260,14 @@ fn chase_system(
         let speed = spawn.speed_walk * BASE_WALK_SPEED;
         let (_reached, new_x, new_z) =
             move_toward(pos.x, pos.z, target_pos.x, target_pos.z, speed * dt);
-        pos.x = new_x;
-        pos.z = new_z;
+        let next_position = Position {
+            x: new_x,
+            y: pos.y,
+            z: new_z,
+        };
+        if *pos != next_position {
+            *pos = next_position;
+        }
     }
 }
 
@@ -292,10 +323,15 @@ fn return_to_spawn_system(
         }
         let speed = spawn.speed_walk * BASE_WALK_SPEED;
         let (reached, new_x, new_z) = move_toward(pos.x, pos.z, spawn.x, spawn.z, speed * dt);
-        pos.x = new_x;
-        pos.z = new_z;
+        let next_position = Position {
+            x: new_x,
+            y: if reached { spawn.y } else { pos.y },
+            z: new_z,
+        };
+        if *pos != next_position {
+            *pos = next_position;
+        }
         if reached {
-            pos.y = spawn.y;
             *state = CreatureState::Idle;
         }
     }

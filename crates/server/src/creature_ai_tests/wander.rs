@@ -112,7 +112,7 @@ fn wander_zero_radius_stays_at_spawn() {
     for _ in 0..200 {
         match state.phase {
             WanderPhase::Idle => tick_idle(&mut state, 0.1, &spawn),
-            WanderPhase::Walking => tick_walk(&mut pos, &mut state, &spawn, 0.1),
+            WanderPhase::Walking => pos = tick_walk(pos, &mut state, &spawn, 0.1),
         }
     }
 
@@ -150,7 +150,7 @@ fn wander_creature_returns_to_idle_after_walk() {
     };
 
     for _ in 0..500 {
-        tick_walk(&mut pos, &mut state, &spawn, 0.05);
+        pos = tick_walk(pos, &mut state, &spawn, 0.05);
         if state.phase == WanderPhase::Idle {
             break;
         }
@@ -167,6 +167,75 @@ fn wander_creature_returns_to_idle_after_walk() {
         "creature at ({}, {}) is {dist:.2} from spawn, within radius {radius}",
         pos.x,
         pos.z,
+    );
+}
+
+#[test]
+fn wander_at_target_does_not_dirty_position() {
+    use bevy::ecs::system::RunSystemOnce;
+
+    let mut app = App::new();
+    app.add_plugins(bevy::MinimalPlugins);
+    app.update();
+    app.update();
+
+    let position = Position {
+        x: 50.0,
+        y: 0.0,
+        z: 80.0,
+    };
+    let entity = app
+        .world_mut()
+        .spawn((
+            position,
+            SpawnPoint {
+                x: position.x,
+                y: position.y,
+                z: position.z,
+                wander_distance: 0.0,
+                speed_walk: 1.0,
+            },
+            WanderState {
+                phase: WanderPhase::Walking,
+                target_x: position.x,
+                target_z: position.z,
+                idle_remaining: 0.0,
+                seed: 42,
+            },
+        ))
+        .id();
+    app.update();
+
+    let tick_before = app
+        .world()
+        .entity(entity)
+        .get_ref::<Position>()
+        .unwrap()
+        .last_changed();
+
+    app.world_mut().run_system_once(wander_system).unwrap();
+
+    assert_eq!(
+        *app.world().entity(entity).get::<Position>().unwrap(),
+        position
+    );
+    assert_eq!(
+        app.world()
+            .entity(entity)
+            .get_ref::<Position>()
+            .unwrap()
+            .last_changed(),
+        tick_before,
+        "reaching an unchanged wander target must not dirty Position"
+    );
+    assert_eq!(
+        app.world()
+            .entity(entity)
+            .get::<WanderState>()
+            .unwrap()
+            .phase,
+        WanderPhase::Idle,
+        "arrival must still advance the wander state"
     );
 }
 
