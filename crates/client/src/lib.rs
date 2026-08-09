@@ -3,6 +3,7 @@
 //! Provides connection setup, auth flow, and message handling
 //! as a minimal Bevy app (no rendering).
 
+use std::path::PathBuf;
 use std::time::Duration;
 
 use bevy::app::AppExit;
@@ -35,7 +36,7 @@ use self::response_handlers::{
 };
 
 const TICK_RATE_HZ: f64 = 20.0;
-const AUTH_TOKEN_PATH: &str = "data/auth_token";
+const AUTH_TOKEN_FILE_NAME: &str = "auth_token";
 
 // -- CLI action types --
 
@@ -90,6 +91,16 @@ pub enum CliState {
 
 #[derive(Resource, Default)]
 struct AuthToken(Option<String>);
+
+fn world_of_osso_config_dir() -> PathBuf {
+    dirs::config_dir()
+        .unwrap_or_else(|| PathBuf::from("."))
+        .join("world-of-osso")
+}
+
+fn auth_token_path() -> PathBuf {
+    world_of_osso_config_dir().join(AUTH_TOKEN_FILE_NAME)
+}
 
 #[derive(Resource, Default)]
 struct AuthRequestSent(bool);

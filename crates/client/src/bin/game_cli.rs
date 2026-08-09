@@ -77,7 +77,7 @@ struct RegisterArgs {
 struct TokenArgs {
     #[command(flatten)]
     server: ServerArgs,
-    /// Auth token (defaults to data/auth_token)
+    /// Auth token (defaults to ~/.config/world-of-osso/auth_token)
     #[arg(short, long)]
     token: Option<String>,
 }

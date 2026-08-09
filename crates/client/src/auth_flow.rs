@@ -1,14 +1,17 @@
 use super::*;
 
 pub(super) fn load_auth_token() -> Option<String> {
-    std::fs::read_to_string(AUTH_TOKEN_PATH)
+    std::fs::read_to_string(auth_token_path())
         .ok()
         .filter(|content| !content.trim().is_empty())
 }
 
 fn save_auth_token(token: &str) {
-    let _ = std::fs::create_dir_all("data");
-    if let Err(error) = std::fs::write(AUTH_TOKEN_PATH, token) {
+    let path = auth_token_path();
+    if let Some(parent) = path.parent() {
+        let _ = std::fs::create_dir_all(parent);
+    }
+    if let Err(error) = std::fs::write(&path, token) {
         warn!("Failed to save auth token: {error}");
     }
 }
