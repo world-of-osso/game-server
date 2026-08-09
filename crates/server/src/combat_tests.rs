@@ -359,11 +359,11 @@ fn test_death_at_zero_hp() {
 
 #[test]
 fn test_respawn_restores_health() {
-    let mut health = Health {
+    let health = Health {
         current: 0.0,
         max: 100.0,
     };
-    let mut position = pos(50.0, 50.0, 50.0);
+    let position = pos(50.0, 50.0, 50.0);
     let spawn = SpawnPoint {
         x: 10.0,
         y: 20.0,
@@ -372,12 +372,75 @@ fn test_respawn_restores_health() {
         speed_walk: 1.0,
     };
 
-    respawn_entity(&mut health, &mut position, &spawn);
+    let (health, position) = respawned_state(health, position, &spawn);
 
     assert_eq!(health.current, 100.0, "health should be restored to max");
     assert_eq!(position.x, 10.0);
     assert_eq!(position.y, 20.0);
     assert_eq!(position.z, 30.0);
+}
+
+#[test]
+fn respawn_at_spawn_with_full_health_does_not_dirty_replicated_state() {
+    let mut app = setup_app();
+    app.add_plugins(lightyear::prelude::server::ServerPlugins {
+        tick_duration: std::time::Duration::from_millis(50),
+    });
+    let spawn = SpawnPoint {
+        x: 10.0,
+        y: 20.0,
+        z: 30.0,
+        wander_distance: 0.0,
+        speed_walk: 1.0,
+    };
+    let position = pos(spawn.x, spawn.y, spawn.z);
+    let entity = app
+        .world_mut()
+        .spawn((
+            DeathState { respawn_timer: 0.0 },
+            Health {
+                current: 100.0,
+                max: 100.0,
+            },
+            spawn,
+            position,
+        ))
+        .id();
+    app.update();
+
+    let health_tick = app
+        .world()
+        .entity(entity)
+        .get_ref::<Health>()
+        .unwrap()
+        .last_changed();
+    let position_tick = app
+        .world()
+        .entity(entity)
+        .get_ref::<Position>()
+        .unwrap()
+        .last_changed();
+
+    app.world_mut()
+        .run_system_once(respawn_system)
+        .expect("respawn system should run");
+    app.update();
+
+    let entity_ref = app.world().entity(entity);
+    assert!(entity_ref.get::<DeathState>().is_none());
+    assert!(entity_ref.get::<Replicate>().is_some());
+    assert_eq!(entity_ref.get::<Health>().unwrap().current, 100.0);
+    assert_eq!(*entity_ref.get::<Position>().unwrap(), position);
+    assert_eq!(
+        entity_ref.get_ref::<Health>().unwrap().last_changed(),
+        health_tick,
+        "respawning at full health must not dirty Health"
+    );
+    assert_eq!(
+        entity_ref.get_ref::<Position>().unwrap().last_changed(),
+        position_tick,
+        "respawning at spawn must not dirty Position"
+    );
 }
 
 #[test]
@@ -389,11 +452,11 @@ fn respawn_timer_counts_down_then_restores() {
         wander_distance: 0.0,
         speed_walk: 1.0,
     };
-    let mut health = Health {
+    let health = Health {
         current: 0.0,
         max: 500.0,
     };
-    let mut position = pos(99.0, 99.0, 99.0);
+    let position = pos(99.0, 99.0, 99.0);
     let mut death = DeathState {
         respawn_timer: DEFAULT_RESPAWN_SECS,
     };
@@ -408,7 +471,7 @@ fn respawn_timer_counts_down_then_restores() {
     assert!(death.respawn_timer <= 0.0, "timer expired at 60s");
 
     // Respawn
-    respawn_entity(&mut health, &mut position, &spawn);
+    let (health, position) = respawned_state(health, position, &spawn);
     assert_eq!(health.current, 500.0, "health restored to max");
     assert_eq!(position.x, 10.0, "returned to spawn x");
     assert_eq!(position.y, 20.0, "returned to spawn y");

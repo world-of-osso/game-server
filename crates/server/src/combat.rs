@@ -333,7 +333,13 @@ fn respawn_system(
         if death.respawn_timer > 0.0 {
             continue;
         }
-        respawn_entity(&mut health, &mut pos, spawn);
+        let (next_health, next_position) = respawned_state(*health, *pos, spawn);
+        if *health != next_health {
+            *health = next_health;
+        }
+        if *pos != next_position {
+            *pos = next_position;
+        }
         commands.entity(entity).remove::<DeathState>().insert((
             Replicate::new(ReplicationMode::SingleServer(NetworkTarget::All)),
             NetworkVisibility,
@@ -351,12 +357,17 @@ fn respawn_system(
     broadcast_events(&events, &mut senders, &mut combat_log, elapsed);
 }
 
-/// Restore health and position for a respawning entity.
-fn respawn_entity(health: &mut Health, pos: &mut Position, spawn: &SpawnPoint) {
+/// Calculate restored health and position for a respawning entity.
+fn respawned_state(
+    mut health: Health,
+    mut position: Position,
+    spawn: &SpawnPoint,
+) -> (Health, Position) {
     health.current = health.max;
-    pos.x = spawn.x;
-    pos.y = spawn.y;
-    pos.z = spawn.z;
+    position.x = spawn.x;
+    position.y = spawn.y;
+    position.z = spawn.z;
+    (health, position)
 }
 
 /// Send combat events to all connected clients and record to combat log.
