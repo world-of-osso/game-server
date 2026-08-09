@@ -15,7 +15,11 @@ import re
 import sys
 from pathlib import Path
 
-SIMC_DIR = Path(sys.argv[1]) if len(sys.argv) > 1 else Path.home() / "Repos/simc/engine/dbc/generated"
+SIMC_DIR = (
+    Path(sys.argv[1])
+    if len(sys.argv) > 1
+    else Path.home() / "Repos/simc/engine/dbc/generated"
+)
 
 SPELL_DATA_FILE = SIMC_DIR / "sc_spell_data.inc"
 
@@ -43,14 +47,16 @@ def parse_spell_data(path: Path) -> list[dict]:
         if sp_coeff == 0.0 and ap_coeff == 0.0 and dot_coeff == 0.0:
             continue
 
-        spells.append({
-            "id": spell_id,
-            "name": name,
-            "sp_direct": sp_coeff,
-            "sp_dot": dot_coeff,
-            "ap_direct": ap_coeff,
-            "ap_dot": 0.0,
-        })
+        spells.append(
+            {
+                "id": spell_id,
+                "name": name,
+                "sp_direct": sp_coeff,
+                "sp_dot": dot_coeff,
+                "ap_direct": ap_coeff,
+                "ap_dot": 0.0,
+            }
+        )
 
     return spells
 
@@ -71,7 +77,7 @@ def emit_sql(spells: list[dict]) -> str:
             f"(entry, direct_bonus, dot_bonus, ap_bonus, ap_dot_bonus, comments) "
             f"VALUES ({s['id']}, {s['sp_direct']}, {s['sp_dot']}, "
             f"{s['ap_direct']}, {s['ap_dot']}, "
-            f"'{s['name'].replace(chr(39), chr(39)+chr(39))}');"
+            f"'{s['name'].replace(chr(39), chr(39) + chr(39))}');"
         )
 
     lines.append("COMMIT;")

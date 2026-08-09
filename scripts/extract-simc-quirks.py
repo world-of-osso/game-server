@@ -18,21 +18,21 @@ import re
 import sys
 from pathlib import Path
 
-SIMC_DIR = Path(sys.argv[1]) if len(sys.argv) > 1 else Path.home() / "Repos/simc/engine/class_modules"
+SIMC_DIR = (
+    Path(sys.argv[1])
+    if len(sys.argv) > 1
+    else Path.home() / "Repos/simc/engine/class_modules"
+)
 
 # Patterns to detect formula quirks
 MULTIPLIER_RE = re.compile(
-    r'(composite_\w*multiplier|action_multiplier|action_ta_multiplier)\s*\('
+    r"(composite_\w*multiplier|action_multiplier|action_ta_multiplier)\s*\("
 )
 EFFECT_RE = re.compile(
-    r'(\w+)->effectN\(\s*(\d+)\s*\)\.(percent|base_value|resource)\(\)'
+    r"(\w+)->effectN\(\s*(\d+)\s*\)\.(percent|base_value|resource)\(\)"
 )
-DA_OVERRIDE_RE = re.compile(
-    r'(da_multiplier|ta_multiplier)\s*\*=\s*([^;]+);'
-)
-SPELL_REF_RE = re.compile(
-    r'(talents?\.\w+\.\w+|spec\.\w+|buff\.\w+)'
-)
+DA_OVERRIDE_RE = re.compile(r"(da_multiplier|ta_multiplier)\s*\*=\s*([^;]+);")
+SPELL_REF_RE = re.compile(r"(talents?\.\w+\.\w+|spec\.\w+|buff\.\w+)")
 
 
 def extract_quirks(path: Path) -> list[dict]:
@@ -52,30 +52,34 @@ def extract_quirks(path: Path) -> list[dict]:
             spell_ref = m.group(1)
             effect_n = int(m.group(2))
             accessor = m.group(3)
-            quirks.append({
-                "class": class_name,
-                "file": path.name,
-                "line": i + 1,
-                "type": "effect_reference",
-                "spell_ref": spell_ref,
-                "effect_index": effect_n,
-                "accessor": accessor,
-                "context": current_func or "unknown",
-                "code": line.strip()[:120],
-            })
+            quirks.append(
+                {
+                    "class": class_name,
+                    "file": path.name,
+                    "line": i + 1,
+                    "type": "effect_reference",
+                    "spell_ref": spell_ref,
+                    "effect_index": effect_n,
+                    "accessor": accessor,
+                    "context": current_func or "unknown",
+                    "code": line.strip()[:120],
+                }
+            )
 
         # Find direct multiplier modifications
         for m in DA_OVERRIDE_RE.finditer(line):
-            quirks.append({
-                "class": class_name,
-                "file": path.name,
-                "line": i + 1,
-                "type": "multiplier_override",
-                "field": m.group(1),
-                "expression": m.group(2).strip()[:80],
-                "context": current_func or "unknown",
-                "code": line.strip()[:120],
-            })
+            quirks.append(
+                {
+                    "class": class_name,
+                    "file": path.name,
+                    "line": i + 1,
+                    "type": "multiplier_override",
+                    "field": m.group(1),
+                    "expression": m.group(2).strip()[:80],
+                    "context": current_func or "unknown",
+                    "code": line.strip()[:120],
+                }
+            )
 
     return quirks
 
@@ -105,7 +109,10 @@ def main():
         "quirks": all_quirks,
     }
 
-    print(f"Extracted {len(all_quirks)} formula quirks from {len(cpp_files)} class files", file=sys.stderr)
+    print(
+        f"Extracted {len(all_quirks)} formula quirks from {len(cpp_files)} class files",
+        file=sys.stderr,
+    )
     for cls, count in sorted(classes.items()):
         print(f"  {cls}: {count}", file=sys.stderr)
 
