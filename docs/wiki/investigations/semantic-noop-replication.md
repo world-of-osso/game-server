@@ -34,25 +34,50 @@ The pre-fix behavioral batch recorded seven change-tick failures:
 
 The RED assertions checked both observable value preservation and Bevy `last_changed()` ticks. Existing tests also covered real movement, presence transitions, combat transitions, and the previously fixed player movement/gravity boundaries.
 
+## Second Proof Wave
+
+The second proof wave added five RED cases across four writer categories and then committed the corresponding minimal guards:
+
+1. `1c139e9` — equal derived-stat recalculation dirtied replicated `Health`/`Mana`; the RED test `update_derived_stats_does_not_dirty_equal_health_or_mana` now proves equal results preserve both ticks.
+2. `e13e09e` — respawning at the existing spawn position with full health dirtied replicated `Position`/`Health`; `respawn_at_spawn_with_full_health_does_not_dirty_replicated_state` covers the unchanged boundary while preserving real respawn changes.
+3. `057dd17` — equal equipment-appearance set and clear requests dirtied `EquipmentAppearance`; `equal_equipment_appearance_request_does_not_dirty_live_component` covers repeated set, and `f84ee17` adds the independently observed RED/GREEN clear-path regression.
+4. `41feebb` — accepting the same guild membership value dirtied `GuildMembership`; `guild_accept_preserves_tick_for_repeated_membership_value` covers the repeated accept.
+
+`945eb0f` covered unchanged gold synchronization and ruled it out as a remaining writer: the existing synchronization already preserves the replicated `Gold` change tick when the value is equal.
+
 ## Fixes
 
-- `86d73f5` — guards NPC `Position` writes in wander, waypoint, chase, and return paths. Tests cover unchanged target/arrival cases and preserve actual movement.
-- `74edc39` — avoids unchanged player `Position` writes when effective movement produces no displacement. Real movement remains applied.
-- `f33c95a` — assigns `PresenceStatus` only when the desired Online/Afk state differs. Real status transitions remain observable.
-- `bd31161` — avoids reinserting unchanged active `CombatStatus(true)`. Entering and expiring combat still change the replicated state.
+First-wave fixes remain preserved:
 
-Together with the earlier `2927382` movement-state guards and `ae81c65` gravity-state guards, these changes target confirmed semantic no-op writers without changing protocol semantics or legitimate gameplay transitions.
+- `86d73f5` — guards NPC `Position` writes in wander, waypoint, chase, and return paths.
+- `74edc39` — avoids unchanged player `Position` writes when effective movement produces no displacement.
+- `f33c95a` — assigns `PresenceStatus` only when the desired Online/Afk state differs.
+- `bd31161` — avoids reinserting unchanged active `CombatStatus(true)`.
+- `2927382` — guards repeated player `Rotation`/`MovementSpeed` writes.
+- `ae81c65` — guards unchanged gravity-derived `Position`, `VerticalVelocity`, `FallTracker`, and `Health` state.
+
+Second-wave fixes are listed above. They preserve real movement, combat, presence, stat, respawn, equipment, guild, and gold transitions without changing protocol semantics.
 
 ## Coverage Status
 
-| Boundary | Status |
+| Boundary / writer | Status |
 |---|---|
-| Bevy writer change ticks | Covered by the seven RED/GREEN behavioral cases and existing movement/gravity tests |
-| Lightyear server serialized-update boundary | Blocked: no direct integration assertion yet distinguishes zero emitted updates from client equality suppression |
+| NPC `Position` wander/waypoint/chase/return | Confirmed no-op; fixed in `86d73f5` |
+| Player `Position` zero-displacement input | Confirmed no-op; fixed in `74edc39` |
+| Active `CombatStatus(true)` maintenance | Confirmed no-op; fixed in `bd31161` |
+| Auto-AFK `PresenceStatus` synchronization | Confirmed no-op; fixed in `f33c95a` |
+| Derived `Health`/`Mana` equal recalculation | Confirmed no-op; fixed in `1c139e9` |
+| Respawn at existing position/full health | Confirmed no-op; fixed in `e13e09e` |
+| Equal equipment appearance set/clear requests | Confirmed no-op; fixed in `057dd17`, both paths covered through `f84ee17` |
+| Repeated equal guild acceptance | Confirmed no-op; fixed in `41feebb` |
+| Gold synchronization | Ruled out / already guarded; covered by `945eb0f` |
+| Player `Rotation`/`MovementSpeed` normal input | Ruled out by `2927382` |
+| Gravity-derived replicated state | Ruled out by `ae81c65` |
+| Spawn-only `Npc`, `ModelDisplay`, and `Zone` | Ruled out for steady-state writes |
+| Admin teleport `Position`, manual presence requests, mount-triggered speed, and other event-driven writers | Remaining unproven; no speculative changes made |
+| Lightyear serialized-update boundary | Blocked: no direct integration assertion distinguishes zero emitted updates from client equality suppression |
 | Live component update frequency and bytes | Unmeasured: no bounded per-component serialized-update or bandwidth capture was completed |
-| CPU/network improvement | Not claimed |
-
-The remaining Health, Mana, Gold, equipment, guild, admin, respawn, and other event-driven writer candidates were not changed by this fix series; they require separate RED proof before remediation.
+| CPU, bandwidth, and wire-count improvement | Not claimed |
 
 ## Sources
 
@@ -62,7 +87,7 @@ The remaining Health, Mana, Gold, equipment, guild, admin, respawn, and other ev
 - [presence system](../../../crates/server/src/friends.rs) — Online/Afk synchronization
 - [combat system](../../../crates/server/src/combat.rs) — active combat state maintenance
 - [dependency versions](../../../Cargo.lock) — Lightyear `0.26.4` lockfile resolution
-- `game-server` commits `86d73f5`, `74edc39`, `f33c95a`, `bd31161` — no-op guards and regression tests
+- `game-server` commits `86d73f5`, `74edc39`, `f33c95a`, `bd31161`, `1c139e9`, `e13e09e`, `057dd17`, `41feebb`, `945eb0f`, and `f84ee17` — no-op guards, ruled-out Gold coverage, and regression tests
 - Local Lightyear `0.26.4` sender/receiver source — tick-only sender selection and client equality suppression
 
 ## See Also

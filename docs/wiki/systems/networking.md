@@ -24,7 +24,7 @@ Lightyear handles:
 - **Entity lifecycle** — spawn/despawn packets as entities enter/leave client view
 - **Zone transitions** — entity despawn + respawn on the client side is transparent
 
-The server's Lightyear `0.26.4` sender runs every 50 ms with `SinceLastAck`. The client compares decoded replicated components and suppresses equal ECS replacement only after serialization, batching, transport, delivery, and deserialization. See [[semantic-noop-replication]] for the confirmed no-op writers and unmeasured wire-level proof boundary.
+The server's Lightyear `0.26.4` sender runs every 50 ms with `SinceLastAck`. The client compares decoded replicated components and suppresses equal ECS replacement only after serialization, batching, transport, delivery, and deserialization. First-wave fixes cover NPC movement, player displacement, presence, combat status, movement state, and gravity; second-wave commits `1c139e9`, `e13e09e`, `057dd17`, and `41feebb` cover equal derived stats, respawn state, equipment appearance, and guild membership. `f84ee17` adds independent clear-path coverage for the equipment guard, while `945eb0f` rules out unchanged Gold synchronization as already guarded. See [[semantic-noop-replication]] for the coverage matrix; no CPU, bandwidth, or wire-count improvement is claimed.
 
 ## Client → Server Inputs
 
