@@ -81,15 +81,25 @@ fn update_derived_stats(mut query: Query<StatsQuery, StatsFilter>) {
         let class = player.class;
 
         if let Some(new_max) = formulas::max_health(class, lv, stats.stamina) {
-            health.current = rescaled_current(health.current, health.max, new_max);
-            health.max = new_max;
+            let next_health = Health {
+                current: rescaled_current(health.current, health.max, new_max),
+                max: new_max,
+            };
+            if *health != next_health {
+                *health = next_health;
+            }
         }
 
         if let Some(mut mana) = mana
             && let Some(new_max) = formulas::max_mana(class, lv, stats.intellect)
         {
-            mana.current = rescaled_current(mana.current, mana.max, new_max);
-            mana.max = new_max;
+            let next_mana = Mana {
+                current: rescaled_current(mana.current, mana.max, new_max),
+                max: new_max,
+            };
+            if *mana != next_mana {
+                *mana = next_mana;
+            }
         }
     }
 }
@@ -188,6 +198,83 @@ mod tests {
 
         // Warrior has no Mana component
         assert!(world.get::<Mana>(entity).is_none());
+    }
+
+    #[test]
+    fn update_derived_stats_does_not_dirty_equal_health_or_mana() {
+        let mut world = World::new();
+        let entity = spawn_player(&mut world, 2, 80, 100.0, 98.0);
+        world.entity_mut(entity).insert(Mana {
+            current: 100.0,
+            max: 100.0,
+        });
+
+        world.run_system_once(update_derived_stats).unwrap();
+        let health_before = *world.get::<Health>(entity).unwrap();
+        let mana_before = *world.get::<Mana>(entity).unwrap();
+        let health_tick_before = world
+            .entity(entity)
+            .get_ref::<Health>()
+            .unwrap()
+            .last_changed();
+        let mana_tick_before = world
+            .entity(entity)
+            .get_ref::<Mana>()
+            .unwrap()
+            .last_changed();
+
+        let unchanged_stats = *world.get::<UnitStats>(entity).unwrap();
+        *world.get_mut::<UnitStats>(entity).unwrap() = unchanged_stats;
+        world.run_system_once(update_derived_stats).unwrap();
+
+        assert_eq!(*world.get::<Health>(entity).unwrap(), health_before);
+        assert_eq!(*world.get::<Mana>(entity).unwrap(), mana_before);
+        assert_eq!(
+            world
+                .entity(entity)
+                .get_ref::<Health>()
+                .unwrap()
+                .last_changed(),
+            health_tick_before,
+            "equal derived health must not advance its change tick"
+        );
+        assert_eq!(
+            world
+                .entity(entity)
+                .get_ref::<Mana>()
+                .unwrap()
+                .last_changed(),
+            mana_tick_before,
+            "equal derived mana must not advance its change tick"
+        );
+
+        *world.get_mut::<UnitStats>(entity).unwrap() = UnitStats {
+            stamina: 101.0,
+            intellect: 99.0,
+            ..unchanged_stats
+        };
+        world.run_system_once(update_derived_stats).unwrap();
+
+        let health_after = *world.get::<Health>(entity).unwrap();
+        let mana_after = *world.get::<Mana>(entity).unwrap();
+        assert_ne!(health_after.max, health_before.max);
+        assert_ne!(mana_after.max, mana_before.max);
+        assert_ne!(
+            world
+                .entity(entity)
+                .get_ref::<Health>()
+                .unwrap()
+                .last_changed(),
+            health_tick_before
+        );
+        assert_ne!(
+            world
+                .entity(entity)
+                .get_ref::<Mana>()
+                .unwrap()
+                .last_changed(),
+            mana_tick_before
+        );
     }
 
     #[test]
