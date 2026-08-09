@@ -726,6 +726,79 @@ mod tests {
     }
 
     #[test]
+    fn equal_clear_equipment_appearance_request_does_not_dirty_live_component() {
+        let db = persistence::temp_database();
+        let (account_id, _token) =
+            persistence_accounts::register_account(&db, "admin", "admin").expect("admin");
+        let (character_id, _data) =
+            persistence::create_character(&db, account_id, "Theron", 1, 1).expect("character");
+        let game_db = persistence::GameDatabase { db };
+        let initial = EquipmentAppearance {
+            entries: vec![shared::components::EquippedAppearanceEntry {
+                slot: shared::components::EquipmentVisualSlot::Chest,
+                item_id: None,
+                display_info_id: None,
+                inventory_type: 0,
+                hidden: true,
+            }],
+        };
+        let mut world = World::new();
+        let entity = world
+            .spawn((initial.clone(), persistence::ClientId(character_id)))
+            .id();
+        world.increment_change_tick();
+        let tick_before = world
+            .entity(entity)
+            .get_ref::<EquipmentAppearance>()
+            .expect("live equipment appearance")
+            .last_changed();
+        let mut state = bevy::ecs::system::SystemState::<(
+            Commands,
+            Query<(Entity, &mut EquipmentAppearance, &persistence::ClientId)>,
+            Query<(Entity, &crate::auth::Authenticated), With<MessageSender<LoginResponse>>>,
+            Query<&mut MessageSender<CharacterListUpdate>>,
+        )>::new(&mut world);
+
+        {
+            let (mut commands, mut query, authenticated_query, mut roster_update_senders) =
+                state.get_mut(&mut world);
+            let response = handle_clear_equipment_appearance(
+                &game_db,
+                &mut commands,
+                &mut query,
+                &authenticated_query,
+                &mut roster_update_senders,
+                "Theron",
+                "chest",
+            );
+            assert_eq!(
+                response,
+                AdminResponse::EquipmentAppearanceCleared {
+                    character_name: "Theron".to_string(),
+                    slot: "Chest".to_string(),
+                }
+            );
+        }
+
+        assert_eq!(
+            world
+                .entity(entity)
+                .get::<EquipmentAppearance>()
+                .expect("live equipment appearance"),
+            &initial
+        );
+        assert_eq!(
+            world
+                .entity(entity)
+                .get_ref::<EquipmentAppearance>()
+                .expect("live equipment appearance")
+                .last_changed(),
+            tick_before,
+            "an equal clear request must not dirty EquipmentAppearance"
+        );
+    }
+
+    #[test]
     fn handle_clear_equipment_appearance_marks_slot_hidden() {
         let db = persistence::temp_database();
         let (account_id, _token) =
