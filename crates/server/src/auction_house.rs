@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, time::Duration};
 
 use bevy::prelude::*;
 use lightyear::prelude::*;
@@ -41,6 +41,32 @@ use self::queries::{
 const MAX_PAGE_SIZE: u32 = 50;
 const HOUSE_CUT_BPS: u32 = 500;
 const MAX_AUCTIONS_PER_CHARACTER: usize = 50;
+const AUCTION_EXPIRATION_INTERVAL: Duration = Duration::from_secs(1);
+
+#[derive(Default)]
+struct AuctionExpirationCadence {
+    has_run: bool,
+    elapsed: Duration,
+}
+
+impl AuctionExpirationCadence {
+    fn should_run(&mut self, delta: Duration) -> bool {
+        if !self.has_run {
+            self.has_run = true;
+            return true;
+        }
+        self.elapsed += delta;
+        if self.elapsed < AUCTION_EXPIRATION_INTERVAL {
+            return false;
+        }
+        self.elapsed = Duration::ZERO;
+        true
+    }
+}
+
+fn auction_expiration_due(time: Res<Time>, mut cadence: Local<AuctionExpirationCadence>) -> bool {
+    cadence.should_run(time.delta())
+}
 
 #[derive(Resource, Default)]
 struct AuctionHouseState {
@@ -65,7 +91,7 @@ impl Plugin for AuctionHousePlugin {
         app.add_systems(Update, process_bid_requests);
         app.add_systems(Update, process_buyout_requests);
         app.add_systems(Update, process_cancel_requests);
-        app.add_systems(FixedUpdate, expire_auctions);
+        app.add_systems(FixedUpdate, expire_auctions.run_if(auction_expiration_due));
     }
 }
 

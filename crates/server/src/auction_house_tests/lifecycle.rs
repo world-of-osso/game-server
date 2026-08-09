@@ -419,6 +419,73 @@ fn outbid_sends_notification_mail_to_previous_bidder() {
 }
 
 #[test]
+fn scheduled_auction_expiration_runs_at_most_once_per_second() {
+    let db = persistence::temp_database();
+    let (seller_id, _) = persistence::create_character(&db, 1, "Seller", 1, 1).expect("seller");
+    let mut app = App::new();
+    app.add_plugins(bevy::MinimalPlugins);
+    app.insert_resource(GameDatabase { db });
+    app.add_plugins(AuctionHousePlugin);
+
+    let mut first = test_auction(1, "First item", 1, 1);
+    first.seller_character_id = seller_id;
+    first.expires_at_unix_secs = unix_now();
+    app.world_mut()
+        .resource_mut::<AuctionHouseState>()
+        .auctions
+        .insert(first.auction_id, first);
+    app.world_mut().run_schedule(FixedUpdate);
+
+    assert!(
+        !app.world()
+            .resource::<AuctionHouseState>()
+            .auctions
+            .contains_key(&1)
+    );
+    assert_eq!(
+        persistence::load_mailbox(&app.world().resource::<GameDatabase>().db, seller_id,).len(),
+        1
+    );
+
+    let mut second = test_auction(2, "Second item", 1, 1);
+    second.seller_character_id = seller_id;
+    second.expires_at_unix_secs = unix_now();
+    app.world_mut()
+        .resource_mut::<AuctionHouseState>()
+        .auctions
+        .insert(second.auction_id, second);
+
+    for _ in 0..5 {
+        app.world_mut()
+            .resource_mut::<Time>()
+            .advance_by(std::time::Duration::from_millis(50));
+        app.world_mut().run_schedule(FixedUpdate);
+    }
+    assert!(
+        app.world()
+            .resource::<AuctionHouseState>()
+            .auctions
+            .contains_key(&2),
+        "repeated sub-second fixed ticks must not expire a newly due auction"
+    );
+
+    app.world_mut()
+        .resource_mut::<Time>()
+        .advance_by(std::time::Duration::from_millis(750));
+    app.world_mut().run_schedule(FixedUpdate);
+    assert!(
+        !app.world()
+            .resource::<AuctionHouseState>()
+            .auctions
+            .contains_key(&2)
+    );
+    assert_eq!(
+        persistence::load_mailbox(&app.world().resource::<GameDatabase>().db, seller_id,).len(),
+        2
+    );
+}
+
+#[test]
 fn expired_auction_without_bid_returns_item_to_seller() {
     let db = persistence::temp_database();
     let (seller_id, _) = persistence::create_character(&db, 1, "Seller", 1, 1).expect("seller");
