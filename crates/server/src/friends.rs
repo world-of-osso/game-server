@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, HashMap, HashSet};
 
 use bevy::prelude::*;
 use lightyear::prelude::Message as NetMessage;
@@ -30,12 +30,117 @@ struct FriendsSnapshotTracker {
     last_sent: Option<FriendsSnapshot>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 struct FriendPresence {
     level: u16,
     class_name: String,
     area: String,
     presence: PresenceStatus,
+}
+
+#[derive(Resource, Default)]
+struct FriendSnapshotIndex {
+    online: HashMap<String, FriendPresence>,
+    online_name_by_entity: HashMap<Entity, String>,
+    owners_by_friend: HashMap<String, HashSet<Entity>>,
+    friend_names_by_owner: HashMap<Entity, HashSet<String>>,
+    connection_by_owner: HashMap<Entity, Entity>,
+    dirty_owners: HashSet<Entity>,
+}
+
+impl FriendSnapshotIndex {
+    fn register_owner(&mut self, owner: Entity, connection: Entity, friends: &PlayerFriendsState) {
+        self.remove_owner_friend_links(owner);
+        self.connection_by_owner.insert(owner, connection);
+        let names = friends
+            .entries
+            .iter()
+            .map(|record| record.name.to_ascii_lowercase())
+            .collect::<HashSet<_>>();
+        for name in &names {
+            self.owners_by_friend
+                .entry(name.clone())
+                .or_default()
+                .insert(owner);
+        }
+        self.friend_names_by_owner.insert(owner, names);
+    }
+
+    fn set_online(
+        &mut self,
+        entity: Entity,
+        player: &Player,
+        level: &Level,
+        zone: Option<&Zone>,
+        presence: Option<&PresenceStatus>,
+    ) {
+        let name = player.name.to_ascii_lowercase();
+        let next = FriendPresence {
+            level: level.0 as u16,
+            class_name: class_name_from_id(player.class),
+            area: zone
+                .map(|zone| format!("Zone {}", zone.id))
+                .unwrap_or_else(|| "Unknown".into()),
+            presence: presence.copied().unwrap_or(PresenceStatus::Online),
+        };
+        let previous_name = self.online_name_by_entity.insert(entity, name.clone());
+        if previous_name
+            .as_ref()
+            .is_some_and(|previous| previous != &name)
+        {
+            if let Some(previous) = previous_name {
+                self.online.remove(&previous);
+                self.mark_owners_for_friend(&previous);
+            }
+        }
+        if self.online.get(&name) == Some(&next) {
+            return;
+        }
+        self.online.insert(name.clone(), next);
+        self.mark_owners_for_friend(&name);
+    }
+
+    fn remove_online(&mut self, entity: Entity) {
+        let Some(name) = self.online_name_by_entity.remove(&entity) else {
+            self.unregister_owner(entity);
+            return;
+        };
+        self.online.remove(&name);
+        self.mark_owners_for_friend(&name);
+        self.unregister_owner(entity);
+    }
+
+    fn take_dirty_owners(&mut self) -> Vec<Entity> {
+        self.dirty_owners.drain().collect()
+    }
+
+    fn mark_owners_for_friend(&mut self, name: &str) {
+        let Some(owners) = self.owners_by_friend.get(name) else {
+            return;
+        };
+        self.dirty_owners.extend(owners.iter().copied());
+    }
+
+    fn unregister_owner(&mut self, owner: Entity) {
+        self.connection_by_owner.remove(&owner);
+        self.dirty_owners.remove(&owner);
+        self.remove_owner_friend_links(owner);
+    }
+
+    fn remove_owner_friend_links(&mut self, owner: Entity) {
+        let Some(names) = self.friend_names_by_owner.remove(&owner) else {
+            return;
+        };
+        for name in names {
+            let remove_name = self.owners_by_friend.get_mut(&name).is_some_and(|owners| {
+                owners.remove(&owner);
+                owners.is_empty()
+            });
+            if remove_name {
+                self.owners_by_friend.remove(&name);
+            }
+        }
+    }
 }
 
 const AUTO_AFK_SECS: f32 = 300.0;
@@ -65,6 +170,7 @@ pub struct FriendsPlugin;
 
 impl Plugin for FriendsPlugin {
     fn build(&self, app: &mut App) {
+        app.init_resource::<FriendSnapshotIndex>();
         app.add_systems(
             Update,
             (
@@ -74,7 +180,9 @@ impl Plugin for FriendsPlugin {
                 process_remove_requests,
                 process_presence_requests,
                 tick_auto_afk,
-                sync_online_status_updates,
+                sync_changed_friend_presence,
+                sync_removed_friend_presence,
+                send_dirty_friends_snapshots,
             )
                 .chain(),
         );
@@ -92,22 +200,35 @@ fn send_initial_friends_snapshot(
     mut commands: Commands,
     connections: NewInWorldConnection,
     mut friends_q: Query<&mut PlayerFriendsState>,
-    online_players: Query<(&Player, &Level, Option<&Zone>, Option<&PresenceStatus>)>,
+    online_players: Query<(
+        Entity,
+        &Player,
+        &Level,
+        Option<&Zone>,
+        Option<&PresenceStatus>,
+    )>,
     db: Option<Res<GameDatabase>>,
+    mut index: ResMut<FriendSnapshotIndex>,
     mut senders: Query<&mut MessageSender<FriendsStateUpdate>>,
 ) {
     let Some(db) = db else { return };
-    let online = collect_online_players(&online_players);
+    if connections.is_empty() {
+        return;
+    }
+    for (entity, player, level, zone, presence) in &online_players {
+        index.set_online(entity, player, level, zone, presence);
+    }
     for (conn_entity, link, _in_world) in &connections {
         let Ok(mut friends) = friends_q.get_mut(link.0) else {
             send_friends_error(conn_entity, &mut senders, "friends unavailable for player");
             continue;
         };
         sanitize_duplicates(&mut friends);
+        index.register_owner(link.0, conn_entity, &friends);
         commands
             .entity(link.0)
             .insert((PresenceStatus::Online, PresenceTracker::default()));
-        let snapshot = build_friends_snapshot(&db.db, &friends, &online);
+        let snapshot = build_friends_snapshot(&db.db, &friends, &index.online);
         send_friends_update(
             conn_entity,
             snapshot.clone(),
@@ -127,12 +248,11 @@ fn process_query_requests(
         With<Authenticated>,
     >,
     friends_q: Query<&PlayerFriendsState>,
-    online_players: Query<(&Player, &Level, Option<&Zone>, Option<&PresenceStatus>)>,
     db: Option<Res<GameDatabase>>,
+    index: Res<FriendSnapshotIndex>,
     mut senders: Query<&mut MessageSender<FriendsStateUpdate>>,
 ) {
     let Some(db) = db else { return };
-    let online = collect_online_players(&online_players);
     for (conn_entity, link, mut receiver) in &mut receivers {
         let mut saw_request = false;
         for _ in receiver.receive() {
@@ -147,7 +267,7 @@ fn process_query_requests(
         };
         send_friends_update(
             conn_entity,
-            build_friends_snapshot(&db.db, friends, &online),
+            build_friends_snapshot(&db.db, friends, &index.online),
             Some("friends refreshed".into()),
             None,
             &mut senders,
@@ -167,17 +287,16 @@ fn process_add_requests(
     >,
     mut friends_q: Query<&mut PlayerFriendsState>,
     players: Query<&Player>,
-    online_players: Query<(&Player, &Level, Option<&Zone>, Option<&PresenceStatus>)>,
     db: Option<Res<GameDatabase>>,
+    mut index: ResMut<FriendSnapshotIndex>,
     mut senders: Query<&mut MessageSender<FriendsStateUpdate>>,
 ) {
     let Some(db) = db else { return };
-    let online = collect_online_players(&online_players);
     process_mutation_requests(
         &mut receivers,
         &mut friends_q,
-        &online,
         &db,
+        &mut index,
         &mut senders,
         |link, request, friends| {
             let player = players
@@ -199,17 +318,16 @@ fn process_remove_requests(
         With<Authenticated>,
     >,
     mut friends_q: Query<&mut PlayerFriendsState>,
-    online_players: Query<(&Player, &Level, Option<&Zone>, Option<&PresenceStatus>)>,
     db: Option<Res<GameDatabase>>,
+    mut index: ResMut<FriendSnapshotIndex>,
     mut senders: Query<&mut MessageSender<FriendsStateUpdate>>,
 ) {
     let Some(db) = db else { return };
-    let online = collect_online_players(&online_players);
     process_mutation_requests(
         &mut receivers,
         &mut friends_q,
-        &online,
         &db,
+        &mut index,
         &mut senders,
         |_, request, friends| remove_friend(friends, request.name.trim()),
     );
@@ -221,8 +339,8 @@ fn process_mutation_requests<R, F>(
         With<Authenticated>,
     >,
     friends_q: &mut Query<&mut PlayerFriendsState>,
-    online: &HashMap<String, FriendPresence>,
     db: &GameDatabase,
+    index: &mut FriendSnapshotIndex,
     senders: &mut Query<&mut MessageSender<FriendsStateUpdate>>,
     mut mutate: F,
 ) where
@@ -240,7 +358,8 @@ fn process_mutation_requests<R, F>(
         };
         for request in requests {
             let result = mutate(link, &request, &mut friends);
-            let snapshot = build_friends_snapshot(&db.db, &friends, online);
+            index.register_owner(link.0, conn_entity, &friends);
+            let snapshot = build_friends_snapshot(&db.db, &friends, &index.online);
             match result {
                 Ok(message) => {
                     persistence::save_friends(&db.db, in_world.character_id, &friends);
@@ -254,41 +373,18 @@ fn process_mutation_requests<R, F>(
     }
 }
 
-type PresenceParamSet<'w, 's> = ParamSet<
-    'w,
-    's,
-    (
-        Query<
-            'static,
-            'static,
-            (&'static mut PresenceStatus, &'static mut PresenceTracker),
-            With<Player>,
-        >,
-        Query<
-            'static,
-            'static,
-            (
-                &'static Player,
-                &'static Level,
-                Option<&'static Zone>,
-                Option<&'static PresenceStatus>,
-            ),
-        >,
-    ),
->;
-
 fn process_presence_requests(
     mut receivers: Query<
         (Entity, &PlayerLink, &mut MessageReceiver<SetPresenceStatus>),
         With<Authenticated>,
     >,
     friends_q: Query<&PlayerFriendsState>,
-    mut presence_set: PresenceParamSet,
+    mut players: Query<(&mut PresenceStatus, &mut PresenceTracker), With<Player>>,
     db: Option<Res<GameDatabase>>,
+    index: Res<FriendSnapshotIndex>,
     mut senders: Query<&mut MessageSender<FriendsStateUpdate>>,
 ) {
     let Some(db) = db else { return };
-    let online = collect_online_players(&presence_set.p1());
     for (conn_entity, link, mut receiver) in &mut receivers {
         let requests: Vec<_> = receiver.receive().collect();
         if requests.is_empty() {
@@ -299,8 +395,8 @@ fn process_presence_requests(
             continue;
         };
         for request in requests {
-            let result = set_presence(link.0, request.status, &mut presence_set.p0());
-            let snapshot = build_friends_snapshot(&db.db, friends, &online);
+            let result = set_presence(link.0, request.status, &mut players);
+            let snapshot = build_friends_snapshot(&db.db, friends, &index.online);
             match result {
                 Ok(message) => {
                     send_friends_update(conn_entity, snapshot, Some(message), None, &mut senders);
@@ -313,26 +409,61 @@ fn process_presence_requests(
     }
 }
 
-fn sync_online_status_updates(
-    connections: Query<(Entity, &PlayerLink), With<Authenticated>>,
+type ChangedFriendPresenceFilter = Or<(
+    Changed<Player>,
+    Changed<Level>,
+    Changed<Zone>,
+    Changed<PresenceStatus>,
+)>;
+
+fn sync_changed_friend_presence(
+    players: Query<
+        (
+            Entity,
+            &Player,
+            &Level,
+            Option<&Zone>,
+            Option<&PresenceStatus>,
+        ),
+        ChangedFriendPresenceFilter,
+    >,
+    mut index: ResMut<FriendSnapshotIndex>,
+) {
+    for (entity, player, level, zone, presence) in &players {
+        index.set_online(entity, player, level, zone, presence);
+    }
+}
+
+fn sync_removed_friend_presence(
+    mut removed_players: RemovedComponents<Player>,
+    mut index: ResMut<FriendSnapshotIndex>,
+) {
+    for entity in removed_players.read() {
+        index.remove_online(entity);
+    }
+}
+
+fn send_dirty_friends_snapshots(
+    mut index: ResMut<FriendSnapshotIndex>,
     mut friends_q: Query<(&PlayerFriendsState, &mut FriendsSnapshotTracker)>,
-    online_players: Query<(&Player, &Level, Option<&Zone>, Option<&PresenceStatus>)>,
     db: Option<Res<GameDatabase>>,
     mut senders: Query<&mut MessageSender<FriendsStateUpdate>>,
 ) {
     let Some(db) = db else { return };
-    let online = collect_online_players(&online_players);
-    for (conn_entity, link) in &connections {
-        let Ok((friends, mut tracker)) = friends_q.get_mut(link.0) else {
+    for owner in index.take_dirty_owners() {
+        let Some(&connection) = index.connection_by_owner.get(&owner) else {
             continue;
         };
-        let snapshot = build_friends_snapshot(&db.db, friends, &online);
+        let Ok((friends, mut tracker)) = friends_q.get_mut(owner) else {
+            continue;
+        };
+        let snapshot = build_friends_snapshot(&db.db, friends, &index.online);
         if tracker.last_sent.as_ref() == Some(&snapshot) {
             continue;
         }
         tracker.last_sent = Some(snapshot.clone());
         send_friends_update(
-            conn_entity,
+            connection,
             snapshot,
             Some("friends updated".into()),
             None,
@@ -420,27 +551,6 @@ fn sort_records(friends: &mut PlayerFriendsState) {
             .cmp(&b.name.to_ascii_lowercase())
             .then(a.name.cmp(&b.name))
     });
-}
-
-fn collect_online_players(
-    players: &Query<(&Player, &Level, Option<&Zone>, Option<&PresenceStatus>)>,
-) -> HashMap<String, FriendPresence> {
-    players
-        .iter()
-        .map(|(player, level, zone, presence)| {
-            (
-                player.name.to_ascii_lowercase(),
-                FriendPresence {
-                    level: level.0 as u16,
-                    class_name: class_name_from_id(player.class),
-                    area: zone
-                        .map(|zone| format!("Zone {}", zone.id))
-                        .unwrap_or_else(|| "Unknown".into()),
-                    presence: presence.copied().unwrap_or(PresenceStatus::Online),
-                },
-            )
-        })
-        .collect()
 }
 
 fn build_friends_snapshot(
