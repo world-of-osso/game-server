@@ -311,10 +311,13 @@ pub(crate) fn handle_set_equipment_appearance(
         &data,
     );
 
-    for (entity, mut appearance, cid) in equipment_query.iter_mut() {
+    for (entity, appearance, cid) in equipment_query.iter_mut() {
         if cid.0 == char_id {
-            show_equipment_appearance(&mut appearance, slot, display_info_id);
-            commands.entity(entity).insert(appearance.clone());
+            let mut next_appearance = appearance.clone();
+            show_equipment_appearance(&mut next_appearance, slot, display_info_id);
+            if *appearance != next_appearance {
+                commands.entity(entity).insert(next_appearance);
+            }
         }
     }
 
@@ -357,10 +360,13 @@ pub(crate) fn handle_clear_equipment_appearance(
         &data,
     );
 
-    for (entity, mut appearance, cid) in equipment_query.iter_mut() {
+    for (entity, appearance, cid) in equipment_query.iter_mut() {
         if cid.0 == char_id {
-            hide_equipment_appearance(&mut appearance, slot);
-            commands.entity(entity).insert(appearance.clone());
+            let mut next_appearance = appearance.clone();
+            hide_equipment_appearance(&mut next_appearance, slot);
+            if *appearance != next_appearance {
+                commands.entity(entity).insert(next_appearance);
+            }
         }
     }
 
