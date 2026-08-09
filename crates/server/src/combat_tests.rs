@@ -15,6 +15,21 @@ fn setup_app() -> App {
     app
 }
 
+fn setup_replication_app() -> App {
+    let mut app = setup_app();
+    app.add_plugins(lightyear::prelude::server::ServerPlugins {
+        tick_duration: std::time::Duration::from_millis(50),
+    });
+    app.update();
+    app
+}
+
+fn setup_combat_app() -> App {
+    let mut app = setup_replication_app();
+    app.add_plugins(CombatPlugin);
+    app
+}
+
 fn spawn_target(app: &mut App, position: Position, hp: f32) -> Entity {
     app.world_mut()
         .spawn((
@@ -58,7 +73,7 @@ fn run_attack_tick(app: &mut App) {
         |time: Res<Time>,
          mut commands: Commands,
          mut attackers: Query<(Entity, &CombatTarget, &mut AutoAttack, &Position)>,
-         mut targets: Query<(&Position, &mut Health, Option<&mut LastDamager>)>| {
+         mut targets: Query<(&Position, &mut Health, Option<&mut LastDamager>, Has<Npc>)>| {
             let dt = time.delta_secs();
             let combat_expires_at = time.elapsed_secs_f64() + COMBAT_GRACE_SECS;
             for (attacker, combat_target, mut aa, apos) in &mut attackers {
@@ -67,8 +82,7 @@ fn run_attack_tick(app: &mut App) {
                 }
                 let Some(te) = combat_target.0 else { continue };
                 aa.timer -= dt;
-                let damage = try_swing(attacker, apos, &mut targets, te, &mut aa, &mut commands);
-                if damage > 0.0 {
+                if try_swing(attacker, apos, &mut targets, te, &mut aa, &mut commands).is_some() {
                     refresh_combat_state(&mut commands, attacker, combat_expires_at);
                     refresh_combat_state(&mut commands, te, combat_expires_at);
                 }
@@ -329,11 +343,9 @@ fn overkill_damage_clamps_to_zero() {
 }
 
 #[test]
-fn test_death_at_zero_hp() {
-    let mut app = App::new();
-    app.add_plugins(bevy::MinimalPlugins);
-
-    let entity = app
+fn zero_health_without_damage_transition_is_not_discovered_by_death_poll() {
+    let mut app = setup_combat_app();
+    let npc = app
         .world_mut()
         .spawn((
             pos(0.0, 0.0, 0.0),
@@ -342,19 +354,102 @@ fn test_death_at_zero_hp() {
                 max: 100.0,
             },
             Npc { template_id: 1 },
+            Replicate::new(ReplicationMode::SingleServer(NetworkTarget::All)),
         ))
         .id();
 
-    // Verify the condition that death_system checks
-    let health = app.world().entity(entity).get::<Health>().unwrap();
-    assert!(health.current <= 0.0);
+    app.world_mut().run_schedule(FixedUpdate);
 
-    // Simulate what death_system does (avoids needing MessageSender)
-    app.world_mut().entity_mut(entity).insert(DeathState {
-        respawn_timer: DEFAULT_RESPAWN_SECS,
-    });
+    let entity = app.world().entity(npc);
+    assert!(
+        entity.get::<DeathState>().is_none(),
+        "a zero-health NPC without an authoritative damage transition must not be discovered by a global death poll"
+    );
+    assert!(
+        entity.get::<Replicate>().is_some(),
+        "a zero-health NPC without an authoritative damage transition must remain replicated"
+    );
+    assert!(
+        app.world()
+            .resource::<CombatLog>()
+            .range(0.0, f64::MAX)
+            .is_empty(),
+        "a global death poll must not emit a death event for an untracked zero-health NPC"
+    );
+}
 
-    assert!(app.world().entity(entity).get::<DeathState>().is_some());
+#[test]
+fn nonlethal_auto_attack_keeps_npc_alive_and_replicated() {
+    let mut app = setup_replication_app();
+    let target = app
+        .world_mut()
+        .spawn((
+            pos(1.0, 0.0, 0.0),
+            Health {
+                current: 100.0,
+                max: 100.0,
+            },
+            Npc { template_id: 1 },
+            Replicate::new(ReplicationMode::SingleServer(NetworkTarget::All)),
+        ))
+        .id();
+    spawn_attacker(&mut app, pos(0.0, 0.0, 0.0), target);
+
+    app.world_mut()
+        .run_system_once(auto_attack_system)
+        .expect("auto-attack system should run");
+    app.update();
+
+    let entity = app.world().entity(target);
+    assert_eq!(entity.get::<Health>().unwrap().current, 90.0);
+    assert!(entity.get::<DeathState>().is_none());
+    assert!(entity.get::<Replicate>().is_some());
+    assert!(
+        app.world()
+            .resource::<CombatLog>()
+            .range(0.0, f64::MAX)
+            .iter()
+            .all(|entry| entry.event.event_type != CombatEventType::Death),
+        "a nonlethal auto-attack must not produce a death combat event"
+    );
+}
+
+#[test]
+fn lethal_auto_attack_produces_death_state_replication_removal_and_event() {
+    let mut app = setup_replication_app();
+    let target = app
+        .world_mut()
+        .spawn((
+            pos(1.0, 0.0, 0.0),
+            Health {
+                current: BASE_DAMAGE,
+                max: 100.0,
+            },
+            Npc { template_id: 1 },
+            Replicate::new(ReplicationMode::SingleServer(NetworkTarget::All)),
+        ))
+        .id();
+    spawn_attacker(&mut app, pos(0.0, 0.0, 0.0), target);
+
+    app.world_mut()
+        .run_system_once(auto_attack_system)
+        .expect("auto-attack system should run");
+    app.update();
+
+    let entity = app.world().entity(target);
+    assert!(entity.get::<DeathState>().is_some());
+    assert!(entity.get::<Replicate>().is_none());
+    assert!(
+        app.world()
+            .resource::<CombatLog>()
+            .range(0.0, f64::MAX)
+            .iter()
+            .any(|entry| {
+                entry.event.target == target.to_bits()
+                    && entry.event.event_type == CombatEventType::Death
+            }),
+        "a lethal auto-attack must produce a death combat event"
+    );
 }
 
 #[test]

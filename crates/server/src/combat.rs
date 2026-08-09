@@ -1,4 +1,3 @@
-use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 use lightyear::prelude::*;
 use shared::components::{CombatStatus, Health, Npc, Position};
@@ -66,13 +65,6 @@ impl CombatLog {
     }
 }
 
-type LivingNpcFilter = (With<Npc>, Without<DeathState>);
-
-#[derive(SystemParam)]
-struct LivingNpcQuery<'w, 's> {
-    query: Query<'w, 's, (Entity, &'static Health), LivingNpcFilter>,
-}
-
 pub struct CombatPlugin;
 
 impl Plugin for CombatPlugin {
@@ -85,7 +77,6 @@ impl Plugin for CombatPlugin {
                 start_attack_system,
                 auto_attack_system,
                 maintain_in_combat_state_system,
-                death_system,
                 respawn_system,
             ),
         );
@@ -144,7 +135,7 @@ fn start_attack_system(
 fn auto_attack_system(
     time: Res<Time>,
     mut attackers: Query<(Entity, &CombatTarget, &mut AutoAttack, &Position)>,
-    mut targets: Query<(&Position, &mut Health, Option<&mut LastDamager>)>,
+    mut targets: Query<(&Position, &mut Health, Option<&mut LastDamager>, Has<Npc>)>,
     mut senders: Query<&mut MessageSender<CombatEvent>>,
     mut combat_log: ResMut<CombatLog>,
     mut commands: Commands,
@@ -162,18 +153,26 @@ fn auto_attack_system(
             continue;
         };
         auto_attack.timer -= dt;
-        let damage = try_swing(
+        let Some(outcome) = try_swing(
             attacker_entity,
             attacker_pos,
             &mut targets,
             target_entity,
             &mut auto_attack,
             &mut commands,
-        );
-        if damage > 0.0 {
-            refresh_combat_state(&mut commands, attacker_entity, combat_expires_at);
-            refresh_combat_state(&mut commands, target_entity, combat_expires_at);
-            events.push(build_damage_event(attacker_entity, target_entity, damage));
+        ) else {
+            continue;
+        };
+        refresh_combat_state(&mut commands, attacker_entity, combat_expires_at);
+        refresh_combat_state(&mut commands, target_entity, combat_expires_at);
+        events.push(build_damage_event(
+            attacker_entity,
+            target_entity,
+            outcome.damage,
+        ));
+        if outcome.npc_died {
+            mark_npc_dead(&mut commands, target_entity);
+            events.push(build_death_event(target_entity));
         }
     }
 
@@ -212,29 +211,32 @@ fn maintain_in_combat_state_system(
     }
 }
 
-/// Attempt a swing if timer ready and target in range. Returns damage dealt.
+struct SwingOutcome {
+    damage: f32,
+    npc_died: bool,
+}
+
+/// Attempt a swing if timer ready and target in range.
 fn try_swing(
     attacker_entity: Entity,
     attacker_pos: &Position,
-    targets: &mut Query<(&Position, &mut Health, Option<&mut LastDamager>)>,
+    targets: &mut Query<(&Position, &mut Health, Option<&mut LastDamager>, Has<Npc>)>,
     target_entity: Entity,
     auto_attack: &mut AutoAttack,
     commands: &mut Commands,
-) -> f32 {
+) -> Option<SwingOutcome> {
     if auto_attack.timer > 0.0 {
-        return 0.0;
+        return None;
     }
-    let Ok((target_pos, mut health, last_damager)) = targets.get_mut(target_entity) else {
-        return 0.0;
+    let Ok((target_pos, mut health, last_damager, is_npc)) = targets.get_mut(target_entity) else {
+        return None;
     };
-    if !in_melee_range(attacker_pos, target_pos) {
-        return 0.0;
-    }
-    if health.current <= 0.0 {
-        return 0.0;
+    if !in_melee_range(attacker_pos, target_pos) || health.current <= 0.0 {
+        return None;
     }
     let damage = BASE_DAMAGE;
     health.current = (health.current - damage).max(0.0);
+    let npc_died = is_npc && health.current == 0.0;
     if let Some(mut last_damager) = last_damager {
         last_damager.0 = attacker_entity;
     } else {
@@ -243,7 +245,7 @@ fn try_swing(
             .insert(LastDamager(attacker_entity));
     }
     auto_attack.timer = AUTO_ATTACK_INTERVAL;
-    damage
+    Some(SwingOutcome { damage, npc_died })
 }
 
 /// Check if two positions are within melee range.
@@ -269,6 +271,25 @@ fn build_damage_event(attacker: Entity, target: Entity, damage: f32) -> CombatEv
     }
 }
 
+fn build_death_event(target: Entity) -> CombatEvent {
+    CombatEvent {
+        attacker: 0,
+        target: target.to_bits(),
+        amount: 0.0,
+        spell_id: 0,
+        event_type: CombatEventType::Death,
+    }
+}
+
+fn mark_npc_dead(commands: &mut Commands, entity: Entity) {
+    commands
+        .entity(entity)
+        .insert(DeathState {
+            respawn_timer: DEFAULT_RESPAWN_SECS,
+        })
+        .remove::<Replicate>();
+}
+
 fn active_combat_state(expires_at: f64) -> (CombatState, CombatStatus) {
     (CombatState { expires_at }, CombatStatus(true))
 }
@@ -277,37 +298,6 @@ fn refresh_combat_state(commands: &mut Commands, entity: Entity, expires_at: f64
     commands
         .entity(entity)
         .insert(active_combat_state(expires_at));
-}
-
-/// Detect entities that just hit 0 HP and mark them dead.
-fn death_system(
-    time: Res<Time>,
-    living: LivingNpcQuery,
-    mut commands: Commands,
-    mut senders: Query<&mut MessageSender<CombatEvent>>,
-    mut combat_log: ResMut<CombatLog>,
-) {
-    let elapsed = time.elapsed_secs_f64();
-    let mut events = Vec::new();
-
-    for (entity, health) in &living.query {
-        if health.current > 0.0 {
-            continue;
-        }
-        commands.entity(entity).insert(DeathState {
-            respawn_timer: DEFAULT_RESPAWN_SECS,
-        });
-        commands.entity(entity).remove::<Replicate>();
-        events.push(CombatEvent {
-            attacker: 0,
-            target: entity.to_bits(),
-            amount: 0.0,
-            spell_id: 0,
-            event_type: CombatEventType::Death,
-        });
-    }
-
-    broadcast_events(&events, &mut senders, &mut combat_log, elapsed);
 }
 
 /// Tick respawn timers and restore dead NPCs when ready.
