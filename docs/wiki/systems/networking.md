@@ -20,9 +20,11 @@ app.replicate::<CastingSpell>();
 
 Lightyear handles:
 - **Interest management** — only replicates entities within the client's spatial relevance radius (`INITIAL_VISIBILITY_RADIUS_SQ = 100² yards`)
-- **Delta compression** — only sends changed components
+- **Change-tick replication** — the server sender selects components from Bevy change ticks; equal mutable assignments are not value-filtered before serialization
 - **Entity lifecycle** — spawn/despawn packets as entities enter/leave client view
 - **Zone transitions** — entity despawn + respawn on the client side is transparent
+
+The server's Lightyear `0.26.4` sender runs every 50 ms with `SinceLastAck`. The client compares decoded replicated components and suppresses equal ECS replacement only after serialization, batching, transport, delivery, and deserialization. See [[semantic-noop-replication]] for the confirmed no-op writers and unmeasured wire-level proof boundary.
 
 ## Client → Server Inputs
 

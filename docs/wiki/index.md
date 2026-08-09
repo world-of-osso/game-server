@@ -40,4 +40,8 @@ Server gameplay systems.
 
 ## investigations/
 
-Debug logs, root cause analyses. (No pages yet.)
+Debug logs and root cause analyses.
+
+| Page | Summary |
+|------|---------|
+| [[semantic-noop-replication]] | Server-side equal assignments advancing Bevy change ticks, Lightyear 0.26.4 tick-only sending, confirmed no-op fixes, and blocked wire-level proof |
