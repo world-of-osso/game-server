@@ -8,7 +8,7 @@ The server performance pass is replacing broad recurring scans with state-, even
 |---|---|---|---|
 | Auction expiration | Scan every auction at 20 Hz | Scan at most once per second | Completed in `e02ce0a` |
 | Terrain streaming | Recompute each connection's 3×3 neighborhood at 20 Hz | Evaluate on initial delivery or tile transition | Completed in `3c5ceca` |
-| Friends online snapshots | Rebuild all online/friend snapshots every app frame | Rebuild only dirty affected owners | Pending |
+| Friends online snapshots | Rebuild all online/friend snapshots every app frame | Rebuild only dirty affected owners | Completed in `914d570` |
 | Interest management | Scan every visible entity against every player every 500 ms | Movement/visibility revisions plus spatial buckets | Pending |
 | Lightyear replication | Scan every replicated root/component per client every 50 ms | Dirty entity/component queue | Pending |
 
@@ -45,6 +45,24 @@ The terrain tests exercise the real streaming system:
 
 The pre-fix same-tile test failed because repeated duplicate `HashSet::insert` attempts dirtied `SentTiles`. All three focused tests passed after `3c5ceca`.
 
+## Friends Online Snapshots
+
+`FriendSnapshotIndex` caches the current online presence map and maintains a reverse index from normalized friend name to owners who list that friend. Presence, login/logout, zone, and level changes mark only affected owners dirty. Friend-list mutations replace that owner's reverse-index links; initial `InWorld` snapshots and explicit query requests remain immediate and owner-scoped.
+
+`sync_changed_friend_presence` updates the cached online data from `Changed<Player>`, `Changed<Level>`, `Changed<Zone>`, and `Changed<PresenceStatus>`. `sync_removed_friend_presence` handles logout/despawn. `send_dirty_friends_snapshots` rebuilds and compares snapshots only for drained dirty owners, so unchanged frames no longer rebuild every owner's snapshot or perform offline-character database lookups. Existing equality suppression remains as a final output guard.
+
+Privacy and ignore state are not inputs to friend snapshots in the current protocol and remain unchanged; ignore-list mutations continue to affect only the ignore-list subsystem.
+
+### Behavioral proof
+
+The added friends tests cover the real `Update` chain and index behavior:
+
+- `unchanged_frame_does_not_rebuild_offline_friend_snapshot` changes persisted offline data between unchanged frames and verifies the tracked snapshot and change tick stay unchanged.
+- `presence_change_updates_only_owners_listing_that_player` updates only owners listing the changed friend; an unrelated owner's tracker stays unchanged.
+- `friend_login_and_logout_update_the_listed_owner` proves online/offline transitions update the listed owner.
+- `friend_zone_and_level_changes_refresh_the_listed_owner` proves both live metadata changes refresh the listed owner.
+- `friend_list_changes_replace_reverse_owner_links` proves reverse ownership is removed from the old friend and added to the new friend.
+
 ## Sources
 
 - [auction plugin](../../../crates/server/src/auction_house.rs) — one-second expiration run condition
@@ -55,6 +73,9 @@ The pre-fix same-tile test failed because repeated duplicate `HashSet::insert` a
 - [terrain connection state](../../../crates/server/src/auth.rs) — sent and last-evaluated tile state
 - [terrain streaming tests](../../../crates/server/src/networking_tests/terrain.rs) — initial, unchanged, boundary, and reconnect proof
 - `game-server` commit `3c5ceca` — terrain transition implementation and proof
+- [friends system](../../../crates/server/src/friends.rs) — cached online data, reverse owner index, dirty fanout, and snapshot sending
+- [friends tests](../../../crates/server/src/friends_tests.rs) — unchanged, affected-owner, lifecycle, metadata, and reverse-index proof
+- `game-server` commit `914d570` — dirty-owner friends snapshot implementation and proof
 
 ## See Also
 
