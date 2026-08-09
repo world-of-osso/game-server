@@ -433,6 +433,7 @@ pub fn process_guild_accepts(
         With<crate::auth::Authenticated>,
     >,
     char_ids: Query<&ClientId>,
+    guilds: Query<&GuildMembership>,
     db: Option<Res<GameDatabase>>,
     mut commands: Commands,
     mut senders: Query<&mut MessageSender<GuildAcceptInviteResponse>>,
@@ -440,7 +441,7 @@ pub fn process_guild_accepts(
     let Some(db) = db else { return };
     for (conn_entity, link, mut receiver) in receivers.iter_mut() {
         for _ in receiver.receive() {
-            let response = handle_guild_accept(&db, &char_ids, &mut commands, link.0);
+            let response = handle_guild_accept(&db, &char_ids, &guilds, &mut commands, link.0);
             let Ok(mut sender) = senders.get_mut(conn_entity) else {
                 continue;
             };
@@ -461,6 +462,7 @@ fn guild_accept_error(msg: impl Into<String>) -> GuildAcceptInviteResponse {
 fn handle_guild_accept(
     db: &GameDatabase,
     char_ids: &Query<&ClientId>,
+    guilds: &Query<&GuildMembership>,
     commands: &mut Commands,
     player_entity: Entity,
 ) -> GuildAcceptInviteResponse {
@@ -479,10 +481,17 @@ fn handle_guild_accept(
         return guild_accept_error(err);
     }
 
-    commands.entity(player_entity).insert(GuildMembership {
+    let next_membership = GuildMembership {
         guild_id: invite.guild_id,
         guild_name: invite.guild_name.clone(),
-    });
+    };
+    let membership_changed = match guilds.get(player_entity) {
+        Ok(current) => current != &next_membership,
+        Err(_) => true,
+    };
+    if membership_changed {
+        commands.entity(player_entity).insert(next_membership);
+    }
 
     GuildAcceptInviteResponse {
         success: true,
@@ -510,7 +519,95 @@ pub fn process_target_messages(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use bevy::ecs::system::RunSystemOnce;
     use std::collections::VecDeque;
+
+    fn apply_guild_accept(app: &mut App, player_entity: Entity) -> GuildAcceptInviteResponse {
+        app.world_mut()
+            .run_system_once(
+                move |db: Res<GameDatabase>,
+                      char_ids: Query<&ClientId>,
+                      guilds: Query<&GuildMembership>,
+                      mut commands: Commands| {
+                    handle_guild_accept(&db, &char_ids, &guilds, &mut commands, player_entity)
+                },
+            )
+            .expect("guild accept handler should run")
+    }
+
+    #[test]
+    fn guild_accept_preserves_tick_for_repeated_membership_value() {
+        let db = crate::persistence::temp_database();
+        let character_id = 42;
+        let _ = crate::persistence_character::create_character(&db, 1, "Invitee", 1, 1)
+            .expect("character should be created");
+        crate::persistence::set_pending_guild_invite(&db, character_id, 7, "Raid Team", "Inviter");
+
+        let mut app = App::new();
+        app.insert_resource(GameDatabase { db });
+        let player = app
+            .world_mut()
+            .spawn((
+                ClientId(character_id),
+                GuildMembership {
+                    guild_id: 1,
+                    guild_name: "Old Team".into(),
+                },
+            ))
+            .id();
+        let initial_tick = app
+            .world()
+            .entity(player)
+            .get_ref::<GuildMembership>()
+            .expect("initial guild membership")
+            .last_changed();
+
+        let first_response = apply_guild_accept(&mut app, player);
+        assert!(first_response.success);
+        assert_eq!(
+            app.world().entity(player).get::<GuildMembership>(),
+            Some(&GuildMembership {
+                guild_id: 7,
+                guild_name: "Raid Team".into(),
+            })
+        );
+        let first_tick = app
+            .world()
+            .entity(player)
+            .get_ref::<GuildMembership>()
+            .expect("updated guild membership")
+            .last_changed();
+        assert_ne!(
+            first_tick, initial_tick,
+            "real membership changes must dirty the component"
+        );
+
+        crate::persistence::set_pending_guild_invite(
+            &app.world().resource::<GameDatabase>().db,
+            character_id,
+            7,
+            "Raid Team",
+            "Inviter",
+        );
+        let second_response = apply_guild_accept(&mut app, player);
+        assert!(second_response.success);
+        assert_eq!(
+            app.world().entity(player).get::<GuildMembership>(),
+            Some(&GuildMembership {
+                guild_id: 7,
+                guild_name: "Raid Team".into(),
+            })
+        );
+        assert_eq!(
+            app.world()
+                .entity(player)
+                .get_ref::<GuildMembership>()
+                .expect("repeated guild membership")
+                .last_changed(),
+            first_tick,
+            "repeating the same membership must not dirty the component"
+        );
+    }
 
     fn say_message(sender: &str, content: &str) -> ChatMessage {
         ChatMessage {
