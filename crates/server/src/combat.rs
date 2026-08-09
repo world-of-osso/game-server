@@ -187,17 +187,20 @@ fn maintain_in_combat_state_system(
         &mut CombatState,
         Option<&CombatTarget>,
         Option<&AutoAttack>,
+        Option<&CombatStatus>,
     )>,
     mut commands: Commands,
 ) {
     let combat_expires_at = time.elapsed_secs_f64() + COMBAT_GRACE_SECS;
     let now = time.elapsed_secs_f64();
-    for (entity, mut combat_state, combat_target, auto_attack) in &mut query {
+    for (entity, mut combat_state, combat_target, auto_attack, combat_status) in &mut query {
         let actively_engaged = combat_target.and_then(|target| target.0).is_some()
             && auto_attack.is_some_and(|auto_attack| auto_attack.active);
         if actively_engaged {
             combat_state.expires_at = combat_expires_at;
-            refresh_combat_state(&mut commands, entity, combat_expires_at);
+            if !combat_status.is_some_and(|status| status.0) {
+                commands.entity(entity).insert(CombatStatus(true));
+            }
             continue;
         }
         if now >= combat_state.expires_at {

@@ -242,6 +242,43 @@ fn entering_combat_sets_replicated_flag() {
 }
 
 #[test]
+fn active_combat_maintenance_does_not_dirty_true_status() {
+    let mut app = setup_app();
+    let target = spawn_target(&mut app, pos(1.0, 0.0, 0.0), 100.0);
+    let attacker = spawn_attacker(&mut app, pos(0.0, 0.0, 0.0), target);
+    let expires_at = app.world().resource::<Time>().elapsed_secs_f64() + COMBAT_GRACE_SECS;
+    app.world_mut()
+        .entity_mut(attacker)
+        .insert(active_combat_state(expires_at));
+    app.update();
+
+    let tick_before = app
+        .world()
+        .entity(attacker)
+        .get_ref::<CombatStatus>()
+        .unwrap()
+        .last_changed();
+
+    run_maintain_combat_state_tick(&mut app);
+
+    assert!(
+        app.world()
+            .entity(attacker)
+            .get::<CombatStatus>()
+            .is_some_and(|status| status.0)
+    );
+    assert_eq!(
+        app.world()
+            .entity(attacker)
+            .get_ref::<CombatStatus>()
+            .unwrap()
+            .last_changed(),
+        tick_before,
+        "maintaining active combat must not dirty an unchanged true status"
+    );
+}
+
+#[test]
 fn combat_flag_expires_after_grace_period_once_target_is_cleared() {
     let mut app = setup_app();
     let target = spawn_target(&mut app, pos(1.0, 0.0, 0.0), 100.0);
