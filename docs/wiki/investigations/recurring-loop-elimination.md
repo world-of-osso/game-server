@@ -15,6 +15,7 @@ The server performance pass is replacing broad recurring scans with state-, even
 | Lightyear replication | Traverse every replicated root/component per client every 50 ms | Dirty global/per-sender candidates with initial full sync and ACK retention | Implemented in `269655a`, `30b5078`; strict-Empty CPU gate pending |
 | Inactive auto-attacks | Fixed combat query retains every `AutoAttack { active: false }` after target loss | Remove `AutoAttack` when `CombatTarget` becomes `None`; active attackers remain fixed-step | Completed in `152ccbd`; live CPU gate pending |
 | Rest-state evaluation | Every `Update`, every authenticated player, linear scan of all innkeepers | Evaluate initial state or only `Changed<Position>`/`Changed<Level>` players | Completed in `fffa86a`; live CPU gate pending |
+| Gold persistence synchronization | Every `Update`, every online player, synchronous redb inventory read | Record persisted mutation values and apply them in `PostUpdate` before replication buffering | Completed in `4e4c73d`, `c3b3c04`, `9d2067c`, `91bbedd`, `8920feb`; live CPU gate pending |
 
 ## Auction Expiration
 
@@ -47,6 +48,14 @@ Before `fffa86a`, `update_player_rest_state` visited every authenticated player 
 Initial world entry still creates and sends the first snapshot. Position changes preserve enter/leave transitions, and level changes recompute rested-XP maximums. Unchanged authenticated players no longer scan the innkeeper list or dirty their rest state.
 
 The behavioral RED test at `/tmp/claude/game-server/rest-dirty-evaluation-red.log` failed because an unchanged update advanced `PlayerRestState::last_changed()`. The focused GREEN test at `/tmp/claude/game-server/rest-dirty-evaluation-green.log` passed after `fffa86a`; cargo fmt and Rust readability evidence were recorded in `/tmp/claude/game-server/rest-dirty-evaluation-readability`. This is a server-side loop elimination; no live CPU or Character-stage claim is made before measurement.
+
+## Gold Persistence Synchronization
+
+Before `8920feb`, `sync_player_gold_from_inventory` scanned every online player every `Update` and synchronously loaded each inventory from redb. The replacement uses `GoldUpdateQueue`: successful persistence writers record the exact persisted value, same-frame records coalesce by character, and `apply_gold_updates` drains the queue in `PostUpdate` within `ReplicationBufferSystems::BeforeBuffer`. It updates only a matching online replicated `Gold`; equal values do not dirty the component, and offline records are discarded because the next login loads persistence again.
+
+Login/select still initializes `Gold` from persisted character state. The mutation boundaries are explicit: barber payments, completed trades, auction creation/bids/refunds/buyouts, and mail claims record values only after their inventory saves succeed. Profession inventory saves do not mutate gold, and auction sale proceeds remain mail until claimed.
+
+The RED/GREEN artifacts are `/tmp/claude/game-server/gold-update-queue-red.log` and `gold-update-queue-green.log`, `/tmp/claude/game-server/barber-gold-update-red.log` and `barber-gold-update-green.log`, `/tmp/claude/game-server/trade-gold-update-red.log` and `trade-gold-update-green.log`, `/tmp/claude/game-server/auction-gold-writers-red.log` and `auction-gold-writers-green.log`, plus the auction focused pair `auction-gold-update-red.log` and `auction-gold-update-green.log`. Readability artifacts are under `gold-update-queue-readability`, `barber-gold-update-readability`, `trade-gold-update-readability`, `auction-gold-writers-readability`, and `gold-poll-removal-readability`. These proofs establish behavior and removal of the unconditional scan; no live CPU or Character-stage claim is made before measurement.
 
 ## Terrain Streaming
 

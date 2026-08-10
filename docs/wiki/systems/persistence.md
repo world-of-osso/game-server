@@ -44,6 +44,12 @@ Character data is written to redb on:
 
 The periodic system currently executes on every fixed tick but returns for 299 of 300 executions. Because Bevy advances the system's change-detection window on each execution, its due `Changed<Position|Health|Player>` query does not preserve mutations from the full 300-tick interval. This is a confirmed correctness bug; see [[tick-loop-audit]].
 
+## Inventory Gold Replication
+
+Login/select still loads persisted inventory gold into the live player's replicated `Gold`. Runtime writers record the persisted value in `GoldUpdateQueue` after successful saves; `apply_gold_updates` drains same-frame records coalesced by character ID in `PostUpdate` before Lightyear buffering. Only matching online players are updated, equal values do not dirty `Gold`, and offline records are discarded because the next login reloads redb.
+
+The covered mutation boundaries are barber payments, completed trades, auction creation/bids/refunds/buyouts, and mail claims. Profession inventory saves do not mutate gold, and auction sale proceeds remain in mail until claim. This replaced the unconditional `sync_player_gold_from_inventory` database/player scan across commits `4e4c73d`, `c3b3c04`, `9d2067c`, `91bbedd`, and `8920feb`.
+
 ## What Is NOT Persisted
 
 These are transient and reconstructed on login or respawn:

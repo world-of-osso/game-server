@@ -34,7 +34,7 @@ The client compares decoded replicated components and suppresses equal ECS repla
 
 `ReplicationDirtyQueue::mark` targets all connected senders; `mark_for_sender` targets one connection for visibility-specific work. Component inserts/configuration and `NetworkVisibility` removal enqueue replication roots. Visibility gain/loss, room changes, hierarchy children, spawn/despawn actions, ACK retention, NACK retry, replication groups, priorities, delta compression, entity mapping, and existing action/update encoding remain inside Lightyear's semantic pipeline.
 
-Authoritative marks are emitted at real state boundaries: player input/gravity, NPC movement/leash restoration, combat transitions, derived-stat recalculation, gold synchronization, barber appearance updates, friend/presence and chat/emote activity, plus interest/visibility transitions. The queue is not a replacement for component change-tick filtering; it narrows candidates before the existing component and ACK checks.
+Authoritative marks are emitted at real state boundaries: player input/gravity, NPC movement/leash restoration, combat transitions, derived-stat recalculation, GoldUpdateQueue application, barber appearance updates, friend/presence and chat/emote activity, plus interest/visibility transitions. The queue is not a replacement for component change-tick filtering; it narrows candidates before the existing component and ACK checks.
 
 `aa5dddb` separates movement's two dirty domains. `networking_movement.rs` reports `position_changed` for translation and `replicated_state_changed` for any replicated movement state. A turn-in-place or zero-translation input can therefore enqueue `Rotation` or `MovementSpeed` replication without dirtying `InterestDirtyQueue`; interest remains position-only. The zero-translation regression was RED before the fix, and the focused server test slice passed with 43 tests GREEN after it. `networking.rs` retains orchestration while movement calculations live in the extracted module.
 
@@ -59,6 +59,14 @@ Each connection keeps both the set of terrain tiles already sent and the last pl
 Initial world entry still sends a `RestStateUpdate` snapshot. Position changes preserve enter/leave transitions; level changes refresh rested-XP maximums. Unchanged players do not scan innkeepers, dirty `PlayerRestState`, or emit duplicate updates. Client receiver and IPC snapshot behavior remain unchanged.
 
 The focused regression test proves both boundaries: unchanged updates preserve the component change tick, while movement into an innkeeper area updates the rest state. RED/GREEN artifacts are recorded in [[recurring-loop-elimination]]. No live CPU or Character-stage claim is made from this code proof.
+
+## Gold Replication Updates
+
+Login still loads persisted inventory gold into the player's replicated `Gold`. Runtime mutations no longer rely on an unconditional database scan. Barber payments, completed trades, auction creation/bids/refunds/buyouts, and mail claims record exact persisted values in `GoldUpdateQueue` only after successful inventory saves. Same-frame values coalesce by character ID.
+
+`apply_gold_updates` drains the queue in `PostUpdate` before Lightyear's replication buffer. It applies only values for matching online players, skips equal values without dirtying `Gold`, and discards offline updates because the next login reloads redb. Profession inventory saves do not change gold; auction sale proceeds remain mail until a claim mutates the inventory. The old `sync_player_gold_from_inventory` online-player/redb scan was removed across commits `4e4c73d`, `c3b3c04`, `9d2067c`, `91bbedd`, and `8920feb`.
+
+Behavioral RED/GREEN and readability artifacts are recorded in [[recurring-loop-elimination]]. This proves mutation boundaries and replication behavior; it does not claim a live CPU threshold result.
 
 ## Client → Server Inputs
 
