@@ -1,8 +1,23 @@
-use bevy::prelude::*;
-use shared::components::{CharacterAppearance, Gold, Player};
-use shared::currency::currency_by_id;
+use std::time::Duration;
 
-use crate::auth_character::load_selected_character_state;
+use bevy::prelude::*;
+use lightyear::connection::host::HostClient;
+use lightyear::prelude::{
+    AppMessageExt, Connected, MessageReceiver, MessageSender, PeerId, RemoteId,
+};
+use shared::components::{
+    CharacterAppearance, EquipmentVisualSlot, EquippedAppearanceEntry, Gold, Health, Player,
+};
+use shared::currency::currency_by_id;
+use shared::death::DeathState;
+use shared::protocol::{
+    AuthChannel, DeathStateUpdate, EnterWorldResponse, LoadTerrain, SelectCharacter,
+};
+
+use crate::auth::Authenticated;
+use crate::auth_character::{load_selected_character_state, process_select_character};
+use crate::death::{DeathPlugin, PlayerDeathState};
+use crate::durability::{EquippedDurability, apply_death_loss};
 use crate::gold::{GoldPlugin, GoldUpdateQueue};
 use crate::persistence::{self, ClientId, GameDatabase};
 
@@ -89,4 +104,102 @@ fn load_selected_character_state_syncs_pvp_currencies_from_wallet() {
     assert_eq!(state.currencies.get(2), 80);
     assert_eq!(state.pvp.progress.honor, 420);
     assert_eq!(state.pvp.progress.conquest, 80);
+}
+
+#[test]
+fn selecting_zero_health_character_queues_one_death_transition() {
+    let db = test_db();
+    let account_id = 7;
+    let (character_id, _) = persistence::create_character(&db.db, account_id, "DeadChar", 1, 1)
+        .expect("character should be created");
+    let mut data = persistence::load_character(&db.db, character_id)
+        .expect("created character should have persisted data");
+    data.health = 0.0;
+    data.equipment_appearance.entries = vec![EquippedAppearanceEntry {
+        slot: EquipmentVisualSlot::Head,
+        item_id: Some(100),
+        display_info_id: Some(200),
+        inventory_type: 1,
+        hidden: false,
+    }];
+    persistence::save_character(&db.db, character_id, &data);
+
+    let expected_initial = crate::durability::load_equipped_durability(&data);
+    let mut expected_after_death = expected_initial.clone();
+    assert!(apply_death_loss(&mut expected_after_death));
+
+    let mut app = App::new();
+    app.add_plugins(MinimalPlugins);
+    app.add_plugins(lightyear::prelude::server::ServerPlugins {
+        tick_duration: Duration::from_millis(50),
+    });
+    app.register_message::<SelectCharacter>();
+    app.register_message::<EnterWorldResponse>();
+    app.register_message::<LoadTerrain>();
+    app.register_message::<DeathStateUpdate>();
+    app.insert_resource(db);
+    app.add_plugins(DeathPlugin);
+    app.add_systems(Update, process_select_character);
+    app.finish();
+    app.cleanup();
+
+    let connection = app
+        .world_mut()
+        .spawn((
+            RemoteId(PeerId::Local(account_id)),
+            Connected,
+            HostClient { buffer: Vec::new() },
+            Authenticated { account_id },
+            MessageSender::<SelectCharacter>::default(),
+            MessageReceiver::<SelectCharacter>::default(),
+            MessageSender::<EnterWorldResponse>::default(),
+            MessageReceiver::<EnterWorldResponse>::default(),
+            MessageSender::<LoadTerrain>::default(),
+            MessageReceiver::<LoadTerrain>::default(),
+            MessageSender::<DeathStateUpdate>::default(),
+            MessageReceiver::<DeathStateUpdate>::default(),
+        ))
+        .id();
+    app.world_mut()
+        .entity_mut(connection)
+        .get_mut::<MessageSender<SelectCharacter>>()
+        .expect("connection should have a character-select sender")
+        .send::<AuthChannel>(SelectCharacter { character_id });
+
+    app.update();
+    app.update();
+    app.world_mut().run_schedule(FixedUpdate);
+    app.world_mut().run_schedule(Last);
+
+    let player = app
+        .world_mut()
+        .query::<(Entity, &ClientId)>()
+        .iter(app.world())
+        .find_map(|(entity, client_id)| (client_id.0 == character_id).then_some(entity))
+        .expect("selecting a character should spawn its player entity");
+    let player_entity = app.world().entity(player);
+    assert_eq!(player_entity.get::<Health>().unwrap().current, 0.0);
+    let death_state = player_entity
+        .get::<PlayerDeathState>()
+        .expect("loaded zero health must queue a death transition");
+    assert_eq!(death_state.state, DeathState::Dead);
+    assert!(death_state.corpse.is_some());
+    assert_eq!(
+        player_entity
+            .get::<EquippedDurability>()
+            .expect("selected player should have durability")
+            .slots,
+        expected_after_death.slots
+    );
+
+    app.world_mut().run_schedule(FixedUpdate);
+    app.world_mut().run_schedule(Last);
+    assert_eq!(
+        app.world()
+            .entity(player)
+            .get::<EquippedDurability>()
+            .unwrap()
+            .slots,
+        expected_after_death.slots
+    );
 }

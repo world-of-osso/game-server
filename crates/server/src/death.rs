@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use bevy::prelude::*;
 use lightyear::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -30,6 +32,17 @@ mod support;
 use self::support::build_snapshot;
 use self::support::{current_seconds, send_error, send_update};
 
+#[cfg(test)]
+use std::sync::{
+    Mutex,
+    atomic::{AtomicUsize, Ordering},
+};
+
+#[derive(Message, Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct PlayerDeathTransition {
+    pub(crate) player: Entity,
+}
+
 #[derive(Component, Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct PlayerDeathState {
     pub state: DeathState,
@@ -54,8 +67,16 @@ struct DeathServerState {
 
 pub struct DeathPlugin;
 
+#[cfg(test)]
+static DEATH_PLAYERS_VISITED: AtomicUsize = AtomicUsize::new(0);
+#[cfg(test)]
+static DEATH_REPLICATION_MARKS: AtomicUsize = AtomicUsize::new(0);
+#[cfg(test)]
+static DEATH_TEST_LOCK: Mutex<()> = Mutex::new(());
+
 impl Plugin for DeathPlugin {
     fn build(&self, app: &mut App) {
+        app.add_message::<PlayerDeathTransition>();
         app.init_resource::<DeathServerState>();
         app.add_systems(PostStartup, load_graveyards_from_world_data);
         app.add_systems(Update, send_initial_death_snapshot);
@@ -66,7 +87,9 @@ impl Plugin for DeathPlugin {
         app.add_systems(Update, process_stuck_escape_requests);
         app.add_systems(
             FixedUpdate,
-            detect_player_deaths.after(crate::networking::apply_terrain_gravity),
+            process_player_death_transitions
+                .after(crate::networking::apply_terrain_gravity)
+                .after(crate::combat::auto_attack_system),
         );
     }
 }
@@ -471,23 +494,23 @@ fn process_stuck_escape_requests(
     }
 }
 
-type DeathDetectionQuery<'w, 's> = Query<
+type PlayerDeathTransitionQuery<'w, 's> = Query<
     'w,
     's,
     (
-        Entity,
         &'static Position,
         &'static mut Health,
         Option<&'static mut EquippedDurability>,
-        Option<&'static mut PlayerDeathState>,
+        Option<&'static PlayerDeathState>,
         &'static crate::persistence::ClientId,
         &'static Player,
     ),
     With<Player>,
 >;
 
-fn detect_player_deaths(
-    mut players: DeathDetectionQuery,
+fn process_player_death_transitions(
+    mut transitions: MessageReader<PlayerDeathTransition>,
+    mut players: PlayerDeathTransitionQuery,
     connections: Query<(Entity, &PlayerLink), With<Authenticated>>,
     state: Res<DeathServerState>,
     time: Res<Time>,
@@ -496,14 +519,28 @@ fn detect_player_deaths(
     replication_dirty: Option<Res<ReplicationDirtyQueue>>,
 ) {
     let now = current_seconds(&time);
-    for (player_entity, position, mut health, durability, death_state, client_id, player) in
-        &mut players
-    {
-        if !should_process_player_death(&health, death_state.as_deref()) {
+    let mut processed_players = HashSet::new();
+    for transition in transitions.read() {
+        let player_entity = transition.player;
+        if !processed_players.insert(player_entity) {
+            continue;
+        }
+
+        #[cfg(test)]
+        DEATH_PLAYERS_VISITED.fetch_add(1, Ordering::SeqCst);
+
+        let Ok((position, mut health, durability, death_state, client_id, player)) =
+            players.get_mut(player_entity)
+        else {
+            continue;
+        };
+        if !should_process_player_death(&health, death_state) {
             continue;
         }
         health.current = 0.0;
         if let Some(replication_dirty) = replication_dirty.as_deref() {
+            #[cfg(test)]
+            DEATH_REPLICATION_MARKS.fetch_add(1, Ordering::SeqCst);
             replication_dirty.mark(player_entity);
         }
         let death_state = build_detected_player_death_state(
@@ -528,6 +565,15 @@ fn detect_player_deaths(
             );
         }
     }
+}
+
+pub(crate) fn apply_health_damage(health: &mut Health, damage: f32) -> bool {
+    if damage <= 0.0 || health.current <= 0.0 {
+        return false;
+    }
+
+    health.current = (health.current - damage).max(0.0);
+    health.current == 0.0
 }
 
 fn should_process_player_death(health: &Health, death_state: Option<&PlayerDeathState>) -> bool {

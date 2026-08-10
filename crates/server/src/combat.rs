@@ -70,6 +70,7 @@ pub struct CombatPlugin;
 
 impl Plugin for CombatPlugin {
     fn build(&self, app: &mut App) {
+        app.add_message::<crate::death::PlayerDeathTransition>();
         app.init_resource::<CombatLog>();
         app.init_resource::<shared::components::SpellBatch>();
         app.add_systems(
@@ -130,7 +131,7 @@ fn start_attack_system(
 }
 
 /// Process auto-attacks: tick timers, deal damage when in range and timer ready.
-fn auto_attack_system(
+pub(crate) fn auto_attack_system(
     time: Res<Time>,
     mut attackers: Query<(Entity, &CombatTarget, &mut AutoAttack, &Position)>,
     mut targets: Query<(&Position, &mut Health, Option<&mut LastDamager>, Has<Npc>)>,
@@ -139,6 +140,7 @@ fn auto_attack_system(
     mut commands: Commands,
     combat_statuses: Query<&CombatStatus>,
     replication_dirty: Option<Res<ReplicationDirtyQueue>>,
+    mut player_deaths: MessageWriter<crate::death::PlayerDeathTransition>,
 ) {
     let dt = time.delta_secs();
     let (elapsed, combat_expires_at) = combat_timing(&time);
@@ -170,6 +172,7 @@ fn auto_attack_system(
         record_swing_events(
             &mut commands,
             &mut events,
+            &mut player_deaths,
             attacker_entity,
             target_entity,
             outcome,
@@ -232,6 +235,7 @@ fn maintain_in_combat_state_system(
 struct SwingOutcome {
     damage: f32,
     npc_died: bool,
+    player_died: bool,
 }
 
 /// Attempt a swing if timer ready and target in range.
@@ -253,8 +257,9 @@ fn try_swing(
         return None;
     }
     let damage = BASE_DAMAGE;
-    health.current = (health.current - damage).max(0.0);
-    let npc_died = is_npc && health.current == 0.0;
+    let became_lethal = crate::death::apply_health_damage(&mut health, damage);
+    let npc_died = is_npc && became_lethal;
+    let player_died = !is_npc && became_lethal;
     if let Some(mut last_damager) = last_damager {
         last_damager.0 = attacker_entity;
     } else {
@@ -263,7 +268,11 @@ fn try_swing(
             .insert(LastDamager(attacker_entity));
     }
     auto_attack.timer = AUTO_ATTACK_INTERVAL;
-    Some(SwingOutcome { damage, npc_died })
+    Some(SwingOutcome {
+        damage,
+        npc_died,
+        player_died,
+    })
 }
 
 /// Check if two positions are within melee range.
@@ -332,6 +341,7 @@ fn refresh_combatants(
 fn record_swing_events(
     commands: &mut Commands,
     events: &mut Vec<CombatEvent>,
+    player_deaths: &mut MessageWriter<crate::death::PlayerDeathTransition>,
     attacker: Entity,
     target: Entity,
     outcome: SwingOutcome,
@@ -340,6 +350,9 @@ fn record_swing_events(
     if outcome.npc_died {
         mark_npc_dead(commands, target);
         events.push(build_death_event(target));
+    }
+    if outcome.player_died {
+        player_deaths.write(crate::death::PlayerDeathTransition { player: target });
     }
 }
 

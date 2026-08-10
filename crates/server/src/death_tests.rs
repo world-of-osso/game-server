@@ -1,8 +1,441 @@
-use super::*;
+use std::{sync::atomic::Ordering, time::Duration};
+
+use bevy::ecs::system::RunSystemOnce;
+use lightyear::connection::host::HostClient;
+use lightyear::prelude::{
+    AppMessageExt, Connected, MessageReceiver, MessageSender, PeerId, RemoteId,
+};
 use shared::death::DeathResult;
+
+use super::*;
 
 fn death_result_at(x: f32, y: f32, z: f32) -> DeathResult {
     on_death(1, WORLD_MAP_ID, x, y, z, 5)
+}
+
+fn setup_death_app() -> App {
+    let mut app = App::new();
+    app.add_plugins(bevy::MinimalPlugins);
+    app.add_plugins(lightyear::prelude::server::ServerPlugins {
+        tick_duration: Duration::from_millis(50),
+    });
+    app.register_message::<DeathStateUpdate>();
+    app.add_plugins(DeathPlugin);
+    app.insert_resource(ReplicationDirtyQueue::default());
+    app.finish();
+    app.cleanup();
+    app
+}
+
+#[test]
+fn idle_fixed_updates_do_not_visit_healthy_players() {
+    let _test_lock = DEATH_TEST_LOCK.lock().unwrap();
+    DEATH_PLAYERS_VISITED.store(0, Ordering::SeqCst);
+
+    let mut app = App::new();
+    app.add_plugins(bevy::MinimalPlugins);
+    app.add_plugins(DeathPlugin);
+
+    let players = (1..=3)
+        .map(|character_id| {
+            app.world_mut()
+                .spawn((
+                    Player {
+                        name: format!("Player{character_id}"),
+                        race: 1,
+                        class: 1,
+                        appearance: shared::components::CharacterAppearance::default(),
+                    },
+                    Position {
+                        x: character_id as f32,
+                        y: 0.0,
+                        z: 0.0,
+                    },
+                    Health {
+                        current: 100.0,
+                        max: 100.0,
+                    },
+                    crate::persistence::ClientId(character_id),
+                ))
+                .id()
+        })
+        .collect::<Vec<_>>();
+
+    app.world_mut().run_schedule(FixedUpdate);
+    DEATH_PLAYERS_VISITED.store(0, Ordering::SeqCst);
+
+    for _ in 0..3 {
+        app.world_mut().run_schedule(FixedUpdate);
+    }
+
+    assert_eq!(
+        DEATH_PLAYERS_VISITED.load(Ordering::SeqCst),
+        0,
+        "idle fixed updates must not visit healthy players"
+    );
+    for player in players {
+        let entity = app.world().entity(player);
+        assert!(entity.get::<PlayerDeathState>().is_none());
+        assert_eq!(entity.get::<Health>().unwrap().current, 100.0);
+    }
+}
+
+fn spawn_death_connection(app: &mut App, peer_id: u64, player: Entity) -> Entity {
+    app.world_mut()
+        .spawn((
+            RemoteId(PeerId::Local(peer_id)),
+            Connected,
+            HostClient { buffer: Vec::new() },
+            Authenticated {
+                account_id: peer_id,
+            },
+            PlayerLink(player),
+            MessageSender::<DeathStateUpdate>::default(),
+            MessageReceiver::<DeathStateUpdate>::default(),
+        ))
+        .id()
+}
+
+fn receive_death_updates(app: &mut App, connection: Entity) -> Vec<DeathStateUpdate> {
+    app.world_mut()
+        .entity_mut(connection)
+        .get_mut::<MessageReceiver<DeathStateUpdate>>()
+        .expect("connection should have a death update receiver")
+        .receive()
+        .collect()
+}
+
+#[test]
+fn queued_player_death_transitions_apply_once_and_route_snapshot() {
+    let _test_lock = DEATH_TEST_LOCK.lock().unwrap();
+    DEATH_REPLICATION_MARKS.store(0, Ordering::SeqCst);
+
+    let mut app = setup_death_app();
+
+    let player_position = Position {
+        x: 12.0,
+        y: 3.0,
+        z: -7.0,
+    };
+    let player = app
+        .world_mut()
+        .spawn((
+            Player {
+                name: "Elara".into(),
+                race: 1,
+                class: 2,
+                appearance: shared::components::CharacterAppearance::default(),
+            },
+            player_position,
+            Health {
+                current: -5.0,
+                max: 70.0,
+            },
+            crate::persistence::ClientId(1),
+            crate::durability::EquippedDurability {
+                slots: vec![crate::durability::DurabilitySlotState {
+                    slot: shared::components::EquipmentVisualSlot::Head,
+                    current: 70,
+                    max: 70,
+                }],
+            },
+        ))
+        .id();
+    let unrelated_player = app
+        .world_mut()
+        .spawn((
+            Player {
+                name: "Theron".into(),
+                race: 1,
+                class: 3,
+                appearance: shared::components::CharacterAppearance::default(),
+            },
+            Position {
+                x: 100.0,
+                y: 0.0,
+                z: 100.0,
+            },
+            Health {
+                current: 100.0,
+                max: 100.0,
+            },
+            crate::persistence::ClientId(2),
+        ))
+        .id();
+    let player_connection = spawn_death_connection(&mut app, 1, player);
+    let unrelated_connection = spawn_death_connection(&mut app, 2, unrelated_player);
+
+    app.world_mut()
+        .write_message(PlayerDeathTransition { player });
+    app.world_mut()
+        .write_message(PlayerDeathTransition { player });
+    app.world_mut().run_schedule(FixedUpdate);
+    app.world_mut().run_schedule(Last);
+
+    let player_entity = app.world().entity(player);
+    assert_eq!(player_entity.get::<Health>().unwrap().current, 0.0);
+    let death_state = player_entity
+        .get::<PlayerDeathState>()
+        .expect("lethal transition should insert player death state");
+    assert_eq!(death_state.state, DeathState::Dead);
+    let corpse = death_state
+        .corpse
+        .as_ref()
+        .expect("death should create corpse");
+    assert_eq!(corpse.player, 1);
+    assert_eq!(corpse.x, player_position.x);
+    assert_eq!(corpse.y, player_position.y);
+    assert_eq!(corpse.z, player_position.z);
+    assert_eq!(
+        player_entity
+            .get::<crate::durability::EquippedDurability>()
+            .unwrap()
+            .slots[0]
+            .current,
+        63
+    );
+    assert_eq!(DEATH_REPLICATION_MARKS.load(Ordering::SeqCst), 1);
+
+    let updates = receive_death_updates(&mut app, player_connection);
+    assert_eq!(updates.len(), 1);
+    assert_eq!(updates[0].message.as_deref(), Some("you died"));
+    assert_eq!(updates[0].error, None);
+    let snapshot = updates[0]
+        .snapshot
+        .as_ref()
+        .expect("death update should contain a snapshot");
+    assert_eq!(snapshot.state, DeathStateSnapshot::Dead);
+    let corpse_snapshot = snapshot
+        .corpse
+        .as_ref()
+        .expect("snapshot should contain corpse");
+    assert_eq!(corpse_snapshot.map_id, WORLD_MAP_ID);
+    assert_eq!(corpse_snapshot.x, player_position.x);
+    assert_eq!(corpse_snapshot.y, player_position.y);
+    assert_eq!(corpse_snapshot.z, player_position.z);
+    assert!(receive_death_updates(&mut app, unrelated_connection).is_empty());
+
+    app.world_mut().run_schedule(FixedUpdate);
+    app.world_mut().run_schedule(Last);
+
+    assert_eq!(DEATH_REPLICATION_MARKS.load(Ordering::SeqCst), 1);
+    assert!(receive_death_updates(&mut app, player_connection).is_empty());
+    assert!(receive_death_updates(&mut app, unrelated_connection).is_empty());
+    assert_eq!(
+        app.world()
+            .entity(player)
+            .get::<crate::durability::EquippedDurability>()
+            .unwrap()
+            .slots[0]
+            .current,
+        63
+    );
+}
+
+#[test]
+fn resurrection_allows_a_second_death_transition() {
+    let _test_lock = DEATH_TEST_LOCK.lock().unwrap();
+    DEATH_PLAYERS_VISITED.store(0, Ordering::SeqCst);
+    DEATH_REPLICATION_MARKS.store(0, Ordering::SeqCst);
+
+    let mut app = setup_death_app();
+    let player_position = Position {
+        x: 12.0,
+        y: 3.0,
+        z: -7.0,
+    };
+    let player = app
+        .world_mut()
+        .spawn((
+            Player {
+                name: "Elara".into(),
+                race: 1,
+                class: 2,
+                appearance: shared::components::CharacterAppearance::default(),
+            },
+            player_position,
+            Health {
+                current: 0.0,
+                max: 70.0,
+            },
+            crate::persistence::ClientId(1),
+            crate::durability::EquippedDurability {
+                slots: vec![crate::durability::DurabilitySlotState {
+                    slot: shared::components::EquipmentVisualSlot::Head,
+                    current: 70,
+                    max: 70,
+                }],
+            },
+        ))
+        .id();
+    let connection = spawn_death_connection(&mut app, 1, player);
+
+    app.world_mut()
+        .write_message(PlayerDeathTransition { player });
+    app.world_mut().run_schedule(FixedUpdate);
+    app.world_mut().run_schedule(Last);
+    assert_eq!(receive_death_updates(&mut app, connection).len(), 1);
+    assert_eq!(
+        app.world()
+            .entity(player)
+            .get::<crate::durability::EquippedDurability>()
+            .unwrap()
+            .slots[0]
+            .current,
+        63
+    );
+
+    let mut graveyards = GraveyardRegistry::new();
+    graveyards.add(Graveyard {
+        id: 1,
+        zone_id: 1,
+        faction: 0,
+        map_id: WORLD_MAP_ID,
+        x: player_position.x,
+        y: player_position.y,
+        z: player_position.z,
+    });
+    let release = app
+        .world_mut()
+        .run_system_once(
+            move |mut players: Query<(&mut Position, &mut PlayerDeathState)>| {
+                let (mut position, mut death_state) =
+                    players.single_mut().expect("test player should be unique");
+                release_spirit_for_player(&mut position, &mut death_state, 1, &graveyards)
+            },
+        )
+        .expect("release helper should run")
+        .expect("player should release spirit");
+    assert_eq!(release, "released spirit");
+
+    let resurrection = app
+        .world_mut()
+        .run_system_once(
+            |mut players: Query<(&mut Position, &mut Health, &mut PlayerDeathState)>| {
+                let (mut position, mut health, mut death_state) =
+                    players.single_mut().expect("test player should be unique");
+                resurrect_player_at_corpse(&mut position, &mut health, None, &mut death_state)
+            },
+        )
+        .expect("resurrection helper should run")
+        .expect("player should resurrect at the corpse");
+    assert_eq!(resurrection, "resurrected at corpse");
+    let resurrected = app.world().entity(player);
+    assert!(resurrected.get::<Health>().unwrap().current > 0.0);
+    assert_eq!(
+        resurrected.get::<PlayerDeathState>().unwrap().state,
+        DeathState::Alive
+    );
+    assert!(
+        resurrected
+            .get::<PlayerDeathState>()
+            .unwrap()
+            .corpse
+            .is_none()
+    );
+
+    let became_lethal = app
+        .world_mut()
+        .entity_mut(player)
+        .get_mut::<Health>()
+        .map(|mut health| {
+            let damage = health.max;
+            apply_health_damage(&mut health, damage)
+        })
+        .expect("resurrected player should have health");
+    assert!(became_lethal);
+    DEATH_PLAYERS_VISITED.store(0, Ordering::SeqCst);
+    DEATH_REPLICATION_MARKS.store(0, Ordering::SeqCst);
+    app.world_mut()
+        .write_message(PlayerDeathTransition { player });
+    app.world_mut().run_schedule(FixedUpdate);
+    app.world_mut().run_schedule(Last);
+
+    let player_entity = app.world().entity(player);
+    assert_eq!(DEATH_PLAYERS_VISITED.load(Ordering::SeqCst), 1);
+    assert_eq!(DEATH_REPLICATION_MARKS.load(Ordering::SeqCst), 1);
+    assert_eq!(
+        player_entity
+            .get::<PlayerDeathState>()
+            .expect("second death should create state")
+            .state,
+        DeathState::Dead
+    );
+    assert!(
+        player_entity
+            .get::<PlayerDeathState>()
+            .unwrap()
+            .corpse
+            .is_some()
+    );
+    assert_eq!(
+        player_entity
+            .get::<crate::durability::EquippedDurability>()
+            .unwrap()
+            .slots[0]
+            .current,
+        56
+    );
+    let updates = receive_death_updates(&mut app, connection);
+    assert_eq!(updates.len(), 1);
+    assert_eq!(updates[0].message.as_deref(), Some("you died"));
+    assert_eq!(
+        updates[0].snapshot.as_ref().unwrap().state,
+        DeathStateSnapshot::Dead
+    );
+
+    app.world_mut().run_schedule(FixedUpdate);
+    app.world_mut().run_schedule(Last);
+    assert_eq!(DEATH_REPLICATION_MARKS.load(Ordering::SeqCst), 1);
+    assert_eq!(
+        app.world()
+            .entity(player)
+            .get::<crate::durability::EquippedDurability>()
+            .unwrap()
+            .slots[0]
+            .current,
+        56
+    );
+    assert!(receive_death_updates(&mut app, connection).is_empty());
+}
+
+#[test]
+fn despawned_player_death_transition_is_ignored() {
+    let _test_lock = DEATH_TEST_LOCK.lock().unwrap();
+    DEATH_REPLICATION_MARKS.store(0, Ordering::SeqCst);
+
+    let mut app = setup_death_app();
+    let player = app
+        .world_mut()
+        .spawn((
+            Player {
+                name: "Elara".into(),
+                race: 1,
+                class: 2,
+                appearance: shared::components::CharacterAppearance::default(),
+            },
+            Position {
+                x: 12.0,
+                y: 3.0,
+                z: -7.0,
+            },
+            Health {
+                current: 100.0,
+                max: 100.0,
+            },
+            crate::persistence::ClientId(1),
+        ))
+        .id();
+    let connection = spawn_death_connection(&mut app, 1, player);
+    app.world_mut()
+        .write_message(PlayerDeathTransition { player });
+    assert!(app.world_mut().despawn(player));
+
+    app.world_mut().run_schedule(FixedUpdate);
+    app.world_mut().run_schedule(Last);
+
+    assert_eq!(DEATH_REPLICATION_MARKS.load(Ordering::SeqCst), 0);
+    assert!(receive_death_updates(&mut app, connection).is_empty());
 }
 
 #[test]

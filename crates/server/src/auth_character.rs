@@ -172,6 +172,7 @@ pub fn process_select_character(
     mut terrain_senders: Query<&mut MessageSender<LoadTerrain>>,
     existing_players: Query<(Entity, &ClientId)>,
     mut commands: Commands,
+    mut player_deaths: MessageWriter<crate::death::PlayerDeathTransition>,
 ) {
     let Some(db) = db.as_ref() else { return };
     let requests: Vec<_> = collect_select_requests(&mut receivers);
@@ -185,6 +186,7 @@ pub fn process_select_character(
             &mut enter_senders,
             &mut terrain_senders,
             &mut commands,
+            &mut player_deaths,
         );
     }
 }
@@ -247,6 +249,7 @@ fn handle_select(
     enter_senders: &mut Query<&mut MessageSender<EnterWorldResponse>>,
     terrain_senders: &mut Query<&mut MessageSender<LoadTerrain>>,
     commands: &mut Commands,
+    player_deaths: &mut MessageWriter<crate::death::PlayerDeathTransition>,
 ) {
     if !validate_ownership(db, account_id, req.character_id) {
         send_enter_error(conn, enter_senders, "Character not found");
@@ -265,6 +268,11 @@ fn handle_select(
         guild.as_ref(),
         build_player_init_state(state),
     );
+    if data.health <= 0.0 {
+        player_deaths.write(crate::death::PlayerDeathTransition {
+            player: player_entity,
+        });
+    }
     insert_world_components(commands, conn, player_entity, req.character_id);
     send_enter_success(conn, enter_senders, player_entity);
     send_load_terrain(conn, terrain_senders);

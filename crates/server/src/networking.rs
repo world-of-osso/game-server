@@ -107,6 +107,7 @@ pub struct ServerNetworkPlugin;
 
 impl Plugin for ServerNetworkPlugin {
     fn build(&self, app: &mut App) {
+        app.add_message::<crate::death::PlayerDeathTransition>();
         app.init_resource::<ConnectedAccounts>();
         app.init_resource::<ChatHistoryBuffer>();
         app.add_systems(Startup, start_server);
@@ -446,6 +447,7 @@ pub(crate) fn apply_terrain_gravity(
     time: Res<Time>,
     dirty_queue: Option<Res<InterestDirtyQueue>>,
     replication_dirty: Option<Res<ReplicationDirtyQueue>>,
+    mut player_deaths: MessageWriter<crate::death::PlayerDeathTransition>,
 ) {
     let Some(terrain) = terrain.as_ref().filter(|t| t.is_loaded()) else {
         return;
@@ -454,6 +456,7 @@ pub(crate) fn apply_terrain_gravity(
     for (entity, mut pos, mut vert_vel, mut fall_tracker, mut health, death_state) in
         players.iter_mut()
     {
+        let previous_health = *health;
         let (next_pos, next_vert_vel, next_fall_tracker, next_health) = calculate_gravity_state(
             terrain,
             *pos,
@@ -478,6 +481,9 @@ pub(crate) fn apply_terrain_gravity(
             if let Some(replication_dirty) = replication_dirty.as_deref() {
                 replication_dirty.mark(entity);
             }
+        }
+        if previous_health.current > 0.0 && next_health.current <= 0.0 {
+            player_deaths.write(crate::death::PlayerDeathTransition { player: entity });
         }
     }
 }
@@ -560,7 +566,7 @@ fn apply_fall_damage_on_landing(
         let fall_distance = (fall_tracker.peak_y - ground_y).max(0.0);
         let damage = health.max * shared::movement::fall_damage_percent(fall_distance);
         if damage > 0.0 {
-            health.current = (health.current - damage).max(0.0);
+            crate::death::apply_health_damage(health, damage);
         }
         fall_tracker.airborne = false;
         fall_tracker.peak_y = ground_y;

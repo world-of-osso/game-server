@@ -56,11 +56,14 @@ fn make_input(dx: f32, dy: f32, dz: f32) -> PlayerInput {
 fn setup_app_with_time() -> App {
     let mut app = App::new();
     app.add_plugins(bevy::MinimalPlugins);
+    app.add_message::<crate::death::PlayerDeathTransition>();
     app.update();
     app.update();
     app
 }
 
+#[path = "networking_tests/death.rs"]
+mod death;
 #[path = "networking_tests/misc.rs"]
 mod misc;
 #[path = "networking_tests/movement.rs"]
