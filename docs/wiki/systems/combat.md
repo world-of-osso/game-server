@@ -38,9 +38,9 @@ Coverage in `combat_tests.rs` includes `nonlethal_auto_attack_keeps_npc_alive_an
 
 ## Player Death Transition (`18c936b`)
 
-Player-targeted melee damage emits the internal `PlayerDeathTransition` only when `Health` crosses from positive to zero. The lifecycle consumer in `death.rs` runs after combat and gravity in `FixedUpdate`, preserving zero-health clamping, `LastDamager`, durability loss, corpse/graveyard state, replication dirtying, the routed `"you died"` update, duplicate-death prevention, resurrection, and later second death. The former broad `detect_player_deaths` player scan is gone.
+Player-targeted melee damage emits the internal `PlayerDeathTransition` only when `Health` crosses from positive to zero. The lifecycle consumer in `death/transitions.rs` runs after combat and gravity in `FixedUpdate`, preserving zero-health clamping, `LastDamager`, durability loss, corpse/graveyard state, replication dirtying, the routed `"you died"` update, duplicate-death prevention, resurrection, and later second death. The former broad `detect_player_deaths` player scan is gone.
 
-Persisted zero health is queued during character selection so relogging a dead character reconstructs the same lifecycle instead of waiting for a poll. Stale entities are ignored safely. RED/GREEN artifacts are recorded under `/tmp/claude/game-server/` for idle-scan removal, transition consumption, combat, fall, login, and second-life coverage. No live CPU savings claim is made.
+Persisted zero health is queued during character selection so relogging a dead character reconstructs the same lifecycle instead of waiting for a poll. `b4e5cbd` split the consumer module and `2106cd8` split the focused proof into `combat_tests/death.rs`; `1b7c5a4` preserves unchanged gravity health ticks. Stale entities are ignored safely. RED/GREEN artifacts are recorded under `/tmp/claude/game-server/` for idle-scan removal, transition consumption, combat, fall, login, and second-life coverage. No live CPU savings claim is made.
 
 ## Melee Hit Table (`shared/src/formulas/melee.rs`)
 
@@ -77,9 +77,11 @@ Key formulas:
 ## Sources
 
 - [crates/server/src/combat.rs](../../../crates/server/src/combat.rs) — CombatPlugin, auto-attack, lethal-transition emission, NPC death transition, and respawn
-- [crates/server/src/combat_tests.rs](../../../crates/server/src/combat_tests.rs) — auto-attack participation, player combat death, NPC death, and respawn coverage
-- [crates/server/src/death.rs](../../../crates/server/src/death.rs) — player death-transition consumer and lifecycle side effects
-- `game-server` commit `18c936b` — replace player death polling with lethal transitions
+- [crates/server/src/combat_tests.rs](../../../crates/server/src/combat_tests.rs) — auto-attack participation, NPC death, and respawn coverage
+- [crates/server/src/combat_tests/death.rs](../../../crates/server/src/combat_tests/death.rs) — focused player combat-death proof
+- [crates/server/src/death/transitions.rs](../../../crates/server/src/death/transitions.rs) — player death-transition consumer and lifecycle side effects
+- `game-server` commits `18c936b`, `b4e5cbd`, `2106cd8` — player death transition, source split, and focused test split
+- `game-server` commit `1b7c5a4` — preserve unchanged gravity health ticks
 - `game-server` commit `152ccbd` — remove inactive auto-attack components after target loss
 - [crates/shared/src/formulas/melee.rs](../../../crates/shared/src/formulas/melee.rs) — hit table, avoidance DR
 - [crates/shared/src/formulas/spell.rs](../../../crates/shared/src/formulas/spell.rs) — spell miss, crit, haste, DoT

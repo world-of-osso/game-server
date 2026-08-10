@@ -1,6 +1,6 @@
 # Game Tick Loop Design
 
-Draft normative design for the `game-server` runtime loops. It keeps one 20 Hz authoritative simulation, makes dependency ordering explicit, and separates fixed simulation from request handling, replication, maintenance, and background I/O. Current behavior is documented in [[tick-model]]; the source-grounded correctness and recurring-work review is [[tick-loop-audit]]. This page proposes the target and does not change runtime behavior.
+Draft normative design for the `game-server` runtime loops. It keeps one 20 Hz authoritative simulation, makes dependency ordering explicit, and separates fixed simulation from request handling, replication, maintenance, and background I/O. Current behavior is documented in [[tick-model]]; the source-grounded correctness and recurring-work review is [[tick-loop-audit]]. Player death source/test splits landed in `b4e5cbd` and `2106cd8`; auto-AFK follow-ups landed in `9412352` and `16768b3`. This page proposes the target and does not change runtime behavior.
 
 ## Content
 
@@ -103,7 +103,7 @@ Do not add recurring full-world polling to either schedule. Prefer change filter
 
 Player death is now owned by an internal `PlayerDeathTransition` message emitted at authoritative lethal boundaries. Combat and fall damage emit only when health crosses from positive to zero; character selection queues the same transition when persisted health is already zero. The FixedUpdate consumer runs after both combat and gravity, clamps health, deduplicates already-dead players, preserves `LastDamager`, applies durability loss, creates the corpse/graveyard state, marks replication dirty, and sends the existing `"you died"` update. The old broad `detect_player_deaths` player scan is removed.
 
-The transition boundary preserves relogging dead characters, resurrection and second-life behavior, stale-entity safety, and existing routing. This is a concrete lifecycle edge inside the proposed phase model; it does not claim that all six phase sets are already migrated.
+The transition boundary preserves relogging dead characters, resurrection and second-life behavior, stale-entity safety, and existing routing. `b4e5cbd` split the consumer into `crates/server/src/death/transitions.rs`; `2106cd8` split the focused death proof into `crates/server/src/combat_tests/death.rs`. Follow-up `1b7c5a4` preserves unchanged gravity health ticks while retaining the lethal boundary. This is a concrete lifecycle edge inside the proposed phase model; it does not claim that all six phase sets are already migrated.
 
 ## Cadence Policy
 
@@ -116,6 +116,7 @@ The transition boundary preserves relogging dead characters, resurrection and se
 | Auction expiration | 1 second | Duration-gated maintenance |
 | Character dirty save | Currently 300 fixed ticks = 15 seconds | Tick-counted simulation time |
 | Tick log | 200 fixed ticks = 10 seconds | Tick-counted simulation time |
+| Auto-AFK deadlines | Activity-driven deadline heap; checked each `Update` | Broad all-player scan eliminated; wider lower-cadence scheduler invocation remains partial |
 
 Gameplay cadence may be expressed in ticks. Operational cadence that means elapsed time should use `Duration`; changing the server tick rate must not silently change save, cleanup, or reporting intervals. Under that rule, periodic persistence should become duration-based if the 15-second interval is retained.
 
@@ -197,9 +198,14 @@ A future zone or instance design may place zone-filtered systems inside the Move
 - [crates/server/src/networking.rs](../../../crates/server/src/networking.rs) — input, movement, request, startup, disconnect, and replication-sender boundaries
 - [crates/server/src/creature_ai.rs](../../../crates/server/src/creature_ai.rs) — fixed-step AI systems and local ordering
 - [crates/server/src/combat.rs](../../../crates/server/src/combat.rs) — combat damage, lethal transition emission, and respawn systems
-- [crates/server/src/death.rs](../../../crates/server/src/death.rs) — player death-transition consumer and lifecycle ordering
+- [crates/server/src/death/transitions.rs](../../../crates/server/src/death/transitions.rs) — player death-transition consumer and lifecycle ordering
 - [crates/server/src/auth_character.rs](../../../crates/server/src/auth_character.rs) — queued transition for persisted zero health
-- `game-server` commit `18c936b` — replace player death polling with lethal transitions
+- [crates/server/src/combat_tests/death.rs](../../../crates/server/src/combat_tests/death.rs) — focused player combat-death proof
+- `game-server` commits `18c936b`, `b4e5cbd`, `2106cd8` — player death transition, source split, and focused test split
+- [crates/server/src/friends/auto_afk.rs](../../../crates/server/src/friends/auto_afk.rs) — activity deadlines and due-entity processing
+- [crates/server/src/friends_tests/auto_afk.rs](../../../crates/server/src/friends_tests/auto_afk.rs) — deadline and lifecycle proof
+- `game-server` commits `16c821c`, `9412352`, `16768b3` — deadline scheduling, module split, and chat ordering
+- `game-server` commit `1b7c5a4` — preserve unchanged gravity health ticks
 - [crates/server/src/interest.rs](../../../crates/server/src/interest.rs) — fixed interest reconciliation and PostUpdate replication dirty forwarding
 - [crates/server/src/persistence.rs](../../../crates/server/src/persistence.rs) — startup, periodic, and shutdown persistence schedules
 - [crates/server/src/persistence_runtime.rs](../../../crates/server/src/persistence_runtime.rs) — 300-tick dirty-save cadence

@@ -11,7 +11,7 @@ Architecture decisions and design specifications.
 | [[stack-decisions]] | Why Bevy + Lightyear + redb; SpacetimeDB rejection rationale; bitcode and SQLite choices |
 | [[azerothcore-comparison]] | Side-by-side: language, ECS vs OOP, tick rate, threading, networking, persistence, prediction, scripting |
 | [[open-questions]] | Unresolved: tick rate (single vs multi-rate), world size (big_space vs origin-shifting), instance management, hot-reloading scripting |
-| [[tick-loop-design]] | Draft normative server-loop design: 20Hz fixed phases, Update/PostUpdate boundaries, catch-up, replication, persistence, and review decisions |
+| [[tick-loop-design]] | Draft normative server-loop design: 20Hz fixed phases, Update/PostUpdate boundaries, completed player-death and broad auto-AFK scan reductions, catch-up, replication, persistence, and review decisions |
 
 ## reference/
 
@@ -31,12 +31,12 @@ Server gameplay systems.
 | Page | Summary |
 |------|---------|
 | [[ecs-storage]] | Bevy ECS as columnar in-memory database: archetype tables, zero-overhead queries, built-in change detection |
-| [[networking]] | Lightyear over QUIC: dirty-candidate replication, GoldUpdateQueue timing, change-filtered durability/rest snapshots, drain-first calendar/trade requests, PlayerInput model, channels, and interest management |
+| [[networking]] | Lightyear over QUIC: dirty-candidate replication, GoldUpdateQueue timing, change-filtered durability/rest snapshots, drain-first calendar/trade requests, PlayerInput model, completed player-death and broad auto-AFK scan reductions, channels, and interest management |
 | [[persistence]] | Dual-layer storage: redb for mutable player data, login-loaded gold, mutation-boundary GoldUpdateQueue replication, and SQLite for static world data |
 | [[world-data]] | SQLite world.db: all tables with row counts, AzerothCore/Retail DB2 sources, WorldDataPlugin, SpellDatabasePlugin |
-| [[tick-model]] | Observed server loop: 50ms runner/fixed cadence, schedule ownership, explicit ordering, maintenance gates, and IPC boundary |
+| [[tick-model]] | Observed server loop: 50ms runner/fixed cadence, schedule ownership, explicit ordering, completed player-death and broad auto-AFK scan reductions, maintenance gates, and IPC boundary |
 | [[zone-architecture]] | Proposed zone/instance partitioning; current implementation is startup-only Elwynn spawning with no per-zone sets or transfers |
-| [[combat]] | Auto-attack system, melee hit table (miss/dodge/parry/glancing/block/crit/hit), spell formulas, stat calculations, DR curves |
+| [[combat]] | Auto-attack system, NPC/player lethal transitions, split death proofs, melee hit table (miss/dodge/parry/glancing/block/crit/hit), spell formulas, stat calculations, DR curves |
 | [[creature-ai]] | Three movement types (idle/wander/waypoint), SpawnPoint, chase system, 40-yard leash/evade, return-to-spawn |
 
 ## investigations/
@@ -46,5 +46,5 @@ Debug logs and root cause analyses.
 | Page | Summary |
 |------|---------|
 | [[semantic-noop-replication]] | First- and second-wave server equal-assignment proofs/fixes, Lightyear 0.26.4 tick-only sending, direct NPC death transition, Gold ruled out, and blocked wire-level proof |
-| [[recurring-loop-elimination]] | Tests-first reductions and eliminations across auction, terrain, friends, auto-AFK, interest, Lightyear, Who roster, gold, durability, calendar, trade-offer, inactive auto-attack, and rest-state scans; multiple literal scheduler/dirty-boundary requirements remain partial |
-| [[tick-loop-audit]] | Exhaustive recurring-schedule audit: 103 registrations / 130 expanded systems; seven narrow removal slices complete, while the preserved Lightyear, interest, friends, and terrain requirements remain partial alongside persistence/order risks and receiver-fan-out measurement |
+| [[recurring-loop-elimination]] | Tests-first reductions and eliminations across auction, terrain, friends, auto-AFK, interest, Lightyear, Who roster, gold, durability, calendar, trade-offer, inactive auto-attack, rest-state, and player-death scans; broad death/auto-AFK scans are eliminated while wider scheduler/dirty-boundary requirements remain partial |
+| [[tick-loop-audit]] | Exhaustive recurring-schedule audit: 103 registrations / 130 expanded systems; seven narrow removal slices plus player-death and broad auto-AFK scan reductions complete, while preserved Lightyear, interest, friends, and terrain requirements remain partial alongside persistence/order risks and receiver-fan-out measurement |

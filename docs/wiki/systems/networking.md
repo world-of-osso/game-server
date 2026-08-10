@@ -54,13 +54,13 @@ Each connection keeps both the set of terrain tiles already sent and the last pl
 
 ## Player Death Transitions
 
-Commit `18c936b` removes the recurring `detect_player_deaths` player scan. Combat and fall damage emit `PlayerDeathTransition` only on a positive-to-zero health crossing; character selection queues the transition for persisted zero health. The FixedUpdate consumer is explicitly ordered after combat and gravity, then performs the existing death lifecycle: clamp, deduplicate, preserve `LastDamager`, apply durability loss, create corpse/graveyard state, mark replication dirty, and route `"you died"`. Resurrection, second death, stale-entity handling, and login behavior remain covered by RED/GREEN artifacts under `/tmp/claude/game-server/` (`death-idle-scan`, `death-transition-consumer`, `player-combat-death`, `player-fall-death`, `player-login-death`, and `death-second-life-tests`). No live CPU savings claim is made.
+Commit `18c936b` removes the recurring `detect_player_deaths` player scan. Combat and fall damage emit `PlayerDeathTransition` only on a positive-to-zero health crossing; character selection queues the transition for persisted zero health. The FixedUpdate consumer in `death/transitions.rs` is explicitly ordered after combat and gravity, then performs the existing death lifecycle: clamp, deduplicate, preserve `LastDamager`, apply durability loss, create corpse/graveyard state, mark replication dirty, and route `"you died"`. `b4e5cbd` split the consumer module, `2106cd8` split the focused proof into `combat_tests/death.rs`, and `1b7c5a4` preserves unchanged gravity health ticks. Resurrection, second death, stale-entity handling, and login behavior remain covered by RED/GREEN artifacts under `/tmp/claude/game-server/` (`death-idle-scan`, `death-transition-consumer`, `player-combat-death`, `player-fall-death`, `player-login-death`, and `death-second-life-tests`). No live CPU savings claim is made.
 
 ## Auto-AFK Activity Deadlines
 
-Commit `16c821c` replaces the every-`Update` all-player idle-time scan with `AutoAfkScheduler`. Login/presence setup schedules generation-tagged deadlines; player input and chat/emote activity reschedule them; manual AFK/DND invalidates automatic deadlines. `process_due_auto_afk` queries only due players and ignores stale generations or despawned entities.
+Commit `16c821c` replaces the every-`Update` all-player idle-time scan with `AutoAfkScheduler`. Login/presence setup schedules generation-tagged deadlines; player input and chat/emote activity reschedule them; manual AFK/DND invalidates automatic deadlines. `9412352` split the scheduler module for readability, and `16768b3` orders chat activity before deadline processing. `process_due_auto_afk` resolves only entities referenced by due deadlines and ignores stale generations or despawned entities.
 
-The broad player scan is removed, but the scheduler still peeks its deadline heap every `Update`. This is **PARTIAL** against the original lower-cadence target. Tests cover deadline timing, activity invalidation, manual presence, lifecycle, zero idle-player visits, and duplicate suppression; no live CPU savings claim is made.
+The broad auto-AFK player scan is completed/eliminated. The scheduler still peeks its deadline heap every `Update`, so only the wider proposed lower-cadence scheduler invocation remains **PARTIAL**. Tests cover deadline timing, activity invalidation, manual presence, lifecycle, zero idle-player visits, and duplicate suppression; no live CPU savings claim is made.
 
 ## Rest-State Synchronization
 
@@ -135,12 +135,15 @@ The `CombatChannel` carries `CombatEvent` structs (attacker, target, amount, spe
 - [ARCHITECTURE.md](../../../ARCHITECTURE.md) — "Networking with Lightyear" section
 - [crates/server/src/networking.rs](../../../crates/server/src/networking.rs) — server plugin, channel types, interest radius
 - [crates/server/src/combat.rs](../../../crates/server/src/combat.rs) — authoritative NPC/player damage transitions and combat events
-- [crates/server/src/death.rs](../../../crates/server/src/death.rs) — player death-transition consumer and routed lifecycle updates
+- [crates/server/src/death/transitions.rs](../../../crates/server/src/death/transitions.rs) — player death-transition consumer and routed lifecycle updates
 - [crates/server/src/auth_character.rs](../../../crates/server/src/auth_character.rs) — persisted zero-health transition queue
-- `game-server` commit `18c936b` — replace player death polling with lethal transitions
-- [crates/server/src/friends.rs](../../../crates/server/src/friends.rs) — activity deadline scheduling and due-player processing
-- [crates/server/src/friends_tests.rs](../../../crates/server/src/friends_tests.rs) — auto-AFK timing, activity, lifecycle, and idle-visit coverage
-- `game-server` commit `16c821c` — replace per-player auto-AFK accumulation with deadline scheduling
+- [crates/server/src/combat_tests/death.rs](../../../crates/server/src/combat_tests/death.rs) — focused player combat-death proof
+- `game-server` commits `18c936b`, `b4e5cbd`, `2106cd8` — player death transition, source split, and focused test split
+- [crates/server/src/friends.rs](../../../crates/server/src/friends.rs) — friends lifecycle and deadline-system registration
+- [crates/server/src/friends/auto_afk.rs](../../../crates/server/src/friends/auto_afk.rs) — activity deadline scheduling and due-entity processing
+- [crates/server/src/friends_tests/auto_afk.rs](../../../crates/server/src/friends_tests/auto_afk.rs) — auto-AFK timing, activity, lifecycle, and idle-visit coverage
+- `game-server` commits `16c821c`, `9412352`, `16768b3` — deadline scheduling, module split, and chat ordering
+- `game-server` commit `1b7c5a4` — preserve unchanged gravity health ticks
 - [crates/server/src/rest.rs](../../../crates/server/src/rest.rs) — innkeeper registry and change-filtered rest-state snapshots
 - [crates/server/src/rest.rs](../../../crates/server/src/rest.rs) — rest-state transition test coverage
 - `game-server` commit `fffa86a` — update rest state only after relevant changes

@@ -1,6 +1,6 @@
 # Tick Loop Audit
 
-Source-grounded audit of every production `game-server` system registered in a recurring Bevy schedule. It inventories 103 recurring registrations expanding to 130 systems, identifies unnecessary every-tick work, and separates completed reductions from literal requirements that remain partial. Commit `18c936b` replaces broad player-death polling with lethal transitions; `16c821c` replaces per-player auto-AFK accumulation with activity deadlines. No live CPU savings claim is made.
+Source-grounded audit of every production `game-server` system registered in a recurring Bevy schedule. It inventories 103 recurring registrations expanding to 130 systems, identifies unnecessary every-tick work, and separates completed reductions from literal requirements that remain partial. Commit `18c936b` replaces broad player-death polling with lethal transitions; `16c821c` replaces per-player auto-AFK accumulation with activity deadlines, with follow-ups in `9412352`, `16768b3`, and `1b7c5a4`. No live CPU savings claim is made.
 
 ## Content
 
@@ -15,6 +15,7 @@ Source-grounded audit of every production `game-server` system registered in a r
 | Preserved primary requirements | **0/4 complete:** Lightyear, interest, friends, and terrain are all **PARTIAL** against their literal targets |
 | Definite idle work | **10 systems remain:** six trade handlers, chat, emote, auction initialization, and rest initialization |
 | Player death polling | **COMPLETED:** `18c936b` replaced the all-player scan with lethal transitions |
+| Auto-AFK player scan | **COMPLETED:** `16c821c` replaced the all-player scan with activity deadlines; only the wider lower-cadence scheduler invocation remains **PARTIAL** |
 | Receiver fan-out | **KEEP/MEASURE:** 74 `Update` system instances poll 75 typed receiver query fields; source inspection does not prove removal is safe |
 
 The narrower seven-item application slice is complete: gold, Who, rest-state evaluation, durability snapshots, calendar query snapshots, the `ClearTradeItem`/`SetTradeMoney` trade-offer path, and inactive auto-attacks. That subset is not the completion boundary for this audit.
@@ -101,7 +102,7 @@ Conflicting ECS access forces serialization, but serialization order is not a ga
 
 The former `detect_player_deaths` system scanned every player with `Health` each `FixedUpdate`. Commit `18c936b` removes that broad poll and introduces an internal `PlayerDeathTransition` message. Combat and fall emit it only on a positive-to-zero crossing; persisted zero health queues it during character selection. The consumer is explicitly ordered after combat and gravity.
 
-The consumer preserves the existing lifecycle: clamps zero health, deduplicates already-dead entities, preserves `LastDamager`, applies durability loss, creates `PlayerDeathState` with corpse/graveyard data, marks replication dirty, and sends the routed `"you died"` update. Tests cover stale entities, login-loaded dead characters, combat/fall death, resurrection and second death, and the unchanged death message/lifecycle contract.
+The consumer preserves the existing lifecycle: clamps zero health, deduplicates already-dead entities, preserves `LastDamager`, applies durability loss, creates `PlayerDeathState` with corpse/graveyard data, marks replication dirty, and sends the routed `"you died"` update. `b4e5cbd` split the consumer into `crates/server/src/death/transitions.rs`; `2106cd8` split the focused combat-death proof into `crates/server/src/combat_tests/death.rs`. Follow-up `1b7c5a4` preserves unchanged gravity health ticks. Tests cover stale entities, login-loaded dead characters, combat/fall death, resurrection and second death, and the unchanged death message/lifecycle contract.
 
 RED/GREEN artifacts under `/tmp/claude/game-server/`: `death-idle-scan`, `death-transition-consumer`, `player-combat-death`, `player-fall-death`, `player-login-death`, and `death-second-life-tests`. No live CPU savings claim is made.
 
@@ -174,7 +175,7 @@ These loops are real, but removing them without replacing their transition model
 | System | Current scope | Safe direction |
 |---|---|---|
 | `apply_terrain_gravity` | Every player every fixed step; terrain lookup even when stationary and grounded | Track grounded/sleeping versus airborne/dirty players; horizontal moves and teleports must wake grounding |
-| `process_due_auto_afk` | Every `Update`, peeks an activity-deadline heap and processes only due players | **PARTIAL.** `16c821c` removed the all-player scan; add a lower-cadence scheduler gate to satisfy the original target |
+| `process_due_auto_afk` | Every `Update`, peeks an activity-deadline heap and resolves only entities referenced by due deadlines | **PARTIAL only for the wider target.** `16c821c` removed the all-player scan; add a lower-cadence scheduler gate to satisfy the original invocation target |
 | `stream_terrain_tiles` | Every connection every fixed step; only the 3×3 work is tile-gated | Wake the system from player tile-coordinate changes instead of probing every connection |
 | creature AI | Five fixed systems; several scan broad creature-state queries and branch on enum variants | Partition active states or combine state-machine passes only after profiling entity counts and behavior |
 | `enforce_duel_outcomes` | Active-duel list each fixed step | **KEEP** while active; optional run condition when the list is empty |
@@ -223,7 +224,7 @@ Most `Update` systems are request-driven. The table lists all module groups cove
 | Death service | initial state; query/release/resurrect/healer/stuck handlers | Added + receivers — **KEEP** |
 | Duel service | challenge/accept/decline handlers | Receivers — **KEEP** |
 | Durability | initial/query; appearance sync; persistence; changed snapshot | Added/Changed; changed snapshot now query-gated — **KEEP** |
-| Friends | initial/query/add/remove/presence; deadline auto-AFK; changed/removed presence; dirty snapshots | Friend-list dirty-owner semantics remain **PARTIAL**; auto-AFK no longer scans players but still polls its next deadline every `Update` — **PARTIAL** |
+| Friends | initial/query/add/remove/presence; deadline auto-AFK; changed/removed presence; dirty snapshots | Friend-list dirty-owner semantics remain **PARTIAL**; the broad auto-AFK player scan is **COMPLETED/eliminated**, while the wider lower-cadence scheduler invocation remains **PARTIAL** |
 | Guild | initial state; query/profile/officer-note handlers | Added + receivers — **KEEP** |
 | Ignore list | initial/query/add/remove | Added + receivers — **KEEP** |
 | Inspect | query handler | Receiver — **KEEP** |
@@ -287,7 +288,7 @@ The vendored replication buffer still performs connection-scaled sender passes, 
 - Friends snapshots: all-owner idle rebuilds removed; friend-list mutations bypass dirty-owner marking — **PARTIAL**
 - Interest: entities×players scan → dirty queues plus spatial buckets; fixed-tick invocation remains — **PARTIAL**
 - Lightyear replication: all-root candidate traversal → dirty entity candidates; component-aware queue remains absent — **PARTIAL**
-- Auto-AFK: every-frame all-player timer accumulation → activity deadline heap; per-`Update` deadline polling remains — **PARTIAL**
+- Auto-AFK: every-frame all-player timer accumulation → activity deadline heap — **COMPLETED/eliminated**; per-`Update` deadline polling remains only against the wider lower-cadence invocation target — **PARTIAL**
 - Who requests: roster materialization before receiver inspection → drain-first shared roster — **COMPLETED**
 - Gold synchronization: per-player redb scan → mutation-triggered `GoldUpdateQueue` — **COMPLETED**
 - NPC death: living-NPC health scan → authoritative damage transition — **COMPLETED**
@@ -321,13 +322,17 @@ This is a static source audit plus a focused Bevy 0.18 change-detection reproduc
 - `game-server` commit `c46b322` — query-level durability change gating with added-component exclusion
 - [crates/server/src/combat.rs](../../../crates/server/src/combat.rs) — attack participation, combat state, and respawn
 - [crates/server/src/creature_ai.rs](../../../crates/server/src/creature_ai.rs) — five fixed AI passes and state branches
-- [crates/server/src/death.rs](../../../crates/server/src/death.rs) — player death-transition consumer and lifecycle side effects
+- [crates/server/src/death/transitions.rs](../../../crates/server/src/death/transitions.rs) — player death-transition consumer and lifecycle side effects
 - [crates/server/src/combat.rs](../../../crates/server/src/combat.rs) — combat lethal-transition emission
 - [crates/server/src/networking.rs](../../../crates/server/src/networking.rs) — fall lethal-transition emission
 - [crates/server/src/auth_character.rs](../../../crates/server/src/auth_character.rs) — persisted zero-health transition queue
-- `game-server` commit `18c936b` — replace player death polling with lethal transitions
-- [crates/server/src/friends.rs](../../../crates/server/src/friends.rs) — activity-deadline auto-AFK and dirty friend snapshots
-- `game-server` commit `16c821c` — replace per-player auto-AFK accumulation with deadline scheduling
+- [crates/server/src/combat_tests/death.rs](../../../crates/server/src/combat_tests/death.rs) — focused player combat-death proof
+- `game-server` commits `18c936b`, `b4e5cbd`, `2106cd8` — player death transition, source split, and focused test split
+- [crates/server/src/friends.rs](../../../crates/server/src/friends.rs) — auto-AFK registration and dirty friend snapshots
+- [crates/server/src/friends/auto_afk.rs](../../../crates/server/src/friends/auto_afk.rs) — activity deadlines and due-entity processing
+- [crates/server/src/friends_tests/auto_afk.rs](../../../crates/server/src/friends_tests/auto_afk.rs) — deadline, lifecycle, and idle-visit proof
+- `game-server` commits `16c821c`, `9412352`, `16768b3` — deadline scheduling, module split, and chat ordering
+- `game-server` commit `1b7c5a4` — preserve unchanged gravity health ticks
 - [crates/server/src/calendar.rs](../../../crates/server/src/calendar.rs) — drain-first calendar query handling, initial snapshot, and schedule/signup mutation ordering
 - `game-server` commit `18be416` — drain calendar queries before building a shared snapshot
 - [calendar tests](../../../crates/server/src/calendar.rs) — idle, shared-snapshot, routing, and eligibility proof

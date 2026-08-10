@@ -1,8 +1,12 @@
 # Wiki Log
 
+## [2026-08-10] audit | Reconcile death source split and auto-AFK scan status
+
+Updated [[tick-loop-design]], [[tick-loop-audit]], [[recurring-loop-elimination]], [[tick-model]], [[combat]], [[networking]], and `index.md` for current game-server commits `b4e5cbd`, `2106cd8`, `9412352`, `16768b3`, and `1b7c5a4`. Recorded the player death consumer split into `death/transitions.rs` and focused proof split into `combat_tests/death.rs`; recorded auto-AFK follow-ups and clarified that the broad all-player auto-AFK scan is completed/eliminated while only the wider lower-cadence scheduler invocation remains partial; replaced imprecise due-player wording with due-deadline entity resolution. No live CPU savings claim; no source behavior changed.
+
 ## [2026-08-10] investigation | Replace auto-AFK player scans with deadlines
 
-Updated [[recurring-loop-elimination]], [[tick-loop-audit]], [[tick-model]], [[networking]], and `index.md` for server commit `16c821c`. Recorded that `tick_auto_afk` previously visited every player and accumulated idle seconds every `Update`; `AutoAfkScheduler` now stores generation-tagged deadlines, activity and presence boundaries reschedule or invalidate them, and `process_due_auto_afk` queries only due players. Tests cover timing, activity invalidation, manual DND, lifecycle, stale/despawned deadlines, zero idle-player visits, and duplicate suppression. Strict status is **PARTIAL** because the deadline heap is still polled every `Update` rather than at a lower cadence. No live CPU savings claim; no runtime behavior changed in this documentation update.
+Updated [[recurring-loop-elimination]], [[tick-loop-audit]], [[tick-model]], [[networking]], and `index.md` for server commit `16c821c`. Recorded that `tick_auto_afk` previously visited every player and accumulated idle seconds every `Update`; `AutoAfkScheduler` now stores generation-tagged deadlines, activity and presence boundaries reschedule or invalidate them, and `process_due_auto_afk` resolves only entities referenced by due deadlines. Tests cover timing, activity invalidation, manual DND, lifecycle, stale/despawned deadlines, zero idle-player visits, and duplicate suppression. The broad all-player scan was eliminated; only the wider lower-cadence scheduler invocation remains **PARTIAL** because the deadline heap is still polled every `Update`. No live CPU savings claim; no runtime behavior changed in this documentation update.
 
 ## [2026-08-10] audit | Correct recurring-loop completion scope
 
