@@ -16,7 +16,7 @@ Source-grounded audit of every production `game-server` system registered in a r
 | Lightyear/interest | **Major root/entity scans fixed:** remaining recurring work is connection/dirty-state plumbing |
 | Receiver fan-out | **Real but unmeasured:** 74 `Update` systems poll typed connection receivers |
 
-**Server audit status: 5/7 complete.** Gold (#1), Who (#2), rest (#3), durability (#4), and inactive auto-attacks (#5) are complete. Calendar (#6) and trade lookup (#7) remain open.
+**Server audit status: 6/7 complete.** Gold (#1), Who (#2), rest (#3), durability (#4), calendar (#6), and inactive auto-attacks (#5) are complete. Trade lookup (#7) remains open.
 
 The design should not be approved as complete until the persistence bug and fixed-order contract are resolved.
 
@@ -105,7 +105,7 @@ Conflicting ECS access forces serialization, but serialization order is not a ga
 | 3 | `rest::update_player_rest_state` | Every `Update`, every authenticated player, linear scan of all innkeepers | **COMPLETED.** `fffa86a` re-evaluates only initial state or `Changed<Position>`/`Changed<Level>` players; add spatial lookup only if profiling justifies it |
 | 4 | `send_changed_durability_snapshot` | Every `Update`, every player with durability, then `Ref::is_changed()` in the body | **COMPLETED.** `c46b322` gates the query with `Changed<EquippedDurability>` and retains the `is_added()` exclusion |
 | 5 | inactive `AutoAttack` entities | Clearing a target leaves `AutoAttack { active: false }`; fixed combat still queries it forever | **COMPLETED.** `152ccbd` removes `AutoAttack` on target loss; component presence now defines participation |
-| 6 | calendar query snapshot | Rebuilds the calendar snapshot before checking for `QueryCalendar` messages | **REMOVE/GATE.** Build once only when at least one request was drained |
+| 6 | calendar query snapshot | Rebuilds the calendar snapshot before checking for `QueryCalendar` messages | **COMPLETED.** `18be416` drains eligible requests first and builds one shared snapshot only when requests exist |
 | 7 | trade offer lookup | Resolves each connection's player before checking whether that typed receiver is empty | **REMOVE/GATE.** Drain first, then resolve player state for non-empty requests |
 
 ### Durability Snapshot Gating
@@ -113,6 +113,12 @@ Conflicting ECS access forces serialization, but serialization order is not a ga
 Before `c46b322`, `send_changed_durability_snapshot` entered every `Update`, iterated every player with `EquippedDurability`, and checked `Ref::is_changed()` inside the body. The query now uses `Changed<EquippedDurability>`, eliminating idle per-player visits while preserving the `is_added()` exclusion for newly added durability.
 
 The RED proof is `/tmp/claude/game-server/durability-changed-filter-red.log`; GREEN is `/tmp/claude/game-server/durability-changed-filter-green.log` (**6 passed**). Formatting and readability artifacts are `/tmp/claude/game-server/durability-changed-filter-fmt.log` and `/tmp/claude/game-server/durability-changed-filter-readability.json`. The proof covers unchanged, newly added, changed, routed, and snapshot-content behavior. No live CPU savings claim is made.
+
+### Calendar Query Snapshot Construction
+
+Before `18be416`, `calendar::process_query_requests` built and cloned the sorted calendar snapshot before checking eligible `QueryCalendar` receivers. The fix drains authenticated + `InWorld` receivers first, returns on idle updates, and builds one shared snapshot only when requests exist. All queued empty-payload queries still drain and produce one refresh response per requesting connection. Schedule/signup mutation order and the initial `Added<InWorld>` snapshot path are unchanged.
+
+RED: `/tmp/claude/game-server/calendar-query-drain-red.log`. GREEN: `/tmp/claude/game-server/calendar-query-drain-green.log` (**6 passed**). Formatting/readability artifacts: `/tmp/claude/game-server/calendar-query-drain-fmt.log` and `/tmp/claude/game-server/calendar-query-drain-readability.json`. No live CPU savings claim is made.
 
 ### Who Query Roster Construction
 
@@ -175,7 +181,7 @@ Most `Update` systems are request-driven. The table lists all module groups cove
 | Admin IPC | `poll_admin_ipc` | Empty channel poll; unbounded drain on bursts — **MEASURE** |
 | Auction house | one-time init; open/query/inventory/owned/bid/mail/create/buyout/cancel handlers | Init boolean after first load; receivers otherwise — **KEEP**, cleanup init placement later |
 | Barber shop | initial snapshot; query/apply handlers | Added + receivers — **KEEP** |
-| Calendar | initial snapshot; query; schedule/signup processing | Added + receivers; query snapshot prebuilt — **REMOVE/GATE** that pre-work |
+| Calendar | initial snapshot; query; schedule/signup processing | Added + receivers; query snapshot is drain-first — **KEEP**; initial snapshot and mutation order unchanged |
 | Collections | initial state; summon/dismiss mount/pet | Added + receivers — **KEEP** |
 | Currency | initial state; earn/spend handlers | Added + receivers — **KEEP** |
 | Death service | initial state; query/release/resurrect/healer/stuck handlers | Added + receivers — **KEEP** |
@@ -253,7 +259,7 @@ These completed slices do not prove that the rest of the server has no recurring
 1. Fix the periodic persistence `Changed<T>` bug and add a real 300-tick-window regression.
 2. Remove per-player redb gold polling; make inventory mutation own `Gold` synchronization.
 3. Add explicit fixed phase ordering for movement, combat, death, lifecycle, interest, and persistence.
-4. Convert calendar and trade pre-work to request boundaries; Who is complete in `a4e7aeb`, and durability change gating is complete in `c46b322`.
+4. Convert trade pre-work to request boundaries; Who is complete in `a4e7aeb`, calendar in `18be416`, and durability change gating in `c46b322`.
 5. Instrument receiver fan-out, gravity, AI, interest target fanout, database latency, and fixed catch-up before broader redesign.
 
 ## Proof Limits
@@ -275,7 +281,9 @@ This is a static source audit plus a focused Bevy 0.18 change-detection reproduc
 - [crates/server/src/creature_ai.rs](../../../crates/server/src/creature_ai.rs) — five fixed AI passes and state branches
 - [crates/server/src/death.rs](../../../crates/server/src/death.rs) — all-player death detection
 - [crates/server/src/friends.rs](../../../crates/server/src/friends.rs) — auto-AFK and dirty friend snapshots
-- [crates/server/src/calendar.rs](../../../crates/server/src/calendar.rs) — pre-drain calendar snapshot construction
+- [crates/server/src/calendar.rs](../../../crates/server/src/calendar.rs) — drain-first calendar query handling, initial snapshot, and schedule/signup mutation ordering
+- `game-server` commit `18be416` — drain calendar queries before building a shared snapshot
+- [calendar tests](../../../crates/server/src/calendar.rs) — idle, shared-snapshot, routing, and eligibility proof
 - [crates/server/src/trade.rs](../../../crates/server/src/trade.rs) — receiver polling and range enforcement
 - [crates/server/src/persistence_runtime.rs](../../../crates/server/src/persistence_runtime.rs) — periodic save gate and `Changed` filters
 - [crates/server/src/interest.rs](../../../crates/server/src/interest.rs) — dirty interest and replication forwarding

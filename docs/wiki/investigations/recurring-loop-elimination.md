@@ -17,6 +17,7 @@ The server performance pass is replacing broad recurring scans with state-, even
 | Inactive auto-attacks | Fixed combat query retains every `AutoAttack { active: false }` after target loss | Remove `AutoAttack` when `CombatTarget` becomes `None`; active attackers remain fixed-step | Completed in `152ccbd`; live CPU gate pending |
 | Rest-state evaluation | Every `Update`, every authenticated player, linear scan of all innkeepers | Evaluate initial state or only `Changed<Position>`/`Changed<Level>` players | Completed in `fffa86a`; live CPU gate pending |
 | Durability snapshots | Every `Update`, every player with durability, then probe `Ref::is_changed()` in the body | Query-level `Changed<EquippedDurability>` gating while retaining the `is_added()` exclusion | Completed in `c46b322`; live CPU savings claim not made |
+| Calendar query snapshots | Build and clone the full calendar snapshot before checking `QueryCalendar` receivers | Drain eligible requests first; build one shared snapshot only when requests exist | Completed in `18be416`; no live CPU savings claim |
 | Gold persistence synchronization | Every `Update`, every online player, synchronous redb inventory read | Record persisted mutation values and apply them in `PostUpdate` before replication buffering | Completed in `4e4c73d`, `c3b3c04`, `9d2067c`, `91bbedd`, `8920feb`; live CPU gate pending |
 
 ## Auction Expiration
@@ -66,6 +67,14 @@ Before `c46b322`, `send_changed_durability_snapshot` ran on every `Update`, visi
 The query now uses `Changed<EquippedDurability>`, so unchanged players do not enter the system. The existing `is_added()` exclusion remains inside the body: newly added durability is still excluded from the changed snapshot path, while a later mutation sends the existing `DurabilityStateUpdate` with unchanged routing and snapshot content.
 
 The six-test proof covers unchanged players, newly added durability, changed durability, routing, repair-cost snapshot content, and existing durability behavior. RED: `/tmp/claude/game-server/durability-changed-filter-red.log`. GREEN: `/tmp/claude/game-server/durability-changed-filter-green.log` (**6 passed**). Formatting and readability artifacts: `/tmp/claude/game-server/durability-changed-filter-fmt.log` and `/tmp/claude/game-server/durability-changed-filter-readability.json`. This is a server-side loop gate; no live CPU savings claim is made.
+
+## Calendar Query Snapshot Materialization
+
+Before `18be416`, `calendar::process_query_requests` built, cloned, and sorted a complete calendar snapshot before inspecting eligible `QueryCalendar` receivers. Idle `Update`s therefore paid snapshot materialization even when no calendar query was queued.
+
+The system now drains authenticated + `InWorld` receivers first and returns when no requests were queued. When requests exist, it builds one shared snapshot and sends one refresh response per requesting connection. All queued empty-payload queries are drained, preserving the prior one-response-per-connection behavior. Schedule/signup mutation ordering and the initial `Added<InWorld>` snapshot path remain unchanged.
+
+The six-test proof covers idle eligible connections, one shared sorted snapshot across multiple connections and queued requests, and ineligible receivers. RED: `/tmp/claude/game-server/calendar-query-drain-red.log`. GREEN: `/tmp/claude/game-server/calendar-query-drain-green.log` (**6 passed**). Formatting and readability artifacts: `/tmp/claude/game-server/calendar-query-drain-fmt.log` and `/tmp/claude/game-server/calendar-query-drain-readability.json`. No live CPU savings claim is made.
 
 ## Gold Persistence Synchronization
 
@@ -175,6 +184,9 @@ Follow-up `aa5dddb` closed a replication wake-up gap in movement input handling.
 - `game-server` commit `fffa86a` — avoid unchanged player rest-state scans
 - [durability system](../../../crates/server/src/durability.rs) — changed-player snapshot gating and added-component exclusion
 - `game-server` commit `c46b322` — gate durability snapshots on changed players
+- [calendar system](../../../crates/server/src/calendar.rs) — initial snapshot, drain-first query handling, and schedule/signup mutation order
+- [calendar tests](../../../crates/server/src/calendar.rs) — idle, shared-snapshot, routing, and eligibility proof
+- `game-server` commit `18be416` — drain calendar queries before building a shared snapshot
 - [Who system](../../../crates/server/src/who.rs) — drain-first request handling, shared roster, filtering, sorting, and response routing
 - `game-server` commit `a4e7aeb` — drain Who requests before building roster
 - [vendored Lightyear provenance](../../../vendor/lightyear_replication/UPSTREAM.md) — version, checksum, upstream commit, and license

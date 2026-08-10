@@ -76,6 +76,10 @@ Login still loads persisted inventory gold into the player's replicated `Gold`. 
 
 Behavioral RED/GREEN and readability artifacts are recorded in [[recurring-loop-elimination]]. This proves mutation boundaries and replication behavior; it does not claim a live CPU threshold result.
 
+## Calendar Query Requests
+
+`calendar::process_query_requests` drains `QueryCalendar` receivers before materializing the calendar snapshot. Repeated idle `Update`s therefore build no calendar snapshot; an Update with one or more eligible `Authenticated` + `InWorld` requests builds one shared sorted snapshot and sends one `calendar refreshed` response per requesting connection. All queued empty-payload requests are drained, preserving the prior response count and routing. Schedule/signup mutation ordering and the initial `Added<InWorld>` calendar snapshot path remain unchanged. Commit `18be416` covers this behavior. See [[recurring-loop-elimination]] and [[tick-loop-audit]]; no live CPU savings claim is made.
+
 ## Who Query Requests
 
 `who::process_query_requests` drains `QueryWho` receivers before materializing the online roster. Repeated idle `Update`s therefore build zero rosters; an Update with one or more eligible requests builds one shared roster and derives each response from it. Only `Authenticated` + `InWorld` connections participate. Each connection receives the response for its latest queued request, multiple connections route independently, and existing trimmed case-insensitive substring filtering, case-insensitive name sorting, `WhoSnapshot` content, `who: N result(s)` message, and error fields remain unchanged. Commit `a4e7aeb` covers this behavior. See [[recurring-loop-elimination]] and [[tick-loop-audit]]; no live CPU savings claim is made.
@@ -120,6 +124,8 @@ The `CombatChannel` carries `CombatEvent` structs (attacker, target, amount, spe
 - `game-server` commit `fffa86a` — update rest state only after relevant changes
 - [crates/server/src/durability.rs](../../../crates/server/src/durability.rs) — change-filtered durability snapshots and routing
 - `game-server` commit `c46b322` — gate durability snapshots on changed players
+- [crates/server/src/calendar.rs](../../../crates/server/src/calendar.rs) — initial snapshot, drain-first query handling, and schedule/signup mutation order
+- `game-server` commit `18be416` — drain calendar queries before building a shared snapshot
 - [crates/server/src/who.rs](../../../crates/server/src/who.rs) — QueryWho drain-first handling and response contract tests
 - `game-server` commit `a4e7aeb` — drain Who requests before building roster
 - [crates/server/src/networking.rs](../../../crates/server/src/networking.rs) — player movement dirty routing and terrain tile-transition gating
