@@ -1,6 +1,8 @@
 # Recurring Loop Elimination
 
-The server performance pass is replacing broad recurring scans with state-, event-, or cadence-bounded work while preserving gameplay and protocol behavior. Each loop is handled as an independent tests-first change.
+The server performance pass is replacing broad recurring scans with state-, event-, or cadence-bounded work while preserving gameplay and protocol behavior. Each loop is handled as an independent tests-first change. This page covers the named completed slices only; it is not an exhaustive claim that all server recurring work is removed. See [[tick-loop-audit]] for the full 130-system inventory.
+
+## Content
 
 ## Status
 
@@ -131,6 +133,7 @@ Follow-up `aa5dddb` closed a replication wake-up gap in movement input handling.
 
 ## See Also
 
+- [[tick-loop-audit]] — exhaustive remaining-loop and correctness audit
 - [[tick-model]] — server fixed-update cadence and lower-frequency gates
 - [[persistence]] — auction, inventory, and mail storage
 - [[semantic-noop-replication]] — earlier elimination of downstream no-op replication work

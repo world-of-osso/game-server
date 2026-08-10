@@ -1,6 +1,6 @@
 # Tick Model
 
-The current server uses a 50 ms outer runner and a 50 ms Bevy fixed timestep configured through Lightyear, producing a nominal 20 Hz authoritative simulation. Runtime work spans multiple Bevy schedules; there is no implemented global seven-stage fixed pipeline. The proposed ordering contract is in [[tick-loop-design]].
+The current server uses a 50 ms outer runner and a 50 ms Bevy fixed timestep configured through Lightyear, producing a nominal 20 Hz authoritative simulation. Runtime work spans multiple Bevy schedules; there is no implemented global seven-stage fixed pipeline. The proposed ordering contract is in [[tick-loop-design]], and the exhaustive correctness/recurring-work review is [[tick-loop-audit]].
 
 ## Content
 
@@ -72,7 +72,7 @@ Each connection receives a `ReplicationSender` with a 50 ms `SinceLastAck` caden
 ## Lower-Frequency and State-Driven Work
 
 - **Auction expiration:** registered in `FixedUpdate`; runs immediately once, then after each accumulated one-second duration.
-- **Periodic character save:** every 300 fixed steps, which is 15 seconds of simulation time at 20 Hz. Dirty `Position`, `Health`, or `Player` rows are written synchronously to redb.
+- **Periodic character save attempt:** every 300 fixed steps, nominally 15 seconds. This is currently incorrect: the system executes and returns on intervening ticks, advancing Bevy's change-detection window, so the due `Changed<Position|Health|Player>` query misses changes made earlier in the interval. See [[tick-loop-audit]].
 - **Tick log:** every 200 fixed steps, which is 10 seconds of simulation time.
 - **Terrain streaming:** remains fixed-step but skips the tile-neighborhood scan until a player changes tiles.
 - **Interest and replication:** dirty/state-driven rather than recurring full-world scans.
@@ -81,6 +81,7 @@ Disconnect saves are observer-driven. Shutdown saves run in `Last` only when `Ap
 
 ## Current Limits
 
+- Periodic save change tracking is a confirmed correctness bug; the 300-tick counter does not preserve a 300-tick `Changed<T>` window.
 - No global `SystemSet` phase chain orders input, AI, movement, combat, lifecycle, visibility, and maintenance.
 - Per-zone system sets and runtime zone-transfer events are not implemented; current `ZonePlugin` performs `PostStartup` Elwynn creature spawning.
 - Many gameplay requests run in `Update`, after the fixed schedule within the same outer update, rather than inside one monolithic game tick.
@@ -105,6 +106,7 @@ Disconnect saves are observer-driven. Shutdown saves run in `Last` only when `Ap
 
 ## See Also
 
+- [[tick-loop-audit]] — complete 130-system recurring-loop audit and prioritized findings
 - [[tick-loop-design]] — proposed explicit phase and cadence contract
 - [[networking]] — transport, interest, and dirty replication details
 - [[persistence]] — save triggers and storage ownership

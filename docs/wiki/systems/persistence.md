@@ -2,9 +2,11 @@
 
 Dual-layer storage: the ECS is the live database, redb is the durable checkpoint. SQLite holds read-only static world data loaded once at startup.
 
+## Content
+
 ## Design Principle
 
-The ECS IS the storage engine while the server runs. redb is a background save — not a hot path. This is fundamentally simpler than systems like SpacetimeDB, where the storage IS the database and every write requires WAL + snapshot machinery.
+The ECS is the live storage engine while the server runs; redb is the durable checkpoint. Current redb reads and writes execute synchronously on the Bevy thread rather than through a background worker, so database latency can stall the game loop. This is still simpler than making every gameplay mutation a database transaction, but persistence must be cadence- and dirty-bounded.
 
 ## redb (Mutable Player Data)
 
@@ -37,10 +39,10 @@ Production inventory rows for characters 6 and 7 used the pre-April 6, 2026 `Inv
 
 Character data is written to redb on:
 - **Logout / disconnect** — immediate flush for the departing player
-- **Periodic interval** — every 5 minutes for all online players
-- **Server shutdown** — final flush of all dirty entities
+- **Periodic interval** — every 300 fixed ticks, nominally 15 seconds at 20 Hz
+- **Server shutdown** — final flush of all live characters
 
-The save query uses `Changed<T>` filters so only entities that actually mutated in the period are serialized and written. Ticks where nothing changes cost nothing.
+The periodic system currently executes on every fixed tick but returns for 299 of 300 executions. Because Bevy advances the system's change-detection window on each execution, its due `Changed<Position|Health|Player>` query does not preserve mutations from the full 300-tick interval. This is a confirmed correctness bug; see [[tick-loop-audit]].
 
 ## What Is NOT Persisted
 
@@ -59,10 +61,12 @@ Read-only at runtime. Loaded into `Res<WorldData>` and `Res<SpellDatabase>` at s
 - [ARCHITECTURE.md](../../../ARCHITECTURE.md) — "Persistence Strategy" section
 - [AGENTS.md](../../../AGENTS.md) — redb file path (`data/game.redb`)
 - [crates/server/src/persistence.rs](../../../crates/server/src/persistence.rs) — table creation and save/load systems
+- [crates/server/src/persistence_runtime.rs](../../../crates/server/src/persistence_runtime.rs) — periodic and shutdown save implementation
 - [crates/server/src/persistence_tests.rs](../../../crates/server/src/persistence_tests.rs) — legacy-database migration regression test added by `ec5ff52`
 
 ## See Also
 
 - [[ecs-storage]] — why the ECS makes change-tracking trivial
 - [[world-data]] — the SQLite side (creature templates, spells, spawn data)
-- [[tick-model]] — persistence flush runs at the end of each tick pipeline
+- [[tick-model]] — observed persistence schedule and fixed-tick cadence
+- [[tick-loop-audit]] — confirmed periodic-save change-detection bug

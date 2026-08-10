@@ -47,3 +47,4 @@ Debug logs and root cause analyses.
 |------|---------|
 | [[semantic-noop-replication]] | First- and second-wave server equal-assignment proofs/fixes, Lightyear 0.26.4 tick-only sending, direct NPC death transition, Gold ruled out, and blocked wire-level proof |
 | [[recurring-loop-elimination]] | Tests-first removal of auction, terrain, friends, interest, and Lightyear recurring scans; dirty-candidate proof and strict-Empty gate status |
+| [[tick-loop-audit]] | Exhaustive 130-system recurring-schedule audit: persistence correctness bug, missing order, confirmed unnecessary loops, and measurement targets |

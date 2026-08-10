@@ -2,6 +2,8 @@
 
 Lightyear handles all game networking over QUIC (via `quinn`). The server is authoritative; clients predict locally and reconcile on correction.
 
+## Content
+
 ## Transport
 
 QUIC provides both reliable and unreliable streams natively, with built-in encryption and connection migration. Lightyear uses `quinn` under the hood. The server binds on port 5000 (`SERVER_PORT`).
@@ -22,7 +24,7 @@ Lightyear handles:
 - **Interest management** — only replicates entities within the client's spatial relevance radius (`INITIAL_VISIBILITY_RADIUS_SQ = 100² yards`)
 - **Change-tick replication** — the server sender selects components from Bevy change ticks; equal mutable assignments are not value-filtered before serialization
 - **Entity lifecycle** — spawn/despawn packets as entities enter/leave client view
-- **Zone transitions** — entity despawn + respawn on the client side is transparent
+- **Future zone transitions** — Lightyear can carry visibility-driven removal/insertion, but `game-server` does not yet implement runtime zone handoff
 
 The server's Lightyear `0.26.4` sender still wakes on its 50 ms `SinceLastAck` cadence, but commits `269655a` and `30b5078` remove the steady-state per-sender traversal of every replicated root and component. The sender now processes dirty global/per-sender candidates and retains candidates until ACK/NACK and pending-action semantics permit removal. A new or reset sender queues every current root once for initial full sync; subsequent unchanged roots do not enter the candidate traversal.
 
@@ -99,7 +101,8 @@ The `CombatChannel` carries `CombatEvent` structs (attacker, target, amount, spe
 
 ## See Also
 
-- [[tick-model]] — replication runs at step 6 of the 20Hz tick pipeline
-- [[zone-architecture]] — zone transfers are transparent to clients via despawn/respawn
+- [[tick-loop-audit]] — recurring networking/application polls and remaining proof limits
+- [[tick-model]] — replication spans fixed state mutation and PostUpdate buffering; no global numbered pipeline exists
+- [[zone-architecture]] — zone handoff is proposed, not current runtime behavior
 - [[combat]] — CombatEvent broadcast over CombatChannel
 - [[recurring-loop-elimination]] — removal of recurring replication, interest, and streaming scans

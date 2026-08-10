@@ -81,6 +81,7 @@ game-server/
 The current runtime and proposed ordering contract are maintained separately:
 
 - [Current tick model](docs/wiki/systems/tick-model.md) — observed schedules, cadence, and explicit ordering
+- [Tick-loop audit](docs/wiki/investigations/tick-loop-audit.md) — exhaustive recurring work and correctness findings
 - [Tick-loop design](docs/wiki/design/tick-loop-design.md) — draft normative phase, catch-up, replication, and maintenance contract
 
 The server targets a 50ms outer runner and passes the same duration to Lightyear, which sets
@@ -192,9 +193,11 @@ fn save_dirty_characters(
 }
 ```
 
-That's it. `Changed<T>` means only entities that actually mutated get written. This system
-runs every N ticks (e.g., every 5 minutes) or on disconnect. The rest of the time, the ECS
-is the single source of truth and nothing touches disk.
+This is the intended shape, but the current implementation's 300-tick internal early return
+advances Bevy's `Changed<T>` window on intervening executions. At 20 Hz, the nominal periodic
+interval is 15 seconds; the current due query can miss changes made earlier in that interval.
+Logout/disconnect and shutdown saves remain separate boundaries. The ECS is the live source of
+truth between durable writes.
 
 Compare this to SpacetimeDB's persistence: WAL with 50ms sync interval, snapshot every 1M
 transactions, crash recovery via log replay. All that machinery exists because SpacetimeDB's
@@ -205,7 +208,7 @@ checkpoint — fundamentally simpler.
 
 Character data saved on:
 - Logout / disconnect
-- Periodic interval (every 5 minutes)
+- Periodic interval (every 300 fixed ticks, nominally 15 seconds at 20 Hz)
 - Server shutdown
 
 ```

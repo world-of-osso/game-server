@@ -2,6 +2,14 @@
 
 Chronological record of wiki operations.
 
+## [2026-08-10] audit | Reconcile tick-loop audit schema and persistence summary
+
+Added required `## Content` sections to edited legacy pages [[recurring-loop-elimination]] and [[networking]]. Corrected [[persistence]] from the stale five-minute/whole-period `Changed<T>` description to the source-backed 300-fixed-tick nominal 15-second cadence and confirmed early-return bug. Added cross-links to [[tick-loop-audit]]. No runtime behavior changed.
+
+## [2026-08-10] investigation | Audit every recurring server schedule
+
+Created [[tick-loop-audit]] from a mechanical inventory of 103 recurring registration calls expanding to 130 systems: 105 `Update`, 21 `FixedUpdate`, 3 `PostUpdate`, and 1 `Last`. Confirmed that `save_dirty_characters` loses earlier `Changed<T>` state because its internal 300-tick early returns still advance Bevy's system `last_run`; recorded the Bevy 0.18 source semantics and focused reproduction. Classified definite recurring waste (`sync_player_gold_from_inventory`, Who roster construction, rest scans, durability probing, inactive auto-attacks), correctness-dependent polls, 76 receiver systems, already-eliminated loops, and missing fixed-order consequences. Updated [[tick-loop-design]], [[tick-model]], [[recurring-loop-elimination]], [[networking]], `index.md`, and `ARCHITECTURE.md`. No runtime behavior changed and no production CPU claim is made.
+
 ## [2026-08-10] audit | Align tick-loop documentation with source
 
 Audited [[tick-loop-design]], [[tick-model]], [[zone-architecture]], [[open-questions]], `index.md`, and `ARCHITECTURE.md`. Added required `## Content` sections, corrected the root architecture page's stale implemented-zone wording, and confirmed wiki/source links resolve. No runtime behavior changed.

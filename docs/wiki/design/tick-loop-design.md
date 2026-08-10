@@ -1,12 +1,14 @@
 # Game Tick Loop Design
 
-Draft normative design for the `game-server` runtime loops. It keeps one 20 Hz authoritative simulation, makes dependency ordering explicit, and separates fixed simulation from request handling, replication, maintenance, and background I/O. Current behavior is documented in [[tick-model]]; this page proposes the target and does not change runtime behavior.
+Draft normative design for the `game-server` runtime loops. It keeps one 20 Hz authoritative simulation, makes dependency ordering explicit, and separates fixed simulation from request handling, replication, maintenance, and background I/O. Current behavior is documented in [[tick-model]]; the source-grounded correctness and recurring-work review is [[tick-loop-audit]]. This page proposes the target and does not change runtime behavior.
 
 ## Content
 
 ## Status and Scope
 
-**Status:** Draft for review.
+**Status:** Draft for review; blocked on the correctness findings in [[tick-loop-audit]].
+
+**Review gate:** fix periodic change tracking and define global fixed-phase ordering before treating this design as approved.
 
 **Proposed baseline:** Keep a single 50 ms `FixedUpdate` cadence shared by Bevy and Lightyear.
 
@@ -181,7 +183,7 @@ A future zone or instance design may place zone-filtered systems inside the Move
 2. **Explicit phases:** add the six phase sets and migrate current fixed systems without changing their gameplay logic.
 3. **Catch-up:** retain Bevy's default 250 ms clamp and bounded catch-up.
 4. **Request boundary:** keep service/request handlers in `Update`; simulation effects enter fixed rules on the next fixed step.
-5. **Persistence cadence:** preserve 15 seconds but express it as elapsed duration rather than 300 ticks.
+5. **Persistence cadence:** preserve 15 seconds, but gate the whole save system or use an explicit dirty set; the current internal 300-tick early return loses `Changed<T>` history.
 
 ## Sources
 
@@ -200,6 +202,7 @@ A future zone or instance design may place zone-filtered systems inside the Move
 
 ## See Also
 
+- [[tick-loop-audit]] — exhaustive recurring-system inventory and correctness verdict
 - [[tick-model]] — observed current schedules and ordering
 - [[networking]] — Lightyear transport, interest, and dirty replication
 - [[persistence]] — character save boundaries and storage ownership
