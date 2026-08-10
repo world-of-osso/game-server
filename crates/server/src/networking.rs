@@ -3,10 +3,7 @@ use bevy::prelude::*;
 use core::net::{IpAddr, Ipv4Addr, SocketAddr};
 use lightyear::prelude::server::*;
 use lightyear::prelude::*;
-use shared::aura::Auras;
-use shared::components::{
-    Health, Mounted, MovementSpeed, Npc, Player, Position, Rotation, VerticalVelocity,
-};
+use shared::components::{Health, Mounted, Npc, Player, Position, VerticalVelocity};
 use shared::death::DeathState;
 use shared::protocol::{ChatMessage, LoadTerrain, PlayerInput, TerrainChannel};
 use std::collections::VecDeque;
@@ -21,22 +18,14 @@ use crate::messaging;
 use crate::persistence::{self, CharacterData, ClientId, GameDatabase};
 use crate::terrain_height::{GRAVITY, GROUND_SNAP_THRESHOLD, TerrainHeightMap};
 
+#[path = "networking_movement.rs"]
+mod movement;
+use movement::*;
+
 const DEFAULT_SERVER_PORT: u16 = 5000;
 /// Squared radius for immediate visibility grant on world entry (matches interest system).
 const INITIAL_VISIBILITY_RADIUS_SQ: f32 = 100.0 * 100.0;
-const DEFAULT_RUN_SPEED: f32 = 7.0;
-const DEFAULT_WALK_SPEED: f32 = 2.5;
-const DEFAULT_SWIM_SPEED: f32 = shared::movement::SWIM_SPEED;
-
 type LinkStatusData = (Has<Connected>, Has<ClientOf>, Has<ReplicationSender>);
-type PlayerMovement = (
-    &'static mut Position,
-    &'static mut Rotation,
-    &'static mut MovementSpeed,
-    &'static mut VerticalVelocity,
-    Option<&'static Auras>,
-    Option<&'static shared::casting::CastState>,
-);
 type ConnInfoData = (
     &'static RemoteId,
     Has<ClientOf>,
@@ -424,107 +413,17 @@ fn process_player_inputs(
             if input.swimming && mounted.contains(link.0) {
                 commands.entity(link.0).remove::<Mounted>();
             }
-            if apply_movement_input(&input, link.0, &mut players, &time) {
+            let changes = apply_movement_input(&input, link.0, &mut players, &time);
+            if changes.position_changed {
                 mark_interest_position_changed(dirty_queue.as_deref(), link.0);
+            }
+            if changes.replicated_state_changed
+                && let Some(replication_dirty) = replication_dirty.as_deref()
+            {
+                replication_dirty.mark(link.0);
             }
         }
     }
-}
-
-/// Apply a single movement input to the specified player entity.
-fn apply_movement_input(
-    input: &PlayerInput,
-    player_entity: Entity,
-    players: &mut Query<PlayerMovement, With<Player>>,
-    time: &Time,
-) -> bool {
-    let Ok((mut pos, mut rotation, mut speed, mut vert_vel, auras, cast_state)) =
-        players.get_mut(player_entity)
-    else {
-        return false;
-    };
-    // Block movement while casting (unless spell allows cast-while-moving)
-    if let Some(cast) = cast_state
-        && !cast.cast_while_moving
-    {
-        if speed.0 != 0.0 {
-            speed.0 = 0.0;
-        }
-        return false;
-    }
-    if input.jumping && vert_vel.0 == 0.0 {
-        vert_vel.0 = shared::movement::JUMP_IMPULSE;
-    }
-    if rotation.y != input.facing_yaw {
-        rotation.y = input.facing_yaw;
-    }
-    let dir_len = direction_length(&input.direction);
-    let desired_speed = compute_movement_speed(input, auras, dir_len);
-    if speed.0 != desired_speed {
-        speed.0 = desired_speed;
-    }
-    if dir_len < 0.001 {
-        return false;
-    }
-    let scale = speed.0 * time.delta_secs() / dir_len;
-    let next_position = Position {
-        x: pos.x + input.direction[0] * scale,
-        y: pos.y + input.direction[1] * scale,
-        z: pos.z + input.direction[2] * scale,
-    };
-    if !validate_move_distance(scale * dir_len, speed.0, time.delta_secs()) {
-        return false;
-    }
-    if *pos == next_position {
-        return false;
-    }
-    *pos = next_position;
-    true
-}
-
-/// Compute effective movement speed from input, auras, and direction.
-fn compute_movement_speed(
-    input: &PlayerInput,
-    auras: Option<&shared::aura::Auras>,
-    dir_len: f32,
-) -> f32 {
-    let base = if input.swimming {
-        DEFAULT_SWIM_SPEED
-    } else if input.running {
-        DEFAULT_RUN_SPEED
-    } else {
-        DEFAULT_WALK_SPEED
-    };
-    let aura_mult = auras.map_or(1.0, |a| a.movement_speed_multiplier());
-    let direction_mult = movement_speed_multiplier(input.facing_yaw, &input.direction, dir_len);
-    base * aura_mult * direction_mult
-}
-
-fn movement_speed_multiplier(facing_yaw: f32, direction: &[f32; 3], dir_len: f32) -> f32 {
-    if dir_len <= 0.001 {
-        return 1.0;
-    }
-
-    let dot = facing_alignment(facing_yaw, direction, dir_len);
-    if dot < -0.5 {
-        shared::movement::BACKPEDAL_MULTIPLIER
-    } else if dot.abs() < 0.5 {
-        shared::movement::STRAFE_MULTIPLIER
-    } else {
-        1.0
-    }
-}
-
-fn facing_alignment(facing_yaw: f32, direction: &[f32; 3], dir_len: f32) -> f32 {
-    let face_x = facing_yaw.sin();
-    let face_z = facing_yaw.cos();
-    (direction[0] * face_x + direction[2] * face_z) / dir_len
-}
-
-/// Reject movement if distance exceeds max speed with tolerance.
-fn validate_move_distance(distance: f32, max_speed: f32, dt: f32) -> bool {
-    let max_distance = max_speed * dt * 1.5; // 50% tolerance for network jitter
-    distance <= max_distance
 }
 
 type GravityPlayerData<'w, 's> = Query<
@@ -669,10 +568,6 @@ fn apply_fall_damage_on_landing(
     }
 
     fall_tracker.last_y = current_y;
-}
-
-fn direction_length(dir: &[f32; 3]) -> f32 {
-    (dir[0].powi(2) + dir[1].powi(2) + dir[2].powi(2)).sqrt()
 }
 
 const TILE_SIZE: f32 = 533.33;

@@ -290,6 +290,43 @@ fn zero_direction_ignored() {
 }
 
 #[test]
+fn turn_in_place_reports_replicated_state_change() {
+    let mut app = setup_app_with_time();
+    let player = spawn_player(app.world_mut(), 5.0, 5.0, 5.0);
+    let input = PlayerInput {
+        direction: [0.0, 0.0, 0.0],
+        facing_yaw: std::f32::consts::FRAC_PI_2,
+        jumping: false,
+        running: false,
+        swimming: false,
+    };
+
+    let changed = app
+        .world_mut()
+        .run_system_once(
+            move |mut q: Query<PlayerMovement, With<Player>>, time: Res<Time>| {
+                apply_movement_input(&input, player, &mut q, &time)
+            },
+        )
+        .expect("movement system should run");
+
+    assert!(
+        changed.replicated_state_changed,
+        "rotation/speed changes must wake replication"
+    );
+    assert!(!changed.position_changed);
+    assert_eq!(app.world().entity(player).get::<Position>().unwrap().x, 5.0);
+    assert_eq!(
+        app.world().entity(player).get::<Rotation>().unwrap().y,
+        std::f32::consts::FRAC_PI_2,
+    );
+    assert_eq!(
+        app.world().entity(player).get::<MovementSpeed>().unwrap().0,
+        DEFAULT_WALK_SPEED,
+    );
+}
+
+#[test]
 fn server_normalizes_direction_preventing_speed_hack() {
     let mut app = setup_app_with_time();
     let normal_player = spawn_player(app.world_mut(), 0.0, 0.0, 0.0);
