@@ -480,15 +480,35 @@ pub(crate) fn apply_terrain_gravity(
         if *fall_tracker != next_fall_tracker {
             *fall_tracker = next_fall_tracker;
         }
-        if *health != next_health {
-            *health = next_health;
-            if let Some(replication_dirty) = replication_dirty.as_deref() {
-                replication_dirty.mark(entity);
-            }
+        apply_gravity_health_transition(
+            entity,
+            previous_health,
+            next_health,
+            &mut health,
+            replication_dirty.as_deref(),
+            &mut player_deaths,
+        );
+    }
+}
+
+fn apply_gravity_health_transition(
+    player_entity: Entity,
+    previous_health: Health,
+    next_health: Health,
+    health: &mut Health,
+    replication_dirty: Option<&ReplicationDirtyQueue>,
+    player_deaths: &mut MessageWriter<crate::death::PlayerDeathTransition>,
+) {
+    if *health != next_health {
+        *health = next_health;
+        if let Some(replication_dirty) = replication_dirty {
+            replication_dirty.mark(player_entity);
         }
-        if previous_health.current > 0.0 && next_health.current <= 0.0 {
-            player_deaths.write(crate::death::PlayerDeathTransition { player: entity });
-        }
+    }
+    if previous_health.current > 0.0 && next_health.current <= 0.0 {
+        player_deaths.write(crate::death::PlayerDeathTransition {
+            player: player_entity,
+        });
     }
 }
 

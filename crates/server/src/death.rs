@@ -538,11 +538,7 @@ fn process_player_death_transitions(
             continue;
         }
         health.current = 0.0;
-        if let Some(replication_dirty) = replication_dirty.as_deref() {
-            #[cfg(test)]
-            DEATH_REPLICATION_MARKS.fetch_add(1, Ordering::SeqCst);
-            replication_dirty.mark(player_entity);
-        }
+        mark_player_death_replication(replication_dirty.as_deref(), player_entity);
         let death_state = build_detected_player_death_state(
             client_id.0,
             position,
@@ -565,6 +561,18 @@ fn process_player_death_transitions(
             );
         }
     }
+}
+
+fn mark_player_death_replication(
+    replication_dirty: Option<&ReplicationDirtyQueue>,
+    player_entity: Entity,
+) {
+    let Some(replication_dirty) = replication_dirty else {
+        return;
+    };
+    #[cfg(test)]
+    DEATH_REPLICATION_MARKS.fetch_add(1, Ordering::SeqCst);
+    replication_dirty.mark(player_entity);
 }
 
 pub(crate) fn apply_health_damage(health: &mut Health, damage: f32) -> bool {
