@@ -13,6 +13,7 @@ The server performance pass is replacing broad recurring scans with state-, even
 | Friends online snapshots | Rebuild all online/friend snapshots every app frame | Rebuild only dirty affected owners | Completed in `914d570` |
 | Interest management | Scan every visible entity against every player every 500 ms | Dirty position/lifecycle triggers plus spatial buckets | Completed in `4523373`, tests split in `a85b035` |
 | Lightyear replication | Traverse every replicated root/component per client every 50 ms | Dirty global/per-sender candidates with initial full sync and ACK retention | Implemented in `269655a`, `30b5078`; strict-Empty CPU gate pending |
+| Who roster materialization | Build the full online-player list before checking `QueryWho` receivers | Drain latest requests first; build one shared roster only when requests exist | Completed in `a4e7aeb`; no live CPU savings claim |
 | Inactive auto-attacks | Fixed combat query retains every `AutoAttack { active: false }` after target loss | Remove `AutoAttack` when `CombatTarget` becomes `None`; active attackers remain fixed-step | Completed in `152ccbd`; live CPU gate pending |
 | Rest-state evaluation | Every `Update`, every authenticated player, linear scan of all innkeepers | Evaluate initial state or only `Changed<Position>`/`Changed<Level>` players | Completed in `fffa86a`; live CPU gate pending |
 | Gold persistence synchronization | Every `Update`, every online player, synchronous redb inventory read | Record persisted mutation values and apply them in `PostUpdate` before replication buffering | Completed in `4e4c73d`, `c3b3c04`, `9d2067c`, `91bbedd`, `8920feb`; live CPU gate pending |
@@ -32,6 +33,14 @@ The test `scheduled_auction_expiration_runs_at_most_once_per_second` exercises t
 3. The second auction expires when accumulated time reaches one second and produces the second mail entry.
 
 The pre-fix test failed when the second auction expired during the sub-second ticks. The focused GREEN test passed after `e02ce0a`.
+
+## Who Query Roster Materialization
+
+Before `a4e7aeb`, `who::process_query_requests` built and cloned the full online-player roster on every `Update`, including repeated frames with no `QueryWho` request. Query receivers now drain first; idle Updates return with zero roster materializations, while request-bearing Updates build one shared roster for all pending connections.
+
+The existing contract is preserved: `Authenticated` + `InWorld` eligibility, independent multi-connection routing, latest-request-per-connection semantics, case-insensitive trimmed substring filtering, case-insensitive name sorting, and the existing snapshot, `who: N result(s)` message, and error fields. Ineligible connections receive no response and do not trigger roster construction.
+
+RED artifacts: `/tmp/claude/game-server/who-idle-roster-red.log` and `/tmp/claude/game-server/who-request-contract-red.log`. GREEN artifact: `/tmp/claude/game-server/who-drain-first-green.log`. Formatting/readability artifacts: `/tmp/claude/game-server/who-drain-first-fmt.log`, `/tmp/claude/game-server/who-drain-first-readability-audit.json`, and `/tmp/claude/game-server/who-drain-first-readability-metrics.json`. No live CPU savings claim is made.
 
 ## Inactive Auto-Attack Participation
 
@@ -155,6 +164,8 @@ Follow-up `aa5dddb` closed a replication wake-up gap in movement input handling.
 - `game-server` commit `152ccbd` — remove inactive auto-attack components
 - [rest system](../../../crates/server/src/rest.rs) — initial and change-filtered rest-state evaluation
 - `game-server` commit `fffa86a` — avoid unchanged player rest-state scans
+- [Who system](../../../crates/server/src/who.rs) — drain-first request handling, shared roster, filtering, sorting, and response routing
+- `game-server` commit `a4e7aeb` — drain Who requests before building roster
 - [vendored Lightyear provenance](../../../vendor/lightyear_replication/UPSTREAM.md) — version, checksum, upstream commit, and license
 - [dirty candidate queue](../../../vendor/lightyear_replication/src/send/dirty.rs) — global/per-sender marks and lifecycle observers
 - [candidate traversal](../../../vendor/lightyear_replication/src/send/candidate.rs) — initial sync, candidate processing, and retry retention

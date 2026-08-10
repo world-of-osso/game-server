@@ -1,5 +1,9 @@
 # Wiki Log
 
+## [2026-08-10] investigation | Drain Who requests before building roster
+
+Updated [[tick-loop-audit]], [[recurring-loop-elimination]], [[networking]], and `index.md` for commit `a4e7aeb`: `who::process_query_requests` now drains `QueryWho` receivers first, produces zero online-roster materializations on repeated idle `Update`s, and builds one shared roster when requests exist. Recorded preserved `Authenticated` + `InWorld` eligibility, latest-request-per-connection behavior, multi-connection routing, filtering/sorting, and snapshot/message/error content. Recorded RED `/tmp/claude/game-server/who-idle-roster-red.log` and `/tmp/claude/game-server/who-request-contract-red.log`, GREEN `/tmp/claude/game-server/who-drain-first-green.log`, and formatting/readability artifacts. Server audit is 4/7 complete: gold, Who, rest, and inactive auto-attacks are complete; durability, calendar, and trade lookup remain open. No live CPU savings claim; no source or runtime behavior changed in this documentation update.
+
 ## [2026-08-10] investigation | Replace recurring gold persistence scan
 
 Updated [[persistence]], [[networking]], and [[recurring-loop-elimination]] for commits `4e4c73d`, `c3b3c04`, `9d2067c`, `91bbedd`, and `8920feb`. Documented login-loaded persisted gold; successful barber, completed-trade, auction, and mail-claim saves recording exact values in `GoldUpdateQueue`; same-frame coalescing; `PostUpdate` application before Lightyear buffering; equal-value suppression; offline discard with reload-on-login; profession saves not changing gold; sale proceeds remaining mail until claim; and removal of `sync_player_gold_from_inventory`. Recorded RED/GREEN and readability artifacts under `/tmp/claude/game-server/`. No live CPU or Character-stage claim.

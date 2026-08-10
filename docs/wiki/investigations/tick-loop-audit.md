@@ -1,6 +1,6 @@
 # Tick Loop Audit
 
-Source-grounded audit of every production `game-server` system registered in a recurring Bevy schedule. It answers whether the current loop design is correct, identifies work that is unnecessary every tick/update, and separates confirmed defects from systems that need measurement before redesign. No runtime behavior changed during this audit.
+Source-grounded audit of every production `game-server` system registered in a recurring Bevy schedule. It answers whether the current loop design is correct, identifies work that is unnecessary every tick/update, and separates confirmed defects from systems that need measurement before redesign. Commit `a4e7aeb` records the completed Who request-gating slice; no live CPU savings claim is made.
 
 ## Content
 
@@ -15,6 +15,8 @@ Source-grounded audit of every production `game-server` system registered in a r
 | Application polling | **Several confirmed unnecessary loops:** gold, Who, rest, durability, inactive auto-attacks |
 | Lightyear/interest | **Major root/entity scans fixed:** remaining recurring work is connection/dirty-state plumbing |
 | Receiver fan-out | **Real but unmeasured:** 74 `Update` systems poll typed connection receivers |
+
+**Server audit status: 4/7 complete.** Gold (#1), Who (#2), rest (#3), and inactive auto-attacks (#5) are complete. Durability (#4), calendar (#6), and trade lookup (#7) remain open.
 
 The design should not be approved as complete until the persistence bug and fixed-order contract are resolved.
 
@@ -99,12 +101,20 @@ Conflicting ECS access forces serialization, but serialization order is not a ga
 | Priority | System | Current steady-state work | Verdict / root direction |
 |---:|---|---|---|
 | 1 | `sync_player_gold_from_inventory` | Every `Update`, every player, synchronous redb inventory load | **REMOVE/GATE.** Update replicated `Gold` at inventory mutation boundaries or through a dirty-character queue |
-| 2 | `who::process_query_requests` | Builds/clones the full online-player list before checking whether any request exists | **REMOVE/GATE.** Drain requests first; cache roster only if request volume requires it |
+| 2 | `who::process_query_requests` | Builds/clones the full online-player list before checking whether any request exists | **COMPLETED.** `a4e7aeb` drains requests first, returns idle with zero roster materializations, and builds one shared roster only when requests exist |
 | 3 | `rest::update_player_rest_state` | Every `Update`, every authenticated player, linear scan of all innkeepers | **COMPLETED.** `fffa86a` re-evaluates only initial state or `Changed<Position>`/`Changed<Level>` players; add spatial lookup only if profiling justifies it |
 | 4 | `send_changed_durability_snapshot` | Every `Update`, every player with durability, then `Ref::is_changed()` in the body | **REMOVE/GATE.** Use a `Changed<EquippedDurability>` query while retaining added-vs-changed semantics |
 | 5 | inactive `AutoAttack` entities | Clearing a target leaves `AutoAttack { active: false }`; fixed combat still queries it forever | **COMPLETED.** `152ccbd` removes `AutoAttack` on target loss; component presence now defines participation |
 | 6 | calendar query snapshot | Rebuilds the calendar snapshot before checking for `QueryCalendar` messages | **REMOVE/GATE.** Build once only when at least one request was drained |
 | 7 | trade offer lookup | Resolves each connection's player before checking whether that typed receiver is empty | **REMOVE/GATE.** Drain first, then resolve player state for non-empty requests |
+
+### Who Query Roster Construction
+
+Before `a4e7aeb`, `who::process_query_requests` materialized the full online roster before inspecting `QueryWho` receivers, so repeated idle `Update`s cloned names and allocated snapshot fields without a request. The fix drains every eligible receiver first and keeps only its latest request. If none are pending, the system returns without materializing the roster; when requests exist, it builds one shared roster and clones that snapshot per response.
+
+The protocol contract remains unchanged: only `Authenticated` + `InWorld` connections are eligible; multiple connections are routed independently; multiple requests from one connection produce one response for the latest request; filtering remains case-insensitive substring matching after trimming; results remain sorted case-insensitively by name; responses retain the existing snapshot, `who: N result(s)` message, and error fields. The focused tests also prove ineligible connections produce neither responses nor roster materialization.
+
+RED artifacts: `/tmp/claude/game-server/who-idle-roster-red.log` and `/tmp/claude/game-server/who-request-contract-red.log`. GREEN artifact: `/tmp/claude/game-server/who-drain-first-green.log`. Formatting/readability artifacts: `/tmp/claude/game-server/who-drain-first-fmt.log`, `/tmp/claude/game-server/who-drain-first-readability-audit.json`, and `/tmp/claude/game-server/who-drain-first-readability-metrics.json`. No live CPU savings claim is made.
 
 One-time initialization systems for auctions and rest also wake every `Update` after completion, but only execute a boolean check. Moving them to a startup boundary would be cleaner; they are not material steady-state scans.
 
@@ -226,6 +236,7 @@ The vendored replication buffer still performs connection-scaled sender passes, 
 - Friends snapshots: all-owner rebuilds → dirty affected owners
 - Interest: entities×players scan → dirty queues plus spatial buckets
 - Lightyear replication: all roots/components per sender → dirty candidates
+- Who requests: roster materialization before receiver inspection → drain-first shared roster
 - NPC death: living-NPC health scan → authoritative damage transition
 - Equal replicated assignments: guarded across proven writers
 
@@ -236,7 +247,7 @@ These completed slices do not prove that the rest of the server has no recurring
 1. Fix the periodic persistence `Changed<T>` bug and add a real 300-tick-window regression.
 2. Remove per-player redb gold polling; make inventory mutation own `Gold` synchronization.
 3. Add explicit fixed phase ordering for movement, combat, death, lifecycle, interest, and persistence.
-4. Convert Who, rest, durability, inactive auto-attacks, calendar, and trade pre-work to request/change/state boundaries.
+4. Convert durability, calendar, and trade pre-work to request/change/state boundaries; Who is complete in `a4e7aeb`.
 5. Instrument receiver fan-out, gravity, AI, interest target fanout, database latency, and fixed catch-up before broader redesign.
 
 ## Proof Limits
@@ -248,7 +259,8 @@ This is a static source audit plus a focused Bevy 0.18 change-detection reproduc
 - [crates/server/src/main.rs](../../../crates/server/src/main.rs) — runner cadence and server plugin assembly
 - [crates/server/src/networking.rs](../../../crates/server/src/networking.rs) — input, gravity, terrain, Update handlers, and schedule registration
 - [crates/server/src/auth_character.rs](../../../crates/server/src/auth_character.rs) — unconditional per-player Gold synchronization
-- [crates/server/src/who.rs](../../../crates/server/src/who.rs) — unconditional online roster construction
+- [crates/server/src/who.rs](../../../crates/server/src/who.rs) — drain-first QueryWho handling, shared roster construction, filtering, sorting, and response routing
+- `game-server` commit `a4e7aeb` — drain Who requests before building roster
 - [crates/server/src/rest.rs](../../../crates/server/src/rest.rs) — initial and change-filtered player/innkeeper evaluation
 - `game-server` commit `fffa86a` — rest-state evaluation gate and transition proof
 - [crates/server/src/durability.rs](../../../crates/server/src/durability.rs) — changed durability polling

@@ -68,6 +68,10 @@ Login still loads persisted inventory gold into the player's replicated `Gold`. 
 
 Behavioral RED/GREEN and readability artifacts are recorded in [[recurring-loop-elimination]]. This proves mutation boundaries and replication behavior; it does not claim a live CPU threshold result.
 
+## Who Query Requests
+
+`who::process_query_requests` drains `QueryWho` receivers before materializing the online roster. Repeated idle `Update`s therefore build zero rosters; an Update with one or more eligible requests builds one shared roster and derives each response from it. Only `Authenticated` + `InWorld` connections participate. Each connection receives the response for its latest queued request, multiple connections route independently, and existing trimmed case-insensitive substring filtering, case-insensitive name sorting, `WhoSnapshot` content, `who: N result(s)` message, and error fields remain unchanged. Commit `a4e7aeb` covers this behavior. See [[recurring-loop-elimination]] and [[tick-loop-audit]]; no live CPU savings claim is made.
+
 ## Client → Server Inputs
 
 Clients send input events, never raw state. The server validates and applies; the client predicts locally:
@@ -106,6 +110,8 @@ The `CombatChannel` carries `CombatEvent` structs (attacker, target, amount, spe
 - [crates/server/src/rest.rs](../../../crates/server/src/rest.rs) — innkeeper registry and change-filtered rest-state snapshots
 - [crates/server/src/rest.rs](../../../crates/server/src/rest.rs) — rest-state transition test coverage
 - `game-server` commit `fffa86a` — update rest state only after relevant changes
+- [crates/server/src/who.rs](../../../crates/server/src/who.rs) — QueryWho drain-first handling and response contract tests
+- `game-server` commit `a4e7aeb` — drain Who requests before building roster
 - [crates/server/src/networking.rs](../../../crates/server/src/networking.rs) — player movement dirty routing and terrain tile-transition gating
 - [crates/server/src/networking_movement.rs](../../../crates/server/src/networking_movement.rs) — translation, rotation, speed, and movement dirty-domain results
 - [crates/server/src/networking_tests/physics.rs](../../../crates/server/src/networking_tests/physics.rs) — zero-translation rotation/speed regression proof
