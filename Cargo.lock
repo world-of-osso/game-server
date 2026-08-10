@@ -3667,8 +3667,6 @@ dependencies = [
 [[package]]
 name = "lightyear_replication"
 version = "0.26.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a451536b73e618035472548e8d7f1af51e193649f556318f7836ddc70e6f73d2"
 dependencies = [
  "avian2d",
  "avian3d",
