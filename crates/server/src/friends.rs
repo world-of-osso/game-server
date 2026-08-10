@@ -166,7 +166,7 @@ impl Plugin for FriendsPlugin {
                 process_add_requests,
                 process_remove_requests,
                 process_presence_requests,
-                process_due_auto_afk,
+                process_due_auto_afk.after(crate::messaging::process_chat_messages),
                 sync_changed_friend_presence,
                 sync_removed_friend_presence,
                 send_dirty_friends_snapshots,
