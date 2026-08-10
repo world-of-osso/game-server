@@ -34,6 +34,8 @@ The client compares decoded replicated components and suppresses equal ECS repla
 
 Authoritative marks are emitted at real state boundaries: player input/gravity, NPC movement/leash restoration, combat transitions, derived-stat recalculation, gold synchronization, barber appearance updates, friend/presence and chat/emote activity, plus interest/visibility transitions. The queue is not a replacement for component change-tick filtering; it narrows candidates before the existing component and ACK checks.
 
+`aa5dddb` separates movement's two dirty domains. `networking_movement.rs` reports `position_changed` for translation and `replicated_state_changed` for any replicated movement state. A turn-in-place or zero-translation input can therefore enqueue `Rotation` or `MovementSpeed` replication without dirtying `InterestDirtyQueue`; interest remains position-only. The zero-translation regression was RED before the fix, and the focused server test slice passed with 43 tests GREEN after it. `networking.rs` retains orchestration while movement calculations live in the extracted module.
+
 The sender change is a vendored patch rather than a protocol fork. `vendor/lightyear_replication/UPSTREAM.md` records Lightyear `0.26.4`, crates.io checksum `a451536b73e618035472548e8d7f1af51e193649f556318f7836ddc70e6f73d2`, upstream commit `7082c5eb09463fc110461f1cc928994460611e98`, and MIT OR Apache-2.0 licensing. Test-only diagnostics count root candidates and `replicate_entity` visits; they are enabled only for integration proof.
 
 The remaining strict-Empty gate is live client CPU verification with zero terrain/world rendering. The candidate traversal proof passes, but no `<=10%` CPU result is claimed.
@@ -83,7 +85,9 @@ The `CombatChannel` carries `CombatEvent` structs (attacker, target, amount, spe
 - [ARCHITECTURE.md](../../../ARCHITECTURE.md) — "Networking with Lightyear" section
 - [crates/server/src/networking.rs](../../../crates/server/src/networking.rs) — server plugin, channel types, interest radius
 - [crates/server/src/combat.rs](../../../crates/server/src/combat.rs) — authoritative NPC damage/death transition and combat events
-- [crates/server/src/networking.rs](../../../crates/server/src/networking.rs) — player movement dirty marking and terrain tile-transition gating
+- [crates/server/src/networking.rs](../../../crates/server/src/networking.rs) — player movement dirty routing and terrain tile-transition gating
+- [crates/server/src/networking_movement.rs](../../../crates/server/src/networking_movement.rs) — translation, rotation, speed, and movement dirty-domain results
+- [crates/server/src/networking_tests/physics.rs](../../../crates/server/src/networking_tests/physics.rs) — zero-translation rotation/speed regression proof
 - [crates/server/src/interest.rs](../../../crates/server/src/interest.rs) — dirty-position interest index and visibility transitions
 - [crates/server/src/interest_tests.rs](../../../crates/server/src/interest_tests.rs) — fixed-tick interest behavior proof
 - [vendor/lightyear_replication/UPSTREAM.md](../../../vendor/lightyear_replication/UPSTREAM.md) — Lightyear `0.26.4` provenance

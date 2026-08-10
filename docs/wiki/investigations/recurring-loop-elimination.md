@@ -98,6 +98,8 @@ Coverage includes initial full replication, changed-position traversal of only t
 
 The vendored provenance is recorded in [`vendor/lightyear_replication/UPSTREAM.md`](../../../vendor/lightyear_replication/UPSTREAM.md): version `0.26.4`, crates.io checksum `a451536b73e618035472548e8d7f1af51e193649f556318f7836ddc70e6f73d2`, upstream commit `7082c5eb09463fc110461f1cc928994460611e98`, and MIT OR Apache-2.0 licensing. The remaining strict-Empty gate is live client verification that CPU usage is at or below 10% with zero terrain/world rendering; no `<=10%` result is claimed here.
 
+Follow-up `aa5dddb` closed a replication wake-up gap in movement input handling. Turn-in-place and other zero-translation inputs can change replicated `Rotation` or `MovementSpeed`; those changes now return `replicated_state_changed` and enqueue the entity for Lightyear even when `position_changed` is false. `InterestDirtyQueue` remains position-only: it is not dirtied by rotation or speed changes. Movement logic moved into `networking_movement.rs` so the two dirty domains stay explicit. The initial no-op regression test was RED, then the full focused server slice passed with 43 tests GREEN. This follow-up changes candidate coverage, not the interest radius or wire format.
+
 ## Sources
 
 - [auction plugin](../../../crates/server/src/auction_house.rs) — one-second expiration run condition
@@ -113,7 +115,9 @@ The vendored provenance is recorded in [`vendor/lightyear_replication/UPSTREAM.m
 - `game-server` commit `914d570` — dirty-owner friends snapshot implementation and proof
 - [interest system](../../../crates/server/src/interest.rs) — dirty position queue, lifecycle observers, spatial buckets, and exact visibility transitions
 - [interest integration tests](../../../crates/server/src/interest_tests.rs) — fixed-tick, radius, multi-player, lifecycle, and reconnect proof
-- [position writers](../../../crates/server/src/networking.rs) — player movement dirty marking
+- [position writers](../../../crates/server/src/networking.rs) — player movement and replication dirty routing
+- [movement implementation](../../../crates/server/src/networking_movement.rs) — position-only interest dirtiness plus rotation/speed replication changes
+- [movement tests](../../../crates/server/src/networking_tests/physics.rs) — zero-translation rotation/speed regression proof
 - [AI position writers](../../../crates/server/src/creature_ai.rs) — NPC movement dirty marking
 - `game-server` commit `4523373` — dirty-position interest implementation
 - `game-server` commit `a85b035` — interest integration-test split
@@ -123,6 +127,7 @@ The vendored provenance is recorded in [`vendor/lightyear_replication/UPSTREAM.m
 - [sender state](../../../vendor/lightyear_replication/src/send/sender.rs) — ACK/NACK and dirty-candidate retention
 - [replication integration tests](../../../crates/integration-tests/src/tests.rs) — diagnostic RED/GREEN and behavior coverage
 - `game-server` commits `269655a` and `30b5078` — vendoring and dirty-candidate implementation
+- `game-server` commit `aa5dddb` — rotation/speed dirty-candidate follow-up and movement extraction
 
 ## See Also
 
