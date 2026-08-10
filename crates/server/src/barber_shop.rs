@@ -7,6 +7,7 @@ use shared::protocol::{
 };
 
 use crate::auth::{Authenticated, InWorld};
+use crate::gold::GoldUpdateQueue;
 use crate::networking::PlayerLink;
 use crate::persistence::{self, GameDatabase};
 use crate::persistence_types::InventoryData;
@@ -117,6 +118,7 @@ fn process_barber_shop_apply_requests(
     mut players: Query<&mut Player>,
     db: Option<Res<GameDatabase>>,
     dirty_queue: Option<Res<ReplicationDirtyQueue>>,
+    mut gold_updates: ResMut<GoldUpdateQueue>,
     mut senders: Query<&mut MessageSender<BarberShopStateUpdate>>,
 ) {
     let Some(db) = db else { return };
@@ -130,6 +132,7 @@ fn process_barber_shop_apply_requests(
                 &mut players,
                 &db,
                 dirty_queue.as_deref(),
+                &mut gold_updates,
                 &mut senders,
             );
         }
@@ -144,6 +147,7 @@ fn handle_apply_request(
     players: &mut Query<&mut Player>,
     db: &GameDatabase,
     dirty_queue: Option<&ReplicationDirtyQueue>,
+    gold_updates: &mut GoldUpdateQueue,
     senders: &mut Query<&mut MessageSender<BarberShopStateUpdate>>,
 ) {
     let Ok(mut player) = players.get_mut(player_entity) else {
@@ -174,7 +178,7 @@ fn handle_apply_request(
             dirty_queue.mark(player_entity);
         }
     }
-    save_barber_shop_changes(&db.db, character_id, applied, &inventory);
+    save_barber_shop_changes(&db.db, character_id, applied, &inventory, gold_updates);
     send_barber_shop_update(
         conn_entity,
         &player.appearance,
@@ -190,14 +194,17 @@ fn save_barber_shop_changes(
     character_id: u64,
     appearance: CharacterAppearance,
     inventory: &InventoryData,
+    gold_updates: &mut GoldUpdateQueue,
 ) {
     let Some(mut data) = persistence::load_character(db, character_id) else {
         persistence::save_inventory(db, character_id, inventory);
+        gold_updates.record(character_id, inventory.gold);
         return;
     };
     data.appearance = appearance;
     persistence::save_character(db, character_id, &data);
     persistence::save_inventory(db, character_id, inventory);
+    gold_updates.record(character_id, inventory.gold);
 }
 
 fn barber_shop_success_message(cost: u32) -> String {
@@ -294,6 +301,55 @@ mod tests {
             hair_color: 5,
             facial_style: 6,
         }
+    }
+
+    #[test]
+    fn barber_shop_persistence_updates_replicated_gold_after_save() {
+        let db = crate::persistence::temp_database();
+        let (character_id, _) = crate::persistence::create_character(&db, 1, "Alice", 1, 1)
+            .expect("character should be created");
+        let inventory = InventoryData {
+            gold: 90_000,
+            items: Vec::new(),
+        };
+
+        let mut app = App::new();
+        app.add_plugins(crate::gold::GoldPlugin);
+        let player = app
+            .world_mut()
+            .spawn((
+                Player {
+                    name: "Alice".into(),
+                    race: 1,
+                    class: 1,
+                    appearance: appearance(),
+                },
+                crate::persistence::ClientId(character_id),
+                shared::components::Gold(100_000),
+            ))
+            .id();
+
+        {
+            let mut queue = app
+                .world_mut()
+                .resource_mut::<crate::gold::GoldUpdateQueue>();
+            save_barber_shop_changes(&db, character_id, appearance(), &inventory, &mut queue);
+        }
+
+        app.update();
+
+        assert_eq!(
+            crate::persistence::load_inventory(&db, character_id).gold,
+            90_000
+        );
+        assert_eq!(
+            app.world()
+                .entity(player)
+                .get::<shared::components::Gold>()
+                .unwrap()
+                .0,
+            90_000
+        );
     }
 
     #[test]
