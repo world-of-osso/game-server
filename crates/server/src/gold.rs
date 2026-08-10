@@ -25,6 +25,15 @@ impl GoldUpdateQueue {
     }
 }
 
+pub(crate) fn record_persisted_gold(
+    db: &redb::Database,
+    character_id: u64,
+    updates: &mut GoldUpdateQueue,
+) {
+    let gold = crate::persistence::load_inventory(db, character_id).gold;
+    updates.record(character_id, gold);
+}
+
 pub(crate) struct GoldPlugin;
 
 impl Plugin for GoldPlugin {

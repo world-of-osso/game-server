@@ -44,37 +44,104 @@ fn deposit_refunded_on_successful_sale() {
     let (buyer_id, _) = persistence::create_character(&db, 2, "Buyer", 1, 1).expect("buyer");
     let source_item = persistence::load_inventory(&db, seller_id).items[0].clone();
     let seller_gold_before = persistence::load_inventory(&db, seller_id).gold;
+    let buyer_gold_before = persistence::load_inventory(&db, buyer_id).gold;
     let mut state = AuctionHouseState::default();
+    let mut app = App::new();
+    app.add_plugins(crate::gold::GoldPlugin);
+    let seller = app
+        .world_mut()
+        .spawn((
+            shared::components::Player {
+                name: "Seller".into(),
+                race: 1,
+                class: 1,
+                appearance: shared::components::CharacterAppearance::default(),
+            },
+            crate::persistence::ClientId(seller_id),
+            shared::components::Gold(seller_gold_before),
+        ))
+        .id();
+    let buyer = app
+        .world_mut()
+        .spawn((
+            shared::components::Player {
+                name: "Buyer".into(),
+                race: 1,
+                class: 1,
+                appearance: shared::components::CharacterAppearance::default(),
+            },
+            crate::persistence::ClientId(buyer_id),
+            shared::components::Gold(buyer_gold_before),
+        ))
+        .id();
 
     let deposit = deposit_cost(source_item.vendor_sell_price, 1, AuctionDuration::Long);
     assert!(deposit > 0, "test needs non-zero deposit");
 
-    create_auction(
-        &db,
-        &mut state,
-        seller_id,
-        &CreateAuction {
-            item_guid: source_item.item_guid,
-            stack_count: 1,
-            min_bid: 100,
-            buyout_price: Some(500),
-            duration: AuctionDuration::Long,
-        },
-    );
-    let after_list = persistence::load_inventory(&db, seller_id).gold;
-    assert_eq!(after_list, seller_gold_before - deposit);
+    {
+        let mut gold_updates = app
+            .world_mut()
+            .resource_mut::<crate::gold::GoldUpdateQueue>();
+        let create = super::super::handlers::create_auction_with_gold_update(
+            &db,
+            &mut state,
+            seller_id,
+            &CreateAuction {
+                item_guid: source_item.item_guid,
+                stack_count: 1,
+                min_bid: 100,
+                buyout_price: Some(500),
+                duration: AuctionDuration::Long,
+            },
+            &mut gold_updates,
+        );
+        assert!(create.success);
+        let after_list = persistence::load_inventory(&db, seller_id).gold;
+        assert_eq!(after_list, seller_gold_before - deposit);
 
-    let auction_id = *state.auctions.keys().next().expect("auction id");
-    buyout_auction(&db, &mut state, buyer_id, auction_id);
+        let auction_id = *state.auctions.keys().next().expect("auction id");
+        let buyout = super::super::handlers::buyout_auction_with_gold_updates(
+            &db,
+            &mut state,
+            buyer_id,
+            auction_id,
+            &mut gold_updates,
+        );
+        assert!(buyout.success);
 
-    let mail = persistence::load_mailbox(&db, seller_id);
+        let mail = persistence::load_mailbox(&db, seller_id);
+        let sale_proceeds = 500 - (500 * HOUSE_CUT_BPS / 10_000);
+        assert_eq!(mail[0].attached_money, sale_proceeds + deposit);
+        let claim = super::super::handlers::claim_mail_with_gold_update(
+            &db,
+            seller_id,
+            mail[0].mail_id,
+            &mut gold_updates,
+        );
+        assert!(claim.success);
+    }
+    app.update();
+
+    let seller_gold = persistence::load_inventory(&db, seller_id).gold;
+    let buyer_gold = persistence::load_inventory(&db, buyer_id).gold;
     let sale_proceeds = 500 - (500 * HOUSE_CUT_BPS / 10_000);
-    assert_eq!(mail[0].attached_money, sale_proceeds + deposit);
-
-    claim_mail(&db, seller_id, mail[0].mail_id);
+    assert_eq!(seller_gold, seller_gold_before + sale_proceeds);
+    assert_eq!(buyer_gold, buyer_gold_before - 500);
     assert_eq!(
-        persistence::load_inventory(&db, seller_id).gold,
-        seller_gold_before + sale_proceeds,
+        app.world()
+            .entity(seller)
+            .get::<shared::components::Gold>()
+            .unwrap()
+            .0,
+        seller_gold
+    );
+    assert_eq!(
+        app.world()
+            .entity(buyer)
+            .get::<shared::components::Gold>()
+            .unwrap()
+            .0,
+        buyer_gold
     );
 }
 

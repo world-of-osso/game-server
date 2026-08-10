@@ -1,6 +1,7 @@
 use bevy::ecs::query::QueryFilter;
 
 use super::*;
+use crate::gold::{GoldUpdateQueue, record_persisted_gold};
 
 pub(super) fn initialize_auction_state(
     db: Option<Res<GameDatabase>>,
@@ -110,10 +111,11 @@ pub(super) fn process_mailbox_requests(
 pub(super) fn process_claim_mail_requests(
     mut receivers: Query<(Entity, &InWorld, &mut MessageReceiver<ClaimAuctionMail>)>,
     db: Option<Res<GameDatabase>>,
+    mut gold_updates: ResMut<GoldUpdateQueue>,
     mut senders: Query<&mut MessageSender<AuctionOperationResponse>>,
 ) {
     process_operation_requests(&mut receivers, db, &mut senders, |db, character_id, req| {
-        claim_mail(&db.db, character_id, req.mail_id)
+        claim_mail_with_gold_update(&db.db, character_id, req.mail_id, &mut gold_updates)
     });
 }
 
@@ -121,10 +123,11 @@ pub(super) fn process_create_requests(
     mut receivers: Query<(Entity, &InWorld, &mut MessageReceiver<CreateAuction>)>,
     db: Option<Res<GameDatabase>>,
     mut state: ResMut<AuctionHouseState>,
+    mut gold_updates: ResMut<GoldUpdateQueue>,
     mut senders: Query<&mut MessageSender<AuctionOperationResponse>>,
 ) {
     process_operation_requests(&mut receivers, db, &mut senders, |db, character_id, req| {
-        create_auction(&db.db, &mut state, character_id, &req)
+        create_auction_with_gold_update(&db.db, &mut state, character_id, &req, &mut gold_updates)
     });
 }
 
@@ -132,6 +135,7 @@ pub(super) fn process_bid_requests(
     mut receivers: Query<(Entity, &InWorld, &mut MessageReceiver<PlaceBid>)>,
     db: Option<Res<GameDatabase>>,
     mut state: ResMut<AuctionHouseState>,
+    mut gold_updates: ResMut<GoldUpdateQueue>,
     mut senders: Query<&mut MessageSender<AuctionOperationResponse>>,
 ) {
     process_stateful_operation_requests(
@@ -140,7 +144,14 @@ pub(super) fn process_bid_requests(
         &mut state,
         &mut senders,
         |db, state, character_id, req| {
-            place_bid(&db.db, state, character_id, req.auction_id, req.amount)
+            place_bid_with_gold_updates(
+                &db.db,
+                state,
+                character_id,
+                req.auction_id,
+                req.amount,
+                &mut gold_updates,
+            )
         },
     );
 }
@@ -149,6 +160,7 @@ pub(super) fn process_buyout_requests(
     mut receivers: Query<(Entity, &InWorld, &mut MessageReceiver<BuyoutAuction>)>,
     db: Option<Res<GameDatabase>>,
     mut state: ResMut<AuctionHouseState>,
+    mut gold_updates: ResMut<GoldUpdateQueue>,
     mut senders: Query<&mut MessageSender<AuctionOperationResponse>>,
 ) {
     process_stateful_operation_requests(
@@ -156,7 +168,15 @@ pub(super) fn process_buyout_requests(
         db,
         &mut state,
         &mut senders,
-        |db, state, character_id, req| buyout_auction(&db.db, state, character_id, req.auction_id),
+        |db, state, character_id, req| {
+            buyout_auction_with_gold_updates(
+                &db.db,
+                state,
+                character_id,
+                req.auction_id,
+                &mut gold_updates,
+            )
+        },
     );
 }
 
@@ -214,6 +234,86 @@ fn expire_single_auction(db: &redb::Database, auction_id: u64, auction: &Auction
         0,
         Some(auction.item.clone()),
     );
+}
+
+pub(super) fn claim_mail_with_gold_update(
+    db: &redb::Database,
+    character_id: u64,
+    mail_id: u64,
+    gold_updates: &mut GoldUpdateQueue,
+) -> AuctionOperationResponse {
+    let response = claim_mail(db, character_id, mail_id);
+    record_successful_gold_updates(db, &response, [character_id], gold_updates);
+    response
+}
+
+pub(super) fn create_auction_with_gold_update(
+    db: &redb::Database,
+    state: &mut AuctionHouseState,
+    character_id: u64,
+    request: &CreateAuction,
+    gold_updates: &mut GoldUpdateQueue,
+) -> AuctionOperationResponse {
+    let response = create_auction(db, state, character_id, request);
+    record_successful_gold_updates(db, &response, [character_id], gold_updates);
+    response
+}
+
+pub(super) fn place_bid_with_gold_updates(
+    db: &redb::Database,
+    state: &mut AuctionHouseState,
+    character_id: u64,
+    auction_id: u64,
+    amount: u32,
+    gold_updates: &mut GoldUpdateQueue,
+) -> AuctionOperationResponse {
+    let previous_bidder = state
+        .auctions
+        .get(&auction_id)
+        .and_then(|auction| auction.current_bidder_character_id);
+    let response = place_bid(db, state, character_id, auction_id, amount);
+    record_successful_gold_updates(
+        db,
+        &response,
+        [Some(character_id), previous_bidder].into_iter().flatten(),
+        gold_updates,
+    );
+    response
+}
+
+pub(super) fn buyout_auction_with_gold_updates(
+    db: &redb::Database,
+    state: &mut AuctionHouseState,
+    character_id: u64,
+    auction_id: u64,
+    gold_updates: &mut GoldUpdateQueue,
+) -> AuctionOperationResponse {
+    let previous_bidder = state
+        .auctions
+        .get(&auction_id)
+        .and_then(|auction| auction.current_bidder_character_id);
+    let response = buyout_auction(db, state, character_id, auction_id);
+    record_successful_gold_updates(
+        db,
+        &response,
+        [Some(character_id), previous_bidder].into_iter().flatten(),
+        gold_updates,
+    );
+    response
+}
+
+fn record_successful_gold_updates(
+    db: &redb::Database,
+    response: &AuctionOperationResponse,
+    character_ids: impl IntoIterator<Item = u64>,
+    gold_updates: &mut GoldUpdateQueue,
+) {
+    if !response.success {
+        return;
+    }
+    for character_id in character_ids {
+        record_persisted_gold(db, character_id, gold_updates);
+    }
 }
 
 fn process_entity_requests<M, R, F, QF>(
