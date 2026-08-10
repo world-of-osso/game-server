@@ -28,7 +28,41 @@ fn execute_completed_trade_moves_items_and_gold() {
         target_offer: trade_offer(target_item.item_guid, 2, 900),
     };
 
-    execute_completed_trade(&db, &trade).expect("trade should complete");
+    let mut app = App::new();
+    app.add_plugins(crate::gold::GoldPlugin);
+    let initiator_player = app
+        .world_mut()
+        .spawn((
+            Player {
+                name: "TraderOne".into(),
+                race: 1,
+                class: 1,
+                appearance: shared::components::CharacterAppearance::default(),
+            },
+            ClientId(initiator_id),
+            shared::components::Gold(initiator_gold_before),
+        ))
+        .id();
+    let target_player = app
+        .world_mut()
+        .spawn((
+            Player {
+                name: "TraderTwo".into(),
+                race: 1,
+                class: 1,
+                appearance: shared::components::CharacterAppearance::default(),
+            },
+            ClientId(target_id),
+            shared::components::Gold(target_gold_before),
+        ))
+        .id();
+    {
+        let mut gold_updates = app
+            .world_mut()
+            .resource_mut::<crate::gold::GoldUpdateQueue>();
+        execute_completed_trade(&db, &trade, &mut gold_updates).expect("trade should complete");
+    }
+    app.update();
 
     let initiator_inventory = persistence::load_inventory(&db, initiator_id);
     let target_inventory = persistence::load_inventory(&db, target_id);
@@ -38,6 +72,22 @@ fn execute_completed_trade_moves_items_and_gold() {
         initiator_gold_before - 1_500 + 900
     );
     assert_eq!(target_inventory.gold, target_gold_before - 900 + 1_500);
+    assert_eq!(
+        app.world()
+            .entity(initiator_player)
+            .get::<shared::components::Gold>()
+            .unwrap()
+            .0,
+        initiator_inventory.gold
+    );
+    assert_eq!(
+        app.world()
+            .entity(target_player)
+            .get::<shared::components::Gold>()
+            .unwrap()
+            .0,
+        target_inventory.gold
+    );
     assert!(
         initiator_inventory
             .items
@@ -66,8 +116,11 @@ fn execute_completed_trade_fails_when_item_is_missing() {
         target_offer: TradeOffer::default(),
     };
 
-    let error = execute_completed_trade(&db, &trade).expect_err("trade should fail");
+    let mut gold_updates = crate::gold::GoldUpdateQueue::default();
+    let error =
+        execute_completed_trade(&db, &trade, &mut gold_updates).expect_err("trade should fail");
     assert!(error.contains("no longer in inventory"));
+    assert!(gold_updates.is_empty());
 }
 
 #[test]

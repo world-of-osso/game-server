@@ -14,6 +14,7 @@ use self::trade_support::{
     send_trade_snapshot_for_player, trade_error_message, validate_offered_item,
 };
 use crate::auth::Authenticated;
+use crate::gold::GoldUpdateQueue;
 use crate::networking::PlayerLink;
 use crate::persistence::{self, ClientId, GameDatabase};
 
@@ -445,6 +446,7 @@ fn process_confirm_requests(
     connections: ConnectionQuery,
     db: Option<Res<GameDatabase>>,
     mut trade: ResMut<ServerTradeState>,
+    mut gold_updates: ResMut<GoldUpdateQueue>,
     mut senders: Query<&mut MessageSender<TradeStateUpdate>>,
 ) {
     let Some(db) = db else { return };
@@ -458,43 +460,95 @@ fn process_confirm_requests(
             continue;
         };
         for _ in receiver.receive() {
-            match trade.manager.confirm_trade(client_id.0) {
-                Ok(Some(completed)) => match execute_completed_trade(&db.db, &completed) {
-                    Ok(()) => {
-                        send_trade_completion(&completed, &connections, &players, &mut senders);
-                    }
-                    Err(error) => {
-                        send_trade_error(conn_entity, &mut senders, &error);
-                        if let Some(other_id) = other_character_id(&completed, client_id.0) {
-                            send_trade_message_to_other(
-                                client_id.0,
-                                other_id,
-                                &connections,
-                                &players,
-                                &mut senders,
-                                Some(error),
-                            );
-                        }
-                    }
-                },
-                Ok(None) => {
-                    if let Some(session) = trade.manager.get_session(client_id.0) {
-                        broadcast_trade_state(
-                            &db.db,
-                            session,
-                            &players,
-                            &connections,
-                            &mut senders,
-                            None,
-                        );
-                    }
-                }
-                Err(error) => {
-                    send_trade_error(conn_entity, &mut senders, trade_error_message(error));
-                }
-            }
+            handle_confirm_trade_request(
+                conn_entity,
+                client_id.0,
+                &mut trade.manager,
+                &db,
+                &mut gold_updates,
+                &connections,
+                &players,
+                &mut senders,
+            );
         }
     }
+}
+
+fn handle_confirm_trade_request(
+    conn_entity: Entity,
+    character_id: u64,
+    manager: &mut TradeManager,
+    db: &GameDatabase,
+    gold_updates: &mut GoldUpdateQueue,
+    connections: &ConnectionQuery,
+    players: &PlayerQuery,
+    senders: &mut Query<&mut MessageSender<TradeStateUpdate>>,
+) {
+    match manager.confirm_trade(character_id) {
+        Ok(Some(completed)) => {
+            let result = execute_and_send_completed_trade(
+                db,
+                &completed,
+                gold_updates,
+                connections,
+                players,
+                senders,
+            );
+            if let Err(error) = result {
+                send_completed_trade_error(
+                    conn_entity,
+                    character_id,
+                    &completed,
+                    error,
+                    connections,
+                    players,
+                    senders,
+                );
+            }
+        }
+        Ok(None) => {
+            if let Some(session) = manager.get_session(character_id) {
+                broadcast_trade_state(&db.db, session, players, connections, senders, None);
+            }
+        }
+        Err(error) => send_trade_error(conn_entity, senders, trade_error_message(error)),
+    }
+}
+
+fn execute_and_send_completed_trade(
+    db: &GameDatabase,
+    completed: &shared::trade::CompletedTrade,
+    gold_updates: &mut GoldUpdateQueue,
+    connections: &ConnectionQuery,
+    players: &PlayerQuery,
+    senders: &mut Query<&mut MessageSender<TradeStateUpdate>>,
+) -> Result<(), String> {
+    execute_completed_trade(&db.db, completed, gold_updates)?;
+    send_trade_completion(completed, connections, players, senders);
+    Ok(())
+}
+
+fn send_completed_trade_error(
+    conn_entity: Entity,
+    character_id: u64,
+    completed: &shared::trade::CompletedTrade,
+    error: String,
+    connections: &ConnectionQuery,
+    players: &PlayerQuery,
+    senders: &mut Query<&mut MessageSender<TradeStateUpdate>>,
+) {
+    send_trade_error(conn_entity, senders, &error);
+    let Some(other_id) = other_character_id(completed, character_id) else {
+        return;
+    };
+    send_trade_message_to_other(
+        character_id,
+        other_id,
+        connections,
+        players,
+        senders,
+        Some(error),
+    );
 }
 
 fn enforce_trade_range(

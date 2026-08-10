@@ -7,6 +7,7 @@ use shared::protocol::{
 };
 use shared::trade::{CompletedTrade, TRADE_SLOT_COUNT, TradeItem, TradeOffer};
 
+use crate::gold::GoldUpdateQueue;
 use crate::persistence::{self, ClientId, InventoryData, InventoryItemData};
 use crate::trade::{ConnectionQuery, PlayerQuery};
 
@@ -191,6 +192,7 @@ pub(super) fn validate_offered_item(
 pub(super) fn execute_completed_trade(
     db: &redb::Database,
     trade: &CompletedTrade,
+    gold_updates: &mut GoldUpdateQueue,
 ) -> Result<(), String> {
     let mut initiator_inventory = persistence::load_inventory(db, trade.initiator);
     let mut target_inventory = persistence::load_inventory(db, trade.target);
@@ -218,6 +220,8 @@ pub(super) fn execute_completed_trade(
 
     persistence::save_inventory(db, trade.initiator, &initiator_inventory);
     persistence::save_inventory(db, trade.target, &target_inventory);
+    gold_updates.record(trade.initiator, initiator_inventory.gold);
+    gold_updates.record(trade.target, target_inventory.gold);
     Ok(())
 }
 
