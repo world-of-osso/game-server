@@ -14,7 +14,7 @@ Source-grounded audit of every production `game-server` system registered in a r
 | Fixed-step ordering | **Incomplete:** several same-tick outcomes are scheduler-order-dependent |
 | Application polling | **Several confirmed unnecessary loops:** gold, Who, rest, durability, inactive auto-attacks |
 | Lightyear/interest | **Major root/entity scans fixed:** remaining recurring work is connection/dirty-state plumbing |
-| Receiver fan-out | **Real but unmeasured:** 76 `Update` systems poll typed connection receivers |
+| Receiver fan-out | **Real but unmeasured:** 74 `Update` systems poll typed connection receivers |
 
 The design should not be approved as complete until the persistence bug and fixed-order contract are resolved.
 
@@ -30,7 +30,7 @@ A production-source inventory found:
 | `Last` | 1 | 1 |
 | **Recurring total** | **103** | **130** |
 
-`Startup`, `PostStartup`, tests, and observers are excluded from the recurring count. Lightyear-owned transport/message/replication systems are audited separately below.
+`Startup`, `PostStartup`, tests, and observers are excluded from the recurring count. “Registration calls” counts each production `.add_systems(...)` invocation, including multiline calls; “expanded systems” expands tuple/chain registrations. Lightyear-owned transport/message/replication systems are audited separately below.
 
 Verdict labels:
 
@@ -182,7 +182,7 @@ Most `Update` systems are request-driven. The table lists all module groups cove
 
 ## Receiver Fan-Out
 
-Seventy-six recurring `Update` systems directly or indirectly drain typed `MessageReceiver`s. Even with no messages, each system iterates every connection entity matching that receiver query before discovering an empty buffer.
+Seventy-four recurring `Update` systems directly or indirectly drain typed `MessageReceiver`s. Even with no messages, each system iterates every connection entity matching that receiver query before discovering an empty buffer.
 
 This is widespread recurring work, but **not yet a proven performance defect**. No production measurement records:
 
@@ -190,7 +190,7 @@ This is widespread recurring work, but **not yet a proven performance defect**. 
 - non-empty receivers or messages drained
 - empty-poll time per system
 - total receiver-poll share of `Update`
-- scheduler contention from 76 independent systems
+- scheduler contention from 74 independent systems
 
 Lightyear 0.26.4 supports trigger/event delivery through `RemoteEvent<M>` and `AppTriggerExt`, but converting request/response messages would be a protocol and routing redesign. Do not replace all receiver systems based only on static inspection.
 
@@ -262,7 +262,7 @@ This is a static source audit plus a focused Bevy 0.18 change-detection reproduc
 - [vendor/lightyear_replication/src/send/buffer.rs](../../../vendor/lightyear_replication/src/send/buffer.rs) — dirty candidates and sender metadata passes
 - [Cargo.lock](../../../Cargo.lock) — locked Bevy 0.18.0 and Lightyear 0.26.4 versions
 - `bevy_ecs 0.18.0 src/system/function_system.rs:445-451,680-684` — system `last_run` advances on execution
-- `bevy_ecs 0.18.0 src/query/filter.rs:942-954` — `Changed<T>` compares against system `last_run`
+- `bevy_ecs 0.18.0 src/query/filter.rs:1083-1094` — `Changed<T>` compares against system `last_run`
 
 ## See Also
 
