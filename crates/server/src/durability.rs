@@ -62,6 +62,12 @@ type ChangedDurabilityQuery<'w, 's> = Query<
     (&'static ClientId, &'static EquippedDurability),
     (With<Player>, Changed<EquippedDurability>),
 >;
+type ChangedDurabilitySnapshotQuery<'w, 's> = Query<
+    'w,
+    's,
+    (Entity, Ref<'static, EquippedDurability>),
+    (With<Player>, Changed<EquippedDurability>),
+>;
 
 pub fn load_equipped_durability(data: &CharacterData) -> EquippedDurability {
     let mut slots = active_durability_slots(&data.equipment_appearance)
@@ -209,7 +215,7 @@ fn persist_changed_durability(db: Option<Res<GameDatabase>>, players: ChangedDur
 }
 
 fn send_changed_durability_snapshot(
-    players: Query<(Entity, Ref<EquippedDurability>), (With<Player>, Changed<EquippedDurability>)>,
+    players: ChangedDurabilitySnapshotQuery,
     connections: Query<(Entity, &PlayerLink), With<Authenticated>>,
     mut senders: Query<&mut MessageSender<DurabilityStateUpdate>>,
 ) {
