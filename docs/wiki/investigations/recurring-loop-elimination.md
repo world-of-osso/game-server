@@ -10,7 +10,7 @@ The server performance pass is replacing broad recurring scans with state-, even
 | Terrain streaming | Recompute each connection's 3×3 neighborhood at 20 Hz | Evaluate on initial delivery or tile transition | Completed in `3c5ceca` |
 | Friends online snapshots | Rebuild all online/friend snapshots every app frame | Rebuild only dirty affected owners | Completed in `914d570` |
 | Interest management | Scan every visible entity against every player every 500 ms | Dirty position/lifecycle triggers plus spatial buckets | Completed in `4523373`, tests split in `a85b035` |
-| Lightyear replication | Scan every replicated root/component per client every 50 ms | Dirty entity/component queue | Pending |
+| Lightyear replication | Traverse every replicated root/component per client every 50 ms | Dirty global/per-sender candidates with initial full sync and ACK retention | Implemented in `269655a`, `30b5078`; strict-Empty CPU gate pending |
 
 ## Auction Expiration
 
@@ -82,6 +82,22 @@ The integration tests in `interest_tests.rs` cover the production `FixedUpdate` 
 
 The implementation landed in `4523373`; `a85b035` moved the integration tests into `interest_tests.rs` without changing the runtime behavior. Focused interest tests passed after both revisions.
 
+## Lightyear Replication
+
+Before `30b5078`, the vendored Lightyear sender traversed every cached replicated root for every sender whenever its 50 ms timer fired, then inspected every replicated component and child. `269655a` vendored `lightyear_replication` `0.26.4` so the sender boundary could change without replacing Lightyear's existing encoder. `30b5078` removes the per-sender all-root/all-component traversal from the steady-state path: a global `ReplicationDirtyQueue` marks entities for all senders, while `mark_for_sender` records connection-specific candidates. The queue is drained into each sender's dirty candidate map before the existing `replicate_entity` semantic pipeline runs.
+
+A new or reset sender performs one initial full sync by queueing every current replication root. After that, unchanged roots are not candidates. Dirty candidates remain queued while their group has pending actions/updates or unacknowledged `SinceLastAck` state, so ACK advancement and NACK retry behavior remain authoritative. Visibility gain/loss, room visibility changes, component inserts/configuration, `NetworkVisibility` removal, hierarchy children, spawn/despawn actions, grouping, priority, delta compression, entity mapping, and wire encoding continue through Lightyear's existing paths.
+
+Authoritative server writers mark real changes rather than relying on a broad `Changed<T>` scan. The marks cover player movement/gravity, NPC movement and leash health restoration, combat status/health transitions, derived stats, gold synchronization, barber appearance changes, friend/presence activity, chat/emote activity, and interest/visibility transitions. The implementation does not claim that every replicated writer is a new feature; it routes existing state boundaries into the sender's candidate queue.
+
+### Behavioral proof
+
+The integration tests use the in-process crossbeam client/server stepper and test-only atomic diagnostics in `lightyear_replication::test_diagnostics`; the counters are not production metrics. The RED idle case measured exactly 160 root visits during five idle send windows over 32 unchanged roots. GREEN reduced both `root_candidates` and `replicate_entity_visits` to zero after initial sync.
+
+Coverage includes initial full replication, changed-position traversal of only the changed root, retention of an unacknowledged dirty root until ACK, sender-targeted visibility gain/loss without visiting another sender, replicated component insert/remove actions, unchanged-root idle behavior, client connection, input delivery, and multi-client routing. The proof covers candidate selection and preserved observable replication behavior; it is not a byte-level wire-count benchmark.
+
+The vendored provenance is recorded in [`vendor/lightyear_replication/UPSTREAM.md`](../../../vendor/lightyear_replication/UPSTREAM.md): version `0.26.4`, crates.io checksum `a451536b73e618035472548e8d7f1af51e193649f556318f7836ddc70e6f73d2`, upstream commit `7082c5eb09463fc110461f1cc928994460611e98`, and MIT OR Apache-2.0 licensing. The remaining strict-Empty gate is live client verification that CPU usage is at or below 10% with zero terrain/world rendering; no `<=10%` result is claimed here.
+
 ## Sources
 
 - [auction plugin](../../../crates/server/src/auction_house.rs) — one-second expiration run condition
@@ -101,6 +117,12 @@ The implementation landed in `4523373`; `a85b035` moved the integration tests in
 - [AI position writers](../../../crates/server/src/creature_ai.rs) — NPC movement dirty marking
 - `game-server` commit `4523373` — dirty-position interest implementation
 - `game-server` commit `a85b035` — interest integration-test split
+- [vendored Lightyear provenance](../../../vendor/lightyear_replication/UPSTREAM.md) — version, checksum, upstream commit, and license
+- [dirty candidate queue](../../../vendor/lightyear_replication/src/send/dirty.rs) — global/per-sender marks and lifecycle observers
+- [candidate traversal](../../../vendor/lightyear_replication/src/send/candidate.rs) — initial sync, candidate processing, and retry retention
+- [sender state](../../../vendor/lightyear_replication/src/send/sender.rs) — ACK/NACK and dirty-candidate retention
+- [replication integration tests](../../../crates/integration-tests/src/tests.rs) — diagnostic RED/GREEN and behavior coverage
+- `game-server` commits `269655a` and `30b5078` — vendoring and dirty-candidate implementation
 
 ## See Also
 

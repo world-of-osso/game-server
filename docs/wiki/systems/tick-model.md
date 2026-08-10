@@ -11,7 +11,7 @@ Each tick runs these stages in order:
 3. **Movement validation** — server-authoritative position update; applies gravity, terrain snapping, speed limits
 4. **Combat resolution** — `start_attack_system`, `auto_attack_system` (including the direct NPC death transition), `respawn_system`
 5. **Zone transition checks** — entities crossing zone boundaries are handed off via events
-6. **Lightyear replication** — delta-compressed changed components sent to clients
+6. **Lightyear replication** — the 50 ms sender cadence processes dirty global/per-sender candidates through Lightyear's existing delta, ACK, visibility, and action pipeline; unchanged roots are skipped after initial full sync
 7. **Persistence flush** — every N ticks (every 5 minutes), dirty entities written to redb
 
 NPC death is not a separate all-living-NPC health poll. The authoritative melee damage boundary handles the lethal transition when `try_swing` reduces an NPC to zero health; respawn remains a state-bounded timer query.
@@ -21,6 +21,8 @@ NPC death is not a separate all-living-NPC health poll. The authoritative melee 
 Auction expiration is registered in `FixedUpdate` but runs immediately once and then at most once per second. Sub-second ticks skip `expire_auctions` entirely; expiration, sale completion, persistence, and auction-mail behavior remain unchanged.
 
 Terrain streaming remains in `FixedUpdate` so position changes are observed promptly, but unchanged player tiles return before the 3×3 neighborhood loop. Initial entry, reconnect, boundary crossings, and teleports still evaluate terrain tiles. See [[recurring-loop-elimination]].
+
+Lightyear replication retains its 50 ms sender cadence, but `30b5078` removes the per-sender all-root/all-component traversal. Initial connection or sender reset queues a full root sync; later fixed ticks process only dirty global/per-sender candidates and retain unacknowledged candidates until ACK/NACK state allows cleanup. See [[networking]] and [[recurring-loop-elimination]].
 
 ## Zone-Parallel Scheduling
 
@@ -42,6 +44,9 @@ AzerothCore uses a ~1ms main loop and manually batches work. Bevy's `FixedUpdate
 - [crates/server/src/combat.rs](../../../crates/server/src/combat.rs) — direct NPC death transition and state-bounded respawn
 - [crates/server/src/auction_house.rs](../../../crates/server/src/auction_house.rs) — one-second auction expiration gate
 - [crates/server/src/networking.rs](../../../crates/server/src/networking.rs) — terrain tile-transition gate
+- [vendor/lightyear_replication/src/send/buffer.rs](../../../vendor/lightyear_replication/src/send/buffer.rs) — dirty-candidate replication boundary
+- [vendor/lightyear_replication/src/send/candidate.rs](../../../vendor/lightyear_replication/src/send/candidate.rs) — initial sync and retry candidate processing
+- `game-server` commits `269655a` and `30b5078` — vendored sender and dirty-candidate implementation
 
 ## See Also
 

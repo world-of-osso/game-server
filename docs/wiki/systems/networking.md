@@ -24,7 +24,19 @@ Lightyear handles:
 - **Entity lifecycle** — spawn/despawn packets as entities enter/leave client view
 - **Zone transitions** — entity despawn + respawn on the client side is transparent
 
-The server's Lightyear `0.26.4` sender runs every 50 ms with `SinceLastAck`. The client compares decoded replicated components and suppresses equal ECS replacement only after serialization, batching, transport, delivery, and deserialization. First-wave fixes cover NPC movement, player displacement, presence, combat status, movement state, and gravity; second-wave commits `1c139e9`, `e13e09e`, `057dd17`, and `41feebb` cover equal derived stats, respawn state, equipment appearance, and guild membership. `f84ee17` adds independent clear-path coverage for the equipment guard, while `945eb0f` rules out unchanged Gold synchronization as already guarded. See [[semantic-noop-replication]] for the coverage matrix; no CPU, bandwidth, or wire-count improvement is claimed.
+The server's Lightyear `0.26.4` sender still wakes on its 50 ms `SinceLastAck` cadence, but commits `269655a` and `30b5078` remove the steady-state per-sender traversal of every replicated root and component. The sender now processes dirty global/per-sender candidates and retains candidates until ACK/NACK and pending-action semantics permit removal. A new or reset sender queues every current root once for initial full sync; subsequent unchanged roots do not enter the candidate traversal.
+
+The client compares decoded replicated components and suppresses equal ECS replacement only after serialization, batching, transport, delivery, and deserialization. First-wave fixes cover NPC movement, player displacement, presence, combat status, movement state, and gravity; second-wave commits `1c139e9`, `e13e09e`, `057dd17`, and `41feebb` cover equal derived stats, respawn state, equipment appearance, and guild membership. `f84ee17` adds independent clear-path coverage for the equipment guard, while `945eb0f` rules out unchanged Gold synchronization as already guarded. See [[semantic-noop-replication]] for the separate equal-assignment coverage; no Character advancement or `<=10%` CPU claim is made.
+
+### Dirty Candidate Replication
+
+`ReplicationDirtyQueue::mark` targets all connected senders; `mark_for_sender` targets one connection for visibility-specific work. Component inserts/configuration and `NetworkVisibility` removal enqueue replication roots. Visibility gain/loss, room changes, hierarchy children, spawn/despawn actions, ACK retention, NACK retry, replication groups, priorities, delta compression, entity mapping, and existing action/update encoding remain inside Lightyear's semantic pipeline.
+
+Authoritative marks are emitted at real state boundaries: player input/gravity, NPC movement/leash restoration, combat transitions, derived-stat recalculation, gold synchronization, barber appearance updates, friend/presence and chat/emote activity, plus interest/visibility transitions. The queue is not a replacement for component change-tick filtering; it narrows candidates before the existing component and ACK checks.
+
+The sender change is a vendored patch rather than a protocol fork. `vendor/lightyear_replication/UPSTREAM.md` records Lightyear `0.26.4`, crates.io checksum `a451536b73e618035472548e8d7f1af51e193649f556318f7836ddc70e6f73d2`, upstream commit `7082c5eb09463fc110461f1cc928994460611e98`, and MIT OR Apache-2.0 licensing. Test-only diagnostics count root candidates and `replicate_entity` visits; they are enabled only for integration proof.
+
+The remaining strict-Empty gate is live client CPU verification with zero terrain/world rendering. The candidate traversal proof passes, but no `<=10%` CPU result is claimed.
 
 ## Interest Management
 
@@ -74,6 +86,11 @@ The `CombatChannel` carries `CombatEvent` structs (attacker, target, amount, spe
 - [crates/server/src/networking.rs](../../../crates/server/src/networking.rs) — player movement dirty marking and terrain tile-transition gating
 - [crates/server/src/interest.rs](../../../crates/server/src/interest.rs) — dirty-position interest index and visibility transitions
 - [crates/server/src/interest_tests.rs](../../../crates/server/src/interest_tests.rs) — fixed-tick interest behavior proof
+- [vendor/lightyear_replication/UPSTREAM.md](../../../vendor/lightyear_replication/UPSTREAM.md) — Lightyear `0.26.4` provenance
+- [vendor/lightyear_replication/src/send/dirty.rs](../../../vendor/lightyear_replication/src/send/dirty.rs) — dirty global/per-sender queue and lifecycle marks
+- [vendor/lightyear_replication/src/send/candidate.rs](../../../vendor/lightyear_replication/src/send/candidate.rs) — initial sync and candidate processing
+- [vendor/lightyear_replication/src/send/sender.rs](../../../vendor/lightyear_replication/src/send/sender.rs) — ACK/NACK retention
+- [crates/integration-tests/src/tests.rs](../../../crates/integration-tests/src/tests.rs) — in-process replication integration proof
 - [CLAUDE.md](../../../CLAUDE.md) — dependency versions
 
 ## See Also

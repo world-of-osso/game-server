@@ -2,6 +2,10 @@
 
 Chronological record of wiki operations.
 
+## [2026-08-10] investigation | Replace Lightyear root traversal with dirty candidates
+
+Updated [[recurring-loop-elimination]], [[networking]], [[tick-model]], and `index.md` for `269655a` and `30b5078`. Recorded vendored `lightyear_replication` `0.26.4` provenance, removal of the per-sender 50 ms all-root/all-component traversal, global and sender-targeted dirty candidates, initial full sync, ACK/NACK retention, visibility and component lifecycle triggers, and authoritative writer marks. Recorded test-only candidate/visit diagnostics: the RED idle case measured exactly 160 root visits; GREEN reduced idle candidates and `replicate_entity` visits to zero after initial sync. Recorded in-process integration coverage for changed roots, ACK retention, targeted visibility, component insert/remove, initial sync, and unchanged idle roots. The strict-Empty client CPU gate remains pending; no Character advancement or `<=10%` CPU claim is made.
+
 ## [2026-08-09] investigation | Replace recurring interest scan with dirty spatial updates
 
 Updated [[recurring-loop-elimination]] and [[networking]] for commits `4523373` and `a85b035`. The former removed the every-500ms `NetworkVisibility`-entities × players scan: authoritative position and lifecycle triggers now dirty observers/targets, a 100-yard X/Z spatial index narrows candidates, and exact 3D `<= 100²` visibility transitions remain per connection. The latter split the real fixed-tick integration tests into `interest_tests.rs` without runtime changes. Recorded proof for unchanged ticks, new targets, same-bucket radius crossings, independent players, removal/re-add, reconnect, spawn/despawn, teleports, boundaries, corpses, and other preserved visibility behavior. Lightyear's 50ms per-sender traversal remains the only pending recurring-loop slice; this update makes no broader Empty-completion claim.
