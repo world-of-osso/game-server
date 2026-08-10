@@ -1,6 +1,6 @@
 # Tick Loop Audit
 
-Source-grounded audit of every production `game-server` system registered in a recurring Bevy schedule. It answers whether the current loop design is correct, identifies work that is unnecessary every tick/update, and separates confirmed defects from systems that need measurement before redesign. Commit `a4e7aeb` records the completed Who request-gating slice; no live CPU savings claim is made.
+Source-grounded audit of every production `game-server` system registered in a recurring Bevy schedule. It answers whether the current loop design is correct, identifies work that is unnecessary every tick/update, and separates confirmed defects from systems that need measurement before redesign. Commits `a4e7aeb` and `c46b322` record completed Who and durability request/change gating; no live CPU savings claim is made.
 
 ## Content
 
@@ -16,7 +16,7 @@ Source-grounded audit of every production `game-server` system registered in a r
 | Lightyear/interest | **Major root/entity scans fixed:** remaining recurring work is connection/dirty-state plumbing |
 | Receiver fan-out | **Real but unmeasured:** 74 `Update` systems poll typed connection receivers |
 
-**Server audit status: 4/7 complete.** Gold (#1), Who (#2), rest (#3), and inactive auto-attacks (#5) are complete. Durability (#4), calendar (#6), and trade lookup (#7) remain open.
+**Server audit status: 5/7 complete.** Gold (#1), Who (#2), rest (#3), durability (#4), and inactive auto-attacks (#5) are complete. Calendar (#6) and trade lookup (#7) remain open.
 
 The design should not be approved as complete until the persistence bug and fixed-order contract are resolved.
 
@@ -103,10 +103,16 @@ Conflicting ECS access forces serialization, but serialization order is not a ga
 | 1 | `sync_player_gold_from_inventory` | Every `Update`, every player, synchronous redb inventory load | **REMOVE/GATE.** Update replicated `Gold` at inventory mutation boundaries or through a dirty-character queue |
 | 2 | `who::process_query_requests` | Builds/clones the full online-player list before checking whether any request exists | **COMPLETED.** `a4e7aeb` drains requests first, returns idle with zero roster materializations, and builds one shared roster only when requests exist |
 | 3 | `rest::update_player_rest_state` | Every `Update`, every authenticated player, linear scan of all innkeepers | **COMPLETED.** `fffa86a` re-evaluates only initial state or `Changed<Position>`/`Changed<Level>` players; add spatial lookup only if profiling justifies it |
-| 4 | `send_changed_durability_snapshot` | Every `Update`, every player with durability, then `Ref::is_changed()` in the body | **REMOVE/GATE.** Use a `Changed<EquippedDurability>` query while retaining added-vs-changed semantics |
+| 4 | `send_changed_durability_snapshot` | Every `Update`, every player with durability, then `Ref::is_changed()` in the body | **COMPLETED.** `c46b322` gates the query with `Changed<EquippedDurability>` and retains the `is_added()` exclusion |
 | 5 | inactive `AutoAttack` entities | Clearing a target leaves `AutoAttack { active: false }`; fixed combat still queries it forever | **COMPLETED.** `152ccbd` removes `AutoAttack` on target loss; component presence now defines participation |
 | 6 | calendar query snapshot | Rebuilds the calendar snapshot before checking for `QueryCalendar` messages | **REMOVE/GATE.** Build once only when at least one request was drained |
 | 7 | trade offer lookup | Resolves each connection's player before checking whether that typed receiver is empty | **REMOVE/GATE.** Drain first, then resolve player state for non-empty requests |
+
+### Durability Snapshot Gating
+
+Before `c46b322`, `send_changed_durability_snapshot` entered every `Update`, iterated every player with `EquippedDurability`, and checked `Ref::is_changed()` inside the body. The query now uses `Changed<EquippedDurability>`, eliminating idle per-player visits while preserving the `is_added()` exclusion for newly added durability.
+
+The RED proof is `/tmp/claude/game-server/durability-changed-filter-red.log`; GREEN is `/tmp/claude/game-server/durability-changed-filter-green.log` (**6 passed**). Formatting and readability artifacts are `/tmp/claude/game-server/durability-changed-filter-fmt.log` and `/tmp/claude/game-server/durability-changed-filter-readability.json`. The proof covers unchanged, newly added, changed, routed, and snapshot-content behavior. No live CPU savings claim is made.
 
 ### Who Query Roster Construction
 
@@ -174,7 +180,7 @@ Most `Update` systems are request-driven. The table lists all module groups cove
 | Currency | initial state; earn/spend handlers | Added + receivers — **KEEP** |
 | Death service | initial state; query/release/resurrect/healer/stuck handlers | Added + receivers — **KEEP** |
 | Duel service | challenge/accept/decline handlers | Receivers — **KEEP** |
-| Durability | initial/query; appearance sync; persistence; changed snapshot | Added/Changed except changed-snapshot full probe — **REMOVE/GATE** that probe |
+| Durability | initial/query; appearance sync; persistence; changed snapshot | Added/Changed; changed snapshot now query-gated — **KEEP** |
 | Friends | initial/query/add/remove/presence; auto-AFK; changed/removed presence; dirty snapshots | Receiver/change/dirty work is good; auto-AFK is **OPTIMIZE** |
 | Guild | initial state; query/profile/officer-note handlers | Added + receivers — **KEEP** |
 | Ignore list | initial/query/add/remove | Added + receivers — **KEEP** |
@@ -247,7 +253,7 @@ These completed slices do not prove that the rest of the server has no recurring
 1. Fix the periodic persistence `Changed<T>` bug and add a real 300-tick-window regression.
 2. Remove per-player redb gold polling; make inventory mutation own `Gold` synchronization.
 3. Add explicit fixed phase ordering for movement, combat, death, lifecycle, interest, and persistence.
-4. Convert durability, calendar, and trade pre-work to request/change/state boundaries; Who is complete in `a4e7aeb`.
+4. Convert calendar and trade pre-work to request boundaries; Who is complete in `a4e7aeb`, and durability change gating is complete in `c46b322`.
 5. Instrument receiver fan-out, gravity, AI, interest target fanout, database latency, and fixed catch-up before broader redesign.
 
 ## Proof Limits
@@ -263,7 +269,8 @@ This is a static source audit plus a focused Bevy 0.18 change-detection reproduc
 - `game-server` commit `a4e7aeb` — drain Who requests before building roster
 - [crates/server/src/rest.rs](../../../crates/server/src/rest.rs) — initial and change-filtered player/innkeeper evaluation
 - `game-server` commit `fffa86a` — rest-state evaluation gate and transition proof
-- [crates/server/src/durability.rs](../../../crates/server/src/durability.rs) — changed durability polling
+- [crates/server/src/durability.rs](../../../crates/server/src/durability.rs) — initial/query durability handling, persistence, appearance sync, and changed-player snapshots
+- `game-server` commit `c46b322` — query-level durability change gating with added-component exclusion
 - [crates/server/src/combat.rs](../../../crates/server/src/combat.rs) — attack participation, combat state, and respawn
 - [crates/server/src/creature_ai.rs](../../../crates/server/src/creature_ai.rs) — five fixed AI passes and state branches
 - [crates/server/src/death.rs](../../../crates/server/src/death.rs) — all-player death detection

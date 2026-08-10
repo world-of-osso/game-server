@@ -16,6 +16,7 @@ The server performance pass is replacing broad recurring scans with state-, even
 | Who roster materialization | Build the full online-player list before checking `QueryWho` receivers | Drain latest requests first; build one shared roster only when requests exist | Completed in `a4e7aeb`; no live CPU savings claim |
 | Inactive auto-attacks | Fixed combat query retains every `AutoAttack { active: false }` after target loss | Remove `AutoAttack` when `CombatTarget` becomes `None`; active attackers remain fixed-step | Completed in `152ccbd`; live CPU gate pending |
 | Rest-state evaluation | Every `Update`, every authenticated player, linear scan of all innkeepers | Evaluate initial state or only `Changed<Position>`/`Changed<Level>` players | Completed in `fffa86a`; live CPU gate pending |
+| Durability snapshots | Every `Update`, every player with durability, then probe `Ref::is_changed()` in the body | Query-level `Changed<EquippedDurability>` gating while retaining the `is_added()` exclusion | Completed in `c46b322`; live CPU savings claim not made |
 | Gold persistence synchronization | Every `Update`, every online player, synchronous redb inventory read | Record persisted mutation values and apply them in `PostUpdate` before replication buffering | Completed in `4e4c73d`, `c3b3c04`, `9d2067c`, `91bbedd`, `8920feb`; live CPU gate pending |
 
 ## Auction Expiration
@@ -57,6 +58,14 @@ Before `fffa86a`, `update_player_rest_state` visited every authenticated player 
 Initial world entry still creates and sends the first snapshot. Position changes preserve enter/leave transitions, and level changes recompute rested-XP maximums. Unchanged authenticated players no longer scan the innkeeper list or dirty their rest state.
 
 The behavioral RED test at `/tmp/claude/game-server/rest-dirty-evaluation-red.log` failed because an unchanged update advanced `PlayerRestState::last_changed()`. The focused GREEN test at `/tmp/claude/game-server/rest-dirty-evaluation-green.log` passed after `fffa86a`; cargo fmt and Rust readability evidence were recorded in `/tmp/claude/game-server/rest-dirty-evaluation-readability`. This is a server-side loop elimination; no live CPU or Character-stage claim is made before measurement.
+
+## Durability Snapshot Synchronization
+
+Before `c46b322`, `send_changed_durability_snapshot` ran on every `Update`, visited every player with `EquippedDurability`, and only then called `Ref::is_changed()` in the system body. Idle updates therefore paid the per-player ECS iteration and change-tick probe even when no durability changed.
+
+The query now uses `Changed<EquippedDurability>`, so unchanged players do not enter the system. The existing `is_added()` exclusion remains inside the body: newly added durability is still excluded from the changed snapshot path, while a later mutation sends the existing `DurabilityStateUpdate` with unchanged routing and snapshot content.
+
+The six-test proof covers unchanged players, newly added durability, changed durability, routing, repair-cost snapshot content, and existing durability behavior. RED: `/tmp/claude/game-server/durability-changed-filter-red.log`. GREEN: `/tmp/claude/game-server/durability-changed-filter-green.log` (**6 passed**). Formatting and readability artifacts: `/tmp/claude/game-server/durability-changed-filter-fmt.log` and `/tmp/claude/game-server/durability-changed-filter-readability.json`. This is a server-side loop gate; no live CPU savings claim is made.
 
 ## Gold Persistence Synchronization
 
@@ -164,6 +173,8 @@ Follow-up `aa5dddb` closed a replication wake-up gap in movement input handling.
 - `game-server` commit `152ccbd` — remove inactive auto-attack components
 - [rest system](../../../crates/server/src/rest.rs) — initial and change-filtered rest-state evaluation
 - `game-server` commit `fffa86a` — avoid unchanged player rest-state scans
+- [durability system](../../../crates/server/src/durability.rs) — changed-player snapshot gating and added-component exclusion
+- `game-server` commit `c46b322` — gate durability snapshots on changed players
 - [Who system](../../../crates/server/src/who.rs) — drain-first request handling, shared roster, filtering, sorting, and response routing
 - `game-server` commit `a4e7aeb` — drain Who requests before building roster
 - [vendored Lightyear provenance](../../../vendor/lightyear_replication/UPSTREAM.md) — version, checksum, upstream commit, and license

@@ -1,5 +1,9 @@
 # Wiki Log
 
+## [2026-08-10] investigation | Gate durability snapshots on changed players
+
+Updated [[recurring-loop-elimination]], [[tick-loop-audit]], [[networking]], and `index.md` for committed server fix `c46b322`. Recorded the previous every-`Update` per-player `Ref::is_changed()` probe and the new query-level `Changed<EquippedDurability>` gate, while retaining the `is_added()` exclusion for newly inserted durability. RED: `/tmp/claude/game-server/durability-changed-filter-red.log`. GREEN: `/tmp/claude/game-server/durability-changed-filter-green.log` (**6 passed**). Formatting/readability artifacts: `/tmp/claude/game-server/durability-changed-filter-fmt.log` and `/tmp/claude/game-server/durability-changed-filter-readability.json`. Audit status is now **5/7 complete**; calendar and trade remain open. No live CPU savings claim; no source, tests, or runtime behavior changed in this documentation update.
+
 ## [2026-08-10] investigation | Drain Who requests before building roster
 
 Updated [[tick-loop-audit]], [[recurring-loop-elimination]], [[networking]], and `index.md` for commit `a4e7aeb`: `who::process_query_requests` now drains `QueryWho` receivers first, produces zero online-roster materializations on repeated idle `Update`s, and builds one shared roster when requests exist. Recorded preserved `Authenticated` + `InWorld` eligibility, latest-request-per-connection behavior, multi-connection routing, filtering/sorting, and snapshot/message/error content. Recorded RED `/tmp/claude/game-server/who-idle-roster-red.log` and `/tmp/claude/game-server/who-request-contract-red.log`, GREEN `/tmp/claude/game-server/who-drain-first-green.log`, and formatting/readability artifacts. Server audit is 4/7 complete: gold, Who, rest, and inactive auto-attacks are complete; durability, calendar, and trade lookup remain open. No live CPU savings claim; no source or runtime behavior changed in this documentation update.

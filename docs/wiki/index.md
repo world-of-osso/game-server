@@ -31,7 +31,7 @@ Server gameplay systems.
 | Page | Summary |
 |------|---------|
 | [[ecs-storage]] | Bevy ECS as columnar in-memory database: archetype tables, zero-overhead queries, built-in change detection |
-| [[networking]] | Lightyear over QUIC: dirty-candidate replication, GoldUpdateQueue timing, PlayerInput model, channels, interest management, and rest-state snapshots |
+| [[networking]] | Lightyear over QUIC: dirty-candidate replication, GoldUpdateQueue timing, change-filtered durability/rest snapshots, PlayerInput model, channels, and interest management |
 | [[persistence]] | Dual-layer storage: redb for mutable player data, login-loaded gold, mutation-boundary GoldUpdateQueue replication, and SQLite for static world data |
 | [[world-data]] | SQLite world.db: all tables with row counts, AzerothCore/Retail DB2 sources, WorldDataPlugin, SpellDatabasePlugin |
 | [[tick-model]] | Observed server loop: 50ms runner/fixed cadence, schedule ownership, explicit ordering, maintenance gates, and IPC boundary |
@@ -46,5 +46,5 @@ Debug logs and root cause analyses.
 | Page | Summary |
 |------|---------|
 | [[semantic-noop-replication]] | First- and second-wave server equal-assignment proofs/fixes, Lightyear 0.26.4 tick-only sending, direct NPC death transition, Gold ruled out, and blocked wire-level proof |
-| [[recurring-loop-elimination]] | Tests-first removal of auction, terrain, friends, interest, Lightyear, Who roster, gold, inactive auto-attack, and rest-state recurring scans; strict-Empty gate status |
-| [[tick-loop-audit]] | Exhaustive 130-system recurring-schedule audit: persistence correctness bug, missing order, confirmed unnecessary loops, and measurement targets |
+| [[recurring-loop-elimination]] | Tests-first removal of auction, terrain, friends, interest, Lightyear, Who roster, gold, durability, inactive auto-attack, and rest-state recurring scans; calendar and trade remain open |
+| [[tick-loop-audit]] | Exhaustive 130-system recurring-schedule audit: 5/7 named loops complete, persistence correctness bug, missing order, and remaining calendar/trade measurement targets |

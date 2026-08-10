@@ -60,6 +60,14 @@ Initial world entry still sends a `RestStateUpdate` snapshot. Position changes p
 
 The focused regression test proves both boundaries: unchanged updates preserve the component change tick, while movement into an innkeeper area updates the rest state. RED/GREEN artifacts are recorded in [[recurring-loop-elimination]]. No live CPU or Character-stage claim is made from this code proof.
 
+## Durability Snapshot Updates
+
+`send_changed_durability_snapshot` broadcasts `DurabilityStateUpdate` only for players whose `EquippedDurability` changed. Before `c46b322`, the system ran every `Update`, visited every durability-bearing player, and called `Ref::is_changed()` in the body; unchanged players therefore still incurred query iteration and change-tick probes.
+
+The query-level `Changed<EquippedDurability>` filter now excludes unchanged players before the system body. The existing `is_added()` check remains, so newly inserted durability does not produce a changed snapshot; later mutations retain the existing authenticated `PlayerLink` routing, `DurabilityStateUpdate` message, repair-cost snapshot, and error behavior.
+
+RED/GREEN and readability evidence is recorded in [[recurring-loop-elimination]]. No live CPU savings claim is made.
+
 ## Gold Replication Updates
 
 Login still loads persisted inventory gold into the player's replicated `Gold`. Runtime mutations no longer rely on an unconditional database scan. Barber payments, completed trades, auction creation/bids/refunds/buyouts, and mail claims record exact persisted values in `GoldUpdateQueue` only after successful inventory saves. Same-frame values coalesce by character ID.
@@ -110,6 +118,8 @@ The `CombatChannel` carries `CombatEvent` structs (attacker, target, amount, spe
 - [crates/server/src/rest.rs](../../../crates/server/src/rest.rs) — innkeeper registry and change-filtered rest-state snapshots
 - [crates/server/src/rest.rs](../../../crates/server/src/rest.rs) — rest-state transition test coverage
 - `game-server` commit `fffa86a` — update rest state only after relevant changes
+- [crates/server/src/durability.rs](../../../crates/server/src/durability.rs) — change-filtered durability snapshots and routing
+- `game-server` commit `c46b322` — gate durability snapshots on changed players
 - [crates/server/src/who.rs](../../../crates/server/src/who.rs) — QueryWho drain-first handling and response contract tests
 - `game-server` commit `a4e7aeb` — drain Who requests before building roster
 - [crates/server/src/networking.rs](../../../crates/server/src/networking.rs) — player movement dirty routing and terrain tile-transition gating
