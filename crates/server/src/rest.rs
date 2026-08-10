@@ -56,7 +56,10 @@ fn initialize_rest_area_registry(
 
 fn update_player_rest_state(
     connections: Query<(Entity, &PlayerLink), With<Authenticated>>,
-    mut players: Query<(&Position, &Level, Option<&mut PlayerRestState>)>,
+    mut players: Query<
+        (&Position, &Level, Option<&mut PlayerRestState>),
+        Or<(Changed<Position>, Changed<Level>, Without<PlayerRestState>)>,
+    >,
     registry: Res<RestAreaRegistry>,
     mut commands: Commands,
     mut senders: Query<&mut MessageSender<RestStateUpdate>>,
@@ -203,6 +206,7 @@ fn send_rest_update(
 mod tests {
     use super::*;
     use crate::world_data::{CreatureModelInfo, CreatureSpawn, CreatureTemplate};
+    use bevy::ecs::change_detection::DetectChanges;
     use std::collections::HashMap;
 
     fn rest_template(npc_flags: u32) -> CreatureTemplate {
@@ -241,6 +245,72 @@ mod tests {
             spawns_by_map: HashMap::from([(0, vec![0])]),
             waypoints: HashMap::new(),
         }
+    }
+
+    #[test]
+    fn unchanged_rest_update_does_not_dirty_state_and_transition_updates_area() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+
+        let registry = RestAreaRegistry {
+            innkeepers: vec![Vec3::ZERO],
+            initialized: true,
+        };
+        app.insert_resource(registry);
+
+        let player = app
+            .world_mut()
+            .spawn((
+                Position {
+                    x: 50.0,
+                    y: 0.0,
+                    z: 0.0,
+                },
+                Level(1),
+                PlayerRestState {
+                    rested_xp: RestedXp::new(xp_to_level(1)),
+                    area_kind: None,
+                    last_sent: Some(RestSnapshot {
+                        in_rest_area: false,
+                        rest_area_kind: None,
+                        rested_xp: 0,
+                        rested_xp_max: xp_to_level(1) * 3 / 2,
+                    }),
+                },
+            ))
+            .id();
+        app.world_mut()
+            .spawn((Authenticated { account_id: 1 }, PlayerLink(player)));
+
+        app.add_systems(Update, update_player_rest_state);
+        app.update();
+
+        let before = app
+            .world()
+            .entity(player)
+            .get_ref::<PlayerRestState>()
+            .unwrap()
+            .last_changed();
+        app.update();
+        let after = app
+            .world()
+            .entity(player)
+            .get_ref::<PlayerRestState>()
+            .unwrap()
+            .last_changed();
+
+        assert_eq!(after, before);
+
+        app.world_mut()
+            .entity_mut(player)
+            .get_mut::<Position>()
+            .unwrap()
+            .x = 0.0;
+        app.update();
+
+        let state = app.world().entity(player).get::<PlayerRestState>().unwrap();
+        assert_eq!(state.area_kind, Some(RestAreaKind::Inn));
+        assert!(state.rested_xp.in_rest_area);
     }
 
     #[test]
