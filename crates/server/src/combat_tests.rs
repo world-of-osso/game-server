@@ -309,6 +309,10 @@ fn combat_flag_expires_after_grace_period_once_target_is_cleared() {
         .entity_mut(attacker)
         .insert(CombatTarget(None));
     let _ = app.world_mut().run_system_once(start_attack_system);
+    assert!(
+        app.world().entity(attacker).get::<AutoAttack>().is_none(),
+        "clearing the combat target should remove the inactive auto-attack"
+    );
 
     app.world_mut()
         .resource_mut::<Time>()

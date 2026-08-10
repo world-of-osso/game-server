@@ -124,10 +124,7 @@ fn start_attack_system(
                 active_combat_state(combat_expires_at),
             ));
         } else if let Ok(mut cmd) = commands.get_entity(entity) {
-            cmd.insert(AutoAttack {
-                timer: 0.0,
-                active: false,
-            });
+            cmd.remove::<AutoAttack>();
         }
     }
 }
