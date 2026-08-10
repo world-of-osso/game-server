@@ -18,6 +18,12 @@ use crate::gold::GoldUpdateQueue;
 use crate::networking::PlayerLink;
 use crate::persistence::{self, ClientId, GameDatabase};
 
+#[cfg(test)]
+use std::sync::{
+    Mutex,
+    atomic::{AtomicUsize, Ordering},
+};
+
 #[path = "trade_support.rs"]
 mod trade_support;
 
@@ -25,6 +31,11 @@ mod trade_support;
 struct ServerTradeState {
     manager: TradeManager,
 }
+
+#[cfg(test)]
+static TRADE_OFFER_PLAYER_RESOLUTIONS: AtomicUsize = AtomicUsize::new(0);
+#[cfg(test)]
+static TRADE_OFFER_TEST_LOCK: Mutex<()> = Mutex::new(());
 
 pub struct TradePlugin;
 
@@ -416,6 +427,13 @@ fn process_trade_offer_updates<R, F>(
     F: FnMut(&redb::Database, u64, &R, &mut TradeManager) -> Result<(), String>,
 {
     for (conn_entity, link, mut receiver) in receivers.iter_mut() {
+        if !receiver.has_messages() {
+            continue;
+        }
+
+        #[cfg(test)]
+        TRADE_OFFER_PLAYER_RESOLUTIONS.fetch_add(1, Ordering::SeqCst);
+
         let Ok((_, _, _, client_id)) = players.get(link.0) else {
             send_trade_error(
                 conn_entity,
