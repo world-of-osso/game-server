@@ -31,7 +31,7 @@ Server gameplay systems.
 | Page | Summary |
 |------|---------|
 | [[ecs-storage]] | Bevy ECS as columnar in-memory database: archetype tables, zero-overhead queries, built-in change detection |
-| [[networking]] | Lightyear over QUIC: replication, PlayerInput model, channels (unreliable movement, reliable combat/chat/inventory), interest management |
+| [[networking]] | Lightyear over QUIC: replication, PlayerInput model, channels (unreliable movement, reliable combat/chat/inventory), interest management, rest-state snapshots |
 | [[persistence]] | Dual-layer storage: redb for mutable player data (characters, inventory, guilds, mail, auctions), SQLite for static world data |
 | [[world-data]] | SQLite world.db: all tables with row counts, AzerothCore/Retail DB2 sources, WorldDataPlugin, SpellDatabasePlugin |
 | [[tick-model]] | Observed server loop: 50ms runner/fixed cadence, schedule ownership, explicit ordering, maintenance gates, and IPC boundary |
@@ -46,5 +46,5 @@ Debug logs and root cause analyses.
 | Page | Summary |
 |------|---------|
 | [[semantic-noop-replication]] | First- and second-wave server equal-assignment proofs/fixes, Lightyear 0.26.4 tick-only sending, direct NPC death transition, Gold ruled out, and blocked wire-level proof |
-| [[recurring-loop-elimination]] | Tests-first removal of auction, terrain, friends, interest, and Lightyear recurring scans; dirty-candidate proof and strict-Empty gate status |
+| [[recurring-loop-elimination]] | Tests-first removal of auction, terrain, friends, interest, Lightyear, inactive auto-attack, and rest-state recurring scans; strict-Empty gate status |
 | [[tick-loop-audit]] | Exhaustive 130-system recurring-schedule audit: persistence correctness bug, missing order, confirmed unnecessary loops, and measurement targets |

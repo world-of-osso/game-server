@@ -52,6 +52,14 @@ Buckets only reduce candidate work. Final visibility still uses the existing exa
 
 Each connection keeps both the set of terrain tiles already sent and the last player tile evaluated by the streaming system. Initial world entry and reconnect begin with no last tile, forcing one evaluation. Later fixed ticks compare the current tile first; movement within the same tile skips the 3×3 neighborhood loop, while boundary crossings and teleports evaluate the destination neighborhood. Existing `SentTiles` membership continues to suppress duplicate `LoadTerrain` messages. See [[recurring-loop-elimination]].
 
+## Rest-State Synchronization
+
+`RestPlugin` builds the innkeeper registry once, then evaluates authenticated players only when their `Position` or `Level` changes, or when they have no `PlayerRestState` yet. Before `fffa86a`, every `Update` recomputed the linear innkeeper-radius scan and mutated existing rest state even when neither input changed.
+
+Initial world entry still sends a `RestStateUpdate` snapshot. Position changes preserve enter/leave transitions; level changes refresh rested-XP maximums. Unchanged players do not scan innkeepers, dirty `PlayerRestState`, or emit duplicate updates. Client receiver and IPC snapshot behavior remain unchanged.
+
+The focused regression test proves both boundaries: unchanged updates preserve the component change tick, while movement into an innkeeper area updates the rest state. RED/GREEN artifacts are recorded in [[recurring-loop-elimination]]. No live CPU or Character-stage claim is made from this code proof.
+
 ## Client → Server Inputs
 
 Clients send input events, never raw state. The server validates and applies; the client predicts locally:
@@ -87,6 +95,9 @@ The `CombatChannel` carries `CombatEvent` structs (attacker, target, amount, spe
 - [ARCHITECTURE.md](../../../ARCHITECTURE.md) — "Networking with Lightyear" section
 - [crates/server/src/networking.rs](../../../crates/server/src/networking.rs) — server plugin, channel types, interest radius
 - [crates/server/src/combat.rs](../../../crates/server/src/combat.rs) — authoritative NPC damage/death transition and combat events
+- [crates/server/src/rest.rs](../../../crates/server/src/rest.rs) — innkeeper registry and change-filtered rest-state snapshots
+- [crates/server/src/rest.rs](../../../crates/server/src/rest.rs) — rest-state transition test coverage
+- `game-server` commit `fffa86a` — update rest state only after relevant changes
 - [crates/server/src/networking.rs](../../../crates/server/src/networking.rs) — player movement dirty routing and terrain tile-transition gating
 - [crates/server/src/networking_movement.rs](../../../crates/server/src/networking_movement.rs) — translation, rotation, speed, and movement dirty-domain results
 - [crates/server/src/networking_tests/physics.rs](../../../crates/server/src/networking_tests/physics.rs) — zero-translation rotation/speed regression proof

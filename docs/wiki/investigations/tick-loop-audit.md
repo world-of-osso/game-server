@@ -100,7 +100,7 @@ Conflicting ECS access forces serialization, but serialization order is not a ga
 |---:|---|---|---|
 | 1 | `sync_player_gold_from_inventory` | Every `Update`, every player, synchronous redb inventory load | **REMOVE/GATE.** Update replicated `Gold` at inventory mutation boundaries or through a dirty-character queue |
 | 2 | `who::process_query_requests` | Builds/clones the full online-player list before checking whether any request exists | **REMOVE/GATE.** Drain requests first; cache roster only if request volume requires it |
-| 3 | `rest::update_player_rest_state` | Every `Update`, every authenticated player, linear scan of all innkeepers | **REMOVE/GATE.** Re-evaluate on initial world entry and position/level changes; add spatial lookup only if needed |
+| 3 | `rest::update_player_rest_state` | Every `Update`, every authenticated player, linear scan of all innkeepers | **COMPLETED.** `fffa86a` re-evaluates only initial state or `Changed<Position>`/`Changed<Level>` players; add spatial lookup only if profiling justifies it |
 | 4 | `send_changed_durability_snapshot` | Every `Update`, every player with durability, then `Ref::is_changed()` in the body | **REMOVE/GATE.** Use a `Changed<EquippedDurability>` query while retaining added-vs-changed semantics |
 | 5 | inactive `AutoAttack` entities | Clearing a target leaves `AutoAttack { active: false }`; fixed combat still queries it forever | **COMPLETED.** `152ccbd` removes `AutoAttack` on target loss; component presence now defines participation |
 | 6 | calendar query snapshot | Rebuilds the calendar snapshot before checking for `QueryCalendar` messages | **REMOVE/GATE.** Build once only when at least one request was drained |
@@ -249,7 +249,8 @@ This is a static source audit plus a focused Bevy 0.18 change-detection reproduc
 - [crates/server/src/networking.rs](../../../crates/server/src/networking.rs) — input, gravity, terrain, Update handlers, and schedule registration
 - [crates/server/src/auth_character.rs](../../../crates/server/src/auth_character.rs) — unconditional per-player Gold synchronization
 - [crates/server/src/who.rs](../../../crates/server/src/who.rs) — unconditional online roster construction
-- [crates/server/src/rest.rs](../../../crates/server/src/rest.rs) — unconditional player/innkeeper evaluation
+- [crates/server/src/rest.rs](../../../crates/server/src/rest.rs) — initial and change-filtered player/innkeeper evaluation
+- `game-server` commit `fffa86a` — rest-state evaluation gate and transition proof
 - [crates/server/src/durability.rs](../../../crates/server/src/durability.rs) — changed durability polling
 - [crates/server/src/combat.rs](../../../crates/server/src/combat.rs) — attack participation, combat state, and respawn
 - [crates/server/src/creature_ai.rs](../../../crates/server/src/creature_ai.rs) — five fixed AI passes and state branches

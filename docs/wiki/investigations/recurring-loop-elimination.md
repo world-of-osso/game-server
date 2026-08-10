@@ -14,6 +14,7 @@ The server performance pass is replacing broad recurring scans with state-, even
 | Interest management | Scan every visible entity against every player every 500 ms | Dirty position/lifecycle triggers plus spatial buckets | Completed in `4523373`, tests split in `a85b035` |
 | Lightyear replication | Traverse every replicated root/component per client every 50 ms | Dirty global/per-sender candidates with initial full sync and ACK retention | Implemented in `269655a`, `30b5078`; strict-Empty CPU gate pending |
 | Inactive auto-attacks | Fixed combat query retains every `AutoAttack { active: false }` after target loss | Remove `AutoAttack` when `CombatTarget` becomes `None`; active attackers remain fixed-step | Completed in `152ccbd`; live CPU gate pending |
+| Rest-state evaluation | Every `Update`, every authenticated player, linear scan of all innkeepers | Evaluate initial state or only `Changed<Position>`/`Changed<Level>` players | Completed in `fffa86a`; live CPU gate pending |
 
 ## Auction Expiration
 
@@ -38,6 +39,14 @@ Before `152ccbd`, `start_attack_system` replaced a cleared target's `AutoAttack`
 Target acquisition still inserts an active component with the existing zero-second timer. Active swing cadence, target-loss combat grace, damage/death transitions, respawn, and reliable `CombatEvent` broadcast remain unchanged.
 
 The behavioral RED test at `/tmp/claude/game-server/autoattack-inactive-removal-red.log` failed on the retained component. The focused GREEN test at `/tmp/claude/game-server/autoattack-inactive-removal-green.log` passed after `152ccbd`; `cargo fmt` and Rust readability evidence were also recorded. This is a server-side loop elimination; no live CPU or Character-stage claim is made before measurement.
+
+## Rest-State Evaluation
+
+Before `fffa86a`, `update_player_rest_state` visited every authenticated player on every `Update`. Each visit recomputed the innkeeper-radius check and mutated `PlayerRestState` even when `Position` and `Level` were unchanged. The query now admits only players whose `Position` or `Level` changed, plus players without an initial `PlayerRestState`; the registry initialization guard remains unchanged.
+
+Initial world entry still creates and sends the first snapshot. Position changes preserve enter/leave transitions, and level changes recompute rested-XP maximums. Unchanged authenticated players no longer scan the innkeeper list or dirty their rest state.
+
+The behavioral RED test at `/tmp/claude/game-server/rest-dirty-evaluation-red.log` failed because an unchanged update advanced `PlayerRestState::last_changed()`. The focused GREEN test at `/tmp/claude/game-server/rest-dirty-evaluation-green.log` passed after `fffa86a`; cargo fmt and Rust readability evidence were recorded in `/tmp/claude/game-server/rest-dirty-evaluation-readability`. This is a server-side loop elimination; no live CPU or Character-stage claim is made before measurement.
 
 ## Terrain Streaming
 
@@ -135,6 +144,8 @@ Follow-up `aa5dddb` closed a replication wake-up gap in movement input handling.
 - [combat system](../../../crates/server/src/combat.rs) — `AutoAttack` lifecycle and fixed-step participation
 - [combat tests](../../../crates/server/src/combat_tests.rs) — target-loss removal and preserved combat-grace behavior
 - `game-server` commit `152ccbd` — remove inactive auto-attack components
+- [rest system](../../../crates/server/src/rest.rs) — initial and change-filtered rest-state evaluation
+- `game-server` commit `fffa86a` — avoid unchanged player rest-state scans
 - [vendored Lightyear provenance](../../../vendor/lightyear_replication/UPSTREAM.md) — version, checksum, upstream commit, and license
 - [dirty candidate queue](../../../vendor/lightyear_replication/src/send/dirty.rs) — global/per-sender marks and lifecycle observers
 - [candidate traversal](../../../vendor/lightyear_replication/src/send/candidate.rs) — initial sync, candidate processing, and retry retention

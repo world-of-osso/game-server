@@ -1,5 +1,9 @@
 # Wiki Log
 
+## [2026-08-10] investigation | Gate rest-state evaluation on relevant changes
+
+Updated [[recurring-loop-elimination]], [[networking]], [[tick-loop-audit]], and `index.md` for `fffa86a`: `update_player_rest_state` now evaluates only players without `PlayerRestState` or with changed `Position`/`Level`, instead of scanning every authenticated player and all innkeepers every `Update`. Initial snapshots, enter/leave transitions, and level-based rested-XP recalculation remain intact. Recorded RED `/tmp/claude/game-server/rest-dirty-evaluation-red.log`, GREEN `/tmp/claude/game-server/rest-dirty-evaluation-green.log`, and Rust readability evidence at `/tmp/claude/game-server/rest-dirty-evaluation-readability`. No live CPU or Character-stage claim is made before measurement.
+
 ## [2026-08-10] investigation | Remove inactive auto-attack participation
 
 Updated [[combat]], [[recurring-loop-elimination]], and [[tick-loop-audit]] for `152ccbd`: clearing `CombatTarget` now removes `AutoAttack` instead of retaining an inactive component in the fixed combat query. Active swing cadence, combat-grace behavior, damage/death, respawn, and reliable combat events remain unchanged. Recorded RED `/tmp/claude/game-server/autoattack-inactive-removal-red.log`, GREEN `/tmp/claude/game-server/autoattack-inactive-removal-green.log`, and cargo fmt/readability evidence. No live CPU or Character-stage claim is made before measurement.
