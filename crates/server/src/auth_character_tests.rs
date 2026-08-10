@@ -3,6 +3,7 @@ use shared::components::{CharacterAppearance, Gold, Player};
 use shared::currency::currency_by_id;
 
 use crate::auth_character::{load_selected_character_state, sync_player_gold_from_inventory};
+use crate::gold::{GoldPlugin, GoldUpdateQueue};
 use crate::persistence::{self, ClientId, GameDatabase, InventoryData};
 
 fn test_db() -> GameDatabase {
@@ -12,6 +13,58 @@ fn test_db() -> GameDatabase {
     persistence::create_tables(&db);
     std::mem::forget(dir);
     GameDatabase { db }
+}
+
+#[test]
+fn queued_gold_updates_coalesce_and_skip_equal_or_offline_players() {
+    let mut app = App::new();
+    app.add_plugins(GoldPlugin);
+    let player = app
+        .world_mut()
+        .spawn((
+            Player {
+                name: "Thrall".into(),
+                race: 2,
+                class: 7,
+                appearance: CharacterAppearance::default(),
+            },
+            ClientId(42),
+            Gold(100),
+        ))
+        .id();
+
+    {
+        let mut updates = app.world_mut().resource_mut::<GoldUpdateQueue>();
+        updates.record(42, 125);
+        updates.record(42, 150);
+    }
+    app.update();
+
+    assert_eq!(app.world().entity(player).get::<Gold>().unwrap().0, 150);
+    let changed_after_update = app
+        .world()
+        .entity(player)
+        .get_ref::<Gold>()
+        .unwrap()
+        .last_changed();
+
+    {
+        let mut updates = app.world_mut().resource_mut::<GoldUpdateQueue>();
+        updates.record(42, 150);
+        updates.record(99, 900);
+    }
+    app.update();
+
+    assert_eq!(app.world().entity(player).get::<Gold>().unwrap().0, 150);
+    assert_eq!(
+        app.world()
+            .entity(player)
+            .get_ref::<Gold>()
+            .unwrap()
+            .last_changed(),
+        changed_after_update
+    );
+    assert!(app.world().resource::<GoldUpdateQueue>().is_empty());
 }
 
 #[test]

@@ -16,6 +16,7 @@ mod duel;
 mod durability;
 mod faction;
 mod friends;
+mod gold;
 mod guild;
 mod ignore_list;
 mod inspect;
@@ -92,7 +93,8 @@ fn add_social_plugins(app: &mut App) {
 }
 
 fn add_progression_plugins(app: &mut App) {
-    app.add_plugins(auction_house::AuctionHousePlugin)
+    app.add_plugins(gold::GoldPlugin)
+        .add_plugins(auction_house::AuctionHousePlugin)
         .add_plugins(collection::CollectionPlugin)
         .add_plugins(currency::CurrencyPlugin)
         .add_plugins(durability::DurabilityPlugin)
