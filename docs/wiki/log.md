@@ -1,8 +1,12 @@
 # Wiki Log
 
+## [2026-08-10] investigation | Replace auto-AFK player scans with deadlines
+
+Updated [[recurring-loop-elimination]], [[tick-loop-audit]], [[tick-model]], [[networking]], and `index.md` for server commit `16c821c`. Recorded that `tick_auto_afk` previously visited every player and accumulated idle seconds every `Update`; `AutoAfkScheduler` now stores generation-tagged deadlines, activity and presence boundaries reschedule or invalidate them, and `process_due_auto_afk` queries only due players. Tests cover timing, activity invalidation, manual DND, lifecycle, stale/despawned deadlines, zero idle-player visits, and duplicate suppression. Strict status is **PARTIAL** because the deadline heap is still polled every `Update` rather than at a lower cadence. No live CPU savings claim; no runtime behavior changed in this documentation update.
+
 ## [2026-08-10] audit | Correct recurring-loop completion scope
 
-Reconciled [[tick-loop-audit]], [[recurring-loop-elimination]], [[tick-loop-design]], [[tick-model]], [[networking]], [[combat]], and `index.md` against current source through `18c936b`. Corrected the recurring inventory to 104 registrations / 130 expanded systems (`Update` 104, `FixedUpdate` 21, `PostUpdate` 4, `Last` 1). Recorded the preserved Lightyear, interest, friends, and terrain requirements as **PARTIAL**, not complete; separated expensive-work reduction from scheduler invocation removal; listed ten remaining definite idle-work systems and the persistence/fixed-order correctness findings; and recorded player death polling as completed by lethal transitions. Documentation reconciliation only; no runtime behavior changed in this update. Current-revision verification is recorded after the documentation commit.
+Reconciled [[tick-loop-audit]], [[recurring-loop-elimination]], [[tick-loop-design]], [[tick-model]], [[networking]], [[combat]], and `index.md` against current source through `18c936b`. Corrected the recurring inventory to 103 registrations / 130 expanded systems (`Update` 85 registrations / 104 systems, `FixedUpdate` 13/21, `PostUpdate` 4/4, `Last` 1/1). Recorded the preserved Lightyear, interest, friends, and terrain requirements as **PARTIAL**, not complete; separated expensive-work reduction from scheduler invocation removal; listed ten remaining definite idle-work systems and the persistence/fixed-order correctness findings; and recorded player death polling as completed by lethal transitions. Documentation reconciliation only; no runtime behavior changed in this update. Current-revision verification is recorded after the documentation commit.
 
 ## [2026-08-10] investigation | Gate trade offer lookups on queued requests
 

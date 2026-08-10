@@ -2,6 +2,8 @@
 
 Combat logic is split across two crates: `shared/src/formulas/` holds pure combat math (melee hit table, stat conversions, spell formulas), and `server/src/combat.rs` runs the live ECS systems (active auto-attack, direct NPC/player lethal-transition emission, respawn).
 
+## Content
+
 ## Server Systems (`CombatPlugin`)
 
 Runs in `FixedUpdate`. Systems in order:

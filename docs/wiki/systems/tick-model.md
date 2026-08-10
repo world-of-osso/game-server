@@ -74,6 +74,7 @@ Each connection receives a `ReplicationSender` with a 50 ms `SinceLastAck` caden
 - **Auction expiration:** registered in `FixedUpdate`; runs immediately once, then after each accumulated one-second duration.
 - **Periodic character save attempt:** every 300 fixed steps, nominally 15 seconds. This is currently incorrect: the system executes and returns on intervening ticks, advancing Bevy's change-detection window, so the due `Changed<Position|Health|Player>` query misses changes made earlier in the interval. See [[tick-loop-audit]].
 - **Tick log:** every 200 fixed steps, which is 10 seconds of simulation time.
+- **Auto-AFK:** activity deadlines remove the per-player `Update` scan; `process_due_auto_afk` still peeks the next deadline every `Update` and processes only due players.
 - **Terrain streaming:** remains fixed-step and still probes every connection's position/tile; only the 3×3 neighborhood/send work is skipped when the tile is unchanged.
 - **Interest:** dirty queues and spatial buckets remove the full entity×player scan, but `update_interest` still invokes every fixed step.
 - **Replication:** dirty entity candidates remove steady-state full-root traversal; dirty entities still traverse replicated components.
@@ -99,6 +100,8 @@ Disconnect saves are observer-driven. Shutdown saves run in `Last` only when `Ap
 - [crates/server/src/death.rs](../../../crates/server/src/death.rs) — player death-transition consumer and lifecycle ordering
 - [crates/server/src/auth_character.rs](../../../crates/server/src/auth_character.rs) — persisted zero-health transition queue
 - `game-server` commit `18c936b` — replace player death polling with lethal transitions
+- [crates/server/src/friends.rs](../../../crates/server/src/friends.rs) — activity-deadline auto-AFK scheduling
+- `game-server` commit `16c821c` — replace per-player auto-AFK accumulation with deadline scheduling
 - [crates/server/src/interest.rs](../../../crates/server/src/interest.rs) — interest and replication dirty schedules
 - [crates/server/src/auction_house.rs](../../../crates/server/src/auction_house.rs) — one-second expiration gate
 - [crates/server/src/persistence.rs](../../../crates/server/src/persistence.rs) — persistence schedule registration

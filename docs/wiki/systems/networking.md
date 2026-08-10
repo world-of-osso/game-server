@@ -56,6 +56,12 @@ Each connection keeps both the set of terrain tiles already sent and the last pl
 
 Commit `18c936b` removes the recurring `detect_player_deaths` player scan. Combat and fall damage emit `PlayerDeathTransition` only on a positive-to-zero health crossing; character selection queues the transition for persisted zero health. The FixedUpdate consumer is explicitly ordered after combat and gravity, then performs the existing death lifecycle: clamp, deduplicate, preserve `LastDamager`, apply durability loss, create corpse/graveyard state, mark replication dirty, and route `"you died"`. Resurrection, second death, stale-entity handling, and login behavior remain covered by RED/GREEN artifacts under `/tmp/claude/game-server/` (`death-idle-scan`, `death-transition-consumer`, `player-combat-death`, `player-fall-death`, `player-login-death`, and `death-second-life-tests`). No live CPU savings claim is made.
 
+## Auto-AFK Activity Deadlines
+
+Commit `16c821c` replaces the every-`Update` all-player idle-time scan with `AutoAfkScheduler`. Login/presence setup schedules generation-tagged deadlines; player input and chat/emote activity reschedule them; manual AFK/DND invalidates automatic deadlines. `process_due_auto_afk` queries only due players and ignores stale generations or despawned entities.
+
+The broad player scan is removed, but the scheduler still peeks its deadline heap every `Update`. This is **PARTIAL** against the original lower-cadence target. Tests cover deadline timing, activity invalidation, manual presence, lifecycle, zero idle-player visits, and duplicate suppression; no live CPU savings claim is made.
+
 ## Rest-State Synchronization
 
 `RestPlugin` builds the innkeeper registry once, then evaluates authenticated players only when their `Position` or `Level` changes, or when they have no `PlayerRestState` yet. Before `fffa86a`, every `Update` recomputed the linear innkeeper-radius scan and mutated existing rest state even when neither input changed.
@@ -132,6 +138,9 @@ The `CombatChannel` carries `CombatEvent` structs (attacker, target, amount, spe
 - [crates/server/src/death.rs](../../../crates/server/src/death.rs) — player death-transition consumer and routed lifecycle updates
 - [crates/server/src/auth_character.rs](../../../crates/server/src/auth_character.rs) — persisted zero-health transition queue
 - `game-server` commit `18c936b` — replace player death polling with lethal transitions
+- [crates/server/src/friends.rs](../../../crates/server/src/friends.rs) — activity deadline scheduling and due-player processing
+- [crates/server/src/friends_tests.rs](../../../crates/server/src/friends_tests.rs) — auto-AFK timing, activity, lifecycle, and idle-visit coverage
+- `game-server` commit `16c821c` — replace per-player auto-AFK accumulation with deadline scheduling
 - [crates/server/src/rest.rs](../../../crates/server/src/rest.rs) — innkeeper registry and change-filtered rest-state snapshots
 - [crates/server/src/rest.rs](../../../crates/server/src/rest.rs) — rest-state transition test coverage
 - `game-server` commit `fffa86a` — update rest state only after relevant changes

@@ -11,6 +11,7 @@ The server performance pass is replacing broad recurring scans with state-, even
 | Auction expiration | Scan every auction at 20 Hz | Scan at most once per second | Completed in `e02ce0a` |
 | Terrain streaming | Recompute each connection's 3×3 neighborhood at 20 Hz | Evaluate on initial delivery or tile transition | **Partial** in `3c5ceca`: repeated 3×3/send work is skipped, but every connection still probes its position and tile each `FixedUpdate` |
 | Friends online snapshots | Rebuild all online/friend snapshots every app frame | Rebuild only dirty affected owners | **Partial** in `914d570`: idle rebuilds are removed, but friend-list mutations send immediately instead of marking the owner dirty, and logout lifecycle coverage is not fully explicit |
+| Auto-AFK | Scan every player and accumulate idle seconds every `Update` | Activity deadlines; process due players at lower cadence | **Partial** in `16c821c`: all-player scans are removed, but the deadline heap is still polled every `Update` |
 | Interest management | Scan every visible entity against every player every 500 ms | Dirty position/lifecycle triggers plus spatial buckets | **Partial** in `4523373`, tests split in `a85b035`: dirty spatial work replaces the broad scan, but the system still runs every `FixedUpdate` and has no movement-revision model |
 | Lightyear replication | Traverse every replicated root/component per client every 50 ms | Dirty entity/component queue with initial full sync and ACK retention | **Partial** in `269655a`, `30b5078`: dirty entity candidates replace root traversal, but the queue is not component-aware, dirty entities still traverse replicated components, and the sender still wakes on cadence |
 | Who roster materialization | Build the full online-player list before checking `QueryWho` receivers | Drain latest requests first; build one shared roster only when requests exist | Completed in `a4e7aeb`; no live CPU savings claim |
@@ -128,6 +129,14 @@ The added friends tests cover the real `Update` chain and index behavior:
 - `friend_zone_and_level_changes_refresh_the_listed_owner` proves both live metadata changes refresh the listed owner.
 - `friend_list_changes_replace_reverse_owner_links` proves reverse ownership is removed from the old friend and added to the new friend.
 
+## Auto-AFK Deadlines
+
+Before `16c821c`, `tick_auto_afk` visited every player each `Update`, incremented per-player idle seconds, and recomputed the desired presence state. `AutoAfkScheduler` now stores generation-tagged deadlines in a min-ordered heap. Login/presence initialization schedules a deadline; player input and chat/emote activity reschedule it; manual AFK/DND invalidates automatic deadlines; stale generations and despawned players are ignored.
+
+`process_due_auto_afk` peeks the next deadline and queries only players whose deadline is due. Idle ticks no longer scan players or increment timers. The system still invokes every `Update`, so the original lower-cadence target remains **PARTIAL** rather than complete.
+
+Tests cover the 300-second boundary, no early transition, activity invalidation, manual DND, online/offline scheduling, initial presence, despawn safety, zero idle player visits, and duplicate-transition suppression. No live CPU savings claim is made.
+
 ## Interest Management
 
 Before `4523373`, `update_interest` ran every 500 ms and evaluated every `NetworkVisibility` entity against every connected player, even when no relevant position or lifecycle state had changed. The replacement keeps a 100-yard X/Z spatial index and marks targets or observers dirty when authoritative position writers, `NetworkVisibility`, or `PlayerLink` lifecycle boundaries change. A fixed-tick system drains the dirty queue, updates bucket membership, evaluates only dirty observers and targets, and checks the exact 3D squared-distance rule against candidates from the observer's 3×3 bucket neighborhood plus previously visible entities. `update_interest` still invokes every `FixedUpdate`, and the queue stores dirty entities rather than movement revisions; the literal requirement remains **PARTIAL**.
@@ -176,8 +185,9 @@ Follow-up `aa5dddb` closed a replication wake-up gap in movement input handling.
 - [terrain streaming tests](../../../crates/server/src/networking_tests/terrain.rs) — initial, unchanged, boundary, and reconnect proof
 - `game-server` commit `3c5ceca` — terrain transition implementation and proof
 - [friends system](../../../crates/server/src/friends.rs) — cached online data, reverse owner index, dirty fanout, and snapshot sending
-- [friends tests](../../../crates/server/src/friends_tests.rs) — unchanged, affected-owner, lifecycle, metadata, and reverse-index proof
+- [friends tests](../../../crates/server/src/friends_tests.rs) — unchanged snapshots, affected-owner isolation, lifecycle, metadata, reverse-index, and auto-AFK deadline proof
 - `game-server` commit `914d570` — dirty-owner friends snapshot implementation and proof
+- `game-server` commit `16c821c` — replace per-player auto-AFK accumulation with deadline scheduling
 - [interest system](../../../crates/server/src/interest.rs) — dirty position queue, lifecycle observers, spatial buckets, and exact visibility transitions
 - [interest integration tests](../../../crates/server/src/interest_tests.rs) — fixed-tick, radius, multi-player, lifecycle, and reconnect proof
 - [position writers](../../../crates/server/src/networking.rs) — player movement and replication dirty routing
