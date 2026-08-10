@@ -12,6 +12,12 @@ use shared::protocol::{
 use crate::auth::{Authenticated, InWorld};
 use crate::networking::PlayerLink;
 
+#[cfg(test)]
+use std::sync::{
+    Mutex,
+    atomic::{AtomicUsize, Ordering},
+};
+
 #[derive(Resource, Debug, Default)]
 struct CalendarState {
     next_event_id: u64,
@@ -30,6 +36,11 @@ struct CalendarEventState {
 }
 
 pub struct CalendarPlugin;
+
+#[cfg(test)]
+static CALENDAR_SNAPSHOT_MATERIALIZATIONS: AtomicUsize = AtomicUsize::new(0);
+#[cfg(test)]
+static CALENDAR_SNAPSHOT_TEST_LOCK: Mutex<()> = Mutex::new(());
 
 impl Plugin for CalendarPlugin {
     fn build(&self, app: &mut App) {
@@ -113,15 +124,13 @@ fn process_query_requests(
     state: Res<CalendarState>,
     mut senders: CalendarSenders,
 ) {
+    let pending_connections = drain_query_requests(&mut receivers);
+    if pending_connections.is_empty() {
+        return;
+    }
+
     let snapshot = build_calendar_snapshot(&state);
-    for (conn_entity, mut receiver) in &mut receivers {
-        let mut saw_request = false;
-        for _ in receiver.receive() {
-            saw_request = true;
-        }
-        if !saw_request {
-            continue;
-        }
+    for conn_entity in pending_connections {
         send_calendar_update(
             conn_entity,
             snapshot.clone(),
@@ -130,6 +139,15 @@ fn process_query_requests(
             &mut senders,
         );
     }
+}
+
+fn drain_query_requests(receivers: &mut QueryReceivers) -> Vec<Entity> {
+    receivers
+        .iter_mut()
+        .filter_map(|(conn_entity, mut receiver)| {
+            (receiver.receive().count() > 0).then_some(conn_entity)
+        })
+        .collect()
 }
 
 fn process_calendar_requests(
@@ -286,6 +304,9 @@ fn confirmed_signup_count(event: &CalendarEventState) -> usize {
 }
 
 fn build_calendar_snapshot(state: &CalendarState) -> CalendarSnapshot {
+    #[cfg(test)]
+    CALENDAR_SNAPSHOT_MATERIALIZATIONS.fetch_add(1, Ordering::SeqCst);
+
     let mut events: Vec<_> = state
         .events
         .iter()
@@ -363,7 +384,134 @@ fn send_calendar_update(
 
 #[cfg(test)]
 mod tests {
+    use std::time::Duration;
+
+    use lightyear::connection::host::HostClient;
+    use lightyear::prelude::{AppMessageExt, Connected, PeerId, RemoteId};
+
     use super::*;
+
+    fn setup_query_app() -> App {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        app.add_plugins(lightyear::prelude::server::ServerPlugins {
+            tick_duration: Duration::from_millis(50),
+        });
+        app.register_message::<QueryCalendar>();
+        app.register_message::<CalendarStateUpdate>();
+        app.insert_resource(sample_calendar_state());
+        app.add_systems(Update, process_query_requests);
+        app.finish();
+        app.cleanup();
+        app
+    }
+
+    fn spawn_query_connection(app: &mut App, peer_id: u64, eligible: bool) -> Entity {
+        let mut entity = app.world_mut().spawn((
+            RemoteId(PeerId::Local(peer_id)),
+            Connected,
+            HostClient { buffer: Vec::new() },
+            MessageSender::<QueryCalendar>::default(),
+            MessageReceiver::<QueryCalendar>::default(),
+            MessageSender::<CalendarStateUpdate>::default(),
+            MessageReceiver::<CalendarStateUpdate>::default(),
+        ));
+        entity.insert(Authenticated {
+            account_id: peer_id,
+        });
+        if eligible {
+            entity.insert(InWorld {
+                character_id: peer_id,
+            });
+        }
+        entity.id()
+    }
+
+    fn send_query(app: &mut App, connection: Entity) {
+        app.world_mut()
+            .entity_mut(connection)
+            .get_mut::<MessageSender<QueryCalendar>>()
+            .expect("connection should have a calendar query sender")
+            .send::<CalendarChannel>(QueryCalendar);
+    }
+
+    fn receive_updates(app: &mut App, connection: Entity) -> Vec<CalendarStateUpdate> {
+        app.world_mut()
+            .entity_mut(connection)
+            .get_mut::<MessageReceiver<CalendarStateUpdate>>()
+            .expect("connection should have a calendar update receiver")
+            .receive()
+            .collect()
+    }
+
+    fn sample_calendar_state() -> CalendarState {
+        CalendarState {
+            next_event_id: 3,
+            events: vec![
+                CalendarEventState {
+                    event_id: 1,
+                    title: "Late Raid".into(),
+                    organizer_name: "Theron".into(),
+                    starts_at_unix_secs: 300,
+                    max_signups: 2,
+                    is_raid: true,
+                    signups: BTreeMap::from([(
+                        "Theron".into(),
+                        CalendarSignupStatusSnapshot::Confirmed,
+                    )]),
+                },
+                CalendarEventState {
+                    event_id: 2,
+                    title: "Early Dungeon".into(),
+                    organizer_name: "Alice".into(),
+                    starts_at_unix_secs: 100,
+                    max_signups: 5,
+                    is_raid: false,
+                    signups: BTreeMap::from([
+                        ("Alice".into(), CalendarSignupStatusSnapshot::Confirmed),
+                        ("Bob".into(), CalendarSignupStatusSnapshot::Tentative),
+                    ]),
+                },
+            ],
+        }
+    }
+
+    fn expected_snapshot() -> CalendarSnapshot {
+        CalendarSnapshot {
+            events: vec![
+                CalendarEventSnapshot {
+                    event_id: 2,
+                    title: "Early Dungeon".into(),
+                    organizer_name: "Alice".into(),
+                    starts_at_unix_secs: 100,
+                    max_signups: 5,
+                    is_raid: false,
+                    signups: vec![
+                        CalendarSignupSnapshot {
+                            character_name: "Alice".into(),
+                            status: CalendarSignupStatusSnapshot::Confirmed,
+                        },
+                        CalendarSignupSnapshot {
+                            character_name: "Bob".into(),
+                            status: CalendarSignupStatusSnapshot::Tentative,
+                        },
+                    ],
+                },
+                CalendarEventSnapshot {
+                    event_id: 1,
+                    title: "Late Raid".into(),
+                    organizer_name: "Theron".into(),
+                    starts_at_unix_secs: 300,
+                    max_signups: 2,
+                    is_raid: true,
+                    signups: vec![CalendarSignupSnapshot {
+                        character_name: "Theron".into(),
+                        status: CalendarSignupStatusSnapshot::Confirmed,
+                    }],
+                },
+            ],
+        }
+    }
 
     fn event_request(title: &str, starts_at_unix_secs: u64) -> ScheduleCalendarEvent {
         ScheduleCalendarEvent {
@@ -421,7 +569,96 @@ mod tests {
     }
 
     #[test]
+    fn eligible_idle_calendar_queries_do_not_materialize_snapshots() {
+        let _test_lock = CALENDAR_SNAPSHOT_TEST_LOCK.lock().unwrap();
+        CALENDAR_SNAPSHOT_MATERIALIZATIONS.store(0, Ordering::SeqCst);
+
+        let mut app = setup_query_app();
+        let first = spawn_query_connection(&mut app, 1, true);
+        let second = spawn_query_connection(&mut app, 2, true);
+
+        app.update();
+        app.update();
+        app.update();
+
+        assert_eq!(
+            CALENDAR_SNAPSHOT_MATERIALIZATIONS.load(Ordering::SeqCst),
+            0,
+            "idle eligible receivers must not build calendar snapshots"
+        );
+        assert!(receive_updates(&mut app, first).is_empty());
+        assert!(receive_updates(&mut app, second).is_empty());
+    }
+
+    #[test]
+    fn calendar_queries_drain_and_share_one_sorted_snapshot() {
+        let _test_lock = CALENDAR_SNAPSHOT_TEST_LOCK.lock().unwrap();
+        CALENDAR_SNAPSHOT_MATERIALIZATIONS.store(0, Ordering::SeqCst);
+
+        let mut app = setup_query_app();
+        let first = spawn_query_connection(&mut app, 1, true);
+        let second = spawn_query_connection(&mut app, 2, true);
+        app.update();
+        CALENDAR_SNAPSHOT_MATERIALIZATIONS.store(0, Ordering::SeqCst);
+
+        send_query(&mut app, first);
+        send_query(&mut app, first);
+        send_query(&mut app, second);
+        app.update();
+        app.update();
+
+        assert_eq!(
+            CALENDAR_SNAPSHOT_MATERIALIZATIONS.load(Ordering::SeqCst),
+            1,
+            "all queued eligible requests must share one calendar snapshot"
+        );
+        let expected = CalendarStateUpdate {
+            snapshot: Some(expected_snapshot()),
+            message: Some("calendar refreshed".into()),
+            error: None,
+        };
+        assert_eq!(receive_updates(&mut app, first), vec![expected.clone()]);
+        assert_eq!(receive_updates(&mut app, second), vec![expected]);
+    }
+
+    #[test]
+    fn ineligible_calendar_receivers_do_not_materialize_or_receive_updates() {
+        let _test_lock = CALENDAR_SNAPSHOT_TEST_LOCK.lock().unwrap();
+        CALENDAR_SNAPSHOT_MATERIALIZATIONS.store(0, Ordering::SeqCst);
+
+        let mut app = setup_query_app();
+        let unauthenticated = app
+            .world_mut()
+            .spawn((
+                RemoteId(PeerId::Local(1)),
+                Connected,
+                HostClient { buffer: Vec::new() },
+                MessageSender::<QueryCalendar>::default(),
+                MessageReceiver::<QueryCalendar>::default(),
+                MessageSender::<CalendarStateUpdate>::default(),
+                MessageReceiver::<CalendarStateUpdate>::default(),
+                InWorld { character_id: 1 },
+            ))
+            .id();
+        let not_in_world = spawn_query_connection(&mut app, 2, false);
+        send_query(&mut app, unauthenticated);
+        send_query(&mut app, not_in_world);
+
+        app.update();
+        app.update();
+
+        assert_eq!(
+            CALENDAR_SNAPSHOT_MATERIALIZATIONS.load(Ordering::SeqCst),
+            0,
+            "ineligible receivers must not build calendar snapshots"
+        );
+        assert!(receive_updates(&mut app, unauthenticated).is_empty());
+        assert!(receive_updates(&mut app, not_in_world).is_empty());
+    }
+
+    #[test]
     fn build_calendar_snapshot_sorts_by_start_time() {
+        let _test_lock = CALENDAR_SNAPSHOT_TEST_LOCK.lock().unwrap();
         let mut state = CalendarState::default();
         schedule_event(&mut state, "Theron", event_request("Late Raid", 300)).unwrap();
         schedule_event(&mut state, "Alice", event_request("Early Raid", 100)).unwrap();
