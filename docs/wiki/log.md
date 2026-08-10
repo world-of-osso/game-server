@@ -1,5 +1,9 @@
 # Wiki Log
 
+## [2026-08-10] investigation | Remove inactive auto-attack participation
+
+Updated [[combat]], [[recurring-loop-elimination]], and [[tick-loop-audit]] for `152ccbd`: clearing `CombatTarget` now removes `AutoAttack` instead of retaining an inactive component in the fixed combat query. Active swing cadence, combat-grace behavior, damage/death, respawn, and reliable combat events remain unchanged. Recorded RED `/tmp/claude/game-server/autoattack-inactive-removal-red.log`, GREEN `/tmp/claude/game-server/autoattack-inactive-removal-green.log`, and cargo fmt/readability evidence. No live CPU or Character-stage claim is made before measurement.
+
 Chronological record of wiki operations.
 
 ## [2026-08-10] audit | Reconcile tick-loop audit schema and persistence summary

@@ -13,6 +13,7 @@ The server performance pass is replacing broad recurring scans with state-, even
 | Friends online snapshots | Rebuild all online/friend snapshots every app frame | Rebuild only dirty affected owners | Completed in `914d570` |
 | Interest management | Scan every visible entity against every player every 500 ms | Dirty position/lifecycle triggers plus spatial buckets | Completed in `4523373`, tests split in `a85b035` |
 | Lightyear replication | Traverse every replicated root/component per client every 50 ms | Dirty global/per-sender candidates with initial full sync and ACK retention | Implemented in `269655a`, `30b5078`; strict-Empty CPU gate pending |
+| Inactive auto-attacks | Fixed combat query retains every `AutoAttack { active: false }` after target loss | Remove `AutoAttack` when `CombatTarget` becomes `None`; active attackers remain fixed-step | Completed in `152ccbd`; live CPU gate pending |
 
 ## Auction Expiration
 
@@ -29,6 +30,14 @@ The test `scheduled_auction_expiration_runs_at_most_once_per_second` exercises t
 3. The second auction expires when accumulated time reaches one second and produces the second mail entry.
 
 The pre-fix test failed when the second auction expired during the sub-second ticks. The focused GREEN test passed after `e02ce0a`.
+
+## Inactive Auto-Attack Participation
+
+Before `152ccbd`, `start_attack_system` replaced a cleared target's `AutoAttack` with `AutoAttack { active: false }`. The entity therefore remained in the `auto_attack_system` query on every `FixedUpdate`; the inactive branch was semantically empty but still paid ECS query validation and iteration. The fix removes `AutoAttack` when `CombatTarget` becomes `None`, making component presence the participation boundary.
+
+Target acquisition still inserts an active component with the existing zero-second timer. Active swing cadence, target-loss combat grace, damage/death transitions, respawn, and reliable `CombatEvent` broadcast remain unchanged.
+
+The behavioral RED test at `/tmp/claude/game-server/autoattack-inactive-removal-red.log` failed on the retained component. The focused GREEN test at `/tmp/claude/game-server/autoattack-inactive-removal-green.log` passed after `152ccbd`; `cargo fmt` and Rust readability evidence were also recorded. This is a server-side loop elimination; no live CPU or Character-stage claim is made before measurement.
 
 ## Terrain Streaming
 
@@ -123,6 +132,9 @@ Follow-up `aa5dddb` closed a replication wake-up gap in movement input handling.
 - [AI position writers](../../../crates/server/src/creature_ai.rs) — NPC movement dirty marking
 - `game-server` commit `4523373` — dirty-position interest implementation
 - `game-server` commit `a85b035` — interest integration-test split
+- [combat system](../../../crates/server/src/combat.rs) — `AutoAttack` lifecycle and fixed-step participation
+- [combat tests](../../../crates/server/src/combat_tests.rs) — target-loss removal and preserved combat-grace behavior
+- `game-server` commit `152ccbd` — remove inactive auto-attack components
 - [vendored Lightyear provenance](../../../vendor/lightyear_replication/UPSTREAM.md) — version, checksum, upstream commit, and license
 - [dirty candidate queue](../../../vendor/lightyear_replication/src/send/dirty.rs) — global/per-sender marks and lifecycle observers
 - [candidate traversal](../../../vendor/lightyear_replication/src/send/candidate.rs) — initial sync, candidate processing, and retry retention

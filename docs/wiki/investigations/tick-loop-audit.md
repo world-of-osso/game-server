@@ -102,7 +102,7 @@ Conflicting ECS access forces serialization, but serialization order is not a ga
 | 2 | `who::process_query_requests` | Builds/clones the full online-player list before checking whether any request exists | **REMOVE/GATE.** Drain requests first; cache roster only if request volume requires it |
 | 3 | `rest::update_player_rest_state` | Every `Update`, every authenticated player, linear scan of all innkeepers | **REMOVE/GATE.** Re-evaluate on initial world entry and position/level changes; add spatial lookup only if needed |
 | 4 | `send_changed_durability_snapshot` | Every `Update`, every player with durability, then `Ref::is_changed()` in the body | **REMOVE/GATE.** Use a `Changed<EquippedDurability>` query while retaining added-vs-changed semantics |
-| 5 | inactive `AutoAttack` entities | Clearing a target leaves `AutoAttack { active: false }`; fixed combat still queries it forever | **REMOVE/GATE.** Component presence or an active marker should define participation |
+| 5 | inactive `AutoAttack` entities | Clearing a target leaves `AutoAttack { active: false }`; fixed combat still queries it forever | **COMPLETED.** `152ccbd` removes `AutoAttack` on target loss; component presence now defines participation |
 | 6 | calendar query snapshot | Rebuilds the calendar snapshot before checking for `QueryCalendar` messages | **REMOVE/GATE.** Build once only when at least one request was drained |
 | 7 | trade offer lookup | Resolves each connection's player before checking whether that typed receiver is empty | **REMOVE/GATE.** Drain first, then resolve player state for non-empty requests |
 
@@ -132,7 +132,7 @@ These loops are real, but removing them without replacing their transition model
 | `apply_terrain_gravity` | All players, terrain lookup and state calculation | **OPTIMIZE** idle/grounded participation |
 | `stream_terrain_tiles` | All connections; same-tile early return | **OPTIMIZE** remaining tile probe |
 | `start_attack_system` | `Changed<CombatTarget>` only | **KEEP** |
-| `auto_attack_system` | Every entity retaining `AutoAttack` | **REMOVE/GATE** inactive participants; keep active attackers fixed-step |
+| `auto_attack_system` | Every entity retaining `AutoAttack` | **KEEP** active attackers fixed-step; `152ccbd` removes inactive participants on target loss |
 | `maintain_in_combat_state_system` | Entities with `CombatState` only | **KEEP** active-state-bounded |
 | `respawn_system` | Dead NPCs with `DeathState` only | **KEEP** active-state-bounded |
 | `wander_system` | All `WanderState` entities; idle/walking timer | **MEASURE** NPC count; simulation-required today |

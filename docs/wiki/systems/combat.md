@@ -1,17 +1,25 @@
 # Combat
 
-Combat logic is split across two crates: `shared/src/formulas/` holds pure combat math (melee hit table, stat conversions, spell formulas), and `server/src/combat.rs` runs the live ECS systems (auto-attack, direct NPC death transition, respawn).
+Combat logic is split across two crates: `shared/src/formulas/` holds pure combat math (melee hit table, stat conversions, spell formulas), and `server/src/combat.rs` runs the live ECS systems (active auto-attack, direct NPC death transition, respawn).
 
 ## Server Systems (`CombatPlugin`)
 
 Runs in `FixedUpdate`. Systems in order:
 
-1. `start_attack_system` — reacts to `Changed<CombatTarget>`; inserts `AutoAttack` and `CombatState`
-2. `auto_attack_system` — ticks swing timers, checks melee range (5 yards), applies `BASE_DAMAGE`, emits damage events, and handles lethal NPC transitions
+1. `start_attack_system` — reacts to `Changed<CombatTarget>`; inserts `AutoAttack` and `CombatState` for a target, and removes `AutoAttack` when the target is cleared
+2. `auto_attack_system` — processes only entities with active `AutoAttack`, ticks swing timers, checks melee range (5 yards), applies `BASE_DAMAGE`, emits damage events, and handles lethal NPC transitions
 3. `maintain_in_combat_state_system` — expires `CombatState` after 5s of no engagement
 4. `respawn_system` — ticks `DeathState.respawn_timer` (default 60s), restores HP and position to `SpawnPoint`, re-adds `Replicate` and `NetworkVisibility`
 
 All combat events are broadcast over `CombatChannel` (reliable ordered) and logged to a server-side `CombatLog` ring buffer (capacity 10,000 entries). Melee damage, NPC death, and NPC respawn events retain this broadcast and logging path.
+
+## Inactive Auto-Attack Participation (`152ccbd`)
+
+Before `152ccbd`, clearing `CombatTarget` retained `AutoAttack { active: false }`. The fixed-step `auto_attack_system` therefore continued validating and iterating those entities forever, even though `ready_auto_attack_target` returned without changing timers, health, combat events, or combat state. `start_attack_system` now removes `AutoAttack` when the target becomes `None`; component presence represents active auto-attack participation.
+
+Target acquisition still inserts an active `AutoAttack` with a zero timer, so the first swing and existing cooldown cadence are unchanged. Clearing a target still leaves `CombatState` available for the existing combat-grace timeout, and active combat, damage, death, respawn, and reliable event behavior remain unchanged.
+
+The RED test at `/tmp/claude/game-server/autoattack-inactive-removal-red.log` failed because the inactive component remained. The focused GREEN test at `/tmp/claude/game-server/autoattack-inactive-removal-green.log` passed after the removal. `cargo fmt` and Rust readability evidence are recorded for the commit. This documents a correctness-preserving participation fix; no live CPU or Character-stage claim is made before runtime measurement.
 
 ## NPC Death Transition (`c8762ed`)
 
@@ -61,7 +69,8 @@ Key formulas:
 ## Sources
 
 - [crates/server/src/combat.rs](../../../crates/server/src/combat.rs) — CombatPlugin, auto-attack, direct NPC death transition, respawn
-- [crates/server/src/combat_tests.rs](../../../crates/server/src/combat_tests.rs) — nonlethal, lethal, zero-without-transition, and respawn behavior coverage
+- [crates/server/src/combat_tests.rs](../../../crates/server/src/combat_tests.rs) — auto-attack participation, nonlethal, lethal, zero-without-transition, and respawn behavior coverage
+- `game-server` commit `152ccbd` — remove inactive auto-attack components after target loss
 - [crates/shared/src/formulas/melee.rs](../../../crates/shared/src/formulas/melee.rs) — hit table, avoidance DR
 - [crates/shared/src/formulas/spell.rs](../../../crates/shared/src/formulas/spell.rs) — spell miss, crit, haste, DoT
 - [crates/shared/src/formulas/mod.rs](../../../crates/shared/src/formulas/mod.rs) — HP, mana, armor, rating conversion
