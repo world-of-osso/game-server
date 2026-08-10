@@ -18,6 +18,7 @@ The server performance pass is replacing broad recurring scans with state-, even
 | Rest-state evaluation | Every `Update`, every authenticated player, linear scan of all innkeepers | Evaluate initial state or only `Changed<Position>`/`Changed<Level>` players | Completed in `fffa86a`; live CPU gate pending |
 | Durability snapshots | Every `Update`, every player with durability, then probe `Ref::is_changed()` in the body | Query-level `Changed<EquippedDurability>` gating while retaining the `is_added()` exclusion | Completed in `c46b322`; live CPU savings claim not made |
 | Calendar query snapshots | Build and clone the full calendar snapshot before checking `QueryCalendar` receivers | Drain eligible requests first; build one shared snapshot only when requests exist | Completed in `18be416`; no live CPU savings claim |
+| Trade offer lookups | Resolve `PlayerLink` → `Player` before checking `ClearTradeItem`/`SetTradeMoney` receivers | Gate the generic offer-update helper with `has_messages`; resolve once per non-empty batch | Completed in `969f2e0`; other six trade handlers remain outside this slice; no live CPU savings claim |
 | Gold persistence synchronization | Every `Update`, every online player, synchronous redb inventory read | Record persisted mutation values and apply them in `PostUpdate` before replication buffering | Completed in `4e4c73d`, `c3b3c04`, `9d2067c`, `91bbedd`, `8920feb`; live CPU gate pending |
 
 ## Auction Expiration
@@ -75,6 +76,14 @@ Before `18be416`, `calendar::process_query_requests` built, cloned, and sorted a
 The system now drains authenticated + `InWorld` receivers first and returns when no requests were queued. When requests exist, it builds one shared snapshot and sends one refresh response per requesting connection. All queued empty-payload queries are drained, preserving the prior one-response-per-connection behavior. Schedule/signup mutation ordering and the initial `Added<InWorld>` snapshot path remain unchanged.
 
 The six-test proof covers idle eligible connections, one shared sorted snapshot across multiple connections and queued requests, and ineligible receivers. RED: `/tmp/claude/game-server/calendar-query-drain-red.log`. GREEN: `/tmp/claude/game-server/calendar-query-drain-green.log` (**6 passed**). Formatting and readability artifacts: `/tmp/claude/game-server/calendar-query-drain-fmt.log` and `/tmp/claude/game-server/calendar-query-drain-readability.json`. No live CPU savings claim is made.
+
+## Trade Offer Lookup
+
+Before `969f2e0`, the generic `process_trade_offer_updates` helper resolved each authenticated connection's `PlayerLink` to a `Player` before checking whether its typed receiver had messages. Idle `Update`s therefore performed unnecessary ECS player-query work for `ClearTradeItem` and `SetTradeMoney`.
+
+The helper now uses `MessageReceiver::has_messages()` first. Empty receivers skip the `PlayerLink` → `Player` lookup; non-empty receivers drain and apply every queued request in order, resolve the player once per batch, and preserve existing persistence, trade-session mutation, broadcast, routing, and missing-player error behavior. The six other trade receiver systems remain outside this named 7-item slice.
+
+RED: `/tmp/claude/game-server/trade-offer-drain-red.log`. An initial GREEN harness-timing failure is retained at `/tmp/claude/game-server/trade-offer-drain-green-attempt1.log`; final GREEN is `/tmp/claude/game-server/trade-offer-drain-green.log` (**6 passed**). Formatting and readability artifacts are recorded alongside the final proof. Audit status is now **7/7 named slices complete**. No live CPU savings claim is made.
 
 ## Gold Persistence Synchronization
 

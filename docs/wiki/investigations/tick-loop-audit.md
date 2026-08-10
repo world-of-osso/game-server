@@ -1,6 +1,6 @@
 # Tick Loop Audit
 
-Source-grounded audit of every production `game-server` system registered in a recurring Bevy schedule. It answers whether the current loop design is correct, identifies work that is unnecessary every tick/update, and separates confirmed defects from systems that need measurement before redesign. Commits `a4e7aeb` and `c46b322` record completed Who and durability request/change gating; no live CPU savings claim is made.
+Source-grounded audit of every production `game-server` system registered in a recurring Bevy schedule. It answers whether the current loop design is correct, identifies work that is unnecessary every tick/update, and separates confirmed defects from systems that need measurement before redesign. Commits `a4e7aeb`, `c46b322`, `18be416`, and `969f2e0` record completed Who, durability, calendar, and trade-offer request gating; no live CPU savings claim is made.
 
 ## Content
 
@@ -12,11 +12,11 @@ Source-grounded audit of every production `game-server` system registered in a r
 |---|---|
 | Periodic persistence | **Confirmed correctness bug:** the 300-tick early return discards most `Changed<T>` history |
 | Fixed-step ordering | **Incomplete:** several same-tick outcomes are scheduler-order-dependent |
-| Application polling | **Several confirmed unnecessary loops:** gold, Who, rest, durability, inactive auto-attacks |
+| Application polling | **Several confirmed unnecessary loops:** gold, Who, rest, durability, calendar, trade-offer lookups, inactive auto-attacks |
 | Lightyear/interest | **Major root/entity scans fixed:** remaining recurring work is connection/dirty-state plumbing |
 | Receiver fan-out | **Real but unmeasured:** 74 `Update` systems poll typed connection receivers |
 
-**Server audit status: 6/7 complete.** Gold (#1), Who (#2), rest (#3), durability (#4), calendar (#6), and inactive auto-attacks (#5) are complete. Trade lookup (#7) remains open.
+**Server audit status: 7/7 named slices complete.** Gold (#1), Who (#2), rest (#3), durability (#4), calendar (#6), trade offer lookup (#7), and inactive auto-attacks (#5) are complete. The remaining findings are the separate persistence correctness bug, fixed-step ordering gap, and unmeasured receiver fan-out.
 
 The design should not be approved as complete until the persistence bug and fixed-order contract are resolved.
 
@@ -106,7 +106,7 @@ Conflicting ECS access forces serialization, but serialization order is not a ga
 | 4 | `send_changed_durability_snapshot` | Every `Update`, every player with durability, then `Ref::is_changed()` in the body | **COMPLETED.** `c46b322` gates the query with `Changed<EquippedDurability>` and retains the `is_added()` exclusion |
 | 5 | inactive `AutoAttack` entities | Clearing a target leaves `AutoAttack { active: false }`; fixed combat still queries it forever | **COMPLETED.** `152ccbd` removes `AutoAttack` on target loss; component presence now defines participation |
 | 6 | calendar query snapshot | Rebuilds the calendar snapshot before checking for `QueryCalendar` messages | **COMPLETED.** `18be416` drains eligible requests first and builds one shared snapshot only when requests exist |
-| 7 | trade offer lookup | Resolves each connection's player before checking whether that typed receiver is empty | **REMOVE/GATE.** Drain first, then resolve player state for non-empty requests |
+| 7 | trade offer lookup | Resolves each connection's player before checking whether that typed receiver is empty | **COMPLETED.** `969f2e0` gates `process_trade_offer_updates` with `has_messages`; only `ClearTradeItem` and `SetTradeMoney` are in scope |
 
 ### Durability Snapshot Gating
 
@@ -119,6 +119,14 @@ The RED proof is `/tmp/claude/game-server/durability-changed-filter-red.log`; GR
 Before `18be416`, `calendar::process_query_requests` built and cloned the sorted calendar snapshot before checking eligible `QueryCalendar` receivers. The fix drains authenticated + `InWorld` receivers first, returns on idle updates, and builds one shared snapshot only when requests exist. All queued empty-payload queries still drain and produce one refresh response per requesting connection. Schedule/signup mutation order and the initial `Added<InWorld>` snapshot path are unchanged.
 
 RED: `/tmp/claude/game-server/calendar-query-drain-red.log`. GREEN: `/tmp/claude/game-server/calendar-query-drain-green.log` (**6 passed**). Formatting/readability artifacts: `/tmp/claude/game-server/calendar-query-drain-fmt.log` and `/tmp/claude/game-server/calendar-query-drain-readability.json`. No live CPU savings claim is made.
+
+### Trade Offer Lookup
+
+Before `969f2e0`, the generic `process_trade_offer_updates` helper resolved each authenticated connection's `PlayerLink` to a `Player` before checking the typed receiver. Idle `Update`s therefore paid the player-query lookup for `ClearTradeItem` and `SetTradeMoney` even when no offer request was queued.
+
+The helper now checks `has_messages()` first. Empty receivers skip player resolution; non-empty receivers drain and apply every queued request in order, resolve the player once per batch, and retain the existing persistence, trade-session, broadcast, routing, and missing-player error behavior. The other six trade receiver systems remain outside this 7-item slice.
+
+RED: `/tmp/claude/game-server/trade-offer-drain-red.log`. The initial GREEN harness-timing failure is recorded at `/tmp/claude/game-server/trade-offer-drain-green-attempt1.log`; final GREEN is `/tmp/claude/game-server/trade-offer-drain-green.log` (**6 passed**). Formatting/readability artifacts are recorded alongside the final proof. No live CPU savings claim is made.
 
 ### Who Query Roster Construction
 
@@ -259,7 +267,7 @@ These completed slices do not prove that the rest of the server has no recurring
 1. Fix the periodic persistence `Changed<T>` bug and add a real 300-tick-window regression.
 2. Remove per-player redb gold polling; make inventory mutation own `Gold` synchronization.
 3. Add explicit fixed phase ordering for movement, combat, death, lifecycle, interest, and persistence.
-4. Convert trade pre-work to request boundaries; Who is complete in `a4e7aeb`, calendar in `18be416`, and durability change gating in `c46b322`.
+4. Convert remaining trade pre-work to request boundaries; the named trade-offer slice is complete in `969f2e0`, alongside Who `a4e7aeb`, calendar `18be416`, and durability change gating `c46b322`.
 5. Instrument receiver fan-out, gravity, AI, interest target fanout, database latency, and fixed catch-up before broader redesign.
 
 ## Proof Limits
@@ -284,7 +292,9 @@ This is a static source audit plus a focused Bevy 0.18 change-detection reproduc
 - [crates/server/src/calendar.rs](../../../crates/server/src/calendar.rs) — drain-first calendar query handling, initial snapshot, and schedule/signup mutation ordering
 - `game-server` commit `18be416` — drain calendar queries before building a shared snapshot
 - [calendar tests](../../../crates/server/src/calendar.rs) — idle, shared-snapshot, routing, and eligibility proof
-- [crates/server/src/trade.rs](../../../crates/server/src/trade.rs) — receiver polling and range enforcement
+- [crates/server/src/trade.rs](../../../crates/server/src/trade.rs) — trade receiver polling, generic offer-update gating, and range enforcement
+- [crates/server/src/trade_tests.rs](../../../crates/server/src/trade_tests.rs) — trade-offer idle, batch, routing, and error proof
+- `game-server` commit `969f2e0` — skip idle trade-offer player lookups
 - [crates/server/src/persistence_runtime.rs](../../../crates/server/src/persistence_runtime.rs) — periodic save gate and `Changed` filters
 - [crates/server/src/interest.rs](../../../crates/server/src/interest.rs) — dirty interest and replication forwarding
 - [vendor/lightyear_replication/src/send/buffer.rs](../../../vendor/lightyear_replication/src/send/buffer.rs) — dirty candidates and sender metadata passes

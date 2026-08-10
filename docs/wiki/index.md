@@ -31,7 +31,7 @@ Server gameplay systems.
 | Page | Summary |
 |------|---------|
 | [[ecs-storage]] | Bevy ECS as columnar in-memory database: archetype tables, zero-overhead queries, built-in change detection |
-| [[networking]] | Lightyear over QUIC: dirty-candidate replication, GoldUpdateQueue timing, change-filtered durability/rest snapshots, PlayerInput model, channels, and interest management |
+| [[networking]] | Lightyear over QUIC: dirty-candidate replication, GoldUpdateQueue timing, change-filtered durability/rest snapshots, drain-first calendar/trade requests, PlayerInput model, channels, and interest management |
 | [[persistence]] | Dual-layer storage: redb for mutable player data, login-loaded gold, mutation-boundary GoldUpdateQueue replication, and SQLite for static world data |
 | [[world-data]] | SQLite world.db: all tables with row counts, AzerothCore/Retail DB2 sources, WorldDataPlugin, SpellDatabasePlugin |
 | [[tick-model]] | Observed server loop: 50ms runner/fixed cadence, schedule ownership, explicit ordering, maintenance gates, and IPC boundary |
@@ -46,5 +46,5 @@ Debug logs and root cause analyses.
 | Page | Summary |
 |------|---------|
 | [[semantic-noop-replication]] | First- and second-wave server equal-assignment proofs/fixes, Lightyear 0.26.4 tick-only sending, direct NPC death transition, Gold ruled out, and blocked wire-level proof |
-| [[recurring-loop-elimination]] | Tests-first removal of auction, terrain, friends, interest, Lightyear, Who roster, gold, durability, calendar, inactive auto-attack, and rest-state recurring scans; trade lookup remains open |
-| [[tick-loop-audit]] | Exhaustive 130-system recurring-schedule audit: 6/7 named loops complete, persistence correctness bug, missing order, and remaining trade measurement target |
+| [[recurring-loop-elimination]] | Tests-first removal of auction, terrain, friends, interest, Lightyear, Who roster, gold, durability, calendar, trade-offer, inactive auto-attack, and rest-state recurring scans; other trade handlers remain outside the named slice |
+| [[tick-loop-audit]] | Exhaustive 130-system recurring-schedule audit: all 7 named loop slices complete, persistence correctness bug, missing order, and remaining unmeasured receiver fan-out |

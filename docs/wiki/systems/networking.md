@@ -80,6 +80,12 @@ Behavioral RED/GREEN and readability artifacts are recorded in [[recurring-loop-
 
 `calendar::process_query_requests` drains `QueryCalendar` receivers before materializing the calendar snapshot. Repeated idle `Update`s therefore build no calendar snapshot; an Update with one or more eligible `Authenticated` + `InWorld` requests builds one shared sorted snapshot and sends one `calendar refreshed` response per requesting connection. All queued empty-payload requests are drained, preserving the prior response count and routing. Schedule/signup mutation ordering and the initial `Added<InWorld>` calendar snapshot path remain unchanged. Commit `18be416` covers this behavior. See [[recurring-loop-elimination]] and [[tick-loop-audit]]; no live CPU savings claim is made.
 
+## Trade Offer Requests
+
+The generic `process_trade_offer_updates` helper handles `ClearTradeItem` and `SetTradeMoney`. Before `969f2e0`, it resolved each authenticated connection's `PlayerLink` to a `Player` before checking the typed receiver, so idle `Update`s performed unnecessary player-query work.
+
+The helper now checks `MessageReceiver::has_messages()` first. Empty receivers skip player resolution; queued requests still drain and apply in order, with one player resolution per batch. Existing persistence, trade-session mutation, broadcast/routing, and missing-player errors remain unchanged. The other six trade receiver systems are outside this named audit slice. RED/GREEN and readability evidence is recorded in [[recurring-loop-elimination]]; no live CPU savings claim is made.
+
 ## Who Query Requests
 
 `who::process_query_requests` drains `QueryWho` receivers before materializing the online roster. Repeated idle `Update`s therefore build zero rosters; an Update with one or more eligible requests builds one shared roster and derives each response from it. Only `Authenticated` + `InWorld` connections participate. Each connection receives the response for its latest queued request, multiple connections route independently, and existing trimmed case-insensitive substring filtering, case-insensitive name sorting, `WhoSnapshot` content, `who: N result(s)` message, and error fields remain unchanged. Commit `a4e7aeb` covers this behavior. See [[recurring-loop-elimination]] and [[tick-loop-audit]]; no live CPU savings claim is made.
