@@ -5,7 +5,6 @@
 
 use bevy::MinimalPlugins;
 use bevy::app::PluginsState;
-use bevy::log::LogPlugin;
 use bevy::prelude::*;
 use bevy::state::app::StatesPlugin;
 use bevy::time::TimeUpdateStrategy;
@@ -52,12 +51,7 @@ impl Stepper {
 
     fn new_server() -> Self {
         let mut server_app = App::new();
-        server_app.add_plugins((
-            MinimalPlugins,
-            TransformPlugin,
-            StatesPlugin,
-            LogPlugin::default(),
-        ));
+        server_app.add_plugins((MinimalPlugins, TransformPlugin, StatesPlugin));
         server_app.add_plugins(server::ServerPlugins {
             tick_duration: TICK_DURATION,
         });
@@ -92,12 +86,7 @@ impl Stepper {
 
     fn build_client_app(tick_duration: Duration) -> App {
         let mut app = App::new();
-        app.add_plugins((
-            MinimalPlugins,
-            TransformPlugin,
-            StatesPlugin,
-            LogPlugin::default(),
-        ));
+        app.add_plugins((MinimalPlugins, TransformPlugin, StatesPlugin));
         app.add_plugins(client::ClientPlugins { tick_duration });
         app.add_plugins(ProtocolPlugin);
         app.finish();

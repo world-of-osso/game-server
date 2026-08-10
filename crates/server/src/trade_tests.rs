@@ -11,6 +11,7 @@ use crate::trade::trade_support::build_trade_party_snapshot;
 fn setup_trade_offer_app(db: redb::Database) -> App {
     let mut app = App::new();
     app.add_plugins(MinimalPlugins);
+    app.add_plugins(bevy::state::app::StatesPlugin);
     app.add_plugins(lightyear::prelude::server::ServerPlugins {
         tick_duration: Duration::from_millis(50),
     });

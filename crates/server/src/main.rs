@@ -43,7 +43,7 @@ mod world_map;
 mod zones;
 
 use bevy::prelude::*;
-use lightyear::prelude::server::ServerPlugins;
+use lightyear::prelude::{ReplicationMetadata, server::ServerPlugins};
 use std::time::Duration;
 
 /// Server tick rate: 20Hz (50ms per tick).
@@ -64,10 +64,14 @@ fn add_runtime_plugins(app: &mut App) {
             Duration::from_secs_f64(1.0 / TICK_RATE_HZ),
         )),
     )
+    .add_plugins(bevy::state::app::StatesPlugin)
     .add_plugins(bevy::log::LogPlugin::default())
     .add_plugins(ServerPlugins {
         tick_duration: Duration::from_secs_f64(1.0 / TICK_RATE_HZ),
-    });
+    })
+    .insert_resource(ReplicationMetadata::new(Duration::from_secs_f64(
+        1.0 / TICK_RATE_HZ,
+    )));
 }
 
 fn add_game_plugins(app: &mut App) {

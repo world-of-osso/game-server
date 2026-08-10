@@ -4,7 +4,7 @@ use shared::components::{CombatStatus, Health, Npc, Position};
 use shared::protocol::{CombatChannel, CombatEvent, CombatEventType};
 
 use crate::creature_ai::SpawnPoint;
-use crate::interest::{InterestDirtyQueue, mark_interest_position_changed};
+use crate::interest::{InterestDirtyQueue, NetworkVisibility, mark_interest_position_changed};
 use crate::networking::CombatTarget;
 
 use std::collections::VecDeque;
@@ -402,8 +402,8 @@ fn respawn_system(
             mark_interest_position_changed(dirty_queue.as_deref(), entity);
         }
         commands.entity(entity).remove::<DeathState>().insert((
-            Replicate::new(ReplicationMode::SingleServer(NetworkTarget::All)),
-            NetworkVisibility,
+            Replicate::to_clients(NetworkTarget::All),
+            NetworkVisibility::default(),
         ));
         commands.entity(entity).remove::<LastDamager>();
         events.push(CombatEvent {

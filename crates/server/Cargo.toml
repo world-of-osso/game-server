@@ -6,10 +6,10 @@ rust-version.workspace = true
 
 [dependencies]
 shared = { git = "https://github.com/world-of-osso/shared-protocol.git", rev = "e25c79d" }
-bevy = { version = "0.18", default-features = false, features = [
+bevy = { version = "0.19", default-features = false, features = [
     "bevy_log", "bevy_state",
 ] }
-lightyear = { version = "0.26", features = ["server", "netcode", "replication", "udp"] }
+lightyear = { version = "0.28", features = ["server", "netcode", "replication", "udp"] }
 redb = "3"
 serde = { version = "1", features = ["derive"] }
 bitcode = "0.6"

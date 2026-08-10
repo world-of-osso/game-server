@@ -13,6 +13,7 @@ use shared::reputation::default_faction_registry;
 use std::collections::HashSet;
 
 use crate::auth::{Authenticated, InWorld, SentTiles};
+use crate::interest::NetworkVisibility;
 use crate::networking::{CombatTarget, PlayerLink, queue_player_despawn, send_load_terrain};
 use crate::persistence::{self, CharacterData, ClientId, GameDatabase};
 
@@ -430,8 +431,8 @@ fn build_player_runtime_components(character_id: u64, level: u16) -> impl Bundle
         SelectedTalents::default(),
         ClientId(character_id),
         CombatTarget::default(),
-        Replicate::new(ReplicationMode::SingleServer(NetworkTarget::All)),
-        NetworkVisibility,
+        Replicate::to_clients(NetworkTarget::All),
+        NetworkVisibility::default(),
     )
 }
 

@@ -1,12 +1,13 @@
 use super::*;
 
-fn make_state_and_conn() -> (ReplicationState, Entity) {
-    (ReplicationState::default(), Entity::from_bits(1))
+fn make_state_and_conn() -> (NetworkVisibility, Entity) {
+    (NetworkVisibility::default(), Entity::from_bits(1))
 }
 
 fn setup_interest_app() -> App {
     let mut app = App::new();
     app.add_plugins(bevy::MinimalPlugins);
+    app.add_plugins(bevy::state::app::StatesPlugin);
     app.add_plugins(lightyear::prelude::server::ServerPlugins {
         tick_duration: std::time::Duration::from_millis(50),
     });
@@ -17,20 +18,13 @@ fn setup_interest_app() -> App {
 fn spawn_interest_observer(app: &mut App, position: Position) -> Entity {
     let player = app.world_mut().spawn(position).id();
     app.world_mut()
-        .spawn((
-            PlayerLink(player),
-            ReplicationSender::new(
-                std::time::Duration::from_millis(50),
-                SendUpdatesMode::SinceLastAck,
-                false,
-            ),
-        ))
+        .spawn((PlayerLink(player), ReplicationSender))
         .id()
 }
 
 fn spawn_interest_target(app: &mut App, position: Position) -> Entity {
     app.world_mut()
-        .spawn((position, NetworkVisibility, ReplicationState::default()))
+        .spawn((position, NetworkVisibility::default()))
         .id()
 }
 
@@ -44,11 +38,11 @@ fn pos(x: f32, y: f32, z: f32) -> Position {
     Position { x, y, z }
 }
 
-fn assert_visible(state: &ReplicationState, conn: Entity, msg: &str) {
+fn assert_visible(state: &NetworkVisibility, conn: Entity, msg: &str) {
     assert!(state.is_visible(conn), "{msg}");
 }
 
-fn assert_not_visible(state: &ReplicationState, conn: Entity, msg: &str) {
+fn assert_not_visible(state: &NetworkVisibility, conn: Entity, msg: &str) {
     assert!(!state.is_visible(conn), "{msg}");
 }
 
@@ -63,7 +57,7 @@ fn new_nearby_entity_is_visible_on_next_fixed_tick() {
     assert!(
         app.world()
             .entity(target)
-            .get::<ReplicationState>()
+            .get::<NetworkVisibility>()
             .unwrap()
             .is_visible(connection),
         "a newly visible entity must not wait for a recurring global scan"
@@ -79,14 +73,14 @@ fn unchanged_interest_ticks_do_not_dirty_visibility() {
     assert!(
         app.world()
             .entity(target)
-            .get::<ReplicationState>()
+            .get::<NetworkVisibility>()
             .unwrap()
             .is_visible(connection)
     );
     let visibility_tick = app
         .world()
         .entity(target)
-        .get_ref::<ReplicationState>()
+        .get_ref::<NetworkVisibility>()
         .unwrap()
         .last_changed();
 
@@ -95,7 +89,7 @@ fn unchanged_interest_ticks_do_not_dirty_visibility() {
     assert_eq!(
         app.world()
             .entity(target)
-            .get_ref::<ReplicationState>()
+            .get_ref::<NetworkVisibility>()
             .unwrap()
             .last_changed(),
         visibility_tick,
@@ -112,7 +106,7 @@ fn dirty_target_crosses_exact_radius_within_same_bucket() {
     assert!(
         !app.world()
             .entity(target)
-            .get::<ReplicationState>()
+            .get::<NetworkVisibility>()
             .unwrap()
             .is_visible(connection)
     );
@@ -125,7 +119,7 @@ fn dirty_target_crosses_exact_radius_within_same_bucket() {
     assert!(
         app.world()
             .entity(target)
-            .get::<ReplicationState>()
+            .get::<NetworkVisibility>()
             .unwrap()
             .is_visible(connection)
     );
@@ -138,7 +132,7 @@ fn dirty_target_crosses_exact_radius_within_same_bucket() {
     assert!(
         !app.world()
             .entity(target)
-            .get::<ReplicationState>()
+            .get::<NetworkVisibility>()
             .unwrap()
             .is_visible(connection)
     );
@@ -150,33 +144,19 @@ fn dirty_observer_movement_updates_only_its_visibility() {
     let player_a = app.world_mut().spawn(pos(0.0, 0.0, 0.0)).id();
     let connection_a = app
         .world_mut()
-        .spawn((
-            PlayerLink(player_a),
-            ReplicationSender::new(
-                std::time::Duration::from_millis(50),
-                SendUpdatesMode::SinceLastAck,
-                false,
-            ),
-        ))
+        .spawn((PlayerLink(player_a), ReplicationSender))
         .id();
     let player_b = app.world_mut().spawn(pos(300.0, 0.0, 0.0)).id();
     let connection_b = app
         .world_mut()
-        .spawn((
-            PlayerLink(player_b),
-            ReplicationSender::new(
-                std::time::Duration::from_millis(50),
-                SendUpdatesMode::SinceLastAck,
-                false,
-            ),
-        ))
+        .spawn((PlayerLink(player_b), ReplicationSender))
         .id();
     let target = spawn_interest_target(&mut app, pos(50.0, 0.0, 0.0));
     run_fixed_ticks(&mut app, 1);
     let state = app
         .world()
         .entity(target)
-        .get::<ReplicationState>()
+        .get::<NetworkVisibility>()
         .unwrap();
     assert!(state.is_visible(connection_a));
     assert!(!state.is_visible(connection_b));
@@ -189,7 +169,7 @@ fn dirty_observer_movement_updates_only_its_visibility() {
     let state = app
         .world()
         .entity(target)
-        .get::<ReplicationState>()
+        .get::<NetworkVisibility>()
         .unwrap();
     assert!(state.is_visible(connection_a));
     assert!(state.is_visible(connection_b));
@@ -202,7 +182,7 @@ fn dirty_observer_movement_updates_only_its_visibility() {
     let state = app
         .world()
         .entity(target)
-        .get::<ReplicationState>()
+        .get::<NetworkVisibility>()
         .unwrap();
     assert!(!state.is_visible(connection_a));
     assert!(state.is_visible(connection_b));
@@ -217,7 +197,7 @@ fn visibility_removal_and_readd_do_not_leave_stale_range_state() {
     assert!(
         app.world()
             .entity(target)
-            .get::<ReplicationState>()
+            .get::<NetworkVisibility>()
             .unwrap()
             .is_visible(connection)
     );
@@ -228,13 +208,15 @@ fn visibility_removal_and_readd_do_not_leave_stale_range_state() {
     app.world_mut()
         .entity_mut(target)
         .insert(pos(500.0, 0.0, 0.0));
-    app.world_mut().entity_mut(target).insert(NetworkVisibility);
+    app.world_mut()
+        .entity_mut(target)
+        .insert(NetworkVisibility::default());
     run_fixed_ticks(&mut app, 1);
 
     assert!(
         !app.world()
             .entity(target)
-            .get::<ReplicationState>()
+            .get::<NetworkVisibility>()
             .unwrap()
             .is_visible(connection)
     );
@@ -246,21 +228,14 @@ fn reconnect_uses_fresh_observer_visibility() {
     let player = app.world_mut().spawn(pos(0.0, 0.0, 0.0)).id();
     let first_connection = app
         .world_mut()
-        .spawn((
-            PlayerLink(player),
-            ReplicationSender::new(
-                std::time::Duration::from_millis(50),
-                SendUpdatesMode::SinceLastAck,
-                false,
-            ),
-        ))
+        .spawn((PlayerLink(player), ReplicationSender))
         .id();
     let target = spawn_interest_target(&mut app, pos(50.0, 0.0, 0.0));
     run_fixed_ticks(&mut app, 1);
     assert!(
         app.world()
             .entity(target)
-            .get::<ReplicationState>()
+            .get::<NetworkVisibility>()
             .unwrap()
             .is_visible(first_connection)
     );
@@ -270,21 +245,14 @@ fn reconnect_uses_fresh_observer_visibility() {
         .remove::<PlayerLink>();
     let second_connection = app
         .world_mut()
-        .spawn((
-            PlayerLink(player),
-            ReplicationSender::new(
-                std::time::Duration::from_millis(50),
-                SendUpdatesMode::SinceLastAck,
-                false,
-            ),
-        ))
+        .spawn((PlayerLink(player), ReplicationSender))
         .id();
     run_fixed_ticks(&mut app, 1);
 
     assert!(
         app.world()
             .entity(target)
-            .get::<ReplicationState>()
+            .get::<NetworkVisibility>()
             .unwrap()
             .is_visible(second_connection)
     );
@@ -343,7 +311,7 @@ fn many_entities_only_nearby_replicated() {
     let mut culled_count = 0;
 
     for &dist in &distances {
-        let mut state = ReplicationState::default();
+        let mut state = NetworkVisibility::default();
         let entity_pos = pos(dist, 0.0, 0.0);
         update_entity_visibility(&entity_pos, &mut state, &players);
         if state.is_visible(conn) {
@@ -364,17 +332,17 @@ fn entity_at_exactly_100yd_boundary() {
     let players = vec![(conn, pos(0.0, 0.0, 0.0))];
 
     // Exactly 100yd — visible (<=)
-    let mut state = ReplicationState::default();
+    let mut state = NetworkVisibility::default();
     update_entity_visibility(&pos(100.0, 0.0, 0.0), &mut state, &players);
     assert_visible(&state, conn, "exactly 100yd should be visible");
 
     // Just over 100yd — culled
-    let mut state = ReplicationState::default();
+    let mut state = NetworkVisibility::default();
     update_entity_visibility(&pos(100.01, 0.0, 0.0), &mut state, &players);
     assert_not_visible(&state, conn, "100.01yd should be culled");
 
     // Just under 100yd — visible
-    let mut state = ReplicationState::default();
+    let mut state = NetworkVisibility::default();
     update_entity_visibility(&pos(99.99, 0.0, 0.0), &mut state, &players);
     assert_visible(&state, conn, "99.99yd should be visible");
 }
@@ -384,9 +352,9 @@ fn teleport_removes_old_area_adds_new_area() {
     let conn = Entity::from_bits(1);
 
     // Entity near old position (0,0,0)
-    let mut old_entity_state = ReplicationState::default();
+    let mut old_entity_state = NetworkVisibility::default();
     // Entity near new position (500,0,0)
-    let mut new_entity_state = ReplicationState::default();
+    let mut new_entity_state = NetworkVisibility::default();
 
     let old_entity_pos = pos(50.0, 0.0, 0.0);
     let new_entity_pos = pos(520.0, 0.0, 0.0);
@@ -423,7 +391,7 @@ fn npc_spawn_appears_to_all_nearby_players() {
     ];
 
     // NPC spawns at (50, 0, 0)
-    let mut state = ReplicationState::default();
+    let mut state = NetworkVisibility::default();
     update_entity_visibility(&pos(50.0, 0.0, 0.0), &mut state, &players);
 
     assert_visible(&state, player_a, "player A within range");
@@ -441,7 +409,7 @@ fn npc_despawn_removed_from_all_observers() {
     ];
 
     // NPC visible to both players
-    let mut state = ReplicationState::default();
+    let mut state = NetworkVisibility::default();
     update_entity_visibility(&pos(10.0, 0.0, 0.0), &mut state, &players);
     assert_visible(&state, player_a, "A sees NPC");
     assert_visible(&state, player_b, "B sees NPC");
@@ -458,8 +426,8 @@ fn two_players_move_toward_each_other_both_gain_visibility() {
     let conn_b = Entity::from_bits(2);
 
     // Player A's entity state (visible to B?) and B's entity state (visible to A?)
-    let mut state_a = ReplicationState::default();
-    let mut state_b = ReplicationState::default();
+    let mut state_a = NetworkVisibility::default();
+    let mut state_b = NetworkVisibility::default();
 
     // Players start 200yd apart — neither visible to the other
     let players_far = vec![(conn_a, pos(0.0, 0.0, 0.0)), (conn_b, pos(200.0, 0.0, 0.0))];
@@ -483,8 +451,8 @@ fn two_players_move_toward_each_other_both_gain_visibility() {
 fn two_players_move_apart_both_lose_visibility() {
     let conn_a = Entity::from_bits(1);
     let conn_b = Entity::from_bits(2);
-    let mut state_a = ReplicationState::default();
-    let mut state_b = ReplicationState::default();
+    let mut state_a = NetworkVisibility::default();
+    let mut state_b = NetworkVisibility::default();
 
     // Start 20yd apart — both visible
     let players_close = vec![(conn_a, pos(0.0, 0.0, 0.0)), (conn_b, pos(20.0, 0.0, 0.0))];
@@ -580,7 +548,7 @@ fn large_entity_count_performance_bounded() {
     let mut visible_count = 0;
 
     for i in 0..500 {
-        let mut state = ReplicationState::default();
+        let mut state = NetworkVisibility::default();
         let entity_pos = pos(i as f32 * 2.0, 0.0, 0.0);
         update_entity_visibility(&entity_pos, &mut state, &players);
         for &(conn, _) in &players {
@@ -616,7 +584,7 @@ fn repeated_update_with_unchanged_positions_is_idempotent() {
     }
 
     // Same for an out-of-range entity: stays culled
-    let mut far_state = ReplicationState::default();
+    let mut far_state = NetworkVisibility::default();
     let far_pos = pos(200.0, 0.0, 0.0);
     for _ in 0..10 {
         update_entity_visibility(&far_pos, &mut far_state, &players);

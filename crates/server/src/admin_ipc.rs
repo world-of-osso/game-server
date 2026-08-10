@@ -24,8 +24,8 @@ impl Plugin for AdminIpcPlugin {
     fn build(&self, app: &mut App) {
         let (receiver, guard) = init();
 
-        app.insert_non_send_resource(receiver)
-            .insert_non_send_resource(guard)
+        app.insert_non_send(receiver)
+            .insert_non_send(guard)
             .add_systems(Update, poll_admin_ipc);
     }
 }
@@ -455,7 +455,9 @@ mod tests {
             SystemState::<Query<(Entity, &mut Position, &persistence::ClientId)>>::new(
                 app.world_mut(),
             );
-        let mut query = system_state.get_mut(app.world_mut());
+        let mut query = system_state
+            .get_mut(app.world_mut())
+            .expect("admin position query should be valid");
 
         let response =
             handle_set_position(&game_db, &mut query, None, "Mover", -8920.5, -188.25, 97.75);
@@ -625,8 +627,9 @@ mod tests {
             Query<(Entity, &crate::auth::Authenticated), With<MessageSender<LoginResponse>>>,
             Query<&mut MessageSender<CharacterListUpdate>>,
         )>::new(&mut world);
-        let (mut commands, mut query, authenticated_query, mut roster_update_senders) =
-            state.get_mut(&mut world);
+        let (mut commands, mut query, authenticated_query, mut roster_update_senders) = state
+            .get_mut(&mut world)
+            .expect("admin equipment query should be valid");
 
         let response = handle_set_equipment_appearance(
             &game_db,
@@ -697,8 +700,9 @@ mod tests {
         )>::new(&mut world);
 
         {
-            let (mut commands, mut query, authenticated_query, mut roster_update_senders) =
-                state.get_mut(&mut world);
+            let (mut commands, mut query, authenticated_query, mut roster_update_senders) = state
+                .get_mut(&mut world)
+                .expect("admin equipment query should be valid");
             let response = handle_set_equipment_appearance(
                 &game_db,
                 &mut commands,
@@ -774,8 +778,9 @@ mod tests {
         )>::new(&mut world);
 
         {
-            let (mut commands, mut query, authenticated_query, mut roster_update_senders) =
-                state.get_mut(&mut world);
+            let (mut commands, mut query, authenticated_query, mut roster_update_senders) = state
+                .get_mut(&mut world)
+                .expect("admin equipment query should be valid");
             let response = handle_clear_equipment_appearance(
                 &game_db,
                 &mut commands,
@@ -826,8 +831,9 @@ mod tests {
             Query<(Entity, &crate::auth::Authenticated), With<MessageSender<LoginResponse>>>,
             Query<&mut MessageSender<CharacterListUpdate>>,
         )>::new(&mut world);
-        let (mut commands, mut query, authenticated_query, mut roster_update_senders) =
-            state.get_mut(&mut world);
+        let (mut commands, mut query, authenticated_query, mut roster_update_senders) = state
+            .get_mut(&mut world)
+            .expect("admin equipment query should be valid");
 
         let response = handle_clear_equipment_appearance(
             &game_db,

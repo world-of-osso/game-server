@@ -16,6 +16,7 @@ fn death_result_at(x: f32, y: f32, z: f32) -> DeathResult {
 fn setup_death_app() -> App {
     let mut app = App::new();
     app.add_plugins(bevy::MinimalPlugins);
+    app.add_plugins(bevy::state::app::StatesPlugin);
     app.add_plugins(lightyear::prelude::server::ServerPlugins {
         tick_duration: Duration::from_millis(50),
     });

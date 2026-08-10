@@ -5,8 +5,8 @@ edition.workspace = true
 rust-version.workspace = true
 
 [dependencies]
-bevy = { version = "0.18", default-features = false }
-lightyear = { version = "0.26", features = ["replication"] }
+bevy = { version = "0.19", default-features = false }
+lightyear = { version = "0.28", features = ["replication"] }
 serde = { version = "1", features = ["derive"] }
 bitcode = "0.6"
 

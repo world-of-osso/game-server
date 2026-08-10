@@ -11,9 +11,9 @@
 
 [package]
 edition = "2024"
-rust-version = "1.88"
+rust-version = "1.95"
 name = "lightyear_replication"
-version = "0.26.4"
+version = "0.28.0"
 authors = ["Charles Bournhonesque <charlesbour@gmail.com>"]
 build = false
 autolib = false
@@ -28,12 +28,19 @@ repository = "https://github.com/cBournhonesque/lightyear"
 
 [package.metadata.docs.rs]
 all-features = true
+features = [
+    "avian2d/2d",
+    "avian2d/f32",
+    "avian3d/3d",
+    "avian3d/f32",
+]
 
 [features]
 avian2d = ["dep:avian2d"]
 avian3d = ["dep:avian3d"]
-client = []
+client = ["lightyear_sync/client"]
 default = ["std"]
+delta = ["dep:dashmap"]
 deterministic = []
 interpolation = []
 metrics = [
@@ -44,7 +51,7 @@ metrics = [
 prediction = []
 server = ["lightyear_connection/server"]
 std = ["lightyear_transport/std"]
-test_diagnostics = []
+test_diagnostics = ["bevy_replicon/test_diagnostics"]
 test_utils = []
 trace = []
 
@@ -52,57 +59,68 @@ trace = []
 name = "lightyear_replication"
 path = "src/lib.rs"
 
+[[test]]
+name = "checkpoint"
+path = "tests/checkpoint.rs"
+
 [dependencies.avian2d]
-version = "0.5"
+version = "0.7"
 optional = true
 default-features = false
 
 [dependencies.avian3d]
-version = "0.5"
+version = "0.7"
 optional = true
 default-features = false
 
 [dependencies.bevy_app]
-version = "0.18"
+version = "0.19"
 default-features = false
 
 [dependencies.bevy_derive]
-version = "0.18"
+version = "0.19"
 default-features = false
 
 [dependencies.bevy_ecs]
-version = "0.18"
+version = "0.19"
 features = ["bevy_reflect"]
 default-features = false
 
 [dependencies.bevy_math]
-version = "0.18"
+version = "0.19"
 default-features = false
 
 [dependencies.bevy_platform]
-version = "0.18"
+version = "0.19"
 default-features = false
 
 [dependencies.bevy_ptr]
-version = "0.18"
+version = "0.19"
 default-features = false
 
 [dependencies.bevy_reflect]
-version = "0.18"
+version = "0.19"
+default-features = false
+
+[dependencies.bevy_replicon]
+version = "0.41"
+
+[dependencies.bevy_state]
+version = "0.19"
 default-features = false
 
 [dependencies.bevy_time]
-version = "0.18"
+version = "0.19"
 features = ["bevy_reflect"]
 default-features = false
 
 [dependencies.bevy_transform]
-version = "0.18"
+version = "0.19"
 features = ["libm"]
 default-features = false
 
 [dependencies.bevy_utils]
-version = "0.18"
+version = "0.19"
 features = ["debug"]
 default-features = false
 
@@ -113,41 +131,46 @@ default-features = false
 
 [dependencies.dashmap]
 version = "6.1.0"
+optional = true
+
+[dependencies.fixedbitset]
+version = "0.5.7"
 
 [dependencies.indexmap]
 version = "2.9.0"
 default-features = false
 
 [dependencies.lightyear_connection]
-version = "0.26.4"
+version = "0.28.0"
 default-features = false
 
 [dependencies.lightyear_core]
-version = "0.26.4"
+version = "0.28.0"
 default-features = false
 
 [dependencies.lightyear_link]
-version = "0.26.4"
+version = "0.28.0"
 default-features = false
 
 [dependencies.lightyear_messages]
-version = "0.26.4"
+version = "0.28.0"
 default-features = false
 
 [dependencies.lightyear_serde]
-version = "0.26.4"
+version = "0.28.0"
 default-features = false
 
 [dependencies.lightyear_sync]
-version = "0.26.4"
+version = "0.28.0"
+optional = true
 default-features = false
 
 [dependencies.lightyear_transport]
-version = "0.26.4"
+version = "0.28.0"
 default-features = false
 
 [dependencies.lightyear_utils]
-version = "0.26.4"
+version = "0.28.0"
 default-features = false
 
 [dependencies.metrics]

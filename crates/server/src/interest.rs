@@ -15,6 +15,25 @@ const INTEREST_BUCKET_SIZE: f32 = INTEREST_RADIUS;
 
 type InterestBucket = (i32, i32);
 
+#[derive(Component, Default)]
+pub(crate) struct NetworkVisibility {
+    visible_senders: HashSet<Entity>,
+}
+
+impl NetworkVisibility {
+    pub(crate) fn is_visible(&self, sender: Entity) -> bool {
+        self.visible_senders.contains(&sender)
+    }
+
+    pub(crate) fn gain_visibility(&mut self, sender: Entity) -> bool {
+        self.visible_senders.insert(sender)
+    }
+
+    pub(crate) fn lose_visibility(&mut self, sender: Entity) -> bool {
+        self.visible_senders.remove(&sender)
+    }
+}
+
 #[derive(Default)]
 struct InterestDirtyEntities {
     interest: HashSet<Entity>,
@@ -181,8 +200,7 @@ impl Plugin for InterestPlugin {
             .add_systems(FixedUpdate, update_interest)
             .add_systems(
                 PostUpdate,
-                forward_position_changes_to_replication
-                    .in_set(ReplicationBufferSystems::BeforeBuffer),
+                forward_position_changes_to_replication.before(ReplicationSystems::Send),
             );
     }
 }
@@ -190,10 +208,17 @@ impl Plugin for InterestPlugin {
 fn on_network_visibility_added(
     trigger: On<Add, NetworkVisibility>,
     positions: Query<&Position>,
+    connections: Query<Entity, With<PlayerLink>>,
+    replication_dirty: Option<Res<ReplicationDirtyQueue>>,
+    mut commands: Commands,
     mut index: ResMut<InterestIndex>,
 ) {
     if let Ok(position) = positions.get(trigger.entity) {
         index.add_target(trigger.entity, *position);
+    }
+    for connection in &connections {
+        commands.lose_visibility(trigger.entity, connection);
+        mark_sender_visibility_changed(replication_dirty.as_deref(), trigger.entity, connection);
     }
 }
 
@@ -219,7 +244,14 @@ fn on_player_link_added(
     index.add_observer(trigger.entity, link.0, *position);
 }
 
-fn on_player_link_removed(trigger: On<Remove, PlayerLink>, mut index: ResMut<InterestIndex>) {
+fn on_player_link_removed(
+    trigger: On<Remove, PlayerLink>,
+    mut visibility: Query<&mut NetworkVisibility>,
+    mut index: ResMut<InterestIndex>,
+) {
+    for mut state in &mut visibility {
+        state.lose_visibility(trigger.entity);
+    }
     index.remove_observer(trigger.entity);
 }
 
@@ -239,8 +271,9 @@ fn update_interest(
     positions: Query<&Position>,
     dirty_queue: Res<InterestDirtyQueue>,
     replication_dirty: Option<Res<ReplicationDirtyQueue>>,
+    mut commands: Commands,
     mut index: ResMut<InterestIndex>,
-    mut visibility_query: Query<(&Position, &mut ReplicationState), With<NetworkVisibility>>,
+    mut visibility_query: Query<(&Position, &mut NetworkVisibility)>,
 ) {
     for entity in dirty_queue.drain_interest() {
         if let Ok(position) = positions.get(entity) {
@@ -255,6 +288,7 @@ fn update_interest(
             &mut index,
             &mut visibility_query,
             replication_dirty.as_deref(),
+            &mut commands,
         );
     }
 
@@ -265,6 +299,7 @@ fn update_interest(
             &mut index,
             &mut visibility_query,
             replication_dirty.as_deref(),
+            &mut commands,
         );
     }
 }
@@ -272,8 +307,9 @@ fn update_interest(
 fn update_observer_visibility(
     connection: Entity,
     index: &mut InterestIndex,
-    visibility_query: &mut Query<(&Position, &mut ReplicationState), With<NetworkVisibility>>,
+    visibility_query: &mut Query<(&Position, &mut NetworkVisibility)>,
     replication_dirty: Option<&ReplicationDirtyQueue>,
+    commands: &mut Commands,
 ) {
     let Some(observer) = index.observers.get(&connection).cloned() else {
         return;
@@ -290,12 +326,12 @@ fn update_observer_visibility(
             distance_squared(position, &observer.position) <= INTEREST_RADIUS_SQ;
         if should_be_visible {
             visible.insert(entity);
-            if !state.is_visible(connection) {
-                state.gain_visibility(connection);
+            if state.gain_visibility(connection) {
+                commands.gain_visibility(entity, connection);
                 mark_sender_visibility_changed(replication_dirty, entity, connection);
             }
-        } else if state.is_visible(connection) {
-            state.lose_visibility(connection);
+        } else if state.lose_visibility(connection) {
+            commands.lose_visibility(entity, connection);
             mark_sender_visibility_changed(replication_dirty, entity, connection);
         }
     }
@@ -308,8 +344,9 @@ fn update_observer_visibility(
 fn update_target_visibility(
     entity: Entity,
     index: &mut InterestIndex,
-    visibility_query: &mut Query<(&Position, &mut ReplicationState), With<NetworkVisibility>>,
+    visibility_query: &mut Query<(&Position, &mut NetworkVisibility)>,
     replication_dirty: Option<&ReplicationDirtyQueue>,
+    commands: &mut Commands,
 ) {
     let Some(position) = index.target_positions.get(&entity).copied() else {
         return;
@@ -337,28 +374,30 @@ fn update_target_visibility(
             connection,
             should_be_visible,
             replication_dirty,
+            commands,
         );
     }
 }
 
 fn apply_target_visibility_transition(
-    state: &mut ReplicationState,
+    state: &mut NetworkVisibility,
     observer: &mut InterestObserver,
     entity: Entity,
     connection: Entity,
     should_be_visible: bool,
     replication_dirty: Option<&ReplicationDirtyQueue>,
+    commands: &mut Commands,
 ) {
     if should_be_visible {
-        if !state.is_visible(connection) {
-            state.gain_visibility(connection);
+        if state.gain_visibility(connection) {
+            commands.gain_visibility(entity, connection);
             mark_sender_visibility_changed(replication_dirty, entity, connection);
         }
         observer.visible.insert(entity);
         return;
     }
-    if state.is_visible(connection) {
-        state.lose_visibility(connection);
+    if state.lose_visibility(connection) {
+        commands.lose_visibility(entity, connection);
         mark_sender_visibility_changed(replication_dirty, entity, connection);
     }
     observer.visible.remove(&entity);
@@ -384,7 +423,7 @@ fn interest_bucket(position: &Position) -> InterestBucket {
 /// Update visibility of a single entity for all players.
 fn update_entity_visibility(
     entity_pos: &Position,
-    state: &mut ReplicationState,
+    state: &mut NetworkVisibility,
     players: &[(Entity, Position)],
 ) {
     for &(conn_entity, player_pos) in players {

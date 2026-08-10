@@ -7,13 +7,12 @@ use shared::components::{Health, Mounted, Npc, Player, Position, VerticalVelocit
 use shared::death::DeathState;
 use shared::protocol::{ChatMessage, LoadTerrain, PlayerInput, TerrainChannel};
 use std::collections::VecDeque;
-use std::time::Duration;
 
 use crate::auth::{
     self, Authenticated, ConnectedAccounts, InWorld, PendingAuth, PendingAuthTimer, SentTiles,
     clear_connected_account,
 };
-use crate::interest::{InterestDirtyQueue, mark_interest_position_changed};
+use crate::interest::{InterestDirtyQueue, NetworkVisibility, mark_interest_position_changed};
 use crate::messaging;
 use crate::persistence::{self, CharacterData, ClientId, GameDatabase};
 use crate::terrain_height::{GRAVITY, GROUND_SNAP_THRESHOLD, TerrainHeightMap};
@@ -191,13 +190,7 @@ fn on_new_link(
             "LinkOf inserted; adding ReplicationSender"
         );
     }
-    commands
-        .entity(trigger.entity)
-        .insert(ReplicationSender::new(
-            Duration::from_millis(50),
-            SendUpdatesMode::SinceLastAck,
-            false,
-        ));
+    commands.entity(trigger.entity).insert(ReplicationSender);
 }
 
 /// When a client connects, mark as pending auth (no player entity yet).
@@ -337,38 +330,44 @@ fn on_player_link_inserted(
     trigger: On<Add, PlayerLink>,
     link_query: Query<&PlayerLink>,
     positions: Query<&Position>,
-    mut vis_query: Query<(Entity, &Position, &mut ReplicationState), With<NetworkVisibility>>,
+    replication_dirty: Option<Res<ReplicationDirtyQueue>>,
+    mut vis_query: Query<(Entity, &Position, &mut NetworkVisibility)>,
+    mut commands: Commands,
 ) {
-    let conn_entity = trigger.entity;
-    let Ok(link) = link_query.get(conn_entity) else {
+    let connection = trigger.entity;
+    let Ok(link) = link_query.get(connection) else {
         return;
     };
-    let Ok(player_pos) = positions.get(link.0) else {
+    let Ok(player_position) = positions.get(link.0) else {
         return;
     };
-    // Grant visibility for the player's own entity
-    if let Ok(mut state) = vis_query.get_mut(link.0) {
-        state.2.gain_visibility(conn_entity);
-    }
-    // Grant visibility for all nearby entities
-    let mut count = 0u32;
-    for (entity, pos, mut state) in vis_query.iter_mut() {
-        if entity == link.0 {
-            continue;
+
+    let mut nearby_count = 0u32;
+    for (entity, position, mut visibility) in &mut vis_query {
+        let dx = position.x - player_position.x;
+        let dy = position.y - player_position.y;
+        let dz = position.z - player_position.z;
+        let is_self = entity == link.0;
+        let is_nearby = dx * dx + dy * dy + dz * dz <= INITIAL_VISIBILITY_RADIUS_SQ;
+
+        if is_self || is_nearby {
+            visibility.gain_visibility(connection);
+            commands.gain_visibility(entity, connection);
+            nearby_count += u32::from(!is_self);
+        } else {
+            visibility.lose_visibility(connection);
+            commands.lose_visibility(entity, connection);
         }
-        let dx = pos.x - player_pos.x;
-        let dy = pos.y - player_pos.y;
-        let dz = pos.z - player_pos.z;
-        if dx * dx + dy * dy + dz * dz <= INITIAL_VISIBILITY_RADIUS_SQ {
-            state.gain_visibility(conn_entity);
-            count += 1;
+        if let Some(replication_dirty) = replication_dirty.as_deref() {
+            replication_dirty.mark_for_sender(entity, connection);
         }
     }
+
     info!(
-        conn = ?conn_entity,
+        conn = ?connection,
         player = ?link.0,
-        nearby = count,
-        "Granted immediate visibility for player + {count} nearby entities"
+        nearby = nearby_count,
+        "Granted immediate visibility for player + {nearby_count} nearby entities"
     );
 }
 

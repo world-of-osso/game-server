@@ -1,15 +1,26 @@
 //! This module is responsible for making sure that parent-children hierarchies are replicated correctly.
-
-use crate::prelude::{Replicate, ReplicationBufferSystems};
-use crate::registry::registry::AppComponentExt;
+use crate::ReplicationSystems;
+use crate::prelude::Replicate;
+#[cfg(feature = "interpolation")]
+use crate::send::InterpolationTarget;
+#[cfg(feature = "prediction")]
+use crate::send::PredictionTarget;
 use alloc::vec::Vec;
 use bevy_app::prelude::*;
 use bevy_ecs::component::Immutable;
 use bevy_ecs::entity::MapEntities;
 use bevy_ecs::prelude::*;
+use bevy_ecs::query::QueryData;
 use bevy_ecs::reflect::ReflectMapEntities;
 use bevy_ecs::relationship::Relationship;
 use bevy_reflect::Reflect;
+use bevy_replicon::bytes::Bytes;
+use bevy_replicon::postcard_utils;
+use bevy_replicon::prelude::{RuleFns, SyncRelatedAppExt};
+use bevy_replicon::shared::replication::deferred_entity::DeferredEntity;
+use bevy_replicon::shared::replication::registry::ctx::{RemoveCtx, SerializeCtx, WriteCtx};
+#[cfg(feature = "client")]
+use bevy_replicon::shared::server_entity_map::ServerEntityMap;
 use core::fmt::Debug;
 use serde::Serialize;
 use serde::de::DeserializeOwned;
@@ -24,6 +35,162 @@ pub enum RelationshipSystems {
     Receive,
     // PostUpdate
     Send,
+}
+
+pub(crate) struct HierarchyPlugin;
+
+/// Client-side placeholder for a replicated [`ChildOf`] whose parent entity
+/// has not been mapped yet.
+///
+/// Replicon's default entity mapping creates a buffered placeholder when a
+/// replicated component references an entity that has not appeared in the
+/// server-to-client map yet. That is unsafe for relationship components like
+/// [`ChildOf`], because inserting the relationship immediately runs Bevy's
+/// relationship hooks and leaves Replicon's placeholder buffer alive while the
+/// next component in the same entity bundle is decoded.
+#[derive(Component)]
+pub(crate) struct PendingChildOf {
+    server_parent: Entity,
+}
+
+impl PendingChildOf {
+    fn new(server_parent: Entity) -> Self {
+        Self { server_parent }
+    }
+}
+
+#[derive(QueryData)]
+struct PropagationQuery {
+    replicate: &'static Replicate,
+    #[cfg(feature = "prediction")]
+    prediction: Option<&'static PredictionTarget>,
+    #[cfg(feature = "interpolation")]
+    interpolation: Option<&'static InterpolationTarget>,
+}
+
+#[derive(QueryData)]
+struct ChildPropagationQuery {
+    replicate_like: &'static ReplicateLike,
+    replicate: Option<&'static Replicate>,
+    #[cfg(feature = "prediction")]
+    prediction: Option<&'static PredictionTarget>,
+    #[cfg(feature = "interpolation")]
+    interpolation: Option<&'static InterpolationTarget>,
+}
+
+impl HierarchyPlugin {
+    fn propagate_when_replicate_like_added(
+        trigger: On<Insert, ReplicateLike>,
+        child_query: Query<ChildPropagationQuery>,
+        root_query: Query<PropagationQuery>,
+        mut commands: Commands,
+    ) {
+        if let Ok(child) = child_query.get(trigger.entity)
+            && let Ok(root_propagation) = root_query.get(child.replicate_like.root)
+        {
+            if child.replicate.is_none() {
+                commands
+                    .entity(trigger.entity)
+                    .insert(root_propagation.replicate.clone());
+            }
+            #[cfg(feature = "prediction")]
+            if child.prediction.is_none()
+                && let Some(prediction) = root_propagation.prediction
+            {
+                commands.entity(trigger.entity).insert(prediction.clone());
+            }
+            #[cfg(feature = "interpolation")]
+            if child.interpolation.is_none()
+                && let Some(interpolation) = root_propagation.interpolation
+            {
+                commands
+                    .entity(trigger.entity)
+                    .insert(interpolation.clone());
+            }
+        }
+    }
+}
+
+impl Plugin for HierarchyPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_observer(Self::propagate_when_replicate_like_added);
+    }
+}
+
+/// Serializes the server parent entity targeted by [`ChildOf`].
+///
+/// Lightyear registers a custom rule for [`ChildOf`] so the receive path can
+/// inspect the raw server entity before mapping it. If the parent is not mapped
+/// yet, the receiver defers inserting the relationship instead of letting
+/// Replicon create a placeholder entity inside the relationship component.
+pub(crate) fn serialize_child_of(
+    _ctx: &mut SerializeCtx,
+    child_of: &ChildOf,
+    message: &mut Vec<u8>,
+) -> bevy_ecs::error::Result<()> {
+    postcard_utils::entity_to_extend_mut(&child_of.parent(), message)?;
+    Ok(())
+}
+
+/// Deserializes the raw server parent entity for stale-message consumption.
+///
+/// The active receive path uses [`write_child_of`] so it can defer insertion
+/// until the parent is mapped.
+pub(crate) fn deserialize_child_of(
+    _ctx: &mut WriteCtx,
+    message: &mut Bytes,
+) -> bevy_ecs::error::Result<ChildOf> {
+    let server_parent = postcard_utils::entity_from_buf(message)?;
+    Ok(ChildOf(server_parent))
+}
+
+/// Receives [`ChildOf`] without using Replicon's placeholder entity mapper.
+///
+/// If the parent has already been mapped, this inserts the real Bevy hierarchy
+/// relationship. If not, it stores [`PendingChildOf`] and waits for
+/// [`resolve_pending_child_of`] to attach the relationship once the parent
+/// mapping is available.
+pub(crate) fn write_child_of(
+    ctx: &mut WriteCtx,
+    _rule_fns: &RuleFns<ChildOf>,
+    entity: &mut DeferredEntity,
+    message: &mut Bytes,
+) -> bevy_ecs::error::Result<()> {
+    let server_parent = postcard_utils::entity_from_buf(message)?;
+    if let Some(&client_parent) = ctx.entity_map.to_client().get(&server_parent) {
+        entity.insert(ChildOf(client_parent));
+        entity.remove::<PendingChildOf>();
+    } else {
+        entity.insert(PendingChildOf::new(server_parent));
+        entity.remove::<ChildOf>();
+    }
+    Ok(())
+}
+
+pub(crate) fn remove_child_of(_ctx: &mut RemoveCtx, entity: &mut DeferredEntity) {
+    entity.remove::<ChildOf>();
+    entity.remove::<PendingChildOf>();
+}
+
+/// Attach delayed hierarchy relationships once Replicon has mapped the parent.
+#[cfg(feature = "client")]
+pub(crate) fn resolve_pending_child_of(
+    entity_map: Option<Res<ServerEntityMap>>,
+    pending: Query<(Entity, &PendingChildOf)>,
+    mut commands: Commands,
+) {
+    let Some(entity_map) = entity_map else {
+        return;
+    };
+    for (entity, pending) in &pending {
+        let Some(&client_parent) = entity_map.to_client().get(&pending.server_parent) else {
+            continue;
+        };
+        commands
+            .entity(entity)
+            .insert(ChildOf(client_parent))
+            .remove::<PendingChildOf>();
+    }
 }
 
 /// When the `DisableReplicateHierarchy` marker component is added to an entity, we will stop replicating their children.
@@ -87,17 +254,15 @@ impl<
 > Plugin for HierarchySendPlugin<R>
 {
     fn build(&self, app: &mut App) {
-        app.register_component::<R>()
-            // need to remember to use the MapEntities implementation that is provided by the Relationship
-            .add_component_map_entities();
+        // Note: app.replicate::<R>() is called in SharedComponentRegistrationPlugin
+        // so that FnsIds match between client and server.
+        app.sync_related_entities::<R>();
 
         // propagate ReplicateLike
         app.add_observer(Self::propagate_replicate_like_replication_marker_removed);
         app.add_systems(
             PostUpdate,
-            Self::propagate_through_hierarchy
-                // update replication components before we actually run the Buffer systems
-                .in_set(ReplicationBufferSystems::BeforeBuffer),
+            Self::propagate_through_hierarchy.before(ReplicationSystems::Send),
         );
     }
 }
@@ -198,17 +363,29 @@ impl<R: Relationship> HierarchySendPlugin<R> {
 mod tests {
     use super::*;
 
-    use crate::send::components::Replicate;
-    use crate::send::plugin::ReplicableRootEntities;
+    use crate::prelude::Replicate;
     use alloc::vec;
+    use bevy_replicon::prelude::{AuthMethod, RepliconSharedPlugin};
+    use bevy_replicon::server::ServerPlugin;
+    use bevy_state::app::StatesPlugin;
+
+    fn app_with_hierarchy_plugin() -> App {
+        let mut app = App::default();
+        app.add_plugins(StatesPlugin);
+        app.init_resource::<bevy_time::Time>();
+        app.add_plugins(RepliconSharedPlugin {
+            auth_method: AuthMethod::None,
+        });
+        app.add_plugins(ServerPlugin::default());
+        app.add_plugins(HierarchySendPlugin::<ChildOf>::default());
+        app
+    }
 
     /// Check that ReplicateLike propagation works correctly when Children gets updated
     /// on an entity that has ReplicationMarker
     #[test]
     fn propagate_replicate_like_children_updated() {
-        let mut app = App::default();
-        app.init_resource::<ReplicableRootEntities>();
-        app.add_plugins(HierarchySendPlugin::<ChildOf>::default());
+        let mut app = app_with_hierarchy_plugin();
 
         let grandparent = app.world_mut().spawn(Replicate::manual(vec![])).id();
         // parent with no ReplicationMarker: ReplicateLike should be propagated
@@ -308,9 +485,7 @@ mod tests {
     /// on an entity that already has children
     #[test]
     fn propagate_replicate_like_replication_marker_added() {
-        let mut app = App::default();
-        app.init_resource::<ReplicableRootEntities>();
-        app.add_plugins(HierarchySendPlugin::<ChildOf>::default());
+        let mut app = app_with_hierarchy_plugin();
 
         let grandparent = app.world_mut().spawn_empty().id();
         // parent with no ReplicationMarker: ReplicateLike should be propagated

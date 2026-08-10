@@ -394,6 +394,7 @@ mod tests {
     fn setup_query_app() -> App {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
+        app.add_plugins(bevy::state::app::StatesPlugin);
         app.add_plugins(lightyear::prelude::server::ServerPlugins {
             tick_duration: Duration::from_millis(50),
         });

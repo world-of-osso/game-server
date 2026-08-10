@@ -1,10 +1,11 @@
 [workspace]
 resolver = "2"
 members = ["crates/server", "crates/client", "crates/integration-tests"]
+exclude = ["vendor/bevy_replicon", "vendor/lightyear_replication"]
 
 [workspace.package]
 edition = "2024"
-rust-version = "1.89"
+rust-version = "1.95"
 
 # Optimize deps in debug builds (Bevy is unusably slow at opt-level 0)
 [profile.dev.package."*"]
@@ -14,4 +15,5 @@ opt-level = 2
 shared = { path = "../shared-protocol" }
 
 [patch.crates-io]
+bevy_replicon = { path = "vendor/bevy_replicon" }
 lightyear_replication = { path = "vendor/lightyear_replication" }

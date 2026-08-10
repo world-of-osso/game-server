@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use bevy::prelude::*;
-use lightyear::prelude::{ReplicationBufferSystems, ReplicationDirtyQueue};
+use lightyear::prelude::{ReplicationDirtyQueue, ReplicationSystems};
 use shared::components::{Gold, Player};
 
 use crate::persistence::ClientId;
@@ -40,7 +40,7 @@ impl Plugin for GoldPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<GoldUpdateQueue>().add_systems(
             PostUpdate,
-            apply_gold_updates.in_set(ReplicationBufferSystems::BeforeBuffer),
+            apply_gold_updates.before(ReplicationSystems::Send),
         );
     }
 }

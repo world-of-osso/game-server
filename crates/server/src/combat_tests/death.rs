@@ -9,6 +9,7 @@ use shared::death::DeathState as PlayerDeathKind;
 fn lethal_player_auto_attack_transitions_death_in_same_fixed_step() {
     let mut app = App::new();
     app.add_plugins(bevy::MinimalPlugins);
+    app.add_plugins(bevy::state::app::StatesPlugin);
     app.add_plugins(lightyear::prelude::server::ServerPlugins {
         tick_duration: std::time::Duration::from_millis(50),
     });

@@ -11,14 +11,14 @@ path = "src/lib.rs"
 
 [dependencies]
 shared = { git = "https://github.com/world-of-osso/shared-protocol.git", rev = "e25c79d" }
-bevy = { version = "0.18", default-features = false, features = [
+bevy = { version = "0.19", default-features = false, features = [
     "bevy_log", "bevy_state",
 ] }
-lightyear = { version = "0.26", features = [
+lightyear = { version = "0.28", features = [
     "client", "server", "replication", "crossbeam", "raw_connection",
 ] }
-lightyear_replication = { version = "0.26", features = ["test_diagnostics"] }
-lightyear_crossbeam = "0.26"
-lightyear_raw_connection = { version = "0.26", features = ["client", "server"] }
+lightyear_replication = { version = "0.28", features = ["test_diagnostics"] }
+lightyear_crossbeam = "0.28"
+lightyear_raw_connection = { version = "0.28", features = ["client", "server"] }
 serde = { version = "1", features = ["derive"] }
 bitcode = "0.6"

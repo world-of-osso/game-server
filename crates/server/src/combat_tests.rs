@@ -18,20 +18,32 @@ fn setup_app() -> App {
     app
 }
 
-fn setup_replication_app() -> App {
+fn build_replication_app() -> App {
     let mut app = setup_app();
+    app.add_plugins(bevy::state::app::StatesPlugin);
     app.add_plugins(lightyear::prelude::server::ServerPlugins {
         tick_duration: std::time::Duration::from_millis(50),
     });
+    app.add_plugins(shared::ProtocolPlugin);
     app.add_message::<crate::death::PlayerDeathTransition>();
+    app
+}
+
+fn finish_replication_app(mut app: App) -> App {
+    app.finish();
+    app.cleanup();
     app.update();
     app
 }
 
+fn setup_replication_app() -> App {
+    finish_replication_app(build_replication_app())
+}
+
 fn setup_combat_app() -> App {
-    let mut app = setup_replication_app();
+    let mut app = build_replication_app();
     app.add_plugins(CombatPlugin);
-    app
+    finish_replication_app(app)
 }
 
 fn spawn_target(app: &mut App, position: Position, hp: f32) -> Entity {
@@ -368,7 +380,7 @@ fn zero_health_without_damage_transition_is_not_discovered_by_death_poll() {
                 max: 100.0,
             },
             Npc { template_id: 1 },
-            Replicate::new(ReplicationMode::SingleServer(NetworkTarget::All)),
+            Replicate::to_clients(NetworkTarget::All),
         ))
         .id();
 
@@ -404,7 +416,7 @@ fn nonlethal_auto_attack_keeps_npc_alive_and_replicated() {
                 max: 100.0,
             },
             Npc { template_id: 1 },
-            Replicate::new(ReplicationMode::SingleServer(NetworkTarget::All)),
+            Replicate::to_clients(NetworkTarget::All),
         ))
         .id();
     spawn_attacker(&mut app, pos(0.0, 0.0, 0.0), target);
@@ -440,7 +452,7 @@ fn lethal_auto_attack_produces_death_state_replication_removal_and_event() {
                 max: 100.0,
             },
             Npc { template_id: 1 },
-            Replicate::new(ReplicationMode::SingleServer(NetworkTarget::All)),
+            Replicate::to_clients(NetworkTarget::All),
         ))
         .id();
     spawn_attacker(&mut app, pos(0.0, 0.0, 0.0), target);
@@ -491,10 +503,7 @@ fn test_respawn_restores_health() {
 
 #[test]
 fn respawn_at_spawn_with_full_health_does_not_dirty_replicated_state() {
-    let mut app = setup_app();
-    app.add_plugins(lightyear::prelude::server::ServerPlugins {
-        tick_duration: std::time::Duration::from_millis(50),
-    });
+    let mut app = setup_replication_app();
     let spawn = SpawnPoint {
         x: 10.0,
         y: 20.0,

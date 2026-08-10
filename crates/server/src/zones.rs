@@ -3,6 +3,7 @@ use lightyear::prelude::*;
 use shared::components::{Health, ModelDisplay, Npc, Position, Zone};
 
 use crate::creature_ai::{SpawnPoint, WanderPhase, WanderState, WaypointState};
+use crate::interest::NetworkVisibility;
 use crate::world_data::WorldData;
 
 /// Elwynn/Northshire spatial bounds for initial creature spawning.
@@ -46,8 +47,8 @@ fn spawn_elwynn_core(commands: &mut Commands, world_data: &WorldData, replicate:
         let mut entity = commands.spawn(bundle);
         if replicate {
             entity.insert((
-                Replicate::new(ReplicationMode::SingleServer(NetworkTarget::All)),
-                NetworkVisibility,
+                Replicate::to_clients(NetworkTarget::All),
+                NetworkVisibility::default(),
             ));
         }
         insert_ai_components(&mut entity, spawn, speed_walk, world_data);

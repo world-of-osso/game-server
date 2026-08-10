@@ -65,10 +65,9 @@ fn server_replicates_position_to_client() {
         y: 200.0,
         z: 300.0,
     };
-    stepper.server_world_mut().spawn((
-        pos,
-        Replicate::new(ReplicationMode::SingleServer(NetworkTarget::All)),
-    ));
+    stepper
+        .server_world_mut()
+        .spawn((pos, Replicate::to_clients(NetworkTarget::All)));
 
     // Tick enough times for replication to propagate
     stepper.tick_step(20);
@@ -98,7 +97,7 @@ fn dirty_position_change_visits_only_the_changed_root() {
                         y: 0.0,
                         z: 0.0,
                     },
-                    Replicate::new(ReplicationMode::SingleServer(NetworkTarget::All)),
+                    Replicate::to_clients(NetworkTarget::All),
                 ))
                 .id()
         })
@@ -140,7 +139,7 @@ fn unacked_dirty_root_remains_candidate_until_ack() {
                 y: 0.0,
                 z: 0.0,
             },
-            Replicate::new(ReplicationMode::SingleServer(NetworkTarget::All)),
+            Replicate::to_clients(NetworkTarget::All),
         ))
         .id();
     stepper.tick_step(20);
@@ -178,18 +177,19 @@ fn targeted_visibility_change_does_not_visit_other_senders() {
                 y: 0.0,
                 z: 0.0,
             },
-            Replicate::new(ReplicationMode::SingleServer(NetworkTarget::All)),
-            NetworkVisibility,
+            Replicate::to_clients(NetworkTarget::All),
         ))
         .id();
+    let senders = stepper.client_of_entities.clone();
+    for sender in senders {
+        stepper.server_world_mut().lose_visibility(entity, sender);
+    }
     stepper.tick_step(5);
 
     let first_sender = stepper.client_of_entities[0];
     stepper
         .server_world_mut()
-        .get_mut::<ReplicationState>(entity)
-        .unwrap()
-        .gain_visibility(first_sender);
+        .gain_visibility(entity, first_sender);
     stepper
         .server_app
         .world()
@@ -208,9 +208,7 @@ fn targeted_visibility_change_does_not_visit_other_senders() {
 
     stepper
         .server_world_mut()
-        .get_mut::<ReplicationState>(entity)
-        .unwrap()
-        .lose_visibility(first_sender);
+        .lose_visibility(entity, first_sender);
     stepper
         .server_app
         .world()
@@ -235,7 +233,7 @@ fn replicated_component_insert_and_remove_preserve_actions() {
                 y: 0.0,
                 z: 0.0,
             },
-            Replicate::new(ReplicationMode::SingleServer(NetworkTarget::All)),
+            Replicate::to_clients(NetworkTarget::All),
         ))
         .id();
     stepper.tick_step(20);
@@ -276,7 +274,7 @@ fn unchanged_replicated_roots_are_not_revisited_after_initial_sync() {
                 y: 0.0,
                 z: 0.0,
             },
-            Replicate::new(ReplicationMode::SingleServer(NetworkTarget::All)),
+            Replicate::to_clients(NetworkTarget::All),
         ));
     }
 
