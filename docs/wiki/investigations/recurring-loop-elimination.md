@@ -9,7 +9,7 @@ The server performance pass is replacing broad recurring scans with state-, even
 | Auction expiration | Scan every auction at 20 Hz | Scan at most once per second | Completed in `e02ce0a` |
 | Terrain streaming | Recompute each connection's 3×3 neighborhood at 20 Hz | Evaluate on initial delivery or tile transition | Completed in `3c5ceca` |
 | Friends online snapshots | Rebuild all online/friend snapshots every app frame | Rebuild only dirty affected owners | Completed in `914d570` |
-| Interest management | Scan every visible entity against every player every 500 ms | Movement/visibility revisions plus spatial buckets | Pending |
+| Interest management | Scan every visible entity against every player every 500 ms | Dirty position/lifecycle triggers plus spatial buckets | Completed in `4523373`, tests split in `a85b035` |
 | Lightyear replication | Scan every replicated root/component per client every 50 ms | Dirty entity/component queue | Pending |
 
 ## Auction Expiration
@@ -63,6 +63,25 @@ The added friends tests cover the real `Update` chain and index behavior:
 - `friend_zone_and_level_changes_refresh_the_listed_owner` proves both live metadata changes refresh the listed owner.
 - `friend_list_changes_replace_reverse_owner_links` proves reverse ownership is removed from the old friend and added to the new friend.
 
+## Interest Management
+
+Before `4523373`, `update_interest` ran every 500 ms and evaluated every `NetworkVisibility` entity against every connected player, even when no relevant position or lifecycle state had changed. The replacement keeps a 100-yard X/Z spatial index and marks targets or observers dirty when authoritative position writers, `NetworkVisibility`, or `PlayerLink` lifecycle boundaries change. A fixed-tick system drains the dirty queue, updates bucket membership, evaluates only dirty observers and targets, and checks the exact 3D squared-distance rule against candidates from the observer's 3×3 bucket neighborhood plus previously visible entities.
+
+Initial `NetworkVisibility` and `PlayerLink` additions register and dirty their state; removal observers clear bucket, observer, and visibility bookkeeping. Player movement, NPC movement, teleports, respawns, and other authoritative position changes call the shared dirty marker. Bucket membership narrows candidates only; it does not replace the exact `distance_squared <= 100²` boundary. Existing per-connection visibility transitions remain intact for multiple players, initial nearby visibility, reconnects, spawns, despawns, radius crossings, teleports, corpse visibility, and stale-state removal. No recurring full entities×players fallback remains.
+
+### Behavioral proof
+
+The integration tests in `interest_tests.rs` cover the production `FixedUpdate` plugin with Lightyear `ReplicationState`:
+
+- `new_nearby_entity_is_visible_on_next_fixed_tick` proves new targets are delivered without waiting for a 500 ms global scan.
+- `unchanged_interest_ticks_do_not_dirty_visibility` proves ten unchanged fixed ticks preserve the visibility change tick.
+- `dirty_target_crosses_exact_radius_within_same_bucket` proves exact radius gain/loss while bucket membership stays unchanged.
+- `dirty_observer_movement_updates_only_its_visibility` proves independent multi-player updates.
+- `visibility_removal_and_readd_do_not_leave_stale_range_state` and `reconnect_uses_fresh_observer_visibility` cover lifecycle cleanup and reconnect.
+- Existing tests retain exact boundary, teleport, NPC spawn/despawn, two-player movement, corpse, phase, instance, stealth, and large-count behavior.
+
+The implementation landed in `4523373`; `a85b035` moved the integration tests into `interest_tests.rs` without changing the runtime behavior. Focused interest tests passed after both revisions.
+
 ## Sources
 
 - [auction plugin](../../../crates/server/src/auction_house.rs) — one-second expiration run condition
@@ -76,6 +95,12 @@ The added friends tests cover the real `Update` chain and index behavior:
 - [friends system](../../../crates/server/src/friends.rs) — cached online data, reverse owner index, dirty fanout, and snapshot sending
 - [friends tests](../../../crates/server/src/friends_tests.rs) — unchanged, affected-owner, lifecycle, metadata, and reverse-index proof
 - `game-server` commit `914d570` — dirty-owner friends snapshot implementation and proof
+- [interest system](../../../crates/server/src/interest.rs) — dirty position queue, lifecycle observers, spatial buckets, and exact visibility transitions
+- [interest integration tests](../../../crates/server/src/interest_tests.rs) — fixed-tick, radius, multi-player, lifecycle, and reconnect proof
+- [position writers](../../../crates/server/src/networking.rs) — player movement dirty marking
+- [AI position writers](../../../crates/server/src/creature_ai.rs) — NPC movement dirty marking
+- `game-server` commit `4523373` — dirty-position interest implementation
+- `game-server` commit `a85b035` — interest integration-test split
 
 ## See Also
 

@@ -2,6 +2,10 @@
 
 Chronological record of wiki operations.
 
+## [2026-08-09] investigation | Replace recurring interest scan with dirty spatial updates
+
+Updated [[recurring-loop-elimination]] and [[networking]] for commits `4523373` and `a85b035`. The former removed the every-500ms `NetworkVisibility`-entities × players scan: authoritative position and lifecycle triggers now dirty observers/targets, a 100-yard X/Z spatial index narrows candidates, and exact 3D `<= 100²` visibility transitions remain per connection. The latter split the real fixed-tick integration tests into `interest_tests.rs` without runtime changes. Recorded proof for unchanged ticks, new targets, same-bucket radius crossings, independent players, removal/re-add, reconnect, spawn/despawn, teleports, boundaries, corpses, and other preserved visibility behavior. Lightyear's 50ms per-sender traversal remains the only pending recurring-loop slice; this update makes no broader Empty-completion claim.
+
 ## [2026-08-09] investigation | Cache and dirty friend snapshots
 
 Updated [[recurring-loop-elimination]] for commit `914d570`: cached online presence, reverse `owners_by_friend` links, and dirty-owner fanout replace every-frame all-owner snapshot rebuilding and offline database lookups. Recorded behavioral proof for unchanged offline data, affected-only presence, login/logout, zone/level changes, and friend-list reverse-index replacement. Privacy and ignore state are not friend-snapshot inputs and remain unchanged.
