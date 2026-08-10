@@ -495,12 +495,12 @@ fn apply_gravity_health_transition(
     player_entity: Entity,
     previous_health: Health,
     next_health: Health,
-    health: &mut Health,
+    health: &mut Mut<Health>,
     replication_dirty: Option<&ReplicationDirtyQueue>,
     player_deaths: &mut MessageWriter<crate::death::PlayerDeathTransition>,
 ) {
-    if *health != next_health {
-        *health = next_health;
+    if **health != next_health {
+        **health = next_health;
         if let Some(replication_dirty) = replication_dirty {
             replication_dirty.mark(player_entity);
         }
