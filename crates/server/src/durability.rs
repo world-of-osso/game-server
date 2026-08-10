@@ -10,6 +10,12 @@ use crate::auth::{Authenticated, InWorld};
 use crate::networking::PlayerLink;
 use crate::persistence::{self, CharacterData, ClientId, DurabilityEntryData, GameDatabase};
 
+#[cfg(test)]
+use std::sync::{
+    Mutex,
+    atomic::{AtomicUsize, Ordering},
+};
+
 #[derive(Component, Debug, Clone, PartialEq, Eq, Default)]
 pub struct EquippedDurability {
     pub slots: Vec<DurabilitySlotState>,
@@ -23,6 +29,11 @@ pub struct DurabilitySlotState {
 }
 
 pub struct DurabilityPlugin;
+
+#[cfg(test)]
+static CHANGED_DURABILITY_PLAYERS_VISITED: AtomicUsize = AtomicUsize::new(0);
+#[cfg(test)]
+static CHANGED_DURABILITY_TEST_LOCK: Mutex<()> = Mutex::new(());
 
 impl Plugin for DurabilityPlugin {
     fn build(&self, app: &mut App) {
@@ -198,12 +209,15 @@ fn persist_changed_durability(db: Option<Res<GameDatabase>>, players: ChangedDur
 }
 
 fn send_changed_durability_snapshot(
-    players: Query<(Entity, Ref<EquippedDurability>), With<Player>>,
+    players: Query<(Entity, Ref<EquippedDurability>), (With<Player>, Changed<EquippedDurability>)>,
     connections: Query<(Entity, &PlayerLink), With<Authenticated>>,
     mut senders: Query<&mut MessageSender<DurabilityStateUpdate>>,
 ) {
     for (player_entity, durability) in &players {
-        if !durability.is_changed() || durability.is_added() {
+        #[cfg(test)]
+        CHANGED_DURABILITY_PLAYERS_VISITED.fetch_add(1, Ordering::SeqCst);
+
+        if durability.is_added() {
             continue;
         }
         let Some(conn_entity) = connection_for_player(player_entity, &connections) else {
@@ -334,8 +348,172 @@ fn slot_sort_key(slot: EquipmentVisualSlot) -> u8 {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use std::time::Duration;
+
+    use lightyear::connection::host::HostClient;
+    use lightyear::prelude::{AppMessageExt, Connected, PeerId, RemoteId};
     use shared::components::EquippedAppearanceEntry;
+
+    use super::*;
+
+    fn setup_changed_snapshot_app() -> App {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        app.add_plugins(lightyear::prelude::server::ServerPlugins {
+            tick_duration: Duration::from_millis(50),
+        });
+        app.register_message::<DurabilityStateUpdate>();
+        app.add_systems(Update, send_changed_durability_snapshot);
+        app.finish();
+        app.cleanup();
+        app
+    }
+
+    fn spawn_player(app: &mut App, durability: EquippedDurability) -> Entity {
+        app.world_mut()
+            .spawn((
+                Player {
+                    name: "Elara".into(),
+                    race: 1,
+                    class: 2,
+                    appearance: shared::components::CharacterAppearance::default(),
+                },
+                durability,
+            ))
+            .id()
+    }
+
+    fn spawn_connection(app: &mut App, peer_id: u64, player: Entity) -> Entity {
+        app.world_mut()
+            .spawn((
+                RemoteId(PeerId::Local(peer_id)),
+                Connected,
+                HostClient { buffer: Vec::new() },
+                Authenticated {
+                    account_id: peer_id,
+                },
+                PlayerLink(player),
+                MessageSender::<DurabilityStateUpdate>::default(),
+                MessageReceiver::<DurabilityStateUpdate>::default(),
+            ))
+            .id()
+    }
+
+    fn receive_updates(app: &mut App, connection: Entity) -> Vec<DurabilityStateUpdate> {
+        app.world_mut()
+            .entity_mut(connection)
+            .get_mut::<MessageReceiver<DurabilityStateUpdate>>()
+            .expect("connection should have a durability update receiver")
+            .receive()
+            .collect()
+    }
+
+    fn sample_durability() -> EquippedDurability {
+        EquippedDurability {
+            slots: vec![
+                DurabilitySlotState {
+                    slot: EquipmentVisualSlot::Head,
+                    current: 70,
+                    max: 70,
+                },
+                DurabilitySlotState {
+                    slot: EquipmentVisualSlot::Chest,
+                    current: 80,
+                    max: 80,
+                },
+            ],
+        }
+    }
+
+    #[test]
+    fn unchanged_durability_player_is_not_visited_or_updated() {
+        let _test_lock = CHANGED_DURABILITY_TEST_LOCK.lock().unwrap();
+        CHANGED_DURABILITY_PLAYERS_VISITED.store(0, Ordering::SeqCst);
+
+        let mut app = setup_changed_snapshot_app();
+        let player = spawn_player(&mut app, sample_durability());
+        let connection = spawn_connection(&mut app, 1, player);
+
+        app.update();
+        assert!(receive_updates(&mut app, connection).is_empty());
+
+        CHANGED_DURABILITY_PLAYERS_VISITED.store(0, Ordering::SeqCst);
+        app.update();
+
+        assert_eq!(CHANGED_DURABILITY_PLAYERS_VISITED.load(Ordering::SeqCst), 0);
+        assert!(receive_updates(&mut app, connection).is_empty());
+    }
+
+    #[test]
+    fn newly_added_durability_is_excluded_from_changed_snapshot() {
+        let _test_lock = CHANGED_DURABILITY_TEST_LOCK.lock().unwrap();
+        CHANGED_DURABILITY_PLAYERS_VISITED.store(0, Ordering::SeqCst);
+
+        let mut app = setup_changed_snapshot_app();
+        app.update();
+        let player = spawn_player(&mut app, sample_durability());
+        let connection = spawn_connection(&mut app, 1, player);
+
+        app.update();
+
+        assert_eq!(CHANGED_DURABILITY_PLAYERS_VISITED.load(Ordering::SeqCst), 1);
+        assert!(receive_updates(&mut app, connection).is_empty());
+    }
+
+    #[test]
+    fn changed_durability_routes_one_snapshot_with_repair_costs() {
+        let _test_lock = CHANGED_DURABILITY_TEST_LOCK.lock().unwrap();
+        CHANGED_DURABILITY_PLAYERS_VISITED.store(0, Ordering::SeqCst);
+
+        let mut app = setup_changed_snapshot_app();
+        let player = spawn_player(&mut app, sample_durability());
+        let connection = spawn_connection(&mut app, 1, player);
+        let other_player = app
+            .world_mut()
+            .spawn(Player {
+                name: "Other".into(),
+                race: 1,
+                class: 2,
+                appearance: shared::components::CharacterAppearance::default(),
+            })
+            .id();
+        let other_connection = spawn_connection(&mut app, 2, other_player);
+
+        app.update();
+        assert!(receive_updates(&mut app, connection).is_empty());
+        assert!(receive_updates(&mut app, other_connection).is_empty());
+
+        app.world_mut()
+            .entity_mut(player)
+            .get_mut::<EquippedDurability>()
+            .expect("player should have durability")
+            .slots[0]
+            .current = 60;
+        CHANGED_DURABILITY_PLAYERS_VISITED.store(0, Ordering::SeqCst);
+
+        app.update();
+
+        assert_eq!(CHANGED_DURABILITY_PLAYERS_VISITED.load(Ordering::SeqCst), 1);
+        let updates = receive_updates(&mut app, connection);
+        assert_eq!(updates.len(), 1);
+        assert_eq!(updates[0].message.as_deref(), Some("durability updated"));
+        assert_eq!(updates[0].error, None);
+        let snapshot = updates[0]
+            .snapshot
+            .as_ref()
+            .expect("durability update should include a snapshot");
+        assert_eq!(snapshot.total_repair_cost, 150);
+        assert_eq!(snapshot.slots.len(), 2);
+        assert_eq!(snapshot.slots[0].slot, EquipmentVisualSlot::Head);
+        assert_eq!(snapshot.slots[0].current, 60);
+        assert_eq!(snapshot.slots[0].max, 70);
+        assert_eq!(snapshot.slots[0].repair_cost, 150);
+        assert_eq!(snapshot.slots[1].slot, EquipmentVisualSlot::Chest);
+        assert_eq!(snapshot.slots[1].current, 80);
+        assert_eq!(snapshot.slots[1].max, 80);
+        assert_eq!(snapshot.slots[1].repair_cost, 0);
+        assert!(receive_updates(&mut app, other_connection).is_empty());
+    }
 
     fn make_appearance() -> EquipmentAppearance {
         EquipmentAppearance {
