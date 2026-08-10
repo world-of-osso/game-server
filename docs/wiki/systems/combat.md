@@ -1,6 +1,6 @@
 # Combat
 
-Combat logic is split across two crates: `shared/src/formulas/` holds pure combat math (melee hit table, stat conversions, spell formulas), and `server/src/combat.rs` runs the live ECS systems (active auto-attack, direct NPC death transition, respawn).
+Combat logic is split across two crates: `shared/src/formulas/` holds pure combat math (melee hit table, stat conversions, spell formulas), and `server/src/combat.rs` runs the live ECS systems (active auto-attack, direct NPC/player lethal-transition emission, respawn).
 
 ## Server Systems (`CombatPlugin`)
 
@@ -33,6 +33,12 @@ The transition contract is explicit:
 - Future NPC damage writers must route through the same authoritative death transition rather than adding another health scan.
 
 Coverage in `combat_tests.rs` includes `nonlethal_auto_attack_keeps_npc_alive_and_replicated`, `lethal_auto_attack_produces_death_state_replication_removal_and_event`, and `zero_health_without_damage_transition_is_not_discovered_by_death_poll`. Respawn semantics remain unchanged: `respawn_system` restores health and spawn position, re-adds replication and visibility, removes `LastDamager`, and emits the existing `Respawn` event.
+
+## Player Death Transition (`18c936b`)
+
+Player-targeted melee damage emits the internal `PlayerDeathTransition` only when `Health` crosses from positive to zero. The lifecycle consumer in `death.rs` runs after combat and gravity in `FixedUpdate`, preserving zero-health clamping, `LastDamager`, durability loss, corpse/graveyard state, replication dirtying, the routed `"you died"` update, duplicate-death prevention, resurrection, and later second death. The former broad `detect_player_deaths` player scan is gone.
+
+Persisted zero health is queued during character selection so relogging a dead character reconstructs the same lifecycle instead of waiting for a poll. Stale entities are ignored safely. RED/GREEN artifacts are recorded under `/tmp/claude/game-server/` for idle-scan removal, transition consumption, combat, fall, login, and second-life coverage. No live CPU savings claim is made.
 
 ## Melee Hit Table (`shared/src/formulas/melee.rs`)
 
@@ -68,8 +74,10 @@ Key formulas:
 
 ## Sources
 
-- [crates/server/src/combat.rs](../../../crates/server/src/combat.rs) — CombatPlugin, auto-attack, direct NPC death transition, respawn
-- [crates/server/src/combat_tests.rs](../../../crates/server/src/combat_tests.rs) — auto-attack participation, nonlethal, lethal, zero-without-transition, and respawn behavior coverage
+- [crates/server/src/combat.rs](../../../crates/server/src/combat.rs) — CombatPlugin, auto-attack, lethal-transition emission, NPC death transition, and respawn
+- [crates/server/src/combat_tests.rs](../../../crates/server/src/combat_tests.rs) — auto-attack participation, player combat death, NPC death, and respawn coverage
+- [crates/server/src/death.rs](../../../crates/server/src/death.rs) — player death-transition consumer and lifecycle side effects
+- `game-server` commit `18c936b` — replace player death polling with lethal transitions
 - `game-server` commit `152ccbd` — remove inactive auto-attack components after target loss
 - [crates/shared/src/formulas/melee.rs](../../../crates/shared/src/formulas/melee.rs) — hit table, avoidance DR
 - [crates/shared/src/formulas/spell.rs](../../../crates/shared/src/formulas/spell.rs) — spell miss, crit, haste, DoT
@@ -77,7 +85,7 @@ Key formulas:
 
 ## See Also
 
-- [[tick-model]] — combat systems run at step 4 of the 20Hz pipeline
+- [[tick-model]] — combat systems run in `FixedUpdate`; no global fixed-phase pipeline is implemented
 - [[networking]] — CombatEvent broadcast over CombatChannel
 - [[creature-ai]] — aggro/threat feeds CombatTarget; leash evade restores HP
 - [[world-data]] — spell_misc/spell_effect tables provide cast time, range, coefficients

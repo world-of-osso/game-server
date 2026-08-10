@@ -1,24 +1,25 @@
 # Tick Loop Audit
 
-Source-grounded audit of every production `game-server` system registered in a recurring Bevy schedule. It answers whether the current loop design is correct, identifies work that is unnecessary every tick/update, and separates confirmed defects from systems that need measurement before redesign. Commits `a4e7aeb`, `c46b322`, `18be416`, and `969f2e0` record completed Who, durability, calendar, and trade-offer request gating; no live CPU savings claim is made.
+Source-grounded audit of every production `game-server` system registered in a recurring Bevy schedule. It inventories 104 recurring registrations expanding to 130 systems, identifies unnecessary every-tick work, and separates completed reductions from literal requirements that remain partial. Commit `18c936b` replaces broad player-death polling with lethal transitions; no live CPU savings claim is made.
 
 ## Content
 
 ## Verdict
 
-**The current loop design is not fully correct.** The 20 Hz cadence and Bevy/Lightyear schedule split are reasonable, and the largest historical full-world scans have been removed. However:
+**The current loop design and loop-removal work are not complete.** The 20 Hz cadence and Bevy/Lightyear schedule split are reasonable, and several historical scans have been narrowed or removed. Current status:
 
 | Area | Verdict |
 |---|---|
-| Periodic persistence | **Confirmed correctness bug:** the 300-tick early return discards most `Changed<T>` history |
-| Fixed-step ordering | **Incomplete:** several same-tick outcomes are scheduler-order-dependent |
-| Application polling | **Several confirmed unnecessary loops:** gold, Who, rest, durability, calendar, trade-offer lookups, inactive auto-attacks |
-| Lightyear/interest | **Major root/entity scans fixed:** remaining recurring work is connection/dirty-state plumbing |
-| Receiver fan-out | **Real but unmeasured:** 74 `Update` systems poll typed connection receivers |
+| Periodic persistence | **BUG:** the 300-tick early return discards most `Changed<T>` history |
+| Fixed-step ordering | **INCOMPLETE:** several same-tick outcomes remain scheduler-order-dependent |
+| Preserved primary requirements | **0/4 complete:** Lightyear, interest, friends, and terrain are all **PARTIAL** against their literal targets |
+| Definite idle work | **10 systems remain:** six trade handlers, chat, emote, auction initialization, and rest initialization |
+| Player death polling | **COMPLETED:** `18c936b` replaced the all-player scan with lethal transitions |
+| Receiver fan-out | **KEEP/MEASURE:** 74 `Update` systems poll typed receivers; source inspection does not prove removal is safe |
 
-**Server audit status: 7/7 named slices complete.** Gold (#1), Who (#2), rest (#3), durability (#4), calendar (#6), trade offer lookup (#7), and inactive auto-attacks (#5) are complete. The remaining findings are the separate persistence correctness bug, fixed-step ordering gap, and unmeasured receiver fan-out.
+The narrower seven-item application slice is complete: gold, Who, rest-state evaluation, durability snapshots, calendar query snapshots, the `ClearTradeItem`/`SetTradeMoney` trade-offer path, and inactive auto-attacks. That subset is not the completion boundary for this audit.
 
-The design should not be approved as complete until the persistence bug and fixed-order contract are resolved.
+Do not approve the loop design as complete until the persistence bug, fixed-order contract, ten definite idle-work systems, and four preserved partial requirements are resolved.
 
 ## Coverage
 
@@ -26,11 +27,11 @@ A production-source inventory found:
 
 | Schedule | Registration calls | Expanded systems |
 |---|---:|---:|
-| `Update` | 86 | 105 |
+| `Update` | 86 | 104 |
 | `FixedUpdate` | 13 | 21 |
-| `PostUpdate` | 3 | 3 |
+| `PostUpdate` | 4 | 4 |
 | `Last` | 1 | 1 |
-| **Recurring total** | **103** | **130** |
+| **Recurring total** | **104** | **130** |
 
 `Startup`, `PostStartup`, tests, and observers are excluded from the recurring count. “Registration calls” counts each production `.add_systems(...)` invocation, including multiline calls; “expanded systems” expands tuple/chain registrations. Lightyear-owned transport/message/replication systems are audited separately below.
 
@@ -78,7 +79,7 @@ change immediately before the due execution → due changed=[entity]
 Only local edges are explicit:
 
 - player input → gravity
-- gravity → player death detection
+- combat/fall damage → player death-transition consumer
 - equipment stats → derived stats
 - chase → leash → return-to-spawn
 - dirty forwarding → Lightyear replication buffer
@@ -88,7 +89,7 @@ The following outcomes can be one fixed step late or depend on scheduler order:
 | Missing edge | Observable consequence |
 |---|---|
 | movement → combat | Melee range may use pre- or post-movement positions |
-| combat → player death | Lethal combat damage may transition the player this tick or next tick |
+| player death transition | **Resolved by `18c936b`:** combat and fall emit lethal transitions, and the FixedUpdate consumer runs after both |
 | movement → terrain streaming | A tile boundary may stream this tick or next tick |
 | movement/lifecycle → interest | Visibility may remain stale for one fixed step |
 | movement → duel/trade enforcement | Range cancellation may happen this tick or next tick |
@@ -96,11 +97,30 @@ The following outcomes can be one fixed step late or depend on scheduler order:
 
 Conflicting ECS access forces serialization, but serialization order is not a gameplay contract. The phase sets proposed in [[tick-loop-design]] are needed for correctness, not just readability.
 
-## Confirmed Unnecessary Recurring Work
+### Player Death Transition (`18c936b`)
 
-| Priority | System | Current steady-state work | Verdict / root direction |
+The former `detect_player_deaths` system scanned every player with `Health` each `FixedUpdate`. Commit `18c936b` removes that broad poll and introduces an internal `PlayerDeathTransition` message. Combat and fall emit it only on a positive-to-zero crossing; persisted zero health queues it during character selection. The consumer is explicitly ordered after combat and gravity.
+
+The consumer preserves the existing lifecycle: clamps zero health, deduplicates already-dead entities, preserves `LastDamager`, applies durability loss, creates `PlayerDeathState` with corpse/graveyard data, marks replication dirty, and sends the routed `"you died"` update. Tests cover stale entities, login-loaded dead characters, combat/fall death, resurrection and second death, and the unchanged death message/lifecycle contract.
+
+RED/GREEN artifacts under `/tmp/claude/game-server/`: `death-idle-scan`, `death-transition-consumer`, `player-combat-death`, `player-fall-death`, `player-login-death`, and `death-second-life-tests`. No live CPU savings claim is made.
+
+## Preserved Primary Requirements
+
+These requirements are evaluated against the literal targets preserved from the original list. Reducing expensive downstream work does not count as removing the recurring invocation.
+
+| Requirement | Implemented reduction | Strict status / remaining work |
+|---|---|---|
+| Lightyear replication | Dirty entity candidates replace steady-state traversal of every replicated root | **PARTIAL.** The queue stores entities, not entity/component entries; each dirty entity still traverses replicated components, and ordinary writers rely on explicit marks |
+| Interest management | Dirty observer/target queues plus 100-yard spatial buckets replace the entities×players scan | **PARTIAL.** No movement revision is modeled, and `update_interest` still invokes every `FixedUpdate` to drain empty queues |
+| Friends online snapshots | Idle all-owner rebuilds and database reads are removed | **PARTIAL.** Login/logout/presence/zone/level dirty affected owners, but friend-list mutations rebuild/send immediately instead of marking the owner dirty |
+| Terrain streaming | Same-tile ticks skip the 3×3 neighborhood and duplicate sends | **PARTIAL.** Every connection still resolves player position and recomputes tile coordinates each `FixedUpdate` |
+
+## Narrow Remove/Gate Slices
+
+| Priority | System | Previous steady-state work | Verdict |
 |---:|---|---|---|
-| 1 | `sync_player_gold_from_inventory` | Every `Update`, every player, synchronous redb inventory load | **REMOVE/GATE.** Update replicated `Gold` at inventory mutation boundaries or through a dirty-character queue |
+| 1 | `sync_player_gold_from_inventory` | Every `Update`, every player, synchronous redb inventory load | **COMPLETED.** `8920feb` removed the scan; persisted mutation values now flow through `GoldUpdateQueue` and `PostUpdate` |
 | 2 | `who::process_query_requests` | Builds/clones the full online-player list before checking whether any request exists | **COMPLETED.** `a4e7aeb` drains requests first, returns idle with zero roster materializations, and builds one shared roster only when requests exist |
 | 3 | `rest::update_player_rest_state` | Every `Update`, every authenticated player, linear scan of all innkeepers | **COMPLETED.** `fffa86a` re-evaluates only initial state or `Changed<Position>`/`Changed<Level>` players; add spatial lookup only if profiling justifies it |
 | 4 | `send_changed_durability_snapshot` | Every `Update`, every player with durability, then `Ref::is_changed()` in the body | **COMPLETED.** `c46b322` gates the query with `Changed<EquippedDurability>` and retains the `is_added()` exclusion |
@@ -136,7 +156,16 @@ The protocol contract remains unchanged: only `Authenticated` + `InWorld` connec
 
 RED artifacts: `/tmp/claude/game-server/who-idle-roster-red.log` and `/tmp/claude/game-server/who-request-contract-red.log`. GREEN artifact: `/tmp/claude/game-server/who-drain-first-green.log`. Formatting/readability artifacts: `/tmp/claude/game-server/who-drain-first-fmt.log`, `/tmp/claude/game-server/who-drain-first-readability-audit.json`, and `/tmp/claude/game-server/who-drain-first-readability-metrics.json`. No live CPU savings claim is made.
 
-One-time initialization systems for auctions and rest also wake every `Update` after completion, but only execute a boolean check. Moving them to a startup boundary would be cleaner; they are not material steady-state scans.
+### Remaining Definite Idle Work
+
+Ten recurring systems still perform source-proven work on idle ticks:
+
+- Six trade request handlers resolve `PlayerLink` → `Player` before checking `InitiateTrade`, `AcceptTrade`, `DeclineTrade`, `CancelTrade`, `SetTradeItem`, or `ConfirmTrade` receivers.
+- `collect_chat_messages` resolves sender name and guild metadata before checking `ChatMessage`.
+- `collect_emote_messages` resolves sender name before checking `EmoteIntent`.
+- Auction and rest initialization remain in `Update` after their one-time load, guarded only by initialized/resource checks.
+
+The initialization guards are cleanup candidates with low steady-state work. Moving them requires explicit startup ordering after database and world-data initialization.
 
 ## Correctness-Dependent Polls
 
@@ -145,9 +174,8 @@ These loops are real, but removing them without replacing their transition model
 | System | Current scope | Safe direction |
 |---|---|---|
 | `apply_terrain_gravity` | Every player every fixed step; terrain lookup even when stationary and grounded | Track grounded/sleeping versus airborne/dirty players; horizontal moves and teleports must wake grounding |
-| `detect_player_deaths` | Every player every fixed step | Central lethal-health transition or audited health-dirty queue; preserve fall, combat, and future damage writers |
 | `tick_auto_afk` | Every player every `Update` for a 300-second deadline | Store activity timestamps/deadlines and process due players at a lower cadence |
-| `stream_terrain_tiles` | Every connection every fixed step; expensive 3×3 work already tile-gated | Wake from player tile changes instead of probing every connection |
+| `stream_terrain_tiles` | Every connection every fixed step; only the 3×3 work is tile-gated | Wake the system from player tile-coordinate changes instead of probing every connection |
 | creature AI | Five fixed systems; several scan broad creature-state queries and branch on enum variants | Partition active states or combine state-machine passes only after profiling entity counts and behavior |
 | `enforce_duel_outcomes` | Active-duel list each fixed step | **KEEP** while active; optional run condition when the list is empty |
 | `enforce_trade_range` | Active-trade sessions each fixed step | **KEEP** while active; position-dirty participants could narrow work later |
@@ -160,7 +188,7 @@ These loops are real, but removing them without replacing their transition model
 | `tick_log` | Local counter and modulo each tick | **KEEP**; negligible |
 | `process_player_inputs` | Per-connection receiver scan; drains all queued inputs | **MEASURE** queue depth/budget; semantically required |
 | `apply_terrain_gravity` | All players, terrain lookup and state calculation | **OPTIMIZE** idle/grounded participation |
-| `stream_terrain_tiles` | All connections; same-tile early return | **OPTIMIZE** remaining tile probe |
+| `stream_terrain_tiles` | All connections; same-tile early return after position lookup and tile computation | **PARTIAL / OPTIMIZE**; downstream sends are gated, recurring probes remain |
 | `start_attack_system` | `Changed<CombatTarget>` only | **KEEP** |
 | `auto_attack_system` | Every entity retaining `AutoAttack` | **KEEP** active attackers fixed-step; `152ccbd` removes inactive participants on target loss |
 | `maintain_in_combat_state_system` | Entities with `CombatState` only | **KEEP** active-state-bounded |
@@ -172,8 +200,8 @@ These loops are real, but removing them without replacing their transition model
 | `return_to_spawn_system` | Same broad creature population; returning branch | **OPTIMIZE** state partition if profiling justifies it |
 | `update_stats_from_equipment` | `Changed<EquippedItems>` | **KEEP** |
 | `update_derived_stats` | `Changed<UnitStats>` or `Changed<Level>` | **KEEP** |
-| `detect_player_deaths` | All players; health/death-state branch | **OPTIMIZE**, after complete writer audit |
-| `update_interest` | Dirty interest/observer/target queues | **KEEP**; expensive work is dirty-driven |
+| `process_player_death_transitions` | Drains lethal transitions and resolves only referenced players | **KEEP**; `18c936b` removed the broad player scan |
+| `update_interest` | Dirty interest/observer/target queues; unconditional fixed-tick invocation | **PARTIAL** against the literal position-change-only target; expensive visibility work is dirty-driven |
 | `expire_auctions` | External one-second run condition; scans auctions only when due | **KEEP**; measure auction-map size later |
 | `enforce_duel_outcomes` | Active duel list | **KEEP** |
 | `enforce_trade_range` | Active trade sessions | **KEEP** |
@@ -181,13 +209,13 @@ These loops are real, but removing them without replacing their transition model
 
 ## Update Matrix
 
-Most `Update` systems are request-driven. The table lists all module groups covering the 105 expanded systems.
+Most `Update` systems are request-driven. The table lists all module groups covering the 104 expanded systems.
 
 | Module | Registered work | Idle shape / verdict |
 |---|---|---|
 | Achievement | initial snapshot; level achievement update | `Added<InWorld>` / `Changed<Level>` — **KEEP** |
 | Admin IPC | `poll_admin_ipc` | Empty channel poll; unbounded drain on bursts — **MEASURE** |
-| Auction house | one-time init; open/query/inventory/owned/bid/mail/create/buyout/cancel handlers | Init boolean after first load; receivers otherwise — **KEEP**, cleanup init placement later |
+| Auction house | one-time init; open/query/inventory/owned/bid/mail/create/buyout/cancel handlers | Receivers are request-driven; recurring initialized/resource check remains **REMOVE/GATE** cleanup |
 | Barber shop | initial snapshot; query/apply handlers | Added + receivers — **KEEP** |
 | Calendar | initial snapshot; query; schedule/signup processing | Added + receivers; query snapshot is drain-first — **KEEP**; initial snapshot and mutation order unchanged |
 | Collections | initial state; summon/dismiss mount/pet | Added + receivers — **KEEP** |
@@ -195,19 +223,19 @@ Most `Update` systems are request-driven. The table lists all module groups cove
 | Death service | initial state; query/release/resurrect/healer/stuck handlers | Added + receivers — **KEEP** |
 | Duel service | challenge/accept/decline handlers | Receivers — **KEEP** |
 | Durability | initial/query; appearance sync; persistence; changed snapshot | Added/Changed; changed snapshot now query-gated — **KEEP** |
-| Friends | initial/query/add/remove/presence; auto-AFK; changed/removed presence; dirty snapshots | Receiver/change/dirty work is good; auto-AFK is **OPTIMIZE** |
+| Friends | initial/query/add/remove/presence; auto-AFK; changed/removed presence; dirty snapshots | Idle rebuild is removed; friend-list dirty-owner semantics remain **PARTIAL**; auto-AFK is **OPTIMIZE** |
 | Guild | initial state; query/profile/officer-note handlers | Added + receivers — **KEEP** |
 | Ignore list | initial/query/add/remove | Added + receivers — **KEEP** |
 | Inspect | query handler | Receiver — **KEEP** |
 | LFG | status/queue/dequeue/role response; matchmaking advance | Receivers + queue-state check — **KEEP/MEASURE** |
-| Networking/auth | chat/history/guild/target; login/register/create/delete/select; gold sync; auth timeout; forced disconnect | Receivers and state timers are acceptable; gold sync is **REMOVE/GATE** |
+| Networking/auth | chat/history/guild/target; login/register/create/delete/select; auth timeout; forced disconnect | Gold scan is removed; chat/emote metadata lookup before receiver checks remains **REMOVE/GATE** |
 | Professions | query/craft/gather; pending gather casts | Receivers + active cast entities — **KEEP** |
 | PvP | initial state; query/queue/rated/dequeue | Added + receivers — **KEEP** |
 | Reputation | initial snapshot | `Added<InWorld>` — **KEEP** |
-| Rest | registry init; player rest-state update | Init guard plus unconditional player×innkeeper scan — **REMOVE/GATE** player scan |
+| Rest | registry init; player rest-state update | Player evaluation is change-gated — **KEEP**; recurring one-time registry guard remains **REMOVE/GATE** cleanup |
 | Talents | query/apply/reset | Receivers — **KEEP** |
-| Trade service | initiate/accept/decline/cancel/item/money/confirm handlers | Receivers; some pre-drain player lookups — **REMOVE/GATE** pre-work |
-| Who | query handler | Unconditional online roster build before request — **REMOVE/GATE** |
+| Trade service | initiate/accept/decline/cancel/item/money/confirm handlers | Offer-update helper is gated; six other handlers still resolve players before receiver checks — **REMOVE/GATE** |
+| Who | query handler | Drains requests before roster materialization — **KEEP** |
 | World map | initial snapshot; zone discovery | Added + `Changed<Zone>` — **KEEP** |
 
 ## Receiver Fan-Out
@@ -224,7 +252,7 @@ This is widespread recurring work, but **not yet a proven performance defect**. 
 
 Lightyear 0.26.4 supports trigger/event delivery through `RemoteEvent<M>` and `AppTriggerExt`, but converting request/response messages would be a protocol and routing redesign. Do not replace all receiver systems based only on static inspection.
 
-Immediate pre-drain fixes are still justified for Who, calendar, and trade because they remove work without changing delivery semantics.
+Who and calendar are drain-first. The shared trade-offer helper is gated for `ClearTradeItem` and `SetTradeMoney`; six other trade handlers plus chat and emote still have source-proven pre-message work. The 74 typed receiver polls themselves remain **KEEP/MEASURE**.
 
 ## PostUpdate and Last
 
@@ -233,6 +261,7 @@ Immediate pre-drain fixes are still justified for Who, calendar, and trade becau
 | `forward_position_changes_to_replication` | Dirty queue drain before Lightyear buffer | **KEEP** |
 | `despawn_pending` | `PendingDespawn` entities only | **KEEP** |
 | `process_npc_kill_reputation` | `Added<DeathState>` | **KEEP** |
+| `apply_gold_updates` | `GoldUpdateQueue` drain; returns when empty | **KEEP**; mutation-triggered replacement for the removed redb scan |
 | `flush_all_characters_on_exit` | Returns unless `AppExit` exists | **KEEP**; exit-only full player scan |
 
 ## Lightyear and Framework Loops
@@ -245,30 +274,34 @@ Required recurring plumbing:
 - ACK/NACK and sender-timer maintenance
 - replication dirty-candidate fanout to connected senders
 
-The previously expensive steady-state all-root/all-component replication traversal is gone. Initial sync still visits all roots once for a new/reset sender. Interest no longer performs a recurring entities×players scan.
+The steady-state all-root candidate traversal is gone. Initial sync still visits all roots once for a new/reset sender. The dirty queue is entity-only: each dirty entity still enters Lightyear's replicated-component traversal, so the literal entity/component-queue requirement remains **PARTIAL**.
 
-The vendored replication buffer still performs connection-scaled sender passes, including dirty fanout and `new_spawns` metadata completion. These are not world-root scans and are not proven unnecessary; measure sender counts and idle cost before changing them.
+Interest no longer performs a recurring entities×players scan. Dirty queues and spatial buckets bound the expensive work, but `update_interest` still invokes every `FixedUpdate`; the literal position-change-only execution requirement remains **PARTIAL**.
 
-## Already Eliminated or Gated
+The vendored replication buffer still performs connection-scaled sender passes, dirty fanout, component checks for dirty entities, and `new_spawns` metadata completion. These are not full-world root scans and are not proven removable; measure sender counts and idle cost before redesign.
 
-- Auction expiration: 20 Hz body → one-second cadence
-- Terrain streaming: repeated 3×3 send work → tile-transition gate
-- Friends snapshots: all-owner rebuilds → dirty affected owners
-- Interest: entities×players scan → dirty queues plus spatial buckets
-- Lightyear replication: all roots/components per sender → dirty candidates
-- Who requests: roster materialization before receiver inspection → drain-first shared roster
-- NPC death: living-NPC health scan → authoritative damage transition
-- Equal replicated assignments: guarded across proven writers
+## Implemented Reductions and Eliminations
 
-These completed slices do not prove that the rest of the server has no recurring scans.
+- Auction expiration: 20 Hz body → one-second cadence — **COMPLETED**
+- Terrain streaming: repeated 3×3 send work → same-tile early return; per-connection tile probe remains — **PARTIAL**
+- Friends snapshots: all-owner idle rebuilds removed; friend-list mutations bypass dirty-owner marking — **PARTIAL**
+- Interest: entities×players scan → dirty queues plus spatial buckets; fixed-tick invocation remains — **PARTIAL**
+- Lightyear replication: all-root candidate traversal → dirty entity candidates; component-aware queue remains absent — **PARTIAL**
+- Who requests: roster materialization before receiver inspection → drain-first shared roster — **COMPLETED**
+- Gold synchronization: per-player redb scan → mutation-triggered `GoldUpdateQueue` — **COMPLETED**
+- NPC death: living-NPC health scan → authoritative damage transition — **COMPLETED**
+- Player death: all-player health scan → authoritative combat/fall/login lethal transitions (`18c936b`) — **COMPLETED**
+- Equal replicated assignments: guarded across proven writers — **COMPLETED for audited writers**
+
+These reductions do not establish completion of the four preserved primary requirements or the remaining audit.
 
 ## Recommended Order
 
-1. Fix the periodic persistence `Changed<T>` bug and add a real 300-tick-window regression.
-2. Remove per-player redb gold polling; make inventory mutation own `Gold` synchronization.
-3. Add explicit fixed phase ordering for movement, combat, death, lifecycle, interest, and persistence.
-4. Convert remaining trade pre-work to request boundaries; the named trade-offer slice is complete in `969f2e0`, alongside Who `a4e7aeb`, calendar `18be416`, and durability change gating `c46b322`.
-5. Instrument receiver fan-out, gravity, AI, interest target fanout, database latency, and fixed catch-up before broader redesign.
+1. Fix periodic persistence without losing the 300-tick `Changed<T>` window; add a production-order regression.
+2. Gate the ten definite idle-work systems: six trade handlers, chat, emote, auction initialization, and rest initialization.
+3. Complete the four preserved requirements: component-aware Lightyear dirtiness, position-change-only interest execution, friend-list dirty-owner updates, and tile-change-only terrain execution.
+4. Add explicit fixed phase ordering for movement, combat, lifecycle, visibility, and persistence.
+5. Measure receiver fan-out, gravity, auto-AFK, creature AI, Lightyear sender work, database latency, and fixed catch-up before broader redesign.
 
 ## Proof Limits
 
@@ -278,7 +311,7 @@ This is a static source audit plus a focused Bevy 0.18 change-detection reproduc
 
 - [crates/server/src/main.rs](../../../crates/server/src/main.rs) — runner cadence and server plugin assembly
 - [crates/server/src/networking.rs](../../../crates/server/src/networking.rs) — input, gravity, terrain, Update handlers, and schedule registration
-- [crates/server/src/auth_character.rs](../../../crates/server/src/auth_character.rs) — unconditional per-player Gold synchronization
+- [crates/server/src/gold.rs](../../../crates/server/src/gold.rs) — mutation-triggered gold queueing and `PostUpdate` application
 - [crates/server/src/who.rs](../../../crates/server/src/who.rs) — drain-first QueryWho handling, shared roster construction, filtering, sorting, and response routing
 - `game-server` commit `a4e7aeb` — drain Who requests before building roster
 - [crates/server/src/rest.rs](../../../crates/server/src/rest.rs) — initial and change-filtered player/innkeeper evaluation
@@ -287,17 +320,29 @@ This is a static source audit plus a focused Bevy 0.18 change-detection reproduc
 - `game-server` commit `c46b322` — query-level durability change gating with added-component exclusion
 - [crates/server/src/combat.rs](../../../crates/server/src/combat.rs) — attack participation, combat state, and respawn
 - [crates/server/src/creature_ai.rs](../../../crates/server/src/creature_ai.rs) — five fixed AI passes and state branches
-- [crates/server/src/death.rs](../../../crates/server/src/death.rs) — all-player death detection
+- [crates/server/src/death.rs](../../../crates/server/src/death.rs) — player death-transition consumer and lifecycle side effects
+- [crates/server/src/combat.rs](../../../crates/server/src/combat.rs) — combat lethal-transition emission
+- [crates/server/src/networking.rs](../../../crates/server/src/networking.rs) — fall lethal-transition emission
+- [crates/server/src/auth_character.rs](../../../crates/server/src/auth_character.rs) — persisted zero-health transition queue
+- `game-server` commit `18c936b` — replace player death polling with lethal transitions
 - [crates/server/src/friends.rs](../../../crates/server/src/friends.rs) — auto-AFK and dirty friend snapshots
 - [crates/server/src/calendar.rs](../../../crates/server/src/calendar.rs) — drain-first calendar query handling, initial snapshot, and schedule/signup mutation ordering
 - `game-server` commit `18be416` — drain calendar queries before building a shared snapshot
 - [calendar tests](../../../crates/server/src/calendar.rs) — idle, shared-snapshot, routing, and eligibility proof
-- [crates/server/src/trade.rs](../../../crates/server/src/trade.rs) — trade receiver polling, generic offer-update gating, and range enforcement
+- [crates/server/src/trade.rs](../../../crates/server/src/trade.rs) — completed generic offer-update gate plus six remaining pre-message player lookups
+- [crates/server/src/messaging.rs](../../../crates/server/src/messaging.rs) — remaining chat/emote metadata work before receiver checks
+- [vendor/lightyear_replication/src/send/dirty.rs](../../../vendor/lightyear_replication/src/send/dirty.rs) — entity-only global/per-sender dirty queue
+- [vendor/lightyear_replication/src/send/buffer.rs](../../../vendor/lightyear_replication/src/send/buffer.rs) — remaining per-dirty-entity component traversal
 - [crates/server/src/trade_tests.rs](../../../crates/server/src/trade_tests.rs) — trade-offer idle, batch, routing, and error proof
 - `game-server` commit `969f2e0` — skip idle trade-offer player lookups
 - [crates/server/src/persistence_runtime.rs](../../../crates/server/src/persistence_runtime.rs) — periodic save gate and `Changed` filters
 - [crates/server/src/interest.rs](../../../crates/server/src/interest.rs) — dirty interest and replication forwarding
-- [vendor/lightyear_replication/src/send/buffer.rs](../../../vendor/lightyear_replication/src/send/buffer.rs) — dirty candidates and sender metadata passes
+- [crates/server/src/admin_ipc.rs](../../../crates/server/src/admin_ipc.rs), [auth.rs](../../../crates/server/src/auth.rs), and [main.rs](../../../crates/server/src/main.rs) — admin, connection lifecycle, runner, and tick-log registrations
+- [crates/server/src/achievement.rs](../../../crates/server/src/achievement.rs), [barber_shop.rs](../../../crates/server/src/barber_shop.rs), [collection.rs](../../../crates/server/src/collection.rs), and [currency.rs](../../../crates/server/src/currency.rs) — progression/economy `Update` registrations
+- [crates/server/src/auction_house.rs](../../../crates/server/src/auction_house.rs), [duel.rs](../../../crates/server/src/duel.rs), [guild.rs](../../../crates/server/src/guild.rs), and [ignore_list.rs](../../../crates/server/src/ignore_list.rs) — service and fixed-enforcement registrations
+- [crates/server/src/inspect.rs](../../../crates/server/src/inspect.rs), [lfg.rs](../../../crates/server/src/lfg.rs), [pvp.rs](../../../crates/server/src/pvp.rs), and [profession.rs](../../../crates/server/src/profession.rs) — request and active-state registrations
+- [crates/server/src/reputation.rs](../../../crates/server/src/reputation.rs), [talent.rs](../../../crates/server/src/talent.rs), [world_map.rs](../../../crates/server/src/world_map.rs), and [stats.rs](../../../crates/server/src/stats.rs) — snapshot, changed-state, and fixed-stat registrations
+- [crates/server/src/persistence.rs](../../../crates/server/src/persistence.rs) — periodic and exit persistence registration
 - [Cargo.lock](../../../Cargo.lock) — locked Bevy 0.18.0 and Lightyear 0.26.4 versions
 - `bevy_ecs 0.18.0 src/system/function_system.rs:445-451,680-684` — system `last_run` advances on execution
 - `bevy_ecs 0.18.0 src/query/filter.rs:1083-1094` — `Changed<T>` compares against system `last_run`
@@ -306,6 +351,6 @@ This is a static source audit plus a focused Bevy 0.18 change-detection reproduc
 
 - [[tick-loop-design]] — proposed fixed phase and cadence contract
 - [[tick-model]] — observed schedule topology
-- [[recurring-loop-elimination]] — previously completed loop-specific changes
+- [[recurring-loop-elimination]] — implemented eliminations and literal partial reductions
 - [[semantic-noop-replication]] — writer-specific no-op replication proof
 - [[networking]] — Lightyear, interest, and terrain behavior

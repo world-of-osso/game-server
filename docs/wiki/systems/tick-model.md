@@ -38,7 +38,7 @@ The two loops are not guaranteed to execute one-for-one:
 | Player movement | `process_player_inputs`, `apply_terrain_gravity`, `stream_terrain_tiles` |
 | Creature AI | wander, waypoint, chase, leash, return-to-spawn |
 | Combat and stats | equipment/derived stats, attack start, auto-attacks, combat status, NPC respawn |
-| Player/world rules | death detection, duel outcomes, trade range enforcement |
+| Player/world rules | lethal death transitions, duel outcomes, trade range enforcement |
 | Visibility | dirty interest reconciliation |
 | Maintenance | auction expiration gate, periodic dirty-character save, tick logging |
 
@@ -49,7 +49,7 @@ This table groups responsibilities; it does not imply a total execution order.
 Only the following relevant order is encoded in current game-server source:
 
 - `process_player_inputs` → `apply_terrain_gravity`
-- `apply_terrain_gravity` → `detect_player_deaths`
+- combat and `apply_terrain_gravity` → player death-transition consumer
 - `update_stats_from_equipment` → `update_derived_stats`
 - `chase_system` → `leash_check_system` → `return_to_spawn_system`
 - Initial world-map snapshot → zone-discovery update in `Update`
@@ -74,8 +74,9 @@ Each connection receives a `ReplicationSender` with a 50 ms `SinceLastAck` caden
 - **Auction expiration:** registered in `FixedUpdate`; runs immediately once, then after each accumulated one-second duration.
 - **Periodic character save attempt:** every 300 fixed steps, nominally 15 seconds. This is currently incorrect: the system executes and returns on intervening ticks, advancing Bevy's change-detection window, so the due `Changed<Position|Health|Player>` query misses changes made earlier in the interval. See [[tick-loop-audit]].
 - **Tick log:** every 200 fixed steps, which is 10 seconds of simulation time.
-- **Terrain streaming:** remains fixed-step but skips the tile-neighborhood scan until a player changes tiles.
-- **Interest and replication:** dirty/state-driven rather than recurring full-world scans.
+- **Terrain streaming:** remains fixed-step and still probes every connection's position/tile; only the 3×3 neighborhood/send work is skipped when the tile is unchanged.
+- **Interest:** dirty queues and spatial buckets remove the full entity×player scan, but `update_interest` still invokes every fixed step.
+- **Replication:** dirty entity candidates remove steady-state full-root traversal; dirty entities still traverse replicated components.
 
 Disconnect saves are observer-driven. Shutdown saves run in `Last` only when `AppExit` is present.
 
@@ -86,6 +87,7 @@ Disconnect saves are observer-driven. Shutdown saves run in `Last` only when `Ap
 - Per-zone system sets and runtime zone-transfer events are not implemented; current `ZonePlugin` performs `PostStartup` Elwynn creature spawning.
 - Many gameplay requests run in `Update`, after the fixed schedule within the same outer update, rather than inside one monolithic game tick.
 - Periodic redb writes run synchronously on the Bevy thread.
+- The preserved Lightyear, interest, friends, and terrain loop-removal requirements remain partial; see [[tick-loop-audit]] for their literal completion criteria.
 
 ## Sources
 
@@ -94,7 +96,9 @@ Disconnect saves are observer-driven. Shutdown saves run in `Last` only when `Ap
 - [crates/server/src/creature_ai.rs](../../../crates/server/src/creature_ai.rs) — fixed AI registration and local chain
 - [crates/server/src/stats.rs](../../../crates/server/src/stats.rs) — chained stat recalculation
 - [crates/server/src/combat.rs](../../../crates/server/src/combat.rs) — fixed combat and NPC respawn
-- [crates/server/src/death.rs](../../../crates/server/src/death.rs) — player death ordering
+- [crates/server/src/death.rs](../../../crates/server/src/death.rs) — player death-transition consumer and lifecycle ordering
+- [crates/server/src/auth_character.rs](../../../crates/server/src/auth_character.rs) — persisted zero-health transition queue
+- `game-server` commit `18c936b` — replace player death polling with lethal transitions
 - [crates/server/src/interest.rs](../../../crates/server/src/interest.rs) — interest and replication dirty schedules
 - [crates/server/src/auction_house.rs](../../../crates/server/src/auction_house.rs) — one-second expiration gate
 - [crates/server/src/persistence.rs](../../../crates/server/src/persistence.rs) — persistence schedule registration

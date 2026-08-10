@@ -1,6 +1,6 @@
 # Recurring Loop Elimination
 
-The server performance pass is replacing broad recurring scans with state-, event-, or cadence-bounded work while preserving gameplay and protocol behavior. Each loop is handled as an independent tests-first change. This page covers the named completed slices only; it is not an exhaustive claim that all server recurring work is removed. See [[tick-loop-audit]] for the full 130-system inventory.
+The server performance pass is replacing broad recurring scans with state-, event-, or cadence-bounded work while preserving gameplay and protocol behavior. Each loop is handled as an independent tests-first change. This page documents both complete eliminations and partial reductions among the named slices; it is not an exhaustive claim that all server recurring work is removed. See [[tick-loop-audit]] for the full 130-system inventory.
 
 ## Content
 
@@ -9,10 +9,10 @@ The server performance pass is replacing broad recurring scans with state-, even
 | Loop | Previous cadence/work | Target | Status |
 |---|---|---|---|
 | Auction expiration | Scan every auction at 20 Hz | Scan at most once per second | Completed in `e02ce0a` |
-| Terrain streaming | Recompute each connection's 3×3 neighborhood at 20 Hz | Evaluate on initial delivery or tile transition | Completed in `3c5ceca` |
-| Friends online snapshots | Rebuild all online/friend snapshots every app frame | Rebuild only dirty affected owners | Completed in `914d570` |
-| Interest management | Scan every visible entity against every player every 500 ms | Dirty position/lifecycle triggers plus spatial buckets | Completed in `4523373`, tests split in `a85b035` |
-| Lightyear replication | Traverse every replicated root/component per client every 50 ms | Dirty global/per-sender candidates with initial full sync and ACK retention | Implemented in `269655a`, `30b5078`; strict-Empty CPU gate pending |
+| Terrain streaming | Recompute each connection's 3×3 neighborhood at 20 Hz | Evaluate on initial delivery or tile transition | **Partial** in `3c5ceca`: repeated 3×3/send work is skipped, but every connection still probes its position and tile each `FixedUpdate` |
+| Friends online snapshots | Rebuild all online/friend snapshots every app frame | Rebuild only dirty affected owners | **Partial** in `914d570`: idle rebuilds are removed, but friend-list mutations send immediately instead of marking the owner dirty, and logout lifecycle coverage is not fully explicit |
+| Interest management | Scan every visible entity against every player every 500 ms | Dirty position/lifecycle triggers plus spatial buckets | **Partial** in `4523373`, tests split in `a85b035`: dirty spatial work replaces the broad scan, but the system still runs every `FixedUpdate` and has no movement-revision model |
+| Lightyear replication | Traverse every replicated root/component per client every 50 ms | Dirty entity/component queue with initial full sync and ACK retention | **Partial** in `269655a`, `30b5078`: dirty entity candidates replace root traversal, but the queue is not component-aware, dirty entities still traverse replicated components, and the sender still wakes on cadence |
 | Who roster materialization | Build the full online-player list before checking `QueryWho` receivers | Drain latest requests first; build one shared roster only when requests exist | Completed in `a4e7aeb`; no live CPU savings claim |
 | Inactive auto-attacks | Fixed combat query retains every `AutoAttack { active: false }` after target loss | Remove `AutoAttack` when `CombatTarget` becomes `None`; active attackers remain fixed-step | Completed in `152ccbd`; live CPU gate pending |
 | Rest-state evaluation | Every `Update`, every authenticated player, linear scan of all innkeepers | Evaluate initial state or only `Changed<Position>`/`Changed<Level>` players | Completed in `fffa86a`; live CPU gate pending |
@@ -83,7 +83,7 @@ Before `969f2e0`, the generic `process_trade_offer_updates` helper resolved each
 
 The helper now uses `MessageReceiver::has_messages()` first. Empty receivers skip the `PlayerLink` → `Player` lookup; non-empty receivers drain and apply every queued request in order, resolve the player once per batch, and preserve existing persistence, trade-session mutation, broadcast, routing, and missing-player error behavior. The six other trade receiver systems remain outside this named 7-item slice.
 
-RED: `/tmp/claude/game-server/trade-offer-drain-red.log`. An initial GREEN harness-timing failure is retained at `/tmp/claude/game-server/trade-offer-drain-green-attempt1.log`; final GREEN is `/tmp/claude/game-server/trade-offer-drain-green.log` (**6 passed**). Formatting and readability artifacts are recorded alongside the final proof. Audit status is now **7/7 named slices complete**. No live CPU savings claim is made.
+RED: `/tmp/claude/game-server/trade-offer-drain-red.log`. An initial GREEN harness-timing failure is retained at `/tmp/claude/game-server/trade-offer-drain-green-attempt1.log`; final GREEN is `/tmp/claude/game-server/trade-offer-drain-green.log` (**6 passed**). Formatting and readability artifacts are recorded alongside the final proof. This completes the narrow seven-item application slice; it does not complete the broader audit or the six other trade handlers. No live CPU savings claim is made.
 
 ## Gold Persistence Synchronization
 
@@ -95,7 +95,7 @@ The RED/GREEN artifacts are `/tmp/claude/game-server/gold-update-queue-red.log` 
 
 ## Terrain Streaming
 
-`SentTiles` now records the connection's last evaluated tile separately from its set of already-sent tiles. `stream_terrain_tiles` still resolves the player's current tile each fixed tick, but it skips the 3×3 neighborhood loop and sender lookups when that tile is unchanged.
+`SentTiles` now records the connection's last evaluated tile separately from its set of already-sent tiles. `stream_terrain_tiles` still resolves the player's current tile each fixed tick, but it skips the 3×3 neighborhood loop and sender lookups when that tile is unchanged. This is a **PARTIAL** reduction: duplicate neighborhood/send work is gated, but tile-change-only system execution is not implemented.
 
 A fresh connection starts with no last tile, so initial world entry and reconnect force evaluation. Movement within one tile preserves the `SentTiles` value and Bevy change tick. Boundary crossings and teleports update the last tile and evaluate the destination neighborhood; the existing tile set still suppresses duplicate `LoadTerrain` messages.
 
@@ -112,7 +112,7 @@ The pre-fix same-tile test failed because repeated duplicate `HashSet::insert` a
 
 ## Friends Online Snapshots
 
-`FriendSnapshotIndex` caches the current online presence map and maintains a reverse index from normalized friend name to owners who list that friend. Presence, login/logout, zone, and level changes mark only affected owners dirty. Friend-list mutations replace that owner's reverse-index links; initial `InWorld` snapshots and explicit query requests remain immediate and owner-scoped.
+`FriendSnapshotIndex` caches the current online presence map and maintains a reverse index from normalized friend name to owners who list that friend. Presence, login/logout, zone, and level changes mark only affected owners dirty. Friend-list mutations replace that owner's reverse-index links and immediately rebuild/send instead of marking the owner dirty; initial `InWorld` snapshots and explicit query requests remain immediate and owner-scoped. The idle rebuild is removed, but the literal all-trigger dirty-owner requirement remains **PARTIAL**.
 
 `sync_changed_friend_presence` updates the cached online data from `Changed<Player>`, `Changed<Level>`, `Changed<Zone>`, and `Changed<PresenceStatus>`. `sync_removed_friend_presence` handles logout/despawn. `send_dirty_friends_snapshots` rebuilds and compares snapshots only for drained dirty owners, so unchanged frames no longer rebuild every owner's snapshot or perform offline-character database lookups. Existing equality suppression remains as a final output guard.
 
@@ -130,7 +130,7 @@ The added friends tests cover the real `Update` chain and index behavior:
 
 ## Interest Management
 
-Before `4523373`, `update_interest` ran every 500 ms and evaluated every `NetworkVisibility` entity against every connected player, even when no relevant position or lifecycle state had changed. The replacement keeps a 100-yard X/Z spatial index and marks targets or observers dirty when authoritative position writers, `NetworkVisibility`, or `PlayerLink` lifecycle boundaries change. A fixed-tick system drains the dirty queue, updates bucket membership, evaluates only dirty observers and targets, and checks the exact 3D squared-distance rule against candidates from the observer's 3×3 bucket neighborhood plus previously visible entities.
+Before `4523373`, `update_interest` ran every 500 ms and evaluated every `NetworkVisibility` entity against every connected player, even when no relevant position or lifecycle state had changed. The replacement keeps a 100-yard X/Z spatial index and marks targets or observers dirty when authoritative position writers, `NetworkVisibility`, or `PlayerLink` lifecycle boundaries change. A fixed-tick system drains the dirty queue, updates bucket membership, evaluates only dirty observers and targets, and checks the exact 3D squared-distance rule against candidates from the observer's 3×3 bucket neighborhood plus previously visible entities. `update_interest` still invokes every `FixedUpdate`, and the queue stores dirty entities rather than movement revisions; the literal requirement remains **PARTIAL**.
 
 Initial `NetworkVisibility` and `PlayerLink` additions register and dirty their state; removal observers clear bucket, observer, and visibility bookkeeping. Player movement, NPC movement, teleports, respawns, and other authoritative position changes call the shared dirty marker. Bucket membership narrows candidates only; it does not replace the exact `distance_squared <= 100²` boundary. Existing per-connection visibility transitions remain intact for multiple players, initial nearby visibility, reconnects, spawns, despawns, radius crossings, teleports, corpse visibility, and stale-state removal. No recurring full entities×players fallback remains.
 
@@ -149,7 +149,7 @@ The implementation landed in `4523373`; `a85b035` moved the integration tests in
 
 ## Lightyear Replication
 
-Before `30b5078`, the vendored Lightyear sender traversed every cached replicated root for every sender whenever its 50 ms timer fired, then inspected every replicated component and child. `269655a` vendored `lightyear_replication` `0.26.4` so the sender boundary could change without replacing Lightyear's existing encoder. `30b5078` removes the per-sender all-root/all-component traversal from the steady-state path: a global `ReplicationDirtyQueue` marks entities for all senders, while `mark_for_sender` records connection-specific candidates. The queue is drained into each sender's dirty candidate map before the existing `replicate_entity` semantic pipeline runs.
+Before `30b5078`, the vendored Lightyear sender traversed every cached replicated root for every sender whenever its 50 ms timer fired, then inspected every replicated component and child. `269655a` vendored `lightyear_replication` `0.26.4` so the sender boundary could change without replacing Lightyear's existing encoder. `30b5078` removes the per-sender all-root candidate traversal from the steady-state path: a global `ReplicationDirtyQueue` marks entities for all senders, while `mark_for_sender` records connection-specific candidates. The queue is entity-only, and each dirty entity still enters the existing replicated-component traversal inside `replicate_entity`; the literal entity/component queue requirement remains **PARTIAL**.
 
 A new or reset sender performs one initial full sync by queueing every current replication root. After that, unchanged roots are not candidates. Dirty candidates remain queued while their group has pending actions/updates or unacknowledged `SinceLastAck` state, so ACK advancement and NACK retry behavior remain authoritative. Visibility gain/loss, room visibility changes, component inserts/configuration, `NetworkVisibility` removal, hierarchy children, spawn/despawn actions, grouping, priority, delta compression, entity mapping, and wire encoding continue through Lightyear's existing paths.
 
@@ -161,7 +161,7 @@ The integration tests use the in-process crossbeam client/server stepper and tes
 
 Coverage includes initial full replication, changed-position traversal of only the changed root, retention of an unacknowledged dirty root until ACK, sender-targeted visibility gain/loss without visiting another sender, replicated component insert/remove actions, unchanged-root idle behavior, client connection, input delivery, and multi-client routing. The proof covers candidate selection and preserved observable replication behavior; it is not a byte-level wire-count benchmark.
 
-The vendored provenance is recorded in [`vendor/lightyear_replication/UPSTREAM.md`](../../../vendor/lightyear_replication/UPSTREAM.md): version `0.26.4`, crates.io checksum `a451536b73e618035472548e8d7f1af51e193649f556318f7836ddc70e6f73d2`, upstream commit `7082c5eb09463fc110461f1cc928994460611e98`, and MIT OR Apache-2.0 licensing. The remaining strict-Empty gate is live client verification that CPU usage is at or below 10% with zero terrain/world rendering; no `<=10%` result is claimed here.
+The vendored provenance is recorded in [`vendor/lightyear_replication/UPSTREAM.md`](../../../vendor/lightyear_replication/UPSTREAM.md): version `0.26.4`, crates.io checksum `a451536b73e618035472548e8d7f1af51e193649f556318f7836ddc70e6f73d2`, upstream commit `7082c5eb09463fc110461f1cc928994460611e98`, and MIT OR Apache-2.0 licensing. Remaining gates are component-aware dirty entries, exhaustive writer coverage, and live client verification with zero terrain/world rendering; no `<=10%` CPU result is claimed here.
 
 Follow-up `aa5dddb` closed a replication wake-up gap in movement input handling. Turn-in-place and other zero-translation inputs can change replicated `Rotation` or `MovementSpeed`; those changes now return `replicated_state_changed` and enqueue the entity for Lightyear even when `position_changed` is false. `InterestDirtyQueue` remains position-only: it is not dirtied by rotation or speed changes. Movement logic moved into `networking_movement.rs` so the two dirty domains stay explicit. The initial no-op regression test was RED, then the full focused server slice passed with 43 tests GREEN. This follow-up changes candidate coverage, not the interest radius or wire format.
 

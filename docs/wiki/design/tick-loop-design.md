@@ -6,9 +6,9 @@ Draft normative design for the `game-server` runtime loops. It keeps one 20 Hz a
 
 ## Status and Scope
 
-**Status:** Draft for review; blocked on the correctness findings in [[tick-loop-audit]].
+**Status:** Draft for review; player lethal-transition ownership is implemented in `18c936b`, but periodic persistence, global fixed phases, ten definite idle-work systems, and the four preserved loop requirements remain open.
 
-**Review gate:** fix periodic change tracking and define global fixed-phase ordering before treating this design as approved.
+**Review gate:** fix periodic change tracking, define global fixed-phase ordering, and complete the literal Lightyear, interest, friends, and terrain boundaries before treating this design as approved.
 
 **Proposed baseline:** Keep a single 50 ms `FixedUpdate` cadence shared by Bevy and Lightyear.
 
@@ -63,7 +63,7 @@ Introduce named `SystemSet`s for dependency boundaries. Systems inside one phase
 | **Input** | Drain and validate simulation inputs | `process_player_inputs` |
 | **Movement** | Apply player and creature movement before range-sensitive rules | `apply_terrain_gravity`, wander, waypoint, chase, leash, return-to-spawn |
 | **Resolution** | Derive stats and resolve combat or proximity rules | stat recalculation, auto-attacks, trade range, duel outcomes |
-| **Lifecycle** | Apply death, respawn, spawn/despawn, and other state transitions | player death detection, NPC respawn |
+| **Lifecycle** | Apply death, respawn, spawn/despawn, and other state transitions | player death-transition consumer, NPC respawn |
 | **Visibility** | Reconcile interest and terrain state after authoritative positions settle | `update_interest`, `stream_terrain_tiles` |
 | **Maintenance** | Run cadence-gated work that observes the completed tick | auction expiration, dirty saves, tick logging |
 
@@ -73,7 +73,7 @@ Required high-level order:
 Input → Movement → Resolution → Lifecycle → Visibility → Maintenance
 ```
 
-Local order remains explicit inside a phase. Examples: equipment stats before derived stats; player input before gravity; combat damage before death handling; respawn position changes before interest reconciliation.
+Local order remains explicit inside a phase. Examples: equipment stats before derived stats; player input before gravity; combat and fall damage before player death handling; respawn position changes before interest reconciliation.
 
 Plugin registration order is not an ordering contract. Every required edge must use phase sets, `.before()`, `.after()`, or `.chain()`.
 
@@ -98,6 +98,12 @@ An `Update` handler that mutates replicated simulation state must declare its bo
 3. Treat the mutation as available to `PostUpdate` replication in the current outer update and to fixed simulation rules on the next fixed step.
 
 Do not add recurring full-world polling to either schedule. Prefer change filters, events, dirty queues, state-bounded queries, and duration gates.
+
+### Player Death Transition (`18c936b`)
+
+Player death is now owned by an internal `PlayerDeathTransition` message emitted at authoritative lethal boundaries. Combat and fall damage emit only when health crosses from positive to zero; character selection queues the same transition when persisted health is already zero. The FixedUpdate consumer runs after both combat and gravity, clamps health, deduplicates already-dead players, preserves `LastDamager`, applies durability loss, creates the corpse/graveyard state, marks replication dirty, and sends the existing `"you died"` update. The old broad `detect_player_deaths` player scan is removed.
+
+The transition boundary preserves relogging dead characters, resurrection and second-life behavior, stale-entity safety, and existing routing. This is a concrete lifecycle edge inside the proposed phase model; it does not claim that all six phase sets are already migrated.
 
 ## Cadence Policy
 
@@ -190,8 +196,10 @@ A future zone or instance design may place zone-filtered systems inside the Move
 - [crates/server/src/main.rs](../../../crates/server/src/main.rs) — runner cadence, Lightyear tick configuration, plugin registration, and tick logging
 - [crates/server/src/networking.rs](../../../crates/server/src/networking.rs) — input, movement, request, startup, disconnect, and replication-sender boundaries
 - [crates/server/src/creature_ai.rs](../../../crates/server/src/creature_ai.rs) — fixed-step AI systems and local ordering
-- [crates/server/src/combat.rs](../../../crates/server/src/combat.rs) — combat, death transition, and respawn systems
-- [crates/server/src/death.rs](../../../crates/server/src/death.rs) — player death ordering after gravity
+- [crates/server/src/combat.rs](../../../crates/server/src/combat.rs) — combat damage, lethal transition emission, and respawn systems
+- [crates/server/src/death.rs](../../../crates/server/src/death.rs) — player death-transition consumer and lifecycle ordering
+- [crates/server/src/auth_character.rs](../../../crates/server/src/auth_character.rs) — queued transition for persisted zero health
+- `game-server` commit `18c936b` — replace player death polling with lethal transitions
 - [crates/server/src/interest.rs](../../../crates/server/src/interest.rs) — fixed interest reconciliation and PostUpdate replication dirty forwarding
 - [crates/server/src/persistence.rs](../../../crates/server/src/persistence.rs) — startup, periodic, and shutdown persistence schedules
 - [crates/server/src/persistence_runtime.rs](../../../crates/server/src/persistence_runtime.rs) — 300-tick dirty-save cadence

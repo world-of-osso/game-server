@@ -46,5 +46,5 @@ Debug logs and root cause analyses.
 | Page | Summary |
 |------|---------|
 | [[semantic-noop-replication]] | First- and second-wave server equal-assignment proofs/fixes, Lightyear 0.26.4 tick-only sending, direct NPC death transition, Gold ruled out, and blocked wire-level proof |
-| [[recurring-loop-elimination]] | Tests-first removal of auction, terrain, friends, interest, Lightyear, Who roster, gold, durability, calendar, trade-offer, inactive auto-attack, and rest-state recurring scans; other trade handlers remain outside the named slice |
-| [[tick-loop-audit]] | Exhaustive 130-system recurring-schedule audit: all 7 named loop slices complete, persistence correctness bug, missing order, and remaining unmeasured receiver fan-out |
+| [[recurring-loop-elimination]] | Tests-first reductions and eliminations across auction, terrain, friends, interest, Lightyear, Who roster, gold, durability, calendar, trade-offer, inactive auto-attack, and rest-state scans; Lightyear, interest, friends, and terrain remain partial under their literal requirements |
+| [[tick-loop-audit]] | Exhaustive recurring-schedule audit: 104 registrations / 130 expanded systems; seven narrow removal slices complete, while the preserved Lightyear, interest, friends, and terrain requirements remain partial alongside persistence/order risks and receiver-fan-out measurement |
