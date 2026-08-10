@@ -78,20 +78,18 @@ game-server/
 
 ## Server Tick Model
 
-```
-20 Hz FixedUpdate (50ms per tick)
-  ├── Receive & apply client inputs (movement, spell casts, interactions)
-  ├── AI systems (creature behavior, patrol, aggro)
-  ├── Movement validation (server authoritative position)
-  ├── Combat resolution (damage, healing, buffs/debuffs, spell effects)
-  ├── Zone transition checks (entity handoff between zones)
-  ├── Lightyear replication (delta-compress changed components, send to clients)
-  └── Periodic: persistence flush (every N ticks, save dirty entities to redb)
-```
+The current runtime and proposed ordering contract are maintained separately:
 
-Each zone runs as a separate system set. Bevy's parallel scheduling runs independent zones
-on different threads. Zones that need to interact (entity crossing boundaries) synchronize
-via events at tick boundaries — same model as AzerothCore's MapUpdater.
+- [Current tick model](docs/wiki/systems/tick-model.md) — observed schedules, cadence, and explicit ordering
+- [Tick-loop design](docs/wiki/design/tick-loop-design.md) — draft normative phase, catch-up, replication, and maintenance contract
+
+The server targets a 50ms outer runner and passes the same duration to Lightyear, which sets
+Bevy's `Time<Fixed>` timestep to 50ms. Fixed simulation, request handling, and replication
+span `FixedUpdate`, `Update`, and `PostUpdate`; current code does not implement one global
+input → AI → movement → combat → zone → replication → persistence chain.
+
+The draft design retains one 20Hz authoritative fixed simulation and adds explicit phase sets.
+Per-zone system sets and cross-zone transfer events remain proposed rather than implemented.
 
 ## Bevy ECS as In-Memory Storage
 
@@ -293,31 +291,10 @@ QUIC provides both reliable and unreliable streams natively.
 
 ## Zone Architecture
 
-```rust
-// Each zone is a separate system set that can run in parallel
-app.configure_sets(
-    FixedUpdate,
-    (
-        ZoneSet::EasternKingdoms,
-        ZoneSet::Kalimdor,
-        ZoneSet::Outland,
-    ).chain() // or .ambiguous_with() for parallel execution
-);
-```
-
-Entities are tagged with a `Zone` component. Systems filter by zone:
-
-```rust
-fn update_combat(
-    query: Query<(&mut Health, &CombatState), With<Zone<Stormwind>>>
-) {
-    // Only processes entities in Stormwind zone
-}
-```
-
-Zone transfers: entity despawns from source zone, event sent, respawns in target zone
-next tick. Lightyear handles the client-side seamlessly (entity despawn + spawn looks
-like a zone transition).
+Zone partitioning is a proposed design, not current runtime behavior. The server currently
+loads Elwynn creatures during `PostStartup`; it does not register per-zone system sets or
+implement runtime zone-transfer events. See [zone architecture](docs/wiki/systems/zone-architecture.md)
+for current implementation, proposed phase placement, and instance-isolation options.
 
 ## Comparison with AzerothCore
 

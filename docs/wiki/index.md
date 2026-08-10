@@ -11,6 +11,7 @@ Architecture decisions and design specifications.
 | [[stack-decisions]] | Why Bevy + Lightyear + redb; SpacetimeDB rejection rationale; bitcode and SQLite choices |
 | [[azerothcore-comparison]] | Side-by-side: language, ECS vs OOP, tick rate, threading, networking, persistence, prediction, scripting |
 | [[open-questions]] | Unresolved: tick rate (single vs multi-rate), world size (big_space vs origin-shifting), instance management, hot-reloading scripting |
+| [[tick-loop-design]] | Draft normative server-loop design: 20Hz fixed phases, Update/PostUpdate boundaries, catch-up, replication, persistence, and review decisions |
 
 ## reference/
 
@@ -33,8 +34,8 @@ Server gameplay systems.
 | [[networking]] | Lightyear over QUIC: replication, PlayerInput model, channels (unreliable movement, reliable combat/chat/inventory), interest management |
 | [[persistence]] | Dual-layer storage: redb for mutable player data (characters, inventory, guilds, mail, auctions), SQLite for static world data |
 | [[world-data]] | SQLite world.db: all tables with row counts, AzerothCore/Retail DB2 sources, WorldDataPlugin, SpellDatabasePlugin |
-| [[tick-model]] | 20Hz FixedUpdate pipeline: inputs → AI → movement → combat → zone transitions → replication → persistence flush |
-| [[zone-architecture]] | Zone system sets, parallel execution, entity Zone tagging, zone transfers, AzerothCore MapUpdater comparison |
+| [[tick-model]] | Observed server loop: 50ms runner/fixed cadence, schedule ownership, explicit ordering, maintenance gates, and IPC boundary |
+| [[zone-architecture]] | Proposed zone/instance partitioning; current implementation is startup-only Elwynn spawning with no per-zone sets or transfers |
 | [[combat]] | Auto-attack system, melee hit table (miss/dodge/parry/glancing/block/crit/hit), spell formulas, stat calculations, DR curves |
 | [[creature-ai]] | Three movement types (idle/wander/waypoint), SpawnPoint, chase system, 40-yard leash/evade, return-to-spawn |
 

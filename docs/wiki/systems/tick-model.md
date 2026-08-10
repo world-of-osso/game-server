@@ -1,58 +1,112 @@
 # Tick Model
 
-The server's core simulation runs at 20 Hz using Bevy's `FixedUpdate` schedule — one tick every 50ms. Systems that do not require tick-rate work use explicit lower-frequency or state-driven gates.
+The current server uses a 50 ms outer runner and a 50 ms Bevy fixed timestep configured through Lightyear, producing a nominal 20 Hz authoritative simulation. Runtime work spans multiple Bevy schedules; there is no implemented global seven-stage fixed pipeline. The proposed ordering contract is in [[tick-loop-design]].
 
-## Tick Pipeline
+## Content
 
-Each tick runs these stages in order:
+## Runtime Topology
 
-1. **Receive & apply client inputs** — `PlayerInput` messages (Move, CastSpell, Interact, Jump, StopMove) are dequeued and applied to player entities
-2. **AI systems** — `wander_system`, `waypoint_system`, `chase_system`, `leash_check_system`, `return_to_spawn_system` run in parallel where independent
-3. **Movement validation** — server-authoritative position update; applies gravity, terrain snapping, speed limits
-4. **Combat resolution** — `start_attack_system`, `auto_attack_system` (including the direct NPC death transition), `respawn_system`
-5. **Zone transition checks** — entities crossing zone boundaries are handed off via events
-6. **Lightyear replication** — the 50 ms sender cadence processes dirty global/per-sender candidates through Lightyear's existing delta, ACK, visibility, and action pipeline; unchanged roots are skipped after initial full sync
-7. **Persistence flush** — every N ticks (every 5 minutes), dirty entities written to redb
+| Boundary | Current responsibility |
+|---|---|
+| `Startup` | Open redb, load SQLite world data and terrain, start Lightyear server |
+| `PostStartup` | Spawn Elwynn creatures and build graveyard state |
+| `PreUpdate` | Lightyear transport, message, and replication receive work |
+| `FixedUpdate` | Authoritative simulation and cadence-gated maintenance |
+| `Update` | Auth, chat, social, economy, progression, and admin IPC requests |
+| `PostUpdate` | Replication dirty forwarding, Lightyear buffering/sending, deferred despawn |
+| `Last` | Lightyear message cleanup and `AppExit` character flush |
 
-NPC death is not a separate all-living-NPC health poll. The authoritative melee damage boundary handles the lethal transition when `try_swing` reduces an NPC to zero health; respawn remains a state-bounded timer query.
+The admin Unix-socket accept loop is independent of the Bevy runner. It forwards commands through an `mpsc` channel; `poll_admin_ipc` applies them to the ECS world in `Update`.
 
-## Lower-Frequency Gates
+## Actual Cadence
 
-Auction expiration is registered in `FixedUpdate` but runs immediately once and then at most once per second. Sub-second ticks skip `expire_auctions` entirely; expiration, sale completion, persistence, and auction-mail behavior remain unchanged.
+`ScheduleRunnerPlugin` targets one outer `App::update()` every 50 ms. `ServerPlugins { tick_duration: 50 ms }` passes the same duration into Lightyear; Lightyear's timeline plugin sets Bevy's `Time<Fixed>` timestep to that duration.
 
-Terrain streaming remains in `FixedUpdate` so position changes are observed promptly, but unchanged player tiles return before the 3×3 neighborhood loop. Initial entry, reconnect, boundary crossings, and teleports still evaluate terrain tiles. See [[recurring-loop-elimination]].
+The two loops are not guaranteed to execute one-for-one:
 
-Lightyear replication retains its 50 ms sender cadence, but `30b5078` removes the per-sender all-root/all-component traversal. Initial connection or sender reset queues a full root sync; later fixed ticks process only dirty global/per-sender candidates and retain unacknowledged candidates until ACK/NACK state allows cleanup. See [[networking]] and [[recurring-loop-elimination]].
+- Healthy operation normally produces one fixed step per outer update.
+- Startup may produce no fixed step until 50 ms accumulates.
+- A slow outer update may execute multiple catch-up fixed steps.
+- Bevy's default 250 ms virtual-time clamp bounds newly accumulated catch-up to five 50 ms steps per outer update.
 
-## Zone-Parallel Scheduling
+`Time` read inside `FixedUpdate` therefore advances in exact 50 ms simulation increments even when several steps execute during one outer update.
 
-Each zone is a separate system set. Bevy's parallel scheduler runs independent zones on different threads simultaneously. Zones that need to interact (entity crossing a boundary) synchronize via events at tick boundaries — the same model as AzerothCore's `MapUpdater` thread pool.
+## Current FixedUpdate Work
 
-## FixedUpdate vs. AzerothCore
+| Area | Systems or responsibility |
+|---|---|
+| Player movement | `process_player_inputs`, `apply_terrain_gravity`, `stream_terrain_tiles` |
+| Creature AI | wander, waypoint, chase, leash, return-to-spawn |
+| Combat and stats | equipment/derived stats, attack start, auto-attacks, combat status, NPC respawn |
+| Player/world rules | death detection, duel outcomes, trade range enforcement |
+| Visibility | dirty interest reconciliation |
+| Maintenance | auction expiration gate, periodic dirty-character save, tick logging |
 
-AzerothCore uses a ~1ms main loop and manually batches work. Bevy's `FixedUpdate` at 20Hz gives a clean, deterministic cadence that naturally batches updates and matches WoW's actual combat tick rate.
+This table groups responsibilities; it does not imply a total execution order.
 
-## Open Questions
+## Explicit Ordering
 
-- Single 20Hz schedule vs. separate schedules at different rates (movement may want higher frequency)
-- Instance isolation: dungeons/raids as separate `World` instances or same world with isolated system sets
+Only the following relevant order is encoded in current game-server source:
+
+- `process_player_inputs` → `apply_terrain_gravity`
+- `apply_terrain_gravity` → `detect_player_deaths`
+- `update_stats_from_equipment` → `update_derived_stats`
+- `chase_system` → `leash_check_system` → `return_to_spawn_system`
+- Initial world-map snapshot → zone-discovery update in `Update`
+- `forward_position_changes_to_replication` runs in PostUpdate `ReplicationBufferSystems::BeforeBuffer`
+
+Other fixed systems are scheduled according to ECS data conflicts and Bevy's scheduler. Plugin registration order is not a global gameplay pipeline.
+
+## Networking Boundary
+
+Lightyear owns transport and replication schedules:
+
+1. Receive transport/messages in `PreUpdate`.
+2. Game-server fixed systems drain `PlayerInput` and mutate authoritative components.
+3. Request handlers run in `Update`.
+4. Game-server hooks forward dirty state before Lightyear's PostUpdate replication buffer.
+5. Lightyear buffers replication/messages and flushes them to transport.
+
+Each connection receives a `ReplicationSender` with a 50 ms `SinceLastAck` cadence. Dirty-candidate processing avoids steady-state traversal of unchanged replication roots while preserving initial sync, visibility, and ACK/NACK behavior.
+
+## Lower-Frequency and State-Driven Work
+
+- **Auction expiration:** registered in `FixedUpdate`; runs immediately once, then after each accumulated one-second duration.
+- **Periodic character save:** every 300 fixed steps, which is 15 seconds of simulation time at 20 Hz. Dirty `Position`, `Health`, or `Player` rows are written synchronously to redb.
+- **Tick log:** every 200 fixed steps, which is 10 seconds of simulation time.
+- **Terrain streaming:** remains fixed-step but skips the tile-neighborhood scan until a player changes tiles.
+- **Interest and replication:** dirty/state-driven rather than recurring full-world scans.
+
+Disconnect saves are observer-driven. Shutdown saves run in `Last` only when `AppExit` is present.
+
+## Current Limits
+
+- No global `SystemSet` phase chain orders input, AI, movement, combat, lifecycle, visibility, and maintenance.
+- Per-zone system sets and runtime zone-transfer events are not implemented; current `ZonePlugin` performs `PostStartup` Elwynn creature spawning.
+- Many gameplay requests run in `Update`, after the fixed schedule within the same outer update, rather than inside one monolithic game tick.
+- Periodic redb writes run synchronously on the Bevy thread.
 
 ## Sources
 
-- [ARCHITECTURE.md](../../../ARCHITECTURE.md) — "Server Tick Model" section
-- [crates/server/src/main.rs](../../../crates/server/src/main.rs) — `FixedUpdate` app setup
-- [crates/server/src/combat.rs](../../../crates/server/src/combat.rs) — direct NPC death transition and state-bounded respawn
-- [crates/server/src/auction_house.rs](../../../crates/server/src/auction_house.rs) — one-second auction expiration gate
-- [crates/server/src/networking.rs](../../../crates/server/src/networking.rs) — terrain tile-transition gate
-- [vendor/lightyear_replication/src/send/buffer.rs](../../../vendor/lightyear_replication/src/send/buffer.rs) — dirty-candidate replication boundary
-- [vendor/lightyear_replication/src/send/candidate.rs](../../../vendor/lightyear_replication/src/send/candidate.rs) — initial sync and retry candidate processing
-- `game-server` commits `269655a` and `30b5078` — vendored sender and dirty-candidate implementation
+- [crates/server/src/main.rs](../../../crates/server/src/main.rs) — runner, Lightyear tick duration, plugin registration, tick log
+- [crates/server/src/networking.rs](../../../crates/server/src/networking.rs) — fixed movement, Update requests, PostUpdate despawn, connection lifecycle
+- [crates/server/src/creature_ai.rs](../../../crates/server/src/creature_ai.rs) — fixed AI registration and local chain
+- [crates/server/src/stats.rs](../../../crates/server/src/stats.rs) — chained stat recalculation
+- [crates/server/src/combat.rs](../../../crates/server/src/combat.rs) — fixed combat and NPC respawn
+- [crates/server/src/death.rs](../../../crates/server/src/death.rs) — player death ordering
+- [crates/server/src/interest.rs](../../../crates/server/src/interest.rs) — interest and replication dirty schedules
+- [crates/server/src/auction_house.rs](../../../crates/server/src/auction_house.rs) — one-second expiration gate
+- [crates/server/src/persistence.rs](../../../crates/server/src/persistence.rs) — persistence schedule registration
+- [crates/server/src/persistence_runtime.rs](../../../crates/server/src/persistence_runtime.rs) — 300-tick save cadence and shutdown flush
+- [crates/server/src/admin_ipc.rs](../../../crates/server/src/admin_ipc.rs) — Update polling boundary
+- [crates/server/src/admin_ipc_server.rs](../../../crates/server/src/admin_ipc_server.rs) — independent socket/Tokio loop
+- [vendor/lightyear_replication/src/send/plugin.rs](../../../vendor/lightyear_replication/src/send/plugin.rs) — PostUpdate replication pipeline
+- [Cargo.lock](../../../Cargo.lock) — Bevy and Lightyear locked versions
 
 ## See Also
 
-- [[zone-architecture]] — parallel zone system sets within the tick
-- [[combat]] — combat systems run in step 4 of the pipeline
-- [[creature-ai]] — AI systems run in step 2
-- [[persistence]] — flush runs at step 7
-- [[ecs-storage]] — `Changed<T>` makes step 7 cheap
-- [[recurring-loop-elimination]] — recurring scans replaced by cadence, state, or event boundaries
+- [[tick-loop-design]] — proposed explicit phase and cadence contract
+- [[networking]] — transport, interest, and dirty replication details
+- [[persistence]] — save triggers and storage ownership
+- [[zone-architecture]] — proposed zone isolation versus current spawn-only implementation
+- [[recurring-loop-elimination]] — removal of recurring world scans

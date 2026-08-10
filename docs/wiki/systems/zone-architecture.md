@@ -1,66 +1,78 @@
 # Zone Architecture
 
-Zones are implemented as Bevy system sets that can execute in parallel. Each zone is an independent unit of game logic; cross-zone interactions go through events at tick boundaries.
+Proposed architecture for partitioning future zone and instance simulation inside the server tick. Current code does not implement per-zone system sets or runtime zone transfers; it loads Elwynn creatures during startup. Tick ordering is defined separately in [[tick-loop-design]].
 
-## Zone System Sets
+**Status:** Proposed; not implemented.
 
-Each zone is a named system set in the `FixedUpdate` schedule:
-
-```rust
-app.configure_sets(
-    FixedUpdate,
-    (
-        ZoneSet::EasternKingdoms,
-        ZoneSet::Kalimdor,
-        ZoneSet::Outland,
-    ).chain() // or .ambiguous_with() for parallel execution
-);
-```
-
-Parallel execution (`.ambiguous_with()`) is used for zones with no shared entities. Chaining (`.chain()`) is used when zones need to observe each other's changes in the same tick.
-
-## Entity Zone Tagging
-
-Entities are tagged with a `Zone` component. Zone-specific systems filter using `With<Zone<X>>`:
-
-```rust
-fn update_combat(
-    query: Query<(&mut Health, &CombatState), With<Zone<Stormwind>>>
-) { ... }
-```
-
-This means a combat system for Stormwind never touches Elwynn data — no lock contention, no false sharing.
-
-## Zone Transfers
-
-When an entity crosses a zone boundary:
-1. Entity **despawns** from the source zone
-2. A **transfer event** is sent
-3. Entity **respawns** in the target zone next tick
-
-Lightyear handles the client side transparently: entity despawn + spawn with the same data looks like a seamless zone transition to the client.
+## Content
 
 ## Current Implementation
 
-`crates/server/src/zones.rs` implements `ZonePlugin`, which spawns creature entities for the Elwynn Forest region on `PostStartup`. Creatures are placed within Elwynn spatial bounds and assigned AI components based on their `movement_type` from `WorldData`.
+`ZonePlugin` registers one `PostStartup` system, `spawn_elwynn_creatures`. It reads `WorldData`, filters creature spawns to the configured Elwynn/Northshire bounds, assigns numeric `Zone` data and AI components, and adds Lightyear replication markers.
+
+Current source has no:
+
+- `ZoneSet` system-set type
+- Per-zone fixed schedules
+- Cross-zone transfer event pipeline
+- Zone despawn/respawn handoff
+- Dedicated thread or Bevy `World` per zone
+
+## Proposed Zone Partitioning
+
+Zone work should remain inside the global fixed-step phase contract rather than creating a second game clock. Zone-filtered systems may run within the Movement, Resolution, and Lifecycle phases:
+
+```text
+Fixed phase
+  ├─ zone A systems
+  ├─ zone B systems
+  └─ zone C systems
+```
+
+Bevy may execute independent systems in parallel when their ECS access permits it. A zone label alone does not guarantee parallelism; queries and resources must avoid unnecessary shared mutable access.
+
+Entities use the numeric `Zone` component as data. Zone-specific logic should query that component or maintain a zone index; it should not model each zone as a different component type.
+
+## Proposed Transfers
+
+A future transfer boundary should be explicit and tick-safe:
+
+1. Detect the destination zone after authoritative movement.
+2. Record a transfer request during the current fixed step.
+3. Apply the `Zone` change during Lifecycle before interest reconciliation.
+4. Recompute visibility and replication targets from the new zone state.
+5. Persist the new zone with the next applicable save boundary.
+
+A same-world transfer should not despawn and recreate the authoritative ECS entity unless a later instance-isolation decision requires that behavior. Lightyear visibility may still cause client-side removal and insertion as relevance changes.
+
+## Instance Isolation
+
+Dungeons and raids remain unresolved. Two candidate models are tracked in [[open-questions]]:
+
+- One Bevy `World` with `InstanceId`/`Zone` filtering
+- Separate Bevy `World`s per instance
+
+The base tick-loop design does not choose between them. Both must preserve a clear handoff to the global transport, persistence, and replication boundaries.
 
 ## Comparison with AzerothCore
 
-AzerothCore uses a `MapUpdater` thread pool where each map runs on a dedicated thread. The Bevy approach uses the ECS scheduler directly — zones become system set labels rather than OS threads, letting Bevy decide optimal parallelism based on data dependencies.
-
-| Aspect | AzerothCore | This Design |
-|--------|-------------|-------------|
-| Parallelism | Thread per map | Bevy parallel scheduler |
-| Cross-zone sync | Mutex + message queues | Events at tick boundary |
-| Zone definition | C++ Map class | System set label + Zone component |
+| Aspect | AzerothCore | Proposed Bevy design |
+|---|---|---|
+| Parallelism | MapUpdater thread pool | ECS scheduler across zone-filtered systems |
+| Cross-zone sync | Map queues and locks | Explicit transfer data applied at a fixed phase boundary |
+| Zone definition | Map object | Numeric zone/instance data plus indexes |
+| Tick ownership | Per-map update under server loop | One global fixed timestep unless a later design changes it |
 
 ## Sources
 
-- [ARCHITECTURE.md](../../../ARCHITECTURE.md) — "Zone Architecture" section and AzerothCore comparison
-- [crates/server/src/zones.rs](../../../crates/server/src/zones.rs) — `ZonePlugin`, `spawn_elwynn_creatures`
+- [ARCHITECTURE.md](../../../ARCHITECTURE.md) — original proposed zone model and AzerothCore comparison
+- [crates/server/src/zones.rs](../../../crates/server/src/zones.rs) — current `PostStartup` Elwynn creature spawning
+- [crates/server/src/world_data.rs](../../../crates/server/src/world_data.rs) — numeric zone and spawn data loaded from SQLite
 
 ## See Also
 
-- [[tick-model]] — parallel zone sets run within the tick pipeline
-- [[creature-ai]] — creatures are assigned AI components during zone spawn
-- [[networking]] — zone transitions are transparent to clients
+- [[tick-loop-design]] — proposed global fixed phases and ordering invariants
+- [[tick-model]] — observed current schedule behavior
+- [[creature-ai]] — fixed-step creature movement systems
+- [[networking]] — interest and replication boundaries
+- [[open-questions]] — unresolved instance isolation model

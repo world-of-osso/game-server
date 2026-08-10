@@ -2,6 +2,14 @@
 
 Chronological record of wiki operations.
 
+## [2026-08-10] audit | Align tick-loop documentation with source
+
+Audited [[tick-loop-design]], [[tick-model]], [[zone-architecture]], [[open-questions]], `index.md`, and `ARCHITECTURE.md`. Added required `## Content` sections, corrected the root architecture page's stale implemented-zone wording, and confirmed wiki/source links resolve. No runtime behavior changed.
+
+## [2026-08-10] design | Draft explicit game tick-loop contract
+
+Created [[tick-loop-design]] as the reviewable normative design for the server runner, Bevy schedules, fixed simulation phases, Lightyear receive/replication boundaries, bounded catch-up, maintenance cadence, persistence, and admin IPC. Rewrote [[tick-model]] as observed current state: Lightyear sets `Time<Fixed>` to 50 ms, most request handlers run in `Update`, replication buffers in `PostUpdate`, and only local ordering constraints exist. Corrected [[zone-architecture]] to proposed status, updated [[open-questions]] and `index.md`, and linked `ARCHITECTURE.md` to the current/design split. No runtime behavior changed.
+
 ## [2026-08-10] investigation | Wake replication for zero-translation movement state
 
 Updated [[recurring-loop-elimination]] and [[networking]] for `aa5dddb`. Recorded the discovered gap where turn-in-place or zero-translation inputs changed replicated `Rotation` or `MovementSpeed` without producing a Lightyear dirty candidate. Documented the fix and `networking_movement.rs` extraction: replication dirtying now covers rotation/speed changes, while `InterestDirtyQueue` remains position-only. Recorded the RED no-op regression and 43-test GREEN focused server proof. No broader CPU or Character claim.

@@ -2,17 +2,19 @@
 
 Unresolved design decisions that have architectural implications. Each requires a concrete decision before the affected system can be finalized.
 
+## Content
+
 ## Tick Rate: Single vs Multi-Rate
 
-**Status**: Unresolved.
+**Status**: Draft decision pending review.
 
-Current design: single `FixedUpdate` schedule at 20Hz (50ms). WoW uses ~20Hz for combat, but movement validation benefits from higher rates to reduce input lag and prevent cheating.
+Current runtime uses one 50 ms `FixedUpdate` timestep configured through Lightyear. [[tick-loop-design]] recommends retaining that single 20 Hz authoritative simulation while adding explicit phase ordering.
 
 Options:
-- **Single 20Hz** — simple, consistent, matches AzerothCore's combat cadence
-- **Multiple schedules** — e.g., 60Hz for movement validation, 20Hz for combat. Bevy supports multiple `FixedUpdate` schedules at different rates. Adds scheduling complexity and potential system ordering issues.
+- **Single 20Hz** — current runtime and recommended baseline; simple ordering and one authoritative time domain
+- **Multiple rates** — custom higher-frequency movement work plus 20 Hz combat; adds another time boundary, cross-rate ordering, and more catch-up behavior
 
-Decision gate: movement feel testing. If 50ms movement response feels acceptable, stay single-rate.
+Decision gate: measured movement feel or validation evidence that 50 ms simulation is insufficient. Keep the single-rate design until that evidence exists.
 
 ## World Size: big_space vs Origin-Shifting
 
@@ -53,6 +55,7 @@ The scripting layer is lower risk. The question is Lua vs Rhai — Lua has Azero
 
 ## See Also
 
+- [[tick-loop-design]] — draft decision and migration plan for the server loop
 - [[stack-decisions]] — resolved design decisions
 - [[azerothcore-comparison]] — AzerothCore's approach to scripting (Eluna Lua)
 - [[crate-structure]] — scripting module placeholder in server/src
