@@ -1,5 +1,3 @@
-use std::collections::HashSet;
-
 use bevy::prelude::*;
 use lightyear::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -27,21 +25,20 @@ const GHOST_RESURRECT_MANA_PCT: f32 = 0.5;
 
 #[path = "death_support.rs"]
 mod support;
+#[path = "death/transitions.rs"]
+mod transitions;
 
 #[cfg(test)]
 use self::support::build_snapshot;
 use self::support::{current_seconds, send_error, send_update};
+use transitions::process_player_death_transitions;
+pub(crate) use transitions::{PlayerDeathTransition, apply_health_damage};
 
 #[cfg(test)]
 use std::sync::{
     Mutex,
     atomic::{AtomicUsize, Ordering},
 };
-
-#[derive(Message, Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) struct PlayerDeathTransition {
-    pub(crate) player: Entity,
-}
 
 #[derive(Component, Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct PlayerDeathState {
@@ -492,100 +489,6 @@ fn process_stuck_escape_requests(
             }
         }
     }
-}
-
-type PlayerDeathTransitionQuery<'w, 's> = Query<
-    'w,
-    's,
-    (
-        &'static Position,
-        &'static mut Health,
-        Option<&'static mut EquippedDurability>,
-        Option<&'static PlayerDeathState>,
-        &'static crate::persistence::ClientId,
-        &'static Player,
-    ),
-    With<Player>,
->;
-
-fn process_player_death_transitions(
-    mut transitions: MessageReader<PlayerDeathTransition>,
-    mut players: PlayerDeathTransitionQuery,
-    connections: Query<(Entity, &PlayerLink), With<Authenticated>>,
-    state: Res<DeathServerState>,
-    time: Res<Time>,
-    mut commands: Commands,
-    mut senders: Query<&mut MessageSender<DeathStateUpdate>>,
-    replication_dirty: Option<Res<ReplicationDirtyQueue>>,
-) {
-    let now = current_seconds(&time);
-    let mut processed_players = HashSet::new();
-    for transition in transitions.read() {
-        let player_entity = transition.player;
-        if !processed_players.insert(player_entity) {
-            continue;
-        }
-
-        #[cfg(test)]
-        DEATH_PLAYERS_VISITED.fetch_add(1, Ordering::SeqCst);
-
-        let Ok((position, mut health, durability, death_state, client_id, player)) =
-            players.get_mut(player_entity)
-        else {
-            continue;
-        };
-        if !should_process_player_death(&health, death_state) {
-            continue;
-        }
-        health.current = 0.0;
-        mark_player_death_replication(replication_dirty.as_deref(), player_entity);
-        let death_state = build_detected_player_death_state(
-            client_id.0,
-            position,
-            player.race,
-            &state.graveyards,
-            now,
-        );
-        if let Some(mut durability) = durability {
-            crate::durability::apply_death_loss(&mut durability);
-        }
-        commands.entity(player_entity).insert(death_state.clone());
-        if let Some(conn_entity) = connection_for_player(player_entity, &connections) {
-            send_update(
-                conn_entity,
-                position,
-                death_state,
-                Some("you died".into()),
-                None,
-                &mut senders,
-            );
-        }
-    }
-}
-
-fn mark_player_death_replication(
-    replication_dirty: Option<&ReplicationDirtyQueue>,
-    player_entity: Entity,
-) {
-    let Some(replication_dirty) = replication_dirty else {
-        return;
-    };
-    #[cfg(test)]
-    DEATH_REPLICATION_MARKS.fetch_add(1, Ordering::SeqCst);
-    replication_dirty.mark(player_entity);
-}
-
-pub(crate) fn apply_health_damage(health: &mut Health, damage: f32) -> bool {
-    if damage <= 0.0 || health.current <= 0.0 {
-        return false;
-    }
-
-    health.current = (health.current - damage).max(0.0);
-    health.current == 0.0
-}
-
-fn should_process_player_death(health: &Health, death_state: Option<&PlayerDeathState>) -> bool {
-    health.current <= 0.0 && death_state.is_none_or(|state| state.state == DeathState::Alive)
 }
 
 fn build_detected_player_death_state(
