@@ -108,6 +108,7 @@ pub struct ServerNetworkPlugin;
 impl Plugin for ServerNetworkPlugin {
     fn build(&self, app: &mut App) {
         app.add_message::<crate::death::PlayerDeathTransition>();
+        app.init_resource::<crate::friends::AutoAfkScheduler>();
         app.init_resource::<ConnectedAccounts>();
         app.init_resource::<ChatHistoryBuffer>();
         app.add_systems(Startup, start_server);
@@ -400,6 +401,7 @@ fn process_player_inputs(
     >,
     mounted: Query<Entity, (With<Player>, With<Mounted>)>,
     time: Res<Time>,
+    mut auto_afk: ResMut<crate::friends::AutoAfkScheduler>,
     dirty_queue: Option<Res<InterestDirtyQueue>>,
     replication_dirty: Option<Res<ReplicationDirtyQueue>>,
 ) {
@@ -408,6 +410,8 @@ fn process_player_inputs(
             crate::friends::mark_player_activity(
                 link.0,
                 &mut presence_q,
+                &mut auto_afk,
+                time.elapsed(),
                 replication_dirty.as_deref(),
             );
             if input.swimming && mounted.contains(link.0) {

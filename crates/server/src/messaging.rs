@@ -45,10 +45,13 @@ pub(crate) struct ChatSystemQueries<'w, 's> {
     chat_senders: Query<'w, 's, (&'static PlayerLink, &'static mut MessageSender<ChatMessage>)>,
     emote_senders: Query<'w, 's, (&'static PlayerLink, &'static mut MessageSender<EmoteEvent>)>,
     history: ResMut<'w, ChatHistoryBuffer>,
+    time: Res<'w, Time>,
+    auto_afk: ResMut<'w, crate::friends::AutoAfkScheduler>,
     replication_dirty: Option<Res<'w, ReplicationDirtyQueue>>,
 }
 
 pub fn process_chat_messages(mut q: ChatSystemQueries) {
+    let activity_at = q.time.elapsed();
     let collected = collect_chat_messages(&mut q.receivers, &q.players, &q.guilds);
     let (collected, mut collected_emotes) = split_chat_emotes(collected);
     collected_emotes.extend(collect_emote_messages(&mut q.emote_receivers, &q.players));
@@ -56,6 +59,8 @@ pub fn process_chat_messages(mut q: ChatSystemQueries) {
         crate::friends::mark_player_activity(
             chat.sender_entity,
             &mut q.presences,
+            &mut q.auto_afk,
+            activity_at,
             q.replication_dirty.as_deref(),
         );
         q.history.entries.push_back(chat.msg.clone());
@@ -67,6 +72,8 @@ pub fn process_chat_messages(mut q: ChatSystemQueries) {
         crate::friends::mark_player_activity(
             emote.player_entity,
             &mut q.presences,
+            &mut q.auto_afk,
+            activity_at,
             q.replication_dirty.as_deref(),
         );
         q.history.entries.push_back(emote.chat.clone());

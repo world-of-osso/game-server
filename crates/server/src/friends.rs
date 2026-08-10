@@ -1,4 +1,6 @@
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::cmp::Reverse;
+use std::collections::{BTreeMap, BinaryHeap, HashMap, HashSet};
+use std::time::Duration;
 
 use bevy::prelude::*;
 use lightyear::prelude::Message as NetMessage;
@@ -143,12 +145,66 @@ impl FriendSnapshotIndex {
     }
 }
 
-const AUTO_AFK_SECS: f32 = 300.0;
+const AUTO_AFK_DURATION: Duration = Duration::from_secs(300);
 
-#[derive(Component, Debug, Clone, Copy, PartialEq)]
+#[cfg(test)]
+use std::sync::{
+    Mutex,
+    atomic::{AtomicUsize, Ordering},
+};
+
+#[cfg(test)]
+static AUTO_AFK_PLAYERS_VISITED: AtomicUsize = AtomicUsize::new(0);
+#[cfg(test)]
+static AUTO_AFK_TRANSITIONS: AtomicUsize = AtomicUsize::new(0);
+#[cfg(test)]
+static AUTO_AFK_TEST_LOCK: Mutex<()> = Mutex::new(());
+
+#[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
 pub struct PresenceTracker {
-    idle_secs: f32,
+    generation: u64,
     manual: Option<ManualPresence>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+struct AutoAfkDeadline {
+    due_at: Duration,
+    player: Entity,
+    generation: u64,
+}
+
+#[derive(Resource, Default)]
+pub(crate) struct AutoAfkScheduler {
+    deadlines: BinaryHeap<Reverse<AutoAfkDeadline>>,
+    next_generation: u64,
+}
+
+impl AutoAfkScheduler {
+    fn next_generation(&mut self) -> u64 {
+        self.next_generation = self.next_generation.wrapping_add(1).max(1);
+        self.next_generation
+    }
+
+    fn invalidate(&mut self, tracker: &mut PresenceTracker) {
+        tracker.generation = self.next_generation();
+    }
+
+    fn schedule(&mut self, player: Entity, tracker: &mut PresenceTracker, now: Duration) {
+        self.invalidate(tracker);
+        self.deadlines.push(Reverse(AutoAfkDeadline {
+            due_at: now + AUTO_AFK_DURATION,
+            player,
+            generation: tracker.generation,
+        }));
+    }
+
+    fn pop_due(&mut self, now: Duration) -> Option<AutoAfkDeadline> {
+        let Reverse(deadline) = self.deadlines.peek().copied()?;
+        if deadline.due_at > now {
+            return None;
+        }
+        self.deadlines.pop().map(|Reverse(deadline)| deadline)
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -160,7 +216,7 @@ enum ManualPresence {
 impl Default for PresenceTracker {
     fn default() -> Self {
         Self {
-            idle_secs: 0.0,
+            generation: 0,
             manual: None,
         }
     }
@@ -171,6 +227,7 @@ pub struct FriendsPlugin;
 impl Plugin for FriendsPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<FriendSnapshotIndex>();
+        app.init_resource::<AutoAfkScheduler>();
         app.add_systems(
             Update,
             (
@@ -179,7 +236,7 @@ impl Plugin for FriendsPlugin {
                 process_add_requests,
                 process_remove_requests,
                 process_presence_requests,
-                tick_auto_afk,
+                process_due_auto_afk,
                 sync_changed_friend_presence,
                 sync_removed_friend_presence,
                 send_dirty_friends_snapshots,
@@ -209,6 +266,8 @@ fn send_initial_friends_snapshot(
     )>,
     db: Option<Res<GameDatabase>>,
     mut index: ResMut<FriendSnapshotIndex>,
+    time: Res<Time>,
+    mut auto_afk: ResMut<AutoAfkScheduler>,
     mut senders: Query<&mut MessageSender<FriendsStateUpdate>>,
 ) {
     let Some(db) = db else { return };
@@ -225,9 +284,11 @@ fn send_initial_friends_snapshot(
         };
         sanitize_duplicates(&mut friends);
         index.register_owner(link.0, conn_entity, &friends);
+        let mut tracker = PresenceTracker::default();
+        schedule_auto_afk(link.0, &mut tracker, time.elapsed(), &mut auto_afk);
         commands
             .entity(link.0)
-            .insert((PresenceStatus::Online, PresenceTracker::default()));
+            .insert((PresenceStatus::Online, tracker));
         let snapshot = build_friends_snapshot(&db.db, &friends, &index.online);
         send_friends_update(
             conn_entity,
@@ -382,6 +443,8 @@ fn process_presence_requests(
     mut players: Query<(&mut PresenceStatus, &mut PresenceTracker), With<Player>>,
     db: Option<Res<GameDatabase>>,
     index: Res<FriendSnapshotIndex>,
+    time: Res<Time>,
+    mut auto_afk: ResMut<AutoAfkScheduler>,
     dirty_queue: Option<Res<ReplicationDirtyQueue>>,
     mut senders: Query<&mut MessageSender<FriendsStateUpdate>>,
 ) {
@@ -396,7 +459,14 @@ fn process_presence_requests(
             continue;
         };
         for request in requests {
-            let result = set_presence(link.0, request.status, &mut players, dirty_queue.as_deref());
+            let result = set_presence(
+                link.0,
+                request.status,
+                &mut players,
+                &mut auto_afk,
+                time.elapsed(),
+                dirty_queue.as_deref(),
+            );
             let snapshot = build_friends_snapshot(&db.db, friends, &index.online);
             match result {
                 Ok(message) => {
@@ -473,26 +543,39 @@ fn send_dirty_friends_snapshots(
     }
 }
 
-fn tick_auto_afk(
+fn process_due_auto_afk(
     time: Res<Time>,
+    mut scheduler: ResMut<AutoAfkScheduler>,
     dirty_queue: Option<Res<ReplicationDirtyQueue>>,
-    mut players: Query<(Entity, &mut PresenceStatus, &mut PresenceTracker), With<Player>>,
+    mut players: Query<(&mut PresenceStatus, &PresenceTracker), With<Player>>,
 ) {
-    for (entity, mut status, mut tracker) in &mut players {
-        if tracker.manual.is_some() {
+    while let Some(deadline) = scheduler.pop_due(time.elapsed()) {
+        #[cfg(test)]
+        AUTO_AFK_PLAYERS_VISITED.fetch_add(1, Ordering::SeqCst);
+
+        let Ok((mut status, tracker)) = players.get_mut(deadline.player) else {
+            continue;
+        };
+        if tracker.generation != deadline.generation || tracker.manual.is_some() {
             continue;
         }
-        tracker.idle_secs += time.delta_secs();
-        let desired = if tracker.idle_secs >= AUTO_AFK_SECS {
-            PresenceStatus::Afk
-        } else {
-            PresenceStatus::Online
-        };
-        if *status != desired {
-            *status = desired;
-            mark_presence_changed(dirty_queue.as_deref(), entity);
+        if *status == PresenceStatus::Afk {
+            continue;
         }
+        *status = PresenceStatus::Afk;
+        #[cfg(test)]
+        AUTO_AFK_TRANSITIONS.fetch_add(1, Ordering::SeqCst);
+        mark_presence_changed(dirty_queue.as_deref(), deadline.player);
     }
+}
+
+fn schedule_auto_afk(
+    player_entity: Entity,
+    tracker: &mut PresenceTracker,
+    now: Duration,
+    scheduler: &mut AutoAfkScheduler,
+) {
+    scheduler.schedule(player_entity, tracker, now);
 }
 
 fn add_friend(
@@ -604,19 +687,27 @@ fn build_friend_snapshot(
 pub fn mark_player_activity(
     player_entity: Entity,
     players: &mut Query<(&mut PresenceStatus, &mut PresenceTracker), With<Player>>,
+    scheduler: &mut AutoAfkScheduler,
+    now: Duration,
     dirty_queue: Option<&ReplicationDirtyQueue>,
 ) {
     let Ok((mut status, mut tracker)) = players.get_mut(player_entity) else {
         return;
     };
-    tracker.idle_secs = 0.0;
     let next_status = match tracker.manual {
-        Some(ManualPresence::Dnd) => PresenceStatus::Dnd,
+        Some(ManualPresence::Dnd) => {
+            scheduler.invalidate(&mut tracker);
+            PresenceStatus::Dnd
+        }
         Some(ManualPresence::Afk) => {
             tracker.manual = None;
+            schedule_auto_afk(player_entity, &mut tracker, now, scheduler);
             PresenceStatus::Online
         }
-        None => PresenceStatus::Online,
+        None => {
+            schedule_auto_afk(player_entity, &mut tracker, now, scheduler);
+            PresenceStatus::Online
+        }
     };
     if *status != next_status {
         *status = next_status;
@@ -628,17 +719,23 @@ fn set_presence(
     player_entity: Entity,
     requested: PresenceStatus,
     players: &mut Query<(&mut PresenceStatus, &mut PresenceTracker), With<Player>>,
+    scheduler: &mut AutoAfkScheduler,
+    now: Duration,
     dirty_queue: Option<&ReplicationDirtyQueue>,
 ) -> Result<String, String> {
     let Ok((mut status, mut tracker)) = players.get_mut(player_entity) else {
         return Err("presence unavailable for player".into());
     };
-    tracker.idle_secs = 0.0;
     tracker.manual = match requested {
         PresenceStatus::Online | PresenceStatus::Offline => None,
         PresenceStatus::Afk => Some(ManualPresence::Afk),
         PresenceStatus::Dnd => Some(ManualPresence::Dnd),
     };
+    if tracker.manual.is_some() {
+        scheduler.invalidate(&mut tracker);
+    } else {
+        schedule_auto_afk(player_entity, &mut tracker, now, scheduler);
+    }
     let next_status = match requested {
         PresenceStatus::Offline => PresenceStatus::Online,
         other => other,
