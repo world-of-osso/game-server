@@ -45,6 +45,7 @@ pub(crate) struct ChatSystemQueries<'w, 's> {
     chat_senders: Query<'w, 's, (&'static PlayerLink, &'static mut MessageSender<ChatMessage>)>,
     emote_senders: Query<'w, 's, (&'static PlayerLink, &'static mut MessageSender<EmoteEvent>)>,
     history: ResMut<'w, ChatHistoryBuffer>,
+    replication_dirty: Option<Res<'w, ReplicationDirtyQueue>>,
 }
 
 pub fn process_chat_messages(mut q: ChatSystemQueries) {
@@ -52,14 +53,22 @@ pub fn process_chat_messages(mut q: ChatSystemQueries) {
     let (collected, mut collected_emotes) = split_chat_emotes(collected);
     collected_emotes.extend(collect_emote_messages(&mut q.emote_receivers, &q.players));
     for chat in &collected {
-        crate::friends::mark_player_activity(chat.sender_entity, &mut q.presences);
+        crate::friends::mark_player_activity(
+            chat.sender_entity,
+            &mut q.presences,
+            q.replication_dirty.as_deref(),
+        );
         q.history.entries.push_back(chat.msg.clone());
         if q.history.entries.len() > 100 {
             q.history.entries.pop_front();
         }
     }
     for emote in &collected_emotes {
-        crate::friends::mark_player_activity(emote.player_entity, &mut q.presences);
+        crate::friends::mark_player_activity(
+            emote.player_entity,
+            &mut q.presences,
+            q.replication_dirty.as_deref(),
+        );
         q.history.entries.push_back(emote.chat.clone());
         if q.history.entries.len() > 100 {
             q.history.entries.pop_front();

@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use lightyear::prelude::ReplicationDirtyQueue;
 use shared::components::{CombatRatings, Health, ItemStatBlock, Level, Mana, Player, UnitStats};
 use shared::formulas;
 
@@ -53,6 +54,7 @@ fn update_stats_from_equipment(
 }
 
 type StatsQuery = (
+    Entity,
     &'static Player,
     &'static UnitStats,
     &'static Level,
@@ -75,8 +77,12 @@ fn rescaled_current(current: f32, old_max: f32, new_max: f32) -> f32 {
 /// Recalculate Health.max and Mana.max when UnitStats or Level change.
 ///
 /// Mirrors AzerothCore `StatSystem.cpp:UpdateAllStats()`.
-fn update_derived_stats(mut query: Query<StatsQuery, StatsFilter>) {
-    for (player, stats, level, mut health, mana) in &mut query {
+fn update_derived_stats(
+    mut query: Query<StatsQuery, StatsFilter>,
+    replication_dirty: Option<Res<ReplicationDirtyQueue>>,
+) {
+    for (entity, player, stats, level, mut health, mana) in &mut query {
+        let mut replication_changed = false;
         let lv = level.0;
         let class = player.class;
 
@@ -87,6 +93,7 @@ fn update_derived_stats(mut query: Query<StatsQuery, StatsFilter>) {
             };
             if *health != next_health {
                 *health = next_health;
+                replication_changed = true;
             }
         }
 
@@ -99,7 +106,12 @@ fn update_derived_stats(mut query: Query<StatsQuery, StatsFilter>) {
             };
             if *mana != next_mana {
                 *mana = next_mana;
+                replication_changed = true;
             }
+        }
+
+        if replication_changed && let Some(replication_dirty) = replication_dirty.as_deref() {
+            replication_dirty.mark(entity);
         }
     }
 }

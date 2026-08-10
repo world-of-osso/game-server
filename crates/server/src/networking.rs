@@ -412,10 +412,15 @@ fn process_player_inputs(
     mounted: Query<Entity, (With<Player>, With<Mounted>)>,
     time: Res<Time>,
     dirty_queue: Option<Res<InterestDirtyQueue>>,
+    replication_dirty: Option<Res<ReplicationDirtyQueue>>,
 ) {
     for (mut receiver, link) in receivers.iter_mut() {
         for input in receiver.receive() {
-            crate::friends::mark_player_activity(link.0, &mut presence_q);
+            crate::friends::mark_player_activity(
+                link.0,
+                &mut presence_q,
+                replication_dirty.as_deref(),
+            );
             if input.swimming && mounted.contains(link.0) {
                 commands.entity(link.0).remove::<Mounted>();
             }
@@ -542,6 +547,7 @@ pub(crate) fn apply_terrain_gravity(
     mut players: GravityPlayerData,
     time: Res<Time>,
     dirty_queue: Option<Res<InterestDirtyQueue>>,
+    replication_dirty: Option<Res<ReplicationDirtyQueue>>,
 ) {
     let Some(terrain) = terrain.as_ref().filter(|t| t.is_loaded()) else {
         return;
@@ -571,6 +577,9 @@ pub(crate) fn apply_terrain_gravity(
         }
         if *health != next_health {
             *health = next_health;
+            if let Some(replication_dirty) = replication_dirty.as_deref() {
+                replication_dirty.mark(entity);
+            }
         }
     }
 }

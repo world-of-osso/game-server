@@ -493,6 +493,7 @@ fn detect_player_deaths(
     time: Res<Time>,
     mut commands: Commands,
     mut senders: Query<&mut MessageSender<DeathStateUpdate>>,
+    replication_dirty: Option<Res<ReplicationDirtyQueue>>,
 ) {
     let now = current_seconds(&time);
     for (player_entity, position, mut health, durability, death_state, client_id, player) in
@@ -502,6 +503,9 @@ fn detect_player_deaths(
             continue;
         }
         health.current = 0.0;
+        if let Some(replication_dirty) = replication_dirty.as_deref() {
+            replication_dirty.mark(player_entity);
+        }
         let death_state = build_detected_player_death_state(
             client_id.0,
             position,

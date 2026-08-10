@@ -39,6 +39,7 @@ commands.trigger(RoomEvent { target: RoomTarget::AddSender(client), room });
 */
 
 use crate::prelude::{PerSenderReplicationState, ReplicationState};
+use crate::send::dirty::ReplicationDirtyQueue;
 use crate::send::plugin::ReplicationBufferSystems;
 use crate::visibility::error::NetworkVisibilityError;
 use crate::visibility::immediate::{NetworkVisibility, NetworkVisibilityPlugin, VisibilityState};
@@ -195,34 +196,62 @@ impl RoomPlugin {
         mut commands: Commands,
         mut room_events: ResMut<RoomEvents>,
         mut query: Query<&mut ReplicationState>,
+        dirty_queue: Option<Res<ReplicationDirtyQueue>>,
     ) {
         // TODO: should we use iter_mut here to keep the allocated NetworkVisibility?
         room_events
             .events
             .drain(..)
-            .for_each(|(entity, mut room_vis)| {
-                if let Ok(mut vis) = query.get_mut(entity) {
-                    room_vis
-                        .clients
-                        .drain()
-                        .for_each(|(sender, state)| match state {
-                            VisibilityState::Gained => vis.gain_visibility(sender),
-                            VisibilityState::Lost => vis.lose_visibility(sender),
-                            VisibilityState::Visible => {
-                                unreachable!()
-                            }
-                            _ => {}
-                        });
-                } else {
-                    trace!(
-                        ?entity,
-                        "Inserting NetworkVisibility from room visibility: {room_vis:?}"
-                    );
-                    commands
-                        .entity(entity)
-                        .try_insert((ReplicationState::from(room_vis), NetworkVisibility));
+            .for_each(|(entity, mut room_visibility)| {
+                if update_existing_room_visibility(
+                    entity,
+                    &mut room_visibility,
+                    &mut query,
+                    dirty_queue.as_deref(),
+                ) {
+                    return;
                 }
+                trace!(
+                    ?entity,
+                    "Inserting NetworkVisibility from room visibility: {room_visibility:?}"
+                );
+                commands
+                    .entity(entity)
+                    .try_insert((ReplicationState::from(room_visibility), NetworkVisibility));
             });
+    }
+}
+
+fn update_existing_room_visibility(
+    entity: Entity,
+    room_visibility: &mut RoomVisibility,
+    query: &mut Query<&mut ReplicationState>,
+    dirty_queue: Option<&ReplicationDirtyQueue>,
+) -> bool {
+    let Ok(mut visibility) = query.get_mut(entity) else {
+        return false;
+    };
+    for (sender, state) in room_visibility.clients.drain() {
+        apply_room_visibility_change(&mut visibility, state, sender);
+        if matches!(state, VisibilityState::Gained | VisibilityState::Lost)
+            && let Some(dirty_queue) = dirty_queue
+        {
+            dirty_queue.mark_for_sender(entity, sender);
+        }
+    }
+    true
+}
+
+fn apply_room_visibility_change(
+    visibility: &mut ReplicationState,
+    state: VisibilityState,
+    sender: Entity,
+) {
+    match state {
+        VisibilityState::Gained => visibility.gain_visibility(sender),
+        VisibilityState::Lost => visibility.lose_visibility(sender),
+        VisibilityState::Visible => unreachable!(),
+        VisibilityState::Default => {}
     }
 }
 

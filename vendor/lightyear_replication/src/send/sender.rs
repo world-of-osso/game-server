@@ -9,7 +9,7 @@ use alloc::{string::ToString, vec::Vec};
 use bevy_ecs::{
     change_detection::Tick as BevyTick,
     component::Component,
-    entity::{Entity, EntityHash},
+    entity::{Entity, EntityHash, EntityIndexMap},
 };
 use bevy_platform::collections::{HashMap, HashSet};
 use bevy_ptr::Ptr;
@@ -75,6 +75,10 @@ pub struct ReplicationSender {
     /// We cannot simply use the SystemTicks because the system runs every frame.
     pub(crate) this_run: BevyTick,
     pub(crate) last_run: BevyTick,
+    /// Dirty replicated entities that still need semantic processing or acknowledgement.
+    pub(crate) dirty_entities: EntityIndexMap<BevyTick>,
+    /// A new or reset sender must evaluate every current replication root once.
+    pub(crate) needs_full_sync: bool,
     /// Tick when we last did a cleanup
     pub(crate) last_cleanup_tick: Option<Tick>,
     pub(crate) send_updates_mode: SendUpdatesMode,
@@ -112,6 +116,8 @@ impl ReplicationSender {
             send_timer,
             this_run: BevyTick::MAX,
             last_run: BevyTick::MAX,
+            dirty_entities: EntityIndexMap::default(),
+            needs_full_sync: true,
             last_cleanup_tick: None,
             bandwidth_cap_enabled,
         }
@@ -163,6 +169,28 @@ impl ReplicationSender {
                 SendUpdatesMode::SinceLastSend => channel.send_tick,
                 SendUpdatesMode::SinceLastAck => channel.ack_bevy_tick,
             })
+    }
+
+    pub(crate) fn candidate_requires_retry(
+        &self,
+        group_id: ReplicationGroupId,
+        dirty_tick: BevyTick,
+    ) -> bool {
+        let Some(channel) = self.group_channels.get(&group_id) else {
+            return false;
+        };
+        if channel
+            .ack_bevy_tick
+            .is_some_and(|ack_tick| !dirty_tick.is_newer_than(ack_tick, self.this_run))
+        {
+            return false;
+        }
+        if !channel.pending_actions.is_empty() || !channel.pending_updates.is_empty() {
+            return true;
+        }
+        self.updates_message_id_to_group_id
+            .values()
+            .any(|metadata| metadata.group_id == group_id)
     }
 
     /// Internal bookkeeping:

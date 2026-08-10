@@ -15,21 +15,36 @@ const INTEREST_BUCKET_SIZE: f32 = INTEREST_RADIUS;
 
 type InterestBucket = (i32, i32);
 
+#[derive(Default)]
+struct InterestDirtyEntities {
+    interest: HashSet<Entity>,
+    replication: HashSet<Entity>,
+}
+
 #[derive(Resource, Default)]
-pub(crate) struct InterestDirtyQueue(Mutex<HashSet<Entity>>);
+pub(crate) struct InterestDirtyQueue(Mutex<InterestDirtyEntities>);
 
 impl InterestDirtyQueue {
     pub(crate) fn mark(&self, entity: Entity) {
-        self.0
-            .lock()
-            .expect("interest dirty queue poisoned")
-            .insert(entity);
+        let mut dirty = self.0.lock().expect("interest dirty queue poisoned");
+        dirty.interest.insert(entity);
+        dirty.replication.insert(entity);
     }
 
-    fn drain(&self) -> Vec<Entity> {
+    fn drain_interest(&self) -> Vec<Entity> {
         self.0
             .lock()
             .expect("interest dirty queue poisoned")
+            .interest
+            .drain()
+            .collect()
+    }
+
+    fn drain_replication(&self) -> Vec<Entity> {
+        self.0
+            .lock()
+            .expect("interest dirty queue poisoned")
+            .replication
             .drain()
             .collect()
     }
@@ -163,7 +178,12 @@ impl Plugin for InterestPlugin {
             .add_observer(on_network_visibility_removed)
             .add_observer(on_player_link_added)
             .add_observer(on_player_link_removed)
-            .add_systems(FixedUpdate, update_interest);
+            .add_systems(FixedUpdate, update_interest)
+            .add_systems(
+                PostUpdate,
+                forward_position_changes_to_replication
+                    .in_set(ReplicationBufferSystems::BeforeBuffer),
+            );
     }
 }
 
@@ -203,13 +223,26 @@ fn on_player_link_removed(trigger: On<Remove, PlayerLink>, mut index: ResMut<Int
     index.remove_observer(trigger.entity);
 }
 
+fn forward_position_changes_to_replication(
+    dirty_queue: Res<InterestDirtyQueue>,
+    replication_dirty: Option<Res<ReplicationDirtyQueue>>,
+) {
+    let Some(replication_dirty) = replication_dirty else {
+        return;
+    };
+    for entity in dirty_queue.drain_replication() {
+        replication_dirty.mark(entity);
+    }
+}
+
 fn update_interest(
     positions: Query<&Position>,
     dirty_queue: Res<InterestDirtyQueue>,
+    replication_dirty: Option<Res<ReplicationDirtyQueue>>,
     mut index: ResMut<InterestIndex>,
     mut visibility_query: Query<(&Position, &mut ReplicationState), With<NetworkVisibility>>,
 ) {
-    for entity in dirty_queue.drain() {
+    for entity in dirty_queue.drain_interest() {
         if let Ok(position) = positions.get(entity) {
             index.update_position(entity, *position);
         }
@@ -217,12 +250,22 @@ fn update_interest(
 
     let dirty_observers = index.dirty_observers.drain().collect::<Vec<_>>();
     for connection in dirty_observers {
-        update_observer_visibility(connection, &mut index, &mut visibility_query);
+        update_observer_visibility(
+            connection,
+            &mut index,
+            &mut visibility_query,
+            replication_dirty.as_deref(),
+        );
     }
 
     let dirty_targets = index.dirty_targets.drain().collect::<Vec<_>>();
     for entity in dirty_targets {
-        update_target_visibility(entity, &mut index, &mut visibility_query);
+        update_target_visibility(
+            entity,
+            &mut index,
+            &mut visibility_query,
+            replication_dirty.as_deref(),
+        );
     }
 }
 
@@ -230,6 +273,7 @@ fn update_observer_visibility(
     connection: Entity,
     index: &mut InterestIndex,
     visibility_query: &mut Query<(&Position, &mut ReplicationState), With<NetworkVisibility>>,
+    replication_dirty: Option<&ReplicationDirtyQueue>,
 ) {
     let Some(observer) = index.observers.get(&connection).cloned() else {
         return;
@@ -248,9 +292,11 @@ fn update_observer_visibility(
             visible.insert(entity);
             if !state.is_visible(connection) {
                 state.gain_visibility(connection);
+                mark_sender_visibility_changed(replication_dirty, entity, connection);
             }
         } else if state.is_visible(connection) {
             state.lose_visibility(connection);
+            mark_sender_visibility_changed(replication_dirty, entity, connection);
         }
     }
 
@@ -263,6 +309,7 @@ fn update_target_visibility(
     entity: Entity,
     index: &mut InterestIndex,
     visibility_query: &mut Query<(&Position, &mut ReplicationState), With<NetworkVisibility>>,
+    replication_dirty: Option<&ReplicationDirtyQueue>,
 ) {
     let Some(position) = index.target_positions.get(&entity).copied() else {
         return;
@@ -289,6 +336,7 @@ fn update_target_visibility(
             entity,
             connection,
             should_be_visible,
+            replication_dirty,
         );
     }
 }
@@ -299,18 +347,31 @@ fn apply_target_visibility_transition(
     entity: Entity,
     connection: Entity,
     should_be_visible: bool,
+    replication_dirty: Option<&ReplicationDirtyQueue>,
 ) {
     if should_be_visible {
         if !state.is_visible(connection) {
             state.gain_visibility(connection);
+            mark_sender_visibility_changed(replication_dirty, entity, connection);
         }
         observer.visible.insert(entity);
         return;
     }
     if state.is_visible(connection) {
         state.lose_visibility(connection);
+        mark_sender_visibility_changed(replication_dirty, entity, connection);
     }
     observer.visible.remove(&entity);
+}
+
+fn mark_sender_visibility_changed(
+    replication_dirty: Option<&ReplicationDirtyQueue>,
+    entity: Entity,
+    connection: Entity,
+) {
+    if let Some(replication_dirty) = replication_dirty {
+        replication_dirty.mark_for_sender(entity, connection);
+    }
 }
 
 fn interest_bucket(position: &Position) -> InterestBucket {

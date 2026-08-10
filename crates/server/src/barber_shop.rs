@@ -116,6 +116,7 @@ fn process_barber_shop_apply_requests(
     >,
     mut players: Query<&mut Player>,
     db: Option<Res<GameDatabase>>,
+    dirty_queue: Option<Res<ReplicationDirtyQueue>>,
     mut senders: Query<&mut MessageSender<BarberShopStateUpdate>>,
 ) {
     let Some(db) = db else { return };
@@ -128,6 +129,7 @@ fn process_barber_shop_apply_requests(
                 request,
                 &mut players,
                 &db,
+                dirty_queue.as_deref(),
                 &mut senders,
             );
         }
@@ -141,6 +143,7 @@ fn handle_apply_request(
     request: ApplyBarberShopChanges,
     players: &mut Query<&mut Player>,
     db: &GameDatabase,
+    dirty_queue: Option<&ReplicationDirtyQueue>,
     senders: &mut Query<&mut MessageSender<BarberShopStateUpdate>>,
 ) {
     let Ok(mut player) = players.get_mut(player_entity) else {
@@ -164,7 +167,13 @@ fn handle_apply_request(
     }
 
     inventory.gold -= cost;
+    let appearance_changed = player.appearance != applied;
     player.appearance = applied;
+    if appearance_changed {
+        if let Some(dirty_queue) = dirty_queue {
+            dirty_queue.mark(player_entity);
+        }
+    }
     save_barber_shop_changes(&db.db, character_id, applied, &inventory);
     send_barber_shop_update(
         conn_entity,

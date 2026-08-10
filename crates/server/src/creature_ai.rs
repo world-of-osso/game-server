@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use lightyear::prelude::ReplicationDirtyQueue;
 use shared::components::{Health, Position, ThreatTable};
 
 use crate::interest::{InterestDirtyQueue, mark_interest_position_changed};
@@ -296,6 +297,7 @@ type LeashQuery<'w, 's> = Query<
     'w,
     's,
     (
+        Entity,
         &'static Position,
         &'static SpawnPoint,
         &'static mut CreatureState,
@@ -306,8 +308,11 @@ type LeashQuery<'w, 's> = Query<
 
 /// Evade pursuing creatures that exceed leash distance from spawn.
 /// Clears threat, restores health, transitions to Returning.
-fn leash_check_system(mut query: LeashQuery) {
-    for (pos, spawn, mut state, threat, health) in &mut query {
+fn leash_check_system(
+    mut query: LeashQuery,
+    replication_dirty: Option<Res<ReplicationDirtyQueue>>,
+) {
+    for (entity, pos, spawn, mut state, threat, health) in &mut query {
         if !matches!(*state, CreatureState::Pursuing { .. }) {
             continue;
         }
@@ -318,8 +323,13 @@ fn leash_check_system(mut query: LeashQuery) {
         if let Some(mut threat) = threat {
             threat.reset();
         }
-        if let Some(mut health) = health {
+        if let Some(mut health) = health
+            && health.current != health.max
+        {
             health.current = health.max;
+            if let Some(replication_dirty) = replication_dirty.as_deref() {
+                replication_dirty.mark(entity);
+            }
         }
     }
 }

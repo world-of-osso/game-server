@@ -225,6 +225,16 @@ impl Stepper {
         }
     }
 
+    /// Advance only the server, leaving client ACKs unread.
+    pub fn server_tick_only(&mut self, n: usize) {
+        for _ in 0..n {
+            self.current_time += self.tick_duration;
+            self.server_app
+                .insert_resource(TimeUpdateStrategy::ManualInstant(self.current_time));
+            self.server_app.update();
+        }
+    }
+
     /// Get the client entity reference in the client app.
     pub fn client(&self, id: usize) -> EntityRef<'_> {
         self.client_apps[id]

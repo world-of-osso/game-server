@@ -44,6 +44,7 @@ metrics = [
 prediction = []
 server = ["lightyear_connection/server"]
 std = ["lightyear_transport/std"]
+test_diagnostics = []
 test_utils = []
 trace = []
 

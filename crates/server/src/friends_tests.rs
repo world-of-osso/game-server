@@ -89,7 +89,7 @@ fn set_presence_tracks_manual_afk_and_resets_idle() {
 
     let mut apply_presence = IntoSystem::into_system(
         move |mut players: Query<(&mut PresenceStatus, &mut PresenceTracker), With<Player>>| {
-            set_presence(player_entity, PresenceStatus::Afk, &mut players)
+            set_presence(player_entity, PresenceStatus::Afk, &mut players, None)
         },
     );
     apply_presence.initialize(app.world_mut());
@@ -131,8 +131,8 @@ fn player_activity_clears_manual_afk_but_preserves_dnd() {
 
     let mut mark_activity = IntoSystem::into_system(
         move |mut players: Query<(&mut PresenceStatus, &mut PresenceTracker), With<Player>>| {
-            mark_player_activity(afk_entity, &mut players);
-            mark_player_activity(dnd_entity, &mut players);
+            mark_player_activity(afk_entity, &mut players, None);
+            mark_player_activity(dnd_entity, &mut players, None);
         },
     );
     mark_activity.initialize(app.world_mut());

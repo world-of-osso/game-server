@@ -140,20 +140,18 @@ fn auto_attack_system(
     mut senders: Query<&mut MessageSender<CombatEvent>>,
     mut combat_log: ResMut<CombatLog>,
     mut commands: Commands,
+    combat_statuses: Query<&CombatStatus>,
+    replication_dirty: Option<Res<ReplicationDirtyQueue>>,
 ) {
     let dt = time.delta_secs();
-    let elapsed = time.elapsed_secs_f64();
-    let combat_expires_at = elapsed + COMBAT_GRACE_SECS;
+    let (elapsed, combat_expires_at) = combat_timing(&time);
     let mut events = Vec::new();
 
     for (attacker_entity, combat_target, mut auto_attack, attacker_pos) in &mut attackers {
-        if !auto_attack.active {
-            continue;
-        }
-        let Some(target_entity) = combat_target.0 else {
+        let Some(target_entity) = ready_auto_attack_target(combat_target, &mut auto_attack, dt)
+        else {
             continue;
         };
-        auto_attack.timer -= dt;
         let Some(outcome) = try_swing(
             attacker_entity,
             attacker_pos,
@@ -164,20 +162,41 @@ fn auto_attack_system(
         ) else {
             continue;
         };
-        refresh_combat_state(&mut commands, attacker_entity, combat_expires_at);
-        refresh_combat_state(&mut commands, target_entity, combat_expires_at);
-        events.push(build_damage_event(
+        refresh_combatants(
+            &mut commands,
+            &combat_statuses,
             attacker_entity,
             target_entity,
-            outcome.damage,
-        ));
-        if outcome.npc_died {
-            mark_npc_dead(&mut commands, target_entity);
-            events.push(build_death_event(target_entity));
-        }
+            combat_expires_at,
+        );
+        mark_replication_changed(replication_dirty.as_deref(), target_entity);
+        record_swing_events(
+            &mut commands,
+            &mut events,
+            attacker_entity,
+            target_entity,
+            outcome,
+        );
     }
 
     broadcast_events(&events, &mut senders, &mut combat_log, elapsed);
+}
+
+fn combat_timing(time: &Time) -> (f64, f64) {
+    let elapsed = time.elapsed_secs_f64();
+    (elapsed, elapsed + COMBAT_GRACE_SECS)
+}
+
+fn ready_auto_attack_target(
+    combat_target: &CombatTarget,
+    auto_attack: &mut AutoAttack,
+    delta_seconds: f32,
+) -> Option<Entity> {
+    if !auto_attack.active {
+        return None;
+    }
+    auto_attack.timer -= delta_seconds;
+    combat_target.0
 }
 
 fn maintain_in_combat_state_system(
@@ -204,10 +223,11 @@ fn maintain_in_combat_state_system(
             continue;
         }
         if now >= combat_state.expires_at {
-            commands
-                .entity(entity)
-                .insert(CombatStatus(false))
-                .remove::<CombatState>();
+            let mut entity_commands = commands.entity(entity);
+            if !combat_status.is_some_and(|status| !status.0) {
+                entity_commands.insert(CombatStatus(false));
+            }
+            entity_commands.remove::<CombatState>();
         }
     }
 }
@@ -282,6 +302,12 @@ fn build_death_event(target: Entity) -> CombatEvent {
     }
 }
 
+fn mark_replication_changed(queue: Option<&ReplicationDirtyQueue>, entity: Entity) {
+    if let Some(queue) = queue {
+        queue.mark(entity);
+    }
+}
+
 fn mark_npc_dead(commands: &mut Commands, entity: Entity) {
     commands
         .entity(entity)
@@ -295,10 +321,42 @@ fn active_combat_state(expires_at: f64) -> (CombatState, CombatStatus) {
     (CombatState { expires_at }, CombatStatus(true))
 }
 
-fn refresh_combat_state(commands: &mut Commands, entity: Entity, expires_at: f64) {
-    commands
-        .entity(entity)
-        .insert(active_combat_state(expires_at));
+fn refresh_combatants(
+    commands: &mut Commands,
+    combat_statuses: &Query<&CombatStatus>,
+    attacker: Entity,
+    target: Entity,
+    expires_at: f64,
+) {
+    refresh_combat_state(commands, combat_statuses, attacker, expires_at);
+    refresh_combat_state(commands, combat_statuses, target, expires_at);
+}
+
+fn record_swing_events(
+    commands: &mut Commands,
+    events: &mut Vec<CombatEvent>,
+    attacker: Entity,
+    target: Entity,
+    outcome: SwingOutcome,
+) {
+    events.push(build_damage_event(attacker, target, outcome.damage));
+    if outcome.npc_died {
+        mark_npc_dead(commands, target);
+        events.push(build_death_event(target));
+    }
+}
+
+fn refresh_combat_state(
+    commands: &mut Commands,
+    combat_statuses: &Query<&CombatStatus>,
+    entity: Entity,
+    expires_at: f64,
+) {
+    let mut entity_commands = commands.entity(entity);
+    entity_commands.insert(CombatState { expires_at });
+    if !combat_statuses.get(entity).is_ok_and(|status| status.0) {
+        entity_commands.insert(CombatStatus(true));
+    }
 }
 
 /// Tick respawn timers and restore dead NPCs when ready.

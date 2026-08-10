@@ -6,9 +6,19 @@ use lightyear::prelude::client::Connected;
 use lightyear::prelude::server::Started;
 use lightyear::prelude::*;
 use lightyear_crossbeam::CrossbeamIo;
-use shared::components::Position;
+use lightyear_replication::test_diagnostics;
+use shared::components::{Health, Position};
 use shared::protocol::InputChannel;
 use shared::protocol::PlayerInput;
+use std::sync::{Mutex, MutexGuard};
+
+static INTEGRATION_TEST_LOCK: Mutex<()> = Mutex::new(());
+
+fn integration_test_guard() -> MutexGuard<'static, ()> {
+    INTEGRATION_TEST_LOCK
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+}
 
 /// Resource to accumulate received PlayerInput messages across ticks.
 #[derive(Resource, Default)]
@@ -28,6 +38,7 @@ fn collect_player_inputs(
 /// After connection, both sides should have the expected marker components.
 #[test]
 fn client_connects_to_server() {
+    let _guard = integration_test_guard();
     let stepper = Stepper::single_client();
 
     // Client side: Connected + CrossbeamIo
@@ -46,6 +57,7 @@ fn client_connects_to_server() {
 /// it appears on the client after enough ticks.
 #[test]
 fn server_replicates_position_to_client() {
+    let _guard = integration_test_guard();
     let mut stepper = Stepper::single_client();
 
     let pos = Position {
@@ -72,9 +84,221 @@ fn server_replicates_position_to_client() {
     assert_eq!(replicated_pos.z, 300.0);
 }
 
+#[test]
+fn dirty_position_change_visits_only_the_changed_root() {
+    let _guard = integration_test_guard();
+    let mut stepper = Stepper::single_client();
+    let changed = (0..32)
+        .map(|x| {
+            stepper
+                .server_world_mut()
+                .spawn((
+                    Position {
+                        x: x as f32,
+                        y: 0.0,
+                        z: 0.0,
+                    },
+                    Replicate::new(ReplicationMode::SingleServer(NetworkTarget::All)),
+                ))
+                .id()
+        })
+        .next()
+        .unwrap();
+
+    stepper.tick_step(20);
+    test_diagnostics::reset();
+    stepper
+        .server_world_mut()
+        .entity_mut(changed)
+        .get_mut::<Position>()
+        .unwrap()
+        .x = 999.0;
+    stepper
+        .server_app
+        .world()
+        .resource::<ReplicationDirtyQueue>()
+        .mark(changed);
+
+    stepper.tick_step(1);
+    let snapshot = test_diagnostics::snapshot();
+    assert_eq!(snapshot.root_candidates, 1);
+    assert_eq!(snapshot.replicate_entity_visits, 1);
+
+    stepper.tick_step(5);
+    assert!(client_has_position(stepper.client_world_mut(0), 999.0));
+}
+
+#[test]
+fn unacked_dirty_root_remains_candidate_until_ack() {
+    let _guard = integration_test_guard();
+    let mut stepper = Stepper::single_client();
+    let entity = stepper
+        .server_world_mut()
+        .spawn((
+            Position {
+                x: 12.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            Replicate::new(ReplicationMode::SingleServer(NetworkTarget::All)),
+        ))
+        .id();
+    stepper.tick_step(20);
+
+    stepper
+        .server_world_mut()
+        .entity_mut(entity)
+        .get_mut::<Position>()
+        .unwrap()
+        .x = 13.0;
+    stepper
+        .server_app
+        .world()
+        .resource::<ReplicationDirtyQueue>()
+        .mark(entity);
+    test_diagnostics::reset();
+    stepper.server_tick_only(3);
+    assert_eq!(test_diagnostics::snapshot().root_candidates, 3);
+
+    stepper.tick_step(10);
+    test_diagnostics::reset();
+    stepper.server_tick_only(3);
+    assert_eq!(test_diagnostics::snapshot().root_candidates, 0);
+}
+
+#[test]
+fn targeted_visibility_change_does_not_visit_other_senders() {
+    let _guard = integration_test_guard();
+    let mut stepper = Stepper::two_clients();
+    let entity = stepper
+        .server_world_mut()
+        .spawn((
+            Position {
+                x: 42.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            Replicate::new(ReplicationMode::SingleServer(NetworkTarget::All)),
+            NetworkVisibility,
+        ))
+        .id();
+    stepper.tick_step(5);
+
+    let first_sender = stepper.client_of_entities[0];
+    stepper
+        .server_world_mut()
+        .get_mut::<ReplicationState>(entity)
+        .unwrap()
+        .gain_visibility(first_sender);
+    stepper
+        .server_app
+        .world()
+        .resource::<ReplicationDirtyQueue>()
+        .mark_for_sender(entity, first_sender);
+    test_diagnostics::reset();
+
+    stepper.tick_step(1);
+    let snapshot = test_diagnostics::snapshot();
+    assert_eq!(snapshot.root_candidates, 1);
+    assert_eq!(snapshot.replicate_entity_visits, 1);
+
+    stepper.tick_step(5);
+    assert!(client_has_position(stepper.client_world_mut(0), 42.0));
+    assert!(!client_has_position(stepper.client_world_mut(1), 42.0));
+
+    stepper
+        .server_world_mut()
+        .get_mut::<ReplicationState>(entity)
+        .unwrap()
+        .lose_visibility(first_sender);
+    stepper
+        .server_app
+        .world()
+        .resource::<ReplicationDirtyQueue>()
+        .mark_for_sender(entity, first_sender);
+    test_diagnostics::reset();
+    stepper.tick_step(1);
+    assert_eq!(test_diagnostics::snapshot().root_candidates, 1);
+    stepper.tick_step(5);
+    assert!(!client_has_position(stepper.client_world_mut(0), 42.0));
+}
+
+#[test]
+fn replicated_component_insert_and_remove_preserve_actions() {
+    let _guard = integration_test_guard();
+    let mut stepper = Stepper::single_client();
+    let entity = stepper
+        .server_world_mut()
+        .spawn((
+            Position {
+                x: 77.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            Replicate::new(ReplicationMode::SingleServer(NetworkTarget::All)),
+        ))
+        .id();
+    stepper.tick_step(20);
+
+    test_diagnostics::reset();
+    stepper
+        .server_world_mut()
+        .entity_mut(entity)
+        .insert(Health {
+            current: 75.0,
+            max: 100.0,
+        });
+    stepper.tick_step(1);
+    assert_eq!(test_diagnostics::snapshot().root_candidates, 1);
+    stepper.tick_step(5);
+    assert_eq!(
+        client_health_at_x(stepper.client_world_mut(0), 77.0),
+        Some(75.0)
+    );
+
+    stepper
+        .server_world_mut()
+        .entity_mut(entity)
+        .remove::<Health>();
+    stepper.tick_step(5);
+    assert_eq!(client_health_at_x(stepper.client_world_mut(0), 77.0), None);
+}
+
+#[test]
+fn unchanged_replicated_roots_are_not_revisited_after_initial_sync() {
+    let _guard = integration_test_guard();
+    let mut stepper = Stepper::single_client();
+
+    for x in 0..32 {
+        stepper.server_world_mut().spawn((
+            Position {
+                x: x as f32,
+                y: 0.0,
+                z: 0.0,
+            },
+            Replicate::new(ReplicationMode::SingleServer(NetworkTarget::All)),
+        ));
+    }
+
+    stepper.tick_step(20);
+    test_diagnostics::reset();
+    stepper.tick_step(5);
+
+    let snapshot = test_diagnostics::snapshot();
+    assert_eq!(
+        snapshot.root_candidates, 0,
+        "unchanged roots must not enter the sender candidate traversal"
+    );
+    assert_eq!(
+        snapshot.replicate_entity_visits, 0,
+        "unchanged roots must not reach replicate_entity"
+    );
+}
+
 /// Send a PlayerInput message from client to server and verify it is received.
 #[test]
 fn client_message_received_by_server() {
+    let _guard = integration_test_guard();
     let mut stepper = Stepper::single_client();
 
     let input = PlayerInput {
@@ -136,6 +360,7 @@ fn process_player_inputs(
 /// that each client's player entity moves independently.
 #[test]
 fn multi_client_input_routes_independently() {
+    let _guard = integration_test_guard();
     let mut stepper = Stepper::two_clients();
     let (player_a, player_b) = setup_two_player_entities(&mut stepper);
     stepper
@@ -229,6 +454,19 @@ fn get_server_position(stepper: &Stepper, entity: Entity) -> Position {
 fn find_replicated_position(world: &mut bevy::prelude::World) -> Option<Position> {
     let mut query = world.query_filtered::<&Position, bevy::prelude::With<Replicated>>();
     query.iter(world).next().copied()
+}
+
+fn client_has_position(world: &mut World, x: f32) -> bool {
+    let mut query = world.query_filtered::<&Position, With<Replicated>>();
+    query.iter(world).any(|position| position.x == x)
+}
+
+fn client_health_at_x(world: &mut World, x: f32) -> Option<f32> {
+    let mut query = world.query_filtered::<(&Position, Option<&Health>), With<Replicated>>();
+    query
+        .iter(world)
+        .find(|(position, _)| position.x == x)
+        .and_then(|(_, health)| health.map(|health| health.current))
 }
 
 /// Send a PlayerInput message from a client via its MessageSender.

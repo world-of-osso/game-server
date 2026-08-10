@@ -382,6 +382,7 @@ fn process_presence_requests(
     mut players: Query<(&mut PresenceStatus, &mut PresenceTracker), With<Player>>,
     db: Option<Res<GameDatabase>>,
     index: Res<FriendSnapshotIndex>,
+    dirty_queue: Option<Res<ReplicationDirtyQueue>>,
     mut senders: Query<&mut MessageSender<FriendsStateUpdate>>,
 ) {
     let Some(db) = db else { return };
@@ -395,7 +396,7 @@ fn process_presence_requests(
             continue;
         };
         for request in requests {
-            let result = set_presence(link.0, request.status, &mut players);
+            let result = set_presence(link.0, request.status, &mut players, dirty_queue.as_deref());
             let snapshot = build_friends_snapshot(&db.db, friends, &index.online);
             match result {
                 Ok(message) => {
@@ -474,9 +475,10 @@ fn send_dirty_friends_snapshots(
 
 fn tick_auto_afk(
     time: Res<Time>,
-    mut players: Query<(&mut PresenceStatus, &mut PresenceTracker), With<Player>>,
+    dirty_queue: Option<Res<ReplicationDirtyQueue>>,
+    mut players: Query<(Entity, &mut PresenceStatus, &mut PresenceTracker), With<Player>>,
 ) {
-    for (mut status, mut tracker) in &mut players {
+    for (entity, mut status, mut tracker) in &mut players {
         if tracker.manual.is_some() {
             continue;
         }
@@ -488,6 +490,7 @@ fn tick_auto_afk(
         };
         if *status != desired {
             *status = desired;
+            mark_presence_changed(dirty_queue.as_deref(), entity);
         }
     }
 }
@@ -601,22 +604,23 @@ fn build_friend_snapshot(
 pub fn mark_player_activity(
     player_entity: Entity,
     players: &mut Query<(&mut PresenceStatus, &mut PresenceTracker), With<Player>>,
+    dirty_queue: Option<&ReplicationDirtyQueue>,
 ) {
     let Ok((mut status, mut tracker)) = players.get_mut(player_entity) else {
         return;
     };
     tracker.idle_secs = 0.0;
-    match tracker.manual {
-        Some(ManualPresence::Dnd) => {
-            *status = PresenceStatus::Dnd;
-        }
+    let next_status = match tracker.manual {
+        Some(ManualPresence::Dnd) => PresenceStatus::Dnd,
         Some(ManualPresence::Afk) => {
             tracker.manual = None;
-            *status = PresenceStatus::Online;
+            PresenceStatus::Online
         }
-        None => {
-            *status = PresenceStatus::Online;
-        }
+        None => PresenceStatus::Online,
+    };
+    if *status != next_status {
+        *status = next_status;
+        mark_presence_changed(dirty_queue, player_entity);
     }
 }
 
@@ -624,6 +628,7 @@ fn set_presence(
     player_entity: Entity,
     requested: PresenceStatus,
     players: &mut Query<(&mut PresenceStatus, &mut PresenceTracker), With<Player>>,
+    dirty_queue: Option<&ReplicationDirtyQueue>,
 ) -> Result<String, String> {
     let Ok((mut status, mut tracker)) = players.get_mut(player_entity) else {
         return Err("presence unavailable for player".into());
@@ -634,10 +639,14 @@ fn set_presence(
         PresenceStatus::Afk => Some(ManualPresence::Afk),
         PresenceStatus::Dnd => Some(ManualPresence::Dnd),
     };
-    *status = match requested {
+    let next_status = match requested {
         PresenceStatus::Offline => PresenceStatus::Online,
         other => other,
     };
+    if *status != next_status {
+        *status = next_status;
+        mark_presence_changed(dirty_queue, player_entity);
+    }
     Ok(format!(
         "presence set to {}",
         match *status {
@@ -647,6 +656,12 @@ fn set_presence(
             PresenceStatus::Offline => "offline",
         }
     ))
+}
+
+fn mark_presence_changed(dirty_queue: Option<&ReplicationDirtyQueue>, player_entity: Entity) {
+    if let Some(dirty_queue) = dirty_queue {
+        dirty_queue.mark(player_entity);
+    }
 }
 
 fn class_name_from_id(class_id: u8) -> String {

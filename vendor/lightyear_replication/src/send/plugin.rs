@@ -11,6 +11,7 @@ use crate::prespawn::PreSpawned;
 use crate::registry::registry::ComponentRegistry;
 use crate::send::buffer;
 use crate::send::components::{Replicate, Replicating, ReplicationGroup};
+use crate::send::dirty::{self, ReplicationDirtyQueue};
 use crate::send::sender::ReplicationSender;
 use bevy_app::{App, Plugin, PostUpdate};
 use bevy_ecs::entity::EntityIndexSet;
@@ -227,6 +228,7 @@ impl Plugin for ReplicationSendPlugin {
     fn build(&self, app: &mut App) {
         // RESOURCES
         app.init_resource::<ReplicableRootEntities>();
+        app.init_resource::<ReplicationDirtyQueue>();
 
         // PLUGINS
         if !app.is_plugin_added::<crate::plugin::SharedPlugin>() {
@@ -255,6 +257,8 @@ impl Plugin for ReplicationSendPlugin {
 
         // SYSTEMS
         app.add_observer(buffer::buffer_entity_despawn_replicate_remove);
+        app.add_observer(dirty::mark_replication_configuration_inserted);
+        app.add_observer(dirty::mark_network_visibility_removed);
         app.add_observer(Self::send_sender_metadata);
         app.add_observer(Replicate::handle_connection);
         #[cfg(feature = "prediction")]
@@ -348,6 +352,7 @@ impl Plugin for ReplicationSendPlugin {
             ParamBuilder,
             ParamBuilder,
             ParamBuilder,
+            ParamBuilder,
         )
             .build_state(app.world_mut())
             .build_system(buffer::replicate)
@@ -394,11 +399,16 @@ impl Plugin for ReplicationSendPlugin {
             .with_name("ReplicationSendPlugin::buffer_component_removed");
 
         let mut buffer_component_remove_observer = Observer::new(buffer_component_remove);
+        let mut mark_component_insert_observer =
+            Observer::new(dirty::mark_replicated_component_inserted);
         for component in component_registry.component_id_to_kind.keys() {
             buffer_component_remove_observer =
                 buffer_component_remove_observer.with_component(*component);
+            mark_component_insert_observer =
+                mark_component_insert_observer.with_component(*component);
         }
         app.world_mut().spawn(buffer_component_remove_observer);
+        app.world_mut().spawn(mark_component_insert_observer);
 
         app.add_systems(
             PostUpdate,

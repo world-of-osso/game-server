@@ -3077,6 +3077,7 @@ dependencies = [
  "lightyear",
  "lightyear_crossbeam",
  "lightyear_raw_connection",
+ "lightyear_replication",
  "serde",
  "shared",
 ]

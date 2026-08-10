@@ -2,25 +2,29 @@ use crate::components::ComponentReplicationOverrides;
 use crate::control::{Controlled, ControlledBy};
 use crate::delta::DeltaManager;
 use crate::error::ReplicationError;
-use crate::hierarchy::{ReplicateLike, ReplicateLikeChildren};
+use crate::hierarchy::ReplicateLike;
 use crate::prelude::{NetworkVisibility, ReplicationState};
 use crate::prespawn::PreSpawned;
 use crate::registry::ComponentKind;
 use crate::registry::registry::ComponentRegistry;
 use crate::send::archetypes::{ReplicatedArchetypes, ReplicatedComponent};
+use crate::send::candidate::{
+    ReplicationCandidateContext, process_sender_candidates, queue_initial_sync,
+};
 #[cfg(feature = "interpolation")]
 use crate::send::components::InterpolationTarget;
 #[cfg(feature = "prediction")]
 use crate::send::components::PredictionTarget;
 use crate::send::components::{Replicate, Replicating, ReplicationGroup, ReplicationGroupId};
+use crate::send::dirty::ReplicationDirtyQueue;
 use crate::send::plugin::ReplicableRootEntities;
 use crate::send::sender::ReplicationSender;
 use crate::visibility::immediate::VisibilityState;
 use bevy_ecs::component::Components;
 use bevy_ecs::prelude::*;
 use bevy_ecs::{
-    archetype::Archetypes, change_detection::ComponentTicks, relationship::RelationshipTarget,
-    system::SystemChangeTick, world::FilteredEntityRef,
+    archetype::Archetypes, change_detection::ComponentTicks, system::SystemChangeTick,
+    world::FilteredEntityRef,
 };
 use bevy_ptr::Ptr;
 use lightyear_connection::client::Connected;
@@ -57,6 +61,7 @@ pub(crate) fn replicate(
     >,
     delta_query: Query<&DeltaManager, With<Server>>,
     replicable_entities: Res<ReplicableRootEntities>,
+    dirty_queue: Res<ReplicationDirtyQueue>,
     component_registry: Res<ComponentRegistry>,
     system_ticks: SystemChangeTick,
     archetypes: &Archetypes,
@@ -67,8 +72,15 @@ pub(crate) fn replicate(
     let _timer = DormantTimerGauge::new("replication/buffer");
 
     let tick = timeline.tick();
+    let dirty_tick = system_ticks.this_run();
+    let dirty = dirty_queue.drain();
 
     replicated_archetypes.update(archetypes, components, component_registry.as_ref());
+    manager_query
+        .iter_mut()
+        .for_each(|(sender_entity, mut sender, _, _, _)| {
+            dirty.apply_to_sender(sender_entity, &mut sender, dirty_tick);
+        });
 
     // NOTE: this system doesn't handle delta compression, because we need to store a shared component history
     // for delta components, which is not possible when we start iterating through the senders first.
@@ -78,10 +90,8 @@ pub(crate) fn replicate(
     let p0 = query.p0();
     manager_query.par_iter_mut().for_each(
         |(sender_entity, mut sender, mut message_manager, delta_manager, link_of)| {
-
             let _span = trace_span!("replicate", sender = ?sender_entity).entered();
 
-            // enable split borrows
             let sender = &mut *sender;
             if !sender.send_timer.is_finished() {
                 return;
@@ -89,64 +99,29 @@ pub(crate) fn replicate(
             #[cfg(feature = "metrics")]
             _timer.activate();
 
-            // delta: either the delta manager is present on the sender directly (Client)
-            // or the delta is on the server
             let delta = delta_manager
-                .or_else(|| {
-                    link_of.and_then(|l| delta_query.get(l.server).ok())
-                });
+                .or_else(|| link_of.and_then(|link| delta_query.get(link.server).ok()));
 
-
-            // update the change ticks
             sender.last_run = sender.this_run;
-            sender.this_run = system_ticks.this_run();
-
-            // TODO: maybe this should be in a separate system in AfterBuffer?
-            // run any possible tick cleanup
+            sender.this_run = dirty_tick;
             sender.tick_cleanup(tick);
 
+            queue_initial_sync(sender, &replicable_entities.entities, dirty_tick);
+
             trace!(
-                // ?replicable_entities.entities,
                 this_run = ?sender.this_run,
                 last_run = ?sender.last_run,
-                "Starting buffer replication for sender {sender_entity:?}");
-            replicable_entities.entities.iter().for_each(|&entity| {
-                let Ok(root_entity_ref) = p0.get(entity) else {
-                    trace!("Replicated Entity {:?} not found in entity_query. This could be because Replicating is not present on the entity", entity);
-                    return;
-                };
-                let _root_span = trace_span!("root", ?entity).entered();
-                replicate_entity(
-                    entity,
-                    tick,
-                    &root_entity_ref,
-                    None,
-                    &mut message_manager.entity_mapper,
-                    sender,
-                    sender_entity,
-                    component_registry.as_ref(),
-                    &replicated_archetypes,
-                    delta,
-                );
-                if let Some(children) = root_entity_ref.get::<ReplicateLikeChildren>() {
-                    for child in children.collection() {
-                        let _child_span = trace_span!("child", ?child).entered();
-                        let child_entity_ref = p0.get(*child).unwrap();
-                        replicate_entity(
-                            *child,
-                            tick,
-                            &root_entity_ref,
-                            Some(&(child_entity_ref, entity)),
-                            &mut message_manager.entity_mapper,
-                            sender,
-                            sender_entity,
-                            component_registry.as_ref(),
-                            &replicated_archetypes,
-                            delta,
-                        );
-                    }
-                }
-            });
+                candidates = sender.dirty_entities.len(),
+                "Starting buffer replication for sender {sender_entity:?}"
+            );
+            let context = ReplicationCandidateContext {
+                tick,
+                sender_entity,
+                component_registry: component_registry.as_ref(),
+                replicated_archetypes: &replicated_archetypes,
+                delta,
+            };
+            process_sender_candidates(&p0, &mut message_manager.entity_mapper, sender, &context);
 
             // Drain all entities that should be despawned because Replicate changed and they are not in the new
             // Replicate's senders list anymore
@@ -198,6 +173,9 @@ pub(crate) fn replicate_entity(
     replicated_archetypes: &ReplicatedArchetypes,
     delta: Option<&DeltaManager>,
 ) {
+    #[cfg(feature = "test_diagnostics")]
+    crate::test_diagnostics::count_replicate_entity_visit();
+
     // TODO: instead of FilteredEntityRef, use a custom QueryParam with no access checks
     //  + can fetch multiple components at once
 

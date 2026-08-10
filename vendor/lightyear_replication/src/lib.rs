@@ -34,6 +34,9 @@ pub mod send;
 
 pub mod delta;
 
+#[cfg(feature = "test_diagnostics")]
+pub mod test_diagnostics;
+
 /// Defines the structure of messages used for replication.
 pub mod message;
 
@@ -66,8 +69,11 @@ pub mod prelude {
         AppComponentExt, ComponentRegistration, ComponentRegistry, TransformLinearInterpolation,
     };
     pub use crate::send::components::*;
+    pub use crate::send::dirty::ReplicationDirtyQueue;
     pub use crate::send::plugin::{ReplicationBufferSystems, ReplicationSendPlugin};
     pub use crate::send::sender::{ReplicationSender, SendUpdatesMode};
+    #[cfg(feature = "test_diagnostics")]
+    pub use crate::test_diagnostics;
     pub use crate::visibility::immediate::{NetworkVisibility, NetworkVisibilityPlugin};
     pub use crate::visibility::room::{Room, RoomEvent, RoomPlugin, RoomTarget};
 }
