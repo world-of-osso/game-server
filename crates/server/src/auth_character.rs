@@ -559,23 +559,6 @@ pub fn spawn_player_entity(
     entity
 }
 
-pub fn sync_player_gold_from_inventory(
-    db: Option<Res<crate::persistence::GameDatabase>>,
-    dirty_queue: Option<Res<ReplicationDirtyQueue>>,
-    mut players: Query<(Entity, &crate::persistence::ClientId, &mut Gold), With<Player>>,
-) {
-    let Some(db) = db.as_ref() else { return };
-    for (player_entity, character_id, mut gold) in &mut players {
-        let live_gold = crate::persistence::load_inventory(&db.db, character_id.0).gold;
-        if gold.0 != live_gold {
-            gold.0 = live_gold;
-            if let Some(dirty_queue) = dirty_queue.as_deref() {
-                dirty_queue.mark(player_entity);
-            }
-        }
-    }
-}
-
 #[cfg(test)]
 #[path = "auth_character_tests.rs"]
 mod tests;
