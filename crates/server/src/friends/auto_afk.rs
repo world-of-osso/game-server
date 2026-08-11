@@ -21,7 +21,7 @@ pub(super) static AUTO_AFK_TRANSITIONS: AtomicUsize = AtomicUsize::new(0);
 #[cfg(test)]
 pub(super) static AUTO_AFK_TEST_LOCK: Mutex<()> = Mutex::new(());
 
-#[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct PresenceTracker {
     pub(crate) generation: u64,
     pub(crate) manual: Option<ManualPresence>,
@@ -72,15 +72,6 @@ impl AutoAfkScheduler {
 pub(crate) enum ManualPresence {
     Afk,
     Dnd,
-}
-
-impl Default for PresenceTracker {
-    fn default() -> Self {
-        Self {
-            generation: 0,
-            manual: None,
-        }
-    }
 }
 
 pub(super) fn process_due_auto_afk(

@@ -85,16 +85,7 @@ fn poll_admin_ipc(
             let _ = cmd.respond.send(response);
             continue;
         }
-        dispatch(
-            cmd,
-            &db,
-            &mut queries.commands,
-            &mut queries.players,
-            res.interest_dirty.as_deref(),
-            &mut queries.equipment,
-            &queries.authenticated,
-            &mut queries.roster_senders,
-        );
+        dispatch(cmd, &db, &mut queries, res.interest_dirty.as_deref());
     }
 }
 
@@ -269,16 +260,15 @@ fn ban_reason(reason: Option<String>) -> String {
 fn dispatch(
     cmd: AdminCommand,
     db: &persistence::GameDatabase,
-    commands: &mut Commands,
-    players: &mut Query<(Entity, &mut Position, &persistence::ClientId)>,
+    queries: &mut AdminQueries<'_, '_>,
     interest_dirty: Option<&crate::interest::InterestDirtyQueue>,
-    equipment_query: &mut Query<(Entity, &mut EquipmentAppearance, &persistence::ClientId)>,
-    authenticated_query: &Query<
-        (Entity, &crate::auth::Authenticated),
-        With<MessageSender<LoginResponse>>,
-    >,
-    roster_update_senders: &mut Query<&mut MessageSender<CharacterListUpdate>>,
 ) {
+    let commands = &mut queries.commands;
+    let players = &mut queries.players;
+    let equipment_query = &mut queries.equipment;
+    let authenticated_query = &queries.authenticated;
+    let roster_update_senders = &mut queries.roster_senders;
+
     let response = match cmd.request {
         AdminRequest::Ping => AdminResponse::Pong,
         AdminRequest::CombatLog { .. } => {

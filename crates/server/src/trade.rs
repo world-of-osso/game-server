@@ -479,8 +479,10 @@ fn process_confirm_requests(
         };
         for _ in receiver.receive() {
             handle_confirm_trade_request(
-                conn_entity,
-                client_id.0,
+                ConfirmTradeRequest {
+                    connection: conn_entity,
+                    character_id: client_id.0,
+                },
                 &mut trade.manager,
                 &db,
                 &mut gold_updates,
@@ -492,9 +494,13 @@ fn process_confirm_requests(
     }
 }
 
-fn handle_confirm_trade_request(
-    conn_entity: Entity,
+struct ConfirmTradeRequest {
+    connection: Entity,
     character_id: u64,
+}
+
+fn handle_confirm_trade_request(
+    request: ConfirmTradeRequest,
     manager: &mut TradeManager,
     db: &GameDatabase,
     gold_updates: &mut GoldUpdateQueue,
@@ -502,7 +508,7 @@ fn handle_confirm_trade_request(
     players: &PlayerQuery,
     senders: &mut Query<&mut MessageSender<TradeStateUpdate>>,
 ) {
-    match manager.confirm_trade(character_id) {
+    match manager.confirm_trade(request.character_id) {
         Ok(Some(completed)) => {
             let result = execute_and_send_completed_trade(
                 db,
@@ -514,8 +520,8 @@ fn handle_confirm_trade_request(
             );
             if let Err(error) = result {
                 send_completed_trade_error(
-                    conn_entity,
-                    character_id,
+                    request.connection,
+                    request.character_id,
                     &completed,
                     error,
                     connections,
@@ -525,11 +531,11 @@ fn handle_confirm_trade_request(
             }
         }
         Ok(None) => {
-            if let Some(session) = manager.get_session(character_id) {
+            if let Some(session) = manager.get_session(request.character_id) {
                 broadcast_trade_state(&db.db, session, players, connections, senders, None);
             }
         }
-        Err(error) => send_trade_error(conn_entity, senders, trade_error_message(error)),
+        Err(error) => send_trade_error(request.connection, senders, trade_error_message(error)),
     }
 }
 

@@ -125,10 +125,12 @@ fn process_barber_shop_apply_requests(
     for (conn_entity, link, in_world, mut receiver) in &mut receivers {
         for request in receiver.receive() {
             handle_apply_request(
-                conn_entity,
-                link.0,
-                in_world.character_id,
-                request,
+                BarberShopApplication {
+                    connection: conn_entity,
+                    player: link.0,
+                    character_id: in_world.character_id,
+                    changes: request,
+                },
                 &mut players,
                 &db,
                 dirty_queue.as_deref(),
@@ -139,28 +141,36 @@ fn process_barber_shop_apply_requests(
     }
 }
 
-fn handle_apply_request(
-    conn_entity: Entity,
-    player_entity: Entity,
+struct BarberShopApplication {
+    connection: Entity,
+    player: Entity,
     character_id: u64,
-    request: ApplyBarberShopChanges,
+    changes: ApplyBarberShopChanges,
+}
+
+fn handle_apply_request(
+    application: BarberShopApplication,
     players: &mut Query<&mut Player>,
     db: &GameDatabase,
     dirty_queue: Option<&ReplicationDirtyQueue>,
     gold_updates: &mut GoldUpdateQueue,
     senders: &mut Query<&mut MessageSender<BarberShopStateUpdate>>,
 ) {
-    let Ok(mut player) = players.get_mut(player_entity) else {
-        send_barber_shop_error(conn_entity, senders, "barber shop unavailable for player");
+    let Ok(mut player) = players.get_mut(application.player) else {
+        send_barber_shop_error(
+            application.connection,
+            senders,
+            "barber shop unavailable for player",
+        );
         return;
     };
 
-    let applied = barber_shop_appearance(player.appearance, request.appearance);
+    let applied = barber_shop_appearance(player.appearance, application.changes.appearance);
     let cost = barber_shop_cost(player.appearance, applied);
-    let mut inventory = persistence::load_inventory(&db.db, character_id);
+    let mut inventory = persistence::load_inventory(&db.db, application.character_id);
     if inventory.gold < cost {
         send_barber_shop_update(
-            conn_entity,
+            application.connection,
             &player.appearance,
             inventory.gold,
             None,
@@ -173,14 +183,18 @@ fn handle_apply_request(
     inventory.gold -= cost;
     let appearance_changed = player.appearance != applied;
     player.appearance = applied;
-    if appearance_changed {
-        if let Some(dirty_queue) = dirty_queue {
-            dirty_queue.mark(player_entity);
-        }
+    if appearance_changed && let Some(dirty_queue) = dirty_queue {
+        dirty_queue.mark(application.player);
     }
-    save_barber_shop_changes(&db.db, character_id, applied, &inventory, gold_updates);
+    save_barber_shop_changes(
+        &db.db,
+        application.character_id,
+        applied,
+        &inventory,
+        gold_updates,
+    );
     send_barber_shop_update(
-        conn_entity,
+        application.connection,
         &player.appearance,
         inventory.gold,
         Some(barber_shop_success_message(cost)),

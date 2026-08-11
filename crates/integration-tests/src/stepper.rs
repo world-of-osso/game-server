@@ -101,8 +101,8 @@ impl Stepper {
                 PingManager::new(PingConfig {
                     ping_interval: Duration::default(),
                 }),
-                ReplicationSender::default(),
-                ReplicationReceiver::default(),
+                ReplicationSender,
+                ReplicationReceiver,
                 crossbeam_io,
             ))
             .id()
@@ -118,8 +118,8 @@ impl Stepper {
                 PingManager::new(PingConfig {
                     ping_interval: Duration::default(),
                 }),
-                ReplicationSender::default(),
-                ReplicationReceiver::default(),
+                ReplicationSender,
+                ReplicationReceiver,
                 Link::new(None),
                 PeerAddr(SocketAddr::new(
                     core::net::IpAddr::V4(Ipv4Addr::LOCALHOST),

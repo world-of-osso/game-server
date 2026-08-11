@@ -1,5 +1,6 @@
 use std::collections::{BTreeMap, HashMap, HashSet};
 
+use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 use lightyear::prelude::Message as NetMessage;
 use lightyear::prelude::*;
@@ -93,14 +94,9 @@ impl FriendSnapshotIndex {
             presence: presence.copied().unwrap_or(PresenceStatus::Online),
         };
         let previous_name = self.online_name_by_entity.insert(entity, name.clone());
-        if previous_name
-            .as_ref()
-            .is_some_and(|previous| previous != &name)
-        {
-            if let Some(previous) = previous_name {
-                self.online.remove(&previous);
-                self.mark_owners_for_friend(&previous);
-            }
+        if let Some(previous) = previous_name.filter(|previous| previous != &name) {
+            self.online.remove(&previous);
+            self.mark_owners_for_friend(&previous);
         }
         if self.online.get(&name) == Some(&next) {
             return;
@@ -183,23 +179,48 @@ type NewInWorldConnection<'w, 's> = Query<
     (With<Authenticated>, Added<InWorld>),
 >;
 
-fn send_initial_friends_snapshot(
-    mut commands: Commands,
-    connections: NewInWorldConnection,
-    mut friends_q: Query<&mut PlayerFriendsState>,
-    online_players: Query<(
-        Entity,
-        &Player,
-        &Level,
-        Option<&Zone>,
-        Option<&PresenceStatus>,
-    )>,
-    db: Option<Res<GameDatabase>>,
-    mut index: ResMut<FriendSnapshotIndex>,
-    time: Res<Time>,
-    mut auto_afk: ResMut<AutoAfkScheduler>,
-    mut senders: Query<&mut MessageSender<FriendsStateUpdate>>,
-) {
+type OnlineFriendPlayer = (
+    Entity,
+    &'static Player,
+    &'static Level,
+    Option<&'static Zone>,
+    Option<&'static PresenceStatus>,
+);
+type OnlineFriendPlayers<'w, 's> = Query<'w, 's, OnlineFriendPlayer>;
+
+type ChangedFriendPresenceFilter = Or<(
+    Changed<Player>,
+    Changed<Level>,
+    Changed<Zone>,
+    Changed<PresenceStatus>,
+)>;
+type ChangedFriendPlayers<'w, 's> = Query<'w, 's, OnlineFriendPlayer, ChangedFriendPresenceFilter>;
+
+#[derive(SystemParam)]
+struct SendInitialFriendsSnapshotParams<'w, 's> {
+    commands: Commands<'w, 's>,
+    connections: NewInWorldConnection<'w, 's>,
+    friends_q: Query<'w, 's, &'static mut PlayerFriendsState>,
+    online_players: OnlineFriendPlayers<'w, 's>,
+    db: Option<Res<'w, GameDatabase>>,
+    index: ResMut<'w, FriendSnapshotIndex>,
+    time: Res<'w, Time>,
+    auto_afk: ResMut<'w, AutoAfkScheduler>,
+    senders: Query<'w, 's, &'static mut MessageSender<FriendsStateUpdate>>,
+}
+
+fn send_initial_friends_snapshot(params: SendInitialFriendsSnapshotParams) {
+    let SendInitialFriendsSnapshotParams {
+        mut commands,
+        connections,
+        mut friends_q,
+        online_players,
+        db,
+        mut index,
+        time,
+        mut auto_afk,
+        mut senders,
+    } = params;
     let Some(db) = db else { return };
     if connections.is_empty() {
         return;
@@ -364,20 +385,41 @@ fn process_mutation_requests<R, F>(
     }
 }
 
-fn process_presence_requests(
-    mut receivers: Query<
-        (Entity, &PlayerLink, &mut MessageReceiver<SetPresenceStatus>),
+#[derive(SystemParam)]
+struct ProcessPresenceRequestsParams<'w, 's> {
+    receivers: Query<
+        'w,
+        's,
+        (
+            Entity,
+            &'static PlayerLink,
+            &'static mut MessageReceiver<SetPresenceStatus>,
+        ),
         With<Authenticated>,
     >,
-    friends_q: Query<&PlayerFriendsState>,
-    mut players: Query<(&mut PresenceStatus, &mut PresenceTracker), With<Player>>,
-    db: Option<Res<GameDatabase>>,
-    index: Res<FriendSnapshotIndex>,
-    time: Res<Time>,
-    mut auto_afk: ResMut<AutoAfkScheduler>,
-    dirty_queue: Option<Res<ReplicationDirtyQueue>>,
-    mut senders: Query<&mut MessageSender<FriendsStateUpdate>>,
-) {
+    friends_q: Query<'w, 's, &'static PlayerFriendsState>,
+    players:
+        Query<'w, 's, (&'static mut PresenceStatus, &'static mut PresenceTracker), With<Player>>,
+    db: Option<Res<'w, GameDatabase>>,
+    index: Res<'w, FriendSnapshotIndex>,
+    time: Res<'w, Time>,
+    auto_afk: ResMut<'w, AutoAfkScheduler>,
+    dirty_queue: Option<Res<'w, ReplicationDirtyQueue>>,
+    senders: Query<'w, 's, &'static mut MessageSender<FriendsStateUpdate>>,
+}
+
+fn process_presence_requests(params: ProcessPresenceRequestsParams) {
+    let ProcessPresenceRequestsParams {
+        mut receivers,
+        friends_q,
+        mut players,
+        db,
+        index,
+        time,
+        mut auto_afk,
+        dirty_queue,
+        mut senders,
+    } = params;
     let Some(db) = db else { return };
     for (conn_entity, link, mut receiver) in &mut receivers {
         let requests: Vec<_> = receiver.receive().collect();
@@ -410,24 +452,8 @@ fn process_presence_requests(
     }
 }
 
-type ChangedFriendPresenceFilter = Or<(
-    Changed<Player>,
-    Changed<Level>,
-    Changed<Zone>,
-    Changed<PresenceStatus>,
-)>;
-
 fn sync_changed_friend_presence(
-    players: Query<
-        (
-            Entity,
-            &Player,
-            &Level,
-            Option<&Zone>,
-            Option<&PresenceStatus>,
-        ),
-        ChangedFriendPresenceFilter,
-    >,
+    players: ChangedFriendPlayers,
     mut index: ResMut<FriendSnapshotIndex>,
 ) {
     for (entity, player, level, zone, presence) in &players {

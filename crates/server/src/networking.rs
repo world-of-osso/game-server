@@ -386,42 +386,53 @@ pub fn send_load_terrain(connection: Entity, senders: &mut Query<&mut MessageSen
     info!("Sent LoadTerrain: azeroth tile (32, 48)");
 }
 
-/// Read PlayerInput messages and apply movement.
-fn process_player_inputs(
-    mut commands: Commands,
-    mut receivers: Query<(&mut MessageReceiver<PlayerInput>, &PlayerLink)>,
-    mut players: Query<PlayerMovement, With<Player>>,
-    mut presence_q: Query<
+#[derive(SystemParam)]
+struct PlayerInputParams<'w, 's> {
+    commands: Commands<'w, 's>,
+    receivers: Query<
+        'w,
+        's,
         (
-            &mut shared::components::PresenceStatus,
-            &mut crate::friends::PresenceTracker,
+            &'static mut MessageReceiver<PlayerInput>,
+            &'static PlayerLink,
+        ),
+    >,
+    players: Query<'w, 's, PlayerMovement, With<Player>>,
+    presence: Query<
+        'w,
+        's,
+        (
+            &'static mut shared::components::PresenceStatus,
+            &'static mut crate::friends::PresenceTracker,
         ),
         With<Player>,
     >,
-    mounted: Query<Entity, (With<Player>, With<Mounted>)>,
-    time: Res<Time>,
-    mut auto_afk: ResMut<crate::friends::AutoAfkScheduler>,
-    dirty_queue: Option<Res<InterestDirtyQueue>>,
-    replication_dirty: Option<Res<ReplicationDirtyQueue>>,
-) {
-    for (mut receiver, link) in receivers.iter_mut() {
+    mounted: Query<'w, 's, Entity, (With<Player>, With<Mounted>)>,
+    auto_afk: ResMut<'w, crate::friends::AutoAfkScheduler>,
+    dirty_queue: Option<Res<'w, InterestDirtyQueue>>,
+    replication_dirty: Option<Res<'w, ReplicationDirtyQueue>>,
+}
+
+/// Read PlayerInput messages and apply movement.
+fn process_player_inputs(time: Res<Time>, mut params: PlayerInputParams) {
+    for (mut receiver, link) in &mut params.receivers {
         for input in receiver.receive() {
             crate::friends::mark_player_activity(
                 link.0,
-                &mut presence_q,
-                &mut auto_afk,
+                &mut params.presence,
+                &mut params.auto_afk,
                 time.elapsed(),
-                replication_dirty.as_deref(),
+                params.replication_dirty.as_deref(),
             );
-            if input.swimming && mounted.contains(link.0) {
-                commands.entity(link.0).remove::<Mounted>();
+            if input.swimming && params.mounted.contains(link.0) {
+                params.commands.entity(link.0).remove::<Mounted>();
             }
-            let changes = apply_movement_input(&input, link.0, &mut players, &time);
+            let changes = apply_movement_input(&input, link.0, &mut params.players, &time);
             if changes.position_changed {
-                mark_interest_position_changed(dirty_queue.as_deref(), link.0);
+                mark_interest_position_changed(params.dirty_queue.as_deref(), link.0);
             }
             if changes.replicated_state_changed
-                && let Some(replication_dirty) = replication_dirty.as_deref()
+                && let Some(replication_dirty) = params.replication_dirty.as_deref()
             {
                 replication_dirty.mark(link.0);
             }

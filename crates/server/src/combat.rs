@@ -1,3 +1,4 @@
+use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 use lightyear::prelude::*;
 use shared::components::{CombatStatus, Health, Npc, Position};
@@ -130,23 +131,47 @@ fn start_attack_system(
     }
 }
 
+type AutoAttackers<'w, 's> = Query<
+    'w,
+    's,
+    (
+        Entity,
+        &'static CombatTarget,
+        &'static mut AutoAttack,
+        &'static Position,
+    ),
+>;
+
+type AutoAttackTargets<'w, 's> = Query<
+    'w,
+    's,
+    (
+        &'static Position,
+        &'static mut Health,
+        Option<&'static mut LastDamager>,
+        Has<Npc>,
+    ),
+>;
+
+#[derive(SystemParam)]
+pub(crate) struct AutoAttackParams<'w, 's> {
+    attackers: AutoAttackers<'w, 's>,
+    targets: AutoAttackTargets<'w, 's>,
+    senders: Query<'w, 's, &'static mut MessageSender<CombatEvent>>,
+    combat_log: ResMut<'w, CombatLog>,
+    commands: Commands<'w, 's>,
+    combat_statuses: Query<'w, 's, &'static CombatStatus>,
+    replication_dirty: Option<Res<'w, ReplicationDirtyQueue>>,
+    player_deaths: MessageWriter<'w, crate::death::PlayerDeathTransition>,
+}
+
 /// Process auto-attacks: tick timers, deal damage when in range and timer ready.
-pub(crate) fn auto_attack_system(
-    time: Res<Time>,
-    mut attackers: Query<(Entity, &CombatTarget, &mut AutoAttack, &Position)>,
-    mut targets: Query<(&Position, &mut Health, Option<&mut LastDamager>, Has<Npc>)>,
-    mut senders: Query<&mut MessageSender<CombatEvent>>,
-    mut combat_log: ResMut<CombatLog>,
-    mut commands: Commands,
-    combat_statuses: Query<&CombatStatus>,
-    replication_dirty: Option<Res<ReplicationDirtyQueue>>,
-    mut player_deaths: MessageWriter<crate::death::PlayerDeathTransition>,
-) {
+pub(crate) fn auto_attack_system(time: Res<Time>, mut params: AutoAttackParams) {
     let dt = time.delta_secs();
     let (elapsed, combat_expires_at) = combat_timing(&time);
     let mut events = Vec::new();
 
-    for (attacker_entity, combat_target, mut auto_attack, attacker_pos) in &mut attackers {
+    for (attacker_entity, combat_target, mut auto_attack, attacker_pos) in &mut params.attackers {
         let Some(target_entity) = ready_auto_attack_target(combat_target, &mut auto_attack, dt)
         else {
             continue;
@@ -154,32 +179,37 @@ pub(crate) fn auto_attack_system(
         let Some(outcome) = try_swing(
             attacker_entity,
             attacker_pos,
-            &mut targets,
+            &mut params.targets,
             target_entity,
             &mut auto_attack,
-            &mut commands,
+            &mut params.commands,
         ) else {
             continue;
         };
         refresh_combatants(
-            &mut commands,
-            &combat_statuses,
+            &mut params.commands,
+            &params.combat_statuses,
             attacker_entity,
             target_entity,
             combat_expires_at,
         );
-        mark_replication_changed(replication_dirty.as_deref(), target_entity);
+        mark_replication_changed(params.replication_dirty.as_deref(), target_entity);
         record_swing_events(
-            &mut commands,
+            &mut params.commands,
             &mut events,
-            &mut player_deaths,
+            &mut params.player_deaths,
             attacker_entity,
             target_entity,
             outcome,
         );
     }
 
-    broadcast_events(&events, &mut senders, &mut combat_log, elapsed);
+    broadcast_events(
+        &events,
+        &mut params.senders,
+        &mut params.combat_log,
+        elapsed,
+    );
 }
 
 fn combat_timing(time: &Time) -> (f64, f64) {
@@ -199,15 +229,21 @@ fn ready_auto_attack_target(
     combat_target.0
 }
 
+type CombatMaintenanceQuery<'w, 's> = Query<
+    'w,
+    's,
+    (
+        Entity,
+        &'static mut CombatState,
+        Option<&'static CombatTarget>,
+        Option<&'static AutoAttack>,
+        Option<&'static CombatStatus>,
+    ),
+>;
+
 fn maintain_in_combat_state_system(
     time: Res<Time>,
-    mut query: Query<(
-        Entity,
-        &mut CombatState,
-        Option<&CombatTarget>,
-        Option<&AutoAttack>,
-        Option<&CombatStatus>,
-    )>,
+    mut query: CombatMaintenanceQuery,
     mut commands: Commands,
 ) {
     let combat_expires_at = time.elapsed_secs_f64() + COMBAT_GRACE_SECS;
@@ -224,7 +260,7 @@ fn maintain_in_combat_state_system(
         }
         if now >= combat_state.expires_at {
             let mut entity_commands = commands.entity(entity);
-            if !combat_status.is_some_and(|status| !status.0) {
+            if combat_status.is_none_or(|status| status.0) {
                 entity_commands.insert(CombatStatus(false));
             }
             entity_commands.remove::<CombatState>();

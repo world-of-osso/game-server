@@ -21,6 +21,7 @@ pub(crate) struct NetworkVisibility {
 }
 
 impl NetworkVisibility {
+    #[cfg(test)]
     pub(crate) fn is_visible(&self, sender: Entity) -> bool {
         self.visible_senders.contains(&sender)
     }
@@ -143,11 +144,11 @@ impl InterestIndex {
         if self.target_positions.contains_key(&entity) {
             self.update_target_position(entity, position);
         }
-        if let Some(&connection) = self.connection_by_player.get(&entity) {
-            if let Some(observer) = self.observers.get_mut(&connection) {
-                observer.position = position;
-                self.dirty_observers.insert(connection);
-            }
+        if let Some(&connection) = self.connection_by_player.get(&entity)
+            && let Some(observer) = self.observers.get_mut(&connection)
+        {
+            observer.position = position;
+            self.dirty_observers.insert(connection);
         }
     }
 
@@ -421,6 +422,7 @@ fn interest_bucket(position: &Position) -> InterestBucket {
 }
 
 /// Update visibility of a single entity for all players.
+#[cfg(test)]
 fn update_entity_visibility(
     entity_pos: &Position,
     state: &mut NetworkVisibility,

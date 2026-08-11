@@ -54,12 +54,20 @@ fn initialize_rest_area_registry(
     registry.initialized = true;
 }
 
+type RestPlayerQuery<'w, 's> = Query<
+    'w,
+    's,
+    (
+        &'static Position,
+        &'static Level,
+        Option<&'static mut PlayerRestState>,
+    ),
+    Or<(Changed<Position>, Changed<Level>, Without<PlayerRestState>)>,
+>;
+
 fn update_player_rest_state(
     connections: Query<(Entity, &PlayerLink), With<Authenticated>>,
-    mut players: Query<
-        (&Position, &Level, Option<&mut PlayerRestState>),
-        Or<(Changed<Position>, Changed<Level>, Without<PlayerRestState>)>,
-    >,
+    mut players: RestPlayerQuery,
     registry: Res<RestAreaRegistry>,
     mut commands: Commands,
     mut senders: Query<&mut MessageSender<RestStateUpdate>>,

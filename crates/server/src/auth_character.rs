@@ -180,9 +180,11 @@ pub fn process_select_character(
     for (entity, account_id, req) in requests {
         despawn_stale_player(&existing_players, req.character_id, &mut commands);
         handle_select(
-            entity,
-            account_id,
-            &req,
+            CharacterSelection {
+                connection: entity,
+                account_id,
+                request: &req,
+            },
             db,
             &mut enter_senders,
             &mut terrain_senders,
@@ -242,30 +244,39 @@ pub(crate) fn despawn_stale_player(
     }
 }
 
-fn handle_select(
-    conn: Entity,
+struct CharacterSelection<'a> {
+    connection: Entity,
     account_id: u64,
-    req: &SelectCharacter,
+    request: &'a SelectCharacter,
+}
+
+fn handle_select(
+    selection: CharacterSelection<'_>,
     db: &GameDatabase,
     enter_senders: &mut Query<&mut MessageSender<EnterWorldResponse>>,
     terrain_senders: &mut Query<&mut MessageSender<LoadTerrain>>,
     commands: &mut Commands,
     player_deaths: &mut MessageWriter<crate::death::PlayerDeathTransition>,
 ) {
-    if !validate_ownership(db, account_id, req.character_id) {
-        send_enter_error(conn, enter_senders, "Character not found");
+    let character_id = selection.request.character_id;
+    if !validate_ownership(db, selection.account_id, character_id) {
+        send_enter_error(selection.connection, enter_senders, "Character not found");
         return;
     }
-    let Some(data) = persistence::load_character(&db.db, req.character_id) else {
-        send_enter_error(conn, enter_senders, "Character data missing");
+    let Some(data) = persistence::load_character(&db.db, character_id) else {
+        send_enter_error(
+            selection.connection,
+            enter_senders,
+            "Character data missing",
+        );
         return;
     };
-    let state = load_selected_character_state(db, req.character_id, data.race);
+    let state = load_selected_character_state(db, character_id, data.race);
     let guild = state.guild.clone();
     let player_entity = spawn_player_entity(
         commands,
         &data,
-        req.character_id,
+        character_id,
         guild.as_ref(),
         build_player_init_state(state),
     );
@@ -274,12 +285,12 @@ fn handle_select(
             player: player_entity,
         });
     }
-    insert_world_components(commands, conn, player_entity, req.character_id);
-    send_enter_success(conn, enter_senders, player_entity);
-    send_load_terrain(conn, terrain_senders);
+    insert_world_components(commands, selection.connection, player_entity, character_id);
+    send_enter_success(selection.connection, enter_senders, player_entity);
+    send_load_terrain(selection.connection, terrain_senders);
     info!(
         "Character {} entered world (account {})",
-        req.character_id, account_id
+        character_id, selection.account_id
     );
 }
 

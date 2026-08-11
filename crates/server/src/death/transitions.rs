@@ -1,5 +1,7 @@
 use std::collections::HashSet;
 
+use bevy::ecs::system::SystemParam;
+
 use super::*;
 
 #[derive(Message, Debug, Clone, Copy, PartialEq, Eq)]
@@ -21,17 +23,22 @@ type PlayerDeathTransitionQuery<'w, 's> = Query<
     With<Player>,
 >;
 
+#[derive(SystemParam)]
+pub(super) struct PlayerDeathParams<'w, 's> {
+    players: PlayerDeathTransitionQuery<'w, 's>,
+    connections: Query<'w, 's, (Entity, &'static PlayerLink), With<Authenticated>>,
+    state: Res<'w, DeathServerState>,
+    time: Res<'w, Time>,
+    commands: Commands<'w, 's>,
+    senders: Query<'w, 's, &'static mut MessageSender<DeathStateUpdate>>,
+    replication_dirty: Option<Res<'w, ReplicationDirtyQueue>>,
+}
+
 pub(super) fn process_player_death_transitions(
     mut transitions: MessageReader<PlayerDeathTransition>,
-    mut players: PlayerDeathTransitionQuery,
-    connections: Query<(Entity, &PlayerLink), With<Authenticated>>,
-    state: Res<DeathServerState>,
-    time: Res<Time>,
-    mut commands: Commands,
-    mut senders: Query<&mut MessageSender<DeathStateUpdate>>,
-    replication_dirty: Option<Res<ReplicationDirtyQueue>>,
+    mut params: PlayerDeathParams,
 ) {
-    let now = current_seconds(&time);
+    let now = current_seconds(&params.time);
     let processed_players = transitions
         .read()
         .map(|transition| transition.player)
@@ -41,7 +48,7 @@ pub(super) fn process_player_death_transitions(
         DEATH_PLAYERS_VISITED.fetch_add(1, Ordering::SeqCst);
 
         let Ok((position, mut health, durability, death_state, client_id, player)) =
-            players.get_mut(player_entity)
+            params.players.get_mut(player_entity)
         else {
             continue;
         };
@@ -49,26 +56,29 @@ pub(super) fn process_player_death_transitions(
             continue;
         }
         health.current = 0.0;
-        mark_player_death_replication(replication_dirty.as_deref(), player_entity);
+        mark_player_death_replication(params.replication_dirty.as_deref(), player_entity);
         let death_state = build_detected_player_death_state(
             client_id.0,
             position,
             player.race,
-            &state.graveyards,
+            &params.state.graveyards,
             now,
         );
         if let Some(mut durability) = durability {
             crate::durability::apply_death_loss(&mut durability);
         }
-        commands.entity(player_entity).insert(death_state.clone());
-        if let Some(conn_entity) = connection_for_player(player_entity, &connections) {
+        params
+            .commands
+            .entity(player_entity)
+            .insert(death_state.clone());
+        if let Some(conn_entity) = connection_for_player(player_entity, &params.connections) {
             send_update(
                 conn_entity,
                 position,
                 death_state,
                 Some("you died".into()),
                 None,
-                &mut senders,
+                &mut params.senders,
             );
         }
     }

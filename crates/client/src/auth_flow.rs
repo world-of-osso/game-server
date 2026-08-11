@@ -44,9 +44,7 @@ pub(super) fn connect_to_server(mut commands: Commands, action: Res<CliAction>) 
 }
 
 pub(super) fn on_link_established(trigger: On<Add, Connected>, mut commands: Commands) {
-    commands
-        .entity(trigger.entity)
-        .insert(ReplicationReceiver::default());
+    commands.entity(trigger.entity).insert(ReplicationReceiver);
 }
 
 pub(super) fn on_connected(
