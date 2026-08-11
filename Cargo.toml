@@ -7,6 +7,9 @@ exclude = ["vendor/bevy_replicon", "vendor/lightyear_replication"]
 edition = "2024"
 rust-version = "1.95"
 
+[profile.dev]
+incremental = true
+
 # Optimize deps in debug builds (Bevy is unusably slow at opt-level 0)
 [profile.dev.package."*"]
 opt-level = 2
