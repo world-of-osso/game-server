@@ -1,6 +1,6 @@
 # game-server
 
-Bevy 0.18 authoritative game server for the WoW project (Lightyear networking, redb auth/characters, SQLite world data).
+Bevy 0.19 authoritative game server for the WoW project (Lightyear 0.28 networking, redb auth/characters, SQLite world data).
 
 ## Wiki
 

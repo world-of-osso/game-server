@@ -1,6 +1,6 @@
 # Tick Model
 
-The current server uses a 50 ms outer runner and a 50 ms Bevy fixed timestep configured through Lightyear, producing a nominal 20 Hz authoritative simulation. Runtime work spans multiple Bevy schedules; there is no implemented global seven-stage fixed pipeline. The proposed ordering contract is in [[tick-loop-design]], and the exhaustive correctness/recurring-work review is [[tick-loop-audit]].
+The current server uses Bevy 0.19 with Lightyear 0.28.0, a 50 ms outer runner, and a 50 ms Bevy fixed timestep configured through Lightyear, producing a nominal 20 Hz authoritative simulation. `StatesPlugin` is required explicitly by the server and test harnesses. Runtime work spans multiple Bevy schedules; there is no implemented global seven-stage fixed pipeline. The proposed ordering contract is in [[tick-loop-design]], and the exhaustive correctness/recurring-work review is [[tick-loop-audit]].
 
 ## Content
 
@@ -67,7 +67,7 @@ Lightyear owns transport and replication schedules:
 4. Game-server hooks forward dirty state before Lightyear's PostUpdate replication buffer.
 5. Lightyear buffers replication/messages and flushes them to transport.
 
-Each connection receives a `ReplicationSender` with a 50 ms `SinceLastAck` cadence. Dirty-candidate processing avoids steady-state traversal of unchanged replication roots while preserving initial sync, visibility, and ACK/NACK behavior.
+Each connection receives a `ReplicationSender`; Lightyear 0.28.0 delegates send traversal to vendored `bevy_replicon` 0.41.1, with `ReplicationMetadata` enforcing a 50 ms cadence. Dirty-candidate processing avoids steady-state traversal of unchanged replication roots while preserving new-sender full sync, local visibility state, and mutation ACK/NACK retention.
 
 ## Lower-Frequency and State-Driven Work
 
@@ -112,8 +112,10 @@ Disconnect saves are observer-driven. Shutdown saves run in `Last` only when `Ap
 - [crates/server/src/persistence_runtime.rs](../../../crates/server/src/persistence_runtime.rs) — 300-tick save cadence and shutdown flush
 - [crates/server/src/admin_ipc.rs](../../../crates/server/src/admin_ipc.rs) — Update polling boundary
 - [crates/server/src/admin_ipc_server.rs](../../../crates/server/src/admin_ipc_server.rs) — independent socket/Tokio loop
-- [vendor/lightyear_replication/src/send/plugin.rs](../../../vendor/lightyear_replication/src/send/plugin.rs) — PostUpdate replication pipeline
-- [Cargo.lock](../../../Cargo.lock) — Bevy and Lightyear locked versions
+- [vendor/lightyear_replication/src/send.rs](../../../vendor/lightyear_replication/src/send.rs) — Lightyear 0.28.0 PostUpdate replication pipeline
+- [Cargo.lock](../../../Cargo.lock) — Bevy 0.19.0, Lightyear 0.28.0, and bevy_replicon 0.41.1 locked versions
+- [vendor/lightyear_replication/UPSTREAM.md](../../../vendor/lightyear_replication/UPSTREAM.md) — vendored Lightyear 0.28.0 provenance
+- [vendor/bevy_replicon/UPSTREAM.md](../../../vendor/bevy_replicon/UPSTREAM.md) — vendored bevy_replicon 0.41.1 provenance
 
 ## See Also
 

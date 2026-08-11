@@ -1,6 +1,6 @@
 # Semantic No-op Replication Updates
 
-The server previously dirtied replicated components when a system assigned a value equal to the existing value. Bevy change ticks treat mutable assignment as a change; Lightyear 0.26.4's server sender checks those ticks, not component equality. The client later suppresses equal ECS replacement, but only after serialization, batching, transport, delivery, deserialization, and comparison. The fixes remove the confirmed recurring no-op writers. No CPU, bandwidth, or network improvement is claimed because direct serialized-update proof and live bandwidth measurement remain blocked/unmeasured.
+The server previously dirtied replicated components when a system assigned a value equal to the existing value. Bevy 0.19 change ticks treat mutable assignment as a change; Lightyear 0.28.0's server sender delegates send traversal to vendored `bevy_replicon` 0.41.1 and still does not value-filter equal mutable assignments before serialization. The client later suppresses equal ECS replacement, but only after serialization, batching, transport, delivery, deserialization, and comparison. The fixes remove the confirmed recurring no-op writers. No CPU, bandwidth, or network improvement is claimed because direct serialized-update proof and live bandwidth measurement remain blocked/unmeasured.
 
 ## Root Cause
 
@@ -18,7 +18,7 @@ mutable equal assignment
 
 The sender does not perform a value-equality check before serialization. `SinceLastAck` can keep a dirty component eligible until the corresponding update is acknowledged. The client equality check therefore prevents downstream client `Changed<T>` work, but does not undo server-side change detection or wire cost.
 
-The locked dependency is Lightyear `0.26.4` (`Cargo.lock`). Server replication uses `ReplicationSender` with a 50 ms interval and `SendUpdatesMode::SinceLastAck` (`crates/server/src/networking.rs`).
+The locked dependency is Lightyear `0.28.0` with vendored `bevy_replicon` `0.41.1` (`Cargo.lock`). Server replication uses `ReplicationSender` with `ReplicationMetadata` configured for a 50 ms interval and `SendUpdatesMode::SinceLastAck` (`crates/server/src/main.rs`, `crates/server/src/networking.rs`).
 
 ## RED Evidence
 
@@ -95,9 +95,11 @@ Future NPC damage writers must route through the same authoritative death transi
 - [player networking](../../../crates/server/src/networking.rs) — player movement writer
 - [presence system](../../../crates/server/src/friends.rs) — Online/Afk synchronization
 - [combat system](../../../crates/server/src/combat.rs) — active combat state maintenance
-- [dependency versions](../../../Cargo.lock) — Lightyear `0.26.4` lockfile resolution
+- [dependency versions](../../../Cargo.lock) — Bevy `0.19.0`, Lightyear `0.28.0`, and `bevy_replicon` `0.41.1` lockfile resolution
 - `game-server` commits `86d73f5`, `74edc39`, `f33c95a`, `bd31161`, `1c139e9`, `e13e09e`, `057dd17`, `41feebb`, `945eb0f`, `f84ee17`, and `c8762ed` — no-op guards, direct NPC death transition, ruled-out Gold coverage, and regression tests
-- Local Lightyear `0.26.4` sender/receiver source — tick-only sender selection and client equality suppression
+- [vendored Lightyear provenance](../../../vendor/lightyear_replication/UPSTREAM.md) — Lightyear `0.28.0` integration boundary
+- [vendored bevy_replicon provenance](../../../vendor/bevy_replicon/UPSTREAM.md) — `bevy_replicon` `0.41.1` dirty-candidate integration
+- Local Lightyear `0.28.0` sender/receiver source — cadence-gated candidate selection and client equality suppression
 
 ## See Also
 

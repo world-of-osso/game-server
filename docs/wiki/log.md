@@ -1,5 +1,9 @@
 # Wiki Log
 
+## [2026-08-10] migration | Document Bevy 0.19 and Lightyear 0.28.0 upgrade
+
+Updated `AGENTS.md`, `CLAUDE.md`, `ARCHITECTURE.md`, [[dev-commands]], [[reference-repos]], [[networking]], [[tick-model]], [[tick-loop-design]], [[stack-decisions]], [[azerothcore-comparison]], [[recurring-loop-elimination]], [[semantic-noop-replication]], [[tick-loop-audit]], and `index.md` for game-server commits `0b1e2e6` and `8b400f5` plus shared-protocol commit `a78c958`. Recorded Rust 1.95, Bevy 0.19, Lightyear 0.28.0, vendored `bevy_replicon` 0.41.1 delegation, global/per-sender dirty candidates, new-sender full sync, mutation ACK/NACK retention, local `NetworkVisibility` plus Lightyear `VisibilityExt`, UDP transport, `ReplicationMetadata` 50 ms cadence, and explicit `StatesPlugin` setup. Current proof includes shared-protocol, server, admin CLI, and seven named connection/replication integration tests. Component-aware entries, exhaustive writer coverage, and live zero-render CPU verification remain partial/unclaimed. Documentation only; no source or dependency changes made by this update.
+
 ## [2026-08-10] audit | Reconcile death source split and auto-AFK scan status
 
 Updated [[tick-loop-design]], [[tick-loop-audit]], [[recurring-loop-elimination]], [[tick-model]], [[combat]], [[networking]], and `index.md` for current game-server commits `b4e5cbd`, `2106cd8`, `9412352`, `16768b3`, and `1b7c5a4`. Recorded the player death consumer split into `death/transitions.rs` and focused proof split into `combat_tests/death.rs`; recorded auto-AFK follow-ups and clarified that the broad all-player auto-AFK scan is completed/eliminated while only the wider lower-cadence scheduler invocation remains partial; replaced imprecise due-player wording with due-deadline entity resolution. No live CPU savings claim; no source behavior changed.

@@ -31,7 +31,7 @@ Server gameplay systems.
 | Page | Summary |
 |------|---------|
 | [[ecs-storage]] | Bevy ECS as columnar in-memory database: archetype tables, zero-overhead queries, built-in change detection |
-| [[networking]] | Lightyear over QUIC: dirty-candidate replication, GoldUpdateQueue timing, change-filtered durability/rest snapshots, drain-first calendar/trade requests, PlayerInput model, completed player-death and broad auto-AFK scan reductions, channels, and interest management |
+| [[networking]] | Lightyear 0.28.0 over UDP with vendored bevy_replicon 0.41.1: dirty-candidate replication, 50 ms ReplicationMetadata cadence, local NetworkVisibility plus VisibilityExt, GoldUpdateQueue timing, change-filtered durability/rest snapshots, drain-first calendar/trade requests, PlayerInput model, completed player-death and broad auto-AFK scan reductions, channels, and interest management |
 | [[persistence]] | Dual-layer storage: redb for mutable player data, login-loaded gold, mutation-boundary GoldUpdateQueue replication, and SQLite for static world data |
 | [[world-data]] | SQLite world.db: all tables with row counts, AzerothCore/Retail DB2 sources, WorldDataPlugin, SpellDatabasePlugin |
 | [[tick-model]] | Observed server loop: 50ms runner/fixed cadence, schedule ownership, explicit ordering, completed player-death and broad auto-AFK scan reductions, maintenance gates, and IPC boundary |
@@ -45,6 +45,6 @@ Debug logs and root cause analyses.
 
 | Page | Summary |
 |------|---------|
-| [[semantic-noop-replication]] | First- and second-wave server equal-assignment proofs/fixes, Lightyear 0.26.4 tick-only sending, direct NPC death transition, Gold ruled out, and blocked wire-level proof |
+| [[semantic-noop-replication]] | First- and second-wave server equal-assignment proofs/fixes, Bevy 0.19 change ticks, Lightyear 0.28.0/bevy_replicon sending, direct NPC death transition, Gold ruled out, and blocked wire-level proof |
 | [[recurring-loop-elimination]] | Tests-first reductions and eliminations across auction, terrain, friends, auto-AFK, interest, Lightyear, Who roster, gold, durability, calendar, trade-offer, inactive auto-attack, rest-state, and player-death scans; broad death/auto-AFK scans are eliminated while wider scheduler/dirty-boundary requirements remain partial |
 | [[tick-loop-audit]] | Exhaustive recurring-schedule audit: 103 registrations / 130 expanded systems; seven narrow removal slices plus player-death and broad auto-AFK scan reductions complete, while preserved Lightyear, interest, friends, and terrain requirements remain partial alongside persistence/order risks and receiver-fan-out measurement |

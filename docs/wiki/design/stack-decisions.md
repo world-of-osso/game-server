@@ -15,7 +15,7 @@ Lightyear provides everything game networking needs as a Bevy-native plugin:
 - **Interest management** — only replicates entities near each client
 - **Delta compression** — sends component diffs, not full state
 - **Client prediction + rollback** — client predicts locally, reconciles on server correction
-- **QUIC transport** — reliable ordered channels for combat/chat/inventory; unreliable for movement
+- **UDP + netcode transport** — reliable ordered channels for combat/chat/inventory; unreliable for movement
 
 The alternative (roll a custom networking layer) was not evaluated seriously. Lightyear solves known-hard problems (rollback, relevance, delta compression) with Bevy integration that would take months to replicate correctly.
 
@@ -36,7 +36,7 @@ SpacetimeDB was evaluated against `~/Repos/SpacetimeDB/ARCHITECTURE.md` and reje
 1. **No tick loop control** — reducers fire as they arrive. Games need deterministic 20Hz batching.
 2. **WASM overhead** — 10–30% cost over native (bounds checks, no SIMD, indirect calls). Relevant at 2000 entities per combat tick.
 3. **Global write lock** — a reducer holds the lock for its full execution. A 50ms tick = 50ms blocked reads.
-4. **Protocol mismatch** — forces WebSocket + BSATN. QUIC with unreliable channels is required for movement.
+4. **Protocol mismatch** — forces WebSocket + BSATN. UDP with Lightyear's reliable and unreliable channels is required for movement and ordered game messages.
 
 SpacetimeDB solves persistence and state sync; those are the easy problems. It cannot solve tick control, and the write lock is architectural, not fixable.
 
@@ -52,6 +52,7 @@ Read-only world data (creature templates, spells, spawn points) is loaded once a
 
 - [ARCHITECTURE.md](../../../ARCHITECTURE.md) — stack table, SpacetimeDB rejection rationale, Bevy ECS storage analysis, persistence strategy
 - [CLAUDE.md](../../../CLAUDE.md) — dependency versions, world.db description
+- [crates/server/Cargo.toml](../../../crates/server/Cargo.toml) — Lightyear UDP/netcode features
 
 ## See Also
 

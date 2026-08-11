@@ -1,12 +1,12 @@
 # Networking
 
-Lightyear handles all game networking over QUIC (via `quinn`). The server is authoritative; clients predict locally and reconcile on correction.
+Lightyear 0.28.0 handles game networking over UDP with netcode. The server is authoritative; clients predict locally and reconcile on correction. The server and test harnesses explicitly add Bevy 0.19's `StatesPlugin` where state scheduling is used.
 
 ## Content
 
 ## Transport
 
-QUIC provides both reliable and unreliable streams natively, with built-in encryption and connection migration. Lightyear uses `quinn` under the hood. The server binds on port 5000 (`SERVER_PORT`).
+Lightyear uses its UDP transport with netcode. The server binds on port 5000 (`SERVER_PORT`).
 
 ## Server → Client Replication
 
@@ -26,25 +26,25 @@ Lightyear handles:
 - **Entity lifecycle** — spawn/despawn packets as entities enter/leave client view
 - **Future zone transitions** — Lightyear can carry visibility-driven removal/insertion, but `game-server` does not yet implement runtime zone handoff
 
-The server's Lightyear `0.26.4` sender still wakes on its 50 ms `SinceLastAck` cadence, but commits `269655a` and `30b5078` remove the steady-state per-sender traversal of every replicated root and component. The sender now processes dirty global/per-sender candidates and retains candidates until ACK/NACK and pending-action semantics permit removal. A new or reset sender queues every current root once for initial full sync; subsequent unchanged roots do not enter the candidate traversal.
+Lightyear 0.28.0 delegates sender traversal to vendored `bevy_replicon` 0.41.1. `ReplicationMetadata` keeps the sender cadence at 50 ms. The migration preserves dirty global and per-sender candidates, mutation ACK/NACK retention, and one full sync for each new or reset sender; subsequent unchanged roots do not enter candidate traversal.
 
 The client compares decoded replicated components and suppresses equal ECS replacement only after serialization, batching, transport, delivery, and deserialization. First-wave fixes cover NPC movement, player displacement, presence, combat status, movement state, and gravity; second-wave commits `1c139e9`, `e13e09e`, `057dd17`, and `41feebb` cover equal derived stats, respawn state, equipment appearance, and guild membership. `f84ee17` adds independent clear-path coverage for the equipment guard, while `945eb0f` rules out unchanged Gold synchronization as already guarded. See [[semantic-noop-replication]] for the separate equal-assignment coverage; no Character advancement or `<=10%` CPU claim is made.
 
 ### Dirty Candidate Replication
 
-`ReplicationDirtyQueue::mark` targets all connected senders; `mark_for_sender` targets one connection for visibility-specific work. Component inserts/configuration and `NetworkVisibility` removal enqueue replication roots. Visibility gain/loss, room changes, hierarchy children, spawn/despawn actions, ACK retention, NACK retry, replication groups, priorities, delta compression, entity mapping, and existing action/update encoding remain inside Lightyear's semantic pipeline.
+`ReplicationDirtyQueue::mark` targets all connected senders; `mark_for_sender` targets one connection for visibility-specific work. Component inserts/configuration and `NetworkVisibility` removal enqueue replication roots. Lightyear's `VisibilityExt` remains the immediate visibility mutation boundary. Visibility gain/loss, room changes, hierarchy children, spawn/despawn actions, ACK retention, NACK retry, replication groups, priorities, delta compression, entity mapping, and existing action/update encoding remain inside the Lightyear/`bevy_replicon` semantic pipeline.
 
 Authoritative marks are emitted at real state boundaries: player input/gravity, NPC movement/leash restoration, combat transitions, player lethal-death transitions, derived-stat recalculation, GoldUpdateQueue application, barber appearance updates, friend/presence and chat/emote activity, plus interest/visibility transitions. The queue is not a replacement for component change-tick filtering; it narrows candidates before the existing component and ACK checks.
 
 `aa5dddb` separates movement's two dirty domains. `networking_movement.rs` reports `position_changed` for translation and `replicated_state_changed` for any replicated movement state. A turn-in-place or zero-translation input can therefore enqueue `Rotation` or `MovementSpeed` replication without dirtying `InterestDirtyQueue`; interest remains position-only. The zero-translation regression was RED before the fix, and the focused server test slice passed with 43 tests GREEN after it. `networking.rs` retains orchestration while movement calculations live in the extracted module.
 
-The sender change is a vendored patch rather than a protocol fork. `vendor/lightyear_replication/UPSTREAM.md` records Lightyear `0.26.4`, crates.io checksum `a451536b73e618035472548e8d7f1af51e193649f556318f7836ddc70e6f73d2`, upstream commit `7082c5eb09463fc110461f1cc928994460611e98`, and MIT OR Apache-2.0 licensing. Test-only diagnostics count root candidates and `replicate_entity` visits; they are enabled only for integration proof.
+The sender change is a vendored Lightyear 0.28.0 integration rather than a protocol fork. `vendor/lightyear_replication/UPSTREAM.md` records the crates.io checksum, upstream commit, and MIT OR Apache-2.0 licensing. The vendored Lightyear layer delegates dirty candidate traversal to `bevy_replicon` 0.41.1 and exposes test-only diagnostics for root candidates and replication visits; diagnostics are enabled only for integration proof.
 
 The candidate traversal reduction is **PARTIAL** against the original entity/component-queue requirement: queue entries identify entities only, and dirty entities still traverse replicated components. Component-aware dirty tracking, exhaustive writer coverage, and strict-Empty live client CPU verification remain open; no `<=10%` CPU result is claimed.
 
 ## Interest Management
 
-The pre-`4523373` implementation scanned every `NetworkVisibility` entity against every player every 500 ms. Current interest management is trigger-driven: authoritative position writers mark changed players/NPCs through `InterestDirtyQueue`, while `NetworkVisibility` and `PlayerLink` add/remove observers register or clear lifecycle state. `InterestIndex` stores target positions in 100-yard X/Z buckets, evaluates only dirty observers/targets, and considers the observer's 3×3 bucket neighborhood plus already visible entities.
+The pre-`4523373` implementation scanned every `NetworkVisibility` entity against every player every 500 ms. Current interest management is trigger-driven: authoritative position writers mark changed players/NPCs through `InterestDirtyQueue`, while local `NetworkVisibility` and `PlayerLink` state register or clear lifecycle state. Lightyear's `VisibilityExt` applies connection-specific gain/loss transitions; `InterestIndex` stores target positions in 100-yard X/Z buckets, evaluates only dirty observers/targets, and considers the observer's 3×3 bucket neighborhood plus already visible entities.
 
 Buckets only reduce candidate work. Final visibility still uses the existing exact 3D squared-distance comparison (`<= 100²` yards), with independent per-connection `gain_visibility`/`lose_visibility` transitions. Initial nearby visibility, reconnects, spawns, despawns, teleports, multiple observers, radius boundaries, corpse visibility, and stale visibility cleanup remain covered. `update_interest` still invokes every `FixedUpdate` to drain dirty queues, and no movement-revision counter is modeled, so the literal position-change-only requirement remains **PARTIAL**. `a85b035` split the real fixed-tick integration tests from `interest.rs`; it did not change runtime semantics. See [[recurring-loop-elimination]].
 
@@ -158,11 +158,16 @@ The `CombatChannel` carries `CombatEvent` structs (attacker, target, amount, spe
 - [crates/server/src/networking_tests/physics.rs](../../../crates/server/src/networking_tests/physics.rs) — zero-translation rotation/speed regression proof
 - [crates/server/src/interest.rs](../../../crates/server/src/interest.rs) — dirty-position interest index and visibility transitions
 - [crates/server/src/interest_tests.rs](../../../crates/server/src/interest_tests.rs) — fixed-tick interest behavior proof
-- [vendor/lightyear_replication/UPSTREAM.md](../../../vendor/lightyear_replication/UPSTREAM.md) — Lightyear `0.26.4` provenance
-- [vendor/lightyear_replication/src/send/dirty.rs](../../../vendor/lightyear_replication/src/send/dirty.rs) — dirty global/per-sender queue and lifecycle marks
-- [vendor/lightyear_replication/src/send/candidate.rs](../../../vendor/lightyear_replication/src/send/candidate.rs) — initial sync and candidate processing
-- [vendor/lightyear_replication/src/send/sender.rs](../../../vendor/lightyear_replication/src/send/sender.rs) — ACK/NACK retention
+- [vendor/lightyear_replication/UPSTREAM.md](../../../vendor/lightyear_replication/UPSTREAM.md) — Lightyear 0.28.0 and vendored `bevy_replicon` provenance
+- [vendor/bevy_replicon/UPSTREAM.md](../../../vendor/bevy_replicon/UPSTREAM.md) — `bevy_replicon` 0.41.1 provenance
+- [vendor/bevy_replicon/src/server/dirty.rs](../../../vendor/bevy_replicon/src/server/dirty.rs) — dirty global/per-sender queue and lifecycle marks
+- [vendor/bevy_replicon/src/server.rs](../../../vendor/bevy_replicon/src/server.rs) — candidate drain and new-sender full sync
+- [vendor/lightyear_replication/src/send.rs](../../../vendor/lightyear_replication/src/send.rs) — Lightyear sender integration, cadence, and ACK/NACK handoff
 - [crates/integration-tests/src/tests.rs](../../../crates/integration-tests/src/tests.rs) — in-process replication integration proof
+- [Cargo.toml](../../../Cargo.toml) and [Cargo.lock](../../../Cargo.lock) — Bevy, Lightyear, and Rust versions
+- `game-server` commit `0b1e2e6` — Bevy 0.19/Lightyear 0.28.0 migration and preserved replication proof
+- `game-server` commit `8b400f5` — local `bevy_replicon` dependency for vendored replication tests
+- `shared-protocol` commit `a78c958` — Bevy 0.19/Lightyear 0.28.0 protocol boundary
 - [CLAUDE.md](../../../CLAUDE.md) — dependency versions
 
 ## See Also

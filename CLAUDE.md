@@ -17,7 +17,7 @@ crates/
 
 - `~/Repos/azerothcore` — C++ WoW 3.3.5a server (architecture reference for zone/map threading, combat systems)
 - `~/Repos/rustbolt-core` — Rust WoW server attempt (early stage, structure reference)
-- `~/Projects/wow/wow-engine` — Sibling Bevy 0.18 project (client renderer)
+- `../game-engine` — Sibling Bevy 0.19 project (client renderer)
 
 ## Dev
 
@@ -25,8 +25,8 @@ crates/
 - `cargo test` — Run all tests
 - `./run-tests.sh` — cargo test + clippy
 - `ssh sakuin /opt/game-server/game-server-admin <command>` — Admin CLI (runs on sakuin via IPC socket)
-- Edition 2024, rust-version 1.89
-- Bevy 0.18, lightyear 0.26, redb 3, bitcode 0.6, rusqlite 0.35
+- Edition 2024, rust-version 1.95
+- Bevy 0.19, lightyear 0.28, redb 3, bitcode 0.6, rusqlite 0.35
 
 ## World Data (SQLite)
 

@@ -38,13 +38,13 @@ Evaluated as an alternative persistence/state-sync backend. Rejected.
 - No tick loop control — reducers fire as they arrive, cannot batch to 20Hz
 - WASM overhead — 10–30% vs native for all game logic
 - Global write lock — one 50ms combat tick blocks all reads and writes
-- Protocol mismatch — forces WebSocket + BSATN; game networking needs QUIC with unreliable channels
+- Protocol mismatch — forces WebSocket + BSATN; game networking needs UDP with Lightyear's reliable and unreliable channels
 
 See [[stack-decisions]] for the full rejection rationale.
 
 ## wow-engine — `~/Projects/wow/wow-engine`
 
-Sibling project, not a third-party repo. The client renderer — a Bevy 0.18 project that the client crate will eventually link to. Shares component types via the shared crate.
+Sibling project, not a third-party repo. The client renderer uses Bevy 0.19 and Lightyear 0.28.0 and shares component types through the shared protocol crate. Its renderer migration is coordinated separately from this server upgrade.
 
 ## Retail WoW DB2 Data — `../game-engine/data/`
 
@@ -57,6 +57,7 @@ DB2 CSVs extracted from the retail WoW CASC archive. Source for spell data loade
 
 - [ARCHITECTURE.md](../../../ARCHITECTURE.md) — Reference Repos section, SpacetimeDB rejection
 - [CLAUDE.md](../../../CLAUDE.md) — Reference Repos section, world.db sources
+- [crates/server/Cargo.toml](../../../crates/server/Cargo.toml) — Lightyear UDP/netcode features
 
 ## See Also
 

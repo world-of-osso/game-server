@@ -10,7 +10,7 @@ Draft normative design for the `game-server` runtime loops. It keeps one 20 Hz a
 
 **Review gate:** fix periodic change tracking, define global fixed-phase ordering, and complete the literal Lightyear, interest, friends, and terrain boundaries before treating this design as approved.
 
-**Proposed baseline:** Keep a single 50 ms `FixedUpdate` cadence shared by Bevy and Lightyear.
+**Implemented dependency baseline:** Bevy 0.19 and Lightyear 0.28.0 share a single 50 ms `FixedUpdate` cadence. Lightyear 0.28.0 delegates replication traversal to vendored `bevy_replicon` 0.41.1; this document remains a draft for loop ordering, not an approval of the remaining optimization gates.
 
 In scope:
 
@@ -52,7 +52,7 @@ Independent admin IPC thread
   Unix socket accept loop → mpsc command → Update poll → mpsc response
 ```
 
-The runner interval and fixed timestep are related but not identical concepts. `ScheduleRunnerPlugin` paces outer `App::update()` calls. Lightyear's `TimelinePlugin` applies the configured 50 ms tick duration to Bevy's `Time<Fixed>`. A healthy update normally executes one fixed step, but Bevy may execute zero steps on startup or multiple catch-up steps after a slow update.
+The runner interval and fixed timestep are related but not identical concepts. `ScheduleRunnerPlugin` paces outer `App::update()` calls. Lightyear's `TimelinePlugin` applies the configured 50 ms tick duration to Bevy's `Time<Fixed>`. The server explicitly adds `StatesPlugin` because state scheduling is not provided by the minimal headless plugin set. A healthy update normally executes one fixed step, but Bevy may execute zero steps on startup or multiple catch-up steps after a slow update.
 
 ## Authoritative Fixed-Step Phases
 
@@ -133,7 +133,7 @@ Implementation should expose fixed steps per outer update and schedule duration 
 
 ## Replication Boundary
 
-Authoritative component mutation finishes before Lightyear's PostUpdate replication buffer.
+Authoritative component mutation finishes before Lightyear 0.28.0's PostUpdate replication buffer. `ReplicationMetadata` enforces the 50 ms sender cadence; local `NetworkVisibility` state and Lightyear `VisibilityExt` provide the connection-specific visibility boundary. New or reset senders receive one full sync, and dirty mutation candidates remain retained until ACK/NACK and pending actions permit removal.
 
 Required invariant:
 
@@ -211,8 +211,10 @@ A future zone or instance design may place zone-filtered systems inside the Move
 - [crates/server/src/persistence_runtime.rs](../../../crates/server/src/persistence_runtime.rs) — 300-tick dirty-save cadence
 - [crates/server/src/admin_ipc.rs](../../../crates/server/src/admin_ipc.rs) — ECS-side IPC polling
 - [crates/server/src/admin_ipc_server.rs](../../../crates/server/src/admin_ipc_server.rs) — background socket/Tokio loop
-- [vendor/lightyear_replication/src/send/plugin.rs](../../../vendor/lightyear_replication/src/send/plugin.rs) — PostUpdate replication buffer ordering
-- [Cargo.lock](../../../Cargo.lock) — locked Bevy 0.18.0 and Lightyear 0.26.4 versions
+- [vendor/lightyear_replication/src/send.rs](../../../vendor/lightyear_replication/src/send.rs) — Lightyear 0.28.0 PostUpdate replication integration and cadence
+- [Cargo.lock](../../../Cargo.lock) — locked Bevy 0.19.0, Lightyear 0.28.0, and bevy_replicon 0.41.1 versions
+- [vendor/lightyear_replication/UPSTREAM.md](../../../vendor/lightyear_replication/UPSTREAM.md) — Lightyear 0.28.0 vendored provenance
+- [vendor/bevy_replicon/UPSTREAM.md](../../../vendor/bevy_replicon/UPSTREAM.md) — bevy_replicon 0.41.1 dirty-candidate integration
 
 ## See Also
 

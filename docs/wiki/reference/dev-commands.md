@@ -40,14 +40,15 @@ Regenerates `data/world.db` (132MB SQLite) from AzerothCore SQL dumps and retail
 | Setting | Value |
 |---------|-------|
 | Edition | 2024 |
-| Minimum rust-version | 1.89 |
+| Minimum rust-version | 1.95 |
 
 ## Key Dependency Versions
 
 | Crate | Version |
 |-------|---------|
-| bevy | 0.18 |
-| lightyear | 0.26 |
+| bevy | 0.19 |
+| lightyear | 0.28.0 |
+| bevy_replicon | 0.41.1 (vendored) |
 | redb | 3 |
 | bitcode | 0.6 |
 | rusqlite | 0.35 |
@@ -61,6 +62,9 @@ Regenerates `data/world.db` (132MB SQLite) from AzerothCore SQL dumps and retail
 
 ## Sources
 
+- [Cargo.toml](../../../Cargo.toml) and [Cargo.lock](../../../Cargo.lock) — Rust and locked dependency versions
+- [vendor/lightyear_replication/UPSTREAM.md](../../../vendor/lightyear_replication/UPSTREAM.md) — Lightyear 0.28.0 vendored provenance
+- [vendor/bevy_replicon/UPSTREAM.md](../../../vendor/bevy_replicon/UPSTREAM.md) — bevy_replicon 0.41.1 vendored provenance
 - [CLAUDE.md](../../../CLAUDE.md) — Dev section, dependency versions, world data section
 
 ## See Also

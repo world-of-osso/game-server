@@ -64,7 +64,7 @@ ticks 2-299: periodic system executes and returns
 tick 300: due query does not contain the player
 ```
 
-A temporary Bevy 0.18 reproduction produced:
+A temporary Bevy 0.19 reproduction produced:
 
 ```text
 change before an early-return execution → due changed=[]
@@ -251,7 +251,7 @@ This is widespread recurring work, but **not yet a proven performance defect**. 
 - total receiver-poll share of `Update`
 - scheduler contention from 74 independent systems
 
-Lightyear 0.26.4 supports trigger/event delivery through `RemoteEvent<M>` and `AppTriggerExt`, but converting request/response messages would be a protocol and routing redesign. Do not replace all receiver systems based only on static inspection.
+Lightyear 0.28.0 supports trigger/event delivery through `RemoteEvent<M>` and `AppTriggerExt`, but converting request/response messages would be a protocol and routing redesign. Do not replace all receiver systems based only on static inspection.
 
 Who and calendar are drain-first. The shared trade-offer helper is gated for `ClearTradeItem` and `SetTradeMoney`; six other trade handlers plus chat and emote still have source-proven pre-message work. The 74 typed receiver polls themselves remain **KEEP/MEASURE**.
 
@@ -275,11 +275,11 @@ Required recurring plumbing:
 - ACK/NACK and sender-timer maintenance
 - replication dirty-candidate fanout to connected senders
 
-The steady-state all-root candidate traversal is gone. Initial sync still visits all roots once for a new/reset sender. The dirty queue is entity-only: each dirty entity still enters Lightyear's replicated-component traversal, so the literal entity/component-queue requirement remains **PARTIAL**.
+The steady-state all-root candidate traversal is gone. Lightyear 0.28.0 delegates traversal to vendored `bevy_replicon` 0.41.1. Initial sync still visits all roots once for a new/reset sender, and mutation candidates remain retained until ACK/NACK and pending actions permit removal. The dirty queue is entity-only: each dirty entity still enters replicated-component traversal, so the literal entity/component-queue requirement remains **PARTIAL**.
 
 Interest no longer performs a recurring entities×players scan. Dirty queues and spatial buckets bound the expensive work, but `update_interest` still invokes every `FixedUpdate`; the literal position-change-only execution requirement remains **PARTIAL**.
 
-The vendored replication buffer still performs connection-scaled sender passes, dirty fanout, component checks for dirty entities, and `new_spawns` metadata completion. These are not full-world root scans and are not proven removable; measure sender counts and idle cost before redesign.
+The vendored replication buffer still performs connection-scaled sender passes, dirty fanout, component checks for dirty entities, and `new_spawns` metadata completion. These are not full-world root scans and are not proven removable; measure sender counts and idle cost before redesign. `ReplicationMetadata` keeps this sender cadence at 50 ms.
 
 ## Implemented Reductions and Eliminations
 
@@ -307,7 +307,7 @@ These reductions do not establish completion of the four preserved primary requi
 
 ## Proof Limits
 
-This is a static source audit plus a focused Bevy 0.18 change-detection reproduction. It proves registration coverage, query/gate shape, the persistence bug, and possible scheduler-order-dependent outcomes. It does not prove whole-server CPU cost, bandwidth reduction, production tick overruns, or the benefit of any proposed optimization.
+This is a static source audit plus focused Bevy 0.19 change-detection reproduction. The migration proof at `0b1e2e6`/`8b400f5`/`a78c958` additionally passes the shared-protocol tests, server test suite, admin CLI tests, and seven-test in-process connection/replication integration slice. It still does not prove whole-server CPU cost, bandwidth reduction, production tick overruns, or the benefit of any proposed optimization.
 
 ## Sources
 
@@ -338,8 +338,9 @@ This is a static source audit plus a focused Bevy 0.18 change-detection reproduc
 - [calendar tests](../../../crates/server/src/calendar.rs) — idle, shared-snapshot, routing, and eligibility proof
 - [crates/server/src/trade.rs](../../../crates/server/src/trade.rs) — completed generic offer-update gate plus six remaining pre-message player lookups
 - [crates/server/src/messaging.rs](../../../crates/server/src/messaging.rs) — remaining chat/emote metadata work before receiver checks
-- [vendor/lightyear_replication/src/send/dirty.rs](../../../vendor/lightyear_replication/src/send/dirty.rs) — entity-only global/per-sender dirty queue
-- [vendor/lightyear_replication/src/send/buffer.rs](../../../vendor/lightyear_replication/src/send/buffer.rs) — remaining per-dirty-entity component traversal
+- [vendor/bevy_replicon/src/server/dirty.rs](../../../vendor/bevy_replicon/src/server/dirty.rs) — entity-only global/per-sender dirty queue
+- [vendor/bevy_replicon/src/server.rs](../../../vendor/bevy_replicon/src/server.rs) — remaining per-dirty-entity component traversal
+- [vendor/lightyear_replication/src/send.rs](../../../vendor/lightyear_replication/src/send.rs) — sender cadence and replication metadata
 - [crates/server/src/trade_tests.rs](../../../crates/server/src/trade_tests.rs) — trade-offer idle, batch, routing, and error proof
 - `game-server` commit `969f2e0` — skip idle trade-offer player lookups
 - [crates/server/src/persistence_runtime.rs](../../../crates/server/src/persistence_runtime.rs) — periodic save gate and `Changed` filters
@@ -350,9 +351,9 @@ This is a static source audit plus a focused Bevy 0.18 change-detection reproduc
 - [crates/server/src/inspect.rs](../../../crates/server/src/inspect.rs), [lfg.rs](../../../crates/server/src/lfg.rs), [pvp.rs](../../../crates/server/src/pvp.rs), and [profession.rs](../../../crates/server/src/profession.rs) — request and active-state registrations
 - [crates/server/src/reputation.rs](../../../crates/server/src/reputation.rs), [talent.rs](../../../crates/server/src/talent.rs), [world_map.rs](../../../crates/server/src/world_map.rs), and [stats.rs](../../../crates/server/src/stats.rs) — snapshot, changed-state, and fixed-stat registrations
 - [crates/server/src/persistence.rs](../../../crates/server/src/persistence.rs) — periodic and exit persistence registration
-- [Cargo.lock](../../../Cargo.lock) — locked Bevy 0.18.0 and Lightyear 0.26.4 versions
-- `bevy_ecs 0.18.0 src/system/function_system.rs:445-451,680-684` — system `last_run` advances on execution
-- `bevy_ecs 0.18.0 src/query/filter.rs:1083-1094` — `Changed<T>` compares against system `last_run`
+- [Cargo.lock](../../../Cargo.lock) — locked Bevy 0.19.0, Lightyear 0.28.0, and bevy_replicon 0.41.1 versions
+- `game-server` commits `0b1e2e6` and `8b400f5`, plus `shared-protocol` commit `a78c958` — migration implementation, vendored test dependency, and protocol boundary
+- `bevy_ecs 0.19.0` system/query change-detection sources — system `last_run` advances on execution and `Changed<T>` compares against it
 
 ## See Also
 

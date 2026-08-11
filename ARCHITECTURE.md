@@ -9,7 +9,7 @@ and reconcile with server state.
 ```
 ┌─────────────────────┐            ┌─────────────────────┐
 │  Client (Bevy)      │            │  Server (Bevy)      │
-│  Rendering          │◄───QUIC───►│  Headless           │
+│  Rendering          │◄────UDP────►│  Headless           │
 │  Input capture      │            │  Game logic          │
 │  Client prediction  │            │  Authority           │
 │  Interpolation      │            │  Persistence         │
@@ -30,8 +30,8 @@ use case because:
   entities, this matters.
 - **Write lock during game logic** — a reducer holds the global DB write lock for its entire
   execution. A 50ms combat tick = 50ms of blocked reads and writes.
-- **Protocol mismatch** — forces WebSocket + BSATN. Game networking needs UDP/QUIC with
-  unreliable channels for movement, reliable channels for chat/inventory.
+- **Protocol mismatch** — forces WebSocket + BSATN. Game networking needs UDP with
+  unreliable channels for movement and reliable channels for chat/inventory.
 - **Solves the wrong problems** — persistence is trivial (periodic save to embedded DB).
   State sync has better game-specific solutions (Lightyear) that understand spatial relevance,
   client prediction, and rollback.
@@ -42,7 +42,7 @@ use case because:
 |-------|-------|---------|
 | ECS | `bevy` (headless) | Game state, systems, scheduling. Shared with client. |
 | Networking | `lightyear` | Server-authoritative multiplayer for Bevy. Prediction, interpolation, interest management, delta compression. |
-| Transport | `quinn` (via lightyear) | QUIC — reliable + unreliable channels, encryption, connection migration. |
+| Transport | Lightyear UDP + netcode | UDP transport with reliable and unreliable game channels. |
 | Persistence | `redb` | Embedded, pure Rust, ACID, append-only B-tree. Character saves, inventory, quest state. |
 | Static data | `ron` files or SQLite | Item templates, spell definitions, creature templates. Loaded once at startup. |
 | Serialization | `bitcode` | Fast binary serialization for networking. ~10x faster than serde-json, smaller than bincode. |
@@ -290,7 +290,7 @@ Server validates and applies. Client predicts locally, reconciles on server corr
 | Chat | Reliable ordered | Chat messages, system notifications |
 | Inventory | Reliable ordered | Item moves, loot, trade |
 
-QUIC provides both reliable and unreliable streams natively.
+Lightyear layers reliable and unreliable game channels over its UDP transport.
 
 ## Zone Architecture
 
@@ -307,7 +307,7 @@ for current implementation, proposed phase placement, and instance-isolation opt
 | ECS | Custom OOP hierarchy | Bevy ECS (data-oriented) |
 | Tick rate | ~1ms main loop | 20Hz FixedUpdate (50ms) |
 | Map threading | Thread pool (MapUpdater) | Bevy parallel system scheduling |
-| Networking | Boost ASIO + custom WoW protocol | QUIC via Lightyear |
+| Networking | Boost ASIO + custom WoW protocol | UDP + netcode via Lightyear |
 | Persistence | MySQL (async queries) | redb (embedded, no server) |
 | Static data | MySQL (loaded at startup) | RON/SQLite (loaded at startup) |
 | State sync | Manual packet construction | Automatic via Lightyear replication |

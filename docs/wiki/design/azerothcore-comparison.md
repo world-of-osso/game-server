@@ -10,7 +10,7 @@ Side-by-side comparison of this Rust/Bevy server against AzerothCore, the C++ Wo
 | **Game state model** | Custom OOP hierarchy | Bevy ECS (data-oriented, archetype columns) |
 | **Tick rate** | ~1ms main loop (variable) | 20Hz FixedUpdate (deterministic 50ms ticks) |
 | **Map threading** | Thread pool (MapUpdater) | Bevy parallel system scheduling (automatic) |
-| **Networking** | Boost ASIO + custom WoW protocol | QUIC via Lightyear |
+| **Networking** | Boost ASIO + custom WoW protocol | UDP + netcode via Lightyear |
 | **Persistence** | MySQL (async queries, always live) | redb (embedded; ECS is live state, redb is checkpoint) |
 | **Static data** | MySQL world DB (~500MB, loaded at startup) | SQLite `data/world.db` (132MB, loaded at startup) |
 | **State sync to clients** | Manual packet construction per system | Automatic via Lightyear replication + delta compression |
@@ -26,7 +26,7 @@ Side-by-side comparison of this Rust/Bevy server against AzerothCore, the C++ Wo
 
 **Client prediction**: AzerothCore has none. Clients receive authoritative updates and wait. Lightyear gives this server rollback-based prediction out of the box, which is the dominant model in modern game networking.
 
-**Protocol**: AzerothCore implements the WoW 3.3.5a binary protocol over TCP. This server uses QUIC, which provides both reliable and unreliable channels natively — matching movement (unreliable) and combat/chat/inventory (reliable ordered) to the correct transport.
+**Protocol**: AzerothCore implements the WoW 3.3.5a binary protocol over TCP. This server uses Lightyear's UDP transport with netcode and separate reliable/unreliable channels — matching movement to unreliable delivery and combat/chat/inventory to reliable ordered delivery.
 
 ## What We Borrow From AzerothCore
 
@@ -41,6 +41,7 @@ AzerothCore at `~/Repos/azerothcore` remains a reference for:
 
 - [ARCHITECTURE.md](../../../ARCHITECTURE.md) — comparison table, zone architecture, persistence strategy
 - [CLAUDE.md](../../../CLAUDE.md) — AzerothCore repo path and usage notes
+- [crates/server/Cargo.toml](../../../crates/server/Cargo.toml) — Lightyear UDP/netcode features
 
 ## See Also
 
