@@ -62,7 +62,7 @@ bevy_state.workspace = true
 bevy_utils.workspace = true
 
 # replication
-bevy_replicon.workspace = true
+bevy_replicon = { version = "0.41", path = "../bevy_replicon" }
 
 # avian
 avian2d = { workspace = true, optional = true }

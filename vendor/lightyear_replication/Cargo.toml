@@ -104,6 +104,7 @@ default-features = false
 
 [dependencies.bevy_replicon]
 version = "0.41"
+path = "../bevy_replicon"
 
 [dependencies.bevy_state]
 version = "0.19"
