@@ -40,8 +40,8 @@ fn deliver_and_tick(app: &mut App, connection: Entity, inputs: Vec<PlayerInput>)
             .send::<InputChannel>(input);
     }
     // Exercise Lightyear's real send/receive path before the production fixed system.
-    app.world_mut().run_schedule(PostUpdate);
-    app.world_mut().run_schedule(PreUpdate);
+    // Host delivery runs in Last, after clearing the previous receive buffer.
+    app.world_mut().run_schedule(Last);
     assert_eq!(
         app.world()
             .get::<MessageReceiver<PlayerInput>>(connection)
