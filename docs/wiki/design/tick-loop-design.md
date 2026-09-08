@@ -75,6 +75,8 @@ Input → Movement → Resolution → Lifecycle → Visibility → Maintenance
 
 Local order remains explicit inside a phase. Examples: equipment stats before derived stats; player input before gravity; combat and fall damage before player death handling; respawn position changes before interest reconciliation.
 
+The input phase consumes all queued packets for a connection but advances continuous player movement once per fixed step from the newest input. Jump and swimming are tick-local events accumulated across the drained batch: any jump applies to that step, and any swimming packet dismounts. This preserves event semantics without making authoritative displacement depend on client packet rate.
+
 Plugin registration order is not an ordering contract. Every required edge must use phase sets, `.before()`, `.after()`, or `.chain()`.
 
 ## Schedule Assignment Policy

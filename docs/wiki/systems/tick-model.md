@@ -69,6 +69,8 @@ Lightyear owns transport and replication schedules:
 
 Each connection receives a `ReplicationSender`; Lightyear 0.28.0 delegates send traversal to vendored `bevy_replicon` 0.41.1, with `ReplicationMetadata` enforcing a 50 ms cadence. Dirty-candidate processing avoids steady-state traversal of unchanged replication roots while preserving new-sender full sync, local visibility state, and mutation ACK/NACK retention.
 
+For each connection, `process_player_inputs` drains all received `PlayerInput` messages in one fixed tick but applies movement once using the latest continuous input. Earlier jump and swimming flags remain tick-local events: any jump requests the one application, and any swimming packet dismounts the player. This prevents packet arrival rate from multiplying the 50 ms simulation delta. The proof uses real Lightyear host delivery through `MessageReceiver` and the production `FixedUpdate` system (RED 5 at `7b7dc1a`, GREEN 5 at `e74b980`); it did not rebuild or restart the local server.
+
 ## Lower-Frequency and State-Driven Work
 
 - **Auction expiration:** registered in `FixedUpdate`; runs immediately once, then after each accumulated one-second duration.
@@ -94,6 +96,8 @@ Disconnect saves are observer-driven. Shutdown saves run in `Last` only when `Ap
 
 - [crates/server/src/main.rs](../../../crates/server/src/main.rs) — runner, Lightyear tick duration, plugin registration, tick log
 - [crates/server/src/networking.rs](../../../crates/server/src/networking.rs) — fixed movement, Update requests, PostUpdate despawn, connection lifecycle
+- [crates/server/src/networking_tests/receiver_rate.rs](../../../crates/server/src/networking_tests/receiver_rate.rs) — queued-input receiver/fixed-step proof
+- `game-server` commits `7b7dc1a`, `e74b980`, `4c40480` — delivery harness, once-per-tick movement, and test-module formatting
 - [crates/server/src/creature_ai.rs](../../../crates/server/src/creature_ai.rs) — fixed AI registration and local chain
 - [crates/server/src/stats.rs](../../../crates/server/src/stats.rs) — chained stat recalculation
 - [crates/server/src/combat.rs](../../../crates/server/src/combat.rs) — fixed combat and NPC respawn

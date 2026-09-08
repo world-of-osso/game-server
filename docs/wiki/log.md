@@ -1,5 +1,9 @@
 # Wiki Log
 
+## [2026-09-08] investigation | Apply queued movement once per fixed tick
+
+Updated [[networking]], [[tick-model]], [[tick-loop-design]], and [[tick-loop-audit]] for server commits `7b7dc1a`, `e74b980`, and `4c40480`. Recorded the receiver-boundary defect: each queued client input previously applied a full 50 ms movement delta, so a roughly 60 Hz sender could multiply authoritative displacement in the 20 Hz simulation. `process_player_inputs` now drains each connection, applies the newest continuous input once, preserves any queued jump, and dismounts on any queued swimming input. Real Lightyear host delivery through `MessageReceiver` and production `FixedUpdate` was RED 5 at `7b7dc1a` and GREEN 5 at `e74b980` (`data/diagnostics/receiver-rate/green-e74b980.log`). Native execution and local-server rebuild/restart were not performed.
+
 ## [2026-08-10] migration | Document Bevy 0.19 and Lightyear 0.28.0 upgrade
 
 Updated `AGENTS.md`, `CLAUDE.md`, `ARCHITECTURE.md`, [[dev-commands]], [[reference-repos]], [[networking]], [[tick-model]], [[tick-loop-design]], [[stack-decisions]], [[azerothcore-comparison]], [[recurring-loop-elimination]], [[semantic-noop-replication]], [[tick-loop-audit]], and `index.md` for game-server commits `0b1e2e6` and `8b400f5` plus shared-protocol commit `a78c958`. Recorded Rust 1.95, Bevy 0.19, Lightyear 0.28.0, vendored `bevy_replicon` 0.41.1 delegation, global/per-sender dirty candidates, new-sender full sync, mutation ACK/NACK retention, local `NetworkVisibility` plus Lightyear `VisibilityExt`, UDP transport, `ReplicationMetadata` 50 ms cadence, and explicit `StatesPlugin` setup. Current proof includes shared-protocol, server, admin CLI, and seven named connection/replication integration tests. Component-aware entries, exhaustive writer coverage, and live zero-render CPU verification remain partial/unclaimed. Documentation only; no source or dependency changes made by this update.

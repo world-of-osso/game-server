@@ -187,7 +187,7 @@ These loops are real, but removing them without replacing their transition model
 | System | Steady-state shape | Verdict |
 |---|---|---|
 | `tick_log` | Local counter and modulo each tick | **KEEP**; negligible |
-| `process_player_inputs` | Per-connection receiver scan; drains all queued inputs | **MEASURE** queue depth/budget; semantically required |
+| `process_player_inputs` | Per-connection receiver scan; drains queued inputs and applies the newest continuous input once | **KEEP**; `e74b980` prevents packet rate from multiplying the fixed delta while retaining jump/swimming events |
 | `apply_terrain_gravity` | All players, terrain lookup and state calculation | **OPTIMIZE** idle/grounded participation |
 | `stream_terrain_tiles` | All connections; same-tile early return after position lookup and tile computation | **PARTIAL / OPTIMIZE**; downstream sends are gated, recurring probes remain |
 | `start_attack_system` | `Changed<CombatTarget>` only | **KEEP** |

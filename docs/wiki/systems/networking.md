@@ -102,7 +102,12 @@ The helper now checks `MessageReceiver::has_messages()` first. Empty receivers s
 
 ## Client → Server Inputs
 
-Clients send input events, never raw state. The server validates and applies; the client predicts locally:
+Clients send input events, never raw state. The server validates and applies; the client predicts locally.
+
+`process_player_inputs` drains each connection's queued `PlayerInput` messages once per 50 ms `FixedUpdate`, then applies exactly one movement step from the newest message. Direction, facing, running, and swimming are continuous state, so the newest packet wins. A jump in any drained packet is retained for that tick, and swimming in any drained packet removes `Mounted` even if the newest packet is no longer swimming. Activity marking and position-interest dirtying occur once for the accepted batch.
+
+Before `e74b980`, every queued packet applied a full fixed-step delta. A client sending around 60 input packets per second therefore applied about three 50 ms movement steps during one 20 Hz server tick. Tests in `networking_tests/receiver_rate.rs` exercise the real Lightyear host delivery, `MessageReceiver`, and production `FixedUpdate` system: one and three identical packets move one step; newest continuous state wins; and earlier jump/swimming events survive a later stopped or non-swimming packet. RED 5 at `7b7dc1a`; GREEN 5 at `e74b980`, recorded in `data/diagnostics/receiver-rate/green-e74b980.log`. The local server was not rebuilt or restarted by that proof.
+
 
 ```rust
 enum PlayerInput {
@@ -156,6 +161,8 @@ The `CombatChannel` carries `CombatEvent` structs (attacker, target, amount, spe
 - [crates/server/src/networking.rs](../../../crates/server/src/networking.rs) — player movement dirty routing and terrain tile-transition gating
 - [crates/server/src/networking_movement.rs](../../../crates/server/src/networking_movement.rs) — translation, rotation, speed, and movement dirty-domain results
 - [crates/server/src/networking_tests/physics.rs](../../../crates/server/src/networking_tests/physics.rs) — zero-translation rotation/speed regression proof
+- [crates/server/src/networking_tests/receiver_rate.rs](../../../crates/server/src/networking_tests/receiver_rate.rs) — real receiver and fixed-step queued-input regressions
+- `game-server` commits `7b7dc1a`, `e74b980`, `4c40480` — RED harness delivery, once-per-tick application, and test-module formatting
 - [crates/server/src/interest.rs](../../../crates/server/src/interest.rs) — dirty-position interest index and visibility transitions
 - [crates/server/src/interest_tests.rs](../../../crates/server/src/interest_tests.rs) — fixed-tick interest behavior proof
 - [vendor/lightyear_replication/UPSTREAM.md](../../../vendor/lightyear_replication/UPSTREAM.md) — Lightyear 0.28.0 and vendored `bevy_replicon` provenance
