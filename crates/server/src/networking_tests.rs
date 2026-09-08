@@ -68,6 +68,8 @@ mod death;
 mod misc;
 #[path = "networking_tests/movement.rs"]
 mod movement;
+#[path = "networking_tests/receiver_rate.rs"]
+mod receiver_rate;
 #[path = "networking_tests/physics.rs"]
 mod physics;
 #[path = "networking_tests/terrain.rs"]
