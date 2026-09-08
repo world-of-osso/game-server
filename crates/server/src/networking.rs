@@ -416,7 +416,16 @@ struct PlayerInputParams<'w, 's> {
 /// Read PlayerInput messages and apply movement.
 fn process_player_inputs(time: Res<Time>, mut params: PlayerInputParams) {
     for (mut receiver, link) in &mut params.receivers {
+        let mut latest = None;
+        let mut jumping = false;
+        let mut swimming_seen = false;
         for input in receiver.receive() {
+            jumping |= input.jumping;
+            swimming_seen |= input.swimming;
+            latest = Some(input);
+        }
+        if let Some(mut input) = latest {
+            input.jumping = jumping;
             crate::friends::mark_player_activity(
                 link.0,
                 &mut params.presence,
@@ -424,7 +433,7 @@ fn process_player_inputs(time: Res<Time>, mut params: PlayerInputParams) {
                 time.elapsed(),
                 params.replication_dirty.as_deref(),
             );
-            if input.swimming && params.mounted.contains(link.0) {
+            if swimming_seen && params.mounted.contains(link.0) {
                 params.commands.entity(link.0).remove::<Mounted>();
             }
             let changes = apply_movement_input(&input, link.0, &mut params.players, &time);
