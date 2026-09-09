@@ -18,7 +18,10 @@ fn idle_creature_stays_at_spawn_point() {
                 y: 20.0,
                 z: 30.0,
             },
-            Npc { template_id: 1 },
+            Npc {
+                template_id: 1,
+                name: "Fixture wolf".into(),
+            },
         ))
         .id();
 

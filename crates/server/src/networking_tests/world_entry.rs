@@ -7,7 +7,10 @@ use std::time::Duration;
 fn spawn_network_npc(app: &mut App, template_id: u32, x: f32) {
     app.world_mut().spawn((
         Position { x, y: 0.0, z: 0.0 },
-        Npc { template_id },
+        Npc {
+            template_id,
+            name: "Fixture wolf".into(),
+        },
         NetworkVisibility::default(),
         Replicate::to_clients(NetworkTarget::All),
     ));

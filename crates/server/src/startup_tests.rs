@@ -79,6 +79,7 @@ fn world_data_loads_from_sqlite() {
     assert!(world.templates.contains_key(&2));
 
     let wolf = &world.templates[&1];
+    assert_eq!(wolf.name, "Wolf");
     assert_eq!(wolf.min_level, 3);
     assert_eq!(wolf.max_level, 4);
 

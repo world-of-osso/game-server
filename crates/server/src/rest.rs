@@ -220,6 +220,7 @@ mod tests {
     fn rest_template(npc_flags: u32) -> CreatureTemplate {
         CreatureTemplate {
             entry: 1,
+            name: "Fixture innkeeper".into(),
             min_level: 1,
             max_level: 1,
             faction: 0,

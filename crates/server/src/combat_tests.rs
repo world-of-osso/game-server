@@ -379,7 +379,10 @@ fn zero_health_without_damage_transition_is_not_discovered_by_death_poll() {
                 current: 0.0,
                 max: 100.0,
             },
-            Npc { template_id: 1 },
+            Npc {
+                template_id: 1,
+                name: "Fixture wolf".into(),
+            },
             Replicate::to_clients(NetworkTarget::All),
         ))
         .id();
@@ -415,7 +418,10 @@ fn nonlethal_auto_attack_keeps_npc_alive_and_replicated() {
                 current: 100.0,
                 max: 100.0,
             },
-            Npc { template_id: 1 },
+            Npc {
+                template_id: 1,
+                name: "Fixture wolf".into(),
+            },
             Replicate::to_clients(NetworkTarget::All),
         ))
         .id();
@@ -451,7 +457,10 @@ fn lethal_auto_attack_produces_death_state_replication_removal_and_event() {
                 current: BASE_DAMAGE,
                 max: 100.0,
             },
-            Npc { template_id: 1 },
+            Npc {
+                template_id: 1,
+                name: "Fixture wolf".into(),
+            },
             Replicate::to_clients(NetworkTarget::All),
         ))
         .id();

@@ -446,6 +446,7 @@ fn build_graveyard_registry_uses_spirit_healer_spawns() {
             5,
             crate::world_data::CreatureTemplate {
                 entry: 5,
+                name: "Fixture spirit healer".into(),
                 min_level: 1,
                 max_level: 1,
                 faction: 0,

@@ -42,7 +42,16 @@ fn spawn_elwynn_core(commands: &mut Commands, world_data: &WorldData, replicate:
         let display_id = resolve_display_id(world_data, spawn.template_entry);
         let health = resolve_health(world_data, spawn.template_entry);
         let speed_walk = resolve_speed_walk(world_data, spawn.template_entry);
-        let bundle = creature_bundle(spawn, health, display_id);
+        let template = world_data
+            .templates
+            .get(&spawn.template_entry)
+            .unwrap_or_else(|| {
+                panic!(
+                    "creature spawn {} references missing template {}",
+                    spawn.guid, spawn.template_entry
+                )
+            });
+        let bundle = creature_bundle(spawn, &template.name, health, display_id);
 
         let mut entity = commands.spawn(bundle);
         if replicate {
@@ -60,6 +69,7 @@ fn spawn_elwynn_core(commands: &mut Commands, world_data: &WorldData, replicate:
 /// Core creature components without replication marker.
 fn creature_bundle(
     spawn: &crate::world_data::CreatureSpawn,
+    name: &str,
     health: f32,
     display_id: u32,
 ) -> (Position, Npc, Health, ModelDisplay, Zone, Rotation) {
@@ -74,6 +84,7 @@ fn creature_bundle(
         },
         Npc {
             template_id: spawn.template_entry,
+            name: name.to_owned(),
         },
         Health {
             current: health,
@@ -183,6 +194,7 @@ mod tests {
     fn make_template(entry: u32, health_mod: f32, display_id: u32) -> CreatureTemplate {
         CreatureTemplate {
             entry,
+            name: "Fixture wolf".into(),
             min_level: 1,
             max_level: 1,
             faction: 0,
@@ -232,7 +244,7 @@ mod tests {
         let conn = rusqlite::Connection::open(&path).unwrap();
         conn.execute_batch(
             "CREATE TABLE creature_template (entry INTEGER, minlevel INTEGER, maxlevel INTEGER,
-                faction INTEGER, npcflag INTEGER, speed_walk REAL, HealthModifier REAL);
+                faction INTEGER, npcflag INTEGER, speed_walk REAL, HealthModifier REAL, name TEXT);
              CREATE TABLE creature_template_model (CreatureID INTEGER, Idx INTEGER,
                 CreatureDisplayID INTEGER, DisplayScale REAL, Probability REAL);
              CREATE TABLE creature (guid INTEGER, id1 INTEGER, map INTEGER, zoneId INTEGER,
@@ -253,7 +265,7 @@ mod tests {
         for (index, angle) in angles.iter().enumerate() {
             let entry = 100 + index as u32;
             conn.execute(
-                "INSERT INTO creature_template VALUES (?1,1,1,1,0,1.0,1.0)",
+                "INSERT INTO creature_template VALUES (?1,1,1,1,0,1.0,1.0,'Loup — Écorché')",
                 [entry],
             )
             .unwrap();
@@ -276,6 +288,7 @@ mod tests {
             .query::<(&Npc, Option<&shared::components::Rotation>)>();
         let mut count = 0;
         for (npc, rotation) in npcs.iter(app.world()) {
+            assert_eq!(serde_json::to_value(npc).unwrap()["name"], "Loup — Écorché");
             let rotation = rotation.expect("authored NPC orientation must be replicated");
             let angle = angles[(npc.template_id - 100) as usize];
             let expected = Vec3::new(angle.cos(), 0.0, -angle.sin());
@@ -350,7 +363,7 @@ mod tests {
             .query::<(&Position, &Npc, &Health, &ModelDisplay, &Zone)>();
         let mut results: Vec<_> = query
             .iter(app.world())
-            .map(|(p, n, h, m, z)| (*p, *n, *h, *m, *z))
+            .map(|(p, n, h, m, z)| (*p, n.clone(), *h, *m, *z))
             .collect();
         results.sort_by_key(|(_, npc, _, _, _)| npc.template_id);
         results
@@ -401,13 +414,11 @@ mod tests {
     }
 
     #[test]
-    fn spawn_system_missing_template_uses_defaults() {
-        let mut app = run_spawn_system(make_world_data(
+    #[should_panic(expected = "creature spawn 1 references missing template 99")]
+    fn spawn_system_rejects_missing_authoritative_template() {
+        drop(run_spawn_system(make_world_data(
             vec![],
             vec![make_spawn(99, -9000.0, 0.0, 0.0)],
-        ));
-        let results = get_spawned(&mut app);
-        assert_eq!(results.len(), 1);
-        assert_creature(&results[0], 99, -9000.0, 100.0, 0);
+        )));
     }
 }

@@ -17,6 +17,7 @@ fn test_world_data(template: CreatureTemplate) -> WorldData {
 fn test_template(entry: u32, faction: u16, min_level: u8, max_level: u8) -> CreatureTemplate {
     CreatureTemplate {
         entry,
+        name: "Fixture wolf".into(),
         min_level,
         max_level,
         faction,

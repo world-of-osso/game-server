@@ -5,6 +5,7 @@ use std::path::Path;
 
 pub struct CreatureTemplate {
     pub entry: u32,
+    pub name: String,
     pub min_level: u8,
     pub max_level: u8,
     pub faction: u16,
@@ -85,6 +86,7 @@ fn template_from_row(row: &Row) -> rusqlite::Result<CreatureTemplate> {
         npc_flags: row.get::<_, i64>(4)? as u32,
         speed_walk: row.get(5)?,
         health_modifier: row.get(6)?,
+        name: row.get(7)?,
         models: Vec::new(),
     })
 }
@@ -92,7 +94,7 @@ fn template_from_row(row: &Row) -> rusqlite::Result<CreatureTemplate> {
 fn load_templates(conn: &Connection) -> HashMap<u32, CreatureTemplate> {
     let mut stmt = conn
         .prepare(
-            "SELECT entry, minlevel, maxlevel, faction, npcflag, speed_walk, HealthModifier
+            "SELECT entry, minlevel, maxlevel, faction, npcflag, speed_walk, HealthModifier, name
              FROM creature_template",
         )
         .expect("Failed to prepare creature_template query");
