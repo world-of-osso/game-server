@@ -173,6 +173,59 @@ fn invalid_equipment_batches_leave_all_persistent_state_unchanged() {
 }
 
 #[test]
+fn equipment_guid_exhaustion_rolls_back_the_complete_batch() {
+    let directory = tempfile::tempdir().unwrap();
+    let db = initialize(&directory.path().join("game.redb"));
+    let before = persistence::load_character(&db, 6).unwrap();
+    let txn = db.begin_write().unwrap();
+    txn.open_table(persistence::NEXT_IDS)
+        .unwrap()
+        .insert("item_instance", u64::MAX - 1)
+        .unwrap();
+    txn.commit().unwrap();
+    let error = grant_equipment(&db, "Theron", &manifest()).unwrap_err();
+    assert!(error.contains("exhausted"), "{error}");
+    assert_eq!(counter(&db), u64::MAX - 1);
+    assert!(list_equipment(&db, "Theron").unwrap().1.is_empty());
+    assert_eq!(persistence::load_character(&db, 6).unwrap(), before);
+}
+
+#[test]
+fn equipment_preserves_hidden_overrides_and_rejects_conflicting_hands() {
+    let directory = tempfile::tempdir().unwrap();
+    let db = initialize(&directory.path().join("game.redb"));
+    let before = persistence::load_character(&db, 6).unwrap();
+    let mut helmet = manifest()[0].clone();
+    helmet.inventory_type = 1;
+    assert!(
+        grant_equipment(&db, "Theron", &[helmet])
+            .unwrap_err()
+            .contains("occupied")
+    );
+    let mut two_handed = manifest()[0].clone();
+    two_handed.inventory_type = 17;
+    assert!(
+        grant_equipment(&db, "Theron", &[two_handed, manifest()[4].clone()])
+            .unwrap_err()
+            .contains("off-hand")
+    );
+    assert_eq!(counter(&db), 50);
+    assert_eq!(persistence::load_character(&db, 6).unwrap(), before);
+    let mut unrestricted = manifest();
+    for item in &mut unrestricted {
+        item.allowable_class = -1;
+        item.allowable_race = -1;
+    }
+    assert_eq!(
+        grant_equipment(&db, "Theron", &unrestricted)
+            .unwrap()
+            .2
+            .len(),
+        5
+    );
+}
+
+#[test]
 fn occupied_slots_reject_batch_without_consuming_guids_or_replacing_items() {
     let dir = tempfile::tempdir().unwrap();
     let db = initialize(&dir.path().join("game.redb"));

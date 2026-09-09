@@ -619,6 +619,99 @@ mod tests {
     }
 
     #[test]
+    fn grant_equipment_delivers_owner_roster_update_without_notifying_other_accounts() {
+        use lightyear::connection::host::HostClient;
+        use lightyear::prelude::{Connected, MessageReceiver, PeerId, RemoteId};
+        let db = persistence::temp_database();
+        let (account_id, _) =
+            persistence_accounts::register_account(&db, "roster-owner", "test").unwrap();
+        let (id, _) = persistence::create_character(&db, account_id, "Theron", 1, 1).unwrap();
+        let game_db = persistence::GameDatabase { db };
+        let mut app = App::new();
+        app.add_plugins((
+            MinimalPlugins,
+            bevy::state::app::StatesPlugin,
+            lightyear::prelude::server::ServerPlugins {
+                tick_duration: std::time::Duration::from_millis(50),
+            },
+            shared::ProtocolPlugin,
+        ));
+        app.finish();
+        app.cleanup();
+        let mut connections = Vec::new();
+        for peer in [account_id, account_id + 1] {
+            connections.push(
+                app.world_mut()
+                    .spawn((
+                        RemoteId(PeerId::Local(peer)),
+                        Connected,
+                        HostClient { buffer: vec![] },
+                        crate::auth::Authenticated { account_id: peer },
+                        MessageSender::<LoginResponse>::default(),
+                        MessageReceiver::<LoginResponse>::default(),
+                        MessageSender::<CharacterListUpdate>::default(),
+                        MessageReceiver::<CharacterListUpdate>::default(),
+                    ))
+                    .id(),
+            );
+        }
+        let mut state = bevy::ecs::system::SystemState::<(
+            Commands,
+            Query<(Entity, &mut EquipmentAppearance, &persistence::ClientId)>,
+            Query<(Entity, &crate::auth::Authenticated), With<MessageSender<LoginResponse>>>,
+            Query<&mut MessageSender<CharacterListUpdate>>,
+        )>::new(app.world_mut());
+        {
+            let (mut commands, mut query, authenticated, mut roster) =
+                state.get_mut(app.world_mut()).unwrap();
+            let definition = crate::equipment_admin_types::EquipmentGrantItem {
+                item_id: 25,
+                name: "Worn Shortsword".into(),
+                quality: 1,
+                required_level: 1,
+                inventory_type: 21,
+                vendor_sell_price: 1,
+                allowable_class: -1,
+                allowable_race: -1,
+            };
+            assert!(matches!(
+                handle_grant_equipment(
+                    &game_db,
+                    &mut commands,
+                    &mut query,
+                    &authenticated,
+                    &mut roster,
+                    "Theron",
+                    &[definition]
+                ),
+                AdminResponse::EquipmentGranted { .. }
+            ));
+        }
+        state.apply(app.world_mut());
+        app.update();
+        let updates: Vec<_> = app
+            .world_mut()
+            .get_mut::<MessageReceiver<CharacterListUpdate>>(connections[0])
+            .unwrap()
+            .receive()
+            .collect();
+        assert_eq!(updates.len(), 1);
+        assert_eq!(updates[0].character.character_id, id);
+        assert_eq!(
+            updates[0].character.equipment_appearance.entries[0].item_id,
+            Some(25)
+        );
+        assert!(
+            app.world_mut()
+                .get_mut::<MessageReceiver<CharacterListUpdate>>(connections[1])
+                .unwrap()
+                .receive()
+                .next()
+                .is_none()
+        );
+    }
+
+    #[test]
     fn grant_equipment_publishes_live_appearance_and_rejection_has_no_side_effects() {
         let db = persistence::temp_database();
         let (account_id, _) =

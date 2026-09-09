@@ -8,7 +8,7 @@ The local admin API can grant and equip trusted item definitions without placing
 - [x] Reject unknown characters, incompatible level/class/race, unsupported inventory types, duplicate items/slots, and occupied slots without modifying items, appearances, bags, gold, or the item-instance counter.
 - [x] Allocate globally unique item GUIDs from the existing item-instance counter and persist slot ownership independently of the CharacterData encoding.
 - [x] Derive item-based equipment appearances, preserve unrelated gear/overrides, publish live appearances, and retain ownership across normal saves and database reopen.
-- [ ] Publish character-list updates through the existing roster channel (wired; transport proof pending).
+- [x] Publish character-list updates only to the owning account through the existing message sender/receiver path.
 - [x] `list-equipment <character>` reports slot, GUID, item ID, and stored item metadata without writes.
 
 ## How it works
@@ -27,7 +27,7 @@ Paths above are relative to `crates/server/src/`.
 ## Tests asserting this spec
 
 - `crates/server/src/persistence_equipment_tests.rs` — file-backed transaction, reopen, rollback and inventory preservation.
-- `crates/server/src/admin_ipc.rs` — live equipment appearance update and rejected-grant no-op.
+- `crates/server/src/admin_ipc.rs` — live equipment appearance, rejected-grant no-op, and owner-only roster message delivery.
 - `crates/server/src/bin/admin.rs` — typed manifest and CLI parsing.
 
 ## Known gaps (current cycle)
