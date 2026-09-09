@@ -1,5 +1,9 @@
 # Wiki Log
 
+## [2026-09-09] investigation | Inactive Arena Tournament creatures
+
+Updated [[world-data]] for `1963dfb`/`d9784a8`: preserve signed event membership during import and select ordinary/inactive-negative spawns without modifying source coordinates. Exact floating Northshire GUID96194/96198/96204 belong to event31. Documented file-backed loader and real isolated importer regressions, mandatory existing-database update, and absence of event activation/scheduling. Local runtime application remains separate from code proof.
+
 ## [2026-09-08] investigation | Apply queued movement once per fixed tick
 
 Updated [[networking]], [[tick-model]], [[tick-loop-design]], and [[tick-loop-audit]] for server commits `7b7dc1a`, `e74b980`, and `4c40480`. Recorded the receiver-boundary defect: each queued client input previously applied a full 50 ms movement delta, so a roughly 60 Hz sender could multiply authoritative displacement in the 20 Hz simulation. `process_player_inputs` now drains each connection, applies the newest continuous input once, preserves any queued jump, and dismounts on any queued swimming input. Real Lightyear host delivery through `MessageReceiver` and production `FixedUpdate` was RED 5 at `7b7dc1a` and GREEN 5 at `e74b980` (`data/diagnostics/receiver-rate/green-e74b980.log`). Native execution and local-server rebuild/restart were not performed.

@@ -15,7 +15,8 @@ Source: `~/Repos/azerothcore/data/sql/base/db_world/`
 | Table | Rows | Purpose |
 |-------|------|---------|
 | `creature_template` | 29,947 | NPC definitions: name, level range, faction, speeds, AI flags, health modifier |
-| `creature` | 149,678 | Spawn instances: map, zone, x/y/z position, respawn time, wander radius, movement type |
+| `creature` | 149,678 | Source spawn instances, including event-only rows; runtime selection applies event membership |
+| `game_event_creature` | Source-dependent | Signed event membership keyed by spawn GUID and event ID |
 | `creature_template_model` | 40,213 | Display models per creature (DisplayID, scale, probability) |
 | `waypoint_data` | 144,657 | Ordered patrol path points with per-point delay (ms) |
 
@@ -34,6 +35,16 @@ Source: `../game-engine/data/` (extracted from CASC archives)
 | `spell_range` | 222 | RangeIndex → min/max range (yards, hostile/friendly) |
 | `spell_cooldowns` | 35,547 | Per-spell cooldowns and GCD recovery times (ms) |
 | `spell_duration` | 428 | DurationIndex → duration / max duration (ms) |
+
+## Event-dependent creature spawns
+
+The importer must preserve `game_event_creature.sql`. No events are currently activated by this server: ordinary spawns remain eligible, positive-only event memberships do not spawn, and negative memberships remain eligible while their event is inactive. A GUID with a negative and a positive membership remains eligible under this inactive-event policy. Source creature rows and coordinates are preserved; no client grounding correction is applied. Event scheduling/activation is not implemented.
+
+The loader requires the membership table and fails explicitly when it is absent. Existing databases need that table populated from the matching AzerothCore dump **before restarting** the corrected server. Do not regenerate an existing populated world database just to add this table: the full import script deletes/recreates `world.db` and can discard separately seeded data.
+
+On September 9, 2026, missing memberships exposed Arena Tournament event31 spawns in normal Northshire: GUID96194 (Arena Organizer),96198 (Fight Promoter),96204 (Paymaster). Their authored elevations were above the loaded terrain. The source membership rows—not visual height guesses—identify why they should be absent. Brother Neals GUID79968 remains at his authored upstairs elevation113.24.
+
+Regression coverage: `startup_tests::world_data_excludes_inactive_tournament_spawns_without_lowering_ordinary_npcs` uses file-backed SQLite and checks selection, unchanged upstairs height, map indexing, and retained source rows. `python scripts/tests/test_import_azerothcore.py` executes the actual importer against isolated fixtures, checking signed memberships and non-destructive missing-input failure.
 
 ## Movement Types
 
