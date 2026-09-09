@@ -1,6 +1,13 @@
 PRAGMA journal_mode=WAL;
 PRAGMA synchronous=NORMAL;
 
+DROP TABLE IF EXISTS game_event_creature;
+CREATE TABLE game_event_creature (
+  eventEntry INTEGER NOT NULL,
+  guid INTEGER NOT NULL,
+  PRIMARY KEY (guid, eventEntry)
+);
+
 DROP TABLE IF EXISTS creature_template;
 CREATE TABLE creature_template (
   entry INTEGER NOT NULL DEFAULT 0,

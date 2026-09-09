@@ -151,13 +151,20 @@ fn spawn_from_row(row: &Row) -> rusqlite::Result<CreatureSpawn> {
 }
 
 fn load_spawns(conn: &Connection) -> Vec<CreatureSpawn> {
+    // No events are activated yet. Negative memberships spawn while inactive.
     let mut stmt = conn
         .prepare(
             "SELECT guid, id1, map, zoneId, position_x, position_y, position_z,
                     wander_distance, MovementType
-             FROM creature",
+             FROM creature
+             WHERE NOT EXISTS (
+                 SELECT 1 FROM game_event_creature event WHERE event.guid = creature.guid
+             ) OR EXISTS (
+                 SELECT 1 FROM game_event_creature event
+                 WHERE event.guid = creature.guid AND event.eventEntry < 0
+             )",
         )
-        .expect("Failed to prepare creature query");
+        .expect("Failed to prepare creature query; import game_event_creature into world.db");
 
     let rows = stmt
         .query_map(params![], spawn_from_row)

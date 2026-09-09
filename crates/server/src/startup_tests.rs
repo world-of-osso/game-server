@@ -28,6 +28,10 @@ fn create_world_schema(conn: &rusqlite::Connection) {
             position_x REAL, position_y REAL, position_z REAL, orientation REAL,
             spawntimesecs INTEGER, wander_distance REAL, MovementType INTEGER
         );
+        CREATE TABLE game_event_creature (
+            eventEntry INTEGER NOT NULL, guid INTEGER NOT NULL,
+            PRIMARY KEY (guid, eventEntry)
+        );
         CREATE TABLE waypoint_data (
             id INTEGER, point INTEGER, position_x REAL, position_y REAL, position_z REAL,
             orientation REAL, delay INTEGER, move_type INTEGER
@@ -82,6 +86,47 @@ fn world_data_loads_from_sqlite() {
     assert_eq!(waypoints.points.len(), 2);
     assert_eq!(waypoints.points[0].position_x, 1.0);
     assert_eq!(waypoints.points[1].position_x, 4.0);
+}
+
+#[test]
+fn world_data_excludes_inactive_tournament_spawns_without_lowering_ordinary_npcs() {
+    let path = write_to_temp_sqlite(|conn| {
+        conn.execute_batch(
+            "INSERT INTO creature VALUES
+                (96194,26012,0,0,0,-8918.51,-135.146,84.2136,0,180,0,0),
+                (96198,26760,0,0,0,-8914.73,-133.636,84.3208,0,180,0,0),
+                (96204,26075,0,0,0,-8911.02,-131.912,84.4265,0,180,0,0),
+                (79968,952,0,0,0,-8902.13,-181.646,113.24,0,430,0,0),
+                (76,1,0,0,0,10,20,30,0,180,0,0),
+                (77,1,0,0,0,40,50,60,0,180,0,0);
+             INSERT INTO game_event_creature VALUES
+                (31,96194),(31,96198),(31,96204),(-72,76),(-72,77),(31,77);",
+        )
+        .unwrap();
+    });
+    let world = crate::world_data::load_world_data(&path);
+    let mut guids = world
+        .spawns
+        .iter()
+        .map(|spawn| spawn.guid)
+        .collect::<Vec<_>>();
+    guids.sort_unstable();
+    assert_eq!(guids, vec![76, 77, 79968]);
+    let brother_neals = world
+        .spawns
+        .iter()
+        .find(|spawn| spawn.guid == 79968)
+        .unwrap();
+    assert_eq!(brother_neals.position_z, 113.24);
+    assert_eq!(world.spawns_by_map[&0].len(), 3);
+    let conn = rusqlite::Connection::open(&path).unwrap();
+    let stored_spawns: i64 = conn
+        .query_row("SELECT count(*) FROM creature", [], |row| row.get(0))
+        .unwrap();
+    assert_eq!(
+        stored_spawns, 6,
+        "event filtering must preserve source spawn rows"
+    );
 }
 
 #[test]

@@ -19,8 +19,9 @@ CREATURE_TEMPLATE_SQL="$SQL_DIR/creature_template.sql"
 CREATURE_SQL="$SQL_DIR/creature.sql"
 CREATURE_TEMPLATE_MODEL_SQL="$SQL_DIR/creature_template_model.sql"
 WAYPOINT_DATA_SQL="$SQL_DIR/waypoint_data.sql"
+GAME_EVENT_CREATURE_SQL="$SQL_DIR/game_event_creature.sql"
 
-for f in "$CREATURE_TEMPLATE_SQL" "$CREATURE_SQL" "$CREATURE_TEMPLATE_MODEL_SQL" "$WAYPOINT_DATA_SQL"; do
+for f in "$CREATURE_TEMPLATE_SQL" "$CREATURE_SQL" "$CREATURE_TEMPLATE_MODEL_SQL" "$WAYPOINT_DATA_SQL" "$GAME_EVENT_CREATURE_SQL"; do
     if [[ ! -f "$f" ]]; then
         echo "ERROR: Missing SQL file: $f" >&2
         exit 1
@@ -85,6 +86,7 @@ import_table "$CREATURE_TEMPLATE_SQL"       "creature_template"
 import_table "$CREATURE_SQL"                "creature"
 import_table "$CREATURE_TEMPLATE_MODEL_SQL" "creature_template_model"
 import_table "$WAYPOINT_DATA_SQL"           "waypoint_data"
+import_table "$GAME_EVENT_CREATURE_SQL"     "game_event_creature"
 
 # --- Retail spell CSV import ---
 
@@ -110,6 +112,7 @@ echo "Verifying row counts:"
 sqlite3 "$DB_PATH" \
     "SELECT 'creature_template: ' || COUNT(*) FROM creature_template;" \
     "SELECT 'creature: ' || COUNT(*) FROM creature;" \
+    "SELECT 'game_event_creature: ' || COUNT(*) FROM game_event_creature;" \
     "SELECT 'creature_template_model: ' || COUNT(*) FROM creature_template_model;" \
     "SELECT 'waypoint_data: ' || COUNT(*) FROM waypoint_data;" \
     "SELECT 'spell_name: ' || COUNT(*) FROM spell_name;" \
