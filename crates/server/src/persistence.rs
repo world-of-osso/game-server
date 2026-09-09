@@ -4,6 +4,8 @@ use shared::profession::{PlayerProfessions, Profession};
 use shared::reputation::CharacterReputation;
 use std::path::{Path, PathBuf};
 
+#[path = "persistence_equipment.rs"]
+pub(crate) mod equipment;
 #[path = "persistence_runtime.rs"]
 mod persistence_runtime;
 
@@ -189,6 +191,8 @@ pub(crate) fn create_tables(db: &Database) {
     let txn = db.begin_write().expect("Failed to begin write txn");
     let _ = txn.open_table(CHARACTERS);
     let _ = txn.open_table(INVENTORIES);
+    txn.open_table(equipment::EQUIPMENT)
+        .expect("Failed to create equipment table");
     let _ = txn.open_table(PROFESSIONS);
     let _ = txn.open_table(REPUTATIONS);
     let _ = txn.open_table(CURRENCIES);

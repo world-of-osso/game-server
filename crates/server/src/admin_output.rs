@@ -132,6 +132,33 @@ fn print_character_response(response: &AdminResponse) -> bool {
 
 fn print_equipment_response(response: &AdminResponse) -> bool {
     match response {
+        AdminResponse::EquipmentListed {
+            character_id,
+            character_name,
+            items,
+        }
+        | AdminResponse::EquipmentGranted {
+            character_id,
+            character_name,
+            items,
+        } => {
+            println!(
+                "character_id={character_id} name={character_name} equipped={}",
+                items.len()
+            );
+            for item in items {
+                println!(
+                    "slot={:?} guid={} item_id={} name={:?} count={} required_level={} quality={}",
+                    item.slot,
+                    item.item_guid,
+                    item.item_id,
+                    item.name,
+                    item.stack_count,
+                    item.required_level,
+                    item.quality
+                );
+            }
+        }
         AdminResponse::EquipmentAppearanceSet {
             character_name,
             slot,

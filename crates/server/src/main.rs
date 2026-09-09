@@ -14,6 +14,7 @@ mod currency;
 mod death;
 mod duel;
 mod durability;
+mod equipment_admin_types;
 mod faction;
 mod friends;
 mod gold;

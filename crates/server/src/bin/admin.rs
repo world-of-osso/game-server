@@ -4,6 +4,9 @@ use shared::components::CharacterAppearance;
 
 #[path = "../admin_output.rs"]
 mod admin_output;
+#[path = "../equipment_admin_types.rs"]
+mod equipment_admin_types;
+use equipment_admin_types::{EquipmentGrantItem, EquipmentOwnership};
 
 use admin_output::print_response;
 
@@ -11,6 +14,13 @@ const SOCKET_PATH: &str = "/tmp/game-server-admin.sock";
 
 #[derive(Debug, Serialize, Deserialize)]
 enum AdminRequest {
+    GrantEquipment {
+        character_name: String,
+        items: Vec<EquipmentGrantItem>,
+    },
+    ListEquipment {
+        character_name: String,
+    },
     ListAccounts,
     ListCharacters {
         username: Option<String>,
@@ -85,6 +95,16 @@ enum AdminRequest {
 
 #[derive(Debug, Serialize, Deserialize)]
 enum AdminResponse {
+    EquipmentListed {
+        character_id: u64,
+        character_name: String,
+        items: Vec<EquipmentOwnership>,
+    },
+    EquipmentGranted {
+        character_id: u64,
+        character_name: String,
+        items: Vec<EquipmentOwnership>,
+    },
     AccountsListed {
         accounts: Vec<AccountInfo>,
     },
@@ -230,10 +250,22 @@ fn print_usage() {
         "  game-server-admin set-equipment-appearance <character_name> <slot> <display_info_id>"
     );
     eprintln!("  game-server-admin clear-equipment-appearance <character_name> <slot>");
+    eprintln!("  game-server-admin grant-equipment <character> <manifest.json>");
+    eprintln!("  game-server-admin list-equipment <character>");
 }
 
 fn parse_request(args: &[String]) -> AdminRequest {
     match args[1].as_str() {
+        "grant-equipment" => parse_grant_equipment(args).unwrap_or_else(|error| {
+            eprintln!("{error}");
+            std::process::exit(1);
+        }),
+        "list-equipment" => {
+            require_args(args, 3, "list-equipment <character>");
+            AdminRequest::ListEquipment {
+                character_name: args[2].clone(),
+            }
+        }
         "ping" => AdminRequest::Ping,
         "list-accounts" => AdminRequest::ListAccounts,
         "list-characters" => parse_list_characters(args),
@@ -259,6 +291,20 @@ fn parse_request(args: &[String]) -> AdminRequest {
             std::process::exit(1);
         }
     }
+}
+
+fn parse_grant_equipment(args: &[String]) -> Result<AdminRequest, String> {
+    if args.len() != 4 {
+        return Err("Usage: grant-equipment <character> <manifest.json>".into());
+    }
+    let bytes = std::fs::read(&args[3])
+        .map_err(|error| format!("read equipment manifest {}: {error}", args[3]))?;
+    let items = serde_json::from_slice(&bytes)
+        .map_err(|error| format!("parse equipment manifest {}: {error}", args[3]))?;
+    Ok(AdminRequest::GrantEquipment {
+        character_name: args[2].clone(),
+        items,
+    })
 }
 
 fn parse_list_characters(args: &[String]) -> AdminRequest {
@@ -611,6 +657,49 @@ mod tests {
                 to_username,
             } if from_username == "alice" && to_username == "admin"
         ));
+    }
+
+    #[test]
+    fn equipment_manifest_command_reads_typed_items_and_rejects_unknown_fields() {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("gear.json");
+        let item = EquipmentGrantItem {
+            item_id: 25,
+            name: "Worn Shortsword".into(),
+            quality: 1,
+            required_level: 1,
+            inventory_type: 13,
+            vendor_sell_price: 1,
+            allowable_class: 1,
+            allowable_race: 1,
+        };
+        std::fs::write(&path, serde_json::to_vec(&vec![item.clone()]).unwrap()).unwrap();
+        let args = vec![
+            "admin".into(),
+            "grant-equipment".into(),
+            "Theron".into(),
+            path.display().to_string(),
+        ];
+        let AdminRequest::GrantEquipment {
+            character_name,
+            items,
+        } = parse_grant_equipment(&args).unwrap()
+        else {
+            panic!("grant request")
+        };
+        assert_eq!(character_name, "Theron");
+        assert_eq!(items, vec![item]);
+        std::fs::write(&path, b"[{\"item_id\":25,\"unknown\":true}]").unwrap();
+        assert!(
+            parse_grant_equipment(&args)
+                .unwrap_err()
+                .contains("manifest")
+        );
+        assert!(parse_grant_equipment(&args[..3]).is_err());
+        let listed = parse_request(&["admin".into(), "list-equipment".into(), "Theron".into()]);
+        assert!(
+            matches!(listed, AdminRequest::ListEquipment { character_name } if character_name == "Theron")
+        );
     }
 
     #[test]

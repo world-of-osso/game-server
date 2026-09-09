@@ -367,6 +367,21 @@ fn dispatch(
             &character_name,
             appearance,
         ),
+        AdminRequest::GrantEquipment {
+            character_name,
+            items,
+        } => handle_grant_equipment(
+            db,
+            commands,
+            equipment_query,
+            authenticated_query,
+            roster_update_senders,
+            &character_name,
+            &items,
+        ),
+        AdminRequest::ListEquipment { character_name } => {
+            handle_list_equipment(db, &character_name)
+        }
         AdminRequest::SetEquipmentAppearance {
             character_name,
             slot,
@@ -601,6 +616,97 @@ mod tests {
         assert_eq!(moved.len(), 2);
         assert!(moved.iter().any(|(_, data)| data.name == "Theron"));
         assert!(moved.iter().any(|(_, data)| data.name == "Elara"));
+    }
+
+    #[test]
+    fn grant_equipment_publishes_live_appearance_and_rejection_has_no_side_effects() {
+        let db = persistence::temp_database();
+        let (account_id, _) =
+            persistence_accounts::register_account(&db, "gear-admin", "test").unwrap();
+        let (id, data) = persistence::create_character(&db, account_id, "Theron", 1, 1).unwrap();
+        let game_db = persistence::GameDatabase { db };
+        let mut world = World::new();
+        let player = world
+            .spawn((data.equipment_appearance.clone(), persistence::ClientId(id)))
+            .id();
+        let other = world
+            .spawn((
+                EquipmentAppearance::default(),
+                persistence::ClientId(id + 100),
+            ))
+            .id();
+        let mut state = bevy::ecs::system::SystemState::<(
+            Commands,
+            Query<(Entity, &mut EquipmentAppearance, &persistence::ClientId)>,
+            Query<(Entity, &crate::auth::Authenticated), With<MessageSender<LoginResponse>>>,
+            Query<&mut MessageSender<CharacterListUpdate>>,
+        )>::new(&mut world);
+        let definition = crate::equipment_admin_types::EquipmentGrantItem {
+            item_id: 25,
+            name: "Worn Shortsword".into(),
+            quality: 1,
+            required_level: 1,
+            inventory_type: 13,
+            vendor_sell_price: 1,
+            allowable_class: 1,
+            allowable_race: 1,
+        };
+        {
+            let (mut commands, mut query, authenticated, mut roster) =
+                state.get_mut(&mut world).unwrap();
+            let result = handle_grant_equipment(
+                &game_db,
+                &mut commands,
+                &mut query,
+                &authenticated,
+                &mut roster,
+                "Theron",
+                &[definition.clone()],
+            );
+            assert!(matches!(result, AdminResponse::EquipmentGranted { .. }));
+        }
+        state.apply(&mut world);
+        let expected = persistence::load_character(&game_db.db, id)
+            .unwrap()
+            .equipment_appearance;
+        assert_eq!(world.get::<EquipmentAppearance>(player).unwrap(), &expected);
+        assert!(
+            world
+                .get::<EquipmentAppearance>(other)
+                .unwrap()
+                .entries
+                .is_empty()
+        );
+        let tick = world
+            .entity(player)
+            .get_ref::<EquipmentAppearance>()
+            .unwrap()
+            .last_changed();
+        world.increment_change_tick();
+        {
+            let (mut commands, mut query, authenticated, mut roster) =
+                state.get_mut(&mut world).unwrap();
+            let result = handle_grant_equipment(
+                &game_db,
+                &mut commands,
+                &mut query,
+                &authenticated,
+                &mut roster,
+                "Theron",
+                &[definition],
+            );
+            assert!(matches!(result, AdminResponse::Error(_)));
+        }
+        state.apply(&mut world);
+        assert_eq!(
+            world
+                .entity(player)
+                .get_ref::<EquipmentAppearance>()
+                .unwrap()
+                .last_changed(),
+            tick
+        );
+        assert_eq!(world.get::<EquipmentAppearance>(player).unwrap(), &expected);
     }
 
     #[test]

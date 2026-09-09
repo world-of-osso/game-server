@@ -1,11 +1,19 @@
 //! Shared types for the admin IPC protocol.
 
+use crate::equipment_admin_types::{EquipmentGrantItem, EquipmentOwnership};
 use serde::{Deserialize, Serialize};
 use shared::components::CharacterAppearance;
 
 /// IPC request from CLI to server.
 #[derive(Debug, Serialize, Deserialize)]
 pub enum AdminRequest {
+    GrantEquipment {
+        character_name: String,
+        items: Vec<EquipmentGrantItem>,
+    },
+    ListEquipment {
+        character_name: String,
+    },
     ListAccounts,
     ListCharacters {
         username: Option<String>,
@@ -127,6 +135,16 @@ pub enum AdminRequest {
 /// IPC response from server to CLI.
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub enum AdminResponse {
+    EquipmentListed {
+        character_id: u64,
+        character_name: String,
+        items: Vec<EquipmentOwnership>,
+    },
+    EquipmentGranted {
+        character_id: u64,
+        character_name: String,
+        items: Vec<EquipmentOwnership>,
+    },
     AccountsListed {
         accounts: Vec<AccountInfo>,
     },

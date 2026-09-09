@@ -1,5 +1,12 @@
 # Persistence
 
+## Physical Equipment
+
+`grant-equipment <character> <manifest.json>` accepts a trusted JSON array with `item_id`, `name`, `quality`, `required_level`, `inventory_type`, `vendor_sell_price`, `allowable_class`, and `allowable_race`. Masks use one-based class/race bits; `-1` permits every class/race. The operation validates the complete batch under a single redb write transaction, then reserves item-instance GUIDs and writes both slot ownership and item-based appearance entries. Existing items, appearances (including hidden overrides), bags and gold are preserved; occupied slots are rejected, not replaced.
+
+The separate `character_equipment` table maps character IDs to unique-slot records containing `InventoryItemData`. It does not change the encoded `CharacterData` structure. Equipped instances are not inserted into the auction/trade bag inventory. Normal character saves load the latest character appearance and do not overwrite this ownership table. `list-equipment <character>` reads persisted slot/GUID/item records. These operations do not add combat damage, armor calculations, or bonus stats. See [admin equipment contract](../../specs/admin-equipment.md) for test coverage and limits.
+
+
 Dual-layer storage: the ECS is the live database, redb is the durable checkpoint. SQLite holds read-only static world data loaded once at startup.
 
 ## Content

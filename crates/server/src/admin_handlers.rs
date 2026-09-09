@@ -280,6 +280,55 @@ pub(crate) fn handle_set_appearance(
     }
 }
 
+pub(crate) fn handle_grant_equipment(
+    db: &persistence::GameDatabase,
+    commands: &mut Commands,
+    equipment_query: &mut Query<(Entity, &mut EquipmentAppearance, &persistence::ClientId)>,
+    authenticated_query: &Query<
+        (Entity, &crate::auth::Authenticated),
+        With<MessageSender<LoginResponse>>,
+    >,
+    roster_update_senders: &mut Query<&mut MessageSender<CharacterListUpdate>>,
+    name: &str,
+    items: &[crate::equipment_admin_types::EquipmentGrantItem],
+) -> AdminResponse {
+    let (character_id, data, owned) =
+        match persistence::equipment::grant_equipment(&db.db, name, items) {
+            Ok(result) => result,
+            Err(error) => return AdminResponse::Error(error),
+        };
+    for (entity, appearance, cid) in equipment_query.iter_mut() {
+        if cid.0 == character_id && *appearance != data.equipment_appearance {
+            commands
+                .entity(entity)
+                .insert(data.equipment_appearance.clone());
+        }
+    }
+    send_character_list_update(
+        db,
+        authenticated_query,
+        roster_update_senders,
+        character_id,
+        &data,
+    );
+    AdminResponse::EquipmentGranted {
+        character_id,
+        character_name: name.into(),
+        items: owned,
+    }
+}
+
+pub(crate) fn handle_list_equipment(db: &persistence::GameDatabase, name: &str) -> AdminResponse {
+    match persistence::equipment::list_equipment(&db.db, name) {
+        Ok((character_id, items)) => AdminResponse::EquipmentListed {
+            character_id,
+            character_name: name.into(),
+            items,
+        },
+        Err(error) => AdminResponse::Error(error),
+    }
+}
+
 pub(crate) fn handle_set_equipment_appearance(
     db: &persistence::GameDatabase,
     commands: &mut Commands,
