@@ -50,6 +50,10 @@ The pre-`4523373` implementation scanned every `NetworkVisibility` entity agains
 
 Buckets only reduce candidate work. Final visibility still uses the existing exact 3D squared-distance comparison (`<= 100²` yards), with independent per-connection `gain_visibility`/`lose_visibility` transitions. Initial nearby visibility, reconnects, spawns, despawns, teleports, multiple observers, radius boundaries, corpse visibility, and stale visibility cleanup remain covered. `update_interest` still invokes every `FixedUpdate` to drain dirty queues, and no movement-revision counter is modeled, so the literal position-change-only requirement remains **PARTIAL**. `a85b035` split the real fixed-tick integration tests from `interest.rs`; it did not change runtime semantics. See [[recurring-loop-elimination]].
 
+## Terrain Height Sampling
+
+The server reads MCNK world X at `0x68`, world Y at `0x6c`, and base elevation at `0x70`. MCVT rows advance toward decreasing world X; columns toward decreasing world Y. Heights use the same four-triangle fan (including the inner center vertex) as the corrected client mesh, not bilinear outer-corner interpolation. Tests cover asymmetric axes, all four triangles, parser coordinates, and the authored Northshire caravan ground height. Earlier swapped-coordinate fixture assertions were incorrect.
+
 ## Terrain Streaming
 
 Each connection keeps both the set of terrain tiles already sent and the last player tile evaluated by the streaming system. Initial world entry and reconnect begin with no last tile, forcing one evaluation. Every later fixed tick still resolves the linked player position and computes tile coordinates; movement within the same tile then skips the 3×3 neighborhood loop, while boundary crossings and teleports evaluate the destination neighborhood. Existing `SentTiles` membership continues to suppress duplicate `LoadTerrain` messages. This is **PARTIAL** against tile-change-only execution. See [[recurring-loop-elimination]].

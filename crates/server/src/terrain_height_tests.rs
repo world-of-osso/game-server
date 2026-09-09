@@ -8,6 +8,95 @@ fn height_at_returns_none_for_unloaded() {
 }
 
 #[test]
+fn asymmetric_plane_maps_rows_to_wow_x_and_columns_to_wow_y() {
+    let mut heights = [0.0; MCVT_COUNT];
+    for row in 0..=8 {
+        for col in 0..=8 {
+            heights[row * 17 + col] = 10.0 * row as f32 + 2.0 * col as f32;
+        }
+        if row < 8 {
+            for col in 0..8 {
+                heights[row * 17 + 9 + col] = 10.0 * (row as f32 + 0.5) + 2.0 * (col as f32 + 0.5);
+            }
+        }
+    }
+    let map = TerrainHeightMap {
+        chunks: vec![ChunkHeight {
+            corner_x: 100.0,
+            corner_y: 200.0,
+            base_z: 50.0,
+            heights,
+            water_level: None,
+        }],
+    };
+    for (row, col, expected) in [(2.0, 5.0, 80.0), (2.25, 5.75, 84.0), (7.5, 1.5, 128.0)] {
+        let x = 100.0 - row * UNIT_SIZE;
+        let y = 200.0 - col * UNIT_SIZE;
+        let actual = map.height_at(x, y).unwrap();
+        assert!(
+            (actual - expected).abs() < 0.001,
+            "row={row} col={col}: {actual} != {expected}"
+        );
+        assert!((map.height_at_bevy(x, -y).unwrap() - expected).abs() < 0.001);
+    }
+}
+
+#[test]
+fn nonplanar_cell_uses_center_vertex_and_all_four_triangles() {
+    let mut heights = [0.0; MCVT_COUNT];
+    heights[0] = 0.0;
+    heights[1] = 4.0;
+    heights[17] = 8.0;
+    heights[18] = 12.0;
+    heights[9] = 20.0;
+    let map = TerrainHeightMap {
+        chunks: vec![ChunkHeight {
+            corner_x: 100.0,
+            corner_y: 200.0,
+            base_z: 50.0,
+            heights,
+            water_level: None,
+        }],
+    };
+    // Each off-center point is halfway from an edge midpoint to the center.
+    for (row, col, expected) in [
+        (0.5, 0.5, 70.0),
+        (0.25, 0.5, 61.0),
+        (0.5, 0.75, 64.0),
+        (0.75, 0.5, 65.0),
+        (0.5, 0.25, 62.0),
+        (0.0, 0.5, 52.0),
+        (1.0, 0.5, 60.0),
+    ] {
+        let actual = map
+            .height_at(100.0 - row * UNIT_SIZE, 200.0 - col * UNIT_SIZE)
+            .unwrap();
+        assert!(
+            (actual - expected).abs() < 0.001,
+            "row={row} col={col}: {actual} != {expected}"
+        );
+    }
+}
+
+#[test]
+fn parsed_mcnk_preserves_asymmetric_world_coordinates() {
+    let mut payload = vec![0u8; 128];
+    payload[0x68..0x6c].copy_from_slice(&(-8900.0f32).to_le_bytes());
+    payload[0x6c..0x70].copy_from_slice(&(-100.0f32).to_le_bytes());
+    payload[0x70..0x74].copy_from_slice(&80.0f32.to_le_bytes());
+    payload.extend_from_slice(b"TVCM");
+    payload.extend_from_slice(&(MCVT_COUNT as u32 * 4).to_le_bytes());
+    payload.extend_from_slice(&[0u8; MCVT_COUNT * 4]);
+    let mut adt = b"KNCM".to_vec();
+    adt.extend_from_slice(&(payload.len() as u32).to_le_bytes());
+    adt.extend_from_slice(&payload);
+    let map = parse_adt_heights(&adt).unwrap();
+    assert_eq!(map.height_at(-8901.0, -102.0), Some(80.0));
+    assert_eq!(map.height_at_bevy(-8901.0, 102.0), Some(80.0));
+    assert_eq!(map.height_at(-102.0, -8901.0), None);
+}
+
+#[test]
 fn height_interpolation() {
     // Create a single chunk with known heights.
     // Corner at WoW X=100, Y=100, base Z=50.
@@ -43,15 +132,13 @@ fn height_interpolation() {
     let h = map.height_at(far_x, far_y).unwrap();
     assert!((h - 90.0).abs() < 0.01, "far corner should be 90, got {h}");
 
-    // Midpoint of first cell should interpolate between corners.
-    // At (col_f=0.5, row_f=0.5), all 4 cell corners have height 0 except (0,0)=10.
-    // top = 10 + (0-10)*0.5 = 5, bot = 0 + (0-0)*0.5 = 0, result = 5 + (0-5)*0.5 = 2.5
+    // Cell midpoint is its authored inner vertex, whose relative height is zero.
     let mid_x = 100.0 - UNIT_SIZE * 0.5;
     let mid_y = 100.0 - UNIT_SIZE * 0.5;
     let h = map.height_at(mid_x, mid_y).unwrap();
     assert!(
-        (h - 52.5).abs() < 0.01,
-        "mid-cell height should be 52.5, got {h}"
+        (h - 50.0).abs() < 0.01,
+        "mid-cell height should be 50, got {h}"
     );
 
     // Outside the chunk returns None.
@@ -206,9 +293,9 @@ fn height_at_exact_vertex_no_interpolation() {
     let h = map.height_at(100.0, 100.0).unwrap();
     assert!((h - 125.0).abs() < 0.01, "vertex (0,0): got {h}");
 
-    // Exact vertex (0,4) at 4 units along X → 100 + 15 = 115
-    let x = 100.0 - UNIT_SIZE * 4.0;
-    let h = map.height_at(x, 100.0).unwrap();
+    // Exact vertex (0,4) at 4 units along decreasing Y → 100 + 15 = 115
+    let y = 100.0 - UNIT_SIZE * 4.0;
+    let h = map.height_at(100.0, y).unwrap();
     assert!((h - 115.0).abs() < 0.01, "vertex (0,4): got {h}");
 }
 
@@ -219,12 +306,11 @@ fn height_consistent_across_adjacent_chunk_boundary() {
     let boundary_x = 100.0 - CHUNK_SIZE;
     let shared_height = 42.0;
 
-    // Chunk A: corner at (100, 100). Col=8 is the min-X edge (boundary).
-    // Set entire col=8 row=0 vertex to shared_height.
+    // Chunk A: row=8 is the min-X boundary; chunk B starts at row=0.
     let mut heights_a = [0.0f32; MCVT_COUNT];
-    heights_a[8] = shared_height; // outer grid (0, 8) = row 0, col 8
+    heights_a[8 * 17] = shared_height;
 
-    // Chunk B: corner at (boundary_x, 100). Col=0 is the max-X edge.
+    // Chunk B: corner at (boundary_x, 100). Row=0 is the max-X edge.
     let mut heights_b = [0.0f32; MCVT_COUNT];
     heights_b[0] = shared_height; // outer grid (0, 0) = row 0, col 0
 
@@ -445,15 +531,14 @@ fn parse_real_adt_file() {
     let map = parse_adt_heights(&data).unwrap();
     assert_eq!(map.chunks.len(), 256, "ADT should have 256 MCNK chunks");
 
-    // azeroth_32_48.adt covers roughly X: -533..0, Y: -9067..-8533.
-    // Pick a point in the center of the tile.
-    let h = map.height_at(-266.0, -8800.0);
+    // Azeroth 32,48 covers WoW X: -9067..-8533, Y: -533..0.
+    let h = map.height_at(-8800.0, -266.0);
     assert!(h.is_some(), "center of tile should have terrain");
     let h = h.unwrap();
     assert!(h > -500.0 && h < 2000.0, "height {h} seems unreasonable");
 
     // Outside the tile returns None.
-    assert!(map.height_at(-8949.0, -132.0).is_none());
+    assert!(map.height_at(-266.0, -8800.0).is_none());
 }
 
 #[test]
@@ -469,14 +554,13 @@ fn height_matches_known_azerothcore_coordinates() {
     };
     let map = parse_adt_heights(&data).unwrap();
 
-    // The Northshire start position is on a neighboring tile, so verify
-    // a known coordinate within this tile instead.
-    // azeroth_32_48 covers X: ~-533..0, Y: ~-9067..-8533 (approx).
-    // Pick the tile center and verify height is reasonable terrain.
-    let h = map.height_at(-266.0, -8800.0).unwrap();
-    // Elwynn Forest terrain is roughly 30-120m elevation.
-    assert!(
-        h > 20.0 && h < 200.0,
-        "Elwynn terrain height {h} should be 20-200",
-    );
+    // Authored Northshire caravan 10255 sits directly on the ground.
+    // MDDF [17180.9140625, 81.8337326, 25962.435546875] in tile coordinates.
+    let center = 32.0 * CHUNK_SIZE * 16.0;
+    let x = center - 25962.435546875;
+    let y = center - 17180.9140625;
+    let h = map
+        .height_at(x, y)
+        .expect("Northshire must be within Azeroth 32,48");
+    assert!((h - 81.83374).abs() < 0.001, "authored caravan ground: {h}");
 }

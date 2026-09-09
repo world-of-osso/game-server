@@ -24,9 +24,9 @@ pub const GROUND_SNAP_THRESHOLD: f32 = 0.1;
 /// Per-chunk height data in WoW world coordinates.
 #[derive(Clone, Debug)]
 struct ChunkHeight {
-    /// WoW X of chunk corner (= raw pos[1]).
+    /// WoW X of chunk corner (MCNK offset 0x68).
     corner_x: f32,
-    /// WoW Y of chunk corner (= raw pos[0]).
+    /// WoW Y of chunk corner (MCNK offset 0x6c).
     corner_y: f32,
     /// Base Z height (= raw pos[2]), MCVT heights are relative to this.
     base_z: f32,
@@ -88,45 +88,33 @@ impl TerrainHeightMap {
     }
 }
 
-/// Bilinear interpolation on the 9x9 outer grid for a point within a chunk.
+/// Sample the authored four-triangle fan, including its inner center vertex.
 fn interpolate_height(chunk: &ChunkHeight, x: f32, y: f32) -> f32 {
-    // Distance from corner in positive direction (terrain grows negative).
-    let dx = chunk.corner_x - x;
-    let dy = chunk.corner_y - y;
-
-    // Clamp to [0, CHUNK_SIZE] to handle edge cases.
-    let dx = dx.clamp(0.0, CHUNK_SIZE);
-    let dy = dy.clamp(0.0, CHUNK_SIZE);
-
-    // Convert to grid cell coordinates (0..8 range for the 9x9 outer grid).
-    let col_f = dx / UNIT_SIZE;
-    let row_f = dy / UNIT_SIZE;
-
-    let col = (col_f as usize).min(7);
+    let row_f = (chunk.corner_x - x).clamp(0.0, CHUNK_SIZE) / UNIT_SIZE;
+    let col_f = (chunk.corner_y - y).clamp(0.0, CHUNK_SIZE) / UNIT_SIZE;
     let row = (row_f as usize).min(7);
-
-    // Fractional position within the cell.
-    let frac_x = col_f - col as f32;
-    let frac_y = row_f - row as f32;
-
-    // Four corners of the outer grid cell.
-    let h00 = outer_height(chunk, row, col);
-    let h10 = outer_height(chunk, row, col + 1);
-    let h01 = outer_height(chunk, row + 1, col);
-    let h11 = outer_height(chunk, row + 1, col + 1);
-
-    // Bilinear interpolation.
-    let top = h00 + (h10 - h00) * frac_x;
-    let bot = h01 + (h11 - h01) * frac_x;
-    top + (bot - top) * frac_y
+    let col = (col_f as usize).min(7);
+    let h = |r: usize, c: usize| chunk.heights[r * 17 + c];
+    let corners = [
+        h(row, col),
+        h(row, col + 1),
+        h(row + 1, col),
+        h(row + 1, col + 1),
+    ];
+    let center = chunk.heights[row * 17 + 9 + col];
+    chunk.base_z + interpolate_fan(corners, center, col_f - col as f32, row_f - row as f32)
 }
 
-/// Get the absolute height of an outer grid vertex at (row, col) in the 9x9 grid.
-fn outer_height(chunk: &ChunkHeight, row: usize, col: usize) -> f32 {
-    // Outer vertices in the 145-array: row * 17 + col
-    // (each pair of rows = 9 outer + 8 inner = 17 entries).
-    let idx = row * 17 + col;
-    chunk.base_z + chunk.heights[idx]
+fn interpolate_fan([tl, tr, bl, br]: [f32; 4], center: f32, col: f32, row: f32) -> f32 {
+    if row <= col && row <= 1.0 - col {
+        tl * (1.0 - col - row) + tr * (col - row) + center * (2.0 * row)
+    } else if col >= row && col >= 1.0 - row {
+        tr * (col - row) + br * (col + row - 1.0) + center * (2.0 * (1.0 - col))
+    } else if row >= col && row >= 1.0 - col {
+        bl * (row - col) + br * (col + row - 1.0) + center * (2.0 * (1.0 - row))
+    } else {
+        tl * (1.0 - col - row) + bl * (row - col) + center * (2.0 * col)
+    }
 }
 
 // -- ADT binary parsing (server-side, no rendering) --
@@ -170,8 +158,8 @@ fn parse_mcnk_height(payload: &[u8]) -> Result<ChunkHeight, String> {
         return Err(format!("MCNK too small: {} bytes", payload.len()));
     }
     // pos at offset 0x68 stored as [Y_wow, X_wow, Z_wow]
-    let pos_y = read_f32(payload, 0x68)?; // WoW Y
-    let pos_x = read_f32(payload, 0x6c)?; // WoW X
+    let pos_x = read_f32(payload, 0x68)?; // WoW X
+    let pos_y = read_f32(payload, 0x6c)?; // WoW Y
     let pos_z = read_f32(payload, 0x70)?; // WoW Z (base height)
 
     let heights = find_mcvt(&payload[128..])?;
