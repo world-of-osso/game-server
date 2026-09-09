@@ -9,7 +9,7 @@ The local admin API can grant and equip trusted item definitions without placing
 - [x] Allocate globally unique item GUIDs from the existing item-instance counter and persist slot ownership independently of the CharacterData encoding.
 - [x] Derive item-based equipment appearances, preserve unrelated gear/overrides, publish live appearances, and retain ownership across normal saves and database reopen.
 - [ ] Publish character-list updates through the existing roster channel (wired; transport proof pending).
-- [ ] `list-equipment <character>` reports slot, GUID, item ID, and stored item metadata without writes.
+- [x] `list-equipment <character>` reports slot, GUID, item ID, and stored item metadata without writes.
 
 ## How it works
 

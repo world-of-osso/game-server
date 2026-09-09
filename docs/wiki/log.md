@@ -1,5 +1,9 @@
 # Wiki Log
 
+## [2026-09-09] systems | Persist administrative physical equipment
+
+Updated [[persistence]], [[dev-commands]], `index.md`, and [the equipment contract](../../specs/admin-equipment.md) for server commit `8742c1a`. A trusted plain JSON array grants validated supported slots atomically into the separate `character_equipment` redb table as `InventoryItemData`, while preserving bags, gold, existing gear, and `CharacterData` encoding. The operation allocates item-instance GUIDs in the same transaction, derives/publishes current live appearance, and `list-equipment` reads ownership without writes. This is not a catalog, unequip system, or combat-stat implementation; Theron has not been granted equipment and no runtime/deployment claim is made.
+
 ## [2026-09-09] systems | Propagate authoritative NPC names
 
 Updated [[world-data]] and [[networking]] for shared-protocol `c8a06c0` and game-server `fc46567`: `creature_template.name` now becomes replicated UTF-8 `Npc.name`; absent templates fail rather than receiving defaults. SQLite-to-spawn coverage uses `Loup — Écorché`. Engine snapshot delivery and visible rendering remain separate boundaries.

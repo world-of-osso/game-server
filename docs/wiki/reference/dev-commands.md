@@ -27,6 +27,15 @@ ssh sakuin /opt/game-server/game-server-admin <command>
 
 Runs on the `sakuin` host. Communicates with the server via a Unix IPC socket (`admin_ipc.rs`, `admin_ipc_server.rs`). Source for the admin binary: `crates/server/src/bin/admin.rs`.
 
+Trusted physical equipment manifests use a plain JSON array, not an envelope:
+
+```bash
+game-server-admin grant-equipment <character> <manifest.json>
+game-server-admin list-equipment <character>
+```
+
+`grant-equipment` requires exactly `item_id`, `name`, `quality`, `required_level`, `inventory_type`, `vendor_sell_price`, `allowable_class`, and `allowable_race` for every array entry; unknown fields are rejected. See [the contract](../../specs/admin-equipment.md).
+
 ## World Data
 
 ```bash

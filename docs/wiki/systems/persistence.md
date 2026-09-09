@@ -76,6 +76,7 @@ Read-only at runtime. Loaded into `Res<WorldData>` and `Res<SpellDatabase>` at s
 - [crates/server/src/persistence.rs](../../../crates/server/src/persistence.rs) — table creation and save/load systems
 - [crates/server/src/persistence_runtime.rs](../../../crates/server/src/persistence_runtime.rs) — periodic and shutdown save implementation
 - [crates/server/src/persistence_tests.rs](../../../crates/server/src/persistence_tests.rs) — legacy-database migration regression test added by `ec5ff52`
+- [crates/server/src/persistence_equipment.rs](../../../crates/server/src/persistence_equipment.rs) — atomic physical-equipment ownership persistence
 
 ## See Also
 
@@ -83,3 +84,4 @@ Read-only at runtime. Loaded into `Res<WorldData>` and `Res<SpellDatabase>` at s
 - [[world-data]] — the SQLite side (creature templates, spells, spawn data)
 - [[tick-model]] — observed persistence schedule and fixed-tick cadence
 - [[tick-loop-audit]] — confirmed periodic-save change-detection bug
+- [Administrative physical equipment](../../specs/admin-equipment.md) — trusted manifest contract and boundaries
