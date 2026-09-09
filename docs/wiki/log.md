@@ -1,5 +1,9 @@
 # Wiki Log
 
+## [2026-09-09] systems | Hide interest targets before character selection
+
+Updated [[networking]] and `index.md` for server commit `34e7551`. `On<Add, ClientVisibility>` hides existing `NetworkVisibility` targets, and `On<Add, NetworkVisibility>` hides new targets for every replication client rather than only selected players. The real UDP regression proves auth succeeds with zero existing or new NPCs before entry, then proves nearby-only delivery and movement-driven replacement. This is server lifecycle proof only; no client startup or visual-runtime completion claim.
+
 ## [2026-09-09] investigation | Inactive Arena Tournament creatures
 
 Updated [[world-data]] for `1963dfb`/`d9784a8`: preserve signed event membership during import and select ordinary/inactive-negative spawns without modifying source coordinates. Exact floating Northshire GUID96194/96198/96204 belong to event31. Documented file-backed loader and real isolated importer regressions, mandatory existing-database update, and absence of event activation/scheduling. Local runtime application remains separate from code proof.
