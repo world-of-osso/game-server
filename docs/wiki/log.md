@@ -1,5 +1,10 @@
 # Wiki Log
 
+## [2026-09-09] systems | Match server terrain sampling to authored MCVT topology
+
+Updated [[networking]] and its index summary for `2cfe233`. MCNK X/Y offsets, MCVT row/column axes, and four-triangle center-fan interpolation now match the corrected client terrain path. Nineteen focused tests pass. Runtime/cart visual proof remains open.
+
+
 ## [2026-09-09] systems | Hide interest targets before character selection
 
 Updated [[networking]] and `index.md` for server commit `34e7551`. `On<Add, ClientVisibility>` hides existing `NetworkVisibility` targets, and `On<Add, NetworkVisibility>` hides new targets for every replication client rather than only selected players. The real UDP regression proves auth succeeds with zero existing or new NPCs before entry, then proves nearby-only delivery and movement-driven replacement. This is server lifecycle proof only; no client startup or visual-runtime completion claim.

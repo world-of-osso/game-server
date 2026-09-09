@@ -31,7 +31,7 @@ Server gameplay systems.
 | Page | Summary |
 |------|---------|
 | [[ecs-storage]] | Bevy ECS as columnar in-memory database: archetype tables, zero-overhead queries, built-in change detection |
-| [[networking]] | Lightyear 0.28.0 over UDP with vendored bevy_replicon 0.41.1: auth remains available before world entry; NetworkVisibility targets are hidden until selected-character interest grants nearby entities; dirty-candidate replication, 50 ms cadence, persistence, channels, and interest management |
+| [[networking]] | Lightyear UDP, pre-entry visibility, matching MCVT server terrain sampling, dirty-candidate replication, 50 ms cadence, persistence, channels, and interest management |
 | [[persistence]] | Dual-layer storage: redb for mutable player data, login-loaded gold, mutation-boundary GoldUpdateQueue replication, and SQLite for static world data |
 | [[world-data]] | SQLite world.db, AzerothCore/Retail sources, signed creature-event membership and inactive-event selection, WorldDataPlugin, SpellDatabasePlugin |
 | [[tick-model]] | Observed server loop: 50ms runner/fixed cadence, schedule ownership, explicit ordering, completed player-death and broad auto-AFK scan reductions, maintenance gates, and IPC boundary |
