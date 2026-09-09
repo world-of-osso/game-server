@@ -157,7 +157,7 @@ fn parse_mcnk_height(payload: &[u8]) -> Result<ChunkHeight, String> {
     if payload.len() < 128 {
         return Err(format!("MCNK too small: {} bytes", payload.len()));
     }
-    // pos at offset 0x68 stored as [Y_wow, X_wow, Z_wow]
+    // Position at offset 0x68 is [X_wow, Y_wow, Z_wow].
     let pos_x = read_f32(payload, 0x68)?; // WoW X
     let pos_y = read_f32(payload, 0x6c)?; // WoW Y
     let pos_z = read_f32(payload, 0x70)?; // WoW Z (base height)
