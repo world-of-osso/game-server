@@ -2,6 +2,7 @@ use std::collections::{HashMap, HashSet};
 use std::sync::Mutex;
 
 use bevy::prelude::*;
+use bevy_replicon::server::visibility::client_visibility::ClientVisibility;
 use lightyear::prelude::*;
 use shared::components::Position;
 
@@ -195,6 +196,7 @@ impl Plugin for InterestPlugin {
         app.init_resource::<InterestDirtyQueue>()
             .init_resource::<InterestIndex>()
             .add_observer(on_network_visibility_added)
+            .add_observer(on_replication_client_added)
             .add_observer(on_network_visibility_removed)
             .add_observer(on_player_link_added)
             .add_observer(on_player_link_removed)
@@ -206,10 +208,21 @@ impl Plugin for InterestPlugin {
     }
 }
 
+/// Replicon defaults to visible; no world entities are relevant before selection.
+fn on_replication_client_added(
+    trigger: On<Add, ClientVisibility>,
+    targets: Query<Entity, With<NetworkVisibility>>,
+    mut commands: Commands,
+) {
+    for entity in &targets {
+        commands.lose_visibility(entity, trigger.entity);
+    }
+}
+
 fn on_network_visibility_added(
     trigger: On<Add, NetworkVisibility>,
     positions: Query<&Position>,
-    connections: Query<Entity, With<PlayerLink>>,
+    connections: Query<Entity, With<ClientVisibility>>,
     replication_dirty: Option<Res<ReplicationDirtyQueue>>,
     mut commands: Commands,
     mut index: ResMut<InterestIndex>,

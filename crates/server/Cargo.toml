@@ -10,6 +10,8 @@ bevy = { version = "0.19", default-features = false, features = [
     "bevy_log", "bevy_state",
 ] }
 lightyear = { version = "0.28", features = ["server", "netcode", "replication", "udp"] }
+# Initialize interest visibility at the actual replication-client lifecycle boundary.
+bevy_replicon = { version = "0.41.1", default-features = false, features = ["server"] }
 redb = "3"
 serde = { version = "1", features = ["derive"] }
 bitcode = "0.6"
@@ -30,4 +32,6 @@ name = "game-server-admin"
 path = "src/bin/admin.rs"
 
 [dev-dependencies]
+# Exercise pre-world replication and auth traffic against a real local client.
+lightyear = { version = "0.28", features = ["client"] }
 tempfile = "3"

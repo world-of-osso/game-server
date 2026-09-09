@@ -74,3 +74,5 @@ mod physics;
 mod receiver_rate;
 #[path = "networking_tests/terrain.rs"]
 mod terrain;
+#[path = "networking_tests/world_entry.rs"]
+mod world_entry;
