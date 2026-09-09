@@ -2,6 +2,8 @@
 
 Creature spawn orientation is loaded from `creature.orientation` (WoW heading radians) and replicated as `Rotation.y = orientation + π/2`, matching the network's +Z-forward yaw convention. The client adapts M2 +X-forward geometry below the NPC actor with a −π/2 visual rotation. A SQLite-to-spawn regression checks cardinal and non-cardinal headings; authored NPCs no longer lose facing at import/load time.
 
+`fc46567` also loads `creature_template.name` into `CreatureTemplate` and copies it into the replicated shared `Npc.name` at spawn. A spawn without its authoritative template now fails explicitly instead of receiving default creature data. The SQLite-to-spawn fixture preserves the UTF-8 name `Loup — Écorché`; client delivery/rendering is outside this server proof.
+
 Static, read-only world data loaded from SQLite at server startup. Two Bevy resources: `WorldData` (creatures, spawns, waypoints) and `SpellDatabase` (spell definitions from Retail DB2).
 
 ## Database
@@ -69,6 +71,8 @@ A `chr_races` table holds playable race metadata. Source: Wago DB2 `ChrRaces` ex
 - [CLAUDE.md](../../../CLAUDE.md) — World Data section with table row counts
 - [AGENTS.md](../../../AGENTS.md) — `chr_races` table and seed script
 - [crates/server/src/world_data.rs](../../../crates/server/src/world_data.rs) — loader implementation
+- [crates/server/src/zones.rs](../../../crates/server/src/zones.rs) — authoritative template lookup and spawned `Npc.name`
+- [shared `Npc` component](../../../../shared-protocol/src/components.rs) — replicated template ID and UTF-8 name
 
 ## See Also
 

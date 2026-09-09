@@ -26,6 +26,8 @@ Lightyear handles:
 - **Entity lifecycle** — spawn/despawn packets as entities enter/leave client view
 - **Future zone transitions** — Lightyear can carry visibility-driven removal/insertion, but `game-server` does not yet implement runtime zone handoff
 
+Shared-protocol `c8a06c0` makes replicated `Npc` carry UTF-8 `name` with `template_id`; the string makes it `Clone + Eq`, not `Copy`. Server `fc46567` supplies that name from `creature_template` when spawning NPCs. The engine's `79a252be` clone-based snapshot mirror is the client-side boundary; visible nameplate rendering is not established by this protocol/server change.
+
 Lightyear 0.28.0 delegates sender traversal to vendored `bevy_replicon` 0.41.1. `ReplicationMetadata` keeps the sender cadence at 50 ms. The migration preserves dirty global and per-sender candidates, mutation ACK/NACK retention, and one full sync for each new or reset sender; subsequent unchanged roots do not enter candidate traversal.
 
 The client compares decoded replicated components and suppresses equal ECS replacement only after serialization, batching, transport, delivery, and deserialization. First-wave fixes cover NPC movement, player displacement, presence, combat status, movement state, and gravity; second-wave commits `1c139e9`, `e13e09e`, `057dd17`, and `41feebb` cover equal derived stats, respawn state, equipment appearance, and guild membership. `f84ee17` adds independent clear-path coverage for the equipment guard, while `945eb0f` rules out unchanged Gold synchronization as already guarded. See [[semantic-noop-replication]] for the separate equal-assignment coverage; no Character advancement or `<=10%` CPU claim is made.
@@ -181,6 +183,8 @@ The `CombatChannel` carries `CombatEvent` structs (attacker, target, amount, spe
 - `game-server` commit `0b1e2e6` — Bevy 0.19/Lightyear 0.28.0 migration and preserved replication proof
 - `game-server` commit `8b400f5` — local `bevy_replicon` dependency for vendored replication tests
 - `shared-protocol` commit `a78c958` — Bevy 0.19/Lightyear 0.28.0 protocol boundary
+- `shared-protocol` commit `c8a06c0` — replicated `Npc.name` contract
+- `game-server` commit `fc46567` — SQLite template name copied into spawned NPCs
 - [CLAUDE.md](../../../CLAUDE.md) — dependency versions
 
 ## See Also

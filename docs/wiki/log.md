@@ -1,5 +1,9 @@
 # Wiki Log
 
+## [2026-09-09] systems | Propagate authoritative NPC names
+
+Updated [[world-data]] and [[networking]] for shared-protocol `c8a06c0` and game-server `fc46567`: `creature_template.name` now becomes replicated UTF-8 `Npc.name`; absent templates fail rather than receiving defaults. SQLite-to-spawn coverage uses `Loup — Écorché`. Engine snapshot delivery and visible rendering remain separate boundaries.
+
 ## [2026-09-09] systems | Match server terrain sampling to authored MCVT topology
 
 Updated [[networking]] and its index summary for `2cfe233`. MCNK X/Y offsets, MCVT row/column axes, and four-triangle center-fan interpolation now match the corrected client terrain path. Nineteen focused tests pass. Runtime/cart visual proof remains open.
