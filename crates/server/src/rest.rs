@@ -239,6 +239,7 @@ mod tests {
             position_x,
             position_y,
             position_z: 56.0,
+            orientation: 0.0,
             wander_distance: 0.0,
             movement_type: 0,
         }

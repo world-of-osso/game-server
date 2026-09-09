@@ -26,6 +26,7 @@ pub struct CreatureSpawn {
     pub position_x: f32,
     pub position_y: f32,
     pub position_z: f32,
+    pub orientation: f32,
     pub wander_distance: f32,
     pub movement_type: u8,
 }
@@ -147,6 +148,7 @@ fn spawn_from_row(row: &Row) -> rusqlite::Result<CreatureSpawn> {
         position_z: row.get(6)?,
         wander_distance: row.get(7)?,
         movement_type: row.get::<_, i64>(8)? as u8,
+        orientation: row.get(9)?,
     })
 }
 
@@ -155,7 +157,7 @@ fn load_spawns(conn: &Connection) -> Vec<CreatureSpawn> {
     let mut stmt = conn
         .prepare(
             "SELECT guid, id1, map, zoneId, position_x, position_y, position_z,
-                    wander_distance, MovementType
+                    wander_distance, MovementType, orientation
              FROM creature
              WHERE NOT EXISTS (
                  SELECT 1 FROM game_event_creature event WHERE event.guid = creature.guid

@@ -465,6 +465,7 @@ fn build_graveyard_registry_uses_spirit_healer_spawns() {
             position_x: -9000.0,
             position_y: 100.0,
             position_z: 50.0,
+            orientation: 0.0,
             wander_distance: 0.0,
             movement_type: 0,
         }],

@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use lightyear::prelude::*;
-use shared::components::{Health, ModelDisplay, Npc, Position, Zone};
+use shared::components::{Health, ModelDisplay, Npc, Position, Rotation, Zone};
 
 use crate::creature_ai::{SpawnPoint, WanderPhase, WanderState, WaypointState};
 use crate::interest::NetworkVisibility;
@@ -62,7 +62,7 @@ fn creature_bundle(
     spawn: &crate::world_data::CreatureSpawn,
     health: f32,
     display_id: u32,
-) -> (Position, Npc, Health, ModelDisplay, Zone) {
+) -> (Position, Npc, Health, ModelDisplay, Zone, Rotation) {
     // Spawn data is WoW coords; convert to Bevy space for ECS.
     let (bx, by, bz) =
         crate::terrain_height::wow_to_bevy(spawn.position_x, spawn.position_y, spawn.position_z);
@@ -82,6 +82,11 @@ fn creature_bundle(
         ModelDisplay { display_id },
         Zone {
             id: spawn.zone_id as u32,
+        },
+        Rotation {
+            x: 0.0,
+            y: spawn.orientation + std::f32::consts::FRAC_PI_2,
+            z: 0.0,
         },
     )
 }
@@ -214,9 +219,74 @@ mod tests {
             position_x: x,
             position_y: y,
             position_z: z,
+            orientation: 0.0,
             wander_distance: 0.0,
             movement_type: 0,
         }
+    }
+
+    #[test]
+    fn authored_sqlite_orientation_reaches_spawned_npc_model_facing() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("world.db");
+        let conn = rusqlite::Connection::open(&path).unwrap();
+        conn.execute_batch(
+            "CREATE TABLE creature_template (entry INTEGER, minlevel INTEGER, maxlevel INTEGER,
+                faction INTEGER, npcflag INTEGER, speed_walk REAL, HealthModifier REAL);
+             CREATE TABLE creature_template_model (CreatureID INTEGER, Idx INTEGER,
+                CreatureDisplayID INTEGER, DisplayScale REAL, Probability REAL);
+             CREATE TABLE creature (guid INTEGER, id1 INTEGER, map INTEGER, zoneId INTEGER,
+                position_x REAL, position_y REAL, position_z REAL, wander_distance REAL,
+                MovementType INTEGER, orientation REAL);
+             CREATE TABLE game_event_creature (guid INTEGER, eventEntry INTEGER);
+             CREATE TABLE waypoint_data (id INTEGER, point INTEGER, position_x REAL,
+                position_y REAL, position_z REAL, delay INTEGER);",
+        )
+        .unwrap();
+        let angles = [
+            0.0f32,
+            std::f32::consts::FRAC_PI_2,
+            std::f32::consts::PI,
+            3.0 * std::f32::consts::FRAC_PI_2,
+            1.606,
+        ];
+        for (index, angle) in angles.iter().enumerate() {
+            let entry = 100 + index as u32;
+            conn.execute(
+                "INSERT INTO creature_template VALUES (?1,1,1,1,0,1.0,1.0)",
+                [entry],
+            )
+            .unwrap();
+            conn.execute(
+                "INSERT INTO creature_template_model VALUES (?1,0,3167,1.0,1.0)",
+                [entry],
+            )
+            .unwrap();
+            conn.execute(
+                "INSERT INTO creature VALUES (?1,?1,0,0,-9000,-100,80,0,0,?2)",
+                rusqlite::params![entry, angle],
+            )
+            .unwrap();
+        }
+        drop(conn);
+        let data = crate::world_data::load_world_data(&path);
+        let mut app = run_spawn_system(data);
+        let mut npcs = app
+            .world_mut()
+            .query::<(&Npc, Option<&shared::components::Rotation>)>();
+        let mut count = 0;
+        for (npc, rotation) in npcs.iter(app.world()) {
+            let rotation = rotation.expect("authored NPC orientation must be replicated");
+            let angle = angles[(npc.template_id - 100) as usize];
+            let expected = Vec3::new(angle.cos(), 0.0, -angle.sin());
+            let model_forward =
+                Quat::from_rotation_y(rotation.y - std::f32::consts::FRAC_PI_2) * Vec3::X;
+            assert!((model_forward - expected).length() < 0.00001);
+            let logical_forward = Vec3::new(rotation.y.sin(), 0.0, rotation.y.cos());
+            assert!((logical_forward - expected).length() < 0.00001);
+            count += 1;
+        }
+        assert_eq!(count, angles.len());
     }
 
     #[test]

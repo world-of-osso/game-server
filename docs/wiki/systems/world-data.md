@@ -1,5 +1,7 @@
 # World Data
 
+Creature spawn orientation is loaded from `creature.orientation` (WoW heading radians) and replicated as `Rotation.y = orientation + π/2`, matching the network's +Z-forward yaw convention. The client adapts M2 +X-forward geometry below the NPC actor with a −π/2 visual rotation. A SQLite-to-spawn regression checks cardinal and non-cardinal headings; authored NPCs no longer lose facing at import/load time.
+
 Static, read-only world data loaded from SQLite at server startup. Two Bevy resources: `WorldData` (creatures, spawns, waypoints) and `SpellDatabase` (spell definitions from Retail DB2).
 
 ## Database
