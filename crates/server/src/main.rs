@@ -7,6 +7,9 @@ mod auth;
 mod auth_character;
 mod barber_shop;
 mod calendar;
+mod cast_presentation;
+#[cfg(test)]
+mod cast_presentation_tests;
 mod collection;
 mod combat;
 mod creature_ai;

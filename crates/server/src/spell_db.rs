@@ -23,6 +23,26 @@ pub struct SpellDatabase {
 }
 
 impl SpellDatabase {
+    #[cfg(test)]
+    pub(crate) fn fixture(spells: Vec<SpellData>) -> Self {
+        Self {
+            spells: spells.into_iter().map(|spell| (spell.id, spell)).collect(),
+        }
+    }
+
+    /// Resolve an explicit ID or a unique exact name; ambiguous ranks require an ID.
+    pub(crate) fn resolve(&self, id: Option<u32>, name: &str) -> Option<&SpellData> {
+        if let Some(id) = id {
+            return self.get(id);
+        }
+        let mut matches = self
+            .spells
+            .values()
+            .filter(|spell| spell.name.eq_ignore_ascii_case(name));
+        let spell = matches.next()?;
+        matches.next().is_none().then_some(spell)
+    }
+
     /// Look up a spell by ID.
     pub fn get(&self, spell_id: u32) -> Option<&SpellData> {
         self.spells.get(&spell_id)

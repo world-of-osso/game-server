@@ -73,6 +73,18 @@ impl Plugin for CombatPlugin {
     fn build(&self, app: &mut App) {
         app.add_message::<crate::death::PlayerDeathTransition>();
         app.init_resource::<CombatLog>();
+        app.add_systems(
+            Update,
+            (
+                crate::cast_presentation::receive_cast_requests,
+                crate::cast_presentation::receive_stop_requests,
+            )
+                .chain(),
+        );
+        app.add_systems(
+            FixedUpdate,
+            crate::cast_presentation::advance_casts.after(crate::networking::process_player_inputs),
+        );
         app.init_resource::<shared::components::SpellBatch>();
         app.add_systems(
             FixedUpdate,

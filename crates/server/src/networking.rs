@@ -387,7 +387,7 @@ pub fn send_load_terrain(connection: Entity, senders: &mut Query<&mut MessageSen
 }
 
 #[derive(SystemParam)]
-struct PlayerInputParams<'w, 's> {
+pub(crate) struct PlayerInputParams<'w, 's> {
     commands: Commands<'w, 's>,
     receivers: Query<
         'w,
@@ -414,7 +414,7 @@ struct PlayerInputParams<'w, 's> {
 }
 
 /// Read PlayerInput messages and apply movement.
-fn process_player_inputs(time: Res<Time>, mut params: PlayerInputParams) {
+pub(crate) fn process_player_inputs(time: Res<Time>, mut params: PlayerInputParams) {
     for (mut receiver, link) in &mut params.receivers {
         let mut latest = None;
         let mut jumping = false;
