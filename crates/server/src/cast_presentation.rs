@@ -60,9 +60,7 @@ fn start_cast(
     let target = if spell.target == SpellTarget::Self_ {
         Some(owner)
     } else {
-        request
-            .target_entity
-            .and_then(|bits| Entity::try_from_bits(bits).ok())
+        request.target_entity.and_then(Entity::try_from_bits)
     };
     let context = cast_context(world, owner, target, &spell)?;
     validate_cast(&spell, &context).map_err(|reason| {
