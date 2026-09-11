@@ -2,7 +2,7 @@
 
 ## [2026-09-11] systems | Authoritative cast presentation
 
-Documented named shared `CastState`, authenticated owner-bound receiver handling, progress/expiry/stop/movement, and engine worker snapshot handoff in [[networking]] and [contract](../specs/cast-presentation.md). Server `3ba4085` and shared `d3b0736`: three focused HostClient tests pass; no spell effects, wire replication, rendered, or deployment claim. Shared source is sibling `shared-protocol`, not stale `crates/shared`.
+Documented named shared `CastState`, authenticated owner-bound receiver handling, progress/expiry/stop/movement, and engine worker snapshot handoff in [[networking]] and [contract](../specs/cast-presentation.md). Server `08c8634` and shared `d3b0736`: five focused HostClient tests pass (`/tmp/claude/cast-presentation-five-tests.log`, 0.02s execution, 12.84s compile); no spell effects, wire replication, rendered, or deployment claim. Shared source is sibling `shared-protocol`, not stale `crates/shared`.
 
 ## [2026-09-09] systems | Persist administrative physical equipment
 

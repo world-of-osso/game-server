@@ -7,9 +7,10 @@ Server-side overhead cast state originates in `crates/server/src/cast_presentati
 - [x] Accept valid timed spell requests only for the authenticated in-world connection's player.
 - [x] Advance active casts and remove them on expiry, explicit stop, or disallowed movement.
 - [x] Reject unknown spells, dead/moving casters, and requests without a player owner.
-- [ ] Preserve the server-resolved spell name through serialization.
-- [ ] Apply existing resource, cooldown, GCD, target, and range validation.
-- [ ] A connection's stop request must not cancel another entity's cast.
+- [x] Preserve the server-resolved spell name through serialization.
+- [x] Apply existing resource, cooldown and GCD validation.
+- [ ] Apply existing target and range validation (implemented; receiver-boundary proof pending).
+- [x] A connection's stop request must not cancel another entity's cast.
 - [x] Expiry must not pretend to apply damage/healing.
 
 ## How it works
