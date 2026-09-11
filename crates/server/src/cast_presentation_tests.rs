@@ -98,6 +98,9 @@ fn cast_presentation_receiver_starts_advances_and_expires_without_effects() {
         .get::<CastState>(player)
         .expect("valid receiver request starts cast");
     assert_eq!(cast.spell_id, 133);
+    assert_eq!(cast.spell_name, "Presentation cast");
+    let decoded: CastState = serde_json::from_slice(&serde_json::to_vec(cast).unwrap()).unwrap();
+    assert_eq!(&decoded, cast);
     assert!(cast.elapsed < cast.duration);
     let before = cast.elapsed;
     advance(&mut app, 3);
@@ -140,4 +143,77 @@ fn cast_presentation_rejects_unknown_dead_moving_and_unowned_requests() {
         .remove::<PlayerLink>();
     start(&mut app, connection, 133);
     assert!(app.world().get::<CastState>(player).is_none());
+}
+
+#[test]
+fn cast_presentation_stop_cannot_cancel_other_players() {
+    let (mut app, player, connection) = fixture();
+    let other = app
+        .world_mut()
+        .spawn((
+            CastState::normal(133, 0, 10.0, true),
+            Health {
+                current: 100.0,
+                max: 100.0,
+            },
+        ))
+        .id();
+    start(&mut app, connection, 133);
+    app.world_mut()
+        .get_mut::<MessageSender<StopSpellCast>>(connection)
+        .unwrap()
+        .send::<CombatChannel>(StopSpellCast);
+    advance(&mut app, 3);
+    assert!(app.world().get::<CastState>(player).is_none());
+    assert!(app.world().get::<CastState>(other).is_some());
+    app.world_mut()
+        .entity_mut(connection)
+        .remove::<Authenticated>();
+    start(&mut app, connection, 133);
+    assert!(app.world().get::<CastState>(player).is_none());
+}
+
+#[test]
+fn cast_presentation_validates_resource_cooldown_and_gcd() {
+    use shared::casting::{GlobalCooldown, SpellCooldowns};
+    use shared::components::Mana;
+    use shared::spell_data::{ResourceType, SpellCost};
+    let (mut app, player, connection) = fixture();
+    let mut spell = app
+        .world()
+        .resource::<crate::spell_db::SpellDatabase>()
+        .get(133)
+        .unwrap()
+        .clone();
+    spell.cost = Some(SpellCost {
+        resource: ResourceType::Mana,
+        amount: 20.0,
+    });
+    app.insert_resource(crate::spell_db::SpellDatabase::fixture(vec![spell]));
+    app.world_mut().entity_mut(player).insert(Mana {
+        current: 10.0,
+        max: 100.0,
+    });
+    start(&mut app, connection, 133);
+    assert!(app.world().get::<CastState>(player).is_none());
+    app.world_mut().get_mut::<Mana>(player).unwrap().current = 100.0;
+    let mut cooldowns = SpellCooldowns::default();
+    cooldowns.start(133, 20.0);
+    app.world_mut().entity_mut(player).insert(cooldowns);
+    start(&mut app, connection, 133);
+    assert!(app.world().get::<CastState>(player).is_none());
+    app.world_mut()
+        .entity_mut(player)
+        .remove::<SpellCooldowns>();
+    app.world_mut()
+        .entity_mut(player)
+        .insert(GlobalCooldown { remaining: 20.0 });
+    start(&mut app, connection, 133);
+    assert!(app.world().get::<CastState>(player).is_none());
+    app.world_mut()
+        .entity_mut(player)
+        .remove::<GlobalCooldown>();
+    start(&mut app, connection, 133);
+    assert!(app.world().get::<CastState>(player).is_some());
+    assert_eq!(app.world().get::<Mana>(player).unwrap().current, 100.0);
 }

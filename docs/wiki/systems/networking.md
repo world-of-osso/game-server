@@ -17,7 +17,7 @@ app.replicate::<Position>();
 app.replicate::<Health>();
 app.replicate::<Mana>();
 app.replicate::<CharacterAppearance>();
-app.replicate::<CastingSpell>();
+app.component::<shared::casting::CastState>().replicate();
 ```
 
 Lightyear handles:
@@ -43,6 +43,14 @@ Authoritative marks are emitted at real state boundaries: player input/gravity, 
 The sender change is a vendored Lightyear 0.28.0 integration rather than a protocol fork. `vendor/lightyear_replication/UPSTREAM.md` records the crates.io checksum, upstream commit, and MIT OR Apache-2.0 licensing. The vendored Lightyear layer delegates dirty candidate traversal to `bevy_replicon` 0.41.1 and exposes test-only diagnostics for root candidates and replication visits; diagnostics are enabled only for integration proof.
 
 The candidate traversal reduction is **PARTIAL** against the original entity/component-queue requirement: queue entries identify entities only, and dirty entities still traverse replicated components. Component-aware dirty tracking, exhaustive writer coverage, and strict-Empty live client CPU verification remain open; no `<=10%` CPU result is claimed.
+
+## Cast Presentation
+
+`cast_presentation.rs` consumes `SpellCastIntent`/`StopSpellCast` through Lightyear receivers. Only authenticated in-world `PlayerLink` ownership selects the caster. Explicit IDs or unique exact names resolve `SpellDatabase` records; existing `validate_cast` checks alive/movement, target/range, available resources and active cooldown/GCD. It does not spend resources or trigger cooldowns.
+
+The compiled shared dependency is `../shared-protocol`, not the stale `crates/shared` tree. Its `CastState` carries `spell_name` and serialized timing, and is registered for replication. Start, fixed-step progress, stop, death/movement cancellation and expiry mark `ReplicationDirtyQueue`. Progress runs after player input. Expiry removes presentation only: no spell effects or successful-damage event are fabricated.
+
+Engine `src/network_runtime/replication.rs::EntitySnapshot` enumerates supported components explicitly, so it must copy/apply/remove `CastState` separately; registering the shared component alone does not reach renderer entities. Receiver tests use real HostClient delivery, not wire component replication. See [contract and boundaries](../../specs/cast-presentation.md).
 
 ## Interest Management
 

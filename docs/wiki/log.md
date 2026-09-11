@@ -1,5 +1,9 @@
 # Wiki Log
 
+## [2026-09-11] systems | Authoritative cast presentation
+
+Documented named shared `CastState`, authenticated owner-bound receiver handling, progress/expiry/stop/movement, and engine worker snapshot handoff in [[networking]] and [contract](../specs/cast-presentation.md). Server `3ba4085` and shared `d3b0736`: three focused HostClient tests pass; no spell effects, wire replication, rendered, or deployment claim. Shared source is sibling `shared-protocol`, not stale `crates/shared`.
+
 ## [2026-09-09] systems | Persist administrative physical equipment
 
 Updated [[persistence]], [[dev-commands]], `index.md`, and [the equipment contract](../../specs/admin-equipment.md) for server commit `8742c1a`. A trusted plain JSON array grants validated supported slots atomically into the separate `character_equipment` redb table as `InventoryItemData`, while preserving bags, gold, existing gear, and `CharacterData` encoding. The operation allocates item-instance GUIDs in the same transaction, derives/publishes current live appearance, and `list-equipment` reads ownership without writes. This is not a catalog, unequip system, or combat-stat implementation; Theron has not been granted equipment and no runtime/deployment claim is made.
