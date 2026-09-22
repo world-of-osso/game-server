@@ -23,6 +23,34 @@ pub struct CharacterData {
     pub durability: Vec<DurabilityEntryData>,
 }
 
+// Frozen seven-byte appearance used by records written before additional choices.
+#[derive(bitcode::Decode)]
+struct LegacyCharacterAppearanceV2 {
+    sex: u8,
+    skin_color: u8,
+    face: u8,
+    eye_color: u8,
+    hair_style: u8,
+    hair_color: u8,
+    facial_style: u8,
+}
+
+#[derive(bitcode::Decode)]
+struct LegacyCharacterDataV5 {
+    name: String,
+    x: f32,
+    y: f32,
+    z: f32,
+    health: f32,
+    max_health: f32,
+    race: u8,
+    class: u8,
+    level: u16,
+    appearance: LegacyCharacterAppearanceV2,
+    equipment_appearance: EquipmentAppearance,
+    durability: Vec<DurabilityEntryData>,
+}
+
 #[derive(bitcode::Decode)]
 struct LegacyCharacterDataV1 {
     name: String,
@@ -47,7 +75,7 @@ struct LegacyCharacterDataV2 {
     race: u8,
     class: u8,
     level: u16,
-    appearance: CharacterAppearance,
+    appearance: LegacyCharacterAppearanceV2,
 }
 
 #[derive(bitcode::Decode)]
@@ -100,7 +128,7 @@ struct LegacyCharacterDataV4 {
     race: u8,
     class: u8,
     level: u16,
-    appearance: CharacterAppearance,
+    appearance: LegacyCharacterAppearanceV2,
     equipment_appearance: EquipmentAppearance,
 }
 
@@ -113,8 +141,11 @@ impl CharacterData {
 }
 
 fn decode_legacy_character_data(bytes: &[u8]) -> Result<CharacterData, bitcode::Error> {
-    bitcode::decode::<LegacyCharacterDataV2>(bytes)
-        .map(character_data_from_legacy_v2)
+    bitcode::decode::<LegacyCharacterDataV5>(bytes)
+        .map(character_data_from_v5)
+        .or_else(|_| {
+            bitcode::decode::<LegacyCharacterDataV2>(bytes).map(character_data_from_legacy_v2)
+        })
         .or_else(|_| bitcode::decode::<LegacyCharacterDataV4>(bytes).map(character_data_from_v4))
         .or_else(|_| {
             bitcode::decode::<LegacyCharacterDataV3AppearanceV1>(bytes)
@@ -127,6 +158,19 @@ fn decode_legacy_character_data(bytes: &[u8]) -> Result<CharacterData, bitcode::
         .or_else(|_| bitcode::decode::<LegacyCharacterDataV1>(bytes).map(character_data_from_v1))
 }
 
+fn upgrade_appearance_v2(appearance: LegacyCharacterAppearanceV2) -> CharacterAppearance {
+    CharacterAppearance {
+        sex: appearance.sex,
+        skin_color: appearance.skin_color,
+        face: appearance.face,
+        eye_color: appearance.eye_color,
+        hair_style: appearance.hair_style,
+        hair_color: appearance.hair_color,
+        facial_style: appearance.facial_style,
+        customization_choices: Vec::new(),
+    }
+}
+
 fn upgrade_appearance_v1(appearance: LegacyCharacterAppearanceV1) -> CharacterAppearance {
     CharacterAppearance {
         sex: appearance.sex,
@@ -136,6 +180,7 @@ fn upgrade_appearance_v1(appearance: LegacyCharacterAppearanceV1) -> CharacterAp
         hair_style: appearance.hair_style,
         hair_color: appearance.hair_color,
         facial_style: appearance.facial_style,
+        customization_choices: Vec::new(),
     }
 }
 
@@ -169,7 +214,11 @@ fn character_data_from_v1(legacy: LegacyCharacterDataV1) -> CharacterData {
 }
 
 fn character_data_from_legacy_v2(legacy: LegacyCharacterDataV2) -> CharacterData {
-    upgrade_legacy!(legacy, legacy.appearance, EquipmentAppearance::default())
+    upgrade_legacy!(
+        legacy,
+        upgrade_appearance_v2(legacy.appearance),
+        EquipmentAppearance::default()
+    )
 }
 
 fn character_data_from_legacy_v2_appearance_v1(
@@ -193,5 +242,20 @@ fn character_data_from_legacy_v3_appearance_v1(
 }
 
 fn character_data_from_v4(legacy: LegacyCharacterDataV4) -> CharacterData {
-    upgrade_legacy!(legacy, legacy.appearance, legacy.equipment_appearance)
+    upgrade_legacy!(
+        legacy,
+        upgrade_appearance_v2(legacy.appearance),
+        legacy.equipment_appearance
+    )
+}
+
+fn character_data_from_v5(legacy: LegacyCharacterDataV5) -> CharacterData {
+    let durability = legacy.durability;
+    let mut data = upgrade_legacy!(
+        legacy,
+        upgrade_appearance_v2(legacy.appearance),
+        legacy.equipment_appearance
+    );
+    data.durability = durability;
+    data
 }

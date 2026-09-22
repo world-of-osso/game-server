@@ -422,6 +422,7 @@ fn full_character_data() -> CharacterData {
             hair_style: 4,
             hair_color: 6,
             facial_style: 1,
+            customization_choices: Vec::new(),
         },
         equipment_appearance: EquipmentAppearance::default(),
         durability: Vec::new(),

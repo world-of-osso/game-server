@@ -220,7 +220,7 @@ fn chars_to_entries(chars: &[(u64, CharacterData)]) -> Vec<shared::protocol::Cha
             level: data.level,
             race: data.race,
             class: data.class,
-            appearance: data.appearance,
+            appearance: data.appearance.clone(),
             equipment_appearance: data.equipment_appearance.clone(),
         })
         .collect()
@@ -324,6 +324,62 @@ mod tests {
     struct ReplicationTag;
     #[derive(Component)]
     struct VisibilityTag;
+
+    #[test]
+    fn customization_choices_survive_creation_reopen_and_login_roster() {
+        use shared::components::{CharacterAppearance, CustomizationChoiceSelection};
+        let appearance = CharacterAppearance {
+            sex: 1,
+            skin_color: 2,
+            face: 3,
+            eye_color: 4,
+            hair_style: 5,
+            hair_color: 6,
+            facial_style: 7,
+            customization_choices: vec![
+                CustomizationChoiceSelection {
+                    option_id: 87,
+                    choice_id: 1734,
+                },
+                CustomizationChoiceSelection {
+                    option_id: 214,
+                    choice_id: 6109,
+                },
+            ],
+        };
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("characters.redb");
+        let id = {
+            let db = redb::Database::create(&path).unwrap();
+            crate::persistence::create_tables(&db);
+            let request = shared::protocol::CreateCharacter {
+                name: "Elara".into(),
+                race: 1,
+                class: 8,
+                appearance: appearance.clone(),
+            };
+            let (id, data) = crate::persistence::create_character_with_appearance(
+                &db,
+                17,
+                &request.name,
+                request.race,
+                request.class,
+                request.appearance,
+            )
+            .unwrap();
+            assert_eq!(data.appearance, appearance);
+            id
+        };
+        let db = redb::Database::open(&path).unwrap();
+        crate::persistence::create_tables(&db);
+        let data = crate::persistence::load_character(&db, id).unwrap();
+        assert_eq!(data.appearance, appearance);
+        crate::persistence::save_character(&db, id, &data);
+        let entries = chars_to_entries(&crate::persistence::list_characters_for_account(&db, 17));
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].character_id, id);
+        assert_eq!(entries[0].appearance, appearance);
+    }
 
     #[test]
     fn relogin_returns_previous_session_entity() {

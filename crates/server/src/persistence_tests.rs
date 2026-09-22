@@ -35,7 +35,18 @@ struct LegacyCharacterDataV2 {
     race: u8,
     class: u8,
     level: u16,
-    appearance: CharacterAppearance,
+    appearance: LegacyCharacterAppearanceV2,
+}
+
+#[derive(bitcode::Encode)]
+struct LegacyCharacterAppearanceV2 {
+    sex: u8,
+    skin_color: u8,
+    face: u8,
+    eye_color: u8,
+    hair_style: u8,
+    hair_color: u8,
+    facial_style: u8,
 }
 
 #[derive(bitcode::Encode)]
@@ -327,7 +338,7 @@ fn load_character_decodes_previous_appearance_records_without_equipment() {
         race: 1,
         class: 1,
         level: 7,
-        appearance: CharacterAppearance {
+        appearance: LegacyCharacterAppearanceV2 {
             sex: 0,
             skin_color: 2,
             face: 3,
@@ -349,7 +360,19 @@ fn load_character_decodes_previous_appearance_records_without_equipment() {
     let loaded = load_character(&db, 100).expect("legacy v2 character should load");
     assert_eq!(loaded.name, "LegacyV2");
     assert_eq!(loaded.level, 7);
-    assert_eq!(loaded.appearance, legacy.appearance);
+    assert_eq!(
+        loaded.appearance,
+        CharacterAppearance {
+            sex: 0,
+            skin_color: 2,
+            face: 3,
+            eye_color: 0,
+            hair_style: 4,
+            hair_color: 5,
+            facial_style: 6,
+            customization_choices: Vec::new(),
+        }
+    );
     assert_eq!(loaded.equipment_appearance, EquipmentAppearance::default());
 }
 
@@ -434,6 +457,7 @@ fn sync_live_components_preserves_existing_equipment_appearance() {
             hair_style: 5,
             hair_color: 6,
             facial_style: 7,
+            customization_choices: Vec::new(),
         },
     };
     let pos = Position {

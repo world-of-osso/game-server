@@ -264,7 +264,7 @@ pub(crate) fn handle_set_appearance(
     let Some(mut data) = persistence::load_character(&db.db, char_id) else {
         return AdminResponse::Error(format!("character data for '{name}' not found"));
     };
-    data.appearance = appearance;
+    data.appearance = appearance.clone();
     persistence::save_character(&db.db, char_id, &data);
     send_character_list_update(
         db,
@@ -450,7 +450,7 @@ fn send_character_list_update(
             level: data.level,
             race: data.race,
             class: data.class,
-            appearance: data.appearance,
+            appearance: data.appearance.clone(),
             equipment_appearance: data.equipment_appearance.clone(),
         },
     };

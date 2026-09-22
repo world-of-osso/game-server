@@ -209,6 +209,7 @@ fn character_appearance(args: &CreateCharacterArgs) -> CharacterAppearance {
         hair_style: args.hair_style,
         hair_color: args.hair_color,
         facial_style: args.facial_style,
+        customization_choices: Vec::new(),
     }
 }
 

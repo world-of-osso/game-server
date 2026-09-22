@@ -217,6 +217,52 @@ pub(crate) fn create_tables(db: &Database) {
     let _ = txn.open_table(SERVER_SETTINGS);
     txn.commit().expect("Failed to commit initial tables");
     migrate_legacy_inventories(db);
+    migrate_legacy_characters(db);
+}
+
+fn migrate_legacy_characters(db: &Database) {
+    let migrations = collect_legacy_character_migrations(db);
+    if migrations.is_empty() {
+        return;
+    }
+    let txn = db
+        .begin_write()
+        .expect("Failed to begin character migration write");
+    {
+        let mut table = txn
+            .open_table(CHARACTERS)
+            .expect("Failed to open characters for migration");
+        for (id, bytes) in &migrations {
+            table
+                .insert(*id, bytes.as_slice())
+                .expect("Failed to write migrated character");
+        }
+    }
+    txn.commit().expect("Failed to commit character migration");
+    info!("Migrated {} legacy character records", migrations.len());
+}
+
+fn collect_legacy_character_migrations(db: &Database) -> Vec<(u64, Vec<u8>)> {
+    let txn = db
+        .begin_read()
+        .expect("Failed to begin character migration read");
+    let table = txn
+        .open_table(CHARACTERS)
+        .expect("Failed to open characters for migration");
+    table
+        .iter()
+        .expect("Failed to iterate character records")
+        .filter_map(|row| {
+            let (id, bytes) = row.expect("Failed to read character migration row");
+            if bitcode::decode::<CharacterData>(bytes.value()).is_ok() {
+                return None;
+            }
+            let data = CharacterData::decode_compatible(bytes.value()).unwrap_or_else(|error| {
+                panic!("Failed to migrate character {}: {error}", id.value())
+            });
+            Some((id.value(), bitcode::encode(&data)))
+        })
+        .collect()
 }
 
 fn migrate_legacy_inventories(db: &Database) {
@@ -792,3 +838,7 @@ mod tests;
 #[cfg(test)]
 #[path = "startup_tests.rs"]
 mod startup_tests;
+
+#[cfg(test)]
+#[path = "persistence_customization_tests.rs"]
+mod customization_tests;

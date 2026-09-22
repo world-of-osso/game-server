@@ -63,7 +63,7 @@ fn handle_create(
         &req.name,
         req.race,
         req.class,
-        req.appearance,
+        req.appearance.clone(),
     ) {
         Ok((cid, data)) => {
             let entry = shared::protocol::CharacterListEntry {
@@ -423,7 +423,7 @@ fn build_player_identity(data: &CharacterData) -> Player {
         name: data.name.clone(),
         race: data.race,
         class: data.class,
-        appearance: data.appearance,
+        appearance: data.appearance.clone(),
     }
 }
 

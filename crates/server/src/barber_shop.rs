@@ -165,8 +165,8 @@ fn handle_apply_request(
         return;
     };
 
-    let applied = barber_shop_appearance(player.appearance, application.changes.appearance);
-    let cost = barber_shop_cost(player.appearance, applied);
+    let applied = barber_shop_appearance(&player.appearance, application.changes.appearance);
+    let cost = barber_shop_cost(&player.appearance, &applied);
     let mut inventory = persistence::load_inventory(&db.db, application.character_id);
     if inventory.gold < cost {
         send_barber_shop_update(
@@ -182,7 +182,7 @@ fn handle_apply_request(
 
     inventory.gold -= cost;
     let appearance_changed = player.appearance != applied;
-    player.appearance = applied;
+    player.appearance = applied.clone();
     if appearance_changed && let Some(dirty_queue) = dirty_queue {
         dirty_queue.mark(application.player);
     }
@@ -237,7 +237,7 @@ fn format_money(copper: u32) -> String {
 }
 
 fn barber_shop_appearance(
-    current: CharacterAppearance,
+    current: &CharacterAppearance,
     requested: CharacterAppearance,
 ) -> CharacterAppearance {
     CharacterAppearance {
@@ -248,10 +248,11 @@ fn barber_shop_appearance(
         hair_style: requested.hair_style,
         hair_color: requested.hair_color,
         facial_style: requested.facial_style,
+        customization_choices: current.customization_choices.clone(),
     }
 }
 
-fn barber_shop_cost(current: CharacterAppearance, requested: CharacterAppearance) -> u32 {
+fn barber_shop_cost(current: &CharacterAppearance, requested: &CharacterAppearance) -> u32 {
     let changed_fields = [
         current.skin_color != requested.skin_color,
         current.face != requested.face,
@@ -278,7 +279,7 @@ fn send_barber_shop_update(
     };
     sender.send::<BarberShopChannel>(BarberShopStateUpdate {
         snapshot: Some(BarberShopSnapshot {
-            appearance: *appearance,
+            appearance: appearance.clone(),
             gold,
         }),
         message,
@@ -314,6 +315,7 @@ mod tests {
             hair_style: 4,
             hair_color: 5,
             facial_style: 6,
+            customization_choices: Vec::new(),
         }
     }
 
@@ -372,10 +374,10 @@ mod tests {
         let requested = CharacterAppearance {
             skin_color: 7,
             hair_color: 2,
-            ..current
+            ..current.clone()
         };
 
-        assert_eq!(barber_shop_cost(current, requested), 20_000);
+        assert_eq!(barber_shop_cost(&current, &requested), 20_000);
     }
 
     #[test]
@@ -389,9 +391,10 @@ mod tests {
             hair_style: 2,
             hair_color: 3,
             facial_style: 4,
+            customization_choices: Vec::new(),
         };
 
-        let applied = barber_shop_appearance(current, requested);
+        let applied = barber_shop_appearance(&current, requested);
 
         assert_eq!(applied.sex, current.sex);
         assert_eq!(applied.eye_color, current.eye_color);

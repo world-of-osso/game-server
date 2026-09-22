@@ -89,7 +89,7 @@ impl CharacterData {
             race: 1,
             class: 1,
             level: 1,
-            appearance: player.appearance,
+            appearance: player.appearance.clone(),
             equipment_appearance: EquipmentAppearance::default(),
             durability: Vec::new(),
         }
@@ -104,6 +104,6 @@ impl CharacterData {
         self.z = wz;
         self.health = health.current;
         self.max_health = health.max;
-        self.appearance = player.appearance;
+        self.appearance = player.appearance.clone();
     }
 }
