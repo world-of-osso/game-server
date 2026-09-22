@@ -263,6 +263,140 @@ fn character_data_round_trip() {
 }
 
 #[test]
+fn customization_migration_reopens_all_earlier_schemas() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("earlier-characters.redb");
+    let six = legacy_appearance_v1_record();
+    let equipped_six = legacy_appearance_v1_with_equipment_record();
+    let absent = LegacyCharacterData {
+        name: "Legacy".into(),
+        x: 1.0,
+        y: 2.0,
+        z: 3.0,
+        health: 90.0,
+        max_health: 100.0,
+        race: 1,
+        class: 1,
+        level: 7,
+    };
+    let seven = LegacyCharacterDataV2 {
+        name: "LegacySeven".into(),
+        x: 1.0,
+        y: 2.0,
+        z: 3.0,
+        health: 90.0,
+        max_health: 100.0,
+        race: 1,
+        class: 1,
+        level: 7,
+        appearance: LegacyCharacterAppearanceV2 {
+            sex: 0,
+            skin_color: 2,
+            face: 3,
+            eye_color: 9,
+            hair_style: 4,
+            hair_color: 5,
+            facial_style: 6,
+        },
+    };
+    let expected_six = CharacterAppearance {
+        sex: 0,
+        skin_color: 2,
+        face: 3,
+        eye_color: 0,
+        hair_style: 4,
+        hair_color: 5,
+        facial_style: 6,
+        customization_choices: Vec::new(),
+    };
+    let fixtures = [
+        (
+            bitcode::encode(&absent),
+            "Legacy",
+            CharacterAppearance::default(),
+            EquipmentAppearance::default(),
+        ),
+        (
+            bitcode::encode(&six),
+            "LegacyV2AppearanceV1",
+            expected_six.clone(),
+            EquipmentAppearance::default(),
+        ),
+        (
+            bitcode::encode(&equipped_six),
+            "LegacyV3AppearanceV1",
+            expected_six.clone(),
+            equipped_six.equipment_appearance.clone(),
+        ),
+        (
+            bitcode::encode(&seven),
+            "LegacySeven",
+            CharacterAppearance {
+                eye_color: 9,
+                ..expected_six
+            },
+            EquipmentAppearance::default(),
+        ),
+    ];
+    {
+        let db = redb::Database::create(&path).unwrap();
+        create_tables(&db);
+        for (index, (bytes, _, _, _)) in fixtures.iter().enumerate() {
+            insert_encoded_character(&db, index as u64 + 1, bytes.clone());
+        }
+    }
+    let current_bytes = {
+        let db = redb::Database::open(&path).unwrap();
+        create_tables(&db);
+        let txn = db.begin_read().unwrap();
+        let table = txn.open_table(CHARACTERS).unwrap();
+        fixtures
+            .iter()
+            .enumerate()
+            .map(|(index, (_, name, appearance, equipment))| {
+                let bytes = table
+                    .get(index as u64 + 1)
+                    .unwrap()
+                    .unwrap()
+                    .value()
+                    .to_vec();
+                let current: CharacterData =
+                    bitcode::decode(&bytes).expect("legacy row rewritten to current schema");
+                assert_eq!(
+                    current,
+                    CharacterData {
+                        name: (*name).into(),
+                        x: 1.0,
+                        y: 2.0,
+                        z: 3.0,
+                        health: 90.0,
+                        max_health: 100.0,
+                        race: 1,
+                        class: 1,
+                        level: 7,
+                        appearance: appearance.clone(),
+                        equipment_appearance: equipment.clone(),
+                        durability: Vec::new(),
+                    }
+                );
+                bytes
+            })
+            .collect::<Vec<_>>()
+    };
+    let db = redb::Database::open(&path).unwrap();
+    create_tables(&db);
+    let txn = db.begin_read().unwrap();
+    let table = txn.open_table(CHARACTERS).unwrap();
+    for (index, expected) in current_bytes.iter().enumerate() {
+        assert_eq!(
+            table.get(index as u64 + 1).unwrap().unwrap().value(),
+            expected.as_slice()
+        );
+    }
+    assert_eq!(table.iter().unwrap().count(), fixtures.len());
+}
+
+#[test]
 fn load_missing_character_returns_none() {
     let db = temp_database();
     assert!(load_character(&db, 999).is_none());

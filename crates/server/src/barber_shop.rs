@@ -403,6 +403,24 @@ mod tests {
     }
 
     #[test]
+    fn barber_shop_preserves_additional_customization_choices() {
+        let current = CharacterAppearance {
+            customization_choices: vec![shared::components::CustomizationChoiceSelection {
+                option_id: 87,
+                choice_id: 1734,
+            }],
+            ..appearance()
+        };
+        let requested = CharacterAppearance {
+            hair_style: 9,
+            ..appearance()
+        };
+        let applied = barber_shop_appearance(&current, requested);
+        assert_eq!(applied.customization_choices, current.customization_choices);
+        assert_eq!(applied.hair_style, 9);
+    }
+
+    #[test]
     fn barber_shop_success_message_formats_money_cost() {
         assert_eq!(
             barber_shop_success_message(12_345),

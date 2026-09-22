@@ -143,6 +143,25 @@ fn customization_migrates_previous_character_without_durability() {
 }
 
 #[test]
+fn customization_migration_rejects_corrupt_records_without_rewriting_them() {
+    let db = temp_database();
+    let bytes = [255, 255, 255];
+    let txn = db.begin_write().unwrap();
+    {
+        txn.open_table(CHARACTERS)
+            .unwrap()
+            .insert(55, bytes.as_slice())
+            .unwrap();
+    }
+    txn.commit().unwrap();
+    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| create_tables(&db)));
+    assert!(result.is_err(), "unknown encoding must fail explicitly");
+    let txn = db.begin_read().unwrap();
+    let table = txn.open_table(CHARACTERS).unwrap();
+    assert_eq!(table.get(55).unwrap().unwrap().value(), bytes.as_slice());
+}
+
+#[test]
 fn customization_migration_rewrites_old_bytes_once_across_reopen() {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("legacy.redb");
