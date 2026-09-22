@@ -252,3 +252,56 @@ fn action_from_token(args: TokenArgs, command: CliCommand) -> CliAction {
         token: args.token,
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn create_character_cli_keeps_core_selectors_and_empty_additional_choices() {
+        let cli = Cli::try_parse_from([
+            "game-cli",
+            "create-character",
+            "--name",
+            "Elara",
+            "--sex",
+            "1",
+            "--skin-color",
+            "2",
+            "--face",
+            "3",
+            "--eye-color",
+            "4",
+            "--hair-style",
+            "5",
+            "--hair-color",
+            "6",
+            "--facial-style",
+            "7",
+        ])
+        .unwrap();
+        let Commands::CreateCharacter(args) = cli.command else {
+            panic!("expected creation command")
+        };
+        let CliCommand::CreateCharacter {
+            name, appearance, ..
+        } = create_character_action(args).command
+        else {
+            panic!("expected creation action")
+        };
+        assert_eq!(name, "Elara");
+        assert_eq!(
+            appearance,
+            CharacterAppearance {
+                sex: 1,
+                skin_color: 2,
+                face: 3,
+                eye_color: 4,
+                hair_style: 5,
+                hair_color: 6,
+                facial_style: 7,
+                customization_choices: Vec::new(),
+            }
+        );
+    }
+}

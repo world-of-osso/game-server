@@ -571,6 +571,7 @@ mod tests {
                 && appearance.hair_style == 5
                 && appearance.hair_color == 1
                 && appearance.facial_style == 6
+                && appearance.customization_choices.is_empty()
         ));
     }
 

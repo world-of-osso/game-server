@@ -90,7 +90,14 @@ fn after_login(
             race,
             class,
             appearance,
-        } => send_create_character_request(name, *race, *class, *appearance, create_senders, exit),
+        } => send_create_character_request(
+            name,
+            *race,
+            *class,
+            appearance.clone(),
+            create_senders,
+            exit,
+        ),
         CliCommand::ChatHistory { limit } => {
             send_chat_history_request(*limit, history_senders, exit);
         }
