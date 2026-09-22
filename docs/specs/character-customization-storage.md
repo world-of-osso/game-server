@@ -4,11 +4,11 @@ The server preserves shared character appearance through creation, persistence a
 
 ## What it must do
 
-- [ ] Preserve sex, all six core selectors and ordered additional option/choice pairs through creation, save, database reopen and login roster construction.
-- [ ] Decode frozen historical character schemas: no appearance; six-byte appearance without/with equipment; seven-byte appearance without/with equipment; seven-byte appearance with equipment and durability.
-- [ ] Upgrade historical appearance to an empty additional-selection vector while preserving every existing core value, equipment entry and durability value.
-- [ ] Rewrite known old records to the current schema at startup once; reopening current records must not alter their bytes or manufacture records/selections.
-- [ ] Encode only the current schema. Unknown/corrupt records fail explicitly instead of silently resetting appearance.
+- [x] Preserve sex, all six core selectors and ordered additional option/choice pairs through creation, save, database reopen and login roster construction.
+- [x] Decode frozen historical character schemas: no appearance; six-byte appearance without/with equipment; seven-byte appearance without/with equipment; seven-byte appearance with equipment and durability.
+- [x] Upgrade historical appearance to an empty additional-selection vector while preserving every existing core value, equipment entry and durability value.
+- [x] Rewrite known old records to the current schema at startup once; reopening current records must not alter their bytes or manufacture records/selections.
+- [x] Encode only the current schema. Unknown/corrupt records fail explicitly instead of silently resetting appearance.
 
 ## How it works
 
@@ -28,6 +28,8 @@ The server preserves shared character appearance through creation, persistence a
 - `crates/server/src/persistence_customization_tests.rs`: frozen pre-change equipment/durability records and temporary-database reopen.
 - `crates/server/src/persistence_tests.rs`: earlier appearance schemas.
 - `crates/server/src/auth.rs`: nonempty additional choices across creation/reopen/roster.
+- `crates/server/src/barber_shop.rs`: core-only barber changes preserve existing additional choices.
+- `crates/client/src/bin/game_cli.rs`, `crates/server/src/bin/admin.rs`: existing core-only CLI defaults remain empty for additional choices.
 
 ## Known gaps (current cycle)
 
