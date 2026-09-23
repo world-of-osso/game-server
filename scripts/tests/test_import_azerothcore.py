@@ -12,6 +12,7 @@ import unittest
 
 SCRIPTS = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(SCRIPTS))
+import content_policy  # noqa: E402
 import db2  # noqa: E402
 
 AZEROTHCORE_SQL = Path(os.environ.get("AZEROTHCORE_SQL", "/home/osso/Repos/azerothcore/data/sql/base/db_world"))
@@ -55,8 +56,9 @@ class CreatureEventImportTests(unittest.TestCase):
         scripts = self.root / "scripts"
         scripts.mkdir()
         (self.root / "data").mkdir()
-        for name in ("import-azerothcore.sh", "world_schema.sql", "db2.py", "db2_schema.sql", "mysql_dump.py"):
+        for name in ("import-azerothcore.sh", "world_schema.sql", "db2.py", "db2_schema.sql", "mysql_dump.py", "content_policy.py"):
             shutil.copy2(SCRIPTS / name, scripts / name)
+        (scripts / "content_overrides.csv").write_text("kind,source_id,retail_id,source_name,retail_name,reason\n")
         self.sql = self.root / "source"
         self.sql.mkdir()
         for name in dump_tables():
@@ -71,6 +73,8 @@ class CreatureEventImportTests(unittest.TestCase):
         )
         self.csv = self.root / "csv"
         write_header_only_csvs(self.csv / db2.DEFAULT_BUILD)
+        (self.csv / content_policy.WRATH_BUILD).mkdir()
+        (self.csv / content_policy.WRATH_BUILD / "SpellName.csv").write_text("ID,Name_lang\n")
         self.db = self.root / "data/world.db"
 
     def run_import(self):
@@ -113,6 +117,15 @@ class CreatureEventImportTests(unittest.TestCase):
         result = self.run_import()
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("SkillLineAbility", result.stderr)
+        self.assertEqual(self.db.read_bytes(), before)
+
+    def test_missing_wrath_spell_names_does_not_destroy_existing_database(self):
+        (self.csv / content_policy.WRATH_BUILD / "SpellName.csv").unlink()
+        self.db.write_bytes(b"existing database must survive failed preflight")
+        before = self.db.read_bytes()
+        result = self.run_import()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("SpellName.csv", result.stderr)
         self.assertEqual(self.db.read_bytes(), before)
 
     def test_content_tables_join_quest_vendor_and_trainer_rows(self):
@@ -171,8 +184,9 @@ class CreatureEventImportTests(unittest.TestCase):
 
 
 @unittest.skipUnless(AZEROTHCORE_SQL.is_dir(), f"AzerothCore dumps not present at {AZEROTHCORE_SQL}")
+@unittest.skipUnless(PINNED_BUILD_DIR.is_dir(), f"pinned DB2 CSVs not present at {PINNED_BUILD_DIR}")
 class AzerothCoreContentTests(unittest.TestCase):
-    """Load the real AzerothCore content dumps and check known Elwynn Forest rows."""
+    """Load real AzerothCore dumps + pinned Retail DB2, derive content_* tables, check Elwynn Forest rows."""
 
     TABLES = (
         "creature_template", "quest_template", "creature_queststarter", "creature_questender",
@@ -183,17 +197,21 @@ class AzerothCoreContentTests(unittest.TestCase):
     def setUpClass(cls):
         cls.temp = tempfile.TemporaryDirectory()
         cls.db = Path(cls.temp.name) / "world.db"
-        result = subprocess.run(
+        cls.report = Path(cls.temp.name) / "content-dropped.csv"
+        commands = [
             [sys.executable, str(SCRIPTS / "mysql_dump.py"), "--db", str(cls.db), "--schema", str(SCRIPTS / "world_schema.sql")]
             + [f"{name}={AZEROTHCORE_SQL / (name + '.sql')}" for name in cls.TABLES],
-            capture_output=True,
-            text=True,
-            timeout=600,
-            check=False,
-        )
-        if result.returncode != 0:
-            raise AssertionError(result.stdout + result.stderr)
+            [sys.executable, str(SCRIPTS / "db2.py"), "import", "--csv-root", str(PINNED_CSV_ROOT), "--db", str(cls.db)],
+            [sys.executable, str(SCRIPTS / "content_policy.py"), "--db", str(cls.db), "--report", str(cls.report),
+             "--csv-root", str(PINNED_CSV_ROOT)],
+        ]
+        for command in commands:
+            result = subprocess.run(command, capture_output=True, text=True, timeout=900, check=False)
+            if result.returncode != 0:
+                raise AssertionError(result.stdout + result.stderr)
         cls.conn = sqlite3.connect(cls.db)
+        with cls.report.open(newline="", encoding="utf-8") as handle:
+            cls.dropped = {(r["table"], r["key"], int(r["source_id"])): r["reason"] for r in csv.DictReader(handle)}
 
     @classmethod
     def tearDownClass(cls):
@@ -202,6 +220,69 @@ class AzerothCoreContentTests(unittest.TestCase):
 
     def rows(self, sql, *params):
         return self.conn.execute(sql, params).fetchall()
+
+    def vendor_items(self, entry):
+        return self.rows(
+            "SELECT v.item, c.Name, c.BuyPrice, c.ItemLevel, c.DisplayInfoID FROM content_npc_vendor v"
+            " JOIN content_item c ON c.ID = v.item WHERE v.entry = ? ORDER BY v.item", entry)
+
+    def test_corina_steele_sells_items_with_retail_level_and_display(self):
+        self.assertEqual(
+            self.vendor_items(54),
+            [
+                (2488, "Gladius", 536, 4, 1542), (2489, "Two-Handed Sword", 343, 3, 1627),
+                (2490, "Tomahawk", 540, 4, 453), (2491, "Large Axe", 484, 4, 22112),
+                (2492, "Cudgel", 285, 3, 12992), (2493, "Wooden Mallet", 701, 4, 22121),
+                (2494, "Stiletto", 402, 4, 22136), (2495, "Walking Stick", 505, 4, 1768),
+            ],
+        )
+        # AzerothCore: Gladius item level 9, display 22078.
+        self.assertEqual(self.rows("SELECT ItemLevel, displayid FROM item_template WHERE entry = 2488"), [(9, 22078)])
+
+    def test_goldshire_barkeep_water_uses_retail_price(self):
+        self.assertEqual(self.rows("SELECT BuyPrice FROM item_template WHERE entry = 159"), [(25,)])
+        self.assertIn((159, "Refreshing Spring Water", 5), [row[:3] for row in self.vendor_items(465)])
+
+    def test_llane_beshere_teaches_retail_warrior_spells(self):
+        self.assertEqual(
+            self.rows(
+                "SELECT s.SpellId, n.Name_lang, s.ReqLevel, s.MoneyCost FROM creature_default_trainer c"
+                " JOIN content_trainer_spell s ON s.TrainerId = c.TrainerId JOIN spell_name n ON n.ID = s.SpellId"
+                " WHERE c.CreatureId = 911 ORDER BY s.ReqLevel, s.SpellId"
+            ),
+            [
+                (1464, "Slam", 1, 0), (88163, "Attack", 1, 0), (100, "Charge", 2, 0), (23922, "Shield Slam", 3, 0),
+                (1715, "Hamstring", 4, 0), (34428, "Victory Rush", 5, 0), (2565, "Shield Block", 6, 0),
+                (6552, "Pummel", 7, 0), (355, "Taunt", 8, 0), (1680, "Whirlwind", 9, 0),
+                (6673, "Battle Shout", 10, 0), (57755, "Heroic Throw", 10, 0), (163201, "Execute", 10, 0),
+                (18499, "Berserker Rage", 12, 0),
+            ],
+        )
+        self.assertEqual(
+            self.dropped[("trainer_spell", "TrainerId=2", 772)],
+            "class trainer: Retail class skill line replaces AzerothCore ranks",
+        )
+
+    def test_wrath_only_items_are_dropped_and_reported(self):
+        self.assertEqual(self.rows("SELECT count(*) FROM content_item WHERE ID IN (41, 2892)"), [(0,)])
+        self.assertEqual(self.dropped[("item_template", "entry=41", 41)], "no Retail row")
+        self.assertEqual(
+            self.dropped[("item_template", "entry=2892", 2892)], "Retail name 'Empty Poison Vial' != 'Deadly Poison'")
+        self.assertEqual(self.rows("SELECT count(*) FROM content_npc_vendor WHERE entry = 1325 AND item = 2892"), [(0,)])
+        self.assertEqual(self.dropped[("npc_vendor", "entry=1325", 2892)], "item not mapped")
+
+    def test_reviewed_override_keeps_renamed_okra(self):
+        self.assertEqual(self.rows("SELECT Name, SourceEntry FROM content_item WHERE ID = 732"), [("Ripe Okra", 732)])
+
+    def test_quests_are_kept_only_when_retail_has_the_id(self):
+        self.assertEqual(
+            self.rows(
+                "SELECT q.ID, t.name FROM content_quest_template q JOIN content_creature_queststarter s ON s.quest = q.ID"
+                " JOIN creature_template t ON t.entry = s.id WHERE q.ID IN (16, 783)"
+            ),
+            [(783, "Deputy Willem")],
+        )
+        self.assertEqual(self.dropped[("quest_template", "ID=16", 16)], "quest id not in Retail QuestV2")
 
     def test_a_threat_within_starts_at_deputy_willem_and_ends_at_marshal_mcbride(self):
         self.assertEqual(

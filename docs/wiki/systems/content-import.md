@@ -1,6 +1,6 @@
 # Content Import
 
-Quest, vendor, trainer, loot, gossip and item content comes from AzerothCore (Wrath 3.3.5) dumps imported into `data/world.db`; the client and spell/class data are Retail `12.1.0.69933`. This page records what was imported, how Wrath IDs line up with Retail DB2 IDs (measured, with counts), and the mapping policy options. **The mapping policy is an open decision for the main thread; nothing in the importer applies one yet.** Rows are imported verbatim with their Wrath IDs.
+Quest, vendor, trainer, loot, gossip and item content comes from AzerothCore (Wrath 3.3.5) dumps imported into `data/world.db`; the client and spell/class data are Retail `12.1.0.69933`. Raw dump tables keep their Wrath IDs verbatim. `scripts/content_policy.py` derives the Retail-first `content_*` tables that the server should read (policy chosen 2026-09-23, option 4 below). This page records the imported tables, the policy and its drop counts, and the ID measurements that motivated it.
 
 ## Imported tables
 
@@ -33,7 +33,7 @@ Quest, vendor, trainer, loot, gossip and item content comes from AzerothCore (Wr
 
 ## ID mapping measurements
 
-Reproduce with `scripts/content_mapping.py --db data/world.db --retail data/db2/12.1.0.69933 --wrath data/db2/3.4.0.47659`. The Retail CSVs (Item, ItemSparse, ItemAppearance, ItemModifiedAppearance, ItemDisplayInfo, ItemXBonusTree, SpellName, CreatureDisplayInfo, CreatureModelData, QuestV2, QuestLineXQuest, TaxiNodes, TaxiPath, TaxiPathNode) and the Wrath Classic `3.4.0.47659` CSVs (SpellName, CreatureDisplayInfo, CreatureModelData, TaxiNodes, TaxiPath) are wago.tools exports under `game-server/data/db2/`. Wrath Classic stands in for 3.3.5 names because AzerothCore ships no spell names or display data. "Name" comparisons are exact; case-only differences are counted separately.
+Reproduce with `scripts/content_mapping.py --db data/world.db` (CSV defaults: the db2.py root). The Retail CSVs (Item, ItemSparse, ItemAppearance, ItemModifiedAppearance, ItemDisplayInfo, ItemXBonusTree, SpellName, CreatureDisplayInfo, CreatureModelData, QuestV2, QuestLineXQuest, TaxiNodes, TaxiPath, TaxiPathNode) and the Wrath Classic `3.4.0.47659` CSVs (SpellName, CreatureDisplayInfo, CreatureModelData, TaxiNodes, TaxiPath) are wago.tools exports under the db2.py CSV root `game-engine/data/db2/<build>/` (one root for every build; `3.4.0.47659/` holds the Wrath Classic files). Wrath Classic stands in for 3.3.5 names because AzerothCore ships no spell names or display data. "Name" comparisons are exact; case-only differences are counted separately.
 
 ### Items: `item_template.entry` vs Retail `ItemSparse.ID`
 
@@ -71,19 +71,47 @@ Retail DB2 has quest ids but no titles, so only id presence is measurable. 8,492
 
 TaxiNodes: 335 of 363 (92.3%) same id + name; 22 same id renamed by Cataclysm (`21` Kargath → New Kargath, `26` Auberdine → Lor'danel); 6 absent. TaxiPath: 879 of 915 (96.1%) same id with the same endpoints.
 
+## Content policy (content_policy.py)
+
+`import-azerothcore.sh` runs `content_policy.py` after the DB2 import; it rebuilds every `content_*` table in one transaction (about 1 s) and writes every dropped row or zeroed reward to `data/reports/content-dropped.csv` (`table,key,source_id,reason`). The server should read `content_*`, not the raw dump tables, for items, vendors, trainers, quests and loot. Gossip, `npc_text`, `broadcast_text`, `points_of_interest`, `trainer` and `creature_default_trainer` carry no mapped ids and are read raw.
+
+**Mapping rule.** An item or spell id is kept when the Retail row with the same id has the same name after trim + case-fold, or when [`scripts/content_overrides.csv`](../../../scripts/content_overrides.csv) lists it. Item names come from `item_template`; Wrath spell names from the Wrath Classic `SpellName.csv`. The override CSV (`kind,source_id,retail_id,source_name,retail_name,reason`) holds 62 reviewed item renames (Okra → Ripe Okra, Scroll of Spirit → Scroll of Versatility, possessive/hyphen/spelling fixes). The import fails if a reviewed name no longer matches either side. Excluded on review: different items behind the same id (Red Linen Bandana → Linen Scrap, Wrath poisons → Empty Poison Vial, mail → plate conversions, gem stat changes).
+
+| Table | Rule | Kept | Dropped |
+|-------|------|------|---------|
+| `content_item` | Mapped `item_template` ids; every column from Retail `item_sparse`/`item` (quality, item level, required level, prices, inventory type, class/subclass, bonding, delay, flags, `StatModifier_bonusStat_N`/`StatPercentEditor_N`) and `DisplayInfoID` from `item_modified_appearance` (modifier 0) → `item_appearance`; `SourceEntry` = AzerothCore entry | 35,731 | 10,365 (8,663 no Retail row, 1,702 name differs) |
+| `content_npc_vendor` | Row kept if item maps (negative reference rows kept) | 34,497 | 3,088 |
+| `content_trainer_spell` | Class trainers (`trainer.Type = 0`): Retail class skill line spells (`skill_line` CategoryID 7 named like `chr_classes`, ClassMask 0 or class bit, AcquireMethod 2/4, not passive), `ReqLevel` = `spell_levels.SpellLevel`, cost 0. Other trainers: AzerothCore rows whose spell and ReqAbility ids map | 3,924 | 3,366 (2,418 class ranks, 948 unmapped) |
+| `content_quest_template` | Id in Retail `quest_v2`; unmapped `RewardItemN`/`RewardChoiceItemIDN` (+ amounts) and `RewardSpell`/`RewardDisplaySpell` set to 0 | 8,492 | 972 (+225 reward items, 247 reward spells zeroed) |
+| `content_quest_template_addon`, `_offer_reward`, `_request_items`, `_poi`, `_poi_points`, `content_{creature,gameobject}_quest{starter,ender}` | Rows of kept quests | 8,492 / 7,904 / 6,936 / 16,999 / 52,201 / 6,922 / 7,270 / 393 / 391 | 972 / 756 / 821 / 1,772 / 4,965 / 523 / 631 / 64 / 66 |
+| `content_{creature,gameobject,reference,item}_loot_template` | Row kept if item maps (reference rows kept); `item_loot_template` also needs a mapped container | 244,583 / 17,794 / 44,132 / 4,933 | 4,883 / 163 / 404 / 64 |
+
+Taxi is not derived: `db2.py` imports Retail `taxi_nodes` (1,464), `taxi_path` (8,690) and `taxi_path_node` (127,438) directly. The same import adds `item`, `item_sparse`, `item_appearance`, `item_modified_appearance` and `quest_v2`. Creature display ids stay as imported (`creature_template_model`).
+
+Concrete rows (tests): Corina Steele (`54`) sells Gladius at Retail item level 4 / display 1542 (AzerothCore 9 / 22078); Barkeep Dobbins' (`465`) Refreshing Spring Water costs the Retail 5 copper (AzerothCore 25); Llane Beshere (`911`, trainer 2) teaches 14 Retail warrior spells from Slam/Attack at 1 to Berserker Rage at 12, including Execute `163201`; AzerothCore Rend `772` is reported as a dropped class rank; `41` OLDRecruit's Belt and `2892` Deadly Poison are dropped with Jasper Fel's (`1325`) vendor row; quest `16` Give Gerard a Drink is dropped, `783` A Threat Within kept with Deputy Willem.
+
+**Open follow-ups (not applied):**
+- 147 kept quests need an item that does not map (`RequiredItemIdN`, `StartItem`, `ItemDrop`), e.g. `83` Red Linen Goods (`1019`); they cannot be completed as authored.
+- 12,887 kept vendor rows have a Wrath `ExtendedCost` (honor/badge costs); Retail `ItemExtendedCost` is not imported or mapped.
+- `content_trainer_spell` has no race columns; faction teleports (`3561` Teleport: Stormwind, `3567` Teleport: Orgrimmar) appear on every mage trainer. `skill_line_ability.RaceMasks_0/1` holds the restriction.
+- 2 kept quests have a `PrevQuestID` that was dropped.
+
 ## Mapping policy options
+
+Chosen: option 4, plus option 3's override table.
 
 1. **Keep ids whose Retail row has the same name (case-insensitive); drop the rest.** Covers 96–98% of referenced items and ~99% of displays; drops 388 quests' item references and most class trainer spells.
 2. **Option 1 + name remap for absent ids with a unique Retail name.** Adds ≤0.3% of items; the examples show unrelated Retail items, so this adds wrong mappings.
 3. **Option 1 + a reviewed override table** (`content_id_map(kind, wrath_id, retail_id)`) for same-id renames and hand-picked remaps (Okra → Ripe Okra, Scroll of Spirit → Scroll of Versatility). Most control, manual cost proportional to the ~2–4% residue.
 4. **Per-domain split, Retail authoritative for attributes.** Items: keep AzerothCore content references to ids that pass option 1, but read item stats, prices, levels, quality and display from Retail DB2 by id, not `item_template` (40% price and 16% item-level agreement). Class spells: do not map AzerothCore class trainers; class abilities come from Retail `skill_line_ability` / `ClassSpells`. Displays: use AzerothCore display ids as-is, drop the 253 absent. Quests: keep ids present in `QuestV2`. Taxi: import Retail TaxiNodes/TaxiPath/TaxiPathNode directly.
 
-**Recommendation: option 4, with option 3's override table only for the renamed-but-same-item cases found while testing specific zones.** It matches the Retail client (item tooltips and models come from Retail DB2 anyway) and avoids hand-mapping ~1,500 ranked class spells that Retail no longer has. Decision needed from the main thread before any loader or gameplay code reads these tables.
+Option 4 matches the Retail client (item tooltips and models come from Retail DB2) and avoids hand-mapping ~1,500 ranked class spells that Retail no longer has.
 
 ## Sources
 
 - [scripts/import-azerothcore.sh](../../../scripts/import-azerothcore.sh), [scripts/mysql_dump.py](../../../scripts/mysql_dump.py), [scripts/world_schema.sql](../../../scripts/world_schema.sql) — import path
 - [scripts/content_mapping.py](../../../scripts/content_mapping.py) — mapping measurements above
+- [scripts/content_policy.py](../../../scripts/content_policy.py), [scripts/content_overrides.csv](../../../scripts/content_overrides.csv) — Retail-first content tables
 - [scripts/tests/test_import_azerothcore.py](../../../scripts/tests/test_import_azerothcore.py) — fixture and real-dump tests (A Threat Within `783` Deputy Willem → Marshal McBride; Corina Steele `54` weapon list; Llane Beshere `911` trainer spells)
 - AzerothCore `src/server/game/Globals/ObjectMgr.cpp` — trainer tables actually loaded
 

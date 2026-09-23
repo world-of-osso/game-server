@@ -5,7 +5,7 @@
 
 --db must hold the imported AzerothCore content tables (import-azerothcore.sh)
 and the Retail skill_line_ability table (db2.py import). --retail and --wrath are
-wago.tools CSV exports (default data/db2/<build>/): Retail 12.1.0.69933 and Wrath
+wago.tools CSV exports (default ../game-engine/data/db2/<build>/, the db2.py root): Retail 12.1.0.69933 and Wrath
 Classic 3.4.0.47659, the latter standing in for 3.3.5 DBCs that AzerothCore reads
 from client files (its *_dbc.sql tables are empty override tables).
 
@@ -17,12 +17,18 @@ ambiguous); unmatched.
 import argparse
 import csv
 import sqlite3
+import sys
 from collections import Counter, defaultdict
 from pathlib import Path
 
-PROJECT_DIR = Path(__file__).resolve().parent.parent
-DEFAULT_RETAIL = PROJECT_DIR / "data/db2/12.1.0.69933"
-DEFAULT_WRATH = PROJECT_DIR / "data/db2/3.4.0.47659"
+SCRIPT_DIR = Path(__file__).resolve().parent
+sys.path.insert(0, str(SCRIPT_DIR))
+import content_policy  # noqa: E402
+import db2  # noqa: E402
+
+PROJECT_DIR = SCRIPT_DIR.parent
+DEFAULT_RETAIL = db2.DEFAULT_CSV_ROOT / db2.DEFAULT_BUILD
+DEFAULT_WRATH = db2.DEFAULT_CSV_ROOT / content_policy.WRATH_BUILD
 EXAMPLES = 5
 
 

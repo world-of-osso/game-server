@@ -24,7 +24,7 @@ Source: `~/Repos/azerothcore/data/sql/base/db_world/`
 | `creature_template_model` | 40,213 | Display models per creature (DisplayID, scale, probability) |
 | `waypoint_data` | 144,657 | Ordered patrol path points with per-point delay (ms) |
 
-Quest, vendor, trainer, loot, gossip and item tables are imported from the same dumps; tables, row counts and the Wrath→Retail ID mapping are in [[content-import]]. No server code reads them yet.
+Quest, vendor, trainer, loot, gossip and item tables are imported from the same dumps; tables, row counts, the Wrath→Retail ID mapping and the derived Retail-first `content_*` tables (the ones the server should read) are in [[content-import]]. No server code reads them yet.
 
 `scripts/mysql_dump.py` loads every dump table (MySQL string escapes decoded; `--schema world_schema.sql` reloads the dump tables into a populated `world.db` in one transaction without touching DB2 tables).
 
@@ -53,6 +53,8 @@ Source: wago.tools exports pinned to Retail `12.1.0.69933` (the local install's 
 | `spell_aura_options` | 32,164 | Stacks, proc chance/charges/PPM per spell |
 | `chr_specialization` | 60 | Specs (ID, class, role, mastery) |
 | `trait_node` | 11,875 | Talent tree nodes |
+
+Item/quest/taxi DB2 tables (`item`, `item_sparse`, `item_appearance`, `item_modified_appearance`, `quest_v2`, `taxi_nodes`, `taxi_path`, `taxi_path_node`) feed [[content-import]]; taxi tables are read directly.
 
 Other imported tables: spell categories, levels, class options, procs-per-minute (+mods), shapeshift (+forms), interrupts, target restrictions, equipped items, radius, scaling, empower (+stages), `spell_x_spell_visual`, `skill_line`, `chr_classes`, `specialization_spells`, `power_type`, `chr_classes_x_power_types`, the `trait_*` / `skill_line_x_trait_tree` talent tables with their cost/condition link tables, `trait_currency_source` and `spec_set_member`. `spell_info` reads the spell, class-option, skill-line-ability, specialization, power-type and trait tables ([[spell-info]], [[talents]]).
 

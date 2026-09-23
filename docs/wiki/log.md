@@ -192,3 +192,7 @@ Created 7 pages and index.md:
 ## [2026-09-23] ingest | AzerothCore content import + ID mapping
 
 Created `systems/content-import.md`: 25 content tables imported via new `scripts/mysql_dump.py` (escape-correct loader, replaces awk/sed); Wrath→Retail mapping measured by `scripts/content_mapping.py`. Updated `systems/world-data.md`, `index.md`.
+
+## [2026-09-23] update | Retail-first content policy
+
+`systems/content-import.md`: policy section (content_* tables, rules, kept/dropped counts, open follow-ups); CSVs moved to the db2.py root. `systems/world-data.md`: new item/quest/taxi DB2 tables.

@@ -1,0 +1,63 @@
+kind,source_id,retail_id,source_name,retail_name,reason
+item,732,732,Okra,Ripe Okra,Okra renamed Ripe Okra; same Westfall Stew ingredient
+item,1181,1181,Scroll of Spirit,Scroll of Versatility,Spirit stat replaced by Versatility; same scroll
+item,1712,1712,Scroll of Spirit II,Scroll of Versatility II,Spirit stat replaced by Versatility; same scroll
+item,4424,4424,Scroll of Spirit III,Scroll of Versatility III,Spirit stat replaced by Versatility; same scroll
+item,10306,10306,Scroll of Spirit IV,Scroll of Versatility IV,Spirit stat replaced by Versatility; same scroll
+item,27501,27501,Scroll of Spirit V,Scroll of Versatility V,Spirit stat replaced by Versatility; same scroll
+item,33460,33460,Scroll of Spirit VI,Scroll of Versatility VI,Spirit stat replaced by Versatility; same scroll
+item,2593,2593,Flask of Port,Flask of Stormwind Tawny,drink renamed; same vendor drink
+item,2594,2594,Flagon of Mead,Flagon of Dwarven Mead,drink renamed; same vendor drink
+item,2595,2595,Jug of Bourbon,Jug of Badlands Bourbon,drink renamed; same vendor drink
+item,2723,2723,Bottle of Pinot Noir,Bottle of Dalaran Noir,drink renamed; same vendor drink
+item,3552,3552,Glommus's Head,Glommus' Head,possessive apostrophe normalised
+item,6075,6075,Vimes's Report,Vimes' Report,possessive apostrophe normalised
+item,6089,6089,Zraedus's Brew,Zraedus' Brew,possessive apostrophe normalised
+item,16303,16303,Ursangous's Paw,Ursangous' Paw,possessive apostrophe normalised
+item,18301,18301,Lethtendris's Wand,Lethtendris' Wand,possessive apostrophe normalised
+item,18426,18426,Lethtendris's Web,Lethtendris' Web,possessive apostrophe normalised
+item,18955,18955,Artorius's Head,Artorius' Head,possessive apostrophe normalised
+item,21781,21781,Thaelis's Head,Thaelis' Head,possessive apostrophe normalised
+item,22216,22216,Venoxis's Venom Sac,Venoxis' Venom Sac,possessive apostrophe normalised
+item,24482,24482,Alturus's Report,Alturus' Report,possessive apostrophe normalised
+item,28171,28171,Spymistress's Wristguards,Spymistress' Wristguards,possessive apostrophe normalised
+item,28178,28178,Spymistress's Boots,Spymistress' Boots,possessive apostrophe normalised
+item,28472,28472,Krasus's Compendium - Chapter 1,Krasus' Compendium - Chapter 1,possessive apostrophe normalised
+item,28473,28473,Krasus's Compendium - Chapter 2,Krasus' Compendium - Chapter 2,possessive apostrophe normalised
+item,28474,28474,Krasus's Compendium - Chapter 3,Krasus' Compendium - Chapter 3,possessive apostrophe normalised
+item,29361,29361,Naberius's Phylactery,Naberius' Phylactery,possessive apostrophe normalised
+item,30017,30017,Telonicus's Pendant of Mayhem,Telonicus' Pendant of Mayhem,possessive apostrophe normalised
+item,30658,30658,Flanis's Pack,Flanis' Pack,possessive apostrophe normalised
+item,30807,30807,Uvuros's Fiery Mane,Uvuros' Fiery Mane,possessive apostrophe normalised
+item,33858,33858,Aeonus's Hourglass,Aeonus' Hourglass,possessive apostrophe normalised
+item,34226,34226,Orfus's Bundle,Orfus' Bundle,possessive apostrophe normalised
+item,34720,34720,Barthus's Note,Barthus' Note,possessive apostrophe normalised
+item,37937,37937,Alystros's Plume Cinch,Alystros' Plume Cinch,possessive apostrophe normalised
+item,39475,39475,Artruis's Focus Stone,Artruis' Focus Stone,possessive apostrophe normalised
+item,42679,42679,Creteus's Mobile Databank,Creteus' Mobile Databank,possessive apostrophe normalised
+item,52253,52253,Sylvanas's Music Box,Sylvanas' Music Box,possessive apostrophe normalised
+item,19133,19133,Fel Infused Leggings,Fel-Infused Leggings,hyphenation normalised
+item,20849,20849,Arcane Forged Shortsword,Arcane-Forged Shortsword,hyphenation normalised
+item,20850,20850,Arcane Forged Axe,Arcane-Forged Axe,hyphenation normalised
+item,20851,20851,Arcane Forged Mace,Arcane-Forged Mace,hyphenation normalised
+item,20852,20852,Arcane Forged Dirk,Arcane-Forged Dirk,hyphenation normalised
+item,28108,28108,Power Infused Mushroom,Power-Infused Mushroom,hyphenation normalised
+item,28109,28109,Essence Infused Mushroom,Essence-Infused Mushroom,hyphenation normalised
+item,29942,29942,Battle Scarred Leggings,Battle-Scarred Leggings,hyphenation normalised
+item,29955,29955,Mana Infused Wristguards,Mana-Infused Wristguards,hyphenation normalised
+item,35953,35953,Mead Basted Caribou,Mead-Basted Caribou,hyphenation normalised
+item,37435,37435,Flame Infused Bindings,Flame-Infused Bindings,hyphenation normalised
+item,43193,43193,Lightning Infused Mantle,Lightning-Infused Mantle,hyphenation normalised
+item,3502,3502,Mudsnout Blossoms,Mudsnout Blossom,spelling corrected
+item,9648,9648,Chainlink Towel,Chain Link Towel,spelling corrected
+item,18365,18365,"A Thoroughly Read Copy of ""Nat Pagle's Extreme' Anglin.""","A Thoroughly Read Copy of ""Nat Pagle's Guide to Extreme Anglin'.""",spelling corrected
+item,30012,30012,Ameer's Judgement,Ameer's Judgment,spelling corrected
+item,31494,31494,Netherwing Sorceror's Charm,Netherwing Sorcerer's Charm,spelling corrected
+item,37008,37008,Ethical Epaulettes,Ethical Epaulets,spelling corrected
+item,37424,37424,Plainhunter's Epaulettes,Plainhunter's Epaulets,spelling corrected
+item,38267,38267,Kalieki's Notes,Kaleiki's Notes,spelling corrected
+item,43144,43144,Mustard Dog Basket!,Mustard Dog Basket,spelling corrected
+item,44484,44484,Formula: Enchant Bracers - Greater Assault,Formula: Enchant Bracer - Greater Assault,spelling corrected
+item,44666,44666,Flumblub's Seat Cushion,Fumblub's Seat Cushion,spelling corrected
+item,45209,45209,Sash of Trumpted Pride,Sash of Trumpeted Pride,spelling corrected
+item,45820,45820,Broach of the Wailing Night,Brooch of the Wailing Night,spelling corrected

@@ -33,7 +33,7 @@ Server gameplay systems.
 | [[ecs-storage]] | Bevy ECS as columnar in-memory database: archetype tables, zero-overhead queries, built-in change detection |
 | [[networking]] | Lightyear UDP, pre-entry visibility, matching MCVT server terrain sampling, dirty-candidate replication, spell cast receivers and `Moving` input marker, 50 ms cadence, persistence, channels, and interest management |
 | [[persistence]] | Dual-layer storage: redb for mutable player data, physical equipment ownership, login-loaded gold, mutation-boundary GoldUpdateQueue replication, and SQLite for static world data |
-| [[content-import]] | AzerothCore quest/vendor/trainer/loot/gossip/item tables in world.db; measured Wrath→Retail item/spell/display/quest/taxi ID mapping; policy options (decision pending) |
+| [[content-import]] | AzerothCore quest/vendor/trainer/loot/gossip/item tables in world.db; measured Wrath→Retail ID mapping; Retail-first `content_*` tables from content_policy.py, override CSV, drop report |
 | [[world-data]] | SQLite world.db, AzerothCore/Retail sources, signed creature-event membership and inactive-event selection, WorldDataPlugin |
 | [[class-progression]] | Race/class validation, Initial spec below 10, known spells from ClassSpells, action bars, `character_progression` table, admin set-level live update |
 | [[talents]] | DB2 trait trees per class, TrinityCore-style config validation (visibility, gates, prerequisites, choice/hero nodes, level point budgets), `character_traits`, commit/snapshot messages, talent spells in KnownSpells |

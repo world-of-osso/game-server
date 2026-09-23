@@ -3,7 +3,8 @@
 #
 # World content (creatures, quests, vendors, trainers, loot, gossip, items): AzerothCore
 # MySQL dumps → mysql_dump.py → SQLite
-# Spell/class data: build-pinned Retail DB2 CSVs (game-engine/data/db2/<build>/) → db2.py import
+# Spell/class/item/quest/taxi data: build-pinned Retail DB2 CSVs (game-engine/data/db2/<build>/) → db2.py import
+# Server-read content_* tables: content_policy.py (Retail-first ID mapping)
 #
 # Usage: ./scripts/import-azerothcore.sh [path/to/azerothcore/data/sql/base/db_world]
 set -euo pipefail
@@ -36,6 +37,7 @@ for table in "${DUMP_TABLES[@]}"; do
 done
 
 python3 "$SCRIPT_DIR/db2.py" check --csv-root "$DB2_CSV_ROOT"
+python3 "$SCRIPT_DIR/content_policy.py" --check --csv-root "$DB2_CSV_ROOT"
 
 rm -f "$DB_PATH" "$DB_PATH-wal" "$DB_PATH-shm"
 echo "Creating $DB_PATH ..."
@@ -52,6 +54,11 @@ python3 "$SCRIPT_DIR/mysql_dump.py" --db "$DB_PATH" --schema "$SCHEMA_SQL" "${DU
 
 echo "  Importing DB2 tables ..."
 python3 "$SCRIPT_DIR/db2.py" import --csv-root "$DB2_CSV_ROOT" --db "$DB_PATH"
+
+# --- Retail-first content tables (content_*, see content_policy.py) ---
+
+echo "  Deriving content tables ..."
+python3 "$SCRIPT_DIR/content_policy.py" --db "$DB_PATH" --csv-root "$DB2_CSV_ROOT"
 
 
 echo "Database written to: $DB_PATH"
