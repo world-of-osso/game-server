@@ -678,3 +678,58 @@ CREATE TABLE skill_line_x_trait_tree (
   TraitTreeID INTEGER NOT NULL DEFAULT 0,
   Variant INTEGER NOT NULL DEFAULT 0
 );
+
+DROP TABLE IF EXISTS trait_node_group_x_trait_cond;
+CREATE TABLE trait_node_group_x_trait_cond (
+  ID INTEGER PRIMARY KEY,
+  TraitCondID INTEGER NOT NULL DEFAULT 0,
+  TraitNodeGroupID INTEGER NOT NULL DEFAULT 0
+);
+
+DROP TABLE IF EXISTS trait_node_group_x_trait_cost;
+CREATE TABLE trait_node_group_x_trait_cost (
+  ID INTEGER PRIMARY KEY,
+  TraitNodeGroupID INTEGER NOT NULL DEFAULT 0,
+  TraitCostID INTEGER NOT NULL DEFAULT 0
+);
+
+DROP TABLE IF EXISTS trait_node_x_trait_cost;
+CREATE TABLE trait_node_x_trait_cost (
+  ID INTEGER PRIMARY KEY,
+  TraitNodeID INTEGER NOT NULL DEFAULT 0,
+  TraitCostID INTEGER NOT NULL DEFAULT 0
+);
+
+DROP TABLE IF EXISTS trait_node_entry_x_trait_cost;
+CREATE TABLE trait_node_entry_x_trait_cost (
+  ID INTEGER PRIMARY KEY,
+  TraitNodeEntryID INTEGER NOT NULL DEFAULT 0,
+  TraitCostID INTEGER NOT NULL DEFAULT 0
+);
+
+DROP TABLE IF EXISTS trait_node_entry_x_trait_cond;
+CREATE TABLE trait_node_entry_x_trait_cond (
+  ID INTEGER PRIMARY KEY,
+  TraitCondID INTEGER NOT NULL DEFAULT 0,
+  TraitNodeEntryID INTEGER NOT NULL DEFAULT 0
+);
+
+DROP TABLE IF EXISTS trait_currency_source;
+CREATE TABLE trait_currency_source (
+  Requirement_lang TEXT NOT NULL DEFAULT '',
+  ID INTEGER PRIMARY KEY,
+  TraitCurrencyID INTEGER NOT NULL DEFAULT 0,
+  Amount INTEGER NOT NULL DEFAULT 0,
+  QuestID INTEGER NOT NULL DEFAULT 0,
+  AchievementID INTEGER NOT NULL DEFAULT 0,
+  PlayerLevel INTEGER NOT NULL DEFAULT 0,
+  TraitNodeEntryID INTEGER NOT NULL DEFAULT 0,
+  OrderIndex INTEGER NOT NULL DEFAULT 0
+);
+
+DROP TABLE IF EXISTS spec_set_member;
+CREATE TABLE spec_set_member (
+  ID INTEGER PRIMARY KEY,
+  ChrSpecializationID INTEGER NOT NULL DEFAULT 0,
+  SpecSet INTEGER NOT NULL DEFAULT 0
+);

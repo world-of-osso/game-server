@@ -47,7 +47,9 @@ TABLES = [
     "TraitCond", "TraitCost", "TraitCurrency", "TraitSubTree", "TraitNodeGroup",
     "TraitNodeGroupXTraitNode", "TraitNodeXTraitCond", "TraitNodeXTraitNodeEntry",
     "TraitTreeLoadout", "TraitTreeLoadoutEntry", "TraitTreeXTraitCurrency",
-    "SkillLineXTraitTree",
+    "SkillLineXTraitTree", "TraitNodeGroupXTraitCond", "TraitNodeGroupXTraitCost",
+    "TraitNodeXTraitCost", "TraitNodeEntryXTraitCost", "TraitNodeEntryXTraitCond",
+    "TraitCurrencySource", "SpecSetMember",
 ]
 
 
