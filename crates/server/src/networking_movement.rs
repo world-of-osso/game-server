@@ -173,6 +173,6 @@ pub(super) fn validate_move_distance(distance: f32, max_speed: f32, delta_second
     distance <= max_distance
 }
 
-fn direction_length(direction: &[f32; 3]) -> f32 {
+pub(super) fn direction_length(direction: &[f32; 3]) -> f32 {
     (direction[0].powi(2) + direction[1].powi(2) + direction[2].powi(2)).sqrt()
 }

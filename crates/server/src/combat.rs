@@ -73,18 +73,6 @@ impl Plugin for CombatPlugin {
     fn build(&self, app: &mut App) {
         app.add_message::<crate::death::PlayerDeathTransition>();
         app.init_resource::<CombatLog>();
-        app.add_systems(
-            Update,
-            (
-                crate::cast_presentation::receive_cast_requests,
-                crate::cast_presentation::receive_stop_requests,
-            )
-                .chain(),
-        );
-        app.add_systems(
-            FixedUpdate,
-            crate::cast_presentation::advance_casts.after(crate::networking::process_player_inputs),
-        );
         app.init_resource::<shared::components::SpellBatch>();
         app.add_systems(
             FixedUpdate,
@@ -369,6 +357,29 @@ fn mark_npc_dead(commands: &mut Commands, entity: Entity) {
             respawn_timer: DEFAULT_RESPAWN_SECS,
         })
         .remove::<Replicate>();
+}
+
+/// World-access `mark_npc_dead` for exclusive systems (spell effects).
+pub(crate) fn mark_npc_dead_world(world: &mut World, entity: Entity) {
+    world
+        .entity_mut(entity)
+        .insert(DeathState {
+            respawn_timer: DEFAULT_RESPAWN_SECS,
+        })
+        .remove::<Replicate>();
+}
+
+/// Put `entity` in combat for the grace period (spell damage dealt or taken).
+pub(crate) fn enter_combat(world: &mut World, entity: Entity) {
+    let expires_at = world.resource::<Time>().elapsed_secs_f64() + COMBAT_GRACE_SECS;
+    let in_combat = world
+        .get::<CombatStatus>(entity)
+        .is_some_and(|status| status.0);
+    let mut entity = world.entity_mut(entity);
+    entity.insert(CombatState { expires_at });
+    if !in_combat {
+        entity.insert(CombatStatus(true));
+    }
 }
 
 fn active_combat_state(expires_at: f64) -> (CombatState, CombatStatus) {

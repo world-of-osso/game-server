@@ -5,11 +5,8 @@ use std::path::PathBuf;
 use std::sync::OnceLock;
 use std::time::Instant;
 
-use rusqlite::{Connection, OpenFlags};
-use shared::spell_data::{ResourceType, SpellEffectDef};
-
-use super::convert::CostError;
 use super::*;
+use rusqlite::{Connection, OpenFlags};
 
 fn world_db_path() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/world.db")
@@ -99,21 +96,6 @@ fn fireball_has_percent_mana_cost_and_cast_time() {
     let cost = &fireball.power_costs[0];
     assert_eq!((cost.power_type, cost.mana_cost), (0, 0));
     assert_eq!(cost.power_cost_pct, 1.0);
-
-    let data = fireball.to_spell_data(|_| Some(50_000.0)).unwrap();
-    assert_eq!(data.cast_time, 1.75);
-    let cost = data.cost.unwrap();
-    assert_eq!(cost.resource, ResourceType::Mana);
-    assert_eq!(cost.amount, 500.0);
-}
-
-#[test]
-fn percent_cost_without_caster_pool_is_an_error() {
-    let Some(fireball) = spell(133) else { return };
-    assert_eq!(
-        fireball.to_spell_data(|_| None).unwrap_err(),
-        CostError::MissingPool(ResourceType::Mana)
-    );
 }
 
 #[test]
@@ -128,15 +110,8 @@ fn kick_interrupts_with_effect_68_and_has_a_cooldown() {
         (categories.defense_type, categories.prevention_type),
         (2, 2)
     );
-
-    let data = kick.to_spell_data(|_| None).unwrap();
-    assert_eq!(data.cooldown, 15.0);
-    assert_eq!(
-        data.effects[0],
-        Some(SpellEffectDef::Interrupt {
-            lockout_duration: 6.0
-        })
-    );
+    let duration = kick.misc.as_ref().unwrap().duration.unwrap();
+    assert_eq!(duration.duration_ms, 6000, "interrupt lockout length");
 }
 
 #[test]
@@ -148,15 +123,6 @@ fn purify_dispels_with_effect_38_keeping_both_dispel_types() {
         .map(|effect| (effect.effect, effect.misc_values[0]))
         .collect();
     assert_eq!(dispels, [(38, 1), (38, 3)]);
-    let data = purify.to_spell_data(|_| Some(50_000.0)).unwrap();
-    assert!(matches!(
-        data.effects[0],
-        Some(SpellEffectDef::Dispel { .. })
-    ));
-    assert!(matches!(
-        data.effects[1],
-        Some(SpellEffectDef::Dispel { .. })
-    ));
 }
 
 #[test]
@@ -166,22 +132,15 @@ fn death_strike_costs_runic_power_type_6_in_tenths() {
     };
     let cost = &death_strike.power_costs[0];
     assert_eq!((cost.power_type, cost.mana_cost), (6, 450));
-    let cost = death_strike.to_spell_data(|_| None).unwrap().cost.unwrap();
-    assert_eq!(cost.resource, ResourceType::RunicPower);
-    assert_eq!(cost.amount, 450.0);
 }
 
 #[test]
-fn soul_shard_cost_has_no_shared_resource_type() {
+fn chaos_bolt_costs_soul_shards_in_tenths() {
     let Some(chaos_bolt) = spell(116858) else {
         return;
     };
     assert_eq!(chaos_bolt.power_costs[0].power_type, 7);
     assert_eq!(chaos_bolt.power_costs[0].mana_cost, 20);
-    assert_eq!(
-        chaos_bolt.to_spell_data(|_| None).unwrap_err(),
-        CostError::UnsupportedPowerType(7)
-    );
 }
 
 #[test]
@@ -196,7 +155,6 @@ fn crusader_strike_keeps_every_aura_gated_power_cost() {
         .collect();
     assert_eq!(costs, [(0, 417383), (1, 137029), (2, 137027), (3, 137028)]);
     assert_eq!(crusader_strike.power_costs[1].power_cost_pct, 0.6);
-    assert!(crusader_strike.unconditional_cost().is_none());
     let categories = crusader_strike.categories.as_ref().unwrap();
     assert_eq!(categories.start_recovery_category, 133);
 }

@@ -75,6 +75,11 @@ pub struct PlayerLink(pub Entity);
 #[derive(Component, Debug, Default)]
 pub struct CombatTarget(pub Option<Entity>);
 
+/// Whether the player's newest input requests translation. Server-only; a
+/// blocking cast freezes `Position`, so casts read intent instead.
+#[derive(Component, Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub(crate) struct Moving(pub bool);
+
 #[derive(Component, Debug, Clone, Copy, PartialEq)]
 pub(crate) struct FallTracker {
     peak_y: f32,
@@ -437,6 +442,10 @@ pub(crate) fn process_player_inputs(time: Res<Time>, mut params: PlayerInputPara
                 params.commands.entity(link.0).remove::<Mounted>();
             }
             let changes = apply_movement_input(&input, link.0, &mut params.players, &time);
+            params
+                .commands
+                .entity(link.0)
+                .insert(Moving(direction_length(&input.direction) >= 0.001));
             if changes.position_changed {
                 mark_interest_position_changed(params.dirty_queue.as_deref(), link.0);
             }

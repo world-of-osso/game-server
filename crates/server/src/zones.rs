@@ -1,6 +1,8 @@
 use bevy::prelude::*;
 use lightyear::prelude::*;
-use shared::components::{Health, ModelDisplay, Npc, Position, Rotation, Zone};
+use shared::components::{
+    Health, ModelDisplay, Npc, Position, Rotation, UnitLevel, UnitPowers, Zone,
+};
 
 use crate::creature_ai::{SpawnPoint, WanderPhase, WanderState, WaypointState};
 use crate::interest::NetworkVisibility;
@@ -54,6 +56,8 @@ fn spawn_elwynn_core(commands: &mut Commands, world_data: &WorldData, replicate:
         let bundle = creature_bundle(spawn, &template.name, health, display_id);
 
         let mut entity = commands.spawn(bundle);
+        // NPC power pools need creature class/level stats, which are not imported.
+        entity.insert((UnitLevel(template.min_level), UnitPowers::default()));
         if replicate {
             entity.insert((
                 Replicate::to_clients(NetworkTarget::All),
@@ -402,6 +406,18 @@ mod tests {
         assert_eq!(results.len(), 2, "only 2 of 3 spawns are in Elwynn bounds");
         assert_creature(&results[0], 1, -9000.0, 150.0, 1001);
         assert_creature(&results[1], 2, -8800.0, 200.0, 1002);
+    }
+
+    #[test]
+    fn spawned_npc_replicates_template_min_level_and_no_powers() {
+        let mut template = make_template(1, 1.0, 100);
+        template.min_level = 7;
+        let spawns = vec![make_spawn(1, -9000.0, -100.0, 50.0)];
+        let mut app = run_spawn_system(make_world_data(vec![template], spawns));
+        let mut query = app.world_mut().query::<(&UnitLevel, &UnitPowers)>();
+        let (level, powers) = query.single(app.world()).unwrap();
+        assert_eq!(*level, UnitLevel(7));
+        assert!(powers.entries.is_empty());
     }
 
     #[test]

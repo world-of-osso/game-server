@@ -7,9 +7,6 @@ mod auth;
 mod auth_character;
 mod barber_shop;
 mod calendar;
-mod cast_presentation;
-#[cfg(test)]
-mod cast_presentation_tests;
 mod class_progression;
 mod collection;
 mod combat;
@@ -39,6 +36,7 @@ mod pvp;
 mod race_class;
 mod reputation;
 mod rest;
+mod spell_cast;
 mod spell_info;
 mod stats;
 mod talent;
@@ -128,6 +126,7 @@ fn add_world_plugins(app: &mut App) {
         .add_plugins(stats::StatsPlugin)
         .add_plugins(combat::CombatPlugin)
         .add_plugins(spell_info::SpellInfoPlugin)
+        .add_plugins(spell_cast::SpellCastPlugin)
         .add_plugins(interest::InterestPlugin)
         .add_plugins(admin_ipc::AdminIpcPlugin);
 }

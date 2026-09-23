@@ -7,11 +7,9 @@
 //! procs-per-minute, empower) are resolved to their referenced rows.
 //! `ClassSpells` holds per-class learnable and specialization spells.
 //!
-//! Casts are presentation-only; `convert` narrows a `SpellInfo` to the shared
-//! `SpellData` that `validate_cast` needs.
+//! `crate::spell_cast` resolves casts from these records.
 
 mod class_data;
-mod convert;
 mod load;
 
 use std::path::Path;
@@ -26,7 +24,7 @@ pub(crate) use class_data::MAX_LEVEL;
 #[cfg(test)]
 pub(crate) use class_data::load_class_spells;
 
-const WORLD_DB_PATH: &str = "data/world.db";
+pub(crate) const WORLD_DB_PATH: &str = "data/world.db";
 
 /// One spell's DB2 data at DifficultyID 0. Sparse tables are boxed so the
 /// ~400k spells without such rows stay small.
@@ -194,6 +192,10 @@ pub struct SpellCategories {
     pub dispel_type: u32,
     pub mechanic: u32,
     pub prevention_type: u32,
+    /// `spell_category.MaxCharges` of `charge_category` (0 = not charge-based).
+    pub max_charges: u32,
+    /// `spell_category.ChargeRecoveryTime` of `charge_category`, ms per charge.
+    pub charge_recovery_ms: u32,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize)]
@@ -262,6 +264,13 @@ pub struct EmpowerStage {
 #[derive(Resource, Debug, Default)]
 pub struct SpellStore {
     spells: Vec<SpellInfo>,
+}
+
+impl SpellInfo {
+    /// Full school bitmask; 0 without a `spell_misc` row.
+    pub fn school_mask(&self) -> u32 {
+        self.misc.as_ref().map_or(0, |misc| misc.school_mask)
+    }
 }
 
 impl SpellStore {
