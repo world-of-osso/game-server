@@ -55,9 +55,9 @@ Server spell data model in `crates/server/src/spell_info/`. `SpellInfoPlugin` lo
 
 ## Load cost
 
-Measured on the real DB (test harness, dev profile, deps at opt-level 2):
+Measured on the real DB in the test harness:
 
-- Load time is about 4.2 s.
+- Load time is 3.9 s in release and about 4.2 s in dev (deps at opt-level 2).
 - RSS grows by about 275 MiB. The live heap estimate is 259 MiB.
 - Struct sizes: `SpellInfo` 360 B, `SpellEffect` 164 B.
 
