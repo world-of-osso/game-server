@@ -1,5 +1,9 @@
 # Wiki Log
 
+## [2026-09-23] systems | Spell cast pipeline, powers and effects
+
+Created [[spell-casting]]; updated [[spell-info]] (conversion removed, charge categories), [[networking]] (cast section now points to spell casting, `Moving` marker), index and the cast spec (`docs/specs/cast-presentation.md`, now the spell casting contract). Effects 2/6/10/30/31/58/64/68/121/136 handled; 18 implicit target IDs; power pools in raw DB2 units with `power_type` regen. 11 real-DB App tests in `spell_cast/tests.rs`.
+
 ## [2026-09-23] systems | Class progression: spec, known spells, action bars
 
 Created [[class-progression]]; updated [[spell-info]], [[persistence]] and index. Race/class validation now runs at creation and select, using a server table because world.db has no chr_races. The Initial spec (OrderIndex 4) is active below level 10. Auto-learned ClassSpells (AcquireMethod 1/2/4, level, race mask), spec spells and mastery form `KnownSpells`, which is snapshotted on world entry with deltas after level or spec changes. Action bars are validated and stored in `character_progression`. Admin set-level updates the online `Level`/`UnitLevel`.

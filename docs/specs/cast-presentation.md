@@ -1,44 +1,48 @@
-# Authoritative cast presentation
+# Authoritative spell casting
 
-Server-side overhead cast state originates in `crates/server/src/cast_presentation.rs`. This is presentation timing, not spell-effect execution. See [networking](../wiki/systems/networking.md#cast-presentation).
+Server-side spell casting in `crates/server/src/spell_cast/`: validation, cast bars, costs, cooldowns, targets and effect resolution. It replaces the presentation-only cast lifecycle. See [spell casting](../wiki/systems/spell-casting.md).
 
 ## What it must do
 
-- [x] Accept valid timed spell requests only for the authenticated in-world connection's player.
-- [x] Advance active casts and remove them on expiry, explicit stop, or disallowed movement.
-- [x] Reject unknown spells, dead/moving casters, and requests without a player owner.
-- [x] Preserve the server-resolved spell name through serialization.
-- [x] Apply existing resource, cooldown and GCD validation.
-- [x] Scale percent costs from the caster's max pool; reject costs whose power type has no shared `ResourceType`, or percent costs with no caster pool.
-- [ ] Apply existing target and range validation (implemented; receiver-boundary proof pending).
-- [x] A connection's stop request must not cancel another entity's cast.
-- [x] Expiry must not pretend to apply damage/healing.
+- [x] Accept spell requests only for the authenticated in-world connection's player; a connection's stop request must not cancel another entity's cast.
+- [x] Reject unknown spells, dead casters, active casts, school lockouts, GCD, cooldown, exhausted charges, moving casters (cast-time/channel spells), wrong target relation, out-of-range (min and max) targets and unaffordable costs, sending `CastFailed` to the owner.
+- [x] Instant spells resolve in the receiving tick; cast-time spells resolve on completion; channels resolve at start and tick per aura period.
+- [x] Spend every non-aura-gated `SpellPower` cost in raw DB2 units (percent of max pool).
+- [x] Start GCD (at cast start), cooldown, category cooldown and charges; send `SpellCooldownUpdate`/`SpellChargesUpdate` to the owner.
+- [x] Movement input cancels casts that are not cast-while-moving.
+- [x] Resolve effects 2, 6 (aura hook), 10, 30, 31, 58, 64 (bounded depth), 68, 121, 136; log unknown effects once per spell and skip them.
+- [x] Fail the cast on unsupported implicit targets of handled effects.
+- [x] Emit `CombatLogEvent` (CastStart, CastSuccess, Damage, Heal, Energize, Interrupt, Death) to source and target owners.
+- [x] Maintain class power pools with DB2 regen/decay; replicate `UnitPowers` and `UnitLevel`.
+- [ ] Contract reasons for too close, school lockout, spell in progress, no charges and unsupported spell (sent as nearest `CastFailReason` plus `detail`).
 
 ## How it works
 
-- [Networking: cast presentation](../wiki/systems/networking.md#cast-presentation)
+- [Spell casting](../wiki/systems/spell-casting.md)
 
 ## Implementation inventory
 
-- `crates/server/src/cast_presentation.rs`: receiver ownership, validation, start/stop/tick.
-- `crates/server/src/combat.rs`: schedule registration.
-- `crates/server/src/networking.rs`: exposes movement ordering boundary.
-- `crates/server/src/spell_info/mod.rs`: `SpellStore` explicit ID or unambiguous exact-name resolution.
-- `crates/server/src/spell_info/convert.rs`: `SpellInfo` → shared `SpellData` (percent costs from caster max pool; unsupported power types reject).
-- `../shared-protocol/src/casting.rs`: serializable named `CastState`.
-- `../shared-protocol/src/protocol.rs`: component replication registration.
+- `crates/server/src/spell_cast/mod.rs`: receivers, validation, start/complete/cancel, `SpellHistory`, messages.
+- `crates/server/src/spell_cast/targets.rs`: implicit targets, relations, range.
+- `crates/server/src/spell_cast/effects.rs`: effect registry, damage/heal paths, `AuraApplier`.
+- `crates/server/src/spell_cast/powers.rs`: `PowerTypeTable`, `PowerPools`, regen, `UnitPowers`/`UnitLevel` sync.
+- `crates/server/src/networking.rs`: `Moving` input marker.
+- `crates/server/src/combat.rs`: `enter_combat`, `mark_npc_dead_world`.
+- `crates/server/src/spell_info/`: spell data including `spell_category` charges.
 
 ## Tests asserting this spec
 
-- `crates/server/src/cast_presentation_tests.rs`: HostClient sender/receiver boundary, progress/expiry, stop/movement, rejection, ownership, validation, serialization.
+- `crates/server/src/spell_cast/tests.rs` (real `world.db` spells): instant Mortal Strike cost/GCD/cooldown messages and repeat failures; Fireball cast time and combat log order; movement cancel; Kick interrupt and Fire lockout; OutOfRange `CastFailed`; Flash Heal overheal; Charge energize raw units and charges message; rage decay; bounded trigger chain; unsupported implicit target; warrior `UnitPowers`/`UnitLevel`.
+- `crates/server/src/zones.rs`: NPC `UnitLevel` and empty `UnitPowers`.
 
 ## Known gaps (current cycle)
 
-- [ ] Engine worker snapshot capture/application and rendered overhead lifecycle require separate engine integration.
-- [ ] End-to-end wire component insertion/update/removal remains unverified here; receiver tests do not prove replication delivery.
+- [ ] Auras, aura-gated costs, procs, periodic effects: next task (`AuraApplier`).
+- [ ] Live players have no `UnitStats`, so coefficient-only spells deal 0 until base stats land.
+- [ ] No faction model: players are allies, NPCs enemies. No facing check. NPCs do not cast and have no power pools.
+- [ ] Combat log reaches only source/target owners, not nearby observers.
+- [ ] End-to-end wire replication and client rendering are unverified here.
 
 ## Out of scope
 
-- Spell damage/healing, resource spending, cooldown triggering, NPC spell AI, and new channel metadata: user restricted this slice to presentation lifecycle.
-- Learned-spell permissions and faction rules are not modeled by existing cast validation. Current relationship classification treats players as friendly and other health-bearing units as hostile; no faction-system claim.
-- Instant casts are rejected with a server diagnostic because there is no timed presentation or effect executor.
+- Learned-spell permissions (known-spells task), haste-scaled GCD, spell travel time, ground-targeted spells (target 87).

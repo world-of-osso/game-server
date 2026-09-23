@@ -1,6 +1,6 @@
 # Spell Info
 
-Server spell data model in `crates/server/src/spell_info/`. `SpellInfoPlugin` loads two read-only resources from `data/world.db` at startup: `SpellStore` (every spell) and `ClassSpells` (per-class spell lists). Source tables and build: [[world-data]] (DB2 12.1.0.69933). Casts are still presentation-only ([[networking]] cast presentation); nothing resolves effects.
+Server spell data model in `crates/server/src/spell_info/`. `SpellInfoPlugin` loads two read-only resources from `data/world.db` at startup: `SpellStore` (every spell) and `ClassSpells` (per-class spell lists). Source tables and build: [[world-data]] (DB2 12.1.0.69933). [[spell-casting]] resolves casts from these records.
 
 ## SpellStore
 
@@ -16,7 +16,7 @@ Server spell data model in `crates/server/src/spell_info/`. `SpellInfoPlugin` lo
 | `effects` | `spell_effect` | Every `EffectIndex`, sorted. Recklessness 1719 has 15. |
 | `power_costs` | `spell_power` | Every `OrderIndex`, including aura-gated rows (`RequiredAuraSpellID`). |
 | `aura_options` | `spell_aura_options` | `CumulativeAura` (max stacks), proc chance/charges/type mask, and PPM. |
-| `categories` | `spell_categories` | Category, GCD category, dispel, mechanic, defense and prevention types. |
+| `categories` | `spell_categories` + `spell_category` | Category, GCD category, dispel, mechanic, defense and prevention types; `MaxCharges`/`ChargeRecoveryTime` of the charge category. |
 | `cooldowns` | `spell_cooldowns` | Recovery, category recovery, and start recovery (GCD). |
 | others | levels, class options, shapeshift, interrupts, target restrictions, equipped items, empower | Boxed because they are sparse. |
 
@@ -29,18 +29,6 @@ Server spell data model in `crates/server/src/spell_info/`. `SpellInfoPlugin` lo
   - Chaos Bolt 116858: 20 = 2 shards.
 - The loader keeps these values unscaled.
 - Percent costs stay in `power_cost_pct`. Fireball 133 has 1.0, meaning 1% of base mana.
-
-## Shared SpellData conversion
-
-`SpellInfo::to_spell_data` narrows a spell for shared `validate_cast`. Shared `SpellData` holds one school, one cost and three effects.
-
-- **Cost:** the first cost with no required aura.
-  - Amount = flat cost + percent × caster max pool. The server has no separate base mana.
-  - A power type with no shared `ResourceType` rejects the cast (`CostError`), as does a percent cost when the caster has no pool.
-- **Effects:** mapped by effect ID.
-  - 2 is damage, 10 is heal, and 30 is energize (the power type is in `EffectMiscValue_0`).
-  - 6 is apply aura, 38 is dispel, and 68 is interrupt. The interrupt lockout is the spell duration: Kick 1766 gets 6 s.
-- **School:** the highest-priority bit of the mask.
 
 ## ClassSpells
 
@@ -73,5 +61,4 @@ Two choices keep the cost down:
 - [spell_info/mod.rs](../../../crates/server/src/spell_info/mod.rs) — types, store, plugin
 - [spell_info/load.rs](../../../crates/server/src/spell_info/load.rs) — SQL loaders
 - [spell_info/class_data.rs](../../../crates/server/src/spell_info/class_data.rs) — class lists
-- [spell_info/convert.rs](../../../crates/server/src/spell_info/convert.rs) — shared conversion
 - [spell_info/tests.rs](../../../crates/server/src/spell_info/tests.rs) — real-DB assertions

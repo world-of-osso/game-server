@@ -1,0 +1,186 @@
+# Spell Casting
+
+Server-authoritative spell casting in `crates/server/src/spell_cast/`. `SpellCastPlugin` validates `SpellCastIntent`, runs cast bars and channels, spends power, starts GCD/cooldowns/charges, selects implicit targets and resolves effects from [[spell-info]] records. Power pools regenerate from the DB2 `power_type` table and replicate as `UnitPowers`. Auras are a hook only (`AuraApplier`, no-op by default).
+
+## Pipeline
+
+1. **Receive** (`Update`): only an authenticated in-world connection's `PlayerLink` player casts. The spell resolves by ID or unique exact name. Explicit target = `target_entity`, else the server `CombatTarget`.
+2. **Validate**, in order:
+   - caster alive;
+   - no active `CastState`;
+   - school not locked out;
+   - GCD of the spell's `StartRecoveryCategory`;
+   - spell and category cooldown;
+   - charges;
+   - moving (see below) for cast-time or channeled spells without `SPELL_ATTR0` 0x10000000;
+   - every handled effect's implicit targets supported;
+   - explicit target;
+   - costs.
+3. **Explicit target** comes from the first handled effect that selects one:
+   - enemy, ally or any relation;
+   - alive;
+   - `spell_range` min/max, hostile (`_0`) or friendly (`_1`); a max of 0 means 5 yd melee.
+   - An ally spell with no valid ally target self-casts (retail auto self-cast).
+   - Facing is not checked.
+4. **Start:**
+   - The GCD starts here: `StartRecoveryTime`, keyed by category, and sends `SpellCooldownUpdate{is_gcd}`.
+   - Instant spells execute now.
+   - Cast-time spells insert a replicated `CastState` and log `CastStart`.
+   - Channeled spells (`SPELL_ATTR1` 0x4/0x40 with a positive duration) execute at start. `CastState::channel` then ticks at the shortest effect `EffectAuraPeriod` for the spell duration.
+5. **Execute** (instant, cast completion, channel start), in order:
+   - recheck caster, target and costs;
+   - plan all targets;
+   - spend costs;
+   - start cooldown and charges;
+   - log `CastSuccess`;
+   - resolve effects in index order.
+   - A failed completion sends `CastFailed`.
+6. **Cancel:** stop requests, caster death and movement all remove `CastState`. A cancelled channel calls `AuraApplier::channel_ended`.
+
+### Movement
+
+- Casting still freezes translation (`networking_movement.rs`).
+- `process_player_inputs` records `Moving(bool)`: whether the newest input has a direction.
+- `advance_casts` runs after input and cancels a non-cast-while-moving cast when `Moving` is true.
+- `MovementSpeed` cannot serve as the signal: it holds run/walk speed even while idle.
+
+### Costs
+
+- Every `SpellPower` row with `RequiredAuraSpellID = 0` applies. Aura-gated rows need the aura runtime.
+- Amount (raw units) = `ManaCost + PowerCostPct% × caster max pool`. The max pool stands in for base mana until base pools exist.
+- Power type -2 costs health.
+- A missing pool or insufficient power fails with `NotEnoughResource`.
+
+### Cooldowns and charges
+
+`SpellHistory` (server-only component) stores absolute ready times from `Time` elapsed seconds:
+
+| What | Keyed by | Source |
+|---|---|---|
+| Spell cooldown | spell | `RecoveryTime` |
+| Category cooldown | `Category` | `CategoryRecoveryTime` |
+| GCD | `StartRecoveryCategory` | `StartRecoveryTime` |
+| Charges | `ChargeCategory` | `spell_category` `MaxCharges` and `ChargeRecoveryTime`, recharging one at a time |
+| School lockouts | school bit | interrupts |
+
+- `SpellCooldownUpdate` carries `max(recovery, category recovery)`.
+- Haste does not scale the GCD.
+
+## Messages
+
+| Message | Recipients | When |
+|---|---|---|
+| `CastFailed{reason, detail}` | caster owner | rejected request or failed completion |
+| `SpellCooldownUpdate` | caster owner | GCD start; cooldown start |
+| `SpellChargesUpdate` | caster owner | charge spent |
+| `CombatLogEvent` | owners of source and target (once each) | CastStart, CastSuccess, Damage, Heal, Energize, Interrupt, Death |
+
+- Other clients in range do not receive combat log events yet.
+- Melee auto-attack still broadcasts the old `CombatEvent` to every client. Retirement: remove it when the client renders `CombatLogEvent`.
+- Spell effects emit only `CombatLogEvent`.
+
+`CastFailReason` lacks several reasons. They are sent as the nearest variant with a `detail` (gap reported to the contract owner):
+
+| Case | Sent as | `detail` |
+|---|---|---|
+| Too close | `OutOfRange` | "too close" |
+| School locked out | `OnCooldown` | "spell school locked out" |
+| No charges | `OnCooldown` | "no charges" |
+| Cast in progress | `InvalidTarget` | "another cast is in progress" |
+| Unknown spell | `InvalidTarget` | "unknown spell" |
+| Unsupported target or power type | `InvalidTarget` | names the ID |
+
+## Implicit targets
+
+Relations: there is no faction model, so players are allies of players and hostile to NPCs.
+
+| IDs | Handling |
+|---|---|
+| 0 | none. If both slots are 0, the effect hits the explicit target, else the caster |
+| 1 | caster |
+| 6 / 21 / 25 | explicit enemy / ally / any |
+| 18, 22 | area center = caster |
+| 53 / 132 / 63 | area center = explicit enemy / ally / any |
+| 15 / 30 | area around the source (default caster), enemy / ally |
+| 16 / 31 | area around the destination (default explicit target, else caster), enemy / ally |
+| 56, 120 | caster (no group or pet backend) |
+| 57, 118 | explicit ally |
+
+- Radius: slot A uses `EffectRadiusIndex_0`; slot B uses `_1`, falling back to `_0` (TrinityCore `CalcRadius`).
+- Area results are nearest first, capped by `SpellTargetRestrictions.MaxTargets`.
+- Any other ID (for example 87 DEST_DEST, 104 cone, 47 front) fails the cast when it belongs to a handled effect.
+
+## Effects
+
+Registry: `effects::handler(effect_id)`. Unhandled effect IDs are skipped and logged once per (spell, effect).
+
+| ID | Name | Handling |
+|---|---|---|
+| 2 | SCHOOL_DAMAGE | scaled amount (below), crit, shared death path |
+| 6 | APPLY_AURA | `AuraApplier::apply_aura` hook, no-op by default |
+| 10 | HEAL | scaled amount, crit, clamped to max, overheal logged |
+| 30 | ENERGIZE | `BasePoints` raw units of power `EffectMiscValue_0`, clamped, excess logged |
+| 31 | WEAPON_PERCENT_DAMAGE | `BasePoints`% of a weapon hit |
+| 58, 121 | WEAPON_DAMAGE, NORMALIZED_WEAPON_DMG | weapon hit + `BasePoints` |
+| 64 | TRIGGER_SPELL | casts `EffectTriggerSpell` at each target, bounded (below) |
+| 68 | INTERRUPT_CAST | cancels an interruptible `CastState` and locks the interrupted spell's school mask for this spell's duration (Kick 1766: 6 s) |
+| 136 | HEAL_PCT | `BasePoints`% of target max health |
+
+TRIGGER_SPELL:
+- The triggered spell ignores cost, cooldown, GCD and cast time.
+- Depth is capped at `MAX_TRIGGER_DEPTH` = 3 hops, the same as the coverage closure.
+
+Formulas:
+- **Scaled amount:** `BasePoints + BonusCoefficient × SP + BonusCoefficientFromAP × AP`.
+  - SP = `UnitStats.intellect`; AP = `max(strength, agility)`. These are retail 1:1 conversions with no spec model.
+  - Units without `UnitStats`, currently live players until base stats land, have SP = AP = 0.
+  - Retail class damage is mostly coefficient-only, so it does 0 damage today.
+- **Crit:** `formulas::melee::crit_chance(level, CombatRatings.crit)`, so 0 without ratings. A crit deals ×2.
+- **Weapon hit:** 10 (the auto-attack base) + `AP / 6 × 2.0`. There is no server weapon data.
+
+Damage and heal side effects:
+- Damage sets `LastDamager` and puts source and target in combat (`combat::enter_combat`, 5 s grace).
+- A lethal hit on an NPC applies `DeathState` and removes `Replicate`.
+- A lethal hit on a player writes `PlayerDeathTransition`.
+
+## Powers
+
+- **Pool list:** the class list comes from `chr_classes_x_power_types`, minus the alternate bars 10/23/24/25.
+- **Order:** `chr_classes.DisplayPower` first, then ascending ID. Example: DK = Runic Power, Runes.
+- **Initial values:** each non-mana pool starts at `DefaultPower`, with max `MaxBasePower`.
+- **Mana** stays in the legacy `Mana` component, with its max from `stats.rs`. `PowerPools` only orders it. Retirement: move mana into `PowerPools` and delete `Mana` when the client reads `UnitPowers`.
+- **Units:** pools hold the raw DB2 values, the same units as `SpellPower` costs and ENERGIZE.
+  - Rage, Runic Power, Soul Shards, Lunar Power and Pain are tenths (`DisplayModifier` 10). Insanity is hundredths.
+  - `UnitPowers` sends the raw `current`/`max` floored to integers. The client divides by the display modifier for `PowerType`.
+- **Regen** (raw units per second, TrinityCore `Player::Regenerate`):
+  - In combat: `RegenCombat`.
+  - Out of combat: `RegenPeace`, starting only after `RegenInterruptTimeMS` since leaving combat.
+  - A positive rate fills toward max. A negative rate moves toward `CenterPower`: Rage/RP decay to 0, and Soul Shards settle at 3.
+  - Examples: Energy +10/s. Rage −12.5/s (−1.25 rage/s) out of combat only. Holy Power −0.1/s after 10 s.
+  - Mana has rate 0 in the data. A placeholder (not retail-derived) regenerates 1% of max per second.
+- **NPCs** get `UnitLevel` (template `min_level`) and empty `UnitPowers`. Creature class/level power stats are not imported.
+- **Players:** `UnitLevel` mirrors `Level`.
+
+## Aura task hook points
+
+- `effects::AuraApplier`, installed through the `AuraApplierHook` resource:
+  - `apply_aura(world, AuraApplication{caster, target, spell_id, effect_index})` for effect 6;
+  - `channel_tick(world, caster, spell_id)` on each channel tick;
+  - `channel_ended` on channel completion or cancel.
+- The hook runs inside `resource_scope`, so it must not re-enter the hook synchronously.
+- Aura-gated power costs (`RequiredAuraSpellID`) and shapeshift checks are skipped until auras exist.
+
+## Sources
+
+- [spell_cast/mod.rs](../../../crates/server/src/spell_cast/mod.rs) — pipeline, `SpellHistory`, messages
+- [spell_cast/targets.rs](../../../crates/server/src/spell_cast/targets.rs) — implicit targets, range
+- [spell_cast/effects.rs](../../../crates/server/src/spell_cast/effects.rs) — handlers, `AuraApplier`
+- [spell_cast/powers.rs](../../../crates/server/src/spell_cast/powers.rs) — `PowerTypeTable`, pools, regen, `UnitPowers`/`UnitLevel`
+- [spell_cast/tests.rs](../../../crates/server/src/spell_cast/tests.rs) — real-DB App tests
+- [spec](../../specs/cast-presentation.md)
+
+## See Also
+
+- [[spell-info]] — the data this resolves
+- [[combat]] — melee, combat state, death
+- [[networking]] — input ordering, replication dirty queue
