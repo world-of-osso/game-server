@@ -24,6 +24,10 @@ Source: `~/Repos/azerothcore/data/sql/base/db_world/`
 | `creature_template_model` | 40,213 | Display models per creature (DisplayID, scale, probability) |
 | `waypoint_data` | 144,657 | Ordered patrol path points with per-point delay (ms) |
 
+Quest, vendor, trainer, loot, gossip and item tables are imported from the same dumps; tables, row counts and the Wrath→Retail ID mapping are in [[content-import]]. No server code reads them yet.
+
+`scripts/mysql_dump.py` loads every dump table (MySQL string escapes decoded; `--schema world_schema.sql` reloads the dump tables into a populated `world.db` in one transaction without touching DB2 tables).
+
 ### Spell/Class Data (Retail WoW DB2 CSVs)
 
 Source: wago.tools exports pinned to Retail `12.1.0.69933` (the local install's `.build.info` version), stored in `../game-engine/data/db2/<build>/<Table>.csv`.
@@ -91,3 +95,4 @@ A `chr_races` table holds playable race metadata. Source: Wago DB2 `ChrRaces` ex
 - [[persistence]] — SQLite is NOT the persistence layer; redb handles mutable player data
 - [[creature-ai]] — movement types drive wander/waypoint AI component assignment
 - [[combat]] — `spell_misc`/`spell_effect` tables feed combat formula inputs
+- [[content-import]] — quest/vendor/trainer/loot/gossip/item tables and ID mapping

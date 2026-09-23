@@ -188,3 +188,7 @@ Created 7 pages and index.md:
 - `reference/crate-structure.md` — shared/server/client/integration-tests with module listings from actual source tree
 - `reference/code-health.md` — 4,838 symbols, 88 untested candidates, dead-code guidance
 - `index.md` — content catalog
+
+## [2026-09-23] ingest | AzerothCore content import + ID mapping
+
+Created `systems/content-import.md`: 25 content tables imported via new `scripts/mysql_dump.py` (escape-correct loader, replaces awk/sed); Wrath→Retail mapping measured by `scripts/content_mapping.py`. Updated `systems/world-data.md`, `index.md`.

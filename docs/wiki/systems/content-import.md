@@ -1,0 +1,94 @@
+# Content Import
+
+Quest, vendor, trainer, loot, gossip and item content comes from AzerothCore (Wrath 3.3.5) dumps imported into `data/world.db`; the client and spell/class data are Retail `12.1.0.69933`. This page records what was imported, how Wrath IDs line up with Retail DB2 IDs (measured, with counts), and the mapping policy options. **The mapping policy is an open decision for the main thread; nothing in the importer applies one yet.** Rows are imported verbatim with their Wrath IDs.
+
+## Imported tables
+
+`scripts/import-azerothcore.sh` loads every table in its `DUMP_TABLES` list from `~/Repos/azerothcore/data/sql/base/db_world/<table>.sql` (AzerothCore `90d7228`, 2026-02-24) via `scripts/mysql_dump.py`. DDL is in `scripts/world_schema.sql`; column order matches the dump `CREATE TABLE` because the dumps use positional `INSERT`s.
+
+| Table | Rows | Content |
+|-------|------|---------|
+| `quest_template` | 9,464 | Quest text, levels, objectives, rewards (Wrath item/spell IDs) |
+| `quest_template_addon` | 9,464 | Prev/next quest chains, class/skill requirements |
+| `quest_offer_reward` / `quest_request_items` | 8,660 / 7,757 | Turn-in and progress text |
+| `quest_poi` / `quest_poi_points` | 18,771 / 57,166 | Quest map blobs |
+| `creature_queststarter` / `creature_questender` | 7,445 / 7,901 | NPC → quest |
+| `gameobject_queststarter` / `gameobject_questender` | 457 / 457 | Object → quest (gameobject templates/spawns not imported) |
+| `npc_vendor` | 37,585 (2,018 vendors) | Vendor item lists; negative `item` = reference to another vendor |
+| `trainer` / `trainer_spell` / `creature_default_trainer` | 126 / 6,417 / 806 | Trainer system AzerothCore `ObjectMgr` loads (`trainer.Type` 0 class, 1 mount, 2 tradeskill, 3 pet) |
+| `npc_trainer` | 4,934 | Legacy trainer table; **not read by AzerothCore** (`ObjectMgr.cpp` queries only `trainer_spell`/`creature_default_trainer`) |
+| `creature_loot_template` / `gameobject_loot_template` / `reference_loot_template` / `item_loot_template` | 249,466 / 17,957 / 44,536 / 4,997 | Loot tables |
+| `gossip_menu` / `gossip_menu_option` | 6,055 / 4,604 | Gossip menus |
+| `npc_text` / `broadcast_text` | 8,361 / 73,039 | Gossip and NPC text |
+| `points_of_interest` | 463 | Gossip map POIs |
+| `item_template` | 46,096 | Wrath item data: stats, prices, quality, class/subclass, displayid |
+
+`creature_template.npcflag` (already imported) marks roles: 2,137 templates with vendor bit 128, 827 with trainer bit 16.
+
+**Taxi:** AzerothCore has no taxi data in SQL; `taxinodes_dbc`/`taxipath_dbc`/`taxipathnode_dbc` are empty override tables (the core reads the client's DBCs). Taxi statistics below use Wrath Classic DB2 as the stand-in.
+
+### Loader
+
+`mysql_dump.py` tokenizes dump `INSERT`s and decodes MySQL string escapes before binding parameters. The previous awk/sed path rewrote only `\'`, so 168 creature names were stored with literal backslashes (`Remy \"Two Times\"`); they now load as `Remy "Two Times"`. `--schema` runs `world_schema.sql` inside the load transaction, so the dump tables can be reloaded into a populated `world.db` without touching DB2 tables, and a failed parse rolls back. The full script still deletes and rebuilds `world.db`.
+
+## ID mapping measurements
+
+Reproduce with `scripts/content_mapping.py --db data/world.db --retail data/db2/12.1.0.69933 --wrath data/db2/3.4.0.47659`. The Retail CSVs (Item, ItemSparse, ItemAppearance, ItemModifiedAppearance, ItemDisplayInfo, ItemXBonusTree, SpellName, CreatureDisplayInfo, CreatureModelData, QuestV2, QuestLineXQuest, TaxiNodes, TaxiPath, TaxiPathNode) and the Wrath Classic `3.4.0.47659` CSVs (SpellName, CreatureDisplayInfo, CreatureModelData, TaxiNodes, TaxiPath) are wago.tools exports under `game-server/data/db2/`. Wrath Classic stands in for 3.3.5 names because AzerothCore ships no spell names or display data. "Name" comparisons are exact; case-only differences are counted separately.
+
+### Items: `item_template.entry` vs Retail `ItemSparse.ID`
+
+| Set | Same id + name | Case-only | Same id, other name | Id absent, name unique | Unmatched |
+|-----|----|----|----|----|----|
+| All 46,096 | 35,250 (76.5%) | 221 | 1,962 (4.3%) | 149 | 8,498 (18.4%, mostly `OLD…`/test items) |
+| Vendor items, 7,647 | 7,316 (95.7%) | 17 | 291 (3.8%) | 0 | 22 |
+| Quest reward items, 5,051 | 4,865 (96.3%) | 60 | 84 (1.7%) | 2 | 38 |
+| Creature loot items, 8,204 | 7,971 (97.2%) | 59 | 102 (1.2%) | 15 | 56 |
+
+Same id with a different name is sometimes a rename (`1181` Scroll of Spirit → Scroll of Versatility, `2593` Flask of Port → Flask of Stormwind Tawny) and sometimes a different item (`1360` Stormwind Chain Gloves → Stormwind Plate Gloves, `2817` Soft Leather Tunic → Hard Leather Tunic, `1019` Red Linen Bandana → Linen Scrap). Name matches for absent ids point at unrelated Retail rows (`5397` Defias Gunpowder → `221485`, `17` Martin Fury → `244855`).
+
+For the 35,250 same-id-same-name items, AzerothCore attributes agree with Retail only partly: class/subclass 94.0%, InventoryType 97.5%, quality 96.7%, BuyPrice 39.8%, SellPrice 40.5%, RequiredLevel 40.1%, ItemLevel 16.2% (level squish), displayid 20.1% (Retail consolidated appearances: `38` Recruit's Shirt AzerothCore display `9891`, Retail `ItemModifiedAppearance`→`ItemAppearance` display `5729`). Of 8,492 quests whose id exists in Retail, 388 reference a reward/required/start item that does not map by id + name (case-insensitive), e.g. `21` Skirmish at Echo Ridge (`2186`), `38` Westfall Stew (`732` Okra → Ripe Okra).
+
+### Spells: AzerothCore spell ids vs Retail `SpellName`
+
+| Set | Same id + name | Same id, other name | Id absent, name ambiguous | Id absent, name unique | Unmatched / no name |
+|-----|----|----|----|----|----|
+| All `trainer_spell`, 3,592 | 1,454 (40.5%) | 190 | 1,520 (42.3%) | 81 | 347 |
+| Class trainers (`trainer.Type=0`), 2,014 | 260 (12.9%) | 39 | 1,519 (75.4%) | 67 | 129 |
+| `quest_template.RewardSpell`, 235 | 161 (68.5%) | 10 | 17 | 2 | 6 / 39 |
+| `quest_template.RewardDisplaySpell`, 76 | 53 (69.7%) | 7 | 3 | 0 | 2 / 11 |
+
+Class trainer spells are mostly Wrath ranks (`143` Fireball rank 2, `591`/`598` Smite) whose ids no longer exist; Retail has one spell per ability. Resolving a name within the trainer's class via Retail `skill_line_ability` gives one Retail spell for only 244 of 1,519 (`205` Frostbolt → `116`, `598` Smite → `585`). Even same-id-same-name class spells are in Retail `skill_line_ability` for only 142 of 260 (`53` Backstab, `139` Renew, `348` Immolate are not). Same-id renames include behaviour changes (`527` Dispel Magic → Purify, `528` Cure Disease → Dispel Magic, `99` Demoralizing Roar → Incapacitating Roar). Quest reward spells matching by id are mostly teach/summon/cosmetic spells; only 2 of 161 are class abilities.
+
+### Creature displays: `creature_template_model.CreatureDisplayID` vs Retail `CreatureDisplayInfo`
+
+21,381 distinct display ids: 21,128 (98.8%) exist in Retail; 253 are absent (e.g. `30`, `79`, `239`). Of those present, 6,684 resolve to the same model file as Wrath Classic and 14,444 to a different file, which are the HD model upgrades (display `26`: `creature/kobold/kobold.m2` → `creature/kobold2/kobold2.m2`; `38`: `tallstrider.m2` → `tallstrider2.m2`). The display id still names the same creature appearance.
+
+### Quests: `quest_template.ID` vs Retail `QuestV2.ID`
+
+Retail DB2 has quest ids but no titles, so only id presence is measurable. 8,492 of 9,464 (89.7%) exist; for creature-started quests 6,719 of 7,227 (93.0%). 2,078 appear in a Retail `QuestLineXQuest`. Absent ids are quests removed in Cataclysm (`16` Give Gerard a Drink, `117` Thunderbrew Lager, `579` Stormwind Library). Presence does not prove the Retail quest has the same objectives; Retail reworked zones (Northshire's `783` A Threat Within still exists by id).
+
+### Taxi: Wrath Classic vs Retail
+
+TaxiNodes: 335 of 363 (92.3%) same id + name; 22 same id renamed by Cataclysm (`21` Kargath → New Kargath, `26` Auberdine → Lor'danel); 6 absent. TaxiPath: 879 of 915 (96.1%) same id with the same endpoints.
+
+## Mapping policy options
+
+1. **Keep ids whose Retail row has the same name (case-insensitive); drop the rest.** Covers 96–98% of referenced items and ~99% of displays; drops 388 quests' item references and most class trainer spells.
+2. **Option 1 + name remap for absent ids with a unique Retail name.** Adds ≤0.3% of items; the examples show unrelated Retail items, so this adds wrong mappings.
+3. **Option 1 + a reviewed override table** (`content_id_map(kind, wrath_id, retail_id)`) for same-id renames and hand-picked remaps (Okra → Ripe Okra, Scroll of Spirit → Scroll of Versatility). Most control, manual cost proportional to the ~2–4% residue.
+4. **Per-domain split, Retail authoritative for attributes.** Items: keep AzerothCore content references to ids that pass option 1, but read item stats, prices, levels, quality and display from Retail DB2 by id, not `item_template` (40% price and 16% item-level agreement). Class spells: do not map AzerothCore class trainers; class abilities come from Retail `skill_line_ability` / `ClassSpells`. Displays: use AzerothCore display ids as-is, drop the 253 absent. Quests: keep ids present in `QuestV2`. Taxi: import Retail TaxiNodes/TaxiPath/TaxiPathNode directly.
+
+**Recommendation: option 4, with option 3's override table only for the renamed-but-same-item cases found while testing specific zones.** It matches the Retail client (item tooltips and models come from Retail DB2 anyway) and avoids hand-mapping ~1,500 ranked class spells that Retail no longer has. Decision needed from the main thread before any loader or gameplay code reads these tables.
+
+## Sources
+
+- [scripts/import-azerothcore.sh](../../../scripts/import-azerothcore.sh), [scripts/mysql_dump.py](../../../scripts/mysql_dump.py), [scripts/world_schema.sql](../../../scripts/world_schema.sql) — import path
+- [scripts/content_mapping.py](../../../scripts/content_mapping.py) — mapping measurements above
+- [scripts/tests/test_import_azerothcore.py](../../../scripts/tests/test_import_azerothcore.py) — fixture and real-dump tests (A Threat Within `783` Deputy Willem → Marshal McBride; Corina Steele `54` weapon list; Llane Beshere `911` trainer spells)
+- AzerothCore `src/server/game/Globals/ObjectMgr.cpp` — trainer tables actually loaded
+
+## See Also
+
+- [[world-data]] — world.db layout, creature and DB2 tables
+- [[spell-info]] — Retail class spell lists (`ClassSpells`)
+- [[class-progression]] — known spells come from Retail `skill_line_ability`

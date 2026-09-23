@@ -34,7 +34,7 @@ Static read-only data loaded at server startup into `Res<WorldData>` and `Res<Sp
 
 - **Database**: `data/world.db` (132MB) — regenerate with `scripts/import-azerothcore.sh`
 - **Sources**:
-  - Creature data: AzerothCore SQL dumps from `~/Repos/azerothcore/data/sql/base/db_world/`
+  - Creature, quest, vendor, trainer, loot, gossip, item data: AzerothCore SQL dumps from `~/Repos/azerothcore/data/sql/base/db_world/` (content tables and Wrath→Retail ID mapping: `docs/wiki/systems/content-import.md`)
   - Spell/class/talent data: build-pinned Retail DB2 CSVs from `../game-engine/data/db2/<build>/`, imported by `scripts/db2.py` (tables, build, row counts: `docs/wiki/systems/world-data.md`)
 - **Modules**:
   - `crates/server/src/world_data.rs` — `WorldDataPlugin`, `WorldData` resource
