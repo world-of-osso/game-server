@@ -67,6 +67,9 @@ Key formulas:
 
 ## Stat Formulas (`shared/src/formulas/mod.rs`)
 
+Players no longer use the HP/mana/rating functions below: [[character-stats]] computes retail stats server-side.
+
+
 - **Max HP**: `base_hp(class, level)` from AzerothCore table + `hp_from_stamina`
   - Below 70: WotLK model (first 20 stam = 1 HP, rest = 10 HP each)
   - Level 70+: retail model (flat 20 HP per stamina)

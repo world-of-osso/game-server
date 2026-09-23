@@ -7,7 +7,7 @@ Server-side spell casting in `crates/server/src/spell_cast/`: validation, cast b
 - [x] Accept spell requests only for the authenticated in-world connection's player; a connection's stop request must not cancel another entity's cast.
 - [x] Reject unknown spells, dead casters, active casts, school lockouts, GCD, cooldown, exhausted charges, moving casters (cast-time/channel spells), wrong target relation, out-of-range (min and max) targets and unaffordable costs, sending `CastFailed` to the owner.
 - [x] Instant spells resolve in the receiving tick; cast-time spells resolve on completion; channels resolve at start and tick per aura period.
-- [x] Spend every non-aura-gated `SpellPower` cost in raw DB2 units (percent of max pool).
+- [x] Spend every non-aura-gated `SpellPower` cost in raw DB2 units (`PowerCostPct` of base mana for mana, of the max pool otherwise).
 - [x] Start GCD (at cast start), cooldown, category cooldown and charges; send `SpellCooldownUpdate`/`SpellChargesUpdate` to the owner.
 - [x] Movement input cancels casts that are not cast-while-moving.
 - [x] Resolve effects 2, 6 (aura hook), 10, 30, 31, 58, 64 (bounded depth), 68, 121, 136; log unknown effects once per spell and skip them.
@@ -33,13 +33,13 @@ Server-side spell casting in `crates/server/src/spell_cast/`: validation, cast b
 
 ## Tests asserting this spec
 
-- `crates/server/src/spell_cast/tests.rs` (real `world.db` spells): instant Mortal Strike cost/GCD/cooldown messages and repeat failures; Fireball cast time and combat log order; movement cancel; Kick interrupt and Fire lockout; OutOfRange `CastFailed`; Flash Heal overheal; Charge energize raw units and charges message; rage decay; bounded trigger chain; unsupported implicit target (`NotSupported`); unknown-spell rejection; warrior `UnitPowers`.
+- `crates/server/src/spell_cast/tests.rs` (real `world.db` spells): instant Mortal Strike cost/GCD/cooldown messages and repeat failures; Fireball cast time and combat log order; movement cancel; Kick interrupt and Fire lockout; OutOfRange `CastFailed`; Flash Heal overheal; Charge energize raw units and charges message; rage decay; bounded trigger chain; unsupported implicit target (`NotSupported`); unknown-spell rejection; warrior `UnitPowers`; Fireball scaling with computed Mage stats; percent mana cost from base mana.
 - `crates/server/src/zones.rs`: NPC `UnitLevel` and empty `UnitPowers`.
 
 ## Known gaps (current cycle)
 
 - [ ] Auras, aura-gated costs, procs, periodic effects: next task (`AuraApplier`).
-- [ ] Live players have no `UnitStats`, so coefficient-only spells deal 0 until base stats land.
+- [ ] Players have no gear or weapon stats (see [character stats](character-stats.md)); weapon hits use a placeholder.
 - [ ] No faction model: players are allies, NPCs enemies. No facing check. NPCs do not cast and have no power pools.
 - [ ] Combat log reaches only source/target owners, not nearby observers.
 - [ ] End-to-end wire replication and client rendering are unverified here.

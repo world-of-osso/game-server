@@ -1,5 +1,9 @@
 # Wiki Log
 
+## [2026-09-23] systems | Retail character stats
+
+Created [[character-stats]] and `docs/specs/character-stats.md`; updated [[spell-casting]] (SP/AP/crit from `CharacterStats`, `PowerCostPct` mana from base mana), [[combat]], the cast spec and the index. Base stats come from SimC `sc_extra_data.inc`; health, mana and rating conversions come from local CASC game tables (hppersta, basemp, combatratings), which match SimC 12.0.1.66709. There is no gear or weapon data. Shared `rating_data.rs` is corrupt and the shared rating conversion is 100× too small, so neither is used for players.
+
 ## [2026-09-23] systems | Spell cast pipeline, powers and effects
 
 Created [[spell-casting]]; updated [[spell-info]] (conversion removed, charge categories), [[networking]] (cast section now points to spell casting, `Moving` marker), index and the cast spec (`docs/specs/cast-presentation.md`, now the spell casting contract). Effects 2/6/10/30/31/58/64/68/121/136 handled; 18 implicit target IDs; power pools in raw DB2 units with `power_type` regen. 11 real-DB App tests in `spell_cast/tests.rs`.

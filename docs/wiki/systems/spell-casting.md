@@ -48,7 +48,7 @@ Server-authoritative spell casting in `crates/server/src/spell_cast/`. `SpellCas
 ### Costs
 
 - Every `SpellPower` row with `RequiredAuraSpellID = 0` applies. Aura-gated rows need the aura runtime.
-- Amount (raw units) = `ManaCost + PowerCostPct% × caster max pool`. The max pool stands in for base mana until base pools exist.
+- Amount (raw units) = `ManaCost + PowerCostPct% × base`. For mana the base is `CharacterStats.base_mana` (gtBaseMP, [[character-stats]]); a caster without `CharacterStats` fails with `NotEnoughResource`. For other pools and health it is the max pool (TrinityCore `Spell::CalcPowerCost` uses the max for non-mana powers).
 - Power type -2 costs health.
 - A missing pool or insufficient power fails with `NotEnoughResource`.
 
@@ -124,10 +124,9 @@ TRIGGER_SPELL:
 
 Formulas:
 - **Scaled amount:** `BasePoints + BonusCoefficient × SP + BonusCoefficientFromAP × AP`.
-  - SP = `UnitStats.intellect`; AP = `max(strength, agility)`. These are retail 1:1 conversions with no spec model.
-  - Units without `UnitStats`, currently live players until base stats land, have SP = AP = 0.
-  - Retail class damage is mostly coefficient-only, so it does 0 damage today.
-- **Crit:** `formulas::melee::crit_chance(level, CombatRatings.crit)`, so 0 without ratings. A crit deals ×2.
+  - SP and AP are `CharacterStats.spell_power` / `attack_power` ([[character-stats]]).
+  - Units without `CharacterStats` (NPCs) have SP = AP = 0.
+- **Crit:** `CharacterStats.crit_pct` (5% base for players, 0 for NPCs). A crit deals ×2.
 - **Weapon hit:** 10 (the auto-attack base) + `AP / 6 × 2.0`. There is no server weapon data.
 
 Damage and heal side effects:
@@ -174,5 +173,6 @@ Damage and heal side effects:
 ## See Also
 
 - [[spell-info]] — the data this resolves
+- [[character-stats]] — spell power, attack power, crit, base mana
 - [[combat]] — melee, combat state, death
 - [[networking]] — input ordering, replication dirty queue
