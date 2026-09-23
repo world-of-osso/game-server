@@ -1,0 +1,825 @@
+//! Pure party/raid state keyed by character id. Systems in `group/mod.rs` feed it the
+//! online player view and turn the returned [`GroupEffect`]s into network messages.
+//!
+//! Groups live in memory only: a group survives a member's relog because members are
+//! character ids, not entities. A group disbands once no member is online.
+
+use std::collections::HashMap;
+
+use shared::group::{
+    GroupRole, MAX_PARTY_SIZE, PartyError, RAID_SUBGROUPS, Raid, ReadyCheck, ReadyResponse,
+    RoleAssignments,
+};
+use shared::loot::LootMode;
+use shared::protocol::{
+    GROUP_INVITE_TIMEOUT_SECS, GroupMemberSnapshot, GroupMessageCode, GroupRoleSnapshot,
+    GroupRosterSnapshot, READY_CHECK_DURATION_SECS, ReadyCheckAnswer, ReadyCheckMemberSnapshot,
+    ReadyCheckUpdate,
+};
+
+pub type CharacterId = u64;
+pub type GroupId = u64;
+
+/// A player currently in the world.
+#[derive(Clone, Debug, PartialEq)]
+pub struct OnlineMember {
+    pub entity: u64,
+    pub name: String,
+    pub class: u8,
+    pub level: u8,
+}
+
+pub type OnlineView = HashMap<CharacterId, OnlineMember>;
+
+/// Something the network layer must send.
+#[derive(Clone, Debug, PartialEq)]
+pub enum GroupEffect {
+    Notice {
+        to: CharacterId,
+        code: GroupMessageCode,
+        name: String,
+    },
+    /// Send the current roster to every online member.
+    Roster(GroupId),
+    /// Tell a former member it is no longer in a group.
+    ClearRoster(CharacterId),
+    InvitePrompt {
+        to: CharacterId,
+        inviter_name: String,
+    },
+    /// Send the ready check state to every participant.
+    ReadyCheck(GroupId),
+}
+
+#[derive(Clone, Debug)]
+struct PendingInvite {
+    inviter: CharacterId,
+    invitee: CharacterId,
+    remaining_secs: f32,
+}
+
+#[derive(Clone, Debug)]
+struct ActiveReadyCheck {
+    initiator_name: String,
+    check: ReadyCheck,
+    finished: bool,
+}
+
+#[derive(Clone, Debug)]
+struct Group {
+    /// Party members also live in `raid.subgroups[0]`; `is_raid` gates raid rules.
+    raid: Raid,
+    is_raid: bool,
+    roles: RoleAssignments,
+    ready_check: Option<ActiveReadyCheck>,
+    /// Online state last reported in a roster, to detect login/logout/relog.
+    reported_online: HashMap<CharacterId, Option<u64>>,
+}
+
+impl Group {
+    fn new(leader: CharacterId) -> Self {
+        let mut subgroups: [Vec<CharacterId>; RAID_SUBGROUPS] = Default::default();
+        subgroups[0].push(leader);
+        Self {
+            raid: Raid {
+                leader,
+                subgroups,
+                loot_mode: LootMode::PersonalLoot,
+            },
+            is_raid: false,
+            roles: RoleAssignments::default(),
+            ready_check: None,
+            reported_online: HashMap::new(),
+        }
+    }
+
+    fn members(&self) -> Vec<CharacterId> {
+        self.raid.all_members().collect()
+    }
+
+    fn add(&mut self, member: CharacterId) -> Result<(), PartyError> {
+        if !self.is_raid && self.raid.total_members() >= MAX_PARTY_SIZE {
+            return Err(PartyError::Full);
+        }
+        self.raid.add_member(member).map(|_| ())
+    }
+}
+
+/// Cached identity of a character that has been seen online.
+#[derive(Clone, Debug, Default)]
+struct Profile {
+    name: String,
+    class: u8,
+    level: u8,
+}
+
+#[derive(bevy::prelude::Resource, Default)]
+pub struct GroupRegistry {
+    groups: HashMap<GroupId, Group>,
+    membership: HashMap<CharacterId, GroupId>,
+    invites: Vec<PendingInvite>,
+    profiles: HashMap<CharacterId, Profile>,
+    next_group_id: GroupId,
+}
+
+type Effects = Vec<GroupEffect>;
+
+fn notice(to: CharacterId, code: GroupMessageCode, name: &str) -> GroupEffect {
+    GroupEffect::Notice {
+        to,
+        code,
+        name: name.into(),
+    }
+}
+
+impl GroupRegistry {
+    // --- Chat-routing hooks ---
+
+    /// Whether two characters are in the same party or raid.
+    pub fn is_in_same_group(&self, a: CharacterId, b: CharacterId) -> bool {
+        match (self.membership.get(&a), self.membership.get(&b)) {
+            (Some(ga), Some(gb)) => ga == gb,
+            _ => false,
+        }
+    }
+
+    /// Every member of the character's group (including itself); empty when ungrouped.
+    pub fn group_members(&self, member: CharacterId) -> Vec<CharacterId> {
+        self.group_of(member)
+            .map(|(_, group)| group.members())
+            .unwrap_or_default()
+    }
+
+    // --- Commands ---
+
+    pub fn invite(
+        &mut self,
+        inviter: CharacterId,
+        target_name: &str,
+        online: &OnlineView,
+    ) -> Effects {
+        match self.try_invite(inviter, target_name, online) {
+            Ok(effects) => effects,
+            Err((code, name)) => vec![notice(inviter, code, &name)],
+        }
+    }
+
+    fn try_invite(
+        &mut self,
+        inviter: CharacterId,
+        target_name: &str,
+        online: &OnlineView,
+    ) -> Result<Effects, (GroupMessageCode, String)> {
+        let Some((invitee, target)) = find_online_by_name(online, target_name) else {
+            return Err((GroupMessageCode::BadPlayerName, target_name.into()));
+        };
+        if invitee == inviter {
+            return Err((GroupMessageCode::InviteSelf, String::new()));
+        }
+        if self.membership.contains_key(&invitee) || self.has_pending_invite(invitee) {
+            return Err((GroupMessageCode::AlreadyInGroup, target.name.clone()));
+        }
+        self.check_can_invite(inviter)?;
+        self.invites.push(PendingInvite {
+            inviter,
+            invitee,
+            remaining_secs: GROUP_INVITE_TIMEOUT_SECS,
+        });
+        let inviter_name = online
+            .get(&inviter)
+            .map(|m| m.name.clone())
+            .unwrap_or_default();
+        Ok(vec![
+            notice(inviter, GroupMessageCode::InvitePlayer, &target.name),
+            GroupEffect::InvitePrompt {
+                to: invitee,
+                inviter_name,
+            },
+        ])
+    }
+
+    fn check_can_invite(&self, inviter: CharacterId) -> Result<(), (GroupMessageCode, String)> {
+        let Some((_, group)) = self.group_of(inviter) else {
+            // Retail: an ungrouped player has one outstanding invite until the party forms.
+            if self.invites.iter().any(|i| i.inviter == inviter) {
+                return Err((GroupMessageCode::InvitePartyBusy, String::new()));
+            }
+            return Ok(());
+        };
+        if group.raid.leader != inviter {
+            return Err((GroupMessageCode::NotLeader, String::new()));
+        }
+        let capacity = if group.is_raid {
+            shared::group::MAX_RAID_SIZE
+        } else {
+            MAX_PARTY_SIZE
+        };
+        if group.raid.total_members() >= capacity {
+            return Err((GroupMessageCode::GroupFull, String::new()));
+        }
+        Ok(())
+    }
+
+    pub fn respond_invite(&mut self, invitee: CharacterId, accept: bool) -> Effects {
+        let Some(index) = self.invites.iter().position(|i| i.invitee == invitee) else {
+            return Vec::new();
+        };
+        let invite = self.invites.remove(index);
+        let invitee_name = self.name_of(invitee);
+        if !accept {
+            return vec![notice(
+                invite.inviter,
+                GroupMessageCode::DeclineGroup,
+                &invitee_name,
+            )];
+        }
+        self.join(invite.inviter, invitee, &invitee_name)
+    }
+
+    fn join(&mut self, inviter: CharacterId, invitee: CharacterId, invitee_name: &str) -> Effects {
+        let group_id = match self.membership.get(&inviter) {
+            Some(&id) => id,
+            None => self.create_group(inviter),
+        };
+        let group = self
+            .groups
+            .get_mut(&group_id)
+            .expect("membership points at a group");
+        if group.add(invitee).is_err() {
+            if group.raid.total_members() <= 1 {
+                self.disband(group_id);
+            }
+            return vec![notice(invitee, GroupMessageCode::GroupFull, "")];
+        }
+        self.membership.insert(invitee, group_id);
+        let joined_code = if group.is_raid {
+            GroupMessageCode::RaidMemberAdded
+        } else {
+            GroupMessageCode::JoinedGroup
+        };
+        let mut effects: Effects = group
+            .members()
+            .into_iter()
+            .filter(|&m| m != invitee)
+            .map(|m| notice(m, joined_code, invitee_name))
+            .collect();
+        if group.is_raid {
+            effects.push(notice(invitee, GroupMessageCode::RaidYouJoined, ""));
+        }
+        effects.push(GroupEffect::Roster(group_id));
+        effects
+    }
+
+    fn create_group(&mut self, leader: CharacterId) -> GroupId {
+        self.next_group_id += 1;
+        let id = self.next_group_id;
+        self.groups.insert(id, Group::new(leader));
+        self.membership.insert(leader, id);
+        id
+    }
+
+    pub fn leave(&mut self, member: CharacterId) -> Effects {
+        let Some(&group_id) = self.membership.get(&member) else {
+            return vec![notice(member, GroupMessageCode::NotInGroup, "")];
+        };
+        let is_raid = self.groups[&group_id].is_raid;
+        let you_code = if is_raid {
+            GroupMessageCode::RaidYouLeft
+        } else {
+            GroupMessageCode::LeftGroupYou
+        };
+        let others_code = if is_raid {
+            GroupMessageCode::RaidMemberRemoved
+        } else {
+            GroupMessageCode::LeftGroup
+        };
+        let mut effects = vec![notice(member, you_code, "")];
+        effects.extend(self.remove_member(group_id, member, others_code));
+        effects
+    }
+
+    pub fn uninvite(&mut self, leader: CharacterId, target_name: &str) -> Effects {
+        let (group_id, target) = match self.leader_target(leader, target_name) {
+            Ok(found) => found,
+            Err(effect) => return vec![effect],
+        };
+        let others_code = if self.groups[&group_id].is_raid {
+            GroupMessageCode::RaidMemberRemoved
+        } else {
+            GroupMessageCode::LeftGroup
+        };
+        let mut effects = vec![notice(target, GroupMessageCode::UninviteYou, "")];
+        effects.extend(self.remove_member(group_id, target, others_code));
+        effects
+    }
+
+    /// Removes `member`, passing leadership and disbanding a group left with one member.
+    fn remove_member(
+        &mut self,
+        group_id: GroupId,
+        member: CharacterId,
+        others_code: GroupMessageCode,
+    ) -> Effects {
+        let name = self.name_of(member);
+        self.membership.remove(&member);
+        let group = self.groups.get_mut(&group_id).expect("group exists");
+        let old_leader = group.raid.leader;
+        let disband = group.raid.leave(member);
+        group.roles.remove(member);
+        group.reported_online.remove(&member);
+        if let Some(active) = &mut group.ready_check {
+            active.check.responses.retain(|(m, _)| *m != member);
+        }
+        let mut effects = vec![GroupEffect::ClearRoster(member)];
+        if disband {
+            effects.extend(self.disband(group_id));
+            return effects;
+        }
+        let remaining = group.members();
+        effects.extend(remaining.iter().map(|&m| notice(m, others_code, &name)));
+        if group.raid.leader != old_leader {
+            let new_leader = group.raid.leader;
+            effects.extend(self.leader_changed_notices(group_id, new_leader));
+        }
+        effects.push(GroupEffect::Roster(group_id));
+        effects
+    }
+
+    fn disband(&mut self, group_id: GroupId) -> Effects {
+        let Some(group) = self.groups.remove(&group_id) else {
+            return Vec::new();
+        };
+        let mut effects = Vec::new();
+        for member in group.members() {
+            self.membership.remove(&member);
+            effects.push(notice(member, GroupMessageCode::GroupDisbanded, ""));
+            effects.push(GroupEffect::ClearRoster(member));
+        }
+        effects
+    }
+
+    pub fn promote(&mut self, leader: CharacterId, target_name: &str) -> Effects {
+        let (group_id, target) = match self.leader_target(leader, target_name) {
+            Ok(found) => found,
+            Err(effect) => return vec![effect],
+        };
+        self.groups
+            .get_mut(&group_id)
+            .expect("group exists")
+            .raid
+            .leader = target;
+        let mut effects = self.leader_changed_notices(group_id, target);
+        effects.push(GroupEffect::Roster(group_id));
+        effects
+    }
+
+    fn leader_changed_notices(&self, group_id: GroupId, new_leader: CharacterId) -> Effects {
+        let name = self.name_of(new_leader);
+        self.groups[&group_id]
+            .members()
+            .into_iter()
+            .map(|m| {
+                if m == new_leader {
+                    notice(m, GroupMessageCode::NewLeaderYou, "")
+                } else {
+                    notice(m, GroupMessageCode::NewLeader, &name)
+                }
+            })
+            .collect()
+    }
+
+    pub fn convert_to_raid(&mut self, leader: CharacterId) -> Effects {
+        let group_id = match self.led_group(leader) {
+            Ok(id) => id,
+            Err(effect) => return vec![effect],
+        };
+        let group = self.groups.get_mut(&group_id).expect("group exists");
+        if group.is_raid {
+            return Vec::new();
+        }
+        group.is_raid = true;
+        let mut effects: Effects = group
+            .members()
+            .into_iter()
+            .map(|m| notice(m, GroupMessageCode::PartyConvertedToRaid, ""))
+            .collect();
+        effects.push(GroupEffect::Roster(group_id));
+        effects
+    }
+
+    /// Moves a raid member to `subgroup` (1–8). A full target subgroup is a no-op, as in
+    /// Retail where the client swaps members instead.
+    pub fn set_subgroup(
+        &mut self,
+        leader: CharacterId,
+        target_name: &str,
+        subgroup: u8,
+    ) -> Effects {
+        let (group_id, target) = match self.leader_target(leader, target_name) {
+            Ok(found) => found,
+            Err(effect) => return vec![effect],
+        };
+        let group = self.groups.get_mut(&group_id).expect("group exists");
+        if !group.is_raid {
+            return vec![notice(leader, GroupMessageCode::NotInRaid, "")];
+        }
+        let Some(index) = usize::from(subgroup).checked_sub(1) else {
+            return Vec::new();
+        };
+        if group.raid.subgroup_of(target) == Some(index) {
+            return Vec::new();
+        }
+        match group.raid.move_to_subgroup(target, index) {
+            Ok(()) => vec![GroupEffect::Roster(group_id)],
+            Err(_) => {
+                bevy::log::info!("[Group] subgroup {subgroup} full or invalid; move ignored");
+                Vec::new()
+            }
+        }
+    }
+
+    pub fn set_role(
+        &mut self,
+        requester: CharacterId,
+        target_name: &str,
+        role: GroupRoleSnapshot,
+    ) -> Effects {
+        let Some((group_id, group)) = self.group_of(requester) else {
+            return vec![notice(requester, GroupMessageCode::NotInGroup, "")];
+        };
+        let Some(target) = self.member_by_name(group, target_name) else {
+            return vec![notice(
+                requester,
+                GroupMessageCode::TargetNotInGroup,
+                target_name,
+            )];
+        };
+        if target != requester && group.raid.leader != requester {
+            return vec![notice(requester, GroupMessageCode::NotLeader, "")];
+        }
+        let group = self.groups.get_mut(&group_id).expect("group exists");
+        match role_from_snapshot(role) {
+            Some(role) => group.roles.assign(target, role),
+            None => group.roles.remove(target),
+        }
+        vec![GroupEffect::Roster(group_id)]
+    }
+
+    pub fn set_loot_method(&mut self, leader: CharacterId, method: LootMode) -> Effects {
+        let group_id = match self.led_group(leader) {
+            Ok(id) => id,
+            Err(effect) => return vec![effect],
+        };
+        let group = self.groups.get_mut(&group_id).expect("group exists");
+        group.raid.loot_mode = method;
+        let code = loot_code(method);
+        let mut effects: Effects = group
+            .members()
+            .into_iter()
+            .map(|m| notice(m, code, ""))
+            .collect();
+        effects.push(GroupEffect::Roster(group_id));
+        effects
+    }
+
+    // --- Ready check ---
+
+    pub fn start_ready_check(&mut self, leader: CharacterId, online: &OnlineView) -> Effects {
+        let group_id = match self.led_group(leader) {
+            Ok(id) => id,
+            Err(effect) => return vec![effect],
+        };
+        let initiator_name = self.name_of(leader);
+        let group = self.groups.get_mut(&group_id).expect("group exists");
+        if group.ready_check.as_ref().is_some_and(|c| !c.finished) {
+            return vec![notice(leader, GroupMessageCode::ReadyCheckInProgress, "")];
+        }
+        let participants: Vec<_> = group
+            .members()
+            .into_iter()
+            .filter(|m| online.contains_key(m))
+            .collect();
+        let mut check = ReadyCheck::new(&participants);
+        check.time_remaining = READY_CHECK_DURATION_SECS;
+        // Retail: the initiator is ready.
+        check.respond(leader, ReadyResponse::Ready);
+        group.ready_check = Some(ActiveReadyCheck {
+            initiator_name: initiator_name.clone(),
+            check,
+            finished: false,
+        });
+        let mut effects: Effects = participants
+            .iter()
+            .map(|&m| notice(m, GroupMessageCode::ReadyCheckStarted, &initiator_name))
+            .collect();
+        effects.push(GroupEffect::ReadyCheck(group_id));
+        effects.extend(self.finish_ready_check_if_done(group_id, false));
+        effects
+    }
+
+    pub fn respond_ready_check(&mut self, member: CharacterId, ready: bool) -> Effects {
+        let Some(&group_id) = self.membership.get(&member) else {
+            return Vec::new();
+        };
+        let group = self.groups.get_mut(&group_id).expect("group exists");
+        let Some(active) = group.ready_check.as_mut().filter(|c| !c.finished) else {
+            return Vec::new();
+        };
+        let response = if ready {
+            ReadyResponse::Ready
+        } else {
+            ReadyResponse::NotReady
+        };
+        if !active.check.respond(member, response) {
+            return Vec::new();
+        }
+        let mut effects = vec![GroupEffect::ReadyCheck(group_id)];
+        effects.extend(self.finish_ready_check_if_done(group_id, false));
+        effects
+    }
+
+    fn finish_ready_check_if_done(&mut self, group_id: GroupId, timed_out: bool) -> Effects {
+        let group = self.groups.get_mut(&group_id).expect("group exists");
+        let Some(active) = group.ready_check.as_mut().filter(|c| !c.finished) else {
+            return Vec::new();
+        };
+        if !timed_out && !active.check.all_responded() {
+            return Vec::new();
+        }
+        active.finished = true;
+        let code = if active.check.all_ready() {
+            GroupMessageCode::ReadyCheckAllReady
+        } else {
+            GroupMessageCode::ReadyCheckFinished
+        };
+        let mut effects: Effects = active
+            .check
+            .responses
+            .iter()
+            .map(|&(m, _)| notice(m, code, ""))
+            .collect();
+        effects.push(GroupEffect::ReadyCheck(group_id));
+        effects.push(GroupEffect::Roster(group_id));
+        effects
+    }
+
+    // --- Time and presence ---
+
+    /// Expires invites (treated as a decline) and ready checks.
+    pub fn tick(&mut self, dt_secs: f32) -> Effects {
+        let mut effects = Vec::new();
+        let mut expired = Vec::new();
+        self.invites.retain_mut(|invite| {
+            invite.remaining_secs -= dt_secs;
+            let keep = invite.remaining_secs > 0.0;
+            if !keep {
+                expired.push(invite.clone());
+            }
+            keep
+        });
+        for invite in expired {
+            let name = self.name_of(invite.invitee);
+            effects.push(notice(
+                invite.inviter,
+                GroupMessageCode::DeclineGroup,
+                &name,
+            ));
+        }
+        let mut timed_out = Vec::new();
+        for (&id, group) in &mut self.groups {
+            if let Some(active) = group.ready_check.as_mut().filter(|c| !c.finished)
+                && active.check.tick(dt_secs)
+            {
+                timed_out.push(id);
+            }
+        }
+        for id in timed_out {
+            effects.extend(self.finish_ready_check_if_done(id, true));
+        }
+        effects
+    }
+
+    /// Records who is online. Resends rosters when a member logs in, out or relogs, and
+    /// disbands groups with no online member.
+    pub fn sync_presence(&mut self, online: &OnlineView) -> Effects {
+        for (&id, member) in online {
+            self.profiles.insert(
+                id,
+                Profile {
+                    name: member.name.clone(),
+                    class: member.class,
+                    level: member.level,
+                },
+            );
+        }
+        self.invites
+            .retain(|i| online.contains_key(&i.invitee) && online.contains_key(&i.inviter));
+        let mut effects = Vec::new();
+        let mut abandoned = Vec::new();
+        for (&id, group) in &mut self.groups {
+            let current: HashMap<_, _> = group
+                .members()
+                .into_iter()
+                .map(|m| (m, online.get(&m).map(|o| o.entity)))
+                .collect();
+            if current.values().all(Option::is_none) {
+                abandoned.push(id);
+            } else if current != group.reported_online {
+                effects.push(GroupEffect::Roster(id));
+            }
+        }
+        for id in abandoned {
+            let group = self.groups.remove(&id).expect("abandoned group exists");
+            for member in group.members() {
+                self.membership.remove(&member);
+            }
+        }
+        effects
+    }
+
+    // --- Snapshots ---
+
+    pub fn roster_members(&self, group_id: GroupId) -> Vec<CharacterId> {
+        self.groups
+            .get(&group_id)
+            .map(Group::members)
+            .unwrap_or_default()
+    }
+
+    /// Builds the roster and remembers which online state it reported.
+    pub fn build_roster(
+        &mut self,
+        group_id: GroupId,
+        online: &OnlineView,
+    ) -> Option<GroupRosterSnapshot> {
+        let group = self.groups.get(&group_id)?;
+        let members = group
+            .members()
+            .into_iter()
+            .map(|m| self.member_snapshot(group, m, online))
+            .collect();
+        let (ready_count, total_count) = group
+            .ready_check
+            .as_ref()
+            .map(|c| {
+                let (_, ready, _) = c.check.counts();
+                (ready as u16, c.check.responses.len() as u16)
+            })
+            .unwrap_or((0, 0));
+        let snapshot = GroupRosterSnapshot {
+            is_raid: group.is_raid,
+            ready_count,
+            total_count,
+            members,
+            loot_method: group.raid.loot_mode,
+        };
+        let reported = group
+            .members()
+            .into_iter()
+            .map(|m| (m, online.get(&m).map(|o| o.entity)))
+            .collect();
+        self.groups.get_mut(&group_id)?.reported_online = reported;
+        Some(snapshot)
+    }
+
+    fn member_snapshot(
+        &self,
+        group: &Group,
+        member: CharacterId,
+        online: &OnlineView,
+    ) -> GroupMemberSnapshot {
+        let profile = self.profiles.get(&member).cloned().unwrap_or_default();
+        GroupMemberSnapshot {
+            name: profile.name,
+            role: group
+                .roles
+                .role_of(member)
+                .map(role_to_snapshot)
+                .unwrap_or(GroupRoleSnapshot::None),
+            is_leader: group.raid.leader == member,
+            online: online.contains_key(&member),
+            subgroup: group.raid.subgroup_of(member).map_or(1, |g| g as u8 + 1),
+            class: profile.class,
+            level: profile.level,
+            entity: online.get(&member).map(|o| o.entity),
+        }
+    }
+
+    pub fn build_ready_check(
+        &self,
+        group_id: GroupId,
+    ) -> Option<(Vec<CharacterId>, ReadyCheckUpdate)> {
+        let active = self.groups.get(&group_id)?.ready_check.as_ref()?;
+        let members = active
+            .check
+            .responses
+            .iter()
+            .map(|&(m, response)| ReadyCheckMemberSnapshot {
+                name: self.name_of(m),
+                answer: match response {
+                    ReadyResponse::Pending => ReadyCheckAnswer::Pending,
+                    ReadyResponse::Ready => ReadyCheckAnswer::Ready,
+                    ReadyResponse::NotReady => ReadyCheckAnswer::NotReady,
+                },
+            })
+            .collect();
+        let recipients = active.check.responses.iter().map(|&(m, _)| m).collect();
+        Some((
+            recipients,
+            ReadyCheckUpdate {
+                initiator_name: active.initiator_name.clone(),
+                time_remaining_secs: active.check.time_remaining.max(0.0),
+                members,
+                finished: active.finished,
+            },
+        ))
+    }
+
+    // --- Lookups ---
+
+    fn group_of(&self, member: CharacterId) -> Option<(GroupId, &Group)> {
+        let id = *self.membership.get(&member)?;
+        Some((id, self.groups.get(&id)?))
+    }
+
+    fn led_group(&self, leader: CharacterId) -> Result<GroupId, GroupEffect> {
+        let Some((id, group)) = self.group_of(leader) else {
+            return Err(notice(leader, GroupMessageCode::NotInGroup, ""));
+        };
+        if group.raid.leader != leader {
+            return Err(notice(leader, GroupMessageCode::NotLeader, ""));
+        }
+        Ok(id)
+    }
+
+    fn leader_target(
+        &self,
+        leader: CharacterId,
+        target_name: &str,
+    ) -> Result<(GroupId, CharacterId), GroupEffect> {
+        let id = self.led_group(leader)?;
+        match self.member_by_name(&self.groups[&id], target_name) {
+            Some(target) => Ok((id, target)),
+            None => Err(notice(
+                leader,
+                GroupMessageCode::TargetNotInGroup,
+                target_name,
+            )),
+        }
+    }
+
+    fn member_by_name(&self, group: &Group, name: &str) -> Option<CharacterId> {
+        group.members().into_iter().find(|m| {
+            self.profiles
+                .get(m)
+                .is_some_and(|p| p.name.eq_ignore_ascii_case(name))
+        })
+    }
+
+    fn has_pending_invite(&self, invitee: CharacterId) -> bool {
+        self.invites.iter().any(|i| i.invitee == invitee)
+    }
+
+    fn name_of(&self, member: CharacterId) -> String {
+        self.profiles
+            .get(&member)
+            .map(|p| p.name.clone())
+            .unwrap_or_default()
+    }
+}
+
+fn find_online_by_name<'a>(
+    online: &'a OnlineView,
+    name: &str,
+) -> Option<(CharacterId, &'a OnlineMember)> {
+    online
+        .iter()
+        .find(|(_, m)| m.name.eq_ignore_ascii_case(name))
+        .map(|(&id, m)| (id, m))
+}
+
+fn role_from_snapshot(role: GroupRoleSnapshot) -> Option<GroupRole> {
+    match role {
+        GroupRoleSnapshot::Tank => Some(GroupRole::Tank),
+        GroupRoleSnapshot::Healer => Some(GroupRole::Healer),
+        GroupRoleSnapshot::Damage => Some(GroupRole::Dps),
+        GroupRoleSnapshot::None => None,
+    }
+}
+
+fn role_to_snapshot(role: GroupRole) -> GroupRoleSnapshot {
+    match role {
+        GroupRole::Tank => GroupRoleSnapshot::Tank,
+        GroupRole::Healer => GroupRoleSnapshot::Healer,
+        GroupRole::Dps => GroupRoleSnapshot::Damage,
+    }
+}
+
+fn loot_code(method: LootMode) -> GroupMessageCode {
+    match method {
+        LootMode::FreeForAll => GroupMessageCode::SetLootFreeForAll,
+        LootMode::RoundRobin => GroupMessageCode::SetLootRoundRobin,
+        LootMode::NeedBeforeGreed => GroupMessageCode::SetLootNeedBeforeGreed,
+        LootMode::PersonalLoot => GroupMessageCode::SetLootPersonal,
+    }
+}

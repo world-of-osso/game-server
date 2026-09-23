@@ -1,0 +1,263 @@
+//! Party/raid backend: invites, leadership, raid subgroups, roles, loot method and
+//! ready checks. State lives in [`GroupRegistry`]; this module moves messages in and out.
+
+mod registry;
+
+use std::collections::HashMap;
+
+use bevy::ecs::system::SystemParam;
+use bevy::prelude::*;
+use lightyear::prelude::*;
+use shared::components::{Player, UnitLevel};
+use shared::protocol::{
+    ConvertGroupToRaid, GroupChannel, GroupCommandResponse, GroupInviteIntent, GroupInvitePrompt,
+    GroupRosterSnapshot, GroupUninviteIntent, LeaveGroup, PromoteGroupLeader, ReadyCheckUpdate,
+    RespondGroupInvite, RespondReadyCheck, SetGroupLootMethod, SetGroupRole, SetRaidSubgroup,
+    StartReadyCheck,
+};
+
+use crate::auth::Authenticated;
+use crate::networking::PlayerLink;
+use crate::persistence::ClientId;
+
+pub use registry::{CharacterId, GroupEffect, GroupRegistry, OnlineMember, OnlineView};
+
+pub struct GroupPlugin;
+
+impl Plugin for GroupPlugin {
+    fn build(&self, app: &mut App) {
+        app.init_resource::<GroupRegistry>();
+        app.add_systems(Update, process_group_commands);
+    }
+}
+
+type Receivers<'w, 's, M> =
+    Query<'w, 's, (&'static PlayerLink, &'static mut MessageReceiver<M>), With<Authenticated>>;
+
+#[derive(SystemParam)]
+struct GroupCommandReceivers<'w, 's> {
+    invites: Receivers<'w, 's, GroupInviteIntent>,
+    uninvites: Receivers<'w, 's, GroupUninviteIntent>,
+    invite_answers: Receivers<'w, 's, RespondGroupInvite>,
+    leaves: Receivers<'w, 's, LeaveGroup>,
+    promotes: Receivers<'w, 's, PromoteGroupLeader>,
+    converts: Receivers<'w, 's, ConvertGroupToRaid>,
+    subgroups: Receivers<'w, 's, SetRaidSubgroup>,
+    roles: Receivers<'w, 's, SetGroupRole>,
+    loot: Receivers<'w, 's, SetGroupLootMethod>,
+    ready_starts: Receivers<'w, 's, StartReadyCheck>,
+    ready_answers: Receivers<'w, 's, RespondReadyCheck>,
+}
+
+#[derive(SystemParam)]
+struct GroupSenders<'w, 's> {
+    connections: Query<'w, 's, (Entity, &'static PlayerLink), With<Authenticated>>,
+    rosters: Query<'w, 's, &'static mut MessageSender<GroupRosterSnapshot>>,
+    responses: Query<'w, 's, &'static mut MessageSender<GroupCommandResponse>>,
+    prompts: Query<'w, 's, &'static mut MessageSender<GroupInvitePrompt>>,
+    ready_checks: Query<'w, 's, &'static mut MessageSender<ReadyCheckUpdate>>,
+}
+
+type OnlinePlayers<'w, 's> = Query<
+    'w,
+    's,
+    (
+        Entity,
+        &'static Player,
+        &'static ClientId,
+        Option<&'static UnitLevel>,
+    ),
+>;
+
+fn process_group_commands(
+    mut receivers: GroupCommandReceivers,
+    mut senders: GroupSenders,
+    players: OnlinePlayers,
+    mut registry: ResMut<GroupRegistry>,
+    time: Res<Time>,
+) {
+    let online = build_online_view(&players);
+    let mut effects = registry.sync_presence(&online);
+    effects.extend(registry.tick(time.delta_secs()));
+    effects.extend(apply_commands(
+        &mut receivers,
+        &players,
+        &online,
+        &mut registry,
+    ));
+    let connections = connections_by_character(&senders.connections, &players);
+    deliver_effects(&effects, &mut registry, &online, &connections, &mut senders);
+}
+
+fn build_online_view(players: &OnlinePlayers) -> OnlineView {
+    players
+        .iter()
+        .map(|(entity, player, client_id, level)| {
+            (
+                client_id.0,
+                OnlineMember {
+                    entity: entity.to_bits(),
+                    name: player.name.clone(),
+                    class: player.class,
+                    level: level.map_or(1, |l| l.0),
+                },
+            )
+        })
+        .collect()
+}
+
+/// Drains one message type as `(sender character id, message)` pairs.
+fn drain<M: lightyear::prelude::Message>(
+    receivers: &mut Receivers<M>,
+    players: &OnlinePlayers,
+) -> Vec<(CharacterId, M)> {
+    let mut drained = Vec::new();
+    for (link, mut receiver) in receivers.iter_mut() {
+        let Ok((_, _, client_id, _)) = players.get(link.0) else {
+            receiver.receive().for_each(drop);
+            continue;
+        };
+        drained.extend(receiver.receive().map(|msg| (client_id.0, msg)));
+    }
+    drained
+}
+
+fn apply_commands(
+    rx: &mut GroupCommandReceivers,
+    players: &OnlinePlayers,
+    online: &OnlineView,
+    registry: &mut GroupRegistry,
+) -> Vec<GroupEffect> {
+    let mut effects = Vec::new();
+    for (from, msg) in drain(&mut rx.invites, players) {
+        effects.extend(registry.invite(from, &msg.name, online));
+    }
+    for (from, msg) in drain(&mut rx.invite_answers, players) {
+        effects.extend(registry.respond_invite(from, msg.accept));
+    }
+    for (from, msg) in drain(&mut rx.uninvites, players) {
+        effects.extend(registry.uninvite(from, &msg.name));
+    }
+    for (from, _) in drain(&mut rx.leaves, players) {
+        effects.extend(registry.leave(from));
+    }
+    for (from, msg) in drain(&mut rx.promotes, players) {
+        effects.extend(registry.promote(from, &msg.name));
+    }
+    for (from, _) in drain(&mut rx.converts, players) {
+        effects.extend(registry.convert_to_raid(from));
+    }
+    for (from, msg) in drain(&mut rx.subgroups, players) {
+        effects.extend(registry.set_subgroup(from, &msg.name, msg.subgroup));
+    }
+    for (from, msg) in drain(&mut rx.roles, players) {
+        effects.extend(registry.set_role(from, &msg.name, msg.role));
+    }
+    for (from, msg) in drain(&mut rx.loot, players) {
+        effects.extend(registry.set_loot_method(from, msg.method));
+    }
+    for (from, _) in drain(&mut rx.ready_starts, players) {
+        effects.extend(registry.start_ready_check(from, online));
+    }
+    for (from, msg) in drain(&mut rx.ready_answers, players) {
+        effects.extend(registry.respond_ready_check(from, msg.ready));
+    }
+    effects
+}
+
+fn connections_by_character(
+    connections: &Query<(Entity, &PlayerLink), With<Authenticated>>,
+    players: &OnlinePlayers,
+) -> HashMap<CharacterId, Entity> {
+    connections
+        .iter()
+        .filter_map(|(conn, link)| {
+            let (_, _, client_id, _) = players.get(link.0).ok()?;
+            Some((client_id.0, conn))
+        })
+        .collect()
+}
+
+fn deliver_effects(
+    effects: &[GroupEffect],
+    registry: &mut GroupRegistry,
+    online: &OnlineView,
+    connections: &HashMap<CharacterId, Entity>,
+    senders: &mut GroupSenders,
+) {
+    for effect in effects {
+        match effect {
+            GroupEffect::Notice { to, code, name } => send_to(
+                &mut senders.responses,
+                connections,
+                *to,
+                GroupCommandResponse {
+                    message: code.format(name),
+                    code: *code,
+                },
+            ),
+            GroupEffect::Roster(group_id) => {
+                let Some(roster) = registry.build_roster(*group_id, online) else {
+                    continue;
+                };
+                for member in registry.roster_members(*group_id) {
+                    send_to(&mut senders.rosters, connections, member, roster.clone());
+                }
+            }
+            GroupEffect::ClearRoster(to) => {
+                send_to(&mut senders.rosters, connections, *to, empty_roster())
+            }
+            GroupEffect::InvitePrompt { to, inviter_name } => send_to(
+                &mut senders.prompts,
+                connections,
+                *to,
+                GroupInvitePrompt {
+                    inviter_name: inviter_name.clone(),
+                    timeout_secs: shared::protocol::GROUP_INVITE_TIMEOUT_SECS,
+                },
+            ),
+            GroupEffect::ReadyCheck(group_id) => {
+                let Some((recipients, update)) = registry.build_ready_check(*group_id) else {
+                    continue;
+                };
+                for member in recipients {
+                    send_to(
+                        &mut senders.ready_checks,
+                        connections,
+                        member,
+                        update.clone(),
+                    );
+                }
+            }
+        }
+    }
+}
+
+fn empty_roster() -> GroupRosterSnapshot {
+    GroupRosterSnapshot {
+        is_raid: false,
+        ready_count: 0,
+        total_count: 0,
+        members: Vec::new(),
+        loot_method: shared::loot::LootMode::PersonalLoot,
+    }
+}
+
+/// Offline recipients are skipped; they get a fresh roster on their next login.
+fn send_to<M: lightyear::prelude::Message>(
+    senders: &mut Query<&mut MessageSender<M>>,
+    connections: &HashMap<CharacterId, Entity>,
+    to: CharacterId,
+    message: M,
+) {
+    let Some(&conn) = connections.get(&to) else {
+        return;
+    };
+    if let Ok(mut sender) = senders.get_mut(conn) {
+        sender.send::<GroupChannel>(message);
+    }
+}
+
+#[cfg(test)]
+#[path = "tests.rs"]
+mod tests;

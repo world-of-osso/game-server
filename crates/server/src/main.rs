@@ -22,6 +22,7 @@ mod faction;
 mod faction_reaction;
 mod friends;
 mod gold;
+mod group;
 mod guild;
 mod ignore_list;
 mod inspect;
@@ -98,6 +99,7 @@ fn add_social_plugins(app: &mut App) {
     app.add_plugins(barber_shop::BarberShopPlugin)
         .add_plugins(calendar::CalendarPlugin)
         .add_plugins(friends::FriendsPlugin)
+        .add_plugins(group::GroupPlugin)
         .add_plugins(guild::GuildPlugin)
         .add_plugins(who::WhoPlugin)
         .add_plugins(ignore_list::IgnoreListPlugin)
