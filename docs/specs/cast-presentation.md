@@ -9,6 +9,7 @@ Server-side overhead cast state originates in `crates/server/src/cast_presentati
 - [x] Reject unknown spells, dead/moving casters, and requests without a player owner.
 - [x] Preserve the server-resolved spell name through serialization.
 - [x] Apply existing resource, cooldown and GCD validation.
+- [x] Scale percent costs from the caster's max pool; reject costs whose power type has no shared `ResourceType`, or percent costs with no caster pool.
 - [ ] Apply existing target and range validation (implemented; receiver-boundary proof pending).
 - [x] A connection's stop request must not cancel another entity's cast.
 - [x] Expiry must not pretend to apply damage/healing.
@@ -22,7 +23,8 @@ Server-side overhead cast state originates in `crates/server/src/cast_presentati
 - `crates/server/src/cast_presentation.rs`: receiver ownership, validation, start/stop/tick.
 - `crates/server/src/combat.rs`: schedule registration.
 - `crates/server/src/networking.rs`: exposes movement ordering boundary.
-- `crates/server/src/spell_db.rs`: explicit ID or unambiguous exact-name resolution.
+- `crates/server/src/spell_info/mod.rs`: `SpellStore` explicit ID or unambiguous exact-name resolution.
+- `crates/server/src/spell_info/convert.rs`: `SpellInfo` → shared `SpellData` (percent costs from caster max pool; unsupported power types reject).
 - `../shared-protocol/src/casting.rs`: serializable named `CastState`.
 - `../shared-protocol/src/protocol.rs`: component replication registration.
 

@@ -42,7 +42,7 @@ SpacetimeDB solves persistence and state sync; those are the easy problems. It c
 
 ## Static Data: SQLite
 
-Read-only world data (creature templates, spells, spawn points) is loaded once at startup into `Res<WorldData>` and `Res<SpellDatabase>`. SQLite at `data/world.db` (132MB, sourced from AzerothCore SQL dumps and retail DB2 CSVs). Not the persistence layer — redb handles all mutable player data.
+Read-only world data (creature templates, spells, spawn points) is loaded once at startup into `Res<WorldData>` and `Res<SpellStore>`. SQLite at `data/world.db` (132MB, sourced from AzerothCore SQL dumps and retail DB2 CSVs). Not the persistence layer — redb handles all mutable player data.
 
 ## Serialization: bitcode
 

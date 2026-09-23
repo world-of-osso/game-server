@@ -4,7 +4,7 @@ Creature spawn orientation is loaded from `creature.orientation` (WoW heading ra
 
 `fc46567` also loads `creature_template.name` into `CreatureTemplate` and copies it into the replicated shared `Npc.name` at spawn. A spawn without its authoritative template now fails explicitly instead of receiving default creature data. The SQLite-to-spawn fixture preserves the UTF-8 name `Loup — Écorché`; client delivery/rendering is outside this server proof.
 
-Static, read-only world data loaded from SQLite at server startup. Two Bevy resources: `WorldData` (creatures, spawns, waypoints) and `SpellDatabase` (spell definitions from Retail DB2).
+Static, read-only world data loaded from SQLite at server startup. Two Bevy resources: `WorldData` (creatures, spawns, waypoints) and `SpellStore` / `ClassSpells` (Retail DB2 spells and class lists, see [[spell-info]]).
 
 ## Database
 
@@ -50,7 +50,7 @@ Source: wago.tools exports pinned to Retail `12.1.0.69933` (the local install's 
 | `chr_specialization` | 60 | Specs (ID, class, role, mastery) |
 | `trait_node` | 11,875 | Talent tree nodes |
 
-Other imported tables: spell categories, levels, class options, procs-per-minute (+mods), shapeshift (+forms), interrupts, target restrictions, equipped items, radius, scaling, empower (+stages), `spell_x_spell_visual`, `skill_line`, `chr_classes`, `specialization_spells`, `power_type`, `chr_classes_x_power_types`, and the `trait_*` / `skill_line_x_trait_tree` talent tables. Nothing in the server reads the new tables yet.
+Other imported tables: spell categories, levels, class options, procs-per-minute (+mods), shapeshift (+forms), interrupts, target restrictions, equipped items, radius, scaling, empower (+stages), `spell_x_spell_visual`, `skill_line`, `chr_classes`, `specialization_spells`, `power_type`, `chr_classes_x_power_types`, and the `trait_*` / `skill_line_x_trait_tree` talent tables. `spell_info` reads the spell, class-option, skill-line-ability, specialization and power-type tables ([[spell-info]]); `trait_*` tables are not read yet.
 
 ## Event-dependent creature spawns
 
@@ -72,7 +72,7 @@ Encoded in `creature.movement_type`:
 ## Modules
 
 - `crates/server/src/world_data.rs` — `WorldDataPlugin`, `WorldData` resource. Loads templates, spawns, waypoints into `HashMap`s keyed by entry/guid.
-- `crates/server/src/spell_db.rs` — `SpellDatabasePlugin`, `SpellDatabase` resource.
+- `crates/server/src/spell_info/` — `SpellInfoPlugin`, `SpellStore`, `ClassSpells` ([[spell-info]]).
 
 ## Race Metadata
 

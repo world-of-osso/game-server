@@ -1,5 +1,9 @@
 # Wiki Log
 
+## [2026-09-23] systems | SpellInfo store replaces spell_db
+
+Created [[spell-info]]; updated [[world-data]], [[networking]], [[persistence]], crate-structure, stack-decisions, index and the cast-presentation spec. `SpellStore` loads every spell with all DifficultyID 0 effects, power costs and option tables; `ClassSpells` adds learnables/specs/power types. Conversion fixes interrupt 68, dispel 38, raw power IDs and percent costs. Rage/Runic Power/Soul Shard costs are stored in tenths (kept raw).
+
 ## [2026-09-23] systems | Build-pinned DB2 spell/class import
 
 Updated [[world-data]]: `scripts/db2.py` fetches 50 wago.tools tables pinned to Retail `12.1.0.69933` and imports them into `world.db` in one transaction (DDL `scripts/db2_schema.sql`, provenance in `db2_build`). Header/schema mismatch fails with previous rows intact. `python scripts/tests/test_import_azerothcore.py` covers fixtures and real pinned rows. No server code reads the new tables yet.

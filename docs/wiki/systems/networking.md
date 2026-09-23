@@ -46,7 +46,7 @@ The candidate traversal reduction is **PARTIAL** against the original entity/com
 
 ## Cast Presentation
 
-`cast_presentation.rs` consumes `SpellCastIntent`/`StopSpellCast` through Lightyear receivers. Only authenticated in-world `PlayerLink` ownership selects the caster. Explicit IDs or unique exact names resolve `SpellDatabase` records; existing `validate_cast` checks alive/movement, target/range, available resources and active cooldown/GCD. It does not spend resources or trigger cooldowns.
+`cast_presentation.rs` consumes `SpellCastIntent`/`StopSpellCast` through Lightyear receivers. Only authenticated in-world `PlayerLink` ownership selects the caster. Explicit IDs or unique exact names resolve `SpellStore` records, converted to shared `SpellData` ([[spell-info]]); existing `validate_cast` checks alive/movement, target/range, available resources and active cooldown/GCD. It does not spend resources or trigger cooldowns.
 
 The compiled shared dependency is `../shared-protocol`, not the stale `crates/shared` tree. Its `CastState` carries `spell_name` and serialized timing, and is registered for replication. Start, fixed-step progress, stop, death/movement cancellation and expiry mark `ReplicationDirtyQueue`. Progress runs after player input. Expiry removes presentation only: no spell effects or successful-damage event are fabricated.
 

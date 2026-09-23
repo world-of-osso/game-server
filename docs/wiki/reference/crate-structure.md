@@ -31,7 +31,7 @@ The project is a Cargo workspace with four crates: `shared`, `server`, `client`,
 - `networking` — Lightyear server plugin configuration; channel setup
 - `persistence` / `persistence_accounts` / `persistence_character` / `persistence_runtime` / `persistence_types` — redb save/load systems using `Changed<T>` filters
 - `world_data` — `WorldDataPlugin`, `WorldData` resource (creatures from SQLite)
-- `spell_db` — `SpellDatabasePlugin`, `SpellDatabase` resource (spells from SQLite)
+- `spell_info` — `SpellInfoPlugin`, `SpellStore` and `ClassSpells` resources (see [[spell-info]])
 - `zones` / `world_map` — zone system sets, map loading, zone transitions
 - `creature_ai` — patrol, aggro, chase, leash, wander, waypoint behaviors
 - `combat` / `stats` / `death` / `interest` — server-side combat pipeline

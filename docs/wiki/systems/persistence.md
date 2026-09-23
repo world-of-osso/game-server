@@ -71,7 +71,7 @@ These are transient and reconstructed on login or respawn:
 
 ## SQLite (Static World Data)
 
-Read-only at runtime. Loaded into `Res<WorldData>` and `Res<SpellDatabase>` at startup. See [[world-data]] for full table reference.
+Read-only at runtime. Loaded into `Res<WorldData>` and `Res<SpellStore>` at startup. See [[world-data]] for full table reference.
 
 ## Sources
 
