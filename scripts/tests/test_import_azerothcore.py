@@ -14,6 +14,8 @@ SCRIPTS = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(SCRIPTS))
 import db2  # noqa: E402
 
+AZEROTHCORE_SQL = Path(os.environ.get("AZEROTHCORE_SQL", "/home/osso/Repos/azerothcore/data/sql/base/db_world"))
+
 PINNED_CSV_ROOT = Path(os.environ.get("DB2_CSV_ROOT", db2.DEFAULT_CSV_ROOT))
 PINNED_BUILD_DIR = PINNED_CSV_ROOT / db2.DEFAULT_BUILD
 
@@ -27,6 +29,12 @@ def write_header_only_csvs(csv_dir):
         columns = [row[1] for row in schema.execute(f"PRAGMA table_info({db2.table_name(name)})")]
         with (csv_dir / f"{name}.csv").open("w", newline="") as handle:
             csv.writer(handle).writerow(columns)
+
+
+def dump_tables():
+    """Table names in import-azerothcore.sh DUMP_TABLES."""
+    script = (SCRIPTS / "import-azerothcore.sh").read_text()
+    return script.split("DUMP_TABLES=(", 1)[1].split(")", 1)[0].split()
 
 
 def run_db2_import(csv_root, db_path):
@@ -47,11 +55,11 @@ class CreatureEventImportTests(unittest.TestCase):
         scripts = self.root / "scripts"
         scripts.mkdir()
         (self.root / "data").mkdir()
-        for name in ("import-azerothcore.sh", "world_schema.sql", "db2.py", "db2_schema.sql"):
+        for name in ("import-azerothcore.sh", "world_schema.sql", "db2.py", "db2_schema.sql", "mysql_dump.py"):
             shutil.copy2(SCRIPTS / name, scripts / name)
         self.sql = self.root / "source"
         self.sql.mkdir()
-        for name in ("creature_template", "creature_template_model", "waypoint_data"):
+        for name in dump_tables():
             (self.sql / f"{name}.sql").write_text("-- empty fixture\n")
         (self.sql / "creature.sql").write_text(
             "INSERT INTO `creature` (guid,id1,position_z) VALUES\n"
@@ -106,6 +114,132 @@ class CreatureEventImportTests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("SkillLineAbility", result.stderr)
         self.assertEqual(self.db.read_bytes(), before)
+
+    def test_content_tables_join_quest_vendor_and_trainer_rows(self):
+        (self.sql / "creature_template.sql").write_text(
+            "INSERT INTO `creature_template` (entry,name,subname,npcflag) VALUES\n"
+            "(823,'Deputy Willem','',2),(54,'Corina Steele','Weaponsmith',4224),"
+            "(3626,'Jenn Langston','Remy \\\"Two Times\\\"',1);\n"
+        )
+        (self.sql / "quest_template.sql").write_text(
+            "INSERT INTO `quest_template` (ID,LogTitle,QuestDescription) VALUES\n"
+            "(783,'A Threat Within','Line one.$B$BLine two\\\\'),(7,'Kobold Camp Cleanup',NULL);\n"
+        )
+        (self.sql / "creature_queststarter.sql").write_text("INSERT INTO `creature_queststarter` VALUES\n(823,783);\n")
+        (self.sql / "item_template.sql").write_text(
+            "INSERT INTO `item_template` (entry,name,BuyPrice,Quality) VALUES\n(2488,'Gladius',536,1),(2489,'Two-handed Sword',343,1);\n"
+        )
+        (self.sql / "npc_vendor.sql").write_text("INSERT INTO `npc_vendor` VALUES\n(54,0,2488,0,0,0,0),(54,0,2489,0,0,0,0);\n")
+        (self.sql / "trainer_spell.sql").write_text(
+            "INSERT INTO `trainer_spell` VALUES\n(1,6673,10,0,0,0,0,0,1,0),(1,100,100,0,0,0,0,0,4,0);\n"
+        )
+        result = self.run_import()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        with sqlite3.connect(self.db) as conn:
+            self.assertEqual(
+                conn.execute(
+                    "SELECT q.ID, q.LogTitle, t.name FROM quest_template q"
+                    " JOIN creature_queststarter s ON s.quest = q.ID JOIN creature_template t ON t.entry = s.id"
+                ).fetchall(),
+                [(783, "A Threat Within", "Deputy Willem")],
+            )
+            self.assertEqual(
+                conn.execute("SELECT QuestDescription FROM quest_template ORDER BY ID").fetchall(),
+                [(None,), ("Line one.$B$BLine two\\",)],
+            )
+            self.assertEqual(
+                conn.execute("SELECT subname FROM creature_template WHERE entry = 3626").fetchone(),
+                ('Remy "Two Times"',),
+            )
+            self.assertEqual(
+                conn.execute(
+                    "SELECT i.name, i.BuyPrice FROM npc_vendor v JOIN item_template i ON i.entry = v.item"
+                    " WHERE v.entry = 54 ORDER BY v.item"
+                ).fetchall(),
+                [("Gladius", 536), ("Two-handed Sword", 343)],
+            )
+            self.assertEqual(
+                conn.execute("SELECT SpellId, ReqLevel FROM trainer_spell ORDER BY ReqLevel").fetchall(),
+                [(6673, 1), (100, 4)],
+            )
+
+    def test_unparseable_dump_fails_without_partial_tables(self):
+        (self.sql / "npc_vendor.sql").write_text("INSERT INTO `npc_vendor` VALUES\n(54,0,2488,0,0,0,0),(54,0,0x1F,0,0,0,0);\n")
+        result = self.run_import()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("unparseable value", result.stderr)
+
+
+@unittest.skipUnless(AZEROTHCORE_SQL.is_dir(), f"AzerothCore dumps not present at {AZEROTHCORE_SQL}")
+class AzerothCoreContentTests(unittest.TestCase):
+    """Load the real AzerothCore content dumps and check known Elwynn Forest rows."""
+
+    TABLES = (
+        "creature_template", "quest_template", "creature_queststarter", "creature_questender",
+        "item_template", "npc_vendor", "trainer", "trainer_spell", "creature_default_trainer",
+    )
+
+    @classmethod
+    def setUpClass(cls):
+        cls.temp = tempfile.TemporaryDirectory()
+        cls.db = Path(cls.temp.name) / "world.db"
+        result = subprocess.run(
+            [sys.executable, str(SCRIPTS / "mysql_dump.py"), "--db", str(cls.db), "--schema", str(SCRIPTS / "world_schema.sql")]
+            + [f"{name}={AZEROTHCORE_SQL / (name + '.sql')}" for name in cls.TABLES],
+            capture_output=True,
+            text=True,
+            timeout=600,
+            check=False,
+        )
+        if result.returncode != 0:
+            raise AssertionError(result.stdout + result.stderr)
+        cls.conn = sqlite3.connect(cls.db)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.conn.close()
+        cls.temp.cleanup()
+
+    def rows(self, sql, *params):
+        return self.conn.execute(sql, params).fetchall()
+
+    def test_a_threat_within_starts_at_deputy_willem_and_ends_at_marshal_mcbride(self):
+        self.assertEqual(
+            self.rows(
+                "SELECT q.ID, q.QuestLevel, st.name, en.name FROM quest_template q"
+                " JOIN creature_queststarter s ON s.quest = q.ID JOIN creature_template st ON st.entry = s.id"
+                " JOIN creature_questender e ON e.quest = q.ID JOIN creature_template en ON en.entry = e.id"
+                " WHERE q.LogTitle = 'A Threat Within'"
+            ),
+            [(783, 1, "Deputy Willem", "Marshal McBride")],
+        )
+
+    def test_goldshire_weaponsmith_corina_steele_sells_basic_weapons(self):
+        self.assertEqual(
+            self.rows(
+                "SELECT v.item, i.name, i.BuyPrice FROM npc_vendor v JOIN item_template i ON i.entry = v.item"
+                " WHERE v.entry = 54 ORDER BY v.item"
+            ),
+            [
+                (2488, "Gladius", 536), (2489, "Two-handed Sword", 343), (2490, "Tomahawk", 540),
+                (2491, "Large Axe", 484), (2492, "Cudgel", 285), (2493, "Wooden Mallet", 701),
+                (2494, "Stiletto", 402), (2495, "Walking Stick", 505),
+            ],
+        )
+
+    def test_northshire_warrior_trainer_llane_beshere_teaches_early_warrior_spells(self):
+        self.assertEqual(
+            self.rows(
+                "SELECT ts.SpellId, ts.MoneyCost, ts.ReqLevel FROM creature_default_trainer c"
+                " JOIN trainer t ON t.Id = c.TrainerId JOIN trainer_spell ts ON ts.TrainerId = t.Id"
+                " WHERE c.CreatureId = 911 ORDER BY ts.ReqLevel, ts.SpellId"
+            ),
+            [(6673, 10, 1), (100, 100, 4), (772, 100, 4), (3127, 100, 6), (6343, 100, 6), (34428, 100, 6)],
+        )
+
+    def test_quoted_creature_subname_is_unescaped(self):
+        self.assertEqual(self.rows("SELECT count(*) FROM creature_template WHERE name LIKE '%\\\"%'"), [(0,)])
+        self.assertEqual(self.rows("SELECT name FROM creature_template WHERE name LIKE 'Remy%'"), [('Remy "Two Times"',)])
 
 
 class Db2ReimportTests(unittest.TestCase):
