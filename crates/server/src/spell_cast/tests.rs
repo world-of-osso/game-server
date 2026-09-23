@@ -10,8 +10,7 @@ use lightyear::prelude::*;
 use rusqlite::{Connection, OpenFlags};
 use shared::casting::CastState;
 use shared::components::{
-    CombatStatus, Health, Level, Mana, Npc, Player, Position, PowerType, UnitLevel, UnitPowers,
-    UnitStats,
+    CombatStatus, Health, Level, Mana, Npc, Player, Position, PowerType, UnitPowers, UnitStats,
 };
 use shared::protocol::{
     CastFailed, CombatChannel, CombatLogEvent, CombatLogKind, ProtocolPlugin, SpellCastIntent,
@@ -21,6 +20,7 @@ use shared::spell_data::CastFailReason;
 
 use super::powers::{PowerPools, PowerTypeTable, load_power_type_table};
 use crate::auth::{Authenticated, InWorld};
+use crate::class_progression::KnownSpells;
 use crate::networking::{Moving, PlayerLink};
 use crate::spell_info::{
     ClassInfo, ClassSpells, SpellEffect, SpellInfo, SpellStore, load_spell_data,
@@ -199,10 +199,12 @@ fn harness(extra: Vec<SpellInfo>, ids: &[u32], class: u8) -> Option<Harness> {
         .map(|&id| data.store.get(id).expect("spell in world.db").clone())
         .collect();
     spells.extend(extra);
+    let known = KnownSpells::fixture(spells.iter().map(|spell| spell.id).collect());
     app.insert_resource(SpellStore::fixture(spells));
     app.insert_resource(power_table(data));
     app.insert_resource(class_spells(data));
     let caster = spawn_player(&mut app, class, 0.0);
+    app.world_mut().entity_mut(caster).insert(known);
     let connection = spawn_connection(&mut app, caster);
     let npc = spawn_npc(&mut app, 3.0);
     app.update();
@@ -282,7 +284,7 @@ impl Harness {
 }
 
 #[test]
-fn warrior_gets_rage_pool_replicated_as_unit_powers_and_level() {
+fn warrior_gets_rage_pool_replicated_as_unit_powers() {
     let Some(mut h) = harness(Vec::new(), &[], 1) else {
         return;
     };
@@ -293,10 +295,6 @@ fn warrior_gets_rage_pool_replicated_as_unit_powers_and_level() {
     assert_eq!(
         (powers.entries[0].current, powers.entries[0].max),
         (0, 1000)
-    );
-    assert_eq!(
-        h.app.world().get::<UnitLevel>(h.caster),
-        Some(&UnitLevel(10))
     );
 }
 
@@ -577,10 +575,33 @@ fn unsupported_implicit_target_fails_the_cast() {
     };
     h.cast_and_deliver(900_001, None);
     let failed = std::mem::take(&mut h.inbox.failed);
-    assert_eq!(failed[0].reason, CastFailReason::InvalidTarget);
+    assert_eq!(failed[0].reason, CastFailReason::NotSupported);
     assert_eq!(
         failed[0].detail.as_deref(),
         Some("implicit target 87 not supported")
     );
     assert_eq!(h.power(PowerType::Rage), 0.0);
+}
+
+#[test]
+fn unknown_spell_is_rejected_as_not_known() {
+    let Some(mut h) = harness(Vec::new(), &[MORTAL_STRIKE], 1) else {
+        return;
+    };
+    h.set_power(PowerType::Rage, 500.0);
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(KnownSpells::fixture(Vec::new()));
+    h.cast_and_deliver(MORTAL_STRIKE, Some(h.npc));
+    assert_eq!(
+        std::mem::take(&mut h.inbox.failed),
+        vec![CastFailed {
+            spell_id: MORTAL_STRIKE,
+            reason: CastFailReason::NotSupported,
+            detail: Some("spell not known".into()),
+        }]
+    );
+    assert_eq!(h.health(h.npc), 5000.0);
+    assert_eq!(h.power(PowerType::Rage), 500.0);
 }

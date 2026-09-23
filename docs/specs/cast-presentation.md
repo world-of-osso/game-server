@@ -13,8 +13,9 @@ Server-side spell casting in `crates/server/src/spell_cast/`: validation, cast b
 - [x] Resolve effects 2, 6 (aura hook), 10, 30, 31, 58, 64 (bounded depth), 68, 121, 136; log unknown effects once per spell and skip them.
 - [x] Fail the cast on unsupported implicit targets of handled effects.
 - [x] Emit `CombatLogEvent` (CastStart, CastSuccess, Damage, Heal, Energize, Interrupt, Death) to source and target owners.
-- [x] Maintain class power pools with DB2 regen/decay; replicate `UnitPowers` and `UnitLevel`.
-- [ ] Contract reasons for too close, school lockout, spell in progress, no charges and unsupported spell (sent as nearest `CastFailReason` plus `detail`).
+- [x] Reject player casts of spells not in `KnownSpells` (`NotSupported`, "spell not known"); NPC casters exempt.
+- [x] Maintain class power pools with DB2 regen/decay; replicate `UnitPowers` (player `UnitLevel` belongs to class progression; NPC `UnitLevel` from the template).
+- [x] Use contract `CastFailReason` variants directly; `NotSupported` names the cause in `detail`.
 
 ## How it works
 
@@ -25,14 +26,14 @@ Server-side spell casting in `crates/server/src/spell_cast/`: validation, cast b
 - `crates/server/src/spell_cast/mod.rs`: receivers, validation, start/complete/cancel, `SpellHistory`, messages.
 - `crates/server/src/spell_cast/targets.rs`: implicit targets, relations, range.
 - `crates/server/src/spell_cast/effects.rs`: effect registry, damage/heal paths, `AuraApplier`.
-- `crates/server/src/spell_cast/powers.rs`: `PowerTypeTable`, `PowerPools`, regen, `UnitPowers`/`UnitLevel` sync.
+- `crates/server/src/spell_cast/powers.rs`: `PowerTypeTable`, `PowerPools`, regen, `UnitPowers` sync.
 - `crates/server/src/networking.rs`: `Moving` input marker.
 - `crates/server/src/combat.rs`: `enter_combat`, `mark_npc_dead_world`.
 - `crates/server/src/spell_info/`: spell data including `spell_category` charges.
 
 ## Tests asserting this spec
 
-- `crates/server/src/spell_cast/tests.rs` (real `world.db` spells): instant Mortal Strike cost/GCD/cooldown messages and repeat failures; Fireball cast time and combat log order; movement cancel; Kick interrupt and Fire lockout; OutOfRange `CastFailed`; Flash Heal overheal; Charge energize raw units and charges message; rage decay; bounded trigger chain; unsupported implicit target; warrior `UnitPowers`/`UnitLevel`.
+- `crates/server/src/spell_cast/tests.rs` (real `world.db` spells): instant Mortal Strike cost/GCD/cooldown messages and repeat failures; Fireball cast time and combat log order; movement cancel; Kick interrupt and Fire lockout; OutOfRange `CastFailed`; Flash Heal overheal; Charge energize raw units and charges message; rage decay; bounded trigger chain; unsupported implicit target (`NotSupported`); unknown-spell rejection; warrior `UnitPowers`.
 - `crates/server/src/zones.rs`: NPC `UnitLevel` and empty `UnitPowers`.
 
 ## Known gaps (current cycle)

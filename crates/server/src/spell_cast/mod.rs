@@ -13,10 +13,11 @@ pub mod targets;
 
 use std::collections::HashMap;
 
+use bevy::ecs::system::SystemState;
 use bevy::prelude::*;
 use lightyear::prelude::*;
 use shared::casting::{CastState, CastTickResult, CastType};
-use shared::components::{Health, Player, PowerType};
+use shared::components::{Health, Npc, Player, PowerType};
 use shared::protocol::{
     CastFailed, CombatChannel, CombatLogEvent, CombatLogKind, SpellCastIntent, SpellChargesUpdate,
     SpellCooldownUpdate, StopSpellCast,
@@ -24,6 +25,7 @@ use shared::protocol::{
 use shared::spell_data::CastFailReason;
 
 use crate::auth::{Authenticated, InWorld};
+use crate::class_progression::KnownSpells;
 use crate::networking::{CombatTarget, Moving, PlayerLink};
 use crate::spell_info::{SpellInfo, SpellStore};
 use effects::{AuraApplierHook, EffectCtx, UnhandledEffects, with_aura_hook};
@@ -53,20 +55,18 @@ impl Plugin for SpellCastPlugin {
                     powers::regenerate_powers,
                     advance_casts.after(crate::networking::process_player_inputs),
                     powers::sync_unit_powers,
-                    powers::sync_unit_level,
                 )
                     .chain(),
             );
     }
 }
 
-/// Why a cast was refused. Mapped to the contract's `CastFailReason`; cases
-/// without a contract variant use the nearest one plus `detail` (contract
-/// gap reported: TooClose, SchoolLockedOut, SpellInProgress, NoCharges,
-/// UnknownSpell/Unsupported).
+/// Why a cast was refused, mapped to the contract's `CastFailReason`.
+/// `NotSupported` carries the specific cause in `detail`.
 #[derive(Debug, Clone, PartialEq)]
 pub enum CastFailure {
     UnknownSpell,
+    NotKnown,
     CasterDead,
     InProgress,
     SchoolLockedOut,
@@ -87,21 +87,22 @@ impl CastFailure {
     fn to_contract(&self) -> (CastFailReason, Option<String>) {
         use CastFailReason as R;
         match self {
-            Self::UnknownSpell => (R::InvalidTarget, Some("unknown spell".into())),
+            Self::UnknownSpell => (R::NotSupported, Some("unknown spell".into())),
+            Self::NotKnown => (R::NotSupported, Some("spell not known".into())),
             Self::CasterDead => (R::CasterDead, None),
-            Self::InProgress => (R::InvalidTarget, Some("another cast is in progress".into())),
-            Self::SchoolLockedOut => (R::OnCooldown, Some("spell school locked out".into())),
+            Self::InProgress => (R::SpellInProgress, None),
+            Self::SchoolLockedOut => (R::SchoolLockedOut, None),
             Self::OnGlobalCooldown => (R::OnGlobalCooldown, None),
             Self::OnCooldown => (R::OnCooldown, None),
-            Self::NoCharges => (R::OnCooldown, Some("no charges".into())),
+            Self::NoCharges => (R::NoChargesRemain, None),
             Self::Moving => (R::CantCastWhileMoving, None),
             Self::NoTarget => (R::NoTarget, None),
             Self::InvalidTarget => (R::InvalidTarget, None),
             Self::OutOfRange => (R::OutOfRange, None),
-            Self::TooClose => (R::OutOfRange, Some("too close".into())),
+            Self::TooClose => (R::TooClose, None),
             Self::NotEnoughPower(power) => (R::NotEnoughResource, Some(format!("{power:?}"))),
             Self::NotEnoughHealth => (R::NotEnoughResource, Some("Health".into())),
-            Self::Unsupported(detail) => (R::InvalidTarget, Some(detail.clone())),
+            Self::Unsupported(detail) => (R::NotSupported, Some(detail.clone())),
         }
     }
 }
@@ -358,6 +359,9 @@ fn request_cast(
             CastFailure::Unsupported("caster is not a player".into()),
         ));
     }
+    if !caster_knows_spell(world, caster, spell.id) {
+        return Err((spell.id, CastFailure::NotKnown));
+    }
     let explicit = request
         .target_entity
         .and_then(Entity::try_from_bits)
@@ -368,6 +372,16 @@ fn request_cast(
                 .and_then(|target| target.0)
         });
     start_cast(world, caster, &spell, explicit).map_err(|failure| (spell.id, failure))
+}
+
+/// Player requests are limited to known spells; NPC casters are exempt.
+fn caster_knows_spell(world: &mut World, caster: Entity, spell_id: u32) -> bool {
+    if world.get::<Npc>(caster).is_some() {
+        return true;
+    }
+    let mut known = SystemState::<Query<&KnownSpells>>::new(world);
+    let known = known.get(world).expect("plain component query always validates");
+    crate::class_progression::knows_spell(&known, caster, spell_id)
 }
 
 /// Validate everything checked before a cast starts; returns the explicit

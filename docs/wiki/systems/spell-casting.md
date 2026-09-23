@@ -6,6 +6,7 @@ Server-authoritative spell casting in `crates/server/src/spell_cast/`. `SpellCas
 
 1. **Receive** (`Update`): only an authenticated in-world connection's `PlayerLink` player casts. The spell resolves by ID or unique exact name. Explicit target = `target_entity`, else the server `CombatTarget`.
 2. **Validate**, in order:
+   - player casters must know the spell (`class_progression::knows_spell` on [[class-progression]] `KnownSpells`; NPCs exempt; triggered spells skip it);
    - caster alive;
    - no active `CastState`;
    - school not locked out;
@@ -79,16 +80,7 @@ Server-authoritative spell casting in `crates/server/src/spell_cast/`. `SpellCas
 - Melee auto-attack still broadcasts the old `CombatEvent` to every client. Retirement: remove it when the client renders `CombatLogEvent`.
 - Spell effects emit only `CombatLogEvent`.
 
-`CastFailReason` lacks several reasons. They are sent as the nearest variant with a `detail` (gap reported to the contract owner):
-
-| Case | Sent as | `detail` |
-|---|---|---|
-| Too close | `OutOfRange` | "too close" |
-| School locked out | `OnCooldown` | "spell school locked out" |
-| No charges | `OnCooldown` | "no charges" |
-| Cast in progress | `InvalidTarget` | "another cast is in progress" |
-| Unknown spell | `InvalidTarget` | "unknown spell" |
-| Unsupported target or power type | `InvalidTarget` | names the ID |
+Failures use the contract `CastFailReason` directly (`TooClose`, `SchoolLockedOut`, `SpellInProgress`, `NoChargesRemain`, ...). `NotSupported` carries the cause in `detail`: "unknown spell", "spell not known", "implicit target N not supported", "power type N". `NotInFront` is unused (no facing check).
 
 ## Implicit targets
 
@@ -159,7 +151,7 @@ Damage and heal side effects:
   - Examples: Energy +10/s. Rage −12.5/s (−1.25 rage/s) out of combat only. Holy Power −0.1/s after 10 s.
   - Mana has rate 0 in the data. A placeholder (not retail-derived) regenerates 1% of max per second.
 - **NPCs** get `UnitLevel` (template `min_level`) and empty `UnitPowers`. Creature class/level power stats are not imported.
-- **Players:** `UnitLevel` mirrors `Level`.
+- **Players:** `UnitLevel` is owned by [[class-progression]]; the cast pipeline only reads levels.
 
 ## Aura task hook points
 
@@ -175,7 +167,7 @@ Damage and heal side effects:
 - [spell_cast/mod.rs](../../../crates/server/src/spell_cast/mod.rs) — pipeline, `SpellHistory`, messages
 - [spell_cast/targets.rs](../../../crates/server/src/spell_cast/targets.rs) — implicit targets, range
 - [spell_cast/effects.rs](../../../crates/server/src/spell_cast/effects.rs) — handlers, `AuraApplier`
-- [spell_cast/powers.rs](../../../crates/server/src/spell_cast/powers.rs) — `PowerTypeTable`, pools, regen, `UnitPowers`/`UnitLevel`
+- [spell_cast/powers.rs](../../../crates/server/src/spell_cast/powers.rs) — `PowerTypeTable`, pools, regen, `UnitPowers`
 - [spell_cast/tests.rs](../../../crates/server/src/spell_cast/tests.rs) — real-DB App tests
 - [spec](../../specs/cast-presentation.md)
 

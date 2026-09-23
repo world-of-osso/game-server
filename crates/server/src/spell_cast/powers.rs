@@ -1,4 +1,4 @@
-//! Server power pools, regeneration and `UnitPowers`/`UnitLevel` replication.
+//! Server power pools, regeneration and `UnitPowers` replication.
 //!
 //! Units: every pool stores the DB2 raw value (`power_type` rows, `SpellPower`
 //! costs and `ENERGIZE` base points share it). Rage, Runic Power, Soul Shards,
@@ -17,9 +17,7 @@ use std::path::Path;
 use bevy::prelude::*;
 use lightyear::prelude::ReplicationDirtyQueue;
 use rusqlite::Connection;
-use shared::components::{
-    CombatStatus, Level, Mana, Player, PowerEntry, PowerType, UnitLevel, UnitPowers,
-};
+use shared::components::{CombatStatus, Mana, Player, PowerEntry, PowerType, UnitPowers};
 
 use crate::spell_info::ClassSpells;
 
@@ -344,23 +342,6 @@ pub(super) fn sync_unit_powers(
             if let Some(dirty) = &dirty {
                 dirty.mark(entity);
             }
-        }
-    }
-}
-
-/// Replicate the player's `Level` as `UnitLevel`.
-pub(super) fn sync_unit_level(
-    mut commands: Commands,
-    players: Query<(Entity, &Level, Option<&UnitLevel>), Or<(Changed<Level>, Without<UnitLevel>)>>,
-    dirty: Option<Res<ReplicationDirtyQueue>>,
-) {
-    for (entity, level, unit_level) in &players {
-        if unit_level.is_some_and(|unit_level| unit_level.0 == level.0) {
-            continue;
-        }
-        commands.entity(entity).insert(UnitLevel(level.0));
-        if let Some(dirty) = &dirty {
-            dirty.mark(entity);
         }
     }
 }

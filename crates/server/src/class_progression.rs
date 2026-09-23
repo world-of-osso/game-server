@@ -38,6 +38,11 @@ const AUTO_LEARN_METHODS: [u32; 3] = [1, 2, 4];
 pub struct KnownSpells(Vec<u32>);
 
 impl KnownSpells {
+    #[cfg(test)]
+    pub(crate) fn fixture(spells: Vec<u32>) -> Self {
+        Self(spells)
+    }
+
     pub fn contains(&self, spell_id: u32) -> bool {
         self.0.contains(&spell_id)
     }
