@@ -321,3 +321,17 @@ fn equal_recompute_does_not_mark_health_changed() {
         tick
     );
 }
+
+#[test]
+fn secondary_dr_follows_curve_21024() {
+    assert_eq!(secondary_dr(10.0), 10.0);
+    assert_eq!(secondary_dr(30.0), 30.0);
+    assert_eq!(secondary_dr(45.0), 43.0);
+    assert_eq!(secondary_dr(250.0), 126.0);
+    // 46 crit rating = 1% at level 90: 2300 rating = 50% raw → 47% after DR.
+    let mut input = paladin_80_holy();
+    input.level = 90;
+    input.gear_ratings.crit = 2300.0;
+    let stats = compute_character_stats(&input, None).unwrap();
+    assert!((stats.crit_pct - 52.0).abs() < 1e-3, "{}", stats.crit_pct);
+}

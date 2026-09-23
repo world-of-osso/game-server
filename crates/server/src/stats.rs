@@ -10,7 +10,7 @@
 use bevy::prelude::*;
 use lightyear::prelude::ReplicationDirtyQueue;
 use shared::components::{CombatRatings, Health, ItemStatBlock, Level, Mana, Player, UnitStats};
-use shared::formulas::{RatingType, apply_secondary_dr, sum_equipment_stats};
+use shared::formulas::sum_equipment_stats;
 
 use crate::character_stats_data::{
     BASE_MANA, CLASS_BASE_STATS, CRIT_RATING, HASTE_RATING, HP_PER_STAMINA, MASTERY_RATING,
@@ -179,9 +179,38 @@ fn apply_primary_pct(stats: UnitStats, pct: UnitStats) -> UnitStats {
     }
 }
 
-/// Rating → percent (mastery: points) with retail secondary-stat DR.
-fn rating_value(rating: f32, per_point: f32, kind: RatingType) -> f32 {
-    apply_secondary_dr(rating / per_point, kind)
+/// Secondary-stat diminishing returns, curve 21024 `(input, output)` in
+/// percent (mastery: points). SimC `DIMINISHING_RETURN_SECONDARY_CR_CURVE`,
+/// `item_scaling.inc` for 12.0.1.66709; `player_t::apply_combat_rating_dr`.
+const SECONDARY_DR_CURVE: [(f32, f32); 8] = [
+    (0.0, 0.0),
+    (30.0, 30.0),
+    (40.0, 39.0),
+    (50.0, 47.0),
+    (60.0, 54.0),
+    (80.0, 66.0),
+    (100.0, 76.0),
+    (200.0, 126.0),
+];
+
+/// Piecewise-linear lookup, clamped to the curve's ends.
+fn secondary_dr(value: f32) -> f32 {
+    let upper = SECONDARY_DR_CURVE
+        .iter()
+        .position(|&(x, _)| x >= value)
+        .unwrap_or(SECONDARY_DR_CURVE.len() - 1);
+    if upper == 0 || value >= SECONDARY_DR_CURVE[upper].0 {
+        return SECONDARY_DR_CURVE[upper].1;
+    }
+    let (x0, y0) = SECONDARY_DR_CURVE[upper - 1];
+    let (x1, y1) = SECONDARY_DR_CURVE[upper];
+    y0 + (value - x0) / (x1 - x0) * (y1 - y0)
+}
+
+/// Rating → percent (mastery: points) after DR. `per_point` is the
+/// gtCombatRatings value: rating for 1% or 1 mastery point (SimC `rating_t::init`).
+fn rating_value(rating: f32, per_point: f32) -> f32 {
+    secondary_dr(rating / per_point)
 }
 
 /// Retail stats for `input`, with aura `mods` folded in. `None` for a class
@@ -199,7 +228,7 @@ pub fn compute_character_stats(
     let mut ratings = input.gear_ratings;
     ratings += mods.ratings_flat;
     let mastery_points = BASE_MASTERY_POINTS
-        + rating_value(ratings.mastery, MASTERY_RATING[level], RatingType::Mastery)
+        + rating_value(ratings.mastery, MASTERY_RATING[level])
         + mods.mastery_points;
     Some(CharacterStats {
         primary,
@@ -212,17 +241,11 @@ pub fn compute_character_stats(
         spell_power: primary.intellect,
         attack_power: primary.strength * input.attack_power_per_strength
             + primary.agility * input.attack_power_per_agility,
-        crit_pct: BASE_CRIT_PCT
-            + rating_value(ratings.crit, CRIT_RATING[level], RatingType::Crit)
-            + mods.crit_pct,
-        haste_pct: rating_value(ratings.haste, HASTE_RATING[level], RatingType::Haste)
-            + mods.haste_pct,
+        crit_pct: BASE_CRIT_PCT + rating_value(ratings.crit, CRIT_RATING[level]) + mods.crit_pct,
+        haste_pct: rating_value(ratings.haste, HASTE_RATING[level]) + mods.haste_pct,
         mastery_pct: mastery_points * input.mastery_coefficient,
-        versatility_pct: rating_value(
-            ratings.versatility,
-            VERSATILITY_RATING[level],
-            RatingType::Versatility,
-        ) + mods.versatility_pct,
+        versatility_pct: rating_value(ratings.versatility, VERSATILITY_RATING[level])
+            + mods.versatility_pct,
         armor: ratings.armor,
     })
 }

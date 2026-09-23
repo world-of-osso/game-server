@@ -36,7 +36,7 @@ Players get retail 12.x stats on the server. See [character stats](../wiki/syste
 
 ## Known gaps
 
-- [ ] Gear stats: the server has no item stat data, so nothing produces `EquippedItems`.
-- [ ] Weapon damage: there is no server weapon data.
+- [ ] Phase 4 (inventory) blocker, gear stats: the server has no item stat data, so nothing produces `EquippedItems`.
+- [ ] Phase 4 (inventory) blocker, weapon damage: there is no server weapon data.
 - [ ] Spec/class passives, dodge/parry/block from stats, and `octclasscombatratingscalar` are not modeled.
 - [ ] `CharacterStats` is not replicated.

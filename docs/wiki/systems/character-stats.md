@@ -12,7 +12,7 @@ NPCs have no `CharacterStats`, so their spell power, attack power and crit are 0
 
 | Data | Source | Status |
 |---|---|---|
-| Class base Str/Agi/Sta/Int per level 1–90 | SimC `engine/dbc/sc_extra_data.inc` `__gt_class_stats_by_level` | No DB2 or game table holds these. SimC measures them in game; levels 81–89 are marked TODO for Warrior, Hunter, Rogue, Priest, Warlock and Demon Hunter, and 82–89 for Death Knight. |
+| Class base Str/Agi/Sta/Int per level 1–90 | SimC `engine/dbc/sc_extra_data.inc` `__gt_class_stats_by_level` | No DB2 or game table holds these; SimC measures them in game. See TODO gaps below. |
 | Racial modifiers | SimC `__gt_race_stats`, mapped to ChrRaces IDs | Dracthyr, Earthen and Haranir are 0 in SimC and are not in the table. |
 | Health per stamina | CASC `gametables/hppersta.txt` (FDID 1391642) | From the local 12.x install. |
 | Base mana | CASC `gametables/basemp.txt` (FDID 1391664) | From the local 12.x install. |
@@ -21,6 +21,7 @@ NPCs have no `CharacterStats`, so their spell power, attack power and crit are 0
 | Mastery coefficient | Effect 0 `EffectBonusCoefficient` of the spec's `MasterySpellID_0`, for example Holy 183997 = 1.5 | |
 | AP conversion | `chr_classes.AttackPowerPerStrength` / `AttackPowerPerAgility` | |
 
+- SimC checkout: `simulationcraft/simc` commit `303610892fe2cd9c71a75eae89007c8d320788ff` (2026-04-05), client data 12.0.1.66709 (`client_data_version.inc`).
 - The three CASC tables are byte-for-byte the values in SimC `sc_scale_data.inc` for build 12.0.1.66709: crit at level 80 is 12.158 and at 90 is 46.
 - `octhpperstamina`, `octbasehpbyclass`, `octbasempbyclass` and `chancetospellcrit` are in the listfile but not in the local root.
 - Retail has no base health. SimC `dbc_t::health_base` returns 0.
@@ -40,9 +41,26 @@ NPCs have no `CharacterStats`, so their spell power, attack power and crit are 0
 8. **Mastery %** = (8 + DR(mastery rating / rating-per-point) + `mastery_points`) × mastery coefficient.
 9. **Armor** = gear armor rating.
 
-DR is `shared::formulas::apply_secondary_dr`, SimC curve 21024. It is the identity up to 30%.
+DR is the server's `secondary_dr`, curve 21024 from SimC `item_scaling.inc` (12.0.1.66709), applied as in `player_t::apply_combat_rating_dr`. It is the identity up to 30%. Rating conversion and DR exist only in `stats.rs`; the server does not use `shared::formulas` rating functions.
 
 Rating units follow SimC `rating_t::init`: the game-table value is the rating needed for 1%, or for 1 mastery point.
+
+## SimC level 81–89 TODO gaps
+
+SimC marks these class blocks TODO for the listed levels:
+
+| Class | TODO levels |
+|---|---|
+| Warrior | 81–89 |
+| Hunter | 81–89 |
+| Rogue | 81–89 |
+| Priest | 81–89 |
+| Death Knight | 82–89 |
+| Warlock | 81–89 |
+| Demon Hunter | 81–89 |
+
+- SimC still ships numbers for those rows. They follow the main-stat curve of the verified classes (Paladin, Shaman, Mage, Monk, Druid, Evoker), with off-stats at the class ratios in the block comments, for example Warrior "Agi = 0.69 of Primary".
+- The server uses the SimC rows as-is and interpolates nothing. The TODO levels are unverified in game.
 
 ## Examples
 
@@ -88,18 +106,21 @@ The spawned `Health` comes from redb. The first recompute keeps the persisted ra
 
 ## Gaps
 
-- **Gear:** the server has no item stat data. world.db has no ItemSparse, and equipment records carry only item_id, name and quality. `EquippedItems` is the gear input, but nothing fills it in production.
+### Phase 4 (inventory) blockers
+
+- **Gear:** the server has no item stat data. world.db has no ItemSparse or item-level budget tables, and equipment records carry only item_id, name and quality. `EquippedItems` stays the gear input, but nothing fills it in production.
 - **Weapons:** there is no weapon data. Weapon hits keep the placeholder in [[spell-casting]].
+
+### Other
 - **Not modeled:**
   - spec and class passives (armor specializations, tank stamina, spec mana pools);
   - `octclasscombatratingscalar`;
   - multiplicative haste stacking;
   - dodge, parry and block from stats.
 - **Replication:** `CharacterStats` is server-only. The client sees only `UnitStats`, `CombatRatings`, `Health` and `Mana`.
-- **Shared formulas:** `shared::formulas::rating_to_percent` and `melee::crit_chance` are not used for players.
-  - `rating_data.rs` interleaves a level column into every sixth entry and ends at level 80.
-  - The division by `raw × 100` is 100× too small.
-  - The fix belongs in shared-protocol.
+- **Shared formulas:** shared-protocol `formulas/rating_data.rs` interleaves a level column into every sixth entry and ends at level 80, and `rating_to_percent` divides by `raw × 100`, which is 100× too small.
+  - The server no longer calls any of them.
+  - They are scheduled for deletion in shared-protocol.
 
 ## Sources
 
