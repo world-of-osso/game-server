@@ -29,6 +29,7 @@ Pure Rust, ACID, embedded B-tree. No external server process. Tables:
 | `auctions` | `AuctionId` | AuctionData |
 | `guilds` | `GuildId` | GuildData |
 | `pvp_states` | `CharacterId` | PlayerPvpProgress |
+| `character_progression` | `CharacterId` | Active spec ID and action bar ([[class-progression]]) |
 
 File: `data/game.redb`
 

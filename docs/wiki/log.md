@@ -1,5 +1,9 @@
 # Wiki Log
 
+## [2026-09-23] systems | Class progression: spec, known spells, action bars
+
+Created [[class-progression]]; updated [[spell-info]], [[persistence]] and index. Race/class validation now runs at creation and select, using a server table because world.db has no chr_races. The Initial spec (OrderIndex 4) is active below level 10. Auto-learned ClassSpells (AcquireMethod 1/2/4, level, race mask), spec spells and mastery form `KnownSpells`, which is snapshotted on world entry with deltas after level or spec changes. Action bars are validated and stored in `character_progression`. Admin set-level updates the online `Level`/`UnitLevel`.
+
 ## [2026-09-23] systems | SpellInfo store replaces spell_db
 
 Created [[spell-info]]; updated [[world-data]], [[networking]], [[persistence]], crate-structure, stack-decisions, index and the cast-presentation spec. `SpellStore` loads every spell with all DifficultyID 0 effects, power costs and option tables; `ClassSpells` adds learnables/specs/power types. Conversion fixes interrupt 68, dispel 38, raw power IDs and percent costs. Rage/Runic Power/Soul Shard costs are stored in tenths (kept raw).

@@ -34,6 +34,7 @@ Server gameplay systems.
 | [[networking]] | Lightyear UDP, pre-entry visibility, matching MCVT server terrain sampling, dirty-candidate replication, named cast-presentation lifecycle, 50 ms cadence, persistence, channels, and interest management |
 | [[persistence]] | Dual-layer storage: redb for mutable player data, physical equipment ownership, login-loaded gold, mutation-boundary GoldUpdateQueue replication, and SQLite for static world data |
 | [[world-data]] | SQLite world.db, AzerothCore/Retail sources, signed creature-event membership and inactive-event selection, WorldDataPlugin |
+| [[class-progression]] | Race/class validation, Initial spec below 10, known spells from ClassSpells, action bars, `character_progression` table, admin set-level live update |
 | [[spell-info]] | SpellStore (every DB2 spell, all effects/costs/options at DifficultyID 0), ClassSpells, raw power-cost units, shared SpellData conversion, load cost |
 | [[tick-model]] | Observed server loop: 50ms runner/fixed cadence, schedule ownership, explicit ordering, completed player-death and broad auto-AFK scan reductions, maintenance gates, and IPC boundary |
 | [[zone-architecture]] | Proposed zone/instance partitioning; current implementation is startup-only Elwynn spawning with no per-zone sets or transfers |

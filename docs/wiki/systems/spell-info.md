@@ -52,6 +52,8 @@ Server spell data model in `crates/server/src/spell_info/`. `SpellInfoPlugin` lo
   - `SpellLevel` must be at most 90. `required_level` = `spell_levels.SpellLevel`.
 - **Specs:** `chr_specialization` supplies role, primary stat, flags and mastery spells. The spell list comes from `specialization_spells`.
 - **Power types:** from `chr_classes_x_power_types`.
+- **Passive:** learnable and spec spells carry `passive` (`spell_misc.Attributes_0 & 0x40`).
+- [[class-progression]] turns these lists into per-player known spells.
 
 ## Load cost
 
