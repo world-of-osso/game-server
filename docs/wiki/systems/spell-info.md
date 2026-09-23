@@ -41,6 +41,7 @@ Server spell data model in `crates/server/src/spell_info/`. `SpellInfoPlugin` lo
 - **Specs:** `chr_specialization` supplies role, primary stat, flags and mastery spells. The spell list comes from `specialization_spells`.
 - **Power types:** from `chr_classes_x_power_types`.
 - **Passive:** learnable and spec spells carry `passive` (`spell_misc.Attributes_0 & 0x40`).
+- **Trait tree:** `ClassInfo.traits` is the class talent tree from `spell_info/trait_data.rs` ([[talents]]). Unknown node, edge or condition types fail the load.
 - [[class-progression]] turns these lists into per-player known spells.
 
 ## Load cost
@@ -61,4 +62,5 @@ Two choices keep the cost down:
 - [spell_info/mod.rs](../../../crates/server/src/spell_info/mod.rs) — types, store, plugin
 - [spell_info/load.rs](../../../crates/server/src/spell_info/load.rs) — SQL loaders
 - [spell_info/class_data.rs](../../../crates/server/src/spell_info/class_data.rs) — class lists
+- [spell_info/trait_data.rs](../../../crates/server/src/spell_info/trait_data.rs) — class trait trees
 - [spell_info/tests.rs](../../../crates/server/src/spell_info/tests.rs) — real-DB assertions

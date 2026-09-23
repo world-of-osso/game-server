@@ -50,7 +50,7 @@ Source: wago.tools exports pinned to Retail `12.1.0.69933` (the local install's 
 | `chr_specialization` | 60 | Specs (ID, class, role, mastery) |
 | `trait_node` | 11,875 | Talent tree nodes |
 
-Other imported tables: spell categories, levels, class options, procs-per-minute (+mods), shapeshift (+forms), interrupts, target restrictions, equipped items, radius, scaling, empower (+stages), `spell_x_spell_visual`, `skill_line`, `chr_classes`, `specialization_spells`, `power_type`, `chr_classes_x_power_types`, and the `trait_*` / `skill_line_x_trait_tree` talent tables. `spell_info` reads the spell, class-option, skill-line-ability, specialization and power-type tables ([[spell-info]]); `trait_*` tables are not read yet.
+Other imported tables: spell categories, levels, class options, procs-per-minute (+mods), shapeshift (+forms), interrupts, target restrictions, equipped items, radius, scaling, empower (+stages), `spell_x_spell_visual`, `skill_line`, `chr_classes`, `specialization_spells`, `power_type`, `chr_classes_x_power_types`, the `trait_*` / `skill_line_x_trait_tree` talent tables with their cost/condition link tables, `trait_currency_source` and `spec_set_member`. `spell_info` reads the spell, class-option, skill-line-ability, specialization, power-type and trait tables ([[spell-info]], [[talents]]).
 
 ## Event-dependent creature spawns
 

@@ -30,6 +30,7 @@ Pure Rust, ACID, embedded B-tree. No external server process. Tables:
 | `guilds` | `GuildId` | GuildData |
 | `pvp_states` | `CharacterId` | PlayerPvpProgress |
 | `character_progression` | `CharacterId` | Active spec ID and action bar ([[class-progression]]) |
+| `character_traits` | `CharacterId` | Trait purchases per spec ([[talents]]) |
 
 File: `data/game.redb`
 

@@ -1,5 +1,9 @@
 # Wiki Log
 
+## [2026-09-23] systems | Retail trait trees replace the Paladin talent stub
+
+Created [[talents]]; updated [[class-progression]], [[spell-info]], [[persistence]], [[world-data]] and index. The DB2 import adds seven trait link/source tables. Each class `TraitTree` loads into `ClassInfo.traits`. `trait_config` validates configs using TrinityCore rules. Points per level come from `TraitCurrencySource`: at level 80 that is 31 class, 30 spec and 10 per hero currency. `CommitTraitConfig` persists purchases per spec in `character_traits`. `TraitConfigSnapshot` is sent on enter world, spec change and budget change. Talent spells join `KnownSpells`. `talent.rs` and its legacy message handlers are removed.
+
 ## [2026-09-23] systems | Retail character stats
 
 Created [[character-stats]] and `docs/specs/character-stats.md`; updated [[spell-casting]] (SP/AP/crit from `CharacterStats`, `PowerCostPct` mana from base mana), [[combat]], the cast spec and the index. Base stats come from SimC `sc_extra_data.inc`; health, mana and rating conversions come from local CASC game tables (hppersta, basemp, combatratings), which match SimC 12.0.1.66709. There is no gear or weapon data. Shared `rating_data.rs` is corrupt and the shared rating conversion is 100× too small, so neither is used for players.

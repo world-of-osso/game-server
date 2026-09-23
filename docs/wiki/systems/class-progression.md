@@ -1,6 +1,6 @@
 # Class Progression
 
-`ClassProgressionPlugin` (`crates/server/src/class_progression.rs`) owns each player's active specialization, known spells and action bar. The rules are computed from [[spell-info]] `ClassSpells`. Race/class validation lives in `race_class.rs`. Casts do not check known spells yet: `knows_spell` is the hook for the cast pipeline.
+`ClassProgressionPlugin` (`crates/server/src/class_progression.rs`) owns each player's active specialization, trait config ([[talents]]), known spells and action bar. The rules are computed from [[spell-info]] `ClassSpells`. Race/class validation lives in `race_class.rs`. Casts do not check known spells yet: `knows_spell` is the hook for the cast pipeline.
 
 ## Race and class validation
 
@@ -32,6 +32,7 @@ The known list is built in learn order:
    - `RaceMasks` must be zero or include the race bit. Summon Warhorse 13819 is Human/Dwarf/Dark Iron; Thalassian Warhorse 34769 is Blood Elf.
 2. The active spec's `specialization_spells`, in `DisplayOrder`.
 3. The spec's mastery spells.
+4. Talent spells of the active spec's trait config, including granted nodes ([[talents]]). A Retribution level 20 Paladin knows the granted Hammer of Wrath 1241288 and Greater Judgment 231663; switching to Holy swaps them for Lay on Hands 633 and Divine Steed 190784.
 
 Duplicates are dropped. Passives stay in the list with no flag; the client decides from its catalog. `LearnableSpell.passive` and `SpecSpell.passive` are `spell_misc.Attributes_0 & 0x40`, and mastery spells count as passive.
 
@@ -50,8 +51,9 @@ The list is stored in the `KnownSpells` component. Cast validation should call `
 
 | When | Sent |
 |---|---|
-| First frame the player has a `PlayerLink` connection | `SpecializationChanged` (only if the class has spec data), `KnownSpellsSnapshot`, `ActionBarSnapshot` |
-| Level change (`Changed<Level>`) or accepted `SetSpecialization` | `SpecializationChanged` if the spec changed, then `SpellsUnlearned` and `SpellsLearned` (each only when non-empty), then `ActionBarSnapshot` if the bar was pruned |
+| First frame the player has a `PlayerLink` connection | `SpecializationChanged` and `TraitConfigSnapshot` (only if the class has spec data), `KnownSpellsSnapshot`, `ActionBarSnapshot` |
+| Level change (`Changed<Level>`) or accepted `SetSpecialization` | `SpecializationChanged` if the spec changed, then `SpellsUnlearned` and `SpellsLearned` (each only when non-empty), then `ActionBarSnapshot` if the bar was pruned, then `TraitConfigSnapshot` if the spec, config or point budget changed |
+| `CommitTraitConfig` | `TraitCommitResult`; when accepted, then the spell deltas and `TraitConfigSnapshot` ([[talents]]) |
 
 ## Level
 
@@ -66,6 +68,7 @@ The list is stored in the `KnownSpells` component. Cast validation should call `
 
 - redb table `character_progression`: `character_id` (u64) → bitcode `ProgressionData { spec_id: u32, action_bar: Vec<(u8, ActionRefData)> }`.
 - The table is created in `create_tables`, and its row is removed with the character.
+- Trait purchases per spec live in `character_traits` ([[talents]]).
 - It is written when:
   - the first world entry finds no record
   - the resolved spec differs from the stored spec
@@ -83,4 +86,5 @@ The list is stored in the `KnownSpells` component. Cast validation should call `
 ## See Also
 
 - [[spell-info]] — `ClassSpells` learnables, specs, passive flags
+- [[talents]] — trait trees, validation, `character_traits`
 - [[persistence]] — redb tables
