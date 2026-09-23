@@ -6,7 +6,7 @@ Server aura runtime in `crates/server/src/auras/`. `AuraPlugin` keeps every unit
 
 - **Aura effects:** SpellEffects 6 (APPLY_AURA), 35 (party area aura) and 65 (raid area aura). There is no group backend, so area auras reach only their resolved targets (always the caster in scope).
 - **One aura per target:** `resolve_effects` collects the aura effects that hit the same unit in one resolution into an effect mask, then calls `apply_aura` once for that unit. Shadow Word: Pain 589 effects 1 (aura 3) and 3 (aura 269) form one instance on the target.
-- **Amounts:** each effect's per-stack amount is set at application: `BasePoints` plus the caster's SP/AP coefficients, with Points, PointsIndexN and BonusCoefficient mods. The amount does not change after that. Ticks and modifiers use amount × stacks.
+- **Amounts:** each effect's per-stack amount is set at application: `BasePoints` with Points and PointsIndexN mods, plus SP/AP coefficients (BonusCoefficient mods) for damage, heal and absorb types. The amount does not change after that. Ticks and modifiers use amount × stacks.
 - **Duration:** `spell_duration` with Duration mods. A duration of 0 or -1 makes the aura permanent, and passives are always permanent.
 - **Stacks and charges:** max stacks = `CumulativeAura` with MaxAuraStacks mods; 0 means the aura does not stack. Charges = `ProcCharges` with ProcCharges mods.
 - **Dead targets:** get no auras unless the spell has `SPELL_ATTR3_ALLOW_AURA_WHILE_DEAD`.
@@ -33,7 +33,7 @@ This is a simplified TrinityCore `Aura::CanStackWith`:
 - Passive spells with an aura effect in the unit's `KnownSpells` are applied as permanent self-cast auras (`AuraSource::KnownSpell`).
 - When a spell leaves `KnownSpells`, its passive aura is removed (`Unlearned`).
 - A `KnownSpells` change is queued in `Update` and synced in the next frame's `FixedUpdate`.
-- Talent passives apply the same way once the trait system adds talent spells to `KnownSpells`. `sync_passives(world, unit, source, spells)` is the integration point.
+- Talent passives: `compute_known_spells` adds `TraitLoadout::active_talent_spells()` to `KnownSpells`, so passive talents apply and unapply through the same sync.
 
 ## Removal
 
@@ -108,7 +108,7 @@ Examples: Shadow Word: Pain 589 ticks 12 (0.1246 × SP 100) eight times. Renew 1
 Healing takes the same mods, then MOD_HEALING_DONE_PERCENT 136 and the target's healing taken (118, 283).
 
 Crits:
-- Chance = MOD_CRIT_PCT 290 + CritChance mods. Rating crit is 0 until the stat system provides it (shared-protocol c6d455f removed the rating conversion).
+- Chance = `CharacterStats.crit_pct` (base, rating and MOD_CRIT_PCT auras) + CritChance mods.
 - A crit adds 100% of the amount, scaled by CritDamageAndHealing mods.
 
 Melee auto-attack (`combat.rs`) takes the attacker's physical `damage_done` × `autoattack_damage_mult` (344) and the target's physical `damage_taken`. It does not apply absorbs or immunity: the swing path is a query system outside the World-based damage path.
@@ -190,28 +190,39 @@ Examples:
 ## Cast pipeline integration
 
 - **Costs:** a `SpellPower` row with `RequiredAuraSpellID` applies only while the caster has that aura. Priest costs are gated on the spec passives 137031/137032/137033/417191, so a priest pays the row of whichever spec passive it knows; with none known the spell is free.
-- **Cast time:** ChangeCastTime mods, then ÷ `spell_haste_mult`.
+- **Cast time:** ChangeCastTime mods, then ÷ `1 + CharacterStats.haste_pct/100`.
 - **Charges:** max charges and recharge follow MOD_MAX_CHARGES 411, CHARGE_RECOVERY_MOD 453 and CHARGE_RECOVERY_MULTIPLIER 454 on the charge category (`EffectMiscValue_0`). Double Time 103827 gives Charge 100 2 charges and a 17 s recharge.
 - **Power regen:** MOD_POWER_REGEN_PERCENT 110 and MOD_MANA_REGEN_PCT 379 scale regen and decay rates.
 - **Movement:** movement reads `AuraStatMods.movement_speed`. It replaced the unused `shared::aura::Auras` read. The combination is the strongest MOD_INCREASE_SPEED 31 × every MOD_SPEED_ALWAYS 129 × the strongest MOD_DECREASE_SPEED 33, and 0 under MOD_ROOT 26, MOD_ROOT_2 455 or MOD_STUN 12.
 - **Crowd control:** cast validation fails with `Stunned` under MOD_STUN 12 (unless `SPELL_ATTR5_ALLOW_WHILE_STUNNED`), `Silenced` under MOD_SILENCE 27 or MOD_PACIFY_SILENCE 60 for `PreventionType` 1 spells, and `Pacified` under MOD_PACIFY 25 or 60 for `PreventionType` 2 spells. A cast already in progress is not interrupted.
 
-## AuraStatMods
+## Stat modifiers
 
-`AuraStatMods` is a component recomputed on every aura change. It is the interface for the stat system. Multipliers start at 1 and multiply as `1 + amount/100`; flat values and percentage points add.
+Every aura change recomputes two components, each written only when its value changed:
+
+- **`stats::StatModifiers`** (additive percentages, [[character-stats]]): `update_character_stats` folds it into `CharacterStats`, so each stat below is applied exactly once, there.
+
+| Field | Aura types |
+|---|---|
+| `primary_flat` | MOD_STAT 29 (MiscValue stat index 0 Str, 1 Agi, 2 Sta, 3 Int; negative = all) |
+| `primary_pct` | MOD_TOTAL_STAT_PERCENTAGE 137 (MiscValueB stat bitmask; 0 = all, TrinityCore `HandleModTotalPercentStat`) |
+| `crit_pct` | MOD_CRIT_PCT 290 |
+| `haste_pct` | 138, 140, 192, 342, 193, 216, plus the strongest MOD_CASTING_SPEED_NOT_STACK 65 (retail haste is one stat) |
+| `mastery_points` | MASTERY 318 |
+| `max_health_pct` | MOD_INCREASE_HEALTH_PERCENT 133 |
+
+  Consumers: spell crit rolls `CharacterStats.crit_pct` (+ CritChance mods); cast time divides by `1 + CharacterStats.haste_pct/100`. NPCs have no `CharacterStats`, so these auras do not change NPC stats.
+- **`AuraStatMods`** (multipliers, `1 + amount/100` each): combat paths read it directly.
 
 | Field | Aura types | Consumer |
 |---|---|---|
-| `stat_flat[4]` / `stat_mult[4]` | 29 / 137 (index 0 Str, 1 Agi, 2 Sta, 3 Int; MiscValue -1 = all) | stat system |
-| `max_health_mult`, `mastery_flat`, `leech_pct`, `max_power_flat` | 133, 318, 443, 418 | stat system |
-| `melee_haste_mult`, `ranged_haste_mult` | 138, 140, 192, 342, 193 | stat system (auto-attack speed) |
-| `spell_haste_mult` | 216, 193, 65 (strongest only) | cast time (applied) |
-| `crit_pct` | 290 | crit roll (applied) |
-| `damage_done_mult[7]` / `damage_taken_mult[7]` | 79 / 87 per school bit | damage path (applied) |
-| `healing_done_mult` / `healing_taken_mult` | 136 / 118, 283 | heal path (applied) |
-| `autoattack_damage_mult` | 344 | melee swing (applied) |
-| `power_regen_mult` | 110 (by power), 379 (mana) | regen (applied) |
-| `movement_speed` | 31, 129, 33, 26, 455, 12 | movement (applied) |
+| `damage_done_mult[7]` / `damage_taken_mult[7]` | 79 / 87 per school bit | spell, periodic and melee damage |
+| `healing_done_mult` / `healing_taken_mult` | 136 / 118, 283 | heals |
+| `autoattack_damage_mult` | 344 | melee swing |
+| `power_regen_mult` | 110 (by power), 379 (mana) | regen |
+| `movement_speed` | 31, 129, 33, 26, 455, 12 | movement |
+
+Aura amounts add SP/AP coefficients only for PERIODIC_DAMAGE 3, PERIODIC_HEAL 8 and SCHOOL_ABSORB 69; every other type uses its base points (Bloodlust 2825 is +30% haste regardless of spell power).
 
 ## Replication
 
@@ -233,8 +244,8 @@ Examples:
 
 ## Coverage
 
-- Handled aura IDs (`handlers::kind`): 3, 4, 8, 12, 20, 23, 24, 25, 26, 27, 29, 31, 33, 39, 42, 60, 65, 69, 79, 87, 89, 107, 108, 110, 118, 129, 133, 136, 137, 138, 140, 192, 193, 216, 218, 219, 226, 231, 271, 283, 290, 318, 342, 344, 379, 411, 418, 443, 453, 454, 455.
-- Of the 95% cut (77 IDs, 6576 instances in [spell coverage](../../spell-coverage.md)), 38 IDs covering 5721 instances (87%) are handled. DUMMY 4 counts as handled, but through the empty script registry.
+- Handled aura IDs (`handlers::kind`): 3, 4, 8, 12, 20, 23, 24, 25, 26, 27, 29, 31, 33, 39, 42, 60, 65, 69, 79, 87, 89, 107, 108, 110, 118, 129, 133, 136, 137, 138, 140, 192, 193, 216, 218, 219, 226, 231, 271, 283, 290, 318, 342, 344, 379, 411, 453, 454, 455.
+- Of the 95% cut (77 IDs, 6576 instances in [spell coverage](../../spell-coverage.md)), 36 IDs covering 5693 instances (87%) are handled. DUMMY 4 counts as handled, but through the empty script registry.
 - Unhandled cut IDs, all tracked and replicated:
   - no pet or summon system: 429, 382;
   - client or visual only: 332 action bar override, 56 transform, 61 scale, 260 screen effect, 403 visual override, 44 tracking;
@@ -244,6 +255,7 @@ Examples:
   - no mechanics or diminishing returns: 77, 232;
   - no armor, block or avoidance model: 142, 51, 187, 229;
   - no haste-regen stat: 416, 417, 457;
+  - no consumer: 418 max power, 443 leech;
   - not yet: 63 additional power cost, 168 damage vs creature type, 213 rage from damage, 220 ability school, 285 linked, 468/396 trigger on health/power, 191/305 speed rules, 467 stat bonus pct, 320, 531.
 
 ## Sources
@@ -252,7 +264,7 @@ Examples:
 - [auras/periodic.rs](../../../crates/server/src/auras/periodic.rs) — ticks
 - [auras/procs.rs](../../../crates/server/src/auras/procs.rs) — events, procs, interrupts
 - [auras/spell_mods.rs](../../../crates/server/src/auras/spell_mods.rs) — `SpellModOp`, matching, charges
-- [auras/stat_mods.rs](../../../crates/server/src/auras/stat_mods.rs) — `AuraStatMods`
+- [auras/stat_mods.rs](../../../crates/server/src/auras/stat_mods.rs) — `StatModifiers` and `AuraStatMods` from auras
 - [auras/handlers.rs](../../../crates/server/src/auras/handlers.rs) — aura type registry
 - [auras/tests.rs](../../../crates/server/src/auras/tests.rs) — real-DB App tests
 - [spec](../../specs/auras.md)
@@ -264,3 +276,4 @@ Examples:
 - [[spell-info]] — aura options, interrupts, class options, labels
 - [[class-progression]] — `KnownSpells` passives
 - [[combat]] — melee swing events
+- [[character-stats]] — `StatModifiers` fold-in

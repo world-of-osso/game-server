@@ -98,7 +98,7 @@ SimC marks these class blocks TODO for the listed levels:
 - `crit_pct`, `haste_pct`, `mastery_points`, `versatility_pct`
 - `max_health_pct`
 
-The aura runtime inserts or updates it, and `Changed<StatModifiers>` triggers a recompute. The pure entry point is `compute_character_stats(&StatInputs, Option<&StatModifiers>)`.
+The aura runtime ([[auras]]) inserts or updates it, and `Changed<StatModifiers>` triggers a recompute. The pure entry point is `compute_character_stats(&StatInputs, Option<&StatModifiers>)`.
 
 ## Existing characters
 

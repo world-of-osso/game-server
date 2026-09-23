@@ -13,11 +13,11 @@ Server-side aura runtime in `crates/server/src/auras/`: aura instances on every 
 - [x] Apply ADD_FLAT/PCT_MODIFIER (class mask) and label modifiers (`SpellLabel`) to cast time, duration, cooldown, GCD, costs, range, points, coefficients, crit, damage/heal and proc/aura fields.
 - [x] Apply `RequiredAuraSpellID` cost gating, charge-category auras (411/453/454), damage/heal multipliers, absorbs, school immunity, crit, spell haste, power regen and movement speed.
 - [x] Auto-apply passive known spells; remove them when unlearned.
-- [x] Expose `AuraStatMods` for the stat system.
+- [x] Fold aura stat changes into `stats::StatModifiers` (applied once, in `CharacterStats`); keep combat multipliers in `AuraStatMods`.
 - [x] Replicate `UnitAuras` on every player and NPC only when the aura set changes, with `remaining_ms` at send time; log `AuraApplied`/`AuraRefreshed`/`AuraRemoved`/`Dispel` to source and target owners.
 - [x] Track unhandled aura types (logged once per spell) so they still show in the UI.
 - [x] Fail casts under stun, silence and pacify with `CastFailReason::Stunned`/`Silenced`/`Pacified`.
-- [ ] Talent passives: needs the trait system to add talent spells to `KnownSpells`.
+- [x] Apply talent passives (talent spells are in `KnownSpells`).
 
 ## How it works
 
@@ -29,7 +29,7 @@ Server-side aura runtime in `crates/server/src/auras/`: aura instances on every 
 - `crates/server/src/auras/periodic.rs`: periodic ticks.
 - `crates/server/src/auras/procs.rs`: `AuraEvent` queue, procs, event interrupts.
 - `crates/server/src/auras/spell_mods.rs`: `SpellModOp`, modifier matching, charge use.
-- `crates/server/src/auras/stat_mods.rs`: `AuraStatMods`.
+- `crates/server/src/auras/stat_mods.rs`: `StatModifiers`/`AuraStatMods` computation.
 - `crates/server/src/auras/handlers.rs`: aura type registry.
 - `crates/server/src/auras/scripts.rs`: `AuraScripts` hooks (empty).
 - `crates/server/src/auras/tests.rs`: real-DB App tests.
