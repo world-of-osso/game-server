@@ -1,12 +1,13 @@
 use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 use lightyear::prelude::*;
-use shared::components::{CombatStatus, Health, Npc, Position};
+use shared::components::{CombatStatus, Health, Npc, Player, Position, UnitFactionTemplate};
 use shared::protocol::{CombatChannel, CombatEvent, CombatEventType};
 
 use crate::auras::AuraStatMods;
 use crate::auras::procs::{self, AuraEvent, PendingAuraEvents};
 use crate::creature_ai::SpawnPoint;
+use crate::faction::{FactionTemplates, UnitFaction};
 use crate::interest::{InterestDirtyQueue, NetworkVisibility, mark_interest_position_changed};
 use crate::networking::CombatTarget;
 
@@ -110,16 +111,34 @@ struct CombatState {
     expires_at: f64,
 }
 
-/// When CombatTarget changes to Some(entity), activate auto-attack.
-/// When None, deactivate.
+/// When CombatTarget changes to an attackable unit, activate auto-attack.
+/// When None or not attackable (for example a friendly guard), deactivate.
 fn start_attack_system(
     query: Query<(Entity, &CombatTarget), Changed<CombatTarget>>,
+    factions: Query<(Option<&UnitFactionTemplate>, Has<Player>)>,
+    templates: Res<FactionTemplates>,
     mut commands: Commands,
     time: Res<Time>,
 ) {
     let combat_expires_at = time.elapsed_secs_f64() + COMBAT_GRACE_SECS;
+    let unit_faction = |entity: Entity| {
+        factions
+            .get(entity)
+            .ok()
+            .map(|(template, is_player)| UnitFaction {
+                template: template.map_or(0, |template| template.0),
+                is_player,
+            })
+    };
     for (entity, target) in &query {
-        if target.0.is_some() {
+        let attackable =
+            target.0.is_some_and(
+                |target| match (unit_faction(entity), unit_faction(target)) {
+                    (Some(attacker), Some(target)) => templates.can_attack(attacker, target),
+                    _ => false,
+                },
+            );
+        if attackable {
             commands.entity(entity).insert((
                 AutoAttack {
                     timer: 0.0,

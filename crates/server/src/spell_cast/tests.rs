@@ -216,6 +216,28 @@ fn heal_clamps_to_max_and_logs_overheal() {
 }
 
 #[test]
+fn friendly_heal_on_hostile_npc_self_casts_instead() {
+    let Some(mut h) = harness(Vec::new(), &[FLASH_HEAL], 5) else {
+        return;
+    };
+    h.app.world_mut().get_mut::<Health>(h.npc).unwrap().current = 1000.0;
+    h.app
+        .world_mut()
+        .get_mut::<Health>(h.caster)
+        .unwrap()
+        .current = 900.0;
+    h.cast_and_deliver(FLASH_HEAL, Some(h.npc));
+    h.advance(32);
+    assert_eq!(h.health(h.npc), 1000.0, "hostile kobold is not healed");
+    assert_eq!(h.health(h.caster), 1000.0);
+    let heal = std::mem::take(&mut h.inbox.log)
+        .into_iter()
+        .find(|e| e.kind == CombatLogKind::Heal)
+        .unwrap();
+    assert_eq!(heal.target, Some(h.caster.to_bits()));
+}
+
+#[test]
 fn energize_adds_raw_units() {
     let Some(mut h) = harness(Vec::new(), &[CHARGE], 1) else {
         return;

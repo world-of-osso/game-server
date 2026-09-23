@@ -90,7 +90,7 @@ Failures use the contract `CastFailReason` directly (`TooClose`, `SchoolLockedOu
 
 ## Implicit targets
 
-Relations: there is no faction model, so players are allies of players and hostile to NPCs.
+Relations come from faction reactions ([[factions]]): enemy = `can_attack`, ally = `can_assist` (the caster is always its own ally). The hostile range applies when the caster's reaction to the target is Hostile, else the friendly range.
 
 | IDs | Handling |
 |---|---|

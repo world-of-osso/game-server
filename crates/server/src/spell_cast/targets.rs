@@ -1,8 +1,9 @@
 //! Implicit target selection (`SpellEffect.implicit_targets`, TrinityCore
 //! `Targets` enum IDs).
 //!
-//! Relations: the server has no faction model, so players are allies of
-//! players and NPCs are hostile to players (and the reverse).
+//! Relations come from `UnitFactionTemplate` reactions (`crate::faction`):
+//! an enemy is a valid attack target, an ally a unit the caster regards as
+//! friendly. The caster is always its own ally.
 //!
 //! Handled IDs: 0 none, 1 UNIT_CASTER, 6 UNIT_TARGET_ENEMY, 15
 //! UNIT_SRC_AREA_ENEMY, 16 UNIT_DEST_AREA_ENEMY, 18 DEST_CASTER, 21
@@ -14,7 +15,9 @@
 //! Every other ID is unsupported and fails the cast.
 
 use bevy::prelude::*;
-use shared::components::{Health, Npc, Position};
+use shared::components::{Health, Player, Position, UnitFactionTemplate};
+
+use crate::faction::{FactionTemplates, Reaction, UnitFaction};
 
 use crate::spell_info::{SpellEffect, SpellInfo};
 
@@ -84,15 +87,34 @@ pub fn explicit_requirement<'a>(
         })
 }
 
-pub fn is_hostile(world: &World, a: Entity, b: Entity) -> bool {
-    a != b && world.get::<Npc>(a).is_some() != world.get::<Npc>(b).is_some()
+fn unit_faction(world: &World, entity: Entity) -> UnitFaction {
+    UnitFaction {
+        template: world
+            .get::<UnitFactionTemplate>(entity)
+            .map_or(0, |template| template.0),
+        is_player: world.get::<Player>(entity).is_some(),
+    }
+}
+
+/// `caster` regards `target` as hostile (selects the hostile spell range).
+pub fn is_hostile(world: &World, caster: Entity, target: Entity) -> bool {
+    let templates = world.resource::<FactionTemplates>();
+    let (caster, target) = (unit_faction(world, caster), unit_faction(world, target));
+    templates.reaction(caster.template, target.template) == Reaction::Hostile
 }
 
 pub fn relation_matches(world: &World, caster: Entity, target: Entity, relation: Relation) -> bool {
+    if relation == Relation::Any {
+        return true;
+    }
+    if caster == target {
+        return relation == Relation::Ally;
+    }
+    let templates = world.resource::<FactionTemplates>();
+    let (caster, target) = (unit_faction(world, caster), unit_faction(world, target));
     match relation {
-        Relation::Enemy => is_hostile(world, caster, target),
-        Relation::Ally => !is_hostile(world, caster, target),
-        Relation::Any => true,
+        Relation::Enemy => templates.can_attack(caster, target),
+        _ => templates.can_assist(caster, target),
     }
 }
 

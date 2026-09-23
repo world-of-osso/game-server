@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use lightyear::prelude::*;
 use shared::components::{
-    Health, ModelDisplay, Npc, Position, Rotation, UnitLevel, UnitPowers, Zone,
+    Health, ModelDisplay, Npc, Position, Rotation, UnitFactionTemplate, UnitLevel, UnitPowers, Zone,
 };
 
 use crate::creature_ai::{SpawnPoint, WanderPhase, WanderState, WaypointState};
@@ -57,7 +57,11 @@ fn spawn_elwynn_core(commands: &mut Commands, world_data: &WorldData, replicate:
 
         let mut entity = commands.spawn(bundle);
         // NPC power pools need creature class/level stats, which are not imported.
-        entity.insert((UnitLevel(template.min_level), UnitPowers::default()));
+        entity.insert((
+            UnitLevel(template.min_level),
+            UnitPowers::default(),
+            UnitFactionTemplate(u32::from(template.faction)),
+        ));
         if replicate {
             entity.insert((
                 Replicate::to_clients(NetworkTarget::All),
@@ -418,6 +422,16 @@ mod tests {
         let (level, powers) = query.single(app.world()).unwrap();
         assert_eq!(*level, UnitLevel(7));
         assert!(powers.entries.is_empty());
+    }
+
+    #[test]
+    fn spawned_npc_carries_template_faction() {
+        let mut template = make_template(1, 1.0, 100);
+        template.faction = 11;
+        let spawns = vec![make_spawn(1, -9000.0, -100.0, 50.0)];
+        let mut app = run_spawn_system(make_world_data(vec![template], spawns));
+        let mut query = app.world_mut().query::<&UnitFactionTemplate>();
+        assert_eq!(*query.single(app.world()).unwrap(), UnitFactionTemplate(11));
     }
 
     #[test]

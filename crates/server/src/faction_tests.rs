@@ -1,0 +1,120 @@
+use super::*;
+
+/// FactionTemplate IDs (Retail DB2, AzerothCore `creature_template.faction`).
+const HUMAN: u32 = 1;
+const ORC: u32 = 2;
+/// Stormwind City Guard (creature 68).
+const STORMWIND_GUARD: u32 = 11;
+/// Kobold Vermin (creature 6, Northshire).
+const KOBOLD: u32 = 25;
+/// Rabbit (creature 721).
+const CRITTER: u32 = 31;
+
+fn player(template: u32) -> UnitFaction {
+    UnitFaction {
+        template,
+        is_player: true,
+    }
+}
+
+fn npc(template: u32) -> UnitFaction {
+    UnitFaction {
+        template,
+        is_player: false,
+    }
+}
+
+#[test]
+fn maps_alliance_race_to_alliance_faction() {
+    assert_eq!(faction_for_race(1), 1);
+}
+
+#[test]
+fn maps_horde_race_to_horde_faction() {
+    assert_eq!(faction_for_race(2), 2);
+}
+
+#[test]
+fn maps_unknown_race_to_neutral_faction() {
+    assert_eq!(faction_for_race(0), 0);
+}
+
+#[test]
+fn race_faction_templates_come_from_chr_races() {
+    assert_eq!(faction_template_for_race(1), HUMAN);
+    assert_eq!(faction_template_for_race(2), ORC);
+    assert_eq!(faction_template_for_race(10), 1610);
+    assert_eq!(faction_template_for_race(22), 2203);
+}
+
+#[test]
+fn stormwind_guard_is_friendly_with_human_player() {
+    let Some(templates) = world_db_faction_templates() else {
+        return;
+    };
+    assert_eq!(
+        templates.reaction(STORMWIND_GUARD, HUMAN),
+        Reaction::Friendly
+    );
+    assert_eq!(
+        templates.reaction(HUMAN, STORMWIND_GUARD),
+        Reaction::Friendly
+    );
+    assert!(!templates.can_attack(player(HUMAN), npc(STORMWIND_GUARD)));
+    assert!(templates.can_assist(player(HUMAN), npc(STORMWIND_GUARD)));
+}
+
+#[test]
+fn stormwind_guard_is_hostile_to_orc_player() {
+    let Some(templates) = world_db_faction_templates() else {
+        return;
+    };
+    assert_eq!(templates.reaction(STORMWIND_GUARD, ORC), Reaction::Hostile);
+    assert_eq!(templates.reaction(ORC, STORMWIND_GUARD), Reaction::Hostile);
+    assert!(templates.can_attack(player(ORC), npc(STORMWIND_GUARD)));
+    assert!(!templates.can_assist(player(ORC), npc(STORMWIND_GUARD)));
+}
+
+#[test]
+fn northshire_kobold_is_hostile_to_human_player() {
+    let Some(templates) = world_db_faction_templates() else {
+        return;
+    };
+    assert_eq!(templates.reaction(HUMAN, KOBOLD), Reaction::Hostile);
+    // The kobold template has no enemy mask: its own view is neutral.
+    assert_eq!(templates.reaction(KOBOLD, HUMAN), Reaction::Neutral);
+    assert!(templates.can_attack(player(HUMAN), npc(KOBOLD)));
+    assert!(templates.can_attack(npc(KOBOLD), player(HUMAN)));
+    assert!(!templates.can_assist(player(HUMAN), npc(KOBOLD)));
+}
+
+#[test]
+fn critter_is_neutral_and_attackable_by_players_only() {
+    let Some(templates) = world_db_faction_templates() else {
+        return;
+    };
+    assert_eq!(templates.reaction(HUMAN, CRITTER), Reaction::Neutral);
+    assert_eq!(templates.reaction(CRITTER, HUMAN), Reaction::Neutral);
+    assert!(templates.can_attack(player(HUMAN), npc(CRITTER)));
+    // Creature vs creature needs a hostile side; kobold and critter are neutral.
+    assert!(!templates.can_attack(npc(KOBOLD), npc(CRITTER)));
+}
+
+#[test]
+fn opposing_players_are_hostile_but_not_attackable_without_pvp() {
+    let Some(templates) = world_db_faction_templates() else {
+        return;
+    };
+    assert_eq!(templates.reaction(HUMAN, ORC), Reaction::Hostile);
+    assert!(!templates.can_attack(player(HUMAN), player(ORC)));
+    assert!(templates.can_assist(player(HUMAN), player(HUMAN)));
+}
+
+#[test]
+fn unknown_template_is_neutral() {
+    let Some(templates) = world_db_faction_templates() else {
+        return;
+    };
+    assert_eq!(templates.reaction(0, HUMAN), Reaction::Neutral);
+    assert_eq!(templates.reaction(HUMAN, 0), Reaction::Neutral);
+}

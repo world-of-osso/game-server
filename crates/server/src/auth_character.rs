@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use lightyear::prelude::*;
 use shared::components::{
     CombatRatings, Gold, GuildMembership, Health, Level, Mana, MovementSpeed, Player, Position,
-    Rotation, UnitStats, VerticalVelocity,
+    Rotation, UnitFactionTemplate, UnitStats, VerticalVelocity,
 };
 use shared::profession::PlayerProfessions;
 use shared::protocol::{
@@ -458,6 +458,7 @@ fn build_player_components(data: &CharacterData, character_id: u64) -> impl Bund
             max: data.max_health,
         },
         build_player_identity(data),
+        UnitFactionTemplate(crate::faction::faction_template_for_race(data.race)),
         data.equipment_appearance.clone(),
         build_player_runtime_components(character_id, data.level),
     )

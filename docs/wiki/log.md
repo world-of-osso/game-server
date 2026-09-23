@@ -1,5 +1,9 @@
 # Wiki Log
 
+## [2026-09-23] systems | NPC faction and reaction
+
+Created [[factions]]; updated [[spell-casting]] (relations from reactions) and the index. NPCs get `UnitFactionTemplate` from `creature_template.faction`, players from `ChrRaces.FactionID`. DB2 `FactionTemplate` imported at 12.1.0.69933; all 657 AzerothCore creature faction IDs exist in Retail. Reputation is not consulted.
+
 ## [2026-09-23] systems | Inventory and equipment networking
 
 Created [[inventory]] and `docs/specs/inventory.md`. Owner-only `InventorySnapshot`/`EquipmentSnapshot` on enter world, `InventoryDelta` after every persisted change (inventory requests, trade, auction/mail, profession). New `inventory_layouts` and `item_instances` tables; equipment stays in `character_equipment`. No item template data: equippability only for admin-granted gear, unknown stack limits, bags 1-4 size 0, no gear stats.

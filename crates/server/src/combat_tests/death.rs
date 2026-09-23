@@ -15,6 +15,7 @@ fn lethal_player_auto_attack_transitions_death_in_same_fixed_step() {
     });
     app.add_plugins(DeathPlugin);
     app.add_plugins(CombatPlugin);
+    app.init_resource::<FactionTemplates>();
     app.finish();
     app.cleanup();
 

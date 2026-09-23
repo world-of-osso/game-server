@@ -223,8 +223,15 @@ fn load_waypoints(conn: &Connection) -> HashMap<u32, WaypointPath> {
 }
 
 fn startup_load_world_data(mut commands: Commands) {
-    let data = load_world_data(std::path::Path::new("data/world.db"));
+    let path = Path::new("data/world.db");
+    let data = load_world_data(path);
     commands.insert_resource(data);
+    let conn = Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY)
+        .expect("Failed to open world.db");
+    let templates = crate::faction::load_faction_templates(&conn)
+        .expect("Failed to load faction_template; run scripts/db2.py import");
+    info!("Loaded {} faction templates", templates.0.len());
+    commands.insert_resource(templates);
 }
 
 pub struct WorldDataPlugin;

@@ -33,14 +33,14 @@ Server-side spell casting in `crates/server/src/spell_cast/`: validation, cast b
 
 ## Tests asserting this spec
 
-- `crates/server/src/spell_cast/tests.rs` (real `world.db` spells): instant Mortal Strike cost/GCD/cooldown messages and repeat failures; Fireball cast time and combat log order; movement cancel; Kick interrupt and Fire lockout; OutOfRange `CastFailed`; Flash Heal overheal; Charge energize raw units and charges message; rage decay; bounded trigger chain; unsupported implicit target (`NotSupported`); unknown-spell rejection; warrior `UnitPowers`; Fireball scaling with computed Mage stats; percent mana cost from base mana.
+- `crates/server/src/spell_cast/tests.rs` (real `world.db` spells): instant Mortal Strike cost/GCD/cooldown messages and repeat failures; Fireball cast time and combat log order; movement cancel; Kick interrupt and Fire lockout; OutOfRange `CastFailed`; Flash Heal overheal; Charge energize raw units and charges message; rage decay; bounded trigger chain; unsupported implicit target (`NotSupported`); unknown-spell rejection; warrior `UnitPowers`; Fireball scaling with computed Mage stats; percent mana cost from base mana; Flash Heal at a hostile kobold self-casts.
 - `crates/server/src/zones.rs`: NPC `UnitLevel` and empty `UnitPowers`.
 
 ## Known gaps (current cycle)
 
 - [x] Auras, aura-gated costs, procs, periodic effects: [auras spec](auras.md).
 - [ ] Players have no gear or weapon stats (see [character stats](character-stats.md)); weapon hits use a placeholder.
-- [ ] No faction model: players are allies, NPCs enemies. No facing check. NPCs do not cast and have no power pools.
+- [ ] Target relations use faction reactions without reputation or PvP flags ([factions wiki](../wiki/systems/factions.md)). No facing check. NPCs do not cast and have no power pools.
 - [ ] Combat log reaches only source/target owners, not nearby observers.
 - [ ] End-to-end wire replication and client rendering are unverified here.
 

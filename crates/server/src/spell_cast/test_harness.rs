@@ -9,7 +9,9 @@ use bevy::prelude::*;
 use lightyear::connection::host::HostClient;
 use lightyear::prelude::*;
 use rusqlite::{Connection, OpenFlags};
-use shared::components::{CombatStatus, Health, Level, Mana, Npc, Player, Position, PowerType};
+use shared::components::{
+    CombatStatus, Health, Level, Mana, Npc, Player, Position, PowerType, UnitFactionTemplate,
+};
 use shared::protocol::{
     CancelAura, CastFailed, CombatChannel, CombatLogEvent, ProtocolPlugin, SpellCastIntent,
     SpellChargesUpdate, SpellCooldownUpdate, StopSpellCast,
@@ -106,6 +108,8 @@ pub(crate) fn spawn_player(app: &mut App, class: u8, x: f32) -> Entity {
                 max: 1000.0,
             },
             Level(10),
+            // Human.
+            UnitFactionTemplate(1),
             Moving(false),
             // In combat so rage does not decay mid-test (rage test toggles it).
             CombatStatus(true),
@@ -127,9 +131,11 @@ pub(crate) fn spawn_npc(app: &mut App, x: f32) -> Entity {
     app.world_mut()
         .spawn((
             Npc {
-                template_id: 1,
-                name: "Target".into(),
+                template_id: 6,
+                name: "Kobold Vermin".into(),
             },
+            // Kobold Vermin: hostile to the Human caster.
+            UnitFactionTemplate(25),
             Position { x, y: 0.0, z: 0.0 },
             Health {
                 current: 5000.0,
@@ -171,7 +177,7 @@ pub(crate) fn spawn_connection(app: &mut App, player: Entity) -> Entity {
 }
 
 /// Level 10 Human caster of `class` at the origin with fixed
-/// `CharacterStats` (100 SP/AP, 10 000 base mana), NPC at 3 yd.
+/// `CharacterStats` (100 SP/AP, 10 000 base mana), hostile kobold at 3 yd.
 pub(crate) fn harness(extra: Vec<SpellInfo>, ids: &[u32], class: u8) -> Option<Harness> {
     harness_with(extra, ids, class, false)
 }
@@ -213,6 +219,7 @@ pub(crate) fn harness_with(
     app.insert_resource(SpellStore::fixture(spells));
     app.insert_resource(power_table(data));
     app.insert_resource(class_spells(data));
+    app.insert_resource(crate::faction::world_db_faction_templates()?);
     let caster = spawn_player(&mut app, class, 0.0);
     if computed_stats {
         app.world_mut()

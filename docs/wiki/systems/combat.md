@@ -17,7 +17,7 @@ All combat events are broadcast over `CombatChannel` (reliable ordered) and logg
 
 ## Inactive Auto-Attack Participation (`152ccbd`)
 
-Before `152ccbd`, clearing `CombatTarget` retained `AutoAttack { active: false }`. The fixed-step `auto_attack_system` therefore continued validating and iterating those entities forever, even though `ready_auto_attack_target` returned without changing timers, health, combat events, or combat state. `start_attack_system` now removes `AutoAttack` when the target becomes `None`; component presence represents active auto-attack participation.
+Before `152ccbd`, clearing `CombatTarget` retained `AutoAttack { active: false }`. The fixed-step `auto_attack_system` therefore continued validating and iterating those entities forever, even though `ready_auto_attack_target` returned without changing timers, health, combat events, or combat state. `start_attack_system` now removes `AutoAttack` when the target becomes `None`; component presence represents active auto-attack participation. It also skips targets that fail `can_attack` ([[factions]]), so selecting a friendly guard neither swings nor enters combat.
 
 Target acquisition still inserts an active `AutoAttack` with a zero timer, so the first swing and existing cooldown cadence are unchanged. Clearing a target still leaves `CombatState` available for the existing combat-grace timeout, and active combat, damage, death, respawn, and reliable event behavior remain unchanged.
 

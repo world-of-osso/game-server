@@ -13,6 +13,7 @@ fn setup_app() -> App {
     let mut app = App::new();
     app.add_plugins(bevy::MinimalPlugins);
     app.init_resource::<CombatLog>();
+    app.init_resource::<FactionTemplates>();
     app.update();
     app.update();
     app
@@ -708,4 +709,64 @@ fn combat_log_records_all_event_types() {
         );
         assert_eq!(log.entries[i].event.amount, i as f32);
     }
+}
+
+/// Human player (FactionTemplate 1) targeting an NPC of `template` in melee
+/// range, full CombatPlugin with the world.db faction templates.
+fn target_npc_with_template(template: u32) -> Option<(App, Entity, Entity)> {
+    let mut app = setup_combat_app();
+    app.insert_resource(crate::faction::world_db_faction_templates()?);
+    let npc = app
+        .world_mut()
+        .spawn((
+            pos(1.0, 0.0, 0.0),
+            Health {
+                current: 100.0,
+                max: 100.0,
+            },
+            Npc {
+                template_id: 68,
+                name: "Stormwind City Guard".into(),
+            },
+            UnitFactionTemplate(template),
+        ))
+        .id();
+    let player = app
+        .world_mut()
+        .spawn((
+            pos(0.0, 0.0, 0.0),
+            Player {
+                name: "Human".into(),
+                race: 1,
+                class: 1,
+                appearance: Default::default(),
+            },
+            UnitFactionTemplate(1),
+            CombatTarget(Some(npc)),
+        ))
+        .id();
+    app.world_mut().run_schedule(FixedUpdate);
+    app.world_mut().run_schedule(FixedUpdate);
+    Some((app, player, npc))
+}
+
+#[test]
+fn auto_attack_on_friendly_guard_is_rejected() {
+    // FactionTemplate 11: Stormwind City Guard.
+    let Some((app, player, guard)) = target_npc_with_template(11) else {
+        return;
+    };
+    assert!(app.world().get::<AutoAttack>(player).is_none());
+    assert!(app.world().get::<CombatStatus>(player).is_none());
+    assert_eq!(app.world().get::<Health>(guard).unwrap().current, 100.0);
+}
+
+#[test]
+fn auto_attack_on_hostile_kobold_swings() {
+    // FactionTemplate 25: Kobold Vermin.
+    let Some((app, player, kobold)) = target_npc_with_template(25) else {
+        return;
+    };
+    assert!(app.world().get::<AutoAttack>(player).is_some());
+    assert_eq!(app.world().get::<Health>(kobold).unwrap().current, 90.0);
 }
