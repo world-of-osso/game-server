@@ -11,6 +11,7 @@ use shared::protocol::{
 };
 
 use crate::auth::{Authenticated, InWorld};
+use crate::gold::GoldUpdateQueue;
 use crate::networking::PlayerLink;
 use crate::persistence::{self, GameDatabase, InventoryData, InventoryItemData};
 
@@ -127,6 +128,7 @@ fn process_craft_requests(
     >,
     mut professions: Query<&mut PlayerProfessions>,
     db: Option<Res<GameDatabase>>,
+    mut inventory_updates: ResMut<GoldUpdateQueue>,
     mut senders: Query<&mut MessageSender<ProfessionStateUpdate>>,
 ) {
     let Some(db) = db else { return };
@@ -153,6 +155,7 @@ fn process_craft_requests(
             ) {
                 Ok(result) => {
                     persistence::save_inventory(&db.db, in_world.character_id, &inventory);
+                    inventory_updates.record_items(in_world.character_id);
                     persistence::save_professions(&db.db, in_world.character_id, &profs);
                     send_profession_update(
                         conn_entity,
@@ -244,6 +247,7 @@ fn tick_pending_gather_casts(
     time: Res<Time>,
     mut pending_casts: Query<(Entity, &mut PendingGatherCast, &mut PlayerProfessions)>,
     db: Option<Res<GameDatabase>>,
+    mut inventory_updates: ResMut<GoldUpdateQueue>,
     mut senders: Query<&mut MessageSender<ProfessionStateUpdate>>,
     mut commands: Commands,
 ) {
@@ -253,7 +257,13 @@ fn tick_pending_gather_casts(
         if pending.remaining_secs > 0.0 {
             continue;
         }
-        resolve_completed_gather(&pending, &mut professions, db.as_ref(), &mut senders);
+        resolve_completed_gather(
+            &pending,
+            &mut professions,
+            db.as_ref(),
+            &mut inventory_updates,
+            &mut senders,
+        );
         commands.entity(player_entity).remove::<PendingGatherCast>();
     }
 }
@@ -262,6 +272,7 @@ fn resolve_completed_gather(
     pending: &PendingGatherCast,
     professions: &mut PlayerProfessions,
     db: &GameDatabase,
+    inventory_updates: &mut GoldUpdateQueue,
     senders: &mut Query<&mut MessageSender<ProfessionStateUpdate>>,
 ) {
     let mut inventory = persistence::load_inventory(&db.db, pending.character_id);
@@ -276,6 +287,7 @@ fn resolve_completed_gather(
     match outcome {
         Ok(result) => {
             persistence::save_inventory(&db.db, pending.character_id, &inventory);
+            inventory_updates.record_items(pending.character_id);
             persistence::save_professions(&db.db, pending.character_id, professions);
             send_profession_update(
                 pending.conn_entity,

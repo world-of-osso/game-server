@@ -25,6 +25,7 @@ mod guild;
 mod ignore_list;
 mod inspect;
 mod interest;
+mod inventory;
 mod lfg;
 mod messaging;
 mod networking;
@@ -100,7 +101,8 @@ fn add_social_plugins(app: &mut App) {
         .add_plugins(lfg::LfgPlugin)
         .add_plugins(duel::DuelPlugin)
         .add_plugins(inspect::InspectPlugin)
-        .add_plugins(trade::TradePlugin);
+        .add_plugins(trade::TradePlugin)
+        .add_plugins(inventory::InventoryPlugin);
 }
 
 fn add_progression_plugins(app: &mut App) {

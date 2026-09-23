@@ -1,5 +1,9 @@
 # Wiki Log
 
+## [2026-09-23] systems | Inventory and equipment networking
+
+Created [[inventory]] and `docs/specs/inventory.md`. Owner-only `InventorySnapshot`/`EquipmentSnapshot` on enter world, `InventoryDelta` after every persisted change (inventory requests, trade, auction/mail, profession). New `inventory_layouts` and `item_instances` tables; equipment stays in `character_equipment`. No item template data: equippability only for admin-granted gear, unknown stack limits, bags 1-4 size 0, no gear stats.
+
 ## [2026-09-23] systems | Aura runtime
 
 Created [[auras]]; updated [[spell-casting]] (AuraApplier hook replaced by direct `auras::apply_aura`, effect 38, aura-gated costs, spell mods), [[spell-info]] (`labels` from new `spell_label` DB2 import), index and specs (`docs/specs/auras.md`). 49 aura types handled (36 of the 77-ID 95% cut, 87% of its instances); aura stats fold into `stats::StatModifiers`; stun/silence/pacify fail casts; procs on melee swing, spell hit, periodic, damage taken, kill/death, cast success; 23 SpellModOps; 9 interrupt flags; movement reads `AuraStatMods.movement_speed`. 17 real-DB App tests in `auras/tests.rs`.

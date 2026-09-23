@@ -6,6 +6,8 @@ use std::path::{Path, PathBuf};
 
 #[path = "persistence_equipment.rs"]
 pub(crate) mod equipment;
+#[path = "persistence_inventory.rs"]
+pub(crate) mod inventory_store;
 #[path = "persistence_runtime.rs"]
 mod persistence_runtime;
 
@@ -193,6 +195,8 @@ pub(crate) fn create_tables(db: &Database) {
     let _ = txn.open_table(INVENTORIES);
     txn.open_table(equipment::EQUIPMENT)
         .expect("Failed to create equipment table");
+    let _ = txn.open_table(inventory_store::INVENTORY_LAYOUTS);
+    let _ = txn.open_table(inventory_store::ITEM_INSTANCES);
     let _ = txn.open_table(PROFESSIONS);
     let _ = txn.open_table(REPUTATIONS);
     let _ = txn.open_table(CURRENCIES);

@@ -45,6 +45,7 @@ Server gameplay systems.
 | [[zone-architecture]] | Proposed zone/instance partitioning; current implementation is startup-only Elwynn spawning with no per-zone sets or transfers |
 | [[combat]] | Auto-attack system, NPC/player lethal transitions, split death proofs, melee hit table (miss/dodge/parry/glancing/block/crit/hit), spell formulas, stat calculations, DR curves |
 | [[creature-ai]] | Three movement types (idle/wander/waypoint), SpawnPoint, chase system, 40-yard leash/evade, return-to-spawn |
+| [[inventory]] | Owner-only bag/equipment snapshots and deltas, bag placements and item-instance tables, Retail swap/split/destroy/equip validation, data gaps |
 
 ## investigations/
 

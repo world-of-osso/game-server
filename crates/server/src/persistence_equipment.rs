@@ -10,10 +10,10 @@ pub(crate) const EQUIPMENT: TableDefinition<u64, &[u8]> =
 type StoreResult<T> = Result<T, Box<dyn std::error::Error>>;
 type GrantedEquipment = (u64, CharacterData, Vec<EquipmentOwnership>);
 
-#[derive(bitcode::Encode, bitcode::Decode)]
-struct EquippedItem {
-    slot: EquipmentVisualSlot,
-    item: InventoryItemData,
+#[derive(bitcode::Encode, bitcode::Decode, Debug, Clone, PartialEq)]
+pub(crate) struct EquippedItem {
+    pub(crate) slot: EquipmentVisualSlot,
+    pub(crate) item: InventoryItemData,
 }
 
 pub(crate) fn grant_equipment(

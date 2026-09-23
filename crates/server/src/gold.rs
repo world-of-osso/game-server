@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use bevy::prelude::*;
 use lightyear::prelude::{ReplicationDirtyQueue, ReplicationSystems};
@@ -6,14 +6,27 @@ use shared::components::{Gold, Player};
 
 use crate::persistence::ClientId;
 
+/// Persisted `InventoryData` changes: gold values to replicate, plus the characters
+/// whose bag contents need an `InventoryDelta`.
 #[derive(Resource, Default)]
 pub(crate) struct GoldUpdateQueue {
     pending: HashMap<u64, u32>,
+    changed_inventories: HashSet<u64>,
 }
 
 impl GoldUpdateQueue {
     pub(crate) fn record(&mut self, character_id: u64, gold: u32) {
         self.pending.insert(character_id, gold);
+        self.changed_inventories.insert(character_id);
+    }
+
+    /// Items changed without a gold change.
+    pub(crate) fn record_items(&mut self, character_id: u64) {
+        self.changed_inventories.insert(character_id);
+    }
+
+    pub(crate) fn take_changed_inventories(&mut self) -> HashSet<u64> {
+        std::mem::take(&mut self.changed_inventories)
     }
 
     pub(crate) fn is_empty(&self) -> bool {
