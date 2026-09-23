@@ -225,28 +225,10 @@ fn run_speed_moves_at_7_0_yards_per_sec() {
 }
 
 #[test]
-fn speed_modifiers_from_auras_apply_to_movement() {
-    use shared::aura::{Aura, AuraEffect};
-
+fn aura_speed_multiplier_scales_movement() {
     let mut app = setup_app_with_time();
     let player = spawn_player(app.world_mut(), 0.0, 0.0, 0.0);
-    let snare = Aura {
-        spell_id: 1,
-        caster: 99,
-        duration: 10.0,
-        remaining: 10.0,
-        effects: [
-            Some(AuraEffect::ModMovementSpeed { percent: -0.50 }),
-            None,
-            None,
-        ],
-        ..Default::default()
-    };
-    app.world_mut()
-        .entity_mut(player)
-        .get_mut::<Auras>()
-        .unwrap()
-        .apply(snare);
+    set_aura_speed(app.world_mut(), player, 0.50);
 
     let input = make_input(1.0, 0.0, 0.0);
     let captured_dt = std::sync::Arc::new(std::sync::Mutex::new(0.0_f32));
@@ -273,23 +255,7 @@ fn speed_modifiers_from_auras_apply_to_movement() {
         pos.x,
     );
 
-    let sprint = Aura {
-        spell_id: 2,
-        caster: 99,
-        duration: 10.0,
-        remaining: 10.0,
-        effects: [
-            Some(AuraEffect::ModMovementSpeed { percent: 0.30 }),
-            None,
-            None,
-        ],
-        ..Default::default()
-    };
-    app.world_mut()
-        .entity_mut(player)
-        .get_mut::<Auras>()
-        .unwrap()
-        .apply(sprint);
+    set_aura_speed(app.world_mut(), player, 1.30);
     app.world_mut()
         .entity_mut(player)
         .get_mut::<Position>()
@@ -307,37 +273,19 @@ fn speed_modifiers_from_auras_apply_to_movement() {
     );
     let dt2 = *captured_dt2.lock().unwrap();
     let pos2 = *app.world().entity(player).get::<Position>().unwrap();
-    let expected_combined = DEFAULT_RUN_SPEED * 0.80 * dt2;
+    let expected_hasted = DEFAULT_RUN_SPEED * 1.30 * dt2;
     assert!(
-        (pos2.x - expected_combined).abs() < 1e-5,
-        "combined moved {}, expected {expected_combined}",
+        (pos2.x - expected_hasted).abs() < 1e-5,
+        "hasted moved {}, expected {expected_hasted}",
         pos2.x,
     );
 }
 
 #[test]
 fn zero_effective_speed_does_not_dirty_position() {
-    use shared::aura::{Aura, AuraEffect};
-
     let mut app = setup_app_with_time();
     let player = spawn_player(app.world_mut(), 10.0, 20.0, 30.0);
-    let root = Aura {
-        spell_id: 1,
-        caster: 99,
-        duration: 10.0,
-        remaining: 10.0,
-        effects: [
-            Some(AuraEffect::ModMovementSpeed { percent: -1.0 }),
-            None,
-            None,
-        ],
-        ..Default::default()
-    };
-    app.world_mut()
-        .entity_mut(player)
-        .get_mut::<Auras>()
-        .unwrap()
-        .apply(root);
+    set_aura_speed(app.world_mut(), player, 0.00);
     app.update();
 
     let initial_position = *app.world().entity(player).get::<Position>().unwrap();
@@ -373,28 +321,10 @@ fn zero_effective_speed_does_not_dirty_position() {
 
 #[test]
 fn root_prevents_movement() {
-    use shared::aura::{Aura, AuraEffect};
-
     let mut app = setup_app_with_time();
     let player = spawn_player(app.world_mut(), 10.0, 20.0, 30.0);
 
-    let root = Aura {
-        spell_id: 1,
-        caster: 99,
-        duration: 10.0,
-        remaining: 10.0,
-        effects: [
-            Some(AuraEffect::ModMovementSpeed { percent: -1.0 }),
-            None,
-            None,
-        ],
-        ..Default::default()
-    };
-    app.world_mut()
-        .entity_mut(player)
-        .get_mut::<Auras>()
-        .unwrap()
-        .apply(root);
+    set_aura_speed(app.world_mut(), player, 0.00);
 
     let input = make_input(1.0, 0.0, 0.0);
     let _ = app.world_mut().run_system_once(
@@ -409,173 +339,6 @@ fn root_prevents_movement() {
     assert_eq!(pos.z, 30.0, "z unchanged while rooted");
     let speed = app.world().entity(player).get::<MovementSpeed>().unwrap();
     assert_eq!(speed.0, 0.0, "speed is zero when rooted");
-}
-
-#[test]
-fn multiple_speed_buffs_stack_additively_on_movement() {
-    use shared::aura::{Aura, AuraEffect};
-
-    let mut app = setup_app_with_time();
-    let player = spawn_player(app.world_mut(), 0.0, 0.0, 0.0);
-
-    for (id, pct) in [(1u32, 0.20f32), (2, 0.30)] {
-        let buff = Aura {
-            spell_id: id,
-            caster: 99,
-            duration: 10.0,
-            remaining: 10.0,
-            effects: [
-                Some(AuraEffect::ModMovementSpeed { percent: pct }),
-                None,
-                None,
-            ],
-            ..Default::default()
-        };
-        app.world_mut()
-            .entity_mut(player)
-            .get_mut::<Auras>()
-            .unwrap()
-            .apply(buff);
-    }
-
-    let input = make_input(1.0, 0.0, 0.0);
-    let captured_dt = std::sync::Arc::new(std::sync::Mutex::new(0.0_f32));
-    let dt_clone = captured_dt.clone();
-    let _ = app.world_mut().run_system_once(
-        move |mut q: Query<PlayerMovement, With<Player>>, time: Res<Time>| {
-            *dt_clone.lock().unwrap() = time.delta_secs();
-            apply_movement_input(&input, player, &mut q, &time);
-        },
-    );
-    let dt = *captured_dt.lock().unwrap();
-    let speed = app.world().entity(player).get::<MovementSpeed>().unwrap();
-    let pos = *app.world().entity(player).get::<Position>().unwrap();
-
-    let expected_speed = DEFAULT_RUN_SPEED * 1.50;
-    assert!(
-        (speed.0 - expected_speed).abs() < 1e-5,
-        "speed {}, expected {expected_speed}",
-        speed.0,
-    );
-    let expected_x = expected_speed * dt;
-    assert!(
-        (pos.x - expected_x).abs() < 1e-5,
-        "moved {}, expected {expected_x}",
-        pos.x,
-    );
-}
-
-#[test]
-fn speed_floor_prevents_full_immobilization_from_snare() {
-    use shared::aura::{Aura, AuraEffect};
-
-    let mut app = setup_app_with_time();
-    let player = spawn_player(app.world_mut(), 0.0, 0.0, 0.0);
-
-    let snare = Aura {
-        spell_id: 1,
-        caster: 99,
-        duration: 10.0,
-        remaining: 10.0,
-        effects: [
-            Some(AuraEffect::ModMovementSpeed { percent: -0.95 }),
-            None,
-            None,
-        ],
-        ..Default::default()
-    };
-    app.world_mut()
-        .entity_mut(player)
-        .get_mut::<Auras>()
-        .unwrap()
-        .apply(snare);
-
-    let input = make_input(1.0, 0.0, 0.0);
-    let _ = app.world_mut().run_system_once(
-        move |mut q: Query<PlayerMovement, With<Player>>, time: Res<Time>| {
-            apply_movement_input(&input, player, &mut q, &time);
-        },
-    );
-
-    let speed = app.world().entity(player).get::<MovementSpeed>().unwrap();
-    let pos = *app.world().entity(player).get::<Position>().unwrap();
-    let expected_speed = DEFAULT_RUN_SPEED * 0.1;
-    assert!(
-        (speed.0 - expected_speed).abs() < 1e-5,
-        "speed {}, expected {expected_speed} (10% floor)",
-        speed.0,
-    );
-    assert!(pos.x > 0.0, "snared player still moves");
-}
-
-#[test]
-fn sprint_partially_counters_snare() {
-    use shared::aura::{Aura, AuraEffect};
-
-    let mut app = setup_app_with_time();
-    let player = spawn_player(app.world_mut(), 0.0, 0.0, 0.0);
-
-    let make_aura = |id, pct| Aura {
-        spell_id: id,
-        caster: 99,
-        duration: 10.0,
-        remaining: 10.0,
-        effects: [
-            Some(AuraEffect::ModMovementSpeed { percent: pct }),
-            None,
-            None,
-        ],
-        ..Default::default()
-    };
-
-    {
-        let mut entity = app.world_mut().entity_mut(player);
-        let mut auras = entity.get_mut::<Auras>().unwrap();
-        auras.apply(make_aura(1, -0.70));
-        auras.apply(make_aura(2, 0.70));
-    }
-
-    let input = make_input(1.0, 0.0, 0.0);
-    let _ = app.world_mut().run_system_once(
-        move |mut q: Query<PlayerMovement, With<Player>>, time: Res<Time>| {
-            apply_movement_input(&input, player, &mut q, &time);
-        },
-    );
-
-    let speed = app.world().entity(player).get::<MovementSpeed>().unwrap();
-    assert!(
-        (speed.0 - DEFAULT_RUN_SPEED).abs() < 1e-5,
-        "sprint cancels snare: speed {}, expected {}",
-        speed.0,
-        DEFAULT_RUN_SPEED,
-    );
-
-    app.world_mut()
-        .entity_mut(player)
-        .get_mut::<Position>()
-        .unwrap()
-        .x = 0.0;
-    {
-        let mut entity = app.world_mut().entity_mut(player);
-        let mut auras = entity.get_mut::<Auras>().unwrap();
-        auras.active.retain(|a| a.spell_id != 2);
-        auras.apply(make_aura(3, 0.30));
-    }
-
-    let input2 = make_input(1.0, 0.0, 0.0);
-    let _ = app.world_mut().run_system_once(
-        move |mut q: Query<PlayerMovement, With<Player>>, time: Res<Time>| {
-            apply_movement_input(&input2, player, &mut q, &time);
-        },
-    );
-
-    let speed = app.world().entity(player).get::<MovementSpeed>().unwrap();
-    let expected = DEFAULT_RUN_SPEED * 0.60;
-    assert!(
-        (speed.0 - expected).abs() < 1e-5,
-        "partial counter: speed {}, expected {expected}",
-        speed.0,
-    );
 }
 
 #[test]

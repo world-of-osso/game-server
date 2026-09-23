@@ -1,5 +1,9 @@
 # Wiki Log
 
+## [2026-09-23] systems | Aura runtime
+
+Created [[auras]]; updated [[spell-casting]] (AuraApplier hook replaced by direct `auras::apply_aura`, effect 38, aura-gated costs, spell mods), [[spell-info]] (`labels` from new `spell_label` DB2 import), index and specs (`docs/specs/auras.md`). 48 aura types handled (37 of the 77-ID 95% cut, 87% of its instances); procs on melee swing, spell hit, periodic, damage taken, kill/death, cast success; 23 SpellModOps; 9 interrupt flags; movement reads `AuraStatMods.movement_speed`. 15 real-DB App tests in `auras/tests.rs`.
+
 ## [2026-09-23] systems | Retail trait trees replace the Paladin talent stub
 
 Created [[talents]]; updated [[class-progression]], [[spell-info]], [[persistence]], [[world-data]] and index. The DB2 import adds seven trait link/source tables. Each class `TraitTree` loads into `ClassInfo.traits`. `trait_config` validates configs using TrinityCore rules. Points per level come from `TraitCurrencySource`: at level 80 that is 31 class, 30 spec and 10 per hero currency. `CommitTraitConfig` persists purchases per spec in `character_traits`. `TraitConfigSnapshot` is sent on enter world, spec change and budget change. Talent spells join `KnownSpells`. `talent.rs` and its legacy message handlers are removed.

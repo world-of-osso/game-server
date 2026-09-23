@@ -180,6 +180,7 @@ pub(super) fn load_spell_store(conn: &Connection) -> rusqlite::Result<SpellStore
     load_target_restrictions(conn, &mut spells)?;
     load_equipped_items(conn, &mut spells)?;
     load_empower_stages(conn, &mut spells)?;
+    load_labels(conn, &mut spells)?;
     finish(&mut spells);
     Ok(SpellStore { spells })
 }
@@ -527,5 +528,15 @@ fn load_empower_stages(conn: &Connection, spells: &mut Spells) -> rusqlite::Resu
             })
         },
         |spell, stage| spell.empower_stages.push(stage),
+    )
+}
+
+fn load_labels(conn: &Connection, spells: &mut Spells) -> rusqlite::Result<()> {
+    fill(
+        conn,
+        spells,
+        "SELECT SpellID, LabelID FROM spell_label ORDER BY SpellID, LabelID",
+        |r| uint(r, 1),
+        |spell, label| spell.labels.push(label),
     )
 }

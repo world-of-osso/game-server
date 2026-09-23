@@ -5,11 +5,16 @@
 //! cast time: replicated `CastState`, resolve on completion; channel: resolve
 //! at start, `CastState` ticks per aura period) → spend costs, start
 //! cooldown/charges → resolve effects. The GCD starts when the cast starts.
+//! Cast time, duration, cooldowns, GCD, costs and range take the caster's
+//! spell modifiers (`crate::auras::spell_mods`); aura effects resolve through
+//! `crate::auras::apply_aura`.
 //! See `docs/wiki/systems/spell-casting.md`.
 
 pub mod effects;
 pub mod powers;
 pub mod targets;
+#[cfg(test)]
+pub(crate) mod test_harness;
 
 use std::collections::HashMap;
 
@@ -24,12 +29,14 @@ use shared::protocol::{
 };
 use shared::spell_data::CastFailReason;
 
+use crate::auras::procs::{self, AuraEvent};
+use crate::auras::{AuraApplication, AuraSource, ChargeMods, SpellModOp, spell_mods};
 use crate::auth::{Authenticated, InWorld};
 use crate::class_progression::KnownSpells;
 use crate::networking::{CombatTarget, Moving, PlayerLink};
 use crate::spell_info::{SpellInfo, SpellStore};
 use crate::stats::CharacterStats;
-use effects::{AuraApplierHook, EffectCtx, UnhandledEffects, with_aura_hook};
+use effects::{EffectCtx, UnhandledEffects};
 use targets::Relation;
 
 const SPELL_ATTR0_CASTABLE_WHILE_MOVING: u32 = 0x1000_0000;
@@ -43,7 +50,6 @@ pub struct SpellCastPlugin;
 impl Plugin for SpellCastPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<UnhandledEffects>()
-            .init_resource::<AuraApplierHook>()
             .add_systems(Startup, powers::load_power_type_table_startup)
             .add_systems(
                 Update,
@@ -69,6 +75,7 @@ pub enum CastFailure {
     UnknownSpell,
     NotKnown,
     CasterDead,
+    CrowdControlled(crate::auras::CastBlock),
     InProgress,
     SchoolLockedOut,
     OnGlobalCooldown,
@@ -91,6 +98,14 @@ impl CastFailure {
             Self::UnknownSpell => (R::NotSupported, Some("unknown spell".into())),
             Self::NotKnown => (R::NotSupported, Some("spell not known".into())),
             Self::CasterDead => (R::CasterDead, None),
+            Self::CrowdControlled(block) => (
+                match block {
+                    crate::auras::CastBlock::Stunned => R::Stunned,
+                    crate::auras::CastBlock::Silenced => R::Silenced,
+                    crate::auras::CastBlock::Pacified => R::Pacified,
+                },
+                None,
+            ),
             Self::InProgress => (R::SpellInProgress, None),
             Self::SchoolLockedOut => (R::SchoolLockedOut, None),
             Self::OnGlobalCooldown => (R::OnGlobalCooldown, None),
@@ -171,23 +186,42 @@ impl SpellHistory {
         category != 0 && self.gcd_ready_at.get(&category).is_some_and(|&at| at > now)
     }
 
-    fn charges_mut(&mut self, spell: &SpellInfo, now: f64) -> Option<&mut ChargeState> {
+    /// Charge state of the spell's charge category; max charges and recharge
+    /// time follow the caster's current charge auras (`mods`).
+    fn charges_mut(
+        &mut self,
+        spell: &SpellInfo,
+        now: f64,
+        mods: ChargeMods,
+    ) -> Option<&mut ChargeState> {
         let categories = spell.categories.as_ref()?;
         if categories.charge_category == 0 || categories.max_charges == 0 {
             return None;
         }
+        let max =
+            (categories.max_charges as i32 + mods.extra_charges).clamp(0, u8::MAX as i32) as u8;
+        let recharge_ms = ((categories.charge_recovery_ms as f32 + mods.recovery_flat_ms)
+            * mods.recovery_mult)
+            .max(0.0);
         let state = self
             .charges
             .entry(categories.charge_category)
             .or_insert(ChargeState {
-                max: categories.max_charges.min(u8::MAX as u32) as u8,
+                max,
                 used: 0,
-                recharge_secs: categories.charge_recovery_ms as f64 / 1000.0,
+                recharge_secs: 0.0,
                 next_ready_at: 0.0,
             });
+        state.max = max;
+        state.recharge_secs = f64::from(recharge_ms) / 1000.0;
         state.refresh(now);
         Some(state)
     }
+}
+
+fn charge_mods(world: &World, caster: Entity, spell: &SpellInfo) -> ChargeMods {
+    let category = spell.categories.as_ref().map_or(0, |c| c.charge_category);
+    crate::auras::charge_mods(world, caster, category)
 }
 
 fn gcd_category(spell: &SpellInfo) -> u32 {
@@ -209,28 +243,53 @@ fn is_channeled(spell: &SpellInfo) -> bool {
     attributes(spell, 1) & SPELL_ATTR1_CHANNELED != 0
 }
 
-fn cast_time_ms(spell: &SpellInfo) -> i32 {
-    spell
+fn modify(world: &World, caster: Entity, spell: &SpellInfo, op: SpellModOp, base: f32) -> f32 {
+    spell_mods::modify(world, caster, spell, op, base)
+}
+
+/// Cast time after ChangeCastTime mods, divided by `1 + CharacterStats.haste_pct`
+/// (haste auras fold in through `StatModifiers`).
+fn cast_time_ms(world: &World, caster: Entity, spell: &SpellInfo) -> i32 {
+    let base = spell
         .misc
         .as_ref()
         .and_then(|misc| misc.cast_time)
-        .map_or(0, |cast| cast.base_ms.max(0))
+        .map_or(0, |cast| cast.base_ms.max(0));
+    if base == 0 {
+        return 0;
+    }
+    let haste = world
+        .get::<CharacterStats>(caster)
+        .map_or(1.0, |stats| 1.0 + stats.haste_pct / 100.0);
+    let modded = modify(
+        world,
+        caster,
+        spell,
+        SpellModOp::ChangeCastTime,
+        base as f32,
+    );
+    (modded / haste.max(0.01)).max(0.0).round() as i32
 }
 
-fn duration_ms(spell: &SpellInfo) -> i32 {
-    spell
+/// Channel duration after Duration mods.
+fn duration_ms(world: &World, caster: Entity, spell: &SpellInfo) -> i32 {
+    let base = spell
         .misc
         .as_ref()
         .and_then(|misc| misc.duration)
-        .map_or(0, |duration| duration.duration_ms)
+        .map_or(0, |duration| duration.duration_ms);
+    if base <= 0 {
+        return base;
+    }
+    modify(world, caster, spell, SpellModOp::Duration, base as f32).round() as i32
 }
 
-/// Effects that have a handler; only these select targets.
+/// Effects that have a handler or apply an aura; only these select targets.
 fn handled_effects(spell: &SpellInfo) -> impl Iterator<Item = &crate::spell_info::SpellEffect> {
     spell
         .effects
         .iter()
-        .filter(|effect| effects::handler(effect.effect).is_some())
+        .filter(|effect| effects::is_handled(effect))
 }
 
 fn max_targets(spell: &SpellInfo) -> u32 {
@@ -398,11 +457,14 @@ fn validate_start(
     if !targets::is_alive(world, caster) {
         return Err(CastFailure::CasterDead);
     }
+    if let Some(block) = crate::auras::cast_blocker(world, caster, spell) {
+        return Err(CastFailure::CrowdControlled(block));
+    }
     if world.get::<CastState>(caster).is_some() {
         return Err(CastFailure::InProgress);
     }
     validate_history(world, caster, spell)?;
-    let has_cast_bar = cast_time_ms(spell) > 0 || is_channeled(spell);
+    let has_cast_bar = cast_time_ms(world, caster, spell) > 0 || is_channeled(spell);
     let may_move = attributes(spell, 0) & SPELL_ATTR0_CASTABLE_WHILE_MOVING != 0;
     if has_cast_bar && !may_move && world.get::<Moving>(caster).is_some_and(|moving| moving.0) {
         return Err(CastFailure::Moving);
@@ -431,9 +493,10 @@ fn validate_history(world: &World, caster: Entity, spell: &SpellInfo) -> Result<
     if history.on_cooldown(spell, now) {
         return Err(CastFailure::OnCooldown);
     }
+    let mods = charge_mods(world, caster, spell);
     let mut history = history.clone();
     if history
-        .charges_mut(spell, now)
+        .charges_mut(spell, now, mods)
         .is_some_and(|charges| charges.used >= charges.max)
     {
         return Err(CastFailure::NoCharges);
@@ -469,6 +532,7 @@ fn validate_target(
             return Err(CastFailure::InvalidTarget);
         };
         let (min, max) = targets::spell_range(spell, targets::is_hostile(world, caster, target));
+        let max = modify(world, caster, spell, SpellModOp::Range, max);
         let distance = from.distance(to);
         if distance > max {
             return Err(CastFailure::OutOfRange);
@@ -482,25 +546,26 @@ fn validate_target(
 
 /// What a `SpellPower` row draws from.
 #[derive(Debug, Clone, Copy, PartialEq)]
-enum CostPool {
+pub(crate) enum CostPool {
     Power(PowerType),
     Health,
 }
 
-/// Every non-aura-gated cost in raw units: flat `ManaCost` plus
-/// `PowerCostPct` of the pool's base: base mana (`CharacterStats`) for mana,
-/// the max pool otherwise (TrinityCore `Spell::CalcPowerCost`).
-fn spell_costs(
+/// Every applicable cost in raw units: flat `ManaCost` plus `PowerCostPct` of
+/// the pool's base: base mana (`CharacterStats`) for mana, the max pool
+/// otherwise (TrinityCore `Spell::CalcPowerCost`), with PowerCostN mods for
+/// `OrderIndex` N. Rows with `RequiredAuraSpellID` apply only while the caster
+/// has that aura.
+pub(crate) fn spell_costs(
     world: &World,
     caster: Entity,
     spell: &SpellInfo,
 ) -> Result<Vec<(CostPool, f32)>, CastFailure> {
     let mut costs = Vec::new();
-    for cost in spell
-        .power_costs
-        .iter()
-        .filter(|cost| cost.required_aura_spell_id == 0)
-    {
+    for cost in spell.power_costs.iter().filter(|cost| {
+        cost.required_aura_spell_id == 0
+            || crate::auras::has_aura(world, caster, cost.required_aura_spell_id)
+    }) {
         let pool = if cost.power_type == POWER_HEALTH {
             CostPool::Health
         } else {
@@ -531,7 +596,10 @@ fn spell_costs(
                 .ok_or(missing.clone())?,
             _ => max,
         };
-        let amount = amount_with(base);
+        let amount = match SpellModOp::power_cost(cost.order_index) {
+            Some(op) => modify(world, caster, spell, op, amount_with(base)).max(0.0),
+            None => amount_with(base),
+        };
         if current < amount {
             return Err(missing);
         }
@@ -548,8 +616,8 @@ fn start_cast(
 ) -> Result<(), CastFailure> {
     let target = validate_start(world, caster, spell, explicit)?;
     start_gcd(world, caster, spell);
-    let cast_ms = cast_time_ms(spell);
-    let channel_ms = duration_ms(spell);
+    let cast_ms = cast_time_ms(world, caster, spell);
+    let channel_ms = duration_ms(world, caster, spell);
     if is_channeled(spell) && channel_ms > 0 {
         execute_cast(world, caster, spell, target)?;
         let tick_ms = spell
@@ -594,10 +662,19 @@ fn insert_cast_state(world: &mut World, caster: Entity, spell: &SpellInfo, cast:
 }
 
 fn start_gcd(world: &mut World, caster: Entity, spell: &SpellInfo) {
-    let gcd_ms = spell
+    let base_gcd_ms = spell
         .cooldowns
         .as_ref()
         .map_or(0, |cd| cd.start_recovery_ms);
+    let gcd_ms = modify(
+        world,
+        caster,
+        spell,
+        SpellModOp::StartCooldown,
+        base_gcd_ms as f32,
+    )
+    .max(0.0)
+    .round() as u32;
     let category = gcd_category(spell);
     if gcd_ms == 0 || category == 0 {
         return;
@@ -642,7 +719,20 @@ fn execute_cast(
         world,
         cast_event(caster, explicit, spell, CombatLogKind::CastSuccess),
     );
+    procs::push_event(
+        world,
+        AuraEvent {
+            actor: caster,
+            target: None,
+            actor_mask: [0, procs::PROC2_CAST_SUCCESSFUL],
+            target_mask: [0; 2],
+            spell_id: Some(spell.id),
+            can_proc: true,
+            periodic: false,
+        },
+    );
     resolve_effects(world, caster, spell, &plan, 0);
+    spell_mods::consume_charges(world, caster, spell);
     Ok(())
 }
 
@@ -658,7 +748,7 @@ fn plan_targets(
     let cap = max_targets(spell);
     let mut plan = Vec::new();
     for (index, effect) in spell.effects.iter().enumerate() {
-        if effects::handler(effect.effect).is_none() {
+        if !effects::is_handled(effect) {
             continue;
         }
         let units =
@@ -678,7 +768,7 @@ fn resolve_effects(
     depth: u8,
 ) {
     for effect in &spell.effects {
-        if effects::handler(effect.effect).is_none() {
+        if !effects::is_handled(effect) {
             effects::log_unhandled(world, spell.id, effect.effect);
         }
     }
@@ -687,8 +777,19 @@ fn resolve_effects(
         spell,
         depth,
     };
+    // Aura effects hitting the same unit form one aura (per-unit effect mask).
+    let mut aura_masks: Vec<(Entity, u32)> = Vec::new();
     for (index, units) in plan {
         let effect = &spell.effects[*index];
+        if crate::auras::is_aura_effect(effect) {
+            for &unit in units {
+                match aura_masks.iter_mut().find(|(target, _)| *target == unit) {
+                    Some((_, mask)) => *mask |= 1 << effect.index,
+                    None => aura_masks.push((unit, 1 << effect.index)),
+                }
+            }
+            continue;
+        }
         let Some(handler) = effects::handler(effect.effect) else {
             continue;
         };
@@ -697,6 +798,51 @@ fn resolve_effects(
                 handler(world, &ctx, effect, unit);
             }
         }
+    }
+    for (target, effect_mask) in aura_masks {
+        crate::auras::apply_aura(
+            world,
+            &AuraApplication {
+                caster,
+                target,
+                spell_id: spell.id,
+                effect_mask,
+                source: AuraSource::Cast,
+            },
+        );
+    }
+    push_hit_events(world, caster, spell, plan, depth);
+}
+
+/// One proc event per distinct unit the spell landed on.
+fn push_hit_events(
+    world: &mut World,
+    caster: Entity,
+    spell: &SpellInfo,
+    plan: &TargetPlan,
+    depth: u8,
+) {
+    let mut hit: Vec<Entity> = Vec::new();
+    for unit in plan.iter().flat_map(|(_, units)| units) {
+        if !hit.contains(unit) {
+            hit.push(*unit);
+        }
+    }
+    for target in hit {
+        let harmful = targets::is_hostile(world, caster, target);
+        let (actor_mask, target_mask) = procs::spell_hit_masks(spell, harmful);
+        procs::push_event(
+            world,
+            AuraEvent {
+                actor: caster,
+                target: Some(target),
+                actor_mask: [actor_mask, 0],
+                target_mask: [target_mask, 0],
+                spell_id: Some(spell.id),
+                can_proc: depth == 0,
+                periodic: false,
+            },
+        );
     }
 }
 
@@ -748,11 +894,21 @@ fn spend_costs(world: &mut World, caster: Entity, costs: &[(CostPool, f32)]) {
 
 fn start_cooldowns(world: &mut World, caster: Entity, spell: &SpellInfo) {
     let now = now(world);
-    let (recovery_ms, category_ms) = spell
+    let (base_recovery_ms, base_category_ms) = spell
         .cooldowns
         .as_ref()
         .map_or((0, 0), |cd| (cd.recovery_ms, cd.category_recovery_ms));
+    let cooldown = |base: u32| {
+        if base == 0 {
+            return 0;
+        }
+        modify(world, caster, spell, SpellModOp::Cooldown, base as f32)
+            .max(0.0)
+            .round() as u32
+    };
+    let (recovery_ms, category_ms) = (cooldown(base_recovery_ms), cooldown(base_category_ms));
     let category = spell.categories.as_ref().map_or(0, |c| c.category);
+    let mods = charge_mods(world, caster, spell);
     let mut entity = world.entity_mut(caster);
     let mut history = entity.entry::<SpellHistory>().or_default();
     let mut history = history.get_mut();
@@ -766,7 +922,7 @@ fn start_cooldowns(world: &mut World, caster: Entity, spell: &SpellInfo) {
             .category_ready_at
             .insert(category, now + category_ms as f64 / 1000.0);
     }
-    let charges = history.charges_mut(spell, now).map(|charges| {
+    let charges = history.charges_mut(spell, now, mods).map(|charges| {
         if charges.used == 0 {
             charges.next_ready_at = now + charges.recharge_secs;
         }
@@ -812,9 +968,7 @@ pub(crate) fn cancel_cast(world: &mut World, caster: Entity) {
     };
     mark_dirty(world, caster);
     if cast.cast_type == CastType::Channel {
-        with_aura_hook(world, |hook, world| {
-            hook.channel_ended(world, caster, cast.spell_id)
-        });
+        crate::auras::channel_ended(world, caster, cast.spell_id);
     }
 }
 
@@ -867,12 +1021,8 @@ pub(crate) fn advance_casts(world: &mut World) {
             .flatten();
         mark_dirty(world, caster);
         match result {
-            CastTickResult::InProgress => {}
-            CastTickResult::ChannelTick => {
-                with_aura_hook(world, |hook, world| {
-                    hook.channel_tick(world, caster, spell_id)
-                });
-            }
+            // Channel periodic effects tick as auras (`crate::auras`).
+            CastTickResult::InProgress | CastTickResult::ChannelTick => {}
             CastTickResult::ChannelComplete => cancel_cast(world, caster),
             CastTickResult::Completed => {
                 world.entity_mut(caster).remove::<CastState>();

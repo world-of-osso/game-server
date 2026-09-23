@@ -2,8 +2,14 @@
 //!
 //! Amounts: `BasePoints + BonusCoefficient × spell power +
 //! BonusCoefficientFromAP × attack power`. Spell power, attack power and crit
-//! chance come from the caster's `CharacterStats` (`stats.rs`); units without
-//! it (NPCs) have 0. A crit doubles the amount (retail 200%).
+//! chance come from the caster's `CharacterStats` (`stats.rs`, aura stat
+//! modifiers included); units without it (NPCs) have 0.
+//! Amounts take the caster's spell modifiers (Points/PointsIndexN on base
+//! points, BonusCoefficient on coefficients); damage and healing then take
+//! HealingAndDamage (or PeriodicHealingAndDamage) mods and the aura damage and
+//! healing multipliers (`AuraStatMods`), then target immunity and absorbs.
+//! CritChance mods add to the crit chance; a crit adds 100% of the amount
+//! (retail 200%), scaled by CritDamageAndHealing mods.
 //!
 //! Weapon model (58, 121, 31): no server-side weapon data exists, so a
 //! weapon hit is the auto-attack's flat 10 plus `AP / 6 × 2.0` (the 2 s
@@ -15,17 +21,19 @@ use bevy::prelude::*;
 use lightyear::prelude::ReplicationDirtyQueue;
 use shared::casting::CastState;
 use shared::components::{Health, Npc, PowerType};
-use shared::protocol::{CombatLogEvent, CombatLogKind};
+use shared::protocol::{CombatLogEvent, CombatLogKind, MissKind};
 
 use super::{SpellHistory, log_event, now};
+use crate::auras::procs::{self, AuraEvent};
+use crate::auras::{AuraStatMods, SpellModOp, spell_mods};
 use crate::spell_info::{SpellEffect, SpellInfo};
 use crate::stats::CharacterStats;
 
 pub const EFFECT_SCHOOL_DAMAGE: u32 = 2;
-pub const EFFECT_APPLY_AURA: u32 = 6;
 pub const EFFECT_HEAL: u32 = 10;
 pub const EFFECT_ENERGIZE: u32 = 30;
 pub const EFFECT_WEAPON_PERCENT_DAMAGE: u32 = 31;
+pub const EFFECT_DISPEL: u32 = 38;
 pub const EFFECT_WEAPON_DAMAGE: u32 = 58;
 pub const EFFECT_TRIGGER_SPELL: u32 = 64;
 pub const EFFECT_INTERRUPT_CAST: u32 = 68;
@@ -36,7 +44,6 @@ pub const EFFECT_HEAL_PCT: u32 = 136;
 pub const MAX_TRIGGER_DEPTH: u8 = 3;
 const WEAPON_BASE_DAMAGE: f32 = 10.0;
 const WEAPON_SPEED: f32 = 2.0;
-const CRIT_MULTIPLIER: f32 = 2.0;
 
 /// One resolving spell.
 pub struct EffectCtx<'a> {
@@ -48,20 +55,26 @@ pub struct EffectCtx<'a> {
 
 pub type EffectHandler = fn(&mut World, &EffectCtx, &SpellEffect, Entity);
 
-/// The effect registry.
+/// The effect registry. Aura effects (`crate::auras::AURA_EFFECTS`, e.g. 6
+/// APPLY_AURA) are resolved per target by `resolve_effects`, not here.
 pub fn handler(effect_id: u32) -> Option<EffectHandler> {
     Some(match effect_id {
         EFFECT_SCHOOL_DAMAGE => school_damage,
-        EFFECT_APPLY_AURA => apply_aura,
         EFFECT_HEAL => heal,
         EFFECT_ENERGIZE => energize,
         EFFECT_WEAPON_PERCENT_DAMAGE => weapon_percent_damage,
+        EFFECT_DISPEL => dispel,
         EFFECT_WEAPON_DAMAGE | EFFECT_NORMALIZED_WEAPON_DMG => weapon_damage,
         EFFECT_TRIGGER_SPELL => trigger_spell,
         EFFECT_INTERRUPT_CAST => interrupt_cast,
         EFFECT_HEAL_PCT => heal_pct,
         _ => return None,
     })
+}
+
+/// Effects that select targets and resolve: registry handlers and aura effects.
+pub fn is_handled(effect: &SpellEffect) -> bool {
+    handler(effect.effect).is_some() || crate::auras::is_aura_effect(effect)
 }
 
 /// `(spell id, effect id)` pairs already logged as unhandled.
@@ -75,64 +88,44 @@ pub fn log_unhandled(world: &mut World, spell_id: u32, effect_id: u32) {
     }
 }
 
-/// One aura application request from effect 6.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct AuraApplication {
-    pub caster: Entity,
-    pub target: Entity,
-    pub spell_id: u32,
-    pub effect_index: u8,
-}
-
-/// Hook for the aura runtime. Called with the world; must not re-enter
-/// `AuraApplierHook` synchronously (it is taken out while running).
-pub trait AuraApplier: Send + Sync + 'static {
-    fn apply_aura(&mut self, _world: &mut World, _application: &AuraApplication) {}
-    /// A channel reached its tick period (shortest effect aura period).
-    fn channel_tick(&mut self, _world: &mut World, _caster: Entity, _spell_id: u32) {}
-    /// A channel completed or was cancelled/interrupted.
-    fn channel_ended(&mut self, _world: &mut World, _caster: Entity, _spell_id: u32) {}
-}
-
-/// Default: auras are not implemented.
-pub struct NoopAuraApplier;
-impl AuraApplier for NoopAuraApplier {}
-
-#[derive(Resource)]
-pub struct AuraApplierHook(pub Box<dyn AuraApplier>);
-
-impl Default for AuraApplierHook {
-    fn default() -> Self {
-        Self(Box::new(NoopAuraApplier))
-    }
-}
-
-pub fn with_aura_hook(world: &mut World, call: impl FnOnce(&mut dyn AuraApplier, &mut World)) {
-    world.resource_scope(|world, mut hook: Mut<AuraApplierHook>| call(hook.0.as_mut(), world));
-}
-
-fn apply_aura(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, target: Entity) {
-    let application = AuraApplication {
-        caster: ctx.caster,
-        target,
-        spell_id: ctx.spell.id,
-        effect_index: effect.index,
-    };
-    with_aura_hook(world, |hook, world| hook.apply_aura(world, &application));
-}
-
 /// `(spell power, attack power)` of `unit`.
-fn power_stats(world: &World, unit: Entity) -> (f32, f32) {
+pub(crate) fn power_stats(world: &World, unit: Entity) -> (f32, f32) {
     world
         .get::<CharacterStats>(unit)
         .map_or((0.0, 0.0), |stats| (stats.spell_power, stats.attack_power))
 }
 
-fn scaled_amount(world: &World, caster: Entity, effect: &SpellEffect) -> f32 {
+/// Base points with the caster's Points and PointsIndexN mods.
+pub(crate) fn modded_base_points(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+    effect: &SpellEffect,
+) -> f32 {
+    let base = spell_mods::modify(world, caster, spell, SpellModOp::Points, effect.base_points);
+    match SpellModOp::points_index(effect.index) {
+        Some(op) => spell_mods::modify(world, caster, spell, op, base),
+        None => base,
+    }
+}
+
+/// Effect amount before crit: `modded_base_points` plus SP/AP coefficients
+/// with BonusCoefficient mods.
+pub(crate) fn scaled_amount(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+    effect: &SpellEffect,
+) -> f32 {
     let (spell_power, attack_power) = power_stats(world, caster);
-    effect.base_points
-        + effect.bonus_coefficient * spell_power
-        + effect.bonus_coefficient_from_ap * attack_power
+    let modify = |op, value| spell_mods::modify(world, caster, spell, op, value);
+    let base = modded_base_points(world, caster, spell, effect);
+    let coefficient = modify(SpellModOp::BonusCoefficient, effect.bonus_coefficient);
+    let ap_coefficient = modify(
+        SpellModOp::BonusCoefficient,
+        effect.bonus_coefficient_from_ap,
+    );
+    base + coefficient * spell_power + ap_coefficient * attack_power
 }
 
 fn weapon_hit(world: &World, caster: Entity) -> f32 {
@@ -140,42 +133,47 @@ fn weapon_hit(world: &World, caster: Entity) -> f32 {
     WEAPON_BASE_DAMAGE + shared::formulas::ap_bonus_damage(attack_power, WEAPON_SPEED)
 }
 
-fn roll_crit(world: &World, caster: Entity) -> bool {
-    let chance = world
+/// Crit chance in percent: `CharacterStats.crit_pct` plus CritChance mods.
+fn crit_chance(world: &World, caster: Entity, spell: &SpellInfo) -> f32 {
+    let base = world
         .get::<CharacterStats>(caster)
         .map_or(0.0, |stats| stats.crit_pct);
-    rand::random::<f32>() * 100.0 < chance
+    spell_mods::modify(world, caster, spell, SpellModOp::CritChance, base)
 }
 
-fn with_crit(world: &World, caster: Entity, amount: f32) -> (f32, bool) {
-    let crit = roll_crit(world, caster);
-    (
-        if crit {
-            amount * CRIT_MULTIPLIER
-        } else {
-            amount
-        },
-        crit,
-    )
+fn with_crit(world: &World, caster: Entity, spell: &SpellInfo, amount: f32) -> (f32, bool) {
+    let crit = rand::random::<f32>() * 100.0 < crit_chance(world, caster, spell);
+    if !crit {
+        return (amount, false);
+    }
+    let bonus = spell_mods::modify(
+        world,
+        caster,
+        spell,
+        SpellModOp::CritDamageAndHealing,
+        amount,
+    );
+    (amount + bonus, true)
 }
 
 fn school_damage(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, target: Entity) {
-    let (amount, crit) = with_crit(world, ctx.caster, scaled_amount(world, ctx.caster, effect));
-    deal_damage(world, ctx, target, amount, crit);
+    let amount = scaled_amount(world, ctx.caster, ctx.spell, effect);
+    let (amount, crit) = with_crit(world, ctx.caster, ctx.spell, amount);
+    deal_damage(world, ctx, target, amount, crit, false);
 }
 
 /// 58 WEAPON_DAMAGE and 121 NORMALIZED_WEAPON_DMG: weapon hit + BasePoints.
 fn weapon_damage(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, target: Entity) {
     let base = weapon_hit(world, ctx.caster) + effect.base_points;
-    let (amount, crit) = with_crit(world, ctx.caster, base);
-    deal_damage(world, ctx, target, amount, crit);
+    let (amount, crit) = with_crit(world, ctx.caster, ctx.spell, base);
+    deal_damage(world, ctx, target, amount, crit, false);
 }
 
 /// 31 WEAPON_PERCENT_DAMAGE: BasePoints% of a weapon hit.
 fn weapon_percent_damage(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, target: Entity) {
     let base = weapon_hit(world, ctx.caster) * effect.base_points / 100.0;
-    let (amount, crit) = with_crit(world, ctx.caster, base);
-    deal_damage(world, ctx, target, amount, crit);
+    let (amount, crit) = with_crit(world, ctx.caster, ctx.spell, base);
+    deal_damage(world, ctx, target, amount, crit, false);
 }
 
 fn log_amount(ctx: &EffectCtx, target: Entity, kind: CombatLogKind) -> CombatLogEvent {
@@ -201,16 +199,51 @@ fn mark_dirty(world: &World, entity: Entity) {
     }
 }
 
-/// Apply damage through the shared death path; logs Damage (+ Death).
-pub fn deal_damage(world: &mut World, ctx: &EffectCtx, target: Entity, amount: f32, crit: bool) {
-    let amount = amount.max(0.0).round();
+/// Spell mods (HealingAndDamage or PeriodicHealingAndDamage) on the base amount.
+fn modded_amount(world: &World, ctx: &EffectCtx, amount: f32, periodic: bool) -> f32 {
+    let op = if periodic {
+        SpellModOp::PeriodicHealingAndDamage
+    } else {
+        SpellModOp::HealingAndDamage
+    };
+    spell_mods::modify(world, ctx.caster, ctx.spell, op, amount)
+}
+
+fn stat_mods(world: &World, unit: Entity) -> Option<&AuraStatMods> {
+    world.get::<AuraStatMods>(unit)
+}
+
+/// Apply damage through the shared death path after spell mods, damage
+/// multipliers, immunity and absorbs; logs Damage (+ Death) and pushes
+/// damage events for procs and interrupts.
+pub fn deal_damage(
+    world: &mut World,
+    ctx: &EffectCtx,
+    target: Entity,
+    amount: f32,
+    crit: bool,
+    periodic: bool,
+) {
+    if !super::targets::is_alive(world, target) {
+        return;
+    }
+    let school = ctx.spell.school_mask();
+    if crate::auras::is_immune(world, target, school) {
+        let mut event = log_amount(ctx, target, CombatLogKind::Miss(MissKind::Immune));
+        event.periodic = periodic;
+        log_event(world, event);
+        return;
+    }
+    let done = stat_mods(world, ctx.caster).map_or(1.0, |mods| mods.damage_done(school));
+    let taken = crate::auras::damage_taken_multiplier(world, target, ctx.caster, school);
+    let amount = (modded_amount(world, ctx, amount, periodic) * done * taken)
+        .max(0.0)
+        .round();
+    let (amount, absorbed) = crate::auras::absorb_damage(world, target, school, amount);
     let Some(mut health) = world.get_mut::<Health>(target) else {
         return;
     };
     let before = health.current;
-    if before <= 0.0 {
-        return;
-    }
     let lethal = crate::death::apply_health_damage(&mut health, amount);
     let overkill = (amount - before).max(0.0);
     mark_dirty(world, target);
@@ -222,14 +255,42 @@ pub fn deal_damage(world: &mut World, ctx: &EffectCtx, target: Entity, amount: f
     let mut event = log_amount(ctx, target, CombatLogKind::Damage);
     event.amount = amount as i32;
     event.overflow = overkill as i32;
+    event.absorbed = absorbed as i32;
     event.crit = crit;
+    event.periodic = periodic;
     log_event(world, event);
+    if amount > 0.0 {
+        push_damage_event(world, ctx, target, periodic);
+    }
     if lethal {
-        kill(world, ctx.caster, target);
+        kill(world, ctx.caster, target, ctx.depth == 0);
     }
 }
 
-fn kill(world: &mut World, killer: Entity, target: Entity) {
+fn push_damage_event(world: &mut World, ctx: &EffectCtx, target: Entity, periodic: bool) {
+    let (actor, taken) = if periodic {
+        (
+            procs::PROC_DEAL_HARMFUL_PERIODIC,
+            procs::PROC_TAKE_HARMFUL_PERIODIC,
+        )
+    } else {
+        (0, 0)
+    };
+    procs::push_event(
+        world,
+        AuraEvent {
+            actor: ctx.caster,
+            target: Some(target),
+            actor_mask: [actor, 0],
+            target_mask: [taken | procs::PROC_TAKE_ANY_DAMAGE, 0],
+            spell_id: Some(ctx.spell.id),
+            can_proc: ctx.depth == 0,
+            periodic,
+        },
+    );
+}
+
+fn kill(world: &mut World, killer: Entity, target: Entity, can_proc: bool) {
     if world.get::<Npc>(target).is_some() {
         crate::combat::mark_npc_dead_world(world, target);
     } else {
@@ -252,22 +313,54 @@ fn kill(world: &mut World, killer: Entity, target: Entity) {
             kind: CombatLogKind::Death,
         },
     );
+    procs::push_event(
+        world,
+        AuraEvent {
+            actor: killer,
+            target: Some(target),
+            actor_mask: [procs::PROC_KILL, 0],
+            target_mask: [procs::PROC_DEATH, 0],
+            spell_id: None,
+            can_proc,
+            periodic: false,
+        },
+    );
 }
 
 fn heal(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, target: Entity) {
-    let (amount, crit) = with_crit(world, ctx.caster, scaled_amount(world, ctx.caster, effect));
-    apply_heal(world, ctx, target, amount, crit);
+    let amount = scaled_amount(world, ctx.caster, ctx.spell, effect);
+    let (amount, crit) = with_crit(world, ctx.caster, ctx.spell, amount);
+    apply_heal(world, ctx, target, amount, crit, false);
 }
 
 /// 136 HEAL_PCT: BasePoints% of the target's max health.
 fn heal_pct(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, target: Entity) {
     let max = world.get::<Health>(target).map_or(0.0, |health| health.max);
-    apply_heal(world, ctx, target, max * effect.base_points / 100.0, false);
+    apply_heal(
+        world,
+        ctx,
+        target,
+        max * effect.base_points / 100.0,
+        false,
+        false,
+    );
 }
 
-/// Heal a living target, clamped to max; logs Heal with overheal.
-pub fn apply_heal(world: &mut World, ctx: &EffectCtx, target: Entity, amount: f32, crit: bool) {
-    let amount = amount.max(0.0).round();
+/// Heal a living target after spell mods and healing multipliers, clamped
+/// to max; logs Heal with overheal. Periodic heals push helpful-periodic events.
+pub fn apply_heal(
+    world: &mut World,
+    ctx: &EffectCtx,
+    target: Entity,
+    amount: f32,
+    crit: bool,
+    periodic: bool,
+) {
+    let done = stat_mods(world, ctx.caster).map_or(1.0, |mods| mods.healing_done_mult);
+    let taken = stat_mods(world, target).map_or(1.0, |mods| mods.healing_taken_mult);
+    let amount = (modded_amount(world, ctx, amount, periodic) * done * taken)
+        .max(0.0)
+        .round();
     let Some(mut health) = world.get_mut::<Health>(target) else {
         return;
     };
@@ -281,7 +374,22 @@ pub fn apply_heal(world: &mut World, ctx: &EffectCtx, target: Entity, amount: f3
     event.amount = amount as i32;
     event.overflow = (amount - effective) as i32;
     event.crit = crit;
+    event.periodic = periodic;
     log_event(world, event);
+    if periodic {
+        procs::push_event(
+            world,
+            AuraEvent {
+                actor: ctx.caster,
+                target: Some(target),
+                actor_mask: [procs::PROC_DEAL_HELPFUL_PERIODIC, 0],
+                target_mask: [procs::PROC_TAKE_HELPFUL_PERIODIC, 0],
+                spell_id: Some(ctx.spell.id),
+                can_proc: ctx.depth == 0,
+                periodic: true,
+            },
+        );
+    }
 }
 
 /// 30 ENERGIZE: BasePoints raw units of power `EffectMiscValue_0`.
@@ -293,7 +401,19 @@ fn energize(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, target: En
         );
         return;
     };
-    let amount = effect.base_points.max(0.0);
+    energize_unit(world, ctx, target, power, effect.base_points, false);
+}
+
+/// Add `amount` raw units of `power`, clamped; logs Energize with the excess.
+pub fn energize_unit(
+    world: &mut World,
+    ctx: &EffectCtx,
+    target: Entity,
+    power: PowerType,
+    amount: f32,
+    periodic: bool,
+) {
+    let amount = amount.max(0.0);
     let Some(gained) = super::powers::change_power(world, target, power, amount) else {
         debug!("Spell {}: target has no {power:?} pool", ctx.spell.id);
         return;
@@ -301,7 +421,18 @@ fn energize(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, target: En
     let mut event = log_amount(ctx, target, CombatLogKind::Energize);
     event.amount = amount as i32;
     event.overflow = (amount - gained) as i32;
+    event.periodic = periodic;
     log_event(world, event);
+}
+
+/// 38 DISPEL: remove `BasePoints` (at least 1) auras of dispel type
+/// `EffectMiscValue_0` from the target.
+fn dispel(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, target: Entity) {
+    let Ok(dispel_type) = u32::try_from(effect.misc_values[0]) else {
+        return;
+    };
+    let count = (effect.base_points.max(1.0)) as usize;
+    crate::auras::dispel(world, ctx.caster, target, dispel_type, count);
 }
 
 /// 64 TRIGGER_SPELL: cast `EffectTriggerSpell` at this target.

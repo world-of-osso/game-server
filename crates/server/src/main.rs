@@ -3,6 +3,7 @@ mod admin_handlers;
 mod admin_ipc;
 mod admin_types;
 mod auction_house;
+mod auras;
 mod auth;
 mod auth_character;
 mod barber_shop;
@@ -127,6 +128,7 @@ fn add_world_plugins(app: &mut App) {
         .add_plugins(combat::CombatPlugin)
         .add_plugins(spell_info::SpellInfoPlugin)
         .add_plugins(spell_cast::SpellCastPlugin)
+        .add_plugins(auras::AuraPlugin)
         .add_plugins(interest::InterestPlugin)
         .add_plugins(admin_ipc::AdminIpcPlugin);
 }

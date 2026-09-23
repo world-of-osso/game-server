@@ -18,6 +18,7 @@ Server spell data model in `crates/server/src/spell_info/`. `SpellInfoPlugin` lo
 | `aura_options` | `spell_aura_options` | `CumulativeAura` (max stacks), proc chance/charges/type mask, and PPM. |
 | `categories` | `spell_categories` + `spell_category` | Category, GCD category, dispel, mechanic, defense and prevention types; `MaxCharges`/`ChargeRecoveryTime` of the charge category. |
 | `cooldowns` | `spell_cooldowns` | Recovery, category recovery, and start recovery (GCD). |
+| `labels` | `spell_label` | `LabelID`s, ascending; matched by label spell modifiers ([[auras]]). |
 | others | levels, class options, shapeshift, interrupts, target restrictions, equipped items, empower | Boxed because they are sparse. |
 
 ## Power cost storage

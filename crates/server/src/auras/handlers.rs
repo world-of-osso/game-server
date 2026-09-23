@@ -1,0 +1,158 @@
+//! Aura type registry, keyed by AuraType ID (TrinityCore `SpellAuraDefines.h`).
+//! Unhandled types are still applied and replicated; `apply_aura` logs them
+//! once per spell.
+
+/// How a handled aura type takes effect.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AuraKind {
+    /// Ticks every `EffectAuraPeriod` (`periodic.rs`).
+    Periodic,
+    /// Folded into `stats::StatModifiers` or `AuraStatMods` (`stat_mods.rs`).
+    StatMod,
+    /// Spell modifier read by the cast pipeline (`spell_mods.rs`).
+    SpellMod,
+    /// Casts `EffectTriggerSpell` on proc (`procs.rs`).
+    ProcTrigger,
+    /// Consumed by incoming damage (`absorb_damage`).
+    Absorb,
+    /// Negates damage of its school mask.
+    SchoolImmunity,
+    /// Damage taken from the aura's caster (`damage_taken_multiplier`).
+    DamageFromCaster,
+    /// Behavior lives in `AuraScripts` keyed by spell ID.
+    Script,
+    /// Charge-category max/recovery modifier (`charge_mods`).
+    ChargeMod,
+    /// Blocks casting (`cast_blocker`); MOD_STUN also roots.
+    CastBlock,
+}
+
+pub const PERIODIC_DAMAGE: u32 = 3;
+pub const DUMMY: u32 = 4;
+pub const PERIODIC_HEAL: u32 = 8;
+pub const MOD_STUN: u32 = 12;
+pub const OBS_MOD_HEALTH: u32 = 20;
+pub const PERIODIC_TRIGGER_SPELL: u32 = 23;
+pub const PERIODIC_ENERGIZE: u32 = 24;
+pub const MOD_PACIFY: u32 = 25;
+pub const MOD_ROOT: u32 = 26;
+pub const MOD_SILENCE: u32 = 27;
+pub const MOD_STAT: u32 = 29;
+pub const MOD_INCREASE_SPEED: u32 = 31;
+pub const MOD_DECREASE_SPEED: u32 = 33;
+pub const SCHOOL_IMMUNITY: u32 = 39;
+pub const PROC_TRIGGER_SPELL: u32 = 42;
+pub const MOD_PACIFY_SILENCE: u32 = 60;
+pub const MOD_CASTING_SPEED_NOT_STACK: u32 = 65;
+pub const SCHOOL_ABSORB: u32 = 69;
+pub const MOD_DAMAGE_PERCENT_DONE: u32 = 79;
+pub const MOD_DAMAGE_PERCENT_TAKEN: u32 = 87;
+pub const PERIODIC_DAMAGE_PERCENT: u32 = 89;
+pub const ADD_FLAT_MODIFIER: u32 = 107;
+pub const ADD_PCT_MODIFIER: u32 = 108;
+pub const MOD_POWER_REGEN_PERCENT: u32 = 110;
+pub const MOD_HEALING_PCT: u32 = 118;
+pub const MOD_SPEED_ALWAYS: u32 = 129;
+pub const MOD_INCREASE_HEALTH_PERCENT: u32 = 133;
+pub const MOD_HEALING_DONE_PERCENT: u32 = 136;
+pub const MOD_TOTAL_STAT_PERCENTAGE: u32 = 137;
+pub const MOD_MELEE_HASTE: u32 = 138;
+pub const MOD_RANGED_HASTE: u32 = 140;
+pub const MOD_MELEE_RANGED_HASTE: u32 = 192;
+pub const MELEE_SLOW: u32 = 193;
+pub const HASTE_SPELLS: u32 = 216;
+pub const ADD_PCT_MODIFIER_BY_SPELL_LABEL: u32 = 218;
+pub const ADD_FLAT_MODIFIER_BY_SPELL_LABEL: u32 = 219;
+pub const PERIODIC_DUMMY: u32 = 226;
+pub const PROC_TRIGGER_SPELL_WITH_VALUE: u32 = 231;
+pub const MOD_SPELL_DAMAGE_FROM_CASTER: u32 = 271;
+pub const MOD_HEALING_RECEIVED: u32 = 283;
+pub const MOD_CRIT_PCT: u32 = 290;
+pub const MASTERY: u32 = 318;
+pub const MOD_MELEE_RANGED_HASTE_2: u32 = 342;
+pub const MOD_AUTOATTACK_DAMAGE: u32 = 344;
+pub const MOD_MANA_REGEN_PCT: u32 = 379;
+pub const MOD_MAX_CHARGES: u32 = 411;
+pub const CHARGE_RECOVERY_MOD: u32 = 453;
+pub const CHARGE_RECOVERY_MULTIPLIER: u32 = 454;
+pub const MOD_ROOT_2: u32 = 455;
+
+pub fn kind(aura_type: u32) -> Option<AuraKind> {
+    use AuraKind::*;
+    Some(match aura_type {
+        PERIODIC_DAMAGE
+        | PERIODIC_HEAL
+        | OBS_MOD_HEALTH
+        | PERIODIC_TRIGGER_SPELL
+        | PERIODIC_ENERGIZE
+        | PERIODIC_DAMAGE_PERCENT => Periodic,
+        PERIODIC_DUMMY | DUMMY => Script,
+        MOD_STUN | MOD_PACIFY | MOD_SILENCE | MOD_PACIFY_SILENCE => CastBlock,
+        MOD_ROOT
+        | MOD_ROOT_2
+        | MOD_STAT
+        | MOD_INCREASE_SPEED
+        | MOD_DECREASE_SPEED
+        | MOD_CASTING_SPEED_NOT_STACK
+        | MOD_DAMAGE_PERCENT_DONE
+        | MOD_DAMAGE_PERCENT_TAKEN
+        | MOD_POWER_REGEN_PERCENT
+        | MOD_HEALING_PCT
+        | MOD_SPEED_ALWAYS
+        | MOD_INCREASE_HEALTH_PERCENT
+        | MOD_HEALING_DONE_PERCENT
+        | MOD_TOTAL_STAT_PERCENTAGE
+        | MOD_MELEE_HASTE
+        | MOD_RANGED_HASTE
+        | MOD_MELEE_RANGED_HASTE
+        | MELEE_SLOW
+        | HASTE_SPELLS
+        | MOD_HEALING_RECEIVED
+        | MOD_CRIT_PCT
+        | MASTERY
+        | MOD_MELEE_RANGED_HASTE_2
+        | MOD_AUTOATTACK_DAMAGE
+        | MOD_MANA_REGEN_PCT => StatMod,
+        ADD_FLAT_MODIFIER
+        | ADD_PCT_MODIFIER
+        | ADD_PCT_MODIFIER_BY_SPELL_LABEL
+        | ADD_FLAT_MODIFIER_BY_SPELL_LABEL => SpellMod,
+        PROC_TRIGGER_SPELL | PROC_TRIGGER_SPELL_WITH_VALUE => ProcTrigger,
+        SCHOOL_ABSORB => Absorb,
+        SCHOOL_IMMUNITY => SchoolImmunity,
+        MOD_SPELL_DAMAGE_FROM_CASTER => DamageFromCaster,
+        MOD_MAX_CHARGES | CHARGE_RECOVERY_MOD | CHARGE_RECOVERY_MULTIPLIER => ChargeMod,
+        _ => return None,
+    })
+}
+
+pub fn is_handled(aura_type: u32) -> bool {
+    kind(aura_type).is_some()
+}
+
+/// TrinityCore `isTriggerAura` types this runtime handles: an aura procs
+/// only when one of its effects is one of these.
+pub fn can_proc(aura_type: u32) -> bool {
+    matches!(
+        aura_type,
+        DUMMY
+            | PERIODIC_DUMMY
+            | PROC_TRIGGER_SPELL
+            | PROC_TRIGGER_SPELL_WITH_VALUE
+            | MOD_STUN
+            | MOD_ROOT
+            | MOD_ROOT_2
+            | SCHOOL_ABSORB
+            | MOD_DAMAGE_PERCENT_TAKEN
+            | MOD_DAMAGE_PERCENT_DONE
+            | MOD_SPELL_DAMAGE_FROM_CASTER
+            | MOD_POWER_REGEN_PERCENT
+            | MOD_MELEE_HASTE
+    )
+}
+
+/// Types whose amount adds SP/AP coefficients (TrinityCore applies spell
+/// power only to damage, heal and absorb amounts); others use base points.
+pub fn scales_with_power(aura_type: u32) -> bool {
+    matches!(aura_type, PERIODIC_DAMAGE | PERIODIC_HEAL | SCHOOL_ABSORB)
+}

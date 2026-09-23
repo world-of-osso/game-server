@@ -39,7 +39,8 @@ Server gameplay systems.
 | [[talents]] | DB2 trait trees per class, TrinityCore-style config validation (visibility, gates, prerequisites, choice/hero nodes, level point budgets), `character_traits`, commit/snapshot messages, talent spells in KnownSpells |
 | [[spell-info]] | SpellStore (every DB2 spell, all effects/costs/options at DifficultyID 0, charge categories), ClassSpells, raw power-cost units, load cost |
 | [[character-stats]] | Retail 12.x player stats: SimC class/race base stats, CASC hppersta/basemp/combatratings, spec main stat and mastery, `StatModifiers` aura fold-in, base-mana costs, gaps (no gear/weapon data) |
-| [[spell-casting]] | Cast pipeline (validation, cast bars/channels, costs, GCD/cooldowns/charges), implicit targets, effect handlers, combat log scope, power pools/regen, UnitPowers, known-spell check, AuraApplier hook |
+| [[spell-casting]] | Cast pipeline (validation, cast bars/channels, costs, GCD/cooldowns/charges), implicit targets, effect handlers, combat log scope, power pools/regen, UnitPowers, known-spell check |
+| [[auras]] | Aura runtime: stacking/refresh, periodic ticks, procs, interrupt flags, dispel, crowd control, spell modifiers (class mask + SpellLabel), `StatModifiers` fold-in, UnitAuras replication, handled aura IDs |
 | [[tick-model]] | Observed server loop: 50ms runner/fixed cadence, schedule ownership, explicit ordering, completed player-death and broad auto-AFK scan reductions, maintenance gates, and IPC boundary |
 | [[zone-architecture]] | Proposed zone/instance partitioning; current implementation is startup-only Elwynn spawning with no per-zone sets or transfers |
 | [[combat]] | Auto-attack system, NPC/player lethal transitions, split death proofs, melee hit table (miss/dodge/parry/glancing/block/crit/hit), spell formulas, stat calculations, DR curves |

@@ -2,28 +2,10 @@ use super::*;
 
 #[test]
 fn speed_recalculates_when_aura_removed() {
-    use shared::aura::{Aura, AuraEffect};
-
     let mut app = setup_app_with_time();
     let player = spawn_player(app.world_mut(), 0.0, 0.0, 0.0);
 
-    let snare = Aura {
-        spell_id: 1,
-        caster: 99,
-        duration: 10.0,
-        remaining: 10.0,
-        effects: [
-            Some(AuraEffect::ModMovementSpeed { percent: -0.50 }),
-            None,
-            None,
-        ],
-        ..Default::default()
-    };
-    {
-        let mut entity = app.world_mut().entity_mut(player);
-        let mut auras = entity.get_mut::<Auras>().unwrap();
-        auras.apply(snare);
-    }
+    set_aura_speed(app.world_mut(), player, 0.50);
 
     let input = make_input(1.0, 0.0, 0.0);
     let _ = app.world_mut().run_system_once(
@@ -37,11 +19,7 @@ fn speed_recalculates_when_aura_removed() {
         "snared: {snared_speed}",
     );
 
-    {
-        let mut entity = app.world_mut().entity_mut(player);
-        let mut auras = entity.get_mut::<Auras>().unwrap();
-        auras.active.clear();
-    }
+    set_aura_speed(app.world_mut(), player, 1.0);
 
     let input2 = make_input(1.0, 0.0, 0.0);
     let _ = app.world_mut().run_system_once(
@@ -58,28 +36,10 @@ fn speed_recalculates_when_aura_removed() {
 
 #[test]
 fn root_expires_movement_resumes() {
-    use shared::aura::{Aura, AuraEffect};
-
     let mut app = setup_app_with_time();
     let player = spawn_player(app.world_mut(), 0.0, 0.0, 0.0);
 
-    let root = Aura {
-        spell_id: 1,
-        caster: 99,
-        duration: 10.0,
-        remaining: 10.0,
-        effects: [
-            Some(AuraEffect::ModMovementSpeed { percent: -1.0 }),
-            None,
-            None,
-        ],
-        ..Default::default()
-    };
-    {
-        let mut entity = app.world_mut().entity_mut(player);
-        let mut auras = entity.get_mut::<Auras>().unwrap();
-        auras.apply(root);
-    }
+    set_aura_speed(app.world_mut(), player, 0.00);
 
     let input = make_input(1.0, 0.0, 0.0);
     let _ = app.world_mut().run_system_once(
@@ -93,11 +53,7 @@ fn root_expires_movement_resumes() {
         0.0
     );
 
-    {
-        let mut entity = app.world_mut().entity_mut(player);
-        let mut auras = entity.get_mut::<Auras>().unwrap();
-        auras.active.clear();
-    }
+    set_aura_speed(app.world_mut(), player, 1.0);
 
     let input2 = make_input(1.0, 0.0, 0.0);
     let _ = app.world_mut().run_system_once(
@@ -116,28 +72,11 @@ fn root_expires_movement_resumes() {
 
 #[test]
 fn jump_while_snared_reduces_horizontal_distance() {
-    use shared::aura::{Aura, AuraEffect};
-
     let mut app = setup_app_with_time();
     let normal = spawn_player(app.world_mut(), 0.0, 0.0, 0.0);
     let snared = spawn_player(app.world_mut(), 0.0, 0.0, 0.0);
 
-    {
-        let mut entity = app.world_mut().entity_mut(snared);
-        let mut auras = entity.get_mut::<Auras>().unwrap();
-        auras.apply(Aura {
-            spell_id: 1,
-            caster: 99,
-            duration: 10.0,
-            remaining: 10.0,
-            effects: [
-                Some(AuraEffect::ModMovementSpeed { percent: -0.50 }),
-                None,
-                None,
-            ],
-            ..Default::default()
-        });
-    }
+    set_aura_speed(app.world_mut(), snared, 0.50);
 
     let normal_input = PlayerInput {
         direction: [1.0, 0.0, 0.0],

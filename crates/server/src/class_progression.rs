@@ -53,6 +53,10 @@ impl KnownSpells {
     pub fn contains(&self, spell_id: u32) -> bool {
         self.0.contains(&spell_id)
     }
+
+    pub fn iter(&self) -> impl Iterator<Item = u32> + '_ {
+        self.0.iter().copied()
+    }
 }
 
 /// Active `ChrSpecialization` ID; 0 when the class has no spec data.

@@ -1,6 +1,6 @@
 use super::*;
+use crate::auras::AuraStatMods;
 use bevy::ecs::system::RunSystemOnce;
-use shared::aura::Auras;
 use shared::components::{MovementSpeed, Rotation};
 use shared::protocol::{ChatType, PlayerInput};
 use std::panic::{AssertUnwindSafe, catch_unwind};
@@ -33,9 +33,17 @@ fn spawn_player(world: &mut World, x: f32, y: f32, z: f32) -> Entity {
                 class: 1,
                 appearance: Default::default(),
             },
-            Auras::default(),
+            AuraStatMods::default(),
         ))
         .id()
+}
+
+/// Movement reads the aura run speed multiplier from `AuraStatMods`.
+fn set_aura_speed(world: &mut World, player: Entity, movement_speed: f32) {
+    world.entity_mut(player).insert(AuraStatMods {
+        movement_speed,
+        ..Default::default()
+    });
 }
 
 fn make_input(dx: f32, dy: f32, dz: f32) -> PlayerInput {

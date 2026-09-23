@@ -56,6 +56,8 @@ pub struct SpellInfo {
     pub equipped_items: Option<Box<SpellEquippedItems>>,
     /// `spell_empower_stage` rows via `spell_empower`, sorted by stage.
     pub empower_stages: Vec<EmpowerStage>,
+    /// `spell_label.LabelID` rows, ascending (matched by `*_MODIFIER_BY_SPELL_LABEL` auras).
+    pub labels: Vec<u32>,
 }
 
 /// `spell_misc` with its index columns resolved.

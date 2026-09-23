@@ -1,0 +1,143 @@
+//! Periodic aura effects. Each effect with a period ticks at
+//! `applied + k × period` while `≤ expiry`, so a 16 s aura with a 2 s period
+//! ticks 8 times; a refresh keeps the tick phase. Amounts are the per-stack
+//! amount × stacks.
+//!
+//! Tick sources: the aura caster deals the tick. PERIODIC_TRIGGER_SPELL casts
+//! `EffectTriggerSpell` from the caster at the aura's unit, as a triggered
+//! spell (no procs from it).
+
+use bevy::prelude::*;
+use shared::components::{Health, PowerType};
+
+use super::handlers::*;
+use super::{ActiveAuras, scripts};
+use crate::spell_cast::effects::{self, EffectCtx};
+use crate::spell_info::{SpellInfo, SpellStore};
+
+/// Triggered spells cast by ticks resolve at this depth (no proc events).
+const TICK_TRIGGER_DEPTH: u8 = 1;
+
+struct Tick {
+    instance_id: u32,
+    caster: Entity,
+    spell_id: u32,
+    effect_index: u8,
+    aura_type: u32,
+    amount: f32,
+    misc: i32,
+    trigger_spell: u32,
+}
+
+fn due_ticks(world: &mut World, unit: Entity, now: f64) -> Vec<Tick> {
+    let Some(mut auras) = world.get_mut::<ActiveAuras>(unit) else {
+        return Vec::new();
+    };
+    let mut ticks = Vec::new();
+    for aura in auras.bypass_change_detection().auras.iter_mut() {
+        let expiry = aura.expires_at.unwrap_or(f64::INFINITY) + 1e-6;
+        let stacks = aura.stack_multiplier();
+        for effect in aura
+            .effects
+            .iter_mut()
+            .filter(|effect| effect.period_ms > 0)
+        {
+            let period = f64::from(effect.period_ms) / 1000.0;
+            while effect.next_tick_at <= now && effect.next_tick_at <= expiry {
+                effect.next_tick_at += period;
+                ticks.push(Tick {
+                    instance_id: aura.instance_id,
+                    caster: aura.caster,
+                    spell_id: aura.spell_id,
+                    effect_index: effect.index,
+                    aura_type: effect.aura_type,
+                    amount: effect.amount * stacks,
+                    misc: effect.misc_values[0],
+                    trigger_spell: effect.trigger_spell,
+                });
+            }
+        }
+    }
+    ticks
+}
+
+/// Run every tick due on `unit` up to `now`.
+pub(super) fn run_due_ticks(world: &mut World, unit: Entity, now: f64) {
+    for tick in due_ticks(world, unit, now) {
+        let alive = world
+            .get::<ActiveAuras>(unit)
+            .is_some_and(|auras| auras.get(tick.instance_id).is_some());
+        if !alive || !crate::spell_cast::targets::is_alive(world, unit) {
+            continue;
+        }
+        let Some(spell) = world
+            .get_resource::<SpellStore>()
+            .and_then(|store| store.get(tick.spell_id))
+            .cloned()
+        else {
+            continue;
+        };
+        run_tick(world, unit, &spell, &tick);
+    }
+}
+
+fn run_tick(world: &mut World, unit: Entity, spell: &SpellInfo, tick: &Tick) {
+    let ctx = EffectCtx {
+        caster: tick.caster,
+        spell,
+        depth: 0,
+    };
+    let max_health = world.get::<Health>(unit).map_or(0.0, |health| health.max);
+    match tick.aura_type {
+        PERIODIC_DAMAGE => effects::deal_damage(world, &ctx, unit, tick.amount, false, true),
+        PERIODIC_DAMAGE_PERCENT => effects::deal_damage(
+            world,
+            &ctx,
+            unit,
+            max_health * tick.amount / 100.0,
+            false,
+            true,
+        ),
+        PERIODIC_HEAL => effects::apply_heal(world, &ctx, unit, tick.amount, false, true),
+        OBS_MOD_HEALTH => effects::apply_heal(
+            world,
+            &ctx,
+            unit,
+            max_health * tick.amount / 100.0,
+            false,
+            true,
+        ),
+        PERIODIC_ENERGIZE => energize(world, &ctx, unit, tick),
+        PERIODIC_TRIGGER_SPELL => crate::spell_cast::cast_triggered(
+            world,
+            tick.caster,
+            tick.trigger_spell,
+            Some(unit),
+            TICK_TRIGGER_DEPTH,
+        ),
+        PERIODIC_DUMMY => {
+            let aura = world
+                .get::<ActiveAuras>(unit)
+                .and_then(|auras| auras.get(tick.instance_id))
+                .cloned();
+            if let Some(aura) = aura {
+                scripts::run_periodic(world, unit, &aura, tick.effect_index);
+            }
+        }
+        other => debug!(
+            "Spell {}: periodic aura type {other} has no tick handler",
+            spell.id
+        ),
+    }
+}
+
+fn energize(world: &mut World, ctx: &EffectCtx, unit: Entity, tick: &Tick) {
+    let Some(power) = PowerType::from_db(tick.misc) else {
+        debug!(
+            "Spell {}: periodic energize of unknown power {}",
+            ctx.spell.id, tick.misc
+        );
+        return;
+    };
+    effects::energize_unit(world, ctx, unit, power, tick.amount, true);
+}

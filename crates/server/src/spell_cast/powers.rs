@@ -243,13 +243,15 @@ type RegenQuery<'w, 's> = Query<
         &'static mut PowerPools,
         Option<&'static mut Mana>,
         Option<&'static CombatStatus>,
+        Option<&'static crate::auras::AuraStatMods>,
     ),
 >;
 
 /// Out of combat: `RegenPeace` after `RegenInterruptTimeMS` since leaving
 /// combat. Negative rates decay toward `CenterPower` and positive rates fill
 /// toward max (below center, a negative rate refills toward center). In
-/// combat: `RegenCombat`.
+/// combat: `RegenCombat`. Rates (regen and decay) scale by the aura power
+/// regen multiplier (MOD_POWER_REGEN_PERCENT, MOD_MANA_REGEN_PCT).
 pub(super) fn regenerate_powers(
     time: Res<Time>,
     table: Option<Res<PowerTypeTable>>,
@@ -260,7 +262,8 @@ pub(super) fn regenerate_powers(
     };
     let dt = time.delta_secs();
     let now = time.elapsed_secs_f64();
-    for (mut pools, mana, combat) in &mut units {
+    for (mut pools, mana, combat, mods) in &mut units {
+        let regen_mult = |power: PowerType| mods.map_or(1.0, |mods| mods.power_regen(power as i32));
         let in_combat = combat.is_some_and(|status| status.0);
         if in_combat {
             pools.out_of_combat_since = now;
@@ -276,14 +279,15 @@ pub(super) fn regenerate_powers(
                 info,
                 in_combat,
                 out_of_combat_ms,
-                dt,
+                dt * regen_mult(pool.power),
             );
             pool.current = next;
         }
         if let Some(mut mana) = mana
             && mana.current < mana.max
         {
-            mana.current = (mana.current + mana.max * MANA_REGEN_PCT_PER_SEC * dt).min(mana.max);
+            let gain = mana.max * MANA_REGEN_PCT_PER_SEC * dt * regen_mult(PowerType::Mana);
+            mana.current = (mana.current + gain).min(mana.max);
         }
     }
 }

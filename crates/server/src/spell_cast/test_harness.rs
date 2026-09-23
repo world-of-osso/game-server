@@ -1,0 +1,311 @@
+//! Real-DB Bevy App harness for cast and aura tests: a player caster with an
+//! authenticated connection and an NPC target (skipped when data/world.db is absent).
+
+use std::path::PathBuf;
+use std::sync::OnceLock;
+use std::time::Duration;
+
+use bevy::prelude::*;
+use lightyear::connection::host::HostClient;
+use lightyear::prelude::*;
+use rusqlite::{Connection, OpenFlags};
+use shared::components::{CombatStatus, Health, Level, Mana, Npc, Player, Position, PowerType};
+use shared::protocol::{
+    CancelAura, CastFailed, CombatChannel, CombatLogEvent, ProtocolPlugin, SpellCastIntent,
+    SpellChargesUpdate, SpellCooldownUpdate, StopSpellCast,
+};
+
+use super::powers::{PowerPools, PowerTypeTable, load_power_type_table};
+use crate::auth::{Authenticated, InWorld};
+use crate::class_progression::KnownSpells;
+use crate::networking::{Moving, PlayerLink};
+use crate::spell_info::{ClassInfo, ClassSpells, SpellInfo, SpellStore, load_spell_data};
+use crate::stats::CharacterStats;
+
+pub(crate) struct WorldData {
+    pub(crate) store: SpellStore,
+    pub(crate) classes: ClassSpells,
+    pub(crate) powers_db: PathBuf,
+}
+
+pub(crate) fn world_db() -> Option<&'static WorldData> {
+    static DATA: OnceLock<Option<WorldData>> = OnceLock::new();
+    DATA.get_or_init(|| {
+        let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/world.db");
+        if !path.exists() {
+            eprintln!("skipping: {} not found", path.display());
+            return None;
+        }
+        let conn = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+        let (store, classes) = load_spell_data(&conn).unwrap();
+        Some(WorldData {
+            store,
+            classes,
+            powers_db: path,
+        })
+    })
+    .as_ref()
+}
+
+pub(crate) fn power_table(data: &WorldData) -> PowerTypeTable {
+    let conn =
+        Connection::open_with_flags(&data.powers_db, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+    load_power_type_table(&conn).unwrap()
+}
+
+pub(crate) fn class_spells(data: &WorldData) -> ClassSpells {
+    ClassSpells {
+        classes: data
+            .classes
+            .classes
+            .iter()
+            .map(|class| ClassInfo {
+                class_id: class.class_id,
+                skill_line: class.skill_line,
+                power_types: class.power_types.clone(),
+                attack_power_per_strength: class.attack_power_per_strength,
+                attack_power_per_agility: class.attack_power_per_agility,
+                learnable: Vec::new(),
+                specs: Vec::new(),
+                traits: class.traits.clone(),
+            })
+            .collect(),
+    }
+}
+
+pub(crate) struct Harness {
+    pub(crate) app: App,
+    pub(crate) caster: Entity,
+    pub(crate) connection: Entity,
+    pub(crate) npc: Entity,
+    pub(crate) inbox: Inbox,
+}
+
+/// Messages drained from the connection every frame (unread HostClient
+/// messages do not survive later frames).
+#[derive(Default)]
+pub(crate) struct Inbox {
+    pub(crate) failed: Vec<CastFailed>,
+    pub(crate) cooldowns: Vec<SpellCooldownUpdate>,
+    pub(crate) charges: Vec<SpellChargesUpdate>,
+    pub(crate) log: Vec<CombatLogEvent>,
+}
+
+pub(crate) fn spawn_player(app: &mut App, class: u8, x: f32) -> Entity {
+    app.world_mut()
+        .spawn((
+            Player {
+                name: "Caster".into(),
+                race: 1,
+                class,
+                appearance: default(),
+            },
+            Position { x, y: 0.0, z: 0.0 },
+            Health {
+                current: 1000.0,
+                max: 1000.0,
+            },
+            Level(10),
+            Moving(false),
+            // In combat so rage does not decay mid-test (rage test toggles it).
+            CombatStatus(true),
+            CharacterStats {
+                spell_power: 100.0,
+                attack_power: 100.0,
+                base_mana: 10_000.0,
+                ..default()
+            },
+            Mana {
+                current: 10_000.0,
+                max: 10_000.0,
+            },
+        ))
+        .id()
+}
+
+pub(crate) fn spawn_npc(app: &mut App, x: f32) -> Entity {
+    app.world_mut()
+        .spawn((
+            Npc {
+                template_id: 1,
+                name: "Target".into(),
+            },
+            Position { x, y: 0.0, z: 0.0 },
+            Health {
+                current: 5000.0,
+                max: 5000.0,
+            },
+        ))
+        .id()
+}
+
+pub(crate) fn spawn_connection(app: &mut App, player: Entity) -> Entity {
+    app.world_mut()
+        .spawn((
+            RemoteId(PeerId::Local(1)),
+            Connected,
+            HostClient { buffer: Vec::new() },
+            Authenticated { account_id: 1 },
+            InWorld { character_id: 1 },
+            PlayerLink(player),
+            (
+                MessageSender::<SpellCastIntent>::default(),
+                MessageReceiver::<SpellCastIntent>::default(),
+                MessageSender::<StopSpellCast>::default(),
+                MessageReceiver::<StopSpellCast>::default(),
+                MessageSender::<CancelAura>::default(),
+                MessageReceiver::<CancelAura>::default(),
+            ),
+            (
+                MessageSender::<CastFailed>::default(),
+                MessageReceiver::<CastFailed>::default(),
+                MessageSender::<SpellCooldownUpdate>::default(),
+                MessageReceiver::<SpellCooldownUpdate>::default(),
+                MessageSender::<SpellChargesUpdate>::default(),
+                MessageReceiver::<SpellChargesUpdate>::default(),
+                MessageSender::<CombatLogEvent>::default(),
+                MessageReceiver::<CombatLogEvent>::default(),
+            ),
+        ))
+        .id()
+}
+
+/// Level 10 Human caster of `class` at the origin with fixed
+/// `CharacterStats` (100 SP/AP, 10 000 base mana), NPC at 3 yd.
+pub(crate) fn harness(extra: Vec<SpellInfo>, ids: &[u32], class: u8) -> Option<Harness> {
+    harness_with(extra, ids, class, false)
+}
+
+/// `computed_stats`: run `StatsPlugin` on a fresh caster (100/100 health,
+/// 0/0 mana, as spawned on world entry) instead of the fixed stats.
+pub(crate) fn harness_with(
+    extra: Vec<SpellInfo>,
+    ids: &[u32],
+    class: u8,
+    computed_stats: bool,
+) -> Option<Harness> {
+    let data = world_db()?;
+    let mut app = App::new();
+    app.add_plugins((MinimalPlugins, bevy::state::app::StatesPlugin));
+    app.add_plugins(lightyear::prelude::server::ServerPlugins {
+        tick_duration: Duration::from_millis(50),
+    });
+    app.add_plugins(ProtocolPlugin);
+    app.add_plugins(crate::combat::CombatPlugin);
+    app.add_plugins(super::SpellCastPlugin);
+    app.add_plugins(crate::auras::AuraPlugin);
+    if computed_stats {
+        app.add_plugins(crate::stats::StatsPlugin);
+    }
+    app.insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+        Duration::from_millis(50),
+    ));
+    app.finish();
+    app.cleanup();
+    // Startup runs first so the real table replaces the missing-DB default.
+    app.update();
+    let mut spells: Vec<SpellInfo> = ids
+        .iter()
+        .map(|&id| data.store.get(id).expect("spell in world.db").clone())
+        .collect();
+    spells.extend(extra);
+    let known = KnownSpells::fixture(spells.iter().map(|spell| spell.id).collect());
+    app.insert_resource(SpellStore::fixture(spells));
+    app.insert_resource(power_table(data));
+    app.insert_resource(class_spells(data));
+    let caster = spawn_player(&mut app, class, 0.0);
+    if computed_stats {
+        app.world_mut()
+            .entity_mut(caster)
+            .remove::<CharacterStats>()
+            .insert((
+                Health {
+                    current: 100.0,
+                    max: 100.0,
+                },
+                Mana {
+                    current: 0.0,
+                    max: 0.0,
+                },
+                shared::components::UnitStats::default(),
+                shared::components::CombatRatings::default(),
+            ));
+    }
+    app.world_mut().entity_mut(caster).insert(known);
+    let connection = spawn_connection(&mut app, caster);
+    let npc = spawn_npc(&mut app, 3.0);
+    app.update();
+    Some(Harness {
+        app,
+        caster,
+        connection,
+        npc,
+        inbox: Inbox::default(),
+    })
+}
+
+pub(crate) fn drain<M: lightyear::prelude::Message>(app: &mut App, connection: Entity) -> Vec<M> {
+    app.world_mut()
+        .get_mut::<MessageReceiver<M>>(connection)
+        .unwrap()
+        .receive()
+        .collect()
+}
+
+impl Harness {
+    pub(crate) fn cast(&mut self, spell_id: u32, target: Option<Entity>) {
+        self.app
+            .world_mut()
+            .get_mut::<MessageSender<SpellCastIntent>>(self.connection)
+            .unwrap()
+            .send::<CombatChannel>(SpellCastIntent {
+                spell_id: Some(spell_id),
+                spell: String::new(),
+                target_entity: target.map(Entity::to_bits),
+            });
+    }
+
+    /// Send + HostClient loopback delivery takes 3 frames (as in the old
+    /// cast presentation tests); the cast resolves in the receiving frame.
+    pub(crate) fn cast_and_deliver(&mut self, spell_id: u32, target: Option<Entity>) {
+        self.cast(spell_id, target);
+        self.advance(3);
+    }
+
+    pub(crate) fn advance(&mut self, frames: usize) {
+        for _ in 0..frames {
+            self.app.update();
+            let inbox = &mut self.inbox;
+            inbox
+                .failed
+                .extend(drain::<CastFailed>(&mut self.app, self.connection));
+            inbox
+                .cooldowns
+                .extend(drain::<SpellCooldownUpdate>(&mut self.app, self.connection));
+            inbox
+                .charges
+                .extend(drain::<SpellChargesUpdate>(&mut self.app, self.connection));
+            inbox
+                .log
+                .extend(drain::<CombatLogEvent>(&mut self.app, self.connection));
+        }
+    }
+
+    pub(crate) fn health(&self, entity: Entity) -> f32 {
+        self.app.world().get::<Health>(entity).unwrap().current
+    }
+
+    pub(crate) fn power(&self, power: PowerType) -> f32 {
+        let pools = self.app.world().get::<PowerPools>(self.caster).unwrap();
+        pools.get(power).unwrap().current
+    }
+
+    pub(crate) fn set_power(&mut self, power: PowerType, value: f32) {
+        let mut pools = self
+            .app
+            .world_mut()
+            .get_mut::<PowerPools>(self.caster)
+            .unwrap();
+        pools.get_mut(power).unwrap().current = value;
+    }
+}

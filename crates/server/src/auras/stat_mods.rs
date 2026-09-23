@@ -1,0 +1,201 @@
+//! Aura modifiers of a unit, recomputed whenever its aura set changes:
+//! stat changes go to `stats::StatModifiers` (folded into `CharacterStats`),
+//! combat multipliers to `AuraStatMods`.
+
+use bevy::prelude::*;
+use shared::components::UnitStats;
+
+use super::handlers::*;
+use super::{ActiveAuras, AuraInstance};
+use crate::stats::StatModifiers;
+
+/// School bit indexes 0 Physical .. 6 Arcane.
+pub const SCHOOL_COUNT: usize = 7;
+
+/// Aura combat multipliers of one unit, read by the damage, heal, regen and
+/// movement paths. Stat changes (primary stats, crit, haste, mastery, max
+/// health) are in `stats::StatModifiers` instead.
+///
+/// Multipliers start at 1.0 and combine multiplicatively (`1 + amount/100`
+/// per aura effect, amount × stacks).
+#[derive(Component, Debug, Clone, PartialEq)]
+pub struct AuraStatMods {
+    /// MOD_DAMAGE_PERCENT_DONE 79 per school bit (MiscValue school mask).
+    pub damage_done_mult: [f32; SCHOOL_COUNT],
+    /// MOD_DAMAGE_PERCENT_TAKEN 87 per school bit.
+    pub damage_taken_mult: [f32; SCHOOL_COUNT],
+    /// MOD_HEALING_DONE_PERCENT 136.
+    pub healing_done_mult: f32,
+    /// MOD_HEALING_PCT 118 and MOD_HEALING_RECEIVED 283.
+    pub healing_taken_mult: f32,
+    /// MOD_AUTOATTACK_DAMAGE 344.
+    pub autoattack_damage_mult: f32,
+    /// MOD_POWER_REGEN_PERCENT 110 by DB2 power type; MOD_MANA_REGEN_PCT
+    /// 379 is folded into power type 0.
+    pub power_regen_mult: Vec<(i32, f32)>,
+    /// Run speed multiplier: strongest MOD_INCREASE_SPEED 31 × every
+    /// MOD_SPEED_ALWAYS 129 × strongest MOD_DECREASE_SPEED 33; 0 while
+    /// rooted or stunned (MOD_ROOT 26, MOD_ROOT_2 455, MOD_STUN 12).
+    pub movement_speed: f32,
+}
+
+impl Default for AuraStatMods {
+    fn default() -> Self {
+        Self {
+            damage_done_mult: [1.0; SCHOOL_COUNT],
+            damage_taken_mult: [1.0; SCHOOL_COUNT],
+            healing_done_mult: 1.0,
+            healing_taken_mult: 1.0,
+            autoattack_damage_mult: 1.0,
+            power_regen_mult: Vec::new(),
+            movement_speed: 1.0,
+        }
+    }
+}
+
+impl AuraStatMods {
+    /// Strongest per-school multiplier among the schools in `school_mask`
+    /// (0 = Physical). Equal to TrinityCore's product over matching auras
+    /// for single-school spells.
+    fn school_mult(table: &[f32; SCHOOL_COUNT], school_mask: u32) -> f32 {
+        let mask = if school_mask == 0 { 1 } else { school_mask };
+        (0..SCHOOL_COUNT)
+            .filter(|&bit| mask & (1 << bit) != 0)
+            .map(|bit| table[bit])
+            .fold(f32::MIN, f32::max)
+    }
+
+    pub fn damage_done(&self, school_mask: u32) -> f32 {
+        Self::school_mult(&self.damage_done_mult, school_mask)
+    }
+
+    pub fn damage_taken(&self, school_mask: u32) -> f32 {
+        Self::school_mult(&self.damage_taken_mult, school_mask)
+    }
+
+    pub fn power_regen(&self, power_type: i32) -> f32 {
+        self.power_regen_mult
+            .iter()
+            .filter(|(power, _)| *power == power_type)
+            .map(|(_, mult)| mult)
+            .product()
+    }
+}
+
+fn pct(amount: f32) -> f32 {
+    1.0 + amount / 100.0
+}
+
+/// Add `amount` to the stats (index 0 Strength, 1 Agility, 2 Stamina,
+/// 3 Intellect) that `selects` picks.
+fn add_to_stats(stats: &mut UnitStats, amount: f32, selects: impl Fn(usize) -> bool) {
+    let fields = [
+        &mut stats.strength,
+        &mut stats.agility,
+        &mut stats.stamina,
+        &mut stats.intellect,
+    ];
+    for (index, field) in fields.into_iter().enumerate() {
+        if selects(index) {
+            *field += amount;
+        }
+    }
+}
+
+fn each_school(mask: i32, mut apply: impl FnMut(usize)) {
+    (0..SCHOOL_COUNT)
+        .filter(|&bit| mask as u32 & (1 << bit) != 0)
+        .for_each(&mut apply);
+}
+
+fn multiply_entry(entries: &mut Vec<(i32, f32)>, key: i32, factor: f32) {
+    match entries.iter_mut().find(|(power, _)| *power == key) {
+        Some((_, value)) => *value *= factor,
+        None => entries.push((key, factor)),
+    }
+}
+
+#[derive(Default)]
+struct Accumulator {
+    combat: AuraStatMods,
+    stats: StatModifiers,
+    fastest: f32,
+    always: f32,
+    slowest: f32,
+    immobile: bool,
+    /// MOD_CASTING_SPEED_NOT_STACK: strongest only.
+    haste_not_stack: f32,
+}
+
+/// Aura stat changes (additive percentages, as `StatModifiers` defines them)
+/// and combat multipliers of `auras`.
+pub fn compute(auras: &ActiveAuras) -> (StatModifiers, AuraStatMods) {
+    let mut acc = Accumulator {
+        always: 1.0,
+        ..default()
+    };
+    for aura in auras.iter() {
+        apply_aura(&mut acc, aura);
+    }
+    acc.combat.movement_speed = if acc.immobile {
+        0.0
+    } else {
+        (pct(acc.fastest) * acc.always * pct(acc.slowest)).max(0.0)
+    };
+    acc.stats.haste_pct += acc.haste_not_stack;
+    (acc.stats, acc.combat)
+}
+
+fn apply_aura(acc: &mut Accumulator, aura: &AuraInstance) {
+    let stacks = aura.stack_multiplier();
+    for effect in &aura.effects {
+        let amount = effect.amount * stacks;
+        let misc = effect.misc_values[0];
+        let combat = &mut acc.combat;
+        let stats = &mut acc.stats;
+        match effect.aura_type {
+            // MiscValue is the stat index; negative is every stat.
+            MOD_STAT => add_to_stats(&mut stats.primary_flat, amount, |index| {
+                misc < 0 || misc as usize == index
+            }),
+            // MiscValueB is a stat bitmask; 0 is every stat (TrinityCore
+            // `HandleModTotalPercentStat`).
+            MOD_TOTAL_STAT_PERCENTAGE => {
+                let mask = effect.misc_values[1];
+                add_to_stats(&mut stats.primary_pct, amount, |index| {
+                    mask == 0 || mask & (1 << index) != 0
+                })
+            }
+            MOD_CRIT_PCT => stats.crit_pct += amount,
+            // Retail 12.x haste is one stat: melee, ranged and spell haste
+            // auras all add to it.
+            MOD_MELEE_HASTE
+            | MOD_RANGED_HASTE
+            | MOD_MELEE_RANGED_HASTE
+            | MOD_MELEE_RANGED_HASTE_2
+            | MELEE_SLOW
+            | HASTE_SPELLS => stats.haste_pct += amount,
+            MOD_CASTING_SPEED_NOT_STACK => acc.haste_not_stack = acc.haste_not_stack.max(amount),
+            MASTERY => stats.mastery_points += amount,
+            MOD_INCREASE_HEALTH_PERCENT => stats.max_health_pct += amount,
+            MOD_DAMAGE_PERCENT_DONE => each_school(misc, |school| {
+                combat.damage_done_mult[school] *= pct(amount)
+            }),
+            MOD_DAMAGE_PERCENT_TAKEN => each_school(misc, |school| {
+                combat.damage_taken_mult[school] *= pct(amount)
+            }),
+            MOD_HEALING_DONE_PERCENT => combat.healing_done_mult *= pct(amount),
+            MOD_HEALING_PCT | MOD_HEALING_RECEIVED => combat.healing_taken_mult *= pct(amount),
+            MOD_AUTOATTACK_DAMAGE => combat.autoattack_damage_mult *= pct(amount),
+            MOD_POWER_REGEN_PERCENT => {
+                multiply_entry(&mut combat.power_regen_mult, misc, pct(amount))
+            }
+            MOD_MANA_REGEN_PCT => multiply_entry(&mut combat.power_regen_mult, 0, pct(amount)),
+            MOD_INCREASE_SPEED => acc.fastest = acc.fastest.max(amount),
+            MOD_SPEED_ALWAYS => acc.always *= pct(amount),
+            MOD_DECREASE_SPEED => acc.slowest = acc.slowest.min(amount),
+            MOD_ROOT | MOD_ROOT_2 | MOD_STUN => acc.immobile = true,
+            _ => {}
+        }
+    }
+}

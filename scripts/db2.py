@@ -39,7 +39,7 @@ TABLES = [
     "SpellAuraOptions", "SpellCategories", "SpellCategory", "SpellLevels",
     "SpellClassOptions", "SpellProcsPerMinute", "SpellProcsPerMinuteMod",
     "SpellShapeshift", "SpellShapeshiftForm", "SpellInterrupts",
-    "SpellTargetRestrictions", "SpellEquippedItems", "SpellRadius",
+    "SpellTargetRestrictions", "SpellEquippedItems", "SpellRadius", "SpellLabel",
     "SpellScaling", "SpellEmpower", "SpellEmpowerStage", "SpellXSpellVisual",
     "SkillLine", "SkillLineAbility", "ChrClasses", "ChrSpecialization",
     "SpecializationSpells", "PowerType", "ChrClassesXPowerTypes",

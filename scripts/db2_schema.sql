@@ -230,6 +230,14 @@ CREATE TABLE spell_class_options (
 );
 CREATE INDEX IF NOT EXISTS spell_class_options_spell_id ON spell_class_options(SpellID);
 
+DROP TABLE IF EXISTS spell_label;
+CREATE TABLE spell_label (
+  ID INTEGER PRIMARY KEY,
+  LabelID INTEGER NOT NULL DEFAULT 0,
+  SpellID INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS spell_label_spell_id ON spell_label(SpellID);
+
 DROP TABLE IF EXISTS spell_procs_per_minute;
 CREATE TABLE spell_procs_per_minute (
   ID INTEGER PRIMARY KEY,

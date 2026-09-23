@@ -4,6 +4,8 @@ use lightyear::prelude::*;
 use shared::components::{CombatStatus, Health, Npc, Position};
 use shared::protocol::{CombatChannel, CombatEvent, CombatEventType};
 
+use crate::auras::AuraStatMods;
+use crate::auras::procs::{self, AuraEvent, PendingAuraEvents};
 use crate::creature_ai::SpawnPoint;
 use crate::interest::{InterestDirtyQueue, NetworkVisibility, mark_interest_position_changed};
 use crate::networking::CombatTarget;
@@ -139,6 +141,7 @@ type AutoAttackers<'w, 's> = Query<
         &'static CombatTarget,
         &'static mut AutoAttack,
         &'static Position,
+        Option<&'static AuraStatMods>,
     ),
 >;
 
@@ -150,6 +153,7 @@ type AutoAttackTargets<'w, 's> = Query<
         &'static mut Health,
         Option<&'static mut LastDamager>,
         Has<Npc>,
+        Option<&'static AuraStatMods>,
     ),
 >;
 
@@ -163,6 +167,7 @@ pub(crate) struct AutoAttackParams<'w, 's> {
     combat_statuses: Query<'w, 's, &'static CombatStatus>,
     replication_dirty: Option<Res<'w, ReplicationDirtyQueue>>,
     player_deaths: MessageWriter<'w, crate::death::PlayerDeathTransition>,
+    aura_events: Option<ResMut<'w, PendingAuraEvents>>,
 }
 
 /// Process auto-attacks: tick timers, deal damage when in range and timer ready.
@@ -171,7 +176,9 @@ pub(crate) fn auto_attack_system(time: Res<Time>, mut params: AutoAttackParams) 
     let (elapsed, combat_expires_at) = combat_timing(&time);
     let mut events = Vec::new();
 
-    for (attacker_entity, combat_target, mut auto_attack, attacker_pos) in &mut params.attackers {
+    for (attacker_entity, combat_target, mut auto_attack, attacker_pos, attacker_mods) in
+        &mut params.attackers
+    {
         let Some(target_entity) = ready_auto_attack_target(combat_target, &mut auto_attack, dt)
         else {
             continue;
@@ -179,6 +186,7 @@ pub(crate) fn auto_attack_system(time: Res<Time>, mut params: AutoAttackParams) 
         let Some(outcome) = try_swing(
             attacker_entity,
             attacker_pos,
+            attacker_mods,
             &mut params.targets,
             target_entity,
             &mut auto_attack,
@@ -194,6 +202,11 @@ pub(crate) fn auto_attack_system(time: Res<Time>, mut params: AutoAttackParams) 
             combat_expires_at,
         );
         mark_replication_changed(params.replication_dirty.as_deref(), target_entity);
+        if let Some(pending) = params.aura_events.as_deref_mut() {
+            pending
+                .0
+                .extend(swing_aura_events(attacker_entity, target_entity, &outcome));
+        }
         record_swing_events(
             &mut params.commands,
             &mut events,
@@ -268,6 +281,49 @@ fn maintain_in_combat_state_system(
     }
 }
 
+/// Melee swing proc/interrupt events: DEAL/TAKE_MELEE_SWING and
+/// TAKE_ANY_DAMAGE, plus KILL/DEATH on a lethal swing.
+fn swing_aura_events(attacker: Entity, target: Entity, outcome: &SwingOutcome) -> Vec<AuraEvent> {
+    let mut events = vec![AuraEvent {
+        actor: attacker,
+        target: Some(target),
+        actor_mask: [
+            procs::PROC_DEAL_MELEE_SWING | procs::PROC_MAIN_HAND_WEAPON_SWING,
+            0,
+        ],
+        target_mask: [
+            procs::PROC_TAKE_MELEE_SWING | procs::PROC_TAKE_ANY_DAMAGE,
+            0,
+        ],
+        spell_id: None,
+        can_proc: true,
+        periodic: false,
+    }];
+    if outcome.npc_died || outcome.player_died {
+        events.push(AuraEvent {
+            actor: attacker,
+            target: Some(target),
+            actor_mask: [procs::PROC_KILL, 0],
+            target_mask: [procs::PROC_DEATH, 0],
+            spell_id: None,
+            can_proc: true,
+            periodic: false,
+        });
+    }
+    events
+}
+
+/// Base swing damage × attacker physical damage done and auto-attack
+/// multipliers × target physical damage taken (`AuraStatMods`).
+fn swing_damage(attacker: Option<&AuraStatMods>, target: Option<&AuraStatMods>) -> f32 {
+    const PHYSICAL: u32 = 1;
+    let done = attacker.map_or(1.0, |mods| {
+        mods.damage_done(PHYSICAL) * mods.autoattack_damage_mult
+    });
+    let taken = target.map_or(1.0, |mods| mods.damage_taken(PHYSICAL));
+    (BASE_DAMAGE * done * taken).max(0.0).round()
+}
+
 struct SwingOutcome {
     damage: f32,
     npc_died: bool,
@@ -278,7 +334,8 @@ struct SwingOutcome {
 fn try_swing(
     attacker_entity: Entity,
     attacker_pos: &Position,
-    targets: &mut Query<(&Position, &mut Health, Option<&mut LastDamager>, Has<Npc>)>,
+    attacker_mods: Option<&AuraStatMods>,
+    targets: &mut AutoAttackTargets,
     target_entity: Entity,
     auto_attack: &mut AutoAttack,
     commands: &mut Commands,
@@ -286,13 +343,15 @@ fn try_swing(
     if auto_attack.timer > 0.0 {
         return None;
     }
-    let Ok((target_pos, mut health, last_damager, is_npc)) = targets.get_mut(target_entity) else {
+    let Ok((target_pos, mut health, last_damager, is_npc, target_mods)) =
+        targets.get_mut(target_entity)
+    else {
         return None;
     };
     if !in_melee_range(attacker_pos, target_pos) || health.current <= 0.0 {
         return None;
     }
-    let damage = BASE_DAMAGE;
+    let damage = swing_damage(attacker_mods, target_mods);
     let became_lethal = crate::death::apply_health_damage(&mut health, damage);
     let npc_died = is_npc && became_lethal;
     let player_died = !is_npc && became_lethal;

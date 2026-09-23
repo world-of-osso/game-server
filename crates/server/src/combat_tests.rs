@@ -89,7 +89,7 @@ fn run_attack_tick(app: &mut App) {
         |time: Res<Time>,
          mut commands: Commands,
          mut attackers: Query<(Entity, &CombatTarget, &mut AutoAttack, &Position)>,
-         mut targets: Query<(&Position, &mut Health, Option<&mut LastDamager>, Has<Npc>)>,
+         mut targets: AutoAttackTargets,
          combat_statuses: Query<&CombatStatus>| {
             let dt = time.delta_secs();
             let combat_expires_at = time.elapsed_secs_f64() + COMBAT_GRACE_SECS;
@@ -99,7 +99,17 @@ fn run_attack_tick(app: &mut App) {
                 }
                 let Some(te) = combat_target.0 else { continue };
                 aa.timer -= dt;
-                if try_swing(attacker, apos, &mut targets, te, &mut aa, &mut commands).is_some() {
+                if try_swing(
+                    attacker,
+                    apos,
+                    None,
+                    &mut targets,
+                    te,
+                    &mut aa,
+                    &mut commands,
+                )
+                .is_some()
+                {
                     refresh_combat_state(
                         &mut commands,
                         &combat_statuses,

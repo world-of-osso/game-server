@@ -1,6 +1,6 @@
 # Spell Casting
 
-Server-authoritative spell casting in `crates/server/src/spell_cast/`. `SpellCastPlugin` validates `SpellCastIntent`, runs cast bars and channels, spends power, starts GCD/cooldowns/charges, selects implicit targets and resolves effects from [[spell-info]] records. Power pools regenerate from the DB2 `power_type` table and replicate as `UnitPowers`. Auras are a hook only (`AuraApplier`, no-op by default).
+Server-authoritative spell casting in `crates/server/src/spell_cast/`. `SpellCastPlugin` validates `SpellCastIntent`, runs cast bars and channels, spends power, starts GCD/cooldowns/charges, selects implicit targets and resolves effects from [[spell-info]] records. Power pools regenerate from the DB2 `power_type` table and replicate as `UnitPowers`. Aura effects, spell modifiers and aura stat modifiers come from [[auras]].
 
 ## Pipeline
 
@@ -8,6 +8,7 @@ Server-authoritative spell casting in `crates/server/src/spell_cast/`. `SpellCas
 2. **Validate**, in order:
    - player casters must know the spell (`class_progression::knows_spell` on [[class-progression]] `KnownSpells`; NPCs exempt; triggered spells skip it);
    - caster alive;
+   - not stunned, silenced or pacified ([[auras]] crowd control);
    - no active `CastState`;
    - school not locked out;
    - GCD of the spell's `StartRecoveryCategory`;
@@ -27,16 +28,17 @@ Server-authoritative spell casting in `crates/server/src/spell_cast/`. `SpellCas
    - The GCD starts here: `StartRecoveryTime`, keyed by category, and sends `SpellCooldownUpdate{is_gcd}`.
    - Instant spells execute now.
    - Cast-time spells insert a replicated `CastState` and log `CastStart`.
-   - Channeled spells (`SPELL_ATTR1` 0x4/0x40 with a positive duration) execute at start. `CastState::channel` then ticks at the shortest effect `EffectAuraPeriod` for the spell duration.
+   - Channeled spells (`SPELL_ATTR1` 0x4/0x40 with a positive duration) execute at start. `CastState::channel` runs for the spell duration (Duration mods); the channel's periodic effects tick as [[auras]].
 5. **Execute** (instant, cast completion, channel start), in order:
    - recheck caster, target and costs;
    - plan all targets;
    - spend costs;
    - start cooldown and charges;
    - log `CastSuccess`;
-   - resolve effects in index order.
+   - resolve effects in index order, with each target's aura effects applied as one aura after the other effects;
+   - push proc events (cast success, one spell hit per distinct target) and spend charged spell mods.
    - A failed completion sends `CastFailed`.
-6. **Cancel:** stop requests, caster death and movement all remove `CastState`. A cancelled channel calls `AuraApplier::channel_ended`.
+6. **Cancel:** stop requests, caster death and movement all remove `CastState`. An ended channel removes its caster's auras of that spell (`auras::channel_ended`).
 
 ### Movement
 
@@ -45,9 +47,13 @@ Server-authoritative spell casting in `crates/server/src/spell_cast/`. `SpellCas
 - `advance_casts` runs after input and cancels a non-cast-while-moving cast when `Moving` is true.
 - `MovementSpeed` cannot serve as the signal: it holds run/walk speed even while idle.
 
+### Spell modifiers
+
+The caster's [[auras]] spell modifiers (107/108/218/219) adjust cast time (ChangeCastTime, then ÷ spell haste), channel duration, cooldown and category cooldown, GCD (StartCooldown), max range, costs (PowerCostN by `OrderIndex`), effect base points, coefficients, crit and damage/heal amounts.
+
 ### Costs
 
-- Every `SpellPower` row with `RequiredAuraSpellID = 0` applies. Aura-gated rows need the aura runtime.
+- Every `SpellPower` row with `RequiredAuraSpellID = 0` applies; a row with `RequiredAuraSpellID` applies only while the caster has that aura (priest spec passives gate most priest costs).
 - Amount (raw units) = `ManaCost + PowerCostPct% × base`. For mana the base is `CharacterStats.base_mana` (gtBaseMP, [[character-stats]]); a caster without `CharacterStats` fails with `NotEnoughResource`. For other pools and health it is the max pool (TrinityCore `Spell::CalcPowerCost` uses the max for non-mana powers).
 - Power type -2 costs health.
 - A missing pool or insufficient power fails with `NotEnoughResource`.
@@ -61,7 +67,7 @@ Server-authoritative spell casting in `crates/server/src/spell_cast/`. `SpellCas
 | Spell cooldown | spell | `RecoveryTime` |
 | Category cooldown | `Category` | `CategoryRecoveryTime` |
 | GCD | `StartRecoveryCategory` | `StartRecoveryTime` |
-| Charges | `ChargeCategory` | `spell_category` `MaxCharges` and `ChargeRecoveryTime`, recharging one at a time |
+| Charges | `ChargeCategory` | `spell_category` `MaxCharges` and `ChargeRecoveryTime` with charge auras 411/453/454, recharging one at a time |
 | School lockouts | school bit | interrupts |
 
 - `SpellCooldownUpdate` carries `max(recovery, category recovery)`.
@@ -74,7 +80,7 @@ Server-authoritative spell casting in `crates/server/src/spell_cast/`. `SpellCas
 | `CastFailed{reason, detail}` | caster owner | rejected request or failed completion |
 | `SpellCooldownUpdate` | caster owner | GCD start; cooldown start |
 | `SpellChargesUpdate` | caster owner | charge spent |
-| `CombatLogEvent` | owners of source and target (once each) | CastStart, CastSuccess, Damage, Heal, Energize, Interrupt, Death |
+| `CombatLogEvent` | owners of source and target (once each) | CastStart, CastSuccess, Damage, Heal, Energize, Interrupt, Death, Miss(Immune); aura events in [[auras]] |
 
 - Other clients in range do not receive combat log events yet.
 - Melee auto-attack still broadcasts the old `CombatEvent` to every client. Retirement: remove it when the client renders `CombatLogEvent`.
@@ -109,10 +115,11 @@ Registry: `effects::handler(effect_id)`. Unhandled effect IDs are skipped and lo
 | ID | Name | Handling |
 |---|---|---|
 | 2 | SCHOOL_DAMAGE | scaled amount (below), crit, shared death path |
-| 6 | APPLY_AURA | `AuraApplier::apply_aura` hook, no-op by default |
+| 6, 35, 65 | APPLY_AURA, APPLY_AREA_AURA_PARTY/RAID | grouped per target, `auras::apply_aura` |
 | 10 | HEAL | scaled amount, crit, clamped to max, overheal logged |
 | 30 | ENERGIZE | `BasePoints` raw units of power `EffectMiscValue_0`, clamped, excess logged |
 | 31 | WEAPON_PERCENT_DAMAGE | `BasePoints`% of a weapon hit |
+| 38 | DISPEL | `auras::dispel` of `EffectMiscValue_0`, up to `BasePoints` (min 1) auras |
 | 58, 121 | WEAPON_DAMAGE, NORMALIZED_WEAPON_DMG | weapon hit + `BasePoints` |
 | 64 | TRIGGER_SPELL | casts `EffectTriggerSpell` at each target, bounded (below) |
 | 68 | INTERRUPT_CAST | cancels an interruptible `CastState` and locks the interrupted spell's school mask for this spell's duration (Kick 1766: 6 s) |
@@ -126,7 +133,8 @@ Formulas:
 - **Scaled amount:** `BasePoints + BonusCoefficient × SP + BonusCoefficientFromAP × AP`.
   - SP and AP are `CharacterStats.spell_power` / `attack_power` ([[character-stats]]).
   - Units without `CharacterStats` (NPCs) have SP = AP = 0.
-- **Crit:** `CharacterStats.crit_pct` (5% base for players, 0 for NPCs). A crit deals ×2.
+- **Crit:** `CharacterStats.crit_pct` (5% base for players, 0 for NPCs; MOD_CRIT_PCT auras fold in through `StatModifiers`) + CritChance mods. A crit adds 100% of the amount, scaled by CritDamageAndHealing mods.
+- **Damage and heal mods:** see [[auras]]: spell mods, done/taken multipliers, immunity and absorbs.
 - **Weapon hit:** 10 (the auto-attack base) + `AP / 6 × 2.0`. There is no server weapon data.
 
 Damage and heal side effects:
@@ -152,27 +160,20 @@ Damage and heal side effects:
 - **NPCs** get `UnitLevel` (template `min_level`) and empty `UnitPowers`. Creature class/level power stats are not imported.
 - **Players:** `UnitLevel` is owned by [[class-progression]]; the cast pipeline only reads levels.
 
-## Aura task hook points
-
-- `effects::AuraApplier`, installed through the `AuraApplierHook` resource:
-  - `apply_aura(world, AuraApplication{caster, target, spell_id, effect_index})` for effect 6;
-  - `channel_tick(world, caster, spell_id)` on each channel tick;
-  - `channel_ended` on channel completion or cancel.
-- The hook runs inside `resource_scope`, so it must not re-enter the hook synchronously.
-- Aura-gated power costs (`RequiredAuraSpellID`) and shapeshift checks are skipped until auras exist.
-
 ## Sources
 
 - [spell_cast/mod.rs](../../../crates/server/src/spell_cast/mod.rs) — pipeline, `SpellHistory`, messages
 - [spell_cast/targets.rs](../../../crates/server/src/spell_cast/targets.rs) — implicit targets, range
-- [spell_cast/effects.rs](../../../crates/server/src/spell_cast/effects.rs) — handlers, `AuraApplier`
+- [spell_cast/effects.rs](../../../crates/server/src/spell_cast/effects.rs) — handlers, damage/heal paths
 - [spell_cast/powers.rs](../../../crates/server/src/spell_cast/powers.rs) — `PowerTypeTable`, pools, regen, `UnitPowers`
 - [spell_cast/tests.rs](../../../crates/server/src/spell_cast/tests.rs) — real-DB App tests
+- [spell_cast/test_harness.rs](../../../crates/server/src/spell_cast/test_harness.rs) — shared real-DB harness (also used by aura tests)
 - [spec](../../specs/cast-presentation.md)
 
 ## See Also
 
 - [[spell-info]] — the data this resolves
 - [[character-stats]] — spell power, attack power, crit, base mana
+- [[auras]] — aura runtime, procs, spell and stat modifiers
 - [[combat]] — melee, combat state, death
 - [[networking]] — input ordering, replication dirty queue

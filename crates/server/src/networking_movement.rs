@@ -1,7 +1,8 @@
 use bevy::prelude::*;
-use shared::aura::Auras;
 use shared::components::{MovementSpeed, Player, Position, Rotation, VerticalVelocity};
 use shared::protocol::PlayerInput;
+
+use crate::auras::AuraStatMods;
 
 pub(super) const DEFAULT_RUN_SPEED: f32 = 7.0;
 pub(super) const DEFAULT_WALK_SPEED: f32 = 2.5;
@@ -12,7 +13,7 @@ pub(super) type PlayerMovement = (
     &'static mut Rotation,
     &'static mut MovementSpeed,
     &'static mut VerticalVelocity,
-    Option<&'static Auras>,
+    Option<&'static AuraStatMods>,
     Option<&'static shared::casting::CastState>,
 );
 
@@ -75,7 +76,7 @@ fn stop_for_blocking_cast(
 
 fn update_rotation_and_speed(
     input: &PlayerInput,
-    auras: Option<&Auras>,
+    auras: Option<&AuraStatMods>,
     rotation: &mut Mut<'_, Rotation>,
     speed: &mut Mut<'_, MovementSpeed>,
 ) -> (f32, MovementChanges) {
@@ -127,7 +128,7 @@ fn apply_input_translation(
 /// Compute effective movement speed from input, auras, and direction.
 pub(super) fn compute_movement_speed(
     input: &PlayerInput,
-    auras: Option<&Auras>,
+    auras: Option<&AuraStatMods>,
     direction_length: f32,
 ) -> f32 {
     let base = if input.swimming {
@@ -137,7 +138,7 @@ pub(super) fn compute_movement_speed(
     } else {
         DEFAULT_WALK_SPEED
     };
-    let aura_multiplier = auras.map_or(1.0, Auras::movement_speed_multiplier);
+    let aura_multiplier = auras.map_or(1.0, |mods| mods.movement_speed);
     let direction_multiplier =
         movement_speed_multiplier(input.facing_yaw, &input.direction, direction_length);
     base * aura_multiplier * direction_multiplier

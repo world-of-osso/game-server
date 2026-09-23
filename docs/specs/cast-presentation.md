@@ -7,10 +7,10 @@ Server-side spell casting in `crates/server/src/spell_cast/`: validation, cast b
 - [x] Accept spell requests only for the authenticated in-world connection's player; a connection's stop request must not cancel another entity's cast.
 - [x] Reject unknown spells, dead casters, active casts, school lockouts, GCD, cooldown, exhausted charges, moving casters (cast-time/channel spells), wrong target relation, out-of-range (min and max) targets and unaffordable costs, sending `CastFailed` to the owner.
 - [x] Instant spells resolve in the receiving tick; cast-time spells resolve on completion; channels resolve at start and tick per aura period.
-- [x] Spend every non-aura-gated `SpellPower` cost in raw DB2 units (`PowerCostPct` of base mana for mana, of the max pool otherwise).
+- [x] Spend every applicable `SpellPower` cost in raw DB2 units (`PowerCostPct` of base mana for mana, of the max pool otherwise); aura-gated rows only while the caster has the aura.
 - [x] Start GCD (at cast start), cooldown, category cooldown and charges; send `SpellCooldownUpdate`/`SpellChargesUpdate` to the owner.
 - [x] Movement input cancels casts that are not cast-while-moving.
-- [x] Resolve effects 2, 6 (aura hook), 10, 30, 31, 58, 64 (bounded depth), 68, 121, 136; log unknown effects once per spell and skip them.
+- [x] Resolve effects 2, 6/35/65 (auras), 10, 30, 31, 38, 58, 64 (bounded depth), 68, 121, 136; log unknown effects once per spell and skip them.
 - [x] Fail the cast on unsupported implicit targets of handled effects.
 - [x] Emit `CombatLogEvent` (CastStart, CastSuccess, Damage, Heal, Energize, Interrupt, Death) to source and target owners.
 - [x] Reject player casts of spells not in `KnownSpells` (`NotSupported`, "spell not known"); NPC casters exempt.
@@ -25,7 +25,7 @@ Server-side spell casting in `crates/server/src/spell_cast/`: validation, cast b
 
 - `crates/server/src/spell_cast/mod.rs`: receivers, validation, start/complete/cancel, `SpellHistory`, messages.
 - `crates/server/src/spell_cast/targets.rs`: implicit targets, relations, range.
-- `crates/server/src/spell_cast/effects.rs`: effect registry, damage/heal paths, `AuraApplier`.
+- `crates/server/src/spell_cast/effects.rs`: effect registry, damage/heal paths.
 - `crates/server/src/spell_cast/powers.rs`: `PowerTypeTable`, `PowerPools`, regen, `UnitPowers` sync.
 - `crates/server/src/networking.rs`: `Moving` input marker.
 - `crates/server/src/combat.rs`: `enter_combat`, `mark_npc_dead_world`.
@@ -38,7 +38,7 @@ Server-side spell casting in `crates/server/src/spell_cast/`: validation, cast b
 
 ## Known gaps (current cycle)
 
-- [ ] Auras, aura-gated costs, procs, periodic effects: next task (`AuraApplier`).
+- [x] Auras, aura-gated costs, procs, periodic effects: [auras spec](auras.md).
 - [ ] Players have no gear or weapon stats (see [character stats](character-stats.md)); weapon hits use a placeholder.
 - [ ] No faction model: players are allies, NPCs enemies. No facing check. NPCs do not cast and have no power pools.
 - [ ] Combat log reaches only source/target owners, not nearby observers.
