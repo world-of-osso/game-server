@@ -201,6 +201,7 @@ Examples:
 Every aura change recomputes two components, each written only when its value changed:
 
 - **`stats::StatModifiers`** (additive percentages, [[character-stats]]): `update_character_stats` folds it into `CharacterStats`, so each stat below is applied exactly once, there.
+  Percentages add across auras: two +10% stamina auras give +20%. TrinityCore multiplies them (`GetTotalAuraMultiplier`), which gives +21%. The results differ only when several auras modify the same stat.
 
 | Field | Aura types |
 |---|---|
