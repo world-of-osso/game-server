@@ -1,7 +1,7 @@
 use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 use lightyear::prelude::*;
-use shared::components::GuildMembership;
+use shared::components::{GuildMembership, Player, Position, Zone};
 use shared::protocol::{
     AuthChannel, ChatChannel, ChatMessage, ChatType, EmoteEvent, EmoteIntent, EmoteKind,
     GuildAcceptInviteRequest, GuildAcceptInviteResponse, GuildInviteRequest, GuildInviteResponse,
@@ -9,8 +9,34 @@ use shared::protocol::{
 };
 
 use crate::ignore_list::PlayerIgnoreListState;
-use crate::networking::{ChatHistoryBuffer, CombatTarget, PlayerLink};
+use crate::networking::{ChatHistoryBuffer, ChatHistoryEntry, CombatTarget, PlayerLink};
 use crate::persistence::{self, ClientId, GameDatabase};
+
+/// Retail /say and /emote hearing range in yards.
+const SAY_RANGE: f32 = 25.0;
+/// Retail /yell hearing range in yards (same zone only).
+const YELL_RANGE: f32 = 300.0;
+const CHAT_HISTORY_LIMIT: usize = 100;
+
+/// Party identity for party chat routing. The group system inserts this on every
+/// member's player entity and removes it on leave; no component means no party.
+#[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
+pub struct PartyMembership {
+    pub party_id: u64,
+}
+
+type ChatProfileQuery<'w, 's> = Query<
+    'w,
+    's,
+    (
+        &'static Player,
+        Option<&'static Position>,
+        Option<&'static Zone>,
+        Option<&'static GuildMembership>,
+        Option<&'static PartyMembership>,
+        Option<&'static PlayerIgnoreListState>,
+    ),
+>;
 
 #[derive(SystemParam)]
 pub(crate) struct ChatSystemQueries<'w, 's> {
@@ -30,8 +56,7 @@ pub(crate) struct ChatSystemQueries<'w, 's> {
             &'static PlayerLink,
         ),
     >,
-    players: Query<'w, 's, &'static shared::components::Player>,
-    guilds: Query<'w, 's, Option<&'static GuildMembership>>,
+    profiles: ChatProfileQuery<'w, 's>,
     presences: Query<
         'w,
         's,
@@ -39,7 +64,7 @@ pub(crate) struct ChatSystemQueries<'w, 's> {
             &'static mut shared::components::PresenceStatus,
             &'static mut crate::friends::PresenceTracker,
         ),
-        With<shared::components::Player>,
+        With<Player>,
     >,
     ignore_lists: Query<'w, 's, Option<&'static PlayerIgnoreListState>>,
     chat_senders: Query<'w, 's, (&'static PlayerLink, &'static mut MessageSender<ChatMessage>)>,
@@ -52,41 +77,37 @@ pub(crate) struct ChatSystemQueries<'w, 's> {
 
 pub fn process_chat_messages(mut q: ChatSystemQueries) {
     let activity_at = q.time.elapsed();
-    let collected = collect_chat_messages(&mut q.receivers, &q.players, &q.guilds);
-    let (collected, mut collected_emotes) = split_chat_emotes(collected);
-    collected_emotes.extend(collect_emote_messages(&mut q.emote_receivers, &q.players));
+    let collected = collect_chat_messages(&mut q.receivers, &q.profiles);
+    let (mut collected, mut emotes) = split_chat_emotes(collected);
+    emotes.extend(collect_emote_messages(&mut q.emote_receivers, &q.profiles));
     for chat in &collected {
-        crate::friends::mark_player_activity(
-            chat.sender_entity,
-            &mut q.presences,
-            &mut q.auto_afk,
-            activity_at,
-            q.replication_dirty.as_deref(),
-        );
-        q.history.entries.push_back(chat.msg.clone());
-        if q.history.entries.len() > 100 {
-            q.history.entries.pop_front();
-        }
+        mark_activity(&mut q, chat.sender_entity, activity_at);
     }
-    for emote in &collected_emotes {
-        crate::friends::mark_player_activity(
-            emote.player_entity,
-            &mut q.presences,
-            &mut q.auto_afk,
-            activity_at,
-            q.replication_dirty.as_deref(),
-        );
-        q.history.entries.push_back(emote.chat.clone());
-        if q.history.entries.len() > 100 {
-            q.history.entries.pop_front();
-        }
+    for emote in &emotes {
+        mark_activity(&mut q, emote.player_entity, activity_at);
     }
-    route_chat_messages(&collected, &mut q.chat_senders, &q.guilds, &q.ignore_lists);
-    route_emote_messages(
-        &collected_emotes,
-        &mut q.chat_senders,
-        &mut q.emote_senders,
-        &q.ignore_lists,
+    collected.extend(emotes.iter().map(|emote| CollectedChat {
+        msg: emote.chat.clone(),
+        sender_entity: emote.player_entity,
+    }));
+    let deliveries = {
+        let online = online_participants(&q.chat_senders, &q.profiles);
+        collected
+            .iter()
+            .flat_map(|chat| route_and_record(chat, &online, &mut q.history))
+            .collect::<Vec<_>>()
+    };
+    send_deliveries(deliveries, &mut q.chat_senders);
+    route_emote_events(&emotes, &mut q.emote_senders, &q.ignore_lists);
+}
+
+fn mark_activity(q: &mut ChatSystemQueries, player: Entity, activity_at: std::time::Duration) {
+    crate::friends::mark_player_activity(
+        player,
+        &mut q.presences,
+        &mut q.auto_afk,
+        activity_at,
+        q.replication_dirty.as_deref(),
     );
 }
 
@@ -99,16 +120,22 @@ pub fn process_chat_history_requests(
         With<crate::auth::Authenticated>,
     >,
     player_links: Query<&PlayerLink>,
-    ignore_lists: Query<Option<&PlayerIgnoreListState>>,
+    players: Query<(&Player, Option<&PlayerIgnoreListState>)>,
     history: Res<ChatHistoryBuffer>,
     mut senders: Query<&mut MessageSender<shared::protocol::ChatHistoryResponse>>,
 ) {
     for (mut receiver, conn_entity) in receivers.iter_mut() {
         for req in receiver.receive() {
             let limit = usize::from(req.limit.clamp(1, 100));
-            let ignored_names =
-                ignored_names_for_connection(conn_entity, &player_links, &ignore_lists);
-            let messages = history_for_connection(&history, limit, ignored_names.as_deref());
+            let messages = player_links
+                .get(conn_entity)
+                .ok()
+                .and_then(|link| players.get(link.0).ok())
+                .map(|(player, ignore_list)| {
+                    let ignored = ignore_list.map(|list| list.names.as_slice());
+                    history_for_player(&history, limit, &player.name, ignored)
+                })
+                .unwrap_or_default();
             let Ok(mut sender) = senders.get_mut(conn_entity) else {
                 continue;
             };
@@ -123,7 +150,6 @@ pub fn process_chat_history_requests(
 struct CollectedChat {
     msg: ChatMessage,
     sender_entity: Entity,
-    sender_guild_id: Option<u32>,
 }
 
 struct CollectedEmote {
@@ -132,29 +158,45 @@ struct CollectedEmote {
     player_entity: Entity,
 }
 
+/// An online player as seen by chat routing.
+struct ChatParticipant<'a> {
+    entity: Entity,
+    name: &'a str,
+    position: Option<&'a Position>,
+    zone: Option<&'a Zone>,
+    guild_id: Option<u32>,
+    party_id: Option<u64>,
+    ignored: &'a [String],
+}
+
+#[derive(Debug, PartialEq)]
+enum ChatRoute {
+    /// Player entities that receive the message.
+    Deliver(Vec<Entity>),
+    /// The message is not delivered; the sender gets this system message instead.
+    Reject(String),
+}
+
+fn sender_name(profiles: &ChatProfileQuery, player: Entity) -> String {
+    profiles
+        .get(player)
+        .map(|(p, ..)| p.name.clone())
+        .unwrap_or_else(|_| "Unknown".into())
+}
+
 fn collect_chat_messages(
     receivers: &mut Query<(&mut MessageReceiver<ChatMessage>, &PlayerLink)>,
-    players: &Query<&shared::components::Player>,
-    guilds: &Query<Option<&GuildMembership>>,
+    profiles: &ChatProfileQuery,
 ) -> Vec<CollectedChat> {
     let mut outgoing = Vec::new();
     for (mut receiver, link) in receivers.iter_mut() {
-        let sender_name = players
-            .get(link.0)
-            .map(|p| p.name.clone())
-            .unwrap_or_else(|_| "Unknown".into());
-        let sender_guild_id = guilds.get(link.0).ok().flatten().map(|g| g.guild_id);
+        let sender_name = sender_name(profiles, link.0);
         for mut msg in receiver.receive() {
             msg.sender = sender_name.clone();
-            if matches!(msg.channel, ChatType::Guild) && sender_guild_id.is_none() {
-                warn!("[Chat] {} sent guild message but has no guild", msg.sender);
-                continue;
-            }
             info!("[Chat] {}: {}", msg.sender, msg.content);
             outgoing.push(CollectedChat {
                 msg,
                 sender_entity: link.0,
-                sender_guild_id,
             });
         }
     }
@@ -184,14 +226,11 @@ fn split_chat_emotes(collected: Vec<CollectedChat>) -> (Vec<CollectedChat>, Vec<
 
 fn collect_emote_messages(
     receivers: &mut Query<(&mut MessageReceiver<EmoteIntent>, &PlayerLink)>,
-    players: &Query<&shared::components::Player>,
+    profiles: &ChatProfileQuery,
 ) -> Vec<CollectedEmote> {
     let mut outgoing = Vec::new();
     for (mut receiver, link) in receivers.iter_mut() {
-        let sender_name = players
-            .get(link.0)
-            .map(|p| p.name.clone())
-            .unwrap_or_else(|_| "Unknown".into());
+        let sender_name = sender_name(profiles, link.0);
         for intent in receiver.receive() {
             info!("[Emote] {} {:?}", sender_name, intent.emote);
             outgoing.push(CollectedEmote {
@@ -208,35 +247,155 @@ fn collect_emote_messages(
     outgoing
 }
 
-fn route_chat_messages(
-    outgoing: &[CollectedChat],
-    conns: &mut Query<(&PlayerLink, &mut MessageSender<ChatMessage>)>,
-    guilds: &Query<Option<&GuildMembership>>,
-    ignore_lists: &Query<Option<&PlayerIgnoreListState>>,
-) {
-    for chat in outgoing {
-        match chat.msg.channel {
-            ChatType::Guild => {
-                send_to_guild(&chat.msg, chat.sender_guild_id, conns, guilds, ignore_lists)
-            }
-            _ => broadcast_to_all(&chat.msg, &mut *conns, ignore_lists),
+fn online_participants<'a>(
+    conns: &Query<(&PlayerLink, &mut MessageSender<ChatMessage>)>,
+    profiles: &'a ChatProfileQuery,
+) -> Vec<ChatParticipant<'a>> {
+    conns
+        .iter()
+        .filter_map(|(link, _)| {
+            let (player, position, zone, guild, party, ignore_list) = profiles.get(link.0).ok()?;
+            Some(ChatParticipant {
+                entity: link.0,
+                name: &player.name,
+                position,
+                zone,
+                guild_id: guild.map(|g| g.guild_id),
+                party_id: party.map(|p| p.party_id),
+                ignored: ignore_list.map_or(&[], |list| list.names.as_slice()),
+            })
+        })
+        .collect()
+}
+
+/// Route one message, record delivered copies in history, and return the
+/// `(player, message)` pairs to send.
+fn route_and_record(
+    chat: &CollectedChat,
+    online: &[ChatParticipant],
+    history: &mut ChatHistoryBuffer,
+) -> Vec<(Entity, ChatMessage)> {
+    let Some(sender) = online.iter().find(|p| p.entity == chat.sender_entity) else {
+        return Vec::new();
+    };
+    match route_chat(&chat.msg, sender, online) {
+        ChatRoute::Reject(text) => vec![(sender.entity, system_message(text))],
+        ChatRoute::Deliver(recipients) => {
+            record_history(history, &chat.msg, &recipients, online);
+            recipients
+                .into_iter()
+                .map(|entity| (entity, chat.msg.clone()))
+                .collect()
         }
     }
 }
 
-fn route_emote_messages(
+fn route_chat(
+    msg: &ChatMessage,
+    sender: &ChatParticipant,
+    online: &[ChatParticipant],
+) -> ChatRoute {
+    let hears = |recipient: &ChatParticipant| match &msg.channel {
+        ChatType::Say | ChatType::Emote => within_range(sender, recipient, SAY_RANGE),
+        ChatType::Yell => {
+            sender.zone == recipient.zone && within_range(sender, recipient, YELL_RANGE)
+        }
+        ChatType::Guild => sender.guild_id.is_some() && recipient.guild_id == sender.guild_id,
+        ChatType::Party => recipient.party_id == sender.party_id,
+        // Whisper echo only; the target is added below.
+        ChatType::Whisper(_) => recipient.entity == sender.entity,
+        // Clients may not author system or broadcast messages.
+        ChatType::System | ChatType::ServerBroadcast => false,
+    };
+    let mut recipients: Vec<Entity> = online
+        .iter()
+        .filter(|recipient| hears(recipient) && accepts_from(recipient, &msg.sender))
+        .map(|recipient| recipient.entity)
+        .collect();
+    match &msg.channel {
+        ChatType::Party if sender.party_id.is_none() => {
+            ChatRoute::Reject("You aren't in a party.".into())
+        }
+        ChatType::Whisper(target_name) => {
+            let Some(target) = online
+                .iter()
+                .find(|p| p.name.eq_ignore_ascii_case(target_name))
+            else {
+                return ChatRoute::Reject(format!(
+                    "No player named '{target_name}' is currently playing."
+                ));
+            };
+            // Retail: a whisper to someone ignoring the sender is dropped silently;
+            // the sender still sees their own echo and gets no error.
+            if target.entity != sender.entity && accepts_from(target, &msg.sender) {
+                recipients.push(target.entity);
+            }
+            ChatRoute::Deliver(recipients)
+        }
+        _ => ChatRoute::Deliver(recipients),
+    }
+}
+
+fn within_range(sender: &ChatParticipant, recipient: &ChatParticipant, range: f32) -> bool {
+    if sender.entity == recipient.entity {
+        return true;
+    }
+    let (Some(a), Some(b)) = (sender.position, recipient.position) else {
+        return false;
+    };
+    let (dx, dy, dz) = (a.x - b.x, a.y - b.y, a.z - b.z);
+    dx * dx + dy * dy + dz * dz <= range * range
+}
+
+fn accepts_from(recipient: &ChatParticipant, sender_name: &str) -> bool {
+    !sender_is_ignored(sender_name, Some(recipient.ignored))
+}
+
+fn system_message(content: String) -> ChatMessage {
+    ChatMessage {
+        sender: String::new(),
+        content,
+        channel: ChatType::System,
+    }
+}
+
+fn record_history(
+    history: &mut ChatHistoryBuffer,
+    msg: &ChatMessage,
+    recipients: &[Entity],
+    online: &[ChatParticipant],
+) {
+    let recipients = online
+        .iter()
+        .filter(|p| recipients.contains(&p.entity))
+        .map(|p| p.name.to_string())
+        .collect();
+    history.entries.push_back(ChatHistoryEntry {
+        message: msg.clone(),
+        recipients,
+    });
+    if history.entries.len() > CHAT_HISTORY_LIMIT {
+        history.entries.pop_front();
+    }
+}
+
+fn send_deliveries(
+    deliveries: Vec<(Entity, ChatMessage)>,
+    conns: &mut Query<(&PlayerLink, &mut MessageSender<ChatMessage>)>,
+) {
+    for (link, mut sender) in conns.iter_mut() {
+        for (_, msg) in deliveries.iter().filter(|(player, _)| *player == link.0) {
+            sender.send::<ChatChannel>(msg.clone());
+        }
+    }
+}
+
+fn route_emote_events(
     outgoing: &[CollectedEmote],
-    chat_senders: &mut Query<(&PlayerLink, &mut MessageSender<ChatMessage>)>,
     emote_senders: &mut Query<(&PlayerLink, &mut MessageSender<EmoteEvent>)>,
     ignore_lists: &Query<Option<&PlayerIgnoreListState>>,
 ) {
     for emote in outgoing {
-        for (link, mut chat_sender) in chat_senders.iter_mut() {
-            if !recipient_accepts_message(link.0, &emote.event.sender, ignore_lists) {
-                continue;
-            }
-            chat_sender.send::<ChatChannel>(emote.chat.clone());
-        }
         for (link, mut emote_sender) in emote_senders.iter_mut() {
             if !recipient_accepts_message(link.0, &emote.event.sender, ignore_lists) {
                 continue;
@@ -246,61 +405,25 @@ fn route_emote_messages(
     }
 }
 
-fn send_to_guild(
-    msg: &ChatMessage,
-    sender_guild_id: Option<u32>,
-    conns: &mut Query<(&PlayerLink, &mut MessageSender<ChatMessage>)>,
-    guilds: &Query<Option<&GuildMembership>>,
-    ignore_lists: &Query<Option<&PlayerIgnoreListState>>,
-) {
-    let Some(gid) = sender_guild_id else { return };
-    for (link, mut sender) in conns.iter_mut() {
-        let is_same_guild = guilds
-            .get(link.0)
-            .ok()
-            .flatten()
-            .is_some_and(|g| g.guild_id == gid);
-        if is_same_guild && recipient_accepts_message(link.0, &msg.sender, ignore_lists) {
-            sender.send::<ChatChannel>(msg.clone());
-        }
-    }
-}
-
-fn broadcast_to_all(
-    msg: &ChatMessage,
-    conns: &mut Query<(&PlayerLink, &mut MessageSender<ChatMessage>)>,
-    ignore_lists: &Query<Option<&PlayerIgnoreListState>>,
-) {
-    for (link, mut sender) in conns.iter_mut() {
-        if !recipient_accepts_message(link.0, &msg.sender, ignore_lists) {
-            continue;
-        }
-        sender.send::<ChatChannel>(msg.clone());
-    }
-}
-
-fn ignored_names_for_connection(
-    conn_entity: Entity,
-    player_links: &Query<&PlayerLink>,
-    ignore_lists: &Query<Option<&PlayerIgnoreListState>>,
-) -> Option<Vec<String>> {
-    let link = player_links.get(conn_entity).ok()?;
-    let ignore_list = ignore_lists.get(link.0).ok().flatten()?;
-    Some(ignore_list.names.clone())
-}
-
-fn history_for_connection(
+fn history_for_player(
     history: &ChatHistoryBuffer,
     limit: usize,
+    player_name: &str,
     ignored_names: Option<&[String]>,
 ) -> Vec<ChatMessage> {
     history
         .entries
         .iter()
-        .filter(|message| !sender_is_ignored(&message.sender, ignored_names))
+        .filter(|entry| {
+            entry
+                .recipients
+                .iter()
+                .any(|name| name.eq_ignore_ascii_case(player_name))
+        })
+        .filter(|entry| !sender_is_ignored(&entry.message.sender, ignored_names))
         .rev()
         .take(limit)
-        .cloned()
+        .map(|entry| entry.message.clone())
         .collect::<Vec<_>>()
         .into_iter()
         .rev()
@@ -536,7 +659,6 @@ pub fn process_target_messages(
 mod tests {
     use super::*;
     use bevy::ecs::system::RunSystemOnce;
-    use std::collections::VecDeque;
 
     fn apply_guild_accept(app: &mut App, player_entity: Entity) -> GuildAcceptInviteResponse {
         app.world_mut()
@@ -641,21 +763,227 @@ mod tests {
         assert!(!sender_is_ignored("Bob", Some(&ignored)));
     }
 
+    fn participant<'a>(
+        world: &mut World,
+        name: &'a str,
+        position: &'a Position,
+        ignored: &'a [String],
+    ) -> ChatParticipant<'a> {
+        ChatParticipant {
+            entity: world.spawn_empty().id(),
+            name,
+            position: Some(position),
+            zone: None,
+            guild_id: None,
+            party_id: None,
+            ignored,
+        }
+    }
+
+    fn at(x: f32) -> Position {
+        Position { x, y: 0.0, z: 0.0 }
+    }
+
+    fn chat(sender: &str, channel: ChatType) -> ChatMessage {
+        ChatMessage {
+            sender: sender.into(),
+            content: "hello".into(),
+            channel,
+        }
+    }
+
+    fn delivered(route: ChatRoute) -> Vec<Entity> {
+        match route {
+            ChatRoute::Deliver(recipients) => recipients,
+            ChatRoute::Reject(text) => panic!("expected delivery, got rejection {text:?}"),
+        }
+    }
+
     #[test]
-    fn history_for_connection_filters_ignored_senders() {
-        let history = ChatHistoryBuffer {
-            entries: VecDeque::from([
-                say_message("Alice", "first"),
-                say_message("Bob", "second"),
-                say_message("Alice", "third"),
-            ]),
+    fn say_reaches_players_within_25_yards_only() {
+        let mut world = World::new();
+        let (origin, near, far) = (at(0.0), at(20.0), at(40.0));
+        let online = [
+            participant(&mut world, "Alice", &origin, &[]),
+            participant(&mut world, "Bob", &near, &[]),
+            participant(&mut world, "Carl", &far, &[]),
+        ];
+
+        let route = route_chat(&chat("Alice", ChatType::Say), &online[0], &online);
+
+        assert_eq!(delivered(route), vec![online[0].entity, online[1].entity]);
+    }
+
+    #[test]
+    fn yell_reaches_300_yards_in_the_same_zone_only() {
+        let mut world = World::new();
+        let (origin, near, far) = (at(0.0), at(250.0), at(350.0));
+        let (elwynn, westfall) = (Zone { id: 12 }, Zone { id: 40 });
+        let mut online = [
+            participant(&mut world, "Alice", &origin, &[]),
+            participant(&mut world, "Bob", &near, &[]),
+            participant(&mut world, "Carl", &near, &[]),
+            participant(&mut world, "Dana", &far, &[]),
+        ];
+        online[0].zone = Some(&elwynn);
+        online[1].zone = Some(&elwynn);
+        online[2].zone = Some(&westfall);
+        online[3].zone = Some(&elwynn);
+
+        let route = route_chat(&chat("Alice", ChatType::Yell), &online[0], &online);
+
+        assert_eq!(delivered(route), vec![online[0].entity, online[1].entity]);
+    }
+
+    #[test]
+    fn whisper_reaches_only_the_target_plus_sender_echo() {
+        let mut world = World::new();
+        let origin = at(0.0);
+        let online = [
+            participant(&mut world, "Alice", &origin, &[]),
+            participant(&mut world, "Bob", &origin, &[]),
+            participant(&mut world, "Carl", &origin, &[]),
+        ];
+
+        let route = route_chat(
+            &chat("Alice", ChatType::Whisper("bob".into())),
+            &online[0],
+            &online,
+        );
+
+        assert_eq!(delivered(route), vec![online[0].entity, online[1].entity]);
+    }
+
+    #[test]
+    fn whisper_to_offline_name_returns_player_not_found_error() {
+        let mut world = World::new();
+        let origin = at(0.0);
+        let online = [participant(&mut world, "Alice", &origin, &[])];
+        let whisper = CollectedChat {
+            msg: chat("Alice", ChatType::Whisper("Zed".into())),
+            sender_entity: online[0].entity,
         };
+        let mut history = ChatHistoryBuffer::default();
+
+        let deliveries = route_and_record(&whisper, &online, &mut history);
+
+        assert_eq!(deliveries.len(), 1);
+        assert_eq!(deliveries[0].0, online[0].entity);
+        assert_eq!(deliveries[0].1.channel, ChatType::System);
+        assert_eq!(
+            deliveries[0].1.content,
+            "No player named 'Zed' is currently playing."
+        );
+        assert!(history.entries.is_empty());
+    }
+
+    #[test]
+    fn whisper_from_ignored_sender_is_dropped_without_error() {
+        let mut world = World::new();
+        let origin = at(0.0);
+        let bob_ignores = ["alice".to_string()];
+        let online = [
+            participant(&mut world, "Alice", &origin, &[]),
+            participant(&mut world, "Bob", &origin, &bob_ignores),
+        ];
+
+        let route = route_chat(
+            &chat("Alice", ChatType::Whisper("Bob".into())),
+            &online[0],
+            &online,
+        );
+
+        assert_eq!(delivered(route), vec![online[0].entity]);
+    }
+
+    #[test]
+    fn party_chat_without_a_group_returns_not_in_group_error() {
+        let mut world = World::new();
+        let origin = at(0.0);
+        let online = [
+            participant(&mut world, "Alice", &origin, &[]),
+            participant(&mut world, "Bob", &origin, &[]),
+        ];
+
+        let route = route_chat(&chat("Alice", ChatType::Party), &online[0], &online);
+
+        assert_eq!(route, ChatRoute::Reject("You aren't in a party.".into()));
+    }
+
+    #[test]
+    fn party_chat_reaches_only_party_members() {
+        let mut world = World::new();
+        let origin = at(0.0);
+        let mut online = [
+            participant(&mut world, "Alice", &origin, &[]),
+            participant(&mut world, "Bob", &origin, &[]),
+            participant(&mut world, "Carl", &origin, &[]),
+        ];
+        online[0].party_id = Some(7);
+        online[1].party_id = Some(7);
+        online[2].party_id = Some(8);
+
+        let route = route_chat(&chat("Alice", ChatType::Party), &online[0], &online);
+
+        assert_eq!(delivered(route), vec![online[0].entity, online[1].entity]);
+    }
+
+    #[test]
+    fn history_returns_only_messages_the_requester_received() {
+        let mut world = World::new();
+        let (origin, far) = (at(0.0), at(40.0));
+        let online = [
+            participant(&mut world, "Alice", &origin, &[]),
+            participant(&mut world, "Bob", &origin, &[]),
+            participant(&mut world, "Carl", &far, &[]),
+        ];
+        let mut history = ChatHistoryBuffer::default();
+        for (sender, channel) in [
+            (0, ChatType::Say),
+            (2, ChatType::Say),
+            (0, ChatType::Whisper("Bob".into())),
+        ] {
+            let collected = CollectedChat {
+                msg: chat(online[sender].name, channel),
+                sender_entity: online[sender].entity,
+            };
+            route_and_record(&collected, &online, &mut history);
+        }
+
+        let senders_seen_by = |name: &str| {
+            history_for_player(&history, 10, name, None)
+                .into_iter()
+                .map(|msg| (msg.sender, msg.channel))
+                .collect::<Vec<_>>()
+        };
+
+        assert_eq!(
+            senders_seen_by("bob"),
+            vec![
+                ("Alice".into(), ChatType::Say),
+                ("Alice".into(), ChatType::Whisper("Bob".into())),
+            ]
+        );
+        assert_eq!(
+            senders_seen_by("Carl"),
+            vec![("Carl".into(), ChatType::Say)]
+        );
+    }
+
+    #[test]
+    fn history_filters_senders_ignored_after_delivery() {
+        let mut history = ChatHistoryBuffer::default();
+        for (sender, content) in [("Alice", "first"), ("Bob", "second")] {
+            history.entries.push_back(ChatHistoryEntry {
+                message: say_message(sender, content),
+                recipients: vec!["Dana".into()],
+            });
+        }
         let ignored = vec!["alice".to_string()];
 
-        let filtered = history_for_connection(&history, 10, Some(&ignored));
+        let filtered = history_for_player(&history, 10, "Dana", Some(&ignored));
 
         assert_eq!(filtered.len(), 1);
-        assert_eq!(filtered[0].sender, "Bob");
         assert_eq!(filtered[0].content, "second");
     }
 

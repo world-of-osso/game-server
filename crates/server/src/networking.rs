@@ -99,7 +99,15 @@ impl FallTracker {
 
 #[derive(Resource, Default)]
 pub struct ChatHistoryBuffer {
-    pub entries: VecDeque<ChatMessage>,
+    pub entries: VecDeque<ChatHistoryEntry>,
+}
+
+/// A routed chat message plus the character names it was delivered to, so
+/// history replays only what each requester was allowed to see.
+#[derive(Clone, Debug)]
+pub struct ChatHistoryEntry {
+    pub message: ChatMessage,
+    pub recipients: Vec<String>,
 }
 
 /// Marks an entity for deferred despawn (next frame), allowing lightyear to process
