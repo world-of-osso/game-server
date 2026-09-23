@@ -78,6 +78,7 @@ fn class_spells(data: &WorldData) -> ClassSpells {
                 attack_power_per_agility: class.attack_power_per_agility,
                 learnable: Vec::new(),
                 specs: Vec::new(),
+                traits: class.traits.clone(),
             })
             .collect(),
     }
