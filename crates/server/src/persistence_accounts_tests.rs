@@ -313,6 +313,21 @@ fn create_character_rejects_invalid_race() {
 }
 
 #[test]
+fn create_character_rejects_invalid_class_and_race_class_combination() {
+    let db = temp_database();
+    let (account_id, _) = register_account(&db, "user1", "pass").unwrap();
+    assert_eq!(
+        create_character(&db, account_id, "Monk", 1, 10),
+        Err("Invalid class id 10".to_string())
+    );
+    assert_eq!(
+        create_character(&db, account_id, "Druid", 3, 11),
+        Err("Class 11 is not available for race 3".to_string())
+    );
+    assert!(list_characters_for_account(&db, account_id).is_empty());
+}
+
+#[test]
 fn create_character_rejects_name_too_short() {
     let db = temp_database();
     let (account_id, _) = register_account(&db, "user1", "pass").unwrap();

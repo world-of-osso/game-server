@@ -10,6 +10,7 @@ mod calendar;
 mod cast_presentation;
 #[cfg(test)]
 mod cast_presentation_tests;
+mod class_progression;
 mod collection;
 mod combat;
 mod creature_ai;
@@ -31,9 +32,11 @@ mod networking;
 mod persistence;
 mod persistence_accounts;
 mod persistence_character;
+mod persistence_progression;
 mod persistence_types;
 mod profession;
 mod pvp;
+mod race_class;
 mod reputation;
 mod rest;
 mod spell_info;
@@ -111,7 +114,8 @@ fn add_progression_plugins(app: &mut App) {
         .add_plugins(profession::ProfessionPlugin)
         .add_plugins(reputation::ReputationPlugin)
         .add_plugins(rest::RestPlugin)
-        .add_plugins(talent::TalentPlugin);
+        .add_plugins(talent::TalentPlugin)
+        .add_plugins(class_progression::ClassProgressionPlugin);
 }
 
 fn add_world_plugins(app: &mut App) {

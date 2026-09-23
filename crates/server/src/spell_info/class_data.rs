@@ -20,9 +20,11 @@ const CLASS_SKILL_LINES: [(u8, u32); 10] = [
     (9, 849),
     (11, 798),
 ];
-const MAX_LEVEL: u32 = 90;
+pub(crate) const MAX_LEVEL: u32 = 90;
 /// SkillLineAbilityAcquireMethod::NeverLearned (TrinityCore DBCEnums.h).
 const ACQUIRE_NEVER_LEARNED: u32 = 3;
+/// SPELL_ATTR0_PASSIVE in `spell_misc.Attributes_0`.
+const ATTR0_PASSIVE: u32 = 0x40;
 
 #[derive(Resource, Debug, Default, Serialize)]
 pub struct ClassSpells {
@@ -52,6 +54,8 @@ pub struct LearnableSpell {
     pub required_level: u32,
     pub supersedes_spell: u32,
     pub race_masks: [u32; 2],
+    /// SPELL_ATTR0_PASSIVE.
+    pub passive: bool,
 }
 
 #[derive(Debug, Serialize)]
@@ -74,9 +78,11 @@ pub struct SpecSpell {
     pub spell_id: u32,
     pub overrides_spell_id: u32,
     pub display_order: u32,
+    /// SPELL_ATTR0_PASSIVE.
+    pub passive: bool,
 }
 
-pub(super) fn load_class_spells(conn: &Connection) -> rusqlite::Result<ClassSpells> {
+pub(crate) fn load_class_spells(conn: &Connection) -> rusqlite::Result<ClassSpells> {
     let classes = CLASS_SKILL_LINES
         .iter()
         .map(|&(class_id, skill_line)| {
@@ -113,10 +119,11 @@ fn load_learnable(
 ) -> rusqlite::Result<Vec<LearnableSpell>> {
     let mut stmt = conn.prepare(
         "SELECT a.Spell, a.ClassMask, a.AcquireMethod, COALESCE(l.SpellLevel, 0),
-                a.SupercedesSpell, a.RaceMasks_0, a.RaceMasks_1
+                a.SupercedesSpell, a.RaceMasks_0, a.RaceMasks_1, COALESCE(m.Attributes_0, 0)
          FROM skill_line_ability a
          JOIN spell_name n ON n.ID = a.Spell
          LEFT JOIN spell_levels l ON l.SpellID = a.Spell AND l.DifficultyID = 0
+         LEFT JOIN spell_misc m ON m.SpellID = a.Spell AND m.DifficultyID = 0
          WHERE a.SkillLine = ?1
          ORDER BY 4, a.Spell",
     )?;
@@ -128,6 +135,7 @@ fn load_learnable(
             required_level: uint(r, 3)?,
             supersedes_spell: uint(r, 4)?,
             race_masks: [uint(r, 5)?, uint(r, 6)?],
+            passive: uint(r, 7)? & ATTR0_PASSIVE != 0,
         })
     })?;
     let bit = class_bit(class_id);
@@ -174,8 +182,9 @@ fn load_specs(conn: &Connection, class_id: u8) -> rusqlite::Result<Vec<SpecInfo>
 
 fn load_spec_spells(conn: &Connection, spec_id: u32) -> rusqlite::Result<Vec<SpecSpell>> {
     let mut stmt = conn.prepare_cached(
-        "SELECT s.SpellID, s.OverridesSpellID, s.DisplayOrder
+        "SELECT s.SpellID, s.OverridesSpellID, s.DisplayOrder, COALESCE(m.Attributes_0, 0)
          FROM specialization_spells s JOIN spell_name n ON n.ID = s.SpellID
+         LEFT JOIN spell_misc m ON m.SpellID = s.SpellID AND m.DifficultyID = 0
          WHERE s.SpecID = ?1 ORDER BY s.DisplayOrder, s.ID",
     )?;
     let rows = stmt.query_map([spec_id], |r| {
@@ -183,6 +192,7 @@ fn load_spec_spells(conn: &Connection, spec_id: u32) -> rusqlite::Result<Vec<Spe
             spell_id: uint(r, 0)?,
             overrides_spell_id: uint(r, 1)?,
             display_order: uint(r, 2)?,
+            passive: uint(r, 3)? & ATTR0_PASSIVE != 0,
         })
     })?;
     rows.collect()

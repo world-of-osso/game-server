@@ -345,7 +345,7 @@ fn dispatch(
         AdminRequest::SetLevel {
             character_name,
             level,
-        } => handle_set_level(db, &character_name, level),
+        } => handle_set_level(db, commands, &character_name, level),
         AdminRequest::SetCredentials {
             token,
             username,

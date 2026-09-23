@@ -184,9 +184,16 @@ pub(crate) fn handle_set_credentials(
 
 pub(crate) fn handle_set_level(
     db: &persistence::GameDatabase,
+    commands: &mut Commands,
     name: &str,
     level: u16,
 ) -> AdminResponse {
+    if !(1..=crate::spell_info::MAX_LEVEL as u16).contains(&level) {
+        return AdminResponse::Error(format!(
+            "level must be 1..={}",
+            crate::spell_info::MAX_LEVEL
+        ));
+    }
     let Some(char_id) = persistence::find_character_id_by_name(&db.db, name) else {
         return AdminResponse::Error(format!("character '{name}' not found"));
     };
@@ -195,6 +202,9 @@ pub(crate) fn handle_set_level(
     };
     data.level = level;
     persistence::save_character(&db.db, char_id, &data);
+    commands.queue(move |world: &mut World| {
+        crate::class_progression::set_live_level(world, char_id, level as u8);
+    });
     AdminResponse::LevelSet {
         character_name: name.to_owned(),
         level,

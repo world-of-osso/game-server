@@ -271,6 +271,10 @@ fn handle_select(
         );
         return;
     };
+    if let Err(error) = crate::race_class::validate_race_class(data.race, data.class) {
+        send_enter_error(selection.connection, enter_senders, &error);
+        return;
+    }
     let state = load_selected_character_state(db, character_id, data.race);
     let guild = state.guild.clone();
     let player_entity = spawn_player_entity(

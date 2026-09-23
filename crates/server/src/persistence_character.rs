@@ -1,5 +1,4 @@
 use redb::{Database, ReadableDatabase, ReadableTable};
-use rusqlite::{Connection, OpenFlags, params};
 use shared::components::{CharacterAppearance, GuildMembership};
 use std::collections::BTreeSet;
 
@@ -378,43 +377,12 @@ pub fn create_character_with_appearance(
         return Err("Maximum characters per account reached".to_string());
     }
     check_name_available(db, name)?;
-    validate_playable_race(race)?;
+    crate::race_class::validate_race_class(race, class)?;
     let character_id = next_id(db, "character");
     let data = default_character_data(name, race, class, appearance);
     save_new_character(db, account_id, character_id, name, &data);
     save_inventory(db, character_id, &default_inventory(db));
     Ok((character_id, data))
-}
-
-pub(crate) fn validate_playable_race(race: u8) -> Result<(), String> {
-    if let Ok(conn) = Connection::open_with_flags("data/world.db", OpenFlags::SQLITE_OPEN_READ_ONLY)
-        && let Ok(mut stmt) = conn.prepare("SELECT 1 FROM chr_races WHERE id = ?1 LIMIT 1")
-    {
-        let mut rows = stmt
-            .query(params![i64::from(race)])
-            .map_err(|e| format!("Failed to execute race query: {e}"))?;
-        return if rows
-            .next()
-            .map_err(|e| format!("Failed to read race query result: {e}"))?
-            .is_some()
-        {
-            Ok(())
-        } else {
-            Err(format!(
-                "Invalid race id {race}. See data/world.db table chr_races"
-            ))
-        };
-    }
-
-    const FALLBACK_PLAYABLE_RACES: &[u8] = &[
-        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 22, 24, 25, 26, 27, 28, 29, 30, 31, 32, 34, 35, 36, 37,
-        52, 70, 84, 85,
-    ];
-    if FALLBACK_PLAYABLE_RACES.contains(&race) {
-        Ok(())
-    } else {
-        Err(format!("Invalid race id {race}"))
-    }
 }
 
 /// Check that a character name is not already taken.
@@ -577,6 +545,12 @@ pub(crate) fn remove_character(
         let mut acct = txn.open_table(ACCOUNT_CHARACTERS).expect("open acct chars");
         acct.insert(account_id, encoded.as_slice())
             .expect("update acct chars");
+        let mut progression = txn
+            .open_table(crate::persistence_progression::CHARACTER_PROGRESSION)
+            .expect("open character progression");
+        progression
+            .remove(character_id)
+            .expect("remove character progression");
     }
     txn.commit().expect("Failed to commit character deletion");
 }

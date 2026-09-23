@@ -204,3 +204,80 @@ fn selecting_zero_health_character_queues_one_death_transition() {
         expected_after_death.slots
     );
 }
+
+#[derive(Resource, Default)]
+struct EnterWorldReplies(Vec<EnterWorldResponse>);
+
+/// Unread receiver buffers are dropped on the next receive, so drain every frame.
+fn collect_enter_world_replies(
+    mut receivers: Query<&mut MessageReceiver<EnterWorldResponse>>,
+    mut replies: ResMut<EnterWorldReplies>,
+) {
+    for mut receiver in &mut receivers {
+        replies.0.extend(receiver.receive());
+    }
+}
+
+#[test]
+fn selecting_character_with_invalid_race_class_is_rejected() {
+    let db = test_db();
+    let account_id = 8;
+    let (character_id, _) = persistence::create_character(&db.db, account_id, "Stonebark", 3, 1)
+        .expect("character should be created");
+    let mut data = persistence::load_character(&db.db, character_id).unwrap();
+    data.class = 11;
+    persistence::save_character(&db.db, character_id, &data);
+
+    let mut app = App::new();
+    app.add_plugins(MinimalPlugins);
+    app.add_plugins(bevy::state::app::StatesPlugin);
+    app.add_plugins(lightyear::prelude::server::ServerPlugins {
+        tick_duration: Duration::from_millis(50),
+    });
+    app.register_message::<SelectCharacter>();
+    app.register_message::<EnterWorldResponse>();
+    app.register_message::<LoadTerrain>();
+    app.insert_resource(db);
+    app.add_plugins(DeathPlugin);
+    app.add_systems(Update, process_select_character);
+    app.init_resource::<EnterWorldReplies>();
+    app.add_systems(Last, collect_enter_world_replies);
+    app.finish();
+    app.cleanup();
+    let connection = app
+        .world_mut()
+        .spawn((
+            RemoteId(PeerId::Local(account_id)),
+            Connected,
+            HostClient { buffer: Vec::new() },
+            Authenticated { account_id },
+            MessageSender::<SelectCharacter>::default(),
+            MessageReceiver::<SelectCharacter>::default(),
+            MessageSender::<EnterWorldResponse>::default(),
+            MessageReceiver::<EnterWorldResponse>::default(),
+            MessageSender::<LoadTerrain>::default(),
+            MessageReceiver::<LoadTerrain>::default(),
+        ))
+        .id();
+    app.world_mut()
+        .get_mut::<MessageSender<SelectCharacter>>(connection)
+        .unwrap()
+        .send::<AuthChannel>(SelectCharacter { character_id });
+    for _ in 0..3 {
+        app.update();
+    }
+
+    let responses = &app.world().resource::<EnterWorldReplies>().0;
+    assert_eq!(responses.len(), 1);
+    assert!(!responses[0].success);
+    assert_eq!(
+        responses[0].error.as_deref(),
+        Some("Class 11 is not available for race 3")
+    );
+    let spawned = app
+        .world_mut()
+        .query::<&ClientId>()
+        .iter(app.world())
+        .count();
+    assert_eq!(spawned, 0);
+}

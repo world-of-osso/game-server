@@ -21,9 +21,10 @@ use bevy::prelude::*;
 use rusqlite::Connection;
 use serde::Serialize;
 
+pub use class_data::{ClassInfo, ClassSpells, SpecInfo};
+pub(crate) use class_data::MAX_LEVEL;
 #[cfg(test)]
-pub use class_data::ClassInfo;
-pub use class_data::ClassSpells;
+pub(crate) use class_data::load_class_spells;
 
 const WORLD_DB_PATH: &str = "data/world.db";
 
