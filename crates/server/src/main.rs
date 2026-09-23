@@ -36,7 +36,7 @@ mod profession;
 mod pvp;
 mod reputation;
 mod rest;
-mod spell_db;
+mod spell_info;
 mod stats;
 mod talent;
 mod terrain_height;
@@ -123,7 +123,7 @@ fn add_world_plugins(app: &mut App) {
         .add_plugins(creature_ai::CreatureAiPlugin)
         .add_plugins(stats::StatsPlugin)
         .add_plugins(combat::CombatPlugin)
-        .add_plugins(spell_db::SpellDatabasePlugin)
+        .add_plugins(spell_info::SpellInfoPlugin)
         .add_plugins(interest::InterestPlugin)
         .add_plugins(admin_ipc::AdminIpcPlugin);
 }

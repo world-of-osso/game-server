@@ -8,7 +8,7 @@ use shared::spell_data::{CastContext, ResourceType, SpellData, SpellTarget, vali
 
 use crate::auth::{Authenticated, InWorld};
 use crate::networking::PlayerLink;
-use crate::spell_db::SpellDatabase;
+use crate::spell_info::SpellStore;
 
 pub(crate) fn receive_cast_requests(world: &mut World) {
     let mut receivers = world.query::<(
@@ -43,11 +43,15 @@ fn start_cast(
     request: &SpellCastIntent,
 ) -> Result<(), &'static str> {
     let spell = world
-        .get_resource::<SpellDatabase>()
-        .ok_or("spell database unavailable")?
+        .get_resource::<SpellStore>()
+        .ok_or("spell store unavailable")?
         .resolve(request.spell_id, &request.spell)
         .ok_or("unknown or ambiguous spell")?
-        .clone();
+        .to_spell_data(|resource| base_pool(world, owner, resource))
+        .map_err(|error| {
+            debug!("Cast cost rejected: {error}");
+            "spell cost cannot be validated"
+        })?;
     if !spell.cast_time.is_finite() || spell.cast_time <= 0.0 {
         return Err("instant spells have no cast presentation; effects are not implemented");
     }
@@ -78,6 +82,18 @@ fn start_cast(
     world.entity_mut(owner).insert(cast);
     mark_dirty(world, owner);
     Ok(())
+}
+
+/// Pool that percent costs scale from. The server has no separate base mana,
+/// so the pool maximum stands in for it.
+fn base_pool(world: &World, owner: Entity, resource: ResourceType) -> Option<f32> {
+    match resource {
+        ResourceType::Mana => world.get::<Mana>(owner).map(|mana| mana.max),
+        resource => world
+            .get::<Resources>(owner)
+            .and_then(|pools| pools.get(resource))
+            .map(|pool| pool.max),
+    }
 }
 
 fn cast_context(

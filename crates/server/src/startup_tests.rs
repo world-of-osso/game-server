@@ -745,18 +745,6 @@ fn world_db_spell_effect_has_coefficients() {
 
 #[test]
 #[ignore]
-fn world_db_loads_spells_through_spell_database() {
-    let conn = world_db_conn();
-    let db = crate::spell_db::load_spell_database(&conn);
-    assert!(!db.is_empty(), "no spells loaded");
-    assert!(db.len() >= 300_000, "only {} spells loaded", db.len());
-    let spell = db.get(12294).expect("Mortal Strike not in SpellDatabase");
-    assert_eq!(spell.name, "Mortal Strike");
-    assert_eq!(spell.school, shared::components::SpellSchool::Physical);
-}
-
-#[test]
-#[ignore]
 fn world_db_loads_through_world_data() {
     let path = world_db_path();
     let data = crate::world_data::load_world_data(&path);

@@ -1,0 +1,341 @@
+//! Server spell data model loaded from the Retail DB2 tables in world.db
+//! (build 12.1.0.69933, `scripts/db2_schema.sql`), DifficultyID 0 only.
+//!
+//! `SpellStore` indexes every `spell_name` row by spell ID. Values are raw
+//! DB2 values: IDs, flags and masks are not translated, times are
+//! milliseconds, and index columns (cast time, duration, range, radius,
+//! procs-per-minute, empower) are resolved to their referenced rows.
+//! `ClassSpells` holds per-class learnable and specialization spells.
+//!
+//! Casts are presentation-only; `convert` narrows a `SpellInfo` to the shared
+//! `SpellData` that `validate_cast` needs.
+
+mod class_data;
+mod convert;
+mod load;
+
+use std::path::Path;
+use std::time::Instant;
+
+use bevy::prelude::*;
+use rusqlite::Connection;
+use serde::Serialize;
+
+#[cfg(test)]
+pub use class_data::ClassInfo;
+pub use class_data::ClassSpells;
+
+const WORLD_DB_PATH: &str = "data/world.db";
+
+/// One spell's DB2 data at DifficultyID 0. Sparse tables are boxed so the
+/// ~400k spells without such rows stay small.
+#[derive(Debug, Clone, Default, Serialize)]
+pub struct SpellInfo {
+    pub id: u32,
+    pub name: String,
+    /// `spell.NameSubtext_lang` (rank text such as "Racial").
+    pub subtext: String,
+    pub misc: Option<SpellMisc>,
+    /// Every `spell_effect` row, sorted by `EffectIndex` (indexes may be sparse).
+    pub effects: Vec<SpellEffect>,
+    /// Every `spell_power` row, sorted by `OrderIndex`.
+    pub power_costs: Vec<SpellPowerCost>,
+    pub aura_options: Option<Box<SpellAuraOptions>>,
+    pub categories: Option<Box<SpellCategories>>,
+    pub cooldowns: Option<Box<SpellCooldownInfo>>,
+    pub levels: Option<Box<SpellLevels>>,
+    pub class_options: Option<Box<SpellClassOptions>>,
+    pub shapeshift: Option<Box<SpellShapeshift>>,
+    pub interrupts: Option<Box<SpellInterrupts>>,
+    pub target_restrictions: Option<Box<SpellTargetRestrictions>>,
+    pub equipped_items: Option<Box<SpellEquippedItems>>,
+    /// `spell_empower_stage` rows via `spell_empower`, sorted by stage.
+    pub empower_stages: Vec<EmpowerStage>,
+}
+
+/// `spell_misc` with its index columns resolved.
+#[derive(Debug, Clone, Default, Serialize)]
+pub struct SpellMisc {
+    pub attributes: [u32; 17],
+    /// Full school bitmask (1 Physical, 2 Holy, 4 Fire, 8 Nature, 16 Frost, 32 Shadow, 64 Arcane).
+    pub school_mask: u32,
+    pub cast_time: Option<SpellCastTime>,
+    pub duration: Option<SpellDuration>,
+    pub pvp_duration: Option<SpellDuration>,
+    pub range: Option<SpellRange>,
+    pub speed: f32,
+    pub launch_delay: f32,
+    pub min_duration: f32,
+    pub icon_file_data_id: u32,
+    pub active_icon_file_data_id: u32,
+    pub content_tuning_id: u32,
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Serialize)]
+pub struct SpellCastTime {
+    pub base_ms: i32,
+    pub minimum_ms: i32,
+}
+
+/// `spell_duration`; `-1` is infinite.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Serialize)]
+pub struct SpellDuration {
+    pub duration_ms: i32,
+    pub max_duration_ms: i32,
+    pub per_resource_ms: i32,
+}
+
+/// `spell_range`: `RangeMin/Max_0` are hostile, `_1` friendly (TrinityCore `GetMaxRange(positive)`).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Serialize)]
+pub struct SpellRange {
+    pub min_hostile: f32,
+    pub min_friendly: f32,
+    pub max_hostile: f32,
+    pub max_friendly: f32,
+    pub flags: u32,
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Serialize)]
+pub struct SpellRadius {
+    pub radius: f32,
+    pub radius_per_level: f32,
+    pub radius_min: f32,
+    pub radius_max: f32,
+}
+
+/// One `spell_effect` row.
+#[derive(Debug, Clone, Default, Serialize)]
+pub struct SpellEffect {
+    pub index: u8,
+    /// SpellEffects ID (e.g. 2 school damage, 6 apply aura, 38 dispel, 68 interrupt).
+    pub effect: u32,
+    /// AuraType ID for aura-applying effects.
+    pub aura: u32,
+    pub base_points: f32,
+    /// Spell power coefficient (`EffectBonusCoefficient`).
+    pub bonus_coefficient: f32,
+    pub bonus_coefficient_from_ap: f32,
+    pub amplitude: f32,
+    pub aura_period_ms: u32,
+    pub chain_amplitude: f32,
+    pub chain_targets: u32,
+    pub item_type: u32,
+    pub mechanic: u32,
+    pub points_per_resource: f32,
+    pub real_points_per_level: f32,
+    pub pos_facing: f32,
+    pub trigger_spell: u32,
+    pub pvp_multiplier: f32,
+    pub coefficient: f32,
+    pub variance: f32,
+    pub resource_coefficient: f32,
+    pub group_size_base_points_coefficient: f32,
+    pub scaling_class: i32,
+    pub attributes: u32,
+    pub misc_values: [i32; 2],
+    pub radius: [Option<SpellRadius>; 2],
+    pub spell_class_mask: [u32; 4],
+    pub implicit_targets: [u32; 2],
+}
+
+/// One `spell_power` row, raw. `power_type` is the DB2 Powers ID
+/// (0 Mana, 1 Rage, 2 Focus, 3 Energy, 4 ComboPoints, 6 RunicPower,
+/// 7 SoulShards, 8 LunarPower, 9 HolyPower, 11 Maelstrom, 12 Chi,
+/// 13 Insanity, 16 ArcaneCharges, 17 Fury, 18 Pain, 19 Essence).
+/// Rage and Runic Power amounts are stored in tenths: Slam 1464 has
+/// `mana_cost` 200 for 20 Rage, Death Strike 49998 has 450 for 45 Runic
+/// Power. They are kept unscaled here.
+#[derive(Debug, Clone, Default, PartialEq, Serialize)]
+pub struct SpellPowerCost {
+    pub order_index: u8,
+    pub power_type: i32,
+    pub mana_cost: i32,
+    pub mana_cost_per_level: i32,
+    pub mana_per_second: i32,
+    /// Percent of base pool (Fireball 133: 1.0 = 1% of base mana).
+    pub power_cost_pct: f32,
+    pub power_cost_max_pct: f32,
+    pub optional_cost: i32,
+    pub optional_cost_pct: f32,
+    pub power_pct_per_second: f32,
+    /// The cost applies only while the caster has this aura (0 = always).
+    pub required_aura_spell_id: u32,
+    pub power_display_id: u32,
+    pub alt_power_bar_id: u32,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize)]
+pub struct SpellAuraOptions {
+    /// Max stacks (`CumulativeAura`).
+    pub cumulative_aura: u32,
+    pub proc_category_recovery_ms: i32,
+    pub proc_chance: u32,
+    pub proc_charges: i32,
+    pub procs_per_minute_id: u32,
+    pub procs_per_minute: Option<ProcsPerMinute>,
+    pub proc_type_mask: [u32; 2],
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Serialize)]
+pub struct ProcsPerMinute {
+    pub base_proc_rate: f32,
+    pub flags: u32,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize)]
+pub struct SpellCategories {
+    pub category: u32,
+    /// GCD category (`StartRecoveryCategory`).
+    pub start_recovery_category: u32,
+    pub charge_category: u32,
+    pub defense_type: u32,
+    pub diminish_type: u32,
+    pub dispel_type: u32,
+    pub mechanic: u32,
+    pub prevention_type: u32,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize)]
+pub struct SpellCooldownInfo {
+    pub recovery_ms: u32,
+    pub category_recovery_ms: u32,
+    /// GCD length (`StartRecoveryTime`).
+    pub start_recovery_ms: u32,
+    pub aura_spell_id: u32,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize)]
+pub struct SpellLevels {
+    pub base_level: u32,
+    pub max_level: u32,
+    pub spell_level: u32,
+    pub max_passive_aura_level: u32,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize)]
+pub struct SpellClassOptions {
+    pub spell_class_set: u32,
+    pub spell_class_mask: [u32; 4],
+    pub modal_next_spell: u32,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize)]
+pub struct SpellShapeshift {
+    pub stance_bar_order: i32,
+    pub shapeshift_exclude: [u32; 2],
+    pub shapeshift_mask: [u32; 2],
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize)]
+pub struct SpellInterrupts {
+    pub interrupt_flags: u32,
+    pub aura_interrupt_flags: [u32; 2],
+    pub channel_interrupt_flags: [u32; 2],
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize)]
+pub struct SpellTargetRestrictions {
+    pub cone_degrees: f32,
+    pub max_targets: u32,
+    pub max_target_level: u32,
+    pub target_creature_type: u32,
+    pub targets: u32,
+    pub width: f32,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize)]
+pub struct SpellEquippedItems {
+    pub item_class: i32,
+    pub inventory_types: u32,
+    pub item_subclass: u32,
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Serialize)]
+pub struct EmpowerStage {
+    pub stage: u32,
+    pub duration_ms: u32,
+}
+
+/// Every spell in world.db, sorted by spell ID (binary-searched; a `HashMap`
+/// of 360-byte values costs ~40% more memory at this load factor).
+#[derive(Resource, Debug, Default)]
+pub struct SpellStore {
+    spells: Vec<SpellInfo>,
+}
+
+impl SpellStore {
+    #[cfg(test)]
+    pub(crate) fn fixture(mut spells: Vec<SpellInfo>) -> Self {
+        spells.sort_by_key(|spell| spell.id);
+        Self { spells }
+    }
+
+    /// Resolve an explicit ID or a unique exact name; ambiguous ranks require an ID.
+    pub(crate) fn resolve(&self, id: Option<u32>, name: &str) -> Option<&SpellInfo> {
+        if let Some(id) = id {
+            return self.get(id);
+        }
+        if name.is_empty() {
+            return None;
+        }
+        let mut matches = self
+            .spells
+            .iter()
+            .filter(|spell| spell.name.eq_ignore_ascii_case(name));
+        let spell = matches.next()?;
+        matches.next().is_none().then_some(spell)
+    }
+
+    pub fn get(&self, spell_id: u32) -> Option<&SpellInfo> {
+        let index = self
+            .spells
+            .binary_search_by_key(&spell_id, |spell| spell.id)
+            .ok()?;
+        Some(&self.spells[index])
+    }
+
+    pub fn len(&self) -> usize {
+        self.spells.len()
+    }
+}
+
+/// Load every spell and the class spell lists from world.db.
+pub fn load_spell_data(conn: &Connection) -> rusqlite::Result<(SpellStore, ClassSpells)> {
+    Ok((
+        load::load_spell_store(conn)?,
+        class_data::load_class_spells(conn)?,
+    ))
+}
+
+pub struct SpellInfoPlugin;
+
+impl Plugin for SpellInfoPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_systems(Startup, load_spell_data_startup);
+    }
+}
+
+fn load_spell_data_startup(mut commands: Commands) {
+    let path = Path::new(WORLD_DB_PATH);
+    if !path.exists() {
+        warn!("world.db not found at {WORLD_DB_PATH}, spell store empty");
+        commands.insert_resource(SpellStore::default());
+        commands.insert_resource(ClassSpells::default());
+        return;
+    }
+    let started = Instant::now();
+    let conn = Connection::open_with_flags(path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
+        .expect("Failed to open world.db for spell data");
+    let (store, classes) = load_spell_data(&conn).expect("Failed to load spell data from world.db");
+    info!(
+        "Loaded {} spells and {} classes from world.db in {:?}",
+        store.len(),
+        classes.classes.len(),
+        started.elapsed()
+    );
+    commands.insert_resource(store);
+    commands.insert_resource(classes);
+}
+
+#[cfg(test)]
+mod tests;

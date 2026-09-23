@@ -1,13 +1,42 @@
 use crate::auth::{Authenticated, InWorld};
 use crate::networking::PlayerLink;
+use crate::spell_info::{
+    SpellCastTime, SpellEffect, SpellInfo, SpellMisc, SpellPowerCost, SpellRange, SpellStore,
+};
 use bevy::prelude::*;
 use lightyear::connection::host::HostClient;
 use lightyear::prelude::*;
 use shared::casting::CastState;
-use shared::components::{Health, MovementSpeed, Player, Position, SpellSchool};
+use shared::components::{Health, MovementSpeed, Player, Position};
 use shared::protocol::{CombatChannel, ProtocolPlugin, SpellCastIntent, StopSpellCast};
-use shared::spell_data::{SpellData, SpellTarget};
 use std::time::Duration;
+
+/// 1 s Fire cast on self, 30 yd.
+fn presentation_spell() -> SpellInfo {
+    SpellInfo {
+        id: 133,
+        name: "Presentation cast".into(),
+        misc: Some(SpellMisc {
+            school_mask: 4,
+            cast_time: Some(SpellCastTime {
+                base_ms: 1000,
+                minimum_ms: 0,
+            }),
+            range: Some(SpellRange {
+                max_hostile: 30.0,
+                max_friendly: 30.0,
+                ..default()
+            }),
+            ..default()
+        }),
+        // TARGET_UNIT_CASTER
+        effects: vec![SpellEffect {
+            implicit_targets: [1, 0],
+            ..default()
+        }],
+        ..default()
+    }
+}
 
 fn fixture() -> (App, Entity, Entity) {
     let mut app = App::new();
@@ -20,19 +49,7 @@ fn fixture() -> (App, Entity, Entity) {
     app.insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
         Duration::from_millis(50),
     ));
-    app.insert_resource(crate::spell_db::SpellDatabase::fixture(vec![SpellData {
-        id: 133,
-        name: "Presentation cast".into(),
-        school: SpellSchool::Fire,
-        cast_time: 1.0,
-        cooldown: 0.0,
-        cost: None,
-        target: SpellTarget::Self_,
-        range: 30.0,
-        cast_while_moving: false,
-        interruptible: true,
-        effects: [None; 3],
-    }]));
+    app.insert_resource(SpellStore::fixture(vec![presentation_spell()]));
     app.finish();
     app.cleanup();
     let player = app
@@ -177,19 +194,14 @@ fn cast_presentation_stop_cannot_cancel_other_players() {
 fn cast_presentation_validates_resource_cooldown_and_gcd() {
     use shared::casting::{GlobalCooldown, SpellCooldowns};
     use shared::components::Mana;
-    use shared::spell_data::{ResourceType, SpellCost};
     let (mut app, player, connection) = fixture();
-    let mut spell = app
-        .world()
-        .resource::<crate::spell_db::SpellDatabase>()
-        .get(133)
-        .unwrap()
-        .clone();
-    spell.cost = Some(SpellCost {
-        resource: ResourceType::Mana,
-        amount: 20.0,
-    });
-    app.insert_resource(crate::spell_db::SpellDatabase::fixture(vec![spell]));
+    let mut spell = presentation_spell();
+    spell.power_costs = vec![SpellPowerCost {
+        power_type: 0,
+        mana_cost: 20,
+        ..default()
+    }];
+    app.insert_resource(SpellStore::fixture(vec![spell]));
     app.world_mut().entity_mut(player).insert(Mana {
         current: 10.0,
         max: 100.0,
@@ -216,4 +228,32 @@ fn cast_presentation_validates_resource_cooldown_and_gcd() {
     start(&mut app, connection, 133);
     assert!(app.world().get::<CastState>(player).is_some());
     assert_eq!(app.world().get::<Mana>(player).unwrap().current, 100.0);
+}
+
+#[test]
+fn cast_presentation_scales_percent_mana_cost_from_max_mana() {
+    use shared::components::Mana;
+    let (mut app, player, connection) = fixture();
+    let mut spell = presentation_spell();
+    // Fireball-style cost: 5% of base mana, no flat amount.
+    spell.power_costs = vec![SpellPowerCost {
+        power_type: 0,
+        power_cost_pct: 5.0,
+        ..default()
+    }];
+    app.insert_resource(SpellStore::fixture(vec![spell]));
+    start(&mut app, connection, 133);
+    assert!(
+        app.world().get::<CastState>(player).is_none(),
+        "percent cost with no mana pool must not cast"
+    );
+    app.world_mut().entity_mut(player).insert(Mana {
+        current: 49.0,
+        max: 1000.0,
+    });
+    start(&mut app, connection, 133);
+    assert!(app.world().get::<CastState>(player).is_none());
+    app.world_mut().get_mut::<Mana>(player).unwrap().current = 50.0;
+    start(&mut app, connection, 133);
+    assert!(app.world().get::<CastState>(player).is_some());
 }
