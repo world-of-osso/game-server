@@ -1,5 +1,6 @@
-//! Class progression: active specialization, known spells and action bars.
-//! Rules and persistence: `docs/wiki/systems/class-progression.md`.
+//! Class progression: active specialization, trait (talent) config, known
+//! spells and action bars. Rules and persistence:
+//! `docs/wiki/systems/class-progression.md`, `docs/wiki/systems/talents.md`.
 
 use std::collections::BTreeMap;
 
@@ -9,18 +10,24 @@ use lightyear::prelude::Message;
 use lightyear::prelude::*;
 use shared::components::{Level, Player, UnitLevel};
 use shared::protocol::{
-    ActionBarSnapshot, ActionRef, KnownSpellsSnapshot, SetActionButton, SetSpecialization,
-    SpecializationChanged, SpellsLearned, SpellsUnlearned, TalentChannel,
+    ActionBarSnapshot, ActionRef, CommitTraitConfig, KnownSpellsSnapshot, SetActionButton,
+    SetSpecialization, SpecializationChanged, SpellsLearned, SpellsUnlearned, TalentChannel,
+    TraitCommitResult, TraitConfigSnapshot, TraitEntrySelection,
 };
 
 use crate::auth::Authenticated;
 use crate::networking::PlayerLink;
 use crate::persistence::{ClientId, GameDatabase};
 use crate::persistence_progression::{
-    ActionRefData, ProgressionData, load_progression, save_progression,
+    ActionRefData, ProgressionData, load_progression, load_trait_configs, save_progression,
+    save_trait_config,
 };
 use crate::race_class::race_mask_allows;
 use crate::spell_info::{ClassInfo, ClassSpells, SpecInfo};
+use crate::trait_config::{
+    ConfigEntry, Purchase, TraitContext, build_config, granted_entries, talent_spell_entries,
+    unspent,
+};
 
 /// Retail spec choice unlocks at level 10; below it the class "Initial" spec is active.
 pub const SPEC_UNLOCK_LEVEL: u8 = 10;
@@ -56,6 +63,36 @@ pub struct ActiveSpec(pub u32);
 #[derive(Component, Debug, Clone, Default, PartialEq, Eq)]
 pub struct ActionBar(BTreeMap<u8, ActionRef>);
 
+/// Validated trait config of the active spec (granted entries included),
+/// its unspent points and the spells it applies.
+#[derive(Component, Debug, Clone, Default, PartialEq, Eq)]
+pub struct TraitLoadout {
+    tree_id: u32,
+    entries: Vec<ConfigEntry>,
+    unspent: Vec<(u32, i32)>,
+    spells: Vec<KnownSpell>,
+}
+
+impl TraitLoadout {
+    /// Integration point for the aura runtime: active and passive spells of
+    /// the applied talents, in config order. Known spells include them.
+    pub fn active_talent_spells(&self) -> impl Iterator<Item = KnownSpell> + '_ {
+        self.spells.iter().copied()
+    }
+
+    fn purchases(&self) -> Vec<Purchase> {
+        self.entries
+            .iter()
+            .filter(|entry| entry.ranks > 0)
+            .map(|entry| Purchase {
+                node_id: entry.node_id,
+                entry_id: entry.entry_id,
+                ranks: entry.ranks,
+            })
+            .collect()
+    }
+}
+
 /// Integration point for the cast pipeline: reject casts of unknown spells.
 pub fn knows_spell(known: &Query<&KnownSpells>, entity: Entity, spell_id: u32) -> bool {
     known
@@ -72,6 +109,7 @@ impl Plugin for ClassProgressionPlugin {
             (
                 init_player_progression,
                 process_set_specialization,
+                process_commit_trait_config,
                 process_set_action_button,
                 sync_level_changes,
             )
@@ -80,10 +118,11 @@ impl Plugin for ClassProgressionPlugin {
     }
 }
 
+/// A known spell and its SPELL_ATTR0_PASSIVE flag.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-struct KnownSpell {
-    spell_id: u32,
-    passive: bool,
+pub struct KnownSpell {
+    pub spell_id: u32,
+    pub passive: bool,
 }
 
 fn class_info(classes: &ClassSpells, class_id: u8) -> Option<&ClassInfo> {
@@ -111,12 +150,13 @@ fn resolve_spec(class: &ClassInfo, level: u8, requested: u32) -> Option<&SpecInf
 }
 
 /// Auto-learned class spells up to `level` for the race, then the spec's spells
-/// and mastery, without duplicates.
+/// and mastery, then talent spells, without duplicates.
 fn compute_known_spells(
     class: &ClassInfo,
     race: u8,
     level: u8,
     spec: Option<&SpecInfo>,
+    talents: impl Iterator<Item = KnownSpell>,
 ) -> Vec<KnownSpell> {
     let learnable = class
         .learnable
@@ -142,7 +182,7 @@ fn compute_known_spells(
         spells.chain(masteries)
     });
     let mut known: Vec<KnownSpell> = Vec::new();
-    for spell in learnable.chain(spec_spells) {
+    for spell in learnable.chain(spec_spells).chain(talents) {
         if !known.iter().any(|entry| entry.spell_id == spell.spell_id) {
             known.push(spell);
         }
@@ -216,19 +256,86 @@ fn bar_snapshot(bar: &ActionBar) -> ActionBarSnapshot {
     }
 }
 
-/// Known spells and spec for a player's class, race and level.
+/// Progression state for a player's class, race, level and requested spec.
+struct Evaluated {
+    spec: ActiveSpec,
+    known: Vec<KnownSpell>,
+    traits: TraitLoadout,
+    /// The saved purchases were invalid and were replaced by the granted-only config.
+    traits_reset: bool,
+}
+
+/// Spec, trait config and known spells. `purchases_for` supplies the saved
+/// trait purchases of the resolved spec.
 fn evaluate(
     classes: &ClassSpells,
     player: &Player,
     level: u8,
     requested_spec: u32,
-) -> (ActiveSpec, Vec<KnownSpell>) {
+    purchases_for: impl FnOnce(u32) -> Vec<Purchase>,
+) -> Evaluated {
     let Some(class) = class_info(classes, player.class) else {
-        return (ActiveSpec(0), Vec::new());
+        return Evaluated {
+            spec: ActiveSpec(0),
+            known: Vec::new(),
+            traits: TraitLoadout::default(),
+            traits_reset: false,
+        };
     };
     let spec = resolve_spec(class, level, requested_spec);
-    let known = compute_known_spells(class, player.race, level, spec);
-    (ActiveSpec(spec.map_or(0, |spec| spec.spec_id)), known)
+    let ctx = TraitContext {
+        spec_id: spec.map_or(0, |spec| spec.spec_id),
+        level,
+    };
+    let (entries, traits_reset) =
+        match build_config(&class.traits, ctx, &purchases_for(ctx.spec_id)) {
+            Ok(entries) => (entries, false),
+            Err(reason) => {
+                warn!("Resetting trait config of spec {}: {reason}", ctx.spec_id);
+                (granted_entries(&class.traits, ctx), true)
+            }
+        };
+    let traits = TraitLoadout {
+        tree_id: class.traits.tree_id,
+        unspent: unspent(&class.traits, ctx, &entries),
+        spells: talent_spell_entries(&class.traits, &entries)
+            .map(|entry| KnownSpell {
+                spell_id: entry.spell_id,
+                passive: entry.passive,
+            })
+            .collect(),
+        entries,
+    };
+    let known = compute_known_spells(
+        class,
+        player.race,
+        level,
+        spec,
+        traits.active_talent_spells(),
+    );
+    Evaluated {
+        spec: ActiveSpec(ctx.spec_id),
+        known,
+        traits,
+        traits_reset,
+    }
+}
+
+fn trait_snapshot(spec: ActiveSpec, traits: &TraitLoadout) -> TraitConfigSnapshot {
+    TraitConfigSnapshot {
+        spec_id: spec.0,
+        tree_id: traits.tree_id,
+        entries: traits
+            .entries
+            .iter()
+            .map(|entry| TraitEntrySelection {
+                node_id: entry.node_id,
+                entry_id: entry.entry_id,
+                rank: entry.total() as u8,
+            })
+            .collect(),
+        unspent: traits.unspent.clone(),
+    }
 }
 
 #[derive(SystemParam)]
@@ -238,6 +345,8 @@ struct ProgressionSenders<'w, 's> {
     unlearned: Query<'w, 's, &'static mut MessageSender<SpellsUnlearned>>,
     spec: Query<'w, 's, &'static mut MessageSender<SpecializationChanged>>,
     bar: Query<'w, 's, &'static mut MessageSender<ActionBarSnapshot>>,
+    traits: Query<'w, 's, &'static mut MessageSender<TraitConfigSnapshot>>,
+    commit: Query<'w, 's, &'static mut MessageSender<TraitCommitResult>>,
 }
 
 fn send<M: Message>(senders: &mut Query<&mut MessageSender<M>>, connection: Entity, message: M) {
@@ -248,8 +357,9 @@ fn send<M: Message>(senders: &mut Query<&mut MessageSender<M>>, connection: Enti
 
 type ConnectionLinks<'w, 's> = Query<'w, 's, (Entity, &'static PlayerLink), With<Authenticated>>;
 
-/// Give newly spawned players their spec, known spells and action bar, and send
-/// the owner `SpecializationChanged`, `KnownSpellsSnapshot` and `ActionBarSnapshot`.
+/// Give newly spawned players their spec, trait config, known spells and action
+/// bar, and send the owner `SpecializationChanged`, `TraitConfigSnapshot`,
+/// `KnownSpellsSnapshot` and `ActionBarSnapshot`.
 fn init_player_progression(
     mut commands: Commands,
     db: Option<Res<GameDatabase>>,
@@ -267,15 +377,22 @@ fn init_player_progression(
         };
         let stored = load_progression(&db.db, client_id.0);
         let requested = stored.as_ref().map_or(0, |data| data.spec_id);
-        let (spec, known_list) = evaluate(&classes, player, level.0, requested);
-        let known = KnownSpells(known_list.iter().map(|spell| spell.spell_id).collect());
+        let configs = load_trait_configs(&db.db, client_id.0);
+        let evaluated = evaluate(&classes, player, level.0, requested, |spec| {
+            configs.spec(spec).to_vec()
+        });
+        let spec = evaluated.spec;
+        if evaluated.traits_reset {
+            save_trait_config(&db.db, client_id.0, spec.0, Vec::new());
+        }
+        let known = KnownSpells(evaluated.known.iter().map(|spell| spell.spell_id).collect());
         let mut bar = ActionBar(match &stored {
             Some(data) => data
                 .action_bar
                 .iter()
                 .map(|&(slot, action)| (slot, action_from_data(action)))
                 .collect(),
-            None => default_action_bar(&known_list),
+            None => default_action_bar(&evaluated.known),
         });
         let pruned = prune_unknown_spells(&mut bar.0, &known);
         if stored.is_none() || pruned || requested != spec.0 {
@@ -287,6 +404,11 @@ fn init_player_progression(
                 connection,
                 SpecializationChanged { spec_id: spec.0 },
             );
+            send(
+                &mut senders.traits,
+                connection,
+                trait_snapshot(spec, &evaluated.traits),
+            );
         }
         send(
             &mut senders.known,
@@ -296,7 +418,9 @@ fn init_player_progression(
             },
         );
         send(&mut senders.bar, connection, bar_snapshot(&bar));
-        commands.entity(link.0).insert((spec, known, bar));
+        commands
+            .entity(link.0)
+            .insert((spec, known, bar, evaluated.traits));
     }
 }
 
@@ -307,27 +431,31 @@ type ProgressionPlayer = (
     &'static mut ActiveSpec,
     &'static mut KnownSpells,
     &'static mut ActionBar,
+    &'static mut TraitLoadout,
 );
 
-/// Re-evaluate spec and known spells after a level or spec change; send deltas,
-/// drop bar buttons for unlearned spells and persist.
+/// Apply a re-evaluated spec, trait config and known spells after a level, spec
+/// or trait change; send deltas, drop bar buttons for unlearned spells and
+/// persist. `TraitConfigSnapshot` is sent when the spec or config changed, or
+/// always with `always_send_traits`.
 fn refresh_player(
-    (player, level, client_id, mut spec, mut known, mut bar): (
+    (_, _, client_id, mut spec, mut known, mut bar, mut traits): (
         &Player,
         &Level,
         &ClientId,
         Mut<ActiveSpec>,
         Mut<KnownSpells>,
         Mut<ActionBar>,
+        Mut<TraitLoadout>,
     ),
-    requested_spec: u32,
-    classes: &ClassSpells,
+    evaluated: Evaluated,
+    always_send_traits: bool,
     db: &GameDatabase,
     connection: Entity,
     senders: &mut ProgressionSenders,
 ) {
-    let (new_spec, known_list) = evaluate(classes, player, level.0, requested_spec);
-    let new_known = KnownSpells(known_list.iter().map(|spell| spell.spell_id).collect());
+    let new_spec = evaluated.spec;
+    let new_known = KnownSpells(evaluated.known.iter().map(|spell| spell.spell_id).collect());
     let spec_changed = *spec != new_spec;
     if spec_changed {
         *spec = new_spec;
@@ -338,6 +466,9 @@ fn refresh_player(
                 spec_id: new_spec.0,
             },
         );
+    }
+    if evaluated.traits_reset {
+        save_trait_config(&db.db, client_id.0, new_spec.0, Vec::new());
     }
     let unlearned = spells_missing_from(&known.0, &new_known.0);
     let learned = spells_missing_from(&new_known.0, &known.0);
@@ -362,6 +493,17 @@ fn refresh_player(
     if *known != new_known {
         *known = new_known;
     }
+    let traits_changed = *traits != evaluated.traits;
+    if traits_changed {
+        *traits = evaluated.traits;
+    }
+    if new_spec.0 != 0 && (spec_changed || traits_changed || always_send_traits) {
+        send(
+            &mut senders.traits,
+            connection,
+            trait_snapshot(new_spec, &traits),
+        );
+    }
     if spec_changed || pruned {
         save_progression(&db.db, client_id.0, &progression_data(*spec, &bar));
     }
@@ -369,7 +511,8 @@ fn refresh_player(
 
 /// `SetSpecialization`: the spec must be a non-Initial spec of the player's class
 /// and the player at least `SPEC_UNLOCK_LEVEL`. A rejected request is answered
-/// with `SpecializationChanged` carrying the unchanged spec.
+/// with `SpecializationChanged` carrying the unchanged spec. An accepted one
+/// loads the new spec's saved trait config.
 fn process_set_specialization(
     db: Option<Res<GameDatabase>>,
     classes: Option<Res<ClassSpells>>,
@@ -396,14 +539,11 @@ fn process_set_specialization(
                 );
                 continue;
             }
-            refresh_player(
-                entry,
-                request.spec_id,
-                &classes,
-                &db,
-                connection,
-                &mut senders,
-            );
+            let configs = load_trait_configs(&db.db, entry.2.0);
+            let evaluated = evaluate(&classes, entry.0, entry.1.0, request.spec_id, |spec| {
+                configs.spec(spec).to_vec()
+            });
+            refresh_player(entry, evaluated, false, &db, connection, &mut senders);
         }
     }
 }
@@ -432,7 +572,98 @@ fn validate_spec_request(
     Ok(())
 }
 
-/// Level changes re-evaluate spec (Initial below the unlock level) and known spells.
+/// `CommitTraitConfig`: the config must be for the active spec and valid at the
+/// player's level (`trait_config::build_config`). An accepted config is
+/// persisted and answered with `TraitCommitResult { ok: true }`, the spell
+/// deltas and `TraitConfigSnapshot`. A rejected one is answered with
+/// `ok: false` and the reason, and changes nothing.
+fn process_commit_trait_config(
+    db: Option<Res<GameDatabase>>,
+    classes: Option<Res<ClassSpells>>,
+    mut receivers: Query<(Entity, &PlayerLink, &mut MessageReceiver<CommitTraitConfig>)>,
+    mut players: Query<ProgressionPlayer>,
+    mut senders: ProgressionSenders,
+) {
+    let (Some(db), Some(classes)) = (db, classes) else {
+        return;
+    };
+    for (connection, link, mut receiver) in &mut receivers {
+        for request in receiver.receive() {
+            let Ok(entry) = players.get_mut(link.0) else {
+                continue;
+            };
+            let spec_id = entry.3.0;
+            let purchases = match commit_purchases(&classes, entry.0, entry.1.0, spec_id, &request)
+            {
+                Ok(purchases) => purchases,
+                Err(reason) => {
+                    warn!(
+                        "Rejected CommitTraitConfig for spec {}: {reason}",
+                        request.spec_id
+                    );
+                    let result = TraitCommitResult {
+                        ok: false,
+                        reason: Some(reason),
+                    };
+                    send(&mut senders.commit, connection, result);
+                    continue;
+                }
+            };
+            save_trait_config(&db.db, entry.2.0, spec_id, purchases.clone());
+            let result = TraitCommitResult {
+                ok: true,
+                reason: None,
+            };
+            send(&mut senders.commit, connection, result);
+            let evaluated = evaluate(&classes, entry.0, entry.1.0, spec_id, |_| purchases);
+            refresh_player(entry, evaluated, true, &db, connection, &mut senders);
+        }
+    }
+}
+
+/// Client ranks include granted ranks; the purchases are the ranks above them.
+fn commit_purchases(
+    classes: &ClassSpells,
+    player: &Player,
+    level: u8,
+    active_spec: u32,
+    request: &CommitTraitConfig,
+) -> Result<Vec<Purchase>, String> {
+    if request.spec_id != active_spec {
+        return Err(format!(
+            "spec {} is not the active spec {active_spec}",
+            request.spec_id
+        ));
+    }
+    let class = class_info(classes, player.class)
+        .ok_or_else(|| format!("class {} has no trait tree", player.class))?;
+    let ctx = TraitContext {
+        spec_id: active_spec,
+        level,
+    };
+    let granted = granted_entries(&class.traits, ctx);
+    let purchases: Vec<Purchase> = request
+        .entries
+        .iter()
+        .map(|selection| {
+            let free = granted
+                .iter()
+                .find(|g| g.node_id == selection.node_id && g.entry_id == selection.entry_id)
+                .map_or(0, |g| g.granted);
+            Purchase {
+                node_id: selection.node_id,
+                entry_id: selection.entry_id,
+                ranks: u32::from(selection.rank).saturating_sub(free),
+            }
+        })
+        .filter(|purchase| purchase.ranks > 0)
+        .collect();
+    build_config(&class.traits, ctx, &purchases)?;
+    Ok(purchases)
+}
+
+/// Level changes re-evaluate spec (Initial below the unlock level), the trait
+/// config against the new point budget, and known spells.
 fn sync_level_changes(
     db: Option<Res<GameDatabase>>,
     classes: Option<Res<ClassSpells>>,
@@ -447,8 +678,15 @@ fn sync_level_changes(
         let Ok(entry) = players.get_mut(link.0) else {
             continue;
         };
-        let requested = entry.3.0;
-        refresh_player(entry, requested, &classes, &db, connection, &mut senders);
+        let current_spec = entry.3.0;
+        let evaluated = evaluate(&classes, entry.0, entry.1.0, current_spec, |spec| {
+            if spec == current_spec {
+                entry.6.purchases()
+            } else {
+                load_trait_configs(&db.db, entry.2.0).spec(spec).to_vec()
+            }
+        });
+        refresh_player(entry, evaluated, false, &db, connection, &mut senders);
     }
 }
 

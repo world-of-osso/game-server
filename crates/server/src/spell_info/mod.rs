@@ -5,12 +5,14 @@
 //! DB2 values: IDs, flags and masks are not translated, times are
 //! milliseconds, and index columns (cast time, duration, range, radius,
 //! procs-per-minute, empower) are resolved to their referenced rows.
-//! `ClassSpells` holds per-class learnable and specialization spells.
+//! `ClassSpells` holds per-class learnable and specialization spells and the
+//! class trait tree.
 //!
 //! `crate::spell_cast` resolves casts from these records.
 
 mod class_data;
 mod load;
+mod trait_data;
 
 use std::path::Path;
 use std::time::Instant;
@@ -23,6 +25,10 @@ pub(crate) use class_data::MAX_LEVEL;
 #[cfg(test)]
 pub(crate) use class_data::load_class_spells;
 pub use class_data::{ClassInfo, ClassSpells, SpecInfo};
+pub use trait_data::{
+    COND_FLAG_GATE, COND_FLAG_SUFFICIENT, TraitCond, TraitCondType, TraitCost, TraitEdgeType,
+    TraitNode, TraitNodeEntry, TraitNodeType, TraitTree,
+};
 
 pub(crate) const WORLD_DB_PATH: &str = "data/world.db";
 

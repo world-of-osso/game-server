@@ -9,6 +9,7 @@ use rusqlite::{Connection, OpenFlags};
 
 use super::*;
 use crate::persistence::{self, temp_database};
+use crate::persistence_progression::load_trait_configs;
 use crate::spell_info::load_class_spells;
 
 const HUMAN: u8 = 1;
@@ -43,8 +44,8 @@ fn known_ids(classes: &ClassSpells, race: u8, class_id: u8, level: u8, spec: u32
         class: class_id,
         appearance: default(),
     };
-    evaluate(classes, &player, level, spec)
-        .1
+    evaluate(classes, &player, level, spec, |_| Vec::new())
+        .known
         .iter()
         .map(|spell| spell.spell_id)
         .collect()
@@ -81,7 +82,8 @@ fn paladin_known_spells_follow_required_level_and_race_mask() {
 }
 
 /// Server-to-client messages drained every frame: unread receiver buffers are
-/// dropped on the next receive.
+/// dropped on the next receive. Collected in `First`, before lightyear's `Last`
+/// clear/send_local chain, so every locally sent message is read exactly once.
 #[derive(Resource)]
 struct Inbox<M>(Vec<(Entity, M)>);
 
@@ -99,7 +101,7 @@ fn collect<M: Message>(
 fn add_inbox<M: Message + serde::Serialize + serde::de::DeserializeOwned>(app: &mut App) {
     app.register_message::<M>();
     app.insert_resource(Inbox::<M>(Vec::new()));
-    app.add_systems(Last, collect::<M>);
+    app.add_systems(First, collect::<M>);
 }
 
 fn setup_app(db: redb::Database, classes: ClassSpells) -> App {
@@ -113,8 +115,11 @@ fn setup_app(db: redb::Database, classes: ClassSpells) -> App {
     add_inbox::<SpellsUnlearned>(&mut app);
     add_inbox::<SpecializationChanged>(&mut app);
     add_inbox::<ActionBarSnapshot>(&mut app);
+    add_inbox::<TraitConfigSnapshot>(&mut app);
+    add_inbox::<TraitCommitResult>(&mut app);
     app.register_message::<SetSpecialization>();
     app.register_message::<SetActionButton>();
+    app.register_message::<CommitTraitConfig>();
     app.insert_resource(GameDatabase { db });
     app.insert_resource(classes);
     app.add_plugins(ClassProgressionPlugin);
@@ -164,6 +169,14 @@ fn spawn_player(app: &mut App, character_id: u64, race: u8, class: u8, level: u8
             MessageSender::<SetActionButton>::default(),
             MessageReceiver::<SetActionButton>::default(),
         ),
+        (
+            MessageSender::<TraitConfigSnapshot>::default(),
+            MessageReceiver::<TraitConfigSnapshot>::default(),
+            MessageSender::<TraitCommitResult>::default(),
+            MessageReceiver::<TraitCommitResult>::default(),
+            MessageSender::<CommitTraitConfig>::default(),
+            MessageReceiver::<CommitTraitConfig>::default(),
+        ),
     ));
     player
 }
@@ -206,6 +219,7 @@ fn drain(app: &mut App, player: Entity) {
     received::<KnownSpellsSnapshot>(app, player);
     received::<SpecializationChanged>(app, player);
     received::<ActionBarSnapshot>(app, player);
+    received::<TraitConfigSnapshot>(app, player);
 }
 
 fn stored(app: &App, character_id: u64) -> ProgressionData {
@@ -295,12 +309,15 @@ fn paladin_switch_retribution_to_holy_sends_deltas_and_prunes_bar() {
         received::<SpecializationChanged>(&mut app, player),
         vec![SpecializationChanged { spec_id: SPEC_HOLY }]
     );
+    // The last two of each list are granted talents: Retribution's Hammer of
+    // Wrath 1241288 and Greater Judgment 231663; Holy's Lay on Hands 633 and
+    // Divine Steed 190784 (node group 8479).
     assert_eq!(
         received::<SpellsUnlearned>(&mut app, player),
         vec![SpellsUnlearned {
             spells: vec![
                 85256, 86539, 137027, 162698, 267316, 342348, 403876, 404752, 412314, 462096,
-                404834, 384376, 1258011,
+                404834, 384376, 1258011, 1241288, 231663,
             ],
         }]
     );
@@ -309,7 +326,7 @@ fn paladin_switch_retribution_to_holy_sends_deltas_and_prunes_bar() {
         vec![SpellsLearned {
             spells: vec![
                 53563, 86103, 137029, 162701, 183997, 212056, 275773, 4987, 289941, 53651, 498,
-                82326, 415091, 428076, 440013, 462093, 231642, 1258016,
+                82326, 415091, 428076, 440013, 462093, 231642, 1258016, 633, 190784,
             ],
         }]
     );
@@ -514,4 +531,229 @@ fn admin_set_level_persists_and_updates_online_player() {
         persistence::load_character(db, character_id).unwrap().level,
         12
     );
+}
+
+/// Retribution nodes (node, entry): Blade of Justice 184575 is a root, Divine
+/// Storm 53385 and Expurgation 383344 need it, Avenging Wrath 31884 needs
+/// Expurgation. Holy: Holy Shock 20473 root, Infusion of Light 53576 below it.
+const BLADE_OF_JUSTICE: (u32, u32) = (81526, 102498);
+const DIVINE_STORM: (u32, u32) = (81527, 102499);
+const EXPURGATION: (u32, u32) = (92689, 114830);
+const AVENGING_WRATH: (u32, u32) = (81544, 102519);
+const HOLY_SHOCK: (u32, u32) = (81555, 102534);
+const INFUSION_OF_LIGHT: (u32, u32) = (81569, 102550);
+/// Nodes granted to Retribution at level 80 (Hammer of Wrath, Auras of the
+/// Resolute, Greater Judgment, hero keystones Dawnlight and Light's Guidance).
+const RET_GRANTED: [(u32, u32); 5] = [
+    (81510, 133481),
+    (81600, 102587),
+    (81603, 102590),
+    (95099, 117696),
+    (95180, 117813),
+];
+
+fn selections(nodes: &[(u32, u32)]) -> Vec<TraitEntrySelection> {
+    nodes
+        .iter()
+        .map(|&(node_id, entry_id)| TraitEntrySelection {
+            node_id,
+            entry_id,
+            rank: 1,
+        })
+        .collect()
+}
+
+fn purchases(nodes: &[(u32, u32)]) -> Vec<Purchase> {
+    nodes
+        .iter()
+        .map(|&(node_id, entry_id)| Purchase {
+            node_id,
+            entry_id,
+            ranks: 1,
+        })
+        .collect()
+}
+
+fn spawn_level_80_paladin(
+    app_db: redb::Database,
+    classes: ClassSpells,
+    spec: u32,
+) -> (App, Entity) {
+    save_progression(
+        &app_db,
+        9,
+        &ProgressionData {
+            spec_id: spec,
+            action_bar: Vec::new(),
+        },
+    );
+    let mut app = setup_app(app_db, classes);
+    let player = spawn_player(&mut app, 9, HUMAN, PALADIN, 80);
+    advance(&mut app);
+    (app, player)
+}
+
+#[test]
+fn enter_world_sends_granted_trait_config_with_level_budget() {
+    let Some(classes) = class_spells() else {
+        return;
+    };
+    let (mut app, player) = spawn_level_80_paladin(temp_database(), classes, SPEC_RETRIBUTION);
+
+    assert_eq!(
+        received::<TraitConfigSnapshot>(&mut app, player),
+        vec![TraitConfigSnapshot {
+            spec_id: SPEC_RETRIBUTION,
+            tree_id: 790,
+            entries: selections(&RET_GRANTED),
+            unspent: vec![(2801, 31), (2800, 30), (2986, 10), (2987, 10), (2988, 10)],
+        }]
+    );
+    let known = app.world().get::<KnownSpells>(player).unwrap();
+    // Granted Hammer of Wrath 1241288 is known; no hero tree is chosen, so the
+    // Dawnlight keystone 431377 is not.
+    assert!(known.contains(1241288));
+    assert!(!known.contains(431377));
+}
+
+#[test]
+fn committed_ret_build_is_persisted_and_learns_talent_spells() {
+    let Some(classes) = class_spells() else {
+        return;
+    };
+    let (mut app, player) = spawn_level_80_paladin(temp_database(), classes, SPEC_RETRIBUTION);
+    drain(&mut app, player);
+    let build = [BLADE_OF_JUSTICE, DIVINE_STORM, EXPURGATION, AVENGING_WRATH];
+
+    send_request(
+        &mut app,
+        player,
+        CommitTraitConfig {
+            spec_id: SPEC_RETRIBUTION,
+            entries: selections(&build),
+        },
+    );
+
+    assert_eq!(
+        received::<TraitCommitResult>(&mut app, player),
+        vec![TraitCommitResult {
+            ok: true,
+            reason: None
+        }]
+    );
+    // Avenging Wrath 31884 is a trainer spell, so all four are new.
+    assert_eq!(
+        received::<SpellsLearned>(&mut app, player),
+        vec![SpellsLearned {
+            spells: vec![184575, 53385, 383344, 31884],
+        }]
+    );
+    let mut entries = selections(&RET_GRANTED);
+    entries.extend(selections(&build));
+    assert_eq!(
+        received::<TraitConfigSnapshot>(&mut app, player),
+        vec![TraitConfigSnapshot {
+            spec_id: SPEC_RETRIBUTION,
+            tree_id: 790,
+            entries,
+            unspent: vec![(2801, 31), (2800, 26), (2986, 10), (2987, 10), (2988, 10)],
+        }]
+    );
+    let loadout = app.world().get::<TraitLoadout>(player).unwrap();
+    // Expurgation is passive, Avenging Wrath active.
+    let talents: Vec<KnownSpell> = loadout.active_talent_spells().collect();
+    for (spell_id, passive) in [(383344, true), (31884, false)] {
+        assert!(
+            talents.contains(&KnownSpell { spell_id, passive }),
+            "{spell_id}"
+        );
+    }
+    assert_eq!(
+        load_trait_configs(&app.world().resource::<GameDatabase>().db, 9).spec(SPEC_RETRIBUTION),
+        purchases(&build).as_slice()
+    );
+}
+
+#[test]
+fn rejected_commit_reports_reason_and_changes_nothing() {
+    let Some(classes) = class_spells() else {
+        return;
+    };
+    let (mut app, player) = spawn_level_80_paladin(temp_database(), classes, SPEC_RETRIBUTION);
+    drain(&mut app, player);
+    let known_before = app.world().get::<KnownSpells>(player).unwrap().clone();
+
+    send_request(
+        &mut app,
+        player,
+        CommitTraitConfig {
+            spec_id: SPEC_RETRIBUTION,
+            entries: selections(&[BLADE_OF_JUSTICE, AVENGING_WRATH]),
+        },
+    );
+    send_request(
+        &mut app,
+        player,
+        CommitTraitConfig {
+            spec_id: SPEC_HOLY,
+            entries: Vec::new(),
+        },
+    );
+
+    assert_eq!(
+        received::<TraitCommitResult>(&mut app, player),
+        vec![
+            TraitCommitResult {
+                ok: false,
+                reason: Some("node 81544 requires one of nodes [92689] fully ranked".into()),
+            },
+            TraitCommitResult {
+                ok: false,
+                reason: Some("spec 65 is not the active spec 70".into()),
+            },
+        ]
+    );
+    assert!(received::<SpellsLearned>(&mut app, player).is_empty());
+    assert!(received::<TraitConfigSnapshot>(&mut app, player).is_empty());
+    assert_eq!(app.world().get::<KnownSpells>(player), Some(&known_before));
+    let saved = load_trait_configs(&app.world().resource::<GameDatabase>().db, 9);
+    assert!(saved.spec(SPEC_RETRIBUTION).is_empty());
+}
+
+#[test]
+fn spec_change_loads_the_other_specs_saved_config() {
+    let Some(classes) = class_spells() else {
+        return;
+    };
+    let db = temp_database();
+    let ret_build = [BLADE_OF_JUSTICE, DIVINE_STORM, EXPURGATION];
+    let holy_build = [HOLY_SHOCK, INFUSION_OF_LIGHT];
+    save_trait_config(&db, 9, SPEC_RETRIBUTION, purchases(&ret_build));
+    save_trait_config(&db, 9, SPEC_HOLY, purchases(&holy_build));
+    let (mut app, player) = spawn_level_80_paladin(db, classes, SPEC_RETRIBUTION);
+    let entered = received::<TraitConfigSnapshot>(&mut app, player);
+    assert_eq!(entered.len(), 1);
+    assert!(entered[0].entries.ends_with(&selections(&ret_build)));
+    drain(&mut app, player);
+    assert!(
+        app.world()
+            .get::<KnownSpells>(player)
+            .unwrap()
+            .contains(383344)
+    );
+
+    send_request(&mut app, player, SetSpecialization { spec_id: SPEC_HOLY });
+
+    let snapshots = received::<TraitConfigSnapshot>(&mut app, player);
+    assert_eq!(snapshots.len(), 1);
+    assert_eq!(snapshots[0].spec_id, SPEC_HOLY);
+    assert!(snapshots[0].entries.ends_with(&selections(&holy_build)));
+    assert_eq!(snapshots[0].unspent[1], (2800, 28));
+    let known = app.world().get::<KnownSpells>(player).unwrap();
+    assert!(known.contains(53576));
+    assert!(!known.contains(383344));
+    let learned = received::<SpellsLearned>(&mut app, player);
+    assert!(learned[0].spells.contains(&53576));
+    let unlearned = received::<SpellsUnlearned>(&mut app, player);
+    assert!(unlearned[0].spells.contains(&383344));
 }

@@ -1,8 +1,9 @@
 use bevy::prelude::*;
 use lightyear::prelude::*;
-use shared::class_spec::SelectedTalents;
 use shared::components::{EquipmentAppearance, Player};
-use shared::protocol::{InspectChannel, InspectSnapshot, InspectStateUpdate, QueryInspectTarget};
+use shared::protocol::{
+    InspectChannel, InspectSnapshot, InspectStateUpdate, QueryInspectTarget, TalentSnapshot,
+};
 
 use crate::auth::Authenticated;
 use crate::networking::PlayerLink;
@@ -24,7 +25,7 @@ fn process_inspect_queries(
         ),
         With<Authenticated>,
     >,
-    players: Query<(&Player, &EquipmentAppearance, &SelectedTalents)>,
+    players: Query<(&Player, &EquipmentAppearance)>,
     mut senders: Query<&mut MessageSender<InspectStateUpdate>>,
 ) {
     for (conn_entity, link, mut receiver) in &mut receivers {
@@ -38,15 +39,14 @@ fn process_inspect_queries(
                     continue;
                 }
             };
-            let Ok((target_player, equipment_appearance, talents)) = players.get(target_entity)
-            else {
+            let Ok((target_player, equipment_appearance)) = players.get(target_entity) else {
                 send_inspect_error(conn_entity, &mut senders, "inspect target data unavailable");
                 continue;
             };
             send_inspect_snapshot(
                 conn_entity,
                 &mut senders,
-                build_inspect_snapshot(target_player, equipment_appearance, talents),
+                build_inspect_snapshot(target_player, equipment_appearance),
             );
         }
     }
@@ -99,15 +99,20 @@ fn inspect_target_entity(
     Ok(target_entity)
 }
 
+/// `InspectSnapshot.talents` is the retired pre-trait talent snapshot and is
+/// sent empty; inspecting trait configs needs a protocol message.
 fn build_inspect_snapshot(
     target: &Player,
     equipment_appearance: &EquipmentAppearance,
-    talents: &SelectedTalents,
 ) -> InspectSnapshot {
     InspectSnapshot {
         target_name: target.name.clone(),
         equipment_appearance: equipment_appearance.clone(),
-        talents: crate::talent::build_talent_snapshot(talents),
+        talents: TalentSnapshot {
+            spec_tabs: Vec::new(),
+            talents: Vec::new(),
+            points_remaining: 0,
+        },
     }
 }
 

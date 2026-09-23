@@ -6,6 +6,7 @@ use rusqlite::Connection;
 use serde::Serialize;
 
 use super::load::{int, uint};
+use super::trait_data::{TraitTree, load_trait_tree};
 
 /// ChrClasses ID -> class skill line (skill_line CategoryID 7). Character creation classes only.
 const CLASS_SKILL_LINES: [(u8, u32); 10] = [
@@ -24,7 +25,7 @@ pub(crate) const MAX_LEVEL: u32 = 90;
 /// SkillLineAbilityAcquireMethod::NeverLearned (TrinityCore DBCEnums.h).
 const ACQUIRE_NEVER_LEARNED: u32 = 3;
 /// SPELL_ATTR0_PASSIVE in `spell_misc.Attributes_0`.
-const ATTR0_PASSIVE: u32 = 0x40;
+pub(super) const ATTR0_PASSIVE: u32 = 0x40;
 
 #[derive(Resource, Debug, Default, Serialize)]
 pub struct ClassSpells {
@@ -45,6 +46,8 @@ pub struct ClassInfo {
     pub learnable: Vec<LearnableSpell>,
     /// Sorted by `OrderIndex`.
     pub specs: Vec<SpecInfo>,
+    /// Class talent tree (class, spec and hero nodes).
+    pub traits: TraitTree,
 }
 
 /// A `skill_line_ability` row on the class skill line.
@@ -99,6 +102,7 @@ pub(crate) fn load_class_spells(conn: &Connection) -> rusqlite::Result<ClassSpel
                 attack_power_per_agility,
                 learnable: load_learnable(conn, class_id, skill_line)?,
                 specs: load_specs(conn, class_id)?,
+                traits: load_trait_tree(conn, skill_line)?,
             })
         })
         .collect::<rusqlite::Result<_>>()?;

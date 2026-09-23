@@ -4,7 +4,7 @@ use shared::components::{
 };
 
 #[test]
-fn build_inspect_snapshot_includes_equipment_and_talents() {
+fn build_inspect_snapshot_includes_equipment_and_empty_legacy_talents() {
     let target = Player {
         name: "Alice".into(),
         race: 1,
@@ -20,24 +20,13 @@ fn build_inspect_snapshot_includes_equipment_and_talents() {
             hidden: false,
         }],
     };
-    let talents = shared::class_spec::SelectedTalents {
-        talent_ids: [101].into_iter().collect(),
-    };
 
-    let snapshot = build_inspect_snapshot(&target, &equipment_appearance, &talents);
+    let snapshot = build_inspect_snapshot(&target, &equipment_appearance);
 
     assert_eq!(snapshot.target_name, "Alice");
-    assert_eq!(snapshot.equipment_appearance.entries.len(), 1);
-    assert_eq!(snapshot.talents.spec_tabs.len(), 3);
-    assert!(
-        snapshot
-            .talents
-            .talents
-            .iter()
-            .find(|talent| talent.talent_id == 101)
-            .expect("talent 101")
-            .active
-    );
+    assert_eq!(snapshot.equipment_appearance, equipment_appearance);
+    assert!(snapshot.talents.talents.is_empty());
+    assert!(snapshot.talents.spec_tabs.is_empty());
 }
 
 #[test]

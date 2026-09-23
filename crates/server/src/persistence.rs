@@ -216,6 +216,7 @@ pub(crate) fn create_tables(db: &Database) {
     let _ = txn.open_table(NEXT_IDS);
     let _ = txn.open_table(SERVER_SETTINGS);
     let _ = txn.open_table(crate::persistence_progression::CHARACTER_PROGRESSION);
+    let _ = txn.open_table(crate::persistence_progression::CHARACTER_TRAITS);
     txn.commit().expect("Failed to commit initial tables");
     migrate_legacy_inventories(db);
     migrate_legacy_characters(db);

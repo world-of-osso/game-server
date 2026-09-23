@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use lightyear::prelude::*;
 use shared::components::{
     CombatRatings, Gold, GuildMembership, Health, Level, Mana, MovementSpeed, Player, Position,
-    Rotation, SelectedTalents, UnitStats, VerticalVelocity,
+    Rotation, UnitStats, VerticalVelocity,
 };
 use shared::profession::PlayerProfessions;
 use shared::protocol::{
@@ -443,7 +443,6 @@ fn build_player_runtime_components(character_id: u64, level: u16) -> impl Bundle
         UnitStats::default(),
         CombatRatings::default(),
         Level(level as u8),
-        SelectedTalents::default(),
         ClientId(character_id),
         CombatTarget::default(),
         Replicate::to_clients(NetworkTarget::All),

@@ -40,9 +40,9 @@ mod rest;
 mod spell_cast;
 mod spell_info;
 mod stats;
-mod talent;
 mod terrain_height;
 mod trade;
+mod trait_config;
 mod who;
 mod world_data;
 mod world_map;
@@ -113,7 +113,6 @@ fn add_progression_plugins(app: &mut App) {
         .add_plugins(profession::ProfessionPlugin)
         .add_plugins(reputation::ReputationPlugin)
         .add_plugins(rest::RestPlugin)
-        .add_plugins(talent::TalentPlugin)
         .add_plugins(class_progression::ClassProgressionPlugin);
 }
 
