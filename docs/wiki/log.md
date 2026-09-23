@@ -1,5 +1,9 @@
 # Wiki Log
 
+## [2026-09-23] systems | Build-pinned DB2 spell/class import
+
+Updated [[world-data]]: `scripts/db2.py` fetches 50 wago.tools tables pinned to Retail `12.1.0.69933` and imports them into `world.db` in one transaction (DDL `scripts/db2_schema.sql`, provenance in `db2_build`). Header/schema mismatch fails with previous rows intact. `python scripts/tests/test_import_azerothcore.py` covers fixtures and real pinned rows. No server code reads the new tables yet.
+
 ## [2026-09-11] systems | Authoritative cast presentation
 
 Documented named shared `CastState`, authenticated owner-bound receiver handling, progress/expiry/stop/movement, and engine worker snapshot handoff in [[networking]] and [contract](../specs/cast-presentation.md). Server `08c8634` and shared `d3b0736`: five focused HostClient tests pass (`/tmp/claude/cast-presentation-five-tests.log`, 0.02s execution, 12.84s compile); no spell effects, wire replication, rendered, or deployment claim. Shared source is sibling `shared-protocol`, not stale `crates/shared`.

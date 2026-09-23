@@ -24,21 +24,33 @@ Source: `~/Repos/azerothcore/data/sql/base/db_world/`
 | `creature_template_model` | 40,213 | Display models per creature (DisplayID, scale, probability) |
 | `waypoint_data` | 144,657 | Ordered patrol path points with per-point delay (ms) |
 
-### Spell Data (Retail WoW DB2 CSVs)
+### Spell/Class Data (Retail WoW DB2 CSVs)
 
-Source: `../game-engine/data/` (extracted from CASC archives)
+Source: wago.tools exports pinned to Retail `12.1.0.69933` (the local install's `.build.info` version), stored in `../game-engine/data/db2/<build>/<Table>.csv`.
 
-| Table | Rows | Purpose |
+- `scripts/db2.py fetch` downloads every table in `db2.TABLES` (skips files already present; retries 429/5xx with backoff + jitter, honours `Retry-After`).
+- `scripts/db2.py import --db data/world.db` replaces only the DB2 tables, in one transaction, so it is safe on a populated `world.db` and idempotent. `import-azerothcore.sh` calls it after rebuilding creature tables.
+- DDL lives in `scripts/db2_schema.sql`. Table names are the snake_case DB2 names (`SpellXSpellVisual` → `spell_x_spell_visual`). The import fails, leaving the previous rows, when a CSV header differs from the schema; a new build needs a schema update.
+- `db2_build(table_name, build)` records the source build of each table.
+- wago.tools has no Retail `SpellIcon` table (icons are FileDataIDs in `spell_misc`).
+
+| Table | Rows (12.1.0.69933) | Purpose |
 |-------|------|---------|
-| `spell_name` | 399,649 | Spell ID → name |
-| `spell` | 399,649 | Spell descriptions and aura text |
-| `spell_misc` | 403,223 | Attributes, cast time index, range index, school, projectile speed |
-| `spell_effect` | 607,032 | Per-effect coefficients, targets (multiple effects per spell) |
-| `spell_power` | 5,677 | Resource costs (mana, rage, energy, etc.) |
-| `spell_cast_times` | 268 | CastingTimeIndex → base cast time (ms) |
+| `spell_name` | 414,027 | Spell ID → name |
+| `spell` | 414,027 | Spell descriptions and aura text |
+| `spell_misc` | 417,635 | Attributes, cast time index, range index, school, projectile speed |
+| `spell_effect` | 629,424 | Per-effect coefficients, targets (multiple effects per spell) |
+| `spell_power` | 5,715 | Resource costs (mana, rage, energy, etc.) |
+| `spell_cast_times` | 272 | CastingTimeIndex → base cast time (ms) |
 | `spell_range` | 222 | RangeIndex → min/max range (yards, hostile/friendly) |
-| `spell_cooldowns` | 35,547 | Per-spell cooldowns and GCD recovery times (ms) |
-| `spell_duration` | 428 | DurationIndex → duration / max duration (ms) |
+| `spell_cooldowns` | 36,334 | Per-spell cooldowns and GCD recovery times (ms) |
+| `spell_duration` | 435 | DurationIndex → duration / max duration (ms) |
+| `skill_line_ability` | 17,957 | Skill line (class/spec) → spell grants |
+| `spell_aura_options` | 32,164 | Stacks, proc chance/charges/PPM per spell |
+| `chr_specialization` | 60 | Specs (ID, class, role, mastery) |
+| `trait_node` | 11,875 | Talent tree nodes |
+
+Other imported tables: spell categories, levels, class options, procs-per-minute (+mods), shapeshift (+forms), interrupts, target restrictions, equipped items, radius, scaling, empower (+stages), `spell_x_spell_visual`, `skill_line`, `chr_classes`, `specialization_spells`, `power_type`, `chr_classes_x_power_types`, and the `trait_*` / `skill_line_x_trait_tree` talent tables. Nothing in the server reads the new tables yet.
 
 ## Event-dependent creature spawns
 
@@ -48,7 +60,7 @@ The loader requires the membership table and fails explicitly when it is absent.
 
 On September 9, 2026, missing memberships exposed Arena Tournament event31 spawns in normal Northshire: GUID96194 (Arena Organizer),96198 (Fight Promoter),96204 (Paymaster). Their authored elevations were above the loaded terrain. The source membership rows—not visual height guesses—identify why they should be absent. Brother Neals GUID79968 remains at his authored upstairs elevation113.24.
 
-Regression coverage: `startup_tests::world_data_excludes_inactive_tournament_spawns_without_lowering_ordinary_npcs` uses file-backed SQLite and checks selection, unchanged upstairs height, map indexing, and retained source rows. `python scripts/tests/test_import_azerothcore.py` executes the actual importer against isolated fixtures, checking signed memberships and non-destructive missing-input failure.
+Regression coverage: `startup_tests::world_data_excludes_inactive_tournament_spawns_without_lowering_ordinary_npcs` uses file-backed SQLite and checks selection, unchanged upstairs height, map indexing, and retained source rows. `python scripts/tests/test_import_azerothcore.py` executes the actual importer against isolated fixtures, checking signed memberships and non-destructive missing-input failure. The same file covers DB2 re-import/rollback on fixtures and, when the pinned CSVs are present (`DB2_CSV_ROOT` overrides the location), known Retail rows such as Kick 1766 Effect 68.
 
 ## Movement Types
 
