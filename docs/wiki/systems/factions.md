@@ -1,6 +1,6 @@
 # Factions and Reactions
 
-Every unit carries a Retail `FactionTemplate` ID in the replicated `UnitFactionTemplate(u32)`. The server derives unit reactions from the DB2 `faction_template` table and uses them for spell target relations ([[spell-casting]]) and auto-attack eligibility ([[combat]]). Code: `crates/server/src/faction.rs`.
+Every unit carries a Retail `FactionTemplate` ID in the replicated `UnitFactionTemplate(u32)`. The server derives unit reactions from the DB2 `faction_template` table and uses them for spell target relations ([[spell-casting]]) and auto-attack eligibility ([[combat]]). Code: `crates/server/src/faction_reaction.rs` (pure rules over FactionTemplate rows, no Bevy types; candidate to move into shared-protocol so client and server share one copy) and `crates/server/src/faction.rs` (ID lookups, race table, world.db loader).
 
 ## Sources of the template ID
 

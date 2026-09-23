@@ -23,6 +23,10 @@ Target acquisition still inserts an active `AutoAttack` with a zero timer, so th
 
 The RED test at `/tmp/claude/game-server/autoattack-inactive-removal-red.log` failed because the inactive component remained. The focused GREEN test at `/tmp/claude/game-server/autoattack-inactive-removal-green.log` passed after the removal. `cargo fmt` and Rust readability evidence are recorded for the commit. This documents a correctness-preserving participation fix; no live CPU or Character-stage claim is made before runtime measurement.
 
+## Replicated Unit Target
+
+`UnitTargetPlugin` (`unit_target.rs`, PostUpdate) mirrors each unit's current target into the replicated `UnitTarget(Option<u64>)` (entity bits) for target-of-target frames. Players: from `CombatTarget` (SetTarget). NPCs: from `CreatureState::Pursuing { target }` (NPCs have no `CombatTarget`; Pursuing is only entered in tests today). Written only when the value changes.
+
 ## NPC Death Transition (`c8762ed`)
 
 NPC death is handled at the sole authoritative NPC damage boundary: `try_swing`, called by `auto_attack_system`. After damage is clamped to zero, a lethal NPC result immediately inserts `DeathState` and removes `Replicate`; the same swing emits both the melee-damage and death `CombatEvent` values. The former 20 Hz scan over every living NPC was removed.

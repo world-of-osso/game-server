@@ -2,7 +2,7 @@
 
 ## [2026-09-23] systems | NPC faction and reaction
 
-Created [[factions]]; updated [[spell-casting]] (relations from reactions) and the index. NPCs get `UnitFactionTemplate` from `creature_template.faction`, players from `ChrRaces.FactionID`. DB2 `FactionTemplate` imported at 12.1.0.69933; all 657 AzerothCore creature faction IDs exist in Retail. Reputation is not consulted.
+Created [[factions]]; updated [[spell-casting]] (relations from reactions) and the index. NPCs get `UnitFactionTemplate` from `creature_template.faction`, players from `ChrRaces.FactionID`. DB2 `FactionTemplate` imported at 12.1.0.69933; all 657 AzerothCore creature faction IDs exist in Retail. Reputation is not consulted. Reaction rules split into pure `faction_reaction.rs`; replicated `UnitTarget` mirrors player `CombatTarget` and NPC chase target ([[combat]]).
 
 ## [2026-09-23] systems | Inventory and equipment networking
 

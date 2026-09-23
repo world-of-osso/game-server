@@ -19,6 +19,7 @@ mod duel;
 mod durability;
 mod equipment_admin_types;
 mod faction;
+mod faction_reaction;
 mod friends;
 mod gold;
 mod guild;
@@ -45,6 +46,7 @@ mod stats;
 mod terrain_height;
 mod trade;
 mod trait_config;
+mod unit_target;
 mod who;
 mod world_data;
 mod world_map;
@@ -128,6 +130,7 @@ fn add_world_plugins(app: &mut App) {
         .add_plugins(creature_ai::CreatureAiPlugin)
         .add_plugins(stats::StatsPlugin)
         .add_plugins(combat::CombatPlugin)
+        .add_plugins(unit_target::UnitTargetPlugin)
         .add_plugins(spell_info::SpellInfoPlugin)
         .add_plugins(spell_cast::SpellCastPlugin)
         .add_plugins(auras::AuraPlugin)

@@ -2,13 +2,16 @@
 //!
 //! Every unit carries a Retail `FactionTemplate` ID in `UnitFactionTemplate`:
 //! NPCs from `creature_template.faction`, players from `ChrRaces.FactionID`.
-//! `reaction` is AzerothCore's template-only `Unit::GetFactionReactionTo`
-//! check; player reputation (forced ranks, at-war) is not consulted.
+//! The reaction rules themselves live in the pure `faction_reaction` module;
+//! this module holds the ID lookups, race table and world.db loader.
 
 use std::collections::HashMap;
 
 use bevy::prelude::*;
 use rusqlite::{Connection, params};
+
+pub use crate::faction_reaction::Reaction;
+use crate::faction_reaction::{self, FactionTemplateEntry};
 
 pub(crate) fn faction_for_race(race: u8) -> u8 {
     match race {
@@ -41,61 +44,6 @@ pub(crate) fn faction_template_for_race(race: u8) -> u32 {
     }
 }
 
-/// AzerothCore `FACTION_TEMPLATE_FLAG_HATES_ALL_EXCEPT_FRIENDS`.
-const HOSTILE_BY_DEFAULT: u32 = 0x2000;
-
-/// One `faction_template` row (DB2 FactionTemplate).
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub struct FactionTemplateEntry {
-    pub faction: u32,
-    pub flags: u32,
-    pub faction_group: u32,
-    pub friend_group: u32,
-    pub enemy_group: u32,
-    pub enemies: [u32; 8],
-    pub friends: [u32; 8],
-}
-
-impl FactionTemplateEntry {
-    /// AzerothCore `FactionTemplateEntry::IsFriendlyTo`.
-    fn is_friendly_to(&self, other: &Self) -> bool {
-        if self.faction == other.faction {
-            return true;
-        }
-        if other.faction != 0 {
-            if self.enemies.contains(&other.faction) {
-                return false;
-            }
-            if self.friends.contains(&other.faction) {
-                return true;
-            }
-        }
-        self.friend_group & other.faction_group != 0 || self.faction_group & other.friend_group != 0
-    }
-
-    /// AzerothCore `FactionTemplateEntry::IsHostileTo`.
-    fn is_hostile_to(&self, other: &Self) -> bool {
-        if other.faction != 0 {
-            if self.enemies.contains(&other.faction) {
-                return true;
-            }
-            if self.friends.contains(&other.faction) {
-                return false;
-            }
-        }
-        self.enemy_group & other.faction_group != 0
-    }
-}
-
-/// How one unit regards another. Unfriendly (a reputation rank) needs the
-/// reputation model and is not produced yet.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub enum Reaction {
-    Hostile,
-    Neutral,
-    Friendly,
-}
-
 /// Faction identity of one unit for attack/assist checks.
 #[derive(Debug, Clone, Copy)]
 pub struct UnitFaction {
@@ -108,48 +56,24 @@ pub struct UnitFaction {
 pub struct FactionTemplates(pub HashMap<u32, FactionTemplateEntry>);
 
 impl FactionTemplates {
-    /// Reaction of a unit with template `a` towards one with template `b`
-    /// (template checks of `GetFactionReactionTo`). A missing
-    /// or unknown template is neutral.
+    fn unit(&self, unit: UnitFaction) -> faction_reaction::Unit<'_> {
+        faction_reaction::Unit {
+            template: self.0.get(&unit.template),
+            is_player: unit.is_player,
+        }
+    }
+
+    /// Reaction of a unit with template `a` towards one with template `b`.
     pub fn reaction(&self, a: u32, b: u32) -> Reaction {
-        let (Some(own), Some(other)) = (self.0.get(&a), self.0.get(&b)) else {
-            return Reaction::Neutral;
-        };
-        if a == b {
-            return Reaction::Friendly;
-        }
-        if own.is_hostile_to(other) {
-            Reaction::Hostile
-        } else if own.is_friendly_to(other) || other.is_friendly_to(own) {
-            Reaction::Friendly
-        } else if own.flags & HOSTILE_BY_DEFAULT != 0 {
-            Reaction::Hostile
-        } else {
-            Reaction::Neutral
-        }
+        faction_reaction::reaction(self.0.get(&a), self.0.get(&b))
     }
 
-    /// AzerothCore `_IsValidAttackTarget`, faction part: never a friendly
-    /// unit; creature vs creature only when one is hostile to the other.
-    /// There is no PvP flag or duel model, so player vs player is rejected.
     pub fn can_attack(&self, a: UnitFaction, b: UnitFaction) -> bool {
-        let forward = self.reaction(a.template, b.template);
-        let backward = self.reaction(b.template, a.template);
-        if forward == Reaction::Friendly || backward == Reaction::Friendly {
-            return false;
-        }
-        match (a.is_player, b.is_player) {
-            (true, true) => false,
-            (false, false) => forward == Reaction::Hostile || backward == Reaction::Hostile,
-            _ => true,
-        }
+        faction_reaction::can_attack(self.unit(a), self.unit(b))
     }
 
-    /// Assist (friendly spell) target: the caster regards the target as
-    /// friendly. Stands in for `_IsValidAssistTarget`'s reaction check plus
-    /// its PvC rule (creature `type_flags` CAN_ASSIST is not imported).
     pub fn can_assist(&self, a: UnitFaction, b: UnitFaction) -> bool {
-        self.reaction(a.template, b.template) == Reaction::Friendly
+        faction_reaction::can_assist(self.unit(a), self.unit(b))
     }
 }
 
@@ -165,6 +89,7 @@ pub fn load_faction_templates(conn: &Connection) -> rusqlite::Result<FactionTemp
     let rows = stmt.query_map(params![], |row| {
         let column = |index: usize| row.get::<_, i64>(index).map(|value| value as u32);
         let mut entry = FactionTemplateEntry {
+            id: column(0)?,
             faction: column(1)?,
             flags: column(2)?,
             faction_group: column(3)?,
@@ -176,7 +101,7 @@ pub fn load_faction_templates(conn: &Connection) -> rusqlite::Result<FactionTemp
             entry.enemies[slot] = column(6 + slot)?;
             entry.friends[slot] = column(14 + slot)?;
         }
-        Ok((column(0)?, entry))
+        Ok((entry.id, entry))
     })?;
     rows.collect::<rusqlite::Result<_>>().map(FactionTemplates)
 }
