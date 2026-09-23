@@ -1,0 +1,680 @@
+-- Retail DB2 tables imported by scripts/db2.py from build-pinned wago.tools CSVs.
+-- Column names and order must match the CSV headers of the pinned build exactly;
+-- db2.py fails the import on any mismatch. Applied inside the import transaction,
+-- so it must only touch DB2 tables.
+
+DROP TABLE IF EXISTS db2_build;
+CREATE TABLE db2_build (
+  table_name TEXT PRIMARY KEY,
+  build TEXT NOT NULL
+);
+
+DROP TABLE IF EXISTS spell_name;
+CREATE TABLE spell_name (
+  ID INTEGER PRIMARY KEY,
+  Name_lang TEXT NOT NULL DEFAULT ''
+);
+
+DROP TABLE IF EXISTS spell;
+CREATE TABLE spell (
+  ID INTEGER PRIMARY KEY,
+  NameSubtext_lang TEXT NOT NULL DEFAULT '',
+  Description_lang TEXT NOT NULL DEFAULT '',
+  AuraDescription_lang TEXT NOT NULL DEFAULT ''
+);
+
+DROP TABLE IF EXISTS spell_misc;
+CREATE TABLE spell_misc (
+  ID INTEGER PRIMARY KEY,
+  Attributes_0 INTEGER NOT NULL DEFAULT 0,
+  Attributes_1 INTEGER NOT NULL DEFAULT 0,
+  Attributes_2 INTEGER NOT NULL DEFAULT 0,
+  Attributes_3 INTEGER NOT NULL DEFAULT 0,
+  Attributes_4 INTEGER NOT NULL DEFAULT 0,
+  Attributes_5 INTEGER NOT NULL DEFAULT 0,
+  Attributes_6 INTEGER NOT NULL DEFAULT 0,
+  Attributes_7 INTEGER NOT NULL DEFAULT 0,
+  Attributes_8 INTEGER NOT NULL DEFAULT 0,
+  Attributes_9 INTEGER NOT NULL DEFAULT 0,
+  Attributes_10 INTEGER NOT NULL DEFAULT 0,
+  Attributes_11 INTEGER NOT NULL DEFAULT 0,
+  Attributes_12 INTEGER NOT NULL DEFAULT 0,
+  Attributes_13 INTEGER NOT NULL DEFAULT 0,
+  Attributes_14 INTEGER NOT NULL DEFAULT 0,
+  Attributes_15 INTEGER NOT NULL DEFAULT 0,
+  Attributes_16 INTEGER NOT NULL DEFAULT 0,
+  DifficultyID INTEGER NOT NULL DEFAULT 0,
+  CastingTimeIndex INTEGER NOT NULL DEFAULT 0,
+  DurationIndex INTEGER NOT NULL DEFAULT 0,
+  PvPDurationIndex INTEGER NOT NULL DEFAULT 0,
+  RangeIndex INTEGER NOT NULL DEFAULT 0,
+  SchoolMask INTEGER NOT NULL DEFAULT 0,
+  Speed REAL NOT NULL DEFAULT 0,
+  LaunchDelay REAL NOT NULL DEFAULT 0,
+  MinDuration REAL NOT NULL DEFAULT 0,
+  SpellIconFileDataID INTEGER NOT NULL DEFAULT 0,
+  ActiveIconFileDataID INTEGER NOT NULL DEFAULT 0,
+  ContentTuningID INTEGER NOT NULL DEFAULT 0,
+  ShowFutureSpellPlayerConditionID INTEGER NOT NULL DEFAULT 0,
+  SpellVisualScript INTEGER NOT NULL DEFAULT 0,
+  ActiveSpellVisualScript INTEGER NOT NULL DEFAULT 0,
+  SpellID INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS spell_misc_spell_id ON spell_misc(SpellID);
+
+DROP TABLE IF EXISTS spell_effect;
+CREATE TABLE spell_effect (
+  ID INTEGER PRIMARY KEY,
+  EffectAura INTEGER NOT NULL DEFAULT 0,
+  DifficultyID INTEGER NOT NULL DEFAULT 0,
+  EffectIndex INTEGER NOT NULL DEFAULT 0,
+  Effect INTEGER NOT NULL DEFAULT 0,
+  EffectAmplitude REAL NOT NULL DEFAULT 0,
+  EffectAttributes INTEGER NOT NULL DEFAULT 0,
+  EffectAuraPeriod INTEGER NOT NULL DEFAULT 0,
+  EffectBonusCoefficient REAL NOT NULL DEFAULT 0,
+  EffectChainAmplitude REAL NOT NULL DEFAULT 0,
+  EffectChainTargets INTEGER NOT NULL DEFAULT 0,
+  EffectItemType INTEGER NOT NULL DEFAULT 0,
+  EffectMechanic INTEGER NOT NULL DEFAULT 0,
+  EffectPointsPerResource REAL NOT NULL DEFAULT 0,
+  EffectPos_facing REAL NOT NULL DEFAULT 0,
+  EffectRealPointsPerLevel REAL NOT NULL DEFAULT 0,
+  EffectTriggerSpell INTEGER NOT NULL DEFAULT 0,
+  BonusCoefficientFromAP REAL NOT NULL DEFAULT 0,
+  PvpMultiplier REAL NOT NULL DEFAULT 0,
+  Coefficient REAL NOT NULL DEFAULT 0,
+  Variance REAL NOT NULL DEFAULT 0,
+  ResourceCoefficient REAL NOT NULL DEFAULT 0,
+  GroupSizeBasePointsCoefficient REAL NOT NULL DEFAULT 0,
+  EffectBasePointsF REAL NOT NULL DEFAULT 0,
+  ScalingClass INTEGER NOT NULL DEFAULT 0,
+  Node__Field_12_0_0_63534_001 INTEGER NOT NULL DEFAULT 0,
+  EffectMiscValue_0 INTEGER NOT NULL DEFAULT 0,
+  EffectMiscValue_1 INTEGER NOT NULL DEFAULT 0,
+  EffectRadiusIndex_0 INTEGER NOT NULL DEFAULT 0,
+  EffectRadiusIndex_1 INTEGER NOT NULL DEFAULT 0,
+  EffectSpellClassMask_0 INTEGER NOT NULL DEFAULT 0,
+  EffectSpellClassMask_1 INTEGER NOT NULL DEFAULT 0,
+  EffectSpellClassMask_2 INTEGER NOT NULL DEFAULT 0,
+  EffectSpellClassMask_3 INTEGER NOT NULL DEFAULT 0,
+  ImplicitTarget_0 INTEGER NOT NULL DEFAULT 0,
+  ImplicitTarget_1 INTEGER NOT NULL DEFAULT 0,
+  SpellID INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS spell_effect_spell_id ON spell_effect(SpellID);
+
+DROP TABLE IF EXISTS spell_power;
+CREATE TABLE spell_power (
+  ID INTEGER PRIMARY KEY,
+  OrderIndex INTEGER NOT NULL DEFAULT 0,
+  ManaCost INTEGER NOT NULL DEFAULT 0,
+  ManaCostPerLevel INTEGER NOT NULL DEFAULT 0,
+  ManaPerSecond INTEGER NOT NULL DEFAULT 0,
+  PowerDisplayID INTEGER NOT NULL DEFAULT 0,
+  AltPowerBarID INTEGER NOT NULL DEFAULT 0,
+  PowerCostPct REAL NOT NULL DEFAULT 0,
+  PowerCostMaxPct REAL NOT NULL DEFAULT 0,
+  OptionalCostPct REAL NOT NULL DEFAULT 0,
+  PowerPctPerSecond REAL NOT NULL DEFAULT 0,
+  PowerType INTEGER NOT NULL DEFAULT 0,
+  RequiredAuraSpellID INTEGER NOT NULL DEFAULT 0,
+  OptionalCost INTEGER NOT NULL DEFAULT 0,
+  SpellID INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS spell_power_spell_id ON spell_power(SpellID);
+
+DROP TABLE IF EXISTS spell_cast_times;
+CREATE TABLE spell_cast_times (
+  ID INTEGER PRIMARY KEY,
+  Base INTEGER NOT NULL DEFAULT 0,
+  Minimum INTEGER NOT NULL DEFAULT 0
+);
+
+DROP TABLE IF EXISTS spell_range;
+CREATE TABLE spell_range (
+  ID INTEGER PRIMARY KEY,
+  DisplayName_lang TEXT NOT NULL DEFAULT '',
+  DisplayNameShort_lang TEXT NOT NULL DEFAULT '',
+  Flags INTEGER NOT NULL DEFAULT 0,
+  RangeMin_0 REAL NOT NULL DEFAULT 0,
+  RangeMin_1 REAL NOT NULL DEFAULT 0,
+  RangeMax_0 REAL NOT NULL DEFAULT 0,
+  RangeMax_1 REAL NOT NULL DEFAULT 0
+);
+
+DROP TABLE IF EXISTS spell_cooldowns;
+CREATE TABLE spell_cooldowns (
+  ID INTEGER PRIMARY KEY,
+  DifficultyID INTEGER NOT NULL DEFAULT 0,
+  CategoryRecoveryTime INTEGER NOT NULL DEFAULT 0,
+  RecoveryTime INTEGER NOT NULL DEFAULT 0,
+  StartRecoveryTime INTEGER NOT NULL DEFAULT 0,
+  AuraSpellID INTEGER NOT NULL DEFAULT 0,
+  SpellID INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS spell_cooldowns_spell_id ON spell_cooldowns(SpellID);
+
+DROP TABLE IF EXISTS spell_duration;
+CREATE TABLE spell_duration (
+  ID INTEGER PRIMARY KEY,
+  Duration INTEGER NOT NULL DEFAULT 0,
+  MaxDuration INTEGER NOT NULL DEFAULT 0,
+  DurationPerResource INTEGER NOT NULL DEFAULT 0
+);
+
+DROP TABLE IF EXISTS spell_aura_options;
+CREATE TABLE spell_aura_options (
+  ID INTEGER PRIMARY KEY,
+  DifficultyID INTEGER NOT NULL DEFAULT 0,
+  CumulativeAura INTEGER NOT NULL DEFAULT 0,
+  ProcCategoryRecovery INTEGER NOT NULL DEFAULT 0,
+  ProcChance INTEGER NOT NULL DEFAULT 0,
+  ProcCharges INTEGER NOT NULL DEFAULT 0,
+  SpellProcsPerMinuteID INTEGER NOT NULL DEFAULT 0,
+  ProcTypeMask_0 INTEGER NOT NULL DEFAULT 0,
+  ProcTypeMask_1 INTEGER NOT NULL DEFAULT 0,
+  SpellID INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS spell_aura_options_spell_id ON spell_aura_options(SpellID);
+
+DROP TABLE IF EXISTS spell_categories;
+CREATE TABLE spell_categories (
+  ID INTEGER PRIMARY KEY,
+  DifficultyID INTEGER NOT NULL DEFAULT 0,
+  Category INTEGER NOT NULL DEFAULT 0,
+  DefenseType INTEGER NOT NULL DEFAULT 0,
+  DiminishType INTEGER NOT NULL DEFAULT 0,
+  DispelType INTEGER NOT NULL DEFAULT 0,
+  Mechanic INTEGER NOT NULL DEFAULT 0,
+  PreventionType INTEGER NOT NULL DEFAULT 0,
+  StartRecoveryCategory INTEGER NOT NULL DEFAULT 0,
+  ChargeCategory INTEGER NOT NULL DEFAULT 0,
+  SpellID INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS spell_categories_spell_id ON spell_categories(SpellID);
+
+DROP TABLE IF EXISTS spell_category;
+CREATE TABLE spell_category (
+  ID INTEGER PRIMARY KEY,
+  Name_lang TEXT NOT NULL DEFAULT '',
+  Flags INTEGER NOT NULL DEFAULT 0,
+  UsesPerWeek INTEGER NOT NULL DEFAULT 0,
+  MaxCharges INTEGER NOT NULL DEFAULT 0,
+  ChargeRecoveryTime INTEGER NOT NULL DEFAULT 0,
+  TypeMask INTEGER NOT NULL DEFAULT 0
+);
+
+DROP TABLE IF EXISTS spell_levels;
+CREATE TABLE spell_levels (
+  ID INTEGER PRIMARY KEY,
+  DifficultyID INTEGER NOT NULL DEFAULT 0,
+  MaxLevel INTEGER NOT NULL DEFAULT 0,
+  MaxPassiveAuraLevel INTEGER NOT NULL DEFAULT 0,
+  BaseLevel INTEGER NOT NULL DEFAULT 0,
+  SpellLevel INTEGER NOT NULL DEFAULT 0,
+  SpellID INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS spell_levels_spell_id ON spell_levels(SpellID);
+
+DROP TABLE IF EXISTS spell_class_options;
+CREATE TABLE spell_class_options (
+  ID INTEGER PRIMARY KEY,
+  SpellID INTEGER NOT NULL DEFAULT 0,
+  ModalNextSpell INTEGER NOT NULL DEFAULT 0,
+  SpellClassSet INTEGER NOT NULL DEFAULT 0,
+  SpellClassMask_0 INTEGER NOT NULL DEFAULT 0,
+  SpellClassMask_1 INTEGER NOT NULL DEFAULT 0,
+  SpellClassMask_2 INTEGER NOT NULL DEFAULT 0,
+  SpellClassMask_3 INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS spell_class_options_spell_id ON spell_class_options(SpellID);
+
+DROP TABLE IF EXISTS spell_procs_per_minute;
+CREATE TABLE spell_procs_per_minute (
+  ID INTEGER PRIMARY KEY,
+  BaseProcRate REAL NOT NULL DEFAULT 0,
+  Flags INTEGER NOT NULL DEFAULT 0
+);
+
+DROP TABLE IF EXISTS spell_procs_per_minute_mod;
+CREATE TABLE spell_procs_per_minute_mod (
+  ID INTEGER PRIMARY KEY,
+  Type INTEGER NOT NULL DEFAULT 0,
+  Param INTEGER NOT NULL DEFAULT 0,
+  Coeff REAL NOT NULL DEFAULT 0,
+  SpellProcsPerMinuteID INTEGER NOT NULL DEFAULT 0
+);
+
+DROP TABLE IF EXISTS spell_shapeshift;
+CREATE TABLE spell_shapeshift (
+  ID INTEGER PRIMARY KEY,
+  SpellID INTEGER NOT NULL DEFAULT 0,
+  StanceBarOrder INTEGER NOT NULL DEFAULT 0,
+  ShapeshiftExclude_0 INTEGER NOT NULL DEFAULT 0,
+  ShapeshiftExclude_1 INTEGER NOT NULL DEFAULT 0,
+  ShapeshiftMask_0 INTEGER NOT NULL DEFAULT 0,
+  ShapeshiftMask_1 INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS spell_shapeshift_spell_id ON spell_shapeshift(SpellID);
+
+DROP TABLE IF EXISTS spell_shapeshift_form;
+CREATE TABLE spell_shapeshift_form (
+  ID INTEGER PRIMARY KEY,
+  Name_lang TEXT NOT NULL DEFAULT '',
+  CreatureDisplayID INTEGER NOT NULL DEFAULT 0,
+  CreatureType INTEGER NOT NULL DEFAULT 0,
+  Flags INTEGER NOT NULL DEFAULT 0,
+  AttackIconFileID INTEGER NOT NULL DEFAULT 0,
+  BonusActionBar INTEGER NOT NULL DEFAULT 0,
+  CombatRoundTime INTEGER NOT NULL DEFAULT 0,
+  DamageVariance REAL NOT NULL DEFAULT 0,
+  MountTypeID INTEGER NOT NULL DEFAULT 0,
+  PresetSpellID_0 INTEGER NOT NULL DEFAULT 0,
+  PresetSpellID_1 INTEGER NOT NULL DEFAULT 0,
+  PresetSpellID_2 INTEGER NOT NULL DEFAULT 0,
+  PresetSpellID_3 INTEGER NOT NULL DEFAULT 0,
+  PresetSpellID_4 INTEGER NOT NULL DEFAULT 0,
+  PresetSpellID_5 INTEGER NOT NULL DEFAULT 0,
+  PresetSpellID_6 INTEGER NOT NULL DEFAULT 0,
+  PresetSpellID_7 INTEGER NOT NULL DEFAULT 0
+);
+
+DROP TABLE IF EXISTS spell_interrupts;
+CREATE TABLE spell_interrupts (
+  ID INTEGER PRIMARY KEY,
+  DifficultyID INTEGER NOT NULL DEFAULT 0,
+  InterruptFlags INTEGER NOT NULL DEFAULT 0,
+  AuraInterruptFlags_0 INTEGER NOT NULL DEFAULT 0,
+  AuraInterruptFlags_1 INTEGER NOT NULL DEFAULT 0,
+  ChannelInterruptFlags_0 INTEGER NOT NULL DEFAULT 0,
+  ChannelInterruptFlags_1 INTEGER NOT NULL DEFAULT 0,
+  SpellID INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS spell_interrupts_spell_id ON spell_interrupts(SpellID);
+
+DROP TABLE IF EXISTS spell_target_restrictions;
+CREATE TABLE spell_target_restrictions (
+  ID INTEGER PRIMARY KEY,
+  DifficultyID INTEGER NOT NULL DEFAULT 0,
+  ConeDegrees REAL NOT NULL DEFAULT 0,
+  MaxTargets INTEGER NOT NULL DEFAULT 0,
+  MaxTargetLevel INTEGER NOT NULL DEFAULT 0,
+  TargetCreatureType INTEGER NOT NULL DEFAULT 0,
+  Targets INTEGER NOT NULL DEFAULT 0,
+  Width REAL NOT NULL DEFAULT 0,
+  SpellID INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS spell_target_restrictions_spell_id ON spell_target_restrictions(SpellID);
+
+DROP TABLE IF EXISTS spell_equipped_items;
+CREATE TABLE spell_equipped_items (
+  ID INTEGER PRIMARY KEY,
+  SpellID INTEGER NOT NULL DEFAULT 0,
+  EquippedItemClass INTEGER NOT NULL DEFAULT 0,
+  EquippedItemInvTypes INTEGER NOT NULL DEFAULT 0,
+  EquippedItemSubclass INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS spell_equipped_items_spell_id ON spell_equipped_items(SpellID);
+
+DROP TABLE IF EXISTS spell_radius;
+CREATE TABLE spell_radius (
+  ID INTEGER PRIMARY KEY,
+  Radius REAL NOT NULL DEFAULT 0,
+  RadiusPerLevel INTEGER NOT NULL DEFAULT 0,
+  RadiusMin REAL NOT NULL DEFAULT 0,
+  RadiusMax REAL NOT NULL DEFAULT 0
+);
+
+DROP TABLE IF EXISTS spell_scaling;
+CREATE TABLE spell_scaling (
+  ID INTEGER PRIMARY KEY,
+  SpellID INTEGER NOT NULL DEFAULT 0,
+  MinScalingLevel INTEGER NOT NULL DEFAULT 0,
+  MaxScalingLevel INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS spell_scaling_spell_id ON spell_scaling(SpellID);
+
+DROP TABLE IF EXISTS spell_empower;
+CREATE TABLE spell_empower (
+  ID INTEGER PRIMARY KEY,
+  SpellID INTEGER NOT NULL DEFAULT 0,
+  Field_10_0_0_44649_002 INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS spell_empower_spell_id ON spell_empower(SpellID);
+
+DROP TABLE IF EXISTS spell_empower_stage;
+CREATE TABLE spell_empower_stage (
+  ID INTEGER PRIMARY KEY,
+  Stage INTEGER NOT NULL DEFAULT 0,
+  DurationMs INTEGER NOT NULL DEFAULT 0,
+  SpellEmpowerID INTEGER NOT NULL DEFAULT 0
+);
+
+DROP TABLE IF EXISTS spell_x_spell_visual;
+CREATE TABLE spell_x_spell_visual (
+  ID INTEGER PRIMARY KEY,
+  DifficultyID INTEGER NOT NULL DEFAULT 0,
+  SpellVisualID INTEGER NOT NULL DEFAULT 0,
+  Probability REAL NOT NULL DEFAULT 0,
+  Flags2 INTEGER NOT NULL DEFAULT 0,
+  Priority INTEGER NOT NULL DEFAULT 0,
+  SpellIconFileID INTEGER NOT NULL DEFAULT 0,
+  ActiveIconFileID INTEGER NOT NULL DEFAULT 0,
+  ViewerUnitConditionID INTEGER NOT NULL DEFAULT 0,
+  ViewerPlayerConditionID INTEGER NOT NULL DEFAULT 0,
+  CasterUnitConditionID INTEGER NOT NULL DEFAULT 0,
+  CasterPlayerConditionID INTEGER NOT NULL DEFAULT 0,
+  SpellID INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS spell_x_spell_visual_spell_id ON spell_x_spell_visual(SpellID);
+
+DROP TABLE IF EXISTS skill_line;
+CREATE TABLE skill_line (
+  DisplayName_lang TEXT NOT NULL DEFAULT '',
+  AlternateVerb_lang TEXT NOT NULL DEFAULT '',
+  Description_lang TEXT NOT NULL DEFAULT '',
+  HordeDisplayName_lang TEXT NOT NULL DEFAULT '',
+  NeutralDisplayName TEXT NOT NULL DEFAULT '',
+  ID INTEGER PRIMARY KEY,
+  CategoryID INTEGER NOT NULL DEFAULT 0,
+  SpellIconFileID INTEGER NOT NULL DEFAULT 0,
+  CanLink INTEGER NOT NULL DEFAULT 0,
+  ParentSkillLineID INTEGER NOT NULL DEFAULT 0,
+  ParentTierIndex INTEGER NOT NULL DEFAULT 0,
+  Flags INTEGER NOT NULL DEFAULT 0,
+  SpellBookSpellID INTEGER NOT NULL DEFAULT 0,
+  ExpansionNameSharedStringID INTEGER NOT NULL DEFAULT 0,
+  HordeExpansionNameSharedStringID INTEGER NOT NULL DEFAULT 0
+);
+
+DROP TABLE IF EXISTS skill_line_ability;
+CREATE TABLE skill_line_ability (
+  AbilityVerb_lang TEXT NOT NULL DEFAULT '',
+  AbilityAllVerb_lang TEXT NOT NULL DEFAULT '',
+  ID INTEGER PRIMARY KEY,
+  SkillLine INTEGER NOT NULL DEFAULT 0,
+  Spell INTEGER NOT NULL DEFAULT 0,
+  MinSkillLineRank INTEGER NOT NULL DEFAULT 0,
+  ClassMask INTEGER NOT NULL DEFAULT 0,
+  SupercedesSpell INTEGER NOT NULL DEFAULT 0,
+  AcquireMethod INTEGER NOT NULL DEFAULT 0,
+  TrivialSkillLineRankHigh INTEGER NOT NULL DEFAULT 0,
+  TrivialSkillLineRankLow INTEGER NOT NULL DEFAULT 0,
+  Flags INTEGER NOT NULL DEFAULT 0,
+  NumSkillUps INTEGER NOT NULL DEFAULT 0,
+  UniqueBit INTEGER NOT NULL DEFAULT 0,
+  TradeSkillCategoryID INTEGER NOT NULL DEFAULT 0,
+  SkillupSkillLineID INTEGER NOT NULL DEFAULT 0,
+  RaceMasks_0 INTEGER NOT NULL DEFAULT 0,
+  RaceMasks_1 INTEGER NOT NULL DEFAULT 0
+);
+
+DROP TABLE IF EXISTS chr_classes;
+CREATE TABLE chr_classes (
+  Name_lang TEXT NOT NULL DEFAULT '',
+  Filename TEXT NOT NULL DEFAULT '',
+  Name_male_lang TEXT NOT NULL DEFAULT '',
+  Name_female_lang TEXT NOT NULL DEFAULT '',
+  PetNameToken TEXT NOT NULL DEFAULT '',
+  Description_lang TEXT NOT NULL DEFAULT '',
+  RoleInfoString_lang TEXT NOT NULL DEFAULT '',
+  DisabledString_lang TEXT NOT NULL DEFAULT '',
+  Hyphenated_name_male_lang TEXT NOT NULL DEFAULT '',
+  Hyphenated_name_female_lang TEXT NOT NULL DEFAULT '',
+  CreateScreenFileDataID INTEGER NOT NULL DEFAULT 0,
+  SelectScreenFileDataID INTEGER NOT NULL DEFAULT 0,
+  IconFileDataID INTEGER NOT NULL DEFAULT 0,
+  LowResScreenFileDataID INTEGER NOT NULL DEFAULT 0,
+  Flags INTEGER NOT NULL DEFAULT 0,
+  StartingLevel INTEGER NOT NULL DEFAULT 0,
+  SpellTextureBlobFileDataID INTEGER NOT NULL DEFAULT 0,
+  ArmorTypeMask INTEGER NOT NULL DEFAULT 0,
+  Field_9_0_1_34490_018 INTEGER NOT NULL DEFAULT 0,
+  MaleCharacterCreationVisualFallback INTEGER NOT NULL DEFAULT 0,
+  MaleCharacterCreationIdleVisualFallback INTEGER NOT NULL DEFAULT 0,
+  FemaleCharacterCreationVisualFallback INTEGER NOT NULL DEFAULT 0,
+  FemaleCharacterCreationIdleVisualFallback INTEGER NOT NULL DEFAULT 0,
+  CharacterCreationIdleGroundVisualFallback INTEGER NOT NULL DEFAULT 0,
+  CharacterCreationGroundVisualFallback INTEGER NOT NULL DEFAULT 0,
+  AlteredFormCharacterCreationIdleVisualFallback INTEGER NOT NULL DEFAULT 0,
+  CharacterCreationAnimLoopWaitTimeMsFallback INTEGER NOT NULL DEFAULT 0,
+  CinematicSequenceID INTEGER NOT NULL DEFAULT 0,
+  DefaultSpec INTEGER NOT NULL DEFAULT 0,
+  ID INTEGER PRIMARY KEY,
+  HasStrengthAttackBonus INTEGER NOT NULL DEFAULT 0,
+  PrimaryStatPriority INTEGER NOT NULL DEFAULT 0,
+  DisplayPower INTEGER NOT NULL DEFAULT 0,
+  RangedAttackPowerPerAgility INTEGER NOT NULL DEFAULT 0,
+  AttackPowerPerAgility INTEGER NOT NULL DEFAULT 0,
+  AttackPowerPerStrength INTEGER NOT NULL DEFAULT 0,
+  SpellClassSet INTEGER NOT NULL DEFAULT 0,
+  ClassColorR INTEGER NOT NULL DEFAULT 0,
+  ClassColorG INTEGER NOT NULL DEFAULT 0,
+  ClassColorB INTEGER NOT NULL DEFAULT 0,
+  RolesMask INTEGER NOT NULL DEFAULT 0,
+  DamageBonusStat INTEGER NOT NULL DEFAULT 0,
+  HasRelicSlot INTEGER NOT NULL DEFAULT 0
+);
+
+DROP TABLE IF EXISTS chr_specialization;
+CREATE TABLE chr_specialization (
+  Name_lang TEXT NOT NULL DEFAULT '',
+  FemaleName_lang TEXT NOT NULL DEFAULT '',
+  Description_lang TEXT NOT NULL DEFAULT '',
+  ID INTEGER PRIMARY KEY,
+  ClassID INTEGER NOT NULL DEFAULT 0,
+  OrderIndex INTEGER NOT NULL DEFAULT 0,
+  PetTalentType INTEGER NOT NULL DEFAULT 0,
+  Role INTEGER NOT NULL DEFAULT 0,
+  Flags INTEGER NOT NULL DEFAULT 0,
+  SpellIconFileID INTEGER NOT NULL DEFAULT 0,
+  PrimaryStatPriority INTEGER NOT NULL DEFAULT 0,
+  AnimReplacements INTEGER NOT NULL DEFAULT 0,
+  MasterySpellID_0 INTEGER NOT NULL DEFAULT 0,
+  MasterySpellID_1 INTEGER NOT NULL DEFAULT 0
+);
+
+DROP TABLE IF EXISTS specialization_spells;
+CREATE TABLE specialization_spells (
+  Description_lang TEXT NOT NULL DEFAULT '',
+  ID INTEGER PRIMARY KEY,
+  SpecID INTEGER NOT NULL DEFAULT 0,
+  SpellID INTEGER NOT NULL DEFAULT 0,
+  OverridesSpellID INTEGER NOT NULL DEFAULT 0,
+  DisplayOrder INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS specialization_spells_spell_id ON specialization_spells(SpellID);
+
+DROP TABLE IF EXISTS power_type;
+CREATE TABLE power_type (
+  NameGlobalStringTag TEXT NOT NULL DEFAULT '',
+  CostGlobalStringTag TEXT NOT NULL DEFAULT '',
+  ID INTEGER PRIMARY KEY,
+  PowerTypeEnum INTEGER NOT NULL DEFAULT 0,
+  MinPower INTEGER NOT NULL DEFAULT 0,
+  MaxBasePower INTEGER NOT NULL DEFAULT 0,
+  CenterPower INTEGER NOT NULL DEFAULT 0,
+  DefaultPower INTEGER NOT NULL DEFAULT 0,
+  DisplayModifier INTEGER NOT NULL DEFAULT 0,
+  RegenInterruptTimeMS INTEGER NOT NULL DEFAULT 0,
+  RegenPeace REAL NOT NULL DEFAULT 0,
+  RegenCombat REAL NOT NULL DEFAULT 0,
+  Flags INTEGER NOT NULL DEFAULT 0
+);
+
+DROP TABLE IF EXISTS chr_classes_x_power_types;
+CREATE TABLE chr_classes_x_power_types (
+  ID INTEGER PRIMARY KEY,
+  PowerType INTEGER NOT NULL DEFAULT 0,
+  ClassID INTEGER NOT NULL DEFAULT 0
+);
+
+DROP TABLE IF EXISTS trait_tree;
+CREATE TABLE trait_tree (
+  TitleText_lang TEXT NOT NULL DEFAULT '',
+  ID INTEGER PRIMARY KEY,
+  TraitSystemID INTEGER NOT NULL DEFAULT 0,
+  TraitTreeID INTEGER NOT NULL DEFAULT 0,
+  FirstTraitNodeID INTEGER NOT NULL DEFAULT 0,
+  PlayerConditionID INTEGER NOT NULL DEFAULT 0,
+  Flags INTEGER NOT NULL DEFAULT 0,
+  Field_10_0_0_45697_006 REAL NOT NULL DEFAULT 0,
+  Field_10_0_0_45697_007 REAL NOT NULL DEFAULT 0,
+  UiTextureKitID INTEGER NOT NULL DEFAULT 0
+);
+
+DROP TABLE IF EXISTS trait_node;
+CREATE TABLE trait_node (
+  ID INTEGER PRIMARY KEY,
+  TraitTreeID INTEGER NOT NULL DEFAULT 0,
+  PosX INTEGER NOT NULL DEFAULT 0,
+  PosY INTEGER NOT NULL DEFAULT 0,
+  Type INTEGER NOT NULL DEFAULT 0,
+  Flags INTEGER NOT NULL DEFAULT 0,
+  TraitSubTreeID INTEGER NOT NULL DEFAULT 0
+);
+
+DROP TABLE IF EXISTS trait_node_entry;
+CREATE TABLE trait_node_entry (
+  ID INTEGER PRIMARY KEY,
+  TraitDefinitionID INTEGER NOT NULL DEFAULT 0,
+  MaxRanks INTEGER NOT NULL DEFAULT 0,
+  NodeEntryType INTEGER NOT NULL DEFAULT 0,
+  TraitSubTreeID INTEGER NOT NULL DEFAULT 0
+);
+
+DROP TABLE IF EXISTS trait_definition;
+CREATE TABLE trait_definition (
+  OverrideName_lang TEXT NOT NULL DEFAULT '',
+  OverrideSubtext_lang TEXT NOT NULL DEFAULT '',
+  OverrideDescription_lang TEXT NOT NULL DEFAULT '',
+  ID INTEGER PRIMARY KEY,
+  SpellID INTEGER NOT NULL DEFAULT 0,
+  OverrideIcon INTEGER NOT NULL DEFAULT 0,
+  OverridesSpellID INTEGER NOT NULL DEFAULT 0,
+  VisibleSpellID INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS trait_definition_spell_id ON trait_definition(SpellID);
+
+DROP TABLE IF EXISTS trait_edge;
+CREATE TABLE trait_edge (
+  ID INTEGER PRIMARY KEY,
+  VisualStyle INTEGER NOT NULL DEFAULT 0,
+  LeftTraitNodeID INTEGER NOT NULL DEFAULT 0,
+  RightTraitNodeID INTEGER NOT NULL DEFAULT 0,
+  Type INTEGER NOT NULL DEFAULT 0
+);
+
+DROP TABLE IF EXISTS trait_cond;
+CREATE TABLE trait_cond (
+  ID INTEGER PRIMARY KEY,
+  CondType INTEGER NOT NULL DEFAULT 0,
+  TraitTreeID INTEGER NOT NULL DEFAULT 0,
+  GrantedRanks INTEGER NOT NULL DEFAULT 0,
+  QuestID INTEGER NOT NULL DEFAULT 0,
+  AchievementID INTEGER NOT NULL DEFAULT 0,
+  SpecSetID INTEGER NOT NULL DEFAULT 0,
+  TraitNodeGroupID INTEGER NOT NULL DEFAULT 0,
+  TraitNodeID INTEGER NOT NULL DEFAULT 0,
+  TraitNodeEntryID INTEGER NOT NULL DEFAULT 0,
+  TraitCurrencyID INTEGER NOT NULL DEFAULT 0,
+  SpentAmountRequired INTEGER NOT NULL DEFAULT 0,
+  Flags INTEGER NOT NULL DEFAULT 0,
+  RequiredLevel INTEGER NOT NULL DEFAULT 0,
+  FreeSharedStringID INTEGER NOT NULL DEFAULT 0,
+  SpendMoreSharedStringID INTEGER NOT NULL DEFAULT 0,
+  TraitCondAccountElementID INTEGER NOT NULL DEFAULT 0
+);
+
+DROP TABLE IF EXISTS trait_cost;
+CREATE TABLE trait_cost (
+  InternalName TEXT NOT NULL DEFAULT '',
+  ID INTEGER PRIMARY KEY,
+  Amount INTEGER NOT NULL DEFAULT 0,
+  TraitCurrencyID INTEGER NOT NULL DEFAULT 0,
+  CurveID INTEGER NOT NULL DEFAULT 0
+);
+
+DROP TABLE IF EXISTS trait_currency;
+CREATE TABLE trait_currency (
+  ID INTEGER PRIMARY KEY,
+  Type INTEGER NOT NULL DEFAULT 0,
+  CurrencyTypesID INTEGER NOT NULL DEFAULT 0,
+  Flags INTEGER NOT NULL DEFAULT 0,
+  Icon INTEGER NOT NULL DEFAULT 0,
+  PlayerDataElementAccountID INTEGER NOT NULL DEFAULT 0,
+  PlayerDataElementCharacterID INTEGER NOT NULL DEFAULT 0
+);
+
+DROP TABLE IF EXISTS trait_sub_tree;
+CREATE TABLE trait_sub_tree (
+  Name_lang TEXT NOT NULL DEFAULT '',
+  Description_lang TEXT NOT NULL DEFAULT '',
+  ID INTEGER PRIMARY KEY,
+  UiTextureAtlasElementID INTEGER NOT NULL DEFAULT 0,
+  TraitTreeID INTEGER NOT NULL DEFAULT 0
+);
+
+DROP TABLE IF EXISTS trait_node_group;
+CREATE TABLE trait_node_group (
+  ID INTEGER PRIMARY KEY,
+  TraitTreeID INTEGER NOT NULL DEFAULT 0,
+  Flags INTEGER NOT NULL DEFAULT 0
+);
+
+DROP TABLE IF EXISTS trait_node_group_x_trait_node;
+CREATE TABLE trait_node_group_x_trait_node (
+  ID INTEGER PRIMARY KEY,
+  TraitNodeGroupID INTEGER NOT NULL DEFAULT 0,
+  TraitNodeID INTEGER NOT NULL DEFAULT 0,
+  _Index INTEGER NOT NULL DEFAULT 0
+);
+
+DROP TABLE IF EXISTS trait_node_x_trait_cond;
+CREATE TABLE trait_node_x_trait_cond (
+  ID INTEGER PRIMARY KEY,
+  TraitCondID INTEGER NOT NULL DEFAULT 0,
+  TraitNodeID INTEGER NOT NULL DEFAULT 0
+);
+
+DROP TABLE IF EXISTS trait_node_x_trait_node_entry;
+CREATE TABLE trait_node_x_trait_node_entry (
+  ID INTEGER PRIMARY KEY,
+  TraitNodeID INTEGER NOT NULL DEFAULT 0,
+  TraitNodeEntryID INTEGER NOT NULL DEFAULT 0,
+  _Index INTEGER NOT NULL DEFAULT 0
+);
+
+DROP TABLE IF EXISTS trait_tree_loadout;
+CREATE TABLE trait_tree_loadout (
+  ID INTEGER PRIMARY KEY,
+  TraitTreeID INTEGER NOT NULL DEFAULT 0,
+  ChrSpecializationID INTEGER NOT NULL DEFAULT 0
+);
+
+DROP TABLE IF EXISTS trait_tree_loadout_entry;
+CREATE TABLE trait_tree_loadout_entry (
+  ID INTEGER PRIMARY KEY,
+  TraitTreeLoadoutID INTEGER NOT NULL DEFAULT 0,
+  SelectedTraitNodeID INTEGER NOT NULL DEFAULT 0,
+  SelectedTraitNodeEntryID INTEGER NOT NULL DEFAULT 0,
+  NumPoints INTEGER NOT NULL DEFAULT 0,
+  OrderIndex INTEGER NOT NULL DEFAULT 0
+);
+
+DROP TABLE IF EXISTS trait_tree_x_trait_currency;
+CREATE TABLE trait_tree_x_trait_currency (
+  ID INTEGER PRIMARY KEY,
+  _Index INTEGER NOT NULL DEFAULT 0,
+  TraitTreeID INTEGER NOT NULL DEFAULT 0,
+  TraitCurrencyID INTEGER NOT NULL DEFAULT 0
+);
+
+DROP TABLE IF EXISTS skill_line_x_trait_tree;
+CREATE TABLE skill_line_x_trait_tree (
+  ID INTEGER PRIMARY KEY,
+  SkillLineID INTEGER NOT NULL DEFAULT 0,
+  TraitTreeID INTEGER NOT NULL DEFAULT 0,
+  Variant INTEGER NOT NULL DEFAULT 0
+);

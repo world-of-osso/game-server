@@ -2,7 +2,7 @@
 # Import AzerothCore MySQL dumps + retail spell CSVs into SQLite world.db.
 #
 # Creature data: AzerothCore MySQL dump → awk extraction → SQLite INSERT
-# Spell data: Retail DB2 CSVs (from game-engine/data/) → sqlite3 .import
+# Spell/class data: build-pinned Retail DB2 CSVs (game-engine/data/db2/<build>/) → db2.py import
 #
 # Usage: ./scripts/import-azerothcore.sh [path/to/azerothcore/data/sql/base/db_world]
 set -euo pipefail
@@ -13,7 +13,7 @@ DB_PATH="$PROJECT_DIR/data/world.db"
 TMP_DIR="$PROJECT_DIR/data/import_tmp"
 
 SQL_DIR="${1:-/home/osso/Repos/azerothcore/data/sql/base/db_world}"
-SPELL_CSV_DIR="${SPELL_CSV_DIR:-$PROJECT_DIR/../game-engine/data}"
+DB2_CSV_ROOT="${DB2_CSV_ROOT:-$PROJECT_DIR/../game-engine/data/db2}"
 
 CREATURE_TEMPLATE_SQL="$SQL_DIR/creature_template.sql"
 CREATURE_SQL="$SQL_DIR/creature.sql"
@@ -28,14 +28,7 @@ for f in "$CREATURE_TEMPLATE_SQL" "$CREATURE_SQL" "$CREATURE_TEMPLATE_MODEL_SQL"
     fi
 done
 
-SPELL_CSVS=(SpellName Spell SpellMisc SpellEffect SpellPower SpellCastTimes SpellRange SpellCooldowns SpellDuration)
-SPELL_TABLES=(spell_name spell spell_misc spell_effect spell_power spell_cast_times spell_range spell_cooldowns spell_duration)
-for csv in "${SPELL_CSVS[@]}"; do
-    if [[ ! -f "$SPELL_CSV_DIR/$csv.csv" ]]; then
-        echo "ERROR: Missing CSV file: $SPELL_CSV_DIR/$csv.csv" >&2
-        exit 1
-    fi
-done
+python3 "$SCRIPT_DIR/db2.py" check --csv-root "$DB2_CSV_ROOT"
 
 rm -f "$DB_PATH" "$DB_PATH-wal" "$DB_PATH-shm"
 mkdir -p "$TMP_DIR"
@@ -88,22 +81,10 @@ import_table "$CREATURE_TEMPLATE_MODEL_SQL" "creature_template_model"
 import_table "$WAYPOINT_DATA_SQL"           "waypoint_data"
 import_table "$GAME_EVENT_CREATURE_SQL"     "game_event_creature"
 
-# --- Retail spell CSV import ---
+# --- Retail DB2 CSV import (build-pinned, see db2.py) ---
 
-import_spell_csv() {
-    local csv_file="$1"
-    local table_name="$2"
-    echo "  Importing $table_name from $(basename "$csv_file") ..."
-    sqlite3 "$DB_PATH" <<EOF
-.mode csv
-.import --skip 1 $csv_file $table_name
-EOF
-    echo "  Done: $table_name"
-}
-
-for i in "${!SPELL_CSVS[@]}"; do
-    import_spell_csv "$SPELL_CSV_DIR/${SPELL_CSVS[$i]}.csv" "${SPELL_TABLES[$i]}"
-done
+echo "  Importing DB2 tables ..."
+python3 "$SCRIPT_DIR/db2.py" import --csv-root "$DB2_CSV_ROOT" --db "$DB_PATH"
 
 rmdir --ignore-fail-on-non-empty "$TMP_DIR"
 
@@ -114,15 +95,6 @@ sqlite3 "$DB_PATH" \
     "SELECT 'creature: ' || COUNT(*) FROM creature;" \
     "SELECT 'game_event_creature: ' || COUNT(*) FROM game_event_creature;" \
     "SELECT 'creature_template_model: ' || COUNT(*) FROM creature_template_model;" \
-    "SELECT 'waypoint_data: ' || COUNT(*) FROM waypoint_data;" \
-    "SELECT 'spell_name: ' || COUNT(*) FROM spell_name;" \
-    "SELECT 'spell: ' || COUNT(*) FROM spell;" \
-    "SELECT 'spell_misc: ' || COUNT(*) FROM spell_misc;" \
-    "SELECT 'spell_effect: ' || COUNT(*) FROM spell_effect;" \
-    "SELECT 'spell_power: ' || COUNT(*) FROM spell_power;" \
-    "SELECT 'spell_cast_times: ' || COUNT(*) FROM spell_cast_times;" \
-    "SELECT 'spell_range: ' || COUNT(*) FROM spell_range;" \
-    "SELECT 'spell_cooldowns: ' || COUNT(*) FROM spell_cooldowns;" \
-    "SELECT 'spell_duration: ' || COUNT(*) FROM spell_duration;"
+    "SELECT 'waypoint_data: ' || COUNT(*) FROM waypoint_data;"
 
 echo "Database written to: $DB_PATH"
