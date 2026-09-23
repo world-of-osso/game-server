@@ -1,68 +1,257 @@
+//! Player character stats (retail 12.x model).
+//!
+//! `compute_character_stats` turns class/race/level base stats, gear and
+//! optional aura `StatModifiers` into `CharacterStats`. `update_character_stats`
+//! applies the result on world entry and whenever level, spec, gear or
+//! modifiers change: it writes the effective `UnitStats` / `CombatRatings`,
+//! `Health.max` and `Mana.max`, rescaling current values by their ratio.
+//! Sources and formulas: `docs/wiki/systems/character-stats.md`.
+
 use bevy::prelude::*;
 use lightyear::prelude::ReplicationDirtyQueue;
 use shared::components::{CombatRatings, Health, ItemStatBlock, Level, Mana, Player, UnitStats};
-use shared::formulas;
+use shared::formulas::{RatingType, apply_secondary_dr, sum_equipment_stats};
+
+use crate::character_stats_data::{
+    BASE_MANA, CLASS_BASE_STATS, CRIT_RATING, HASTE_RATING, HP_PER_STAMINA, MASTERY_RATING,
+    RACE_STAT_MODS, VERSATILITY_RATING,
+};
+use crate::class_progression::ActiveSpec;
+use crate::spell_info::{ClassInfo, ClassSpells, SpellStore};
+
+/// Every player has 5% base crit (SimC `dbc_t::all_crit_base`).
+const BASE_CRIT_PCT: f32 = 5.0;
+/// Every player has 8 base mastery points (SimC `player_t::init_base_stats`).
+const BASE_MASTERY_POINTS: f32 = 8.0;
 
 /// Component holding the stat blocks of all equipped items.
-///
-/// When this changes (equip/unequip), `update_stats_from_equipment` recomputes
-/// `UnitStats` and `CombatRatings`, which then triggers `update_derived_stats`
-/// to recalculate HP/mana.
 #[derive(Component, Debug, Clone, Default, PartialEq)]
 pub struct EquippedItems {
     pub items: Vec<ItemStatBlock>,
 }
 
-/// Base stats for a character (without gear). Set once at character creation
-/// or level-up. Equipment stats are added on top by `update_stats_from_equipment`.
+/// Aura stat changes, folded in after base + gear. Absent means none.
+/// Percent fields are additive with each other (10.0 = +10%).
 #[derive(Component, Debug, Clone, Copy, Default, PartialEq)]
-pub struct BaseStats {
+pub struct StatModifiers {
+    /// Added to base + gear primary stats.
+    pub primary_flat: UnitStats,
+    /// Percent increase per primary stat, applied after `primary_flat`.
+    pub primary_pct: UnitStats,
+    /// Added to gear ratings before conversion.
+    pub ratings_flat: CombatRatings,
+    pub crit_pct: f32,
+    pub haste_pct: f32,
+    pub mastery_points: f32,
+    pub versatility_pct: f32,
+    pub max_health_pct: f32,
+}
+
+/// The spec's main stat: gear Str/Agi/Int count only when they match it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PrimaryStat {
+    Strength,
+    Agility,
+    Intellect,
+}
+
+impl PrimaryStat {
+    /// `ChrSpecialization.PrimaryStatPriority`: 0-1 Int, 2-3 Agi, 4-5 Str.
+    pub fn from_priority(priority: u32) -> Self {
+        match priority {
+            0 | 1 => Self::Intellect,
+            2 | 3 => Self::Agility,
+            _ => Self::Strength,
+        }
+    }
+}
+
+/// Everything `compute_character_stats` reads.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct StatInputs {
+    pub class: u8,
+    pub race: u8,
+    pub level: u8,
+    /// `None` when the class has no spec data: all gear stats count.
+    pub primary_stat: Option<PrimaryStat>,
+    /// Mastery spell effect 0 `EffectBonusCoefficient`; 0 without mastery.
+    pub mastery_coefficient: f32,
+    /// `chr_classes.AttackPowerPerStrength` / `AttackPowerPerAgility`.
+    pub attack_power_per_strength: f32,
+    pub attack_power_per_agility: f32,
+    pub gear_primary: UnitStats,
+    pub gear_ratings: CombatRatings,
+}
+
+/// Derived stats of a player (server-only).
+#[derive(Component, Debug, Clone, Copy, Default, PartialEq)]
+pub struct CharacterStats {
+    /// Effective primary stats (base + gear + modifiers).
     pub primary: UnitStats,
-    pub secondary: CombatRatings,
+    /// Effective ratings (gear + modifiers).
+    pub ratings: CombatRatings,
+    pub max_health: f32,
+    /// gtBaseMP; 0 for classes without mana. Max mana equals it and
+    /// `PowerCostPct` mana costs are a percentage of it.
+    pub base_mana: f32,
+    pub spell_power: f32,
+    pub attack_power: f32,
+    pub crit_pct: f32,
+    pub haste_pct: f32,
+    pub mastery_pct: f32,
+    pub versatility_pct: f32,
+    pub armor: f32,
 }
 
 pub struct StatsPlugin;
 
 impl Plugin for StatsPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(
-            FixedUpdate,
-            (update_stats_from_equipment, update_derived_stats).chain(),
-        );
+        app.add_systems(Update, update_character_stats);
     }
 }
 
-/// When equipped items change, recompute UnitStats = base + gear.
-fn update_stats_from_equipment(
-    mut query: Query<
-        (
-            &BaseStats,
-            &EquippedItems,
-            &mut UnitStats,
-            &mut CombatRatings,
-        ),
-        Changed<EquippedItems>,
-    >,
-) {
-    for (base, equipped, mut stats, mut ratings) in &mut query {
-        let (gear_primary, gear_secondary) = formulas::sum_equipment_stats(&equipped.items);
-        *stats = base.primary;
-        *stats += gear_primary;
-        *ratings = base.secondary;
-        *ratings += gear_secondary;
+fn level_index(level: u8) -> Option<usize> {
+    (1..=HP_PER_STAMINA.len())
+        .contains(&usize::from(level))
+        .then(|| usize::from(level) - 1)
+}
+
+/// Class base + racial modifier; `None` for unknown class or level.
+pub fn base_primary_stats(class: u8, race: u8, level: u8) -> Option<UnitStats> {
+    let [str, agi, sta, int] = CLASS_BASE_STATS
+        .get(usize::from(class))
+        .filter(|_| class > 0)?[level_index(level)?];
+    let [race_str, race_agi, race_sta, race_int] = RACE_STAT_MODS
+        .iter()
+        .find(|(id, _)| *id == race)
+        .map_or([0; 4], |(_, mods)| *mods);
+    let stat = |base: u16, racial: i16| f32::from(base) + f32::from(racial);
+    Some(UnitStats {
+        strength: stat(str, race_str),
+        agility: stat(agi, race_agi),
+        stamina: stat(sta, race_sta),
+        intellect: stat(int, race_int),
+        spirit: 0.0,
+    })
+}
+
+/// gtBaseMP for the class; `None` for classes without mana.
+pub fn base_mana(class: u8, level: u8) -> Option<f32> {
+    let mana = BASE_MANA.get(usize::from(class))?[level_index(level)?];
+    (mana > 0).then_some(mana as f32)
+}
+
+/// Gear primary stats the spec uses: stamina plus its main stat.
+fn usable_gear_primary(gear: UnitStats, primary: Option<PrimaryStat>) -> UnitStats {
+    let Some(primary) = primary else {
+        return gear;
+    };
+    UnitStats {
+        stamina: gear.stamina,
+        strength: if primary == PrimaryStat::Strength {
+            gear.strength
+        } else {
+            0.0
+        },
+        agility: if primary == PrimaryStat::Agility {
+            gear.agility
+        } else {
+            0.0
+        },
+        intellect: if primary == PrimaryStat::Intellect {
+            gear.intellect
+        } else {
+            0.0
+        },
+        spirit: 0.0,
     }
 }
 
-type StatsQuery = (
-    Entity,
-    &'static Player,
-    &'static UnitStats,
-    &'static Level,
-    &'static mut Health,
-    Option<&'static mut Mana>,
-);
+fn apply_primary_pct(stats: UnitStats, pct: UnitStats) -> UnitStats {
+    let scale = |value: f32, pct: f32| value * (1.0 + pct / 100.0);
+    UnitStats {
+        stamina: scale(stats.stamina, pct.stamina),
+        strength: scale(stats.strength, pct.strength),
+        agility: scale(stats.agility, pct.agility),
+        intellect: scale(stats.intellect, pct.intellect),
+        spirit: scale(stats.spirit, pct.spirit),
+    }
+}
 
-type StatsFilter = Or<(Changed<UnitStats>, Changed<Level>)>;
+/// Rating → percent (mastery: points) with retail secondary-stat DR.
+fn rating_value(rating: f32, per_point: f32, kind: RatingType) -> f32 {
+    apply_secondary_dr(rating / per_point, kind)
+}
+
+/// Retail stats for `input`, with aura `mods` folded in. `None` for a class
+/// or level outside the tables (1..=13, 1..=90).
+pub fn compute_character_stats(
+    input: &StatInputs,
+    mods: Option<&StatModifiers>,
+) -> Option<CharacterStats> {
+    let level = level_index(input.level)?;
+    let mods = mods.copied().unwrap_or_default();
+    let mut primary = base_primary_stats(input.class, input.race, input.level)?;
+    primary += usable_gear_primary(input.gear_primary, input.primary_stat);
+    primary += mods.primary_flat;
+    let primary = apply_primary_pct(primary, mods.primary_pct);
+    let mut ratings = input.gear_ratings;
+    ratings += mods.ratings_flat;
+    let mastery_points = BASE_MASTERY_POINTS
+        + rating_value(ratings.mastery, MASTERY_RATING[level], RatingType::Mastery)
+        + mods.mastery_points;
+    Some(CharacterStats {
+        primary,
+        ratings,
+        max_health: (primary.stamina.floor()
+            * HP_PER_STAMINA[level]
+            * (1.0 + mods.max_health_pct / 100.0))
+            .floor(),
+        base_mana: base_mana(input.class, input.level).unwrap_or(0.0),
+        spell_power: primary.intellect,
+        attack_power: primary.strength * input.attack_power_per_strength
+            + primary.agility * input.attack_power_per_agility,
+        crit_pct: BASE_CRIT_PCT
+            + rating_value(ratings.crit, CRIT_RATING[level], RatingType::Crit)
+            + mods.crit_pct,
+        haste_pct: rating_value(ratings.haste, HASTE_RATING[level], RatingType::Haste)
+            + mods.haste_pct,
+        mastery_pct: mastery_points * input.mastery_coefficient,
+        versatility_pct: rating_value(
+            ratings.versatility,
+            VERSATILITY_RATING[level],
+            RatingType::Versatility,
+        ) + mods.versatility_pct,
+        armor: ratings.armor,
+    })
+}
+
+fn class_info(classes: Option<&ClassSpells>, class: u8) -> Option<&ClassInfo> {
+    classes?.classes.iter().find(|info| info.class_id == class)
+}
+
+/// Spec main stat and mastery coefficient of the active spec.
+fn spec_inputs(
+    class: Option<&ClassInfo>,
+    spec: Option<&ActiveSpec>,
+    spells: Option<&SpellStore>,
+) -> (Option<PrimaryStat>, f32) {
+    let Some(spec) = spec.and_then(|spec| class?.specs.iter().find(|info| info.spec_id == spec.0))
+    else {
+        return (None, 0.0);
+    };
+    let mastery = spec
+        .mastery_spells
+        .first()
+        .and_then(|&id| spells?.get(id))
+        .and_then(|spell| spell.effects.iter().find(|effect| effect.index == 0))
+        .map_or(0.0, |effect| effect.bonus_coefficient);
+    (
+        Some(PrimaryStat::from_priority(spec.primary_stat_priority)),
+        mastery,
+    )
+}
 
 /// Compute new current value preserving the current-to-max ratio.
 fn rescaled_current(current: f32, old_max: f32, new_max: f32) -> f32 {
@@ -74,373 +263,89 @@ fn rescaled_current(current: f32, old_max: f32, new_max: f32) -> f32 {
     (new_max * ratio).min(new_max)
 }
 
-/// Recalculate Health.max and Mana.max when UnitStats or Level change.
-///
-/// Mirrors AzerothCore `StatSystem.cpp:UpdateAllStats()`.
-fn update_derived_stats(
-    mut query: Query<StatsQuery, StatsFilter>,
+type StatsQuery = (
+    Entity,
+    &'static Player,
+    &'static Level,
+    Option<&'static ActiveSpec>,
+    Option<&'static EquippedItems>,
+    Option<&'static StatModifiers>,
+    &'static mut UnitStats,
+    &'static mut CombatRatings,
+    &'static mut Health,
+    Option<&'static mut Mana>,
+);
+
+type StatsFilter = Or<(
+    Added<Player>,
+    Changed<Level>,
+    Changed<ActiveSpec>,
+    Changed<EquippedItems>,
+    Changed<StatModifiers>,
+)>;
+
+/// Recompute `CharacterStats` and write stats, health and mana maxima.
+fn update_character_stats(
+    mut commands: Commands,
+    mut players: Query<StatsQuery, StatsFilter>,
+    classes: Option<Res<ClassSpells>>,
+    spells: Option<Res<SpellStore>>,
     replication_dirty: Option<Res<ReplicationDirtyQueue>>,
 ) {
-    for (entity, player, stats, level, mut health, mana) in &mut query {
-        let mut replication_changed = false;
-        let lv = level.0;
-        let class = player.class;
-
-        if let Some(new_max) = formulas::max_health(class, lv, stats.stamina) {
-            let next_health = Health {
-                current: rescaled_current(health.current, health.max, new_max),
-                max: new_max,
-            };
-            if *health != next_health {
-                *health = next_health;
-                replication_changed = true;
-            }
+    for (
+        entity,
+        player,
+        level,
+        spec,
+        equipped,
+        mods,
+        mut unit_stats,
+        mut ratings,
+        mut health,
+        mana,
+    ) in &mut players
+    {
+        let class = class_info(classes.as_deref(), player.class);
+        let (primary_stat, mastery_coefficient) = spec_inputs(class, spec, spells.as_deref());
+        let (gear_primary, gear_ratings) =
+            sum_equipment_stats(equipped.map_or(&[][..], |gear| gear.items.as_slice()));
+        let input = StatInputs {
+            class: player.class,
+            race: player.race,
+            level: level.0,
+            primary_stat,
+            mastery_coefficient,
+            attack_power_per_strength: class.map_or(0.0, |class| class.attack_power_per_strength),
+            attack_power_per_agility: class.map_or(0.0, |class| class.attack_power_per_agility),
+            gear_primary,
+            gear_ratings,
+        };
+        let Some(stats) = compute_character_stats(&input, mods) else {
+            warn!(
+                "no stat data for class {} level {}; stats unchanged",
+                player.class, level.0
+            );
+            continue;
+        };
+        let mut changed = unit_stats.set_if_neq(stats.primary);
+        changed |= ratings.set_if_neq(stats.ratings);
+        changed |= health.set_if_neq(Health {
+            current: rescaled_current(health.current, health.max, stats.max_health),
+            max: stats.max_health,
+        });
+        if let Some(mut mana) = mana {
+            changed |= mana.set_if_neq(Mana {
+                current: rescaled_current(mana.current, mana.max, stats.base_mana),
+                max: stats.base_mana,
+            });
         }
-
-        if let Some(mut mana) = mana
-            && let Some(new_max) = formulas::max_mana(class, lv, stats.intellect)
-        {
-            let next_mana = Mana {
-                current: rescaled_current(mana.current, mana.max, new_max),
-                max: new_max,
-            };
-            if *mana != next_mana {
-                *mana = next_mana;
-                replication_changed = true;
-            }
-        }
-
-        if replication_changed && let Some(replication_dirty) = replication_dirty.as_deref() {
-            replication_dirty.mark(entity);
+        commands.entity(entity).insert(stats);
+        if changed && let Some(dirty) = replication_dirty.as_deref() {
+            dirty.mark(entity);
         }
     }
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use bevy::ecs::system::RunSystemOnce;
-    use shared::components::CombatRatings;
-
-    fn spawn_player(
-        world: &mut World,
-        class: u8,
-        level: u8,
-        stamina: f32,
-        intellect: f32,
-    ) -> Entity {
-        world
-            .spawn((
-                Player {
-                    name: "Test".into(),
-                    race: 1,
-                    class,
-                    appearance: Default::default(),
-                },
-                UnitStats {
-                    stamina,
-                    intellect,
-                    ..Default::default()
-                },
-                CombatRatings::default(),
-                Level(level),
-                Health {
-                    current: 100.0,
-                    max: 100.0,
-                },
-            ))
-            .id()
-    }
-
-    #[test]
-    fn update_stats_recalculates_health() {
-        let mut world = World::new();
-        let entity = spawn_player(&mut world, 1, 80, 159.0, 0.0);
-
-        world.run_system_once(update_derived_stats).unwrap();
-
-        let health = world.get::<Health>(entity).unwrap();
-        // Warrior L80: base 8121 + 159 * 20 = 11301
-        assert!((health.max - 11301.0).abs() < 1.0);
-    }
-
-    #[test]
-    fn update_stats_preserves_health_ratio() {
-        let mut world = World::new();
-        let entity = spawn_player(&mut world, 1, 80, 159.0, 0.0);
-
-        // Set current to 50% of max before recalc
-        world.get_mut::<Health>(entity).unwrap().current = 50.0;
-
-        world.run_system_once(update_derived_stats).unwrap();
-
-        let health = world.get::<Health>(entity).unwrap();
-        let expected_current = health.max * 0.5;
-        assert!(
-            (health.current - expected_current).abs() < 1.0,
-            "health ratio should be preserved: {} vs {}",
-            health.current,
-            expected_current,
-        );
-    }
-
-    #[test]
-    fn update_stats_recalculates_mana_for_mana_class() {
-        let mut world = World::new();
-        let entity = spawn_player(&mut world, 2, 80, 100.0, 98.0);
-        // Add Mana component for paladin
-        world.entity_mut(entity).insert(Mana {
-            current: 100.0,
-            max: 100.0,
-        });
-
-        world.run_system_once(update_derived_stats).unwrap();
-
-        let mana = world.get::<Mana>(entity).unwrap();
-        // Paladin L80: base 4394 + 98 * 20 = 6354
-        assert!((mana.max - 6354.0).abs() < 1.0);
-    }
-
-    #[test]
-    fn update_stats_skips_mana_for_warrior() {
-        let mut world = World::new();
-        let entity = spawn_player(&mut world, 1, 80, 159.0, 0.0);
-
-        world.run_system_once(update_derived_stats).unwrap();
-
-        // Warrior has no Mana component
-        assert!(world.get::<Mana>(entity).is_none());
-    }
-
-    #[test]
-    fn update_derived_stats_does_not_dirty_equal_health_or_mana() {
-        let mut world = World::new();
-        let entity = spawn_player(&mut world, 2, 80, 100.0, 98.0);
-        world.entity_mut(entity).insert(Mana {
-            current: 100.0,
-            max: 100.0,
-        });
-
-        world.run_system_once(update_derived_stats).unwrap();
-        let health_before = *world.get::<Health>(entity).unwrap();
-        let mana_before = *world.get::<Mana>(entity).unwrap();
-        let health_tick_before = world
-            .entity(entity)
-            .get_ref::<Health>()
-            .unwrap()
-            .last_changed();
-        let mana_tick_before = world
-            .entity(entity)
-            .get_ref::<Mana>()
-            .unwrap()
-            .last_changed();
-
-        let unchanged_stats = *world.get::<UnitStats>(entity).unwrap();
-        *world.get_mut::<UnitStats>(entity).unwrap() = unchanged_stats;
-        world.run_system_once(update_derived_stats).unwrap();
-
-        assert_eq!(*world.get::<Health>(entity).unwrap(), health_before);
-        assert_eq!(*world.get::<Mana>(entity).unwrap(), mana_before);
-        assert_eq!(
-            world
-                .entity(entity)
-                .get_ref::<Health>()
-                .unwrap()
-                .last_changed(),
-            health_tick_before,
-            "equal derived health must not advance its change tick"
-        );
-        assert_eq!(
-            world
-                .entity(entity)
-                .get_ref::<Mana>()
-                .unwrap()
-                .last_changed(),
-            mana_tick_before,
-            "equal derived mana must not advance its change tick"
-        );
-
-        *world.get_mut::<UnitStats>(entity).unwrap() = UnitStats {
-            stamina: 101.0,
-            intellect: 99.0,
-            ..unchanged_stats
-        };
-        world.run_system_once(update_derived_stats).unwrap();
-
-        let health_after = *world.get::<Health>(entity).unwrap();
-        let mana_after = *world.get::<Mana>(entity).unwrap();
-        assert_ne!(health_after.max, health_before.max);
-        assert_ne!(mana_after.max, mana_before.max);
-        assert_ne!(
-            world
-                .entity(entity)
-                .get_ref::<Health>()
-                .unwrap()
-                .last_changed(),
-            health_tick_before
-        );
-        assert_ne!(
-            world
-                .entity(entity)
-                .get_ref::<Mana>()
-                .unwrap()
-                .last_changed(),
-            mana_tick_before
-        );
-    }
-
-    #[test]
-    fn update_stats_only_runs_on_change() {
-        let mut world = World::new();
-        let entity = spawn_player(&mut world, 1, 80, 159.0, 0.0);
-
-        // First run processes the newly-added components
-        world.run_system_once(update_derived_stats).unwrap();
-        let max_after_first = world.get::<Health>(entity).unwrap().max;
-
-        // Manually set health to something wrong
-        world.get_mut::<Health>(entity).unwrap().max = 999.0;
-
-        // Second run should NOT recalculate (UnitStats/Level unchanged)
-        world.run_system_once(update_derived_stats).unwrap();
-        let max_after_second = world.get::<Health>(entity).unwrap().max;
-
-        // Should still be 999.0 since no stat/level change triggered
-        assert!(
-            (max_after_second - 999.0).abs() < 0.01
-                || (max_after_second - max_after_first).abs() < 0.01,
-            "system should only run on Changed<UnitStats|Level>"
-        );
-    }
-
-    fn spawn_player_with_gear(
-        world: &mut World,
-        class: u8,
-        level: u8,
-        base_stamina: f32,
-        items: Vec<ItemStatBlock>,
-    ) -> Entity {
-        world
-            .spawn((
-                Player {
-                    name: "Test".into(),
-                    race: 1,
-                    class,
-                    appearance: Default::default(),
-                },
-                BaseStats {
-                    primary: UnitStats {
-                        stamina: base_stamina,
-                        ..Default::default()
-                    },
-                    secondary: CombatRatings::default(),
-                },
-                UnitStats::default(),
-                CombatRatings::default(),
-                EquippedItems { items },
-                Level(level),
-                Health {
-                    current: 100.0,
-                    max: 100.0,
-                },
-            ))
-            .id()
-    }
-
-    #[test]
-    fn equip_recalculates_stats() {
-        let mut world = World::new();
-        let gear = vec![ItemStatBlock {
-            primary: UnitStats {
-                stamina: 50.0,
-                ..Default::default()
-            },
-            secondary: CombatRatings::default(),
-        }];
-        let entity = spawn_player_with_gear(&mut world, 1, 80, 100.0, gear);
-
-        world.run_system_once(update_stats_from_equipment).unwrap();
-
-        let stats = world.get::<UnitStats>(entity).unwrap();
-        // base 100 + gear 50 = 150
-        assert!((stats.stamina - 150.0).abs() < 0.01);
-    }
-
-    #[test]
-    fn equip_triggers_health_recalc() {
-        let mut world = World::new();
-        let gear = vec![ItemStatBlock {
-            primary: UnitStats {
-                stamina: 50.0,
-                ..Default::default()
-            },
-            secondary: CombatRatings::default(),
-        }];
-        let entity = spawn_player_with_gear(&mut world, 1, 80, 100.0, gear);
-
-        // Run both systems in chain
-        world.run_system_once(update_stats_from_equipment).unwrap();
-        world.run_system_once(update_derived_stats).unwrap();
-
-        let health = world.get::<Health>(entity).unwrap();
-        // Warrior L80: base_hp 8121 + 150 stam * 20 = 11121
-        assert!((health.max - 11121.0).abs() < 1.0);
-    }
-
-    #[test]
-    fn unequip_reduces_stats() {
-        let mut world = World::new();
-        let gear = vec![ItemStatBlock {
-            primary: UnitStats {
-                stamina: 80.0,
-                ..Default::default()
-            },
-            secondary: CombatRatings::default(),
-        }];
-        let entity = spawn_player_with_gear(&mut world, 1, 80, 100.0, gear);
-
-        world.run_system_once(update_stats_from_equipment).unwrap();
-        let stamina_with_gear = world.get::<UnitStats>(entity).unwrap().stamina;
-        assert!((stamina_with_gear - 180.0).abs() < 0.01);
-
-        // Unequip: clear items
-        world
-            .get_mut::<EquippedItems>(entity)
-            .unwrap()
-            .items
-            .clear();
-        world.run_system_once(update_stats_from_equipment).unwrap();
-
-        let stamina_without = world.get::<UnitStats>(entity).unwrap().stamina;
-        assert!((stamina_without - 100.0).abs() < 0.01);
-    }
-
-    #[test]
-    fn equip_aggregates_secondary_ratings() {
-        let mut world = World::new();
-        let gear = vec![
-            ItemStatBlock {
-                primary: UnitStats::default(),
-                secondary: CombatRatings {
-                    crit: 50.0,
-                    ..Default::default()
-                },
-            },
-            ItemStatBlock {
-                primary: UnitStats::default(),
-                secondary: CombatRatings {
-                    crit: 30.0,
-                    haste: 20.0,
-                    ..Default::default()
-                },
-            },
-        ];
-        let entity = spawn_player_with_gear(&mut world, 1, 80, 100.0, gear);
-
-        world.run_system_once(update_stats_from_equipment).unwrap();
-
-        let ratings = world.get::<CombatRatings>(entity).unwrap();
-        assert!((ratings.crit - 80.0).abs() < 0.01);
-        assert!((ratings.haste - 20.0).abs() < 0.01);
-    }
-}
+#[path = "stats_tests.rs"]
+mod tests;

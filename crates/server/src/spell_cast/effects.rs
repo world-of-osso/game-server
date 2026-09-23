@@ -1,11 +1,9 @@
 //! Spell effect handlers, keyed by `SpellEffect.effect` (SpellEffects ID).
 //!
 //! Amounts: `BasePoints + BonusCoefficient × spell power +
-//! BonusCoefficientFromAP × attack power`. Spell power is `UnitStats.intellect`
-//! and attack power is `max(strength, agility)` (retail 1:1 conversions; no
-//! spec- or aura-based stat model yet); units without `UnitStats` have 0.
-//! Crit chance comes from `CombatRatings.crit` via `formulas::crit_chance`
-//! (0 without ratings); a crit doubles the amount (retail 200%).
+//! BonusCoefficientFromAP × attack power`. Spell power, attack power and crit
+//! chance come from the caster's `CharacterStats` (`stats.rs`); units without
+//! it (NPCs) have 0. A crit doubles the amount (retail 200%).
 //!
 //! Weapon model (58, 121, 31): no server-side weapon data exists, so a
 //! weapon hit is the auto-attack's flat 10 plus `AP / 6 × 2.0` (the 2 s
@@ -16,11 +14,12 @@ use std::collections::HashSet;
 use bevy::prelude::*;
 use lightyear::prelude::ReplicationDirtyQueue;
 use shared::casting::CastState;
-use shared::components::{CombatRatings, Health, Level, Npc, PowerType, UnitStats};
+use shared::components::{Health, Npc, PowerType};
 use shared::protocol::{CombatLogEvent, CombatLogKind};
 
 use super::{SpellHistory, log_event, now};
 use crate::spell_info::{SpellEffect, SpellInfo};
+use crate::stats::CharacterStats;
 
 pub const EFFECT_SCHOOL_DAMAGE: u32 = 2;
 pub const EFFECT_APPLY_AURA: u32 = 6;
@@ -124,9 +123,9 @@ fn apply_aura(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, target: 
 
 /// `(spell power, attack power)` of `unit`.
 fn power_stats(world: &World, unit: Entity) -> (f32, f32) {
-    world.get::<UnitStats>(unit).map_or((0.0, 0.0), |stats| {
-        (stats.intellect, stats.strength.max(stats.agility))
-    })
+    world
+        .get::<CharacterStats>(unit)
+        .map_or((0.0, 0.0), |stats| (stats.spell_power, stats.attack_power))
 }
 
 fn scaled_amount(world: &World, caster: Entity, effect: &SpellEffect) -> f32 {
@@ -142,12 +141,10 @@ fn weapon_hit(world: &World, caster: Entity) -> f32 {
 }
 
 fn roll_crit(world: &World, caster: Entity) -> bool {
-    let Some(ratings) = world.get::<CombatRatings>(caster) else {
-        return false;
-    };
-    let level = world.get::<Level>(caster).map_or(1, |level| level.0);
-    let chance = shared::formulas::melee::crit_chance(level, ratings.crit);
-    chance > 0 && rand::random::<u32>() % 10_000 < chance
+    let chance = world
+        .get::<CharacterStats>(caster)
+        .map_or(0.0, |stats| stats.crit_pct);
+    rand::random::<f32>() * 100.0 < chance
 }
 
 fn with_crit(world: &World, caster: Entity, amount: f32) -> (f32, bool) {

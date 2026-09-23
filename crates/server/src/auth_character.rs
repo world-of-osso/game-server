@@ -541,7 +541,7 @@ fn insert_spawn_mount_state(
 }
 
 fn insert_spawn_mana_state(commands: &mut Commands, entity: Entity, data: &CharacterData) {
-    if shared::formulas::base_mana(data.class, data.level as u8).is_none() {
+    if crate::stats::base_mana(data.class, data.level as u8).is_none() {
         return;
     }
     commands.entity(entity).insert(Mana {

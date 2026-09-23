@@ -28,6 +28,7 @@ use crate::auth::{Authenticated, InWorld};
 use crate::class_progression::KnownSpells;
 use crate::networking::{CombatTarget, Moving, PlayerLink};
 use crate::spell_info::{SpellInfo, SpellStore};
+use crate::stats::CharacterStats;
 use effects::{AuraApplierHook, EffectCtx, UnhandledEffects, with_aura_hook};
 use targets::Relation;
 
@@ -380,7 +381,9 @@ fn caster_knows_spell(world: &mut World, caster: Entity, spell_id: u32) -> bool 
         return true;
     }
     let mut known = SystemState::<Query<&KnownSpells>>::new(world);
-    let known = known.get(world).expect("plain component query always validates");
+    let known = known
+        .get(world)
+        .expect("plain component query always validates");
     crate::class_progression::knows_spell(&known, caster, spell_id)
 }
 
@@ -485,7 +488,8 @@ enum CostPool {
 }
 
 /// Every non-aura-gated cost in raw units: flat `ManaCost` plus
-/// `PowerCostPct` of the caster's max pool (base pools are not modeled).
+/// `PowerCostPct` of the pool's base: base mana (`CharacterStats`) for mana,
+/// the max pool otherwise (TrinityCore `Spell::CalcPowerCost`).
 fn spell_costs(
     world: &World,
     caster: Entity,
@@ -520,7 +524,14 @@ fn spell_costs(
             CostPool::Health => CastFailure::NotEnoughHealth,
         };
         let (current, max) = value.ok_or(missing.clone())?;
-        let amount = amount_with(max);
+        let base = match pool {
+            CostPool::Power(PowerType::Mana) => world
+                .get::<CharacterStats>(caster)
+                .map(|stats| stats.base_mana)
+                .ok_or(missing.clone())?,
+            _ => max,
+        };
+        let amount = amount_with(base);
         if current < amount {
             return Err(missing);
         }

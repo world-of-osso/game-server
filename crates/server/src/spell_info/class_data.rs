@@ -38,6 +38,9 @@ pub struct ClassInfo {
     pub skill_line: u32,
     /// `chr_classes_x_power_types.PowerType` raw DB IDs, ascending.
     pub power_types: Vec<i32>,
+    /// `chr_classes.AttackPowerPerStrength` / `AttackPowerPerAgility`.
+    pub attack_power_per_strength: f32,
+    pub attack_power_per_agility: f32,
     /// Sorted by required level, then spell ID.
     pub learnable: Vec<LearnableSpell>,
     /// Sorted by `OrderIndex`.
@@ -86,10 +89,14 @@ pub(crate) fn load_class_spells(conn: &Connection) -> rusqlite::Result<ClassSpel
     let classes = CLASS_SKILL_LINES
         .iter()
         .map(|&(class_id, skill_line)| {
+            let (attack_power_per_strength, attack_power_per_agility) =
+                load_attack_power_conversions(conn, class_id)?;
             Ok(ClassInfo {
                 class_id,
                 skill_line,
                 power_types: load_power_types(conn, class_id)?,
+                attack_power_per_strength,
+                attack_power_per_agility,
                 learnable: load_learnable(conn, class_id, skill_line)?,
                 specs: load_specs(conn, class_id)?,
             })
@@ -108,6 +115,14 @@ fn load_power_types(conn: &Connection, class_id: u8) -> rusqlite::Result<Vec<i32
     )?;
     let rows = stmt.query_map([class_id], |r| Ok(int(r, 0)? as i32))?;
     rows.collect()
+}
+
+fn load_attack_power_conversions(conn: &Connection, class_id: u8) -> rusqlite::Result<(f32, f32)> {
+    conn.query_row(
+        "SELECT AttackPowerPerStrength, AttackPowerPerAgility FROM chr_classes WHERE ID = ?1",
+        [class_id],
+        |r| Ok((int(r, 0)? as f32, int(r, 1)? as f32)),
+    )
 }
 
 /// Rule: ClassMask is 0 or has the class bit; AcquireMethod != NeverLearned;

@@ -10,7 +10,7 @@ use lightyear::prelude::*;
 use rusqlite::{Connection, OpenFlags};
 use shared::casting::CastState;
 use shared::components::{
-    CombatStatus, Health, Level, Mana, Npc, Player, Position, PowerType, UnitPowers, UnitStats,
+    CombatStatus, Health, Level, Mana, Npc, Player, Position, PowerType, UnitPowers,
 };
 use shared::protocol::{
     CastFailed, CombatChannel, CombatLogEvent, CombatLogKind, ProtocolPlugin, SpellCastIntent,
@@ -25,6 +25,7 @@ use crate::networking::{Moving, PlayerLink};
 use crate::spell_info::{
     ClassInfo, ClassSpells, SpellEffect, SpellInfo, SpellStore, load_spell_data,
 };
+use crate::stats::CharacterStats;
 
 const MORTAL_STRIKE: u32 = 12294;
 const FIREBALL: u32 = 133;
@@ -73,6 +74,8 @@ fn class_spells(data: &WorldData) -> ClassSpells {
                 class_id: class.class_id,
                 skill_line: class.skill_line,
                 power_types: class.power_types.clone(),
+                attack_power_per_strength: class.attack_power_per_strength,
+                attack_power_per_agility: class.attack_power_per_agility,
                 learnable: Vec::new(),
                 specs: Vec::new(),
             })
@@ -116,12 +119,11 @@ fn spawn_player(app: &mut App, class: u8, x: f32) -> Entity {
             Moving(false),
             // In combat so rage does not decay mid-test (rage test toggles it).
             CombatStatus(true),
-            UnitStats {
-                stamina: 0.0,
-                strength: 100.0,
-                agility: 0.0,
-                intellect: 100.0,
-                spirit: 0.0,
+            CharacterStats {
+                spell_power: 100.0,
+                attack_power: 100.0,
+                base_mana: 10_000.0,
+                ..default()
             },
             Mana {
                 current: 10_000.0,
@@ -176,8 +178,20 @@ fn spawn_connection(app: &mut App, player: Entity) -> Entity {
         .id()
 }
 
-/// Warrior caster (class 1) at the origin, NPC at 3 yd.
+/// Level 10 Human caster of `class` at the origin with fixed
+/// `CharacterStats` (100 SP/AP, 10 000 base mana), NPC at 3 yd.
 fn harness(extra: Vec<SpellInfo>, ids: &[u32], class: u8) -> Option<Harness> {
+    harness_with(extra, ids, class, false)
+}
+
+/// `computed_stats`: run `StatsPlugin` on a fresh caster (100/100 health,
+/// 0/0 mana, as spawned on world entry) instead of the fixed stats.
+fn harness_with(
+    extra: Vec<SpellInfo>,
+    ids: &[u32],
+    class: u8,
+    computed_stats: bool,
+) -> Option<Harness> {
     let data = world_db()?;
     let mut app = App::new();
     app.add_plugins((MinimalPlugins, bevy::state::app::StatesPlugin));
@@ -187,6 +201,9 @@ fn harness(extra: Vec<SpellInfo>, ids: &[u32], class: u8) -> Option<Harness> {
     app.add_plugins(ProtocolPlugin);
     app.add_plugins(crate::combat::CombatPlugin);
     app.add_plugins(super::SpellCastPlugin);
+    if computed_stats {
+        app.add_plugins(crate::stats::StatsPlugin);
+    }
     app.insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
         Duration::from_millis(50),
     ));
@@ -204,6 +221,23 @@ fn harness(extra: Vec<SpellInfo>, ids: &[u32], class: u8) -> Option<Harness> {
     app.insert_resource(power_table(data));
     app.insert_resource(class_spells(data));
     let caster = spawn_player(&mut app, class, 0.0);
+    if computed_stats {
+        app.world_mut()
+            .entity_mut(caster)
+            .remove::<CharacterStats>()
+            .insert((
+                Health {
+                    current: 100.0,
+                    max: 100.0,
+                },
+                Mana {
+                    current: 0.0,
+                    max: 0.0,
+                },
+                shared::components::UnitStats::default(),
+                shared::components::CombatRatings::default(),
+            ));
+    }
     app.world_mut().entity_mut(caster).insert(known);
     let connection = spawn_connection(&mut app, caster);
     let npc = spawn_npc(&mut app, 3.0);
@@ -305,7 +339,7 @@ fn instant_spell_resolves_same_tick_spending_cost_and_starting_gcd_and_cooldown(
     };
     h.set_power(PowerType::Rage, 500.0);
     h.cast_and_deliver(MORTAL_STRIKE, Some(h.npc));
-    // AP coefficient 5.2012 × strength 100 = 520.
+    // AP coefficient 5.2012 × attack power 100 = 520.
     assert_eq!(h.health(h.npc), 5000.0 - 520.0);
     assert_eq!(h.power(PowerType::Rage), 200.0, "30 rage = 300 raw spent");
     assert!(h.app.world().get::<CastState>(h.caster).is_none());
@@ -368,9 +402,9 @@ fn cast_time_spell_completes_after_its_cast_time() {
     assert_eq!(h.health(h.npc), 5000.0);
     h.advance(10);
     assert!(h.app.world().get::<CastState>(h.caster).is_none());
-    // SP coefficient 3.8812 × intellect 100 = 388.
+    // SP coefficient 3.8812 × spell power 100 = 388.
     assert_eq!(h.health(h.npc), 5000.0 - 388.0);
-    // 1% of max mana (100) spent on completion, then at most 0.25 s of 1%/s regen.
+    // 1% of base mana (100) spent on completion, then at most 0.25 s of 1%/s regen.
     let mana = h.app.world().get::<Mana>(h.caster).unwrap().current;
     assert!((9_900.0..=9_925.0).contains(&mana), "mana {mana}");
     let kinds: Vec<_> = std::mem::take(&mut h.inbox.log)
@@ -475,7 +509,7 @@ fn heal_clamps_to_max_and_logs_overheal() {
         .into_iter()
         .find(|e| e.kind == CombatLogKind::Heal)
         .unwrap();
-    // SP coefficient 6.82 × intellect 100 = 682; 100 effective.
+    // SP coefficient 6.82 × spell power 100 = 682; 100 effective.
     assert_eq!((heal.amount, heal.overflow), (682, 582));
 }
 
@@ -604,4 +638,51 @@ fn unknown_spell_is_rejected_as_not_known() {
     );
     assert_eq!(h.health(h.npc), 5000.0);
     assert_eq!(h.power(PowerType::Rage), 500.0);
+}
+
+#[test]
+fn computed_stats_make_fireball_scale_with_intellect() {
+    let Some(mut h) = harness_with(Vec::new(), &[FIREBALL], 8, true) else {
+        return;
+    };
+    // Level 10 Human Mage: base Int 38 = spell power 38; gtBaseMP 1000;
+    // Sta 555 × gtHpPerSta 2 = 1110 health (was 100/100: stays full).
+    let stats = *h.app.world().get::<CharacterStats>(h.caster).unwrap();
+    assert_eq!((stats.spell_power, stats.base_mana), (38.0, 1000.0));
+    assert_eq!(
+        *h.app.world().get::<Health>(h.caster).unwrap(),
+        Health {
+            current: 1110.0,
+            max: 1110.0
+        }
+    );
+    h.cast_and_deliver(FIREBALL, Some(h.npc));
+    h.advance(40);
+    let damage = std::mem::take(&mut h.inbox.log)
+        .into_iter()
+        .find(|e| e.kind == CombatLogKind::Damage)
+        .expect("fireball hit");
+    // SP coefficient 3.8812 × 38 = 147 (×2 on a 5% crit).
+    let expected = if damage.crit { 295 } else { 147 };
+    assert_eq!(damage.amount, expected);
+}
+
+#[test]
+fn percent_mana_cost_uses_base_mana_not_max_pool() {
+    let Some(mut h) = harness(Vec::new(), &[FIREBALL], 8) else {
+        return;
+    };
+    h.app
+        .world_mut()
+        .get_mut::<CharacterStats>(h.caster)
+        .unwrap()
+        .base_mana = 2_000.0;
+    // Cost is 1% of base mana 2000 = 20; 1% of the 10 000 max pool would be
+    // 100. 40 mana plus 0.15 s of 1%/s regen (15) affords only the former.
+    h.app.world_mut().get_mut::<Mana>(h.caster).unwrap().current = 40.0;
+    h.cast_and_deliver(FIREBALL, Some(h.npc));
+    assert!(std::mem::take(&mut h.inbox.failed).is_empty());
+    assert!(h.app.world().get::<CastState>(h.caster).is_some());
+    h.advance(40);
+    assert_eq!(h.health(h.npc), 5000.0 - 388.0);
 }

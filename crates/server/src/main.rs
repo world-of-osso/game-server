@@ -7,6 +7,7 @@ mod auth;
 mod auth_character;
 mod barber_shop;
 mod calendar;
+mod character_stats_data;
 mod class_progression;
 mod collection;
 mod combat;
