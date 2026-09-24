@@ -128,6 +128,47 @@ CREATE TABLE waypoint_data (
   PRIMARY KEY (id, point)
 );
 
+-- Per-spawn addon (keyed by creature.guid) and per-template fallback (keyed by
+-- creature_template.entry): AzerothCore Creature::GetCreatureAddon.
+DROP TABLE IF EXISTS creature_addon;
+CREATE TABLE creature_addon (
+  guid INTEGER NOT NULL DEFAULT 0,
+  path_id INTEGER NOT NULL DEFAULT 0,
+  mount INTEGER NOT NULL DEFAULT 0,
+  bytes1 INTEGER NOT NULL DEFAULT 0,
+  bytes2 INTEGER NOT NULL DEFAULT 0,
+  emote INTEGER NOT NULL DEFAULT 0,
+  visibilityDistanceType INTEGER NOT NULL DEFAULT 0,
+  auras TEXT,
+  PRIMARY KEY (guid)
+);
+
+DROP TABLE IF EXISTS creature_template_addon;
+CREATE TABLE creature_template_addon (
+  entry INTEGER NOT NULL DEFAULT 0,
+  path_id INTEGER NOT NULL DEFAULT 0,
+  mount INTEGER NOT NULL DEFAULT 0,
+  bytes1 INTEGER NOT NULL DEFAULT 0,
+  bytes2 INTEGER NOT NULL DEFAULT 0,
+  emote INTEGER NOT NULL DEFAULT 0,
+  visibilityDistanceType INTEGER NOT NULL DEFAULT 0,
+  auras TEXT,
+  PRIMARY KEY (entry)
+);
+
+-- angle is degrees; groupAI 0x200 = GROUP_AI_FLAG_FOLLOW_LEADER.
+DROP TABLE IF EXISTS creature_formations;
+CREATE TABLE creature_formations (
+  leaderGUID INTEGER NOT NULL DEFAULT 0,
+  memberGUID INTEGER NOT NULL DEFAULT 0,
+  dist REAL NOT NULL DEFAULT 0,
+  angle REAL NOT NULL DEFAULT 0,
+  groupAI INTEGER NOT NULL DEFAULT 0,
+  point_1 INTEGER NOT NULL DEFAULT 0,
+  point_2 INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (memberGUID)
+);
+
 -- Quest/vendor/trainer/loot/gossip/item content. Column order matches the AzerothCore
 -- dump CREATE TABLE (positional INSERTs); MySQL int/float/text -> INTEGER/REAL/TEXT.
 

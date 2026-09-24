@@ -176,6 +176,35 @@ class CreatureEventImportTests(unittest.TestCase):
                 [(6673, 1), (100, 4)],
             )
 
+    def test_creature_addons_and_formations_keep_paths_mounts_auras_and_offsets(self):
+        (self.sql / "creature_addon.sql").write_text(
+            "INSERT INTO `creature_addon` VALUES\n"
+            "(79968,799680,2410,0,1,0,0,'1244 7164'),(76,0,0,0,1,0,0,NULL);\n"
+        )
+        (self.sql / "creature_template_addon.sql").write_text(
+            "INSERT INTO `creature_template_addon` VALUES\n(952,0,0,8,1,233,0,'');\n"
+        )
+        (self.sql / "creature_formations.sql").write_text(
+            "INSERT INTO `creature_formations` VALUES\n(79968,79968,0,0,2,0,0),(79968,96194,3.5,90,515,0,0);\n"
+        )
+        result = self.run_import()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        with sqlite3.connect(self.db) as conn:
+            self.assertEqual(
+                conn.execute("SELECT guid, path_id, mount, auras FROM creature_addon ORDER BY guid").fetchall(),
+                [(76, 0, 0, None), (79968, 799680, 2410, "1244 7164")],
+            )
+            self.assertEqual(
+                conn.execute("SELECT entry, bytes1, emote FROM creature_template_addon").fetchall(),
+                [(952, 8, 233)],
+            )
+            self.assertEqual(
+                conn.execute(
+                    "SELECT leaderGUID, memberGUID, dist, angle, groupAI FROM creature_formations ORDER BY memberGUID"
+                ).fetchall(),
+                [(79968, 79968, 0.0, 0.0, 2), (79968, 96194, 3.5, 90.0, 515)],
+            )
+
     def test_unparseable_dump_fails_without_partial_tables(self):
         (self.sql / "npc_vendor.sql").write_text("INSERT INTO `npc_vendor` VALUES\n(54,0,2488,0,0,0,0),(54,0,0x1F,0,0,0,0);\n")
         result = self.run_import()

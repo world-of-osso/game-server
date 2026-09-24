@@ -19,6 +19,7 @@ DB2_CSV_ROOT="${DB2_CSV_ROOT:-$PROJECT_DIR/../game-engine/data/db2}"
 # Tables loaded from same-named dumps in $SQL_DIR (<table>.sql); DDL in world_schema.sql.
 DUMP_TABLES=(
     creature_template creature creature_template_model waypoint_data game_event_creature
+    creature_addon creature_template_addon creature_formations
     quest_template quest_template_addon quest_offer_reward quest_request_items quest_poi quest_poi_points
     creature_queststarter creature_questender gameobject_queststarter gameobject_questender
     npc_vendor npc_trainer trainer trainer_spell creature_default_trainer
