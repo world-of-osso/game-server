@@ -296,7 +296,8 @@ fn equipping_weapon_into_main_hand_updates_equipment_appearance() {
     let appearance = app
         .world()
         .get::<EquipmentAppearance>(client.player)
-        .unwrap();
+        .unwrap()
+        .clone();
     assert_eq!(appearance.entries.len(), 1);
     let entry = &appearance.entries[0];
     assert_eq!(entry.slot, EquipmentVisualSlot::MainHand);
@@ -313,7 +314,7 @@ fn equipping_weapon_into_main_hand_updates_equipment_appearance() {
     );
     assert_eq!(equipped.item.as_ref().unwrap().item_guid, sword);
     let persisted = persistence::load_character(db(&app), client.character_id).unwrap();
-    assert_eq!(persisted.equipment_appearance, *appearance);
+    assert_eq!(persisted.equipment_appearance, appearance);
 }
 
 #[test]
