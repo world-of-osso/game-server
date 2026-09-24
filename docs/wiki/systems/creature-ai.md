@@ -63,6 +63,14 @@ Every spawned creature carries a `SpawnPoint`:
 
 Also used by `combat.rs` to reset position on respawn after death.
 
+## Grid Activation
+
+`grid_activity.rs` follows AzerothCore grid activation (`Map::Update` → `MarkNearbyCellsOf`, `Creature::IsUpdateNeeded`): map 0 is bucketed into 533.3333 yd grids (`SIZE_OF_GRIDS`) and a creature runs its per-tick systems only while one of its home grids is within one grid (3x3) of a player's grid. Home grids are the spawn grid plus every grid the creature's patrol path, or its formation leader's path, crosses. Other creatures carry `GridDormant`; wander, waypoint, formation, chase, leash, return-to-spawn, `update_auras` and `sync_unit_auras` skip them. The active set is recomputed in `FixedPreUpdate` only when a player changes grid or enters/leaves the world, and only creatures in grids that changed are toggled. Unlike AzerothCore, patrollers and formation members are not updated everywhere; covering their path grids keeps them active wherever a player can see them.
+
+Timers: dormant state resumes where it stopped. Aura expiry and periodic tick times are absolute, so on reactivation expired auras end and missed ticks run at once. `respawn_system` is not gated (it only visits dead creatures): a dormant creature respawns at its spawn point on its normal timer.
+
+With all 24,521 map 0 creatures and no players, an idle dev server uses about 8% of one core (81% without grid activation).
+
 ## Coordinate System
 
 Creature data is stored in WoW coordinate space. The AI operates in Bevy space (X-right, Y-up, Z-back). The `wow_to_bevy()` function in `terrain_height.rs` handles the conversion at waypoint load time.

@@ -1,6 +1,6 @@
 # Zone Architecture
 
-Proposed architecture for partitioning future zone and instance simulation inside the server tick. Current code does not implement per-zone system sets or runtime zone transfers; it loads Elwynn creatures during startup. Tick ordering is defined separately in [[tick-loop-design]].
+Proposed architecture for partitioning future zone and instance simulation inside the server tick. Current code does not implement per-zone system sets or runtime zone transfers; it spawns every map 0 (Eastern Kingdoms) creature during startup. Tick ordering is defined separately in [[tick-loop-design]].
 
 **Status:** Proposed; not implemented.
 
@@ -8,7 +8,7 @@ Proposed architecture for partitioning future zone and instance simulation insid
 
 ## Current Implementation
 
-`ZonePlugin` registers one `PostStartup` system, `spawn_elwynn_creatures`. It reads `WorldData`, filters creature spawns to the configured Elwynn/Northshire bounds, assigns numeric `Zone` data and AI components, and adds Lightyear replication markers.
+`ZonePlugin` registers one `PostStartup` system, `spawn_eastern_kingdoms_creatures`. It reads `WorldData`, spawns every map 0 creature (map 1 stays unspawned: `Position` has no map, so interest would overlap the continents), assigns numeric `Zone` data and AI components, and adds Lightyear replication markers.
 
 Current source has no:
 
@@ -66,7 +66,7 @@ The base tick-loop design does not choose between them. Both must preserve a cle
 ## Sources
 
 - [ARCHITECTURE.md](../../../ARCHITECTURE.md) — original proposed zone model and AzerothCore comparison
-- [crates/server/src/zones.rs](../../../crates/server/src/zones.rs) — current `PostStartup` Elwynn creature spawning
+- [crates/server/src/zones.rs](../../../crates/server/src/zones.rs) — current `PostStartup` map 0 creature spawning
 - [crates/server/src/world_data.rs](../../../crates/server/src/world_data.rs) — numeric zone and spawn data loaded from SQLite
 
 ## See Also

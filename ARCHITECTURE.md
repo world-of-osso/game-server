@@ -295,7 +295,7 @@ Lightyear layers reliable and unreliable game channels over its UDP transport.
 ## Zone Architecture
 
 Zone partitioning is a proposed design, not current runtime behavior. The server currently
-loads Elwynn creatures during `PostStartup`; it does not register per-zone system sets or
+spawns every map 0 creature during `PostStartup`; it does not register per-zone system sets or
 implement runtime zone-transfer events. See [zone architecture](docs/wiki/systems/zone-architecture.md)
 for current implementation, proposed phase placement, and instance-isolation options.
 

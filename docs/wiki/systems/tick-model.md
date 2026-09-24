@@ -9,7 +9,8 @@ The current server uses Bevy 0.19 with Lightyear 0.28.0, a 50 ms outer runner, a
 | Boundary | Current responsibility |
 |---|---|
 | `Startup` | Open redb, load SQLite world data and terrain, start Lightyear server |
-| `PostStartup` | Spawn Elwynn creatures and build graveyard state |
+| `PostStartup` | Spawn map 0 creatures and build graveyard state |
+| `FixedPreUpdate` | Grid activation: toggle `GridDormant` on creatures far from every player ([[creature-ai]]) |
 | `PreUpdate` | Lightyear transport, message, and replication receive work |
 | `FixedUpdate` | Authoritative simulation and cadence-gated maintenance |
 | `Update` | Auth, chat, social, economy, progression, and admin IPC requests |
@@ -87,7 +88,7 @@ Disconnect saves are observer-driven. Shutdown saves run in `Last` only when `Ap
 
 - Periodic save change tracking is a confirmed correctness bug; the 300-tick counter does not preserve a 300-tick `Changed<T>` window.
 - No global `SystemSet` phase chain orders input, AI, movement, combat, lifecycle, visibility, and maintenance.
-- Per-zone system sets and runtime zone-transfer events are not implemented; current `ZonePlugin` performs `PostStartup` Elwynn creature spawning.
+- Per-zone system sets and runtime zone-transfer events are not implemented; current `ZonePlugin` performs `PostStartup` map 0 creature spawning.
 - Many gameplay requests run in `Update`, after the fixed schedule within the same outer update, rather than inside one monolithic game tick.
 - Periodic redb writes run synchronously on the Bevy thread.
 - The preserved Lightyear, interest, friends, and terrain loop-removal requirements remain partial; see [[tick-loop-audit]] for their literal completion criteria.

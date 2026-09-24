@@ -244,3 +244,7 @@ Created `systems/quests.md` (quest data, rules, runtime) and `specs/quests.md`; 
 ## [2026-09-24] update | Every spawn respawns
 
 [[creature-ai]]: all spawns get SpawnPoint + RespawnDelay (spawntimesecs + corpse decay by rank); escorts rejoin respawned leaders.
+
+## [2026-09-24] update | Grid activation
+
+[[creature-ai]]: every map 0 creature spawns; creatures more than one 533.33 yd grid from every player carry `GridDormant` and skip AI and aura updates; respawn timers keep running. [[zone-architecture]], [[tick-model]]: map 0 spawning, FixedPreUpdate grid step.
