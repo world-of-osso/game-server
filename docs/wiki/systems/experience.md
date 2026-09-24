@@ -17,7 +17,7 @@
   - Grey mob (level ≤ `GetGrayLevel`): 0. Grey level is 0 below 7, `(L−7) − (count of multiples of 5 in 15..=L − 1)` below 35, and `L−10` from 35.
 - `kill_gain` (Gain):
   - Critters (`type` 8) and `flags_extra & 0x40` give 0.
-  - Divided by 10 when `creature_template.exp` is below `GetExpansionForLevel(player)`. Classic mobs hit this from level 30.
+  - Retail's ÷10 for creatures of an older expansion (`GetExpansionForLevel`) is omitted: without ContentTuning scaling every creature is older than a level 30+ player, so levelling would stall. A level 35 same-level kill gives the full 190.
   - Elites (`rank` 1 or 2) give ×2. There are no dungeon maps, so the 2.75× dungeon rate never applies.
   - Multiplied by `ExperienceModifier`.
 - Level 10 examples: a level 10 mob gives 65, level 8 gives 39, level 5 gives 11 and level 4 gives 0. A level 10 elite gives 130.
@@ -56,9 +56,16 @@
   - `RefillAfterLevelUp` sets health and mana to the new maxima after `update_character_stats`. Retail `GiveLevel` refills only health and mana (`SetToMaxOnLevelUp`).
 - redb `character_xp`: `character_id` → u32 XP into the current level. The row is removed with the character.
 
+## Messages (ExperienceChannel, owner only)
+
+- `PlayerXpUpdate { xp, next_level_xp, rested_xp }`: on enter world (`Added<InWorld>`), after each applied gain and on any `Changed<Level>` (admin set-level included). `next_level_xp` is 0 at the cap.
+- `LogXpGain { victim, original, amount, group_bonus, reason }` for each applied gain (Retail `LogXPGain`): Kill carries the NPC entity bits and the group rate; Quest has no victim and rate 1.0. Rested XP is not applied, so `original == amount`.
+- `QuestGiverQuestComplete.xp`: the turn-in XP, 0 at the cap.
+- `send_xp_updates` runs after `apply_xp_awards` in PostUpdate, before replication send.
+
 ## Gaps
 
-- No protocol message for XP. The client cannot show an XP bar or XP gain. Retail sends `LogXPGain` and the `XP` / `NextLevelXP` fields, and `QuestGiverQuestComplete` carries the XP.
+- `rested_xp` in `PlayerXpUpdate` comes from `PlayerRestState`, but the pool never accumulates or is consumed.
 - Rested bonus (`RestMgr::GetRestBonusFor`) is not applied. Rested XP is not persisted.
 - `SPELL_AURA_MOD_XP_PCT`, quest XP auras, pet XP, BG/raid rates and XP-to-money at the cap are not implemented.
 

@@ -6,7 +6,6 @@ fn mob(level: u8) -> KillVictim {
     KillVictim {
         level,
         elite: false,
-        expansion: 0,
         experience_modifier: 1.0,
         gives_experience: true,
     }
@@ -54,34 +53,43 @@ fn grey_mobs_give_no_xp_and_green_mobs_scale_down() {
 }
 
 #[test]
-fn critters_give_nothing_and_old_expansion_mobs_give_a_tenth() {
+fn critters_give_nothing() {
     let critter = KillVictim {
         gives_experience: false,
         ..mob(10)
     };
     assert_eq!(kill_gain(10, &critter), 0);
-    // Level 30 PerKill 165 / 10: classic creatures past GetExpansionForLevel 30.
-    assert_eq!(kill_gain(30, &mob(30)), 17);
-    assert_eq!(kill_gain(29, &mob(29)), 160);
+}
+
+#[test]
+fn level_35_same_level_kill_gets_full_xp_without_the_expansion_penalty() {
+    // gtXp PerKill at 35; Retail's 10% old-expansion rule is omitted.
+    assert_eq!(kill_gain(35, &mob(35)), 190);
 }
 
 #[test]
 fn solo_kill_rewards_only_the_living_killer() {
     assert_eq!(
         kill_rewards(&mob(10), &[member(1, 10, true)], false),
-        vec![(1, 65)]
+        KillRewards {
+            group_bonus: 1.0,
+            shares: vec![(1, 65)],
+        }
     );
     let dead = KillMember {
         alive: false,
         ..member(1, 10, true)
     };
-    assert!(kill_rewards(&mob(10), &[dead], false).is_empty());
+    assert!(kill_rewards(&mob(10), &[dead], false).shares.is_empty());
 }
 
 #[test]
 fn group_kill_xp_is_split_by_level_with_the_group_bonus() {
     let pair = [member(1, 10, true), member(2, 10, false)];
-    assert_eq!(kill_rewards(&mob(10), &pair, true), vec![(1, 32), (2, 32)]);
+    assert_eq!(
+        kill_rewards(&mob(10), &pair, true).shares,
+        vec![(1, 32), (2, 32)]
+    );
     // 65 * 1.166 * 10 / 30.
     let trio = [
         member(1, 10, true),
@@ -90,7 +98,10 @@ fn group_kill_xp_is_split_by_level_with_the_group_bonus() {
     ];
     assert_eq!(
         kill_rewards(&mob(10), &trio, true),
-        vec![(1, 25), (2, 25), (3, 25)]
+        KillRewards {
+            group_bonus: 1.166,
+            shares: vec![(1, 25), (2, 25), (3, 25)],
+        }
     );
     // A dead member is not counted and gets nothing.
     let with_dead = [
@@ -100,7 +111,10 @@ fn group_kill_xp_is_split_by_level_with_the_group_bonus() {
             ..member(2, 10, false)
         },
     ];
-    assert_eq!(kill_rewards(&mob(10), &with_dead, true), vec![(1, 65)]);
+    assert_eq!(
+        kill_rewards(&mob(10), &with_dead, true).shares,
+        vec![(1, 65)]
+    );
 }
 
 #[test]
@@ -108,7 +122,7 @@ fn group_with_a_member_the_mob_is_grey_for_gets_half_xp() {
     // Level 8 is grey for level 20 (gray 12): XP comes from the level 10
     // member, halved plus one; the level 20 member gets none.
     let members = [member(1, 10, true), member(2, 20, false)];
-    assert_eq!(kill_rewards(&mob(8), &members, true), vec![(1, 7)]);
+    assert_eq!(kill_rewards(&mob(8), &members, true).shares, vec![(1, 7)]);
 }
 
 #[test]
@@ -175,7 +189,7 @@ fn crossing_the_threshold_saves_level_and_xp_and_refills_health_and_mana() {
     app.world_mut()
         .resource_mut::<XpAwards>()
         .0
-        .push((character_id, 100));
+        .push(XpAward::quest(character_id, 100));
     app.update();
     app.update();
 
@@ -211,7 +225,10 @@ fn dead_players_gain_no_xp() {
             },
         ))
         .id();
-    app.world_mut().resource_mut::<XpAwards>().0.push((7, 500));
+    app.world_mut()
+        .resource_mut::<XpAwards>()
+        .0
+        .push(XpAward::quest(7, 500));
     app.update();
 
     assert_eq!(app.world().get::<Level>(player), Some(&Level(1)));

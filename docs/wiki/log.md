@@ -1,5 +1,9 @@
 # Wiki Log
 
+## [2026-09-24] systems | Experience messages
+
+Updated [[experience]]: owner-only `PlayerXpUpdate`/`LogXpGain` on `ExperienceChannel` and `QuestGiverQuestComplete.xp` (shared-protocol `xp-protocol`). The old-expansion ÷10 kill XP rule is removed because there is no ContentTuning scaling. Rested caps now use gtXp instead of the deleted Wrath `shared::xp::xp_to_level`.
+
 ## [2026-09-24] systems | Experience and levelling
 
 Created [[experience]]; updated [[class-progression]] and the index. Kill XP follows TrinityCore master `Formulas.h` + `KillRewarder` over the Retail gtXp table (CASC FDID 1391661), and quest XP follows `Quest::XPValue` over the QuestXP DB2 (12.1.0.69933). Level-ups save `CharacterData.level`, set `Level`/`UnitLevel` (driving spell, stat and trait deltas) and refill health and mana. XP is stored in redb `character_xp`. There is no XP protocol message yet.

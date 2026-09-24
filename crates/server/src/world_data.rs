@@ -14,8 +14,6 @@ pub struct CreatureTemplate {
     pub health_modifier: f32,
     /// `rank`: 1 elite, 2 rare elite (Retail `CreatureClassifications`).
     pub rank: u8,
-    /// `exp`: health scaling expansion.
-    pub expansion: u8,
     /// `ExperienceModifier` (TrinityCore `ModExperience`).
     pub experience_modifier: f32,
     /// Critters and `CREATURE_FLAG_EXTRA_NO_XP` give no experience.
@@ -99,10 +97,9 @@ fn template_from_row(row: &Row) -> rusqlite::Result<CreatureTemplate> {
         health_modifier: row.get(6)?,
         name: row.get(7)?,
         rank: row.get::<_, i64>(8)? as u8,
-        expansion: row.get::<_, i64>(9)? as u8,
-        experience_modifier: row.get(10)?,
-        gives_experience: row.get::<_, i64>(11)? != CREATURE_TYPE_CRITTER
-            && row.get::<_, i64>(12)? & CREATURE_FLAG_EXTRA_NO_XP == 0,
+        experience_modifier: row.get(9)?,
+        gives_experience: row.get::<_, i64>(10)? != CREATURE_TYPE_CRITTER
+            && row.get::<_, i64>(11)? & CREATURE_FLAG_EXTRA_NO_XP == 0,
         models: Vec::new(),
     })
 }
@@ -111,7 +108,7 @@ fn load_templates(conn: &Connection) -> HashMap<u32, CreatureTemplate> {
     let mut stmt = conn
         .prepare(
             "SELECT entry, minlevel, maxlevel, faction, npcflag, speed_walk, HealthModifier, name,
-                    rank, exp, ExperienceModifier, type, flags_extra
+                    rank, ExperienceModifier, type, flags_extra
              FROM creature_template",
         )
         .expect("Failed to prepare creature_template query");

@@ -9,17 +9,29 @@
 //! and sets `Level`/`UnitLevel`. Class progression, stats and trait budgets
 //! react to `Changed<Level>`; `refill_after_level_up` then sets health and
 //! mana to the new maxima (`GiveLevel` `SetFullHealth` + mana
-//! `SetToMaxOnLevelUp`).
+//! `SetToMaxOnLevelUp`). Each applied gain sends `LogXpGain`; the XP bar
+//! (`PlayerXpUpdate`) is sent on enter world, after a gain and on any level
+//! change.
+//!
+//! There is no ContentTuning level scaling, so every creature is an older
+//! expansion than a level 30+ player; the `Gain` "10% XP for creatures of
+//! lower expansion" rule is omitted, or levelling would stall past 30.
+use std::collections::HashSet;
+
 use bevy::prelude::*;
-use lightyear::prelude::ReplicationDirtyQueue;
+use lightyear::prelude::*;
 use shared::components::{Health, Level, Mana, Npc, Player, Position, UnitLevel};
 use shared::death::DeathState as PlayerLifeState;
+use shared::protocol::{ExperienceChannel, LogXpGain, PlayerXpUpdate, XpGainReason};
 
+use crate::auth::InWorld;
 use crate::combat::{DeathState, LastDamager};
 use crate::death::PlayerDeathState;
 use crate::group::GroupRegistry;
+use crate::networking::PlayerLink;
 use crate::persistence::{self, ClientId, GameDatabase};
 use crate::persistence_progression::{load_xp, save_xp};
+use crate::rest::PlayerRestState;
 use crate::world_data::WorldData;
 use crate::xp_data::{QUEST_XP, XP_DIVISOR, XP_PER_KILL, XP_TO_NEXT_LEVEL};
 
@@ -95,27 +107,11 @@ pub(crate) fn base_gain(player_level: u8, mob_level: u8) -> u32 {
     (row(&XP_PER_KILL, mob_level) * ((1.0 - below) * divisor)).round() as u32
 }
 
-/// `GetExpansionForLevel` (TrinityCore `Formulas.h`).
-fn expansion_for_level(level: u8) -> u8 {
-    match level {
-        0..30 => 0,
-        30..35 => 3,
-        35..40 => 5,
-        40..45 => 7,
-        45..50 => 4,
-        50..60 => 8,
-        60..70 => 9,
-        70..80 => 10,
-        _ => CURRENT_EXPANSION,
-    }
-}
-
 /// What a killed creature contributes to kill XP.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub(crate) struct KillVictim {
     pub level: u8,
     pub elite: bool,
-    pub expansion: u8,
     pub experience_modifier: f32,
     pub gives_experience: bool,
 }
@@ -126,13 +122,7 @@ pub(crate) fn kill_gain(player_level: u8, victim: &KillVictim) -> u32 {
     if !victim.gives_experience {
         return 0;
     }
-    let mut gain = base_gain(player_level, victim.level);
-    if gain == 0 {
-        return 0;
-    }
-    if victim.expansion < expansion_for_level(player_level) {
-        gain = (gain as f32 / 10.0).round() as u32;
-    }
+    let gain = base_gain(player_level, victim.level);
     let elite = if victim.elite { 2.0 } else { 1.0 };
     (gain as f32 * elite * victim.experience_modifier) as u32
 }
@@ -157,20 +147,31 @@ pub(crate) struct KillMember {
     pub is_killer: bool,
 }
 
-/// `KillRewarder::Reward` XP: `(character_id, xp)` for every member with XP.
-/// `grouped` is whether the killer is in a group.
+/// Kill XP per member plus the group rate `GiveXP` reports.
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) struct KillRewards {
+    pub group_bonus: f32,
+    /// `(character_id, xp)` for every member with XP.
+    pub shares: Vec<(u64, u32)>,
+}
+
+/// `KillRewarder::Reward` XP. `grouped` is whether the killer is in a group.
 pub(crate) fn kill_rewards(
     victim: &KillVictim,
     members: &[KillMember],
     grouped: bool,
-) -> Vec<(u64, u32)> {
+) -> KillRewards {
     if !grouped {
-        return members
+        let shares = members
             .iter()
             .filter(|member| member.is_killer && member.alive)
             .map(|member| (member.character_id, kill_gain(member.level, victim)))
             .filter(|&(_, xp)| xp > 0)
             .collect();
+        return KillRewards {
+            group_bonus: 1.0,
+            shares,
+        };
     }
     // `_InitGroupData`: the killer plus alive members count.
     let counted: Vec<&KillMember> = members
@@ -185,12 +186,15 @@ pub(crate) fn kill_rewards(
         .map(|member| member.level)
         .max()
     else {
-        return Vec::new();
+        return KillRewards {
+            group_bonus: 1.0,
+            shares: Vec::new(),
+        };
     };
     let full_xp = max_level == max_not_gray;
     let xp = kill_gain(max_not_gray, victim);
     let group_rate = group_rate(counted.len());
-    members
+    let shares = members
         .iter()
         .filter(|member| member.alive && member.level <= max_not_gray)
         .map(|member| {
@@ -203,7 +207,11 @@ pub(crate) fn kill_rewards(
             (member.character_id, share)
         })
         .filter(|&(_, xp)| xp > 0)
-        .collect()
+        .collect();
+    KillRewards {
+        group_bonus: group_rate,
+        shares,
+    }
 }
 
 /// `Quest::RoundXPValue`.
@@ -254,9 +262,35 @@ pub(crate) fn give_xp(level: u8, xp: u32, amount: u32) -> (u8, u32) {
     (level, xp)
 }
 
-/// XP to add this frame: `(character_id, xp)`.
+/// One queued gain; `victim` is set for kill XP.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub(crate) struct XpAward {
+    pub character_id: u64,
+    pub amount: u32,
+    pub victim: Option<Entity>,
+    pub group_bonus: f32,
+    pub reason: XpGainReason,
+}
+
+impl XpAward {
+    pub(crate) fn quest(character_id: u64, amount: u32) -> Self {
+        Self {
+            character_id,
+            amount,
+            victim: None,
+            group_bonus: 1.0,
+            reason: XpGainReason::Quest,
+        }
+    }
+}
+
+/// XP to add this frame.
 #[derive(Resource, Default)]
-pub(crate) struct XpAwards(pub Vec<(u64, u32)>);
+pub(crate) struct XpAwards(pub Vec<XpAward>);
+
+/// Characters whose XP changed this frame and need a `PlayerXpUpdate`.
+#[derive(Resource, Default)]
+struct XpDirty(HashSet<u64>);
 
 /// Set on a level-up; health and mana refill once stats are recomputed.
 #[derive(Component, Debug)]
@@ -267,11 +301,17 @@ pub struct ExperiencePlugin;
 impl Plugin for ExperiencePlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<XpAwards>();
+        app.init_resource::<XpDirty>();
         app.add_systems(
             Update,
             refill_after_level_up.after(crate::stats::update_character_stats),
         );
-        app.add_systems(PostUpdate, (award_kill_xp, apply_xp_awards).chain());
+        app.add_systems(
+            PostUpdate,
+            (award_kill_xp, apply_xp_awards, send_xp_updates)
+                .chain()
+                .before(ReplicationSystems::Send),
+        );
     }
 }
 
@@ -288,7 +328,6 @@ fn victim_of(world_data: &WorldData, npc: &Npc, level: &UnitLevel) -> Option<Kil
     Some(KillVictim {
         level: level.0,
         elite: matches!(template.rank, 1 | 2),
-        expansion: template.expansion,
         experience_modifier: template.experience_modifier,
         gives_experience: template.gives_experience,
     })
@@ -308,7 +347,7 @@ type KillPlayers<'w, 's> = Query<
 
 /// Kill XP for NPC deaths credited to a player (`LastDamager`).
 fn award_kill_xp(
-    killed: Query<(&Npc, &UnitLevel, &LastDamager, &Position), Added<DeathState>>,
+    killed: Query<(Entity, &Npc, &UnitLevel, &LastDamager, &Position), Added<DeathState>>,
     players: KillPlayers,
     groups: Option<Res<GroupRegistry>>,
     world_data: Option<Res<WorldData>>,
@@ -317,7 +356,7 @@ fn award_kill_xp(
     let Some(world_data) = world_data else {
         return;
     };
-    for (npc, level, killer, position) in &killed {
+    for (npc_entity, npc, level, killer, position) in &killed {
         let Ok((killer_id, ..)) = players.get(killer.0) else {
             continue;
         };
@@ -341,9 +380,19 @@ fn award_kill_xp(
                 is_killer: id.0 == killer_id.0,
             })
             .collect();
-        awards
-            .0
-            .extend(kill_rewards(&victim, &members, !group.is_empty()));
+        let rewards = kill_rewards(&victim, &members, !group.is_empty());
+        awards.0.extend(
+            rewards
+                .shares
+                .into_iter()
+                .map(|(character_id, amount)| XpAward {
+                    character_id,
+                    amount,
+                    victim: Some(npc_entity),
+                    group_bonus: rewards.group_bonus,
+                    reason: XpGainReason::Kill,
+                }),
+        );
     }
 }
 
@@ -360,18 +409,36 @@ type XpPlayers<'w, 's> = Query<
     With<Player>,
 >;
 
+type XpConnections<'w, 's> = Query<'w, 's, (Entity, Ref<'static, InWorld>, &'static PlayerLink)>;
+
+fn connection_of(connections: &XpConnections, character_id: u64) -> Option<Entity> {
+    connections
+        .iter()
+        .find(|(_, in_world, _)| in_world.character_id == character_id)
+        .map(|(connection, ..)| connection)
+}
+
 /// `Player::GiveXP` for queued awards: dead players and the cap gain nothing.
+/// Rested XP is not consumed, so `original` equals `amount`.
 fn apply_xp_awards(
     mut awards: ResMut<XpAwards>,
+    mut dirty: ResMut<XpDirty>,
     db: Option<Res<GameDatabase>>,
     mut players: XpPlayers,
+    connections: XpConnections,
+    mut senders: Query<&mut MessageSender<LogXpGain>>,
     mut commands: Commands,
 ) {
     let Some(db) = db else {
         awards.0.clear();
         return;
     };
-    for (character_id, amount) in std::mem::take(&mut awards.0) {
+    for award in std::mem::take(&mut awards.0) {
+        let XpAward {
+            character_id,
+            amount,
+            ..
+        } = award;
         let Some((entity, _, mut level, unit_level, death)) =
             players.iter_mut().find(|(_, id, ..)| id.0 == character_id)
         else {
@@ -382,6 +449,18 @@ fn apply_xp_awards(
         }
         let (new_level, xp) = give_xp(level.0, load_xp(&db.db, character_id), amount);
         save_xp(&db.db, character_id, xp);
+        dirty.0.insert(character_id);
+        if let Some(mut sender) = connection_of(&connections, character_id)
+            .and_then(|connection| senders.get_mut(connection).ok())
+        {
+            sender.send::<ExperienceChannel>(LogXpGain {
+                victim: award.victim.map(Entity::to_bits),
+                original: amount,
+                amount,
+                group_bonus: award.group_bonus,
+                reason: award.reason,
+            });
+        }
         if new_level == level.0 {
             continue;
         }
@@ -394,6 +473,37 @@ fn apply_xp_awards(
             unit_level.0 = new_level;
         }
         commands.entity(entity).insert(RefillAfterLevelUp);
+    }
+}
+
+/// `PlayerXpUpdate` on enter world, after a gain and on any level change.
+fn send_xp_updates(
+    mut dirty: ResMut<XpDirty>,
+    db: Option<Res<GameDatabase>>,
+    connections: XpConnections,
+    players: Query<(Ref<Level>, Option<&PlayerRestState>)>,
+    mut senders: Query<&mut MessageSender<PlayerXpUpdate>>,
+) {
+    let changed = std::mem::take(&mut dirty.0);
+    let Some(db) = db else {
+        return;
+    };
+    for (connection, in_world, link) in &connections {
+        let Ok((level, rest)) = players.get(link.0) else {
+            continue;
+        };
+        let character_id = in_world.character_id;
+        if !(in_world.is_added() || level.is_changed() || changed.contains(&character_id)) {
+            continue;
+        }
+        let Ok(mut sender) = senders.get_mut(connection) else {
+            continue;
+        };
+        sender.send::<ExperienceChannel>(PlayerXpUpdate {
+            xp: load_xp(&db.db, character_id),
+            next_level_xp: xp_to_next_level(level.0),
+            rested_xp: rest.map_or(0, PlayerRestState::rested_xp),
+        });
     }
 }
 

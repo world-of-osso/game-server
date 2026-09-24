@@ -212,7 +212,6 @@ mod tests {
             speed_walk: 1.0,
             health_modifier: health_mod,
             rank: 0,
-            expansion: 0,
             experience_modifier: 1.0,
             gives_experience: true,
             models: vec![CreatureModelInfo { display_id }],

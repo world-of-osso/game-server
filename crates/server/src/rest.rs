@@ -2,9 +2,10 @@ use bevy::prelude::*;
 use lightyear::prelude::*;
 use shared::components::{Level, Position};
 use shared::protocol::{RestAreaKindSnapshot, RestChannel, RestSnapshot, RestStateUpdate};
-use shared::xp::{RestedXp, xp_to_level};
+use shared::xp::RestedXp;
 
 use crate::auth::Authenticated;
+use crate::experience::xp_to_next_level;
 use crate::networking::PlayerLink;
 use crate::world_data::WorldData;
 
@@ -22,6 +23,12 @@ pub struct PlayerRestState {
     rested_xp: RestedXp,
     area_kind: Option<RestAreaKind>,
     last_sent: Option<RestSnapshot>,
+}
+
+impl PlayerRestState {
+    pub(crate) fn rested_xp(&self) -> u32 {
+        self.rested_xp.amount
+    }
 }
 
 #[derive(Resource, Debug, Default, Clone, PartialEq)]
@@ -86,7 +93,7 @@ fn update_player_rest_state(
         } else {
             let snapshot = build_initial_rest_snapshot(position, level.0, &registry);
             commands.entity(link.0).insert(PlayerRestState {
-                rested_xp: RestedXp::new(xp_to_level(level.0)),
+                rested_xp: RestedXp::new(xp_to_next_level(level.0)),
                 area_kind: map_rest_area_kind(snapshot.rest_area_kind.as_ref()),
                 last_sent: Some(snapshot.clone()),
             });
@@ -110,7 +117,7 @@ fn update_existing_rest_state(
     mut state: Mut<PlayerRestState>,
     registry: &RestAreaRegistry,
 ) -> Option<RestSnapshot> {
-    state.rested_xp.update_max(xp_to_level(level.0));
+    state.rested_xp.update_max(xp_to_next_level(level.0));
     state.area_kind = detect_rest_area_kind(position, registry);
     state.rested_xp.in_rest_area = state.area_kind.is_some();
 
@@ -127,7 +134,7 @@ fn build_initial_rest_snapshot(
     level: u8,
     registry: &RestAreaRegistry,
 ) -> RestSnapshot {
-    let mut rested_xp = RestedXp::new(xp_to_level(level));
+    let mut rested_xp = RestedXp::new(xp_to_next_level(level));
     let area_kind = detect_rest_area_kind(position, registry);
     rested_xp.in_rest_area = area_kind.is_some();
     build_rest_snapshot_from_parts(rested_xp, area_kind)
@@ -228,7 +235,6 @@ mod tests {
             speed_walk: 1.0,
             health_modifier: 1.0,
             rank: 0,
-            expansion: 0,
             experience_modifier: 1.0,
             gives_experience: true,
             models: vec![CreatureModelInfo { display_id: 1 }],
@@ -282,13 +288,13 @@ mod tests {
                 },
                 Level(1),
                 PlayerRestState {
-                    rested_xp: RestedXp::new(xp_to_level(1)),
+                    rested_xp: RestedXp::new(xp_to_next_level(1)),
                     area_kind: None,
                     last_sent: Some(RestSnapshot {
                         in_rest_area: false,
                         rest_area_kind: None,
                         rested_xp: 0,
-                        rested_xp_max: xp_to_level(1) * 3 / 2,
+                        rested_xp_max: xp_to_next_level(1) * 3 / 2,
                     }),
                 },
             ))
@@ -359,7 +365,7 @@ mod tests {
     #[test]
     fn build_rest_snapshot_marks_inn_state() {
         let mut state = PlayerRestState {
-            rested_xp: RestedXp::new(xp_to_level(1)),
+            rested_xp: RestedXp::new(xp_to_next_level(1)),
             area_kind: None,
             last_sent: None,
         };
@@ -369,6 +375,6 @@ mod tests {
         let snapshot = build_rest_snapshot(&state);
         assert!(snapshot.in_rest_area);
         assert_eq!(snapshot.rest_area_kind, Some(RestAreaKindSnapshot::Inn));
-        assert_eq!(snapshot.rested_xp_max, xp_to_level(1) * 3 / 2);
+        assert_eq!(snapshot.rested_xp_max, xp_to_next_level(1) * 3 / 2);
     }
 }

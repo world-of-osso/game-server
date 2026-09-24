@@ -9,12 +9,12 @@ use lightyear::prelude::{AppMessageExt, Connected, Message, PeerId, RemoteId};
 use shared::components::{CharacterAppearance, EquipmentAppearance};
 use shared::protocol::{
     AbandonQuest, DestroyItem, EquipItem, EquipmentSnapshot, InventoryDelta, InventoryError,
-    InventorySnapshot, QuestFailed, QuestFailedReason, QuestGiverAcceptQuest,
-    QuestGiverChooseReward, QuestGiverCompleteQuest, QuestGiverHello, QuestGiverOfferReward,
-    QuestGiverQueryQuest, QuestGiverQuestComplete, QuestGiverQuestDetails, QuestGiverQuestList,
-    QuestGiverQuestState, QuestGiverRequestItems, QuestGiverStatus, QuestGiverStatusEntry,
-    QuestGiverStatusQuery, QuestRewardItem, SetQuestWatched, SortBags, SplitItem, SwapItem,
-    UseItem,
+    InventorySnapshot, LogXpGain, PlayerXpUpdate, QuestFailed, QuestFailedReason,
+    QuestGiverAcceptQuest, QuestGiverChooseReward, QuestGiverCompleteQuest, QuestGiverHello,
+    QuestGiverOfferReward, QuestGiverQueryQuest, QuestGiverQuestComplete, QuestGiverQuestDetails,
+    QuestGiverQuestList, QuestGiverQuestState, QuestGiverRequestItems, QuestGiverStatus,
+    QuestGiverStatusEntry, QuestGiverStatusQuery, QuestRewardItem, SetQuestWatched, SortBags,
+    SplitItem, SwapItem, UseItem, XpGainReason,
 };
 
 use super::*;
@@ -95,6 +95,8 @@ macro_rules! for_quest_messages {
         $apply::<UseItem>($($arg),*);
         $apply::<EquipItem>($($arg),*);
         $apply::<SortBags>($($arg),*);
+        $apply::<PlayerXpUpdate>($($arg),*);
+        $apply::<LogXpGain>($($arg),*);
     };
 }
 
@@ -287,6 +289,14 @@ fn a_threat_within_accepted_from_willem_and_turned_in_at_mcbride_is_persisted() 
     let mcbride = spawn_npc(&mut app, MARSHAL_MCBRIDE, 3.0);
     assert!(enter_world(&mut app, &client).entries.is_empty());
     assert_eq!(
+        received::<PlayerXpUpdate>(&mut app, &client),
+        vec![PlayerXpUpdate {
+            xp: 0,
+            next_level_xp: 250,
+            rested_xp: 0,
+        }]
+    );
+    assert_eq!(
         statuses(&mut app, &client, &[willem, mcbride]),
         vec![QuestGiverStatus::Available, QuestGiverStatus::None]
     );
@@ -332,6 +342,25 @@ fn a_threat_within_accepted_from_willem_and_turned_in_at_mcbride_is_persisted() 
 
     let complete = received::<QuestGiverQuestComplete>(&mut app, &client);
     assert_eq!(complete[0].quest_id, A_THREAT_WITHIN);
+    assert_eq!(complete[0].xp, 100);
+    assert_eq!(
+        received::<LogXpGain>(&mut app, &client),
+        vec![LogXpGain {
+            victim: None,
+            original: 100,
+            amount: 100,
+            group_bonus: 1.0,
+            reason: XpGainReason::Quest,
+        }]
+    );
+    assert_eq!(
+        received::<PlayerXpUpdate>(&mut app, &client),
+        vec![PlayerXpUpdate {
+            xp: 100,
+            next_level_xp: 250,
+            rested_xp: 0,
+        }]
+    );
     assert_eq!(
         last_update(&mut app, &client).removed,
         vec![A_THREAT_WITHIN]

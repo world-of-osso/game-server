@@ -11,7 +11,7 @@ Quest givers, the quest log and objective tracking for the Retail-style quest di
 - [x] Kill objectives count creature kills by the killer and group members within 74 yards of the creature (melee and spell kills).
 - [x] Item objectives count the items in the bags, whatever path added them; removing items lowers progress.
 - [x] `QuestGiverCompleteQuest` at the ender answers `QuestGiverOfferReward` when objectives are done, else `QuestGiverRequestItems{can_complete: false}`.
-- [x] `QuestGiverChooseReward` requires a valid choice when choice items exist, free bag cells for every granted item, and gold for negative `RewardMoney`; destroys required and provided items; grants money and items; marks the quest turned in; grants QuestXP experience ([experience](experience.md)); answers `QuestGiverQuestComplete`; offers the chain's next quest (`QuestGiverQuestDetails`) when the same NPC starts it.
+- [x] `QuestGiverChooseReward` requires a valid choice when choice items exist, free bag cells for every granted item, and gold for negative `RewardMoney`; destroys required and provided items; grants money and items; marks the quest turned in; grants QuestXP experience ([experience](experience.md)); answers `QuestGiverQuestComplete` (with its `xp`); offers the chain's next quest (`QuestGiverQuestDetails`) when the same NPC starts it.
 - [x] `AbandonQuest` removes the quest and its provided start item; `SetQuestWatched` toggles tracking.
 - [x] Enter world sends `QuestLogSnapshot` (entries with objectives and counts, completion, level, sort id, texts, watched flag, POI polygons); later changes send `QuestLogUpdate{changed, removed, watched_quest_ids}`.
 - [x] Quest log, progress, turned-in quests and watch list persist per character (redb `quest_logs`).
@@ -25,7 +25,6 @@ Quest givers, the quest log and objective tracking for the Retail-style quest di
 
 ## Known gaps (current cycle)
 
-- [ ] `QuestGiverQuestComplete` carries no XP amount (shared-protocol field needed); the XP itself is granted ([experience](experience.md)).
 - [ ] Game object objectives never progress (game object templates/spawns are not imported); explore/area-trigger objectives have no data.
 - [ ] Wrath race masks: `AllowableRaces` 1101/690 lists Wrath races only, so post-Wrath races (Worgen, Void Elf, Pandaren, ...) fail race-restricted quests.
 - [ ] Daily/weekly quests have no reset; they are one-time. Timed quests, `RequiredFactionId`/reputation, skill requirements, reward spells, reputation rewards and `ItemDrop` quest-item drops are not applied.

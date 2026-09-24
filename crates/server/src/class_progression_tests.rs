@@ -117,6 +117,8 @@ fn setup_app(db: redb::Database, classes: ClassSpells) -> App {
     add_inbox::<ActionBarSnapshot>(&mut app);
     add_inbox::<TraitConfigSnapshot>(&mut app);
     add_inbox::<TraitCommitResult>(&mut app);
+    add_inbox::<shared::protocol::LogXpGain>(&mut app);
+    add_inbox::<shared::protocol::PlayerXpUpdate>(&mut app);
     app.register_message::<SetSpecialization>();
     app.register_message::<SetActionButton>();
     app.register_message::<CommitTraitConfig>();
@@ -507,7 +509,6 @@ fn world_with_creature(entry: u32, min_level: u8) -> crate::world_data::WorldDat
         speed_walk: 1.0,
         health_modifier: 1.0,
         rank: 0,
-        expansion: 0,
         experience_modifier: 1.0,
         gives_experience: true,
         models: Vec::new(),
@@ -522,9 +523,11 @@ fn world_with_creature(entry: u32, min_level: u8) -> crate::world_data::WorldDat
 
 #[test]
 fn kill_xp_crossing_level_10_levels_up_and_sends_learned_spells() {
+    use crate::auth::InWorld;
     use crate::combat::{DeathState, LastDamager};
     use crate::persistence_progression::{load_xp, save_xp};
     use shared::components::{Npc, Position};
+    use shared::protocol::{LogXpGain, PlayerXpUpdate, XpGainReason};
 
     let Some(classes) = class_spells() else {
         return;
@@ -542,24 +545,61 @@ fn kill_xp_crossing_level_10_levels_up_and_sends_learned_spells() {
         z: 0.0,
     };
     app.world_mut().entity_mut(player).insert(origin.clone());
+    let connection = connection_of(&mut app, player);
+    app.world_mut().entity_mut(connection).insert((
+        InWorld { character_id },
+        MessageSender::<LogXpGain>::default(),
+        MessageReceiver::<LogXpGain>::default(),
+        MessageSender::<PlayerXpUpdate>::default(),
+        MessageReceiver::<PlayerXpUpdate>::default(),
+    ));
     advance(&mut app);
     drain(&mut app, player);
+    assert_eq!(
+        received::<PlayerXpUpdate>(&mut app, player),
+        vec![PlayerXpUpdate {
+            xp: 8720,
+            next_level_xp: 8770,
+            rested_xp: 0,
+        }]
+    );
 
-    app.world_mut().spawn((
-        Npc {
-            template_id: 299,
-            name: "Fixture wolf".into(),
-        },
-        UnitLevel(9),
-        origin,
-        LastDamager(player),
-        DeathState {
-            respawn_timer: 60.0,
-        },
-    ));
+    let wolf = app
+        .world_mut()
+        .spawn((
+            Npc {
+                template_id: 299,
+                name: "Fixture wolf".into(),
+            },
+            UnitLevel(9),
+            origin,
+            LastDamager(player),
+            DeathState {
+                respawn_timer: 60.0,
+            },
+        ))
+        .id();
     advance(&mut app);
 
     assert_eq!(app.world().get::<Level>(player), Some(&Level(10)));
+    assert_eq!(
+        received::<LogXpGain>(&mut app, player),
+        vec![LogXpGain {
+            victim: Some(wolf.to_bits()),
+            original: 60,
+            amount: 60,
+            group_bonus: 1.0,
+            reason: XpGainReason::Kill,
+        }]
+    );
+    assert_eq!(
+        received::<PlayerXpUpdate>(&mut app, player),
+        vec![PlayerXpUpdate {
+            xp: 10,
+            next_level_xp: 10_590,
+            rested_xp: 0,
+        }]
+    );
     assert_eq!(app.world().get::<UnitLevel>(player), Some(&UnitLevel(10)));
     let db = &app.world().resource::<GameDatabase>().db;
     assert_eq!(load_xp(db, character_id), 10);

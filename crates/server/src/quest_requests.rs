@@ -16,7 +16,7 @@ use shared::protocol::{
 use super::{QueriedQuestGivers, QuestDirty, QuestStore, distance, giver_statuses, quest_player};
 use crate::auth::{Authenticated, InWorld};
 use crate::combat::DeathState;
-use crate::experience::{XpAwards, quest_xp};
+use crate::experience::{MAX_LEVEL, XpAward, XpAwards, quest_xp};
 use crate::gold::GoldUpdateQueue;
 use crate::inventory::free_bag_cells;
 use crate::item_templates::ItemTemplates;
@@ -438,14 +438,16 @@ impl<'a> QuestSession<'a, '_, '_> {
         log.remove(quest_id);
         log.mark_rewarded(quest_id);
         self.save_log(&log);
-        let xp = quest_xp(
-            quest.level,
-            self.requester.player.level,
-            quest.reward_xp_difficulty,
-        );
+        // `RewardQuest`: no XP at the cap.
+        let level = self.requester.player.level;
+        let xp = if level >= MAX_LEVEL {
+            0
+        } else {
+            quest_xp(quest.level, level, quest.reward_xp_difficulty)
+        };
         if xp > 0 {
             let character_id = self.character();
-            self.io.effects.xp.0.push((character_id, xp));
+            self.io.effects.xp.0.push(XpAward::quest(character_id, xp));
         }
         let complete = QuestGiverQuestComplete {
             quest_id,
@@ -458,6 +460,7 @@ impl<'a> QuestSession<'a, '_, '_> {
                     count,
                 })
                 .collect(),
+            xp,
         };
         send(
             &mut self.io.senders.completed,
