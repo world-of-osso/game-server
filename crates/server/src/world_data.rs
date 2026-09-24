@@ -37,6 +37,8 @@ pub struct CreatureSpawn {
     pub orientation: f32,
     pub wander_distance: f32,
     pub movement_type: u8,
+    /// `creature.spawntimesecs`: respawn delay after the corpse decays.
+    pub spawntimesecs: u32,
 }
 
 pub struct WaypointPath {
@@ -235,6 +237,7 @@ fn spawn_from_row(row: &Row) -> rusqlite::Result<CreatureSpawn> {
         wander_distance: row.get(7)?,
         movement_type: row.get::<_, i64>(8)? as u8,
         orientation: row.get(9)?,
+        spawntimesecs: row.get::<_, i64>(10)? as u32,
     })
 }
 
@@ -243,7 +246,7 @@ fn load_spawns(conn: &Connection) -> Vec<CreatureSpawn> {
     let mut stmt = conn
         .prepare(
             "SELECT guid, id1, map, zoneId, position_x, position_y, position_z,
-                    wander_distance, MovementType, orientation
+                    wander_distance, MovementType, orientation, spawntimesecs
              FROM creature
              WHERE NOT EXISTS (
                  SELECT 1 FROM game_event_creature event WHERE event.guid = creature.guid

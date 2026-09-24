@@ -1,4 +1,4 @@
-use std::{sync::atomic::Ordering, time::Duration};
+use std::time::Duration;
 
 use bevy::ecs::system::RunSystemOnce;
 use lightyear::connection::host::HostClient;
@@ -8,6 +8,14 @@ use lightyear::prelude::{
 use shared::death::DeathResult;
 
 use super::*;
+
+fn counters(app: &App) -> &DeathTransitionCounters {
+    app.world().resource::<DeathTransitionCounters>()
+}
+
+fn reset_counters(app: &mut App) {
+    *app.world_mut().resource_mut::<DeathTransitionCounters>() = DeathTransitionCounters::default();
+}
 
 fn death_result_at(x: f32, y: f32, z: f32) -> DeathResult {
     on_death(1, WORLD_MAP_ID, x, y, z, 5)
@@ -30,9 +38,6 @@ fn setup_death_app() -> App {
 
 #[test]
 fn idle_fixed_updates_do_not_visit_healthy_players() {
-    let _test_lock = DEATH_TEST_LOCK.lock().unwrap();
-    DEATH_PLAYERS_VISITED.store(0, Ordering::SeqCst);
-
     let mut app = App::new();
     app.add_plugins(bevy::MinimalPlugins);
     app.add_plugins(DeathPlugin);
@@ -63,14 +68,14 @@ fn idle_fixed_updates_do_not_visit_healthy_players() {
         .collect::<Vec<_>>();
 
     app.world_mut().run_schedule(FixedUpdate);
-    DEATH_PLAYERS_VISITED.store(0, Ordering::SeqCst);
+    reset_counters(&mut app);
 
     for _ in 0..3 {
         app.world_mut().run_schedule(FixedUpdate);
     }
 
     assert_eq!(
-        DEATH_PLAYERS_VISITED.load(Ordering::SeqCst),
+        counters(&app).players_visited,
         0,
         "idle fixed updates must not visit healthy players"
     );
@@ -108,9 +113,6 @@ fn receive_death_updates(app: &mut App, connection: Entity) -> Vec<DeathStateUpd
 
 #[test]
 fn queued_player_death_transitions_apply_once_and_route_snapshot() {
-    let _test_lock = DEATH_TEST_LOCK.lock().unwrap();
-    DEATH_REPLICATION_MARKS.store(0, Ordering::SeqCst);
-
     let mut app = setup_death_app();
 
     let player_position = Position {
@@ -195,7 +197,7 @@ fn queued_player_death_transitions_apply_once_and_route_snapshot() {
             .current,
         63
     );
-    assert_eq!(DEATH_REPLICATION_MARKS.load(Ordering::SeqCst), 1);
+    assert_eq!(counters(&app).replication_marks, 1);
 
     let updates = receive_death_updates(&mut app, player_connection);
     assert_eq!(updates.len(), 1);
@@ -219,7 +221,7 @@ fn queued_player_death_transitions_apply_once_and_route_snapshot() {
     app.world_mut().run_schedule(FixedUpdate);
     app.world_mut().run_schedule(Last);
 
-    assert_eq!(DEATH_REPLICATION_MARKS.load(Ordering::SeqCst), 1);
+    assert_eq!(counters(&app).replication_marks, 1);
     assert!(receive_death_updates(&mut app, player_connection).is_empty());
     assert!(receive_death_updates(&mut app, unrelated_connection).is_empty());
     assert_eq!(
@@ -235,10 +237,6 @@ fn queued_player_death_transitions_apply_once_and_route_snapshot() {
 
 #[test]
 fn resurrection_allows_a_second_death_transition() {
-    let _test_lock = DEATH_TEST_LOCK.lock().unwrap();
-    DEATH_PLAYERS_VISITED.store(0, Ordering::SeqCst);
-    DEATH_REPLICATION_MARKS.store(0, Ordering::SeqCst);
-
     let mut app = setup_death_app();
     let player_position = Position {
         x: 12.0,
@@ -345,16 +343,15 @@ fn resurrection_allows_a_second_death_transition() {
         })
         .expect("resurrected player should have health");
     assert!(became_lethal);
-    DEATH_PLAYERS_VISITED.store(0, Ordering::SeqCst);
-    DEATH_REPLICATION_MARKS.store(0, Ordering::SeqCst);
+    reset_counters(&mut app);
     app.world_mut()
         .write_message(PlayerDeathTransition { player });
     app.world_mut().run_schedule(FixedUpdate);
     app.world_mut().run_schedule(Last);
 
     let player_entity = app.world().entity(player);
-    assert_eq!(DEATH_PLAYERS_VISITED.load(Ordering::SeqCst), 1);
-    assert_eq!(DEATH_REPLICATION_MARKS.load(Ordering::SeqCst), 1);
+    assert_eq!(counters(&app).players_visited, 1);
+    assert_eq!(counters(&app).replication_marks, 1);
     assert_eq!(
         player_entity
             .get::<PlayerDeathState>()
@@ -387,7 +384,7 @@ fn resurrection_allows_a_second_death_transition() {
 
     app.world_mut().run_schedule(FixedUpdate);
     app.world_mut().run_schedule(Last);
-    assert_eq!(DEATH_REPLICATION_MARKS.load(Ordering::SeqCst), 1);
+    assert_eq!(counters(&app).replication_marks, 1);
     assert_eq!(
         app.world()
             .entity(player)
@@ -402,9 +399,6 @@ fn resurrection_allows_a_second_death_transition() {
 
 #[test]
 fn despawned_player_death_transition_is_ignored() {
-    let _test_lock = DEATH_TEST_LOCK.lock().unwrap();
-    DEATH_REPLICATION_MARKS.store(0, Ordering::SeqCst);
-
     let mut app = setup_death_app();
     let player = app
         .world_mut()
@@ -435,7 +429,7 @@ fn despawned_player_death_transition_is_ignored() {
     app.world_mut().run_schedule(FixedUpdate);
     app.world_mut().run_schedule(Last);
 
-    assert_eq!(DEATH_REPLICATION_MARKS.load(Ordering::SeqCst), 0);
+    assert_eq!(counters(&app).replication_marks, 0);
     assert!(receive_death_updates(&mut app, connection).is_empty());
 }
 
@@ -473,6 +467,7 @@ fn build_graveyard_registry_uses_spirit_healer_spawns() {
             orientation: 0.0,
             wander_distance: 0.0,
             movement_type: 0,
+            spawntimesecs: 120,
         }],
         spawns_by_map: [(0, vec![0])].into_iter().collect(),
         waypoints: default(),

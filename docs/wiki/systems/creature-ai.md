@@ -33,7 +33,7 @@ Per point (`WaypointMovementGenerator::StartMove`/`OnArrived`): walk to the poin
 
 ## Death and Respawn
 
-Wander, waypoint and formation systems skip entities with `DeathState`. Patrollers carry a `SpawnPoint`, so `combat::respawn_system` restores them at their spawn after the respawn timer and restarts the path from its first point (`WaypointState::restart`; AzerothCore `Creature::Respawn` → `Motion_Initialize` → new `WaypointMovementGenerator`). Idle (MovementType 0) spawns, including most formation members, have no `SpawnPoint` and do not respawn.
+Wander, waypoint and formation systems skip entities with `DeathState`. Every spawn carries a `SpawnPoint` and a `RespawnDelay` of `creature.spawntimesecs` + corpse decay by rank (60 s normal, 300 s elite/rare/rare elite, 600 s world boss; AzerothCore `Creature::setDeathState` `m_respawnDelay + m_corpseDelay`, default `Corpse.Decay.*`). `combat::respawn_system` restores the creature at its spawn when the timer ends; a patroller restarts its path from the first point (`WaypointState::restart`; AzerothCore `Creature::Respawn` → `Motion_Initialize`). A respawned escort, or the escorts of a respawned leader, rejoin their slots on the leader's next leg.
 
 ## Chase and Aggro
 
@@ -56,7 +56,7 @@ Spawn-time `creature_addon`/`creature_template_addon` fields (`zones.rs`): `moun
 
 ## SpawnPoint Component
 
-Wandering and patrolling creatures carry a `SpawnPoint`:
+Every spawned creature carries a `SpawnPoint`:
 - `x, y, z` — original spawn coordinates
 - `wander_distance` — radius for random wander
 - `speed_walk` — creature's walk speed multiplier (from `creature_template.speed_walk`)

@@ -19,8 +19,6 @@ const MELEE_RANGE: f32 = 5.0;
 const AUTO_ATTACK_INTERVAL: f32 = 2.0;
 /// Base melee damage per swing.
 const BASE_DAMAGE: f32 = 10.0;
-/// Default respawn timer in seconds.
-const DEFAULT_RESPAWN_SECS: f32 = 60.0;
 const COMBAT_GRACE_SECS: f64 = 5.0;
 
 /// Maximum number of combat log entries retained in memory.
@@ -100,6 +98,27 @@ pub struct AutoAttack {
 #[derive(Component, Debug)]
 pub struct DeathState {
     pub respawn_timer: f32,
+}
+
+/// Seconds from death to respawn: AzerothCore `Creature::setDeathState`
+/// `m_respawnTime = now + m_respawnDelay (spawntimesecs) + m_corpseDelay`.
+#[derive(Component, Debug, Clone, Copy, PartialEq)]
+pub struct RespawnDelay(pub f32);
+
+impl RespawnDelay {
+    pub fn for_spawn(spawntimesecs: u32, rank: u8) -> Self {
+        Self((spawntimesecs + corpse_decay_secs(rank)) as f32)
+    }
+}
+
+/// `m_corpseDelay` by `creature_template.rank` (Creature::Create, default
+/// Corpse.Decay.* config; world bosses outside instances get ELITE * 2).
+fn corpse_decay_secs(rank: u8) -> u32 {
+    match rank {
+        1 | 2 | 4 => 300,
+        3 => 600,
+        _ => 60,
+    }
 }
 
 /// Tracks the last entity that dealt damage to a target.
@@ -429,21 +448,20 @@ fn mark_replication_changed(queue: Option<&ReplicationDirtyQueue>, entity: Entit
 }
 
 fn mark_npc_dead(commands: &mut Commands, entity: Entity) {
-    commands
-        .entity(entity)
-        .insert(DeathState {
-            respawn_timer: DEFAULT_RESPAWN_SECS,
-        })
-        .remove::<Replicate>();
+    commands.entity(entity).queue(insert_npc_death);
 }
 
 /// World-access `mark_npc_dead` for exclusive systems (spell effects).
 pub(crate) fn mark_npc_dead_world(world: &mut World, entity: Entity) {
-    world
-        .entity_mut(entity)
-        .insert(DeathState {
-            respawn_timer: DEFAULT_RESPAWN_SECS,
-        })
+    insert_npc_death(world.entity_mut(entity));
+}
+
+/// Start the NPC's respawn timer and stop replicating it. NPCs without a
+/// `RespawnDelay` (not world spawns) have no `SpawnPoint` and never respawn.
+fn insert_npc_death(mut entity: EntityWorldMut) {
+    let respawn_timer = entity.get::<RespawnDelay>().map_or(0.0, |delay| delay.0);
+    entity
+        .insert(DeathState { respawn_timer })
         .remove::<Replicate>();
 }
 

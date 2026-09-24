@@ -240,3 +240,7 @@ Created `systems/quests.md` (quest data, rules, runtime) and `specs/quests.md`; 
 ## [2026-09-24] update | Patrol death and respawn
 
 [[creature-ai]]: dead creatures stop wandering/patrolling/following; patrollers respawn at spawn and restart their path.
+
+## [2026-09-24] update | Every spawn respawns
+
+[[creature-ai]]: all spawns get SpawnPoint + RespawnDelay (spawntimesecs + corpse decay by rank); escorts rejoin respawned leaders.

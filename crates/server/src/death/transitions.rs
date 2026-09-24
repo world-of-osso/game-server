@@ -32,6 +32,8 @@ pub(super) struct PlayerDeathParams<'w, 's> {
     commands: Commands<'w, 's>,
     senders: Query<'w, 's, &'static mut MessageSender<DeathStateUpdate>>,
     replication_dirty: Option<Res<'w, ReplicationDirtyQueue>>,
+    #[cfg(test)]
+    counters: ResMut<'w, DeathTransitionCounters>,
 }
 
 pub(super) fn process_player_death_transitions(
@@ -45,7 +47,9 @@ pub(super) fn process_player_death_transitions(
         .collect::<HashSet<_>>();
     for player_entity in processed_players {
         #[cfg(test)]
-        DEATH_PLAYERS_VISITED.fetch_add(1, Ordering::SeqCst);
+        {
+            params.counters.players_visited += 1;
+        }
 
         let Ok((position, mut health, durability, death_state, client_id, player)) =
             params.players.get_mut(player_entity)
@@ -56,7 +60,13 @@ pub(super) fn process_player_death_transitions(
             continue;
         }
         health.current = 0.0;
-        mark_player_death_replication(params.replication_dirty.as_deref(), player_entity);
+        if let Some(replication_dirty) = params.replication_dirty.as_deref() {
+            replication_dirty.mark(player_entity);
+            #[cfg(test)]
+            {
+                params.counters.replication_marks += 1;
+            }
+        }
         let death_state = build_detected_player_death_state(
             client_id.0,
             position,
@@ -82,18 +92,6 @@ pub(super) fn process_player_death_transitions(
             );
         }
     }
-}
-
-fn mark_player_death_replication(
-    replication_dirty: Option<&ReplicationDirtyQueue>,
-    player_entity: Entity,
-) {
-    let Some(replication_dirty) = replication_dirty else {
-        return;
-    };
-    #[cfg(test)]
-    DEATH_REPLICATION_MARKS.fetch_add(1, Ordering::SeqCst);
-    replication_dirty.mark(player_entity);
 }
 
 pub(crate) fn apply_health_damage(health: &mut Health, damage: f32) -> bool {

@@ -582,38 +582,20 @@ fn respawn_at_spawn_with_full_health_does_not_dirty_replicated_state() {
 }
 
 #[test]
-fn respawn_timer_counts_down_then_restores() {
-    let spawn = SpawnPoint {
-        x: 10.0,
-        y: 20.0,
-        z: 30.0,
-        wander_distance: 0.0,
-        speed_walk: 1.0,
-    };
-    let health = Health {
-        current: 0.0,
-        max: 500.0,
-    };
-    let position = pos(99.0, 99.0, 99.0);
-    let mut death = DeathState {
-        respawn_timer: DEFAULT_RESPAWN_SECS,
-    };
-
-    // Tick 50 seconds - still dead
-    death.respawn_timer -= 50.0;
-    assert!(death.respawn_timer > 0.0, "timer not expired at 50s");
-    assert_eq!(health.current, 0.0, "still dead");
-
-    // Tick remaining 10s - timer expires
-    death.respawn_timer -= 10.0;
-    assert!(death.respawn_timer <= 0.0, "timer expired at 60s");
-
-    // Respawn
-    let (health, position) = respawned_state(health, position, &spawn);
-    assert_eq!(health.current, 500.0, "health restored to max");
-    assert_eq!(position.x, 10.0, "returned to spawn x");
-    assert_eq!(position.y, 20.0, "returned to spawn y");
-    assert_eq!(position.z, 30.0, "returned to spawn z");
+fn respawn_delay_is_spawntimesecs_plus_rank_corpse_decay() {
+    // Northshire Guard: spawntimesecs 430, normal rank.
+    assert_eq!(RespawnDelay::for_spawn(430, 0), RespawnDelay(490.0));
+    assert_eq!(
+        RespawnDelay::for_spawn(430, 1),
+        RespawnDelay(730.0),
+        "elite"
+    );
+    assert_eq!(RespawnDelay::for_spawn(430, 4), RespawnDelay(730.0), "rare");
+    assert_eq!(
+        RespawnDelay::for_spawn(430, 3),
+        RespawnDelay(1030.0),
+        "world boss"
+    );
 }
 
 fn make_event(event_type: CombatEventType, amount: f32) -> CombatEvent {

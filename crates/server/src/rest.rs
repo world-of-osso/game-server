@@ -254,6 +254,7 @@ mod tests {
             orientation: 0.0,
             wander_distance: 0.0,
             movement_type: 0,
+            spawntimesecs: 120,
         }
     }
 

@@ -7,6 +7,7 @@ use shared::components::{
 use shared::protocol::NpcFlags;
 use std::collections::HashMap;
 
+use crate::combat::RespawnDelay;
 use crate::creature_ai::{FormationMember, SpawnPoint, WanderPhase, WanderState, WaypointState};
 use crate::interest::NetworkVisibility;
 use crate::world_data::{CreatureAddon, CreatureSpawn, GROUP_AI_FLAG_FOLLOW_LEADER, WorldData};
@@ -226,6 +227,8 @@ fn resolve_health(world_data: &WorldData, template_entry: u32) -> f32 {
         .unwrap_or(100.0)
 }
 
+/// Every spawn gets a `SpawnPoint` and `RespawnDelay` so it respawns where it
+/// was placed; MovementType 1 wanders, 2 patrols.
 fn insert_ai_components(
     entity: &mut EntityCommands,
     spawn: &CreatureSpawn,
@@ -233,53 +236,6 @@ fn insert_ai_components(
     addon: Option<&CreatureAddon>,
     world_data: &WorldData,
 ) {
-    let movement_type = spawn.movement_type;
-    if movement_type == 1 {
-        insert_wander(entity, spawn, template.speed_walk);
-    } else if movement_type == 2 {
-        insert_waypoint(entity, spawn, template, addon, world_data);
-    }
-}
-
-fn insert_wander(
-    entity: &mut EntityCommands,
-    spawn: &crate::world_data::CreatureSpawn,
-    speed_walk: f32,
-) {
-    let (bx, by, bz) =
-        crate::terrain_height::wow_to_bevy(spawn.position_x, spawn.position_y, spawn.position_z);
-    entity.insert(SpawnPoint {
-        x: bx,
-        y: by,
-        z: bz,
-        wander_distance: spawn.wander_distance,
-        speed_walk,
-    });
-    entity.insert(WanderState {
-        phase: WanderPhase::Idle,
-        target_x: bx,
-        target_z: bz,
-        idle_remaining: 1.0,
-        seed: spawn.guid,
-    });
-}
-
-/// MovementType 2 walks the addon's `path_id` (Creature::LoadCreaturesAddon
-/// sets `m_path_id`; WaypointMovementGenerator::LoadPath reads it). Without
-/// an addon path AzerothCore idles the spawn (ObjectMgr::LoadCreatureAddons).
-fn insert_waypoint(
-    entity: &mut EntityCommands,
-    spawn: &CreatureSpawn,
-    template: &crate::world_data::CreatureTemplate,
-    addon: Option<&CreatureAddon>,
-    world_data: &WorldData,
-) {
-    let Some(path_id) = addon.map(|addon| addon.path_id).filter(|&id| id != 0) else {
-        return;
-    };
-    if !world_data.waypoints.contains_key(&path_id) {
-        return;
-    }
     let (bx, by, bz) =
         crate::terrain_height::wow_to_bevy(spawn.position_x, spawn.position_y, spawn.position_z);
     entity.insert((
@@ -290,8 +246,35 @@ fn insert_waypoint(
             wander_distance: spawn.wander_distance,
             speed_walk: template.speed_walk,
         },
-        WaypointState::new(path_id, template.speed_walk, template.speed_run, (bx, bz)),
+        RespawnDelay::for_spawn(spawn.spawntimesecs, template.rank),
     ));
+    if spawn.movement_type == 1 {
+        entity.insert(WanderState {
+            phase: WanderPhase::Idle,
+            target_x: bx,
+            target_z: bz,
+            idle_remaining: 1.0,
+            seed: spawn.guid,
+        });
+    } else if spawn.movement_type == 2
+        && let Some(path_id) = patrol_path(addon, world_data)
+    {
+        entity.insert(WaypointState::new(
+            path_id,
+            template.speed_walk,
+            template.speed_run,
+            (bx, bz),
+        ));
+    }
+}
+
+/// MovementType 2 walks the addon's `path_id` (Creature::LoadCreaturesAddon
+/// sets `m_path_id`; WaypointMovementGenerator::LoadPath reads it). Without
+/// an addon path AzerothCore idles the spawn (ObjectMgr::LoadCreatureAddons).
+fn patrol_path(addon: Option<&CreatureAddon>, world_data: &WorldData) -> Option<u32> {
+    addon
+        .map(|addon| addon.path_id)
+        .filter(|&id| id != 0 && world_data.waypoints.contains_key(&id))
 }
 
 #[cfg(test)]
@@ -352,6 +335,7 @@ mod tests {
             orientation: 0.0,
             wander_distance: 0.0,
             movement_type: 0,
+            spawntimesecs: 120,
         }
     }
 
@@ -368,7 +352,7 @@ mod tests {
                 CreatureDisplayID INTEGER, DisplayScale REAL, Probability REAL);
              CREATE TABLE creature (guid INTEGER, id1 INTEGER, map INTEGER, zoneId INTEGER,
                 position_x REAL, position_y REAL, position_z REAL, wander_distance REAL,
-                MovementType INTEGER, orientation REAL);
+                MovementType INTEGER, orientation REAL, spawntimesecs INTEGER);
              CREATE TABLE game_event_creature (guid INTEGER, eventEntry INTEGER);
              CREATE TABLE waypoint_data (id INTEGER, point INTEGER, position_x REAL,
                 position_y REAL, position_z REAL, orientation REAL, delay INTEGER,
@@ -401,7 +385,7 @@ mod tests {
             )
             .unwrap();
             conn.execute(
-                "INSERT INTO creature VALUES (?1,?1,0,0,-9000,-100,80,0,0,?2)",
+                "INSERT INTO creature VALUES (?1,?1,0,0,-9000,-100,80,0,0,?2,120)",
                 rusqlite::params![entry, angle],
             )
             .unwrap();

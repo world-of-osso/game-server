@@ -34,12 +34,6 @@ use self::support::{current_seconds, send_error, send_update};
 use transitions::process_player_death_transitions;
 pub(crate) use transitions::{PlayerDeathTransition, apply_health_damage};
 
-#[cfg(test)]
-use std::sync::{
-    Mutex,
-    atomic::{AtomicUsize, Ordering},
-};
-
 #[derive(Component, Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct PlayerDeathState {
     pub state: DeathState,
@@ -64,17 +58,20 @@ struct DeathServerState {
 
 pub struct DeathPlugin;
 
+/// Per-App death-transition work counters, so parallel tests don't share them.
 #[cfg(test)]
-static DEATH_PLAYERS_VISITED: AtomicUsize = AtomicUsize::new(0);
-#[cfg(test)]
-static DEATH_REPLICATION_MARKS: AtomicUsize = AtomicUsize::new(0);
-#[cfg(test)]
-static DEATH_TEST_LOCK: Mutex<()> = Mutex::new(());
+#[derive(Resource, Debug, Default, PartialEq)]
+struct DeathTransitionCounters {
+    players_visited: usize,
+    replication_marks: usize,
+}
 
 impl Plugin for DeathPlugin {
     fn build(&self, app: &mut App) {
         app.add_message::<PlayerDeathTransition>();
         app.init_resource::<DeathServerState>();
+        #[cfg(test)]
+        app.init_resource::<DeathTransitionCounters>();
         app.add_systems(PostStartup, load_graveyards_from_world_data);
         app.add_systems(Update, send_initial_death_snapshot);
         app.add_systems(Update, process_death_queries);

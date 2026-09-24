@@ -306,10 +306,21 @@ fn position(app: &App, entity: Entity) -> Position {
     *app.world().get::<Position>(entity).unwrap()
 }
 
-fn kill(app: &mut App, entity: Entity, respawn_timer: f32) {
-    app.world_mut()
-        .entity_mut(entity)
-        .insert(crate::combat::DeathState { respawn_timer });
+/// Kill through the combat death path (real `RespawnDelay` timer).
+fn kill(app: &mut App, entity: Entity) {
+    app.world_mut().get_mut::<Health>(entity).unwrap().current = 0.0;
+    crate::combat::mark_npc_dead_world(app.world_mut(), entity);
+}
+
+fn is_dead(app: &App, entity: Entity) -> bool {
+    app.world()
+        .get::<crate::combat::DeathState>(entity)
+        .is_some()
+}
+
+fn gap(app: &App, a: Entity, b: Entity) -> f32 {
+    let (a, b) = (position(app, a), position(app, b));
+    (a.x - b.x).hypot(a.z - b.z)
 }
 
 #[test]
@@ -332,7 +343,15 @@ fn killed_northshire_guard_lies_still_then_respawns_at_spawn_and_restarts_its_pa
             .current_index,
         4
     );
-    kill(&mut app, guard, 2.0);
+    kill(&mut app, guard);
+    assert_eq!(
+        app.world()
+            .get::<crate::combat::DeathState>(guard)
+            .unwrap()
+            .respawn_timer,
+        490.0,
+        "spawntimesecs 430 + 60 s normal corpse decay"
+    );
     let corpse = position(&app, guard);
     for _ in 0..30 {
         app.update();
@@ -378,13 +397,44 @@ fn killed_northshire_guard_lies_still_then_respawns_at_spawn_and_restarts_its_pa
 
 #[test]
 #[ignore]
-fn dead_escort_and_escorts_of_a_dead_leader_hold_still() {
-    let mut app = patrol_app(&[MOUNTAINEER_LEADER, 4479, 4480]);
+fn killed_idle_northshire_guard_respawns_at_its_spawn_after_its_timer() {
+    // 79926: MovementType 0 Northshire Guard, spawntimesecs 430, normal rank.
+    let spawn = spawn_of(79926);
+    assert_eq!(spawn.movement_type, 0);
+    let (sx, sy, sz) =
+        crate::terrain_height::wow_to_bevy(spawn.position_x, spawn.position_y, spawn.position_z);
+    let mut app = respawning_patrol_app(&[79926]);
+    let guard = entity_of(&app, 79926);
+    *app.world_mut().get_mut::<Position>(guard).unwrap() = Position {
+        x: sx + 5.0,
+        y: sy,
+        z: sz,
+    };
+    kill(&mut app, guard);
+    // 490 s is 9,800 ticks at 20 Hz.
+    for _ in 0..9_790 {
+        app.update();
+    }
+    assert!(is_dead(&app, guard), "still dead at 489.5 s");
+    for _ in 0..20 {
+        app.update();
+    }
+    assert!(!is_dead(&app, guard), "respawned by 490.5 s");
+    let health = *app.world().get::<Health>(guard).unwrap();
+    assert_eq!(health.current, health.max);
+    let respawned = position(&app, guard);
+    assert_eq!((respawned.x, respawned.y, respawned.z), (sx, sy, sz));
+}
+
+#[test]
+#[ignore]
+fn dead_escort_holds_still_then_respawns_and_rejoins_its_leader() {
+    let mut app = respawning_patrol_app(&[MOUNTAINEER_LEADER, 4479, 4480]);
     let leader = entity_of(&app, MOUNTAINEER_LEADER);
     let (dead_escort, escort) = (entity_of(&app, 4479), entity_of(&app, 4480));
     run_arrivals(&mut app, leader, 3);
 
-    kill(&mut app, dead_escort, 600.0);
+    kill(&mut app, dead_escort);
     let corpse = position(&app, dead_escort);
     let escort_before = position(&app, escort);
     run_arrivals(&mut app, leader, 2);
@@ -399,18 +449,54 @@ fn dead_escort_and_escorts_of_a_dead_leader_hold_still() {
         "live escort kept following"
     );
 
+    while is_dead(&app, dead_escort) {
+        app.update();
+    }
+    let spawn = spawn_of(4479);
+    let respawned = position(&app, dead_escort);
+    let (sx, _, sz) = wow_to_bevy_xz(spawn.position_x, spawn.position_y);
+    assert!(
+        (respawned.x - sx).hypot(respawned.z - sz) < 1.0,
+        "respawned at its own spawn"
+    );
+    run_arrivals(&mut app, leader, 2);
+    assert!(
+        (gap(&app, dead_escort, leader) - 2.0).abs() < 0.01,
+        "respawned escort back on its 2 yd slot"
+    );
+}
+
+#[test]
+#[ignore]
+fn escorts_hold_still_while_their_leader_is_dead_then_rejoin_it() {
+    let mut app = respawning_patrol_app(&[MOUNTAINEER_LEADER, 4479, 4480]);
+    let leader = entity_of(&app, MOUNTAINEER_LEADER);
+    let escorts = [entity_of(&app, 4479), entity_of(&app, 4480)];
+    run_arrivals(&mut app, leader, 3);
     for _ in 0..5 {
         app.update();
     }
-    kill(&mut app, leader, 600.0);
-    let (leader_corpse, escort_stopped) = (position(&app, leader), position(&app, escort));
-    for _ in 0..200 {
+
+    kill(&mut app, leader);
+    let leader_corpse = position(&app, leader);
+    let stopped = escorts.map(|escort| position(&app, escort));
+    while is_dead(&app, leader) {
         app.update();
         assert_eq!(position(&app, leader), leader_corpse);
         assert_eq!(
-            position(&app, escort),
-            escort_stopped,
+            escorts.map(|escort| position(&app, escort)),
+            stopped,
             "a dead leader drags no one"
+        );
+    }
+    let state = app.world().get::<WaypointState>(leader).unwrap();
+    assert_eq!(state.current_index, 0, "respawned leader restarts its path");
+
+    run_arrivals(&mut app, leader, 2);
+    for escort in escorts {
+        assert!(
+            (gap(&app, escort, leader) - 2.0).abs() < 0.01,
+            "escort rejoined its respawned leader"
         );
     }
 }
