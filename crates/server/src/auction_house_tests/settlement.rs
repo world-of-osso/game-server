@@ -13,6 +13,7 @@ fn bid_on_expired_auction_fails_gracefully() {
         &db,
         &mut state,
         seller_id,
+        crate::npc_interaction::AUCTION_HOUSE_ALLIANCE,
         &CreateAuction {
             item_guid: source_item.item_guid,
             stack_count: 1,
@@ -86,6 +87,7 @@ fn deposit_refunded_on_successful_sale() {
             &db,
             &mut state,
             seller_id,
+            crate::npc_interaction::AUCTION_HOUSE_ALLIANCE,
             &CreateAuction {
                 item_guid: source_item.item_guid,
                 stack_count: 1,
@@ -156,6 +158,7 @@ fn auction_snapshot_independent_of_inventory_changes() {
         &db,
         &mut state,
         seller_id,
+        crate::npc_interaction::AUCTION_HOUSE_ALLIANCE,
         &CreateAuction {
             item_guid: source_item.item_guid,
             stack_count: 1,
@@ -222,6 +225,7 @@ fn seller_offline_auction_still_completes() {
         &db,
         &mut state,
         seller_id,
+        crate::npc_interaction::AUCTION_HOUSE_ALLIANCE,
         &CreateAuction {
             item_guid: source_item.item_guid,
             stack_count: 1,
@@ -279,6 +283,7 @@ fn unique_item_prevents_duplicate_listing() {
         &db,
         &mut state,
         seller_id,
+        crate::npc_interaction::AUCTION_HOUSE_ALLIANCE,
         &CreateAuction {
             item_guid: item.item_guid,
             stack_count: 3,
@@ -294,6 +299,7 @@ fn unique_item_prevents_duplicate_listing() {
         &db,
         &mut state,
         seller_id,
+        crate::npc_interaction::AUCTION_HOUSE_ALLIANCE,
         &CreateAuction {
             item_guid: remaining.item_guid,
             stack_count: 2,
@@ -318,6 +324,7 @@ fn expired_auction_with_bid_awards_winner_and_pays_seller() {
         &db,
         &mut state,
         seller_id,
+        crate::npc_interaction::AUCTION_HOUSE_ALLIANCE,
         &CreateAuction {
             item_guid: source_item.item_guid,
             stack_count: 2,
@@ -379,6 +386,7 @@ fn house_cut_deducted_on_successful_sale() {
             &db,
             &mut state,
             seller_id,
+            crate::npc_interaction::AUCTION_HOUSE_ALLIANCE,
             &CreateAuction {
                 item_guid: source_item.item_guid,
                 stack_count: 1,
@@ -412,6 +420,7 @@ fn buyout_transfers_item_and_deducts_gold() {
         &db,
         &mut state,
         seller_id,
+        crate::npc_interaction::AUCTION_HOUSE_ALLIANCE,
         &CreateAuction {
             item_guid: source_item.item_guid,
             stack_count: 2,
@@ -459,6 +468,7 @@ fn buyout_and_claim_mail_delivers_item_and_gold() {
         &db,
         &mut state,
         seller_id,
+        crate::npc_interaction::AUCTION_HOUSE_ALLIANCE,
         &CreateAuction {
             item_guid: source_item.item_guid,
             stack_count: 3,

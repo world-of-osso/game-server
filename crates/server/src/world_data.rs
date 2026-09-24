@@ -232,6 +232,9 @@ fn startup_load_world_data(mut commands: Commands) {
         .expect("Failed to load faction_template; run scripts/db2.py import");
     info!("Loaded {} faction templates", templates.0.len());
     commands.insert_resource(templates);
+    let gossip =
+        crate::npc_interaction::load_gossip_catalog(&conn).expect("Failed to load gossip menus");
+    commands.insert_resource(gossip);
 }
 
 pub struct WorldDataPlugin;

@@ -42,6 +42,7 @@ fn create_auction_moves_items_from_inventory_into_state() {
         &db,
         &mut state,
         character_id,
+        crate::npc_interaction::AUCTION_HOUSE_ALLIANCE,
         &CreateAuction {
             item_guid: source_item.item_guid,
             stack_count: 5,
@@ -97,6 +98,7 @@ fn successful_auction_deposit_updates_online_gold() {
             &db,
             &mut state,
             character_id,
+            crate::npc_interaction::AUCTION_HOUSE_ALLIANCE,
             &CreateAuction {
                 item_guid: source_item.item_guid,
                 stack_count: 5,
@@ -136,6 +138,7 @@ fn place_bid_refunds_previous_bidder_and_updates_current_bid() {
         &db,
         &mut state,
         seller_id,
+        crate::npc_interaction::AUCTION_HOUSE_ALLIANCE,
         &CreateAuction {
             item_guid: source_item.item_guid,
             stack_count: 2,

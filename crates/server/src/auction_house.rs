@@ -12,7 +12,7 @@ use shared::protocol::{
     QueryOwnedAuctions,
 };
 
-use crate::auth::{Authenticated, InWorld};
+use crate::auth::InWorld;
 use crate::persistence::{
     self, AuctionData, GameDatabase, InventoryData, InventoryItemData, MailEntryData,
 };

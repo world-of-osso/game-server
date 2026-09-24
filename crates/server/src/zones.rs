@@ -3,6 +3,7 @@ use lightyear::prelude::*;
 use shared::components::{
     Health, ModelDisplay, Npc, Position, Rotation, UnitFactionTemplate, UnitLevel, UnitPowers, Zone,
 };
+use shared::protocol::NpcFlags;
 
 use crate::creature_ai::{SpawnPoint, WanderPhase, WanderState, WaypointState};
 use crate::interest::NetworkVisibility;
@@ -61,6 +62,7 @@ fn spawn_elwynn_core(commands: &mut Commands, world_data: &WorldData, replicate:
             UnitLevel(template.min_level),
             UnitPowers::default(),
             UnitFactionTemplate(u32::from(template.faction)),
+            NpcFlags::from_azerothcore(template.npc_flags),
         ));
         if replicate {
             entity.insert((

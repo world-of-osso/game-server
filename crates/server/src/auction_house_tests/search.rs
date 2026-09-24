@@ -11,6 +11,7 @@ fn create_auction_appears_in_search_results() {
         &db,
         &mut state,
         seller_id,
+        crate::npc_interaction::AUCTION_HOUSE_ALLIANCE,
         &CreateAuction {
             item_guid: source_item.item_guid,
             stack_count: 3,
@@ -51,6 +52,7 @@ fn bid_recorded_and_underbid_rejected() {
         &db,
         &mut state,
         seller_id,
+        crate::npc_interaction::AUCTION_HOUSE_ALLIANCE,
         &CreateAuction {
             item_guid: source_item.item_guid,
             stack_count: 2,

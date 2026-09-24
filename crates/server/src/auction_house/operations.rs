@@ -1,5 +1,4 @@
 use super::*;
-use crate::faction::faction_for_race;
 
 /// Deposit = vendor_sell_price * stack_count * duration_multiplier.
 pub(super) fn deposit_cost(
@@ -40,7 +39,6 @@ pub(super) fn claim_mail(
 /// Validated inputs for creating an auction.
 struct ValidatedAuction {
     character_name: String,
-    race: u8,
     source: InventoryItemData,
     item_index: usize,
     deposit: u32,
@@ -82,7 +80,6 @@ fn validate_create_auction(
     validate_auction_deposit(&inventory, deposit)?;
     Ok(ValidatedAuction {
         character_name: character.name,
-        race: character.race,
         source,
         item_index: index,
         deposit,
@@ -147,6 +144,7 @@ pub(super) fn create_auction(
     db: &redb::Database,
     state: &mut AuctionHouseState,
     character_id: u64,
+    house: u8,
     req: &CreateAuction,
 ) -> AuctionOperationResponse {
     let validated = match validate_create_auction(db, state, character_id, req) {
@@ -178,7 +176,7 @@ pub(super) fn create_auction(
         current_bidder_character_id: None,
         buyout_price: req.buyout_price,
         expires_at_unix_secs: unix_now() + duration_secs(req.duration),
-        faction: faction_for_race(validated.race),
+        faction: house,
         deposit: validated.deposit,
     };
     persistence::save_auction(db, &auction);

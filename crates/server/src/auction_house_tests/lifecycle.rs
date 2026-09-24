@@ -12,6 +12,7 @@ fn cancel_own_auction_returns_item_via_mail() {
         &db,
         &mut state,
         seller_id,
+        crate::npc_interaction::AUCTION_HOUSE_ALLIANCE,
         &CreateAuction {
             item_guid: source_item.item_guid,
             stack_count: 3,
@@ -53,6 +54,7 @@ fn cancel_auction_with_bids_rejected() {
         &db,
         &mut state,
         seller_id,
+        crate::npc_interaction::AUCTION_HOUSE_ALLIANCE,
         &CreateAuction {
             item_guid: source_item.item_guid,
             stack_count: 1,
@@ -80,6 +82,7 @@ fn bid_on_own_auction_rejected() {
         &db,
         &mut state,
         seller_id,
+        crate::npc_interaction::AUCTION_HOUSE_ALLIANCE,
         &CreateAuction {
             item_guid: source_item.item_guid,
             stack_count: 1,
@@ -122,6 +125,7 @@ fn bid_only_auction_rejects_buyout() {
         &db,
         &mut state,
         seller_id,
+        crate::npc_interaction::AUCTION_HOUSE_ALLIANCE,
         &CreateAuction {
             item_guid: source_item.item_guid,
             stack_count: 1,
@@ -164,6 +168,7 @@ fn create_auction_rejected_with_insufficient_deposit() {
         &db,
         &mut state,
         seller_id,
+        crate::npc_interaction::AUCTION_HOUSE_ALLIANCE,
         &CreateAuction {
             item_guid: source_item.item_guid,
             stack_count: 1,
@@ -201,6 +206,7 @@ fn max_auction_slots_per_character_enforced() {
         &db,
         &mut state,
         seller_id,
+        crate::npc_interaction::AUCTION_HOUSE_ALLIANCE,
         &CreateAuction {
             item_guid: source_item.item_guid,
             stack_count: 1,
@@ -234,6 +240,7 @@ fn duration_tiers_set_correct_expiry() {
             &db,
             &mut state,
             seller_id,
+            crate::npc_interaction::AUCTION_HOUSE_ALLIANCE,
             &CreateAuction {
                 item_guid: source_item.item_guid,
                 stack_count: 1,
@@ -265,6 +272,7 @@ fn concurrent_bids_respect_updated_minimum() {
         &db,
         &mut state,
         seller_id,
+        crate::npc_interaction::AUCTION_HOUSE_ALLIANCE,
         &CreateAuction {
             item_guid: source_item.item_guid,
             stack_count: 1,
@@ -307,6 +315,7 @@ fn bid_at_buyout_price_triggers_immediate_sale() {
         &db,
         &mut state,
         seller_id,
+        crate::npc_interaction::AUCTION_HOUSE_ALLIANCE,
         &CreateAuction {
             item_guid: source_item.item_guid,
             stack_count: 1,
@@ -345,6 +354,7 @@ fn insufficient_gold_for_bid_and_buyout() {
         &db,
         &mut state,
         seller_id,
+        crate::npc_interaction::AUCTION_HOUSE_ALLIANCE,
         &CreateAuction {
             item_guid: source_item.item_guid,
             stack_count: 1,
@@ -392,6 +402,7 @@ fn outbid_sends_notification_mail_to_previous_bidder() {
         &db,
         &mut state,
         seller_id,
+        crate::npc_interaction::AUCTION_HOUSE_ALLIANCE,
         &CreateAuction {
             item_guid: source_item.item_guid,
             stack_count: 1,
@@ -496,6 +507,7 @@ fn expired_auction_without_bid_returns_item_to_seller() {
         &db,
         &mut state,
         seller_id,
+        crate::npc_interaction::AUCTION_HOUSE_ALLIANCE,
         &CreateAuction {
             item_guid: source_item.item_guid,
             stack_count: 4,
@@ -549,6 +561,7 @@ fn relist_after_expired_auction() {
         &db,
         &mut state,
         seller_id,
+        crate::npc_interaction::AUCTION_HOUSE_ALLIANCE,
         &CreateAuction {
             item_guid: source_item.item_guid,
             stack_count: 2,
@@ -588,6 +601,7 @@ fn relist_after_expired_auction() {
         &db,
         &mut state,
         seller_id,
+        crate::npc_interaction::AUCTION_HOUSE_ALLIANCE,
         &CreateAuction {
             item_guid: relisted_item.item_guid,
             stack_count: 2,

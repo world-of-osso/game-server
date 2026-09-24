@@ -220,3 +220,7 @@ Created `systems/content-import.md`: 25 content tables imported via new `scripts
 ## [2026-09-24] create | Quest runtime
 
 Created `systems/quests.md` (quest data, rules, runtime) and `specs/quests.md`; index entry added.
+
+## [2026-09-24] create | NPC interaction
+
+[[npc-interaction]]: NpcFlags replication, InteractNpc/SelectGossipOption/CloseInteraction, gossip menus, ActiveInteraction session; auction requests require an auctioneer session and use its faction house.

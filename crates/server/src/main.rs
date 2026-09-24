@@ -33,6 +33,7 @@ mod item_templates;
 mod lfg;
 mod messaging;
 mod networking;
+mod npc_interaction;
 mod persistence;
 mod persistence_accounts;
 mod persistence_character;
@@ -143,6 +144,7 @@ fn add_world_plugins(app: &mut App) {
         .add_plugins(stats::StatsPlugin)
         .add_plugins(combat::CombatPlugin)
         .add_plugins(unit_target::UnitTargetPlugin)
+        .add_plugins(npc_interaction::NpcInteractionPlugin)
         .add_plugins(spell_info::SpellInfoPlugin)
         .add_plugins(spell_cast::SpellCastPlugin)
         .add_plugins(auras::AuraPlugin)

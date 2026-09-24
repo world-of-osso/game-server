@@ -1,7 +1,6 @@
-use bevy::ecs::query::QueryFilter;
-
 use super::*;
 use crate::gold::{GoldUpdateQueue, record_persisted_gold};
+use crate::npc_interaction::ActiveInteraction;
 
 pub(super) fn initialize_auction_state(
     db: Option<Res<GameDatabase>>,
@@ -18,78 +17,126 @@ pub(super) fn initialize_auction_state(
     state.initialized = true;
 }
 
-type OpenAuctionReceiver<'w, 's> = Query<
+/// Rejection for auction requests without an open auctioneer interaction.
+pub(super) const NO_AUCTIONEER: &str = "not interacting with an auctioneer";
+
+/// Auction requests from in-world connections plus their open NPC interaction.
+type SessionReceiver<'w, 's, M> = Query<
     'w,
     's,
-    (Entity, &'static mut MessageReceiver<OpenAuctionHouse>),
-    (With<Authenticated>, With<InWorld>),
+    (
+        Entity,
+        &'static InWorld,
+        Option<&'static ActiveInteraction>,
+        &'static mut MessageReceiver<M>,
+    ),
 >;
 
+/// Hands each request its character and auction house, or `None` when the
+/// connection has no auctioneer frame open. TrinityCore validates the auctioneer
+/// (`GetNPCIfCanInteractWith(.., UNIT_NPC_FLAG_AUCTIONEER)`) on every auction packet.
+fn for_each_session_request<M, F>(receivers: &mut SessionReceiver<M>, mut handle: F)
+where
+    M: lightyear::prelude::Message,
+    F: FnMut(Entity, u64, Option<u8>, M),
+{
+    for (entity, in_world, session, mut receiver) in &mut *receivers {
+        let house = session.and_then(|interaction| interaction.auction_house);
+        for req in receiver.receive() {
+            handle(entity, in_world.character_id, house, req);
+        }
+    }
+}
+
 pub(super) fn process_open_requests(
-    mut receivers: OpenAuctionReceiver,
+    mut receivers: SessionReceiver<OpenAuctionHouse>,
     mut senders: Query<&mut MessageSender<AuctionHouseOpened>>,
 ) {
-    process_entity_requests(&mut receivers, &mut senders, |_| AuctionHouseOpened {
-        success: true,
-        error: None,
+    for_each_session_request(&mut receivers, |entity, _, house, _| {
+        let response = AuctionHouseOpened {
+            success: house.is_some(),
+            error: house.is_none().then(|| NO_AUCTIONEER.to_string()),
+        };
+        send_auction_message(&mut senders, entity, response);
     });
 }
 
 pub(super) fn process_query_requests(
-    mut receivers: Query<(Entity, &mut MessageReceiver<QueryAuctions>), With<InWorld>>,
+    mut receivers: SessionReceiver<QueryAuctions>,
     state: Res<AuctionHouseState>,
     mut senders: Query<&mut MessageSender<AuctionSearchResults>>,
+    mut rejections: Query<&mut MessageSender<AuctionOperationResponse>>,
 ) {
-    process_entity_requests(&mut receivers, &mut senders, |req: QueryAuctions| {
-        search_auctions(&state.auctions, &req.query)
+    for_each_session_request(&mut receivers, |entity, _, house, mut req| {
+        let Some(house) = house else {
+            send_auction_message(&mut rejections, entity, err(NO_AUCTIONEER));
+            return;
+        };
+        req.query.faction = house;
+        send_auction_message(
+            &mut senders,
+            entity,
+            search_auctions(&state.auctions, &req.query),
+        );
     });
 }
 
 pub(super) fn process_inventory_requests(
-    mut receivers: Query<(
-        Entity,
-        &InWorld,
-        &mut MessageReceiver<QueryAuctionInventory>,
-    )>,
+    mut receivers: SessionReceiver<QueryAuctionInventory>,
     db: Option<Res<GameDatabase>>,
     mut senders: Query<&mut MessageSender<AuctionInventorySnapshot>>,
+    mut rejections: Query<&mut MessageSender<AuctionOperationResponse>>,
 ) {
     let Some(db) = db else { return };
-    process_in_world_requests(&mut receivers, &mut senders, |character_id, _| {
+    for_each_session_request(&mut receivers, |entity, character_id, house, _| {
+        if house.is_none() {
+            send_auction_message(&mut rejections, entity, err(NO_AUCTIONEER));
+            return;
+        }
         let inventory = persistence::load_inventory(&db.db, character_id);
-        inventory_snapshot(&inventory)
+        send_auction_message(&mut senders, entity, inventory_snapshot(&inventory));
     });
 }
 
 pub(super) fn process_owned_requests(
-    mut receivers: Query<(Entity, &InWorld, &mut MessageReceiver<QueryOwnedAuctions>)>,
+    mut receivers: SessionReceiver<QueryOwnedAuctions>,
     state: Res<AuctionHouseState>,
     mut senders: Query<&mut MessageSender<OwnedAuctionListResponse>>,
+    mut rejections: Query<&mut MessageSender<AuctionOperationResponse>>,
 ) {
-    process_in_world_requests(&mut receivers, &mut senders, |character_id, _| {
+    for_each_session_request(&mut receivers, |entity, character_id, house, _| {
+        if house.is_none() {
+            send_auction_message(&mut rejections, entity, err(NO_AUCTIONEER));
+            return;
+        }
         let listings = state
             .auctions
             .values()
             .filter(|auction| auction.seller_character_id == character_id)
             .map(to_listing_summary)
             .collect();
-        OwnedAuctionListResponse { listings }
+        send_auction_message(&mut senders, entity, OwnedAuctionListResponse { listings });
     });
 }
 
 pub(super) fn process_bid_list_requests(
-    mut receivers: Query<(Entity, &InWorld, &mut MessageReceiver<QueryBidAuctions>)>,
+    mut receivers: SessionReceiver<QueryBidAuctions>,
     state: Res<AuctionHouseState>,
     mut senders: Query<&mut MessageSender<BidAuctionListResponse>>,
+    mut rejections: Query<&mut MessageSender<AuctionOperationResponse>>,
 ) {
-    process_in_world_requests(&mut receivers, &mut senders, |character_id, _| {
+    for_each_session_request(&mut receivers, |entity, character_id, house, _| {
+        if house.is_none() {
+            send_auction_message(&mut rejections, entity, err(NO_AUCTIONEER));
+            return;
+        }
         let listings = state
             .auctions
             .values()
             .filter(|auction| auction.current_bidder_character_id == Some(character_id))
             .map(to_listing_summary)
             .collect();
-        BidAuctionListResponse { listings }
+        send_auction_message(&mut senders, entity, BidAuctionListResponse { listings });
     });
 }
 
@@ -120,33 +167,44 @@ pub(super) fn process_claim_mail_requests(
 }
 
 pub(super) fn process_create_requests(
-    mut receivers: Query<(Entity, &InWorld, &mut MessageReceiver<CreateAuction>)>,
+    mut receivers: SessionReceiver<CreateAuction>,
     db: Option<Res<GameDatabase>>,
     mut state: ResMut<AuctionHouseState>,
     mut gold_updates: ResMut<GoldUpdateQueue>,
     mut senders: Query<&mut MessageSender<AuctionOperationResponse>>,
 ) {
-    process_operation_requests(&mut receivers, db, &mut senders, |db, character_id, req| {
-        create_auction_with_gold_update(&db.db, &mut state, character_id, &req, &mut gold_updates)
-    });
+    process_session_operations(
+        &mut receivers,
+        db,
+        &mut senders,
+        |db, character_id, house, req| {
+            create_auction_with_gold_update(
+                &db.db,
+                &mut state,
+                character_id,
+                house,
+                &req,
+                &mut gold_updates,
+            )
+        },
+    );
 }
 
 pub(super) fn process_bid_requests(
-    mut receivers: Query<(Entity, &InWorld, &mut MessageReceiver<PlaceBid>)>,
+    mut receivers: SessionReceiver<PlaceBid>,
     db: Option<Res<GameDatabase>>,
     mut state: ResMut<AuctionHouseState>,
     mut gold_updates: ResMut<GoldUpdateQueue>,
     mut senders: Query<&mut MessageSender<AuctionOperationResponse>>,
 ) {
-    process_stateful_operation_requests(
+    process_session_operations(
         &mut receivers,
         db,
-        &mut state,
         &mut senders,
-        |db, state, character_id, req| {
+        |db, character_id, _, req| {
             place_bid_with_gold_updates(
                 &db.db,
-                state,
+                &mut state,
                 character_id,
                 req.auction_id,
                 req.amount,
@@ -157,21 +215,20 @@ pub(super) fn process_bid_requests(
 }
 
 pub(super) fn process_buyout_requests(
-    mut receivers: Query<(Entity, &InWorld, &mut MessageReceiver<BuyoutAuction>)>,
+    mut receivers: SessionReceiver<BuyoutAuction>,
     db: Option<Res<GameDatabase>>,
     mut state: ResMut<AuctionHouseState>,
     mut gold_updates: ResMut<GoldUpdateQueue>,
     mut senders: Query<&mut MessageSender<AuctionOperationResponse>>,
 ) {
-    process_stateful_operation_requests(
+    process_session_operations(
         &mut receivers,
         db,
-        &mut state,
         &mut senders,
-        |db, state, character_id, req| {
+        |db, character_id, _, req| {
             buyout_auction_with_gold_updates(
                 &db.db,
-                state,
+                &mut state,
                 character_id,
                 req.auction_id,
                 &mut gold_updates,
@@ -181,17 +238,16 @@ pub(super) fn process_buyout_requests(
 }
 
 pub(super) fn process_cancel_requests(
-    mut receivers: Query<(Entity, &InWorld, &mut MessageReceiver<CancelAuction>)>,
+    mut receivers: SessionReceiver<CancelAuction>,
     db: Option<Res<GameDatabase>>,
     mut state: ResMut<AuctionHouseState>,
     mut senders: Query<&mut MessageSender<AuctionOperationResponse>>,
 ) {
-    process_stateful_operation_requests(
+    process_session_operations(
         &mut receivers,
         db,
-        &mut state,
         &mut senders,
-        |db, state, character_id, req| cancel_auction(&db.db, state, character_id, req.auction_id),
+        |db, character_id, _, req| cancel_auction(&db.db, &mut state, character_id, req.auction_id),
     );
 }
 
@@ -251,10 +307,11 @@ pub(super) fn create_auction_with_gold_update(
     db: &redb::Database,
     state: &mut AuctionHouseState,
     character_id: u64,
+    house: u8,
     request: &CreateAuction,
     gold_updates: &mut GoldUpdateQueue,
 ) -> AuctionOperationResponse {
-    let response = create_auction(db, state, character_id, request);
+    let response = create_auction(db, state, character_id, house, request);
     record_successful_gold_updates(db, &response, [character_id], gold_updates);
     response
 }
@@ -316,23 +373,6 @@ fn record_successful_gold_updates(
     }
 }
 
-fn process_entity_requests<M, R, F, QF>(
-    receivers: &mut Query<(Entity, &mut MessageReceiver<M>), QF>,
-    senders: &mut Query<&mut MessageSender<R>>,
-    mut build_response: F,
-) where
-    M: lightyear::prelude::Message,
-    R: lightyear::prelude::Message,
-    F: FnMut(M) -> R,
-    QF: QueryFilter,
-{
-    for (entity, mut receiver) in &mut *receivers {
-        for req in receiver.receive() {
-            send_auction_message(senders, entity, build_response(req));
-        }
-    }
-}
-
 fn process_in_world_requests<M, R, F>(
     receivers: &mut Query<(Entity, &InWorld, &mut MessageReceiver<M>)>,
     senders: &mut Query<&mut MessageSender<R>>,
@@ -365,19 +405,22 @@ fn process_operation_requests<M, F>(
     });
 }
 
-fn process_stateful_operation_requests<M, F>(
-    receivers: &mut Query<(Entity, &InWorld, &mut MessageReceiver<M>)>,
+fn process_session_operations<M, F>(
+    receivers: &mut SessionReceiver<M>,
     db: Option<Res<GameDatabase>>,
-    state: &mut AuctionHouseState,
     senders: &mut Query<&mut MessageSender<AuctionOperationResponse>>,
     mut build_response: F,
 ) where
     M: lightyear::prelude::Message,
-    F: FnMut(&GameDatabase, &mut AuctionHouseState, u64, M) -> AuctionOperationResponse,
+    F: FnMut(&GameDatabase, u64, u8, M) -> AuctionOperationResponse,
 {
     let Some(db) = db else { return };
-    process_in_world_requests(receivers, senders, |character_id, req| {
-        build_response(&db, state, character_id, req)
+    for_each_session_request(receivers, |entity, character_id, house, req| {
+        let response = match house {
+            Some(house) => build_response(&db, character_id, house, req),
+            None => err(NO_AUCTIONEER),
+        };
+        send_auction_message(senders, entity, response);
     });
 }
 

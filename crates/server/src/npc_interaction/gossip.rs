@@ -1,0 +1,316 @@
+//! Gossip menus from world.db (`gossip_menu`, `gossip_menu_option`, `npc_text`,
+//! `broadcast_text`, `creature_template.gossip_menu_id`) and the choice of what an
+//! NPC opens. The `conditions` table is not imported, so every option whose
+//! `OptionNpcFlag` matches the NPC is shown and a menu with several texts uses the
+//! lowest `TextID`.
+
+use std::collections::HashMap;
+
+use bevy::prelude::*;
+use rusqlite::{Connection, Row, params};
+use shared::protocol::{GossipMenu, GossipMenuOption, InteractionKind, NpcFlags, NpcRole};
+
+/// `npc_text` 68, "Greetings, $n." — the client's default gossip text
+/// (AzerothCore `DEFAULT_GOSSIP_MESSAGE`).
+const DEFAULT_NPC_TEXT_ID: u32 = 68;
+const NPC_TEXT_SLOTS: usize = 8;
+
+/// What selecting a gossip option does.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum GossipAction {
+    Submenu(u32),
+    Role(NpcRole),
+    Close,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+struct GossipOptionData {
+    option_id: u32,
+    icon: u8,
+    text: String,
+    option_type: u8,
+    npc_flag: NpcFlags,
+    action_menu_id: u32,
+}
+
+#[derive(Debug, Clone, Default, PartialEq)]
+struct GossipMenuData {
+    text: String,
+    options: Vec<GossipOptionData>,
+}
+
+#[derive(Resource, Debug, Default, Clone)]
+pub struct GossipCatalog {
+    menus: HashMap<u32, GossipMenuData>,
+    template_menus: HashMap<u32, u32>,
+    default_text: String,
+}
+
+/// A frame to open plus the routing of its gossip options.
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) struct Opening {
+    pub kind: InteractionKind,
+    pub actions: Vec<(u32, GossipAction)>,
+}
+
+impl GossipCatalog {
+    /// What interacting with an NPC opens (Retail): a gossip menu when it has the
+    /// GOSSIP flag or several roles, otherwise its single role; `None` when it has
+    /// nothing to interact with. Quests are listed by the quest system, not as a
+    /// gossip option.
+    pub(crate) fn open(&self, template_id: u32, flags: NpcFlags) -> Option<Opening> {
+        let roles = roles_from_flags(flags);
+        if !flags.contains(NpcFlags::GOSSIP) && roles.len() == 1 {
+            return Some(Opening {
+                kind: InteractionKind::Role(roles[0]),
+                actions: Vec::new(),
+            });
+        }
+        if !flags.contains(NpcFlags::GOSSIP) && roles.is_empty() {
+            return None;
+        }
+        // Menu 0 is AzerothCore's default menu: one option per NPC role.
+        let menu_id = self.template_menus.get(&template_id).copied().unwrap_or(0);
+        Some(self.submenu(menu_id, flags))
+    }
+
+    /// Menu `menu_id` with the options `flags` allow.
+    pub(crate) fn submenu(&self, menu_id: u32, flags: NpcFlags) -> Opening {
+        match self.menus.get(&menu_id) {
+            Some(menu) => self.data_menu(menu_id, menu, flags),
+            None => gossip_opening(menu_id, self.default_text.clone(), Vec::new()),
+        }
+    }
+
+    fn data_menu(&self, menu_id: u32, menu: &GossipMenuData, flags: NpcFlags) -> Opening {
+        let options = menu
+            .options
+            .iter()
+            .filter(|option| flags.0 & option.npc_flag.0 != 0)
+            .filter_map(|option| {
+                let action = option_action(option.option_type, option.action_menu_id)?;
+                Some((option.option_id, option.icon, option.text.clone(), action))
+            })
+            .collect();
+        let text = if menu.text.is_empty() {
+            self.default_text.clone()
+        } else {
+            menu.text.clone()
+        };
+        gossip_opening(menu_id, text, options)
+    }
+}
+
+fn gossip_opening(
+    menu_id: u32,
+    text: String,
+    options: Vec<(u32, u8, String, GossipAction)>,
+) -> Opening {
+    let actions = options
+        .iter()
+        .map(|(id, _, _, action)| (*id, *action))
+        .collect();
+    let options = options
+        .into_iter()
+        .map(|(option_id, icon, text, _)| GossipMenuOption {
+            option_id,
+            icon,
+            text,
+        })
+        .collect();
+    Opening {
+        kind: InteractionKind::Gossip(GossipMenu {
+            menu_id,
+            text,
+            options,
+        }),
+        actions,
+    }
+}
+
+/// Roles an NPC's flags grant, in Retail gossip order.
+pub(crate) fn roles_from_flags(flags: NpcFlags) -> Vec<NpcRole> {
+    const VENDOR_ANY: u64 = NpcFlags::VENDOR
+        | NpcFlags::VENDOR_AMMO
+        | NpcFlags::VENDOR_FOOD
+        | NpcFlags::VENDOR_POISON
+        | NpcFlags::VENDOR_REAGENT
+        | NpcFlags::REPAIR;
+    const TRAINER_ANY: u64 =
+        NpcFlags::TRAINER | NpcFlags::TRAINER_CLASS | NpcFlags::TRAINER_PROFESSION;
+    [
+        (NpcFlags::QUESTGIVER, NpcRole::QuestGiver),
+        (VENDOR_ANY, NpcRole::Vendor),
+        (TRAINER_ANY, NpcRole::Trainer),
+        (NpcFlags::FLIGHTMASTER, NpcRole::FlightMaster),
+        (NpcFlags::INNKEEPER, NpcRole::Innkeeper),
+        (NpcFlags::BANKER, NpcRole::Banker),
+        (NpcFlags::PETITIONER, NpcRole::Petitioner),
+        (NpcFlags::TABARD_DESIGNER, NpcRole::TabardDesigner),
+        (NpcFlags::BATTLEMASTER, NpcRole::Battlemaster),
+        (NpcFlags::AUCTIONEER, NpcRole::AuctionHouse),
+        (NpcFlags::STABLEMASTER, NpcRole::StableMaster),
+    ]
+    .into_iter()
+    .filter(|(mask, _)| flags.contains(*mask))
+    .map(|(_, role)| role)
+    .collect()
+}
+
+/// AzerothCore `GossipOptionType` → action. Hidden (`None`): NONE (script-only),
+/// QUESTGIVER (quests are listed separately), spirit healer/guide (dead players
+/// only), ARMORER (AzerothCore never shows it), and the pre-Retail talent
+/// unlearn / dual spec / outdoor PvP types.
+fn option_action(option_type: u8, action_menu_id: u32) -> Option<GossipAction> {
+    Some(match option_type {
+        1 if action_menu_id != 0 => GossipAction::Submenu(action_menu_id),
+        1 => GossipAction::Close,
+        3 => GossipAction::Role(NpcRole::Vendor),
+        4 => GossipAction::Role(NpcRole::FlightMaster),
+        5 => GossipAction::Role(NpcRole::Trainer),
+        8 => GossipAction::Role(NpcRole::Innkeeper),
+        9 => GossipAction::Role(NpcRole::Banker),
+        10 => GossipAction::Role(NpcRole::Petitioner),
+        11 => GossipAction::Role(NpcRole::TabardDesigner),
+        12 => GossipAction::Role(NpcRole::Battlemaster),
+        13 => GossipAction::Role(NpcRole::AuctionHouse),
+        14 => GossipAction::Role(NpcRole::StableMaster),
+        _ => return None,
+    })
+}
+
+pub fn load_gossip_catalog(conn: &Connection) -> rusqlite::Result<GossipCatalog> {
+    let broadcast = load_broadcast_texts(conn)?;
+    let npc_texts = load_npc_texts(conn, &broadcast)?;
+    let mut menus = load_menu_texts(conn, &npc_texts)?;
+    load_menu_options(conn, &broadcast, &mut menus)?;
+    let template_menus = conn
+        .prepare("SELECT entry, gossip_menu_id FROM creature_template WHERE gossip_menu_id <> 0")?
+        .query_map(params![], |row| {
+            Ok((row.get::<_, i64>(0)? as u32, row.get::<_, i64>(1)? as u32))
+        })?
+        .collect::<rusqlite::Result<_>>()?;
+    Ok(GossipCatalog {
+        menus,
+        template_menus,
+        default_text: npc_texts
+            .get(&DEFAULT_NPC_TEXT_ID)
+            .cloned()
+            .unwrap_or_default(),
+    })
+}
+
+/// broadcast_text id → MaleText, or FemaleText when MaleText is empty.
+fn load_broadcast_texts(conn: &Connection) -> rusqlite::Result<HashMap<u32, String>> {
+    conn.prepare("SELECT ID, MaleText, FemaleText FROM broadcast_text")?
+        .query_map(params![], |row| {
+            let male: Option<String> = row.get(1)?;
+            let female: Option<String> = row.get(2)?;
+            Ok((
+                row.get::<_, i64>(0)? as u32,
+                first_non_empty([male, female]),
+            ))
+        })?
+        .collect()
+}
+
+fn first_non_empty<const N: usize>(texts: [Option<String>; N]) -> String {
+    texts
+        .into_iter()
+        .flatten()
+        .find(|text| !text.is_empty())
+        .unwrap_or_default()
+}
+
+/// npc_text id → text of its most probable slot (lowest slot on ties).
+fn load_npc_texts(
+    conn: &Connection,
+    broadcast: &HashMap<u32, String>,
+) -> rusqlite::Result<HashMap<u32, String>> {
+    let columns: Vec<String> = (0..NPC_TEXT_SLOTS)
+        .map(|slot| format!("text{slot}_0, text{slot}_1, BroadcastTextID{slot}, Probability{slot}"))
+        .collect();
+    let sql = format!("SELECT ID, {} FROM npc_text", columns.join(", "));
+    conn.prepare(&sql)?
+        .query_map(params![], |row| {
+            Ok((
+                row.get::<_, i64>(0)? as u32,
+                npc_text_from_row(row, broadcast)?,
+            ))
+        })?
+        .collect()
+}
+
+fn npc_text_from_row(row: &Row, broadcast: &HashMap<u32, String>) -> rusqlite::Result<String> {
+    let mut best: Option<(f64, String)> = None;
+    for slot in 0..NPC_TEXT_SLOTS {
+        let base = 1 + slot * 4;
+        let broadcast_id = row.get::<_, i64>(base + 2)? as u32;
+        let text = broadcast
+            .get(&broadcast_id)
+            .filter(|text| !text.is_empty())
+            .cloned()
+            .unwrap_or_else(|| first_non_empty([row.get(base).ok(), row.get(base + 1).ok()]));
+        let probability: f64 = row.get(base + 3)?;
+        if text.is_empty() || best.as_ref().is_some_and(|(p, _)| *p >= probability) {
+            continue;
+        }
+        best = Some((probability, text));
+    }
+    Ok(best.map(|(_, text)| text).unwrap_or_default())
+}
+
+fn load_menu_texts(
+    conn: &Connection,
+    npc_texts: &HashMap<u32, String>,
+) -> rusqlite::Result<HashMap<u32, GossipMenuData>> {
+    conn.prepare("SELECT MenuID, MIN(TextID) FROM gossip_menu GROUP BY MenuID")?
+        .query_map(params![], |row| {
+            let text_id = row.get::<_, i64>(1)? as u32;
+            Ok((
+                row.get::<_, i64>(0)? as u32,
+                GossipMenuData {
+                    text: npc_texts.get(&text_id).cloned().unwrap_or_default(),
+                    options: Vec::new(),
+                },
+            ))
+        })?
+        .collect()
+}
+
+fn load_menu_options(
+    conn: &Connection,
+    broadcast: &HashMap<u32, String>,
+    menus: &mut HashMap<u32, GossipMenuData>,
+) -> rusqlite::Result<()> {
+    let mut stmt = conn.prepare(
+        "SELECT MenuID, OptionID, OptionIcon, OptionText, OptionBroadcastTextID,
+                OptionType, OptionNpcFlag, ActionMenuID
+         FROM gossip_menu_option ORDER BY MenuID, OptionID",
+    )?;
+    let rows = stmt.query_map(params![], |row| {
+        let broadcast_id = row.get::<_, i64>(4)? as u32;
+        let option_text: Option<String> = row.get(3)?;
+        let text = broadcast
+            .get(&broadcast_id)
+            .filter(|text| !text.is_empty())
+            .cloned()
+            .unwrap_or_else(|| first_non_empty([option_text]));
+        Ok((
+            row.get::<_, i64>(0)? as u32,
+            GossipOptionData {
+                option_id: row.get::<_, i64>(1)? as u32,
+                icon: row.get::<_, i64>(2)? as u8,
+                text,
+                option_type: row.get::<_, i64>(5)? as u8,
+                npc_flag: NpcFlags::from_azerothcore(row.get::<_, i64>(6)? as u32),
+                action_menu_id: row.get::<_, i64>(7)? as u32,
+            },
+        ))
+    })?;
+    for row in rows {
+        let (menu_id, option) = row?;
+        menus.entry(menu_id).or_default().options.push(option);
+    }
+    Ok(())
+}
