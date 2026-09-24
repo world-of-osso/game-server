@@ -15,7 +15,8 @@
 //!
 //! There is no ContentTuning level scaling, so every creature is an older
 //! expansion than a level 30+ player; the `Gain` "10% XP for creatures of
-//! lower expansion" rule is omitted, or levelling would stall past 30.
+//! lower expansion" rule is omitted, or levelling would stall past 30; the
+//! same holds for the `XPValue` ÷9 on old-expansion quests at level 80+.
 use std::collections::HashSet;
 
 use bevy::prelude::*;
@@ -41,13 +42,6 @@ pub(crate) const MAX_LEVEL: u8 = crate::spell_info::MAX_LEVEL as u8;
 /// Group members this close to the killed creature share kill XP
 /// (TrinityCore `CONFIG_GROUP_XP_DISTANCE` default).
 const GROUP_XP_DISTANCE: f32 = 74.0;
-
-/// `EXPANSION_LEVEL_CURRENT` for 12.x: Midnight.
-const CURRENT_EXPANSION: u8 = 11;
-/// `GetMaxLevelForExpansion(CURRENT_EXPANSION - 1)`: The War Within cap.
-const PREVIOUS_EXPANSION_MAX_LEVEL: u8 = 80;
-/// Quest content is AzerothCore Wrath data ([[content-import]]).
-const QUEST_CONTENT_EXPANSION: u8 = 2;
 
 fn row<T: Copy>(table: &[T], level: u8) -> T {
     table[usize::from(level.max(1) - 1).min(table.len() - 1)]
@@ -226,7 +220,9 @@ fn round_xp_value(xp: u32) -> u32 {
 
 /// `Quest::XPValue`. Imported quests carry a fixed `QuestLevel` (-1 = the
 /// player's level) instead of Retail ContentTuning, so a quest far below the
-/// player keeps the `diffFactor` reduction (10/10 down to 1/10).
+/// player keeps the `diffFactor` reduction (10/10 down to 1/10). The ÷9 for
+/// old-expansion quests at level 80+ is omitted: all imported quests are
+/// Wrath content, so it would cut every quest past 80.
 pub(crate) fn quest_xp(quest_level: i32, player_level: u8, difficulty: u8) -> u32 {
     let quest_level = if quest_level > 0 {
         quest_level
@@ -240,11 +236,7 @@ pub(crate) fn quest_xp(quest_level: i32, player_level: u8, difficulty: u8) -> u3
         return 0;
     };
     let diff_factor = (2 * (quest_level - i32::from(player_level)) + 12).clamp(1, 10) as u32;
-    let mut xp = diff_factor * base / 10;
-    if player_level >= PREVIOUS_EXPANSION_MAX_LEVEL && QUEST_CONTENT_EXPANSION < CURRENT_EXPANSION {
-        xp = (xp as f32 / 9.0) as u32;
-    }
-    round_xp_value(xp)
+    round_xp_value(diff_factor * base / 10)
 }
 
 /// `Player::GiveXP` levelling loop: `(level, xp)` after adding `amount`.

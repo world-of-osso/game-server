@@ -133,9 +133,14 @@ fn quest_xp_uses_quest_xp_db2_with_the_low_level_reduction() {
     assert_eq!(quest_xp(1, 10, 3), 10);
     // QuestLevel -1 scales to the player: level 10 difficulty 5 = 1415, rounded.
     assert_eq!(quest_xp(-1, 10, 5), 1400);
-    // Level 80+: old-expansion quests give 1/9 (11765 / 9, rounded).
-    assert_eq!(quest_xp(80, 80, 5), 1300);
     assert_eq!(quest_xp(255, 10, 5), 0);
+}
+
+#[test]
+fn level_85_quest_at_level_85_gets_the_full_quest_xp_without_the_expansion_cut() {
+    // QuestXP level 85 difficulty 5 = 12440, rounded to 50; no ÷9 past 80.
+    assert_eq!(quest_xp(85, 85, 5), 12_450);
+    assert_eq!(quest_xp(80, 80, 5), 11_750);
 }
 
 #[test]

@@ -36,7 +36,7 @@
 - `quest_xp` (XPValue):
   - Base: `QuestXP[quest level][RewardXPDifficulty]`.
   - Multiplied by `diffFactor = clamp(2 × (quest level − player level) + 12, 1, 10) / 10`.
-  - At player level 80+: divided by 9, because all quest content is AzerothCore Wrath (expansion 2 < 11).
+  - Retail's ÷9 at player level 80+ for old-expansion quests is omitted: all quest content is AzerothCore Wrath, so it would cut every quest past 80. A level 85 quest at 85 (difficulty 5) gives the full 12,450.
   - Rounded by `RoundXPValue`.
 - Imported quests have a fixed `QuestLevel` instead of Retail ContentTuning, where −1 means the player's level. Quests far below the player therefore keep the reduction.
 - A Threat Within 783 (level 1, difficulty 3) gives 100 at level 1, 20 at level 6 and 10 at level 10.
