@@ -236,3 +236,7 @@ Created `systems/quests.md` (quest data, rules, runtime) and `specs/quests.md`; 
 ## [2026-09-24] update | NPC patrol paths, formations, creature addons
 
 [[creature-ai]]: MovementType 2 walks creature_addon/creature_template_addon `path_id` (not guid), delays in ms, run/walk per move_type, point orientation; formation followers; addon mount and auras. [[world-data]]: creature_addon, creature_template_addon, creature_formations tables.
+
+## [2026-09-24] update | Patrol death and respawn
+
+[[creature-ai]]: dead creatures stop wandering/patrolling/following; patrollers respawn at spawn and restart their path.

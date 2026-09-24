@@ -33,6 +33,18 @@ struct Spawned(HashMap<u32, Entity>);
 
 /// App running the creature AI with only the spawns in `guids`.
 fn patrol_app(guids: &'static [u32]) -> App {
+    patrol_app_with(guids, |_| {})
+}
+
+/// `patrol_app` plus the NPC respawn timer.
+fn respawning_patrol_app(guids: &'static [u32]) -> App {
+    patrol_app_with(guids, |app| {
+        app.init_resource::<crate::combat::CombatLog>();
+        app.add_systems(FixedUpdate, crate::combat::respawn_system);
+    })
+}
+
+fn patrol_app_with(guids: &'static [u32], extra: impl FnOnce(&mut App)) -> App {
     let mut app = App::new();
     app.add_plugins(MinimalPlugins);
     // One 20 Hz server tick per update, so every arrival is observed.
@@ -44,6 +56,7 @@ fn patrol_app(guids: &'static [u32]) -> App {
     ));
     app.insert_resource(load_world_data(&world_db_path()));
     app.add_plugins(CreatureAiPlugin);
+    extra(&mut app);
     app.add_systems(
         PostStartup,
         |mut commands: Commands, world_data: Res<WorldData>| {
@@ -268,4 +281,136 @@ fn northshire_guard_carries_its_addon_aura() {
         .collect();
     assert_eq!(spells, vec![18950], "Invisibility and Stealth Detection");
     assert!(app.world().get::<AddonAuras>(guard).is_none());
+}
+
+/// Run until the patroller has newly arrived at `count` points.
+fn run_arrivals(app: &mut App, patroller: Entity, count: usize) {
+    let arrived_now = |app: &App| app.world().get::<WaypointState>(patroller).unwrap().arrived;
+    let mut arrivals = 0;
+    let mut was_arrived = arrived_now(app);
+    for _ in 0..20_000 {
+        app.update();
+        let arrived = arrived_now(app);
+        if arrived && !was_arrived {
+            arrivals += 1;
+            if arrivals == count {
+                return;
+            }
+        }
+        was_arrived = arrived;
+    }
+    panic!("only {arrivals} of {count} arrivals");
+}
+
+fn position(app: &App, entity: Entity) -> Position {
+    *app.world().get::<Position>(entity).unwrap()
+}
+
+fn kill(app: &mut App, entity: Entity, respawn_timer: f32) {
+    app.world_mut()
+        .entity_mut(entity)
+        .insert(crate::combat::DeathState { respawn_timer });
+}
+
+#[test]
+#[ignore]
+fn killed_northshire_guard_lies_still_then_respawns_at_spawn_and_restarts_its_path() {
+    let spawn = spawn_of(NORTHSHIRE_GUARD);
+    let (sx, sy, sz) =
+        crate::terrain_height::wow_to_bevy(spawn.position_x, spawn.position_y, spawn.position_z);
+    let mut app = respawning_patrol_app(&[NORTHSHIRE_GUARD]);
+    let guard = entity_of(&app, NORTHSHIRE_GUARD);
+    run_arrivals(&mut app, guard, 4);
+    // Mid-leg toward point 5.
+    for _ in 0..10 {
+        app.update();
+    }
+    assert_eq!(
+        app.world()
+            .get::<WaypointState>(guard)
+            .unwrap()
+            .current_index,
+        4
+    );
+    kill(&mut app, guard, 2.0);
+    let corpse = position(&app, guard);
+    for _ in 0..30 {
+        app.update();
+        assert_eq!(
+            position(&app, guard),
+            corpse,
+            "a dead patroller does not move"
+        );
+    }
+
+    while app
+        .world()
+        .get::<crate::combat::DeathState>(guard)
+        .is_some()
+    {
+        app.update();
+    }
+    let state = app.world().get::<WaypointState>(guard).unwrap();
+    assert_eq!(state.current_index, 0, "path restarted at point 1");
+    assert_eq!(state.leg_origin, (sx, sz));
+    let respawned = position(&app, guard);
+    assert_eq!((respawned.x, respawned.y, respawned.z), (sx, sy, sz));
+
+    // The guard spawns on point 1: it arrives there first, then walks on.
+    run_arrivals(&mut app, guard, 1);
+    assert_eq!(
+        app.world()
+            .get::<WaypointState>(guard)
+            .unwrap()
+            .current_index,
+        0
+    );
+    run_arrivals(&mut app, guard, 1);
+    assert_eq!(
+        app.world()
+            .get::<WaypointState>(guard)
+            .unwrap()
+            .current_index,
+        1,
+        "then walks on to point 2, not the point it died heading for"
+    );
+}
+
+#[test]
+#[ignore]
+fn dead_escort_and_escorts_of_a_dead_leader_hold_still() {
+    let mut app = patrol_app(&[MOUNTAINEER_LEADER, 4479, 4480]);
+    let leader = entity_of(&app, MOUNTAINEER_LEADER);
+    let (dead_escort, escort) = (entity_of(&app, 4479), entity_of(&app, 4480));
+    run_arrivals(&mut app, leader, 3);
+
+    kill(&mut app, dead_escort, 600.0);
+    let corpse = position(&app, dead_escort);
+    let escort_before = position(&app, escort);
+    run_arrivals(&mut app, leader, 2);
+    assert_eq!(
+        position(&app, dead_escort),
+        corpse,
+        "dead escort left behind"
+    );
+    assert_ne!(
+        position(&app, escort),
+        escort_before,
+        "live escort kept following"
+    );
+
+    for _ in 0..5 {
+        app.update();
+    }
+    kill(&mut app, leader, 600.0);
+    let (leader_corpse, escort_stopped) = (position(&app, leader), position(&app, escort));
+    for _ in 0..200 {
+        app.update();
+        assert_eq!(position(&app, leader), leader_corpse);
+        assert_eq!(
+            position(&app, escort),
+            escort_stopped,
+            "a dead leader drags no one"
+        );
+    }
 }

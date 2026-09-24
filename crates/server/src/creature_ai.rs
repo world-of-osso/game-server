@@ -2,6 +2,7 @@ use bevy::prelude::*;
 use lightyear::prelude::ReplicationDirtyQueue;
 use shared::components::{Health, Position, Rotation, ThreatTable};
 
+use crate::combat::DeathState;
 use crate::interest::{InterestDirtyQueue, mark_interest_position_changed};
 use crate::terrain_height::{bevy_to_wow, wow_to_bevy};
 use crate::world_data::{WaypointMoveType, WaypointPath, WaypointPoint, WorldData};
@@ -91,6 +92,11 @@ impl WaypointState {
         }
     }
 
+    /// Walk the path again from its first point, leaving from `origin`.
+    pub fn restart(&mut self, origin: (f32, f32)) {
+        *self = Self::new(self.path_id, self.speed_walk, self.speed_run, origin);
+    }
+
     fn speed(&self, move_type: WaypointMoveType) -> f32 {
         match move_type {
             WaypointMoveType::Walk => self.speed_walk * BASE_WALK_SPEED,
@@ -142,13 +148,16 @@ impl CreatureState {
 fn wander_system(
     time: Res<Time>,
     dirty_queue: Option<Res<InterestDirtyQueue>>,
-    mut query: Query<(
-        Entity,
-        &mut Position,
-        &SpawnPoint,
-        &mut WanderState,
-        Option<&CreatureState>,
-    )>,
+    mut query: Query<
+        (
+            Entity,
+            &mut Position,
+            &SpawnPoint,
+            &mut WanderState,
+            Option<&CreatureState>,
+        ),
+        Without<DeathState>,
+    >,
 ) {
     let dt = time.delta_secs();
     for (entity, mut pos, spawn, mut state, creature_state) in &mut query {
@@ -242,13 +251,16 @@ fn waypoint_system(
     world_data: Res<WorldData>,
     dirty_queue: Option<Res<InterestDirtyQueue>>,
     replication_dirty: Option<Res<ReplicationDirtyQueue>>,
-    mut query: Query<(
-        Entity,
-        &mut Position,
-        &mut WaypointState,
-        Option<&mut Rotation>,
-        Option<&CreatureState>,
-    )>,
+    mut query: Query<
+        (
+            Entity,
+            &mut Position,
+            &mut WaypointState,
+            Option<&mut Rotation>,
+            Option<&CreatureState>,
+        ),
+        Without<DeathState>,
+    >,
 ) {
     let dt = time.delta_secs();
     for (entity, mut pos, mut state, rotation, creature_state) in &mut query {
@@ -323,17 +335,26 @@ fn start_next_leg(state: &mut WaypointState, position: &Position, path_len: usiz
 /// Move formation members with their patrolling leader (CreatureGroup::LeaderMoveTo):
 /// each member heads for the leader's current point offset by `follow_dist` at
 /// `follow_angle` from the leg's direction, at the speed that lands it there
-/// when the leader arrives.
+/// when the leader arrives. Dead members and members of a dead leader hold
+/// still: LeaderMoveTo skips `!member->IsAlive()`, a dead leader never reaches
+/// StartMove, and its death dismisses the group (`Creature::setDeathState` →
+/// `FormationReset(true, false)`, which leaves members' motion untouched).
 fn formation_system(
     world_data: Res<WorldData>,
     dirty_queue: Option<Res<InterestDirtyQueue>>,
-    leaders: Query<(&Position, &WaypointState, Option<&CreatureState>), Without<FormationMember>>,
-    mut members: Query<(
-        Entity,
-        &mut Position,
-        &FormationMember,
-        Option<&CreatureState>,
-    )>,
+    leaders: Query<
+        (&Position, &WaypointState, Option<&CreatureState>),
+        (Without<FormationMember>, Without<DeathState>),
+    >,
+    mut members: Query<
+        (
+            Entity,
+            &mut Position,
+            &FormationMember,
+            Option<&CreatureState>,
+        ),
+        Without<DeathState>,
+    >,
 ) {
     for (entity, mut pos, member, member_state) in &mut members {
         if matches!(member_state, Some(s) if !s.is_idle()) {

@@ -6,7 +6,7 @@ use shared::protocol::{CombatChannel, CombatEvent, CombatEventType};
 
 use crate::auras::AuraStatMods;
 use crate::auras::procs::{self, AuraEvent, PendingAuraEvents};
-use crate::creature_ai::SpawnPoint;
+use crate::creature_ai::{SpawnPoint, WaypointState};
 use crate::faction::{FactionTemplates, UnitFaction};
 use crate::interest::{InterestDirtyQueue, NetworkVisibility, mark_interest_position_changed};
 use crate::networking::CombatTarget;
@@ -506,8 +506,10 @@ fn refresh_combat_state(
     }
 }
 
-/// Tick respawn timers and restore dead NPCs when ready.
-fn respawn_system(
+/// Tick respawn timers and restore dead NPCs when ready. A patroller
+/// restarts its path from the first point (AzerothCore `Creature::Respawn` →
+/// `Motion_Initialize` → a new WaypointMovementGenerator at `i_path->begin()`).
+pub(crate) fn respawn_system(
     time: Res<Time>,
     mut query: Query<(
         Entity,
@@ -515,6 +517,7 @@ fn respawn_system(
         &mut Health,
         &SpawnPoint,
         &mut Position,
+        Option<&mut WaypointState>,
     )>,
     mut commands: Commands,
     dirty_queue: Option<Res<InterestDirtyQueue>>,
@@ -525,7 +528,7 @@ fn respawn_system(
     let elapsed = time.elapsed_secs_f64();
     let mut events = Vec::new();
 
-    for (entity, mut death, mut health, spawn, mut pos) in &mut query {
+    for (entity, mut death, mut health, spawn, mut pos, waypoint) in &mut query {
         death.respawn_timer -= dt;
         if death.respawn_timer > 0.0 {
             continue;
@@ -537,6 +540,9 @@ fn respawn_system(
         if *pos != next_position {
             *pos = next_position;
             mark_interest_position_changed(dirty_queue.as_deref(), entity);
+        }
+        if let Some(mut waypoint) = waypoint {
+            waypoint.restart((spawn.x, spawn.z));
         }
         commands.entity(entity).remove::<DeathState>().insert((
             Replicate::to_clients(NetworkTarget::All),

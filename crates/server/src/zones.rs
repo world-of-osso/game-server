@@ -280,13 +280,17 @@ fn insert_waypoint(
     if !world_data.waypoints.contains_key(&path_id) {
         return;
     }
-    let (bx, _, bz) =
+    let (bx, by, bz) =
         crate::terrain_height::wow_to_bevy(spawn.position_x, spawn.position_y, spawn.position_z);
-    entity.insert(WaypointState::new(
-        path_id,
-        template.speed_walk,
-        template.speed_run,
-        (bx, bz),
+    entity.insert((
+        SpawnPoint {
+            x: bx,
+            y: by,
+            z: bz,
+            wander_distance: spawn.wander_distance,
+            speed_walk: template.speed_walk,
+        },
+        WaypointState::new(path_id, template.speed_walk, template.speed_run, (bx, bz)),
     ));
 }
 

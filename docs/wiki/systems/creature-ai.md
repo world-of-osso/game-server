@@ -29,7 +29,11 @@ Per point (`WaypointMovementGenerator::StartMove`/`OnArrived`): walk to the poin
 
 ## Formations
 
-`creature_formations` members with `GROUP_AI_FLAG_FOLLOW_LEADER` (0x200) get `FormationMember { leader, follow_dist, follow_angle }` when their leader is spawned; groups whose leader has no own row never move (AzerothCore `CreatureGroup::AddMember`). `formation_system` runs after `waypoint_system` (`CreatureGroup::LeaderMoveTo`): each tick the leader moves, a member heads for the leader's current point offset by `follow_dist` at `follow_angle` (degrees in the table) from the leg direction, closing its distance in the leader's proportion so both arrive together. Members hold while the leader pauses or fights. AzerothCore mirrors the angle when the leader turns more than 90° from its facing; the server always uses the travel-direction offset. Assist/evade group AI flags are not implemented.
+`creature_formations` members with `GROUP_AI_FLAG_FOLLOW_LEADER` (0x200) get `FormationMember { leader, follow_dist, follow_angle }` when their leader is spawned; groups whose leader has no own row never move (AzerothCore `CreatureGroup::AddMember`). `formation_system` runs after `waypoint_system` (`CreatureGroup::LeaderMoveTo`): each tick the leader moves, a member heads for the leader's current point offset by `follow_dist` at `follow_angle` (degrees in the table) from the leg direction, closing its distance in the leader's proportion so both arrive together. Members hold while the leader pauses or fights. Dead members, and members of a dead leader, stay where they are (`LeaderMoveTo` skips dead members; a dead leader never reaches `StartMove`; `setDeathState` dismisses the group with `FormationReset(true, false)`). AzerothCore mirrors the angle when the leader turns more than 90° from its facing; the server always uses the travel-direction offset. Assist/evade group AI flags are not implemented.
+
+## Death and Respawn
+
+Wander, waypoint and formation systems skip entities with `DeathState`. Patrollers carry a `SpawnPoint`, so `combat::respawn_system` restores them at their spawn after the respawn timer and restarts the path from its first point (`WaypointState::restart`; AzerothCore `Creature::Respawn` → `Motion_Initialize` → new `WaypointMovementGenerator`). Idle (MovementType 0) spawns, including most formation members, have no `SpawnPoint` and do not respawn.
 
 ## Chase and Aggro
 
@@ -52,7 +56,7 @@ Spawn-time `creature_addon`/`creature_template_addon` fields (`zones.rs`): `moun
 
 ## SpawnPoint Component
 
-Wandering creatures carry a `SpawnPoint`:
+Wandering and patrolling creatures carry a `SpawnPoint`:
 - `x, y, z` — original spawn coordinates
 - `wander_distance` — radius for random wander
 - `speed_walk` — creature's walk speed multiplier (from `creature_template.speed_walk`)

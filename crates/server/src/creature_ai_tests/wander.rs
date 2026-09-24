@@ -263,3 +263,41 @@ fn wander_targets_respect_boundary_across_spawns() {
         }
     }
 }
+
+#[test]
+fn dead_wanderer_does_not_move() {
+    let mut app = ai_test_app();
+    let spawn = SpawnPoint {
+        x: 50.0,
+        y: 0.0,
+        z: 80.0,
+        wander_distance: 5.0,
+        speed_walk: 1.0,
+    };
+    let corpse = Position {
+        x: 52.0,
+        y: 0.0,
+        z: 81.0,
+    };
+    let entity = app
+        .world_mut()
+        .spawn((
+            corpse,
+            spawn,
+            WanderState {
+                phase: WanderPhase::Walking,
+                target_x: 55.0,
+                target_z: 80.0,
+                idle_remaining: 0.0,
+                seed: 1,
+            },
+            crate::combat::DeathState {
+                respawn_timer: 60.0,
+            },
+        ))
+        .id();
+    for _ in 0..40 {
+        app.update();
+    }
+    assert_eq!(*app.world().get::<Position>(entity).unwrap(), corpse);
+}
