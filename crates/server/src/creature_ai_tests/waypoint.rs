@@ -9,6 +9,7 @@ fn patrol_returns_to_nearest_waypoint_after_combat() {
         position_y: y,
         position_z: z,
         delay: 0,
+        ..Default::default()
     };
 
     let path = WaypointPath {
@@ -75,6 +76,7 @@ fn waypoint_creature_follows_path_in_order() {
         position_y: y,
         position_z: z,
         delay: 0,
+        ..Default::default()
     };
 
     let path = WaypointPath {
@@ -89,33 +91,23 @@ fn waypoint_creature_follows_path_in_order() {
         y: 0.0,
         z: 0.0,
     };
-    let mut state = WaypointState {
-        creature_guid: 1,
-        current_index: 0,
-        delay_remaining: 0.0,
-        speed_walk: 1.0,
-    };
-
-    pos = tick_waypoint(pos, &mut state, &path, 0.1);
-    assert_eq!(state.current_index, 1, "advanced past wp 0");
-
-    for _ in 0..500 {
-        if state.current_index != 1 {
+    let mut state = WaypointState::new(1, 1.0, 1.0, (10.0, 0.0));
+    let mut reached = Vec::new();
+    for _ in 0..2000 {
+        let was_arrived = state.arrived;
+        pos = tick_waypoint(pos, &mut state, &path, 0.1).0;
+        if state.arrived && !was_arrived {
+            reached.push((state.current_index, pos.x));
+        }
+        if reached.len() == 4 {
             break;
         }
-        pos = tick_waypoint(pos, &mut state, &path, 0.1);
     }
-    assert_eq!(state.current_index, 2, "advanced past wp 1");
-    assert!((pos.x - 20.0).abs() < 0.5, "reached wp 1 at x=20");
-
-    for _ in 0..500 {
-        if state.current_index != 2 {
-            break;
-        }
-        pos = tick_waypoint(pos, &mut state, &path, 0.1);
-    }
-    assert_eq!(state.current_index, 0, "wrapped back to wp 0");
-    assert!((pos.x - 30.0).abs() < 0.5, "reached wp 2 at x=30");
+    assert_eq!(
+        reached,
+        vec![(0, 10.0), (1, 20.0), (2, 30.0), (0, 10.0)],
+        "points reached in order, then the path wraps"
+    );
 }
 
 #[test]
@@ -128,13 +120,15 @@ fn waypoint_creature_pauses_at_delay() {
                 position_x: 10.0,
                 position_y: 0.0,
                 position_z: 0.0,
-                delay: 3,
+                delay: 3000,
+                ..Default::default()
             },
             WaypointPoint {
                 position_x: 20.0,
                 position_y: 0.0,
                 position_z: 0.0,
                 delay: 0,
+                ..Default::default()
             },
         ],
     };
@@ -143,33 +137,29 @@ fn waypoint_creature_pauses_at_delay() {
         y: 0.0,
         z: 0.0,
     };
-    let mut state = WaypointState {
-        creature_guid: 1,
-        current_index: 0,
-        delay_remaining: 0.0,
-        speed_walk: 1.0,
-    };
+    let mut state = WaypointState::new(1, 1.0, 1.0, (10.0, 0.0));
 
-    pos = tick_waypoint(pos, &mut state, &path, 0.5);
-    assert_eq!(state.current_index, 1);
+    pos = tick_waypoint(pos, &mut state, &path, 0.5).0;
+    assert!(state.arrived);
+    assert_eq!(state.current_index, 0);
     assert!(
         (state.delay_remaining - 3.0).abs() < 0.01,
-        "delay set to 3s"
+        "waypoint_data.delay is milliseconds: 3000 ms pauses 3 s"
     );
 
-    let pos_before = pos;
-    pos = tick_waypoint(pos, &mut state, &path, 0.5);
-    assert_eq!(pos.x, pos_before.x, "no movement during delay");
-    assert!(state.delay_remaining > 0.0, "still delaying");
-
-    for _ in 0..10 {
-        pos = tick_waypoint(pos, &mut state, &path, 0.5);
+    for _ in 0..5 {
+        let before = pos;
+        pos = tick_waypoint(pos, &mut state, &path, 0.5).0;
+        assert_eq!(pos, before, "no movement during delay");
     }
-    assert!(state.delay_remaining <= 0.0, "delay expired");
+    assert_eq!(state.current_index, 0, "still paused after 2.5 s");
 
-    let pos_after_delay = pos.x;
-    pos = tick_waypoint(pos, &mut state, &path, 0.5);
-    assert!(pos.x > pos_after_delay, "moving toward wp 1 after delay");
+    pos = tick_waypoint(pos, &mut state, &path, 0.5).0;
+    assert_eq!(
+        state.current_index, 1,
+        "next leg starts when the 3 s delay ends"
+    );
+    assert!(pos.x > 10.0, "moving toward wp 1 after delay");
 }
 
 #[test]
@@ -184,6 +174,7 @@ fn waypoint_at_current_position_does_not_dirty_position() {
             position_y: 0.0,
             position_z: 0.0,
             delay: 0,
+            ..Default::default()
         }],
     };
     let mut app = App::new();
@@ -193,6 +184,7 @@ fn waypoint_at_current_position_does_not_dirty_position() {
         spawns: vec![],
         spawns_by_map: HashMap::new(),
         waypoints: HashMap::from([(7, path)]),
+        ..Default::default()
     });
     app.update();
     app.update();
@@ -204,15 +196,7 @@ fn waypoint_at_current_position_does_not_dirty_position() {
     };
     let entity = app
         .world_mut()
-        .spawn((
-            position,
-            WaypointState {
-                creature_guid: 7,
-                current_index: 0,
-                delay_remaining: 0.0,
-                speed_walk: 1.0,
-            },
-        ))
+        .spawn((position, WaypointState::new(7, 1.0, 1.0, (0.0, 0.0))))
         .id();
     app.update();
 
@@ -241,14 +225,19 @@ fn waypoint_at_current_position_does_not_dirty_position() {
 }
 
 #[test]
-fn advance_waypoint_wraps() {
+fn next_leg_wraps_and_starts_from_the_reached_point() {
     let mut state = WaypointState {
-        creature_guid: 1,
         current_index: 3,
-        delay_remaining: 0.0,
-        speed_walk: 1.0,
+        arrived: true,
+        ..WaypointState::new(1, 1.0, 1.0, (0.0, 0.0))
     };
-    advance_waypoint(&mut state, 2.0, 4);
+    let at = Position {
+        x: 5.0,
+        y: 0.0,
+        z: -2.0,
+    };
+    start_next_leg(&mut state, &at, 4);
     assert_eq!(state.current_index, 0);
-    assert_eq!(state.delay_remaining, 2.0);
+    assert!(!state.arrived);
+    assert_eq!(state.leg_origin, (5.0, -2.0));
 }

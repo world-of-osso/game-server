@@ -34,6 +34,7 @@ fn ai_test_app() -> App {
         spawns: vec![],
         spawns_by_map: HashMap::new(),
         waypoints: HashMap::new(),
+        ..Default::default()
     });
     app.add_systems(
         FixedUpdate,

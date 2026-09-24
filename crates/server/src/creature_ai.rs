@@ -1,12 +1,15 @@
 use bevy::prelude::*;
 use lightyear::prelude::ReplicationDirtyQueue;
-use shared::components::{Health, Position, ThreatTable};
+use shared::components::{Health, Position, Rotation, ThreatTable};
 
 use crate::interest::{InterestDirtyQueue, mark_interest_position_changed};
-use crate::world_data::{WaypointPath, WorldData};
+use crate::terrain_height::{bevy_to_wow, wow_to_bevy};
+use crate::world_data::{WaypointMoveType, WaypointPath, WaypointPoint, WorldData};
 
 /// Walk speed in world-units per second (base WoW walk speed).
 const BASE_WALK_SPEED: f32 = 2.5;
+/// Run speed in world-units per second (AzerothCore `baseMoveSpeed[MOVE_RUN]`).
+const BASE_RUN_SPEED: f32 = 7.0;
 /// Maximum chase distance from spawn before evading (yards).
 const LEASH_DISTANCE: f32 = 40.0;
 /// Idle pause range in seconds after reaching a wander destination.
@@ -21,7 +24,7 @@ impl Plugin for CreatureAiPlugin {
             FixedUpdate,
             (
                 wander_system,
-                waypoint_system,
+                (waypoint_system, formation_system).chain(),
                 (chase_system, leash_check_system, return_to_spawn_system).chain(),
             ),
         );
@@ -59,10 +62,52 @@ pub enum WanderPhase {
 /// State for waypoint-pathing creatures (movement_type=2).
 #[derive(Component, Debug)]
 pub struct WaypointState {
-    pub creature_guid: u32,
+    /// `waypoint_data.id` from the spawn's creature addon.
+    pub path_id: u32,
+    /// Point walked toward, or reached and waiting out its delay.
     pub current_index: usize,
+    /// `current_index` was reached; the next leg starts when the delay ends.
+    pub arrived: bool,
     pub delay_remaining: f32,
     pub speed_walk: f32,
+    pub speed_run: f32,
+    /// Bevy (x, z) the current leg started from.
+    pub leg_origin: (f32, f32),
+    /// Distance covered in the last tick (0 while paused).
+    pub moved: f32,
+}
+
+impl WaypointState {
+    pub fn new(path_id: u32, speed_walk: f32, speed_run: f32, origin: (f32, f32)) -> Self {
+        Self {
+            path_id,
+            current_index: 0,
+            arrived: false,
+            delay_remaining: 0.0,
+            speed_walk,
+            speed_run,
+            leg_origin: origin,
+            moved: 0.0,
+        }
+    }
+
+    fn speed(&self, move_type: WaypointMoveType) -> f32 {
+        match move_type {
+            WaypointMoveType::Walk => self.speed_walk * BASE_WALK_SPEED,
+            WaypointMoveType::Run | WaypointMoveType::Land | WaypointMoveType::Takeoff => {
+                self.speed_run * BASE_RUN_SPEED
+            }
+        }
+    }
+}
+
+/// `creature_formations` member that moves with its patrolling leader.
+#[derive(Component, Debug)]
+pub struct FormationMember {
+    pub leader: Entity,
+    pub follow_dist: f32,
+    /// Radians, relative to the leader's direction of travel.
+    pub follow_angle: f32,
 }
 
 /// High-level creature behavior state. Overrides wander/waypoint when non-idle.
@@ -196,25 +241,121 @@ fn waypoint_system(
     time: Res<Time>,
     world_data: Res<WorldData>,
     dirty_queue: Option<Res<InterestDirtyQueue>>,
+    replication_dirty: Option<Res<ReplicationDirtyQueue>>,
     mut query: Query<(
         Entity,
         &mut Position,
         &mut WaypointState,
+        Option<&mut Rotation>,
         Option<&CreatureState>,
     )>,
 ) {
     let dt = time.delta_secs();
-    for (entity, mut pos, mut state, creature_state) in &mut query {
+    for (entity, mut pos, mut state, rotation, creature_state) in &mut query {
+        state.moved = 0.0;
         if matches!(creature_state, Some(s) if !s.is_idle()) {
             continue;
         }
-        let Some(path) = world_data.waypoints.get(&state.creature_guid) else {
+        let Some(path) = world_data.waypoints.get(&state.path_id) else {
             continue;
         };
         if path.points.is_empty() {
             continue;
         }
-        let next_position = tick_waypoint(*pos, &mut state, path, dt);
+        let (next_position, facing) = tick_waypoint(*pos, &mut state, path, dt);
+        if *pos != next_position {
+            *pos = next_position;
+            mark_interest_position_changed(dirty_queue.as_deref(), entity);
+        }
+        if let (Some(orientation), Some(mut rotation)) = (facing, rotation) {
+            rotation.y = orientation + std::f32::consts::FRAC_PI_2;
+            if let Some(replication_dirty) = replication_dirty.as_deref() {
+                replication_dirty.mark(entity);
+            }
+        }
+    }
+}
+
+/// Advance one tick along the path (WaypointMovementGenerator::StartMove /
+/// OnArrived): walk to the current point, wait its `delay` ms, then start the
+/// next leg, wrapping after the last point. Returns the new position and the
+/// point's orientation when it is to be faced (arrival with a delay).
+fn tick_waypoint(
+    mut position: Position,
+    state: &mut WaypointState,
+    path: &WaypointPath,
+    dt: f32,
+) -> (Position, Option<f32>) {
+    if state.delay_remaining > 0.0 {
+        state.delay_remaining -= dt;
+        if state.delay_remaining > 0.0 {
+            return (position, None);
+        }
+    }
+    if state.arrived {
+        start_next_leg(state, &position, path.points.len());
+    }
+    let point = &path.points[state.current_index % path.points.len()];
+    // Waypoint data is WoW coords; convert target to Bevy for movement.
+    let (tx, ty, tz) = wow_to_bevy(point.position_x, point.position_y, point.position_z);
+    let step = state.speed(point.move_type) * dt;
+    let (reached, nx, nz) = move_toward(position.x, position.z, tx, tz, step);
+    state.moved = (nx - position.x).hypot(nz - position.z);
+    position.x = nx;
+    position.z = nz;
+    if !reached {
+        return (position, None);
+    }
+    position.y = ty;
+    state.arrived = true;
+    state.delay_remaining = point.delay as f32 / 1000.0;
+    (position, point.orientation.filter(|_| point.delay > 0))
+}
+
+fn start_next_leg(state: &mut WaypointState, position: &Position, path_len: usize) {
+    state.arrived = false;
+    state.leg_origin = (position.x, position.z);
+    state.current_index = (state.current_index + 1) % path_len;
+}
+
+// -- Formation logic --
+
+/// Move formation members with their patrolling leader (CreatureGroup::LeaderMoveTo):
+/// each member heads for the leader's current point offset by `follow_dist` at
+/// `follow_angle` from the leg's direction, at the speed that lands it there
+/// when the leader arrives.
+fn formation_system(
+    world_data: Res<WorldData>,
+    dirty_queue: Option<Res<InterestDirtyQueue>>,
+    leaders: Query<(&Position, &WaypointState, Option<&CreatureState>), Without<FormationMember>>,
+    mut members: Query<(
+        Entity,
+        &mut Position,
+        &FormationMember,
+        Option<&CreatureState>,
+    )>,
+) {
+    for (entity, mut pos, member, member_state) in &mut members {
+        if matches!(member_state, Some(s) if !s.is_idle()) {
+            continue;
+        }
+        let Ok((leader_pos, leg, leader_state)) = leaders.get(member.leader) else {
+            continue;
+        };
+        if leg.moved <= 0.0 || matches!(leader_state, Some(s) if !s.is_idle()) {
+            continue;
+        }
+        let Some(point) = world_data
+            .waypoints
+            .get(&leg.path_id)
+            .and_then(|path| path.points.get(leg.current_index))
+        else {
+            continue;
+        };
+        let slot = formation_slot(leg.leg_origin, point, member);
+        let (px, _, pz) = wow_to_bevy(point.position_x, point.position_y, point.position_z);
+        let leader_remaining = (px - leader_pos.x).hypot(pz - leader_pos.z);
+        let next_position = follow_leader_step(*pos, slot, leader_remaining, leg.moved);
         if *pos != next_position {
             *pos = next_position;
             mark_interest_position_changed(dirty_queue.as_deref(), entity);
@@ -222,34 +363,37 @@ fn waypoint_system(
     }
 }
 
-fn tick_waypoint(
-    mut position: Position,
-    state: &mut WaypointState,
-    path: &WaypointPath,
-    dt: f32,
-) -> Position {
-    if state.delay_remaining > 0.0 {
-        state.delay_remaining -= dt;
-        return position;
-    }
-    let point = &path.points[state.current_index % path.points.len()];
-    // Waypoint data is WoW coords; convert target to Bevy for movement.
-    let (tx, ty, tz) =
-        crate::terrain_height::wow_to_bevy(point.position_x, point.position_y, point.position_z);
-    let speed = state.speed_walk * BASE_WALK_SPEED;
-    let (reached, nx, nz) = move_toward(position.x, position.z, tx, tz, speed * dt);
-    position.x = nx;
-    position.z = nz;
-    if reached {
-        position.y = ty;
-        advance_waypoint(state, point.delay as f32, path.points.len());
-    }
-    position
+/// Bevy position of a member's slot at `point`: AzerothCore offsets
+/// `follow_angle` from the leg's direction (its `pathAngle` points back at the
+/// leader, then flips by pi whenever the leader faces its travel direction).
+fn formation_slot(origin: (f32, f32), point: &WaypointPoint, member: &FormationMember) -> Position {
+    let (ox, oy, _) = bevy_to_wow(origin.0, 0.0, origin.1);
+    let heading = (point.position_y - oy).atan2(point.position_x - ox);
+    let angle = heading + member.follow_angle;
+    let (x, y, z) = wow_to_bevy(
+        point.position_x + angle.cos() * member.follow_dist,
+        point.position_y + angle.sin() * member.follow_dist,
+        point.position_z,
+    );
+    Position { x, y, z }
 }
 
-fn advance_waypoint(state: &mut WaypointState, delay_secs: f32, path_len: usize) {
-    state.delay_remaining = delay_secs;
-    state.current_index = (state.current_index + 1) % path_len;
+/// Close the member's distance to `slot` in the same proportion the leader
+/// closed its own distance this tick (`leader_moved` of `leader_remaining +
+/// leader_moved`), so both arrive together.
+fn follow_leader_step(
+    mut position: Position,
+    slot: Position,
+    leader_remaining: f32,
+    leader_moved: f32,
+) -> Position {
+    let keep = leader_remaining / (leader_remaining + leader_moved);
+    if keep <= 0.0 {
+        return slot;
+    }
+    position.x = slot.x + (position.x - slot.x) * keep;
+    position.z = slot.z + (position.z - slot.z) * keep;
+    position
 }
 
 // -- Chase logic --

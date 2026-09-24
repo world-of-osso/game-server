@@ -35,6 +35,18 @@ fn create_world_schema(conn: &rusqlite::Connection) {
         CREATE TABLE waypoint_data (
             id INTEGER, point INTEGER, position_x REAL, position_y REAL, position_z REAL,
             orientation REAL, delay INTEGER, move_type INTEGER
+        );
+        CREATE TABLE creature_addon (
+            guid INTEGER PRIMARY KEY, path_id INTEGER, mount INTEGER, bytes1 INTEGER,
+            bytes2 INTEGER, emote INTEGER, visibilityDistanceType INTEGER, auras TEXT
+        );
+        CREATE TABLE creature_template_addon (
+            entry INTEGER PRIMARY KEY, path_id INTEGER, mount INTEGER, bytes1 INTEGER,
+            bytes2 INTEGER, emote INTEGER, visibilityDistanceType INTEGER, auras TEXT
+        );
+        CREATE TABLE creature_formations (
+            leaderGUID INTEGER, memberGUID INTEGER PRIMARY KEY, dist REAL, angle REAL,
+            groupAI INTEGER, point_1 INTEGER, point_2 INTEGER
         );",
     )
     .expect("create world schema");
@@ -187,7 +199,7 @@ fn world_data_models_attached_to_templates() {
 }
 
 #[test]
-fn world_data_waypoints_grouped_by_creature() {
+fn world_data_waypoints_grouped_by_path() {
     let path = write_to_temp_sqlite(|conn| {
         conn.execute_batch(
             "INSERT INTO waypoint_data VALUES (1,1, 0.0,0.0,0.0,0.0,500,0);

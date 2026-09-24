@@ -452,6 +452,7 @@ fn build_graveyard_registry_uses_spirit_healer_spawns() {
                 faction: 0,
                 npc_flags: shared::death::NPC_FLAG_SPIRIT_HEALER,
                 speed_walk: 1.0,
+                speed_run: 1.0,
                 health_modifier: 1.0,
                 rank: 0,
                 experience_modifier: 1.0,
@@ -475,6 +476,7 @@ fn build_graveyard_registry_uses_spirit_healer_spawns() {
         }],
         spawns_by_map: [(0, vec![0])].into_iter().collect(),
         waypoints: default(),
+        ..Default::default()
     };
 
     let registry = build_graveyard_registry(&world_data);

@@ -10,7 +10,7 @@ Determined by `creature.movement_type` in SQLite (see [[world-data]]):
 |------|-----------|----------|
 | 0 | none | Idle — stands at spawn point |
 | 1 | `WanderState` | Random wander within `wander_distance` of spawn |
-| 2 | `WaypointState` | Follows ordered `waypoint_data` patrol path |
+| 2 | `WaypointState` | Follows the spawn's creature-addon `path_id` in `waypoint_data` |
 
 ## Wander System
 
@@ -23,7 +23,13 @@ Wander respects `SpawnPoint.wander_distance` — targets are always within that 
 
 ## Waypoint System
 
-`WaypointState` follows `WaypointPath` loaded from `WorldData.waypoints`. Points loop (`current_index % path_len`). Each point has an optional `delay` (seconds); the creature pauses before advancing to the next. Waypoint coordinates are stored in WoW space and converted to Bevy space via `wow_to_bevy()`.
+`waypoint_data.id` is a **path ID**, not a creature guid. A MovementType 2 spawn walks `path_id` from its `creature_addon` row, else its `creature_template_addon` row (AzerothCore `Creature::GetCreatureAddon` → `LoadCreaturesAddon` sets `m_path_id`; `WaypointMovementGenerator::LoadPath` reads `GetWaypointPath()`). With no addon path the spawn idles: AzerothCore never derives `guid*10` (`ObjectMgr::LoadCreatureAddons` resets such spawns to idle). Of 6,554 MovementType 2 spawns, 6,543 resolve a path this way.
+
+Per point (`WaypointMovementGenerator::StartMove`/`OnArrived`): walk to the point, pause `delay` **milliseconds**, then start the next leg; the path wraps after the last point. `move_type` 0 walks (`speed_walk * 2.5`), 1 runs (`speed_run * 7.0`); 2/3 (land/takeoff) also use run speed since flight is not modelled. A point's `orientation` is faced (`Rotation`) on arrival only when it has a delay. `waypoint_data.action` (waypoint_scripts) is not run. Waypoint coordinates are WoW space, converted via `wow_to_bevy()`.
+
+## Formations
+
+`creature_formations` members with `GROUP_AI_FLAG_FOLLOW_LEADER` (0x200) get `FormationMember { leader, follow_dist, follow_angle }` when their leader is spawned; groups whose leader has no own row never move (AzerothCore `CreatureGroup::AddMember`). `formation_system` runs after `waypoint_system` (`CreatureGroup::LeaderMoveTo`): each tick the leader moves, a member heads for the leader's current point offset by `follow_dist` at `follow_angle` (degrees in the table) from the leg direction, closing its distance in the leader's proportion so both arrive together. Members hold while the leader pauses or fights. AzerothCore mirrors the angle when the leader turns more than 90° from its facing; the server always uses the travel-direction offset. Assist/evade group AI flags are not implemented.
 
 ## Chase and Aggro
 
@@ -40,9 +46,13 @@ Threat is tracked in the `ThreatTable` component (from `shared/src/threat.rs`). 
 
 `return_to_spawn_system` then walks the creature back to its spawn point at walk speed. On arrival, `CreatureState` → `Idle` and normal AI resumes.
 
+## Creature addon mount and auras
+
+Spawn-time `creature_addon`/`creature_template_addon` fields (`zones.rs`): `mount` → replicated `Mounted { mount_display_id }`; `auras` → self-cast through the aura runtime on the next FixedUpdate (`apply_addon_auras`; spells missing from `SpellStore` are logged). `bytes1` (stand state), `bytes2` (sheath), `emote` (`UNIT_NPC_EMOTESTATE`) and `visibilityDistanceType` are imported but not applied: the protocol has no persistent stand/emote state.
+
 ## SpawnPoint Component
 
-All creatures carry a `SpawnPoint`:
+Wandering creatures carry a `SpawnPoint`:
 - `x, y, z` — original spawn coordinates
 - `wander_distance` — radius for random wander
 - `speed_walk` — creature's walk speed multiplier (from `creature_template.speed_walk`)
@@ -61,6 +71,6 @@ Creature data is stored in WoW coordinate space. The AI operates in Bevy space (
 
 ## See Also
 
-- [[world-data]] — `creature`, `creature_template`, `waypoint_data` tables
+- [[world-data]] — `creature`, `creature_template`, `waypoint_data`, `creature_addon`, `creature_formations` tables
 - [[combat]] — `CombatTarget` drives the Pursuing state; leash evade restores HP
 - [[tick-model]] — AI systems run at step 2 of the 20Hz pipeline

@@ -232,3 +232,7 @@ Created `systems/quests.md` (quest data, rules, runtime) and `specs/quests.md`; 
 ## [2026-09-24] create | NPC interaction
 
 [[npc-interaction]]: NpcFlags replication, InteractNpc/SelectGossipOption/CloseInteraction, gossip menus, ActiveInteraction session; auction requests require an auctioneer session and use its faction house.
+
+## [2026-09-24] update | NPC patrol paths, formations, creature addons
+
+[[creature-ai]]: MovementType 2 walks creature_addon/creature_template_addon `path_id` (not guid), delays in ms, run/walk per move_type, point orientation; formation followers; addon mount and auras. [[world-data]]: creature_addon, creature_template_addon, creature_formations tables.

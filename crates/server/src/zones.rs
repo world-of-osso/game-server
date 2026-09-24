@@ -1,13 +1,15 @@
 use bevy::prelude::*;
 use lightyear::prelude::*;
 use shared::components::{
-    Health, ModelDisplay, Npc, Position, Rotation, UnitFactionTemplate, UnitLevel, UnitPowers, Zone,
+    Health, ModelDisplay, Mounted, Npc, Position, Rotation, UnitFactionTemplate, UnitLevel,
+    UnitPowers, Zone,
 };
 use shared::protocol::NpcFlags;
+use std::collections::HashMap;
 
-use crate::creature_ai::{SpawnPoint, WanderPhase, WanderState, WaypointState};
+use crate::creature_ai::{FormationMember, SpawnPoint, WanderPhase, WanderState, WaypointState};
 use crate::interest::NetworkVisibility;
-use crate::world_data::WorldData;
+use crate::world_data::{CreatureAddon, CreatureSpawn, GROUP_AI_FLAG_FOLLOW_LEADER, WorldData};
 
 /// Elwynn/Northshire spatial bounds for initial creature spawning.
 const SPAWN_MIN_X: f32 = -9600.0;
@@ -19,7 +21,8 @@ pub struct ZonePlugin;
 
 impl Plugin for ZonePlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(PostStartup, spawn_elwynn_creatures);
+        app.add_systems(PostStartup, spawn_elwynn_creatures)
+            .add_systems(FixedUpdate, apply_addon_auras);
     }
 }
 
@@ -35,16 +38,25 @@ fn spawn_elwynn_core(commands: &mut Commands, world_data: &WorldData, replicate:
         warn!("No spawns found for map 0 (Eastern Kingdoms)");
         return 0;
     };
+    let spawns = indices
+        .iter()
+        .map(|&idx| &world_data.spawns[idx])
+        .filter(|spawn| in_elwynn_bounds(spawn.position_x, spawn.position_y));
+    spawn_creatures(commands, world_data, replicate, spawns).len() as u32
+}
 
-    let mut count = 0u32;
-    for &idx in indices {
-        let spawn = &world_data.spawns[idx];
-        if !in_elwynn_bounds(spawn.position_x, spawn.position_y) {
-            continue;
-        }
+/// Spawn `spawns` with their AI, addon and formation components; returns
+/// the entity of each spawn guid.
+fn spawn_creatures<'a>(
+    commands: &mut Commands,
+    world_data: &WorldData,
+    replicate: bool,
+    spawns: impl Iterator<Item = &'a CreatureSpawn>,
+) -> HashMap<u32, Entity> {
+    let mut entities = HashMap::new();
+    for spawn in spawns {
         let display_id = resolve_display_id(world_data, spawn.template_entry);
         let health = resolve_health(world_data, spawn.template_entry);
-        let speed_walk = resolve_speed_walk(world_data, spawn.template_entry);
         let template = world_data
             .templates
             .get(&spawn.template_entry)
@@ -70,10 +82,91 @@ fn spawn_elwynn_core(commands: &mut Commands, world_data: &WorldData, replicate:
                 NetworkVisibility::default(),
             ));
         }
-        insert_ai_components(&mut entity, spawn, speed_walk, world_data);
-        count += 1;
+        let addon = world_data.addon_for(spawn);
+        insert_ai_components(&mut entity, spawn, template, addon, world_data);
+        if let Some(addon) = addon {
+            insert_addon_components(&mut entity, addon);
+        }
+        entities.insert(spawn.guid, entity.id());
     }
-    count
+    insert_formation_members(commands, world_data, &entities);
+    entities
+}
+
+/// `creature_addon` mount and auras (Creature::LoadCreaturesAddon).
+fn insert_addon_components(entity: &mut EntityCommands, addon: &CreatureAddon) {
+    if addon.mount != 0 {
+        entity.insert(Mounted {
+            mount_display_id: addon.mount,
+        });
+    }
+    if !addon.auras.is_empty() {
+        entity.insert(AddonAuras(addon.auras.clone()));
+    }
+}
+
+/// Link spawned followers to their spawned leader (FormationMgr::AddCreatureToGroup).
+fn insert_formation_members(
+    commands: &mut Commands,
+    world_data: &WorldData,
+    entities: &HashMap<u32, Entity>,
+) {
+    for (guid, &member) in entities {
+        let Some(info) = world_data.formations.get(guid) else {
+            continue;
+        };
+        if info.group_ai & GROUP_AI_FLAG_FOLLOW_LEADER == 0 {
+            continue;
+        }
+        let Some(&leader) = entities.get(&info.leader_guid) else {
+            continue;
+        };
+        commands.entity(member).insert(FormationMember {
+            leader,
+            follow_dist: info.follow_dist,
+            follow_angle: info.follow_angle,
+        });
+    }
+}
+
+/// `creature_addon.auras` not yet applied to the spawned creature.
+#[derive(Component, Debug)]
+pub(crate) struct AddonAuras(pub Vec<u32>);
+
+/// Self-cast addon auras once the creature exists (Creature::LoadCreaturesAddon `AddAura`).
+fn apply_addon_auras(world: &mut World) {
+    let pending: Vec<(Entity, Vec<u32>)> = world
+        .query::<(Entity, &AddonAuras)>()
+        .iter(world)
+        .map(|(entity, auras)| (entity, auras.0.clone()))
+        .collect();
+    for (creature, spell_ids) in pending {
+        world.entity_mut(creature).remove::<AddonAuras>();
+        for spell_id in spell_ids {
+            apply_addon_aura(world, creature, spell_id);
+        }
+    }
+}
+
+fn apply_addon_aura(world: &mut World, creature: Entity, spell_id: u32) {
+    let Some(effect_mask) = world
+        .get_resource::<crate::spell_info::SpellStore>()
+        .and_then(|store| store.get(spell_id))
+        .map(crate::auras::aura_effect_mask)
+    else {
+        warn!("creature_addon aura spell {spell_id} not in SpellStore");
+        return;
+    };
+    crate::auras::apply_aura(
+        world,
+        &crate::auras::AuraApplication {
+            caster: creature,
+            target: creature,
+            spell_id,
+            effect_mask,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
 }
 
 /// Core creature components without replication marker.
@@ -133,25 +226,18 @@ fn resolve_health(world_data: &WorldData, template_entry: u32) -> f32 {
         .unwrap_or(100.0)
 }
 
-fn resolve_speed_walk(world_data: &WorldData, template_entry: u32) -> f32 {
-    world_data
-        .templates
-        .get(&template_entry)
-        .map(|t| t.speed_walk)
-        .unwrap_or(1.0)
-}
-
 fn insert_ai_components(
     entity: &mut EntityCommands,
-    spawn: &crate::world_data::CreatureSpawn,
-    speed_walk: f32,
+    spawn: &CreatureSpawn,
+    template: &crate::world_data::CreatureTemplate,
+    addon: Option<&CreatureAddon>,
     world_data: &WorldData,
 ) {
     let movement_type = spawn.movement_type;
     if movement_type == 1 {
-        insert_wander(entity, spawn, speed_walk);
+        insert_wander(entity, spawn, template.speed_walk);
     } else if movement_type == 2 {
-        insert_waypoint(entity, spawn, speed_walk, world_data);
+        insert_waypoint(entity, spawn, template, addon, world_data);
     }
 }
 
@@ -178,22 +264,35 @@ fn insert_wander(
     });
 }
 
+/// MovementType 2 walks the addon's `path_id` (Creature::LoadCreaturesAddon
+/// sets `m_path_id`; WaypointMovementGenerator::LoadPath reads it). Without
+/// an addon path AzerothCore idles the spawn (ObjectMgr::LoadCreatureAddons).
 fn insert_waypoint(
     entity: &mut EntityCommands,
-    spawn: &crate::world_data::CreatureSpawn,
-    speed_walk: f32,
+    spawn: &CreatureSpawn,
+    template: &crate::world_data::CreatureTemplate,
+    addon: Option<&CreatureAddon>,
     world_data: &WorldData,
 ) {
-    if !world_data.waypoints.contains_key(&spawn.guid) {
+    let Some(path_id) = addon.map(|addon| addon.path_id).filter(|&id| id != 0) else {
+        return;
+    };
+    if !world_data.waypoints.contains_key(&path_id) {
         return;
     }
-    entity.insert(WaypointState {
-        creature_guid: spawn.guid,
-        current_index: 0,
-        delay_remaining: 0.0,
-        speed_walk,
-    });
+    let (bx, _, bz) =
+        crate::terrain_height::wow_to_bevy(spawn.position_x, spawn.position_y, spawn.position_z);
+    entity.insert(WaypointState::new(
+        path_id,
+        template.speed_walk,
+        template.speed_run,
+        (bx, bz),
+    ));
 }
+
+#[cfg(test)]
+#[path = "zones_world_db_tests.rs"]
+mod world_db_tests;
 
 #[cfg(test)]
 mod tests {
@@ -210,6 +309,7 @@ mod tests {
             faction: 0,
             npc_flags: 0,
             speed_walk: 1.0,
+            speed_run: 1.0,
             health_modifier: health_mod,
             rank: 0,
             experience_modifier: 1.0,
@@ -232,6 +332,7 @@ mod tests {
             spawns,
             spawns_by_map,
             waypoints: HashMap::new(),
+            ..Default::default()
         }
     }
 
@@ -258,7 +359,7 @@ mod tests {
         conn.execute_batch(
             "CREATE TABLE creature_template (entry INTEGER, minlevel INTEGER, maxlevel INTEGER,
                 faction INTEGER, npcflag INTEGER, speed_walk REAL, HealthModifier REAL, name TEXT, rank INTEGER, exp INTEGER,
-                ExperienceModifier REAL, type INTEGER, flags_extra INTEGER);
+                ExperienceModifier REAL, type INTEGER, flags_extra INTEGER, speed_run REAL);
              CREATE TABLE creature_template_model (CreatureID INTEGER, Idx INTEGER,
                 CreatureDisplayID INTEGER, DisplayScale REAL, Probability REAL);
              CREATE TABLE creature (guid INTEGER, id1 INTEGER, map INTEGER, zoneId INTEGER,
@@ -266,7 +367,14 @@ mod tests {
                 MovementType INTEGER, orientation REAL);
              CREATE TABLE game_event_creature (guid INTEGER, eventEntry INTEGER);
              CREATE TABLE waypoint_data (id INTEGER, point INTEGER, position_x REAL,
-                position_y REAL, position_z REAL, delay INTEGER);",
+                position_y REAL, position_z REAL, orientation REAL, delay INTEGER,
+                move_type INTEGER);
+             CREATE TABLE creature_addon (guid INTEGER, path_id INTEGER, mount INTEGER,
+                auras TEXT);
+             CREATE TABLE creature_template_addon (entry INTEGER, path_id INTEGER,
+                mount INTEGER, auras TEXT);
+             CREATE TABLE creature_formations (leaderGUID INTEGER, memberGUID INTEGER,
+                dist REAL, angle REAL, groupAI INTEGER);",
         )
         .unwrap();
         let angles = [
@@ -279,7 +387,7 @@ mod tests {
         for (index, angle) in angles.iter().enumerate() {
             let entry = 100 + index as u32;
             conn.execute(
-                "INSERT INTO creature_template VALUES (?1,1,1,1,0,1.0,1.0,'Loup — Écorché',0,0,1.0,1,0)",
+                "INSERT INTO creature_template VALUES (?1,1,1,1,0,1.0,1.0,'Loup — Écorché',0,0,1.0,1,0,1.14)",
                 [entry],
             )
             .unwrap();

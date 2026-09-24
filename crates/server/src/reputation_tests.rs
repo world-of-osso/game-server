@@ -11,6 +11,7 @@ fn test_world_data(template: CreatureTemplate) -> WorldData {
         spawns: Vec::new(),
         spawns_by_map: HashMap::new(),
         waypoints: HashMap::new(),
+        ..Default::default()
     }
 }
 
@@ -23,6 +24,7 @@ fn test_template(entry: u32, faction: u16, min_level: u8, max_level: u8) -> Crea
         faction,
         npc_flags: 0,
         speed_walk: 1.0,
+        speed_run: 1.0,
         health_modifier: 1.0,
         rank: 0,
         experience_modifier: 1.0,

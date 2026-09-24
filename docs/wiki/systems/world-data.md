@@ -22,7 +22,10 @@ Source: `~/Repos/azerothcore/data/sql/base/db_world/`
 | `creature` | 149,678 | Source spawn instances, including event-only rows; runtime selection applies event membership |
 | `game_event_creature` | Source-dependent | Signed event membership keyed by spawn GUID and event ID |
 | `creature_template_model` | 40,213 | Display models per creature (DisplayID, scale, probability) |
-| `waypoint_data` | 144,657 | Ordered patrol path points with per-point delay (ms) |
+| `waypoint_data` | 144,657 | Patrol points keyed by path ID: delay (ms), move_type, orientation |
+| `creature_addon` | 35,153 | Per-spawn path_id, mount, bytes1/2, emote, visibility, auras |
+| `creature_template_addon` | 11,983 | Same fields per template entry; fallback when a spawn has no row |
+| `creature_formations` | 5,829 | leaderGUID/memberGUID, dist, angle (degrees), groupAI, point_1/2 |
 
 Quest, vendor, trainer, loot, gossip and item tables are imported from the same dumps; tables, row counts, the Wrath→Retail ID mapping and the derived Retail-first `content_*` tables (the ones the server should read) are in [[content-import]]. No server code reads them yet.
 
@@ -73,11 +76,11 @@ Regression coverage: `startup_tests::world_data_excludes_inactive_tournament_spa
 Encoded in `creature.movement_type`:
 - `0` — idle (stands still)
 - `1` — random wander (within `wander_distance` of spawn)
-- `2` — waypoint patrol (follows `waypoint_data` path)
+- `2` — waypoint patrol (follows the addon `path_id` in `waypoint_data`, see [[creature-ai]])
 
 ## Modules
 
-- `crates/server/src/world_data.rs` — `WorldDataPlugin`, `WorldData` resource. Loads templates, spawns, waypoints into `HashMap`s keyed by entry/guid.
+- `crates/server/src/world_data.rs` — `WorldDataPlugin`, `WorldData` resource. Loads templates, spawns, waypoints (by path ID), creature addons (by guid / template entry) and follow formations (by member guid) into `HashMap`s.
 - `crates/server/src/spell_info/` — `SpellInfoPlugin`, `SpellStore`, `ClassSpells` ([[spell-info]]).
 
 ## Race Metadata

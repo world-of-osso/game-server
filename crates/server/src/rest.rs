@@ -233,6 +233,7 @@ mod tests {
             faction: 0,
             npc_flags,
             speed_walk: 1.0,
+            speed_run: 1.0,
             health_modifier: 1.0,
             rank: 0,
             experience_modifier: 1.0,
@@ -264,6 +265,7 @@ mod tests {
             spawns: vec![rest_spawn(position_x, position_y)],
             spawns_by_map: HashMap::from([(0, vec![0])]),
             waypoints: HashMap::new(),
+            ..Default::default()
         }
     }
 

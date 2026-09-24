@@ -149,6 +149,7 @@ fn pursuing_pauses_waypoint() {
         position_y: y,
         position_z: z,
         delay: 0,
+        ..Default::default()
     };
 
     let mut waypoints = HashMap::new();
@@ -166,6 +167,7 @@ fn pursuing_pauses_waypoint() {
         spawns: vec![],
         spawns_by_map: HashMap::new(),
         waypoints,
+        ..Default::default()
     });
     app.update();
     app.update();
@@ -178,12 +180,7 @@ fn pursuing_pauses_waypoint() {
                 y: 0.0,
                 z: 0.0,
             },
-            WaypointState {
-                creature_guid: 1,
-                current_index: 0,
-                delay_remaining: 0.0,
-                speed_walk: 1.0,
-            },
+            WaypointState::new(1, 1.0, 1.0, (0.0, 0.0)),
             CreatureState::Pursuing { target: 1 },
         ))
         .id();

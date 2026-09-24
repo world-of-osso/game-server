@@ -507,6 +507,7 @@ fn world_with_creature(entry: u32, min_level: u8) -> crate::world_data::WorldDat
         faction: 32,
         npc_flags: 0,
         speed_walk: 1.0,
+        speed_run: 1.0,
         health_modifier: 1.0,
         rank: 0,
         experience_modifier: 1.0,
@@ -518,6 +519,7 @@ fn world_with_creature(entry: u32, min_level: u8) -> crate::world_data::WorldDat
         spawns: Vec::new(),
         spawns_by_map: std::collections::HashMap::new(),
         waypoints: std::collections::HashMap::new(),
+        ..Default::default()
     }
 }
 
