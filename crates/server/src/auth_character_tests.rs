@@ -7,6 +7,7 @@ use lightyear::prelude::{
 };
 use shared::components::{
     CharacterAppearance, EquipmentVisualSlot, EquippedAppearanceEntry, Gold, Health, Player,
+    UnitLevel,
 };
 use shared::currency::currency_by_id;
 use shared::death::DeathState;
@@ -106,28 +107,12 @@ fn load_selected_character_state_syncs_pvp_currencies_from_wallet() {
     assert_eq!(state.pvp.progress.conquest, 80);
 }
 
-#[test]
-fn selecting_zero_health_character_queues_one_death_transition() {
-    let db = test_db();
-    let account_id = 7;
-    let (character_id, _) = persistence::create_character(&db.db, account_id, "DeadChar", 1, 1)
-        .expect("character should be created");
-    let mut data = persistence::load_character(&db.db, character_id)
-        .expect("created character should have persisted data");
-    data.health = 0.0;
-    data.equipment_appearance.entries = vec![EquippedAppearanceEntry {
-        slot: EquipmentVisualSlot::Head,
-        item_id: Some(100),
-        display_info_id: Some(200),
-        inventory_type: 1,
-        hidden: false,
-    }];
-    persistence::save_character(&db.db, character_id, &data);
-
-    let expected_initial = crate::durability::load_equipped_durability(&data);
-    let mut expected_after_death = expected_initial.clone();
-    assert!(apply_death_loss(&mut expected_after_death));
-
+/// Runs `SelectCharacter` through `process_select_character` and returns the spawned player.
+fn select_character_in_world(
+    db: GameDatabase,
+    account_id: u64,
+    character_id: u64,
+) -> (App, Entity) {
     let mut app = App::new();
     app.add_plugins(MinimalPlugins);
     app.add_plugins(bevy::state::app::StatesPlugin);
@@ -178,6 +163,50 @@ fn selecting_zero_health_character_queues_one_death_transition() {
         .iter(app.world())
         .find_map(|(entity, client_id)| (client_id.0 == character_id).then_some(entity))
         .expect("selecting a character should spawn its player entity");
+    (app, player)
+}
+
+#[test]
+fn selected_player_replicates_its_persisted_level_as_unit_level() {
+    let db = test_db();
+    let account_id = 9;
+    let (character_id, _) = persistence::create_character(&db.db, account_id, "Leveled", 1, 2)
+        .expect("character should be created");
+    let mut data = persistence::load_character(&db.db, character_id).unwrap();
+    data.level = 14;
+    persistence::save_character(&db.db, character_id, &data);
+
+    let (app, player) = select_character_in_world(db, account_id, character_id);
+
+    assert_eq!(
+        app.world().entity(player).get::<UnitLevel>(),
+        Some(&UnitLevel(14))
+    );
+}
+
+#[test]
+fn selecting_zero_health_character_queues_one_death_transition() {
+    let db = test_db();
+    let account_id = 7;
+    let (character_id, _) = persistence::create_character(&db.db, account_id, "DeadChar", 1, 1)
+        .expect("character should be created");
+    let mut data = persistence::load_character(&db.db, character_id)
+        .expect("created character should have persisted data");
+    data.health = 0.0;
+    data.equipment_appearance.entries = vec![EquippedAppearanceEntry {
+        slot: EquipmentVisualSlot::Head,
+        item_id: Some(100),
+        display_info_id: Some(200),
+        inventory_type: 1,
+        hidden: false,
+    }];
+    persistence::save_character(&db.db, character_id, &data);
+
+    let expected_initial = crate::durability::load_equipped_durability(&data);
+    let mut expected_after_death = expected_initial.clone();
+    assert!(apply_death_loss(&mut expected_after_death));
+
+    let (mut app, player) = select_character_in_world(db, account_id, character_id);
     let player_entity = app.world().entity(player);
     assert_eq!(player_entity.get::<Health>().unwrap().current, 0.0);
     let death_state = player_entity
