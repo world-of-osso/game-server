@@ -8,6 +8,7 @@ use shared::protocol::{
     SetTarget,
 };
 
+use crate::group::GroupRegistry;
 use crate::ignore_list::PlayerIgnoreListState;
 use crate::networking::{ChatHistoryBuffer, ChatHistoryEntry, CombatTarget, PlayerLink};
 use crate::persistence::{self, ClientId, GameDatabase};
@@ -18,13 +19,6 @@ const SAY_RANGE: f32 = 25.0;
 const YELL_RANGE: f32 = 300.0;
 const CHAT_HISTORY_LIMIT: usize = 100;
 
-/// Party identity for party chat routing. The group system inserts this on every
-/// member's player entity and removes it on leave; no component means no party.
-#[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
-pub struct PartyMembership {
-    pub party_id: u64,
-}
-
 type ChatProfileQuery<'w, 's> = Query<
     'w,
     's,
@@ -33,7 +27,7 @@ type ChatProfileQuery<'w, 's> = Query<
         Option<&'static Position>,
         Option<&'static Zone>,
         Option<&'static GuildMembership>,
-        Option<&'static PartyMembership>,
+        Option<&'static ClientId>,
         Option<&'static PlayerIgnoreListState>,
     ),
 >;
@@ -70,6 +64,7 @@ pub(crate) struct ChatSystemQueries<'w, 's> {
     chat_senders: Query<'w, 's, (&'static PlayerLink, &'static mut MessageSender<ChatMessage>)>,
     emote_senders: Query<'w, 's, (&'static PlayerLink, &'static mut MessageSender<EmoteEvent>)>,
     history: ResMut<'w, ChatHistoryBuffer>,
+    groups: Res<'w, GroupRegistry>,
     time: Res<'w, Time>,
     auto_afk: ResMut<'w, crate::friends::AutoAfkScheduler>,
     replication_dirty: Option<Res<'w, ReplicationDirtyQueue>>,
@@ -94,7 +89,7 @@ pub fn process_chat_messages(mut q: ChatSystemQueries) {
         let online = online_participants(&q.chat_senders, &q.profiles);
         collected
             .iter()
-            .flat_map(|chat| route_and_record(chat, &online, &mut q.history))
+            .flat_map(|chat| route_and_record(chat, &online, &q.groups, &mut q.history))
             .collect::<Vec<_>>()
     };
     send_deliveries(deliveries, &mut q.chat_senders);
@@ -165,7 +160,8 @@ struct ChatParticipant<'a> {
     position: Option<&'a Position>,
     zone: Option<&'a Zone>,
     guild_id: Option<u32>,
-    party_id: Option<u64>,
+    /// Character id (`ClientId`), the key for group membership.
+    character_id: Option<u64>,
     ignored: &'a [String],
 }
 
@@ -254,14 +250,15 @@ fn online_participants<'a>(
     conns
         .iter()
         .filter_map(|(link, _)| {
-            let (player, position, zone, guild, party, ignore_list) = profiles.get(link.0).ok()?;
+            let (player, position, zone, guild, client_id, ignore_list) =
+                profiles.get(link.0).ok()?;
             Some(ChatParticipant {
                 entity: link.0,
                 name: &player.name,
                 position,
                 zone,
                 guild_id: guild.map(|g| g.guild_id),
-                party_id: party.map(|p| p.party_id),
+                character_id: client_id.map(|id| id.0),
                 ignored: ignore_list.map_or(&[], |list| list.names.as_slice()),
             })
         })
@@ -273,12 +270,13 @@ fn online_participants<'a>(
 fn route_and_record(
     chat: &CollectedChat,
     online: &[ChatParticipant],
+    groups: &GroupRegistry,
     history: &mut ChatHistoryBuffer,
 ) -> Vec<(Entity, ChatMessage)> {
     let Some(sender) = online.iter().find(|p| p.entity == chat.sender_entity) else {
         return Vec::new();
     };
-    match route_chat(&chat.msg, sender, online) {
+    match route_chat(&chat.msg, sender, online, groups) {
         ChatRoute::Reject(text) => vec![(sender.entity, system_message(text))],
         ChatRoute::Deliver(recipients) => {
             record_history(history, &chat.msg, &recipients, online);
@@ -294,6 +292,7 @@ fn route_chat(
     msg: &ChatMessage,
     sender: &ChatParticipant,
     online: &[ChatParticipant],
+    groups: &GroupRegistry,
 ) -> ChatRoute {
     let hears = |recipient: &ChatParticipant| match &msg.channel {
         ChatType::Say | ChatType::Emote => within_range(sender, recipient, SAY_RANGE),
@@ -301,7 +300,10 @@ fn route_chat(
             sender.zone == recipient.zone && within_range(sender, recipient, YELL_RANGE)
         }
         ChatType::Guild => sender.guild_id.is_some() && recipient.guild_id == sender.guild_id,
-        ChatType::Party => recipient.party_id == sender.party_id,
+        ChatType::Party => match (sender.character_id, recipient.character_id) {
+            (Some(a), Some(b)) => groups.is_in_same_group(a, b),
+            _ => false,
+        },
         // Whisper echo only; the target is added below.
         ChatType::Whisper(_) => recipient.entity == sender.entity,
         // Clients may not author system or broadcast messages.
@@ -313,7 +315,11 @@ fn route_chat(
         .map(|recipient| recipient.entity)
         .collect();
     match &msg.channel {
-        ChatType::Party if sender.party_id.is_none() => {
+        ChatType::Party
+            if sender
+                .character_id
+                .is_none_or(|id| groups.group_members(id).is_empty()) =>
+        {
             ChatRoute::Reject("You aren't in a party.".into())
         }
         ChatType::Whisper(target_name) => {
@@ -775,7 +781,7 @@ mod tests {
             position: Some(position),
             zone: None,
             guild_id: None,
-            party_id: None,
+            character_id: None,
             ignored,
         }
     }
@@ -809,7 +815,12 @@ mod tests {
             participant(&mut world, "Carl", &far, &[]),
         ];
 
-        let route = route_chat(&chat("Alice", ChatType::Say), &online[0], &online);
+        let route = route_chat(
+            &chat("Alice", ChatType::Say),
+            &online[0],
+            &online,
+            &GroupRegistry::default(),
+        );
 
         assert_eq!(delivered(route), vec![online[0].entity, online[1].entity]);
     }
@@ -830,7 +841,12 @@ mod tests {
         online[2].zone = Some(&westfall);
         online[3].zone = Some(&elwynn);
 
-        let route = route_chat(&chat("Alice", ChatType::Yell), &online[0], &online);
+        let route = route_chat(
+            &chat("Alice", ChatType::Yell),
+            &online[0],
+            &online,
+            &GroupRegistry::default(),
+        );
 
         assert_eq!(delivered(route), vec![online[0].entity, online[1].entity]);
     }
@@ -849,6 +865,7 @@ mod tests {
             &chat("Alice", ChatType::Whisper("bob".into())),
             &online[0],
             &online,
+            &GroupRegistry::default(),
         );
 
         assert_eq!(delivered(route), vec![online[0].entity, online[1].entity]);
@@ -865,7 +882,8 @@ mod tests {
         };
         let mut history = ChatHistoryBuffer::default();
 
-        let deliveries = route_and_record(&whisper, &online, &mut history);
+        let deliveries =
+            route_and_record(&whisper, &online, &GroupRegistry::default(), &mut history);
 
         assert_eq!(deliveries.len(), 1);
         assert_eq!(deliveries[0].0, online[0].entity);
@@ -891,39 +909,101 @@ mod tests {
             &chat("Alice", ChatType::Whisper("Bob".into())),
             &online[0],
             &online,
+            &GroupRegistry::default(),
         );
 
         assert_eq!(delivered(route), vec![online[0].entity]);
+    }
+
+    fn online_view(online: &[ChatParticipant]) -> crate::group::OnlineView {
+        online
+            .iter()
+            .map(|p| {
+                let member = crate::group::OnlineMember {
+                    entity: p.entity.to_bits(),
+                    name: p.name.into(),
+                    class: 1,
+                    level: 10,
+                };
+                (
+                    p.character_id.expect("participant has a character id"),
+                    member,
+                )
+            })
+            .collect()
+    }
+
+    /// Forms a group through the real invite flow: `leader` invites each of `members`,
+    /// who accept.
+    fn form_group(
+        groups: &mut GroupRegistry,
+        online: &[ChatParticipant],
+        leader: usize,
+        members: &[usize],
+    ) {
+        let view = online_view(online);
+        groups.sync_presence(&view);
+        for &member in members {
+            groups.invite(
+                online[leader].character_id.unwrap(),
+                online[member].name,
+                &view,
+            );
+            groups.respond_invite(online[member].character_id.unwrap(), true);
+        }
+    }
+
+    fn with_character_ids<'a, const N: usize>(
+        mut online: [ChatParticipant<'a>; N],
+    ) -> [ChatParticipant<'a>; N] {
+        for (id, participant) in online.iter_mut().enumerate() {
+            participant.character_id = Some(id as u64 + 1);
+        }
+        online
     }
 
     #[test]
     fn party_chat_without_a_group_returns_not_in_group_error() {
         let mut world = World::new();
         let origin = at(0.0);
-        let online = [
+        let online = with_character_ids([
             participant(&mut world, "Alice", &origin, &[]),
             participant(&mut world, "Bob", &origin, &[]),
-        ];
+        ]);
+        let mut groups = GroupRegistry::default();
+        form_group(&mut groups, &online, 1, &[]);
 
-        let route = route_chat(&chat("Alice", ChatType::Party), &online[0], &online);
+        let route = route_chat(
+            &chat("Alice", ChatType::Party),
+            &online[0],
+            &online,
+            &groups,
+        );
 
         assert_eq!(route, ChatRoute::Reject("You aren't in a party.".into()));
     }
 
     #[test]
-    fn party_chat_reaches_only_party_members() {
+    fn party_chat_reaches_group_members_and_not_other_groups_or_ungrouped() {
         let mut world = World::new();
         let origin = at(0.0);
-        let mut online = [
+        let online = with_character_ids([
             participant(&mut world, "Alice", &origin, &[]),
             participant(&mut world, "Bob", &origin, &[]),
             participant(&mut world, "Carl", &origin, &[]),
-        ];
-        online[0].party_id = Some(7);
-        online[1].party_id = Some(7);
-        online[2].party_id = Some(8);
+            participant(&mut world, "Dana", &origin, &[]),
+            participant(&mut world, "Eve", &origin, &[]),
+        ]);
+        let mut groups = GroupRegistry::default();
+        form_group(&mut groups, &online, 0, &[1]);
+        form_group(&mut groups, &online, 2, &[3]);
 
-        let route = route_chat(&chat("Alice", ChatType::Party), &online[0], &online);
+        let route = route_chat(
+            &chat("Alice", ChatType::Party),
+            &online[0],
+            &online,
+            &groups,
+        );
 
         assert_eq!(delivered(route), vec![online[0].entity, online[1].entity]);
     }
@@ -947,7 +1027,7 @@ mod tests {
                 msg: chat(online[sender].name, channel),
                 sender_entity: online[sender].entity,
             };
-            route_and_record(&collected, &online, &mut history);
+            route_and_record(&collected, &online, &GroupRegistry::default(), &mut history);
         }
 
         let senders_seen_by = |name: &str| {
