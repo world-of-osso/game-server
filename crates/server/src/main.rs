@@ -40,6 +40,10 @@ mod persistence_progression;
 mod persistence_types;
 mod profession;
 mod pvp;
+mod quest;
+mod quest_data;
+mod quest_rules;
+mod quest_view;
 mod race_class;
 mod reputation;
 mod rest;
@@ -110,7 +114,9 @@ fn add_social_plugins(app: &mut App) {
         .add_plugins(trade::TradePlugin)
         .add_plugins(item_templates::ItemTemplatesPlugin)
         .add_plugins(item_stats::ItemScalingPlugin)
-        .add_plugins(inventory::InventoryPlugin);
+        .add_plugins(inventory::InventoryPlugin)
+        .add_plugins(quest_data::QuestDataPlugin)
+        .add_plugins(quest::QuestPlugin);
 }
 
 fn add_progression_plugins(app: &mut App) {

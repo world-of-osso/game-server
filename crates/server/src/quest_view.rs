@@ -1,0 +1,211 @@
+//! Protocol views of quest state and the bag edits quests make.
+use std::collections::BTreeMap;
+
+use redb::Database;
+use shared::protocol::{
+    QuestEntrySnapshot, QuestGiverQuestDetails, QuestLogSnapshot, QuestLogUpdate,
+    QuestObjectiveSnapshot, QuestRewardItem, QuestRewards,
+};
+
+use crate::persistence::quest_store::{ActiveQuestData, QuestLogData};
+use crate::persistence::{self, InventoryData, InventoryItemData};
+use crate::quest_data::{QuestDb, QuestTemplate};
+use crate::quest_rules::{objective_counts, objectives_done};
+
+/// Quest log entries by quest id, as last sent to a client.
+pub(crate) type QuestLogView = BTreeMap<u32, QuestEntrySnapshot>;
+
+pub(crate) fn bag_count(inventory: &InventoryData, item_id: u32) -> u32 {
+    inventory
+        .items
+        .iter()
+        .filter(|item| item.item_id == item_id)
+        .map(|item| item.stack_count)
+        .sum()
+}
+
+/// Remove up to `count` of an item from the bags, emptied stacks first-to-last.
+pub(crate) fn remove_items(inventory: &mut InventoryData, item_id: u32, mut count: u32) {
+    for item in inventory
+        .items
+        .iter_mut()
+        .filter(|item| item.item_id == item_id)
+    {
+        let taken = item.stack_count.min(count);
+        item.stack_count -= taken;
+        count -= taken;
+    }
+    inventory.items.retain(|item| item.stack_count > 0);
+}
+
+/// Add a new stack; the inventory model places it on next load.
+pub(crate) fn grant_item(
+    inventory: &mut InventoryData,
+    db: &Database,
+    quests: &QuestDb,
+    item_id: u32,
+    count: u32,
+) {
+    let info = quests.items.get(&item_id).cloned().unwrap_or_default();
+    inventory.items.push(InventoryItemData {
+        item_guid: persistence::next_id(db, "item_instance"),
+        item_id,
+        name: info.name,
+        quality: info.quality,
+        required_level: info.required_level,
+        stack_count: count,
+        vendor_sell_price: info.sell_price,
+        unique_auction: false,
+    });
+}
+
+fn objective_snapshots(quest: &QuestTemplate, counts: &[u32]) -> Vec<QuestObjectiveSnapshot> {
+    quest
+        .objectives
+        .iter()
+        .zip(counts)
+        .map(|(objective, &current)| QuestObjectiveSnapshot {
+            text: objective.text.clone(),
+            current,
+            required: objective.required,
+            completed: current >= objective.required,
+            kind: objective.kind,
+            object_id: objective.object_id,
+        })
+        .collect()
+}
+
+fn quest_entry(
+    quests: &QuestDb,
+    quest: &QuestTemplate,
+    active: &ActiveQuestData,
+    watched: bool,
+    inventory: &InventoryData,
+) -> QuestEntrySnapshot {
+    let counts = objective_counts(quest, active, |item_id| bag_count(inventory, item_id));
+    QuestEntrySnapshot {
+        quest_id: quest.id,
+        title: quest.title.clone(),
+        zone: String::new(),
+        completed: objectives_done(quest, &counts),
+        repeatability: quest.repeatability(),
+        objectives: objective_snapshots(quest, &counts),
+        level: quest.level,
+        sort_id: quest.sort_id,
+        objectives_text: quest.objectives_text.clone(),
+        completion_text: quest.completion_log.clone(),
+        watched,
+        pois: quests.pois.get(&quest.id).cloned().unwrap_or_default(),
+    }
+}
+
+/// Every quest in the log, in log order.
+pub(crate) fn log_entries(
+    quests: &QuestDb,
+    log: &QuestLogData,
+    inventory: &InventoryData,
+) -> Vec<QuestEntrySnapshot> {
+    log.active
+        .iter()
+        .filter_map(|active| {
+            let quest = quests.quests.get(&active.quest_id)?;
+            let watched = log.watched.contains(&active.quest_id);
+            Some(quest_entry(quests, quest, active, watched, inventory))
+        })
+        .collect()
+}
+
+pub(crate) fn log_snapshot(
+    quests: &QuestDb,
+    log: &QuestLogData,
+    inventory: &InventoryData,
+) -> QuestLogSnapshot {
+    QuestLogSnapshot {
+        entries: log_entries(quests, log, inventory),
+        watched_quest_ids: log.watched.clone(),
+    }
+}
+
+pub(crate) fn view_of(entries: &[QuestEntrySnapshot]) -> QuestLogView {
+    entries
+        .iter()
+        .map(|entry| (entry.quest_id, entry.clone()))
+        .collect()
+}
+
+/// Entries that were added or changed and ids that left, or `None` when the
+/// log and watch list are unchanged.
+pub(crate) fn diff_log(
+    old: &QuestLogView,
+    old_watched: &[u32],
+    new: &QuestLogView,
+    new_watched: &[u32],
+) -> Option<QuestLogUpdate> {
+    let changed: Vec<_> = new
+        .iter()
+        .filter(|(id, entry)| old.get(id) != Some(entry))
+        .map(|(_, entry)| entry.clone())
+        .collect();
+    let removed: Vec<_> = old
+        .keys()
+        .filter(|id| !new.contains_key(id))
+        .copied()
+        .collect();
+    if changed.is_empty() && removed.is_empty() && old_watched == new_watched {
+        return None;
+    }
+    Some(QuestLogUpdate {
+        changed,
+        removed,
+        watched_quest_ids: new_watched.to_vec(),
+    })
+}
+
+fn reward_items(quests: &QuestDb, items: &[(u32, u32)]) -> Vec<QuestRewardItem> {
+    items
+        .iter()
+        .map(|&(item_id, count)| QuestRewardItem {
+            item_id,
+            name: quests.item_name(item_id),
+            count,
+        })
+        .collect()
+}
+
+pub(crate) fn quest_rewards(quests: &QuestDb, quest: &QuestTemplate) -> QuestRewards {
+    QuestRewards {
+        money: quest.reward_money.max(0) as u32,
+        items: reward_items(quests, &quest.reward_items),
+        choice_items: reward_items(quests, &quest.choice_items),
+    }
+}
+
+/// Item objectives as `QuestRewardItem`s (the progress dialog's item list).
+pub(crate) fn required_items(quests: &QuestDb, quest: &QuestTemplate) -> Vec<QuestRewardItem> {
+    let items: Vec<(u32, u32)> = quest
+        .objectives
+        .iter()
+        .filter(|objective| objective.kind == shared::protocol::QuestObjectiveKind::Item)
+        .map(|objective| (objective.object_id, objective.required))
+        .collect();
+    reward_items(quests, &items)
+}
+
+pub(crate) fn quest_details(
+    quests: &QuestDb,
+    quest: &QuestTemplate,
+    npc: u64,
+) -> QuestGiverQuestDetails {
+    QuestGiverQuestDetails {
+        npc,
+        quest_id: quest.id,
+        title: quest.title.clone(),
+        description: quest.description.clone(),
+        objectives_text: quest.objectives_text.clone(),
+        level: quest.level,
+        min_level: quest.min_level,
+        suggested_group: quest.suggested_group,
+        objectives: objective_snapshots(quest, &vec![0; quest.objectives.len()]),
+        rewards: quest_rewards(quests, quest),
+    }
+}

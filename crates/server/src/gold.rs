@@ -25,6 +25,11 @@ impl GoldUpdateQueue {
         self.changed_inventories.insert(character_id);
     }
 
+    /// Characters whose bags changed this frame, before `send_inventory_deltas` takes them.
+    pub(crate) fn changed_inventories(&self) -> &HashSet<u64> {
+        &self.changed_inventories
+    }
+
     pub(crate) fn take_changed_inventories(&mut self) -> HashSet<u64> {
         std::mem::take(&mut self.changed_inventories)
     }

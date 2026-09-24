@@ -32,6 +32,10 @@ use inventory_model::{InventoryModel, InventoryView, diff_views, error};
 #[derive(Component, Debug, Default)]
 pub(crate) struct SentInventoryView(InventoryView);
 
+/// `send_inventory_deltas`, which drains `GoldUpdateQueue`'s changed inventories.
+#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
+pub(crate) struct InventoryDeltas;
+
 pub struct InventoryPlugin;
 
 impl Plugin for InventoryPlugin {
@@ -50,7 +54,9 @@ impl Plugin for InventoryPlugin {
         );
         app.add_systems(
             PostUpdate,
-            send_inventory_deltas.before(ReplicationSystems::Send),
+            send_inventory_deltas
+                .in_set(InventoryDeltas)
+                .before(ReplicationSystems::Send),
         );
     }
 }
@@ -86,6 +92,11 @@ fn load_model(
     })?;
     let mut mint = || persistence::next_id(db, "item_instance");
     Ok(InventoryModel::from_record(record, templates, &mut mint))
+}
+
+/// Empty bag cells once every owned item is placed; 0 when the record is missing.
+pub(crate) fn free_bag_cells(db: &Database, templates: &ItemTemplates, character_id: u64) -> usize {
+    load_model(db, templates, character_id).map_or(0, |model| model.free_cells())
 }
 
 fn send_error(connection: Entity, senders: &mut ErrorSenders, error: InventoryError) {

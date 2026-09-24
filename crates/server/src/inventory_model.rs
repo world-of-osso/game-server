@@ -153,6 +153,14 @@ impl InventoryModel {
             .is_some_and(Option::is_none)
     }
 
+    pub(crate) fn free_cells(&self) -> usize {
+        self.bags
+            .iter()
+            .flatten()
+            .filter(|cell| cell.is_none())
+            .count()
+    }
+
     fn first_free_cell(&self) -> Option<(usize, usize)> {
         self.bags.iter().enumerate().find_map(|(bag, cells)| {
             cells

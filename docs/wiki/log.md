@@ -216,3 +216,7 @@ Created `systems/content-import.md`: 25 content tables imported via new `scripts
 ## [2026-09-24] update | Equipped gear feeds character stats
 
 `systems/character-stats.md`: Gear section (item stat/armor/weapon formulas, squish, tooltip checks), gaps. `systems/inventory.md`: `EquippedItems` sync. `systems/spell-casting.md`: weapon hit uses main-hand damage.
+
+## [2026-09-24] create | Quest runtime
+
+Created `systems/quests.md` (quest data, rules, runtime) and `specs/quests.md`; index entry added.

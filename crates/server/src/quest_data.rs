@@ -1,0 +1,434 @@
+//! Static quest content from world.db `content_quest_*` (Retail-first mapped
+//! AzerothCore rows, see docs/wiki/systems/content-import.md).
+//!
+//! Previous-quest lists follow AzerothCore `ObjectMgr::LoadQuests`: a quest's
+//! `PrevQuestID` plus every quest naming it as `NextQuestID` (sign kept: positive
+//! = must be turned in, negative = must be in the log), and `RewardNextQuest`
+//! links form the chain checked by `SatisfyQuestPrevChain`/`NextChain`.
+use std::collections::{HashMap, HashSet};
+use std::path::Path;
+
+use bevy::prelude::*;
+use rusqlite::{Connection, OpenFlags, Row};
+use shared::protocol::{QuestObjectiveKind, QuestPoiPoint, QuestPoiSnapshot, QuestRepeatability};
+
+/// `Flags` bits (AzerothCore `QuestFlags`).
+const QUEST_FLAGS_DAILY: u32 = 0x1000;
+const QUEST_FLAGS_WEEKLY: u32 = 0x8000;
+/// `SpecialFlags` bit (AzerothCore `QUEST_SPECIAL_FLAGS_REPEATABLE`).
+const QUEST_SPECIAL_FLAGS_REPEATABLE: u32 = 0x1;
+
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) struct ObjectiveDef {
+    pub kind: QuestObjectiveKind,
+    pub object_id: u32,
+    pub required: u32,
+    pub text: String,
+}
+
+#[derive(Debug, Clone, Default, PartialEq)]
+pub(crate) struct QuestTemplate {
+    pub id: u32,
+    pub title: String,
+    /// -1 scales to the player's level.
+    pub level: i32,
+    pub min_level: u8,
+    /// 0 = no maximum.
+    pub max_level: u8,
+    pub sort_id: i32,
+    pub suggested_group: u8,
+    pub flags: u32,
+    pub special_flags: u32,
+    /// Race bits (`1 << (race - 1)` in the imported Wrath data); 0 = any.
+    pub allowable_races: u32,
+    /// Class bits (`1 << (class - 1)`); 0 = any.
+    pub allowable_classes: u32,
+    pub exclusive_group: i32,
+    pub reward_next_quest: u32,
+    /// Copper; negative = the quest costs money to turn in.
+    pub reward_money: i32,
+    /// Item given on accept (`StartItem` x `ProvidedItemCount`).
+    pub start_item: u32,
+    pub provided_item_count: u32,
+    pub reward_items: Vec<(u32, u32)>,
+    pub choice_items: Vec<(u32, u32)>,
+    pub objectives: Vec<ObjectiveDef>,
+    pub description: String,
+    pub objectives_text: String,
+    pub completion_log: String,
+    pub offer_reward_text: String,
+    pub request_items_text: String,
+}
+
+impl QuestTemplate {
+    pub fn repeatability(&self) -> QuestRepeatability {
+        if self.flags & QUEST_FLAGS_DAILY != 0 {
+            QuestRepeatability::Daily
+        } else if self.flags & QUEST_FLAGS_WEEKLY != 0 {
+            QuestRepeatability::Weekly
+        } else {
+            QuestRepeatability::Normal
+        }
+    }
+
+    /// Can be taken again after turn-in. Daily/weekly quests have no reset
+    /// tracking yet, so they count as one-time.
+    pub fn is_repeatable(&self) -> bool {
+        self.special_flags & QUEST_SPECIAL_FLAGS_REPEATABLE != 0
+            && self.repeatability() == QuestRepeatability::Normal
+    }
+}
+
+/// `content_item` attributes a granted item needs.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub(crate) struct QuestItemInfo {
+    pub name: String,
+    pub quality: u8,
+    pub required_level: u16,
+    pub sell_price: u32,
+}
+
+#[derive(Resource, Debug, Default, Clone)]
+pub(crate) struct QuestDb {
+    pub quests: HashMap<u32, QuestTemplate>,
+    /// Creature entry -> quests it starts.
+    pub starters: HashMap<u32, Vec<u32>>,
+    /// Creature entry -> quests it ends.
+    pub enders: HashMap<u32, Vec<u32>>,
+    /// Signed previous quests (see module docs).
+    pub prev_quests: HashMap<u32, Vec<i32>>,
+    /// Quests whose `RewardNextQuest` is the key.
+    pub prev_chain_quests: HashMap<u32, Vec<u32>>,
+    pub exclusive_groups: HashMap<i32, Vec<u32>>,
+    /// Items quests reward, require or provide.
+    pub items: HashMap<u32, QuestItemInfo>,
+    pub pois: HashMap<u32, Vec<QuestPoiSnapshot>>,
+}
+
+impl QuestDb {
+    pub fn item_name(&self, item_id: u32) -> String {
+        self.items
+            .get(&item_id)
+            .map(|item| item.name.clone())
+            .unwrap_or_default()
+    }
+}
+
+const QUEST_QUERY: &str = "SELECT q.*, a.MaxLevel, a.AllowableClasses, a.PrevQuestID, \
+     a.NextQuestID, a.ExclusiveGroup, a.ProvidedItemCount, a.SpecialFlags, \
+     o.RewardText, r.CompletionText \
+     FROM content_quest_template q \
+     LEFT JOIN content_quest_template_addon a ON a.ID = q.ID \
+     LEFT JOIN content_quest_offer_reward o ON o.ID = q.ID \
+     LEFT JOIN content_quest_request_items r ON r.ID = q.ID";
+
+/// Addon columns (`PrevQuestID`, `NextQuestID`) the link tables are built from.
+struct QuestLinks {
+    prev_quest: i32,
+    next_quest: i32,
+}
+
+fn text(row: &Row, column: &str) -> rusqlite::Result<String> {
+    Ok(row.get::<_, Option<String>>(column)?.unwrap_or_default())
+}
+
+fn int(row: &Row, column: &str) -> rusqlite::Result<i64> {
+    Ok(row.get::<_, Option<i64>>(column)?.unwrap_or_default())
+}
+
+fn item_pairs(
+    row: &Row,
+    id_column: &str,
+    count_column: &str,
+    n: usize,
+) -> rusqlite::Result<Vec<(u32, u32)>> {
+    let mut pairs = Vec::new();
+    for index in 1..=n {
+        let id = int(row, &format!("{id_column}{index}"))?;
+        let count = int(row, &format!("{count_column}{index}"))?;
+        if id > 0 && count > 0 {
+            pairs.push((id as u32, count as u32));
+        }
+    }
+    Ok(pairs)
+}
+
+/// Creature/game object objectives (`RequiredNpcOrGo1-4`, negative = game
+/// object) then item objectives (`RequiredItemId1-6`), Wrath objective order.
+fn objectives_from_row(row: &Row, names: &ContentNames) -> rusqlite::Result<Vec<ObjectiveDef>> {
+    let mut objectives = Vec::new();
+    for index in 1..=4 {
+        let id = int(row, &format!("RequiredNpcOrGo{index}"))?;
+        let required = int(row, &format!("RequiredNpcOrGoCount{index}"))?;
+        if id == 0 || required <= 0 {
+            continue;
+        }
+        let authored = text(row, &format!("ObjectiveText{index}"))?;
+        let (kind, object_id) = if id > 0 {
+            (QuestObjectiveKind::Monster, id as u32)
+        } else {
+            (QuestObjectiveKind::GameObject, id.unsigned_abs() as u32)
+        };
+        let text = match (authored.is_empty(), names.creatures.get(&object_id)) {
+            (true, Some(name)) if kind == QuestObjectiveKind::Monster => format!("{name} slain"),
+            _ => authored,
+        };
+        objectives.push(ObjectiveDef {
+            kind,
+            object_id,
+            required: required as u32,
+            text,
+        });
+    }
+    for (item_id, required) in item_pairs(row, "RequiredItemId", "RequiredItemCount", 6)? {
+        objectives.push(ObjectiveDef {
+            kind: QuestObjectiveKind::Item,
+            object_id: item_id,
+            required,
+            text: names
+                .items
+                .get(&item_id)
+                .map(|item| item.name.clone())
+                .unwrap_or_default(),
+        });
+    }
+    Ok(objectives)
+}
+
+fn quest_from_row(
+    row: &Row,
+    names: &ContentNames,
+) -> rusqlite::Result<(QuestTemplate, QuestLinks)> {
+    let quest = QuestTemplate {
+        id: int(row, "ID")? as u32,
+        title: text(row, "LogTitle")?,
+        level: int(row, "QuestLevel")? as i32,
+        min_level: int(row, "MinLevel")?.clamp(0, 255) as u8,
+        max_level: int(row, "MaxLevel")?.clamp(0, 255) as u8,
+        sort_id: int(row, "QuestSortID")? as i32,
+        suggested_group: int(row, "SuggestedGroupNum")?.clamp(0, 255) as u8,
+        flags: int(row, "Flags")? as u32,
+        special_flags: int(row, "SpecialFlags")? as u32,
+        allowable_races: int(row, "AllowableRaces")? as u32,
+        allowable_classes: int(row, "AllowableClasses")? as u32,
+        exclusive_group: int(row, "ExclusiveGroup")? as i32,
+        reward_next_quest: int(row, "RewardNextQuest")? as u32,
+        reward_money: int(row, "RewardMoney")? as i32,
+        start_item: int(row, "StartItem")? as u32,
+        provided_item_count: int(row, "ProvidedItemCount")? as u32,
+        reward_items: item_pairs(row, "RewardItem", "RewardAmount", 4)?,
+        choice_items: item_pairs(row, "RewardChoiceItemID", "RewardChoiceItemQuantity", 6)?,
+        objectives: objectives_from_row(row, names)?,
+        description: text(row, "QuestDescription")?,
+        objectives_text: text(row, "LogDescription")?,
+        completion_log: text(row, "QuestCompletionLog")?,
+        offer_reward_text: text(row, "RewardText")?,
+        request_items_text: text(row, "CompletionText")?,
+    };
+    let links = QuestLinks {
+        prev_quest: int(row, "PrevQuestID")? as i32,
+        next_quest: int(row, "NextQuestID")? as i32,
+    };
+    Ok((quest, links))
+}
+
+fn load_creature_names(conn: &Connection) -> rusqlite::Result<HashMap<u32, String>> {
+    let mut statement = conn.prepare("SELECT entry, name FROM creature_template")?;
+    let rows = statement.query_map([], |row| Ok((row.get::<_, u32>(0)?, row.get(1)?)))?;
+    rows.collect()
+}
+
+fn load_relations(conn: &Connection, table: &str) -> rusqlite::Result<HashMap<u32, Vec<u32>>> {
+    let mut statement =
+        conn.prepare(&format!("SELECT id, quest FROM {table} ORDER BY id, quest"))?;
+    let mut relations: HashMap<u32, Vec<u32>> = HashMap::new();
+    let rows = statement.query_map([], |row| Ok((row.get::<_, u32>(0)?, row.get(1)?)))?;
+    for row in rows {
+        let (npc, quest) = row?;
+        relations.entry(npc).or_default().push(quest);
+    }
+    Ok(relations)
+}
+
+fn referenced_item_ids(quest: &QuestTemplate) -> impl Iterator<Item = u32> + '_ {
+    let objective_items = quest
+        .objectives
+        .iter()
+        .filter(|objective| objective.kind == QuestObjectiveKind::Item)
+        .map(|objective| objective.object_id);
+    quest
+        .reward_items
+        .iter()
+        .chain(&quest.choice_items)
+        .map(|&(item_id, _)| item_id)
+        .chain(objective_items)
+        .chain((quest.start_item != 0).then_some(quest.start_item))
+}
+
+fn load_all_items(conn: &Connection) -> rusqlite::Result<HashMap<u32, QuestItemInfo>> {
+    let mut statement =
+        conn.prepare("SELECT ID, Name, Quality, RequiredLevel, SellPrice FROM content_item")?;
+    let rows = statement.query_map([], |row| {
+        Ok((
+            row.get::<_, u32>(0)?,
+            QuestItemInfo {
+                name: row.get::<_, Option<String>>(1)?.unwrap_or_default(),
+                quality: row.get(2)?,
+                required_level: row.get(3)?,
+                sell_price: row.get::<_, i64>(4)?.max(0) as u32,
+            },
+        ))
+    })?;
+    rows.collect()
+}
+
+fn load_poi_points(conn: &Connection) -> rusqlite::Result<HashMap<(u32, u32), Vec<QuestPoiPoint>>> {
+    let mut statement = conn.prepare(
+        "SELECT QuestID, Idx1, X, Y FROM content_quest_poi_points ORDER BY QuestID, Idx1, Idx2",
+    )?;
+    let mut points: HashMap<(u32, u32), Vec<QuestPoiPoint>> = HashMap::new();
+    let rows = statement.query_map([], |row| {
+        Ok((
+            (row.get::<_, u32>(0)?, row.get::<_, u32>(1)?),
+            QuestPoiPoint {
+                x: row.get(2)?,
+                y: row.get(3)?,
+            },
+        ))
+    })?;
+    for row in rows {
+        let (key, point) = row?;
+        points.entry(key).or_default().push(point);
+    }
+    Ok(points)
+}
+
+fn load_pois(conn: &Connection) -> rusqlite::Result<HashMap<u32, Vec<QuestPoiSnapshot>>> {
+    let mut points = load_poi_points(conn)?;
+    let mut statement = conn.prepare(
+        "SELECT QuestID, id, ObjectiveIndex, MapID, WorldMapAreaId, Floor, Priority, Flags \
+         FROM content_quest_poi ORDER BY QuestID, id",
+    )?;
+    let mut pois: HashMap<u32, Vec<QuestPoiSnapshot>> = HashMap::new();
+    let rows = statement.query_map([], |row| {
+        let quest_id: u32 = row.get(0)?;
+        let poi_id: u32 = row.get(1)?;
+        Ok((
+            quest_id,
+            poi_id,
+            QuestPoiSnapshot {
+                objective_index: row.get(2)?,
+                map_id: row.get(3)?,
+                world_map_area_id: row.get(4)?,
+                floor: row.get(5)?,
+                priority: row.get(6)?,
+                flags: row.get(7)?,
+                points: Vec::new(),
+            },
+        ))
+    })?;
+    for row in rows {
+        let (quest_id, poi_id, mut poi) = row?;
+        poi.points = points.remove(&(quest_id, poi_id)).unwrap_or_default();
+        pois.entry(quest_id).or_default().push(poi);
+    }
+    Ok(pois)
+}
+
+fn link_quests(db: &mut QuestDb, links: &[(u32, QuestLinks)]) {
+    for (quest_id, link) in links {
+        if link.prev_quest != 0 {
+            db.prev_quests
+                .entry(*quest_id)
+                .or_default()
+                .push(link.prev_quest);
+        }
+        if link.next_quest != 0 {
+            let signed = if link.next_quest < 0 {
+                -(*quest_id as i32)
+            } else {
+                *quest_id as i32
+            };
+            let next = link.next_quest.unsigned_abs();
+            db.prev_quests.entry(next).or_default().push(signed);
+        }
+    }
+    for quest in db.quests.values() {
+        if quest.reward_next_quest != 0 {
+            db.prev_chain_quests
+                .entry(quest.reward_next_quest)
+                .or_default()
+                .push(quest.id);
+        }
+        if quest.exclusive_group != 0 {
+            db.exclusive_groups
+                .entry(quest.exclusive_group)
+                .or_default()
+                .push(quest.id);
+        }
+    }
+}
+
+/// Names objective text and granted items are built from.
+struct ContentNames {
+    creatures: HashMap<u32, String>,
+    items: HashMap<u32, QuestItemInfo>,
+}
+
+pub(crate) fn load_quest_db(path: &Path) -> rusqlite::Result<QuestDb> {
+    let conn = Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
+    let mut names = ContentNames {
+        creatures: load_creature_names(&conn)?,
+        items: load_all_items(&conn)?,
+    };
+    let mut statement = conn.prepare(QUEST_QUERY)?;
+    let rows = statement.query_map([], |row| quest_from_row(row, &names))?;
+    let mut db = QuestDb::default();
+    let mut links = Vec::new();
+    for row in rows {
+        let (quest, link) = row?;
+        links.push((quest.id, link));
+        db.quests.insert(quest.id, quest);
+    }
+    link_quests(&mut db, &links);
+    db.starters = load_relations(&conn, "content_creature_queststarter")?;
+    db.enders = load_relations(&conn, "content_creature_questender")?;
+    let referenced: HashSet<u32> = db.quests.values().flat_map(referenced_item_ids).collect();
+    names
+        .items
+        .retain(|item_id, _| referenced.contains(item_id));
+    db.items = names.items;
+    db.pois = load_pois(&conn)?;
+    Ok(db)
+}
+
+pub struct QuestDataPlugin;
+
+impl Plugin for QuestDataPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_systems(Startup, startup_load_quest_db);
+    }
+}
+
+fn startup_load_quest_db(mut commands: Commands) {
+    let path = Path::new(crate::spell_info::WORLD_DB_PATH);
+    let quests = load_quest_db(path)
+        .unwrap_or_else(|error| panic!("load quests from {}: {error}", path.display()));
+    info!("Loaded {} quests", quests.quests.len());
+    commands.insert_resource(quests);
+}
+
+/// Quest content from the real `data/world.db`, loaded once; `None` when absent.
+#[cfg(test)]
+pub(crate) fn test_quest_db() -> Option<&'static QuestDb> {
+    static DB: std::sync::OnceLock<Option<QuestDb>> = std::sync::OnceLock::new();
+    DB.get_or_init(|| {
+        let path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/world.db");
+        if !path.exists() {
+            eprintln!("skipping: {} not found", path.display());
+            return None;
+        }
+        Some(load_quest_db(&path).expect("load quests"))
+    })
+    .as_ref()
+}

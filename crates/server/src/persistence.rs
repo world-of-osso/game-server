@@ -10,6 +10,8 @@ pub(crate) mod equipment;
 pub(crate) mod inventory_store;
 #[path = "persistence_runtime.rs"]
 mod persistence_runtime;
+#[path = "persistence_quests.rs"]
+pub(crate) mod quest_store;
 
 pub use self::persistence_runtime::ClientId;
 use self::persistence_runtime::{flush_all_characters_on_exit, save_dirty_characters};
@@ -197,6 +199,7 @@ pub(crate) fn create_tables(db: &Database) {
         .expect("Failed to create equipment table");
     let _ = txn.open_table(inventory_store::INVENTORY_LAYOUTS);
     let _ = txn.open_table(inventory_store::ITEM_INSTANCES);
+    let _ = txn.open_table(quest_store::QUEST_LOGS);
     let _ = txn.open_table(PROFESSIONS);
     let _ = txn.open_table(REPUTATIONS);
     let _ = txn.open_table(CURRENCIES);
