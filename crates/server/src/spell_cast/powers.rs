@@ -23,9 +23,10 @@ use crate::spell_info::ClassSpells;
 
 /// Alternate (encounter/quest/mount) bars are not class resources.
 const ALTERNATE_POWERS: [i32; 4] = [10, 23, 24, 25];
-/// `power_type` mana regen is 0; placeholder until mana regen stats exist
-/// (not retail-derived): 1% of max mana per second, in and out of combat.
-const MANA_REGEN_PCT_PER_SEC: f32 = 0.01;
+/// Retail mana regen: 1% of gtBaseMP per second, in and out of combat
+/// (TrinityCore `Player::UpdatePowerRegen` `basemana / 100`; SimC
+/// `init_resources` "1% of base mana as mana regen per second").
+const MANA_REGEN_BASE_PCT_PER_SEC: f32 = 0.01;
 
 /// One `power_type` row, raw DB2 values. Regen is raw units per second
 /// (TrinityCore `Player::Regenerate`: `RegenPeace * 0.001 * elapsed_ms`).
@@ -244,6 +245,7 @@ type RegenQuery<'w, 's> = Query<
         Option<&'static mut Mana>,
         Option<&'static CombatStatus>,
         Option<&'static crate::auras::AuraStatMods>,
+        Option<&'static crate::stats::CharacterStats>,
     ),
 >;
 
@@ -251,7 +253,9 @@ type RegenQuery<'w, 's> = Query<
 /// combat. Negative rates decay toward `CenterPower` and positive rates fill
 /// toward max (below center, a negative rate refills toward center). In
 /// combat: `RegenCombat`. Rates (regen and decay) scale by the aura power
-/// regen multiplier (MOD_POWER_REGEN_PERCENT, MOD_MANA_REGEN_PCT).
+/// regen multiplier (MOD_POWER_REGEN_PERCENT, MOD_MANA_REGEN_PCT). Mana
+/// (`power_type` rate 0) regenerates `MANA_REGEN_BASE_PCT_PER_SEC` of base
+/// mana, scaled by the same multiplier.
 pub(super) fn regenerate_powers(
     time: Res<Time>,
     table: Option<Res<PowerTypeTable>>,
@@ -262,7 +266,7 @@ pub(super) fn regenerate_powers(
     };
     let dt = time.delta_secs();
     let now = time.elapsed_secs_f64();
-    for (mut pools, mana, combat, mods) in &mut units {
+    for (mut pools, mana, combat, mods, stats) in &mut units {
         let regen_mult = |power: PowerType| mods.map_or(1.0, |mods| mods.power_regen(power as i32));
         let in_combat = combat.is_some_and(|status| status.0);
         if in_combat {
@@ -286,7 +290,8 @@ pub(super) fn regenerate_powers(
         if let Some(mut mana) = mana
             && mana.current < mana.max
         {
-            let gain = mana.max * MANA_REGEN_PCT_PER_SEC * dt * regen_mult(PowerType::Mana);
+            let base_mana = stats.map_or(0.0, |stats| stats.base_mana);
+            let gain = base_mana * MANA_REGEN_BASE_PCT_PER_SEC * dt * regen_mult(PowerType::Mana);
             mana.current = (mana.current + gain).min(mana.max);
         }
     }

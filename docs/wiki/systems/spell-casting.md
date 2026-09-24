@@ -156,7 +156,9 @@ Damage and heal side effects:
   - Out of combat: `RegenPeace`, starting only after `RegenInterruptTimeMS` since leaving combat.
   - A positive rate fills toward max. A negative rate moves toward `CenterPower`: Rage/RP decay to 0, and Soul Shards settle at 3.
   - Examples: Energy +10/s. Rage −12.5/s (−1.25 rage/s) out of combat only. Holy Power −0.1/s after 10 s.
-  - Mana has rate 0 in the data. A placeholder (not retail-derived) regenerates 1% of max per second.
+  - Mana has rate 0 in the data. It regenerates 1% of base mana (gtBaseMP, `CharacterStats.base_mana`, not the pool max) per second, in and out of combat, times the aura regen multiplier (TrinityCore `Player::UpdatePowerRegen` `basemana / 100`; SimC `init_resources`).
+  - Class/spec passives supply the multiplier via MOD_MANA_REGEN_PCT/MOD_POWER_REGEN_PERCENT: class −36% (Paladin, Priest, Shaman, Druid), healer spec +25%, hybrid spec +60%, Arcane +60%. Level 80 (base 50 000): Holy Paladin 400/s, Frost Mage 500/s, Arcane Mage 800/s.
+  - Not implemented: flat MOD_POWER_REGEN 85 (per 5 s); haste scaling of Energy/Focus regen (`power_type` flag `RegenAffectedByHaste` 0x400).
 - **NPCs** get `UnitLevel` (template `min_level`) and empty `UnitPowers`. Creature class/level power stats are not imported.
 - **Players:** `UnitLevel` is owned by [[class-progression]]; the cast pipeline only reads levels.
 

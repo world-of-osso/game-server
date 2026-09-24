@@ -402,11 +402,81 @@ fn percent_mana_cost_uses_base_mana_not_max_pool() {
         .unwrap()
         .base_mana = 2_000.0;
     // Cost is 1% of base mana 2000 = 20; 1% of the 10 000 max pool would be
-    // 100. 40 mana plus 0.15 s of 1%/s regen (15) affords only the former.
+    // 100. 40 mana plus 0.15 s of 1%/s base mana regen (3) affords only the
+    // former.
     h.app.world_mut().get_mut::<Mana>(h.caster).unwrap().current = 40.0;
     h.cast_and_deliver(FIREBALL, Some(h.npc));
     assert!(std::mem::take(&mut h.inbox.failed).is_empty());
     assert!(h.app.world().get::<CastState>(h.caster).is_some());
     h.advance(40);
     assert_eq!(h.health(h.npc), 5000.0 - 388.0);
+}
+
+/// Level 80 caster knowing the real class/spec passives `passives`, 50 000
+/// gtBaseMP (all mana classes at 80) and an empty 250 000 pool (regen
+/// follows base mana, not the pool). Returns the
+/// mana gained over 1 s in combat, then over 1 s out of combat.
+fn mana_regen_per_second(class: u8, passives: &[u32]) -> Option<(f32, f32)> {
+    let mut h = harness(Vec::new(), passives, class)?;
+    let base_mana = crate::stats::base_mana(class, 80).unwrap();
+    assert_eq!(base_mana, 50_000.0);
+    let world = h.app.world_mut();
+    world
+        .entity_mut(h.caster)
+        .insert(shared::components::Level(80));
+    world.get_mut::<CharacterStats>(h.caster).unwrap().base_mana = base_mana;
+    // Let the passives apply before measuring.
+    h.advance(2);
+    let measure = |h: &mut Harness| {
+        *h.app.world_mut().get_mut::<Mana>(h.caster).unwrap() = Mana {
+            current: 0.0,
+            max: 250_000.0,
+        };
+        h.advance(20);
+        h.app.world().get::<Mana>(h.caster).unwrap().current
+    };
+    let in_combat = measure(&mut h);
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(CombatStatus(false));
+    let out_of_combat = measure(&mut h);
+    Some((in_combat, out_of_combat))
+}
+
+fn assert_near(actual: f32, expected: f32) {
+    assert!((actual - expected).abs() < 0.5, "{actual} != {expected}");
+}
+
+#[test]
+fn holy_paladin_regenerates_one_percent_base_mana_scaled_by_class_and_spec_passives() {
+    // Paladin 137026: MOD_MANA_REGEN_PCT -36; Holy Paladin 1258016: +25.
+    // 1% of 50 000 = 500/s × 0.64 × 1.25 = 400/s, in and out of combat.
+    let Some((in_combat, out_of_combat)) = mana_regen_per_second(2, &[137026, 137029, 1258016])
+    else {
+        return;
+    };
+    assert_near(in_combat, 400.0);
+    assert_near(out_of_combat, 400.0);
+}
+
+#[test]
+fn frost_mage_regenerates_one_percent_base_mana_per_second() {
+    // Mage 137018 and Frost Mage 137020/1256913 carry no regen modifier.
+    let Some((in_combat, out_of_combat)) = mana_regen_per_second(8, &[137018, 137020, 1256913])
+    else {
+        return;
+    };
+    assert_near(in_combat, 500.0);
+    assert_near(out_of_combat, 500.0);
+}
+
+#[test]
+fn arcane_mage_power_regen_aura_raises_mana_regen_by_its_percentage() {
+    // Arcane Mage 137021: MOD_POWER_REGEN_PERCENT +60 on mana: 500 × 1.6.
+    let Some((in_combat, out_of_combat)) = mana_regen_per_second(8, &[137018, 137021]) else {
+        return;
+    };
+    assert_near(in_combat, 800.0);
+    assert_near(out_of_combat, 800.0);
 }
