@@ -47,6 +47,8 @@ pub(crate) struct QuestTemplate {
     pub reward_next_quest: u32,
     /// Copper; negative = the quest costs money to turn in.
     pub reward_money: i32,
+    /// `RewardXPDifficulty`: column of the QuestXP DB2 row.
+    pub reward_xp_difficulty: u8,
     /// Item given on accept (`StartItem` x `ProvidedItemCount`).
     pub start_item: u32,
     pub provided_item_count: u32,
@@ -214,6 +216,7 @@ fn quest_from_row(
         exclusive_group: int(row, "ExclusiveGroup")? as i32,
         reward_next_quest: int(row, "RewardNextQuest")? as u32,
         reward_money: int(row, "RewardMoney")? as i32,
+        reward_xp_difficulty: int(row, "RewardXPDifficulty")?.clamp(0, 255) as u8,
         start_item: int(row, "StartItem")? as u32,
         provided_item_count: int(row, "ProvidedItemCount")? as u32,
         reward_items: item_pairs(row, "RewardItem", "RewardAmount", 4)?,

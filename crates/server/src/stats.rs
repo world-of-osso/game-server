@@ -285,7 +285,7 @@ fn spec_inputs(
 
 /// Item data `update_character_stats` resolves equipped item ids with.
 #[derive(bevy::ecs::system::SystemParam)]
-struct ItemData<'w> {
+pub(crate) struct ItemData<'w> {
     templates: Option<Res<'w, ItemTemplates>>,
     tables: Option<Res<'w, ItemScalingTables>>,
 }
@@ -348,7 +348,7 @@ type StatsFilter = Or<(
 )>;
 
 /// Recompute `CharacterStats` and write stats, health and mana maxima.
-fn update_character_stats(
+pub(crate) fn update_character_stats(
     mut commands: Commands,
     mut players: Query<StatsQuery, StatsFilter>,
     classes: Option<Res<ClassSpells>>,

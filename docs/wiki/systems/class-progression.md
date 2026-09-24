@@ -65,7 +65,7 @@ The list is stored in the `KnownSpells` component. Cast validation should call `
 
 - `CharacterData.level` in redb is the source of truth.
 - `Level(u8)` is spawned from it and replicated. Periodic saves never write the live `Level` back.
-- There is no XP gain system. Level changes go through admin IPC `set-level <character> <level>`:
+- Levels change through XP ([[experience]]) or admin IPC `set-level <character> <level>`:
   - It validates 1..=90 (`spell_info::MAX_LEVEL`) and saves `CharacterData`.
   - It queues `set_live_level`, which updates the online player's `Level` and, if present, `UnitLevel`.
   - `sync_level_changes` then sends the deltas.

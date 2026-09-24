@@ -16,6 +16,7 @@ use shared::protocol::{
 use super::{QueriedQuestGivers, QuestDirty, QuestStore, distance, giver_statuses, quest_player};
 use crate::auth::{Authenticated, InWorld};
 use crate::combat::DeathState;
+use crate::experience::{XpAwards, quest_xp};
 use crate::gold::GoldUpdateQueue;
 use crate::inventory::free_bag_cells;
 use crate::item_templates::ItemTemplates;
@@ -124,6 +125,7 @@ pub(super) struct QuestSideEffects<'w> {
     templates: Option<Res<'w, ItemTemplates>>,
     inventories: ResMut<'w, GoldUpdateQueue>,
     dirty: ResMut<'w, QuestDirty>,
+    xp: ResMut<'w, XpAwards>,
 }
 
 /// Everything a request touches besides storage.
@@ -436,6 +438,15 @@ impl<'a> QuestSession<'a, '_, '_> {
         log.remove(quest_id);
         log.mark_rewarded(quest_id);
         self.save_log(&log);
+        let xp = quest_xp(
+            quest.level,
+            self.requester.player.level,
+            quest.reward_xp_difficulty,
+        );
+        if xp > 0 {
+            let character_id = self.character();
+            self.io.effects.xp.0.push((character_id, xp));
+        }
         let complete = QuestGiverQuestComplete {
             quest_id,
             money: quest.reward_money.max(0) as u32,

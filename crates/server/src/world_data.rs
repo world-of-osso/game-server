@@ -12,6 +12,14 @@ pub struct CreatureTemplate {
     pub npc_flags: u32,
     pub speed_walk: f32,
     pub health_modifier: f32,
+    /// `rank`: 1 elite, 2 rare elite (Retail `CreatureClassifications`).
+    pub rank: u8,
+    /// `exp`: health scaling expansion.
+    pub expansion: u8,
+    /// `ExperienceModifier` (TrinityCore `ModExperience`).
+    pub experience_modifier: f32,
+    /// Critters and `CREATURE_FLAG_EXTRA_NO_XP` give no experience.
+    pub gives_experience: bool,
     pub models: Vec<CreatureModelInfo>,
 }
 
@@ -77,6 +85,9 @@ pub fn load_world_data(path: &Path) -> WorldData {
     }
 }
 
+const CREATURE_TYPE_CRITTER: i64 = 8;
+const CREATURE_FLAG_EXTRA_NO_XP: i64 = 0x40;
+
 fn template_from_row(row: &Row) -> rusqlite::Result<CreatureTemplate> {
     Ok(CreatureTemplate {
         entry: row.get::<_, i64>(0)? as u32,
@@ -87,6 +98,11 @@ fn template_from_row(row: &Row) -> rusqlite::Result<CreatureTemplate> {
         speed_walk: row.get(5)?,
         health_modifier: row.get(6)?,
         name: row.get(7)?,
+        rank: row.get::<_, i64>(8)? as u8,
+        expansion: row.get::<_, i64>(9)? as u8,
+        experience_modifier: row.get(10)?,
+        gives_experience: row.get::<_, i64>(11)? != CREATURE_TYPE_CRITTER
+            && row.get::<_, i64>(12)? & CREATURE_FLAG_EXTRA_NO_XP == 0,
         models: Vec::new(),
     })
 }
@@ -94,7 +110,8 @@ fn template_from_row(row: &Row) -> rusqlite::Result<CreatureTemplate> {
 fn load_templates(conn: &Connection) -> HashMap<u32, CreatureTemplate> {
     let mut stmt = conn
         .prepare(
-            "SELECT entry, minlevel, maxlevel, faction, npcflag, speed_walk, HealthModifier, name
+            "SELECT entry, minlevel, maxlevel, faction, npcflag, speed_walk, HealthModifier, name,
+                    rank, exp, ExperienceModifier, type, flags_extra
              FROM creature_template",
         )
         .expect("Failed to prepare creature_template query");

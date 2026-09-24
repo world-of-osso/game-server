@@ -24,6 +24,10 @@ fn test_template(entry: u32, faction: u16, min_level: u8, max_level: u8) -> Crea
         npc_flags: 0,
         speed_walk: 1.0,
         health_modifier: 1.0,
+        rank: 0,
+        expansion: 0,
+        experience_modifier: 1.0,
+        gives_experience: true,
         models: Vec::new(),
     }
 }

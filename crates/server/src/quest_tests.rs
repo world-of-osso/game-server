@@ -60,6 +60,7 @@ fn setup_app() -> Option<App> {
     app.insert_resource(quests);
     app.add_plugins(crate::inventory::InventoryPlugin);
     app.add_plugins(QuestPlugin);
+    app.add_plugins(crate::experience::ExperiencePlugin);
     app.finish();
     app.cleanup();
     Some(app)
@@ -340,6 +341,11 @@ fn a_threat_within_accepted_from_willem_and_turned_in_at_mcbride_is_persisted() 
     let saved = load_quest_log(db(&app), client.character_id);
     assert!(saved.active.is_empty() && saved.watched.is_empty());
     assert!(saved.is_rewarded(A_THREAT_WITHIN));
+    // QuestXP level 1, RewardXPDifficulty 3; level 2 needs 250.
+    assert_eq!(
+        crate::persistence_progression::load_xp(db(&app), client.character_id),
+        100
+    );
     assert_eq!(
         statuses(&mut app, &client, &[mcbride]),
         vec![QuestGiverStatus::Available]

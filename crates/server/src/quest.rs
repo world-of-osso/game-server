@@ -72,6 +72,7 @@ pub struct QuestPlugin;
 impl Plugin for QuestPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<QuestDirty>();
+        app.init_resource::<crate::experience::XpAwards>();
         app.add_systems(
             Update,
             (

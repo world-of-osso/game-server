@@ -18,6 +18,7 @@ mod death;
 mod duel;
 mod durability;
 mod equipment_admin_types;
+mod experience;
 mod faction;
 mod faction_reaction;
 mod friends;
@@ -58,6 +59,7 @@ mod unit_target;
 mod who;
 mod world_data;
 mod world_map;
+mod xp_data;
 mod zones;
 
 use bevy::prelude::*;
@@ -117,7 +119,8 @@ fn add_social_plugins(app: &mut App) {
         .add_plugins(item_stats::ItemScalingPlugin)
         .add_plugins(inventory::InventoryPlugin)
         .add_plugins(quest_data::QuestDataPlugin)
-        .add_plugins(quest::QuestPlugin);
+        .add_plugins(quest::QuestPlugin)
+        .add_plugins(experience::ExperiencePlugin);
 }
 
 fn add_progression_plugins(app: &mut App) {

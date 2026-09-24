@@ -1,5 +1,9 @@
 # Wiki Log
 
+## [2026-09-24] systems | Experience and levelling
+
+Created [[experience]]; updated [[class-progression]] and the index. Kill XP follows TrinityCore master `Formulas.h` + `KillRewarder` over the Retail gtXp table (CASC FDID 1391661), and quest XP follows `Quest::XPValue` over the QuestXP DB2 (12.1.0.69933). Level-ups save `CharacterData.level`, set `Level`/`UnitLevel` (driving spell, stat and trait deltas) and refill health and mana. XP is stored in redb `character_xp`. There is no XP protocol message yet.
+
 ## [2026-09-23] systems | NPC faction and reaction
 
 Created [[factions]]; updated [[spell-casting]] (relations from reactions) and the index. NPCs get `UnitFactionTemplate` from `creature_template.faction`, players from `ChrRaces.FactionID`. DB2 `FactionTemplate` imported at 12.1.0.69933; all 657 AzerothCore creature faction IDs exist in Retail. Reputation is not consulted. Reaction rules split into pure `faction_reaction.rs`; replicated `UnitTarget` mirrors player `CombatTarget` and NPC chase target ([[combat]]).

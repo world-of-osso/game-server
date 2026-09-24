@@ -211,6 +211,10 @@ mod tests {
             npc_flags: 0,
             speed_walk: 1.0,
             health_modifier: health_mod,
+            rank: 0,
+            expansion: 0,
+            experience_modifier: 1.0,
+            gives_experience: true,
             models: vec![CreatureModelInfo { display_id }],
         }
     }
@@ -254,7 +258,8 @@ mod tests {
         let conn = rusqlite::Connection::open(&path).unwrap();
         conn.execute_batch(
             "CREATE TABLE creature_template (entry INTEGER, minlevel INTEGER, maxlevel INTEGER,
-                faction INTEGER, npcflag INTEGER, speed_walk REAL, HealthModifier REAL, name TEXT);
+                faction INTEGER, npcflag INTEGER, speed_walk REAL, HealthModifier REAL, name TEXT, rank INTEGER, exp INTEGER,
+                ExperienceModifier REAL, type INTEGER, flags_extra INTEGER);
              CREATE TABLE creature_template_model (CreatureID INTEGER, Idx INTEGER,
                 CreatureDisplayID INTEGER, DisplayScale REAL, Probability REAL);
              CREATE TABLE creature (guid INTEGER, id1 INTEGER, map INTEGER, zoneId INTEGER,
@@ -275,7 +280,7 @@ mod tests {
         for (index, angle) in angles.iter().enumerate() {
             let entry = 100 + index as u32;
             conn.execute(
-                "INSERT INTO creature_template VALUES (?1,1,1,1,0,1.0,1.0,'Loup — Écorché')",
+                "INSERT INTO creature_template VALUES (?1,1,1,1,0,1.0,1.0,'Loup — Écorché',0,0,1.0,1,0)",
                 [entry],
             )
             .unwrap();

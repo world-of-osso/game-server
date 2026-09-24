@@ -28,5 +28,6 @@ Marker delivery is query-driven rather than replicated because the marker depend
 ## See Also
 
 - [[inventory]] — bag model, `free_bag_cells`, delta path
+- [[experience]] — quest and kill XP (turn-in queues `quest_xp`)
 - [[combat]] — NPC death (`DeathState`, `LastDamager`)
 - [[content-import]] — quest tables and mapping policy

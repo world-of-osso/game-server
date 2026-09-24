@@ -6,6 +6,9 @@ use crate::trait_config::Purchase;
 pub(crate) const CHARACTER_PROGRESSION: TableDefinition<u64, &[u8]> =
     TableDefinition::new("character_progression");
 
+/// Experience table: character_id -> XP into the current level.
+pub(crate) const CHARACTER_XP: TableDefinition<u64, u32> = TableDefinition::new("character_xp");
+
 /// Trait configs table: character_id -> serialized `TraitConfigsData`.
 pub(crate) const CHARACTER_TRAITS: TableDefinition<u64, &[u8]> =
     TableDefinition::new("character_traits");
@@ -47,6 +50,30 @@ pub fn save_progression(db: &Database, character_id: u64, data: &ProgressionData
     }
     txn.commit()
         .expect("Failed to commit character progression save");
+}
+
+pub fn load_xp(db: &Database, character_id: u64) -> u32 {
+    let txn = db.begin_read().expect("Failed to begin read txn");
+    let Ok(table) = txn.open_table(CHARACTER_XP) else {
+        return 0;
+    };
+    table
+        .get(character_id)
+        .expect("Failed to read character xp")
+        .map_or(0, |guard| guard.value())
+}
+
+pub fn save_xp(db: &Database, character_id: u64, xp: u32) {
+    let txn = db.begin_write().expect("Failed to begin write txn");
+    {
+        let mut table = txn
+            .open_table(CHARACTER_XP)
+            .expect("Failed to open character_xp table");
+        table
+            .insert(character_id, xp)
+            .expect("Failed to insert character xp");
+    }
+    txn.commit().expect("Failed to commit character xp save");
 }
 
 /// Saved trait purchases per `ChrSpecialization` ID, ascending by spec.

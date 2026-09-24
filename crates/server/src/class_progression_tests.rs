@@ -123,6 +123,7 @@ fn setup_app(db: redb::Database, classes: ClassSpells) -> App {
     app.insert_resource(GameDatabase { db });
     app.insert_resource(classes);
     app.add_plugins(ClassProgressionPlugin);
+    app.add_plugins(crate::experience::ExperiencePlugin);
     app.finish();
     app.cleanup();
     app
@@ -493,6 +494,89 @@ fn level_changes_send_learned_spells_and_leave_initial_spec_at_unlock() {
     );
     assert!(received::<SpecializationChanged>(&mut app, player).is_empty());
     assert_eq!(stored(&app, 4).spec_id, SPEC_HOLY);
+}
+
+fn world_with_creature(entry: u32, min_level: u8) -> crate::world_data::WorldData {
+    let template = crate::world_data::CreatureTemplate {
+        entry,
+        name: "Fixture wolf".into(),
+        min_level,
+        max_level: min_level,
+        faction: 32,
+        npc_flags: 0,
+        speed_walk: 1.0,
+        health_modifier: 1.0,
+        rank: 0,
+        expansion: 0,
+        experience_modifier: 1.0,
+        gives_experience: true,
+        models: Vec::new(),
+    };
+    crate::world_data::WorldData {
+        templates: std::collections::HashMap::from([(entry, template)]),
+        spawns: Vec::new(),
+        spawns_by_map: std::collections::HashMap::new(),
+        waypoints: std::collections::HashMap::new(),
+    }
+}
+
+#[test]
+fn kill_xp_crossing_level_10_levels_up_and_sends_learned_spells() {
+    use crate::combat::{DeathState, LastDamager};
+    use crate::persistence_progression::{load_xp, save_xp};
+    use shared::components::{Npc, Position};
+
+    let Some(classes) = class_spells() else {
+        return;
+    };
+    let db = temp_database();
+    let (character_id, _) = persistence::create_character(&db, 1, "Uther", HUMAN, PALADIN).unwrap();
+    // Level 9 needs 8770; a level 9 kill gives gtXp PerKill 60.
+    save_xp(&db, character_id, 8720);
+    let mut app = setup_app(db, classes);
+    app.insert_resource(world_with_creature(299, 9));
+    let player = spawn_player(&mut app, character_id, HUMAN, PALADIN, 9);
+    let origin = Position {
+        x: 0.0,
+        y: 0.0,
+        z: 0.0,
+    };
+    app.world_mut().entity_mut(player).insert(origin.clone());
+    advance(&mut app);
+    drain(&mut app, player);
+
+    app.world_mut().spawn((
+        Npc {
+            template_id: 299,
+            name: "Fixture wolf".into(),
+        },
+        UnitLevel(9),
+        origin,
+        LastDamager(player),
+        DeathState {
+            respawn_timer: 60.0,
+        },
+    ));
+    advance(&mut app);
+
+    assert_eq!(app.world().get::<Level>(player), Some(&Level(10)));
+    assert_eq!(app.world().get::<UnitLevel>(player), Some(&UnitLevel(10)));
+    let db = &app.world().resource::<GameDatabase>().db;
+    assert_eq!(load_xp(db, character_id), 10);
+    assert_eq!(
+        persistence::load_character(db, character_id).unwrap().level,
+        10
+    );
+    assert_eq!(
+        received::<SpecializationChanged>(&mut app, player),
+        vec![SpecializationChanged { spec_id: SPEC_HOLY }]
+    );
+    let learned = received::<SpellsLearned>(&mut app, player);
+    assert_eq!(learned.len(), 1);
+    // Divine Shield 642 and Sense Undead 5502 are level 10.
+    for spell_id in [642, 5502] {
+        assert!(learned[0].spells.contains(&spell_id), "missing {spell_id}");
+    }
 }
 
 #[test]
