@@ -480,8 +480,11 @@ fn escorts_hold_still_while_their_leader_is_dead_then_rejoin_it() {
     kill(&mut app, leader);
     let leader_corpse = position(&app, leader);
     let stopped = escorts.map(|escort| position(&app, escort));
-    while is_dead(&app, leader) {
+    loop {
         app.update();
+        if !is_dead(&app, leader) {
+            break;
+        }
         assert_eq!(position(&app, leader), leader_corpse);
         assert_eq!(
             escorts.map(|escort| position(&app, escort)),
