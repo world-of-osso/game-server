@@ -5,8 +5,10 @@ use std::path::Path;
 use bevy::prelude::*;
 use rusqlite::{Connection, OpenFlags, Row};
 
-/// Item attributes inventory validation needs.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+use crate::item_stats::{ItemScaling, ItemStatAllocation};
+
+/// Item attributes inventory validation and item stats need.
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
 pub struct ItemTemplate {
     /// Retail `Enum.InventoryType`; 0 = not equippable.
     pub inventory_type: u8,
@@ -19,6 +21,8 @@ pub struct ItemTemplate {
     pub allowable_class: i64,
     /// One-based race bits (`AllowableRaces_1` high word, `_0` low word).
     pub allowable_race: u64,
+    /// Stat, armor and weapon inputs (`item_stats::item_stats`).
+    pub scaling: ItemScaling,
 }
 
 pub const BIND_ON_PICKUP: u8 = 1;
@@ -53,8 +57,45 @@ impl ItemTemplates {
     }
 }
 
-const ITEM_QUERY: &str = "SELECT ID, InventoryType, Stackable, Bonding, RequiredLevel, \
-     AllowableClass, AllowableRaces_0, AllowableRaces_1 FROM content_item";
+const ITEM_QUERY: &str = "SELECT c.ID, c.InventoryType, c.Stackable, c.Bonding, c.RequiredLevel, \
+     c.AllowableClass, c.AllowableRaces_0, c.AllowableRaces_1, \
+     c.ClassID, c.SubclassID, c.Quality, c.ItemLevel, s.ItemSquishEraID, c.ItemDelay, \
+     c.DmgVariance, c.Flags_1, \
+     c.StatModifier_bonusStat_0, c.StatPercentEditor_0, s.StatPercentageOfSocket_0, \
+     c.StatModifier_bonusStat_1, c.StatPercentEditor_1, s.StatPercentageOfSocket_1, \
+     c.StatModifier_bonusStat_2, c.StatPercentEditor_2, s.StatPercentageOfSocket_2, \
+     c.StatModifier_bonusStat_3, c.StatPercentEditor_3, s.StatPercentageOfSocket_3, \
+     c.StatModifier_bonusStat_4, c.StatPercentEditor_4, s.StatPercentageOfSocket_4, \
+     c.StatModifier_bonusStat_5, c.StatPercentEditor_5, s.StatPercentageOfSocket_5, \
+     c.StatModifier_bonusStat_6, c.StatPercentEditor_6, s.StatPercentageOfSocket_6, \
+     c.StatModifier_bonusStat_7, c.StatPercentEditor_7, s.StatPercentageOfSocket_7, \
+     c.StatModifier_bonusStat_8, c.StatPercentEditor_8, s.StatPercentageOfSocket_8, \
+     c.StatModifier_bonusStat_9, c.StatPercentEditor_9, s.StatPercentageOfSocket_9 \
+     FROM content_item c JOIN item_sparse s ON s.ID = c.ID";
+const FIRST_STAT_COLUMN: usize = 16;
+
+fn scaling_from_row(row: &Row) -> rusqlite::Result<ItemScaling> {
+    let mut stats = [ItemStatAllocation::default(); 10];
+    for (index, stat) in stats.iter_mut().enumerate() {
+        let column = FIRST_STAT_COLUMN + index * 3;
+        *stat = ItemStatAllocation {
+            stat: row.get(column)?,
+            allocation: row.get(column + 1)?,
+            socket_multiplier: row.get::<_, f64>(column + 2)? as f32,
+        };
+    }
+    Ok(ItemScaling {
+        class_id: row.get(8)?,
+        subclass_id: row.get(9)?,
+        quality: row.get(10)?,
+        item_level: row.get(11)?,
+        squish_era: row.get(12)?,
+        delay_ms: row.get(13)?,
+        damage_variance: row.get::<_, f64>(14)? as f32,
+        flags2: row.get(15)?,
+        stats,
+    })
+}
 
 fn template_from_row(row: &Row) -> rusqlite::Result<(u32, ItemTemplate)> {
     let low: i64 = row.get(6)?;
@@ -66,6 +107,7 @@ fn template_from_row(row: &Row) -> rusqlite::Result<(u32, ItemTemplate)> {
         required_level: row.get(4)?,
         allowable_class: row.get(5)?,
         allowable_race: (u64::from(high as u32) << 32) | u64::from(low as u32),
+        scaling: scaling_from_row(row)?,
     };
     Ok((row.get(0)?, template))
 }

@@ -11,9 +11,10 @@
 //! CritChance mods add to the crit chance; a crit adds 100% of the amount
 //! (retail 200%), scaled by CritDamageAndHealing mods.
 //!
-//! Weapon model (58, 121, 31): no server-side weapon data exists, so a
-//! weapon hit is the auto-attack's flat 10 plus `AP / 6 × 2.0` (the 2 s
-//! auto-attack interval as weapon speed).
+//! Weapon hits (58, 121, 31) roll the main hand's `[min, max]` and add
+//! `AP / 6 × speed`; 121 NORMALIZED_WEAPON_DMG uses the normalized speed of the
+//! weapon type (SimC `action_t::calculate_weapon_damage`). Main-hand damage is
+//! `CharacterStats.main_hand` (`item_stats.rs`), unarmed 1-2 at 2.0 s.
 
 use std::collections::HashSet;
 
@@ -26,6 +27,7 @@ use shared::protocol::{CombatLogEvent, CombatLogKind, MissKind};
 use super::{SpellHistory, log_event, now};
 use crate::auras::procs::{self, AuraEvent};
 use crate::auras::{AuraStatMods, SpellModOp, spell_mods};
+use crate::item_stats::WeaponDamage;
 use crate::spell_info::{SpellEffect, SpellInfo};
 use crate::stats::CharacterStats;
 
@@ -42,8 +44,6 @@ pub const EFFECT_HEAL_PCT: u32 = 136;
 
 /// Triggered spells may trigger further spells up to this depth.
 pub const MAX_TRIGGER_DEPTH: u8 = 3;
-const WEAPON_BASE_DAMAGE: f32 = 10.0;
-const WEAPON_SPEED: f32 = 2.0;
 
 /// One resolving spell.
 pub struct EffectCtx<'a> {
@@ -128,9 +128,19 @@ pub(crate) fn scaled_amount(
     base + coefficient * spell_power + ap_coefficient * attack_power
 }
 
-fn weapon_hit(world: &World, caster: Entity) -> f32 {
+/// One main-hand weapon hit; units without `CharacterStats` hit unarmed with 0 AP.
+fn weapon_hit(world: &World, caster: Entity, normalized: bool) -> f32 {
     let (_, attack_power) = power_stats(world, caster);
-    WEAPON_BASE_DAMAGE + shared::formulas::ap_bonus_damage(attack_power, WEAPON_SPEED)
+    let weapon = world
+        .get::<CharacterStats>(caster)
+        .map_or(WeaponDamage::UNARMED, |stats| stats.main_hand);
+    let speed = if normalized {
+        weapon.kind.normalized_speed()
+    } else {
+        weapon.speed
+    };
+    let roll = weapon.min + rand::random::<f32>() * (weapon.max - weapon.min);
+    shared::formulas::auto_attack_damage(roll, attack_power, speed)
 }
 
 /// Crit chance in percent: `CharacterStats.crit_pct` plus CritChance mods.
@@ -164,14 +174,15 @@ fn school_damage(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, targe
 
 /// 58 WEAPON_DAMAGE and 121 NORMALIZED_WEAPON_DMG: weapon hit + BasePoints.
 fn weapon_damage(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, target: Entity) {
-    let base = weapon_hit(world, ctx.caster) + effect.base_points;
+    let normalized = effect.effect == EFFECT_NORMALIZED_WEAPON_DMG;
+    let base = weapon_hit(world, ctx.caster, normalized) + effect.base_points;
     let (amount, crit) = with_crit(world, ctx.caster, ctx.spell, base);
     deal_damage(world, ctx, target, amount, crit, false);
 }
 
 /// 31 WEAPON_PERCENT_DAMAGE: BasePoints% of a weapon hit.
 fn weapon_percent_damage(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, target: Entity) {
-    let base = weapon_hit(world, ctx.caster) * effect.base_points / 100.0;
+    let base = weapon_hit(world, ctx.caster, false) * effect.base_points / 100.0;
     let (amount, crit) = with_crit(world, ctx.caster, ctx.spell, base);
     deal_damage(world, ctx, target, amount, crit, false);
 }

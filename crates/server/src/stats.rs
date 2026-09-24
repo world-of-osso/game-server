@@ -11,12 +11,15 @@ use bevy::prelude::*;
 use lightyear::prelude::ReplicationDirtyQueue;
 use shared::components::{CombatRatings, Health, ItemStatBlock, Level, Mana, Player, UnitStats};
 use shared::formulas::sum_equipment_stats;
+use shared::protocol::EquipmentSlot;
 
 use crate::character_stats_data::{
     BASE_MANA, CLASS_BASE_STATS, CRIT_RATING, HASTE_RATING, HP_PER_STAMINA, MASTERY_RATING,
     RACE_STAT_MODS, VERSATILITY_RATING,
 };
 use crate::class_progression::ActiveSpec;
+use crate::item_stats::{ItemScalingTables, WeaponDamage, item_stats};
+use crate::item_templates::ItemTemplates;
 use crate::spell_info::{ClassInfo, ClassSpells, SpellStore};
 
 /// Every player has 5% base crit (SimC `dbc_t::all_crit_base`).
@@ -24,10 +27,11 @@ const BASE_CRIT_PCT: f32 = 5.0;
 /// Every player has 8 base mastery points (SimC `player_t::init_base_stats`).
 const BASE_MASTERY_POINTS: f32 = 8.0;
 
-/// Component holding the stat blocks of all equipped items.
+/// Item ids physically equipped, by slot. The inventory sets it on world
+/// entry and after every item change.
 #[derive(Component, Debug, Clone, Default, PartialEq)]
 pub struct EquippedItems {
-    pub items: Vec<ItemStatBlock>,
+    pub items: Vec<(EquipmentSlot, u32)>,
 }
 
 /// Aura stat changes, folded in after base + gear. Absent means none.
@@ -101,6 +105,8 @@ pub struct CharacterStats {
     pub mastery_pct: f32,
     pub versatility_pct: f32,
     pub armor: f32,
+    /// Main-hand swing data; unarmed without a weapon.
+    pub main_hand: WeaponDamage,
 }
 
 pub struct StatsPlugin;
@@ -247,6 +253,7 @@ pub fn compute_character_stats(
         versatility_pct: rating_value(ratings.versatility, VERSATILITY_RATING[level])
             + mods.versatility_pct,
         armor: ratings.armor,
+        main_hand: WeaponDamage::UNARMED,
     })
 }
 
@@ -274,6 +281,39 @@ fn spec_inputs(
         Some(PrimaryStat::from_priority(spec.primary_stat_priority)),
         mastery,
     )
+}
+
+/// Item data `update_character_stats` resolves equipped item ids with.
+#[derive(bevy::ecs::system::SystemParam)]
+struct ItemData<'w> {
+    templates: Option<Res<'w, ItemTemplates>>,
+    tables: Option<Res<'w, ItemScalingTables>>,
+}
+
+impl ItemData<'_> {
+    /// Stat blocks of every equipped item and the main-hand weapon.
+    fn gear(&self, equipped: Option<&EquippedItems>) -> (Vec<ItemStatBlock>, WeaponDamage) {
+        let (Some(templates), Some(tables), Some(equipped)) =
+            (self.templates.as_deref(), self.tables.as_deref(), equipped)
+        else {
+            return (Vec::new(), WeaponDamage::UNARMED);
+        };
+        let mut blocks = Vec::with_capacity(equipped.items.len());
+        let mut main_hand = WeaponDamage::UNARMED;
+        for &(slot, item_id) in &equipped.items {
+            let Some(template) = templates.get(item_id) else {
+                continue;
+            };
+            let stats = item_stats(template, tables);
+            blocks.push(stats.block);
+            if slot == EquipmentSlot::MainHand
+                && let Some(weapon) = stats.weapon
+            {
+                main_hand = weapon;
+            }
+        }
+        (blocks, main_hand)
+    }
 }
 
 /// Compute new current value preserving the current-to-max ratio.
@@ -313,6 +353,7 @@ fn update_character_stats(
     mut players: Query<StatsQuery, StatsFilter>,
     classes: Option<Res<ClassSpells>>,
     spells: Option<Res<SpellStore>>,
+    items: ItemData,
     replication_dirty: Option<Res<ReplicationDirtyQueue>>,
 ) {
     for (
@@ -330,8 +371,8 @@ fn update_character_stats(
     {
         let class = class_info(classes.as_deref(), player.class);
         let (primary_stat, mastery_coefficient) = spec_inputs(class, spec, spells.as_deref());
-        let (gear_primary, gear_ratings) =
-            sum_equipment_stats(equipped.map_or(&[][..], |gear| gear.items.as_slice()));
+        let (gear, main_hand) = items.gear(equipped);
+        let (gear_primary, gear_ratings) = sum_equipment_stats(&gear);
         let input = StatInputs {
             class: player.class,
             race: player.race,
@@ -343,13 +384,14 @@ fn update_character_stats(
             gear_primary,
             gear_ratings,
         };
-        let Some(stats) = compute_character_stats(&input, mods) else {
+        let Some(mut stats) = compute_character_stats(&input, mods) else {
             warn!(
                 "no stat data for class {} level {}; stats unchanged",
                 player.class, level.0
             );
             continue;
         };
+        stats.main_hand = main_hand;
         let mut changed = unit_stats.set_if_neq(stats.primary);
         changed |= ratings.set_if_neq(stats.ratings);
         changed |= health.set_if_neq(Health {

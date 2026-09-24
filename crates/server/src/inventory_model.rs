@@ -19,6 +19,7 @@ use crate::item_templates::{BIND_ON_EQUIP, ItemTemplate, ItemTemplates};
 use crate::persistence::equipment::EquippedItem;
 use crate::persistence::inventory_store::{InventoryRecord, ItemInstanceData, ItemPlacementData};
 use crate::persistence::{CharacterData, InventoryItemData};
+use crate::stats::EquippedItems;
 
 pub(crate) type InventoryView = BTreeMap<ItemLocation, ItemStack>;
 type OpResult = Result<(), InventoryError>;
@@ -202,6 +203,17 @@ impl InventoryModel {
 
     pub(crate) fn appearance(&self) -> &shared::components::EquipmentAppearance {
         &self.character.equipment_appearance
+    }
+
+    /// Physically equipped item ids, the input of character stats.
+    pub(crate) fn equipped_items(&self) -> EquippedItems {
+        EquippedItems {
+            items: self
+                .equipped
+                .iter()
+                .map(|(slot, item)| (*slot, item.item_id))
+                .collect(),
+        }
     }
 
     fn stack(&self, item: &InventoryItemData, durability: Option<ItemDurability>) -> ItemStack {

@@ -208,3 +208,7 @@ Created `systems/content-import.md`: 25 content tables imported via new `scripts
 ## [2026-09-23] update | Retail-first content policy
 
 `systems/content-import.md`: policy section (content_* tables, rules, kept/dropped counts, open follow-ups); CSVs moved to the db2.py root. `systems/world-data.md`: new item/quest/taxi DB2 tables.
+
+## [2026-09-24] update | Equipped gear feeds character stats
+
+`systems/character-stats.md`: Gear section (item stat/armor/weapon formulas, squish, tooltip checks), gaps. `systems/inventory.md`: `EquippedItems` sync. `systems/spell-casting.md`: weapon hit uses main-hand damage.

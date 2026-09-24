@@ -24,6 +24,7 @@ fn content_item_rows_load_inventory_attributes() {
             required_level: 1,
             allowable_class: -1,
             allowable_race: u64::MAX,
+            scaling: sword.scaling,
         }
     );
     assert!(sword.allows(1, 1));

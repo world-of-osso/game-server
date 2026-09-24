@@ -28,6 +28,7 @@ fn test_templates() -> ItemTemplates {
             required_level,
             allowable_class,
             allowable_race: u64::MAX,
+            ..ItemTemplate::default()
         };
     ItemTemplates(
         [
@@ -47,6 +48,11 @@ fn bag(slot: u8) -> ItemLocation {
 }
 
 fn setup_app(db: Database) -> App {
+    setup_app_with(db, |_| {})
+}
+
+/// `setup_app` plus the plugins `extra` adds before the app finishes.
+fn setup_app_with(db: Database, extra: impl FnOnce(&mut App)) -> App {
     let mut app = App::new();
     app.add_plugins(MinimalPlugins);
     app.add_plugins(bevy::state::app::StatesPlugin);
@@ -73,6 +79,7 @@ fn setup_app(db: Database) -> App {
     app.insert_resource(test_templates());
     app.add_plugins(InventoryPlugin);
     app.add_plugins(crate::trade::TradePlugin);
+    extra(&mut app);
     app.finish();
     app.cleanup();
     app
@@ -607,5 +614,74 @@ fn class_restricted_weapon_is_rejected_and_bind_on_pickup_is_soulbound() {
             .equipment_appearance
             .entries
             .is_empty()
+    );
+}
+
+#[test]
+fn equipping_real_weapon_updates_character_stats_and_main_hand() {
+    use crate::item_stats::{WeaponDamage, load_item_scaling_tables};
+    use crate::stats::{CharacterStats, StatsPlugin};
+    use shared::components::{CombatRatings, Health, Level, UnitStats, WeaponType};
+
+    const NOTCHED_SHORTSWORD: u32 = 727;
+    let path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/world.db");
+    if !path.exists() {
+        eprintln!("skipping: {} not found", path.display());
+        return;
+    }
+    let mut app = setup_app_with(persistence::temp_database(), |app| {
+        app.add_plugins(StatsPlugin);
+    });
+    app.insert_resource(crate::item_templates::load_item_templates(&path).unwrap());
+    app.insert_resource(load_item_scaling_tables(&path).unwrap());
+    let client = spawn_client(&mut app, 1, "Bagger");
+    let mut data = persistence::load_character(db(&app), client.character_id).unwrap();
+    data.level = 5;
+    persistence::save_character(db(&app), client.character_id, &data);
+    app.world_mut().entity_mut(client.player).insert((
+        Level(5),
+        UnitStats::default(),
+        CombatRatings::default(),
+        Health {
+            current: 1.0,
+            max: 1.0,
+        },
+    ));
+    grant_bag_item(
+        &app,
+        client.character_id,
+        NOTCHED_SHORTSWORD,
+        "Notched Shortsword",
+    );
+    enter_world(&mut app, &client);
+    app.update();
+    let before = *app.world().get::<CharacterStats>(client.player).unwrap();
+    assert_eq!(before.main_hand, WeaponDamage::UNARMED);
+
+    request(
+        &mut app,
+        &client,
+        SwapItem {
+            from: bag(3),
+            to: ItemLocation::Equipment(EquipmentSlot::MainHand),
+        },
+    );
+    app.update();
+
+    assert!(received::<InventoryError>(&mut app, &client).is_empty());
+    let after = *app.world().get::<CharacterStats>(client.player).unwrap();
+    // Notched Shortsword (ilvl 5): +1 Agility, +1 Stamina, 1-2 damage at 2.60.
+    // A warrior with no spec counts every gear primary stat.
+    assert_eq!(after.primary.agility, before.primary.agility + 1.0);
+    assert_eq!(after.primary.stamina, before.primary.stamina + 1.0);
+    assert_eq!(after.max_health, before.max_health + 1.0);
+    assert_eq!(
+        after.main_hand,
+        WeaponDamage {
+            min: 1.0,
+            max: 2.0,
+            speed: 2.6,
+            kind: WeaponType::OneHand,
+        }
     );
 }

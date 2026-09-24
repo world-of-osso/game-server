@@ -20,6 +20,7 @@ NPCs have no `CharacterStats`, so their spell power, attack power and crit are 0
 | Spec main stat | `chr_specialization.PrimaryStatPriority`: 0–1 Int, 2–3 Agi, 4–5 Str | |
 | Mastery coefficient | Effect 0 `EffectBonusCoefficient` of the spec's `MasterySpellID_0`, for example Holy 183997 = 1.5 | |
 | AP conversion | `chr_classes.AttackPowerPerStrength` / `AttackPowerPerAgility` | |
+| Gear stats, armor, weapon damage | world.db `content_item` + `item_sparse`, DB2 `rand_prop_points`, `item_armor_{quality,shield,total}`, `armor_location`, `item_damage_{one,two}_hand{,_caster}`, `item_squish_era`, `curve_point` (12.1.0.69933); CASC `gametables/{combatratingsmultbyilvl,staminamultbyilvl,itemsocketcostperlevel}.txt` (FDIDs 1391670, 1980632, 1391643) | See [Gear](#gear). |
 
 - SimC checkout: `simulationcraft/simc` commit `303610892fe2cd9c71a75eae89007c8d320788ff` (2026-04-05), client data 12.0.1.66709 (`client_data_version.inc`).
 - The three CASC tables are byte-for-byte the values in SimC `sc_scale_data.inc` for build 12.0.1.66709: crit at level 80 is 12.158 and at 90 is 46.
@@ -44,6 +45,30 @@ NPCs have no `CharacterStats`, so their spell power, attack power and crit are 0
 DR is the server's `secondary_dr`, curve 21024 from SimC `item_scaling.inc` (12.0.1.66709), applied as in `player_t::apply_combat_rating_dr`. It is the identity up to 30%. Rating conversion and DR exist only in `stats.rs`; the server does not use `shared::formulas` rating functions.
 
 Rating units follow SimC `rating_t::init`: the game-table value is the rating needed for 1%, or for 1 mastery point.
+
+## Gear
+
+`item_stats.rs` computes each equipped item's stats; `ItemScalingTables` loads the DB2 tables at startup and the three item-level game tables are generated into `character_stats_data.rs`. Formulas are SimC `sc_item_data.cpp` (`scaled_stat`, `random_suffix_type`, `item_combat_rating_type`, `armor_value`, `weapon_dmg_min/max`) and `sc_const_data.cpp` `dbc_t::weapon_dps`; TrinityCore `Item::GetItemStatValue`, `ItemTemplate::GetArmor`/`GetDamage` read the same tables.
+
+1. **Item level:** ItemSparse `ItemLevel`; items with `ItemSquishEraID` below 2 take the Midnight squish curve 92181 (1→1, 10→10, 342→70, …), rounded (SimC `item_t::download_item_data`). Black Duskwood Staff 21 → 12.
+2. **Budget:** RandPropPoints float column for the level: Epic (quality 4-5), Superior (3, 7) or Good (rest); column 0 two-handers/head/chest/legs, 1 shoulders/waist/feet/hands/trinket, 2 neck/finger/cloak/wrist, 3 one-handers/off-hands.
+3. **Stat** = floor(StatPercentEditor × budget × 0.0001 − round_half_even(StatPercentageOfSocket × socket cost) + 0.5), with ratings × gtCombatRatingsMultByILvl and stamina × gtStaminaMultByILvl for the slot column (armor, weapon, trinket, jewelry), multiplied before rounding.
+   - Modeled `ITEM_MOD`s: 3 Agi, 4 Str, 5 Int, 7 Sta, 71–74 hybrids (added to each listed primary; the spec main-stat filter keeps one), 32 crit, 36 haste, 40 versatility, 49 mastery.
+4. **Armor:** shields floor(ItemArmorShield[quality] + 0.5); cloth–plate floor(ItemArmorTotal[material] × ItemArmorQuality[quality] × ArmorLocation[slot][material] + 0.5), robe uses the chest row.
+5. **Weapon:** DPS from ItemDamageOneHand/TwoHand (Caster variants with `ITEM_FLAG2_CASTER_WEAPON` 0x200; bows/guns/crossbows two-hand, wands one-hand caster); min = floor(DPS × speed × (1 − DmgVariance/2)), max = floor(DPS × speed × (1 + DmgVariance/2) + 0.5).
+
+The main-hand result is `CharacterStats.main_hand` (unarmed 1–2 at 2.0 s, TrinityCore `BASE_MINDAMAGE`/`BASE_MAXDAMAGE`). Spell weapon hits (effects 58, 121, 31) roll it and add AP / 6 × speed; 121 uses the normalized speed (dagger 1.7, one-hand 2.4, two-hand 3.3, ranged 2.8).
+
+`EquippedItems` holds `(EquipmentSlot, item_id)` of physically equipped items. The inventory sets it on world entry (`send_initial_inventory`) and after each item change (`send_inventory_deltas`), which triggers the recompute.
+
+**Checked against Retail tooltips** (Wowhead tooltip API, 2026-09-24):
+
+| Item | Level | Tooltip | Server |
+|---|---|---|---|
+| Notched Shortsword 727 | 5 | 1–2, 2.60, +1 Agi, +1 Sta | same |
+| Black Duskwood Staff 937 | 21 → 12 | 6–9, 3.60 | same |
+| Vendetta 776 | shown at 83 | 13–23, 1.80, +13 Agi, +13 crit | same at 83 |
+| Forlorn Breastplate of War 35588 | shown at 34 | 26 armor, +8 Str/Int, +12 Sta, +15 crit | same at 34; 15 → 4/6/8, 18 armor unscaled |
 
 ## SimC level 81–89 TODO gaps
 
@@ -106,10 +131,11 @@ The spawned `Health` comes from redb. The first recompute keeps the persisted ra
 
 ## Gaps
 
-### Phase 4 (inventory) blockers
+### Gear
 
-- **Gear:** the server has no item stat data. world.db has no ItemSparse or item-level budget tables, and equipment records carry only item_id, name and quality. `EquippedItems` stays the gear input, but nothing fills it in production.
-- **Weapons:** there is no weapon data. Weapon hits keep the placeholder in [[spell-casting]].
+- **Scaled item levels:** Wowhead shows some old items at a level other than ItemSparse `ItemLevel` (Vendetta 20 at 83, Riverpaw Leather Vest 6 at 80, Forlorn Breastplate 35 at 34). The source of that scaling (drop context bonus lists, ContentTuning, `PlayerLevelToItemLevelCurveID`) is not identified; the server uses the static, squished level. ItemBonus/bonus-tree levels are not applied.
+- **Not modeled:** sockets and gems, enchants, tertiary stats (leech, avoidance, speed), bonus armor, off-hand and ranged swings; auto-attacks (`combat.rs`) keep their flat damage.
+- **Admin grant:** `grant-equipment` writes equipment without the inventory change queue, so an online player's `EquippedItems` updates at the next inventory change or relog.
 
 ### Other
 - **Not modeled:**
@@ -126,6 +152,8 @@ The spawned `Health` comes from redb. The first recompute keeps the persisted ra
 
 - [stats.rs](../../../crates/server/src/stats.rs) — computation, components, system
 - [stats_tests.rs](../../../crates/server/src/stats_tests.rs) — concrete-number and real enter-world/admin set-level tests
+- [item_stats.rs](../../../crates/server/src/item_stats.rs) — item stats, armor, weapon damage, scaling tables
+- [item_stats_tests.rs](../../../crates/server/src/item_stats_tests.rs) — real-item tooltip tests
 - [character_stats_data.rs](../../../crates/server/src/character_stats_data.rs) — generated tables
 - [gen_character_stat_tables.py](../../../scripts/gen_character_stat_tables.py) — generator
 

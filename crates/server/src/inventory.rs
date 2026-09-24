@@ -21,6 +21,7 @@ use crate::item_templates::ItemTemplates;
 use crate::networking::PlayerLink;
 use crate::persistence::inventory_store::{load_inventory_record, save_inventory_record};
 use crate::persistence::{self, GameDatabase};
+use crate::stats::EquippedItems;
 
 #[path = "inventory_model.rs"]
 mod inventory_model;
@@ -95,7 +96,7 @@ fn send_error(connection: Entity, senders: &mut ErrorSenders, error: InventoryEr
 
 fn send_initial_inventory(
     mut commands: Commands,
-    connections: Query<(Entity, &InWorld), (With<Authenticated>, Added<InWorld>)>,
+    connections: Query<(Entity, &InWorld, &PlayerLink), (With<Authenticated>, Added<InWorld>)>,
     store: InventoryStore,
     mut inventory_senders: Query<&mut MessageSender<InventorySnapshot>>,
     mut equipment_senders: Query<&mut MessageSender<EquipmentSnapshot>>,
@@ -104,7 +105,7 @@ fn send_initial_inventory(
     let Some((db, templates)) = store.get() else {
         return;
     };
-    for (connection, in_world) in &connections {
+    for (connection, in_world, link) in &connections {
         let model = match load_model(db, templates, in_world.character_id) {
             Ok(model) => model,
             Err(error) => {
@@ -121,6 +122,7 @@ fn send_initial_inventory(
         commands
             .entity(connection)
             .insert(SentInventoryView(model.view()));
+        commands.entity(link.0).insert(model.equipped_items());
         // Persist placements chosen for previously unplaced items.
         save_inventory_record(db, in_world.character_id, &model.into_record());
     }
@@ -263,7 +265,7 @@ fn send_inventory_deltas(
     mut updates: ResMut<GoldUpdateQueue>,
     store: InventoryStore,
     mut connections: DeltaConnections,
-    mut appearances: Query<&mut EquipmentAppearance, With<Player>>,
+    mut players: Query<(&mut EquipmentAppearance, Option<&mut EquippedItems>), With<Player>>,
     dirty_queue: Option<Res<ReplicationDirtyQueue>>,
     mut senders: Query<&mut MessageSender<InventoryDelta>>,
 ) {
@@ -283,6 +285,7 @@ fn send_inventory_deltas(
         };
         let view = model.view();
         let appearance = model.appearance().clone();
+        let equipped = model.equipped_items();
         save_inventory_record(db, in_world.character_id, &model.into_record());
         let changes = diff_views(&sent.0, &view);
         if !changes.is_empty()
@@ -291,9 +294,13 @@ fn send_inventory_deltas(
             sender.send::<InventoryChannel>(InventoryDelta { changes });
             sent.0 = view;
         }
-        if let Ok(mut current) = appearances.get_mut(link.0)
-            && *current != appearance
-        {
+        let Ok((mut current, current_equipped)) = players.get_mut(link.0) else {
+            continue;
+        };
+        if let Some(mut current_equipped) = current_equipped {
+            current_equipped.set_if_neq(equipped);
+        }
+        if *current != appearance {
             *current = appearance;
             if let Some(dirty_queue) = dirty_queue.as_deref() {
                 dirty_queue.mark(link.0);

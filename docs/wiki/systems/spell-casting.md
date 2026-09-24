@@ -135,7 +135,7 @@ Formulas:
   - Units without `CharacterStats` (NPCs) have SP = AP = 0.
 - **Crit:** `CharacterStats.crit_pct` (5% base for players, 0 for NPCs; MOD_CRIT_PCT auras fold in through `StatModifiers`) + CritChance mods. A crit adds 100% of the amount, scaled by CritDamageAndHealing mods.
 - **Damage and heal mods:** see [[auras]]: spell mods, done/taken multipliers, immunity and absorbs.
-- **Weapon hit:** 10 (the auto-attack base) + `AP / 6 × 2.0`. There is no server weapon data.
+- **Weapon hit:** a roll in the main hand's `[min, max]` + `AP / 6 × speed`; 121 uses the weapon type's normalized speed. Main-hand damage comes from the equipped weapon ([[character-stats]] Gear), unarmed 1–2 at 2.0 s.
 
 Damage and heal side effects:
 - Damage sets `LastDamager` and puts source and target in combat (`combat::enter_combat`, 5 s grace).
