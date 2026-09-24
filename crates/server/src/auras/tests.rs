@@ -1,7 +1,9 @@
 //! Aura runtime tests with real spells from data/world.db (skipped when absent).
 
 use shared::casting::CastState;
-use shared::components::{AuraView, Health, Mana, Player, Position, UnitAuras};
+use shared::components::{
+    AuraView, Health, Mana, Player, Position, UnitAuras, UnitFactionTemplate,
+};
 use shared::protocol::{CancelAura, CombatChannel, CombatLogEvent, CombatLogKind};
 
 use super::*;
@@ -202,6 +204,16 @@ fn same_caster_refresh_resets_duration_and_other_casters_coexist() {
     assert_eq!(auras_of(&h, h.npc, SHADOW_WORD_PAIN).len(), 2);
 }
 
+/// Monster template 14 (EnemyGroup includes players): the NPC regards the
+/// caster as hostile, so its auras on the caster are harmful. The harness
+/// kobold (25) is only hostile from the player side.
+fn make_npc_hostile_to_players(h: &mut Harness) {
+    h.app
+        .world_mut()
+        .entity_mut(h.npc)
+        .insert(UnitFactionTemplate(14));
+}
+
 fn cancel(h: &mut Harness, spell_id: u32) {
     h.app
         .world_mut()
@@ -216,6 +228,7 @@ fn cancel_aura_removes_own_buff_but_not_a_debuff() {
     let Some(mut h) = harness(Vec::new(), &[RENEW, SHADOW_WORD_PAIN], 5) else {
         return;
     };
+    make_npc_hostile_to_players(&mut h);
     apply(&mut h.app, h.caster, h.caster, RENEW);
     apply(&mut h.app, h.npc, h.caster, SHADOW_WORD_PAIN);
     cancel(&mut h, SHADOW_WORD_PAIN);
@@ -231,6 +244,7 @@ fn purify_dispels_a_magic_debuff() {
     let Some(mut h) = harness(Vec::new(), &[PURIFY, SHADOW_WORD_PAIN], 5) else {
         return;
     };
+    make_npc_hostile_to_players(&mut h);
     apply(&mut h.app, h.npc, h.caster, SHADOW_WORD_PAIN);
     assert_eq!(auras_of(&h, h.caster, SHADOW_WORD_PAIN)[0].dispel_type, 1);
     h.cast_and_deliver(PURIFY, None);
