@@ -3,6 +3,7 @@ use lightyear::prelude::ReplicationDirtyQueue;
 use shared::components::{Health, Position, Rotation, ThreatTable};
 
 use crate::combat::DeathState;
+use crate::grid_activity::GridDormant;
 use crate::interest::{InterestDirtyQueue, mark_interest_position_changed};
 use crate::terrain_height::{bevy_to_wow, wow_to_bevy};
 use crate::world_data::{WaypointMoveType, WaypointPath, WaypointPoint, WorldData};
@@ -156,7 +157,7 @@ fn wander_system(
             &mut WanderState,
             Option<&CreatureState>,
         ),
-        Without<DeathState>,
+        (Without<DeathState>, Without<GridDormant>),
     >,
 ) {
     let dt = time.delta_secs();
@@ -259,7 +260,7 @@ fn waypoint_system(
             Option<&mut Rotation>,
             Option<&CreatureState>,
         ),
-        Without<DeathState>,
+        (Without<DeathState>, Without<GridDormant>),
     >,
 ) {
     let dt = time.delta_secs();
@@ -344,7 +345,11 @@ fn formation_system(
     dirty_queue: Option<Res<InterestDirtyQueue>>,
     leaders: Query<
         (&Position, &WaypointState, Option<&CreatureState>),
-        (Without<FormationMember>, Without<DeathState>),
+        (
+            Without<FormationMember>,
+            Without<DeathState>,
+            Without<GridDormant>,
+        ),
     >,
     mut members: Query<
         (
@@ -353,7 +358,7 @@ fn formation_system(
             &FormationMember,
             Option<&CreatureState>,
         ),
-        Without<DeathState>,
+        (Without<DeathState>, Without<GridDormant>),
     >,
 ) {
     for (entity, mut pos, member, member_state) in &mut members {
@@ -423,7 +428,7 @@ fn follow_leader_step(
 fn chase_system(
     time: Res<Time>,
     dirty_queue: Option<Res<InterestDirtyQueue>>,
-    mut chasers: Query<(Entity, &mut Position, &SpawnPoint, &CreatureState)>,
+    mut chasers: Query<(Entity, &mut Position, &SpawnPoint, &CreatureState), Without<GridDormant>>,
     targets: Query<&Position, Without<SpawnPoint>>,
 ) {
     let dt = time.delta_secs();
@@ -469,6 +474,7 @@ type LeashQuery<'w, 's> = Query<
         Option<&'static mut ThreatTable>,
         Option<&'static mut Health>,
     ),
+    Without<GridDormant>,
 >;
 
 /// Evade pursuing creatures that exceed leash distance from spawn.
@@ -503,7 +509,10 @@ fn leash_check_system(
 fn return_to_spawn_system(
     time: Res<Time>,
     dirty_queue: Option<Res<InterestDirtyQueue>>,
-    mut query: Query<(Entity, &mut Position, &SpawnPoint, &mut CreatureState)>,
+    mut query: Query<
+        (Entity, &mut Position, &SpawnPoint, &mut CreatureState),
+        Without<GridDormant>,
+    >,
 ) {
     let dt = time.delta_secs();
     for (entity, mut pos, spawn, mut state) in &mut query {

@@ -29,6 +29,7 @@ use shared::protocol::{CancelAura, CombatLogEvent, CombatLogKind};
 
 use crate::auth::{Authenticated, InWorld};
 use crate::class_progression::KnownSpells;
+use crate::grid_activity::GridDormant;
 use crate::networking::PlayerLink;
 use crate::spell_cast::{log_event, targets};
 use crate::spell_info::{SpellEffect, SpellInfo, SpellStore};
@@ -942,10 +943,11 @@ pub fn sync_passives(world: &mut World, unit: Entity, source: AuraSource, spells
 }
 
 /// Death, state interrupts (movement, combat, spec), lost casters,
-/// periodic ticks, then expiry.
+/// periodic ticks, then expiry. Dormant creatures catch up on reactivation
+/// (expiry and tick times are absolute).
 fn update_auras(world: &mut World) {
     let now = aura_now(world);
-    let mut units = world.query_filtered::<Entity, With<ActiveAuras>>();
+    let mut units = world.query_filtered::<Entity, (With<ActiveAuras>, Without<GridDormant>)>();
     let units: Vec<Entity> = units.iter(world).collect();
     for unit in units {
         if !targets::is_alive(world, unit) {
@@ -1048,7 +1050,8 @@ fn state_interrupts(world: &mut World, unit: Entity) {
 /// taken at send time and the client counts down.
 fn sync_unit_auras(world: &mut World) {
     let now = aura_now(world);
-    let mut units = world.query::<(Entity, &mut ActiveAuras, &mut UnitAuras)>();
+    let mut units =
+        world.query_filtered::<(Entity, &mut ActiveAuras, &mut UnitAuras), Without<GridDormant>>();
     let mut changed = Vec::new();
     for (entity, mut auras, mut view) in units.iter_mut(world) {
         if !auras.dirty {

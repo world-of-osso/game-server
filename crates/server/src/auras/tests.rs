@@ -121,6 +121,41 @@ fn shadow_word_pain_ticks_periodic_damage_then_expires() {
 }
 
 #[test]
+fn dormant_creature_skips_aura_ticks_then_catches_up_on_reactivation() {
+    let Some(mut h) = harness(Vec::new(), &[SHADOW_WORD_PAIN], 5) else {
+        return;
+    };
+    h.cast_and_deliver(SHADOW_WORD_PAIN, Some(h.npc));
+    assert_eq!(h.health(h.npc), 5000.0 - 17.0);
+    let npc = h.npc;
+    h.app
+        .world_mut()
+        .entity_mut(npc)
+        .insert(crate::grid_activity::GridDormant);
+    // 20 s dormant: past all 8 two-second ticks and the 16 s expiry.
+    h.advance(frames_for(20_000));
+    let periodic = |h: &Harness| {
+        log_of(h, CombatLogKind::Damage, SHADOW_WORD_PAIN)
+            .into_iter()
+            .filter(|event| event.periodic)
+            .count()
+    };
+    assert_eq!(periodic(&h), 0);
+    assert_eq!(h.health(h.npc), 5000.0 - 17.0);
+    assert_eq!(auras_of(&h, h.npc, SHADOW_WORD_PAIN).len(), 1);
+
+    h.app
+        .world_mut()
+        .entity_mut(npc)
+        .remove::<crate::grid_activity::GridDormant>();
+    h.advance(2);
+    assert_eq!(periodic(&h), 8);
+    assert_eq!(h.health(h.npc), 5000.0 - 17.0 - 8.0 * 12.0);
+    assert!(auras_of(&h, h.npc, SHADOW_WORD_PAIN).is_empty());
+    assert!(view_of(&h, h.npc, SHADOW_WORD_PAIN).is_none());
+}
+
+#[test]
 fn renew_heals_every_tick() {
     let Some(mut h) = harness(Vec::new(), &[RENEW], 5) else {
         return;

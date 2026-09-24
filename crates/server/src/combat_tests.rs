@@ -582,6 +582,52 @@ fn respawn_at_spawn_with_full_health_does_not_dirty_replicated_state() {
 }
 
 #[test]
+fn dead_creature_in_dormant_grid_respawns_on_its_timer() {
+    use bevy::time::TimeUpdateStrategy;
+    let mut app = setup_combat_app();
+    app.insert_resource(TimeUpdateStrategy::ManualDuration(
+        std::time::Duration::from_millis(50),
+    ));
+    let spawn = SpawnPoint {
+        x: 10.0,
+        y: 20.0,
+        z: 30.0,
+        wander_distance: 0.0,
+        speed_walk: 1.0,
+    };
+    let wolf = app
+        .world_mut()
+        .spawn((
+            DeathState { respawn_timer: 3.0 },
+            crate::grid_activity::GridDormant,
+            Health {
+                current: 0.0,
+                max: 100.0,
+            },
+            spawn,
+            // Died 15 yd from its spawn point.
+            pos(25.0, 20.0, 30.0),
+        ))
+        .id();
+
+    // 2.5 s: still dead.
+    for _ in 0..50 {
+        app.update();
+    }
+    assert!(app.world().get::<DeathState>(wolf).is_some());
+
+    // 3.5 s: back at its spawn point with full health, still dormant.
+    for _ in 0..20 {
+        app.update();
+    }
+    let wolf = app.world().entity(wolf);
+    assert!(wolf.get::<DeathState>().is_none());
+    assert_eq!(wolf.get::<Health>().unwrap().current, 100.0);
+    assert_eq!(*wolf.get::<Position>().unwrap(), pos(10.0, 20.0, 30.0));
+    assert!(wolf.get::<crate::grid_activity::GridDormant>().is_some());
+}
+
+#[test]
 fn respawn_delay_is_spawntimesecs_plus_rank_corpse_decay() {
     // Northshire Guard: spawntimesecs 430, normal rank.
     assert_eq!(RespawnDelay::for_spawn(430, 0), RespawnDelay(490.0));
