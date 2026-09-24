@@ -52,6 +52,9 @@ TABLES = [
     "TraitCurrencySource", "SpecSetMember",
     "Item", "ItemSparse", "ItemAppearance", "ItemModifiedAppearance", "QuestV2",
     "TaxiNodes", "TaxiPath", "TaxiPathNode", "FactionTemplate",
+    "RandPropPoints", "ItemArmorQuality", "ItemArmorShield", "ItemArmorTotal",
+    "ArmorLocation", "ItemDamageOneHand", "ItemDamageOneHandCaster",
+    "ItemDamageTwoHand", "ItemDamageTwoHandCaster", "ItemSquishEra", "CurvePoint",
 ]
 
 
