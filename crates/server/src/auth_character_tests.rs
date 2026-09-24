@@ -12,7 +12,8 @@ use shared::components::{
 use shared::currency::currency_by_id;
 use shared::death::DeathState;
 use shared::protocol::{
-    AuthChannel, DeathStateUpdate, EnterWorldResponse, LoadTerrain, SelectCharacter,
+    AuthChannel, ChatMessage, ChatType, DeathStateUpdate, EnterWorldResponse, LoadTerrain,
+    SelectCharacter,
 };
 
 use crate::auth::Authenticated;
@@ -309,4 +310,78 @@ fn selecting_character_with_invalid_race_class_is_rejected() {
         .iter(app.world())
         .count();
     assert_eq!(spawned, 0);
+}
+
+#[derive(Resource, Default)]
+struct ChatReplies(Vec<ChatMessage>);
+
+fn collect_chat_replies(
+    mut receivers: Query<&mut MessageReceiver<ChatMessage>>,
+    mut replies: ResMut<ChatReplies>,
+) {
+    for mut receiver in &mut receivers {
+        replies.0.extend(receiver.receive());
+    }
+}
+
+#[test]
+fn entering_world_sends_one_system_motd_message() {
+    let db = test_db();
+    let account_id = 12;
+    let (character_id, _) = persistence::create_character(&db.db, account_id, "Motdreader", 1, 1)
+        .expect("character should be created");
+    let mut motd = shared::motd::Motd::default();
+    motd.set("Raid reset is Tuesday.", 1_000).unwrap();
+
+    let mut app = App::new();
+    app.add_plugins(MinimalPlugins);
+    app.add_plugins(bevy::state::app::StatesPlugin);
+    app.add_plugins(lightyear::prelude::server::ServerPlugins {
+        tick_duration: Duration::from_millis(50),
+    });
+    app.register_message::<SelectCharacter>();
+    app.register_message::<EnterWorldResponse>();
+    app.register_message::<LoadTerrain>();
+    app.register_message::<ChatMessage>();
+    app.insert_resource(db);
+    app.insert_resource(motd);
+    app.add_plugins(DeathPlugin);
+    app.add_systems(Update, process_select_character);
+    app.add_systems(
+        Update,
+        crate::messaging::send_motd_on_enter_world.after(process_select_character),
+    );
+    app.init_resource::<ChatReplies>();
+    app.add_systems(Last, collect_chat_replies);
+    app.finish();
+    app.cleanup();
+    let connection = app
+        .world_mut()
+        .spawn((
+            RemoteId(PeerId::Local(account_id)),
+            Connected,
+            HostClient { buffer: Vec::new() },
+            Authenticated { account_id },
+            MessageSender::<SelectCharacter>::default(),
+            MessageReceiver::<SelectCharacter>::default(),
+            MessageSender::<EnterWorldResponse>::default(),
+            MessageReceiver::<EnterWorldResponse>::default(),
+            MessageSender::<LoadTerrain>::default(),
+            MessageReceiver::<LoadTerrain>::default(),
+            MessageSender::<ChatMessage>::default(),
+            MessageReceiver::<ChatMessage>::default(),
+        ))
+        .id();
+    app.world_mut()
+        .get_mut::<MessageSender<SelectCharacter>>(connection)
+        .unwrap()
+        .send::<AuthChannel>(SelectCharacter { character_id });
+    for _ in 0..4 {
+        app.update();
+    }
+
+    let messages = &app.world().resource::<ChatReplies>().0;
+    assert_eq!(messages.len(), 1);
+    assert_eq!(messages[0].channel, ChatType::System);
+    assert_eq!(messages[0].content, "Raid reset is Tuesday.");
 }

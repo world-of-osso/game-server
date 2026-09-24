@@ -141,6 +141,10 @@ impl Plugin for ServerNetworkPlugin {
         app.add_systems(Update, auth::process_create_character);
         app.add_systems(Update, auth::process_delete_character);
         app.add_systems(Update, auth::process_select_character);
+        app.add_systems(
+            Update,
+            messaging::send_motd_on_enter_world.after(auth::process_select_character),
+        );
         app.add_systems(Update, auth::auth_timeout);
         app.add_systems(Update, auth::deliver_forced_disconnects);
         app.add_observer(on_new_link);

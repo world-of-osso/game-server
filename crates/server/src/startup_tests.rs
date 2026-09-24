@@ -300,8 +300,7 @@ fn motd_round_trip() {
 fn motd_default_when_missing() {
     let db = temp_database();
     let motd = load_motd(&db);
-    assert_eq!(motd, shared::motd::Motd::default());
-    assert!(motd.message.is_empty());
+    assert_eq!(motd.message, "Welcome to World of Osso.");
 }
 
 #[test]

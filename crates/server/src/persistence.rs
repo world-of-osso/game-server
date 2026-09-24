@@ -803,16 +803,26 @@ pub fn next_id(db: &Database, key: &str) -> u64 {
     id
 }
 
-/// Load the MOTD from the database. Returns default if not set.
+/// MOTD until an admin sets or clears one.
+const DEFAULT_MOTD: &str = "Welcome to World of Osso.";
+
+fn default_motd() -> shared::motd::Motd {
+    shared::motd::Motd {
+        message: DEFAULT_MOTD.to_string(),
+        updated_at: 0,
+    }
+}
+
+/// Load the MOTD from the database. Returns `DEFAULT_MOTD` if never saved.
 pub fn load_motd(db: &Database) -> shared::motd::Motd {
     let txn = db.begin_read().expect("Failed to begin read txn");
     let table = match txn.open_table(SERVER_SETTINGS) {
         Ok(t) => t,
-        Err(_) => return shared::motd::Motd::default(),
+        Err(_) => return default_motd(),
     };
     match table.get("motd").expect("Failed to read motd") {
         Some(bytes) => bitcode::decode(bytes.value()).unwrap_or_default(),
-        None => shared::motd::Motd::default(),
+        None => default_motd(),
     }
 }
 

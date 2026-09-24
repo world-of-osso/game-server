@@ -357,6 +357,19 @@ fn accepts_from(recipient: &ChatParticipant, sender_name: &str) -> bool {
     !sender_is_ignored(sender_name, Some(recipient.ignored))
 }
 
+/// Retail login system line: the message of the day, once per world entry.
+pub fn send_motd_on_enter_world(
+    motd: Res<shared::motd::Motd>,
+    mut entered: Query<&mut MessageSender<ChatMessage>, Added<crate::auth::InWorld>>,
+) {
+    let Some(message) = motd.as_chat_message() else {
+        return;
+    };
+    for mut sender in &mut entered {
+        sender.send::<ChatChannel>(message.clone());
+    }
+}
+
 fn system_message(content: String) -> ChatMessage {
     ChatMessage {
         sender: String::new(),
