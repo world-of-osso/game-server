@@ -757,3 +757,131 @@ fn spec_change_loads_the_other_specs_saved_config() {
     let unlearned = received::<SpellsUnlearned>(&mut app, player);
     assert!(unlearned[0].spells.contains(&383344));
 }
+
+#[test]
+fn new_human_paladin_default_bar_skips_class_mounts() {
+    let Some(classes) = class_spells() else {
+        return;
+    };
+    let db = temp_database();
+    let (character_id, _) = persistence::create_character(&db, 1, "Uther", HUMAN, PALADIN).unwrap();
+    let mut app = setup_app(db, classes);
+    let player = spawn_player(&mut app, character_id, HUMAN, PALADIN, 1);
+    advance(&mut app);
+
+    // Summon Warhorse 13819 and Summon Charger 23214 (EffectAura 78 MOUNTED)
+    // are known from level 1 and used to take slots 0 and 1.
+    let known = app.world().get::<KnownSpells>(player).unwrap();
+    assert!(known.contains(13819) && known.contains(23214));
+    assert_eq!(
+        received::<ActionBarSnapshot>(&mut app, player),
+        vec![ActionBarSnapshot {
+            slots: vec![(0, ActionRef::Spell(CRUSADER_STRIKE))],
+        }]
+    );
+}
+
+/// Swift Justice (node 81521, entry 102491) needs Divine Storm; Final Verdict
+/// 383328 (node 81532, entry 102504, TraitDefinition 107509) needs Swift
+/// Justice and has `OverridesSpellID` Templar's Verdict 85256.
+const SWIFT_JUSTICE: (u32, u32) = (81521, 102491);
+const FINAL_VERDICT: (u32, u32) = (81532, 102504);
+const FINAL_VERDICT_SPELL: u32 = 383328;
+
+#[test]
+fn final_verdict_replaces_templars_verdict_in_known_spells_and_bar() {
+    let Some(classes) = class_spells() else {
+        return;
+    };
+    let db = temp_database();
+    save_progression(
+        &db,
+        9,
+        &ProgressionData {
+            spec_id: SPEC_RETRIBUTION,
+            action_bar: vec![
+                (0, ActionRefData::Spell(CRUSADER_STRIKE)),
+                (5, ActionRefData::Spell(TEMPLARS_VERDICT)),
+            ],
+        },
+    );
+    let mut app = setup_app(db, classes);
+    let player = spawn_player(&mut app, 9, HUMAN, PALADIN, 80);
+    advance(&mut app);
+    drain(&mut app, player);
+    let without_verdict = [BLADE_OF_JUSTICE, DIVINE_STORM, SWIFT_JUSTICE];
+    let mut with_verdict = without_verdict.to_vec();
+    with_verdict.push(FINAL_VERDICT);
+
+    send_request(
+        &mut app,
+        player,
+        CommitTraitConfig {
+            spec_id: SPEC_RETRIBUTION,
+            entries: selections(&with_verdict),
+        },
+    );
+
+    assert_eq!(
+        received::<SpellsUnlearned>(&mut app, player),
+        vec![SpellsUnlearned {
+            spells: vec![TEMPLARS_VERDICT],
+        }]
+    );
+    let learned = received::<SpellsLearned>(&mut app, player);
+    assert!(learned[0].spells.contains(&FINAL_VERDICT_SPELL));
+    let replaced = vec![
+        (0, ActionRef::Spell(CRUSADER_STRIKE)),
+        (5, ActionRef::Spell(FINAL_VERDICT_SPELL)),
+    ];
+    assert_eq!(
+        received::<ActionBarSnapshot>(&mut app, player),
+        vec![ActionBarSnapshot { slots: replaced }]
+    );
+    let known = app.world().get::<KnownSpells>(player).unwrap();
+    assert!(known.contains(FINAL_VERDICT_SPELL) && !known.contains(TEMPLARS_VERDICT));
+    assert_eq!(
+        stored(&app, 9).action_bar,
+        vec![
+            (0, ActionRefData::Spell(CRUSADER_STRIKE)),
+            (5, ActionRefData::Spell(FINAL_VERDICT_SPELL)),
+        ]
+    );
+
+    send_request(
+        &mut app,
+        player,
+        CommitTraitConfig {
+            spec_id: SPEC_RETRIBUTION,
+            entries: selections(&without_verdict),
+        },
+    );
+
+    assert_eq!(
+        received::<SpellsUnlearned>(&mut app, player),
+        vec![SpellsUnlearned {
+            spells: vec![FINAL_VERDICT_SPELL],
+        }]
+    );
+    assert_eq!(
+        received::<SpellsLearned>(&mut app, player),
+        vec![SpellsLearned {
+            spells: vec![TEMPLARS_VERDICT],
+        }]
+    );
+    let restored = vec![
+        (0, ActionRef::Spell(CRUSADER_STRIKE)),
+        (5, ActionRef::Spell(TEMPLARS_VERDICT)),
+    ];
+    assert_eq!(
+        received::<ActionBarSnapshot>(&mut app, player),
+        vec![ActionBarSnapshot { slots: restored }]
+    );
+    assert_eq!(
+        stored(&app, 9).action_bar,
+        vec![
+            (0, ActionRefData::Spell(CRUSADER_STRIKE)),
+            (5, ActionRefData::Spell(TEMPLARS_VERDICT)),
+        ]
+    );
+}

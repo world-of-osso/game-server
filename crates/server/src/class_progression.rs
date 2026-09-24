@@ -75,6 +75,9 @@ pub struct TraitLoadout {
     entries: Vec<ConfigEntry>,
     unspent: Vec<(u32, i32)>,
     spells: Vec<KnownSpell>,
+    /// `(TraitDefinition.OverridesSpellID, SpellID)` of the applied talents:
+    /// the baseline spell is not known and its bar buttons show the talent.
+    overrides: Vec<(u32, u32)>,
 }
 
 impl TraitLoadout {
@@ -154,13 +157,14 @@ fn resolve_spec(class: &ClassInfo, level: u8, requested: u32) -> Option<&SpecInf
 }
 
 /// Auto-learned class spells up to `level` for the race, then the spec's spells
-/// and mastery, then talent spells, without duplicates.
+/// and mastery, then talent spells, without duplicates and without the spells
+/// the talents override.
 fn compute_known_spells(
     class: &ClassInfo,
     race: u8,
     level: u8,
     spec: Option<&SpecInfo>,
-    talents: impl Iterator<Item = KnownSpell>,
+    traits: &TraitLoadout,
 ) -> Vec<KnownSpell> {
     let learnable = class
         .learnable
@@ -185,20 +189,35 @@ fn compute_known_spells(
         });
         spells.chain(masteries)
     });
+    let overridden = |spell_id| traits.overrides.iter().any(|&(base, _)| base == spell_id);
     let mut known: Vec<KnownSpell> = Vec::new();
-    for spell in learnable.chain(spec_spells).chain(talents) {
-        if !known.iter().any(|entry| entry.spell_id == spell.spell_id) {
+    for spell in learnable
+        .chain(spec_spells)
+        .chain(traits.active_talent_spells())
+    {
+        if !overridden(spell.spell_id)
+            && !known.iter().any(|entry| entry.spell_id == spell.spell_id)
+        {
             known.push(spell);
         }
     }
     known
 }
 
-/// Known non-passive spells in learn order on slots 0..12.
-fn default_action_bar(known: &[KnownSpell]) -> BTreeMap<u8, ActionRef> {
+/// Known non-passive spells in learn order on slots 0..12, without class
+/// mounts (`LearnableSpell.mount`).
+fn default_action_bar(class: Option<&ClassInfo>, known: &[KnownSpell]) -> BTreeMap<u8, ActionRef> {
+    let is_mount = |spell_id| {
+        class.is_some_and(|class| {
+            class
+                .learnable
+                .iter()
+                .any(|spell| spell.spell_id == spell_id && spell.mount)
+        })
+    };
     known
         .iter()
-        .filter(|spell| !spell.passive)
+        .filter(|spell| !spell.passive && !is_mount(spell.spell_id))
         .take(DEFAULT_BAR_SLOTS)
         .enumerate()
         .map(|(slot, spell)| (slot as u8, ActionRef::Spell(spell.spell_id)))
@@ -213,6 +232,36 @@ fn prune_unknown_spells(bar: &mut BTreeMap<u8, ActionRef>, known: &KnownSpells) 
         ActionRef::Item(_) | ActionRef::Macro(_) => true,
     });
     bar.len() != before
+}
+
+/// Point buttons of overridden spells at their talent replacement, and buttons
+/// of a replacement that is no longer known back at its baseline spell.
+/// `previous` are the overrides the bar was last rewritten with. Returns true
+/// when any button changed.
+fn apply_spell_overrides(
+    bar: &mut BTreeMap<u8, ActionRef>,
+    previous: &[(u32, u32)],
+    overrides: &[(u32, u32)],
+    known: &KnownSpells,
+) -> bool {
+    let mut changed = false;
+    for action in bar.values_mut() {
+        let ActionRef::Spell(spell_id) = action else {
+            continue;
+        };
+        let replacement = overrides.iter().find(|&&(base, _)| base == *spell_id);
+        let restored = previous
+            .iter()
+            .find(|&&(_, talent)| talent == *spell_id && !known.contains(talent));
+        if let Some(&(_, talent)) = replacement {
+            *spell_id = talent;
+            changed = true;
+        } else if let Some(&(base, _)) = restored {
+            *spell_id = base;
+            changed = true;
+        }
+    }
+    changed
 }
 
 fn spells_missing_from(spells: &[u32], other: &[u32]) -> Vec<u32> {
@@ -299,24 +348,25 @@ fn evaluate(
                 (granted_entries(&class.traits, ctx), true)
             }
         };
+    let talents: Vec<_> = talent_spell_entries(&class.traits, &entries).collect();
     let traits = TraitLoadout {
         tree_id: class.traits.tree_id,
         unspent: unspent(&class.traits, ctx, &entries),
-        spells: talent_spell_entries(&class.traits, &entries)
+        spells: talents
+            .iter()
             .map(|entry| KnownSpell {
                 spell_id: entry.spell_id,
                 passive: entry.passive,
             })
             .collect(),
+        overrides: talents
+            .iter()
+            .filter(|entry| entry.overrides_spell_id != 0)
+            .map(|entry| (entry.overrides_spell_id, entry.spell_id))
+            .collect(),
         entries,
     };
-    let known = compute_known_spells(
-        class,
-        player.race,
-        level,
-        spec,
-        traits.active_talent_spells(),
-    );
+    let known = compute_known_spells(class, player.race, level, spec, &traits);
     Evaluated {
         spec: ActiveSpec(ctx.spec_id),
         known,
@@ -396,10 +446,12 @@ fn init_player_progression(
                 .iter()
                 .map(|&(slot, action)| (slot, action_from_data(action)))
                 .collect(),
-            None => default_action_bar(&evaluated.known),
+            None => default_action_bar(class_info(&classes, player.class), &evaluated.known),
         });
+        let overrides = &evaluated.traits.overrides;
+        let rewritten = apply_spell_overrides(&mut bar.0, &[], overrides, &known);
         let pruned = prune_unknown_spells(&mut bar.0, &known);
-        if stored.is_none() || pruned || requested != spec.0 {
+        if stored.is_none() || rewritten || pruned || requested != spec.0 {
             save_progression(&db.db, client_id.0, &progression_data(spec, &bar));
         }
         if spec.0 != 0 {
@@ -439,8 +491,8 @@ type ProgressionPlayer = (
 );
 
 /// Apply a re-evaluated spec, trait config and known spells after a level, spec
-/// or trait change; send deltas, drop bar buttons for unlearned spells and
-/// persist. `TraitConfigSnapshot` is sent when the spec or config changed, or
+/// or trait change; send deltas, rewrite bar buttons of overridden spells, drop
+/// bar buttons for unlearned spells and persist. `TraitConfigSnapshot` is sent when the spec or config changed, or
 /// always with `always_send_traits`.
 fn refresh_player(
     (_, _, client_id, mut spec, mut known, mut bar, mut traits): (
@@ -490,8 +542,15 @@ fn refresh_player(
             SpellsLearned { spells: learned },
         );
     }
+    let rewritten = apply_spell_overrides(
+        &mut bar.0,
+        &traits.overrides,
+        &evaluated.traits.overrides,
+        &new_known,
+    );
     let pruned = prune_unknown_spells(&mut bar.0, &new_known);
-    if pruned {
+    let bar_changed = rewritten || pruned;
+    if bar_changed {
         send(&mut senders.bar, connection, bar_snapshot(&bar));
     }
     if *known != new_known {
@@ -508,7 +567,7 @@ fn refresh_player(
             trait_snapshot(new_spec, &traits),
         );
     }
-    if spec_changed || pruned {
+    if spec_changed || bar_changed {
         save_progression(&db.db, client_id.0, &progression_data(*spec, &bar));
     }
 }

@@ -34,7 +34,7 @@ The known list is built in learn order:
 3. The spec's mastery spells.
 4. Talent spells of the active spec's trait config, including granted nodes ([[talents]]). A Retribution level 20 Paladin knows the granted Hammer of Wrath 1241288 and Greater Judgment 231663; switching to Holy swaps them for Lay on Hands 633 and Divine Steed 190784.
 
-Duplicates are dropped. Passives stay in the list with no flag; the client decides from its catalog. `LearnableSpell.passive` and `SpecSpell.passive` are `spell_misc.Attributes_0 & 0x40`, and mastery spells count as passive.
+Duplicates are dropped. A talent whose `TraitDefinition.OverridesSpellID` is set removes that baseline spell ([[talents]]): Retribution's Final Verdict 383328 replaces Templar's Verdict 85256. Passives stay in the list with no flag; the client decides from its catalog. `LearnableSpell.passive` and `SpecSpell.passive` are `spell_misc.Attributes_0 & 0x40`, and mastery spells count as passive.
 
 The list is stored in the `KnownSpells` component. Cast validation should call `class_progression::knows_spell(&Query<&KnownSpells>, player, spell_id)`.
 
@@ -44,7 +44,13 @@ The list is stored in the `KnownSpells` component. Cast validation should call `
 - `SetActionButton` with `Spell(id)` requires a known spell. `Item`/`Macro` refs are stored as given, and `None` clears the slot.
   - Accepted requests are persisted and get no reply.
   - Rejected requests are answered with the unchanged `ActionBarSnapshot`.
-- **Default bar:** when a character has no progression record, its first 12 known non-passive spells go on slots 0–11 in learn order. A new Orc Warrior gets Slam 1464 on slot 0 and Attack 88163 on slot 1.
+- **Default bar:** when a character has no progression record, its first 12 known non-passive spells go on slots 0–11 in learn order.
+  - Known spells come only from the class skill line, the spec and talents, so profession and riding spells never qualify.
+  - Class mounts are skipped: learnables with a `spell_effect.EffectAura` 78 (SPELL_AURA_MOUNTED) effect (`LearnableSpell.mount`). A new Human Paladin knows Summon Warhorse 13819 and Summon Charger 23214 but its bar is only Crusader Strike 35395 on slot 0.
+  - Other utility spells without a mount aura still qualify, for example Sense Undead 5502 at level 10.
+  - Saved bars of existing characters are not changed.
+  - A new Orc Warrior gets Slam 1464 on slot 0 and Attack 88163 on slot 1.
+- **Overrides:** a button of a spell that an applied talent overrides now holds the talent spell. When the talent is removed and its spell is no longer known, the button goes back to the baseline spell. Both send `ActionBarSnapshot` and persist the bar. The rewrite also runs on enter world.
 - A spell button whose spell stops being known (spec change or lower level) is removed. The server then sends `ActionBarSnapshot` and persists the bar.
 
 ## Messages (TalentChannel)
@@ -52,7 +58,7 @@ The list is stored in the `KnownSpells` component. Cast validation should call `
 | When | Sent |
 |---|---|
 | First frame the player has a `PlayerLink` connection | `SpecializationChanged` and `TraitConfigSnapshot` (only if the class has spec data), `KnownSpellsSnapshot`, `ActionBarSnapshot` |
-| Level change (`Changed<Level>`) or accepted `SetSpecialization` | `SpecializationChanged` if the spec changed, then `SpellsUnlearned` and `SpellsLearned` (each only when non-empty), then `ActionBarSnapshot` if the bar was pruned, then `TraitConfigSnapshot` if the spec, config or point budget changed |
+| Level change (`Changed<Level>`) or accepted `SetSpecialization` | `SpecializationChanged` if the spec changed, then `SpellsUnlearned` and `SpellsLearned` (each only when non-empty), then `ActionBarSnapshot` if the bar was rewritten or pruned, then `TraitConfigSnapshot` if the spec, config or point budget changed |
 | `CommitTraitConfig` | `TraitCommitResult`; when accepted, then the spell deltas and `TraitConfigSnapshot` ([[talents]]) |
 
 ## Level

@@ -92,8 +92,9 @@ The config does not need to spend all its points.
 - A talent spell is the `TraitDefinition.SpellID` of every entry with ranks whose node is outside hero trees or in the selected one. Active and passive spells both count.
 - A Retribution level 80 empty config already knows its granted Hammer of Wrath 1241288, Auras of the Resolute 385633 and Greater Judgment 231663.
 - `TraitLoadout::active_talent_spells()` yields `KnownSpell { spell_id, passive }`. It is the hook for the aura runtime to apply passive talent auras.
+- `TraitDefinition.OverridesSpellID` of an applied talent removes the baseline spell from `KnownSpells` (`TraitLoadout.overrides`), and bar buttons follow ([[class-progression]]). Paladin examples: Final Verdict 383328 over Templar's Verdict 85256, Hammer of the Righteous 53595, Blessed Hammer 204019, Holy Shock 20473 and Crusading Strikes 404542 over Crusader Strike 35395.
 - Not handled yet:
-  - `TraitDefinition.OverridesSpellID`: a talent that replaces a baseline spell does not remove it.
+  - `specialization_spells.OverridesSpellID` (for example Holy Judgment 275773 over Judgment 20271): both spells stay known.
   - `TraitDefinitionEffectPoints` is not imported.
 
 ## Retired

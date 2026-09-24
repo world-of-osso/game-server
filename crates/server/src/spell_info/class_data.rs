@@ -26,6 +26,8 @@ pub(crate) const MAX_LEVEL: u32 = 90;
 const ACQUIRE_NEVER_LEARNED: u32 = 3;
 /// SPELL_ATTR0_PASSIVE in `spell_misc.Attributes_0`.
 pub(super) const ATTR0_PASSIVE: u32 = 0x40;
+/// SPELL_AURA_MOUNTED in `spell_effect.EffectAura`.
+const AURA_MOUNTED: u32 = 78;
 
 #[derive(Resource, Debug, Default, Serialize)]
 pub struct ClassSpells {
@@ -62,6 +64,8 @@ pub struct LearnableSpell {
     pub race_masks: [u32; 2],
     /// SPELL_ATTR0_PASSIVE.
     pub passive: bool,
+    /// An effect applies SPELL_AURA_MOUNTED (class mounts such as Summon Warhorse 13819).
+    pub mount: bool,
 }
 
 #[derive(Debug, Serialize)]
@@ -138,7 +142,9 @@ fn load_learnable(
 ) -> rusqlite::Result<Vec<LearnableSpell>> {
     let mut stmt = conn.prepare(
         "SELECT a.Spell, a.ClassMask, a.AcquireMethod, COALESCE(l.SpellLevel, 0),
-                a.SupercedesSpell, a.RaceMasks_0, a.RaceMasks_1, COALESCE(m.Attributes_0, 0)
+                a.SupercedesSpell, a.RaceMasks_0, a.RaceMasks_1, COALESCE(m.Attributes_0, 0),
+                EXISTS(SELECT 1 FROM spell_effect e
+                       WHERE e.SpellID = a.Spell AND e.EffectAura = ?2)
          FROM skill_line_ability a
          JOIN spell_name n ON n.ID = a.Spell
          LEFT JOIN spell_levels l ON l.SpellID = a.Spell AND l.DifficultyID = 0
@@ -146,7 +152,7 @@ fn load_learnable(
          WHERE a.SkillLine = ?1
          ORDER BY 4, a.Spell",
     )?;
-    let rows = stmt.query_map([skill_line], |r| {
+    let rows = stmt.query_map([skill_line, AURA_MOUNTED], |r| {
         Ok(LearnableSpell {
             spell_id: uint(r, 0)?,
             class_mask: uint(r, 1)?,
@@ -155,6 +161,7 @@ fn load_learnable(
             supersedes_spell: uint(r, 4)?,
             race_masks: [uint(r, 5)?, uint(r, 6)?],
             passive: uint(r, 7)? & ATTR0_PASSIVE != 0,
+            mount: uint(r, 8)? != 0,
         })
     })?;
     let bit = class_bit(class_id);
