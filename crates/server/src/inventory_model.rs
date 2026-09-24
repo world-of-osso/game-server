@@ -1,12 +1,11 @@
 //! Pure bag/equipment model: builds a slot grid from `InventoryRecord`, applies
 //! Retail item moves, and writes the result back.
 //!
-//! Server data gaps (no item template table): inventory type comes from
-//! `ItemInstanceData` or the equipped appearance entry, stack limits are unknown
-//! (same-item stacks swap instead of merging), bags 1-4 have no container data
-//! (size 0), dual wield is not tracked (one-handers go to the main hand only),
-//! class/race proficiency and binding types are not stored, and neck, finger,
-//! trinket and ranged slots have no server storage.
+//! Item rules come from `content_item` (`ItemTemplates`): inventory type, stack
+//! size, required level, class/race masks and bonding. Gaps: bags 1-4 have no
+//! container support (size 0), dual wield and weapon/armor skills are not tracked
+//! (one-handers go to the main hand only), and neck, finger, trinket and ranged
+//! slots have no server storage.
 use std::collections::{BTreeMap, HashMap, HashSet};
 
 use shared::components::EquippedAppearanceEntry;
@@ -16,6 +15,7 @@ use shared::protocol::{
     InventorySnapshot, ItemDurability, ItemLocation, ItemStack,
 };
 
+use crate::item_templates::{BIND_ON_EQUIP, ItemTemplate, ItemTemplates};
 use crate::persistence::equipment::EquippedItem;
 use crate::persistence::inventory_store::{InventoryRecord, ItemInstanceData, ItemPlacementData};
 use crate::persistence::{CharacterData, InventoryItemData};
@@ -31,6 +31,8 @@ pub(crate) struct InventoryModel {
     overflow: Vec<InventoryItemData>,
     equipped: BTreeMap<EquipmentSlot, InventoryItemData>,
     instances: HashMap<u64, ItemInstanceData>,
+    /// Templates of the item ids this character owns.
+    templates: HashMap<u32, ItemTemplate>,
     character: CharacterData,
     gold: u32,
 }
@@ -52,7 +54,18 @@ fn bag_size(bag: u8) -> usize {
 
 impl InventoryModel {
     /// `mint` allocates a fresh item guid (for duplicate guids and splits).
-    pub(crate) fn from_record(record: InventoryRecord, mint: &mut impl FnMut() -> u64) -> Self {
+    pub(crate) fn from_record(
+        record: InventoryRecord,
+        templates: &ItemTemplates,
+        mint: &mut impl FnMut() -> u64,
+    ) -> Self {
+        let owned_templates = record
+            .inventory
+            .items
+            .iter()
+            .chain(record.equipped.iter().map(|entry| &entry.item))
+            .filter_map(|item| Some((item.item_id, *templates.get(item.item_id)?)))
+            .collect();
         let mut model = Self {
             bags: (0..BAG_COUNT)
                 .map(|bag| vec![None; bag_size(bag)])
@@ -60,32 +73,37 @@ impl InventoryModel {
             overflow: Vec::new(),
             equipped: BTreeMap::new(),
             instances: record.instances,
+            templates: owned_templates,
             character: record.character,
             gold: record.inventory.gold,
         };
-        model.load_equipped(record.equipped);
+        for entry in record.equipped {
+            model
+                .equipped
+                .insert(EquipmentSlot::from_visual_slot(entry.slot), entry.item);
+        }
         model.load_bag_items(record.inventory.items, &record.placements, mint);
+        model.bind_owned_pickup_items();
         model
     }
 
-    fn load_equipped(&mut self, equipped: Vec<EquippedItem>) {
-        for entry in equipped {
-            let inventory_type = self
-                .character
-                .equipment_appearance
-                .entries
-                .iter()
-                .find(|appearance| appearance.slot == entry.slot)
-                .map(|appearance| appearance.inventory_type)
-                .unwrap_or(0);
-            self.instances
-                .entry(entry.item.item_guid)
-                .or_insert(ItemInstanceData {
-                    inventory_type,
-                    soulbound: false,
-                });
-            self.equipped
-                .insert(EquipmentSlot::from_visual_slot(entry.slot), entry.item);
+    /// Bind-on-pickup and quest items are soulbound once owned.
+    fn bind_owned_pickup_items(&mut self) {
+        let guids: Vec<u64> = self
+            .bags
+            .iter()
+            .flatten()
+            .flatten()
+            .chain(self.equipped.values())
+            .chain(&self.overflow)
+            .filter(|item| {
+                self.template(item)
+                    .is_some_and(ItemTemplate::binds_on_pickup)
+            })
+            .map(|item| item.item_guid)
+            .collect();
+        for guid in guids {
+            self.instances.entry(guid).or_default().soulbound = true;
         }
     }
 
@@ -330,10 +348,18 @@ impl InventoryModel {
         })
     }
 
+    fn template(&self, item: &InventoryItemData) -> Option<&ItemTemplate> {
+        self.templates.get(&item.item_id)
+    }
+
     fn inventory_type(&self, item: &InventoryItemData) -> u8 {
-        self.instances
-            .get(&item.item_guid)
-            .map_or(0, |meta| meta.inventory_type)
+        self.template(item)
+            .map_or(0, |template| template.inventory_type)
+    }
+
+    /// Items without a template never stack.
+    fn max_stack(&self, item: &InventoryItemData) -> u32 {
+        self.template(item).map_or(1, |template| template.max_stack)
     }
 
     /// Run `op`, then update appearance entries of the slots whose item changed.
@@ -393,6 +419,10 @@ impl InventoryModel {
             (ItemLocation::Equipment(slot), ItemLocation::Bag { .. }) if self.get(to).is_some() => {
                 self.equip_into(to, slot)
             }
+            _ if self.can_merge(from, to) => {
+                self.merge_stacks(from, to, u32::MAX);
+                Ok(())
+            }
             _ => {
                 let moving = self.take(from);
                 let displaced = self.take(to);
@@ -401,6 +431,48 @@ impl InventoryModel {
                 Ok(())
             }
         }
+    }
+
+    /// Same item in two bag slots with room left in the target stack.
+    fn can_merge(&self, from: ItemLocation, to: ItemLocation) -> bool {
+        let (Some(source), Some(target)) = (self.get(from), self.get(to)) else {
+            return false;
+        };
+        matches!(
+            (from, to),
+            (ItemLocation::Bag { .. }, ItemLocation::Bag { .. })
+        ) && source.item_id == target.item_id
+            && target.stack_count < self.max_stack(target)
+    }
+
+    /// Move up to `count` items from `from` onto the stack at `to`, capped at the
+    /// stack size; an emptied source stack is removed.
+    fn merge_stacks(&mut self, from: ItemLocation, to: ItemLocation, count: u32) {
+        let (
+            ItemLocation::Bag { bag, slot },
+            ItemLocation::Bag {
+                bag: to_bag,
+                slot: to_slot,
+            },
+        ) = (from, to)
+        else {
+            return;
+        };
+        let target = self.get(to).expect("merge target");
+        let room = self.max_stack(target).saturating_sub(target.stack_count);
+        let source = self.bags[usize::from(bag)][usize::from(slot)]
+            .as_mut()
+            .expect("merge source");
+        let moved = count.min(room).min(source.stack_count);
+        source.stack_count -= moved;
+        if source.stack_count == 0 {
+            let removed = self.take(from).expect("merge source");
+            self.instances.remove(&removed.item_guid);
+        }
+        let target = self.bags[usize::from(to_bag)][usize::from(to_slot)]
+            .as_mut()
+            .expect("merge target");
+        target.stack_count += moved;
     }
 
     /// Retail `CMSG_AUTO_EQUIP_ITEM`: equip into the first allowed slot, or store
@@ -455,10 +527,22 @@ impl InventoryModel {
                 "dual wield is not tracked by the server",
             ));
         }
-        if item.required_level > self.character.level {
+        let template = self
+            .template(item)
+            .expect("equippable items have templates");
+        if template.required_level > self.character.level {
             return Err(error(
                 InventoryErrorReason::CantEquipLevelI,
-                format!("requires level {}", item.required_level),
+                format!("requires level {}", template.required_level),
+            ));
+        }
+        if !template.allows(self.character.class, self.character.race) {
+            return Err(error(
+                InventoryErrorReason::CantEquipEver,
+                format!(
+                    "item {} is not usable by class {} race {}",
+                    item.item_id, self.character.class, self.character.race
+                ),
             ));
         }
         Ok(())
@@ -484,6 +568,7 @@ impl InventoryModel {
         self.put(ItemLocation::Equipment(slot), moving);
         self.put(source, previous);
         let Some(conflict) = conflict else {
+            self.bind_on_equip(slot);
             return Ok(());
         };
         match self.first_free_cell() {
@@ -494,6 +579,7 @@ impl InventoryModel {
                     slot: cell as u8,
                 };
                 self.put(to, other);
+                self.bind_on_equip(slot);
                 Ok(())
             }
             None => {
@@ -507,6 +593,19 @@ impl InventoryModel {
                     format!("no free bag slot for the item in {conflict:?}"),
                 ))
             }
+        }
+    }
+
+    fn bind_on_equip(&mut self, slot: EquipmentSlot) {
+        let Some(item) = self.equipped.get(&slot) else {
+            return;
+        };
+        if self
+            .template(item)
+            .is_some_and(|t| t.bonding == BIND_ON_EQUIP)
+        {
+            let guid = item.item_guid;
+            self.instances.entry(guid).or_default().soulbound = true;
         }
     }
 
@@ -536,7 +635,8 @@ impl InventoryModel {
         }
     }
 
-    /// Retail `CMSG_SPLIT_ITEM`: move `count` of a bag stack into an empty bag slot.
+    /// Retail `CMSG_SPLIT_ITEM`: move `count` of a bag stack into an empty bag slot
+    /// or onto a stack of the same item with room for all of them.
     pub(crate) fn split(
         &mut self,
         from: ItemLocation,
@@ -564,11 +664,17 @@ impl InventoryModel {
                 ),
             ));
         }
-        if self.get(to).is_some() {
-            return Err(error(
-                InventoryErrorReason::CantStack,
-                "split target must be empty: stack limits are unknown to the server",
-            ));
+        if let Some(target) = self.get(to) {
+            let fits = target.item_id == source.item_id
+                && target.stack_count + count <= self.max_stack(target);
+            if !fits {
+                return Err(error(
+                    InventoryErrorReason::CantStack,
+                    format!("{count} more do not stack onto the item at {to:?}"),
+                ));
+            }
+            self.merge_stacks(from, to, count);
+            return Ok(());
         }
         let mut split = source.clone();
         let source_guid = split.item_guid;
@@ -644,7 +750,7 @@ impl InventoryModel {
 fn not_equippable(inventory_type: u8) -> InventoryError {
     error(
         InventoryErrorReason::NotEquippable,
-        format!("inventory type {inventory_type} is not equippable (0 = unknown to the server)"),
+        format!("inventory type {inventory_type} is not equippable"),
     )
 }
 

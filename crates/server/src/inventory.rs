@@ -5,6 +5,7 @@
 //! `GoldUpdateQueue`; `send_inventory_deltas` then diffs the persisted state
 //! against the last view sent to the owner. Trade, auction mail and profession
 //! paths record the same queue, so their item changes reach the owner as deltas.
+use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 use lightyear::prelude::*;
 use redb::Database;
@@ -16,6 +17,7 @@ use shared::protocol::{
 
 use crate::auth::{Authenticated, InWorld};
 use crate::gold::GoldUpdateQueue;
+use crate::item_templates::ItemTemplates;
 use crate::networking::PlayerLink;
 use crate::persistence::inventory_store::{load_inventory_record, save_inventory_record};
 use crate::persistence::{self, GameDatabase};
@@ -57,7 +59,24 @@ type Requests<'w, 's, M> =
 type ErrorSenders<'w, 's> = Query<'w, 's, &'static mut MessageSender<InventoryError>>;
 type OpResult = Result<(), InventoryError>;
 
-fn load_model(db: &Database, character_id: u64) -> Result<InventoryModel, InventoryError> {
+/// Persistence plus item templates: everything `load_model` reads.
+#[derive(SystemParam)]
+struct InventoryStore<'w> {
+    db: Option<Res<'w, GameDatabase>>,
+    templates: Option<Res<'w, ItemTemplates>>,
+}
+
+impl InventoryStore<'_> {
+    fn get(&self) -> Option<(&Database, &ItemTemplates)> {
+        Some((&self.db.as_ref()?.db, self.templates.as_deref()?))
+    }
+}
+
+fn load_model(
+    db: &Database,
+    templates: &ItemTemplates,
+    character_id: u64,
+) -> Result<InventoryModel, InventoryError> {
     let record = load_inventory_record(db, character_id).ok_or_else(|| {
         error(
             InventoryErrorReason::InternalBagError,
@@ -65,7 +84,7 @@ fn load_model(db: &Database, character_id: u64) -> Result<InventoryModel, Invent
         )
     })?;
     let mut mint = || persistence::next_id(db, "item_instance");
-    Ok(InventoryModel::from_record(record, &mut mint))
+    Ok(InventoryModel::from_record(record, templates, &mut mint))
 }
 
 fn send_error(connection: Entity, senders: &mut ErrorSenders, error: InventoryError) {
@@ -77,14 +96,16 @@ fn send_error(connection: Entity, senders: &mut ErrorSenders, error: InventoryEr
 fn send_initial_inventory(
     mut commands: Commands,
     connections: Query<(Entity, &InWorld), (With<Authenticated>, Added<InWorld>)>,
-    db: Option<Res<GameDatabase>>,
+    store: InventoryStore,
     mut inventory_senders: Query<&mut MessageSender<InventorySnapshot>>,
     mut equipment_senders: Query<&mut MessageSender<EquipmentSnapshot>>,
     mut errors: ErrorSenders,
 ) {
-    let Some(db) = db else { return };
+    let Some((db, templates)) = store.get() else {
+        return;
+    };
     for (connection, in_world) in &connections {
-        let model = match load_model(&db.db, in_world.character_id) {
+        let model = match load_model(db, templates, in_world.character_id) {
             Ok(model) => model,
             Err(error) => {
                 send_error(connection, &mut errors, error);
@@ -101,25 +122,27 @@ fn send_initial_inventory(
             .entity(connection)
             .insert(SentInventoryView(model.view()));
         // Persist placements chosen for previously unplaced items.
-        save_inventory_record(&db.db, in_world.character_id, &model.into_record());
+        save_inventory_record(db, in_world.character_id, &model.into_record());
     }
 }
 
 /// Apply each queued request to the sender's own inventory and persist on success.
 fn process_requests<M: lightyear::prelude::Message>(
     receivers: &mut Requests<M>,
-    db: Option<Res<GameDatabase>>,
+    store: InventoryStore,
     updates: &mut GoldUpdateQueue,
     errors: &mut ErrorSenders,
     mut apply: impl FnMut(&mut InventoryModel, M, &Database) -> OpResult,
 ) {
-    let Some(db) = db else { return };
+    let Some((db, templates)) = store.get() else {
+        return;
+    };
     for (connection, in_world, mut receiver) in receivers.iter_mut() {
         let character_id = in_world.character_id;
         for request in receiver.receive() {
-            let result = load_model(&db.db, character_id).and_then(|mut model| {
-                apply(&mut model, request, &db.db)?;
-                save_inventory_record(&db.db, character_id, &model.into_record());
+            let result = load_model(db, templates, character_id).and_then(|mut model| {
+                apply(&mut model, request, db)?;
+                save_inventory_record(db, character_id, &model.into_record());
                 Ok(())
             });
             match result {
@@ -132,13 +155,13 @@ fn process_requests<M: lightyear::prelude::Message>(
 
 fn process_swap_requests(
     mut receivers: Requests<SwapItem>,
-    db: Option<Res<GameDatabase>>,
+    store: InventoryStore,
     mut updates: ResMut<GoldUpdateQueue>,
     mut errors: ErrorSenders,
 ) {
     process_requests(
         &mut receivers,
-        db,
+        store,
         &mut updates,
         &mut errors,
         |model, req, _| model.swap(req.from, req.to),
@@ -147,13 +170,13 @@ fn process_swap_requests(
 
 fn process_split_requests(
     mut receivers: Requests<SplitItem>,
-    db: Option<Res<GameDatabase>>,
+    store: InventoryStore,
     mut updates: ResMut<GoldUpdateQueue>,
     mut errors: ErrorSenders,
 ) {
     process_requests(
         &mut receivers,
-        db,
+        store,
         &mut updates,
         &mut errors,
         |model, req, db| {
@@ -165,13 +188,13 @@ fn process_split_requests(
 
 fn process_destroy_requests(
     mut receivers: Requests<DestroyItem>,
-    db: Option<Res<GameDatabase>>,
+    store: InventoryStore,
     mut updates: ResMut<GoldUpdateQueue>,
     mut errors: ErrorSenders,
 ) {
     process_requests(
         &mut receivers,
-        db,
+        store,
         &mut updates,
         &mut errors,
         |model, req, _| model.destroy(req.location, req.count),
@@ -180,13 +203,13 @@ fn process_destroy_requests(
 
 fn process_use_requests(
     mut receivers: Requests<UseItem>,
-    db: Option<Res<GameDatabase>>,
+    store: InventoryStore,
     mut updates: ResMut<GoldUpdateQueue>,
     mut errors: ErrorSenders,
 ) {
     process_requests(
         &mut receivers,
-        db,
+        store,
         &mut updates,
         &mut errors,
         |model, req, _| model.use_item(req.location),
@@ -195,13 +218,13 @@ fn process_use_requests(
 
 fn process_equip_requests(
     mut receivers: Requests<EquipItem>,
-    db: Option<Res<GameDatabase>>,
+    store: InventoryStore,
     mut updates: ResMut<GoldUpdateQueue>,
     mut errors: ErrorSenders,
 ) {
     process_requests(
         &mut receivers,
-        db,
+        store,
         &mut updates,
         &mut errors,
         |model, req, _| model.auto_equip(req.from),
@@ -210,13 +233,13 @@ fn process_equip_requests(
 
 fn process_sort_requests(
     mut receivers: Requests<SortBags>,
-    db: Option<Res<GameDatabase>>,
+    store: InventoryStore,
     mut updates: ResMut<GoldUpdateQueue>,
     mut errors: ErrorSenders,
 ) {
     process_requests(
         &mut receivers,
-        db,
+        store,
         &mut updates,
         &mut errors,
         |model, _, _| model.sort_bags(),
@@ -238,14 +261,16 @@ type DeltaConnections<'w, 's> = Query<
 /// and refresh the replicated `EquipmentAppearance`.
 fn send_inventory_deltas(
     mut updates: ResMut<GoldUpdateQueue>,
-    db: Option<Res<GameDatabase>>,
+    store: InventoryStore,
     mut connections: DeltaConnections,
     mut appearances: Query<&mut EquipmentAppearance, With<Player>>,
     dirty_queue: Option<Res<ReplicationDirtyQueue>>,
     mut senders: Query<&mut MessageSender<InventoryDelta>>,
 ) {
     let changed = updates.take_changed_inventories();
-    let Some(db) = db else { return };
+    let Some((db, templates)) = store.get() else {
+        return;
+    };
     if changed.is_empty() {
         return;
     }
@@ -253,12 +278,12 @@ fn send_inventory_deltas(
         if !changed.contains(&in_world.character_id) {
             continue;
         }
-        let Ok(model) = load_model(&db.db, in_world.character_id) else {
+        let Ok(model) = load_model(db, templates, in_world.character_id) else {
             continue;
         };
         let view = model.view();
         let appearance = model.appearance().clone();
-        save_inventory_record(&db.db, in_world.character_id, &model.into_record());
+        save_inventory_record(db, in_world.character_id, &model.into_record());
         let changes = diff_views(&sent.0, &view);
         if !changes.is_empty()
             && let Ok(mut sender) = senders.get_mut(connection)

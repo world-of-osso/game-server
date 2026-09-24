@@ -9,13 +9,38 @@ use shared::protocol::{
 };
 
 use super::*;
+use crate::item_templates::{ItemTemplate, ItemTemplates, load_item_templates};
 use crate::persistence::ClientId;
-use crate::persistence::inventory_store::ItemInstanceData;
 
 const LINEN: u32 = 2589;
 const PEACEBLOOM: u32 = 2447;
 const COPPER_ORE: u32 = 2770;
 const WORN_SHORTSWORD: u32 = 25;
+const VERIGANS_FIST: u32 = 6953;
+
+/// `content_item` rows for the items these tests use (world.db, Retail 12.1).
+fn test_templates() -> ItemTemplates {
+    let template =
+        |inventory_type, max_stack, bonding, required_level, allowable_class| ItemTemplate {
+            inventory_type,
+            max_stack,
+            bonding,
+            required_level,
+            allowable_class,
+            allowable_race: u64::MAX,
+        };
+    ItemTemplates(
+        [
+            (WORN_SHORTSWORD, template(21, 1, 2, 1, -1)),
+            (LINEN, template(0, 1000, 0, 0, -1)),
+            (PEACEBLOOM, template(0, 1000, 0, 0, -1)),
+            (COPPER_ORE, template(0, 1000, 0, 0, -1)),
+            (VERIGANS_FIST, template(17, 1, 1, 0, 2)),
+        ]
+        .into_iter()
+        .collect(),
+    )
+}
 
 fn bag(slot: u8) -> ItemLocation {
     ItemLocation::Bag { bag: 0, slot }
@@ -45,6 +70,7 @@ fn setup_app(db: Database) -> App {
     app.register_message::<TradeStateUpdate>();
     app.insert_resource(GameDatabase { db });
     app.init_resource::<GoldUpdateQueue>();
+    app.insert_resource(test_templates());
     app.add_plugins(InventoryPlugin);
     app.add_plugins(crate::trade::TradePlugin);
     app.finish();
@@ -98,6 +124,7 @@ fn spawn_client(app: &mut App, account_id: u64, name: &str) -> Client {
     add_message_pair::<SplitItem>(app, connection);
     add_message_pair::<DestroyItem>(app, connection);
     add_message_pair::<UseItem>(app, connection);
+    add_message_pair::<EquipItem>(app, connection);
     add_message_pair::<InitiateTrade>(app, connection);
     add_message_pair::<AcceptTrade>(app, connection);
     add_message_pair::<SetTradeItem>(app, connection);
@@ -173,29 +200,26 @@ fn stack(guid: u64, item_id: u32, count: u32) -> ItemStack {
 }
 
 /// Give the character a Worn Shortsword (inventory type 21, main hand) in its bags.
-fn grant_bag_weapon(app: &App, character_id: u64) -> u64 {
+fn grant_bag_item(app: &App, character_id: u64, item_id: u32, name: &str) -> u64 {
     let db = db(app);
     let guid = persistence::next_id(db, "item_instance");
-    let mut record = load_inventory_record(db, character_id).unwrap();
-    record.inventory.items.push(persistence::InventoryItemData {
+    let mut inventory = persistence::load_inventory(db, character_id);
+    inventory.items.push(persistence::InventoryItemData {
         item_guid: guid,
-        item_id: WORN_SHORTSWORD,
-        name: "Worn Shortsword".into(),
+        item_id,
+        name: name.into(),
         quality: 1,
         required_level: 1,
         stack_count: 1,
         vendor_sell_price: 7,
         unique_auction: false,
     });
-    record.instances.insert(
-        guid,
-        ItemInstanceData {
-            inventory_type: 21,
-            soulbound: false,
-        },
-    );
-    save_inventory_record(db, character_id, &record);
+    persistence::save_inventory(db, character_id, &inventory);
     guid
+}
+
+fn grant_bag_weapon(app: &App, character_id: u64) -> u64 {
+    grant_bag_item(app, character_id, WORN_SHORTSWORD, "Worn Shortsword")
 }
 
 #[test]
@@ -312,7 +336,9 @@ fn equipping_weapon_into_main_hand_updates_equipment_appearance() {
         equipped.location,
         ItemLocation::Equipment(EquipmentSlot::MainHand)
     );
-    assert_eq!(equipped.item.as_ref().unwrap().item_guid, sword);
+    let equipped = equipped.item.as_ref().unwrap();
+    assert_eq!(equipped.item_guid, sword);
+    assert!(equipped.soulbound, "Worn Shortsword binds on equip");
     let persisted = persistence::load_character(db(&app), client.character_id).unwrap();
     assert_eq!(persisted.equipment_appearance, appearance);
 }
@@ -504,4 +530,82 @@ fn completed_trade_emits_inventory_deltas_to_both_owners() {
     assert_eq!(change[0].location, bag(3));
     let item = change[0].item.as_ref().unwrap();
     assert_eq!((item.item_id, item.count), (LINEN, 5));
+}
+
+#[test]
+fn swapping_a_split_stack_back_merges_into_one_stack() {
+    let mut app = setup_app(persistence::temp_database());
+    let client = spawn_client(&mut app, 1, "Bagger");
+    enter_world(&mut app, &client);
+    let linen = guid_of(&app, client.character_id, LINEN);
+    request(
+        &mut app,
+        &client,
+        SplitItem {
+            from: bag(0),
+            to: bag(5),
+            count: 5,
+        },
+    );
+    received::<InventoryDelta>(&mut app, &client);
+
+    request(
+        &mut app,
+        &client,
+        SwapItem {
+            from: bag(5),
+            to: bag(0),
+        },
+    );
+
+    assert_eq!(
+        received::<InventoryDelta>(&mut app, &client),
+        vec![InventoryDelta {
+            changes: vec![
+                InventorySlotChange {
+                    location: bag(0),
+                    item: Some(stack(linen, LINEN, 20))
+                },
+                InventorySlotChange {
+                    location: bag(5),
+                    item: None
+                },
+            ]
+        }]
+    );
+    let linen_stacks: Vec<u32> = persistence::load_inventory(db(&app), client.character_id)
+        .items
+        .iter()
+        .filter(|item| item.item_id == LINEN)
+        .map(|item| item.stack_count)
+        .collect();
+    assert_eq!(linen_stacks, vec![20]);
+}
+
+#[test]
+fn class_restricted_weapon_is_rejected_and_bind_on_pickup_is_soulbound() {
+    let mut app = setup_app(persistence::temp_database());
+    let client = spawn_client(&mut app, 1, "Bagger");
+    let fist = grant_bag_item(&app, client.character_id, VERIGANS_FIST, "Verigan's Fist");
+    enter_world(&mut app, &client);
+    let snapshot = received::<InventorySnapshot>(&mut app, &client);
+    let owned = snapshot[0].bags[0]
+        .items
+        .iter()
+        .find(|entry| entry.item.item_guid == fist)
+        .unwrap();
+    assert!(owned.item.soulbound);
+
+    request(&mut app, &client, EquipItem { from: bag(3) });
+
+    let errors = received::<InventoryError>(&mut app, &client);
+    assert_eq!(errors.len(), 1);
+    assert_eq!(errors[0].reason, InventoryErrorReason::CantEquipEver);
+    assert!(
+        persistence::load_character(db(&app), client.character_id)
+            .unwrap()
+            .equipment_appearance
+            .entries
+            .is_empty()
+    );
 }

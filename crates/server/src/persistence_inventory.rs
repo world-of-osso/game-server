@@ -28,11 +28,9 @@ pub struct ItemPlacementData {
     pub slot: u8,
 }
 
-/// Instance attributes the server has no item template for.
+/// Per-instance item state (template attributes live in `ItemTemplates`).
 #[derive(bitcode::Encode, bitcode::Decode, Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct ItemInstanceData {
-    /// Retail `Enum.InventoryType`; 0 = not equippable / unknown.
-    pub inventory_type: u8,
     pub soulbound: bool,
 }
 
