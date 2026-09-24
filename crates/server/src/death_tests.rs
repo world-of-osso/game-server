@@ -433,18 +433,18 @@ fn despawned_player_death_transition_is_ignored() {
     assert!(receive_death_updates(&mut app, connection).is_empty());
 }
 
-#[test]
-fn build_graveyard_registry_uses_spirit_healer_spawns() {
-    let world_data = WorldData {
+/// One spawn of a creature template carrying `npcflag`.
+fn world_data_with_one_spawn(npcflag: u32) -> WorldData {
+    WorldData {
         templates: [(
             5,
             crate::world_data::CreatureTemplate {
                 entry: 5,
-                name: "Fixture spirit healer".into(),
+                name: "Fixture creature".into(),
                 min_level: 1,
                 max_level: 1,
                 faction: 0,
-                npc_flags: shared::death::NPC_FLAG_SPIRIT_HEALER,
+                npc_flags: npcflag,
                 speed_walk: 1.0,
                 speed_run: 1.0,
                 health_modifier: 1.0,
@@ -472,11 +472,26 @@ fn build_graveyard_registry_uses_spirit_healer_spawns() {
         spawns_by_map: [(0, vec![0])].into_iter().collect(),
         waypoints: default(),
         ..Default::default()
-    };
+    }
+}
 
-    let registry = build_graveyard_registry(&world_data);
+/// Spirit Healer (creature_template entry 6491): npcflag 16385 = GOSSIP | SPIRITHEALER 0x4000.
+const SPIRIT_HEALER_6491_NPCFLAG: u32 = 16385;
+/// AzerothCore UNIT_NPC_FLAG_VENDOR_REAGENT.
+const VENDOR_REAGENT_NPCFLAG: u32 = 0x0800;
+
+#[test]
+fn build_graveyard_registry_uses_spirit_healer_spawns() {
+    let registry = build_graveyard_registry(&world_data_with_one_spawn(SPIRIT_HEALER_6491_NPCFLAG));
 
     assert_eq!(registry.len(), 1);
+}
+
+#[test]
+fn build_graveyard_registry_ignores_reagent_vendor_spawns() {
+    let registry = build_graveyard_registry(&world_data_with_one_spawn(VENDOR_REAGENT_NPCFLAG));
+
+    assert_eq!(registry.len(), 0);
 }
 
 #[test]

@@ -8,8 +8,8 @@ use shared::death::{
 };
 use shared::protocol::{
     AcceptSpiritHealerResurrection, DeathChannel, DeathPositionSnapshot, DeathSnapshot,
-    DeathStateSnapshot, DeathStateUpdate, QueryDeathStatus, ReleaseSpirit, ResurrectAtCorpse,
-    UseStuckEscape,
+    DeathStateSnapshot, DeathStateUpdate, NpcFlags, QueryDeathStatus, ReleaseSpirit,
+    ResurrectAtCorpse, UseStuckEscape,
 };
 
 use crate::auth::{Authenticated, InWorld};
@@ -102,7 +102,7 @@ fn build_graveyard_registry(world_data: &WorldData) -> GraveyardRegistry {
         let Some(template) = world_data.templates.get(&spawn.template_entry) else {
             continue;
         };
-        if template.npc_flags & shared::death::NPC_FLAG_SPIRIT_HEALER == 0 {
+        if !NpcFlags::from_azerothcore(template.npc_flags).contains(NpcFlags::SPIRIT_HEALER) {
             continue;
         }
         let (x, y, z) = crate::terrain_height::wow_to_bevy(
