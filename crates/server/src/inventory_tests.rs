@@ -9,7 +9,7 @@ use shared::protocol::{
 };
 
 use super::*;
-use crate::item_templates::{ItemTemplate, ItemTemplates, load_item_templates};
+use crate::item_templates::{ItemTemplate, ItemTemplates};
 use crate::persistence::ClientId;
 
 const LINEN: u32 = 2589;
