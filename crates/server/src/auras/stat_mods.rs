@@ -30,6 +30,9 @@ pub struct AuraStatMods {
     pub healing_taken_mult: f32,
     /// MOD_AUTOATTACK_DAMAGE 344.
     pub autoattack_damage_mult: f32,
+    /// MOD_RAGE_FROM_DAMAGE_DEALT 213, summed percent (TrinityCore
+    /// `GetTotalAuraModifier` in `RewardRage`).
+    pub rage_from_damage_dealt_pct: f32,
     /// MOD_POWER_REGEN_PERCENT 110 by DB2 power type; MOD_MANA_REGEN_PCT
     /// 379 is folded into power type 0.
     pub power_regen_mult: Vec<(i32, f32)>,
@@ -47,6 +50,7 @@ impl Default for AuraStatMods {
             healing_done_mult: 1.0,
             healing_taken_mult: 1.0,
             autoattack_damage_mult: 1.0,
+            rage_from_damage_dealt_pct: 0.0,
             power_regen_mult: Vec::new(),
             movement_speed: 1.0,
         }
@@ -187,6 +191,7 @@ fn apply_aura(acc: &mut Accumulator, aura: &AuraInstance) {
             MOD_HEALING_DONE_PERCENT => combat.healing_done_mult *= pct(amount),
             MOD_HEALING_PCT | MOD_HEALING_RECEIVED => combat.healing_taken_mult *= pct(amount),
             MOD_AUTOATTACK_DAMAGE => combat.autoattack_damage_mult *= pct(amount),
+            MOD_RAGE_FROM_DAMAGE_DEALT => combat.rage_from_damage_dealt_pct += amount,
             MOD_POWER_REGEN_PERCENT => {
                 multiply_entry(&mut combat.power_regen_mult, misc, pct(amount))
             }

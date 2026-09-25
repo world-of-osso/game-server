@@ -60,6 +60,7 @@ pub const MOD_MELEE_HASTE: u32 = 138;
 pub const MOD_RANGED_HASTE: u32 = 140;
 pub const MOD_MELEE_RANGED_HASTE: u32 = 192;
 pub const MELEE_SLOW: u32 = 193;
+pub const MOD_RAGE_FROM_DAMAGE_DEALT: u32 = 213;
 pub const HASTE_SPELLS: u32 = 216;
 pub const ADD_PCT_MODIFIER_BY_SPELL_LABEL: u32 = 218;
 pub const ADD_FLAT_MODIFIER_BY_SPELL_LABEL: u32 = 219;
@@ -112,6 +113,7 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | MASTERY
         | MOD_MELEE_RANGED_HASTE_2
         | MOD_AUTOATTACK_DAMAGE
+        | MOD_RAGE_FROM_DAMAGE_DEALT
         | MOD_MANA_REGEN_PCT => StatMod,
         ADD_FLAT_MODIFIER
         | ADD_PCT_MODIFIER

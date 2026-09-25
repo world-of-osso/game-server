@@ -4,6 +4,8 @@ use shared::components::Player;
 
 #[path = "combat_tests/death.rs"]
 mod death;
+#[path = "combat_tests/rage.rs"]
+mod rage;
 
 fn pos(x: f32, y: f32, z: f32) -> Position {
     Position { x, y, z }

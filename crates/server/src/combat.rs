@@ -13,6 +13,8 @@ use crate::creature_scripts::{TrainingDummy, health_loss};
 use crate::faction::{FactionTemplates, UnitFaction};
 use crate::interest::{InterestDirtyQueue, NetworkVisibility, mark_interest_position_changed};
 use crate::networking::CombatTarget;
+use crate::spell_cast::powers::PowerPools;
+use shared::components::PowerType;
 
 use std::collections::VecDeque;
 
@@ -23,6 +25,16 @@ const AUTO_ATTACK_INTERVAL: f32 = 2.0;
 /// Base melee damage per swing.
 const BASE_DAMAGE: f32 = 10.0;
 const COMBAT_GRACE_SECS: f64 = 5.0;
+/// Retail rage per second of swing time for each auto-attack dealt (SimC
+/// `sc_warrior.cpp` `melee_t::base_rage_generation`), before
+/// MOD_RAGE_FROM_DAMAGE_DEALT (the spec passives' rage multipliers).
+const RAGE_PER_SWING_SECOND: f32 = 1.75;
+/// Retail rage per damaging auto-attack taken, at most once per
+/// `RAGE_FROM_HITS_TAKEN_COOLDOWN_SECS` (SimC `warrior_t::assess_damage`).
+const RAGE_PER_HIT_TAKEN: f32 = 3.0;
+const RAGE_FROM_HITS_TAKEN_COOLDOWN_SECS: f64 = 1.0;
+/// Rage pools are stored in tenths (`power_type.DisplayModifier` 10).
+const RAGE_RAW_PER_RAGE: f32 = 10.0;
 
 /// Maximum number of combat log entries retained in memory.
 const COMBAT_LOG_CAPACITY: usize = 10_000;
@@ -549,6 +561,8 @@ fn record_swing_events(
     outcome: SwingOutcome,
 ) {
     events.push(build_damage_event(attacker, target, outcome.damage));
+    let damage = outcome.damage;
+    commands.queue(move |world: &mut World| reward_swing_rage(world, attacker, target, damage));
     let swing = swing_log_event(attacker, target, &outcome);
     commands.queue(move |world: &mut World| crate::spell_cast::log_event(world, swing));
     if outcome.npc_died || outcome.player_died {
@@ -562,6 +576,56 @@ fn record_swing_events(
     if outcome.player_died {
         player_deaths.write(crate::death::PlayerDeathTransition { player: target });
     }
+}
+
+/// When the unit next gains rage from an auto-attack taken.
+#[derive(Component, Debug)]
+struct RageFromHitsTakenReadyAt(f64);
+
+/// Rage for a landed swing: the attacker gains swing time × 1.75 rage scaled
+/// by MOD_RAGE_FROM_DAMAGE_DEALT, rounded to 0.1 rage (SimC
+/// `trigger_rage_gain`); the victim gains 3 rage when the swing did damage.
+/// Only units whose primary power is rage gain it (AzerothCore
+/// `Unit::DealDamage` `HasActivePowerType(POWER_RAGE)`).
+fn reward_swing_rage(world: &mut World, attacker: Entity, target: Entity, damage: f32) {
+    if has_rage_primary_power(world, attacker) {
+        let bonus_pct = world
+            .get::<AuraStatMods>(attacker)
+            .map_or(0.0, |mods| mods.rage_from_damage_dealt_pct);
+        let rage = AUTO_ATTACK_INTERVAL * RAGE_PER_SWING_SECOND * (1.0 + bonus_pct / 100.0);
+        change_rage(world, attacker, (rage * RAGE_RAW_PER_RAGE).round());
+    }
+    if damage > 0.0
+        && has_rage_primary_power(world, target)
+        && take_hit_rage_cooldown(world, target)
+    {
+        change_rage(world, target, RAGE_PER_HIT_TAKEN * RAGE_RAW_PER_RAGE);
+    }
+}
+
+fn has_rage_primary_power(world: &World, unit: Entity) -> bool {
+    world
+        .get::<PowerPools>(unit)
+        .is_some_and(|pools| pools.order.first() == Some(&PowerType::Rage))
+}
+
+/// Start the hit-taken rage cooldown; false while it is running.
+fn take_hit_rage_cooldown(world: &mut World, unit: Entity) -> bool {
+    let now = world.resource::<Time>().elapsed_secs_f64();
+    if world
+        .get::<RageFromHitsTakenReadyAt>(unit)
+        .is_some_and(|ready| now < ready.0)
+    {
+        return false;
+    }
+    world.entity_mut(unit).insert(RageFromHitsTakenReadyAt(
+        now + RAGE_FROM_HITS_TAKEN_COOLDOWN_SECS,
+    ));
+    true
+}
+
+fn change_rage(world: &mut World, unit: Entity, raw: f32) {
+    crate::spell_cast::powers::change_power(world, unit, PowerType::Rage, raw);
 }
 
 fn refresh_combat_state(

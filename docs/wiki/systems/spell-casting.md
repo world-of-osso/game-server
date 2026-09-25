@@ -159,6 +159,9 @@ Damage and heal side effects:
   - Mana has rate 0 in the data. It regenerates 1% of base mana (gtBaseMP, `CharacterStats.base_mana`, not the pool max) per second, in and out of combat, times the aura regen multiplier (TrinityCore `Player::UpdatePowerRegen` `basemana / 100`; SimC `init_resources`).
   - Class/spec passives supply the multiplier via MOD_MANA_REGEN_PCT/MOD_POWER_REGEN_PERCENT: class −36% (Paladin, Priest, Shaman, Druid), healer spec +25%, hybrid spec +60%, Arcane +60%. Level 80 (base 50 000): Holy Paladin 400/s, Frost Mage 500/s, Arcane Mage 800/s.
   - Not implemented: flat MOD_POWER_REGEN 85 (per 5 s); haste scaling of Energy/Focus regen (`power_type` flag `RegenAffectedByHaste` 0x400).
+- **Rage from auto-attacks** (`combat.rs` `reward_swing_rage`, Retail values from SimC `sc_warrior.cpp`; AzerothCore's Wrath `RewardRage` damage/level conversion is not used). Only units whose primary power is Rage (AzerothCore `HasActivePowerType(POWER_RAGE)`):
+  - Dealt: every landed swing gives swing time (2 s) × 1.75 rage × (1 + Σ MOD_RAGE_FROM_DAMAGE_DEALT 213 %), rounded to 0.1 rage (`melee_t::trigger_rage_gain`). Unspecced 3.5 rage; Arms Warrior 137049 (+250%) 12.3 rage; Protection 1258163 (−56%).
+  - Taken: a damaging swing taken gives 3 rage, at most once per second (`warrior_t::assess_damage`).
 - **NPCs** get `UnitLevel` (template `min_level`) and empty `UnitPowers`. Creature class/level power stats are not imported.
 - **Players:** `UnitLevel` is owned by [[class-progression]]; the cast pipeline only reads levels.
 
