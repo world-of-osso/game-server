@@ -563,6 +563,30 @@ class PinnedBuildImportTests(unittest.TestCase):
             [(4, 101)],
         )
 
+    def test_bolt_of_linen_cloth_takes_two_linen_cloth(self):
+        self.assertEqual(
+            self.one("SELECT Reagent_0, ReagentCount_0, Reagent_1 FROM spell_reagents WHERE SpellID = 2963"),
+            [(2589, 2, 0)],
+        )
+
+    def test_white_linen_shirt_is_a_classic_tailoring_shirt(self):
+        self.assertEqual(
+            self.one(
+                "SELECT c.Name_lang, c.ParentTradeSkillCategoryID, c.SkillLineID FROM skill_line_ability a"
+                " JOIN trade_skill_category c ON c.ID = a.TradeSkillCategoryID WHERE a.Spell = 2393"
+            ),
+            [("Shirts", 362, 197)],
+        )
+
+    def test_blacksmith_hammer_is_totem_category_162(self):
+        self.assertEqual(
+            self.one("SELECT Name_lang, TotemCategoryType, TotemCategoryMask FROM totem_category WHERE ID = 162"),
+            [("Blacksmith Hammer", 24, 4)],
+        )
+
+    def test_classic_tailoring_uses_skill_tier_336(self):
+        self.assertEqual(self.one("SELECT SkillTierID FROM skill_race_class_info WHERE SkillID = 2540"), [(336,)])
+
 
 if __name__ == "__main__":
     unittest.main()

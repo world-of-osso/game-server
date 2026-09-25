@@ -56,6 +56,7 @@ TABLES = [
     "ArmorLocation", "ItemDamageOneHand", "ItemDamageOneHandCaster",
     "ItemDamageTwoHand", "ItemDamageTwoHandCaster", "ItemSquishEra", "CurvePoint",
     "DurabilityCosts", "DurabilityQuality", "GameObjectDisplayInfo", "BankTab", "CreatureDisplayInfo",
+    "SpellReagents", "SpellTotems", "TradeSkillCategory", "SkillRaceClassInfo", "TotemCategory",
 ]
 
 
