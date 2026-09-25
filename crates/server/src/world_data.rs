@@ -415,6 +415,13 @@ fn startup_load_world_data(mut commands: Commands) {
         .expect("Failed to load item durability; run scripts/db2.py import");
     info!("Loaded durability for {} items", durability.0.len());
     commands.insert_resource(durability);
+    let game_objects = crate::game_objects::load_game_object_spawns(&conn)
+        .expect("Failed to load content_gameobject; run scripts/import-azerothcore.sh");
+    info!("Loaded {} game object spawns", game_objects.0.len());
+    commands.insert_resource(game_objects);
+    let prices = crate::bank::load_bank_tab_prices(&conn)
+        .expect("Failed to load bank_tab; run scripts/db2.py import");
+    commands.insert_resource(prices);
 }
 
 pub struct WorldDataPlugin;

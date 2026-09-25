@@ -8,18 +8,25 @@
 //! by `IsWithinDistInMap`, which also adds both units' combat reach. The same check
 //! runs every frame while an interaction is open; TrinityCore repeats it on every
 //! auction/vendor/bank request, so a player who walks out of range loses the frame.
+//!
+//! `UseGameObject` opens a game object's frame the same way (TrinityCore
+//! `WorldSession::HandleGameObjectUseOpcode` / `Player::GetGameObjectIfCanInteractWith`):
+//! a Guild Vault opens the guild bank role for a living player within the object's
+//! reach (`game_objects::GameObjectBounds::reaches`).
 
 use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 use lightyear::prelude::*;
 use shared::components::{CombatStatus, Health, Npc, Position, UnitFactionTemplate};
 use shared::protocol::{
-    CloseInteraction, InteractNpc, InteractionChannel, InteractionClosed, InteractionError,
-    InteractionFailed, InteractionKind, InteractionOpened, NpcFlags, NpcRole, SelectGossipOption,
+    CloseInteraction, GAMEOBJECT_TYPE_GUILD_BANK, GameObjectInfo, InteractNpc, InteractionChannel,
+    InteractionClosed, InteractionError, InteractionFailed, InteractionKind, InteractionOpened,
+    NpcFlags, NpcRole, SelectGossipOption, UseGameObject,
 };
 
 use crate::auth::InWorld;
 use crate::faction::{FactionTemplates, Reaction};
+use crate::game_objects::{GAME_OBJECT_INTERACT_DISTANCE, GameObjectBounds, wow_position};
 use crate::networking::PlayerLink;
 
 mod gossip;
@@ -46,6 +53,7 @@ const FACTION_MASK_HORDE: u32 = 0x4;
 /// The NPC a connection is interacting with. Lives on the connection entity.
 #[derive(Component, Debug, Clone, PartialEq)]
 pub struct ActiveInteraction {
+    /// The NPC or game object.
     pub npc: Entity,
     /// Role frame currently open; `None` while a gossip menu is shown.
     pub role: Option<NpcRole>,
@@ -63,6 +71,7 @@ impl Plugin for NpcInteractionPlugin {
             Update,
             (
                 process_interact_requests,
+                process_game_object_uses,
                 process_gossip_selections,
                 process_close_requests,
                 close_invalid_interactions,
@@ -109,6 +118,15 @@ struct InteractionWorld<'w, 's> {
         ),
     >,
     npcs: Query<'w, 's, NpcView<'static>>,
+    objects: Query<
+        'w,
+        's,
+        (
+            &'static GameObjectInfo,
+            &'static Position,
+            &'static GameObjectBounds,
+        ),
+    >,
     templates: Res<'w, FactionTemplates>,
     catalog: Res<'w, GossipCatalog>,
 }
@@ -141,6 +159,43 @@ impl InteractionWorld<'_, '_> {
             return Err(InteractionError::TooFarAway);
         }
         Ok(npc_view)
+    }
+
+    /// The role a game object opens if `player` may use it now.
+    fn usable_object(&self, player: Entity, object: Entity) -> Result<NpcRole, InteractionError> {
+        let (info, position, bounds) = self
+            .objects
+            .get(object)
+            .map_err(|_| InteractionError::InvalidTarget)?;
+        let role = match info.go_type {
+            GAMEOBJECT_TYPE_GUILD_BANK => NpcRole::GuildBanker,
+            _ => return Err(InteractionError::InvalidTarget),
+        };
+        let (player_position, player_health, _) = self
+            .players
+            .get(player)
+            .map_err(|_| InteractionError::InvalidTarget)?;
+        if player_health.current <= 0.0 {
+            return Err(InteractionError::PlayerDead);
+        }
+        let reaches = bounds.reaches(
+            wow_position(position),
+            wow_position(player_position),
+            GAME_OBJECT_INTERACT_DISTANCE,
+        );
+        if !reaches {
+            return Err(InteractionError::TooFarAway);
+        }
+        Ok(role)
+    }
+
+    /// Whether the open interaction with `target` (an NPC or a game object) still holds.
+    fn still_interactable(&self, player: Entity, target: Entity) -> bool {
+        if self.objects.contains(target) {
+            self.usable_object(player, target).is_ok()
+        } else {
+            self.interactable(player, target).is_ok()
+        }
     }
 
     fn auction_house(&self, npc: Entity) -> u8 {
@@ -220,6 +275,52 @@ fn process_interact_requests(
             current = Some(interaction.0.npc);
             senders.opened(connection, interaction.0.npc, interaction.1);
             commands.entity(connection).insert(interaction.0);
+        }
+    }
+}
+
+type UseReceivers<'w, 's> = Query<
+    'w,
+    's,
+    (
+        Entity,
+        &'static PlayerLink,
+        Option<&'static ActiveInteraction>,
+        &'static mut MessageReceiver<UseGameObject>,
+    ),
+    With<InWorld>,
+>;
+
+fn process_game_object_uses(
+    mut receivers: UseReceivers,
+    world: InteractionWorld,
+    mut senders: InteractionSenders,
+    mut commands: Commands,
+) {
+    for (connection, link, current, mut receiver) in &mut receivers {
+        let mut current = current.map(|interaction| interaction.npc);
+        for request in receiver.receive() {
+            let result = Entity::try_from_bits(request.object)
+                .ok_or(InteractionError::InvalidTarget)
+                .and_then(|object| Ok((object, world.usable_object(link.0, object)?)));
+            let (object, role) = match result {
+                Ok(opened) => opened,
+                Err(error) => {
+                    senders.failed(connection, request.object, error);
+                    continue;
+                }
+            };
+            if let Some(previous) = current.filter(|previous| *previous != object) {
+                senders.closed(connection, previous);
+            }
+            current = Some(object);
+            senders.opened(connection, object, InteractionKind::Role(role));
+            commands.entity(connection).insert(ActiveInteraction {
+                npc: object,
+                role: Some(role),
+                auction_house: None,
+                gossip_actions: Vec::new(),
+            });
         }
     }
 }
@@ -345,7 +446,7 @@ fn close_invalid_interactions(
     mut commands: Commands,
 ) {
     for (connection, link, interaction) in &connections {
-        if world.interactable(link.0, interaction.npc).is_ok() {
+        if world.still_interactable(link.0, interaction.npc) {
             continue;
         }
         senders.closed(connection, interaction.npc);

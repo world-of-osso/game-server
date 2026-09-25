@@ -107,6 +107,20 @@ fn print_character_response(response: &AdminResponse) -> bool {
             guild_id,
             guild_name,
         } => print_guild_created(*character_id, *guild_id, guild_name),
+        AdminResponse::GuildRankSet {
+            character_name,
+            rank,
+            rank_name,
+        } => {
+            println!("Guild rank set: {character_name} -> {rank} ({rank_name})");
+        }
+        AdminResponse::GuildBankRightsSet {
+            guild_id,
+            rank,
+            rank_name,
+        } => {
+            println!("Guild bank rights set: guild {guild_id} rank {rank} ({rank_name})");
+        }
         AdminResponse::LevelSet {
             character_name,
             level,

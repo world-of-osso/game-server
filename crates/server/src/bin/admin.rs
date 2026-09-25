@@ -62,6 +62,27 @@ enum AdminRequest {
         guild_id: u32,
         guild_name: String,
     },
+    /// Guild rank (0 Guild Master .. 4 Initiate) of a guild member.
+    SetGuildRank {
+        character_name: String,
+        rank: u8,
+    },
+    /// Guild bank tab rights of a rank.
+    SetGuildBankTabRights {
+        guild_id: u32,
+        rank: u8,
+        tab: u8,
+        view: bool,
+        deposit: bool,
+        withdrawals_per_day: u32,
+    },
+    /// Guild bank gold withdrawal right and copper per day of a rank.
+    SetGuildBankGoldRights {
+        guild_id: u32,
+        rank: u8,
+        withdraw_gold: bool,
+        gold_per_day: u64,
+    },
     SetLevel {
         character_name: String,
         level: u16,
@@ -167,6 +188,16 @@ enum AdminResponse {
         guild_id: u32,
         guild_name: String,
     },
+    GuildRankSet {
+        character_name: String,
+        rank: u8,
+        rank_name: String,
+    },
+    GuildBankRightsSet {
+        guild_id: u32,
+        rank: u8,
+        rank_name: String,
+    },
     LevelSet {
         character_name: String,
         level: u16,
@@ -258,6 +289,13 @@ fn print_usage() {
     eprintln!("  game-server-admin unban-account <username>");
     eprintln!("  game-server-admin approve-registration <username>");
     eprintln!("  game-server-admin create-guild <character_name> <guild_id> <guild_name>");
+    eprintln!("  game-server-admin set-guild-rank <character_name> <rank 0-4>");
+    eprintln!(
+        "  game-server-admin set-guild-bank-rights <guild_id> <rank> tab <tab> <view 0|1> <deposit 0|1> <stacks_per_day>"
+    );
+    eprintln!(
+        "  game-server-admin set-guild-bank-rights <guild_id> <rank> gold <withdraw 0|1> <copper_per_day>"
+    );
     eprintln!("  game-server-admin set-level <character_name> <level>");
     eprintln!("  game-server-admin set-credentials <token> <username> <password>");
     eprintln!("  game-server-admin set-position <character_name> <x> <y> <z>");
@@ -299,6 +337,8 @@ fn parse_request(args: &[String]) -> AdminRequest {
         "unban-account" => parse_unban_account(args),
         "approve-registration" => parse_approve_registration(args),
         "create-guild" => parse_create_guild(args),
+        "set-guild-rank" => parse_set_guild_rank(args),
+        "set-guild-bank-rights" => parse_set_guild_bank_rights(args),
         "set-level" => parse_set_level(args),
         "set-credentials" => parse_set_credentials(args),
         "set-position" => parse_set_position(args),
@@ -480,6 +520,68 @@ fn parse_number(value: &str, what: &str) -> u32 {
     })
 }
 
+fn parse_flag(value: &str, what: &str) -> bool {
+    match value {
+        "0" => false,
+        "1" => true,
+        _ => {
+            eprintln!("Invalid {what}: {value} (expected 0 or 1)");
+            std::process::exit(1);
+        }
+    }
+}
+
+fn parse_small(value: &str, what: &str) -> u8 {
+    u8::try_from(parse_number(value, what)).unwrap_or_else(|_| {
+        eprintln!("Invalid {what}: {value}");
+        std::process::exit(1);
+    })
+}
+
+fn parse_set_guild_rank(args: &[String]) -> AdminRequest {
+    require_args(args, 4, "set-guild-rank <character_name> <rank 0-4>");
+    AdminRequest::SetGuildRank {
+        character_name: args[2].clone(),
+        rank: parse_small(&args[3], "rank"),
+    }
+}
+
+fn parse_set_guild_bank_rights(args: &[String]) -> AdminRequest {
+    const USAGE: &str = "set-guild-bank-rights <guild_id> <rank> tab <tab> <view 0|1> <deposit 0|1> <stacks_per_day> | <guild_id> <rank> gold <withdraw 0|1> <copper_per_day>";
+    require_args(args, 5, USAGE);
+    let guild_id = parse_number(&args[2], "guild_id");
+    let rank = parse_small(&args[3], "rank");
+    match args[4].as_str() {
+        "tab" => {
+            require_args(args, 9, USAGE);
+            AdminRequest::SetGuildBankTabRights {
+                guild_id,
+                rank,
+                tab: parse_small(&args[5], "tab"),
+                view: parse_flag(&args[6], "view"),
+                deposit: parse_flag(&args[7], "deposit"),
+                withdrawals_per_day: parse_number(&args[8], "stacks_per_day"),
+            }
+        }
+        "gold" => {
+            require_args(args, 7, USAGE);
+            AdminRequest::SetGuildBankGoldRights {
+                guild_id,
+                rank,
+                withdraw_gold: parse_flag(&args[5], "withdraw"),
+                gold_per_day: args[6].parse().unwrap_or_else(|_| {
+                    eprintln!("Invalid copper_per_day: {}", args[6]);
+                    std::process::exit(1);
+                }),
+            }
+        }
+        _ => {
+            eprintln!("Usage: game-server-admin {USAGE}");
+            std::process::exit(1);
+        }
+    }
+}
+
 fn parse_set_gold(args: &[String]) -> AdminRequest {
     require_args(args, 4, "set-gold <character_name> <copper>");
     AdminRequest::SetGold {
@@ -561,6 +663,60 @@ mod tests {
 
     fn args(words: &[&str]) -> Vec<String> {
         words.iter().map(|word| word.to_string()).collect()
+    }
+
+    #[test]
+    fn parse_guild_rank_and_bank_rights_requests() {
+        let rank = parse_request(&args(&[
+            "game-server-admin",
+            "set-guild-rank",
+            "Bankalt",
+            "3",
+        ]));
+        assert!(matches!(
+            rank,
+            AdminRequest::SetGuildRank { ref character_name, rank: 3 } if character_name == "Bankalt"
+        ));
+        let tab = parse_request(&args(&[
+            "game-server-admin",
+            "set-guild-bank-rights",
+            "7",
+            "3",
+            "tab",
+            "0",
+            "1",
+            "1",
+            "2",
+        ]));
+        assert!(matches!(
+            tab,
+            AdminRequest::SetGuildBankTabRights {
+                guild_id: 7,
+                rank: 3,
+                tab: 0,
+                view: true,
+                deposit: true,
+                withdrawals_per_day: 2
+            }
+        ));
+        let gold = parse_request(&args(&[
+            "game-server-admin",
+            "set-guild-bank-rights",
+            "7",
+            "3",
+            "gold",
+            "1",
+            "50000",
+        ]));
+        assert!(matches!(
+            gold,
+            AdminRequest::SetGuildBankGoldRights {
+                guild_id: 7,
+                rank: 3,
+                withdraw_gold: true,
+                gold_per_day: 50_000
+            }
+        ));
     }
 
     #[test]

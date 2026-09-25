@@ -779,6 +779,17 @@ impl InventoryModel {
             .and_then(|(slot, _)| slot.visual_slot())
     }
 
+    /// Every item in the bags, in bag and slot order.
+    pub(crate) fn bag_items(&self) -> impl Iterator<Item = &InventoryItemData> {
+        self.bags.iter().flatten().flatten()
+    }
+
+    pub(crate) fn is_soulbound(&self, item_guid: u64) -> bool {
+        self.instances
+            .get(&item_guid)
+            .is_some_and(|meta| meta.soulbound)
+    }
+
     /// The bag item with `item_guid`.
     pub(crate) fn bag_item(&self, item_guid: u64) -> Option<&InventoryItemData> {
         self.bags

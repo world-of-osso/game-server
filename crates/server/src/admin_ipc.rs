@@ -342,6 +342,39 @@ fn dispatch(
             guild_id,
             guild_name,
         } => handle_create_guild(db, &character_name, guild_id, &guild_name),
+        AdminRequest::SetGuildRank {
+            character_name,
+            rank,
+        } => handle_set_guild_rank(db, &character_name, rank),
+        AdminRequest::SetGuildBankTabRights {
+            guild_id,
+            rank,
+            tab,
+            view,
+            deposit,
+            withdrawals_per_day,
+        } => handle_set_guild_bank_rights(db, guild_id, rank, |rank_data| {
+            let rights = rank_data
+                .tabs
+                .get_mut(usize::from(tab))
+                .ok_or_else(|| format!("guild bank tab {tab} does not exist"))?;
+            *rights = crate::persistence::banks::GuildTabRights {
+                view,
+                deposit,
+                withdrawals_per_day,
+            };
+            Ok(())
+        }),
+        AdminRequest::SetGuildBankGoldRights {
+            guild_id,
+            rank,
+            withdraw_gold,
+            gold_per_day,
+        } => handle_set_guild_bank_rights(db, guild_id, rank, |rank_data| {
+            rank_data.withdraw_gold = withdraw_gold;
+            rank_data.gold_per_day = gold_per_day;
+            Ok(())
+        }),
         AdminRequest::SetLevel {
             character_name,
             level,

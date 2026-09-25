@@ -6,6 +6,10 @@ mod auction_house;
 mod auras;
 mod auth;
 mod auth_character;
+mod bank;
+mod bank_storage;
+#[cfg(test)]
+mod bank_test_harness;
 mod barber_shop;
 mod calendar;
 mod character_stats_data;
@@ -23,10 +27,12 @@ mod experience;
 mod faction;
 mod faction_reaction;
 mod friends;
+mod game_objects;
 mod gold;
 mod grid_activity;
 mod group;
 mod guild;
+mod guild_bank;
 mod ignore_list;
 mod inspect;
 mod interest;
@@ -154,6 +160,9 @@ fn add_world_plugins(app: &mut App) {
         .add_plugins(unit_target::UnitTargetPlugin)
         .add_plugins(npc_interaction::NpcInteractionPlugin)
         .add_plugins(merchant::MerchantPlugin)
+        .add_plugins(game_objects::GameObjectPlugin)
+        .add_plugins(bank::BankPlugin)
+        .add_plugins(guild_bank::GuildBankPlugin)
         .add_plugins(spell_info::SpellInfoPlugin)
         .add_plugins(spell_cast::SpellCastPlugin)
         .add_plugins(auras::AuraPlugin)

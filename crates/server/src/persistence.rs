@@ -4,6 +4,8 @@ use shared::profession::{PlayerProfessions, Profession};
 use shared::reputation::CharacterReputation;
 use std::path::{Path, PathBuf};
 
+#[path = "persistence_banks.rs"]
+pub(crate) mod banks;
 #[path = "persistence_equipment.rs"]
 pub(crate) mod equipment;
 #[path = "persistence_inventory.rs"]
@@ -225,6 +227,7 @@ pub(crate) fn create_tables(db: &Database) {
     let _ = txn.open_table(crate::persistence_progression::CHARACTER_PROGRESSION);
     let _ = txn.open_table(crate::persistence_progression::CHARACTER_TRAITS);
     let _ = txn.open_table(crate::persistence_progression::CHARACTER_XP);
+    banks::create_bank_tables(&txn);
     txn.commit().expect("Failed to commit initial tables");
     migrate_legacy_inventories(db);
     migrate_legacy_characters(db);

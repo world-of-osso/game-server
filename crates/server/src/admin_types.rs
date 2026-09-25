@@ -55,6 +55,27 @@ pub enum AdminRequest {
         guild_id: u32,
         guild_name: String,
     },
+    /// Guild rank (0 Guild Master .. 4 Initiate) of a guild member.
+    SetGuildRank {
+        character_name: String,
+        rank: u8,
+    },
+    /// Guild bank tab rights of a rank.
+    SetGuildBankTabRights {
+        guild_id: u32,
+        rank: u8,
+        tab: u8,
+        view: bool,
+        deposit: bool,
+        withdrawals_per_day: u32,
+    },
+    /// Guild bank gold withdrawal right and copper per day of a rank.
+    SetGuildBankGoldRights {
+        guild_id: u32,
+        rank: u8,
+        withdraw_gold: bool,
+        gold_per_day: u64,
+    },
     SetLevel {
         character_name: String,
         level: u16,
@@ -206,6 +227,16 @@ pub enum AdminResponse {
         character_id: u64,
         guild_id: u32,
         guild_name: String,
+    },
+    GuildRankSet {
+        character_name: String,
+        rank: u8,
+        rank_name: String,
+    },
+    GuildBankRightsSet {
+        guild_id: u32,
+        rank: u8,
+        rank_name: String,
     },
     LevelSet {
         character_name: String,

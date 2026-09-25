@@ -389,9 +389,10 @@ fn build_guild_snapshot(
 ) -> GuildSnapshot {
     let profile = load_guild_profile(db, guild.guild_id);
     let online = online_member_map(online_players, guild.guild_id);
+    let ranks = crate::persistence::banks::load_guild(db, guild.guild_id);
     let members = list_guild_members(db, guild.guild_id)
         .into_iter()
-        .map(|member| build_member_snapshot(db, member, &online))
+        .map(|member| build_member_snapshot(db, member, &online, &ranks))
         .collect();
     GuildSnapshot {
         guild_id: guild.guild_id,
@@ -406,8 +407,10 @@ fn build_member_snapshot(
     db: &redb::Database,
     member: GuildMemberRecord,
     online: &BTreeMap<String, OnlineMemberState>,
+    guild: &crate::persistence::banks::GuildData,
 ) -> GuildMemberSnapshot {
     let online_state = online.get(&member.name);
+    let rank = crate::persistence::banks::load_guild_member_rank(db, guild, member.character_id);
     let officer_note = load_guild_member_note(db, member.character_id).officer_note;
     GuildMemberSnapshot {
         character_name: member.name.clone(),
@@ -417,7 +420,7 @@ fn build_member_snapshot(
         class_name: online_state
             .map(|state| state.class_name.clone())
             .unwrap_or_else(|| class_name_from_id(member.class_id)),
-        rank_name: "Member".into(),
+        rank_name: guild.ranks[usize::from(rank)].name.clone(),
         is_online: online_state.is_some(),
         officer_note,
         last_online: if online_state.is_some() {
@@ -562,6 +565,7 @@ mod tests {
                     class_name: "Priest".into(),
                 },
             )]),
+            &crate::persistence::banks::GuildData::default(),
         );
 
         assert_eq!(profile.motd, "Bring flasks");
@@ -569,5 +573,7 @@ mod tests {
         assert!(snapshot.is_online);
         assert_eq!(snapshot.officer_note, "Reliable healer");
         assert_eq!(snapshot.class_name, "Priest");
+        // No stored rank: the lowest default rank.
+        assert_eq!(snapshot.rank_name, "Initiate");
     }
 }

@@ -10,6 +10,7 @@ use shared::protocol::{AuthChannel, CharacterListUpdate, LoginResponse};
 
 use crate::admin_types::*;
 use crate::persistence;
+use crate::persistence::banks;
 use crate::persistence_accounts;
 
 pub(crate) fn handle_combat_log(
@@ -581,6 +582,7 @@ fn parse_equipment_visual_slot(value: &str) -> Option<EquipmentVisualSlot> {
     }
 }
 
+/// Assigns the character to the guild as its Guild Master.
 pub(crate) fn handle_create_guild(
     db: &persistence::GameDatabase,
     name: &str,
@@ -588,12 +590,64 @@ pub(crate) fn handle_create_guild(
     guild_name: &str,
 ) -> AdminResponse {
     match persistence::set_character_guild_by_name(&db.db, name, guild_id, guild_name) {
-        Ok(character_id) => AdminResponse::GuildCreated {
-            character_id,
-            guild_id,
-            guild_name: guild_name.to_owned(),
-        },
+        Ok(character_id) => {
+            banks::save_guild_member_rank(&db.db, character_id, banks::GUILD_MASTER_RANK);
+            AdminResponse::GuildCreated {
+                character_id,
+                guild_id,
+                guild_name: guild_name.to_owned(),
+            }
+        }
         Err(e) => AdminResponse::Error(e),
+    }
+}
+
+pub(crate) fn handle_set_guild_rank(
+    db: &persistence::GameDatabase,
+    name: &str,
+    rank: u8,
+) -> AdminResponse {
+    let Some(character_id) = persistence::find_character_id_by_name(&db.db, name) else {
+        return AdminResponse::Error(format!("character '{name}' not found"));
+    };
+    let Some(membership) = persistence::load_character_guild(&db.db, character_id) else {
+        return AdminResponse::Error(format!("character '{name}' is not in a guild"));
+    };
+    let guild = banks::load_guild(&db.db, membership.guild_id);
+    let Some(rank_data) = guild.ranks.get(usize::from(rank)) else {
+        return AdminResponse::Error(format!("guild rank {rank} does not exist"));
+    };
+    banks::save_guild_member_rank(&db.db, character_id, rank);
+    AdminResponse::GuildRankSet {
+        character_name: name.to_owned(),
+        rank,
+        rank_name: rank_data.name.clone(),
+    }
+}
+
+/// Edit one rank's guild bank rights; the Guild Master's rights are fixed.
+pub(crate) fn handle_set_guild_bank_rights(
+    db: &persistence::GameDatabase,
+    guild_id: u32,
+    rank: u8,
+    edit: impl FnOnce(&mut banks::GuildRankData) -> Result<(), String>,
+) -> AdminResponse {
+    if rank == banks::GUILD_MASTER_RANK {
+        return AdminResponse::Error("the Guild Master rank has every right".into());
+    }
+    let mut guild = banks::load_guild(&db.db, guild_id);
+    let Some(rank_data) = guild.ranks.get_mut(usize::from(rank)) else {
+        return AdminResponse::Error(format!("guild rank {rank} does not exist"));
+    };
+    if let Err(error) = edit(rank_data) {
+        return AdminResponse::Error(error);
+    }
+    let rank_name = rank_data.name.clone();
+    banks::save_guild(&db.db, guild_id, &guild);
+    AdminResponse::GuildBankRightsSet {
+        guild_id,
+        rank,
+        rank_name,
     }
 }
 
