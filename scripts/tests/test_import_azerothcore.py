@@ -19,6 +19,7 @@ AZEROTHCORE_SQL = Path(os.environ.get("AZEROTHCORE_SQL", "/home/osso/Repos/azero
 
 PINNED_CSV_ROOT = Path(os.environ.get("DB2_CSV_ROOT", db2.DEFAULT_CSV_ROOT))
 PINNED_BUILD_DIR = PINNED_CSV_ROOT / db2.DEFAULT_BUILD
+TDB_DIR = Path(os.environ.get("TDB_DIR", content_policy.DEFAULT_TDB_DIR))
 
 
 def write_header_only_csvs(csv_dir):
@@ -30,6 +31,16 @@ def write_header_only_csvs(csv_dir):
         columns = [row[1] for row in schema.execute(f"PRAGMA table_info({db2.table_name(name)})")]
         with (csv_dir / f"{name}.csv").open("w", newline="") as handle:
             csv.writer(handle).writerow(columns)
+
+
+def write_creature_display_ids(csv_dir, ids):
+    """Rewrite CreatureDisplayInfo.csv with one zeroed row per display id."""
+    path = csv_dir / "CreatureDisplayInfo.csv"
+    header = path.read_text().splitlines()[0].split(",")
+    with path.open("w", newline="") as handle:
+        writer = csv.writer(handle)
+        writer.writerow(header)
+        writer.writerows([display_id] + [0] * (len(header) - 1) for display_id in ids)
 
 
 def dump_tables():
@@ -76,6 +87,10 @@ class CreatureEventImportTests(unittest.TestCase):
         (self.csv / content_policy.WRATH_BUILD).mkdir()
         (self.csv / content_policy.WRATH_BUILD / "SpellName.csv").write_text("ID,Name_lang\n")
         self.db = self.root / "data/world.db"
+        self.tdb = self.root / "data/reference/tdb1210"
+        self.tdb.mkdir(parents=True)
+        for name in content_policy.TDB_TABLES:
+            (self.tdb / f"{name}.sql").write_text("-- empty fixture\n")
 
     def run_import(self):
         return subprocess.run(
@@ -205,6 +220,80 @@ class CreatureEventImportTests(unittest.TestCase):
                 [(79968, 79968, 0.0, 0.0, 2), (79968, 96194, 3.5, 90.0, 515)],
             )
 
+    def write_wrath_only_display_fixture(self):
+        """AzerothCore displays 6808/382/79/3167 against Retail displays 520/366/3167 and TrinityCore models."""
+        (self.sql / "creature_template.sql").write_text(
+            "INSERT INTO `creature_template` (entry,name) VALUES\n"
+            "(2349,'Giant Moss Creeper'),(30,'Forest Spider'),(54,'Corina Steele'),"
+            "(23050,'Little Noah'),(1216,'Shore Crawler'),(1822,'Venom Mist Lurker');\n"
+        )
+        (self.sql / "creature_template_model.sql").write_text(
+            "INSERT INTO `creature_template_model` VALUES\n"
+            "(2349,0,6808,1,1,12340),(30,0,382,1,1,12340),(54,0,3167,1,1,12340),"
+            "(23050,0,79,1,1,12340),(1216,0,9570,1,1,12340),(1822,0,1087,1,1,12340);\n"
+        )
+        tdb_template = "INSERT INTO `creature_template` VALUES\n" + ",".join(
+            f"({entry},0,0,'{name}',NULL,NULL,NULL,NULL" + ",0" * 34 + ")"
+            for entry, name in ((2349, "Domesticated Creeper"), (30, "Forest Spider"), (54, "Corina Steele"),
+                                (1216, "Shore Crawler"), (1822, "Venom Mist Lurker"))
+        ) + ";\n"
+        (self.tdb / "creature_template.sql").write_text(tdb_template)
+        (self.tdb / "creature_template_model.sql").write_text(
+            "INSERT INTO `creature_template_model` VALUES\n"
+            "(2349,0,520,1,1,66044),(30,0,366,1,1,66044),(54,0,99999,1,1,66044),"
+            "(1216,0,32790,1,1,66044),(1822,0,759,1,1,66044);\n"
+        )
+        write_creature_display_ids(self.csv / db2.DEFAULT_BUILD, [520, 366, 3167, 759])
+
+    def test_wrath_only_displays_take_trinitycore_retail_models(self):
+        self.write_wrath_only_display_fixture()
+        (self.root / "scripts/content_overrides.csv").write_text(
+            "kind,source_id,retail_id,source_name,retail_name,reason\n"
+            "creature,2349,2349,Giant Moss Creeper,Domesticated Creeper,renamed spider\n"
+        )
+        result = self.run_import()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        with sqlite3.connect(self.db) as conn:
+            self.assertEqual(
+                conn.execute("SELECT CreatureID, Idx, CreatureDisplayID, VerifiedBuild FROM content_creature_template_model"
+                             " ORDER BY CreatureID").fetchall(),
+                [(30, 0, 366, 66044), (54, 0, 3167, 12340), (1216, 0, 9570, 12340), (1822, 0, 759, 66044),
+                 (2349, 0, 520, 66044), (23050, 0, 79, 12340)],
+            )
+            self.assertEqual(
+                conn.execute("SELECT CreatureID, CreatureDisplayID FROM creature_template_model ORDER BY CreatureID").fetchall(),
+                [(30, 382), (54, 3167), (1216, 9570), (1822, 1087), (2349, 6808), (23050, 79)],
+            )
+        with (self.root / "data/reports/content-dropped.csv").open(newline="") as handle:
+            reported = {(r["table"], int(r["source_id"])): r["reason"] for r in csv.DictReader(handle)}
+        self.assertEqual(reported[("creature_template_model", 23050)],
+                         "display absent from Retail kept: no TrinityCore Retail template")
+        self.assertEqual(reported[("creature_template_model", 1216)],
+                         "display absent from Retail kept: TrinityCore Retail displays [32790] absent from Retail CreatureDisplayInfo")
+        self.assertNotIn(("creature_template_model", 2349), reported)
+
+    def test_renamed_creature_without_reviewed_override_keeps_wrath_display_and_is_reported(self):
+        self.write_wrath_only_display_fixture()
+        result = self.run_import()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        with sqlite3.connect(self.db) as conn:
+            self.assertEqual(
+                conn.execute("SELECT CreatureDisplayID FROM content_creature_template_model WHERE CreatureID = 2349").fetchall(),
+                [(6808,)],
+            )
+        with (self.root / "data/reports/content-dropped.csv").open(newline="") as handle:
+            reasons = [r["reason"] for r in csv.DictReader(handle) if r["source_id"] == "2349"]
+        self.assertEqual(reasons, ["display absent from Retail kept: TrinityCore Retail name 'Domesticated Creeper' != 'Giant Moss Creeper'"])
+
+    def test_missing_trinitycore_models_do_not_destroy_existing_database(self):
+        (self.tdb / "creature_template_model.sql").unlink()
+        self.db.write_bytes(b"existing database must survive failed preflight")
+        before = self.db.read_bytes()
+        result = self.run_import()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("creature_template_model.sql", result.stderr)
+        self.assertEqual(self.db.read_bytes(), before)
+
     def test_unparseable_dump_fails_without_partial_tables(self):
         (self.sql / "npc_vendor.sql").write_text("INSERT INTO `npc_vendor` VALUES\n(54,0,2488,0,0,0,0),(54,0,0x1F,0,0,0,0);\n")
         result = self.run_import()
@@ -214,11 +303,12 @@ class CreatureEventImportTests(unittest.TestCase):
 
 @unittest.skipUnless(AZEROTHCORE_SQL.is_dir(), f"AzerothCore dumps not present at {AZEROTHCORE_SQL}")
 @unittest.skipUnless(PINNED_BUILD_DIR.is_dir(), f"pinned DB2 CSVs not present at {PINNED_BUILD_DIR}")
+@unittest.skipUnless(TDB_DIR.is_dir(), f"TrinityCore Retail excerpts not present at {TDB_DIR}")
 class AzerothCoreContentTests(unittest.TestCase):
     """Load real AzerothCore dumps + pinned Retail DB2, derive content_* tables, check Elwynn Forest rows."""
 
     TABLES = (
-        "creature_template", "quest_template", "creature_queststarter", "creature_questender",
+        "creature_template", "creature_template_model", "quest_template", "creature_queststarter", "creature_questender",
         "item_template", "npc_vendor", "trainer", "trainer_spell", "creature_default_trainer",
         "gameobject_template", "gameobject_template_addon", "gameobject",
     )
@@ -233,7 +323,7 @@ class AzerothCoreContentTests(unittest.TestCase):
             + [f"{name}={AZEROTHCORE_SQL / (name + '.sql')}" for name in cls.TABLES],
             [sys.executable, str(SCRIPTS / "db2.py"), "import", "--csv-root", str(PINNED_CSV_ROOT), "--db", str(cls.db)],
             [sys.executable, str(SCRIPTS / "content_policy.py"), "--db", str(cls.db), "--report", str(cls.report),
-             "--csv-root", str(PINNED_CSV_ROOT)],
+             "--csv-root", str(PINNED_CSV_ROOT), "--tdb-dir", str(TDB_DIR)],
         ]
         for command in commands:
             result = subprocess.run(command, capture_output=True, text=True, timeout=900, check=False)
@@ -369,6 +459,18 @@ class AzerothCoreContentTests(unittest.TestCase):
         self.assertEqual(costs[0], [10_000, 1_000_000, 5_000_000, 10_000_000, 25_000_000, 50_000_000])
         self.assertEqual(costs[1], [1_000_000, 2_500_000, 5_000_000, 10_000_000, 25_000_000, 50_000_000])
         self.assertEqual(costs[2], [10_000_000, 250_000_000, 1_000_000_000, 5_000_000_000, 25_000_000_000])
+
+    def test_wrath_only_spider_and_murloc_displays_use_retail_models(self):
+        # Giant Moss Creeper 6808, Forest Lurker 827, Daggerspine Raider 11254 and Silt Crawler 9571 are not in Retail.
+        self.assertEqual(
+            self.rows("SELECT CreatureID, CreatureDisplayID FROM content_creature_template_model"
+                      " WHERE CreatureID IN (2349, 1195, 2595, 922) ORDER BY CreatureID"),
+            [(922, 342), (1195, 909), (2349, 520), (2595, 4763)],
+        )
+
+    def test_retail_display_is_kept_as_imported(self):
+        # Hogger's AzerothCore display 384 exists in Retail, so TrinityCore's 108956 is not used.
+        self.assertEqual(self.rows("SELECT CreatureDisplayID FROM content_creature_template_model WHERE CreatureID = 448"), [(384,)])
 
     def test_quoted_creature_subname_is_unescaped(self):
         self.assertEqual(self.rows("SELECT count(*) FROM creature_template WHERE name LIKE '%\\\"%'"), [(0,)])

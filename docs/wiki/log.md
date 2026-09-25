@@ -1,5 +1,9 @@
 # Wiki Log
 
+## [2026-09-25] systems | Retail creature displays
+
+Updated [[content-import]] and [[world-data]]. `content_policy.py` builds `content_creature_template_model`: templates with a display absent from Retail `CreatureDisplayInfo` take TrinityCore TDB1210 Retail model rows for the same entry (same name or reviewed `creature` override). Map-0 spawns: 53 templates / 681 spawns moved off 40 Wrath-only displays. `db2.py` imports `creature_display_info`.
+
 ## [2026-09-24] systems | Experience messages
 
 Updated [[experience]]: owner-only `PlayerXpUpdate`/`LogXpGain` on `ExperienceChannel` and `QuestGiverQuestComplete.xp` (shared-protocol `xp-protocol`). The old-expansion ÷10 kill XP rule is removed because there is no ContentTuning scaling. Rested caps now use gtXp instead of the deleted Wrath `shared::xp::xp_to_level`.

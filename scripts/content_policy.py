@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Derive the Retail-first content_* tables the server reads from AzerothCore + Retail DB2 tables.
 
-  content_policy.py [--db data/world.db] [--csv-root DIR] [--overrides CSV] [--report CSV] [--check]
+  content_policy.py [--db data/world.db] [--csv-root DIR] [--tdb-dir DIR] [--overrides CSV] [--report CSV] [--check]
 
 --check only verifies the inputs exist (import-azerothcore.sh preflight).
 
@@ -20,6 +20,10 @@ DB2 tables (db2.py). Policy (docs/wiki/systems/content-import.md):
   zeroed. Vendor and loot rows need a mapped item.
 - Game object templates are kept when their displayId is 0 (no model) or a Retail
   game_object_display_info row; spawns and addons need a kept template.
+- content_creature_template_model: a template with any display absent from Retail
+  creature_display_info takes the model rows of the same entry in TrinityCore's
+  Retail world DB (--tdb-dir dumps) when that entry has the same name (or a
+  reviewed creature override) and every one of its displays exists in Retail.
 
 Every dropped row or zeroed reward is written to --report. Runs in one transaction.
 """
@@ -34,11 +38,14 @@ from pathlib import Path
 SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
 import db2  # noqa: E402
+import mysql_dump  # noqa: E402
 
 PROJECT_DIR = SCRIPT_DIR.parent
 WRATH_BUILD = "3.4.0.47659"
 DEFAULT_OVERRIDES = SCRIPT_DIR / "content_overrides.csv"
 DEFAULT_REPORT = PROJECT_DIR / "data/reports/content-dropped.csv"
+DEFAULT_TDB_DIR = PROJECT_DIR / "data/reference/tdb1210"
+TDB_TABLES = ("creature_template", "creature_template_model")
 
 REWARD_ITEMS = [(f"RewardItem{n}", f"RewardAmount{n}") for n in range(1, 5)] + [
     (f"RewardChoiceItemID{n}", f"RewardChoiceItemQuantity{n}") for n in range(1, 7)
@@ -73,10 +80,12 @@ def normalize(name):
 
 def load_overrides(path, conn):
     """{kind: {source_id: retail_id}}; fails when a reviewed name no longer matches either side."""
-    source_name_sql = {"item": "SELECT name FROM item_template WHERE entry = ?"}
+    source_name_sql = {"item": "SELECT name FROM item_template WHERE entry = ?",
+                       "creature": "SELECT name FROM creature_template WHERE entry = ?"}
     retail_name_sql = {"item": "SELECT Display_lang FROM item_sparse WHERE ID = ?",
-                       "spell": "SELECT Name_lang FROM spell_name WHERE ID = ?"}
-    overrides = {"item": {}, "spell": {}}
+                       "spell": "SELECT Name_lang FROM spell_name WHERE ID = ?",
+                       "creature": "SELECT name FROM temp.tdb_creature_template WHERE entry = ?"}
+    overrides = {"item": {}, "spell": {}, "creature": {}}
     with path.open(newline="", encoding="utf-8") as handle:
         for row in csv.DictReader(handle):
             kind, source_id, retail_id = row["kind"], int(row["source_id"]), int(row["retail_id"])
@@ -261,7 +270,57 @@ def build_gameobjects(conn, report):
             report.drop(table, f"{row_key}={row}", entry, "template dropped")
 
 
-def apply_policy(conn, wrath_spell_names, overrides_path, report):
+def load_tdb_tables(conn, tdb_dir):
+    """TrinityCore Retail creature_template (entry, name) and creature_template_model as temp tables."""
+    conn.execute("CREATE TEMP TABLE tdb_creature_template (entry INTEGER PRIMARY KEY, name TEXT)")
+    conn.execute("""CREATE TEMP TABLE tdb_creature_template_model (CreatureID INTEGER NOT NULL, Idx INTEGER NOT NULL,
+        CreatureDisplayID INTEGER NOT NULL, DisplayScale REAL NOT NULL, Probability REAL NOT NULL,
+        VerifiedBuild INTEGER, PRIMARY KEY (CreatureID, Idx))""")
+    path = tdb_dir / "creature_template.sql"
+    rows = mysql_dump.dump_rows(path.read_text(encoding="utf-8"), "creature_template", path)
+    conn.executemany("INSERT INTO temp.tdb_creature_template VALUES (?, ?)", ((row[0], row[3]) for _, row in rows))
+    path = tdb_dir / "creature_template_model.sql"
+    rows = mysql_dump.dump_rows(path.read_text(encoding="utf-8"), "creature_template_model", path)
+    conn.executemany("INSERT INTO temp.tdb_creature_template_model VALUES (?,?,?,?,?,?)", (row for _, row in rows))
+
+
+def retail_model_reason(conn, entry, name, reviewed):
+    """None when TrinityCore's Retail models for `entry` may replace AzerothCore's, else why not."""
+    retail = conn.execute("SELECT name FROM temp.tdb_creature_template WHERE entry = ?", (entry,)).fetchone()
+    if retail is None:
+        return "no TrinityCore Retail template"
+    if not reviewed and normalize(retail[0]) != normalize(name):
+        return f"TrinityCore Retail name {retail[0]!r} != {name!r}"
+    displays = [d for (d,) in conn.execute(
+        "SELECT CreatureDisplayID FROM temp.tdb_creature_template_model WHERE CreatureID = ? ORDER BY Idx", (entry,))]
+    if not displays:
+        return "no TrinityCore Retail models"
+    absent = [d for d in displays if not conn.execute("SELECT 1 FROM creature_display_info WHERE ID = ?", (d,)).fetchone()]
+    if absent:
+        return f"TrinityCore Retail displays {absent} absent from Retail CreatureDisplayInfo"
+    return None
+
+
+def build_creature_models(conn, overrides, report):
+    clone_table(conn, "creature_template_model", "content_creature_template_model")
+    conn.execute("INSERT INTO content_creature_template_model SELECT * FROM creature_template_model")
+    wrath_only = conn.execute("""SELECT DISTINCT m.CreatureID, t.name FROM creature_template_model m
+        LEFT JOIN creature_template t ON t.entry = m.CreatureID
+        WHERE m.CreatureDisplayID NOT IN (SELECT ID FROM creature_display_info) ORDER BY m.CreatureID""").fetchall()
+    for entry, name in wrath_only:
+        retail_entry = overrides.get(entry, entry)
+        reason = retail_model_reason(conn, retail_entry, name, entry in overrides)
+        if reason:
+            report.drop("creature_template_model", f"CreatureID={entry}", entry, f"display absent from Retail kept: {reason}")
+            continue
+        conn.execute("DELETE FROM content_creature_template_model WHERE CreatureID = ?", (entry,))
+        conn.execute("""INSERT INTO content_creature_template_model
+            SELECT ?, Idx, CreatureDisplayID, DisplayScale, Probability, VerifiedBuild
+            FROM temp.tdb_creature_template_model WHERE CreatureID = ?""", (entry, retail_entry))
+
+
+def apply_policy(conn, wrath_spell_names, overrides_path, tdb_dir, report):
+    load_tdb_tables(conn, tdb_dir)
     retail_items = dict(conn.execute("SELECT ID, Display_lang FROM item_sparse"))
     retail_spells = dict(conn.execute("SELECT ID, Name_lang FROM spell_name"))
     overrides = load_overrides(overrides_path, conn)
@@ -275,18 +334,21 @@ def apply_policy(conn, wrath_spell_names, overrides_path, report):
     build_quests(conn, item_map, spell_map, report)
     build_loot(conn, report)
     build_gameobjects(conn, report)
+    build_creature_models(conn, overrides["creature"], report)
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--db", type=Path, default=PROJECT_DIR / "data/world.db")
     parser.add_argument("--csv-root", type=Path, default=db2.DEFAULT_CSV_ROOT)
+    parser.add_argument("--tdb-dir", type=Path, default=DEFAULT_TDB_DIR)
     parser.add_argument("--overrides", type=Path, default=DEFAULT_OVERRIDES)
     parser.add_argument("--report", type=Path, default=DEFAULT_REPORT)
     parser.add_argument("--check", action="store_true")
     args = parser.parse_args()
     wrath_path = args.csv_root / WRATH_BUILD / "SpellName.csv"
-    missing = [str(p) for p in (wrath_path, args.overrides) if not p.is_file()]
+    tdb_paths = [args.tdb_dir / f"{table}.sql" for table in TDB_TABLES]
+    missing = [str(p) for p in (wrath_path, args.overrides, *tdb_paths) if not p.is_file()]
     if missing:
         raise SystemExit(f"Missing content policy inputs: {', '.join(missing)}")
     if args.check:
@@ -296,7 +358,7 @@ def main():
     conn = sqlite3.connect(args.db, isolation_level=None)
     try:
         conn.execute("BEGIN")
-        apply_policy(conn, wrath_spell_names, args.overrides, report)
+        apply_policy(conn, wrath_spell_names, args.overrides, args.tdb_dir, report)
         conn.execute("COMMIT")
     except BaseException:
         if conn.in_transaction:

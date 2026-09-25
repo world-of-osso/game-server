@@ -61,3 +61,7 @@ item,44484,44484,Formula: Enchant Bracers - Greater Assault,Formula: Enchant Bra
 item,44666,44666,Flumblub's Seat Cushion,Fumblub's Seat Cushion,spelling corrected
 item,45209,45209,Sash of Trumpted Pride,Sash of Trumpeted Pride,spelling corrected
 item,45820,45820,Broach of the Wailing Night,Brooch of the Wailing Night,spelling corrected
+creature,1780,1780,Moss Stalker,Skitterweb Striker,Retail renamed the entry; Wrath tarantula display; Retail bonespider2 display (TrinityCore 12.1)
+creature,1781,1781,Mist Creeper,Skitterweb Lurker,Retail renamed the entry; Wrath tarantula display; Retail bonespider2 display (TrinityCore 12.1)
+creature,2349,2349,Giant Moss Creeper,Domesticated Creeper,Retail renamed the entry; Wrath tarantula display; Retail tarantula2 display (TrinityCore 12.1)
+creature,2350,2350,Forest Moss Creeper,Forest Creeper,Retail renamed the entry; Wrath tarantula display; Retail tarantula2 display (TrinityCore 12.1)

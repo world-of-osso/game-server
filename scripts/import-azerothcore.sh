@@ -15,6 +15,8 @@ DB_PATH="$PROJECT_DIR/data/world.db"
 
 SQL_DIR="${1:-/home/osso/Repos/azerothcore/data/sql/base/db_world}"
 DB2_CSV_ROOT="${DB2_CSV_ROOT:-$PROJECT_DIR/../game-engine/data/db2}"
+# TrinityCore Retail world DB excerpts (creature_template, creature_template_model) for Retail displays.
+TDB_DIR="${TDB_DIR:-$PROJECT_DIR/data/reference/tdb1210}"
 
 # Tables loaded from same-named dumps in $SQL_DIR (<table>.sql); DDL in world_schema.sql.
 DUMP_TABLES=(
@@ -39,7 +41,7 @@ for table in "${DUMP_TABLES[@]}"; do
 done
 
 python3 "$SCRIPT_DIR/db2.py" check --csv-root "$DB2_CSV_ROOT"
-python3 "$SCRIPT_DIR/content_policy.py" --check --csv-root "$DB2_CSV_ROOT"
+python3 "$SCRIPT_DIR/content_policy.py" --check --csv-root "$DB2_CSV_ROOT" --tdb-dir "$TDB_DIR"
 
 rm -f "$DB_PATH" "$DB_PATH-wal" "$DB_PATH-shm"
 echo "Creating $DB_PATH ..."
@@ -60,7 +62,7 @@ python3 "$SCRIPT_DIR/db2.py" import --csv-root "$DB2_CSV_ROOT" --db "$DB_PATH"
 # --- Retail-first content tables (content_*, see content_policy.py) ---
 
 echo "  Deriving content tables ..."
-python3 "$SCRIPT_DIR/content_policy.py" --db "$DB_PATH" --csv-root "$DB2_CSV_ROOT"
+python3 "$SCRIPT_DIR/content_policy.py" --db "$DB_PATH" --csv-root "$DB2_CSV_ROOT" --tdb-dir "$TDB_DIR"
 
 
 echo "Database written to: $DB_PATH"

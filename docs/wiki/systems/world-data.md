@@ -22,6 +22,7 @@ Source: `~/Repos/azerothcore/data/sql/base/db_world/`
 | `creature` | 149,678 | Source spawn instances, including event-only rows; runtime selection applies event membership |
 | `game_event_creature` | Source-dependent | Signed event membership keyed by spawn GUID and event ID |
 | `creature_template_model` | 40,213 | Display models per creature (DisplayID, scale, probability) |
+| `content_creature_template_model` | 40,186 | `creature_template_model` with Wrath-only displays replaced by TrinityCore Retail models ([[content-import]]) |
 | `waypoint_data` | 144,657 | Patrol points keyed by path ID: delay (ms), move_type, orientation |
 | `creature_addon` | 35,153 | Per-spawn path_id, mount, bytes1/2, emote, visibility, auras |
 | `creature_template_addon` | 11,983 | Same fields per template entry; fallback when a spawn has no row |
