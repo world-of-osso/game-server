@@ -1,6 +1,6 @@
 # Content Import
 
-Quest, vendor, trainer, loot, gossip and item content comes from AzerothCore (Wrath 3.3.5) dumps imported into `data/world.db`; the client and spell/class data are Retail `12.1.0.69933`. Raw dump tables keep their Wrath IDs verbatim. `scripts/content_policy.py` derives the Retail-first `content_*` tables that the server should read (policy chosen 2026-09-23, option 4 below). This page records the imported tables, the policy and its drop counts, and the ID measurements that motivated it.
+Quest, vendor, loot, gossip and item content comes from AzerothCore (Wrath 3.3.5) dumps imported into `data/world.db`; the client and spell/class data are Retail `12.1.0.69933`. Raw dump tables keep their Wrath IDs verbatim. `scripts/content_policy.py` derives the Retail-first `content_*` tables that the server should read (policy chosen 2026-09-23, option 4 below). This page records the imported tables, the policy and its drop counts, and the ID measurements that motivated it.
 
 ## Imported tables
 
@@ -16,9 +16,7 @@ Quest, vendor, trainer, loot, gossip and item content comes from AzerothCore (Wr
 | `gameobject_queststarter` / `gameobject_questender` | 457 / 457 | Object → quest |
 | `gameobject_template` / `gameobject_template_addon` / `gameobject` | 21,581 / 21,493 / 96,459 | Game object templates and spawns ([[game-objects]]) |
 | `npc_vendor` | 37,585 (2,018 vendors) | Vendor item lists; negative `item` = reference to another vendor |
-| `trainer` / `trainer_spell` / `creature_default_trainer` | 126 / 6,417 / 806 | Trainer system AzerothCore `ObjectMgr` loads (`trainer.Type` 0 class, 1 mount, 2 tradeskill, 3 pet) |
-| `npc_trainer` | 4,934 | Legacy trainer table; **not read by AzerothCore** (`ObjectMgr.cpp` queries only `trainer_spell`/`creature_default_trainer`) |
-| `tdb_trainer` / `tdb_trainer_spell` / `tdb_creature_trainer` / `tdb_skill_tiers` | 192 / 5,402 / 975 / 59 | TrinityCore TDB1210.26091 (Retail 12.1.0) excerpts in `data/reference/tdb1210/` (source: `SOURCE.txt` there), loaded with `mysql_dump.py --prefix tdb_` and `scripts/tdb_schema.sql`; Retail profession trainers and skill tier caps ([professions](professions.md)) |
+| `tdb_trainer` / `tdb_trainer_spell` / `tdb_creature_trainer` / `tdb_skill_tiers` | 192 / 5,402 / 975 / 59 | Trainers come from TrinityCore TDB1210.26091 (Retail 12.1.0) excerpts, not AzerothCore (whose trainer tables are no longer imported: its profession trainers teach the Apprentice/Journeyman/Expert/Artisan ranks Retail removed, its class trainers Wrath ranks) in `data/reference/tdb1210/` (source: `SOURCE.txt` there), loaded with `mysql_dump.py --prefix tdb_` and `scripts/tdb_schema.sql`; Retail profession trainers and skill tier caps ([professions](professions.md)) |
 | `creature_loot_template` / `gameobject_loot_template` / `reference_loot_template` / `item_loot_template` | 249,466 / 17,957 / 44,536 / 4,997 | Loot tables |
 | `gossip_menu` / `gossip_menu_option` | 6,055 / 4,604 | Gossip menus |
 | `npc_text` / `broadcast_text` | 8,361 / 73,039 | Gossip and NPC text |
@@ -75,7 +73,7 @@ TaxiNodes: 335 of 363 (92.3%) same id + name; 22 same id renamed by Cataclysm (`
 
 ## Content policy (content_policy.py)
 
-`import-azerothcore.sh` runs `content_policy.py` after the DB2 import; it rebuilds every `content_*` table in one transaction (about 1 s) and writes every dropped row or zeroed reward to `data/reports/content-dropped.csv` (`table,key,source_id,reason`). The server should read `content_*`, not the raw dump tables, for items, vendors, trainers, quests and loot. Gossip, `npc_text`, `broadcast_text`, `points_of_interest`, `trainer` and `creature_default_trainer` carry no mapped ids and are read raw.
+`import-azerothcore.sh` runs `content_policy.py` after the DB2 import; it rebuilds every `content_*` table in one transaction (about 1 s) and writes every dropped row or zeroed reward to `data/reports/content-dropped.csv` (`table,key,source_id,reason`). The server should read `content_*`, not the raw dump tables, for items, vendors, quests and loot. Gossip, `npc_text`, `broadcast_text` and `points_of_interest` carry no mapped ids and are read raw.
 
 **Mapping rule.** An item or spell id is kept when the Retail row with the same id has the same name after trim + case-fold, or when [`scripts/content_overrides.csv`](../../../scripts/content_overrides.csv) lists it. Item names come from `item_template`; Wrath spell names from the Wrath Classic `SpellName.csv`. The override CSV (`kind,source_id,retail_id,source_name,retail_name,reason`) holds 62 reviewed item renames and 4 creature renames (below) (Okra → Ripe Okra, Scroll of Spirit → Scroll of Versatility, possessive/hyphen/spelling fixes). The import fails if a reviewed name no longer matches either side. Excluded on review: different items behind the same id (Red Linen Bandana → Linen Scrap, Wrath poisons → Empty Poison Vial, mail → plate conversions, gem stat changes).
 
@@ -83,7 +81,6 @@ TaxiNodes: 335 of 363 (92.3%) same id + name; 22 same id renamed by Cataclysm (`
 |-------|------|------|---------|
 | `content_item` | Mapped `item_template` ids; every column from Retail `item_sparse`/`item` (quality, item level, required level, prices, inventory type, class/subclass, bonding, delay, flags, `StatModifier_bonusStat_N`/`StatPercentEditor_N`) and `DisplayInfoID` from `item_modified_appearance` (modifier 0) → `item_appearance`; `SourceEntry` = AzerothCore entry | 35,731 | 10,365 (8,663 no Retail row, 1,702 name differs) |
 | `content_npc_vendor` | Row kept if item maps (negative reference rows kept) | 34,497 | 3,088 |
-| `content_trainer_spell` | Class trainers (`trainer.Type = 0`): Retail class skill line spells (`skill_line` CategoryID 7 named like `chr_classes`, ClassMask 0 or class bit, AcquireMethod 2/4, not passive), `ReqLevel` = `spell_levels.SpellLevel`, cost 0. Other trainers: AzerothCore rows whose spell and ReqAbility ids map | 3,924 | 3,366 (2,418 class ranks, 948 unmapped) |
 | `content_quest_template` | Id in Retail `quest_v2`; unmapped `RewardItemN`/`RewardChoiceItemIDN` (+ amounts) and `RewardSpell`/`RewardDisplaySpell` set to 0 | 8,492 | 972 (+225 reward items, 247 reward spells zeroed) |
 | `content_quest_template_addon`, `_offer_reward`, `_request_items`, `_poi`, `_poi_points`, `content_{creature,gameobject}_quest{starter,ender}` | Rows of kept quests | 8,492 / 7,904 / 6,936 / 16,999 / 52,201 / 6,922 / 7,270 / 393 / 391 | 972 / 756 / 821 / 1,772 / 4,965 / 523 / 631 / 64 / 66 |
 | `content_gameobject_template`, `_template_addon`, `content_gameobject` | Template kept if `displayId` is 0 or a Retail `game_object_display_info` row; addons/spawns need a kept template | 21,269 / 21,181 / 95,979 | 312 / 312 / 480 |
@@ -92,12 +89,11 @@ TaxiNodes: 335 of 363 (92.3%) same id + name; 22 same id renamed by Cataclysm (`
 
 Taxi is not derived: `db2.py` imports Retail `taxi_nodes` (1,464), `taxi_path` (8,690) and `taxi_path_node` (127,438) directly. The same import adds `item`, `item_sparse`, `item_appearance`, `item_modified_appearance`, `quest_v2`, and `durability_costs` (1,300 item levels) / `durability_quality` (18) for repair costs ([merchant](merchant.md)). **Creature displays.** Retail models come from TrinityCore `TDB1210.26091` (12.1.0 world DB; `data/reference/tdb1210/SOURCE.txt`): `creature_template.sql` and `creature_template_model.sql`, cut from `TDB_full_world_1210.26091_2026_09_09.sql` and read by `content_policy.py --tdb-dir` (default `data/reference/tdb1210`, `TDB_DIR` in `import-azerothcore.sh`). AzerothCore rows whose displays all exist in Retail are kept even when TrinityCore differs (Hogger `448`: `384`, TrinityCore `108956`). On map 0, 53 spawned templates (681 spawns, 40 displays) had a Wrath-only first display; all 53 now have Retail displays, mostly the HD model of the same creature (Forest Lurker `1195` `827` → `909` tarantula2, Daggerspine Raider `2595` `11254` → `4763` naga male, Silt Crawler `922` `9571` → `342` crab2). The four creature overrides are Retail renames of Wetlands/Hillsbrad spiders: Moss Stalker `1780` → Skitterweb Striker, Mist Creeper `1781` → Skitterweb Lurker, Giant Moss Creeper `2349` → Domesticated Creeper, Forest Moss Creeper `2350` → Forest Creeper. `db2.py` imports Retail `creature_display_info` (120,984) for the existence check. The server's `load_models` reads `content_creature_template_model`; the raw table stays verbatim.
 
-Concrete rows (tests): Corina Steele (`54`) sells Gladius at Retail item level 4 / display 1542 (AzerothCore 9 / 22078); Barkeep Dobbins' (`465`) Refreshing Spring Water costs the Retail 5 copper (AzerothCore 25); Llane Beshere (`911`, trainer 2) teaches 14 Retail warrior spells from Slam/Attack at 1 to Berserker Rage at 12, including Execute `163201`; AzerothCore Rend `772` is reported as a dropped class rank; `41` OLDRecruit's Belt and `2892` Deadly Poison are dropped with Jasper Fel's (`1325`) vendor row; quest `16` Give Gerard a Drink is dropped, `783` A Threat Within kept with Deputy Willem.
+Concrete rows (tests): Corina Steele (`54`) sells Gladius at Retail item level 4 / display 1542 (AzerothCore 9 / 22078); Barkeep Dobbins' (`465`) Refreshing Spring Water costs the Retail 5 copper (AzerothCore 25); `41` OLDRecruit's Belt and `2892` Deadly Poison are dropped with Jasper Fel's (`1325`) vendor row; quest `16` Give Gerard a Drink is dropped, `783` A Threat Within kept with Deputy Willem.
 
 **Open follow-ups (not applied):**
 - 147 kept quests need an item that does not map (`RequiredItemIdN`, `StartItem`, `ItemDrop`), e.g. `83` Red Linen Goods (`1019`); they cannot be completed as authored.
 - 12,887 kept vendor rows have a Wrath `ExtendedCost` (honor/badge costs); Retail `ItemExtendedCost` is not imported or mapped.
-- `content_trainer_spell` has no race columns; faction teleports (`3561` Teleport: Stormwind, `3567` Teleport: Orgrimmar) appear on every mage trainer. `skill_line_ability.RaceMasks_0/1` holds the restriction.
 - 2 kept quests have a `PrevQuestID` that was dropped.
 
 ## Mapping policy options
@@ -116,8 +112,7 @@ Option 4 matches the Retail client (item tooltips and models come from Retail DB
 - [scripts/import-azerothcore.sh](../../../scripts/import-azerothcore.sh), [scripts/mysql_dump.py](../../../scripts/mysql_dump.py), [scripts/world_schema.sql](../../../scripts/world_schema.sql) — import path
 - [scripts/content_mapping.py](../../../scripts/content_mapping.py) — mapping measurements above
 - [scripts/content_policy.py](../../../scripts/content_policy.py), [scripts/content_overrides.csv](../../../scripts/content_overrides.csv) — Retail-first content tables
-- [scripts/tests/test_import_azerothcore.py](../../../scripts/tests/test_import_azerothcore.py) — fixture and real-dump tests (A Threat Within `783` Deputy Willem → Marshal McBride; Corina Steele `54` weapon list; Llane Beshere `911` trainer spells)
-- AzerothCore `src/server/game/Globals/ObjectMgr.cpp` — trainer tables actually loaded
+- [scripts/tests/test_import_azerothcore.py](../../../scripts/tests/test_import_azerothcore.py) — fixture and real-dump tests (A Threat Within `783` Deputy Willem → Marshal McBride; Corina Steele `54` weapon list)
 - TrinityCore TDB1210.26091 `creature_template` / `creature_template_model` (`data/reference/tdb1210/`) — Retail creature models
 
 ## See Also
