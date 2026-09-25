@@ -3,7 +3,7 @@
 //!
 //! Relations come from `UnitFactionTemplate` reactions (`crate::faction`):
 //! an enemy is a valid attack target, an ally a unit the caster regards as
-//! friendly. The caster is always its own ally.
+//! friendly. The caster is always its own ally; its duel opponent is an enemy.
 //!
 //! Handled IDs: 0 none, 1 UNIT_CASTER, 6 UNIT_TARGET_ENEMY, 15
 //! UNIT_SRC_AREA_ENEMY, 16 UNIT_DEST_AREA_ENEMY, 18 DEST_CASTER, 21
@@ -98,6 +98,9 @@ fn unit_faction(world: &World, entity: Entity) -> UnitFaction {
 
 /// `caster` regards `target` as hostile (selects the hostile spell range).
 pub fn is_hostile(world: &World, caster: Entity, target: Entity) -> bool {
+    if dueling(world, caster, target) {
+        return true;
+    }
     let templates = world.resource::<FactionTemplates>();
     let (caster, target) = (unit_faction(world, caster), unit_faction(world, target));
     templates.reaction(caster.template, target.template) == Reaction::Hostile
@@ -110,12 +113,18 @@ pub fn relation_matches(world: &World, caster: Entity, target: Entity, relation:
     if caster == target {
         return relation == Relation::Ally;
     }
+    // The duel opponent is hostile: attackable, never assisted.
+    let dueling = dueling(world, caster, target);
     let templates = world.resource::<FactionTemplates>();
     let (caster, target) = (unit_faction(world, caster), unit_faction(world, target));
     match relation {
-        Relation::Enemy => templates.can_attack(caster, target),
-        _ => templates.can_assist(caster, target),
+        Relation::Enemy => dueling || templates.can_attack(caster, target),
+        _ => !dueling && templates.can_assist(caster, target),
     }
+}
+
+fn dueling(world: &World, caster: Entity, target: Entity) -> bool {
+    crate::duel::dueling(world.get::<crate::duel::DuelOpponent>(caster), target)
 }
 
 pub fn is_alive(world: &World, entity: Entity) -> bool {

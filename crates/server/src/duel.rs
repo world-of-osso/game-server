@@ -11,6 +11,39 @@ use crate::networking::PlayerLink;
 
 const DUEL_BOUNDARY_RADIUS: f32 = 30.0;
 
+/// A duelist's opponent while their duel is in progress (AzerothCore
+/// `duel->Opponent` in `DUEL_STATE_IN_PROGRESS`): each is hostile to and a
+/// valid attack target of the other (`Unit::GetReactionTo` "duel - always
+/// hostile to opponent", `Unit::_IsValidAttackTarget` "check duel").
+#[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
+pub struct DuelOpponent(pub Entity);
+
+/// The duelist the opponent's damage took to 1 health: the duel is lost.
+#[derive(Component, Debug)]
+pub(crate) struct DuelDefeated;
+
+/// `a_opponent` is the `DuelOpponent` of a unit dueling `b`.
+pub(crate) fn dueling(a_opponent: Option<&DuelOpponent>, b: Entity) -> bool {
+    a_opponent.is_some_and(|opponent| opponent.0 == b)
+}
+
+/// Unit::DealDamage "prevent kill only if killed in duel and killed by
+/// opponent": the opponent's hit of `damage` that would leave the victim at 1
+/// health or less leaves exactly 1 and defeats them. Returns the health loss
+/// and whether the hit ends the duel.
+pub(crate) fn duel_health_loss(
+    victim_opponent: Option<&DuelOpponent>,
+    attacker: Entity,
+    health: f32,
+    damage: f32,
+) -> (f32, bool) {
+    if dueling(victim_opponent, attacker) && damage > 0.0 && damage >= health - 1.0 {
+        ((health - 1.0).max(0.0), true)
+    } else {
+        (damage, false)
+    }
+}
+
 #[derive(Resource, Default)]
 struct DuelServerState {
     pending: Vec<PendingDuel>,
@@ -174,6 +207,7 @@ fn process_duel_accepts(
     connections: ConnectionQuery,
     mut state: ResMut<DuelServerState>,
     mut senders: Query<&mut MessageSender<DuelStateUpdate>>,
+    mut commands: Commands,
 ) {
     for (conn_entity, link, mut receiver) in &mut receivers {
         for _ in receiver.receive() {
@@ -189,6 +223,12 @@ fn process_duel_accepts(
                 send_duel_error(conn_entity, &mut senders, "duel target is missing");
                 continue;
             };
+            commands
+                .entity(active.challenger)
+                .insert(DuelOpponent(active.target));
+            commands
+                .entity(active.target)
+                .insert(DuelOpponent(active.challenger));
             broadcast_active_duel(active, challenger, target, &connections, &mut senders);
         }
     }
@@ -291,19 +331,34 @@ fn send_decline_snapshots(
 
 fn enforce_duel_outcomes(
     players: PlayerQuery,
+    defeated: Query<(), With<DuelDefeated>>,
     connections: ConnectionQuery,
     mut state: ResMut<DuelServerState>,
     mut senders: Query<&mut MessageSender<DuelStateUpdate>>,
+    mut commands: Commands,
 ) {
     let mut resolutions = Vec::new();
     for duel in state.active.iter().copied() {
-        if let Some(resolution) = resolve_active_duel(duel, &players) {
+        if let Some(resolution) = resolve_active_duel(duel, &players, &defeated) {
             resolutions.push((duel, resolution));
         }
     }
     for (duel, resolution) in resolutions {
         state.remove_active(duel);
+        commands.queue(move |world: &mut World| end_duel(world, duel));
         send_duel_resolution(duel, resolution, &players, &connections, &mut senders);
+    }
+}
+
+/// Player::DuelComplete: the duelists are no longer hostile. Both stop
+/// attacking and leave combat (Unit::DealDamage `CombatStopWithPets` on the
+/// duel-winning hit; `AttackStop` both when a same-team duelist flees).
+fn end_duel(world: &mut World, duel: ActiveDuel) {
+    for duelist in [duel.challenger, duel.target] {
+        if let Ok(mut entity) = world.get_entity_mut(duelist) {
+            entity.remove::<(DuelOpponent, DuelDefeated)>();
+            crate::combat::combat_stop(world, duelist);
+        }
     }
 }
 
@@ -595,13 +650,29 @@ fn build_duel_boundary(challenger: &Position, target: &Position) -> DuelBoundary
     }
 }
 
-fn resolve_active_duel(duel: ActiveDuel, players: &PlayerQuery) -> Option<DuelResolution> {
+fn resolve_active_duel(
+    duel: ActiveDuel,
+    players: &PlayerQuery,
+    defeated: &Query<(), With<DuelDefeated>>,
+) -> Option<DuelResolution> {
     let Ok((_, _, challenger_pos, challenger_health)) = players.get(duel.challenger) else {
         return Some(DuelResolution::Cancelled);
     };
     let Ok((_, _, target_pos, target_health)) = players.get(duel.target) else {
         return Some(DuelResolution::Cancelled);
     };
+    if defeated.contains(duel.challenger) {
+        return Some(DuelResolution::WinLoss {
+            winner: duel.target,
+            loser: duel.challenger,
+        });
+    }
+    if defeated.contains(duel.target) {
+        return Some(DuelResolution::WinLoss {
+            winner: duel.challenger,
+            loser: duel.target,
+        });
+    }
     resolve_duel_state(
         challenger_pos,
         target_pos,

@@ -10,6 +10,7 @@ use crate::auras::AuraStatMods;
 use crate::auras::procs::{self, AuraEvent, PendingAuraEvents};
 use crate::creature_ai::{SpawnPoint, WaypointState};
 use crate::creature_scripts::{TrainingDummy, health_loss};
+use crate::duel::DuelOpponent;
 use crate::faction::{FactionTemplates, UnitFaction};
 use crate::interest::{InterestDirtyQueue, NetworkVisibility, mark_interest_position_changed};
 use crate::networking::CombatTarget;
@@ -149,7 +150,11 @@ struct CombatState {
 /// When None or not attackable (for example a friendly guard), deactivate.
 fn start_attack_system(
     query: Query<(Entity, &CombatTarget), Changed<CombatTarget>>,
-    factions: Query<(Option<&UnitFactionTemplate>, Has<Player>)>,
+    factions: Query<(
+        Option<&UnitFactionTemplate>,
+        Has<Player>,
+        Option<&DuelOpponent>,
+    )>,
     templates: Res<FactionTemplates>,
     mut commands: Commands,
     time: Res<Time>,
@@ -159,19 +164,24 @@ fn start_attack_system(
         factions
             .get(entity)
             .ok()
-            .map(|(template, is_player)| UnitFaction {
+            .map(|(template, is_player, _)| UnitFaction {
                 template: template.map_or(0, |template| template.0),
                 is_player,
             })
     };
+    let dueling = |attacker: Entity, target: Entity| {
+        factions
+            .get(attacker)
+            .is_ok_and(|(_, _, opponent)| crate::duel::dueling(opponent, target))
+    };
     for (entity, target) in &query {
-        let attackable =
-            target.0.is_some_and(
-                |target| match (unit_faction(entity), unit_faction(target)) {
+        let attackable = target.0.is_some_and(|target| {
+            dueling(entity, target)
+                || match (unit_faction(entity), unit_faction(target)) {
                     (Some(attacker), Some(target)) => templates.can_attack(attacker, target),
                     _ => false,
-                },
-            );
+                }
+        });
         if attackable {
             commands.entity(entity).insert((
                 AutoAttack {
@@ -208,6 +218,7 @@ type AutoAttackTargets<'w, 's> = Query<
         Has<Npc>,
         Option<&'static AuraStatMods>,
         Has<TrainingDummy>,
+        Option<&'static DuelOpponent>,
     ),
 >;
 
@@ -384,6 +395,8 @@ struct SwingOutcome {
     overkill: f32,
     npc_died: bool,
     player_died: bool,
+    /// The duel opponent's swing took the target to 1 health.
+    duel_defeated: bool,
 }
 
 /// Attempt a swing if timer ready and target in range.
@@ -399,7 +412,7 @@ fn try_swing(
     if auto_attack.timer > 0.0 {
         return None;
     }
-    let Ok((target_pos, mut health, last_damager, is_npc, target_mods, training_dummy)) =
+    let Ok((target_pos, mut health, last_damager, is_npc, target_mods, training_dummy, duel)) =
         targets.get_mut(target_entity)
     else {
         return None;
@@ -409,8 +422,13 @@ fn try_swing(
     }
     let damage = swing_damage(attacker_mods, target_mods);
     let overkill = (damage - health.current).max(0.0);
-    let became_lethal =
-        crate::death::apply_health_damage(&mut health, health_loss(training_dummy, damage));
+    let (loss, duel_defeated) = crate::duel::duel_health_loss(
+        duel,
+        attacker_entity,
+        health.current,
+        health_loss(training_dummy, damage),
+    );
+    let became_lethal = crate::death::apply_health_damage(&mut health, loss);
     let npc_died = is_npc && became_lethal;
     let player_died = !is_npc && became_lethal;
     if let Some(mut last_damager) = last_damager {
@@ -426,6 +444,7 @@ fn try_swing(
         overkill,
         npc_died,
         player_died,
+        duel_defeated,
     })
 }
 
@@ -524,6 +543,25 @@ fn insert_npc_death(mut entity: EntityWorldMut) {
         .remove::<Replicate>();
 }
 
+/// AzerothCore `Unit::CombatStop`: `unit` stops attacking (`AttackStop`), its
+/// attackers stop attacking it (`RemoveAllAttackers`) and it leaves combat
+/// (`ClearInCombat`). The attackers leave combat once their grace runs out.
+pub(crate) fn combat_stop(world: &mut World, unit: Entity) {
+    let attackers: Vec<Entity> = world
+        .query_filtered::<(Entity, &CombatTarget), With<AutoAttack>>()
+        .iter(world)
+        .filter(|(_, target)| target.0 == Some(unit))
+        .map(|(attacker, _)| attacker)
+        .collect();
+    for attacker in attackers {
+        world.entity_mut(attacker).remove::<AutoAttack>();
+    }
+    world
+        .entity_mut(unit)
+        .remove::<(AutoAttack, CombatState)>()
+        .insert(CombatStatus(false));
+}
+
 /// Put `entity` in combat for the grace period (spell damage dealt or taken).
 pub(crate) fn enter_combat(world: &mut World, entity: Entity) {
     let expires_at = world.resource::<Time>().elapsed_secs_f64() + COMBAT_GRACE_SECS;
@@ -575,6 +613,9 @@ fn record_swing_events(
     }
     if outcome.player_died {
         player_deaths.write(crate::death::PlayerDeathTransition { player: target });
+    }
+    if outcome.duel_defeated {
+        commands.entity(target).insert(crate::duel::DuelDefeated);
     }
 }
 

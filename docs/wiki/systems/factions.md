@@ -51,7 +51,7 @@ Not modelled: player reputation (AzerothCore returns the player's reputation ran
 
 | Check | Rule | Used by |
 |---|---|---|
-| `can_attack(a, b)` | neither side Friendly toward the other; creature vs creature needs one side Hostile; player vs player is rejected (no PvP flag or duel model) | spell `Enemy` relation, auto-attack start |
+| `can_attack(a, b)` | neither side Friendly toward the other; creature vs creature needs one side Hostile; player vs player is rejected (no PvP flag) | spell `Enemy` relation, auto-attack start |
 | `can_assist(a, b)` | `reaction(a, b)` is Friendly; a unit always assists itself | spell `Ally` relation |
 | `is_hostile(a, b)` | `reaction(a, b)` is Hostile | hostile vs friendly spell range |
 
@@ -60,6 +60,7 @@ Not modelled: player reputation (AzerothCore returns the player's reputation ran
 - A friendly spell whose explicit target fails `can_assist` self-casts (for example Flash Heal with a hostile kobold targeted heals the caster).
 - Auto-attack: `start_attack_system` only activates `AutoAttack` when `can_attack` holds. Targeting a friendly guard therefore selects it without swinging or entering combat.
 - Units without `UnitFactionTemplate` use template 0 (Neutral to everyone).
+- **Duels** (`duel.rs` `DuelOpponent`, inserted on both duelists when the duel is accepted, removed when it resolves): each duelist is Hostile to its opponent and a valid attack target for it regardless of faction, and never an assist target (AzerothCore `Unit::GetReactionTo` "duel - always hostile to opponent", `Unit::_IsValidAttackTarget` "check duel"). Spell `Enemy`/`Ally` relations, the hostile spell range and `start_attack_system` check it before faction. Opponent damage (melee or spell) that would leave the victim at 1 health or less leaves exactly 1 and marks `DuelDefeated`; the duel then resolves as lost and both duelists `combat_stop` (AzerothCore `Unit::DealDamage` duel branch, `CombatStopWithPets`, `Player::DuelComplete`).
 
 ## Sources
 

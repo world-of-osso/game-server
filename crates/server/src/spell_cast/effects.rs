@@ -253,12 +253,21 @@ pub fn deal_damage(
         .round();
     let (amount, absorbed) = crate::auras::absorb_damage(world, target, school, amount);
     let training_dummy = world.get::<TrainingDummy>(target).is_some();
+    let duel = world.get::<crate::duel::DuelOpponent>(target).copied();
     let Some(mut health) = world.get_mut::<Health>(target) else {
         return;
     };
     let before = health.current;
-    let lethal =
-        crate::death::apply_health_damage(&mut health, health_loss(training_dummy, amount));
+    let (loss, duel_defeated) = crate::duel::duel_health_loss(
+        duel.as_ref(),
+        ctx.caster,
+        before,
+        health_loss(training_dummy, amount),
+    );
+    let lethal = crate::death::apply_health_damage(&mut health, loss);
+    if duel_defeated {
+        world.entity_mut(target).insert(crate::duel::DuelDefeated);
+    }
     let overkill = (amount - before).max(0.0);
     mark_dirty(world, target);
     world
