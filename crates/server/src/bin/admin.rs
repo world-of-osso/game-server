@@ -127,6 +127,10 @@ enum AdminRequest {
         character_name: String,
         slot: String,
     },
+    TaxiLearn {
+        character_name: String,
+        node: u32,
+    },
     Ping,
 }
 
@@ -245,6 +249,11 @@ enum AdminResponse {
         character_name: String,
         slot: String,
     },
+    TaxiNodeLearned {
+        character_name: String,
+        node: u32,
+        node_name: String,
+    },
     Pong,
     Error(String),
 }
@@ -323,6 +332,7 @@ fn print_usage() {
     eprintln!("  game-server-admin clear-equipment-appearance <character_name> <slot>");
     eprintln!("  game-server-admin grant-equipment <character> <manifest.json>");
     eprintln!("  game-server-admin list-equipment <character>");
+    eprintln!("  game-server-admin taxi-learn <character_name> <taxi_node_id>");
 }
 
 fn parse_request(args: &[String]) -> AdminRequest {
@@ -361,6 +371,7 @@ fn parse_request(args: &[String]) -> AdminRequest {
         "set-appearance" => parse_set_appearance(args),
         "set-equipment-appearance" => parse_set_equipment_appearance(args),
         "clear-equipment-appearance" => parse_clear_equipment_appearance(args),
+        "taxi-learn" => parse_taxi_learn(args),
         other => {
             eprintln!("Unknown command: {other}");
             print_usage();
@@ -512,6 +523,14 @@ fn parse_create_guild(args: &[String]) -> AdminRequest {
         character_name: args[2].clone(),
         guild_id,
         guild_name: args[4..].join(" "),
+    }
+}
+
+fn parse_taxi_learn(args: &[String]) -> AdminRequest {
+    require_args(args, 4, "taxi-learn <character_name> <taxi_node_id>");
+    AdminRequest::TaxiLearn {
+        character_name: args[2].clone(),
+        node: parse_number(&args[3], "taxi node id"),
     }
 }
 

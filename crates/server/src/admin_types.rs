@@ -166,6 +166,11 @@ pub enum AdminRequest {
     },
     BroadcastEnable,
     BroadcastDisable,
+    /// Teach a character a flight point (`TaxiNodes.ID`).
+    TaxiLearn {
+        character_name: String,
+        node: u32,
+    },
     Ping,
 }
 
@@ -334,6 +339,11 @@ pub enum AdminResponse {
     },
     BroadcastEnabled,
     BroadcastDisabled,
+    TaxiNodeLearned {
+        character_name: String,
+        node: u32,
+        node_name: String,
+    },
     Pong,
     Error(String),
 }

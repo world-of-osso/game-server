@@ -161,3 +161,14 @@ fn receiver_rate_latest_swimming_controls_translation() {
         ],
     );
 }
+
+#[test]
+fn input_of_a_player_the_server_flies_is_dropped() {
+    let (mut app, player, connection) = receiver_app();
+    app.world_mut()
+        .get_mut::<shared::components::MovementControl>(player)
+        .unwrap()
+        .controlled = true;
+    deliver_and_tick(&mut app, connection, vec![make_input(0.0, 0.0, 1.0)]);
+    assert_position(&app, player, [0.0; 3]);
+}

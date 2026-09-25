@@ -127,6 +127,13 @@ fn print_character_response(response: &AdminResponse) -> bool {
         } => {
             println!("Level set: {character_name} -> {level}");
         }
+        AdminResponse::TaxiNodeLearned {
+            character_name,
+            node,
+            node_name,
+        } => {
+            println!("Flight point learned: {character_name} -> {node} {node_name}");
+        }
         AdminResponse::PositionSet {
             character_name,
             x,

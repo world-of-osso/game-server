@@ -38,6 +38,7 @@ struct AdminResources<'w> {
     ticket_mgr: ResMut<'w, shared::ticket::TicketManager>,
     motd: ResMut<'w, shared::motd::Motd>,
     autobroadcast: ResMut<'w, shared::motd::Autobroadcast>,
+    taxi: Res<'w, crate::taxi::TaxiNetwork>,
     interest_dirty: Option<Res<'w, crate::interest::InterestDirtyQueue>>,
     item_templates: Option<Res<'w, crate::item_templates::ItemTemplates>>,
     vendor_catalog: Option<Res<'w, crate::merchant::VendorCatalog>>,
@@ -127,6 +128,13 @@ fn dispatch_resource_commands(
             character_name,
             (*item_id, *count),
         ));
+    }
+    if let AdminRequest::TaxiLearn {
+        character_name,
+        node,
+    } = request
+    {
+        return Some(handle_taxi_learn(db, &res.taxi, character_name, *node));
     }
     None
 }
@@ -517,7 +525,8 @@ fn dispatch(
         | AdminRequest::BroadcastRemove { .. }
         | AdminRequest::BroadcastSetInterval { .. }
         | AdminRequest::BroadcastEnable
-        | AdminRequest::BroadcastDisable => unreachable!(),
+        | AdminRequest::BroadcastDisable
+        | AdminRequest::TaxiLearn { .. } => unreachable!(),
     };
     let _ = cmd.respond.send(response);
 }
@@ -613,6 +622,39 @@ mod tests {
             AdminResponse::Error(_)
         ));
         assert!(updates.changed_inventories().is_empty());
+    }
+
+    #[test]
+    fn taxi_learn_adds_a_flight_point_to_the_characters_known_nodes() {
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../data/world.db");
+        if !path.exists() {
+            eprintln!("skipping: {} not found", path.display());
+            return;
+        }
+        let conn = rusqlite::Connection::open(&path).unwrap();
+        let network = crate::taxi::load_taxi_network(&conn).unwrap();
+        let game_db = persistence::GameDatabase {
+            db: persistence::temp_database(),
+        };
+        let (character_id, _) =
+            persistence::create_character(&game_db.db, 1, "Scout", 1, 1).expect("create character");
+
+        assert_eq!(
+            handle_taxi_learn(&game_db, &network, "Scout", 4),
+            AdminResponse::TaxiNodeLearned {
+                character_name: "Scout".into(),
+                node: 4,
+                node_name: "Sentinel Hill, Westfall".into(),
+            }
+        );
+        assert_eq!(
+            persistence::taxi_store::load_known_taxi_nodes(&game_db.db, character_id),
+            std::collections::BTreeSet::from([4])
+        );
+        assert_eq!(
+            handle_taxi_learn(&game_db, &network, "Scout", 999_999),
+            AdminResponse::Error("taxi node 999999 not found".into())
+        );
     }
 
     #[test]

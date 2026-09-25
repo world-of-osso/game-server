@@ -212,6 +212,30 @@ pub(crate) fn handle_set_level(
     }
 }
 
+/// Add a flight point to a character's known nodes (saved; used from the next
+/// flight map).
+pub(crate) fn handle_taxi_learn(
+    db: &persistence::GameDatabase,
+    network: &crate::taxi::TaxiNetwork,
+    name: &str,
+    node: u32,
+) -> AdminResponse {
+    let Some(char_id) = persistence::find_character_id_by_name(&db.db, name) else {
+        return AdminResponse::Error(format!("character '{name}' not found"));
+    };
+    let Some(taxi_node) = network.nodes.get(&node) else {
+        return AdminResponse::Error(format!("taxi node {node} not found"));
+    };
+    let mut known = persistence::taxi_store::load_known_taxi_nodes(&db.db, char_id);
+    known.insert(node);
+    persistence::taxi_store::save_known_taxi_nodes(&db.db, char_id, &known);
+    AdminResponse::TaxiNodeLearned {
+        character_name: name.to_owned(),
+        node,
+        node_name: taxi_node.name.clone(),
+    }
+}
+
 pub(crate) fn handle_set_gold(
     db: &persistence::GameDatabase,
     commands: &mut Commands,

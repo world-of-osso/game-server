@@ -62,6 +62,7 @@ mod rest;
 mod spell_cast;
 mod spell_info;
 mod stats;
+mod taxi;
 mod teleport;
 mod terrain_height;
 mod trade;
@@ -163,6 +164,7 @@ fn add_world_plugins(app: &mut App) {
         .add_plugins(npc_interaction::NpcInteractionPlugin)
         .add_plugins(merchant::MerchantPlugin)
         .add_plugins(loot::LootPlugin)
+        .add_plugins(taxi::TaxiPlugin)
         .add_plugins(game_objects::GameObjectPlugin)
         .add_plugins(bank::BankPlugin)
         .add_plugins(guild_bank::GuildBankPlugin)

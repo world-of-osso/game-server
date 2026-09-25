@@ -724,3 +724,23 @@ fn lethal_fall_reduces_health_to_zero() {
 
     assert_eq!(health.current, 0.0);
 }
+
+#[test]
+fn a_player_the_server_flies_is_left_out_of_gravity() {
+    let mut app = setup_app_with_time();
+    app.insert_resource(crate::terrain_height::test_helpers::flat_terrain(
+        100.0, 100.0, 50.0,
+    ));
+    let player = spawn_player(app.world_mut(), 90.0, 60.0, -90.0);
+    app.world_mut()
+        .get_mut::<shared::components::MovementControl>(player)
+        .unwrap()
+        .controlled = true;
+    app.update();
+
+    app.world_mut()
+        .run_system_once(apply_terrain_gravity)
+        .unwrap();
+
+    assert_eq!(app.world().get::<Position>(player).unwrap().y, 60.0);
+}

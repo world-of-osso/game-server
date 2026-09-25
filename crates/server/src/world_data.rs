@@ -443,6 +443,10 @@ fn startup_load_world_data(mut commands: Commands) {
         .expect("Failed to load content_creature_loot_template; run scripts/import-azerothcore.sh");
     info!("Loaded loot tables for {} creatures", loot.creature.len());
     commands.insert_resource(loot);
+    let taxi = crate::taxi::load_taxi_network(&conn)
+        .expect("Failed to load taxi_nodes/taxi_path/taxi_path_node; run scripts/db2.py import");
+    info!("Loaded {} flight points", taxi.nodes.len());
+    commands.insert_resource(taxi);
     let durability = crate::durability::load_item_durability(&conn)
         .expect("Failed to load item durability; run scripts/db2.py import");
     info!("Loaded durability for {} items", durability.0.len());

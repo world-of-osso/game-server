@@ -435,6 +435,7 @@ pub(crate) struct PlayerInputParams<'w, 's> {
         With<Player>,
     >,
     mounted: Query<'w, 's, Entity, (With<Player>, With<Mounted>)>,
+    controls: Query<'w, 's, &'static shared::components::MovementControl>,
     auto_afk: ResMut<'w, crate::friends::AutoAfkScheduler>,
     dirty_queue: Option<Res<'w, InterestDirtyQueue>>,
     replication_dirty: Option<Res<'w, ReplicationDirtyQueue>>,
@@ -451,7 +452,12 @@ pub(crate) fn process_player_inputs(time: Res<Time>, mut params: PlayerInputPara
             swimming_seen |= input.swimming;
             latest = Some(input);
         }
-        if let Some(mut input) = latest {
+        // The server drives a controlled player (taxi flight); its input is dropped.
+        let controlled = params
+            .controls
+            .get(link.0)
+            .is_ok_and(|control| control.controlled);
+        if let Some(mut input) = latest.filter(|_| !controlled) {
             input.jumping = jumping;
             crate::friends::mark_player_activity(
                 link.0,
@@ -490,6 +496,7 @@ type GravityPlayerData<'w, 's> = Query<
         &'static mut FallTracker,
         &'static mut Health,
         Option<&'static crate::death::PlayerDeathState>,
+        &'static shared::components::MovementControl,
     ),
     With<Player>,
 >;
@@ -507,9 +514,12 @@ pub(crate) fn apply_terrain_gravity(
         return;
     };
     let dt = time.delta_secs();
-    for (entity, mut pos, mut vert_vel, mut fall_tracker, mut health, death_state) in
+    for (entity, mut pos, mut vert_vel, mut fall_tracker, mut health, death_state, control) in
         players.iter_mut()
     {
+        if control.controlled {
+            continue;
+        }
         let previous_health = *health;
         let (next_pos, next_vert_vel, next_fall_tracker, next_health) = calculate_gravity_state(
             terrain,
