@@ -459,6 +459,25 @@ fn swing_log_event(attacker: Entity, target: Entity, outcome: &SwingOutcome) -> 
     }
 }
 
+/// The killing blow's Death line in the killer's and victim's combat log,
+/// for melee and spell kills alike (Unit::DealDamage → Unit::Kill).
+pub(crate) fn death_log_event(killer: Entity, target: Entity) -> CombatLogEvent {
+    CombatLogEvent {
+        source: Some(killer.to_bits()),
+        target: Some(target.to_bits()),
+        spell_id: None,
+        school_mask: 0,
+        amount: 0,
+        overflow: 0,
+        absorbed: 0,
+        resisted: 0,
+        blocked: 0,
+        crit: false,
+        periodic: false,
+        kind: CombatLogKind::Death,
+    }
+}
+
 fn build_death_event(target: Entity) -> CombatEvent {
     CombatEvent {
         attacker: 0,
@@ -532,6 +551,10 @@ fn record_swing_events(
     events.push(build_damage_event(attacker, target, outcome.damage));
     let swing = swing_log_event(attacker, target, &outcome);
     commands.queue(move |world: &mut World| crate::spell_cast::log_event(world, swing));
+    if outcome.npc_died || outcome.player_died {
+        let death = death_log_event(attacker, target);
+        commands.queue(move |world: &mut World| crate::spell_cast::log_event(world, death));
+    }
     if outcome.npc_died {
         mark_npc_dead(commands, target);
         events.push(build_death_event(target));

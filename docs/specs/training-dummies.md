@@ -24,4 +24,3 @@ Creatures with `creature_template.ScriptName = 'npc_training_dummy'` behave like
 - [ ] `SPELL_STUN_PERMANENT` 61204 (Reset), knockback immunity and `mechanic_immune_mask` are not applied; creatures have no melee, facing or knockback yet, so nothing observable depends on them.
 - [ ] Evade does not stop players still auto-attacking the dummy out of range (`CombatStop` → `RemoveAllAttackers`).
 - [ ] `npc_target_dummy` (engineering target dummies 2673/2674/12426, summoned and self-killing after 15 s) is not implemented: nothing summons them.
-- [ ] A lethal melee swing sends no `CombatLogEvent` Death (spells do), so melee kills are missing from the chat Combat Log.

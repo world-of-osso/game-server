@@ -114,3 +114,71 @@ fn lethal_player_auto_attack_transitions_death_in_same_fixed_step() {
         "a second fixed step must not repeat the death transition"
     );
 }
+
+/// (kind, source, target) of the combat log events the harness caster received.
+fn logged(
+    h: &crate::spell_cast::test_harness::Harness,
+) -> Vec<(CombatLogKind, Option<u64>, Option<u64>)> {
+    h.inbox
+        .log
+        .iter()
+        .map(|event| (event.kind, event.source, event.target))
+        .collect()
+}
+
+/// Unit::DealDamage → Unit::Kill for melee as for spells: the killing
+/// swing's Damage line is followed by a Death line.
+#[test]
+fn lethal_melee_swing_on_an_npc_logs_death_after_the_damage() {
+    let Some(mut h) = crate::spell_cast::test_harness::harness(Vec::new(), &[], 1) else {
+        return;
+    };
+    h.app.world_mut().entity_mut(h.npc).insert(Health {
+        current: 5.0,
+        max: 5.0,
+    });
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(CombatTarget(Some(h.npc)));
+    h.advance(5);
+
+    let (caster, npc) = (Some(h.caster.to_bits()), Some(h.npc.to_bits()));
+    assert_eq!(
+        logged(&h),
+        vec![
+            (CombatLogKind::Damage, caster, npc),
+            (CombatLogKind::Death, caster, npc),
+        ]
+    );
+    assert!(h.app.world().get::<DeathState>(h.npc).is_some());
+}
+
+#[test]
+fn lethal_melee_swing_on_a_player_logs_death_to_the_victim() {
+    let Some(mut h) = crate::spell_cast::test_harness::harness(Vec::new(), &[], 1) else {
+        return;
+    };
+    h.app.world_mut().entity_mut(h.caster).insert(Health {
+        current: 5.0,
+        max: 100.0,
+    });
+    let (caster, npc) = (h.caster, h.npc);
+    h.app.world_mut().entity_mut(npc).insert((
+        CombatTarget(Some(caster)),
+        AutoAttack {
+            timer: 0.0,
+            active: true,
+        },
+    ));
+    h.advance(5);
+
+    let (caster, npc) = (Some(caster.to_bits()), Some(npc.to_bits()));
+    assert_eq!(
+        logged(&h),
+        vec![
+            (CombatLogKind::Damage, npc, caster),
+            (CombatLogKind::Death, npc, caster),
+        ]
+    );
+}

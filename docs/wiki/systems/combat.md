@@ -29,7 +29,7 @@ The RED test at `/tmp/claude/game-server/autoattack-inactive-removal-red.log` fa
 
 ## NPC Death Transition (`c8762ed`)
 
-NPC death is handled at the sole authoritative NPC damage boundary: `try_swing`, called by `auto_attack_system`. After damage is clamped to zero, a lethal NPC result immediately inserts `DeathState` and removes `Replicate`; the same swing emits both the melee-damage and death `CombatEvent` values. The former 20 Hz scan over every living NPC was removed.
+NPC death is handled at the sole authoritative NPC damage boundary: `try_swing`, called by `auto_attack_system`. After damage is clamped to zero, a lethal NPC result immediately inserts `DeathState` and removes `Replicate`; the same swing emits both the melee-damage and death `CombatEvent` values. A lethal swing on an NPC or a player also sends the `CombatLogEvent` Death line (after the swing's Damage line) to the killer and victim, built by the same `death_log_event` spell kills use (AzerothCore `Unit::DealDamage` → `Unit::Kill` for both). The former 20 Hz scan over every living NPC was removed.
 
 The transition contract is explicit:
 

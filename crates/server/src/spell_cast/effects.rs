@@ -310,23 +310,7 @@ fn kill(world: &mut World, killer: Entity, target: Entity, can_proc: bool) {
     } else {
         world.write_message(crate::death::PlayerDeathTransition { player: target });
     }
-    log_event(
-        world,
-        CombatLogEvent {
-            source: Some(killer.to_bits()),
-            target: Some(target.to_bits()),
-            spell_id: None,
-            school_mask: 0,
-            amount: 0,
-            overflow: 0,
-            absorbed: 0,
-            resisted: 0,
-            blocked: 0,
-            crit: false,
-            periodic: false,
-            kind: CombatLogKind::Death,
-        },
-    );
+    log_event(world, crate::combat::death_log_event(killer, target));
     procs::push_event(
         world,
         AuraEvent {
