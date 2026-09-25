@@ -219,7 +219,7 @@ impl Learner<'_> {
     /// Whether casting or learning `spell` would add a primary profession the
     /// character lacks (`SpellInfo::IsPrimaryProfessionFirstRank` on the spell or
     /// its `LEARN_SPELL` triggers).
-    fn adds_primary_profession(&self, profs: &PlayerProfessions, spell: u32) -> bool {
+    pub(crate) fn adds_primary_profession(&self, profs: &PlayerProfessions, spell: u32) -> bool {
         let Some(info) = self.spells.get(spell) else {
             return false;
         };

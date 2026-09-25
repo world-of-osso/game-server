@@ -93,6 +93,7 @@ pub(crate) fn trainer_services(
             req_skill_line: spell.req_skill_line,
             req_skill_rank: spell.req_skill_rank,
             req_abilities: spell.req_abilities.clone(),
+            profession: learner.adds_primary_profession(profs, spell.spell),
         })
         .collect()
 }

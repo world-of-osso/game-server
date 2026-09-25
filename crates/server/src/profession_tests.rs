@@ -408,9 +408,20 @@ fn georgio_lists_tailoring_for_ten_copper_at_level_five() {
         .find(|service| service.spell_id == TAILORING)
         .unwrap();
     assert_eq!(
-        (tailoring.cost, tailoring.req_level, tailoring.state),
-        (10, 5, TrainerServiceState::Available)
+        (
+            tailoring.cost,
+            tailoring.req_level,
+            tailoring.state,
+            tailoring.profession
+        ),
+        (10, 5, TrainerServiceState::Available, true)
     );
+    let shirt = list
+        .services
+        .iter()
+        .find(|service| service.spell_id == WHITE_LINEN_SHIRT)
+        .unwrap();
+    assert!(!shirt.profession);
     assert_eq!(
         service_state(list, WHITE_LINEN_SHIRT),
         Some(TrainerServiceState::Unavailable)
