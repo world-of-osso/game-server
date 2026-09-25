@@ -2,7 +2,9 @@ use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 use lightyear::prelude::*;
 use shared::components::{CombatStatus, Health, Npc, Player, Position, UnitFactionTemplate};
-use shared::protocol::{CombatChannel, CombatEvent, CombatEventType};
+use shared::protocol::{
+    CombatChannel, CombatEvent, CombatEventType, CombatLogEvent, CombatLogKind,
+};
 
 use crate::auras::AuraStatMods;
 use crate::auras::procs::{self, AuraEvent, PendingAuraEvents};
@@ -366,6 +368,8 @@ fn swing_damage(attacker: Option<&AuraStatMods>, target: Option<&AuraStatMods>) 
 
 struct SwingOutcome {
     damage: f32,
+    /// Damage beyond the target's health before the swing.
+    overkill: f32,
     npc_died: bool,
     player_died: bool,
 }
@@ -392,6 +396,7 @@ fn try_swing(
         return None;
     }
     let damage = swing_damage(attacker_mods, target_mods);
+    let overkill = (damage - health.current).max(0.0);
     let became_lethal =
         crate::death::apply_health_damage(&mut health, health_loss(training_dummy, damage));
     let npc_died = is_npc && became_lethal;
@@ -406,6 +411,7 @@ fn try_swing(
     auto_attack.timer = AUTO_ATTACK_INTERVAL;
     Some(SwingOutcome {
         damage,
+        overkill,
         npc_died,
         player_died,
     })
@@ -431,6 +437,25 @@ fn build_damage_event(attacker: Entity, target: Entity, damage: f32) -> CombatEv
         amount: damage,
         spell_id: 0,
         event_type: CombatEventType::MeleeDamage,
+    }
+}
+
+/// The swing in the attacker's and target's combat log (AzerothCore
+/// `SendAttackStateUpdate`): physical Damage without a spell.
+fn swing_log_event(attacker: Entity, target: Entity, outcome: &SwingOutcome) -> CombatLogEvent {
+    CombatLogEvent {
+        source: Some(attacker.to_bits()),
+        target: Some(target.to_bits()),
+        spell_id: None,
+        school_mask: 1,
+        amount: outcome.damage as i32,
+        overflow: outcome.overkill as i32,
+        absorbed: 0,
+        resisted: 0,
+        blocked: 0,
+        crit: false,
+        periodic: false,
+        kind: CombatLogKind::Damage,
     }
 }
 
@@ -505,6 +530,8 @@ fn record_swing_events(
     outcome: SwingOutcome,
 ) {
     events.push(build_damage_event(attacker, target, outcome.damage));
+    let swing = swing_log_event(attacker, target, &outcome);
+    commands.queue(move |world: &mut World| crate::spell_cast::log_event(world, swing));
     if outcome.npc_died {
         mark_npc_dead(commands, target);
         events.push(build_death_event(target));

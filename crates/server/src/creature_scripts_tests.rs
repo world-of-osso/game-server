@@ -96,3 +96,28 @@ fn dummy_evades_five_seconds_after_the_last_hit_dropping_its_debuffs() {
     );
     assert_eq!(h.health(h.npc), DUMMY_HEALTH);
 }
+
+#[test]
+fn melee_swings_on_the_dummy_reach_the_attackers_combat_log() {
+    let Some(mut h) = dummy_harness() else {
+        return;
+    };
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(crate::networking::CombatTarget(Some(h.npc)));
+    // Swings at 0 s and 2 s.
+    h.advance(45);
+
+    let swings: Vec<_> = h
+        .inbox
+        .log
+        .iter()
+        .filter(|e| e.kind == CombatLogKind::Damage && e.spell_id.is_none())
+        .map(|e| (e.source, e.target, e.school_mask, e.amount, e.overflow))
+        .collect();
+    let (caster, npc) = (Some(h.caster.to_bits()), Some(h.npc.to_bits()));
+    assert_eq!(swings, vec![(caster, npc, 1, 10, 9); 2]);
+    assert!(h.inbox.log.iter().all(|e| e.kind != CombatLogKind::Death));
+    assert_eq!(h.health(h.npc), DUMMY_HEALTH);
+}
