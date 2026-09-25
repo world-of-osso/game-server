@@ -357,6 +357,14 @@ fn dispatch(
             y,
             z,
         } => handle_set_position(db, players, interest_dirty, &character_name, x, y, z),
+        AdminRequest::SetGold {
+            character_name,
+            copper,
+        } => handle_set_gold(db, commands, &character_name, copper),
+        AdminRequest::SetDurability {
+            character_name,
+            percent,
+        } => handle_set_durability(db, commands, &character_name, percent),
         AdminRequest::SetAppearance {
             character_name,
             appearance,

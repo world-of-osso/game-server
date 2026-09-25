@@ -1,9 +1,11 @@
-//! Vendors (docs/wiki/systems/merchant.md): vendor lists, buy, sell and buyback
-//! for the NPC whose vendor frame `npc_interaction` has open.
+//! Vendors (docs/wiki/systems/merchant.md): vendor lists, buy, sell, buyback and
+//! repair for the NPC whose vendor frame `npc_interaction` has open.
 //!
 //! Rules follow AzerothCore: `WorldSession::SendListInventory`,
 //! `HandleSellItemOpcode` and `HandleBuybackItem` (Handlers/ItemHandler.cpp) and
-//! `Player::BuyItemFromVendorSlot` (Player.cpp:10651). A request whose NPC is not
+//! `Player::BuyItemFromVendorSlot` (Player.cpp:10651); repair is
+//! `HandleRepairItemOpcode` (Handlers/NPCHandler.cpp:748) with
+//! `Player::DurabilityRepairAll`/`DurabilityRepair` (Player.cpp:4736-4752). A request whose NPC is not
 //! the connection's open vendor is refused; `close_invalid_interactions` already
 //! closes the frame once the player walks out of range. Money and bags change in
 //! one `InventoryModel` save and reach the owner through `GoldUpdateQueue`.
@@ -17,13 +19,14 @@ use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 use lightyear::prelude::*;
 use redb::Database;
-use shared::components::{Level, Npc, Player};
+use shared::components::{EquipmentVisualSlot, Level, Npc, Player};
 use shared::protocol::{
     BuyItem, BuybackItem, BuybackItemRequest, BuybackList, MerchantChannel, MerchantError,
-    MerchantFailed, NpcFlags, NpcRole, SellItem, VendorInventory, VendorItem,
+    MerchantFailed, NpcFlags, NpcRole, RepairItem, SellItem, VendorInventory, VendorItem,
 };
 
 use crate::auth::InWorld;
+use crate::durability::{EquippedDurability, ItemDurability};
 use crate::faction::faction_for_race;
 use crate::gold::GoldUpdateQueue;
 use crate::inventory::{inventory_model::InventoryModel, load_model};
@@ -63,6 +66,7 @@ impl Plugin for MerchantPlugin {
                     process_buy_requests,
                     process_sell_requests,
                     process_buyback_requests,
+                    process_repair_requests,
                 )
                     .chain(),
             );
@@ -112,6 +116,8 @@ struct Shop<'w, 's> {
     gold: ResMut<'w, GoldUpdateQueue>,
     npcs: Query<'w, 's, (&'static Npc, &'static NpcFlags)>,
     players: Query<'w, 's, (&'static Player, Option<&'static Level>)>,
+    durability_rules: Res<'w, ItemDurability>,
+    durability: Query<'w, 's, &'static mut EquippedDurability>,
     inventories: Query<'w, 's, &'static mut MessageSender<VendorInventory>>,
     buybacks: Query<'w, 's, &'static mut MessageSender<BuybackList>>,
     failures: Query<'w, 's, &'static mut MessageSender<MerchantFailed>>,
@@ -480,6 +486,69 @@ fn buy_back(shop: &mut Shop, customer: &mut Customer, req: BuybackItemRequest) -
     shop.save(customer.character_id, model);
     customer.buyback.remove(req.slot);
     shop.send_buyback(customer.connection, customer.buyback);
+    Ok(())
+}
+
+fn process_repair_requests(mut requests: Requests<RepairItem>, mut shop: Shop) {
+    process(&mut requests, &mut shop, |req| req.npc, repair);
+}
+
+/// AzerothCore `DurabilityRepairAll` / `DurabilityRepair`: each damaged item costs
+/// `ItemDurability::repair_cost`; an item that costs more than the money left stays
+/// damaged (AzerothCore skips it silently; we answer "You don't have enough money.").
+/// Only equipped items carry durability.
+fn repair(shop: &mut Shop, customer: &mut Customer, req: RepairItem) -> MerchantResult {
+    let vendor = customer.vendor_for(req.npc)?;
+    let repairs = shop
+        .npcs
+        .get(vendor)
+        .is_ok_and(|(_, flags)| flags.contains(NpcFlags::REPAIR));
+    if !repairs {
+        return Err(MerchantError::NotInteracting);
+    }
+    let mut model = shop.load(customer.character_id)?;
+    let only: Option<EquipmentVisualSlot> = match req.item_guid {
+        None => None,
+        Some(guid) => Some(
+            model
+                .equipped_visual_slot(guid)
+                .ok_or(MerchantError::ItemNotFound)?,
+        ),
+    };
+    let Ok(mut durability) = shop.durability.get_mut(customer.player) else {
+        return Err(MerchantError::ItemNotFound);
+    };
+    let mut gold = model.gold();
+    let mut short = false;
+    for entry in durability
+        .slots
+        .iter_mut()
+        .filter(|entry| only.is_none_or(|slot| slot == entry.slot))
+    {
+        let Some(cost) = shop
+            .durability_rules
+            .repair_cost(entry.item_id, entry.max - entry.current)
+        else {
+            continue;
+        };
+        if cost == 0 {
+            continue;
+        }
+        if cost > gold {
+            short = true;
+            continue;
+        }
+        gold -= cost;
+        entry.current = entry.max;
+    }
+    drop(durability);
+    if gold != model.gold() {
+        model.set_gold(gold);
+        shop.save(customer.character_id, model);
+    }
+    if short {
+        return Err(MerchantError::NotEnoughMoney);
+    }
     Ok(())
 }
 

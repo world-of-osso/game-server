@@ -121,6 +121,18 @@ fn print_character_response(response: &AdminResponse) -> bool {
         } => {
             println!("Position set: {character_name} -> ({x}, {y}, {z})");
         }
+        AdminResponse::GoldSet {
+            character_name,
+            copper,
+        } => {
+            println!("Gold set: {character_name} -> {copper} copper");
+        }
+        AdminResponse::DurabilitySet {
+            character_name,
+            percent,
+        } => {
+            println!("Durability set: {character_name} -> {percent}%");
+        }
         AdminResponse::AppearanceSet {
             character_name,
             appearance,

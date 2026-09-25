@@ -211,6 +211,52 @@ pub(crate) fn handle_set_level(
     }
 }
 
+pub(crate) fn handle_set_gold(
+    db: &persistence::GameDatabase,
+    commands: &mut Commands,
+    name: &str,
+    copper: u32,
+) -> AdminResponse {
+    let Some(char_id) = persistence::find_character_id_by_name(&db.db, name) else {
+        return AdminResponse::Error(format!("character '{name}' not found"));
+    };
+    let mut inventory = persistence::load_inventory(&db.db, char_id);
+    inventory.gold = copper;
+    persistence::save_inventory(&db.db, char_id, &inventory);
+    commands.queue(move |world: &mut World| {
+        world
+            .resource_mut::<crate::gold::GoldUpdateQueue>()
+            .record(char_id, copper);
+    });
+    AdminResponse::GoldSet {
+        character_name: name.to_owned(),
+        copper,
+    }
+}
+
+/// Sets every equipped item with durability to `percent` of its max, saved and
+/// on the live player.
+pub(crate) fn handle_set_durability(
+    db: &persistence::GameDatabase,
+    commands: &mut Commands,
+    name: &str,
+    percent: u32,
+) -> AdminResponse {
+    if percent > 100 {
+        return AdminResponse::Error("percent must be 0..=100".into());
+    }
+    let Some(char_id) = persistence::find_character_id_by_name(&db.db, name) else {
+        return AdminResponse::Error(format!("character '{name}' not found"));
+    };
+    commands.queue(move |world: &mut World| {
+        crate::durability::set_durability_percent(world, char_id, percent);
+    });
+    AdminResponse::DurabilitySet {
+        character_name: name.to_owned(),
+        percent,
+    }
+}
+
 pub(crate) fn handle_set_position(
     db: &persistence::GameDatabase,
     players: &mut Query<(Entity, &mut Position, &persistence::ClientId)>,

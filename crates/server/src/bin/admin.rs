@@ -77,6 +77,16 @@ enum AdminRequest {
         y: f32,
         z: f32,
     },
+    /// Money in copper.
+    SetGold {
+        character_name: String,
+        copper: u32,
+    },
+    /// Every equipped item to `percent` of its max durability.
+    SetDurability {
+        character_name: String,
+        percent: u32,
+    },
     SetAppearance {
         character_name: String,
         appearance: CharacterAppearance,
@@ -171,6 +181,14 @@ enum AdminResponse {
         y: f32,
         z: f32,
     },
+    GoldSet {
+        character_name: String,
+        copper: u32,
+    },
+    DurabilitySet {
+        character_name: String,
+        percent: u32,
+    },
     AppearanceSet {
         character_name: String,
         appearance: CharacterAppearance,
@@ -243,6 +261,8 @@ fn print_usage() {
     eprintln!("  game-server-admin set-level <character_name> <level>");
     eprintln!("  game-server-admin set-credentials <token> <username> <password>");
     eprintln!("  game-server-admin set-position <character_name> <x> <y> <z>");
+    eprintln!("  game-server-admin set-gold <character_name> <copper>");
+    eprintln!("  game-server-admin set-durability <character_name> <percent>");
     eprintln!(
         "  game-server-admin set-appearance <character_name> <sex> <skin_color> <face> <eye_color> <hair_style> <hair_color> <facial_style>"
     );
@@ -282,6 +302,8 @@ fn parse_request(args: &[String]) -> AdminRequest {
         "set-level" => parse_set_level(args),
         "set-credentials" => parse_set_credentials(args),
         "set-position" => parse_set_position(args),
+        "set-gold" => parse_set_gold(args),
+        "set-durability" => parse_set_durability(args),
         "set-appearance" => parse_set_appearance(args),
         "set-equipment-appearance" => parse_set_equipment_appearance(args),
         "clear-equipment-appearance" => parse_clear_equipment_appearance(args),
@@ -451,6 +473,29 @@ fn parse_set_level(args: &[String]) -> AdminRequest {
     }
 }
 
+fn parse_number(value: &str, what: &str) -> u32 {
+    value.parse().unwrap_or_else(|_| {
+        eprintln!("Invalid {what}: {value}");
+        std::process::exit(1);
+    })
+}
+
+fn parse_set_gold(args: &[String]) -> AdminRequest {
+    require_args(args, 4, "set-gold <character_name> <copper>");
+    AdminRequest::SetGold {
+        character_name: args[2].clone(),
+        copper: parse_number(&args[3], "copper"),
+    }
+}
+
+fn parse_set_durability(args: &[String]) -> AdminRequest {
+    require_args(args, 4, "set-durability <character_name> <percent>");
+    AdminRequest::SetDurability {
+        character_name: args[2].clone(),
+        percent: parse_number(&args[3], "percent"),
+    }
+}
+
 fn parse_set_credentials(args: &[String]) -> AdminRequest {
     require_args(args, 5, "set-credentials <token> <username> <password>");
     AdminRequest::SetCredentials {
@@ -513,6 +558,34 @@ fn parse_u8_arg(name: &str, value: &str) -> u8 {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn args(words: &[&str]) -> Vec<String> {
+        words.iter().map(|word| word.to_string()).collect()
+    }
+
+    #[test]
+    fn parse_set_gold_and_set_durability_requests() {
+        let gold = parse_request(&args(&[
+            "game-server-admin",
+            "set-gold",
+            "Shopper",
+            "250000",
+        ]));
+        assert!(matches!(
+            gold,
+            AdminRequest::SetGold { ref character_name, copper: 250_000 } if character_name == "Shopper"
+        ));
+        let durability = parse_request(&args(&[
+            "game-server-admin",
+            "set-durability",
+            "Shopper",
+            "40",
+        ]));
+        assert!(matches!(
+            durability,
+            AdminRequest::SetDurability { ref character_name, percent: 40 } if character_name == "Shopper"
+        ));
+    }
 
     #[test]
     fn parse_set_position_request() {

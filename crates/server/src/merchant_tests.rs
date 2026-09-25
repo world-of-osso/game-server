@@ -13,6 +13,7 @@ use shared::protocol::{
 
 use super::stock::{BuybackEntry, BuybackSlots, VendorStock};
 use super::*;
+use crate::durability::{DurabilitySlotState, EquippedDurability, load_item_durability};
 use crate::faction::world_db_faction_templates;
 use crate::item_templates::load_item_templates;
 use crate::npc_interaction::{NpcInteractionPlugin, load_gossip_catalog};
@@ -69,6 +70,7 @@ struct Harness {
     app: App,
     conn: Connection,
     character_id: u64,
+    player: Entity,
     connection: Entity,
 }
 
@@ -94,6 +96,7 @@ fn harness() -> Option<Harness> {
     app.init_resource::<GoldUpdateQueue>();
     app.add_plugins((NpcInteractionPlugin, MerchantPlugin));
     app.insert_resource(load_vendor_catalog(&conn).unwrap());
+    app.insert_resource(load_item_durability(&conn).unwrap());
     app.finish();
     app.cleanup();
     let db = &app.world().resource::<GameDatabase>().db;
@@ -139,6 +142,7 @@ fn harness() -> Option<Harness> {
                 pair::<BuyItem>(),
                 pair::<SellItem>(),
                 pair::<BuybackItemRequest>(),
+                pair::<RepairItem>(),
             ),
         ))
         .id();
@@ -147,6 +151,7 @@ fn harness() -> Option<Harness> {
         app,
         conn,
         character_id,
+        player,
         connection,
     })
 }
@@ -260,6 +265,36 @@ impl Harness {
             .map(|failed| failed.error)
             .collect()
     }
+}
+
+/// Tarnished Chain Vest 44/55 and Large Round Shield 25/35 (0.8 copper a point).
+fn damage_gear(h: &mut Harness) {
+    let slot = |slot, item_id, current, max| DurabilitySlotState {
+        slot,
+        item_id,
+        current,
+        max,
+    };
+    h.app
+        .world_mut()
+        .entity_mut(h.player)
+        .insert(EquippedDurability {
+            slots: vec![
+                slot(EquipmentVisualSlot::Chest, TARNISHED_CHAIN_VEST, 44, 55),
+                slot(EquipmentVisualSlot::OffHand, LARGE_ROUND_SHIELD, 25, 35),
+            ],
+        });
+}
+
+fn durability(h: &Harness) -> Vec<(u32, u32)> {
+    h.app
+        .world()
+        .get::<EquippedDurability>(h.player)
+        .unwrap()
+        .slots
+        .iter()
+        .map(|entry| (entry.current, entry.max))
+        .collect()
 }
 
 fn names(inventory: &VendorInventory) -> Vec<(u32, &str, u32)> {
@@ -518,4 +553,99 @@ fn a_thirteenth_sale_replaces_the_oldest_buyback() {
     slots.remove(5);
     slots.add(sale(20, 20.0));
     assert_eq!(slots.get(5).unwrap().item.item_guid, 20);
+}
+
+#[test]
+fn godric_repairs_all_damaged_gear_for_the_azerothcore_cost() {
+    let Some(mut h) = harness() else { return };
+    damage_gear(&mut h);
+    let godric = h.open(GODRIC_ROTHGAR);
+
+    h.send::<_, MerchantChannel>(RepairItem {
+        npc: godric.to_bits(),
+        item_guid: None,
+    });
+
+    assert!(h.failures().is_empty());
+    // 11 * 0.8 -> 8 and 10 * 0.8 -> 8 copper.
+    assert_eq!(h.inventory().gold, 100_000 - 16);
+    assert_eq!(durability(&h), vec![(55, 55), (35, 35)]);
+}
+
+#[test]
+fn repair_stops_at_the_money_left_and_needs_a_repairing_vendor() {
+    let Some(mut h) = harness() else { return };
+    damage_gear(&mut h);
+    let danil = h.open(BROTHER_DANIL);
+    h.send::<_, MerchantChannel>(RepairItem {
+        npc: danil.to_bits(),
+        item_guid: None,
+    });
+    assert_eq!(h.failures(), vec![MerchantError::NotInteracting]);
+
+    let godric = h.open(GODRIC_ROTHGAR);
+    h.set_gold(10);
+    h.send::<_, MerchantChannel>(RepairItem {
+        npc: godric.to_bits(),
+        item_guid: None,
+    });
+
+    assert_eq!(h.failures(), vec![MerchantError::NotEnoughMoney]);
+    assert_eq!(h.inventory().gold, 2);
+    assert_eq!(durability(&h), vec![(55, 55), (25, 35)]);
+}
+
+#[test]
+fn admin_set_gold_persists_and_queues_the_live_money() {
+    use bevy::ecs::system::RunSystemOnce;
+
+    use crate::admin_handlers::handle_set_gold;
+    use crate::admin_types::AdminResponse;
+
+    let Some(mut h) = harness() else { return };
+    let response = h
+        .app
+        .world_mut()
+        .run_system_once(|db: Res<GameDatabase>, mut commands: Commands| {
+            handle_set_gold(&db, &mut commands, "Shopper", 250_000)
+        })
+        .unwrap();
+
+    assert!(matches!(
+        response,
+        AdminResponse::GoldSet {
+            copper: 250_000,
+            ..
+        }
+    ));
+    assert_eq!(h.inventory().gold, 250_000);
+    let queue = h.app.world().resource::<GoldUpdateQueue>();
+    assert!(queue.changed_inventories().contains(&h.character_id));
+}
+
+#[test]
+fn admin_set_durability_damages_the_live_player_and_rejects_over_100() {
+    use bevy::ecs::system::RunSystemOnce;
+
+    use crate::admin_handlers::handle_set_durability;
+    use crate::admin_types::AdminResponse;
+
+    let Some(mut h) = harness() else { return };
+    damage_gear(&mut h);
+    let set = |percent| {
+        move |db: Res<GameDatabase>, mut commands: Commands| {
+            handle_set_durability(&db, &mut commands, "Shopper", percent)
+        }
+    };
+    let rejected = h.app.world_mut().run_system_once(set(101)).unwrap();
+    assert!(
+        matches!(rejected, AdminResponse::Error(message) if message == "percent must be 0..=100")
+    );
+
+    let accepted = h.app.world_mut().run_system_once(set(50)).unwrap();
+    assert!(matches!(
+        accepted,
+        AdminResponse::DurabilitySet { percent: 50, .. }
+    ));
+    assert_eq!(durability(&h), vec![(27, 55), (17, 35)]);
 }

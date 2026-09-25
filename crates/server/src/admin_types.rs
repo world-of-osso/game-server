@@ -70,6 +70,16 @@ pub enum AdminRequest {
         y: f32,
         z: f32,
     },
+    /// Money in copper.
+    SetGold {
+        character_name: String,
+        copper: u32,
+    },
+    /// Every equipped item to `percent` of its max durability.
+    SetDurability {
+        character_name: String,
+        percent: u32,
+    },
     SetAppearance {
         character_name: String,
         appearance: CharacterAppearance,
@@ -210,6 +220,14 @@ pub enum AdminResponse {
         x: f32,
         y: f32,
         z: f32,
+    },
+    GoldSet {
+        character_name: String,
+        copper: u32,
+    },
+    DurabilitySet {
+        character_name: String,
+        percent: u32,
     },
     AppearanceSet {
         character_name: String,
