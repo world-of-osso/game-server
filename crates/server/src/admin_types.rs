@@ -94,7 +94,7 @@ pub enum AdminRequest {
     /// Money in copper.
     SetGold {
         character_name: String,
-        copper: u32,
+        copper: u64,
     },
     /// Every equipped item to `percent` of its max durability.
     SetDurability {
@@ -254,7 +254,7 @@ pub enum AdminResponse {
     },
     GoldSet {
         character_name: String,
-        copper: u32,
+        copper: u64,
     },
     DurabilitySet {
         character_name: String,

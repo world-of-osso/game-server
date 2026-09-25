@@ -240,3 +240,48 @@ fn tab_names_longer_than_fifteen_letters_are_refused() {
     });
     assert_eq!(failures(&mut h), vec![BankError::InvalidTabName]);
 }
+
+#[test]
+fn all_five_warband_tabs_are_bought_with_gold_above_the_old_u32_cap() {
+    let Some(mut h) = harness() else { return };
+    // 1000g + 25,000g + 100,000g + 500,000g + 2,500,000g (Retail BankTab).
+    h.set_gold(31_260_000_000 + 7);
+    let npc = h.open_banker();
+    for _ in 0..5 {
+        buy_tab(&mut h, npc, BankType::Account);
+    }
+    let contents = last_contents(&mut h, BankType::Account);
+    assert_eq!(contents.tabs.len(), 5);
+    assert_eq!(contents.next_tab_cost, None);
+    assert_eq!(h.gold(), 7);
+    buy_tab(&mut h, npc, BankType::Account);
+    assert_eq!(failures(&mut h), vec![BankError::MaxTabs]);
+}
+
+#[test]
+fn warband_money_stops_at_the_retail_gold_cap() {
+    let Some(mut h) = harness() else { return };
+    h.set_gold(crate::gold::MAX_MONEY);
+    let npc = h.open_banker();
+    let transfer = |copper, deposit| BankMoneyTransfer {
+        npc: npc.to_bits(),
+        bank: BankType::Account,
+        copper,
+        deposit,
+    };
+    h.send::<_, BankChannel>(transfer(crate::gold::MAX_MONEY, true));
+    assert_eq!(
+        last_contents(&mut h, BankType::Account).money,
+        Some(99_999_999_999)
+    );
+    assert_eq!(h.gold(), 0);
+    h.set_gold(1);
+    h.send::<_, BankChannel>(transfer(1, true));
+    // Withdrawing it all back fits; one more copper on the player would not.
+    h.send::<_, BankChannel>(transfer(crate::gold::MAX_MONEY, false));
+    assert_eq!(
+        failures(&mut h),
+        vec![BankError::TooMuchGold, BankError::TooMuchGold]
+    );
+    assert_eq!(h.gold(), 1);
+}

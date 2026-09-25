@@ -101,7 +101,7 @@ enum AdminRequest {
     /// Money in copper.
     SetGold {
         character_name: String,
-        copper: u32,
+        copper: u64,
     },
     /// Every equipped item to `percent` of its max durability.
     SetDurability {
@@ -214,7 +214,7 @@ enum AdminResponse {
     },
     GoldSet {
         character_name: String,
-        copper: u32,
+        copper: u64,
     },
     DurabilitySet {
         character_name: String,
@@ -586,7 +586,10 @@ fn parse_set_gold(args: &[String]) -> AdminRequest {
     require_args(args, 4, "set-gold <character_name> <copper>");
     AdminRequest::SetGold {
         character_name: args[2].clone(),
-        copper: parse_number(&args[3], "copper"),
+        copper: args[3].parse().unwrap_or_else(|_| {
+            eprintln!("Invalid copper: {}", args[3]);
+            std::process::exit(1);
+        }),
     }
 }
 

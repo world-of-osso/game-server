@@ -422,7 +422,9 @@ impl<'a> QuestSession<'a, '_, '_> {
             return Err(failed(quest_id, QuestFailedReason::ObjectivesIncomplete));
         }
         let items = self.granted_items(quest, choice_index)?;
-        let gold = inventory.gold.checked_add_signed(quest.reward_money);
+        let gold = inventory
+            .gold
+            .checked_add_signed(i64::from(quest.reward_money));
         let Some(gold) = gold else {
             return Err(failed(quest_id, QuestFailedReason::NotEnoughMoney));
         };

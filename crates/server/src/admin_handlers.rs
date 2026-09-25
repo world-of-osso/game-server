@@ -216,7 +216,7 @@ pub(crate) fn handle_set_gold(
     db: &persistence::GameDatabase,
     commands: &mut Commands,
     name: &str,
-    copper: u32,
+    copper: u64,
 ) -> AdminResponse {
     let Some(char_id) = persistence::find_character_id_by_name(&db.db, name) else {
         return AdminResponse::Error(format!("character '{name}' not found"));

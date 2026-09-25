@@ -234,7 +234,7 @@ impl Harness {
         )
     }
 
-    fn set_gold(&mut self, gold: u32) {
+    fn set_gold(&mut self, gold: u64) {
         let db = &self.app.world().resource::<GameDatabase>().db;
         let mut inventory = persistence::load_inventory(db, self.character_id);
         inventory.gold = gold;

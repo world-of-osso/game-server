@@ -99,7 +99,7 @@ fn deposit_refunded_on_successful_sale() {
         );
         assert!(create.success);
         let after_list = persistence::load_inventory(&db, seller_id).gold;
-        assert_eq!(after_list, seller_gold_before - deposit);
+        assert_eq!(after_list, seller_gold_before - u64::from(deposit));
 
         let auction_id = *state.auctions.keys().next().expect("auction id");
         let buyout = super::super::handlers::buyout_auction_with_gold_updates(
@@ -127,7 +127,7 @@ fn deposit_refunded_on_successful_sale() {
     let seller_gold = persistence::load_inventory(&db, seller_id).gold;
     let buyer_gold = persistence::load_inventory(&db, buyer_id).gold;
     let sale_proceeds = 500 - (500 * HOUSE_CUT_BPS / 10_000);
-    assert_eq!(seller_gold, seller_gold_before + sale_proceeds);
+    assert_eq!(seller_gold, seller_gold_before + u64::from(sale_proceeds));
     assert_eq!(buyer_gold, buyer_gold_before - 500);
     assert_eq!(
         app.world()
@@ -255,7 +255,7 @@ fn gold_overflow_saturates_at_max() {
     let (seller_id, _) = persistence::create_character(&db, 1, "Seller", 1, 1).expect("seller");
 
     let mut inv = persistence::load_inventory(&db, seller_id);
-    inv.gold = u32::MAX - 10;
+    inv.gold = crate::gold::MAX_MONEY - 10;
     persistence::save_inventory(&db, seller_id, &inv);
 
     deliver_mail(&db, seller_id, "Test", "gold overflow", 100, None);
@@ -263,7 +263,11 @@ fn gold_overflow_saturates_at_max() {
     claim_mail(&db, seller_id, mail[0].mail_id);
 
     let final_gold = persistence::load_inventory(&db, seller_id).gold;
-    assert_eq!(final_gold, u32::MAX, "gold saturates at u32::MAX");
+    assert_eq!(
+        final_gold,
+        crate::gold::MAX_MONEY,
+        "gold stops at the Retail cap"
+    );
 }
 
 #[test]

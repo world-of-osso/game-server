@@ -105,6 +105,13 @@ struct LegacyInventoryData {
     items: Vec<LegacyInventoryItemData>,
 }
 
+/// The inventory layout before gold became `u64`.
+#[derive(bitcode::Encode)]
+struct LegacyInventoryDataU32Gold {
+    gold: u32,
+    items: Vec<InventoryItemData>,
+}
+
 fn sample_data() -> CharacterData {
     CharacterData {
         name: "TestPlayer".into(),
@@ -187,10 +194,22 @@ fn legacy_appearance_v1_with_equipment_record() -> LegacyCharacterDataV3Appearan
 }
 
 #[test]
-fn legacy_inventory_is_rewritten_during_startup() {
+fn legacy_inventories_move_to_u64_gold_during_startup() {
     let file = tempfile::NamedTempFile::new().unwrap();
     let db = redb::Database::create(file.path()).unwrap();
-    let legacy = LegacyInventoryData {
+    let linen = |unique_auction| InventoryItemData {
+        item_guid: 7,
+        item_id: 2589,
+        name: "Linen Cloth".into(),
+        quality: 1,
+        required_level: 1,
+        stack_count: 20,
+        vendor_sell_price: 13,
+        unique_auction,
+    };
+    // Character 42: the first layout; character 43: the u32-gold layout at the
+    // AzerothCore cap.
+    let first = bitcode::encode(&LegacyInventoryData {
         gold: 42_000,
         items: vec![LegacyInventoryItemData {
             item_guid: 7,
@@ -201,41 +220,43 @@ fn legacy_inventory_is_rewritten_during_startup() {
             stack_count: 20,
             vendor_sell_price: 13,
         }],
-    };
-    let legacy_bytes = bitcode::encode(&legacy);
+    });
+    let u32_gold = bitcode::encode(&LegacyInventoryDataU32Gold {
+        gold: 0x7FFF_FFFE,
+        items: vec![linen(true)],
+    });
     {
         let txn = db.begin_write().unwrap();
         {
-            let mut table = txn.open_table(INVENTORIES).unwrap();
-            table.insert(42, legacy_bytes.as_slice()).unwrap();
+            let mut table = txn.open_table(LEGACY_INVENTORIES).unwrap();
+            table.insert(42, first.as_slice()).unwrap();
+            table.insert(43, u32_gold.as_slice()).unwrap();
         }
         txn.commit().unwrap();
     }
 
     create_tables(&db);
 
-    let stored_bytes = {
-        let txn = db.begin_read().unwrap();
-        let table = txn.open_table(INVENTORIES).unwrap();
-        table.get(42).unwrap().unwrap().value().to_vec()
-    };
-    let stored: InventoryData = bitcode::decode(&stored_bytes).unwrap();
     assert_eq!(
-        stored,
+        load_inventory(&db, 42),
         InventoryData {
             gold: 42_000,
-            items: vec![InventoryItemData {
-                item_guid: 7,
-                item_id: 2589,
-                name: "Linen Cloth".into(),
-                quality: 1,
-                required_level: 1,
-                stack_count: 20,
-                vendor_sell_price: 13,
-                unique_auction: false,
-            }],
+            items: vec![linen(false)],
         }
     );
+    assert_eq!(
+        load_inventory(&db, 43),
+        InventoryData {
+            gold: 2_147_483_646,
+            items: vec![linen(true)],
+        }
+    );
+    let txn = db.begin_read().unwrap();
+    assert!(txn.open_table(LEGACY_INVENTORIES).is_err());
+    drop(txn);
+    // A second startup has nothing left to move.
+    create_tables(&db);
+    assert_eq!(load_inventory(&db, 43).gold, 2_147_483_646);
 }
 
 #[test]

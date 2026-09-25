@@ -44,7 +44,8 @@ pub struct InventoryItemData {
 
 #[derive(bitcode::Encode, bitcode::Decode, Debug, Clone, PartialEq)]
 pub struct InventoryData {
-    pub gold: u32,
+    /// Copper, capped at `gold::MAX_MONEY`.
+    pub gold: u64,
     pub items: Vec<InventoryItemData>,
 }
 

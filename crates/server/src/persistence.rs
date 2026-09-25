@@ -24,7 +24,12 @@ pub use crate::persistence_types::*;
 pub(crate) const CHARACTERS: TableDefinition<u64, &[u8]> = TableDefinition::new("characters");
 
 /// Inventory table: PlayerId (u64) -> serialized inventory (bytes).
-const INVENTORIES: TableDefinition<u64, &[u8]> = TableDefinition::new("inventories");
+/// Inventory table: character_id -> bitcode `InventoryData` (gold in `u64` copper).
+const INVENTORIES: TableDefinition<u64, &[u8]> = TableDefinition::new("character_inventories");
+/// Inventories written before gold became `u64` (gold in `u32` copper); moved into
+/// `INVENTORIES` and dropped at startup.
+pub(crate) const LEGACY_INVENTORIES: TableDefinition<u64, &[u8]> =
+    TableDefinition::new("inventories");
 
 #[derive(bitcode::Decode)]
 struct LegacyInventoryItemData {
@@ -37,10 +42,18 @@ struct LegacyInventoryItemData {
     vendor_sell_price: u32,
 }
 
+/// The first inventory layout: items without `unique_auction`.
 #[derive(bitcode::Decode)]
 struct LegacyInventoryData {
     gold: u32,
     items: Vec<LegacyInventoryItemData>,
+}
+
+/// The layout before gold became `u64`.
+#[derive(bitcode::Decode)]
+struct LegacyInventoryDataU32Gold {
+    gold: u32,
+    items: Vec<InventoryItemData>,
 }
 
 /// Profession table: PlayerId (u64) -> serialized profession state (bytes).
@@ -278,56 +291,65 @@ fn collect_legacy_character_migrations(db: &Database) -> Vec<(u64, Vec<u8>)> {
         .collect()
 }
 
+/// Move every row of the `u32`-gold `inventories` table into `character_inventories`
+/// and drop the old table, in one transaction. Rows decode as the pre-`u64` layout
+/// or the older layout without `unique_auction`.
 fn migrate_legacy_inventories(db: &Database) {
-    let migrations = collect_legacy_inventory_migrations(db);
-    if migrations.is_empty() {
-        return;
-    }
-
-    let migrated_count = migrations.len();
-    persist_inventory_migrations(db, &migrations);
-    info!("Migrated {migrated_count} legacy inventory records");
-}
-
-fn collect_legacy_inventory_migrations(db: &Database) -> Vec<(u64, Vec<u8>)> {
     let txn = db
-        .begin_read()
-        .expect("Failed to begin inventory migration read");
-    let table = txn
-        .open_table(INVENTORIES)
-        .expect("Failed to open inventories table for migration");
-    let rows = table
-        .iter()
-        .expect("Failed to iterate inventories for migration");
-
-    rows.filter_map(|row| {
-        let (key, value) = row.expect("Failed to read inventory migration row");
-        let character_id = key.value();
-        encode_current_inventory_if_legacy(value.value())
-            .unwrap_or_else(|error| {
-                panic!("Failed to migrate inventory for character {character_id}: {error}")
+        .begin_write()
+        .expect("Failed to begin inventory migration write");
+    let migrated = {
+        let legacy = match txn.open_table(LEGACY_INVENTORIES) {
+            Ok(table) => table,
+            Err(error) => panic!("Failed to open legacy inventories: {error}"),
+        };
+        let rows: Vec<(u64, InventoryData)> = legacy
+            .iter()
+            .expect("Failed to iterate legacy inventories")
+            .map(|row| {
+                let (key, value) = row.expect("Failed to read legacy inventory row");
+                let character_id = key.value();
+                let inventory = decode_legacy_inventory(value.value()).unwrap_or_else(|error| {
+                    panic!("Failed to migrate inventory for character {character_id}: {error}")
+                });
+                (character_id, inventory)
             })
-            .map(|bytes| (character_id, bytes))
-    })
-    .collect()
+            .collect();
+        let mut table = txn
+            .open_table(INVENTORIES)
+            .expect("Failed to open inventories table for migration");
+        for (character_id, inventory) in &rows {
+            table
+                .insert(*character_id, bitcode::encode(inventory).as_slice())
+                .expect("Failed to write migrated inventory");
+        }
+        rows.len()
+    };
+    txn.delete_table(LEGACY_INVENTORIES)
+        .expect("Failed to drop legacy inventories");
+    txn.commit().expect("Failed to commit inventory migration");
+    if migrated > 0 {
+        info!("Migrated {migrated} legacy inventory records to u64 gold");
+    }
 }
 
-fn encode_current_inventory_if_legacy(bytes: &[u8]) -> Result<Option<Vec<u8>>, String> {
-    match bitcode::decode::<InventoryData>(bytes) {
-        Ok(_) => Ok(None),
-        Err(current_error) => {
-            let legacy = bitcode::decode::<LegacyInventoryData>(bytes).map_err(|legacy_error| {
-                format!("current decode {current_error:?}; legacy decode {legacy_error:?}")
-            })?;
-            let current = inventory_data_from_legacy(legacy);
-            Ok(Some(bitcode::encode(&current)))
-        }
+fn decode_legacy_inventory(bytes: &[u8]) -> Result<InventoryData, String> {
+    match bitcode::decode::<LegacyInventoryDataU32Gold>(bytes) {
+        Ok(record) => Ok(InventoryData {
+            gold: u64::from(record.gold),
+            items: record.items,
+        }),
+        Err(current_error) => bitcode::decode::<LegacyInventoryData>(bytes)
+            .map(inventory_data_from_legacy)
+            .map_err(|legacy_error| {
+                format!("u32-gold decode {current_error:?}; first layout decode {legacy_error:?}")
+            }),
     }
 }
 
 fn inventory_data_from_legacy(legacy: LegacyInventoryData) -> InventoryData {
     InventoryData {
-        gold: legacy.gold,
+        gold: u64::from(legacy.gold),
         items: legacy
             .items
             .into_iter()
@@ -343,23 +365,6 @@ fn inventory_data_from_legacy(legacy: LegacyInventoryData) -> InventoryData {
             })
             .collect(),
     }
-}
-
-fn persist_inventory_migrations(db: &Database, migrations: &[(u64, Vec<u8>)]) {
-    let txn = db
-        .begin_write()
-        .expect("Failed to begin inventory migration write");
-    {
-        let mut table = txn
-            .open_table(INVENTORIES)
-            .expect("Failed to open inventories table for migration");
-        for (character_id, bytes) in migrations {
-            table
-                .insert(*character_id, bytes.as_slice())
-                .expect("Failed to write migrated inventory");
-        }
-    }
-    txn.commit().expect("Failed to commit inventory migration");
 }
 
 pub fn load_inventory(db: &Database, character_id: u64) -> InventoryData {

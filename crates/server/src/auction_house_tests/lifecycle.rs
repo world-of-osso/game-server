@@ -161,7 +161,7 @@ fn create_auction_rejected_with_insufficient_deposit() {
 
     let deposit = deposit_cost(source_item.vendor_sell_price, 1, AuctionDuration::Long);
     let mut inv = persistence::load_inventory(&db, seller_id);
-    inv.gold = deposit - 1;
+    inv.gold = u64::from(deposit) - 1;
     persistence::save_inventory(&db, seller_id, &inv);
 
     let response = create_auction(
@@ -181,7 +181,7 @@ fn create_auction_rejected_with_insufficient_deposit() {
     assert!(state.auctions.is_empty());
     assert_eq!(
         persistence::load_inventory(&db, seller_id).gold,
-        deposit - 1
+        u64::from(deposit) - 1
     );
     assert_eq!(
         persistence::load_inventory(&db, seller_id).items.len(),

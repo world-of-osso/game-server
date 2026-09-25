@@ -26,7 +26,7 @@ use shared::protocol::{
 
 use crate::auth::{Authenticated, InWorld};
 use crate::bank_storage::{self, BankTabData, TabsFull};
-use crate::gold::GoldUpdateQueue;
+use crate::gold::{GoldUpdateQueue, MAX_MONEY};
 use crate::inventory::{inventory_model::InventoryModel, load_model};
 use crate::item_templates::{ItemTemplate, ItemTemplates};
 use crate::npc_interaction::ActiveInteraction;
@@ -35,8 +35,6 @@ use crate::persistence::banks::{
 };
 use crate::persistence::{self, GameDatabase, InventoryItemData};
 
-/// AzerothCore `MAX_MONEY_AMOUNT` (Player.h:923), the player's gold limit.
-const MAX_PLAYER_MONEY: u64 = 0x7FFF_FFFF - 1;
 /// Tab name length (Retail `GuildBankPopupEditBox` letters="15").
 pub(crate) const TAB_NAME_LETTERS: usize = 15;
 /// Retail `INV_Misc_QuestionMark`, the icon of a new tab.
@@ -406,11 +404,11 @@ fn purchase_tab(vault: &mut Vault, patron: &Patron, req: BankPurchaseTab) -> Ban
         .copied()
         .ok_or(BankError::MaxTabs)?;
     let mut model = vault.load_model(patron.character_id)?;
-    let gold = u64::from(model.gold());
+    let gold = model.gold();
     if gold < cost {
         return Err(BankError::CantAfford);
     }
-    model.set_gold((gold - cost) as u32);
+    model.set_gold(gold - cost);
     data.tabs.push(new_tab(data.tabs.len() + 1));
     vault.save(patron, req.bank, &data, Some(model));
     Ok(())
@@ -424,22 +422,25 @@ fn transfer_money(vault: &mut Vault, patron: &Patron, req: BankMoneyTransfer) ->
     }
     let mut data = vault.load_bank(patron, req.bank);
     let mut model = vault.load_model(patron.character_id)?;
-    let gold = u64::from(model.gold());
+    let gold = model.gold();
     let (gold, money) = if req.deposit {
         if gold < req.copper {
             return Err(BankError::NotEnoughMoney);
+        }
+        if data.money + req.copper > MAX_MONEY {
+            return Err(BankError::TooMuchGold);
         }
         (gold - req.copper, data.money + req.copper)
     } else {
         if data.money < req.copper {
             return Err(BankError::NotEnoughMoney);
         }
-        if gold + req.copper > MAX_PLAYER_MONEY {
+        if gold + req.copper > MAX_MONEY {
             return Err(BankError::TooMuchGold);
         }
         (gold + req.copper, data.money - req.copper)
     };
-    model.set_gold(gold as u32);
+    model.set_gold(gold);
     data.money = money;
     vault.save(patron, req.bank, &data, Some(model));
     Ok(())

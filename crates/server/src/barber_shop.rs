@@ -168,7 +168,7 @@ fn handle_apply_request(
     let applied = barber_shop_appearance(&player.appearance, application.changes.appearance);
     let cost = barber_shop_cost(&player.appearance, &applied);
     let mut inventory = persistence::load_inventory(&db.db, application.character_id);
-    if inventory.gold < cost {
+    if inventory.gold < u64::from(cost) {
         send_barber_shop_update(
             application.connection,
             &player.appearance,
@@ -180,7 +180,7 @@ fn handle_apply_request(
         return;
     }
 
-    inventory.gold -= cost;
+    inventory.gold -= u64::from(cost);
     let appearance_changed = player.appearance != applied;
     player.appearance = applied.clone();
     if appearance_changed && let Some(dirty_queue) = dirty_queue {
@@ -269,7 +269,7 @@ fn barber_shop_cost(current: &CharacterAppearance, requested: &CharacterAppearan
 fn send_barber_shop_update(
     conn_entity: Entity,
     appearance: &CharacterAppearance,
-    gold: u32,
+    gold: u64,
     message: Option<String>,
     error: Option<String>,
     senders: &mut Query<&mut MessageSender<BarberShopStateUpdate>>,

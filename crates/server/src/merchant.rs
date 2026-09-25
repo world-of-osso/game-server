@@ -28,7 +28,7 @@ use shared::protocol::{
 use crate::auth::InWorld;
 use crate::durability::{EquippedDurability, ItemDurability};
 use crate::faction::faction_for_race;
-use crate::gold::GoldUpdateQueue;
+use crate::gold::{GoldUpdateQueue, MAX_MONEY};
 use crate::inventory::{inventory_model::InventoryModel, load_model};
 use crate::item_templates::{BIND_ON_PICKUP, ItemTemplate, ItemTemplates};
 use crate::networking::PlayerLink;
@@ -42,9 +42,6 @@ mod stock;
 use catalog::VendorSlot;
 pub use catalog::{VendorCatalog, load_vendor_catalog};
 use stock::{BuybackEntry, BuybackSlots, VendorStock};
-
-/// AzerothCore `MAX_MONEY_AMOUNT` (Player.h:923).
-const MAX_MONEY: u32 = 0x7FFF_FFFF - 1;
 
 /// Retail `ITEM_FLAG2_FACTION_HORDE` / `ITEM_FLAG2_FACTION_ALLIANCE` (`Flags_1`).
 const FLAG2_FACTION_HORDE: i64 = 0x1;
@@ -374,7 +371,10 @@ fn buy(shop: &mut Shop, customer: &mut Customer, req: BuyItem) -> MerchantResult
     }
     let count = match goods.buy_price {
         0 => req.count.max(1),
-        price => req.count.max(1).min(MAX_MONEY / price),
+        price => req
+            .count
+            .max(1)
+            .min(u32::try_from(MAX_MONEY / u64::from(price)).unwrap_or(u32::MAX)),
     };
     let items = goods.buy_count.saturating_mul(count);
     let now = shop.now();
@@ -384,7 +384,7 @@ fn buy(shop: &mut Shop, customer: &mut Customer, req: BuyItem) -> MerchantResult
     if available.is_some_and(|left| left < items) {
         return Err(MerchantError::SoldOut);
     }
-    let price = goods.buy_price.saturating_mul(count);
+    let price = u64::from(goods.buy_price) * u64::from(count);
     let mut model = shop.load(customer.character_id)?;
     if model.gold() < price {
         return Err(MerchantError::NotEnoughMoney);
@@ -442,8 +442,8 @@ fn sell(shop: &mut Shop, customer: &mut Customer, req: SellItem) -> MerchantResu
     if sell_price == 0 {
         return Err(MerchantError::NotInterested);
     }
-    let money = sell_price.saturating_mul(count);
-    if model.gold() >= MAX_MONEY.saturating_sub(money) {
+    let money = u64::from(sell_price) * u64::from(count);
+    if model.gold() + money > MAX_MONEY {
         return Err(MerchantError::TooMuchGold);
     }
     let mut mint = shop.mint();
@@ -456,7 +456,7 @@ fn sell(shop: &mut Shop, customer: &mut Customer, req: SellItem) -> MerchantResu
     let sold_at = shop.now();
     customer.buyback.add(BuybackEntry {
         item: sold,
-        price: money,
+        price: sell_price.saturating_mul(count),
         sold_at,
     });
     shop.send_buyback(customer.connection, customer.buyback);
@@ -472,7 +472,7 @@ fn buy_back(shop: &mut Shop, customer: &mut Customer, req: BuybackItemRequest) -
         .cloned()
         .ok_or(MerchantError::ItemNotFound)?;
     let mut model = shop.load(customer.character_id)?;
-    if model.gold() < entry.price {
+    if model.gold() < u64::from(entry.price) {
         return Err(MerchantError::NotEnoughMoney);
     }
     // Items without a template never stack (`InventoryModel::max_stack`).
@@ -482,7 +482,7 @@ fn buy_back(shop: &mut Shop, customer: &mut Customer, req: BuybackItemRequest) -
         .store_item(entry.item, template, &mut mint)
         .map_err(|_| MerchantError::InventoryFull)?;
     drop(mint);
-    model.set_gold(model.gold() - entry.price);
+    model.set_gold(model.gold() - u64::from(entry.price));
     shop.save(customer.character_id, model);
     customer.buyback.remove(req.slot);
     shop.send_buyback(customer.connection, customer.buyback);
@@ -534,11 +534,11 @@ fn repair(shop: &mut Shop, customer: &mut Customer, req: RepairItem) -> Merchant
         if cost == 0 {
             continue;
         }
-        if cost > gold {
+        if u64::from(cost) > gold {
             short = true;
             continue;
         }
-        gold -= cost;
+        gold -= u64::from(cost);
         entry.current = entry.max;
     }
     drop(durability);

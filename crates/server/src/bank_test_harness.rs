@@ -229,14 +229,14 @@ impl Harness {
         persistence::load_inventory(self.db(), self.character_id)
     }
 
-    pub fn set_gold(&mut self, gold: u32) {
+    pub fn set_gold(&mut self, gold: u64) {
         let db = self.db();
         let mut inventory = persistence::load_inventory(db, self.character_id);
         inventory.gold = gold;
         persistence::save_inventory(db, self.character_id, &inventory);
     }
 
-    pub fn gold(&self) -> u32 {
+    pub fn gold(&self) -> u64 {
         self.inventory().gold
     }
 

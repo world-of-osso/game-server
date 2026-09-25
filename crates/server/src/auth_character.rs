@@ -323,7 +323,7 @@ fn validate_ownership(db: &GameDatabase, account_id: u64, character_id: u64) -> 
 }
 
 struct SelectedCharacterState {
-    gold: u32,
+    gold: u64,
     guild: Option<GuildMembership>,
     professions: PlayerProfessions,
     achievements: crate::achievement::PlayerAchievementState,
@@ -470,7 +470,7 @@ fn build_player_components(data: &CharacterData, character_id: u64) -> impl Bund
 }
 
 pub struct PlayerInitState {
-    pub gold: u32,
+    pub gold: u64,
     pub professions: PlayerProfessions,
     pub achievements: crate::achievement::PlayerAchievementState,
     pub pvp: crate::pvp::PlayerPvpState,

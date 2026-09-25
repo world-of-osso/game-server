@@ -6,16 +6,20 @@ use shared::components::{Gold, Player};
 
 use crate::persistence::ClientId;
 
+/// Retail gold cap, 9,999,999g 99s 99c (TrinityCore `MAX_MONEY_AMOUNT`): the most copper
+/// a player or a Warband bank holds.
+pub(crate) const MAX_MONEY: u64 = 99_999_999_999;
+
 /// Persisted `InventoryData` changes: gold values to replicate, plus the characters
 /// whose bag contents need an `InventoryDelta`.
 #[derive(Resource, Default)]
 pub(crate) struct GoldUpdateQueue {
-    pending: HashMap<u64, u32>,
+    pending: HashMap<u64, u64>,
     changed_inventories: HashSet<u64>,
 }
 
 impl GoldUpdateQueue {
-    pub(crate) fn record(&mut self, character_id: u64, gold: u32) {
+    pub(crate) fn record(&mut self, character_id: u64, gold: u64) {
         self.pending.insert(character_id, gold);
         self.changed_inventories.insert(character_id);
     }
@@ -38,7 +42,7 @@ impl GoldUpdateQueue {
         self.pending.is_empty()
     }
 
-    fn take(&mut self) -> HashMap<u64, u32> {
+    fn take(&mut self) -> HashMap<u64, u64> {
         std::mem::take(&mut self.pending)
     }
 }

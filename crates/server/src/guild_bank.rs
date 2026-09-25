@@ -29,7 +29,7 @@ use shared::protocol::{
 use crate::auth::InWorld;
 use crate::bank::{BankTabPrices, TAB_NAME_LETTERS, new_tab};
 use crate::bank_storage::{self, TabsFull};
-use crate::gold::GoldUpdateQueue;
+use crate::gold::{GoldUpdateQueue, MAX_MONEY};
 use crate::inventory::{inventory_model::InventoryModel, load_model};
 use crate::item_templates::{BIND_QUEST, ItemTemplate, ItemTemplates};
 use crate::npc_interaction::ActiveInteraction;
@@ -42,8 +42,6 @@ use crate::persistence::{self, GameDatabase};
 
 /// AzerothCore `GUILD_BANK_MONEY_LIMIT` (Guild.h:54).
 const GUILD_BANK_MONEY_LIMIT: u64 = 0x7_FFFF_FFFF_FFFF;
-/// AzerothCore `MAX_MONEY_AMOUNT` (Player.h:923).
-const MAX_PLAYER_MONEY: u64 = 0x7FFF_FFFF - 1;
 /// Retail tab info text length (`GuildBankTabInfoEditBox` letters="500").
 const TAB_TEXT_LETTERS: usize = 500;
 
@@ -579,7 +577,7 @@ fn transfer_money(
     member.vault_for(req.object)?;
     let mut guild = load_guild(vault.db(), member.guild_id);
     let mut model = vault.load_model(member.character_id)?;
-    let gold = u64::from(model.gold());
+    let gold = model.gold();
     let mut usage = None;
     let kind = if req.deposit {
         if gold < req.copper {
@@ -589,7 +587,7 @@ fn transfer_money(
             return Err(GuildBankError::TooMuchMoney);
         }
         guild.money += req.copper;
-        model.set_gold((gold - req.copper) as u32);
+        model.set_gold(gold - req.copper);
         GuildBankLogKindData::DepositMoney
     } else {
         if guild.money < req.copper {
@@ -602,11 +600,11 @@ fn transfer_money(
             }
             today.copper_withdrawn += req.copper;
         }
-        if gold + req.copper > MAX_PLAYER_MONEY {
+        if gold + req.copper > MAX_MONEY {
             return Err(GuildBankError::TooMuchMoney);
         }
         guild.money -= req.copper;
-        model.set_gold((gold + req.copper) as u32);
+        model.set_gold(gold + req.copper);
         usage = Some(today);
         GuildBankLogKindData::WithdrawMoney
     };
@@ -633,11 +631,11 @@ fn buy_tab(vault: &mut GuildVault, member: &Member, req: GuildBankBuyTab) -> Gui
         .next_tab_cost(&guild)
         .ok_or(GuildBankError::Permissions)?;
     let mut model = vault.load_model(member.character_id)?;
-    let gold = u64::from(model.gold());
+    let gold = model.gold();
     if gold < cost {
         return Err(GuildBankError::NotEnoughMoney);
     }
-    model.set_gold((gold - cost) as u32);
+    model.set_gold(gold - cost);
     guild.tabs.push(new_tab(guild.tabs.len() + 1));
     let mut logs = load_guild_bank_logs(vault.db(), member.guild_id);
     logs.push(

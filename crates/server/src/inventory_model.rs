@@ -35,7 +35,7 @@ pub(crate) struct InventoryModel {
     /// Templates of the item ids this character owns.
     templates: HashMap<u32, ItemTemplate>,
     character: CharacterData,
-    gold: u32,
+    gold: u64,
 }
 
 pub(crate) fn error(reason: InventoryErrorReason, detail: impl Into<String>) -> InventoryError {
@@ -747,11 +747,11 @@ impl InventoryModel {
         ))
     }
 
-    pub(crate) fn gold(&self) -> u32 {
+    pub(crate) fn gold(&self) -> u64 {
         self.gold
     }
 
-    pub(crate) fn set_gold(&mut self, gold: u32) {
+    pub(crate) fn set_gold(&mut self, gold: u64) {
         self.gold = gold;
     }
 

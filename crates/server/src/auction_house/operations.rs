@@ -28,7 +28,10 @@ pub(super) fn claim_mail(
     let mail = mailbox.remove(index);
     persistence::save_mailbox(db, character_id, &mailbox);
     let mut inventory = persistence::load_inventory(db, character_id);
-    inventory.gold = inventory.gold.saturating_add(mail.attached_money);
+    inventory.gold = inventory
+        .gold
+        .saturating_add(u64::from(mail.attached_money))
+        .min(crate::gold::MAX_MONEY);
     if let Some(item) = mail.attached_item {
         inventory.items.push(item);
     }
@@ -134,7 +137,7 @@ fn validate_auction_deposit(
     inventory: &InventoryData,
     deposit: u32,
 ) -> Result<(), AuctionOperationResponse> {
-    if deposit > 0 && inventory.gold < deposit {
+    if deposit > 0 && inventory.gold < u64::from(deposit) {
         return Err(err("not enough gold for auction deposit"));
     }
     Ok(())
@@ -153,7 +156,7 @@ pub(super) fn create_auction(
     };
 
     let mut inventory = persistence::load_inventory(db, character_id);
-    inventory.gold -= validated.deposit;
+    inventory.gold -= u64::from(validated.deposit);
     if inventory.items[validated.item_index].stack_count == req.stack_count {
         inventory.items.remove(validated.item_index);
     } else {
@@ -203,7 +206,7 @@ fn refund_previous_bidder(db: &redb::Database, auction: &AuctionData, new_bidder
     }
     let refund = auction.current_bid.unwrap_or(0);
     let mut prev_inventory = persistence::load_inventory(db, prev_bidder);
-    prev_inventory.gold = prev_inventory.gold.saturating_add(refund);
+    prev_inventory.gold = prev_inventory.gold.saturating_add(u64::from(refund));
     persistence::save_inventory(db, prev_bidder, &prev_inventory);
     deliver_mail(
         db,
@@ -238,10 +241,10 @@ pub(super) fn place_bid(
     let mut bidder_inventory = persistence::load_inventory(db, character_id);
     let credit = previous_bid_credit(auction, character_id);
     let additional = amount.saturating_sub(credit);
-    if bidder_inventory.gold < additional {
+    if bidder_inventory.gold < u64::from(additional) {
         return err("not enough gold");
     }
-    bidder_inventory.gold -= additional;
+    bidder_inventory.gold -= u64::from(additional);
     persistence::save_inventory(db, character_id, &bidder_inventory);
 
     refund_previous_bidder(db, auction, character_id);
@@ -283,11 +286,11 @@ pub(super) fn buyout_auction(
     let mut buyer_inventory = persistence::load_inventory(db, character_id);
     let credit = previous_bid_credit(&auction, character_id);
     let additional = price.saturating_sub(credit);
-    if buyer_inventory.gold < additional {
+    if buyer_inventory.gold < u64::from(additional) {
         state.auctions.insert(auction_id, auction);
         return err("not enough gold");
     }
-    buyer_inventory.gold -= additional;
+    buyer_inventory.gold -= u64::from(additional);
     persistence::save_inventory(db, character_id, &buyer_inventory);
 
     if let Some(prev_bidder) = auction.current_bidder_character_id
@@ -296,7 +299,7 @@ pub(super) fn buyout_auction(
         let mut prev_inventory = persistence::load_inventory(db, prev_bidder);
         prev_inventory.gold = prev_inventory
             .gold
-            .saturating_add(auction.current_bid.unwrap_or(0));
+            .saturating_add(u64::from(auction.current_bid.unwrap_or(0)));
         persistence::save_inventory(db, prev_bidder, &prev_inventory);
     }
 
