@@ -55,6 +55,7 @@ struct AdminQueries<'w, 's> {
             Entity,
             &'static mut Position,
             &'static persistence::ClientId,
+            &'static mut shared::components::MovementControl,
         ),
     >,
     equipment: Query<
@@ -630,12 +631,17 @@ mod tests {
                     z: 0.0,
                 },
                 persistence::ClientId(character_id),
+                shared::components::MovementControl::default(),
             ))
             .id();
-        let mut system_state =
-            SystemState::<Query<(Entity, &mut Position, &persistence::ClientId)>>::new(
-                app.world_mut(),
-            );
+        let mut system_state = SystemState::<
+            Query<(
+                Entity,
+                &mut Position,
+                &persistence::ClientId,
+                &mut shared::components::MovementControl,
+            )>,
+        >::new(app.world_mut());
         let mut query = system_state
             .get_mut(app.world_mut())
             .expect("admin position query should be valid");
@@ -658,6 +664,11 @@ mod tests {
         let pos = app.world().entity(live_entity).get::<Position>().unwrap();
         let (bx, by, bz) = crate::terrain_height::wow_to_bevy(-8920.5, -188.25, 97.75);
         assert_eq!((pos.x, pos.y, pos.z), (bx, by, bz));
+        let control = app
+            .world()
+            .get::<shared::components::MovementControl>(live_entity)
+            .unwrap();
+        assert_eq!(control.epoch, 1, "the client adopts the new position");
     }
 
     #[test]

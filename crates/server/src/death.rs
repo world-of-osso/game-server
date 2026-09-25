@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use lightyear::prelude::*;
 use serde::{Deserialize, Serialize};
-use shared::components::{Health, Level, Mana, Player, Position};
+use shared::components::{Health, Level, Mana, MovementControl, Player, Position};
 use shared::death::{
     Corpse, DeathState, Graveyard, GraveyardRegistry, SpiritHealerContext, accept_spirit_healer,
     in_corpse_range, on_death, resurrect_at_corpse,
@@ -15,8 +15,9 @@ use shared::protocol::{
 use crate::auth::{Authenticated, InWorld};
 use crate::durability::EquippedDurability;
 use crate::faction::faction_for_race;
-use crate::interest::{InterestDirtyQueue, mark_interest_position_changed};
+use crate::interest::InterestDirtyQueue;
 use crate::networking::PlayerLink;
+use crate::teleport::teleported;
 use crate::world_data::WorldData;
 
 const WORLD_MAP_ID: u16 = 0;
@@ -243,14 +244,20 @@ fn process_release_spirit_requests(
         (Entity, &PlayerLink, &mut MessageReceiver<ReleaseSpirit>),
         With<Authenticated>,
     >,
-    mut players: Query<(&mut Position, &mut PlayerDeathState, &Player)>,
+    mut players: Query<(
+        &mut Position,
+        &mut PlayerDeathState,
+        &Player,
+        &mut MovementControl,
+    )>,
     state: Res<DeathServerState>,
     dirty_queue: Option<Res<InterestDirtyQueue>>,
     mut senders: Query<&mut MessageSender<DeathStateUpdate>>,
 ) {
     for (conn_entity, link, mut receiver) in &mut receivers {
         for _ in receiver.receive() {
-            let Ok((mut position, mut death_state, player)) = players.get_mut(link.0) else {
+            let Ok((mut position, mut death_state, player, mut control)) = players.get_mut(link.0)
+            else {
                 send_error(
                     conn_entity,
                     &mut senders,
@@ -265,7 +272,7 @@ fn process_release_spirit_requests(
                 &state.graveyards,
             );
             if result.is_ok() {
-                mark_interest_position_changed(dirty_queue.as_deref(), link.0);
+                teleported(dirty_queue.as_deref(), link.0, &mut control);
             }
             send_release_spirit_result(
                 conn_entity,
@@ -328,13 +335,15 @@ fn process_resurrect_at_corpse_requests(
         &mut Health,
         Option<&mut Mana>,
         &mut PlayerDeathState,
+        &mut MovementControl,
     )>,
     dirty_queue: Option<Res<InterestDirtyQueue>>,
     mut senders: Query<&mut MessageSender<DeathStateUpdate>>,
 ) {
     for (conn_entity, link, player, mut receiver) in &mut receivers {
         for _ in receiver.receive() {
-            let Ok((mut position, mut health, mana, mut death_state)) = players.get_mut(link.0)
+            let Ok((mut position, mut health, mana, mut death_state, mut control)) =
+                players.get_mut(link.0)
             else {
                 send_error(
                     conn_entity,
@@ -346,7 +355,7 @@ fn process_resurrect_at_corpse_requests(
             let result =
                 resurrect_player_at_corpse(&mut position, &mut health, mana, &mut death_state);
             if result.is_ok() {
-                mark_interest_position_changed(dirty_queue.as_deref(), link.0);
+                teleported(dirty_queue.as_deref(), link.0, &mut control);
             }
             send_resurrect_response(
                 conn_entity,
@@ -403,6 +412,7 @@ type SpiritHealerPlayerData<'w, 's> = Query<
         Option<&'static Level>,
         Option<&'static mut EquippedDurability>,
         &'static mut PlayerDeathState,
+        &'static mut MovementControl,
     ),
 >;
 
@@ -423,8 +433,15 @@ fn process_spirit_healer_requests(
     let now = current_seconds(&time);
     for (conn_entity, link, mut receiver) in &mut receivers {
         for _ in receiver.receive() {
-            let Ok((mut position, mut health, mana, level, durability, mut death_state)) =
-                players.get_mut(link.0)
+            let Ok((
+                mut position,
+                mut health,
+                mana,
+                level,
+                durability,
+                mut death_state,
+                mut control,
+            )) = players.get_mut(link.0)
             else {
                 send_error(
                     conn_entity,
@@ -443,7 +460,7 @@ fn process_spirit_healer_requests(
                 now,
             ) {
                 Ok(message) => {
-                    mark_interest_position_changed(dirty_queue.as_deref(), link.0);
+                    teleported(dirty_queue.as_deref(), link.0, &mut control);
                     send_update(
                         conn_entity,
                         &position,
@@ -473,14 +490,20 @@ fn process_stuck_escape_requests(
         (Entity, &PlayerLink, &mut MessageReceiver<UseStuckEscape>),
         With<Authenticated>,
     >,
-    mut players: Query<(&mut Position, Option<&PlayerDeathState>, &Player)>,
+    mut players: Query<(
+        &mut Position,
+        Option<&PlayerDeathState>,
+        &Player,
+        &mut MovementControl,
+    )>,
     state: Res<DeathServerState>,
     dirty_queue: Option<Res<InterestDirtyQueue>>,
     mut senders: Query<&mut MessageSender<DeathStateUpdate>>,
 ) {
     for (conn_entity, link, mut receiver) in &mut receivers {
         for _ in receiver.receive() {
-            let Ok((mut position, death_state, player)) = players.get_mut(link.0) else {
+            let Ok((mut position, death_state, player, mut control)) = players.get_mut(link.0)
+            else {
                 send_error(
                     conn_entity,
                     &mut senders,
@@ -490,7 +513,7 @@ fn process_stuck_escape_requests(
             };
             match use_stuck_escape(&mut position, death_state, player.race, &state.graveyards) {
                 Ok(message) => {
-                    mark_interest_position_changed(dirty_queue.as_deref(), link.0);
+                    teleported(dirty_queue.as_deref(), link.0, &mut control);
                     send_update(
                         conn_entity,
                         &position,

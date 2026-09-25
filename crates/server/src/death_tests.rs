@@ -692,3 +692,76 @@ fn stuck_escape_rejects_dead_players() {
 
     assert_eq!(error, "stuck escape is unavailable while dead");
 }
+
+#[test]
+fn releasing_the_spirit_moves_the_ghost_to_its_graveyard_and_bumps_the_teleport_epoch() {
+    let mut app = App::new();
+    app.add_plugins(bevy::MinimalPlugins);
+    app.add_plugins(bevy::state::app::StatesPlugin);
+    app.add_plugins(lightyear::prelude::server::ServerPlugins {
+        tick_duration: Duration::from_millis(50),
+    });
+    app.add_plugins(shared::protocol::ProtocolPlugin);
+    app.add_plugins(DeathPlugin);
+    app.insert_resource(ReplicationDirtyQueue::default());
+    app.finish();
+    app.cleanup();
+    let graveyard = Graveyard {
+        id: 2,
+        zone_id: 12,
+        faction: 0,
+        map_id: WORLD_MAP_ID,
+        x: 100.0,
+        y: 0.0,
+        z: 0.0,
+    };
+    let player = app
+        .world_mut()
+        .spawn((
+            Player {
+                name: "Ghost".into(),
+                race: 1,
+                class: 1,
+                appearance: shared::components::CharacterAppearance::default(),
+            },
+            Position {
+                x: 90.0,
+                y: 5.0,
+                z: 0.0,
+            },
+            Health {
+                current: 0.0,
+                max: 100.0,
+            },
+            crate::persistence::ClientId(1),
+            PlayerDeathState {
+                state: DeathState::Dead,
+                corpse: Some(death_result_at(90.0, 5.0, 0.0).corpse),
+                graveyard: Some(graveyard),
+            },
+        ))
+        .id();
+    let connection = spawn_death_connection(&mut app, 1, player);
+    app.world_mut().entity_mut(connection).insert((
+        MessageSender::<ReleaseSpirit>::default(),
+        MessageReceiver::<ReleaseSpirit>::default(),
+    ));
+    app.update();
+    assert_eq!(
+        app.world().get::<MovementControl>(player),
+        Some(&MovementControl::default()),
+        "every player carries MovementControl"
+    );
+
+    app.world_mut()
+        .get_mut::<MessageSender<ReleaseSpirit>>(connection)
+        .unwrap()
+        .send::<DeathChannel>(ReleaseSpirit);
+    for _ in 0..3 {
+        app.update();
+    }
+
+    let position = *app.world().get::<Position>(player).unwrap();
+    assert_eq!((position.x, position.y, position.z), (100.0, 0.0, 0.0));
+    assert_eq!(app.world().get::<MovementControl>(player).unwrap().epoch, 1);
+}

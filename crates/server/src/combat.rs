@@ -97,10 +97,9 @@ impl Plugin for CombatPlugin {
                 start_attack_system,
                 auto_attack_system,
                 maintain_in_combat_state_system,
-                corpse_decay_system,
+                corpse_decay_system.before(respawn_system),
                 respawn_system,
-            )
-                .chain(),
+            ),
         );
     }
 }

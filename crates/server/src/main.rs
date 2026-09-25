@@ -62,6 +62,7 @@ mod rest;
 mod spell_cast;
 mod spell_info;
 mod stats;
+mod teleport;
 mod terrain_height;
 mod trade;
 mod trait_config;
