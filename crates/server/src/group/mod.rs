@@ -1,6 +1,7 @@
 //! Party/raid backend: invites, leadership, raid subgroups, roles, loot method and
 //! ready checks. State lives in [`GroupRegistry`]; this module moves messages in and out.
 
+mod member_state;
 mod registry;
 
 use std::collections::HashMap;
@@ -10,10 +11,10 @@ use bevy::prelude::*;
 use lightyear::prelude::*;
 use shared::components::{Player, UnitLevel};
 use shared::protocol::{
-    ConvertGroupToRaid, GroupChannel, GroupCommandResponse, GroupInviteIntent, GroupInvitePrompt,
-    GroupRosterSnapshot, GroupUninviteIntent, LeaveGroup, PromoteGroupLeader, ReadyCheckUpdate,
-    RespondGroupInvite, RespondReadyCheck, SetGroupLootMethod, SetGroupRole, SetRaidSubgroup,
-    StartReadyCheck,
+    ConvertGroupToParty, ConvertGroupToRaid, GroupChannel, GroupCommandResponse,
+    GroupInviteCancelled, GroupInviteIntent, GroupInvitePrompt, GroupRosterSnapshot,
+    GroupUninviteIntent, LeaveGroup, PromoteGroupLeader, ReadyCheckUpdate, RespondGroupInvite,
+    RespondReadyCheck, SetGroupLootMethod, SetGroupRole, SetRaidSubgroup, StartReadyCheck,
 };
 
 use crate::auth::Authenticated;
@@ -27,7 +28,15 @@ pub struct GroupPlugin;
 impl Plugin for GroupPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<GroupRegistry>();
-        app.add_systems(Update, process_group_commands);
+        app.init_resource::<member_state::SentMemberStates>();
+        app.add_systems(
+            Update,
+            (
+                process_group_commands,
+                member_state::send_group_member_states,
+            )
+                .chain(),
+        );
     }
 }
 
@@ -42,6 +51,7 @@ struct GroupCommandReceivers<'w, 's> {
     leaves: Receivers<'w, 's, LeaveGroup>,
     promotes: Receivers<'w, 's, PromoteGroupLeader>,
     converts: Receivers<'w, 's, ConvertGroupToRaid>,
+    party_converts: Receivers<'w, 's, ConvertGroupToParty>,
     subgroups: Receivers<'w, 's, SetRaidSubgroup>,
     roles: Receivers<'w, 's, SetGroupRole>,
     loot: Receivers<'w, 's, SetGroupLootMethod>,
@@ -55,6 +65,7 @@ struct GroupSenders<'w, 's> {
     rosters: Query<'w, 's, &'static mut MessageSender<GroupRosterSnapshot>>,
     responses: Query<'w, 's, &'static mut MessageSender<GroupCommandResponse>>,
     prompts: Query<'w, 's, &'static mut MessageSender<GroupInvitePrompt>>,
+    cancelled_invites: Query<'w, 's, &'static mut MessageSender<GroupInviteCancelled>>,
     ready_checks: Query<'w, 's, &'static mut MessageSender<ReadyCheckUpdate>>,
 }
 
@@ -147,6 +158,9 @@ fn apply_commands(
     for (from, _) in drain(&mut rx.converts, players) {
         effects.extend(registry.convert_to_raid(from));
     }
+    for (from, _) in drain(&mut rx.party_converts, players) {
+        effects.extend(registry.convert_to_party(from));
+    }
     for (from, msg) in drain(&mut rx.subgroups, players) {
         effects.extend(registry.set_subgroup(from, &msg.name, msg.subgroup));
     }
@@ -214,6 +228,14 @@ fn deliver_effects(
                 GroupInvitePrompt {
                     inviter_name: inviter_name.clone(),
                     timeout_secs: shared::protocol::GROUP_INVITE_TIMEOUT_SECS,
+                },
+            ),
+            GroupEffect::InviteCancelled { to, inviter_name } => send_to(
+                &mut senders.cancelled_invites,
+                connections,
+                *to,
+                GroupInviteCancelled {
+                    inviter_name: inviter_name.clone(),
                 },
             ),
             GroupEffect::ReadyCheck(group_id) => {

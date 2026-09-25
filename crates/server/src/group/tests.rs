@@ -2,7 +2,15 @@ use std::time::Duration;
 
 use lightyear::connection::host::HostClient;
 use lightyear::prelude::{AppMessageExt, Connected, PeerId, RemoteId};
-use shared::protocol::{GroupMessageCode, GroupRoleSnapshot, ReadyCheckAnswer};
+use shared::components::{
+    AuraView, Health, Position, PowerEntry, PowerType, UnitAuras, UnitPowers,
+};
+use shared::death::DeathState;
+use shared::protocol::{
+    GroupMemberState, GroupMemberStates, GroupMessageCode, GroupRoleSnapshot, ReadyCheckAnswer,
+};
+
+use crate::death::PlayerDeathState;
 
 use super::*;
 
@@ -24,6 +32,8 @@ fn setup_app() -> App {
     app.register_message::<GroupCommandResponse>();
     app.register_message::<GroupInvitePrompt>();
     app.register_message::<ReadyCheckUpdate>();
+    app.register_message::<GroupInviteCancelled>();
+    app.register_message::<GroupMemberStates>();
     app.add_plugins(GroupPlugin);
     app.add_systems(Update, collect_inbox);
     app.finish();
@@ -47,6 +57,15 @@ fn spawn_player(app: &mut App, character_id: u64, name: &str) -> Entity {
             },
             UnitLevel(80),
             ClientId(character_id),
+            Health {
+                current: 1000.0,
+                max: 1000.0,
+            },
+            Position {
+                x: character_id as f32,
+                y: 0.0,
+                z: 0.0,
+            },
         ))
         .id()
 }
@@ -86,6 +105,12 @@ fn connect(app: &mut App, character_id: u64, name: &str) -> Client {
                 MessageSender::<ReadyCheckUpdate>::default(),
                 MessageReceiver::<ReadyCheckUpdate>::default(),
             ),
+            (
+                MessageSender::<GroupInviteCancelled>::default(),
+                MessageReceiver::<GroupInviteCancelled>::default(),
+                MessageSender::<GroupMemberStates>::default(),
+                MessageReceiver::<GroupMemberStates>::default(),
+            ),
         ))
         .id();
     Client { player, conn }
@@ -107,6 +132,8 @@ struct Inbox {
     responses: Vec<GroupCommandResponse>,
     prompts: Vec<GroupInvitePrompt>,
     ready_checks: Vec<ReadyCheckUpdate>,
+    cancelled_invites: Vec<GroupInviteCancelled>,
+    member_states: Vec<GroupMemberStates>,
 }
 
 fn collect_inbox(
@@ -116,13 +143,26 @@ fn collect_inbox(
         &mut MessageReceiver<GroupCommandResponse>,
         &mut MessageReceiver<GroupInvitePrompt>,
         &mut MessageReceiver<ReadyCheckUpdate>,
+        &mut MessageReceiver<GroupInviteCancelled>,
+        &mut MessageReceiver<GroupMemberStates>,
     )>,
 ) {
-    for (mut inbox, mut rosters, mut responses, mut prompts, mut ready_checks) in &mut connections {
+    for (
+        mut inbox,
+        mut rosters,
+        mut responses,
+        mut prompts,
+        mut ready_checks,
+        mut cancels,
+        mut states,
+    ) in &mut connections
+    {
         inbox.rosters.extend(rosters.receive());
         inbox.responses.extend(responses.receive());
         inbox.prompts.extend(prompts.receive());
         inbox.ready_checks.extend(ready_checks.receive());
+        inbox.cancelled_invites.extend(cancels.receive());
+        inbox.member_states.extend(states.receive());
     }
 }
 
@@ -146,6 +186,10 @@ fn prompts(app: &mut App, client: &Client) -> Vec<GroupInvitePrompt> {
 
 fn ready_checks(app: &mut App, client: &Client) -> Vec<ReadyCheckUpdate> {
     std::mem::take(&mut inbox(app, client).ready_checks)
+}
+
+fn member_states(app: &mut App, client: &Client) -> Vec<GroupMemberStates> {
+    std::mem::take(&mut inbox(app, client).member_states)
 }
 
 fn pump(app: &mut App) {
@@ -493,4 +537,375 @@ fn role_and_loot_method_show_in_roster() {
     let roster = registry.build_roster(1, &view).expect("roster");
     assert_eq!(roster.members[1].role, GroupRoleSnapshot::Healer);
     assert_eq!(roster.loot_method, shared::loot::LootMode::RoundRobin);
+}
+
+fn cancelled_invitees(effects: &[GroupEffect]) -> Vec<(CharacterId, String)> {
+    effects
+        .iter()
+        .filter_map(|e| match e {
+            GroupEffect::InviteCancelled { to, inviter_name } => Some((*to, inviter_name.clone())),
+            _ => None,
+        })
+        .collect()
+}
+
+#[test]
+fn invite_from_a_player_who_joins_another_group_is_cancelled() {
+    let view = online(&SEVEN);
+    let mut registry = GroupRegistry::default();
+    registry.sync_presence(&view);
+    registry.invite(1, "P2", &view);
+    registry.invite(3, "P1", &view);
+
+    let joined = registry.respond_invite(1, true);
+
+    assert_eq!(cancelled_invitees(&joined), [(2, "P1".to_string())]);
+    assert!(registry.respond_invite(2, true).is_empty());
+    assert!(!registry.is_in_same_group(2, 3));
+    assert_eq!(registry.group_members(3), [3, 1]);
+}
+
+#[test]
+fn invite_from_a_leader_who_leaves_is_cancelled() {
+    let view = online(&SEVEN);
+    let mut registry = registry_with_party(&view, 3);
+    registry.invite(1, "P4", &view);
+
+    let left = registry.leave(1);
+
+    assert_eq!(cancelled_invitees(&left), [(4, "P1".to_string())]);
+    assert!(registry.respond_invite(4, true).is_empty());
+    assert!(!registry.is_in_same_group(2, 4));
+    assert!(!registry.is_in_same_group(1, 4));
+}
+
+#[test]
+fn invite_from_a_leader_who_promotes_someone_else_is_cancelled() {
+    let view = online(&SEVEN);
+    let mut registry = registry_with_party(&view, 2);
+    registry.invite(1, "P3", &view);
+
+    let promoted = registry.promote(1, "P2");
+
+    assert_eq!(cancelled_invitees(&promoted), [(3, "P1".to_string())]);
+    assert!(registry.respond_invite(3, true).is_empty());
+    assert!(!registry.is_in_same_group(1, 3));
+}
+
+#[test]
+fn expired_invite_closes_the_invitees_popup() {
+    let view = online(&SEVEN);
+    let mut registry = GroupRegistry::default();
+    registry.sync_presence(&view);
+    registry.invite(1, "P2", &view);
+
+    let effects = registry.tick(61.0);
+
+    assert_eq!(cancelled_invitees(&effects), [(2, "P1".to_string())]);
+}
+
+#[test]
+fn invite_from_a_player_who_logs_out_is_cancelled() {
+    let view = online(&SEVEN);
+    let mut registry = GroupRegistry::default();
+    registry.sync_presence(&view);
+    registry.invite(1, "P2", &view);
+
+    let mut inviter_gone = view.clone();
+    inviter_gone.remove(&1);
+    let effects = registry.sync_presence(&inviter_gone);
+
+    assert_eq!(cancelled_invitees(&effects), [(2, "P1".to_string())]);
+    assert!(registry.respond_invite(2, true).is_empty());
+}
+
+#[test]
+fn raid_of_five_converts_back_to_a_party_in_one_subgroup() {
+    let view = online(&SEVEN);
+    let mut registry = registry_with_party(&view, 3);
+    registry.convert_to_raid(1);
+    registry.set_subgroup(1, "P2", 4);
+    registry.set_subgroup(1, "P3", 8);
+
+    let effects = registry.convert_to_party(1);
+
+    assert_eq!(
+        notice_codes(&effects, 2),
+        [GroupMessageCode::RaidConvertedToParty]
+    );
+    let roster = registry.build_roster(1, &view).expect("party roster");
+    assert!(!roster.is_raid);
+    assert!(roster.members.iter().all(|m| m.subgroup == 1));
+    assert_eq!(
+        notice_codes(&registry.invite(1, "P4", &view), 1),
+        [GroupMessageCode::InvitePlayer]
+    );
+}
+
+#[test]
+fn raid_of_six_cannot_convert_to_a_party() {
+    let view = online(&SEVEN);
+    let mut registry = registry_with_party(&view, 5);
+    registry.convert_to_raid(1);
+    registry.invite(1, "P6", &view);
+    registry.respond_invite(6, true);
+
+    let effects = registry.convert_to_party(1);
+
+    assert_eq!(notice_codes(&effects, 1), [GroupMessageCode::GroupFull]);
+    assert!(registry.build_roster(1, &view).expect("roster").is_raid);
+}
+
+#[test]
+fn convert_to_party_needs_a_raid_and_the_leader() {
+    let view = online(&SEVEN);
+    let mut registry = registry_with_party(&view, 2);
+    assert_eq!(
+        notice_codes(&registry.convert_to_party(1), 1),
+        [GroupMessageCode::NotInRaid]
+    );
+    registry.convert_to_raid(1);
+    assert_eq!(
+        notice_codes(&registry.convert_to_party(2), 2),
+        [GroupMessageCode::NotLeader]
+    );
+}
+
+#[test]
+fn invite_rejections_for_self_and_busy_ungrouped_inviter() {
+    let view = online(&SEVEN);
+    let mut registry = GroupRegistry::default();
+    registry.sync_presence(&view);
+
+    assert_eq!(
+        notice_codes(&registry.invite(1, "p1", &view), 1),
+        [GroupMessageCode::InviteSelf]
+    );
+    registry.invite(1, "P2", &view);
+    assert_eq!(
+        notice_codes(&registry.invite(1, "P3", &view), 1),
+        [GroupMessageCode::InvitePartyBusy]
+    );
+    assert_eq!(
+        notice_codes(&registry.invite(3, "P2", &view), 3),
+        [GroupMessageCode::AlreadyInGroup]
+    );
+    assert_eq!(
+        notice_codes(&registry.invite(1, "Nobody", &view), 1),
+        [GroupMessageCode::BadPlayerName]
+    );
+}
+
+#[test]
+fn moving_a_party_member_to_a_subgroup_needs_a_raid() {
+    let view = online(&SEVEN);
+    let mut registry = registry_with_party(&view, 2);
+
+    assert_eq!(
+        notice_codes(&registry.set_subgroup(1, "P2", 3), 1),
+        [GroupMessageCode::NotInRaid]
+    );
+}
+
+#[test]
+fn second_ready_check_is_rejected_and_timeout_finishes_with_away_members() {
+    let view = online(&SEVEN);
+    let mut registry = registry_with_party(&view, 3);
+    registry.start_ready_check(1, &view);
+    registry.respond_ready_check(2, false);
+
+    assert_eq!(
+        notice_codes(&registry.start_ready_check(1, &view), 1),
+        [GroupMessageCode::ReadyCheckInProgress]
+    );
+    let effects = registry.tick(31.0);
+
+    assert_eq!(
+        notice_codes(&effects, 3),
+        [GroupMessageCode::ReadyCheckFinished]
+    );
+    let group_id = 1;
+    let (_, update) = registry.build_ready_check(group_id).expect("ready check");
+    assert!(update.finished);
+    let answers: Vec<_> = update
+        .members
+        .iter()
+        .map(|m| (m.name.as_str(), m.answer))
+        .collect();
+    assert_eq!(
+        answers,
+        [
+            ("P1", ReadyCheckAnswer::Ready),
+            ("P2", ReadyCheckAnswer::NotReady),
+            ("P3", ReadyCheckAnswer::Pending),
+        ]
+    );
+}
+
+#[test]
+fn level_up_resends_the_roster() {
+    let view = online(&SEVEN);
+    let mut registry = registry_with_party(&view, 2);
+    registry.build_roster(1, &view);
+    assert!(registry.sync_presence(&view).is_empty());
+
+    let mut leveled = view.clone();
+    leveled.get_mut(&2).expect("P2 online").level = 11;
+    let effects = registry.sync_presence(&leveled);
+
+    assert_eq!(effects, [GroupEffect::Roster(1)]);
+    let roster = registry.build_roster(1, &leveled).expect("roster");
+    assert_eq!(roster.members[1].level, 11);
+}
+
+// --- Live member state ---
+
+fn member_names(update: &GroupMemberStates) -> Vec<&str> {
+    update.members.iter().map(|m| m.name.as_str()).collect()
+}
+
+#[test]
+fn member_states_carry_live_health_power_death_and_debuffs_for_every_member() {
+    let mut app = setup_app();
+    app.insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+        Duration::from_millis(100),
+    ));
+    let alice = connect(&mut app, 1, "Alice");
+    let bob = connect(&mut app, 2, "Bob");
+    let cara = connect(&mut app, 3, "Cara");
+    invite_and_accept(&mut app, &alice, &bob, "Bob");
+    pump(&mut app);
+    assert!(
+        member_states(&mut app, &cara).is_empty(),
+        "ungrouped get none"
+    );
+    let first = member_states(&mut app, &alice);
+    let everyone: Vec<_> = first.iter().flat_map(member_names).collect();
+    assert_eq!(everyone, ["Alice", "Bob"]);
+    let bob_state = &first
+        .iter()
+        .flat_map(|u| &u.members)
+        .find(|m| m.name == "Bob");
+    assert_eq!(
+        bob_state.map(|m| (m.health, m.max_health, m.death, m.position.x)),
+        Some((1000, 1000, DeathState::Alive, 2.0))
+    );
+    member_states(&mut app, &bob);
+
+    pump(&mut app);
+    assert!(
+        member_states(&mut app, &alice).is_empty(),
+        "unchanged state is not resent"
+    );
+
+    let debuff = AuraView {
+        instance_id: 1,
+        spell_id: 589,
+        caster: None,
+        stacks: 1,
+        charges: 0,
+        duration_ms: 18_000,
+        remaining_ms: 18_000,
+        harmful: true,
+        dispel_type: 1,
+        flags: 0,
+    };
+    let buff = AuraView {
+        spell_id: 21562,
+        harmful: false,
+        instance_id: 2,
+        ..debuff.clone()
+    };
+    app.world_mut().entity_mut(bob.player).insert((
+        Health {
+            current: 412.4,
+            max: 1000.0,
+        },
+        UnitPowers {
+            entries: vec![PowerEntry {
+                power: PowerType::Mana,
+                current: 300,
+                max: 500,
+            }],
+        },
+        UnitAuras {
+            auras: vec![debuff.clone(), buff],
+        },
+        PlayerDeathState {
+            state: DeathState::Ghost,
+            ..Default::default()
+        },
+    ));
+    pump(&mut app);
+
+    let updates = member_states(&mut app, &alice);
+    let changed: Vec<&GroupMemberState> = updates.iter().flat_map(|u| &u.members).collect();
+    assert_eq!(changed.len(), 1, "only Bob changed");
+    assert_eq!(changed[0].name, "Bob");
+    assert_eq!((changed[0].health, changed[0].max_health), (412, 1000));
+    assert_eq!(
+        changed[0].power,
+        Some(PowerEntry {
+            power: PowerType::Mana,
+            current: 300,
+            max: 500,
+        })
+    );
+    assert_eq!(changed[0].death, DeathState::Ghost);
+    assert_eq!(changed[0].debuffs, vec![debuff]);
+}
+
+#[test]
+fn member_states_follow_membership_and_resend_to_a_relogged_member() {
+    let mut app = setup_app();
+    app.insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+        Duration::from_millis(100),
+    ));
+    let alice = connect(&mut app, 1, "Alice");
+    let bob = connect(&mut app, 2, "Bob");
+    invite_and_accept(&mut app, &alice, &bob, "Bob");
+    pump(&mut app);
+    member_states(&mut app, &alice);
+
+    app.world_mut().despawn(bob.conn);
+    app.world_mut().despawn(bob.player);
+    pump(&mut app);
+    let bob_again = connect(&mut app, 2, "Bob");
+    pump(&mut app);
+
+    let resent: Vec<_> = member_states(&mut app, &bob_again)
+        .iter()
+        .flat_map(|u| u.members.iter().map(|m| m.name.clone()))
+        .collect();
+    assert_eq!(resent, ["Alice", "Bob"]);
+    let to_alice: Vec<_> = member_states(&mut app, &alice)
+        .iter()
+        .flat_map(|u| u.members.iter().map(|m| m.name.clone()))
+        .collect();
+    assert_eq!(to_alice, ["Bob"], "Alice already has her own state");
+}
+
+#[test]
+fn invitee_receives_invite_cancelled_when_the_invite_expires() {
+    let mut app = setup_app();
+    app.insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+        Duration::from_secs(31),
+    ));
+    app.world_mut()
+        .resource_mut::<Time<Virtual>>()
+        .set_max_delta(Duration::from_secs(31));
+    let alice = connect(&mut app, 1, "Alice");
+    let bob = connect(&mut app, 2, "Bob");
+    send(&mut app, &alice, GroupInviteIntent { name: "Bob".into() });
+    pump(&mut app);
+    assert_eq!(prompts(&mut app, &bob).len(), 1);
+    pump(&mut app);
+
+    assert_eq!(
+        std::mem::take(&mut inbox(&mut app, &bob).cancelled_invites),
+        vec![GroupInviteCancelled {
+            inviter_name: "Alice".into(),
+        }]
+    );
+    assert!(codes(&mut app, &alice).contains(&GroupMessageCode::DeclineGroup));
 }

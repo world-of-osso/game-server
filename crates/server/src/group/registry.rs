@@ -7,8 +7,7 @@
 use std::collections::HashMap;
 
 use shared::group::{
-    GroupRole, MAX_PARTY_SIZE, PartyError, RAID_SUBGROUPS, Raid, ReadyCheck, ReadyResponse,
-    RoleAssignments,
+    GroupRole, MAX_PARTY_SIZE, PartyError, Raid, ReadyCheck, ReadyResponse, RoleAssignments,
 };
 use shared::loot::LootMode;
 use shared::protocol::{
@@ -47,6 +46,11 @@ pub enum GroupEffect {
         to: CharacterId,
         inviter_name: String,
     },
+    /// Close the invitee's invite popup: the invite is no longer valid.
+    InviteCancelled {
+        to: CharacterId,
+        inviter_name: String,
+    },
     /// Send the ready check state to every participant.
     ReadyCheck(GroupId),
 }
@@ -72,20 +76,15 @@ struct Group {
     is_raid: bool,
     roles: RoleAssignments,
     ready_check: Option<ActiveReadyCheck>,
-    /// Online state last reported in a roster, to detect login/logout/relog.
-    reported_online: HashMap<CharacterId, Option<u64>>,
+    /// Online entity and level last reported in a roster, to detect login, logout,
+    /// relog and level-ups.
+    reported_online: HashMap<CharacterId, Option<(u64, u8)>>,
 }
 
 impl Group {
     fn new(leader: CharacterId) -> Self {
-        let mut subgroups: [Vec<CharacterId>; RAID_SUBGROUPS] = Default::default();
-        subgroups[0].push(leader);
         Self {
-            raid: Raid {
-                leader,
-                subgroups,
-                loot_mode: LootMode::PersonalLoot,
-            },
+            raid: Raid::new(leader),
             is_raid: false,
             roles: RoleAssignments::default(),
             ready_check: None,
@@ -252,18 +251,25 @@ impl GroupRegistry {
             return vec![notice(invitee, GroupMessageCode::GroupFull, "")];
         }
         self.membership.insert(invitee, group_id);
-        let joined_code = if group.is_raid {
+        let is_raid = group.is_raid;
+        let others: Vec<_> = group
+            .members()
+            .into_iter()
+            .filter(|&m| m != invitee)
+            .collect();
+        // Invites the joiner sent while ungrouped would pull players into this group.
+        let mut effects = self.cancel_invites_from(invitee);
+        let joined_code = if is_raid {
             GroupMessageCode::RaidMemberAdded
         } else {
             GroupMessageCode::JoinedGroup
         };
-        let mut effects: Effects = group
-            .members()
-            .into_iter()
-            .filter(|&m| m != invitee)
-            .map(|m| notice(m, joined_code, invitee_name))
-            .collect();
-        if group.is_raid {
+        effects.extend(
+            others
+                .into_iter()
+                .map(|m| notice(m, joined_code, invitee_name)),
+        );
+        if is_raid {
             effects.push(notice(invitee, GroupMessageCode::RaidYouJoined, ""));
         }
         effects.push(GroupEffect::Roster(group_id));
@@ -321,6 +327,7 @@ impl GroupRegistry {
         others_code: GroupMessageCode,
     ) -> Effects {
         let name = self.name_of(member);
+        let mut effects = self.cancel_invites_from(member);
         self.membership.remove(&member);
         let group = self.groups.get_mut(&group_id).expect("group exists");
         let old_leader = group.raid.leader;
@@ -330,7 +337,7 @@ impl GroupRegistry {
         if let Some(active) = &mut group.ready_check {
             active.check.responses.retain(|(m, _)| *m != member);
         }
-        let mut effects = vec![GroupEffect::ClearRoster(member)];
+        effects.push(GroupEffect::ClearRoster(member));
         if disband {
             effects.extend(self.disband(group_id));
             return effects;
@@ -368,7 +375,8 @@ impl GroupRegistry {
             .expect("group exists")
             .raid
             .leader = target;
-        let mut effects = self.leader_changed_notices(group_id, target);
+        let mut effects = self.cancel_invites_from(leader);
+        effects.extend(self.leader_changed_notices(group_id, target));
         effects.push(GroupEffect::Roster(group_id));
         effects
     }
@@ -402,6 +410,28 @@ impl GroupRegistry {
             .members()
             .into_iter()
             .map(|m| notice(m, GroupMessageCode::PartyConvertedToRaid, ""))
+            .collect();
+        effects.push(GroupEffect::Roster(group_id));
+        effects
+    }
+
+    pub fn convert_to_party(&mut self, leader: CharacterId) -> Effects {
+        let group_id = match self.led_group(leader) {
+            Ok(id) => id,
+            Err(effect) => return vec![effect],
+        };
+        let group = self.groups.get_mut(&group_id).expect("group exists");
+        if !group.is_raid {
+            return vec![notice(leader, GroupMessageCode::NotInRaid, "")];
+        }
+        if group.raid.collapse_to_party().is_err() {
+            return vec![notice(leader, GroupMessageCode::GroupFull, "")];
+        }
+        group.is_raid = false;
+        let mut effects: Effects = group
+            .members()
+            .into_iter()
+            .map(|m| notice(m, GroupMessageCode::RaidConvertedToParty, ""))
             .collect();
         effects.push(GroupEffect::Roster(group_id));
         effects
@@ -584,6 +614,10 @@ impl GroupRegistry {
                 GroupMessageCode::DeclineGroup,
                 &name,
             ));
+            effects.push(GroupEffect::InviteCancelled {
+                to: invite.invitee,
+                inviter_name: self.name_of(invite.inviter),
+            });
         }
         let mut timed_out = Vec::new();
         for (&id, group) in &mut self.groups {
@@ -612,15 +646,26 @@ impl GroupRegistry {
                 },
             );
         }
-        self.invites
-            .retain(|i| online.contains_key(&i.invitee) && online.contains_key(&i.inviter));
         let mut effects = Vec::new();
+        let (kept, dropped): (Vec<_>, Vec<_>) = std::mem::take(&mut self.invites)
+            .into_iter()
+            .partition(|i| online.contains_key(&i.invitee) && online.contains_key(&i.inviter));
+        self.invites = kept;
+        for invite in dropped
+            .into_iter()
+            .filter(|i| online.contains_key(&i.invitee))
+        {
+            effects.push(GroupEffect::InviteCancelled {
+                to: invite.invitee,
+                inviter_name: self.name_of(invite.inviter),
+            });
+        }
         let mut abandoned = Vec::new();
         for (&id, group) in &mut self.groups {
             let current: HashMap<_, _> = group
                 .members()
                 .into_iter()
-                .map(|m| (m, online.get(&m).map(|o| o.entity)))
+                .map(|m| (m, reported_state(online, m)))
                 .collect();
             if current.values().all(Option::is_none) {
                 abandoned.push(id);
@@ -676,7 +721,7 @@ impl GroupRegistry {
         let reported = group
             .members()
             .into_iter()
-            .map(|m| (m, online.get(&m).map(|o| o.entity)))
+            .map(|m| (m, reported_state(online, m)))
             .collect();
         self.groups.get_mut(&group_id)?.reported_online = reported;
         Some(snapshot)
@@ -776,6 +821,22 @@ impl GroupRegistry {
         })
     }
 
+    /// Drops every pending invite `inviter` sent, closing the invitees' popups.
+    fn cancel_invites_from(&mut self, inviter: CharacterId) -> Effects {
+        let inviter_name = self.name_of(inviter);
+        let (cancelled, kept): (Vec<_>, Vec<_>) = std::mem::take(&mut self.invites)
+            .into_iter()
+            .partition(|i| i.inviter == inviter);
+        self.invites = kept;
+        cancelled
+            .into_iter()
+            .map(|i| GroupEffect::InviteCancelled {
+                to: i.invitee,
+                inviter_name: inviter_name.clone(),
+            })
+            .collect()
+    }
+
     fn has_pending_invite(&self, invitee: CharacterId) -> bool {
         self.invites.iter().any(|i| i.invitee == invitee)
     }
@@ -786,6 +847,10 @@ impl GroupRegistry {
             .map(|p| p.name.clone())
             .unwrap_or_default()
     }
+}
+
+fn reported_state(online: &OnlineView, member: CharacterId) -> Option<(u64, u8)> {
+    online.get(&member).map(|o| (o.entity, o.level))
 }
 
 fn find_online_by_name<'a>(
