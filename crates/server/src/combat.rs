@@ -568,10 +568,14 @@ pub(crate) fn mark_npc_dead_world(world: &mut World, entity: Entity) {
 /// `CorpseDelay` (AzerothCore `setDeathState(CORPSE)`: `m_corpseRemoveTime = now +
 /// m_corpseDelay`). NPCs without a `RespawnDelay` (not world spawns) have no
 /// `SpawnPoint` and never respawn; without a `CorpseDelay` the corpse goes at once.
+/// Dying stops combat (`setDeathState` → `CombatStop`), so its killers do not
+/// swing at it again when it respawns.
 fn insert_npc_death(mut entity: EntityWorldMut) {
     let respawn_timer = entity.get::<RespawnDelay>().map_or(0.0, |delay| delay.0);
     let remaining = entity.get::<CorpseDelay>().map_or(0.0, |delay| delay.0);
     entity.insert((DeathState { respawn_timer }, Corpse { remaining }));
+    let npc = entity.id();
+    entity.world_scope(|world| combat_stop(world, npc));
 }
 
 /// AzerothCore `Creature::Update` in `CORPSE` state: past `m_corpseRemoveTime` the

@@ -634,6 +634,55 @@ fn dead_creature_in_dormant_grid_respawns_on_its_timer() {
     assert!(wolf.get::<crate::grid_activity::GridDormant>().is_some());
 }
 
+/// AzerothCore `Unit::setDeathState` runs `CombatStop` on death, so a killer
+/// standing at the spawn point does not swing at the respawned NPC.
+#[test]
+fn a_killed_npc_respawns_in_its_killers_melee_range_at_full_health() {
+    use bevy::time::TimeUpdateStrategy;
+    let mut app = setup_combat_app();
+    app.insert_resource(TimeUpdateStrategy::ManualDuration(
+        std::time::Duration::from_millis(50),
+    ));
+    let kobold = app
+        .world_mut()
+        .spawn((
+            pos(1.0, 0.0, 0.0),
+            // Three swings: the kill lands well after the attack started.
+            Health {
+                current: BASE_DAMAGE * 3.0,
+                max: 100.0,
+            },
+            Npc {
+                template_id: 6,
+                name: "Kobold Vermin".into(),
+            },
+            SpawnPoint {
+                x: 1.0,
+                y: 0.0,
+                z: 0.0,
+                wander_distance: 0.0,
+                speed_walk: 1.0,
+            },
+            RespawnDelay(3.0),
+            CorpseDelay(1.0),
+        ))
+        .id();
+    let player = spawn_attacker(&mut app, pos(0.0, 0.0, 0.0), kobold);
+
+    for _ in 0..(AUTO_ATTACK_INTERVAL * 2.0 * 20.0) as usize + 10 {
+        app.update();
+    }
+    assert!(app.world().get::<DeathState>(kobold).is_some(), "killed");
+
+    // 3 s respawn plus another auto-attack interval.
+    for _ in 0..(60.0 + AUTO_ATTACK_INTERVAL * 20.0) as usize {
+        app.update();
+    }
+    assert!(app.world().get::<DeathState>(kobold).is_none(), "respawned");
+    assert_eq!(app.world().get::<Health>(kobold).unwrap().current, 100.0);
+    assert!(app.world().get::<AutoAttack>(player).is_none());
+}
+
 #[test]
 fn respawn_delay_is_spawntimesecs_plus_rank_corpse_decay() {
     // Northshire Guard: spawntimesecs 430, normal rank.
