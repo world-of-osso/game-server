@@ -285,9 +285,25 @@ fn handle_select(
         build_player_init_state(state),
     );
     if data.health <= 0.0 {
-        player_deaths.write(crate::death::PlayerDeathTransition {
-            player: player_entity,
-        });
+        match persistence::load_corpse(&db.db, character_id) {
+            Some(corpse) => {
+                commands
+                    .entity(player_entity)
+                    .insert(crate::death::PersistedGhost(shared::death::Corpse {
+                        player: character_id,
+                        map_id: corpse.map_id,
+                        x: corpse.x,
+                        y: corpse.y,
+                        z: corpse.z,
+                        created_at: corpse.created_at,
+                    }));
+            }
+            None => {
+                player_deaths.write(crate::death::PlayerDeathTransition {
+                    player: player_entity,
+                });
+            }
+        }
     }
     insert_world_components(commands, selection.connection, player_entity, character_id);
     send_enter_success(selection.connection, enter_senders, player_entity);

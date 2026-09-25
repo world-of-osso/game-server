@@ -491,3 +491,117 @@ fn entering_world_loads_the_tile_under_the_character() {
         (32, 48)
     );
 }
+
+fn ghost_at_graveyard(character_id: u64) -> PlayerDeathState {
+    PlayerDeathState {
+        state: DeathState::Ghost,
+        corpse: Some(shared::death::Corpse {
+            player: character_id,
+            map_id: 0,
+            x: -8913.5,
+            y: 82.0,
+            z: 140.25,
+            created_at: 1234,
+        }),
+        graveyard: Some(shared::death::Graveyard {
+            id: 7,
+            zone_id: 12,
+            faction: 0,
+            map_id: 0,
+            x: -9050.0,
+            y: 90.0,
+            z: 200.0,
+        }),
+    }
+}
+
+/// Save the character the way a logout does (`save_live_character`), at the
+/// graveyard with 0 health.
+fn log_out(db: &GameDatabase, character_id: u64, health: f32, death: Option<&PlayerDeathState>) {
+    let data = persistence::load_character(&db.db, character_id).unwrap();
+    let player = Player {
+        name: data.name.clone(),
+        race: data.race,
+        class: data.class,
+        appearance: data.appearance.clone(),
+    };
+    let position = shared::components::Position {
+        x: -9050.0,
+        y: 90.0,
+        z: 200.0,
+    };
+    let health = Health {
+        current: health,
+        max: 100.0,
+    };
+    persistence::save_live_character(&db.db, character_id, &player, &position, &health, death);
+}
+
+/// Player::LoadFromDB (PLAYER_FLAGS_GHOST → still dead, a ghost) and
+/// Player::LoadCorpse (the corpse stays where it died): a released ghost
+/// that logs out comes back a ghost, not freshly Dead at the graveyard.
+#[test]
+fn relogged_ghost_comes_back_a_ghost_with_its_corpse() {
+    let db = test_db();
+    let account_id = 11;
+    let (character_id, _) = persistence::create_character(&db.db, account_id, "Spirit", 1, 1)
+        .expect("character should be created");
+    let ghost = ghost_at_graveyard(character_id);
+    log_out(&db, character_id, 0.0, Some(&ghost));
+
+    let (mut app, player) = select_character_in_world(db, account_id, character_id);
+    // The death systems run the frame after the player spawns; the client
+    // hears the restored state in the initial death snapshot.
+    let mut updates = Vec::new();
+    for _ in 0..3 {
+        app.update();
+        let mut receivers = app
+            .world_mut()
+            .query::<&mut MessageReceiver<DeathStateUpdate>>();
+        for mut receiver in receivers.iter_mut(app.world_mut()) {
+            updates.extend(receiver.receive());
+        }
+    }
+    let states: Vec<_> = updates
+        .iter()
+        .filter_map(|update| {
+            update
+                .snapshot
+                .as_ref()
+                .map(|snapshot| snapshot.state.clone())
+        })
+        .collect();
+    assert_eq!(states, vec![shared::protocol::DeathStateSnapshot::Ghost]);
+    let player = app.world().entity(player);
+    let death_state = player.get::<PlayerDeathState>().expect("ghost restored");
+    assert_eq!(death_state.state, DeathState::Ghost);
+    assert_eq!(death_state.corpse, ghost.corpse);
+    let position = player.get::<shared::components::Position>().unwrap();
+    assert_eq!((position.x, position.z), (-9050.0, 200.0));
+    assert_eq!(player.get::<Health>().unwrap().current, 0.0);
+}
+
+#[test]
+fn character_saved_after_resurrection_logs_in_alive() {
+    let db = test_db();
+    let account_id = 12;
+    let (character_id, _) = persistence::create_character(&db.db, account_id, "Risen", 1, 1)
+        .expect("character should be created");
+    log_out(
+        &db,
+        character_id,
+        0.0,
+        Some(&ghost_at_graveyard(character_id)),
+    );
+    log_out(&db, character_id, 50.0, Some(&PlayerDeathState::default()));
+
+    let (mut app, player) = select_character_in_world(db, account_id, character_id);
+    app.update();
+    let player = app.world().entity(player);
+    assert!(
+        player
+            .get::<PlayerDeathState>()
+            .is_none_or(|state| state.state == DeathState::Alive)
+    );
+    assert_eq!(player.get::<Health>().unwrap().current, 50.0);
+}

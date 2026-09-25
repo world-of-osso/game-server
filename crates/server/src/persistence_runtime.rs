@@ -3,6 +3,7 @@ use bevy::prelude::*;
 use shared::components::{Health, Player, Position};
 
 use super::{CharacterData, GameDatabase, load_character, save_character};
+use crate::death::PlayerDeathState;
 
 /// Marker component linking a player entity to its character_id for periodic saves.
 #[derive(Component, Debug)]
@@ -16,9 +17,15 @@ type DirtyPlayerData = (
     &'static Health,
     &'static Player,
     &'static ClientId,
+    Option<&'static PlayerDeathState>,
 );
 type DirtyPlayerFilter = (
-    Or<(Changed<Position>, Changed<Health>, Changed<Player>)>,
+    Or<(
+        Changed<Position>,
+        Changed<Health>,
+        Changed<Player>,
+        Changed<PlayerDeathState>,
+    )>,
     With<Player>,
     With<ClientId>,
 );
@@ -41,11 +48,8 @@ pub(super) fn save_dirty_characters(
     let Some(db) = db else { return };
 
     let mut saved_count = 0;
-    for (position, health, player, client_id) in players.query.iter() {
-        let mut data = load_character(&db.db, client_id.0)
-            .unwrap_or_else(|| CharacterData::from_components(player, position, health));
-        data.sync_live_components(player, position, health);
-        save_character(&db.db, client_id.0, &data);
+    for (position, health, player, client_id, death) in players.query.iter() {
+        save_live_character(&db.db, client_id.0, player, position, health, death);
         saved_count += 1;
     }
     if saved_count == 0 {
@@ -56,7 +60,13 @@ pub(super) fn save_dirty_characters(
 
 pub(super) fn flush_all_characters_on_exit(
     db: Option<Res<GameDatabase>>,
-    players: Query<(&Position, &Health, &Player, &ClientId)>,
+    players: Query<(
+        &Position,
+        &Health,
+        &Player,
+        &ClientId,
+        Option<&PlayerDeathState>,
+    )>,
     mut exit_events: MessageReader<AppExit>,
 ) {
     if exit_events.read().next().is_none() {
@@ -66,14 +76,41 @@ pub(super) fn flush_all_characters_on_exit(
     let Some(db) = db else { return };
 
     let mut saved_count = 0usize;
-    for (position, health, player, client_id) in players.iter() {
-        let mut data = load_character(&db.db, client_id.0)
-            .unwrap_or_else(|| CharacterData::from_components(player, position, health));
-        data.sync_live_components(player, position, health);
-        save_character(&db.db, client_id.0, &data);
+    for (position, health, player, client_id, death) in players.iter() {
+        save_live_character(&db.db, client_id.0, player, position, health, death);
         saved_count += 1;
     }
     if saved_count > 0 {
         info!("Shutdown save: {} characters written", saved_count);
     }
+}
+
+/// Save a player's live state (periodic, logout and shutdown saves).
+pub fn save_live_character(
+    db: &redb::Database,
+    character_id: u64,
+    player: &Player,
+    position: &Position,
+    health: &Health,
+    death: Option<&PlayerDeathState>,
+) {
+    let mut data = load_character(db, character_id)
+        .unwrap_or_else(|| CharacterData::from_components(player, position, health));
+    data.sync_live_components(player, position, health);
+    save_character(db, character_id, &data);
+    super::save_corpse(db, character_id, ghost_corpse(death).as_ref());
+}
+
+/// Only a released ghost keeps its corpse across logins (AzerothCore saves
+/// `PLAYER_FLAGS_GHOST` and the `corpse` row).
+fn ghost_corpse(death: Option<&PlayerDeathState>) -> Option<super::CorpseData> {
+    let death = death.filter(|death| death.state == shared::death::DeathState::Ghost)?;
+    let corpse = death.corpse.as_ref()?;
+    Some(super::CorpseData {
+        map_id: corpse.map_id,
+        x: corpse.x,
+        y: corpse.y,
+        z: corpse.z,
+        created_at: corpse.created_at,
+    })
 }

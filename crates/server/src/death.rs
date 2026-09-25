@@ -73,7 +73,10 @@ impl Plugin for DeathPlugin {
         #[cfg(test)]
         app.init_resource::<DeathTransitionCounters>();
         app.add_systems(PostStartup, load_graveyards_from_world_data);
-        app.add_systems(Update, send_initial_death_snapshot);
+        app.add_systems(
+            Update,
+            (restore_persisted_ghosts, send_initial_death_snapshot).chain(),
+        );
         app.add_systems(Update, process_death_queries);
         app.add_systems(Update, process_release_spirit_requests);
         app.add_systems(Update, process_resurrect_at_corpse_requests);
@@ -85,6 +88,30 @@ impl Plugin for DeathPlugin {
                 .after(crate::networking::apply_terrain_gravity)
                 .after(crate::combat::auto_attack_system),
         );
+    }
+}
+
+/// The corpse of a character that logged out as a ghost, on its new player
+/// entity until `restore_persisted_ghosts` rebuilds the death state.
+#[derive(Component, Debug)]
+pub(crate) struct PersistedGhost(pub Corpse);
+
+/// Player::LoadFromDB: a character saved with `PLAYER_FLAGS_GHOST` loads
+/// still dead, as a ghost, and `Player::LoadCorpse` puts its corpse back
+/// where it died. The graveyard is the corpse's, as at release.
+fn restore_persisted_ghosts(
+    ghosts: Query<(Entity, &PersistedGhost, &Player)>,
+    state: Res<DeathServerState>,
+    mut commands: Commands,
+) {
+    for (entity, ghost, player) in &ghosts {
+        let mut death_state =
+            build_player_death_state(ghost.0.clone(), player.race, &state.graveyards);
+        death_state.state = DeathState::Ghost;
+        commands
+            .entity(entity)
+            .remove::<PersistedGhost>()
+            .insert(death_state);
     }
 }
 

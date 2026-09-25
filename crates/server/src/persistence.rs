@@ -15,7 +15,7 @@ mod persistence_runtime;
 #[path = "persistence_quests.rs"]
 pub(crate) mod quest_store;
 
-pub use self::persistence_runtime::ClientId;
+pub use self::persistence_runtime::{ClientId, save_live_character};
 use self::persistence_runtime::{flush_all_characters_on_exit, save_dirty_characters};
 pub use crate::persistence_character::*;
 pub use crate::persistence_types::*;
@@ -134,6 +134,21 @@ pub(crate) const BANNED_ACCOUNTS: TableDefinition<u64, &[u8]> =
 /// Auto-increment counters: key (&str) -> next_id (u64).
 pub(crate) const NEXT_IDS: TableDefinition<&str, u64> = TableDefinition::new("next_ids");
 
+/// Corpses of released (ghost) characters: character_id (u64) -> bitcode
+/// `CorpseData` (AzerothCore `corpse` table, read by `Player::LoadCorpse`).
+pub(crate) const CHARACTER_CORPSES: TableDefinition<u64, &[u8]> =
+    TableDefinition::new("character_corpses");
+
+/// A ghost's corpse, in the Bevy-space coordinates of `shared::death::Corpse`.
+#[derive(bitcode::Encode, bitcode::Decode, Debug, Clone, PartialEq)]
+pub struct CorpseData {
+    pub map_id: u16,
+    pub x: f32,
+    pub y: f32,
+    pub z: f32,
+    pub created_at: u64,
+}
+
 /// Server settings: key (&str) -> value (&[u8]).
 const SERVER_SETTINGS: TableDefinition<&str, &[u8]> = TableDefinition::new("server_settings");
 
@@ -237,6 +252,7 @@ pub(crate) fn create_tables(db: &Database) {
     let _ = txn.open_table(BANNED_ACCOUNTS);
     let _ = txn.open_table(NEXT_IDS);
     let _ = txn.open_table(SERVER_SETTINGS);
+    let _ = txn.open_table(CHARACTER_CORPSES);
     let _ = txn.open_table(crate::persistence_progression::CHARACTER_PROGRESSION);
     let _ = txn.open_table(crate::persistence_progression::CHARACTER_TRAITS);
     let _ = txn.open_table(crate::persistence_progression::CHARACTER_XP);
@@ -536,6 +552,38 @@ pub fn save_achievements(
             .expect("Failed to insert achievements");
     }
     txn.commit().expect("Failed to commit achievements save");
+}
+
+pub fn load_corpse(db: &Database, character_id: u64) -> Option<CorpseData> {
+    let txn = db.begin_read().expect("Failed to begin read txn");
+    let table = txn
+        .open_table(CHARACTER_CORPSES)
+        .expect("Failed to open corpse table");
+    table
+        .get(character_id)
+        .expect("Failed to read corpse")
+        .map(|guard| bitcode::decode(guard.value()).expect("decode corpse"))
+}
+
+/// Store the ghost's corpse, or forget it (`None`) once the character is alive.
+pub fn save_corpse(db: &Database, character_id: u64, corpse: Option<&CorpseData>) {
+    let txn = db.begin_write().expect("Failed to begin write txn");
+    {
+        let mut table = txn
+            .open_table(CHARACTER_CORPSES)
+            .expect("Failed to open corpse table");
+        match corpse {
+            Some(corpse) => {
+                table
+                    .insert(character_id, bitcode::encode(corpse).as_slice())
+                    .expect("Failed to insert corpse");
+            }
+            None => {
+                table.remove(character_id).expect("Failed to remove corpse");
+            }
+        }
+    }
+    txn.commit().expect("Failed to commit corpse save");
 }
 
 pub fn load_pvp(db: &Database, character_id: u64) -> crate::pvp::PlayerPvpProgress {

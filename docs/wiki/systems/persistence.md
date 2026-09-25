@@ -31,6 +31,7 @@ Pure Rust, ACID, embedded B-tree. No external server process. Tables:
 | `pvp_states` | `CharacterId` | PlayerPvpProgress |
 | `character_progression` | `CharacterId` | Active spec ID and action bar ([[class-progression]]) |
 | `character_traits` | `CharacterId` | Trait purchases per spec ([[talents]]) |
+| `character_corpses` | `CharacterId` | `CorpseData` (map, Bevy-space position, death time) of a released ghost. Periodic, logout and shutdown saves (`save_live_character`) write it while `PlayerDeathState` is Ghost and delete it otherwise; a 0-health character with a row logs in as a Ghost with that corpse and the corpse's graveyard (`death.rs` `restore_persisted_ghosts`, AzerothCore `Player::LoadFromDB` `PLAYER_FLAGS_GHOST` + `Player::LoadCorpse`); without one it dies again on login (Dead at its saved position) |
 
 File: `data/game.redb`
 

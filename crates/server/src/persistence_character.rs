@@ -561,6 +561,12 @@ pub(crate) fn remove_character(
             .open_table(crate::persistence_progression::CHARACTER_XP)
             .expect("open character xp");
         xp.remove(character_id).expect("remove character xp");
+        let mut corpses = txn
+            .open_table(crate::persistence::CHARACTER_CORPSES)
+            .expect("open character corpses");
+        corpses
+            .remove(character_id)
+            .expect("remove character corpse");
     }
     txn.commit().expect("Failed to commit character deletion");
 }

@@ -14,7 +14,7 @@ use crate::auth::{
 };
 use crate::interest::{InterestDirtyQueue, NetworkVisibility, mark_interest_position_changed};
 use crate::messaging;
-use crate::persistence::{self, CharacterData, ClientId, GameDatabase};
+use crate::persistence::{self, ClientId, GameDatabase};
 use crate::terrain_height::{GRAVITY, GROUND_SNAP_THRESHOLD, TerrainHeightMap};
 
 #[path = "networking_movement.rs"]
@@ -274,11 +274,19 @@ fn log_replication_state(replicated: &ReplicatedQuery, client_id: u64, flags: &[
     );
 }
 
+type DisconnectPlayer = (
+    &'static Position,
+    &'static Health,
+    &'static Player,
+    &'static ClientId,
+    Option<&'static crate::death::PlayerDeathState>,
+);
+
 /// When a client disconnects, save data and clean up.
 fn on_client_disconnected(
     trigger: On<Remove, Connected>,
     conn_query: DisconnectQuery,
-    player_query: Query<(&Position, &Health, &Player, &ClientId)>,
+    player_query: Query<DisconnectPlayer>,
     db: Option<Res<GameDatabase>>,
     mut connected: ResMut<ConnectedAccounts>,
     mut commands: Commands,
@@ -304,18 +312,15 @@ fn on_client_disconnected(
 /// Save player data and despawn the entity on disconnect.
 fn save_and_despawn(
     db: &Option<Res<GameDatabase>>,
-    player_query: &Query<(&Position, &Health, &Player, &ClientId)>,
+    player_query: &Query<DisconnectPlayer>,
     entity: Entity,
     in_world: Option<&InWorld>,
     commands: &mut Commands,
 ) {
     if let (Some(db), Some(_)) = (db.as_ref(), in_world)
-        && let Ok((pos, health, player, cid)) = player_query.get(entity)
+        && let Ok((pos, health, player, cid, death)) = player_query.get(entity)
     {
-        let mut data = persistence::load_character(&db.db, cid.0)
-            .unwrap_or_else(|| CharacterData::from_components(player, pos, health));
-        data.sync_live_components(player, pos, health);
-        persistence::save_character(&db.db, cid.0, &data);
+        persistence::save_live_character(&db.db, cid.0, player, pos, health, death);
         info!("Saved character data for character_id {}", cid.0);
     }
     queue_player_despawn(commands, entity);
