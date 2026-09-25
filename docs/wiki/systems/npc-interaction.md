@@ -64,5 +64,5 @@ The house comes from the auctioneer's FactionTemplate `FactionGroup` (TrinityCor
 ## Known gaps
 
 - Orgrimmar NPCs are not spawned live: `zones.rs` spawns map 0 only.
-- Role frames (vendor lists, trainer lists, bank, flight map, binder) have no server content yet; only the open/route/close contract exists.
+- Role frames other than the vendor ([merchant](merchant.md)) and the auction house (trainer lists, bank, flight map, binder) have no server content yet; only the open/route/close contract exists.
 - `shared::death::NPC_FLAG_SPIRIT_HEALER` is 0x0800 (VENDOR_REAGENT); the real spirit healer bit is 0x4000 (Spirit Healer 6491 has npcflag 16385), so the spirit-healer check in `death.rs` does not match real spirit healers.

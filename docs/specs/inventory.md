@@ -30,7 +30,7 @@ Owner-only bag and equipment state for the in-game bag and character frames (gam
 - [ ] Dual wield and weapon/armor skills are not tracked: one-handers equip to the main hand only.
 - [ ] Items arriving by trade, mail or loot take a free slot rather than stacking onto existing stacks; soulbound items are not blocked from trade.
 - [ ] Neck, finger, trinket and ranged slots have no server storage (`WRONG_SLOT`).
-- [ ] Bag-item durability is not tracked (`None`); equipped durability comes from the per-slot durability state.
+- [ ] Bag-item durability is not tracked (`None`); equipped durability is the saved per-item state (max from `item_template.MaxDurability`, see [merchant](merchant.md)).
 - [ ] Items offered in an open trade are not locked; trade completion re-validates them.
 - [ ] Equipped items do not feed `stats::EquippedItems`: the server has no item stats (phase 4 blocker).
 
