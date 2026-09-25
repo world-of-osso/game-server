@@ -404,6 +404,10 @@ fn startup_load_world_data(mut commands: Commands) {
     let gossip =
         crate::npc_interaction::load_gossip_catalog(&conn).expect("Failed to load gossip menus");
     commands.insert_resource(gossip);
+    let vendors =
+        crate::merchant::load_vendor_catalog(&conn).expect("Failed to load content_npc_vendor");
+    info!("Loaded {} vendor lists", vendors.vendors.len());
+    commands.insert_resource(vendors);
 }
 
 pub struct WorldDataPlugin;

@@ -33,6 +33,7 @@ mod inventory;
 mod item_stats;
 mod item_templates;
 mod lfg;
+mod merchant;
 mod messaging;
 mod networking;
 mod npc_interaction;
@@ -150,6 +151,7 @@ fn add_world_plugins(app: &mut App) {
         .add_plugins(combat::CombatPlugin)
         .add_plugins(unit_target::UnitTargetPlugin)
         .add_plugins(npc_interaction::NpcInteractionPlugin)
+        .add_plugins(merchant::MerchantPlugin)
         .add_plugins(spell_info::SpellInfoPlugin)
         .add_plugins(spell_cast::SpellCastPlugin)
         .add_plugins(auras::AuraPlugin)

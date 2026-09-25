@@ -24,7 +24,7 @@ use crate::persistence::{self, GameDatabase};
 use crate::stats::EquippedItems;
 
 #[path = "inventory_model.rs"]
-mod inventory_model;
+pub(crate) mod inventory_model;
 
 use inventory_model::{InventoryModel, InventoryView, diff_views, error};
 
@@ -79,7 +79,7 @@ impl InventoryStore<'_> {
     }
 }
 
-fn load_model(
+pub(crate) fn load_model(
     db: &Database,
     templates: &ItemTemplates,
     character_id: u64,

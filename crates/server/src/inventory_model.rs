@@ -746,6 +746,132 @@ impl InventoryModel {
         ))
     }
 
+    pub(crate) fn gold(&self) -> u32 {
+        self.gold
+    }
+
+    pub(crate) fn set_gold(&mut self, gold: u32) {
+        self.gold = gold;
+    }
+
+    /// Items of `item_id` in bags and equipment.
+    pub(crate) fn owned_count(&self, item_id: u32) -> u32 {
+        self.bags
+            .iter()
+            .flatten()
+            .flatten()
+            .chain(self.equipped.values())
+            .chain(&self.overflow)
+            .filter(|item| item.item_id == item_id)
+            .map(|item| item.stack_count)
+            .sum()
+    }
+
+    /// The bag item with `item_guid`.
+    pub(crate) fn bag_item(&self, item_guid: u64) -> Option<&InventoryItemData> {
+        self.bags
+            .iter()
+            .flatten()
+            .flatten()
+            .find(|item| item.item_guid == item_guid)
+    }
+
+    /// Remove `count` of the bag stack `item_guid` (0 or the stack size takes all).
+    /// A partial take is a new item with guid `mint()` (AzerothCore `CloneItem`).
+    pub(crate) fn take_bag_item(
+        &mut self,
+        item_guid: u64,
+        count: u32,
+        mint: &mut impl FnMut() -> u64,
+    ) -> Result<InventoryItemData, InventoryError> {
+        let cell = self
+            .bags
+            .iter_mut()
+            .flatten()
+            .find(|cell| {
+                cell.as_ref()
+                    .is_some_and(|item| item.item_guid == item_guid)
+            })
+            .ok_or_else(|| {
+                error(
+                    InventoryErrorReason::ItemNotFound,
+                    format!("no bag item {item_guid}"),
+                )
+            })?;
+        let item = cell.as_mut().expect("found item");
+        if count == 0 || count == item.stack_count {
+            let taken = cell.take().expect("found item");
+            return Ok(taken);
+        }
+        if count > item.stack_count {
+            return Err(error(
+                InventoryErrorReason::TooFewToSplit,
+                format!("cannot take {count} from a stack of {}", item.stack_count),
+            ));
+        }
+        item.stack_count -= count;
+        let mut taken = item.clone();
+        taken.item_guid = mint();
+        taken.stack_count = count;
+        if let Some(meta) = self.instances.get(&item_guid).copied() {
+            self.instances.insert(taken.item_guid, meta);
+        }
+        Ok(taken)
+    }
+
+    /// AzerothCore `CanStoreNewItem` + `StoreNewItem`: top up existing stacks of the
+    /// item, then fill empty bag slots with full stacks. The first new stack keeps
+    /// `item`'s guid, later ones get `mint()`. Nothing changes when it doesn't fit.
+    pub(crate) fn store_item(
+        &mut self,
+        item: InventoryItemData,
+        template: ItemTemplate,
+        mint: &mut impl FnMut() -> u64,
+    ) -> OpResult {
+        self.templates.insert(item.item_id, template);
+        let max_stack = template.max_stack.max(1);
+        let room: u32 = self
+            .bags
+            .iter()
+            .flatten()
+            .map(|cell| match cell {
+                None => max_stack,
+                Some(other) if other.item_id == item.item_id => {
+                    max_stack.saturating_sub(other.stack_count)
+                }
+                Some(_) => 0,
+            })
+            .fold(0u32, u32::saturating_add);
+        if room < item.stack_count {
+            return Err(error(
+                InventoryErrorReason::InvFull,
+                format!("no room for {} of item {}", item.stack_count, item.item_id),
+            ));
+        }
+        let mut left = item.stack_count;
+        for other in self.bags.iter_mut().flatten().flatten() {
+            if left == 0 {
+                break;
+            }
+            if other.item_id == item.item_id && other.stack_count < max_stack {
+                let moved = left.min(max_stack - other.stack_count);
+                other.stack_count += moved;
+                left -= moved;
+            }
+        }
+        let mut guid = Some(item.item_guid);
+        while left > 0 {
+            let (bag, slot) = self.first_free_cell().expect("room was counted");
+            let count = left.min(max_stack);
+            let mut stack = item.clone();
+            stack.item_guid = guid.take().unwrap_or_else(&mut *mint);
+            stack.stack_count = count;
+            self.bags[bag][slot] = Some(stack);
+            left -= count;
+        }
+        Ok(())
+    }
+
     /// Compact bag items: quality descending, then item id, then larger stacks first.
     pub(crate) fn sort_bags(&mut self) -> OpResult {
         let mut items: Vec<_> = self
