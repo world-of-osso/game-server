@@ -330,6 +330,7 @@ impl GuildVault<'_, '_> {
             kind,
             actor: member.name.clone(),
             item_id: 0,
+            item_name: String::new(),
             count: 0,
             copper: 0,
             time: unix_now(),
@@ -517,6 +518,7 @@ fn deposit(vault: &mut GuildVault, member: &Member, req: GuildBankDeposit) -> Gu
         Some(req.tab),
         GuildBankLogData {
             item_id: item.item_id,
+            item_name: item.name.clone(),
             count: item.stack_count,
             ..vault.log(member, GuildBankLogKindData::DepositItem)
         },
@@ -559,6 +561,7 @@ fn withdraw(vault: &mut GuildVault, member: &Member, req: GuildBankWithdraw) -> 
         Some(req.tab),
         GuildBankLogData {
             item_id: item.item_id,
+            item_name: item.name.clone(),
             count: item.stack_count,
             ..vault.log(member, GuildBankLogKindData::WithdrawItem)
         },
@@ -728,6 +731,7 @@ fn send_log(vault: &mut GuildVault, member: &Member, req: GuildBankQueryLog) -> 
             kind: log_kind(entry.kind),
             actor: entry.actor.clone(),
             item_id: entry.item_id,
+            item_name: entry.item_name.clone(),
             count: entry.count,
             copper: entry.copper,
             seconds_ago: now.saturating_sub(entry.time),

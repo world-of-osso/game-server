@@ -13,7 +13,8 @@ Quest, vendor, trainer, loot, gossip and item content comes from AzerothCore (Wr
 | `quest_offer_reward` / `quest_request_items` | 8,660 / 7,757 | Turn-in and progress text |
 | `quest_poi` / `quest_poi_points` | 18,771 / 57,166 | Quest map blobs |
 | `creature_queststarter` / `creature_questender` | 7,445 / 7,901 | NPC → quest |
-| `gameobject_queststarter` / `gameobject_questender` | 457 / 457 | Object → quest (gameobject templates/spawns not imported) |
+| `gameobject_queststarter` / `gameobject_questender` | 457 / 457 | Object → quest |
+| `gameobject_template` / `gameobject_template_addon` / `gameobject` | 21,581 / 21,493 / 96,459 | Game object templates and spawns ([[game-objects]]) |
 | `npc_vendor` | 37,585 (2,018 vendors) | Vendor item lists; negative `item` = reference to another vendor |
 | `trainer` / `trainer_spell` / `creature_default_trainer` | 126 / 6,417 / 806 | Trainer system AzerothCore `ObjectMgr` loads (`trainer.Type` 0 class, 1 mount, 2 tradeskill, 3 pet) |
 | `npc_trainer` | 4,934 | Legacy trainer table; **not read by AzerothCore** (`ObjectMgr.cpp` queries only `trainer_spell`/`creature_default_trainer`) |
@@ -84,6 +85,7 @@ TaxiNodes: 335 of 363 (92.3%) same id + name; 22 same id renamed by Cataclysm (`
 | `content_trainer_spell` | Class trainers (`trainer.Type = 0`): Retail class skill line spells (`skill_line` CategoryID 7 named like `chr_classes`, ClassMask 0 or class bit, AcquireMethod 2/4, not passive), `ReqLevel` = `spell_levels.SpellLevel`, cost 0. Other trainers: AzerothCore rows whose spell and ReqAbility ids map | 3,924 | 3,366 (2,418 class ranks, 948 unmapped) |
 | `content_quest_template` | Id in Retail `quest_v2`; unmapped `RewardItemN`/`RewardChoiceItemIDN` (+ amounts) and `RewardSpell`/`RewardDisplaySpell` set to 0 | 8,492 | 972 (+225 reward items, 247 reward spells zeroed) |
 | `content_quest_template_addon`, `_offer_reward`, `_request_items`, `_poi`, `_poi_points`, `content_{creature,gameobject}_quest{starter,ender}` | Rows of kept quests | 8,492 / 7,904 / 6,936 / 16,999 / 52,201 / 6,922 / 7,270 / 393 / 391 | 972 / 756 / 821 / 1,772 / 4,965 / 523 / 631 / 64 / 66 |
+| `content_gameobject_template`, `_template_addon`, `content_gameobject` | Template kept if `displayId` is 0 or a Retail `game_object_display_info` row; addons/spawns need a kept template | 21,269 / 21,181 / 95,979 | 312 / 312 / 480 |
 | `content_{creature,gameobject,reference,item}_loot_template` | Row kept if item maps (reference rows kept); `item_loot_template` also needs a mapped container | 244,583 / 17,794 / 44,132 / 4,933 | 4,883 / 163 / 404 / 64 |
 
 Taxi is not derived: `db2.py` imports Retail `taxi_nodes` (1,464), `taxi_path` (8,690) and `taxi_path_node` (127,438) directly. The same import adds `item`, `item_sparse`, `item_appearance`, `item_modified_appearance`, `quest_v2`, and `durability_costs` (1,300 item levels) / `durability_quality` (18) for repair costs ([merchant](merchant.md)). Creature display ids stay as imported (`creature_template_model`).

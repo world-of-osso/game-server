@@ -132,13 +132,13 @@ fn guild_master_deposit_and_withdraw_are_logged() {
     let entries: Vec<_> = log
         .entries
         .iter()
-        .map(|e| (e.kind, e.actor.as_str(), e.item_id, e.count))
+        .map(|e| (e.kind, e.actor.as_str(), e.item_name.as_str(), e.count))
         .collect();
     assert_eq!(
         entries,
         vec![
-            (GuildBankLogKind::DepositItem, "Banker", LINEN, 20),
-            (GuildBankLogKind::WithdrawItem, "Banker", LINEN, 20),
+            (GuildBankLogKind::DepositItem, "Banker", "Linen Cloth", 20),
+            (GuildBankLogKind::WithdrawItem, "Banker", "Linen Cloth", 20),
         ]
     );
     h.send::<_, GuildBankChannel>(GuildBankQueryLog {

@@ -116,6 +116,7 @@ pub struct GuildBankLogData {
     pub kind: GuildBankLogKindData,
     pub actor: String,
     pub item_id: u32,
+    pub item_name: String,
     pub count: u32,
     pub copper: u64,
     /// Unix seconds.

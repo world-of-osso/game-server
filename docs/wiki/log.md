@@ -252,3 +252,7 @@ Created `systems/quests.md` (quest data, rules, runtime) and `specs/quests.md`; 
 ## [2026-09-24] create | Merchant
 
 [[merchant]]: vendor list/buy/sell/buyback/repair (AzerothCore rules), per-item durability from item_template.MaxDurability with Retail DurabilityCosts/DurabilityQuality repair costs; [[content-import]] db2.py imports durability_costs/durability_quality.
+
+## [2026-09-25] create | Banks
+
+[[banks]]: character bank and Warband bank at bankers (Retail BankTab prices), guild bank at Guild Vaults with default ranks, per-rank tab rights, daily reset and logs; [[game-objects]]: type 34 vault spawns with GeoBox reach; [[content-import]] imports gameobject tables, GameObjectDisplayInfo and BankTab.
