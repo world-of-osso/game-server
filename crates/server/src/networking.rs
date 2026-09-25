@@ -388,19 +388,24 @@ fn on_player_link_inserted(
     );
 }
 
-/// Send the initial terrain loading command to a client.
-pub fn send_load_terrain(connection: Entity, senders: &mut Query<&mut MessageSender<LoadTerrain>>) {
+/// Send the initial terrain loading command for the tile under the entering character;
+/// the client's loading screen waits for exactly this tile.
+pub fn send_load_terrain(
+    connection: Entity,
+    position: &Position,
+    senders: &mut Query<&mut MessageSender<LoadTerrain>>,
+) {
     let Ok(mut sender) = senders.get_mut(connection) else {
         warn!("No MessageSender<LoadTerrain> on connection entity");
         return;
     };
-    let msg = LoadTerrain {
+    let (tile_y, tile_x) = position_tile(position);
+    sender.send::<TerrainChannel>(LoadTerrain {
         map_name: "azeroth".into(),
-        initial_tile_y: 32,
-        initial_tile_x: 48,
-    };
-    sender.send::<TerrainChannel>(msg);
-    info!("Sent LoadTerrain: azeroth tile (32, 48)");
+        initial_tile_y: tile_y,
+        initial_tile_x: tile_x,
+    });
+    info!("Sent LoadTerrain: azeroth tile ({tile_y}, {tile_x})");
 }
 
 #[derive(SystemParam)]

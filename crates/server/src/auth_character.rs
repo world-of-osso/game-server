@@ -291,7 +291,11 @@ fn handle_select(
     }
     insert_world_components(commands, selection.connection, player_entity, character_id);
     send_enter_success(selection.connection, enter_senders, player_entity);
-    send_load_terrain(selection.connection, terrain_senders);
+    send_load_terrain(
+        selection.connection,
+        &persisted_player_position(&data),
+        terrain_senders,
+    );
     info!(
         "Character {} entered world (account {})",
         character_id, selection.account_id

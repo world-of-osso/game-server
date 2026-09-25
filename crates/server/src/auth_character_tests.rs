@@ -385,3 +385,92 @@ fn entering_world_sends_one_system_motd_message() {
     assert_eq!(messages[0].channel, ChatType::System);
     assert_eq!(messages[0].content, "Raid reset is Tuesday.");
 }
+
+#[derive(Resource, Default)]
+struct TerrainReplies(Vec<LoadTerrain>);
+
+fn collect_terrain_replies(
+    mut receivers: Query<&mut MessageReceiver<LoadTerrain>>,
+    mut replies: ResMut<TerrainReplies>,
+) {
+    for mut receiver in &mut receivers {
+        replies.0.extend(receiver.receive());
+    }
+}
+
+/// First `LoadTerrain` a character saved at WoW `(x, y, z)` receives on entering the world.
+fn initial_terrain_on_enter(wow_position: (f32, f32, f32)) -> LoadTerrain {
+    let db = test_db();
+    let account_id = 21;
+    let (character_id, _) = persistence::create_character(&db.db, account_id, "Tilewalker", 1, 1)
+        .expect("character should be created");
+    let mut data = persistence::load_character(&db.db, character_id).expect("character data");
+    // CharacterData stores WoW coordinates.
+    (data.x, data.y, data.z) = wow_position;
+    persistence::save_character(&db.db, character_id, &data);
+
+    let mut app = App::new();
+    app.add_plugins(MinimalPlugins);
+    app.add_plugins(bevy::state::app::StatesPlugin);
+    app.add_plugins(lightyear::prelude::server::ServerPlugins {
+        tick_duration: Duration::from_millis(50),
+    });
+    app.register_message::<SelectCharacter>();
+    app.register_message::<EnterWorldResponse>();
+    app.register_message::<LoadTerrain>();
+    app.insert_resource(db);
+    app.add_plugins(DeathPlugin);
+    app.add_systems(Update, process_select_character);
+    app.init_resource::<TerrainReplies>();
+    app.add_systems(Last, collect_terrain_replies);
+    app.finish();
+    app.cleanup();
+    let connection = app
+        .world_mut()
+        .spawn((
+            RemoteId(PeerId::Local(account_id)),
+            Connected,
+            HostClient { buffer: Vec::new() },
+            Authenticated { account_id },
+            MessageSender::<SelectCharacter>::default(),
+            MessageReceiver::<SelectCharacter>::default(),
+            MessageSender::<EnterWorldResponse>::default(),
+            MessageReceiver::<EnterWorldResponse>::default(),
+            MessageSender::<LoadTerrain>::default(),
+            MessageReceiver::<LoadTerrain>::default(),
+        ))
+        .id();
+    app.world_mut()
+        .get_mut::<MessageSender<SelectCharacter>>(connection)
+        .unwrap()
+        .send::<AuthChannel>(SelectCharacter { character_id });
+    for _ in 0..4 {
+        app.update();
+    }
+    app.world()
+        .resource::<TerrainReplies>()
+        .0
+        .first()
+        .cloned()
+        .expect("entering the world sends LoadTerrain")
+}
+
+#[test]
+fn entering_world_loads_the_tile_under_the_character() {
+    // Auctioneer Fitch, Stormwind Trade District: ADT azeroth_30_48 (row 30, column 48).
+    let stormwind = initial_terrain_on_enter((-8821.0, 660.8, 97.5));
+    assert_eq!(
+        (
+            stormwind.map_name.as_str(),
+            stormwind.initial_tile_y,
+            stormwind.initial_tile_x
+        ),
+        ("azeroth", 30, 48)
+    );
+    // Northshire Abbey: ADT azeroth_32_48.
+    let northshire = initial_terrain_on_enter((-8949.0, -132.0, 83.0));
+    assert_eq!(
+        (northshire.initial_tile_y, northshire.initial_tile_x),
+        (32, 48)
+    );
+}
