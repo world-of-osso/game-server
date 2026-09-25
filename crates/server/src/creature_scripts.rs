@@ -19,8 +19,9 @@ impl Plugin for CreatureScriptsPlugin {
 /// never dies, while the combat log still reports the full hit (it is sent
 /// before `DealDamage`). Its 5 s `resetTimer`, restarted by every hit, is the
 /// shared combat grace, which only damage refreshes; when it runs out the
-/// dummy evades and `_EnterEvadeMode` → `RemoveEvadeAuras` strips the auras
-/// others put on it.
+/// dummy evades: `_EnterEvadeMode` → `RemoveEvadeAuras` strips the auras
+/// others put on it and `CombatStop` → `RemoveAllAttackers` stops the players
+/// still auto-attacking it (out of range, so no hit refreshes the timer).
 #[derive(Component, Debug, Default)]
 pub struct TrainingDummy {
     /// `CombatStatus` seen last tick, to catch the evade.
@@ -56,6 +57,7 @@ fn training_dummy_evade_system(world: &mut World) {
         auras::remove_auras(world, dummy, RemoveReason::Evade, |aura| {
             aura.caster != dummy
         });
+        crate::combat::combat_stop(world, dummy);
     }
 }
 

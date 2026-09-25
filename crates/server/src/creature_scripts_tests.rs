@@ -121,3 +121,42 @@ fn melee_swings_on_the_dummy_reach_the_attackers_combat_log() {
     assert!(h.inbox.log.iter().all(|e| e.kind != CombatLogKind::Death));
     assert_eq!(h.health(h.npc), DUMMY_HEALTH);
 }
+
+/// Evade → `CombatStop` → `RemoveAllAttackers`: a player still auto-attacking
+/// the dummy from out of range stops, and leaves combat after the grace.
+#[test]
+fn evade_stops_out_of_range_attackers_and_they_leave_combat() {
+    let Some(mut h) = dummy_harness() else {
+        return;
+    };
+    let (caster, dummy) = (h.caster, h.npc);
+    h.app
+        .world_mut()
+        .entity_mut(caster)
+        .insert(crate::networking::CombatTarget(Some(dummy)));
+    h.advance(3);
+    h.app
+        .world_mut()
+        .entity_mut(caster)
+        .insert(shared::components::Position {
+            x: 40.0,
+            y: 0.0,
+            z: 0.0,
+        });
+    // Past the dummy's 5 s reset timer: it evades.
+    h.advance(110);
+    assert!(!in_combat(&h));
+    assert!(
+        h.app
+            .world()
+            .get::<crate::combat::AutoAttack>(caster)
+            .is_none(),
+        "the evade stops the attacker's auto-attack"
+    );
+    // The attacker's own 5 s combat grace then runs out.
+    h.advance(110);
+    assert_eq!(
+        h.app.world().get::<CombatStatus>(caster),
+        Some(&CombatStatus(false))
+    );
+}
