@@ -171,14 +171,14 @@ pub fn process_select_character(
     db: Option<Res<GameDatabase>>,
     mut enter_senders: Query<&mut MessageSender<EnterWorldResponse>>,
     mut terrain_senders: Query<&mut MessageSender<LoadTerrain>>,
-    existing_players: Query<(Entity, &ClientId)>,
+    existing_players: Query<LivePlayer>,
     mut commands: Commands,
     mut player_deaths: MessageWriter<crate::death::PlayerDeathTransition>,
 ) {
     let Some(db) = db.as_ref() else { return };
     let requests: Vec<_> = collect_select_requests(&mut receivers);
     for (entity, account_id, req) in requests {
-        despawn_stale_player(&existing_players, req.character_id, &mut commands);
+        save_and_despawn_stale_player(&db.db, &existing_players, req.character_id, &mut commands);
         handle_select(
             CharacterSelection {
                 connection: entity,
@@ -231,16 +231,36 @@ pub(crate) fn push_unique_select_request(
     true
 }
 
-pub(crate) fn despawn_stale_player(
-    existing: &Query<(Entity, &ClientId)>,
+/// A player entity still in the world, with what `save_live_character` writes.
+pub(crate) type LivePlayer = (
+    Entity,
+    &'static ClientId,
+    Option<(
+        &'static Player,
+        &'static Position,
+        &'static Health,
+        Option<&'static crate::death::PlayerDeathState>,
+    )>,
+);
+
+/// The character is entering the world again while an older session's player is
+/// still there (re-auth): save that player's live state first, so the new player
+/// loads where the old one was, then despawn it.
+pub(crate) fn save_and_despawn_stale_player(
+    db: &redb::Database,
+    existing: &Query<LivePlayer>,
     character_id: u64,
     commands: &mut Commands,
 ) {
-    for (entity, cid) in existing.iter() {
-        if cid.0 == character_id {
-            warn!("Despawning stale player entity {entity:?} for character {character_id}");
-            queue_player_despawn(commands, entity);
+    for (entity, cid, live) in existing.iter() {
+        if cid.0 != character_id {
+            continue;
         }
+        if let Some((player, position, health, death)) = live {
+            persistence::save_live_character(db, character_id, player, position, health, death);
+        }
+        warn!("Despawning stale player entity {entity:?} for character {character_id}");
+        queue_player_despawn(commands, entity);
     }
 }
 

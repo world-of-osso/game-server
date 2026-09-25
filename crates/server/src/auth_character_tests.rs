@@ -605,3 +605,64 @@ fn character_saved_after_resurrection_logs_in_alive() {
     );
     assert_eq!(player.get::<Health>().unwrap().current, 50.0);
 }
+
+/// A second session of the same account (re-auth) selects the character again while
+/// the first session's player is still in the world.
+fn select_again(app: &mut App, account_id: u64, character_id: u64) {
+    let connection = app
+        .world_mut()
+        .spawn((
+            RemoteId(PeerId::Local(account_id + 100)),
+            Connected,
+            HostClient { buffer: Vec::new() },
+            Authenticated { account_id },
+            MessageSender::<SelectCharacter>::default(),
+            MessageReceiver::<SelectCharacter>::default(),
+            MessageSender::<EnterWorldResponse>::default(),
+            MessageReceiver::<EnterWorldResponse>::default(),
+            MessageSender::<LoadTerrain>::default(),
+            MessageReceiver::<LoadTerrain>::default(),
+            MessageSender::<DeathStateUpdate>::default(),
+            MessageReceiver::<DeathStateUpdate>::default(),
+        ))
+        .id();
+    app.world_mut()
+        .get_mut::<MessageSender<SelectCharacter>>(connection)
+        .unwrap()
+        .send::<AuthChannel>(SelectCharacter { character_id });
+    app.update();
+    app.update();
+}
+
+#[test]
+fn re_entering_the_world_keeps_where_the_old_session_moved_to() {
+    let db = test_db();
+    let account_id = 11;
+    let (character_id, _) = persistence::create_character(&db.db, account_id, "Relogger", 1, 1)
+        .expect("character should be created");
+    let (mut app, stale) = select_character_in_world(db, account_id, character_id);
+    // The old session flew to Sentinel Hill (Bevy space) and was never saved.
+    let landed = shared::components::Position {
+        x: -10550.8,
+        y: 59.07,
+        z: -1034.49,
+    };
+    *app.world_mut()
+        .get_mut::<shared::components::Position>(stale)
+        .unwrap() = landed;
+
+    select_again(&mut app, account_id, character_id);
+
+    let fresh = app
+        .world_mut()
+        .query::<(Entity, &ClientId, &shared::components::Position)>()
+        .iter(app.world())
+        .find(|(entity, client_id, _)| client_id.0 == character_id && *entity != stale)
+        .map(|(_, _, position)| *position)
+        .expect("the new session spawns a player");
+    assert_eq!(fresh, landed, "the new player starts where the old one was");
+    let stored =
+        persistence::load_character(&app.world().resource::<GameDatabase>().db, character_id)
+            .unwrap();
+    assert_eq!((stored.x, stored.y, stored.z), (-10550.8, 1034.49, 59.07));
+}

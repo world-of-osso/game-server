@@ -462,6 +462,8 @@ mod tests {
         app.add_plugins(bevy::MinimalPlugins);
 
         let character_id = 77;
+        let dir = tempfile::tempdir().unwrap();
+        let db = redb::Database::create(dir.path().join("game.redb")).unwrap();
         let player = app
             .world_mut()
             .spawn((ClientId(character_id), ReplicationTag, VisibilityTag))
@@ -470,8 +472,8 @@ mod tests {
         app.add_systems(
             Update,
             (
-                move |existing: Query<(Entity, &ClientId)>, mut commands: Commands| {
-                    despawn_stale_player(&existing, character_id, &mut commands);
+                move |existing: Query<LivePlayer>, mut commands: Commands| {
+                    save_and_despawn_stale_player(&db, &existing, character_id, &mut commands);
                 },
                 move |mut commands: Commands| {
                     commands
