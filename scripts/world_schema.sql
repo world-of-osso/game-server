@@ -189,7 +189,7 @@ CREATE TABLE creature_formations (
   PRIMARY KEY (memberGUID)
 );
 
--- Quest/vendor/trainer/loot/gossip/item content. Column order matches the AzerothCore
+-- Quest/vendor/loot/gossip/item content. Column order matches the AzerothCore
 -- dump CREATE TABLE (positional INSERTs); MySQL int/float/text -> INTEGER/REAL/TEXT.
 
 DROP TABLE IF EXISTS quest_template;
@@ -413,50 +413,6 @@ CREATE TABLE npc_vendor (
   ExtendedCost INTEGER NOT NULL DEFAULT 0,
   VerifiedBuild INTEGER DEFAULT NULL,
   PRIMARY KEY (entry, item, ExtendedCost)
-);
-
-DROP TABLE IF EXISTS npc_trainer;
-CREATE TABLE npc_trainer (
-  ID INTEGER NOT NULL DEFAULT 0,
-  SpellID INTEGER NOT NULL DEFAULT 0,
-  MoneyCost INTEGER NOT NULL DEFAULT 0,
-  ReqSkillLine INTEGER NOT NULL DEFAULT 0,
-  ReqSkillRank INTEGER NOT NULL DEFAULT 0,
-  ReqLevel INTEGER NOT NULL DEFAULT 0,
-  ReqSpell INTEGER NOT NULL DEFAULT 0,
-  PRIMARY KEY (ID, SpellID)
-);
-
-DROP TABLE IF EXISTS trainer;
-CREATE TABLE trainer (
-  Id INTEGER NOT NULL DEFAULT 0,
-  Type INTEGER NOT NULL DEFAULT 2,
-  Requirement INTEGER NOT NULL DEFAULT 0,
-  Greeting TEXT,
-  VerifiedBuild INTEGER DEFAULT 0,
-  PRIMARY KEY (Id)
-);
-
-DROP TABLE IF EXISTS trainer_spell;
-CREATE TABLE trainer_spell (
-  TrainerId INTEGER NOT NULL DEFAULT 0,
-  SpellId INTEGER NOT NULL DEFAULT 0,
-  MoneyCost INTEGER NOT NULL DEFAULT 0,
-  ReqSkillLine INTEGER NOT NULL DEFAULT 0,
-  ReqSkillRank INTEGER NOT NULL DEFAULT 0,
-  ReqAbility1 INTEGER NOT NULL DEFAULT 0,
-  ReqAbility2 INTEGER NOT NULL DEFAULT 0,
-  ReqAbility3 INTEGER NOT NULL DEFAULT 0,
-  ReqLevel INTEGER NOT NULL DEFAULT 0,
-  VerifiedBuild INTEGER DEFAULT 0,
-  PRIMARY KEY (TrainerId, SpellId)
-);
-
-DROP TABLE IF EXISTS creature_default_trainer;
-CREATE TABLE creature_default_trainer (
-  CreatureId INTEGER NOT NULL,
-  TrainerId INTEGER NOT NULL DEFAULT 0,
-  PRIMARY KEY (CreatureId)
 );
 
 DROP TABLE IF EXISTS creature_loot_template;

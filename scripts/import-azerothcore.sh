@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 # Import AzerothCore MySQL dumps + retail spell CSVs into SQLite world.db.
 #
-# World content (creatures, quests, vendors, trainers, loot, gossip, items): AzerothCore
+# World content (creatures, quests, vendors, loot, gossip, items): AzerothCore
 # MySQL dumps → mysql_dump.py → SQLite
 # Spell/class/item/quest/taxi data: build-pinned Retail DB2 CSVs (game-engine/data/db2/<build>/) → db2.py import
+# Retail profession trainers + skill tier caps: TrinityCore TDB1210 excerpts
+# (data/reference/tdb1210/<table>.sql) → mysql_dump.py --prefix tdb_ → tdb_* tables
 # Server-read content_* tables: content_policy.py (Retail-first ID mapping)
 #
 # Usage: ./scripts/import-azerothcore.sh [path/to/azerothcore/data/sql/base/db_world]
@@ -15,7 +17,8 @@ DB_PATH="$PROJECT_DIR/data/world.db"
 
 SQL_DIR="${1:-/home/osso/Repos/azerothcore/data/sql/base/db_world}"
 DB2_CSV_ROOT="${DB2_CSV_ROOT:-$PROJECT_DIR/../game-engine/data/db2}"
-# TrinityCore Retail world DB excerpts (creature_template, creature_template_model) for Retail displays.
+# TrinityCore Retail world DB excerpts: creature_template/creature_template_model for Retail displays,
+# trainer tables and skill_tiers for profession trainers.
 TDB_DIR="${TDB_DIR:-$PROJECT_DIR/data/reference/tdb1210}"
 
 # Tables loaded from same-named dumps in $SQL_DIR (<table>.sql); DDL in world_schema.sql.
@@ -24,7 +27,7 @@ DUMP_TABLES=(
     creature_addon creature_template_addon creature_formations
     quest_template quest_template_addon quest_offer_reward quest_request_items quest_poi quest_poi_points
     creature_queststarter creature_questender gameobject_queststarter gameobject_questender
-    npc_vendor npc_trainer trainer trainer_spell creature_default_trainer
+    npc_vendor
     creature_loot_template gameobject_loot_template reference_loot_template item_loot_template
     gossip_menu gossip_menu_option npc_text broadcast_text points_of_interest item_template
     gameobject_template gameobject_template_addon gameobject
@@ -40,6 +43,18 @@ for table in "${DUMP_TABLES[@]}"; do
     DUMP_ARGS+=("$table=$f")
 done
 
+# Tables loaded from same-named TDB excerpts in $TDB_DIR; DDL in tdb_schema.sql.
+TDB_TABLES=(skill_tiers trainer trainer_spell creature_trainer)
+TDB_ARGS=()
+for table in "${TDB_TABLES[@]}"; do
+    f="$TDB_DIR/$table.sql"
+    if [[ ! -f "$f" ]]; then
+        echo "ERROR: Missing TDB excerpt: $f" >&2
+        exit 1
+    fi
+    TDB_ARGS+=("$table=$f")
+done
+
 python3 "$SCRIPT_DIR/db2.py" check --csv-root "$DB2_CSV_ROOT"
 python3 "$SCRIPT_DIR/content_policy.py" --check --csv-root "$DB2_CSV_ROOT" --tdb-dir "$TDB_DIR"
 
@@ -53,6 +68,11 @@ sqlite3 "$DB_PATH" "PRAGMA journal_mode=WAL;" > /dev/null
 
 echo "  Importing AzerothCore dumps ..."
 python3 "$SCRIPT_DIR/mysql_dump.py" --db "$DB_PATH" --schema "$SCHEMA_SQL" "${DUMP_ARGS[@]}"
+
+# --- TrinityCore TDB import (Retail trainers, skill tiers) ---
+
+echo "  Importing TDB tables ..."
+python3 "$SCRIPT_DIR/mysql_dump.py" --db "$DB_PATH" --schema "$SCRIPT_DIR/tdb_schema.sql" --prefix tdb_ "${TDB_ARGS[@]}"
 
 # --- Retail DB2 CSV import (build-pinned, see db2.py) ---
 

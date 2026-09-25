@@ -1,0 +1,49 @@
+-- TrinityCore TDB (Retail 12.1.0 world DB) tables imported by mysql_dump.py --prefix tdb_
+-- from the per-table excerpts in data/reference/tdb1210/ (see SOURCE.txt there).
+-- Columns follow the TDB1210.26091 DDL. Retail profession trainers and skill tier caps
+-- (SkillTiers is server-side data; Retail 12.x ships no SkillTiers DB2).
+
+DROP TABLE IF EXISTS tdb_skill_tiers;
+CREATE TABLE tdb_skill_tiers (
+  ID INTEGER PRIMARY KEY,
+  Value1 INTEGER NOT NULL DEFAULT 0, Value2 INTEGER NOT NULL DEFAULT 0,
+  Value3 INTEGER NOT NULL DEFAULT 0, Value4 INTEGER NOT NULL DEFAULT 0,
+  Value5 INTEGER NOT NULL DEFAULT 0, Value6 INTEGER NOT NULL DEFAULT 0,
+  Value7 INTEGER NOT NULL DEFAULT 0, Value8 INTEGER NOT NULL DEFAULT 0,
+  Value9 INTEGER NOT NULL DEFAULT 0, Value10 INTEGER NOT NULL DEFAULT 0,
+  Value11 INTEGER NOT NULL DEFAULT 0, Value12 INTEGER NOT NULL DEFAULT 0,
+  Value13 INTEGER NOT NULL DEFAULT 0, Value14 INTEGER NOT NULL DEFAULT 0,
+  Value15 INTEGER NOT NULL DEFAULT 0, Value16 INTEGER NOT NULL DEFAULT 0
+);
+
+DROP TABLE IF EXISTS tdb_trainer;
+CREATE TABLE tdb_trainer (
+  Id INTEGER PRIMARY KEY,
+  Type INTEGER NOT NULL DEFAULT 2,
+  Greeting TEXT,
+  VerifiedBuild INTEGER NOT NULL DEFAULT 0
+);
+
+DROP TABLE IF EXISTS tdb_trainer_spell;
+CREATE TABLE tdb_trainer_spell (
+  TrainerId INTEGER NOT NULL DEFAULT 0,
+  SpellId INTEGER NOT NULL DEFAULT 0,
+  MoneyCost INTEGER NOT NULL DEFAULT 0,
+  ReqSkillLine INTEGER NOT NULL DEFAULT 0,
+  ReqSkillRank INTEGER NOT NULL DEFAULT 0,
+  ReqAbility1 INTEGER NOT NULL DEFAULT 0,
+  ReqAbility2 INTEGER NOT NULL DEFAULT 0,
+  ReqAbility3 INTEGER NOT NULL DEFAULT 0,
+  ReqLevel INTEGER NOT NULL DEFAULT 0,
+  VerifiedBuild INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (TrainerId, SpellId)
+);
+
+DROP TABLE IF EXISTS tdb_creature_trainer;
+CREATE TABLE tdb_creature_trainer (
+  CreatureID INTEGER NOT NULL DEFAULT 0,
+  TrainerID INTEGER NOT NULL DEFAULT 0,
+  MenuID INTEGER NOT NULL DEFAULT 0,
+  OptionID INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (CreatureID, MenuID, OptionID)
+);

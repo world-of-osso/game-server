@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Load the INSERT rows of AzerothCore mysqldump files into existing SQLite tables.
 
-  mysql_dump.py --db PATH [--schema DDL.sql] TABLE=DUMP.sql [TABLE=DUMP.sql ...]
+  mysql_dump.py --db PATH [--schema DDL.sql] [--prefix P] TABLE=DUMP.sql [TABLE=DUMP.sql ...]
 
 --schema runs DDL (e.g. world_schema.sql, which drops and recreates the dump
 tables) in the same transaction as the load, so re-importing into a populated
@@ -9,7 +9,9 @@ world.db replaces only those tables and a failed load leaves them as they were.
 
 Each dump's `INSERT INTO `table` [(cols)] VALUES (...),(...);` statements are
 tokenized with MySQL string escapes (\\' \\" \\\\ \\n \\r \\t \\0 \\Z) decoded, and
-inserted through parameters, so text reaches SQLite verbatim. All tables load in
+inserted through parameters, so text reaches SQLite verbatim. --prefix loads each
+dump table into `<P><table>` (TrinityCore `trainer` → `tdb_trainer`), so dumps
+from another source never replace the AzerothCore tables of the same name. All tables load in
 one transaction; any unparseable token fails the whole load.
 """
 
@@ -80,12 +82,12 @@ def dump_rows(text, table, source):
             yield columns, row
 
 
-def load_table(conn, table, dump_path):
+def load_table(conn, table, dump_path, prefix=""):
     text = Path(dump_path).read_text(encoding="utf-8")
     count = 0
     for columns, row in dump_rows(text, table, dump_path):
         column_sql = f" ({','.join(columns)})" if columns else ""
-        conn.execute(f"INSERT INTO {table}{column_sql} VALUES ({','.join('?' * len(row))})", row)
+        conn.execute(f"INSERT INTO {prefix}{table}{column_sql} VALUES ({','.join('?' * len(row))})", row)
         count += 1
     return count
 
@@ -94,6 +96,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--db", type=Path, required=True)
     parser.add_argument("--schema", type=Path)
+    parser.add_argument("--prefix", default="")
     parser.add_argument("pairs", nargs="+", metavar="TABLE=DUMP")
     args = parser.parse_args()
     conn = sqlite3.connect(args.db, isolation_level=None)
@@ -101,7 +104,7 @@ def main():
         conn.executescript("BEGIN;\n" + (args.schema.read_text() if args.schema else ""))
         for pair in args.pairs:
             table, dump_path = pair.split("=", 1)
-            print(f"  {table}: {load_table(conn, table, dump_path)}")
+            print(f"  {args.prefix}{table}: {load_table(conn, table, dump_path, args.prefix)}")
         conn.execute("COMMIT")
     except BaseException:
         if conn.in_transaction:

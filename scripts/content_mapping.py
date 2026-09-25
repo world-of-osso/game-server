@@ -130,24 +130,10 @@ def report_spells(conn, retail, wrath):
     retail_names = {i: row["Name_lang"] for i, row in read_csv(retail / "SpellName.csv").items()}
     wrath_names = {i: row["Name_lang"] for i, row in read_csv(wrath / "SpellName.csv").items()}
     learnable = column_set(conn, "SELECT DISTINCT Spell FROM skill_line_ability")
-    class_ability_ids = defaultdict(set)  # (name, class id) -> Retail spell ids a class skill line grants
-    for spell, mask in conn.execute("SELECT Spell, ClassMask FROM skill_line_ability WHERE ClassMask > 0"):
-        for class_id in range(1, 32):
-            if mask & (1 << (class_id - 1)) and spell in retail_names:
-                class_ability_ids[(retail_names[spell], class_id)].add(spell)
-    class_of = defaultdict(set)
-    for spell, class_id in conn.execute(
-            "SELECT DISTINCT s.SpellId, t.Requirement FROM trainer_spell s JOIN trainer t ON t.Id = s.TrainerId WHERE t.Type = 0"):
-        class_of[spell].add(class_id)
-    trainer = column_set(conn, "SELECT DISTINCT SpellId FROM trainer_spell")
-    class_trainer = column_set(
-        conn, "SELECT DISTINCT s.SpellId FROM trainer_spell s JOIN trainer t ON t.Id = s.TrainerId WHERE t.Type = 0")
     reward = column_set(conn, "SELECT DISTINCT RewardSpell FROM quest_template WHERE RewardSpell > 0")
     display = column_set(conn, "SELECT DISTINCT RewardDisplaySpell FROM quest_template")
     print("\n## Spells (AzerothCore spell ids, names from Wrath Classic SpellName, vs Retail SpellName)")
     for title, ids in {
-        "trainer_spell (all trainers)": trainer,
-        "trainer_spell (class trainers, trainer.Type=0)": class_trainer,
         "quest_template.RewardSpell": reward,
         "quest_template.RewardDisplaySpell": display,
     }.items():
@@ -155,14 +141,6 @@ def report_spells(conn, retail, wrath):
         print_split(title, split)
         same = [i for i, _ in split.get("same id, same name", [])]
         in_sla = [i for i in same if i in learnable]
-        if "class trainers" in title:
-            ambiguous = [i for i, _ in split.get("id absent, name ambiguous in Retail", [])]
-            resolved = {i: next(iter(ids_)) for i in ambiguous
-                        for ids_ in [set().union(*(class_ability_ids[(wrath_names[i], c)] for c in class_of[i]))]
-                        if len(ids_) == 1}
-            print(f"- of name-ambiguous, resolved to one Retail spell by (name, trainer class) in skill_line_ability:"
-                  f" {len(resolved)}/{len(ambiguous)} e.g. "
-                  + "; ".join(f"{i} {wrath_names[i]!r} -> {r}" for i, r in list(resolved.items())[:EXAMPLES]))
         print(f"- of same-id-same-name, in Retail skill_line_ability: {len(in_sla)}/{len(same)}"
               f"; not, e.g. {[(i, retail_names[i]) for i in same if i not in learnable][:EXAMPLES]}")
 

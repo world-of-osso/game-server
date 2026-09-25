@@ -20,6 +20,7 @@ AZEROTHCORE_SQL = Path(os.environ.get("AZEROTHCORE_SQL", "/home/osso/Repos/azero
 PINNED_CSV_ROOT = Path(os.environ.get("DB2_CSV_ROOT", db2.DEFAULT_CSV_ROOT))
 PINNED_BUILD_DIR = PINNED_CSV_ROOT / db2.DEFAULT_BUILD
 TDB_DIR = Path(os.environ.get("TDB_DIR", content_policy.DEFAULT_TDB_DIR))
+TRAINER_TDB_TABLES = ("skill_tiers", "trainer", "trainer_spell", "creature_trainer")
 
 
 def write_header_only_csvs(csv_dir):
@@ -67,7 +68,7 @@ class CreatureEventImportTests(unittest.TestCase):
         scripts = self.root / "scripts"
         scripts.mkdir()
         (self.root / "data").mkdir()
-        for name in ("import-azerothcore.sh", "world_schema.sql", "db2.py", "db2_schema.sql", "mysql_dump.py", "content_policy.py"):
+        for name in ("import-azerothcore.sh", "world_schema.sql", "db2.py", "db2_schema.sql", "mysql_dump.py", "content_policy.py", "tdb_schema.sql"):
             shutil.copy2(SCRIPTS / name, scripts / name)
         (scripts / "content_overrides.csv").write_text("kind,source_id,retail_id,source_name,retail_name,reason\n")
         self.sql = self.root / "source"
@@ -89,13 +90,13 @@ class CreatureEventImportTests(unittest.TestCase):
         self.db = self.root / "data/world.db"
         self.tdb = self.root / "data/reference/tdb1210"
         self.tdb.mkdir(parents=True)
-        for name in content_policy.TDB_TABLES:
+        for name in (*content_policy.TDB_TABLES, *TRAINER_TDB_TABLES):
             (self.tdb / f"{name}.sql").write_text("-- empty fixture\n")
 
     def run_import(self):
         return subprocess.run(
             [str(self.root / "scripts/import-azerothcore.sh"), str(self.sql)],
-            env={**os.environ, "DB2_CSV_ROOT": str(self.csv)},
+            env={**os.environ, "DB2_CSV_ROOT": str(self.csv), "TDB_DIR": str(self.tdb)},
             capture_output=True,
             text=True,
             timeout=10,
@@ -143,7 +144,28 @@ class CreatureEventImportTests(unittest.TestCase):
         self.assertIn("SpellName.csv", result.stderr)
         self.assertEqual(self.db.read_bytes(), before)
 
-    def test_content_tables_join_quest_vendor_and_trainer_rows(self):
+    def test_tdb_trainer_rows_load_and_azerothcore_trainers_are_not_imported(self):
+        (self.tdb / "trainer.sql").write_text("INSERT INTO `trainer` VALUES (163,2,'TDB greeting',0);\n")
+        (self.tdb / "creature_trainer.sql").write_text("INSERT INTO `creature_trainer` VALUES (1346,163,4353,0);\n")
+        result = self.run_import()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        with sqlite3.connect(self.db) as conn:
+            tables = {name for (name,) in conn.execute("SELECT name FROM sqlite_master WHERE type = 'table'")}
+            for dead in ("trainer", "trainer_spell", "npc_trainer", "creature_default_trainer", "content_trainer_spell"):
+                self.assertNotIn(dead, tables)
+            self.assertEqual(conn.execute("SELECT Id, Greeting FROM tdb_trainer").fetchall(), [(163, "TDB greeting")])
+            self.assertEqual(conn.execute("SELECT * FROM tdb_creature_trainer").fetchall(), [(1346, 163, 4353, 0)])
+
+    def test_missing_tdb_excerpt_does_not_destroy_existing_database(self):
+        (self.tdb / "skill_tiers.sql").unlink()
+        self.db.write_bytes(b"existing database must survive failed preflight")
+        before = self.db.read_bytes()
+        result = self.run_import()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("skill_tiers.sql", result.stderr)
+        self.assertEqual(self.db.read_bytes(), before)
+
+    def test_content_tables_join_quest_and_vendor_rows(self):
         (self.sql / "creature_template.sql").write_text(
             "INSERT INTO `creature_template` (entry,name,subname,npcflag) VALUES\n"
             "(823,'Deputy Willem','',2),(54,'Corina Steele','Weaponsmith',4224),"
@@ -158,9 +180,6 @@ class CreatureEventImportTests(unittest.TestCase):
             "INSERT INTO `item_template` (entry,name,BuyPrice,Quality) VALUES\n(2488,'Gladius',536,1),(2489,'Two-handed Sword',343,1);\n"
         )
         (self.sql / "npc_vendor.sql").write_text("INSERT INTO `npc_vendor` VALUES\n(54,0,2488,0,0,0,0),(54,0,2489,0,0,0,0);\n")
-        (self.sql / "trainer_spell.sql").write_text(
-            "INSERT INTO `trainer_spell` VALUES\n(1,6673,10,0,0,0,0,0,1,0),(1,100,100,0,0,0,0,0,4,0);\n"
-        )
         result = self.run_import()
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         with sqlite3.connect(self.db) as conn:
@@ -185,10 +204,6 @@ class CreatureEventImportTests(unittest.TestCase):
                     " WHERE v.entry = 54 ORDER BY v.item"
                 ).fetchall(),
                 [("Gladius", 536), ("Two-handed Sword", 343)],
-            )
-            self.assertEqual(
-                conn.execute("SELECT SpellId, ReqLevel FROM trainer_spell ORDER BY ReqLevel").fetchall(),
-                [(6673, 1), (100, 4)],
             )
 
     def test_creature_addons_and_formations_keep_paths_mounts_auras_and_offsets(self):
@@ -309,7 +324,7 @@ class AzerothCoreContentTests(unittest.TestCase):
 
     TABLES = (
         "creature_template", "creature_template_model", "quest_template", "creature_queststarter", "creature_questender",
-        "item_template", "npc_vendor", "trainer", "trainer_spell", "creature_default_trainer",
+        "item_template", "npc_vendor",
         "gameobject_template", "gameobject_template_addon", "gameobject",
     )
 
@@ -363,26 +378,6 @@ class AzerothCoreContentTests(unittest.TestCase):
         self.assertEqual(self.rows("SELECT BuyPrice FROM item_template WHERE entry = 159"), [(25,)])
         self.assertIn((159, "Refreshing Spring Water", 5), [row[:3] for row in self.vendor_items(465)])
 
-    def test_llane_beshere_teaches_retail_warrior_spells(self):
-        self.assertEqual(
-            self.rows(
-                "SELECT s.SpellId, n.Name_lang, s.ReqLevel, s.MoneyCost FROM creature_default_trainer c"
-                " JOIN content_trainer_spell s ON s.TrainerId = c.TrainerId JOIN spell_name n ON n.ID = s.SpellId"
-                " WHERE c.CreatureId = 911 ORDER BY s.ReqLevel, s.SpellId"
-            ),
-            [
-                (1464, "Slam", 1, 0), (88163, "Attack", 1, 0), (100, "Charge", 2, 0), (23922, "Shield Slam", 3, 0),
-                (1715, "Hamstring", 4, 0), (34428, "Victory Rush", 5, 0), (2565, "Shield Block", 6, 0),
-                (6552, "Pummel", 7, 0), (355, "Taunt", 8, 0), (1680, "Whirlwind", 9, 0),
-                (6673, "Battle Shout", 10, 0), (57755, "Heroic Throw", 10, 0), (163201, "Execute", 10, 0),
-                (18499, "Berserker Rage", 12, 0),
-            ],
-        )
-        self.assertEqual(
-            self.dropped[("trainer_spell", "TrainerId=2", 772)],
-            "class trainer: Retail class skill line replaces AzerothCore ranks",
-        )
-
     def test_wrath_only_items_are_dropped_and_reported(self):
         self.assertEqual(self.rows("SELECT count(*) FROM content_item WHERE ID IN (41, 2892)"), [(0,)])
         self.assertEqual(self.dropped[("item_template", "entry=41", 41)], "no Retail row")
@@ -426,16 +421,6 @@ class AzerothCoreContentTests(unittest.TestCase):
                 (2491, "Large Axe", 484), (2492, "Cudgel", 285), (2493, "Wooden Mallet", 701),
                 (2494, "Stiletto", 402), (2495, "Walking Stick", 505),
             ],
-        )
-
-    def test_northshire_warrior_trainer_llane_beshere_teaches_early_warrior_spells(self):
-        self.assertEqual(
-            self.rows(
-                "SELECT ts.SpellId, ts.MoneyCost, ts.ReqLevel FROM creature_default_trainer c"
-                " JOIN trainer t ON t.Id = c.TrainerId JOIN trainer_spell ts ON ts.TrainerId = t.Id"
-                " WHERE c.CreatureId = 911 ORDER BY ts.ReqLevel, ts.SpellId"
-            ),
-            [(6673, 10, 1), (100, 100, 4), (772, 100, 4), (3127, 100, 6), (6343, 100, 6), (34428, 100, 6)],
         )
 
     def test_stormwind_guild_vaults_keep_retail_display_and_spawns(self):
@@ -586,6 +571,46 @@ class PinnedBuildImportTests(unittest.TestCase):
 
     def test_classic_tailoring_uses_skill_tier_336(self):
         self.assertEqual(self.one("SELECT SkillTierID FROM skill_race_class_info WHERE SkillID = 2540"), [(336,)])
+
+
+class TdbExcerptImportTests(unittest.TestCase):
+    """Import the real TDB1210 excerpts and check Stormwind's Retail tailoring trainer."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.temp = tempfile.TemporaryDirectory()
+        db = Path(cls.temp.name) / "world.db"
+        pairs = [f"{name}={TDB_DIR / (name + '.sql')}" for name in TRAINER_TDB_TABLES]
+        subprocess.run(
+            [sys.executable, str(SCRIPTS / "mysql_dump.py"), "--db", str(db),
+             "--schema", str(SCRIPTS / "tdb_schema.sql"), "--prefix", "tdb_", *pairs],
+            check=True, capture_output=True, timeout=120,
+        )
+        cls.conn = sqlite3.connect(db)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.conn.close()
+        cls.temp.cleanup()
+
+    def one(self, sql):
+        return self.conn.execute(sql).fetchall()
+
+    def test_georgio_bolero_uses_retail_tailoring_trainer(self):
+        self.assertEqual(self.one("SELECT TrainerID FROM tdb_creature_trainer WHERE CreatureID = 1346"), [(163,)])
+
+    def test_tailoring_trainer_teaches_the_profession_and_classic_recipes(self):
+        self.assertEqual(
+            self.one("SELECT SpellId, MoneyCost, ReqSkillLine, ReqSkillRank, ReqLevel FROM tdb_trainer_spell"
+                     " WHERE TrainerId = 163 AND SpellId IN (264617, 2393) ORDER BY SpellId"),
+            [(2393, 10, 2540, 1, 0), (264617, 10, 0, 0, 5)],
+        )
+
+    def test_retail_trainer_offers_no_apprentice_rank_spell(self):
+        self.assertEqual(self.one("SELECT count(*) FROM tdb_trainer_spell WHERE TrainerId = 163 AND SpellId = 3911"), [(0,)])
+
+    def test_classic_tier_caps_at_300(self):
+        self.assertEqual(self.one("SELECT Value1, Value2 FROM tdb_skill_tiers WHERE ID = 336"), [(300, 0)])
 
 
 if __name__ == "__main__":

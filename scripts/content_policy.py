@@ -13,9 +13,6 @@ DB2 tables (db2.py). Policy (docs/wiki/systems/content-import.md):
   lists it. Item names come from item_template; Wrath spell names from the Wrath
   Classic SpellName CSV (AzerothCore ships none).
 - content_item takes every attribute from Retail item_sparse/item/appearance.
-- Class trainers (trainer.Type = 0) teach the Retail class skill line's non-passive
-  spells gained by level (skill_line_ability AcquireMethod 2/4); other
-  trainers keep AzerothCore spells whose id (and ReqAbility ids) map.
 - Quests are kept when their id is in quest_v2; unmapped reward items/spells are
   zeroed. Vendor and loot rows need a mapped item.
 - Game object templates are kept when their displayId is 0 (no model) or a Retail
@@ -61,8 +58,6 @@ LOOT_TABLES = ["creature_loot_template", "gameobject_loot_template", "reference_
 # SkillLineAbilityAcquireMethod AutomaticCharLevel / LearnedOrAutomaticCharLevel (TrinityCore DBCEnums.h):
 # the spells a character gains by level. Learned (0) rows are talent/helper spells (Hotbar Slot 01,
 # Bloodthirst Heal); NeverLearned (3) is excluded as in spell_info/class_data.rs.
-ACQUIRE_BY_LEVEL = (2, 4)
-ATTR0_PASSIVE = 0x40
 ITEM_COLUMNS = """
     s.ID, s.Display_lang AS Name, s.OverallQualityID AS Quality, s.ItemLevel, s.RequiredLevel,
     s.BuyPrice, s.SellPrice, s.VendorStackCount, s.Stackable, s.MaxCount,
@@ -170,38 +165,6 @@ def build_vendors(conn, report):
     for entry, item in conn.execute("""SELECT entry, item FROM npc_vendor v WHERE item > 0
             AND NOT EXISTS (SELECT 1 FROM temp.item_map m WHERE m.source_id = v.item)"""):
         report.drop("npc_vendor", f"entry={entry}", item, "item not mapped")
-
-
-def build_trainers(conn, report):
-    clone_table(conn, "trainer_spell", "content_trainer_spell")
-    conn.execute(f"""INSERT INTO content_trainer_spell
-        (TrainerId, SpellId, MoneyCost, ReqSkillLine, ReqSkillRank, ReqAbility1, ReqAbility2, ReqAbility3, ReqLevel, VerifiedBuild)
-        SELECT DISTINCT t.Id, a.Spell, 0, 0, 0, 0, 0, 0, COALESCE(l.SpellLevel, 0), 0
-        FROM trainer t
-        JOIN chr_classes c ON c.ID = t.Requirement
-        JOIN skill_line sl ON sl.CategoryID = 7 AND sl.DisplayName_lang = c.Name_lang
-        JOIN skill_line_ability a ON a.SkillLine = sl.ID
-        JOIN spell_name n ON n.ID = a.Spell
-        LEFT JOIN spell_levels l ON l.SpellID = a.Spell AND l.DifficultyID = 0
-        LEFT JOIN spell_misc m ON m.SpellID = a.Spell AND m.DifficultyID = 0
-        WHERE t.Type = 0 AND (a.ClassMask = 0 OR a.ClassMask & (1 << (c.ID - 1)) != 0)
-          AND a.AcquireMethod IN {ACQUIRE_BY_LEVEL} AND COALESCE(m.Attributes_0, 0) & {ATTR0_PASSIVE} = 0""")
-    for trainer, spell in conn.execute(
-            "SELECT s.TrainerId, s.SpellId FROM trainer_spell s JOIN trainer t ON t.Id = s.TrainerId WHERE t.Type = 0"):
-        report.drop("trainer_spell", f"TrainerId={trainer}", spell, "class trainer: Retail class skill line replaces AzerothCore ranks")
-    mapped = "(SELECT retail_id FROM temp.spell_map WHERE source_id = s.{0})"
-    ability = "CASE WHEN s.{0} = 0 THEN 0 ELSE " + mapped + " END"
-    rows = conn.execute(f"""SELECT s.TrainerId, s.SpellId, {mapped.format('SpellId')}, s.MoneyCost, s.ReqSkillLine, s.ReqSkillRank,
-            {ability.format('ReqAbility1')}, {ability.format('ReqAbility2')}, {ability.format('ReqAbility3')}, s.ReqLevel, s.VerifiedBuild
-        FROM trainer_spell s JOIN trainer t ON t.Id = s.TrainerId WHERE t.Type != 0""").fetchall()
-    for trainer, source_spell, spell, cost, skill, rank, req1, req2, req3, level, build in rows:
-        if spell is None:
-            report.drop("trainer_spell", f"TrainerId={trainer}", source_spell, "spell not mapped")
-        elif None in (req1, req2, req3):
-            report.drop("trainer_spell", f"TrainerId={trainer}", source_spell, "required ability not mapped")
-        else:
-            conn.execute("INSERT INTO content_trainer_spell VALUES (?,?,?,?,?,?,?,?,?,?)",
-                         (trainer, spell, cost, skill, rank, req1, req2, req3, level, build))
 
 
 def build_quests(conn, item_map, spell_map, report):
@@ -330,7 +293,6 @@ def apply_policy(conn, wrath_spell_names, overrides_path, tdb_dir, report):
     create_map_table(conn, "spell_map", spell_map)
     build_items(conn, item_map, item_reasons, report)
     build_vendors(conn, report)
-    build_trainers(conn, report)
     build_quests(conn, item_map, spell_map, report)
     build_loot(conn, report)
     build_gameobjects(conn, report)
