@@ -683,6 +683,63 @@ fn a_killed_npc_respawns_in_its_killers_melee_range_at_full_health() {
     assert!(app.world().get::<AutoAttack>(player).is_none());
 }
 
+/// AzerothCore `Unit::Attack` (Unit.cpp:7241-7243) refuses dead victims:
+/// targeting a corpse does not start auto-attack.
+#[test]
+fn targeting_a_corpse_does_not_start_auto_attack() {
+    let mut app = setup_combat_app();
+    let corpse = spawn_target(&mut app, pos(1.0, 0.0, 0.0), 0.0);
+    app.world_mut().entity_mut(corpse).insert(Npc {
+        template_id: 6,
+        name: "Kobold Vermin".into(),
+    });
+    let player = spawn_player(&mut app, pos(0.0, 0.0, 0.0));
+
+    app.world_mut().get_mut::<CombatTarget>(player).unwrap().0 = Some(corpse);
+    app.world_mut().run_schedule(FixedUpdate);
+
+    assert!(app.world().get::<AutoAttack>(player).is_none());
+}
+
+/// A second player targets the NPC in the same tick another player's swing
+/// kills it: the kill's `CombatStop` covers the new attacker too.
+#[test]
+fn targeting_an_npc_in_the_tick_it_dies_leaves_no_auto_attack() {
+    let mut app = setup_combat_app();
+    let kobold = spawn_target(&mut app, pos(1.0, 0.0, 0.0), BASE_DAMAGE);
+    app.world_mut().entity_mut(kobold).insert(Npc {
+        template_id: 6,
+        name: "Kobold Vermin".into(),
+    });
+    let killer = spawn_attacker(&mut app, pos(0.0, 0.0, 0.0), kobold);
+    let latecomer = spawn_player(&mut app, pos(0.0, 0.0, 1.0));
+    app.world_mut()
+        .get_mut::<CombatTarget>(latecomer)
+        .unwrap()
+        .0 = Some(kobold);
+
+    app.world_mut().run_schedule(FixedUpdate);
+
+    assert!(app.world().get::<DeathState>(kobold).is_some(), "killed");
+    assert!(app.world().get::<AutoAttack>(killer).is_none());
+    assert!(app.world().get::<AutoAttack>(latecomer).is_none());
+}
+
+fn spawn_player(app: &mut App, position: Position) -> Entity {
+    app.world_mut()
+        .spawn((
+            position,
+            CombatTarget(None),
+            Player {
+                name: "test".into(),
+                race: 1,
+                class: 1,
+                appearance: Default::default(),
+            },
+        ))
+        .id()
+}
+
 #[test]
 fn respawn_delay_is_spawntimesecs_plus_rank_corpse_decay() {
     // Northshire Guard: spawntimesecs 430, normal rank.
@@ -909,9 +966,10 @@ fn human_melee_on_training_dummy_logs_every_swing_and_never_kills_it() {
         })
         .map(|entry| entry.event.amount)
         .collect();
+    // The first swing lands in the tick the target is set.
     assert_eq!(
         swings,
-        vec![BASE_DAMAGE; 3],
+        vec![BASE_DAMAGE; 4],
         "each swing logs its full damage"
     );
     assert!(

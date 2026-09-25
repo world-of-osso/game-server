@@ -53,11 +53,9 @@ fn lethal_player_auto_attack_transitions_death_in_same_fixed_step() {
                 timer: 0.0,
                 active: true,
             },
-            Player {
-                name: "Attacker".into(),
-                race: 1,
-                class: 1,
-                appearance: Default::default(),
+            Npc {
+                template_id: 6,
+                name: "Kobold Vermin".into(),
             },
         ))
         .id();

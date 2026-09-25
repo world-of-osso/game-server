@@ -94,7 +94,9 @@ impl Plugin for CombatPlugin {
         app.add_systems(
             FixedUpdate,
             (
-                start_attack_system,
+                // A target set in the tick of a kill is attacking before the
+                // kill's `CombatStop` runs.
+                start_attack_system.before(auto_attack_system),
                 auto_attack_system,
                 maintain_in_combat_state_system,
                 corpse_decay_system.before(respawn_system),
@@ -178,6 +180,8 @@ struct CombatState {
 
 /// When CombatTarget changes to an attackable unit, activate auto-attack.
 /// When None or not attackable (for example a friendly guard), deactivate.
+/// Dead units neither attack nor are attacked (AzerothCore `Unit::Attack`,
+/// Unit.cpp:7241-7243).
 fn start_attack_system(
     query: Query<(Entity, &CombatTarget), Changed<CombatTarget>>,
     factions: Query<(
@@ -185,6 +189,7 @@ fn start_attack_system(
         Has<Player>,
         Option<&DuelOpponent>,
     )>,
+    health: Query<&Health>,
     templates: Res<FactionTemplates>,
     mut commands: Commands,
     time: Res<Time>,
@@ -204,13 +209,15 @@ fn start_attack_system(
             .get(attacker)
             .is_ok_and(|(_, _, opponent)| crate::duel::dueling(opponent, target))
     };
+    let dead = |entity: Entity| health.get(entity).is_ok_and(|health| health.current <= 0.0);
     for (entity, target) in &query {
         let attackable = target.0.is_some_and(|target| {
-            dueling(entity, target)
-                || match (unit_faction(entity), unit_faction(target)) {
-                    (Some(attacker), Some(target)) => templates.can_attack(attacker, target),
-                    _ => false,
-                }
+            !(dead(entity) || dead(target))
+                && (dueling(entity, target)
+                    || match (unit_faction(entity), unit_faction(target)) {
+                        (Some(attacker), Some(target)) => templates.can_attack(attacker, target),
+                        _ => false,
+                    })
         });
         if attackable {
             commands.entity(entity).insert((
