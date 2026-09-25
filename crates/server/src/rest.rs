@@ -235,6 +235,8 @@ mod tests {
             speed_walk: 1.0,
             speed_run: 1.0,
             health_modifier: 1.0,
+            unit_class: 1,
+            expansion: 0,
             rank: 0,
             experience_modifier: 1.0,
             gives_experience: true,

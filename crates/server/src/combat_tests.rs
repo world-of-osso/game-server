@@ -806,10 +806,10 @@ fn human_melee_on_training_dummy_logs_every_swing_and_never_kills_it() {
         return;
     };
     app.insert_resource(templates);
-    // Grandmaster's Training Dummy (31144): HealthModifier 0.000187 × 100, faction 7.
+    // Grandmaster's Training Dummy (31144): ceil(12600 basehp2 × 0.000187) hp, faction 7.
     let health = Health {
-        current: 0.000187 * 100.0,
-        max: 0.000187 * 100.0,
+        current: 3.0,
+        max: 3.0,
     };
     let dummy = app
         .world_mut()

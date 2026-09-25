@@ -11,8 +11,8 @@ use crate::spell_cast::test_harness::{Harness, harness};
 const MORTAL_STRIKE: u32 = 12294;
 /// Weapon damage plus a 15 s MOD_DECREASE_SPEED aura.
 const HAMSTRING: u32 = 1715;
-/// Grandmaster's Training Dummy (31144): HealthModifier 0.000187 × 100.
-const DUMMY_HEALTH: f32 = 0.000187 * 100.0;
+/// Grandmaster's Training Dummy (31144): ceil(12600 level 80 basehp2 × HealthModifier 0.000187).
+const DUMMY_HEALTH: f32 = 3.0;
 
 /// The harness NPC turned into Grandmaster's Training Dummy (faction 7).
 fn dummy_harness() -> Option<Harness> {
@@ -59,8 +59,8 @@ fn spell_damage_beyond_its_health_is_logged_but_the_dummy_keeps_its_health() {
         .iter()
         .find(|e| e.kind == CombatLogKind::Damage)
         .expect("Mortal Strike damage logged");
-    // 5.2012 AP coefficient × 100 AP; overkill against the 0.0187 health.
-    assert_eq!((damage.amount, damage.overflow), (520, 519));
+    // 5.2012 AP coefficient × 100 AP; overkill against the 3 health.
+    assert_eq!((damage.amount, damage.overflow), (520, 517));
     assert!(log.iter().all(|e| e.kind != CombatLogKind::Death));
     assert_eq!(h.health(h.npc), DUMMY_HEALTH);
     assert!(h.app.world().get::<DeathState>(h.npc).is_none());
@@ -117,7 +117,7 @@ fn melee_swings_on_the_dummy_reach_the_attackers_combat_log() {
         .map(|e| (e.source, e.target, e.school_mask, e.amount, e.overflow))
         .collect();
     let (caster, npc) = (Some(h.caster.to_bits()), Some(h.npc.to_bits()));
-    assert_eq!(swings, vec![(caster, npc, 1, 10, 9); 2]);
+    assert_eq!(swings, vec![(caster, npc, 1, 10, 7); 2]);
     assert!(h.inbox.log.iter().all(|e| e.kind != CombatLogKind::Death));
     assert_eq!(h.health(h.npc), DUMMY_HEALTH);
 }

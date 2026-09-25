@@ -23,6 +23,7 @@ Source: `~/Repos/azerothcore/data/sql/base/db_world/`
 | `game_event_creature` | Source-dependent | Signed event membership keyed by spawn GUID and event ID |
 | `creature_template_model` | 40,213 | Display models per creature (DisplayID, scale, probability) |
 | `content_creature_template_model` | 40,186 | `creature_template_model` with Wrath-only displays replaced by TrinityCore Retail models ([[content-import]]); `world_data.rs` `load_models` reads this table, and spawns replicate the first model by `Idx` |
+| `creature_classlevelstats` | 400 | Base health per (level, unit_class), `basehp0..2` by `creature_template.exp`; spawn health is `ceil(basehp × HealthModifier)` at the template `minlevel` (`zones.rs` `resolve_health`, AzerothCore `Creature::SelectLevel`) |
 | `waypoint_data` | 144,657 | Patrol points keyed by path ID: delay (ms), move_type, orientation |
 | `creature_addon` | 35,153 | Per-spawn path_id, mount, bytes1/2, emote, visibility, auras |
 | `creature_template_addon` | 11,983 | Same fields per template entry; fallback when a spawn has no row |

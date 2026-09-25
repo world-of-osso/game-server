@@ -48,6 +48,9 @@ fn create_world_schema(conn: &rusqlite::Connection) {
         CREATE TABLE creature_formations (
             leaderGUID INTEGER, memberGUID INTEGER PRIMARY KEY, dist REAL, angle REAL,
             groupAI INTEGER, point_1 INTEGER, point_2 INTEGER
+        );
+        CREATE TABLE creature_classlevelstats (
+            level INTEGER, class INTEGER, basehp0 INTEGER, basehp1 INTEGER, basehp2 INTEGER
         );",
     )
     .expect("create world schema");

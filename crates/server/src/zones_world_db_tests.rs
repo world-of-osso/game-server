@@ -573,3 +573,31 @@ fn every_eastern_kingdoms_spawn_display_exists_in_retail() {
         "map 0 displays absent from Retail: {absent:?}"
     );
 }
+
+/// Stormwind City Guard (68, level 75 warrior, exp 2, HealthModifier 1.5) and
+/// Diseased Young Wolf (299, level 1 warrior, exp 0, HealthModifier 1).
+const STORMWIND_GUARD: u32 = 189;
+const DISEASED_YOUNG_WOLF: u32 = 79648;
+
+/// Creature::SelectLevel: ceil(creature_classlevelstats.basehp<exp> × HealthModifier).
+#[test]
+#[ignore]
+fn creature_health_is_class_level_base_hp_times_health_modifier() {
+    let app = patrol_app(&[
+        STORMWIND_DUMMIES[0],
+        STORMWIND_DUMMIES[1],
+        STORMWIND_GUARD,
+        DISEASED_YOUNG_WOLF,
+    ]);
+    let health = |guid| {
+        let health = app.world().get::<Health>(entity_of(&app, guid)).unwrap();
+        (health.current, health.max)
+    };
+    // 12600 (level 80 basehp2) × 0.000187 = 2.36.
+    assert_eq!(health(STORMWIND_DUMMIES[0]), (3.0, 3.0));
+    // 3052 (level 60 basehp0) × 0.000187 = 0.57.
+    assert_eq!(health(STORMWIND_DUMMIES[1]), (1.0, 1.0));
+    // 10635 (level 75 basehp2) × 1.5 = 15952.5.
+    assert_eq!(health(STORMWIND_GUARD), (15953.0, 15953.0));
+    assert_eq!(health(DISEASED_YOUNG_WOLF), (42.0, 42.0));
+}

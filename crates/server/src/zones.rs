@@ -53,7 +53,6 @@ fn spawn_creatures<'a>(
     let mut entities = HashMap::new();
     for spawn in spawns {
         let display_id = resolve_display_id(world_data, spawn.template_entry);
-        let health = resolve_health(world_data, spawn.template_entry);
         let template = world_data
             .templates
             .get(&spawn.template_entry)
@@ -63,6 +62,7 @@ fn spawn_creatures<'a>(
                     spawn.guid, spawn.template_entry
                 )
             });
+        let health = resolve_health(world_data, template);
         let bundle = creature_bundle(spawn, &template.name, health, display_id);
 
         let mut entity = commands.spawn(bundle);
@@ -212,12 +212,18 @@ fn resolve_display_id(world_data: &WorldData, template_entry: u32) -> u32 {
         .unwrap_or(0)
 }
 
-fn resolve_health(world_data: &WorldData, template_entry: u32) -> f32 {
-    world_data
-        .templates
-        .get(&template_entry)
-        .map(|t| t.health_modifier * 100.0)
-        .unwrap_or(100.0)
+/// Creature::SelectLevel / CreatureBaseStats::GenerateHealth:
+/// max(1, ceil(basehp<exp> × HealthModifier)) at the spawn level.
+fn resolve_health(world_data: &WorldData, template: &crate::world_data::CreatureTemplate) -> f32 {
+    let key = (template.min_level, template.unit_class);
+    let base_hp = world_data.class_level_base_hp.get(&key).unwrap_or_else(|| {
+        panic!(
+            "creature template {} has no creature_classlevelstats row for level {} class {}",
+            template.entry, key.0, key.1
+        )
+    });
+    let base_hp = base_hp[usize::from(template.expansion)] as f32;
+    (base_hp * template.health_modifier).ceil().max(1.0)
 }
 
 /// Every spawn gets a `SpawnPoint` and `RespawnDelay` so it respawns where it
@@ -291,6 +297,8 @@ mod tests {
             speed_walk: 1.0,
             speed_run: 1.0,
             health_modifier: health_mod,
+            unit_class: 1,
+            expansion: 0,
             rank: 0,
             experience_modifier: 1.0,
             gives_experience: true,
@@ -313,6 +321,7 @@ mod tests {
             spawns,
             spawns_by_map,
             waypoints: HashMap::new(),
+            class_level_base_hp: HashMap::from([((1, 1), [100; 3]), ((7, 1), [100; 3])]),
             ..Default::default()
         }
     }
@@ -342,7 +351,10 @@ mod tests {
             "CREATE TABLE creature_template (entry INTEGER, minlevel INTEGER, maxlevel INTEGER,
                 faction INTEGER, npcflag INTEGER, speed_walk REAL, HealthModifier REAL, name TEXT, rank INTEGER, exp INTEGER,
                 ExperienceModifier REAL, type INTEGER, flags_extra INTEGER, speed_run REAL,
-                ScriptName TEXT);
+                ScriptName TEXT, unit_class INTEGER);
+             CREATE TABLE creature_classlevelstats (level INTEGER, class INTEGER,
+                basehp0 INTEGER, basehp1 INTEGER, basehp2 INTEGER);
+             INSERT INTO creature_classlevelstats VALUES (1,1,42,42,42);
              CREATE TABLE content_creature_template_model (CreatureID INTEGER, Idx INTEGER,
                 CreatureDisplayID INTEGER, DisplayScale REAL, Probability REAL);
              CREATE TABLE creature (guid INTEGER, id1 INTEGER, map INTEGER, zoneId INTEGER,
@@ -370,7 +382,7 @@ mod tests {
         for (index, angle) in angles.iter().enumerate() {
             let entry = 100 + index as u32;
             conn.execute(
-                "INSERT INTO creature_template VALUES (?1,1,1,1,0,1.0,1.0,'Loup — Écorché',0,0,1.0,1,0,1.14,'')",
+                "INSERT INTO creature_template VALUES (?1,1,1,1,0,1.0,1.0,'Loup — Écorché',0,0,1.0,1,0,1.14,'',1)",
                 [entry],
             )
             .unwrap();
@@ -420,15 +432,16 @@ mod tests {
     }
 
     #[test]
-    fn health_from_modifier() {
-        let wd = make_world_data(vec![make_template(10, 2.5, 0)], vec![]);
-        assert_eq!(resolve_health(&wd, 10), 250.0);
-    }
-
-    #[test]
-    fn health_missing_template() {
-        let wd = make_world_data(vec![], vec![]);
-        assert_eq!(resolve_health(&wd, 999), 100.0);
+    fn health_is_base_hp_of_the_template_expansion_times_modifier() {
+        let mut wd = make_world_data(vec![], vec![]);
+        wd.class_level_base_hp.insert((1, 1), [42, 43, 44]);
+        let mut template = make_template(10, 2.5, 0);
+        assert_eq!(resolve_health(&wd, &template), 105.0);
+        template.expansion = 2;
+        assert_eq!(resolve_health(&wd, &template), 110.0);
+        // Never below 1 hp.
+        template.health_modifier = 0.0;
+        assert_eq!(resolve_health(&wd, &template), 1.0);
     }
 
     /// Test-only system: spawns creatures without `Replicate` (which requires lightyear plugins).

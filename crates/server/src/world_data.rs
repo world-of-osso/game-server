@@ -13,6 +13,10 @@ pub struct CreatureTemplate {
     pub speed_walk: f32,
     pub speed_run: f32,
     pub health_modifier: f32,
+    /// `unit_class`: the `creature_classlevelstats.class` row.
+    pub unit_class: u8,
+    /// `exp`: which `creature_classlevelstats.basehp<exp>` column applies.
+    pub expansion: u8,
     /// `rank`: 1 elite, 2 rare elite (Retail `CreatureClassifications`).
     pub rank: u8,
     /// `ExperienceModifier` (TrinityCore `ModExperience`).
@@ -105,6 +109,8 @@ pub struct WorldData {
     pub template_addons: HashMap<u32, CreatureAddon>,
     /// `creature_formations` keyed by member guid (leaders' own rows omitted).
     pub formations: HashMap<u32, FormationInfo>,
+    /// `creature_classlevelstats` basehp0..2 keyed by (level, class).
+    pub class_level_base_hp: HashMap<(u8, u8), [u32; 3]>,
 }
 
 impl WorldData {
@@ -134,6 +140,7 @@ pub fn load_world_data(path: &Path) -> WorldData {
         "SELECT entry, path_id, mount, auras FROM creature_template_addon",
     );
     let formations = load_formations(&conn);
+    let class_level_base_hp = load_class_level_base_hp(&conn);
 
     info!(
         "WorldData loaded: {} templates, {} spawns, {} maps, {} waypoint paths, {} addons, {} formation members",
@@ -153,7 +160,23 @@ pub fn load_world_data(path: &Path) -> WorldData {
         addons,
         template_addons,
         formations,
+        class_level_base_hp,
     }
+}
+
+fn load_class_level_base_hp(conn: &Connection) -> HashMap<(u8, u8), [u32; 3]> {
+    let mut stmt = conn
+        .prepare("SELECT level, class, basehp0, basehp1, basehp2 FROM creature_classlevelstats")
+        .expect("Failed to prepare creature_classlevelstats query");
+    stmt.query_map(params![], |row| {
+        Ok((
+            (row.get::<_, i64>(0)? as u8, row.get::<_, i64>(1)? as u8),
+            [row.get(2)?, row.get(3)?, row.get(4)?],
+        ))
+    })
+    .expect("Failed to query creature_classlevelstats")
+    .map(|row| row.expect("Failed to read creature_classlevelstats row"))
+    .collect()
 }
 
 const CREATURE_TYPE_CRITTER: i64 = 8;
@@ -175,6 +198,8 @@ fn template_from_row(row: &Row) -> rusqlite::Result<CreatureTemplate> {
             && row.get::<_, i64>(11)? & CREATURE_FLAG_EXTRA_NO_XP == 0,
         speed_run: row.get(12)?,
         script_name: row.get(13)?,
+        unit_class: row.get::<_, i64>(14)? as u8,
+        expansion: row.get::<_, i64>(15)? as u8,
         models: Vec::new(),
     })
 }
@@ -183,7 +208,7 @@ fn load_templates(conn: &Connection) -> HashMap<u32, CreatureTemplate> {
     let mut stmt = conn
         .prepare(
             "SELECT entry, minlevel, maxlevel, faction, npcflag, speed_walk, HealthModifier, name,
-                    rank, ExperienceModifier, type, flags_extra, speed_run, ScriptName
+                    rank, ExperienceModifier, type, flags_extra, speed_run, ScriptName, unit_class, exp
              FROM creature_template",
         )
         .expect("Failed to prepare creature_template query");

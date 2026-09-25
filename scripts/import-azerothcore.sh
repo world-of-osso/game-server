@@ -20,7 +20,7 @@ TDB_DIR="${TDB_DIR:-$PROJECT_DIR/data/reference/tdb1210}"
 
 # Tables loaded from same-named dumps in $SQL_DIR (<table>.sql); DDL in world_schema.sql.
 DUMP_TABLES=(
-    creature_template creature creature_template_model waypoint_data game_event_creature
+    creature_template creature creature_template_model creature_classlevelstats waypoint_data game_event_creature
     creature_addon creature_template_addon creature_formations
     quest_template quest_template_addon quest_offer_reward quest_request_items quest_poi quest_poi_points
     creature_queststarter creature_questender gameobject_queststarter gameobject_questender

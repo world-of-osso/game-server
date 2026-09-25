@@ -112,6 +112,26 @@ CREATE TABLE creature_template_model (
   PRIMARY KEY (CreatureID, Idx)
 );
 
+-- Creature base stats per level and unit_class; basehp0..2 by creature_template.exp
+-- (AzerothCore CreatureBaseStats, Creature::SelectLevel).
+DROP TABLE IF EXISTS creature_classlevelstats;
+CREATE TABLE creature_classlevelstats (
+  level INTEGER NOT NULL,
+  class INTEGER NOT NULL,
+  basehp0 INTEGER NOT NULL DEFAULT 1,
+  basehp1 INTEGER NOT NULL DEFAULT 1,
+  basehp2 INTEGER NOT NULL DEFAULT 1,
+  basemana INTEGER NOT NULL DEFAULT 0,
+  basearmor INTEGER NOT NULL DEFAULT 1,
+  attackpower INTEGER NOT NULL DEFAULT 0,
+  rangedattackpower INTEGER NOT NULL DEFAULT 0,
+  damage_base REAL NOT NULL DEFAULT 0,
+  damage_exp1 REAL NOT NULL DEFAULT 0,
+  damage_exp2 REAL NOT NULL DEFAULT 0,
+  comment TEXT,
+  PRIMARY KEY (level, class)
+);
+
 DROP TABLE IF EXISTS waypoint_data;
 CREATE TABLE waypoint_data (
   id INTEGER NOT NULL DEFAULT 0,
