@@ -332,9 +332,8 @@ fn inventory_round_trip() {
 fn inventory_default_on_missing() {
     let db = temp_database();
     let inventory = load_inventory(&db, 9999);
-    // default_inventory gives 3 starter items and 100_000 gold
-    assert_eq!(inventory.gold, 100_000);
-    assert_eq!(inventory.items.len(), 3);
+    assert_eq!(inventory.gold, 0);
+    assert!(inventory.items.is_empty());
 }
 
 #[test]

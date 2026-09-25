@@ -147,10 +147,6 @@ fn harness(level: u8) -> Option<Harness> {
     let db = &app.world().resource::<GameDatabase>().db;
     let (character_id, _) =
         persistence::create_character(db, 1, "Crafter", 1, 1).expect("create character");
-    // Start with empty bags (the default inventory carries 20 Linen Cloth).
-    let mut inventory = persistence::load_inventory(db, character_id);
-    inventory.items.clear();
-    persistence::save_inventory(db, character_id, &inventory);
     let player = app
         .world_mut()
         .spawn((

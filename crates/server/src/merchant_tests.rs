@@ -100,8 +100,8 @@ fn harness() -> Option<Harness> {
     app.finish();
     app.cleanup();
     let db = &app.world().resource::<GameDatabase>().db;
-    let (character_id, _) =
-        persistence::create_character(db, 1, "Shopper", 1, 1).expect("create character");
+    let (character_id, _) = persistence::create_character_with_test_bags(db, 1, "Shopper", 1, 1)
+        .expect("create character");
     let player = app
         .world_mut()
         .spawn((

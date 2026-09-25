@@ -32,7 +32,7 @@ fn min_next_bid_rounds_up() {
 fn create_auction_moves_items_from_inventory_into_state() {
     let db = persistence::temp_database();
     let (character_id, _) =
-        persistence::create_character(&db, 1, "Seller", 1, 1).expect("character");
+        persistence::create_character_with_test_bags(&db, 1, "Seller", 1, 1).expect("character");
     let inventory_before = persistence::load_inventory(&db, character_id);
     let source_item = inventory_before.items[0].clone();
     let original_count = source_item.stack_count;
@@ -70,7 +70,7 @@ fn create_auction_moves_items_from_inventory_into_state() {
 fn successful_auction_deposit_updates_online_gold() {
     let db = persistence::temp_database();
     let (character_id, _) =
-        persistence::create_character(&db, 1, "Seller", 1, 1).expect("character");
+        persistence::create_character_with_test_bags(&db, 1, "Seller", 1, 1).expect("character");
     let inventory_before = persistence::load_inventory(&db, character_id);
     let source_item = inventory_before.items[0].clone();
     let mut state = AuctionHouseState::default();
@@ -127,11 +127,12 @@ fn successful_auction_deposit_updates_online_gold() {
 #[test]
 fn place_bid_refunds_previous_bidder_and_updates_current_bid() {
     let db = persistence::temp_database();
-    let (seller_id, _) = persistence::create_character(&db, 1, "Seller", 1, 1).expect("seller");
+    let (seller_id, _) =
+        persistence::create_character_with_test_bags(&db, 1, "Seller", 1, 1).expect("seller");
     let (bidder_a_id, _) =
-        persistence::create_character(&db, 2, "BidderA", 1, 1).expect("bidder a");
+        persistence::create_character_with_test_bags(&db, 2, "BidderA", 1, 1).expect("bidder a");
     let (bidder_b_id, _) =
-        persistence::create_character(&db, 3, "BidderB", 1, 1).expect("bidder b");
+        persistence::create_character_with_test_bags(&db, 3, "BidderB", 1, 1).expect("bidder b");
     let source_item = persistence::load_inventory(&db, seller_id).items[0].clone();
     let mut state = AuctionHouseState::default();
     create_auction(

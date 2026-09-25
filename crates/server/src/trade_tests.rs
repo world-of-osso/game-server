@@ -96,10 +96,10 @@ fn idle_trade_offer_receivers_do_not_resolve_players_or_emit_updates() {
     TRADE_OFFER_PLAYER_RESOLUTIONS.store(0, Ordering::SeqCst);
 
     let db = persistence::temp_database();
-    let (first_id, _) =
-        persistence::create_character(&db, 1, "TraderOne", 1, 1).expect("first character");
-    let (second_id, _) =
-        persistence::create_character(&db, 2, "TraderTwo", 1, 1).expect("second character");
+    let (first_id, _) = persistence::create_character_with_test_bags(&db, 1, "TraderOne", 1, 1)
+        .expect("first character");
+    let (second_id, _) = persistence::create_character_with_test_bags(&db, 2, "TraderTwo", 1, 1)
+        .expect("second character");
     let mut app = setup_trade_offer_app(db);
     let first_player = spawn_trade_player(&mut app, first_id, "TraderOne");
     let second_player = spawn_trade_player(&mut app, second_id, "TraderTwo");
@@ -131,10 +131,10 @@ fn queued_trade_money_requests_apply_in_order_and_broadcast_each_update() {
     TRADE_OFFER_PLAYER_RESOLUTIONS.store(0, Ordering::SeqCst);
 
     let db = persistence::temp_database();
-    let (first_id, _) =
-        persistence::create_character(&db, 1, "TraderOne", 1, 1).expect("first character");
-    let (second_id, _) =
-        persistence::create_character(&db, 2, "TraderTwo", 1, 1).expect("second character");
+    let (first_id, _) = persistence::create_character_with_test_bags(&db, 1, "TraderOne", 1, 1)
+        .expect("first character");
+    let (second_id, _) = persistence::create_character_with_test_bags(&db, 2, "TraderTwo", 1, 1)
+        .expect("second character");
     let mut app = setup_trade_offer_app(db);
     let first_player = spawn_trade_player(&mut app, first_id, "TraderOne");
     let second_player = spawn_trade_player(&mut app, second_id, "TraderTwo");
@@ -228,8 +228,9 @@ fn missing_trade_player_errors_only_for_a_queued_request() {
 fn execute_completed_trade_moves_items_and_gold() {
     let db = persistence::temp_database();
     let (initiator_id, _) =
-        persistence::create_character(&db, 1, "TraderOne", 1, 1).expect("initiator");
-    let (target_id, _) = persistence::create_character(&db, 2, "TraderTwo", 1, 1).expect("target");
+        persistence::create_character_with_test_bags(&db, 1, "TraderOne", 1, 1).expect("initiator");
+    let (target_id, _) =
+        persistence::create_character_with_test_bags(&db, 2, "TraderTwo", 1, 1).expect("target");
 
     let initiator_item = persistence::load_inventory(&db, initiator_id).items[0].clone();
     let target_item = persistence::load_inventory(&db, target_id).items[1].clone();
@@ -321,8 +322,9 @@ fn execute_completed_trade_moves_items_and_gold() {
 fn execute_completed_trade_fails_when_item_is_missing() {
     let db = persistence::temp_database();
     let (initiator_id, _) =
-        persistence::create_character(&db, 1, "TraderOne", 1, 1).expect("initiator");
-    let (target_id, _) = persistence::create_character(&db, 2, "TraderTwo", 1, 1).expect("target");
+        persistence::create_character_with_test_bags(&db, 1, "TraderOne", 1, 1).expect("initiator");
+    let (target_id, _) =
+        persistence::create_character_with_test_bags(&db, 2, "TraderTwo", 1, 1).expect("target");
 
     let trade = CompletedTrade {
         initiator: initiator_id,
@@ -342,7 +344,7 @@ fn execute_completed_trade_fails_when_item_is_missing() {
 fn build_trade_party_snapshot_uses_inventory_metadata() {
     let db = persistence::temp_database();
     let (character_id, _) =
-        persistence::create_character(&db, 1, "TraderOne", 1, 1).expect("character");
+        persistence::create_character_with_test_bags(&db, 1, "TraderOne", 1, 1).expect("character");
     let inventory = persistence::load_inventory(&db, character_id);
     let item = inventory.items[0].clone();
     let snapshot = build_trade_party_snapshot(

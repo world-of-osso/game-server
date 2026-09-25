@@ -381,7 +381,7 @@ pub fn create_character_with_appearance(
     let character_id = next_id(db, "character");
     let data = default_character_data(name, race, class, appearance);
     save_new_character(db, account_id, character_id, name, &data);
-    save_inventory(db, character_id, &default_inventory(db));
+    save_inventory(db, character_id, &InventoryData::default());
     Ok((character_id, data))
 }
 
@@ -468,34 +468,37 @@ pub(crate) fn save_new_character(
     txn.commit().expect("Failed to commit new character");
 }
 
-fn starter_item(
+/// Test fixture: a new character whose bags are granted 20 Linen Cloth, 10
+/// Peacebloom and 10 Copper Ore, with 10 gold (new characters start empty).
+#[cfg(test)]
+pub(crate) fn create_character_with_test_bags(
     db: &Database,
-    item_id: u32,
+    account_id: u64,
     name: &str,
-    count: u32,
-    price: u32,
-) -> InventoryItemData {
-    InventoryItemData {
+    race: u8,
+    class: u8,
+) -> Result<(u64, CharacterData), String> {
+    let created = create_character(db, account_id, name, race, class)?;
+    let item = |item_id, name: &str, stack_count, vendor_sell_price| InventoryItemData {
         item_guid: next_id(db, "item_instance"),
         item_id,
         name: name.to_string(),
         quality: 1,
         required_level: 1,
-        stack_count: count,
-        vendor_sell_price: price,
+        stack_count,
+        vendor_sell_price,
         unique_auction: false,
-    }
-}
-
-pub(crate) fn default_inventory(db: &Database) -> InventoryData {
-    InventoryData {
+    };
+    let bags = InventoryData {
         gold: 100_000,
         items: vec![
-            starter_item(db, 2589, "Linen Cloth", 20, 13),
-            starter_item(db, 2447, "Peacebloom", 10, 10),
-            starter_item(db, 2770, "Copper Ore", 10, 25),
+            item(2589, "Linen Cloth", 20, 13),
+            item(2447, "Peacebloom", 10, 10),
+            item(2770, "Copper Ore", 10, 25),
         ],
-    }
+    };
+    save_inventory(db, created.0, &bags);
+    Ok(created)
 }
 
 /// Read character IDs from an open account_characters table.

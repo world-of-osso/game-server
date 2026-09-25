@@ -486,10 +486,9 @@ fn character_load_populates_all_fields() {
         "position set"
     );
 
-    // Inventory should have starter items
+    // New characters start with empty bags and no money.
     let inv = crate::persistence::load_inventory(&db, cid);
-    assert!(!inv.items.is_empty(), "starter items present");
-    assert!(inv.gold > 0, "starter gold present");
+    assert_eq!(inv, crate::persistence::InventoryData::default());
 
     // Guild defaults to none
     let guild = load_character_guild(&db, cid);

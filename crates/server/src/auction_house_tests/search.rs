@@ -3,7 +3,8 @@ use super::*;
 #[test]
 fn create_auction_appears_in_search_results() {
     let db = persistence::temp_database();
-    let (seller_id, _) = persistence::create_character(&db, 1, "Seller", 1, 1).expect("character");
+    let (seller_id, _) =
+        persistence::create_character_with_test_bags(&db, 1, "Seller", 1, 1).expect("character");
     let source_item = persistence::load_inventory(&db, seller_id).items[0].clone();
     let mut state = AuctionHouseState::default();
 
@@ -44,8 +45,10 @@ fn create_auction_appears_in_search_results() {
 #[test]
 fn bid_recorded_and_underbid_rejected() {
     let db = persistence::temp_database();
-    let (seller_id, _) = persistence::create_character(&db, 1, "Seller", 1, 1).expect("seller");
-    let (bidder_id, _) = persistence::create_character(&db, 2, "Bidder", 1, 1).expect("bidder");
+    let (seller_id, _) =
+        persistence::create_character_with_test_bags(&db, 1, "Seller", 1, 1).expect("seller");
+    let (bidder_id, _) =
+        persistence::create_character_with_test_bags(&db, 2, "Bidder", 1, 1).expect("bidder");
     let source_item = persistence::load_inventory(&db, seller_id).items[0].clone();
     let mut state = AuctionHouseState::default();
     create_auction(

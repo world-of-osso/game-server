@@ -94,6 +94,44 @@ pub(crate) fn load_model(
     Ok(InventoryModel::from_record(record, templates, &mut mint))
 }
 
+/// Store `count` of `item_id` in the character's bags (AzerothCore `StoreNewItem`),
+/// with its `content_item` name, quality and sell price; the item's name on success.
+/// Nothing is saved when it does not fit. Callers record the change in
+/// `GoldUpdateQueue` so the owner gets an `InventoryDelta`.
+pub(crate) fn grant_item(
+    db: &Database,
+    templates: &ItemTemplates,
+    catalog: &crate::merchant::VendorCatalog,
+    character_id: u64,
+    (item_id, count): (u32, u32),
+) -> Result<String, String> {
+    let goods = catalog
+        .goods
+        .get(&item_id)
+        .ok_or_else(|| format!("item {item_id} is not in content_item"))?;
+    let template = *templates
+        .get(item_id)
+        .ok_or_else(|| format!("item {item_id} has no template"))?;
+    let mut model =
+        load_model(db, templates, character_id).map_err(|error| format!("{error:?}"))?;
+    let item = persistence::InventoryItemData {
+        item_guid: persistence::next_id(db, "item_instance"),
+        item_id,
+        name: goods.name.clone(),
+        quality: goods.quality,
+        required_level: template.required_level,
+        stack_count: count,
+        vendor_sell_price: goods.sell_price,
+        unique_auction: false,
+    };
+    let mut mint = || persistence::next_id(db, "item_instance");
+    model
+        .store_item(item, template, &mut mint)
+        .map_err(|error| format!("{error:?}"))?;
+    save_inventory_record(db, character_id, &model.into_record());
+    Ok(goods.name.clone())
+}
+
 /// Empty bag cells once every owned item is placed; 0 when the record is missing.
 pub(crate) fn free_bag_cells(db: &Database, templates: &ItemTemplates, character_id: u64) -> usize {
     load_model(db, templates, character_id).map_or(0, |model| model.free_cells())

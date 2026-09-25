@@ -11,6 +11,8 @@ Retail professions on the server: learning at profession trainers and crafting k
 - `CraftRecipe { casts }` repeats the cast; stopping or moving cancels the rest, and the first cast that cannot start ends the queue.
 - Professions persist per character and reach the owner as `ProfessionSnapshot` on world entry and after every change.
 
+- New characters start with empty bags and no money (the old 20 Linen / 10 Peacebloom / 10 Copper Ore / 10 gold seed is gone). Admin `grant-item <character> <item_id> <count>` stores items in the bags (content_item name, quality and sell price, stacked to the template's max) and sends an online owner the `InventoryDelta`; unknown items, unknown characters and full bags are refused unchanged.
+
 ## Out of scope
 
 Gathering nodes, Dragonflight+ quality/concentration/crafting orders/specializations, recrafting, unlearning, First Aid, reputation price discounts, gossip-menu-specific trainers.

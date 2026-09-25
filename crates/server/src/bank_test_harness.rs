@@ -168,7 +168,7 @@ pub(crate) fn harness() -> Option<Harness> {
 
 fn create_character(app: &mut App, name: &str) -> u64 {
     let db = &app.world().resource::<GameDatabase>().db;
-    persistence::create_character(db, ACCOUNT, name, 1, 1)
+    persistence::create_character_with_test_bags(db, ACCOUNT, name, 1, 1)
         .expect("create character")
         .0
 }

@@ -42,7 +42,7 @@ pub struct InventoryItemData {
     pub unique_auction: bool,
 }
 
-#[derive(bitcode::Encode, bitcode::Decode, Debug, Clone, PartialEq)]
+#[derive(bitcode::Encode, bitcode::Decode, Debug, Clone, PartialEq, Default)]
 pub struct InventoryData {
     /// Copper, capped at `gold::MAX_MONEY`.
     pub gold: u64,

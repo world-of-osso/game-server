@@ -94,7 +94,8 @@ struct Client {
 fn spawn_client(app: &mut App, account_id: u64, name: &str) -> Client {
     let db = &app.world().resource::<GameDatabase>().db;
     let (character_id, _) =
-        persistence::create_character(db, account_id, name, 1, 1).expect("create character");
+        persistence::create_character_with_test_bags(db, account_id, name, 1, 1)
+            .expect("create character");
     let player = app
         .world_mut()
         .spawn((
@@ -230,7 +231,7 @@ fn grant_bag_weapon(app: &App, character_id: u64) -> u64 {
 }
 
 #[test]
-fn enter_world_sends_owner_snapshots_with_starter_items() {
+fn enter_world_sends_owner_snapshots_with_granted_items() {
     let mut app = setup_app(persistence::temp_database());
     let client = spawn_client(&mut app, 1, "Bagger");
     let linen = guid_of(&app, client.character_id, LINEN);

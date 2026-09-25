@@ -96,6 +96,12 @@ pub enum AdminRequest {
         character_name: String,
         copper: u64,
     },
+    /// `count` of `item_id` into the character's bags.
+    GrantItem {
+        character_name: String,
+        item_id: u32,
+        count: u32,
+    },
     /// Every equipped item to `percent` of its max durability.
     SetDurability {
         character_name: String,
@@ -255,6 +261,12 @@ pub enum AdminResponse {
     GoldSet {
         character_name: String,
         copper: u64,
+    },
+    ItemGranted {
+        character_name: String,
+        item_id: u32,
+        name: String,
+        count: u32,
     },
     DurabilitySet {
         character_name: String,

@@ -40,6 +40,8 @@ mod catalog;
 mod stock;
 
 use catalog::VendorSlot;
+#[cfg(test)]
+pub(crate) use catalog::VendorGoods;
 pub use catalog::{VendorCatalog, load_vendor_catalog};
 use stock::{BuybackEntry, BuybackSlots, VendorStock};
 

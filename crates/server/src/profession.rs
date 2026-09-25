@@ -418,11 +418,14 @@ fn store_created_item(
     count: u32,
 ) -> Result<(), String> {
     let character_id = with_bags(world, player, |bags| {
-        let mut model = bags.load()?;
-        let item = bags.new_item(item_id, count)?;
-        bags.store(&mut model, item)?;
-        save_inventory_record(&bags.db.db, bags.character_id, &model.into_record());
-        Ok::<_, String>(bags.character_id)
+        crate::inventory::grant_item(
+            &bags.db.db,
+            bags.templates,
+            bags.catalog,
+            bags.character_id,
+            (item_id, count),
+        )
+        .map(|_| bags.character_id)
     })
     .ok_or("caster has no bags")??;
     world

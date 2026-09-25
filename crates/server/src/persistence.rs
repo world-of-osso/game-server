@@ -395,7 +395,7 @@ pub fn load_inventory(db: &Database, character_id: u64) -> InventoryData {
     match table.get(character_id).expect("Failed to read inventory") {
         Some(guard) => bitcode::decode::<InventoryData>(guard.value()).expect("decode inventory"),
         None => {
-            let inventory = default_inventory(db);
+            let inventory = InventoryData::default();
             save_inventory(db, character_id, &inventory);
             inventory
         }

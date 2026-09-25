@@ -141,6 +141,14 @@ fn print_character_response(response: &AdminResponse) -> bool {
         } => {
             println!("Gold set: {character_name} -> {copper} copper");
         }
+        AdminResponse::ItemGranted {
+            character_name,
+            item_id,
+            name,
+            count,
+        } => {
+            println!("Item granted: {character_name} <- {count} x {name} ({item_id})");
+        }
         AdminResponse::DurabilitySet {
             character_name,
             percent,

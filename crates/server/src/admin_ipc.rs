@@ -39,6 +39,9 @@ struct AdminResources<'w> {
     motd: ResMut<'w, shared::motd::Motd>,
     autobroadcast: ResMut<'w, shared::motd::Autobroadcast>,
     interest_dirty: Option<Res<'w, crate::interest::InterestDirtyQueue>>,
+    item_templates: Option<Res<'w, crate::item_templates::ItemTemplates>>,
+    vendor_catalog: Option<Res<'w, crate::merchant::VendorCatalog>>,
+    inventory_updates: ResMut<'w, crate::gold::GoldUpdateQueue>,
 }
 
 /// Queries needed by the admin IPC dispatch loop.
@@ -107,7 +110,53 @@ fn dispatch_resource_commands(
     if let Some(r) = dispatch_autobroadcast(request, &mut res.autobroadcast) {
         return Some(r);
     }
+    if let AdminRequest::GrantItem {
+        character_name,
+        item_id,
+        count,
+    } = request
+    {
+        let (Some(templates), Some(catalog)) = (&res.item_templates, &res.vendor_catalog) else {
+            return Some(AdminResponse::Error("item data not loaded".into()));
+        };
+        return Some(handle_grant_item(
+            db,
+            (templates, catalog),
+            &mut res.inventory_updates,
+            character_name,
+            (*item_id, *count),
+        ));
+    }
     None
+}
+
+/// `grant-item`: store the items in the character's bags; an online owner gets the
+/// `InventoryDelta` through `GoldUpdateQueue`.
+fn handle_grant_item(
+    db: &persistence::GameDatabase,
+    (templates, catalog): (
+        &crate::item_templates::ItemTemplates,
+        &crate::merchant::VendorCatalog,
+    ),
+    inventory_updates: &mut crate::gold::GoldUpdateQueue,
+    name: &str,
+    (item_id, count): (u32, u32),
+) -> AdminResponse {
+    let Some(character_id) = persistence::find_character_id_by_name(&db.db, name) else {
+        return AdminResponse::Error(format!("character '{name}' not found"));
+    };
+    match crate::inventory::grant_item(&db.db, templates, catalog, character_id, (item_id, count)) {
+        Ok(item_name) => {
+            inventory_updates.record_items(character_id);
+            AdminResponse::ItemGranted {
+                character_name: name.to_owned(),
+                item_id,
+                name: item_name,
+                count,
+            }
+        }
+        Err(error) => AdminResponse::Error(format!("grant {count} x {item_id} to {name}: {error}")),
+    }
 }
 
 /// Dispatch ticket commands, returning Some if handled.
@@ -271,7 +320,7 @@ fn dispatch(
 
     let response = match cmd.request {
         AdminRequest::Ping => AdminResponse::Pong,
-        AdminRequest::CombatLog { .. } => {
+        AdminRequest::CombatLog { .. } | AdminRequest::GrantItem { .. } => {
             // Handled in poll_admin_ipc before dispatch is called
             unreachable!()
         }
@@ -478,6 +527,92 @@ mod tests {
     use bevy::ecs::system::SystemState;
 
     use crate::persistence_accounts;
+
+    /// Linen Cloth (2589): `content_item` name and a 1000 stack (world.db, Retail 12.1).
+    fn linen_data() -> (
+        crate::item_templates::ItemTemplates,
+        crate::merchant::VendorCatalog,
+    ) {
+        let templates = crate::item_templates::ItemTemplates(
+            [(
+                2589,
+                crate::item_templates::ItemTemplate {
+                    max_stack: 1000,
+                    allowable_class: -1,
+                    allowable_race: u64::MAX,
+                    ..Default::default()
+                },
+            )]
+            .into_iter()
+            .collect(),
+        );
+        let mut catalog = crate::merchant::VendorCatalog::default();
+        catalog.goods.insert(
+            2589,
+            crate::merchant::VendorGoods {
+                name: "Linen Cloth".into(),
+                quality: 1,
+                buy_price: 0,
+                sell_price: 13,
+                buy_count: 1,
+                max_count: 0,
+            },
+        );
+        (templates, catalog)
+    }
+
+    #[test]
+    fn grant_item_puts_the_stack_in_the_bags_and_queues_a_delta() {
+        let db = persistence::GameDatabase {
+            db: persistence::temp_database(),
+        };
+        let (character_id, _) =
+            persistence::create_character(&db.db, 1, "Stitchwell", 1, 1).expect("character");
+        let (templates, catalog) = linen_data();
+        let mut updates = crate::gold::GoldUpdateQueue::default();
+
+        let response = handle_grant_item(
+            &db,
+            (&templates, &catalog),
+            &mut updates,
+            "Stitchwell",
+            (2589, 4),
+        );
+
+        assert!(matches!(
+            response,
+            AdminResponse::ItemGranted { ref name, item_id: 2589, count: 4, .. } if name == "Linen Cloth"
+        ));
+        let bags = persistence::load_inventory(&db.db, character_id);
+        assert_eq!(
+            bags.items
+                .iter()
+                .map(|item| (item.item_id, item.stack_count, item.name.as_str()))
+                .collect::<Vec<_>>(),
+            vec![(2589, 4, "Linen Cloth")]
+        );
+        assert!(updates.changed_inventories().contains(&character_id));
+    }
+
+    #[test]
+    fn grant_item_refuses_unknown_items_and_characters() {
+        let db = persistence::GameDatabase {
+            db: persistence::temp_database(),
+        };
+        persistence::create_character(&db.db, 1, "Stitchwell", 1, 1).expect("character");
+        let (templates, catalog) = linen_data();
+        let mut updates = crate::gold::GoldUpdateQueue::default();
+        let data = (&templates, &catalog);
+        assert!(matches!(
+            handle_grant_item(&db, data, &mut updates, "Stitchwell", (999_999, 1)),
+            AdminResponse::Error(_)
+        ));
+        assert!(matches!(
+            handle_grant_item(&db, data, &mut updates, "Nobody", (2589, 1)),
+            AdminResponse::Error(_)
+        ));
+        assert!(updates.changed_inventories().is_empty());
+    }
 
     #[test]
     fn handle_set_position_updates_persisted_character_coords() {

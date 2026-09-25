@@ -103,6 +103,12 @@ enum AdminRequest {
         character_name: String,
         copper: u64,
     },
+    /// `count` of `item_id` into the character's bags.
+    GrantItem {
+        character_name: String,
+        item_id: u32,
+        count: u32,
+    },
     /// Every equipped item to `percent` of its max durability.
     SetDurability {
         character_name: String,
@@ -216,6 +222,12 @@ enum AdminResponse {
         character_name: String,
         copper: u64,
     },
+    ItemGranted {
+        character_name: String,
+        item_id: u32,
+        name: String,
+        count: u32,
+    },
     DurabilitySet {
         character_name: String,
         percent: u32,
@@ -300,6 +312,7 @@ fn print_usage() {
     eprintln!("  game-server-admin set-credentials <token> <username> <password>");
     eprintln!("  game-server-admin set-position <character_name> <x> <y> <z>");
     eprintln!("  game-server-admin set-gold <character_name> <copper>");
+    eprintln!("  game-server-admin grant-item <character_name> <item_id> <count>");
     eprintln!("  game-server-admin set-durability <character_name> <percent>");
     eprintln!(
         "  game-server-admin set-appearance <character_name> <sex> <skin_color> <face> <eye_color> <hair_style> <hair_color> <facial_style>"
@@ -343,6 +356,7 @@ fn parse_request(args: &[String]) -> AdminRequest {
         "set-credentials" => parse_set_credentials(args),
         "set-position" => parse_set_position(args),
         "set-gold" => parse_set_gold(args),
+        "grant-item" => parse_grant_item(args),
         "set-durability" => parse_set_durability(args),
         "set-appearance" => parse_set_appearance(args),
         "set-equipment-appearance" => parse_set_equipment_appearance(args),
@@ -593,6 +607,15 @@ fn parse_set_gold(args: &[String]) -> AdminRequest {
     }
 }
 
+fn parse_grant_item(args: &[String]) -> AdminRequest {
+    require_args(args, 5, "grant-item <character_name> <item_id> <count>");
+    AdminRequest::GrantItem {
+        character_name: args[2].clone(),
+        item_id: parse_number(&args[3], "item_id"),
+        count: parse_number(&args[4], "count"),
+    }
+}
+
 fn parse_set_durability(args: &[String]) -> AdminRequest {
     require_args(args, 4, "set-durability <character_name> <percent>");
     AdminRequest::SetDurability {
@@ -743,6 +766,22 @@ mod tests {
         assert!(matches!(
             durability,
             AdminRequest::SetDurability { ref character_name, percent: 40 } if character_name == "Shopper"
+        ));
+    }
+
+    #[test]
+    fn parse_grant_item_request() {
+        let grant = parse_request(&args(&[
+            "game-server-admin",
+            "grant-item",
+            "Stitchwell",
+            "2589",
+            "4",
+        ]));
+        assert!(matches!(
+            grant,
+            AdminRequest::GrantItem { ref character_name, item_id: 2589, count: 4 }
+                if character_name == "Stitchwell"
         ));
     }
 
