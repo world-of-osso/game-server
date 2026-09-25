@@ -7,7 +7,7 @@ use shared::components::{
 use shared::protocol::NpcFlags;
 use std::collections::HashMap;
 
-use crate::combat::RespawnDelay;
+use crate::combat::{CorpseDelay, RespawnDelay};
 use crate::creature_ai::{FormationMember, SpawnPoint, WanderPhase, WanderState, WaypointState};
 use crate::interest::NetworkVisibility;
 use crate::world_data::{CreatureAddon, CreatureSpawn, GROUP_AI_FLAG_FOLLOW_LEADER, WorldData};
@@ -246,6 +246,7 @@ fn insert_ai_components(
             speed_walk: template.speed_walk,
         },
         RespawnDelay::for_spawn(spawn.spawntimesecs, template.rank),
+        CorpseDelay::for_rank(template.rank),
     ));
     if spawn.movement_type == 1 {
         entity.insert(WanderState {

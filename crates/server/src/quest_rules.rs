@@ -199,6 +199,25 @@ pub(crate) fn credit_kill(db: &QuestDb, log: &mut QuestLogData, creature_entry: 
     changed
 }
 
+/// AzerothCore `Player::HasQuestForItem`: a quest in the log still needs more
+/// of `item_id` for one of its item objectives.
+pub(crate) fn quest_needs_item(
+    db: &QuestDb,
+    log: &QuestLogData,
+    item_id: u32,
+    bag_count: impl Fn(u32) -> u32,
+) -> bool {
+    log.active.iter().any(|active| {
+        db.quests.get(&active.quest_id).is_some_and(|quest| {
+            quest.objectives.iter().any(|objective| {
+                objective.kind == QuestObjectiveKind::Item
+                    && objective.object_id == item_id
+                    && bag_count(item_id) < objective.required
+            })
+        })
+    })
+}
+
 /// Is the quest in the log with every objective done.
 pub(crate) fn is_complete_in_log(
     db: &QuestDb,

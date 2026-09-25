@@ -159,3 +159,24 @@ fn orc_cannot_take_alliance_quest_and_log_caps_at_35() {
         Err(QuestFailedReason::QuestLogFull)
     );
 }
+
+/// Wolves Across the Border (33): 8 Diseased Wolf Pelts.
+const WOLVES_ACROSS_THE_BORDER: u32 = 33;
+const DISEASED_WOLF_PELT: u32 = 50432;
+
+#[test]
+fn quest_needs_its_item_until_the_bags_hold_the_count() {
+    let Some(db) = test_quest_db() else {
+        return;
+    };
+    let log = log_with(&[WOLVES_ACROSS_THE_BORDER], &[]);
+    assert!(quest_needs_item(db, &log, DISEASED_WOLF_PELT, |_| 7));
+    assert!(!quest_needs_item(db, &log, DISEASED_WOLF_PELT, |_| 8));
+    assert!(!quest_needs_item(
+        db,
+        &log_with(&[], &[]),
+        DISEASED_WOLF_PELT,
+        no_items
+    ));
+    assert!(!quest_needs_item(db, &log, 755, no_items), "Melted Candle");
+}

@@ -460,7 +460,7 @@ fn nonlethal_auto_attack_keeps_npc_alive_and_replicated() {
 }
 
 #[test]
-fn lethal_auto_attack_produces_death_state_replication_removal_and_event() {
+fn lethal_auto_attack_leaves_a_replicated_corpse_and_a_death_event() {
     let mut app = setup_replication_app();
     let target = app
         .world_mut()
@@ -475,6 +475,7 @@ fn lethal_auto_attack_produces_death_state_replication_removal_and_event() {
                 name: "Fixture wolf".into(),
             },
             Replicate::to_clients(NetworkTarget::All),
+            CorpseDelay(60.0),
         ))
         .id();
     spawn_attacker(&mut app, pos(0.0, 0.0, 0.0), target);
@@ -486,7 +487,11 @@ fn lethal_auto_attack_produces_death_state_replication_removal_and_event() {
 
     let entity = app.world().entity(target);
     assert!(entity.get::<DeathState>().is_some());
-    assert!(entity.get::<Replicate>().is_none());
+    assert!(
+        entity.get::<Replicate>().is_some(),
+        "the corpse stays visible"
+    );
+    assert_eq!(entity.get::<Corpse>(), Some(&Corpse { remaining: 60.0 }));
     assert!(
         app.world()
             .resource::<CombatLog>()
@@ -872,4 +877,54 @@ fn human_melee_on_training_dummy_logs_every_swing_and_never_kills_it() {
         "the dummy never swings back"
     );
     assert!(entity.get::<CombatStatus>().is_some_and(|status| status.0));
+}
+
+#[test]
+fn corpse_stops_replicating_when_its_decay_runs_out() {
+    use bevy::time::TimeUpdateStrategy;
+    let mut app = setup_combat_app();
+    app.insert_resource(TimeUpdateStrategy::ManualDuration(
+        std::time::Duration::from_millis(50),
+    ));
+    let wolf = app
+        .world_mut()
+        .spawn((
+            DeathState {
+                respawn_timer: 240.0,
+            },
+            Corpse { remaining: 1.0 },
+            Health {
+                current: 0.0,
+                max: 100.0,
+            },
+            pos(0.0, 0.0, 0.0),
+            Replicate::to_clients(NetworkTarget::All),
+        ))
+        .id();
+    for _ in 0..15 {
+        app.update();
+    }
+    assert!(app.world().get::<Replicate>(wolf).is_some(), "0.75 s in");
+    for _ in 0..10 {
+        app.update();
+    }
+    let wolf = app.world().entity(wolf);
+    assert!(wolf.get::<Replicate>().is_none(), "removed after 1 s");
+    assert!(wolf.get::<Corpse>().is_none());
+    assert!(
+        wolf.get::<DeathState>().is_some(),
+        "still waiting to respawn"
+    );
+}
+
+#[test]
+fn looting_a_corpse_empty_halves_its_remaining_decay_and_respawn() {
+    // Kobold Vermin: spawntimesecs 180 + 60 s decay; looted 20 s after death.
+    let mut corpse = Corpse { remaining: 40.0 };
+    let mut death = DeathState {
+        respawn_timer: 220.0,
+    };
+    corpse_looted(&mut corpse, &mut death);
+    assert_eq!(corpse, Corpse { remaining: 20.0 });
+    assert_eq!(death.respawn_timer, 200.0);
 }

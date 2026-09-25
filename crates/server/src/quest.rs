@@ -147,14 +147,15 @@ fn send_initial_quest_log(
     }
 }
 
-type PlayerPositions<'w, 's> = Query<'w, 's, (&'static ClientId, &'static Position), With<Player>>;
+pub(crate) type PlayerPositions<'w, 's> =
+    Query<'w, 's, (&'static ClientId, &'static Position), With<Player>>;
 
 fn distance(a: &Position, b: &Position) -> f32 {
     ((a.x - b.x).powi(2) + (a.y - b.y).powi(2) + (a.z - b.z).powi(2)).sqrt()
 }
 
 /// The killer plus its group members within reward distance of the creature.
-fn credited_characters(
+pub(crate) fn credited_characters(
     killer: u64,
     creature: &Position,
     players: &PlayerPositions,

@@ -40,6 +40,7 @@ mod inventory;
 mod item_stats;
 mod item_templates;
 mod lfg;
+mod loot;
 mod merchant;
 mod messaging;
 mod networking;
@@ -160,6 +161,7 @@ fn add_world_plugins(app: &mut App) {
         .add_plugins(unit_target::UnitTargetPlugin)
         .add_plugins(npc_interaction::NpcInteractionPlugin)
         .add_plugins(merchant::MerchantPlugin)
+        .add_plugins(loot::LootPlugin)
         .add_plugins(game_objects::GameObjectPlugin)
         .add_plugins(bank::BankPlugin)
         .add_plugins(guild_bank::GuildBankPlugin)

@@ -97,8 +97,10 @@ impl Plugin for CombatPlugin {
                 start_attack_system,
                 auto_attack_system,
                 maintain_in_combat_state_system,
+                corpse_decay_system,
                 respawn_system,
-            ),
+            )
+                .chain(),
         );
     }
 }
@@ -125,6 +127,35 @@ impl RespawnDelay {
     pub fn for_spawn(spawntimesecs: u32, rank: u8) -> Self {
         Self((spawntimesecs + corpse_decay_secs(rank)) as f32)
     }
+}
+
+/// Seconds a corpse stays visible after death (AzerothCore `m_corpseDelay`).
+#[derive(Component, Debug, Clone, Copy, PartialEq)]
+pub struct CorpseDelay(pub f32);
+
+impl CorpseDelay {
+    pub fn for_rank(rank: u8) -> Self {
+        Self(corpse_decay_secs(rank) as f32)
+    }
+}
+
+/// A dead NPC still shown to clients: AzerothCore `CORPSE` death state, until
+/// `m_corpseRemoveTime`. Its removal stops replication (`RemoveCorpse`).
+#[derive(Component, Debug, Clone, Copy, PartialEq)]
+pub struct Corpse {
+    pub remaining: f32,
+}
+
+/// AzerothCore `Rate.Corpse.Decay.Looted` default (worldserver.conf.dist).
+const CORPSE_DECAY_LOOTED_RATE: f32 = 0.5;
+
+/// AzerothCore `Creature::AllLootRemovedFromCorpse` (Creature.cpp:2954-2984): once
+/// the corpse has no loot left, the remaining decay shrinks by the looted rate and
+/// the respawn moves earlier by the same amount.
+pub(crate) fn corpse_looted(corpse: &mut Corpse, death: &mut DeathState) {
+    let diff = corpse.remaining.max(0.0) * CORPSE_DECAY_LOOTED_RATE;
+    corpse.remaining -= diff;
+    death.respawn_timer -= diff;
 }
 
 /// `m_corpseDelay` by `creature_template.rank` (Creature::Create, default
@@ -534,13 +565,30 @@ pub(crate) fn mark_npc_dead_world(world: &mut World, entity: Entity) {
     insert_npc_death(world.entity_mut(entity));
 }
 
-/// Start the NPC's respawn timer and stop replicating it. NPCs without a
-/// `RespawnDelay` (not world spawns) have no `SpawnPoint` and never respawn.
+/// Start the NPC's respawn timer and leave its corpse replicated for its
+/// `CorpseDelay` (AzerothCore `setDeathState(CORPSE)`: `m_corpseRemoveTime = now +
+/// m_corpseDelay`). NPCs without a `RespawnDelay` (not world spawns) have no
+/// `SpawnPoint` and never respawn; without a `CorpseDelay` the corpse goes at once.
 fn insert_npc_death(mut entity: EntityWorldMut) {
     let respawn_timer = entity.get::<RespawnDelay>().map_or(0.0, |delay| delay.0);
-    entity
-        .insert(DeathState { respawn_timer })
-        .remove::<Replicate>();
+    let remaining = entity.get::<CorpseDelay>().map_or(0.0, |delay| delay.0);
+    entity.insert((DeathState { respawn_timer }, Corpse { remaining }));
+}
+
+/// AzerothCore `Creature::Update` in `CORPSE` state: past `m_corpseRemoveTime` the
+/// corpse is removed from clients (`RemoveCorpse`) until it respawns.
+pub(crate) fn corpse_decay_system(
+    time: Res<Time>,
+    mut corpses: Query<(Entity, &mut Corpse)>,
+    mut commands: Commands,
+) {
+    let dt = time.delta_secs();
+    for (entity, mut corpse) in &mut corpses {
+        corpse.remaining -= dt;
+        if corpse.remaining <= 0.0 {
+            commands.entity(entity).remove::<(Corpse, Replicate)>();
+        }
+    }
 }
 
 /// AzerothCore `Unit::CombatStop`: `unit` stops attacking (`AttackStop`), its
@@ -720,10 +768,13 @@ pub(crate) fn respawn_system(
         if let Some(mut waypoint) = waypoint {
             waypoint.restart((spawn.x, spawn.z));
         }
-        commands.entity(entity).remove::<DeathState>().insert((
-            Replicate::to_clients(NetworkTarget::All),
-            NetworkVisibility::default(),
-        ));
+        commands
+            .entity(entity)
+            .remove::<(DeathState, Corpse)>()
+            .insert((
+                Replicate::to_clients(NetworkTarget::All),
+                NetworkVisibility::default(),
+            ));
         commands.entity(entity).remove::<LastDamager>();
         events.push(CombatEvent {
             attacker: 0,

@@ -1,0 +1,458 @@
+//! Real-DB tests against data/world.db; each test skips when the DB is absent.
+
+use std::path::PathBuf;
+use std::time::Duration;
+
+use lightyear::connection::host::HostClient;
+use lightyear::prelude::{Channel, Connected, PeerId, RemoteId};
+use rusqlite::{Connection, OpenFlags};
+use shared::components::{CharacterAppearance, Player};
+
+use super::*;
+use crate::combat::{CorpseDelay, RespawnDelay, mark_npc_dead_world};
+use crate::inventory::free_bag_cells;
+use crate::item_templates::load_item_templates;
+use crate::merchant::load_vendor_catalog;
+use crate::persistence::ClientId;
+
+const KOBOLD_VERMIN: u32 = 6;
+const MELTED_CANDLE: u32 = 755;
+const TARNISHED_CHAIN_VEST: u32 = 2379;
+
+fn world_db_path() -> Option<PathBuf> {
+    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/world.db");
+    if !path.exists() {
+        eprintln!("skipping: {} not found", path.display());
+        return None;
+    }
+    Some(path)
+}
+
+#[derive(Resource)]
+struct Inbox<M>(Vec<M>);
+
+fn collect<M: lightyear::prelude::Message>(
+    mut receivers: Query<&mut MessageReceiver<M>>,
+    mut inbox: ResMut<Inbox<M>>,
+) {
+    for mut receiver in &mut receivers {
+        inbox.0.extend(receiver.receive());
+    }
+}
+
+fn add_inbox<M: lightyear::prelude::Message>(app: &mut App) {
+    app.insert_resource(Inbox::<M>(Vec::new()));
+    app.add_systems(First, collect::<M>);
+}
+
+type Pair<M> = (MessageSender<M>, MessageReceiver<M>);
+
+fn pair<M: lightyear::prelude::Message>() -> Pair<M> {
+    (MessageSender::default(), MessageReceiver::default())
+}
+
+struct Harness {
+    app: App,
+    looter: Looter,
+}
+
+#[derive(Clone, Copy)]
+struct Looter {
+    character_id: u64,
+    player: Entity,
+    connection: Entity,
+}
+
+fn harness(tables: bool) -> Option<Harness> {
+    let path = world_db_path()?;
+    let conn = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+    let mut app = App::new();
+    app.add_plugins((MinimalPlugins, bevy::state::app::StatesPlugin));
+    app.add_plugins(lightyear::prelude::server::ServerPlugins {
+        tick_duration: Duration::from_millis(50),
+    });
+    app.add_plugins(shared::protocol::ProtocolPlugin);
+    add_inbox::<LootResponse>(&mut app);
+    add_inbox::<LootSlotRemoved>(&mut app);
+    add_inbox::<LootClosed>(&mut app);
+    add_inbox::<CorpseLootable>(&mut app);
+    add_inbox::<LootFailed>(&mut app);
+    app.insert_resource(load_item_templates(&path).unwrap());
+    app.insert_resource(load_vendor_catalog(&conn).unwrap());
+    app.insert_resource(GameDatabase {
+        db: persistence::temp_database(),
+    });
+    app.init_resource::<GoldUpdateQueue>();
+    app.add_plugins(LootPlugin);
+    if tables {
+        app.insert_resource(load_loot_tables(&conn).unwrap());
+    }
+    app.finish();
+    app.cleanup();
+    let looter = spawn_looter(&mut app, "Looter", 1);
+    app.update();
+    Some(Harness { app, looter })
+}
+
+fn spawn_looter(app: &mut App, name: &str, peer: u64) -> Looter {
+    let db = &app.world().resource::<GameDatabase>().db;
+    let (character_id, _) = persistence::create_character(db, peer, name, 1, 1).unwrap();
+    let player = app
+        .world_mut()
+        .spawn((
+            Player {
+                name: name.into(),
+                race: 1,
+                class: 1,
+                appearance: CharacterAppearance::default(),
+            },
+            ClientId(character_id),
+            Position {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            Health {
+                current: 100.0,
+                max: 100.0,
+            },
+        ))
+        .id();
+    let connection = app
+        .world_mut()
+        .spawn((
+            RemoteId(PeerId::Local(peer)),
+            Connected,
+            HostClient { buffer: Vec::new() },
+            InWorld { character_id },
+            PlayerLink(player),
+            (
+                pair::<LootUnit>(),
+                pair::<LootSlotRequest>(),
+                pair::<LootRelease>(),
+                pair::<LootResponse>(),
+                pair::<LootSlotRemoved>(),
+                pair::<LootClosed>(),
+                pair::<CorpseLootable>(),
+                pair::<LootFailed>(),
+            ),
+        ))
+        .id();
+    Looter {
+        character_id,
+        player,
+        connection,
+    }
+}
+
+impl Harness {
+    /// A Kobold Vermin 2 yd away, killed by the looter.
+    fn kill_kobold(&mut self) -> Entity {
+        let kobold = self
+            .app
+            .world_mut()
+            .spawn((
+                Npc {
+                    template_id: KOBOLD_VERMIN,
+                    name: "Kobold Vermin".into(),
+                },
+                Position {
+                    x: 2.0,
+                    y: 0.0,
+                    z: 0.0,
+                },
+                Health {
+                    current: 0.0,
+                    max: 100.0,
+                },
+                LastDamager(self.looter.player),
+                RespawnDelay::for_spawn(180, 0),
+                CorpseDelay::for_rank(0),
+            ))
+            .id();
+        mark_npc_dead_world(self.app.world_mut(), kobold);
+        self.settle();
+        kobold
+    }
+
+    /// Replace the rolled loot with 3 copper and a Melted Candle.
+    fn stock(&mut self, corpse: Entity) {
+        let loot = CorpseLoot {
+            looters: [(
+                self.looter.character_id,
+                vec![
+                    Some(LootContent::Money { copper: 3 }),
+                    Some(LootContent::Item {
+                        item_id: MELTED_CANDLE,
+                        name: "Melted Candle".into(),
+                        quality: 0,
+                        count: 1,
+                    }),
+                ],
+            )]
+            .into(),
+        };
+        self.app.world_mut().entity_mut(corpse).insert(loot);
+    }
+
+    fn send<M: lightyear::prelude::Message, C: Channel>(&mut self, from: Looter, message: M) {
+        self.app
+            .world_mut()
+            .get_mut::<MessageSender<M>>(from.connection)
+            .unwrap()
+            .send::<C>(message);
+        self.settle();
+    }
+
+    fn open(&mut self, corpse: Entity, auto: bool) {
+        let looter = self.looter;
+        self.send::<_, LootChannel>(
+            looter,
+            LootUnit {
+                corpse: corpse.to_bits(),
+                auto,
+            },
+        );
+    }
+
+    fn take_slot(&mut self, corpse: Entity, slot: u8) {
+        let looter = self.looter;
+        self.send::<_, LootChannel>(
+            looter,
+            LootSlotRequest {
+                corpse: corpse.to_bits(),
+                slot,
+            },
+        );
+    }
+
+    /// Frames for a sent message to reach its inbox.
+    fn settle(&mut self) {
+        for _ in 0..3 {
+            self.app.update();
+        }
+    }
+
+    fn take<M: lightyear::prelude::Message>(&mut self) -> Vec<M> {
+        std::mem::take(&mut self.app.world_mut().resource_mut::<Inbox<M>>().0)
+    }
+
+    fn inventory(&self) -> persistence::InventoryData {
+        persistence::load_inventory(
+            &self.app.world().resource::<GameDatabase>().db,
+            self.looter.character_id,
+        )
+    }
+
+    fn count_of(&self, item_id: u32) -> u32 {
+        self.inventory()
+            .items
+            .iter()
+            .filter(|item| item.item_id == item_id)
+            .map(|item| item.stack_count)
+            .sum()
+    }
+
+    fn failures(&mut self) -> Vec<LootError> {
+        self.take::<LootFailed>()
+            .into_iter()
+            .map(|failed| failed.error)
+            .collect()
+    }
+
+    fn corpse(&self, corpse: Entity) -> Corpse {
+        *self.app.world().get::<Corpse>(corpse).unwrap()
+    }
+}
+
+fn lootable(corpse: Entity, lootable: bool) -> CorpseLootable {
+    CorpseLootable {
+        corpse: corpse.to_bits(),
+        lootable,
+    }
+}
+
+#[test]
+fn killing_a_kobold_vermin_gives_its_killer_lootable_coins() {
+    let Some(mut h) = harness(true) else { return };
+    let kobold = h.kill_kobold();
+
+    assert_eq!(h.take::<CorpseLootable>(), vec![lootable(kobold, true)]);
+    let loot = h.app.world().get::<CorpseLoot>(kobold).unwrap();
+    let slots = &loot.looters[&h.looter.character_id];
+    let Some(LootContent::Money { copper }) = slots[0] else {
+        panic!("money slot first: {slots:?}");
+    };
+    assert!((1..=5).contains(&copper), "mingold 1, maxgold 5: {copper}");
+}
+
+#[test]
+fn looting_both_slots_moves_coins_and_candle_into_the_bags_and_ends_the_sparkle() {
+    let Some(mut h) = harness(true) else { return };
+    let kobold = h.kill_kobold();
+    h.stock(kobold);
+    h.take::<CorpseLootable>();
+    let gold_before = h.inventory().gold;
+
+    h.open(kobold, false);
+    let responses = h.take::<LootResponse>();
+    assert_eq!(responses.len(), 1);
+    assert!(!responses[0].auto);
+    assert_eq!(
+        responses[0]
+            .slots
+            .iter()
+            .map(|slot| slot.slot)
+            .collect::<Vec<_>>(),
+        [0, 1]
+    );
+    let decay_before = h.corpse(kobold).remaining;
+
+    h.take_slot(kobold, 0);
+    assert_eq!(h.inventory().gold, gold_before + 3);
+    assert!(
+        h.take::<LootClosed>().is_empty(),
+        "the candle is still there"
+    );
+    h.take_slot(kobold, 1);
+
+    assert_eq!(h.count_of(MELTED_CANDLE), 1);
+    let removed: Vec<u8> = h.take::<LootSlotRemoved>().iter().map(|r| r.slot).collect();
+    assert_eq!(removed, [0, 1]);
+    assert_eq!(h.take::<CorpseLootable>(), vec![lootable(kobold, false)]);
+    assert_eq!(h.take::<LootClosed>().len(), 1);
+    assert!(
+        h.app
+            .world()
+            .get::<ActiveLoot>(h.looter.connection)
+            .is_none()
+    );
+    // All loot taken: the rest of the 60 s decay is halved.
+    let decay = h.corpse(kobold).remaining;
+    assert!(
+        (decay - decay_before / 2.0).abs() < 0.5,
+        "{decay} vs {decay_before}"
+    );
+    assert!(h.failures().is_empty());
+}
+
+#[test]
+fn auto_loot_takes_every_slot_at_once() {
+    let Some(mut h) = harness(true) else { return };
+    let kobold = h.kill_kobold();
+    h.stock(kobold);
+    let gold_before = h.inventory().gold;
+
+    h.open(kobold, true);
+
+    assert!(h.take::<LootResponse>()[0].auto);
+    assert_eq!(h.inventory().gold, gold_before + 3);
+    assert_eq!(h.count_of(MELTED_CANDLE), 1);
+    assert_eq!(h.take::<LootClosed>().len(), 1);
+    assert!(
+        h.app
+            .world()
+            .get::<ActiveLoot>(h.looter.connection)
+            .is_none()
+    );
+}
+
+#[test]
+fn an_item_that_does_not_fit_stays_in_the_window() {
+    let Some(mut h) = harness(true) else { return };
+    let kobold = h.kill_kobold();
+    h.stock(kobold);
+    let db = &h.app.world().resource::<GameDatabase>().db;
+    let templates = h.app.world().resource::<ItemTemplates>();
+    let free = free_bag_cells(db, templates, h.looter.character_id);
+    let mut inventory = persistence::load_inventory(db, h.looter.character_id);
+    for index in 0..free {
+        inventory.items.push(InventoryItemData {
+            item_guid: 900_000 + index as u64,
+            item_id: TARNISHED_CHAIN_VEST,
+            name: "Tarnished Chain Vest".into(),
+            quality: 1,
+            required_level: 1,
+            stack_count: 1,
+            vendor_sell_price: 17,
+            unique_auction: false,
+        });
+    }
+    persistence::save_inventory(db, h.looter.character_id, &inventory);
+
+    h.open(kobold, true);
+
+    assert_eq!(h.failures(), vec![LootError::InventoryFull]);
+    assert_eq!(h.count_of(MELTED_CANDLE), 0);
+    let removed: Vec<u8> = h.take::<LootSlotRemoved>().iter().map(|r| r.slot).collect();
+    assert_eq!(removed, [0], "the coins still fit");
+    assert!(h.take::<LootClosed>().is_empty());
+    assert_eq!(
+        h.app.world().get::<ActiveLoot>(h.looter.connection),
+        Some(&ActiveLoot { corpse: kobold })
+    );
+}
+
+#[test]
+fn a_player_who_did_not_kill_it_may_not_loot() {
+    let Some(mut h) = harness(true) else { return };
+    let kobold = h.kill_kobold();
+    let stranger = spawn_looter(&mut h.app, "Stranger", 2);
+    h.settle();
+
+    h.send::<_, LootChannel>(
+        stranger,
+        LootUnit {
+            corpse: kobold.to_bits(),
+            auto: false,
+        },
+    );
+
+    assert_eq!(h.failures(), vec![LootError::NoPermission]);
+    assert!(h.take::<LootResponse>().is_empty());
+}
+
+#[test]
+fn a_corpse_out_of_reach_is_refused_and_walking_away_closes_the_window() {
+    let Some(mut h) = harness(true) else { return };
+    let kobold = h.kill_kobold();
+    h.stock(kobold);
+    h.app
+        .world_mut()
+        .get_mut::<Position>(h.looter.player)
+        .unwrap()
+        .x = 20.0;
+    h.open(kobold, false);
+    assert_eq!(h.failures(), vec![LootError::TooFar]);
+
+    h.app
+        .world_mut()
+        .get_mut::<Position>(h.looter.player)
+        .unwrap()
+        .x = 0.0;
+    h.open(kobold, false);
+    assert_eq!(h.take::<LootResponse>().len(), 1);
+    h.app
+        .world_mut()
+        .get_mut::<Position>(h.looter.player)
+        .unwrap()
+        .x = 20.0;
+    h.settle();
+    assert_eq!(h.take::<LootClosed>().len(), 1);
+    assert!(
+        h.app
+            .world()
+            .get::<ActiveLoot>(h.looter.connection)
+            .is_none()
+    );
+}
+
+#[test]
+fn a_corpse_nobody_gets_loot_from_decays_in_half_the_time() {
+    let Some(mut h) = harness(false) else { return };
+    let kobold = h.kill_kobold();
+
+    assert!(h.take::<CorpseLootable>().is_empty());
+    assert!(h.app.world().get::<CorpseLoot>(kobold).is_none());
+    assert_eq!(h.corpse(kobold), Corpse { remaining: 30.0 });
+}
