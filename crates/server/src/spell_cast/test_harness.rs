@@ -200,6 +200,7 @@ pub(crate) fn harness_with(
     app.add_plugins(crate::combat::CombatPlugin);
     app.add_plugins(super::SpellCastPlugin);
     app.add_plugins(crate::auras::AuraPlugin);
+    app.add_plugins(crate::creature_scripts::CreatureScriptsPlugin);
     if computed_stats {
         app.add_plugins(crate::stats::StatsPlugin);
     }

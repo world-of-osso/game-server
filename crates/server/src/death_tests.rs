@@ -453,6 +453,7 @@ fn world_data_with_one_spawn(npcflag: u32) -> WorldData {
                 rank: 0,
                 experience_modifier: 1.0,
                 gives_experience: true,
+                script_name: String::new(),
                 models: vec![],
             },
         )]

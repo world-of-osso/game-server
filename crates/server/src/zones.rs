@@ -81,6 +81,7 @@ fn spawn_creatures<'a>(
         }
         let addon = world_data.addon_for(spawn);
         insert_ai_components(&mut entity, spawn, template, addon, world_data);
+        crate::creature_scripts::insert_script_components(&mut entity, &template.script_name);
         if let Some(addon) = addon {
             insert_addon_components(&mut entity, addon);
         }
@@ -293,6 +294,7 @@ mod tests {
             rank: 0,
             experience_modifier: 1.0,
             gives_experience: true,
+            script_name: String::new(),
             models: vec![CreatureModelInfo { display_id }],
         }
     }
@@ -339,7 +341,8 @@ mod tests {
         conn.execute_batch(
             "CREATE TABLE creature_template (entry INTEGER, minlevel INTEGER, maxlevel INTEGER,
                 faction INTEGER, npcflag INTEGER, speed_walk REAL, HealthModifier REAL, name TEXT, rank INTEGER, exp INTEGER,
-                ExperienceModifier REAL, type INTEGER, flags_extra INTEGER, speed_run REAL);
+                ExperienceModifier REAL, type INTEGER, flags_extra INTEGER, speed_run REAL,
+                ScriptName TEXT);
              CREATE TABLE creature_template_model (CreatureID INTEGER, Idx INTEGER,
                 CreatureDisplayID INTEGER, DisplayScale REAL, Probability REAL);
              CREATE TABLE creature (guid INTEGER, id1 INTEGER, map INTEGER, zoneId INTEGER,
@@ -367,7 +370,7 @@ mod tests {
         for (index, angle) in angles.iter().enumerate() {
             let entry = 100 + index as u32;
             conn.execute(
-                "INSERT INTO creature_template VALUES (?1,1,1,1,0,1.0,1.0,'Loup — Écorché',0,0,1.0,1,0,1.14)",
+                "INSERT INTO creature_template VALUES (?1,1,1,1,0,1.0,1.0,'Loup — Écorché',0,0,1.0,1,0,1.14,'')",
                 [entry],
             )
             .unwrap();

@@ -512,6 +512,7 @@ fn world_with_creature(entry: u32, min_level: u8) -> crate::world_data::WorldDat
         rank: 0,
         experience_modifier: 1.0,
         gives_experience: true,
+        script_name: String::new(),
         models: Vec::new(),
     };
     crate::world_data::WorldData {

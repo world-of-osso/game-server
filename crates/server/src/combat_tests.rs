@@ -798,3 +798,76 @@ fn auto_attack_on_hostile_kobold_swings() {
     assert!(app.world().get::<AutoAttack>(player).is_some());
     assert_eq!(app.world().get::<Health>(kobold).unwrap().current, 90.0);
 }
+
+#[test]
+fn human_melee_on_training_dummy_logs_every_swing_and_never_kills_it() {
+    let mut app = setup_combat_app();
+    let Some(templates) = crate::faction::world_db_faction_templates() else {
+        return;
+    };
+    app.insert_resource(templates);
+    // Grandmaster's Training Dummy (31144): HealthModifier 0.000187 × 100, faction 7.
+    let health = Health {
+        current: 0.000187 * 100.0,
+        max: 0.000187 * 100.0,
+    };
+    let dummy = app
+        .world_mut()
+        .spawn((
+            pos(1.0, 0.0, 0.0),
+            health,
+            Npc {
+                template_id: 31144,
+                name: "Grandmaster's Training Dummy".into(),
+            },
+            UnitFactionTemplate(7),
+            TrainingDummy::default(),
+        ))
+        .id();
+    let player = app
+        .world_mut()
+        .spawn((
+            pos(0.0, 0.0, 0.0),
+            Player {
+                name: "Human".into(),
+                race: 1,
+                class: 1,
+                appearance: Default::default(),
+            },
+            UnitFactionTemplate(1),
+            CombatTarget(Some(dummy)),
+        ))
+        .id();
+    app.world_mut().run_schedule(FixedUpdate);
+    for _ in 0..3 {
+        app.world_mut().get_mut::<AutoAttack>(player).unwrap().timer = 0.0;
+        app.world_mut().run_schedule(FixedUpdate);
+    }
+
+    let log = app.world().resource::<CombatLog>().range(0.0, f64::MAX);
+    let swings: Vec<f32> = log
+        .iter()
+        .filter(|entry| {
+            entry.event.target == dummy.to_bits()
+                && entry.event.event_type == CombatEventType::MeleeDamage
+        })
+        .map(|entry| entry.event.amount)
+        .collect();
+    assert_eq!(
+        swings,
+        vec![BASE_DAMAGE; 3],
+        "each swing logs its full damage"
+    );
+    assert!(
+        log.iter()
+            .all(|entry| entry.event.event_type != CombatEventType::Death)
+    );
+    let entity = app.world().entity(dummy);
+    assert_eq!(*entity.get::<Health>().unwrap(), health);
+    assert!(entity.get::<DeathState>().is_none());
+    assert!(
+        entity.get::<AutoAttack>().is_none(),
+        "the dummy never swings back"
+    );
+    assert!(entity.get::<CombatStatus>().is_some_and(|status| status.0));
+}

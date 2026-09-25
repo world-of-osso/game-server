@@ -503,3 +503,33 @@ fn escorts_hold_still_while_their_leader_is_dead_then_rejoin_it() {
         );
     }
 }
+
+/// Stormwind Grandmaster's (31144) and Expert's (32666) Training Dummies,
+/// ScriptName `npc_training_dummy`, MovementType 0.
+const STORMWIND_DUMMIES: [u32; 2] = [201235, 202726];
+
+#[test]
+#[ignore]
+fn stormwind_training_dummies_get_their_script_and_stand_still() {
+    let mut app = patrol_app(&[STORMWIND_DUMMIES[0], STORMWIND_DUMMIES[1], NORTHSHIRE_GUARD]);
+    let dummies = STORMWIND_DUMMIES.map(|guid| entity_of(&app, guid));
+    let guard = entity_of(&app, NORTHSHIRE_GUARD);
+    for dummy in dummies {
+        assert!(
+            app.world()
+                .get::<crate::creature_scripts::TrainingDummy>(dummy)
+                .is_some()
+        );
+    }
+    assert!(
+        app.world()
+            .get::<crate::creature_scripts::TrainingDummy>(guard)
+            .is_none()
+    );
+
+    let placed = dummies.map(|dummy| position(&app, dummy));
+    for _ in 0..200 {
+        app.update();
+    }
+    assert_eq!(dummies.map(|dummy| position(&app, dummy)), placed);
+}

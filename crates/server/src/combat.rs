@@ -7,6 +7,7 @@ use shared::protocol::{CombatChannel, CombatEvent, CombatEventType};
 use crate::auras::AuraStatMods;
 use crate::auras::procs::{self, AuraEvent, PendingAuraEvents};
 use crate::creature_ai::{SpawnPoint, WaypointState};
+use crate::creature_scripts::{TrainingDummy, health_loss};
 use crate::faction::{FactionTemplates, UnitFaction};
 use crate::interest::{InterestDirtyQueue, NetworkVisibility, mark_interest_position_changed};
 use crate::networking::CombatTarget;
@@ -192,6 +193,7 @@ type AutoAttackTargets<'w, 's> = Query<
         Option<&'static mut LastDamager>,
         Has<Npc>,
         Option<&'static AuraStatMods>,
+        Has<TrainingDummy>,
     ),
 >;
 
@@ -381,7 +383,7 @@ fn try_swing(
     if auto_attack.timer > 0.0 {
         return None;
     }
-    let Ok((target_pos, mut health, last_damager, is_npc, target_mods)) =
+    let Ok((target_pos, mut health, last_damager, is_npc, target_mods, training_dummy)) =
         targets.get_mut(target_entity)
     else {
         return None;
@@ -390,7 +392,8 @@ fn try_swing(
         return None;
     }
     let damage = swing_damage(attacker_mods, target_mods);
-    let became_lethal = crate::death::apply_health_damage(&mut health, damage);
+    let became_lethal =
+        crate::death::apply_health_damage(&mut health, health_loss(training_dummy, damage));
     let npc_died = is_npc && became_lethal;
     let player_died = !is_npc && became_lethal;
     if let Some(mut last_damager) = last_damager {

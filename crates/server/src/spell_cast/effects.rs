@@ -27,6 +27,7 @@ use shared::protocol::{CombatLogEvent, CombatLogKind, MissKind};
 use super::{SpellHistory, log_event, now};
 use crate::auras::procs::{self, AuraEvent};
 use crate::auras::{AuraStatMods, SpellModOp, spell_mods};
+use crate::creature_scripts::{TrainingDummy, health_loss};
 use crate::item_stats::WeaponDamage;
 use crate::spell_info::{SpellEffect, SpellInfo};
 use crate::stats::CharacterStats;
@@ -251,11 +252,13 @@ pub fn deal_damage(
         .max(0.0)
         .round();
     let (amount, absorbed) = crate::auras::absorb_damage(world, target, school, amount);
+    let training_dummy = world.get::<TrainingDummy>(target).is_some();
     let Some(mut health) = world.get_mut::<Health>(target) else {
         return;
     };
     let before = health.current;
-    let lethal = crate::death::apply_health_damage(&mut health, amount);
+    let lethal =
+        crate::death::apply_health_damage(&mut health, health_loss(training_dummy, amount));
     let overkill = (amount - before).max(0.0);
     mark_dirty(world, target);
     world

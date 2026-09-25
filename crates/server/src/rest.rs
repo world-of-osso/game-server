@@ -238,6 +238,7 @@ mod tests {
             rank: 0,
             experience_modifier: 1.0,
             gives_experience: true,
+            script_name: String::new(),
             models: vec![CreatureModelInfo { display_id: 1 }],
         }
     }

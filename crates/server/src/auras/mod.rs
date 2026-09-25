@@ -565,6 +565,8 @@ pub enum RemoveReason {
     /// The passive spell is no longer known.
     Unlearned,
     CasterGone,
+    /// The creature evaded (`RemoveEvadeAuras`).
+    Evade,
 }
 
 fn announce_removed(world: &mut World, unit: Entity, aura: &AuraInstance) {

@@ -13,6 +13,7 @@ mod class_progression;
 mod collection;
 mod combat;
 mod creature_ai;
+mod creature_scripts;
 mod currency;
 mod death;
 mod duel;
@@ -146,6 +147,7 @@ fn add_world_plugins(app: &mut App) {
         .add_plugins(terrain_height::TerrainPlugin)
         .add_plugins(zones::ZonePlugin)
         .add_plugins(creature_ai::CreatureAiPlugin)
+        .add_plugins(creature_scripts::CreatureScriptsPlugin)
         .add_plugins(grid_activity::GridActivityPlugin)
         .add_plugins(stats::StatsPlugin)
         .add_plugins(combat::CombatPlugin)

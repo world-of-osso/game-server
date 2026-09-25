@@ -19,6 +19,8 @@ pub struct CreatureTemplate {
     pub experience_modifier: f32,
     /// Critters and `CREATURE_FLAG_EXTRA_NO_XP` give no experience.
     pub gives_experience: bool,
+    /// `ScriptName`: the AzerothCore CreatureScript (`creature_scripts`).
+    pub script_name: String,
     pub models: Vec<CreatureModelInfo>,
 }
 
@@ -172,6 +174,7 @@ fn template_from_row(row: &Row) -> rusqlite::Result<CreatureTemplate> {
         gives_experience: row.get::<_, i64>(10)? != CREATURE_TYPE_CRITTER
             && row.get::<_, i64>(11)? & CREATURE_FLAG_EXTRA_NO_XP == 0,
         speed_run: row.get(12)?,
+        script_name: row.get(13)?,
         models: Vec::new(),
     })
 }
@@ -180,7 +183,7 @@ fn load_templates(conn: &Connection) -> HashMap<u32, CreatureTemplate> {
     let mut stmt = conn
         .prepare(
             "SELECT entry, minlevel, maxlevel, faction, npcflag, speed_walk, HealthModifier, name,
-                    rank, ExperienceModifier, type, flags_extra, speed_run
+                    rank, ExperienceModifier, type, flags_extra, speed_run, ScriptName
              FROM creature_template",
         )
         .expect("Failed to prepare creature_template query");
