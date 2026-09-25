@@ -603,3 +603,75 @@ fn enemy_faction_corpse_still_visible_for_looting() {
     update_entity_visibility(&enemy_corpse_pos, &mut state, &players);
     assert_visible(&state, conn, "enemy corpse within range is visible");
 }
+
+/// A corpse past its decay is hidden from the players that saw it (AzerothCore
+/// `RemoveCorpse`) and shown again when the NPC respawns.
+#[test]
+fn a_decayed_corpse_leaves_its_observers_and_the_respawn_returns() {
+    use crate::combat::{Corpse, DeathState};
+    use crate::creature_ai::SpawnPoint;
+    use bevy::time::TimeUpdateStrategy;
+    use shared::components::Health;
+
+    let mut app = setup_interest_app();
+    app.add_plugins(crate::combat::CombatPlugin);
+    app.init_resource::<crate::faction::FactionTemplates>();
+    app.insert_resource(TimeUpdateStrategy::ManualDuration(
+        std::time::Duration::from_millis(50),
+    ));
+    app.finish();
+    app.cleanup();
+    let connection = spawn_interest_observer(&mut app, pos(0.0, 0.0, 0.0));
+    let wolf = app
+        .world_mut()
+        .spawn((
+            pos(5.0, 0.0, 0.0),
+            NetworkVisibility::default(),
+            Replicate::to_clients(NetworkTarget::All),
+            Health {
+                current: 0.0,
+                max: 100.0,
+            },
+            DeathState { respawn_timer: 3.0 },
+            Corpse { remaining: 1.0 },
+            SpawnPoint {
+                x: 5.0,
+                y: 0.0,
+                z: 0.0,
+                wander_distance: 0.0,
+                speed_walk: 1.0,
+            },
+        ))
+        .id();
+    app.update();
+    run_fixed_ticks(&mut app, 1);
+    let visible = |app: &App| {
+        app.world()
+            .get::<NetworkVisibility>(wolf)
+            .is_some_and(|state| state.is_visible(connection))
+    };
+    assert!(visible(&app), "the fresh corpse is seen");
+
+    // 1.5 s: past the 1 s decay.
+    for _ in 0..30 {
+        app.update();
+    }
+    let corpse = app.world().entity(wolf);
+    assert!(corpse.get::<Corpse>().is_none());
+    assert!(
+        !visible(&app),
+        "the decayed corpse is hidden from its observer"
+    );
+    assert!(
+        corpse.get::<Replicate>().is_some(),
+        "replication stays for the respawn"
+    );
+
+    // 3.5 s: respawned at full health and visible again.
+    for _ in 0..40 {
+        app.update();
+    }
+    run_fixed_ticks(&mut app, 1);
+    assert!(app.world().get::<DeathState>(wolf).is_none());
+    assert!(visible(&app), "the respawned NPC is shown again");
+}

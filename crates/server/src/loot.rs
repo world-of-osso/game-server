@@ -541,12 +541,20 @@ fn close_invalid_loot(
     }
 }
 
-/// A decayed corpse (no longer `Corpse`) loses its loot.
+/// A decayed corpse (no longer `Corpse`) loses its loot; its remaining looters are
+/// told it is no longer lootable.
 fn drop_decayed_loot(
-    decayed: Query<Entity, (With<CorpseLoot>, Without<Corpse>)>,
+    decayed: Query<(Entity, &CorpseLoot), Without<Corpse>>,
+    connections: Query<(Entity, &InWorld)>,
+    mut senders: LootSenders,
     mut commands: Commands,
 ) {
-    for corpse in &decayed {
+    for (corpse, loot) in &decayed {
+        for (connection, in_world) in &connections {
+            if loot.looters.contains_key(&in_world.character_id) {
+                senders.lootable(connection, corpse, false);
+            }
+        }
         commands.entity(corpse).remove::<CorpseLoot>();
     }
 }

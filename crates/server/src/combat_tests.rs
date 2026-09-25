@@ -880,44 +880,6 @@ fn human_melee_on_training_dummy_logs_every_swing_and_never_kills_it() {
 }
 
 #[test]
-fn corpse_stops_replicating_when_its_decay_runs_out() {
-    use bevy::time::TimeUpdateStrategy;
-    let mut app = setup_combat_app();
-    app.insert_resource(TimeUpdateStrategy::ManualDuration(
-        std::time::Duration::from_millis(50),
-    ));
-    let wolf = app
-        .world_mut()
-        .spawn((
-            DeathState {
-                respawn_timer: 240.0,
-            },
-            Corpse { remaining: 1.0 },
-            Health {
-                current: 0.0,
-                max: 100.0,
-            },
-            pos(0.0, 0.0, 0.0),
-            Replicate::to_clients(NetworkTarget::All),
-        ))
-        .id();
-    for _ in 0..15 {
-        app.update();
-    }
-    assert!(app.world().get::<Replicate>(wolf).is_some(), "0.75 s in");
-    for _ in 0..10 {
-        app.update();
-    }
-    let wolf = app.world().entity(wolf);
-    assert!(wolf.get::<Replicate>().is_none(), "removed after 1 s");
-    assert!(wolf.get::<Corpse>().is_none());
-    assert!(
-        wolf.get::<DeathState>().is_some(),
-        "still waiting to respawn"
-    );
-}
-
-#[test]
 fn looting_a_corpse_empty_halves_its_remaining_decay_and_respawn() {
     // Kobold Vermin: spawntimesecs 180 + 60 s decay; looted 20 s after death.
     let mut corpse = Corpse { remaining: 40.0 };

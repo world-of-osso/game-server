@@ -575,7 +575,9 @@ fn insert_npc_death(mut entity: EntityWorldMut) {
 }
 
 /// AzerothCore `Creature::Update` in `CORPSE` state: past `m_corpseRemoveTime` the
-/// corpse is removed from clients (`RemoveCorpse`) until it respawns.
+/// corpse is removed from clients (`RemoveCorpse`) until it respawns. Dropping
+/// `NetworkVisibility` hides it from every observer; `Replicate` stays, and the
+/// respawn's new `NetworkVisibility` shows the NPC again.
 pub(crate) fn corpse_decay_system(
     time: Res<Time>,
     mut corpses: Query<(Entity, &mut Corpse)>,
@@ -585,7 +587,9 @@ pub(crate) fn corpse_decay_system(
     for (entity, mut corpse) in &mut corpses {
         corpse.remaining -= dt;
         if corpse.remaining <= 0.0 {
-            commands.entity(entity).remove::<(Corpse, Replicate)>();
+            commands
+                .entity(entity)
+                .remove::<(Corpse, NetworkVisibility)>();
         }
     }
 }

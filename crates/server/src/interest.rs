@@ -236,11 +236,25 @@ fn on_network_visibility_added(
     }
 }
 
+/// Taking `NetworkVisibility` off an entity hides it from every player that sees it:
+/// the entity leaves those clients, while it may keep `Replicate` (a decayed corpse
+/// that respawns). Removing `Replicate` alone marks nothing for the senders, so
+/// their copies would stay.
 fn on_network_visibility_removed(
     trigger: On<Remove, NetworkVisibility>,
+    states: Query<&NetworkVisibility>,
+    replication_dirty: Option<Res<ReplicationDirtyQueue>>,
+    mut commands: Commands,
     mut index: ResMut<InterestIndex>,
 ) {
-    index.remove_target(trigger.entity);
+    let entity = trigger.entity;
+    if let Ok(state) = states.get(entity) {
+        for &sender in &state.visible_senders {
+            commands.lose_visibility(entity, sender);
+            mark_sender_visibility_changed(replication_dirty.as_deref(), entity, sender);
+        }
+    }
+    index.remove_target(entity);
 }
 
 fn on_player_link_added(

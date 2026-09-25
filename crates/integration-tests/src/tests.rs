@@ -221,6 +221,53 @@ fn targeted_visibility_change_does_not_visit_other_senders() {
     assert!(!client_has_position(stepper.client_world_mut(0), 42.0));
 }
 
+/// A dead NPC's corpse decays and later respawns on the same server entity: losing
+/// visibility (marked dirty for the sender, as `interest` does) removes the client's
+/// copy, and regaining it shows the entity again.
+#[test]
+fn a_hidden_entity_leaves_the_client_and_returns_when_shown_again() {
+    let _guard = integration_test_guard();
+    let mut stepper = Stepper::single_client();
+    let sender = stepper.client_of_entities[0];
+    let corpse = stepper
+        .server_world_mut()
+        .spawn((
+            Position {
+                x: 7.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            Replicate::to_clients(NetworkTarget::All),
+        ))
+        .id();
+    stepper.tick_step(10);
+    assert!(client_has_position(stepper.client_world_mut(0), 7.0));
+
+    stepper.server_world_mut().lose_visibility(corpse, sender);
+    stepper
+        .server_app
+        .world()
+        .resource::<ReplicationDirtyQueue>()
+        .mark_for_sender(corpse, sender);
+    stepper.tick_step(10);
+    assert!(
+        !client_has_position(stepper.client_world_mut(0), 7.0),
+        "a corpse hidden at decay leaves the client"
+    );
+
+    stepper.server_world_mut().gain_visibility(corpse, sender);
+    stepper
+        .server_app
+        .world()
+        .resource::<ReplicationDirtyQueue>()
+        .mark_for_sender(corpse, sender);
+    stepper.tick_step(10);
+    assert!(
+        client_has_position(stepper.client_world_mut(0), 7.0),
+        "the respawned NPC is shown again"
+    );
+}
+
 #[test]
 fn replicated_component_insert_and_remove_preserve_actions() {
     let _guard = integration_test_guard();

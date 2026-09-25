@@ -456,3 +456,19 @@ fn a_corpse_nobody_gets_loot_from_decays_in_half_the_time() {
     assert!(h.app.world().get::<CorpseLoot>(kobold).is_none());
     assert_eq!(h.corpse(kobold), Corpse { remaining: 30.0 });
 }
+
+#[test]
+fn a_decayed_corpse_stops_being_lootable_for_its_looters() {
+    let Some(mut h) = harness(true) else { return };
+    let kobold = h.kill_kobold();
+    assert_eq!(h.take::<CorpseLootable>(), vec![lootable(kobold, true)]);
+
+    // `combat::corpse_decay_system` removes `Corpse` when the decay runs out.
+    h.app.world_mut().entity_mut(kobold).remove::<Corpse>();
+    h.settle();
+
+    assert_eq!(h.take::<CorpseLootable>(), vec![lootable(kobold, false)]);
+    assert!(h.app.world().get::<CorpseLoot>(kobold).is_none());
+    h.open(kobold, false);
+    assert_eq!(h.failures(), vec![LootError::NoPermission]);
+}
