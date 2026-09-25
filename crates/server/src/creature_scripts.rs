@@ -52,6 +52,7 @@ fn training_dummy_evade_system(world: &mut World) {
         })
         .collect();
     for dummy in evading {
+        debug!("Training dummy {dummy} evades");
         auras::remove_auras(world, dummy, RemoveReason::Evade, |aura| {
             aura.caster != dummy
         });
