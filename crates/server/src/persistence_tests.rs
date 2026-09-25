@@ -641,3 +641,50 @@ fn sync_live_components_preserves_existing_equipment_appearance() {
         Some(175942)
     );
 }
+
+/// Bevy `(x, y, z)` stored as WoW `(x, -z, y)`.
+fn stored_position(db: &Database, character_id: u64) -> (f32, f32, f32) {
+    let data = load_character(db, character_id).expect("saved character");
+    (data.x, data.y, data.z)
+}
+
+#[test]
+fn a_player_who_stops_moving_before_the_save_tick_is_still_saved() {
+    let mut app = App::new();
+    app.add_plugins(MinimalPlugins);
+    app.add_systems(FixedUpdate, persistence_runtime::save_dirty_characters);
+    app.insert_resource(GameDatabase {
+        db: temp_database(),
+    });
+    let db = &app.world().resource::<GameDatabase>().db;
+    let (character_id, _) = create_character(db, 1, "Walker", 1, 1).unwrap();
+    let player = app
+        .world_mut()
+        .spawn((
+            Player {
+                name: "Walker".into(),
+                race: 1,
+                class: 1,
+                appearance: CharacterAppearance::default(),
+            },
+            ClientId(character_id),
+            Position {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            Health {
+                current: 100.0,
+                max: 100.0,
+            },
+        ))
+        .id();
+    app.world_mut().run_schedule(FixedUpdate);
+    app.world_mut().get_mut::<Position>(player).unwrap().x = 25.0;
+    // Moves on tick 2, then stands still through the 300-tick save.
+    for _ in 0..300 {
+        app.world_mut().run_schedule(FixedUpdate);
+    }
+    let db = &app.world().resource::<GameDatabase>().db;
+    assert_eq!(stored_position(db, character_id).0, 25.0);
+}

@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 use shared::components::{Health, Player, Position};
@@ -32,15 +34,20 @@ type DirtyPlayerFilter = (
 
 #[derive(SystemParam)]
 pub(super) struct DirtyPlayersQuery<'w, 's> {
-    query: Query<'w, 's, DirtyPlayerData, DirtyPlayerFilter>,
+    changed: Query<'w, 's, Entity, DirtyPlayerFilter>,
+    players: Query<'w, 's, DirtyPlayerData, (With<Player>, With<ClientId>)>,
 }
 
-/// Periodically save all player data to the database.
+/// Periodically save the players changed since the last save. The system runs every
+/// fixed tick and `Changed` only covers the previous run, so changed players are
+/// collected every tick and kept until the save tick writes them.
 pub(super) fn save_dirty_characters(
     db: Option<Res<GameDatabase>>,
     players: DirtyPlayersQuery,
     mut tick_count: Local<u64>,
+    mut unsaved: Local<HashSet<Entity>>,
 ) {
+    unsaved.extend(players.changed.iter());
     *tick_count += 1;
     if !(*tick_count).is_multiple_of(SAVE_INTERVAL_TICKS) {
         return;
@@ -48,7 +55,10 @@ pub(super) fn save_dirty_characters(
     let Some(db) = db else { return };
 
     let mut saved_count = 0;
-    for (position, health, player, client_id, death) in players.query.iter() {
+    for entity in unsaved.drain() {
+        let Ok((position, health, player, client_id, death)) = players.players.get(entity) else {
+            continue;
+        };
         save_live_character(&db.db, client_id.0, player, position, health, death);
         saved_count += 1;
     }
