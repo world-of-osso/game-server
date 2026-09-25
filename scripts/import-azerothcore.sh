@@ -25,6 +25,7 @@ DUMP_TABLES=(
     npc_vendor npc_trainer trainer trainer_spell creature_default_trainer
     creature_loot_template gameobject_loot_template reference_loot_template item_loot_template
     gossip_menu gossip_menu_option npc_text broadcast_text points_of_interest item_template
+    gameobject_template gameobject_template_addon gameobject
 )
 
 DUMP_ARGS=()

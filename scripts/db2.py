@@ -55,7 +55,7 @@ TABLES = [
     "RandPropPoints", "ItemArmorQuality", "ItemArmorShield", "ItemArmorTotal",
     "ArmorLocation", "ItemDamageOneHand", "ItemDamageOneHandCaster",
     "ItemDamageTwoHand", "ItemDamageTwoHandCaster", "ItemSquishEra", "CurvePoint",
-    "DurabilityCosts", "DurabilityQuality",
+    "DurabilityCosts", "DurabilityQuality", "GameObjectDisplayInfo", "BankTab",
 ]
 
 

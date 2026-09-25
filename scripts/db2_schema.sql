@@ -1168,3 +1168,38 @@ CREATE TABLE durability_quality (
   ID INTEGER PRIMARY KEY,
   Data REAL NOT NULL DEFAULT 0
 );
+
+-- GeoBox_0-2 / GeoBox_3-5: model bounding box min / max (AzerothCore minX..maxZ).
+DROP TABLE IF EXISTS game_object_display_info;
+CREATE TABLE game_object_display_info (
+  ID INTEGER PRIMARY KEY,
+  GeoBox_0 REAL NOT NULL DEFAULT 0,
+  GeoBox_1 REAL NOT NULL DEFAULT 0,
+  GeoBox_2 REAL NOT NULL DEFAULT 0,
+  GeoBox_3 REAL NOT NULL DEFAULT 0,
+  GeoBox_4 REAL NOT NULL DEFAULT 0,
+  GeoBox_5 REAL NOT NULL DEFAULT 0,
+  FileDataID INTEGER NOT NULL DEFAULT 0,
+  ObjectEffectPackageID INTEGER NOT NULL DEFAULT 0,
+  OverrideLootEffectScale REAL NOT NULL DEFAULT 0,
+  OverrideNameScale REAL NOT NULL DEFAULT 0,
+  AlternateDisplayType INTEGER NOT NULL DEFAULT 0,
+  ClientCreatureDisplayInfoID INTEGER NOT NULL DEFAULT 0,
+  ClientItemID INTEGER NOT NULL DEFAULT 0,
+  Field_11_0_0_54210_008 INTEGER NOT NULL DEFAULT 0
+);
+
+-- Bank tab prices. BankType is Retail Enum.BankType: 0 Character, 1 Guild, 2 Account.
+DROP TABLE IF EXISTS bank_tab;
+CREATE TABLE bank_tab (
+  ID INTEGER PRIMARY KEY,
+  Cost INTEGER NOT NULL DEFAULT 0,
+  BankType INTEGER NOT NULL DEFAULT 0,
+  OrderIndex INTEGER NOT NULL DEFAULT 0,
+  PlayerConditionID INTEGER NOT NULL DEFAULT 0,
+  PurchasePromptTitle INTEGER NOT NULL DEFAULT 0,
+  PurchasePromptBody INTEGER NOT NULL DEFAULT 0,
+  PurchasePromptConfirmation INTEGER NOT NULL DEFAULT 0,
+  TabCleanupConfirmation INTEGER NOT NULL DEFAULT 0,
+  TabNameEditBoxHeader INTEGER NOT NULL DEFAULT 0
+);

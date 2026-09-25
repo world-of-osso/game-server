@@ -18,6 +18,8 @@ DB2 tables (db2.py). Policy (docs/wiki/systems/content-import.md):
   trainers keep AzerothCore spells whose id (and ReqAbility ids) map.
 - Quests are kept when their id is in quest_v2; unmapped reward items/spells are
   zeroed. Vendor and loot rows need a mapped item.
+- Game object templates are kept when their displayId is 0 (no model) or a Retail
+  game_object_display_info row; spawns and addons need a kept template.
 
 Every dropped row or zeroed reward is written to --report. Runs in one transaction.
 """
@@ -243,6 +245,22 @@ def build_loot(conn, report):
                 report.drop(table, f"Entry={source_entry}", source_item, "item not mapped")
 
 
+def build_gameobjects(conn, report):
+    clone_table(conn, "gameobject_template", "content_gameobject_template")
+    conn.execute("""INSERT INTO content_gameobject_template SELECT * FROM gameobject_template t
+        WHERE t.displayId = 0 OR t.displayId IN (SELECT ID FROM game_object_display_info)""")
+    for entry, display in conn.execute("""SELECT entry, displayId FROM gameobject_template
+            WHERE entry NOT IN (SELECT entry FROM content_gameobject_template)"""):
+        report.drop("gameobject_template", f"entry={entry}", display, "display not in Retail GameObjectDisplayInfo")
+    for table, key in (("gameobject_template_addon", "entry"), ("gameobject", "id")):
+        clone_table(conn, table, f"content_{table}")
+        kept = f"{key} IN (SELECT entry FROM content_gameobject_template)"
+        conn.execute(f"INSERT INTO content_{table} SELECT * FROM {table} WHERE {kept}")
+        row_key = "guid" if table == "gameobject" else "entry"
+        for row, entry in conn.execute(f"SELECT {row_key}, {key} FROM {table} WHERE NOT ({kept})"):
+            report.drop(table, f"{row_key}={row}", entry, "template dropped")
+
+
 def apply_policy(conn, wrath_spell_names, overrides_path, report):
     retail_items = dict(conn.execute("SELECT ID, Display_lang FROM item_sparse"))
     retail_spells = dict(conn.execute("SELECT ID, Name_lang FROM spell_name"))
@@ -256,6 +274,7 @@ def apply_policy(conn, wrath_spell_names, overrides_path, report):
     build_trainers(conn, report)
     build_quests(conn, item_map, spell_map, report)
     build_loot(conn, report)
+    build_gameobjects(conn, report)
 
 
 def main():

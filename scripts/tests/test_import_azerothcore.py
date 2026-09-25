@@ -220,6 +220,7 @@ class AzerothCoreContentTests(unittest.TestCase):
     TABLES = (
         "creature_template", "quest_template", "creature_queststarter", "creature_questender",
         "item_template", "npc_vendor", "trainer", "trainer_spell", "creature_default_trainer",
+        "gameobject_template", "gameobject_template_addon", "gameobject",
     )
 
     @classmethod
@@ -346,6 +347,28 @@ class AzerothCoreContentTests(unittest.TestCase):
             ),
             [(6673, 10, 1), (100, 100, 4), (772, 100, 4), (3127, 100, 6), (6343, 100, 6), (34428, 100, 6)],
         )
+
+    def test_stormwind_guild_vaults_keep_retail_display_and_spawns(self):
+        # Entry 187329 "Guild Vault" (type 34 GAMEOBJECT_TYPE_GUILD_BANK), display 7607:
+        # Retail GameObjectDisplayInfo 7607 is FileDataID 199769 (guildvault_human_01.m2).
+        self.assertEqual(
+            self.rows("SELECT t.name, t.type, d.FileDataID FROM content_gameobject_template t"
+                      " JOIN game_object_display_info d ON d.ID = t.displayId WHERE t.entry = 187329"),
+            [("Guild Vault", 34, 199769)],
+        )
+        self.assertEqual(
+            self.rows("SELECT round(position_x, 2), round(position_y, 2) FROM content_gameobject"
+                      " WHERE id = 187329 AND map = 0 ORDER BY guid"),
+            [(-8934.91, 618.27), (-8910.43, 636.38), (-8930.72, 610.53), (-8902.25, 621.31)],
+        )
+
+    def test_retail_bank_tab_prices(self):
+        # Retail BankTab: Character 1g..5000g, Guild 100g..5000g, Warband 1000g..2500000g.
+        costs = {bank: [c for (c,) in self.rows("SELECT Cost FROM bank_tab WHERE BankType = ? ORDER BY OrderIndex", bank)]
+                 for bank in (0, 1, 2)}
+        self.assertEqual(costs[0], [10_000, 1_000_000, 5_000_000, 10_000_000, 25_000_000, 50_000_000])
+        self.assertEqual(costs[1], [1_000_000, 2_500_000, 5_000_000, 10_000_000, 25_000_000, 50_000_000])
+        self.assertEqual(costs[2], [10_000_000, 250_000_000, 1_000_000_000, 5_000_000_000, 25_000_000_000])
 
     def test_quoted_creature_subname_is_unescaped(self):
         self.assertEqual(self.rows("SELECT count(*) FROM creature_template WHERE name LIKE '%\\\"%'"), [(0,)])
