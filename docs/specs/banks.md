@@ -71,8 +71,11 @@ The client frames are specified in game-engine `docs/specs/bank-frame.md` and `d
 - `crates/server/src/bin/admin.rs` (`parse_guild_rank_and_bank_rights_requests`)
 - `scripts/tests/test_import_azerothcore.py` (`test_stormwind_guild_vaults_keep_retail_display_and_spawns`, `test_retail_bank_tab_prices`)
 
+- [x] Player gold is `u64` copper, capped at the Retail 9,999,999g 99s 99c (`gold::MAX_MONEY`). All five Warband tabs (3,126,000g in total) can be bought. The Warband bank's money is capped at the same limit.
+- [x] Inventories written with `u32` gold (the `inventories` table, in either older layout) move into `character_inventories` at startup, and the old table is dropped.
+
 ## Known gaps (current cycle)
-- [ ] Player gold is `u32` with the AzerothCore cap (0x7FFFFFFE copper, about 214,748g). Warband tabs 2–5 are unaffordable until gold moves to `u64`.
+- (none)
 
 ## Out of scope
 - Sorting, search, the expansion filter and the tab icon picker (deferred by decision).
