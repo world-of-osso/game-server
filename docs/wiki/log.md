@@ -260,3 +260,7 @@ Created `systems/quests.md` (quest data, rules, runtime) and `specs/quests.md`; 
 ## [2026-09-25] create | Banks
 
 [[banks]]: character bank and Warband bank at bankers (Retail BankTab prices), guild bank at Guild Vaults with default ranks, per-rank tab rights, daily reset and logs; [[game-objects]]: type 34 vault spawns with GeoBox reach; [[content-import]] imports gameobject tables, GameObjectDisplayInfo and BankTab.
+
+## [2026-09-25] create | Professions
+
+[[professions]]: PlayerProfessions (skill lines + spells) replaces the AzerothCore-era placeholder; TDB1210 trainers (TrainerList/TrainerBuySpell), LEARN_SPELL/SKILL_STEP/CREATE_ITEM handlers, CraftRecipe queue, SpellReagents/SpellTotems checks. [[content-import]]: tdb_* tables, SpellReagents/SpellTotems/TradeSkillCategory/SkillRaceClassInfo/TotemCategory.

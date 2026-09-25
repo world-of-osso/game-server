@@ -18,6 +18,7 @@ Quest, vendor, trainer, loot, gossip and item content comes from AzerothCore (Wr
 | `npc_vendor` | 37,585 (2,018 vendors) | Vendor item lists; negative `item` = reference to another vendor |
 | `trainer` / `trainer_spell` / `creature_default_trainer` | 126 / 6,417 / 806 | Trainer system AzerothCore `ObjectMgr` loads (`trainer.Type` 0 class, 1 mount, 2 tradeskill, 3 pet) |
 | `npc_trainer` | 4,934 | Legacy trainer table; **not read by AzerothCore** (`ObjectMgr.cpp` queries only `trainer_spell`/`creature_default_trainer`) |
+| `tdb_trainer` / `tdb_trainer_spell` / `tdb_creature_trainer` / `tdb_skill_tiers` | 192 / 5,402 / 975 / 59 | TrinityCore TDB1210.26091 (Retail 12.1.0) excerpts in `data/reference/tdb1210/` (source: `SOURCE.txt` there), loaded with `mysql_dump.py --prefix tdb_` and `scripts/tdb_schema.sql`; Retail profession trainers and skill tier caps ([professions](professions.md)) |
 | `creature_loot_template` / `gameobject_loot_template` / `reference_loot_template` / `item_loot_template` | 249,466 / 17,957 / 44,536 / 4,997 | Loot tables |
 | `gossip_menu` / `gossip_menu_option` | 6,055 / 4,604 | Gossip menus |
 | `npc_text` / `broadcast_text` | 8,361 / 73,039 | Gossip and NPC text |

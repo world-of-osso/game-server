@@ -69,6 +69,9 @@ pub fn handler(effect_id: u32) -> Option<EffectHandler> {
         EFFECT_TRIGGER_SPELL => trigger_spell,
         EFFECT_INTERRUPT_CAST => interrupt_cast,
         EFFECT_HEAL_PCT => heal_pct,
+        crate::profession::EFFECT_CREATE_ITEM => crate::profession::effect_create_item,
+        crate::profession::EFFECT_LEARN_SPELL => crate::profession::effect_learn_spell,
+        crate::profession::EFFECT_SKILL_STEP => crate::profession::effect_skill_step,
         _ => return None,
     })
 }

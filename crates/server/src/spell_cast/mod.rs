@@ -88,6 +88,12 @@ pub enum CastFailure {
     TooClose,
     NotEnoughPower(PowerType),
     NotEnoughHealth,
+    /// Missing `SpellReagents` item (its name).
+    Reagents(String),
+    /// Missing `SpellTotems` tool (item or tool category name).
+    Totems(String),
+    /// A created item does not fit in the bags.
+    InventoryFull,
     Unsupported(String),
 }
 
@@ -118,6 +124,10 @@ impl CastFailure {
             Self::TooClose => (R::TooClose, None),
             Self::NotEnoughPower(power) => (R::NotEnoughResource, Some(format!("{power:?}"))),
             Self::NotEnoughHealth => (R::NotEnoughResource, Some("Health".into())),
+            // SPELL_FAILED_REAGENTS, SPELL_FAILED_TOTEM_CATEGORY, ERR_INV_FULL
+            Self::Reagents(item) => (R::Reagents, Some(format!("Missing reagent: {item}"))),
+            Self::Totems(tool) => (R::Totems, Some(format!("Requires {tool}"))),
+            Self::InventoryFull => (R::InventoryFull, Some("Inventory is full.".into())),
             Self::Unsupported(detail) => (R::NotSupported, Some(detail.clone())),
         }
     }
@@ -402,6 +412,33 @@ pub(crate) fn receive_cast_requests(world: &mut World) {
     }
 }
 
+/// Cast a spell for a player as its own request would, answering `CastFailed`
+/// on refusal (profession crafts).
+pub(crate) fn cast_for_player(
+    world: &mut World,
+    player: Entity,
+    spell_id: u32,
+) -> Result<(), CastFailure> {
+    let request = SpellCastIntent {
+        spell_id: Some(spell_id),
+        spell: String::new(),
+        target_entity: None,
+    };
+    request_cast(world, player, &request).map_err(|(spell_id, failure)| {
+        let (reason, detail) = failure.to_contract();
+        send_to_owner(
+            world,
+            player,
+            CastFailed {
+                spell_id,
+                reason,
+                detail,
+            },
+        );
+        failure
+    })
+}
+
 fn request_cast(
     world: &mut World,
     caster: Entity,
@@ -434,9 +471,14 @@ fn request_cast(
     start_cast(world, caster, &spell, explicit).map_err(|failure| (spell.id, failure))
 }
 
-/// Player requests are limited to known spells; NPC casters are exempt.
+/// Player requests are limited to known class and profession spells; NPC
+/// casters are exempt.
 fn caster_knows_spell(world: &mut World, caster: Entity, spell_id: u32) -> bool {
-    if world.get::<Npc>(caster).is_some() {
+    if world.get::<Npc>(caster).is_some()
+        || world
+            .get::<crate::profession::PlayerProfessions>(caster)
+            .is_some_and(|professions| professions.knows(spell_id))
+    {
         return true;
     }
     let mut known = SystemState::<Query<&KnownSpells>>::new(world);
@@ -476,6 +518,7 @@ fn validate_start(
     }
     let target = validate_target(world, caster, spell, explicit)?;
     spell_costs(world, caster, spell)?;
+    crate::profession::check_cast_items(world, caster, spell)?;
     Ok(target)
 }
 
@@ -712,8 +755,10 @@ fn execute_cast(
     }
     let explicit = validate_target(world, caster, spell, explicit)?;
     let costs = spell_costs(world, caster, spell)?;
+    crate::profession::check_cast_items(world, caster, spell)?;
     let plan = plan_targets(world, caster, spell, explicit)?;
     spend_costs(world, caster, &costs);
+    crate::profession::take_reagents(world, caster, spell);
     start_cooldowns(world, caster, spell);
     log_event(
         world,
@@ -963,6 +1008,9 @@ fn start_cooldowns(world: &mut World, caster: Entity, spell: &SpellInfo) {
 
 /// Remove an active cast (stop, movement, death, interrupt).
 pub(crate) fn cancel_cast(world: &mut World, caster: Entity) {
+    world
+        .entity_mut(caster)
+        .remove::<crate::profession::CraftQueue>();
     let Some(cast) = world.entity_mut(caster).take::<CastState>() else {
         return;
     };

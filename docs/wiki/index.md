@@ -32,6 +32,7 @@ Server gameplay systems.
 |------|---------|
 | [[banks]] | Character, Warband and guild bank storage (redb), one-transaction moves, guild ranks, daily reset, logs |
 | [[game-objects]] | Guild Vault spawns from content_gameobject, GeoBox reach check, UseGameObject |
+| [[professions]] | Retail skill lines (parent + expansion child), TDB1210 trainers, crafting through the spell pipeline (reagents, tools, CREATE_ITEM, TrinityCore skill-up chances) |
 | [[ecs-storage]] | Bevy ECS as columnar in-memory database: archetype tables, zero-overhead queries, built-in change detection |
 | [[networking]] | Lightyear UDP, pre-entry visibility, matching MCVT server terrain sampling, dirty-candidate replication, spell cast receivers and `Moving` input marker, 50 ms cadence, persistence, channels, and interest management |
 | [[persistence]] | Dual-layer storage: redb for mutable player data, physical equipment ownership, login-loaded gold, mutation-boundary GoldUpdateQueue replication, and SQLite for static world data |

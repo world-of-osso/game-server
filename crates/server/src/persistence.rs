@@ -1,6 +1,6 @@
+use crate::profession::PlayerProfessions;
 use bevy::prelude::*;
 use redb::{Database, ReadableDatabase, ReadableTable, TableDefinition};
-use shared::profession::{PlayerProfessions, Profession};
 use shared::reputation::CharacterReputation;
 use std::path::{Path, PathBuf};
 
@@ -56,8 +56,10 @@ struct LegacyInventoryDataU32Gold {
     items: Vec<InventoryItemData>,
 }
 
-/// Profession table: PlayerId (u64) -> serialized profession state (bytes).
-const PROFESSIONS: TableDefinition<u64, &[u8]> = TableDefinition::new("professions");
+/// Profession table: PlayerId (u64) -> bitcode `PlayerProfessions` (skill lines + spells).
+const PROFESSIONS: TableDefinition<u64, &[u8]> = TableDefinition::new("profession_state");
+/// The AzerothCore-era profession table (placeholder Mining/Blacksmithing state), deleted.
+const LEGACY_PROFESSIONS: TableDefinition<u64, &[u8]> = TableDefinition::new("professions");
 
 /// Reputation table: PlayerId (u64) -> serialized reputation state (bytes).
 const REPUTATIONS: TableDefinition<u64, &[u8]> = TableDefinition::new("reputations");
@@ -231,6 +233,8 @@ pub(crate) fn create_tables(db: &Database) {
     let _ = txn.open_table(inventory_store::ITEM_INSTANCES);
     let _ = txn.open_table(quest_store::QUEST_LOGS);
     let _ = txn.open_table(PROFESSIONS);
+    txn.delete_table(LEGACY_PROFESSIONS)
+        .expect("Failed to delete legacy professions table");
     let _ = txn.open_table(REPUTATIONS);
     let _ = txn.open_table(CURRENCIES);
     let _ = txn.open_table(ACHIEVEMENTS);
@@ -421,11 +425,7 @@ pub fn load_professions(db: &Database, character_id: u64) -> PlayerProfessions {
         Some(guard) => {
             bitcode::decode::<PlayerProfessions>(guard.value()).expect("decode professions")
         }
-        None => {
-            let professions = default_professions();
-            save_professions(db, character_id, &professions);
-            professions
-        }
+        None => PlayerProfessions::default(),
     }
 }
 
@@ -758,15 +758,6 @@ pub fn save_collections(
             .expect("Failed to insert collections");
     }
     txn.commit().expect("Failed to commit collections save");
-}
-
-fn default_professions() -> PlayerProfessions {
-    let mut professions = PlayerProfessions::default();
-    professions.learn(Profession::Mining).expect("learn Mining");
-    professions
-        .learn(Profession::Blacksmithing)
-        .expect("learn Blacksmithing");
-    professions
 }
 
 pub fn load_mailbox(db: &Database, character_id: u64) -> Vec<MailEntryData> {

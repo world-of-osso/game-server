@@ -4,7 +4,6 @@ use shared::components::{
     CombatRatings, Gold, GuildMembership, Health, Level, Mana, MovementSpeed, Player, Position,
     Rotation, UnitFactionTemplate, UnitLevel, UnitStats, VerticalVelocity,
 };
-use shared::profession::PlayerProfessions;
 use shared::protocol::{
     AuthChannel, CreateCharacter, CreateCharacterResponse, DeleteCharacter,
     DeleteCharacterResponse, EnterWorldResponse, LoadTerrain, SelectCharacter,
@@ -16,6 +15,7 @@ use crate::auth::{Authenticated, InWorld, SentTiles};
 use crate::interest::NetworkVisibility;
 use crate::networking::{CombatTarget, PlayerLink, queue_player_despawn, send_load_terrain};
 use crate::persistence::{self, CharacterData, ClientId, GameDatabase};
+use crate::profession::PlayerProfessions;
 
 /// Default run speed in yards per second (WoW run speed).
 const DEFAULT_RUN_SPEED: f32 = 7.0;

@@ -1,111 +1,671 @@
+//! Real-DB profession tests against data/world.db (TDB1210 trainers, Retail DB2
+//! recipes); each test skips when the DB is absent.
+//!
+//! Georgio Bolero (1346) is the Stormwind tailoring trainer (TDB trainer 163):
+//! Tailoring (264617) costs 10 copper at level 5 and learns 3908 Tailoring,
+//! 264616 (Classic Tailoring skill) and SKILL_STEP 1 of Classic Tailoring (2540,
+//! cap 300 from tier 336). Bolt of Linen Cloth (2963) is learned with the line,
+//! takes 2 Linen Cloth (2589), casts 1.5 s, and is orange below rank 25.
+
+use std::path::PathBuf;
+use std::time::Duration;
+
+use lightyear::connection::host::HostClient;
+use lightyear::prelude::{Channel, Connected, PeerId, RemoteId};
+use rusqlite::{Connection, OpenFlags};
+use shared::casting::CastState;
+use shared::components::{CharacterAppearance, Health, Level, Npc, Position, UnitFactionTemplate};
+use shared::protocol::{
+    CastFailed, CombatChannel, CraftRecipe, InteractNpc, InteractionChannel, InteractionKind,
+    InteractionOpened, NpcFlags, ProtocolPlugin, SelectGossipOption, SpellCastIntent,
+    StopSpellCast, TrainerBuyFailed, TrainerBuySpell, TrainerChannel, TrainerFailReason,
+    TrainerList, TrainerServiceState,
+};
+use shared::spell_data::CastFailReason;
+
 use super::*;
-use shared::profession::{PlayerProfessions, Profession};
+use crate::faction::world_db_faction_templates;
+use crate::item_templates::load_item_templates;
+use crate::merchant::load_vendor_catalog;
+use crate::networking::Moving;
+use crate::npc_interaction::{NpcInteractionPlugin, load_gossip_catalog};
+use crate::persistence::ClientId;
+use crate::spell_cast::test_harness::{class_spells, power_table, world_db};
 
-fn learned_professions() -> PlayerProfessions {
-    let mut profs = PlayerProfessions::default();
-    profs.learn(Profession::Mining).unwrap();
-    profs.learn(Profession::Blacksmithing).unwrap();
-    profs
+const HUMAN_TEMPLATE: u32 = 1;
+const GEORGIO_BOLERO: u32 = 1346;
+const TAILORING: u32 = 264617;
+const TAILORING_SKILL: u32 = 197;
+const CLASSIC_TAILORING: u32 = 2540;
+const BOLT_OF_LINEN_CLOTH: u32 = 2963;
+const WHITE_LINEN_SHIRT: u32 = 2393;
+const LINEN_CLOTH: u32 = 2589;
+const BOLT_ITEM: u32 = 2996;
+/// Blacksmithing (264435) and Mining (265838): the two primaries of `two_primaries`.
+const BLACKSMITHING: u32 = 264435;
+const MINING: u32 = 265838;
+/// Cooking (264633): a secondary profession.
+const COOKING: u32 = 264633;
+
+fn world_db_path() -> Option<PathBuf> {
+    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/world.db");
+    path.exists().then_some(path)
 }
 
-#[test]
-fn build_profession_snapshot_includes_skills_and_craftable_recipe() {
-    let profs = learned_professions();
-    let inventory = InventoryData {
-        gold: 0,
-        items: vec![InventoryItemData {
-            item_guid: 1,
-            item_id: 2770,
-            name: "Copper Ore".into(),
-            quality: 1,
-            required_level: 1,
-            stack_count: 4,
-            vendor_sell_price: 25,
-            unique_auction: false,
-        }],
-    };
-
-    let snapshot = build_profession_snapshot(&profs, &inventory);
-
-    assert_eq!(snapshot.skills.len(), 2);
-    assert!(
-        snapshot
-            .skills
-            .iter()
-            .any(|skill| skill.profession == "Mining")
-    );
-    assert!(
-        snapshot
-            .recipes
-            .iter()
-            .any(|recipe| recipe.name == "Copper Bracers" && recipe.craftable)
-    );
+/// Spells the tests touch: the trainer spells of Tailoring, Blacksmithing,
+/// Mining and Cooking trainers, what they learn, and the abilities of their lines.
+fn profession_spells(conn: &Connection) -> Vec<u32> {
+    let mut statement = conn
+        .prepare(
+            "SELECT SpellId FROM tdb_trainer_spell WHERE TrainerId IN (163, 27, 91, 136) \
+             UNION SELECT EffectTriggerSpell FROM spell_effect WHERE Effect = 36 AND SpellID IN \
+               (SELECT SpellId FROM tdb_trainer_spell WHERE TrainerId IN (163, 27, 91, 136)) \
+             UNION SELECT Spell FROM skill_line_ability WHERE SkillLine IN (197, 164, 186, 185)",
+        )
+        .unwrap();
+    statement
+        .query_map([], |row| row.get(0))
+        .unwrap()
+        .map(Result::unwrap)
+        .collect()
 }
 
-#[test]
-fn craft_recipe_consumes_materials_adds_output_and_skillup() {
-    let db = test_db();
-    let mut profs = learned_professions();
-    let mut inventory = InventoryData {
-        gold: 0,
-        items: vec![InventoryItemData {
-            item_guid: 1,
-            item_id: 2770,
-            name: "Copper Ore".into(),
+#[derive(Resource)]
+struct Inbox<M>(Vec<M>);
+
+fn collect<M: lightyear::prelude::Message>(
+    mut receivers: Query<&mut MessageReceiver<M>>,
+    mut inbox: ResMut<Inbox<M>>,
+) {
+    for mut receiver in &mut receivers {
+        inbox.0.extend(receiver.receive());
+    }
+}
+
+fn add_inbox<M: lightyear::prelude::Message>(app: &mut App) {
+    app.insert_resource(Inbox::<M>(Vec::new()));
+    app.add_systems(First, collect::<M>);
+}
+
+fn pair<M: lightyear::prelude::Message>() -> (MessageSender<M>, MessageReceiver<M>) {
+    (MessageSender::default(), MessageReceiver::default())
+}
+
+struct Harness {
+    app: App,
+    conn: Connection,
+    character_id: u64,
+    player: Entity,
+    connection: Entity,
+}
+
+fn harness(level: u8) -> Option<Harness> {
+    let path = world_db_path()?;
+    let data = world_db()?;
+    let conn = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+    let mut app = App::new();
+    app.add_plugins((MinimalPlugins, bevy::state::app::StatesPlugin));
+    app.add_plugins(lightyear::prelude::server::ServerPlugins {
+        tick_duration: Duration::from_millis(50),
+    });
+    app.add_plugins(ProtocolPlugin);
+    add_inbox::<InteractionOpened>(&mut app);
+    add_inbox::<TrainerList>(&mut app);
+    add_inbox::<TrainerBuyFailed>(&mut app);
+    add_inbox::<ProfessionSnapshot>(&mut app);
+    add_inbox::<CastFailed>(&mut app);
+    app.insert_resource(world_db_faction_templates()?);
+    app.insert_resource(load_gossip_catalog(&conn).unwrap());
+    app.insert_resource(load_item_templates(&path).unwrap());
+    app.insert_resource(load_vendor_catalog(&conn).unwrap());
+    app.insert_resource(load_profession_data(&conn).unwrap());
+    app.insert_resource(GameDatabase {
+        db: persistence::temp_database(),
+    });
+    app.init_resource::<GoldUpdateQueue>();
+    app.add_plugins((
+        NpcInteractionPlugin,
+        crate::combat::CombatPlugin,
+        crate::spell_cast::SpellCastPlugin,
+        crate::auras::AuraPlugin,
+        crate::creature_scripts::CreatureScriptsPlugin,
+        ProfessionPlugin,
+    ));
+    app.insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+        Duration::from_millis(50),
+    ));
+    app.finish();
+    app.cleanup();
+    app.update();
+    let spells = profession_spells(&conn)
+        .into_iter()
+        .filter_map(|id| data.store.get(id).cloned())
+        .collect();
+    app.insert_resource(SpellStore::fixture(spells));
+    app.insert_resource(power_table(data));
+    app.insert_resource(class_spells(data));
+    let db = &app.world().resource::<GameDatabase>().db;
+    let (character_id, _) =
+        persistence::create_character(db, 1, "Crafter", 1, 1).expect("create character");
+    // Start with empty bags (the default inventory carries 20 Linen Cloth).
+    let mut inventory = persistence::load_inventory(db, character_id);
+    inventory.items.clear();
+    persistence::save_inventory(db, character_id, &inventory);
+    let player = app
+        .world_mut()
+        .spawn((
+            Player {
+                name: "Crafter".into(),
+                race: 1,
+                class: 1,
+                appearance: CharacterAppearance::default(),
+            },
+            Level(level),
+            ClientId(character_id),
+            Position {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            Health {
+                current: 100.0,
+                max: 100.0,
+            },
+            UnitFactionTemplate(HUMAN_TEMPLATE),
+            Moving(false),
+            PlayerProfessions::default(),
+        ))
+        .id();
+    let connection = app
+        .world_mut()
+        .spawn((
+            RemoteId(PeerId::Local(1)),
+            Connected,
+            HostClient { buffer: Vec::new() },
+            Authenticated { account_id: 1 },
+            InWorld { character_id },
+            PlayerLink(player),
+            (
+                pair::<InteractNpc>(),
+                pair::<InteractionOpened>(),
+                pair::<SelectGossipOption>(),
+                pair::<TrainerList>(),
+                pair::<TrainerBuySpell>(),
+                pair::<TrainerBuyFailed>(),
+            ),
+            (
+                pair::<ProfessionSnapshot>(),
+                pair::<CraftRecipe>(),
+                pair::<CastFailed>(),
+                pair::<SpellCastIntent>(),
+                pair::<StopSpellCast>(),
+            ),
+        ))
+        .id();
+    app.update();
+    Some(Harness {
+        app,
+        conn,
+        character_id,
+        player,
+        connection,
+    })
+}
+
+impl Harness {
+    fn send<M: lightyear::prelude::Message, C: Channel>(&mut self, message: M) {
+        self.app
+            .world_mut()
+            .get_mut::<MessageSender<M>>(self.connection)
+            .unwrap()
+            .send::<C>(message);
+        self.advance(3);
+    }
+
+    fn advance(&mut self, frames: usize) {
+        for _ in 0..frames {
+            self.app.update();
+        }
+    }
+
+    fn take<M: lightyear::prelude::Message>(&mut self) -> Vec<M> {
+        std::mem::take(&mut self.app.world_mut().resource_mut::<Inbox<M>>().0)
+    }
+
+    /// Spawn a creature from its world.db template 2 yd from the player.
+    fn spawn_npc(&mut self, entry: u32) -> Entity {
+        let (name, faction, npcflag): (String, u32, u32) = self
+            .conn
+            .query_row(
+                "SELECT name, faction, npcflag FROM creature_template WHERE entry = ?1",
+                [entry],
+                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+            )
+            .unwrap();
+        self.app
+            .world_mut()
+            .spawn((
+                Npc {
+                    template_id: entry,
+                    name,
+                },
+                NpcFlags::from_azerothcore(npcflag),
+                Position {
+                    x: 2.0,
+                    y: 0.0,
+                    z: 0.0,
+                },
+                Health {
+                    current: 100.0,
+                    max: 100.0,
+                },
+                UnitFactionTemplate(faction),
+            ))
+            .id()
+    }
+
+    /// Talk to Georgio and pick "Train me." (gossip menu 4353 option 0, type 5).
+    fn open_georgio(&mut self) -> Entity {
+        let npc = self.spawn_npc(GEORGIO_BOLERO);
+        self.send::<_, InteractionChannel>(InteractNpc { npc: npc.to_bits() });
+        let opened = self.take::<InteractionOpened>();
+        assert!(
+            matches!(
+                opened.as_slice(),
+                [InteractionOpened {
+                    kind: InteractionKind::Gossip(_),
+                    ..
+                }]
+            ),
+            "{opened:?}"
+        );
+        self.send::<_, InteractionChannel>(SelectGossipOption {
+            npc: npc.to_bits(),
+            option_id: 0,
+        });
+        // The list is sent in the frame the option opens the role; deliver it.
+        self.advance(3);
+        npc
+    }
+
+    fn buy(&mut self, npc: Entity, spell_id: u32) {
+        self.send::<_, TrainerChannel>(TrainerBuySpell {
+            npc: npc.to_bits(),
+            spell_id,
+        });
+    }
+
+    fn craft(&mut self, spell_id: u32, casts: u16) {
+        self.send::<_, ProfessionChannel>(CraftRecipe { spell_id, casts });
+    }
+
+    fn professions(&self) -> PlayerProfessions {
+        self.app
+            .world()
+            .get::<PlayerProfessions>(self.player)
+            .unwrap()
+            .clone()
+    }
+
+    fn db(&self) -> &redb::Database {
+        &self.app.world().resource::<GameDatabase>().db
+    }
+
+    fn gold(&self) -> u64 {
+        persistence::load_inventory(self.db(), self.character_id).gold
+    }
+
+    fn set_gold(&mut self, gold: u64) {
+        let mut inventory = persistence::load_inventory(self.db(), self.character_id);
+        inventory.gold = gold;
+        persistence::save_inventory(self.db(), self.character_id, &inventory);
+    }
+
+    fn give(&mut self, item_id: u32, name: &str, count: u32) {
+        let mut inventory = persistence::load_inventory(self.db(), self.character_id);
+        let item_guid = persistence::next_id(self.db(), "item_instance");
+        inventory.items.push(InventoryItemData {
+            item_guid,
+            item_id,
+            name: name.into(),
             quality: 1,
-            required_level: 1,
-            stack_count: 4,
-            vendor_sell_price: 25,
+            required_level: 0,
+            stack_count: count,
+            vendor_sell_price: 0,
             unique_auction: false,
-        }],
-    };
+        });
+        persistence::save_inventory(self.db(), self.character_id, &inventory);
+    }
 
-    let result = craft_recipe(
-        RECIPE_COPPER_BRACERS,
-        &mut profs,
-        &mut inventory,
-        &db.db,
-        0.0,
-    )
-    .expect("craft succeeds");
-
-    assert!(result.message.contains("crafted Copper Bracers"));
-    assert_eq!(
-        result.skill_up.as_ref().expect("skill-up").profession,
-        "Blacksmithing"
-    );
-    assert_eq!(count_inventory_item(&inventory, 2770), 2);
-    assert!(
-        inventory
+    fn bag_count(&self, item_id: u32) -> u32 {
+        persistence::load_inventory(self.db(), self.character_id)
             .items
             .iter()
-            .any(|item| item.item_id == 2851 && item.name == "Copper Bracers")
+            .filter(|item| item.item_id == item_id)
+            .map(|item| item.stack_count)
+            .sum()
+    }
+
+    /// Learn Tailoring at Georgio with 1 silver; drains the messages.
+    fn learn_tailoring(&mut self) -> Entity {
+        self.set_gold(100);
+        let npc = self.open_georgio();
+        self.buy(npc, TAILORING);
+        self.take::<TrainerList>();
+        self.take::<ProfessionSnapshot>();
+        npc
+    }
+
+    fn line(&self, skill: u32) -> Option<ProfessionSkillLine> {
+        self.professions().line(skill).copied()
+    }
+
+    fn set_rank(&mut self, skill: u32, rank: u16) {
+        let mut profs = self.professions();
+        let line = profs.line(skill).copied().unwrap();
+        profs.set_line(ProfessionSkillLine { rank, ..line });
+        self.app.world_mut().entity_mut(self.player).insert(profs);
+        self.app.update();
+    }
+
+    fn casting(&self) -> bool {
+        self.app.world().get::<CastState>(self.player).is_some()
+    }
+
+    /// Advance until the player has no cast and no queued craft (max 20 s).
+    fn finish_crafting(&mut self) {
+        for _ in 0..400 {
+            self.app.update();
+            if !self.casting() && self.app.world().get::<CraftQueue>(self.player).is_none() {
+                // Deliver the last snapshot and failures.
+                self.advance(3);
+                return;
+            }
+        }
+        panic!("crafting did not finish");
+    }
+}
+
+fn service_state(list: &TrainerList, spell_id: u32) -> Option<TrainerServiceState> {
+    list.services
+        .iter()
+        .find(|service| service.spell_id == spell_id)
+        .map(|service| service.state)
+}
+
+#[test]
+fn georgio_lists_tailoring_for_ten_copper_at_level_five() {
+    let Some(mut h) = harness(10) else { return };
+    h.open_georgio();
+    let lists = h.take::<TrainerList>();
+    let [list] = lists.as_slice() else {
+        panic!("{lists:?}")
+    };
+    assert_eq!(list.trainer_id, 163);
+    let tailoring = list
+        .services
+        .iter()
+        .find(|service| service.spell_id == TAILORING)
+        .unwrap();
+    assert_eq!(
+        (tailoring.cost, tailoring.req_level, tailoring.state),
+        (10, 5, TrainerServiceState::Available)
+    );
+    assert_eq!(
+        service_state(list, WHITE_LINEN_SHIRT),
+        Some(TrainerServiceState::Unavailable)
+    );
+    assert_eq!(
+        service_state(list, 3911),
+        None,
+        "no AzerothCore Apprentice Tailor rank"
     );
 }
 
 #[test]
-fn gather_node_adds_items_and_reports_skillup() {
-    let db = test_db();
-    let mut profs = learned_professions();
-    let mut inventory = InventoryData {
-        gold: 0,
-        items: Vec::new(),
-    };
+fn learning_tailoring_takes_gold_and_learns_classic_tailoring_with_bolt_of_linen() {
+    let Some(mut h) = harness(10) else { return };
+    h.set_gold(100);
+    let npc = h.open_georgio();
+    h.take::<TrainerList>();
+    h.buy(npc, TAILORING);
 
-    let result = complete_gather(
-        NODE_COPPER_VEIN,
-        &mut profs,
-        &mut inventory,
-        &db.db,
-        0.0,
-        &[0.0],
-    )
-    .expect("gather succeeds");
-
-    assert!(result.message.contains("gathered Copper Vein"));
+    assert_eq!(h.gold(), 90);
+    let classic = h.line(CLASSIC_TAILORING).unwrap();
+    assert_eq!((classic.step, classic.rank, classic.max_rank), (1, 1, 300));
+    assert!(h.line(TAILORING_SKILL).is_some());
+    let profs = h.professions();
+    for spell in [3908, 264616, BOLT_OF_LINEN_CLOTH] {
+        assert!(
+            profs.knows(spell),
+            "{spell} not learned: {:?}",
+            profs.spells
+        );
+    }
     assert_eq!(
-        result.skill_up.as_ref().expect("skill-up").profession,
-        "Mining"
+        h.take::<ProfessionSnapshot>().last(),
+        Some(&profs.snapshot())
     );
-    assert!(count_inventory_item(&inventory, 2770) >= 1);
+    let lists = h.take::<TrainerList>();
+    let list = lists.last().expect("list re-sent after the purchase");
+    assert_eq!(
+        service_state(list, TAILORING),
+        Some(TrainerServiceState::Known)
+    );
+    assert_eq!(
+        service_state(list, WHITE_LINEN_SHIRT),
+        Some(TrainerServiceState::Available)
+    );
+    assert_eq!(
+        persistence::load_professions(h.db(), h.character_id),
+        profs,
+        "saved"
+    );
+}
+
+#[test]
+fn tailoring_purchase_without_ten_copper_fails_and_changes_nothing() {
+    let Some(mut h) = harness(10) else { return };
+    h.set_gold(9);
+    let npc = h.open_georgio();
+    h.buy(npc, TAILORING);
+
+    let failures = h.take::<TrainerBuyFailed>();
+    assert_eq!(
+        failures.iter().map(|f| f.reason).collect::<Vec<_>>(),
+        vec![TrainerFailReason::NotEnoughMoney]
+    );
+    assert_eq!(h.gold(), 9);
+    assert_eq!(h.professions(), PlayerProfessions::default());
+}
+
+#[test]
+fn level_four_character_cannot_learn_tailoring() {
+    let Some(mut h) = harness(4) else { return };
+    h.set_gold(100);
+    let npc = h.open_georgio();
+    let lists = h.take::<TrainerList>();
+    assert_eq!(
+        service_state(&lists[0], TAILORING),
+        Some(TrainerServiceState::Unavailable)
+    );
+    h.buy(npc, TAILORING);
+    assert_eq!(
+        h.take::<TrainerBuyFailed>()
+            .iter()
+            .map(|f| f.reason)
+            .collect::<Vec<_>>(),
+        vec![TrainerFailReason::Unavailable]
+    );
+    assert_eq!(h.gold(), 100);
+}
+
+#[test]
+fn buying_from_a_trainer_whose_frame_is_not_open_fails() {
+    let Some(mut h) = harness(10) else { return };
+    h.set_gold(100);
+    let npc = h.spawn_npc(GEORGIO_BOLERO);
+    h.buy(npc, TAILORING);
+    assert_eq!(
+        h.take::<TrainerBuyFailed>()
+            .iter()
+            .map(|f| f.reason)
+            .collect::<Vec<_>>(),
+        vec![TrainerFailReason::Unavailable]
+    );
+    assert_eq!(h.gold(), 100);
+}
+
+/// Learn `spell` as the trainer purchase would (cast its effects on the player).
+fn learn_by_cast(h: &mut Harness, spell: u32) {
+    let player = h.player;
+    crate::spell_cast::cast_triggered(h.app.world_mut(), player, spell, Some(player), 0);
+    h.app.update();
+}
+
+#[test]
+fn third_primary_profession_is_refused_but_cooking_is_not() {
+    let Some(mut h) = harness(10) else { return };
+    learn_by_cast(&mut h, BLACKSMITHING);
+    learn_by_cast(&mut h, MINING);
+    assert!(h.line(164).is_some() && h.line(186).is_some());
+    h.set_gold(100);
+    let npc = h.open_georgio();
+    h.buy(npc, TAILORING);
+
+    assert_eq!(
+        h.take::<TrainerBuyFailed>()
+            .iter()
+            .map(|f| f.reason)
+            .collect::<Vec<_>>(),
+        vec![TrainerFailReason::Unavailable]
+    );
+    assert_eq!(h.gold(), 100);
+    assert!(h.line(TAILORING_SKILL).is_none());
+
+    let world = h.app.world_mut();
+    let blocked = with_learner(world, h.player, |learner, profs| {
+        learner.blocked_by_primary_limit(profs, COOKING)
+    });
+    assert_eq!(blocked, Some(false));
+}
+
+#[test]
+fn crafting_two_bolts_consumes_four_linen_and_raises_classic_tailoring_twice() {
+    let Some(mut h) = harness(10) else { return };
+    h.learn_tailoring();
+    h.give(LINEN_CLOTH, "Linen Cloth", 5);
+    h.craft(BOLT_OF_LINEN_CLOTH, 2);
+    assert!(h.casting(), "first cast started");
+    h.finish_crafting();
+
+    assert_eq!(h.bag_count(LINEN_CLOTH), 1);
+    assert_eq!(h.bag_count(BOLT_ITEM), 2);
+    // Orange below rank 25: every craft raises the skill (1000 permille).
+    assert_eq!(h.line(CLASSIC_TAILORING).unwrap().rank, 3);
+    assert!(h.take::<CastFailed>().is_empty());
+    let snapshots = h.take::<ProfessionSnapshot>();
+    assert_eq!(snapshots.last(), Some(&h.professions().snapshot()));
+}
+
+#[test]
+fn crafting_without_linen_fails_with_missing_reagent() {
+    let Some(mut h) = harness(10) else { return };
+    h.learn_tailoring();
+    h.give(LINEN_CLOTH, "Linen Cloth", 1);
+    h.craft(BOLT_OF_LINEN_CLOTH, 1);
+
+    let failed = h.take::<CastFailed>();
+    assert_eq!(
+        failed
+            .iter()
+            .map(|f| (f.spell_id, f.reason, f.detail.clone()))
+            .collect::<Vec<_>>(),
+        vec![(
+            BOLT_OF_LINEN_CLOTH,
+            CastFailReason::Reagents,
+            Some("Missing reagent: Linen Cloth".into())
+        )]
+    );
+    assert!(!h.casting());
+    assert_eq!(h.bag_count(LINEN_CLOTH), 1);
+    assert_eq!(h.line(CLASSIC_TAILORING).unwrap().rank, 1);
+}
+
+#[test]
+fn queued_crafts_stop_when_the_linen_runs_out() {
+    let Some(mut h) = harness(10) else { return };
+    h.learn_tailoring();
+    h.give(LINEN_CLOTH, "Linen Cloth", 4);
+    h.craft(BOLT_OF_LINEN_CLOTH, 3);
+    h.finish_crafting();
+
+    assert_eq!(h.bag_count(BOLT_ITEM), 2);
+    assert_eq!(h.bag_count(LINEN_CLOTH), 0);
+    let failed = h.take::<CastFailed>();
+    assert_eq!(
+        failed.iter().map(|f| f.reason).collect::<Vec<_>>(),
+        vec![CastFailReason::Reagents]
+    );
+}
+
+#[test]
+fn stopping_the_cast_cancels_the_remaining_crafts() {
+    let Some(mut h) = harness(10) else { return };
+    h.learn_tailoring();
+    h.give(LINEN_CLOTH, "Linen Cloth", 6);
+    h.craft(BOLT_OF_LINEN_CLOTH, 3);
+    h.send::<_, CombatChannel>(StopSpellCast);
+    h.advance(60);
+
+    assert!(!h.casting());
+    assert_eq!(h.bag_count(BOLT_ITEM), 0);
+    assert_eq!(h.bag_count(LINEN_CLOTH), 6);
+}
+
+#[test]
+fn grey_bolt_of_linen_gives_no_skill() {
+    let Some(mut h) = harness(10) else { return };
+    h.learn_tailoring();
+    h.set_rank(CLASSIC_TAILORING, 50);
+    h.give(LINEN_CLOTH, "Linen Cloth", 2);
+    h.craft(BOLT_OF_LINEN_CLOTH, 1);
+    h.finish_crafting();
+
+    assert_eq!(h.bag_count(BOLT_ITEM), 1);
+    assert_eq!(h.line(CLASSIC_TAILORING).unwrap().rank, 50);
+}
+
+#[test]
+fn unknown_recipe_cannot_be_crafted() {
+    let Some(mut h) = harness(10) else { return };
+    h.learn_tailoring();
+    h.give(2996, "Bolt of Linen Cloth", 1);
+    h.give(2320, "Coarse Thread", 1);
+    h.give(2324, "Bleach", 1);
+    h.craft(WHITE_LINEN_SHIRT, 1);
+
+    let failed = h.take::<CastFailed>();
+    assert_eq!(
+        failed.iter().map(|f| f.detail.clone()).collect::<Vec<_>>(),
+        vec![Some("spell not known".into())]
+    );
+    assert!(!h.casting());
+}
+
+#[test]
+fn white_linen_shirt_bought_at_rank_one_is_craftable() {
+    let Some(mut h) = harness(10) else { return };
+    let npc = h.learn_tailoring();
+    h.buy(npc, WHITE_LINEN_SHIRT);
+    assert!(h.professions().knows(WHITE_LINEN_SHIRT));
+    assert_eq!(h.gold(), 80);
+    h.give(2996, "Bolt of Linen Cloth", 1);
+    h.give(2320, "Coarse Thread", 1);
+    h.give(2324, "Bleach", 1);
+    h.craft(WHITE_LINEN_SHIRT, 1);
+    h.finish_crafting();
+
+    assert_eq!(h.bag_count(2576), 1, "White Linen Shirt");
+    assert_eq!(h.bag_count(2996) + h.bag_count(2320) + h.bag_count(2324), 0);
 }

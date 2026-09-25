@@ -768,6 +768,45 @@ impl InventoryModel {
             .sum()
     }
 
+    /// Items of `item_id` in bags (reagents and tools never come from equipment).
+    pub(crate) fn bag_count(&self, item_id: u32) -> u32 {
+        self.bag_items()
+            .filter(|item| item.item_id == item_id)
+            .map(|item| item.stack_count)
+            .sum()
+    }
+
+    /// Item ids of every bag stack.
+    pub(crate) fn bag_item_ids(&self) -> impl Iterator<Item = u32> + '_ {
+        self.bag_items().map(|item| item.item_id)
+    }
+
+    /// AzerothCore `DestroyItemCount`: remove `count` of `item_id` from bag
+    /// stacks in bag order; nothing changes when the bags hold fewer.
+    pub(crate) fn destroy_bag_items(&mut self, item_id: u32, count: u32) -> Result<(), String> {
+        if self.bag_count(item_id) < count {
+            return Err(format!("bags hold fewer than {count} of item {item_id}"));
+        }
+        let mut left = count;
+        for cell in self.bags.iter_mut().flatten() {
+            if left == 0 {
+                break;
+            }
+            let Some(item) = cell.as_mut().filter(|item| item.item_id == item_id) else {
+                continue;
+            };
+            let taken = left.min(item.stack_count);
+            item.stack_count -= taken;
+            left -= taken;
+            if item.stack_count == 0 {
+                let guid = item.item_guid;
+                *cell = None;
+                self.instances.remove(&guid);
+            }
+        }
+        Ok(())
+    }
+
     /// Visual slot of the equipped item `item_guid`.
     pub(crate) fn equipped_visual_slot(
         &self,

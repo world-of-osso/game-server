@@ -1,653 +1,605 @@
+//! Professions (docs/wiki/systems/professions.md): Retail skill lines learned from
+//! profession trainers, and crafting through the spell pipeline.
+//!
+//! A profession is a parent `SkillLine` (197 Tailoring) plus per-expansion child
+//! lines (2540 Classic Tailoring). Rules follow TrinityCore master
+//! (a352b1fa): trainer spells are cast (`Trainer::TeachSpell`), `LEARN_SPELL`
+//! (36) learns its trigger spell and the skills its `SKILL` (118) effects name
+//! (`Player::AddSpell`), `SKILL_STEP` (44) raises a line to a tier
+//! (`Spell::EffectSkill`), a line activates its parent at `ParentTierIndex`
+//! (`Player::SetSkill`) and teaches its automatic abilities
+//! (`Player::LearnSkillRewardedSpells`). A recipe cast checks and takes its
+//! `SpellReagents` and `SpellTotems` (`Spell::CheckItems`/`TakeReagents`),
+//! `CREATE_ITEM` (24) stores the item and rolls `Player::UpdateCraftSkill`.
+//! `PlayerProfessions` changes are saved and sent as `ProfessionSnapshot`.
+
+mod data;
+mod trainer;
+
 use bevy::prelude::*;
 use lightyear::prelude::*;
-use redb::Database;
-use shared::profession::{
-    CraftMaterial, CraftResult, GatherNode, GatherResult, PlayerProfessions, Profession, Recipe,
-    attempt_craft, attempt_gather,
-};
-use shared::protocol::{
-    CraftProfessionRecipe, GatherProfessionNode, ProfessionChannel, ProfessionRecipeSnapshot,
-    ProfessionSkillSnapshot, ProfessionSnapshot, ProfessionStateUpdate, QueryProfessions,
-};
+use shared::components::Player;
+use shared::profession::{MAX_PRIMARY_PROFESSIONS, ProfessionSkillLine, recipe_difficulty};
+use shared::protocol::{CraftRecipe, ProfessionChannel, ProfessionSnapshot};
+
+pub use data::{ProfessionData, load_profession_data};
+pub(crate) use trainer::TrainerPlugin;
 
 use crate::auth::{Authenticated, InWorld};
 use crate::gold::GoldUpdateQueue;
+use crate::inventory::inventory_model::InventoryModel;
+use crate::inventory::load_model;
+use crate::item_templates::ItemTemplates;
+use crate::merchant::VendorCatalog;
 use crate::networking::PlayerLink;
-use crate::persistence::{self, GameDatabase, InventoryData, InventoryItemData};
+use crate::persistence::inventory_store::save_inventory_record;
+use crate::persistence::{self, ClientId, GameDatabase, InventoryItemData};
+use crate::spell_cast::CastFailure;
+use crate::spell_cast::effects::EffectCtx;
+use crate::spell_info::{SpellEffect, SpellInfo, SpellStore};
+use data::ACQUIRE_AUTOMATIC_SKILL_RANK;
 
-pub(crate) const NODE_COPPER_VEIN: u32 = 1;
-pub(crate) const RECIPE_COPPER_BRACERS: u32 = 5001;
-const GATHER_CAST_SECS: f32 = 1.5;
-const COPPER_ORE_ID: u32 = 2770;
-const COPPER_BRACERS_ID: u32 = 2851;
+pub const EFFECT_CREATE_ITEM: u32 = 24;
+pub const EFFECT_LEARN_SPELL: u32 = 36;
+pub const EFFECT_SKILL_STEP: u32 = 44;
+pub const EFFECT_SKILL: u32 = 118;
 
-struct GatherNodeDef {
-    id: u32,
-    name: &'static str,
-    cast_secs: f32,
-    profession: Profession,
-    required_skill: u16,
-    trivial_skill: u16,
-    yield_item_id: u32,
-    yield_name: &'static str,
-    min_count: u16,
-    max_count: u16,
-    vendor_sell_price: u32,
+/// A character's learned skill lines and the spells learned through them.
+#[derive(Component, Debug, Clone, Default, PartialEq, Eq, bitcode::Encode, bitcode::Decode)]
+pub struct PlayerProfessions {
+    pub lines: Vec<ProfessionSkillLine>,
+    pub spells: Vec<u32>,
 }
 
-struct ProfessionRecipeDef {
-    recipe_id: u32,
-    name: &'static str,
-    profession: Profession,
-    required_skill: u16,
-    trivial_skill: u16,
-    material_item_id: u32,
-    material_name: &'static str,
-    material_count: u16,
-    output_item_id: u32,
-    output_name: &'static str,
-    output_count: u16,
-    output_vendor_sell_price: u32,
+impl PlayerProfessions {
+    pub fn knows(&self, spell: u32) -> bool {
+        self.spells.contains(&spell)
+    }
+
+    pub fn line(&self, skill: u32) -> Option<&ProfessionSkillLine> {
+        self.lines.iter().find(|line| line.skill_line == skill)
+    }
+
+    pub fn rank(&self, skill: u32) -> u16 {
+        self.line(skill).map_or(0, |line| line.rank)
+    }
+
+    fn step(&self, skill: u32) -> u16 {
+        self.line(skill).map_or(0, |line| line.step)
+    }
+
+    fn set_line(&mut self, line: ProfessionSkillLine) {
+        match self
+            .lines
+            .iter_mut()
+            .find(|known| known.skill_line == line.skill_line)
+        {
+            Some(known) => *known = line,
+            None => self.lines.push(line),
+        }
+    }
+
+    pub fn snapshot(&self) -> ProfessionSnapshot {
+        ProfessionSnapshot {
+            lines: self.lines.clone(),
+            spells: self.spells.clone(),
+        }
+    }
 }
 
-#[derive(Component, Debug)]
-struct PendingGatherCast {
-    conn_entity: Entity,
-    character_id: u64,
-    node_id: u32,
-    remaining_secs: f32,
+/// Learning rules for one character (race and class select tiers and abilities).
+pub(crate) struct Learner<'a> {
+    pub(crate) data: &'a ProfessionData,
+    pub(crate) spells: &'a SpellStore,
+    pub(crate) race: u8,
+    pub(crate) class: u8,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-struct ProfessionActionSuccess {
-    message: String,
-    skill_up: Option<ProfessionSkillSnapshot>,
+impl Learner<'_> {
+    /// `Player::LearnSpell` / `AddSpell`: the spell, then the skills its `SKILL`
+    /// effects name. `from_skill` is the line teaching it, whose skill is not re-set.
+    pub(crate) fn learn_spell(&self, profs: &mut PlayerProfessions, spell: u32, from_skill: u32) {
+        if profs.knows(spell) {
+            return;
+        }
+        profs.spells.push(spell);
+        let Some(info) = self.spells.get(spell) else {
+            warn!("Learned profession spell {spell} has no spell data");
+            return;
+        };
+        for effect in info.effects.iter().filter(|e| e.effect == EFFECT_SKILL) {
+            let skill = effect.misc_values[0] as u32;
+            let step = effect.base_points as u16;
+            if skill == from_skill || step == 0 {
+                continue;
+            }
+            let Some(cap) = self.data.tier_cap(skill, step, self.race, self.class) else {
+                warn!("Spell {spell}: skill {skill} has no tier {step} cap");
+                continue;
+            };
+            let max = cap.max(profs.line(skill).map_or(0, |line| line.max_rank));
+            self.set_skill(profs, skill, step, profs.rank(skill).max(1), max);
+        }
+    }
+
+    /// `Spell::EffectSkill` (`SKILL_STEP`): raise `skill` to tier `step`.
+    pub(crate) fn skill_step(&self, profs: &mut PlayerProfessions, skill: u32, step: u16) {
+        if step == 0 || profs.step(skill) >= step {
+            return;
+        }
+        let Some(max) = self.data.tier_cap(skill, step, self.race, self.class) else {
+            warn!("Skill {skill} has no tier {step} cap");
+            return;
+        };
+        self.set_skill(profs, skill, step, profs.rank(skill).max(1), max);
+    }
+
+    /// `Player::SetSkill` for an active line: enable the parent line at
+    /// `ParentTierIndex`, store the line, teach its automatic abilities.
+    fn set_skill(&self, profs: &mut PlayerProfessions, skill: u32, step: u16, rank: u16, max: u16) {
+        if let Some(line) = self.data.skill_line(skill)
+            && line.parent != 0
+            && line.parent_tier_index > 0
+            && profs.step(line.parent) < line.parent_tier_index
+        {
+            let parent_step = line.parent_tier_index;
+            if let Some(parent_max) =
+                self.data
+                    .tier_cap(line.parent, parent_step, self.race, self.class)
+            {
+                let parent_rank = profs.rank(line.parent).max(1);
+                self.set_skill(profs, line.parent, parent_step, parent_rank, parent_max);
+            }
+        }
+        profs.set_line(ProfessionSkillLine {
+            skill_line: skill,
+            step,
+            rank,
+            max_rank: max,
+        });
+        self.learn_rewarded_spells(profs, skill, rank);
+    }
+
+    /// `Player::LearnSkillRewardedSpells`: automatic abilities of `skill`;
+    /// `AutomaticSkillRank` ones from their `MinSkillLineRank`.
+    fn learn_rewarded_spells(&self, profs: &mut PlayerProfessions, skill: u32, rank: u16) {
+        let spells: Vec<(u32, u32)> = self
+            .data
+            .abilities_for_skill(skill, self.race, self.class)
+            .filter(|ability| ability.auto_learned())
+            .filter(|ability| {
+                ability.acquire_method != ACQUIRE_AUTOMATIC_SKILL_RANK || rank >= ability.min_rank
+            })
+            .map(|ability| (ability.spell, ability.skill_line))
+            .collect();
+        for (spell, line) in spells {
+            self.learn_spell(profs, spell, line);
+        }
+    }
+
+    /// `Player::UpdateCraftSkill` + `UpdateSkillPro`: `roll` in 1..=1000 raises the
+    /// recipe's skill-up line by `NumSkillUps` when it is within the difficulty's
+    /// chance. Returns the new rank when the skill rose.
+    pub(crate) fn craft_skill_up(
+        &self,
+        profs: &mut PlayerProfessions,
+        spell: u32,
+        roll: u32,
+    ) -> Option<u16> {
+        let ability = self
+            .data
+            .abilities_for_spell(spell)
+            .iter()
+            .find(|ability| ability.skillup_line != 0)?;
+        let line = *profs.line(ability.skillup_line)?;
+        if line.rank == 0 || line.rank >= line.max_rank {
+            return None;
+        }
+        let chance = recipe_difficulty(line.rank, ability.trivial_low, ability.trivial_high)
+            .skill_up_chance_permille();
+        if roll > chance {
+            return None;
+        }
+        let rank = (line.rank + ability.num_skill_ups.max(1)).min(line.max_rank);
+        profs.set_line(ProfessionSkillLine { rank, ..line });
+        self.learn_rewarded_spells(profs, line.skill_line, rank);
+        Some(rank)
+    }
+
+    /// Primary profession lines known (`GetFreePrimaryProfessionPoints` counts
+    /// against `MAX_PRIMARY_PROFESSIONS`).
+    fn primary_professions(&self, profs: &PlayerProfessions) -> usize {
+        profs
+            .lines
+            .iter()
+            .filter(|line| self.data.is_primary_profession(line.skill_line))
+            .count()
+    }
+
+    /// Whether casting or learning `spell` would add a primary profession the
+    /// character lacks (`SpellInfo::IsPrimaryProfessionFirstRank` on the spell or
+    /// its `LEARN_SPELL` triggers).
+    fn adds_primary_profession(&self, profs: &PlayerProfessions, spell: u32) -> bool {
+        let Some(info) = self.spells.get(spell) else {
+            return false;
+        };
+        info.effects.iter().any(|effect| match effect.effect {
+            EFFECT_SKILL => {
+                let skill = effect.misc_values[0] as u32;
+                self.data.is_primary_profession(skill) && profs.line(skill).is_none()
+            }
+            EFFECT_LEARN_SPELL => self.adds_primary_profession(profs, effect.trigger_spell),
+            _ => false,
+        })
+    }
+
+    /// No primary profession slot is left for `spell`.
+    pub(crate) fn blocked_by_primary_limit(&self, profs: &PlayerProfessions, spell: u32) -> bool {
+        self.adds_primary_profession(profs, spell)
+            && self.primary_professions(profs) >= MAX_PRIMARY_PROFESSIONS
+    }
+}
+
+/// Remaining casts of a `CraftRecipe` request; removed when a cast is cancelled
+/// or the next one cannot start.
+#[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct CraftQueue {
+    pub(crate) spell_id: u32,
+    pub(crate) remaining: u16,
 }
 
 pub struct ProfessionPlugin;
 
 impl Plugin for ProfessionPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, process_profession_queries);
-        app.add_systems(Update, process_craft_requests);
-        app.add_systems(Update, process_gather_requests);
-        app.add_systems(Update, tick_pending_gather_casts);
+        app.add_plugins(TrainerPlugin)
+            .add_systems(Update, receive_craft_requests)
+            .add_systems(
+                FixedUpdate,
+                continue_craft_queues.after(crate::spell_cast::advance_casts),
+            )
+            .add_systems(PostUpdate, save_and_send_professions);
     }
 }
 
-fn process_profession_queries(
-    mut receivers: Query<
-        (
-            Entity,
-            &PlayerLink,
-            &InWorld,
-            &mut MessageReceiver<QueryProfessions>,
-        ),
-        With<Authenticated>,
-    >,
-    professions: Query<&PlayerProfessions>,
-    db: Option<Res<GameDatabase>>,
-    mut senders: Query<&mut MessageSender<ProfessionStateUpdate>>,
+/// Run `apply` on `player`'s professions with its race/class learning rules.
+pub(crate) fn with_learner<R>(
+    world: &mut World,
+    player: Entity,
+    apply: impl FnOnce(&Learner, &mut PlayerProfessions) -> R,
+) -> Option<R> {
+    let (race, class) = world
+        .get::<Player>(player)
+        .map(|player| (player.race, player.class))?;
+    let mut profs = world.get::<PlayerProfessions>(player)?.clone();
+    let result = {
+        let data = world.get_resource::<ProfessionData>()?;
+        let spells = world.get_resource::<SpellStore>()?;
+        let learner = Learner {
+            data,
+            spells,
+            race,
+            class,
+        };
+        apply(&learner, &mut profs)
+    };
+    let mut current = world.get_mut::<PlayerProfessions>(player)?;
+    if *current != profs {
+        *current = profs;
+    }
+    Some(result)
+}
+
+/// `LEARN_SPELL` (36).
+pub(crate) fn effect_learn_spell(
+    world: &mut World,
+    _ctx: &EffectCtx,
+    effect: &SpellEffect,
+    target: Entity,
 ) {
-    let Some(db) = db else { return };
-    for (conn_entity, link, in_world, mut receiver) in &mut receivers {
-        for _ in receiver.receive() {
-            let Ok(professions) = professions.get(link.0) else {
-                send_profession_error(
-                    conn_entity,
-                    in_world.character_id,
-                    db.as_ref(),
-                    None,
-                    &mut senders,
-                    "professions unavailable for player",
-                );
-                continue;
-            };
-            let inventory = persistence::load_inventory(&db.db, in_world.character_id);
-            send_profession_update(
-                conn_entity,
-                &build_profession_snapshot(professions, &inventory),
-                None,
-                None,
-                None,
-                &mut senders,
-            );
-        }
+    let spell = effect.trigger_spell;
+    if with_learner(world, target, |learner, profs| {
+        learner.learn_spell(profs, spell, 0)
+    })
+    .is_none()
+    {
+        warn!("LEARN_SPELL {spell}: target {target} has no professions");
     }
 }
 
-fn process_craft_requests(
-    mut receivers: Query<
-        (
-            Entity,
-            &PlayerLink,
-            &InWorld,
-            &mut MessageReceiver<CraftProfessionRecipe>,
-        ),
-        With<Authenticated>,
-    >,
-    mut professions: Query<&mut PlayerProfessions>,
-    db: Option<Res<GameDatabase>>,
-    mut inventory_updates: ResMut<GoldUpdateQueue>,
-    mut senders: Query<&mut MessageSender<ProfessionStateUpdate>>,
+/// `SKILL_STEP` (44).
+pub(crate) fn effect_skill_step(
+    world: &mut World,
+    _ctx: &EffectCtx,
+    effect: &SpellEffect,
+    target: Entity,
 ) {
-    let Some(db) = db else { return };
-    for (conn_entity, link, in_world, mut receiver) in &mut receivers {
-        for request in receiver.receive() {
-            let Ok(mut profs) = professions.get_mut(link.0) else {
-                send_profession_error(
-                    conn_entity,
-                    in_world.character_id,
-                    db.as_ref(),
-                    None,
-                    &mut senders,
-                    "professions unavailable for player",
-                );
-                continue;
-            };
-            let mut inventory = persistence::load_inventory(&db.db, in_world.character_id);
-            match craft_recipe(
-                request.recipe_id,
-                &mut profs,
-                &mut inventory,
-                &db.db,
-                rand::random::<f32>(),
-            ) {
-                Ok(result) => {
-                    persistence::save_inventory(&db.db, in_world.character_id, &inventory);
-                    inventory_updates.record_items(in_world.character_id);
-                    persistence::save_professions(&db.db, in_world.character_id, &profs);
-                    send_profession_update(
-                        conn_entity,
-                        &build_profession_snapshot(&profs, &inventory),
-                        Some(result.message),
-                        result.skill_up,
-                        None,
-                        &mut senders,
-                    );
-                }
-                Err(error) => {
-                    send_profession_error(
-                        conn_entity,
-                        in_world.character_id,
-                        db.as_ref(),
-                        Some(&profs),
-                        &mut senders,
-                        &error,
-                    );
-                }
+    let skill = effect.misc_values[0] as u32;
+    let step = effect.base_points as u16;
+    if with_learner(world, target, |learner, profs| {
+        learner.skill_step(profs, skill, step)
+    })
+    .is_none()
+    {
+        warn!("SKILL_STEP {skill}: target {target} has no professions");
+    }
+}
+
+/// `CREATE_ITEM` (24): store `EffectBasePoints` of `EffectItemType` in the
+/// target's bags, then roll the craft skill-up (`Spell::DoCreateItem`).
+pub(crate) fn effect_create_item(
+    world: &mut World,
+    ctx: &EffectCtx,
+    effect: &SpellEffect,
+    target: Entity,
+) {
+    let count = effect.base_points.round().max(1.0) as u32;
+    if let Err(error) = store_created_item(world, target, effect.item_type, count) {
+        warn!("Spell {}: CREATE_ITEM failed: {error}", ctx.spell.id);
+        return;
+    }
+    let roll = rand::Rng::gen_range(&mut rand::thread_rng(), 1..=1000);
+    with_learner(world, target, |learner, profs| {
+        learner.craft_skill_up(profs, ctx.spell.id, roll)
+    });
+}
+
+/// The character's inventory, item templates and item names.
+struct Bags<'w> {
+    db: &'w GameDatabase,
+    templates: &'w ItemTemplates,
+    catalog: &'w VendorCatalog,
+    character_id: u64,
+}
+
+impl Bags<'_> {
+    fn load(&self) -> Result<InventoryModel, String> {
+        load_model(&self.db.db, self.templates, self.character_id)
+            .map_err(|error| format!("{error:?}"))
+    }
+
+    fn item_name(&self, item_id: u32) -> String {
+        self.catalog
+            .goods
+            .get(&item_id)
+            .map_or_else(|| format!("item {item_id}"), |goods| goods.name.clone())
+    }
+
+    fn new_item(&self, item_id: u32, count: u32) -> Result<InventoryItemData, String> {
+        let goods = self
+            .catalog
+            .goods
+            .get(&item_id)
+            .ok_or_else(|| format!("item {item_id} is not in content_item"))?;
+        let template = self
+            .templates
+            .get(item_id)
+            .ok_or_else(|| format!("item {item_id} has no template"))?;
+        Ok(InventoryItemData {
+            item_guid: persistence::next_id(&self.db.db, "item_instance"),
+            item_id,
+            name: goods.name.clone(),
+            quality: goods.quality,
+            required_level: template.required_level,
+            stack_count: count,
+            vendor_sell_price: goods.sell_price,
+            unique_auction: false,
+        })
+    }
+
+    fn store(&self, model: &mut InventoryModel, item: InventoryItemData) -> Result<(), String> {
+        let template = *self
+            .templates
+            .get(item.item_id)
+            .ok_or_else(|| format!("item {} has no template", item.item_id))?;
+        let db = &self.db.db;
+        let mut mint = || persistence::next_id(db, "item_instance");
+        model
+            .store_item(item, template, &mut mint)
+            .map_err(|error| format!("{error:?}"))
+    }
+}
+
+fn with_bags<R>(world: &World, player: Entity, apply: impl FnOnce(&Bags) -> R) -> Option<R> {
+    let character_id = world.get::<ClientId>(player)?.0;
+    let bags = Bags {
+        db: world.get_resource::<GameDatabase>()?,
+        templates: world.get_resource::<ItemTemplates>()?,
+        catalog: world.get_resource::<VendorCatalog>()?,
+        character_id,
+    };
+    Some(apply(&bags))
+}
+
+fn store_created_item(
+    world: &mut World,
+    player: Entity,
+    item_id: u32,
+    count: u32,
+) -> Result<(), String> {
+    let character_id = with_bags(world, player, |bags| {
+        let mut model = bags.load()?;
+        let item = bags.new_item(item_id, count)?;
+        bags.store(&mut model, item)?;
+        save_inventory_record(&bags.db.db, bags.character_id, &model.into_record());
+        Ok::<_, String>(bags.character_id)
+    })
+    .ok_or("caster has no bags")??;
+    world
+        .resource_mut::<GoldUpdateQueue>()
+        .record_items(character_id);
+    Ok(())
+}
+
+/// `Spell::CheckItems` for player casters: reagents and tools in the bags, and
+/// room for every created item. Spells without either pass.
+pub(crate) fn check_cast_items(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+) -> Result<(), CastFailure> {
+    let Some(data) = world.get_resource::<ProfessionData>() else {
+        return Ok(());
+    };
+    let reagents = data.reagents(spell.id);
+    let tools = data.tools(spell.id);
+    let created: Vec<(u32, u32)> = spell
+        .effects
+        .iter()
+        .filter(|effect| effect.effect == EFFECT_CREATE_ITEM && effect.item_type != 0)
+        .map(|effect| (effect.item_type, effect.base_points.round().max(1.0) as u32))
+        .collect();
+    if reagents.is_empty() && tools.is_none() && created.is_empty() {
+        return Ok(());
+    }
+    if world.get::<Player>(caster).is_none() {
+        return Ok(());
+    }
+    with_bags(world, caster, |bags| {
+        let mut model = bags
+            .load()
+            .map_err(|detail| CastFailure::Unsupported(format!("bags unavailable: {detail}")))?;
+        for &(item, count) in reagents {
+            if model.bag_count(item) < count {
+                return Err(CastFailure::Reagents(bags.item_name(item)));
             }
         }
+        if let Some(tools) = tools {
+            check_tools(data, &model, tools, bags)?;
+        }
+        // The model is only checked, never saved: store the created items in it.
+        for (item, count) in created {
+            let item = bags
+                .new_item(item, count)
+                .map_err(CastFailure::Unsupported)?;
+            bags.store(&mut model, item)
+                .map_err(|_| CastFailure::InventoryFull)?;
+        }
+        Ok(())
+    })
+    .unwrap_or_else(|| Err(CastFailure::Unsupported("caster has no bags".into())))
+}
+
+fn check_tools(
+    data: &ProfessionData,
+    model: &InventoryModel,
+    tools: &data::Tools,
+    bags: &Bags,
+) -> Result<(), CastFailure> {
+    for &item in &tools.items {
+        if model.bag_count(item) == 0 {
+            return Err(CastFailure::Totems(bags.item_name(item)));
+        }
+    }
+    for &category in &tools.categories {
+        if !model
+            .bag_item_ids()
+            .any(|item| data.item_meets_totem_category(item, category))
+        {
+            let name = data
+                .totem_category(category)
+                .map_or_else(|| format!("tool category {category}"), |c| c.name.clone());
+            return Err(CastFailure::Totems(name));
+        }
+    }
+    Ok(())
+}
+
+/// `Spell::TakeReagents`: remove the spell's reagents from the caster's bags.
+pub(crate) fn take_reagents(world: &mut World, caster: Entity, spell: &SpellInfo) {
+    let Some(reagents) = world
+        .get_resource::<ProfessionData>()
+        .map(|data| data.reagents(spell.id).to_vec())
+    else {
+        return;
+    };
+    if reagents.is_empty() {
+        return;
+    }
+    let taken = with_bags(world, caster, |bags| {
+        let mut model = bags.load()?;
+        for (item, count) in reagents {
+            model.destroy_bag_items(item, count)?;
+        }
+        save_inventory_record(&bags.db.db, bags.character_id, &model.into_record());
+        Ok::<_, String>(bags.character_id)
+    });
+    match taken {
+        Some(Ok(character_id)) => world
+            .resource_mut::<GoldUpdateQueue>()
+            .record_items(character_id),
+        Some(Err(error)) => warn!("Spell {}: reagents not taken: {error}", spell.id),
+        None => {}
     }
 }
 
-fn process_gather_requests(
-    mut receivers: Query<
-        (
-            Entity,
-            &PlayerLink,
-            &InWorld,
-            &mut MessageReceiver<GatherProfessionNode>,
-        ),
-        With<Authenticated>,
-    >,
-    pending: Query<(), With<PendingGatherCast>>,
-    professions: Query<&PlayerProfessions>,
-    db: Option<Res<GameDatabase>>,
-    mut senders: Query<&mut MessageSender<ProfessionStateUpdate>>,
-    mut commands: Commands,
-) {
-    let Some(db) = db else { return };
-    for (conn_entity, link, in_world, mut receiver) in &mut receivers {
-        for request in receiver.receive() {
-            let Ok(profs) = professions.get(link.0) else {
-                send_profession_error(
-                    conn_entity,
-                    in_world.character_id,
-                    db.as_ref(),
-                    None,
-                    &mut senders,
-                    "professions unavailable for player",
-                );
-                continue;
-            };
-            let Some(node) = gather_node_def(request.node_id) else {
-                send_profession_error(
-                    conn_entity,
-                    in_world.character_id,
-                    db.as_ref(),
-                    Some(profs),
-                    &mut senders,
-                    "unknown gather node",
-                );
-                continue;
-            };
-            if pending.contains(link.0) {
-                send_profession_error(
-                    conn_entity,
-                    in_world.character_id,
-                    db.as_ref(),
-                    Some(profs),
-                    &mut senders,
-                    "already gathering",
-                );
-                continue;
-            }
-            commands.entity(link.0).insert(PendingGatherCast {
-                conn_entity,
-                character_id: in_world.character_id,
-                node_id: node.id,
-                remaining_secs: node.cast_secs,
+fn receive_craft_requests(world: &mut World) {
+    let mut receivers = world.query_filtered::<(
+        &PlayerLink,
+        Has<InWorld>,
+        &mut MessageReceiver<CraftRecipe>,
+    ), With<Authenticated>>();
+    let requests: Vec<(Entity, CraftRecipe)> = receivers
+        .iter_mut(world)
+        .filter(|(_, in_world, _)| *in_world)
+        .flat_map(|(link, _, mut receiver)| {
+            let player = link.0;
+            receiver
+                .receive()
+                .map(move |request| (player, request))
+                .collect::<Vec<_>>()
+        })
+        .collect();
+    for (player, request) in requests {
+        world.entity_mut(player).remove::<CraftQueue>();
+        if crate::spell_cast::cast_for_player(world, player, request.spell_id).is_ok()
+            && request.casts > 1
+        {
+            world.entity_mut(player).insert(CraftQueue {
+                spell_id: request.spell_id,
+                remaining: request.casts - 1,
             });
         }
     }
 }
 
-fn tick_pending_gather_casts(
-    time: Res<Time>,
-    mut pending_casts: Query<(Entity, &mut PendingGatherCast, &mut PlayerProfessions)>,
+/// Start the next queued craft once the previous cast has finished.
+fn continue_craft_queues(world: &mut World) {
+    let mut queues =
+        world.query_filtered::<(Entity, &CraftQueue), Without<shared::casting::CastState>>();
+    let ready: Vec<(Entity, CraftQueue)> = queues
+        .iter(world)
+        .map(|(player, queue)| (player, *queue))
+        .collect();
+    for (player, queue) in ready {
+        if queue.remaining <= 1 {
+            world.entity_mut(player).remove::<CraftQueue>();
+        } else {
+            world.entity_mut(player).insert(CraftQueue {
+                remaining: queue.remaining - 1,
+                ..queue
+            });
+        }
+        if crate::spell_cast::cast_for_player(world, player, queue.spell_id).is_err() {
+            world.entity_mut(player).remove::<CraftQueue>();
+        }
+    }
+}
+
+/// Persist changed professions and send the owner its `ProfessionSnapshot`.
+fn save_and_send_professions(
+    changed: Query<(Entity, &ClientId, &PlayerProfessions), Changed<PlayerProfessions>>,
+    mut connections: Query<(&PlayerLink, &mut MessageSender<ProfessionSnapshot>)>,
     db: Option<Res<GameDatabase>>,
-    mut inventory_updates: ResMut<GoldUpdateQueue>,
-    mut senders: Query<&mut MessageSender<ProfessionStateUpdate>>,
-    mut commands: Commands,
 ) {
-    let Some(db) = db else { return };
-    for (player_entity, mut pending, mut professions) in &mut pending_casts {
-        pending.remaining_secs -= time.delta_secs();
-        if pending.remaining_secs > 0.0 {
-            continue;
+    for (player, character_id, profs) in &changed {
+        if let Some(db) = db.as_deref() {
+            persistence::save_professions(&db.db, character_id.0, profs);
         }
-        resolve_completed_gather(
-            &pending,
-            &mut professions,
-            db.as_ref(),
-            &mut inventory_updates,
-            &mut senders,
-        );
-        commands.entity(player_entity).remove::<PendingGatherCast>();
-    }
-}
-
-fn resolve_completed_gather(
-    pending: &PendingGatherCast,
-    professions: &mut PlayerProfessions,
-    db: &GameDatabase,
-    inventory_updates: &mut GoldUpdateQueue,
-    senders: &mut Query<&mut MessageSender<ProfessionStateUpdate>>,
-) {
-    let mut inventory = persistence::load_inventory(&db.db, pending.character_id);
-    let outcome = complete_gather(
-        pending.node_id,
-        professions,
-        &mut inventory,
-        &db.db,
-        rand::random::<f32>(),
-        &[rand::random::<f32>()],
-    );
-    match outcome {
-        Ok(result) => {
-            persistence::save_inventory(&db.db, pending.character_id, &inventory);
-            inventory_updates.record_items(pending.character_id);
-            persistence::save_professions(&db.db, pending.character_id, professions);
-            send_profession_update(
-                pending.conn_entity,
-                &build_profession_snapshot(professions, &inventory),
-                Some(result.message),
-                result.skill_up,
-                None,
-                senders,
-            );
-        }
-        Err(error) => {
-            send_profession_error(
-                pending.conn_entity,
-                pending.character_id,
-                db,
-                Some(professions),
-                senders,
-                &error,
-            );
+        if let Some((_, mut sender)) = connections.iter_mut().find(|(link, _)| link.0 == player) {
+            sender.send::<ProfessionChannel>(profs.snapshot());
         }
     }
-}
-
-fn send_profession_update(
-    conn_entity: Entity,
-    snapshot: &ProfessionSnapshot,
-    message: Option<String>,
-    skill_up: Option<ProfessionSkillSnapshot>,
-    error: Option<String>,
-    senders: &mut Query<&mut MessageSender<ProfessionStateUpdate>>,
-) {
-    let Ok(mut sender) = senders.get_mut(conn_entity) else {
-        return;
-    };
-    sender.send::<ProfessionChannel>(ProfessionStateUpdate {
-        snapshot: Some(snapshot.clone()),
-        message,
-        skill_up,
-        error,
-    });
-}
-
-fn send_profession_error(
-    conn_entity: Entity,
-    character_id: u64,
-    db: &GameDatabase,
-    professions: Option<&PlayerProfessions>,
-    senders: &mut Query<&mut MessageSender<ProfessionStateUpdate>>,
-    error: &str,
-) {
-    let snapshot = professions.map(|profs| {
-        let inventory = persistence::load_inventory(&db.db, character_id);
-        build_profession_snapshot(profs, &inventory)
-    });
-    let Ok(mut sender) = senders.get_mut(conn_entity) else {
-        return;
-    };
-    sender.send::<ProfessionChannel>(ProfessionStateUpdate {
-        snapshot,
-        message: None,
-        skill_up: None,
-        error: Some(error.into()),
-    });
-}
-
-fn build_profession_snapshot(
-    professions: &PlayerProfessions,
-    inventory: &InventoryData,
-) -> ProfessionSnapshot {
-    ProfessionSnapshot {
-        skills: professions
-            .skills
-            .iter()
-            .map(|skill| ProfessionSkillSnapshot {
-                profession: profession_name(skill.profession).into(),
-                current: skill.current,
-                max: skill.max,
-            })
-            .collect(),
-        recipes: recipe_defs()
-            .iter()
-            .filter(|def| professions.knows(def.profession))
-            .map(|def| ProfessionRecipeSnapshot {
-                spell_id: def.recipe_id,
-                profession: profession_name(def.profession).into(),
-                name: def.name.into(),
-                craftable: recipe_is_craftable(def, professions, inventory),
-                cooldown: None,
-            })
-            .collect(),
-    }
-}
-
-fn recipe_is_craftable(
-    def: &ProfessionRecipeDef,
-    professions: &PlayerProfessions,
-    inventory: &InventoryData,
-) -> bool {
-    matches!(
-        attempt_craft(
-            &recipe_from_def(def),
-            &mut professions.clone(),
-            &|item_id| { count_inventory_item(inventory, item_id) },
-            1.0
-        ),
-        CraftResult::Success { .. }
-    )
-}
-
-fn craft_recipe(
-    recipe_id: u32,
-    professions: &mut PlayerProfessions,
-    inventory: &mut InventoryData,
-    db: &Database,
-    roll: f32,
-) -> Result<ProfessionActionSuccess, String> {
-    let Some(def) = recipe_def(recipe_id) else {
-        return Err("unknown profession recipe".into());
-    };
-    match attempt_craft(
-        &recipe_from_def(def),
-        professions,
-        &|item_id| count_inventory_item(inventory, item_id),
-        roll,
-    ) {
-        CraftResult::Success {
-            output_item_id,
-            output_count,
-            skilled_up,
-        } => {
-            consume_recipe_materials(inventory, def)?;
-            add_inventory_item(
-                inventory,
-                db,
-                output_item_id,
-                def.output_name,
-                u32::from(output_count),
-                def.output_vendor_sell_price,
-            );
-            Ok(ProfessionActionSuccess {
-                message: format!("crafted {}", def.output_name),
-                skill_up: skill_up_snapshot(professions, def.profession, skilled_up),
-            })
-        }
-        CraftResult::WrongProfession => Err("profession not learned".into()),
-        CraftResult::SkillTooLow => Err("profession skill is too low".into()),
-        CraftResult::MissingMaterials { missing } => Err(format_missing_materials(&missing)),
-    }
-}
-
-fn complete_gather(
-    node_id: u32,
-    professions: &mut PlayerProfessions,
-    inventory: &mut InventoryData,
-    db: &Database,
-    roll: f32,
-    count_rolls: &[f32],
-) -> Result<ProfessionActionSuccess, String> {
-    let Some(def) = gather_node_def(node_id) else {
-        return Err("unknown gather node".into());
-    };
-    match attempt_gather(&gather_node_from_def(def), professions, roll, count_rolls) {
-        GatherResult::Success { items, skilled_up } => {
-            for (item_id, count) in items {
-                add_inventory_item(
-                    inventory,
-                    db,
-                    item_id,
-                    def.yield_name,
-                    u32::from(count),
-                    def.vendor_sell_price,
-                );
-            }
-            Ok(ProfessionActionSuccess {
-                message: format!("gathered {}", def.name),
-                skill_up: skill_up_snapshot(professions, def.profession, skilled_up),
-            })
-        }
-        GatherResult::SkillTooLow => Err("gathering skill is too low".into()),
-        GatherResult::WrongProfession => Err("profession not learned".into()),
-    }
-}
-
-fn consume_recipe_materials(
-    inventory: &mut InventoryData,
-    def: &ProfessionRecipeDef,
-) -> Result<(), String> {
-    let Some(index) = inventory.items.iter().position(|item| {
-        item.item_id == def.material_item_id && item.stack_count >= u32::from(def.material_count)
-    }) else {
-        return Err(format!(
-            "missing materials: {} x{}",
-            def.material_name, def.material_count
-        ));
-    };
-    inventory.items[index].stack_count -= u32::from(def.material_count);
-    if inventory.items[index].stack_count == 0 {
-        inventory.items.remove(index);
-    }
-    Ok(())
-}
-
-fn add_inventory_item(
-    inventory: &mut InventoryData,
-    db: &Database,
-    item_id: u32,
-    name: &str,
-    count: u32,
-    vendor_sell_price: u32,
-) {
-    if let Some(existing) = inventory
-        .items
-        .iter_mut()
-        .find(|item| item.item_id == item_id)
-    {
-        existing.stack_count = existing.stack_count.saturating_add(count);
-        return;
-    }
-    inventory.items.push(InventoryItemData {
-        item_guid: persistence::next_id(db, "item_instance"),
-        item_id,
-        name: name.into(),
-        quality: 1,
-        required_level: 1,
-        stack_count: count,
-        vendor_sell_price,
-        unique_auction: false,
-    });
-}
-
-fn count_inventory_item(inventory: &InventoryData, item_id: u32) -> u16 {
-    inventory
-        .items
-        .iter()
-        .filter(|item| item.item_id == item_id)
-        .map(|item| item.stack_count as u16)
-        .sum()
-}
-
-fn format_missing_materials(missing: &[CraftMaterial]) -> String {
-    let list = missing
-        .iter()
-        .map(|material| format!("{} x{}", material.item_id, material.count))
-        .collect::<Vec<_>>()
-        .join(", ");
-    format!("missing materials: {list}")
-}
-
-fn skill_up_snapshot(
-    professions: &PlayerProfessions,
-    profession: Profession,
-    skilled_up: bool,
-) -> Option<ProfessionSkillSnapshot> {
-    if !skilled_up {
-        return None;
-    }
-    professions
-        .get(profession)
-        .map(|skill| ProfessionSkillSnapshot {
-            profession: profession_name(profession).into(),
-            current: skill.current,
-            max: skill.max,
-        })
-}
-
-fn profession_name(profession: Profession) -> &'static str {
-    match profession {
-        Profession::Mining => "Mining",
-        Profession::Herbalism => "Herbalism",
-        Profession::Skinning => "Skinning",
-        Profession::Blacksmithing => "Blacksmithing",
-        Profession::Leatherworking => "Leatherworking",
-        Profession::Tailoring => "Tailoring",
-        Profession::Engineering => "Engineering",
-        Profession::Alchemy => "Alchemy",
-        Profession::Enchanting => "Enchanting",
-        Profession::Jewelcrafting => "Jewelcrafting",
-        Profession::Inscription => "Inscription",
-        Profession::Cooking => "Cooking",
-        Profession::Fishing => "Fishing",
-    }
-}
-
-fn gather_node_def(node_id: u32) -> Option<&'static GatherNodeDef> {
-    gather_node_defs().iter().find(|node| node.id == node_id)
-}
-
-fn recipe_def(recipe_id: u32) -> Option<&'static ProfessionRecipeDef> {
-    recipe_defs()
-        .iter()
-        .find(|recipe| recipe.recipe_id == recipe_id)
-}
-
-fn gather_node_from_def(def: &GatherNodeDef) -> GatherNode {
-    GatherNode {
-        profession: def.profession,
-        required_skill: def.required_skill,
-        trivial_skill: def.trivial_skill,
-        yields: vec![(def.yield_item_id, def.min_count, def.max_count)],
-        respawn_secs: 30,
-    }
-}
-
-fn recipe_from_def(def: &ProfessionRecipeDef) -> Recipe {
-    Recipe {
-        id: def.recipe_id,
-        profession: def.profession,
-        required_skill: def.required_skill,
-        trivial_skill: def.trivial_skill,
-        materials: vec![CraftMaterial {
-            item_id: def.material_item_id,
-            count: def.material_count,
-        }],
-        output_item_id: def.output_item_id,
-        output_count: def.output_count,
-        source: None,
-    }
-}
-
-fn gather_node_defs() -> &'static [GatherNodeDef] {
-    &[GatherNodeDef {
-        id: NODE_COPPER_VEIN,
-        name: "Copper Vein",
-        cast_secs: GATHER_CAST_SECS,
-        profession: Profession::Mining,
-        required_skill: 1,
-        trivial_skill: 50,
-        yield_item_id: COPPER_ORE_ID,
-        yield_name: "Copper Ore",
-        min_count: 1,
-        max_count: 2,
-        vendor_sell_price: 25,
-    }]
-}
-
-fn recipe_defs() -> &'static [ProfessionRecipeDef] {
-    &[ProfessionRecipeDef {
-        recipe_id: RECIPE_COPPER_BRACERS,
-        name: "Copper Bracers",
-        profession: Profession::Blacksmithing,
-        required_skill: 1,
-        trivial_skill: 50,
-        material_item_id: COPPER_ORE_ID,
-        material_name: "Copper Ore",
-        material_count: 2,
-        output_item_id: COPPER_BRACERS_ID,
-        output_name: "Copper Bracers",
-        output_count: 1,
-        output_vendor_sell_price: 75,
-    }]
-}
-
-#[cfg(test)]
-fn test_db() -> GameDatabase {
-    let dir = tempfile::tempdir().expect("tempdir");
-    let path = dir.path().join("professions.redb");
-    let db = redb::Database::create(&path).expect("db");
-    crate::persistence::create_tables(&db);
-    std::mem::forget(dir);
-    GameDatabase { db }
 }
 
 #[cfg(test)]
