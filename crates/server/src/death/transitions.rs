@@ -81,6 +81,11 @@ pub(super) fn process_player_death_transitions(
             .commands
             .entity(player_entity)
             .insert(death_state.clone());
+        // `Player::setDeathState` -> `Unit::setDeathState` -> `CombatStop`
+        // (AzerothCore Player.cpp:1078, Unit.cpp:11439-11441).
+        params
+            .commands
+            .queue(move |world: &mut World| crate::combat::combat_stop(world, player_entity));
         if let Some(conn_entity) = connection_for_player(player_entity, &params.connections) {
             send_update(
                 conn_entity,

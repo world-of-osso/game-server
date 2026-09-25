@@ -115,6 +115,93 @@ fn lethal_player_auto_attack_transitions_death_in_same_fixed_step() {
     );
 }
 
+/// AzerothCore `Player::setDeathState` (Player.cpp:1078) calls
+/// `Unit::setDeathState`, whose `CombatStop` (Unit.cpp:11439-11441) runs for
+/// players too: the dying player stops attacking and its attackers stop
+/// attacking it, so a player resurrected in melee range is not swung at, and a
+/// dead player's auto-attack does not keep hitting its target.
+#[test]
+fn a_player_resurrected_in_melee_range_is_not_attacked_by_its_killer() {
+    use bevy::time::TimeUpdateStrategy;
+    let mut app = App::new();
+    app.add_plugins(bevy::MinimalPlugins);
+    app.add_plugins(bevy::state::app::StatesPlugin);
+    app.add_plugins(lightyear::prelude::server::ServerPlugins {
+        tick_duration: std::time::Duration::from_millis(50),
+    });
+    app.add_plugins(DeathPlugin);
+    app.add_plugins(CombatPlugin);
+    app.init_resource::<FactionTemplates>();
+    app.insert_resource(TimeUpdateStrategy::ManualDuration(
+        std::time::Duration::from_millis(50),
+    ));
+    app.finish();
+    app.cleanup();
+
+    let player = app
+        .world_mut()
+        .spawn((
+            pos(0.0, 0.0, 0.0),
+            Health {
+                current: BASE_DAMAGE * 3.0,
+                max: 100.0,
+            },
+            Player {
+                name: "Target".into(),
+                race: 1,
+                class: 1,
+                appearance: Default::default(),
+            },
+            ClientId(2),
+        ))
+        .id();
+    let kobold = app
+        .world_mut()
+        .spawn((
+            pos(1.0, 0.0, 0.0),
+            Health {
+                current: 100.0,
+                max: 100.0,
+            },
+            Npc {
+                template_id: 6,
+                name: "Kobold Vermin".into(),
+            },
+            CombatTarget(Some(player)),
+        ))
+        .id();
+    app.world_mut()
+        .entity_mut(player)
+        .insert(CombatTarget(Some(kobold)));
+
+    // Three kobold swings, 2 s apart.
+    for _ in 0..(AUTO_ATTACK_INTERVAL * 2.0 * 20.0) as usize + 10 {
+        app.update();
+    }
+    let dead = app.world().get::<PlayerDeathState>(player).expect("killed");
+    assert_eq!(dead.state, PlayerDeathKind::Dead);
+    let kobold_health = app.world().get::<Health>(kobold).unwrap().current;
+
+    // Resurrected where it died, in the kobold's melee range.
+    app.world_mut()
+        .get_mut::<PlayerDeathState>(player)
+        .unwrap()
+        .state = PlayerDeathKind::Alive;
+    app.world_mut().get_mut::<Health>(player).unwrap().current = 50.0;
+    for _ in 0..(AUTO_ATTACK_INTERVAL * 2.0 * 20.0) as usize {
+        app.update();
+    }
+
+    assert_eq!(app.world().get::<Health>(player).unwrap().current, 50.0);
+    assert!(app.world().get::<AutoAttack>(kobold).is_none());
+    assert!(app.world().get::<AutoAttack>(player).is_none());
+    assert_eq!(
+        app.world().get::<Health>(kobold).unwrap().current,
+        kobold_health,
+        "the player's auto-attack stopped when it died"
+    );
+}
+
 /// (kind, source, target) of the combat log events the harness caster received.
 fn logged(
     h: &crate::spell_cast::test_harness::Harness,
