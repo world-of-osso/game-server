@@ -138,6 +138,7 @@ fn queued_player_death_transitions_apply_once_and_route_snapshot() {
             crate::durability::EquippedDurability {
                 slots: vec![crate::durability::DurabilitySlotState {
                     slot: shared::components::EquipmentVisualSlot::Head,
+                    item_id: 0,
                     current: 70,
                     max: 70,
                 }],
@@ -261,6 +262,7 @@ fn resurrection_allows_a_second_death_transition() {
             crate::durability::EquippedDurability {
                 slots: vec![crate::durability::DurabilitySlotState {
                     slot: shared::components::EquipmentVisualSlot::Head,
+                    item_id: 0,
                     current: 70,
                     max: 70,
                 }],

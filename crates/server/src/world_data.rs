@@ -408,6 +408,10 @@ fn startup_load_world_data(mut commands: Commands) {
         crate::merchant::load_vendor_catalog(&conn).expect("Failed to load content_npc_vendor");
     info!("Loaded {} vendor lists", vendors.vendors.len());
     commands.insert_resource(vendors);
+    let durability = crate::durability::load_item_durability(&conn)
+        .expect("Failed to load item durability; run scripts/db2.py import");
+    info!("Loaded durability for {} items", durability.0.len());
+    commands.insert_resource(durability);
 }
 
 pub struct WorldDataPlugin;

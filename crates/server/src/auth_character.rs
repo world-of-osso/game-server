@@ -492,9 +492,7 @@ fn insert_player_spawn_components(
     commands
         .entity(entity)
         .insert(crate::networking::FallTracker::grounded(by));
-    commands
-        .entity(entity)
-        .insert(crate::durability::load_equipped_durability(data));
+    crate::durability::insert_equipped_durability(commands, entity, data);
     insert_player_init_state(commands, entity, init)
 }
 

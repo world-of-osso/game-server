@@ -1,5 +1,8 @@
+use std::collections::HashMap;
+
 use bevy::prelude::*;
 use lightyear::prelude::*;
+use rusqlite::Connection;
 use shared::components::{EquipmentAppearance, EquipmentVisualSlot, Player};
 use shared::protocol::{
     DurabilityChannel, DurabilitySlotSnapshot, DurabilitySnapshot, DurabilityStateUpdate,
@@ -24,8 +27,92 @@ pub struct EquippedDurability {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DurabilitySlotState {
     pub slot: EquipmentVisualSlot,
+    /// The equipped item this durability belongs to.
+    pub item_id: u32,
     pub current: u32,
     pub max: u32,
+}
+
+/// Durability of one item: AzerothCore `item_template.MaxDurability` (joined by
+/// `content_item.SourceEntry`) and the copper per lost point, AzerothCore
+/// `Player::DurabilityRepair` (Player.cpp:4752): `DurabilityCosts[ItemLevel]`
+/// multiplier for the item's class/subclass times `DurabilityQuality[(Quality+1)*2]`,
+/// from the Retail DB2s with Retail item levels. `None` when a DB2 row is missing,
+/// which makes the item unrepairable as in AzerothCore.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct ItemDurabilityInfo {
+    pub max: u32,
+    pub cost_per_point: Option<f64>,
+}
+
+#[derive(Resource, Debug, Clone, Default)]
+pub struct ItemDurability(pub HashMap<u32, ItemDurabilityInfo>);
+
+impl ItemDurability {
+    fn info(&self, item_id: u32) -> Option<ItemDurabilityInfo> {
+        self.0.get(&item_id).copied().filter(|info| info.max > 0)
+    }
+
+    /// Copper to restore `lost` points (at least 1, AzerothCore `if (costs == 0) costs = 1`);
+    /// `None` if the item can't be repaired.
+    pub fn repair_cost(&self, item_id: u32, lost: u32) -> Option<u32> {
+        if lost == 0 {
+            return Some(0);
+        }
+        let rate = self.info(item_id)?.cost_per_point?;
+        Some(((f64::from(lost) * rate) as u32).max(1))
+    }
+}
+
+/// AzerothCore `ItemSubClassToDurabilityMultiplierId` (ItemTemplate.h:557):
+/// weapons use their subclass, armor 21 + subclass, anything else 0.
+fn cost_column(class_id: i64, subclass_id: i64) -> usize {
+    match class_id {
+        2 => subclass_id as usize,
+        4 => 21 + subclass_id as usize,
+        _ => 0,
+    }
+}
+
+pub fn load_item_durability(conn: &Connection) -> rusqlite::Result<ItemDurability> {
+    let mut costs: HashMap<i64, Vec<i64>> = HashMap::new();
+    let mut statement = conn.prepare("SELECT * FROM durability_costs")?;
+    let columns = statement.column_count();
+    let rows = statement.query_map([], |row| {
+        let multipliers = (1..columns)
+            .map(|column| row.get::<_, i64>(column))
+            .collect::<rusqlite::Result<Vec<_>>>()?;
+        Ok((row.get::<_, i64>(0)?, multipliers))
+    })?;
+    for row in rows {
+        let (item_level, multipliers) = row?;
+        costs.insert(item_level, multipliers);
+    }
+    let quality: HashMap<i64, f64> = conn
+        .prepare("SELECT ID, Data FROM durability_quality")?
+        .query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?
+        .collect::<rusqlite::Result<_>>()?;
+    let mut statement = conn.prepare(
+        "SELECT c.ID, t.MaxDurability, c.ItemLevel, c.Quality, c.ClassID, c.SubclassID \
+         FROM content_item c JOIN item_template t ON t.entry = c.SourceEntry \
+         WHERE t.MaxDurability > 0",
+    )?;
+    let items = statement.query_map([], |row| {
+        let item_level: i64 = row.get(2)?;
+        let item_quality: i64 = row.get(3)?;
+        let column = cost_column(row.get(4)?, row.get(5)?);
+        let multiplier = costs
+            .get(&item_level)
+            .and_then(|row_costs| row_costs.get(column))
+            .copied();
+        let quality_mod = quality.get(&((item_quality + 1) * 2)).copied();
+        let info = ItemDurabilityInfo {
+            max: row.get(1)?,
+            cost_per_point: multiplier.zip(quality_mod).map(|(m, q)| m as f64 * q),
+        };
+        Ok((row.get::<_, u32>(0)?, info))
+    })?;
+    Ok(ItemDurability(items.collect::<rusqlite::Result<_>>()?))
 }
 
 pub struct DurabilityPlugin;
@@ -37,9 +124,16 @@ static CHANGED_DURABILITY_TEST_LOCK: Mutex<()> = Mutex::new(());
 
 impl Plugin for DurabilityPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, send_initial_durability_snapshot);
+        app.init_resource::<ItemDurability>();
+        app.add_systems(
+            Update,
+            (
+                sync_durability_from_equipment_appearance,
+                send_initial_durability_snapshot,
+            )
+                .chain(),
+        );
         app.add_systems(Update, process_durability_queries);
-        app.add_systems(Update, sync_durability_from_equipment_appearance);
         app.add_systems(Update, persist_changed_durability);
         app.add_systems(Update, send_changed_durability_snapshot);
     }
@@ -69,22 +163,63 @@ type ChangedDurabilitySnapshotQuery<'w, 's> = Query<
     (With<Player>, Changed<EquippedDurability>),
 >;
 
-pub fn load_equipped_durability(data: &CharacterData) -> EquippedDurability {
-    let mut slots = active_durability_slots(&data.equipment_appearance)
-        .into_iter()
-        .map(|slot| {
-            let (max, _) = slot_profile(slot);
-            let current = data
-                .durability
-                .iter()
-                .find(|entry| entry.slot == slot)
-                .map(|entry| entry.current.min(max))
-                .unwrap_or(max);
-            DurabilitySlotState { slot, current, max }
+/// Durability of the equipped items at login: saved current values, full for
+/// items without a saved value.
+pub fn load_equipped_durability(
+    data: &CharacterData,
+    rules: &ItemDurability,
+) -> EquippedDurability {
+    let saved = |slot, _item_id| {
+        data.durability
+            .iter()
+            .find(|entry| entry.slot == slot)
+            .map(|entry| entry.current)
+    };
+    EquippedDurability {
+        slots: durability_slots(&data.equipment_appearance, rules, saved),
+    }
+}
+
+/// One slot per equipped item with a max durability, `current` from `previous`
+/// (capped at max) or full.
+fn durability_slots(
+    appearance: &EquipmentAppearance,
+    rules: &ItemDurability,
+    previous: impl Fn(EquipmentVisualSlot, u32) -> Option<u32>,
+) -> Vec<DurabilitySlotState> {
+    let mut slots: Vec<DurabilitySlotState> = appearance
+        .entries
+        .iter()
+        .filter_map(|entry| {
+            let item_id = entry.item_id?;
+            let max = rules.info(item_id)?.max;
+            let current = previous(entry.slot, item_id).map_or(max, |current| current.min(max));
+            Some(DurabilitySlotState {
+                slot: entry.slot,
+                item_id,
+                current,
+                max,
+            })
         })
-        .collect::<Vec<_>>();
+        .collect();
     slots.sort_by_key(|entry| slot_sort_key(entry.slot));
-    EquippedDurability { slots }
+    slots.dedup_by_key(|entry| entry.slot);
+    slots
+}
+
+/// Insert `EquippedDurability` on a spawning player once `ItemDurability` is at hand.
+pub fn insert_equipped_durability(commands: &mut Commands, player: Entity, data: &CharacterData) {
+    let data = data.clone();
+    commands
+        .entity(player)
+        .queue(move |mut entity: EntityWorldMut| {
+            let durability = entity
+                .world()
+                .get_resource::<ItemDurability>()
+                .map(|rules| load_equipped_durability(&data, rules))
+                .unwrap_or_default();
+            entity.insert(durability);
+        });
 }
 
 pub fn apply_death_loss(durability: &mut EquippedDurability) -> bool {
@@ -95,7 +230,10 @@ pub fn apply_spirit_healer_loss(durability: &mut EquippedDurability) -> bool {
     apply_fractional_loss(durability, 0.25)
 }
 
-pub fn build_snapshot(durability: &EquippedDurability) -> DurabilitySnapshot {
+pub fn build_snapshot(
+    durability: &EquippedDurability,
+    rules: &ItemDurability,
+) -> DurabilitySnapshot {
     let slots = durability
         .slots
         .iter()
@@ -103,7 +241,9 @@ pub fn build_snapshot(durability: &EquippedDurability) -> DurabilitySnapshot {
             slot: entry.slot,
             current: entry.current,
             max: entry.max,
-            repair_cost: repair_cost_for_slot(entry.slot, entry.current, entry.max),
+            repair_cost: rules
+                .repair_cost(entry.item_id, entry.max - entry.current)
+                .unwrap_or(0),
         })
         .collect::<Vec<_>>();
     let total_repair_cost = slots.iter().map(|entry| entry.repair_cost).sum();
@@ -117,6 +257,7 @@ fn send_initial_durability_snapshot(
     connections: NewInWorldLink,
     durability: Query<&EquippedDurability>,
     mut senders: Query<&mut MessageSender<DurabilityStateUpdate>>,
+    rules: Res<ItemDurability>,
 ) {
     for (conn_entity, link) in &connections {
         let Ok(durability) = durability.get(link.0) else {
@@ -129,9 +270,8 @@ fn send_initial_durability_snapshot(
         };
         send_update(
             conn_entity,
-            durability,
-            Some("durability loaded".into()),
-            None,
+            build_snapshot(durability, &rules),
+            "durability loaded",
             &mut senders,
         );
     }
@@ -148,6 +288,7 @@ fn process_durability_queries(
     >,
     durability: Query<&EquippedDurability>,
     mut senders: Query<&mut MessageSender<DurabilityStateUpdate>>,
+    rules: Res<ItemDurability>,
 ) {
     for (conn_entity, link, mut receiver) in &mut receivers {
         let requests: Vec<_> = receiver.receive().collect();
@@ -164,31 +305,27 @@ fn process_durability_queries(
         };
         send_update(
             conn_entity,
-            durability,
-            Some("durability refreshed".into()),
-            None,
+            build_snapshot(durability, &rules),
+            "durability refreshed",
             &mut senders,
         );
     }
 }
 
-fn sync_durability_from_equipment_appearance(mut players: DurabilityAppearanceQuery) {
+/// A newly equipped item starts at full durability; the item still in its slot
+/// keeps its value.
+fn sync_durability_from_equipment_appearance(
+    mut players: DurabilityAppearanceQuery,
+    rules: Res<ItemDurability>,
+) {
     for (appearance, mut durability) in &mut players {
-        let desired_slots = active_durability_slots(appearance);
-        let mut next = desired_slots
-            .into_iter()
-            .map(|slot| {
-                let (max, _) = slot_profile(slot);
-                let current = durability
-                    .slots
-                    .iter()
-                    .find(|entry| entry.slot == slot)
-                    .map(|entry| entry.current.min(max))
-                    .unwrap_or(max);
-                DurabilitySlotState { slot, current, max }
-            })
-            .collect::<Vec<_>>();
-        next.sort_by_key(|entry| slot_sort_key(entry.slot));
+        let next = durability_slots(appearance, &rules, |slot, item_id| {
+            durability
+                .slots
+                .iter()
+                .find(|entry| entry.slot == slot && entry.item_id == item_id)
+                .map(|entry| entry.current)
+        });
         if durability.slots != next {
             durability.slots = next;
         }
@@ -201,23 +338,62 @@ fn persist_changed_durability(db: Option<Res<GameDatabase>>, players: ChangedDur
         let Some(mut data) = persistence::load_character(&db.db, character_id.0) else {
             continue;
         };
-        data.durability = durability
-            .slots
-            .iter()
-            .map(|entry| DurabilityEntryData {
-                slot: entry.slot,
-                current: entry.current,
-                max: entry.max,
-            })
-            .collect();
+        data.durability = saved_entries(durability);
         persistence::save_character(&db.db, character_id.0, &data);
     }
+}
+
+fn saved_entries(durability: &EquippedDurability) -> Vec<DurabilityEntryData> {
+    durability
+        .slots
+        .iter()
+        .map(|entry| DurabilityEntryData {
+            slot: entry.slot,
+            current: entry.current,
+            max: entry.max,
+        })
+        .collect()
+}
+
+/// Admin `set-durability`: every equipped item to `percent` of its max, on the live
+/// player (persisted by `persist_changed_durability`) or in the saved character.
+pub fn set_durability_percent(world: &mut World, character_id: u64, percent: u32) {
+    let scale = |durability: &mut EquippedDurability| {
+        for entry in &mut durability.slots {
+            entry.current = entry.max * percent / 100;
+        }
+    };
+    let mut players = world.query::<(&ClientId, &mut EquippedDurability)>();
+    let mut live = false;
+    for (id, mut durability) in players.iter_mut(world) {
+        if id.0 == character_id {
+            scale(&mut durability);
+            live = true;
+        }
+    }
+    if live {
+        return;
+    }
+    let (Some(db), Some(rules)) = (
+        world.get_resource::<GameDatabase>(),
+        world.get_resource::<ItemDurability>(),
+    ) else {
+        return;
+    };
+    let Some(mut data) = persistence::load_character(&db.db, character_id) else {
+        return;
+    };
+    let mut durability = load_equipped_durability(&data, rules);
+    scale(&mut durability);
+    data.durability = saved_entries(&durability);
+    persistence::save_character(&db.db, character_id, &data);
 }
 
 fn send_changed_durability_snapshot(
     players: ChangedDurabilitySnapshotQuery,
     connections: Query<(Entity, &PlayerLink), With<Authenticated>>,
     mut senders: Query<&mut MessageSender<DurabilityStateUpdate>>,
+    rules: Res<ItemDurability>,
 ) {
     for (player_entity, durability) in &players {
         #[cfg(test)]
@@ -231,9 +407,8 @@ fn send_changed_durability_snapshot(
         };
         send_update(
             conn_entity,
-            &durability,
-            Some("durability updated".into()),
-            None,
+            build_snapshot(&durability, &rules),
+            "durability updated",
             &mut senders,
         );
     }
@@ -246,17 +421,6 @@ fn connection_for_player(
     connections
         .iter()
         .find_map(|(conn_entity, link)| (link.0 == player_entity).then_some(conn_entity))
-}
-
-fn active_durability_slots(appearance: &EquipmentAppearance) -> Vec<EquipmentVisualSlot> {
-    let mut slots = appearance
-        .entries
-        .iter()
-        .map(|entry| entry.slot)
-        .collect::<Vec<_>>();
-    slots.sort_by_key(|slot| slot_sort_key(*slot));
-    slots.dedup();
-    slots
 }
 
 fn apply_fractional_loss(durability: &mut EquippedDurability, fraction: f32) -> bool {
@@ -277,18 +441,17 @@ fn apply_fractional_loss(durability: &mut EquippedDurability, fraction: f32) -> 
 
 fn send_update(
     conn_entity: Entity,
-    durability: &EquippedDurability,
-    message: Option<String>,
-    error: Option<String>,
+    snapshot: DurabilitySnapshot,
+    message: &str,
     senders: &mut Query<&mut MessageSender<DurabilityStateUpdate>>,
 ) {
     let Ok(mut sender) = senders.get_mut(conn_entity) else {
         return;
     };
     sender.send::<DurabilityChannel>(DurabilityStateUpdate {
-        snapshot: Some(build_snapshot(durability)),
-        message,
-        error,
+        snapshot: Some(snapshot),
+        message: Some(message.into()),
+        error: None,
     });
 }
 
@@ -305,33 +468,6 @@ fn send_error(
         message: None,
         error: Some(error.into()),
     });
-}
-
-fn repair_cost_for_slot(slot: EquipmentVisualSlot, current: u32, max: u32) -> u32 {
-    let missing = max.saturating_sub(current);
-    if missing == 0 {
-        return 0;
-    }
-    let (_, cost_per_point) = slot_profile(slot);
-    missing.saturating_mul(cost_per_point)
-}
-
-fn slot_profile(slot: EquipmentVisualSlot) -> (u32, u32) {
-    match slot {
-        EquipmentVisualSlot::Head => (70, 15),
-        EquipmentVisualSlot::Shoulder => (60, 12),
-        EquipmentVisualSlot::Back => (40, 8),
-        EquipmentVisualSlot::Chest => (80, 18),
-        EquipmentVisualSlot::Shirt => (0, 0),
-        EquipmentVisualSlot::Tabard => (0, 0),
-        EquipmentVisualSlot::Wrist => (50, 10),
-        EquipmentVisualSlot::Hands => (60, 12),
-        EquipmentVisualSlot::Waist => (60, 12),
-        EquipmentVisualSlot::Legs => (75, 16),
-        EquipmentVisualSlot::Feet => (60, 12),
-        EquipmentVisualSlot::MainHand => (90, 20),
-        EquipmentVisualSlot::OffHand => (80, 18),
-    }
 }
 
 fn slot_sort_key(slot: EquipmentVisualSlot) -> u8 {
@@ -370,6 +506,7 @@ mod tests {
             tick_duration: Duration::from_millis(50),
         });
         app.register_message::<DurabilityStateUpdate>();
+        app.insert_resource(starter_rules());
         app.add_systems(Update, send_changed_durability_snapshot);
         app.finish();
         app.cleanup();
@@ -415,19 +552,46 @@ mod tests {
             .collect()
     }
 
+    const TARNISHED_CHAIN_VEST: u32 = 2379;
+    const LARGE_ROUND_SHIELD: u32 = 2129;
+
+    /// AzerothCore MaxDurability 55 and 35; Retail item level 2, quality 1, mail
+    /// chest and shield: DurabilityCosts[2] armor multiplier 1 times
+    /// DurabilityQuality[4] 0.8 copper per point.
+    fn starter_rules() -> ItemDurability {
+        let info = |max| ItemDurabilityInfo {
+            max,
+            cost_per_point: Some(0.800_000_011_92),
+        };
+        ItemDurability(
+            [
+                (TARNISHED_CHAIN_VEST, info(55)),
+                (LARGE_ROUND_SHIELD, info(35)),
+            ]
+            .into_iter()
+            .collect(),
+        )
+    }
+
+    fn slot(
+        slot: EquipmentVisualSlot,
+        item_id: u32,
+        current: u32,
+        max: u32,
+    ) -> DurabilitySlotState {
+        DurabilitySlotState {
+            slot,
+            item_id,
+            current,
+            max,
+        }
+    }
+
     fn sample_durability() -> EquippedDurability {
         EquippedDurability {
             slots: vec![
-                DurabilitySlotState {
-                    slot: EquipmentVisualSlot::Head,
-                    current: 70,
-                    max: 70,
-                },
-                DurabilitySlotState {
-                    slot: EquipmentVisualSlot::Chest,
-                    current: 80,
-                    max: 80,
-                },
+                slot(EquipmentVisualSlot::Chest, TARNISHED_CHAIN_VEST, 55, 55),
+                slot(EquipmentVisualSlot::OffHand, LARGE_ROUND_SHIELD, 35, 35),
             ],
         }
     }
@@ -495,7 +659,7 @@ mod tests {
             .get_mut::<EquippedDurability>()
             .expect("player should have durability")
             .slots[0]
-            .current = 60;
+            .current = 44;
         CHANGED_DURABILITY_PLAYERS_VISITED.store(0, Ordering::SeqCst);
 
         app.update();
@@ -509,42 +673,30 @@ mod tests {
             .snapshot
             .as_ref()
             .expect("durability update should include a snapshot");
-        assert_eq!(snapshot.total_repair_cost, 150);
+        // 11 lost points * 0.8 = 8.8 -> 8 copper.
+        assert_eq!(snapshot.total_repair_cost, 8);
         assert_eq!(snapshot.slots.len(), 2);
-        assert_eq!(snapshot.slots[0].slot, EquipmentVisualSlot::Head);
-        assert_eq!(snapshot.slots[0].current, 60);
-        assert_eq!(snapshot.slots[0].max, 70);
-        assert_eq!(snapshot.slots[0].repair_cost, 150);
-        assert_eq!(snapshot.slots[1].slot, EquipmentVisualSlot::Chest);
-        assert_eq!(snapshot.slots[1].current, 80);
-        assert_eq!(snapshot.slots[1].max, 80);
+        assert_eq!(snapshot.slots[0].slot, EquipmentVisualSlot::Chest);
+        assert_eq!(snapshot.slots[0].current, 44);
+        assert_eq!(snapshot.slots[0].max, 55);
+        assert_eq!(snapshot.slots[0].repair_cost, 8);
+        assert_eq!(snapshot.slots[1].slot, EquipmentVisualSlot::OffHand);
         assert_eq!(snapshot.slots[1].repair_cost, 0);
         assert!(receive_updates(&mut app, other_connection).is_empty());
     }
 
-    fn make_appearance() -> EquipmentAppearance {
-        EquipmentAppearance {
-            entries: vec![
-                EquippedAppearanceEntry {
-                    slot: EquipmentVisualSlot::Head,
-                    item_id: Some(100),
-                    display_info_id: Some(200),
-                    inventory_type: 1,
-                    hidden: false,
-                },
-                EquippedAppearanceEntry {
-                    slot: EquipmentVisualSlot::Chest,
-                    item_id: Some(101),
-                    display_info_id: Some(201),
-                    inventory_type: 5,
-                    hidden: false,
-                },
-            ],
+    fn entry(slot: EquipmentVisualSlot, item_id: Option<u32>) -> EquippedAppearanceEntry {
+        EquippedAppearanceEntry {
+            slot,
+            item_id,
+            display_info_id: None,
+            inventory_type: 0,
+            hidden: false,
         }
     }
 
     #[test]
-    fn load_equipped_durability_preserves_saved_values() {
+    fn items_without_max_durability_get_no_slot_and_saved_values_survive_login() {
         let data = CharacterData {
             name: "Alice".into(),
             x: 0.0,
@@ -556,59 +708,77 @@ mod tests {
             class: 1,
             level: 1,
             appearance: shared::components::CharacterAppearance::default(),
-            equipment_appearance: make_appearance(),
+            equipment_appearance: EquipmentAppearance {
+                entries: vec![
+                    entry(EquipmentVisualSlot::Chest, Some(TARNISHED_CHAIN_VEST)),
+                    // Recruit's Boots (40): MaxDurability 0.
+                    entry(EquipmentVisualSlot::Feet, Some(40)),
+                    entry(EquipmentVisualSlot::OffHand, Some(LARGE_ROUND_SHIELD)),
+                    entry(EquipmentVisualSlot::Shirt, None),
+                ],
+            },
             durability: vec![DurabilityEntryData {
-                slot: EquipmentVisualSlot::Head,
-                current: 55,
-                max: 70,
-            }],
-        };
-
-        let durability = load_equipped_durability(&data);
-
-        assert_eq!(durability.slots.len(), 2);
-        assert_eq!(durability.slots[0].slot, EquipmentVisualSlot::Head);
-        assert_eq!(durability.slots[0].current, 55);
-        assert_eq!(durability.slots[1].slot, EquipmentVisualSlot::Chest);
-        assert_eq!(durability.slots[1].current, 80);
-    }
-
-    #[test]
-    fn death_loss_reduces_current_durability() {
-        let mut durability = EquippedDurability {
-            slots: vec![DurabilitySlotState {
                 slot: EquipmentVisualSlot::Chest,
-                current: 80,
-                max: 80,
+                current: 30,
+                max: 55,
             }],
         };
 
-        assert!(apply_death_loss(&mut durability));
-        assert_eq!(durability.slots[0].current, 72);
+        let durability = load_equipped_durability(&data, &starter_rules());
+
+        assert_eq!(
+            durability.slots,
+            vec![
+                slot(EquipmentVisualSlot::Chest, TARNISHED_CHAIN_VEST, 30, 55),
+                slot(EquipmentVisualSlot::OffHand, LARGE_ROUND_SHIELD, 35, 35),
+            ]
+        );
     }
 
     #[test]
-    fn build_snapshot_sums_total_repair_cost() {
-        let durability = EquippedDurability {
-            slots: vec![
-                DurabilitySlotState {
-                    slot: EquipmentVisualSlot::Head,
-                    current: 60,
-                    max: 70,
-                },
-                DurabilitySlotState {
-                    slot: EquipmentVisualSlot::Chest,
-                    current: 70,
-                    max: 80,
-                },
-            ],
-        };
+    fn death_loss_takes_ten_percent_rounded_up() {
+        let mut durability = sample_durability();
+        assert!(apply_death_loss(&mut durability));
+        assert_eq!(durability.slots[0].current, 49);
+        assert_eq!(durability.slots[1].current, 31);
+    }
 
-        let snapshot = build_snapshot(&durability);
+    #[test]
+    fn repair_costs_follow_the_azerothcore_formula_with_a_one_copper_minimum() {
+        let rules = starter_rules();
+        assert_eq!(rules.repair_cost(TARNISHED_CHAIN_VEST, 0), Some(0));
+        assert_eq!(rules.repair_cost(TARNISHED_CHAIN_VEST, 1), Some(1));
+        assert_eq!(rules.repair_cost(TARNISHED_CHAIN_VEST, 55), Some(44));
+        assert_eq!(rules.repair_cost(40, 5), None);
+        let snapshot = build_snapshot(
+            &EquippedDurability {
+                slots: vec![
+                    slot(EquipmentVisualSlot::Chest, TARNISHED_CHAIN_VEST, 0, 55),
+                    slot(EquipmentVisualSlot::OffHand, LARGE_ROUND_SHIELD, 25, 35),
+                ],
+            },
+            &rules,
+        );
+        assert_eq!(snapshot.slots[1].repair_cost, 8);
+        assert_eq!(snapshot.total_repair_cost, 52);
+    }
 
-        assert_eq!(snapshot.slots.len(), 2);
-        assert_eq!(snapshot.slots[0].repair_cost, 150);
-        assert_eq!(snapshot.slots[1].repair_cost, 180);
-        assert_eq!(snapshot.total_repair_cost, 330);
+    #[test]
+    fn world_db_costs_match_the_retail_db2_rows() {
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../data/world.db");
+        if !path.exists() {
+            eprintln!("skipping: {} not found", path.display());
+            return;
+        }
+        let conn =
+            Connection::open_with_flags(&path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+        let rules = load_item_durability(&conn).unwrap();
+        assert_eq!(rules.info(TARNISHED_CHAIN_VEST).unwrap().max, 55);
+        assert_eq!(rules.info(LARGE_ROUND_SHIELD).unwrap().max, 35);
+        assert_eq!(rules.repair_cost(TARNISHED_CHAIN_VEST, 11), Some(8));
+        // Worn Shortsword (25): one-handed sword, Retail item level 1, max 20.
+        let sword = rules.info(25).unwrap();
+        assert_eq!(sword.max, 20);
+        assert!(rules.info(40).is_none());
     }
 }

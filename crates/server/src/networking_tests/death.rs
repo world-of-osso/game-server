@@ -39,6 +39,7 @@ fn lethal_fall_transitions_death_in_same_fixed_step() {
             crate::durability::EquippedDurability {
                 slots: vec![crate::durability::DurabilitySlotState {
                     slot: shared::components::EquipmentVisualSlot::Head,
+                    item_id: 0,
                     current: 70,
                     max: 70,
                 }],

@@ -37,6 +37,7 @@ fn lethal_player_auto_attack_transitions_death_in_same_fixed_step() {
             EquippedDurability {
                 slots: vec![DurabilitySlotState {
                     slot: EquipmentVisualSlot::Head,
+                    item_id: 0,
                     current: 70,
                     max: 70,
                 }],

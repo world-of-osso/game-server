@@ -237,11 +237,12 @@ impl InventoryModel {
         }
     }
 
+    /// Saved durability of the equipped slot (kept current by the durability plugin).
     fn equipped_durability(&self, slot: EquipmentSlot) -> Option<ItemDurability> {
         let visual = slot.visual_slot()?;
-        crate::durability::load_equipped_durability(&self.character)
-            .slots
-            .into_iter()
+        self.character
+            .durability
+            .iter()
             .find(|entry| entry.slot == visual)
             .map(|entry| ItemDurability {
                 current: entry.current,
@@ -765,6 +766,17 @@ impl InventoryModel {
             .filter(|item| item.item_id == item_id)
             .map(|item| item.stack_count)
             .sum()
+    }
+
+    /// Visual slot of the equipped item `item_guid`.
+    pub(crate) fn equipped_visual_slot(
+        &self,
+        item_guid: u64,
+    ) -> Option<shared::components::EquipmentVisualSlot> {
+        self.equipped
+            .iter()
+            .find(|(_, item)| item.item_guid == item_guid)
+            .and_then(|(slot, _)| slot.visual_slot())
     }
 
     /// The bag item with `item_guid`.

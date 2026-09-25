@@ -19,7 +19,7 @@ use shared::protocol::{
 use crate::auth::Authenticated;
 use crate::auth_character::{load_selected_character_state, process_select_character};
 use crate::death::{DeathPlugin, PlayerDeathState};
-use crate::durability::{EquippedDurability, apply_death_loss};
+use crate::durability::{EquippedDurability, ItemDurability, ItemDurabilityInfo, apply_death_loss};
 use crate::gold::{GoldPlugin, GoldUpdateQueue};
 use crate::persistence::{self, ClientId, GameDatabase};
 
@@ -109,6 +109,21 @@ fn load_selected_character_state_syncs_pvp_currencies_from_wallet() {
 }
 
 /// Runs `SelectCharacter` through `process_select_character` and returns the spawned player.
+/// Item 100 (the test helm) has 70 durability points.
+fn helm_durability() -> ItemDurability {
+    ItemDurability(
+        [(
+            100,
+            ItemDurabilityInfo {
+                max: 70,
+                cost_per_point: Some(1.0),
+            },
+        )]
+        .into_iter()
+        .collect(),
+    )
+}
+
 fn select_character_in_world(
     db: GameDatabase,
     account_id: u64,
@@ -125,6 +140,7 @@ fn select_character_in_world(
     app.register_message::<LoadTerrain>();
     app.register_message::<DeathStateUpdate>();
     app.insert_resource(db);
+    app.insert_resource(helm_durability());
     app.add_plugins(DeathPlugin);
     app.add_systems(Update, process_select_character);
     app.finish();
@@ -203,7 +219,8 @@ fn selecting_zero_health_character_queues_one_death_transition() {
     }];
     persistence::save_character(&db.db, character_id, &data);
 
-    let expected_initial = crate::durability::load_equipped_durability(&data);
+    let expected_initial = crate::durability::load_equipped_durability(&data, &helm_durability());
+    assert_eq!(expected_initial.slots.len(), 1);
     let mut expected_after_death = expected_initial.clone();
     assert!(apply_death_loss(&mut expected_after_death));
 
