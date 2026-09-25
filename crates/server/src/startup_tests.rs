@@ -19,7 +19,7 @@ fn create_world_schema(conn: &rusqlite::Connection) {
             MovementType INTEGER, flags_extra INTEGER, exp INTEGER, ExperienceModifier REAL,
             ScriptName TEXT NOT NULL DEFAULT ''
         );
-        CREATE TABLE creature_template_model (
+        CREATE TABLE content_creature_template_model (
             CreatureID INTEGER, Idx INTEGER, CreatureDisplayID INTEGER,
             DisplayScale REAL, Probability REAL
         );
@@ -75,7 +75,7 @@ fn world_data_loads_from_sqlite() {
             "INSERT INTO creature_template VALUES
                 (1,'Wolf',NULL,3,4,35,0, 1.0,1.4,1.0,0,1,0,1,1.0,1.0,'',1,0,0,1.0,''),
                 (2,'Boar',NULL,2,3,35,0, 1.0,1.2,1.0,0,1,0,1,1.0,1.0,'',0,0,0,1.0,'');
-             INSERT INTO creature_template_model VALUES (1,0,100,1.0,1.0),(2,0,200,1.0,1.0);
+             INSERT INTO content_creature_template_model VALUES (1,0,100,1.0,1.0),(2,0,200,1.0,1.0);
              INSERT INTO creature VALUES (10,1,0,1,1, 0.0,0.0,0.0,0.0, 300,5.0,1);
              INSERT INTO creature VALUES (11,2,1,2,2, 10.0,20.0,30.0,0.0, 300,0.0,0);
              INSERT INTO waypoint_data VALUES (10,1, 1.0,2.0,3.0,0.0,0,0);
@@ -186,8 +186,8 @@ fn world_data_models_attached_to_templates() {
         conn.execute_batch(
             "INSERT INTO creature_template VALUES
                 (5,'Demon',NULL,10,10,35,0,1.0,1.5,1.0,0,1,0,1,2.0,1.0,'',0,0,0,1.0,'');
-             INSERT INTO creature_template_model VALUES (5,0,301,1.0,0.7);
-             INSERT INTO creature_template_model VALUES (5,1,302,1.0,0.3);",
+             INSERT INTO content_creature_template_model VALUES (5,0,301,1.0,0.7);
+             INSERT INTO content_creature_template_model VALUES (5,1,302,1.0,0.3);",
         )
         .unwrap();
     });
@@ -683,6 +683,8 @@ fn world_db_has_all_expected_tables() {
         "creature",
         "creature_template",
         "creature_template_model",
+        "content_creature_template_model",
+        "creature_display_info",
         "spell_cast_times",
         "spell_cooldowns",
         "spell_duration",

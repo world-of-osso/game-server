@@ -343,7 +343,7 @@ mod tests {
                 faction INTEGER, npcflag INTEGER, speed_walk REAL, HealthModifier REAL, name TEXT, rank INTEGER, exp INTEGER,
                 ExperienceModifier REAL, type INTEGER, flags_extra INTEGER, speed_run REAL,
                 ScriptName TEXT);
-             CREATE TABLE creature_template_model (CreatureID INTEGER, Idx INTEGER,
+             CREATE TABLE content_creature_template_model (CreatureID INTEGER, Idx INTEGER,
                 CreatureDisplayID INTEGER, DisplayScale REAL, Probability REAL);
              CREATE TABLE creature (guid INTEGER, id1 INTEGER, map INTEGER, zoneId INTEGER,
                 position_x REAL, position_y REAL, position_z REAL, wander_distance REAL,
@@ -375,7 +375,7 @@ mod tests {
             )
             .unwrap();
             conn.execute(
-                "INSERT INTO creature_template_model VALUES (?1,0,3167,1.0,1.0)",
+                "INSERT INTO content_creature_template_model VALUES (?1,0,3167,1.0,1.0)",
                 [entry],
             )
             .unwrap();

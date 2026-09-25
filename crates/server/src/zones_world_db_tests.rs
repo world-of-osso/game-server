@@ -533,3 +533,43 @@ fn stormwind_training_dummies_get_their_script_and_stand_still() {
     }
     assert_eq!(dummies.map(|dummy| position(&app, dummy)), placed);
 }
+
+/// Giant Moss Creeper (2349), Hillsbrad: AzerothCore display 6808 is Wrath-only;
+/// TrinityCore's Retail model for the entry is 520.
+const GIANT_MOSS_CREEPER: [u32; 1] = [14583];
+
+#[test]
+#[ignore]
+fn wrath_only_display_spawns_with_its_retail_display() {
+    let app = patrol_app(&GIANT_MOSS_CREEPER);
+    let creeper = entity_of(&app, GIANT_MOSS_CREEPER[0]);
+    let display = app.world().get::<ModelDisplay>(creeper).unwrap();
+    assert_eq!(display.display_id, 520);
+}
+
+#[test]
+#[ignore]
+fn every_eastern_kingdoms_spawn_display_exists_in_retail() {
+    let conn = rusqlite::Connection::open_with_flags(
+        world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let retail: HashSet<u32> = conn
+        .prepare("SELECT ID FROM creature_display_info")
+        .unwrap()
+        .query_map([], |row| row.get(0))
+        .unwrap()
+        .map(Result::unwrap)
+        .collect();
+    let data = world_data();
+    let absent: HashSet<u32> = data.spawns_by_map[&0]
+        .iter()
+        .map(|&index| resolve_display_id(data, data.spawns[index].template_entry))
+        .filter(|display| !retail.contains(display))
+        .collect();
+    assert!(
+        absent.is_empty(),
+        "map 0 displays absent from Retail: {absent:?}"
+    );
+}

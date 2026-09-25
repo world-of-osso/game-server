@@ -2,7 +2,7 @@
 
 ## [2026-09-25] systems | Retail creature displays
 
-Updated [[content-import]] and [[world-data]]. `content_policy.py` builds `content_creature_template_model`: templates with a display absent from Retail `CreatureDisplayInfo` take TrinityCore TDB1210 Retail model rows for the same entry (same name or reviewed `creature` override). Map-0 spawns: 53 templates / 681 spawns moved off 40 Wrath-only displays. `db2.py` imports `creature_display_info`.
+Updated [[content-import]] and [[world-data]]. `content_policy.py` builds `content_creature_template_model`: templates with a display absent from Retail `CreatureDisplayInfo` take TrinityCore TDB1210 Retail model rows for the same entry (same name or reviewed `creature` override). Map-0 spawns: 53 templates / 681 spawns moved off 40 Wrath-only displays. `db2.py` imports `creature_display_info`. Server `load_models` reads `content_creature_template_model`.
 
 ## [2026-09-24] systems | Experience messages
 

@@ -204,10 +204,10 @@ fn load_models(conn: &Connection, templates: &mut HashMap<u32, CreatureTemplate>
     let mut stmt = conn
         .prepare(
             "SELECT CreatureID, CreatureDisplayID, DisplayScale, Probability
-             FROM creature_template_model
+             FROM content_creature_template_model
              ORDER BY CreatureID, Idx",
         )
-        .expect("Failed to prepare creature_template_model query");
+        .expect("Failed to prepare content_creature_template_model query");
 
     let rows = stmt
         .query_map(params![], |row| {
@@ -218,10 +218,10 @@ fn load_models(conn: &Connection, templates: &mut HashMap<u32, CreatureTemplate>
                 },
             ))
         })
-        .expect("Failed to query creature_template_model");
+        .expect("Failed to query content_creature_template_model");
 
     for row in rows {
-        let (creature_id, model) = row.expect("Failed to read creature_template_model row");
+        let (creature_id, model) = row.expect("Failed to read content_creature_template_model row");
         if let Some(template) = templates.get_mut(&creature_id) {
             template.models.push(model);
         }
