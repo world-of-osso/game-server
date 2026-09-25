@@ -32,6 +32,7 @@ Server-side vendors: the list, buy, sell, buyback and repair, following AzerothC
   - Each item costs `lost * DurabilityCosts[ItemLevel][class/subclass] * DurabilityQuality[(Quality+1)*2]`, at least 1 copper.
   - Items the remaining money can't cover stay damaged and the request answers `NotEnoughMoney`.
 - [x] Durability belongs to equipped items with `item_template.MaxDurability > 0`, matched by `content_item.SourceEntry`. A newly equipped item starts at full durability.
+- [x] Changing from the old per-slot profile: at login a saved current value is capped to the item's max, an equipped item without `MaxDurability` (e.g. Recruit's Boots 40) loses its durability slot, and a newly equipped item starts at full durability instead of taking over the slot's value.
 - [x] Admin `set-gold <character> <copper>` sets the money and replicates it live. `set-durability <character> <percent>` sets every equipped item to that percent of its max.
 - [ ] No reputation price discount (`GetReputationPriceDiscount`): NPC factions are not mapped to reputation factions.
 - [ ] Items with a Wrath `ExtendedCost` (12,887 rows) are skipped, because Retail `ItemExtendedCost` is not imported.
