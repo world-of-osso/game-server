@@ -30,6 +30,12 @@ pub(crate) struct WorldData {
     pub(crate) powers_db: PathBuf,
 }
 
+/// What an effect with `Variance` 0.05 and an amount of `base` deals or
+/// heals: `base` ± 2.5%, rounded (SpellEffectInfo::CalcValue).
+pub(crate) fn varied(base: f32) -> std::ops::RangeInclusive<f32> {
+    (base * 0.975).round()..=(base * 1.025).round()
+}
+
 pub(crate) fn world_db() -> Option<&'static WorldData> {
     static DATA: OnceLock<Option<WorldData>> = OnceLock::new();
     DATA.get_or_init(|| {
@@ -67,6 +73,7 @@ pub(crate) fn class_spells(data: &WorldData) -> ClassSpells {
                 power_types: class.power_types.clone(),
                 attack_power_per_strength: class.attack_power_per_strength,
                 attack_power_per_agility: class.attack_power_per_agility,
+                primary_stat_priority: class.primary_stat_priority,
                 learnable: Vec::new(),
                 specs: Vec::new(),
                 traits: class.traits.clone(),

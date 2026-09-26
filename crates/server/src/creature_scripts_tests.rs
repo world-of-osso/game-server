@@ -59,8 +59,12 @@ fn spell_damage_beyond_its_health_is_logged_but_the_dummy_keeps_its_health() {
         .iter()
         .find(|e| e.kind == CombatLogKind::Damage)
         .expect("Mortal Strike damage logged");
-    // 5.2012 AP coefficient × 100 AP; overkill against the 3 health.
-    assert_eq!((damage.amount, damage.overflow), (520, 517));
+    // 5.2012 AP coefficient × 100 AP ± 2.5%; overkill against the 3 health.
+    assert!(
+        crate::spell_cast::test_harness::varied(520.12).contains(&(damage.amount as f32)),
+        "{damage:?}"
+    );
+    assert_eq!(damage.overflow, damage.amount - 3);
     assert!(log.iter().all(|e| e.kind != CombatLogKind::Death));
     assert_eq!(h.health(h.npc), DUMMY_HEALTH);
     assert!(h.app.world().get::<DeathState>(h.npc).is_none());
@@ -113,11 +117,26 @@ fn melee_swings_on_the_dummy_reach_the_attackers_combat_log() {
         .inbox
         .log
         .iter()
-        .filter(|e| e.kind == CombatLogKind::Damage && e.spell_id.is_none())
-        .map(|e| (e.source, e.target, e.school_mask, e.amount, e.overflow))
+        .filter(|e| e.spell_id.is_none() && e.kind != CombatLogKind::Death)
         .collect();
     let (caster, npc) = (Some(h.caster.to_bits()), Some(h.npc.to_bits()));
-    assert_eq!(swings, vec![(caster, npc, 1, 10, 7); 2]);
+    assert_eq!(swings.len(), 2, "{swings:?}");
+    for swing in swings {
+        assert_eq!(
+            (swing.source, swing.target, swing.school_mask),
+            (caster, npc, 1)
+        );
+        // Unarmed 1-2 + 100 AP / 6 × 2.0 s = 34-35 over the dummy's 3 health,
+        // unless missed, dodged or parried.
+        match swing.kind {
+            CombatLogKind::Damage => {
+                assert!((34..=35).contains(&swing.amount), "{swing:?}");
+                assert_eq!(swing.overflow, swing.amount - 3);
+            }
+            CombatLogKind::Miss(_) => assert_eq!(swing.amount, 0),
+            _ => panic!("{swing:?}"),
+        }
+    }
     assert!(h.inbox.log.iter().all(|e| e.kind != CombatLogKind::Death));
     assert_eq!(h.health(h.npc), DUMMY_HEALTH);
 }

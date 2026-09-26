@@ -247,6 +247,7 @@ mod tests {
             aggro_mode: crate::creature_aggro::AggroMode::Aggressive,
             models: vec![CreatureModelInfo { display_id: 1 }],
             tuning: None,
+            armor: 0.0,
         }
     }
 

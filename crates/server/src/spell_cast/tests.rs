@@ -17,6 +17,9 @@ const MORTAL_STRIKE: u32 = 12294;
 const FIREBALL: u32 = 133;
 const KICK: u32 = 1766;
 const FLASH_HEAL: u32 = 2061;
+const FROSTBOLT: u32 = 116;
+/// Frostbolt's TRIGGER_MISSILE (32) spell: SCHOOL_DAMAGE 2.448 × SP, Variance 0.05.
+const FROSTBOLT_DAMAGE: u32 = 228597;
 const CHARGE: u32 = 100;
 
 #[test]
@@ -41,8 +44,8 @@ fn instant_spell_resolves_same_tick_spending_cost_and_starting_gcd_and_cooldown(
     };
     h.set_power(PowerType::Rage, 500.0);
     h.cast_and_deliver(MORTAL_STRIKE, Some(h.npc));
-    // AP coefficient 5.2012 × attack power 100 = 520.
-    assert_eq!(h.health(h.npc), 5000.0 - 520.0);
+    // AP coefficient 5.2012 × attack power 100 = 520, ± 2.5% variance.
+    assert!(varied(520.12).contains(&(5000.0 - h.health(h.npc))));
     assert_eq!(h.power(PowerType::Rage), 200.0, "30 rage = 300 raw spent");
     assert!(h.app.world().get::<CastState>(h.caster).is_none());
     h.advance(2);
@@ -73,7 +76,12 @@ fn instant_spell_resolves_same_tick_spending_cost_and_starting_gcd_and_cooldown(
         .iter()
         .find(|e| e.kind == CombatLogKind::Damage)
         .unwrap();
-    assert_eq!((damage.amount, damage.overflow), (520, 0));
+    assert!(
+        varied(520.12).contains(&(damage.amount as f32)),
+        "{damage:?}"
+    );
+    assert_eq!(damage.overflow, 0);
+    let health_after_hit = 5000.0 - damage.amount as f32;
 
     h.cast_and_deliver(MORTAL_STRIKE, Some(h.npc));
     let failed = std::mem::take(&mut h.inbox.failed);
@@ -84,7 +92,7 @@ fn instant_spell_resolves_same_tick_spending_cost_and_starting_gcd_and_cooldown(
         std::mem::take(&mut h.inbox.failed)[0].reason,
         CastFailReason::OnCooldown
     );
-    assert_eq!(h.health(h.npc), 5000.0 - 520.0);
+    assert_eq!(h.health(h.npc), health_after_hit);
 }
 
 #[test]
@@ -104,8 +112,8 @@ fn cast_time_spell_completes_after_its_cast_time() {
     assert_eq!(h.health(h.npc), 5000.0);
     h.advance(10);
     assert!(h.app.world().get::<CastState>(h.caster).is_none());
-    // SP coefficient 3.8812 × spell power 100 = 388.
-    assert_eq!(h.health(h.npc), 5000.0 - 388.0);
+    // SP coefficient 3.8812 × spell power 100 = 388, ± 2.5% variance.
+    assert!(varied(388.12).contains(&(5000.0 - h.health(h.npc))));
     // 1% of base mana (100) spent on completion, then at most 0.25 s of 1%/s regen.
     let mana = h.app.world().get::<Mana>(h.caster).unwrap().current;
     assert!((9_900.0..=9_925.0).contains(&mana), "mana {mana}");
@@ -211,8 +219,13 @@ fn heal_clamps_to_max_and_logs_overheal() {
         .into_iter()
         .find(|e| e.kind == CombatLogKind::Heal)
         .unwrap();
-    // SP coefficient 6.82 × spell power 100 = 682; 100 effective.
-    assert_eq!((heal.amount, heal.overflow), (682, 582));
+    // SP coefficient 6.82 × spell power 100 = 682 ± 2.5%; 100 effective.
+    assert!(
+        varied(682.0).contains(&(heal.amount as f32)),
+        "{}",
+        heal.amount
+    );
+    assert_eq!(heal.overflow, heal.amount - 100);
 }
 
 #[test]
@@ -386,9 +399,9 @@ fn computed_stats_make_fireball_scale_with_intellect() {
         .into_iter()
         .find(|e| e.kind == CombatLogKind::Damage)
         .expect("fireball hit");
-    // SP coefficient 3.8812 × 38 = 147 (×2 on a 5% crit).
-    let expected = if damage.crit { 295 } else { 147 };
-    assert_eq!(damage.amount, expected);
+    // SP coefficient 3.8812 × 38 = 147.5 ± 2.5% (×2 on a 5% crit).
+    let base = if damage.crit { 2.0 * 147.49 } else { 147.49 };
+    assert!(varied(base).contains(&(damage.amount as f32)), "{damage:?}");
 }
 
 #[test]
@@ -409,7 +422,7 @@ fn percent_mana_cost_uses_base_mana_not_max_pool() {
     assert!(std::mem::take(&mut h.inbox.failed).is_empty());
     assert!(h.app.world().get::<CastState>(h.caster).is_some());
     h.advance(40);
-    assert_eq!(h.health(h.npc), 5000.0 - 388.0);
+    assert!(varied(388.12).contains(&(5000.0 - h.health(h.npc))));
 }
 
 /// Level 80 caster knowing the real class/spec passives `passives`, 50 000
@@ -479,4 +492,80 @@ fn arcane_mage_power_regen_aura_raises_mana_regen_by_its_percentage() {
     };
     assert_near(in_combat, 800.0);
     assert_near(out_of_combat, 800.0);
+}
+
+#[test]
+fn level_10_mage_frostbolt_deals_spell_power_times_its_coefficient() {
+    let Some(mut h) = harness_with(Vec::new(), &[FROSTBOLT, FROSTBOLT_DAMAGE], 8, true) else {
+        return;
+    };
+    // Level 10 Human Mage, no spec: the class main stat is Intellect
+    // (PrimaryStatPriority 0), so spell power = Int 38.
+    let stats = *h.app.world().get::<CharacterStats>(h.caster).unwrap();
+    assert_eq!(stats.spell_power, 38.0);
+    h.cast_and_deliver(FROSTBOLT, Some(h.npc));
+    h.advance(80);
+    let hits: Vec<_> = std::mem::take(&mut h.inbox.log)
+        .into_iter()
+        .filter(|e| e.kind == CombatLogKind::Damage && e.spell_id == Some(FROSTBOLT_DAMAGE))
+        .collect();
+    assert_eq!(hits.len(), 1, "{:?}", h.inbox.failed);
+    // BasePoints 0 + 2.448 × 38 = 93.0 ± 2.5% (×2 on a 5% crit).
+    let base = if hits[0].crit { 2.0 * 93.02 } else { 93.02 };
+    assert!(
+        varied(base).contains(&(hits[0].amount as f32)),
+        "{:?}",
+        hits[0]
+    );
+    assert_eq!(h.health(h.npc), 5000.0 - hits[0].amount as f32);
+}
+
+#[test]
+fn a_spell_crit_doubles_the_damage() {
+    let Some(mut h) = harness(Vec::new(), &[FIREBALL], 8) else {
+        return;
+    };
+    h.app
+        .world_mut()
+        .get_mut::<CharacterStats>(h.caster)
+        .unwrap()
+        .crit_pct = 100.0;
+    h.cast_and_deliver(FIREBALL, Some(h.npc));
+    h.advance(40);
+    let hit = std::mem::take(&mut h.inbox.log)
+        .into_iter()
+        .find(|e| e.kind == CombatLogKind::Damage)
+        .expect("fireball hit");
+    // 3.8812 × SP 100 = 388 ± 2.5%, × 2 (Unit::SpellCriticalDamageBonus).
+    assert!(hit.crit);
+    assert!(
+        varied(2.0 * 388.12).contains(&(hit.amount as f32)),
+        "{hit:?}"
+    );
+}
+
+#[test]
+fn physical_spell_damage_takes_the_creatures_armor() {
+    let Some(mut h) = harness(Vec::new(), &[MORTAL_STRIKE], 1) else {
+        return;
+    };
+    // A level 10 caster against armor 90: ArmorConstant(10) 210 stops 30%.
+    let mut constants = vec![0.0; 11];
+    constants[10] = 210.0;
+    h.app
+        .insert_resource(crate::level_scaling::ArmorConstants(constants));
+    let (caster, npc) = (h.caster, h.npc);
+    h.app
+        .world_mut()
+        .entity_mut(caster)
+        .insert(shared::components::UnitLevel(10));
+    h.app.world_mut().entity_mut(npc).insert((
+        shared::components::UnitLevel(10),
+        crate::level_scaling::CreatureArmor(90.0),
+    ));
+    h.set_power(PowerType::Rage, 500.0);
+    h.cast_and_deliver(MORTAL_STRIKE, Some(npc));
+    // 5.2012 × AP 100 = 520 ± 2.5% (507-533), × 0.7 truncated: 354-373.
+    let damage = 5000.0 - h.health(npc);
+    assert!((354.0..=373.0).contains(&damage), "{damage}");
 }

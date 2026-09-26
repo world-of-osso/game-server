@@ -462,6 +462,7 @@ fn world_data_with_one_spawn(npcflag: u32) -> WorldData {
                 aggro_mode: crate::creature_aggro::AggroMode::Aggressive,
                 models: vec![],
                 tuning: None,
+                armor: 0.0,
             },
         )]
         .into_iter()

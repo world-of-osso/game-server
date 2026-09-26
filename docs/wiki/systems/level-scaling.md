@@ -45,6 +45,7 @@ Tuned creatures (`ContentTuningID` != 0, 4,563 of the 4,824 templates spawned on
 
 - [[world-data]] — ExpectedStat tables and tuned template columns
 - [[combat]] — swing pipeline
+- [[player-damage]] — player swings and creature armor, applied before these multipliers
 - [[experience]] — kill XP at the scaled level
 - [[creature-aggro]] — aggro radius at the scaled level
 - [[content-import]] — ContentTuning import

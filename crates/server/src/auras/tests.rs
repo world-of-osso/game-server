@@ -8,7 +8,7 @@ use shared::protocol::{CancelAura, CombatChannel, CombatLogEvent, CombatLogKind}
 
 use super::*;
 use crate::networking::CombatTarget;
-use crate::spell_cast::test_harness::{Harness, harness, world_db};
+use crate::spell_cast::test_harness::{Harness, harness, varied, world_db};
 
 const SHADOW_WORD_PAIN: u32 = 589;
 const RENEW: u32 = 139;
@@ -93,9 +93,10 @@ fn shadow_word_pain_ticks_periodic_damage_then_expires() {
         return;
     };
     h.cast_and_deliver(SHADOW_WORD_PAIN, Some(h.npc));
-    // Effect 0: 0.168 × SP 100 = 16.8 → 17 direct. Effect 1: PERIODIC_DAMAGE
+    // Effect 0: 0.168 × SP 100 = 16.8 ± 2.5% direct. Effect 1: PERIODIC_DAMAGE
     // 0.1246 × 100 = 12.46 → 12 every 2 s for 16 s (duration index 387).
-    assert_eq!(h.health(h.npc), 5000.0 - 17.0);
+    let direct = 5000.0 - h.health(h.npc);
+    assert!(varied(16.8).contains(&direct), "{direct}");
     let aura = auras_of(&h, h.npc, SHADOW_WORD_PAIN);
     assert_eq!(aura.len(), 1);
     assert!(aura[0].harmful);
@@ -107,7 +108,7 @@ fn shadow_word_pain_ticks_periodic_damage_then_expires() {
         .collect();
     assert_eq!(ticks.len(), 8);
     assert!(ticks.iter().all(|tick| tick.amount == 12));
-    assert_eq!(h.health(h.npc), 5000.0 - 17.0 - 8.0 * 12.0);
+    assert_eq!(h.health(h.npc), 5000.0 - direct - 8.0 * 12.0);
     assert!(auras_of(&h, h.npc, SHADOW_WORD_PAIN).is_empty());
     assert!(view_of(&h, h.npc, SHADOW_WORD_PAIN).is_none());
     assert_eq!(
@@ -126,7 +127,8 @@ fn dormant_creature_skips_aura_ticks_then_catches_up_on_reactivation() {
         return;
     };
     h.cast_and_deliver(SHADOW_WORD_PAIN, Some(h.npc));
-    assert_eq!(h.health(h.npc), 5000.0 - 17.0);
+    let direct = 5000.0 - h.health(h.npc);
+    assert!(varied(16.8).contains(&direct), "{direct}");
     let npc = h.npc;
     h.app
         .world_mut()
@@ -141,7 +143,7 @@ fn dormant_creature_skips_aura_ticks_then_catches_up_on_reactivation() {
             .count()
     };
     assert_eq!(periodic(&h), 0);
-    assert_eq!(h.health(h.npc), 5000.0 - 17.0);
+    assert_eq!(h.health(h.npc), 5000.0 - direct);
     assert_eq!(auras_of(&h, h.npc, SHADOW_WORD_PAIN).len(), 1);
 
     h.app
@@ -150,7 +152,7 @@ fn dormant_creature_skips_aura_ticks_then_catches_up_on_reactivation() {
         .remove::<crate::grid_activity::GridDormant>();
     h.advance(2);
     assert_eq!(periodic(&h), 8);
-    assert_eq!(h.health(h.npc), 5000.0 - 17.0 - 8.0 * 12.0);
+    assert_eq!(h.health(h.npc), 5000.0 - direct - 8.0 * 12.0);
     assert!(auras_of(&h, h.npc, SHADOW_WORD_PAIN).is_empty());
     assert!(view_of(&h, h.npc, SHADOW_WORD_PAIN).is_none());
 }
@@ -303,13 +305,23 @@ fn passive_proc_trigger_fires_on_melee_swing() {
         .world_mut()
         .entity_mut(h.caster)
         .insert(CombatTarget(Some(npc)));
-    h.advance(3);
+    // Ten 2 s unarmed swings; missed, dodged and parried ones do not proc.
+    h.advance(3 + 9 * 40);
+    let landed = h
+        .inbox
+        .log
+        .iter()
+        .filter(|e| e.spell_id.is_none() && e.kind == CombatLogKind::Damage)
+        .count();
     let procs: Vec<_> = log_of(&h, CombatLogKind::Damage, DEVASTATOR_DAMAGE);
-    assert_eq!(procs.len(), 1, "one swing, one proc");
-    assert_eq!(procs[0].source, Some(h.caster.to_bits()));
-    assert_eq!(procs[0].target, Some(npc.to_bits()));
-    // 236282 effect 0: AP coefficient 1.314 × AP 100.
-    assert_eq!(procs[0].amount, 131);
+    assert!(landed > 0);
+    assert_eq!(procs.len(), landed, "one proc per landed swing");
+    for proc in &procs {
+        assert_eq!(proc.source, Some(h.caster.to_bits()));
+        assert_eq!(proc.target, Some(npc.to_bits()));
+        // 236282 effect 0: AP coefficient 1.314 × AP 100, ± 2.5% variance.
+        assert!(varied(131.4).contains(&(proc.amount as f32)), "{proc:?}");
+    }
 }
 
 #[test]
@@ -443,8 +455,12 @@ fn class_mask_and_label_modifiers_scale_damage() {
     h.advance(40);
     let hits = log_of(&h, CombatLogKind::Damage, MIND_BLAST);
     assert_eq!(hits.len(), 1, "{:?}", h.inbox.failed);
-    // 0.78336 × SP 100 × 0.93 × 4.00 × 2.37 = 690.6.
-    assert_eq!(hits[0].amount, 691);
+    // 0.78336 × SP 100 × 0.93 × 4.00 × 2.37 = 690.6, ± 2.5% variance.
+    assert!(
+        varied(690.6).contains(&(hits[0].amount as f32)),
+        "{:?}",
+        hits[0]
+    );
 }
 
 /// Warrior talent: MOD_MAX_CHARGES 411 +1 and CHARGE_RECOVERY_MOD 453

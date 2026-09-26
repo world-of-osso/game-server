@@ -108,10 +108,10 @@ mod combat {
     use super::*;
     use crate::auth::InWorld;
     use crate::networking::CombatTarget;
-    use crate::spell_cast::test_harness::{Harness, harness, spawn_player};
+    use crate::spell_cast::test_harness::{Harness, harness, spawn_player, varied};
     use lightyear::connection::host::HostClient;
     use shared::components::PowerType;
-    use shared::protocol::{CombatLogEvent, CombatLogKind};
+    use shared::protocol::{CombatLogEvent, CombatLogKind, MissKind};
 
     const MORTAL_STRIKE: u32 = 12294;
 
@@ -222,9 +222,12 @@ mod combat {
         d.start();
         let opponent = d.opponent;
         d.h.cast_and_deliver(MORTAL_STRIKE, Some(opponent));
-        // 5.2012 AP coefficient × 100 AP.
-        assert_eq!(d.damage_to_opponent(), vec![520]);
-        assert_eq!(d.h.health(opponent), 480.0);
+        // 5.2012 AP coefficient × 100 AP, ± 2.5% variance.
+        let damage = d.damage_to_opponent();
+        assert_eq!(damage.len(), 1);
+        let damage = damage[0] as f32;
+        assert!(varied(520.12).contains(&damage), "{damage}");
+        assert_eq!(d.h.health(opponent), 1000.0 - damage);
         assert!(d.h.inbox.failed.is_empty());
     }
 
@@ -240,8 +243,24 @@ mod combat {
             .entity_mut(caster)
             .insert(CombatTarget(Some(opponent)));
         d.h.advance(3);
-        assert_eq!(d.damage_to_opponent(), vec![10]);
-        assert_eq!(d.h.health(opponent), 990.0);
+        // One unarmed swing: 1-2 + 100 AP / 6 × 2.0 s = 34-35, or a 5% miss.
+        let swings: Vec<_> =
+            d.h.inbox
+                .log
+                .iter()
+                .filter(|e| e.spell_id.is_none() && e.target == Some(opponent.to_bits()))
+                .map(|e| (e.kind, e.amount))
+                .collect();
+        match swings[..] {
+            [(CombatLogKind::Damage, amount)] => {
+                assert!((34..=35).contains(&amount), "{amount}");
+                assert_eq!(d.h.health(opponent), 1000.0 - amount as f32);
+            }
+            [(CombatLogKind::Miss(MissKind::Miss), _)] => {
+                assert_eq!(d.h.health(opponent), 1000.0)
+            }
+            _ => panic!("{swings:?}"),
+        }
     }
 
     /// Unit::DealDamage: the opponent's lethal hit leaves the loser at 1

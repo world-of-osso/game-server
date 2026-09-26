@@ -35,12 +35,16 @@ const TOP_LEVEL: u8 = MAX_LEVEL + 3;
 pub struct CreatureStats {
     pub health: f32,
     pub auto_attack_dps: f32,
+    pub armor: f32,
+    pub armor_constant: f32,
 }
 
 #[derive(Debug, Clone, Copy)]
 enum Stat {
     Health,
     AutoAttackDps,
+    Armor,
+    ArmorConstant,
 }
 
 impl CreatureStats {
@@ -48,6 +52,8 @@ impl CreatureStats {
         match stat {
             Stat::Health => self.health,
             Stat::AutoAttackDps => self.auto_attack_dps,
+            Stat::Armor => self.armor,
+            Stat::ArmorConstant => self.armor_constant,
         }
     }
 }
@@ -91,7 +97,39 @@ impl ExpectedStats {
             .chain(class_mod)
             .fold(row.get(stat), |value, mods| value * mods.get(stat))
     }
+
+    /// Creature::GetBaseArmorForLevel (Creature.cpp:3208-3214) of an untuned
+    /// template: ContentTuning 0, HealthScalingExpansion 0.
+    pub fn untuned_armor(&self, level: u8, unit_class: u8, armor_modifier: f32) -> f32 {
+        self.evaluate(Stat::Armor, level, 0, 0, unit_class) * armor_modifier
+    }
+
+    /// The ArmorConstant a player attacker of every level 0..=MAX_LEVEL + 3
+    /// meets: ExpansionID -2, no ContentTuning, CLASS_NONE
+    /// (Unit::CalcArmorReducedDamage, Unit.cpp:1760).
+    pub fn armor_constants(&self) -> ArmorConstants {
+        ArmorConstants(
+            (0..=TOP_LEVEL)
+                .map(|level| self.evaluate(Stat::ArmorConstant, level, DEFAULT_EXPANSION, 0, 0))
+                .collect(),
+        )
+    }
 }
+
+/// ExpectedStat ArmorConstant by attacker level (index = level).
+#[derive(Resource, Debug, Clone, Default, PartialEq)]
+pub struct ArmorConstants(pub Vec<f32>);
+
+impl ArmorConstants {
+    pub fn at(&self, level: u8) -> Option<f32> {
+        self.0.get(usize::from(level.min(TOP_LEVEL))).copied()
+    }
+}
+
+/// A creature's armor at its own level (UNIT_MOD_ARMOR BASE_VALUE,
+/// Creature::UpdateLevelDependantStats, Creature.cpp:1665-1666).
+#[derive(Component, Debug, Clone, Copy, PartialEq)]
+pub struct CreatureArmor(pub f32);
 
 /// ExpectedStatMod rows EvaluateExpectedStat applies per creature class
 /// (DB2Stores.cpp:2521-2538): warrior 4, paladin 2, rogue 3, mage 1.
@@ -113,6 +151,7 @@ pub struct TuningInputs {
     pub unit_class: u8,
     pub health_modifier: f32,
     pub damage_modifier: f32,
+    pub armor_modifier: f32,
 }
 
 /// A tuned template's max health and base auto-attack DPS at every level
@@ -121,6 +160,7 @@ pub struct TuningInputs {
 pub struct LevelStats {
     max_health: Vec<f32>,
     base_damage: Vec<f32>,
+    armor: Vec<f32>,
     damage_modifier: f32,
 }
 
@@ -148,6 +188,10 @@ impl LevelStats {
             base_damage: (0..=TOP_LEVEL)
                 .map(|level| eval(Stat::AutoAttackDps, level))
                 .collect(),
+            // Creature::GetBaseArmorForLevel (Creature.cpp:3208-3214).
+            armor: (0..=TOP_LEVEL)
+                .map(|level| eval(Stat::Armor, level) * inputs.armor_modifier)
+                .collect(),
             damage_modifier: inputs.damage_modifier,
         }
     }
@@ -158,6 +202,10 @@ impl LevelStats {
 
     pub fn base_damage(&self, level: u8) -> f32 {
         self.base_damage[usize::from(level.min(TOP_LEVEL))]
+    }
+
+    pub fn armor(&self, level: u8) -> f32 {
+        self.armor[usize::from(level.min(TOP_LEVEL))]
     }
 
     /// Main-hand swing damage range at `level` for a swing every
@@ -221,6 +269,15 @@ impl<'a> UnitScaling<'a> {
         self.tuned.map_or(1.0, |(scaling, stats)| {
             stats.base_damage(self.level_against(target))
                 / stats.base_damage(scaling.native_level())
+        })
+    }
+
+    /// `armor` (the creature's own) × Creature::GetArmorMultiplierForTarget
+    /// (Creature.cpp:3216-3224): a tuned creature's own armor is its base armor
+    /// at its native level, so the product is its base armor at the attacker's level.
+    pub fn armor_against(&self, armor: f32, attacker: &UnitScaling) -> f32 {
+        self.tuned.map_or(armor, |(_, stats)| {
+            stats.armor(self.level_against(attacker))
         })
     }
 

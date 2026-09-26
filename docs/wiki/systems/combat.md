@@ -9,7 +9,7 @@ Combat logic is split across two crates: `shared/src/formulas/` holds pure comba
 Runs in `FixedUpdate`. Systems in order:
 
 1. `start_attack_system` — reacts to `Changed<CombatTarget>`; inserts `AutoAttack` and `CombatState` for a target, and removes `AutoAttack` when the target is cleared
-2. `auto_attack_system` — processes only entities with active `AutoAttack`, ticks swing timers, checks melee range (5 yards), applies `BASE_DAMAGE` (ExpectedStat damage for tuned creatures, then per-target damage and health multipliers, see [[level-scaling]]), emits damage events, and handles lethal NPC transitions
+2. `auto_attack_system` — processes only entities with active `AutoAttack`, ticks the main- and off-hand swing timers, checks melee range (5 yards), and swings: players their weapon through the hit table and armor ([[player-damage]]), creatures `BASE_DAMAGE` or their ExpectedStat damage through armor; then per-target damage and health multipliers ([[level-scaling]]). It emits damage or miss/dodge/parry events and handles lethal NPC transitions
 3. `maintain_in_combat_state_system` — expires `CombatState` after 5s of no engagement
 4. `respawn_system` — ticks `DeathState.respawn_timer` (default 60s), restores HP and position to `SpawnPoint`, re-adds `Replicate` and `NetworkVisibility`
 
@@ -47,6 +47,8 @@ Player-targeted melee damage emits the internal `PlayerDeathTransition` only whe
 Persisted zero health is queued during character selection so relogging a dead character reconstructs the same lifecycle instead of waiting for a poll. `b4e5cbd` split the consumer module and `2106cd8` split the focused proof into `combat_tests/death.rs`; `1b7c5a4` preserves unchanged gravity health ticks. Stale entities are ignored safely. RED/GREEN artifacts are recorded under `/tmp/claude/game-server/` for idle-scan removal, transition consumption, combat, fall, login, and second-life coverage. No live CPU savings claim is made.
 
 ## Melee Hit Table (`shared/src/formulas/melee.rs`)
+
+The server does not use this AzerothCore table: player swings roll TrinityCore master's in `crates/server/src/melee.rs` ([[player-damage]]).
 
 Single-roll resolution matching AzerothCore's `RollMeleeOutcomeAgainst()`. Priority order on a 0–10000 scale:
 
@@ -100,4 +102,5 @@ Players no longer use the HP/mana/rating functions below: [[character-stats]] co
 - [[networking]] — CombatEvent broadcast over CombatChannel
 - [[creature-aggro]] — creature aggro/threat sets the creature's CombatTarget; evade stops combat and restores HP
 - [[creature-ai]] — chase and leash movement
+- [[player-damage]] — weapon swings, hit table, armor and spell amounts
 - [[world-data]] — spell_misc/spell_effect tables provide cast time, range, coefficients

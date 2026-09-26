@@ -51,6 +51,7 @@ fn lethal_player_auto_attack_transitions_death_in_same_fixed_step() {
             CombatTarget(Some(target)),
             AutoAttack {
                 timer: 0.0,
+                off_hand_timer: 0.0,
                 active: true,
             },
             Npc {
@@ -226,12 +227,22 @@ fn lethal_melee_swing_on_an_npc_logs_death_after_the_damage() {
         .world_mut()
         .entity_mut(h.caster)
         .insert(CombatTarget(Some(h.npc)));
-    h.advance(5);
+    // Ten 2 s swings: the first that is not missed, dodged or parried kills.
+    h.advance(5 + 9 * 40);
 
     let (caster, npc) = (Some(h.caster.to_bits()), Some(h.npc.to_bits()));
+    let log = logged(&h);
+    let avoided = log.len() - 2;
+    assert!(
+        log[..avoided].iter().all(
+            |&(kind, source, target)| matches!(kind, CombatLogKind::Miss(_))
+                && (source, target) == (caster, npc)
+        ),
+        "{log:?}"
+    );
     assert_eq!(
-        logged(&h),
-        vec![
+        log[avoided..],
+        [
             (CombatLogKind::Damage, caster, npc),
             (CombatLogKind::Death, caster, npc),
         ]
@@ -253,6 +264,7 @@ fn lethal_melee_swing_on_a_player_logs_death_to_the_victim() {
         CombatTarget(Some(caster)),
         AutoAttack {
             timer: 0.0,
+            off_hand_timer: 0.0,
             active: true,
         },
     ));

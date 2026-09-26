@@ -28,7 +28,7 @@ Health and damage
   - A level 10 player's 10 damage removes 115 of Hogger's 13,137 health; a level 40 player's removes 10.
 - [x] A tuned creature's swing does `ExpectedStat.CreatureAutoAttackDps(own level) × DamageModifier × 2 s`, rolled uniformly between 1× and 1.5× (UpdateLevelDependantStats, Creature.cpp:1650-1656; CalculateMinMaxDamage, StatSystem.cpp:1138-1147).
 - [x] Any damage a tuned creature deals, swings and spells alike, is multiplied by (base DPS at the target's level ÷ base DPS at its own level) (Unit::DealDamageMods, Unit.cpp:814-815; GetDamageMultiplierForTarget, Creature.cpp:3198-3206).
-- [x] Untuned creatures keep `creature_classlevelstats` health and the flat 10-damage swing.
+- [x] Untuned creatures keep `creature_classlevelstats` health and the flat 10-damage swing. Players swing their weapon ([player damage](player-damage.md)).
 
 Per-player rules
 - [x] Kill XP uses the creature's level against each player: the killer, and every group member for the group's grey test and the highest non-grey member (Trinity::XP::Gain, Formulas.h:190; KillRewarder, KillRewarder.cpp:110).
@@ -86,9 +86,8 @@ Client
 ## Known gaps (current cycle)
 
 - [ ] The client shows the raw shared health pool. Hogger reads 13,137 to everyone, while Retail shows each viewer max health at their own level.
-- [ ] Creature armor (ExpectedStat CreatureArmor) and creature attack power are not modelled. No creature armor exists server-side.
+- [ ] Creature attack power is not modelled. Creature armor is ExpectedStat CreatureArmor ([player damage](player-damage.md)).
 - [ ] Creature attack speed is the server's flat 2 s, not `BaseAttackTime`.
-- [ ] Players still swing a flat 10. A level 10 player needs about 114 swings for Hogger.
 - [ ] Nameplates show no level. Retail's default nameplates show none either. Unit tooltips are the npctooltip branch's, which calls `level_for_viewer`.
 - [ ] Kill reputation still uses the template's `max(minlevel, maxlevel)`. That matches the scaled level except for creatures with a negative delta.
 - [ ] Mythic+ seasons are not modelled: ContentTuningXExpected rows with a `MinMythicPlusSeasonID` never apply, and rows with only a maximum season always do. No map 0 tuning uses either.

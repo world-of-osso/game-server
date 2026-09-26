@@ -1,7 +1,8 @@
 use super::*;
 
 /// ExpectedStat rows 10 and 30 (ExpansionID -2) of 12.1.0.69933, plus a
-/// made-up Midnight (11) level 30 row and ContentTuning 999 mod.
+/// made-up Midnight (11) level 30 row and ContentTuning 999 mod. Mods 4
+/// (warrior) and 1 (mage) are the real ExpectedStatMod rows.
 fn expected_stats() -> ExpectedStats {
     ExpectedStats {
         by_level: HashMap::from([
@@ -10,6 +11,8 @@ fn expected_stats() -> ExpectedStats {
                 CreatureStats {
                     health: 377.3423,
                     auto_attack_dps: 17.05213,
+                    armor: 90.0,
+                    armor_constant: 210.0,
                 },
             ),
             (
@@ -17,6 +20,8 @@ fn expected_stats() -> ExpectedStats {
                 CreatureStats {
                     health: 4378.775,
                     auto_attack_dps: 162.6229,
+                    armor: 155.0,
+                    armor_constant: 361.0,
                 },
             ),
             (
@@ -24,6 +29,8 @@ fn expected_stats() -> ExpectedStats {
                 CreatureStats {
                     health: 5000.0,
                     auto_attack_dps: 200.0,
+                    armor: 200.0,
+                    armor_constant: 400.0,
                 },
             ),
         ]),
@@ -33,6 +40,8 @@ fn expected_stats() -> ExpectedStats {
                 CreatureStats {
                     health: 1.0,
                     auto_attack_dps: 1.0,
+                    armor: 1.0,
+                    armor_constant: 1.0,
                 },
             ),
             (
@@ -40,6 +49,8 @@ fn expected_stats() -> ExpectedStats {
                 CreatureStats {
                     health: 0.8,
                     auto_attack_dps: 0.925,
+                    armor: 0.8,
+                    armor_constant: 1.0,
                 },
             ),
             (
@@ -47,6 +58,8 @@ fn expected_stats() -> ExpectedStats {
                 CreatureStats {
                     health: 2.0,
                     auto_attack_dps: 0.5,
+                    armor: 1.0,
+                    armor_constant: 1.0,
                 },
             ),
         ]),
@@ -62,6 +75,7 @@ const HOGGER: TuningInputs = TuningInputs {
     unit_class: 1,
     health_modifier: 3.0,
     damage_modifier: 1.7,
+    armor_modifier: 1.0,
 };
 
 pub(crate) const HOGGER_SCALING: LevelScaling = LevelScaling {
@@ -163,4 +177,29 @@ fn untuned_units_deal_and_take_damage_unscaled() {
     assert_eq!(wolf.level_against(&player), 7);
     assert_eq!(health_loss(&player, &wolf, 10.0), 10.0);
     assert_eq!(damage_dealt(&wolf, &player, 10.0), 10.0);
+}
+
+#[test]
+fn tuned_creature_armor_is_expected_stat_armor_at_the_attackers_level() {
+    let stats = ScaledStats(Arc::new(LevelStats::build(&expected_stats(), &HOGGER)));
+    let hogger =
+        UnitScaling::from_item((Some(&UnitLevel(30)), Some(&HOGGER_SCALING), Some(&stats)));
+    let (level_10, level_40) = (player(10), player(40));
+    let own_armor = stats.0.armor(30);
+    assert_eq!(own_armor, 155.0);
+    let at = |level| UnitScaling::from_item((Some(level), None, None));
+    assert_eq!(hogger.armor_against(own_armor, &at(&level_10)), 90.0);
+    assert_eq!(hogger.armor_against(own_armor, &at(&level_40)), 155.0);
+}
+
+#[test]
+fn untuned_armor_and_armor_constants_come_from_the_default_expansion_rows() {
+    let stats = expected_stats();
+    // Mage class mod 1: CreatureArmorMod 0.8; ArmorModifier 2.
+    assert_eq!(stats.untuned_armor(10, 8, 2.0), 90.0 * 0.8 * 2.0);
+    let constants = stats.armor_constants();
+    assert_eq!(
+        (constants.at(10), constants.at(30)),
+        (Some(210.0), Some(361.0))
+    );
 }

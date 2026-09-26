@@ -472,11 +472,15 @@ fn spell_damage_on_neutral_creature_puts_the_damage_on_its_threat_list() {
     let boar = spawn_harness_boar(&mut h, 20.0);
     h.cast_and_deliver(FIREBALL, Some(boar));
     h.advance(40);
-    // SP coefficient 3.8812 × spell power 100 = 388.
-    assert_eq!(h.health(boar), 5000.0 - 388.0);
+    // SP coefficient 3.8812 × spell power 100 = 388 ± 2.5%.
+    let damage = 5000.0 - h.health(boar);
+    assert!(
+        crate::spell_cast::test_harness::varied(388.12).contains(&damage),
+        "{damage}"
+    );
     assert_eq!(state(&h.app, boar), pursuing(h.caster));
     let threat = h.app.world().get::<ThreatTable>(boar).unwrap();
-    assert_eq!(threat.threat_for(h.caster.to_bits()), 388.0);
+    assert_eq!(threat.threat_for(h.caster.to_bits()), damage);
 }
 
 #[test]

@@ -296,3 +296,7 @@ Created `systems/quests.md` (quest data, rules, runtime) and `specs/quests.md`; 
 ## [2026-09-26] update | Quest money per player
 
 [[content-import]]: content_tuning_level keeps GetContentTuningData levels (MinLevelWithDelta, ScalingFactionGroup) for the server. TrinityCore quests now pay and offer Quest::MoneyValue at the player's quest level, not MaxMoneyValue: Beating Them Back! pays 55 at level 1 ([retail-world-content](../specs/retail-world-content.md)).
+
+## [2026-09-26] create | Player damage
+
+[[player-damage]]: players swing their weapon (AP / 6 × speed, off hand at half) every weapon speed over haste, through TrinityCore's hit table and ExpectedStat creature armor, before level scaling; spell power only from an Intellect main stat, spell variance and versatility, armor on physical spells, TRIGGER_MISSILE. [[combat]], [[character-stats]] and [[level-scaling]] link it.

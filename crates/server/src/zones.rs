@@ -10,7 +10,7 @@ use std::collections::HashMap;
 use crate::combat::{CorpseDelay, RespawnDelay};
 use crate::creature_ai::{FormationMember, SpawnPoint, WanderPhase, WanderState, WaypointState};
 use crate::interest::NetworkVisibility;
-use crate::level_scaling::ScaledStats;
+use crate::level_scaling::{CreatureArmor, ScaledStats};
 use crate::world_data::{
     CreatureAddon, CreatureSpawn, CreatureTemplate, GROUP_AI_FLAG_FOLLOW_LEADER, TemplateTuning,
     WorldData,
@@ -71,12 +71,20 @@ fn spawn_creatures<'a>(
             .tuning
             .as_ref()
             .map(|tuning| (spawn_level_scaling(template, tuning), tuning));
-        let (level, health) = match &scaling {
+        let (level, health, armor) = match &scaling {
             Some((scaling, tuning)) => {
                 let level = scaling.native_level();
-                (level, tuning.stats.max_health(level))
+                (
+                    level,
+                    tuning.stats.max_health(level),
+                    tuning.stats.armor(level),
+                )
             }
-            None => (template.min_level, resolve_health(world_data, template)),
+            None => (
+                template.min_level,
+                resolve_health(world_data, template),
+                template.armor,
+            ),
         };
         let bundle = creature_bundle(spawn, &template.name, health, display_id);
 
@@ -87,6 +95,7 @@ fn spawn_creatures<'a>(
         // NPC power pools need creature class/level stats, which are not imported.
         entity.insert((
             UnitLevel(level),
+            CreatureArmor(armor),
             UnitPowers::default(),
             UnitFactionTemplate(u32::from(template.faction)),
             NpcFlags::from_azerothcore(template.npc_flags),
@@ -353,6 +362,7 @@ mod tests {
             aggro_mode: crate::creature_aggro::AggroMode::Aggressive,
             models: vec![CreatureModelInfo { display_id }],
             tuning: None,
+            armor: 0.0,
         }
     }
 
@@ -402,11 +412,12 @@ mod tests {
                 ExperienceModifier REAL, type INTEGER, flags_extra INTEGER, speed_run REAL,
                 ScriptName TEXT, unit_class INTEGER, detection_range REAL, unit_flags INTEGER,
                 ContentTuningID INTEGER, HealthScalingExpansion INTEGER, LevelScalingDeltaMin INTEGER,
-                LevelScalingDeltaMax INTEGER, DamageModifier REAL, subname TEXT);
+                LevelScalingDeltaMax INTEGER, DamageModifier REAL, ArmorModifier REAL, subname TEXT);
              CREATE TABLE expected_stat (ID INTEGER, Lvl INTEGER, ExpansionID INTEGER,
-                CreatureHealth REAL, CreatureAutoAttackDps REAL);
+                CreatureHealth REAL, CreatureAutoAttackDps REAL, CreatureArmor REAL,
+                ArmorConstant REAL);
              CREATE TABLE expected_stat_mod (ID INTEGER, CreatureHealthMod REAL,
-                CreatureAutoAttackDPSMod REAL);
+                CreatureAutoAttackDPSMod REAL, CreatureArmorMod REAL, ArmorConstantMod REAL);
              CREATE TABLE content_tuning_x_expected (ID INTEGER, ContentTuningID INTEGER,
                 ExpectedStatModID INTEGER, MinMythicPlusSeasonID INTEGER);
              CREATE TABLE creature_classlevelstats (level INTEGER, class INTEGER,
@@ -439,7 +450,7 @@ mod tests {
         for (index, angle) in angles.iter().enumerate() {
             let entry = 100 + index as u32;
             conn.execute(
-                "INSERT INTO content_creature_template VALUES (?1,1,1,1,0,1.0,1.0,'Loup — Écorché',0,0,1.0,1,0,1.14,'',1,20.0,0,0,0,0,0,1.0,'')",
+                "INSERT INTO content_creature_template VALUES (?1,1,1,1,0,1.0,1.0,'Loup — Écorché',0,0,1.0,1,0,1.14,'',1,20.0,0,0,0,0,0,1.0,1.0,'')",
                 [entry],
             )
             .unwrap();

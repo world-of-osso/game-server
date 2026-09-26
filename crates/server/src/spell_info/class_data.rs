@@ -44,6 +44,8 @@ pub struct ClassInfo {
     /// `chr_classes.AttackPowerPerStrength` / `AttackPowerPerAgility`.
     pub attack_power_per_strength: f32,
     pub attack_power_per_agility: f32,
+    /// `chr_classes.PrimaryStatPriority`: the main stat without a spec.
+    pub primary_stat_priority: u32,
     /// Sorted by required level, then spell ID.
     pub learnable: Vec<LearnableSpell>,
     /// Sorted by `OrderIndex`.
@@ -96,14 +98,15 @@ pub(crate) fn load_class_spells(conn: &Connection) -> rusqlite::Result<ClassSpel
     let classes = CLASS_SKILL_LINES
         .iter()
         .map(|&(class_id, skill_line)| {
-            let (attack_power_per_strength, attack_power_per_agility) =
-                load_attack_power_conversions(conn, class_id)?;
+            let (attack_power_per_strength, attack_power_per_agility, primary_stat_priority) =
+                load_class_stats(conn, class_id)?;
             Ok(ClassInfo {
                 class_id,
                 skill_line,
                 power_types: load_power_types(conn, class_id)?,
                 attack_power_per_strength,
                 attack_power_per_agility,
+                primary_stat_priority,
                 learnable: load_learnable(conn, class_id, skill_line)?,
                 specs: load_specs(conn, class_id)?,
                 traits: load_trait_tree(conn, skill_line)?,
@@ -125,11 +128,12 @@ fn load_power_types(conn: &Connection, class_id: u8) -> rusqlite::Result<Vec<i32
     rows.collect()
 }
 
-fn load_attack_power_conversions(conn: &Connection, class_id: u8) -> rusqlite::Result<(f32, f32)> {
+fn load_class_stats(conn: &Connection, class_id: u8) -> rusqlite::Result<(f32, f32, u32)> {
     conn.query_row(
-        "SELECT AttackPowerPerStrength, AttackPowerPerAgility FROM chr_classes WHERE ID = ?1",
+        "SELECT AttackPowerPerStrength, AttackPowerPerAgility, PrimaryStatPriority
+         FROM chr_classes WHERE ID = ?1",
         [class_id],
-        |r| Ok((int(r, 0)? as f32, int(r, 1)? as f32)),
+        |r| Ok((int(r, 0)? as f32, int(r, 1)? as f32, uint(r, 2)?)),
     )
 }
 
