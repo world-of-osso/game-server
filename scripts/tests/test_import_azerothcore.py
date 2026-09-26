@@ -1282,12 +1282,12 @@ class LocalExpectedStatExtractTests(unittest.TestCase):
         default_levels = sorted(row["Lvl"] for row in self.stats.values() if row["ExpansionID"] == -2)
         self.assertEqual(default_levels, list(range(1, 134)))
         self.assertEqual((self.stats[1]["Lvl"], self.stats[1]["CreatureHealth"]), (1, 78.0))
-        self.assertEqual((self.stats[475]["Lvl"], self.stats[475]["CreatureHealth"]), (90, 141482.0))
+        self.assertEqual((self.stats[475]["Lvl"], self.stats[475]["CreatureHealth"]), (90, 141482.015625))
 
     def test_default_creature_health_grows_to_level_90_then_holds(self):
         by_level = {row["Lvl"]: row["CreatureHealth"] for row in self.stats.values() if row["ExpansionID"] == -2}
         self.assertTrue(all(by_level[level] < by_level[level + 1] for level in range(1, 90)))
-        self.assertEqual({by_level[level] for level in range(90, 134)}, {141482.0})
+        self.assertEqual({by_level[level] for level in range(90, 134)}, {141482.015625})
 
     def test_legion_level_73_has_two_rows(self):
         # DB2Manager::LoadStores keys _expectedStatsByLevel by (Lvl, ExpansionID) in ID order,

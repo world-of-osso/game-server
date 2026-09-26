@@ -631,19 +631,20 @@ fn tuned_creature_health_is_expected_stat_health_at_its_range_maximum() {
             (scaling.min_level, scaling.max_level, scaling.delta),
         )
     };
-    // ExpectedStat level 90 (ExpansionID -2, no Midnight row): 141,482.
+    // ExpectedStat level 90 (ExpansionID -2, no Midnight row): float32 141,482.015625,
+    // so ceil(× 1.5) is 212,224.
     assert_eq!(
         stats(STORMWIND_CITY_GUARD),
-        (212_223.0, 212_223.0, 90, (90, 90, 0))
+        (212_224.0, 212_224.0, 90, (90, 90, 0))
     );
     // ContentTuning 181 and 864 (levels 1-90), HealthModifier 25 and 8.
     assert_eq!(
         stats(STORMWIND_DUMMIES[0]),
-        (3_537_050.0, 3_537_050.0, 90, (1, 90, 0))
+        (3_537_051.0, 3_537_051.0, 90, (1, 90, 0))
     );
     assert_eq!(
         stats(STORMWIND_DUMMIES[1]),
-        (1_131_856.0, 1_131_856.0, 90, (1, 90, 0))
+        (1_131_857.0, 1_131_857.0, 90, (1, 90, 0))
     );
     // ExpectedStat level 30: 4,378.775.
     assert_eq!(

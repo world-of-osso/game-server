@@ -21,13 +21,13 @@ Tuned creatures (`ContentTuningID` != 0, 4,563 of the 4,824 templates spawned on
 
 ### Measured values (world.db 2026-09-26)
 
-- ExpectedStat -2 CreatureHealth: 78 at level 1, 377.34 at 10, 4,378.8 at 30 and 141,482 at 90. It stays at 141,482 from 90 to 133.
+- ExpectedStat -2 CreatureHealth: 78 at level 1, 377.34 at 10, 4,378.775 at 30 and 141,482.015625 at 90 (exact float32). It stays there from 90 to 133.
 - Legion (6) has two rows at level 73 (566 and 569); 569 is used.
 - Max health:
-  - Stormwind City Guard (CT 883, HealthModifier 1.5): 212,223.
+  - Stormwind City Guard (CT 883, HealthModifier 1.5): 212,224.
   - Hogger (CT 73, 3.0): 13,137.
   - Diseased Young Wolf (1.0): 4,379.
-  - Training Dummy (CT 181, 25) and PvP Training Dummy (CT 864, 8), both level 90: 3,537,050 and 1,131,856.
+  - Training Dummy (CT 181, 25) and PvP Training Dummy (CT 864, 8), both level 90: 3,537,051 and 1,131,857.
 - Hogger's swing: 553–829 against level 30+ players and 58–87 against a level 10 player.
 - Live, Riverpaw Outrunner (CT 73) hit a level 10 player for 35–49 and Hogger hit a level 40 player for 553–823 ([spec](../../specs/level-scaling.md)).
 - Only one ContentTuningXExpected row applies to a map 0 tuning, and no map 0 tuning uses Mythic+ season fields.

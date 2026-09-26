@@ -22,7 +22,7 @@ Health and damage
   - HealthScalingExpansion -1 means Midnight (11).
   - A level without a row for its expansion uses the ExpansionID -2 row.
   - Of two rows for the same (level, expansion), the later ID wins.
-  - Examples: a level 90 Stormwind City Guard has 212,223 health, a level 30 Hogger 13,137.
+  - Examples: a level 90 Stormwind City Guard has 212,224 health (ceil of float32 141,482.015625 × 1.5), a level 30 Hogger 13,137.
 - [x] Health is one pool per creature. Damage the creature takes is divided by (max health at the attacker's level ÷ its own max health) (Unit::DealDamage, Unit.cpp:829-830; GetHealthMultiplierForTarget, Creature.cpp:3181-3189).
   - This covers swings and spells.
   - A level 10 player's 10 damage removes 115 of Hogger's 13,137 health; a level 40 player's removes 10.
