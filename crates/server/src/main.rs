@@ -31,6 +31,7 @@ mod friends;
 mod game_objects;
 mod gold;
 mod grid_activity;
+mod ground;
 mod group;
 mod guild;
 mod guild_bank;
@@ -155,7 +156,7 @@ fn add_world_plugins(app: &mut App) {
     app.add_plugins(world_map::WorldMapPlugin)
         .add_plugins(networking::ServerNetworkPlugin)
         .add_plugins(world_data::WorldDataPlugin)
-        .add_plugins(terrain_height::TerrainPlugin)
+        .add_plugins(ground::GroundPlugin)
         .add_plugins(zones::ZonePlugin)
         .add_plugins(creature_ai::CreatureAiPlugin)
         .add_plugins(creature_aggro::CreatureAggroPlugin)

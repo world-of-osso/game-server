@@ -1,4 +1,18 @@
 use super::*;
+use crate::ground::GroundMap;
+
+/// Probe `map` at `pos` and clamp to that ground, as the gravity system does.
+fn probe_and_clamp(
+    map: &mut GroundMap,
+    pos: &mut Position,
+    vel: &mut VerticalVelocity,
+    fall_tracker: &mut FallTracker,
+    health: &mut Health,
+    dt: f32,
+) {
+    let probe = map.ground_at(Vec3::new(pos.x, pos.y, pos.z));
+    clamp_to_ground(probe, pos, vel, fall_tracker, health, dt);
+}
 
 #[test]
 fn speed_recalculates_when_aura_removed() {
@@ -311,7 +325,7 @@ fn component_last_changed<T: Component>(
 #[test]
 fn grounded_gravity_does_not_dirty_unchanged_player_state() {
     let mut app = setup_app_with_time();
-    app.insert_resource(crate::terrain_height::test_helpers::flat_terrain(
+    app.insert_resource(crate::terrain_height::test_helpers::flat_ground(
         100.0, 100.0, 50.0,
     ));
     let player = spawn_player(app.world_mut(), 90.0, 50.0, -90.0);
@@ -344,7 +358,7 @@ fn grounded_gravity_does_not_dirty_unchanged_player_state() {
 #[test]
 fn gravity_system_applies_real_falling_state_changes_only() {
     let mut app = setup_app_with_time();
-    app.insert_resource(crate::terrain_height::test_helpers::flat_terrain(
+    app.insert_resource(crate::terrain_height::test_helpers::flat_ground(
         100.0, 100.0, 50.0,
     ));
     let player = spawn_player(app.world_mut(), 90.0, 60.0, -90.0);
@@ -372,11 +386,11 @@ fn gravity_system_applies_real_falling_state_changes_only() {
 }
 
 #[test]
-fn terrain_clamps_below_ground() {
-    let map = crate::terrain_height::test_helpers::flat_terrain(100.0, 100.0, 50.0);
+fn terrain_within_step_reach_above_the_feet_lifts_the_player() {
+    let mut map = crate::terrain_height::test_helpers::flat_ground(100.0, 100.0, 50.0);
     let mut pos = Position {
         x: 90.0,
-        y: 30.0,
+        y: 48.6,
         z: -90.0,
     };
     let mut vel = VerticalVelocity::default();
@@ -385,8 +399,8 @@ fn terrain_clamps_below_ground() {
         current: 100.0,
         max: 100.0,
     };
-    clamp_to_terrain(
-        &map,
+    probe_and_clamp(
+        &mut map,
         &mut pos,
         &mut vel,
         &mut fall_tracker,
@@ -396,9 +410,37 @@ fn terrain_clamps_below_ground() {
     assert!((pos.y - 50.0).abs() < 0.01);
 }
 
+/// Shared ground rule: a surface higher than the feet plus the step reach is a
+/// ceiling, so a player 20 yd under the terrain falls instead of popping up.
+#[test]
+fn terrain_beyond_step_reach_above_the_feet_does_not_lift_the_player() {
+    let mut map = crate::terrain_height::test_helpers::flat_ground(100.0, 100.0, 50.0);
+    let mut pos = Position {
+        x: 90.0,
+        y: 30.0,
+        z: -90.0,
+    };
+    let dt = 0.05;
+    let mut vel = VerticalVelocity::default();
+    let mut fall_tracker = FallTracker::grounded(pos.y);
+    let mut health = Health {
+        current: 100.0,
+        max: 100.0,
+    };
+    probe_and_clamp(
+        &mut map,
+        &mut pos,
+        &mut vel,
+        &mut fall_tracker,
+        &mut health,
+        dt,
+    );
+    assert!((pos.y - (30.0 - GRAVITY * dt)).abs() < 0.01, "y {}", pos.y);
+}
+
 #[test]
 fn terrain_applies_gravity() {
-    let map = crate::terrain_height::test_helpers::flat_terrain(100.0, 100.0, 50.0);
+    let mut map = crate::terrain_height::test_helpers::flat_ground(100.0, 100.0, 50.0);
     let mut pos = Position {
         x: 90.0,
         y: 60.0,
@@ -411,7 +453,14 @@ fn terrain_applies_gravity() {
         current: 100.0,
         max: 100.0,
     };
-    clamp_to_terrain(&map, &mut pos, &mut vel, &mut fall_tracker, &mut health, dt);
+    probe_and_clamp(
+        &mut map,
+        &mut pos,
+        &mut vel,
+        &mut fall_tracker,
+        &mut health,
+        dt,
+    );
     let expected = 60.0 - GRAVITY * dt;
     assert!((pos.y - expected).abs() < 0.01);
 }
@@ -419,7 +468,7 @@ fn terrain_applies_gravity() {
 #[test]
 fn gravity_accumulates_until_landing() {
     let ground_y = 50.0;
-    let map = crate::terrain_height::test_helpers::flat_terrain(100.0, 100.0, ground_y);
+    let mut map = crate::terrain_height::test_helpers::flat_ground(100.0, 100.0, ground_y);
     let mut pos = Position {
         x: 90.0,
         y: 60.0,
@@ -433,17 +482,38 @@ fn gravity_accumulates_until_landing() {
     let mut vel = VerticalVelocity::default();
     let mut fall_tracker = FallTracker::grounded(pos.y);
 
-    clamp_to_terrain(&map, &mut pos, &mut vel, &mut fall_tracker, &mut health, dt);
+    probe_and_clamp(
+        &mut map,
+        &mut pos,
+        &mut vel,
+        &mut fall_tracker,
+        &mut health,
+        dt,
+    );
     let after_one = 60.0 - GRAVITY * dt;
     assert!((pos.y - after_one).abs() < 0.01);
 
-    clamp_to_terrain(&map, &mut pos, &mut vel, &mut fall_tracker, &mut health, dt);
+    probe_and_clamp(
+        &mut map,
+        &mut pos,
+        &mut vel,
+        &mut fall_tracker,
+        &mut health,
+        dt,
+    );
     let after_two = after_one - GRAVITY * dt;
     assert!((pos.y - after_two).abs() < 0.01);
     assert!(pos.y > ground_y, "still airborne");
 
     for _ in 0..200 {
-        clamp_to_terrain(&map, &mut pos, &mut vel, &mut fall_tracker, &mut health, dt);
+        probe_and_clamp(
+            &mut map,
+            &mut pos,
+            &mut vel,
+            &mut fall_tracker,
+            &mut health,
+            dt,
+        );
     }
     assert!(
         (pos.y - ground_y).abs() < 0.01,
@@ -451,13 +521,20 @@ fn gravity_accumulates_until_landing() {
         pos.y,
     );
 
-    clamp_to_terrain(&map, &mut pos, &mut vel, &mut fall_tracker, &mut health, dt);
+    probe_and_clamp(
+        &mut map,
+        &mut pos,
+        &mut vel,
+        &mut fall_tracker,
+        &mut health,
+        dt,
+    );
     assert!((pos.y - ground_y).abs() < 0.01);
 }
 
 #[test]
 fn terrain_on_ground_stays() {
-    let map = crate::terrain_height::test_helpers::flat_terrain(100.0, 100.0, 50.0);
+    let mut map = crate::terrain_height::test_helpers::flat_ground(100.0, 100.0, 50.0);
     let mut pos = Position {
         x: 90.0,
         y: 50.05,
@@ -469,8 +546,8 @@ fn terrain_on_ground_stays() {
         current: 100.0,
         max: 100.0,
     };
-    clamp_to_terrain(
-        &map,
+    probe_and_clamp(
+        &mut map,
         &mut pos,
         &mut vel,
         &mut fall_tracker,
@@ -483,12 +560,12 @@ fn terrain_on_ground_stays() {
 #[test]
 fn ground_snap_within_threshold() {
     let ground_y = 50.0;
-    let map = crate::terrain_height::test_helpers::flat_terrain(100.0, 100.0, ground_y);
+    let mut map = crate::terrain_height::test_helpers::flat_ground(100.0, 100.0, ground_y);
     let dt = 0.05;
 
     let mut below = Position {
         x: 90.0,
-        y: 48.0,
+        y: 48.6,
         z: -90.0,
     };
     let mut below_vel = VerticalVelocity::default();
@@ -497,8 +574,8 @@ fn ground_snap_within_threshold() {
         current: 100.0,
         max: 100.0,
     };
-    clamp_to_terrain(
-        &map,
+    probe_and_clamp(
+        &mut map,
         &mut below,
         &mut below_vel,
         &mut below_fall,
@@ -518,8 +595,8 @@ fn ground_snap_within_threshold() {
         current: 100.0,
         max: 100.0,
     };
-    clamp_to_terrain(
-        &map,
+    probe_and_clamp(
+        &mut map,
         &mut exact,
         &mut exact_vel,
         &mut exact_fall,
@@ -540,8 +617,8 @@ fn ground_snap_within_threshold() {
         current: 100.0,
         max: 100.0,
     };
-    clamp_to_terrain(
-        &map,
+    probe_and_clamp(
+        &mut map,
         &mut within,
         &mut within_vel,
         &mut within_fall,
@@ -562,8 +639,8 @@ fn ground_snap_within_threshold() {
         current: 100.0,
         max: 100.0,
     };
-    clamp_to_terrain(
-        &map,
+    probe_and_clamp(
+        &mut map,
         &mut above,
         &mut above_vel,
         &mut above_fall,
@@ -581,7 +658,7 @@ fn ground_snap_within_threshold() {
 #[test]
 fn jump_impulse_and_landing() {
     let ground_y = 50.0;
-    let map = crate::terrain_height::test_helpers::flat_terrain(100.0, 100.0, ground_y);
+    let mut map = crate::terrain_height::test_helpers::flat_ground(100.0, 100.0, ground_y);
     let mut pos = Position {
         x: 90.0,
         y: ground_y,
@@ -595,7 +672,14 @@ fn jump_impulse_and_landing() {
     };
     let dt = 0.05;
 
-    clamp_to_terrain(&map, &mut pos, &mut vel, &mut fall_tracker, &mut health, dt);
+    probe_and_clamp(
+        &mut map,
+        &mut pos,
+        &mut vel,
+        &mut fall_tracker,
+        &mut health,
+        dt,
+    );
     let expected_y = ground_y + shared::movement::JUMP_IMPULSE * dt;
     assert!(
         (pos.y - expected_y).abs() < 0.1,
@@ -613,7 +697,14 @@ fn jump_impulse_and_landing() {
 
     let mut peak_y = pos.y;
     for _ in 0..200 {
-        clamp_to_terrain(&map, &mut pos, &mut vel, &mut fall_tracker, &mut health, dt);
+        probe_and_clamp(
+            &mut map,
+            &mut pos,
+            &mut vel,
+            &mut fall_tracker,
+            &mut health,
+            dt,
+        );
         if pos.y > peak_y {
             peak_y = pos.y;
         }
@@ -634,7 +725,7 @@ fn jump_impulse_and_landing() {
 #[test]
 fn short_fall_does_not_deal_damage() {
     let ground_y = 50.0;
-    let map = crate::terrain_height::test_helpers::flat_terrain(100.0, 100.0, ground_y);
+    let mut map = crate::terrain_height::test_helpers::flat_ground(100.0, 100.0, ground_y);
     let mut pos = Position {
         x: 90.0,
         y: ground_y + shared::movement::FALL_DAMAGE_THRESHOLD - 0.1,
@@ -649,7 +740,14 @@ fn short_fall_does_not_deal_damage() {
     let dt = 0.05;
 
     for _ in 0..200 {
-        clamp_to_terrain(&map, &mut pos, &mut vel, &mut fall_tracker, &mut health, dt);
+        probe_and_clamp(
+            &mut map,
+            &mut pos,
+            &mut vel,
+            &mut fall_tracker,
+            &mut health,
+            dt,
+        );
         if pos.y <= ground_y + 0.01 && vel.0 == 0.0 {
             break;
         }
@@ -661,7 +759,7 @@ fn short_fall_does_not_deal_damage() {
 #[test]
 fn long_fall_deals_damage_on_landing_once() {
     let ground_y = 50.0;
-    let map = crate::terrain_height::test_helpers::flat_terrain(100.0, 100.0, ground_y);
+    let mut map = crate::terrain_height::test_helpers::flat_ground(100.0, 100.0, ground_y);
     let start_y = ground_y + 20.0;
     let mut pos = Position {
         x: 90.0,
@@ -678,7 +776,14 @@ fn long_fall_deals_damage_on_landing_once() {
     let dt = 0.05;
 
     for _ in 0..400 {
-        clamp_to_terrain(&map, &mut pos, &mut vel, &mut fall_tracker, &mut health, dt);
+        probe_and_clamp(
+            &mut map,
+            &mut pos,
+            &mut vel,
+            &mut fall_tracker,
+            &mut health,
+            dt,
+        );
         if pos.y <= ground_y + 0.01 && vel.0 == 0.0 {
             break;
         }
@@ -691,7 +796,14 @@ fn long_fall_deals_damage_on_landing_once() {
     );
 
     let landed_health = health.current;
-    clamp_to_terrain(&map, &mut pos, &mut vel, &mut fall_tracker, &mut health, dt);
+    probe_and_clamp(
+        &mut map,
+        &mut pos,
+        &mut vel,
+        &mut fall_tracker,
+        &mut health,
+        dt,
+    );
     assert_eq!(
         health.current, landed_health,
         "damage should not repeat after landing"
@@ -701,7 +813,7 @@ fn long_fall_deals_damage_on_landing_once() {
 #[test]
 fn lethal_fall_reduces_health_to_zero() {
     let ground_y = 50.0;
-    let map = crate::terrain_height::test_helpers::flat_terrain(100.0, 100.0, ground_y);
+    let mut map = crate::terrain_height::test_helpers::flat_ground(100.0, 100.0, ground_y);
     let mut pos = Position {
         x: 90.0,
         y: ground_y + 70.0,
@@ -716,7 +828,14 @@ fn lethal_fall_reduces_health_to_zero() {
     let dt = 0.05;
 
     for _ in 0..800 {
-        clamp_to_terrain(&map, &mut pos, &mut vel, &mut fall_tracker, &mut health, dt);
+        probe_and_clamp(
+            &mut map,
+            &mut pos,
+            &mut vel,
+            &mut fall_tracker,
+            &mut health,
+            dt,
+        );
         if pos.y <= ground_y + 0.01 && vel.0 == 0.0 {
             break;
         }
@@ -728,7 +847,7 @@ fn lethal_fall_reduces_health_to_zero() {
 #[test]
 fn a_player_the_server_flies_is_left_out_of_gravity() {
     let mut app = setup_app_with_time();
-    app.insert_resource(crate::terrain_height::test_helpers::flat_terrain(
+    app.insert_resource(crate::terrain_height::test_helpers::flat_ground(
         100.0, 100.0, 50.0,
     ));
     let player = spawn_player(app.world_mut(), 90.0, 60.0, -90.0);

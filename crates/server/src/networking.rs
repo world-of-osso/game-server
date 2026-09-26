@@ -12,10 +12,11 @@ use crate::auth::{
     self, Authenticated, ConnectedAccounts, InWorld, PendingAuth, PendingAuthTimer, SentTiles,
     clear_connected_account,
 };
+use crate::ground::{GroundMap, GroundProbe};
 use crate::interest::{InterestDirtyQueue, NetworkVisibility, mark_interest_position_changed};
 use crate::messaging;
 use crate::persistence::{self, ClientId, GameDatabase};
-use crate::terrain_height::{GRAVITY, GROUND_SNAP_THRESHOLD, TerrainHeightMap};
+use crate::terrain_height::{GRAVITY, GROUND_SNAP_THRESHOLD};
 
 #[path = "networking_movement.rs"]
 mod movement;
@@ -501,16 +502,16 @@ type GravityPlayerData<'w, 's> = Query<
     With<Player>,
 >;
 
-/// Apply gravity and terrain clamping to all players each tick.
+/// Apply gravity and ground clamping (terrain and WMO floors) to all players each tick.
 pub(crate) fn apply_terrain_gravity(
-    terrain: Option<Res<TerrainHeightMap>>,
+    ground: Option<ResMut<GroundMap>>,
     mut players: GravityPlayerData,
     time: Res<Time>,
     dirty_queue: Option<Res<InterestDirtyQueue>>,
     replication_dirty: Option<Res<ReplicationDirtyQueue>>,
     mut player_deaths: MessageWriter<crate::death::PlayerDeathTransition>,
 ) {
-    let Some(terrain) = terrain.as_ref().filter(|t| t.is_loaded()) else {
+    let Some(mut ground) = ground else {
         return;
     };
     let dt = time.delta_secs();
@@ -522,7 +523,7 @@ pub(crate) fn apply_terrain_gravity(
         }
         let previous_health = *health;
         let (next_pos, next_vert_vel, next_fall_tracker, next_health) = calculate_gravity_state(
-            terrain,
+            ground.ground_at(Vec3::new(pos.x, pos.y, pos.z)),
             *pos,
             *vert_vel,
             *fall_tracker,
@@ -573,7 +574,7 @@ fn apply_gravity_health_transition(
 }
 
 fn calculate_gravity_state(
-    terrain: &TerrainHeightMap,
+    ground: GroundProbe,
     mut pos: Position,
     mut vert_vel: VerticalVelocity,
     mut fall_tracker: FallTracker,
@@ -586,8 +587,8 @@ fn calculate_gravity_state(
         fall_tracker.peak_y = pos.y;
         fall_tracker.airborne = false;
     } else {
-        clamp_to_terrain(
-            terrain,
+        clamp_to_ground(
+            ground,
             &mut pos,
             &mut vert_vel,
             &mut fall_tracker,
@@ -598,17 +599,20 @@ fn calculate_gravity_state(
     (pos, vert_vel, fall_tracker, health)
 }
 
-/// Clamp a position (Bevy space) to terrain: apply vertical velocity and gravity.
-fn clamp_to_terrain(
-    terrain: &TerrainHeightMap,
+/// Clamp a position (Bevy space) to its ground: apply vertical velocity and gravity.
+fn clamp_to_ground(
+    ground: GroundProbe,
     pos: &mut Position,
     vert_vel: &mut VerticalVelocity,
     fall_tracker: &mut FallTracker,
     health: &mut Health,
     dt: f32,
 ) {
-    let Some(ground_y) = terrain.height_at_bevy(pos.x, pos.z) else {
-        return;
+    let ground_y = match ground {
+        GroundProbe::Supported(ground_y) => ground_y,
+        // Nothing within step reach: keep falling until a surface is under the feet.
+        GroundProbe::Unsupported => f32::NEG_INFINITY,
+        GroundProbe::Unloaded => return,
     };
 
     // Apply vertical velocity (jump impulse)

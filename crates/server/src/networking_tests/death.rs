@@ -12,7 +12,7 @@ fn lethal_fall_transitions_death_in_same_fixed_step() {
     app.add_plugins(bevy::MinimalPlugins);
     app.add_plugins(crate::death::DeathPlugin);
     app.add_systems(FixedUpdate, apply_terrain_gravity);
-    app.insert_resource(crate::terrain_height::test_helpers::flat_terrain(
+    app.insert_resource(crate::terrain_height::test_helpers::flat_ground(
         100.0, 100.0, ground_y,
     ));
     let player = app

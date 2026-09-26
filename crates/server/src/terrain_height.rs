@@ -1,5 +1,3 @@
-use bevy::prelude::*;
-
 /// Convert WoW coordinates (X-right, Y-forward, Z-up) to Bevy (X-right, Y-up, Z-back).
 pub(crate) fn wow_to_bevy(x: f32, y: f32, z: f32) -> (f32, f32, f32) {
     (x, z, -y)
@@ -37,8 +35,8 @@ struct ChunkHeight {
     water_level: Option<f32>,
 }
 
-/// Bevy resource holding parsed ADT terrain heightmaps for server-side collision.
-#[derive(Resource, Default)]
+/// Parsed ADT terrain heights of one map tile for server-side collision.
+#[derive(Default)]
 pub struct TerrainHeightMap {
     chunks: Vec<ChunkHeight>,
 }
@@ -80,11 +78,6 @@ impl TerrainHeightMap {
     pub fn water_height_at(&self, x: f32, y: f32) -> Option<f32> {
         let chunk = self.find_chunk(x, y)?;
         chunk.water_level
-    }
-
-    /// Returns true if any terrain data is loaded.
-    pub fn is_loaded(&self) -> bool {
-        !self.chunks.is_empty()
     }
 }
 
@@ -226,42 +219,19 @@ fn read_f32(data: &[u8], off: usize) -> Result<f32, String> {
     Ok(f32::from_le_bytes(bytes))
 }
 
-// -- Bevy plugin for loading terrain at startup --
-
-pub struct TerrainPlugin;
-
-impl Plugin for TerrainPlugin {
-    fn build(&self, app: &mut App) {
-        app.add_systems(Startup, load_terrain);
-    }
-}
-
-/// Attempt to load Elwynn Forest ADT at startup. Inserts TerrainHeightMap
-/// resource regardless (empty if file not found).
-fn load_terrain(mut commands: Commands) {
-    let path = "../game-engine/data/terrain/azeroth_32_48.adt";
-    match std::fs::read(path) {
-        Ok(data) => match parse_adt_heights(&data) {
-            Ok(map) => {
-                info!("Loaded terrain: {} chunks from {path}", map.chunks.len());
-                commands.insert_resource(map);
-            }
-            Err(e) => {
-                warn!("Failed to parse ADT {path}: {e}");
-                commands.insert_resource(TerrainHeightMap::default());
-            }
-        },
-        Err(e) => {
-            info!("No terrain file at {path}: {e}");
-            commands.insert_resource(TerrainHeightMap::default());
-        }
-    }
-}
-
 /// Test helpers exposed for use by other modules' tests.
 #[cfg(test)]
 pub mod test_helpers {
     use super::*;
+
+    /// Ground made of one flat terrain chunk (see [`flat_terrain`]).
+    pub fn flat_ground(corner_x: f32, corner_y: f32, height: f32) -> crate::ground::GroundMap {
+        let (bx, _, bz) = wow_to_bevy(corner_x - 1.0, corner_y - 1.0, 0.0);
+        crate::ground::GroundMap::with_terrain(
+            crate::ground::bevy_to_tile(bx, bz),
+            flat_terrain(corner_x, corner_y, height),
+        )
+    }
 
     /// Create a flat terrain chunk at the given corner with uniform height.
     pub fn flat_terrain(corner_x: f32, corner_y: f32, height: f32) -> TerrainHeightMap {

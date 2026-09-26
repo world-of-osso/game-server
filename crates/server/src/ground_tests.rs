@@ -1,0 +1,114 @@
+use std::path::PathBuf;
+use std::time::Duration;
+
+use bevy::ecs::system::{RunSystemOnce, SystemState};
+use shared::components::{Health, MovementControl, Player, Position, VerticalVelocity};
+
+use super::*;
+use crate::networking::FallTracker;
+use crate::persistence;
+
+/// Inside the Stormwind auction house (WoW -8820, 660): its floor is at 98.06
+/// over terrain at 94.65 (game-engine docs/wiki/investigations/stormwind-hilly-plaza.md).
+const AUCTION_HOUSE_WOW: (f32, f32) = (-8820.0, 660.0);
+const AUCTION_HOUSE_FLOOR: f32 = 98.06;
+
+fn client_data_dir() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../game-engine/data")
+}
+
+fn client_ground() -> GroundMap {
+    GroundMap::open(&client_data_dir()).expect("azeroth WDT in the client's data/terrain")
+}
+
+fn auction_house_feet(wow_z: f32) -> Vec3 {
+    let (x, y, z) =
+        crate::terrain_height::wow_to_bevy(AUCTION_HOUSE_WOW.0, AUCTION_HOUSE_WOW.1, wow_z);
+    Vec3::new(x, y, z)
+}
+
+#[test]
+fn auction_house_ground_is_its_floor_not_the_terrain_under_it() {
+    let mut ground = client_ground();
+
+    let on_floor = ground.ground_at(auction_house_feet(98.1));
+    let under_floor = ground.ground_at(auction_house_feet(94.7));
+
+    let GroundProbe::Supported(floor) = on_floor else {
+        panic!("no ground on the auction house floor: {on_floor:?}");
+    };
+    assert!((floor - AUCTION_HOUSE_FLOOR).abs() < 0.05, "floor {floor}");
+    let GroundProbe::Supported(terrain) = under_floor else {
+        panic!("no ground under the auction house floor: {under_floor:?}");
+    };
+    assert!((terrain - 94.65).abs() < 0.05, "terrain {terrain}");
+}
+
+/// `game-server-admin set-position` a little above the auction house floor: the
+/// server's gravity lands the player on the floor.
+#[test]
+fn set_position_over_the_auction_house_floor_lands_on_it() {
+    let db = persistence::temp_database();
+    let (character_id, _) =
+        persistence::create_character(&db, 1, "Mover", 1, 1).expect("character");
+    let game_db = persistence::GameDatabase { db };
+    let mut app = App::new();
+    app.add_plugins(bevy::MinimalPlugins)
+        .add_message::<crate::death::PlayerDeathTransition>()
+        .insert_resource(client_ground());
+    app.update();
+    let player = app
+        .world_mut()
+        .spawn((
+            Position {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            Health {
+                current: 100.0,
+                max: 100.0,
+            },
+            VerticalVelocity::default(),
+            FallTracker::grounded(0.0),
+            Player {
+                name: "Mover".into(),
+                race: 1,
+                class: 1,
+                appearance: Default::default(),
+            },
+            persistence::ClientId(character_id),
+        ))
+        .id();
+    let mut admin = SystemState::<
+        Query<(
+            Entity,
+            &mut Position,
+            &persistence::ClientId,
+            &mut MovementControl,
+        )>,
+    >::new(app.world_mut());
+    let mut query = admin.get_mut(app.world_mut()).unwrap();
+    crate::admin_handlers::handle_set_position(
+        &game_db,
+        &mut query,
+        None,
+        "Mover",
+        AUCTION_HOUSE_WOW.0,
+        AUCTION_HOUSE_WOW.1,
+        99.0,
+    );
+    admin.apply(app.world_mut());
+
+    for _ in 0..40 {
+        app.world_mut()
+            .resource_mut::<Time>()
+            .advance_by(Duration::from_millis(50));
+        app.world_mut()
+            .run_system_once(crate::networking::apply_terrain_gravity)
+            .unwrap();
+    }
+
+    let y = app.world().get::<Position>(player).unwrap().y;
+    assert!((y - AUCTION_HOUSE_FLOOR).abs() < 0.05, "player y {y}");
+}
