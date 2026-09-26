@@ -38,6 +38,10 @@ pub struct CreatureTemplate {
     /// `detection_range`: aggro radius against a same-level target.
     pub detection_range: f32,
     pub aggro_mode: AggroMode,
+    /// `CREATURE_FLAG_EXTRA_TRIGGER`: the template spawns with its invisible model.
+    pub trigger: bool,
+    /// `unit_flags` (TrinityCore `UnitFlags`), unless the spawn overrides them.
+    pub unit_flags: u32,
     pub models: Vec<CreatureModelInfo>,
     /// Retail ContentTuning scaling; `None` keeps the fixed `min_level` and
     /// creature_classlevelstats health.
@@ -56,8 +60,13 @@ pub struct TemplateTuning {
     pub stats: Arc<LevelStats>,
 }
 
+/// `creature_template_model` row.
 pub struct CreatureModelInfo {
     pub display_id: u32,
+    /// Weight of the model among the template's (`GetRandomValidModel`).
+    pub probability: f32,
+    /// `CreatureModelInfo::is_trigger`: the display's model file is an invisible trigger model.
+    pub is_trigger: bool,
 }
 
 pub struct CreatureSpawn {
@@ -73,6 +82,10 @@ pub struct CreatureSpawn {
     pub movement_type: u8,
     /// `creature.spawntimesecs`: respawn delay after the corpse decays.
     pub spawntimesecs: u32,
+    /// `creature.modelid`: the spawn's display instead of its template's.
+    pub display_id: Option<u32>,
+    /// `creature.unit_flags`: the spawn's unit flags instead of its template's.
+    pub unit_flags: Option<u32>,
 }
 
 pub struct WaypointPath {
@@ -279,6 +292,10 @@ fn load_class_level_base_hp(conn: &Connection) -> HashMap<(u8, u8), [u32; 3]> {
 
 const CREATURE_TYPE_CRITTER: i64 = 8;
 const CREATURE_FLAG_EXTRA_NO_XP: i64 = 0x40;
+const CREATURE_FLAG_EXTRA_TRIGGER: i64 = 0x80;
+/// TrinityCore `ObjectMgr::LoadCreatureModelInfo` `trigggerCreatureModelFileID`: the model files of
+/// invisible trigger displays.
+const TRIGGER_MODEL_FILE_DATA_IDS: &str = "124640, 124641, 124642, 343863, 439302";
 
 fn template_from_row(row: &Row, expected: &ExpectedStats) -> rusqlite::Result<CreatureTemplate> {
     let unit_class = row.get::<_, i64>(14)? as u8;
@@ -328,6 +345,8 @@ fn template_from_row(row: &Row, expected: &ExpectedStats) -> rusqlite::Result<Cr
             row.get::<_, i64>(17)? as u32,
             &row.get::<_, String>(13)?,
         ),
+        trigger: row.get::<_, i64>(11)? & CREATURE_FLAG_EXTRA_TRIGGER != 0,
+        unit_flags: row.get::<_, i64>(17)? as u32,
         models: Vec::new(),
         armor: expected.untuned_armor(row.get::<_, i64>(1)? as u8, unit_class, armor_modifier),
         tuning,
@@ -362,11 +381,14 @@ pub(crate) fn load_templates(
 
 fn load_models(conn: &Connection, templates: &mut HashMap<u32, CreatureTemplate>) {
     let mut stmt = conn
-        .prepare(
-            "SELECT CreatureID, CreatureDisplayID, DisplayScale, Probability
-             FROM content_creature_template_model
-             ORDER BY CreatureID, Idx",
-        )
+        .prepare(&format!(
+            "SELECT model.CreatureID, model.CreatureDisplayID, model.Probability,
+                    COALESCE(data.FileDataID IN ({TRIGGER_MODEL_FILE_DATA_IDS}), 0)
+             FROM content_creature_template_model model
+             LEFT JOIN creature_display_info display ON display.ID = model.CreatureDisplayID
+             LEFT JOIN creature_model_data data ON data.ID = display.ModelID
+             ORDER BY model.CreatureID, model.Idx"
+        ))
         .expect("Failed to prepare content_creature_template_model query");
 
     let rows = stmt
@@ -375,6 +397,8 @@ fn load_models(conn: &Connection, templates: &mut HashMap<u32, CreatureTemplate>
                 row.get::<_, i64>(0)? as u32,
                 CreatureModelInfo {
                     display_id: row.get::<_, i64>(1)? as u32,
+                    probability: row.get(2)?,
+                    is_trigger: row.get(3)?,
                 },
             ))
         })
@@ -401,7 +425,14 @@ fn spawn_from_row(row: &Row) -> rusqlite::Result<CreatureSpawn> {
         movement_type: row.get::<_, i64>(8)? as u8,
         orientation: row.get(9)?,
         spawntimesecs: row.get::<_, i64>(10)? as u32,
+        display_id: nonzero(row.get(11)?),
+        unit_flags: nonzero(row.get(12)?),
     })
+}
+
+/// 0 in a spawn override column means the template's value.
+fn nonzero(value: i64) -> Option<u32> {
+    (value != 0).then_some(value as u32)
 }
 
 fn load_spawns(conn: &Connection) -> Vec<CreatureSpawn> {
@@ -409,7 +440,7 @@ fn load_spawns(conn: &Connection) -> Vec<CreatureSpawn> {
     let mut stmt = conn
         .prepare(
             "SELECT guid, id1, map, zoneId, position_x, position_y, position_z,
-                    wander_distance, MovementType, orientation, spawntimesecs
+                    wander_distance, MovementType, orientation, spawntimesecs, modelid, unit_flags
              FROM content_creature creature
              WHERE NOT EXISTS (
                  SELECT 1 FROM content_game_event_creature event WHERE event.guid = creature.guid

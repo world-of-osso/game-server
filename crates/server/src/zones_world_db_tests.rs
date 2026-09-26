@@ -595,7 +595,14 @@ fn every_eastern_kingdoms_spawn_display_exists_in_retail() {
     let data = world_data();
     let absent: HashSet<u32> = data.spawns_by_map[&0]
         .iter()
-        .map(|&index| resolve_display_id(data, data.spawns[index].template_entry))
+        .flat_map(|&index| {
+            let spawn = &data.spawns[index];
+            let models = &data.templates[&spawn.template_entry].models;
+            spawn
+                .display_id
+                .into_iter()
+                .chain(models.iter().map(|model| model.display_id))
+        })
         .filter(|display| !retail.contains(display))
         .collect();
     assert!(
@@ -835,4 +842,96 @@ fn spawned_creatures_carry_expected_stat_armor() {
     );
     assert_eq!(world_data().armor_constants.at(10), Some(210.0));
     assert_eq!(world_data().armor_constants.at(30), Some(361.0));
+}
+
+/// Summon Enabler Stalker (53488): models 169 (Probability 0) and 16925 (the invisible
+/// stalker, model file 124642), `CREATURE_FLAG_EXTRA_TRIGGER`, `UNIT_FLAG_NOT_SELECTABLE`.
+/// TrinityCore guid 276318 in Stormwind has no modelid; Stockade guid 375809 has modelid 16925.
+const STALKER_STORMWIND: u32 = RETAIL + 276_318;
+const STALKER_STOCKADE: u32 = RETAIL + 375_809;
+const INVISIBLE_STALKER_DISPLAY: u32 = 16_925;
+
+/// ObjectMgr::ChooseDisplayId: a trigger takes its first invisible model; a spawn's modelid wins
+/// (ChooseCreatureFlags: the template's unit flags where the spawn sets none).
+#[test]
+#[ignore]
+fn summon_enabler_stalker_spawns_invisible_and_not_selectable() {
+    assert_eq!(spawn_of(STALKER_STORMWIND).display_id, None);
+    assert_eq!(
+        spawn_of(STALKER_STOCKADE).display_id,
+        Some(INVISIBLE_STALKER_DISPLAY)
+    );
+    let app = patrol_app(&[STALKER_STORMWIND, STALKER_STOCKADE]);
+    for guid in [STALKER_STORMWIND, STALKER_STOCKADE] {
+        let stalker = entity_of(&app, guid);
+        assert_eq!(
+            app.world().get::<ModelDisplay>(stalker),
+            Some(&ModelDisplay {
+                display_id: INVISIBLE_STALKER_DISPLAY
+            }),
+            "guid {guid}"
+        );
+        let flags = app.world().get::<UnitFlags>(stalker).expect("unit flags");
+        assert!(!flags.is_selectable(), "guid {guid}: {flags:?}");
+    }
+}
+
+/// How often each display of `entry` is chosen over 4000 spawns without a modelid (TDB1210
+/// gives every Stockade spawn one; summons and continent spawns mostly have none).
+fn display_counts(entry: u32) -> HashMap<u32, u32> {
+    let template = &world_data().templates[&entry];
+    let spawn = CreatureSpawn {
+        guid: 1,
+        template_entry: entry,
+        map: 34,
+        zone_id: 717,
+        position_x: 0.0,
+        position_y: 0.0,
+        position_z: 0.0,
+        orientation: 0.0,
+        wander_distance: 0.0,
+        movement_type: 0,
+        spawntimesecs: 120,
+        display_id: None,
+        unit_flags: None,
+    };
+    let spawn = &spawn;
+    let mut rng = <rand::rngs::StdRng as rand::SeedableRng>::seed_from_u64(34);
+    let mut counts = HashMap::new();
+    for _ in 0..4000 {
+        *counts
+            .entry(choose_display_id(template, spawn, &mut rng))
+            .or_default() += 1;
+    }
+    counts
+}
+
+/// CreatureTemplate::GetRandomValidModel: the Stockade Guard (46405) takes 2989, 2990 or 2992
+/// (Probability 1 each), never 2991 (Probability 0); Rifle Commander Coe (46417) always takes
+/// 2991, his only model with a weight, not his first (2989).
+#[test]
+#[ignore]
+fn stockade_models_are_chosen_by_probability() {
+    let guard = display_counts(46_405);
+    assert_eq!(
+        guard.keys().copied().collect::<HashSet<_>>(),
+        HashSet::from([2989, 2990, 2992]),
+        "{guard:?}"
+    );
+    for count in guard.values() {
+        assert!((1200..1470).contains(count), "{guard:?}");
+    }
+    assert_eq!(display_counts(46_417), HashMap::from([(2991, 4000)]));
+}
+
+/// SelectRandomWeightedContainerElement: with every weight 0 (Petty Criminal 46382: 35069, 35070)
+/// each model is equally likely.
+#[test]
+#[ignore]
+fn models_without_weights_are_chosen_uniformly() {
+    let criminal = display_counts(46_382);
+    assert_eq!(criminal.len(), 2, "{criminal:?}");
+    for display in [35069, 35070] {
+        assert!((1850..2150).contains(&criminal[&display]), "{criminal:?}");
+    }
 }
