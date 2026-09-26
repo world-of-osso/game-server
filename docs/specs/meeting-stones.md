@@ -24,3 +24,7 @@ Summoning a party member at a meeting stone, following TrinityCore (`GameObject:
 ## Gaps
 - The server hosts map 0 only: stones on other maps (12 on Kalimdor, map 1) do not spawn and no summon crosses maps. Map transfer is the next phase.
 - The ritual's `animSpell` (32783 Arcane Channeling) is not cast on helpers.
+- Players carry no `Zone`, so `SummonRequest.zone_id` is 0 and the client names the area "Unknown".
+
+## Live evidence (2026-09-26)
+Own server :5080 with three game-engine clients at Blackrock Mountain stone 179584 (ContentTuning 201, level 30): stone use opened portal 179944 after the 5 s cast (`Spell 59782: ritual 179944 … opened`), the second member's click sent the offer, and the accept moved the target 88 yd to the summoner (`… accepted a summon`). Details in game-engine `docs/specs/meeting-stones.md`.
