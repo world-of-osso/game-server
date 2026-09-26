@@ -58,6 +58,7 @@ World creatures attack players: hostile creatures aggro players that come near, 
 - `crates/server/src/creature_aggro_tests.rs` — aggro radius formula, `AggroMode` from flags, hostile spider aggroes/chases/hits, level-scaled radius, nearest player first, dead/ghost/flying ignored, neutral boar fights back only when hit (threat = damage), hostile civilian fights back only when hit, training dummy never fights, 110%/130% threat swap, target death evades home at full health, leash evade stops attackers and ignores damage while evading, killed creature forgets its fight, Fireball threat 388 on a neutral creature, Silence engages without damage.
 - `crates/server/src/zones_world_db_tests.rs` `world_spawns_aggro_by_template_hostile_attack_civilian_and_dummy_do_not` (`--ignored`, real world.db) — Riverpaw Outrunner 80474 and Forest Spider 79883 aggro and hit a level 5 Human 4 yd away; Kobold Vermin 79992 (civilian) and Heroic Training Dummy 48325 do not.
 - `crates/server/src/creature_ai_tests/` — chase reach and run speed, leash evade, return-to-spawn run speed.
+- Live 2-process proof (2026-09-25, `game-server/data/diagnostics/aggro-20260925/`, `live-proof.sh`): server on :5071 in a private-/tmp bwrap, `game-cli chat listen` puts a level 1 Human 4 yd from Forest Spider spawn 79883 without targeting anything; `game-server-admin combat-log 25` shows 10 MeleeDamage events (10 each, every 2.05 s) from an NPC entity to the player entity. The attacker entity was not resolved to a name.
 
 ## Known gaps (current cycle)
 
