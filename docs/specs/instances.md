@@ -57,3 +57,9 @@ Own server :5081 (copied world.db/game.redb), headless clients Fixshout, Fixpart
 - Fixshout and Fixpartner (one group) entered copy 2 and see each other; Stormlight (solo) got copy 3 at the same coordinates and sees neither (`06`, `07`, `instances-group-vs-solo.log`).
 - After a server restart Fixshout, saved in map 34, logged into a new copy 1 at the entrance; `kill` then release teleported it to graveyard 1854 in Stormwind, alive at 2120/4240 (`08`-`10`).
 - Stormlight, offered a summon at the Westfall stone and moved to Ratchet (Kalimdor), accepted there and was transferred to Fixshout in Westfall (`11`-`13`, `summon-kalimdor-to-westfall.log`). The reverse direction (Tanaris stone, target moved to Stormwind) was not completed live: the headless UI script could not time its click around the loading screen.
+
+## Live evidence, Stockade content (2026-09-26)
+Own server :5083 (worktree world.db = `world-stockade-20260926.db`, copied game.redb), headless clients on `npc_appearance-retail-stockade-20260926.sqlite`; screenshots, scene dumps and logs in game-engine `data/diagnostics/stockadecontent-20260926/`:
+- Fixshout entered copy 1: Stockade guards, prisoners, Petty Criminals, Riverpaw gnolls, Rumbling Earth and Hogger render with their Retail models and customizations; 0 client panics in three client runs (`01`-`05`, `scene-05-hogger.txt`).
+- Fixshout killed a Petty Criminal (no loot table in TDB1210) and Bruegal Ironknuckle, whose corpse opened 2s 69c and Jimmied Handcuffs (3228) (`06`-`08`).
+- Stormlight (solo) got copy 2, where Bruegal was alive while dead in copy 1 (`09`, `scene-09-copy2.txt`).
