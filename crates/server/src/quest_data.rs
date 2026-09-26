@@ -26,6 +26,19 @@ pub(crate) struct ObjectiveDef {
     pub text: String,
 }
 
+/// `RewardMoneyDifficulty`, `RewardMoneyMultiplier` and the quest's
+/// ContentTuning levels (`content_tuning_level`, DB2Manager::GetContentTuningData).
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
+pub(crate) struct QuestMoneyScaling {
+    pub difficulty: u8,
+    pub multiplier: f32,
+    /// `MinLevelWithDelta`; 0 when the ContentTuning row is missing.
+    pub min_level: u8,
+    pub max_level: u8,
+    /// ContentTuningEntry::GetScalingFactionGroup: 3 Alliance, 5 Horde, 0 both.
+    pub faction_group: u32,
+}
+
 #[derive(Debug, Clone, Default, PartialEq)]
 pub(crate) struct QuestTemplate {
     pub id: u32,
@@ -45,8 +58,11 @@ pub(crate) struct QuestTemplate {
     pub allowable_classes: u32,
     pub exclusive_group: i32,
     pub reward_next_quest: u32,
-    /// Copper; negative = the quest costs money to turn in.
+    /// Copper; negative = the quest costs money to turn in. TrinityCore quests
+    /// store `Quest::MaxMoneyValue` here and pay `money_scaling` per player.
     pub reward_money: i32,
+    /// TrinityCore quests (`ContentTuningID` != 0): `Quest::MoneyValue` inputs.
+    pub money_scaling: Option<QuestMoneyScaling>,
     /// `RewardXPDifficulty`: column of the QuestXP DB2 row.
     pub reward_xp_difficulty: u8,
     /// Item given on accept (`StartItem` x `ProvidedItemCount`).
@@ -105,6 +121,8 @@ pub(crate) struct QuestDb {
     /// Items quests reward, require or provide.
     pub items: HashMap<u32, QuestItemInfo>,
     pub pois: HashMap<u32, Vec<QuestPoiSnapshot>>,
+    /// `quest_money_reward`: copper by quest level (ID) and RewardMoneyDifficulty.
+    pub money_rewards: HashMap<u8, [u32; 10]>,
 }
 
 impl QuestDb {
@@ -118,8 +136,10 @@ impl QuestDb {
 
 const QUEST_QUERY: &str = "SELECT q.*, a.MaxLevel, a.AllowableClasses, a.PrevQuestID, \
      a.NextQuestID, a.ExclusiveGroup, a.ProvidedItemCount, a.SpecialFlags, \
-     o.RewardText, r.CompletionText \
+     o.RewardText, r.CompletionText, t.MinLevelWithDelta AS TuningMinLevelWithDelta, \
+     t.maxlevel AS TuningMaxLevel, t.ScalingFactionGroup AS TuningScalingFactionGroup \
      FROM content_quest_template q \
+     LEFT JOIN content_tuning_level t ON t.ID = q.ContentTuningID \
      LEFT JOIN content_quest_template_addon a ON a.ID = q.ID \
      LEFT JOIN content_quest_offer_reward o ON o.ID = q.ID \
      LEFT JOIN content_quest_request_items r ON r.ID = q.ID";
@@ -216,6 +236,19 @@ fn quest_from_row(
         exclusive_group: int(row, "ExclusiveGroup")? as i32,
         reward_next_quest: int(row, "RewardNextQuest")? as u32,
         reward_money: int(row, "RewardMoney")? as i32,
+        money_scaling: (int(row, "ContentTuningID")? != 0)
+            .then(|| -> rusqlite::Result<QuestMoneyScaling> {
+                Ok(QuestMoneyScaling {
+                    difficulty: int(row, "RewardMoneyDifficulty")?.clamp(0, 255) as u8,
+                    multiplier: row
+                        .get::<_, Option<f64>>("RewardMoneyMultiplier")?
+                        .unwrap_or(1.0) as f32,
+                    min_level: int(row, "TuningMinLevelWithDelta")?.clamp(0, 255) as u8,
+                    max_level: int(row, "TuningMaxLevel")?.clamp(0, 255) as u8,
+                    faction_group: int(row, "TuningScalingFactionGroup")? as u32,
+                })
+            })
+            .transpose()?,
         reward_xp_difficulty: int(row, "RewardXPDifficulty")?.clamp(0, 255) as u8,
         start_item: int(row, "StartItem")? as u32,
         provided_item_count: int(row, "ProvidedItemCount")? as u32,
@@ -402,7 +435,24 @@ pub(crate) fn load_quest_db(path: &Path) -> rusqlite::Result<QuestDb> {
         .retain(|item_id, _| referenced.contains(item_id));
     db.items = names.items;
     db.pois = load_pois(&conn)?;
+    db.money_rewards = load_money_rewards(&conn)?;
     Ok(db)
+}
+
+fn load_money_rewards(conn: &Connection) -> rusqlite::Result<HashMap<u8, [u32; 10]>> {
+    let columns: Vec<String> = (0..10).map(|n| format!("Difficulty_{n}")).collect();
+    let mut statement = conn.prepare(&format!(
+        "SELECT ID, {} FROM quest_money_reward WHERE ID BETWEEN 0 AND 255",
+        columns.join(", ")
+    ))?;
+    let rows = statement.query_map([], |row| {
+        let mut money = [0; 10];
+        for (index, value) in money.iter_mut().enumerate() {
+            *value = row.get(index + 1)?;
+        }
+        Ok((row.get::<_, u8>(0)?, money))
+    })?;
+    rows.collect()
 }
 
 pub struct QuestDataPlugin;

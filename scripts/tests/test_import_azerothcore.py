@@ -416,6 +416,12 @@ class CreatureEventImportTests(unittest.TestCase):
                 "tuned templates take TrinityCore's difficulty-0 scaling expansion, level delta and modifiers",
             )
             self.assertEqual(
+                conn.execute("SELECT ID, minlevel, maxlevel, MinLevelWithDelta, ScalingFactionGroup"
+                             " FROM content_tuning_level WHERE ID IN (6, 864) ORDER BY ID").fetchall(),
+                [(6, 5, 30, 5, 0), (864, 1, 90, 1, 0)],
+                "GetContentTuningData levels are kept for the server",
+            )
+            self.assertEqual(
                 conn.execute("SELECT guid, path_id, mount, bytes2, auras FROM content_creature_addon ORDER BY guid").fetchall(),
                 [(120000, 0, 2410, 1, "1244"), (offset + 311, 3110, 0, 1 | 1 << 8, "130")],
             )
@@ -1169,6 +1175,14 @@ class ContentTuningLevelTests(unittest.TestCase):
 
     def test_levels_clamp_to_one(self):
         self.assertEqual(retail_content.content_tuning_levels(0, 0, 0, 0), (1, 1))
+
+    def test_quest_min_level_adds_target_level_delta_before_clamping(self):
+        self.assertEqual(retail_content.quest_min_level(5, 0, 2), 7)
+        self.assertEqual(retail_content.quest_min_level(0, 1, -3), 1)
+        self.assertEqual(retail_content.quest_min_level(0, 2, 0), 90)
+
+    def test_horde_and_alliance_flags_give_scaling_faction_groups(self):
+        self.assertEqual([retail_content.scaling_faction_group(f) for f in (0, 0x08, 0x10, 0x18)], [0, 5, 3, 5])
 
 
 import db2_casc  # noqa: E402

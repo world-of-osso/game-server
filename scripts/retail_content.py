@@ -74,12 +74,34 @@ def health_expansion(health_scaling_expansion):
     return min(health_scaling_expansion, WRATH_HEALTH_EXPANSIONS)
 
 
+def quest_min_level(min_level, min_type, target_level_delta):
+    """GetContentTuningData's MinLevelWithDelta: clamp(MinLevel + TargetLevelDelta, 1, MAX_LEVEL),
+    before MinLevel itself is clamped (DB2Stores.cpp:2233-2235)."""
+    return min(max(min_level + CALC_TYPE_ADJUSTMENT[min_type] + target_level_delta, 1), MAX_LEVEL)
+
+
+# ContentTuningFlag Horde 0x08 / Alliance 0x10 (DBCEnums.h:452-457) give
+# ContentTuningEntry::GetScalingFactionGroup 5 / 3 (DB2Structure.h:1008-1018).
+def scaling_faction_group(flags):
+    if flags & 0x08:
+        return 5
+    if flags & 0x10:
+        return 3
+    return 0
+
+
 def create_level_table(conn):
-    """temp.tuning_level: the level range of every ContentTuning row."""
-    conn.execute("CREATE TEMP TABLE tuning_level (ID INTEGER PRIMARY KEY, minlevel INTEGER, maxlevel INTEGER)")
-    conn.executemany("INSERT INTO temp.tuning_level VALUES (?, ?, ?)", (
-        (tuning, *content_tuning_levels(*values)) for tuning, *values in conn.execute(
-            "SELECT ID, MinLevelSquish, MaxLevelSquish, MinLevelScalingOffset, MaxLevelScalingOffset FROM content_tuning")))
+    """content_tuning_level: GetContentTuningData levels of every ContentTuning row, read by
+    this import (creature and quest levels) and by the server (Player::GetQuestLevel)."""
+    conn.execute("DROP TABLE IF EXISTS content_tuning_level")
+    conn.execute("""CREATE TABLE content_tuning_level (ID INTEGER PRIMARY KEY, minlevel INTEGER, maxlevel INTEGER,
+        MinLevelWithDelta INTEGER, ScalingFactionGroup INTEGER)""")
+    conn.executemany("INSERT INTO content_tuning_level VALUES (?, ?, ?, ?, ?)", (
+        (tuning, *content_tuning_levels(low, high, low_type, high_type), quest_min_level(low, low_type, delta),
+         scaling_faction_group(flags))
+        for tuning, low, high, low_type, high_type, delta, flags in conn.execute(
+            """SELECT ID, MinLevelSquish, MaxLevelSquish, MinLevelScalingOffset, MaxLevelScalingOffset,
+                AllowedMinOffset, Flags FROM content_tuning""")))
 
 
 def build_templates(conn, report):
@@ -109,7 +131,7 @@ def build_templates(conn, report):
             d.ContentTuningID, d.HealthScalingExpansion, d.LevelScalingDeltaMin, d.LevelScalingDeltaMax
         FROM tdb_creature_template t
         JOIN temp.tdb_difficulty d ON d.Entry = t.entry
-        LEFT JOIN temp.tuning_level l ON l.ID = d.ContentTuningID
+        LEFT JOIN content_tuning_level l ON l.ID = d.ContentTuningID
         WHERE t.entry IN (SELECT id1 FROM content_creature WHERE guid IN (SELECT guid FROM temp.retail_spawn))
           AND t.entry NOT IN (SELECT entry FROM creature_template)""")
     # AzerothCore templates TrinityCore also tunes take its ContentTuning range, and the
@@ -118,12 +140,12 @@ def build_templates(conn, report):
             minlevel = l.minlevel, maxlevel = l.maxlevel, HealthScalingExpansion = d.HealthScalingExpansion,
             LevelScalingDeltaMin = d.LevelScalingDeltaMin, LevelScalingDeltaMax = d.LevelScalingDeltaMax,
             HealthModifier = d.HealthModifier, ArmorModifier = d.ArmorModifier, DamageModifier = d.DamageModifier
-        FROM temp.tdb_difficulty d JOIN temp.tuning_level l ON l.ID = d.ContentTuningID
+        FROM temp.tdb_difficulty d JOIN content_tuning_level l ON l.ID = d.ContentTuningID
         WHERE d.Entry = content_creature_template.entry
           AND content_creature_template.entry IN (SELECT entry FROM creature_template)""")
     for entry, tuning in conn.execute("""SELECT t.entry, d.ContentTuningID FROM content_creature_template t
             JOIN temp.tdb_difficulty d ON d.Entry = t.entry
-            WHERE d.ContentTuningID NOT IN (SELECT ID FROM temp.tuning_level) ORDER BY t.entry""").fetchall():
+            WHERE d.ContentTuningID NOT IN (SELECT ID FROM content_tuning_level) ORDER BY t.entry""").fetchall():
         fixed = "level 1" if not conn.execute("SELECT 1 FROM creature_template WHERE entry = ?", (entry,)).fetchone() \
             else "AzerothCore levels kept"
         report.drop("tdb_creature_template_difficulty", f"Entry={entry}", tuning, f"ContentTuningID not in ContentTuning; {fixed}")
@@ -541,16 +563,15 @@ def insert_quest_templates(conn, quests, report):
     # QuestLevel -1 scales to the player (Quest::XPValue); MinLevel is ContentTuning's minimum.
     # RewardMoney is TrinityCore's Quest::MaxMoneyValue (QuestDef.cpp:486-494):
     # QuestMoneyReward[ContentTuning MaxLevel].Difficulty[RewardMoneyDifficulty] ×
-    # RewardMoneyMultiplier, truncated to uint32; 0 without ContentTuning. The money a player
-    # gets, Quest::MoneyValue (QuestDef.cpp:478-484), indexes Player::GetQuestLevel instead
-    # (Player.cpp:14339-14353), which needs per-player scaling; RewardMoneyDifficulty,
-    # RewardMoneyMultiplier, ContentTuningID and quest_money_reward are carried for it.
+    # RewardMoneyMultiplier, truncated to uint32; 0 without ContentTuning. The server pays each
+    # player Quest::MoneyValue (quest_rules.rs quest_money) from RewardMoneyDifficulty,
+    # RewardMoneyMultiplier, ContentTuningID, content_tuning_level and quest_money_reward.
     difficulty = "CASE q.RewardMoneyDifficulty " + " ".join(
         f"WHEN {n} THEN m.Difficulty_{n}" for n in range(QUEST_MONEY_DIFFICULTIES)) + " ELSE 0 END"
     conn.execute(f"""INSERT INTO content_quest_template ({targets}, QuestLevel, MinLevel, RewardMoney)
         SELECT {sources}, -1, COALESCE(l.minlevel, 0),
             COALESCE(CAST({difficulty} * q.RewardMoneyMultiplier AS INTEGER), 0)
-        FROM tdb_quest_template q LEFT JOIN temp.tuning_level l ON l.ID = q.ContentTuningID
+        FROM tdb_quest_template q LEFT JOIN content_tuning_level l ON l.ID = q.ContentTuningID
         LEFT JOIN quest_money_reward m ON m.ID = l.maxlevel WHERE q.ID IN ({quests})""")
     fill_rewards_from_azerothcore(conn, quests, report)
     for column in REWARD_ITEM_COLUMNS:

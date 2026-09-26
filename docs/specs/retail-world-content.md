@@ -64,8 +64,14 @@ Quests
   - Where the TrinityCore group is all zero and the AzerothCore quest with the same ID has one, AzerothCore's mapped group fills it: 31 reward-item groups and 97 choice groups, each in content-dropped.csv.
   - TrinityCore sniffed choice rewards for only 1 of 3,212 Retail quests.
 - [x] `RewardMoney` is TrinityCore's `Quest::MaxMoneyValue` (QuestDef.cpp:486-494 at a352b1fa): `QuestMoneyReward[ContentTuning MaxLevel].Difficulty[RewardMoneyDifficulty] × RewardMoneyMultiplier`, truncated. It is 0 without a ContentTuning.
-  - 2,696 of 6,078 TrinityCore quests pay money. For example, Beating Them Back! pays 2000.
+  - 2,696 of 6,078 TrinityCore quests have MaxMoneyValue money. For example, Beating Them Back! has 2000.
   - `RewardMoneyDifficulty`, `RewardMoneyMultiplier` and `ContentTuningID` are carried.
+- [x] A TrinityCore quest (`ContentTuningID` != 0) pays and offers each player `Quest::MoneyValue` (QuestDef.cpp:478-484): `QuestMoneyReward[Player::GetQuestLevel].Difficulty[RewardMoneyDifficulty] × RewardMoneyMultiplier`, truncated, or 0 without a row.
+  - `GetQuestLevel` (Player.cpp:14339-14353) is `min(player level, MaxLevel)` once the player is at least `GetQuestMinLevel`, and that minimum otherwise.
+  - `GetQuestMinLevel` (Player.cpp:14315-14329) is `MinLevelWithDelta`. For a player outside the ContentTuning's scaling faction group (Flags Horde 0x08 → 5, Alliance 0x10 → 3) it is `MaxLevel`.
+  - Examples: Beating Them Back! pays 55 at level 1 and 2000 from level 10.
+  - AzerothCore quests pay their fixed `RewardMoney`.
+  - `content_tuning_level` holds the GetContentTuningData levels (`minlevel`, `maxlevel`, `MinLevelWithDelta`, `ScalingFactionGroup`) for the import and the server.
 - [x] QuestMoneyReward comes from local CASC: FDID 1139047, layout 01D6219A, with a pallet-array field and a non-inline ID list. It is imported as `quest_money_reward` (130 rows). Level 10 gives 0/200/500/1000/1500/2000/4000/6000/8000/0.
 - [x] Addon, offer/request text and POIs come from TrinityCore where it has rows, AzerothCore's otherwise.
   - A POI keeps its lowest `BlobIndex`.
@@ -106,20 +112,15 @@ Server behaviour on Retail content
   - TrinityCore-only template;
   - patrol, escort, mount, aura, dummy, health and aggro on Retail guids.
 - `crates/server/src/startup_tests.rs` `world_db_*`: content tables present, Hogger at 1-30, no orphan spawns.
-- `crates/server/src/quest_rules_tests.rs`, `quest_tests.rs`: Retail Northshire chain and Riverpaw Gnoll Bounty.
+- `crates/server/src/quest_rules_tests.rs`, `quest_tests.rs`: Retail Northshire chain and Riverpaw Gnoll Bounty; quest money per player level (`beating_them_back_pays_quest_money_for_the_players_level`, faction group, minimum level, AzerothCore fixed money); Beating Them Back! turned in at level 1 pays 55.
+- `scripts/tests/test_import_azerothcore.py` `ContentTuningLevelTests`: `MinLevelWithDelta`, scaling faction group.
 - `crates/server/src/merchant_tests.rs`, `npc_interaction_tests.rs`, `game_objects_tests.rs`, `bank_test_harness.rs`: Retail vendor lists, gossip menus, vaults (205107) and mailboxes (20209585).
 
 ## Known gaps (current cycle)
 
-- [ ] **Levels and health.** The server spawns creatures at `minlevel`; per-player scaling within the ContentTuning range is a separate task.
-  - `creature_classlevelstats` has real base HP only up to level 83, so a level-90 Stormwind City Guard has 2 HP.
-  - Retail health comes from ExpectedStat, which is not imported.
+- [x] **Levels and health** are per-player ContentTuning scaling with ExpectedStat health ([level-scaling](level-scaling.md)).
 - [ ] **Quest levels.** `QuestLevel` -1 scales quests to the player without clamping to ContentTuning's range.
-- [ ] **Per-player quest money.** TrinityCore pays `Quest::MoneyValue` (QuestDef.cpp:478-484). That indexes QuestMoneyReward by `Player::GetQuestLevel` (Player.cpp:14339-14353):
-  - `min(player level, ContentTuning MaxLevel)` once the player level is at least `GetQuestMinLevel`;
-  - `GetQuestMinLevel` is `MinLevelWithDelta`, or MaxLevel for the other faction group (Player.cpp:14315-14329).
-  - Otherwise it uses that minimum.
-  - The server pays the stored MaxMoneyValue, which overpays below the cap (Beating Them Back! is 55 at level 1 in Retail and 2000 here) until per-player scaling computes MoneyValue from the carried columns.
+- [ ] **Quest money at the level cap.** Retail pays `RewardMoneyMaxLevel` instead of XP at the cap; it is not implemented, so a capped player gets MoneyValue and no XP.
 - [ ] **Unmapped quest data.**
   - 260 objectives of other types (talk-to, area trigger, criteria tree, …) are reported, not tracked.
   - `RewardMoneyMultiplier`, `RewardDisplaySpell2-3`, reputation requirements (addon only) and TrinityCore's 64-bit `AllowableRaces` (truncated to 32 bits) are not mapped.

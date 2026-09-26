@@ -292,3 +292,7 @@ Created `systems/quests.md` (quest data, rules, runtime) and `specs/quests.md`; 
 ## [2026-09-26] create | Level scaling
 
 [[level-scaling]]: tuned creatures spawn at their ContentTuning maximum with ExpectedStat health, and are fought at each unit's clamped level through TrinityCore's damage and health multipliers. XP and aggro use the scaled level, and the target frame shows it with a difficulty colour. [[world-data]]: expected_stat tables. [[experience]], [[creature-aggro]] and [[combat]] link it.
+
+## [2026-09-26] update | Quest money per player
+
+[[content-import]]: content_tuning_level keeps GetContentTuningData levels (MinLevelWithDelta, ScalingFactionGroup) for the server. TrinityCore quests now pay and offer Quest::MoneyValue at the player's quest level, not MaxMoneyValue: Beating Them Back! pays 55 at level 1 ([retail-world-content](../specs/retail-world-content.md)).

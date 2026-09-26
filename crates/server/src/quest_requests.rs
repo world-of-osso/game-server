@@ -27,7 +27,7 @@ use crate::persistence::quest_store::{
 use crate::persistence::{self, InventoryData};
 use crate::quest_data::{QuestDb, QuestTemplate};
 use crate::quest_rules::{
-    QuestPlayer, can_take, ends, giver_quest_list, is_complete_in_log, starts,
+    QuestPlayer, can_take, ends, giver_quest_list, is_complete_in_log, quest_money, starts,
 };
 use crate::quest_view::{
     bag_count, grant_item, quest_details, quest_rewards, remove_items, required_items,
@@ -313,7 +313,12 @@ impl<'a> QuestSession<'a, '_, '_> {
 
     fn query(&mut self, npc: u64, quest_id: u32) -> QuestResult {
         self.offerable(npc, quest_id, &load_quest_log(self.db, self.character()))?;
-        let details = quest_details(self.quests, self.quest(quest_id)?, npc);
+        let details = quest_details(
+            self.quests,
+            self.quest(quest_id)?,
+            npc,
+            self.requester.player,
+        );
         send(
             &mut self.io.senders.details,
             self.requester.connection,
@@ -381,7 +386,7 @@ impl<'a> QuestSession<'a, '_, '_> {
                 quest_id,
                 title: quest.title.clone(),
                 reward_text: quest.offer_reward_text.clone(),
-                rewards: quest_rewards(self.quests, quest),
+                rewards: quest_rewards(self.quests, quest, self.requester.player),
             };
             send(&mut self.io.senders.offer_reward, connection, offer);
         } else {
@@ -422,9 +427,8 @@ impl<'a> QuestSession<'a, '_, '_> {
             return Err(failed(quest_id, QuestFailedReason::ObjectivesIncomplete));
         }
         let items = self.granted_items(quest, choice_index)?;
-        let gold = inventory
-            .gold
-            .checked_add_signed(i64::from(quest.reward_money));
+        let money = quest_money(self.quests, quest, self.requester.player);
+        let gold = inventory.gold.checked_add_signed(i64::from(money));
         let Some(gold) = gold else {
             return Err(failed(quest_id, QuestFailedReason::NotEnoughMoney));
         };
@@ -436,7 +440,7 @@ impl<'a> QuestSession<'a, '_, '_> {
             grant_item(&mut inventory, self.db, self.quests, item_id, count);
         }
         inventory.gold = gold;
-        self.save_inventory(&inventory, quest.reward_money != 0);
+        self.save_inventory(&inventory, money != 0);
         log.remove(quest_id);
         log.mark_rewarded(quest_id);
         self.save_log(&log);
@@ -453,7 +457,7 @@ impl<'a> QuestSession<'a, '_, '_> {
         }
         let complete = QuestGiverQuestComplete {
             quest_id,
-            money: quest.reward_money.max(0) as u32,
+            money: money.max(0) as u32,
             items: items
                 .iter()
                 .map(|&(item_id, count)| QuestRewardItem {
@@ -482,7 +486,7 @@ impl<'a> QuestSession<'a, '_, '_> {
         let Ok(quest) = self.quest(next_quest) else {
             return;
         };
-        let details = quest_details(self.quests, quest, npc);
+        let details = quest_details(self.quests, quest, npc, self.requester.player);
         send(
             &mut self.io.senders.details,
             self.requester.connection,

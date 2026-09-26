@@ -21,6 +21,17 @@ pub(crate) fn faction_for_race(race: u8) -> u8 {
     }
 }
 
+/// `FactionTemplate.FactionGroup` of each race's `ChrRaces.FactionID` template
+/// (build 12.1.0.69933): 3 (player | Alliance) for Alliance races, 5 (player |
+/// Horde) for Horde races, 1 (player) for neutral Pandaren.
+pub(crate) fn faction_group_for_race(race: u8) -> u32 {
+    match faction_for_race(race) {
+        1 => 3,
+        2 => 5,
+        _ => 1,
+    }
+}
+
 /// `ChrRaces.FactionID` (a FactionTemplate ID) of each character race,
 /// build 12.1.0.69933. 0 = unknown race (no template: neutral to everyone).
 pub(crate) fn faction_template_for_race(race: u8) -> u32 {

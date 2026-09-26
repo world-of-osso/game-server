@@ -7,7 +7,7 @@ use shared::protocol::{
 };
 
 use crate::persistence::quest_store::{ActiveQuestData, QuestLogData};
-use crate::quest_data::{QuestDb, QuestTemplate};
+use crate::quest_data::{QuestDb, QuestMoneyScaling, QuestTemplate};
 
 /// Quests this many levels below the player are trivial
 /// (`CONFIG_QUEST_LOW_LEVEL_HIDE_DIFF` default).
@@ -22,6 +22,39 @@ pub(crate) struct QuestPlayer {
     pub level: u8,
     pub race: u8,
     pub class: u8,
+}
+
+/// Player::GetQuestLevel (Player.cpp:14339-14353) of a TrinityCore quest: the
+/// player's level clamped to the quest's ContentTuning range. The minimum is
+/// GetQuestMinLevel (:14315-14329): `MinLevelWithDelta`, or the maximum for a
+/// player outside the quest's scaling faction group.
+fn tuned_quest_level(scaling: &QuestMoneyScaling, player: QuestPlayer) -> u8 {
+    let faction_group = crate::faction::faction_group_for_race(player.race);
+    let min_level = if scaling.faction_group != 0 && faction_group != scaling.faction_group {
+        scaling.max_level
+    } else {
+        scaling.min_level
+    };
+    if player.level >= min_level {
+        player.level.min(scaling.max_level)
+    } else {
+        min_level
+    }
+}
+
+/// Copper the quest pays this player: Quest::MoneyValue (QuestDef.cpp:478-484),
+/// `QuestMoneyReward[GetQuestLevel].Difficulty[RewardMoneyDifficulty] ×
+/// RewardMoneyMultiplier` truncated, 0 without a row; AzerothCore quests pay
+/// their fixed `RewardMoney` (negative costs money).
+pub(crate) fn quest_money(quests: &QuestDb, quest: &QuestTemplate, player: QuestPlayer) -> i32 {
+    let Some(scaling) = &quest.money_scaling else {
+        return quest.reward_money;
+    };
+    quests
+        .money_rewards
+        .get(&tuned_quest_level(scaling, player))
+        .and_then(|money| money.get(usize::from(scaling.difficulty)))
+        .map_or(0, |&copper| (copper as f32 * scaling.multiplier) as i32)
 }
 
 /// A quest's level for this player (-1 scales to the player).

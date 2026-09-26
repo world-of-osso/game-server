@@ -10,7 +10,7 @@ use shared::protocol::{
 use crate::persistence::quest_store::{ActiveQuestData, QuestLogData};
 use crate::persistence::{self, InventoryData, InventoryItemData};
 use crate::quest_data::{QuestDb, QuestTemplate};
-use crate::quest_rules::{objective_counts, objectives_done};
+use crate::quest_rules::{QuestPlayer, objective_counts, objectives_done, quest_money};
 
 /// Quest log entries by quest id, as last sent to a client.
 pub(crate) type QuestLogView = BTreeMap<u32, QuestEntrySnapshot>;
@@ -172,9 +172,13 @@ fn reward_items(quests: &QuestDb, items: &[(u32, u32)]) -> Vec<QuestRewardItem> 
         .collect()
 }
 
-pub(crate) fn quest_rewards(quests: &QuestDb, quest: &QuestTemplate) -> QuestRewards {
+pub(crate) fn quest_rewards(
+    quests: &QuestDb,
+    quest: &QuestTemplate,
+    player: QuestPlayer,
+) -> QuestRewards {
     QuestRewards {
-        money: quest.reward_money.max(0) as u32,
+        money: quest_money(quests, quest, player).max(0) as u32,
         items: reward_items(quests, &quest.reward_items),
         choice_items: reward_items(quests, &quest.choice_items),
     }
@@ -195,6 +199,7 @@ pub(crate) fn quest_details(
     quests: &QuestDb,
     quest: &QuestTemplate,
     npc: u64,
+    player: QuestPlayer,
 ) -> QuestGiverQuestDetails {
     QuestGiverQuestDetails {
         npc,
@@ -206,6 +211,6 @@ pub(crate) fn quest_details(
         min_level: quest.min_level,
         suggested_group: quest.suggested_group,
         objectives: objective_snapshots(quest, &vec![0; quest.objectives.len()]),
-        rewards: quest_rewards(quests, quest),
+        rewards: quest_rewards(quests, quest, player),
     }
 }

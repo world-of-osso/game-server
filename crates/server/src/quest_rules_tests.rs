@@ -204,3 +204,82 @@ fn quest_needs_its_item_until_the_bags_hold_the_count() {
     ));
     assert!(!quest_needs_item(db, &log, 755, no_items), "Melted Candle");
 }
+
+/// Quest::MoneyValue: QuestMoneyReward Difficulty_5 at the player's quest level
+/// (ContentTuning 1476: levels 1-10) × RewardMoneyMultiplier 1.
+#[test]
+fn beating_them_back_pays_quest_money_for_the_players_level() {
+    let Some(db) = test_quest_db() else { return };
+    let quest = &db.quests[&BEATING_THEM_BACK];
+    let at = |level| {
+        quest_money(
+            db,
+            quest,
+            QuestPlayer {
+                level,
+                ..HUMAN_WARRIOR
+            },
+        )
+    };
+    assert_eq!(at(1), 55);
+    assert_eq!(at(10), 2000);
+    assert_eq!(at(40), 2000, "capped at ContentTuning MaxLevel 10");
+    assert_eq!(quest.reward_money, 2000, "RewardMoney keeps MaxMoneyValue");
+}
+
+fn scaled_quest(faction_group: u32) -> (QuestDb, QuestTemplate) {
+    let mut db = QuestDb::default();
+    db.money_rewards
+        .insert(5, [0, 10, 20, 30, 40, 50, 60, 70, 80, 90]);
+    db.money_rewards
+        .insert(20, [0, 100, 200, 300, 400, 500, 600, 700, 800, 900]);
+    let quest = QuestTemplate {
+        reward_money: 900,
+        money_scaling: Some(crate::quest_data::QuestMoneyScaling {
+            difficulty: 3,
+            multiplier: 1.5,
+            min_level: 5,
+            max_level: 20,
+            faction_group,
+        }),
+        ..Default::default()
+    };
+    (db, quest)
+}
+
+#[test]
+fn below_its_minimum_a_quest_pays_its_minimum_levels_money_times_the_multiplier() {
+    let (db, quest) = scaled_quest(0);
+    // Level 1 < MinLevelWithDelta 5: QuestMoneyReward[5] 30 × 1.5.
+    assert_eq!(quest_money(&db, &quest, HUMAN_WARRIOR), 45);
+    // A level without a QuestMoneyReward row pays nothing.
+    let player = QuestPlayer {
+        level: 12,
+        ..HUMAN_WARRIOR
+    };
+    assert_eq!(quest_money(&db, &quest, player), 0);
+}
+
+#[test]
+fn player_outside_the_quests_faction_group_is_paid_at_its_maximum() {
+    // Horde-scaled (5) quest: a Human is paid at MaxLevel 20, an Orc at its own level floor.
+    let (db, quest) = scaled_quest(5);
+    assert_eq!(quest_money(&db, &quest, HUMAN_WARRIOR), 450);
+    let orc = QuestPlayer {
+        race: 2,
+        ..HUMAN_WARRIOR
+    };
+    assert_eq!(quest_money(&db, &quest, orc), 45);
+}
+
+#[test]
+fn azerothcore_quest_pays_its_fixed_reward_money() {
+    let quest = QuestTemplate {
+        reward_money: -250,
+        ..Default::default()
+    };
+    assert_eq!(
+        quest_money(&QuestDb::default(), &quest, HUMAN_WARRIOR),
+        -250
+    );
+}
