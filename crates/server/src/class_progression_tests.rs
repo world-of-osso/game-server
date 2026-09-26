@@ -502,6 +502,8 @@ fn world_with_creature(entry: u32, min_level: u8) -> crate::world_data::WorldDat
     let template = crate::world_data::CreatureTemplate {
         entry,
         name: "Fixture wolf".into(),
+        subname: String::new(),
+        creature_type: 1,
         min_level,
         max_level: min_level,
         faction: 32,

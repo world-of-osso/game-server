@@ -23,6 +23,11 @@ pub struct ItemTemplate {
     pub allowable_race: u64,
     /// Stat, armor and weapon inputs (`item_stats::item_stats`).
     pub scaling: ItemScaling,
+    /// `ItemAppearance` id equipping or binding the item teaches the account's
+    /// appearance collection: its `item_modified_appearance` row with the lowest
+    /// `ItemAppearanceModifierID` (Retail's default source). `None` for items
+    /// without an appearance (cloth, potions, rings, trinkets).
+    pub appearance_id: Option<u32>,
 }
 
 pub const BIND_ON_PICKUP: u8 = 1;
@@ -70,9 +75,12 @@ const ITEM_QUERY: &str = "SELECT c.ID, c.InventoryType, c.Stackable, c.Bonding, 
      c.StatModifier_bonusStat_6, c.StatPercentEditor_6, s.StatPercentageOfSocket_6, \
      c.StatModifier_bonusStat_7, c.StatPercentEditor_7, s.StatPercentageOfSocket_7, \
      c.StatModifier_bonusStat_8, c.StatPercentEditor_8, s.StatPercentageOfSocket_8, \
-     c.StatModifier_bonusStat_9, c.StatPercentEditor_9, s.StatPercentageOfSocket_9 \
+     c.StatModifier_bonusStat_9, c.StatPercentEditor_9, s.StatPercentageOfSocket_9, \
+     (SELECT m.ItemAppearanceID FROM item_modified_appearance m WHERE m.ItemID = c.ID \
+      AND m.ItemAppearanceID != 0 ORDER BY m.ItemAppearanceModifierID, m.OrderIndex LIMIT 1) \
      FROM content_item c JOIN item_sparse s ON s.ID = c.ID";
 const FIRST_STAT_COLUMN: usize = 16;
+const APPEARANCE_COLUMN: usize = FIRST_STAT_COLUMN + 10 * 3;
 
 fn scaling_from_row(row: &Row) -> rusqlite::Result<ItemScaling> {
     let mut stats = [ItemStatAllocation::default(); 10];
@@ -108,6 +116,7 @@ fn template_from_row(row: &Row) -> rusqlite::Result<(u32, ItemTemplate)> {
         allowable_class: row.get(5)?,
         allowable_race: (u64::from(high as u32) << 32) | u64::from(low as u32),
         scaling: scaling_from_row(row)?,
+        appearance_id: row.get(APPEARANCE_COLUMN)?,
     };
     Ok((row.get(0)?, template))
 }

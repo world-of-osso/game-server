@@ -487,7 +487,12 @@ fn a_poor_quality_drop_becomes_coins_at_its_sell_price() {
     let rolled = std::iter::repeat_with(|| {
         tables.roll_creature(KOBOLD_VERMIN, &templates, |_| false, &mut rng)
     })
-    .find(|rolled| rolled.items.iter().any(|drop| drop.item_id == MELTED_CANDLE))
+    .find(|rolled| {
+        rolled
+            .items
+            .iter()
+            .any(|drop| drop.item_id == MELTED_CANDLE)
+    })
     .unwrap();
     let candles: u64 = rolled
         .items

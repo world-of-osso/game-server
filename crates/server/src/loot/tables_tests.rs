@@ -175,3 +175,47 @@ fn money_follows_generate_money_loot() {
         assert!((1..=5).contains(&money_loot(1, 5, &mut rng)));
     }
 }
+
+const DEFIAS_THUG: u32 = 38;
+
+fn chance_of(chances: &[(u32, f32)], item: u32) -> f32 {
+    chances
+        .iter()
+        .find(|(id, _)| *id == item)
+        .map(|(_, chance)| *chance)
+        .unwrap_or_else(|| panic!("item {item} missing from {chances:?}"))
+}
+
+#[test]
+fn defias_thug_drop_chances_resolve_references_and_groups() {
+    let Some((tables, items)) = world_db() else {
+        return;
+    };
+    let chances = tables.drop_chances(DEFIAS_THUG, &items);
+
+    let close = |item: u32, expected: f32| {
+        let chance = chance_of(&chances, item);
+        assert!(
+            (chance - expected).abs() < 1e-3,
+            "{item}: {chance} vs {expected}"
+        );
+    };
+    // Own rows: Red Burlap Bandana (quest) 60 %, Pitted Defias Shortsword 2 %.
+    close(752, 60.0);
+    close(2057, 2.0);
+    // Reference 20017 at 30 %: its group rolls Darnassian Bleu 67 %, Refreshing
+    // Spring Water 33 %.
+    close(2070, 30.0 * 0.67);
+    close(159, 30.0 * 0.33);
+    // Reference 11111 at 0.2 %: five equal-chance pouches.
+    for pouch in [805, 828, 4496, 5571, 5572] {
+        close(pouch, 0.2 / 5.0);
+    }
+    // Group 1 reference 20000 at 30 %: 23 equal-chance grey items.
+    close(1364, 30.0 / 23.0);
+    assert_eq!(chances.len(), 2 + 2 + 5 + 23);
+    assert!(
+        chances.windows(2).all(|pair| pair[0].1 >= pair[1].1),
+        "highest chance first: {chances:?}"
+    );
+}

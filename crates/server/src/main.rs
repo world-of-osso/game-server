@@ -19,6 +19,7 @@ mod combat;
 mod creature_aggro;
 mod creature_ai;
 mod creature_scripts;
+mod creature_tooltip;
 mod currency;
 mod death;
 mod duel;
@@ -168,6 +169,7 @@ fn add_world_plugins(app: &mut App) {
         .add_plugins(npc_interaction::NpcInteractionPlugin)
         .add_plugins(merchant::MerchantPlugin)
         .add_plugins(loot::LootPlugin)
+        .add_plugins(creature_tooltip::CreatureTooltipPlugin)
         .add_plugins(taxi::TaxiPlugin)
         .add_plugins(game_objects::GameObjectPlugin)
         .add_plugins(bank::BankPlugin)
