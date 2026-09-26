@@ -304,3 +304,7 @@ Created `systems/quests.md` (quest data, rules, runtime) and `specs/quests.md`; 
 ## [2026-09-26] create | Meeting stones
 
 [[meeting-stones]]: party summons at the 15 map-0 meeting stones (59782 cast and channel, Meeting Stone Summoning Portal ritual, 7720 SUMMON_PLAYER, 2 min offer, accept teleport). [[spell-casting]]: cast/channel movement now follows `SpellInterrupts` (Spell::CheckMovement) instead of `SPELL_ATTR0` 0x10000000, and channels start after their cast time. [[game-objects]] links it.
+
+## [2026-09-26] update | Maps and dungeon instances
+
+[[zone-architecture]]: maps 0 and 1 and dungeon copies share one World by `InMap`; `maps` module (MapStore, InstanceManager, teleport_to/NewWorld/WorldPortAck, area trigger teleports, dungeon release, login map). Spec [instances](../specs/instances.md). [[meeting-stones]]: summons cross maps. [[game-objects]]: spawned per map copy.

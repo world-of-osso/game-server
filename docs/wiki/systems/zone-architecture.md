@@ -1,6 +1,6 @@
 # Zone Architecture
 
-Proposed architecture for partitioning future zone and instance simulation inside the server tick. Current code does not implement per-zone system sets or runtime zone transfers; it spawns every map 0 (Eastern Kingdoms) creature during startup. Tick ordering is defined separately in [[tick-loop-design]].
+Maps and dungeon copies share one Bevy `World`, partitioned by the `InMap { map_id, instance_id }` component ([instances spec](../../specs/instances.md)); per-zone system sets remain a proposal. Tick ordering is defined separately in [[tick-loop-design]].
 
 **Status:** Proposed; not implemented.
 
@@ -8,15 +8,16 @@ Proposed architecture for partitioning future zone and instance simulation insid
 
 ## Current Implementation
 
-`ZonePlugin` registers one `PostStartup` system, `spawn_eastern_kingdoms_creatures`. It reads `WorldData`, spawns every map 0 creature (map 1 stays unspawned: `Position` has no map, so interest would overlap the continents), assigns numeric `Zone` data and AI components, and adds Lightyear replication markers.
+`maps` (crates/server/src/maps/) owns the map model:
 
-Current source has no:
+- `InMap` on every positioned entity. `ZonePlugin::spawn_continent_creatures` and `game_objects::spawn_continent_game_objects` spawn maps 0 and 1 at `PostStartup` (`NPC_APPEARANCE_MAPS`); `zones::spawn_map_creatures` / `game_objects::spawn_map_game_objects` spawn a dungeon copy when it is created (creatures only for maps with client NPC appearance data).
+- `MapStore` (Map, MapDifficulty, AreaTrigger, AreaTriggerActionSet DB2; TDB areatrigger_teleport, world_safe_locs, graveyard_zone, instance_template) loads in `startup_load_world_data`.
+- `InstanceManager` keeps dungeon copies (recent instance per group/character, owning group, player set, unload time). Observers on `Insert`/`Discard` of a player's `InMap` add and remove players.
+- `transfer::teleport_to` is the one teleport entry point: same map moves the player; another map removes `InMap`, inserts `MapTransfer` and sends `NewWorld`; `receive_world_port_acks` (Update) resolves the copy and re-inserts `InMap`.
+- `area_triggers::detect_area_trigger_teleports` (FixedUpdate after gravity) fires teleport triggers on entering.
+- Interest buckets are keyed by `(InMap, x, z)`; a player without a map (in transfer) sees only itself. `GroundMap` holds one `MapGround` per map, opened lazily from the map's WDT.
 
-- `ZoneSet` system-set type
-- Per-zone fixed schedules
-- Cross-zone transfer event pipeline
-- Zone despawn/respawn handoff
-- Dedicated thread or Bevy `World` per zone
+Current source has no per-zone schedules and no dedicated `World` per instance.
 
 ## Proposed Zone Partitioning
 
@@ -47,12 +48,7 @@ A same-world transfer should not despawn and recreate the authoritative ECS enti
 
 ## Instance Isolation
 
-Dungeons and raids remain unresolved. Two candidate models are tracked in [[open-questions]]:
-
-- One Bevy `World` with `InstanceId`/`Zone` filtering
-- Separate Bevy `World`s per instance
-
-The base tick-loop design does not choose between them. Both must preserve a clear handoff to the global transport, persistence, and replication boundaries.
+Chosen (dungeons phase 1): one Bevy `World` with `InMap` filtering, matching TrinityCore's map/instance-id pair without a second world or clock. Every cross-entity rule that must not reach another copy reads `InMap` (interest, aggro, spell targets, grid activation, chat range, group rewards). Separate `World`s per instance were not needed: the global transport, persistence and replication boundaries stay single.
 
 ## Comparison with AzerothCore
 
@@ -66,7 +62,8 @@ The base tick-loop design does not choose between them. Both must preserve a cle
 ## Sources
 
 - [ARCHITECTURE.md](../../../ARCHITECTURE.md) — original proposed zone model and AzerothCore comparison
-- [crates/server/src/zones.rs](../../../crates/server/src/zones.rs) — current `PostStartup` map 0 creature spawning
+- [crates/server/src/zones.rs](../../../crates/server/src/zones.rs) — continent and dungeon-copy creature spawning
+- [crates/server/src/maps/](../../../crates/server/src/maps/) — `InMap`, map store, instances, transfers, area triggers
 - [crates/server/src/world_data.rs](../../../crates/server/src/world_data.rs) — numeric zone and spawn data loaded from SQLite
 
 ## See Also

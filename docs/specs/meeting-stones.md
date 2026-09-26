@@ -5,7 +5,7 @@ Summoning a party member at a meeting stone, following TrinityCore (`GameObject:
 ## What it must do
 
 ### Stones
-- [x] Meeting stones (`content_gameobject` rows of type 23 on map 0, 15 of them) spawn with the other game objects.
+- [x] Meeting stones (`content_gameobject` rows of type 23 on maps 0 and 1) spawn with the other game objects.
 - [x] `UseGameObject` on a stone (alive, within 5 yd of the model box) opens no frame and casts the stone's spell as the user: Summoning Stone Effect (59782), or Ritual of Summoning (61994) at the Summoning Portal (194097).
 - [x] The user's target must be another player in its party or raid, else `CastFailed` `InvalidTarget`.
 - [x] A stone with ContentTuning needs the user and the target at its max level (`LevelRequirement` / `TargetTooLowLevel`); a stone without ContentTuning (178834, near the Deadmines) has no level check.
@@ -22,7 +22,7 @@ Summoning a party member at a meeting stone, following TrinityCore (`GameObject:
 - [x] Responses while dead or in combat are ignored; the offer stays open.
 
 ## Gaps
-- The server hosts map 0 only: stones on other maps (12 on Kalimdor, map 1) do not spawn and no summon crosses maps. Map transfer is the next phase.
+- The summoner must target the player, and only players in its interest radius can be targeted (client); an accepted summon crosses maps through a map transfer ([instances](instances.md)).
 - The ritual's `animSpell` (32783 Arcane Channeling) is not cast on helpers.
 - Players carry no `Zone`, so `SummonRequest.zone_id` is 0 and the client names the area "Unknown".
 
