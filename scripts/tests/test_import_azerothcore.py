@@ -1,6 +1,7 @@
 """Exercise the real importer without touching the development world database."""
 
 import csv
+import json
 import os
 from pathlib import Path
 import shutil
@@ -149,7 +150,7 @@ class CreatureEventImportTests(unittest.TestCase):
         scripts.mkdir()
         (self.root / "data").mkdir()
         for name in ("import-azerothcore.sh", "world_schema.sql", "db2.py", "db2_casc.py", "db2_schema.sql", "mysql_dump.py",
-                     "content_common.py", "retail_content.py",
+                     "content_common.py", "retail_content.py", "wowhead_loot.py",
                      "content_policy.py", "tdb_schema.sql"):
             shutil.copy2(SCRIPTS / name, scripts / name)
         (scripts / "content_overrides.csv").write_text("kind,source_id,retail_id,source_name,retail_name,reason\n")
@@ -167,6 +168,10 @@ class CreatureEventImportTests(unittest.TestCase):
         )
         self.csv = self.root / "csv"
         write_header_only_csvs(self.csv / db2.DEFAULT_BUILD)
+        # Map.db2: Eastern Kingdoms and Kalimdor are open world (InstanceType 0), the Stockade a party dungeon.
+        write_db2_rows(self.csv / db2.DEFAULT_BUILD, "Map", [
+            {"ID": 0, "Directory": "Azeroth"}, {"ID": 1, "Directory": "Kalimdor"},
+            {"ID": 34, "Directory": "StormwindJail", "InstanceType": 1}])
         (self.csv / content_policy.WRATH_BUILD).mkdir()
         (self.csv / content_policy.WRATH_BUILD / "SpellName.csv").write_text("ID,Name_lang\n")
         self.db = self.root / "data/world.db"
@@ -457,7 +462,8 @@ class CreatureEventImportTests(unittest.TestCase):
         self.assertNotIn(("tdb_creature", "guid=316"), reported, "other maps keep AzerothCore spawns silently")
 
     def test_retail_stockade_spawns_replace_azerothcore_classic_stockade(self):
-        """Map 34 (The Stockade): TrinityCore's DEFAULT_PHASE 169 Normal-difficulty spawns replace AzerothCore's."""
+        """TrinityCore's DEFAULT_PHASE 169 spawns are base phase on every map; the Stockade (a party dungeon)
+        takes its Normal-difficulty spawns and Wowhead's drops where TrinityCore has no loot."""
         (self.sql / "creature_template.sql").write_text(
             "INSERT INTO `creature_template` (entry,name,minlevel,maxlevel,exp,faction,lootid,mingold,maxgold,rank) VALUES\n"
             "(1696,'Targorr the Dread',24,24,0,14,1696,123,266,1),(1720,'Bruegal Ironknuckle',25,25,0,14,1720,210,279,2);\n"
@@ -467,7 +473,6 @@ class CreatureEventImportTests(unittest.TestCase):
             "(84027,1696,34,159.582,1.25311,-25.6062),(79090,1720,34,160.051,45.709,-34.7729);\n"
         )
         (self.sql / "item_template.sql").write_text("INSERT INTO `item_template` (entry,name) VALUES\n(3228,'Jimmied Handcuffs');\n")
-        write_db2_rows(self.csv / db2.DEFAULT_BUILD, "ItemSparse", [{"ID": 3228, "Display_lang": "Jimmied Handcuffs"}])
         write_tdb(self.tdb, "creature", [
             tdb_creature(375720, 46254, 34, 158.016, 116.564, -35.1063, difficulties="1", phase_id=169),
             tdb_creature(375808, 1720, 34, 103.112, 77.7348, -34.8562, difficulties="1", phase_id=169),
@@ -486,7 +491,21 @@ class CreatureEventImportTests(unittest.TestCase):
             tdb_difficulty(46254, 35, 0, 0, 0, content_tuning=0),
             tdb_difficulty(46254, 35, 0, 0, 0, content_tuning=215, difficulty=1),
             tdb_difficulty(1720, 3, 210, 279, 1720, content_tuning=0),
+            tdb_difficulty(16123, 1, 0, 0, 0, content_tuning=0),
         ])
+        # Wowhead npc=46254 (Hogger) and npc=1720 pages, stockade-20260926 scrape (two rows each).
+        scrape = self.root / "data/reference/wowhead/stockade-20260926"
+        scrape.mkdir(parents=True)
+        (scrape / "46254.json").write_text(json.dumps({"drops": [
+            {"id": 2168, "quality": 3, "classs": 4, "stack": [1, 1],
+             "modes": {"0": {"count": 41982, "outof": 135040}, "1": {"count": 41982, "outof": 135040}, "mode": [1]}},
+            {"id": 3228, "quality": 2, "classs": 12, "stack": [1, 2],
+             "modes": {"1": {"count": 50, "outof": 200}, "mode": [1]}}]}))
+        (scrape / "1720.json").write_text(json.dumps({"drops": [
+            {"id": 3228, "quality": 2, "classs": 4, "stack": [1, 1],
+             "modes": {"1": {"count": 1, "outof": 2}, "mode": [1]}}]}))
+        write_db2_rows(self.csv / db2.DEFAULT_BUILD, "ItemSparse", [{"ID": 3228, "Display_lang": "Jimmied Handcuffs"},
+                                                                  {"ID": 2168, "Display_lang": "Corpse Rompers"}])
         write_tdb(self.tdb, "creature_loot_template", ["(1720,0,3228,60,0,1,1,1,1,'')"])
         write_content_tuning(self.csv / db2.DEFAULT_BUILD, [(215, 10, 30, 0, 0)])
         result = self.run_import()
@@ -495,8 +514,9 @@ class CreatureEventImportTests(unittest.TestCase):
         with sqlite3.connect(self.db) as conn:
             self.assertEqual(
                 conn.execute("SELECT guid, id1, map, position_x FROM content_creature ORDER BY guid").fetchall(),
-                [(offset + 375720, 46254, 34, 158.016), (offset + 375808, 1720, 34, 103.112)],
-                "Retail Hogger and Bruegal replace Classic Targorr; Heroic-only and continent phase-169 spawns stay out",
+                [(offset + 16397, 16123, 0, -8900.0), (offset + 375720, 46254, 34, 158.016),
+                 (offset + 375808, 1720, 34, 103.112)],
+                "Retail Hogger and Bruegal replace Classic Targorr, a phase-169 Stormwind spawn is kept, Heroic-only stays out",
             )
             self.assertEqual(
                 conn.execute("SELECT entry, minlevel, maxlevel, ContentTuningID, HealthModifier FROM content_creature_template"
@@ -510,15 +530,26 @@ class CreatureEventImportTests(unittest.TestCase):
                 [(1720, retail_content.TDB_LOOT_OFFSET + 1720, 210, 279)],
                 "without a Normal row, Difficulty.db2 falls Normal back to DifficultyID 0",
             )
+            wowhead = retail_content.WOWHEAD_LOOT_OFFSET + 46254
             self.assertEqual(
-                conn.execute("SELECT Entry, Item FROM content_creature_loot_template").fetchall(),
-                [(retail_content.TDB_LOOT_OFFSET + 1720, 3228)],
+                conn.execute("SELECT Entry, Item, round(Chance, 3), QuestRequired, GroupId, MinCount, MaxCount, Comment"
+                             " FROM content_creature_loot_template ORDER BY Entry, Item").fetchall(),
+                [(retail_content.TDB_LOOT_OFFSET + 1720, 3228, 60.0, 0, 1, 1, 1, ""),
+                 (wowhead, 2168, 31.089, 0, 0, 1, 1, "wowhead stockade-20260926"),
+                 (wowhead, 3228, 25.0, 1, 0, 1, 2, "wowhead stockade-20260926")],
+                "Bruegal keeps TrinityCore's loot; Hogger (LootID 0) drops Wowhead's Normal-mode rates",
+            )
+            self.assertEqual(
+                conn.execute("SELECT lootid, mingold, maxgold FROM content_creature_template WHERE entry = 46254").fetchall(),
+                [(wowhead, 0, 0)],
             )
         with (self.root / "data/reports/content-dropped.csv").open(newline="") as handle:
             reported = {(r["table"], r["key"]): r["reason"] for r in csv.DictReader(handle)}
         self.assertEqual(reported[("creature", "guid=84027")], "map 34 spawn replaced by Retail spawns")
         self.assertEqual(reported[("tdb_creature", "guid=375671")], "not base phase: spawnDifficulties 2")
-        self.assertEqual(reported[("tdb_creature", "guid=16397")], "not base phase: PhaseId 169")
+        self.assertNotIn(("tdb_creature", "guid=16397"), reported)
+        self.assertEqual(reported[("wowhead_creature_drop", "entry=1720")],
+                         "stockade-20260926: not Retail-spawned, TrinityCore loot kept, or no drops at its spawn difficulty")
 
     def write_retail_vendor_and_loot_fixture(self):
         """Corina Steele (54) spawned by TrinityCore sells Retail's list; an AzerothCore-only vendor keeps its own."""

@@ -21,16 +21,19 @@ How it works: [content import](../wiki/systems/content-import.md).
 ## What it must do
 
 Spawn and id rules
-- [x] Maps 0/1 take TrinityCore base-phase rows only: `PhaseId` 0, `PhaseGroup` 0, `terrainSwapMap` -1, and difficulty 0 in `spawnDifficulties`.
+- [x] Retail maps (0, 1, 34) take TrinityCore base-phase rows only: `PhaseId` 0 or 169, `PhaseGroup` 0, `terrainSwapMap` -1, and the map's spawn difficulty in `spawnDifficulties`. `DEFAULT_PHASE` 169 is unphased (`PhaseShift.h:31`, `PhasingHandler::InitDbPhaseShift`). The spawn difficulty follows the map's `Map.db2` InstanceType: open world 0 (`DIFFICULTY_NONE`), a party dungeon its instance difficulty, Normal (1) for every hosted copy; other instance types fail the import.
   - This applies to `content_creature` and to `content_gameobject`.
   - Game objects whose only event membership is positive (holiday decorations) don't spawn.
   - Other maps keep AzerothCore's rows.
-- [x] The Stockade (map 34) takes its Normal-difficulty rows (difficulty 1 in `spawnDifficulties`, its only `MapDifficulty`) with `PhaseId` 0 or 169: TrinityCore's `DEFAULT_PHASE` 169 is unphased (`PhaseShift.h:31`, `PhasingHandler::InitDbPhaseShift`), and every Retail Stockade spawn carries it. 143 creatures (Hogger, Lord Overheat, Randolph Moloch, Riverpaw and fire-elemental trash, prisoners, guards) replace AzerothCore's 93 Classic ones (Targorr, Bazil Thredd, ...); its game objects are 33 fires and a bonfire (Retail has no Stockade doors or chests).
-- [x] A Stockade entry's template values (ContentTuning, health, loot, gold) come from its `DifficultyID` 1 row (`CreatureTemplate::GetDifficulty`), else its `DifficultyID` 0 row: Difficulty.db2 (build 69933) falls Normal back to None. Hogger: ContentTuning 215 (10-30), LevelScalingDelta +2. Bruegal Ironknuckle keeps loot 1720. An entry spawned at two difficulties with different resolved rows fails the import.
+- [x] Spawns (verified 2026-09-26, `world-stockade-20260926.db`; before → after the phase-169 and Stockade import): creatures map 0 45,317 → 50,930, map 1 49,853 → 52,309, map 34 93 → 143; game objects map 0 11,582 → 12,654, map 1 10,295 → 11,250, map 34 18 → 34. The Stockade's 143 creatures (Hogger, Lord Overheat, Randolph Moloch, Riverpaw and fire-elemental trash, prisoners, guards) replace AzerothCore's 93 Classic ones (Targorr, Bazil Thredd, ...); its game objects are 33 fires and a bonfire (Retail has no Stockade doors or chests).
+- [x] An entry's template values come from the `creature_template_difficulty` row of its spawns' difficulty. A Stockade entry's template values (ContentTuning, health, loot, gold) come from its `DifficultyID` 1 row (`CreatureTemplate::GetDifficulty`), else its `DifficultyID` 0 row: Difficulty.db2 (build 69933) falls Normal back to None. Hogger: ContentTuning 215 (10-30), LevelScalingDelta +2. Bruegal Ironknuckle keeps loot 1720. An entry spawned at two difficulties with different resolved rows fails the import.
 - [x] Retail spawn guids are the TrinityCore guid + 20,000,000 (`RETAIL_GUID_OFFSET`), because 10 TrinityCore creature guids collide with AzerothCore spawns kept on other maps.
 - [x] TrinityCore loot template and reference ids are also + 20,000,000 (`TDB_LOOT_OFFSET`), in creature `lootid` and in chest and fishing-hole `Data1`.
 - [x] Raw AzerothCore tables, `tdb_*` tables and DB2 tables stay verbatim. Every dropped or replaced row is in `data/reports/content-dropped.csv` with its reason.
 - [x] Newton Burnside stands at the Retail bank counter (-8908.35, 639.24). Auctioneer Jaxon stands above the Retail auction house floor (z 99.62 > 98.06).
+
+Wowhead loot
+- [x] A Retail-spawned creature without TrinityCore loot (`LootID` 0) whose Wowhead drops are scraped (`data/reference/wowhead/<scrape>/<entry>.json`, the npc page's `drops` Listview; `scripts/wowhead_loot.py`) drops them: loot id entry + 30,000,000, one ungrouped row per item with `Chance` = count / outof of the spawns' difficulty mode, `MinCount`/`MaxCount` from `stack`, `QuestRequired` for Quest-class (12) items, `Comment` `wowhead <scrape>`. Raw rows stay in `wowhead_creature_drop` with the scrape name. TrinityCore loot wins where it exists (Bruegal Ironknuckle, Lord Overheat). Scrape `stockade-20260926`: 15 Stockade creatures, 3,335 rows (e.g. Hogger: Corpse Rompers 31.1 %).
 
 Creature templates and levels
 - [x] `content_creature_template` is AzerothCore's templates plus TrinityCore's template, difficulty-0 values and models for every Retail-spawned entry AzerothCore lacks.
@@ -121,8 +124,7 @@ Server behaviour on Retail content
 
 ## Known gaps (current cycle)
 
-- [ ] **Continent phase-169 spawns.** Maps 0/1 keep `PhaseId` 0 only and drop 8,069 creature and 2,271 game object spawns in `DEFAULT_PHASE` 169 that TrinityCore shows; including them needs client NPC appearance coverage for their displays first.
-- [ ] **Stockade loot.** TDB1210 gives the Retail Stockade trash and bosses no loot table and no money (Normal `LootID` 0, gold 0); only Bruegal Ironknuckle (1720) and Lord Overheat's quest item drop.
+- [ ] **Stockade money.** TDB1210 gives the Retail Stockade creatures no gold and Wowhead has no money data, so they drop no coins (grey items still become coins).
 
 - [x] **Levels and health** are per-player ContentTuning scaling with ExpectedStat health ([level-scaling](level-scaling.md)).
 - [ ] **Quest levels.** `QuestLevel` -1 scales quests to the player without clamping to ContentTuning's range.
