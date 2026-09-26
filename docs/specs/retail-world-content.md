@@ -38,6 +38,7 @@ Creature templates and levels
   - Examples: Hogger 1-30; Homeless Stormwind Citizen 5-30.
 - [x] ContentTuning comes from local CASC: FDID 1962930, layout A3E13004, via `db2.py extract`. It is imported as `content_tuning`.
 - [x] Retail-spawned NPCs use TrinityCore loot when TrinityCore has rows for their LootID, with gold from difficulty 0. Otherwise they use AzerothCore's loot id.
+- [x] Retail-spawned NPCs with no loot table in either source (7,745 entries) drop nothing and have no money, even where TrinityCore's difficulty 0 has gold (54 entries). Each one is in content-dropped.csv. This is a user decision.
 - [x] Retail-spawned NPCs use TrinityCore's lowest `creature_template_gossip` menu when they have one.
 
 Services
@@ -59,9 +60,12 @@ Quests
   - Other objective types are reported.
 - [x] Retail-spawned NPCs and objects give and end TrinityCore relations only. AzerothCore relations of other entries stay.
 - [x] Reward-item and choice-reward groups:
-  - Where the TrinityCore group is all zero, AzerothCore's mapped group fills it.
+  - Where the TrinityCore group is all zero and the AzerothCore quest with the same ID has one, AzerothCore's mapped group fills it: 31 reward-item groups and 97 choice groups, each in content-dropped.csv.
   - TrinityCore sniffed choice rewards for only 1 of 3,212 Retail quests.
-- [x] `RewardMoney` is AzerothCore's where the quest exists there, else 0.
+- [x] `RewardMoney` is TrinityCore's `Quest::MaxMoneyValue` (QuestDef.cpp:486-494 at a352b1fa): `QuestMoneyReward[ContentTuning MaxLevel].Difficulty[RewardMoneyDifficulty] × RewardMoneyMultiplier`, truncated. It is 0 without a ContentTuning.
+  - 2,696 of 6,078 TrinityCore quests pay money. For example, Beating Them Back! pays 2000.
+  - `RewardMoneyDifficulty`, `RewardMoneyMultiplier` and `ContentTuningID` are carried.
+- [x] QuestMoneyReward comes from local CASC: FDID 1139047, layout 01D6219A, with a pallet-array field and a non-inline ID list. It is imported as `quest_money_reward` (130 rows). Level 10 gives 0/200/500/1000/1500/2000/4000/6000/8000/0.
 - [x] Addon, offer/request text and POIs come from TrinityCore where it has rows, AzerothCore's otherwise.
   - A POI keeps its lowest `BlobIndex`.
   - `WorldMapAreaId` holds TrinityCore's `UiMapID`.
@@ -82,7 +86,7 @@ Server behaviour on Retail content
 - `scripts/retail_content.py`: spawns, templates and ContentTuning levels, addons, waypoints, formations, events, game objects, vendors, loot, gossip, quests
 - `scripts/content_policy.py`: AzerothCore mapping, and runs the `retail_content` steps
 - `scripts/content_common.py`: `clone_table`, `Report`
-- `scripts/db2.py`, `scripts/db2_casc.py`: local-CASC `extract` of ContentTuning (WDC5 decoder)
+- `scripts/db2.py`, `scripts/db2_casc.py`: local-CASC `extract` of ContentTuning and QuestMoneyReward (WDC5 decoder)
 - `scripts/tdb_schema.sql`, `scripts/import-azerothcore.sh` (`TDB_TABLES`): the `tdb_*` tables
 - `data/reference/tdb1210/*.sql`: TDB1210 excerpts (provenance in `SOURCE.txt`; not in git)
 - `crates/server/src/world_data.rs`: loads the `content_creature*`, `content_waypoint_data` and `content_game_event_creature` tables
@@ -110,7 +114,11 @@ Server behaviour on Retail content
   - `creature_classlevelstats` has real base HP only up to level 83, so a level-90 Stormwind City Guard has 2 HP.
   - Retail health comes from ExpectedStat, which is not imported.
 - [ ] **Quest levels.** `QuestLevel` -1 scales quests to the player without clamping to ContentTuning's range.
-- [ ] **Quest money.** TrinityCore quest money needs QuestMoneyReward (FDID 1139047, array-pallet compression not decoded). 652 of 6,078 TrinityCore quests have AzerothCore money.
+- [ ] **Per-player quest money.** TrinityCore pays `Quest::MoneyValue` (QuestDef.cpp:478-484). That indexes QuestMoneyReward by `Player::GetQuestLevel` (Player.cpp:14339-14353):
+  - `min(player level, ContentTuning MaxLevel)` once the player level is at least `GetQuestMinLevel`;
+  - `GetQuestMinLevel` is `MinLevelWithDelta`, or MaxLevel for the other faction group (Player.cpp:14315-14329).
+  - Otherwise it uses that minimum.
+  - The server pays the stored MaxMoneyValue, which overpays below the cap (Beating Them Back! is 55 at level 1 in Retail and 2000 here) until per-player scaling computes MoneyValue from the carried columns.
 - [ ] **Unmapped quest data.**
   - 260 objectives of other types (talk-to, area trigger, criteria tree, …) are reported, not tracked.
   - `RewardMoneyMultiplier`, `RewardDisplaySpell2-3`, reputation requirements (addon only) and TrinityCore's 64-bit `AllowableRaces` (truncated to 32 bits) are not mapped.

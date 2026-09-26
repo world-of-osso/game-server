@@ -40,7 +40,7 @@ Quest, vendor, trainer, loot, gossip and item tables are imported from the same 
 
 ### Spell/Class Data (Retail WoW DB2 CSVs)
 
-Source: wago.tools exports pinned to Retail `12.1.0.69933` (the local install's `.build.info` version), stored in `../game-engine/data/db2/<build>/<Table>.csv`. `ContentTuning.csv` is the exception: `db2.py extract` decodes it from the local CASC install (FDID 1962930, `scripts/db2_casc.py`), never from the web.
+Source: wago.tools exports pinned to Retail `12.1.0.69933` (the local install's `.build.info` version), stored in `../game-engine/data/db2/<build>/<Table>.csv`. `ContentTuning.csv` and `QuestMoneyReward.csv` are the exception: `db2.py extract` decodes them from the local CASC install (FDIDs 1962930 and 1139047, `scripts/db2_casc.py`), never from the web.
 
 - `scripts/db2.py fetch` downloads every table in `db2.TABLES` (skips files already present; retries 429/5xx with backoff + jitter, honours `Retry-After`).
 - `scripts/db2.py import --db data/world.db` replaces only the DB2 tables, in one transaction, so it is safe on a populated `world.db` and idempotent. `import-azerothcore.sh` calls it after rebuilding creature tables.
