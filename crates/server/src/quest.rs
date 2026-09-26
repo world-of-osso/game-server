@@ -147,17 +147,26 @@ fn send_initial_quest_log(
     }
 }
 
-pub(crate) type PlayerPositions<'w, 's> =
-    Query<'w, 's, (&'static ClientId, &'static Position), With<Player>>;
+pub(crate) type PlayerPositions<'w, 's> = Query<
+    'w,
+    's,
+    (
+        &'static ClientId,
+        &'static Position,
+        &'static crate::maps::InMap,
+    ),
+    With<Player>,
+>;
 
 fn distance(a: &Position, b: &Position) -> f32 {
     ((a.x - b.x).powi(2) + (a.y - b.y).powi(2) + (a.z - b.z).powi(2)).sqrt()
 }
 
-/// The killer plus its group members within reward distance of the creature.
+/// The killer plus its group members within reward distance of the creature, in its
+/// map copy (`Player::IsAtGroupRewardDistance`).
 pub(crate) fn credited_characters(
     killer: u64,
-    creature: &Position,
+    (creature_map, creature): (&crate::maps::InMap, &Position),
     players: &PlayerPositions,
     groups: Option<&GroupRegistry>,
 ) -> Vec<u64> {
@@ -169,15 +178,17 @@ pub(crate) fn credited_characters(
         .into_iter()
         .filter(|&member| {
             member == killer
-                || players.iter().any(|(id, position)| {
-                    id.0 == member && distance(position, creature) <= GROUP_REWARD_DISTANCE
+                || players.iter().any(|(id, position, map)| {
+                    id.0 == member
+                        && map == creature_map
+                        && distance(position, creature) <= GROUP_REWARD_DISTANCE
                 })
         })
         .collect()
 }
 
 fn credit_quest_kills(
-    killed: Query<(&Npc, &LastDamager, &Position), Added<DeathState>>,
+    killed: Query<(&Npc, &LastDamager, &Position, &crate::maps::InMap), Added<DeathState>>,
     players: PlayerPositions,
     groups: Option<Res<GroupRegistry>>,
     store: QuestStore,
@@ -186,11 +197,12 @@ fn credit_quest_kills(
     let Some((db, quests)) = store.get() else {
         return;
     };
-    for (npc, killer, position) in &killed {
-        let Ok((killer_id, _)) = players.get(killer.0) else {
+    for (npc, killer, position, map) in &killed {
+        let Ok((killer_id, ..)) = players.get(killer.0) else {
             continue;
         };
-        for character_id in credited_characters(killer_id.0, position, &players, groups.as_deref())
+        for character_id in
+            credited_characters(killer_id.0, (map, position), &players, groups.as_deref())
         {
             let mut log = load_quest_log(db, character_id);
             if credit_kill(quests, &mut log, npc.template_id) {

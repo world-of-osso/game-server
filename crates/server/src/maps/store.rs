@@ -1,0 +1,396 @@
+//! Map data read at startup: `Map.db2` / `MapDifficulty.db2` entries, area trigger
+//! teleports (`AreaTrigger.db2` shapes + TDB `areatrigger_teleport` →
+//! `world_safe_locs`) and graveyards (`graveyard_zone`).
+
+use std::collections::HashMap;
+
+use bevy::prelude::*;
+use rusqlite::{Connection, Row};
+
+use super::WorldLocation;
+
+/// `Map.db2` InstanceType (TrinityCore `MapTypes`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum InstanceType {
+    /// `MAP_COMMON`: continents and other world maps.
+    Common,
+    /// `MAP_INSTANCE`: five-player dungeons.
+    Party,
+    Raid,
+    Battleground,
+    Arena,
+    Scenario,
+}
+
+impl InstanceType {
+    fn from_db2(value: u32) -> Option<Self> {
+        Some(match value {
+            0 => Self::Common,
+            1 => Self::Party,
+            2 => Self::Raid,
+            3 => Self::Battleground,
+            4 => Self::Arena,
+            5 => Self::Scenario,
+            _ => return None,
+        })
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct MapEntry {
+    pub id: u32,
+    /// `Directory`, lowercased: `world/maps/<directory>/`.
+    pub directory: String,
+    pub name: String,
+    pub instance_type: InstanceType,
+    /// `AreaTableID`: the area of positions the terrain names none for
+    /// (TrinityCore `TerrainInfo::GetAreaId`), the zone of a WMO-only dungeon.
+    pub area_table_id: u32,
+    pub parent_map_id: i32,
+    /// `CorpseMapID` and `Corpse`: where the dungeon's entrance lies on its parent map.
+    pub corpse_map_id: i32,
+    pub corpse: (f32, f32),
+    pub max_players: u32,
+    pub wdt_file_data_id: u32,
+}
+
+impl MapEntry {
+    /// TrinityCore `MapEntry::IsDungeon` (garrisons are not imported).
+    pub fn is_dungeon(&self) -> bool {
+        matches!(
+            self.instance_type,
+            InstanceType::Party | InstanceType::Raid | InstanceType::Scenario
+        )
+    }
+}
+
+/// `MapDifficulty.db2` row.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct MapDifficulty {
+    pub difficulty_id: u32,
+    /// `ResetInterval`: 0 means no reset schedule (a normal dungeon).
+    pub reset_interval: u32,
+    pub max_players: u32,
+}
+
+/// `DIFFICULTY_NORMAL`, the player's default dungeon difficulty
+/// (`Player::GetDungeonDifficultyID` of a new character).
+pub const DIFFICULTY_NORMAL: u32 = 1;
+
+/// `AreaTrigger.db2` ShapeType of the teleport triggers (sphere and box only).
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum AreaTriggerShape {
+    Sphere {
+        radius: f32,
+    },
+    /// Half extents along the box's yaw-rotated axes (`Box_length / 2` …).
+    Box {
+        half_length: f32,
+        half_width: f32,
+        half_height: f32,
+        yaw: f32,
+    },
+}
+
+/// `AreaTriggerActionSetFlag::AllowWhileGhost`.
+const ACTION_SET_ALLOW_WHILE_GHOST: u32 = 0x8;
+
+/// An `AreaTrigger.db2` row with an `areatrigger_teleport` target.
+#[derive(Debug, Clone, PartialEq)]
+pub struct AreaTriggerTeleport {
+    pub id: u32,
+    pub map_id: u32,
+    /// WoW coordinates.
+    pub center: Vec3,
+    pub shape: AreaTriggerShape,
+    pub allow_while_ghost: bool,
+    pub target: WorldLocation,
+}
+
+impl AreaTriggerTeleport {
+    /// TrinityCore `Player::IsInAreaTrigger` shape test at `point` (WoW coordinates):
+    /// `IsInDist` for a sphere, `Position::IsWithinBox` for a box.
+    pub fn contains(&self, point: Vec3) -> bool {
+        match self.shape {
+            AreaTriggerShape::Sphere { radius } => {
+                point.distance_squared(self.center) < radius * radius
+            }
+            AreaTriggerShape::Box {
+                half_length,
+                half_width,
+                half_height,
+                yaw,
+            } => {
+                let rotation = std::f64::consts::TAU - f64::from(yaw);
+                let (sin, cos) = rotation.sin_cos();
+                let dx = f64::from(point.x - self.center.x);
+                let dy = f64::from(point.y - self.center.y);
+                let rot_x = (dx * cos - dy * sin) as f32;
+                let rot_y = (dy * cos + dx * sin) as f32;
+                rot_x.abs() <= half_length
+                    && rot_y.abs() <= half_width
+                    && (point.z - self.center.z).abs() <= half_height
+            }
+        }
+    }
+}
+
+/// Map data (`sMapStore`, `sMapDifficultyStore`, `ObjectMgr` area triggers and
+/// graveyards).
+#[derive(Resource, Debug, Default, Clone)]
+pub struct MapStore {
+    pub maps: HashMap<u32, MapEntry>,
+    pub difficulties: HashMap<u32, Vec<MapDifficulty>>,
+    pub area_triggers: HashMap<u32, Vec<AreaTriggerTeleport>>,
+    pub safe_locs: HashMap<u32, WorldLocation>,
+    /// `graveyard_zone`: ghost zone → WorldSafeLocs ids.
+    pub graveyard_zones: HashMap<u32, Vec<u32>>,
+    /// `instance_template.parent` by dungeon map.
+    pub instance_parents: HashMap<u32, u32>,
+}
+
+impl MapStore {
+    pub fn map(&self, map_id: u32) -> Option<&MapEntry> {
+        self.maps.get(&map_id)
+    }
+
+    /// The difficulty a dungeon is created at. Players and groups keep the default
+    /// `DIFFICULTY_NORMAL` until difficulty selection exists (docs/specs/instances.md).
+    pub fn dungeon_difficulty(&self, map_id: u32) -> Option<&MapDifficulty> {
+        self.difficulties
+            .get(&map_id)?
+            .iter()
+            .find(|difficulty| difficulty.difficulty_id == DIFFICULTY_NORMAL)
+    }
+
+    pub fn area_triggers_on(&self, map_id: u32) -> &[AreaTriggerTeleport] {
+        self.area_triggers.get(&map_id).map_or(&[], Vec::as_slice)
+    }
+
+    /// `ObjectMgr::GetGoBackTrigger` (ObjectMgr.cpp:7268-7290): the target of a trigger on
+    /// `map_id` leading to its parent (`instance_template.parent`, else `CorpseMapID`).
+    pub fn go_back_location(&self, map_id: u32) -> Option<WorldLocation> {
+        let entry = self.map(map_id)?;
+        if entry.corpse_map_id < 0 {
+            return None;
+        }
+        let parent = entry
+            .is_dungeon()
+            .then(|| self.instance_parents.get(&map_id).copied())
+            .flatten()
+            .unwrap_or(entry.corpse_map_id as u32);
+        self.area_triggers_on(map_id)
+            .iter()
+            .map(|trigger| trigger.target)
+            .find(|target| target.map_id == parent)
+    }
+
+    /// `ObjectMgr::GetMapEntranceTrigger` (ObjectMgr.cpp:7295-7306): the target of the
+    /// first trigger leading into `map_id` (lowest trigger id).
+    pub fn entrance_location(&self, map_id: u32) -> Option<WorldLocation> {
+        self.area_triggers
+            .values()
+            .flatten()
+            .filter(|trigger| trigger.target.map_id == map_id)
+            .min_by_key(|trigger| trigger.id)
+            .map(|trigger| trigger.target)
+    }
+}
+
+impl MapStore {
+    /// Maps 0 and 1 as `Map.db2` lists them, for tests without world.db.
+    #[cfg(test)]
+    pub fn continents() -> Self {
+        let continent = |id: u32, directory: &str, name: &str, wdt_file_data_id: u32| MapEntry {
+            id,
+            directory: directory.into(),
+            name: name.into(),
+            instance_type: InstanceType::Common,
+            area_table_id: 0,
+            parent_map_id: -1,
+            corpse_map_id: -1,
+            corpse: (0.0, 0.0),
+            max_players: 0,
+            wdt_file_data_id,
+        };
+        Self {
+            maps: HashMap::from([
+                (0, continent(0, "azeroth", "Eastern Kingdoms", 775_971)),
+                (1, continent(1, "kalimdor", "Kalimdor", 782_779)),
+            ]),
+            ..Default::default()
+        }
+    }
+}
+
+pub fn load_map_store(conn: &Connection) -> rusqlite::Result<MapStore> {
+    let safe_locs = load_safe_locs(conn)?;
+    Ok(MapStore {
+        maps: load_maps(conn)?,
+        difficulties: load_difficulties(conn)?,
+        area_triggers: load_area_triggers(conn, &safe_locs)?,
+        graveyard_zones: load_graveyard_zones(conn)?,
+        instance_parents: load_instance_parents(conn)?,
+        safe_locs,
+    })
+}
+
+fn load_maps(conn: &Connection) -> rusqlite::Result<HashMap<u32, MapEntry>> {
+    let mut statement = conn.prepare(
+        "SELECT ID, Directory, MapName_lang, InstanceType, AreaTableID, ParentMapID,
+                CorpseMapID, Corpse_0, Corpse_1, MaxPlayers, WdtFileDataID FROM map",
+    )?;
+    let rows = statement.query_map([], map_from_row)?;
+    let mut maps = HashMap::new();
+    for row in rows {
+        if let Some(entry) = row? {
+            maps.insert(entry.id, entry);
+        }
+    }
+    Ok(maps)
+}
+
+fn map_from_row(row: &Row) -> rusqlite::Result<Option<MapEntry>> {
+    let id: u32 = row.get(0)?;
+    let instance_type: u32 = row.get(3)?;
+    let Some(instance_type) = InstanceType::from_db2(instance_type) else {
+        warn!("Map {id} has unknown InstanceType {instance_type}; not loaded");
+        return Ok(None);
+    };
+    Ok(Some(MapEntry {
+        id,
+        directory: row.get::<_, String>(1)?.to_ascii_lowercase(),
+        name: row.get(2)?,
+        instance_type,
+        area_table_id: row.get(4)?,
+        parent_map_id: row.get(5)?,
+        corpse_map_id: row.get(6)?,
+        corpse: (row.get::<_, f64>(7)? as f32, row.get::<_, f64>(8)? as f32),
+        max_players: row.get(9)?,
+        wdt_file_data_id: row.get(10)?,
+    }))
+}
+
+fn load_difficulties(conn: &Connection) -> rusqlite::Result<HashMap<u32, Vec<MapDifficulty>>> {
+    let mut statement = conn.prepare(
+        "SELECT MapID, DifficultyID, ResetInterval, MaxPlayers FROM map_difficulty ORDER BY ID",
+    )?;
+    let mut difficulties: HashMap<u32, Vec<MapDifficulty>> = HashMap::new();
+    let rows = statement.query_map([], |row| {
+        Ok((
+            row.get::<_, u32>(0)?,
+            MapDifficulty {
+                difficulty_id: row.get(1)?,
+                reset_interval: row.get(2)?,
+                max_players: row.get(3)?,
+            },
+        ))
+    })?;
+    for row in rows {
+        let (map_id, difficulty) = row?;
+        difficulties.entry(map_id).or_default().push(difficulty);
+    }
+    Ok(difficulties)
+}
+
+/// `ObjectMgr::LoadWorldSafeLocs`: `Facing` is stored in degrees.
+fn load_safe_locs(conn: &Connection) -> rusqlite::Result<HashMap<u32, WorldLocation>> {
+    let mut statement =
+        conn.prepare("SELECT ID, MapID, LocX, LocY, LocZ, Facing FROM tdb_world_safe_locs")?;
+    let rows = statement.query_map([], |row| {
+        Ok((
+            row.get::<_, u32>(0)?,
+            WorldLocation {
+                map_id: row.get(1)?,
+                position: Vec3::new(
+                    row.get::<_, f64>(2)? as f32,
+                    row.get::<_, f64>(3)? as f32,
+                    row.get::<_, f64>(4)? as f32,
+                ),
+                orientation: (row.get::<_, f64>(5)? as f32).to_radians(),
+            },
+        ))
+    })?;
+    rows.collect()
+}
+
+const AREA_TRIGGER_QUERY: &str = "SELECT a.ID, a.ContinentID, a.Pos_0, a.Pos_1, a.Pos_2, \
+     a.ShapeType, a.Radius, a.Box_length, a.Box_width, a.Box_height, a.Box_yaw, \
+     COALESCE(s.Flags, 0), t.PortLocID \
+     FROM tdb_areatrigger_teleport t \
+     JOIN area_trigger a ON a.ID = t.ID \
+     LEFT JOIN area_trigger_action_set s ON s.ID = a.AreaTriggerActionSetID \
+     ORDER BY a.ID";
+
+/// `ObjectMgr::LoadAreaTriggerTeleports`; rows naming a missing trigger or port
+/// location are skipped (TrinityCore logs and skips them too).
+fn load_area_triggers(
+    conn: &Connection,
+    safe_locs: &HashMap<u32, WorldLocation>,
+) -> rusqlite::Result<HashMap<u32, Vec<AreaTriggerTeleport>>> {
+    let mut statement = conn.prepare(AREA_TRIGGER_QUERY)?;
+    let rows = statement.query_map([], |row| {
+        let float =
+            |index: usize| -> rusqlite::Result<f32> { Ok(row.get::<_, f64>(index)? as f32) };
+        let shape = match row.get::<_, u32>(5)? {
+            0 => Some(AreaTriggerShape::Sphere { radius: float(6)? }),
+            1 => Some(AreaTriggerShape::Box {
+                half_length: float(7)? / 2.0,
+                half_width: float(8)? / 2.0,
+                half_height: float(9)? / 2.0,
+                yaw: float(10)?,
+            }),
+            _ => None,
+        };
+        Ok((
+            row.get::<_, u32>(0)?,
+            row.get::<_, u32>(1)?,
+            Vec3::new(float(2)?, float(3)?, float(4)?),
+            shape,
+            row.get::<_, u32>(11)?,
+            row.get::<_, u32>(12)?,
+        ))
+    })?;
+    let mut triggers: HashMap<u32, Vec<AreaTriggerTeleport>> = HashMap::new();
+    for row in rows {
+        let (id, map_id, center, shape, action_flags, port_loc) = row?;
+        let Some(shape) = shape else {
+            warn!("Area trigger {id} teleport has an unsupported shape; skipped");
+            continue;
+        };
+        let Some(&target) = safe_locs.get(&port_loc) else {
+            warn!("Area trigger {id} names missing world_safe_locs {port_loc}; skipped");
+            continue;
+        };
+        triggers
+            .entry(map_id)
+            .or_default()
+            .push(AreaTriggerTeleport {
+                id,
+                map_id,
+                center,
+                shape,
+                allow_while_ghost: action_flags & ACTION_SET_ALLOW_WHILE_GHOST != 0,
+                target,
+            });
+    }
+    Ok(triggers)
+}
+
+fn load_graveyard_zones(conn: &Connection) -> rusqlite::Result<HashMap<u32, Vec<u32>>> {
+    let mut statement =
+        conn.prepare("SELECT GhostZone, ID FROM tdb_graveyard_zone ORDER BY GhostZone, ID")?;
+    let mut zones: HashMap<u32, Vec<u32>> = HashMap::new();
+    let rows = statement.query_map([], |row| Ok((row.get::<_, u32>(0)?, row.get::<_, u32>(1)?)))?;
+    for row in rows {
+        let (zone, safe_loc) = row?;
+        zones.entry(zone).or_default().push(safe_loc);
+    }
+    Ok(zones)
+}
+
+fn load_instance_parents(conn: &Connection) -> rusqlite::Result<HashMap<u32, u32>> {
+    let mut statement = conn.prepare("SELECT map, parent FROM tdb_instance_template")?;
+    let rows = statement.query_map([], |row| Ok((row.get::<_, u32>(0)?, row.get::<_, u32>(1)?)))?;
+    rows.collect()
+}

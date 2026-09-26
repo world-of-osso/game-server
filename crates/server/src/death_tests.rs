@@ -9,6 +9,8 @@ use shared::death::DeathResult;
 
 use super::*;
 
+const WORLD_MAP_ID: u16 = 0;
+
 fn counters(app: &App) -> &DeathTransitionCounters {
     app.world().resource::<DeathTransitionCounters>()
 }
@@ -46,6 +48,7 @@ fn idle_fixed_updates_do_not_visit_healthy_players() {
         .map(|character_id| {
             app.world_mut()
                 .spawn((
+                    crate::maps::InMap::continent(0),
                     Player {
                         name: format!("Player{character_id}"),
                         race: 1,
@@ -123,6 +126,7 @@ fn queued_player_death_transitions_apply_once_and_route_snapshot() {
     let player = app
         .world_mut()
         .spawn((
+            crate::maps::InMap::continent(0),
             Player {
                 name: "Elara".into(),
                 race: 1,
@@ -148,6 +152,7 @@ fn queued_player_death_transitions_apply_once_and_route_snapshot() {
     let unrelated_player = app
         .world_mut()
         .spawn((
+            crate::maps::InMap::continent(0),
             Player {
                 name: "Theron".into(),
                 race: 1,
@@ -247,6 +252,7 @@ fn resurrection_allows_a_second_death_transition() {
     let player = app
         .world_mut()
         .spawn((
+            crate::maps::InMap::continent(0),
             Player {
                 name: "Elara".into(),
                 race: 1,
@@ -315,7 +321,7 @@ fn resurrection_allows_a_second_death_transition() {
             |mut players: Query<(&mut Position, &mut Health, &mut PlayerDeathState)>| {
                 let (mut position, mut health, mut death_state) =
                     players.single_mut().expect("test player should be unique");
-                resurrect_player_at_corpse(&mut position, &mut health, None, &mut death_state)
+                resurrect_player_at_corpse(&mut position, &mut health, None, &mut death_state, 0)
             },
         )
         .expect("resurrection helper should run")
@@ -405,6 +411,7 @@ fn despawned_player_death_transition_is_ignored() {
     let player = app
         .world_mut()
         .spawn((
+            crate::maps::InMap::continent(0),
             Player {
                 name: "Elara".into(),
                 race: 1,
@@ -604,7 +611,7 @@ fn corpse_resurrection_clears_death_state() {
         }),
     };
 
-    let message = resurrect_player_at_corpse(&mut position, &mut health, None, &mut death_state)
+    let message = resurrect_player_at_corpse(&mut position, &mut health, None, &mut death_state, 0)
         .expect("corpse resurrection");
 
     assert_eq!(message, "resurrected at corpse");
@@ -667,7 +674,7 @@ fn stuck_escape_teleports_alive_player_to_nearest_graveyard() {
         z: 0.0,
     });
 
-    let message = use_stuck_escape(&mut position, None, 1, &graveyards).expect("stuck escape");
+    let message = use_stuck_escape(&mut position, None, 1, 0, &graveyards).expect("stuck escape");
 
     assert_eq!(message, "stuck escape used");
     assert_eq!(position.x, 100.0);
@@ -692,6 +699,7 @@ fn stuck_escape_rejects_dead_players() {
         &mut position,
         Some(&death_state),
         1,
+        0,
         &GraveyardRegistry::new(),
     )
     .expect_err("dead players cannot use stuck escape");
@@ -724,6 +732,7 @@ fn releasing_the_spirit_moves_the_ghost_to_its_graveyard_and_bumps_the_teleport_
     let player = app
         .world_mut()
         .spawn((
+            crate::maps::InMap::continent(0),
             Player {
                 name: "Ghost".into(),
                 race: 1,

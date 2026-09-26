@@ -74,6 +74,7 @@ fn spawn_attacker(app: &mut App, position: Position, target: Entity) -> Entity {
                 off_hand_timer: 0.0,
                 active: true,
             },
+            crate::maps::InMap::continent(0),
             Player {
                 name: "test".into(),
                 race: 1,
@@ -820,6 +821,7 @@ fn spawn_player(app: &mut App, position: Position) -> Entity {
         .spawn((
             position,
             CombatTarget(None),
+            crate::maps::InMap::continent(0),
             Player {
                 name: "test".into(),
                 race: 1,
@@ -966,6 +968,7 @@ fn target_npc_with_template(template: u32) -> Option<(App, Entity, Entity)> {
         .world_mut()
         .spawn((
             pos(0.0, 0.0, 0.0),
+            crate::maps::InMap::continent(0),
             Player {
                 name: "Human".into(),
                 race: 1,
@@ -1031,6 +1034,7 @@ fn human_melee_on_training_dummy_logs_every_swing_and_never_kills_it() {
         .world_mut()
         .spawn((
             pos(0.0, 0.0, 0.0),
+            crate::maps::InMap::continent(0),
             Player {
                 name: "Human".into(),
                 race: 1,

@@ -584,6 +584,10 @@ pub(crate) fn remove_character(
         corpses
             .remove(character_id)
             .expect("remove character corpse");
+        let mut maps = txn
+            .open_table(crate::maps::persistence::CHARACTER_MAPS)
+            .expect("open character maps");
+        maps.remove(character_id).expect("remove character map");
     }
     txn.commit().expect("Failed to commit character deletion");
 }

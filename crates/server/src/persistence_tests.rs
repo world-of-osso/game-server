@@ -661,6 +661,7 @@ fn a_player_who_stops_moving_before_the_save_tick_is_still_saved() {
     let player = app
         .world_mut()
         .spawn((
+            crate::maps::InMap::continent(0),
             Player {
                 name: "Walker".into(),
                 race: 1,

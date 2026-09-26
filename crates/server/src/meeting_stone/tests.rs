@@ -52,6 +52,7 @@ struct Harness {
     stranger: Member,
     requests: Vec<SummonRequest>,
     failed: Vec<(Entity, CastFailed)>,
+    new_worlds: Vec<(Entity, NewWorld)>,
 }
 
 fn pair<M: lightyear::prelude::Message>() -> (MessageSender<M>, MessageReceiver<M>) {
@@ -82,6 +83,7 @@ fn harness(stone_entry: u32) -> Option<Harness> {
         crate::spell_cast::SpellCastPlugin,
         crate::auras::AuraPlugin,
         MeetingStonePlugin,
+        crate::maps::MapPlugin,
     ));
     app.insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
         Duration::from_millis(50),
@@ -98,6 +100,7 @@ fn harness(stone_entry: u32) -> Option<Harness> {
     app.insert_resource(power_table(data));
     app.insert_resource(class_spells(data));
     app.insert_resource(load_meeting_stone_data(&conn).unwrap());
+    app.insert_resource(crate::maps::store::load_map_store(&conn).unwrap());
     let spawn = stone_spawn(&conn, stone_entry);
     let stone = app.world_mut().spawn(game_object_bundle(&spawn)).id();
     let stone_position = *app.world().get::<Position>(stone).unwrap();
@@ -128,6 +131,7 @@ fn harness(stone_entry: u32) -> Option<Harness> {
         stranger,
         requests: Vec::new(),
         failed: Vec::new(),
+        new_worlds: Vec::new(),
     })
 }
 
@@ -158,6 +162,7 @@ fn spawn_member(app: &mut App, character_id: u64, name: &str, at: Position, zone
             CombatTarget(None),
             MovementControl::default(),
             Zone { id: zone },
+            crate::maps::InMap::continent(0),
         ))
         .id();
     let connection = app
@@ -181,6 +186,11 @@ fn spawn_member(app: &mut App, character_id: u64, name: &str, at: Position, zone
                 pair::<CastFailed>(),
                 pair::<SpellCastIntent>(),
                 pair::<StopSpellCast>(),
+            ),
+            (
+                pair::<NewWorld>(),
+                pair::<WorldPortAck>(),
+                pair::<TransferAborted>(),
             ),
         ))
         .id();
@@ -233,6 +243,16 @@ impl Harness {
                     .collect();
                 self.failed
                     .extend(failed.into_iter().map(|failure| (member.player, failure)));
+                let new_worlds: Vec<NewWorld> = world
+                    .get_mut::<MessageReceiver<NewWorld>>(member.connection)
+                    .unwrap()
+                    .receive()
+                    .collect();
+                self.new_worlds.extend(
+                    new_worlds
+                        .into_iter()
+                        .map(|new_world| (member.player, new_world)),
+                );
             }
         }
     }
@@ -577,4 +597,49 @@ fn a_second_summon_while_one_is_pending_is_refused() {
         h.failed.last().map(|(_, failure)| failure.reason),
         Some(CastFailReason::SummonPending)
     );
+}
+
+/// Ratchet, Northern Barrens (Kalimdor, map 1).
+const RATCHET: (f32, f32, f32) = (-956.0, -3754.0, 5.0);
+
+#[test]
+fn accepting_on_kalimdor_transfers_the_target_to_the_summoner_in_eastern_kingdoms() {
+    let Some(mut h) = harness(DEADMINES_STONE) else {
+        return;
+    };
+    let (x, y, z) = crate::terrain_height::wow_to_bevy(RATCHET.0, RATCHET.1, RATCHET.2);
+    h.app
+        .world_mut()
+        .entity_mut(h.target.player)
+        .insert((Position { x, y, z }, crate::maps::InMap::continent(1)));
+    h.offer_summon();
+    let summoned_to = h.position(h.summoner.player);
+    h.respond(true);
+
+    // Out of Kalimdor, loading Eastern Kingdoms.
+    assert_eq!(
+        h.app.world().get::<crate::maps::InMap>(h.target.player),
+        None
+    );
+    h.advance(2);
+    let target = h.target.player;
+    let (_, new_world) = h
+        .new_worlds
+        .iter()
+        .find(|(player, _)| *player == target)
+        .expect("NewWorld for map 0");
+    assert_eq!(new_world.map_id, 0);
+    assert_eq!(new_world.map_directory, "azeroth");
+
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<WorldPortAck>>(h.target.connection)
+        .unwrap()
+        .send::<TransferChannel>(WorldPortAck);
+    h.advance(3);
+    assert_eq!(
+        h.app.world().get::<crate::maps::InMap>(h.target.player),
+        Some(&crate::maps::InMap::continent(0))
+    );
+    assert_eq!(h.position(h.target.player), summoned_to);
 }

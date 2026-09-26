@@ -336,6 +336,7 @@ type KillPlayers<'w, 's> = Query<
         &'static Level,
         &'static Position,
         Option<&'static PlayerDeathState>,
+        &'static crate::maps::InMap,
     ),
     With<Player>,
 >;
@@ -350,6 +351,7 @@ fn award_kill_xp(
             Option<&LevelScaling>,
             &LastDamager,
             &Position,
+            &crate::maps::InMap,
         ),
         Added<DeathState>,
     >,
@@ -361,7 +363,7 @@ fn award_kill_xp(
     let Some(world_data) = world_data else {
         return;
     };
-    for (npc_entity, npc, level, scaling, killer, position) in &killed {
+    for (npc_entity, npc, level, scaling, killer, position, map) in &killed {
         let Ok((killer_id, ..)) = players.get(killer.0) else {
             continue;
         };
@@ -373,12 +375,13 @@ fn award_kill_xp(
             .map_or_else(Vec::new, |groups| groups.group_members(killer_id.0));
         let members: Vec<KillMember> = players
             .iter()
-            .filter(|(id, _, member_position, _)| {
+            .filter(|(id, _, member_position, _, member_map)| {
                 id.0 == killer_id.0
                     || (group.contains(&id.0)
+                        && *member_map == map
                         && distance(member_position, position) <= GROUP_XP_DISTANCE)
             })
-            .map(|(id, level, _, death)| KillMember {
+            .map(|(id, level, _, death, _)| KillMember {
                 character_id: id.0,
                 level: level.0,
                 alive: is_alive(death),

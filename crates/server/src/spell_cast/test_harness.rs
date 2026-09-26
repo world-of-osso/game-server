@@ -110,6 +110,7 @@ pub(crate) fn spawn_player(app: &mut App, class: u8, x: f32) -> Entity {
                 appearance: default(),
             },
             Position { x, y: 0.0, z: 0.0 },
+            crate::maps::InMap::continent(0),
             Health {
                 current: 1000.0,
                 max: 1000.0,
@@ -144,6 +145,7 @@ pub(crate) fn spawn_npc(app: &mut App, x: f32) -> Entity {
             // Kobold Vermin: hostile to the Human caster.
             UnitFactionTemplate(25),
             Position { x, y: 0.0, z: 0.0 },
+            crate::maps::InMap::continent(0),
             Health {
                 current: 5000.0,
                 max: 5000.0,

@@ -5,7 +5,7 @@
 # MySQL dumps → mysql_dump.py → SQLite
 # Spell/class/item/quest/taxi data: build-pinned Retail DB2 CSVs (game-engine/data/db2/<build>/) → db2.py import
 # Retail profession trainers + skill tier caps, Retail creature models and the Retail
-# creature spawns of maps 0/1: TrinityCore TDB1210 excerpts
+# creature spawns of maps 0/1, areatrigger teleports and graveyards: TrinityCore TDB1210 excerpts
 # (data/reference/tdb1210/<table>.sql) → mysql_dump.py --prefix tdb_ → tdb_* tables
 # Server-read content_* tables: content_policy.py (Retail-first ID mapping)
 #
@@ -30,6 +30,7 @@ DUMP_TABLES=(
     creature_queststarter creature_questender gameobject_queststarter gameobject_questender
     npc_vendor
     creature_loot_template gameobject_loot_template reference_loot_template item_loot_template
+    areatrigger_teleport world_safe_locs graveyard_zone instance_template
     gossip_menu gossip_menu_option npc_text broadcast_text points_of_interest item_template
     gameobject_template gameobject_template_addon gameobject
 )
@@ -54,6 +55,7 @@ TDB_TABLES=(
     creature_queststarter creature_questender gameobject_queststarter gameobject_questender
     npc_vendor gossip_menu gossip_menu_option npc_text creature_template_gossip broadcast_text
     creature_loot_template gameobject_loot_template reference_loot_template item_loot_template
+    areatrigger_teleport world_safe_locs graveyard_zone instance_template
 )
 TDB_ARGS=()
 for table in "${TDB_TABLES[@]}"; do

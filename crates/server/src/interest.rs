@@ -6,6 +6,7 @@ use bevy_replicon::server::visibility::client_visibility::ClientVisibility;
 use lightyear::prelude::*;
 use shared::components::Position;
 
+use crate::maps::InMap;
 use crate::networking::PlayerLink;
 
 /// Entities beyond this distance (in yards) from a player are not replicated.
@@ -14,7 +15,8 @@ const INTEREST_RADIUS: f32 = 100.0;
 const INTEREST_RADIUS_SQ: f32 = INTEREST_RADIUS * INTEREST_RADIUS;
 const INTEREST_BUCKET_SIZE: f32 = INTEREST_RADIUS;
 
-type InterestBucket = (i32, i32);
+/// A 100 yd square of one map copy.
+type InterestBucket = (InMap, i32, i32);
 
 #[derive(Component, Default)]
 pub(crate) struct NetworkVisibility {
@@ -81,14 +83,26 @@ pub(crate) fn mark_interest_position_changed(queue: Option<&InterestDirtyQueue>,
 struct InterestObserver {
     player: Entity,
     position: Position,
+    /// `None` while the player is in a map transfer: it sees only itself.
+    map: Option<InMap>,
     visible: HashSet<Entity>,
+}
+
+impl InterestObserver {
+    /// A player always sees itself; others share its map copy within the radius.
+    fn sees(&self, entity: Entity, position: &Position, map: Option<InMap>) -> bool {
+        entity == self.player
+            || (self.map.is_some()
+                && map == self.map
+                && distance_squared(position, &self.position) <= INTEREST_RADIUS_SQ)
+    }
 }
 
 #[derive(Resource, Default)]
 struct InterestIndex {
     buckets: HashMap<InterestBucket, HashSet<Entity>>,
     target_buckets: HashMap<Entity, InterestBucket>,
-    target_positions: HashMap<Entity, Position>,
+    target_positions: HashMap<Entity, (Position, Option<InMap>)>,
     observers: HashMap<Entity, InterestObserver>,
     connection_by_player: HashMap<Entity, Entity>,
     dirty_targets: HashSet<Entity>,
@@ -96,11 +110,13 @@ struct InterestIndex {
 }
 
 impl InterestIndex {
-    fn add_target(&mut self, entity: Entity, position: Position) {
-        let bucket = interest_bucket(&position);
-        self.buckets.entry(bucket).or_default().insert(entity);
-        self.target_buckets.insert(entity, bucket);
-        self.target_positions.insert(entity, position);
+    fn add_target(&mut self, entity: Entity, position: Position, map: Option<InMap>) {
+        if let Some(map) = map {
+            let bucket = interest_bucket(map, &position);
+            self.buckets.entry(bucket).or_default().insert(entity);
+            self.target_buckets.insert(entity, bucket);
+        }
+        self.target_positions.insert(entity, (position, map));
         self.dirty_targets.insert(entity);
     }
 
@@ -121,13 +137,20 @@ impl InterestIndex {
         }
     }
 
-    fn add_observer(&mut self, connection: Entity, player: Entity, position: Position) {
+    fn add_observer(
+        &mut self,
+        connection: Entity,
+        player: Entity,
+        position: Position,
+        map: Option<InMap>,
+    ) {
         self.connection_by_player.insert(player, connection);
         self.observers.insert(
             connection,
             InterestObserver {
                 player,
                 position,
+                map,
                 visible: HashSet::new(),
             },
         );
@@ -141,22 +164,26 @@ impl InterestIndex {
         self.dirty_observers.remove(&connection);
     }
 
-    fn update_position(&mut self, entity: Entity, position: Position) {
+    fn update_position(&mut self, entity: Entity, position: Position, map: Option<InMap>) {
         if self.target_positions.contains_key(&entity) {
-            self.update_target_position(entity, position);
+            self.update_target_position(entity, position, map);
         }
         if let Some(&connection) = self.connection_by_player.get(&entity)
             && let Some(observer) = self.observers.get_mut(&connection)
         {
             observer.position = position;
+            observer.map = map;
             self.dirty_observers.insert(connection);
         }
     }
 
-    fn update_target_position(&mut self, entity: Entity, position: Position) {
-        let next_bucket = interest_bucket(&position);
-        let previous_bucket = self.target_buckets.insert(entity, next_bucket);
-        if previous_bucket != Some(next_bucket) {
+    fn update_target_position(&mut self, entity: Entity, position: Position, map: Option<InMap>) {
+        let next_bucket = map.map(|map| interest_bucket(map, &position));
+        let previous_bucket = match next_bucket {
+            Some(next_bucket) => self.target_buckets.insert(entity, next_bucket),
+            None => self.target_buckets.remove(&entity),
+        };
+        if previous_bucket != next_bucket {
             if let Some(previous_bucket) = previous_bucket {
                 let remove_bucket =
                     self.buckets
@@ -169,18 +196,23 @@ impl InterestIndex {
                     self.buckets.remove(&previous_bucket);
                 }
             }
-            self.buckets.entry(next_bucket).or_default().insert(entity);
+            if let Some(next_bucket) = next_bucket {
+                self.buckets.entry(next_bucket).or_default().insert(entity);
+            }
         }
-        self.target_positions.insert(entity, position);
+        self.target_positions.insert(entity, (position, map));
         self.dirty_targets.insert(entity);
     }
 
-    fn nearby_targets(&self, position: &Position) -> HashSet<Entity> {
-        let (bucket_x, bucket_z) = interest_bucket(position);
+    fn nearby_targets(&self, map: Option<InMap>, position: &Position) -> HashSet<Entity> {
         let mut candidates = HashSet::new();
+        let Some(map) = map else {
+            return candidates;
+        };
+        let (_, bucket_x, bucket_z) = interest_bucket(map, position);
         for dz in -1..=1 {
             for dx in -1..=1 {
-                if let Some(entities) = self.buckets.get(&(bucket_x + dx, bucket_z + dz)) {
+                if let Some(entities) = self.buckets.get(&(map, bucket_x + dx, bucket_z + dz)) {
                     candidates.extend(entities.iter().copied());
                 }
             }
@@ -221,14 +253,14 @@ fn on_replication_client_added(
 
 fn on_network_visibility_added(
     trigger: On<Add, NetworkVisibility>,
-    positions: Query<&Position>,
+    positions: Query<(&Position, Option<&InMap>)>,
     connections: Query<Entity, With<ClientVisibility>>,
     replication_dirty: Option<Res<ReplicationDirtyQueue>>,
     mut commands: Commands,
     mut index: ResMut<InterestIndex>,
 ) {
-    if let Ok(position) = positions.get(trigger.entity) {
-        index.add_target(trigger.entity, *position);
+    if let Ok((position, map)) = positions.get(trigger.entity) {
+        index.add_target(trigger.entity, *position, map.copied());
     }
     for connection in &connections {
         commands.lose_visibility(trigger.entity, connection);
@@ -260,16 +292,16 @@ fn on_network_visibility_removed(
 fn on_player_link_added(
     trigger: On<Add, PlayerLink>,
     links: Query<&PlayerLink>,
-    positions: Query<&Position>,
+    positions: Query<(&Position, Option<&InMap>)>,
     mut index: ResMut<InterestIndex>,
 ) {
     let Ok(link) = links.get(trigger.entity) else {
         return;
     };
-    let Ok(position) = positions.get(link.0) else {
+    let Ok((position, map)) = positions.get(link.0) else {
         return;
     };
-    index.add_observer(trigger.entity, link.0, *position);
+    index.add_observer(trigger.entity, link.0, *position, map.copied());
 }
 
 fn on_player_link_removed(
@@ -295,17 +327,27 @@ fn forward_position_changes_to_replication(
     }
 }
 
+type VisibilityTargets<'w, 's> = Query<
+    'w,
+    's,
+    (
+        &'static Position,
+        Option<&'static InMap>,
+        &'static mut NetworkVisibility,
+    ),
+>;
+
 fn update_interest(
-    positions: Query<&Position>,
+    positions: Query<(&Position, Option<&InMap>)>,
     dirty_queue: Res<InterestDirtyQueue>,
     replication_dirty: Option<Res<ReplicationDirtyQueue>>,
     mut commands: Commands,
     mut index: ResMut<InterestIndex>,
-    mut visibility_query: Query<(&Position, &mut NetworkVisibility)>,
+    mut visibility_query: VisibilityTargets,
 ) {
     for entity in dirty_queue.drain_interest() {
-        if let Ok(position) = positions.get(entity) {
-            index.update_position(entity, *position);
+        if let Ok((position, map)) = positions.get(entity) {
+            index.update_position(entity, *position, map.copied());
         }
     }
 
@@ -335,24 +377,23 @@ fn update_interest(
 fn update_observer_visibility(
     connection: Entity,
     index: &mut InterestIndex,
-    visibility_query: &mut Query<(&Position, &mut NetworkVisibility)>,
+    visibility_query: &mut VisibilityTargets,
     replication_dirty: Option<&ReplicationDirtyQueue>,
     commands: &mut Commands,
 ) {
     let Some(observer) = index.observers.get(&connection).cloned() else {
         return;
     };
-    let mut candidates = index.nearby_targets(&observer.position);
+    let mut candidates = index.nearby_targets(observer.map, &observer.position);
     candidates.extend(observer.visible.iter().copied());
+    candidates.insert(observer.player);
     let mut visible = HashSet::new();
 
     for entity in candidates {
-        let Ok((position, mut state)) = visibility_query.get_mut(entity) else {
+        let Ok((position, map, mut state)) = visibility_query.get_mut(entity) else {
             continue;
         };
-        let should_be_visible =
-            distance_squared(position, &observer.position) <= INTEREST_RADIUS_SQ;
-        if should_be_visible {
+        if observer.sees(entity, position, map.copied()) {
             visible.insert(entity);
             if state.gain_visibility(connection) {
                 commands.gain_visibility(entity, connection);
@@ -372,29 +413,20 @@ fn update_observer_visibility(
 fn update_target_visibility(
     entity: Entity,
     index: &mut InterestIndex,
-    visibility_query: &mut Query<(&Position, &mut NetworkVisibility)>,
+    visibility_query: &mut VisibilityTargets,
     replication_dirty: Option<&ReplicationDirtyQueue>,
     commands: &mut Commands,
 ) {
-    let Some(position) = index.target_positions.get(&entity).copied() else {
+    let Some((position, map)) = index.target_positions.get(&entity).copied() else {
         return;
     };
-    let observers = index
-        .observers
-        .iter()
-        .map(|(&connection, observer)| (connection, observer.position))
-        .collect::<Vec<_>>();
-    let Ok((_position, mut state)) = visibility_query.get_mut(entity) else {
+    let Ok((_position, _map, mut state)) = visibility_query.get_mut(entity) else {
         index.dirty_targets.insert(entity);
         return;
     };
 
-    for (connection, observer_position) in observers {
-        let should_be_visible =
-            distance_squared(&position, &observer_position) <= INTEREST_RADIUS_SQ;
-        let Some(observer) = index.observers.get_mut(&connection) else {
-            continue;
-        };
+    for (&connection, observer) in index.observers.iter_mut() {
+        let should_be_visible = observer.sees(entity, &position, map);
         apply_target_visibility_transition(
             &mut state,
             observer,
@@ -441,8 +473,9 @@ fn mark_sender_visibility_changed(
     }
 }
 
-fn interest_bucket(position: &Position) -> InterestBucket {
+fn interest_bucket(map: InMap, position: &Position) -> InterestBucket {
     (
+        map,
         (position.x / INTEREST_BUCKET_SIZE).floor() as i32,
         (position.z / INTEREST_BUCKET_SIZE).floor() as i32,
     )

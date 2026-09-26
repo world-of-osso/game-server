@@ -16,11 +16,11 @@ use crate::auth::{Authenticated, InWorld};
 use crate::durability::EquippedDurability;
 use crate::faction::faction_for_race;
 use crate::interest::InterestDirtyQueue;
+use crate::maps::{InMap, MapStore};
 use crate::networking::PlayerLink;
 use crate::teleport::teleported;
 use crate::world_data::WorldData;
 
-const WORLD_MAP_ID: u16 = 0;
 const GHOST_RESURRECT_HEALTH_PCT: f32 = 0.5;
 const GHOST_RESURRECT_MANA_PCT: f32 = 0.5;
 
@@ -29,9 +29,7 @@ mod support;
 #[path = "death/transitions.rs"]
 mod transitions;
 
-#[cfg(test)]
-use self::support::build_snapshot;
-use self::support::{current_seconds, send_error, send_update};
+use self::support::{build_snapshot, current_seconds, send_error, send_update};
 use transitions::process_player_death_transitions;
 pub(crate) use transitions::{PlayerDeathTransition, apply_health_damage};
 
@@ -249,14 +247,18 @@ fn process_release_spirit_requests(
         &mut PlayerDeathState,
         &Player,
         &mut MovementControl,
+        &InMap,
     )>,
     state: Res<DeathServerState>,
+    maps: Option<Res<MapStore>>,
     dirty_queue: Option<Res<InterestDirtyQueue>>,
     mut senders: Query<&mut MessageSender<DeathStateUpdate>>,
+    mut commands: Commands,
 ) {
     for (conn_entity, link, mut receiver) in &mut receivers {
         for _ in receiver.receive() {
-            let Ok((mut position, mut death_state, player, mut control)) = players.get_mut(link.0)
+            let Ok((mut position, mut death_state, player, mut control, map)) =
+                players.get_mut(link.0)
             else {
                 send_error(
                     conn_entity,
@@ -265,15 +267,27 @@ fn process_release_spirit_requests(
                 );
                 continue;
             };
-            let result = release_spirit_for_player(
-                &mut position,
-                &mut death_state,
-                player.race,
-                &state.graveyards,
-            );
-            if result.is_ok() {
-                teleported(dirty_queue.as_deref(), link.0, &mut control);
-            }
+            let dungeon = maps
+                .as_deref()
+                .and_then(|maps| maps.map(map.map_id))
+                .filter(|entry| entry.is_dungeon());
+            let result = match (dungeon, maps.as_deref()) {
+                (Some(entry), Some(maps)) => release_spirit_in_dungeon(
+                    link.0,
+                    &position,
+                    &mut death_state,
+                    entry,
+                    maps,
+                    &mut commands,
+                ),
+                _ => release_spirit_for_player(
+                    &mut position,
+                    &mut death_state,
+                    player.race,
+                    &state.graveyards,
+                )
+                .inspect(|_| teleported(dirty_queue.as_deref(), link.0, &mut control)),
+            };
             send_release_spirit_result(
                 conn_entity,
                 &position,
@@ -283,6 +297,44 @@ fn process_release_spirit_requests(
             );
         }
     }
+}
+
+/// `Player::RepopAtGraveyard` in a dungeon (Player.cpp:4720-4764): the corpse turns to
+/// bones and the player is teleported to the closest graveyard of the dungeon's zone
+/// (`ObjectMgr::GetClosestGraveyard`) and resurrected there (`TELE_REVIVE_AT_TELEPORT`).
+/// A WMO-only dungeon's zone is its `Map.db2` AreaTableID (`TerrainInfo::GetAreaId`).
+pub(crate) fn release_spirit_in_dungeon(
+    player: Entity,
+    position: &Position,
+    death_state: &mut PlayerDeathState,
+    map: &crate::maps::store::MapEntry,
+    maps: &MapStore,
+    commands: &mut Commands,
+) -> Result<String, String> {
+    if death_state.state != DeathState::Dead {
+        return Err("unable to release spirit here".to_string());
+    }
+    let (x, y, z) = crate::terrain_height::bevy_to_wow(position.x, position.y, position.z);
+    let location = crate::maps::WorldLocation {
+        map_id: map.id,
+        position: Vec3::new(x, y, z),
+        orientation: 0.0,
+    };
+    let grave =
+        crate::maps::graveyard::closest_graveyard_in_zone(maps, &location, map.area_table_id)
+            .ok_or_else(|| "unable to release spirit here".to_string())?;
+    death_state.state = DeathState::Ghost;
+    death_state.corpse = None;
+    death_state.graveyard = None;
+    commands.queue(move |world: &mut World| {
+        crate::maps::teleport_to(
+            world,
+            player,
+            grave,
+            crate::maps::TeleportOptions { revive: true },
+        );
+    });
+    Ok("released spirit".into())
 }
 
 fn send_release_spirit_result(
@@ -336,13 +388,14 @@ fn process_resurrect_at_corpse_requests(
         Option<&mut Mana>,
         &mut PlayerDeathState,
         &mut MovementControl,
+        &InMap,
     )>,
     dirty_queue: Option<Res<InterestDirtyQueue>>,
     mut senders: Query<&mut MessageSender<DeathStateUpdate>>,
 ) {
     for (conn_entity, link, player, mut receiver) in &mut receivers {
         for _ in receiver.receive() {
-            let Ok((mut position, mut health, mana, mut death_state, mut control)) =
+            let Ok((mut position, mut health, mana, mut death_state, mut control, map)) =
                 players.get_mut(link.0)
             else {
                 send_error(
@@ -352,8 +405,13 @@ fn process_resurrect_at_corpse_requests(
                 );
                 continue;
             };
-            let result =
-                resurrect_player_at_corpse(&mut position, &mut health, mana, &mut death_state);
+            let result = resurrect_player_at_corpse(
+                &mut position,
+                &mut health,
+                mana,
+                &mut death_state,
+                map.map_id,
+            );
             if result.is_ok() {
                 teleported(dirty_queue.as_deref(), link.0, &mut control);
             }
@@ -495,6 +553,7 @@ fn process_stuck_escape_requests(
         Option<&PlayerDeathState>,
         &Player,
         &mut MovementControl,
+        &InMap,
     )>,
     state: Res<DeathServerState>,
     dirty_queue: Option<Res<InterestDirtyQueue>>,
@@ -502,7 +561,7 @@ fn process_stuck_escape_requests(
 ) {
     for (conn_entity, link, mut receiver) in &mut receivers {
         for _ in receiver.receive() {
-            let Ok((mut position, death_state, player, mut control)) = players.get_mut(link.0)
+            let Ok((mut position, death_state, player, mut control, map)) = players.get_mut(link.0)
             else {
                 send_error(
                     conn_entity,
@@ -511,7 +570,13 @@ fn process_stuck_escape_requests(
                 );
                 continue;
             };
-            match use_stuck_escape(&mut position, death_state, player.race, &state.graveyards) {
+            match use_stuck_escape(
+                &mut position,
+                death_state,
+                player.race,
+                map.map_id,
+                &state.graveyards,
+            ) {
                 Ok(message) => {
                     teleported(dirty_queue.as_deref(), link.0, &mut control);
                     send_update(
@@ -540,6 +605,7 @@ fn process_stuck_escape_requests(
 
 fn build_detected_player_death_state(
     client_id: u64,
+    map_id: u32,
     position: &Position,
     player_race: u8,
     graveyards: &GraveyardRegistry,
@@ -547,7 +613,7 @@ fn build_detected_player_death_state(
 ) -> PlayerDeathState {
     let result = on_death(
         client_id,
-        WORLD_MAP_ID,
+        map_id as u16,
         position.x,
         position.y,
         position.z,
@@ -607,6 +673,7 @@ fn use_stuck_escape(
     position: &mut Position,
     death_state: Option<&PlayerDeathState>,
     player_race: u8,
+    map_id: u32,
     graveyards: &GraveyardRegistry,
 ) -> Result<String, String> {
     if death_state
@@ -617,7 +684,7 @@ fn use_stuck_escape(
     }
     let graveyard = lookup_graveyard(
         graveyards,
-        WORLD_MAP_ID,
+        map_id as u16,
         position.x,
         position.y,
         position.z,
@@ -635,6 +702,7 @@ fn resurrect_player_at_corpse(
     health: &mut Health,
     mana: Option<Mut<Mana>>,
     death_state: &mut PlayerDeathState,
+    map_id: u32,
 ) -> Result<String, String> {
     let corpse = death_state
         .corpse
@@ -645,7 +713,7 @@ fn resurrect_player_at_corpse(
         position.x,
         position.y,
         position.z,
-        WORLD_MAP_ID,
+        map_id as u16,
         corpse,
     )
     .map_err(|_| "you are not close enough to your corpse".to_string())?;
@@ -699,6 +767,40 @@ fn complete_resurrection(
     health.current = (health.max * GHOST_RESURRECT_HEALTH_PCT).max(1.0);
     if let Some(mana) = mana.as_mut() {
         mana.current = mana.max * GHOST_RESURRECT_MANA_PCT;
+    }
+}
+
+/// `Player::ResurrectPlayer(0.5f)` where the player stands (a teleport's
+/// `TELE_REVIVE_AT_TELEPORT`, a ghost entering the dungeon holding its corpse).
+pub(crate) fn resurrect_player(world: &mut World, player: Entity) {
+    let mut entity = world.entity_mut(player);
+    let Some(mut death_state) = entity.get::<PlayerDeathState>().cloned() else {
+        return;
+    };
+    let Some(mut health) = entity.get::<Health>().copied() else {
+        return;
+    };
+    complete_resurrection(&mut health, entity.get_mut::<Mana>(), &mut death_state);
+    entity.insert((health, death_state.clone()));
+    if let Some(queue) = world.get_resource::<ReplicationDirtyQueue>() {
+        queue.mark(player);
+    }
+    let position = *world
+        .get::<Position>(player)
+        .expect("player has a Position");
+    let mut connections = world.query_filtered::<(Entity, &PlayerLink), With<Authenticated>>();
+    let Some(connection) = connections
+        .iter(world)
+        .find_map(|(connection, link)| (link.0 == player).then_some(connection))
+    else {
+        return;
+    };
+    if let Some(mut sender) = world.get_mut::<MessageSender<DeathStateUpdate>>(connection) {
+        sender.send::<DeathChannel>(DeathStateUpdate {
+            snapshot: Some(build_snapshot(&position, &death_state)),
+            message: Some("resurrected".into()),
+            error: None,
+        });
     }
 }
 

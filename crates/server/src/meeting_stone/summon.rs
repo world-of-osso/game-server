@@ -10,17 +10,17 @@
 //!
 //! `SummonResponse` is ignored while the target is dead or in combat
 //! (`HandleSummonResponseOpcode`, MovementHandler.cpp:768-774). A decline or a
-//! late accept ends the offer; an accept in time ends a taxi flight and moves
-//! the target to the held position (`teleport::teleported`). The server hosts
-//! map 0 only, so summoner and target always share a map.
+//! late accept ends the offer; an accept in time ends a taxi flight and teleports
+//! the target to the held location (`TeleportTo(m_summon_location)`), onto another
+//! map through a map transfer (`maps::teleport_to`).
 
 use bevy::prelude::*;
 use lightyear::prelude::*;
-use shared::components::{CombatStatus, MovementControl, Player, Position, Zone};
+use shared::components::{CombatStatus, Player, Position, Rotation, Zone};
 use shared::protocol::{InteractionChannel, SummonRequest, SummonResponse};
 
 use crate::auth::InWorld;
-use crate::interest::InterestDirtyQueue;
+use crate::maps::{InMap, TeleportOptions, WorldLocation};
 use crate::networking::PlayerLink;
 use crate::spell_cast::effects::EffectCtx;
 use crate::spell_cast::{now, targets};
@@ -33,7 +33,7 @@ const SUMMON_DELAY_MS: u32 = 120_000;
 /// An open summon offer on the summoned player.
 #[derive(Component, Debug, Clone, Copy, PartialEq)]
 pub(crate) struct PendingSummon {
-    pub location: Position,
+    pub location: WorldLocation,
     pub expires_at: f64,
 }
 
@@ -66,8 +66,22 @@ pub(crate) fn effect_summon_player(
     send_summon_request(world, summoner, target);
 }
 
+/// The summoner's `WorldLocation` (`Player::SendSummonRequestFrom` stores
+/// `summoner->GetMapId()` and position).
+fn summoner_location(world: &World, summoner: Entity) -> Option<WorldLocation> {
+    let map = world.get::<InMap>(summoner)?;
+    let position = world.get::<Position>(summoner)?;
+    let (x, y, z) = crate::terrain_height::bevy_to_wow(position.x, position.y, position.z);
+    let orientation = world.get::<Rotation>(summoner)?.y - std::f32::consts::FRAC_PI_2;
+    Some(WorldLocation {
+        map_id: map.map_id,
+        position: Vec3::new(x, y, z),
+        orientation,
+    })
+}
+
 fn send_summon_request(world: &mut World, summoner: Entity, target: Entity) {
-    let Some(location) = world.get::<Position>(summoner).copied() else {
+    let Some(location) = summoner_location(world, summoner) else {
         return;
     };
     let request = SummonRequest {
@@ -129,15 +143,9 @@ fn respond_to_summon(world: &mut World, player: Entity, accept: bool) {
         return;
     }
     crate::taxi::finish_flight(world.entity_mut(player));
-    let Some(mut control) = world.get::<MovementControl>(player).copied() else {
-        return;
-    };
-    world.entity_mut(player).insert(pending.location);
-    crate::teleport::teleported(
-        world.get_resource::<InterestDirtyQueue>(),
-        player,
-        &mut control,
+    crate::maps::teleport_to(world, player, pending.location, TeleportOptions::default());
+    info!(
+        "{player} accepted a summon to map {}",
+        pending.location.map_id
     );
-    world.entity_mut(player).insert(control);
-    info!("{player} accepted a summon");
 }

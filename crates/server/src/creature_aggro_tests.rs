@@ -63,6 +63,7 @@ fn spawn_player(app: &mut App, position: Position, level: u8) -> Entity {
     app.world_mut()
         .spawn((
             position,
+            crate::maps::InMap::continent(0),
             Player {
                 name: "Anduin".into(),
                 race: 1,
@@ -107,6 +108,7 @@ fn spawn_creature(app: &mut App, fixture: &CreatureFixture, position: Position) 
     let mut commands = world.commands();
     let mut entity = commands.spawn((
         position,
+        crate::maps::InMap::continent(0),
         Npc {
             template_id: 30,
             name: "Forest Spider".into(),
@@ -453,6 +455,7 @@ fn spawn_harness_boar(h: &mut crate::spell_cast::test_harness::Harness, x: f32) 
         },
         UnitFactionTemplate(NEUTRAL_BEAST),
         Position { x, y: 0.0, z: 0.0 },
+        crate::maps::InMap::continent(0),
         Health {
             current: 5000.0,
             max: 5000.0,
@@ -515,4 +518,26 @@ fn hostile_civilian_ignores_nearby_player_until_hit() {
     run(&mut app, 20);
     assert_eq!(state(&app, kobold), pursuing(player));
     assert!(health(&app, player) < 100.0, "civilian hits back");
+}
+
+#[test]
+fn a_player_on_another_map_at_the_spiders_coordinates_is_not_attacked() {
+    let mut app = aggro_app();
+    let position = Position {
+        x: 0.0,
+        y: 0.0,
+        z: 0.0,
+    };
+    let spider = spawn_creature(&mut app, &FOREST_SPIDER, position);
+    let player = spawn_player(&mut app, position, 5);
+    app.world_mut()
+        .entity_mut(player)
+        .insert(crate::maps::InMap::continent(1));
+
+    run(&mut app, 3);
+
+    assert_eq!(
+        app.world().get::<CreatureState>(spider),
+        Some(&CreatureState::Idle)
+    );
 }

@@ -145,6 +145,7 @@ fn spawn_client(app: &mut App, level: u8) -> Client {
     let player = app
         .world_mut()
         .spawn((
+            crate::maps::InMap::continent(0),
             Player {
                 name: "Questor".into(),
                 race: 1,
@@ -190,6 +191,7 @@ fn enter_world(app: &mut App, client: &Client) -> QuestLogSnapshot {
 fn spawn_npc(app: &mut App, template_id: u32, x: f32) -> u64 {
     app.world_mut()
         .spawn((
+            crate::maps::InMap::continent(0),
             Npc {
                 template_id,
                 name: String::new(),
@@ -267,6 +269,7 @@ fn mark_rewarded(app: &App, client: &Client, quest_id: u32) {
 fn kill(app: &mut App, client: &Client, template_id: u32, count: usize) {
     for _ in 0..count {
         app.world_mut().spawn((
+            crate::maps::InMap::continent(0),
             Npc {
                 template_id,
                 name: String::new(),

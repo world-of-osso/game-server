@@ -19,6 +19,7 @@ type PlayerDeathTransitionQuery<'w, 's> = Query<
         Option<&'static PlayerDeathState>,
         &'static crate::persistence::ClientId,
         &'static Player,
+        &'static crate::maps::InMap,
     ),
     With<Player>,
 >;
@@ -51,7 +52,7 @@ pub(super) fn process_player_death_transitions(
             params.counters.players_visited += 1;
         }
 
-        let Ok((position, mut health, durability, death_state, client_id, player)) =
+        let Ok((position, mut health, durability, death_state, client_id, player, map)) =
             params.players.get_mut(player_entity)
         else {
             continue;
@@ -69,6 +70,7 @@ pub(super) fn process_player_death_transitions(
         }
         let death_state = build_detected_player_death_state(
             client_id.0,
+            map.map_id,
             position,
             player.race,
             &params.state.graveyards,

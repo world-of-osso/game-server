@@ -6,6 +6,7 @@ use shared::components::{Health, Player, Position};
 
 use super::{CharacterData, GameDatabase, load_character, save_character};
 use crate::death::PlayerDeathState;
+use crate::maps::{InMap, MapTransfer};
 
 /// Marker component linking a player entity to its character_id for periodic saves.
 #[derive(Component, Debug)]
@@ -20,6 +21,8 @@ type DirtyPlayerData = (
     &'static Player,
     &'static ClientId,
     Option<&'static PlayerDeathState>,
+    Option<&'static InMap>,
+    Option<&'static MapTransfer>,
 );
 type DirtyPlayerFilter = (
     Or<(
@@ -56,10 +59,13 @@ pub(super) fn save_dirty_characters(
 
     let mut saved_count = 0;
     for entity in unsaved.drain() {
-        let Ok((position, health, player, client_id, death)) = players.players.get(entity) else {
+        let Ok((position, health, player, client_id, death, map, transfer)) =
+            players.players.get(entity)
+        else {
             continue;
         };
-        save_live_character(&db.db, client_id.0, player, position, health, death);
+        let map_id = crate::maps::saved_map_id(map, transfer);
+        save_live_character(&db.db, client_id.0, player, position, health, death, map_id);
         saved_count += 1;
     }
     if saved_count == 0 {
@@ -70,13 +76,7 @@ pub(super) fn save_dirty_characters(
 
 pub(super) fn flush_all_characters_on_exit(
     db: Option<Res<GameDatabase>>,
-    players: Query<(
-        &Position,
-        &Health,
-        &Player,
-        &ClientId,
-        Option<&PlayerDeathState>,
-    )>,
+    players: Query<DirtyPlayerData>,
     mut exit_events: MessageReader<AppExit>,
 ) {
     if exit_events.read().next().is_none() {
@@ -86,8 +86,9 @@ pub(super) fn flush_all_characters_on_exit(
     let Some(db) = db else { return };
 
     let mut saved_count = 0usize;
-    for (position, health, player, client_id, death) in players.iter() {
-        save_live_character(&db.db, client_id.0, player, position, health, death);
+    for (position, health, player, client_id, death, map, transfer) in players.iter() {
+        let map_id = crate::maps::saved_map_id(map, transfer);
+        save_live_character(&db.db, client_id.0, player, position, health, death, map_id);
         saved_count += 1;
     }
     if saved_count > 0 {
@@ -103,7 +104,9 @@ pub fn save_live_character(
     position: &Position,
     health: &Health,
     death: Option<&PlayerDeathState>,
+    map_id: u32,
 ) {
+    crate::maps::persistence::save_character_map(db, character_id, map_id);
     let mut data = load_character(db, character_id)
         .unwrap_or_else(|| CharacterData::from_components(player, position, health));
     data.sync_live_components(player, position, health);

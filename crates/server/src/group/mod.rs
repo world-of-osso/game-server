@@ -21,7 +21,7 @@ use crate::auth::Authenticated;
 use crate::networking::PlayerLink;
 use crate::persistence::ClientId;
 
-pub use registry::{CharacterId, GroupEffect, GroupRegistry, OnlineMember, OnlineView};
+pub use registry::{CharacterId, GroupEffect, GroupId, GroupRegistry, OnlineMember, OnlineView};
 
 pub struct GroupPlugin;
 

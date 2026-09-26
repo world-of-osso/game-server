@@ -31,6 +31,7 @@ use bevy::prelude::*;
 use shared::components::{Player, Position};
 
 use crate::creature_ai::{FormationMember, SpawnPoint, WaypointState};
+use crate::maps::InMap;
 use crate::terrain_height::{bevy_to_wow, wow_to_bevy};
 use crate::world_data::WorldData;
 
@@ -42,7 +43,8 @@ pub const SIZE_OF_GRIDS: f32 = 533.3333;
 #[derive(Component, Debug)]
 pub struct GridDormant;
 
-type GridCoord = (i32, i32);
+/// A grid of one map copy.
+type GridCoord = (InMap, i32, i32);
 
 pub struct GridActivityPlugin;
 
@@ -76,10 +78,11 @@ impl GridIndex {
     }
 }
 
-/// Grid of a Bevy-space position (WoW x, y = Bevy x, -z).
-fn grid_of(x: f32, z: f32) -> GridCoord {
+/// Grid of a Bevy-space position (WoW x, y = Bevy x, -z) on `map`.
+fn grid_of(map: InMap, x: f32, z: f32) -> GridCoord {
     let (wow_x, wow_y, _) = bevy_to_wow(x, 0.0, z);
     (
+        map,
         (wow_x / SIZE_OF_GRIDS).floor() as i32,
         (wow_y / SIZE_OF_GRIDS).floor() as i32,
     )
@@ -109,6 +112,7 @@ type CreatureHomes<'w, 's> = Query<
         &'static SpawnPoint,
         Option<&'static WaypointState>,
         Option<&'static FormationMember>,
+        &'static InMap,
     ),
 >;
 
@@ -140,23 +144,24 @@ fn register_creatures(
 }
 
 fn home_grids(
-    (spawn, waypoints, member): (
+    (spawn, waypoints, member, &map): (
         &SpawnPoint,
         Option<&WaypointState>,
         Option<&FormationMember>,
+        &InMap,
     ),
     creatures: &CreatureHomes,
     world_data: Option<&WorldData>,
 ) -> Vec<GridCoord> {
-    let mut grids = vec![grid_of(spawn.x, spawn.z)];
+    let mut grids = vec![grid_of(map, spawn.x, spawn.z)];
     let leader = member.and_then(|member| creatures.get(member.leader).ok());
-    if let Some((leader_spawn, _, _)) = leader {
-        grids.push(grid_of(leader_spawn.x, leader_spawn.z));
+    if let Some((leader_spawn, _, _, _)) = leader {
+        grids.push(grid_of(map, leader_spawn.x, leader_spawn.z));
     }
-    let paths = [waypoints, leader.and_then(|(_, path, _)| path)];
+    let paths = [waypoints, leader.and_then(|(_, path, _, _)| path)];
     for path in paths.into_iter().flatten() {
         if let Some(path) = world_data.and_then(|data| data.waypoints.get(&path.path_id)) {
-            grids.extend(path_grids(path));
+            grids.extend(path_grids(map, path));
         }
     }
     grids.sort_unstable();
@@ -166,7 +171,7 @@ fn home_grids(
 
 /// Every grid a closed patrol path crosses, sampled at a quarter grid along
 /// each leg (the last point walks back to the first).
-fn path_grids(path: &crate::world_data::WaypointPath) -> Vec<GridCoord> {
+fn path_grids(map: InMap, path: &crate::world_data::WaypointPath) -> Vec<GridCoord> {
     let points: Vec<(f32, f32)> = path
         .points
         .iter()
@@ -183,7 +188,7 @@ fn path_grids(path: &crate::world_data::WaypointPath) -> Vec<GridCoord> {
             .max(1.0) as usize;
         for step in 0..=steps {
             let t = step as f32 / steps as f32;
-            grids.push(grid_of(x0 + (x1 - x0) * t, z0 + (z1 - z0) * t));
+            grids.push(grid_of(map, x0 + (x1 - x0) * t, z0 + (z1 - z0) * t));
         }
     }
     grids
@@ -194,11 +199,11 @@ fn path_grids(path: &crate::world_data::WaypointPath) -> Vec<GridCoord> {
 fn update_grid_activity(
     mut commands: Commands,
     mut index: ResMut<GridIndex>,
-    players: Query<(Entity, &Position), With<Player>>,
+    players: Query<(Entity, &Position, &InMap), With<Player>>,
 ) {
     let player_grids: HashMap<Entity, GridCoord> = players
         .iter()
-        .map(|(player, position)| (player, grid_of(position.x, position.z)))
+        .map(|(player, position, &map)| (player, grid_of(map, position.x, position.z)))
         .collect();
     if player_grids == index.player_grids {
         return;
@@ -225,10 +230,10 @@ fn update_grid_activity(
 /// The 3x3 grids around each player grid.
 fn neighbourhoods<'a>(player_grids: impl Iterator<Item = &'a GridCoord>) -> HashSet<GridCoord> {
     let mut active = HashSet::new();
-    for &(gx, gy) in player_grids {
+    for &(map, gx, gy) in player_grids {
         for dx in -1..=1 {
             for dy in -1..=1 {
-                active.insert((gx + dx, gy + dy));
+                active.insert((map, gx + dx, gy + dy));
             }
         }
     }

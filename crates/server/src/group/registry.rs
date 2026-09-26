@@ -782,6 +782,11 @@ impl GroupRegistry {
 
     // --- Lookups ---
 
+    /// The group `member` belongs to (`Player::GetGroup`).
+    pub fn group_id_of(&self, member: CharacterId) -> Option<GroupId> {
+        self.membership.get(&member).copied()
+    }
+
     fn group_of(&self, member: CharacterId) -> Option<(GroupId, &Group)> {
         let id = *self.membership.get(&member)?;
         Some((id, self.groups.get(&id)?))

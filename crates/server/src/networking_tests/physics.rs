@@ -10,7 +10,7 @@ fn probe_and_clamp(
     health: &mut Health,
     dt: f32,
 ) {
-    let probe = map.ground_at(Vec3::new(pos.x, pos.y, pos.z));
+    let probe = map.ground_at(0, Vec3::new(pos.x, pos.y, pos.z));
     clamp_to_ground(probe, pos, vel, fall_tracker, health, dt);
 }
 

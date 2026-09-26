@@ -280,6 +280,7 @@ type Killed<'w, 's> = Query<
         &'static Npc,
         &'static LastDamager,
         &'static Position,
+        &'static crate::maps::InMap,
         &'static mut Corpse,
         &'static mut DeathState,
     ),
@@ -294,14 +295,17 @@ fn generate_corpse_loot(
     mut senders: LootSenders,
     mut commands: Commands,
 ) {
-    for (corpse, npc, killer, position, mut decay, mut death) in &mut killed {
-        let Ok((killer_id, _)) = players.get(killer.0) else {
+    for (corpse, npc, killer, position, map, mut decay, mut death) in &mut killed {
+        let Ok((killer_id, ..)) = players.get(killer.0) else {
             continue;
         };
         let mut loot = CorpseLoot::default();
-        for character_id in
-            credited_characters(killer_id.0, position, &players, rolls.groups.as_deref())
-        {
+        for character_id in credited_characters(
+            killer_id.0,
+            (map, position),
+            &players,
+            rolls.groups.as_deref(),
+        ) {
             let slots = rolls.roll(npc.template_id, character_id);
             if !slots.is_empty() {
                 loot.looters.insert(character_id, slots);

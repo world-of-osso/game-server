@@ -142,6 +142,8 @@ fn select_character_in_world(
     app.insert_resource(db);
     app.insert_resource(helm_durability());
     app.add_plugins(DeathPlugin);
+    app.insert_resource(crate::maps::MapStore::continents());
+    app.init_resource::<crate::maps::InstanceManager>();
     app.add_systems(Update, process_select_character);
     app.finish();
     app.cleanup();
@@ -286,6 +288,8 @@ fn selecting_character_with_invalid_race_class_is_rejected() {
     app.register_message::<LoadTerrain>();
     app.insert_resource(db);
     app.add_plugins(DeathPlugin);
+    app.insert_resource(crate::maps::MapStore::continents());
+    app.init_resource::<crate::maps::InstanceManager>();
     app.add_systems(Update, process_select_character);
     app.init_resource::<EnterWorldReplies>();
     app.add_systems(Last, collect_enter_world_replies);
@@ -363,6 +367,8 @@ fn entering_world_sends_one_system_motd_message() {
     app.insert_resource(db);
     app.insert_resource(motd);
     app.add_plugins(DeathPlugin);
+    app.insert_resource(crate::maps::MapStore::continents());
+    app.init_resource::<crate::maps::InstanceManager>();
     app.add_systems(Update, process_select_character);
     app.add_systems(
         Update,
@@ -417,6 +423,11 @@ fn collect_terrain_replies(
 
 /// First `LoadTerrain` a character saved at WoW `(x, y, z)` receives on entering the world.
 fn initial_terrain_on_enter(wow_position: (f32, f32, f32)) -> LoadTerrain {
+    initial_terrain_on_enter_map(0, wow_position)
+}
+
+/// First `LoadTerrain` a character saved on map `map_id` receives on entering the world.
+fn initial_terrain_on_enter_map(map_id: u32, wow_position: (f32, f32, f32)) -> LoadTerrain {
     let db = test_db();
     let account_id = 21;
     let (character_id, _) = persistence::create_character(&db.db, account_id, "Tilewalker", 1, 1)
@@ -425,6 +436,7 @@ fn initial_terrain_on_enter(wow_position: (f32, f32, f32)) -> LoadTerrain {
     // CharacterData stores WoW coordinates.
     (data.x, data.y, data.z) = wow_position;
     persistence::save_character(&db.db, character_id, &data);
+    crate::maps::persistence::save_character_map(&db.db, character_id, map_id);
 
     let mut app = App::new();
     app.add_plugins(MinimalPlugins);
@@ -437,6 +449,8 @@ fn initial_terrain_on_enter(wow_position: (f32, f32, f32)) -> LoadTerrain {
     app.register_message::<LoadTerrain>();
     app.insert_resource(db);
     app.add_plugins(DeathPlugin);
+    app.insert_resource(crate::maps::MapStore::continents());
+    app.init_resource::<crate::maps::InstanceManager>();
     app.add_systems(Update, process_select_character);
     app.init_resource::<TerrainReplies>();
     app.add_systems(Last, collect_terrain_replies);
@@ -470,6 +484,20 @@ fn initial_terrain_on_enter(wow_position: (f32, f32, f32)) -> LoadTerrain {
         .first()
         .cloned()
         .expect("entering the world sends LoadTerrain")
+}
+
+#[test]
+fn a_character_saved_on_kalimdor_enters_kalimdor() {
+    // Ratchet, Northern Barrens: tile row 39 (WoW Y), column 33 (WoW X).
+    let ratchet = initial_terrain_on_enter_map(1, (-956.0, -3754.0, 5.0));
+    assert_eq!(
+        (
+            ratchet.map_name.as_str(),
+            ratchet.initial_tile_y,
+            ratchet.initial_tile_x
+        ),
+        ("kalimdor", 39, 33)
+    );
 }
 
 #[test]
@@ -534,7 +562,7 @@ fn log_out(db: &GameDatabase, character_id: u64, health: f32, death: Option<&Pla
         current: health,
         max: 100.0,
     };
-    persistence::save_live_character(&db.db, character_id, &player, &position, &health, death);
+    persistence::save_live_character(&db.db, character_id, &player, &position, &health, death, 0);
 }
 
 /// Player::LoadFromDB (PLAYER_FLAGS_GHOST → still dead, a ghost) and

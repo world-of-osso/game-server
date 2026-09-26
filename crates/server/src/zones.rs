@@ -21,30 +21,41 @@ pub struct ZonePlugin;
 
 impl Plugin for ZonePlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(PostStartup, spawn_eastern_kingdoms_creatures)
+        app.add_systems(PostStartup, spawn_continent_creatures)
             .add_systems(FixedUpdate, apply_addon_auras);
     }
 }
 
-fn spawn_eastern_kingdoms_creatures(mut commands: Commands, world_data: Res<WorldData>) {
-    let count = spawn_eastern_kingdoms_core(&mut commands, &world_data, true);
-    info!("Spawned {count} creatures on map 0 (Eastern Kingdoms)");
+/// The hosted continents are created at startup with all their creatures.
+fn spawn_continent_creatures(mut commands: Commands, world_data: Res<WorldData>) {
+    for map_id in crate::maps::NPC_APPEARANCE_MAPS {
+        let count = spawn_map_creatures(
+            &mut commands,
+            &world_data,
+            crate::maps::InMap::continent(map_id),
+            true,
+        );
+        info!("Spawned {count} creatures on map {map_id}");
+    }
 }
 
-/// Spawn every map 0 creature. Map 1 stays unspawned: `Position` has no map, so interest
-/// would overlap the two continents. When `replicate` is true, adds `Replicate`
-/// (requires lightyear plugins). Tests pass `false` to avoid that dependency.
-fn spawn_eastern_kingdoms_core(
+/// Spawn every creature of `map`'s map into that copy (none outside
+/// `NPC_APPEARANCE_MAPS`). When `replicate` is true, adds
+/// `Replicate` (requires lightyear plugins). Tests pass `false` to avoid that dependency.
+pub(crate) fn spawn_map_creatures(
     commands: &mut Commands,
     world_data: &WorldData,
+    map: crate::maps::InMap,
     replicate: bool,
 ) -> u32 {
-    let Some(indices) = world_data.spawns_by_map.get(&0) else {
-        warn!("No spawns found for map 0 (Eastern Kingdoms)");
+    if !crate::maps::NPC_APPEARANCE_MAPS.contains(&map.map_id) {
+        return 0;
+    }
+    let Some(indices) = world_data.spawns_by_map.get(&(map.map_id as u16)) else {
         return 0;
     };
     let spawns = indices.iter().map(|&idx| &world_data.spawns[idx]);
-    spawn_creatures(commands, world_data, replicate, spawns).len() as u32
+    spawn_creatures(commands, world_data, map, replicate, spawns).len() as u32
 }
 
 /// Spawn `spawns` with their AI, addon and formation components; returns
@@ -52,6 +63,7 @@ fn spawn_eastern_kingdoms_core(
 fn spawn_creatures<'a>(
     commands: &mut Commands,
     world_data: &WorldData,
+    map: crate::maps::InMap,
     replicate: bool,
     spawns: impl Iterator<Item = &'a CreatureSpawn>,
 ) -> HashMap<u32, Entity> {
@@ -88,7 +100,7 @@ fn spawn_creatures<'a>(
         };
         let bundle = creature_bundle(spawn, &template.name, health, display_id);
 
-        let mut entity = commands.spawn(bundle);
+        let mut entity = commands.spawn((bundle, map));
         if let Some((scaling, tuning)) = scaling {
             entity.insert((scaling, ScaledStats(tuning.stats.clone())));
         }
@@ -514,7 +526,12 @@ mod tests {
 
     /// Test-only system: spawns creatures without `Replicate` (which requires lightyear plugins).
     fn spawn_test(mut commands: Commands, world_data: Res<WorldData>) {
-        spawn_eastern_kingdoms_core(&mut commands, &world_data, false);
+        spawn_map_creatures(
+            &mut commands,
+            &world_data,
+            crate::maps::InMap::continent(0),
+            false,
+        );
     }
 
     fn run_spawn_system(wd: WorldData) -> App {
