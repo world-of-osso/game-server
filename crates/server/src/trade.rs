@@ -404,7 +404,7 @@ fn process_set_money_requests(
         &mut senders,
         |db, client_id, req, manager| {
             let inventory = persistence::load_inventory(db, client_id);
-            if inventory.gold < u64::from(req.copper) {
+            if inventory.gold < req.copper {
                 return Err("not enough gold for trade".into());
             }
             manager

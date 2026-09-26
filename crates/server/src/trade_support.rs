@@ -196,24 +196,24 @@ pub(super) fn execute_completed_trade(
 ) -> Result<(), String> {
     let mut initiator_inventory = persistence::load_inventory(db, trade.initiator);
     let mut target_inventory = persistence::load_inventory(db, trade.target);
-    if initiator_inventory.gold < u64::from(trade.initiator_offer.gold) {
+    if initiator_inventory.gold < trade.initiator_offer.gold {
         return Err("trade failed: initiator no longer has enough gold".into());
     }
-    if target_inventory.gold < u64::from(trade.target_offer.gold) {
+    if target_inventory.gold < trade.target_offer.gold {
         return Err("trade failed: target no longer has enough gold".into());
     }
 
     let initiator_items = take_offered_items(&mut initiator_inventory, &trade.initiator_offer)?;
     let target_items = take_offered_items(&mut target_inventory, &trade.target_offer)?;
 
-    initiator_inventory.gold -= u64::from(trade.initiator_offer.gold);
-    target_inventory.gold -= u64::from(trade.target_offer.gold);
+    initiator_inventory.gold -= trade.initiator_offer.gold;
+    target_inventory.gold -= trade.target_offer.gold;
     initiator_inventory.gold = initiator_inventory
         .gold
-        .saturating_add(u64::from(trade.target_offer.gold));
+        .saturating_add(trade.target_offer.gold);
     target_inventory.gold = target_inventory
         .gold
-        .saturating_add(u64::from(trade.initiator_offer.gold));
+        .saturating_add(trade.initiator_offer.gold);
 
     initiator_inventory.items.extend(target_items);
     target_inventory.items.extend(initiator_items);

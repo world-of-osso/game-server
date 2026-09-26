@@ -76,8 +76,8 @@ fn compare_listing(
         AuctionSortField::MinBid => a.min_bid.cmp(&b.min_bid),
         AuctionSortField::Buyout => a
             .buyout_price
-            .unwrap_or(u32::MAX)
-            .cmp(&b.buyout_price.unwrap_or(u32::MAX)),
+            .unwrap_or(u64::MAX)
+            .cmp(&b.buyout_price.unwrap_or(u64::MAX)),
         AuctionSortField::TimeLeft => {
             auction_time_rank(a.time_left).cmp(&auction_time_rank(b.time_left))
         }
@@ -143,7 +143,7 @@ pub(super) fn to_mail_entry(mail: MailEntryData) -> shared::protocol::AuctionMai
     }
 }
 
-pub(super) fn min_next_bid(auction: &AuctionData) -> u32 {
+pub(super) fn min_next_bid(auction: &AuctionData) -> u64 {
     match auction.current_bid {
         Some(current) => current.saturating_add((current / 20).max(1)),
         None => auction.min_bid,

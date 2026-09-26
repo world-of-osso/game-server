@@ -380,8 +380,8 @@ fn expired_auction_with_bid_awards_winner_and_pays_seller() {
 
 #[test]
 fn house_cut_deducted_on_successful_sale() {
-    let deposit = 13_u32;
-    let cases: &[(u32, u32)] = &[
+    let deposit = 13_u64;
+    let cases: &[(u64, u64)] = &[
         (200, 190 + deposit),
         (1000, 950 + deposit),
         (1, 1 + deposit),
@@ -533,4 +533,43 @@ fn buyout_and_claim_mail_delivers_item_and_gold() {
         persistence::load_inventory(&db, buyer_id).items.len(),
         buyer_item_count_before + 1
     );
+}
+
+#[test]
+fn buyout_above_the_u32_copper_range_pays_the_seller_in_full() {
+    let db = persistence::temp_database();
+    let (seller_id, _) =
+        persistence::create_character_with_test_bags(&db, 1, "Seller", 1, 1).expect("seller");
+    let (buyer_id, _) =
+        persistence::create_character_with_test_bags(&db, 2, "Buyer", 1, 1).expect("buyer");
+    let source_item = persistence::load_inventory(&db, seller_id).items[0].clone();
+    // 1,000,000 gold: above u32::MAX copper (~429,496 gold), below Retail's cap.
+    let buyout = 10_000_000_000_u64;
+    let mut buyer_inventory = persistence::load_inventory(&db, buyer_id);
+    buyer_inventory.gold = buyout + 5;
+    persistence::save_inventory(&db, buyer_id, &buyer_inventory);
+    let mut state = AuctionHouseState::default();
+
+    let created = create_auction(
+        &db,
+        &mut state,
+        seller_id,
+        crate::npc_interaction::AUCTION_HOUSE_ALLIANCE,
+        &CreateAuction {
+            item_guid: source_item.item_guid,
+            stack_count: 1,
+            min_bid: 5_000_000_000,
+            buyout_price: Some(buyout),
+            duration: AuctionDuration::Short,
+        },
+    );
+    assert!(created.success, "{}", created.message);
+    let auction_id = *state.auctions.keys().next().expect("auction id");
+
+    assert!(buyout_auction(&db, &mut state, buyer_id, auction_id).success);
+
+    assert_eq!(persistence::load_inventory(&db, buyer_id).gold, 5);
+    let deposit = deposit_cost(source_item.vendor_sell_price, 1, AuctionDuration::Short);
+    let seller_mail = persistence::load_mailbox(&db, seller_id);
+    assert_eq!(seller_mail[0].attached_money, 9_500_000_000 + deposit);
 }

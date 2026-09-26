@@ -321,7 +321,7 @@ pub(super) fn place_bid_with_gold_updates(
     state: &mut AuctionHouseState,
     character_id: u64,
     auction_id: u64,
-    amount: u32,
+    amount: u64,
     gold_updates: &mut GoldUpdateQueue,
 ) -> AuctionOperationResponse {
     let previous_bidder = state

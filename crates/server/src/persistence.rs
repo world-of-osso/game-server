@@ -87,11 +87,63 @@ const IGNORE_LISTS: TableDefinition<u64, &[u8]> = TableDefinition::new("ignore_l
 /// Collection table: PlayerId (u64) -> serialized collection state (bytes).
 const COLLECTIONS: TableDefinition<u64, &[u8]> = TableDefinition::new("collections");
 
-/// Active auction table: auction_id (u64) -> serialized auction data (bytes).
-const AUCTIONS: TableDefinition<u64, &[u8]> = TableDefinition::new("auctions");
+/// Active auction table: auction_id (u64) -> bitcode `AuctionData` (money in `u64` copper).
+const AUCTIONS: TableDefinition<u64, &[u8]> = TableDefinition::new("auction_listings");
+/// Auctions written before auction money became `u64`; moved into `AUCTIONS` and
+/// dropped at startup.
+pub(crate) const LEGACY_AUCTIONS: TableDefinition<u64, &[u8]> = TableDefinition::new("auctions");
 
-/// Mailbox table: character_id (u64) -> serialized Vec<MailEntryData>.
-const MAILBOXES: TableDefinition<u64, &[u8]> = TableDefinition::new("mailboxes");
+/// The auction layout before money became `u64`.
+#[derive(bitcode::Encode, bitcode::Decode)]
+pub(crate) struct LegacyAuctionDataU32Money {
+    pub auction_id: u64,
+    pub seller_character_id: u64,
+    pub seller_name: String,
+    pub item: InventoryItemData,
+    pub stack_count: u32,
+    pub min_bid: u32,
+    pub current_bid: Option<u32>,
+    pub current_bidder_character_id: Option<u64>,
+    pub buyout_price: Option<u32>,
+    pub expires_at_unix_secs: u64,
+    pub faction: u8,
+    pub deposit: u32,
+}
+
+impl From<LegacyAuctionDataU32Money> for AuctionData {
+    fn from(legacy: LegacyAuctionDataU32Money) -> Self {
+        Self {
+            auction_id: legacy.auction_id,
+            seller_character_id: legacy.seller_character_id,
+            seller_name: legacy.seller_name,
+            item: legacy.item,
+            stack_count: legacy.stack_count,
+            min_bid: u64::from(legacy.min_bid),
+            current_bid: legacy.current_bid.map(u64::from),
+            current_bidder_character_id: legacy.current_bidder_character_id,
+            buyout_price: legacy.buyout_price.map(u64::from),
+            expires_at_unix_secs: legacy.expires_at_unix_secs,
+            faction: legacy.faction,
+            deposit: u64::from(legacy.deposit),
+        }
+    }
+}
+
+/// Mailbox table: character_id (u64) -> bitcode `Vec<MailEntryData>` (money in `u64`).
+const MAILBOXES: TableDefinition<u64, &[u8]> = TableDefinition::new("auction_mailboxes");
+/// Mailboxes written before mail money became `u64`; moved into `MAILBOXES` and
+/// dropped at startup.
+pub(crate) const LEGACY_MAILBOXES: TableDefinition<u64, &[u8]> = TableDefinition::new("mailboxes");
+
+/// The mail layout before money became `u64`.
+#[derive(bitcode::Encode, bitcode::Decode)]
+pub(crate) struct LegacyMailEntryDataU32Money {
+    pub mail_id: u64,
+    pub subject: String,
+    pub body: String,
+    pub attached_money: u32,
+    pub attached_item: Option<InventoryItemData>,
+}
 
 /// Account table: token (&str) -> account_id (u64).
 pub(crate) const ACCOUNTS: TableDefinition<&str, u64> = TableDefinition::new("accounts");
@@ -267,6 +319,93 @@ pub(crate) fn create_tables(db: &Database) {
     txn.commit().expect("Failed to commit initial tables");
     migrate_legacy_inventories(db);
     migrate_legacy_characters(db);
+    migrate_legacy_auctions(db);
+    migrate_legacy_mailboxes(db);
+}
+
+/// Move every row of the `u32`-money `mailboxes` table into `auction_mailboxes` and
+/// drop the old table, in one transaction.
+fn migrate_legacy_mailboxes(db: &Database) {
+    let txn = db
+        .begin_write()
+        .expect("Failed to begin mailbox migration write");
+    {
+        let legacy = txn
+            .open_table(LEGACY_MAILBOXES)
+            .expect("Failed to open legacy mailboxes");
+        let rows: Vec<(u64, Vec<MailEntryData>)> = legacy
+            .iter()
+            .expect("Failed to iterate legacy mailboxes")
+            .map(|row| {
+                let (key, value) = row.expect("Failed to read legacy mailbox row");
+                let mails = bitcode::decode::<Vec<LegacyMailEntryDataU32Money>>(value.value())
+                    .unwrap_or_else(|error| {
+                        panic!("Failed to migrate mailbox {}: {error:?}", key.value())
+                    })
+                    .into_iter()
+                    .map(|mail| MailEntryData {
+                        mail_id: mail.mail_id,
+                        subject: mail.subject,
+                        body: mail.body,
+                        attached_money: u64::from(mail.attached_money),
+                        attached_item: mail.attached_item,
+                    })
+                    .collect();
+                (key.value(), mails)
+            })
+            .collect();
+        let mut table = txn
+            .open_table(MAILBOXES)
+            .expect("Failed to open mailboxes table for migration");
+        for (character_id, mails) in &rows {
+            table
+                .insert(*character_id, bitcode::encode(mails).as_slice())
+                .expect("Failed to write migrated mailbox");
+        }
+    }
+    txn.delete_table(LEGACY_MAILBOXES)
+        .expect("Failed to drop legacy mailboxes");
+    txn.commit().expect("Failed to commit mailbox migration");
+}
+
+/// Move every row of the `u32`-money `auctions` table into `auction_listings` and
+/// drop the old table, in one transaction.
+fn migrate_legacy_auctions(db: &Database) {
+    let txn = db
+        .begin_write()
+        .expect("Failed to begin auction migration write");
+    let migrated = {
+        let legacy = txn
+            .open_table(LEGACY_AUCTIONS)
+            .expect("Failed to open legacy auctions");
+        let rows: Vec<AuctionData> = legacy
+            .iter()
+            .expect("Failed to iterate legacy auctions")
+            .map(|row| {
+                let (key, value) = row.expect("Failed to read legacy auction row");
+                bitcode::decode::<LegacyAuctionDataU32Money>(value.value())
+                    .unwrap_or_else(|error| {
+                        panic!("Failed to migrate auction {}: {error:?}", key.value())
+                    })
+                    .into()
+            })
+            .collect();
+        let mut table = txn
+            .open_table(AUCTIONS)
+            .expect("Failed to open auctions table for migration");
+        for auction in &rows {
+            table
+                .insert(auction.auction_id, bitcode::encode(auction).as_slice())
+                .expect("Failed to write migrated auction");
+        }
+        rows.len()
+    };
+    txn.delete_table(LEGACY_AUCTIONS)
+        .expect("Failed to drop legacy auctions");
+    txn.commit().expect("Failed to commit auction migration");
+    if migrated > 0 {
+        info!("Migrated {migrated} legacy auctions to u64 money");
+    }
 }
 
 fn migrate_legacy_characters(db: &Database) {

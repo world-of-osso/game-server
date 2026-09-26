@@ -39,7 +39,7 @@ use self::queries::{
 };
 
 const MAX_PAGE_SIZE: u32 = 50;
-const HOUSE_CUT_BPS: u32 = 500;
+const HOUSE_CUT_BPS: u64 = 500;
 const MAX_AUCTIONS_PER_CHARACTER: usize = 50;
 const AUCTION_EXPIRATION_INTERVAL: Duration = Duration::from_secs(1);
 

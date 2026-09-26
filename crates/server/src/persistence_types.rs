@@ -54,7 +54,7 @@ pub struct MailEntryData {
     pub mail_id: u64,
     pub subject: String,
     pub body: String,
-    pub attached_money: u32,
+    pub attached_money: u64,
     pub attached_item: Option<InventoryItemData>,
 }
 
@@ -65,15 +65,15 @@ pub struct AuctionData {
     pub seller_name: String,
     pub item: InventoryItemData,
     pub stack_count: u32,
-    pub min_bid: u32,
-    pub current_bid: Option<u32>,
+    pub min_bid: u64,
+    pub current_bid: Option<u64>,
     pub current_bidder_character_id: Option<u64>,
-    pub buyout_price: Option<u32>,
+    pub buyout_price: Option<u64>,
     pub expires_at_unix_secs: u64,
     /// 0 = neutral, 1 = Alliance, 2 = Horde
     pub faction: u8,
     /// Deposit paid on listing, refunded on successful sale.
-    pub deposit: u32,
+    pub deposit: u64,
 }
 
 impl CharacterData {

@@ -66,7 +66,7 @@ fn spawn_trade_connection(app: &mut App, peer_id: u64, player: Entity) -> Entity
         .id()
 }
 
-fn send_set_money(app: &mut App, connection: Entity, copper: u32) {
+fn send_set_money(app: &mut App, connection: Entity, copper: u64) {
     app.world_mut()
         .entity_mut(connection)
         .get_mut::<MessageSender<SetTradeMoney>>()
@@ -83,7 +83,7 @@ fn receive_trade_updates(app: &mut App, connection: Entity) -> Vec<TradeStateUpd
         .collect()
 }
 
-fn trade_offer(item_guid: u64, count: u16, gold: u32) -> TradeOffer {
+fn trade_offer(item_guid: u64, count: u16, gold: u64) -> TradeOffer {
     let mut offer = TradeOffer::default();
     offer.slots[0] = Some(TradeItem { item_guid, count });
     offer.gold = gold;

@@ -688,3 +688,77 @@ fn a_player_who_stops_moving_before_the_save_tick_is_still_saved() {
     let db = &app.world().resource::<GameDatabase>().db;
     assert_eq!(stored_position(db, character_id).0, 25.0);
 }
+
+fn peacebloom(item_guid: u64) -> InventoryItemData {
+    InventoryItemData {
+        item_guid,
+        item_id: 2447,
+        name: "Peacebloom".into(),
+        quality: 1,
+        required_level: 0,
+        stack_count: 5,
+        vendor_sell_price: 5,
+        unique_auction: false,
+    }
+}
+
+#[test]
+fn legacy_u32_money_auctions_and_mailboxes_move_to_u64_tables() {
+    let file = tempfile::NamedTempFile::new().unwrap();
+    let db = redb::Database::create(file.path()).unwrap();
+    let auction = LegacyAuctionDataU32Money {
+        auction_id: 9,
+        seller_character_id: 42,
+        seller_name: "Seller".into(),
+        item: peacebloom(70),
+        stack_count: 5,
+        min_bid: 1_000,
+        current_bid: Some(4_000_000_000),
+        current_bidder_character_id: Some(43),
+        buyout_price: Some(4_294_967_295),
+        expires_at_unix_secs: 1_800_000_000,
+        faction: 1,
+        deposit: 60,
+    };
+    let mails = vec![LegacyMailEntryDataU32Money {
+        mail_id: 3,
+        subject: "Auction won".into(),
+        body: "You won Peacebloom.".into(),
+        attached_money: 4_000_000_000,
+        attached_item: Some(peacebloom(71)),
+    }];
+    {
+        let txn = db.begin_write().unwrap();
+        {
+            let mut table = txn.open_table(LEGACY_AUCTIONS).unwrap();
+            table
+                .insert(9, bitcode::encode(&auction).as_slice())
+                .unwrap();
+            let mut table = txn.open_table(LEGACY_MAILBOXES).unwrap();
+            table
+                .insert(43, bitcode::encode(&mails).as_slice())
+                .unwrap();
+        }
+        txn.commit().unwrap();
+    }
+
+    create_tables(&db);
+
+    let auctions = load_auctions(&db);
+    assert_eq!(auctions.len(), 1);
+    assert_eq!(auctions[0].current_bid, Some(4_000_000_000));
+    assert_eq!(auctions[0].buyout_price, Some(4_294_967_295));
+    assert_eq!(auctions[0].deposit, 60);
+    assert_eq!(auctions[0].item, peacebloom(70));
+    let mailbox = load_mailbox(&db, 43);
+    assert_eq!(mailbox.len(), 1);
+    assert_eq!(mailbox[0].attached_money, 4_000_000_000);
+    assert_eq!(mailbox[0].attached_item, Some(peacebloom(71)));
+    let txn = db.begin_read().unwrap();
+    assert!(txn.open_table(LEGACY_AUCTIONS).is_err());
+    assert!(txn.open_table(LEGACY_MAILBOXES).is_err());
+    drop(txn);
+    // A second startup keeps the migrated rows.
+    create_tables(&db);
+    assert_eq!(load_auctions(&db)[0].min_bid, 1_000);
+}
