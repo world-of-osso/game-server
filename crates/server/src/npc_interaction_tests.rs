@@ -20,8 +20,9 @@ const HUMAN_TEMPLATE: u32 = 1;
 const ORC_TEMPLATE: u32 = 2;
 /// Auctioneer Fitch, Stormwind Trade District (creature guid 79705, npcflag 0x200000, faction 12).
 const AUCTIONEER_FITCH: u32 = 8719;
-/// Auctioneer Wabang, Orgrimmar (npcflag auctioneer | questgiver, faction 29).
-const AUCTIONEER_WABANG: u32 = 8724;
+/// Auctioneer Drezmit, Orgrimmar (TrinityCore-only template: Retail Orgrimmar no longer
+/// spawns AzerothCore's Auctioneer Wabang; npcflag auctioneer | questgiver | gossip, faction 29).
+const AUCTIONEER_DREZMIT: u32 = 44866;
 /// Innkeeper Farley, Goldshire (npcflag gossip | questgiver | vendor | innkeeper, gossip menu 1291).
 const INNKEEPER_FARLEY: u32 = 295;
 /// Innkeeper Gryshka, Orgrimmar (faction 29, hostile to Humans).
@@ -311,17 +312,17 @@ fn stormwind_auctioneer_opens_alliance_auction_house_within_range_only() {
 }
 
 #[test]
-fn orgrimmar_auctioneer_with_quests_offers_gossip_option_to_horde_auction_house() {
+fn orgrimmar_auctioneer_with_quest_flag_offers_gossip_option_to_horde_auction_house() {
     let Some(mut h) = harness(ORC_TEMPLATE) else {
         return;
     };
-    let wabang = h.spawn_real_npc(AUCTIONEER_WABANG, 2.0);
-    h.interact(wabang);
+    let drezmit = h.spawn_real_npc(AUCTIONEER_DREZMIT, 2.0);
+    h.interact(drezmit);
     let default_text = "Greetings, $n.".to_string();
     assert_eq!(
         h.take::<InteractionOpened>(),
         vec![opened(
-            wabang,
+            drezmit,
             InteractionKind::Gossip(GossipMenu {
                 menu_id: 0,
                 text: default_text,
@@ -332,10 +333,13 @@ fn orgrimmar_auctioneer_with_quests_offers_gossip_option_to_horde_auction_house(
     );
     assert_eq!(h.session().unwrap().auction_house, None);
 
-    h.select(wabang, 11);
+    h.select(drezmit, 11);
     assert_eq!(
         h.take::<InteractionOpened>(),
-        vec![opened(wabang, InteractionKind::Role(NpcRole::AuctionHouse))]
+        vec![opened(
+            drezmit,
+            InteractionKind::Role(NpcRole::AuctionHouse)
+        )]
     );
     assert_eq!(
         h.session().unwrap().auction_house,
