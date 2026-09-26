@@ -4,7 +4,8 @@
 # World content (creatures, quests, vendors, loot, gossip, items): AzerothCore
 # MySQL dumps → mysql_dump.py → SQLite
 # Spell/class/item/quest/taxi data: build-pinned Retail DB2 CSVs (game-engine/data/db2/<build>/) → db2.py import
-# Retail profession trainers + skill tier caps: TrinityCore TDB1210 excerpts
+# Retail profession trainers + skill tier caps, Retail creature models and the Retail
+# creature spawns of maps 0/1: TrinityCore TDB1210 excerpts
 # (data/reference/tdb1210/<table>.sql) → mysql_dump.py --prefix tdb_ → tdb_* tables
 # Server-read content_* tables: content_policy.py (Retail-first ID mapping)
 #
@@ -17,8 +18,8 @@ DB_PATH="$PROJECT_DIR/data/world.db"
 
 SQL_DIR="${1:-/home/osso/Repos/azerothcore/data/sql/base/db_world}"
 DB2_CSV_ROOT="${DB2_CSV_ROOT:-$PROJECT_DIR/../game-engine/data/db2}"
-# TrinityCore Retail world DB excerpts: creature_template/creature_template_model for Retail displays,
-# trainer tables and skill_tiers for profession trainers.
+# TrinityCore Retail world DB excerpts: trainer tables and skill_tiers for profession trainers,
+# creature tables for Retail displays and the Retail spawns of maps 0/1 (content_policy.py).
 TDB_DIR="${TDB_DIR:-$PROJECT_DIR/data/reference/tdb1210}"
 
 # Tables loaded from same-named dumps in $SQL_DIR (<table>.sql); DDL in world_schema.sql.
@@ -44,7 +45,11 @@ for table in "${DUMP_TABLES[@]}"; do
 done
 
 # Tables loaded from same-named TDB excerpts in $TDB_DIR; DDL in tdb_schema.sql.
-TDB_TABLES=(skill_tiers trainer trainer_spell creature_trainer)
+TDB_TABLES=(
+    skill_tiers trainer trainer_spell creature_trainer
+    creature creature_template creature_template_model creature_template_difficulty
+    creature_addon creature_template_addon creature_formations waypoint_path waypoint_path_node game_event_creature
+)
 TDB_ARGS=()
 for table in "${TDB_TABLES[@]}"; do
     f="$TDB_DIR/$table.sql"
@@ -56,7 +61,7 @@ for table in "${TDB_TABLES[@]}"; do
 done
 
 python3 "$SCRIPT_DIR/db2.py" check --csv-root "$DB2_CSV_ROOT"
-python3 "$SCRIPT_DIR/content_policy.py" --check --csv-root "$DB2_CSV_ROOT" --tdb-dir "$TDB_DIR"
+python3 "$SCRIPT_DIR/content_policy.py" --check --csv-root "$DB2_CSV_ROOT"
 
 rm -f "$DB_PATH" "$DB_PATH-wal" "$DB_PATH-shm"
 echo "Creating $DB_PATH ..."
@@ -69,7 +74,7 @@ sqlite3 "$DB_PATH" "PRAGMA journal_mode=WAL;" > /dev/null
 echo "  Importing AzerothCore dumps ..."
 python3 "$SCRIPT_DIR/mysql_dump.py" --db "$DB_PATH" --schema "$SCHEMA_SQL" "${DUMP_ARGS[@]}"
 
-# --- TrinityCore TDB import (Retail trainers, skill tiers) ---
+# --- TrinityCore TDB import (Retail trainers, skill tiers, creature models and spawns) ---
 
 echo "  Importing TDB tables ..."
 python3 "$SCRIPT_DIR/mysql_dump.py" --db "$DB_PATH" --schema "$SCRIPT_DIR/tdb_schema.sql" --prefix tdb_ "${TDB_ARGS[@]}"
@@ -82,7 +87,7 @@ python3 "$SCRIPT_DIR/db2.py" import --csv-root "$DB2_CSV_ROOT" --db "$DB_PATH"
 # --- Retail-first content tables (content_*, see content_policy.py) ---
 
 echo "  Deriving content tables ..."
-python3 "$SCRIPT_DIR/content_policy.py" --db "$DB_PATH" --csv-root "$DB2_CSV_ROOT" --tdb-dir "$TDB_DIR"
+python3 "$SCRIPT_DIR/content_policy.py" --db "$DB_PATH" --csv-root "$DB2_CSV_ROOT"
 
 
 echo "Database written to: $DB_PATH"

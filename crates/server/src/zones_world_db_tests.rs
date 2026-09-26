@@ -1,5 +1,5 @@
 //! Patrols, formations and creature addons spawned from the imported world.db
-//! (`cargo test -p server zones_world_db -- --ignored`).
+//! (`cargo test -p server world_db_tests -- --ignored`).
 
 use super::*;
 use crate::creature_ai::CreatureAiPlugin;
@@ -9,14 +9,25 @@ use std::collections::HashSet;
 use std::path::PathBuf;
 use std::sync::OnceLock;
 
-/// Northshire Abbey guard walking path 799270 (creature_addon.path_id), 14 points,
-/// 2000 ms pauses at points 1 and 8.
-const NORTHSHIRE_GUARD: u32 = 79927;
-const NORTHSHIRE_GUARD_PATH: u32 = 799270;
-/// Ironforge Mountaineer (path 44810) leading 4479 (2 yd at 240°) and 4480
-/// (2 yd at 120°), groupAI 514 (FOLLOW_LEADER).
-const MOUNTAINEER_LEADER: u32 = 4481;
-const MOUNTAINEER_MEMBERS: [(u32, f32, f32); 2] = [(4479, 2.0, 240.0), (4480, 2.0, 120.0)];
+/// Retail spawns are TrinityCore guid + `RETAIL_GUID_OFFSET` (content_policy.py).
+const RETAIL: u32 = 20_000_000;
+/// Stormwind City Patroller (1976, TrinityCore guid 313806) walking path 25104480
+/// (creature_addon.PathId), 14 points, 12 s and 20 s pauses at points 7 and 14,
+/// spawntimesecs 300.
+const PATROLLER: u32 = RETAIL + 313_806;
+const PATROLLER_PATH: u32 = 25_104_480;
+/// Stormwind Royal Guard (42218, TrinityCore guid 280010, path 2240080) leading
+/// 280023 (5 yd at 90°) and 280024 (5 yd at 360°), groupAI 515.
+const ROYAL_GUARD_LEADER: u32 = RETAIL + 280_010;
+const ROYAL_GUARD_MEMBERS: [(u32, f32, f32); 2] = [
+    (RETAIL + 280_023, 5.0, 90.0),
+    (RETAIL + 280_024, 5.0, 360.0),
+];
+const ROYAL_GUARD_ESCORTS: [u32; 3] = [
+    ROYAL_GUARD_LEADER,
+    ROYAL_GUARD_MEMBERS[0].0,
+    ROYAL_GUARD_MEMBERS[1].0,
+];
 
 fn world_db_path() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/world.db")
@@ -100,48 +111,47 @@ fn wow_to_bevy_xz(x: f32, y: f32) -> (f32, f32, f32) {
 
 #[test]
 #[ignore]
-fn northshire_guard_walks_addon_path_in_order_pausing_at_delays() {
-    let spawn = spawn_of(NORTHSHIRE_GUARD);
+fn stormwind_patroller_walks_addon_path_in_order_pausing_at_delays() {
+    let spawn = spawn_of(PATROLLER);
     assert_eq!(spawn.movement_type, 2);
     assert_eq!(
         world_data().addon_for(spawn).map(|addon| addon.path_id),
-        Some(NORTHSHIRE_GUARD_PATH)
+        Some(PATROLLER_PATH)
     );
     assert!(
-        !world_data().waypoints.contains_key(&NORTHSHIRE_GUARD),
+        !world_data().waypoints.contains_key(&PATROLLER),
         "the path is keyed by path id, not guid"
     );
-    let path = &world_data().waypoints[&NORTHSHIRE_GUARD_PATH];
+    let path = &world_data().waypoints[&PATROLLER_PATH];
     assert_eq!(path.points.len(), 14);
 
-    let mut app = patrol_app(&[NORTHSHIRE_GUARD]);
+    let mut app = patrol_app(&[PATROLLER]);
     let guard = entity_of(&app, spawn.guid);
     assert_eq!(
         app.world().get::<WaypointState>(guard).unwrap().path_id,
-        NORTHSHIRE_GUARD_PATH
+        PATROLLER_PATH
     );
 
     let mut reached = Vec::new();
     let mut pauses = Vec::new();
-    let mut arrived_at: Option<f32> = None;
-    for _ in 0..20_000 {
+    // Point being waited at and when the patroller arrived there.
+    let mut waiting: Option<(usize, f32)> = None;
+    for _ in 0..40_000 {
         app.update();
-        let state = app.world().get::<WaypointState>(guard).unwrap();
-        let pos = *app.world().get::<Position>(guard).unwrap();
-        match (arrived_at, state.arrived) {
-            (None, true) => {
-                let (px, pz) = point_bevy(path, state.current_index);
-                assert!((pos.x - px).abs() < 0.001 && (pos.z - pz).abs() < 0.001);
-                reached.push(state.current_index);
-                arrived_at = Some(fixed_elapsed(&app));
-            }
-            (Some(at), false) => {
+        let now = arrival(&app, guard);
+        if waiting.map(|(index, _)| index) != now {
+            if let Some((_, at)) = waiting.take() {
                 pauses.push(fixed_elapsed(&app) - at);
-                arrived_at = None;
             }
-            _ => {}
+            if let Some(index) = now {
+                let pos = *app.world().get::<Position>(guard).unwrap();
+                let (px, pz) = point_bevy(path, index);
+                assert!((pos.x - px).abs() < 0.001 && (pos.z - pz).abs() < 0.001);
+                reached.push(index);
+                waiting = Some((index, fixed_elapsed(&app)));
+            }
         }
-        if reached.len() == 15 && arrived_at.is_none() {
+        if pauses.len() == 15 {
             break;
         }
     }
@@ -155,25 +165,25 @@ fn northshire_guard_walks_addon_path_in_order_pausing_at_delays() {
             reached[index] + 1
         );
     }
-    assert_eq!(pauses.iter().filter(|pause| **pause > 1.5).count(), 3);
+    assert_eq!(pauses.iter().filter(|pause| **pause > 1.5).count(), 2);
 }
 
 #[test]
 #[ignore]
-fn ironforge_mountaineer_escorts_hold_their_offsets_along_the_patrol() {
-    let leader_spawn = spawn_of(MOUNTAINEER_LEADER);
+fn royal_guard_escorts_hold_their_offsets_along_the_patrol() {
+    let leader_spawn = spawn_of(ROYAL_GUARD_LEADER);
     let path_id = world_data().addon_for(leader_spawn).unwrap().path_id;
     let path = &world_data().waypoints[&path_id];
-    for (guid, dist, angle) in MOUNTAINEER_MEMBERS {
+    for (guid, dist, angle) in ROYAL_GUARD_MEMBERS {
         let info = &world_data().formations[&guid];
-        assert_eq!(info.leader_guid, MOUNTAINEER_LEADER);
+        assert_eq!(info.leader_guid, ROYAL_GUARD_LEADER);
         assert_eq!(info.follow_dist, dist);
         assert!((info.follow_angle - angle.to_radians()).abs() < 1e-6);
     }
 
-    let mut app = patrol_app(&[MOUNTAINEER_LEADER, 4479, 4480]);
-    let leader = entity_of(&app, MOUNTAINEER_LEADER);
-    let members: Vec<(Entity, f32, f32)> = MOUNTAINEER_MEMBERS
+    let mut app = patrol_app(&ROYAL_GUARD_ESCORTS);
+    let leader = entity_of(&app, ROYAL_GUARD_LEADER);
+    let members: Vec<(Entity, f32, f32)> = ROYAL_GUARD_MEMBERS
         .iter()
         .map(|&(guid, dist, angle)| {
             let entity = entity_of(&app, guid);
@@ -188,18 +198,20 @@ fn ironforge_mountaineer_escorts_hold_their_offsets_along_the_patrol() {
     // WoW-space leg start: the spawn, then each reached point.
     let mut origin = (leader_spawn.position_x, leader_spawn.position_y);
     let mut arrivals = 0;
-    let mut was_arrived = false;
+    let mut last_arrival = None;
     let mut first_member_positions = HashSet::new();
     for _ in 0..20_000 {
         app.update();
-        let state = app.world().get::<WaypointState>(leader).unwrap();
-        let (arrived, index) = (state.arrived, state.current_index);
+        let now = arrival(&app, leader);
         let first = *app.world().get::<Position>(members[0].0).unwrap();
         first_member_positions.insert((first.x.to_bits(), first.z.to_bits()));
-        if arrived && !was_arrived {
+        if let Some(index) = now.filter(|_| now != last_arrival) {
             let point = &path.points[index];
             let heading = (point.position_y - origin.1).atan2(point.position_x - origin.0);
-            for &(member, dist, angle) in &members {
+            // A zero-length leg (point 1 on the spawn, a pause node repeating the
+            // previous point) has no heading; members keep their previous slots.
+            let moved = (point.position_x - origin.0).hypot(point.position_y - origin.1) > 0.01;
+            for &(member, dist, angle) in members.iter().filter(|_| moved) {
                 let pos = *app.world().get::<Position>(member).unwrap();
                 let (ex, _, ez) = wow_to_bevy_xz(
                     point.position_x + (heading + angle).cos() * dist,
@@ -222,7 +234,7 @@ fn ironforge_mountaineer_escorts_hold_their_offsets_along_the_patrol() {
                 break;
             }
         }
-        was_arrived = arrived;
+        last_arrival = now;
     }
     assert_eq!(arrivals, 10, "leader patrolled 10 points");
     assert!(
@@ -234,12 +246,14 @@ fn ironforge_mountaineer_escorts_hold_their_offsets_along_the_patrol() {
 #[test]
 #[ignore]
 fn addon_mounts_spawn_mounted_from_spawn_and_template_rows() {
-    // 120618 Stormwind Harbor Guard: creature_addon.mount 2410.
-    // 79677 General Marcus Jonathan: no spawn row; creature_template_addon.mount 2410.
-    let harbor_guard = spawn_of(120618);
-    let marcus = spawn_of(79677);
-    assert!(!world_data().addons.contains_key(&79677));
-    let app = patrol_app(&[120618, 79677, NORTHSHIRE_GUARD]);
+    // TrinityCore 313610 Stormwind Harbor Guard: creature_addon.mount 2410.
+    // TrinityCore 313914 General Marcus Jonathan: no spawn row; creature_template_addon.mount 2410.
+    const HARBOR_GUARD: u32 = RETAIL + 313_610;
+    const MARCUS: u32 = RETAIL + 313_914;
+    let harbor_guard = spawn_of(HARBOR_GUARD);
+    let marcus = spawn_of(MARCUS);
+    assert!(!world_data().addons.contains_key(&MARCUS));
+    let app = patrol_app(&[HARBOR_GUARD, MARCUS, PATROLLER]);
     for (spawn, mount) in [(harbor_guard, Some(2410)), (marcus, Some(2410))] {
         let entity = entity_of(&app, spawn.guid);
         assert_eq!(
@@ -249,14 +263,16 @@ fn addon_mounts_spawn_mounted_from_spawn_and_template_rows() {
             mount
         );
     }
-    let guard = entity_of(&app, NORTHSHIRE_GUARD);
+    let guard = entity_of(&app, PATROLLER);
     assert!(app.world().get::<Mounted>(guard).is_none());
 }
 
 #[test]
 #[ignore]
-fn northshire_guard_carries_its_addon_aura() {
-    let spawn = spawn_of(NORTHSHIRE_GUARD);
+fn cenarion_hold_infantry_carries_its_addon_aura() {
+    // TrinityCore 42766 Cenarion Hold Infantry (15184), Silithus: creature_addon.auras 18950.
+    const INFANTRY: u32 = RETAIL + 42_766;
+    let spawn = spawn_of(INFANTRY);
     assert_eq!(world_data().addon_for(spawn).unwrap().auras, vec![18950]);
     let conn = rusqlite::Connection::open_with_flags(
         world_db_path(),
@@ -265,7 +281,7 @@ fn northshire_guard_carries_its_addon_aura() {
     .unwrap();
     let (store, _) = crate::spell_info::load_spell_data(&conn).unwrap();
     let factions = crate::faction::load_faction_templates(&conn).unwrap();
-    let mut app = patrol_app(&[NORTHSHIRE_GUARD]);
+    let mut app = patrol_app(&[INFANTRY]);
     app.insert_resource(store);
     app.insert_resource(factions);
     app.init_resource::<crate::auras::UnhandledAuras>();
@@ -285,21 +301,28 @@ fn northshire_guard_carries_its_addon_aura() {
 
 /// Run until the patroller has newly arrived at `count` points.
 fn run_arrivals(app: &mut App, patroller: Entity, count: usize) {
-    let arrived_now = |app: &App| app.world().get::<WaypointState>(patroller).unwrap().arrived;
     let mut arrivals = 0;
-    let mut was_arrived = arrived_now(app);
+    let mut last = arrival(app, patroller);
     for _ in 0..20_000 {
         app.update();
-        let arrived = arrived_now(app);
-        if arrived && !was_arrived {
+        let now = arrival(app, patroller);
+        if now.is_some() && now != last {
             arrivals += 1;
             if arrivals == count {
                 return;
             }
         }
-        was_arrived = arrived;
+        last = now;
     }
     panic!("only {arrivals} of {count} arrivals");
+}
+
+/// The point the patroller has arrived at, if any. TrinityCore paths have
+/// zero-length legs (point 1 on the spawn, a pause node repeating the previous
+/// point), across which `arrived` stays set while `current_index` advances.
+fn arrival(app: &App, patroller: Entity) -> Option<usize> {
+    let state = app.world().get::<WaypointState>(patroller).unwrap();
+    state.arrived.then_some(state.current_index)
 }
 
 fn position(app: &App, entity: Entity) -> Position {
@@ -325,12 +348,12 @@ fn gap(app: &App, a: Entity, b: Entity) -> f32 {
 
 #[test]
 #[ignore]
-fn killed_northshire_guard_lies_still_then_respawns_at_spawn_and_restarts_its_path() {
-    let spawn = spawn_of(NORTHSHIRE_GUARD);
+fn killed_patroller_lies_still_then_respawns_at_spawn_and_restarts_its_path() {
+    let spawn = spawn_of(PATROLLER);
     let (sx, sy, sz) =
         crate::terrain_height::wow_to_bevy(spawn.position_x, spawn.position_y, spawn.position_z);
-    let mut app = respawning_patrol_app(&[NORTHSHIRE_GUARD]);
-    let guard = entity_of(&app, NORTHSHIRE_GUARD);
+    let mut app = respawning_patrol_app(&[PATROLLER]);
+    let guard = entity_of(&app, PATROLLER);
     run_arrivals(&mut app, guard, 4);
     // Mid-leg toward point 5.
     for _ in 0..10 {
@@ -349,8 +372,8 @@ fn killed_northshire_guard_lies_still_then_respawns_at_spawn_and_restarts_its_pa
             .get::<crate::combat::DeathState>(guard)
             .unwrap()
             .respawn_timer,
-        490.0,
-        "spawntimesecs 430 + 60 s normal corpse decay"
+        360.0,
+        "spawntimesecs 300 + 60 s normal corpse decay"
     );
     let corpse = position(&app, guard);
     for _ in 0..30 {
@@ -375,15 +398,8 @@ fn killed_northshire_guard_lies_still_then_respawns_at_spawn_and_restarts_its_pa
     let respawned = position(&app, guard);
     assert_eq!((respawned.x, respawned.y, respawned.z), (sx, sy, sz));
 
-    // The guard spawns on point 1: it arrives there first, then walks on.
-    run_arrivals(&mut app, guard, 1);
-    assert_eq!(
-        app.world()
-            .get::<WaypointState>(guard)
-            .unwrap()
-            .current_index,
-        0
-    );
+    // Point 1 is the spawn: the respawned patroller is on it at once, then walks on.
+    assert_eq!(arrival(&app, guard), Some(0));
     run_arrivals(&mut app, guard, 1);
     assert_eq!(
         app.world()
@@ -398,28 +414,29 @@ fn killed_northshire_guard_lies_still_then_respawns_at_spawn_and_restarts_its_pa
 #[test]
 #[ignore]
 fn killed_idle_northshire_guard_respawns_at_its_spawn_after_its_timer() {
-    // 79926: MovementType 0 Northshire Guard, spawntimesecs 430, normal rank.
-    let spawn = spawn_of(79926);
+    // TrinityCore 280021: MovementType 0 Northshire Guard, spawntimesecs 120, normal rank.
+    const IDLE_GUARD: u32 = RETAIL + 280_021;
+    let spawn = spawn_of(IDLE_GUARD);
     assert_eq!(spawn.movement_type, 0);
     let (sx, sy, sz) =
         crate::terrain_height::wow_to_bevy(spawn.position_x, spawn.position_y, spawn.position_z);
-    let mut app = respawning_patrol_app(&[79926]);
-    let guard = entity_of(&app, 79926);
+    let mut app = respawning_patrol_app(&[IDLE_GUARD]);
+    let guard = entity_of(&app, IDLE_GUARD);
     *app.world_mut().get_mut::<Position>(guard).unwrap() = Position {
         x: sx + 5.0,
         y: sy,
         z: sz,
     };
     kill(&mut app, guard);
-    // 490 s is 9,800 ticks at 20 Hz.
-    for _ in 0..9_790 {
+    // 180 s is 3,600 ticks at 20 Hz.
+    for _ in 0..3_590 {
         app.update();
     }
-    assert!(is_dead(&app, guard), "still dead at 489.5 s");
+    assert!(is_dead(&app, guard), "still dead at 179.5 s");
     for _ in 0..20 {
         app.update();
     }
-    assert!(!is_dead(&app, guard), "respawned by 490.5 s");
+    assert!(!is_dead(&app, guard), "respawned by 180.5 s");
     let health = *app.world().get::<Health>(guard).unwrap();
     assert_eq!(health.current, health.max);
     let respawned = position(&app, guard);
@@ -429,9 +446,12 @@ fn killed_idle_northshire_guard_respawns_at_its_spawn_after_its_timer() {
 #[test]
 #[ignore]
 fn dead_escort_holds_still_then_respawns_and_rejoins_its_leader() {
-    let mut app = respawning_patrol_app(&[MOUNTAINEER_LEADER, 4479, 4480]);
-    let leader = entity_of(&app, MOUNTAINEER_LEADER);
-    let (dead_escort, escort) = (entity_of(&app, 4479), entity_of(&app, 4480));
+    let mut app = respawning_patrol_app(&ROYAL_GUARD_ESCORTS);
+    let leader = entity_of(&app, ROYAL_GUARD_LEADER);
+    let (dead_escort, escort) = (
+        entity_of(&app, ROYAL_GUARD_ESCORTS[1]),
+        entity_of(&app, ROYAL_GUARD_ESCORTS[2]),
+    );
     run_arrivals(&mut app, leader, 3);
 
     kill(&mut app, dead_escort);
@@ -452,7 +472,7 @@ fn dead_escort_holds_still_then_respawns_and_rejoins_its_leader() {
     while is_dead(&app, dead_escort) {
         app.update();
     }
-    let spawn = spawn_of(4479);
+    let spawn = spawn_of(ROYAL_GUARD_ESCORTS[1]);
     let respawned = position(&app, dead_escort);
     let (sx, _, sz) = wow_to_bevy_xz(spawn.position_x, spawn.position_y);
     assert!(
@@ -461,17 +481,20 @@ fn dead_escort_holds_still_then_respawns_and_rejoins_its_leader() {
     );
     run_arrivals(&mut app, leader, 2);
     assert!(
-        (gap(&app, dead_escort, leader) - 2.0).abs() < 0.01,
-        "respawned escort back on its 2 yd slot"
+        (gap(&app, dead_escort, leader) - 5.0).abs() < 0.01,
+        "respawned escort back on its 5 yd slot"
     );
 }
 
 #[test]
 #[ignore]
 fn escorts_hold_still_while_their_leader_is_dead_then_rejoin_it() {
-    let mut app = respawning_patrol_app(&[MOUNTAINEER_LEADER, 4479, 4480]);
-    let leader = entity_of(&app, MOUNTAINEER_LEADER);
-    let escorts = [entity_of(&app, 4479), entity_of(&app, 4480)];
+    let mut app = respawning_patrol_app(&ROYAL_GUARD_ESCORTS);
+    let leader = entity_of(&app, ROYAL_GUARD_LEADER);
+    let escorts = [
+        entity_of(&app, ROYAL_GUARD_ESCORTS[1]),
+        entity_of(&app, ROYAL_GUARD_ESCORTS[2]),
+    ];
     run_arrivals(&mut app, leader, 3);
     for _ in 0..5 {
         app.update();
@@ -498,22 +521,23 @@ fn escorts_hold_still_while_their_leader_is_dead_then_rejoin_it() {
     run_arrivals(&mut app, leader, 2);
     for escort in escorts {
         assert!(
-            (gap(&app, escort, leader) - 2.0).abs() < 0.01,
+            (gap(&app, escort, leader) - 5.0).abs() < 0.01,
             "escort rejoined its respawned leader"
         );
     }
 }
 
-/// Stormwind Grandmaster's (31144) and Expert's (32666) Training Dummies,
-/// ScriptName `npc_training_dummy`, MovementType 0.
-const STORMWIND_DUMMIES: [u32; 2] = [201235, 202726];
+/// Stormwind's Retail Training Dummy (153292, TrinityCore guid 850239) and PvP
+/// Training Dummy (114832, 850247), TrinityCore-only templates with ScriptName
+/// `npc_training_dummy`, MovementType 0.
+const STORMWIND_DUMMIES: [u32; 2] = [RETAIL + 850_239, RETAIL + 850_247];
 
 #[test]
 #[ignore]
 fn stormwind_training_dummies_get_their_script_and_stand_still() {
-    let mut app = patrol_app(&[STORMWIND_DUMMIES[0], STORMWIND_DUMMIES[1], NORTHSHIRE_GUARD]);
+    let mut app = patrol_app(&[STORMWIND_DUMMIES[0], STORMWIND_DUMMIES[1], PATROLLER]);
     let dummies = STORMWIND_DUMMIES.map(|guid| entity_of(&app, guid));
-    let guard = entity_of(&app, NORTHSHIRE_GUARD);
+    let guard = entity_of(&app, PATROLLER);
     for dummy in dummies {
         assert!(
             app.world()
@@ -536,7 +560,7 @@ fn stormwind_training_dummies_get_their_script_and_stand_still() {
 
 /// Giant Moss Creeper (2349), Hillsbrad: AzerothCore display 6808 is Wrath-only;
 /// TrinityCore's Retail model for the entry is 520.
-const GIANT_MOSS_CREEPER: [u32; 1] = [14583];
+const GIANT_MOSS_CREEPER: [u32; 1] = [RETAIL + 323_400];
 
 #[test]
 #[ignore]
@@ -576,8 +600,8 @@ fn every_eastern_kingdoms_spawn_display_exists_in_retail() {
 
 /// Stormwind City Guard (68, level 75 warrior, exp 2, HealthModifier 1.5) and
 /// Diseased Young Wolf (299, level 1 warrior, exp 0, HealthModifier 1).
-const STORMWIND_GUARD: u32 = 189;
-const DISEASED_YOUNG_WOLF: u32 = 79648;
+const STORMWIND_GUARD: u32 = RETAIL + 313_646;
+const DISEASED_YOUNG_WOLF: u32 = RETAIL + 280_052;
 
 /// Creature::SelectLevel: ceil(creature_classlevelstats.basehp<exp> × HealthModifier).
 #[test]
@@ -593,21 +617,22 @@ fn creature_health_is_class_level_base_hp_times_health_modifier() {
         let health = app.world().get::<Health>(entity_of(&app, guid)).unwrap();
         (health.current, health.max)
     };
-    // 12600 (level 80 basehp2) × 0.000187 = 2.36.
-    assert_eq!(health(STORMWIND_DUMMIES[0]), (3.0, 3.0));
-    // 3052 (level 60 basehp0) × 0.000187 = 0.57.
-    assert_eq!(health(STORMWIND_DUMMIES[1]), (1.0, 1.0));
+    // Level 83 (from the nearest AzerothCore spawns, the Heroic Training Dummies)
+    // basehp2 13945 × TrinityCore HealthModifier 25 and 8.
+    assert_eq!(health(STORMWIND_DUMMIES[0]), (348_625.0, 348_625.0));
+    assert_eq!(health(STORMWIND_DUMMIES[1]), (111_560.0, 111_560.0));
     // 10635 (level 75 basehp2) × 1.5 = 15952.5.
     assert_eq!(health(STORMWIND_GUARD), (15953.0, 15953.0));
     assert_eq!(health(DISEASED_YOUNG_WOLF), (42.0, 42.0));
 }
 
-/// Riverpaw Outrunner (478, level 9, faction 20), Kobold Vermin (6, civilian),
-/// Forest Spider (30, level 5, faction 22) and Heroic Training Dummy (31146).
-const RIVERPAW_OUTRUNNER: u32 = 80474;
-const KOBOLD_VERMIN: u32 = 79992;
-const FOREST_SPIDER: u32 = 79883;
-const HEROIC_TRAINING_DUMMY: u32 = 48325;
+/// Riverpaw Outrunner (478, level 9, faction 20), Diseased Young Wolf (299,
+/// civilian), Forest Spider (30, level 5, faction 22) and Stormwind's Heroic
+/// Training Dummy (31146).
+const RIVERPAW_OUTRUNNER: u32 = RETAIL + 280_315;
+const CIVILIAN_WOLF: u32 = RETAIL + 280_055;
+const FOREST_SPIDER: u32 = RETAIL + 280_109;
+const HEROIC_TRAINING_DUMMY: u32 = RETAIL + 850_240;
 
 /// A level 5 Human 4 yards east of `guid`'s spawn point.
 fn spawn_human_near(app: &mut App, guid: u32) -> Entity {
@@ -643,7 +668,7 @@ fn world_spawns_aggro_by_template_hostile_attack_civilian_and_dummy_do_not() {
     let mut app = patrol_app_with(
         &[
             RIVERPAW_OUTRUNNER,
-            KOBOLD_VERMIN,
+            CIVILIAN_WOLF,
             FOREST_SPIDER,
             HEROIC_TRAINING_DUMMY,
         ],
@@ -657,7 +682,7 @@ fn world_spawns_aggro_by_template_hostile_attack_civilian_and_dummy_do_not() {
     );
     let players: Vec<(u32, Entity)> = [
         RIVERPAW_OUTRUNNER,
-        KOBOLD_VERMIN,
+        CIVILIAN_WOLF,
         FOREST_SPIDER,
         HEROIC_TRAINING_DUMMY,
     ]
@@ -688,11 +713,70 @@ fn world_spawns_aggro_by_template_hostile_attack_civilian_and_dummy_do_not() {
         assert!(player_health(guid) < 100.0, "spawn {guid} hits the Human");
     }
     assert_eq!(
-        state(KOBOLD_VERMIN),
+        state(CIVILIAN_WOLF),
         Some(crate::creature_ai::CreatureState::Idle),
-        "civilian kobold does not aggro on sight"
+        "civilian wolf does not aggro on sight"
     );
-    assert_eq!(player_health(KOBOLD_VERMIN), 100.0);
+    assert_eq!(player_health(CIVILIAN_WOLF), 100.0);
     assert_eq!(state(HEROIC_TRAINING_DUMMY), None, "dummy has no combat AI");
     assert_eq!(player_health(HEROIC_TRAINING_DUMMY), 100.0);
+}
+
+fn spawns_of(entry: u32) -> Vec<&'static CreatureSpawn> {
+    world_data()
+        .spawns
+        .iter()
+        .filter(|spawn| spawn.template_entry == entry)
+        .collect()
+}
+
+/// Newton Burnside (2456) behind the Retail bank counter, not AzerothCore's
+/// (-8935.27, 613.14), now street outside the bank; Auctioneer Jaxon (15659)
+/// above the Retail auction house floor (98.06), not AzerothCore's z 96.68.
+#[test]
+#[ignore]
+fn stormwind_banker_and_auctioneer_stand_at_retail_positions() {
+    let newton = spawns_of(2456);
+    assert_eq!(newton.len(), 1);
+    assert_eq!(
+        (newton[0].guid, newton[0].position_x, newton[0].position_y),
+        (RETAIL + 314_008, -8908.35, 639.24)
+    );
+    let jaxon = spawns_of(15659);
+    assert_eq!(jaxon.len(), 1);
+    assert_eq!(jaxon[0].guid, RETAIL + 314_060);
+    assert!(jaxon[0].position_z > 98.06, "z {}", jaxon[0].position_z);
+    assert!(
+        world_data().spawns_by_map[&0]
+            .iter()
+            .chain(&world_data().spawns_by_map[&1])
+            .all(|&index| world_data().spawns[index].guid > RETAIL),
+        "maps 0 and 1 spawn only Retail spawns"
+    );
+}
+
+/// Homeless Stormwind Citizen (42384) has no AzerothCore template: TrinityCore's
+/// template, its Retail models, and the level of its nearest AzerothCore spawns.
+#[test]
+#[ignore]
+fn retail_only_creature_spawns_from_its_trinitycore_template() {
+    let citizens = spawns_of(42384);
+    assert_eq!(citizens.len(), 71);
+    let template = &world_data().templates[&42384];
+    assert_eq!(template.name, "Homeless Stormwind Citizen");
+    assert_eq!((template.min_level, template.max_level), (13, 14));
+    assert!(!template.models.is_empty());
+    const CITIZEN: u32 = RETAIL + 224_152;
+    assert!(citizens.iter().any(|spawn| spawn.guid == CITIZEN));
+    let app = patrol_app(&[CITIZEN]);
+    let display = app
+        .world()
+        .get::<ModelDisplay>(entity_of(&app, CITIZEN))
+        .unwrap();
+    assert!(
+        template
+            .models
+            .iter()
+            .any(|model| model.display_id == display.display_id)
+    );
 }

@@ -156,7 +156,7 @@ impl Harness {
             .conn
             .query_row(
                 "SELECT t.name, t.faction, t.npcflag, c.position_x, c.position_y, c.position_z
-                 FROM creature_template t JOIN creature c ON c.id1 = t.entry
+                 FROM content_creature_template t JOIN content_creature c ON c.id1 = t.entry
                  WHERE t.entry = ?1 ORDER BY c.guid LIMIT 1",
                 [entry],
                 |row| {

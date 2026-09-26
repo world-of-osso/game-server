@@ -298,7 +298,7 @@ fn load_templates(conn: &Connection, table: &str) -> rusqlite::Result<HashMap<u3
 
 fn load_money(conn: &Connection) -> rusqlite::Result<HashMap<u32, CreatureLoot>> {
     let mut statement =
-        conn.prepare("SELECT entry, lootid, mingold, maxgold FROM creature_template")?;
+        conn.prepare("SELECT entry, lootid, mingold, maxgold FROM content_creature_template")?;
     let rows = statement.query_map([], |row| {
         Ok((
             row.get(0)?,

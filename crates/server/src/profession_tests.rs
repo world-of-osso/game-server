@@ -233,7 +233,7 @@ impl Harness {
         let (name, faction, npcflag): (String, u32, u32) = self
             .conn
             .query_row(
-                "SELECT name, faction, npcflag FROM creature_template WHERE entry = ?1",
+                "SELECT name, faction, npcflag FROM content_creature_template WHERE entry = ?1",
                 [entry],
                 |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
             )

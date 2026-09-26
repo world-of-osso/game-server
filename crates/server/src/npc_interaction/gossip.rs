@@ -185,7 +185,9 @@ pub fn load_gossip_catalog(conn: &Connection) -> rusqlite::Result<GossipCatalog>
     let mut menus = load_menu_texts(conn, &npc_texts)?;
     load_menu_options(conn, &broadcast, &mut menus)?;
     let template_menus = conn
-        .prepare("SELECT entry, gossip_menu_id FROM creature_template WHERE gossip_menu_id <> 0")?
+        .prepare(
+            "SELECT entry, gossip_menu_id FROM content_creature_template WHERE gossip_menu_id <> 0",
+        )?
         .query_map(params![], |row| {
             Ok((row.get::<_, i64>(0)? as u32, row.get::<_, i64>(1)? as u32))
         })?

@@ -236,7 +236,7 @@ fn quest_from_row(
 }
 
 fn load_creature_names(conn: &Connection) -> rusqlite::Result<HashMap<u32, String>> {
-    let mut statement = conn.prepare("SELECT entry, name FROM creature_template")?;
+    let mut statement = conn.prepare("SELECT entry, name FROM content_creature_template")?;
     let rows = statement.query_map([], |row| Ok((row.get::<_, u32>(0)?, row.get(1)?)))?;
     rows.collect()
 }

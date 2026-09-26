@@ -19,8 +19,32 @@ AZEROTHCORE_SQL = Path(os.environ.get("AZEROTHCORE_SQL", "/home/osso/Repos/azero
 
 PINNED_CSV_ROOT = Path(os.environ.get("DB2_CSV_ROOT", db2.DEFAULT_CSV_ROOT))
 PINNED_BUILD_DIR = PINNED_CSV_ROOT / db2.DEFAULT_BUILD
-TDB_DIR = Path(os.environ.get("TDB_DIR", content_policy.DEFAULT_TDB_DIR))
+TDB_DIR = Path(os.environ.get("TDB_DIR", SCRIPTS.parent / "data/reference/tdb1210"))
 TRAINER_TDB_TABLES = ("skill_tiers", "trainer", "trainer_spell", "creature_trainer")
+
+
+def tdb_tables():
+    """Table names in import-azerothcore.sh TDB_TABLES."""
+    script = (SCRIPTS / "import-azerothcore.sh").read_text()
+    return script.split("TDB_TABLES=(", 1)[1].split(")", 1)[0].split()
+
+
+def tdb_creature(guid, entry, map_id, x, y, z, difficulties="0", phase_id=0, phase_group=0, terrain_swap=-1):
+    """One TDB1210 `creature` row (28 columns, TrinityCore DDL order)."""
+    return (f"({guid},{entry},{map_id},0,0,'{difficulties}',0,{phase_id},{phase_group},{terrain_swap},0,1,"
+            f"{x},{y},{z},1.5,300,0,0,100,0,NULL,NULL,NULL,NULL,'',NULL,66044)")
+
+
+def tdb_template(entry, name, faction, npcflag, classification=0, unit_class=1, flags_extra=0, script=""):
+    """One TDB1210 `creature_template` row (42 columns, TrinityCore DDL order)."""
+    return (f"({entry},0,0,'{name}',NULL,NULL,NULL,NULL,0,0,{faction},{npcflag},1,1.14286,1,{classification},0,2000,2000,"
+            f"1,1,{unit_class},0,0,0,0,0,7,0,'',0,1,0,0,0,0,1,0,{flags_extra},'{script}',NULL,66044)")
+
+
+def tdb_difficulty(entry, health_modifier, gold_min, gold_max, loot_id):
+    """One TDB1210 `creature_template_difficulty` row (DifficultyID 0, 29 columns)."""
+    return (f"({entry},0,0,0,6,0,{health_modifier},1,1,1,0,0,0,0,{loot_id},0,0,{gold_min},{gold_max},"
+            "0,0,0,0,0,0,0,0,66044)")
 
 
 def write_header_only_csvs(csv_dir):
@@ -90,7 +114,7 @@ class CreatureEventImportTests(unittest.TestCase):
         self.db = self.root / "data/world.db"
         self.tdb = self.root / "data/reference/tdb1210"
         self.tdb.mkdir(parents=True)
-        for name in (*content_policy.TDB_TABLES, *TRAINER_TDB_TABLES):
+        for name in tdb_tables():
             (self.tdb / f"{name}.sql").write_text("-- empty fixture\n")
 
     def run_import(self):
@@ -235,6 +259,126 @@ class CreatureEventImportTests(unittest.TestCase):
                 [(79968, 79968, 0.0, 0.0, 2), (79968, 96194, 3.5, 90.0, 515)],
             )
 
+    def write_retail_spawn_fixture(self):
+        """AzerothCore spawns on maps 0 and 571; TrinityCore Stormwind spawns in and out of the base phase."""
+        (self.sql / "creature_template.sql").write_text(
+            "INSERT INTO `creature_template` (entry,name,minlevel,maxlevel,exp,faction,lootid) VALUES\n"
+            "(68,'Stormwind City Guard',75,75,2,11,68),(2455,'Olivia Burnside',30,30,0,12,0),"
+            "(26012,'Borean Tundra Wolf',70,71,2,14,26012);\n"
+        )
+        (self.sql / "creature.sql").write_text(
+            "INSERT INTO `creature` (guid,id1,map,position_x,position_y,position_z) VALUES\n"
+            "(79968,68,0,-8935.0,613.0,99.6),(120000,26012,571,3000.0,5000.0,20.0),(4000,2455,1,10.0,10.0,1.0);\n"
+        )
+        (self.sql / "creature_addon.sql").write_text(
+            "INSERT INTO `creature_addon` VALUES\n(79968,799680,0,0,1,0,0,''),(120000,0,2410,0,1,0,0,'1244');\n"
+        )
+        (self.sql / "creature_formations.sql").write_text(
+            "INSERT INTO `creature_formations` VALUES\n(120000,120000,0,0,2,0,0),(79968,79968,0,0,2,0,0);\n"
+        )
+        (self.sql / "game_event_creature.sql").write_text("INSERT INTO `game_event_creature` VALUES\n(12,79968),(12,120000);\n")
+        rows = [
+            tdb_creature(311, 68, 0, -8908.35, 639.24, 99.7),
+            tdb_creature(312, 68, 0, -8900.0, 640.0, 99.7, phase_id=12345),
+            tdb_creature(313, 68, 1, 10.0, 10.0, 1.0, difficulties="1,2"),
+            tdb_creature(314, 68, 0, -8900.0, 641.0, 99.7, terrain_swap=638),
+            tdb_creature(315, 42384, 0, -8910.0, 640.0, 99.7, difficulties="0,1"),
+            tdb_creature(316, 68, 530, 1.0, 1.0, 1.0),
+            tdb_creature(317, 68, 1, 20.0, 20.0, 1.0, phase_group=431),
+        ]
+        (self.tdb / "creature.sql").write_text("INSERT INTO `creature` VALUES\n" + ",".join(rows) + ";\n")
+        (self.tdb / "creature_template.sql").write_text(
+            "INSERT INTO `creature_template` VALUES\n"
+            + ",".join([tdb_template(68, "Stormwind City Guard", 11, 0),
+                        tdb_template(42384, "Homeless Stormwind Citizen", 12, 1, flags_extra=2)]) + ";\n"
+        )
+        (self.tdb / "creature_template_model.sql").write_text(
+            "INSERT INTO `creature_template_model` VALUES\n(42384,0,33167,1,1,66044),(42384,1,33168,1,1,66044),(68,0,3167,1,1,66044);\n"
+        )
+        (self.tdb / "creature_template_difficulty.sql").write_text(
+            "INSERT INTO `creature_template_difficulty` VALUES\n" + tdb_difficulty(42384, 0.5, 3, 9, 42384) + ";\n"
+        )
+        (self.tdb / "creature_addon.sql").write_text(
+            "INSERT INTO `creature_addon` VALUES\n(311,3110,0,0,0,0,0,1,1,0,0,0,0,0,'130');\n"
+        )
+        (self.tdb / "creature_template_addon.sql").write_text(
+            "INSERT INTO `creature_template_addon` VALUES\n(42384,0,0,0,1,0,0,1,0,0,0,0,0,0,'');\n"
+        )
+        (self.tdb / "waypoint_path.sql").write_text("INSERT INTO `waypoint_path` VALUES\n(3110,1,0,NULL,'guard');\n")
+        (self.tdb / "waypoint_path_node.sql").write_text(
+            "INSERT INTO `waypoint_path_node` VALUES\n(3110,0,-8908.0,639.0,99.7,NULL,0),(3110,1,-8890.0,650.0,99.7,1.2,5000);\n"
+        )
+        (self.tdb / "creature_formations.sql").write_text(
+            "INSERT INTO `creature_formations` VALUES\n(311,311,0,0,515,0,0),(311,315,2,90,515,0,0);\n"
+        )
+        (self.tdb / "game_event_creature.sql").write_text("INSERT INTO `game_event_creature` VALUES\n(-5,315),(7,312);\n")
+
+    def test_retail_spawns_replace_azerothcore_spawns_on_maps_0_and_1(self):
+        self.write_retail_spawn_fixture()
+        result = self.run_import()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        offset = content_policy.RETAIL_GUID_OFFSET
+        with sqlite3.connect(self.db) as conn:
+            self.assertEqual(
+                conn.execute("SELECT guid, id1, map, position_x, position_y, spawntimesecs FROM content_creature"
+                             " ORDER BY guid").fetchall(),
+                [(120000, 26012, 571, 3000.0, 5000.0, 120),
+                 (offset + 311, 68, 0, -8908.35, 639.24, 300),
+                 (offset + 315, 42384, 0, -8910.0, 640.0, 300)],
+            )
+            self.assertEqual(conn.execute("SELECT count(*) FROM creature").fetchone()[0], 3, "raw spawns stay verbatim")
+            self.assertEqual(
+                conn.execute("SELECT entry, name, minlevel, maxlevel, exp, faction, npcflag, HealthModifier,"
+                             " mingold, maxgold, lootid, flags_extra, detection_range FROM content_creature_template"
+                             " WHERE entry = 42384").fetchall(),
+                [(42384, "Homeless Stormwind Citizen", 75, 75, 2, 12, 1, 0.5, 3, 9, 0, 2, 20.0)],
+                "TDB-only template: levels of the nearest AzerothCore-template spawns, no TrinityCore loot id",
+            )
+            self.assertEqual(
+                conn.execute("SELECT CreatureID, Idx, CreatureDisplayID FROM content_creature_template_model"
+                             " ORDER BY CreatureID, Idx").fetchall(),
+                [(42384, 0, 33167), (42384, 1, 33168)],
+                "TDB-only templates take TrinityCore's models; AzerothCore entries keep theirs",
+            )
+            self.assertEqual(
+                conn.execute("SELECT entry, minlevel, lootid FROM content_creature_template WHERE entry IN (68, 2455)"
+                             " ORDER BY entry").fetchall(),
+                [(68, 75, 68), (2455, 30, 0)],
+                "AzerothCore templates are kept as imported",
+            )
+            self.assertEqual(
+                conn.execute("SELECT guid, path_id, mount, bytes2, auras FROM content_creature_addon ORDER BY guid").fetchall(),
+                [(120000, 0, 2410, 1, "1244"), (offset + 311, 3110, 0, 1 | 1 << 8, "130")],
+            )
+            self.assertEqual(
+                conn.execute("SELECT entry FROM content_creature_template_addon").fetchall(), [(42384,)],
+            )
+            self.assertEqual(
+                conn.execute("SELECT id, point, position_x, orientation, delay, move_type FROM content_waypoint_data"
+                             " ORDER BY id, point").fetchall(),
+                [(3110, 0, -8908.0, 0.0, 0, 1), (3110, 1, -8890.0, 1.2, 5000, 1)],
+            )
+            self.assertEqual(
+                conn.execute("SELECT leaderGUID, memberGUID, dist, angle, groupAI FROM content_creature_formations"
+                             " ORDER BY memberGUID").fetchall(),
+                [(120000, 120000, 0.0, 0.0, 2), (offset + 311, offset + 311, 0.0, 0.0, 515),
+                 (offset + 311, offset + 315, 2.0, 90.0, 515)],
+            )
+            self.assertEqual(
+                conn.execute("SELECT eventEntry, guid FROM content_game_event_creature ORDER BY guid").fetchall(),
+                [(12, 120000), (-5, offset + 315)],
+            )
+        with (self.root / "data/reports/content-dropped.csv").open(newline="") as handle:
+            reported = {(r["table"], r["key"]): r["reason"] for r in csv.DictReader(handle)}
+        self.assertEqual(reported[("creature", "guid=79968")], "map 0 spawn replaced by Retail spawns")
+        self.assertEqual(reported[("creature", "guid=4000")], "map 1 spawn replaced by Retail spawns")
+        self.assertEqual(reported[("creature_addon", "guid=79968")], "spawn replaced by Retail spawns")
+        self.assertEqual(reported[("tdb_creature", "guid=312")], "not base phase: PhaseId 12345")
+        self.assertEqual(reported[("tdb_creature", "guid=313")], "not base phase: spawnDifficulties 1,2")
+        self.assertEqual(reported[("tdb_creature", "guid=314")], "not base phase: terrainSwapMap 638")
+        self.assertEqual(reported[("tdb_creature", "guid=317")], "not base phase: PhaseGroup 431")
+        self.assertNotIn(("tdb_creature", "guid=316"), reported, "other maps keep AzerothCore spawns silently")
+
     def write_wrath_only_display_fixture(self):
         """AzerothCore displays 6808/382/79/3167 against Retail displays 520/366/3167 and TrinityCore models."""
         (self.sql / "creature_template.sql").write_text(
@@ -326,6 +470,7 @@ class AzerothCoreContentTests(unittest.TestCase):
         "creature_template", "creature_template_model", "quest_template", "creature_queststarter", "creature_questender",
         "item_template", "npc_vendor",
         "gameobject_template", "gameobject_template_addon", "gameobject",
+        "creature", "creature_addon", "creature_template_addon", "creature_formations", "game_event_creature", "waypoint_data",
     )
 
     @classmethod
@@ -336,9 +481,11 @@ class AzerothCoreContentTests(unittest.TestCase):
         commands = [
             [sys.executable, str(SCRIPTS / "mysql_dump.py"), "--db", str(cls.db), "--schema", str(SCRIPTS / "world_schema.sql")]
             + [f"{name}={AZEROTHCORE_SQL / (name + '.sql')}" for name in cls.TABLES],
+            [sys.executable, str(SCRIPTS / "mysql_dump.py"), "--db", str(cls.db), "--schema", str(SCRIPTS / "tdb_schema.sql"),
+             "--prefix", "tdb_"] + [f"{name}={TDB_DIR / (name + '.sql')}" for name in tdb_tables()],
             [sys.executable, str(SCRIPTS / "db2.py"), "import", "--csv-root", str(PINNED_CSV_ROOT), "--db", str(cls.db)],
             [sys.executable, str(SCRIPTS / "content_policy.py"), "--db", str(cls.db), "--report", str(cls.report),
-             "--csv-root", str(PINNED_CSV_ROOT), "--tdb-dir", str(TDB_DIR)],
+             "--csv-root", str(PINNED_CSV_ROOT)],
         ]
         for command in commands:
             result = subprocess.run(command, capture_output=True, text=True, timeout=900, check=False)

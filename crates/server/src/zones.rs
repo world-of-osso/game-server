@@ -357,7 +357,7 @@ mod tests {
         let path = dir.path().join("world.db");
         let conn = rusqlite::Connection::open(&path).unwrap();
         conn.execute_batch(
-            "CREATE TABLE creature_template (entry INTEGER, minlevel INTEGER, maxlevel INTEGER,
+            "CREATE TABLE content_creature_template (entry INTEGER, minlevel INTEGER, maxlevel INTEGER,
                 faction INTEGER, npcflag INTEGER, speed_walk REAL, HealthModifier REAL, name TEXT, rank INTEGER, exp INTEGER,
                 ExperienceModifier REAL, type INTEGER, flags_extra INTEGER, speed_run REAL,
                 ScriptName TEXT, unit_class INTEGER, detection_range REAL, unit_flags INTEGER);
@@ -366,18 +366,18 @@ mod tests {
              INSERT INTO creature_classlevelstats VALUES (1,1,42,42,42);
              CREATE TABLE content_creature_template_model (CreatureID INTEGER, Idx INTEGER,
                 CreatureDisplayID INTEGER, DisplayScale REAL, Probability REAL);
-             CREATE TABLE creature (guid INTEGER, id1 INTEGER, map INTEGER, zoneId INTEGER,
+             CREATE TABLE content_creature (guid INTEGER, id1 INTEGER, map INTEGER, zoneId INTEGER,
                 position_x REAL, position_y REAL, position_z REAL, wander_distance REAL,
                 MovementType INTEGER, orientation REAL, spawntimesecs INTEGER);
-             CREATE TABLE game_event_creature (guid INTEGER, eventEntry INTEGER);
-             CREATE TABLE waypoint_data (id INTEGER, point INTEGER, position_x REAL,
+             CREATE TABLE content_game_event_creature (guid INTEGER, eventEntry INTEGER);
+             CREATE TABLE content_waypoint_data (id INTEGER, point INTEGER, position_x REAL,
                 position_y REAL, position_z REAL, orientation REAL, delay INTEGER,
                 move_type INTEGER);
-             CREATE TABLE creature_addon (guid INTEGER, path_id INTEGER, mount INTEGER,
+             CREATE TABLE content_creature_addon (guid INTEGER, path_id INTEGER, mount INTEGER,
                 auras TEXT);
-             CREATE TABLE creature_template_addon (entry INTEGER, path_id INTEGER,
+             CREATE TABLE content_creature_template_addon (entry INTEGER, path_id INTEGER,
                 mount INTEGER, auras TEXT);
-             CREATE TABLE creature_formations (leaderGUID INTEGER, memberGUID INTEGER,
+             CREATE TABLE content_creature_formations (leaderGUID INTEGER, memberGUID INTEGER,
                 dist REAL, angle REAL, groupAI INTEGER);",
         )
         .unwrap();
@@ -391,7 +391,7 @@ mod tests {
         for (index, angle) in angles.iter().enumerate() {
             let entry = 100 + index as u32;
             conn.execute(
-                "INSERT INTO creature_template VALUES (?1,1,1,1,0,1.0,1.0,'Loup — Écorché',0,0,1.0,1,0,1.14,'',1,20.0,0)",
+                "INSERT INTO content_creature_template VALUES (?1,1,1,1,0,1.0,1.0,'Loup — Écorché',0,0,1.0,1,0,1.14,'',1,20.0,0)",
                 [entry],
             )
             .unwrap();
@@ -401,7 +401,7 @@ mod tests {
             )
             .unwrap();
             conn.execute(
-                "INSERT INTO creature VALUES (?1,?1,0,0,-9000,-100,80,0,0,?2,120)",
+                "INSERT INTO content_creature VALUES (?1,?1,0,0,-9000,-100,80,0,0,?2,120)",
                 rusqlite::params![entry, angle],
             )
             .unwrap();

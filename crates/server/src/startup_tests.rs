@@ -11,7 +11,7 @@ use std::path::PathBuf;
 
 fn create_world_schema(conn: &rusqlite::Connection) {
     conn.execute_batch(
-        "CREATE TABLE creature_template (
+        "CREATE TABLE content_creature_template (
             entry INTEGER PRIMARY KEY, name TEXT, subname TEXT,
             minlevel INTEGER, maxlevel INTEGER, faction INTEGER, npcflag INTEGER,
             speed_walk REAL, speed_run REAL, scale REAL, rank INTEGER,
@@ -25,29 +25,29 @@ fn create_world_schema(conn: &rusqlite::Connection) {
             CreatureID INTEGER, Idx INTEGER, CreatureDisplayID INTEGER,
             DisplayScale REAL, Probability REAL
         );
-        CREATE TABLE creature (
+        CREATE TABLE content_creature (
             guid INTEGER PRIMARY KEY, id1 INTEGER, map INTEGER,
             zoneId INTEGER, areaId INTEGER,
             position_x REAL, position_y REAL, position_z REAL, orientation REAL,
             spawntimesecs INTEGER, wander_distance REAL, MovementType INTEGER
         );
-        CREATE TABLE game_event_creature (
+        CREATE TABLE content_game_event_creature (
             eventEntry INTEGER NOT NULL, guid INTEGER NOT NULL,
             PRIMARY KEY (guid, eventEntry)
         );
-        CREATE TABLE waypoint_data (
+        CREATE TABLE content_waypoint_data (
             id INTEGER, point INTEGER, position_x REAL, position_y REAL, position_z REAL,
             orientation REAL, delay INTEGER, move_type INTEGER
         );
-        CREATE TABLE creature_addon (
+        CREATE TABLE content_creature_addon (
             guid INTEGER PRIMARY KEY, path_id INTEGER, mount INTEGER, bytes1 INTEGER,
             bytes2 INTEGER, emote INTEGER, visibilityDistanceType INTEGER, auras TEXT
         );
-        CREATE TABLE creature_template_addon (
+        CREATE TABLE content_creature_template_addon (
             entry INTEGER PRIMARY KEY, path_id INTEGER, mount INTEGER, bytes1 INTEGER,
             bytes2 INTEGER, emote INTEGER, visibilityDistanceType INTEGER, auras TEXT
         );
-        CREATE TABLE creature_formations (
+        CREATE TABLE content_creature_formations (
             leaderGUID INTEGER, memberGUID INTEGER PRIMARY KEY, dist REAL, angle REAL,
             groupAI INTEGER, point_1 INTEGER, point_2 INTEGER
         );
@@ -77,14 +77,14 @@ fn write_to_temp_sqlite(populate: impl FnOnce(&rusqlite::Connection)) -> PathBuf
 fn world_data_loads_from_sqlite() {
     let path = write_to_temp_sqlite(|conn| {
         conn.execute_batch(
-            "INSERT INTO creature_template VALUES
+            "INSERT INTO content_creature_template VALUES
                 (1,'Wolf',NULL,3,4,35,0, 1.0,1.4,1.0,0,1,0,1,1.0,1.0,'',1,0,0,1.0,'',20.0),
                 (2,'Boar',NULL,2,3,35,0, 1.0,1.2,1.0,0,1,0,1,1.0,1.0,'',0,0,0,1.0,'',20.0);
              INSERT INTO content_creature_template_model VALUES (1,0,100,1.0,1.0),(2,0,200,1.0,1.0);
-             INSERT INTO creature VALUES (10,1,0,1,1, 0.0,0.0,0.0,0.0, 300,5.0,1);
-             INSERT INTO creature VALUES (11,2,1,2,2, 10.0,20.0,30.0,0.0, 300,0.0,0);
-             INSERT INTO waypoint_data VALUES (10,1, 1.0,2.0,3.0,0.0,0,0);
-             INSERT INTO waypoint_data VALUES (10,2, 4.0,5.0,6.0,0.0,0,0);",
+             INSERT INTO content_creature VALUES (10,1,0,1,1, 0.0,0.0,0.0,0.0, 300,5.0,1);
+             INSERT INTO content_creature VALUES (11,2,1,2,2, 10.0,20.0,30.0,0.0, 300,0.0,0);
+             INSERT INTO content_waypoint_data VALUES (10,1, 1.0,2.0,3.0,0.0,0,0);
+             INSERT INTO content_waypoint_data VALUES (10,2, 4.0,5.0,6.0,0.0,0,0);",
         )
         .unwrap();
     });
@@ -111,14 +111,14 @@ fn world_data_loads_from_sqlite() {
 fn world_data_excludes_inactive_tournament_spawns_without_lowering_ordinary_npcs() {
     let path = write_to_temp_sqlite(|conn| {
         conn.execute_batch(
-            "INSERT INTO creature VALUES
+            "INSERT INTO content_creature VALUES
                 (96194,26012,0,0,0,-8918.51,-135.146,84.2136,0,180,0,0),
                 (96198,26760,0,0,0,-8914.73,-133.636,84.3208,0,180,0,0),
                 (96204,26075,0,0,0,-8911.02,-131.912,84.4265,0,180,0,0),
                 (79968,952,0,0,0,-8902.13,-181.646,113.24,0,430,0,0),
                 (76,1,0,0,0,10,20,30,0,180,0,0),
                 (77,1,0,0,0,40,50,60,0,180,0,0);
-             INSERT INTO game_event_creature VALUES
+             INSERT INTO content_game_event_creature VALUES
                 (31,96194),(31,96198),(31,96204),(-72,76),(-72,77),(31,77);",
         )
         .unwrap();
@@ -140,7 +140,9 @@ fn world_data_excludes_inactive_tournament_spawns_without_lowering_ordinary_npcs
     assert_eq!(world.spawns_by_map[&0].len(), 3);
     let conn = rusqlite::Connection::open(&path).unwrap();
     let stored_spawns: i64 = conn
-        .query_row("SELECT count(*) FROM creature", [], |row| row.get(0))
+        .query_row("SELECT count(*) FROM content_creature", [], |row| {
+            row.get(0)
+        })
         .unwrap();
     assert_eq!(
         stored_spawns, 6,
@@ -162,11 +164,11 @@ fn world_data_empty_tables() {
 fn world_data_spawns_indexed_by_map() {
     let path = write_to_temp_sqlite(|conn| {
         conn.execute_batch(
-            "INSERT INTO creature_template VALUES
+            "INSERT INTO content_creature_template VALUES
                 (1,'Wolf',NULL,1,1,35,0,1.0,1.0,1.0,0,1,0,1,1.0,1.0,'',0,0,0,1.0,'',20.0);
-             INSERT INTO creature VALUES (1,1,0,1,1, 0.0,0.0,0.0,0.0, 300,0.0,0);
-             INSERT INTO creature VALUES (2,1,0,1,1, 1.0,0.0,0.0,0.0, 300,0.0,0);
-             INSERT INTO creature VALUES (3,1,1,1,1, 2.0,0.0,0.0,0.0, 300,0.0,0);",
+             INSERT INTO content_creature VALUES (1,1,0,1,1, 0.0,0.0,0.0,0.0, 300,0.0,0);
+             INSERT INTO content_creature VALUES (2,1,0,1,1, 1.0,0.0,0.0,0.0, 300,0.0,0);
+             INSERT INTO content_creature VALUES (3,1,1,1,1, 2.0,0.0,0.0,0.0, 300,0.0,0);",
         )
         .unwrap();
     });
@@ -189,7 +191,7 @@ fn world_data_spawns_indexed_by_map() {
 fn world_data_models_attached_to_templates() {
     let path = write_to_temp_sqlite(|conn| {
         conn.execute_batch(
-            "INSERT INTO creature_template VALUES
+            "INSERT INTO content_creature_template VALUES
                 (5,'Demon',NULL,10,10,35,0,1.0,1.5,1.0,0,1,0,1,2.0,1.0,'',0,0,0,1.0,'',20.0);
              INSERT INTO content_creature_template_model VALUES (5,0,301,1.0,0.7);
              INSERT INTO content_creature_template_model VALUES (5,1,302,1.0,0.3);",
@@ -208,11 +210,11 @@ fn world_data_models_attached_to_templates() {
 fn world_data_waypoints_grouped_by_path() {
     let path = write_to_temp_sqlite(|conn| {
         conn.execute_batch(
-            "INSERT INTO waypoint_data VALUES (1,1, 0.0,0.0,0.0,0.0,500,0);
-             INSERT INTO waypoint_data VALUES (1,2, 1.0,1.0,1.0,0.0,500,0);
-             INSERT INTO waypoint_data VALUES (1,3, 2.0,2.0,2.0,0.0,500,0);
-             INSERT INTO waypoint_data VALUES (2,1, 5.0,5.0,5.0,0.0,300,0);
-             INSERT INTO waypoint_data VALUES (2,2, 6.0,6.0,6.0,0.0,300,0);",
+            "INSERT INTO content_waypoint_data VALUES (1,1, 0.0,0.0,0.0,0.0,500,0);
+             INSERT INTO content_waypoint_data VALUES (1,2, 1.0,1.0,1.0,0.0,500,0);
+             INSERT INTO content_waypoint_data VALUES (1,3, 2.0,2.0,2.0,0.0,500,0);
+             INSERT INTO content_waypoint_data VALUES (2,1, 5.0,5.0,5.0,0.0,300,0);
+             INSERT INTO content_waypoint_data VALUES (2,2, 6.0,6.0,6.0,0.0,300,0);",
         )
         .unwrap();
     });
@@ -521,11 +523,11 @@ fn world_db_hogger_exists() {
     let conn = world_db_conn();
     let name: String = conn
         .query_row(
-            "SELECT name FROM creature_template WHERE entry = 448",
+            "SELECT name FROM content_creature_template WHERE entry = 448",
             [],
             |r| r.get(0),
         )
-        .expect("Hogger (entry 448) missing from creature_template");
+        .expect("Hogger (entry 448) missing from content_creature_template");
     assert_eq!(name, "Hogger");
 }
 
@@ -534,11 +536,13 @@ fn world_db_hogger_exists() {
 fn world_db_hogger_has_spawn() {
     let conn = world_db_conn();
     let count: u64 = conn
-        .query_row("SELECT COUNT(*) FROM creature WHERE id1 = 448", [], |r| {
-            r.get(0)
-        })
+        .query_row(
+            "SELECT COUNT(*) FROM content_creature WHERE id1 = 448",
+            [],
+            |r| r.get(0),
+        )
         .unwrap();
-    assert!(count >= 1, "Hogger has no spawns in creature table");
+    assert!(count >= 1, "Hogger has no spawns in content_creature");
 }
 
 #[test]
@@ -564,7 +568,7 @@ fn world_db_templates_mostly_have_names() {
     let conn = world_db_conn();
     let nameless: u64 = conn
         .query_row(
-            "SELECT COUNT(*) FROM creature_template WHERE name = '' OR name IS NULL",
+            "SELECT COUNT(*) FROM content_creature_template WHERE name = '' OR name IS NULL",
             [],
             |r| r.get(0),
         )
@@ -582,8 +586,8 @@ fn world_db_spawns_reference_valid_templates() {
     let conn = world_db_conn();
     let orphans: u64 = conn
         .query_row(
-            "SELECT COUNT(*) FROM creature c
-             WHERE NOT EXISTS (SELECT 1 FROM creature_template t WHERE t.entry = c.id1)",
+            "SELECT COUNT(*) FROM content_creature c
+             WHERE NOT EXISTS (SELECT 1 FROM content_creature_template t WHERE t.entry = c.id1)",
             [],
             |r| r.get(0),
         )
@@ -605,7 +609,7 @@ fn world_db_waypoints_have_ordered_points() {
             "SELECT COUNT(*) FROM (
                 SELECT id, point,
                        LAG(point) OVER (PARTITION BY id ORDER BY point) AS prev
-                FROM waypoint_data
+                FROM content_waypoint_data
             ) WHERE prev IS NOT NULL AND point <= prev",
             [],
             |r| r.get(0),
@@ -622,7 +626,11 @@ fn world_db_waypoints_have_ordered_points() {
 fn world_db_multiple_maps_present() {
     let conn = world_db_conn();
     let map_count: u64 = conn
-        .query_row("SELECT COUNT(DISTINCT map) FROM creature", [], |r| r.get(0))
+        .query_row(
+            "SELECT COUNT(DISTINCT map) FROM content_creature",
+            [],
+            |r| r.get(0),
+        )
         .unwrap();
     // AzerothCore has spawns across Eastern Kingdoms (0), Kalimdor (1), Outland (530), Northrend (571), etc.
     assert!(
@@ -646,7 +654,14 @@ fn world_db_has_all_expected_tables() {
         "creature",
         "creature_template",
         "creature_template_model",
+        "content_creature",
+        "content_creature_template",
         "content_creature_template_model",
+        "content_creature_addon",
+        "content_creature_template_addon",
+        "content_creature_formations",
+        "content_game_event_creature",
+        "content_waypoint_data",
         "creature_display_info",
         "spell_cast_times",
         "spell_cooldowns",

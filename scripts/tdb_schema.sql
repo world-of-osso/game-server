@@ -1,7 +1,9 @@
 -- TrinityCore TDB (Retail 12.1.0 world DB) tables imported by mysql_dump.py --prefix tdb_
 -- from the per-table excerpts in data/reference/tdb1210/ (see SOURCE.txt there).
 -- Columns follow the TDB1210.26091 DDL. Retail profession trainers and skill tier caps
--- (SkillTiers is server-side data; Retail 12.x ships no SkillTiers DB2).
+-- (SkillTiers is server-side data; Retail 12.x ships no SkillTiers DB2), and the Retail
+-- creature spawns, templates, models, addons, formations, waypoints and event memberships
+-- that content_policy.py turns into the content_creature* tables.
 
 DROP TABLE IF EXISTS tdb_skill_tiers;
 CREATE TABLE tdb_skill_tiers (
@@ -46,4 +48,209 @@ CREATE TABLE tdb_creature_trainer (
   MenuID INTEGER NOT NULL DEFAULT 0,
   OptionID INTEGER NOT NULL DEFAULT 0,
   PRIMARY KEY (CreatureID, MenuID, OptionID)
+);
+
+DROP TABLE IF EXISTS tdb_creature;
+CREATE TABLE tdb_creature (
+  guid INTEGER NOT NULL DEFAULT 0,
+  id INTEGER NOT NULL DEFAULT 0,
+  map INTEGER NOT NULL DEFAULT 0,
+  zoneId INTEGER NOT NULL DEFAULT 0,
+  areaId INTEGER NOT NULL DEFAULT 0,
+  spawnDifficulties TEXT NOT NULL DEFAULT '0',
+  phaseUseFlags INTEGER NOT NULL DEFAULT 0,
+  PhaseId INTEGER DEFAULT 0,
+  PhaseGroup INTEGER DEFAULT 0,
+  terrainSwapMap INTEGER NOT NULL DEFAULT -1,
+  modelid INTEGER NOT NULL DEFAULT 0,
+  equipment_id INTEGER NOT NULL DEFAULT 0,
+  position_x REAL NOT NULL DEFAULT 0,
+  position_y REAL NOT NULL DEFAULT 0,
+  position_z REAL NOT NULL DEFAULT 0,
+  orientation REAL NOT NULL DEFAULT 0,
+  spawntimesecs INTEGER NOT NULL DEFAULT 120,
+  wander_distance REAL NOT NULL DEFAULT 0,
+  currentwaypoint INTEGER NOT NULL DEFAULT 0,
+  curHealthPct INTEGER DEFAULT NULL,
+  MovementType INTEGER NOT NULL DEFAULT 0,
+  npcflag INTEGER DEFAULT NULL,
+  unit_flags INTEGER DEFAULT NULL,
+  unit_flags2 INTEGER DEFAULT NULL,
+  unit_flags3 INTEGER DEFAULT NULL,
+  ScriptName TEXT NOT NULL DEFAULT '',
+  StringId TEXT DEFAULT NULL,
+  VerifiedBuild INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (guid)
+);
+
+DROP TABLE IF EXISTS tdb_creature_template;
+CREATE TABLE tdb_creature_template (
+  entry INTEGER NOT NULL DEFAULT 0,
+  KillCredit1 INTEGER NOT NULL DEFAULT 0,
+  KillCredit2 INTEGER NOT NULL DEFAULT 0,
+  name TEXT,
+  femaleName TEXT,
+  subname TEXT,
+  TitleAlt TEXT,
+  IconName TEXT DEFAULT NULL,
+  RequiredExpansion INTEGER NOT NULL DEFAULT 0,
+  VignetteID INTEGER NOT NULL DEFAULT 0,
+  faction INTEGER NOT NULL DEFAULT 0,
+  npcflag INTEGER NOT NULL DEFAULT 0,
+  speed_walk REAL NOT NULL DEFAULT 1,
+  speed_run REAL NOT NULL DEFAULT 1.14286,
+  scale REAL NOT NULL DEFAULT 1,
+  Classification INTEGER NOT NULL DEFAULT 0,
+  dmgschool INTEGER NOT NULL DEFAULT 0,
+  BaseAttackTime INTEGER NOT NULL DEFAULT 0,
+  RangeAttackTime INTEGER NOT NULL DEFAULT 0,
+  BaseVariance REAL NOT NULL DEFAULT 1,
+  RangeVariance REAL NOT NULL DEFAULT 1,
+  unit_class INTEGER NOT NULL DEFAULT 0,
+  unit_flags INTEGER NOT NULL DEFAULT 0,
+  unit_flags2 INTEGER NOT NULL DEFAULT 0,
+  unit_flags3 INTEGER NOT NULL DEFAULT 0,
+  family INTEGER NOT NULL DEFAULT 0,
+  trainer_class INTEGER NOT NULL DEFAULT 0,
+  type INTEGER NOT NULL DEFAULT 0,
+  VehicleId INTEGER NOT NULL DEFAULT 0,
+  AIName TEXT NOT NULL DEFAULT '',
+  MovementType INTEGER NOT NULL DEFAULT 0,
+  ExperienceModifier REAL NOT NULL DEFAULT 1,
+  RacialLeader INTEGER NOT NULL DEFAULT 0,
+  movementId INTEGER NOT NULL DEFAULT 0,
+  WidgetSetID INTEGER NOT NULL DEFAULT 0,
+  WidgetSetUnitConditionID INTEGER NOT NULL DEFAULT 0,
+  RegenHealth INTEGER NOT NULL DEFAULT 1,
+  CreatureImmunitiesId INTEGER NOT NULL DEFAULT 0,
+  flags_extra INTEGER NOT NULL DEFAULT 0,
+  ScriptName TEXT NOT NULL DEFAULT '',
+  StringId TEXT DEFAULT NULL,
+  VerifiedBuild INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (entry)
+);
+
+DROP TABLE IF EXISTS tdb_creature_template_model;
+CREATE TABLE tdb_creature_template_model (
+  CreatureID INTEGER NOT NULL,
+  Idx INTEGER NOT NULL DEFAULT 0,
+  CreatureDisplayID INTEGER NOT NULL,
+  DisplayScale REAL NOT NULL DEFAULT 1,
+  Probability REAL NOT NULL DEFAULT 0,
+  VerifiedBuild INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (CreatureID, Idx)
+);
+
+DROP TABLE IF EXISTS tdb_creature_template_difficulty;
+CREATE TABLE tdb_creature_template_difficulty (
+  Entry INTEGER NOT NULL,
+  DifficultyID INTEGER NOT NULL DEFAULT 0,
+  LevelScalingDeltaMin INTEGER NOT NULL DEFAULT 0,
+  LevelScalingDeltaMax INTEGER NOT NULL DEFAULT 0,
+  ContentTuningID INTEGER NOT NULL DEFAULT 0,
+  HealthScalingExpansion INTEGER NOT NULL DEFAULT 0,
+  HealthModifier REAL NOT NULL DEFAULT 1,
+  ManaModifier REAL NOT NULL DEFAULT 1,
+  ArmorModifier REAL NOT NULL DEFAULT 1,
+  DamageModifier REAL NOT NULL DEFAULT 1,
+  CreatureDifficultyID INTEGER NOT NULL DEFAULT 0,
+  TypeFlags INTEGER NOT NULL DEFAULT 0,
+  TypeFlags2 INTEGER NOT NULL DEFAULT 0,
+  TypeFlags3 INTEGER NOT NULL DEFAULT 0,
+  LootID INTEGER NOT NULL DEFAULT 0,
+  PickPocketLootID INTEGER NOT NULL DEFAULT 0,
+  SkinLootID INTEGER NOT NULL DEFAULT 0,
+  GoldMin INTEGER NOT NULL DEFAULT 0,
+  GoldMax INTEGER NOT NULL DEFAULT 0,
+  StaticFlags1 INTEGER NOT NULL DEFAULT 0,
+  StaticFlags2 INTEGER NOT NULL DEFAULT 0,
+  StaticFlags3 INTEGER NOT NULL DEFAULT 0,
+  StaticFlags4 INTEGER NOT NULL DEFAULT 0,
+  StaticFlags5 INTEGER NOT NULL DEFAULT 0,
+  StaticFlags6 INTEGER NOT NULL DEFAULT 0,
+  StaticFlags7 INTEGER NOT NULL DEFAULT 0,
+  StaticFlags8 INTEGER NOT NULL DEFAULT 0,
+  VerifiedBuild INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (Entry, DifficultyID)
+);
+
+DROP TABLE IF EXISTS tdb_creature_addon;
+CREATE TABLE tdb_creature_addon (
+  guid INTEGER NOT NULL DEFAULT 0,
+  PathId INTEGER NOT NULL DEFAULT 0,
+  mount INTEGER NOT NULL DEFAULT 0,
+  MountCreatureID INTEGER NOT NULL DEFAULT 0,
+  StandState INTEGER NOT NULL DEFAULT 0,
+  AnimTier INTEGER NOT NULL DEFAULT 0,
+  VisFlags INTEGER NOT NULL DEFAULT 0,
+  SheathState INTEGER NOT NULL DEFAULT 1,
+  PvPFlags INTEGER NOT NULL DEFAULT 0,
+  emote INTEGER NOT NULL DEFAULT 0,
+  aiAnimKit INTEGER NOT NULL DEFAULT 0,
+  movementAnimKit INTEGER NOT NULL DEFAULT 0,
+  meleeAnimKit INTEGER NOT NULL DEFAULT 0,
+  visibilityDistanceType INTEGER NOT NULL DEFAULT 0,
+  auras TEXT,
+  PRIMARY KEY (guid)
+);
+
+DROP TABLE IF EXISTS tdb_creature_template_addon;
+CREATE TABLE tdb_creature_template_addon (
+  entry INTEGER NOT NULL DEFAULT 0,
+  PathId INTEGER NOT NULL DEFAULT 0,
+  mount INTEGER NOT NULL DEFAULT 0,
+  MountCreatureID INTEGER NOT NULL DEFAULT 0,
+  StandState INTEGER NOT NULL DEFAULT 0,
+  AnimTier INTEGER NOT NULL DEFAULT 0,
+  VisFlags INTEGER NOT NULL DEFAULT 0,
+  SheathState INTEGER NOT NULL DEFAULT 1,
+  PvPFlags INTEGER NOT NULL DEFAULT 0,
+  emote INTEGER NOT NULL DEFAULT 0,
+  aiAnimKit INTEGER NOT NULL DEFAULT 0,
+  movementAnimKit INTEGER NOT NULL DEFAULT 0,
+  meleeAnimKit INTEGER NOT NULL DEFAULT 0,
+  visibilityDistanceType INTEGER NOT NULL DEFAULT 0,
+  auras TEXT,
+  PRIMARY KEY (entry)
+);
+
+DROP TABLE IF EXISTS tdb_creature_formations;
+CREATE TABLE tdb_creature_formations (
+  leaderGUID INTEGER NOT NULL DEFAULT 0,
+  memberGUID INTEGER NOT NULL DEFAULT 0,
+  dist REAL NOT NULL,
+  angle REAL NOT NULL,
+  groupAI INTEGER NOT NULL,
+  point_1 INTEGER NOT NULL DEFAULT 0,
+  point_2 INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (memberGUID)
+);
+
+DROP TABLE IF EXISTS tdb_waypoint_path;
+CREATE TABLE tdb_waypoint_path (
+  PathId INTEGER NOT NULL,
+  MoveType INTEGER NOT NULL DEFAULT 0,
+  Flags INTEGER NOT NULL DEFAULT 0,
+  Velocity REAL DEFAULT NULL,
+  Comment TEXT DEFAULT NULL,
+  PRIMARY KEY (PathId)
+);
+
+DROP TABLE IF EXISTS tdb_waypoint_path_node;
+CREATE TABLE tdb_waypoint_path_node (
+  PathId INTEGER NOT NULL DEFAULT 0,
+  NodeId INTEGER NOT NULL DEFAULT 0,
+  PositionX REAL NOT NULL DEFAULT 0,
+  PositionY REAL NOT NULL DEFAULT 0,
+  PositionZ REAL NOT NULL DEFAULT 0,
+  Orientation REAL DEFAULT NULL,
+  Delay INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (PathId, NodeId)
+);
+
+DROP TABLE IF EXISTS tdb_game_event_creature;
+CREATE TABLE tdb_game_event_creature (
+  eventEntry INTEGER NOT NULL,
+  guid INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (guid, eventEntry)
 );

@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """Derive the Retail-first content_* tables the server reads from AzerothCore + Retail DB2 tables.
 
-  content_policy.py [--db data/world.db] [--csv-root DIR] [--tdb-dir DIR] [--overrides CSV] [--report CSV] [--check]
+  content_policy.py [--db data/world.db] [--csv-root DIR] [--overrides CSV] [--report CSV] [--check]
 
 --check only verifies the inputs exist (import-azerothcore.sh preflight).
 
-Needs world.db with the AzerothCore dump tables (mysql_dump.py) and the Retail
-DB2 tables (db2.py). Policy (docs/wiki/systems/content-import.md):
+Needs world.db with the AzerothCore dump tables (mysql_dump.py), the TrinityCore
+Retail tdb_* tables (mysql_dump.py --prefix tdb_) and the Retail DB2 tables
+(db2.py). Policy (docs/wiki/systems/content-import.md):
 
 - An AzerothCore item/spell id is kept when the Retail row with the same id has
   the same name (case-insensitive, trimmed), or when scripts/content_overrides.csv
@@ -19,30 +20,36 @@ DB2 tables (db2.py). Policy (docs/wiki/systems/content-import.md):
   game_object_display_info row; spawns and addons need a kept template.
 - content_creature_template_model: a template with any display absent from Retail
   creature_display_info takes the model rows of the same entry in TrinityCore's
-  Retail world DB (--tdb-dir dumps) when that entry has the same name (or a
-  reviewed creature override) and every one of its displays exists in Retail.
+  Retail world DB (tdb_creature_template_model) when that entry has the same name
+  (or a reviewed creature override) and every one of its displays exists in Retail.
+- content_creature: maps 0 and 1 (RETAIL_MAPS) spawn TrinityCore's base-phase
+  Retail spawns (PhaseId 0, PhaseGroup 0, terrainSwapMap -1, difficulty 0 in
+  spawnDifficulties) at guid + RETAIL_GUID_OFFSET instead of AzerothCore's; other
+  maps keep AzerothCore's. content_creature_template adds the TrinityCore template of
+  every spawned entry AzerothCore lacks, at the levels of the spawns nearest to its
+  own that have an AzerothCore template (TrinityCore levels are ContentTuning
+  scaling ranges). Addons, formations, waypoints and event memberships follow the
+  spawns' source.
 
 Every dropped row or zeroed reward is written to --report. Runs in one transaction.
 """
 
 import argparse
+import bisect
 import csv
 import sqlite3
 import sys
-from collections import Counter
+from collections import Counter, defaultdict
 from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
 import db2  # noqa: E402
-import mysql_dump  # noqa: E402
 
 PROJECT_DIR = SCRIPT_DIR.parent
 WRATH_BUILD = "3.4.0.47659"
 DEFAULT_OVERRIDES = SCRIPT_DIR / "content_overrides.csv"
 DEFAULT_REPORT = PROJECT_DIR / "data/reports/content-dropped.csv"
-DEFAULT_TDB_DIR = PROJECT_DIR / "data/reference/tdb1210"
-TDB_TABLES = ("creature_template", "creature_template_model")
 
 REWARD_ITEMS = [(f"RewardItem{n}", f"RewardAmount{n}") for n in range(1, 5)] + [
     (f"RewardChoiceItemID{n}", f"RewardChoiceItemQuantity{n}") for n in range(1, 7)
@@ -79,7 +86,7 @@ def load_overrides(path, conn):
                        "creature": "SELECT name FROM creature_template WHERE entry = ?"}
     retail_name_sql = {"item": "SELECT Display_lang FROM item_sparse WHERE ID = ?",
                        "spell": "SELECT Name_lang FROM spell_name WHERE ID = ?",
-                       "creature": "SELECT name FROM temp.tdb_creature_template WHERE entry = ?"}
+                       "creature": "SELECT name FROM tdb_creature_template WHERE entry = ?"}
     overrides = {"item": {}, "spell": {}, "creature": {}}
     with path.open(newline="", encoding="utf-8") as handle:
         for row in csv.DictReader(handle):
@@ -233,29 +240,15 @@ def build_gameobjects(conn, report):
             report.drop(table, f"{row_key}={row}", entry, "template dropped")
 
 
-def load_tdb_tables(conn, tdb_dir):
-    """TrinityCore Retail creature_template (entry, name) and creature_template_model as temp tables."""
-    conn.execute("CREATE TEMP TABLE tdb_creature_template (entry INTEGER PRIMARY KEY, name TEXT)")
-    conn.execute("""CREATE TEMP TABLE tdb_creature_template_model (CreatureID INTEGER NOT NULL, Idx INTEGER NOT NULL,
-        CreatureDisplayID INTEGER NOT NULL, DisplayScale REAL NOT NULL, Probability REAL NOT NULL,
-        VerifiedBuild INTEGER, PRIMARY KEY (CreatureID, Idx))""")
-    path = tdb_dir / "creature_template.sql"
-    rows = mysql_dump.dump_rows(path.read_text(encoding="utf-8"), "creature_template", path)
-    conn.executemany("INSERT INTO temp.tdb_creature_template VALUES (?, ?)", ((row[0], row[3]) for _, row in rows))
-    path = tdb_dir / "creature_template_model.sql"
-    rows = mysql_dump.dump_rows(path.read_text(encoding="utf-8"), "creature_template_model", path)
-    conn.executemany("INSERT INTO temp.tdb_creature_template_model VALUES (?,?,?,?,?,?)", (row for _, row in rows))
-
-
 def retail_model_reason(conn, entry, name, reviewed):
     """None when TrinityCore's Retail models for `entry` may replace AzerothCore's, else why not."""
-    retail = conn.execute("SELECT name FROM temp.tdb_creature_template WHERE entry = ?", (entry,)).fetchone()
+    retail = conn.execute("SELECT name FROM tdb_creature_template WHERE entry = ?", (entry,)).fetchone()
     if retail is None:
         return "no TrinityCore Retail template"
     if not reviewed and normalize(retail[0]) != normalize(name):
         return f"TrinityCore Retail name {retail[0]!r} != {name!r}"
     displays = [d for (d,) in conn.execute(
-        "SELECT CreatureDisplayID FROM temp.tdb_creature_template_model WHERE CreatureID = ? ORDER BY Idx", (entry,))]
+        "SELECT CreatureDisplayID FROM tdb_creature_template_model WHERE CreatureID = ? ORDER BY Idx", (entry,))]
     if not displays:
         return "no TrinityCore Retail models"
     absent = [d for d in displays if not conn.execute("SELECT 1 FROM creature_display_info WHERE ID = ?", (d,)).fetchone()]
@@ -279,11 +272,214 @@ def build_creature_models(conn, overrides, report):
         conn.execute("DELETE FROM content_creature_template_model WHERE CreatureID = ?", (entry,))
         conn.execute("""INSERT INTO content_creature_template_model
             SELECT ?, Idx, CreatureDisplayID, DisplayScale, Probability, VerifiedBuild
-            FROM temp.tdb_creature_template_model WHERE CreatureID = ?""", (entry, retail_entry))
+            FROM tdb_creature_template_model WHERE CreatureID = ?""", (entry, retail_entry))
 
 
-def apply_policy(conn, wrath_spell_names, overrides_path, tdb_dir, report):
-    load_tdb_tables(conn, tdb_dir)
+# --- Retail creature spawns (maps 0 and 1) ---
+# The client renders Retail terrain and WMOs, so AzerothCore's Wrath spawn positions put
+# interior NPCs in walls or under floors (docs/specs/retail-spawn-source.md).
+
+RETAIL_MAPS = (0, 1)
+# TrinityCore guids reach 11.8M and 10 collide with kept AzerothCore spawns
+# (maps 229, 230, 530, 609); AzerothCore's reach 5.3M.
+RETAIL_GUID_OFFSET = 20_000_000
+# A TrinityCore-only template takes the levels of the median of this many nearest
+# spawns (per spawn of the entry) that have an AzerothCore template.
+LEVEL_NEIGHBOURS = 5
+# Only spawns that carry an area's level count: not level-1 critters, non-combat pets or
+# invisible triggers, not service NPCs (any npcflag: spirit healers, vendors) and not
+# holiday spawns (any game event), whose levels are set per role.
+CREATURE_TYPE_CRITTER = 8
+CREATURE_TYPE_NON_COMBAT_PET = 12
+CREATURE_FLAG_EXTRA_TRIGGER = 0x80
+
+MAP_LIST = ", ".join(str(m) for m in RETAIL_MAPS)
+BASE_PHASE = """COALESCE(PhaseId, 0) = 0 AND COALESCE(PhaseGroup, 0) = 0 AND terrainSwapMap = -1
+    AND ',' || replace(spawnDifficulties, ' ', '') || ',' LIKE '%,0,%'"""
+
+
+def not_base_phase_reason(phase_id, phase_group, terrain_swap, difficulties):
+    if phase_id:
+        return f"not base phase: PhaseId {phase_id}"
+    if phase_group:
+        return f"not base phase: PhaseGroup {phase_group}"
+    if terrain_swap != -1:
+        return f"not base phase: terrainSwapMap {terrain_swap}"
+    return f"not base phase: spawnDifficulties {difficulties}"
+
+
+def build_spawns(conn, report):
+    """content_creature and temp.retail_spawn (TrinityCore guid -> content guid)."""
+    clone_table(conn, "creature", "content_creature")
+    conn.execute(f"INSERT INTO content_creature SELECT * FROM creature WHERE map NOT IN ({MAP_LIST})")
+    for guid, map_id in conn.execute(f"SELECT guid, map FROM creature WHERE map IN ({MAP_LIST}) ORDER BY guid"):
+        report.drop("creature", f"guid={guid}", guid, f"map {map_id} spawn replaced by Retail spawns")
+    conn.execute(f"""CREATE TEMP TABLE retail_spawn AS SELECT guid AS tdb_guid, guid + {RETAIL_GUID_OFFSET} AS guid
+        FROM tdb_creature WHERE map IN ({MAP_LIST}) AND {BASE_PHASE}""")
+    conn.execute("CREATE UNIQUE INDEX temp.retail_spawn_tdb ON retail_spawn(tdb_guid)")
+    for guid, *phase in conn.execute(f"""SELECT guid, PhaseId, PhaseGroup, terrainSwapMap, spawnDifficulties
+            FROM tdb_creature WHERE map IN ({MAP_LIST}) AND NOT ({BASE_PHASE}) ORDER BY guid"""):
+        report.drop("tdb_creature", f"guid={guid}", guid, not_base_phase_reason(*phase))
+    conn.execute("""INSERT INTO content_creature (guid, id1, map, zoneId, areaId, equipment_id, position_x, position_y,
+            position_z, orientation, spawntimesecs, wander_distance, currentwaypoint, MovementType, ScriptName, VerifiedBuild)
+        SELECT r.guid, c.id, c.map, c.zoneId, c.areaId, c.equipment_id, c.position_x, c.position_y, c.position_z,
+            c.orientation, c.spawntimesecs, c.wander_distance, c.currentwaypoint, c.MovementType, c.ScriptName, c.VerifiedBuild
+        FROM temp.retail_spawn r JOIN tdb_creature c ON c.guid = r.tdb_guid""")
+
+
+class SpawnGrid:
+    """Spawns bucketed into CELL-yard squares per map, for nearest-neighbour lookups."""
+
+    CELL = 200.0
+
+    def __init__(self, points):
+        self.cells = defaultdict(list)
+        self.per_map = Counter()
+        for map_id, x, y, value in points:
+            self.cells[(map_id, int(x // self.CELL), int(y // self.CELL))].append((x, y, value))
+            self.per_map[map_id] += 1
+
+    def nearest(self, map_id, x, y, count):
+        """Values of the `count` nearest points on `map_id` (all of them if the map has fewer)."""
+        count = min(count, self.per_map[map_id])
+        cx, cy = int(x // self.CELL), int(y // self.CELL)
+        found = []
+        ring = 0
+        # Rings past `ring` are at least ring * CELL yards away.
+        while count and (len(found) < count or found[count - 1][0] > (ring * self.CELL) ** 2):
+            for dx in range(-ring, ring + 1):
+                for dy in ((-ring, ring) if abs(dx) != ring else range(-ring, ring + 1)):
+                    for px, py, value in self.cells.get((map_id, cx + dx, cy + dy), ()):
+                        bisect.insort(found, ((px - x) ** 2 + (py - y) ** 2, value))
+            ring += 1
+        return [value for _, value in found[:count]]
+
+
+def derived_levels(conn):
+    """{entry: (minlevel, maxlevel, exp)} for spawned TrinityCore-only entries."""
+    known = conn.execute(f"""SELECT c.map, c.position_x, c.position_y, t.minlevel, t.maxlevel, t.exp
+        FROM content_creature c JOIN creature_template t ON t.entry = c.id1
+        WHERE c.guid IN (SELECT guid FROM temp.retail_spawn)
+          AND t.type NOT IN ({CREATURE_TYPE_CRITTER}, {CREATURE_TYPE_NON_COMBAT_PET})
+          AND t.flags_extra & {CREATURE_FLAG_EXTRA_TRIGGER} = 0 AND t.npcflag = 0
+          AND c.guid - {RETAIL_GUID_OFFSET} NOT IN (SELECT guid FROM tdb_game_event_creature)""").fetchall()
+    grid = SpawnGrid((m, x, y, (lo, hi, exp)) for m, x, y, lo, hi, exp in known)
+    neighbours = defaultdict(list)
+    for entry, map_id, x, y in conn.execute("""SELECT c.id1, c.map, c.position_x, c.position_y FROM content_creature c
+            WHERE c.guid IN (SELECT guid FROM temp.retail_spawn)
+              AND c.id1 NOT IN (SELECT entry FROM creature_template)"""):
+        neighbours[entry].extend(grid.nearest(map_id, x, y, LEVEL_NEIGHBOURS))
+    levels = {}
+    for entry, values in neighbours.items():
+        if values:
+            values.sort()
+            levels[entry] = values[(len(values) - 1) // 2]
+    return levels
+
+
+def build_templates(conn, report):
+    """content_creature_template: AzerothCore's, plus TrinityCore's for spawned entries AzerothCore lacks."""
+    clone_table(conn, "creature_template", "content_creature_template")
+    conn.execute("INSERT INTO content_creature_template SELECT * FROM creature_template")
+    conn.execute("CREATE TEMP TABLE retail_level (entry INTEGER PRIMARY KEY, minlevel INTEGER, maxlevel INTEGER, exp INTEGER)")
+    conn.executemany("INSERT INTO temp.retail_level VALUES (?, ?, ?, ?)",
+                     ((entry, *values) for entry, values in derived_levels(conn).items()))
+    # Loot, pickpocket and skinning ids index TrinityCore's loot tables, which are not imported;
+    # gossip menus and vendor lists are AzerothCore-keyed. npcflag's high word is npcflag2.
+    conn.execute("""INSERT INTO content_creature_template (entry, KillCredit1, KillCredit2, name, subname, IconName,
+            minlevel, maxlevel, exp, faction, npcflag, speed_walk, speed_run, scale, rank, dmgschool, DamageModifier,
+            BaseAttackTime, RangeAttackTime, BaseVariance, RangeVariance, unit_class, unit_flags, unit_flags2, family,
+            type, type_flags, VehicleId, mingold, maxgold, AIName, MovementType, HealthModifier, ManaModifier,
+            ArmorModifier, ExperienceModifier, RacialLeader, movementId, RegenHealth, flags_extra, ScriptName, VerifiedBuild)
+        SELECT t.entry, t.KillCredit1, t.KillCredit2, t.name, t.subname, t.IconName,
+            l.minlevel, l.maxlevel, l.exp, t.faction, t.npcflag & 4294967295, t.speed_walk, t.speed_run, t.scale,
+            t.Classification, t.dmgschool, d.DamageModifier, t.BaseAttackTime, t.RangeAttackTime, t.BaseVariance,
+            t.RangeVariance, t.unit_class, t.unit_flags, t.unit_flags2, t.family, t.type, d.TypeFlags, t.VehicleId,
+            d.GoldMin, d.GoldMax, t.AIName, t.MovementType, d.HealthModifier, d.ManaModifier, d.ArmorModifier,
+            t.ExperienceModifier, t.RacialLeader, t.movementId, t.RegenHealth, t.flags_extra, t.ScriptName, t.VerifiedBuild
+        FROM tdb_creature_template t
+        JOIN tdb_creature_template_difficulty d ON d.Entry = t.entry AND d.DifficultyID = 0
+        JOIN temp.retail_level l ON l.entry = t.entry""")
+    retail_only = "SELECT entry FROM content_creature_template WHERE entry NOT IN (SELECT entry FROM creature_template)"
+    conn.execute(f"""INSERT INTO content_creature_template_model
+        SELECT CreatureID, Idx, CreatureDisplayID, DisplayScale, Probability, VerifiedBuild
+        FROM tdb_creature_template_model WHERE CreatureID IN ({retail_only})""")
+    for entry, display in conn.execute(f"""SELECT CreatureID, CreatureDisplayID FROM tdb_creature_template_model
+            WHERE CreatureID IN ({retail_only})
+              AND CreatureDisplayID NOT IN (SELECT ID FROM creature_display_info) ORDER BY CreatureID, Idx""").fetchall():
+        report.drop("tdb_creature_template_model", f"CreatureID={entry}", display,
+                    "display absent from Retail CreatureDisplayInfo kept")
+    for guid, entry in conn.execute("""SELECT guid, id1 FROM content_creature
+            WHERE guid IN (SELECT guid FROM temp.retail_spawn)
+              AND id1 NOT IN (SELECT entry FROM content_creature_template) ORDER BY guid""").fetchall():
+        report.drop("tdb_creature", f"guid={guid - RETAIL_GUID_OFFSET}", entry,
+                    "no AzerothCore template and no TrinityCore template with a difficulty 0 row and derivable level")
+        conn.execute("DELETE FROM content_creature WHERE guid = ?", (guid,))
+
+
+def build_addons(conn, report):
+    clone_table(conn, "creature_addon", "content_creature_addon")
+    conn.execute("INSERT INTO content_creature_addon SELECT * FROM creature_addon WHERE guid IN (SELECT guid FROM content_creature)")
+    for (guid,) in conn.execute("SELECT guid FROM creature_addon WHERE guid NOT IN (SELECT guid FROM content_creature)"):
+        report.drop("creature_addon", f"guid={guid}", guid, "spawn replaced by Retail spawns")
+    # AzerothCore packs UNIT_FIELD_BYTES_1 (stand state, vis flags, anim tier) and BYTES_2 (sheath, PvP flags).
+    addon_columns = """PathId, mount, StandState | (VisFlags << 16) | (AnimTier << 24), SheathState | (PvPFlags << 8),
+        emote, visibilityDistanceType, auras"""
+    conn.execute(f"""INSERT INTO content_creature_addon SELECT r.guid, {addon_columns}
+        FROM tdb_creature_addon a JOIN temp.retail_spawn r ON r.tdb_guid = a.guid
+        WHERE r.guid IN (SELECT guid FROM content_creature)""")
+    clone_table(conn, "creature_template_addon", "content_creature_template_addon")
+    conn.execute("INSERT INTO content_creature_template_addon SELECT * FROM creature_template_addon")
+    conn.execute(f"""INSERT INTO content_creature_template_addon SELECT a.entry, {addon_columns}
+        FROM tdb_creature_template_addon a
+        WHERE a.entry IN (SELECT entry FROM content_creature_template)
+          AND a.entry NOT IN (SELECT entry FROM creature_template)""")
+
+
+def build_waypoints(conn):
+    """AzerothCore paths plus the TrinityCore paths of Retail addons (per-path move type onto every point)."""
+    clone_table(conn, "waypoint_data", "content_waypoint_data")
+    conn.execute("INSERT INTO content_waypoint_data SELECT * FROM waypoint_data")
+    retail_paths = """SELECT a.path_id FROM content_creature_addon a JOIN temp.retail_spawn r ON r.guid = a.guid
+        UNION SELECT path_id FROM content_creature_template_addon WHERE entry NOT IN (SELECT entry FROM creature_template)"""
+    clash = conn.execute(f"SELECT DISTINCT id FROM waypoint_data WHERE id IN ({retail_paths}) AND id <> 0").fetchall()
+    if clash:
+        raise SystemExit(f"TrinityCore waypoint paths collide with AzerothCore waypoint_data ids: {clash[:10]}")
+    conn.execute(f"""INSERT INTO content_waypoint_data (id, point, position_x, position_y, position_z, orientation, delay, move_type)
+        SELECT n.PathId, n.NodeId, n.PositionX, n.PositionY, n.PositionZ, COALESCE(n.Orientation, 0), n.Delay, p.MoveType
+        FROM tdb_waypoint_path_node n JOIN tdb_waypoint_path p ON p.PathId = n.PathId
+        WHERE n.PathId IN ({retail_paths})""")
+
+
+def build_formations_and_events(conn, report):
+    clone_table(conn, "creature_formations", "content_creature_formations")
+    conn.execute("""INSERT INTO content_creature_formations SELECT * FROM creature_formations
+        WHERE memberGUID IN (SELECT guid FROM content_creature)""")
+    conn.execute("""INSERT INTO content_creature_formations
+        SELECT leader.guid, member.guid, f.dist, f.angle, f.groupAI, f.point_1, f.point_2
+        FROM tdb_creature_formations f
+        JOIN temp.retail_spawn member ON member.tdb_guid = f.memberGUID
+        JOIN temp.retail_spawn leader ON leader.tdb_guid = f.leaderGUID""")
+    clone_table(conn, "game_event_creature", "content_game_event_creature")
+    conn.execute("""INSERT INTO content_game_event_creature SELECT * FROM game_event_creature
+        WHERE guid IN (SELECT guid FROM content_creature)""")
+    conn.execute("""INSERT INTO content_game_event_creature SELECT e.eventEntry, r.guid
+        FROM tdb_game_event_creature e JOIN temp.retail_spawn r ON r.tdb_guid = e.guid""")
+    for table, key in (("creature_formations", "memberGUID"), ("game_event_creature", "guid")):
+        for (guid,) in conn.execute(f"SELECT {key} FROM {table} WHERE {key} NOT IN (SELECT guid FROM content_creature)"):
+            report.drop(table, f"{key}={guid}", guid, "spawn replaced by Retail spawns")
+
+
+def build_creatures(conn, report):
+    build_spawns(conn, report)
+    build_templates(conn, report)
+    build_addons(conn, report)
+    build_waypoints(conn)
+    build_formations_and_events(conn, report)
+    conn.execute("CREATE INDEX content_creature_map ON content_creature(map)")
+
+
+def apply_policy(conn, wrath_spell_names, overrides_path, report):
     retail_items = dict(conn.execute("SELECT ID, Display_lang FROM item_sparse"))
     retail_spells = dict(conn.execute("SELECT ID, Name_lang FROM spell_name"))
     overrides = load_overrides(overrides_path, conn)
@@ -297,20 +493,19 @@ def apply_policy(conn, wrath_spell_names, overrides_path, tdb_dir, report):
     build_loot(conn, report)
     build_gameobjects(conn, report)
     build_creature_models(conn, overrides["creature"], report)
+    build_creatures(conn, report)
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--db", type=Path, default=PROJECT_DIR / "data/world.db")
     parser.add_argument("--csv-root", type=Path, default=db2.DEFAULT_CSV_ROOT)
-    parser.add_argument("--tdb-dir", type=Path, default=DEFAULT_TDB_DIR)
     parser.add_argument("--overrides", type=Path, default=DEFAULT_OVERRIDES)
     parser.add_argument("--report", type=Path, default=DEFAULT_REPORT)
     parser.add_argument("--check", action="store_true")
     args = parser.parse_args()
     wrath_path = args.csv_root / WRATH_BUILD / "SpellName.csv"
-    tdb_paths = [args.tdb_dir / f"{table}.sql" for table in TDB_TABLES]
-    missing = [str(p) for p in (wrath_path, args.overrides, *tdb_paths) if not p.is_file()]
+    missing = [str(p) for p in (wrath_path, args.overrides) if not p.is_file()]
     if missing:
         raise SystemExit(f"Missing content policy inputs: {', '.join(missing)}")
     if args.check:
@@ -320,7 +515,7 @@ def main():
     conn = sqlite3.connect(args.db, isolation_level=None)
     try:
         conn.execute("BEGIN")
-        apply_policy(conn, wrath_spell_names, args.overrides, args.tdb_dir, report)
+        apply_policy(conn, wrath_spell_names, args.overrides, report)
         conn.execute("COMMIT")
     except BaseException:
         if conn.in_transaction:

@@ -138,11 +138,11 @@ pub fn load_world_data(path: &Path) -> WorldData {
     let waypoints = load_waypoints(&conn);
     let addons = load_addons(
         &conn,
-        "SELECT guid, path_id, mount, auras FROM creature_addon",
+        "SELECT guid, path_id, mount, auras FROM content_creature_addon",
     );
     let template_addons = load_addons(
         &conn,
-        "SELECT entry, path_id, mount, auras FROM creature_template_addon",
+        "SELECT entry, path_id, mount, auras FROM content_creature_template_addon",
     );
     let formations = load_formations(&conn);
     let class_level_base_hp = load_class_level_base_hp(&conn);
@@ -222,17 +222,17 @@ fn load_templates(conn: &Connection) -> HashMap<u32, CreatureTemplate> {
             "SELECT entry, minlevel, maxlevel, faction, npcflag, speed_walk, HealthModifier, name,
                     rank, ExperienceModifier, type, flags_extra, speed_run, ScriptName, unit_class, exp,
                     detection_range, unit_flags
-             FROM creature_template",
+             FROM content_creature_template",
         )
-        .expect("Failed to prepare creature_template query");
+        .expect("Failed to prepare content_creature_template query");
 
     let rows = stmt
         .query_map(params![], template_from_row)
-        .expect("Failed to query creature_template");
+        .expect("Failed to query content_creature_template");
 
     let mut map = HashMap::new();
     for row in rows {
-        let t = row.expect("Failed to read creature_template row");
+        let t = row.expect("Failed to read content_creature_template row");
         map.insert(t.entry, t);
     }
     map
@@ -288,21 +288,21 @@ fn load_spawns(conn: &Connection) -> Vec<CreatureSpawn> {
         .prepare(
             "SELECT guid, id1, map, zoneId, position_x, position_y, position_z,
                     wander_distance, MovementType, orientation, spawntimesecs
-             FROM creature
+             FROM content_creature creature
              WHERE NOT EXISTS (
-                 SELECT 1 FROM game_event_creature event WHERE event.guid = creature.guid
+                 SELECT 1 FROM content_game_event_creature event WHERE event.guid = creature.guid
              ) OR EXISTS (
-                 SELECT 1 FROM game_event_creature event
+                 SELECT 1 FROM content_game_event_creature event
                  WHERE event.guid = creature.guid AND event.eventEntry < 0
              )",
         )
-        .expect("Failed to prepare creature query; import game_event_creature into world.db");
+        .expect("Failed to prepare content_creature query");
 
     let rows = stmt
         .query_map(params![], spawn_from_row)
-        .expect("Failed to query creature");
+        .expect("Failed to query content_creature");
 
-    rows.map(|r| r.expect("Failed to read creature row"))
+    rows.map(|r| r.expect("Failed to read content_creature row"))
         .collect()
 }
 
@@ -338,19 +338,19 @@ fn load_waypoints(conn: &Connection) -> HashMap<u32, WaypointPath> {
         .prepare(
             // WaypointMgr::Load skips move_type >= WAYPOINT_MOVE_TYPE_MAX.
             "SELECT id, point, position_x, position_y, position_z, orientation, delay, move_type
-             FROM waypoint_data
+             FROM content_waypoint_data
              WHERE move_type < 4
              ORDER BY id, point",
         )
-        .expect("Failed to prepare waypoint_data query");
+        .expect("Failed to prepare content_waypoint_data query");
 
     let rows = stmt
         .query_map(params![], waypoint_point_from_row)
-        .expect("Failed to query waypoint_data");
+        .expect("Failed to query content_waypoint_data");
 
     let mut map: HashMap<u32, WaypointPath> = HashMap::new();
     for row in rows {
-        let (path_id, point) = row.expect("Failed to read waypoint_data row");
+        let (path_id, point) = row.expect("Failed to read content_waypoint_data row");
         map.entry(path_id)
             .or_insert_with(|| WaypointPath { points: Vec::new() })
             .points
@@ -389,7 +389,7 @@ fn parse_addon_auras(text: &str) -> Vec<u32> {
 fn load_addons(conn: &Connection, sql: &str) -> HashMap<u32, CreatureAddon> {
     let mut stmt = conn
         .prepare(sql)
-        .expect("Failed to prepare creature addon query; import creature_addon into world.db");
+        .expect("Failed to prepare creature addon query");
     let rows = stmt
         .query_map(params![], addon_from_row)
         .expect("Failed to query creature addons");
@@ -415,20 +415,18 @@ fn load_formations(conn: &Connection) -> HashMap<u32, FormationInfo> {
             // A leader joins its group only through its own row
             // (CreatureGroup::AddMember), so groups without one never move.
             "SELECT leaderGUID, memberGUID, dist, angle, groupAI
-             FROM creature_formations member
+             FROM content_creature_formations member
              WHERE leaderGUID <> memberGUID AND EXISTS (
-                 SELECT 1 FROM creature_formations leader
+                 SELECT 1 FROM content_creature_formations leader
                  WHERE leader.memberGUID = member.leaderGUID
                    AND leader.leaderGUID = member.leaderGUID
              )",
         )
-        .expect(
-            "Failed to prepare creature_formations query; import creature_formations into world.db",
-        );
+        .expect("Failed to prepare content_creature_formations query");
     let rows = stmt
         .query_map(params![], formation_from_row)
-        .expect("Failed to query creature_formations");
-    rows.map(|r| r.expect("Failed to read creature_formations row"))
+        .expect("Failed to query content_creature_formations");
+    rows.map(|r| r.expect("Failed to read content_creature_formations row"))
         .collect()
 }
 
