@@ -14,6 +14,7 @@ Server-side creature loot: corpses, personal loot rolls, and the loot requests. 
   - `QuestRequired` rows drop only while one of the looter's quests still needs the item (`Player::HasQuestForItem`);
   - counts above the stack size split into stacks; items without an item template are skipped; at most 16 normal and 32 quest items.
 - [x] Coins: `Loot::generateMoneyLoot` over `creature_template.mingold`/`maxgold`, per looter. Slots are the coins first, then the items.
+- [x] **Deviation from Retail (user request): junk becomes gold.** A poor-quality (grey, `content_item.Quality` 0) item a roll yields is not put in a slot; its `SellPrice` × count is added to that looter's coins, shown in the normal money slot. Applies to every loot the server generates; creature loot is the only loot generated today (gameobject loot is not implemented, see below). Grey items are also never listed in unit tooltips (game-engine `docs/specs/unit-tooltip.md`).
 - [x] `LootUnit { corpse, auto }` answers `LootResponse` with the looter's remaining slots. Refused with `LootFailed`: `NoPermission` (no loot for this player, not a corpse), `PlayerDead`, `TooFar` (beyond `INTERACTION_DISTANCE`, AzerothCore `IsWithinDistInMap(INTERACTION_DISTANCE)`). Opening another corpse closes the previous window.
 - [x] `LootSlotRequest { corpse, slot }` for the open window stores the slot: coins with `set_gold` (refused `TooMuchGold` past `MAX_MONEY`), items with `store_item` (refused `CantCarryMore` past `MaxCount`, `InventoryFull` when it does not fit; the slot stays). Each taken slot answers `LootSlotRemoved`; the save reaches the player through `Gold` and `InventoryDelta`.
 - [x] Taking the last slot sends `CorpseLootable { lootable: false }` and `LootClosed`.
@@ -25,7 +26,7 @@ Server-side creature loot: corpses, personal loot rolls, and the loot requests. 
 ## Tests asserting this spec
 
 - `crates/server/src/loot/tables_tests.rs`: Kobold Vermin 1-5 copper, Diseased Young Wolf beast parts and no coins, the quest pelt only with Wolves Across the Border, equal-chance group of Grey 1-5, stack split, money rule.
-- `crates/server/src/loot_tests.rs`: killing a Kobold Vermin makes it lootable for the killer; looting both slots moves coins and candle into the bags, ends lootability and halves the decay; auto-loot; a full bag keeps the item; a stranger is refused; out of reach is refused and walking away closes; a corpse without loot decays in half the time.
+- `crates/server/src/loot_tests.rs`: a grey Melted Candle a Kobold Vermin rolls becomes 1 copper per candle in the money slot, and no grey item is left; killing a Kobold Vermin makes it lootable for the killer; looting both slots moves coins and candle into the bags, ends lootability and halves the decay; auto-loot; a full bag keeps the item; a stranger is refused; out of reach is refused and walking away closes; a corpse without loot decays in half the time.
 - `crates/server/src/combat_tests.rs`: a lethal swing leaves a replicated corpse; the corpse stops replicating after its decay; the looted halving.
 - `crates/server/src/quest_rules_tests.rs`: `quest_needs_item`.
 - Live evidence: game-engine `data/diagnostics/npcloot-20260925/`.
