@@ -25,14 +25,17 @@ fn content_item_rows_load_inventory_attributes() {
             allowable_class: -1,
             allowable_race: u64::MAX,
             scaling: sword.scaling,
+            appearance_id: Some(154),
         }
     );
     assert!(sword.allows(1, 1));
     let linen = templates.get(2589).unwrap();
     assert_eq!((linen.inventory_type, linen.max_stack), (0, 1000));
+    assert_eq!(linen.appearance_id, None, "cloth teaches no appearance");
     // Verigan's Fist: Paladin-only, bind on pickup.
     let fist = templates.get(6953).unwrap();
     assert!(fist.allows(2, 1));
     assert!(!fist.allows(1, 1));
     assert!(fist.binds_on_pickup());
+    assert_eq!(fist.appearance_id, Some(2288));
 }

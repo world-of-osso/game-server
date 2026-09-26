@@ -283,7 +283,8 @@ fn killing_a_kobold_vermin_gives_its_killer_lootable_coins() {
     let Some(LootContent::Money { copper }) = slots[0] else {
         panic!("money slot first: {slots:?}");
     };
-    assert!((1..=5).contains(&copper), "mingold 1, maxgold 5: {copper}");
+    // mingold 1, maxgold 5, plus the sell price of any grey item the roll yielded.
+    assert!(copper >= 1, "{copper}");
 }
 
 #[test]
@@ -471,4 +472,50 @@ fn a_decayed_corpse_stops_being_lootable_for_its_looters() {
     assert!(h.app.world().get::<CorpseLoot>(kobold).is_none());
     h.open(kobold, false);
     assert_eq!(h.failures(), vec![LootError::NoPermission]);
+}
+
+#[test]
+fn a_poor_quality_drop_becomes_coins_at_its_sell_price() {
+    use rand::SeedableRng;
+
+    let Some(path) = world_db_path() else { return };
+    let conn = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+    let tables = load_loot_tables(&conn).unwrap();
+    let catalog = load_vendor_catalog(&conn).unwrap();
+    let templates = load_item_templates(&path).unwrap();
+    // Kobold Vermin drops the grey Melted Candle (sell price 1 copper) 20 % of kills.
+    let mut rng = rand::rngs::StdRng::seed_from_u64(7);
+    let rolled = std::iter::repeat_with(|| {
+        tables.roll_creature(KOBOLD_VERMIN, &templates, |_| false, &mut rng)
+    })
+    .find(|rolled| {
+        rolled
+            .items
+            .iter()
+            .any(|drop| drop.item_id == MELTED_CANDLE)
+    })
+    .unwrap();
+    let candles: u64 = rolled
+        .items
+        .iter()
+        .filter(|drop| drop.item_id == MELTED_CANDLE)
+        .map(|drop| u64::from(drop.count))
+        .sum();
+    assert_eq!(catalog.goods[&MELTED_CANDLE].sell_price, 1);
+
+    let slots = loot_slots(rolled.clone(), &catalog);
+
+    assert_eq!(
+        slots[0],
+        Some(LootContent::Money {
+            copper: rolled.copper + candles
+        })
+    );
+    assert!(
+        slots.iter().flatten().all(|content| match content {
+            LootContent::Item { quality, .. } => *quality > 0,
+            LootContent::Money { .. } => true,
+        }),
+        "no grey item left: {slots:?}"
+    );
 }

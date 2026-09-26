@@ -10,6 +10,10 @@ use crate::level_scaling::{CreatureStats, ExpectedStats, LevelStats, TuningInput
 pub struct CreatureTemplate {
     pub entry: u32,
     pub name: String,
+    /// `subname`: the tooltip subtitle ("Weaponsmith"); empty when none.
+    pub subname: String,
+    /// `type`: Retail `CreatureType` (1 Beast … 7 Humanoid, 8 Critter …).
+    pub creature_type: u8,
     pub min_level: u8,
     pub max_level: u8,
     pub faction: u16,
@@ -192,7 +196,7 @@ fn creature_stats(row: &Row) -> rusqlite::Result<CreatureStats> {
 }
 
 /// expected_stat, expected_stat_mod and content_tuning_x_expected (DB2Manager::LoadStores).
-fn load_expected_stats(conn: &Connection) -> ExpectedStats {
+pub(crate) fn load_expected_stats(conn: &Connection) -> ExpectedStats {
     let mut stats = ExpectedStats::default();
     let mut stmt = conn
         .prepare(
@@ -293,6 +297,8 @@ fn template_from_row(row: &Row, expected: &ExpectedStats) -> rusqlite::Result<Cr
         speed_walk: row.get(5)?,
         health_modifier,
         name: row.get(7)?,
+        subname: row.get::<_, Option<String>>(23)?.unwrap_or_default(),
+        creature_type: row.get::<_, i64>(10)? as u8,
         rank: row.get::<_, i64>(8)? as u8,
         experience_modifier: row.get(9)?,
         gives_experience: row.get::<_, i64>(10)? != CREATURE_TYPE_CRITTER
@@ -313,13 +319,13 @@ fn template_from_row(row: &Row, expected: &ExpectedStats) -> rusqlite::Result<Cr
     })
 }
 
-fn load_templates(conn: &Connection, expected: &ExpectedStats) -> HashMap<u32, CreatureTemplate> {
+pub(crate) fn load_templates(conn: &Connection, expected: &ExpectedStats) -> HashMap<u32, CreatureTemplate> {
     let mut stmt = conn
         .prepare(
             "SELECT entry, minlevel, maxlevel, faction, npcflag, speed_walk, HealthModifier, name,
                     rank, ExperienceModifier, type, flags_extra, speed_run, ScriptName, unit_class, exp,
                     detection_range, unit_flags, ContentTuningID, HealthScalingExpansion,
-                    LevelScalingDeltaMin, LevelScalingDeltaMax, DamageModifier
+                    LevelScalingDeltaMin, LevelScalingDeltaMax, DamageModifier, subname
              FROM content_creature_template",
         )
         .expect("Failed to prepare content_creature_template query");

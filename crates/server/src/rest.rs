@@ -228,6 +228,8 @@ mod tests {
         CreatureTemplate {
             entry: 1,
             name: "Fixture innkeeper".into(),
+            subname: String::new(),
+            creature_type: 7,
             min_level: 1,
             max_level: 1,
             faction: 0,

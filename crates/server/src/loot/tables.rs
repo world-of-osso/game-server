@@ -130,13 +130,17 @@ impl LootTables {
         needs_quest_item: impl Fn(u32) -> bool,
         rng: &mut impl Rng,
     ) -> RolledLoot {
-        let Some(info) = self.money.get(&entry) else {
+        // A creature without a loot table drops nothing, coins included (user rule,
+        // docs/specs/loot.md).
+        let Some((info, template)) = self
+            .money
+            .get(&entry)
+            .and_then(|info| Some((info, self.creature.get(&info.loot_id)?)))
+        else {
             return RolledLoot::default();
         };
         let mut drops = Vec::new();
-        if let Some(template) = self.creature.get(&info.loot_id) {
-            self.process(template, items, &needs_quest_item, rng, &mut drops);
-        }
+        self.process(template, items, &needs_quest_item, rng, &mut drops);
         let (mut normal, mut quest): (Vec<_>, Vec<_>) =
             drops.into_iter().partition(|drop| !drop.needs_quest);
         normal.truncate(MAX_NR_LOOT_ITEMS);
@@ -259,6 +263,98 @@ fn roll_group(
         }
     }
     equal.choose(rng).map(|row| **row)
+}
+
+impl LootTables {
+    /// Chance per item that one kill of a creature entry drops it at least once, in
+    /// percent, highest first (the unit tooltip's drop list, game-engine
+    /// `docs/specs/unit-tooltip.md`). It follows `roll_creature` without a quest filter:
+    ///
+    /// - an ungrouped row counts its `Chance`;
+    /// - a group row counts its share of the group's one roll: explicitly chanced
+    ///   rows in order until 100 % is used up, and the rest split evenly among the
+    ///   equal-chance rows;
+    /// - a reference row multiplies its own chance by the chance that one of the
+    ///   reference's `MaxCount` passes drops the item;
+    /// - several rows of one item combine as independent rolls.
+    ///
+    /// The 3-per-group (1 when equippable) repeat limit never applies within one roll
+    /// of these tables and is ignored.
+    pub fn drop_chances(&self, entry: u32, items: &ItemTemplates) -> Vec<(u32, f32)> {
+        let template = self
+            .money
+            .get(&entry)
+            .and_then(|info| self.creature.get(&info.loot_id));
+        let misses = template.map_or_else(HashMap::new, |template| self.misses(template, items));
+        let mut chances: Vec<(u32, f32)> = misses
+            .into_iter()
+            .map(|(item, miss)| (item, ((1.0 - miss) * 100.0) as f32))
+            .filter(|(_, chance)| *chance > 0.0)
+            .collect();
+        chances.sort_by(|a, b| b.1.total_cmp(&a.1).then(a.0.cmp(&b.0)));
+        chances
+    }
+
+    /// Probability per item that one pass of `template` does not drop it.
+    fn misses(&self, template: &LootTemplate, items: &ItemTemplates) -> HashMap<u32, f64> {
+        let mut misses = HashMap::new();
+        for row in &template.entries {
+            self.count_row(
+                row,
+                f64::from(row.chance.min(100.0)) / 100.0,
+                items,
+                &mut misses,
+            );
+        }
+        for group in &template.groups {
+            for (row, chance) in group_shares(group, items) {
+                self.count_row(row, chance / 100.0, items, &mut misses);
+            }
+        }
+        misses
+    }
+
+    fn count_row(
+        &self,
+        row: &LootRow,
+        chance: f64,
+        items: &ItemTemplates,
+        misses: &mut HashMap<u32, f64>,
+    ) {
+        if row.reference == 0 {
+            if items.get(row.item).is_some() {
+                *misses.entry(row.item).or_insert(1.0) *= 1.0 - chance;
+            }
+            return;
+        }
+        let Some(referenced) = self.reference.get(&row.reference) else {
+            return;
+        };
+        for (item, pass_miss) in self.misses(referenced, items) {
+            let dropped = 1.0 - pass_miss.powi(row.max_count as i32);
+            *misses.entry(item).or_insert(1.0) *= 1.0 - chance * dropped;
+        }
+    }
+}
+
+/// Each row's percent of a group's one roll (`roll_group`).
+fn group_shares<'a>(group: &'a [LootRow], items: &ItemTemplates) -> Vec<(&'a LootRow, f64)> {
+    let rows: Vec<&LootRow> = group
+        .iter()
+        .filter(|row| row.reference != 0 || items.get(row.item).is_some())
+        .collect();
+    let mut left = 100.0_f64;
+    let mut shares = Vec::new();
+    for row in rows.iter().filter(|row| row.chance != 0.0) {
+        let share = f64::from(row.chance).min(left);
+        left -= share;
+        shares.push((*row, share));
+    }
+    let equal: Vec<&&LootRow> = rows.iter().filter(|row| row.chance == 0.0).collect();
+    for row in &equal {
+        shares.push((**row, left / equal.len() as f64));
+    }
+    shares
 }
 
 pub(crate) fn load_loot_tables(conn: &Connection) -> rusqlite::Result<LootTables> {

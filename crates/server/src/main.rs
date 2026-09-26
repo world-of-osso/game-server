@@ -2,6 +2,7 @@ mod achievement;
 mod admin_handlers;
 mod admin_ipc;
 mod admin_types;
+mod appearance_collection;
 mod auction_house;
 mod auras;
 mod auth;
@@ -19,6 +20,7 @@ mod combat;
 mod creature_aggro;
 mod creature_ai;
 mod creature_scripts;
+mod creature_tooltip;
 mod currency;
 mod death;
 mod duel;
@@ -134,6 +136,7 @@ fn add_social_plugins(app: &mut App) {
         .add_plugins(item_templates::ItemTemplatesPlugin)
         .add_plugins(item_stats::ItemScalingPlugin)
         .add_plugins(inventory::InventoryPlugin)
+        .add_plugins(appearance_collection::AppearanceCollectionPlugin)
         .add_plugins(quest_data::QuestDataPlugin)
         .add_plugins(quest::QuestPlugin)
         .add_plugins(experience::ExperiencePlugin);
@@ -169,6 +172,7 @@ fn add_world_plugins(app: &mut App) {
         .add_plugins(npc_interaction::NpcInteractionPlugin)
         .add_plugins(merchant::MerchantPlugin)
         .add_plugins(loot::LootPlugin)
+        .add_plugins(creature_tooltip::CreatureTooltipPlugin)
         .add_plugins(taxi::TaxiPlugin)
         .add_plugins(game_objects::GameObjectPlugin)
         .add_plugins(bank::BankPlugin)

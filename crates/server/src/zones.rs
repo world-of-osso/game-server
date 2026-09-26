@@ -334,6 +334,8 @@ mod tests {
         CreatureTemplate {
             entry,
             name: "Fixture wolf".into(),
+            subname: String::new(),
+            creature_type: 1,
             min_level: 1,
             max_level: 1,
             faction: 0,

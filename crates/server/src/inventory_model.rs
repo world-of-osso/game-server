@@ -823,6 +823,20 @@ impl InventoryModel {
         self.bags.iter().flatten().flatten()
     }
 
+    /// Item ids whose appearance the account learns (Retail transmog): every
+    /// equipped item and every soulbound one.
+    pub(crate) fn appearance_sources(&self) -> Vec<u32> {
+        let equipped = self.equipped.values();
+        let soulbound = self
+            .bags
+            .iter()
+            .flatten()
+            .flatten()
+            .chain(&self.overflow)
+            .filter(|item| self.is_soulbound(item.item_guid));
+        equipped.chain(soulbound).map(|item| item.item_id).collect()
+    }
+
     pub(crate) fn is_soulbound(&self, item_guid: u64) -> bool {
         self.instances
             .get(&item_guid)

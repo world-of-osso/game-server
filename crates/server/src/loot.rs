@@ -85,20 +85,29 @@ fn distance(a: &Position, b: &Position) -> f32 {
     Vec3::new(a.x, a.y, a.z).distance(Vec3::new(b.x, b.y, b.z))
 }
 
-/// Slots of a roll: coins first (the Retail money slot), then the items.
+/// Retail `Enum.ItemQuality.Poor`.
+const POOR_QUALITY: u8 = 0;
+
+/// Slots of a roll: coins first (the Retail money slot), then the items. A poor
+/// (grey) item is not dropped: its vendor sell price per item joins the coins
+/// (a deliberate deviation from Retail, docs/specs/loot.md).
 fn loot_slots(rolled: tables::RolledLoot, catalog: &VendorCatalog) -> Vec<Option<LootContent>> {
-    let money = (rolled.copper > 0).then_some(LootContent::Money {
-        copper: rolled.copper,
-    });
-    let items = rolled.items.into_iter().map(|drop| {
+    let mut copper = rolled.copper;
+    let mut items = Vec::new();
+    for drop in rolled.items {
         let goods = catalog.goods.get(&drop.item_id);
-        LootContent::Item {
+        if let Some(goods) = goods.filter(|goods| goods.quality == POOR_QUALITY) {
+            copper += u64::from(goods.sell_price) * u64::from(drop.count);
+            continue;
+        }
+        items.push(LootContent::Item {
             item_id: drop.item_id,
             name: goods.map(|goods| goods.name.clone()).unwrap_or_default(),
             quality: goods.map_or(0, |goods| goods.quality),
             count: drop.count,
-        }
-    });
+        });
+    }
+    let money = (copper > 0).then_some(LootContent::Money { copper });
     money.into_iter().chain(items).map(Some).collect()
 }
 

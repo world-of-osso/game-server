@@ -443,6 +443,8 @@ fn world_data_with_one_spawn(npcflag: u32) -> WorldData {
             crate::world_data::CreatureTemplate {
                 entry: 5,
                 name: "Fixture creature".into(),
+                subname: String::new(),
+                creature_type: 7,
                 min_level: 1,
                 max_level: 1,
                 faction: 0,

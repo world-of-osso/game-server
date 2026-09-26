@@ -15,6 +15,7 @@ use shared::protocol::{
     InventoryErrorReason, InventorySnapshot, SortBags, SplitItem, SwapItem, UseItem,
 };
 
+use crate::appearance_collection::AppearanceSourceItems;
 use crate::auth::{Authenticated, InWorld};
 use crate::gold::GoldUpdateQueue;
 use crate::item_templates::ItemTemplates;
@@ -168,9 +169,10 @@ fn send_initial_inventory(
         if let Ok(mut sender) = equipment_senders.get_mut(connection) {
             sender.send::<InventoryChannel>(model.equipment_snapshot());
         }
-        commands
-            .entity(connection)
-            .insert(SentInventoryView(model.view()));
+        commands.entity(connection).insert((
+            SentInventoryView(model.view()),
+            AppearanceSourceItems(model.appearance_sources()),
+        ));
         commands.entity(link.0).insert(model.equipped_items());
         // Persist placements chosen for previously unplaced items.
         save_inventory_record(db, in_world.character_id, &model.into_record());
@@ -309,8 +311,10 @@ type DeltaConnections<'w, 's> = Query<
 >;
 
 /// Send each changed character's owner the locations that differ from its last view,
-/// and refresh the replicated `EquipmentAppearance`.
+/// and refresh the replicated `EquipmentAppearance` and the connection's
+/// `AppearanceSourceItems`.
 fn send_inventory_deltas(
+    mut commands: Commands,
     mut updates: ResMut<GoldUpdateQueue>,
     store: InventoryStore,
     mut connections: DeltaConnections,
@@ -333,6 +337,9 @@ fn send_inventory_deltas(
             continue;
         };
         let view = model.view();
+        commands
+            .entity(connection)
+            .insert(AppearanceSourceItems(model.appearance_sources()));
         let appearance = model.appearance().clone();
         let equipped = model.equipped_items();
         save_inventory_record(db, in_world.character_id, &model.into_record());
