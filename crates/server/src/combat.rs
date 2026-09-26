@@ -595,7 +595,7 @@ struct SwingOutcome {
     blocked: f32,
     /// Damage beyond the target's health before the swing.
     overkill: f32,
-    /// Unhasted weapon speed: rage per swing (CalcMeleeAttackRageGain, Unit.cpp:2236-2246).
+    /// Unhasted weapon speed: rage per swing (CalcMeleeAttackRageGain, Unit.cpp:2239-2249).
     weapon_speed: f32,
     npc_died: bool,
     player_died: bool,
@@ -930,7 +930,7 @@ struct RageFromHitsTakenReadyAt(f64);
 /// Rage for a swing: the attacker gains `swing_secs` (the unhasted weapon
 /// speed, half for the off hand) × 1.75 rage scaled by
 /// MOD_RAGE_FROM_DAMAGE_DEALT, rounded to 0.1 rage (SimC `trigger_rage_gain`;
-/// CalcMeleeAttackRageGain, Unit.cpp:2236-2246); the victim gains 3 rage when
+/// CalcMeleeAttackRageGain, Unit.cpp:2239-2249); the victim gains 3 rage when
 /// the swing did damage. Only units whose primary power is rage gain it
 /// (AzerothCore `Unit::DealDamage` `HasActivePowerType(POWER_RAGE)`).
 fn reward_swing_rage(
