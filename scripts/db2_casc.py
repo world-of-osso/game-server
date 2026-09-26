@@ -8,7 +8,8 @@ db2_schema.sql, positionally; the expected layout hash pins that order to the bu
 (WoWDBDefs `LAYOUT` line for the table).
 
 Handles the subset the local tables need: one or more unencrypted sections, inline
-IDs or a non-inline ID list (prepended as the first column), copy tables, and field
+IDs or a non-inline ID list (prepended as the first column), a relationship map (its
+foreign id appended as the last column), copy tables, and field
 compression none/bitpacked/common/pallet/pallet array/signed bitpacked. A pallet-array
 field expands to its array-count columns. String fields, inline arrays and sparse
 (offset-map) layouts fail.
@@ -62,10 +63,11 @@ def decode(data):
     offset = 204
     sections = []
     for _ in range(header["section_count"]):
-        key, file_offset, count, strings, _end, id_list, _rel, _offset_map, copies = struct.unpack_from("<Q8I", data, offset)
+        key, file_offset, count, strings, _end, id_list, relations, _offset_map, copies = struct.unpack_from(
+            "<Q8I", data, offset)
         if key:
             raise ValueError("encrypted DB2 section is not supported")
-        sections.append((file_offset, count, strings, id_list, copies))
+        sections.append((file_offset, count, strings, id_list, copies, relations))
         offset += 40
     offset += header["field_count"] * 4
     infos = [struct.unpack_from("<HHIIIII", data, offset + 24 * i) for i in range(header["info_size"] // 24)]
@@ -85,9 +87,17 @@ def decode(data):
             cursor += extra
     size = header["record_size"]
     rows = {}
-    for file_offset, count, strings, id_list, copies in sections:
+    for file_offset, count, strings, id_list, copies, relations in sections:
         ids_at = file_offset + count * size + strings
         ids = struct.unpack_from(f"<{id_list // 4}I", data, ids_at) if id_list else None
+        # Section order: records, strings, ID list, copy table, relationship map
+        # (entry count, min id, max id, then (foreign id, record index) pairs).
+        relation_at = ids_at + id_list + 8 * copies
+        related = {}
+        if relations:
+            entries = struct.unpack_from("<I", data, relation_at)[0]
+            related = {index: foreign for foreign, index in
+                       struct.iter_unpack("<II", data[relation_at + 12:relation_at + 12 + 8 * entries])}
         for record in range(count):
             bits = int.from_bytes(data[file_offset + record * size:file_offset + (record + 1) * size], "little")
             fields = [field_value(index, info, bits, pallets) for index, info in enumerate(infos)]
@@ -98,6 +108,8 @@ def decode(data):
             values = [record_id] if ids else []
             for value in fields:
                 values.extend(value if isinstance(value, tuple) else (value,))
+            if relations:
+                values.append(related.get(record, 0))
             rows[record_id] = values
         id_column = 0 if ids else header["id_index"]
         copy_at = ids_at + id_list
@@ -121,7 +133,8 @@ def field_value(index, info, bits, pallets):
 
 def typed(raw, sql_type):
     if sql_type == "REAL":
-        return float(f"{struct.unpack('<f', struct.pack('<I', raw & 0xFFFFFFFF))[0]:.7g}")
+        # The exact float32 value (a 7-digit rendering loses up to 3 significant digits).
+        return struct.unpack('<f', struct.pack('<I', raw & 0xFFFFFFFF))[0]
     return struct.unpack("<i", struct.pack("<I", raw & 0xFFFFFFFF))[0]
 
 

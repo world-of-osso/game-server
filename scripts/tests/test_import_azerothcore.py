@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 import shutil
 import sqlite3
+import struct
 import subprocess
 import sys
 import tempfile
@@ -1163,39 +1164,66 @@ class ContentTuningLevelTests(unittest.TestCase):
 import db2_casc  # noqa: E402
 
 
+WAGO_VERIFY = SCRIPTS.parent / "data/reference/wago-verify"
+# Rows copied from wago.tools' 12.1.0.69933 exports (data/reference/wago-verify); wago prints
+# float32 values rounded to 11 significant digits.
+WAGO_ROWS = {
+    "QuestMoneyReward": "10,0,200,500,1000,1500,2000,4000,6000,8000,0",
+    "ContentTuning": "2802,0,10,0,0,0,0,0,0,80,80,0,0,0,0,0,0,0,1.20000004768",
+    "ExpectedStat": "1,-2,78,292.24713134766,4.75353193283,50,600,20,0,116,292.24713134766,0,1",
+    "ExpectedStatMod": "405,0.90844345093,0.9357034564,0.9357034564,1,1,0.93159759045,0.92000001669,0.88179254532,"
+                       "0.9357034564",
+    "ContentTuningXExpected": "13,5,0,0,500",
+}
+
+
+def float32(value):
+    return struct.unpack("<f", struct.pack("<f", float(value)))[0]
+
+
+def same_cells(decoded, exported):
+    """Decoded values equal wago's cells at float32 precision."""
+    return len(decoded) == len(exported) and all(float32(a) == float32(b) for a, b in zip(decoded, exported))
+
+
 @unittest.skipUnless(db2_casc.CASC_LOCAL.is_file(), f"casc-local not present at {db2_casc.CASC_LOCAL}")
-class LocalContentTuningExtractTests(unittest.TestCase):
-    """Decode ContentTuning (FDID 1962930) straight from the local CASC install."""
+class LocalDb2ExtractTests(unittest.TestCase):
+    """Decode the LOCAL_TABLES straight from the local CASC install and check them against wago.tools."""
 
     @classmethod
     def setUpClass(cls):
         schema = sqlite3.connect(":memory:")
         schema.executescript(db2.SCHEMA_SQL.read_text())
-        columns = [(row[1], row[2]) for row in schema.execute("PRAGMA table_info(content_tuning)")]
-        fdid, layout = db2.LOCAL_TABLES["ContentTuning"]
-        cls.header, rows = db2_casc.extract_rows(fdid, layout, columns)
-        cls.rows = {row[0]: dict(zip(cls.header, row)) for row in rows}
+        cls.tables = {}
+        for table, (fdid, layout) in db2.LOCAL_TABLES.items():
+            columns = [(row[1], row[2]) for row in schema.execute(f"PRAGMA table_info({db2.table_name(table)})")]
+            header, rows = db2_casc.extract_rows(fdid, layout, columns)
+            cls.tables[table] = (header, {row[0]: row for row in rows})
 
-    def test_every_record_decodes(self):
-        self.assertEqual(len(self.rows), 2929)
+    def test_wago_rows_decode_identically(self):
+        for table, line in WAGO_ROWS.items():
+            exported = line.split(",")
+            with self.subTest(table=table):
+                decoded = self.tables[table][1][int(exported[0])]
+                self.assertTrue(same_cells(decoded, exported), (decoded, exported))
 
-    def test_elwynn_tuning_is_levels_5_to_30(self):
-        row = self.rows[2]
-        self.assertEqual((row["MinLevelSquish"], row["MaxLevelSquish"], row["MinLevelScalingOffset"],
-                          row["MaxLevelScalingOffset"], row["XpMultQuest"]), (5, 30, 0, 0, 1.0))
+    def test_pallet_array_id_list_and_copy_table(self):
+        # QuestMoneyReward: 90 records + 40 copy-table rows, ID from the non-inline ID list,
+        # Difficulty_0..9 from one pallet-array field.
+        self.assertEqual(len(self.tables["QuestMoneyReward"][1]), 130)
 
-    def test_quest_money_reward_expands_its_pallet_array(self):
-        schema = sqlite3.connect(":memory:")
-        schema.executescript(db2.SCHEMA_SQL.read_text())
-        columns = [(row[1], row[2]) for row in schema.execute("PRAGMA table_info(quest_money_reward)")]
-        fdid, layout = db2.LOCAL_TABLES["QuestMoneyReward"]
-        header, rows = db2_casc.extract_rows(fdid, layout, columns)
-        money = {row[0]: row[1:] for row in rows}
-        # 90 records + 40 copy-table rows; the ID comes from the non-inline ID list.
-        self.assertEqual(len(money), 130)
-        self.assertEqual(money[10], [0, 200, 500, 1000, 1500, 2000, 4000, 6000, 8000, 0])
-        self.assertEqual(money[1], [0, 5, 15, 30, 40, 55, 110, 165, 220, 0])
+    def test_relationship_map_is_the_last_column(self):
+        # ExpectedStat.Lvl and ContentTuningXExpected.ContentTuningID come from the relationship map.
+        self.assertEqual(self.tables["ExpectedStat"][0][-1], "Lvl")
+        self.assertEqual(self.tables["ContentTuningXExpected"][1][13][-1], 500)
 
-    def test_signed_expansion_and_max_level_type(self):
-        row = self.rows[864]
-        self.assertEqual((row["ExpansionID"], row["MinLevelSquish"], row["MaxLevelScalingOffset"]), (-3, 1, 2))
+    @unittest.skipUnless(WAGO_VERIFY.is_dir(), f"wago.tools exports not present at {WAGO_VERIFY}")
+    def test_whole_tables_match_the_wago_exports(self):
+        for table, (header, rows) in self.tables.items():
+            with self.subTest(table=table):
+                with (WAGO_VERIFY / f"{table}.csv").open(newline="") as handle:
+                    exported = list(csv.reader(handle))
+                self.assertEqual(exported[0], header)
+                self.assertEqual(sorted(int(row[0]) for row in exported[1:]), sorted(rows))
+                bad = [row[0] for row in exported[1:] if not same_cells(rows[int(row[0])], row)]
+                self.assertEqual(bad, [])

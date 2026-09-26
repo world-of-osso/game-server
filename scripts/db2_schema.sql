@@ -1363,3 +1363,48 @@ CREATE TABLE quest_money_reward (
   Difficulty_8 INTEGER NOT NULL DEFAULT 0,
   Difficulty_9 INTEGER NOT NULL DEFAULT 0
 );
+
+-- Extracted from local CASC (db2.py extract): Retail expected creature/player stats per level
+-- and their per-ContentTuning modifiers (TrinityCore DB2Manager::EvaluateExpectedStat). The
+-- layouts (0FD90F9C, 8C41CCCE, 897A4313) postdate the vendored WoWDBDefs; column order and
+-- names follow the build's wago.tools export (data/reference/wago-verify), ID from the ID list,
+-- the last column from the relationship map.
+DROP TABLE IF EXISTS expected_stat;
+CREATE TABLE expected_stat (
+  ID INTEGER PRIMARY KEY,
+  ExpansionID INTEGER NOT NULL DEFAULT 0,
+  CreatureHealth REAL NOT NULL DEFAULT 0,
+  PlayerHealth REAL NOT NULL DEFAULT 0,
+  CreatureAutoAttackDps REAL NOT NULL DEFAULT 0,
+  CreatureArmor REAL NOT NULL DEFAULT 0,
+  PlayerMana REAL NOT NULL DEFAULT 0,
+  PlayerPrimaryStat REAL NOT NULL DEFAULT 0,
+  PlayerSecondaryStat REAL NOT NULL DEFAULT 0,
+  ArmorConstant REAL NOT NULL DEFAULT 0,
+  CreatureSpellDamage REAL NOT NULL DEFAULT 0,
+  ContentSetID INTEGER NOT NULL DEFAULT 0,
+  Lvl INTEGER NOT NULL DEFAULT 0
+);
+
+DROP TABLE IF EXISTS expected_stat_mod;
+CREATE TABLE expected_stat_mod (
+  ID INTEGER PRIMARY KEY,
+  CreatureHealthMod REAL NOT NULL DEFAULT 1,
+  PlayerHealthMod REAL NOT NULL DEFAULT 1,
+  CreatureAutoAttackDPSMod REAL NOT NULL DEFAULT 1,
+  CreatureArmorMod REAL NOT NULL DEFAULT 1,
+  PlayerManaMod REAL NOT NULL DEFAULT 1,
+  PlayerPrimaryStatMod REAL NOT NULL DEFAULT 1,
+  PlayerSecondaryStatMod REAL NOT NULL DEFAULT 1,
+  ArmorConstantMod REAL NOT NULL DEFAULT 1,
+  CreatureSpellDamageMod REAL NOT NULL DEFAULT 1
+);
+
+DROP TABLE IF EXISTS content_tuning_x_expected;
+CREATE TABLE content_tuning_x_expected (
+  ID INTEGER PRIMARY KEY,
+  ExpectedStatModID INTEGER NOT NULL DEFAULT 0,
+  MinMythicPlusSeasonID INTEGER NOT NULL DEFAULT 0,
+  MaxMythicPlusSeasonID INTEGER NOT NULL DEFAULT 0,
+  ContentTuningID INTEGER NOT NULL DEFAULT 0
+);

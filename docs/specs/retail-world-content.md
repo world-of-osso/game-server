@@ -36,7 +36,7 @@ Creature templates and levels
   - `minlevel`/`maxlevel` are that ContentTuning's range, following TrinityCore `GetContentTuningData` under Expansion 11: calc types add +0, +1, +90 or +80, clamped to 1..123.
   - AzerothCore's fixed levels stay only where there is no ContentTuningID.
   - Examples: Hogger 1-30; Homeless Stormwind Citizen 5-30.
-- [x] ContentTuning comes from local CASC: FDID 1962930, layout A3E13004, via `db2.py extract`. It is imported as `content_tuning`.
+- [x] ContentTuning comes from local CASC: FDID 1962930, layout A3E13004, via `db2.py extract`. It is imported as `content_tuning`. The locally decoded ContentTuning, QuestMoneyReward, ExpectedStat, ExpectedStatMod and ContentTuningXExpected match wago.tools' 12.1.0.69933 exports on every row (`LocalDb2ExtractTests`). The ExpectedStat tables are imported (`expected_stat`, `expected_stat_mod`, `content_tuning_x_expected`) for Retail creature health.
 - [x] Retail-spawned NPCs use TrinityCore loot when TrinityCore has rows for their LootID, with gold from difficulty 0. Otherwise they use AzerothCore's loot id.
 - [x] Retail-spawned NPCs with no loot table in either source (7,745 entries) drop nothing and have no money, even where TrinityCore's difficulty 0 has gold (54 entries). Each one is in content-dropped.csv. This is a user decision.
 - [x] Retail-spawned NPCs use TrinityCore's lowest `creature_template_gossip` menu when they have one.
