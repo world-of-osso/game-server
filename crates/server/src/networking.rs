@@ -14,6 +14,7 @@ use crate::auth::{
 };
 use crate::ground::{GroundMap, GroundProbe};
 use crate::interest::{InterestDirtyQueue, NetworkVisibility, mark_interest_position_changed};
+use crate::maps::InMap;
 use crate::messaging;
 use crate::persistence::{self, ClientId, GameDatabase};
 use crate::terrain_height::{GRAVITY, GROUND_SNAP_THRESHOLD};
@@ -297,6 +298,8 @@ type DisconnectPlayer = (
     &'static Player,
     &'static ClientId,
     Option<&'static crate::death::PlayerDeathState>,
+    Option<&'static InMap>,
+    Option<&'static crate::maps::MapTransfer>,
 );
 
 /// When a client disconnects, save data and clean up.
@@ -335,9 +338,10 @@ fn save_and_despawn(
     commands: &mut Commands,
 ) {
     if let (Some(db), Some(_)) = (db.as_ref(), in_world)
-        && let Ok((pos, health, player, cid, death)) = player_query.get(entity)
+        && let Ok((pos, health, player, cid, death, map, transfer)) = player_query.get(entity)
     {
-        persistence::save_live_character(&db.db, cid.0, player, pos, health, death);
+        let map_id = crate::maps::saved_map_id(map, transfer);
+        persistence::save_live_character(&db.db, cid.0, player, pos, health, death, map_id);
         info!("Saved character data for character_id {}", cid.0);
     }
     queue_player_despawn(commands, entity);
@@ -368,26 +372,28 @@ fn despawn_pending(mut commands: Commands, query: Query<Entity, With<PendingDesp
 fn on_player_link_inserted(
     trigger: On<Add, PlayerLink>,
     link_query: Query<&PlayerLink>,
-    positions: Query<&Position>,
+    positions: Query<(&Position, Option<&InMap>)>,
     replication_dirty: Option<Res<ReplicationDirtyQueue>>,
-    mut vis_query: Query<(Entity, &Position, &mut NetworkVisibility)>,
+    mut vis_query: Query<(Entity, &Position, Option<&InMap>, &mut NetworkVisibility)>,
     mut commands: Commands,
 ) {
     let connection = trigger.entity;
     let Ok(link) = link_query.get(connection) else {
         return;
     };
-    let Ok(player_position) = positions.get(link.0) else {
+    let Ok((player_position, player_map)) = positions.get(link.0) else {
         return;
     };
 
     let mut nearby_count = 0u32;
-    for (entity, position, mut visibility) in &mut vis_query {
+    for (entity, position, map, mut visibility) in &mut vis_query {
         let dx = position.x - player_position.x;
         let dy = position.y - player_position.y;
         let dz = position.z - player_position.z;
         let is_self = entity == link.0;
-        let is_nearby = dx * dx + dy * dy + dz * dz <= INITIAL_VISIBILITY_RADIUS_SQ;
+        let is_nearby = player_map.is_some()
+            && map == player_map
+            && dx * dx + dy * dy + dz * dz <= INITIAL_VISIBILITY_RADIUS_SQ;
 
         if is_self || is_nearby {
             visibility.gain_visibility(connection);
@@ -412,8 +418,10 @@ fn on_player_link_inserted(
 
 /// Send the initial terrain loading command for the tile under the entering character;
 /// the client's loading screen waits for exactly this tile.
+/// `map_directory` is the map's lowercase `Map.db2` Directory.
 pub fn send_load_terrain(
     connection: Entity,
+    map_directory: &str,
     position: &Position,
     senders: &mut Query<&mut MessageSender<LoadTerrain>>,
 ) {
@@ -423,11 +431,11 @@ pub fn send_load_terrain(
     };
     let (tile_y, tile_x) = position_tile(position);
     sender.send::<TerrainChannel>(LoadTerrain {
-        map_name: "azeroth".into(),
+        map_name: map_directory.into(),
         initial_tile_y: tile_y,
         initial_tile_x: tile_x,
     });
-    info!("Sent LoadTerrain: azeroth tile ({tile_y}, {tile_x})");
+    info!("Sent LoadTerrain: {map_directory} tile ({tile_y}, {tile_x})");
 }
 
 #[derive(SystemParam)]
@@ -442,6 +450,8 @@ pub(crate) struct PlayerInputParams<'w, 's> {
         ),
     >,
     players: Query<'w, 's, PlayerMovement, With<Player>>,
+    /// A player in a map transfer (no `InMap`) does not move.
+    on_map: Query<'w, 's, (), (With<Player>, With<InMap>)>,
     presence: Query<
         'w,
         's,
@@ -474,7 +484,7 @@ pub(crate) fn process_player_inputs(time: Res<Time>, mut params: PlayerInputPara
             .controls
             .get(link.0)
             .is_ok_and(|control| control.controlled);
-        if let Some(mut input) = latest.filter(|_| !controlled) {
+        if let Some(mut input) = latest.filter(|_| !controlled && params.on_map.contains(link.0)) {
             input.jumping = jumping;
             crate::friends::mark_player_activity(
                 link.0,
@@ -514,6 +524,7 @@ type GravityPlayerData<'w, 's> = Query<
         &'static mut Health,
         Option<&'static crate::death::PlayerDeathState>,
         &'static shared::components::MovementControl,
+        &'static InMap,
     ),
     With<Player>,
 >;
@@ -531,7 +542,7 @@ pub(crate) fn apply_terrain_gravity(
         return;
     };
     let dt = time.delta_secs();
-    for (entity, mut pos, mut vert_vel, mut fall_tracker, mut health, death_state, control) in
+    for (entity, mut pos, mut vert_vel, mut fall_tracker, mut health, death_state, control, map) in
         players.iter_mut()
     {
         if control.controlled {
@@ -539,7 +550,7 @@ pub(crate) fn apply_terrain_gravity(
         }
         let previous_health = *health;
         let (next_pos, next_vert_vel, next_fall_tracker, next_health) = calculate_gravity_state(
-            ground.ground_at(Vec3::new(pos.x, pos.y, pos.z)),
+            ground.ground_at(map.map_id, Vec3::new(pos.x, pos.y, pos.z)),
             *pos,
             *vert_vel,
             fall_tracker.for_epoch(control.epoch, pos.y),
@@ -693,11 +704,16 @@ fn wow_to_tile(wow_x: f32, wow_y: f32) -> (u32, u32) {
 
 fn stream_terrain_tiles(
     mut conn_q: Query<(Entity, &PlayerLink, &mut SentTiles)>,
-    players: Query<&Position, With<Player>>,
+    players: Query<(&Position, &InMap), With<Player>>,
+    maps: Option<Res<crate::maps::MapStore>>,
     mut senders: Query<&mut MessageSender<LoadTerrain>>,
 ) {
+    let Some(maps) = maps else { return };
     for (conn_entity, link, mut sent) in conn_q.iter_mut() {
-        let Ok(pos) = players.get(link.0) else {
+        let Ok((pos, map)) = players.get(link.0) else {
+            continue;
+        };
+        let Some(entry) = maps.map(map.map_id) else {
             continue;
         };
         let current_tile = position_tile(pos);
@@ -705,7 +721,13 @@ fn stream_terrain_tiles(
             continue;
         }
         sent.last_tile = Some(current_tile);
-        send_nearby_tiles(conn_entity, current_tile, &mut sent, &mut senders);
+        send_nearby_tiles(
+            conn_entity,
+            &entry.directory,
+            current_tile,
+            &mut sent,
+            &mut senders,
+        );
     }
 }
 
@@ -716,6 +738,7 @@ fn position_tile(pos: &Position) -> (u32, u32) {
 
 fn send_nearby_tiles(
     conn_entity: Entity,
+    map_directory: &str,
     (tile_y, tile_x): (u32, u32),
     sent: &mut SentTiles,
     senders: &mut Query<&mut MessageSender<LoadTerrain>>,
@@ -729,7 +752,7 @@ fn send_nearby_tiles(
                     continue;
                 };
                 sender.send::<TerrainChannel>(LoadTerrain {
-                    map_name: "azeroth".into(),
+                    map_name: map_directory.into(),
                     initial_tile_y: ty,
                     initial_tile_x: tx,
                 });

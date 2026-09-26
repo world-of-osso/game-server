@@ -784,3 +784,39 @@ CREATE TABLE tdb_broadcast_text (
   VerifiedBuild INTEGER NOT NULL DEFAULT 0,
   PRIMARY KEY (ID, VerifiedBuild)
 );
+
+-- Map transfer data (ObjectMgr::LoadAreaTriggerTeleports, LoadWorldSafeLocs, LoadGraveyardZones,
+-- LoadInstanceTemplate): areatrigger teleport targets and graveyards of every map.
+DROP TABLE IF EXISTS tdb_areatrigger_teleport;
+CREATE TABLE tdb_areatrigger_teleport (
+  ID INTEGER PRIMARY KEY,
+  PortLocID INTEGER NOT NULL DEFAULT 0,
+  Name TEXT
+);
+
+DROP TABLE IF EXISTS tdb_world_safe_locs;
+CREATE TABLE tdb_world_safe_locs (
+  ID INTEGER PRIMARY KEY,
+  MapID INTEGER DEFAULT NULL,
+  LocX REAL DEFAULT NULL,
+  LocY REAL DEFAULT NULL,
+  LocZ REAL DEFAULT NULL,
+  Facing REAL DEFAULT NULL,
+  TransportSpawnId INTEGER DEFAULT NULL,
+  Comment TEXT DEFAULT NULL
+);
+
+DROP TABLE IF EXISTS tdb_graveyard_zone;
+CREATE TABLE tdb_graveyard_zone (
+  ID INTEGER NOT NULL DEFAULT 0,
+  GhostZone INTEGER NOT NULL DEFAULT 0,
+  Comment TEXT,
+  PRIMARY KEY (ID, GhostZone)
+);
+
+DROP TABLE IF EXISTS tdb_instance_template;
+CREATE TABLE tdb_instance_template (
+  map INTEGER PRIMARY KEY,
+  parent INTEGER NOT NULL,
+  script TEXT NOT NULL DEFAULT ''
+);

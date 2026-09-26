@@ -300,6 +300,7 @@ pub(crate) fn create_tables(db: &Database) {
     let _ = txn.open_table(NEXT_IDS);
     let _ = txn.open_table(SERVER_SETTINGS);
     let _ = txn.open_table(CHARACTER_CORPSES);
+    let _ = txn.open_table(crate::maps::persistence::CHARACTER_MAPS);
     let _ = txn.open_table(crate::persistence_progression::CHARACTER_PROGRESSION);
     let _ = txn.open_table(crate::persistence_progression::CHARACTER_TRAITS);
     let _ = txn.open_table(crate::persistence_progression::CHARACTER_XP);

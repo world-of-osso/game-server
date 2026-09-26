@@ -100,6 +100,7 @@ fn spawn_looter(app: &mut App, name: &str, peer: u64) -> Looter {
     let player = app
         .world_mut()
         .spawn((
+            crate::maps::InMap::continent(0),
             Player {
                 name: name.into(),
                 race: 1,
@@ -152,6 +153,7 @@ impl Harness {
             .app
             .world_mut()
             .spawn((
+                crate::maps::InMap::continent(0),
                 Npc {
                     template_id: KOBOLD_VERMIN,
                     name: "Kobold Vermin".into(),

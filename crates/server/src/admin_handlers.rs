@@ -328,6 +328,90 @@ pub(crate) fn handle_set_position(
     }
 }
 
+/// `.go xyz`: an online character teleports (`maps::teleport_to`); an offline one is
+/// saved on `map_id` at `wow_position`.
+pub(crate) fn handle_teleport(
+    db: &persistence::GameDatabase,
+    commands: &mut Commands,
+    players: &Query<(
+        Entity,
+        &mut Position,
+        &persistence::ClientId,
+        &mut shared::components::MovementControl,
+    )>,
+    name: &str,
+    map_id: u32,
+    wow_position: Vec3,
+) -> AdminResponse {
+    let Some(char_id) = persistence::find_character_id_by_name(&db.db, name) else {
+        return AdminResponse::Error(format!("character '{name}' not found"));
+    };
+    let destination = crate::maps::WorldLocation {
+        map_id,
+        position: wow_position,
+        orientation: 0.0,
+    };
+    let online = players
+        .iter()
+        .find_map(|(entity, _, cid, _)| (cid.0 == char_id).then_some(entity));
+    match online {
+        Some(player) => commands.queue(move |world: &mut World| {
+            crate::maps::teleport_to(
+                world,
+                player,
+                destination,
+                crate::maps::TeleportOptions::default(),
+            );
+        }),
+        None => {
+            let Some(mut data) = persistence::load_character(&db.db, char_id) else {
+                return AdminResponse::Error(format!("character data for '{name}' not found"));
+            };
+            (data.x, data.y, data.z) = (wow_position.x, wow_position.y, wow_position.z);
+            persistence::save_character(&db.db, char_id, &data);
+            crate::maps::persistence::save_character_map(&db.db, char_id, map_id);
+        }
+    }
+    AdminResponse::Teleported {
+        character_name: name.to_owned(),
+        map_id,
+        online: online.is_some(),
+    }
+}
+
+/// `.die`: an online character's health drops to 0 and it dies like any lethal hit
+/// (`PlayerDeathTransition`).
+pub(crate) fn handle_kill(
+    db: &persistence::GameDatabase,
+    commands: &mut Commands,
+    players: &Query<(
+        Entity,
+        &mut Position,
+        &persistence::ClientId,
+        &mut shared::components::MovementControl,
+    )>,
+    name: &str,
+) -> AdminResponse {
+    let Some(char_id) = persistence::find_character_id_by_name(&db.db, name) else {
+        return AdminResponse::Error(format!("character '{name}' not found"));
+    };
+    let Some(player) = players
+        .iter()
+        .find_map(|(entity, _, cid, _)| (cid.0 == char_id).then_some(entity))
+    else {
+        return AdminResponse::Error(format!("character '{name}' is not online"));
+    };
+    commands.queue(move |world: &mut World| {
+        if let Some(mut health) = world.get_mut::<shared::components::Health>(player) {
+            health.current = 0.0;
+        }
+        world.write_message(crate::death::PlayerDeathTransition { player });
+    });
+    AdminResponse::Killed {
+        character_name: name.to_owned(),
+    }
+}
+
 pub(crate) struct EquipmentAppearanceRequest<'a> {
     pub(crate) name: &'a str,
     pub(crate) slot_name: &'a str,

@@ -1,6 +1,7 @@
 use super::*;
 
 fn spawn_terrain_connection(app: &mut App, player: Entity) -> Entity {
+    app.insert_resource(crate::maps::MapStore::continents());
     app.world_mut()
         .spawn((PlayerLink(player), SentTiles::default()))
         .id()

@@ -614,7 +614,9 @@ fn validate_target(
         Some(_) => return Err(CastFailure::InvalidTarget),
         None => return Err(CastFailure::NoTarget),
     };
-    if !targets::is_alive(world, target) {
+    // A unit of another map copy is not found (`ObjectAccessor::GetUnit` searches the
+    // caster's map).
+    if !targets::is_alive(world, target) || !targets::same_map(world, caster, target) {
         return Err(CastFailure::InvalidTarget);
     }
     if target != caster {

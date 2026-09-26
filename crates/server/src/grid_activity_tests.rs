@@ -49,6 +49,7 @@ fn spawn_wanderer(app: &mut App) -> Entity {
     app.world_mut()
         .spawn((
             position,
+            InMap::continent(0),
             spawn_point(position),
             WanderState {
                 phase: WanderPhase::Idle,
@@ -64,6 +65,7 @@ fn spawn_wanderer(app: &mut App) -> Entity {
 fn spawn_player(app: &mut App, wow_x: f32) -> Entity {
     app.world_mut()
         .spawn((
+            InMap::continent(0),
             Player {
                 name: "Walker".into(),
                 race: 1,
@@ -91,10 +93,11 @@ fn dormant(app: &App, entity: Entity) -> bool {
 
 #[test]
 fn grid_of_matches_azerothcore_grid_boundaries() {
+    let map = InMap::continent(0);
     let (x, _, z) = wow_to_bevy(533.0, -1.0, 0.0);
-    assert_eq!(grid_of(x, z), (0, -1));
+    assert_eq!(grid_of(map, x, z), (map, 0, -1));
     let (x, _, z) = wow_to_bevy(533.4, 1066.7, 0.0);
-    assert_eq!(grid_of(x, z), (1, 2));
+    assert_eq!(grid_of(map, x, z), (map, 1, 2));
 }
 
 #[test]
@@ -168,6 +171,7 @@ fn patroller_stays_active_where_its_path_passes_a_player() {
         .world_mut()
         .spawn((
             start,
+            InMap::continent(0),
             spawn_point(start),
             WaypointState::new(PATROL_PATH, 1.0, 1.0, (start.x, start.z)),
         ))
@@ -175,4 +179,25 @@ fn patroller_stays_active_where_its_path_passes_a_player() {
     advance(&mut app, 10);
     assert!(!dormant(&app, guard));
     assert_ne!(position(&app, guard), start);
+}
+
+#[test]
+fn a_player_on_another_map_does_not_wake_the_creature_under_its_coordinates() {
+    let mut app = grid_app(HashMap::new());
+    let player = spawn_player(&mut app, SPAWN.0);
+    app.world_mut()
+        .entity_mut(player)
+        .insert(InMap::continent(1));
+    let wolf = spawn_wanderer(&mut app);
+    advance(&mut app, 5);
+    assert!(
+        dormant(&app, wolf),
+        "Kalimdor's player leaves map 0 grids asleep"
+    );
+
+    app.world_mut()
+        .entity_mut(player)
+        .insert(InMap::continent(0));
+    advance(&mut app, 5);
+    assert!(!dormant(&app, wolf));
 }

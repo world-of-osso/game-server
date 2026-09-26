@@ -24,7 +24,11 @@ fn spawns() -> Option<GameObjectSpawns> {
 fn eastern_kingdoms_guild_vaults_load_with_retail_display_boxes() {
     let Some(spawns) = spawns() else { return };
     // Stormwind 4, Ironforge 2, Undercity 4, Booty Bay 2 (TrinityCore map 0 type 34).
-    let vaults = spawns.0.iter().filter(|s| s.info.go_type == 34).count();
+    let vaults = spawns
+        .0
+        .iter()
+        .filter(|s| s.map_id == 0 && s.info.go_type == 34)
+        .count();
     assert_eq!(vaults, 12);
     let stormwind: Vec<_> = spawns
         .0
@@ -79,7 +83,11 @@ const GOLDSHIRE_MAILBOX: u32 = 20_209_585;
 fn eastern_kingdoms_mailboxes_spawn_with_retail_display_boxes() {
     let Some(spawns) = spawns() else { return };
     // TrinityCore map 0 base-phase type 19 rows with a Retail GameObjectDisplayInfo box.
-    let mailboxes: Vec<_> = spawns.0.iter().filter(|s| s.info.go_type == 19).collect();
+    let mailboxes: Vec<_> = spawns
+        .0
+        .iter()
+        .filter(|s| s.map_id == 0 && s.info.go_type == 19)
+        .collect();
     assert_eq!(mailboxes.len(), 75);
     // The Lion's Pride Inn mailbox in Goldshire (TrinityCore guid 209585 + 20,000,000).
     let goldshire = mailboxes

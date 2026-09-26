@@ -133,6 +133,12 @@ pub fn is_alive(world: &World, entity: Entity) -> bool {
         .is_some_and(|health| health.current > 0.0)
 }
 
+/// Both units are in one map copy.
+pub fn same_map(world: &World, a: Entity, b: Entity) -> bool {
+    let map = world.get::<crate::maps::InMap>(a);
+    map.is_some() && map == world.get::<crate::maps::InMap>(b)
+}
+
 pub fn position(world: &World, entity: Entity) -> Option<Vec3> {
     world
         .get::<Position>(entity)
@@ -246,11 +252,12 @@ fn area_units(
     relation: Relation,
     max_targets: u32,
 ) -> Vec<Entity> {
-    let mut query = world.query::<(Entity, &Position, &Health)>();
+    let caster_map = world.get::<crate::maps::InMap>(caster).copied();
+    let mut query = world.query::<(Entity, &Position, &Health, &crate::maps::InMap)>();
     let mut found: Vec<(f32, Entity)> = query
         .iter(world)
-        .filter(|(_, _, health)| health.current > 0.0)
-        .map(|(entity, pos, _)| (Vec3::new(pos.x, pos.y, pos.z).distance(center), entity))
+        .filter(|(_, _, health, map)| health.current > 0.0 && Some(**map) == caster_map)
+        .map(|(entity, pos, _, _)| (Vec3::new(pos.x, pos.y, pos.z).distance(center), entity))
         .filter(|&(distance, _)| distance <= radius)
         .collect();
     found.retain(|&(_, entity)| relation_matches(world, caster, entity, relation));

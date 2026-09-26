@@ -308,3 +308,7 @@ Created `systems/quests.md` (quest data, rules, runtime) and `specs/quests.md`; 
 ## [2026-09-26] update | Merchant cursor buys and Sell All Junk
 
 [[merchant]]: `BuyItem.destination` stores a purchase in the bag slot the client's merchant cursor was dropped on (TrinityCore `CanStoreNewItem(bag, slot)`: same-item stacks fill, the rest spills, another item refuses `CantStack`); `SellAllJunkItems` sells every poor bag stack through the ordinary sale path ([merchant spec](../specs/merchant.md)). `InventoryErrorReason::message` gives the client Retail `ERR_*` text.
+
+## [2026-09-26] update | Maps and dungeon instances
+
+[[zone-architecture]]: maps 0 and 1 and dungeon copies share one World by `InMap`; `maps` module (MapStore, InstanceManager, teleport_to/NewWorld/WorldPortAck, area trigger teleports, dungeon release, login map). Spec [instances](../specs/instances.md). [[meeting-stones]]: summons cross maps. [[game-objects]]: spawned per map copy.

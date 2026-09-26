@@ -50,7 +50,7 @@ Server gameplay systems.
 | [[spell-casting]] | Cast pipeline (validation, cast bars/channels, costs, GCD/cooldowns/charges), implicit targets, effect handlers, combat log scope, power pools/regen, UnitPowers, known-spell check |
 | [[auras]] | Aura runtime: stacking/refresh, periodic ticks, procs, interrupt flags, dispel, crowd control, spell modifiers (class mask + SpellLabel), `StatModifiers` fold-in, UnitAuras replication, handled aura IDs |
 | [[tick-model]] | Observed server loop: 50ms runner/fixed cadence, schedule ownership, explicit ordering, completed player-death and broad auto-AFK scan reductions, maintenance gates, and IPC boundary |
-| [[zone-architecture]] | Proposed zone/instance partitioning; current implementation is startup-only Elwynn spawning with no per-zone sets or transfers |
+| [[zone-architecture]] | Maps 0 and 1 plus dungeon copies in one World by `InMap`; map transfers (NewWorld/WorldPortAck), InstanceManager, area trigger teleports; per-zone sets still proposed |
 | [[factions]] | `UnitFactionTemplate` sources (creature_template, ChrRaces), FactionTemplate reaction rules, attack/assist checks, Wrath vs Retail ID coverage |
 | [[combat]] | Auto-attack system, NPC/player lethal transitions, split death proofs, melee hit table (miss/dodge/parry/glancing/block/crit/hit), spell formulas, stat calculations, DR curves |
 | [[creature-ai]] | Three movement types (idle/wander/waypoint by addon path_id), formations, addon mounts/auras, grid activation (GridDormant), SpawnPoint, chase system, 40-yard leash/evade, return-to-spawn |

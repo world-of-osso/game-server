@@ -1,5 +1,8 @@
 use super::*;
 
+/// Eastern Kingdoms, where the fixtures stand unless a test moves them.
+const MAP_0: InMap = InMap::continent(0);
+
 fn make_state_and_conn() -> (NetworkVisibility, Entity) {
     (NetworkVisibility::default(), Entity::from_bits(1))
 }
@@ -16,7 +19,7 @@ fn setup_interest_app() -> App {
 }
 
 fn spawn_interest_observer(app: &mut App, position: Position) -> Entity {
-    let player = app.world_mut().spawn(position).id();
+    let player = app.world_mut().spawn((position, MAP_0)).id();
     app.world_mut()
         .spawn((PlayerLink(player), ReplicationSender))
         .id()
@@ -24,7 +27,7 @@ fn spawn_interest_observer(app: &mut App, position: Position) -> Entity {
 
 fn spawn_interest_target(app: &mut App, position: Position) -> Entity {
     app.world_mut()
-        .spawn((position, NetworkVisibility::default()))
+        .spawn((position, MAP_0, NetworkVisibility::default()))
         .id()
 }
 
@@ -141,12 +144,12 @@ fn dirty_target_crosses_exact_radius_within_same_bucket() {
 #[test]
 fn dirty_observer_movement_updates_only_its_visibility() {
     let mut app = setup_interest_app();
-    let player_a = app.world_mut().spawn(pos(0.0, 0.0, 0.0)).id();
+    let player_a = app.world_mut().spawn((pos(0.0, 0.0, 0.0), MAP_0)).id();
     let connection_a = app
         .world_mut()
         .spawn((PlayerLink(player_a), ReplicationSender))
         .id();
-    let player_b = app.world_mut().spawn(pos(300.0, 0.0, 0.0)).id();
+    let player_b = app.world_mut().spawn((pos(300.0, 0.0, 0.0), MAP_0)).id();
     let connection_b = app
         .world_mut()
         .spawn((PlayerLink(player_b), ReplicationSender))
@@ -225,7 +228,7 @@ fn visibility_removal_and_readd_do_not_leave_stale_range_state() {
 #[test]
 fn reconnect_uses_fresh_observer_visibility() {
     let mut app = setup_interest_app();
-    let player = app.world_mut().spawn(pos(0.0, 0.0, 0.0)).id();
+    let player = app.world_mut().spawn((pos(0.0, 0.0, 0.0), MAP_0)).id();
     let first_connection = app
         .world_mut()
         .spawn((PlayerLink(player), ReplicationSender))
@@ -626,6 +629,7 @@ fn a_decayed_corpse_leaves_its_observers_and_the_respawn_returns() {
         .world_mut()
         .spawn((
             pos(5.0, 0.0, 0.0),
+            MAP_0,
             NetworkVisibility::default(),
             Replicate::to_clients(NetworkTarget::All),
             Health {
@@ -675,4 +679,83 @@ fn a_decayed_corpse_leaves_its_observers_and_the_respawn_returns() {
     run_fixed_ticks(&mut app, 1);
     assert!(app.world().get::<DeathState>(wolf).is_none());
     assert!(visible(&app), "the respawned NPC is shown again");
+}
+
+#[test]
+fn a_target_on_another_map_at_the_same_coordinates_stays_hidden() {
+    let mut app = setup_interest_app();
+    let connection = spawn_interest_observer(&mut app, pos(0.0, 0.0, 0.0));
+    // Kalimdor (map 1) and a Stockade copy (map 34) at the observer's coordinates.
+    let kalimdor = app
+        .world_mut()
+        .spawn((
+            pos(5.0, 0.0, 0.0),
+            InMap::continent(1),
+            NetworkVisibility::default(),
+        ))
+        .id();
+    let stockade = app
+        .world_mut()
+        .spawn((
+            pos(5.0, 0.0, 0.0),
+            InMap {
+                map_id: 34,
+                instance_id: 1,
+            },
+            NetworkVisibility::default(),
+        ))
+        .id();
+    let neighbour = spawn_interest_target(&mut app, pos(5.0, 0.0, 0.0));
+
+    run_fixed_ticks(&mut app, 1);
+
+    let visible = |entity: Entity| {
+        app.world()
+            .entity(entity)
+            .get::<NetworkVisibility>()
+            .unwrap()
+            .is_visible(connection)
+    };
+    assert!(visible(neighbour));
+    assert!(!visible(kalimdor));
+    assert!(!visible(stockade));
+}
+
+#[test]
+fn a_player_leaving_its_map_keeps_only_itself_until_it_arrives() {
+    let mut app = setup_interest_app();
+    let player = app
+        .world_mut()
+        .spawn((pos(0.0, 0.0, 0.0), MAP_0, NetworkVisibility::default()))
+        .id();
+    let connection = app
+        .world_mut()
+        .spawn((PlayerLink(player), ReplicationSender))
+        .id();
+    let neighbour = spawn_interest_target(&mut app, pos(5.0, 0.0, 0.0));
+    run_fixed_ticks(&mut app, 1);
+
+    // Map transfer: out of map 0, the neighbour no longer sees it either.
+    app.world_mut().entity_mut(player).remove::<InMap>();
+    app.world().resource::<InterestDirtyQueue>().mark(player);
+    run_fixed_ticks(&mut app, 1);
+    let visible = |app: &App, entity: Entity| {
+        app.world()
+            .entity(entity)
+            .get::<NetworkVisibility>()
+            .unwrap()
+            .is_visible(connection)
+    };
+    assert!(visible(&app, player), "a player always sees itself");
+    assert!(!visible(&app, neighbour));
+
+    // Arrival in a Stockade copy at the same coordinates.
+    app.world_mut().entity_mut(player).insert(InMap {
+        map_id: 34,
+        instance_id: 1,
+    });
+    app.world().resource::<InterestDirtyQueue>().mark(player);
+    run_fixed_ticks(&mut app, 1);
+    assert!(visible(&app, player));
+    assert!(!visible(&app, neighbour));
 }

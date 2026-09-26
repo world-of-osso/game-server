@@ -47,6 +47,7 @@ mod level_scaling;
 mod lfg;
 mod loot;
 mod mail;
+mod maps;
 mod meeting_stone;
 mod melee;
 mod merchant;
@@ -163,6 +164,7 @@ fn add_world_plugins(app: &mut App) {
         .add_plugins(networking::ServerNetworkPlugin)
         .add_plugins(world_data::WorldDataPlugin)
         .add_plugins(ground::GroundPlugin)
+        .add_plugins(maps::MapPlugin)
         .add_plugins(zones::ZonePlugin)
         .add_plugins(creature_ai::CreatureAiPlugin)
         .add_plugins(creature_aggro::CreatureAggroPlugin)

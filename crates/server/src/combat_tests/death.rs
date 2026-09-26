@@ -27,6 +27,7 @@ fn lethal_player_auto_attack_transitions_death_in_same_fixed_step() {
                 current: 5.0,
                 max: 100.0,
             },
+            crate::maps::InMap::continent(0),
             Player {
                 name: "Target".into(),
                 race: 1,
@@ -145,6 +146,7 @@ fn a_player_resurrected_in_melee_range_is_not_attacked_by_its_killer() {
                 current: BASE_DAMAGE * 3.0,
                 max: 100.0,
             },
+            crate::maps::InMap::continent(0),
             Player {
                 name: "Target".into(),
                 race: 1,

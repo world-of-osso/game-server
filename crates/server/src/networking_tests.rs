@@ -27,6 +27,7 @@ fn spawn_player(world: &mut World, x: f32, y: f32, z: f32) -> Entity {
             MovementSpeed(DEFAULT_RUN_SPEED),
             VerticalVelocity::default(),
             FallTracker::grounded(y),
+            crate::maps::InMap::continent(0),
             Player {
                 name: "test".into(),
                 race: 1,

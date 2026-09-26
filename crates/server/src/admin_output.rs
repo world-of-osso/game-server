@@ -143,6 +143,17 @@ fn print_character_response(response: &AdminResponse) -> bool {
         } => {
             println!("Position set: {character_name} -> ({x}, {y}, {z})");
         }
+        AdminResponse::Killed { character_name } => {
+            println!("Killed: {character_name}");
+        }
+        AdminResponse::Teleported {
+            character_name,
+            map_id,
+            online,
+        } => {
+            let how = if *online { "teleporting" } else { "saved" };
+            println!("Teleport: {character_name} -> map {map_id} ({how})");
+        }
         AdminResponse::GoldSet {
             character_name,
             copper,

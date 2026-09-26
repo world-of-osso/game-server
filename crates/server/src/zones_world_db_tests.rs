@@ -75,7 +75,13 @@ fn patrol_app_with(guids: &'static [u32], extra: impl FnOnce(&mut App)) -> App {
                 .spawns
                 .iter()
                 .filter(|spawn| guids.contains(&spawn.guid));
-            let spawned = spawn_creatures(&mut commands, &world_data, false, spawns);
+            let spawned = spawn_creatures(
+                &mut commands,
+                &world_data,
+                crate::maps::InMap::continent(0),
+                false,
+                spawns,
+            );
             commands.insert_resource(Spawned(spawned));
         },
     );

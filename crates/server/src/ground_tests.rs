@@ -17,8 +17,14 @@ fn client_data_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../game-engine/data")
 }
 
+/// `world/maps/azeroth/azeroth.wdt`.
+const AZEROTH_WDT_FDID: u32 = 775_971;
+
 fn client_ground() -> GroundMap {
-    GroundMap::open(&client_data_dir()).expect("azeroth WDT in the client's data/terrain")
+    GroundMap::new(
+        &client_data_dir(),
+        std::collections::HashMap::from([(0, AZEROTH_WDT_FDID)]),
+    )
 }
 
 fn auction_house_feet(wow_z: f32) -> Vec3 {
@@ -31,8 +37,8 @@ fn auction_house_feet(wow_z: f32) -> Vec3 {
 fn auction_house_ground_is_its_floor_not_the_terrain_under_it() {
     let mut ground = client_ground();
 
-    let on_floor = ground.ground_at(auction_house_feet(98.1));
-    let under_floor = ground.ground_at(auction_house_feet(94.7));
+    let on_floor = ground.ground_at(0, auction_house_feet(98.1));
+    let under_floor = ground.ground_at(0, auction_house_feet(94.7));
 
     let GroundProbe::Supported(floor) = on_floor else {
         panic!("no ground on the auction house floor: {on_floor:?}");
@@ -71,6 +77,7 @@ fn settle_after_set_position(start_y: f32, wow_z: f32) -> (f32, f32) {
             },
             VerticalVelocity::default(),
             FallTracker::grounded(start_y),
+            crate::maps::InMap::continent(0),
             Player {
                 name: "Mover".into(),
                 race: 1,

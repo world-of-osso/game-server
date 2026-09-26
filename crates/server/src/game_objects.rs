@@ -2,8 +2,8 @@
 //!
 //! Guild Vaults (`GAMEOBJECT_TYPE_GUILD_BANK`), Mailboxes
 //! (`GAMEOBJECT_TYPE_MAILBOX`) and meeting stones (`GAMEOBJECT_TYPE_MEETINGSTONE`)
-//! on map 0 spawn for now; other types and maps become spawns by widening
-//! `SPAWN_QUERY`. Summoning portals spawn at runtime (`meeting_stone::ritual`). A spawned object
+//! spawn for now, into each copy of their map (`maps`); other types become spawns by
+//! widening `SPAWN_QUERY`. Summoning portals spawn at runtime (`meeting_stone::ritual`). A spawned object
 //! replicates `Position`, `Rotation` and `GameObjectInfo`, and keeps its model box
 //! (Retail `GameObjectDisplayInfo.GeoBox`) for the interaction reach check.
 //!
@@ -32,15 +32,16 @@ pub(crate) const GAME_OBJECT_INTERACT_DISTANCE: f32 = 5.0;
 
 const SPAWN_QUERY: &str = "SELECT g.guid, g.id, g.position_x, g.position_y, g.position_z, \
      g.orientation, t.type, t.displayId, t.name, t.size, \
-     d.GeoBox_0, d.GeoBox_1, d.GeoBox_2, d.GeoBox_3, d.GeoBox_4, d.GeoBox_5 \
+     d.GeoBox_0, d.GeoBox_1, d.GeoBox_2, d.GeoBox_3, d.GeoBox_4, d.GeoBox_5, g.map \
      FROM content_gameobject g \
      JOIN content_gameobject_template t ON t.entry = g.id \
      JOIN game_object_display_info d ON d.ID = t.displayId \
-     WHERE g.map = 0 AND t.type IN (?1, ?2, ?3) ORDER BY g.guid";
+     WHERE t.type IN (?1, ?2, ?3) ORDER BY g.guid";
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GameObjectSpawn {
     pub guid: u32,
+    pub map_id: u32,
     pub info: GameObjectInfo,
     /// WoW coordinates.
     pub position: Vec3,
@@ -76,6 +77,7 @@ fn spawn_from_row(row: &Row) -> rusqlite::Result<GameObjectSpawn> {
     let geo = |index: usize| -> rusqlite::Result<f32> { Ok(row.get::<_, f64>(index)? as f32) };
     Ok(GameObjectSpawn {
         guid: row.get(0)?,
+        map_id: row.get(16)?,
         info: GameObjectInfo {
             entry: row.get(1)?,
             go_type: row.get(6)?,
@@ -139,15 +141,35 @@ pub(crate) fn game_object_bundle(
     )
 }
 
-fn spawn_game_objects(mut commands: Commands, spawns: Res<GameObjectSpawns>) {
-    for spawn in &spawns.0 {
+fn spawn_continent_game_objects(mut commands: Commands, spawns: Res<GameObjectSpawns>) {
+    for map_id in crate::maps::NPC_APPEARANCE_MAPS {
+        let count = spawn_map_game_objects(
+            &mut commands,
+            &spawns,
+            crate::maps::InMap::continent(map_id),
+        );
+        info!("Spawned {count} game objects on map {map_id}");
+    }
+}
+
+/// Spawn the game objects of `map`'s map into that copy.
+pub(crate) fn spawn_map_game_objects(
+    commands: &mut Commands,
+    spawns: &GameObjectSpawns,
+    map: crate::maps::InMap,
+) -> usize {
+    let spawns = spawns.0.iter().filter(|spawn| spawn.map_id == map.map_id);
+    let mut count = 0;
+    for spawn in spawns {
         commands.spawn((
             game_object_bundle(spawn),
+            map,
             Replicate::to_clients(NetworkTarget::All),
             NetworkVisibility::default(),
         ));
+        count += 1;
     }
-    info!("Spawned {} game objects on map 0", spawns.0.len());
+    count
 }
 
 pub struct GameObjectPlugin;
@@ -155,7 +177,7 @@ pub struct GameObjectPlugin;
 impl Plugin for GameObjectPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<GameObjectSpawns>()
-            .add_systems(PostStartup, spawn_game_objects);
+            .add_systems(PostStartup, spawn_continent_game_objects);
     }
 }
 

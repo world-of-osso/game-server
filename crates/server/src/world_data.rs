@@ -592,6 +592,14 @@ fn startup_load_world_data(mut commands: Commands) {
     let meeting_stones = crate::meeting_stone::load_meeting_stone_data(&conn)
         .expect("Failed to load meeting stone and ritual templates");
     commands.insert_resource(meeting_stones);
+    let maps = crate::maps::store::load_map_store(&conn)
+        .expect("Failed to load map data; run scripts/import-azerothcore.sh");
+    info!(
+        "Loaded {} maps, area trigger teleports on {} maps",
+        maps.maps.len(),
+        maps.area_triggers.len()
+    );
+    commands.insert_resource(maps);
     let prices = crate::bank::load_bank_tab_prices(&conn)
         .expect("Failed to load bank_tab; run scripts/db2.py import");
     commands.insert_resource(prices);

@@ -64,6 +64,7 @@ TABLES = [
     "DurabilityCosts", "DurabilityQuality", "GameObjectDisplayInfo", "BankTab", "CreatureDisplayInfo",
     "SpellReagents", "SpellTotems", "TradeSkillCategory", "SkillRaceClassInfo", "TotemCategory",
     "ContentTuning", "QuestMoneyReward", "ExpectedStat", "ExpectedStatMod", "ContentTuningXExpected",
+    "Map", "MapDifficulty", "AreaTrigger", "AreaTriggerActionSet",
 ]
 # Extracted from local CASC by FileDataID (community listfile), pinned to the build's
 # WoWDBDefs layout hash: {table: (FileDataID, layout hash)}.

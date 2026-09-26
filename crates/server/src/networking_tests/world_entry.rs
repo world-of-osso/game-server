@@ -7,6 +7,7 @@ use std::time::Duration;
 fn spawn_network_npc(app: &mut App, template_id: u32, x: f32) {
     app.world_mut().spawn((
         Position { x, y: 0.0, z: 0.0 },
+        crate::maps::InMap::continent(0),
         Npc {
             template_id,
             name: "Fixture wolf".into(),
@@ -179,11 +180,14 @@ fn pre_world_client_exchanges_auth_without_receiving_npcs_then_receives_nearby_n
         .unwrap();
     let player = server
         .world_mut()
-        .spawn(Position {
-            x: 0.0,
-            y: 0.0,
-            z: 0.0,
-        })
+        .spawn((
+            Position {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            crate::maps::InMap::continent(0),
+        ))
         .id();
     server
         .world_mut()

@@ -18,6 +18,7 @@ fn lethal_fall_transitions_death_in_same_fixed_step() {
     let player = app
         .world_mut()
         .spawn((
+            crate::maps::InMap::continent(0),
             Player {
                 name: "Elara".into(),
                 race: 1,

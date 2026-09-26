@@ -1,11 +1,12 @@
-//! Server-side player ground: ADT terrain and WMO floors per map tile, judged by
-//! the shared rule the client predicts with (`shared::ground`,
+//! Server-side player ground: ADT terrain and WMO floors per map, judged by the
+//! shared rule the client predicts with (`shared::ground`,
 //! game-engine docs/specs/wmo-floor-collision.md).
 //!
-//! Tiles load on first use from the client's asset cache (`../game-engine/data`):
-//! the azeroth WDT MAID names each tile's root and `_obj0` ADT FileDataIDs, the
-//! `_obj0` MODF places WMOs by FileDataID, and each WMO root's GFID names its
-//! group files.
+//! Maps load on first use from the client's asset cache (`../game-engine/data`): the
+//! map's WDT (`Map.db2` WdtFileDataID) either names one global WMO (MPHD flag 0x1, a
+//! WMO-only dungeon such as the Stockade) or, through MAID, each tile's root and
+//! `_obj0` ADT FileDataIDs; the `_obj0` MODF places WMOs by FileDataID, and each WMO
+//! root's GFID names its group files.
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -13,14 +14,15 @@ use std::sync::Arc;
 
 use bevy::math::{Affine3A, Vec3};
 use bevy::prelude::*;
-use shared::ground::{WmoCollision, WmoGroupCollision, placement_position, placement_rotation};
+use shared::ground::{
+    WmoCollision, WmoGroupCollision, global_wmo_placement_position, placement_position,
+    placement_rotation,
+};
 
 use crate::terrain_height::{TerrainHeightMap, parse_adt_heights};
 
 /// The client's asset cache, relative to the server's working directory.
 const CLIENT_DATA_DIR: &str = "../game-engine/data";
-/// `world/maps/azeroth/azeroth.wdt`.
-const AZEROTH_WDT_FDID: u32 = 775_971;
 const TILE_SIZE: f32 = shared::navmesh::TILE_SIZE;
 const MAP_TILES: usize = 64;
 /// MAID entry: root, obj0, obj1, tex0, lod, map texture, map normal, minimap FDIDs.
@@ -28,6 +30,8 @@ const MAID_ENTRY_SIZE: usize = 32;
 const MODF_ENTRY_SIZE: usize = 64;
 const MODF_FLAG_HAS_SCALE: u16 = 0x4;
 const MODF_FLAG_FILEDATAID: u16 = 0x8;
+/// wowdev WDT MPHD `wdt_uses_global_map_obj`: the map is one WMO, placed by the WDT MODF.
+const MPHD_FLAG_GLOBAL_WMO: u32 = 0x1;
 
 /// What supports a player's feet.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -57,21 +61,92 @@ struct TileSource {
     tiles: Vec<TileFiles>,
 }
 
-/// Ground geometry of the tiles players have visited.
+/// Ground geometry of every map players have visited.
 #[derive(Resource, Default)]
 pub struct GroundMap {
+    data_dir: PathBuf,
+    /// `Map.db2` WdtFileDataID by map id.
+    wdts: HashMap<u32, u32>,
+    /// `None`: the map's WDT is not available.
+    maps: HashMap<u32, Option<MapGround>>,
+}
+
+impl GroundMap {
+    /// Maps load lazily from `data_dir` (`terrain/<fdid>.wdt|adt`, `models/<fdid>.wmo`).
+    pub fn new(data_dir: &Path, wdts: HashMap<u32, u32>) -> Self {
+        Self {
+            data_dir: data_dir.to_path_buf(),
+            wdts,
+            maps: HashMap::new(),
+        }
+    }
+
+    /// A map 0 holding only `terrain` for `tile`, without WMOs or lazy loading.
+    #[cfg(test)]
+    pub(crate) fn with_terrain(tile: (u32, u32), terrain: TerrainHeightMap) -> Self {
+        let mut map = MapGround::default();
+        map.tiles.insert(
+            tile,
+            Some(TileGround {
+                terrain,
+                wmos: Vec::new(),
+            }),
+        );
+        Self {
+            maps: HashMap::from([(0, Some(map))]),
+            ..default()
+        }
+    }
+
+    /// Ground under `feet` (Bevy space) on map `map_id`, loading the map and its tile on
+    /// first use.
+    pub fn ground_at(&mut self, map_id: u32, feet: Vec3) -> GroundProbe {
+        if !self.maps.contains_key(&map_id) {
+            let loaded = self.open_map(map_id);
+            self.maps.insert(map_id, loaded);
+        }
+        match self.maps.get_mut(&map_id) {
+            Some(Some(map)) => map.ground_at(feet),
+            _ => GroundProbe::Unloaded,
+        }
+    }
+
+    fn open_map(&self, map_id: u32) -> Option<MapGround> {
+        let Some(&wdt) = self.wdts.get(&map_id) else {
+            warn!("Map {map_id} has no WDT; no ground");
+            return None;
+        };
+        match MapGround::open(&self.data_dir, wdt) {
+            Ok(map) => {
+                info!("Ground of map {map_id} loads from WDT {wdt}");
+                Some(map)
+            }
+            Err(err) => {
+                error!("No ground on map {map_id}: {err}");
+                None
+            }
+        }
+    }
+}
+
+/// Ground geometry of one map: its global WMO, or the ADT tiles players have visited.
+#[derive(Default)]
+struct MapGround {
     source: Option<TileSource>,
+    global_wmo: Option<WmoCollision>,
     /// `None`: the tile's terrain is not available.
     tiles: HashMap<(u32, u32), Option<TileGround>>,
     /// WMO group collision by root FileDataID, shared by the tiles a WMO spans.
     wmo_models: HashMap<u32, Vec<Arc<WmoGroupCollision>>>,
 }
 
-impl GroundMap {
-    /// Tiles load lazily from `data_dir` (`terrain/<fdid>.adt`, `models/<fdid>.wmo`).
-    pub fn open(data_dir: &Path) -> Result<Self, String> {
-        let wdt_path = data_dir.join(format!("terrain/{AZEROTH_WDT_FDID}.wdt"));
-        let wdt = std::fs::read(&wdt_path).map_err(|e| format!("{}: {e}", wdt_path.display()))?;
+impl MapGround {
+    fn open(data_dir: &Path, wdt_fdid: u32) -> Result<Self, String> {
+        let wdt = read_client_file(data_dir, "terrain", wdt_fdid, "wdt")?;
+        let mphd = find_chunk(&wdt, b"MPHD")?.ok_or("WDT has no MPHD")?;
+        if read_u32(mphd, 0)? & MPHD_FLAG_GLOBAL_WMO != 0 {
+            return Self::open_global_wmo(data_dir, &wdt);
+        }
         Ok(Self {
             source: Some(TileSource {
                 data_dir: data_dir.to_path_buf(),
@@ -81,22 +156,33 @@ impl GroundMap {
         })
     }
 
-    /// A map holding only `terrain` for `tile`, without WMOs or lazy loading.
-    #[cfg(test)]
-    pub(crate) fn with_terrain(tile: (u32, u32), terrain: TerrainHeightMap) -> Self {
-        let mut map = Self::default();
-        map.tiles.insert(
-            tile,
-            Some(TileGround {
-                terrain,
-                wmos: Vec::new(),
-            }),
+    /// The WDT MODF's single entry, placed from the world origin
+    /// (`global_wmo_placement_position`).
+    fn open_global_wmo(data_dir: &Path, wdt: &[u8]) -> Result<Self, String> {
+        let modf = find_chunk(wdt, b"MODF")?.ok_or("global-WMO WDT has no MODF")?;
+        let entry = modf
+            .get(..MODF_ENTRY_SIZE)
+            .ok_or("global-WMO WDT MODF is empty")?;
+        let placement = parse_modf_entry(entry)?;
+        let groups = load_wmo_groups(data_dir, placement.fdid)?;
+        let world_from_local = Affine3A::from_scale_rotation_translation(
+            Vec3::splat(placement.scale),
+            placement_rotation(placement.rotation),
+            global_wmo_placement_position(placement.position),
         );
-        map
+        Ok(Self {
+            global_wmo: Some(WmoCollision::new(world_from_local, groups)),
+            ..default()
+        })
     }
 
-    /// Ground under `feet` (Bevy space), loading its tile on first use.
-    pub fn ground_at(&mut self, feet: Vec3) -> GroundProbe {
+    fn ground_at(&mut self, feet: Vec3) -> GroundProbe {
+        if let Some(wmo) = &self.global_wmo {
+            return match shared::ground::ground_at(feet, None, std::slice::from_ref(wmo)) {
+                Some(ground) => GroundProbe::Supported(ground.height),
+                None => GroundProbe::Unsupported,
+            };
+        }
         let tile = bevy_to_tile(feet.x, feet.z);
         if !self.tiles.contains_key(&tile) {
             let loaded = self.load_tile(tile);
@@ -310,22 +396,20 @@ pub struct GroundPlugin;
 
 impl Plugin for GroundPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, open_ground_map);
+        app.add_systems(PostStartup, open_ground_map);
     }
 }
 
-fn open_ground_map(mut commands: Commands) {
+/// After `WorldDataPlugin` has loaded the `MapStore` (Startup).
+fn open_ground_map(mut commands: Commands, maps: Res<crate::maps::MapStore>) {
     let data_dir = Path::new(CLIENT_DATA_DIR);
-    match GroundMap::open(data_dir) {
-        Ok(map) => {
-            info!("Ground tiles load from {}", data_dir.display());
-            commands.insert_resource(map);
-        }
-        Err(err) => {
-            error!("No player ground: {err}");
-            commands.insert_resource(GroundMap::default());
-        }
-    }
+    let wdts = maps
+        .maps
+        .values()
+        .map(|entry| (entry.id, entry.wdt_file_data_id))
+        .collect();
+    info!("Ground loads from {}", data_dir.display());
+    commands.insert_resource(GroundMap::new(data_dir, wdts));
 }
 
 #[cfg(test)]

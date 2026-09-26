@@ -29,6 +29,7 @@ type ChatProfileQuery<'w, 's> = Query<
         Option<&'static GuildMembership>,
         Option<&'static ClientId>,
         Option<&'static PlayerIgnoreListState>,
+        Option<&'static crate::maps::InMap>,
     ),
 >;
 
@@ -158,6 +159,8 @@ struct ChatParticipant<'a> {
     entity: Entity,
     name: &'a str,
     position: Option<&'a Position>,
+    /// Say, yell and emote are heard on the sender's map copy only.
+    map: Option<&'a crate::maps::InMap>,
     zone: Option<&'a Zone>,
     guild_id: Option<u32>,
     /// Character id (`ClientId`), the key for group membership.
@@ -250,12 +253,13 @@ fn online_participants<'a>(
     conns
         .iter()
         .filter_map(|(link, _)| {
-            let (player, position, zone, guild, client_id, ignore_list) =
+            let (player, position, zone, guild, client_id, ignore_list, map) =
                 profiles.get(link.0).ok()?;
             Some(ChatParticipant {
                 entity: link.0,
                 name: &player.name,
                 position,
+                map,
                 zone,
                 guild_id: guild.map(|g| g.guild_id),
                 character_id: client_id.map(|id| id.0),
@@ -349,6 +353,9 @@ fn within_range(sender: &ChatParticipant, recipient: &ChatParticipant, range: f3
     let (Some(a), Some(b)) = (sender.position, recipient.position) else {
         return false;
     };
+    if sender.map != recipient.map {
+        return false;
+    }
     let (dx, dy, dz) = (a.x - b.x, a.y - b.y, a.z - b.z);
     dx * dx + dy * dy + dz * dz <= range * range
 }
@@ -792,6 +799,7 @@ mod tests {
             entity: world.spawn_empty().id(),
             name,
             position: Some(position),
+            map: None,
             zone: None,
             guild_id: None,
             character_id: None,

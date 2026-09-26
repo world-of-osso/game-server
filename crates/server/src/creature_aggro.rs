@@ -19,6 +19,7 @@ use crate::creature_ai::{CreatureState, chase_system};
 use crate::death::PlayerDeathState;
 use crate::faction::{FactionTemplates, Reaction, UnitFaction};
 use crate::grid_activity::GridDormant;
+use crate::maps::InMap;
 use crate::networking::CombatTarget;
 use crate::taxi::TaxiFlight;
 
@@ -139,26 +140,29 @@ type Victims<'w, 's> = Query<
         Has<Player>,
         Has<TaxiFlight>,
         Has<DeathState>,
+        Option<&'static InMap>,
     ),
 >;
 
-/// A unit a creature may keep attacking: alive (not a corpse or ghost), not
-/// on a flight path, and attackable by the creature's faction
-/// (`Creature::_IsTargetAcceptable` / `CanCreatureAttack`).
+/// A unit a creature may keep attacking: in the creature's map copy (`IsInMap`),
+/// alive (not a corpse or ghost), not on a flight path, and attackable by the
+/// creature's faction (`Creature::_IsTargetAcceptable` / `CanCreatureAttack`).
 fn valid_victim(
     victims: &Victims,
     templates: &FactionTemplates,
     creature_faction: u32,
+    creature_map: &InMap,
     victim: Entity,
 ) -> bool {
-    let Ok((_, health, faction, _, death, is_player, flying, npc_dead)) = victims.get(victim)
+    let Ok((_, health, faction, _, death, is_player, flying, npc_dead, map)) = victims.get(victim)
     else {
         return false;
     };
     let alive = health.current > 0.0
         && !npc_dead
         && death.is_none_or(|death| death.state == shared::death::DeathState::Alive);
-    alive
+    map == Some(creature_map)
+        && alive
         && !flying
         && templates.can_attack(
             UnitFaction {
@@ -183,6 +187,7 @@ type Watchers<'w, 's> = Query<
         Option<&'static LevelScaling>,
         &'static UnitFactionTemplate,
         &'static CreatureState,
+        &'static InMap,
     ),
     (Without<DeathState>, Without<GridDormant>),
 >;
@@ -199,7 +204,7 @@ fn aggro_on_sight_system(
     templates: Res<FactionTemplates>,
     mut commands: Commands,
 ) {
-    for (creature, position, range, level, scaling, faction, state) in &watchers {
+    for (creature, position, range, level, scaling, faction, state, map) in &watchers {
         if !state.is_idle() {
             continue;
         }
@@ -216,7 +221,7 @@ fn aggro_on_sight_system(
                     == Reaction::Hostile;
                 (distance <= radius
                     && hostile
-                    && valid_victim(&victims, &templates, faction.0, player))
+                    && valid_victim(&victims, &templates, faction.0, map, player))
                 .then_some((player, distance))
             })
             .min_by(|a, b| a.1.total_cmp(&b.1));
@@ -236,6 +241,7 @@ type Engaged<'w, 's> = Query<
         &'static mut ThreatTable,
         &'static mut CreatureState,
         Option<&'static mut CombatTarget>,
+        &'static InMap,
     ),
     (Without<DeathState>, Without<GridDormant>),
 >;
@@ -251,13 +257,13 @@ fn update_victim_system(
     templates: Res<FactionTemplates>,
     mut commands: Commands,
 ) {
-    for (creature, position, faction, mut threat, mut state, combat_target) in &mut engaged {
+    for (creature, position, faction, mut threat, mut state, combat_target, map) in &mut engaged {
         let CreatureState::Pursuing { target } = *state else {
             continue;
         };
         let valid = |unit: u64| {
             Entity::try_from_bits(unit)
-                .is_some_and(|unit| valid_victim(&victims, &templates, faction.0, unit))
+                .is_some_and(|unit| valid_victim(&victims, &templates, faction.0, map, unit))
         };
         let current = valid(target).then_some(target);
         if current.is_none() {

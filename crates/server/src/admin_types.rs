@@ -91,6 +91,19 @@ pub enum AdminRequest {
         y: f32,
         z: f32,
     },
+    /// TrinityCore `.go xyz <x> <y> <z> <map>`: `Player::TeleportTo` for an online
+    /// character (a map transfer when the map changes), the saved location otherwise.
+    Teleport {
+        character_name: String,
+        map_id: u32,
+        x: f32,
+        y: f32,
+        z: f32,
+    },
+    /// TrinityCore `.die`: the online character dies (`Unit::Kill`).
+    Kill {
+        character_name: String,
+    },
     /// Money in copper.
     SetGold {
         character_name: String,
@@ -266,6 +279,14 @@ pub enum AdminResponse {
         x: f32,
         y: f32,
         z: f32,
+    },
+    Teleported {
+        character_name: String,
+        map_id: u32,
+        online: bool,
+    },
+    Killed {
+        character_name: String,
     },
     GoldSet {
         character_name: String,

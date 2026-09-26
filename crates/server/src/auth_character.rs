@@ -174,6 +174,7 @@ pub fn process_select_character(
     existing_players: Query<LivePlayer>,
     mut commands: Commands,
     mut player_deaths: MessageWriter<crate::death::PlayerDeathTransition>,
+    mut maps: crate::maps::LoginMaps,
 ) {
     let Some(db) = db.as_ref() else { return };
     let requests: Vec<_> = collect_select_requests(&mut receivers);
@@ -190,6 +191,7 @@ pub fn process_select_character(
             &mut terrain_senders,
             &mut commands,
             &mut player_deaths,
+            &mut maps,
         );
     }
 }
@@ -240,6 +242,8 @@ pub(crate) type LivePlayer = (
         &'static Position,
         &'static Health,
         Option<&'static crate::death::PlayerDeathState>,
+        Option<&'static crate::maps::InMap>,
+        Option<&'static crate::maps::MapTransfer>,
     )>,
 );
 
@@ -256,8 +260,17 @@ pub(crate) fn save_and_despawn_stale_player(
         if cid.0 != character_id {
             continue;
         }
-        if let Some((player, position, health, death)) = live {
-            persistence::save_live_character(db, character_id, player, position, health, death);
+        if let Some((player, position, health, death, map, transfer)) = live {
+            let map_id = crate::maps::saved_map_id(map, transfer);
+            persistence::save_live_character(
+                db,
+                character_id,
+                player,
+                position,
+                health,
+                death,
+                map_id,
+            );
         }
         warn!("Despawning stale player entity {entity:?} for character {character_id}");
         queue_player_despawn(commands, entity);
@@ -277,13 +290,14 @@ fn handle_select(
     terrain_senders: &mut Query<&mut MessageSender<LoadTerrain>>,
     commands: &mut Commands,
     player_deaths: &mut MessageWriter<crate::death::PlayerDeathTransition>,
+    maps: &mut crate::maps::LoginMaps,
 ) {
     let character_id = selection.request.character_id;
     if !validate_ownership(db, selection.account_id, character_id) {
         send_enter_error(selection.connection, enter_senders, "Character not found");
         return;
     }
-    let Some(data) = persistence::load_character(&db.db, character_id) else {
+    let Some(mut data) = persistence::load_character(&db.db, character_id) else {
         send_enter_error(
             selection.connection,
             enter_senders,
@@ -295,11 +309,28 @@ fn handle_select(
         send_enter_error(selection.connection, enter_senders, &error);
         return;
     }
+    let saved_map = crate::maps::persistence::load_character_map(&db.db, character_id);
+    let Some(place) = maps.resolve(
+        commands,
+        character_id,
+        saved_map,
+        persisted_player_position(&data),
+    ) else {
+        send_enter_error(
+            selection.connection,
+            enter_senders,
+            "Character map unavailable",
+        );
+        return;
+    };
+    (data.x, data.y, data.z) =
+        crate::terrain_height::bevy_to_wow(place.position.x, place.position.y, place.position.z);
     let state = load_selected_character_state(db, character_id, data.race);
     let guild = state.guild.clone();
     let player_entity = spawn_player_entity(
         commands,
         &data,
+        place.map,
         character_id,
         guild.as_ref(),
         build_player_init_state(state),
@@ -329,7 +360,8 @@ fn handle_select(
     send_enter_success(selection.connection, enter_senders, player_entity);
     send_load_terrain(
         selection.connection,
-        &persisted_player_position(&data),
+        &place.directory,
+        &place.position,
         terrain_senders,
     );
     info!(
@@ -604,12 +636,13 @@ fn insert_spawn_guild_membership(
 pub fn spawn_player_entity(
     commands: &mut Commands,
     data: &CharacterData,
+    map: crate::maps::InMap,
     character_id: u64,
     guild: Option<&GuildMembership>,
     init: PlayerInitState,
 ) -> Entity {
     let entity = commands
-        .spawn(build_player_components(data, character_id))
+        .spawn((build_player_components(data, character_id), map))
         .id();
     let collections = insert_player_spawn_components(commands, entity, data, init);
     insert_spawn_mount_state(commands, entity, &collections);
