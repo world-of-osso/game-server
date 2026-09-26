@@ -32,6 +32,7 @@ Spawn and id rules
 
 Creature templates and levels
 - [x] `content_creature_template` is AzerothCore's templates plus TrinityCore's template, difficulty-0 values and models for every Retail-spawned entry AzerothCore lacks.
+- [x] Every creature spawned on maps 0/1 wears a Retail CreatureDisplayInfo display. An AzerothCore template whose display is absent from Retail takes TrinityCore's models when both use the same name, when a reviewed override covers it, or when a Retail spawn references the entry. The last case covers TrinityCore renames: Pygmy Surf Crawler 3106 goes from display 1307 to 1938.
 - [x] Every template TrinityCore tunes carries `ContentTuningID` (difficulty 0).
   - `minlevel`/`maxlevel` are that ContentTuning's range, following TrinityCore `GetContentTuningData` under Expansion 11: calc types add +0, +1, +90 or +80, clamped to 1..123.
   - AzerothCore's fixed levels stay only where there is no ContentTuningID.

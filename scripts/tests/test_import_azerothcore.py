@@ -831,6 +831,24 @@ class CreatureEventImportTests(unittest.TestCase):
             reasons = [r["reason"] for r in csv.DictReader(handle) if r["source_id"] == "2349"]
         self.assertEqual(reasons, ["display absent from Retail kept: TrinityCore Retail name 'Domesticated Creeper' != 'Giant Moss Creeper'"])
 
+    def test_retail_spawned_creature_takes_its_retail_models_despite_a_rename(self):
+        # Pygmy Surf Crawler 3106's case: TrinityCore renamed the entry (Surf Crawler), but a
+        # Retail spawn references the entry, so it is TrinityCore's creature and wears its models.
+        self.write_wrath_only_display_fixture()
+        (self.tdb / "creature.sql").write_text(
+            "INSERT INTO `creature` VALUES\n" + tdb_creature(401, 2349, 1, 10.0, 10.0, 1.0) + ";\n")
+        result = self.run_import()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        with sqlite3.connect(self.db) as conn:
+            self.assertEqual(
+                conn.execute("SELECT CreatureDisplayID FROM content_creature_template_model WHERE CreatureID = 2349").fetchall(),
+                [(520,)],
+            )
+        with (self.root / "data/reports/content-dropped.csv").open(newline="") as handle:
+            reasons = [r["reason"] for r in csv.DictReader(handle)
+                       if r["table"] == "creature_template_model" and r["source_id"] == "2349"]
+        self.assertEqual(reasons, [])
+
     def test_missing_trinitycore_models_do_not_destroy_existing_database(self):
         (self.tdb / "creature_template_model.sql").unlink()
         self.db.write_bytes(b"existing database must survive failed preflight")
@@ -995,6 +1013,18 @@ class AzerothCoreContentTests(unittest.TestCase):
                       " WHERE CreatureID IN (2349, 1195, 2595, 922) ORDER BY CreatureID"),
             [(922, 342), (1195, 909), (2349, 520), (2595, 4763)],
         )
+
+    def test_pygmy_surf_crawler_model_is_a_retail_display(self):
+        # AzerothCore 3106's display 1307 is not in Retail; its Retail spawns on map 1 take
+        # TrinityCore's model although TrinityCore renamed the entry Surf Crawler.
+        self.assertEqual(self.rows("SELECT CreatureDisplayID FROM content_creature_template_model WHERE CreatureID = 3106"),
+                         [(1938,)])
+        self.assertEqual(self.rows("SELECT count(*) FROM creature_display_info WHERE ID = 1938"), [(1,)])
+
+    def test_every_display_spawned_on_maps_0_and_1_is_a_retail_display(self):
+        self.assertEqual(self.rows("""SELECT DISTINCT m.CreatureID, m.CreatureDisplayID FROM content_creature c
+            JOIN content_creature_template_model m ON m.CreatureID = c.id1
+            WHERE c.map IN (0, 1) AND m.CreatureDisplayID NOT IN (SELECT ID FROM creature_display_info)"""), [])
 
     def test_retail_display_is_kept_as_imported(self):
         # Hogger's AzerothCore display 384 exists in Retail, so TrinityCore's 108956 is not used.

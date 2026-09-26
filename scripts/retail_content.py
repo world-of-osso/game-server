@@ -31,6 +31,12 @@ BASE_PHASE = """COALESCE(PhaseId, 0) = 0 AND COALESCE(PhaseGroup, 0) = 0 AND ter
     AND ',' || replace(spawnDifficulties, ' ', '') || ',' LIKE '%,0,%'"""
 
 
+def retail_spawned_entries(conn):
+    """Creature entries a Retail (base-phase, maps 0/1) TrinityCore spawn references."""
+    return {entry for (entry,) in conn.execute(
+        f"SELECT DISTINCT id FROM tdb_creature WHERE map IN ({MAP_LIST}) AND {BASE_PHASE}")}
+
+
 def not_base_phase_reason(phase_id, phase_group, terrain_swap, difficulties):
     if phase_id:
         return f"not base phase: PhaseId {phase_id}"

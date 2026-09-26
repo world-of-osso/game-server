@@ -20,8 +20,9 @@ Retail tdb_* tables (mysql_dump.py --prefix tdb_) and the Retail DB2 tables
   game_object_display_info row; spawns and addons need a kept template.
 - content_creature_template_model: a template with any display absent from Retail
   creature_display_info takes the model rows of the same entry in TrinityCore's
-  Retail world DB (tdb_creature_template_model) when that entry has the same name
-  (or a reviewed creature override) and every one of its displays exists in Retail.
+  Retail world DB (tdb_creature_template_model) when that entry has the same name (or a
+  reviewed creature override, or a Retail spawn of maps 0/1 references it) and every one
+  of its displays exists in Retail.
 - content_creature: maps 0 and 1 (RETAIL_MAPS) spawn TrinityCore's base-phase
   Retail spawns (PhaseId 0, PhaseGroup 0, terrainSwapMap -1, difficulty 0 in
   spawnDifficulties) at guid + RETAIL_GUID_OFFSET instead of AzerothCore's; other
@@ -239,12 +240,15 @@ def retail_model_reason(conn, entry, name, reviewed):
 def build_creature_models(conn, overrides, report):
     clone_table(conn, "creature_template_model", "content_creature_template_model")
     conn.execute("INSERT INTO content_creature_template_model SELECT * FROM creature_template_model")
+    # A Retail spawn references its entry by TrinityCore's id, so that entry is TrinityCore's
+    # creature even when TrinityCore renamed it (Pygmy Surf Crawler 3106 -> Surf Crawler).
+    retail_spawned = retail_content.retail_spawned_entries(conn)
     wrath_only = conn.execute("""SELECT DISTINCT m.CreatureID, t.name FROM creature_template_model m
         LEFT JOIN creature_template t ON t.entry = m.CreatureID
         WHERE m.CreatureDisplayID NOT IN (SELECT ID FROM creature_display_info) ORDER BY m.CreatureID""").fetchall()
     for entry, name in wrath_only:
         retail_entry = overrides.get(entry, entry)
-        reason = retail_model_reason(conn, retail_entry, name, entry in overrides)
+        reason = retail_model_reason(conn, retail_entry, name, entry in overrides or entry in retail_spawned)
         if reason:
             report.drop("creature_template_model", f"CreatureID={entry}", entry, f"display absent from Retail kept: {reason}")
             continue
