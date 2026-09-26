@@ -96,43 +96,68 @@ Concrete rows (tests): Corina Steele (`54`) sells Gladius at Retail item level 4
 - 12,887 kept vendor rows have a Wrath `ExtendedCost` (honor/badge costs); Retail `ItemExtendedCost` is not imported or mapped.
 - 2 kept quests have a `PrevQuestID` that was dropped.
 
-## Retail creature spawns (maps 0 and 1)
+## Retail world content (maps 0 and 1)
 
-Spec: [retail-spawn-source](../../specs/retail-spawn-source.md). AzerothCore's Wrath spawn positions don't match the Retail WMOs the client renders. For example, Stormwind bankers stand at (-8935, 613), which is now the street outside the Retail bank, while TrinityCore has them at (-8908, 639). Auctioneers sit at z 97.46 under the Retail auction house floor at 98.06. `content_policy.py` `build_creatures` therefore takes maps 0/1 spawns from TrinityCore TDB1210.26091. The excerpts are imported verbatim as `tdb_creature`, `tdb_creature_template`, `tdb_creature_template_model`, `tdb_creature_template_difficulty`, `tdb_creature_addon`, `tdb_creature_template_addon`, `tdb_creature_formations`, `tdb_waypoint_path`, `tdb_waypoint_path_node` and `tdb_game_event_creature` (DDL `tdb_schema.sql`). `content_policy.py` now reads the `tdb_*` tables instead of re-parsing the dumps.
+Spec: [retail-world-content](../../specs/retail-world-content.md). The client renders Retail WMOs, and AzerothCore's Wrath content doesn't match them. For example, Stormwind bankers stand at (-8935, 613), which is now the street outside the Retail bank, while TrinityCore has them at (-8908, 639). Auctioneers sit at z 97.46, under the Retail auction house floor at 98.06. Wrath content also lacks Cataclysm's rebuilt zones.
 
-| Step | Rule | Rows |
-|------|------|------|
-| Base phase | TrinityCore map 0/1 rows with `PhaseId` 0, `PhaseGroup` 0, `terrainSwapMap` -1, difficulty 0 in `spawnDifficulties` (`phaseUseFlags` ignored: 7 base rows are ALWAYS_VISIBLE) | 95,170 kept (map 0 45,317, map 1 49,853); 14,654 reported (14,591 PhaseId, 60 PhaseGroup, 3 terrainSwapMap) |
-| Spawns | `content_creature` = AzerothCore rows on other maps + Retail rows at TrinityCore guid + 20,000,000 (10 TrinityCore guids collide with kept AzerothCore spawns on maps 229/230/530/609) | 184,436; 60,412 AzerothCore map 0/1 spawns reported |
-| Templates | AzerothCore `creature_template` as is (46,040 Retail spawns, 4,954 entries); TrinityCore template + difficulty-0 row for the 4,720 entries AzerothCore lacks (49,130 spawns) | 34,667 (+4,720); 0 spawns dropped |
-| Models | TrinityCore `creature_template_model` for TrinityCore-only templates; all their displays exist in Retail `CreatureDisplayInfo` | `content_creature_template_model` 47,241 (+7,055) |
-| Addons | AzerothCore rows of kept spawns + TrinityCore rows of Retail spawns (`bytes1` = StandState \| VisFlags<<16 \| AnimTier<<24, `bytes2` = SheathState \| PvPFlags<<8); template addons for TrinityCore-only entries | 2,098 Retail spawn addons, 4,160 template addons; 16,872 AzerothCore addons reported |
-| Waypoints | AzerothCore `waypoint_data` + TrinityCore nodes of Retail addon paths, path `MoveType` per point; path id collision fails the import | 964 paths / 30,085 points added |
-| Formations, events | Same split; TrinityCore event ids kept (only the sign is used) | 202 formation rows, 2,151 memberships; 301 / 8,889 AzerothCore rows reported |
+`content_policy.py` runs the AzerothCore mapping first. Then `retail_content.py` resolves maps 0/1 from TrinityCore TDB1210.26091:
+- the excerpts are imported verbatim as `tdb_*` tables through `mysql_dump.py --prefix tdb_`, with DDL in `tdb_schema.sql`;
+- unsigned 64-bit values are stored as their signed bit pattern.
 
-**Levels.** TrinityCore has no fixed creature levels: `creature_template_difficulty.ContentTuningID` points at ContentTuning scaling ranges such as 1-30, 5-30 or 15-30. `zoneId`/`areaId` are 0 on about 98% of rows in both sources, so there is no zone to look levels up by either. A TrinityCore-only template takes `minlevel`/`maxlevel`/`exp` from the median, by level, of the 5 nearest same-map Retail spawns that have an AzerothCore template, pooled over all its spawns (`SpawnGrid`, 200 yd cells). Critters, non-combat pets, triggers, NPCs with any npcflag and game-event spawns don't count as neighbours, because their levels are role-set: before this exclusion, Shatterspear Laborers came out at level 1 from nearby critters, and at 60 from a Spirit Healer. Checked on AzerothCore entries by leaving each entry's own spawns out, the rule is within 4 levels of the real level for 79% of entries and within 9 for 86%. The 5% that are off by 30 or more are mostly in areas that Cataclysm re-levelled or that have no AzerothCore neighbours.
+Each TrinityCore row is mapped into the AzerothCore-shaped `content_*` table that the server already reads.
+
+### Coverage (measured before switching, maps 0/1)
+
+| Measure | AzerothCore | TrinityCore | Source used |
+|---|---|---|---|
+| Creature spawns (base phase for TDB) | 60,412 | 95,170 | TrinityCore |
+| Spawned creature entries (both / AC-only / TDB-only) | 7,118 | 9,674 (4,783 / 2,335 / 4,891) | TrinityCore |
+| Game object spawns | 44,960 | 39,268 (21,877 after holiday-only and phased rows) | TrinityCore |
+| Quests started/ended by spawned NPCs/objects | 4,327 | 6,545 | TrinityCore |
+| Vendor entries with rows / rows | 985 / 15,382 | 1,287 / 18,565 | TrinityCore; AzerothCore for vendors TDB lacks |
+| Gossip menus of spawned NPCs | 1,263 | 1,470 | TrinityCore |
+| Non-service entries with loot | 2,669 of 3,543 | 1,749 of 5,001 | TrinityCore per NPC; AzerothCore's for 147 NPCs TDB has none for |
+| Quests with choice rewards | – | 1 of 3,212 Retail quests (sniffed offers) | AzerothCore group fills an empty TrinityCore one (378 quests) |
+| smart_scripts rows for spawned entries | – | 8,296 | not imported (no server consumer) |
+
+**Quest starters are not thinner in TrinityCore.** At first, TDB seemed to lack starters for 2,068 of its quests that AzerothCore NPCs give. But 1,993 of them are quests TrinityCore flags `0x4000` with no ContentTuning; Cataclysm removed these:
+- 783 "[DEPRECATED] A Threat Within"
+- 7 Kobold Camp Cleanup
+- 18 Brotherhood of Thieves
+- the old Westfall chain
+
+The other 75 are holiday quests, which TrinityCore gives through `game_event_creature_quest`, and removed mount exchanges. Filling them in from AzerothCore would put Wrath's Northshire back on Retail NPCs, so Retail-spawned NPCs give only TrinityCore's relations.
+
+### Rules and counts
+
+| Domain | Rule | Result |
+|---|---|---|
+| Spawns | Base phase: `PhaseId` 0, `PhaseGroup` 0, `terrainSwapMap` -1, difficulty 0. Guid + 20,000,000 (10 TrinityCore guids collide with kept AzerothCore spawns on maps 229/230/530/609). Addons (`bytes1` = StandState \| VisFlags<<16 \| AnimTier<<24, `bytes2` = SheathState \| PvPFlags<<8), formations, waypoint paths (path `MoveType` per point) and event memberships follow | 95,170 creatures, 60,412 AzerothCore spawns replaced; 21,877 objects, 45,186 replaced; 17,391 holiday-only and 3,377 phased TDB objects skipped |
+| Creature templates | AzerothCore's, plus TrinityCore template + difficulty 0 + models for 4,720 entries it lacks. `ContentTuningID` on 16,003 templates; `minlevel`/`maxlevel` = its range (below) | 34,667 templates |
+| Game object templates | TrinityCore's template replaces AzerothCore's for Retail-spawned entries: `Data0-23`, chest/fishing-hole `Data1` + 20,000,000; `Data24-34` reported for 608 templates. Retail display required | 6,142 TrinityCore templates |
+| Items | `content_item` adds the Retail items TrinityCore vendors, loot and quests reference (`SourceEntry` NULL) | 19,136 Retail-only items |
+| Vendors | TrinityCore list (type 1 items) for Retail-spawned vendors; currency rows dropped | 2,434 vendors |
+| Loot | Retail-spawned NPC with TrinityCore rows for its LootID → `lootid` + 20,000,000, gold from difficulty 0; references + 20,000,000; ItemType 2 (currency) dropped; exact repeated rows (the TDB loot tables have no key) kept once; item loot for TDB containers replaces AzerothCore's | 1,783 NPCs on TrinityCore loot, 147 keep AzerothCore's |
+| Gossip | Lowest `creature_template_gossip` menu per Retail-spawned NPC (4 have more; no conditions). Menus reached through submenus come from TrinityCore. `GossipOptionNpc` → AzerothCore type / npcflag / icon: 0→1/GOSSIP/0, 1→3/VENDOR/1, 2→4/FLIGHTMASTER/2, 3→5/TRAINER/3, 4→6/SPIRITHEALER/4, 5→8/INNKEEPER/5, 6→9/BANKER/6, 7→10/PETITIONER/7, 8→11/TABARDDESIGNER/8, 9→12/BATTLEMASTER/9, 10→13/AUCTIONEER/6, 12→14/STABLEMASTER/0, others hidden (12 options). `npc_text` = BroadcastText ids + probabilities; the text resolves through AzerothCore's `broadcast_text` (176 ids missing) | 6,765 menus |
+| Quests | Quests Retail-spawned NPCs/objects start or end, in QuestV2 (367 not). Mapping: `QuestLevel` -1, `MinLevel` = ContentTuning minimum, `ContentTuningID` column. `quest_objectives` Monster/GameObject → `RequiredNpcOrGo1-4` (objects negative), Item → `RequiredItemId1-6`, PlayerKills → `RequiredPlayerKills`; 260 objectives of other types reported. `RewardDisplaySpell` = `RewardDisplaySpell1`. Items missing from ItemSparse (29) and spells missing from SpellName (114) zeroed. `RewardMoney` = AzerothCore's (money is RewardMoneyDifficulty × QuestMoneyReward, not imported). Addon, offer/request text and POIs from TrinityCore where it has rows; POI `id` = `Idx1` (lowest `BlobIndex`), `WorldMapAreaId` = `UiMapID` | 6,078 TrinityCore quests (4,018 with objectives, 652 with money), 5,802 AzerothCore quests kept |
+
+**Levels.** TrinityCore creature levels are ContentTuning ranges. ContentTuning (FDID 1962930, layout A3E13004, 2,929 rows) is read from the local CASC install with `casc-local` and decoded by `db2_casc.py` (`db2.py extract`); its columns come positionally from `db2_schema.sql`. The CSV matches an independently written decoder.
+
+Levels follow `DB2Manager::GetContentTuningData`:
+- `min = MinLevelSquish + adjust(MinLevelScalingOffset)` and `max = MaxLevelSquish + adjust(MaxLevelScalingOffset)`, clamped to 1..123.
+- `adjust` is 0, +1, +90 (`GetMaxLevelForExpansion(11)`, worldserver.conf default `Expansion = 11`) or +80.
+- The wago column names correspond positionally to TrinityCore's MinLevel/MaxLevel/MinLevelType/MaxLevelType.
 
 Examples:
-- Homeless Stormwind Citizen `42384`: 13-14
-- West Plains Drifter `42391`: 16-17
-- Redridge Citizen `43222`: 18-19
-- Stormwind Training Dummy `153292`: 83, taken from the neighbouring Heroic Training Dummies
+- Hogger 1-30 (CT 73)
+- Newton Burnside 1-90 (CT 864)
+- Stormwind City Guard 90-90 (CT 883)
 
-**Not carried for TrinityCore-only templates:**
-- `lootid`/`pickpocketloot`/`skinloot` are 0, because TrinityCore loot ids index its own `creature_loot_template`, which uses Retail item ids and isn't imported.
-- `gossip_menu_id` is 0.
-- There are no vendor lists and no quest relations.
+TrinityCore-only templates without a ContentTuning get level 1 (reported), because the area fallback needs AreaTable, which isn't imported. `exp` comes from `HealthScalingExpansion` clamped to 0..2 (-1 → 2). Until the server scales levels per player, spawns take `minlevel`, and `creature_classlevelstats` only has real base HP up to level 83.
 
-Retail spawns with these templates:
-- 565 of 1,440 vendor-flagged spawns have no `content_npc_vendor` rows.
-- 955 of 3,190 quest-flagged spawns have no quest relation.
-- 1,438 gossip-flagged spawns show the default menu.
+**Paths.** TrinityCore paths start on the spawn point and repeat a node, with `Orientation` + `Delay`, to pause facing a direction. For example, Stormwind City Patroller path `25104480` has points 6/7 and 13/14. Legs of zero length arrive at once. `waypoint_path.Flags` (12 FollowPathBackwards, 567 ExactSplinePath) and `Velocity` (443) are ignored.
 
-Flight masters (114 TrinityCore-only), bankers (25) and auctioneers (14) work from `npcflag` and position alone. Examples: Orgrimmar's Retail auctioneers (Auctioneer Drezmit `44866`), and the Stormwind Training Dummy `153292` with TrinityCore's ScriptName `npc_training_dummy`.
-
-**Paths.** TrinityCore paths start on the spawn point and repeat a node, with `Orientation` + `Delay`, to pause facing a direction. For example, Stormwind City Patroller path `25104480` has points 6/7 and 13/14. Legs of zero length arrive at once. `waypoint_path.Flags` (1 FollowPathBackwards: 12 paths, 2 ExactSplinePath: 567) and `Velocity` (443) are ignored.
-
-**Spawn groups and pools.** All base-phase map 0/1 spawns in `spawn_group` belong to the legacy group 2 (flags 9), except one in a group with flags 25. None is manual-spawn, so spawn groups are not imported. 493 Retail spawns are pool members. Pools are ignored, as they are for AzerothCore (all members spawn).
+**Spawn groups and pools.** No base-phase spawn on maps 0/1 is manual-spawn: all are in legacy group 2 (flags 9), apart from one in a group with flags 25. Pools are ignored, as they are for AzerothCore.
 
 ## Mapping policy options
 
@@ -152,7 +177,7 @@ Option 4 matches the Retail client (item tooltips and models come from Retail DB
 - [scripts/content_policy.py](../../../scripts/content_policy.py), [scripts/content_overrides.csv](../../../scripts/content_overrides.csv) — Retail-first content tables
 - [scripts/tests/test_import_azerothcore.py](../../../scripts/tests/test_import_azerothcore.py) — fixture and real-dump tests (A Threat Within `783` Deputy Willem → Marshal McBride; Corina Steele `54` weapon list)
 - TrinityCore TDB1210.26091 `creature_template` / `creature_template_model` (`data/reference/tdb1210/`) — Retail creature models
-- TrinityCore TDB1210.26091 `creature`, `creature_template_difficulty`, `creature_addon`, `creature_template_addon`, `creature_formations`, `waypoint_path`, `waypoint_path_node`, `game_event_creature` — Retail spawns of maps 0/1
+- TrinityCore TDB1210.26091 excerpts (`TDB_TABLES` in `import-azerothcore.sh`): Retail world content of maps 0/1 ([scripts/retail_content.py](../../../scripts/retail_content.py))
 
 ## See Also
 

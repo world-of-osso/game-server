@@ -23,8 +23,10 @@ Source: `~/Repos/azerothcore/data/sql/base/db_world/`
 | `game_event_creature` | Source-dependent | Signed event membership keyed by spawn GUID and event ID |
 | `creature_template_model` | 40,213 | Display models per creature (DisplayID, scale, probability) |
 | `content_creature_template_model` | 40,186 | `creature_template_model` with Wrath-only displays replaced by TrinityCore Retail models ([[content-import]]); `world_data.rs` `load_models` reads this table, and spawns replicate the first model by `Idx` |
-| `content_creature` | 184,436 | Server-read spawns: TrinityCore Retail base-phase spawns on maps 0/1 (guid + 20,000,000), AzerothCore spawns elsewhere ([[content-import]], [retail-spawn-source](../../specs/retail-spawn-source.md)) |
-| `content_creature_template` | 34,667 | Server-read templates: AzerothCore's plus 4,720 TrinityCore templates for Retail-only entries |
+| `content_creature` | 184,436 | Server-read spawns: TrinityCore Retail base-phase spawns on maps 0/1 (guid + 20,000,000), AzerothCore spawns elsewhere ([[content-import]], [retail-world-content](../../specs/retail-world-content.md)) |
+| `content_creature_template` | 34,667 | Server-read templates: AzerothCore's plus 4,720 TrinityCore templates for Retail-only entries; `ContentTuningID` + its level range for the 16,003 templates TrinityCore tunes |
+| `content_tuning` | 2,929 | Retail ContentTuning DB2, extracted from local CASC (`db2.py extract`) |
+| `content_gossip_menu` / `content_gossip_menu_option` / `content_npc_text` | 6,975 / 5,619 / 8,578 | Server-read gossip: TrinityCore rows for the menus Retail-spawned NPCs reach, AzerothCore's for the rest |
 | `content_creature_addon` / `content_creature_template_addon` / `content_creature_formations` / `content_game_event_creature` / `content_waypoint_data` | 20,379 / 16,143 / 5,730 / 4,941 / 174,818 | Server-read spawn-keyed rows, following each spawn's source |
 | `creature_classlevelstats` | 400 | Base health per (level, unit_class), `basehp0..2` by `creature_template.exp`; spawn health is `ceil(basehp × HealthModifier)` at the template `minlevel` (`zones.rs` `resolve_health`, AzerothCore `Creature::SelectLevel`) |
 | `waypoint_data` | 144,657 | Patrol points keyed by path ID: delay (ms), move_type, orientation |
@@ -38,7 +40,7 @@ Quest, vendor, trainer, loot, gossip and item tables are imported from the same 
 
 ### Spell/Class Data (Retail WoW DB2 CSVs)
 
-Source: wago.tools exports pinned to Retail `12.1.0.69933` (the local install's `.build.info` version), stored in `../game-engine/data/db2/<build>/<Table>.csv`.
+Source: wago.tools exports pinned to Retail `12.1.0.69933` (the local install's `.build.info` version), stored in `../game-engine/data/db2/<build>/<Table>.csv`. `ContentTuning.csv` is the exception: `db2.py extract` decodes it from the local CASC install (FDID 1962930, `scripts/db2_casc.py`), never from the web.
 
 - `scripts/db2.py fetch` downloads every table in `db2.TABLES` (skips files already present; retries 429/5xx with backoff + jitter, honours `Retry-After`).
 - `scripts/db2.py import --db data/world.db` replaces only the DB2 tables, in one transaction, so it is safe on a populated `world.db` and idempotent. `import-azerothcore.sh` calls it after rebuilding creature tables.

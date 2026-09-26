@@ -1,5 +1,13 @@
 # Wiki Log
 
+## [2026-09-26] systems | Retail world content
+
+Updated [[content-import]], and renamed the spec `retail-spawn-source` to `retail-world-content`. Maps 0/1 now resolve from TrinityCore TDB1210:
+- game objects (21,877), vendors, loot, gossip and quests (6,078), on top of creature spawns;
+- creature levels are ContentTuning ranges; ContentTuning is extracted from local CASC, and the neighbour-median levels are removed.
+
+A finding: the apparent quest-starter gap was 1,993 quests that Cataclysm removed, so AzerothCore relations are not re-added to Retail NPCs. Server tests now use Retail Northshire's warrior chain.
+
 ## [2026-09-26] systems | Retail creature spawns
 
 Updated [[content-import]] and [[world-data]], and created spec `retail-spawn-source`. Maps 0/1 now spawn TrinityCore TDB1210 base-phase spawns: 95,170 at guid + 20,000,000, replacing 60,412 AzerothCore spawns. The server reads `content_creature*`. 4,720 TrinityCore-only templates take their levels from the nearest AzerothCore-template spawns and have no loot, gossip, vendor or quest data. TrinityCore addons, paths, formations and event memberships follow the spawns.
