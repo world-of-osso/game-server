@@ -14,7 +14,7 @@ Server-authoritative spell casting in `crates/server/src/spell_cast/`. `SpellCas
    - GCD of the spell's `StartRecoveryCategory`;
    - spell and category cooldown;
    - charges;
-   - moving (see below) for cast-time or channeled spells without `SPELL_ATTR0` 0x10000000;
+   - moving (see below), when the cast bar or the channel would break on movement;
    - every handled effect's implicit targets supported;
    - explicit target;
    - costs.
@@ -28,8 +28,8 @@ Server-authoritative spell casting in `crates/server/src/spell_cast/`. `SpellCas
    - The GCD starts here: `StartRecoveryTime`, keyed by category, and sends `SpellCooldownUpdate{is_gcd}`.
    - Instant spells execute now.
    - Cast-time spells insert a replicated `CastState` and log `CastStart`.
-   - Channeled spells (`SPELL_ATTR1` 0x4/0x40 with a positive duration) execute at start. `CastState::channel` runs for the spell duration (Duration mods); the channel's periodic effects tick as [[auras]].
-5. **Execute** (instant, cast completion, channel start), in order:
+   - Channeled spells (`SPELL_ATTR1` 0x4/0x40 with a positive duration) execute when their cast time, if any, is over (TrinityCore `Spell::handle_immediate`); `CastState::channel` then runs for the spell duration (Duration mods) and the channel's periodic effects tick as [[auras]].
+5. **Execute** (instant, cast completion, before a channel), in order:
    - recheck caster, target and costs;
    - plan all targets;
    - spend costs;
@@ -38,13 +38,15 @@ Server-authoritative spell casting in `crates/server/src/spell_cast/`. `SpellCas
    - resolve effects in index order, with each target's aura effects applied as one aura after the other effects;
    - push proc events (cast success, one spell hit per distinct target) and spend charged spell mods.
    - A failed completion sends `CastFailed`.
-6. **Cancel:** stop requests, caster death and movement all remove `CastState`. An ended channel removes its caster's auras of that spell (`auras::channel_ended`).
+6. **Cancel:** stop requests, caster death and movement all remove `CastState`. An ended channel removes its caster's auras of that spell (`auras::channel_ended`) and the ritual objects it held (`meeting_stone::ritual::channel_ended`).
 
 ### Movement
 
 - Casting still freezes translation (`networking_movement.rs`).
 - `process_player_inputs` records `Moving(bool)`: whether the newest input has a direction.
 - `advance_casts` runs after input and cancels a non-cast-while-moving cast when `Moving` is true.
+- Cast-while-moving is TrinityCore `Spell::CheckMovement`: a cast bar breaks only with `SpellInterrupts.InterruptFlags` Movement (0x1); a channel breaks when `ChannelInterruptFlags_0` holds Moving or Turning (0x8 | 0x10, `SpellInfo::IsMoveAllowedChannel`). Summoning Stone Effect (59782) has InterruptFlags 0 and ChannelInterruptFlags 15406: its 5 s cast survives walking, its channel does not.
+- `cast_granted` casts a spell a game object grants its user (meeting stones), without a spellbook check.
 - `MovementSpeed` cannot serve as the signal: it holds run/walk speed even while idle.
 
 ### Spell modifiers

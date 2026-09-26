@@ -47,6 +47,7 @@ mod level_scaling;
 mod lfg;
 mod loot;
 mod mail;
+mod meeting_stone;
 mod melee;
 mod merchant;
 mod messaging;
@@ -179,6 +180,7 @@ fn add_world_plugins(app: &mut App) {
         .add_plugins(bank::BankPlugin)
         .add_plugins(guild_bank::GuildBankPlugin)
         .add_plugins(mail::MailPlugin)
+        .add_plugins(meeting_stone::MeetingStonePlugin)
         .add_plugins(spell_info::SpellInfoPlugin)
         .add_plugins(spell_cast::SpellCastPlugin)
         .add_plugins(auras::AuraPlugin)

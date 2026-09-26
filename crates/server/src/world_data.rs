@@ -334,7 +334,10 @@ fn template_from_row(row: &Row, expected: &ExpectedStats) -> rusqlite::Result<Cr
     })
 }
 
-pub(crate) fn load_templates(conn: &Connection, expected: &ExpectedStats) -> HashMap<u32, CreatureTemplate> {
+pub(crate) fn load_templates(
+    conn: &Connection,
+    expected: &ExpectedStats,
+) -> HashMap<u32, CreatureTemplate> {
     let mut stmt = conn
         .prepare(
             "SELECT entry, minlevel, maxlevel, faction, npcflag, speed_walk, HealthModifier, name,
@@ -586,6 +589,9 @@ fn startup_load_world_data(mut commands: Commands) {
         .expect("Failed to load content_gameobject; run scripts/import-azerothcore.sh");
     info!("Loaded {} game object spawns", game_objects.0.len());
     commands.insert_resource(game_objects);
+    let meeting_stones = crate::meeting_stone::load_meeting_stone_data(&conn)
+        .expect("Failed to load meeting stone and ritual templates");
+    commands.insert_resource(meeting_stones);
     let prices = crate::bank::load_bank_tab_prices(&conn)
         .expect("Failed to load bank_tab; run scripts/db2.py import");
     commands.insert_resource(prices);

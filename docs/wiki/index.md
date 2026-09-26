@@ -34,6 +34,7 @@ Server gameplay systems.
 | [[level-scaling]] | Retail ContentTuning creature levels: per-viewer level, ExpectedStat health/damage, shared health pool through damage and health multipliers, target-frame level colour |
 | [[banks]] | Character, Warband and guild bank storage (redb), one-transaction moves, guild ranks, daily reset, logs |
 | [[game-objects]] | Guild Vault and Mailbox spawns from content_gameobject, GeoBox reach check, UseGameObject |
+| [[meeting-stones]] | Meeting stone summons: GameObject::Use checks, 59782 cast and channel, TRANS_DOOR ritual portal, SUMMON_PLAYER offer, accept teleport |
 | [[trade]] | Trade sessions, AzerothCore initiation checks, one-transaction exchange through InventoryModel, refusal keeps the window open |
 | [[mail]] | Player and Auction House mail: per-character redb mailboxes, one-transaction send/take/return, delivery delay, expiry sweep, PendingMail |
 | [[professions]] | Retail skill lines (parent + expansion child), TDB1210 trainers, crafting through the spell pipeline (reagents, tools, CREATE_ITEM, TrinityCore skill-up chances) |

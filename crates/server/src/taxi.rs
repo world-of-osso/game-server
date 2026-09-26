@@ -372,13 +372,22 @@ fn fly_taxis(
         };
         crate::interest::mark_interest_position_changed(dirty_queue.as_deref(), entity);
         if landed {
-            control.controlled = false;
             teleported(dirty_queue.as_deref(), entity, &mut control);
-            commands
-                .entity(entity)
-                .remove::<(TaxiFlight, Mounted)>()
-                .insert(MovementSpeed(RUN_SPEED));
+            commands.entity(entity).queue(finish_flight);
         }
+    }
+}
+
+/// End a flight where the player is (landing, `Player::FinishTaxiFlight`).
+pub(crate) fn finish_flight(mut player: EntityWorldMut) {
+    if !player.contains::<TaxiFlight>() {
+        return;
+    }
+    player
+        .remove::<(TaxiFlight, Mounted)>()
+        .insert(MovementSpeed(RUN_SPEED));
+    if let Some(mut control) = player.get_mut::<MovementControl>() {
+        control.controlled = false;
     }
 }
 
