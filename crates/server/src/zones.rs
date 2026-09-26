@@ -402,7 +402,7 @@ mod tests {
                 ExperienceModifier REAL, type INTEGER, flags_extra INTEGER, speed_run REAL,
                 ScriptName TEXT, unit_class INTEGER, detection_range REAL, unit_flags INTEGER,
                 ContentTuningID INTEGER, HealthScalingExpansion INTEGER, LevelScalingDeltaMin INTEGER,
-                LevelScalingDeltaMax INTEGER, DamageModifier REAL);
+                LevelScalingDeltaMax INTEGER, DamageModifier REAL, subname TEXT);
              CREATE TABLE expected_stat (ID INTEGER, Lvl INTEGER, ExpansionID INTEGER,
                 CreatureHealth REAL, CreatureAutoAttackDps REAL);
              CREATE TABLE expected_stat_mod (ID INTEGER, CreatureHealthMod REAL,
@@ -439,7 +439,7 @@ mod tests {
         for (index, angle) in angles.iter().enumerate() {
             let entry = 100 + index as u32;
             conn.execute(
-                "INSERT INTO content_creature_template VALUES (?1,1,1,1,0,1.0,1.0,'Loup — Écorché',0,0,1.0,1,0,1.14,'',1,20.0,0,0,0,0,0,1.0)",
+                "INSERT INTO content_creature_template VALUES (?1,1,1,1,0,1.0,1.0,'Loup — Écorché',0,0,1.0,1,0,1.14,'',1,20.0,0,0,0,0,0,1.0,'')",
                 [entry],
             )
             .unwrap();

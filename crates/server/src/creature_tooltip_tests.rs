@@ -156,14 +156,15 @@ fn weaponsmith_tooltip_lists_the_items_she_sells() {
     assert_eq!(
         tooltip.vendor_items,
         [
-            item(2488, "Gladius", 1, Some(154)),
+            // Retail (TDB1210) npc_vendor slot order.
             item(2489, "Two-Handed Sword", 1, Some(607)),
-            item(2490, "Tomahawk", 1, Some(388)),
-            item(2491, "Large Axe", 1, Some(857)),
             item(2492, "Cudgel", 1, Some(858)),
-            item(2493, "Wooden Mallet", 1, Some(859)),
+            item(2491, "Large Axe", 1, Some(857)),
             item(2494, "Stiletto", 1, Some(860)),
             item(2495, "Walking Stick", 1, Some(861)),
+            item(2488, "Gladius", 1, Some(154)),
+            item(2490, "Tomahawk", 1, Some(388)),
+            item(2493, "Wooden Mallet", 1, Some(859)),
         ]
     );
 }
