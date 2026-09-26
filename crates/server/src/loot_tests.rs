@@ -283,7 +283,8 @@ fn killing_a_kobold_vermin_gives_its_killer_lootable_coins() {
     let Some(LootContent::Money { copper }) = slots[0] else {
         panic!("money slot first: {slots:?}");
     };
-    assert!((1..=5).contains(&copper), "mingold 1, maxgold 5: {copper}");
+    // mingold 1, maxgold 5, plus the sell price of any grey item the roll yielded.
+    assert!(copper >= 1, "{copper}");
 }
 
 #[test]

@@ -2,6 +2,7 @@ mod achievement;
 mod admin_handlers;
 mod admin_ipc;
 mod admin_types;
+mod appearance_collection;
 mod auction_house;
 mod auras;
 mod auth;
@@ -134,6 +135,7 @@ fn add_social_plugins(app: &mut App) {
         .add_plugins(item_templates::ItemTemplatesPlugin)
         .add_plugins(item_stats::ItemScalingPlugin)
         .add_plugins(inventory::InventoryPlugin)
+        .add_plugins(appearance_collection::AppearanceCollectionPlugin)
         .add_plugins(quest_data::QuestDataPlugin)
         .add_plugins(quest::QuestPlugin)
         .add_plugins(experience::ExperiencePlugin);
