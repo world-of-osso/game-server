@@ -104,6 +104,15 @@ enum AdminRequest {
         y: f32,
         z: f32,
     },
+    /// TrinityCore `.go xyz <x> <y> <z> <map>`: `Player::TeleportTo` for an online
+    /// character (a map transfer when the map changes), the saved location otherwise.
+    Teleport {
+        character_name: String,
+        map_id: u32,
+        x: f32,
+        y: f32,
+        z: f32,
+    },
     /// Money in copper.
     SetGold {
         character_name: String,
@@ -250,6 +259,11 @@ enum AdminResponse {
         x: f32,
         y: f32,
         z: f32,
+    },
+    Teleported {
+        character_name: String,
+        map_id: u32,
+        online: bool,
     },
     GoldSet {
         character_name: String,
@@ -400,6 +414,7 @@ fn parse_request(args: &[String]) -> AdminRequest {
         "set-level" => parse_set_level(args),
         "set-credentials" => parse_set_credentials(args),
         "set-position" => parse_set_position(args),
+        "teleport" => parse_teleport(args),
         "combat-log" => parse_combat_log(args),
         "set-gold" => parse_set_gold(args),
         "grant-item" => parse_grant_item(args),
@@ -722,6 +737,26 @@ fn parse_set_position(args: &[String]) -> AdminRequest {
         x,
         y,
         z,
+    }
+}
+
+fn parse_teleport(args: &[String]) -> AdminRequest {
+    require_args(args, 7, "teleport <character_name> <map_id> <x> <y> <z>");
+    let number = |index: usize| -> f32 {
+        args[index].parse().unwrap_or_else(|_| {
+            eprintln!("Invalid number: {}", args[index]);
+            std::process::exit(1);
+        })
+    };
+    AdminRequest::Teleport {
+        character_name: args[2].clone(),
+        map_id: args[3].parse().unwrap_or_else(|_| {
+            eprintln!("Invalid map id: {}", args[3]);
+            std::process::exit(1);
+        }),
+        x: number(4),
+        y: number(5),
+        z: number(6),
     }
 }
 

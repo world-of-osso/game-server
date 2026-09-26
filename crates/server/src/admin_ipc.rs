@@ -483,6 +483,20 @@ fn dispatch(
             y,
             z,
         } => handle_set_position(db, players, interest_dirty, &character_name, x, y, z),
+        AdminRequest::Teleport {
+            character_name,
+            map_id,
+            x,
+            y,
+            z,
+        } => handle_teleport(
+            db,
+            commands,
+            players,
+            &character_name,
+            map_id,
+            Vec3::new(x, y, z),
+        ),
         AdminRequest::SetGold {
             character_name,
             copper,
@@ -738,6 +752,50 @@ mod tests {
             handle_taxi_learn(&game_db, &network, "Scout", 999_999),
             AdminResponse::Error("taxi node 999999 not found".into())
         );
+    }
+
+    #[test]
+    fn teleporting_an_offline_character_saves_its_map_and_position() {
+        let db = persistence::temp_database();
+        let (character_id, _) =
+            persistence::create_character(&db, 1, "Voyager", 1, 1).expect("character");
+        let game_db = persistence::GameDatabase { db };
+        let mut app = App::new();
+        let mut system_state = SystemState::<(
+            Commands,
+            Query<(
+                Entity,
+                &mut Position,
+                &persistence::ClientId,
+                &mut shared::components::MovementControl,
+            )>,
+        )>::new(app.world_mut());
+        let (mut commands, players) = system_state.get_mut(app.world_mut()).unwrap();
+
+        // Ratchet, Kalimdor.
+        let response = handle_teleport(
+            &game_db,
+            &mut commands,
+            &players,
+            "Voyager",
+            1,
+            Vec3::new(-956.0, -3754.0, 5.0),
+        );
+
+        assert_eq!(
+            response,
+            AdminResponse::Teleported {
+                character_name: "Voyager".into(),
+                map_id: 1,
+                online: false,
+            }
+        );
+        assert_eq!(
+            crate::maps::persistence::load_character_map(&game_db.db, character_id),
+            1
+        );
+        let saved = persistence::load_character(&game_db.db, character_id).unwrap();
+        assert_eq!((saved.x, saved.y, saved.z), (-956.0, -3754.0, 5.0));
     }
 
     #[test]
