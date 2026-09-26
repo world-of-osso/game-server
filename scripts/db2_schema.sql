@@ -1319,3 +1319,30 @@ CREATE TABLE totem_category (
   TotemCategoryType INTEGER NOT NULL DEFAULT 0,
   TotemCategoryMask INTEGER NOT NULL DEFAULT 0
 );
+
+-- Extracted from local CASC (db2.py extract, FDID 1962930, layout A3E13004): creature and
+-- quest level ranges. Column order is the WoWDBDefs layout; TrinityCore names them
+-- MinLevel/MaxLevel (…Squish), MinLevelType/MaxLevelType (…ScalingOffset: ContentTuningCalcType),
+-- TargetLevelDelta/TargetLevelMaxDelta (Allowed…Offset), TargetLevelMin/Max (Lfg…Level).
+DROP TABLE IF EXISTS content_tuning;
+CREATE TABLE content_tuning (
+  ID INTEGER PRIMARY KEY,
+  Flags INTEGER NOT NULL DEFAULT 0,
+  ExpansionID INTEGER NOT NULL DEFAULT 0,
+  HPScalingCurveID INTEGER NOT NULL DEFAULT 0,
+  DMGScalingCurveID INTEGER NOT NULL DEFAULT 0,
+  HPPrimaryStatScalingCurveID INTEGER NOT NULL DEFAULT 0,
+  DMGPrimaryStatScalingCurveID INTEGER NOT NULL DEFAULT 0,
+  PrimaryStatScalingModPlayerDataElementCharacterID INTEGER NOT NULL DEFAULT 0,
+  PrimaryStatScalingModPlayerDataElementCharacterMultiplier REAL NOT NULL DEFAULT 0,
+  MinLevelSquish INTEGER NOT NULL DEFAULT 0,
+  MaxLevelSquish INTEGER NOT NULL DEFAULT 0,
+  MinLevelScalingOffset INTEGER NOT NULL DEFAULT 0,
+  MaxLevelScalingOffset INTEGER NOT NULL DEFAULT 0,
+  AllowedMinOffset INTEGER NOT NULL DEFAULT 0,
+  AllowedMaxOffset INTEGER NOT NULL DEFAULT 0,
+  LfgMinLevel INTEGER NOT NULL DEFAULT 0,
+  LfgMaxLevel INTEGER NOT NULL DEFAULT 0,
+  ILevel INTEGER NOT NULL DEFAULT 0,
+  XpMultQuest REAL NOT NULL DEFAULT 0
+);

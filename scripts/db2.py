@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
 """Fetch build-pinned Retail DB2 CSVs from wago.tools and import them into world.db.
 
-  db2.py fetch  [--build B] [--csv-root DIR]
-  db2.py check  [--build B] [--csv-root DIR]
-  db2.py import [--build B] [--csv-root DIR] [--db PATH]
+  db2.py fetch   [--build B] [--csv-root DIR]
+  db2.py extract [--build B] [--csv-root DIR]
+  db2.py check   [--build B] [--csv-root DIR]
+  db2.py import  [--build B] [--csv-root DIR] [--db PATH]
+
+`extract` writes the LOCAL_TABLES CSVs from the local CASC install (db2_casc.py)
+instead of wago.tools; `fetch` skips them.
 
 CSVs live in <csv-root>/<build>/<Table>.csv. Import replaces every DB2 table
 listed in TABLES inside one transaction (non-DB2 tables are untouched), checks
@@ -22,6 +26,8 @@ import time
 import urllib.error
 import urllib.request
 from pathlib import Path
+
+import db2_casc
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 PROJECT_DIR = SCRIPT_DIR.parent
@@ -57,7 +63,11 @@ TABLES = [
     "ItemDamageTwoHand", "ItemDamageTwoHandCaster", "ItemSquishEra", "CurvePoint",
     "DurabilityCosts", "DurabilityQuality", "GameObjectDisplayInfo", "BankTab", "CreatureDisplayInfo",
     "SpellReagents", "SpellTotems", "TradeSkillCategory", "SkillRaceClassInfo", "TotemCategory",
+    "ContentTuning",
 ]
+# Extracted from local CASC by FileDataID (community listfile), pinned to the build's
+# WoWDBDefs layout hash: {table: (FileDataID, layout hash)}.
+LOCAL_TABLES = {"ContentTuning": (1962930, 0xA3E13004)}
 
 
 def table_name(db2_name):
@@ -104,6 +114,8 @@ def fetch(build, csv_root):
     missing = []
     for db2 in TABLES:
         target = out_dir / f"{db2}.csv"
+        if db2 in LOCAL_TABLES:
+            continue
         if target.exists():
             print(f"  have {target.name}")
             continue
@@ -120,6 +132,27 @@ def fetch(build, csv_root):
         print(f"  fetched {target.name} ({len(body)} bytes)")
     if missing:
         raise SystemExit(f"wago.tools has no {build} export for: {', '.join(missing)}")
+
+
+def extract(build, csv_root):
+    """Write each LOCAL_TABLES CSV from local CASC, columns from db2_schema.sql."""
+    if build != DEFAULT_BUILD:
+        raise SystemExit(f"local CASC holds {DEFAULT_BUILD} only, not {build}")
+    out_dir = csv_root / build
+    out_dir.mkdir(parents=True, exist_ok=True)
+    schema = sqlite3.connect(":memory:")
+    schema.executescript(SCHEMA_SQL.read_text())
+    for db2, (fdid, layout_hash) in LOCAL_TABLES.items():
+        columns = [(row[1], row[2]) for row in schema.execute(f"PRAGMA table_info({table_name(db2)})")]
+        header, rows = db2_casc.extract_rows(fdid, layout_hash, columns)
+        target = out_dir / f"{db2}.csv"
+        partial = target.with_suffix(".csv.part")
+        with partial.open("w", newline="", encoding="utf-8") as handle:
+            writer = csv.writer(handle)
+            writer.writerow(header)
+            writer.writerows(rows)
+        partial.rename(target)
+        print(f"  extracted {target.name} ({len(rows)} rows, FDID {fdid})")
 
 
 def read_csv(path):
@@ -174,13 +207,15 @@ def import_tables(build, csv_root, db_path):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("command", choices=["fetch", "check", "import"])
+    parser.add_argument("command", choices=["fetch", "extract", "check", "import"])
     parser.add_argument("--build", default=DEFAULT_BUILD)
     parser.add_argument("--csv-root", type=Path, default=DEFAULT_CSV_ROOT)
     parser.add_argument("--db", type=Path, default=DEFAULT_DB)
     args = parser.parse_args()
     if args.command == "fetch":
         fetch(args.build, args.csv_root)
+    elif args.command == "extract":
+        extract(args.build, args.csv_root)
     elif args.command == "check":
         check_csvs(args.csv_root / args.build)
     else:

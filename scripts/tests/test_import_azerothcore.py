@@ -41,10 +41,23 @@ def tdb_template(entry, name, faction, npcflag, classification=0, unit_class=1, 
             f"1,1,{unit_class},0,0,0,0,0,7,0,'',0,1,0,0,0,0,1,0,{flags_extra},'{script}',NULL,66044)")
 
 
-def tdb_difficulty(entry, health_modifier, gold_min, gold_max, loot_id):
+def tdb_difficulty(entry, health_modifier, gold_min, gold_max, loot_id, content_tuning=6, health_expansion=0):
     """One TDB1210 `creature_template_difficulty` row (DifficultyID 0, 29 columns)."""
-    return (f"({entry},0,0,0,6,0,{health_modifier},1,1,1,0,0,0,0,{loot_id},0,0,{gold_min},{gold_max},"
-            "0,0,0,0,0,0,0,0,66044)")
+    return (f"({entry},0,0,0,{content_tuning},{health_expansion},{health_modifier},1,1,1,0,0,0,0,{loot_id},0,0,"
+            f"{gold_min},{gold_max},0,0,0,0,0,0,0,0,66044)")
+
+
+def write_content_tuning(csv_dir, rows):
+    """ContentTuning.csv rows (ID, MinLevelSquish, MaxLevelSquish, MinLevelScalingOffset, MaxLevelScalingOffset)."""
+    path = csv_dir / "ContentTuning.csv"
+    header = path.read_text().splitlines()[0].split(",")
+    with path.open("w", newline="") as handle:
+        writer = csv.writer(handle)
+        writer.writerow(header)
+        for tuning, low, high, low_type, high_type in rows:
+            values = dict.fromkeys(header, 0) | {"ID": tuning, "MinLevelSquish": low, "MaxLevelSquish": high,
+                                                "MinLevelScalingOffset": low_type, "MaxLevelScalingOffset": high_type}
+            writer.writerow(values[column] for column in header)
 
 
 def write_header_only_csvs(csv_dir):
@@ -92,7 +105,8 @@ class CreatureEventImportTests(unittest.TestCase):
         scripts = self.root / "scripts"
         scripts.mkdir()
         (self.root / "data").mkdir()
-        for name in ("import-azerothcore.sh", "world_schema.sql", "db2.py", "db2_schema.sql", "mysql_dump.py", "content_policy.py", "tdb_schema.sql"):
+        for name in ("import-azerothcore.sh", "world_schema.sql", "db2.py", "db2_casc.py", "db2_schema.sql", "mysql_dump.py",
+                     "content_policy.py", "tdb_schema.sql"):
             shutil.copy2(SCRIPTS / name, scripts / name)
         (scripts / "content_overrides.csv").write_text("kind,source_id,retail_id,source_name,retail_name,reason\n")
         self.sql = self.root / "source"
@@ -296,8 +310,11 @@ class CreatureEventImportTests(unittest.TestCase):
             "INSERT INTO `creature_template_model` VALUES\n(42384,0,33167,1,1,66044),(42384,1,33168,1,1,66044),(68,0,3167,1,1,66044);\n"
         )
         (self.tdb / "creature_template_difficulty.sql").write_text(
-            "INSERT INTO `creature_template_difficulty` VALUES\n" + tdb_difficulty(42384, 0.5, 3, 9, 42384) + ";\n"
+            "INSERT INTO `creature_template_difficulty` VALUES\n" + tdb_difficulty(42384, 0.5, 3, 9, 42384) + ","
+            + tdb_difficulty(68, 1.5, 0, 0, 0, content_tuning=864, health_expansion=-1) + ";\n"
         )
+        # 6: levels 5-30. 864: 1 to MaxLevel type 2, the Midnight cap 90.
+        write_content_tuning(self.csv / db2.DEFAULT_BUILD, [(6, 5, 30, 0, 0), (864, 1, 0, 0, 2)])
         (self.tdb / "creature_addon.sql").write_text(
             "INSERT INTO `creature_addon` VALUES\n(311,3110,0,0,0,0,0,1,1,0,0,0,0,0,'130');\n"
         )
@@ -328,11 +345,11 @@ class CreatureEventImportTests(unittest.TestCase):
             )
             self.assertEqual(conn.execute("SELECT count(*) FROM creature").fetchone()[0], 3, "raw spawns stay verbatim")
             self.assertEqual(
-                conn.execute("SELECT entry, name, minlevel, maxlevel, exp, faction, npcflag, HealthModifier,"
-                             " mingold, maxgold, lootid, flags_extra, detection_range FROM content_creature_template"
+                conn.execute("SELECT entry, name, minlevel, maxlevel, exp, ContentTuningID, faction, npcflag, HealthModifier,"
+                             " mingold, maxgold, flags_extra, detection_range FROM content_creature_template"
                              " WHERE entry = 42384").fetchall(),
-                [(42384, "Homeless Stormwind Citizen", 75, 75, 2, 12, 1, 0.5, 3, 9, 0, 2, 20.0)],
-                "TDB-only template: levels of the nearest AzerothCore-template spawns, no TrinityCore loot id",
+                [(42384, "Homeless Stormwind Citizen", 5, 30, 0, 6, 12, 1, 0.5, 3, 9, 2, 20.0)],
+                "TDB-only template: ContentTuning 6 range",
             )
             self.assertEqual(
                 conn.execute("SELECT CreatureID, Idx, CreatureDisplayID FROM content_creature_template_model"
@@ -341,10 +358,10 @@ class CreatureEventImportTests(unittest.TestCase):
                 "TDB-only templates take TrinityCore's models; AzerothCore entries keep theirs",
             )
             self.assertEqual(
-                conn.execute("SELECT entry, minlevel, lootid FROM content_creature_template WHERE entry IN (68, 2455)"
-                             " ORDER BY entry").fetchall(),
-                [(68, 75, 68), (2455, 30, 0)],
-                "AzerothCore templates are kept as imported",
+                conn.execute("SELECT entry, minlevel, maxlevel, exp, ContentTuningID, lootid FROM content_creature_template"
+                             " WHERE entry IN (68, 2455) ORDER BY entry").fetchall(),
+                [(68, 1, 90, 2, 864, 68), (2455, 30, 30, 0, 0, 0)],
+                "AzerothCore templates keep their data; TrinityCore's ContentTuning range replaces fixed levels",
             )
             self.assertEqual(
                 conn.execute("SELECT guid, path_id, mount, bytes2, auras FROM content_creature_addon ORDER BY guid").fetchall(),
@@ -762,3 +779,49 @@ class TdbExcerptImportTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ContentTuningLevelTests(unittest.TestCase):
+    """TrinityCore GetContentTuningData level ranges under Expansion 11 (Midnight)."""
+
+    def test_fixed_range_is_kept(self):
+        self.assertEqual(content_policy.content_tuning_levels(5, 30, 0, 0), (5, 30))
+
+    def test_max_level_type_adds_the_midnight_cap(self):
+        # ContentTuning 1/864: MaxLevelSquish 0 + GetMaxLevelForExpansion(11).
+        self.assertEqual(content_policy.content_tuning_levels(1, 0, 0, 2), (1, 90))
+
+    def test_min_level_type_adds_one_and_prev_expansion_type_the_war_within_cap(self):
+        self.assertEqual(content_policy.content_tuning_levels(0, 0, 1, 3), (1, 80))
+
+    def test_levels_clamp_to_one(self):
+        self.assertEqual(content_policy.content_tuning_levels(0, 0, 0, 0), (1, 1))
+
+
+import db2_casc  # noqa: E402
+
+
+@unittest.skipUnless(db2_casc.CASC_LOCAL.is_file(), f"casc-local not present at {db2_casc.CASC_LOCAL}")
+class LocalContentTuningExtractTests(unittest.TestCase):
+    """Decode ContentTuning (FDID 1962930) straight from the local CASC install."""
+
+    @classmethod
+    def setUpClass(cls):
+        schema = sqlite3.connect(":memory:")
+        schema.executescript(db2.SCHEMA_SQL.read_text())
+        columns = [(row[1], row[2]) for row in schema.execute("PRAGMA table_info(content_tuning)")]
+        fdid, layout = db2.LOCAL_TABLES["ContentTuning"]
+        cls.header, rows = db2_casc.extract_rows(fdid, layout, columns)
+        cls.rows = {row[0]: dict(zip(cls.header, row)) for row in rows}
+
+    def test_every_record_decodes(self):
+        self.assertEqual(len(self.rows), 2929)
+
+    def test_elwynn_tuning_is_levels_5_to_30(self):
+        row = self.rows[2]
+        self.assertEqual((row["MinLevelSquish"], row["MaxLevelSquish"], row["MinLevelScalingOffset"],
+                          row["MaxLevelScalingOffset"], row["XpMultQuest"]), (5, 30, 0, 0, 1.0))
+
+    def test_signed_expansion_and_max_level_type(self):
+        row = self.rows[864]
+        self.assertEqual((row["ExpansionID"], row["MinLevelSquish"], row["MaxLevelScalingOffset"]), (-3, 1, 2))

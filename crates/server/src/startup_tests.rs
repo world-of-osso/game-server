@@ -745,6 +745,7 @@ fn world_db_loads_through_world_data() {
     assert!(!data.spawns_by_map.is_empty(), "no map index built");
     assert!(!data.waypoints.is_empty(), "no waypoints loaded");
     let hogger = data.templates.get(&448).expect("Hogger template missing");
-    assert!(hogger.min_level >= 10);
+    // ContentTuning 73: Elwynn Forest scales 1-30.
+    assert_eq!((hogger.min_level, hogger.max_level), (1, 30));
     assert!(!hogger.models.is_empty(), "Hogger has no models");
 }

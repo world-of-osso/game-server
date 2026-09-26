@@ -9,7 +9,8 @@ world.db replaces only those tables and a failed load leaves them as they were.
 
 Each dump's `INSERT INTO `table` [(cols)] VALUES (...),(...);` statements are
 tokenized with MySQL string escapes (\\' \\" \\\\ \\n \\r \\t \\0 \\Z) decoded, and
-inserted through parameters, so text reaches SQLite verbatim. --prefix loads each
+inserted through parameters, so text reaches SQLite verbatim. Unsigned 64-bit
+integers above 2^63-1 are stored as their two's-complement (signed) bit pattern. --prefix loads each
 dump table into `<P><table>` (TrinityCore `trainer` → `tdb_trainer`), so dumps
 from another source never replace the AzerothCore tables of the same name. All tables load in
 one transaction; any unparseable token fails the whole load.
@@ -69,7 +70,10 @@ def parse_values(text, pos, source):
         elif real is not None:
             row.append(float(real))
         else:
-            row.append(int(integer))
+            value = int(integer)
+            # MySQL BIGINT UNSIGNED masks (TrinityCore AllowableRaces) exceed SQLite's int64:
+            # store their two's-complement bit pattern.
+            row.append(value - (1 << 64) if value >= 1 << 63 else value)
 
 
 def dump_rows(text, table, source):

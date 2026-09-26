@@ -598,9 +598,9 @@ fn every_eastern_kingdoms_spawn_display_exists_in_retail() {
     );
 }
 
-/// Stormwind City Guard (68, level 75 warrior, exp 2, HealthModifier 1.5) and
-/// Diseased Young Wolf (299, level 1 warrior, exp 0, HealthModifier 1).
-const STORMWIND_GUARD: u32 = RETAIL + 313_646;
+/// Diseased Young Wolf (299, ContentTuning 73: levels 1-30, warrior, exp 0,
+/// HealthModifier 1). Spawns take their ContentTuning minimum until the server
+/// scales levels per player.
 const DISEASED_YOUNG_WOLF: u32 = RETAIL + 280_052;
 
 /// Creature::SelectLevel: ceil(creature_classlevelstats.basehp<exp> × HealthModifier).
@@ -610,19 +610,16 @@ fn creature_health_is_class_level_base_hp_times_health_modifier() {
     let app = patrol_app(&[
         STORMWIND_DUMMIES[0],
         STORMWIND_DUMMIES[1],
-        STORMWIND_GUARD,
         DISEASED_YOUNG_WOLF,
     ]);
     let health = |guid| {
         let health = app.world().get::<Health>(entity_of(&app, guid)).unwrap();
         (health.current, health.max)
     };
-    // Level 83 (from the nearest AzerothCore spawns, the Heroic Training Dummies)
-    // basehp2 13945 × TrinityCore HealthModifier 25 and 8.
-    assert_eq!(health(STORMWIND_DUMMIES[0]), (348_625.0, 348_625.0));
-    assert_eq!(health(STORMWIND_DUMMIES[1]), (111_560.0, 111_560.0));
-    // 10635 (level 75 basehp2) × 1.5 = 15952.5.
-    assert_eq!(health(STORMWIND_GUARD), (15953.0, 15953.0));
+    // ContentTuning 181 (levels 1-90): level 1 basehp2 1 × TrinityCore HealthModifier 25 and 8.
+    assert_eq!(health(STORMWIND_DUMMIES[0]), (25.0, 25.0));
+    assert_eq!(health(STORMWIND_DUMMIES[1]), (8.0, 8.0));
+    // Level 1 basehp0 42 × 1.
     assert_eq!(health(DISEASED_YOUNG_WOLF), (42.0, 42.0));
 }
 
@@ -756,7 +753,7 @@ fn stormwind_banker_and_auctioneer_stand_at_retail_positions() {
 }
 
 /// Homeless Stormwind Citizen (42384) has no AzerothCore template: TrinityCore's
-/// template, its Retail models, and the level of its nearest AzerothCore spawns.
+/// template, its Retail models, and its ContentTuning level range.
 #[test]
 #[ignore]
 fn retail_only_creature_spawns_from_its_trinitycore_template() {
@@ -764,7 +761,11 @@ fn retail_only_creature_spawns_from_its_trinitycore_template() {
     assert_eq!(citizens.len(), 71);
     let template = &world_data().templates[&42384];
     assert_eq!(template.name, "Homeless Stormwind Citizen");
-    assert_eq!((template.min_level, template.max_level), (13, 14));
+    assert_eq!(
+        (template.min_level, template.max_level),
+        (5, 30),
+        "ContentTuning 6"
+    );
     assert!(!template.models.is_empty());
     const CITIZEN: u32 = RETAIL + 224_152;
     assert!(citizens.iter().any(|spawn| spawn.guid == CITIZEN));

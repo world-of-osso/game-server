@@ -26,20 +26,18 @@ Retail tdb_* tables (mysql_dump.py --prefix tdb_) and the Retail DB2 tables
   Retail spawns (PhaseId 0, PhaseGroup 0, terrainSwapMap -1, difficulty 0 in
   spawnDifficulties) at guid + RETAIL_GUID_OFFSET instead of AzerothCore's; other
   maps keep AzerothCore's. content_creature_template adds the TrinityCore template of
-  every spawned entry AzerothCore lacks, at the levels of the spawns nearest to its
-  own that have an AzerothCore template (TrinityCore levels are ContentTuning
-  scaling ranges). Addons, formations, waypoints and event memberships follow the
-  spawns' source.
+  every spawned entry AzerothCore lacks; every template TrinityCore tunes carries its
+  ContentTuningID and that ContentTuning's level range (the server scales within it).
+  Addons, formations, waypoints and event memberships follow the spawns' source.
 
 Every dropped row or zeroed reward is written to --report. Runs in one transaction.
 """
 
 import argparse
-import bisect
 import csv
 import sqlite3
 import sys
-from collections import Counter, defaultdict
+from collections import Counter
 from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -283,15 +281,15 @@ RETAIL_MAPS = (0, 1)
 # TrinityCore guids reach 11.8M and 10 collide with kept AzerothCore spawns
 # (maps 229, 230, 530, 609); AzerothCore's reach 5.3M.
 RETAIL_GUID_OFFSET = 20_000_000
-# A TrinityCore-only template takes the levels of the median of this many nearest
-# spawns (per spawn of the entry) that have an AzerothCore template.
-LEVEL_NEIGHBOURS = 5
-# Only spawns that carry an area's level count: not level-1 critters, non-combat pets or
-# invisible triggers, not service NPCs (any npcflag: spirit healers, vendors) and not
-# holiday spawns (any game event), whose levels are set per role.
-CREATURE_TYPE_CRITTER = 8
-CREATURE_TYPE_NON_COMBAT_PET = 12
-CREATURE_FLAG_EXTRA_TRIGGER = 0x80
+# TrinityCore DB2Manager::GetContentTuningData with worldserver.conf's default Expansion 11
+# (Midnight): ContentTuningCalcType None/MinLevel/MaxLevel/PrevExpansionMaxLevel adds 0, 1,
+# GetMaxLevelForExpansion(11) = 90 or GetMaxLevelForExpansion(10) = 80 (SharedDefines.h);
+# levels clamp to 1..MAX_LEVEL 123 (DBCEnums.h).
+CALC_TYPE_ADJUSTMENT = {0: 0, 1: 1, 2: 90, 3: 80}
+MAX_LEVEL = 123
+# creature_classlevelstats has basehp0..2 (Classic, TBC, Wrath); TrinityCore's
+# HealthScalingExpansion -1 is the current expansion.
+WRATH_HEALTH_EXPANSIONS = 2
 
 MAP_LIST = ", ".join(str(m) for m in RETAIL_MAPS)
 BASE_PHASE = """COALESCE(PhaseId, 0) = 0 AND COALESCE(PhaseGroup, 0) = 0 AND terrainSwapMap = -1
@@ -327,79 +325,69 @@ def build_spawns(conn, report):
         FROM temp.retail_spawn r JOIN tdb_creature c ON c.guid = r.tdb_guid""")
 
 
-class SpawnGrid:
-    """Spawns bucketed into CELL-yard squares per map, for nearest-neighbour lookups."""
-
-    CELL = 200.0
-
-    def __init__(self, points):
-        self.cells = defaultdict(list)
-        self.per_map = Counter()
-        for map_id, x, y, value in points:
-            self.cells[(map_id, int(x // self.CELL), int(y // self.CELL))].append((x, y, value))
-            self.per_map[map_id] += 1
-
-    def nearest(self, map_id, x, y, count):
-        """Values of the `count` nearest points on `map_id` (all of them if the map has fewer)."""
-        count = min(count, self.per_map[map_id])
-        cx, cy = int(x // self.CELL), int(y // self.CELL)
-        found = []
-        ring = 0
-        # Rings past `ring` are at least ring * CELL yards away.
-        while count and (len(found) < count or found[count - 1][0] > (ring * self.CELL) ** 2):
-            for dx in range(-ring, ring + 1):
-                for dy in ((-ring, ring) if abs(dx) != ring else range(-ring, ring + 1)):
-                    for px, py, value in self.cells.get((map_id, cx + dx, cy + dy), ()):
-                        bisect.insort(found, ((px - x) ** 2 + (py - y) ** 2, value))
-            ring += 1
-        return [value for _, value in found[:count]]
+def content_tuning_levels(min_level, max_level, min_type, max_type):
+    """(min, max) creature level range of a ContentTuning row (TrinityCore GetContentTuningData)."""
+    def level(base, calc_type):
+        return min(max(base + CALC_TYPE_ADJUSTMENT[calc_type], 1), MAX_LEVEL)
+    return level(min_level, min_type), level(max_level, max_type)
 
 
-def derived_levels(conn):
-    """{entry: (minlevel, maxlevel, exp)} for spawned TrinityCore-only entries."""
-    known = conn.execute(f"""SELECT c.map, c.position_x, c.position_y, t.minlevel, t.maxlevel, t.exp
-        FROM content_creature c JOIN creature_template t ON t.entry = c.id1
-        WHERE c.guid IN (SELECT guid FROM temp.retail_spawn)
-          AND t.type NOT IN ({CREATURE_TYPE_CRITTER}, {CREATURE_TYPE_NON_COMBAT_PET})
-          AND t.flags_extra & {CREATURE_FLAG_EXTRA_TRIGGER} = 0 AND t.npcflag = 0
-          AND c.guid - {RETAIL_GUID_OFFSET} NOT IN (SELECT guid FROM tdb_game_event_creature)""").fetchall()
-    grid = SpawnGrid((m, x, y, (lo, hi, exp)) for m, x, y, lo, hi, exp in known)
-    neighbours = defaultdict(list)
-    for entry, map_id, x, y in conn.execute("""SELECT c.id1, c.map, c.position_x, c.position_y FROM content_creature c
-            WHERE c.guid IN (SELECT guid FROM temp.retail_spawn)
-              AND c.id1 NOT IN (SELECT entry FROM creature_template)"""):
-        neighbours[entry].extend(grid.nearest(map_id, x, y, LEVEL_NEIGHBOURS))
-    levels = {}
-    for entry, values in neighbours.items():
-        if values:
-            values.sort()
-            levels[entry] = values[(len(values) - 1) // 2]
-    return levels
+def health_expansion(health_scaling_expansion):
+    """AzerothCore creature_template.exp (basehp column) for a TrinityCore HealthScalingExpansion."""
+    if health_scaling_expansion < 0:
+        return WRATH_HEALTH_EXPANSIONS
+    return min(health_scaling_expansion, WRATH_HEALTH_EXPANSIONS)
+
+
+def create_level_table(conn):
+    """temp.tuning_level: the level range of every ContentTuning row."""
+    conn.execute("CREATE TEMP TABLE tuning_level (ID INTEGER PRIMARY KEY, minlevel INTEGER, maxlevel INTEGER)")
+    conn.executemany("INSERT INTO temp.tuning_level VALUES (?, ?, ?)", (
+        (tuning, *content_tuning_levels(*values)) for tuning, *values in conn.execute(
+            "SELECT ID, MinLevelSquish, MaxLevelSquish, MinLevelScalingOffset, MaxLevelScalingOffset FROM content_tuning")))
 
 
 def build_templates(conn, report):
     """content_creature_template: AzerothCore's, plus TrinityCore's for spawned entries AzerothCore lacks."""
     clone_table(conn, "creature_template", "content_creature_template")
     conn.execute("INSERT INTO content_creature_template SELECT * FROM creature_template")
-    conn.execute("CREATE TEMP TABLE retail_level (entry INTEGER PRIMARY KEY, minlevel INTEGER, maxlevel INTEGER, exp INTEGER)")
-    conn.executemany("INSERT INTO temp.retail_level VALUES (?, ?, ?, ?)",
-                     ((entry, *values) for entry, values in derived_levels(conn).items()))
-    # Loot, pickpocket and skinning ids index TrinityCore's loot tables, which are not imported;
-    # gossip menus and vendor lists are AzerothCore-keyed. npcflag's high word is npcflag2.
+    conn.execute("ALTER TABLE content_creature_template ADD COLUMN ContentTuningID INTEGER NOT NULL DEFAULT 0")
+    create_level_table(conn)
+    conn.execute("""CREATE TEMP TABLE tdb_difficulty AS SELECT * FROM tdb_creature_template_difficulty WHERE DifficultyID = 0""")
+    conn.execute("CREATE UNIQUE INDEX temp.tdb_difficulty_entry ON tdb_difficulty(Entry)")
+    conn.create_function("health_expansion", 1, health_expansion, deterministic=True)
+    # npcflag's high word is npcflag2. Levels are the ContentTuning range (level 1 without one).
     conn.execute("""INSERT INTO content_creature_template (entry, KillCredit1, KillCredit2, name, subname, IconName,
             minlevel, maxlevel, exp, faction, npcflag, speed_walk, speed_run, scale, rank, dmgschool, DamageModifier,
             BaseAttackTime, RangeAttackTime, BaseVariance, RangeVariance, unit_class, unit_flags, unit_flags2, family,
             type, type_flags, VehicleId, mingold, maxgold, AIName, MovementType, HealthModifier, ManaModifier,
-            ArmorModifier, ExperienceModifier, RacialLeader, movementId, RegenHealth, flags_extra, ScriptName, VerifiedBuild)
+            ArmorModifier, ExperienceModifier, RacialLeader, movementId, RegenHealth, flags_extra, ScriptName, VerifiedBuild,
+            ContentTuningID)
         SELECT t.entry, t.KillCredit1, t.KillCredit2, t.name, t.subname, t.IconName,
-            l.minlevel, l.maxlevel, l.exp, t.faction, t.npcflag & 4294967295, t.speed_walk, t.speed_run, t.scale,
+            COALESCE(l.minlevel, 1), COALESCE(l.maxlevel, 1), health_expansion(d.HealthScalingExpansion), t.faction,
+            t.npcflag & 4294967295, t.speed_walk, t.speed_run, t.scale,
             t.Classification, t.dmgschool, d.DamageModifier, t.BaseAttackTime, t.RangeAttackTime, t.BaseVariance,
             t.RangeVariance, t.unit_class, t.unit_flags, t.unit_flags2, t.family, t.type, d.TypeFlags, t.VehicleId,
             d.GoldMin, d.GoldMax, t.AIName, t.MovementType, d.HealthModifier, d.ManaModifier, d.ArmorModifier,
-            t.ExperienceModifier, t.RacialLeader, t.movementId, t.RegenHealth, t.flags_extra, t.ScriptName, t.VerifiedBuild
+            t.ExperienceModifier, t.RacialLeader, t.movementId, t.RegenHealth, t.flags_extra, t.ScriptName, t.VerifiedBuild,
+            d.ContentTuningID
         FROM tdb_creature_template t
-        JOIN tdb_creature_template_difficulty d ON d.Entry = t.entry AND d.DifficultyID = 0
-        JOIN temp.retail_level l ON l.entry = t.entry""")
+        JOIN temp.tdb_difficulty d ON d.Entry = t.entry
+        LEFT JOIN temp.tuning_level l ON l.ID = d.ContentTuningID
+        WHERE t.entry IN (SELECT id1 FROM content_creature WHERE guid IN (SELECT guid FROM temp.retail_spawn))
+          AND t.entry NOT IN (SELECT entry FROM creature_template)""")
+    # AzerothCore templates TrinityCore also tunes take its ContentTuning range.
+    conn.execute("""UPDATE content_creature_template SET ContentTuningID = d.ContentTuningID,
+            minlevel = l.minlevel, maxlevel = l.maxlevel
+        FROM temp.tdb_difficulty d JOIN temp.tuning_level l ON l.ID = d.ContentTuningID
+        WHERE d.Entry = content_creature_template.entry
+          AND content_creature_template.entry IN (SELECT entry FROM creature_template)""")
+    for entry, tuning in conn.execute("""SELECT t.entry, d.ContentTuningID FROM content_creature_template t
+            JOIN temp.tdb_difficulty d ON d.Entry = t.entry
+            WHERE d.ContentTuningID NOT IN (SELECT ID FROM temp.tuning_level) ORDER BY t.entry""").fetchall():
+        fixed = "level 1" if not conn.execute("SELECT 1 FROM creature_template WHERE entry = ?", (entry,)).fetchone() \
+            else "AzerothCore levels kept"
+        report.drop("tdb_creature_template_difficulty", f"Entry={entry}", tuning, f"ContentTuningID not in ContentTuning; {fixed}")
     retail_only = "SELECT entry FROM content_creature_template WHERE entry NOT IN (SELECT entry FROM creature_template)"
     conn.execute(f"""INSERT INTO content_creature_template_model
         SELECT CreatureID, Idx, CreatureDisplayID, DisplayScale, Probability, VerifiedBuild
@@ -413,7 +401,7 @@ def build_templates(conn, report):
             WHERE guid IN (SELECT guid FROM temp.retail_spawn)
               AND id1 NOT IN (SELECT entry FROM content_creature_template) ORDER BY guid""").fetchall():
         report.drop("tdb_creature", f"guid={guid - RETAIL_GUID_OFFSET}", entry,
-                    "no AzerothCore template and no TrinityCore template with a difficulty 0 row and derivable level")
+                    "no AzerothCore template and no TrinityCore template with a difficulty 0 row")
         conn.execute("DELETE FROM content_creature WHERE guid = ?", (guid,))
 
 
