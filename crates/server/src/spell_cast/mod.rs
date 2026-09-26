@@ -3,8 +3,10 @@
 //!
 //! Pipeline: `SpellCastIntent` → validate → start (instant: resolve now;
 //! cast time: replicated `CastState`, resolve on completion; channel: resolve
-//! at start, `CastState` ticks per aura period) → spend costs, start
-//! cooldown/charges → resolve effects. The GCD starts when the cast starts.
+//! when the cast time, if any, is over, then `CastState` ticks per aura
+//! period, as TrinityCore `Spell::prepare` / `handle_immediate`) → spend costs,
+//! start cooldown/charges → resolve effects. The GCD starts when the cast starts.
+//! Game objects cast for their user without a spellbook check (`cast_granted`).
 //! Cast time, duration, cooldowns, GCD, costs and range take the caster's
 //! spell modifiers (`crate::auras::spell_mods`); aura effects resolve through
 //! `crate::auras::apply_aura`.
@@ -39,7 +41,10 @@ use crate::stats::CharacterStats;
 use effects::{EffectCtx, UnhandledEffects};
 use targets::Relation;
 
-const SPELL_ATTR0_CASTABLE_WHILE_MOVING: u32 = 0x1000_0000;
+/// `SpellInterruptFlags::Movement`.
+const SPELL_INTERRUPT_MOVEMENT: u32 = 0x1;
+/// `SpellAuraInterruptFlags::Moving | Turning`.
+const CHANNEL_INTERRUPT_MOVING: u32 = 0x8 | 0x10;
 /// SPELL_ATTR1_IS_CHANNELLED / SPELL_ATTR1_IS_SELF_CHANNELLED.
 const SPELL_ATTR1_CHANNELED: u32 = 0x4 | 0x40;
 /// `SpellPower.PowerType` -2 costs health.
@@ -253,6 +258,22 @@ fn is_channeled(spell: &SpellInfo) -> bool {
     attributes(spell, 1) & SPELL_ATTR1_CHANNELED != 0
 }
 
+/// Moving leaves the cast bar alone (`Spell::CheckMovement`: no
+/// `SpellInterruptFlags::Movement`).
+fn cast_allows_moving(spell: &SpellInfo) -> bool {
+    spell
+        .interrupts
+        .as_ref()
+        .is_none_or(|interrupts| interrupts.interrupt_flags & SPELL_INTERRUPT_MOVEMENT == 0)
+}
+
+/// Moving leaves the channel alone (`SpellInfo::IsMoveAllowedChannel`).
+fn channel_allows_moving(spell: &SpellInfo) -> bool {
+    spell.interrupts.as_ref().is_none_or(|interrupts| {
+        interrupts.channel_interrupt_flags[0] & CHANNEL_INTERRUPT_MOVING == 0
+    })
+}
+
 fn modify(world: &World, caster: Entity, spell: &SpellInfo, op: SpellModOp, base: f32) -> f32 {
     spell_mods::modify(world, caster, spell, op, base)
 }
@@ -282,7 +303,7 @@ fn cast_time_ms(world: &World, caster: Entity, spell: &SpellInfo) -> i32 {
 }
 
 /// Channel duration after Duration mods.
-fn duration_ms(world: &World, caster: Entity, spell: &SpellInfo) -> i32 {
+pub(crate) fn duration_ms(world: &World, caster: Entity, spell: &SpellInfo) -> i32 {
     let base = spell
         .misc
         .as_ref()
@@ -318,7 +339,7 @@ fn owner_connection(world: &mut World, player: Entity) -> Option<Entity> {
         .find_map(|(connection, link)| (link.0 == player).then_some(connection))
 }
 
-fn send_to_owner<M: lightyear::prelude::Message + Clone>(
+pub(crate) fn send_to_owner<M: lightyear::prelude::Message + Clone>(
     world: &mut World,
     player: Entity,
     message: M,
@@ -439,6 +460,35 @@ pub(crate) fn cast_for_player(
     })
 }
 
+/// Cast a spell a game object grants its user (TrinityCore `GameObject::Use`
+/// casts as the user, spellbook aside), answering `CastFailed` on refusal.
+pub(crate) fn cast_granted(
+    world: &mut World,
+    caster: Entity,
+    spell_id: u32,
+    target: Option<Entity>,
+) -> Result<(), CastFailure> {
+    let result = world
+        .get_resource::<SpellStore>()
+        .and_then(|store| store.get(spell_id))
+        .cloned()
+        .ok_or(CastFailure::UnknownSpell)
+        .and_then(|spell| start_cast(world, caster, &spell, target));
+    if let Err(failure) = &result {
+        let (reason, detail) = failure.to_contract();
+        send_to_owner(
+            world,
+            caster,
+            CastFailed {
+                spell_id,
+                reason,
+                detail,
+            },
+        );
+    }
+    result
+}
+
 fn request_cast(
     world: &mut World,
     caster: Entity,
@@ -506,9 +556,9 @@ fn validate_start(
         return Err(CastFailure::InProgress);
     }
     validate_history(world, caster, spell)?;
-    let has_cast_bar = cast_time_ms(world, caster, spell) > 0 || is_channeled(spell);
-    let may_move = attributes(spell, 0) & SPELL_ATTR0_CASTABLE_WHILE_MOVING != 0;
-    if has_cast_bar && !may_move && world.get::<Moving>(caster).is_some_and(|moving| moving.0) {
+    let blocked_by_moving = (cast_time_ms(world, caster, spell) > 0 && !cast_allows_moving(spell))
+        || (is_channeled(spell) && !channel_allows_moving(spell));
+    if blocked_by_moving && world.get::<Moving>(caster).is_some_and(|moving| moving.0) {
         return Err(CastFailure::Moving);
     }
     if let Some(id) = handled_effects(spell).find_map(targets::unsupported_target) {
@@ -660,26 +710,6 @@ fn start_cast(
     let target = validate_start(world, caster, spell, explicit)?;
     start_gcd(world, caster, spell);
     let cast_ms = cast_time_ms(world, caster, spell);
-    let channel_ms = duration_ms(world, caster, spell);
-    if is_channeled(spell) && channel_ms > 0 {
-        execute_cast(world, caster, spell, target)?;
-        let tick_ms = spell
-            .effects
-            .iter()
-            .map(|effect| effect.aura_period_ms)
-            .filter(|&period| period > 0)
-            .min()
-            .unwrap_or(0);
-        let mut cast = CastState::channel(
-            spell.id,
-            target.map_or(0, Entity::to_bits),
-            channel_ms as f32 / 1000.0,
-            tick_ms as f32 / 1000.0,
-            true,
-        );
-        insert_cast_state(world, caster, spell, &mut cast);
-        return Ok(());
-    }
     if cast_ms > 0 {
         let mut cast = CastState::normal(
             spell.id,
@@ -694,12 +724,45 @@ fn start_cast(
         );
         return Ok(());
     }
-    execute_cast(world, caster, spell, target)
+    execute_and_channel(world, caster, spell, target)
+}
+
+/// Resolve the spell; a channeled spell then channels for its duration.
+fn execute_and_channel(
+    world: &mut World,
+    caster: Entity,
+    spell: &SpellInfo,
+    target: Option<Entity>,
+) -> Result<(), CastFailure> {
+    execute_cast(world, caster, spell, target)?;
+    let channel_ms = duration_ms(world, caster, spell);
+    if !is_channeled(spell) || channel_ms <= 0 {
+        return Ok(());
+    }
+    let tick_ms = spell
+        .effects
+        .iter()
+        .map(|effect| effect.aura_period_ms)
+        .filter(|&period| period > 0)
+        .min()
+        .unwrap_or(0);
+    let mut cast = CastState::channel(
+        spell.id,
+        target.map_or(0, Entity::to_bits),
+        channel_ms as f32 / 1000.0,
+        tick_ms as f32 / 1000.0,
+        true,
+    );
+    insert_cast_state(world, caster, spell, &mut cast);
+    Ok(())
 }
 
 fn insert_cast_state(world: &mut World, caster: Entity, spell: &SpellInfo, cast: &mut CastState) {
     cast.spell_name = spell.name.clone();
-    cast.cast_while_moving = attributes(spell, 0) & SPELL_ATTR0_CASTABLE_WHILE_MOVING != 0;
+    cast.cast_while_moving = match cast.cast_type {
+        CastType::Normal => cast_allows_moving(spell),
+        CastType::Channel => channel_allows_moving(spell),
+    };
     world.entity_mut(caster).insert(cast.clone());
     mark_dirty(world, caster);
 }
@@ -833,6 +896,10 @@ fn resolve_effects(
                     None => aura_masks.push((unit, 1 << effect.index)),
                 }
             }
+            continue;
+        }
+        if let Some(handler) = effects::cast_handler(effect.effect) {
+            handler(world, &ctx, effect);
             continue;
         }
         let Some(handler) = effects::handler(effect.effect) else {
@@ -1022,6 +1089,7 @@ pub(crate) fn cancel_cast(world: &mut World, caster: Entity) {
     mark_dirty(world, caster);
     if cast.cast_type == CastType::Channel {
         crate::auras::channel_ended(world, caster, cast.spell_id);
+        crate::meeting_stone::ritual::channel_ended(world, caster, cast.spell_id);
     }
 }
 
@@ -1093,7 +1161,7 @@ fn complete_cast(world: &mut World, caster: Entity, spell_id: u32, target: Optio
     else {
         return;
     };
-    if let Err(failure) = execute_cast(world, caster, &spell, target) {
+    if let Err(failure) = execute_and_channel(world, caster, &spell, target) {
         debug!("Cast of {spell_id} by {caster} failed on completion: {failure:?}");
         let (reason, detail) = failure.to_contract();
         send_to_owner(
