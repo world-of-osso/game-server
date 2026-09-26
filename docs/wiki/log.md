@@ -268,3 +268,7 @@ Created `systems/quests.md` (quest data, rules, runtime) and `specs/quests.md`; 
 ## [2026-09-26] create | Mail
 
 [[mail]]: player mail at type-19 Mailboxes (postage, C.O.D., 1 h cross-account item delay, 30/3-day expiry, return, PendingMail), Auction House results delivered as real mail (legacy `mailboxes` migrated); [[game-objects]]: mailbox spawns.
+
+## [2026-09-26] update | Trade
+
+[[trade]]: exchange through InventoryModel in one transaction (bag space, gold cap, soulbound), 7th non-traded slot, CancelTradeAccept, AzerothCore initiation checks, Retail messages.

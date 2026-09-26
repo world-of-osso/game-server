@@ -1,22 +1,26 @@
 use bevy::prelude::*;
 use lightyear::prelude::*;
-use shared::components::{Player, Position};
+use shared::components::{Health, Player, Position};
 use shared::protocol::{
-    AcceptTrade, CancelTrade, ClearTradeItem, ConfirmTrade, DeclineTrade, InitiateTrade,
-    SetTradeItem, SetTradeMoney, TradeStateUpdate,
+    AcceptTrade, CancelTrade, CancelTradeAccept, ClearTradeItem, ConfirmTrade, DeclineTrade,
+    InitiateTrade, SetTradeItem, SetTradeMoney, TradeStateUpdate,
 };
 use shared::trade::{TradeItem, TradeManager};
 
 use self::trade_support::{
-    broadcast_trade_state, execute_completed_trade, find_player_by_character_id,
-    find_player_by_name, other_character_id, position_tuple, send_trade_completion,
-    send_trade_error, send_trade_message, send_trade_message_to_other,
+    ERR_NOT_ENOUGH_MONEY, ERR_TRADE_CANCELLED, ERR_TRADE_TOO_FAR, broadcast_trade_state,
+    execute_completed_trade, find_player_by_character_id, find_player_by_name, position_tuple,
+    send_trade_completion, send_trade_error, send_trade_message, send_trade_message_to_other,
     send_trade_snapshot_for_player, trade_error_message, validate_offered_item,
 };
+use crate::auras::ActiveAuras;
 use crate::auth::Authenticated;
+use crate::faction::faction_for_race;
 use crate::gold::GoldUpdateQueue;
+use crate::item_templates::ItemTemplates;
 use crate::networking::PlayerLink;
 use crate::persistence::{self, ClientId, GameDatabase};
+use crate::taxi::TaxiFlight;
 
 #[cfg(test)]
 use std::sync::{
@@ -50,6 +54,7 @@ impl Plugin for TradePlugin {
         app.add_systems(Update, process_clear_item_requests);
         app.add_systems(Update, process_set_money_requests);
         app.add_systems(Update, process_confirm_requests);
+        app.add_systems(Update, process_cancel_accept_requests);
         app.add_systems(FixedUpdate, enforce_trade_range);
     }
 }
@@ -65,6 +70,60 @@ type PlayerQuery<'w, 's> = Query<
     ),
 >;
 type ConnectionQuery<'w, 's> = Query<'w, 's, (Entity, &'static PlayerLink), With<Authenticated>>;
+/// What AzerothCore `HandleInitiateTradeOpcode` checks on both players.
+type TraderStates<'w, 's> = Query<
+    'w,
+    's,
+    (
+        &'static Player,
+        Option<&'static Health>,
+        Option<&'static ActiveAuras>,
+        Has<TaxiFlight>,
+    ),
+>;
+
+/// A player as trade initiation sees them.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct Trader {
+    pub alive: bool,
+    pub stunned: bool,
+    pub in_flight: bool,
+    pub faction: u8,
+}
+
+fn trader(states: &TraderStates, player: Entity) -> Option<Trader> {
+    let (player, health, auras, in_flight) = states.get(player).ok()?;
+    Some(Trader {
+        alive: health.is_none_or(|health| health.current > 0.0),
+        stunned: auras.is_some_and(ActiveAuras::is_stunned),
+        in_flight,
+        faction: faction_for_race(player.race),
+    })
+}
+
+/// AzerothCore `HandleInitiateTradeOpcode` refusals in its order, as Retail text;
+/// `None` lets the request through to the busy and range checks.
+pub(crate) fn initiation_refusal(me: Trader, other: Trader) -> Option<&'static str> {
+    if !me.alive {
+        return Some("You can't do that when you're dead."); // TRADE_STATUS_YOU_DEAD
+    }
+    if me.stunned {
+        return Some("You can't do that right now."); // TRADE_STATUS_YOU_STUNNED
+    }
+    if me.in_flight || other.in_flight {
+        return Some(ERR_TRADE_TOO_FAR); // TRADE_STATUS_TARGET_TO_FAR
+    }
+    if !other.alive {
+        return Some("You can't trade with dead players."); // ERR_TRADE_TARGET_DEAD
+    }
+    if other.stunned {
+        return Some("Target is stunned"); // ERR_TARGET_STUNNED
+    }
+    if me.faction != other.faction {
+        return Some("Target is unfriendly."); // TRADE_STATUS_WRONG_FACTION
+    }
+    None
+}
 
 fn process_initiate_requests(
     mut receivers: Query<
@@ -73,6 +132,7 @@ fn process_initiate_requests(
     >,
     players: PlayerQuery,
     connections: ConnectionQuery,
+    states: TraderStates,
     db: Option<Res<GameDatabase>>,
     mut trade: ResMut<ServerTradeState>,
     mut senders: Query<&mut MessageSender<TradeStateUpdate>>,
@@ -80,7 +140,7 @@ fn process_initiate_requests(
     let Some(db) = db else { return };
     let now = unix_now();
     for (conn_entity, link, mut receiver) in &mut receivers {
-        let Ok((_, player, position, client_id)) = players.get(link.0) else {
+        let Ok((_, _, position, client_id)) = players.get(link.0) else {
             send_trade_error(
                 conn_entity,
                 &mut senders,
@@ -89,12 +149,38 @@ fn process_initiate_requests(
             continue;
         };
         for req in receiver.receive() {
-            let Some((_, target_player, target_pos, target_client_id)) =
+            let Some((target_entity, target_player, target_pos, target_client_id)) =
                 find_player_by_name(&players, &req.target_name)
             else {
-                send_trade_error(conn_entity, &mut senders, "trade target is not online");
+                send_trade_error(
+                    conn_entity,
+                    &mut senders,
+                    format!(
+                        "No player named '{}' is currently playing.",
+                        req.target_name
+                    ), // ERR_CHAT_PLAYER_NOT_FOUND_S
+                );
                 continue;
             };
+            let refusal = trader(&states, link.0)
+                .zip(trader(&states, target_entity))
+                .map(|(me, other)| initiation_refusal(me, other));
+            match refusal {
+                Some(None) => {}
+                Some(Some(text)) => {
+                    send_trade_error(conn_entity, &mut senders, text);
+                    continue;
+                }
+                None => {
+                    send_trade_error(conn_entity, &mut senders, ERR_TRADE_CANCELLED);
+                    continue;
+                }
+            }
+            if trade.manager.is_trading(target_client_id.0) {
+                let busy = format!("{} is busy right now.", target_player.name); // ERR_PLAYER_BUSY_S
+                send_trade_error(conn_entity, &mut senders, busy);
+                continue;
+            }
             let result = trade.manager.initiate_trade(
                 client_id.0,
                 target_client_id.0,
@@ -112,24 +198,17 @@ fn process_initiate_requests(
                         );
                         continue;
                     };
-                    send_trade_snapshot_for_player(
-                        &db.db,
-                        client_id.0,
-                        session,
-                        &players,
-                        &connections,
-                        &mut senders,
-                        Some(format!("trade request sent to {}", target_player.name)),
-                    );
-                    send_trade_snapshot_for_player(
-                        &db.db,
-                        target_client_id.0,
-                        session,
-                        &players,
-                        &connections,
-                        &mut senders,
-                        Some(format!("{} wants to trade", player.name)),
-                    );
+                    for character_id in [client_id.0, target_client_id.0] {
+                        send_trade_snapshot_for_player(
+                            &db.db,
+                            character_id,
+                            session,
+                            &players,
+                            &connections,
+                            &mut senders,
+                            None,
+                        );
+                    }
                 }
                 Err(error) => {
                     send_trade_error(conn_entity, &mut senders, trade_error_message(error));
@@ -170,7 +249,7 @@ fn process_accept_requests(
                             &players,
                             &connections,
                             &mut senders,
-                            Some("trade opened".into()),
+                            None,
                         );
                     }
                 }
@@ -226,7 +305,7 @@ fn handle_decline_request(
 ) -> Result<(), shared::trade::TradeError> {
     let other_id = decline_target(manager, client_id);
     manager.decline_trade(client_id)?;
-    send_trade_message(conn_entity, senders, None, Some("trade declined".into()));
+    send_trade_message(conn_entity, senders, None, Some(ERR_TRADE_CANCELLED.into()));
     notify_other_declined_trade(client_id, other_id, players, connections, senders);
     Ok(())
 }
@@ -253,7 +332,7 @@ fn notify_other_declined_trade(
         connections,
         players,
         senders,
-        Some("trade request declined".into()),
+        Some(ERR_TRADE_CANCELLED.into()),
     );
 }
 
@@ -283,7 +362,7 @@ fn process_cancel_requests(
                         conn_entity,
                         &mut senders,
                         None,
-                        Some("trade cancelled".into()),
+                        Some(ERR_TRADE_CANCELLED.into()),
                     );
                     send_trade_message_to_other(
                         client_id.0,
@@ -291,7 +370,7 @@ fn process_cancel_requests(
                         &connections,
                         &players,
                         &mut senders,
-                        Some("trade cancelled".into()),
+                        Some(ERR_TRADE_CANCELLED.into()),
                     );
                 }
                 Err(error) => {
@@ -310,10 +389,13 @@ fn process_set_item_requests(
     players: PlayerQuery,
     connections: ConnectionQuery,
     db: Option<Res<GameDatabase>>,
+    templates: Option<Res<ItemTemplates>>,
     mut trade: ResMut<ServerTradeState>,
     mut senders: Query<&mut MessageSender<TradeStateUpdate>>,
 ) {
-    let Some(db) = db else { return };
+    let (Some(db), Some(templates)) = (db, templates) else {
+        return;
+    };
     for (conn_entity, link, mut receiver) in &mut receivers {
         let Ok((_, _, _, client_id)) = players.get(link.0) else {
             send_trade_error(
@@ -324,7 +406,7 @@ fn process_set_item_requests(
             continue;
         };
         for req in receiver.receive() {
-            if let Err(error) = validate_offered_item(&db.db, client_id.0, &req) {
+            if let Err(error) = validate_offered_item(&db.db, &templates, client_id.0, &req) {
                 send_trade_error(conn_entity, &mut senders, &error);
                 continue;
             }
@@ -405,7 +487,7 @@ fn process_set_money_requests(
         |db, client_id, req, manager| {
             let inventory = persistence::load_inventory(db, client_id);
             if inventory.gold < req.copper {
-                return Err("not enough gold for trade".into());
+                return Err(ERR_NOT_ENOUGH_MONEY.into());
             }
             manager
                 .set_gold(client_id, req.copper)
@@ -463,11 +545,21 @@ fn process_confirm_requests(
     players: PlayerQuery,
     connections: ConnectionQuery,
     db: Option<Res<GameDatabase>>,
+    templates: Option<Res<ItemTemplates>>,
     mut trade: ResMut<ServerTradeState>,
     mut gold_updates: ResMut<GoldUpdateQueue>,
     mut senders: Query<&mut MessageSender<TradeStateUpdate>>,
 ) {
-    let Some(db) = db else { return };
+    let (Some(db), Some(templates)) = (db, templates) else {
+        return;
+    };
+    let mut exchange = Exchange {
+        db: &db.db,
+        templates: &templates,
+        gold_updates: &mut gold_updates,
+        connections: &connections,
+        players: &players,
+    };
     for (conn_entity, link, mut receiver) in &mut receivers {
         let Ok((_, _, _, client_id)) = players.get(link.0) else {
             send_trade_error(
@@ -478,101 +570,120 @@ fn process_confirm_requests(
             continue;
         };
         for _ in receiver.receive() {
-            handle_confirm_trade_request(
-                ConfirmTradeRequest {
-                    connection: conn_entity,
-                    character_id: client_id.0,
-                },
-                &mut trade.manager,
-                &db,
-                &mut gold_updates,
-                &connections,
-                &players,
-                &mut senders,
-            );
+            exchange.confirm(conn_entity, client_id.0, &mut trade.manager, &mut senders);
         }
     }
 }
 
-struct ConfirmTradeRequest {
-    connection: Entity,
-    character_id: u64,
+/// Everything an accepted trade needs to execute and report.
+struct Exchange<'a, 'w, 's> {
+    db: &'a redb::Database,
+    templates: &'a ItemTemplates,
+    gold_updates: &'a mut GoldUpdateQueue,
+    connections: &'a ConnectionQuery<'w, 's>,
+    players: &'a PlayerQuery<'w, 's>,
 }
 
-fn handle_confirm_trade_request(
-    request: ConfirmTradeRequest,
-    manager: &mut TradeManager,
-    db: &GameDatabase,
-    gold_updates: &mut GoldUpdateQueue,
-    connections: &ConnectionQuery,
-    players: &PlayerQuery,
-    senders: &mut Query<&mut MessageSender<TradeStateUpdate>>,
-) {
-    match manager.confirm_trade(request.character_id) {
-        Ok(Some(completed)) => {
-            let result = execute_and_send_completed_trade(
-                db,
-                &completed,
-                gold_updates,
-                connections,
-                players,
-                senders,
-            );
-            if let Err(error) = result {
-                send_completed_trade_error(
-                    request.connection,
-                    request.character_id,
-                    &completed,
-                    error,
-                    connections,
-                    players,
-                    senders,
-                );
+impl Exchange<'_, '_, '_> {
+    /// AzerothCore `HandleAcceptTradeOpcode`: once both accepted, execute; a refusal
+    /// keeps the window open with both accepts cleared and each side's reason.
+    fn confirm(
+        &mut self,
+        connection: Entity,
+        character_id: u64,
+        manager: &mut TradeManager,
+        senders: &mut Query<&mut MessageSender<TradeStateUpdate>>,
+    ) {
+        let completed = match manager.confirm_trade(character_id) {
+            Ok(Some(completed)) => completed,
+            Ok(None) => {
+                if let Some(session) = manager.get_session(character_id) {
+                    broadcast_trade_state(
+                        self.db,
+                        session,
+                        self.players,
+                        self.connections,
+                        senders,
+                        None,
+                    );
+                }
+                return;
+            }
+            Err(error) => {
+                send_trade_error(connection, senders, trade_error_message(error));
+                return;
+            }
+        };
+        match execute_completed_trade(self.db, self.templates, &completed, self.gold_updates) {
+            Ok(()) => {
+                manager.finish_trade(character_id);
+                send_trade_completion(&completed, self.connections, self.players, senders);
+            }
+            Err(refusal) => {
+                manager.refuse_accepts(character_id);
+                let Some(session) = manager.get_session(character_id) else {
+                    return;
+                };
+                for viewer in [completed.initiator, completed.target] {
+                    let Some(viewer_connection) = trade_support::connection_for_character(
+                        self.players,
+                        self.connections,
+                        viewer,
+                    ) else {
+                        continue;
+                    };
+                    let snapshot =
+                        trade_support::build_trade_snapshot(self.db, viewer, session, self.players);
+                    if let Ok(mut sender) = senders.get_mut(viewer_connection) {
+                        sender.send::<shared::protocol::TradeChannel>(TradeStateUpdate {
+                            trade: Some(snapshot),
+                            message: None,
+                            error: Some(refusal.message_for(viewer).into()),
+                        });
+                    }
+                }
             }
         }
-        Ok(None) => {
-            if let Some(session) = manager.get_session(request.character_id) {
-                broadcast_trade_state(&db.db, session, players, connections, senders, None);
-            }
-        }
-        Err(error) => send_trade_error(request.connection, senders, trade_error_message(error)),
     }
 }
 
-fn execute_and_send_completed_trade(
-    db: &GameDatabase,
-    completed: &shared::trade::CompletedTrade,
-    gold_updates: &mut GoldUpdateQueue,
-    connections: &ConnectionQuery,
-    players: &PlayerQuery,
-    senders: &mut Query<&mut MessageSender<TradeStateUpdate>>,
-) -> Result<(), String> {
-    execute_completed_trade(&db.db, completed, gold_updates)?;
-    send_trade_completion(completed, connections, players, senders);
-    Ok(())
-}
-
-fn send_completed_trade_error(
-    conn_entity: Entity,
-    character_id: u64,
-    completed: &shared::trade::CompletedTrade,
-    error: String,
-    connections: &ConnectionQuery,
-    players: &PlayerQuery,
-    senders: &mut Query<&mut MessageSender<TradeStateUpdate>>,
+/// Retail `CancelTradeAccept`: withdraw the player's own accept.
+fn process_cancel_accept_requests(
+    mut receivers: Query<
+        (Entity, &PlayerLink, &mut MessageReceiver<CancelTradeAccept>),
+        With<Authenticated>,
+    >,
+    players: PlayerQuery,
+    connections: ConnectionQuery,
+    db: Option<Res<GameDatabase>>,
+    mut trade: ResMut<ServerTradeState>,
+    mut senders: Query<&mut MessageSender<TradeStateUpdate>>,
 ) {
-    send_trade_error(conn_entity, senders, &error);
-    let Some(other_id) = other_character_id(completed, character_id) else {
-        return;
-    };
-    send_trade_message_to_other(
-        character_id,
-        other_id,
-        connections,
-        players,
-        senders,
-        Some(error),
-    );
+    let Some(db) = db else { return };
+    for (conn_entity, link, mut receiver) in &mut receivers {
+        let Ok((_, _, _, client_id)) = players.get(link.0) else {
+            continue;
+        };
+        for _ in receiver.receive() {
+            match trade.manager.unconfirm_trade(client_id.0) {
+                Ok(()) => {
+                    if let Some(session) = trade.manager.get_session(client_id.0) {
+                        broadcast_trade_state(
+                            &db.db,
+                            session,
+                            &players,
+                            &connections,
+                            &mut senders,
+                            None,
+                        );
+                    }
+                }
+                Err(error) => {
+                    send_trade_error(conn_entity, &mut senders, trade_error_message(error));
+                }
+            }
+        }
+    }
 }
 
 fn enforce_trade_range(
@@ -592,7 +703,7 @@ fn enforce_trade_range(
             &connections,
             &players,
             &mut senders,
-            Some("trade cancelled: out of range".into()),
+            Some(ERR_TRADE_TOO_FAR.into()),
         );
         send_trade_message_to_other(
             target,
@@ -600,7 +711,7 @@ fn enforce_trade_range(
             &connections,
             &players,
             &mut senders,
-            Some("trade cancelled: out of range".into()),
+            Some(ERR_TRADE_TOO_FAR.into()),
         );
     }
 }

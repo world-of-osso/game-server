@@ -252,6 +252,14 @@ impl ActiveAuras {
         self.auras.iter()
     }
 
+    /// Under a `SPELL_AURA_MOD_STUN` effect (AzerothCore `UNIT_STATE_STUNNED`).
+    pub fn is_stunned(&self) -> bool {
+        self.auras
+            .iter()
+            .flat_map(|aura| &aura.effects)
+            .any(|effect| effect.aura_type == handlers::MOD_STUN)
+    }
+
     pub fn has_spell(&self, spell_id: u32) -> bool {
         self.auras.iter().any(|aura| aura.spell_id == spell_id)
     }

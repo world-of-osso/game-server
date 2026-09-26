@@ -535,9 +535,10 @@ fn completed_trade_emits_inventory_deltas_to_both_owners() {
     assert_eq!(taker_deltas.len(), 1);
     let change = &taker_deltas[0].changes;
     assert_eq!(change.len(), 1);
-    assert_eq!(change[0].location, bag(3));
+    // The traded linen tops up the taker's own stack (AzerothCore `StoreItem`).
+    assert_eq!(change[0].location, bag(0));
     let item = change[0].item.as_ref().unwrap();
-    assert_eq!((item.item_id, item.count), (LINEN, 5));
+    assert_eq!((item.item_id, item.count), (LINEN, 25));
 }
 
 #[test]

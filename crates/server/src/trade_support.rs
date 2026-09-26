@@ -5,9 +5,14 @@ use shared::protocol::{
     SetTradeItem, TradeChannel, TradeItemSnapshot, TradePartySnapshot, TradePhase, TradeSnapshot,
     TradeStateUpdate,
 };
-use shared::trade::{CompletedTrade, TRADE_SLOT_COUNT, TradeItem, TradeOffer};
+use shared::trade::{
+    CompletedTrade, TRADE_SLOT_COUNT, TRADE_SLOT_NONTRADED, TradeItem, TradeOffer,
+};
 
-use crate::gold::GoldUpdateQueue;
+use crate::gold::{GoldUpdateQueue, MAX_MONEY};
+use crate::inventory::{inventory_model::InventoryModel, load_model};
+use crate::item_templates::ItemTemplates;
+use crate::persistence::inventory_store::write_inventory_record;
 use crate::persistence::{self, ClientId, InventoryData, InventoryItemData};
 use crate::trade::{ConnectionQuery, PlayerQuery};
 
@@ -55,7 +60,7 @@ pub(super) fn send_trade_snapshot_for_player(
     send_trade_message(conn_entity, senders, Some(snapshot), message);
 }
 
-fn build_trade_snapshot(
+pub(super) fn build_trade_snapshot(
     db: &redb::Database,
     viewer_id: u64,
     session: &shared::trade::TradeSession,
@@ -163,100 +168,141 @@ fn snapshot_trade_item(inventory: &InventoryData, item: &TradeItem) -> TradeItem
     }
 }
 
+/// AzerothCore `HandleSetTradeItemOpcode` / `Item::CanBeTraded`: a bag item with
+/// enough in the stack, not soulbound unless it sits in the "Will not be traded" slot.
 pub(super) fn validate_offered_item(
     db: &redb::Database,
+    templates: &ItemTemplates,
     character_id: u64,
     req: &SetTradeItem,
 ) -> Result<(), String> {
-    if usize::from(req.slot) >= TRADE_SLOT_COUNT {
-        return Err("trade slot is out of range".into());
+    let slot = usize::from(req.slot);
+    if slot >= TRADE_SLOT_COUNT || req.stack_count == 0 {
+        return Err(ERR_ITEM_NOT_FOUND.into());
     }
-    if req.stack_count == 0 {
-        return Err("trade stack count must be greater than zero".into());
-    }
-
-    let inventory = persistence::load_inventory(db, character_id);
-    let Some(item) = inventory
-        .items
-        .iter()
-        .find(|item| item.item_guid == req.item_guid)
-    else {
-        return Err("item is not in inventory".into());
+    let model = load_model(db, templates, character_id).map_err(|_| ERR_ITEM_NOT_FOUND)?;
+    let Some(item) = model.bag_item(req.item_guid) else {
+        return Err(ERR_ITEM_NOT_FOUND.into());
     };
     if item.stack_count < u32::from(req.stack_count) {
-        return Err("not enough quantity for trade offer".into());
+        return Err(ERR_ITEM_NOT_FOUND.into());
+    }
+    if slot != TRADE_SLOT_NONTRADED && model.is_soulbound(req.item_guid) {
+        return Err(ERR_TRADE_BOUND_ITEM.into());
     }
     Ok(())
 }
 
+/// Why an accepted exchange was refused; each side sees its own Retail text.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum ExchangeRefusal {
+    /// `character_id` no longer has an offered item or the offered money.
+    OfferGone(u64),
+    /// `character_id` has no room for what they receive.
+    BagFull(u64),
+    /// `character_id` would pass the gold cap.
+    TooMuchGold(u64),
+}
+
+impl ExchangeRefusal {
+    /// The text `viewer` sees.
+    pub(super) fn message_for(self, viewer: u64) -> &'static str {
+        match self {
+            Self::OfferGone(_) => ERR_ITEM_NOT_FOUND,
+            Self::BagFull(who) if who == viewer => "Trade failed, you don't have enough space.", // ERR_TRADE_BAG_FULL
+            Self::BagFull(_) => "Trade failed, target doesn't have enough space.", // ERR_TRADE_TARGET_BAG_FULL
+            Self::TooMuchGold(who) if who == viewer => "At gold limit", // ERR_TOO_MUCH_GOLD
+            Self::TooMuchGold(_) => "Trade failed.",
+        }
+    }
+}
+
+/// AzerothCore `HandleAcceptTradeOpcode`: both sides' items leave their bags, money
+/// moves, each side stores what it receives, and both inventories are written in
+/// one transaction. Nothing changes when anything does not fit.
 pub(super) fn execute_completed_trade(
     db: &redb::Database,
+    templates: &ItemTemplates,
     trade: &CompletedTrade,
     gold_updates: &mut GoldUpdateQueue,
-) -> Result<(), String> {
-    let mut initiator_inventory = persistence::load_inventory(db, trade.initiator);
-    let mut target_inventory = persistence::load_inventory(db, trade.target);
-    if initiator_inventory.gold < trade.initiator_offer.gold {
-        return Err("trade failed: initiator no longer has enough gold".into());
-    }
-    if target_inventory.gold < trade.target_offer.gold {
-        return Err("trade failed: target no longer has enough gold".into());
-    }
-
-    let initiator_items = take_offered_items(&mut initiator_inventory, &trade.initiator_offer)?;
-    let target_items = take_offered_items(&mut target_inventory, &trade.target_offer)?;
-
-    initiator_inventory.gold -= trade.initiator_offer.gold;
-    target_inventory.gold -= trade.target_offer.gold;
-    initiator_inventory.gold = initiator_inventory
-        .gold
-        .saturating_add(trade.target_offer.gold);
-    target_inventory.gold = target_inventory
-        .gold
-        .saturating_add(trade.initiator_offer.gold);
-
-    initiator_inventory.items.extend(target_items);
-    target_inventory.items.extend(initiator_items);
-
-    persistence::save_inventory(db, trade.initiator, &initiator_inventory);
-    persistence::save_inventory(db, trade.target, &target_inventory);
-    gold_updates.record(trade.initiator, initiator_inventory.gold);
-    gold_updates.record(trade.target, target_inventory.gold);
+) -> Result<(), ExchangeRefusal> {
+    let load = |id| load_model(db, templates, id).map_err(|_| ExchangeRefusal::OfferGone(id));
+    let mut initiator = load(trade.initiator)?;
+    let mut target = load(trade.target)?;
+    let mut mint = || persistence::next_id(db, "item_instance");
+    let to_target = take_offered_items(&mut initiator, &trade.initiator_offer, &mut mint)
+        .ok_or(ExchangeRefusal::OfferGone(trade.initiator))?;
+    let to_initiator = take_offered_items(&mut target, &trade.target_offer, &mut mint)
+        .ok_or(ExchangeRefusal::OfferGone(trade.target))?;
+    let initiator_gold = exchanged_gold(
+        &initiator,
+        trade.initiator,
+        trade.initiator_offer.gold,
+        trade.target_offer.gold,
+    )?;
+    let target_gold = exchanged_gold(
+        &target,
+        trade.target,
+        trade.target_offer.gold,
+        trade.initiator_offer.gold,
+    )?;
+    store_received(&mut initiator, to_initiator, templates, &mut mint)
+        .ok_or(ExchangeRefusal::BagFull(trade.initiator))?;
+    store_received(&mut target, to_target, templates, &mut mint)
+        .ok_or(ExchangeRefusal::BagFull(trade.target))?;
+    initiator.set_gold(initiator_gold);
+    target.set_gold(target_gold);
+    let txn = db.begin_write().expect("Failed to begin trade write");
+    write_inventory_record(&txn, trade.initiator, &initiator.into_record());
+    write_inventory_record(&txn, trade.target, &target.into_record());
+    txn.commit().expect("Failed to commit trade");
+    gold_updates.record(trade.initiator, initiator_gold);
+    gold_updates.record(trade.target, target_gold);
     Ok(())
+}
+
+/// Gold after giving `given` and receiving `received`.
+fn exchanged_gold(
+    model: &InventoryModel,
+    character_id: u64,
+    given: u64,
+    received: u64,
+) -> Result<u64, ExchangeRefusal> {
+    let left = model
+        .gold()
+        .checked_sub(given)
+        .ok_or(ExchangeRefusal::OfferGone(character_id))?;
+    left.checked_add(received)
+        .filter(|gold| *gold <= MAX_MONEY)
+        .ok_or(ExchangeRefusal::TooMuchGold(character_id))
 }
 
 fn take_offered_items(
-    inventory: &mut InventoryData,
+    model: &mut InventoryModel,
     offer: &TradeOffer,
-) -> Result<Vec<InventoryItemData>, String> {
-    let mut moved = Vec::new();
-    for item in offer.slots.iter().flatten() {
-        let Some(index) = inventory
-            .items
-            .iter()
-            .position(|entry| entry.item_guid == item.item_guid)
-        else {
-            return Err(format!(
-                "trade item {} is no longer in inventory",
-                item.item_guid
-            ));
-        };
-        if inventory.items[index].stack_count < u32::from(item.count) {
-            return Err(format!(
-                "trade item {} no longer has enough quantity",
-                item.item_guid
-            ));
-        }
+    mint: &mut impl FnMut() -> u64,
+) -> Option<Vec<InventoryItemData>> {
+    offer
+        .traded_items()
+        .map(|item| {
+            model
+                .take_bag_item(item.item_guid, u32::from(item.count), mint)
+                .ok()
+        })
+        .collect()
+}
 
-        let mut moved_item = inventory.items[index].clone();
-        moved_item.stack_count = u32::from(item.count);
-        inventory.items[index].stack_count -= u32::from(item.count);
-        if inventory.items[index].stack_count == 0 {
-            inventory.items.remove(index);
-        }
-        moved.push(moved_item);
+fn store_received(
+    model: &mut InventoryModel,
+    items: Vec<InventoryItemData>,
+    templates: &ItemTemplates,
+    mint: &mut impl FnMut() -> u64,
+) -> Option<()> {
+    for item in items {
+        let template = templates.get(item.item_id).copied().unwrap_or_default();
+        model.store_item(item, template, mint).ok()?;
     }
-    Ok(moved)
+    Some(())
 }
 
 pub(super) fn send_trade_completion(
@@ -265,22 +311,16 @@ pub(super) fn send_trade_completion(
     players: &PlayerQuery,
     senders: &mut Query<&mut MessageSender<TradeStateUpdate>>,
 ) {
-    send_trade_message_to_other(
-        completed.initiator,
-        completed.initiator,
-        connections,
-        players,
-        senders,
-        Some("trade completed".into()),
-    );
-    send_trade_message_to_other(
-        completed.target,
-        completed.target,
-        connections,
-        players,
-        senders,
-        Some("trade completed".into()),
-    );
+    for character_id in [completed.initiator, completed.target] {
+        send_trade_message_to_other(
+            character_id,
+            character_id,
+            connections,
+            players,
+            senders,
+            Some(ERR_TRADE_COMPLETE.into()),
+        );
+    }
 }
 
 pub(super) fn send_trade_message_to_other(
@@ -362,34 +402,32 @@ fn player_name(players: &PlayerQuery, character_id: u64) -> String {
         .unwrap_or_else(|| format!("Player {character_id}"))
 }
 
-pub(super) fn other_character_id(completed: &CompletedTrade, player_id: u64) -> Option<u64> {
-    if completed.initiator == player_id {
-        Some(completed.target)
-    } else if completed.target == player_id {
-        Some(completed.initiator)
-    } else {
-        None
-    }
-}
-
 pub(super) fn position_tuple(position: &Position) -> (f32, f32, f32) {
     (position.x, position.y, position.z)
 }
 
+pub(super) const ERR_ITEM_NOT_FOUND: &str = "The item was not found.";
+pub(super) const ERR_TRADE_BOUND_ITEM: &str = "You can't trade a soulbound item.";
+pub(super) const ERR_TRADE_COMPLETE: &str = "Trade complete.";
+pub(super) const ERR_TRADE_CANCELLED: &str = "Trade canceled.";
+pub(super) const ERR_TRADE_TOO_FAR: &str = "Trade target is too far away.";
+pub(super) const ERR_NOT_ENOUGH_MONEY: &str = "You don't have enough money.";
+
+/// Retail GlobalStrings text for a trade refusal.
 pub(super) fn trade_error_message(error: shared::trade::TradeError) -> &'static str {
+    use shared::trade::TradeError;
     match error {
-        shared::trade::TradeError::OutOfRange => "trade target is out of range",
-        shared::trade::TradeError::CannotTradeWithSelf => "cannot trade with yourself",
-        shared::trade::TradeError::AlreadyTrading => "one of the players is already trading",
-        shared::trade::TradeError::NoPendingRequest => "no pending trade request",
-        shared::trade::TradeError::NoActiveSession => "no active trade session",
-        shared::trade::TradeError::InvalidTarget => "invalid trade target",
-        shared::trade::TradeError::PlayerDead => "cannot trade while dead",
-        shared::trade::TradeError::PlayerInCombat => "cannot trade while in combat",
-        shared::trade::TradeError::TradeNotOpen => "trade window is not open",
-        shared::trade::TradeError::InvalidSlot => "trade slot is out of range",
-        shared::trade::TradeError::ItemAlreadyOffered => "item is already offered in trade",
-        shared::trade::TradeError::NotConfirmed => "trade is not confirmed",
-        shared::trade::TradeError::ItemSoulbound => "item is soulbound and cannot be traded",
+        TradeError::OutOfRange => ERR_TRADE_TOO_FAR,
+        TradeError::CannotTradeWithSelf => "You can't trade with yourself.", // ERR_TRADE_SELF
+        TradeError::AlreadyTrading => "You are already trading",             // ERR_ALREADY_TRADING
+        TradeError::InvalidTarget => "No target or name specified.", // ERR_NO_TARGET_OR_NAME
+        TradeError::PlayerDead => "You can't do that when you're dead.", // ERR_PLAYER_DEAD
+        TradeError::PlayerInCombat => "You can't do that while in combat", // ERR_NOT_IN_COMBAT
+        TradeError::ItemSoulbound => ERR_TRADE_BOUND_ITEM,
+        TradeError::ItemAlreadyOffered | TradeError::InvalidSlot => ERR_ITEM_NOT_FOUND,
+        TradeError::NoPendingRequest
+        | TradeError::NoActiveSession
+        | TradeError::TradeNotOpen
+        | TradeError::NotConfirmed => ERR_TRADE_CANCELLED,
     }
 }
