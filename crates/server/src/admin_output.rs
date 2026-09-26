@@ -21,6 +21,7 @@ fn print_listing_response(response: &AdminResponse) -> bool {
         AdminResponse::AccountsListed { accounts } => print_accounts(accounts),
         AdminResponse::CharactersListed { characters } => print_characters(characters),
         AdminResponse::CharacterFound { character } => print_character_search(character.as_ref()),
+        AdminResponse::CombatLogEntries { count, entries } => print_combat_log(*count, entries),
         _ => return false,
     }
     true
@@ -336,4 +337,19 @@ fn print_appearance_set(character_name: &str, appearance: &CharacterAppearance) 
         appearance.hair_color,
         appearance.facial_style
     );
+}
+
+fn print_combat_log(count: usize, entries: &[CombatLogSummary]) {
+    println!("Combat log: {count} entries");
+    for entry in entries {
+        println!(
+            "t={:.2} {} attacker={} target={} amount={} spell_id={}",
+            entry.timestamp,
+            entry.event_type,
+            entry.attacker,
+            entry.target,
+            entry.amount,
+            entry.spell_id
+        );
+    }
 }

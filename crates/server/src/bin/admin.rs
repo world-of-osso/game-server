@@ -135,11 +135,30 @@ enum AdminRequest {
         character_name: String,
         node: u32,
     },
+    CombatLog {
+        last_seconds: f64,
+    },
     Ping,
+}
+
+/// Mirror of the server's `CombatLogSummary` (same field order: msgpack
+/// encodes structs as arrays).
+#[derive(Debug, Serialize, Deserialize)]
+struct CombatLogSummary {
+    timestamp: f64,
+    event_type: String,
+    attacker: u64,
+    target: u64,
+    amount: f32,
+    spell_id: u32,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 enum AdminResponse {
+    CombatLogEntries {
+        count: usize,
+        entries: Vec<CombatLogSummary>,
+    },
     EquipmentListed {
         character_id: u64,
         character_name: String,
@@ -309,6 +328,7 @@ fn print_usage() {
     eprintln!("  game-server-admin list-accounts");
     eprintln!("  game-server-admin list-characters [username]");
     eprintln!("  game-server-admin find-character <name>");
+    eprintln!("  game-server-admin combat-log <last_seconds>");
     eprintln!("  game-server-admin move-characters <from_username> <to_username>");
     eprintln!("  game-server-admin check-account <username>");
     eprintln!("  game-server-admin check-password <username> <password>");
@@ -374,6 +394,7 @@ fn parse_request(args: &[String]) -> AdminRequest {
         "set-level" => parse_set_level(args),
         "set-credentials" => parse_set_credentials(args),
         "set-position" => parse_set_position(args),
+        "combat-log" => parse_combat_log(args),
         "set-gold" => parse_set_gold(args),
         "grant-item" => parse_grant_item(args),
         "mail-deliver-now" => {
@@ -667,6 +688,15 @@ fn parse_set_credentials(args: &[String]) -> AdminRequest {
     }
 }
 
+fn parse_combat_log(args: &[String]) -> AdminRequest {
+    require_args(args, 3, "combat-log <last_seconds>");
+    let last_seconds: f64 = args[2].parse().unwrap_or_else(|_| {
+        eprintln!("Invalid last_seconds: {}", args[2]);
+        std::process::exit(1);
+    });
+    AdminRequest::CombatLog { last_seconds }
+}
+
 fn parse_set_position(args: &[String]) -> AdminRequest {
     require_args(args, 6, "set-position <character_name> <x> <y> <z>");
     let x: f32 = args[3].parse().unwrap_or_else(|_| {
@@ -825,6 +855,22 @@ mod tests {
             grant,
             AdminRequest::GrantItem { ref character_name, item_id: 2589, count: 4 }
                 if character_name == "Stitchwell"
+        ));
+    }
+
+    #[test]
+    fn parse_combat_log_request() {
+        let args = vec![
+            "game-server-admin".to_string(),
+            "combat-log".to_string(),
+            "25".to_string(),
+        ];
+
+        let request = parse_request(&args);
+
+        assert!(matches!(
+            request,
+            AdminRequest::CombatLog { last_seconds } if last_seconds == 25.0
         ));
     }
 
