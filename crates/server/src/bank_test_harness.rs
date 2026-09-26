@@ -380,6 +380,29 @@ impl Harness {
         object
     }
 
+    /// Spawn the game object of spawn `guid` 2 yd away and use it.
+    pub fn use_game_object(&mut self, guid: u32) -> Entity {
+        let spawns = crate::game_objects::load_game_object_spawns(&self.conn).unwrap();
+        let mut spawn = spawns
+            .0
+            .into_iter()
+            .find(|spawn| spawn.guid == guid)
+            .unwrap_or_else(|| panic!("game object spawn {guid}"));
+        spawn.position = Vec3::new(2.0, 0.0, 0.0);
+        spawn.orientation = 0.0;
+        spawn.bounds.orientation = 0.0;
+        let object = self
+            .app
+            .world_mut()
+            .spawn(crate::game_objects::game_object_bundle(&spawn))
+            .id();
+        self.send::<_, InteractionChannel>(UseGameObject {
+            object: object.to_bits(),
+        });
+        self.app.update();
+        object
+    }
+
     /// A character on another account.
     pub fn create_on_account(&mut self, account_id: u64, name: &str, race: u8) -> u64 {
         let db = &self.app.world().resource::<GameDatabase>().db;

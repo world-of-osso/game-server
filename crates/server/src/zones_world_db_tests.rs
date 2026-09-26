@@ -795,7 +795,8 @@ fn stormwind_banker_and_auctioneer_stand_at_retail_positions() {
 #[ignore]
 fn retail_only_creature_spawns_from_its_trinitycore_template() {
     let citizens = spawns_of(42384);
-    assert_eq!(citizens.len(), 71);
+    // 71 TrinityCore spawns in PhaseId 0, 2 in DEFAULT_PHASE 169.
+    assert_eq!(citizens.len(), 73);
     let template = &world_data().templates[&42384];
     assert_eq!(template.name, "Homeless Stormwind Citizen");
     assert_eq!(

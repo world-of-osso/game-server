@@ -44,6 +44,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
 import db2  # noqa: E402
 import retail_content  # noqa: E402
+import wowhead_loot  # noqa: E402
 from content_common import Report, clone_table  # noqa: E402
 
 PROJECT_DIR = SCRIPT_DIR.parent
@@ -259,6 +260,8 @@ def build_creature_models(conn, overrides, report):
 
 
 def apply_policy(conn, wrath_spell_names, overrides_path, report):
+    retail_content.create_retail_map_table(conn)
+    wowhead_loot.load_wowhead_drops(conn, wowhead_loot.wowhead_root())
     retail_items = dict(conn.execute("SELECT ID, Display_lang FROM item_sparse"))
     retail_spells = dict(conn.execute("SELECT ID, Name_lang FROM spell_name"))
     overrides = load_overrides(overrides_path, conn)

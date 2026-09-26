@@ -235,3 +235,26 @@ fn a_creature_without_a_loot_table_drops_nothing_not_even_coins() {
     assert_eq!(rolled, RolledLoot::default());
     assert!(tables.drop_chances(LUMBERJACK, &items).is_empty());
 }
+
+/// Hogger (46254) has no TrinityCore loot (Normal LootID 0): he drops Wowhead's
+/// stockade-20260926 Normal-mode rates, e.g. Corpse Rompers 41,982 / 135,040.
+#[test]
+fn stockade_hogger_drops_his_wowhead_items_at_their_rates() {
+    let Some((tables, items)) = world_db() else {
+        return;
+    };
+    let chances = tables.drop_chances(46254, &items);
+    let chance = |item| chances.iter().find(|(id, _)| *id == item).map(|c| c.1);
+    let rompers = chance(2168).expect("Corpse Rompers");
+    assert!((rompers - 31.089).abs() < 0.01, "{rompers}");
+    assert_eq!(chances.len(), 5, "{chances:?}");
+    let mut rng = StdRng::seed_from_u64(7);
+    let dropped: HashSet<u32> = (0..200)
+        .flat_map(|_| {
+            ids(&tables
+                .roll_creature(46254, &items, |_| false, &mut rng)
+                .items)
+        })
+        .collect();
+    assert_eq!(dropped, HashSet::from([2168, 1934, 1959, 132569, 151074]));
+}

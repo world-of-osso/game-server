@@ -82,13 +82,14 @@ const GOLDSHIRE_MAILBOX: u32 = 20_209_585;
 #[test]
 fn eastern_kingdoms_mailboxes_spawn_with_retail_display_boxes() {
     let Some(spawns) = spawns() else { return };
-    // TrinityCore map 0 base-phase type 19 rows with a Retail GameObjectDisplayInfo box.
+    // TrinityCore map 0 base-phase (PhaseId 0: 75, DEFAULT_PHASE 169: 3) type 19 rows with a
+    // Retail GameObjectDisplayInfo box.
     let mailboxes: Vec<_> = spawns
         .0
         .iter()
         .filter(|s| s.map_id == 0 && s.info.go_type == 19)
         .collect();
-    assert_eq!(mailboxes.len(), 75);
+    assert_eq!(mailboxes.len(), 78);
     // The Lion's Pride Inn mailbox in Goldshire (TrinityCore guid 209585 + 20,000,000).
     let goldshire = mailboxes
         .iter()
@@ -98,4 +99,22 @@ fn eastern_kingdoms_mailboxes_spawn_with_retail_display_boxes() {
     assert_eq!(goldshire.info.display_id, 1907);
     assert!((goldshire.position.x - -9455.99).abs() < 1e-2);
     assert!((goldshire.bounds.max.z - 3.0802).abs() < 1e-3);
+}
+
+#[test]
+fn stockade_fires_and_bonfire_spawn_as_decoration() {
+    let Some(spawns) = spawns() else { return };
+    // TDB1210 map 34 (DEFAULT_PHASE 169): 23 Small Fire (0.5), 10 Medium Fire (0.75), 1 Bonfire.
+    let stockade: Vec<_> = spawns.0.iter().filter(|s| s.map_id == 34).collect();
+    let count = |entry: u32| stockade.iter().filter(|s| s.info.entry == entry).count();
+    assert_eq!((count(206038), count(206039), count(206117)), (23, 10, 1));
+    assert_eq!(stockade.len(), 34);
+    let bonfire = stockade.iter().find(|s| s.info.entry == 206117).unwrap();
+    assert_eq!(bonfire.info.go_type, GAMEOBJECT_TYPE_SPELL_FOCUS);
+    assert_eq!(bonfire.info.display_id, 200);
+    assert!((bonfire.position.x - 80.1872).abs() < 1e-3);
+    assert!(!bonfire.info.is_usable());
+    let fire = stockade.iter().find(|s| s.info.entry == 206038).unwrap();
+    assert_eq!(fire.info.go_type, GAMEOBJECT_TYPE_GENERIC);
+    assert!(!fire.info.is_usable());
 }

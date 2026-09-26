@@ -20,10 +20,13 @@ use crate::group::GroupId;
 /// `Instance.UnloadDelay` default (worldserver.conf.dist): 30 minutes.
 pub const INSTANCE_UNLOAD_DELAY_SECS: f64 = 1800.0;
 
+/// The world maps the server hosts; other world maps are refused.
+pub const HOSTED_CONTINENTS: [u32; 2] = [0, 1];
+
 /// Maps whose NPCs the client has appearance data for (game-engine
-/// data/cache/npc_appearance.sqlite covers maps 0 and 1): the world maps the server
-/// hosts, and the maps whose creatures spawn. A dungeon outside it opens empty.
-pub const NPC_APPEARANCE_MAPS: [u32; 2] = [0, 1];
+/// data/cache/npc_appearance.sqlite covers maps 0, 1 and 34, The Stockade): the maps
+/// whose creatures spawn. A dungeon outside it opens empty.
+pub const NPC_APPEARANCE_MAPS: [u32; 3] = [0, 1, 34];
 
 /// Who a player enters instances with: its character and its group.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -98,7 +101,7 @@ impl InstanceManager {
         entrant: InstanceEntrant,
         now: f64,
     ) -> Result<ResolvedMap, TransferAbortReason> {
-        if NPC_APPEARANCE_MAPS.contains(&map_id) {
+        if HOSTED_CONTINENTS.contains(&map_id) {
             return Ok(ResolvedMap {
                 map: InMap::continent(map_id),
                 created: false,
@@ -191,7 +194,7 @@ impl InstanceManager {
     }
 
     /// `Map::PlayerCannotEnter` (Map.cpp:1807-1852), checked before a far teleport:
-    /// the copy `entrant` is bound to must admit it. World maps without NPC data, raids,
+    /// the copy `entrant` is bound to must admit it. World maps other than the hosted continents, raids,
     /// battlegrounds and scenarios are not hosted.
     pub fn player_cannot_enter(
         &self,
@@ -199,7 +202,7 @@ impl InstanceManager {
         map_id: u32,
         entrant: InstanceEntrant,
     ) -> Option<TransferAbortReason> {
-        if NPC_APPEARANCE_MAPS.contains(&map_id) {
+        if HOSTED_CONTINENTS.contains(&map_id) {
             return None;
         }
         let Some(entry) = store.map(map_id) else {

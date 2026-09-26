@@ -8,4 +8,5 @@ World game objects from AzerothCore `gameobject` / `gameobject_template`. The im
 - **Server-only component:** `GameObjectBounds` holds the Retail `GeoBox` model box and the facing.
 - **Reach:** the player's WoW-space position is rotated into object space by −orientation and must lie inside the box scaled by the object size and grown by 5 yd. This is AzerothCore `IsAtInteractDistance`, but with the blizzlike 5 yd; AzerothCore itself uses 10.
 - **No grid activation:** game objects have no per-tick systems, so they don't take part in it.
-- **Adding a type:** another type (mailbox, chest) needs its spawn query widened, plus a role or handler in `npc_interaction::usable_object`.
+- **Adding a type:** another type (chest) needs its spawn query widened, plus a role or handler in `npc_interaction::usable_object` and in shared-protocol `GameObjectInfo::is_usable`.
+- **Decoration:** `GAMEOBJECT_TYPE_GENERIC` (5) and `GAMEOBJECT_TYPE_SPELL_FOCUS` (8) spawn (fires, bonfires, lamps) but are not usable: the client gives them no `WorldObjectInteraction`, and a `UseGameObject` for one fails with `InvalidTarget`. `GO_FLAG_NOT_SELECTABLE` is not replicated: no spawned usable object carries it (measured 2026-09-26).
