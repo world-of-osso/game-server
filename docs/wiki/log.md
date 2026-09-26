@@ -272,3 +272,7 @@ Created `systems/quests.md` (quest data, rules, runtime) and `specs/quests.md`; 
 ## [2026-09-26] update | Trade
 
 [[trade]]: exchange through InventoryModel in one transaction (bag space, gold cap, soulbound), 7th non-traded slot, CancelTradeAccept, AzerothCore initiation checks, Retail messages.
+
+## [2026-09-25] create | Creature aggro
+
+[[creature-aggro]]: AggroMode per template (passive/reactive/aggressive), level-scaled aggro radius (GetAggroRange), threat from melee/spell damage and harmful spell hits, top-threat victim with 110%/130% swap, evade with combat_stop and full health; [[creature-ai]]: chase and return at run speed, 2 yd chase reach, leash evade through enter_evade_mode; [[combat]]: NPC CombatTarget now set by aggro.

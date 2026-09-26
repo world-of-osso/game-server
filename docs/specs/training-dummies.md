@@ -21,5 +21,5 @@ Creatures with `creature_template.ScriptName = 'npc_training_dummy'` behave like
 
 ## Known gaps
 
-- [ ] `SPELL_STUN_PERMANENT` 61204 (Reset), knockback immunity and `mechanic_immune_mask` are not applied; creatures have no melee, facing or knockback yet, so nothing observable depends on them.
+- [ ] `SPELL_STUN_PERMANENT` 61204 (Reset), knockback immunity and `mechanic_immune_mask` are not applied; creatures have no facing or knockback yet, and dummies never swing (no threat list, [creature-aggro](creature-aggro.md)), so nothing observable depends on them.
 - [ ] `npc_target_dummy` (engineering target dummies 2673/2674/12426, summoned and self-killing after 15 s) is not implemented: nothing summons them.

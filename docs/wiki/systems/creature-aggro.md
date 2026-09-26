@@ -1,0 +1,58 @@
+# Creature Aggro
+
+How world creatures decide to fight: `crates/server/src/creature_aggro.rs` (`CreatureAggroPlugin`, FixedUpdate, before `chase_system`) ports AzerothCore's default creature AI (AggressorAI/ReactorAI): aggro on sight, threat from damage, top-threat victim selection and evade. Movement (chase, leash, return home) stays in [[creature-ai]]; swings go through the player auto-attack path in [[combat]]. Contract: [creature-aggro spec](../../specs/creature-aggro.md).
+
+## Spawn components
+
+`CreatureTemplate.aggro_mode` is computed at load from `type`, `flags_extra`, `unit_flags` and `ScriptName` (`AggroMode::for_template`); `zones.rs` calls `insert_aggro_components`:
+
+| Mode | Templates | Components |
+|------|-----------|------------|
+| `Passive` | critters (type 8), non-combat pets (12), triggers (flags_extra 0x80), `IMMUNE_TO_PC` (unit_flags 0x100), `npc_training_dummy` | none |
+| `Reactive` | civilians (flags_extra 0x2) | `ThreatTable`, `CreatureState::Idle` |
+| `Aggressive` | everything else | + `AggroRange(detection_range)` |
+
+Without a `ThreatTable` a creature never engages: `add_threat` ignores it. Hostility is not part of the mode: an aggressive creature that is neutral to the player (Stonetusk Boar, template 189) never passes the on-sight reaction check, matching AzerothCore where `MoveInLineOfSight` tests `IsHostileTo`.
+
+Measured on world.db (2026-09-25): many Elwynn low-level templates are civilian in AzerothCore data (Kobold Vermin 6, Diseased Young/Timber Wolf 299/69, flags_extra 2), so they only fight back; Forest Spider 30 (faction 22) and Riverpaw Outrunner 478 (faction 20) aggro Humans.
+
+## Aggro on sight
+
+`aggro_on_sight_system`: for each idle, alive, non-dormant creature with `AggroRange`, the nearest player that is inside `aggro_radius(detection_range, creature level, player level)`, whose FactionTemplate reaction from the creature is Hostile, and who is a valid victim, is engaged via `attack_start`.
+
+`aggro_radius` is `Creature::GetAggroRange`: `detection_range − (player level − creature level)`, the difference capped at −25, clamped to 5..45; below 1 yard it is 0. No line-of-sight or Z test (no collision data, creature Y is not kept on the ground while moving).
+
+Valid victim (`valid_victim`, used for on-sight and engaged targets): health above 0, no NPC `DeathState`, `PlayerDeathState` Alive (or absent), not on a `TaxiFlight`, and `FactionTemplates::can_attack(creature, victim)`.
+
+## Threat and engage
+
+`add_threat(world, creature, attacker, amount)` is the single entry point:
+
+- melee: `combat::record_swing_events` queues it with the swing damage
+- spells: `spell_cast::effects::deal_damage` (direct and periodic) with the final damage; `spell_cast::push_hit_events` with 0 for every hit unit the caster can attack (`Relation::Enemy`), so a non-damaging debuff engages
+- on sight: `attack_start` = `add_threat(.., 0.0)`
+
+It does nothing for a creature without a threat list, dead, at 0 health, or `Returning` (AzerothCore `UNIT_STATE_EVADE` blocks `AddThreat`). Otherwise it adds the threat; an idle creature becomes `Pursuing { attacker }` with `CombatTarget(Some(attacker))`, which `start_attack_system` turns into an `AutoAttack`. Both units enter combat (`combat::enter_combat`).
+
+## Victim update
+
+`update_victim_system` (`CreatureAI::UpdateVictim` / `Creature::SelectVictim`), each tick for pursuing creatures: drops the current target if invalid, pops invalid entries off the top of the threat list, then `ThreatTable::aggro_target(current, top_in_melee)` (110% in melee, 130% beyond, `ThreatMgr::getHostileTarget`). A new victim rewrites `CreatureState::Pursuing` and the creature's `CombatTarget` together. An empty list evades. `ThreatTable` (shared-protocol) exposes no iterator, so invalid entries below the top stay until they reach the top.
+
+## Evade and death
+
+`enter_evade_mode` (`CreatureAI::EnterEvadeMode`), from `update_victim_system` or `creature_ai::leash_check_system` (40 yd from spawn): `Returning`, threat reset, `CombatTarget(None)`, full health (replication marked dirty), then `combat::combat_stop` so the creature and everyone auto-attacking it stop. `return_to_spawn_system` runs it home, then `Idle`.
+
+`combat::insert_npc_death` calls `forget_combat`: threat reset, `Idle`, `CombatTarget(None)`, so a corpse does not chase and respawns idle.
+
+## Sources
+
+- [crates/server/src/creature_aggro.rs](../../../crates/server/src/creature_aggro.rs)
+- [crates/server/src/creature_aggro_tests.rs](../../../crates/server/src/creature_aggro_tests.rs)
+- AzerothCore `src/server/game/AI/CreatureAI.cpp`, `Entities/Creature/Creature.cpp` (`CanStartAttack`, `GetAggroRange`, `CanCreatureAttack`), `Entities/Unit/Unit.cpp` (`DealDamage`, `SelectVictim`), `Spells/Spell.cpp` (`DoSpellHitOnUnit`)
+
+## See Also
+
+- [[creature-ai]] — chase, leash, return-to-spawn movement
+- [[combat]] — auto-attack, combat state, `combat_stop`
+- [[factions]] — reaction and `can_attack` rules
+- [training-dummies spec](../../specs/training-dummies.md) — passive creatures that take hits without fighting back

@@ -37,18 +37,15 @@ Wander, waypoint and formation systems skip entities with `DeathState`. Every sp
 
 ## Chase and Aggro
 
-`CreatureState::Pursuing { target }` overrides wander/waypoint AI. When active, `chase_system` moves the creature toward the target entity each tick at walk speed.
+`CreatureState::Pursuing { target }` overrides wander/waypoint AI. When active, `chase_system` runs the creature toward the target entity each tick at `speed_run × 7` yd/s (`ChaseMovementGenerator` runs), stopping `CHASE_REACH` (2 yd) short horizontally and following the target's height so the 3D 5-yard melee check passes.
 
-Threat is tracked in the `ThreatTable` component (from `shared/src/threat.rs`). When threat results in a new top-threat target, `CreatureState` transitions to `Pursuing`.
+Who enters `Pursuing`, threat and target selection are [[creature-aggro]].
 
 ## Leash and Evade
 
-`leash_check_system` runs after chase each tick. If the creature exceeds **40 yards** (2D distance) from its `SpawnPoint`:
-1. `CreatureState` → `Returning`
-2. `ThreatTable` is reset
-3. Health is restored to max (immediate full heal on evade)
+`leash_check_system` runs after chase each tick. A pursuing creature more than **40 yards** (2D distance) from its `SpawnPoint` evades through `creature_aggro::enter_evade_mode` (threat cleared, `combat_stop`, full health, `CreatureState` → `Returning`; see [[creature-aggro]]).
 
-`return_to_spawn_system` then walks the creature back to its spawn point at walk speed. On arrival, `CreatureState` → `Idle` and normal AI resumes.
+`return_to_spawn_system` then runs the creature back to its spawn point at `speed_run × 7` yd/s (`MoveTargetedHome` runs by default). On arrival, `CreatureState` → `Idle` and normal AI resumes.
 
 ## Creature addon mount and auras
 
@@ -60,6 +57,7 @@ Every spawned creature carries a `SpawnPoint`:
 - `x, y, z` — original spawn coordinates
 - `wander_distance` — radius for random wander
 - `speed_walk` — creature's walk speed multiplier (from `creature_template.speed_walk`)
+- `speed_run` — run speed multiplier for chase and evade (from `creature_template.speed_run`)
 
 Also used by `combat.rs` to reset position on respawn after death.
 
@@ -84,5 +82,6 @@ Creature data is stored in WoW coordinate space. The AI operates in Bevy space (
 ## See Also
 
 - [[world-data]] — `creature`, `creature_template`, `waypoint_data`, `creature_addon`, `creature_formations` tables
-- [[combat]] — `CombatTarget` drives the Pursuing state; leash evade restores HP
+- [[creature-aggro]] — aggro on sight/damage, threat, evade
+- [[combat]] — the creature's `CombatTarget` drives its auto-attack; leash evade restores HP
 - [[tick-model]] — AI systems run at step 2 of the 20Hz pipeline

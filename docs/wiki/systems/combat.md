@@ -25,7 +25,7 @@ The RED test at `/tmp/claude/game-server/autoattack-inactive-removal-red.log` fa
 
 ## Replicated Unit Target
 
-`UnitTargetPlugin` (`unit_target.rs`, PostUpdate) mirrors each unit's current target into the replicated `UnitTarget(Option<u64>)` (entity bits) for target-of-target frames. Players: from `CombatTarget` (SetTarget). NPCs: from `CreatureState::Pursuing { target }` (NPCs have no `CombatTarget`; Pursuing is only entered in tests today). Written only when the value changes.
+`UnitTargetPlugin` (`unit_target.rs`, PostUpdate) mirrors each unit's current target into the replicated `UnitTarget(Option<u64>)` (entity bits) for target-of-target frames. Players: from `CombatTarget` (SetTarget). NPCs: from `CreatureState::Pursuing { target }`, which [[creature-aggro]] keeps equal to the creature's own `CombatTarget`. Written only when the value changes.
 
 ## NPC Death Transition (`c8762ed`)
 
@@ -98,5 +98,6 @@ Players no longer use the HP/mana/rating functions below: [[character-stats]] co
 
 - [[tick-model]] — combat systems run in `FixedUpdate`; no global fixed-phase pipeline is implemented
 - [[networking]] — CombatEvent broadcast over CombatChannel
-- [[creature-ai]] — aggro/threat feeds CombatTarget; leash evade restores HP
+- [[creature-aggro]] — creature aggro/threat sets the creature's CombatTarget; evade stops combat and restores HP
+- [[creature-ai]] — chase and leash movement
 - [[world-data]] — spell_misc/spell_effect tables provide cast time, range, coefficients

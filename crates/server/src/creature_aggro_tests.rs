@@ -466,3 +466,21 @@ fn harmful_spell_without_damage_engages_a_neutral_creature() {
     assert_eq!(h.health(boar), 5000.0);
     assert_eq!(state(&h.app, boar), pursuing(h.caster));
 }
+
+#[test]
+fn hostile_civilian_ignores_nearby_player_until_hit() {
+    let mut app = aggro_app();
+    let civilian = CreatureFixture {
+        mode: AggroMode::for_template(7, 0x2, 0, ""),
+        ..FOREST_SPIDER
+    };
+    let kobold = spawn_creature(&mut app, &civilian, at(0.0, 0.0));
+    let player = spawn_player(&mut app, at(3.0, 0.0), 5);
+    run(&mut app, 10);
+    assert_eq!(state(&app, kobold), Some(CreatureState::Idle));
+
+    attack(&mut app, player, kobold);
+    run(&mut app, 20);
+    assert_eq!(state(&app, kobold), pursuing(player));
+    assert!(health(&app, player) < 100.0, "civilian hits back");
+}
