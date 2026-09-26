@@ -581,6 +581,7 @@ fn insert_npc_death(mut entity: EntityWorldMut) {
     let respawn_timer = entity.get::<RespawnDelay>().map_or(0.0, |delay| delay.0);
     let remaining = entity.get::<CorpseDelay>().map_or(0.0, |delay| delay.0);
     entity.insert((DeathState { respawn_timer }, Corpse { remaining }));
+    crate::creature_aggro::forget_combat(&mut entity);
     let npc = entity.id();
     entity.world_scope(|world| combat_stop(world, npc));
 }
@@ -662,6 +663,9 @@ fn record_swing_events(
 ) {
     events.push(build_damage_event(attacker, target, outcome.damage));
     let damage = outcome.damage;
+    commands.queue(move |world: &mut World| {
+        crate::creature_aggro::add_threat(world, target, attacker, damage);
+    });
     commands.queue(move |world: &mut World| reward_swing_rage(world, attacker, target, damage));
     let swing = swing_log_event(attacker, target, &outcome);
     commands.queue(move |world: &mut World| crate::spell_cast::log_event(world, swing));

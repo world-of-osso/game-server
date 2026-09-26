@@ -518,6 +518,7 @@ fn test_respawn_restores_health() {
         z: 30.0,
         wander_distance: 5.0,
         speed_walk: 1.0,
+        speed_run: 1.0,
     };
 
     let (health, position) = respawned_state(health, position, &spawn);
@@ -537,6 +538,7 @@ fn respawn_at_spawn_with_full_health_does_not_dirty_replicated_state() {
         z: 30.0,
         wander_distance: 0.0,
         speed_walk: 1.0,
+        speed_run: 1.0,
     };
     let position = pos(spawn.x, spawn.y, spawn.z);
     let entity = app
@@ -601,6 +603,7 @@ fn dead_creature_in_dormant_grid_respawns_on_its_timer() {
         z: 30.0,
         wander_distance: 0.0,
         speed_walk: 1.0,
+        speed_run: 1.0,
     };
     let wolf = app
         .world_mut()
@@ -662,6 +665,7 @@ fn a_killed_npc_respawns_in_its_killers_melee_range_at_full_health() {
                 z: 0.0,
                 wander_distance: 0.0,
                 speed_walk: 1.0,
+                speed_run: 1.0,
             },
             RespawnDelay(3.0),
             CorpseDelay(1.0),

@@ -23,6 +23,7 @@ fn return_moves_toward_spawn() {
                 z: 0.0,
                 wander_distance: 5.0,
                 speed_walk: 1.0,
+                speed_run: 1.0,
             },
             CreatureState::Returning,
         ))
@@ -61,6 +62,7 @@ fn return_transitions_to_idle_at_spawn() {
                 z: 0.0,
                 wander_distance: 5.0,
                 speed_walk: 1.0,
+                speed_run: 1.0,
             },
             CreatureState::Returning,
         ))
@@ -98,6 +100,7 @@ fn return_at_spawn_does_not_dirty_position() {
                 z: position.z,
                 wander_distance: 5.0,
                 speed_walk: 1.0,
+                speed_run: 1.0,
             },
             CreatureState::Returning,
         ))
@@ -158,6 +161,7 @@ fn return_ignores_idle_creatures() {
                 z: 0.0,
                 wander_distance: 5.0,
                 speed_walk: 1.0,
+                speed_run: 1.0,
             },
             CreatureState::Idle,
         ))
@@ -170,7 +174,7 @@ fn return_ignores_idle_creatures() {
 }
 
 #[test]
-fn return_respects_walk_speed() {
+fn return_respects_run_speed() {
     use bevy::ecs::system::RunSystemOnce;
 
     let mut app = App::new();
@@ -192,6 +196,7 @@ fn return_respects_walk_speed() {
                 z: 0.0,
                 wander_distance: 5.0,
                 speed_walk: 1.0,
+                speed_run: 1.0,
             },
             CreatureState::Returning,
         ))
@@ -210,7 +215,8 @@ fn return_respects_walk_speed() {
                 y: 0.0,
                 z: 0.0,
                 wander_distance: 5.0,
-                speed_walk: 2.0,
+                speed_walk: 1.0,
+                speed_run: 2.0,
             },
             CreatureState::Returning,
         ))
@@ -222,6 +228,6 @@ fn return_respects_walk_speed() {
     let fast_pos = app.world().entity(fast).get::<Position>().unwrap().x;
     assert!(
         fast_pos < slow_pos,
-        "faster creature should be closer to spawn: fast={fast_pos}, slow={slow_pos}"
+        "faster runner should be closer to spawn: fast={fast_pos}, slow={slow_pos}"
     );
 }

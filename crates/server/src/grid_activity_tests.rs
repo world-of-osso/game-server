@@ -40,6 +40,7 @@ fn spawn_point(position: Position) -> SpawnPoint {
         z: position.z,
         wander_distance: 5.0,
         speed_walk: 1.0,
+        speed_run: 1.0,
     }
 }
 

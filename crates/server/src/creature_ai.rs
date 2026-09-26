@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use lightyear::prelude::ReplicationDirtyQueue;
-use shared::components::{Health, Position, Rotation, ThreatTable};
+use shared::components::{Position, Rotation};
 
 use crate::combat::DeathState;
 use crate::grid_activity::GridDormant;
@@ -14,6 +14,9 @@ const BASE_WALK_SPEED: f32 = 2.5;
 const BASE_RUN_SPEED: f32 = 7.0;
 /// Maximum chase distance from spawn before evading (yards).
 const LEASH_DISTANCE: f32 = 40.0;
+/// Horizontal distance a chaser closes to (yards), inside the 5 yard
+/// melee range (`ATTACK_DISTANCE`) so auto-attacks land.
+const CHASE_REACH: f32 = 2.0;
 /// Idle pause range in seconds after reaching a wander destination.
 const IDLE_MIN_SECS: f32 = 2.0;
 const IDLE_MAX_SECS: f32 = 5.0;
@@ -41,6 +44,8 @@ pub struct SpawnPoint {
     pub z: f32,
     pub wander_distance: f32,
     pub speed_walk: f32,
+    /// `creature_template.speed_run`: chase and evade-home speed multiplier.
+    pub speed_run: f32,
 }
 
 /// State machine for random-wander creatures (movement_type=1).
@@ -125,13 +130,6 @@ pub enum CreatureState {
     Idle,
     /// Chasing a threat target. Wander/waypoint AI pauses.
     /// `target` is the u64 entity ID from the ThreatTable.
-    #[cfg_attr(
-        not(test),
-        expect(
-            dead_code,
-            reason = "retained for threat-driven chase transitions exercised in tests"
-        )
-    )]
     Pursuing { target: u64 },
     /// Returning to spawn point after evade. Wander/waypoint AI pauses.
     Returning,
@@ -424,8 +422,10 @@ fn follow_leader_step(
 
 // -- Chase logic --
 
-/// Move pursuing creatures toward their target each tick.
-fn chase_system(
+/// Run pursuing creatures toward their target each tick
+/// (`ChaseMovementGenerator`, run speed) until within `CHASE_REACH`,
+/// following the target's height so the 3D melee range check holds.
+pub(crate) fn chase_system(
     time: Res<Time>,
     dirty_queue: Option<Res<InterestDirtyQueue>>,
     mut chasers: Query<(Entity, &mut Position, &SpawnPoint, &CreatureState), Without<GridDormant>>,
@@ -440,18 +440,26 @@ fn chase_system(
         let Ok(target_pos) = targets.get(target_entity) else {
             continue; // target despawned or invalid
         };
-        let speed = spawn.speed_walk * BASE_WALK_SPEED;
-        let (_reached, new_x, new_z) =
-            move_toward(pos.x, pos.z, target_pos.x, target_pos.z, speed * dt);
-        let next_position = Position {
-            x: new_x,
-            y: pos.y,
-            z: new_z,
-        };
+        let next_position = chase_step(*pos, target_pos, spawn.speed_run * BASE_RUN_SPEED * dt);
         if *pos != next_position {
             *pos = next_position;
             mark_interest_position_changed(dirty_queue.as_deref(), entity);
         }
+    }
+}
+
+/// Move up to `step` toward the point `CHASE_REACH` short of `target`.
+fn chase_step(position: Position, target: &Position, step: f32) -> Position {
+    let gap = (target.x - position.x).hypot(target.z - position.z);
+    let travel = (gap - CHASE_REACH).clamp(0.0, step);
+    if travel <= 0.0 {
+        return position;
+    }
+    let ratio = travel / gap;
+    Position {
+        x: position.x + (target.x - position.x) * ratio,
+        y: position.y + (target.y - position.y) * ratio,
+        z: position.z + (target.z - position.z) * ratio,
     }
 }
 
@@ -463,49 +471,24 @@ fn beyond_leash(pos: &Position, spawn: &SpawnPoint) -> bool {
     dist_sq > LEASH_DISTANCE * LEASH_DISTANCE
 }
 
-type LeashQuery<'w, 's> = Query<
-    'w,
-    's,
-    (
-        Entity,
-        &'static Position,
-        &'static SpawnPoint,
-        &'static mut CreatureState,
-        Option<&'static mut ThreatTable>,
-        Option<&'static mut Health>,
-    ),
-    Without<GridDormant>,
->;
-
-/// Evade pursuing creatures that exceed leash distance from spawn.
-/// Clears threat, restores health, transitions to Returning.
+/// Evade pursuing creatures that exceed leash distance from spawn
+/// (`enter_evade_mode`: threat cleared, combat stopped, health restored,
+/// Returning).
 fn leash_check_system(
-    mut query: LeashQuery,
-    replication_dirty: Option<Res<ReplicationDirtyQueue>>,
+    query: Query<(Entity, &Position, &SpawnPoint, &CreatureState), Without<GridDormant>>,
+    mut commands: Commands,
 ) {
-    for (entity, pos, spawn, mut state, threat, health) in &mut query {
-        if !matches!(*state, CreatureState::Pursuing { .. }) {
-            continue;
-        }
-        if !beyond_leash(pos, spawn) {
-            continue;
-        }
-        *state = CreatureState::Returning;
-        if let Some(mut threat) = threat {
-            threat.reset();
-        }
-        if let Some(mut health) = health
-            && health.current != health.max
-        {
-            health.current = health.max;
-            if let Some(replication_dirty) = replication_dirty.as_deref() {
-                replication_dirty.mark(entity);
-            }
+    for (entity, pos, spawn, state) in &query {
+        if matches!(*state, CreatureState::Pursuing { .. }) && beyond_leash(pos, spawn) {
+            commands.queue(move |world: &mut World| {
+                crate::creature_aggro::enter_evade_mode(world, entity);
+            });
         }
     }
 }
 
-/// Walk returning creatures back to their spawn point, then transition to Idle.
+/// Run evading creatures back to their spawn point (`MoveTargetedHome`,
+/// run speed), then transition to Idle.
 fn return_to_spawn_system(
     time: Res<Time>,
     dirty_queue: Option<Res<InterestDirtyQueue>>,
@@ -519,7 +502,7 @@ fn return_to_spawn_system(
         if *state != CreatureState::Returning {
             continue;
         }
-        let speed = spawn.speed_walk * BASE_WALK_SPEED;
+        let speed = spawn.speed_run * BASE_RUN_SPEED;
         let (reached, new_x, new_z) = move_toward(pos.x, pos.z, spawn.x, spawn.z, speed * dt);
         let next_position = Position {
             x: new_x,

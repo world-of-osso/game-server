@@ -61,6 +61,7 @@ fn wander_creature_moves_within_radius() {
                 z: spawn_z,
                 wander_distance: radius,
                 speed_walk: 1.0,
+                speed_run: 1.0,
             },
             WanderState {
                 phase: WanderPhase::Idle,
@@ -98,6 +99,7 @@ fn wander_zero_radius_stays_at_spawn() {
         z: spawn_z,
         wander_distance: 0.0,
         speed_walk: 1.0,
+        speed_run: 1.0,
     };
     let mut pos = Position {
         x: spawn_x,
@@ -138,6 +140,7 @@ fn wander_creature_returns_to_idle_after_walk() {
         z: spawn_z,
         wander_distance: radius,
         speed_walk: 1.0,
+        speed_run: 1.0,
     };
     let mut pos = Position {
         x: spawn_x,
@@ -197,6 +200,7 @@ fn wander_at_target_does_not_dirty_position() {
                 z: position.z,
                 wander_distance: 0.0,
                 speed_walk: 1.0,
+                speed_run: 1.0,
             },
             WanderState {
                 phase: WanderPhase::Walking,
@@ -273,6 +277,7 @@ fn dead_wanderer_does_not_move() {
         z: 80.0,
         wander_distance: 5.0,
         speed_walk: 1.0,
+        speed_run: 1.0,
     };
     let corpse = Position {
         x: 52.0,

@@ -28,8 +28,10 @@ pub struct TrainingDummy {
     in_combat: bool,
 }
 
+pub(crate) const TRAINING_DUMMY_SCRIPT: &str = "npc_training_dummy";
+
 pub(crate) fn insert_script_components(entity: &mut EntityCommands, script_name: &str) {
-    if script_name == "npc_training_dummy" {
+    if script_name == TRAINING_DUMMY_SCRIPT {
         entity.insert(TrainingDummy::default());
     }
 }

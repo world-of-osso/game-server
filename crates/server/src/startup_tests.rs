@@ -18,7 +18,8 @@ fn create_world_schema(conn: &rusqlite::Connection) {
             unit_class INTEGER, unit_flags INTEGER, type INTEGER,
             HealthModifier REAL, ManaModifier REAL, AIName TEXT,
             MovementType INTEGER, flags_extra INTEGER, exp INTEGER, ExperienceModifier REAL,
-            ScriptName TEXT NOT NULL DEFAULT ''
+            ScriptName TEXT NOT NULL DEFAULT '',
+            detection_range REAL
         );
         CREATE TABLE content_creature_template_model (
             CreatureID INTEGER, Idx INTEGER, CreatureDisplayID INTEGER,
@@ -77,8 +78,8 @@ fn world_data_loads_from_sqlite() {
     let path = write_to_temp_sqlite(|conn| {
         conn.execute_batch(
             "INSERT INTO creature_template VALUES
-                (1,'Wolf',NULL,3,4,35,0, 1.0,1.4,1.0,0,1,0,1,1.0,1.0,'',1,0,0,1.0,''),
-                (2,'Boar',NULL,2,3,35,0, 1.0,1.2,1.0,0,1,0,1,1.0,1.0,'',0,0,0,1.0,'');
+                (1,'Wolf',NULL,3,4,35,0, 1.0,1.4,1.0,0,1,0,1,1.0,1.0,'',1,0,0,1.0,'',20.0),
+                (2,'Boar',NULL,2,3,35,0, 1.0,1.2,1.0,0,1,0,1,1.0,1.0,'',0,0,0,1.0,'',20.0);
              INSERT INTO content_creature_template_model VALUES (1,0,100,1.0,1.0),(2,0,200,1.0,1.0);
              INSERT INTO creature VALUES (10,1,0,1,1, 0.0,0.0,0.0,0.0, 300,5.0,1);
              INSERT INTO creature VALUES (11,2,1,2,2, 10.0,20.0,30.0,0.0, 300,0.0,0);
@@ -162,7 +163,7 @@ fn world_data_spawns_indexed_by_map() {
     let path = write_to_temp_sqlite(|conn| {
         conn.execute_batch(
             "INSERT INTO creature_template VALUES
-                (1,'Wolf',NULL,1,1,35,0,1.0,1.0,1.0,0,1,0,1,1.0,1.0,'',0,0,0,1.0,'');
+                (1,'Wolf',NULL,1,1,35,0,1.0,1.0,1.0,0,1,0,1,1.0,1.0,'',0,0,0,1.0,'',20.0);
              INSERT INTO creature VALUES (1,1,0,1,1, 0.0,0.0,0.0,0.0, 300,0.0,0);
              INSERT INTO creature VALUES (2,1,0,1,1, 1.0,0.0,0.0,0.0, 300,0.0,0);
              INSERT INTO creature VALUES (3,1,1,1,1, 2.0,0.0,0.0,0.0, 300,0.0,0);",
@@ -189,7 +190,7 @@ fn world_data_models_attached_to_templates() {
     let path = write_to_temp_sqlite(|conn| {
         conn.execute_batch(
             "INSERT INTO creature_template VALUES
-                (5,'Demon',NULL,10,10,35,0,1.0,1.5,1.0,0,1,0,1,2.0,1.0,'',0,0,0,1.0,'');
+                (5,'Demon',NULL,10,10,35,0,1.0,1.5,1.0,0,1,0,1,2.0,1.0,'',0,0,0,1.0,'',20.0);
              INSERT INTO content_creature_template_model VALUES (5,0,301,1.0,0.7);
              INSERT INTO content_creature_template_model VALUES (5,1,302,1.0,0.3);",
         )

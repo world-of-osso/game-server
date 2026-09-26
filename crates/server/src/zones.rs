@@ -81,6 +81,11 @@ fn spawn_creatures<'a>(
         }
         let addon = world_data.addon_for(spawn);
         insert_ai_components(&mut entity, spawn, template, addon, world_data);
+        crate::creature_aggro::insert_aggro_components(
+            &mut entity,
+            template.aggro_mode,
+            template.detection_range,
+        );
         crate::creature_scripts::insert_script_components(&mut entity, &template.script_name);
         if let Some(addon) = addon {
             insert_addon_components(&mut entity, addon);
@@ -244,6 +249,7 @@ fn insert_ai_components(
             z: bz,
             wander_distance: spawn.wander_distance,
             speed_walk: template.speed_walk,
+            speed_run: template.speed_run,
         },
         RespawnDelay::for_spawn(spawn.spawntimesecs, template.rank),
         CorpseDelay::for_rank(template.rank),
@@ -304,6 +310,8 @@ mod tests {
             experience_modifier: 1.0,
             gives_experience: true,
             script_name: String::new(),
+            detection_range: 20.0,
+            aggro_mode: crate::creature_aggro::AggroMode::Aggressive,
             models: vec![CreatureModelInfo { display_id }],
         }
     }
@@ -352,7 +360,7 @@ mod tests {
             "CREATE TABLE creature_template (entry INTEGER, minlevel INTEGER, maxlevel INTEGER,
                 faction INTEGER, npcflag INTEGER, speed_walk REAL, HealthModifier REAL, name TEXT, rank INTEGER, exp INTEGER,
                 ExperienceModifier REAL, type INTEGER, flags_extra INTEGER, speed_run REAL,
-                ScriptName TEXT, unit_class INTEGER);
+                ScriptName TEXT, unit_class INTEGER, detection_range REAL, unit_flags INTEGER);
              CREATE TABLE creature_classlevelstats (level INTEGER, class INTEGER,
                 basehp0 INTEGER, basehp1 INTEGER, basehp2 INTEGER);
              INSERT INTO creature_classlevelstats VALUES (1,1,42,42,42);
@@ -383,7 +391,7 @@ mod tests {
         for (index, angle) in angles.iter().enumerate() {
             let entry = 100 + index as u32;
             conn.execute(
-                "INSERT INTO creature_template VALUES (?1,1,1,1,0,1.0,1.0,'Loup — Écorché',0,0,1.0,1,0,1.14,'',1)",
+                "INSERT INTO creature_template VALUES (?1,1,1,1,0,1.0,1.0,'Loup — Écorché',0,0,1.0,1,0,1.14,'',1,20.0,0)",
                 [entry],
             )
             .unwrap();

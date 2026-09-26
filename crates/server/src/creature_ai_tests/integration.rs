@@ -1,4 +1,5 @@
 use super::*;
+use shared::components::Health;
 use shared::components::ThreatTable;
 
 #[test]
@@ -28,6 +29,7 @@ fn chase_reaches_target_over_multiple_ticks() {
                 z: 0.0,
                 wander_distance: 5.0,
                 speed_walk: 1.0,
+                speed_run: 1.0,
             },
             CreatureState::Pursuing {
                 target: target.to_bits(),
@@ -38,13 +40,16 @@ fn chase_reaches_target_over_multiple_ticks() {
     for _ in 0..200 {
         app.update();
         let pos = *app.world().entity(chaser).get::<Position>().unwrap();
-        if (pos.x - 10.0).abs() < 0.2 {
+        if (pos.x - 8.0).abs() < 0.01 {
             break;
         }
     }
 
     let pos = *app.world().entity(chaser).get::<Position>().unwrap();
-    assert!((pos.x - 10.0).abs() < 0.2);
+    assert!(
+        (pos.x - 8.0).abs() < 0.01,
+        "chaser stops CHASE_REACH (2 yd) short of the target: {pos:?}"
+    );
 }
 
 #[test]
@@ -77,6 +82,7 @@ fn chase_then_leash_evade() {
                 z: 0.0,
                 wander_distance: 5.0,
                 speed_walk: 1.0,
+                speed_run: 1.0,
             },
             CreatureState::Pursuing {
                 target: target.to_bits(),
@@ -134,6 +140,7 @@ fn full_pipeline_pursue_evade_return_idle() {
                 z: 0.0,
                 wander_distance: 5.0,
                 speed_walk: 1.0,
+                speed_run: 1.0,
             },
             CreatureState::Pursuing {
                 target: target.to_bits(),

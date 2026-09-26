@@ -3,6 +3,8 @@ use rusqlite::{Connection, OpenFlags, Row, params};
 use std::collections::HashMap;
 use std::path::Path;
 
+use crate::creature_aggro::AggroMode;
+
 pub struct CreatureTemplate {
     pub entry: u32,
     pub name: String,
@@ -25,6 +27,9 @@ pub struct CreatureTemplate {
     pub gives_experience: bool,
     /// `ScriptName`: the AzerothCore CreatureScript (`creature_scripts`).
     pub script_name: String,
+    /// `detection_range`: aggro radius against a same-level target.
+    pub detection_range: f32,
+    pub aggro_mode: AggroMode,
     pub models: Vec<CreatureModelInfo>,
 }
 
@@ -200,6 +205,13 @@ fn template_from_row(row: &Row) -> rusqlite::Result<CreatureTemplate> {
         script_name: row.get(13)?,
         unit_class: row.get::<_, i64>(14)? as u8,
         expansion: row.get::<_, i64>(15)? as u8,
+        detection_range: row.get(16)?,
+        aggro_mode: AggroMode::for_template(
+            row.get::<_, i64>(10)? as u32,
+            row.get::<_, i64>(11)? as u32,
+            row.get::<_, i64>(17)? as u32,
+            &row.get::<_, String>(13)?,
+        ),
         models: Vec::new(),
     })
 }
@@ -208,7 +220,8 @@ fn load_templates(conn: &Connection) -> HashMap<u32, CreatureTemplate> {
     let mut stmt = conn
         .prepare(
             "SELECT entry, minlevel, maxlevel, faction, npcflag, speed_walk, HealthModifier, name,
-                    rank, ExperienceModifier, type, flags_extra, speed_run, ScriptName, unit_class, exp
+                    rank, ExperienceModifier, type, flags_extra, speed_run, ScriptName, unit_class, exp,
+                    detection_range, unit_flags
              FROM creature_template",
         )
         .expect("Failed to prepare creature_template query");

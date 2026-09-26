@@ -32,6 +32,7 @@ fn chase_moves_toward_target() {
                 z: 0.0,
                 wander_distance: 5.0,
                 speed_walk: 1.0,
+                speed_run: 1.0,
             },
             CreatureState::Pursuing {
                 target: target_entity.to_bits(),
@@ -71,6 +72,7 @@ fn chase_at_target_does_not_dirty_position() {
                 z: 0.0,
                 wander_distance: 5.0,
                 speed_walk: 1.0,
+                speed_run: 1.0,
             },
             CreatureState::Pursuing {
                 target: target.to_bits(),
@@ -102,7 +104,7 @@ fn chase_at_target_does_not_dirty_position() {
 }
 
 #[test]
-fn chase_respects_walk_speed() {
+fn chase_respects_run_speed() {
     use bevy::ecs::system::RunSystemOnce;
 
     let mut app = App::new();
@@ -134,6 +136,7 @@ fn chase_respects_walk_speed() {
                 z: 0.0,
                 wander_distance: 5.0,
                 speed_walk: 1.0,
+                speed_run: 1.0,
             },
             CreatureState::Pursuing {
                 target: target_bits,
@@ -154,7 +157,8 @@ fn chase_respects_walk_speed() {
                 y: 0.0,
                 z: 0.0,
                 wander_distance: 5.0,
-                speed_walk: 2.0,
+                speed_walk: 1.0,
+                speed_run: 2.0,
             },
             CreatureState::Pursuing {
                 target: target_bits,
@@ -168,7 +172,7 @@ fn chase_respects_walk_speed() {
     let pos2 = *app.world().entity(chaser2).get::<Position>().unwrap();
     assert!(
         pos2.x > pos1.x,
-        "faster creature (speed_walk=2) should move further: {} vs {}",
+        "faster creature (speed_run=2) should move further: {} vs {}",
         pos2.x,
         pos1.x
     );
@@ -206,6 +210,7 @@ fn chase_stops_when_idle() {
                 z: 0.0,
                 wander_distance: 5.0,
                 speed_walk: 1.0,
+                speed_run: 1.0,
             },
             CreatureState::Idle,
         ))
@@ -241,6 +246,7 @@ fn chase_handles_despawned_target() {
                 z: 5.0,
                 wander_distance: 5.0,
                 speed_walk: 1.0,
+                speed_run: 1.0,
             },
             CreatureState::Pursuing { target: u64::MAX },
         ))

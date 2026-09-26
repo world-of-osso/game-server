@@ -515,6 +515,8 @@ fn world_with_creature(entry: u32, min_level: u8) -> crate::world_data::WorldDat
         experience_modifier: 1.0,
         gives_experience: true,
         script_name: String::new(),
+        detection_range: 20.0,
+        aggro_mode: crate::creature_aggro::AggroMode::Aggressive,
         models: Vec::new(),
     };
     crate::world_data::WorldData {

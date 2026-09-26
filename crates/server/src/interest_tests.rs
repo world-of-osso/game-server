@@ -640,6 +640,7 @@ fn a_decayed_corpse_leaves_its_observers_and_the_respawn_returns() {
                 z: 0.0,
                 wander_distance: 0.0,
                 speed_walk: 1.0,
+                speed_run: 1.0,
             },
         ))
         .id();

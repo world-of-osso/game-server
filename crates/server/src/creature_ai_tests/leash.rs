@@ -1,4 +1,5 @@
 use super::*;
+use shared::components::Health;
 
 #[test]
 fn beyond_leash_unit_tests() {
@@ -8,6 +9,7 @@ fn beyond_leash_unit_tests() {
         z: 0.0,
         wander_distance: 5.0,
         speed_walk: 1.0,
+        speed_run: 1.0,
     };
 
     assert!(!beyond_leash(
@@ -57,6 +59,7 @@ fn beyond_leash_unit_tests() {
         z: 100.0,
         wander_distance: 5.0,
         speed_walk: 1.0,
+        speed_run: 1.0,
     };
     assert!(beyond_leash(
         &Position {
@@ -103,6 +106,7 @@ fn leash_evade_beyond_distance() {
                 z: 0.0,
                 wander_distance: 5.0,
                 speed_walk: 1.0,
+                speed_run: 1.0,
             },
             CreatureState::Pursuing { target: 1 },
             threat,
@@ -155,6 +159,7 @@ fn leash_within_range_no_evade() {
                 z: 0.0,
                 wander_distance: 5.0,
                 speed_walk: 1.0,
+                speed_run: 1.0,
             },
             CreatureState::Pursuing { target: 1 },
         ))
@@ -189,6 +194,7 @@ fn leash_at_boundary_no_evade() {
                 z: 0.0,
                 wander_distance: 5.0,
                 speed_walk: 1.0,
+                speed_run: 1.0,
             },
             CreatureState::Pursuing { target: 1 },
         ))
@@ -223,6 +229,7 @@ fn leash_ignores_idle_creatures() {
                 z: 0.0,
                 wander_distance: 5.0,
                 speed_walk: 1.0,
+                speed_run: 1.0,
             },
             CreatureState::Idle,
         ))

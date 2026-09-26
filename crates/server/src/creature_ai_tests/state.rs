@@ -28,6 +28,7 @@ fn pursuing_pauses_wander() {
                 z: 80.0,
                 wander_distance: 5.0,
                 speed_walk: 1.0,
+                speed_run: 1.0,
             },
             WanderState {
                 phase: WanderPhase::Idle,
@@ -72,6 +73,7 @@ fn returning_pauses_wander() {
                 z: 80.0,
                 wander_distance: 5.0,
                 speed_walk: 1.0,
+                speed_run: 1.0,
             },
             WanderState {
                 phase: WanderPhase::Idle,
@@ -116,6 +118,7 @@ fn idle_state_allows_wander() {
                 z: 80.0,
                 wander_distance: 5.0,
                 speed_walk: 1.0,
+                speed_run: 1.0,
             },
             WanderState {
                 phase: WanderPhase::Idle,

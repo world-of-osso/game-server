@@ -874,6 +874,11 @@ fn push_hit_events(
         }
     }
     for target in hit {
+        // Spell::DoSpellHitOnUnit (Spell.cpp:2879-2882): a spell landing on a
+        // unit the caster can attack starts combat with it.
+        if targets::relation_matches(world, caster, target, Relation::Enemy) {
+            crate::creature_aggro::add_threat(world, target, caster, 0.0);
+        }
         let harmful = targets::is_hostile(world, caster, target);
         let (actor_mask, target_mask) = procs::spell_hit_masks(spell, harmful);
         procs::push_event(
