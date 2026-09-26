@@ -6,7 +6,7 @@
 # Usage: scripts/import-map-tables.sh [path/to/world.db]
 set -euo pipefail
 G="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-DB="${1:-$G/data/world.db}"
+DB="$(realpath "${1:-$G/data/world.db}")"
 T="${TDB_DIR:-$G/data/reference/tdb1210}"
 # TDB tables: the tdb_schema.sql DDL from "DROP TABLE IF EXISTS tdb_areatrigger_teleport" to the end.
 python3 "$G/scripts/mysql_dump.py" --db "$DB" \
