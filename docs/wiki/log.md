@@ -300,3 +300,7 @@ Created `systems/quests.md` (quest data, rules, runtime) and `specs/quests.md`; 
 ## [2026-09-26] create | Player damage
 
 [[player-damage]]: players swing their weapon (AP / 6 × speed, off hand at half) every weapon speed over haste, through TrinityCore's hit table and ExpectedStat creature armor, before level scaling; spell power only from an Intellect main stat, spell variance and versatility, armor on physical spells, TRIGGER_MISSILE. [[combat]], [[character-stats]] and [[level-scaling]] link it.
+
+## [2026-09-26] update | Merchant cursor buys and Sell All Junk
+
+[[merchant]]: `BuyItem.destination` stores a purchase in the bag slot the client's merchant cursor was dropped on (TrinityCore `CanStoreNewItem(bag, slot)`: same-item stacks fill, the rest spills, another item refuses `CantStack`); `SellAllJunkItems` sells every poor bag stack through the ordinary sale path ([merchant spec](../specs/merchant.md)). `InventoryErrorReason::message` gives the client Retail `ERR_*` text.

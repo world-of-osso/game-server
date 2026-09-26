@@ -13,14 +13,14 @@ Owner-only bag and equipment state for the in-game bag and character frames (gam
 - [x] `DestroyItem{location, count}` removes `count` items; 0 or at least the stack size removes the stack. Persisted.
 - [x] `UseItem` replies `EQUIP_ERR_CANT_DO_RIGHT_NOW` with a detail: the server has no item spell data.
 - [x] `SortBags` compacts bag items by quality, item id, stack size.
-- [x] Rejections reply `InventoryError{reason, detail}` with Retail `EQUIP_ERR_*` names: invalid bag slot (`INTERNAL_BAG_ERROR`), empty source (`ITEM_NOT_FOUND`), wrong slot (`WRONG_SLOT`), unknown/non-equip type (`NOT_EQUIPPABLE`), level (`CANT_EQUIP_LEVEL_I`), class/race (`CANT_EQUIP_EVER`), one-hander to off hand (`CANT_DUAL_WIELD`), two-hand conflict with full bags (`INV_FULL`), bad split count (`TOO_FEW_TO_SPLIT`), non-bag split (`SPLIT_FAILED`), split onto a different item or a full stack (`CANT_STACK`).
+- [x] Rejections reply `InventoryError{reason, detail}` with Retail `EQUIP_ERR_*` names (`InventoryErrorReason::message()` gives the client's `ERR_*` text; `CantEquipLevelI` carries the required level): invalid bag slot (`INTERNAL_BAG_ERROR`), empty source (`ITEM_NOT_FOUND`), wrong slot (`WRONG_SLOT`), unknown/non-equip type (`NOT_EQUIPPABLE`), level (`CANT_EQUIP_LEVEL_I`), class/race (`CANT_EQUIP_EVER`), one-hander to off hand (`CANT_DUAL_WIELD`), two-hand conflict with full bags (`INV_FULL`), bad split count (`TOO_FEW_TO_SPLIT`), non-bag split (`SPLIT_FAILED`), split onto a different item or a full stack (`CANT_STACK`).
 - [x] Two-handers displace the off hand (and off-hand items displace an equipped two-hander) into a free bag slot.
 - [x] Equipment changes update the persisted and replicated `EquipmentAppearance` (hidden flag kept) and physical `character_equipment` ownership.
 - [x] Trade completion, auction/mail claims and profession craft/gather results emit deltas.
 
 ## Tests asserting this spec
 
-- `crates/server/src/inventory_tests.rs` — enter-world snapshots, swap, main-hand equip + appearance, wrong-type equip, class-restricted equip + bind-on-pickup, split 20 into 15+5, split stack merged back, destroy persistence, invalid slot, use-item error, trade-completion deltas.
+- `crates/server/src/inventory_tests.rs` — enter-world snapshots, swap, main-hand equip + appearance, wrong-type equip, sword onto the head slot (`WRONG_SLOT` text), main-hand sword unequipped onto an empty bag slot, class-restricted equip + bind-on-pickup, split 20 into 15+5, split stack merged back, destroy persistence, invalid slot, use-item error, trade-completion deltas.
 - `crates/server/src/item_templates_tests.rs` — real world.db `content_item` rows (skips without the DB).
 - shared-protocol `src/protocol_inventory_tests.rs` — wire round trips, Retail slot ids, inventory-type slot map, registration.
 
@@ -36,4 +36,4 @@ Owner-only bag and equipment state for the in-game bag and character frames (gam
 
 ## Out of scope
 
-Bank, reagent bank, bag containers, item use spells, vendor buy/sell, loot.
+Bank, reagent bank, bag containers, item use spells, vendor buy/sell ([merchant](merchant.md)), loot.

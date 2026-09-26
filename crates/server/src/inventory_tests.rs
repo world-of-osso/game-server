@@ -687,3 +687,69 @@ fn equipping_real_weapon_updates_character_stats_and_main_hand() {
         }
     );
 }
+
+#[test]
+fn a_sword_dropped_on_the_head_slot_is_refused_with_retail_text() {
+    let mut app = setup_app(persistence::temp_database());
+    let client = spawn_client(&mut app, 1, "Bagger");
+    grant_bag_weapon(&app, client.character_id);
+    enter_world(&mut app, &client);
+
+    request(
+        &mut app,
+        &client,
+        SwapItem {
+            from: bag(3),
+            to: ItemLocation::Equipment(EquipmentSlot::Head),
+        },
+    );
+
+    let errors = received::<InventoryError>(&mut app, &client);
+    assert_eq!(errors.len(), 1);
+    assert_eq!(
+        errors[0].reason.message(),
+        "That item does not go in that slot."
+    );
+    assert!(received::<InventoryDelta>(&mut app, &client).is_empty());
+}
+
+#[test]
+fn an_equipped_sword_dropped_on_an_empty_bag_slot_is_unequipped_there() {
+    let mut app = setup_app(persistence::temp_database());
+    let client = spawn_client(&mut app, 1, "Bagger");
+    let sword = grant_bag_weapon(&app, client.character_id);
+    enter_world(&mut app, &client);
+    let main_hand = ItemLocation::Equipment(EquipmentSlot::MainHand);
+    request(
+        &mut app,
+        &client,
+        SwapItem {
+            from: bag(3),
+            to: main_hand,
+        },
+    );
+    received::<InventoryDelta>(&mut app, &client);
+
+    request(
+        &mut app,
+        &client,
+        SwapItem {
+            from: main_hand,
+            to: bag(9),
+        },
+    );
+
+    assert!(received::<InventoryError>(&mut app, &client).is_empty());
+    let deltas = received::<InventoryDelta>(&mut app, &client);
+    let changes: Vec<_> = deltas[0]
+        .changes
+        .iter()
+        .map(|change| (change.location, change.item.as_ref().map(|i| i.item_guid)))
+        .collect();
+    assert_eq!(changes, vec![(bag(9), Some(sword)), (main_hand, None)]);
+    let appearance = app
+        .world()
+        .get::<EquipmentAppearance>(client.player)
+        .unwrap();
+    assert!(appearance.entries.is_empty());
+}

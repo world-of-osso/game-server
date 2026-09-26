@@ -21,8 +21,9 @@ use lightyear::prelude::*;
 use redb::Database;
 use shared::components::{EquipmentVisualSlot, Level, Npc, Player};
 use shared::protocol::{
-    BuyItem, BuybackItem, BuybackItemRequest, BuybackList, MerchantChannel, MerchantError,
-    MerchantFailed, NpcFlags, NpcRole, RepairItem, SellItem, VendorInventory, VendorItem,
+    BuyItem, BuybackItem, BuybackItemRequest, BuybackList, InventoryErrorReason, MerchantChannel,
+    MerchantError, MerchantFailed, NpcFlags, NpcRole, RepairItem, SellAllJunkItems, SellItem,
+    VendorInventory, VendorItem,
 };
 
 use crate::auth::InWorld;
@@ -39,9 +40,9 @@ use crate::persistence::{self, GameDatabase, InventoryItemData};
 mod catalog;
 mod stock;
 
-use catalog::VendorSlot;
 #[cfg(test)]
 pub(crate) use catalog::VendorGoods;
+use catalog::VendorSlot;
 pub use catalog::{VendorCatalog, load_vendor_catalog};
 use stock::{BuybackEntry, BuybackSlots, VendorStock};
 
@@ -50,6 +51,8 @@ const FLAG2_FACTION_HORDE: i64 = 0x1;
 const FLAG2_FACTION_ALLIANCE: i64 = 0x2;
 const TEAM_ALLIANCE: u8 = 1;
 const TEAM_HORDE: u8 = 2;
+/// `ITEM_QUALITY_POOR`.
+const QUALITY_POOR: u8 = 0;
 
 pub struct MerchantPlugin;
 
@@ -64,6 +67,7 @@ impl Plugin for MerchantPlugin {
                     send_vendor_lists,
                     process_buy_requests,
                     process_sell_requests,
+                    process_sell_all_junk_requests,
                     process_buyback_requests,
                     process_repair_requests,
                 )
@@ -342,6 +346,10 @@ fn process_sell_requests(mut requests: Requests<SellItem>, mut shop: Shop) {
     process(&mut requests, &mut shop, |req| req.npc, sell);
 }
 
+fn process_sell_all_junk_requests(mut requests: Requests<SellAllJunkItems>, mut shop: Shop) {
+    process(&mut requests, &mut shop, |req| req.npc, sell_all_junk);
+}
+
 fn process_buyback_requests(mut requests: Requests<BuybackItemRequest>, mut shop: Shop) {
     process(&mut requests, &mut shop, |req| req.npc, buy_back);
 }
@@ -405,9 +413,14 @@ fn buy(shop: &mut Shop, customer: &mut Customer, req: BuyItem) -> MerchantResult
         vendor_sell_price: goods.sell_price,
         unique_auction: false,
     };
-    model
-        .store_item(item, template, &mut mint)
-        .map_err(|_| MerchantError::InventoryFull)?;
+    match req.destination {
+        Some(location) => model.store_item_at(item, template, location, &mut mint),
+        None => model.store_item(item, template, &mut mint),
+    }
+    .map_err(|error| match error.reason {
+        InventoryErrorReason::CantStack => MerchantError::CantStack,
+        _ => MerchantError::InventoryFull,
+    })?;
     drop(mint);
     model.set_gold(model.gold() - price);
     shop.save(customer.character_id, model);
@@ -462,6 +475,40 @@ fn sell(shop: &mut Shop, customer: &mut Customer, req: SellItem) -> MerchantResu
         sold_at,
     });
     shop.send_buyback(customer.connection, customer.buyback);
+    Ok(())
+}
+
+/// TrinityCore `HandleSellAllJunkItems` (ItemHandler.cpp:427-484): every
+/// poor-quality bag stack the vendor buys is sold whole in bag order, each into a
+/// buyback slot. The first refused sale (gold cap) ends it without a message,
+/// as TrinityCore discards the `SellItemToVendor` error.
+fn sell_all_junk(
+    shop: &mut Shop,
+    customer: &mut Customer,
+    req: SellAllJunkItems,
+) -> MerchantResult {
+    customer.vendor_for(req.npc)?;
+    let junk: Vec<u64> = shop
+        .load(customer.character_id)?
+        .bag_items()
+        .filter(|item| {
+            shop.catalog
+                .goods
+                .get(&item.item_id)
+                .is_some_and(|goods| goods.quality == QUALITY_POOR && goods.sell_price > 0)
+        })
+        .map(|item| item.item_guid)
+        .collect();
+    for item_guid in junk {
+        let sale = SellItem {
+            npc: req.npc,
+            item_guid,
+            count: 0,
+        };
+        if sell(shop, customer, sale).is_err() {
+            break;
+        }
+    }
     Ok(())
 }
 
