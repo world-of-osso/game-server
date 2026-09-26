@@ -379,6 +379,39 @@ pub(crate) fn handle_teleport(
     }
 }
 
+/// `.die`: an online character's health drops to 0 and it dies like any lethal hit
+/// (`PlayerDeathTransition`).
+pub(crate) fn handle_kill(
+    db: &persistence::GameDatabase,
+    commands: &mut Commands,
+    players: &Query<(
+        Entity,
+        &mut Position,
+        &persistence::ClientId,
+        &mut shared::components::MovementControl,
+    )>,
+    name: &str,
+) -> AdminResponse {
+    let Some(char_id) = persistence::find_character_id_by_name(&db.db, name) else {
+        return AdminResponse::Error(format!("character '{name}' not found"));
+    };
+    let Some(player) = players
+        .iter()
+        .find_map(|(entity, _, cid, _)| (cid.0 == char_id).then_some(entity))
+    else {
+        return AdminResponse::Error(format!("character '{name}' is not online"));
+    };
+    commands.queue(move |world: &mut World| {
+        if let Some(mut health) = world.get_mut::<shared::components::Health>(player) {
+            health.current = 0.0;
+        }
+        world.write_message(crate::death::PlayerDeathTransition { player });
+    });
+    AdminResponse::Killed {
+        character_name: name.to_owned(),
+    }
+}
+
 pub(crate) struct EquipmentAppearanceRequest<'a> {
     pub(crate) name: &'a str,
     pub(crate) slot_name: &'a str,

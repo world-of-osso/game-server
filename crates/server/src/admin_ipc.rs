@@ -497,6 +497,9 @@ fn dispatch(
             map_id,
             Vec3::new(x, y, z),
         ),
+        AdminRequest::Kill { character_name } => {
+            handle_kill(db, commands, players, &character_name)
+        }
         AdminRequest::SetGold {
             character_name,
             copper,
@@ -752,6 +755,62 @@ mod tests {
             handle_taxi_learn(&game_db, &network, "Scout", 999_999),
             AdminResponse::Error("taxi node 999999 not found".into())
         );
+    }
+
+    #[test]
+    fn killing_an_online_character_drops_its_health_and_starts_its_death() {
+        let db = persistence::temp_database();
+        let (character_id, _) =
+            persistence::create_character(&db, 1, "Doomed", 1, 1).expect("character");
+        let game_db = persistence::GameDatabase { db };
+        let mut app = App::new();
+        app.add_message::<crate::death::PlayerDeathTransition>();
+        let player = app
+            .world_mut()
+            .spawn((
+                Position {
+                    x: 0.0,
+                    y: 0.0,
+                    z: 0.0,
+                },
+                shared::components::Health {
+                    current: 100.0,
+                    max: 100.0,
+                },
+                persistence::ClientId(character_id),
+                shared::components::MovementControl::default(),
+            ))
+            .id();
+        let mut system_state = SystemState::<(
+            Commands,
+            Query<(
+                Entity,
+                &mut Position,
+                &persistence::ClientId,
+                &mut shared::components::MovementControl,
+            )>,
+        )>::new(app.world_mut());
+        let (mut commands, players) = system_state.get_mut(app.world_mut()).unwrap();
+        let response = handle_kill(&game_db, &mut commands, &players, "Doomed");
+        system_state.apply(app.world_mut());
+
+        assert_eq!(
+            response,
+            AdminResponse::Killed {
+                character_name: "Doomed".into()
+            }
+        );
+        assert_eq!(
+            app.world()
+                .get::<shared::components::Health>(player)
+                .unwrap()
+                .current,
+            0.0
+        );
+        let deaths = app
+            .world()
+            .resource::<Messages<crate::death::PlayerDeathTransition>>();
+        assert_eq!(deaths.len(), 1);
     }
 
     #[test]

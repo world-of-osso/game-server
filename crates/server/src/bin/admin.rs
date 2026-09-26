@@ -113,6 +113,10 @@ enum AdminRequest {
         y: f32,
         z: f32,
     },
+    /// TrinityCore `.die`: the online character dies (`Unit::Kill`).
+    Kill {
+        character_name: String,
+    },
     /// Money in copper.
     SetGold {
         character_name: String,
@@ -265,6 +269,9 @@ enum AdminResponse {
         map_id: u32,
         online: bool,
     },
+    Killed {
+        character_name: String,
+    },
     GoldSet {
         character_name: String,
         copper: u64,
@@ -415,6 +422,12 @@ fn parse_request(args: &[String]) -> AdminRequest {
         "set-credentials" => parse_set_credentials(args),
         "set-position" => parse_set_position(args),
         "teleport" => parse_teleport(args),
+        "kill" => {
+            require_args(args, 3, "kill <character_name>");
+            AdminRequest::Kill {
+                character_name: args[2].clone(),
+            }
+        }
         "combat-log" => parse_combat_log(args),
         "set-gold" => parse_set_gold(args),
         "grant-item" => parse_grant_item(args),
