@@ -28,7 +28,7 @@ impl Plugin for ZonePlugin {
 
 /// The hosted continents are created at startup with all their creatures.
 fn spawn_continent_creatures(mut commands: Commands, world_data: Res<WorldData>) {
-    for map_id in crate::maps::NPC_APPEARANCE_MAPS {
+    for map_id in crate::maps::HOSTED_CONTINENTS {
         let count = spawn_map_creatures(
             &mut commands,
             &world_data,

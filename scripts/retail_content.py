@@ -1,4 +1,4 @@
-"""Retail world content of maps 0 and 1 from TrinityCore TDB1210 (content_policy.py step).
+"""Retail world content of maps 0, 1 and 34 (The Stockade) from TrinityCore TDB1210 (content_policy.py step).
 
 The client renders Retail terrain and WMOs, so AzerothCore's Wrath content puts interior
 NPCs in walls or under floors and misses Cataclysm-and-later NPCs. For RETAIL_MAPS this
@@ -12,7 +12,13 @@ table the server already reads. docs/specs/retail-world-content.md is the contra
 
 from content_common import clone_table
 
-RETAIL_MAPS = (0, 1)
+# Map -> (spawn difficulty, phases that are its base phase). Continents spawn at DIFFICULTY_NONE,
+# The Stockade (34) at DIFFICULTY_NORMAL (1), the only difficulty its MapDifficulty row has.
+# TrinityCore's DEFAULT_PHASE 169 is unphased (PhaseShift.h:31, PhasingHandler::InitDbPhaseShift):
+# every Retail Stockade spawn carries it. The continents keep PhaseId 0 only: their phase-169
+# spawns have no client NPC appearance coverage yet.
+DEFAULT_PHASE = 169
+RETAIL_MAPS = {0: (0, (0,)), 1: (0, (0,)), 34: (1, (0, DEFAULT_PHASE))}
 # TrinityCore guids reach 11.8M and 10 collide with kept AzerothCore spawns
 # (maps 229, 230, 530, 609); AzerothCore's reach 5.3M.
 RETAIL_GUID_OFFSET = 20_000_000
@@ -27,18 +33,25 @@ MAX_LEVEL = 123
 WRATH_HEALTH_EXPANSIONS = 2
 
 MAP_LIST = ", ".join(str(m) for m in RETAIL_MAPS)
-BASE_PHASE = """COALESCE(PhaseId, 0) = 0 AND COALESCE(PhaseGroup, 0) = 0 AND terrainSwapMap = -1
-    AND ',' || replace(spawnDifficulties, ' ', '') || ',' LIKE '%,0,%'"""
+
+
+def map_base_phase(map_id, difficulty, phases):
+    return f"""(map = {map_id} AND COALESCE(PhaseId, 0) IN ({', '.join(map(str, phases))}) AND COALESCE(PhaseGroup, 0) = 0
+        AND terrainSwapMap = -1 AND ',' || replace(spawnDifficulties, ' ', '') || ',' LIKE '%,{difficulty},%')"""
+
+
+BASE_PHASE = "(" + " OR ".join(map_base_phase(m, *spec) for m, spec in RETAIL_MAPS.items()) + ")"
+SPAWN_DIFFICULTY = "CASE map " + " ".join(f"WHEN {m} THEN {d}" for m, (d, _) in RETAIL_MAPS.items()) + " END"
 
 
 def retail_spawned_entries(conn):
-    """Creature entries a Retail (base-phase, maps 0/1) TrinityCore spawn references."""
+    """Creature entries a Retail (base-phase, RETAIL_MAPS) TrinityCore spawn references."""
     return {entry for (entry,) in conn.execute(
         f"SELECT DISTINCT id FROM tdb_creature WHERE map IN ({MAP_LIST}) AND {BASE_PHASE}")}
 
 
-def not_base_phase_reason(phase_id, phase_group, terrain_swap, difficulties):
-    if phase_id:
+def not_base_phase_reason(map_id, phase_id, phase_group, terrain_swap, difficulties):
+    if (phase_id or 0) not in RETAIL_MAPS[map_id][1]:
         return f"not base phase: PhaseId {phase_id}"
     if phase_group:
         return f"not base phase: PhaseGroup {phase_group}"
@@ -56,7 +69,7 @@ def build_spawns(conn, report):
     conn.execute(f"""CREATE TEMP TABLE retail_spawn AS SELECT guid AS tdb_guid, guid + {RETAIL_GUID_OFFSET} AS guid
         FROM tdb_creature WHERE map IN ({MAP_LIST}) AND {BASE_PHASE}""")
     conn.execute("CREATE UNIQUE INDEX temp.retail_spawn_tdb ON retail_spawn(tdb_guid)")
-    for guid, *phase in conn.execute(f"""SELECT guid, PhaseId, PhaseGroup, terrainSwapMap, spawnDifficulties
+    for guid, *phase in conn.execute(f"""SELECT guid, map, PhaseId, PhaseGroup, terrainSwapMap, spawnDifficulties
             FROM tdb_creature WHERE map IN ({MAP_LIST}) AND NOT ({BASE_PHASE}) ORDER BY guid"""):
         report.drop("tdb_creature", f"guid={guid}", guid, not_base_phase_reason(*phase))
     conn.execute("""INSERT INTO content_creature (guid, id1, map, zoneId, areaId, equipment_id, position_x, position_y,
@@ -110,6 +123,22 @@ def create_level_table(conn):
                 AllowedMinOffset, Flags FROM content_tuning""")))
 
 
+def create_difficulty_table(conn):
+    """temp.tdb_difficulty: the creature_template_difficulty row each entry uses (CreatureTemplate::GetDifficulty,
+    Creature.cpp:252-262) at the difficulty of its Retail spawns' map, DifficultyID 0 for entries spawned
+    nowhere. Difficulty.db2 (build 69933) falls Normal (1) back to None (0)."""
+    conn.execute(f"""CREATE TEMP TABLE spawn_difficulty AS SELECT DISTINCT c.id AS entry,
+            CASE WHEN EXISTS (SELECT 1 FROM tdb_creature_template_difficulty d
+                WHERE d.Entry = c.id AND d.DifficultyID = {SPAWN_DIFFICULTY}) THEN {SPAWN_DIFFICULTY} ELSE 0 END AS difficulty
+        FROM tdb_creature c WHERE map IN ({MAP_LIST}) AND {BASE_PHASE}""")
+    clash = conn.execute("SELECT entry FROM temp.spawn_difficulty GROUP BY entry HAVING count(*) > 1").fetchall()
+    if clash:
+        raise SystemExit(f"entries spawned at two difficulties with different creature_template_difficulty rows: {clash[:10]}")
+    conn.execute("""CREATE TEMP TABLE tdb_difficulty AS SELECT d.* FROM tdb_creature_template_difficulty d
+        WHERE d.DifficultyID = COALESCE((SELECT s.difficulty FROM temp.spawn_difficulty s WHERE s.entry = d.Entry), 0)""")
+    conn.execute("CREATE UNIQUE INDEX temp.tdb_difficulty_entry ON tdb_difficulty(Entry)")
+
+
 def build_templates(conn, report):
     """content_creature_template: AzerothCore's, plus TrinityCore's for spawned entries AzerothCore lacks."""
     clone_table(conn, "creature_template", "content_creature_template")
@@ -117,8 +146,7 @@ def build_templates(conn, report):
     for column in ("ContentTuningID", "HealthScalingExpansion", "LevelScalingDeltaMin", "LevelScalingDeltaMax"):
         conn.execute(f"ALTER TABLE content_creature_template ADD COLUMN {column} INTEGER NOT NULL DEFAULT 0")
     create_level_table(conn)
-    conn.execute("""CREATE TEMP TABLE tdb_difficulty AS SELECT * FROM tdb_creature_template_difficulty WHERE DifficultyID = 0""")
-    conn.execute("CREATE UNIQUE INDEX temp.tdb_difficulty_entry ON tdb_difficulty(Entry)")
+    create_difficulty_table(conn)
     conn.create_function("health_expansion", 1, health_expansion, deterministic=True)
     # npcflag's high word is npcflag2. Levels are the ContentTuning range (level 1 without one).
     conn.execute("""INSERT INTO content_creature_template (entry, KillCredit1, KillCredit2, name, subname, IconName,
@@ -348,7 +376,7 @@ def build_gameobjects(conn, report):
         AND guid NOT IN (SELECT guid FROM tdb_game_event_gameobject WHERE eventEntry < 0)"""
     conn.execute(f"""CREATE TEMP TABLE retail_gameobject AS SELECT guid AS tdb_guid, id FROM tdb_gameobject
         WHERE map IN ({MAP_LIST}) AND {BASE_PHASE} AND NOT ({holiday})""")
-    for guid, *phase in conn.execute(f"""SELECT guid, PhaseId, PhaseGroup, terrainSwapMap, spawnDifficulties
+    for guid, *phase in conn.execute(f"""SELECT guid, map, PhaseId, PhaseGroup, terrainSwapMap, spawnDifficulties
             FROM tdb_gameobject WHERE map IN ({MAP_LIST}) AND NOT ({BASE_PHASE}) ORDER BY guid"""):
         report.drop("tdb_gameobject", f"guid={guid}", guid, not_base_phase_reason(*phase))
     for (guid,) in conn.execute(f"""SELECT guid FROM tdb_gameobject WHERE map IN ({MAP_LIST}) AND {BASE_PHASE}

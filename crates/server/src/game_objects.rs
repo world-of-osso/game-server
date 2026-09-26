@@ -142,7 +142,7 @@ pub(crate) fn game_object_bundle(
 }
 
 fn spawn_continent_game_objects(mut commands: Commands, spawns: Res<GameObjectSpawns>) {
-    for map_id in crate::maps::NPC_APPEARANCE_MAPS {
+    for map_id in crate::maps::HOSTED_CONTINENTS {
         let count = spawn_map_game_objects(
             &mut commands,
             &spawns,

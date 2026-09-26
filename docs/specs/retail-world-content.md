@@ -1,6 +1,6 @@
 # Retail World Content
 
-On Eastern Kingdoms (map 0) and Kalimdor (map 1), world content comes from TrinityCore TDB1210.26091, the Retail 12.1.0 world DB. AzerothCore (Wrath 3.3.5) is used only where TrinityCore has nothing for the same NPC or quest.
+On Eastern Kingdoms (map 0), Kalimdor (map 1) and The Stockade (map 34), world content comes from TrinityCore TDB1210.26091, the Retail 12.1.0 world DB. AzerothCore (Wrath 3.3.5) is used only where TrinityCore has nothing for the same NPC or quest.
 
 TrinityCore content covers:
 - creature and game object spawns;
@@ -25,6 +25,8 @@ Spawn and id rules
   - This applies to `content_creature` and to `content_gameobject`.
   - Game objects whose only event membership is positive (holiday decorations) don't spawn.
   - Other maps keep AzerothCore's rows.
+- [x] The Stockade (map 34) takes its Normal-difficulty rows (difficulty 1 in `spawnDifficulties`, its only `MapDifficulty`) with `PhaseId` 0 or 169: TrinityCore's `DEFAULT_PHASE` 169 is unphased (`PhaseShift.h:31`, `PhasingHandler::InitDbPhaseShift`), and every Retail Stockade spawn carries it. 143 creatures (Hogger, Lord Overheat, Randolph Moloch, Riverpaw and fire-elemental trash, prisoners, guards) replace AzerothCore's 93 Classic ones (Targorr, Bazil Thredd, ...); its game objects are 33 fires and a bonfire (Retail has no Stockade doors or chests).
+- [x] A Stockade entry's template values (ContentTuning, health, loot, gold) come from its `DifficultyID` 1 row (`CreatureTemplate::GetDifficulty`), else its `DifficultyID` 0 row: Difficulty.db2 (build 69933) falls Normal back to None. Hogger: ContentTuning 215 (10-30), LevelScalingDelta +2. Bruegal Ironknuckle keeps loot 1720. An entry spawned at two difficulties with different resolved rows fails the import.
 - [x] Retail spawn guids are the TrinityCore guid + 20,000,000 (`RETAIL_GUID_OFFSET`), because 10 TrinityCore creature guids collide with AzerothCore spawns kept on other maps.
 - [x] TrinityCore loot template and reference ids are also + 20,000,000 (`TDB_LOOT_OFFSET`), in creature `lootid` and in chest and fishing-hole `Data1`.
 - [x] Raw AzerothCore tables, `tdb_*` tables and DB2 tables stay verbatim. Every dropped or replaced row is in `data/reports/content-dropped.csv` with its reason.
@@ -33,7 +35,7 @@ Spawn and id rules
 Creature templates and levels
 - [x] `content_creature_template` is AzerothCore's templates plus TrinityCore's template, difficulty-0 values and models for every Retail-spawned entry AzerothCore lacks.
 - [x] Every creature spawned on maps 0/1 wears a Retail CreatureDisplayInfo display. An AzerothCore template whose display is absent from Retail takes TrinityCore's models when both use the same name, when a reviewed override covers it, or when a Retail spawn references the entry. The last case covers TrinityCore renames: Pygmy Surf Crawler 3106 goes from display 1307 to 1938.
-- [x] Every template TrinityCore tunes carries `ContentTuningID` (difficulty 0).
+- [x] Every template TrinityCore tunes carries `ContentTuningID` (difficulty 0; Stockade entries difficulty 1).
   - `minlevel`/`maxlevel` are that ContentTuning's range, following TrinityCore `GetContentTuningData` under Expansion 11: calc types add +0, +1, +90 or +80, clamped to 1..123.
   - AzerothCore's fixed levels stay only where there is no ContentTuningID.
   - Examples: Hogger 1-30; Homeless Stormwind Citizen 5-30.
@@ -104,7 +106,7 @@ Server behaviour on Retail content
 ## Tests asserting this spec
 
 - `scripts/tests/test_import_azerothcore.py`
-  - Fixtures: Retail spawns; vendors and loot; game objects; gossip; quests.
+  - Fixtures: Retail spawns; Stockade spawns (`test_retail_stockade_spawns_replace_azerothcore_classic_stockade`); vendors and loot; game objects; gossip; quests.
   - `ContentTuningLevelTests`.
   - `LocalContentTuningExtractTests`: real CASC.
   - `AzerothCoreContentTests`: real dumps (vaults, quests, items).
@@ -118,6 +120,9 @@ Server behaviour on Retail content
 - `crates/server/src/merchant_tests.rs`, `npc_interaction_tests.rs`, `game_objects_tests.rs`, `bank_test_harness.rs`: Retail vendor lists, gossip menus, vaults (205107) and mailboxes (20209585).
 
 ## Known gaps (current cycle)
+
+- [ ] **Continent phase-169 spawns.** Maps 0/1 keep `PhaseId` 0 only and drop 8,069 creature and 2,271 game object spawns in `DEFAULT_PHASE` 169 that TrinityCore shows; including them needs client NPC appearance coverage for their displays first.
+- [ ] **Stockade loot.** TDB1210 gives the Retail Stockade trash and bosses no loot table and no money (Normal `LootID` 0, gold 0); only Bruegal Ironknuckle (1720) and Lord Overheat's quest item drop.
 
 - [x] **Levels and health** are per-player ContentTuning scaling with ExpectedStat health ([level-scaling](level-scaling.md)).
 - [ ] **Quest levels.** `QuestLevel` -1 scales quests to the player without clamping to ContentTuning's range.

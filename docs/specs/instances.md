@@ -6,7 +6,7 @@ Dungeons phase 1: several maps in one world, far teleports between them and dung
 
 ### Maps in one world
 - [x] Every world entity carries `InMap { map_id, instance_id }` (`WorldObject::GetMapId` / `GetInstanceId`); continents are instance 0.
-- [x] Eastern Kingdoms (0) and Kalimdor (1) are hosted: both spawn their creatures and game objects at startup (44,378 + 49,408 creatures). Other world maps are refused (`MapNotAllowed`): the client has NPC appearance data for maps 0 and 1 only (`maps::NPC_APPEARANCE_MAPS`).
+- [x] Eastern Kingdoms (0) and Kalimdor (1) are hosted (`maps::HOSTED_CONTINENTS`): both spawn their creatures and game objects at startup (44,378 + 49,408 creatures). Other world maps are refused (`MapNotAllowed`). Creatures spawn only on maps the client has NPC appearance data for (`maps::NPC_APPEARANCE_MAPS`: 0, 1, 34).
 - [x] Visibility, creature aggro (`IsInMap` in `_IsTargetAcceptable`), spell area and explicit targets (`ObjectAccessor::GetUnit` searches the caster's map), grid activation, say/yell/emote range and group XP, quest and loot credit (`IsAtGroupRewardDistance`) only relate entities of one map copy. A creature whose victim leaves its map loses it and evades.
 - [x] Player ground is per map: the map's `Map.db2` WDT either names one global WMO (MPHD 0x1; the Stockade, WMO 108631 placed from the world origin) or ADT tiles.
 - [x] The character's map is saved (`character_maps`) with its position; a player in a transfer is saved at its destination (`m_teleport_dest`). Characters without a row are on map 0.
@@ -21,7 +21,7 @@ Dungeons phase 1: several maps in one world, far teleports between them and dung
 - [x] Five-player dungeons (`InstanceType` 1) at `DIFFICULTY_NORMAL` without reset schedule: a group enters its most recent copy of the map (`Group::GetRecentInstanceId`), a player without a group its own (`Player::GetRecentInstanceId`); without one a copy is created and remembered. Raids, scenarios, battlegrounds and dungeons with a reset schedule are refused (`MapNotAllowed`).
 - [x] `InstanceMap::CannotEnter` (Map.cpp:2908-2946): a full copy (`MapDifficulty.MaxPlayers`, 5 for the Stockade) or one owned by another group answers `TRANSFER_ABORT_MAX_PLAYERS`.
 - [x] A copy starts its unload timer when created and when its last player leaves (`InstanceMap::RemovePlayerFromMap`); after `Instance.UnloadDelay` (30 min) it is removed with its entities, and the next entry recreates it fresh under the same id.
-- [x] Dungeon creatures do not spawn yet: their displays are not in the client's NPC appearance data (Stockade: 92 of 93 spawns uncovered). Dungeon copies open empty.
+- [x] Each Stockade copy spawns its own Retail creatures (143, TDB1210 Normal; [retail world content](retail-world-content.md)) and game objects of the spawned types when it is created, with the generic creature AI (boss scripts: phase 3); they respawn inside their copy and go when the copy unloads. Other dungeons open empty: their displays are not in the client's NPC appearance data.
 
 ### Area triggers (`HandleAreaTriggerOpcode`, MiscHandler.cpp:479-640)
 - [x] `AreaTrigger.db2` sphere and box triggers with an `areatrigger_teleport` row (`world_safe_locs` target) teleport a player who walks into them (`Player::IsInAreaTrigger`: `IsInDist`, `Position::IsWithinBox`). A ghost uses only triggers whose `AreaTriggerActionSet` allows ghosts; a taxi passenger none. The first position on a map records the trigger stood in without firing.
@@ -49,7 +49,7 @@ Dungeons phase 1: several maps in one world, far teleports between them and dung
 - Players carry no `Zone`; the zone of a continent position is not computed.
 
 ## Tests asserting this spec
-`cargo test -p server --bin game-server maps::` (map store on real world.db, instance ids, max players, unload, Stockade entrance/exit/group/refusal, Kalimdor teleport, Stockade release), `interest::` (other-map targets hidden, transfer visibility), `grid_activity::`, `creature_aggro::` (other-map player not attacked), `meeting_stone::` (Kalimdor target summoned to Eastern Kingdoms, portal in the caster's map), `auth_character::` (Kalimdor login terrain), `admin_ipc::` (teleport, kill).
+`cargo test -p server --bin game-server maps::` (map store on real world.db, instance ids, max players, unload, Stockade entrance/exit/group/refusal, per-copy Stockade creatures and their unload, Kalimdor teleport, Stockade release), `interest::` (other-map targets hidden, transfer visibility), `grid_activity::`, `creature_aggro::` (other-map player not attacked), `meeting_stone::` (Kalimdor target summoned to Eastern Kingdoms, portal in the caster's map), `auth_character::` (Kalimdor login terrain), `admin_ipc::` (teleport, kill).
 
 ## Live evidence (2026-09-26)
 Own server :5081 (copied world.db/game.redb), headless clients Fixshout, Fixpartner, Stormlight (level 20); screenshots and logs in game-engine `data/diagnostics/instances-20260926/`:

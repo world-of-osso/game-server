@@ -244,6 +244,23 @@ fn pair<M: lightyear::prelude::Message>() -> (MessageSender<M>, MessageReceiver<
 }
 
 fn harness() -> Option<Harness> {
+    harness_with(|_| {})
+}
+
+/// A harness whose copies spawn world.db's creatures and game objects.
+fn harness_with_content() -> Option<Harness> {
+    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/world.db");
+    let world_data = crate::world_data::load_world_data(&path);
+    let conn = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY)
+        .expect("open world.db");
+    let objects = crate::game_objects::load_game_object_spawns(&conn).expect("game objects");
+    harness_with(move |app| {
+        app.insert_resource(world_data);
+        app.insert_resource(objects);
+    })
+}
+
+fn harness_with(setup: impl FnOnce(&mut App)) -> Option<Harness> {
     let store = map_store()?;
     let mut app = App::new();
     app.add_plugins((MinimalPlugins, bevy::state::app::StatesPlugin));
@@ -258,6 +275,7 @@ fn harness() -> Option<Harness> {
     ));
     app.insert_resource(store.clone());
     app.init_resource::<GroupRegistry>();
+    setup(&mut app);
     app.finish();
     app.cleanup();
     app.update();
@@ -411,6 +429,19 @@ impl Harness {
         assert_eq!(registry.group_members(ids[0]).len(), ids.len());
     }
 
+    /// (template, name, level) of every creature in `map`, sorted.
+    fn creatures_in(&mut self, map: InMap) -> Vec<(u32, String, u8)> {
+        let world = self.app.world_mut();
+        let mut query = world.query::<(&shared::components::Npc, &UnitLevelOf, &InMap)>();
+        let mut creatures: Vec<_> = query
+            .iter(world)
+            .filter(|(_, _, in_map)| **in_map == map)
+            .map(|(npc, level, _)| (npc.template_id, npc.name.clone(), level.0))
+            .collect();
+        creatures.sort();
+        creatures
+    }
+
     /// Walk from beside the entrance into trigger 101 and answer the `NewWorld`.
     fn enter_stockade(&mut self, who: &Traveler) -> NewWorld {
         self.walk_to(who, STOCKADE_ENTRANCE_TRIGGER + Vec3::new(0.0, 0.0, 20.0));
@@ -422,6 +453,55 @@ impl Harness {
 }
 
 const STORMWIND: InMap = InMap::continent(0);
+type UnitLevelOf = shared::components::UnitLevel;
+/// Retail Stockade (TDB1210 map 34, DEFAULT_PHASE 169, Normal): 143 creatures, one Hogger (46254)
+/// on ContentTuning 215 (levels 10-30) with LevelScalingDelta 2.
+const STOCKADE_CREATURES: usize = 143;
+const HOGGER: u32 = 46254;
+
+#[test]
+fn each_stockade_copy_spawns_its_own_retail_creatures_and_unloads_them() {
+    let Some(mut h) = harness_with_content() else {
+        return;
+    };
+    let start = STOCKADE_ENTRANCE_TRIGGER + Vec3::new(0.0, 0.0, 20.0);
+    let first = h.spawn(1, STORMWIND, start);
+    let second = h.spawn(2, STORMWIND, start);
+    h.enter_stockade(&first);
+    h.enter_stockade(&second);
+    let (a, b) = (h.map_of(&first).unwrap(), h.map_of(&second).unwrap());
+    assert_ne!(a, b);
+    for copy in [a, b] {
+        let creatures = h.creatures_in(copy);
+        assert_eq!(creatures.len(), STOCKADE_CREATURES, "{copy:?}");
+        let hogger: Vec<_> = creatures.iter().filter(|c| c.0 == HOGGER).collect();
+        assert_eq!(hogger.len(), 1, "{copy:?}");
+        assert_eq!(hogger[0].1, "Hogger");
+        assert_eq!(
+            hogger[0].2, 32,
+            "ContentTuning 215 top level 30 + Normal delta 2"
+        );
+    }
+
+    // `first` leaves; after Instance.UnloadDelay its copy goes with its creatures.
+    h.walk_to(&first, STOCKADE_EXIT_TRIGGER);
+    h.new_worlds(&first);
+    h.ack(&first);
+    let delay = Duration::from_secs_f64(INSTANCE_UNLOAD_DELAY_SECS + 1.0);
+    h.app
+        .world_mut()
+        .resource_mut::<Time<Virtual>>()
+        .set_max_delta(delay);
+    h.app
+        .insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(delay));
+    h.advance(2);
+    assert!(h.creatures_in(a).is_empty());
+    assert_eq!(
+        h.creatures_in(b).len(),
+        STOCKADE_CREATURES,
+        "the occupied copy stays"
+    );
+}
 
 #[test]
 fn walking_into_the_stockade_entrance_transfers_the_player_into_a_copy_of_map_34() {

@@ -44,9 +44,9 @@ def tdb_template(entry, name, faction, npcflag, classification=0, unit_class=1, 
 
 
 def tdb_difficulty(entry, health_modifier, gold_min, gold_max, loot_id, content_tuning=6, health_expansion=0,
-                   delta=(0, 0), armor_modifier=1, damage_modifier=1):
-    """One TDB1210 `creature_template_difficulty` row (DifficultyID 0, 29 columns)."""
-    return (f"({entry},0,{delta[0]},{delta[1]},{content_tuning},{health_expansion},{health_modifier},1,"
+                   delta=(0, 0), armor_modifier=1, damage_modifier=1, difficulty=0):
+    """One TDB1210 `creature_template_difficulty` row (29 columns)."""
+    return (f"({entry},{difficulty},{delta[0]},{delta[1]},{content_tuning},{health_expansion},{health_modifier},1,"
             f"{armor_modifier},{damage_modifier},0,0,0,0,{loot_id},0,0,"
             f"{gold_min},{gold_max},0,0,0,0,0,0,0,0,66044)")
 
@@ -455,6 +455,70 @@ class CreatureEventImportTests(unittest.TestCase):
         self.assertEqual(reported[("tdb_creature", "guid=314")], "not base phase: terrainSwapMap 638")
         self.assertEqual(reported[("tdb_creature", "guid=317")], "not base phase: PhaseGroup 431")
         self.assertNotIn(("tdb_creature", "guid=316"), reported, "other maps keep AzerothCore spawns silently")
+
+    def test_retail_stockade_spawns_replace_azerothcore_classic_stockade(self):
+        """Map 34 (The Stockade): TrinityCore's DEFAULT_PHASE 169 Normal-difficulty spawns replace AzerothCore's."""
+        (self.sql / "creature_template.sql").write_text(
+            "INSERT INTO `creature_template` (entry,name,minlevel,maxlevel,exp,faction,lootid,mingold,maxgold,rank) VALUES\n"
+            "(1696,'Targorr the Dread',24,24,0,14,1696,123,266,1),(1720,'Bruegal Ironknuckle',25,25,0,14,1720,210,279,2);\n"
+        )
+        (self.sql / "creature.sql").write_text(
+            "INSERT INTO `creature` (guid,id1,map,position_x,position_y,position_z) VALUES\n"
+            "(84027,1696,34,159.582,1.25311,-25.6062),(79090,1720,34,160.051,45.709,-34.7729);\n"
+        )
+        (self.sql / "item_template.sql").write_text("INSERT INTO `item_template` (entry,name) VALUES\n(3228,'Jimmied Handcuffs');\n")
+        write_db2_rows(self.csv / db2.DEFAULT_BUILD, "ItemSparse", [{"ID": 3228, "Display_lang": "Jimmied Handcuffs"}])
+        write_tdb(self.tdb, "creature", [
+            tdb_creature(375720, 46254, 34, 158.016, 116.564, -35.1063, difficulties="1", phase_id=169),
+            tdb_creature(375808, 1720, 34, 103.112, 77.7348, -34.8562, difficulties="1", phase_id=169),
+            tdb_creature(375671, 46248, 34, 145.88, 111.855, -35.1063, difficulties="2", phase_id=169),
+            tdb_creature(16397, 16123, 0, -8900.0, 640.0, 99.7, phase_id=169),
+        ])
+        write_tdb(self.tdb, "creature_template", [tdb_template(46254, "Hogger", 14, 0, classification=1),
+                                                  tdb_template(46248, "Riverpaw Basher", 14, 0, classification=1),
+                                                  tdb_template(16123, "Gnome Citizen", 12, 0),
+                                                  tdb_template(1720, "Bruegal Ironknuckle", 14, 0, classification=2)])
+        (self.tdb / "creature_template_model.sql").write_text(
+            "INSERT INTO `creature_template_model` VALUES\n(46254,0,108956,1,0,66044),(46248,0,175,1,0,66044),"
+            "(16123,0,7197,1,1,66044);\n"
+        )
+        write_tdb(self.tdb, "creature_template_difficulty", [
+            tdb_difficulty(46254, 35, 0, 0, 0, content_tuning=0),
+            tdb_difficulty(46254, 35, 0, 0, 0, content_tuning=215, difficulty=1),
+            tdb_difficulty(1720, 3, 210, 279, 1720, content_tuning=0),
+        ])
+        write_tdb(self.tdb, "creature_loot_template", ["(1720,0,3228,60,0,1,1,1,1,'')"])
+        write_content_tuning(self.csv / db2.DEFAULT_BUILD, [(215, 10, 30, 0, 0)])
+        result = self.run_import()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        offset = retail_content.RETAIL_GUID_OFFSET
+        with sqlite3.connect(self.db) as conn:
+            self.assertEqual(
+                conn.execute("SELECT guid, id1, map, position_x FROM content_creature ORDER BY guid").fetchall(),
+                [(offset + 375720, 46254, 34, 158.016), (offset + 375808, 1720, 34, 103.112)],
+                "Retail Hogger and Bruegal replace Classic Targorr; Heroic-only and continent phase-169 spawns stay out",
+            )
+            self.assertEqual(
+                conn.execute("SELECT entry, minlevel, maxlevel, ContentTuningID, HealthModifier FROM content_creature_template"
+                             " WHERE entry = 46254").fetchall(),
+                [(46254, 10, 30, 215, 35.0)],
+                "Stockade creatures take their Normal (DifficultyID 1) row",
+            )
+            self.assertEqual(
+                conn.execute("SELECT entry, lootid, mingold, maxgold FROM content_creature_template WHERE entry = 1720")
+                .fetchall(),
+                [(1720, retail_content.TDB_LOOT_OFFSET + 1720, 210, 279)],
+                "without a Normal row, Difficulty.db2 falls Normal back to DifficultyID 0",
+            )
+            self.assertEqual(
+                conn.execute("SELECT Entry, Item FROM content_creature_loot_template").fetchall(),
+                [(retail_content.TDB_LOOT_OFFSET + 1720, 3228)],
+            )
+        with (self.root / "data/reports/content-dropped.csv").open(newline="") as handle:
+            reported = {(r["table"], r["key"]): r["reason"] for r in csv.DictReader(handle)}
+        self.assertEqual(reported[("creature", "guid=84027")], "map 34 spawn replaced by Retail spawns")
+        self.assertEqual(reported[("tdb_creature", "guid=375671")], "not base phase: spawnDifficulties 2")
+        self.assertEqual(reported[("tdb_creature", "guid=16397")], "not base phase: PhaseId 169")
 
     def write_retail_vendor_and_loot_fixture(self):
         """Corina Steele (54) spawned by TrinityCore sells Retail's list; an AzerothCore-only vendor keeps its own."""
