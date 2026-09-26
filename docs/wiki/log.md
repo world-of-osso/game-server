@@ -1,5 +1,9 @@
 # Wiki Log
 
+## [2026-09-26] systems | Retail creature spawns
+
+Updated [[content-import]] and [[world-data]], and created spec `retail-spawn-source`. Maps 0/1 now spawn TrinityCore TDB1210 base-phase spawns: 95,170 at guid + 20,000,000, replacing 60,412 AzerothCore spawns. The server reads `content_creature*`. 4,720 TrinityCore-only templates take their levels from the nearest AzerothCore-template spawns and have no loot, gossip, vendor or quest data. TrinityCore addons, paths, formations and event memberships follow the spawns.
+
 ## [2026-09-25] systems | Retail creature displays
 
 Updated [[content-import]] and [[world-data]]. `content_policy.py` builds `content_creature_template_model`: templates with a display absent from Retail `CreatureDisplayInfo` take TrinityCore TDB1210 Retail model rows for the same entry (same name or reviewed `creature` override). Map-0 spawns: 53 templates / 681 spawns moved off 40 Wrath-only displays. `db2.py` imports `creature_display_info`. Server `load_models` reads `content_creature_template_model`.

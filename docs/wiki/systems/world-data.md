@@ -23,6 +23,9 @@ Source: `~/Repos/azerothcore/data/sql/base/db_world/`
 | `game_event_creature` | Source-dependent | Signed event membership keyed by spawn GUID and event ID |
 | `creature_template_model` | 40,213 | Display models per creature (DisplayID, scale, probability) |
 | `content_creature_template_model` | 40,186 | `creature_template_model` with Wrath-only displays replaced by TrinityCore Retail models ([[content-import]]); `world_data.rs` `load_models` reads this table, and spawns replicate the first model by `Idx` |
+| `content_creature` | 184,436 | Server-read spawns: TrinityCore Retail base-phase spawns on maps 0/1 (guid + 20,000,000), AzerothCore spawns elsewhere ([[content-import]], [retail-spawn-source](../../specs/retail-spawn-source.md)) |
+| `content_creature_template` | 34,667 | Server-read templates: AzerothCore's plus 4,720 TrinityCore templates for Retail-only entries |
+| `content_creature_addon` / `content_creature_template_addon` / `content_creature_formations` / `content_game_event_creature` / `content_waypoint_data` | 20,379 / 16,143 / 5,730 / 4,941 / 174,818 | Server-read spawn-keyed rows, following each spawn's source |
 | `creature_classlevelstats` | 400 | Base health per (level, unit_class), `basehp0..2` by `creature_template.exp`; spawn health is `ceil(basehp × HealthModifier)` at the template `minlevel` (`zones.rs` `resolve_health`, AzerothCore `Creature::SelectLevel`) |
 | `waypoint_data` | 144,657 | Patrol points keyed by path ID: delay (ms), move_type, orientation |
 | `creature_addon` | 35,153 | Per-spawn path_id, mount, bytes1/2, emote, visibility, auras |
@@ -82,7 +85,7 @@ Encoded in `creature.movement_type`:
 
 ## Modules
 
-- `crates/server/src/world_data.rs` — `WorldDataPlugin`, `WorldData` resource. Loads templates, spawns, waypoints (by path ID), creature addons (by guid / template entry) and follow formations (by member guid) into `HashMap`s.
+- `crates/server/src/world_data.rs` — `WorldDataPlugin`, `WorldData` resource. Loads (from the `content_creature*` / `content_waypoint_data` / `content_game_event_creature` tables) templates, spawns, waypoints (by path ID), creature addons (by guid / template entry) and follow formations (by member guid) into `HashMap`s.
 - `crates/server/src/spell_info/` — `SpellInfoPlugin`, `SpellStore`, `ClassSpells` ([[spell-info]]).
 
 ## Race Metadata
