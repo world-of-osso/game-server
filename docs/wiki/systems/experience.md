@@ -17,7 +17,8 @@
   - Grey mob (level ≤ `GetGrayLevel`): 0. Grey level is 0 below 7, `(L−7) − (count of multiples of 5 in 15..=L − 1)` below 35, and `L−10` from 35.
 - `kill_gain` (Gain):
   - Critters (`type` 8) and `flags_extra & 0x40` give 0.
-  - Retail's ÷10 for creatures of an older expansion (`GetExpansionForLevel`) is omitted: without ContentTuning scaling every creature is older than a level 30+ player, so levelling would stall. A level 35 same-level kill gives the full 190.
+  - A tuned creature's level is its level against each player ([[level-scaling]]). Hogger (1-30) gives a level 10 killer a same-level 65 and a level 40 killer nothing.
+  - Retail's ÷10 for creatures of an older expansion (`HealthScalingExpansion` < `GetExpansionForLevel`) is still omitted. It would cut every Elwynn creature (HealthScalingExpansion 0) for players level 30 and up. A level 35 same-level kill gives the full 190.
   - Elites (`rank` 1 or 2) give ×2. There are no dungeon maps, so the 2.75× dungeon rate never applies.
   - Multiplied by `ExperienceModifier`.
 - Level 10 examples: a level 10 mob gives 65, level 8 gives 39, level 5 gives 11 and level 4 gives 0. A level 10 elite gives 130.

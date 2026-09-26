@@ -20,7 +20,7 @@ Measured on world.db (2026-09-25): many Elwynn low-level templates are civilian 
 
 `aggro_on_sight_system`: for each idle, alive, non-dormant creature with `AggroRange`, the nearest player that is inside `aggro_radius(detection_range, creature level, player level)`, whose FactionTemplate reaction from the creature is Hostile, and who is a valid victim, is engaged via `attack_start`.
 
-`aggro_radius` is `Creature::GetAggroRange`: `detection_range − (player level − creature level)`, the difference capped at −25, clamped to 5..45; below 1 yard it is 0. No line-of-sight or Z test (no collision data, creature Y is not kept on the ground while moving).
+`aggro_radius` is `Creature::GetAggroRange`: `detection_range − (player level − creature level)`. A tuned creature's level here is its level against that player ([[level-scaling]]), the difference capped at −25, clamped to 5..45; below 1 yard it is 0. No line-of-sight or Z test (no collision data, creature Y is not kept on the ground while moving).
 
 Valid victim (`valid_victim`, used for on-sight and engaged targets): health above 0, no NPC `DeathState`, `PlayerDeathState` Alive (or absent), not on a `TaxiFlight`, and `FactionTemplates::can_attack(creature, victim)`.
 

@@ -288,3 +288,7 @@ Created `systems/quests.md` (quest data, rules, runtime) and `specs/quests.md`; 
 ## [2026-09-25] create | Creature aggro
 
 [[creature-aggro]]: AggroMode per template (passive/reactive/aggressive), level-scaled aggro radius (GetAggroRange), threat from melee/spell damage and harmful spell hits, top-threat victim with 110%/130% swap, evade with combat_stop and full health; [[creature-ai]]: chase and return at run speed, 2 yd chase reach, leash evade through enter_evade_mode; [[combat]]: NPC CombatTarget now set by aggro.
+
+## [2026-09-26] create | Level scaling
+
+[[level-scaling]]: tuned creatures spawn at their ContentTuning maximum with ExpectedStat health, and are fought at each unit's clamped level through TrinityCore's damage and health multipliers. XP and aggro use the scaled level, and the target frame shows it with a difficulty colour. [[world-data]]: expected_stat tables. [[experience]], [[creature-aggro]] and [[combat]] link it.

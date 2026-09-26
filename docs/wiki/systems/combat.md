@@ -9,7 +9,7 @@ Combat logic is split across two crates: `shared/src/formulas/` holds pure comba
 Runs in `FixedUpdate`. Systems in order:
 
 1. `start_attack_system` — reacts to `Changed<CombatTarget>`; inserts `AutoAttack` and `CombatState` for a target, and removes `AutoAttack` when the target is cleared
-2. `auto_attack_system` — processes only entities with active `AutoAttack`, ticks swing timers, checks melee range (5 yards), applies `BASE_DAMAGE`, emits damage events, and handles lethal NPC transitions
+2. `auto_attack_system` — processes only entities with active `AutoAttack`, ticks swing timers, checks melee range (5 yards), applies `BASE_DAMAGE` (ExpectedStat damage for tuned creatures, then per-target damage and health multipliers, see [[level-scaling]]), emits damage events, and handles lethal NPC transitions
 3. `maintain_in_combat_state_system` — expires `CombatState` after 5s of no engagement
 4. `respawn_system` — ticks `DeathState.respawn_timer` (default 60s), restores HP and position to `SpawnPoint`, re-adds `Replicate` and `NetworkVisibility`
 

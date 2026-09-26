@@ -28,7 +28,8 @@ Source: `~/Repos/azerothcore/data/sql/base/db_world/`
 | `content_tuning` | 2,929 | Retail ContentTuning DB2, extracted from local CASC (`db2.py extract`) |
 | `content_gossip_menu` / `content_gossip_menu_option` / `content_npc_text` | 6,975 / 5,619 / 8,578 | Server-read gossip: TrinityCore rows for the menus Retail-spawned NPCs reach, AzerothCore's for the rest |
 | `content_creature_addon` / `content_creature_template_addon` / `content_creature_formations` / `content_game_event_creature` / `content_waypoint_data` | 20,379 / 16,143 / 5,730 / 4,941 / 174,818 | Server-read spawn-keyed rows, following each spawn's source |
-| `creature_classlevelstats` | 400 | Base health per (level, unit_class), `basehp0..2` by `creature_template.exp`; spawn health is `ceil(basehp × HealthModifier)` at the template `minlevel` (`zones.rs` `resolve_health`, AzerothCore `Creature::SelectLevel`) |
+| `creature_classlevelstats` | 400 | Base health per (level, unit_class), `basehp0..2` by `creature_template.exp`. An untuned template's spawn health is `ceil(basehp × HealthModifier)` at its `minlevel` (`zones.rs` `resolve_health`, AzerothCore `Creature::SelectLevel`). Tuned templates use ExpectedStat instead ([[level-scaling]]) |
+| `expected_stat` / `expected_stat_mod` / `content_tuning_x_expected` | 232 / 335 / 1,072 | Retail creature health and DPS per (level, expansion), with their per-ContentTuning and per-class mods. Local CASC extract (`db2.py extract`). Tuned `content_creature_template` rows add `ContentTuningID`, `HealthScalingExpansion` and `LevelScalingDeltaMin/Max` ([[level-scaling]]) |
 | `waypoint_data` | 144,657 | Patrol points keyed by path ID: delay (ms), move_type, orientation |
 | `creature_addon` | 35,153 | Per-spawn path_id, mount, bytes1/2, emote, visibility, auras |
 | `creature_template_addon` | 11,983 | Same fields per template entry; fallback when a spawn has no row |
