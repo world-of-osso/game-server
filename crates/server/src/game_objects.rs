@@ -1,9 +1,10 @@
 //! World game objects from world.db `content_gameobject` (docs/wiki/systems/game-objects.md).
 //!
 //! Guild Vaults (`GAMEOBJECT_TYPE_GUILD_BANK`), Mailboxes
-//! (`GAMEOBJECT_TYPE_MAILBOX`) and meeting stones (`GAMEOBJECT_TYPE_MEETINGSTONE`)
-//! spawn for now, into each copy of their map (`maps`); other types become spawns by
-//! widening `SPAWN_QUERY`. Summoning portals spawn at runtime (`meeting_stone::ritual`). A spawned object
+//! (`GAMEOBJECT_TYPE_MAILBOX`), meeting stones (`GAMEOBJECT_TYPE_MEETINGSTONE`) and the
+//! non-usable decoration (`GAMEOBJECT_TYPE_GENERIC`) and spell foci
+//! (`GAMEOBJECT_TYPE_SPELL_FOCUS`: fires, bonfires) spawn for now, into each copy of their
+//! map (`maps`); other types become spawns by widening `SPAWN_QUERY`. Summoning portals spawn at runtime (`meeting_stone::ritual`). A spawned object
 //! replicates `Position`, `Rotation` and `GameObjectInfo`, and keeps its model box
 //! (Retail `GameObjectDisplayInfo.GeoBox`) for the interaction reach check.
 //!
@@ -20,8 +21,8 @@ use lightyear::prelude::*;
 use rusqlite::{Connection, Row};
 use shared::components::{Position, Rotation};
 use shared::protocol::{
-    GAMEOBJECT_TYPE_GUILD_BANK, GAMEOBJECT_TYPE_MAILBOX, GAMEOBJECT_TYPE_MEETINGSTONE,
-    GameObjectInfo,
+    GAMEOBJECT_TYPE_GENERIC, GAMEOBJECT_TYPE_GUILD_BANK, GAMEOBJECT_TYPE_MAILBOX,
+    GAMEOBJECT_TYPE_MEETINGSTONE, GAMEOBJECT_TYPE_SPELL_FOCUS, GameObjectInfo,
 };
 
 use crate::interest::NetworkVisibility;
@@ -36,7 +37,7 @@ const SPAWN_QUERY: &str = "SELECT g.guid, g.id, g.position_x, g.position_y, g.po
      FROM content_gameobject g \
      JOIN content_gameobject_template t ON t.entry = g.id \
      JOIN game_object_display_info d ON d.ID = t.displayId \
-     WHERE t.type IN (?1, ?2, ?3) ORDER BY g.guid";
+     WHERE t.type IN (?1, ?2, ?3, ?4, ?5) ORDER BY g.guid";
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GameObjectSpawn {
@@ -107,6 +108,8 @@ pub fn load_game_object_spawns(conn: &Connection) -> rusqlite::Result<GameObject
             GAMEOBJECT_TYPE_GUILD_BANK,
             GAMEOBJECT_TYPE_MAILBOX,
             GAMEOBJECT_TYPE_MEETINGSTONE,
+            GAMEOBJECT_TYPE_GENERIC,
+            GAMEOBJECT_TYPE_SPELL_FOCUS,
         ],
         spawn_from_row,
     )?;

@@ -329,3 +329,20 @@ fn admin_sets_member_ranks_and_rank_bank_rights() {
     );
     h.take::<GuildBankContents>();
 }
+
+#[test]
+fn using_the_stockade_bonfire_or_a_fire_is_refused_as_an_invalid_target() {
+    let Some(mut h) = harness() else { return };
+    // Stockade Bonfire (206117, GAMEOBJECT_TYPE_SPELL_FOCUS) and Small Fire (206038, GENERIC).
+    for guid in [20_235_252, 20_235_253] {
+        let object = h.use_game_object(guid);
+        assert_eq!(
+            h.take::<InteractionFailed>(),
+            vec![InteractionFailed {
+                npc: object.to_bits(),
+                error: InteractionError::InvalidTarget,
+            }]
+        );
+        assert!(h.take::<InteractionOpened>().is_empty());
+    }
+}
