@@ -264,3 +264,7 @@ Created `systems/quests.md` (quest data, rules, runtime) and `specs/quests.md`; 
 ## [2026-09-25] create | Professions
 
 [[professions]]: PlayerProfessions (skill lines + spells) replaces the AzerothCore-era placeholder; TDB1210 trainers (TrainerList/TrainerBuySpell), LEARN_SPELL/SKILL_STEP/CREATE_ITEM handlers, CraftRecipe queue, SpellReagents/SpellTotems checks. [[content-import]]: tdb_* tables, SpellReagents/SpellTotems/TradeSkillCategory/SkillRaceClassInfo/TotemCategory.
+
+## [2026-09-26] create | Mail
+
+[[mail]]: player mail at type-19 Mailboxes (postage, C.O.D., 1 h cross-account item delay, 30/3-day expiry, return, PendingMail), Auction House results delivered as real mail (legacy `mailboxes` migrated); [[game-objects]]: mailbox spawns.

@@ -33,12 +33,13 @@ fn cancel_own_auction_returns_item_via_mail() {
     assert!(response.success);
     assert!(!state.auctions.contains_key(&auction_id));
 
-    let seller_mail = persistence::load_mailbox(&db, seller_id);
+    let seller_mail = mail_store::load_mailbox(&db, seller_id);
     assert_eq!(seller_mail.len(), 1);
-    assert_eq!(seller_mail[0].attached_money, 0);
+    assert_eq!(seller_mail[0].money, 0);
     let returned_item = seller_mail[0]
-        .attached_item
-        .as_ref()
+        .items
+        .first()
+        .map(|attached| &attached.item)
         .expect("returned item");
     assert_eq!(returned_item.item_id, source_item.item_id);
     assert_eq!(returned_item.stack_count, 3);
@@ -347,15 +348,15 @@ fn bid_at_buyout_price_triggers_immediate_sale() {
 
     assert!(!state.auctions.contains_key(&auction_id));
 
-    let buyer_mail = persistence::load_mailbox(&db, buyer_id);
+    let buyer_mail = mail_store::load_mailbox(&db, buyer_id);
     assert_eq!(buyer_mail.len(), 1);
-    assert!(buyer_mail[0].attached_item.is_some());
+    assert!(!buyer_mail[0].items.is_empty());
 
-    let seller_mail = persistence::load_mailbox(&db, seller_id);
+    let seller_mail = mail_store::load_mailbox(&db, seller_id);
     assert_eq!(seller_mail.len(), 1);
     let dep = deposit_cost(source_item.vendor_sell_price, 1, AuctionDuration::Medium);
     let expected_proceeds = 500 - (500 * HOUSE_CUT_BPS / 10_000) + dep;
-    assert_eq!(seller_mail[0].attached_money, expected_proceeds);
+    assert_eq!(seller_mail[0].money, expected_proceeds);
 }
 
 #[test]
@@ -433,19 +434,19 @@ fn outbid_sends_notification_mail_to_previous_bidder() {
     let auction_id = *state.auctions.keys().next().expect("auction id");
 
     place_bid(&db, &mut state, bidder_a_id, auction_id, 100);
-    assert!(persistence::load_mailbox(&db, bidder_a_id).is_empty());
+    assert!(mail_store::load_mailbox(&db, bidder_a_id).is_empty());
 
     let response = place_bid(&db, &mut state, bidder_b_id, auction_id, 105);
     assert!(response.success);
 
-    let mail_a = persistence::load_mailbox(&db, bidder_a_id);
+    let mail_a = mail_store::load_mailbox(&db, bidder_a_id);
     assert_eq!(mail_a.len(), 1);
     assert_eq!(mail_a[0].subject, "Outbid");
     assert!(mail_a[0].body.contains(&source_item.name));
-    assert_eq!(mail_a[0].attached_money, 0);
-    assert!(mail_a[0].attached_item.is_none());
+    assert_eq!(mail_a[0].money, 0);
+    assert!(mail_a[0].items.is_empty());
 
-    assert!(persistence::load_mailbox(&db, bidder_b_id).is_empty());
+    assert!(mail_store::load_mailbox(&db, bidder_b_id).is_empty());
 }
 
 #[test]
@@ -474,7 +475,7 @@ fn scheduled_auction_expiration_runs_at_most_once_per_second() {
             .contains_key(&1)
     );
     assert_eq!(
-        persistence::load_mailbox(&app.world().resource::<GameDatabase>().db, seller_id,).len(),
+        mail_store::load_mailbox(&app.world().resource::<GameDatabase>().db, seller_id,).len(),
         1
     );
 
@@ -511,7 +512,7 @@ fn scheduled_auction_expiration_runs_at_most_once_per_second() {
             .contains_key(&2)
     );
     assert_eq!(
-        persistence::load_mailbox(&app.world().resource::<GameDatabase>().db, seller_id,).len(),
+        mail_store::load_mailbox(&app.world().resource::<GameDatabase>().db, seller_id,).len(),
         2
     );
 }
@@ -560,12 +561,13 @@ fn expired_auction_without_bid_returns_item_to_seller() {
         Some(auction.item.clone()),
     );
 
-    let seller_mail = persistence::load_mailbox(&db, seller_id);
+    let seller_mail = mail_store::load_mailbox(&db, seller_id);
     assert_eq!(seller_mail.len(), 1);
-    assert_eq!(seller_mail[0].attached_money, 0);
+    assert_eq!(seller_mail[0].money, 0);
     let returned_item = seller_mail[0]
-        .attached_item
-        .as_ref()
+        .items
+        .first()
+        .map(|attached| &attached.item)
         .expect("returned item");
     assert_eq!(returned_item.item_id, source_item.item_id);
     assert_eq!(returned_item.stack_count, 4);
@@ -609,9 +611,13 @@ fn relist_after_expired_auction() {
         Some(auction.item),
     );
 
-    let mail = persistence::load_mailbox(&db, seller_id);
-    let claim = claim_mail(&db, seller_id, mail[0].mail_id);
-    assert!(claim.success);
+    let mail = mail_store::load_mailbox(&db, seller_id);
+    take_mail(
+        &db,
+        seller_id,
+        mail[0].mail_id,
+        &mut GoldUpdateQueue::default(),
+    );
 
     let inv = persistence::load_inventory(&db, seller_id);
     let relisted_item = inv

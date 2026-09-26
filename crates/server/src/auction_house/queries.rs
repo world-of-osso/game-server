@@ -133,16 +133,6 @@ pub(super) fn to_listing_summary(auction: &AuctionData) -> AuctionListingSummary
     }
 }
 
-pub(super) fn to_mail_entry(mail: MailEntryData) -> shared::protocol::AuctionMailEntry {
-    shared::protocol::AuctionMailEntry {
-        mail_id: mail.mail_id,
-        subject: mail.subject,
-        body: mail.body,
-        attached_money: mail.attached_money,
-        attached_item: mail.attached_item.map(to_inventory_item),
-    }
-}
-
 pub(super) fn min_next_bid(auction: &AuctionData) -> u64 {
     match auction.current_bid {
         Some(current) => current.saturating_add((current / 20).max(1)),

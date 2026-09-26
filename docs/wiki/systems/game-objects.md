@@ -2,7 +2,7 @@
 
 World game objects from AzerothCore `gameobject` / `gameobject_template`. The import keeps a template only when it has no model or its `displayId` is in the Retail `GameObjectDisplayInfo` table; the result is `content_gameobject*` (see [content import](content-import.md)).
 
-- **Spawning:** `game_objects::load_game_object_spawns` loads type 34 (`GAMEOBJECT_TYPE_GUILD_BANK`) on map 0. `spawn_game_objects` (PostStartup) spawns each one.
+- **Spawning:** `game_objects::load_game_object_spawns` loads type 34 (`GAMEOBJECT_TYPE_GUILD_BANK`) and type 19 (`GAMEOBJECT_TYPE_MAILBOX`, opens `NpcRole::Mailbox`) on map 0. `spawn_game_objects` (PostStartup) spawns each one.
 - **Replicated components:** `Position` (Bevy space), `Rotation` (same facing convention as creatures) and `GameObjectInfo { entry, go_type, display_id, name, scale }`.
 - **Visibility:** `NetworkVisibility` puts the objects under interest management.
 - **Server-only component:** `GameObjectBounds` holds the Retail `GeoBox` model box and the facing.

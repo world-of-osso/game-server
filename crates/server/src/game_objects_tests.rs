@@ -22,8 +22,8 @@ fn spawns() -> Option<GameObjectSpawns> {
 fn eastern_kingdoms_guild_vaults_load_with_retail_display_boxes() {
     let Some(spawns) = spawns() else { return };
     // Stormwind 4, Ironforge 2, Undercity 4, Booty Bay 2 (AzerothCore map 0 type 34).
-    assert_eq!(spawns.0.len(), 12);
-    assert!(spawns.0.iter().all(|s| s.info.go_type == 34));
+    let vaults = spawns.0.iter().filter(|s| s.info.go_type == 34).count();
+    assert_eq!(vaults, 12);
     let stormwind: Vec<_> = spawns
         .0
         .iter()
@@ -66,4 +66,18 @@ fn bundle_places_the_vault_in_server_space() {
     let (position, _, info, _) = game_object_bundle(vault);
     assert_eq!(wow_position(&position), vault.position);
     assert_eq!(info, vault.info);
+}
+
+#[test]
+fn eastern_kingdoms_mailboxes_spawn_with_retail_display_boxes() {
+    let Some(spawns) = spawns() else { return };
+    // AzerothCore map 0 type 19 rows with a Retail GameObjectDisplayInfo box.
+    let mailboxes: Vec<_> = spawns.0.iter().filter(|s| s.info.go_type == 19).collect();
+    assert_eq!(mailboxes.len(), 56);
+    // The Lion's Pride Inn mailbox in Goldshire (AzerothCore guid 26784).
+    let goldshire = mailboxes.iter().find(|s| s.guid == 26784).unwrap();
+    assert_eq!(goldshire.info.name, "Mailbox");
+    assert_eq!(goldshire.info.display_id, 1907);
+    assert!((goldshire.position.x - -9455.99).abs() < 1e-2);
+    assert!((goldshire.bounds.max.z - 3.0802).abs() < 1e-3);
 }

@@ -41,6 +41,7 @@ mod item_stats;
 mod item_templates;
 mod lfg;
 mod loot;
+mod mail;
 mod merchant;
 mod messaging;
 mod networking;
@@ -168,6 +169,7 @@ fn add_world_plugins(app: &mut App) {
         .add_plugins(game_objects::GameObjectPlugin)
         .add_plugins(bank::BankPlugin)
         .add_plugins(guild_bank::GuildBankPlugin)
+        .add_plugins(mail::MailPlugin)
         .add_plugins(spell_info::SpellInfoPlugin)
         .add_plugins(spell_cast::SpellCastPlugin)
         .add_plugins(auras::AuraPlugin)

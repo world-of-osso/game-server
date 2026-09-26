@@ -156,6 +156,12 @@ fn print_character_response(response: &AdminResponse) -> bool {
         } => {
             println!("Item granted: {character_name} <- {count} x {name} ({item_id})");
         }
+        AdminResponse::MailDelivered {
+            character_name,
+            count,
+        } => {
+            println!("Mail delivered: {character_name} <- {count} mail");
+        }
         AdminResponse::DurabilitySet {
             character_name,
             percent,

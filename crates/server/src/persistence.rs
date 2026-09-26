@@ -10,6 +10,8 @@ pub(crate) mod banks;
 pub(crate) mod equipment;
 #[path = "persistence_inventory.rs"]
 pub(crate) mod inventory_store;
+#[path = "persistence_mail.rs"]
+pub(crate) mod mail_store;
 #[path = "persistence_runtime.rs"]
 mod persistence_runtime;
 #[path = "persistence_quests.rs"]
@@ -127,22 +129,6 @@ impl From<LegacyAuctionDataU32Money> for AuctionData {
             deposit: u64::from(legacy.deposit),
         }
     }
-}
-
-/// Mailbox table: character_id (u64) -> bitcode `Vec<MailEntryData>` (money in `u64`).
-const MAILBOXES: TableDefinition<u64, &[u8]> = TableDefinition::new("auction_mailboxes");
-/// Mailboxes written before mail money became `u64`; moved into `MAILBOXES` and
-/// dropped at startup.
-pub(crate) const LEGACY_MAILBOXES: TableDefinition<u64, &[u8]> = TableDefinition::new("mailboxes");
-
-/// The mail layout before money became `u64`.
-#[derive(bitcode::Encode, bitcode::Decode)]
-pub(crate) struct LegacyMailEntryDataU32Money {
-    pub mail_id: u64,
-    pub subject: String,
-    pub body: String,
-    pub attached_money: u32,
-    pub attached_item: Option<InventoryItemData>,
 }
 
 /// Account table: token (&str) -> account_id (u64).
@@ -299,7 +285,7 @@ pub(crate) fn create_tables(db: &Database) {
     let _ = txn.open_table(IGNORE_LISTS);
     let _ = txn.open_table(COLLECTIONS);
     let _ = txn.open_table(AUCTIONS);
-    let _ = txn.open_table(MAILBOXES);
+    let _ = txn.open_table(mail_store::MAILBOXES);
     let _ = txn.open_table(ACCOUNTS);
     let _ = txn.open_table(ACCOUNT_CHARACTERS);
     let _ = txn.open_table(CHARACTER_NAMES);
@@ -320,52 +306,7 @@ pub(crate) fn create_tables(db: &Database) {
     migrate_legacy_inventories(db);
     migrate_legacy_characters(db);
     migrate_legacy_auctions(db);
-    migrate_legacy_mailboxes(db);
-}
-
-/// Move every row of the `u32`-money `mailboxes` table into `auction_mailboxes` and
-/// drop the old table, in one transaction.
-fn migrate_legacy_mailboxes(db: &Database) {
-    let txn = db
-        .begin_write()
-        .expect("Failed to begin mailbox migration write");
-    {
-        let legacy = txn
-            .open_table(LEGACY_MAILBOXES)
-            .expect("Failed to open legacy mailboxes");
-        let rows: Vec<(u64, Vec<MailEntryData>)> = legacy
-            .iter()
-            .expect("Failed to iterate legacy mailboxes")
-            .map(|row| {
-                let (key, value) = row.expect("Failed to read legacy mailbox row");
-                let mails = bitcode::decode::<Vec<LegacyMailEntryDataU32Money>>(value.value())
-                    .unwrap_or_else(|error| {
-                        panic!("Failed to migrate mailbox {}: {error:?}", key.value())
-                    })
-                    .into_iter()
-                    .map(|mail| MailEntryData {
-                        mail_id: mail.mail_id,
-                        subject: mail.subject,
-                        body: mail.body,
-                        attached_money: u64::from(mail.attached_money),
-                        attached_item: mail.attached_item,
-                    })
-                    .collect();
-                (key.value(), mails)
-            })
-            .collect();
-        let mut table = txn
-            .open_table(MAILBOXES)
-            .expect("Failed to open mailboxes table for migration");
-        for (character_id, mails) in &rows {
-            table
-                .insert(*character_id, bitcode::encode(mails).as_slice())
-                .expect("Failed to write migrated mailbox");
-        }
-    }
-    txn.delete_table(LEGACY_MAILBOXES)
-        .expect("Failed to drop legacy mailboxes");
-    txn.commit().expect("Failed to commit mailbox migration");
+    mail_store::migrate_legacy_mailboxes(db, crate::guild_bank::unix_now());
 }
 
 /// Move every row of the `u32`-money `auctions` table into `auction_listings` and
@@ -900,39 +841,6 @@ pub fn save_collections(
             .expect("Failed to insert collections");
     }
     txn.commit().expect("Failed to commit collections save");
-}
-
-pub fn load_mailbox(db: &Database, character_id: u64) -> Vec<MailEntryData> {
-    let txn = db.begin_read().expect("Failed to begin read txn");
-    let table = txn
-        .open_table(MAILBOXES)
-        .expect("Failed to open mailboxes table");
-    match table.get(character_id).expect("Failed to read mailbox") {
-        Some(guard) => {
-            bitcode::decode::<Vec<MailEntryData>>(guard.value()).expect("decode mailbox")
-        }
-        None => Vec::new(),
-    }
-}
-
-pub fn save_mailbox(db: &Database, character_id: u64, mailbox: &[MailEntryData]) {
-    let bytes = bitcode::encode(mailbox);
-    let txn = db.begin_write().expect("Failed to begin write txn");
-    {
-        let mut table = txn
-            .open_table(MAILBOXES)
-            .expect("Failed to open mailboxes table");
-        table
-            .insert(character_id, bytes.as_slice())
-            .expect("Failed to insert mailbox");
-    }
-    txn.commit().expect("Failed to commit mailbox save");
-}
-
-pub fn append_mail(db: &Database, character_id: u64, mail: MailEntryData) {
-    let mut mailbox = load_mailbox(db, character_id);
-    mailbox.push(mail);
-    save_mailbox(db, character_id, &mailbox);
 }
 
 pub fn load_auctions(db: &Database) -> Vec<AuctionData> {

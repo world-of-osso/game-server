@@ -102,6 +102,10 @@ pub enum AdminRequest {
         item_id: u32,
         count: u32,
     },
+    /// Deliver the character's mail still in transit now.
+    MailDeliverNow {
+        character_name: String,
+    },
     /// Every equipped item to `percent` of its max durability.
     SetDurability {
         character_name: String,
@@ -272,6 +276,10 @@ pub enum AdminResponse {
         item_id: u32,
         name: String,
         count: u32,
+    },
+    MailDelivered {
+        character_name: String,
+        count: usize,
     },
     DurabilitySet {
         character_name: String,

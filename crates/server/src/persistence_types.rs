@@ -50,15 +50,6 @@ pub struct InventoryData {
 }
 
 #[derive(bitcode::Encode, bitcode::Decode, Debug, Clone, PartialEq)]
-pub struct MailEntryData {
-    pub mail_id: u64,
-    pub subject: String,
-    pub body: String,
-    pub attached_money: u64,
-    pub attached_item: Option<InventoryItemData>,
-}
-
-#[derive(bitcode::Encode, bitcode::Decode, Debug, Clone, PartialEq)]
 pub struct AuctionData {
     pub auction_id: u64,
     pub seller_character_id: u64,

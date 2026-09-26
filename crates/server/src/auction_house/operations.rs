@@ -16,29 +16,6 @@ pub(super) fn deposit_cost(
         .saturating_mul(multiplier)
 }
 
-pub(super) fn claim_mail(
-    db: &redb::Database,
-    character_id: u64,
-    mail_id: u64,
-) -> AuctionOperationResponse {
-    let mut mailbox = persistence::load_mailbox(db, character_id);
-    let Some(index) = mailbox.iter().position(|entry| entry.mail_id == mail_id) else {
-        return err("mail not found");
-    };
-    let mail = mailbox.remove(index);
-    persistence::save_mailbox(db, character_id, &mailbox);
-    let mut inventory = persistence::load_inventory(db, character_id);
-    inventory.gold = inventory
-        .gold
-        .saturating_add(mail.attached_money)
-        .min(crate::gold::MAX_MONEY);
-    if let Some(item) = mail.attached_item {
-        inventory.items.push(item);
-    }
-    persistence::save_inventory(db, character_id, &inventory);
-    ok("mail claimed")
-}
-
 /// Validated inputs for creating an auction.
 struct ValidatedAuction {
     character_name: String,
@@ -364,23 +341,35 @@ pub(super) fn complete_sale(
     );
 }
 
+/// Instant Auction House mail (AzerothCore `MailDraft` from `MAIL_AUCTION`).
 pub(super) fn deliver_mail(
     db: &redb::Database,
     character_id: u64,
     subject: &str,
     body: &str,
-    attached_money: u64,
-    attached_item: Option<InventoryItemData>,
+    money: u64,
+    item: Option<InventoryItemData>,
 ) {
-    persistence::append_mail(
+    let now = unix_now();
+    mail_store::deliver_mail(
         db,
         character_id,
-        MailEntryData {
+        MailData {
             mail_id: persistence::next_id(db, "mail"),
+            sender: MailSender::AuctionHouse,
             subject: subject.to_string(),
             body: body.to_string(),
-            attached_money,
-            attached_item,
+            items: item
+                .into_iter()
+                .map(|item| MailItemData { slot: 0, item })
+                .collect(),
+            money,
+            cod: 0,
+            delivers_at: now,
+            expires_at: now + shared::mail::MAIL_EXPIRY_SECS,
+            read: false,
+            returned: false,
+            cod_payment: false,
         },
     );
 }

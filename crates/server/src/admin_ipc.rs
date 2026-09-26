@@ -43,6 +43,7 @@ struct AdminResources<'w> {
     item_templates: Option<Res<'w, crate::item_templates::ItemTemplates>>,
     vendor_catalog: Option<Res<'w, crate::merchant::VendorCatalog>>,
     inventory_updates: ResMut<'w, crate::gold::GoldUpdateQueue>,
+    changed_mailboxes: ResMut<'w, crate::mail::ChangedMailboxes>,
 }
 
 /// Queries needed by the admin IPC dispatch loop.
@@ -129,6 +130,13 @@ fn dispatch_resource_commands(
             (*item_id, *count),
         ));
     }
+    if let AdminRequest::MailDeliverNow { character_name } = request {
+        return Some(handle_mail_deliver_now(
+            db,
+            &mut res.changed_mailboxes,
+            character_name,
+        ));
+    }
     if let AdminRequest::TaxiLearn {
         character_name,
         node,
@@ -165,6 +173,24 @@ fn handle_grant_item(
             }
         }
         Err(error) => AdminResponse::Error(format!("grant {count} x {item_id} to {name}: {error}")),
+    }
+}
+
+/// `mail-deliver-now`: mail in transit to the character arrives now; an open
+/// mailbox gets the inbox again.
+fn handle_mail_deliver_now(
+    db: &persistence::GameDatabase,
+    changed: &mut crate::mail::ChangedMailboxes,
+    name: &str,
+) -> AdminResponse {
+    let Some(character_id) = persistence::find_character_id_by_name(&db.db, name) else {
+        return AdminResponse::Error(format!("character '{name}' not found"));
+    };
+    let count = crate::mail::deliver_pending_mail(&db.db, character_id, crate::mail::unix_now());
+    changed.0.insert(character_id);
+    AdminResponse::MailDelivered {
+        character_name: name.to_owned(),
+        count,
     }
 }
 
@@ -329,7 +355,9 @@ fn dispatch(
 
     let response = match cmd.request {
         AdminRequest::Ping => AdminResponse::Pong,
-        AdminRequest::CombatLog { .. } | AdminRequest::GrantItem { .. } => {
+        AdminRequest::CombatLog { .. }
+        | AdminRequest::GrantItem { .. }
+        | AdminRequest::MailDeliverNow { .. } => {
             // Handled in poll_admin_ipc before dispatch is called
             unreachable!()
         }
@@ -602,6 +630,54 @@ mod tests {
             vec![(2589, 4, "Linen Cloth")]
         );
         assert!(updates.changed_inventories().contains(&character_id));
+    }
+
+    #[test]
+    fn mail_deliver_now_delivers_mail_in_transit_and_refreshes_the_mailbox() {
+        use crate::persistence::mail_store::{self, MailData, MailSender};
+        let db = persistence::GameDatabase {
+            db: persistence::temp_database(),
+        };
+        let (character_id, _) =
+            persistence::create_character(&db.db, 1, "Tradeb", 1, 1).expect("character");
+        let now = crate::mail::unix_now();
+        mail_store::deliver_mail(
+            &db.db,
+            character_id,
+            MailData {
+                mail_id: 1,
+                sender: MailSender::Player {
+                    character_id: 99,
+                    name: "Tradea".into(),
+                },
+                subject: "Linen".into(),
+                body: String::new(),
+                items: Vec::new(),
+                money: 5,
+                cod: 0,
+                delivers_at: now + 3_600,
+                expires_at: now + 3_600 + shared::mail::MAIL_EXPIRY_SECS,
+                read: false,
+                returned: false,
+                cod_payment: false,
+            },
+        );
+        let mut changed = crate::mail::ChangedMailboxes::default();
+
+        let response = handle_mail_deliver_now(&db, &mut changed, "Tradeb");
+
+        assert!(matches!(
+            response,
+            AdminResponse::MailDelivered { count: 1, .. }
+        ));
+        let mail = &mail_store::load_mailbox(&db.db, character_id)[0];
+        assert!(mail.is_delivered(crate::mail::unix_now()));
+        assert!(mail.expires_at >= now + shared::mail::MAIL_EXPIRY_SECS);
+        assert!(changed.0.contains(&character_id));
+        assert!(matches!(
+            handle_mail_deliver_now(&db, &mut changed, "Nobody"),
+            AdminResponse::Error(_)
+        ));
     }
 
     #[test]

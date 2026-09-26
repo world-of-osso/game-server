@@ -140,32 +140,6 @@ pub(super) fn process_bid_list_requests(
     });
 }
 
-pub(super) fn process_mailbox_requests(
-    mut receivers: Query<(Entity, &InWorld, &mut MessageReceiver<QueryAuctionMailbox>)>,
-    db: Option<Res<GameDatabase>>,
-    mut senders: Query<&mut MessageSender<AuctionMailboxSnapshot>>,
-) {
-    let Some(db) = db else { return };
-    process_in_world_requests(&mut receivers, &mut senders, |character_id, _| {
-        let entries = persistence::load_mailbox(&db.db, character_id)
-            .into_iter()
-            .map(to_mail_entry)
-            .collect();
-        AuctionMailboxSnapshot { entries }
-    });
-}
-
-pub(super) fn process_claim_mail_requests(
-    mut receivers: Query<(Entity, &InWorld, &mut MessageReceiver<ClaimAuctionMail>)>,
-    db: Option<Res<GameDatabase>>,
-    mut gold_updates: ResMut<GoldUpdateQueue>,
-    mut senders: Query<&mut MessageSender<AuctionOperationResponse>>,
-) {
-    process_operation_requests(&mut receivers, db, &mut senders, |db, character_id, req| {
-        claim_mail_with_gold_update(&db.db, character_id, req.mail_id, &mut gold_updates)
-    });
-}
-
 pub(super) fn process_create_requests(
     mut receivers: SessionReceiver<CreateAuction>,
     db: Option<Res<GameDatabase>>,
@@ -292,17 +266,6 @@ fn expire_single_auction(db: &redb::Database, auction_id: u64, auction: &Auction
     );
 }
 
-pub(super) fn claim_mail_with_gold_update(
-    db: &redb::Database,
-    character_id: u64,
-    mail_id: u64,
-    gold_updates: &mut GoldUpdateQueue,
-) -> AuctionOperationResponse {
-    let response = claim_mail(db, character_id, mail_id);
-    record_successful_gold_updates(db, &response, [character_id], gold_updates);
-    response
-}
-
 pub(super) fn create_auction_with_gold_update(
     db: &redb::Database,
     state: &mut AuctionHouseState,
@@ -371,38 +334,6 @@ fn record_successful_gold_updates(
     for character_id in character_ids {
         record_persisted_gold(db, character_id, gold_updates);
     }
-}
-
-fn process_in_world_requests<M, R, F>(
-    receivers: &mut Query<(Entity, &InWorld, &mut MessageReceiver<M>)>,
-    senders: &mut Query<&mut MessageSender<R>>,
-    mut build_response: F,
-) where
-    M: lightyear::prelude::Message,
-    R: lightyear::prelude::Message,
-    F: FnMut(u64, M) -> R,
-{
-    for (entity, in_world, mut receiver) in &mut *receivers {
-        for req in receiver.receive() {
-            let response = build_response(in_world.character_id, req);
-            send_auction_message(senders, entity, response);
-        }
-    }
-}
-
-fn process_operation_requests<M, F>(
-    receivers: &mut Query<(Entity, &InWorld, &mut MessageReceiver<M>)>,
-    db: Option<Res<GameDatabase>>,
-    senders: &mut Query<&mut MessageSender<AuctionOperationResponse>>,
-    mut build_response: F,
-) where
-    M: lightyear::prelude::Message,
-    F: FnMut(&GameDatabase, u64, M) -> AuctionOperationResponse,
-{
-    let Some(db) = db else { return };
-    process_in_world_requests(receivers, senders, |character_id, req| {
-        build_response(&db, character_id, req)
-    });
 }
 
 fn process_session_operations<M, F>(

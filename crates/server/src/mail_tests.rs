@@ -1,0 +1,394 @@
+use std::time::Duration;
+
+use bevy::time::TimeUpdateStrategy;
+use shared::protocol::{
+    MailAction, MailChannel, MailError, MailFailed, MailRequest, MailSent, MailboxContents,
+    PendingMail, SendMail,
+};
+
+use super::*;
+use crate::bank_test_harness::{Harness, LINEN, PEACEBLOOM, harness};
+use crate::persistence::mail_store::{MailData, MailItemData, MailSender, load_mailbox};
+
+const DAY: u64 = 86_400;
+
+fn send(h: &mut Harness, mailbox: Entity, mail: SendMail) {
+    h.send::<_, MailChannel>(SendMail {
+        object: mailbox.to_bits(),
+        ..mail
+    });
+}
+
+fn letter(recipient: &str) -> SendMail {
+    SendMail {
+        object: 0,
+        recipient: recipient.into(),
+        subject: "Linen".into(),
+        body: "For your tailoring.".into(),
+        attachments: Vec::new(),
+        money: 0,
+        cod: 0,
+    }
+}
+
+fn act(h: &mut Harness, mailbox: Entity, mail_id: u64, action: MailAction) {
+    h.send::<_, MailChannel>(MailRequest {
+        object: mailbox.to_bits(),
+        mail_id,
+        action,
+    });
+}
+
+fn failures(h: &mut Harness) -> Vec<MailError> {
+    h.take::<MailFailed>()
+        .into_iter()
+        .map(|failed| failed.error)
+        .collect()
+}
+
+fn templates(h: &Harness) -> &ItemTemplates {
+    h.app.world().resource::<ItemTemplates>()
+}
+
+/// Advance the clock past one mail tick (virtual time steps at most 250 ms).
+fn run_mail_tick(h: &mut Harness) {
+    h.app
+        .insert_resource(TimeUpdateStrategy::ManualDuration(Duration::from_millis(
+            250,
+        )));
+    for _ in 0..6 {
+        h.app.update();
+    }
+    h.app.insert_resource(TimeUpdateStrategy::Automatic);
+}
+
+#[test]
+fn item_and_money_to_another_account_arrive_after_an_hour_and_are_taken_at_the_mailbox() {
+    let Some(mut h) = harness() else { return };
+    let recipient = h.create_on_account(2, "Tradeb", 1);
+    let linen = h.guid_of(LINEN);
+    let gold_before = h.gold();
+    let mailbox = h.open_mailbox();
+    assert_eq!(h.take::<MailboxContents>().len(), 1);
+
+    send(
+        &mut h,
+        mailbox,
+        SendMail {
+            attachments: vec![linen],
+            money: 5_000,
+            ..letter("tradeb")
+        },
+    );
+
+    assert_eq!(h.take::<MailSent>().len(), 1, "{:?}", failures(&mut h));
+    // Postage 30c for one item plus the 5,000c sent.
+    assert_eq!(h.gold(), gold_before - 5_030);
+    assert_eq!(h.count_of(LINEN), 0);
+    let now = unix_now();
+    let in_transit = load_mailbox(h.db(), recipient);
+    assert_eq!(in_transit.len(), 1);
+    assert!((now + 3_599..=now + 3_601).contains(&in_transit[0].delivers_at));
+    assert_eq!(
+        in_transit[0].expires_at,
+        in_transit[0].delivers_at + 30 * DAY
+    );
+    assert!(inbox(&in_transit, now).is_empty());
+
+    assert_eq!(deliver_pending_mail(h.db(), recipient, now), 1);
+    h.play_as(recipient);
+    run_mail_tick(&mut h);
+    let pending = h.take::<PendingMail>();
+    assert_eq!(pending.last().unwrap().senders, vec!["Banker".to_string()]);
+
+    let mailbox = h.open_mailbox();
+    let contents = h.take::<MailboxContents>().pop().unwrap();
+    let mail = &contents.mails[0];
+    assert_eq!(mail.sender, "Banker");
+    assert_eq!(mail.money, 5_000);
+    assert_eq!(mail.attachments[0].item.item_id, LINEN);
+    assert_eq!(mail.attachments[0].item.count, 20);
+    assert!(mail.returnable && !mail.can_delete());
+
+    let recipient_gold = h.gold();
+    let recipient_linen = h.count_of(LINEN);
+    act(
+        &mut h,
+        mailbox,
+        mail.mail_id,
+        MailAction::TakeAttachment { slot: 0 },
+    );
+    act(&mut h, mailbox, mail.mail_id, MailAction::TakeMoney);
+
+    assert!(failures(&mut h).is_empty());
+    assert_eq!(h.count_of(LINEN), recipient_linen + 20);
+    assert_eq!(h.gold(), recipient_gold + 5_000);
+    let emptied = h.take::<MailboxContents>().pop().unwrap();
+    assert!(emptied.mails[0].attachments.is_empty());
+    assert_eq!(emptied.mails[0].money, 0);
+    assert!(emptied.mails[0].read && emptied.mails[0].can_delete());
+    run_mail_tick(&mut h);
+    assert_eq!(
+        h.take::<PendingMail>().pop().unwrap().senders,
+        Vec::<String>::new()
+    );
+}
+
+#[test]
+fn cod_is_paid_with_the_first_item_and_mailed_to_the_sender() {
+    let Some(mut h) = harness() else { return };
+    let seller = h.character_id;
+    let buyer = h.create_alt("Buyer");
+    let peacebloom = h.guid_of(PEACEBLOOM);
+    let mailbox = h.open_mailbox();
+    send(
+        &mut h,
+        mailbox,
+        SendMail {
+            attachments: vec![peacebloom],
+            cod: 2_000,
+            ..letter("Buyer")
+        },
+    );
+    assert_eq!(h.take::<MailSent>().len(), 1);
+    let mail = &load_mailbox(h.db(), buyer)[0];
+    // Same account: no delivery delay; C.O.D. mail lasts 3 days.
+    assert_eq!(mail.expires_at, mail.delivers_at + 3 * DAY);
+    let mail_id = mail.mail_id;
+
+    h.play_as(buyer);
+    let mailbox = h.open_mailbox();
+    h.set_gold(1_999);
+    act(
+        &mut h,
+        mailbox,
+        mail_id,
+        MailAction::TakeAttachment { slot: 0 },
+    );
+    assert_eq!(failures(&mut h), vec![MailError::CodInsufficientMoney]);
+    let peacebloom_before = h.count_of(PEACEBLOOM);
+    h.set_gold(5_000);
+    act(
+        &mut h,
+        mailbox,
+        mail_id,
+        MailAction::TakeAttachment { slot: 0 },
+    );
+
+    assert!(failures(&mut h).is_empty());
+    assert_eq!(h.gold(), 3_000);
+    assert_eq!(h.count_of(PEACEBLOOM), peacebloom_before + 10);
+    let payments = load_mailbox(h.db(), seller);
+    assert_eq!(payments.len(), 1);
+    assert_eq!(payments[0].money, 2_000);
+    assert!(payments[0].cod_payment && !payments[0].returnable());
+    assert_eq!(
+        payments[0].sender,
+        MailSender::Player {
+            character_id: buyer,
+            name: "Buyer".into()
+        }
+    );
+}
+
+#[test]
+fn refused_sends_change_nothing() {
+    let Some(mut h) = harness() else { return };
+    h.create_alt("Buyer");
+    h.create_on_account(2, "Grunt", 2);
+    let linen = h.guid_of(LINEN);
+    let gold = h.gold();
+
+    // No open mailbox.
+    send(&mut h, Entity::from_bits(1), letter("Buyer"));
+    let mailbox = h.open_mailbox();
+    send(&mut h, mailbox, letter("Banker"));
+    send(&mut h, mailbox, letter("Nobody"));
+    send(&mut h, mailbox, letter("Grunt"));
+    send(
+        &mut h,
+        mailbox,
+        SendMail {
+            attachments: vec![linen],
+            money: 10,
+            cod: 10,
+            ..letter("Buyer")
+        },
+    );
+    h.make_soulbound(linen);
+    send(
+        &mut h,
+        mailbox,
+        SendMail {
+            attachments: vec![linen],
+            ..letter("Buyer")
+        },
+    );
+    h.set_gold(29);
+    send(&mut h, mailbox, letter("Buyer"));
+
+    assert_eq!(
+        failures(&mut h),
+        vec![
+            MailError::NotInteracting,
+            MailError::ToSelf,
+            MailError::RecipientNotFound,
+            MailError::WrongFaction,
+            MailError::Internal,
+            MailError::BoundItem,
+            MailError::NotEnoughMoney,
+        ]
+    );
+    assert!(h.take::<MailSent>().is_empty());
+    assert_eq!(h.count_of(LINEN), 20);
+    h.set_gold(gold);
+}
+
+#[test]
+fn returned_mail_goes_back_once_and_letters_delete() {
+    let Some(mut h) = harness() else { return };
+    let sender = h.character_id;
+    let recipient = h.create_alt("Buyer");
+    let peacebloom = h.guid_of(PEACEBLOOM);
+    let mailbox = h.open_mailbox();
+    send(
+        &mut h,
+        mailbox,
+        SendMail {
+            attachments: vec![peacebloom],
+            ..letter("Buyer")
+        },
+    );
+    send(&mut h, mailbox, letter("Buyer"));
+    let mails = load_mailbox(h.db(), recipient);
+    let (parcel, text) = (mails[0].mail_id, mails[1].mail_id);
+
+    h.play_as(recipient);
+    let mailbox = h.open_mailbox();
+    act(&mut h, mailbox, parcel, MailAction::Delete);
+    assert_eq!(failures(&mut h), vec![MailError::CannotDelete]);
+    act(&mut h, mailbox, parcel, MailAction::Return);
+    act(&mut h, mailbox, text, MailAction::Delete);
+    assert!(failures(&mut h).is_empty());
+    assert!(load_mailbox(h.db(), recipient).is_empty());
+
+    let back = load_mailbox(h.db(), sender);
+    assert_eq!(back.len(), 1);
+    assert!(back[0].returned && !back[0].returnable());
+    assert_eq!(back[0].items[0].item.item_guid, peacebloom);
+    h.play_as(sender);
+    let mailbox = h.open_mailbox();
+    act(&mut h, mailbox, back[0].mail_id, MailAction::Return);
+    assert_eq!(failures(&mut h), vec![MailError::Internal]);
+}
+
+fn parcel(mail_id: u64, sender: MailSender, delivered: u64) -> MailData {
+    MailData {
+        mail_id,
+        sender,
+        subject: "Parcel".into(),
+        body: String::new(),
+        items: vec![MailItemData {
+            slot: 0,
+            item: persistence::InventoryItemData {
+                item_guid: 9_000 + mail_id,
+                item_id: LINEN,
+                name: "Linen Cloth".into(),
+                quality: 1,
+                required_level: 0,
+                stack_count: 5,
+                vendor_sell_price: 13,
+                unique_auction: false,
+            },
+        }],
+        money: 0,
+        cod: 0,
+        delivers_at: delivered,
+        expires_at: delivered + 30 * DAY,
+        read: false,
+        returned: false,
+        cod_payment: false,
+    }
+}
+
+#[test]
+fn expired_player_mail_is_returned_and_auction_mail_deleted() {
+    let Some(h) = harness() else { return };
+    let sender = h.character_id;
+    let db = h.db();
+    let (recipient, _) =
+        persistence::create_character_with_test_bags(db, 2, "Tradeb", 1, 1).unwrap();
+    let from = MailSender::Player {
+        character_id: sender,
+        name: "Banker".into(),
+    };
+    mail_store::deliver_mail(db, recipient, parcel(1, from, 1_000));
+    mail_store::deliver_mail(db, recipient, parcel(2, MailSender::AuctionHouse, 1_000));
+    mail_store::deliver_mail(db, recipient, parcel(3, MailSender::AuctionHouse, 5_000));
+
+    let changed = expire_mail(db, 1_000 + 30 * DAY);
+
+    assert!(changed.contains(&sender) && changed.contains(&recipient));
+    let kept: Vec<u64> = load_mailbox(db, recipient)
+        .iter()
+        .map(|m| m.mail_id)
+        .collect();
+    assert_eq!(kept, vec![3]);
+    let back = load_mailbox(db, sender);
+    assert_eq!(back.len(), 1);
+    assert!(back[0].returned);
+    assert_eq!(back[0].items[0].item.item_guid, 9_001);
+    assert_eq!(
+        back[0].sender,
+        MailSender::Player {
+            character_id: recipient,
+            name: "Tradeb".into()
+        }
+    );
+}
+
+#[test]
+fn taking_money_past_the_gold_cap_is_refused() {
+    let Some(mut h) = harness() else { return };
+    let mut mail = parcel(1, MailSender::AuctionHouse, 0);
+    mail.items.clear();
+    mail.money = 10;
+    mail_store::deliver_mail(h.db(), h.character_id, mail);
+    h.set_gold(MAX_MONEY - 5);
+
+    let result = act_on_mail(
+        h.db(),
+        templates(&h),
+        h.character_id,
+        1,
+        MailAction::TakeMoney,
+        1,
+    );
+
+    assert_eq!(result, Err(MailError::TooMuchGold));
+    assert_eq!(h.gold(), MAX_MONEY - 5);
+    assert_eq!(load_mailbox(h.db(), h.character_id)[0].money, 10);
+}
+
+#[test]
+fn pending_senders_are_the_newest_three_unread_delivered() {
+    let player = |id, name: &str| MailSender::Player {
+        character_id: id,
+        name: name.into(),
+    };
+    let mut read = parcel(5, player(5, "Reader"), 500);
+    read.read = true;
+    let mails = vec![
+        parcel(1, player(1, "Old"), 100),
+        parcel(2, MailSender::AuctionHouse, 200),
+        parcel(3, player(3, "Tradea"), 300),
+        parcel(4, player(3, "Tradea"), 400),
+        read,
+        parcel(6, player(6, "Later"), 9_999),
+    ];
+
+    assert_eq!(
+        pending_senders(&mails, 1_000),
+        vec!["Tradea".to_string(), "Auction House".into(), "Old".into()]
+    );
+}

@@ -1,4 +1,4 @@
-//! Test harness for the bank and guild bank plugins: a real world.db (skips when
+//! Test harness for the bank, guild bank and mail plugins: a real world.db (skips when
 //! absent), a temp game database, one connection whose character can be switched,
 //! and inboxes for the messages the server sends.
 use std::path::PathBuf;
@@ -18,6 +18,7 @@ use crate::faction::world_db_faction_templates;
 use crate::gold::GoldUpdateQueue;
 use crate::guild_bank::GuildBankPlugin;
 use crate::item_templates::load_item_templates;
+use crate::mail::MailPlugin;
 use crate::networking::PlayerLink;
 use crate::npc_interaction::{NpcInteractionPlugin, load_gossip_catalog};
 use crate::persistence::{self, ClientId, GameDatabase};
@@ -78,6 +79,10 @@ pub(crate) fn harness() -> Option<Harness> {
     add_inbox::<GuildBankContents>(&mut app);
     add_inbox::<GuildBankFailed>(&mut app);
     add_inbox::<GuildBankLog>(&mut app);
+    add_inbox::<MailboxContents>(&mut app);
+    add_inbox::<MailSent>(&mut app);
+    add_inbox::<MailFailed>(&mut app);
+    add_inbox::<PendingMail>(&mut app);
     app.insert_resource(world_db_faction_templates()?);
     app.insert_resource(load_gossip_catalog(&conn).unwrap());
     app.insert_resource(load_item_templates(&path).unwrap());
@@ -86,7 +91,12 @@ pub(crate) fn harness() -> Option<Harness> {
         db: persistence::temp_database(),
     });
     app.init_resource::<GoldUpdateQueue>();
-    app.add_plugins((NpcInteractionPlugin, BankPlugin, GuildBankPlugin));
+    app.add_plugins((
+        NpcInteractionPlugin,
+        BankPlugin,
+        GuildBankPlugin,
+        MailPlugin,
+    ));
     app.finish();
     app.cleanup();
     let character_id = create_character(&mut app, "Banker");
@@ -153,6 +163,14 @@ pub(crate) fn harness() -> Option<Harness> {
                 pair::<GuildBankSetTabInfo>(),
                 pair::<GuildBankSetTabText>(),
                 pair::<GuildBankQueryLog>(),
+            ),
+            (
+                pair::<MailboxContents>(),
+                pair::<MailSent>(),
+                pair::<MailFailed>(),
+                pair::<PendingMail>(),
+                pair::<SendMail>(),
+                pair::<MailRequest>(),
             ),
         ))
         .id();
@@ -336,5 +354,37 @@ impl Harness {
         // The guild bank goes out one frame after the role opens.
         self.app.update();
         object
+    }
+
+    /// Spawn the Goldshire mailbox (AzerothCore guid 26784) 2 yd away and use it.
+    pub fn open_mailbox(&mut self) -> Entity {
+        let spawns = crate::game_objects::load_game_object_spawns(&self.conn).unwrap();
+        let mut spawn = spawns
+            .0
+            .into_iter()
+            .find(|spawn| spawn.guid == 26784)
+            .expect("Goldshire mailbox");
+        spawn.position = Vec3::new(2.0, 0.0, 0.0);
+        spawn.orientation = 0.0;
+        spawn.bounds.orientation = 0.0;
+        let object = self
+            .app
+            .world_mut()
+            .spawn(crate::game_objects::game_object_bundle(&spawn))
+            .id();
+        self.send::<_, InteractionChannel>(UseGameObject {
+            object: object.to_bits(),
+        });
+        // The inbox goes out one frame after the role opens.
+        self.app.update();
+        object
+    }
+
+    /// A character on another account.
+    pub fn create_on_account(&mut self, account_id: u64, name: &str, race: u8) -> u64 {
+        let db = &self.app.world().resource::<GameDatabase>().db;
+        persistence::create_character_with_test_bags(db, account_id, name, race, 1)
+            .expect("create character")
+            .0
     }
 }

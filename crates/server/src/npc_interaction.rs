@@ -19,9 +19,9 @@ use bevy::prelude::*;
 use lightyear::prelude::*;
 use shared::components::{CombatStatus, Health, Npc, Position, UnitFactionTemplate};
 use shared::protocol::{
-    CloseInteraction, GAMEOBJECT_TYPE_GUILD_BANK, GameObjectInfo, InteractNpc, InteractionChannel,
-    InteractionClosed, InteractionError, InteractionFailed, InteractionKind, InteractionOpened,
-    NpcFlags, NpcRole, SelectGossipOption, UseGameObject,
+    CloseInteraction, GAMEOBJECT_TYPE_GUILD_BANK, GAMEOBJECT_TYPE_MAILBOX, GameObjectInfo,
+    InteractNpc, InteractionChannel, InteractionClosed, InteractionError, InteractionFailed,
+    InteractionKind, InteractionOpened, NpcFlags, NpcRole, SelectGossipOption, UseGameObject,
 };
 
 use crate::auth::InWorld;
@@ -169,6 +169,7 @@ impl InteractionWorld<'_, '_> {
             .map_err(|_| InteractionError::InvalidTarget)?;
         let role = match info.go_type {
             GAMEOBJECT_TYPE_GUILD_BANK => NpcRole::GuildBanker,
+            GAMEOBJECT_TYPE_MAILBOX => NpcRole::Mailbox,
             _ => return Err(InteractionError::InvalidTarget),
         };
         let (player_position, player_health, _) = self

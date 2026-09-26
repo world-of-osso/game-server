@@ -1,5 +1,29 @@
 use super::*;
+use crate::gold::GoldUpdateQueue;
 use crate::persistence;
+
+/// Take a mail's money and items at a mailbox (`TakeInboxMoney`, `TakeInboxItem`).
+fn take_mail(db: &redb::Database, character_id: u64, mail_id: u64, gold: &mut GoldUpdateQueue) {
+    use shared::protocol::MailAction;
+    let templates = crate::item_templates::ItemTemplates::default();
+    let mail = mail_store::load_mailbox(db, character_id)
+        .into_iter()
+        .find(|mail| mail.mail_id == mail_id)
+        .expect("mail in the mailbox");
+    let actions = std::iter::once(MailAction::TakeMoney).chain(mail.items.iter().map(|attached| {
+        MailAction::TakeAttachment {
+            slot: attached.slot,
+        }
+    }));
+    for action in actions {
+        let changes =
+            crate::mail::act_on_mail(db, &templates, character_id, mail_id, action, unix_now())
+                .expect("take from mail");
+        for (id, copper) in changes.gold {
+            gold.record(id, copper);
+        }
+    }
+}
 
 fn test_auction(id: u64, name: &str, quality: u8, required_level: u16) -> AuctionData {
     AuctionData {

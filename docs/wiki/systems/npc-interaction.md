@@ -53,7 +53,7 @@ An open interaction is `ActiveInteraction { npc, role, auction_house, gossip_act
 
 ## Auction house
 
-Auction requests need an `ActiveInteraction` whose role is AuctionHouse (TrinityCore checks `GetNPCIfCanInteractWith(auctioneer, UNIT_NPC_FLAG_AUCTIONEER)` on every `CMSG_AUCTION_*`). Without one: `OpenAuctionHouse` answers `success: false`; `QueryAuctions`, `QueryAuctionInventory`, `QueryOwnedAuctions`, `QueryBidAuctions`, `CreateAuction`, `PlaceBid`, `BuyoutAuction` and `CancelAuction` answer `AuctionOperationResponse { success: false, "not interacting with an auctioneer" }`. Auction mail (`QueryAuctionMailbox`, `ClaimAuctionMail`) is not gated.
+Auction requests need an `ActiveInteraction` whose role is AuctionHouse (TrinityCore checks `GetNPCIfCanInteractWith(auctioneer, UNIT_NPC_FLAG_AUCTIONEER)` on every `CMSG_AUCTION_*`). Without one: `OpenAuctionHouse` answers `success: false`; `QueryAuctions`, `QueryAuctionInventory`, `QueryOwnedAuctions`, `QueryBidAuctions`, `CreateAuction`, `PlaceBid`, `BuyoutAuction` and `CancelAuction` answer `AuctionOperationResponse { success: false, "not interacting with an auctioneer" }`. Auction results arrive as mail, taken at a mailbox ([mail](mail.md)).
 
 The house comes from the auctioneer's FactionTemplate `FactionGroup` (TrinityCore `AuctionHouseMgr::GetAuctionHouseEntry`): Alliance bit 0x2 → 1, Horde bit 0x4 → 2, otherwise neutral → 3. Searches use the session house (the client's `AuctionSearchQuery.faction` is overwritten) and new auctions store it in `AuctionData.faction`. Auctions saved earlier with faction 0 stay visible in every house.
 

@@ -115,16 +115,10 @@ fn deposit_refunded_on_successful_sale() {
         );
         assert!(buyout.success);
 
-        let mail = persistence::load_mailbox(&db, seller_id);
+        let mail = mail_store::load_mailbox(&db, seller_id);
         let sale_proceeds = 500 - (500 * HOUSE_CUT_BPS / 10_000);
-        assert_eq!(mail[0].attached_money, sale_proceeds + deposit);
-        let claim = super::super::handlers::claim_mail_with_gold_update(
-            &db,
-            seller_id,
-            mail[0].mail_id,
-            &mut gold_updates,
-        );
-        assert!(claim.success);
+        assert_eq!(mail[0].money, sale_proceeds + deposit);
+        take_mail(&db, seller_id, mail[0].mail_id, &mut gold_updates);
     }
     app.update();
 
@@ -246,36 +240,19 @@ fn seller_offline_auction_still_completes() {
     let response = buyout_auction(&db, &mut state, buyer_id, auction_id);
     assert!(response.success);
 
-    let seller_mail = persistence::load_mailbox(&db, seller_id);
+    let seller_mail = mail_store::load_mailbox(&db, seller_id);
     assert_eq!(seller_mail.len(), 1);
-    assert!(seller_mail[0].attached_money > 0);
+    assert!(seller_mail[0].money > 0);
 
     let seller_gold_before_claim = persistence::load_inventory(&db, seller_id).gold;
-    claim_mail(&db, seller_id, seller_mail[0].mail_id);
+    take_mail(
+        &db,
+        seller_id,
+        seller_mail[0].mail_id,
+        &mut GoldUpdateQueue::default(),
+    );
     let seller_gold_after_claim = persistence::load_inventory(&db, seller_id).gold;
     assert!(seller_gold_after_claim > seller_gold_before_claim);
-}
-
-#[test]
-fn gold_overflow_saturates_at_max() {
-    let db = persistence::temp_database();
-    let (seller_id, _) =
-        persistence::create_character_with_test_bags(&db, 1, "Seller", 1, 1).expect("seller");
-
-    let mut inv = persistence::load_inventory(&db, seller_id);
-    inv.gold = crate::gold::MAX_MONEY - 10;
-    persistence::save_inventory(&db, seller_id, &inv);
-
-    deliver_mail(&db, seller_id, "Test", "gold overflow", 100, None);
-    let mail = persistence::load_mailbox(&db, seller_id);
-    claim_mail(&db, seller_id, mail[0].mail_id);
-
-    let final_gold = persistence::load_inventory(&db, seller_id).gold;
-    assert_eq!(
-        final_gold,
-        crate::gold::MAX_MONEY,
-        "gold stops at the Retail cap"
-    );
 }
 
 #[test]
@@ -363,17 +340,21 @@ fn expired_auction_with_bid_awards_winner_and_pays_seller() {
     persistence::delete_auction(&db, auction_id);
     complete_sale(&db, &auction, winner_id, winning_bid);
 
-    let seller_mail = persistence::load_mailbox(&db, seller_id);
+    let seller_mail = mail_store::load_mailbox(&db, seller_id);
     assert_eq!(seller_mail.len(), 1);
     let dep = deposit_cost(source_item.vendor_sell_price, 2, AuctionDuration::Short);
     let expected_proceeds = 200 - (200 * HOUSE_CUT_BPS / 10_000) + dep;
-    assert_eq!(seller_mail[0].attached_money, expected_proceeds);
-    assert!(seller_mail[0].attached_item.is_none());
+    assert_eq!(seller_mail[0].money, expected_proceeds);
+    assert!(seller_mail[0].items.is_empty());
 
-    let bidder_mail = persistence::load_mailbox(&db, bidder_id);
+    let bidder_mail = mail_store::load_mailbox(&db, bidder_id);
     assert_eq!(bidder_mail.len(), 1);
-    assert_eq!(bidder_mail[0].attached_money, 0);
-    let won_item = bidder_mail[0].attached_item.as_ref().expect("won item");
+    assert_eq!(bidder_mail[0].money, 0);
+    let won_item = bidder_mail[0]
+        .items
+        .first()
+        .map(|attached| &attached.item)
+        .expect("won item");
     assert_eq!(won_item.item_id, source_item.item_id);
     assert_eq!(won_item.stack_count, 2);
 }
@@ -415,11 +396,11 @@ fn house_cut_deducted_on_successful_sale() {
         let auction_id = *state.auctions.keys().next().expect("auction id");
         buyout_auction(&db, &mut state, buyer_id, auction_id);
 
-        let seller_mail = persistence::load_mailbox(&db, seller_id);
+        let seller_mail = mail_store::load_mailbox(&db, seller_id);
         assert_eq!(
-            seller_mail[0].attached_money, expected_proceeds,
+            seller_mail[0].money, expected_proceeds,
             "buyout={buyout_price}: expected {expected_proceeds}, got {}",
-            seller_mail[0].attached_money,
+            seller_mail[0].money,
         );
     }
 }
@@ -458,21 +439,25 @@ fn buyout_transfers_item_and_deducts_gold() {
     let buyer_gold_after = persistence::load_inventory(&db, buyer_id).gold;
     assert_eq!(buyer_gold_after, buyer_gold_before - 300);
 
-    let buyer_mail = persistence::load_mailbox(&db, buyer_id);
+    let buyer_mail = mail_store::load_mailbox(&db, buyer_id);
     assert_eq!(buyer_mail.len(), 1);
-    let buyer_item = buyer_mail[0].attached_item.as_ref().expect("item in mail");
+    let buyer_item = buyer_mail[0]
+        .items
+        .first()
+        .map(|attached| &attached.item)
+        .expect("item in mail");
     assert_eq!(buyer_item.item_id, source_item.item_id);
     assert_eq!(buyer_item.stack_count, 2);
 
-    let seller_mail = persistence::load_mailbox(&db, seller_id);
+    let seller_mail = mail_store::load_mailbox(&db, seller_id);
     assert_eq!(seller_mail.len(), 1);
     let deposit = deposit_cost(source_item.vendor_sell_price, 2, AuctionDuration::Medium);
     let expected_gold = 300 - (300 * HOUSE_CUT_BPS / 10_000) + deposit;
-    assert_eq!(seller_mail[0].attached_money, expected_gold);
+    assert_eq!(seller_mail[0].money, expected_gold);
 }
 
 #[test]
-fn buyout_and_claim_mail_delivers_item_and_gold() {
+fn buyout_mail_delivers_item_and_gold_taken_at_the_mailbox() {
     let db = persistence::temp_database();
     let (seller_id, _) =
         persistence::create_character_with_test_bags(&db, 1, "Seller", 1, 1).expect("seller");
@@ -481,7 +466,7 @@ fn buyout_and_claim_mail_delivers_item_and_gold() {
     let source_item = persistence::load_inventory(&db, seller_id).items[0].clone();
     let seller_gold_before = persistence::load_inventory(&db, seller_id).gold;
     let buyer_gold_before = persistence::load_inventory(&db, buyer_id).gold;
-    let buyer_item_count_before = persistence::load_inventory(&db, buyer_id).items.len();
+    let buyer_owned_before = owned(&db, buyer_id, source_item.item_id);
     let mut state = AuctionHouseState::default();
     let deposit = deposit_cost(source_item.vendor_sell_price, 3, AuctionDuration::Medium);
 
@@ -503,24 +488,24 @@ fn buyout_and_claim_mail_delivers_item_and_gold() {
     assert!(response.success);
     assert!(!state.auctions.contains_key(&auction_id));
 
-    let seller_mail = persistence::load_mailbox(&db, seller_id);
-    let buyer_mail = persistence::load_mailbox(&db, buyer_id);
+    let seller_mail = mail_store::load_mailbox(&db, seller_id);
+    let buyer_mail = mail_store::load_mailbox(&db, buyer_id);
     assert_eq!(seller_mail.len(), 1);
     assert_eq!(buyer_mail.len(), 1);
-    assert_eq!(seller_mail[0].attached_money, 190 + deposit);
+    assert_eq!(seller_mail[0].money, 190 + deposit);
     assert_eq!(
         buyer_mail[0]
-            .attached_item
-            .as_ref()
+            .items
+            .first()
+            .map(|attached| &attached.item)
             .expect("buyer item mail")
             .stack_count,
         3
     );
 
-    let seller_claim = claim_mail(&db, seller_id, seller_mail[0].mail_id);
-    let buyer_claim = claim_mail(&db, buyer_id, buyer_mail[0].mail_id);
-    assert!(seller_claim.success);
-    assert!(buyer_claim.success);
+    let mut gold_updates = GoldUpdateQueue::default();
+    take_mail(&db, seller_id, seller_mail[0].mail_id, &mut gold_updates);
+    take_mail(&db, buyer_id, buyer_mail[0].mail_id, &mut gold_updates);
     assert_eq!(
         persistence::load_inventory(&db, seller_id).gold,
         seller_gold_before + 190
@@ -530,9 +515,18 @@ fn buyout_and_claim_mail_delivers_item_and_gold() {
         buyer_gold_before - 200
     );
     assert_eq!(
-        persistence::load_inventory(&db, buyer_id).items.len(),
-        buyer_item_count_before + 1
+        owned(&db, buyer_id, source_item.item_id),
+        buyer_owned_before + 3
     );
+}
+
+fn owned(db: &redb::Database, character_id: u64, item_id: u32) -> u32 {
+    persistence::load_inventory(db, character_id)
+        .items
+        .iter()
+        .filter(|item| item.item_id == item_id)
+        .map(|item| item.stack_count)
+        .sum()
 }
 
 #[test]
@@ -570,6 +564,6 @@ fn buyout_above_the_u32_copper_range_pays_the_seller_in_full() {
 
     assert_eq!(persistence::load_inventory(&db, buyer_id).gold, 5);
     let deposit = deposit_cost(source_item.vendor_sell_price, 1, AuctionDuration::Short);
-    let seller_mail = persistence::load_mailbox(&db, seller_id);
-    assert_eq!(seller_mail[0].attached_money, 9_500_000_000 + deposit);
+    let seller_mail = mail_store::load_mailbox(&db, seller_id);
+    assert_eq!(seller_mail[0].money, 9_500_000_000 + deposit);
 }

@@ -109,6 +109,10 @@ enum AdminRequest {
         item_id: u32,
         count: u32,
     },
+    /// Deliver the character's mail still in transit now.
+    MailDeliverNow {
+        character_name: String,
+    },
     /// Every equipped item to `percent` of its max durability.
     SetDurability {
         character_name: String,
@@ -232,6 +236,10 @@ enum AdminResponse {
         name: String,
         count: u32,
     },
+    MailDelivered {
+        character_name: String,
+        count: usize,
+    },
     DurabilitySet {
         character_name: String,
         percent: u32,
@@ -322,6 +330,7 @@ fn print_usage() {
     eprintln!("  game-server-admin set-position <character_name> <x> <y> <z>");
     eprintln!("  game-server-admin set-gold <character_name> <copper>");
     eprintln!("  game-server-admin grant-item <character_name> <item_id> <count>");
+    eprintln!("  game-server-admin mail-deliver-now <character_name>");
     eprintln!("  game-server-admin set-durability <character_name> <percent>");
     eprintln!(
         "  game-server-admin set-appearance <character_name> <sex> <skin_color> <face> <eye_color> <hair_style> <hair_color> <facial_style>"
@@ -367,6 +376,12 @@ fn parse_request(args: &[String]) -> AdminRequest {
         "set-position" => parse_set_position(args),
         "set-gold" => parse_set_gold(args),
         "grant-item" => parse_grant_item(args),
+        "mail-deliver-now" => {
+            require_args(args, 3, "mail-deliver-now <character_name>");
+            AdminRequest::MailDeliverNow {
+                character_name: args[2].clone(),
+            }
+        }
         "set-durability" => parse_set_durability(args),
         "set-appearance" => parse_set_appearance(args),
         "set-equipment-appearance" => parse_set_equipment_appearance(args),
@@ -761,6 +776,15 @@ mod tests {
                 withdraw_gold: true,
                 gold_per_day: 50_000
             }
+        ));
+    }
+
+    #[test]
+    fn parse_mail_deliver_now_request() {
+        let request = parse_request(&args(&["game-server-admin", "mail-deliver-now", "Tradeb"]));
+        assert!(matches!(
+            request,
+            AdminRequest::MailDeliverNow { ref character_name } if character_name == "Tradeb"
         ));
     }
 

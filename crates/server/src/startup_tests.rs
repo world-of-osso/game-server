@@ -1,5 +1,6 @@
+use super::mail_store::MAILBOXES;
 use super::*;
-use super::{AUCTIONS, INVENTORIES, MAILBOXES, SERVER_SETTINGS};
+use super::{AUCTIONS, INVENTORIES, SERVER_SETTINGS};
 use redb::ReadableDatabase;
 use shared::components::{CharacterAppearance, EquipmentAppearance};
 use std::path::PathBuf;
@@ -334,47 +335,6 @@ fn inventory_default_on_missing() {
     let inventory = load_inventory(&db, 9999);
     assert_eq!(inventory.gold, 0);
     assert!(inventory.items.is_empty());
-}
-
-#[test]
-fn mailbox_empty_on_missing() {
-    let db = temp_database();
-    let mails = load_mailbox(&db, 9999);
-    assert!(mails.is_empty());
-}
-
-#[test]
-fn mailbox_append() {
-    let db = temp_database();
-    let mail1 = MailEntryData {
-        mail_id: 1,
-        subject: "Hello".to_string(),
-        body: "First message".to_string(),
-        attached_money: 0,
-        attached_item: None,
-    };
-    let mail2 = MailEntryData {
-        mail_id: 2,
-        subject: "Package".to_string(),
-        body: "Here's some gold".to_string(),
-        attached_money: 1000,
-        attached_item: Some(InventoryItemData {
-            item_guid: 5,
-            item_id: 2447,
-            name: "Peacebloom".to_string(),
-            quality: 1,
-            required_level: 1,
-            stack_count: 5,
-            vendor_sell_price: 10,
-            unique_auction: false,
-        }),
-    };
-    append_mail(&db, 7, mail1.clone());
-    append_mail(&db, 7, mail2.clone());
-    let mails = load_mailbox(&db, 7);
-    assert_eq!(mails.len(), 2);
-    assert_eq!(mails[0], mail1);
-    assert_eq!(mails[1], mail2);
 }
 
 #[test]

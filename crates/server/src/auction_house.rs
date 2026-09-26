@@ -4,17 +4,17 @@ use bevy::prelude::*;
 use lightyear::prelude::*;
 use shared::protocol::{
     AuctionChannel, AuctionDuration, AuctionHouseOpened, AuctionInventoryItem,
-    AuctionInventorySnapshot, AuctionListingSummary, AuctionMailboxSnapshot,
-    AuctionOperationResponse, AuctionSearchQuery, AuctionSearchResults, AuctionSortDir,
-    AuctionSortField, AuctionTimeLeft, BidAuctionListResponse, BuyoutAuction, CancelAuction,
-    ClaimAuctionMail, CreateAuction, OpenAuctionHouse, OwnedAuctionListResponse, PlaceBid,
-    QueryAuctionInventory, QueryAuctionMailbox, QueryAuctions, QueryBidAuctions,
+    AuctionInventorySnapshot, AuctionListingSummary, AuctionOperationResponse, AuctionSearchQuery,
+    AuctionSearchResults, AuctionSortDir, AuctionSortField, AuctionTimeLeft,
+    BidAuctionListResponse, BuyoutAuction, CancelAuction, CreateAuction, OpenAuctionHouse,
+    OwnedAuctionListResponse, PlaceBid, QueryAuctionInventory, QueryAuctions, QueryBidAuctions,
     QueryOwnedAuctions,
 };
 
 use crate::auth::InWorld;
 use crate::persistence::{
-    self, AuctionData, GameDatabase, InventoryData, InventoryItemData, MailEntryData,
+    self, AuctionData, GameDatabase, InventoryData, InventoryItemData,
+    mail_store::{self, MailData, MailItemData, MailSender},
 };
 
 mod handlers;
@@ -23,19 +23,17 @@ mod queries;
 
 use self::handlers::{
     expire_auctions, initialize_auction_state, process_bid_list_requests, process_bid_requests,
-    process_buyout_requests, process_cancel_requests, process_claim_mail_requests,
-    process_create_requests, process_inventory_requests, process_mailbox_requests,
-    process_open_requests, process_owned_requests, process_query_requests,
+    process_buyout_requests, process_cancel_requests, process_create_requests,
+    process_inventory_requests, process_open_requests, process_owned_requests,
+    process_query_requests,
 };
 #[cfg(test)]
 use self::operations::deposit_cost;
 use self::operations::{
-    buyout_auction, cancel_auction, claim_mail, complete_sale, create_auction, deliver_mail,
-    place_bid,
+    buyout_auction, cancel_auction, complete_sale, create_auction, deliver_mail, place_bid,
 };
 use self::queries::{
-    duration_secs, inventory_snapshot, min_next_bid, search_auctions, to_listing_summary,
-    to_mail_entry, unix_now,
+    duration_secs, inventory_snapshot, min_next_bid, search_auctions, to_listing_summary, unix_now,
 };
 
 const MAX_PAGE_SIZE: u32 = 50;
@@ -85,8 +83,6 @@ impl Plugin for AuctionHousePlugin {
         app.add_systems(Update, process_inventory_requests);
         app.add_systems(Update, process_owned_requests);
         app.add_systems(Update, process_bid_list_requests);
-        app.add_systems(Update, process_mailbox_requests);
-        app.add_systems(Update, process_claim_mail_requests);
         app.add_systems(Update, process_create_requests);
         app.add_systems(Update, process_bid_requests);
         app.add_systems(Update, process_buyout_requests);

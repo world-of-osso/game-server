@@ -1,13 +1,14 @@
 //! World game objects from world.db `content_gameobject` (docs/wiki/systems/game-objects.md).
 //!
-//! Only Guild Vaults (`GAMEOBJECT_TYPE_GUILD_BANK`) on map 0 spawn for now; other
-//! types and maps become spawns by widening `SPAWN_QUERY`. A spawned object
+//! Guild Vaults (`GAMEOBJECT_TYPE_GUILD_BANK`) and Mailboxes
+//! (`GAMEOBJECT_TYPE_MAILBOX`) on map 0 spawn for now; other types and maps become
+//! spawns by widening `SPAWN_QUERY`. A spawned object
 //! replicates `Position`, `Rotation` and `GameObjectInfo`, and keeps its model box
 //! (Retail `GameObjectDisplayInfo.GeoBox`) for the interaction reach check.
 //!
 //! Reach is AzerothCore `GameObject::IsAtInteractDistance`: the player must be inside
 //! the object's rotated model box grown by the interaction distance on every side.
-//! The distance for guild vaults is the blizzlike 5 yd (AzerothCore
+//! The distance is the blizzlike 5 yd (AzerothCore
 //! `GameObject::GetInteractionDistance` notes 5.0 as blizzlike and uses 10.0).
 //! Game objects have no per-tick systems, so grid activation does not apply.
 
@@ -17,7 +18,7 @@ use bevy::prelude::*;
 use lightyear::prelude::*;
 use rusqlite::{Connection, Row};
 use shared::components::{Position, Rotation};
-use shared::protocol::{GAMEOBJECT_TYPE_GUILD_BANK, GameObjectInfo};
+use shared::protocol::{GAMEOBJECT_TYPE_GUILD_BANK, GAMEOBJECT_TYPE_MAILBOX, GameObjectInfo};
 
 use crate::interest::NetworkVisibility;
 use crate::terrain_height::{bevy_to_wow, wow_to_bevy};
@@ -31,7 +32,7 @@ const SPAWN_QUERY: &str = "SELECT g.guid, g.id, g.position_x, g.position_y, g.po
      FROM content_gameobject g \
      JOIN content_gameobject_template t ON t.entry = g.id \
      JOIN game_object_display_info d ON d.ID = t.displayId \
-     WHERE g.map = 0 AND t.type = ?1 ORDER BY g.guid";
+     WHERE g.map = 0 AND t.type IN (?1, ?2) ORDER BY g.guid";
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GameObjectSpawn {
@@ -95,7 +96,10 @@ fn spawn_from_row(row: &Row) -> rusqlite::Result<GameObjectSpawn> {
 
 pub fn load_game_object_spawns(conn: &Connection) -> rusqlite::Result<GameObjectSpawns> {
     let mut statement = conn.prepare(SPAWN_QUERY)?;
-    let rows = statement.query_map([GAMEOBJECT_TYPE_GUILD_BANK], spawn_from_row)?;
+    let rows = statement.query_map(
+        [GAMEOBJECT_TYPE_GUILD_BANK, GAMEOBJECT_TYPE_MAILBOX],
+        spawn_from_row,
+    )?;
     Ok(GameObjectSpawns(rows.collect::<rusqlite::Result<_>>()?))
 }
 

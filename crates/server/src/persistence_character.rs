@@ -255,6 +255,20 @@ pub fn find_character_id_by_name(db: &Database, character_name: &str) -> Option<
         .map(|v| v.value())
 }
 
+/// Character id of `character_name` compared ASCII case-insensitively.
+pub fn find_character_id_by_name_ignore_case(db: &Database, character_name: &str) -> Option<u64> {
+    let txn = db.begin_read().expect("Failed to begin read txn");
+    let names = txn
+        .open_table(CHARACTER_NAMES)
+        .expect("Failed to open character_names");
+    names
+        .iter()
+        .expect("Failed to iterate character names")
+        .map(|row| row.expect("Failed to read character name"))
+        .find(|(name, _)| name.value().eq_ignore_ascii_case(character_name))
+        .map(|(_, id)| id.value())
+}
+
 /// List all characters for an account.
 pub fn list_characters_for_account(db: &Database, account_id: u64) -> Vec<(u64, CharacterData)> {
     let char_ids = load_account_char_ids(db, account_id);

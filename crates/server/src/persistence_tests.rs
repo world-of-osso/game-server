@@ -703,7 +703,7 @@ fn peacebloom(item_guid: u64) -> InventoryItemData {
 }
 
 #[test]
-fn legacy_u32_money_auctions_and_mailboxes_move_to_u64_tables() {
+fn legacy_u32_money_auctions_and_auction_mail_move_to_u64_tables() {
     let file = tempfile::NamedTempFile::new().unwrap();
     let db = redb::Database::create(file.path()).unwrap();
     let auction = LegacyAuctionDataU32Money {
@@ -720,7 +720,7 @@ fn legacy_u32_money_auctions_and_mailboxes_move_to_u64_tables() {
         faction: 1,
         deposit: 60,
     };
-    let mails = vec![LegacyMailEntryDataU32Money {
+    let mails = vec![mail_store::LegacyAuctionMail {
         mail_id: 3,
         subject: "Auction won".into(),
         body: "You won Peacebloom.".into(),
@@ -734,7 +734,7 @@ fn legacy_u32_money_auctions_and_mailboxes_move_to_u64_tables() {
             table
                 .insert(9, bitcode::encode(&auction).as_slice())
                 .unwrap();
-            let mut table = txn.open_table(LEGACY_MAILBOXES).unwrap();
+            let mut table = txn.open_table(mail_store::LEGACY_MAILBOXES).unwrap();
             table
                 .insert(43, bitcode::encode(&mails).as_slice())
                 .unwrap();
@@ -750,13 +750,19 @@ fn legacy_u32_money_auctions_and_mailboxes_move_to_u64_tables() {
     assert_eq!(auctions[0].buyout_price, Some(4_294_967_295));
     assert_eq!(auctions[0].deposit, 60);
     assert_eq!(auctions[0].item, peacebloom(70));
-    let mailbox = load_mailbox(&db, 43);
+    let mailbox = mail_store::load_mailbox(&db, 43);
     assert_eq!(mailbox.len(), 1);
-    assert_eq!(mailbox[0].attached_money, 4_000_000_000);
-    assert_eq!(mailbox[0].attached_item, Some(peacebloom(71)));
+    assert_eq!(mailbox[0].sender, mail_store::MailSender::AuctionHouse);
+    assert_eq!(mailbox[0].subject, "Auction won");
+    assert_eq!(mailbox[0].money, 4_000_000_000);
+    assert_eq!(mailbox[0].items[0].item, peacebloom(71));
+    assert_eq!(
+        mailbox[0].expires_at,
+        mailbox[0].delivers_at + shared::mail::MAIL_EXPIRY_SECS
+    );
     let txn = db.begin_read().unwrap();
     assert!(txn.open_table(LEGACY_AUCTIONS).is_err());
-    assert!(txn.open_table(LEGACY_MAILBOXES).is_err());
+    assert!(txn.open_table(mail_store::LEGACY_MAILBOXES).is_err());
     drop(txn);
     // A second startup keeps the migrated rows.
     create_tables(&db);
