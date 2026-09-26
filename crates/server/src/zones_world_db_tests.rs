@@ -601,3 +601,98 @@ fn creature_health_is_class_level_base_hp_times_health_modifier() {
     assert_eq!(health(STORMWIND_GUARD), (15953.0, 15953.0));
     assert_eq!(health(DISEASED_YOUNG_WOLF), (42.0, 42.0));
 }
+
+/// Riverpaw Outrunner (478, level 9, faction 20), Kobold Vermin (6, civilian),
+/// Forest Spider (30, level 5, faction 22) and Heroic Training Dummy (31146).
+const RIVERPAW_OUTRUNNER: u32 = 80474;
+const KOBOLD_VERMIN: u32 = 79992;
+const FOREST_SPIDER: u32 = 79883;
+const HEROIC_TRAINING_DUMMY: u32 = 48325;
+
+/// A level 5 Human 4 yards east of `guid`'s spawn point.
+fn spawn_human_near(app: &mut App, guid: u32) -> Entity {
+    let spawn = spawn_of(guid);
+    let (x, y, z) =
+        crate::terrain_height::wow_to_bevy(spawn.position_x, spawn.position_y, spawn.position_z);
+    app.world_mut()
+        .spawn((
+            Position { x: x + 4.0, y, z },
+            shared::components::Player {
+                name: "Anduin".into(),
+                race: 1,
+                class: 1,
+                appearance: Default::default(),
+            },
+            Health {
+                current: 100.0,
+                max: 100.0,
+            },
+            UnitLevel(5),
+            UnitFactionTemplate(crate::faction::faction_template_for_race(1)),
+            crate::networking::CombatTarget::default(),
+        ))
+        .id()
+}
+
+#[test]
+#[ignore]
+fn world_spawns_aggro_by_template_hostile_attack_civilian_and_dummy_do_not() {
+    let Some(templates) = crate::faction::world_db_faction_templates() else {
+        return;
+    };
+    let mut app = patrol_app_with(
+        &[
+            RIVERPAW_OUTRUNNER,
+            KOBOLD_VERMIN,
+            FOREST_SPIDER,
+            HEROIC_TRAINING_DUMMY,
+        ],
+        |app| {
+            app.insert_resource(templates);
+            app.add_plugins((
+                crate::combat::CombatPlugin,
+                crate::creature_aggro::CreatureAggroPlugin,
+            ));
+        },
+    );
+    let players: Vec<(u32, Entity)> = [
+        RIVERPAW_OUTRUNNER,
+        KOBOLD_VERMIN,
+        FOREST_SPIDER,
+        HEROIC_TRAINING_DUMMY,
+    ]
+    .into_iter()
+    .map(|guid| (guid, spawn_human_near(&mut app, guid)))
+    .collect();
+    for _ in 0..100 {
+        app.update();
+    }
+    let state = |guid| {
+        app.world()
+            .get::<crate::creature_ai::CreatureState>(entity_of(&app, guid))
+            .cloned()
+    };
+    let player_health = |guid: u32| {
+        let player = players.iter().find(|(g, _)| *g == guid).unwrap().1;
+        app.world().get::<Health>(player).unwrap().current
+    };
+    for guid in [RIVERPAW_OUTRUNNER, FOREST_SPIDER] {
+        let player = players.iter().find(|(g, _)| *g == guid).unwrap().1;
+        assert_eq!(
+            state(guid),
+            Some(crate::creature_ai::CreatureState::Pursuing {
+                target: player.to_bits()
+            }),
+            "spawn {guid} aggroes the Human"
+        );
+        assert!(player_health(guid) < 100.0, "spawn {guid} hits the Human");
+    }
+    assert_eq!(
+        state(KOBOLD_VERMIN),
+        Some(crate::creature_ai::CreatureState::Idle),
+        "civilian kobold does not aggro on sight"
+    );
+    assert_eq!(player_health(KOBOLD_VERMIN), 100.0);
+    assert_eq!(state(HEROIC_TRAINING_DUMMY), None, "dummy has no combat AI");
+    assert_eq!(player_health(HEROIC_TRAINING_DUMMY), 100.0);
+}
