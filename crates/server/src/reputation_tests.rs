@@ -35,6 +35,7 @@ fn test_template(entry: u32, faction: u16, min_level: u8, max_level: u8) -> Crea
         detection_range: 20.0,
         aggro_mode: crate::creature_aggro::AggroMode::Aggressive,
         models: Vec::new(),
+        tuning: None,
     }
 }
 

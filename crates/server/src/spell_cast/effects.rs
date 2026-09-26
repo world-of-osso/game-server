@@ -29,6 +29,7 @@ use crate::auras::procs::{self, AuraEvent};
 use crate::auras::{AuraStatMods, SpellModOp, spell_mods};
 use crate::creature_scripts::{TrainingDummy, health_loss};
 use crate::item_stats::WeaponDamage;
+use crate::level_scaling::UnitScaling;
 use crate::spell_info::{SpellEffect, SpellInfo};
 use crate::stats::CharacterStats;
 
@@ -255,6 +256,12 @@ pub fn deal_damage(
         .max(0.0)
         .round();
     let (amount, absorbed) = crate::auras::absorb_damage(world, target, school, amount);
+    let (caster_scaling, target_scaling) = (
+        UnitScaling::of(world, ctx.caster),
+        UnitScaling::of(world, target),
+    );
+    let amount = crate::level_scaling::damage_dealt(&caster_scaling, &target_scaling, amount);
+    let scaled_loss = crate::level_scaling::health_loss(&caster_scaling, &target_scaling, amount);
     let training_dummy = world.get::<TrainingDummy>(target).is_some();
     let duel = world.get::<crate::duel::DuelOpponent>(target).copied();
     let Some(mut health) = world.get_mut::<Health>(target) else {
@@ -265,13 +272,13 @@ pub fn deal_damage(
         duel.as_ref(),
         ctx.caster,
         before,
-        health_loss(training_dummy, amount),
+        health_loss(training_dummy, scaled_loss),
     );
     let lethal = crate::death::apply_health_damage(&mut health, loss);
     if duel_defeated {
         world.entity_mut(target).insert(crate::duel::DuelDefeated);
     }
-    let overkill = (amount - before).max(0.0);
+    let overkill = (scaled_loss - before).max(0.0);
     mark_dirty(world, target);
     world
         .entity_mut(target)

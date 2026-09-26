@@ -1,6 +1,6 @@
 use super::*;
 use bevy::ecs::system::RunSystemOnce;
-use shared::components::Player;
+use shared::components::{Player, UnitLevel};
 
 #[path = "combat_tests/death.rs"]
 mod death;
@@ -93,6 +93,7 @@ fn run_attack_tick(app: &mut App) {
          mut commands: Commands,
          mut attackers: Query<(Entity, &CombatTarget, &mut AutoAttack, &Position)>,
          mut targets: AutoAttackTargets,
+         scaling: Query<ScalingItem<'static>>,
          combat_statuses: Query<&CombatStatus>| {
             let dt = time.delta_secs();
             let combat_expires_at = time.elapsed_secs_f64() + COMBAT_GRACE_SECS;
@@ -107,6 +108,7 @@ fn run_attack_tick(app: &mut App) {
                     apos,
                     None,
                     &mut targets,
+                    &scaling,
                     te,
                     &mut aa,
                     &mut commands,
@@ -124,6 +126,62 @@ fn run_attack_tick(app: &mut App) {
             }
         },
     );
+}
+
+/// Hogger's per-level stats (level_scaling_tests fixture: ExpectedStat 10 and 30).
+fn tuned_hogger(app: &mut App, entity: Entity) {
+    app.world_mut().entity_mut(entity).insert((
+        UnitLevel(30),
+        crate::level_scaling::tests::HOGGER_SCALING,
+        crate::level_scaling::tests::hogger_stats(),
+    ));
+}
+
+#[test]
+fn level_10_player_hit_takes_the_level_10_share_of_a_tuned_creatures_health() {
+    let mut app = setup_app();
+    let hogger = spawn_target(&mut app, pos(1.0, 0.0, 0.0), 13_137.0);
+    tuned_hogger(&mut app, hogger);
+    let player = spawn_attacker(&mut app, pos(0.0, 0.0, 0.0), hogger);
+    app.world_mut().entity_mut(player).insert(UnitLevel(10));
+    run_attack_tick(&mut app);
+    // 10 damage against a level 10 Hogger's 1,133 health is 115 of its 13,137.
+    let health = app.world().get::<Health>(hogger).unwrap();
+    assert_eq!(health.current, 13_137.0 - 115.0);
+}
+
+#[test]
+fn level_40_player_hit_on_a_tuned_creature_is_unscaled() {
+    let mut app = setup_app();
+    let hogger = spawn_target(&mut app, pos(1.0, 0.0, 0.0), 13_137.0);
+    tuned_hogger(&mut app, hogger);
+    let player = spawn_attacker(&mut app, pos(0.0, 0.0, 0.0), hogger);
+    app.world_mut().entity_mut(player).insert(UnitLevel(40));
+    run_attack_tick(&mut app);
+    assert_eq!(app.world().get::<Health>(hogger).unwrap().current, 13_127.0);
+}
+
+#[test]
+fn tuned_creature_swings_expected_stat_damage_at_the_targets_level() {
+    for (player_level, dps) in [(10, 17.05213f32), (40, 162.6229)] {
+        let mut app = setup_app();
+        let player = spawn_target(&mut app, pos(1.0, 0.0, 0.0), 100_000.0);
+        app.world_mut()
+            .entity_mut(player)
+            .insert(UnitLevel(player_level));
+        let hogger = spawn_attacker(&mut app, pos(0.0, 0.0, 0.0), player);
+        app.world_mut().entity_mut(hogger).remove::<Player>();
+        tuned_hogger(&mut app, hogger);
+        run_attack_tick(&mut app);
+        // DPS × DamageModifier 1.7 × 2 s, rolled up to 1.5×, at the player's level.
+        let min = dps * 1.7 * 2.0;
+        let taken = 100_000.0 - app.world().get::<Health>(player).unwrap().current;
+        assert!(
+            taken >= min.round() - 1.0 && taken <= (min * 1.5).round(),
+            "level {player_level}: {taken} outside {min}..{}",
+            min * 1.5
+        );
+    }
 }
 
 #[test]

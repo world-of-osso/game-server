@@ -2,8 +2,10 @@ use bevy::prelude::*;
 use rusqlite::{Connection, OpenFlags, Row, params};
 use std::collections::HashMap;
 use std::path::Path;
+use std::sync::Arc;
 
 use crate::creature_aggro::AggroMode;
+use crate::level_scaling::{CreatureStats, ExpectedStats, LevelStats, TuningInputs};
 
 pub struct CreatureTemplate {
     pub entry: u32,
@@ -31,6 +33,18 @@ pub struct CreatureTemplate {
     pub detection_range: f32,
     pub aggro_mode: AggroMode,
     pub models: Vec<CreatureModelInfo>,
+    /// Retail ContentTuning scaling; `None` keeps the fixed `min_level` and
+    /// creature_classlevelstats health.
+    pub tuning: Option<TemplateTuning>,
+}
+
+/// A template with a `ContentTuningID`: `min_level`/`max_level` are its
+/// ContentTuning range (docs/specs/level-scaling.md).
+pub struct TemplateTuning {
+    pub content_tuning_id: u32,
+    /// `LevelScalingDeltaMin..=Max`, rolled per spawn (Creature::ApplyLevelScaling).
+    pub delta: (i8, i8),
+    pub stats: Arc<LevelStats>,
 }
 
 pub struct CreatureModelInfo {
@@ -131,7 +145,8 @@ pub fn load_world_data(path: &Path) -> WorldData {
     let conn = Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY)
         .expect("Failed to open world.db");
 
-    let mut templates = load_templates(&conn);
+    let expected_stats = load_expected_stats(&conn);
+    let mut templates = load_templates(&conn, &expected_stats);
     load_models(&conn, &mut templates);
     let spawns = load_spawns(&conn);
     let spawns_by_map = build_spawns_by_map(&spawns);
@@ -169,6 +184,68 @@ pub fn load_world_data(path: &Path) -> WorldData {
     }
 }
 
+fn creature_stats(row: &Row) -> rusqlite::Result<CreatureStats> {
+    Ok(CreatureStats {
+        health: row.get(1)?,
+        auto_attack_dps: row.get(2)?,
+    })
+}
+
+/// expected_stat, expected_stat_mod and content_tuning_x_expected (DB2Manager::LoadStores).
+fn load_expected_stats(conn: &Connection) -> ExpectedStats {
+    let mut stats = ExpectedStats::default();
+    let mut stmt = conn
+        .prepare(
+            "SELECT Lvl, CreatureHealth, CreatureAutoAttackDps, ExpansionID FROM expected_stat ORDER BY ID",
+        )
+        .expect("Failed to prepare expected_stat query");
+    let rows = stmt
+        .query_map(params![], |row| {
+            Ok((
+                (row.get::<_, i64>(0)? as u8, row.get::<_, i64>(3)? as i32),
+                creature_stats(row)?,
+            ))
+        })
+        .expect("Failed to query expected_stat");
+    stats.by_level = rows
+        .map(|row| row.expect("Failed to read expected_stat row"))
+        .collect();
+    let mut stmt = conn
+        .prepare("SELECT ID, CreatureHealthMod, CreatureAutoAttackDPSMod FROM expected_stat_mod")
+        .expect("Failed to prepare expected_stat_mod query");
+    let rows = stmt
+        .query_map(params![], |row| {
+            Ok((row.get::<_, i64>(0)? as u32, creature_stats(row)?))
+        })
+        .expect("Failed to query expected_stat_mod");
+    stats.mods = rows
+        .map(|row| row.expect("Failed to read expected_stat_mod row"))
+        .collect();
+    // Without Mythic+ (active season 0) a row with a minimum season never
+    // applies and one with only a maximum season always does (ExpectedStatModReducer).
+    let mut stmt = conn
+        .prepare(
+            "SELECT ContentTuningID, ExpectedStatModID FROM content_tuning_x_expected
+             WHERE MinMythicPlusSeasonID = 0 ORDER BY ID",
+        )
+        .expect("Failed to prepare content_tuning_x_expected query");
+    let rows = stmt
+        .query_map(params![], |row| {
+            Ok((row.get::<_, i64>(0)? as u32, row.get::<_, i64>(1)? as u32))
+        })
+        .expect("Failed to query content_tuning_x_expected");
+    for row in rows {
+        let (content_tuning_id, mod_id) =
+            row.expect("Failed to read content_tuning_x_expected row");
+        stats
+            .content_tuning_mods
+            .entry(content_tuning_id)
+            .or_default()
+            .push(mod_id);
+    }
+    stats
+}
+
 fn load_class_level_base_hp(conn: &Connection) -> HashMap<(u8, u8), [u32; 3]> {
     let mut stmt = conn
         .prepare("SELECT level, class, basehp0, basehp1, basehp2 FROM creature_classlevelstats")
@@ -187,7 +264,26 @@ fn load_class_level_base_hp(conn: &Connection) -> HashMap<(u8, u8), [u32; 3]> {
 const CREATURE_TYPE_CRITTER: i64 = 8;
 const CREATURE_FLAG_EXTRA_NO_XP: i64 = 0x40;
 
-fn template_from_row(row: &Row) -> rusqlite::Result<CreatureTemplate> {
+fn template_from_row(row: &Row, expected: &ExpectedStats) -> rusqlite::Result<CreatureTemplate> {
+    let unit_class = row.get::<_, i64>(14)? as u8;
+    let health_modifier = row.get(6)?;
+    let content_tuning_id = row.get::<_, i64>(18)? as u32;
+    let tuning = (content_tuning_id != 0)
+        .then(|| -> rusqlite::Result<TemplateTuning> {
+            let inputs = TuningInputs {
+                content_tuning_id,
+                health_scaling_expansion: row.get::<_, i64>(19)? as i32,
+                unit_class,
+                health_modifier,
+                damage_modifier: row.get(22)?,
+            };
+            Ok(TemplateTuning {
+                content_tuning_id,
+                delta: (row.get::<_, i64>(20)? as i8, row.get::<_, i64>(21)? as i8),
+                stats: Arc::new(LevelStats::build(expected, &inputs)),
+            })
+        })
+        .transpose()?;
     Ok(CreatureTemplate {
         entry: row.get::<_, i64>(0)? as u32,
         min_level: row.get::<_, i64>(1)? as u8,
@@ -195,7 +291,7 @@ fn template_from_row(row: &Row) -> rusqlite::Result<CreatureTemplate> {
         faction: row.get::<_, i64>(3)? as u16,
         npc_flags: row.get::<_, i64>(4)? as u32,
         speed_walk: row.get(5)?,
-        health_modifier: row.get(6)?,
+        health_modifier,
         name: row.get(7)?,
         rank: row.get::<_, i64>(8)? as u8,
         experience_modifier: row.get(9)?,
@@ -203,7 +299,7 @@ fn template_from_row(row: &Row) -> rusqlite::Result<CreatureTemplate> {
             && row.get::<_, i64>(11)? & CREATURE_FLAG_EXTRA_NO_XP == 0,
         speed_run: row.get(12)?,
         script_name: row.get(13)?,
-        unit_class: row.get::<_, i64>(14)? as u8,
+        unit_class,
         expansion: row.get::<_, i64>(15)? as u8,
         detection_range: row.get(16)?,
         aggro_mode: AggroMode::for_template(
@@ -213,21 +309,23 @@ fn template_from_row(row: &Row) -> rusqlite::Result<CreatureTemplate> {
             &row.get::<_, String>(13)?,
         ),
         models: Vec::new(),
+        tuning,
     })
 }
 
-fn load_templates(conn: &Connection) -> HashMap<u32, CreatureTemplate> {
+fn load_templates(conn: &Connection, expected: &ExpectedStats) -> HashMap<u32, CreatureTemplate> {
     let mut stmt = conn
         .prepare(
             "SELECT entry, minlevel, maxlevel, faction, npcflag, speed_walk, HealthModifier, name,
                     rank, ExperienceModifier, type, flags_extra, speed_run, ScriptName, unit_class, exp,
-                    detection_range, unit_flags
+                    detection_range, unit_flags, ContentTuningID, HealthScalingExpansion,
+                    LevelScalingDeltaMin, LevelScalingDeltaMax, DamageModifier
              FROM content_creature_template",
         )
         .expect("Failed to prepare content_creature_template query");
 
     let rows = stmt
-        .query_map(params![], template_from_row)
+        .query_map(params![], |row| template_from_row(row, expected))
         .expect("Failed to query content_creature_template");
 
     let mut map = HashMap::new();

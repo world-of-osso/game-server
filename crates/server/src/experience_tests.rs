@@ -4,7 +4,8 @@ use crate::persistence_progression::save_xp;
 
 fn mob(level: u8) -> KillVictim {
     KillVictim {
-        level,
+        level: UnitLevel(level),
+        scaling: None,
         elite: false,
         experience_modifier: 1.0,
         gives_experience: true,
@@ -50,6 +51,44 @@ fn grey_mobs_give_no_xp_and_green_mobs_scale_down() {
     for (player, gray) in [(6, 0), (7, 1), (15, 8), (34, 24), (35, 25), (80, 70)] {
         assert_eq!(gray_level(player), gray, "player level {player}");
     }
+}
+
+/// Hogger's range (ContentTuning 73: 1-30), non-elite for plain numbers.
+fn scaled_hogger() -> KillVictim {
+    KillVictim {
+        scaling: Some(LevelScaling {
+            content_tuning_id: 73,
+            min_level: 1,
+            max_level: 30,
+            delta: 0,
+        }),
+        ..mob(30)
+    }
+}
+
+#[test]
+fn tuned_kill_gives_xp_for_the_killers_scaled_level() {
+    // Level 10 to a level 10 player: a same-level kill.
+    assert_eq!(kill_gain(10, &scaled_hogger()), kill_gain(10, &mob(10)));
+    assert_eq!(kill_gain(10, &scaled_hogger()), 65);
+    // Capped at 30 for a level 33 player; grey to a level 40 player.
+    assert_eq!(kill_gain(33, &scaled_hogger()), kill_gain(33, &mob(30)));
+    assert_eq!(kill_gain(40, &scaled_hogger()), 0);
+}
+
+#[test]
+fn group_members_see_a_tuned_kill_at_their_own_level() {
+    // A level 40 member sees Hogger grey (30), so the level 10 killer is the
+    // highest non-grey member: half XP split by level.
+    let grouped = kill_rewards(
+        &scaled_hogger(),
+        &[member(1, 10, true), member(2, 40, false)],
+        true,
+    );
+    assert_eq!(
+        grouped.shares,
+        vec![(1, (65.0 * 10.0 / 50.0 / 2.0) as u32 + 1)]
+    );
 }
 
 #[test]

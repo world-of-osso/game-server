@@ -10,7 +10,12 @@ use std::collections::HashMap;
 use crate::combat::{CorpseDelay, RespawnDelay};
 use crate::creature_ai::{FormationMember, SpawnPoint, WanderPhase, WanderState, WaypointState};
 use crate::interest::NetworkVisibility;
-use crate::world_data::{CreatureAddon, CreatureSpawn, GROUP_AI_FLAG_FOLLOW_LEADER, WorldData};
+use crate::level_scaling::ScaledStats;
+use crate::world_data::{
+    CreatureAddon, CreatureSpawn, CreatureTemplate, GROUP_AI_FLAG_FOLLOW_LEADER, TemplateTuning,
+    WorldData,
+};
+use shared::level_scaling::LevelScaling;
 
 pub struct ZonePlugin;
 
@@ -62,13 +67,26 @@ fn spawn_creatures<'a>(
                     spawn.guid, spawn.template_entry
                 )
             });
-        let health = resolve_health(world_data, template);
+        let scaling = template
+            .tuning
+            .as_ref()
+            .map(|tuning| (spawn_level_scaling(template, tuning), tuning));
+        let (level, health) = match &scaling {
+            Some((scaling, tuning)) => {
+                let level = scaling.native_level();
+                (level, tuning.stats.max_health(level))
+            }
+            None => (template.min_level, resolve_health(world_data, template)),
+        };
         let bundle = creature_bundle(spawn, &template.name, health, display_id);
 
         let mut entity = commands.spawn(bundle);
+        if let Some((scaling, tuning)) = scaling {
+            entity.insert((scaling, ScaledStats(tuning.stats.clone())));
+        }
         // NPC power pools need creature class/level stats, which are not imported.
         entity.insert((
-            UnitLevel(template.min_level),
+            UnitLevel(level),
             UnitPowers::default(),
             UnitFactionTemplate(u32::from(template.faction)),
             NpcFlags::from_azerothcore(template.npc_flags),
@@ -217,9 +235,28 @@ fn resolve_display_id(world_data: &WorldData, template_entry: u32) -> u32 {
         .unwrap_or(0)
 }
 
-/// Creature::SelectLevel / CreatureBaseStats::GenerateHealth:
+/// Creature::ApplyLevelScaling (Creature.cpp:3122-3159): the ContentTuning
+/// range and a delta rolled once per spawn.
+fn spawn_level_scaling(template: &CreatureTemplate, tuning: &TemplateTuning) -> LevelScaling {
+    let (low, high) = (
+        tuning.delta.0.min(tuning.delta.1),
+        tuning.delta.0.max(tuning.delta.1),
+    );
+    LevelScaling {
+        content_tuning_id: tuning.content_tuning_id,
+        min_level: template.min_level,
+        max_level: template.max_level,
+        delta: if low == high {
+            low
+        } else {
+            rand::Rng::gen_range(&mut rand::thread_rng(), low..=high)
+        },
+    }
+}
+
+/// Untuned templates: Creature::SelectLevel / CreatureBaseStats::GenerateHealth:
 /// max(1, ceil(basehp<exp> × HealthModifier)) at the spawn level.
-fn resolve_health(world_data: &WorldData, template: &crate::world_data::CreatureTemplate) -> f32 {
+fn resolve_health(world_data: &WorldData, template: &CreatureTemplate) -> f32 {
     let key = (template.min_level, template.unit_class);
     let base_hp = world_data.class_level_base_hp.get(&key).unwrap_or_else(|| {
         panic!(
@@ -313,6 +350,7 @@ mod tests {
             detection_range: 20.0,
             aggro_mode: crate::creature_aggro::AggroMode::Aggressive,
             models: vec![CreatureModelInfo { display_id }],
+            tuning: None,
         }
     }
 
@@ -360,7 +398,15 @@ mod tests {
             "CREATE TABLE content_creature_template (entry INTEGER, minlevel INTEGER, maxlevel INTEGER,
                 faction INTEGER, npcflag INTEGER, speed_walk REAL, HealthModifier REAL, name TEXT, rank INTEGER, exp INTEGER,
                 ExperienceModifier REAL, type INTEGER, flags_extra INTEGER, speed_run REAL,
-                ScriptName TEXT, unit_class INTEGER, detection_range REAL, unit_flags INTEGER);
+                ScriptName TEXT, unit_class INTEGER, detection_range REAL, unit_flags INTEGER,
+                ContentTuningID INTEGER, HealthScalingExpansion INTEGER, LevelScalingDeltaMin INTEGER,
+                LevelScalingDeltaMax INTEGER, DamageModifier REAL);
+             CREATE TABLE expected_stat (ID INTEGER, Lvl INTEGER, ExpansionID INTEGER,
+                CreatureHealth REAL, CreatureAutoAttackDps REAL);
+             CREATE TABLE expected_stat_mod (ID INTEGER, CreatureHealthMod REAL,
+                CreatureAutoAttackDPSMod REAL);
+             CREATE TABLE content_tuning_x_expected (ID INTEGER, ContentTuningID INTEGER,
+                ExpectedStatModID INTEGER, MinMythicPlusSeasonID INTEGER);
              CREATE TABLE creature_classlevelstats (level INTEGER, class INTEGER,
                 basehp0 INTEGER, basehp1 INTEGER, basehp2 INTEGER);
              INSERT INTO creature_classlevelstats VALUES (1,1,42,42,42);
@@ -391,7 +437,7 @@ mod tests {
         for (index, angle) in angles.iter().enumerate() {
             let entry = 100 + index as u32;
             conn.execute(
-                "INSERT INTO content_creature_template VALUES (?1,1,1,1,0,1.0,1.0,'Loup — Écorché',0,0,1.0,1,0,1.14,'',1,20.0,0)",
+                "INSERT INTO content_creature_template VALUES (?1,1,1,1,0,1.0,1.0,'Loup — Écorché',0,0,1.0,1,0,1.14,'',1,20.0,0,0,0,0,0,1.0)",
                 [entry],
             )
             .unwrap();

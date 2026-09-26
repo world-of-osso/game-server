@@ -13,6 +13,7 @@ use crate::creature_scripts::{TrainingDummy, health_loss};
 use crate::duel::DuelOpponent;
 use crate::faction::{FactionTemplates, UnitFaction};
 use crate::interest::{InterestDirtyQueue, NetworkVisibility, mark_interest_position_changed};
+use crate::level_scaling::{ScalingItem, UnitScaling};
 use crate::networking::CombatTarget;
 use crate::spell_cast::powers::PowerPools;
 use shared::components::PowerType;
@@ -23,7 +24,7 @@ use std::collections::VecDeque;
 const MELEE_RANGE: f32 = 5.0;
 /// Seconds between auto-attack swings.
 const AUTO_ATTACK_INTERVAL: f32 = 2.0;
-/// Base melee damage per swing.
+/// Base melee damage per swing of units without ExpectedStat damage.
 const BASE_DAMAGE: f32 = 10.0;
 const COMBAT_GRACE_SECS: f64 = 5.0;
 /// Retail rage per second of swing time for each auto-attack dealt (SimC
@@ -263,6 +264,7 @@ type AutoAttackTargets<'w, 's> = Query<
 pub(crate) struct AutoAttackParams<'w, 's> {
     attackers: AutoAttackers<'w, 's>,
     targets: AutoAttackTargets<'w, 's>,
+    scaling: Query<'w, 's, ScalingItem<'static>>,
     senders: Query<'w, 's, &'static mut MessageSender<CombatEvent>>,
     combat_log: ResMut<'w, CombatLog>,
     commands: Commands<'w, 's>,
@@ -290,6 +292,7 @@ pub(crate) fn auto_attack_system(time: Res<Time>, mut params: AutoAttackParams) 
             attacker_pos,
             attacker_mods,
             &mut params.targets,
+            &params.scaling,
             target_entity,
             &mut auto_attack,
             &mut params.commands,
@@ -416,14 +419,24 @@ fn swing_aura_events(attacker: Entity, target: Entity, outcome: &SwingOutcome) -
 }
 
 /// Base swing damage × attacker physical damage done and auto-attack
-/// multipliers × target physical damage taken (`AuraStatMods`).
-fn swing_damage(attacker: Option<&AuraStatMods>, target: Option<&AuraStatMods>) -> f32 {
+/// multipliers × target physical damage taken (`AuraStatMods`). A tuned
+/// creature's base is rolled from its ExpectedStat swing damage range.
+fn swing_damage(
+    attacker: &UnitScaling,
+    attacker_mods: Option<&AuraStatMods>,
+    target_mods: Option<&AuraStatMods>,
+) -> f32 {
     const PHYSICAL: u32 = 1;
-    let done = attacker.map_or(1.0, |mods| {
+    let base = attacker
+        .swing_damage_range(AUTO_ATTACK_INTERVAL)
+        .map_or(BASE_DAMAGE, |(min, max)| {
+            rand::Rng::gen_range(&mut rand::thread_rng(), min..=max)
+        });
+    let done = attacker_mods.map_or(1.0, |mods| {
         mods.damage_done(PHYSICAL) * mods.autoattack_damage_mult
     });
-    let taken = target.map_or(1.0, |mods| mods.damage_taken(PHYSICAL));
-    (BASE_DAMAGE * done * taken).max(0.0).round()
+    let taken = target_mods.map_or(1.0, |mods| mods.damage_taken(PHYSICAL));
+    (base * done * taken).max(0.0).round()
 }
 
 struct SwingOutcome {
@@ -442,6 +455,7 @@ fn try_swing(
     attacker_pos: &Position,
     attacker_mods: Option<&AuraStatMods>,
     targets: &mut AutoAttackTargets,
+    scaling: &Query<ScalingItem<'static>>,
     target_entity: Entity,
     auto_attack: &mut AutoAttack,
     commands: &mut Commands,
@@ -457,13 +471,25 @@ fn try_swing(
     if !in_melee_range(attacker_pos, target_pos) || health.current <= 0.0 {
         return None;
     }
-    let damage = swing_damage(attacker_mods, target_mods);
-    let overkill = (damage - health.current).max(0.0);
+    let unit = |entity| {
+        scaling.get(entity).map_or(
+            UnitScaling::from_item((None, None, None)),
+            UnitScaling::from_item,
+        )
+    };
+    let (attacker, target) = (unit(attacker_entity), unit(target_entity));
+    let damage = crate::level_scaling::damage_dealt(
+        &attacker,
+        &target,
+        swing_damage(&attacker, attacker_mods, target_mods),
+    );
+    let scaled_loss = crate::level_scaling::health_loss(&attacker, &target, damage);
+    let overkill = (scaled_loss - health.current).max(0.0);
     let (loss, duel_defeated) = crate::duel::duel_health_loss(
         duel,
         attacker_entity,
         health.current,
-        health_loss(training_dummy, damage),
+        health_loss(training_dummy, scaled_loss),
     );
     let became_lethal = crate::death::apply_health_damage(&mut health, loss);
     let npc_died = is_npc && became_lethal;

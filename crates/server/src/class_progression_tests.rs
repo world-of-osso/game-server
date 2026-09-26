@@ -518,6 +518,7 @@ fn world_with_creature(entry: u32, min_level: u8) -> crate::world_data::WorldDat
         detection_range: 20.0,
         aggro_mode: crate::creature_aggro::AggroMode::Aggressive,
         models: Vec::new(),
+        tuning: None,
     };
     crate::world_data::WorldData {
         templates: std::collections::HashMap::from([(entry, template)]),

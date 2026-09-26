@@ -12,6 +12,7 @@
 use bevy::prelude::*;
 use lightyear::prelude::ReplicationDirtyQueue;
 use shared::components::{Health, Player, Position, ThreatTable, UnitFactionTemplate, UnitLevel};
+use shared::level_scaling::{LevelScaling, level_for_viewer};
 
 use crate::combat::DeathState;
 use crate::creature_ai::{CreatureState, chase_system};
@@ -179,6 +180,7 @@ type Watchers<'w, 's> = Query<
         &'static Position,
         &'static AggroRange,
         &'static UnitLevel,
+        Option<&'static LevelScaling>,
         &'static UnitFactionTemplate,
         &'static CreatureState,
     ),
@@ -197,7 +199,7 @@ fn aggro_on_sight_system(
     templates: Res<FactionTemplates>,
     mut commands: Commands,
 ) {
-    for (creature, position, range, level, faction, state) in &watchers {
+    for (creature, position, range, level, scaling, faction, state) in &watchers {
         if !state.is_idle() {
             continue;
         }
@@ -206,7 +208,10 @@ fn aggro_on_sight_system(
             .filter_map(|player| {
                 let (player_pos, _, player_faction, player_level, ..) = victims.get(player).ok()?;
                 let distance = distance(position, player_pos);
-                let radius = aggro_radius(range.0, level.0, player_level.map_or(1, |l| l.0));
+                let player_level = player_level.map_or(1, |l| l.0);
+                // Creature::GetAttackDistance: both levels against each other.
+                let creature_level = level_for_viewer(*level, scaling, player_level);
+                let radius = aggro_radius(range.0, creature_level, player_level);
                 let hostile = templates.reaction(faction.0, player_faction.map_or(0, |f| f.0))
                     == Reaction::Hostile;
                 (distance <= radius

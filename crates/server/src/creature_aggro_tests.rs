@@ -233,6 +233,34 @@ fn player_outside_level_scaled_radius_is_ignored() {
 }
 
 #[test]
+fn tuned_creature_aggro_radius_uses_its_level_against_the_player() {
+    let mut app = aggro_app();
+    // Native level 30 (ContentTuning 1-30): unscaled, a level 10 player would
+    // be 20 levels below and aggroed from 38 yards.
+    let spider = spawn_creature(
+        &mut app,
+        &CreatureFixture {
+            level: 30,
+            ..FOREST_SPIDER
+        },
+        at(0.0, 0.0),
+    );
+    app.world_mut().entity_mut(spider).insert(LevelScaling {
+        content_tuning_id: 73,
+        min_level: 1,
+        max_level: 30,
+        delta: 0,
+    });
+    // Scaled to level 10 against a level 10 player: radius 18 yards.
+    spawn_player(&mut app, at(20.0, 0.0), 10);
+    run(&mut app, 10);
+    assert_eq!(state(&app, spider), Some(CreatureState::Idle));
+    let near = spawn_player(&mut app, at(0.0, 17.0), 10);
+    run(&mut app, 1);
+    assert_eq!(state(&app, spider), pursuing(near));
+}
+
+#[test]
 fn nearest_hostile_player_is_attacked_first() {
     let mut app = aggro_app();
     let spider = spawn_creature(&mut app, &FOREST_SPIDER, at(0.0, 0.0));

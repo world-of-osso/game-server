@@ -23,6 +23,7 @@ use bevy::prelude::*;
 use lightyear::prelude::*;
 use shared::components::{Health, Level, Mana, Npc, Player, Position, UnitLevel};
 use shared::death::DeathState as PlayerLifeState;
+use shared::level_scaling::{LevelScaling, gray_level, level_for_viewer};
 use shared::protocol::{ExperienceChannel, LogXpGain, PlayerXpUpdate, XpGainReason};
 
 use crate::auth::InWorld;
@@ -53,19 +54,6 @@ pub(crate) fn xp_to_next_level(level: u8) -> u32 {
         0
     } else {
         row(&XP_TO_NEXT_LEVEL, level)
-    }
-}
-
-/// `Trinity::XP::GetGrayLevel`: creatures at or below this level are grey.
-pub(crate) fn gray_level(player_level: u8) -> u8 {
-    match player_level {
-        0..7 => 0,
-        7..35 => {
-            let multiples_of_five_from_15 =
-                (15..=player_level).filter(|l| l % 5 == 0).count() as u8;
-            player_level - 7 - multiples_of_five_from_15 + 1
-        }
-        _ => player_level - 10,
     }
 }
 
@@ -104,10 +92,19 @@ pub(crate) fn base_gain(player_level: u8, mob_level: u8) -> u32 {
 /// What a killed creature contributes to kill XP.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub(crate) struct KillVictim {
-    pub level: u8,
+    pub level: UnitLevel,
+    /// A tuned creature is killed at each player's scaled level.
+    pub scaling: Option<LevelScaling>,
     pub elite: bool,
     pub experience_modifier: f32,
     pub gives_experience: bool,
+}
+
+impl KillVictim {
+    /// `victim->GetLevelForTarget(player)` (Formulas.h:190, KillRewarder.cpp:110).
+    fn level_for(&self, player_level: u8) -> u8 {
+        level_for_viewer(self.level, self.scaling.as_ref(), player_level)
+    }
 }
 
 /// `Trinity::XP::Gain` for an open-world kill (no dungeon maps exist, so
@@ -116,7 +113,7 @@ pub(crate) fn kill_gain(player_level: u8, victim: &KillVictim) -> u32 {
     if !victim.gives_experience {
         return 0;
     }
-    let gain = base_gain(player_level, victim.level);
+    let gain = base_gain(player_level, victim.level_for(player_level));
     let elite = if victim.elite { 2.0 } else { 1.0 };
     (gain as f32 * elite * victim.experience_modifier) as u32
 }
@@ -176,7 +173,7 @@ pub(crate) fn kill_rewards(
     let max_level = counted.iter().map(|member| member.level).max().unwrap_or(0);
     let Some(max_not_gray) = counted
         .iter()
-        .filter(|member| victim.level > gray_level(member.level))
+        .filter(|member| victim.level_for(member.level) > gray_level(member.level))
         .map(|member| member.level)
         .max()
     else {
@@ -315,10 +312,16 @@ fn is_alive(death: Option<&PlayerDeathState>) -> bool {
     death.is_none_or(|death| death.state == PlayerLifeState::Alive)
 }
 
-fn victim_of(world_data: &WorldData, npc: &Npc, level: &UnitLevel) -> Option<KillVictim> {
+fn victim_of(
+    world_data: &WorldData,
+    npc: &Npc,
+    level: &UnitLevel,
+    scaling: Option<&LevelScaling>,
+) -> Option<KillVictim> {
     let template = world_data.templates.get(&npc.template_id)?;
     Some(KillVictim {
-        level: level.0,
+        level: *level,
+        scaling: scaling.copied(),
         elite: matches!(template.rank, 1 | 2),
         experience_modifier: template.experience_modifier,
         gives_experience: template.gives_experience,
@@ -339,7 +342,17 @@ type KillPlayers<'w, 's> = Query<
 
 /// Kill XP for NPC deaths credited to a player (`LastDamager`).
 fn award_kill_xp(
-    killed: Query<(Entity, &Npc, &UnitLevel, &LastDamager, &Position), Added<DeathState>>,
+    killed: Query<
+        (
+            Entity,
+            &Npc,
+            &UnitLevel,
+            Option<&LevelScaling>,
+            &LastDamager,
+            &Position,
+        ),
+        Added<DeathState>,
+    >,
     players: KillPlayers,
     groups: Option<Res<GroupRegistry>>,
     world_data: Option<Res<WorldData>>,
@@ -348,11 +361,11 @@ fn award_kill_xp(
     let Some(world_data) = world_data else {
         return;
     };
-    for (npc_entity, npc, level, killer, position) in &killed {
+    for (npc_entity, npc, level, scaling, killer, position) in &killed {
         let Ok((killer_id, ..)) = players.get(killer.0) else {
             continue;
         };
-        let Some(victim) = victim_of(&world_data, npc, level) else {
+        let Some(victim) = victim_of(&world_data, npc, level, scaling) else {
             continue;
         };
         let group = groups

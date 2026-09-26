@@ -598,29 +598,59 @@ fn every_eastern_kingdoms_spawn_display_exists_in_retail() {
     );
 }
 
-/// Diseased Young Wolf (299, ContentTuning 73: levels 1-30, warrior, exp 0,
-/// HealthModifier 1). Spawns take their ContentTuning minimum until the server
-/// scales levels per player.
+/// Diseased Young Wolf (299, ContentTuning 73: levels 1-30, warrior,
+/// HealthScalingExpansion 0, HealthModifier 1).
 const DISEASED_YOUNG_WOLF: u32 = RETAIL + 280_052;
+/// Hogger (448, ContentTuning 73, HealthModifier 3).
+const HOGGER: u32 = RETAIL + 280_348;
+/// Stormwind City Guard (68, ContentTuning 883: level 90, HealthScalingExpansion 11,
+/// warrior, HealthModifier 1.5).
+const STORMWIND_CITY_GUARD: u32 = RETAIL + 313_646;
 
-/// Creature::SelectLevel: ceil(creature_classlevelstats.basehp<exp> × HealthModifier).
+/// Creature::SelectLevel and GetMaxHealthByLevel: a tuned creature is its
+/// ContentTuning maximum, with ceil(ExpectedStat CreatureHealth × HealthModifier).
 #[test]
 #[ignore]
-fn creature_health_is_class_level_base_hp_times_health_modifier() {
+fn tuned_creature_health_is_expected_stat_health_at_its_range_maximum() {
     let app = patrol_app(&[
         STORMWIND_DUMMIES[0],
         STORMWIND_DUMMIES[1],
         DISEASED_YOUNG_WOLF,
+        HOGGER,
+        STORMWIND_CITY_GUARD,
     ]);
-    let health = |guid| {
-        let health = app.world().get::<Health>(entity_of(&app, guid)).unwrap();
-        (health.current, health.max)
+    let stats = |guid| {
+        let entity = entity_of(&app, guid);
+        let health = app.world().get::<Health>(entity).unwrap();
+        let level = app.world().get::<UnitLevel>(entity).unwrap();
+        let scaling = app.world().get::<LevelScaling>(entity).unwrap();
+        (
+            health.current,
+            health.max,
+            level.0,
+            (scaling.min_level, scaling.max_level, scaling.delta),
+        )
     };
-    // ContentTuning 181 (levels 1-90): level 1 basehp2 1 × TrinityCore HealthModifier 25 and 8.
-    assert_eq!(health(STORMWIND_DUMMIES[0]), (25.0, 25.0));
-    assert_eq!(health(STORMWIND_DUMMIES[1]), (8.0, 8.0));
-    // Level 1 basehp0 42 × 1.
-    assert_eq!(health(DISEASED_YOUNG_WOLF), (42.0, 42.0));
+    // ExpectedStat level 90 (ExpansionID -2, no Midnight row): 141,482.
+    assert_eq!(
+        stats(STORMWIND_CITY_GUARD),
+        (212_223.0, 212_223.0, 90, (90, 90, 0))
+    );
+    // ContentTuning 181 and 864 (levels 1-90), HealthModifier 25 and 8.
+    assert_eq!(
+        stats(STORMWIND_DUMMIES[0]),
+        (3_537_050.0, 3_537_050.0, 90, (1, 90, 0))
+    );
+    assert_eq!(
+        stats(STORMWIND_DUMMIES[1]),
+        (1_131_856.0, 1_131_856.0, 90, (1, 90, 0))
+    );
+    // ExpectedStat level 30: 4,378.775.
+    assert_eq!(
+        stats(DISEASED_YOUNG_WOLF),
+        (4_379.0, 4_379.0, 30, (1, 30, 0))
+    );
+    assert_eq!(stats(HOGGER), (13_137.0, 13_137.0, 30, (1, 30, 0)));
 }
 
 /// Riverpaw Outrunner (478, level 9, faction 20), Diseased Young Wolf (299,

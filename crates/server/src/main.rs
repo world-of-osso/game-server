@@ -41,6 +41,7 @@ mod interest;
 mod inventory;
 mod item_stats;
 mod item_templates;
+mod level_scaling;
 mod lfg;
 mod loot;
 mod mail;
