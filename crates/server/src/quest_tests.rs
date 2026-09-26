@@ -462,14 +462,14 @@ fn blackrock_worg_kills_progress_beating_them_back_to_turn_in() {
     assert!(!entry.pois.is_empty());
 
     turn_in(&mut app, &client, mcbride, BEATING_THEM_BACK, None);
-    // TrinityCore money is RewardMoneyDifficulty × QuestMoneyReward (not imported) and
-    // AzerothCore has no Beating Them Back!: no money.
+    // RewardMoney is TrinityCore's Quest::MaxMoneyValue: QuestMoneyReward at ContentTuning
+    // 1476's MaxLevel 10, RewardMoneyDifficulty 5 (2000) × RewardMoneyMultiplier 1.
     assert_eq!(
         received::<QuestGiverQuestComplete>(&mut app, &client)[0].money,
-        0
+        2000
     );
     let inventory = persistence::load_inventory(db(&app), client.character_id);
-    assert_eq!(inventory.gold, gold_before);
+    assert_eq!(inventory.gold, gold_before + 2000);
     assert!(load_quest_log(db(&app), client.character_id).is_rewarded(BEATING_THEM_BACK));
 }
 

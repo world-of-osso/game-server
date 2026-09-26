@@ -63,11 +63,11 @@ TABLES = [
     "ItemDamageTwoHand", "ItemDamageTwoHandCaster", "ItemSquishEra", "CurvePoint",
     "DurabilityCosts", "DurabilityQuality", "GameObjectDisplayInfo", "BankTab", "CreatureDisplayInfo",
     "SpellReagents", "SpellTotems", "TradeSkillCategory", "SkillRaceClassInfo", "TotemCategory",
-    "ContentTuning",
+    "ContentTuning", "QuestMoneyReward",
 ]
 # Extracted from local CASC by FileDataID (community listfile), pinned to the build's
 # WoWDBDefs layout hash: {table: (FileDataID, layout hash)}.
-LOCAL_TABLES = {"ContentTuning": (1962930, 0xA3E13004)}
+LOCAL_TABLES = {"ContentTuning": (1962930, 0xA3E13004), "QuestMoneyReward": (1139047, 0x01D6219A)}
 
 
 def table_name(db2_name):

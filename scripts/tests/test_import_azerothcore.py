@@ -389,8 +389,8 @@ class CreatureEventImportTests(unittest.TestCase):
                 conn.execute("SELECT entry, name, minlevel, maxlevel, exp, ContentTuningID, faction, npcflag, HealthModifier,"
                              " mingold, maxgold, flags_extra, detection_range FROM content_creature_template"
                              " WHERE entry = 42384").fetchall(),
-                [(42384, "Homeless Stormwind Citizen", 5, 30, 0, 6, 12, 1, 0.5, 3, 9, 2, 20.0)],
-                "TDB-only template: ContentTuning 6 range",
+                [(42384, "Homeless Stormwind Citizen", 5, 30, 0, 6, 12, 1, 0.5, 0, 0, 2, 20.0)],
+                "TDB-only template: ContentTuning 6 range; no loot table anywhere, so no money",
             )
             self.assertEqual(
                 conn.execute("SELECT CreatureID, Idx, CreatureDisplayID FROM content_creature_template_model"
@@ -429,6 +429,8 @@ class CreatureEventImportTests(unittest.TestCase):
         with (self.root / "data/reports/content-dropped.csv").open(newline="") as handle:
             reported = {(r["table"], r["key"]): r["reason"] for r in csv.DictReader(handle)}
         self.assertEqual(reported[("creature", "guid=79968")], "map 0 spawn replaced by Retail spawns")
+        self.assertEqual(reported[("content_creature_template", "entry=42384")],
+                         "no loot table in either source; money 3-9 set to 0")
         self.assertEqual(reported[("creature", "guid=4000")], "map 1 spawn replaced by Retail spawns")
         self.assertEqual(reported[("creature_addon", "guid=79968")], "spawn replaced by Retail spawns")
         self.assertEqual(reported[("tdb_creature", "guid=312")], "not base phase: PhaseId 12345")
@@ -491,10 +493,10 @@ class CreatureEventImportTests(unittest.TestCase):
                 [(2488, "Gladius", 2488), (2489, "Two-handed Sword", 2489), (200000, "Retail Bread", None)],
             )
             self.assertEqual(
-                conn.execute("SELECT entry, lootid FROM content_creature_template WHERE entry IN (68, 42384)"
-                             " ORDER BY entry").fetchall(),
-                [(68, 68), (42384, loot + 42384)],
-                "TrinityCore loot when it has rows, AzerothCore's otherwise",
+                conn.execute("SELECT entry, lootid, mingold, maxgold FROM content_creature_template"
+                             " WHERE entry IN (68, 42384) ORDER BY entry").fetchall(),
+                [(68, 68, 0, 0), (42384, loot + 42384, 3, 9)],
+                "TrinityCore loot (and its gold) when it has rows, AzerothCore's otherwise",
             )
             self.assertEqual(
                 conn.execute("SELECT Entry, Item, Reference, Chance, MaxCount FROM content_creature_loot_template"
@@ -653,11 +655,14 @@ class CreatureEventImportTests(unittest.TestCase):
         (self.tdb / "creature.sql").write_text(rows + ";\n")
         write_db2_rows(self.csv / db2.DEFAULT_BUILD, "QuestV2", [{"ID": 783}, {"ID": 999}, {"ID": 26150}])
         write_db2_rows(self.csv / db2.DEFAULT_BUILD, "SpellName", [{"ID": 8326, "Name_lang": "Ghost"}])
+        # ContentTuning 6 tops out at 30: QuestMoneyReward level 30, difficulty 5.
+        write_db2_rows(self.csv / db2.DEFAULT_BUILD, "QuestMoneyReward", [{"ID": 30, "Difficulty_5": 1235}])
         write_tdb(self.tdb, "quest_template", [
             tdb_row("quest_template", ID=783, QuestType=2, ContentTuningID=6, RewardXPDifficulty=1, Flags=8,
                     AllowableRaces=-1, LogTitle="A Threat Within", LogDescription="Speak with Marshal McBride.",
                     QuestDescription="Kobolds!", QuestCompletionLog="Return."),
-            tdb_row("quest_template", ID=26150, QuestType=2, ContentTuningID=6, RewardItem1=200000, RewardAmount1=1,
+            tdb_row("quest_template", ID=26150, QuestType=2, ContentTuningID=6, RewardMoneyDifficulty=5,
+                    RewardMoneyMultiplier=0.5, RewardItem1=200000, RewardAmount1=1,
                     RewardChoiceItemID1=999999, RewardChoiceItemQuantity1=1, RewardSpell=8326,
                     RewardDisplaySpell1=77777, LogTitle="Retail Only"),
             tdb_row("quest_template", ID=31000, LogTitle="Not In QuestV2")])
@@ -680,10 +685,11 @@ class CreatureEventImportTests(unittest.TestCase):
                 conn.execute("SELECT ID, QuestLevel, MinLevel, ContentTuningID, RewardMoney, RewardXPDifficulty, Flags,"
                              " AllowableRaces, LogTitle, LogDescription, QuestCompletionLog FROM content_quest_template"
                              " ORDER BY ID").fetchall(),
-                [(783, -1, 5, 6, 100, 1, 8, -1, "A Threat Within", "Speak with Marshal McBride.", "Return."),
+                [(783, -1, 5, 6, 0, 1, 8, -1, "A Threat Within", "Speak with Marshal McBride.", "Return."),
                  (999, 70, 68, 0, 5000, 0, 0, 0, "Northrend Quest", None, None),
-                 (26150, -1, 5, 6, 0, 0, 0, 0, "Retail Only", "", "")],
-                "TrinityCore quests scale to the player (-1) from ContentTuning's minimum; money only from AzerothCore",
+                 (26150, -1, 5, 6, 617, 0, 0, 0, "Retail Only", "", "")],
+                "TrinityCore quests scale to the player (-1) from ContentTuning's minimum; money is"
+                " QuestMoneyReward[ContentTuning max 30][5] 1235 × 0.5, not AzerothCore's",
             )
             self.assertEqual(
                 conn.execute("SELECT RequiredNpcOrGo1, RequiredNpcOrGoCount1, ObjectiveText1, RequiredItemId1,"
@@ -701,6 +707,8 @@ class CreatureEventImportTests(unittest.TestCase):
             self.assertEqual(conn.execute("SELECT RewardChoiceItemID1, RewardChoiceItemQuantity1 FROM content_quest_template"
                                           " WHERE ID = 783").fetchall(), [(2488, 1)],
                              "AzerothCore's choice rewards fill TrinityCore's empty ones")
+            self.assertEqual(conn.execute("SELECT ID, RewardMoneyDifficulty, RewardMoneyMultiplier FROM content_quest_template"
+                                          " ORDER BY ID").fetchall(), [(783, 0, 0.0), (999, 0, 1.0), (26150, 5, 0.5)])
             self.assertEqual(conn.execute("SELECT id, quest FROM content_creature_questender ORDER BY quest").fetchall(),
                              [(68, 783)])
             self.assertEqual(conn.execute("SELECT ID, RewardText FROM content_quest_offer_reward").fetchall(),
@@ -721,6 +729,8 @@ class CreatureEventImportTests(unittest.TestCase):
                          "spell not in Retail SpellName; zeroed")
         self.assertEqual(reported[("tdb_quest_template", "ID=31000", "31000")], "quest id not in Retail QuestV2")
         self.assertEqual(reported[("quest_template", "ID=783", "783")], "replaced by TrinityCore's quest")
+        self.assertEqual(reported[("content_quest_template", "ID=783 RewardChoiceItemID", "783")],
+                         "empty TrinityCore reward group filled from the same-ID AzerothCore quest")
         self.assertEqual(reported[("creature_queststarter", "id=823", "783")],
                          "relation of a Retail-spawned entry replaced by TrinityCore's")
 
@@ -1158,6 +1168,18 @@ class LocalContentTuningExtractTests(unittest.TestCase):
         row = self.rows[2]
         self.assertEqual((row["MinLevelSquish"], row["MaxLevelSquish"], row["MinLevelScalingOffset"],
                           row["MaxLevelScalingOffset"], row["XpMultQuest"]), (5, 30, 0, 0, 1.0))
+
+    def test_quest_money_reward_expands_its_pallet_array(self):
+        schema = sqlite3.connect(":memory:")
+        schema.executescript(db2.SCHEMA_SQL.read_text())
+        columns = [(row[1], row[2]) for row in schema.execute("PRAGMA table_info(quest_money_reward)")]
+        fdid, layout = db2.LOCAL_TABLES["QuestMoneyReward"]
+        header, rows = db2_casc.extract_rows(fdid, layout, columns)
+        money = {row[0]: row[1:] for row in rows}
+        # 90 records + 40 copy-table rows; the ID comes from the non-inline ID list.
+        self.assertEqual(len(money), 130)
+        self.assertEqual(money[10], [0, 200, 500, 1000, 1500, 2000, 4000, 6000, 8000, 0])
+        self.assertEqual(money[1], [0, 5, 15, 30, 40, 55, 110, 165, 220, 0])
 
     def test_signed_expansion_and_max_level_type(self):
         row = self.rows[864]

@@ -8,8 +8,10 @@ db2_schema.sql, positionally; the expected layout hash pins that order to the bu
 (WoWDBDefs `LAYOUT` line for the table).
 
 Handles the subset the local tables need: one or more unencrypted sections, inline
-IDs or an ID list, copy tables, and field compression none/bitpacked/common/pallet/
-signed bitpacked. String fields, pallet arrays and sparse (offset-map) layouts fail.
+IDs or a non-inline ID list (prepended as the first column), copy tables, and field
+compression none/bitpacked/common/pallet/pallet array/signed bitpacked. A pallet-array
+field expands to its array-count columns. String fields, inline arrays and sparse
+(offset-map) layouts fail.
 """
 
 import os
@@ -23,7 +25,7 @@ CASC_LOCAL = Path(os.environ.get("CASC_LOCAL", "/syncthing/Sync/Projects/world-o
 CASC_CWD = Path(os.environ.get("CASC_CWD", "/syncthing/Sync/Projects/world-of-osso/game-engine"))
 
 COMPRESSION_NONE, COMPRESSION_BITPACKED, COMPRESSION_COMMON, COMPRESSION_PALLET = 0, 1, 2, 3
-COMPRESSION_SIGNED = 5
+COMPRESSION_PALLET_ARRAY, COMPRESSION_SIGNED = 4, 5
 
 
 def extract_fdid(fdid, out_dir):
@@ -50,7 +52,10 @@ def read_header(data):
 
 
 def decode(data):
-    """{id: [raw uint32 per field]} for every record, copies included."""
+    """(header, {id: [raw uint32 per column]}) for every record, copies included.
+
+    With a non-inline ID list the ID is prepended as column 0; a pallet-array field
+    contributes its array-count values."""
     header = read_header(data)
     if header["flags"] & 1:
         raise ValueError("sparse (offset map) DB2 layout is not supported")
@@ -68,7 +73,7 @@ def decode(data):
     pallets, commons = {}, {}
     cursor = offset
     for index, (_, _, extra, compression, *_rest) in enumerate(infos):
-        if compression == COMPRESSION_PALLET:
+        if compression in (COMPRESSION_PALLET, COMPRESSION_PALLET_ARRAY):
             pallets[index] = data[cursor:cursor + extra]
             cursor += extra
         elif compression not in (COMPRESSION_NONE, COMPRESSION_BITPACKED, COMPRESSION_COMMON, COMPRESSION_SIGNED):
@@ -85,17 +90,19 @@ def decode(data):
         ids = struct.unpack_from(f"<{id_list // 4}I", data, ids_at) if id_list else None
         for record in range(count):
             bits = int.from_bytes(data[file_offset + record * size:file_offset + (record + 1) * size], "little")
-            values = [field_value(index, info, bits, pallets) for index, info in enumerate(infos)]
-            record_id = ids[record] if ids else values[header["id_index"]]
+            fields = [field_value(index, info, bits, pallets) for index, info in enumerate(infos)]
+            record_id = ids[record] if ids else fields[header["id_index"]]
             for index, info in enumerate(infos):
                 if info[3] == COMPRESSION_COMMON:
-                    values[index] = commons[index].get(record_id, info[4])
-            if ids:
-                values[header["id_index"]] = record_id
+                    fields[index] = commons[index].get(record_id, info[4])
+            values = [record_id] if ids else []
+            for value in fields:
+                values.extend(value if isinstance(value, tuple) else (value,))
             rows[record_id] = values
+        id_column = 0 if ids else header["id_index"]
         copy_at = ids_at + id_list
         for new_id, source_id in struct.iter_unpack("<II", data[copy_at:copy_at + 8 * copies]):
-            rows[new_id] = [new_id if i == header["id_index"] else v for i, v in enumerate(rows[source_id])]
+            rows[new_id] = [new_id if i == id_column else v for i, v in enumerate(rows[source_id])]
     return header, rows
 
 
@@ -104,6 +111,9 @@ def field_value(index, info, bits, pallets):
     raw = (bits >> bit_offset) & ((1 << bit_size) - 1) if bit_size else 0
     if compression == COMPRESSION_PALLET:
         return struct.unpack_from("<I", pallets[index], raw * 4)[0]
+    if compression == COMPRESSION_PALLET_ARRAY:
+        count = info[6]
+        return struct.unpack_from(f"<{count}I", pallets[index], raw * 4 * count)
     if compression == COMPRESSION_SIGNED and raw & (1 << (value2 - 1)):
         return raw - (1 << value2)
     return raw
@@ -122,8 +132,9 @@ def extract_rows(fdid, layout_hash, columns):
     header, rows = decode(data)
     if header["layout_hash"] != layout_hash:
         raise SystemExit(f"FDID {fdid}: layout {header['layout_hash']:08X}, expected {layout_hash:08X}")
-    if header["field_count"] != len(columns):
-        raise SystemExit(f"FDID {fdid}: {header['field_count']} fields, schema has {len(columns)} columns")
+    widths = {len(values) for values in rows.values()}
+    if widths != {len(columns)}:
+        raise SystemExit(f"FDID {fdid}: decoded {sorted(widths)} columns, schema has {len(columns)}")
     if any(sql_type == "TEXT" for _, sql_type in columns):
         raise SystemExit(f"FDID {fdid}: string columns are not supported")
     return [name for name, _ in columns], [

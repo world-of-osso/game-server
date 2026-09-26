@@ -287,6 +287,15 @@ def build_loot(conn, report):
         report.drop("item_loot_template", f"Entry={container}", item, "container loot replaced by TrinityCore's")
     conn.execute("DELETE FROM content_item_loot_template WHERE Entry IN (SELECT Entry FROM tdb_item_loot_template)")
     insert_tdb_loot(conn, "item_loot_template", "Entry IN (SELECT ID FROM content_item)", report, offset_entry=False)
+    # Retail-spawned creatures with no loot table in either source drop nothing, money included
+    # (TrinityCore difficulty-0 gold is ignored for them).
+    no_loot = """entry IN (SELECT entry FROM temp.retail_entry)
+        AND (lootid = 0 OR lootid NOT IN (SELECT Entry FROM content_creature_loot_template))"""
+    for entry, low, high in conn.execute(f"""SELECT entry, mingold, maxgold FROM content_creature_template
+            WHERE {no_loot} ORDER BY entry""").fetchall():
+        report.drop("content_creature_template", f"entry={entry}", entry,
+                    f"no loot table in either source; money {low}-{high} set to 0")
+    conn.execute(f"UPDATE content_creature_template SET mingold = 0, maxgold = 0 WHERE {no_loot}")
 
 
 # --- Game objects ---
@@ -448,6 +457,7 @@ def build_gossip_options(conn, menus, report):
 
 # TrinityCore QuestObjectiveType values the AzerothCore quest shape holds.
 OBJECTIVE_MONSTER, OBJECTIVE_ITEM, OBJECTIVE_GAMEOBJECT, OBJECTIVE_PLAYERKILLS = 0, 1, 2, 9
+QUEST_MONEY_DIFFICULTIES = 10
 NPC_OR_GO_SLOTS, ITEM_SLOTS = 4, 6
 # AzerothCore column ← TrinityCore column, same meaning.
 QUEST_COLUMNS = {name: name for name in (
@@ -459,7 +469,8 @@ QUEST_COLUMNS = {name: name for name in (
     "POIContinent", "POIx", "POIy", "POIPriority", "RewardTitle", "RewardArenaPoints",
     *[f"RewardFaction{kind}{n}" for n in range(1, 6) for kind in ("ID", "Value", "Override")],
     "TimeAllowed", "AllowableRaces", "LogTitle", "LogDescription", "QuestDescription", "AreaDescription",
-    "QuestCompletionLog", "VerifiedBuild", "ContentTuningID")} | {"RewardDisplaySpell": "RewardDisplaySpell1"}
+    "QuestCompletionLog", "VerifiedBuild", "ContentTuningID", "RewardMoneyMultiplier")} | {
+    "RewardDisplaySpell": "RewardDisplaySpell1"}
 REWARD_ITEM_COLUMNS = ([f"RewardItem{n}" for n in range(1, 5)] + [f"RewardChoiceItemID{n}" for n in range(1, 7)]
                        + [f"ItemDrop{n}" for n in range(1, 5)] + ["StartItem"])
 REWARD_ITEM_AMOUNTS = {f"RewardItem{n}": f"RewardAmount{n}" for n in range(1, 5)} | {
@@ -497,8 +508,8 @@ def build_quests(conn, report):
         report.drop("quest_template", f"ID={quest}", quest, "replaced by TrinityCore's quest")
     conn.execute(f"CREATE TEMP TABLE azerothcore_quest AS SELECT * FROM content_quest_template WHERE ID IN ({quests})")
     conn.execute(f"DELETE FROM content_quest_template WHERE ID IN ({quests})")
-    if "ContentTuningID" not in [row[1] for row in conn.execute("PRAGMA table_info(content_quest_template)")]:
-        conn.execute("ALTER TABLE content_quest_template ADD COLUMN ContentTuningID INTEGER NOT NULL DEFAULT 0")
+    conn.execute("ALTER TABLE content_quest_template ADD COLUMN ContentTuningID INTEGER NOT NULL DEFAULT 0")
+    conn.execute("ALTER TABLE content_quest_template ADD COLUMN RewardMoneyMultiplier REAL NOT NULL DEFAULT 1")
     insert_quest_templates(conn, quests, report)
     map_quest_objectives(conn, quests, report)
     build_quest_children(conn, quests, report)
@@ -509,13 +520,20 @@ def insert_quest_templates(conn, quests, report):
     targets = ", ".join(QUEST_COLUMNS)
     sources = ", ".join(f"q.{column}" for column in QUEST_COLUMNS.values())
     # QuestLevel -1 scales to the player (Quest::XPValue); MinLevel is ContentTuning's minimum.
-    # TrinityCore money is RewardMoneyDifficulty × QuestMoneyReward (not imported): AzerothCore's
-    # fixed RewardMoney where the quest exists there, else 0.
+    # RewardMoney is TrinityCore's Quest::MaxMoneyValue (QuestDef.cpp:486-494):
+    # QuestMoneyReward[ContentTuning MaxLevel].Difficulty[RewardMoneyDifficulty] ×
+    # RewardMoneyMultiplier, truncated to uint32; 0 without ContentTuning. The money a player
+    # gets, Quest::MoneyValue (QuestDef.cpp:478-484), indexes Player::GetQuestLevel instead
+    # (Player.cpp:14339-14353), which needs per-player scaling; RewardMoneyDifficulty,
+    # RewardMoneyMultiplier, ContentTuningID and quest_money_reward are carried for it.
+    difficulty = "CASE q.RewardMoneyDifficulty " + " ".join(
+        f"WHEN {n} THEN m.Difficulty_{n}" for n in range(QUEST_MONEY_DIFFICULTIES)) + " ELSE 0 END"
     conn.execute(f"""INSERT INTO content_quest_template ({targets}, QuestLevel, MinLevel, RewardMoney)
-        SELECT {sources}, -1, COALESCE(l.minlevel, 0), COALESCE(a.RewardMoney, 0)
+        SELECT {sources}, -1, COALESCE(l.minlevel, 0),
+            COALESCE(CAST({difficulty} * q.RewardMoneyMultiplier AS INTEGER), 0)
         FROM tdb_quest_template q LEFT JOIN temp.tuning_level l ON l.ID = q.ContentTuningID
-        LEFT JOIN temp.azerothcore_quest a ON a.ID = q.ID WHERE q.ID IN ({quests})""")
-    fill_rewards_from_azerothcore(conn, quests)
+        LEFT JOIN quest_money_reward m ON m.ID = l.maxlevel WHERE q.ID IN ({quests})""")
+    fill_rewards_from_azerothcore(conn, quests, report)
     for column in REWARD_ITEM_COLUMNS:
         amount = REWARD_ITEM_AMOUNTS.get(column)
         for quest, item in conn.execute(f"""SELECT ID, {column} FROM content_quest_template WHERE ID IN ({quests})
@@ -536,14 +554,19 @@ REWARD_GROUPS = ([(f"RewardItem{n}", f"RewardAmount{n}") for n in range(1, 5)],
                  [(f"RewardChoiceItemID{n}", f"RewardChoiceItemQuantity{n}") for n in range(1, 7)])
 
 
-def fill_rewards_from_azerothcore(conn, quests):
+def fill_rewards_from_azerothcore(conn, quests, report):
+    """An all-zero TrinityCore group takes the same-ID AzerothCore quest's mapped group (reported)."""
     for group in REWARD_GROUPS:
         columns = [column for pair in group for column in pair]
         empty = " AND ".join(f"q.{item} = 0" for item, _ in group)
+        filled = f"""q.ID IN ({quests}) AND {empty}
+              AND q.ID IN (SELECT ID FROM temp.azerothcore_quest WHERE {group[0][0]} <> 0)"""
+        for (quest,) in conn.execute(f"SELECT q.ID FROM content_quest_template q WHERE {filled} ORDER BY q.ID").fetchall():
+            report.drop("content_quest_template", f"ID={quest} {group[0][0][:-1]}", quest,
+                        "empty TrinityCore reward group filled from the same-ID AzerothCore quest")
         conn.execute(f"""UPDATE content_quest_template AS q SET ({', '.join(columns)}) =
             (SELECT {', '.join(columns)} FROM temp.azerothcore_quest a WHERE a.ID = q.ID)
-            WHERE q.ID IN ({quests}) AND {empty}
-              AND q.ID IN (SELECT ID FROM temp.azerothcore_quest WHERE {group[0][0]} <> 0)""")
+            WHERE {filled}""")
 
 
 def map_quest_objectives(conn, quests, report):

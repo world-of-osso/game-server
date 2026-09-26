@@ -1346,3 +1346,20 @@ CREATE TABLE content_tuning (
   ILevel INTEGER NOT NULL DEFAULT 0,
   XpMultQuest REAL NOT NULL DEFAULT 0
 );
+
+-- Extracted from local CASC (db2.py extract, FDID 1139047, layout 01D6219A): quest money by
+-- quest level (ID) and RewardMoneyDifficulty (TrinityCore Quest::MoneyValue).
+DROP TABLE IF EXISTS quest_money_reward;
+CREATE TABLE quest_money_reward (
+  ID INTEGER PRIMARY KEY,
+  Difficulty_0 INTEGER NOT NULL DEFAULT 0,
+  Difficulty_1 INTEGER NOT NULL DEFAULT 0,
+  Difficulty_2 INTEGER NOT NULL DEFAULT 0,
+  Difficulty_3 INTEGER NOT NULL DEFAULT 0,
+  Difficulty_4 INTEGER NOT NULL DEFAULT 0,
+  Difficulty_5 INTEGER NOT NULL DEFAULT 0,
+  Difficulty_6 INTEGER NOT NULL DEFAULT 0,
+  Difficulty_7 INTEGER NOT NULL DEFAULT 0,
+  Difficulty_8 INTEGER NOT NULL DEFAULT 0,
+  Difficulty_9 INTEGER NOT NULL DEFAULT 0
+);
