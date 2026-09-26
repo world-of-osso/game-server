@@ -144,6 +144,7 @@ fn spawn_player(app: &mut App, character_id: u64, race: u8, class: u8, level: u8
             Level(level),
             UnitLevel(level),
             ClientId(character_id),
+            crate::maps::InMap::continent(0),
         ))
         .id();
     app.world_mut().spawn((
@@ -584,6 +585,7 @@ fn kill_xp_crossing_level_10_levels_up_and_sends_learned_spells() {
             },
             UnitLevel(9),
             origin,
+            crate::maps::InMap::continent(0),
             LastDamager(player),
             DeathState {
                 respawn_timer: 60.0,

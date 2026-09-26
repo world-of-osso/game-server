@@ -174,6 +174,8 @@ fn enter_world_app(db: GameDatabase, spells: SpellStore, classes: ClassSpells) -
     app.insert_resource(db);
     app.insert_resource(spells);
     app.insert_resource(classes);
+    app.insert_resource(crate::maps::MapStore::continents());
+    app.init_resource::<crate::maps::InstanceManager>();
     app.add_systems(Update, crate::auth_character::process_select_character);
     app.add_plugins(StatsPlugin);
     app.finish();
