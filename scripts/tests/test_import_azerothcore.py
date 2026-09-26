@@ -599,6 +599,14 @@ class CreatureEventImportTests(unittest.TestCase):
             "INSERT INTO `npc_text` VALUES\n(5000,1,0,0,0,0,0,0,0,3000,0,0,0,0,0,0,0,66044),"
             "(5001,0.5,0.5,0,0,0,0,0,0,3001,3002,0,0,0,0,0,0,66044);\n"
         )
+        (self.sql / "broadcast_text.sql").write_text(
+            "INSERT INTO `broadcast_text` (ID,MaleText,FemaleText) VALUES\n(3001,'Wrath text',''),"
+            "(3370,'I want to browse your goods.','');\n"
+        )
+        write_tdb(self.tdb, "broadcast_text", [
+            tdb_row("broadcast_text", Text="Hello, $n.", ID=3000, VerifiedBuild=66044),
+            tdb_row("broadcast_text", Text="Old Retail text", ID=3001, VerifiedBuild=60000),
+            tdb_row("broadcast_text", Text="", Text1="Retail text", ID=3001, VerifiedBuild=66044)])
         result = self.run_import()
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         with sqlite3.connect(self.db) as conn:
@@ -630,12 +638,19 @@ class CreatureEventImportTests(unittest.TestCase):
                  (5000, None, 3000, 1.0, 0, 0.0),
                  (5001, None, 3001, 0.5, 3002, 0.5)],
             )
+            self.assertEqual(
+                conn.execute("SELECT ID, MaleText, FemaleText FROM content_broadcast_text ORDER BY ID").fetchall(),
+                [(3000, "Hello, $n.", ""), (3001, "", "Retail text"), (3370, "I want to browse your goods.", "")],
+                "TrinityCore's latest-build BroadcastText row wins; AzerothCore's rows fill the rest",
+            )
         with (self.root / "data/reports/content-dropped.csv").open(newline="") as handle:
             reported = {(r["table"], r["key"], r["source_id"]): r["reason"] for r in csv.DictReader(handle)}
         self.assertEqual(reported[("tdb_creature_template_gossip", "CreatureID=68", "9002")],
                          "more than one menu; the server has no conditions, lowest MenuID 9001 used")
         self.assertEqual(reported[("tdb_gossip_menu_option", "MenuID=9000 OptionID=3", "18")],
                          "GossipOptionNpc 18 has no AzerothCore option type; hidden")
+        self.assertEqual(reported[("tdb_npc_text", "ID=5001", "3002")],
+                         "BroadcastText id in neither TrinityCore's nor AzerothCore's broadcast_text")
 
     def test_retail_quests_objectives_rewards_and_relations(self):
         self.write_retail_vendor_and_loot_fixture()

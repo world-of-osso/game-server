@@ -1,5 +1,5 @@
-//! Gossip menus from world.db (`gossip_menu`, `gossip_menu_option`, `npc_text`,
-//! `broadcast_text`, `creature_template.gossip_menu_id`) and the choice of what an
+//! Gossip menus from world.db (`content_gossip_menu`, `content_gossip_menu_option`, `content_npc_text`,
+//! `content_broadcast_text`, `content_creature_template.gossip_menu_id`) and the choice of what an
 //! NPC opens. The `conditions` table is not imported, so every option whose
 //! `OptionNpcFlag` matches the NPC is shown and a menu with several texts uses the
 //! lowest `TextID`.
@@ -204,7 +204,7 @@ pub fn load_gossip_catalog(conn: &Connection) -> rusqlite::Result<GossipCatalog>
 
 /// broadcast_text id → MaleText, or FemaleText when MaleText is empty.
 fn load_broadcast_texts(conn: &Connection) -> rusqlite::Result<HashMap<u32, String>> {
-    conn.prepare("SELECT ID, MaleText, FemaleText FROM broadcast_text")?
+    conn.prepare("SELECT ID, MaleText, FemaleText FROM content_broadcast_text")?
         .query_map(params![], |row| {
             let male: Option<String> = row.get(1)?;
             let female: Option<String> = row.get(2)?;

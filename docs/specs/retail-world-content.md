@@ -47,6 +47,7 @@ Services
   - The menus Retail-spawned NPCs reach (plus their submenus) come from TrinityCore: `gossip_menu`, `gossip_menu_option` and `npc_text`.
   - `GossipOptionNpc` maps to AzerothCore's option type, npcflag and icon. Vendor, taxi, trainer, spirit healer, binder, banker, petition, tabard, battlemaster, auctioneer and stablemaster are mapped; the others are hidden.
   - Every other menu stays AzerothCore's.
+- [x] Gossip texts resolve through `content_broadcast_text`: TrinityCore's Retail BroadcastText (TDB hotfixes `broadcast_text`, latest `VerifiedBuild` per ID, `Text`/`Text1` → `MaleText`/`FemaleText`), plus AzerothCore's rows for the ids TrinityCore lacks. Every npc_text BroadcastText id of the Retail menus resolves; before this, 176 were missing. Farley's bind option reads "Bind your hearthstone to this inn."
 - [x] `content_item` adds every Retail item TrinityCore's content references, with no `SourceEntry`.
 
 Quests
@@ -123,7 +124,7 @@ Server behaviour on Retail content
   - 260 objectives of other types (talk-to, area trigger, criteria tree, …) are reported, not tracked.
   - `RewardMoneyMultiplier`, `RewardDisplaySpell2-3`, reputation requirements (addon only) and TrinityCore's 64-bit `AllowableRaces` (truncated to 32 bits) are not mapped.
 - [ ] **Gossip limits.**
-  - 176 npc_text BroadcastText ids are missing from AzerothCore's `broadcast_text`; Retail BroadcastText is not imported.
+  - BroadcastText comes from TDB's hotfixes SQL, not local CASC: the local CASC resolution cache maps `broadcasttext.db2` (FDID 841604) to encoding key 599c2108…, which no local archive holds. The likely cause is asset-resolver's locale-blind root resolution (last record wins); I have not confirmed it.
   - Gossip conditions are not modelled: the lowest menu is used, and 4 NPCs have more than one.
 - [ ] **Waypoints and spawn overrides.**
   - TrinityCore `waypoint_path.Flags`/`Velocity` are ignored.

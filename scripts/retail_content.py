@@ -428,10 +428,25 @@ def build_gossip(conn, report):
     conn.execute(f"""INSERT INTO content_npc_text (ID, {', '.join(f'BroadcastTextID{n}, Probability{n}' for n in slots)})
         SELECT ID, {', '.join(f'BroadcastTextID{n}, Probability{n}' for n in slots)}
         FROM tdb_npc_text WHERE ID IN ({texts})""")
+    build_broadcast_text(conn)
     for text, broadcast in conn.execute(" UNION ".join(
             f"SELECT ID, BroadcastTextID{n} FROM content_npc_text WHERE ID IN ({texts}) AND BroadcastTextID{n} <> 0"
-            f" AND BroadcastTextID{n} NOT IN (SELECT ID FROM broadcast_text)" for n in slots)).fetchall():
-        report.drop("tdb_npc_text", f"ID={text}", broadcast, "BroadcastText id not in the AzerothCore broadcast_text table")
+            f" AND BroadcastTextID{n} NOT IN (SELECT ID FROM content_broadcast_text)" for n in slots)).fetchall():
+        report.drop("tdb_npc_text", f"ID={text}", broadcast,
+                    "BroadcastText id in neither TrinityCore's nor AzerothCore's broadcast_text")
+
+
+def build_broadcast_text(conn):
+    """content_broadcast_text: TrinityCore's Retail BroadcastText (hotfixes DB, latest VerifiedBuild per ID;
+    Text/Text1 are the male/female texts), plus AzerothCore's rows for ids TrinityCore lacks."""
+    clone_table(conn, "broadcast_text", "content_broadcast_text")
+    conn.execute("""INSERT INTO content_broadcast_text (ID, LanguageID, MaleText, FemaleText, EmoteID1, EmoteID2,
+            EmoteID3, EmoteDelay1, EmoteDelay2, EmoteDelay3, SoundEntriesId, EmotesID, Flags, VerifiedBuild)
+        SELECT ID, LanguageID, Text, Text1, EmoteID1, EmoteID2, EmoteID3, EmoteDelay1, EmoteDelay2, EmoteDelay3,
+            SoundKitID1, EmotesID, Flags, VerifiedBuild
+        FROM tdb_broadcast_text t WHERE VerifiedBuild = (SELECT MAX(VerifiedBuild) FROM tdb_broadcast_text l
+            WHERE l.ID = t.ID)""")
+    conn.execute("INSERT INTO content_broadcast_text SELECT * FROM broadcast_text WHERE ID NOT IN (SELECT ID FROM tdb_broadcast_text)")
 
 
 def build_gossip_options(conn, menus, report):

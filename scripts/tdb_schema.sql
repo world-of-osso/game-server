@@ -759,3 +759,28 @@ CREATE TABLE tdb_item_loot_template (
   MaxCount INTEGER NOT NULL DEFAULT 1,
   Comment TEXT DEFAULT NULL
 );
+
+-- From TDB_full_hotfixes (TrinityCore's Retail BroadcastText rows; the local CASC root resolves
+-- broadcasttext.db2 to a locale whose data is not installed).
+DROP TABLE IF EXISTS tdb_broadcast_text;
+CREATE TABLE tdb_broadcast_text (
+  Text TEXT,
+  Text1 TEXT,
+  ID INTEGER NOT NULL DEFAULT 0,
+  LanguageID INTEGER NOT NULL DEFAULT 0,
+  ConditionID INTEGER NOT NULL DEFAULT 0,
+  EmotesID INTEGER NOT NULL DEFAULT 0,
+  Flags INTEGER NOT NULL DEFAULT 0,
+  ChatBubbleDurationMs INTEGER NOT NULL DEFAULT 0,
+  VoiceOverPriorityID INTEGER NOT NULL DEFAULT 0,
+  SoundKitID1 INTEGER NOT NULL DEFAULT 0,
+  SoundKitID2 INTEGER NOT NULL DEFAULT 0,
+  EmoteID1 INTEGER NOT NULL DEFAULT 0,
+  EmoteID2 INTEGER NOT NULL DEFAULT 0,
+  EmoteID3 INTEGER NOT NULL DEFAULT 0,
+  EmoteDelay1 INTEGER NOT NULL DEFAULT 0,
+  EmoteDelay2 INTEGER NOT NULL DEFAULT 0,
+  EmoteDelay3 INTEGER NOT NULL DEFAULT 0,
+  VerifiedBuild INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (ID, VerifiedBuild)
+);

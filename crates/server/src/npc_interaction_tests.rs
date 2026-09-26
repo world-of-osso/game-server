@@ -373,7 +373,8 @@ fn innkeeper_gossip_menu_lists_vendor_option_that_opens_vendor() {
                 text: "Welcome to my Inn, weary traveler. What can I do for you?".into(),
                 options: vec![
                     option(0, 0, "What can I do at an inn?"),
-                    option(1, 5, "Make this inn your home."),
+                    // Retail BroadcastText of the option (TrinityCore's OptionText is the older wording).
+                    option(1, 5, "Bind your hearthstone to this inn."),
                     option(2, 1, "I want to browse your goods."),
                 ],
             })
