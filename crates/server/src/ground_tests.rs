@@ -141,3 +141,41 @@ fn set_position_down_onto_the_floor_deals_no_fall_damage() {
     assert!((y - AUCTION_HOUSE_FLOOR).abs() < 0.05, "player y {y}");
     assert_eq!(health, 100.0);
 }
+
+/// `world/maps/stormwindjail/stormwindjail.wdt`: the Stockade, one global WMO (108631).
+const STOCKADE_WDT_FDID: u32 = 791_060;
+
+fn stockade_ground(ground: &mut GroundMap, wow_x: f32, wow_y: f32, wow_z: f32) -> GroundProbe {
+    let (x, y, z) = crate::terrain_height::wow_to_bevy(wow_x, wow_y, wow_z);
+    ground.ground_at(34, Vec3::new(x, y, z))
+}
+
+/// The teleport targets players fell from in the Stockade lie outside its WMO: no face of any
+/// of its 27 groups crosses those columns (walls and rock between the cells). A yard or two
+/// east, on the Jail18 (-34.86) and Jail02 (-26.52) cell floors, the ground holds.
+#[test]
+fn stockade_fall_points_are_outside_the_wmo_and_its_floors_hold_beside_them() {
+    let mut ground = GroundMap::new(
+        &client_data_dir(),
+        std::collections::HashMap::from([(34, STOCKADE_WDT_FDID)]),
+    );
+    for (x, y) in [(97.0, 76.0), (99.0, 77.0), (101.0, 78.0), (74.0, -16.0)] {
+        for z in [-40.0, -35.0, -30.0, -26.0, -20.0, -10.0, 0.0, 10.0] {
+            assert_eq!(
+                stockade_ground(&mut ground, x, y, z),
+                GroundProbe::Unsupported,
+                "({x}, {y}, {z})"
+            );
+        }
+    }
+    for (x, y, floor) in [(103.0, 76.0, -34.86), (104.5, 77.3, -34.86)] {
+        let GroundProbe::Supported(height) = stockade_ground(&mut ground, x, y, floor + 0.3) else {
+            panic!("no Jail18 floor at ({x}, {y})");
+        };
+        assert!((height - floor).abs() < 0.05, "({x}, {y}) floor {height}");
+    }
+    let GroundProbe::Supported(corridor) = stockade_ground(&mut ground, 78.0, -16.0, -26.0) else {
+        panic!("no Jail02 floor at (78, -16)");
+    };
+    assert!(corridor < -26.0 && corridor > -28.0, "floor {corridor}");
+}
