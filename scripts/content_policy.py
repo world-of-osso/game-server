@@ -129,12 +129,16 @@ def create_map_table(conn, name, mapping):
     conn.executemany(f"INSERT INTO {name} VALUES (?, ?)", mapping.items())
 
 
-def build_items(conn, item_map, item_reasons, report):
+def build_items(conn, item_map, item_reasons, retail_ids, report):
+    """content_item: mapped AzerothCore items plus the Retail items TrinityCore content references (no SourceEntry)."""
     for source_id, reason in sorted(item_reasons.items()):
         report.drop("item_template", f"entry={source_id}", source_id, reason)
+    conn.execute("CREATE TEMP TABLE item_source AS SELECT retail_id, source_id FROM temp.item_map")
+    conn.executemany("INSERT INTO temp.item_source VALUES (?, NULL)",
+                     ((item,) for item in sorted(retail_ids - set(item_map.values()))))
     conn.execute("DROP TABLE IF EXISTS content_item")
     conn.execute(f"""CREATE TABLE content_item AS SELECT {ITEM_COLUMNS}, im.source_id AS SourceEntry
-        FROM temp.item_map im JOIN item_sparse s ON s.ID = im.retail_id LEFT JOIN item i ON i.ID = s.ID""")
+        FROM temp.item_source im JOIN item_sparse s ON s.ID = im.retail_id LEFT JOIN item i ON i.ID = s.ID""")
     conn.execute("CREATE UNIQUE INDEX content_item_id ON content_item(ID)")
 
 
@@ -258,13 +262,18 @@ def apply_policy(conn, wrath_spell_names, overrides_path, report):
     spell_map, _ = map_ids(wrath_spell_names, retail_spells, overrides["spell"])
     create_map_table(conn, "item_map", item_map)
     create_map_table(conn, "spell_map", spell_map)
-    build_items(conn, item_map, item_reasons, report)
+    build_items(conn, item_map, item_reasons, retail_content.tdb_item_ids(conn), report)
     build_vendors(conn, report)
     build_quests(conn, item_map, spell_map, report)
     build_loot(conn, report)
     build_gameobjects(conn, report)
     build_creature_models(conn, overrides["creature"], report)
     retail_content.build_creatures(conn, report)
+    retail_content.build_gameobjects(conn, report)
+    retail_content.build_vendors(conn, report)
+    retail_content.build_loot(conn, report)
+    retail_content.build_gossip(conn, report)
+    retail_content.build_quests(conn, report)
 
 
 def main():

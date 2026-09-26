@@ -704,21 +704,6 @@ CREATE TABLE tdb_creature_template_gossip (
   PRIMARY KEY (CreatureID, MenuID)
 );
 
-DROP TABLE IF EXISTS tdb_points_of_interest;
-CREATE TABLE tdb_points_of_interest (
-  ID INTEGER NOT NULL DEFAULT 0,
-  PositionX REAL NOT NULL DEFAULT 0,
-  PositionY REAL NOT NULL DEFAULT 0,
-  PositionZ REAL NOT NULL DEFAULT 0,
-  Icon INTEGER NOT NULL DEFAULT 0,
-  Flags INTEGER NOT NULL DEFAULT 0,
-  Importance INTEGER NOT NULL DEFAULT 0,
-  Name TEXT,
-  WMOGroupID INTEGER NOT NULL DEFAULT 0,
-  VerifiedBuild INTEGER NOT NULL DEFAULT 0,
-  PRIMARY KEY (ID)
-);
-
 DROP TABLE IF EXISTS tdb_creature_loot_template;
 CREATE TABLE tdb_creature_loot_template (
   Entry INTEGER NOT NULL DEFAULT 0,

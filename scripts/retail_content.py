@@ -200,3 +200,418 @@ def build_creatures(conn, report):
     build_waypoints(conn)
     build_formations_and_events(conn, report)
     conn.execute("CREATE INDEX content_creature_map ON content_creature(map)")
+    conn.execute("""CREATE TEMP TABLE retail_entry AS SELECT DISTINCT id1 AS entry FROM content_creature
+        WHERE guid IN (SELECT guid FROM temp.retail_spawn)""")
+    conn.execute("CREATE UNIQUE INDEX temp.retail_entry_entry ON retail_entry(entry)")
+
+
+# --- Items, vendors and loot ---
+# TrinityCore's item ids are Retail ids already; its loot ids live beside AzerothCore's.
+
+# TrinityCore loot template and reference ids (loot tables reach 700,018, AzerothCore's 1.6M).
+TDB_LOOT_OFFSET = 20_000_000
+# TrinityCore ItemVendorType and LootStoreItem::Type.
+VENDOR_ITEM, VENDOR_CURRENCY = 1, 2
+LOOT_ITEM, LOOT_REFERENCE, LOOT_CURRENCY = 0, 1, 2
+QUEST_ITEM_COLUMNS = ([f"RewardItem{n}" for n in range(1, 5)] + [f"ItemDrop{n}" for n in range(1, 5)]
+                      + [f"RewardChoiceItemID{n}" for n in range(1, 7)] + ["StartItem"])
+TDB_LOOT_TABLES = ("creature_loot_template", "gameobject_loot_template", "reference_loot_template", "item_loot_template")
+
+
+def tdb_item_ids(conn):
+    """Retail item ids TrinityCore's vendors, loot and quests reference that Retail ItemSparse has."""
+    sources = [f"SELECT item FROM tdb_npc_vendor WHERE type = {VENDOR_ITEM}"]
+    sources += [f"SELECT Item FROM tdb_{table} WHERE ItemType = {LOOT_ITEM}" for table in TDB_LOOT_TABLES]
+    sources += ["SELECT Entry FROM tdb_item_loot_template",
+                "SELECT ObjectID FROM tdb_quest_objectives WHERE Type = 1"]  # QUEST_OBJECTIVE_ITEM
+    sources += [f"SELECT {column} FROM tdb_quest_template" for column in QUEST_ITEM_COLUMNS]
+    return {item for (item,) in conn.execute(
+        f"SELECT ID FROM item_sparse WHERE ID IN ({' UNION '.join(sources)})")}
+
+
+def build_vendors(conn, report):
+    """TrinityCore's vendor list for every Retail-spawned vendor that has one."""
+    retail = f"""SELECT entry FROM tdb_npc_vendor WHERE type = {VENDOR_ITEM}
+        AND entry IN (SELECT entry FROM temp.retail_entry)"""
+    for entry, item in conn.execute(f"SELECT entry, item FROM content_npc_vendor WHERE entry IN ({retail})").fetchall():
+        report.drop("npc_vendor", f"entry={entry}", item, "vendor list replaced by TrinityCore's")
+    conn.execute(f"DELETE FROM content_npc_vendor WHERE entry IN ({retail})")
+    rows = "FROM tdb_npc_vendor WHERE entry IN (SELECT entry FROM temp.retail_entry)"
+    # "+item": probe by entry only; an index probe per (entry, item) pair is a cross product.
+    conn.execute(f"""INSERT INTO content_npc_vendor (entry, slot, item, maxcount, incrtime, ExtendedCost, VerifiedBuild)
+        SELECT entry, slot, item, maxcount, incrtime, ExtendedCost, VerifiedBuild {rows}
+        AND type = {VENDOR_ITEM} AND +item IN (SELECT ID FROM content_item)""")
+    for entry, item, kind in conn.execute(f"""SELECT entry, item, type {rows}
+            AND (type <> {VENDOR_ITEM} OR +item NOT IN (SELECT ID FROM content_item))""").fetchall():
+        reason = "currency cost row; currencies are not modelled" if kind == VENDOR_CURRENCY else "item not in Retail ItemSparse"
+        report.drop("tdb_npc_vendor", f"entry={entry}", item, reason)
+
+
+def insert_tdb_loot(conn, table, where, report, offset_entry=True):
+    """Map TrinityCore loot rows (ItemType item/reference) of `table` into content_<table>."""
+    entry = f"Entry + {TDB_LOOT_OFFSET}" if offset_entry else "Entry"
+    reference = f"CASE ItemType WHEN {LOOT_REFERENCE} THEN Item + {TDB_LOOT_OFFSET} ELSE 0 END"
+    # TrinityCore's loot tables have no primary key: a row repeated under (Entry, Item, Reference,
+    # GroupId), all exact copies in TDB1210, is kept once.
+    for key, item, copies in conn.execute(f"""SELECT {entry}, Item, count(*) FROM tdb_{table} WHERE ({where})
+            AND ItemType IN ({LOOT_ITEM}, {LOOT_REFERENCE}) GROUP BY Entry, ItemType, Item, GroupId HAVING count(*) > 1
+            """).fetchall():
+        report.drop(f"tdb_{table}", f"Entry={key}", item, f"row repeated {copies} times; kept once")
+    conn.execute(f"""INSERT OR IGNORE INTO content_{table}
+            (Entry, Item, Reference, Chance, QuestRequired, LootMode, GroupId, MinCount, MaxCount, Comment)
+        SELECT {entry}, CASE ItemType WHEN {LOOT_REFERENCE} THEN Item + {TDB_LOOT_OFFSET} ELSE Item END, {reference},
+            Chance, QuestRequired, LootMode, GroupId, MinCount, MaxCount, Comment
+        FROM tdb_{table} WHERE ({where}) AND (ItemType = {LOOT_REFERENCE}
+            OR (ItemType = {LOOT_ITEM} AND Item IN (SELECT ID FROM content_item)))""")
+    for key, item, kind in conn.execute(f"""SELECT {entry}, Item, ItemType FROM tdb_{table} WHERE ({where})
+            AND NOT (ItemType = {LOOT_REFERENCE} OR (ItemType = {LOOT_ITEM} AND Item IN (SELECT ID FROM content_item)))
+            """).fetchall():
+        reason = "currency loot; currencies are not modelled" if kind == LOOT_CURRENCY else "item not in Retail ItemSparse"
+        report.drop(f"tdb_{table}", f"Entry={key}", item, reason)
+
+
+def build_loot(conn, report):
+    """TrinityCore loot (ids + TDB_LOOT_OFFSET) for Retail-spawned creatures that have some, AzerothCore's otherwise."""
+    conn.execute("""CREATE TEMP TABLE retail_loot AS SELECT d.Entry AS entry, d.LootID AS loot_id, d.GoldMin, d.GoldMax
+        FROM temp.tdb_difficulty d
+        WHERE d.Entry IN (SELECT entry FROM temp.retail_entry)
+          AND d.LootID IN (SELECT Entry FROM tdb_creature_loot_template)""")
+    conn.execute(f"""UPDATE content_creature_template SET lootid = l.loot_id + {TDB_LOOT_OFFSET},
+            mingold = l.GoldMin, maxgold = l.GoldMax
+        FROM temp.retail_loot l WHERE l.entry = content_creature_template.entry""")
+    insert_tdb_loot(conn, "creature_loot_template", "Entry IN (SELECT loot_id FROM temp.retail_loot)", report)
+    insert_tdb_loot(conn, "reference_loot_template", "1", report)
+    insert_tdb_loot(conn, "gameobject_loot_template", "1", report)
+    for container, item in conn.execute("""SELECT Entry, Item FROM content_item_loot_template
+            WHERE Entry IN (SELECT Entry FROM tdb_item_loot_template)""").fetchall():
+        report.drop("item_loot_template", f"Entry={container}", item, "container loot replaced by TrinityCore's")
+    conn.execute("DELETE FROM content_item_loot_template WHERE Entry IN (SELECT Entry FROM tdb_item_loot_template)")
+    insert_tdb_loot(conn, "item_loot_template", "Entry IN (SELECT ID FROM content_item)", report, offset_entry=False)
+
+
+# --- Game objects ---
+
+# TrinityCore GameObjectTypes whose Data1 is a gameobject_loot_template id (chest, fishing hole).
+GAMEOBJECT_TYPE_CHEST, GAMEOBJECT_TYPE_FISHINGHOLE = 3, 25
+AZEROTHCORE_DATA_FIELDS = 24
+TDB_DATA_FIELDS = 35
+
+
+def build_gameobjects(conn, report):
+    """TrinityCore base-phase objects on RETAIL_MAPS (guid + RETAIL_GUID_OFFSET) with TrinityCore's templates."""
+    for guid, map_id in conn.execute(f"SELECT guid, map FROM content_gameobject WHERE map IN ({MAP_LIST})").fetchall():
+        report.drop("gameobject", f"guid={guid}", guid, f"map {map_id} spawn replaced by Retail spawns")
+    conn.execute(f"DELETE FROM content_gameobject WHERE map IN ({MAP_LIST})")
+    # No events are activated: positive-only memberships never spawn (as for creatures).
+    holiday = """guid IN (SELECT guid FROM tdb_game_event_gameobject WHERE eventEntry > 0)
+        AND guid NOT IN (SELECT guid FROM tdb_game_event_gameobject WHERE eventEntry < 0)"""
+    conn.execute(f"""CREATE TEMP TABLE retail_gameobject AS SELECT guid AS tdb_guid, id FROM tdb_gameobject
+        WHERE map IN ({MAP_LIST}) AND {BASE_PHASE} AND NOT ({holiday})""")
+    for guid, *phase in conn.execute(f"""SELECT guid, PhaseId, PhaseGroup, terrainSwapMap, spawnDifficulties
+            FROM tdb_gameobject WHERE map IN ({MAP_LIST}) AND NOT ({BASE_PHASE}) ORDER BY guid"""):
+        report.drop("tdb_gameobject", f"guid={guid}", guid, not_base_phase_reason(*phase))
+    for (guid,) in conn.execute(f"""SELECT guid FROM tdb_gameobject WHERE map IN ({MAP_LIST}) AND {BASE_PHASE}
+            AND {holiday} ORDER BY guid"""):
+        report.drop("tdb_gameobject", f"guid={guid}", guid, "holiday spawn (positive game event only)")
+    build_gameobject_templates(conn, report)
+    conn.execute(f"""INSERT INTO content_gameobject (guid, id, map, zoneId, areaId, position_x, position_y, position_z,
+            orientation, rotation0, rotation1, rotation2, rotation3, spawntimesecs, animprogress, state, ScriptName,
+            VerifiedBuild)
+        SELECT g.guid + {RETAIL_GUID_OFFSET}, g.id, g.map, g.zoneId, g.areaId, g.position_x, g.position_y, g.position_z,
+            g.orientation, g.rotation0, g.rotation1, g.rotation2, g.rotation3, g.spawntimesecs, g.animprogress, g.state,
+            g.ScriptName, g.VerifiedBuild
+        FROM temp.retail_gameobject r JOIN tdb_gameobject g ON g.guid = r.tdb_guid
+        WHERE g.id IN (SELECT entry FROM content_gameobject_template)""")
+    for guid, entry in conn.execute("""SELECT tdb_guid, id FROM temp.retail_gameobject
+            WHERE id NOT IN (SELECT entry FROM content_gameobject_template) ORDER BY tdb_guid"""):
+        report.drop("tdb_gameobject", f"guid={guid}", entry, "template dropped")
+
+
+def build_gameobject_templates(conn, report):
+    """TrinityCore's template (Data0-23, chest loot ids offset) replaces AzerothCore's for Retail-spawned entries."""
+    retail = "SELECT DISTINCT id FROM temp.retail_gameobject"
+    conn.execute(f"DELETE FROM content_gameobject_template WHERE entry IN ({retail})")
+    conn.execute(f"DELETE FROM content_gameobject_template_addon WHERE entry IN ({retail})")
+    data = ", ".join(f"Data{n}" for n in range(AZEROTHCORE_DATA_FIELDS))
+    loot_types = f"({GAMEOBJECT_TYPE_CHEST}, {GAMEOBJECT_TYPE_FISHINGHOLE})"
+    mapped = data.replace("Data1,", f"CASE WHEN type IN {loot_types} AND Data1 <> 0 THEN Data1 + {TDB_LOOT_OFFSET} "
+                                   "ELSE Data1 END,", 1)
+    displayed = "(displayId = 0 OR displayId IN (SELECT ID FROM game_object_display_info))"
+    conn.execute(f"""INSERT INTO content_gameobject_template (entry, type, displayId, name, IconName, castBarCaption, unk1,
+            size, {data}, AIName, ScriptName, VerifiedBuild)
+        SELECT entry, type, displayId, name, IconName, castBarCaption, unk1, size, {mapped}, AIName, ScriptName,
+            VerifiedBuild
+        FROM tdb_gameobject_template WHERE entry IN ({retail}) AND {displayed}""")
+    for entry, display in conn.execute(f"""SELECT entry, displayId FROM tdb_gameobject_template
+            WHERE entry IN ({retail}) AND NOT {displayed}"""):
+        report.drop("tdb_gameobject_template", f"entry={entry}", display, "display not in Retail GameObjectDisplayInfo")
+    for n in range(AZEROTHCORE_DATA_FIELDS, TDB_DATA_FIELDS):
+        for entry, value in conn.execute(f"""SELECT entry, Data{n} FROM tdb_gameobject_template
+                WHERE entry IN (SELECT entry FROM content_gameobject_template) AND entry IN ({retail})
+                  AND Data{n} <> 0"""):
+            report.drop("tdb_gameobject_template", f"entry={entry} Data{n}", value, "Data24-34 not in the AzerothCore schema")
+    conn.execute(f"""INSERT INTO content_gameobject_template_addon
+            (entry, faction, flags, mingold, maxgold, artkit0, artkit1, artkit2, artkit3)
+        SELECT entry, faction, flags, mingold, maxgold, artkit0, artkit1, artkit2, artkit3
+        FROM tdb_gameobject_template_addon WHERE entry IN ({retail})
+          AND entry IN (SELECT entry FROM content_gameobject_template)""")
+
+
+# --- Gossip ---
+
+# TrinityCore GossipOptionNpc → AzerothCore (OptionType, OptionNpcFlag, OptionIcon). Values are
+# confirmed by the TDB option texts ("I want to browse your goods." 1, "Show me where I can
+# fly." 2, "Train me." 3, "I'd like to browse the items up for auction." 10, stables 12).
+GOSSIP_OPTION_NPC = {
+    0: (1, 0x1, 0),              # None: GOSSIP_OPTION_GOSSIP, UNIT_NPC_FLAG_GOSSIP, chat
+    1: (3, 0x80, 1),             # Vendor
+    2: (4, 0x2000, 2),           # TaxiNode
+    3: (5, 0x10, 3),             # Trainer
+    4: (6, 0x4000, 4),           # SpiritHealer
+    5: (8, 0x10000, 5),          # Binder (innkeeper)
+    6: (9, 0x20000, 6),          # Banker
+    7: (10, 0x40000, 7),         # PetitionVendor
+    8: (11, 0x80000, 8),         # GuildTabardVendor
+    9: (12, 0x100000, 9),        # Battlemaster
+    10: (13, 0x200000, 6),       # Auctioneer
+    12: (14, 0x400000, 0),       # Stablemaster
+}
+GOSSIP_OPTION_NONE = 0
+NPC_TEXT_SLOTS = 8
+
+
+def retail_menu_closure(conn):
+    """Menus of Retail-spawned NPCs (TrinityCore's lowest per NPC) and every TrinityCore submenu they reach."""
+    menus = {menu for (menu,) in conn.execute("SELECT gossip_menu_id FROM temp.retail_gossip")}
+    frontier = set(menus)
+    while frontier:
+        found = {menu for (menu,) in conn.execute(
+            f"SELECT DISTINCT ActionMenuID FROM tdb_gossip_menu_option WHERE ActionMenuID <> 0 "
+            f"AND MenuID IN ({','.join(map(str, frontier))})")}
+        frontier = found - menus
+        menus |= found
+    return menus
+
+
+def build_gossip(conn, report):
+    """TrinityCore menus, options and texts for Retail-spawned NPCs; AzerothCore's for every other menu."""
+    conn.execute("""CREATE TEMP TABLE retail_gossip AS SELECT CreatureID AS entry, MIN(MenuID) AS gossip_menu_id
+        FROM tdb_creature_template_gossip WHERE CreatureID IN (SELECT entry FROM temp.retail_entry) GROUP BY CreatureID""")
+    for entry, menu, used in conn.execute("""SELECT g.CreatureID, g.MenuID, r.gossip_menu_id FROM tdb_creature_template_gossip g
+            JOIN temp.retail_gossip r ON r.entry = g.CreatureID WHERE g.MenuID <> r.gossip_menu_id ORDER BY 1, 2""").fetchall():
+        report.drop("tdb_creature_template_gossip", f"CreatureID={entry}", menu,
+                    f"more than one menu; the server has no conditions, lowest MenuID {used} used")
+    conn.execute("""UPDATE content_creature_template SET gossip_menu_id = r.gossip_menu_id
+        FROM temp.retail_gossip r WHERE r.entry = content_creature_template.entry""")
+    conn.execute("CREATE TEMP TABLE retail_menu (MenuID INTEGER PRIMARY KEY)")
+    conn.executemany("INSERT INTO temp.retail_menu VALUES (?)", ((menu,) for menu in sorted(retail_menu_closure(conn))))
+    menus = "SELECT MenuID FROM temp.retail_menu"
+    for table in ("gossip_menu", "gossip_menu_option"):
+        clone_table(conn, table, f"content_{table}")
+        conn.execute(f"INSERT INTO content_{table} SELECT * FROM {table} WHERE MenuID NOT IN ({menus})")
+    conn.execute(f"""INSERT INTO content_gossip_menu (MenuID, TextID)
+        SELECT MenuID, TextID FROM tdb_gossip_menu WHERE MenuID IN ({menus})""")
+    build_gossip_options(conn, menus, report)
+    texts = f"SELECT TextID FROM tdb_gossip_menu WHERE MenuID IN ({menus})"
+    clone_table(conn, "npc_text", "content_npc_text")
+    conn.execute(f"INSERT INTO content_npc_text SELECT * FROM npc_text WHERE ID NOT IN ({texts})")
+    slots = range(NPC_TEXT_SLOTS)
+    conn.execute(f"""INSERT INTO content_npc_text (ID, {', '.join(f'BroadcastTextID{n}, Probability{n}' for n in slots)})
+        SELECT ID, {', '.join(f'BroadcastTextID{n}, Probability{n}' for n in slots)}
+        FROM tdb_npc_text WHERE ID IN ({texts})""")
+    for text, broadcast in conn.execute(" UNION ".join(
+            f"SELECT ID, BroadcastTextID{n} FROM content_npc_text WHERE ID IN ({texts}) AND BroadcastTextID{n} <> 0"
+            f" AND BroadcastTextID{n} NOT IN (SELECT ID FROM broadcast_text)" for n in slots)).fetchall():
+        report.drop("tdb_npc_text", f"ID={text}", broadcast, "BroadcastText id not in the AzerothCore broadcast_text table")
+
+
+def build_gossip_options(conn, menus, report):
+    conn.execute("CREATE TEMP TABLE gossip_option_npc (npc INTEGER PRIMARY KEY, type INTEGER, flag INTEGER, icon INTEGER)")
+    conn.executemany("INSERT INTO temp.gossip_option_npc VALUES (?, ?, ?, ?)",
+                     ((npc, *values) for npc, values in GOSSIP_OPTION_NPC.items()))
+    conn.execute(f"""INSERT INTO content_gossip_menu_option (MenuID, OptionID, OptionIcon, OptionText, OptionBroadcastTextID,
+            OptionType, OptionNpcFlag, ActionMenuID, ActionPoiID, BoxCoded, BoxMoney, BoxText, BoxBroadcastTextID,
+            VerifiedBuild)
+        SELECT o.MenuID, o.OptionID, COALESCE(n.icon, 0), o.OptionText, o.OptionBroadcastTextID,
+            COALESCE(n.type, {GOSSIP_OPTION_NONE}), COALESCE(n.flag, 1), o.ActionMenuID, o.ActionPoiID, o.BoxCoded,
+            o.BoxMoney, o.BoxText, o.BoxBroadcastTextID, o.VerifiedBuild
+        FROM tdb_gossip_menu_option o LEFT JOIN temp.gossip_option_npc n ON n.npc = o.OptionNpc
+        WHERE o.MenuID IN ({menus})""")
+    for menu, option, npc in conn.execute(f"""SELECT MenuID, OptionID, OptionNpc FROM tdb_gossip_menu_option
+            WHERE MenuID IN ({menus}) AND OptionNpc NOT IN (SELECT npc FROM temp.gossip_option_npc)
+            ORDER BY MenuID, OptionID""").fetchall():
+        report.drop("tdb_gossip_menu_option", f"MenuID={menu} OptionID={option}", npc,
+                    f"GossipOptionNpc {npc} has no AzerothCore option type; hidden")
+
+
+# --- Quests ---
+
+# TrinityCore QuestObjectiveType values the AzerothCore quest shape holds.
+OBJECTIVE_MONSTER, OBJECTIVE_ITEM, OBJECTIVE_GAMEOBJECT, OBJECTIVE_PLAYERKILLS = 0, 1, 2, 9
+NPC_OR_GO_SLOTS, ITEM_SLOTS = 4, 6
+# AzerothCore column ← TrinityCore column, same meaning.
+QUEST_COLUMNS = {name: name for name in (
+    "ID", "QuestType", "QuestSortID", "QuestInfoID", "SuggestedGroupNum", "RewardNextQuest", "RewardXPDifficulty",
+    "RewardMoneyDifficulty", "RewardSpell", "RewardHonor", "RewardKillHonor", "StartItem", "Flags",
+    *[f"RewardItem{n}" for n in range(1, 5)], *[f"RewardAmount{n}" for n in range(1, 5)],
+    *[f"ItemDrop{n}" for n in range(1, 5)], *[f"ItemDropQuantity{n}" for n in range(1, 5)],
+    *[f"RewardChoiceItemID{n}" for n in range(1, 7)], *[f"RewardChoiceItemQuantity{n}" for n in range(1, 7)],
+    "POIContinent", "POIx", "POIy", "POIPriority", "RewardTitle", "RewardArenaPoints",
+    *[f"RewardFaction{kind}{n}" for n in range(1, 6) for kind in ("ID", "Value", "Override")],
+    "TimeAllowed", "AllowableRaces", "LogTitle", "LogDescription", "QuestDescription", "AreaDescription",
+    "QuestCompletionLog", "VerifiedBuild", "ContentTuningID")} | {"RewardDisplaySpell": "RewardDisplaySpell1"}
+REWARD_ITEM_COLUMNS = ([f"RewardItem{n}" for n in range(1, 5)] + [f"RewardChoiceItemID{n}" for n in range(1, 7)]
+                       + [f"ItemDrop{n}" for n in range(1, 5)] + ["StartItem"])
+REWARD_ITEM_AMOUNTS = {f"RewardItem{n}": f"RewardAmount{n}" for n in range(1, 5)} | {
+    f"RewardChoiceItemID{n}": f"RewardChoiceItemQuantity{n}" for n in range(1, 7)} | {
+    f"ItemDrop{n}": f"ItemDropQuantity{n}" for n in range(1, 5)}
+RELATION_TABLES = {"creature_queststarter": "temp.retail_entry", "creature_questender": "temp.retail_entry",
+                   "gameobject_queststarter": "temp.retail_gameobject_entry",
+                   "gameobject_questender": "temp.retail_gameobject_entry"}
+
+
+def retail_relations(conn):
+    """temp.retail_relation (tbl, id, quest): TrinityCore's relations of Retail-spawned NPCs and objects.
+
+    AzerothCore relations are not added for TrinityCore quests without a starter: 1,993 of the
+    2,068 such AzerothCore rows are quests TrinityCore flags 0x4000 with no ContentTuning
+    (removed by Cataclysm, e.g. 783 "[DEPRECATED] A Threat Within"), the rest holiday or
+    removed quests (holiday quest givers are game_event_creature_quest in TrinityCore)."""
+    conn.execute("CREATE TEMP TABLE retail_gameobject_entry AS SELECT DISTINCT id AS entry FROM temp.retail_gameobject")
+    conn.execute("CREATE TEMP TABLE retail_relation (tbl TEXT, id INTEGER, quest INTEGER)")
+    for table, spawned in RELATION_TABLES.items():
+        conn.execute(f"""INSERT INTO temp.retail_relation SELECT '{table}', id, quest FROM tdb_{table}
+            WHERE id IN (SELECT entry FROM {spawned})""")
+
+
+def build_quests(conn, report):
+    """TrinityCore quests (mapped to the AzerothCore shape) for Retail-spawned quest givers and enders."""
+    retail_relations(conn)
+    for (quest,) in conn.execute("""SELECT DISTINCT quest FROM temp.retail_relation
+            WHERE quest NOT IN (SELECT ID FROM quest_v2) ORDER BY quest""").fetchall():
+        report.drop("tdb_quest_template", f"ID={quest}", quest, "quest id not in Retail QuestV2")
+    conn.execute("""CREATE TEMP TABLE retail_quest AS SELECT DISTINCT quest AS ID FROM temp.retail_relation
+        WHERE quest IN (SELECT ID FROM quest_v2) AND quest IN (SELECT ID FROM tdb_quest_template)""")
+    quests = "SELECT ID FROM temp.retail_quest"
+    for (quest,) in conn.execute(f"SELECT ID FROM content_quest_template WHERE ID IN ({quests})").fetchall():
+        report.drop("quest_template", f"ID={quest}", quest, "replaced by TrinityCore's quest")
+    conn.execute(f"CREATE TEMP TABLE azerothcore_quest AS SELECT * FROM content_quest_template WHERE ID IN ({quests})")
+    conn.execute(f"DELETE FROM content_quest_template WHERE ID IN ({quests})")
+    if "ContentTuningID" not in [row[1] for row in conn.execute("PRAGMA table_info(content_quest_template)")]:
+        conn.execute("ALTER TABLE content_quest_template ADD COLUMN ContentTuningID INTEGER NOT NULL DEFAULT 0")
+    insert_quest_templates(conn, quests, report)
+    map_quest_objectives(conn, quests, report)
+    build_quest_children(conn, quests, report)
+    build_quest_relations(conn, report)
+
+
+def insert_quest_templates(conn, quests, report):
+    targets = ", ".join(QUEST_COLUMNS)
+    sources = ", ".join(f"q.{column}" for column in QUEST_COLUMNS.values())
+    # QuestLevel -1 scales to the player (Quest::XPValue); MinLevel is ContentTuning's minimum.
+    # TrinityCore money is RewardMoneyDifficulty × QuestMoneyReward (not imported): AzerothCore's
+    # fixed RewardMoney where the quest exists there, else 0.
+    conn.execute(f"""INSERT INTO content_quest_template ({targets}, QuestLevel, MinLevel, RewardMoney)
+        SELECT {sources}, -1, COALESCE(l.minlevel, 0), COALESCE(a.RewardMoney, 0)
+        FROM tdb_quest_template q LEFT JOIN temp.tuning_level l ON l.ID = q.ContentTuningID
+        LEFT JOIN temp.azerothcore_quest a ON a.ID = q.ID WHERE q.ID IN ({quests})""")
+    fill_rewards_from_azerothcore(conn, quests)
+    for column in REWARD_ITEM_COLUMNS:
+        amount = REWARD_ITEM_AMOUNTS.get(column)
+        for quest, item in conn.execute(f"""SELECT ID, {column} FROM content_quest_template WHERE ID IN ({quests})
+                AND {column} <> 0 AND {column} NOT IN (SELECT ID FROM content_item)""").fetchall():
+            report.drop("tdb_quest_template", f"ID={quest} {column}", item, "item not in Retail ItemSparse; zeroed")
+            conn.execute(f"UPDATE content_quest_template SET {column} = 0{f', {amount} = 0' if amount else ''} WHERE ID = ?",
+                         (quest,))
+    for column, source in (("RewardSpell", "RewardSpell"), ("RewardDisplaySpell", "RewardDisplaySpell1")):
+        for quest, spell in conn.execute(f"""SELECT ID, {column} FROM content_quest_template WHERE ID IN ({quests})
+                AND {column} > 0 AND {column} NOT IN (SELECT ID FROM spell_name)""").fetchall():
+            report.drop("tdb_quest_template", f"ID={quest} {source}", spell, "spell not in Retail SpellName; zeroed")
+            conn.execute(f"UPDATE content_quest_template SET {column} = 0 WHERE ID = ?", (quest,))
+
+
+# TrinityCore's reward columns come from sniffed quest offers: 1 of 3,212 Retail quests has
+# choice rewards; AzerothCore's (Retail-mapped) group fills an all-zero TrinityCore group.
+REWARD_GROUPS = ([(f"RewardItem{n}", f"RewardAmount{n}") for n in range(1, 5)],
+                 [(f"RewardChoiceItemID{n}", f"RewardChoiceItemQuantity{n}") for n in range(1, 7)])
+
+
+def fill_rewards_from_azerothcore(conn, quests):
+    for group in REWARD_GROUPS:
+        columns = [column for pair in group for column in pair]
+        empty = " AND ".join(f"q.{item} = 0" for item, _ in group)
+        conn.execute(f"""UPDATE content_quest_template AS q SET ({', '.join(columns)}) =
+            (SELECT {', '.join(columns)} FROM temp.azerothcore_quest a WHERE a.ID = q.ID)
+            WHERE q.ID IN ({quests}) AND {empty}
+              AND q.ID IN (SELECT ID FROM temp.azerothcore_quest WHERE {group[0][0]} <> 0)""")
+
+
+def map_quest_objectives(conn, quests, report):
+    """quest_objectives → RequiredNpcOrGo1-4 (game objects negative), RequiredItemId1-6, RequiredPlayerKills."""
+    objectives = conn.execute(f"""SELECT QuestID, ID, Type, ObjectID, Amount, Description FROM tdb_quest_objectives
+        WHERE QuestID IN ({quests}) ORDER BY QuestID, "Order", StorageIndex, ID""").fetchall()
+    by_quest = {}
+    for quest, objective, kind, object_id, amount, description in objectives:
+        slots = by_quest.setdefault(quest, {"npc": [], "item": [], "kills": 0})
+        if kind in (OBJECTIVE_MONSTER, OBJECTIVE_GAMEOBJECT) and len(slots["npc"]) < NPC_OR_GO_SLOTS:
+            slots["npc"].append((object_id if kind == OBJECTIVE_MONSTER else -object_id, amount, description or ""))
+        elif kind == OBJECTIVE_ITEM and len(slots["item"]) < ITEM_SLOTS:
+            slots["item"].append((object_id, amount))
+        elif kind == OBJECTIVE_PLAYERKILLS:
+            slots["kills"] = amount
+        elif kind in (OBJECTIVE_MONSTER, OBJECTIVE_GAMEOBJECT, OBJECTIVE_ITEM):
+            report.drop("tdb_quest_objectives", f"QuestID={quest} ID={objective}", object_id,
+                        f"more objectives of type {kind} than the AzerothCore quest shape holds")
+        else:
+            report.drop("tdb_quest_objectives", f"QuestID={quest} ID={objective}", object_id,
+                        f"objective type {kind} not supported")
+    for quest, slots in by_quest.items():
+        values = {"RequiredPlayerKills": slots["kills"]}
+        for n, (object_id, amount, text) in enumerate(slots["npc"], 1):
+            values |= {f"RequiredNpcOrGo{n}": object_id, f"RequiredNpcOrGoCount{n}": amount, f"ObjectiveText{n}": text}
+        for n, (item, amount) in enumerate(slots["item"], 1):
+            values |= {f"RequiredItemId{n}": item, f"RequiredItemCount{n}": amount}
+        conn.execute(f"UPDATE content_quest_template SET {', '.join(f'{c} = ?' for c in values)} WHERE ID = ?",
+                     (*values.values(), quest))
+
+
+def build_quest_children(conn, quests, report):
+    """Addon, offer/request texts and POIs: TrinityCore's rows where it has them, AzerothCore's otherwise."""
+    addon = ("ID, MaxLevel, AllowableClasses, SourceSpellID, PrevQuestID, NextQuestID, ExclusiveGroup, "
+             "RewardMailTemplateID, RewardMailDelay, RequiredSkillID, RequiredSkillPoints, RequiredMinRepFaction, "
+             "RequiredMaxRepFaction, RequiredMinRepValue, RequiredMaxRepValue, ProvidedItemCount, SpecialFlags")
+    children = {
+        "quest_template_addon": ("ID", addon, addon),
+        "quest_offer_reward": ("ID", "ID, Emote1, Emote2, Emote3, Emote4, EmoteDelay1, EmoteDelay2, EmoteDelay3, "
+                               "EmoteDelay4, RewardText, VerifiedBuild", None),
+        "quest_request_items": ("ID", "ID, EmoteOnComplete, EmoteOnIncomplete, CompletionText, VerifiedBuild", None),
+        # One POI per (QuestID, Idx1), the lowest BlobIndex: the points are keyed by Idx1 alone.
+        "quest_poi": ("QuestID", "QuestID, id, ObjectiveIndex, MapID, WorldMapAreaId, Floor, Priority, Flags, VerifiedBuild",
+                      "QuestID, Idx1, ObjectiveIndex, MapID, UiMapID, 0, Priority, Flags, VerifiedBuild"),
+        "quest_poi_points": ("QuestID", "QuestID, Idx1, Idx2, X, Y, VerifiedBuild", None),
+    }
+    for table, (key, columns, sources) in children.items():
+        tdb_keyed = f"SELECT {key} FROM tdb_{table} WHERE {key} IN ({quests})"
+        conn.execute(f"DELETE FROM content_{table} WHERE {key} IN ({tdb_keyed})")
+        lowest_blob = """AND BlobIndex = (SELECT MIN(BlobIndex) FROM tdb_quest_poi b
+            WHERE b.QuestID = tdb_quest_poi.QuestID AND b.Idx1 = tdb_quest_poi.Idx1)""" if table == "quest_poi" else ""
+        conn.execute(f"""INSERT INTO content_{table} ({columns}) SELECT {sources or columns} FROM tdb_{table}
+            WHERE {key} IN ({quests}) {lowest_blob}""")
+        if table == "quest_poi":
+            for quest, index, blob in conn.execute(f"""SELECT QuestID, Idx1, BlobIndex FROM tdb_quest_poi
+                    WHERE QuestID IN ({quests}) AND NOT (1 {lowest_blob}) ORDER BY 1, 2, 3""").fetchall():
+                report.drop("tdb_quest_poi", f"QuestID={quest} Idx1={index}", blob, "second blob of the POI; lowest kept")
+        # AzerothCore rows of a TrinityCore quest without TrinityCore rows stay; so do other quests'.
+        conn.execute(f"""INSERT OR IGNORE INTO content_{table} SELECT * FROM {table}
+            WHERE {key} IN ({quests}) AND {key} NOT IN ({tdb_keyed})""")
+
+
+def build_quest_relations(conn, report):
+    """Retail-spawned NPCs/objects give and end the resolved relations; every other entry keeps AzerothCore's."""
+    for table, spawned in RELATION_TABLES.items():
+        for entry, quest in conn.execute(f"""SELECT id, quest FROM content_{table} WHERE id IN (SELECT entry FROM {spawned})
+                AND (id, quest) NOT IN (SELECT id, quest FROM temp.retail_relation WHERE tbl = '{table}')""").fetchall():
+            report.drop(table, f"id={entry}", quest, "relation of a Retail-spawned entry replaced by TrinityCore's")
+        conn.execute(f"DELETE FROM content_{table} WHERE id IN (SELECT entry FROM {spawned})")
+        conn.execute(f"""INSERT OR IGNORE INTO content_{table} (id, quest) SELECT id, quest FROM temp.retail_relation
+            WHERE tbl = '{table}' AND quest IN (SELECT ID FROM content_quest_template)""")

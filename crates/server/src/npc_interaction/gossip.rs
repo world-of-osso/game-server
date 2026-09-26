@@ -232,7 +232,7 @@ fn load_npc_texts(
     let columns: Vec<String> = (0..NPC_TEXT_SLOTS)
         .map(|slot| format!("text{slot}_0, text{slot}_1, BroadcastTextID{slot}, Probability{slot}"))
         .collect();
-    let sql = format!("SELECT ID, {} FROM npc_text", columns.join(", "));
+    let sql = format!("SELECT ID, {} FROM content_npc_text", columns.join(", "));
     conn.prepare(&sql)?
         .query_map(params![], |row| {
             Ok((
@@ -266,7 +266,7 @@ fn load_menu_texts(
     conn: &Connection,
     npc_texts: &HashMap<u32, String>,
 ) -> rusqlite::Result<HashMap<u32, GossipMenuData>> {
-    conn.prepare("SELECT MenuID, MIN(TextID) FROM gossip_menu GROUP BY MenuID")?
+    conn.prepare("SELECT MenuID, MIN(TextID) FROM content_gossip_menu GROUP BY MenuID")?
         .query_map(params![], |row| {
             let text_id = row.get::<_, i64>(1)? as u32;
             Ok((
@@ -288,7 +288,7 @@ fn load_menu_options(
     let mut stmt = conn.prepare(
         "SELECT MenuID, OptionID, OptionIcon, OptionText, OptionBroadcastTextID,
                 OptionType, OptionNpcFlag, ActionMenuID
-         FROM gossip_menu_option ORDER BY MenuID, OptionID",
+         FROM content_gossip_menu_option ORDER BY MenuID, OptionID",
     )?;
     let rows = stmt.query_map(params![], |row| {
         let broadcast_id = row.get::<_, i64>(4)? as u32;

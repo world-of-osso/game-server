@@ -48,6 +48,45 @@ def tdb_difficulty(entry, health_modifier, gold_min, gold_max, loot_id, content_
             f"{gold_min},{gold_max},0,0,0,0,0,0,0,0,66044)")
 
 
+def tdb_gameobject(guid, entry, map_id, x, y, z, phase_id=0):
+    """One TDB1210 `gameobject` row (24 columns, TrinityCore DDL order)."""
+    return (f"({guid},{entry},{map_id},0,0,'0',0,{phase_id},0,-1,{x},{y},{z},0.5,0,0,0.25,0.97,300,255,1,'',NULL,66044)")
+
+
+def tdb_gameobject_template(entry, kind, display, name, data0=0, data1=0, data34=0):
+    """One TDB1210 `gameobject_template` row (49 columns: Data0..Data34, ContentTuningId, RequiredLevel, …)."""
+    data = [data0, data1] + [0] * 32 + [data34]
+    return f"({entry},{kind},{display},'{name}','','','',1," + ",".join(map(str, data)) + ",0,0,'','',NULL,66044)"
+
+
+def tdb_row(table, **values):
+    """A positional TDB1210 `table` INSERT tuple; columns from tdb_schema.sql, unset ones 0 / ''."""
+    schema = sqlite3.connect(":memory:")
+    schema.executescript((SCRIPTS / "tdb_schema.sql").read_text())
+    cells = []
+    for _, name, sql_type, *_ in schema.execute(f"PRAGMA table_info(tdb_{table})"):
+        value = values.pop(name, "" if sql_type == "TEXT" else 0)
+        cells.append("NULL" if value is None else repr(value) if isinstance(value, str) else str(value))
+    if values:
+        raise KeyError(f"tdb_{table} has no columns {sorted(values)}")
+    return "(" + ",".join(cells) + ")"
+
+
+def write_tdb(tdb_dir, table, rows):
+    (tdb_dir / f"{table}.sql").write_text(f"INSERT INTO `{table}` VALUES\n" + ",".join(rows) + ";\n")
+
+
+def write_db2_rows(csv_dir, table, rows):
+    """Rewrite <table>.csv with `rows` ({column: value}); other columns 0."""
+    path = csv_dir / f"{table}.csv"
+    header = path.read_text().splitlines()[0].split(",")
+    with path.open("w", newline="") as handle:
+        writer = csv.writer(handle)
+        writer.writerow(header)
+        for row in rows:
+            writer.writerow(row.get(column, 0) for column in header)
+
+
 def write_content_tuning(csv_dir, rows):
     """ContentTuning.csv rows (ID, MinLevelSquish, MaxLevelSquish, MinLevelScalingOffset, MaxLevelScalingOffset)."""
     path = csv_dir / "ContentTuning.csv"
@@ -397,6 +436,293 @@ class CreatureEventImportTests(unittest.TestCase):
         self.assertEqual(reported[("tdb_creature", "guid=314")], "not base phase: terrainSwapMap 638")
         self.assertEqual(reported[("tdb_creature", "guid=317")], "not base phase: PhaseGroup 431")
         self.assertNotIn(("tdb_creature", "guid=316"), reported, "other maps keep AzerothCore spawns silently")
+
+    def write_retail_vendor_and_loot_fixture(self):
+        """Corina Steele (54) spawned by TrinityCore sells Retail's list; an AzerothCore-only vendor keeps its own."""
+        self.write_retail_spawn_fixture()
+        (self.sql / "creature_template.sql").write_text(
+            "INSERT INTO `creature_template` (entry,name,minlevel,maxlevel,exp,faction,npcflag,lootid) VALUES\n"
+            "(68,'Stormwind City Guard',75,75,2,11,0,68),(2455,'Olivia Burnside',30,30,0,12,0,0),"
+            "(26012,'Borean Tundra Wolf',70,71,2,14,0,26012),(54,'Corina Steele',10,10,0,12,128,0),"
+            "(999,'Arctic Vendor',70,70,2,35,128,0);\n"
+        )
+        (self.sql / "creature.sql").write_text(
+            "INSERT INTO `creature` (guid,id1,map,position_x,position_y,position_z) VALUES\n"
+            "(79968,68,0,-8935.0,613.0,99.6),(120000,26012,571,3000.0,5000.0,20.0),(4000,2455,1,10.0,10.0,1.0),"
+            "(120001,999,571,3010.0,5000.0,20.0);\n"
+        )
+        (self.sql / "item_template.sql").write_text(
+            "INSERT INTO `item_template` (entry,name) VALUES\n(2488,'Gladius'),(2489,'Two-handed Sword');\n"
+        )
+        (self.sql / "npc_vendor.sql").write_text("INSERT INTO `npc_vendor` VALUES\n(54,0,2488,0,0,0,0),(999,0,2488,0,0,0,0);\n")
+        (self.sql / "creature_loot_template.sql").write_text(
+            "INSERT INTO `creature_loot_template` VALUES\n(68,2488,0,5,0,1,0,1,1,'guard sword');\n"
+        )
+        write_db2_rows(self.csv / db2.DEFAULT_BUILD, "ItemSparse", [
+            {"ID": 2488, "Display_lang": "Gladius"}, {"ID": 2489, "Display_lang": "Two-handed Sword"},
+            {"ID": 200000, "Display_lang": "Retail Bread"}])
+        rows = (self.tdb / "creature.sql").read_text().rstrip(";\n") + "," + tdb_creature(318, 54, 0, -9464.0, 99.0, 58.0)
+        (self.tdb / "creature.sql").write_text(rows + ";\n")
+        (self.tdb / "npc_vendor.sql").write_text(
+            "INSERT INTO `npc_vendor` VALUES\n(54,1,2489,0,0,0,1,'',0,0,66044),(54,2,200000,0,0,0,1,'',0,0,66044),"
+            "(54,3,1792,0,0,0,2,'',0,0,66044);\n"
+        )
+        (self.tdb / "creature_loot_template.sql").write_text(
+            "INSERT INTO `creature_loot_template` VALUES\n(42384,0,2489,10,0,1,0,1,1,'sword'),"
+            "(42384,1,500,100,0,1,0,1,1,'reference'),(42384,2,1792,100,0,1,0,1,5,'currency');\n"
+        )
+        (self.tdb / "reference_loot_template.sql").write_text(
+            "INSERT INTO `reference_loot_template` VALUES\n(500,0,200000,50,0,1,0,1,2,'bread');\n"
+        )
+
+    def test_retail_vendors_and_loot_replace_azerothcore_for_retail_spawned_npcs(self):
+        self.write_retail_vendor_and_loot_fixture()
+        result = self.run_import()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        loot = retail_content.TDB_LOOT_OFFSET
+        with sqlite3.connect(self.db) as conn:
+            self.assertEqual(
+                conn.execute("SELECT entry, slot, item FROM content_npc_vendor ORDER BY entry, slot").fetchall(),
+                [(54, 1, 2489), (54, 2, 200000), (999, 0, 2488)],
+                "Retail-spawned vendor sells TrinityCore's list; AzerothCore-only vendor keeps its own",
+            )
+            self.assertEqual(
+                conn.execute("SELECT ID, Name, SourceEntry FROM content_item ORDER BY ID").fetchall(),
+                [(2488, "Gladius", 2488), (2489, "Two-handed Sword", 2489), (200000, "Retail Bread", None)],
+            )
+            self.assertEqual(
+                conn.execute("SELECT entry, lootid FROM content_creature_template WHERE entry IN (68, 42384)"
+                             " ORDER BY entry").fetchall(),
+                [(68, 68), (42384, loot + 42384)],
+                "TrinityCore loot when it has rows, AzerothCore's otherwise",
+            )
+            self.assertEqual(
+                conn.execute("SELECT Entry, Item, Reference, Chance, MaxCount FROM content_creature_loot_template"
+                             " ORDER BY Entry, Item").fetchall(),
+                [(68, 2488, 0, 5.0, 1), (loot + 42384, 2489, 0, 10.0, 1), (loot + 42384, loot + 500, loot + 500, 100.0, 1)],
+            )
+            self.assertEqual(
+                conn.execute("SELECT Entry, Item, Reference FROM content_reference_loot_template").fetchall(),
+                [(loot + 500, 200000, 0)],
+            )
+        with (self.root / "data/reports/content-dropped.csv").open(newline="") as handle:
+            reported = {(r["table"], r["key"], r["source_id"]): r["reason"] for r in csv.DictReader(handle)}
+        self.assertEqual(reported[("tdb_npc_vendor", "entry=54", "1792")], "currency cost row; currencies are not modelled")
+        self.assertEqual(reported[("tdb_creature_loot_template", f"Entry={loot + 42384}", "1792")],
+                         "currency loot; currencies are not modelled")
+        self.assertEqual(reported[("npc_vendor", "entry=54", "2488")], "vendor list replaced by TrinityCore's")
+
+    def test_retail_gameobjects_replace_azerothcore_on_maps_0_and_1(self):
+        (self.sql / "gameobject_template.sql").write_text(
+            "INSERT INTO `gameobject_template` (entry,type,displayId,name) VALUES\n"
+            "(144131,19,4127,'Mailbox'),(190000,19,4127,'Northrend Mailbox');\n"
+        )
+        (self.sql / "gameobject.sql").write_text(
+            "INSERT INTO `gameobject` (guid,id,map,position_x,position_y,position_z) VALUES\n"
+            "(26784,144131,0,-9456.0,46.0,56.6),(50000,190000,571,3000.0,5000.0,20.0);\n"
+        )
+        (self.tdb / "gameobject_template.sql").write_text(
+            "INSERT INTO `gameobject_template` VALUES\n" + ",".join([
+                tdb_gameobject_template(144131, 19, 9001, "Mailbox"),
+                tdb_gameobject_template(3000, 3, 9001, "Battered Chest", data0=57, data1=77, data34=5),
+                tdb_gameobject_template(3001, 3, 12345, "Invisible Chest")]) + ";\n"
+        )
+        (self.tdb / "gameobject_template_addon.sql").write_text(
+            "INSERT INTO `gameobject_template_addon` VALUES\n(3000,94,4,0,0,0,0,0,0,0,0,0);\n"
+        )
+        (self.tdb / "gameobject.sql").write_text("INSERT INTO `gameobject` VALUES\n" + ",".join([
+            tdb_gameobject(400, 144131, 0, -9460.0, 50.0, 57.0),
+            tdb_gameobject(401, 144131, 0, -9461.0, 50.0, 57.0, phase_id=170),
+            tdb_gameobject(402, 144131, 0, -9462.0, 50.0, 57.0),
+            tdb_gameobject(403, 3000, 1, 10.0, 10.0, 1.0),
+            tdb_gameobject(404, 3001, 1, 11.0, 10.0, 1.0)]) + ";\n")
+        (self.tdb / "game_event_gameobject.sql").write_text("INSERT INTO `game_event_gameobject` VALUES\n(12,402);\n")
+        write_db2_rows(self.csv / db2.DEFAULT_BUILD, "GameObjectDisplayInfo", [{"ID": 4127}, {"ID": 9001}])
+        result = self.run_import()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        offset = retail_content.RETAIL_GUID_OFFSET
+        with sqlite3.connect(self.db) as conn:
+            self.assertEqual(
+                conn.execute("SELECT guid, id, map, position_x, rotation2, spawntimesecs, state FROM content_gameobject"
+                             " ORDER BY guid").fetchall(),
+                [(50000, 190000, 571, 3000.0, 0.0, 0, 0), (offset + 400, 144131, 0, -9460.0, 0.25, 300, 1),
+                 (offset + 403, 3000, 1, 10.0, 0.25, 300, 1)],
+            )
+            self.assertEqual(
+                conn.execute("SELECT entry, type, displayId, Data0, Data1 FROM content_gameobject_template ORDER BY entry")
+                .fetchall(),
+                [(3000, 3, 9001, 57, retail_content.TDB_LOOT_OFFSET + 77), (144131, 19, 9001, 0, 0),
+                 (190000, 19, 4127, 0, 0)],
+                "Retail-spawned objects take TrinityCore's template; chest loot ids move beside AzerothCore's",
+            )
+            self.assertEqual(conn.execute("SELECT entry, faction, flags FROM content_gameobject_template_addon").fetchall(),
+                             [(3000, 94, 4)])
+        with (self.root / "data/reports/content-dropped.csv").open(newline="") as handle:
+            reported = {(r["table"], r["key"]): r["reason"] for r in csv.DictReader(handle)}
+        self.assertEqual(reported[("gameobject", "guid=26784")], "map 0 spawn replaced by Retail spawns")
+        self.assertEqual(reported[("tdb_gameobject", "guid=401")], "not base phase: PhaseId 170")
+        self.assertEqual(reported[("tdb_gameobject", "guid=402")], "holiday spawn (positive game event only)")
+        self.assertEqual(reported[("tdb_gameobject_template", "entry=3001")], "display not in Retail GameObjectDisplayInfo")
+        self.assertEqual(reported[("tdb_gameobject", "guid=404")], "template dropped")
+        self.assertEqual(reported[("tdb_gameobject_template", "entry=3000 Data34")], "Data24-34 not in the AzerothCore schema")
+
+    def test_retail_gossip_menus_texts_and_options_for_retail_spawned_npcs(self):
+        self.write_retail_spawn_fixture()
+        (self.sql / "creature_template.sql").write_text(
+            "INSERT INTO `creature_template` (entry,name,gossip_menu_id) VALUES\n"
+            "(68,'Stormwind City Guard',100),(2455,'Olivia Burnside',1291),(26012,'Borean Tundra Wolf',0);\n"
+        )
+        (self.sql / "gossip_menu.sql").write_text("INSERT INTO `gossip_menu` VALUES\n(100,4000),(1291,4001);\n")
+        (self.sql / "gossip_menu_option.sql").write_text(
+            "INSERT INTO `gossip_menu_option` VALUES\n(100,0,0,'Wrath option',0,1,1,0,0,0,0,'',0,0);\n"
+        )
+        (self.sql / "npc_text.sql").write_text(
+            "INSERT INTO `npc_text` (ID,text0_0,BroadcastTextID0,Probability0) VALUES\n(4000,'Wrath guard text',0,1),"
+            "(4001,'Olivia text',0,1),(5000,'Old text 5000',0,1);\n"
+        )
+        (self.tdb / "creature_template_gossip.sql").write_text(
+            "INSERT INTO `creature_template_gossip` VALUES\n(42384,9000,66044),(68,9002,66044),(68,9001,66044);\n"
+        )
+        (self.tdb / "gossip_menu.sql").write_text(
+            "INSERT INTO `gossip_menu` VALUES\n(9000,5000,66044),(9001,5000,66044),(9003,5001,66044),(9999,5002,66044);\n"
+        )
+        (self.tdb / "gossip_menu_option.sql").write_text(
+            "INSERT INTO `gossip_menu_option` VALUES\n"
+            "(9000,100,0,1,'I want to browse your goods.',3370,0,0,0,0,NULL,0,0,'',0,NULL,NULL,66044),"
+            "(9000,101,1,0,'Tell me more.',0,0,0,9003,0,NULL,0,0,'',0,NULL,NULL,66044),"
+            "(9000,102,2,10,'Auction!',0,0,0,0,0,NULL,0,0,'',0,NULL,NULL,66044),"
+            "(9000,103,3,18,'Check my mail.',0,0,0,0,0,NULL,0,0,'',0,NULL,NULL,66044);\n"
+        )
+        (self.tdb / "npc_text.sql").write_text(
+            "INSERT INTO `npc_text` VALUES\n(5000,1,0,0,0,0,0,0,0,3000,0,0,0,0,0,0,0,66044),"
+            "(5001,0.5,0.5,0,0,0,0,0,0,3001,3002,0,0,0,0,0,0,66044);\n"
+        )
+        result = self.run_import()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        with sqlite3.connect(self.db) as conn:
+            self.assertEqual(
+                conn.execute("SELECT entry, gossip_menu_id FROM content_creature_template ORDER BY entry").fetchall(),
+                [(68, 9001), (2455, 1291), (26012, 0), (42384, 9000)],
+                "Retail-spawned NPCs take TrinityCore's lowest menu; others keep AzerothCore's",
+            )
+            self.assertEqual(
+                conn.execute("SELECT MenuID, TextID FROM content_gossip_menu ORDER BY MenuID").fetchall(),
+                [(100, 4000), (1291, 4001), (9000, 5000), (9001, 5000), (9003, 5001)],
+                "TrinityCore rows for the menus Retail-spawned NPCs reach; AzerothCore rows for the rest",
+            )
+            self.assertEqual(
+                conn.execute("SELECT MenuID, OptionID, OptionIcon, OptionText, OptionBroadcastTextID, OptionType,"
+                             " OptionNpcFlag, ActionMenuID FROM content_gossip_menu_option ORDER BY MenuID, OptionID")
+                .fetchall(),
+                [(100, 0, 0, "Wrath option", 0, 1, 1, 0),
+                 (9000, 0, 1, "I want to browse your goods.", 3370, 3, 128, 0),
+                 (9000, 1, 0, "Tell me more.", 0, 1, 1, 9003),
+                 (9000, 2, 6, "Auction!", 0, 13, 2097152, 0),
+                 (9000, 3, 0, "Check my mail.", 0, 0, 1, 0)],
+                "GossipOptionNpc → AzerothCore option type, npcflag and icon",
+            )
+            self.assertEqual(
+                conn.execute("SELECT ID, text0_0, BroadcastTextID0, Probability0, BroadcastTextID1, Probability1"
+                             " FROM content_npc_text ORDER BY ID").fetchall(),
+                [(4000, "Wrath guard text", 0, 1.0, 0, 0.0), (4001, "Olivia text", 0, 1.0, 0, 0.0),
+                 (5000, None, 3000, 1.0, 0, 0.0),
+                 (5001, None, 3001, 0.5, 3002, 0.5)],
+            )
+        with (self.root / "data/reports/content-dropped.csv").open(newline="") as handle:
+            reported = {(r["table"], r["key"], r["source_id"]): r["reason"] for r in csv.DictReader(handle)}
+        self.assertEqual(reported[("tdb_creature_template_gossip", "CreatureID=68", "9002")],
+                         "more than one menu; the server has no conditions, lowest MenuID 9001 used")
+        self.assertEqual(reported[("tdb_gossip_menu_option", "MenuID=9000 OptionID=3", "18")],
+                         "GossipOptionNpc 18 has no AzerothCore option type; hidden")
+
+    def test_retail_quests_objectives_rewards_and_relations(self):
+        self.write_retail_vendor_and_loot_fixture()
+        (self.sql / "creature_template.sql").write_text(
+            "INSERT INTO `creature_template` (entry,name) VALUES\n(68,'Stormwind City Guard'),(823,'Deputy Willem'),"
+            "(26012,'Borean Tundra Wolf'),(6,'Kobold Vermin'),(54,'Corina Steele'),(999,'Arctic Vendor');\n"
+        )
+        (self.sql / "quest_template.sql").write_text(
+            "INSERT INTO `quest_template` (ID,QuestLevel,MinLevel,RewardMoney,LogTitle,RewardChoiceItemID1,"
+            "RewardChoiceItemQuantity1) VALUES\n"
+            "(783,2,1,100,'A Threat Within',2488,1),(999,70,68,5000,'Northrend Quest',0,0);\n"
+        )
+        (self.sql / "quest_template_addon.sql").write_text("INSERT INTO `quest_template_addon` (ID,PrevQuestID) VALUES\n(783,0);\n")
+        (self.sql / "creature_queststarter.sql").write_text("INSERT INTO `creature_queststarter` VALUES\n(823,783),(26012,999);\n")
+        (self.sql / "creature_questender.sql").write_text("INSERT INTO `creature_questender` VALUES\n(823,783);\n")
+        rows = (self.tdb / "creature.sql").read_text().rstrip(";\n") + "," + tdb_creature(319, 823, 0, -8933.0, -136.0, 83.0)
+        (self.tdb / "creature.sql").write_text(rows + ";\n")
+        write_db2_rows(self.csv / db2.DEFAULT_BUILD, "QuestV2", [{"ID": 783}, {"ID": 999}, {"ID": 26150}])
+        write_db2_rows(self.csv / db2.DEFAULT_BUILD, "SpellName", [{"ID": 8326, "Name_lang": "Ghost"}])
+        write_tdb(self.tdb, "quest_template", [
+            tdb_row("quest_template", ID=783, QuestType=2, ContentTuningID=6, RewardXPDifficulty=1, Flags=8,
+                    AllowableRaces=-1, LogTitle="A Threat Within", LogDescription="Speak with Marshal McBride.",
+                    QuestDescription="Kobolds!", QuestCompletionLog="Return."),
+            tdb_row("quest_template", ID=26150, QuestType=2, ContentTuningID=6, RewardItem1=200000, RewardAmount1=1,
+                    RewardChoiceItemID1=999999, RewardChoiceItemQuantity1=1, RewardSpell=8326,
+                    RewardDisplaySpell1=77777, LogTitle="Retail Only"),
+            tdb_row("quest_template", ID=31000, LogTitle="Not In QuestV2")])
+        write_tdb(self.tdb, "quest_objectives", [
+            tdb_row("quest_objectives", ID=1, QuestID=783, Type=0, Order=0, ObjectID=6, Amount=8,
+                    Description="Kobold Vermin slain"),
+            tdb_row("quest_objectives", ID=2, QuestID=783, Type=1, Order=1, ObjectID=2489, Amount=2),
+            tdb_row("quest_objectives", ID=3, QuestID=783, Type=10, Order=2, ObjectID=5000, Amount=1)])
+        write_tdb(self.tdb, "quest_offer_reward", [tdb_row("quest_offer_reward", ID=783, RewardText="Well done.")])
+        write_tdb(self.tdb, "creature_questender", [tdb_row("creature_questender", id=68, quest=783)])
+        write_tdb(self.tdb, "creature_queststarter", [tdb_row("creature_queststarter", id=42384, quest=26150),
+                                                      tdb_row("creature_queststarter", id=42384, quest=31000)])
+        write_tdb(self.tdb, "quest_poi", [tdb_row("quest_poi", QuestID=26150, BlobIndex=0, Idx1=0, ObjectiveIndex=-1,
+                                                  MapID=0, UiMapID=37, Priority=0, Flags=3)])
+        write_tdb(self.tdb, "quest_poi_points", [tdb_row("quest_poi_points", QuestID=26150, Idx1=0, Idx2=0, X=-9000, Y=-80, Z=90)])
+        result = self.run_import()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        with sqlite3.connect(self.db) as conn:
+            self.assertEqual(
+                conn.execute("SELECT ID, QuestLevel, MinLevel, ContentTuningID, RewardMoney, RewardXPDifficulty, Flags,"
+                             " AllowableRaces, LogTitle, LogDescription, QuestCompletionLog FROM content_quest_template"
+                             " ORDER BY ID").fetchall(),
+                [(783, -1, 5, 6, 100, 1, 8, -1, "A Threat Within", "Speak with Marshal McBride.", "Return."),
+                 (999, 70, 68, 0, 5000, 0, 0, 0, "Northrend Quest", None, None),
+                 (26150, -1, 5, 6, 0, 0, 0, 0, "Retail Only", "", "")],
+                "TrinityCore quests scale to the player (-1) from ContentTuning's minimum; money only from AzerothCore",
+            )
+            self.assertEqual(
+                conn.execute("SELECT RequiredNpcOrGo1, RequiredNpcOrGoCount1, ObjectiveText1, RequiredItemId1,"
+                             " RequiredItemCount1, RequiredNpcOrGo2 FROM content_quest_template WHERE ID = 783").fetchall(),
+                [(6, 8, "Kobold Vermin slain", 2489, 2, 0)],
+            )
+            self.assertEqual(
+                conn.execute("SELECT RewardItem1, RewardAmount1, RewardChoiceItemID1, RewardSpell, RewardDisplaySpell"
+                             " FROM content_quest_template WHERE ID = 26150").fetchall(),
+                [(200000, 1, 0, 8326, 0)],
+            )
+            self.assertEqual(conn.execute("SELECT id, quest FROM content_creature_queststarter ORDER BY quest").fetchall(),
+                             [(26012, 999), (42384, 26150)],
+                             "Retail-spawned NPCs give TrinityCore's quests only; AzerothCore's Northrend giver keeps its own")
+            self.assertEqual(conn.execute("SELECT RewardChoiceItemID1, RewardChoiceItemQuantity1 FROM content_quest_template"
+                                          " WHERE ID = 783").fetchall(), [(2488, 1)],
+                             "AzerothCore's choice rewards fill TrinityCore's empty ones")
+            self.assertEqual(conn.execute("SELECT id, quest FROM content_creature_questender ORDER BY quest").fetchall(),
+                             [(68, 783)])
+            self.assertEqual(conn.execute("SELECT ID, RewardText FROM content_quest_offer_reward").fetchall(),
+                             [(783, "Well done.")])
+            self.assertEqual(conn.execute("SELECT ID, PrevQuestID FROM content_quest_template_addon").fetchall(),
+                             [(783, 0)], "AzerothCore addon kept where TrinityCore has none")
+            self.assertEqual(conn.execute("SELECT QuestID, id, ObjectiveIndex, MapID, WorldMapAreaId, Flags"
+                                          " FROM content_quest_poi").fetchall(), [(26150, 0, -1, 0, 37, 3)])
+            self.assertEqual(conn.execute("SELECT QuestID, Idx1, Idx2, X, Y FROM content_quest_poi_points").fetchall(),
+                             [(26150, 0, 0, -9000, -80)])
+        with (self.root / "data/reports/content-dropped.csv").open(newline="") as handle:
+            reported = {(r["table"], r["key"], r["source_id"]): r["reason"] for r in csv.DictReader(handle)}
+        self.assertEqual(reported[("tdb_quest_objectives", "QuestID=783 ID=3", "5000")],
+                         "objective type 10 not supported")
+        self.assertEqual(reported[("tdb_quest_template", "ID=26150 RewardChoiceItemID1", "999999")],
+                         "item not in Retail ItemSparse; zeroed")
+        self.assertEqual(reported[("tdb_quest_template", "ID=26150 RewardDisplaySpell1", "77777")],
+                         "spell not in Retail SpellName; zeroed")
+        self.assertEqual(reported[("tdb_quest_template", "ID=31000", "31000")], "quest id not in Retail QuestV2")
+        self.assertEqual(reported[("quest_template", "ID=783", "783")], "replaced by TrinityCore's quest")
+        self.assertEqual(reported[("creature_queststarter", "id=823", "783")],
+                         "relation of a Retail-spawned entry replaced by TrinityCore's")
 
     def write_wrath_only_display_fixture(self):
         """AzerothCore displays 6808/382/79/3167 against Retail displays 520/366/3167 and TrinityCore models."""
