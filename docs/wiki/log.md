@@ -300,3 +300,7 @@ Created `systems/quests.md` (quest data, rules, runtime) and `specs/quests.md`; 
 ## [2026-09-26] create | Player damage
 
 [[player-damage]]: players swing their weapon (AP / 6 × speed, off hand at half) every weapon speed over haste, through TrinityCore's hit table and ExpectedStat creature armor, before level scaling; spell power only from an Intellect main stat, spell variance and versatility, armor on physical spells, TRIGGER_MISSILE. [[combat]], [[character-stats]] and [[level-scaling]] link it.
+
+## [2026-09-26] create | Meeting stones
+
+[[meeting-stones]]: party summons at the 15 map-0 meeting stones (59782 cast and channel, Meeting Stone Summoning Portal ritual, 7720 SUMMON_PLAYER, 2 min offer, accept teleport). [[spell-casting]]: cast/channel movement now follows `SpellInterrupts` (Spell::CheckMovement) instead of `SPELL_ATTR0` 0x10000000, and channels start after their cast time. [[game-objects]] links it.

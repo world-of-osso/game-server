@@ -12,16 +12,18 @@
 //! `UseGameObject` opens a game object's frame the same way (TrinityCore
 //! `WorldSession::HandleGameObjectUseOpcode` / `Player::GetGameObjectIfCanInteractWith`):
 //! a Guild Vault opens the guild bank role for a living player within the object's
-//! reach (`game_objects::GameObjectBounds::reaches`).
+//! reach (`game_objects::GameObjectBounds::reaches`). Meeting stones and summoning
+//! portals open no frame; `meeting_stone::use_object` casts their spell.
 
 use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 use lightyear::prelude::*;
 use shared::components::{CombatStatus, Health, Npc, Position, UnitFactionTemplate};
 use shared::protocol::{
-    CloseInteraction, GAMEOBJECT_TYPE_GUILD_BANK, GAMEOBJECT_TYPE_MAILBOX, GameObjectInfo,
-    InteractNpc, InteractionChannel, InteractionClosed, InteractionError, InteractionFailed,
-    InteractionKind, InteractionOpened, NpcFlags, NpcRole, SelectGossipOption, UseGameObject,
+    CloseInteraction, GAMEOBJECT_TYPE_GUILD_BANK, GAMEOBJECT_TYPE_MAILBOX,
+    GAMEOBJECT_TYPE_MEETINGSTONE, GAMEOBJECT_TYPE_RITUAL, GameObjectInfo, InteractNpc,
+    InteractionChannel, InteractionClosed, InteractionError, InteractionFailed, InteractionKind,
+    InteractionOpened, NpcFlags, NpcRole, SelectGossipOption, UseGameObject,
 };
 
 use crate::auth::InWorld;
@@ -161,15 +163,16 @@ impl InteractionWorld<'_, '_> {
         Ok(npc_view)
     }
 
-    /// The role a game object opens if `player` may use it now.
-    fn usable_object(&self, player: Entity, object: Entity) -> Result<NpcRole, InteractionError> {
+    /// What using a game object does if `player` may use it now.
+    fn usable_object(&self, player: Entity, object: Entity) -> Result<ObjectUse, InteractionError> {
         let (info, position, bounds) = self
             .objects
             .get(object)
             .map_err(|_| InteractionError::InvalidTarget)?;
         let role = match info.go_type {
-            GAMEOBJECT_TYPE_GUILD_BANK => NpcRole::GuildBanker,
-            GAMEOBJECT_TYPE_MAILBOX => NpcRole::Mailbox,
+            GAMEOBJECT_TYPE_GUILD_BANK => ObjectUse::Role(NpcRole::GuildBanker),
+            GAMEOBJECT_TYPE_MAILBOX => ObjectUse::Role(NpcRole::Mailbox),
+            GAMEOBJECT_TYPE_MEETINGSTONE | GAMEOBJECT_TYPE_RITUAL => ObjectUse::Spell,
             _ => return Err(InteractionError::InvalidTarget),
         };
         let (player_position, player_health, _) = self
@@ -203,6 +206,15 @@ impl InteractionWorld<'_, '_> {
         let faction = self.npcs.get(npc).map_or(0, |view| view.4.0);
         auction_house_for(&self.templates, faction)
     }
+}
+
+/// Result of using a game object.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ObjectUse {
+    /// Opens a role frame.
+    Role(NpcRole),
+    /// Casts the object's spell (`meeting_stone::use_object`).
+    Spell,
 }
 
 fn distance(a: &Position, b: &Position) -> f32 {
@@ -305,7 +317,14 @@ fn process_game_object_uses(
                 .ok_or(InteractionError::InvalidTarget)
                 .and_then(|object| Ok((object, world.usable_object(link.0, object)?)));
             let (object, role) = match result {
-                Ok(opened) => opened,
+                Ok((object, ObjectUse::Role(role))) => (object, role),
+                Ok((object, ObjectUse::Spell)) => {
+                    let player = link.0;
+                    commands.queue(move |world: &mut World| {
+                        crate::meeting_stone::use_object(world, player, object);
+                    });
+                    continue;
+                }
                 Err(error) => {
                     senders.failed(connection, request.object, error);
                     continue;

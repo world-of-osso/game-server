@@ -82,13 +82,32 @@ pub fn handler(effect_id: u32) -> Option<EffectHandler> {
         crate::profession::EFFECT_CREATE_ITEM => crate::profession::effect_create_item,
         crate::profession::EFFECT_LEARN_SPELL => crate::profession::effect_learn_spell,
         crate::profession::EFFECT_SKILL_STEP => crate::profession::effect_skill_step,
+        crate::meeting_stone::summon::EFFECT_SUMMON_PLAYER => {
+            crate::meeting_stone::summon::effect_summon_player
+        }
         _ => return None,
     })
 }
 
-/// Effects that select targets and resolve: registry handlers and aura effects.
+pub type CastEffectHandler = fn(&mut World, &EffectCtx, &SpellEffect);
+
+/// Effects TrinityCore resolves once per cast (`SPELL_EFFECT_HANDLE_HIT`),
+/// whatever units the effect's targets select.
+pub fn cast_handler(effect_id: u32) -> Option<CastEffectHandler> {
+    Some(match effect_id {
+        crate::meeting_stone::ritual::EFFECT_TRANS_DOOR => {
+            crate::meeting_stone::ritual::effect_trans_door
+        }
+        _ => return None,
+    })
+}
+
+/// Effects that select targets and resolve: registry handlers, once-per-cast
+/// handlers and aura effects.
 pub fn is_handled(effect: &SpellEffect) -> bool {
-    handler(effect.effect).is_some() || crate::auras::is_aura_effect(effect)
+    handler(effect.effect).is_some()
+        || cast_handler(effect.effect).is_some()
+        || crate::auras::is_aura_effect(effect)
 }
 
 /// `(spell id, effect id)` pairs already logged as unhandled.
