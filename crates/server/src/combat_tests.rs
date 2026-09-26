@@ -1,9 +1,12 @@
 use super::*;
+use crate::stats::CharacterStats;
 use bevy::ecs::system::RunSystemOnce;
 use shared::components::{Player, UnitLevel};
 
 #[path = "combat_tests/death.rs"]
 mod death;
+#[path = "combat_tests/player_damage.rs"]
+mod player_damage;
 #[path = "combat_tests/rage.rs"]
 mod rage;
 
@@ -68,6 +71,7 @@ fn spawn_attacker(app: &mut App, position: Position, target: Entity) -> Entity {
             CombatTarget(Some(target)),
             AutoAttack {
                 timer: 0.0,
+                off_hand_timer: 0.0,
                 active: true,
             },
             Player {
@@ -91,37 +95,61 @@ fn run_attack_tick(app: &mut App) {
     let _ = app.world_mut().run_system_once(
         |time: Res<Time>,
          mut commands: Commands,
-         mut attackers: Query<(Entity, &CombatTarget, &mut AutoAttack, &Position)>,
+         mut attackers: Query<(
+            Entity,
+            &CombatTarget,
+            &mut AutoAttack,
+            &Position,
+            Option<&CharacterStats>,
+        )>,
          mut targets: AutoAttackTargets,
          scaling: Query<ScalingItem<'static>>,
+         armor_constants: Option<Res<ArmorConstants>>,
          combat_statuses: Query<&CombatStatus>| {
             let dt = time.delta_secs();
             let combat_expires_at = time.elapsed_secs_f64() + COMBAT_GRACE_SECS;
-            for (attacker, combat_target, mut aa, apos) in &mut attackers {
+            let context = SwingContext {
+                scaling: &scaling,
+                armor_constants: armor_constants.as_deref(),
+            };
+            for (entity, combat_target, mut aa, position, stats) in &mut attackers {
                 if !aa.active {
                     continue;
                 }
                 let Some(te) = combat_target.0 else { continue };
                 aa.timer -= dt;
-                if try_swing(
-                    attacker,
-                    apos,
-                    None,
-                    &mut targets,
-                    &scaling,
-                    te,
-                    &mut aa,
-                    &mut commands,
-                )
-                .is_some()
-                {
-                    refresh_combat_state(
+                aa.off_hand_timer -= dt;
+                let attacker = Attacker {
+                    entity,
+                    position,
+                    mods: None,
+                    stats,
+                };
+                for hand in [Hand::Main, Hand::Off] {
+                    if try_swing(
+                        &attacker,
+                        hand,
+                        &mut targets,
+                        &context,
+                        te,
+                        &mut aa,
                         &mut commands,
-                        &combat_statuses,
-                        attacker,
-                        combat_expires_at,
-                    );
-                    refresh_combat_state(&mut commands, &combat_statuses, te, combat_expires_at);
+                    )
+                    .is_some()
+                    {
+                        refresh_combat_state(
+                            &mut commands,
+                            &combat_statuses,
+                            entity,
+                            combat_expires_at,
+                        );
+                        refresh_combat_state(
+                            &mut commands,
+                            &combat_statuses,
+                            te,
+                            combat_expires_at,
+                        );
+                    }
                 }
             }
         },

@@ -45,6 +45,7 @@ mod level_scaling;
 mod lfg;
 mod loot;
 mod mail;
+mod melee;
 mod merchant;
 mod messaging;
 mod networking;

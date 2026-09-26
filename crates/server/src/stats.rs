@@ -76,7 +76,9 @@ pub struct StatInputs {
     pub class: u8,
     pub race: u8,
     pub level: u8,
-    /// `None` when the class has no spec data: all gear stats count.
+    /// The spec's main stat, else the class's (Player::GetPrimaryStat,
+    /// StatSystem.cpp:297-314). `None` without class data: all gear stats
+    /// count and there is no spell power.
     pub primary_stat: Option<PrimaryStat>,
     /// Mastery spell effect 0 `EffectBonusCoefficient`; 0 without mastery.
     pub mastery_coefficient: f32,
@@ -98,6 +100,8 @@ pub struct CharacterStats {
     /// gtBaseMP; 0 for classes without mana. Max mana equals it and
     /// `PowerCostPct` mana costs are a percentage of it.
     pub base_mana: f32,
+    /// Intellect when the main stat is Intellect, else 0
+    /// (Unit::SpellBaseDamageBonusDone, Unit.cpp:7118-7119).
     pub spell_power: f32,
     pub attack_power: f32,
     pub crit_pct: f32,
@@ -107,6 +111,8 @@ pub struct CharacterStats {
     pub armor: f32,
     /// Main-hand swing data; unarmed without a weapon.
     pub main_hand: WeaponDamage,
+    /// An equipped off-hand weapon swings too.
+    pub off_hand: Option<WeaponDamage>,
 }
 
 pub struct StatsPlugin;
@@ -244,7 +250,11 @@ pub fn compute_character_stats(
             * (1.0 + mods.max_health_pct / 100.0))
             .floor(),
         base_mana: base_mana(input.class, input.level).unwrap_or(0.0),
-        spell_power: primary.intellect,
+        spell_power: if input.primary_stat == Some(PrimaryStat::Intellect) {
+            primary.intellect.max(0.0)
+        } else {
+            0.0
+        },
         attack_power: primary.strength * input.attack_power_per_strength
             + primary.agility * input.attack_power_per_agility,
         crit_pct: BASE_CRIT_PCT + rating_value(ratings.crit, CRIT_RATING[level]) + mods.crit_pct,
@@ -254,6 +264,7 @@ pub fn compute_character_stats(
             + mods.versatility_pct,
         armor: ratings.armor,
         main_hand: WeaponDamage::UNARMED,
+        off_hand: None,
     })
 }
 
@@ -261,7 +272,8 @@ fn class_info(classes: Option<&ClassSpells>, class: u8) -> Option<&ClassInfo> {
     classes?.classes.iter().find(|info| info.class_id == class)
 }
 
-/// Spec main stat and mastery coefficient of the active spec.
+/// Main stat and mastery coefficient of the active spec; without one, the
+/// class main stat and no mastery.
 fn spec_inputs(
     class: Option<&ClassInfo>,
     spec: Option<&ActiveSpec>,
@@ -269,7 +281,8 @@ fn spec_inputs(
 ) -> (Option<PrimaryStat>, f32) {
     let Some(spec) = spec.and_then(|spec| class?.specs.iter().find(|info| info.spec_id == spec.0))
     else {
-        return (None, 0.0);
+        let class_stat = class.map(|class| PrimaryStat::from_priority(class.primary_stat_priority));
+        return (class_stat, 0.0);
     };
     let mastery = spec
         .mastery_spells
@@ -291,29 +304,38 @@ pub(crate) struct ItemData<'w> {
 }
 
 impl ItemData<'_> {
-    /// Stat blocks of every equipped item and the main-hand weapon.
-    fn gear(&self, equipped: Option<&EquippedItems>) -> (Vec<ItemStatBlock>, WeaponDamage) {
+    /// Stat blocks of every equipped item and the main- and off-hand weapons.
+    fn gear(&self, equipped: Option<&EquippedItems>) -> Gear {
+        let mut gear = Gear {
+            blocks: Vec::new(),
+            main_hand: WeaponDamage::UNARMED,
+            off_hand: None,
+        };
         let (Some(templates), Some(tables), Some(equipped)) =
             (self.templates.as_deref(), self.tables.as_deref(), equipped)
         else {
-            return (Vec::new(), WeaponDamage::UNARMED);
+            return gear;
         };
-        let mut blocks = Vec::with_capacity(equipped.items.len());
-        let mut main_hand = WeaponDamage::UNARMED;
         for &(slot, item_id) in &equipped.items {
             let Some(template) = templates.get(item_id) else {
                 continue;
             };
             let stats = item_stats(template, tables);
-            blocks.push(stats.block);
-            if slot == EquipmentSlot::MainHand
-                && let Some(weapon) = stats.weapon
-            {
-                main_hand = weapon;
+            gear.blocks.push(stats.block);
+            match (slot, stats.weapon) {
+                (EquipmentSlot::MainHand, Some(weapon)) => gear.main_hand = weapon,
+                (EquipmentSlot::OffHand, Some(weapon)) => gear.off_hand = Some(weapon),
+                _ => {}
             }
         }
-        (blocks, main_hand)
+        gear
     }
+}
+
+struct Gear {
+    blocks: Vec<ItemStatBlock>,
+    main_hand: WeaponDamage,
+    off_hand: Option<WeaponDamage>,
 }
 
 /// Compute new current value preserving the current-to-max ratio.
@@ -371,8 +393,8 @@ pub(crate) fn update_character_stats(
     {
         let class = class_info(classes.as_deref(), player.class);
         let (primary_stat, mastery_coefficient) = spec_inputs(class, spec, spells.as_deref());
-        let (gear, main_hand) = items.gear(equipped);
-        let (gear_primary, gear_ratings) = sum_equipment_stats(&gear);
+        let gear = items.gear(equipped);
+        let (gear_primary, gear_ratings) = sum_equipment_stats(&gear.blocks);
         let input = StatInputs {
             class: player.class,
             race: player.race,
@@ -391,7 +413,8 @@ pub(crate) fn update_character_stats(
             );
             continue;
         };
-        stats.main_hand = main_hand;
+        stats.main_hand = gear.main_hand;
+        stats.off_hand = gear.off_hand;
         let mut changed = unit_stats.set_if_neq(stats.primary);
         changed |= ratings.set_if_neq(stats.ratings);
         changed |= health.set_if_neq(Health {

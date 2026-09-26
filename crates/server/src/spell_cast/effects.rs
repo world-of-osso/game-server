@@ -10,6 +10,12 @@
 //! healing multipliers (`AuraStatMods`), then target immunity and absorbs.
 //! CritChance mods add to the crit chance; a crit adds 100% of the amount
 //! (retail 200%), scaled by CritDamageAndHealing mods.
+//! School damage and heals vary by ± `Variance` / 2 (Spell::EffectSchoolDMG,
+//! SpellEffects.cpp:565-567; EffectHeal, :1280-1282). The caster's
+//! versatility raises all damage and healing (Unit::SpellDamagePctDone,
+//! Unit.cpp:6944-6946). Physical damage takes the target's armor unless the
+//! spell has a bleed mechanic (Unit::CalculateSpellDamageTaken, Unit.cpp:1212-1213;
+//! SpellMgr.cpp:3036-3038).
 //!
 //! Weapon hits (58, 121, 31) roll the main hand's `[min, max]` and add
 //! `AP / 6 × speed`; 121 NORMALIZED_WEAPON_DMG uses the normalized speed of the
@@ -29,7 +35,7 @@ use crate::auras::procs::{self, AuraEvent};
 use crate::auras::{AuraStatMods, SpellModOp, spell_mods};
 use crate::creature_scripts::{TrainingDummy, health_loss};
 use crate::item_stats::WeaponDamage;
-use crate::level_scaling::UnitScaling;
+use crate::level_scaling::{ArmorConstants, CreatureArmor, UnitScaling};
 use crate::spell_info::{SpellEffect, SpellInfo};
 use crate::stats::CharacterStats;
 
@@ -37,6 +43,7 @@ pub const EFFECT_SCHOOL_DAMAGE: u32 = 2;
 pub const EFFECT_HEAL: u32 = 10;
 pub const EFFECT_ENERGIZE: u32 = 30;
 pub const EFFECT_WEAPON_PERCENT_DAMAGE: u32 = 31;
+pub const EFFECT_TRIGGER_MISSILE: u32 = 32;
 pub const EFFECT_DISPEL: u32 = 38;
 pub const EFFECT_WEAPON_DAMAGE: u32 = 58;
 pub const EFFECT_TRIGGER_SPELL: u32 = 64;
@@ -67,7 +74,9 @@ pub fn handler(effect_id: u32) -> Option<EffectHandler> {
         EFFECT_WEAPON_PERCENT_DAMAGE => weapon_percent_damage,
         EFFECT_DISPEL => dispel,
         EFFECT_WEAPON_DAMAGE | EFFECT_NORMALIZED_WEAPON_DMG => weapon_damage,
-        EFFECT_TRIGGER_SPELL => trigger_spell,
+        // Spell::EffectTriggerMissileSpell (SpellEffects.cpp:725-778): the
+        // missile's spell hits the unit target, like TRIGGER_SPELL.
+        EFFECT_TRIGGER_SPELL | EFFECT_TRIGGER_MISSILE => trigger_spell,
         EFFECT_INTERRUPT_CAST => interrupt_cast,
         EFFECT_HEAL_PCT => heal_pct,
         crate::profession::EFFECT_CREATE_ITEM => crate::profession::effect_create_item,
@@ -145,7 +154,64 @@ fn weapon_hit(world: &World, caster: Entity, normalized: bool) -> f32 {
         weapon.speed
     };
     let roll = weapon.min + rand::random::<f32>() * (weapon.max - weapon.min);
-    shared::formulas::auto_attack_damage(roll, attack_power, speed)
+    roll + attack_power / crate::melee::ATTACK_POWER_PER_DPS * speed
+}
+
+/// `amount` × (1 + a uniform roll in ±`variance` / 2) (SpellEffectInfo::CalcValue,
+/// SpellInfo.cpp:560-567).
+fn with_variance(amount: f32, variance: f32) -> f32 {
+    let delta = (variance * 0.5).abs();
+    if delta == 0.0 {
+        return amount;
+    }
+    amount * (1.0 + rand::Rng::gen_range(&mut rand::thread_rng(), -delta..=delta))
+}
+
+/// 1 + the caster's versatility (players only).
+fn versatility_multiplier(world: &World, caster: Entity) -> f32 {
+    world
+        .get::<CharacterStats>(caster)
+        .map_or(1.0, |stats| 1.0 + stats.versatility_pct / 100.0)
+}
+
+const MECHANIC_BLEED: u32 = 15;
+
+/// Unit::IsDamageReducedByArmor (Unit.cpp:1680-1687): physical damage of a
+/// spell without a bleed mechanic.
+fn reduced_by_armor(spell: &SpellInfo) -> bool {
+    let bleed = spell
+        .categories
+        .as_ref()
+        .is_some_and(|categories| categories.mechanic == MECHANIC_BLEED)
+        || spell
+            .effects
+            .iter()
+            .any(|effect| effect.mechanic == MECHANIC_BLEED);
+    spell.school_mask() & 1 != 0 && !bleed
+}
+
+/// The target's armor against the caster: a creature's own armor at the
+/// caster's level, a player's gear armor.
+fn armor_reduced(world: &World, caster: Entity, target: Entity, amount: f32) -> f32 {
+    let (caster_scaling, target_scaling) = (
+        UnitScaling::of(world, caster),
+        UnitScaling::of(world, target),
+    );
+    let armor = match (
+        world.get::<CreatureArmor>(target),
+        world.get::<CharacterStats>(target),
+    ) {
+        (Some(armor), _) => target_scaling.armor_against(armor.0, &caster_scaling),
+        (None, Some(stats)) => stats.armor,
+        (None, None) => 0.0,
+    };
+    crate::combat::armor_mitigated(
+        amount,
+        armor,
+        &caster_scaling,
+        &target_scaling,
+        world.get_resource::<ArmorConstants>(),
+    )
 }
 
 /// Crit chance in percent: `CharacterStats.crit_pct` plus CritChance mods.
@@ -172,7 +238,10 @@ fn with_crit(world: &World, caster: Entity, spell: &SpellInfo, amount: f32) -> (
 }
 
 fn school_damage(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, target: Entity) {
-    let amount = scaled_amount(world, ctx.caster, ctx.spell, effect);
+    let amount = with_variance(
+        scaled_amount(world, ctx.caster, ctx.spell, effect),
+        effect.variance,
+    );
     let (amount, crit) = with_crit(world, ctx.caster, ctx.spell, amount);
     deal_damage(world, ctx, target, amount, crit, false);
 }
@@ -250,11 +319,17 @@ pub fn deal_damage(
         log_event(world, event);
         return;
     }
-    let done = stat_mods(world, ctx.caster).map_or(1.0, |mods| mods.damage_done(school));
+    let done = stat_mods(world, ctx.caster).map_or(1.0, |mods| mods.damage_done(school))
+        * versatility_multiplier(world, ctx.caster);
     let taken = crate::auras::damage_taken_multiplier(world, target, ctx.caster, school);
     let amount = (modded_amount(world, ctx, amount, periodic) * done * taken)
         .max(0.0)
         .round();
+    let amount = if reduced_by_armor(ctx.spell) {
+        armor_reduced(world, ctx.caster, target, amount)
+    } else {
+        amount
+    };
     let (amount, absorbed) = crate::auras::absorb_damage(world, target, school, amount);
     let (caster_scaling, target_scaling) = (
         UnitScaling::of(world, ctx.caster),
@@ -346,7 +421,10 @@ fn kill(world: &mut World, killer: Entity, target: Entity, can_proc: bool) {
 }
 
 fn heal(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, target: Entity) {
-    let amount = scaled_amount(world, ctx.caster, ctx.spell, effect);
+    let amount = with_variance(
+        scaled_amount(world, ctx.caster, ctx.spell, effect),
+        effect.variance,
+    );
     let (amount, crit) = with_crit(world, ctx.caster, ctx.spell, amount);
     apply_heal(world, ctx, target, amount, crit, false);
 }
@@ -374,7 +452,8 @@ pub fn apply_heal(
     crit: bool,
     periodic: bool,
 ) {
-    let done = stat_mods(world, ctx.caster).map_or(1.0, |mods| mods.healing_done_mult);
+    let done = stat_mods(world, ctx.caster).map_or(1.0, |mods| mods.healing_done_mult)
+        * versatility_multiplier(world, ctx.caster);
     let taken = stat_mods(world, target).map_or(1.0, |mods| mods.healing_taken_mult);
     let amount = (modded_amount(world, ctx, amount, periodic) * done * taken)
         .max(0.0)

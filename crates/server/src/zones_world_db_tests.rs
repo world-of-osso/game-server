@@ -812,3 +812,20 @@ fn retail_only_creature_spawns_from_its_trinitycore_template() {
             .any(|model| model.display_id == display.display_id)
     );
 }
+
+/// Creature::UpdateLevelDependantStats (Creature.cpp:1665-1666): a creature's
+/// armor is ExpectedStat CreatureArmor at its own level × ArmorModifier; the
+/// ArmorConstant a level 10 attacker meets is the level 10 ExpansionID -2 row.
+#[test]
+#[ignore]
+fn spawned_creatures_carry_expected_stat_armor() {
+    let app = patrol_app(&[HOGGER]);
+    let hogger = entity_of(&app, HOGGER);
+    // Level 30, CreatureArmor 155, warrior ExpectedStatMod 4 × 1, ArmorModifier 1.
+    assert_eq!(
+        app.world().get::<CreatureArmor>(hogger),
+        Some(&CreatureArmor(155.0))
+    );
+    assert_eq!(world_data().armor_constants.at(10), Some(210.0));
+    assert_eq!(world_data().armor_constants.at(30), Some(361.0));
+}

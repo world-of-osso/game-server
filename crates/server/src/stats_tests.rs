@@ -86,6 +86,8 @@ fn level_10_orc_warrior_base_stats_include_racial_mods() {
     assert_eq!(stats.max_health, 1112.0);
     assert_eq!(stats.base_mana, 0.0);
     assert_eq!(stats.attack_power, 36.0);
+    // Strength main stat: Intellect gives no spell power.
+    assert_eq!(stats.spell_power, 0.0);
     assert_eq!(base_mana(WARRIOR, 10), None);
 }
 
@@ -245,21 +247,19 @@ fn entering_world_rescales_persisted_health_and_follows_spec_and_admin_level() {
         }
     );
     assert_eq!(world.get::<UnitStats>(player).unwrap().intellect, 159.0);
+    // No spec yet: the Paladin class main stat is Strength
+    // (chr_classes.PrimaryStatPriority 4), so Intellect gives no spell power.
     let stats = world.get::<CharacterStats>(player).unwrap();
-    assert_eq!((stats.spell_power, stats.mastery_pct), (159.0, 0.0));
+    assert_eq!((stats.spell_power, stats.mastery_pct), (0.0, 0.0));
 
-    // class_progression resolves Holy at 80; the mastery coefficient follows.
+    // class_progression resolves Holy at 80; spell power and the mastery
+    // coefficient follow.
     app.world_mut()
         .entity_mut(player)
         .insert(ActiveSpec(SPEC_HOLY));
     app.update();
-    assert_eq!(
-        app.world()
-            .get::<CharacterStats>(player)
-            .unwrap()
-            .mastery_pct,
-        12.0
-    );
+    let stats = app.world().get::<CharacterStats>(player).unwrap();
+    assert_eq!((stats.spell_power, stats.mastery_pct), (159.0, 12.0));
 
     let response = app
         .world_mut()

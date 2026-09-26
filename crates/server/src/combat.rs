@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use lightyear::prelude::*;
 use shared::components::{CombatStatus, Health, Npc, Player, Position, UnitFactionTemplate};
 use shared::protocol::{
-    CombatChannel, CombatEvent, CombatEventType, CombatLogEvent, CombatLogKind,
+    CombatChannel, CombatEvent, CombatEventType, CombatLogEvent, CombatLogKind, MissKind,
 };
 
 use crate::auras::AuraStatMods;
@@ -13,17 +13,24 @@ use crate::creature_scripts::{TrainingDummy, health_loss};
 use crate::duel::DuelOpponent;
 use crate::faction::{FactionTemplates, UnitFaction};
 use crate::interest::{InterestDirtyQueue, NetworkVisibility, mark_interest_position_changed};
-use crate::level_scaling::{ScalingItem, UnitScaling};
+use crate::item_stats::WeaponDamage;
+use crate::level_scaling::{ArmorConstants, CreatureArmor, ScalingItem, UnitScaling};
+use crate::melee::{self, Hand, MeleeOutcome, Victim};
 use crate::networking::CombatTarget;
 use crate::spell_cast::powers::PowerPools;
+use crate::stats::CharacterStats;
 use shared::components::PowerType;
 
 use std::collections::VecDeque;
 
 /// Melee attack range in yards.
 const MELEE_RANGE: f32 = 5.0;
-/// Seconds between auto-attack swings.
+/// Seconds between the auto-attack swings of units without `CharacterStats`
+/// (creatures); players swing at their weapon speed.
 const AUTO_ATTACK_INTERVAL: f32 = 2.0;
+/// A swing of one hand pushes the other hand's timer to at least this
+/// (`ATTACK_DISPLAY_DELAY`, Unit.h:643; Unit::AttackerStateUpdate, Unit.cpp:2203-2230).
+const ATTACK_DISPLAY_DELAY: f32 = 0.2;
 /// Base melee damage per swing of units without ExpectedStat damage.
 const BASE_DAMAGE: f32 = 10.0;
 const COMBAT_GRACE_SECS: f64 = 5.0;
@@ -107,10 +114,12 @@ impl Plugin for CombatPlugin {
     }
 }
 
-/// Tracks the swing timer for auto-attacks.
+/// Tracks the swing timers for auto-attacks: the main hand and, for a unit
+/// with an off-hand weapon, the off hand.
 #[derive(Component, Debug)]
 pub struct AutoAttack {
     pub timer: f32,
+    pub off_hand_timer: f32,
     pub active: bool,
 }
 
@@ -224,6 +233,7 @@ fn start_attack_system(
             commands.entity(entity).insert((
                 AutoAttack {
                     timer: 0.0,
+                    off_hand_timer: 0.0,
                     active: true,
                 },
                 active_combat_state(combat_expires_at),
@@ -243,6 +253,7 @@ type AutoAttackers<'w, 's> = Query<
         &'static mut AutoAttack,
         &'static Position,
         Option<&'static AuraStatMods>,
+        Option<&'static CharacterStats>,
     ),
 >;
 
@@ -257,14 +268,19 @@ type AutoAttackTargets<'w, 's> = Query<
         Option<&'static AuraStatMods>,
         Has<TrainingDummy>,
         Option<&'static DuelOpponent>,
+        TargetArmor<'static>,
     ),
 >;
+
+/// A creature's own armor or a player's gear armor.
+type TargetArmor<'a> = (Option<&'a CreatureArmor>, Option<&'a CharacterStats>);
 
 #[derive(SystemParam)]
 pub(crate) struct AutoAttackParams<'w, 's> {
     attackers: AutoAttackers<'w, 's>,
     targets: AutoAttackTargets<'w, 's>,
     scaling: Query<'w, 's, ScalingItem<'static>>,
+    armor_constants: Option<Res<'w, ArmorConstants>>,
     senders: Query<'w, 's, &'static mut MessageSender<CombatEvent>>,
     combat_log: ResMut<'w, CombatLog>,
     commands: Commands<'w, 's>,
@@ -279,46 +295,47 @@ pub(crate) fn auto_attack_system(time: Res<Time>, mut params: AutoAttackParams) 
     let dt = time.delta_secs();
     let (elapsed, combat_expires_at) = combat_timing(&time);
     let mut events = Vec::new();
+    let mut swings = Vec::new();
 
-    for (attacker_entity, combat_target, mut auto_attack, attacker_pos, attacker_mods) in
+    for (attacker_entity, combat_target, mut auto_attack, position, mods, stats) in
         &mut params.attackers
     {
         let Some(target_entity) = ready_auto_attack_target(combat_target, &mut auto_attack, dt)
         else {
             continue;
         };
-        let Some(outcome) = try_swing(
-            attacker_entity,
-            attacker_pos,
-            attacker_mods,
-            &mut params.targets,
-            &params.scaling,
-            target_entity,
-            &mut auto_attack,
-            &mut params.commands,
-        ) else {
-            continue;
+        let attacker = Attacker {
+            entity: attacker_entity,
+            position,
+            mods,
+            stats,
         };
-        refresh_combatants(
-            &mut params.commands,
-            &params.combat_statuses,
-            attacker_entity,
-            target_entity,
-            combat_expires_at,
-        );
-        mark_replication_changed(params.replication_dirty.as_deref(), target_entity);
-        if let Some(pending) = params.aura_events.as_deref_mut() {
-            pending
-                .0
-                .extend(swing_aura_events(attacker_entity, target_entity, &outcome));
+        for hand in [Hand::Main, Hand::Off] {
+            let Some(outcome) = try_swing(
+                &attacker,
+                hand,
+                &mut params.targets,
+                &SwingContext {
+                    scaling: &params.scaling,
+                    armor_constants: params.armor_constants.as_deref(),
+                },
+                target_entity,
+                &mut auto_attack,
+                &mut params.commands,
+            ) else {
+                continue;
+            };
+            swings.push((attacker_entity, target_entity, outcome));
         }
-        record_swing_events(
-            &mut params.commands,
+    }
+    for (attacker, target, outcome) in swings {
+        record_swing(
+            &mut params,
             &mut events,
-            &mut params.player_deaths,
-            attacker_entity,
-            target_entity,
+            attacker,
+            target,
             outcome,
+            combat_expires_at,
         );
     }
 
@@ -327,6 +344,41 @@ pub(crate) fn auto_attack_system(time: Res<Time>, mut params: AutoAttackParams) 
         &mut params.senders,
         &mut params.combat_log,
         elapsed,
+    );
+}
+
+fn record_swing(
+    params: &mut AutoAttackParams,
+    events: &mut Vec<CombatEvent>,
+    attacker_entity: Entity,
+    target_entity: Entity,
+    outcome: SwingOutcome,
+    combat_expires_at: f64,
+) {
+    refresh_combatants(
+        &mut params.commands,
+        &params.combat_statuses,
+        attacker_entity,
+        target_entity,
+        combat_expires_at,
+    );
+    mark_replication_changed(params.replication_dirty.as_deref(), target_entity);
+    // Procs default to normal and critical hits (SpellMgr::LoadSpellProcs
+    // HitMask 0); dodge- and parry-triggered procs are not modelled.
+    if !outcome.kind.avoided()
+        && let Some(pending) = params.aura_events.as_deref_mut()
+    {
+        pending
+            .0
+            .extend(swing_aura_events(attacker_entity, target_entity, &outcome));
+    }
+    record_swing_events(
+        &mut params.commands,
+        events,
+        &mut params.player_deaths,
+        attacker_entity,
+        target_entity,
+        outcome,
     );
 }
 
@@ -344,6 +396,7 @@ fn ready_auto_attack_target(
         return None;
     }
     auto_attack.timer -= delta_seconds;
+    auto_attack.off_hand_timer -= delta_seconds;
     combat_target.0
 }
 
@@ -389,13 +442,14 @@ fn maintain_in_combat_state_system(
 /// Melee swing proc/interrupt events: DEAL/TAKE_MELEE_SWING and
 /// TAKE_ANY_DAMAGE, plus KILL/DEATH on a lethal swing.
 fn swing_aura_events(attacker: Entity, target: Entity, outcome: &SwingOutcome) -> Vec<AuraEvent> {
+    let hand_swing = match outcome.hand {
+        Hand::Main => procs::PROC_MAIN_HAND_WEAPON_SWING,
+        Hand::Off => procs::PROC_OFF_HAND_WEAPON_SWING,
+    };
     let mut events = vec![AuraEvent {
         actor: attacker,
         target: Some(target),
-        actor_mask: [
-            procs::PROC_DEAL_MELEE_SWING | procs::PROC_MAIN_HAND_WEAPON_SWING,
-            0,
-        ],
+        actor_mask: [procs::PROC_DEAL_MELEE_SWING | hand_swing, 0],
         target_mask: [
             procs::PROC_TAKE_MELEE_SWING | procs::PROC_TAKE_ANY_DAMAGE,
             0,
@@ -418,97 +472,231 @@ fn swing_aura_events(attacker: Entity, target: Entity, outcome: &SwingOutcome) -
     events
 }
 
-/// Base swing damage × attacker physical damage done and auto-attack
-/// multipliers × target physical damage taken (`AuraStatMods`). A tuned
-/// creature's base is rolled from its ExpectedStat swing damage range.
+/// The swinging unit.
+pub(crate) struct Attacker<'a> {
+    pub entity: Entity,
+    pub position: &'a Position,
+    pub mods: Option<&'a AuraStatMods>,
+    /// Players: weapon, attack power, crit, haste and versatility. Units
+    /// without it (creatures) swing their ExpectedStat or flat damage.
+    pub stats: Option<&'a CharacterStats>,
+}
+
+impl Attacker<'_> {
+    fn weapon(&self, hand: Hand) -> Option<WeaponDamage> {
+        match hand {
+            Hand::Main => Some(
+                self.stats
+                    .map_or(WeaponDamage::UNARMED, |stats| stats.main_hand),
+            ),
+            Hand::Off => self.stats.and_then(|stats| stats.off_hand),
+        }
+    }
+
+    /// Seconds to the hand's next swing: the weapon speed over haste for
+    /// players (Unit::ApplyAttackTimePercentMod), the flat interval otherwise.
+    fn swing_time(&self, weapon: &WeaponDamage) -> f32 {
+        self.stats.map_or(AUTO_ATTACK_INTERVAL, |stats| {
+            melee::swing_time(weapon.speed, stats.haste_pct)
+        })
+    }
+}
+
+/// World data a swing reads besides the two units.
+pub(crate) struct SwingContext<'a, 'w, 's> {
+    pub scaling: &'a Query<'w, 's, ScalingItem<'static>>,
+    pub armor_constants: Option<&'a ArmorConstants>,
+}
+
+/// Swing damage before armor and outcome: a player's weapon roll
+/// (`melee::weapon_damage_range`), a tuned creature's ExpectedStat roll or the
+/// flat `BASE_DAMAGE`; then × attacker physical damage done and auto-attack
+/// multipliers × target physical damage taken (`AuraStatMods`, Unit::MeleeDamageBonusDone/Taken).
 fn swing_damage(
-    attacker: &UnitScaling,
-    attacker_mods: Option<&AuraStatMods>,
+    attacker: &Attacker,
+    weapon: &WeaponDamage,
+    hand: Hand,
+    scaling: &UnitScaling,
     target_mods: Option<&AuraStatMods>,
 ) -> f32 {
     const PHYSICAL: u32 = 1;
-    let base = attacker
-        .swing_damage_range(AUTO_ATTACK_INTERVAL)
-        .map_or(BASE_DAMAGE, |(min, max)| {
-            rand::Rng::gen_range(&mut rand::thread_rng(), min..=max)
-        });
-    let done = attacker_mods.map_or(1.0, |mods| {
+    let mut rng = rand::thread_rng();
+    let base = match attacker.stats {
+        Some(stats) => melee::roll_weapon_damage(
+            melee::weapon_damage_range(weapon, stats.attack_power, stats.versatility_pct, hand),
+            rand::Rng::r#gen(&mut rng),
+        ),
+        None => scaling
+            .swing_damage_range(AUTO_ATTACK_INTERVAL)
+            .map_or(BASE_DAMAGE, |(min, max)| {
+                rand::Rng::gen_range(&mut rng, min..=max)
+            }),
+    };
+    let done = attacker.mods.map_or(1.0, |mods| {
         mods.damage_done(PHYSICAL) * mods.autoattack_damage_mult
     });
     let taken = target_mods.map_or(1.0, |mods| mods.damage_taken(PHYSICAL));
     (base * done * taken).max(0.0).round()
 }
 
-struct SwingOutcome {
+/// The target's armor against `attacker` (Unit::CalcArmorReducedDamage): a
+/// creature's own armor × its level-scaling armor multiplier, a player's gear armor.
+fn target_armor(
+    (creature, player): TargetArmor,
+    target: &UnitScaling,
+    attacker: &UnitScaling,
+) -> f32 {
+    match (creature, player) {
+        (Some(armor), _) => target.armor_against(armor.0, attacker),
+        (None, Some(stats)) => stats.armor,
+        (None, None) => 0.0,
+    }
+}
+
+/// Physical `damage` after the target's armor at the attacker's level
+/// against it; without ExpectedStat data there is no mitigation.
+pub(crate) fn armor_mitigated(
     damage: f32,
+    armor: f32,
+    attacker: &UnitScaling,
+    target: &UnitScaling,
+    constants: Option<&ArmorConstants>,
+) -> f32 {
+    constants
+        .and_then(|constants| constants.at(attacker.level_against(target)))
+        .map_or(damage, |constant| {
+            melee::armor_reduced_damage(damage, armor, constant)
+        })
+}
+
+/// The hit-table result of a player's swing; units without `CharacterStats`
+/// always hit. `level_difference` is the target's level against the
+/// attacker minus the attacker's against it.
+fn roll_outcome(attacker: &Attacker, target_is_npc: bool, level_difference: i32) -> MeleeOutcome {
+    let Some(stats) = attacker.stats else {
+        return MeleeOutcome::Hit;
+    };
+    let victim = if target_is_npc {
+        Victim::Creature { level_difference }
+    } else {
+        Victim::Player
+    };
+    let chances = melee::player_swing_chances(victim, stats.crit_pct, stats.off_hand.is_some());
+    melee::roll_melee_outcome(
+        &chances,
+        rand::Rng::gen_range(&mut rand::thread_rng(), 0..10_000),
+    )
+}
+
+struct SwingOutcome {
+    hand: Hand,
+    kind: MeleeOutcome,
+    damage: f32,
+    blocked: f32,
     /// Damage beyond the target's health before the swing.
     overkill: f32,
+    /// Unhasted weapon speed: rage per swing (CalcMeleeAttackRageGain, Unit.cpp:2236-2246).
+    weapon_speed: f32,
     npc_died: bool,
     player_died: bool,
     /// The duel opponent's swing took the target to 1 health.
     duel_defeated: bool,
 }
 
-/// Attempt a swing if timer ready and target in range.
+/// Swing `hand` if its timer is ready, it has a weapon and the target is in
+/// range. Players roll the hit table, and every swing takes the target's armor
+/// (Unit::CalculateMeleeDamage, Unit.cpp:1387-1495).
 fn try_swing(
-    attacker_entity: Entity,
-    attacker_pos: &Position,
-    attacker_mods: Option<&AuraStatMods>,
+    attacker: &Attacker,
+    hand: Hand,
     targets: &mut AutoAttackTargets,
-    scaling: &Query<ScalingItem<'static>>,
+    context: &SwingContext,
     target_entity: Entity,
     auto_attack: &mut AutoAttack,
     commands: &mut Commands,
 ) -> Option<SwingOutcome> {
-    if auto_attack.timer > 0.0 {
+    let timer = match hand {
+        Hand::Main => auto_attack.timer,
+        Hand::Off => auto_attack.off_hand_timer,
+    };
+    if timer > 0.0 {
         return None;
     }
-    let Ok((target_pos, mut health, last_damager, is_npc, target_mods, training_dummy, duel)) =
-        targets.get_mut(target_entity)
+    let weapon = attacker.weapon(hand)?;
+    let Ok((
+        target_pos,
+        mut health,
+        last_damager,
+        is_npc,
+        target_mods,
+        training_dummy,
+        duel,
+        armor,
+    )) = targets.get_mut(target_entity)
     else {
         return None;
     };
-    if !in_melee_range(attacker_pos, target_pos) || health.current <= 0.0 {
+    if !in_melee_range(attacker.position, target_pos) || health.current <= 0.0 {
         return None;
     }
     let unit = |entity| {
-        scaling.get(entity).map_or(
+        context.scaling.get(entity).map_or(
             UnitScaling::from_item((None, None, None)),
             UnitScaling::from_item,
         )
     };
-    let (attacker, target) = (unit(attacker_entity), unit(target_entity));
-    let damage = crate::level_scaling::damage_dealt(
-        &attacker,
+    let (attacker_scaling, target) = (unit(attacker.entity), unit(target_entity));
+    let level_difference = i32::from(target.level_against(&attacker_scaling))
+        - i32::from(attacker_scaling.level_against(&target));
+    let armored = armor_mitigated(
+        swing_damage(attacker, &weapon, hand, &attacker_scaling, target_mods),
+        target_armor(armor, &target, &attacker_scaling),
+        &attacker_scaling,
         &target,
-        swing_damage(&attacker, attacker_mods, target_mods),
+        context.armor_constants,
     );
-    let scaled_loss = crate::level_scaling::health_loss(&attacker, &target, damage);
+    let kind = roll_outcome(attacker, is_npc, level_difference);
+    let (outcome_damage, blocked) = melee::outcome_damage(armored, kind, level_difference);
+    let damage = crate::level_scaling::damage_dealt(&attacker_scaling, &target, outcome_damage);
+    let scaled_loss = crate::level_scaling::health_loss(&attacker_scaling, &target, damage);
     let overkill = (scaled_loss - health.current).max(0.0);
     let (loss, duel_defeated) = crate::duel::duel_health_loss(
         duel,
-        attacker_entity,
+        attacker.entity,
         health.current,
         health_loss(training_dummy, scaled_loss),
     );
     let became_lethal = crate::death::apply_health_damage(&mut health, loss);
-    let npc_died = is_npc && became_lethal;
-    let player_died = !is_npc && became_lethal;
     if let Some(mut last_damager) = last_damager {
-        last_damager.0 = attacker_entity;
+        last_damager.0 = attacker.entity;
     } else {
         commands
             .entity(target_entity)
-            .insert(LastDamager(attacker_entity));
+            .insert(LastDamager(attacker.entity));
     }
-    auto_attack.timer = AUTO_ATTACK_INTERVAL;
+    reset_swing_timers(auto_attack, hand, attacker.swing_time(&weapon));
     Some(SwingOutcome {
+        hand,
+        kind,
         damage,
+        blocked,
         overkill,
-        npc_died,
-        player_died,
+        weapon_speed: weapon.speed,
+        npc_died: is_npc && became_lethal,
+        player_died: !is_npc && became_lethal,
         duel_defeated,
     })
+}
+
+/// Restart `hand`'s timer and hold the other hand at least
+/// `ATTACK_DISPLAY_DELAY` away, so both hands never land together.
+fn reset_swing_timers(auto_attack: &mut AutoAttack, hand: Hand, swing_time: f32) {
+    let (swung, other) = match hand {
+        Hand::Main => (&mut auto_attack.timer, &mut auto_attack.off_hand_timer),
+        Hand::Off => (&mut auto_attack.off_hand_timer, &mut auto_attack.timer),
+    };
+    *swung = swing_time;
+    *other = other.max(ATTACK_DISPLAY_DELAY);
 }
 
 /// Check if two positions are within melee range.
@@ -524,18 +712,36 @@ fn distance(a: &Position, b: &Position) -> f32 {
     (dx * dx + dy * dy + dz * dz).sqrt()
 }
 
-fn build_damage_event(attacker: Entity, target: Entity, damage: f32) -> CombatEvent {
+/// A swing's `CombatEvent`: melee damage, or the avoidance without an amount.
+fn build_swing_event(attacker: Entity, target: Entity, outcome: &SwingOutcome) -> CombatEvent {
+    let event_type = match outcome.kind {
+        MeleeOutcome::Miss => CombatEventType::Miss,
+        MeleeOutcome::Dodge => CombatEventType::Dodge,
+        MeleeOutcome::Parry => CombatEventType::Parry,
+        _ => CombatEventType::MeleeDamage,
+    };
     CombatEvent {
         attacker: attacker.to_bits(),
         target: target.to_bits(),
-        amount: damage,
+        amount: outcome.damage,
         spell_id: 0,
-        event_type: CombatEventType::MeleeDamage,
+        event_type,
+    }
+}
+
+/// The combat log `MissKind` of an avoided swing.
+fn swing_miss_kind(outcome: MeleeOutcome) -> Option<MissKind> {
+    match outcome {
+        MeleeOutcome::Miss => Some(MissKind::Miss),
+        MeleeOutcome::Dodge => Some(MissKind::Dodge),
+        MeleeOutcome::Parry => Some(MissKind::Parry),
+        _ => None,
     }
 }
 
 /// The swing in the attacker's and target's combat log (AzerothCore
-/// `SendAttackStateUpdate`): physical Damage without a spell.
+/// `SendAttackStateUpdate`): physical Damage without a spell, with its crit
+/// and blocked amount, or the Miss, Dodge or Parry.
 fn swing_log_event(attacker: Entity, target: Entity, outcome: &SwingOutcome) -> CombatLogEvent {
     CombatLogEvent {
         source: Some(attacker.to_bits()),
@@ -546,10 +752,10 @@ fn swing_log_event(attacker: Entity, target: Entity, outcome: &SwingOutcome) -> 
         overflow: outcome.overkill as i32,
         absorbed: 0,
         resisted: 0,
-        blocked: 0,
-        crit: false,
+        blocked: outcome.blocked as i32,
+        crit: outcome.kind == MeleeOutcome::Crit,
         periodic: false,
-        kind: CombatLogKind::Damage,
+        kind: swing_miss_kind(outcome.kind).map_or(CombatLogKind::Damage, CombatLogKind::Miss),
     }
 }
 
@@ -687,12 +893,18 @@ fn record_swing_events(
     target: Entity,
     outcome: SwingOutcome,
 ) {
-    events.push(build_damage_event(attacker, target, outcome.damage));
+    events.push(build_swing_event(attacker, target, &outcome));
     let damage = outcome.damage;
     commands.queue(move |world: &mut World| {
         crate::creature_aggro::add_threat(world, target, attacker, damage);
     });
-    commands.queue(move |world: &mut World| reward_swing_rage(world, attacker, target, damage));
+    let rage_secs = match outcome.hand {
+        Hand::Main => outcome.weapon_speed,
+        Hand::Off => outcome.weapon_speed / 2.0,
+    };
+    commands.queue(move |world: &mut World| {
+        reward_swing_rage(world, attacker, target, rage_secs, damage)
+    });
     let swing = swing_log_event(attacker, target, &outcome);
     commands.queue(move |world: &mut World| crate::spell_cast::log_event(world, swing));
     if outcome.npc_died || outcome.player_died {
@@ -715,17 +927,24 @@ fn record_swing_events(
 #[derive(Component, Debug)]
 struct RageFromHitsTakenReadyAt(f64);
 
-/// Rage for a landed swing: the attacker gains swing time × 1.75 rage scaled
-/// by MOD_RAGE_FROM_DAMAGE_DEALT, rounded to 0.1 rage (SimC
-/// `trigger_rage_gain`); the victim gains 3 rage when the swing did damage.
-/// Only units whose primary power is rage gain it (AzerothCore
-/// `Unit::DealDamage` `HasActivePowerType(POWER_RAGE)`).
-fn reward_swing_rage(world: &mut World, attacker: Entity, target: Entity, damage: f32) {
+/// Rage for a swing: the attacker gains `swing_secs` (the unhasted weapon
+/// speed, half for the off hand) × 1.75 rage scaled by
+/// MOD_RAGE_FROM_DAMAGE_DEALT, rounded to 0.1 rage (SimC `trigger_rage_gain`;
+/// CalcMeleeAttackRageGain, Unit.cpp:2236-2246); the victim gains 3 rage when
+/// the swing did damage. Only units whose primary power is rage gain it
+/// (AzerothCore `Unit::DealDamage` `HasActivePowerType(POWER_RAGE)`).
+fn reward_swing_rage(
+    world: &mut World,
+    attacker: Entity,
+    target: Entity,
+    swing_secs: f32,
+    damage: f32,
+) {
     if has_rage_primary_power(world, attacker) {
         let bonus_pct = world
             .get::<AuraStatMods>(attacker)
             .map_or(0.0, |mods| mods.rage_from_damage_dealt_pct);
-        let rage = AUTO_ATTACK_INTERVAL * RAGE_PER_SWING_SECOND * (1.0 + bonus_pct / 100.0);
+        let rage = swing_secs * RAGE_PER_SWING_SECOND * (1.0 + bonus_pct / 100.0);
         change_rage(world, attacker, (rage * RAGE_RAW_PER_RAGE).round());
     }
     if damage > 0.0
