@@ -8,7 +8,8 @@ use lightyear::prelude::{Channel, Connected, PeerId, RemoteId};
 use rusqlite::{Connection, OpenFlags};
 use shared::components::{CharacterAppearance, Health, Position, UnitFactionTemplate};
 use shared::protocol::{
-    InteractNpc, InteractionChannel, InteractionKind, InteractionOpened, ProtocolPlugin,
+    InteractNpc, InteractionChannel, InteractionKind, InteractionOpened, ItemLocation,
+    ProtocolPlugin, SellAllJunkItems,
 };
 
 use super::stock::{BuybackEntry, BuybackSlots, VendorStock};
@@ -34,6 +35,10 @@ const VEST_SLOT: u32 = 0;
 const SHIELD_SLOT: u32 = 7;
 const SPRING_WATER: u32 = 159;
 const LINEN: u32 = 2589;
+/// Poor-quality drops: Ruined Pelt 5c, Broken Fang 6c, Chipped Claw 4c.
+const RUINED_PELT: u32 = 4865;
+const BROKEN_FANG: u32 = 7073;
+const CHIPPED_CLAW: u32 = 7074;
 /// Pattern: Blue Linen Vest: maxcount 1, incrtime 9000 at Tharynn Bouden.
 const BLUE_LINEN_VEST_PATTERN: u32 = 6270;
 
@@ -144,6 +149,7 @@ fn harness() -> Option<Harness> {
                 pair::<MerchantFailed>(),
                 pair::<BuyItem>(),
                 pair::<SellItem>(),
+                pair::<SellAllJunkItems>(),
                 pair::<BuybackItemRequest>(),
                 pair::<RepairItem>(),
             ),
@@ -215,7 +221,45 @@ impl Harness {
             slot,
             item_id,
             count,
+            destination: None,
         });
+    }
+
+    fn buy_into(&mut self, npc: Entity, slot: u32, item_id: u32, destination: ItemLocation) {
+        self.send::<_, MerchantChannel>(BuyItem {
+            npc: npc.to_bits(),
+            slot,
+            item_id,
+            count: 1,
+            destination: Some(destination),
+        });
+    }
+
+    fn grant(&mut self, item_id: u32, count: u32) {
+        let world = self.app.world();
+        crate::inventory::grant_item(
+            &world.resource::<GameDatabase>().db,
+            world.resource::<ItemTemplates>(),
+            world.resource::<VendorCatalog>(),
+            self.character_id,
+            (item_id, count),
+        )
+        .expect("grant");
+    }
+
+    /// Item id and count at each occupied bag location.
+    fn bag_view(&self) -> Vec<(ItemLocation, u32, u32)> {
+        let world = self.app.world();
+        crate::inventory::load_model(
+            &world.resource::<GameDatabase>().db,
+            world.resource::<ItemTemplates>(),
+            self.character_id,
+        )
+        .unwrap()
+        .view()
+        .into_iter()
+        .map(|(location, stack)| (location, stack.item_id, stack.count))
+        .collect()
     }
 
     fn sell(&mut self, npc: Entity, item_guid: u64, count: u32) {
@@ -653,4 +697,114 @@ fn admin_set_durability_damages_the_live_player_and_rejects_over_100() {
         AdminResponse::DurabilitySet { percent: 50, .. }
     ));
     assert_eq!(durability(&h), vec![(27, 55), (17, 35)]);
+}
+
+fn backpack(slot: u8) -> ItemLocation {
+    ItemLocation::Bag { bag: 0, slot }
+}
+
+#[test]
+fn a_merchant_cursor_dropped_on_backpack_slot_ten_buys_the_vest_there() {
+    let Some(mut h) = harness() else { return };
+    let godric = h.open(GODRIC_ROTHGAR);
+
+    h.buy_into(godric, VEST_SLOT, TARNISHED_CHAIN_VEST, backpack(9));
+
+    assert!(h.failures().is_empty());
+    assert!(
+        h.bag_view()
+            .contains(&(backpack(9), TARNISHED_CHAIN_VEST, 1))
+    );
+    assert_eq!(h.inventory().gold, 100_000 - 89);
+}
+
+#[test]
+fn buying_onto_an_occupied_slot_stacks_the_same_item_and_refuses_another() {
+    let Some(mut h) = harness() else { return };
+    let danil = h.open(BROTHER_DANIL);
+    let list = h.take::<VendorInventory>().remove(0);
+    let water = list
+        .items
+        .iter()
+        .find(|item| item.item_id == SPRING_WATER)
+        .unwrap()
+        .slot;
+    h.buy_into(danil, water, SPRING_WATER, backpack(6));
+    h.buy_into(danil, water, SPRING_WATER, backpack(6));
+    assert!(h.failures().is_empty());
+    assert!(h.bag_view().contains(&(backpack(6), SPRING_WATER, 10)));
+
+    // Backpack slot 1 holds the starter Linen Cloth.
+    h.buy_into(danil, water, SPRING_WATER, backpack(0));
+
+    assert_eq!(h.failures(), vec![MerchantError::CantStack]);
+    assert_eq!(h.count_of(SPRING_WATER), vec![10]);
+    assert_eq!(h.inventory().gold, 100_000 - 10);
+}
+
+#[test]
+fn a_purchase_overflowing_its_slot_fills_it_and_stores_the_rest() {
+    let Some(mut h) = harness() else { return };
+    h.grant(SPRING_WATER, 17);
+    let danil = h.open(BROTHER_DANIL);
+    let list = h.take::<VendorInventory>().remove(0);
+    let water = list
+        .items
+        .iter()
+        .find(|item| item.item_id == SPRING_WATER)
+        .unwrap()
+        .slot;
+    let (at, _, _) = *h
+        .bag_view()
+        .iter()
+        .find(|(_, item, _)| *item == SPRING_WATER)
+        .unwrap();
+
+    // Five more: three fill the stack to 20, two go to a free slot.
+    h.buy_into(danil, water, SPRING_WATER, at);
+    assert!(h.failures().is_empty());
+    assert!(h.bag_view().contains(&(at, SPRING_WATER, 20)));
+    assert_eq!(h.count_of(SPRING_WATER), vec![20, 2]);
+
+    // A full stack takes no more (TrinityCore `CanStoreItem_InSpecificSlot`).
+    h.buy_into(danil, water, SPRING_WATER, at);
+    assert_eq!(h.failures(), vec![MerchantError::CantStack]);
+}
+
+#[test]
+fn sell_all_junk_sells_three_grey_stacks_for_their_summed_price() {
+    let Some(mut h) = harness() else { return };
+    h.grant(RUINED_PELT, 2);
+    h.grant(BROKEN_FANG, 1);
+    h.grant(CHIPPED_CLAW, 3);
+    let godric = h.open(GODRIC_ROTHGAR);
+    h.take::<BuybackList>();
+
+    h.send::<_, MerchantChannel>(SellAllJunkItems {
+        npc: godric.to_bits(),
+    });
+
+    assert!(h.failures().is_empty());
+    assert_eq!(h.inventory().gold, 100_000 + 2 * 5 + 6 + 3 * 4);
+    for grey in [RUINED_PELT, BROKEN_FANG, CHIPPED_CLAW] {
+        assert!(h.count_of(grey).is_empty(), "{grey} sold");
+    }
+    assert_eq!(h.count_of(LINEN), vec![20], "common items stay");
+    // TrinityCore `SellItemToVendor` puts each sale in a buyback slot.
+    let buyback = h.take::<BuybackList>().pop().unwrap();
+    assert_eq!(buyback.items.len(), 3);
+}
+
+#[test]
+fn sell_all_junk_needs_the_vendor_open() {
+    let Some(mut h) = harness() else { return };
+    h.grant(RUINED_PELT, 2);
+    let godric = h.spawn_vendor(GODRIC_ROTHGAR);
+
+    h.send::<_, MerchantChannel>(SellAllJunkItems {
+        npc: godric.to_bits(),
+    });
+
+    assert_eq!(h.failures(), vec![MerchantError::NotInteracting]);
+    assert_eq!(h.count_of(RUINED_PELT), vec![2]);
 }

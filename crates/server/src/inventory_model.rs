@@ -553,7 +553,9 @@ impl InventoryModel {
             .expect("equippable items have templates");
         if template.required_level > self.character.level {
             return Err(error(
-                InventoryErrorReason::CantEquipLevelI,
+                InventoryErrorReason::CantEquipLevelI {
+                    level: template.required_level,
+                },
                 format!("requires level {}", template.required_level),
             ));
         }
@@ -906,19 +908,7 @@ impl InventoryModel {
     ) -> OpResult {
         self.templates.insert(item.item_id, template);
         let max_stack = template.max_stack.max(1);
-        let room: u32 = self
-            .bags
-            .iter()
-            .flatten()
-            .map(|cell| match cell {
-                None => max_stack,
-                Some(other) if other.item_id == item.item_id => {
-                    max_stack.saturating_sub(other.stack_count)
-                }
-                Some(_) => 0,
-            })
-            .fold(0u32, u32::saturating_add);
-        if room < item.stack_count {
+        if self.room_for(item.item_id, max_stack) < item.stack_count {
             return Err(error(
                 InventoryErrorReason::InvFull,
                 format!("no room for {} of item {}", item.stack_count, item.item_id),
@@ -946,6 +936,86 @@ impl InventoryModel {
             left -= count;
         }
         Ok(())
+    }
+
+    /// TrinityCore `CanStoreNewItem(bag, slot)` + `StoreNewItem` for a purchase
+    /// dropped on a bag slot: it goes to `location` when that is empty or holds the
+    /// same item with room; what does not fit there is stored like `store_item`
+    /// (`CanStoreItem` spills to other stacks and free slots). Another item or a
+    /// full stack at `location` refuses with `CantStack`; nothing changes on failure.
+    pub(crate) fn store_item_at(
+        &mut self,
+        mut item: InventoryItemData,
+        template: ItemTemplate,
+        location: ItemLocation,
+        mint: &mut impl FnMut() -> u64,
+    ) -> OpResult {
+        let ItemLocation::Bag { bag, slot } = location else {
+            return Err(error(
+                InventoryErrorReason::WrongSlot,
+                format!("purchases go to bag slots, not {location:?}"),
+            ));
+        };
+        self.check_location(location)?;
+        self.templates.insert(item.item_id, template);
+        let max_stack = template.max_stack.max(1);
+        let room_here = match self.get(location) {
+            None => max_stack,
+            Some(other) if other.item_id == item.item_id && other.stack_count < max_stack => {
+                max_stack - other.stack_count
+            }
+            Some(_) => {
+                return Err(error(
+                    InventoryErrorReason::CantStack,
+                    format!("item {} does not stack onto {location:?}", item.item_id),
+                ));
+            }
+        };
+        if self.room_for(item.item_id, max_stack) < item.stack_count {
+            return Err(error(
+                InventoryErrorReason::InvFull,
+                format!("no room for {} of item {}", item.stack_count, item.item_id),
+            ));
+        }
+        let here = room_here.min(item.stack_count);
+        let rest = item.stack_count - here;
+        let cell = &mut self.bags[usize::from(bag)][usize::from(slot)];
+        let guid_taken = match cell {
+            Some(other) => {
+                other.stack_count += here;
+                false
+            }
+            None => {
+                *cell = Some(InventoryItemData {
+                    stack_count: here,
+                    ..item.clone()
+                });
+                true
+            }
+        };
+        if rest == 0 {
+            return Ok(());
+        }
+        if guid_taken {
+            item.item_guid = mint();
+        }
+        item.stack_count = rest;
+        self.store_item(item, template, mint)
+    }
+
+    /// Items of `item_id` the bags can still take: free slots plus room on its stacks.
+    fn room_for(&self, item_id: u32, max_stack: u32) -> u32 {
+        self.bags
+            .iter()
+            .flatten()
+            .map(|cell| match cell {
+                None => max_stack,
+                Some(other) if other.item_id == item_id => {
+                    max_stack.saturating_sub(other.stack_count)
+                }
+                Some(_) => 0,
+            })
+            .fold(0u32, u32::saturating_add)
     }
 
     /// Compact bag items: quality descending, then item id, then larger stacks first.

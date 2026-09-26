@@ -18,11 +18,13 @@ Server-side vendors: the list, buy, sell, buyback and repair, following AzerothC
   - Refused with `SoldOut`, `NotEnoughMoney`, `CantCarryMore` (`MaxCount`) or `InventoryFull`.
   - A refused buy changes nothing.
   - Items first top up existing stacks, then fill empty backpack slots.
+  - [x] `BuyItem.destination: Some(bag slot)` (a merchant cursor dropped on that slot; TrinityCore `HandleBuyItemOpcode` ContainerGUID + Slot, `CanStoreNewItem(bag, slot)`): the purchase goes there when the slot is empty or holds the same item with room; what does not fit there is stored as above. Another item or a full stack there refuses with `CantStack` ("This item cannot stack."). An equipment destination is refused (`InventoryFull`; TrinityCore equips single items bought onto an equipment slot, the client never sends one).
 - [x] Limited stock (AzerothCore `VendorItemCount`) is per vendor creature and slot. Each `incrtime` seconds after the last purchase it restocks one purchase, capped at `maxcount`. A limited buy re-sends `VendorInventory`.
 - [x] Sell: `SellItem { item_guid, count }`, where count 0 means the whole stack.
   - Pays `SellPrice * count`.
   - Refused with `NotInterested` when `SellPrice` is 0 or `count` is more than the stack. Refused with `TooMuchGold` at the money cap (`0x7FFFFFFE`).
   - A partial sale splits the stack. The sold part gets a new guid.
+- [x] Sell All Junk (`SellAllJunkItems { npc }`, TrinityCore `HandleSellAllJunkItems`, ItemHandler.cpp:427-484): every bag stack of `content_item.Quality` 0 (poor) with a `SellPrice` is sold whole in bag order, each into a buyback slot. The first refused sale (money cap) ends it silently, as TrinityCore discards the error; a closed vendor answers `NotInteracting`.
 - [x] Buyback: 12 slots per session in the world, not persisted.
   - A sale goes into the current slot, or replaces the oldest sale when that slot is taken.
   - Buying back costs what the sale paid, restores the item (stacking) and frees the slot.
@@ -36,7 +38,7 @@ Server-side vendors: the list, buy, sell, buyback and repair, following AzerothC
 - [x] Admin `set-gold <character> <copper>` sets the money and replicates it live. `set-durability <character> <percent>` sets every equipped item to that percent of its max.
 - [ ] No reputation price discount (`GetReputationPriceDiscount`): NPC factions are not mapped to reputation factions.
 - [ ] Items with a Wrath `ExtendedCost` (12,887 rows) are skipped, because Retail `ItemExtendedCost` is not imported.
-- [ ] No vendor conditions, no refundable purchases, no guild-bank repair, and no Sell All Junk.
+- [ ] No vendor conditions, no refundable purchases, no guild-bank repair; no per-bag junk-sell exclusion flags (`BagSlotFlags::ExcludeJunkSell`).
 - [ ] Bag items have no durability, so selling damaged items and repairing bag items do not apply.
 
 ## Tests asserting this spec
@@ -46,5 +48,7 @@ Server-side vendors: the list, buy, sell, buyback and repair, following AzerothC
   - Brother Danil 152: water at 5 per purchase stacking to 20, no sell price, no repair.
   - Tharynn Bouden 66: the limited pattern sells out.
   - Also: linen sale and buyback, restock timing, 13th sale, admin commands.
+  - Buy into a slot: the vest onto backpack slot 10; water stacking onto its slot and refused on the linen slot; 17 water + 5 fills to 20 and stores 2, then a full stack refuses.
+  - Sell All Junk: 2 Ruined Pelt, 1 Broken Fang, 3 Chipped Claw pay 28 copper into 3 buyback slots; refused with the vendor closed.
 - `crates/server/src/durability.rs` tests: MaxDurability per item, cost formula, world.db DB2 costs.
 - `crates/server/src/bin/admin.rs` tests: set-gold / set-durability parsing.

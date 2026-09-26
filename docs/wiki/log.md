@@ -304,3 +304,7 @@ Created `systems/quests.md` (quest data, rules, runtime) and `specs/quests.md`; 
 ## [2026-09-26] create | Meeting stones
 
 [[meeting-stones]]: party summons at the 15 map-0 meeting stones (59782 cast and channel, Meeting Stone Summoning Portal ritual, 7720 SUMMON_PLAYER, 2 min offer, accept teleport). [[spell-casting]]: cast/channel movement now follows `SpellInterrupts` (Spell::CheckMovement) instead of `SPELL_ATTR0` 0x10000000, and channels start after their cast time. [[game-objects]] links it.
+
+## [2026-09-26] update | Merchant cursor buys and Sell All Junk
+
+[[merchant]]: `BuyItem.destination` stores a purchase in the bag slot the client's merchant cursor was dropped on (TrinityCore `CanStoreNewItem(bag, slot)`: same-item stacks fill, the rest spills, another item refuses `CantStack`); `SellAllJunkItems` sells every poor bag stack through the ordinary sale path ([merchant spec](../specs/merchant.md)). `InventoryErrorReason::message` gives the client Retail `ERR_*` text.

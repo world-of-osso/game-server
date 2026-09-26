@@ -9,6 +9,8 @@ Vendors in `crates/server/src/merchant.rs`, with `merchant/catalog.rs` (the worl
 3. Each request system (`process_buy/sell/buyback/repair_requests`) runs through `process`, which pairs a request with its `Customer`: connection, character, player entity, open vendor and `BuybackSlots`.
 4. A refusal answers `MerchantFailed { npc, error }`. `MerchantError::message` is the Retail GlobalStrings text.
 
+A buy with `destination` (the client's merchant cursor dropped on a bag slot) goes through `InventoryModel::store_item_at`: the slot takes what fits, the rest goes through `store_item`, and the room check covers both before anything changes. `sell_all_junk` lists the poor-quality bag stacks with a sell price from `VendorCatalog.goods`, then runs the ordinary `sell` on each, so every sale fills a buyback slot and re-sends `BuybackList`.
+
 Money and bags change in one `InventoryModel` (load → mutate → `save_inventory_record`) and are recorded in `GoldUpdateQueue`. That queue replicates `Gold` and makes `send_inventory_deltas` send the owner an `InventoryDelta`. Repair also mutates the player's `EquippedDurability`, whose change detection persists it and sends `DurabilityStateUpdate`.
 
 ## Data
