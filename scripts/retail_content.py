@@ -86,7 +86,8 @@ def build_templates(conn, report):
     """content_creature_template: AzerothCore's, plus TrinityCore's for spawned entries AzerothCore lacks."""
     clone_table(conn, "creature_template", "content_creature_template")
     conn.execute("INSERT INTO content_creature_template SELECT * FROM creature_template")
-    conn.execute("ALTER TABLE content_creature_template ADD COLUMN ContentTuningID INTEGER NOT NULL DEFAULT 0")
+    for column in ("ContentTuningID", "HealthScalingExpansion", "LevelScalingDeltaMin", "LevelScalingDeltaMax"):
+        conn.execute(f"ALTER TABLE content_creature_template ADD COLUMN {column} INTEGER NOT NULL DEFAULT 0")
     create_level_table(conn)
     conn.execute("""CREATE TEMP TABLE tdb_difficulty AS SELECT * FROM tdb_creature_template_difficulty WHERE DifficultyID = 0""")
     conn.execute("CREATE UNIQUE INDEX temp.tdb_difficulty_entry ON tdb_difficulty(Entry)")
@@ -97,7 +98,7 @@ def build_templates(conn, report):
             BaseAttackTime, RangeAttackTime, BaseVariance, RangeVariance, unit_class, unit_flags, unit_flags2, family,
             type, type_flags, VehicleId, mingold, maxgold, AIName, MovementType, HealthModifier, ManaModifier,
             ArmorModifier, ExperienceModifier, RacialLeader, movementId, RegenHealth, flags_extra, ScriptName, VerifiedBuild,
-            ContentTuningID)
+            ContentTuningID, HealthScalingExpansion, LevelScalingDeltaMin, LevelScalingDeltaMax)
         SELECT t.entry, t.KillCredit1, t.KillCredit2, t.name, t.subname, t.IconName,
             COALESCE(l.minlevel, 1), COALESCE(l.maxlevel, 1), health_expansion(d.HealthScalingExpansion), t.faction,
             t.npcflag & 4294967295, t.speed_walk, t.speed_run, t.scale,
@@ -105,15 +106,18 @@ def build_templates(conn, report):
             t.RangeVariance, t.unit_class, t.unit_flags, t.unit_flags2, t.family, t.type, d.TypeFlags, t.VehicleId,
             d.GoldMin, d.GoldMax, t.AIName, t.MovementType, d.HealthModifier, d.ManaModifier, d.ArmorModifier,
             t.ExperienceModifier, t.RacialLeader, t.movementId, t.RegenHealth, t.flags_extra, t.ScriptName, t.VerifiedBuild,
-            d.ContentTuningID
+            d.ContentTuningID, d.HealthScalingExpansion, d.LevelScalingDeltaMin, d.LevelScalingDeltaMax
         FROM tdb_creature_template t
         JOIN temp.tdb_difficulty d ON d.Entry = t.entry
         LEFT JOIN temp.tuning_level l ON l.ID = d.ContentTuningID
         WHERE t.entry IN (SELECT id1 FROM content_creature WHERE guid IN (SELECT guid FROM temp.retail_spawn))
           AND t.entry NOT IN (SELECT entry FROM creature_template)""")
-    # AzerothCore templates TrinityCore also tunes take its ContentTuning range.
+    # AzerothCore templates TrinityCore also tunes take its ContentTuning range, and the
+    # difficulty-0 scaling expansion, level delta and modifiers ExpectedStat is scaled by.
     conn.execute("""UPDATE content_creature_template SET ContentTuningID = d.ContentTuningID,
-            minlevel = l.minlevel, maxlevel = l.maxlevel
+            minlevel = l.minlevel, maxlevel = l.maxlevel, HealthScalingExpansion = d.HealthScalingExpansion,
+            LevelScalingDeltaMin = d.LevelScalingDeltaMin, LevelScalingDeltaMax = d.LevelScalingDeltaMax,
+            HealthModifier = d.HealthModifier, ArmorModifier = d.ArmorModifier, DamageModifier = d.DamageModifier
         FROM temp.tdb_difficulty d JOIN temp.tuning_level l ON l.ID = d.ContentTuningID
         WHERE d.Entry = content_creature_template.entry
           AND content_creature_template.entry IN (SELECT entry FROM creature_template)""")

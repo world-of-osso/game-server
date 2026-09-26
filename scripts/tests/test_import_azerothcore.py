@@ -43,9 +43,11 @@ def tdb_template(entry, name, faction, npcflag, classification=0, unit_class=1, 
             f"1,1,{unit_class},0,0,0,0,0,7,0,'',0,1,0,0,0,0,1,0,{flags_extra},'{script}',NULL,66044)")
 
 
-def tdb_difficulty(entry, health_modifier, gold_min, gold_max, loot_id, content_tuning=6, health_expansion=0):
+def tdb_difficulty(entry, health_modifier, gold_min, gold_max, loot_id, content_tuning=6, health_expansion=0,
+                   delta=(0, 0), armor_modifier=1, damage_modifier=1):
     """One TDB1210 `creature_template_difficulty` row (DifficultyID 0, 29 columns)."""
-    return (f"({entry},0,0,0,{content_tuning},{health_expansion},{health_modifier},1,1,1,0,0,0,0,{loot_id},0,0,"
+    return (f"({entry},0,{delta[0]},{delta[1]},{content_tuning},{health_expansion},{health_modifier},1,"
+            f"{armor_modifier},{damage_modifier},0,0,0,0,{loot_id},0,0,"
             f"{gold_min},{gold_max},0,0,0,0,0,0,0,0,66044)")
 
 
@@ -353,7 +355,8 @@ class CreatureEventImportTests(unittest.TestCase):
         )
         (self.tdb / "creature_template_difficulty.sql").write_text(
             "INSERT INTO `creature_template_difficulty` VALUES\n" + tdb_difficulty(42384, 0.5, 3, 9, 42384) + ","
-            + tdb_difficulty(68, 1.5, 0, 0, 0, content_tuning=864, health_expansion=-1) + ";\n"
+            + tdb_difficulty(68, 1.5, 0, 0, 0, content_tuning=864, health_expansion=-1, delta=(-1, 2),
+                             armor_modifier=1.25, damage_modifier=1.75) + ";\n"
         )
         # 6: levels 5-30. 864: 1 to MaxLevel type 2, the Midnight cap 90.
         write_content_tuning(self.csv / db2.DEFAULT_BUILD, [(6, 5, 30, 0, 0), (864, 1, 0, 0, 2)])
@@ -404,6 +407,13 @@ class CreatureEventImportTests(unittest.TestCase):
                              " WHERE entry IN (68, 2455) ORDER BY entry").fetchall(),
                 [(68, 1, 90, 2, 864, 68), (2455, 30, 30, 0, 0, 0)],
                 "AzerothCore templates keep their data; TrinityCore's ContentTuning range replaces fixed levels",
+            )
+            self.assertEqual(
+                conn.execute("SELECT entry, HealthScalingExpansion, LevelScalingDeltaMin, LevelScalingDeltaMax,"
+                             " HealthModifier, ArmorModifier, DamageModifier FROM content_creature_template"
+                             " WHERE entry IN (68, 2455, 42384) ORDER BY entry").fetchall(),
+                [(68, -1, -1, 2, 1.5, 1.25, 1.75), (2455, 0, 0, 0, 1.0, 1.0, 1.0), (42384, 0, 0, 0, 0.5, 1.0, 1.0)],
+                "tuned templates take TrinityCore's difficulty-0 scaling expansion, level delta and modifiers",
             )
             self.assertEqual(
                 conn.execute("SELECT guid, path_id, mount, bytes2, auras FROM content_creature_addon ORDER BY guid").fetchall(),
@@ -1227,3 +1237,55 @@ class LocalDb2ExtractTests(unittest.TestCase):
                 self.assertEqual(sorted(int(row[0]) for row in exported[1:]), sorted(rows))
                 bad = [row[0] for row in exported[1:] if not same_cells(rows[int(row[0])], row)]
                 self.assertEqual(bad, [])
+
+
+def extract_local(db2_name):
+    """{ID: {column: value}} of a LOCAL_TABLES DB2 decoded from the local CASC install."""
+    schema = sqlite3.connect(":memory:")
+    schema.executescript(db2.SCHEMA_SQL.read_text())
+    columns = [(row[1], row[2]) for row in schema.execute(f"PRAGMA table_info({db2.table_name(db2_name)})")]
+    fdid, layout = db2.LOCAL_TABLES[db2_name]
+    header, rows = db2_casc.extract_rows(fdid, layout, columns)
+    return {row[0]: dict(zip(header, row)) for row in rows}
+
+
+@unittest.skipUnless(db2_casc.CASC_LOCAL.is_file(), f"casc-local not present at {db2_casc.CASC_LOCAL}")
+class LocalExpectedStatExtractTests(unittest.TestCase):
+    """ExpectedStat (ID list + Lvl relationship), ExpectedStatMod (ID list, copies) and
+    ContentTuningXExpected (ID list + ContentTuningID relationship) from local CASC."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.stats = extract_local("ExpectedStat")
+        cls.mods = extract_local("ExpectedStatMod")
+        cls.tuning_mods = extract_local("ContentTuningXExpected")
+
+    def test_every_record_decodes(self):
+        self.assertEqual((len(self.stats), len(self.tuning_mods)), (232, 1072))
+        self.assertEqual(len(self.mods), 265 + 70)
+
+    def test_levels_come_from_the_relationship_field(self):
+        default_levels = sorted(row["Lvl"] for row in self.stats.values() if row["ExpansionID"] == -2)
+        self.assertEqual(default_levels, list(range(1, 134)))
+        self.assertEqual((self.stats[1]["Lvl"], self.stats[1]["CreatureHealth"]), (1, 78.0))
+        self.assertEqual((self.stats[475]["Lvl"], self.stats[475]["CreatureHealth"]), (90, 141482.0))
+
+    def test_default_creature_health_grows_to_level_90_then_holds(self):
+        by_level = {row["Lvl"]: row["CreatureHealth"] for row in self.stats.values() if row["ExpansionID"] == -2}
+        self.assertTrue(all(by_level[level] < by_level[level + 1] for level in range(1, 90)))
+        self.assertEqual({by_level[level] for level in range(90, 134)}, {141482.0})
+
+    def test_legion_level_73_has_two_rows(self):
+        # DB2Manager::LoadStores keys _expectedStatsByLevel by (Lvl, ExpansionID) in ID order,
+        # so the later ID (569) is the one TrinityCore evaluates.
+        rows = sorted(i for i, row in self.stats.items() if (row["Lvl"], row["ExpansionID"]) == (73, 6))
+        self.assertEqual(rows, [566, 569])
+
+    def test_class_mods_trinitycore_reads_exist(self):
+        # DB2Manager::EvaluateExpectedStat: warrior 4, paladin 2, rogue 3, mage 1.
+        self.assertTrue({1, 2, 3, 4} <= self.mods.keys())
+
+    def test_content_tuning_mods_reference_expected_stat_mods(self):
+        referenced = {row["ExpectedStatModID"] for row in self.tuning_mods.values()}
+        self.assertTrue(referenced <= self.mods.keys(), referenced - self.mods.keys())
+        self.assertTrue(all(row["ContentTuningID"] > 0 for row in self.tuning_mods.values()))
