@@ -10,7 +10,13 @@ use equipment_admin_types::{EquipmentGrantItem, EquipmentOwnership};
 
 use admin_output::print_response;
 
-const SOCKET_PATH: &str = "/tmp/game-server-admin.sock";
+const DEFAULT_SOCKET_PATH: &str = "/tmp/game-server-admin.sock";
+
+/// The server's admin socket; `GAME_SERVER_ADMIN_SOCKET` as the server reads it.
+fn socket_path() -> std::path::PathBuf {
+    std::env::var_os("GAME_SERVER_ADMIN_SOCKET")
+        .map_or_else(|| DEFAULT_SOCKET_PATH.into(), Into::into)
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 enum AdminRequest {
@@ -311,7 +317,7 @@ fn main() {
     }
 
     let request = parse_request(&args);
-    let response: AdminResponse = match Client::call(SOCKET_PATH, &request) {
+    let response: AdminResponse = match Client::call(socket_path(), &request) {
         Ok(r) => r,
         Err(e) => {
             eprintln!("Failed to connect: {e}");

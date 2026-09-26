@@ -3,7 +3,7 @@ use std::sync::mpsc;
 
 use peercred_ipc::{Connection, Server};
 
-use super::SOCKET_PATH;
+use super::socket_path;
 use crate::admin_types::{AdminRequest, AdminResponse};
 
 /// Internal command passed from IPC server thread to Bevy main loop.
@@ -25,7 +25,7 @@ impl Drop for SocketGuard {
 
 /// Spawn the IPC server on a tokio runtime in a background thread.
 pub(super) fn init() -> (mpsc::Receiver<AdminCommand>, SocketGuard) {
-    let path = PathBuf::from(SOCKET_PATH);
+    let path = socket_path();
 
     // Remove stale socket from a previous run.
     let _ = std::fs::remove_file(&path);
