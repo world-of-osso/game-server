@@ -35,7 +35,7 @@ NPCs have no `CharacterStats`, so their spell power, attack power and crit are 0
 2. **Max health** = floor(Sta) × hppersta(level) × (1 + `max_health_pct`/100), floored.
 3. **Mana:** max mana = base mana = basemp(class, level). Intellect does not add mana.
    - Only classes with a non-zero basemp column get a `Mana` component: Paladin, Priest, Shaman, Mage, Warlock, Monk, Druid and Evoker.
-4. **Spell power** = Int. **Attack power** = Str × AttackPowerPerStrength + Agi × AttackPowerPerAgility.
+4. **Spell power** = Int when the main stat is Intellect, else 0 (TrinityCore Unit::SpellBaseDamageBonusDone). The main stat is the active spec's, else `chr_classes.PrimaryStatPriority`. **Attack power** = Str × AttackPowerPerStrength + Agi × AttackPowerPerAgility.
 5. **Crit %** = 5 + DR(crit rating / rating-per-1%) + `crit_pct`.
 6. **Haste %** = DR(haste rating / rating-per-1%) + `haste_pct`.
 7. **Versatility %** = DR(versatility rating / rating-per-1%) + `versatility_pct`.
@@ -57,7 +57,7 @@ Rating units follow SimC `rating_t::init`: the game-table value is the rating ne
 4. **Armor:** shields floor(ItemArmorShield[quality] + 0.5); cloth–plate floor(ItemArmorTotal[material] × ItemArmorQuality[quality] × ArmorLocation[slot][material] + 0.5), robe uses the chest row.
 5. **Weapon:** DPS from ItemDamageOneHand/TwoHand (Caster variants with `ITEM_FLAG2_CASTER_WEAPON` 0x200; bows/guns/crossbows two-hand, wands one-hand caster); min = floor(DPS × speed × (1 − DmgVariance/2)), max = floor(DPS × speed × (1 + DmgVariance/2) + 0.5).
 
-The main-hand result is `CharacterStats.main_hand` (unarmed 1–2 at 2.0 s, TrinityCore `BASE_MINDAMAGE`/`BASE_MAXDAMAGE`). Spell weapon hits (effects 58, 121, 31) roll it and add AP / 6 × speed; 121 uses the normalized speed (dagger 1.7, one-hand 2.4, two-hand 3.3, ranged 2.8).
+The main-hand result is `CharacterStats.main_hand` (unarmed 1–2 at 2.0 s, TrinityCore `BASE_MINDAMAGE`/`BASE_MAXDAMAGE`); an off-hand weapon is `CharacterStats.off_hand`. Auto-attacks swing both ([[player-damage]]). Spell weapon hits (effects 58, 121, 31) roll it and add AP / 6 × speed; 121 uses the normalized speed (dagger 1.7, one-hand 2.4, two-hand 3.3, ranged 2.8).
 
 `EquippedItems` holds `(EquipmentSlot, item_id)` of physically equipped items. The inventory sets it on world entry (`send_initial_inventory`) and after each item change (`send_inventory_deltas`), which triggers the recompute.
 
@@ -134,7 +134,7 @@ The spawned `Health` comes from redb. The first recompute keeps the persisted ra
 ### Gear
 
 - **Scaled item levels:** Wowhead shows some old items at a level other than ItemSparse `ItemLevel` (Vendetta 20 at 83, Riverpaw Leather Vest 6 at 80, Forlorn Breastplate 35 at 34). The source of that scaling (drop context bonus lists, ContentTuning, `PlayerLevelToItemLevelCurveID`) is not identified; the server uses the static, squished level. ItemBonus/bonus-tree levels are not applied.
-- **Not modeled:** sockets and gems, enchants, tertiary stats (leech, avoidance, speed), bonus armor, off-hand and ranged swings; auto-attacks (`combat.rs`) keep their flat damage.
+- **Not modeled:** sockets and gems, enchants, tertiary stats (leech, avoidance, speed), bonus armor, ranged swings. Auto-attacks swing `main_hand` and `off_hand` ([[player-damage]]).
 - **Admin grant:** `grant-equipment` writes equipment without the inventory change queue, so an online player's `EquippedItems` updates at the next inventory change or relog.
 
 ### Other
@@ -161,4 +161,5 @@ The spawned `Health` comes from redb. The first recompute keeps the persisted ra
 
 - [[spell-casting]] — reads spell power, attack power, crit and base mana
 - [[class-progression]] — `ActiveSpec`, `Level`, admin set-level
-- [[combat]] — melee formulas in shared
+- [[combat]] — auto-attack systems
+- [[player-damage]] — how AP, SP, crit, haste, versatility and weapons become damage

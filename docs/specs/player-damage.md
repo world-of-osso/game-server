@@ -1,0 +1,82 @@
+# Player Damage
+
+Players deal Retail damage: auto-attacks swing the equipped weapon with attack power, through the melee hit table and the target's armor, and spells scale with spell or attack power. The rules are TrinityCore master a352b1fa's, except the weapon-power coefficient (Retail 6, TrinityCore 3.5). Level scaling's health-ratio rule still applies on top ([level scaling](level-scaling.md)).
+
+## What it must do
+
+Auto-attack
+- [x] A player's swing rolls a whole number between trunc((weapon min + AP / 6 × weapon speed) × (1 + versatility)) and the same for weapon max (Player::CalculateMinMaxDamage, StatSystem.cpp:435-485; Unit::CalculateDamage, Unit.cpp:2490-2539). AP / 6 is SimC's `WEAPON_POWER_COEFFICIENT`; TrinityCore divides by 3.5 (StatSystem.cpp:455).
+- [x] Without a weapon the main hand is unarmed: 1-2 at 2.0 s (`BASE_MINDAMAGE`/`BASE_MAXDAMAGE`).
+- [x] The swing takes the aura physical damage done, auto-attack (MOD_AUTOATTACK_DAMAGE 344) and damage taken multipliers.
+- [x] The main hand swings every weapon speed / (1 + haste) (Unit::ApplyAttackTimePercentMod, Unit.cpp:11032).
+- [x] An equipped off-hand weapon swings on its own timer at half damage (UNIT_MOD_DAMAGE_OFFHAND TOTAL_PCT 0.5, Unit.cpp:350). A swing of either hand holds the other at least 200 ms away (ATTACK_DISPLAY_DELAY, Unit.cpp:2203-2230).
+- [x] Swing rage uses the unhasted weapon speed, halved for the off hand (CalcMeleeAttackRageGain, Unit.cpp:2239-2249).
+- [x] Units without `CharacterStats` (creatures) keep their ExpectedStat or flat 10 swing every 2 s.
+
+Hit table (player swings; one roll in 0..10000, Unit::RollMeleeOutcomeAgainst, Unit.cpp:2378-2488)
+- [x] Miss 5% (Unit::GetUnitMissChance, Unit.cpp:2825-2830), +19% while an off-hand weapon is equipped (Unit.cpp:12509-12512).
+- [x] Against a creature: dodge 3%, parry 6%, block 3%, each +1.5% per level the creature is above the player (Unit.cpp:2749-2861). A block stops 30% (Unit::GetBlockPercent, Unit.h:1000).
+- [x] Glancing blows only against creatures 4 or more levels above: 10% + 10% per level, for 10% less damage per level, at most 30% (Unit.cpp:2444-2454, 1474-1486).
+- [x] Crit at the player's crit chance doubles the damage (Unit.cpp:1429-1436).
+- [x] Against a player only the miss applies: player dodge, parry and block are not modelled.
+- [x] Misses, dodges and parries do no damage, are logged as `CombatLogKind::Miss(Miss | Dodge | Parry)` and `CombatEventType::Miss | Dodge | Parry`, and raise no procs (proc HitMask defaults to normal and critical hits).
+
+Armor
+- [x] Every creature spawns with `CreatureArmor` = ExpectedStat CreatureArmor at its own level × ArmorModifier (Creature::GetBaseArmorForLevel, Creature.cpp:3208-3214). A tuned creature's armor against an attacker is its base armor at its level for that attacker (GetArmorMultiplierForTarget, Creature.cpp:3216-3224).
+- [x] Physical damage is × (1 − min(armor / (armor + ArmorConstant), 85%)), truncated, where ArmorConstant is the ExpansionID -2 ExpectedStat row at the attacker's level against the target (Unit::CalcArmorReducedDamage, Unit.cpp:1689-1777). A player target uses its gear armor.
+- [x] Armor applies to every swing, and to spell damage with a physical school unless the spell has a bleed mechanic (Unit::IsDamageReducedByArmor, Unit.cpp:1680-1687; SpellMgr.cpp:3036-3038).
+- [x] The level-scaling damage multiplier and health ratio apply after armor and the outcome (Unit::DealDamageMods, Unit::DealDamage).
+
+Spells
+- [x] Spell power is Intellect when the main stat is Intellect, else 0 (Unit::SpellBaseDamageBonusDone, Unit.cpp:7113-7119). The main stat is the spec's, else the class's `chr_classes.PrimaryStatPriority` (Player::GetPrimaryStat, StatSystem.cpp:297-314).
+- [x] School damage and heals are BasePoints + BonusCoefficient × SP + BonusCoefficientFromAP × AP, then × (1 + a uniform roll in ± Variance / 2) (Spell::EffectSchoolDMG, SpellEffects.cpp:565-567; SpellEffectInfo::CalcValue, SpellInfo.cpp:560-567).
+- [x] The caster's versatility raises spell damage and healing (Unit::SpellDamagePctDone, Unit.cpp:6944-6946).
+- [x] A spell crit doubles the damage (Unit::SpellCriticalDamageBonus, Unit.cpp:7297-7325), as a melee crit does.
+- [x] TRIGGER_MISSILE (32) triggers its spell at the unit target (Spell::EffectTriggerMissileSpell, SpellEffects.cpp:725-778). Frostbolt 116 deals its damage through 228597.
+
+Examples
+- A level 10 Human Warrior without a spec (Str 33 = AP 33, 5% crit) with the Worn Shortsword (0-1 at 2.60) swings 14-15. Against a level 10 Hogger (armor 90, ArmorConstant 210: 30%) that is 9-10, 104-115 of Hogger's 13,137 pool. With the hit table the average is 98.8 of the pool a swing: about 133 swings, 5.8 minutes.
+- A level 10 Human Mage (Int 38 = SP 38) casts Frostbolt for 2.448 × 38 = 93 ± 2.5%, 186 ± 2.5% on a crit.
+- Live: a level 10 Arms Warrior with the Worn Shortsword killed a level 10 Mangy Wolf in 10 swings (7 hits of 60-64, 3 dodges) in 24 s. Arms Warrior 137049 gives auto-attacks +476%; Plate Specialization 86101 gives +5% Strength (35 AP); 15-16 × 5.76 = 86-92, less 30% armor (`game-engine/data/diagnostics/playerdamage-20260926/`).
+
+## How it works
+
+- [Player damage](../wiki/systems/player-damage.md) — swing pipeline, armor, spell amounts
+- [Combat](../wiki/systems/combat.md) — auto-attack systems
+- [Character stats](../wiki/systems/character-stats.md) — attack power, spell power, crit, haste, versatility, weapons
+
+## Implementation inventory
+
+- `crates/server/src/melee.rs` — weapon damage range and roll, swing time, hit-table chances and roll, outcome damage, armor reduction
+- `crates/server/src/combat.rs` — `Attacker`, `try_swing`, `armor_mitigated`, `AutoAttack.off_hand_timer`, swing log and events
+- `crates/server/src/level_scaling.rs` — `CreatureArmor`, `ArmorConstants`, `LevelStats::armor`, `UnitScaling::armor_against`
+- `crates/server/src/world_data.rs` — ExpectedStat CreatureArmor/ArmorConstant and ArmorModifier loading
+- `crates/server/src/zones.rs` — `CreatureArmor` at spawn
+- `crates/server/src/stats.rs` — spell power rule, class main-stat fallback, `CharacterStats.off_hand`
+- `crates/server/src/spell_cast/effects.rs` — TRIGGER_MISSILE, variance, versatility, armor on physical spells
+
+## Tests asserting this spec
+
+- `crates/server/src/melee_tests.rs` — weapon damage, off hand, roll, haste, hit-table chances and order, outcomes, armor.
+- `crates/server/src/combat_tests/player_damage.rs` — a swing through Hogger's armor, the weapon-speed/haste timer, full crit chance, the off-hand timer and damage, a level 10 warrior killing Hogger with the Worn Shortsword (real item data).
+- `crates/server/src/level_scaling_tests.rs` — tuned armor at the attacker's level, untuned armor and ArmorConstants.
+- `crates/server/src/spell_cast/tests.rs` — `level_10_mage_frostbolt_deals_spell_power_times_its_coefficient`, `a_spell_crit_doubles_the_damage`, `physical_spell_damage_takes_the_creatures_armor`.
+- `crates/server/src/stats_tests.rs` — no spell power for a Strength warrior or a spec-less paladin.
+- `crates/server/src/zones_world_db_tests.rs` (real world.db, `--ignored`): `spawned_creatures_carry_expected_stat_armor`.
+
+## Known gaps (current cycle)
+
+- [ ] Facing is not modelled: every swing lands in front, so creatures parry and block from behind.
+- [ ] Player dodge, parry and block, crushing blows and creature swings' hit table (miss, crit) are not modelled; creatures always hit.
+- [ ] Hit rating and expertise (TrinityCore `m_modMeleeHitChance`, GetExpertiseDodgeOrParryReduction), MOD_CRIT_DAMAGE_BONUS and armor penetration are not modelled.
+- [ ] Ranged auto-shot does not exist on the server; ranged weapons do not swing.
+- [ ] Dual wield is not tracked: the inventory refuses one-handers in the off hand, so only off-hand-only weapons swing there.
+- [ ] Proc hit masks are not modelled: avoided swings raise no procs, so dodge- or parry-triggered procs never fire.
+- [ ] Spell hit and resist rolls, and the ArmorItemLevelDiminishing curve at the maximum level, are not modelled.
+- [ ] SpellEffect `Coefficient` with a `ScalingClass` (SpellScaling game table base points) is not modelled; those effects use `EffectBasePointsF`.
+- [ ] The Worn Shortsword rolls 0-1 (item level 1). Retail's tooltip was not checked.
+- [ ] Plate Specialization (86101) applies without plate armor (aura runtime: armor specialization conditions are not checked).
+
+## Out of scope
+
+- Talents' passive damage mods beyond what the aura runtime already applies, mastery beyond its stat, PvP scaling and set bonuses.

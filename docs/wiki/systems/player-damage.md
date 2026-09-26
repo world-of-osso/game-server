@@ -1,0 +1,79 @@
+# Player Damage
+
+How a player's auto-attacks and spells turn stats into damage, in the order TrinityCore master a352b1fa applies each step. The requirements and tests are in the [player damage spec](../../specs/player-damage.md).
+
+## Auto-attack pipeline
+
+`combat.rs` `auto_attack_system` ticks both hands of every attacker's `AutoAttack` (`timer`, `off_hand_timer`) and calls `try_swing` for the main hand, then the off hand. An `Attacker` with `CharacterStats` is a player; without it (creatures) the swing keeps the creature rules of [[level-scaling]].
+
+1. **Weapon:** `CharacterStats.main_hand` (unarmed 1-2 at 2.0 s) or `off_hand` (none: no off-hand swing). Both come from `EquippedItems` through `item_stats.rs` ([[character-stats]]).
+2. **Roll:** `melee::weapon_damage_range` = (min or max + AP / 6 × speed) × (1 + versatility), × 0.5 for the off hand. `melee::roll_weapon_damage` picks a whole number in the truncated bounds (Unit::CalculateDamage `urand`).
+3. **Done/taken:** × aura physical damage done × MOD_AUTOATTACK_DAMAGE × target physical damage taken (`AuraStatMods`), rounded.
+4. **Armor:** `combat::armor_mitigated` against `target_armor`: a creature's `CreatureArmor` through `UnitScaling::armor_against` (its ExpectedStat armor at its level for the attacker), a player's `CharacterStats.armor`. The constant is `ArmorConstants.at(attacker level against the target)`. Without the `ArmorConstants` resource (unit tests) there is no mitigation.
+5. **Outcome:** `melee::player_swing_chances` + `roll_melee_outcome` (one roll in 0..10000, chances truncated to hundredths), then `outcome_damage`: avoidance 0, crit × 2, glancing −10%/level, block −30% (the blocked amount goes to the combat log).
+6. **Level scaling:** `damage_dealt` (a tuned creature attacker's multiplier) and `health_loss` (a tuned creature target's health ratio), unchanged from [[level-scaling]].
+7. **Timers:** the swung hand restarts at weapon speed / (1 + haste); the other hand is pushed to at least 0.2 s.
+
+Creatures skip steps 1, 2 and 5: their base is the ExpectedStat roll (tuned) or 10, every 2 s, and they always hit. Step 4 applies to them too, so a player's gear armor mitigates creature swings.
+
+Avoided swings emit `CombatEventType::Miss | Dodge | Parry` and `CombatLogKind::Miss(..)` with amount 0, add 0 threat, still give swing rage and raise no proc events.
+
+## Hit table values
+
+| | Chance | Source |
+|---|---|---|
+| Miss | 5%, +19% with an off-hand weapon | Unit::GetUnitMissChance, MeleeSpellMissChance |
+| Dodge (creature) | 3% + 1.5%/level above | GetUnitDodgeChance |
+| Parry (creature) | 6% + 1.5%/level above | GetUnitParryChance |
+| Glancing (creature 4+ levels above) | 10% + 10%/level | RollMeleeOutcomeAgainst |
+| Block (creature) | 3% + 1.5%/level above, stops 30% | GetUnitBlockChance, GetBlockPercent |
+| Crit | `CharacterStats.crit_pct` | GetUnitCriticalChanceDone |
+
+TrinityCore's creature values differ from SimC's Retail target (3% miss, 3% dodge, 3% parry at equal level). The server follows TrinityCore; the difference is unverified against Retail.
+
+## Armor
+
+- `world_data.rs` loads ExpectedStat `CreatureArmor` and `ArmorConstant` with their ExpectedStatMod columns, and `ArmorModifier` per template.
+- `LevelStats::armor` holds a tuned template's armor per level; an untuned template's `CreatureTemplate.armor` is ExpectedStat armor at `min_level` (ContentTuning 0, expansion 0 falling back to -2).
+- `zones.rs` inserts `CreatureArmor` (armor at the spawn's own level) on every spawn.
+- `ArmorConstants` (a resource, index = level) is the ExpansionID -2 ArmorConstant row with no class mod, what TrinityCore passes for a player attacker. Every ExpectedStatMod class row has ArmorConstantMod 1, so creature attackers get the same value.
+
+Level 10: CreatureArmor 90, ArmorConstant 210 (30%). Level 30: 155 and 361.
+
+## Spells
+
+`spell_cast/effects.rs`:
+- `scaled_amount`: BasePoints + BonusCoefficient × SP + BonusCoefficientFromAP × AP (unchanged).
+- `with_variance` on SCHOOL_DAMAGE and HEAL: × (1 ± Variance / 2). Most class spells have Variance 0.05. Test helper: `test_harness::varied`.
+- `with_crit`: + 100% (× 2), with CritDamageAndHealing mods (unchanged).
+- `deal_damage`: × damage done × versatility × damage taken, then armor if `reduced_by_armor` (physical school, no bleed mechanic 15), then absorbs and level scaling. `apply_heal` takes versatility too.
+- TRIGGER_MISSILE (32) shares TRIGGER_SPELL's handler: Frostbolt 116 → 228597 (2.448 × SP).
+
+Spell power is Intellect only for an Intellect main stat (`stats.rs`); warriors, rogues and other Strength or Agility specs have 0.
+
+## Numbers
+
+| Case | Working | Result |
+|---|---|---|
+| L10 Human Warrior, no spec, Worn Shortsword (0-1, 2.60) vs L10 Hogger | trunc(0-1 + 33 / 6 × 2.6) = 14-15; × 0.7 = 9-10; × 13,137 / 1,133 = 104-115 of the pool | ~133 swings (unit test: 110-160) |
+| L10 Arms Warrior, same sword, vs L10 Mangy Wolf (live) | Str 33 × 1.05 (Plate Specialization) = AP 34.65 → 15-16; × 5.76 (Arms Warrior +476% auto-attack) = 86-92; × 0.7 = 60-64 | 7 hits + 3 dodges, dead in 24 s |
+| L10 Human Mage Frostbolt | 2.448 × Int 38 = 93 ± 2.5% | 91-95, 181-191 on a crit |
+
+Live proof: `game-engine/data/diagnostics/playerdamage-20260926/` (server and client combat logs, kill screenshot).
+
+## Sources
+
+- [melee.rs](../../../crates/server/src/melee.rs) — weapon damage, hit table, outcome, armor formula
+- [combat.rs](../../../crates/server/src/combat.rs) — swing pipeline, timers, events
+- [level_scaling.rs](../../../crates/server/src/level_scaling.rs) — `CreatureArmor`, `ArmorConstants`, `armor_against`
+- [effects.rs](../../../crates/server/src/spell_cast/effects.rs) — spell amounts, variance, versatility, armor, TRIGGER_MISSILE
+- TrinityCore master a352b1fa: `Entities/Unit/Unit.cpp` (CalculateMeleeDamage, RollMeleeOutcomeAgainst, CalcArmorReducedDamage, SpellBaseDamageBonusDone, SpellCriticalDamageBonus), `Entities/Unit/StatSystem.cpp` (Player::CalculateMinMaxDamage, UpdateAttackPowerAndDamage, GetPrimaryStat), `Spells/SpellEffects.cpp`, `Spells/SpellInfo.cpp`
+- SimC `WEAPON_POWER_COEFFICIENT` (6) for AP per weapon DPS
+
+## See Also
+
+- [[combat]] — auto-attack systems and death transitions
+- [[character-stats]] — AP, SP, crit, haste, versatility, weapons
+- [[level-scaling]] — damage and health multipliers after armor
+- [[spell-casting]] — effect handlers
+- [[auras]] — `AuraStatMods` (MOD_AUTOATTACK_DAMAGE, damage done/taken)
