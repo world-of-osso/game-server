@@ -13,6 +13,7 @@ import unittest
 SCRIPTS = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(SCRIPTS))
 import content_policy  # noqa: E402
+import retail_content  # noqa: E402
 import db2  # noqa: E402
 
 AZEROTHCORE_SQL = Path(os.environ.get("AZEROTHCORE_SQL", "/home/osso/Repos/azerothcore/data/sql/base/db_world"))
@@ -106,6 +107,7 @@ class CreatureEventImportTests(unittest.TestCase):
         scripts.mkdir()
         (self.root / "data").mkdir()
         for name in ("import-azerothcore.sh", "world_schema.sql", "db2.py", "db2_casc.py", "db2_schema.sql", "mysql_dump.py",
+                     "content_common.py", "retail_content.py",
                      "content_policy.py", "tdb_schema.sql"):
             shutil.copy2(SCRIPTS / name, scripts / name)
         (scripts / "content_overrides.csv").write_text("kind,source_id,retail_id,source_name,retail_name,reason\n")
@@ -334,7 +336,7 @@ class CreatureEventImportTests(unittest.TestCase):
         self.write_retail_spawn_fixture()
         result = self.run_import()
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        offset = content_policy.RETAIL_GUID_OFFSET
+        offset = retail_content.RETAIL_GUID_OFFSET
         with sqlite3.connect(self.db) as conn:
             self.assertEqual(
                 conn.execute("SELECT guid, id1, map, position_x, position_y, spawntimesecs FROM content_creature"
@@ -785,17 +787,17 @@ class ContentTuningLevelTests(unittest.TestCase):
     """TrinityCore GetContentTuningData level ranges under Expansion 11 (Midnight)."""
 
     def test_fixed_range_is_kept(self):
-        self.assertEqual(content_policy.content_tuning_levels(5, 30, 0, 0), (5, 30))
+        self.assertEqual(retail_content.content_tuning_levels(5, 30, 0, 0), (5, 30))
 
     def test_max_level_type_adds_the_midnight_cap(self):
         # ContentTuning 1/864: MaxLevelSquish 0 + GetMaxLevelForExpansion(11).
-        self.assertEqual(content_policy.content_tuning_levels(1, 0, 0, 2), (1, 90))
+        self.assertEqual(retail_content.content_tuning_levels(1, 0, 0, 2), (1, 90))
 
     def test_min_level_type_adds_one_and_prev_expansion_type_the_war_within_cap(self):
-        self.assertEqual(content_policy.content_tuning_levels(0, 0, 1, 3), (1, 80))
+        self.assertEqual(retail_content.content_tuning_levels(0, 0, 1, 3), (1, 80))
 
     def test_levels_clamp_to_one(self):
-        self.assertEqual(content_policy.content_tuning_levels(0, 0, 0, 0), (1, 1))
+        self.assertEqual(retail_content.content_tuning_levels(0, 0, 0, 0), (1, 1))
 
 
 import db2_casc  # noqa: E402

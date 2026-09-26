@@ -49,6 +49,11 @@ TDB_TABLES=(
     skill_tiers trainer trainer_spell creature_trainer
     creature creature_template creature_template_model creature_template_difficulty
     creature_addon creature_template_addon creature_formations waypoint_path waypoint_path_node game_event_creature
+    gameobject gameobject_template gameobject_template_addon game_event_gameobject
+    quest_template quest_template_addon quest_offer_reward quest_request_items quest_objectives quest_poi quest_poi_points
+    creature_queststarter creature_questender gameobject_queststarter gameobject_questender
+    npc_vendor gossip_menu gossip_menu_option npc_text creature_template_gossip points_of_interest
+    creature_loot_template gameobject_loot_template reference_loot_template item_loot_template
 )
 TDB_ARGS=()
 for table in "${TDB_TABLES[@]}"; do
