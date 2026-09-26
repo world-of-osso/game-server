@@ -5,8 +5,10 @@ use rusqlite::OpenFlags;
 
 use super::*;
 
-/// Stormwind bank Guild Vault (AzerothCore entry 187329, display 7607).
-const STORMWIND_VAULT: u32 = 187329;
+/// Stormwind bank Guild Vault (TrinityCore entry 205107, guid 220030, display 7607); Retail
+/// Stormwind has one entry per vault, 205104-205107.
+const STORMWIND_VAULT: u32 = 205107;
+const STORMWIND_VAULTS: std::ops::RangeInclusive<u32> = 205104..=205107;
 
 fn spawns() -> Option<GameObjectSpawns> {
     let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/world.db");
@@ -21,16 +23,19 @@ fn spawns() -> Option<GameObjectSpawns> {
 #[test]
 fn eastern_kingdoms_guild_vaults_load_with_retail_display_boxes() {
     let Some(spawns) = spawns() else { return };
-    // Stormwind 4, Ironforge 2, Undercity 4, Booty Bay 2 (AzerothCore map 0 type 34).
+    // Stormwind 4, Ironforge 2, Undercity 4, Booty Bay 2 (TrinityCore map 0 type 34).
     let vaults = spawns.0.iter().filter(|s| s.info.go_type == 34).count();
     assert_eq!(vaults, 12);
     let stormwind: Vec<_> = spawns
         .0
         .iter()
-        .filter(|s| s.info.entry == STORMWIND_VAULT)
+        .filter(|s| STORMWIND_VAULTS.contains(&s.info.entry))
         .collect();
     assert_eq!(stormwind.len(), 4);
-    let vault = stormwind[0];
+    let vault = stormwind
+        .iter()
+        .find(|s| s.info.entry == STORMWIND_VAULT)
+        .unwrap();
     assert_eq!(vault.info.name, "Guild Vault");
     assert_eq!(vault.info.display_id, 7607);
     // Retail GameObjectDisplayInfo 7607 GeoBox.
@@ -68,14 +73,19 @@ fn bundle_places_the_vault_in_server_space() {
     assert_eq!(info, vault.info);
 }
 
+const GOLDSHIRE_MAILBOX: u32 = 20_209_585;
+
 #[test]
 fn eastern_kingdoms_mailboxes_spawn_with_retail_display_boxes() {
     let Some(spawns) = spawns() else { return };
-    // AzerothCore map 0 type 19 rows with a Retail GameObjectDisplayInfo box.
+    // TrinityCore map 0 base-phase type 19 rows with a Retail GameObjectDisplayInfo box.
     let mailboxes: Vec<_> = spawns.0.iter().filter(|s| s.info.go_type == 19).collect();
-    assert_eq!(mailboxes.len(), 56);
-    // The Lion's Pride Inn mailbox in Goldshire (AzerothCore guid 26784).
-    let goldshire = mailboxes.iter().find(|s| s.guid == 26784).unwrap();
+    assert_eq!(mailboxes.len(), 75);
+    // The Lion's Pride Inn mailbox in Goldshire (TrinityCore guid 209585 + 20,000,000).
+    let goldshire = mailboxes
+        .iter()
+        .find(|s| s.guid == GOLDSHIRE_MAILBOX)
+        .unwrap();
     assert_eq!(goldshire.info.name, "Mailbox");
     assert_eq!(goldshire.info.display_id, 1907);
     assert!((goldshire.position.x - -9455.99).abs() < 1e-2);

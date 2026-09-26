@@ -338,8 +338,8 @@ impl Harness {
         let mut spawn = spawns
             .0
             .into_iter()
-            .find(|spawn| spawn.info.entry == 187329)
-            .expect("Stormwind Guild Vault");
+            .find(|spawn| spawn.info.entry == 205107)
+            .expect("Stormwind Guild Vault (TrinityCore entry 205107)");
         spawn.position = Vec3::new(3.0, 0.0, 0.0);
         spawn.orientation = 0.0;
         spawn.bounds.orientation = 0.0;
@@ -356,13 +356,13 @@ impl Harness {
         object
     }
 
-    /// Spawn the Goldshire mailbox (AzerothCore guid 26784) 2 yd away and use it.
+    /// Spawn the Goldshire mailbox (TrinityCore guid 209585 + 20,000,000) 2 yd away and use it.
     pub fn open_mailbox(&mut self) -> Entity {
         let spawns = crate::game_objects::load_game_object_spawns(&self.conn).unwrap();
         let mut spawn = spawns
             .0
             .into_iter()
-            .find(|spawn| spawn.guid == 26784)
+            .find(|spawn| spawn.guid == 20_209_585)
             .expect("Goldshire mailbox");
         spawn.position = Vec3::new(2.0, 0.0, 0.0);
         spawn.orientation = 0.0;

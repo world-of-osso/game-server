@@ -6,11 +6,17 @@ use crate::quest_data::test_quest_db;
 
 const DEPUTY_WILLEM: u32 = 823;
 const MARSHAL_MCBRIDE: u32 = 197;
-const A_THREAT_WITHIN: u32 = 783;
-const KOBOLD_CAMP_CLEANUP: u32 = 7;
-const EAGAN_PELTSKINNER: u32 = 5261;
-const KOBOLD_VERMIN: u32 = 6;
-const KOBOLD_WORKER: u32 = 257;
+// Retail Northshire's warrior chain (TrinityCore; Cataclysm removed A Threat Within and
+// Kobold Camp Cleanup): Beating Them Back! → Lions for Lambs → Join the Battle! →
+// They Sent Assassins. ContentTuning 1476 (levels 1-10), Human-only race mask.
+const BEATING_THEM_BACK: u32 = 28766;
+const LIONS_FOR_LAMBS: u32 = 28774;
+const JOIN_THE_BATTLE: u32 = 28789;
+const THEY_SENT_ASSASSINS: u32 = 28797;
+/// Beating Them Back!'s hunter variant (AllowableClasses 128).
+const BEATING_THEM_BACK_HUNTER: u32 = 28757;
+const BLACKROCK_WORG: u32 = 49871;
+const BLACKROCK_SPY: u32 = 49874;
 
 const HUMAN_WARRIOR: QuestPlayer = QuestPlayer {
     level: 1,
@@ -40,36 +46,51 @@ fn no_items(_: u32) -> u32 {
 }
 
 #[test]
-fn willem_offers_a_threat_within_but_not_its_follow_ups() {
+fn mcbride_offers_a_warrior_beating_them_back_but_not_its_follow_ups() {
     let Some(db) = test_quest_db() else { return };
     let log = QuestLogData::default();
 
-    let list = giver_quest_list(db, &log, HUMAN_WARRIOR, DEPUTY_WILLEM, no_items);
+    let list = giver_quest_list(db, &log, HUMAN_WARRIOR, MARSHAL_MCBRIDE, no_items);
+    let offered: Vec<(u32, &str, QuestGiverQuestState)> = list
+        .iter()
+        .map(|entry| (entry.quest_id, entry.title.as_str(), entry.state))
+        .collect();
 
-    assert_eq!(
-        list.iter()
-            .map(|entry| (entry.quest_id, entry.title.as_str(), entry.state))
-            .collect::<Vec<_>>(),
-        vec![(
-            A_THREAT_WITHIN,
-            "A Threat Within",
-            QuestGiverQuestState::Available
-        )]
+    assert!(offered.contains(&(
+        BEATING_THEM_BACK,
+        "Beating Them Back!",
+        QuestGiverQuestState::Available
+    )));
+    assert!(
+        !offered
+            .iter()
+            .any(|(id, _, _)| [LIONS_FOR_LAMBS, BEATING_THEM_BACK_HUNTER].contains(id)),
+        "{offered:?}"
     );
     assert_eq!(
-        giver_status(db, &log, HUMAN_WARRIOR, DEPUTY_WILLEM, no_items),
+        giver_status(db, &log, HUMAN_WARRIOR, MARSHAL_MCBRIDE, no_items),
         QuestGiverStatus::Available
     );
 }
 
 #[test]
-fn kobold_camp_cleanup_needs_a_threat_within_turned_in() {
+fn lions_for_lambs_needs_beating_them_back_turned_in() {
     let Some(db) = test_quest_db() else { return };
-    let quest = &db.quests[&KOBOLD_CAMP_CLEANUP];
+    let quest = &db.quests[&LIONS_FOR_LAMBS];
 
     let fresh = can_take(db, &QuestLogData::default(), HUMAN_WARRIOR, quest);
-    let in_log = can_take(db, &log_with(&[A_THREAT_WITHIN], &[]), HUMAN_WARRIOR, quest);
-    let rewarded = can_take(db, &log_with(&[], &[A_THREAT_WITHIN]), HUMAN_WARRIOR, quest);
+    let in_log = can_take(
+        db,
+        &log_with(&[BEATING_THEM_BACK], &[]),
+        HUMAN_WARRIOR,
+        quest,
+    );
+    let rewarded = can_take(
+        db,
+        &log_with(&[], &[BEATING_THEM_BACK]),
+        HUMAN_WARRIOR,
+        quest,
+    );
 
     assert_eq!(fresh, Err(QuestFailedReason::DontHaveRequirement));
     assert_eq!(in_log, Err(QuestFailedReason::DontHaveRequirement));
@@ -77,17 +98,17 @@ fn kobold_camp_cleanup_needs_a_threat_within_turned_in() {
 }
 
 #[test]
-fn mcbride_marks_reward_for_a_threat_within_and_then_offers_kobold_camp_cleanup() {
+fn willem_marks_reward_for_join_the_battle_and_then_offers_they_sent_assassins() {
     let Some(db) = test_quest_db() else { return };
-    let accepted = log_with(&[A_THREAT_WITHIN], &[]);
-    let turned_in = log_with(&[], &[A_THREAT_WITHIN]);
+    let accepted = log_with(&[JOIN_THE_BATTLE], &[BEATING_THEM_BACK, LIONS_FOR_LAMBS]);
+    let turned_in = log_with(&[], &[BEATING_THEM_BACK, LIONS_FOR_LAMBS, JOIN_THE_BATTLE]);
 
     assert_eq!(
-        giver_status(db, &accepted, HUMAN_WARRIOR, MARSHAL_MCBRIDE, no_items),
+        giver_status(db, &accepted, HUMAN_WARRIOR, DEPUTY_WILLEM, no_items),
         QuestGiverStatus::Reward
     );
     assert_eq!(
-        giver_status(db, &turned_in, HUMAN_WARRIOR, MARSHAL_MCBRIDE, no_items),
+        giver_status(db, &turned_in, HUMAN_WARRIOR, DEPUTY_WILLEM, no_items),
         QuestGiverStatus::Available
     );
     let offered: Vec<u32> =
@@ -95,55 +116,58 @@ fn mcbride_marks_reward_for_a_threat_within_and_then_offers_kobold_camp_cleanup(
             .iter()
             .map(|entry| entry.quest_id)
             .collect();
-    assert!(offered.contains(&EAGAN_PELTSKINNER));
-    assert!(!offered.contains(&A_THREAT_WITHIN));
+    assert!(offered.contains(&THEY_SENT_ASSASSINS));
+    assert!(!offered.contains(&JOIN_THE_BATTLE));
 }
 
 #[test]
-fn eight_kobold_vermin_kills_complete_kobold_camp_cleanup() {
+fn six_blackrock_worg_kills_complete_beating_them_back() {
     let Some(db) = test_quest_db() else { return };
-    let mut log = log_with(&[KOBOLD_CAMP_CLEANUP], &[A_THREAT_WITHIN]);
+    let mut log = log_with(&[BEATING_THEM_BACK], &[]);
 
-    assert!(!credit_kill(db, &mut log, KOBOLD_WORKER));
-    for _ in 0..7 {
-        assert!(credit_kill(db, &mut log, KOBOLD_VERMIN));
+    assert!(!credit_kill(db, &mut log, BLACKROCK_SPY));
+    for _ in 0..5 {
+        assert!(credit_kill(db, &mut log, BLACKROCK_WORG));
     }
-    assert!(!is_complete_in_log(db, &log, KOBOLD_CAMP_CLEANUP, no_items));
-    assert!(credit_kill(db, &mut log, KOBOLD_VERMIN));
-    assert!(!credit_kill(db, &mut log, KOBOLD_VERMIN));
+    assert!(!is_complete_in_log(db, &log, BEATING_THEM_BACK, no_items));
+    assert!(credit_kill(db, &mut log, BLACKROCK_WORG));
+    assert!(!credit_kill(db, &mut log, BLACKROCK_WORG));
 
-    assert_eq!(log.active(KOBOLD_CAMP_CLEANUP).unwrap().counts, vec![8]);
-    assert!(is_complete_in_log(db, &log, KOBOLD_CAMP_CLEANUP, no_items));
+    assert_eq!(log.active(BEATING_THEM_BACK).unwrap().counts, vec![6]);
+    assert!(is_complete_in_log(db, &log, BEATING_THEM_BACK, no_items));
     assert_eq!(
         giver_status(db, &log, HUMAN_WARRIOR, MARSHAL_MCBRIDE, no_items),
         QuestGiverStatus::Reward
     );
 }
 
+/// The quest scales to the player (QuestLevel -1): at level 10, ContentTuning
+/// 1476's top, Retail still shows it as a normal quest.
 #[test]
-fn level_ten_sees_a_threat_within_as_trivial() {
+fn level_ten_sees_beating_them_back_as_a_normal_quest() {
     let Some(db) = test_quest_db() else { return };
     let player = QuestPlayer {
         level: 10,
         ..HUMAN_WARRIOR
     };
 
+    assert_eq!(db.quests[&BEATING_THEM_BACK].level, -1);
     assert_eq!(
         giver_status(
             db,
             &QuestLogData::default(),
             player,
-            DEPUTY_WILLEM,
+            MARSHAL_MCBRIDE,
             no_items
         ),
-        QuestGiverStatus::LowLevelAvailable
+        QuestGiverStatus::Available
     );
 }
 
 #[test]
 fn orc_cannot_take_alliance_quest_and_log_caps_at_35() {
     let Some(db) = test_quest_db() else { return };
-    let quest = &db.quests[&A_THREAT_WITHIN];
+    let quest = &db.quests[&BEATING_THEM_BACK];
     let orc = QuestPlayer {
         race: 2,
         ..HUMAN_WARRIOR
@@ -160,22 +184,22 @@ fn orc_cannot_take_alliance_quest_and_log_caps_at_35() {
     );
 }
 
-/// Wolves Across the Border (33): 8 Diseased Wolf Pelts.
-const WOLVES_ACROSS_THE_BORDER: u32 = 33;
-const DISEASED_WOLF_PELT: u32 = 50432;
+/// Riverpaw Gnoll Bounty (11, Westfall): 8 Painted Gnoll Armbands.
+const RIVERPAW_GNOLL_BOUNTY: u32 = 11;
+const PAINTED_GNOLL_ARMBAND: u32 = 782;
 
 #[test]
 fn quest_needs_its_item_until_the_bags_hold_the_count() {
     let Some(db) = test_quest_db() else {
         return;
     };
-    let log = log_with(&[WOLVES_ACROSS_THE_BORDER], &[]);
-    assert!(quest_needs_item(db, &log, DISEASED_WOLF_PELT, |_| 7));
-    assert!(!quest_needs_item(db, &log, DISEASED_WOLF_PELT, |_| 8));
+    let log = log_with(&[RIVERPAW_GNOLL_BOUNTY], &[]);
+    assert!(quest_needs_item(db, &log, PAINTED_GNOLL_ARMBAND, |_| 7));
+    assert!(!quest_needs_item(db, &log, PAINTED_GNOLL_ARMBAND, |_| 8));
     assert!(!quest_needs_item(
         db,
         &log_with(&[], &[]),
-        DISEASED_WOLF_PELT,
+        PAINTED_GNOLL_ARMBAND,
         no_items
     ));
     assert!(!quest_needs_item(db, &log, 755, no_items), "Melted Candle");

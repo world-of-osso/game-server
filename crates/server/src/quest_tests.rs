@@ -25,13 +25,22 @@ use crate::quest_data::test_quest_db;
 
 const DEPUTY_WILLEM: u32 = 823;
 const MARSHAL_MCBRIDE: u32 = 197;
-const KOBOLD_VERMIN: u32 = 6;
-const A_THREAT_WITHIN: u32 = 783;
-const KOBOLD_CAMP_CLEANUP: u32 = 7;
-const BROTHERHOOD_OF_THIEVES: u32 = 18;
-const RED_BURLAP_BANDANA: u32 = 752;
-const MILITIA_DAGGER: u32 = 2224;
-const MILITIA_HAMMER: u32 = 5580;
+const DEPUTY_RAINER: u32 = 963;
+const BLACKROCK_WORG: u32 = 49871;
+// Retail Northshire's warrior chain (TrinityCore; Cataclysm removed A Threat Within,
+// Kobold Camp Cleanup and Brotherhood of Thieves).
+const BEATING_THEM_BACK: u32 = 28766;
+const LIONS_FOR_LAMBS: u32 = 28774;
+const JOIN_THE_BATTLE: u32 = 28789;
+const THEY_SENT_ASSASSINS: u32 = 28797;
+/// Westfall: Westbrook Garrison Needs Help! (239) leads to Deputy Rainer's Riverpaw
+/// Gnoll Bounty (11), 8 Painted Gnoll Armbands for a Militia Buckler or Urchin's Pants
+/// (AzerothCore's choice rewards; TrinityCore sniffed none).
+const WESTBROOK_GARRISON_NEEDS_HELP: u32 = 239;
+const RIVERPAW_GNOLL_BOUNTY: u32 = 11;
+const PAINTED_GNOLL_ARMBAND: u32 = 782;
+const MILITIA_BUCKLER: u32 = 2249;
+const URCHINS_PANTS: u32 = 2238;
 
 fn item_templates() -> ItemTemplates {
     static TEMPLATES: OnceLock<ItemTemplates> = OnceLock::new();
@@ -282,11 +291,13 @@ fn bag_items(app: &App, client: &Client) -> Vec<(u32, u32)> {
 }
 
 #[test]
-fn a_threat_within_accepted_from_willem_and_turned_in_at_mcbride_is_persisted() {
+fn join_the_battle_accepted_from_mcbride_and_turned_in_at_willem_is_persisted() {
     let Some(mut app) = setup_app() else { return };
     let client = spawn_client(&mut app, 1);
-    let willem = spawn_npc(&mut app, DEPUTY_WILLEM, 2.0);
-    let mcbride = spawn_npc(&mut app, MARSHAL_MCBRIDE, 3.0);
+    let mcbride = spawn_npc(&mut app, MARSHAL_MCBRIDE, 2.0);
+    let willem = spawn_npc(&mut app, DEPUTY_WILLEM, 3.0);
+    mark_rewarded(&app, &client, BEATING_THEM_BACK);
+    mark_rewarded(&app, &client, LIONS_FOR_LAMBS);
     assert!(enter_world(&mut app, &client).entries.is_empty());
     assert_eq!(
         received::<PlayerXpUpdate>(&mut app, &client),
@@ -297,32 +308,36 @@ fn a_threat_within_accepted_from_willem_and_turned_in_at_mcbride_is_persisted() 
         }]
     );
     assert_eq!(
-        statuses(&mut app, &client, &[willem, mcbride]),
+        statuses(&mut app, &client, &[mcbride, willem]),
         vec![QuestGiverStatus::Available, QuestGiverStatus::None]
     );
 
-    request(&mut app, &client, QuestGiverHello { npc: willem });
+    request(&mut app, &client, QuestGiverHello { npc: mcbride });
     let list = received::<QuestGiverQuestList>(&mut app, &client)
         .pop()
         .unwrap();
-    assert_eq!(list.quests[0].quest_id, A_THREAT_WITHIN);
-    assert_eq!(list.quests[0].state, QuestGiverQuestState::Available);
-    accept(&mut app, &client, willem, A_THREAT_WITHIN);
+    assert!(
+        list.quests
+            .iter()
+            .any(|quest| quest.quest_id == JOIN_THE_BATTLE
+                && quest.state == QuestGiverQuestState::Available)
+    );
+    accept(&mut app, &client, mcbride, JOIN_THE_BATTLE);
 
     let update = last_update(&mut app, &client);
     assert_eq!(update.changed.len(), 1);
     let entry = &update.changed[0];
     assert_eq!(
         (entry.quest_id, entry.title.as_str()),
-        (A_THREAT_WITHIN, "A Threat Within")
+        (JOIN_THE_BATTLE, "Join the Battle!")
     );
     assert!(entry.completed && entry.watched && entry.objectives.is_empty());
-    assert_eq!(update.watched_quest_ids, vec![A_THREAT_WITHIN]);
+    assert_eq!(update.watched_quest_ids, vec![JOIN_THE_BATTLE]);
     let markers = received::<QuestGiverStatusMultiple>(&mut app, &client)
         .pop()
         .unwrap();
     assert!(markers.statuses.contains(&QuestGiverStatusEntry {
-        npc: mcbride,
+        npc: willem,
         status: QuestGiverStatus::Reward,
     }));
 
@@ -330,25 +345,26 @@ fn a_threat_within_accepted_from_willem_and_turned_in_at_mcbride_is_persisted() 
         &mut app,
         &client,
         QuestGiverCompleteQuest {
-            npc: mcbride,
-            quest_id: A_THREAT_WITHIN,
+            npc: willem,
+            quest_id: JOIN_THE_BATTLE,
         },
     );
     assert_eq!(
         received::<QuestGiverOfferReward>(&mut app, &client).len(),
         1
     );
-    turn_in(&mut app, &client, mcbride, A_THREAT_WITHIN, None);
+    turn_in(&mut app, &client, willem, JOIN_THE_BATTLE, None);
 
     let complete = received::<QuestGiverQuestComplete>(&mut app, &client);
-    assert_eq!(complete[0].quest_id, A_THREAT_WITHIN);
-    assert_eq!(complete[0].xp, 100);
+    assert_eq!(complete[0].quest_id, JOIN_THE_BATTLE);
+    // QuestXP level 1 (QuestLevel -1 scales to the player), RewardXPDifficulty 2.
+    assert_eq!(complete[0].xp, 50);
     assert_eq!(
         received::<LogXpGain>(&mut app, &client),
         vec![LogXpGain {
             victim: None,
-            original: 100,
-            amount: 100,
+            original: 50,
+            amount: 50,
             group_bonus: 1.0,
             reason: XpGainReason::Quest,
         }]
@@ -356,33 +372,32 @@ fn a_threat_within_accepted_from_willem_and_turned_in_at_mcbride_is_persisted() 
     assert_eq!(
         received::<PlayerXpUpdate>(&mut app, &client),
         vec![PlayerXpUpdate {
-            xp: 100,
+            xp: 50,
             next_level_xp: 250,
             rested_xp: 0,
         }]
     );
     assert_eq!(
         last_update(&mut app, &client).removed,
-        vec![A_THREAT_WITHIN]
+        vec![JOIN_THE_BATTLE]
     );
     let next = received::<QuestGiverQuestDetails>(&mut app, &client);
-    assert_eq!(next[0].quest_id, KOBOLD_CAMP_CLEANUP);
+    assert_eq!(next[0].quest_id, THEY_SENT_ASSASSINS);
     let saved = load_quest_log(db(&app), client.character_id);
     assert!(saved.active.is_empty() && saved.watched.is_empty());
-    assert!(saved.is_rewarded(A_THREAT_WITHIN));
-    // QuestXP level 1, RewardXPDifficulty 3; level 2 needs 250.
+    assert!(saved.is_rewarded(JOIN_THE_BATTLE));
     assert_eq!(
         crate::persistence_progression::load_xp(db(&app), client.character_id),
-        100
+        50
     );
     assert_eq!(
-        statuses(&mut app, &client, &[mcbride]),
+        statuses(&mut app, &client, &[willem]),
         vec![QuestGiverStatus::Available]
     );
 }
 
 #[test]
-fn kobold_camp_cleanup_is_blocked_until_a_threat_within_is_turned_in() {
+fn lions_for_lambs_is_blocked_until_beating_them_back_is_turned_in() {
     let Some(mut app) = setup_app() else { return };
     let client = spawn_client(&mut app, 1);
     let mcbride = spawn_npc(&mut app, MARSHAL_MCBRIDE, 2.0);
@@ -393,16 +408,16 @@ fn kobold_camp_cleanup_is_blocked_until_a_threat_within_is_turned_in() {
         &client,
         QuestGiverQueryQuest {
             npc: mcbride,
-            quest_id: KOBOLD_CAMP_CLEANUP,
+            quest_id: LIONS_FOR_LAMBS,
         },
     );
     let expected = vec![QuestFailed {
-        quest_id: KOBOLD_CAMP_CLEANUP,
+        quest_id: LIONS_FOR_LAMBS,
         reason: QuestFailedReason::DontHaveRequirement,
     }];
     assert_eq!(received::<QuestFailed>(&mut app, &client), expected);
     assert!(received::<QuestGiverQuestDetails>(&mut app, &client).is_empty());
-    accept(&mut app, &client, mcbride, KOBOLD_CAMP_CLEANUP);
+    accept(&mut app, &client, mcbride, LIONS_FOR_LAMBS);
     assert_eq!(received::<QuestFailed>(&mut app, &client), expected);
     assert!(
         load_quest_log(db(&app), client.character_id)
@@ -410,28 +425,27 @@ fn kobold_camp_cleanup_is_blocked_until_a_threat_within_is_turned_in() {
             .is_empty()
     );
 
-    mark_rewarded(&app, &client, A_THREAT_WITHIN);
-    accept(&mut app, &client, mcbride, KOBOLD_CAMP_CLEANUP);
+    mark_rewarded(&app, &client, BEATING_THEM_BACK);
+    accept(&mut app, &client, mcbride, LIONS_FOR_LAMBS);
     assert!(received::<QuestFailed>(&mut app, &client).is_empty());
     assert!(
         load_quest_log(db(&app), client.character_id)
-            .active(KOBOLD_CAMP_CLEANUP)
+            .active(LIONS_FOR_LAMBS)
             .is_some()
     );
 }
 
 #[test]
-fn kobold_vermin_kills_progress_kobold_camp_cleanup_to_turn_in() {
+fn blackrock_worg_kills_progress_beating_them_back_to_turn_in() {
     let Some(mut app) = setup_app() else { return };
     let client = spawn_client(&mut app, 1);
     let mcbride = spawn_npc(&mut app, MARSHAL_MCBRIDE, 2.0);
-    mark_rewarded(&app, &client, A_THREAT_WITHIN);
     enter_world(&mut app, &client);
-    accept(&mut app, &client, mcbride, KOBOLD_CAMP_CLEANUP);
+    accept(&mut app, &client, mcbride, BEATING_THEM_BACK);
     received::<QuestLogUpdate>(&mut app, &client);
     let gold_before = persistence::load_inventory(db(&app), client.character_id).gold;
 
-    kill(&mut app, &client, KOBOLD_VERMIN, 3);
+    kill(&mut app, &client, BLACKROCK_WORG, 3);
     let objective = &last_update(&mut app, &client).changed[0].objectives[0];
     assert_eq!(
         (
@@ -439,31 +453,33 @@ fn kobold_vermin_kills_progress_kobold_camp_cleanup_to_turn_in() {
             objective.current,
             objective.required
         ),
-        ("Kobold Vermin slain", 3, 8)
+        ("Blackrock Worg slain", 3, 6)
     );
-    kill(&mut app, &client, KOBOLD_VERMIN, 6);
+    kill(&mut app, &client, BLACKROCK_WORG, 4);
     let entry = &last_update(&mut app, &client).changed[0];
-    assert_eq!(entry.objectives[0].current, 8);
+    assert_eq!(entry.objectives[0].current, 6);
     assert!(entry.completed && entry.objectives[0].completed);
     assert!(!entry.pois.is_empty());
 
-    turn_in(&mut app, &client, mcbride, KOBOLD_CAMP_CLEANUP, None);
+    turn_in(&mut app, &client, mcbride, BEATING_THEM_BACK, None);
+    // TrinityCore money is RewardMoneyDifficulty × QuestMoneyReward (not imported) and
+    // AzerothCore has no Beating Them Back!: no money.
     assert_eq!(
         received::<QuestGiverQuestComplete>(&mut app, &client)[0].money,
-        25
+        0
     );
     let inventory = persistence::load_inventory(db(&app), client.character_id);
-    assert_eq!(inventory.gold, gold_before + 25);
-    assert!(load_quest_log(db(&app), client.character_id).is_rewarded(KOBOLD_CAMP_CLEANUP));
+    assert_eq!(inventory.gold, gold_before);
+    assert!(load_quest_log(db(&app), client.character_id).is_rewarded(BEATING_THEM_BACK));
 }
 
-fn grant_bandanas(app: &mut App, client: &Client, count: u32) {
+fn grant_armbands(app: &mut App, client: &Client, count: u32) {
     let db = db(app);
     let mut inventory = persistence::load_inventory(db, client.character_id);
     inventory.items.push(InventoryItemData {
         item_guid: persistence::next_id(db, "item_instance"),
-        item_id: RED_BURLAP_BANDANA,
-        name: "Red Burlap Bandana".into(),
+        item_id: PAINTED_GNOLL_ARMBAND,
+        name: "Painted Gnoll Armband".into(),
         quality: 1,
         required_level: 0,
         stack_count: count,
@@ -478,26 +494,26 @@ fn grant_bandanas(app: &mut App, client: &Client, count: u32) {
 }
 
 #[test]
-fn brotherhood_of_thieves_counts_bag_items_and_grants_the_chosen_reward() {
+fn riverpaw_gnoll_bounty_counts_bag_items_and_grants_the_chosen_reward() {
     let Some(mut app) = setup_app() else { return };
     let client = spawn_client(&mut app, 2);
-    let willem = spawn_npc(&mut app, DEPUTY_WILLEM, 2.0);
-    mark_rewarded(&app, &client, A_THREAT_WITHIN);
+    let rainer = spawn_npc(&mut app, DEPUTY_RAINER, 2.0);
+    mark_rewarded(&app, &client, WESTBROOK_GARRISON_NEEDS_HELP);
     enter_world(&mut app, &client);
-    accept(&mut app, &client, willem, BROTHERHOOD_OF_THIEVES);
+    accept(&mut app, &client, rainer, RIVERPAW_GNOLL_BOUNTY);
     received::<QuestLogUpdate>(&mut app, &client);
 
-    grant_bandanas(&mut app, &client, 8);
+    grant_armbands(&mut app, &client, 8);
     let entry = &last_update(&mut app, &client).changed[0];
-    assert_eq!(entry.objectives[0].text, "Red Burlap Bandana");
+    assert_eq!(entry.objectives[0].text, "Painted Gnoll Armband");
     assert_eq!((entry.objectives[0].current, entry.completed), (8, true));
 
     request(
         &mut app,
         &client,
         QuestGiverCompleteQuest {
-            npc: willem,
-            quest_id: BROTHERHOOD_OF_THIEVES,
+            npc: rainer,
+            quest_id: RIVERPAW_GNOLL_BOUNTY,
         },
     );
     let offer = received::<QuestGiverOfferReward>(&mut app, &client)
@@ -509,17 +525,13 @@ fn brotherhood_of_thieves_counts_bag_items_and_grants_the_chosen_reward() {
         .iter()
         .map(|item| item.item_id)
         .collect();
-    // Militia Dagger, Hammer, Shortsword, Warhammer, Quarterstaff.
-    assert_eq!(
-        choices,
-        vec![MILITIA_DAGGER, MILITIA_HAMMER, 1161, 5579, 1159]
-    );
-    turn_in(&mut app, &client, willem, BROTHERHOOD_OF_THIEVES, None);
+    assert_eq!(choices, vec![MILITIA_BUCKLER, URCHINS_PANTS]);
+    turn_in(&mut app, &client, rainer, RIVERPAW_GNOLL_BOUNTY, None);
     assert_eq!(
         received::<QuestFailed>(&mut app, &client)[0].reason,
         QuestFailedReason::InvalidRewardChoice
     );
-    turn_in(&mut app, &client, willem, BROTHERHOOD_OF_THIEVES, Some(1));
+    turn_in(&mut app, &client, rainer, RIVERPAW_GNOLL_BOUNTY, Some(1));
 
     let complete = received::<QuestGiverQuestComplete>(&mut app, &client)
         .pop()
@@ -527,46 +539,46 @@ fn brotherhood_of_thieves_counts_bag_items_and_grants_the_chosen_reward() {
     assert_eq!(
         complete.items,
         vec![QuestRewardItem {
-            item_id: MILITIA_HAMMER,
-            name: "Militia Hammer".into(),
+            item_id: URCHINS_PANTS,
+            name: "Urchin's Pants".into(),
             count: 1,
         }]
     );
     let items = bag_items(&app, &client);
-    assert!(items.contains(&(MILITIA_HAMMER, 1)));
+    assert!(items.contains(&(URCHINS_PANTS, 1)));
     assert!(
         !items
             .iter()
-            .any(|&(id, _)| id == MILITIA_DAGGER || id == RED_BURLAP_BANDANA)
+            .any(|&(id, _)| id == MILITIA_BUCKLER || id == PAINTED_GNOLL_ARMBAND)
     );
 }
 
 #[test]
-fn abandoning_a_threat_within_removes_it_and_willem_offers_it_again() {
+fn abandoning_beating_them_back_removes_it_and_mcbride_offers_it_again() {
     let Some(mut app) = setup_app() else { return };
     let client = spawn_client(&mut app, 1);
-    let willem = spawn_npc(&mut app, DEPUTY_WILLEM, 2.0);
+    let mcbride = spawn_npc(&mut app, MARSHAL_MCBRIDE, 2.0);
     enter_world(&mut app, &client);
-    accept(&mut app, &client, willem, A_THREAT_WITHIN);
+    accept(&mut app, &client, mcbride, BEATING_THEM_BACK);
     received::<QuestLogUpdate>(&mut app, &client);
 
     request(
         &mut app,
         &client,
         AbandonQuest {
-            quest_id: A_THREAT_WITHIN,
+            quest_id: BEATING_THEM_BACK,
         },
     );
 
     let update = last_update(&mut app, &client);
     assert_eq!(
         (update.removed, update.watched_quest_ids),
-        (vec![A_THREAT_WITHIN], vec![])
+        (vec![BEATING_THEM_BACK], vec![])
     );
     let saved = load_quest_log(db(&app), client.character_id);
     assert!(saved.active.is_empty() && saved.rewarded.is_empty());
     assert_eq!(
-        statuses(&mut app, &client, &[willem]),
+        statuses(&mut app, &client, &[mcbride]),
         vec![QuestGiverStatus::Available]
     );
 }
@@ -575,16 +587,16 @@ fn abandoning_a_threat_within_removes_it_and_willem_offers_it_again() {
 fn untracking_a_quest_persists_and_resends_the_watch_list() {
     let Some(mut app) = setup_app() else { return };
     let client = spawn_client(&mut app, 1);
-    let willem = spawn_npc(&mut app, DEPUTY_WILLEM, 2.0);
+    let mcbride = spawn_npc(&mut app, MARSHAL_MCBRIDE, 2.0);
     enter_world(&mut app, &client);
-    accept(&mut app, &client, willem, A_THREAT_WITHIN);
+    accept(&mut app, &client, mcbride, BEATING_THEM_BACK);
     received::<QuestLogUpdate>(&mut app, &client);
 
     request(
         &mut app,
         &client,
         SetQuestWatched {
-            quest_id: A_THREAT_WITHIN,
+            quest_id: BEATING_THEM_BACK,
             watched: false,
         },
     );
@@ -602,7 +614,7 @@ fn untracking_a_quest_persists_and_resends_the_watch_list() {
         .remove::<InWorld>();
     app.update();
     let snapshot = enter_world(&mut app, &client);
-    assert_eq!(snapshot.entries[0].quest_id, A_THREAT_WITHIN);
+    assert_eq!(snapshot.entries[0].quest_id, BEATING_THEM_BACK);
     assert!(snapshot.watched_quest_ids.is_empty());
 }
 
@@ -610,15 +622,15 @@ fn untracking_a_quest_persists_and_resends_the_watch_list() {
 fn quest_giver_out_of_range_is_too_far() {
     let Some(mut app) = setup_app() else { return };
     let client = spawn_client(&mut app, 1);
-    let willem = spawn_npc(&mut app, DEPUTY_WILLEM, 50.0);
+    let mcbride = spawn_npc(&mut app, MARSHAL_MCBRIDE, 50.0);
     enter_world(&mut app, &client);
 
-    accept(&mut app, &client, willem, A_THREAT_WITHIN);
+    accept(&mut app, &client, mcbride, BEATING_THEM_BACK);
 
     assert_eq!(
         received::<QuestFailed>(&mut app, &client),
         vec![QuestFailed {
-            quest_id: A_THREAT_WITHIN,
+            quest_id: BEATING_THEM_BACK,
             reason: QuestFailedReason::TooFar,
         }]
     );

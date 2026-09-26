@@ -29,6 +29,9 @@ const THARYNN_BOUDEN: u32 = 66;
 
 const LARGE_ROUND_SHIELD: u32 = 2129;
 const TARNISHED_CHAIN_VEST: u32 = 2379;
+/// Godric Rothgar's list slots (TrinityCore order).
+const VEST_SLOT: u32 = 0;
+const SHIELD_SLOT: u32 = 7;
 const SPRING_WATER: u32 = 159;
 const LINEN: u32 = 2589;
 /// Pattern: Blue Linen Vest: maxcount 1, incrtime 9000 at Tharynn Bouden.
@@ -323,18 +326,19 @@ fn opening_godric_rothgar_sends_his_armor_list_and_an_empty_buyback() {
     assert!(lists[0].can_repair);
     assert_eq!(
         names(&lists[0]),
+        // TrinityCore's Retail list order (npc_vendor.slot).
         vec![
-            (0, "Large Round Shield", 78),
-            (1, "Tarnished Chain Vest", 89),
+            (0, "Tarnished Chain Vest", 89),
+            (1, "Tarnished Chain Leggings", 90),
             (2, "Tarnished Chain Belt", 45),
-            (3, "Tarnished Chain Leggings", 90),
-            (4, "Tarnished Chain Boots", 67),
-            (5, "Tarnished Chain Bracers", 45),
-            (6, "Tarnished Chain Gloves", 45),
-            (7, "Small Shield", 36),
+            (3, "Tarnished Chain Boots", 67),
+            (4, "Tarnished Chain Bracers", 45),
+            (5, "Tarnished Chain Gloves", 45),
+            (6, "Small Shield", 36),
+            (7, "Large Round Shield", 78),
         ]
     );
-    let vest = &lists[0].items[1];
+    let vest = &lists[0].items[0];
     assert_eq!(
         (vest.stack_count, vest.num_available, vest.usable),
         (1, None, true)
@@ -348,7 +352,7 @@ fn buying_the_tarnished_chain_vest_costs_89_copper_and_lands_in_the_backpack() {
     let godric = h.open(GODRIC_ROTHGAR);
     assert_eq!(h.inventory().gold, 100_000);
 
-    h.buy(godric, 1, TARNISHED_CHAIN_VEST, 1);
+    h.buy(godric, VEST_SLOT, TARNISHED_CHAIN_VEST, 1);
 
     assert!(h.failures().is_empty());
     assert_eq!(h.inventory().gold, 99_911);
@@ -366,17 +370,17 @@ fn buying_the_tarnished_chain_vest_costs_89_copper_and_lands_in_the_backpack() {
 fn buying_is_refused_without_the_vendor_open_or_the_money() {
     let Some(mut h) = harness() else { return };
     let godric = h.spawn_vendor(GODRIC_ROTHGAR);
-    h.buy(godric, 1, TARNISHED_CHAIN_VEST, 1);
+    h.buy(godric, VEST_SLOT, TARNISHED_CHAIN_VEST, 1);
     assert_eq!(h.failures(), vec![MerchantError::NotInteracting]);
 
     h.send::<_, InteractionChannel>(InteractNpc {
         npc: godric.to_bits(),
     });
     h.set_gold(88);
-    h.buy(godric, 1, TARNISHED_CHAIN_VEST, 1);
+    h.buy(godric, VEST_SLOT, TARNISHED_CHAIN_VEST, 1);
     assert_eq!(h.failures(), vec![MerchantError::NotEnoughMoney]);
-    // Slot 1 holds the vest, not the shield.
-    h.buy(godric, 1, LARGE_ROUND_SHIELD, 1);
+    // The vest's slot does not hold the shield.
+    h.buy(godric, VEST_SLOT, LARGE_ROUND_SHIELD, 1);
     assert_eq!(h.failures(), vec![MerchantError::ItemNotFound]);
     assert_eq!(h.inventory().gold, 88);
     assert!(h.count_of(TARNISHED_CHAIN_VEST).is_empty());
@@ -387,13 +391,13 @@ fn a_purchase_that_does_not_fit_the_backpack_changes_nothing() {
     let Some(mut h) = harness() else { return };
     let godric = h.open(GODRIC_ROTHGAR);
     // 16 backpack slots, 3 hold the starter stacks.
-    h.buy(godric, 0, LARGE_ROUND_SHIELD, 14);
+    h.buy(godric, SHIELD_SLOT, LARGE_ROUND_SHIELD, 14);
 
     assert_eq!(h.failures(), vec![MerchantError::InventoryFull]);
     assert_eq!(h.inventory().gold, 100_000);
     assert!(h.count_of(LARGE_ROUND_SHIELD).is_empty());
 
-    h.buy(godric, 0, LARGE_ROUND_SHIELD, 13);
+    h.buy(godric, SHIELD_SLOT, LARGE_ROUND_SHIELD, 13);
     assert!(h.failures().is_empty());
     assert_eq!(h.count_of(LARGE_ROUND_SHIELD), vec![1; 13]);
     assert_eq!(h.inventory().gold, 100_000 - 13 * 78);
@@ -476,7 +480,8 @@ fn tharynn_boudens_limited_pattern_sells_out_after_one() {
     let Some(mut h) = harness() else { return };
     let tharynn = h.open(THARYNN_BOUDEN);
     let list = h.take::<VendorInventory>().remove(0);
-    assert_eq!(list.items.len(), 19);
+    // TrinityCore's Retail list.
+    assert_eq!(list.items.len(), 22);
     let pattern = list
         .items
         .iter()
@@ -490,7 +495,7 @@ fn tharynn_boudens_limited_pattern_sells_out_after_one() {
     assert!(h.failures().is_empty());
     let refreshed = h.take::<VendorInventory>();
     assert_eq!(refreshed.len(), 1);
-    assert_eq!(refreshed[0].items.len(), 18);
+    assert_eq!(refreshed[0].items.len(), 21);
     assert!(
         refreshed[0]
             .items

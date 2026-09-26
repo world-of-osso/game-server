@@ -318,22 +318,30 @@ fn orgrimmar_auctioneer_with_quest_flag_offers_gossip_option_to_horde_auction_ho
     };
     let drezmit = h.spawn_real_npc(AUCTIONEER_DREZMIT, 2.0);
     h.interact(drezmit);
-    let default_text = "Greetings, $n.".to_string();
+    // TrinityCore menu 12949: a quest-flavour option (GossipOptionNpc None) and the
+    // auction option (GossipOptionNpc Auctioneer → type 13, npcflag auctioneer, icon 6).
     assert_eq!(
         h.take::<InteractionOpened>(),
         vec![opened(
             drezmit,
             InteractionKind::Gossip(GossipMenu {
-                menu_id: 0,
-                text: default_text,
-                // AzerothCore default menu 0 option 11 (type 13, npcflag auctioneer).
-                options: vec![option(11, 6, "Auction!")],
+                menu_id: 12949,
+                text: "Feel free to browse the items up for bid. I can help you place an item up for auction too."
+                    .into(),
+                options: vec![
+                    option(
+                        0,
+                        0,
+                        "Have you seen anyone suspicious trying to sell a crate of objects recently?"
+                    ),
+                    option(1, 6, "Let me see the items up for auction."),
+                ],
             })
         )]
     );
     assert_eq!(h.session().unwrap().auction_house, None);
 
-    h.select(drezmit, 11);
+    h.select(drezmit, 1);
     assert_eq!(
         h.take::<InteractionOpened>(),
         vec![opened(
@@ -354,8 +362,8 @@ fn innkeeper_gossip_menu_lists_vendor_option_that_opens_vendor() {
     };
     let farley = h.spawn_real_npc(INNKEEPER_FARLEY, 2.0);
     h.interact(farley);
-    // gossip_menu_option rows of menu 1291; "Trick or Treat!" is a Hallow's End
-    // option whose holiday condition is not imported.
+    // TrinityCore gossip_menu_option rows of menu 1291 (Retail has no "Trick or Treat!"
+    // row there; AzerothCore's was a Hallow's End option).
     assert_eq!(
         h.take::<InteractionOpened>(),
         vec![opened(
@@ -364,16 +372,15 @@ fn innkeeper_gossip_menu_lists_vendor_option_that_opens_vendor() {
                 menu_id: 1291,
                 text: "Welcome to my Inn, weary traveler. What can I do for you?".into(),
                 options: vec![
-                    option(0, 0, "Trick or Treat!"),
+                    option(0, 0, "What can I do at an inn?"),
                     option(1, 5, "Make this inn your home."),
-                    option(2, 0, "What can I do at an inn?"),
-                    option(3, 1, "I want to browse your goods."),
+                    option(2, 1, "I want to browse your goods."),
                 ],
             })
         )]
     );
 
-    h.select(farley, 2);
+    h.select(farley, 0);
     let submenu = h.take::<InteractionOpened>();
     assert!(
         matches!(&submenu[..], [InteractionOpened { kind: InteractionKind::Gossip(menu), .. }] if menu.menu_id == 1221),
@@ -382,7 +389,7 @@ fn innkeeper_gossip_menu_lists_vendor_option_that_opens_vendor() {
 
     h.interact(farley);
     h.take::<InteractionOpened>();
-    h.select(farley, 3);
+    h.select(farley, 2);
     assert_eq!(
         h.take::<InteractionOpened>(),
         vec![opened(farley, InteractionKind::Role(NpcRole::Vendor))]
