@@ -260,6 +260,12 @@ fn on_network_visibility_added(
     mut index: ResMut<InterestIndex>,
 ) {
     if let Ok((position, map)) = positions.get(trigger.entity) {
+        if map.is_none() {
+            error!(
+                "{} is replicated without an InMap: no player sees it",
+                trigger.entity
+            );
+        }
         index.add_target(trigger.entity, *position, map.copied());
     }
     for connection in &connections {

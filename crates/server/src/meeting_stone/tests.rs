@@ -414,6 +414,11 @@ fn finished_cast_opens_the_portal_at_the_summoner_and_channels_for_two_minutes()
     let portals = h.portals();
     assert_eq!(portals.len(), 1);
     assert_eq!(portals[0].1, h.position(summoner));
+    // In the summoner's map copy, so the helper can see and click it.
+    assert_eq!(
+        h.app.world().get::<crate::maps::InMap>(portals[0].0),
+        Some(&crate::maps::InMap::continent(0))
+    );
     let channel = h.cast(summoner).expect("summoning channel");
     assert_eq!(channel.spell_id, SUMMONING_STONE_EFFECT);
     assert_eq!(channel.cast_type, CastType::Channel);

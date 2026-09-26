@@ -57,9 +57,10 @@ pub(crate) fn effect_trans_door(world: &mut World, ctx: &EffectCtx, effect: &Spe
         return;
     };
     let caster = ctx.caster;
-    let (Some(position), Some(rotation)) = (
+    let (Some(position), Some(rotation), Some(map)) = (
         world.get::<Position>(caster).copied(),
         world.get::<Rotation>(caster).copied(),
+        world.get::<crate::maps::InMap>(caster).copied(),
     ) else {
         return;
     };
@@ -68,6 +69,7 @@ pub(crate) fn effect_trans_door(world: &mut World, ctx: &EffectCtx, effect: &Spe
         .spawn((
             position,
             rotation,
+            map,
             template.bounds(rotation.y - FRAC_PI_2),
             template.info.clone(),
             Ritual {
