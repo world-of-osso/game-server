@@ -871,7 +871,11 @@ class AzerothCoreContentTests(unittest.TestCase):
         self.assertIn((159, "Refreshing Spring Water", 5), [row[:3] for row in self.vendor_items(465)])
 
     def test_wrath_only_items_are_dropped_and_reported(self):
-        self.assertEqual(self.rows("SELECT count(*) FROM content_item WHERE ID IN (41, 2892)"), [(0,)])
+        self.assertEqual(self.rows("SELECT count(*) FROM content_item WHERE ID = 41"), [(0,)])
+        # Retail's 2892 Empty Poison Vial is in content_item for TrinityCore's content, not as
+        # AzerothCore's Deadly Poison (no SourceEntry).
+        self.assertEqual(self.rows("SELECT Name, SourceEntry FROM content_item WHERE ID = 2892"),
+                         [("Empty Poison Vial", None)])
         self.assertEqual(self.dropped[("item_template", "entry=41", 41)], "no Retail row")
         self.assertEqual(
             self.dropped[("item_template", "entry=2892", 2892)], "Retail name 'Empty Poison Vial' != 'Deadly Poison'")
@@ -882,12 +886,14 @@ class AzerothCoreContentTests(unittest.TestCase):
         self.assertEqual(self.rows("SELECT Name, SourceEntry FROM content_item WHERE ID = 732"), [("Ripe Okra", 732)])
 
     def test_quests_are_kept_only_when_retail_has_the_id(self):
+        # 783 A Threat Within is in QuestV2 but Cataclysm removed it: Retail Deputy Willem
+        # gives TrinityCore's quests only, so nothing starts it.
         self.assertEqual(
             self.rows(
                 "SELECT q.ID, t.name FROM content_quest_template q JOIN content_creature_queststarter s ON s.quest = q.ID"
-                " JOIN creature_template t ON t.entry = s.id WHERE q.ID IN (16, 783)"
+                " JOIN content_creature_template t ON t.entry = s.id WHERE q.ID IN (16, 783, 28789)"
             ),
-            [(783, "Deputy Willem")],
+            [(28789, "Marshal McBride")],
         )
         self.assertEqual(self.dropped[("quest_template", "ID=16", 16)], "quest id not in Retail QuestV2")
 
@@ -916,18 +922,21 @@ class AzerothCoreContentTests(unittest.TestCase):
         )
 
     def test_stormwind_guild_vaults_keep_retail_display_and_spawns(self):
-        # Entry 187329 "Guild Vault" (type 34 GAMEOBJECT_TYPE_GUILD_BANK), display 7607:
+        # TrinityCore entry 205107 "Guild Vault" (type 34 GAMEOBJECT_TYPE_GUILD_BANK), display 7607:
         # Retail GameObjectDisplayInfo 7607 is FileDataID 199769 (guildvault_human_01.m2).
         self.assertEqual(
             self.rows("SELECT t.name, t.type, d.FileDataID FROM content_gameobject_template t"
-                      " JOIN game_object_display_info d ON d.ID = t.displayId WHERE t.entry = 187329"),
+                      " JOIN game_object_display_info d ON d.ID = t.displayId WHERE t.entry = 205107"),
             [("Guild Vault", 34, 199769)],
         )
+        # Retail Stormwind has one entry per vault; AzerothCore's four 187329 spawns are replaced.
         self.assertEqual(
-            self.rows("SELECT round(position_x, 2), round(position_y, 2) FROM content_gameobject"
-                      " WHERE id = 187329 AND map = 0 ORDER BY guid"),
-            [(-8934.91, 618.27), (-8910.43, 636.38), (-8930.72, 610.53), (-8902.25, 621.31)],
+            self.rows("SELECT id, round(position_x, 2), round(position_y, 2) FROM content_gameobject"
+                      " WHERE id BETWEEN 205104 AND 205107 AND map = 0 ORDER BY guid"),
+            [(205107, -8930.07, 613.16), (205106, -8932.42, 617.34), (205105, -8303.91, 572.98),
+             (205104, -8307.61, 569.94)],
         )
+        self.assertEqual(self.rows("SELECT count(*) FROM content_gameobject WHERE id = 187329 AND map = 0"), [(0,)])
 
     def test_retail_bank_tab_prices(self):
         # Retail BankTab: Character 1g..5000g, Guild 100g..5000g, Warband 1000g..2500000g.
