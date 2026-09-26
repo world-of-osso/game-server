@@ -219,3 +219,19 @@ fn defias_thug_drop_chances_resolve_references_and_groups() {
         "highest chance first: {chances:?}"
     );
 }
+
+/// Lumberjack (842): `mingold` 40, `maxgold` 57, `lootid` 0.
+const LUMBERJACK: u32 = 842;
+
+#[test]
+fn a_creature_without_a_loot_table_drops_nothing_not_even_coins() {
+    let Some((tables, items)) = world_db() else {
+        return;
+    };
+    let mut rng = StdRng::seed_from_u64(3);
+
+    let rolled = tables.roll_creature(LUMBERJACK, &items, |_| true, &mut rng);
+
+    assert_eq!(rolled, RolledLoot::default());
+    assert!(tables.drop_chances(LUMBERJACK, &items).is_empty());
+}

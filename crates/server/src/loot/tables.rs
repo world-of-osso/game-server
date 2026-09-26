@@ -130,13 +130,17 @@ impl LootTables {
         needs_quest_item: impl Fn(u32) -> bool,
         rng: &mut impl Rng,
     ) -> RolledLoot {
-        let Some(info) = self.money.get(&entry) else {
+        // A creature without a loot table drops nothing, coins included (user rule,
+        // docs/specs/loot.md).
+        let Some((info, template)) = self
+            .money
+            .get(&entry)
+            .and_then(|info| Some((info, self.creature.get(&info.loot_id)?)))
+        else {
             return RolledLoot::default();
         };
         let mut drops = Vec::new();
-        if let Some(template) = self.creature.get(&info.loot_id) {
-            self.process(template, items, &needs_quest_item, rng, &mut drops);
-        }
+        self.process(template, items, &needs_quest_item, rng, &mut drops);
         let (mut normal, mut quest): (Vec<_>, Vec<_>) =
             drops.into_iter().partition(|drop| !drop.needs_quest);
         normal.truncate(MAX_NR_LOOT_ITEMS);
