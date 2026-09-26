@@ -86,6 +86,8 @@ pub(crate) struct FallTracker {
     peak_y: f32,
     last_y: f32,
     airborne: bool,
+    /// `MovementControl::epoch` of the position being tracked.
+    epoch: u32,
 }
 
 impl FallTracker {
@@ -94,6 +96,20 @@ impl FallTracker {
             peak_y: y,
             last_y: y,
             airborne: false,
+            epoch: 0,
+        }
+    }
+
+    /// A server reposition (new `MovementControl::epoch`) is not a fall: tracking
+    /// restarts at the new height.
+    fn for_epoch(self, epoch: u32, y: f32) -> Self {
+        if self.epoch == epoch {
+            self
+        } else {
+            Self {
+                epoch,
+                ..Self::grounded(y)
+            }
         }
     }
 }
@@ -526,7 +542,7 @@ pub(crate) fn apply_terrain_gravity(
             ground.ground_at(Vec3::new(pos.x, pos.y, pos.z)),
             *pos,
             *vert_vel,
-            *fall_tracker,
+            fall_tracker.for_epoch(control.epoch, pos.y),
             *health,
             death_state,
             dt,
@@ -649,7 +665,9 @@ fn apply_fall_damage_on_landing(
         fall_tracker.peak_y = fall_tracker.peak_y.max(fall_tracker.last_y).max(current_y);
     }
 
-    let landed = fall_tracker.airborne && vertical_velocity == 0.0 && current_y <= ground_y;
+    // Landing is coming within snap reach: WMO floor heights carry float noise
+    // from one probe to the next, so the feet can rest a hair above the floor.
+    let landed = fall_tracker.airborne && !now_airborne;
     if landed {
         let fall_distance = (fall_tracker.peak_y - ground_y).max(0.0);
         let damage = health.max * shared::movement::fall_damage_percent(fall_distance);

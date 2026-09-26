@@ -44,10 +44,10 @@ fn auction_house_ground_is_its_floor_not_the_terrain_under_it() {
     assert!((terrain - 94.65).abs() < 0.05, "terrain {terrain}");
 }
 
-/// `game-server-admin set-position` a little above the auction house floor: the
-/// server's gravity lands the player on the floor.
-#[test]
-fn set_position_over_the_auction_house_floor_lands_on_it() {
+/// Player "Mover" standing at height `start_y` is moved by `game-server-admin
+/// set-position` to WoW `(AUCTION_HOUSE_WOW, wow_z)`; returns their height and
+/// health after two seconds of server gravity.
+fn settle_after_set_position(start_y: f32, wow_z: f32) -> (f32, f32) {
     let db = persistence::temp_database();
     let (character_id, _) =
         persistence::create_character(&db, 1, "Mover", 1, 1).expect("character");
@@ -62,7 +62,7 @@ fn set_position_over_the_auction_house_floor_lands_on_it() {
         .spawn((
             Position {
                 x: 0.0,
-                y: 0.0,
+                y: start_y,
                 z: 0.0,
             },
             Health {
@@ -70,7 +70,7 @@ fn set_position_over_the_auction_house_floor_lands_on_it() {
                 max: 100.0,
             },
             VerticalVelocity::default(),
-            FallTracker::grounded(0.0),
+            FallTracker::grounded(start_y),
             Player {
                 name: "Mover".into(),
                 race: 1,
@@ -96,7 +96,7 @@ fn set_position_over_the_auction_house_floor_lands_on_it() {
         "Mover",
         AUCTION_HOUSE_WOW.0,
         AUCTION_HOUSE_WOW.1,
-        99.0,
+        wow_z,
     );
     admin.apply(app.world_mut());
 
@@ -109,6 +109,28 @@ fn set_position_over_the_auction_house_floor_lands_on_it() {
             .unwrap();
     }
 
-    let y = app.world().get::<Position>(player).unwrap().y;
+    let world = app.world();
+    (
+        world.get::<Position>(player).unwrap().y,
+        world.get::<Health>(player).unwrap().current,
+    )
+}
+
+/// `game-server-admin set-position` a little above the auction house floor: the
+/// server's gravity lands the player on the floor.
+#[test]
+fn set_position_over_the_auction_house_floor_lands_on_it() {
+    let (y, _) = settle_after_set_position(0.0, 99.0);
+
     assert!((y - AUCTION_HOUSE_FLOOR).abs() < 0.05, "player y {y}");
+}
+
+/// A set-position down from 40 yd higher, then a 2.4 yd drop to the floor, is a
+/// reposition and a short fall: no fall damage.
+#[test]
+fn set_position_down_onto_the_floor_deals_no_fall_damage() {
+    let (y, health) = settle_after_set_position(140.0, 100.5);
+
+    assert!((y - AUCTION_HOUSE_FLOOR).abs() < 0.05, "player y {y}");
+    assert_eq!(health, 100.0);
 }

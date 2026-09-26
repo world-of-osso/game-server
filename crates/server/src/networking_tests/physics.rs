@@ -532,6 +532,48 @@ fn gravity_accumulates_until_landing() {
     assert!((pos.y - ground_y).abs() < 0.01);
 }
 
+/// The server falls at `GRAVITY * dt` per tick and leaves a player resting up to
+/// `GROUND_SNAP_THRESHOLD` above the ground, and WMO floor heights carry float
+/// noise from one probe to the next. Coming to rest a hair above the floor is a
+/// landing: the 30 yd fall deals its damage, and a later 2 yd drop is judged
+/// from the floor.
+#[test]
+fn a_fall_that_comes_to_rest_a_hair_above_the_floor_lands() {
+    let dt = 0.05;
+    let mut pos = Position {
+        x: 0.0,
+        y: 50.0 + 31.0 * GRAVITY * dt + 0.05,
+        z: 0.0,
+    };
+    let mut vel = VerticalVelocity::default();
+    let mut fall_tracker = FallTracker::grounded(pos.y);
+    let mut health = Health {
+        current: 100.0,
+        max: 100.0,
+    };
+    let mut settle = |ground: f32, pos: &mut Position, health: &mut Health| {
+        for _ in 0..40 {
+            clamp_to_ground(
+                GroundProbe::Supported(ground),
+                pos,
+                &mut vel,
+                &mut fall_tracker,
+                health,
+                dt,
+            );
+        }
+    };
+
+    settle(50.0, &mut pos, &mut health);
+    let after_fall = health.current;
+    settle(49.99999, &mut pos, &mut health);
+    settle(48.0, &mut pos, &mut health);
+
+    assert!(after_fall < 100.0, "the 30 yd fall deals damage");
+    assert!((pos.y - 48.0).abs() <= GROUND_SNAP_THRESHOLD, "y {}", pos.y);
+    assert_eq!(health.current, after_fall, "a 2 yd drop deals no damage");
+}
+
 #[test]
 fn terrain_on_ground_stays() {
     let mut map = crate::terrain_height::test_helpers::flat_ground(100.0, 100.0, 50.0);
