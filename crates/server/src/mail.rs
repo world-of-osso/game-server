@@ -141,6 +141,8 @@ fn header(mail: &MailData, soulbound: &HashSet<u64>) -> MailHeader {
                     durability: None,
                     soulbound: soulbound.contains(&attached.item.item_guid),
                 },
+                name: attached.item.name.clone(),
+                quality: attached.item.quality,
             })
             .collect(),
         expires_at: mail.expires_at,
