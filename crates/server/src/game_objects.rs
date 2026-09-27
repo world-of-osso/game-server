@@ -33,7 +33,8 @@ pub(crate) const GAME_OBJECT_INTERACT_DISTANCE: f32 = 5.0;
 
 const SPAWN_QUERY: &str = "SELECT g.guid, g.id, g.position_x, g.position_y, g.position_z, \
      g.orientation, t.type, t.displayId, t.name, t.size, \
-     d.GeoBox_0, d.GeoBox_1, d.GeoBox_2, d.GeoBox_3, d.GeoBox_4, d.GeoBox_5, g.map \
+     d.GeoBox_0, d.GeoBox_1, d.GeoBox_2, d.GeoBox_3, d.GeoBox_4, d.GeoBox_5, g.map, \
+     g.spawnDifficulties \
      FROM content_gameobject g \
      JOIN content_gameobject_template t ON t.entry = g.id \
      JOIN game_object_display_info d ON d.ID = t.displayId \
@@ -48,6 +49,9 @@ pub struct GameObjectSpawn {
     pub position: Vec3,
     pub orientation: f32,
     pub bounds: GameObjectBounds,
+    /// `gameobject.spawnDifficulties`: the copy difficulties it spawns in (0 on a
+    /// continent).
+    pub spawn_difficulties: Vec<u32>,
 }
 
 /// Model box in object space (WoW axes, unscaled) plus the spawn's facing.
@@ -98,6 +102,16 @@ fn spawn_from_row(row: &Row) -> rusqlite::Result<GameObjectSpawn> {
             scale: scale as f32,
             orientation: row.get::<_, f64>(5)? as f32,
         },
+        spawn_difficulties: row
+            .get::<_, String>(17)?
+            .split(',')
+            .map(|token| {
+                token
+                    .trim()
+                    .parse()
+                    .unwrap_or_else(|_| panic!("bad spawnDifficulties in gameobject {}", token))
+            })
+            .collect(),
     })
 }
 
@@ -150,18 +164,22 @@ fn spawn_continent_game_objects(mut commands: Commands, spawns: Res<GameObjectSp
             &mut commands,
             &spawns,
             crate::maps::InMap::continent(map_id),
+            0,
         );
         info!("Spawned {count} game objects on map {map_id}");
     }
 }
 
-/// Spawn the game objects of `map`'s map into that copy.
+/// Spawn the game objects of `map`'s map spawned at its `difficulty_id` into that copy.
 pub(crate) fn spawn_map_game_objects(
     commands: &mut Commands,
     spawns: &GameObjectSpawns,
     map: crate::maps::InMap,
+    difficulty_id: u32,
 ) -> usize {
-    let spawns = spawns.0.iter().filter(|spawn| spawn.map_id == map.map_id);
+    let spawns = spawns.0.iter().filter(|spawn| {
+        spawn.map_id == map.map_id && spawn.spawn_difficulties.contains(&difficulty_id)
+    });
     let mut count = 0;
     for spawn in spawns {
         commands.spawn((

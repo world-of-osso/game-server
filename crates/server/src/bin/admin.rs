@@ -168,6 +168,19 @@ enum AdminRequest {
     Revive {
         character_name: String,
     },
+    /// Shift the instance-lock clock by `seconds`.
+    ClockAdvance {
+        seconds: i64,
+    },
+    /// TrinityCore `.instance listbinds`.
+    InstanceLocks {
+        character_name: String,
+    },
+    /// TrinityCore `.instance unbind <mapid|all>`.
+    InstanceUnbind {
+        character_name: String,
+        map_id: Option<u32>,
+    },
     Ping,
 }
 
@@ -326,6 +339,18 @@ enum AdminResponse {
     Revived {
         character_name: String,
     },
+    ClockAdvanced {
+        offset_secs: i64,
+        unix: i64,
+    },
+    InstanceLockList {
+        character_name: String,
+        locks: Vec<String>,
+    },
+    InstanceUnbound {
+        character_name: String,
+        count: usize,
+    },
     Pong,
     Error(String),
 }
@@ -407,6 +432,9 @@ fn print_usage() {
     eprintln!("  game-server-admin grant-equipment <character> <manifest.json>");
     eprintln!("  game-server-admin list-equipment <character>");
     eprintln!("  game-server-admin taxi-learn <character_name> <taxi_node_id>");
+    eprintln!("  game-server-admin clock-advance <seconds>");
+    eprintln!("  game-server-admin instance-locks <character_name>");
+    eprintln!("  game-server-admin instance-unbind <character_name> <map_id|all>");
 }
 
 fn parse_request(args: &[String]) -> AdminRequest {
@@ -451,6 +479,26 @@ fn parse_request(args: &[String]) -> AdminRequest {
             AdminRequest::Damage {
                 character_name: args[2].clone(),
                 amount: args[3].parse().expect("amount must be a number"),
+            }
+        }
+        "clock-advance" => {
+            require_args(args, 3, "clock-advance <seconds>");
+            AdminRequest::ClockAdvance {
+                seconds: args[2].parse().expect("seconds must be an integer"),
+            }
+        }
+        "instance-locks" => {
+            require_args(args, 3, "instance-locks <character_name>");
+            AdminRequest::InstanceLocks {
+                character_name: args[2].clone(),
+            }
+        }
+        "instance-unbind" => {
+            require_args(args, 4, "instance-unbind <character_name> <map_id|all>");
+            AdminRequest::InstanceUnbind {
+                character_name: args[2].clone(),
+                map_id: (args[3] != "all")
+                    .then(|| args[3].parse().expect("map_id must be a number or all")),
             }
         }
         "kill" => {

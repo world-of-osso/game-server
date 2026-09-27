@@ -310,9 +310,11 @@ fn handle_select(
         return;
     }
     let saved_map = crate::maps::persistence::load_character_map(&db.db, character_id);
+    let dungeon_difficulty = crate::maps::difficulty::load_dungeon_difficulty(&db.db, character_id);
     let Some(place) = maps.resolve(
         commands,
         character_id,
+        dungeon_difficulty.0,
         saved_map,
         persisted_player_position(&data),
     ) else {
@@ -335,6 +337,7 @@ fn handle_select(
         guild.as_ref(),
         build_player_init_state(state),
     );
+    commands.entity(player_entity).insert(dungeon_difficulty);
     if data.health <= 0.0 {
         match persistence::load_corpse(&db.db, character_id) {
             Some(corpse) => {

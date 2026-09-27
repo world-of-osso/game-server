@@ -114,10 +114,24 @@ fn a_stockade_death_releases_to_the_stockade_graveyard_in_stormwind() {
     assert!(close(grave.position, STOCKADE_GRAVEYARD));
 }
 
+/// 2026-09-27 12:00 UTC (a Sunday): the instance-lock clock of these tests.
+const SUNDAY_NOON: i64 = 1_790_510_400;
+
+/// A Normal-difficulty entrant; a grouped one's leader is character 1.
 fn entrant(character_id: u64, group: Option<u64>) -> InstanceEntrant {
     InstanceEntrant {
         character_id,
         group,
+        leader: if group.is_some() { 1 } else { character_id },
+        difficulty_id: store::DIFFICULTY_NORMAL,
+    }
+}
+
+/// Elapsed seconds `elapsed` on Sunday noon.
+fn at(elapsed: f64) -> instances::Now {
+    instances::Now {
+        elapsed,
+        unix: SUNDAY_NOON,
     }
 }
 
@@ -126,13 +140,13 @@ fn group_members_share_a_stockade_copy_and_a_solo_player_gets_its_own() {
     let Some(store) = map_store() else { return };
     let mut instances = InstanceManager::default();
     let first = instances
-        .create_map(store, STOCKADE, entrant(1, Some(7)), 0.0)
+        .create_map(store, STOCKADE, entrant(1, Some(7)), at(0.0))
         .unwrap();
     let second = instances
-        .create_map(store, STOCKADE, entrant(2, Some(7)), 1.0)
+        .create_map(store, STOCKADE, entrant(2, Some(7)), at(1.0))
         .unwrap();
     let solo = instances
-        .create_map(store, STOCKADE, entrant(3, None), 2.0)
+        .create_map(store, STOCKADE, entrant(3, None), at(2.0))
         .unwrap();
 
     assert!(first.created);
@@ -147,10 +161,13 @@ fn group_members_share_a_stockade_copy_and_a_solo_player_gets_its_own() {
     assert_ne!(solo.map.instance_id, first.map.instance_id);
     // The solo player's copy is not the group's to enter, and the other way round.
     assert_eq!(
-        instances.find_instance(STOCKADE, entrant(3, Some(7))),
+        instances.find_instance(store, STOCKADE, entrant(3, Some(7)), SUNDAY_NOON),
         Some(first.map)
     );
-    assert_eq!(instances.find_instance(STOCKADE, entrant(1, None)), None);
+    assert_eq!(
+        instances.find_instance(store, STOCKADE, entrant(1, None), SUNDAY_NOON),
+        None
+    );
 }
 
 #[test]
@@ -159,7 +176,7 @@ fn a_full_stockade_copy_refuses_the_sixth_player_and_a_stranger_to_its_group() {
     let mut world = World::new();
     let mut instances = InstanceManager::default();
     let copy = instances
-        .create_map(store, STOCKADE, entrant(1, Some(7)), 0.0)
+        .create_map(store, STOCKADE, entrant(1, Some(7)), at(0.0))
         .unwrap()
         .map;
     // MapDifficulty 8 (Normal) holds 5 players.
@@ -167,11 +184,11 @@ fn a_full_stockade_copy_refuses_the_sixth_player_and_a_stranger_to_its_group() {
         instances.add_player(copy, world.spawn_empty().id());
     }
     assert_eq!(
-        instances.player_cannot_enter(store, STOCKADE, entrant(6, Some(7))),
+        instances.player_cannot_enter(store, STOCKADE, entrant(6, Some(7)), SUNDAY_NOON),
         Some(TransferAbortReason::MaxPlayers)
     );
     assert_eq!(
-        instances.cannot_enter(copy, entrant(9, Some(8))),
+        instances.cannot_enter(copy, entrant(9, Some(8)), SUNDAY_NOON),
         Some(TransferAbortReason::MaxPlayers)
     );
 }
@@ -183,11 +200,11 @@ fn an_empty_copy_unloads_after_thirty_minutes_and_comes_back_fresh() {
     let player = world.spawn_empty().id();
     let mut instances = InstanceManager::default();
     let copy = instances
-        .create_map(store, STOCKADE, entrant(1, None), 0.0)
+        .create_map(store, STOCKADE, entrant(1, None), at(0.0))
         .unwrap()
         .map;
     instances.add_player(copy, player);
-    instances.remove_player(copy, player, 100.0);
+    instances.remove_player(copy, player, at(100.0));
 
     assert!(
         instances
@@ -200,7 +217,7 @@ fn an_empty_copy_unloads_after_thirty_minutes_and_comes_back_fresh() {
     );
     // The player re-enters its recent instance id as a new copy.
     let again = instances
-        .create_map(store, STOCKADE, entrant(1, None), 2000.0)
+        .create_map(store, STOCKADE, entrant(1, None), at(2000.0))
         .unwrap();
     assert_eq!(again.map, copy);
     assert!(again.created);
@@ -213,13 +230,13 @@ fn raids_and_world_maps_without_npc_data_are_not_hosted() {
     // Outland (530); Molten Core (409), a raid.
     for map_id in [530, 409] {
         assert_eq!(
-            instances.player_cannot_enter(store, map_id, entrant(1, None)),
+            instances.player_cannot_enter(store, map_id, entrant(1, None), SUNDAY_NOON),
             Some(TransferAbortReason::MapNotAllowed),
             "map {map_id}"
         );
     }
     assert_eq!(
-        instances.player_cannot_enter(store, 1, entrant(1, None)),
+        instances.player_cannot_enter(store, 1, entrant(1, None), SUNDAY_NOON),
         None
     );
 }
@@ -232,6 +249,7 @@ struct Harness {
     /// only holds the current frame's messages).
     new_worlds: std::collections::HashMap<Entity, Vec<NewWorld>>,
     aborts: std::collections::HashMap<Entity, Vec<TransferAborted>>,
+    saves: std::collections::HashMap<Entity, usize>,
 }
 
 struct Traveler {
@@ -249,6 +267,10 @@ fn harness() -> Option<Harness> {
 
 /// A harness whose copies spawn world.db's creatures and game objects.
 fn harness_with_content() -> Option<Harness> {
+    harness_with_content_and(|_| {})
+}
+
+fn harness_with_content_and(extra: impl FnOnce(&mut App)) -> Option<Harness> {
     let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/world.db");
     let world_data = crate::world_data::load_world_data(&path);
     let conn = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY)
@@ -257,6 +279,7 @@ fn harness_with_content() -> Option<Harness> {
     harness_with(move |app| {
         app.insert_resource(world_data);
         app.insert_resource(objects);
+        extra(app);
     })
 }
 
@@ -274,6 +297,10 @@ fn harness_with(setup: impl FnOnce(&mut App)) -> Option<Harness> {
         Duration::from_millis(50),
     ));
     app.insert_resource(store.clone());
+    app.insert_resource(ServerClock {
+        offset_secs: 0,
+        fixed_unix: Some(SUNDAY_NOON),
+    });
     app.init_resource::<GroupRegistry>();
     setup(&mut app);
     app.finish();
@@ -283,6 +310,7 @@ fn harness_with(setup: impl FnOnce(&mut App)) -> Option<Harness> {
         app,
         new_worlds: Default::default(),
         aborts: Default::default(),
+        saves: Default::default(),
     })
 }
 
@@ -335,6 +363,10 @@ impl Harness {
                     pair::<WorldPortAck>(),
                     pair::<TransferAborted>(),
                     pair::<DeathStateUpdate>(),
+                    pair::<InstanceSaveCreated>(),
+                    pair::<WorldServerInfo>(),
+                    pair::<SetDungeonDifficulty>(),
+                    pair::<DungeonDifficultySet>(),
                 ),
             ))
             .id();
@@ -350,8 +382,10 @@ impl Harness {
                 Entity,
                 &mut MessageReceiver<NewWorld>,
                 &mut MessageReceiver<TransferAborted>,
+                &mut MessageReceiver<InstanceSaveCreated>,
             )>();
-            for (connection, mut new_worlds, mut aborts) in connections.iter_mut(world) {
+            for (connection, mut new_worlds, mut aborts, mut saves) in connections.iter_mut(world) {
+                *self.saves.entry(connection).or_default() += saves.receive().count();
                 self.new_worlds
                     .entry(connection)
                     .or_default()
@@ -408,6 +442,7 @@ impl Harness {
                         name: format!("Traveler{id}"),
                         class: 1,
                         level: 20,
+                        dungeon_difficulty: crate::maps::store::DIFFICULTY_NORMAL,
                     },
                 )
             })
@@ -702,4 +737,470 @@ fn releasing_in_the_stockade_resurrects_the_player_at_the_stockade_graveyard() {
         DeathState::Alive
     );
     assert_eq!(world.get::<Health>(player.player).unwrap().current, 50.0);
+}
+
+// --- Difficulties and instance locks (Grim Batol, map 670) ---
+
+const GRIM_BATOL: u32 = 670;
+/// `areatrigger_teleport` 6179 "Grim Batol Entrance" box center in the Twilight Highlands.
+const GRIM_BATOL_ENTRANCE_TRIGGER: Vec3 = Vec3::new(-4042.39, -3444.45, 295.0);
+/// `world_safe_locs` 3957 inside Grim Batol.
+const GRIM_BATOL_ARRIVAL: Vec3 = Vec3::new(-624.155, -189.365, 272.04);
+/// General Umbriss (boss 0, DungeonEncounter 1051, Bit 3).
+const UMBRISS: u32 = 39625;
+const TROGG_DWELLER: u32 = 39450;
+const EASTERN_KINGDOMS: InMap = InMap::continent(0);
+/// 2026-09-27 15:00 UTC: the daily reset after `SUNDAY_NOON`.
+const SUNDAY_RESET: i64 = 1_790_521_200;
+
+fn entrant_at(character_id: u64, difficulty_id: u32) -> InstanceEntrant {
+    InstanceEntrant {
+        difficulty_id,
+        ..entrant(character_id, None)
+    }
+}
+
+#[test]
+fn grim_batol_offers_three_difficulties_and_the_stockade_downscales_to_normal() {
+    let Some(store) = map_store() else { return };
+    let heroic = store
+        .downscaled_map_difficulty(GRIM_BATOL, store::DIFFICULTY_HEROIC)
+        .unwrap();
+    assert_eq!(
+        (
+            heroic.difficulty_id,
+            heroic.reset_interval,
+            heroic.is_instance_id_bound()
+        ),
+        (2, store::ResetInterval::Daily, true)
+    );
+    let mythic = store
+        .downscaled_map_difficulty(GRIM_BATOL, store::DIFFICULTY_MYTHIC)
+        .unwrap();
+    assert_eq!(
+        (
+            mythic.difficulty_id,
+            mythic.reset_interval,
+            mythic.is_using_encounter_locks()
+        ),
+        (23, store::ResetInterval::Weekly, true)
+    );
+    let normal = store
+        .downscaled_map_difficulty(GRIM_BATOL, store::DIFFICULTY_NORMAL)
+        .unwrap();
+    assert!(!normal.has_reset_schedule());
+    // The Stockade has Normal only: Heroic and Mythic fall back (Mythic → Heroic → Normal).
+    for difficulty in [store::DIFFICULTY_HEROIC, store::DIFFICULTY_MYTHIC] {
+        assert_eq!(
+            store
+                .downscaled_map_difficulty(STOCKADE, difficulty)
+                .unwrap()
+                .difficulty_id,
+            store::DIFFICULTY_NORMAL
+        );
+    }
+    assert_eq!(
+        store.difficulty_entries[&store::DIFFICULTY_MYTHIC].name,
+        "Mythic"
+    );
+    assert!(
+        !store.difficulty_entries[&8].can_select(),
+        "Mythic Keystone is not selectable"
+    );
+    assert_eq!(
+        store
+            .dungeon_encounter(1051, GRIM_BATOL, store::DIFFICULTY_HEROIC)
+            .map(|e| e.bit),
+        Some(3)
+    );
+}
+
+#[test]
+fn a_heroic_copy_is_created_at_heroic_and_normal_is_another_copy() {
+    let Some(store) = map_store() else { return };
+    let mut instances = InstanceManager::default();
+    let heroic = instances
+        .create_map(
+            store,
+            GRIM_BATOL,
+            entrant_at(1, store::DIFFICULTY_HEROIC),
+            at(0.0),
+        )
+        .unwrap();
+    // A change to Normal forgets the (unlocked) Heroic copy; even remembered, it is not entered.
+    let normal = instances
+        .create_map(
+            store,
+            GRIM_BATOL,
+            entrant_at(1, store::DIFFICULTY_NORMAL),
+            at(1.0),
+        )
+        .unwrap();
+    assert_ne!(heroic.map, normal.map);
+    assert_eq!(
+        instances.copy_difficulty(heroic.map).unwrap().difficulty_id,
+        2
+    );
+    assert_eq!(
+        instances.copy_difficulty(normal.map).unwrap().difficulty_id,
+        1
+    );
+    // The Stockade at Heroic is a Normal copy.
+    let stockade = instances
+        .create_map(
+            store,
+            STOCKADE,
+            entrant_at(1, store::DIFFICULTY_HEROIC),
+            at(2.0),
+        )
+        .unwrap();
+    assert_eq!(
+        instances
+            .copy_difficulty(stockade.map)
+            .unwrap()
+            .difficulty_id,
+        1
+    );
+}
+
+#[test]
+fn a_heroic_kill_locks_the_player_to_its_copy_which_comes_back_with_the_boss_dead() {
+    let Some(store) = map_store() else { return };
+    let mut world = World::new();
+    let player = world.spawn_empty().id();
+    let mut instances = InstanceManager::default();
+    let heroic = entrant_at(1, store::DIFFICULTY_HEROIC);
+    let copy = instances
+        .create_map(store, GRIM_BATOL, heroic, at(0.0))
+        .unwrap()
+        .map;
+    instances.add_player(copy, player);
+    let saved = instances.update_instance_lock(copy, &[(player, 1)], 1, Some(3), SUNDAY_NOON);
+    assert_eq!(saved, vec![player]);
+    instances.remove_player(copy, player, at(10.0));
+    assert_eq!(
+        instances.take_expired(10.0 + INSTANCE_UNLOAD_DELAY_SECS),
+        vec![copy]
+    );
+
+    // Re-entering creates the same instance id with Umbriss done; he does not spawn.
+    let again = instances
+        .create_map(store, GRIM_BATOL, heroic, at(2000.0))
+        .unwrap();
+    assert_eq!((again.map, again.created), (copy, true));
+    assert_eq!(instances.initial_done_bosses(copy), 1);
+    assert_eq!(
+        crate::scripted_ai::instance_script::done_boss_entries(store, GRIM_BATOL, 1),
+        vec![UMBRISS]
+    );
+    // Saved to that copy, the player may not join another group's Heroic copy...
+    let other = instances
+        .create_map(
+            store,
+            GRIM_BATOL,
+            entrant_at(2, store::DIFFICULTY_HEROIC),
+            at(2001.0),
+        )
+        .unwrap()
+        .map;
+    assert_eq!(
+        instances.cannot_enter(other, entrant_at(1, store::DIFFICULTY_HEROIC), SUNDAY_NOON),
+        Some(TransferAbortReason::LockedToDifferentInstance)
+    );
+    // ...but may after the daily reset, and Normal never locks.
+    assert_eq!(
+        instances.cannot_enter(
+            other,
+            entrant_at(1, store::DIFFICULTY_HEROIC),
+            SUNDAY_RESET + 1
+        ),
+        None
+    );
+    let normal = instances
+        .create_map(
+            store,
+            GRIM_BATOL,
+            entrant_at(1, store::DIFFICULTY_NORMAL),
+            at(2002.0),
+        )
+        .unwrap();
+    assert!(normal.created);
+    assert_eq!(instances.initial_done_bosses(normal.map), 0);
+}
+
+#[test]
+fn an_expired_lock_resets_its_empty_copy() {
+    let Some(store) = map_store() else { return };
+    let mut world = World::new();
+    let player = world.spawn_empty().id();
+    let mut instances = InstanceManager::default();
+    let heroic = entrant_at(1, store::DIFFICULTY_HEROIC);
+    let copy = instances
+        .create_map(store, GRIM_BATOL, heroic, at(0.0))
+        .unwrap()
+        .map;
+    instances.add_player(copy, player);
+    instances.update_instance_lock(copy, &[(player, 1)], 1, Some(3), SUNDAY_NOON);
+    let after = instances::Now {
+        elapsed: 100.0,
+        unix: SUNDAY_RESET + 1,
+    };
+    // Occupied: the players are told, the copy stays.
+    assert_eq!(instances.expire_locked_copies(after), vec![copy]);
+    assert!(instances.take_expired(200.0).is_empty());
+    // Empty after the reset: it unloads at once and the next entry is a fresh copy.
+    instances.remove_player(copy, player, after);
+    assert_eq!(instances.take_expired(101.0), vec![copy]);
+    let fresh = instances
+        .create_map(store, GRIM_BATOL, heroic, after)
+        .unwrap();
+    assert!(fresh.created);
+    assert_ne!(fresh.map, copy);
+    assert_eq!(instances.initial_done_bosses(fresh.map), 0);
+}
+
+#[test]
+fn a_difficulty_change_resets_and_forgets_the_players_unlocked_copies() {
+    let Some(store) = map_store() else { return };
+    let mut instances = InstanceManager::default();
+    let normal = instances
+        .create_map(
+            store,
+            GRIM_BATOL,
+            entrant_at(1, store::DIFFICULTY_NORMAL),
+            at(0.0),
+        )
+        .unwrap()
+        .map;
+    let results = instances.reset_instances(entrant_at(1, store::DIFFICULTY_NORMAL), true, at(5.0));
+    assert_eq!(
+        results,
+        vec![(GRIM_BATOL, instances::InstanceResetResult::Success)]
+    );
+    assert_eq!(instances.take_expired(6.0), vec![normal]);
+    assert!(
+        instances
+            .create_map(
+                store,
+                GRIM_BATOL,
+                entrant_at(1, store::DIFFICULTY_NORMAL),
+                at(7.0)
+            )
+            .unwrap()
+            .created
+    );
+}
+
+impl Harness {
+    fn enter_grim_batol(&mut self, who: &Traveler) {
+        self.walk_to(who, GRIM_BATOL_ENTRANCE_TRIGGER + Vec3::new(0.0, 0.0, 40.0));
+        self.walk_to(who, GRIM_BATOL_ENTRANCE_TRIGGER);
+        let new_world = self.new_worlds(who).pop().expect("NewWorld for map 670");
+        assert_eq!(new_world.map_id, GRIM_BATOL);
+        self.ack(who);
+    }
+
+    fn leave_map(&mut self, who: &Traveler) {
+        let player = who.player;
+        self.app
+            .world_mut()
+            .run_system_once(move |world: &mut World| {
+                let back = WorldLocation {
+                    map_id: 0,
+                    position: GRIM_BATOL_ENTRANCE_TRIGGER + Vec3::new(0.0, 0.0, 40.0),
+                    orientation: 0.0,
+                };
+                teleport_to(world, player, back, TeleportOptions::default())
+            })
+            .unwrap();
+        self.new_worlds(who);
+        self.ack(who);
+    }
+
+    /// (entity, max health) of the creatures of `entry` in `map`.
+    fn creature_health(&mut self, map: InMap, entry: u32) -> Vec<(Entity, f32)> {
+        let world = self.app.world_mut();
+        let mut query = world.query::<(Entity, &shared::components::Npc, &Health, &InMap)>();
+        query
+            .iter(world)
+            .filter(|(_, npc, _, in_map)| **in_map == map && npc.template_id == entry)
+            .map(|(entity, _, health, _)| (entity, health.max))
+            .collect()
+    }
+}
+
+#[test]
+fn heroic_grim_batol_spawns_heroic_creatures_and_a_boss_kill_keeps_its_copy() {
+    let Some(mut h) = harness_with_content_and(|app| {
+        app.add_plugins(crate::scripted_ai::ScriptedAiPlugin);
+    }) else {
+        return;
+    };
+    let start = GRIM_BATOL_ENTRANCE_TRIGGER + Vec3::new(0.0, 0.0, 40.0);
+    let hero = h.spawn(1, EASTERN_KINGDOMS, start);
+    let casual = h.spawn(2, EASTERN_KINGDOMS, start);
+    h.app
+        .world_mut()
+        .entity_mut(hero.player)
+        .insert(DungeonDifficulty(store::DIFFICULTY_HEROIC));
+    h.enter_grim_batol(&hero);
+    h.enter_grim_batol(&casual);
+    let (heroic, normal) = (h.map_of(&hero).unwrap(), h.map_of(&casual).unwrap());
+    assert_ne!(heroic, normal);
+    assert!(close(h.position(&hero), GRIM_BATOL_ARRIVAL));
+    // Trogg Dweller: HealthModifier 1.125 at Heroic, 0.4 at Normal (creature_template_difficulty).
+    let heroic_troggs = h.creature_health(heroic, TROGG_DWELLER);
+    let normal_troggs = h.creature_health(normal, TROGG_DWELLER);
+    assert_eq!((heroic_troggs.len(), normal_troggs.len()), (94, 94));
+    let ratio = heroic_troggs[0].1 / normal_troggs[0].1;
+    assert!((ratio - 1.125 / 0.4).abs() < 0.01, "{ratio}");
+    let heroic_umbriss = h.creature_health(heroic, UMBRISS);
+    assert_eq!(heroic_umbriss.len(), 1);
+
+    // Umbriss dies (BossAI::_JustDied): the hero is saved.
+    let umbriss = heroic_umbriss[0].0;
+    h.advance(2);
+    h.app
+        .world_mut()
+        .run_system_once(move |world: &mut World| {
+            crate::scripted_ai::dispatch(world, umbriss, crate::scripted_ai::Hook::JustDied(None));
+        })
+        .unwrap();
+    h.advance(2);
+    assert_eq!(h.saves.get(&hero.connection).copied(), Some(1));
+    let lock = h
+        .app
+        .world()
+        .resource::<InstanceManager>()
+        .locks
+        .lock(1, (GRIM_BATOL, 0))
+        .cloned()
+        .expect("heroic lock");
+    assert_eq!(
+        (
+            lock.instance_id,
+            lock.difficulty_id,
+            lock.data.completed_encounters
+        ),
+        (heroic.instance_id, 2, 1 << 3)
+    );
+
+    // Out, the copy unloads; back in, the same copy without Umbriss.
+    h.leave_map(&hero);
+    let delay = Duration::from_secs_f64(INSTANCE_UNLOAD_DELAY_SECS + 1.0);
+    h.app
+        .world_mut()
+        .resource_mut::<Time<Virtual>>()
+        .set_max_delta(delay);
+    h.app
+        .insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(delay));
+    h.advance(2);
+    assert!(h.creature_health(heroic, UMBRISS).is_empty());
+    h.app
+        .insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+            Duration::from_millis(50),
+        ));
+    h.enter_grim_batol(&hero);
+    assert_eq!(h.map_of(&hero), Some(heroic));
+    assert!(
+        h.creature_health(heroic, UMBRISS).is_empty(),
+        "Umbriss stays dead"
+    );
+    assert!(
+        !h.creatures_in(heroic).is_empty(),
+        "the rest of the copy respawned"
+    );
+}
+
+impl Harness {
+    fn request_difficulty(&mut self, who: &Traveler, difficulty_id: u32) {
+        self.app
+            .world_mut()
+            .get_mut::<MessageSender<SetDungeonDifficulty>>(who.connection)
+            .unwrap()
+            .send::<InstanceChannel>(SetDungeonDifficulty { difficulty_id });
+    }
+
+    /// The `DungeonDifficultySet`s `who` received over the next frames.
+    fn difficulty_messages(&mut self, who: &Traveler) -> Vec<u32> {
+        let mut received = Vec::new();
+        for _ in 0..3 {
+            self.app.update();
+            received.extend(
+                self.app
+                    .world_mut()
+                    .get_mut::<MessageReceiver<DungeonDifficultySet>>(who.connection)
+                    .unwrap()
+                    .receive()
+                    .map(|set| set.difficulty_id),
+            );
+        }
+        received
+    }
+
+    fn difficulty_of(&self, who: &Traveler) -> Option<u32> {
+        self.app
+            .world()
+            .get::<DungeonDifficulty>(who.player)
+            .map(|d| d.0)
+    }
+}
+
+#[test]
+fn the_player_picks_its_dungeon_difficulty_outside_instances_only() {
+    let Some(mut h) = harness() else { return };
+    let start = GRIM_BATOL_ENTRANCE_TRIGGER + Vec3::new(0.0, 0.0, 40.0);
+    let player = h.spawn(1, EASTERN_KINGDOMS, start);
+    h.request_difficulty(&player, store::DIFFICULTY_HEROIC);
+    assert_eq!(h.difficulty_messages(&player), vec![2]);
+    assert_eq!(h.difficulty_of(&player), Some(2));
+    // Mythic Keystone (8) is not selectable; nothing changes.
+    h.request_difficulty(&player, 8);
+    assert!(h.difficulty_messages(&player).is_empty());
+    // Inside Grim Batol (Heroic copy) the difficulty cannot change.
+    h.enter_grim_batol(&player);
+    assert_eq!(
+        h.app
+            .world()
+            .resource::<InstanceManager>()
+            .copy_difficulty(h.map_of(&player).unwrap())
+            .unwrap()
+            .difficulty_id,
+        2
+    );
+    h.request_difficulty(&player, store::DIFFICULTY_MYTHIC);
+    assert!(h.difficulty_messages(&player).is_empty());
+    assert_eq!(h.difficulty_of(&player), Some(2));
+}
+
+#[test]
+fn only_a_group_leader_sets_the_groups_difficulty_for_every_member() {
+    let Some(mut h) = harness() else { return };
+    let start = GRIM_BATOL_ENTRANCE_TRIGGER + Vec3::new(0.0, 0.0, 40.0);
+    let leader = h.spawn(1, EASTERN_KINGDOMS, start);
+    let member = h.spawn(2, EASTERN_KINGDOMS, start);
+    h.group(&[&leader, &member]);
+    h.request_difficulty(&member, store::DIFFICULTY_HEROIC);
+    assert!(h.difficulty_messages(&member).is_empty());
+    h.request_difficulty(&leader, store::DIFFICULTY_MYTHIC);
+    h.app.update();
+    assert_eq!(h.difficulty_messages(&member), vec![23]);
+    assert_eq!(
+        (h.difficulty_of(&leader), h.difficulty_of(&member)),
+        (Some(23), Some(23))
+    );
+    // Both enter the group's Mythic copy.
+    h.enter_grim_batol(&leader);
+    h.enter_grim_batol(&member);
+    let copy = h.map_of(&leader).unwrap();
+    assert_eq!(h.map_of(&member), Some(copy));
+    assert_eq!(
+        h.app
+            .world()
+            .resource::<InstanceManager>()
+            .copy_difficulty(copy)
+            .unwrap()
+            .difficulty_id,
+        23
+    );
 }

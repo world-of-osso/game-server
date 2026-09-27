@@ -45,7 +45,7 @@ fn kobold_vermin_drops_its_1_to_5_copper_every_kill() {
     let coins: HashSet<u64> = (0..200)
         .map(|_| {
             tables
-                .roll_creature(KOBOLD_VERMIN, &items, |_| false, &mut rng)
+                .roll_creature(KOBOLD_VERMIN, 0, &items, |_| false, &mut rng)
                 .copper
         })
         .collect();
@@ -59,7 +59,7 @@ fn diseased_wolf_always_drops_one_beast_part_and_no_coins() {
     };
     let mut rng = StdRng::seed_from_u64(2);
     for _ in 0..200 {
-        let loot = tables.roll_creature(DISEASED_YOUNG_WOLF, &items, |_| false, &mut rng);
+        let loot = tables.roll_creature(DISEASED_YOUNG_WOLF, 0, &items, |_| false, &mut rng);
         assert_eq!(loot.copper, 0, "mingold = maxgold = 0");
         let parts = ids(&loot.items)
             .into_iter()
@@ -78,7 +78,7 @@ fn quest_pelt_drops_only_for_a_player_on_the_quest() {
     let mut rng = StdRng::seed_from_u64(3);
     let without: usize = (0..200)
         .map(|_| {
-            let loot = tables.roll_creature(DISEASED_YOUNG_WOLF, &items, |_| false, &mut rng);
+            let loot = tables.roll_creature(DISEASED_YOUNG_WOLF, 0, &items, |_| false, &mut rng);
             ids(&loot.items).contains(&DISEASED_WOLF_PELT) as usize
         })
         .sum();
@@ -87,6 +87,7 @@ fn quest_pelt_drops_only_for_a_player_on_the_quest() {
         .map(|_| {
             let loot = tables.roll_creature(
                 DISEASED_YOUNG_WOLF,
+                0,
                 &items,
                 |item| item == DISEASED_WOLF_PELT,
                 &mut rng,
@@ -161,7 +162,7 @@ fn counts_above_the_stack_size_split_into_stacks() {
         .into(),
         ..Default::default()
     };
-    let loot = tables.roll_creature(1, &items, |_| false, &mut StdRng::seed_from_u64(5));
+    let loot = tables.roll_creature(1, 0, &items, |_| false, &mut StdRng::seed_from_u64(5));
     let counts: Vec<u32> = loot.items.iter().map(|drop| drop.count).collect();
     assert_eq!(counts, [20, 20, 5]);
 }
@@ -191,7 +192,7 @@ fn defias_thug_drop_chances_resolve_references_and_groups() {
     let Some((tables, items)) = world_db() else {
         return;
     };
-    let chances = tables.drop_chances(DEFIAS_THUG, &items);
+    let chances = tables.drop_chances(DEFIAS_THUG, 0, &items);
 
     let close = |item: u32, expected: f32| {
         let chance = chance_of(&chances, item);
@@ -230,10 +231,10 @@ fn a_creature_without_a_loot_table_drops_nothing_not_even_coins() {
     };
     let mut rng = StdRng::seed_from_u64(3);
 
-    let rolled = tables.roll_creature(LUMBERJACK, &items, |_| true, &mut rng);
+    let rolled = tables.roll_creature(LUMBERJACK, 0, &items, |_| true, &mut rng);
 
     assert_eq!(rolled, RolledLoot::default());
-    assert!(tables.drop_chances(LUMBERJACK, &items).is_empty());
+    assert!(tables.drop_chances(LUMBERJACK, 0, &items).is_empty());
 }
 
 /// Hogger (46254) has no TrinityCore loot (Normal LootID 0): he drops Wowhead's
@@ -243,7 +244,7 @@ fn stockade_hogger_drops_his_wowhead_items_at_their_rates() {
     let Some((tables, items)) = world_db() else {
         return;
     };
-    let chances = tables.drop_chances(46254, &items);
+    let chances = tables.drop_chances(46254, 0, &items);
     let chance = |item| chances.iter().find(|(id, _)| *id == item).map(|c| c.1);
     let rompers = chance(2168).expect("Corpse Rompers");
     assert!((rompers - 31.089).abs() < 0.01, "{rompers}");
@@ -252,7 +253,7 @@ fn stockade_hogger_drops_his_wowhead_items_at_their_rates() {
     let dropped: HashSet<u32> = (0..200)
         .flat_map(|_| {
             ids(&tables
-                .roll_creature(46254, &items, |_| false, &mut rng)
+                .roll_creature(46254, 0, &items, |_| false, &mut rng)
                 .items)
         })
         .collect();

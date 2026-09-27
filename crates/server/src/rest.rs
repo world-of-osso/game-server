@@ -274,6 +274,7 @@ mod tests {
             spawntimesecs: 120,
             display_id: None,
             unit_flags: None,
+            spawn_difficulties: vec![0],
         }
     }
 

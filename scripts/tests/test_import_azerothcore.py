@@ -169,10 +169,22 @@ class CreatureEventImportTests(unittest.TestCase):
         )
         self.csv = self.root / "csv"
         write_header_only_csvs(self.csv / db2.DEFAULT_BUILD)
-        # Map.db2: Eastern Kingdoms and Kalimdor are open world (InstanceType 0), the Stockade a party dungeon.
+        # Map.db2: Eastern Kingdoms and Kalimdor are open world (InstanceType 0), the Stockade and Grim Batol
+        # party dungeons; MapDifficulty.db2 offers the Stockade Normal only, Grim Batol Normal, Heroic and Mythic.
         write_db2_rows(self.csv / db2.DEFAULT_BUILD, "Map", [
             {"ID": 0, "Directory": "Azeroth"}, {"ID": 1, "Directory": "Kalimdor"},
-            {"ID": 34, "Directory": "StormwindJail", "InstanceType": 1}])
+            {"ID": 34, "Directory": "StormwindJail", "InstanceType": 1},
+            {"ID": 670, "Directory": "GrimBatol", "InstanceType": 1}])
+        write_db2_rows(self.csv / db2.DEFAULT_BUILD, "MapDifficulty", [
+            {"ID": 8, "MapID": 34, "DifficultyID": 1, "MaxPlayers": 5},
+            {"ID": 1, "MapID": 670, "DifficultyID": 2, "ResetInterval": 1, "MaxPlayers": 5},
+            {"ID": 122, "MapID": 670, "DifficultyID": 1, "MaxPlayers": 5},
+            {"ID": 3345, "MapID": 670, "DifficultyID": 23, "ResetInterval": 2, "MaxPlayers": 5, "Flags": 66,
+             "LockID": 251}])
+        write_db2_rows(self.csv / db2.DEFAULT_BUILD, "Difficulty", [
+            {"ID": 1, "Name_lang": "Normal", "InstanceType": 1, "FallbackDifficultyID": 0, "Flags": 4},
+            {"ID": 2, "Name_lang": "Heroic", "InstanceType": 1, "FallbackDifficultyID": 1, "Flags": 5},
+            {"ID": 23, "Name_lang": "Mythic", "InstanceType": 1, "FallbackDifficultyID": 2, "Flags": 133}])
         (self.csv / content_policy.WRATH_BUILD).mkdir()
         (self.csv / content_policy.WRATH_BUILD / "SpellName.csv").write_text("ID,Name_lang\n")
         self.db = self.root / "data/world.db"
@@ -577,6 +589,81 @@ class CreatureEventImportTests(unittest.TestCase):
         self.assertNotIn(("tdb_creature", "guid=16397"), reported)
         self.assertEqual(reported[("wowhead_creature_drop", "entry=1720")],
                          "stockade-20260926: not Retail-spawned, TrinityCore loot kept, or no drops at its spawn difficulty")
+
+    def test_grim_batol_spawns_every_difficulty_it_offers_with_that_difficultys_template_row(self):
+        """A dungeon offering several difficulties (Grim Batol 670: Normal, Heroic, Mythic) keeps each spawn with the
+        difficulties it spawns at; each (entry, difficulty) takes its creature_template_difficulty row, else the row of
+        the difficulty's Difficulty.db2 fallback; Wowhead drops follow the difficulty's mode."""
+        write_tdb(self.tdb, "creature", [
+            tdb_creature(1001, 39625, 670, -704.925, -444.562, 269.17, difficulties="1,2"),
+            tdb_creature(1002, 39450, 670, -700.0, -440.0, 269.0, difficulties="1,2"),
+            tdb_creature(1003, 40166, 670, -690.0, -430.0, 269.0, difficulties="2"),
+            tdb_creature(1004, 40319, 670, -436.372, -680.093, 268.649, difficulties="1,2"),
+        ])
+        write_tdb(self.tdb, "creature_template", [tdb_template(39625, "General Umbriss", 14, 0, classification=1),
+                                                  tdb_template(39450, "Trogg Dweller", 14, 0),
+                                                  tdb_template(40166, "Molten Giant", 14, 0, classification=1),
+                                                  tdb_template(40319, "Drahga Shadowburner", 14, 0, classification=1)])
+        write_tdb(self.tdb, "creature_template_difficulty", [
+            tdb_difficulty(39625, 35.0, 20004, 20004, 0, content_tuning=1118),
+            tdb_difficulty(39625, 30.0, 20004, 20004, 0, content_tuning=253, health_expansion=3, difficulty=1),
+            tdb_difficulty(39625, 30.0, 20004, 20004, 0, content_tuning=1118, health_expansion=3, difficulty=2),
+            tdb_difficulty(39450, 0.4, 6367, 6367, 0, content_tuning=1118),
+            tdb_difficulty(39450, 0.4, 6367, 6367, 0, content_tuning=253, health_expansion=3, difficulty=1),
+            tdb_difficulty(40166, 9.5, 0, 0, 0, content_tuning=1118),
+            tdb_difficulty(40319, 5.0, 0, 0, 0, content_tuning=0),
+            tdb_difficulty(40319, 10.5, 20026, 20026, 40319, content_tuning=253, difficulty=1),
+            tdb_difficulty(40319, 10.5, 20026, 20026, 0, content_tuning=1118, difficulty=2),
+        ])
+        (self.tdb / "creature_template_model.sql").write_text(
+            "INSERT INTO `creature_template_model` VALUES\n(39625,0,31451,1,1,66044),(39450,0,31472,1,1,66044),"
+            "(40166,0,12162,1,1,66044),(40319,0,31792,1,1,66044);\n")
+        write_tdb(self.tdb, "creature_loot_template", ["(40319,0,56123,20,0,1,1,1,1,'')"])
+        (self.sql / "item_template.sql").write_text("INSERT INTO `item_template` (entry,name) VALUES\n(56123,'X');\n")
+        write_db2_rows(self.csv / db2.DEFAULT_BUILD, "ItemSparse", [{"ID": 56123, "Display_lang": "Umbriss's Belt"},
+                                                                  {"ID": 56112, "Display_lang": "Heroic Belt"}])
+        write_content_tuning(self.csv / db2.DEFAULT_BUILD, [(253, 80, 85, 0, 0), (1118, 30, 30, 0, 0)])
+        scrape = self.root / "data/reference/wowhead/grimbatol-20260927"
+        scrape.mkdir(parents=True)
+        (scrape / "39625.json").write_text(json.dumps({"drops": [
+            {"id": 56123, "quality": 3, "classs": 4, "stack": [1, 1],
+             "modes": {"1": {"count": 30, "outof": 100}, "mode": [1, 2]}},
+            {"id": 56112, "quality": 3, "classs": 4, "stack": [1, 1],
+             "modes": {"2": {"count": 40, "outof": 100}, "mode": [1, 2]}}]}))
+        result = self.run_import()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        offset = retail_content.RETAIL_GUID_OFFSET
+        with sqlite3.connect(self.db) as conn:
+            self.assertEqual(
+                conn.execute("SELECT guid, id1, spawnDifficulties FROM content_creature WHERE map = 670 ORDER BY guid")
+                .fetchall(),
+                [(offset + 1001, 39625, "1,2"), (offset + 1002, 39450, "1,2"), (offset + 1003, 40166, "2"),
+                 (offset + 1004, 40319, "1,2")],
+                "the Heroic-only Molten Giant is kept: Grim Batol offers Heroic",
+            )
+            self.assertEqual(
+                conn.execute("SELECT entry, ContentTuningID, minlevel, HealthModifier FROM content_creature_template"
+                             " WHERE entry IN (39625, 40166) ORDER BY entry").fetchall(),
+                [(39625, 253, 80, 30.0), (40166, 1118, 30, 9.5)],
+                "the base template is the lowest spawn difficulty's row (Molten Giant: Heroic falls back to 0)",
+            )
+            wowhead = retail_content.WOWHEAD_LOOT_OFFSET
+            heroic_wowhead = wowhead + 2 * retail_content.WOWHEAD_DIFFICULTY_STRIDE
+            self.assertEqual(
+                conn.execute("SELECT entry, DifficultyID, ContentTuningID, minlevel, maxlevel, HealthModifier, lootid,"
+                             " mingold FROM content_creature_template_difficulty ORDER BY entry, DifficultyID").fetchall(),
+                [(39450, 1, 253, 80, 85, 0.4, 0, 0), (39450, 2, 253, 80, 85, 0.4, 0, 0),
+                 (39625, 1, 253, 80, 85, 30.0, wowhead + 39625, 0), (39625, 2, 1118, 30, 30, 30.0, heroic_wowhead + 39625, 0),
+                 (40166, 2, 1118, 30, 30, 9.5, 0, 0),
+                 (40319, 1, 253, 80, 85, 10.5, retail_content.TDB_LOOT_OFFSET + 40319, 20026),
+                 (40319, 2, 1118, 30, 30, 10.5, 0, 0)],
+                "Trogg Dweller has no Heroic row and takes Normal's; Drahga's TrinityCore loot is Normal-only",
+            )
+            self.assertEqual(
+                conn.execute("SELECT Entry, Item, round(Chance, 1) FROM content_creature_loot_template"
+                             " WHERE Comment LIKE 'wowhead%' ORDER BY Entry").fetchall(),
+                [(wowhead + 39625, 56123, 30.0), (heroic_wowhead + 39625, 56112, 40.0)],
+            )
 
     def write_retail_vendor_and_loot_fixture(self):
         """Corina Steele (54) spawned by TrinityCore sells Retail's list; an AzerothCore-only vendor keeps its own."""

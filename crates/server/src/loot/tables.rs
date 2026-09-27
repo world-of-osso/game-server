@@ -84,6 +84,8 @@ pub(crate) struct LootTables {
     pub reference: HashMap<u32, LootTemplate>,
     /// By creature template entry.
     pub money: HashMap<u32, CreatureLoot>,
+    /// By (entry, dungeon difficulty): `content_creature_template_difficulty` loot.
+    pub difficulty_money: HashMap<(u32, u32), CreatureLoot>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -121,11 +123,20 @@ fn roll_chance(chance: f32, rng: &mut impl Rng) -> bool {
 }
 
 impl LootTables {
-    /// One player's loot of a creature: `needs_quest_item` says whether the
-    /// player's quests still need an item (`LootItem::AllowedForPlayer`).
+    /// The loot id and money of `entry` in a copy at `difficulty_id` (0 outside
+    /// dungeons): its difficulty row's, else its template's.
+    fn creature_loot(&self, entry: u32, difficulty_id: u32) -> Option<&CreatureLoot> {
+        self.difficulty_money
+            .get(&(entry, difficulty_id))
+            .or_else(|| self.money.get(&entry))
+    }
+
+    /// One player's loot of a creature of a copy at `difficulty_id`: `needs_quest_item`
+    /// says whether the player's quests still need an item (`LootItem::AllowedForPlayer`).
     pub fn roll_creature(
         &self,
         entry: u32,
+        difficulty_id: u32,
         items: &ItemTemplates,
         needs_quest_item: impl Fn(u32) -> bool,
         rng: &mut impl Rng,
@@ -133,8 +144,7 @@ impl LootTables {
         // A creature without a loot table drops nothing, coins included (user rule,
         // docs/specs/loot.md).
         let Some((info, template)) = self
-            .money
-            .get(&entry)
+            .creature_loot(entry, difficulty_id)
             .and_then(|info| Some((info, self.creature.get(&info.loot_id)?)))
         else {
             return RolledLoot::default();
@@ -280,10 +290,14 @@ impl LootTables {
     ///
     /// The 3-per-group (1 when equippable) repeat limit never applies within one roll
     /// of these tables and is ignored.
-    pub fn drop_chances(&self, entry: u32, items: &ItemTemplates) -> Vec<(u32, f32)> {
+    pub fn drop_chances(
+        &self,
+        entry: u32,
+        difficulty_id: u32,
+        items: &ItemTemplates,
+    ) -> Vec<(u32, f32)> {
         let template = self
-            .money
-            .get(&entry)
+            .creature_loot(entry, difficulty_id)
             .and_then(|info| self.creature.get(&info.loot_id));
         let misses = template.map_or_else(HashMap::new, |template| self.misses(template, items));
         let mut chances: Vec<(u32, f32)> = misses
@@ -362,6 +376,7 @@ pub(crate) fn load_loot_tables(conn: &Connection) -> rusqlite::Result<LootTables
         creature: load_templates(conn, "content_creature_loot_template")?,
         reference: load_templates(conn, "content_reference_loot_template")?,
         money: load_money(conn)?,
+        difficulty_money: load_difficulty_money(conn)?,
     })
 }
 
@@ -390,6 +405,23 @@ fn load_templates(conn: &Connection, table: &str) -> rusqlite::Result<HashMap<u3
         templates.entry(entry).or_default().add(loot_row);
     }
     Ok(templates)
+}
+
+fn load_difficulty_money(conn: &Connection) -> rusqlite::Result<HashMap<(u32, u32), CreatureLoot>> {
+    let mut statement = conn.prepare(
+        "SELECT entry, DifficultyID, lootid, mingold, maxgold FROM content_creature_template_difficulty",
+    )?;
+    let rows = statement.query_map([], |row| {
+        Ok((
+            (row.get(0)?, row.get(1)?),
+            CreatureLoot {
+                loot_id: row.get(2)?,
+                min_gold: row.get(3)?,
+                max_gold: row.get(4)?,
+            },
+        ))
+    })?;
+    rows.collect()
 }
 
 fn load_money(conn: &Connection) -> rusqlite::Result<HashMap<u32, CreatureLoot>> {

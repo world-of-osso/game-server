@@ -46,6 +46,8 @@ pub fn instance_script(name: &str) -> Option<InstanceScript> {
                 encounter_id,
             })
             .collect(),
+        // instance_the_stockade loads no creatureData.
+        boss_creatures: &[],
     })
 }
 

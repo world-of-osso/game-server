@@ -58,10 +58,12 @@ pub(crate) fn teleport_to(
         return true;
     }
     let entrant = entrant_of(world, player);
+    let unix = super::difficulty::now(world).unix;
     let refused = world.resource::<InstanceManager>().player_cannot_enter(
         world.resource::<MapStore>(),
         destination.map_id,
         entrant,
+        unix,
     );
     if let Some(reason) = refused {
         info!(
@@ -219,11 +221,11 @@ fn complete_transfer(world: &mut World, player: Entity) {
     };
     world.entity_mut(player).remove::<MapTransfer>();
     let entrant = entrant_of(world, player);
-    let now = world.resource::<Time>().elapsed_secs_f64();
+    let now = super::difficulty::now(world);
     let resolved = world.resource_scope(|world, mut instances: Mut<InstanceManager>| {
         let resolved =
             instances.create_map(world.resource::<MapStore>(), transfer.map_id, entrant, now)?;
-        match instances.cannot_enter(resolved.map, entrant) {
+        match instances.cannot_enter(resolved.map, entrant, now.unix) {
             Some(reason) => Err(reason),
             None => Ok(resolved),
         }
@@ -286,19 +288,48 @@ fn refuse_arrival(
     );
 }
 
-/// Spawn a newly created copy's creatures and game objects.
+/// Spawn a newly created copy's creatures and game objects at its difficulty.
 pub(crate) fn spawn_map_content(world: &mut World, map: InMap) {
+    let content = map_content(
+        world.resource::<InstanceManager>(),
+        world.resource::<MapStore>(),
+        map,
+    );
     let mut queue = CommandQueue::default();
     {
         let mut commands = Commands::new(&mut queue, world);
-        if let Some(world_data) = world.get_resource::<crate::world_data::WorldData>() {
-            crate::zones::spawn_map_creatures(&mut commands, world_data, map, true);
-        }
         if let Some(objects) = world.get_resource::<crate::game_objects::GameObjectSpawns>() {
-            crate::game_objects::spawn_map_game_objects(&mut commands, objects, map);
+            crate::game_objects::spawn_map_game_objects(
+                &mut commands,
+                objects,
+                map,
+                content.difficulty_id,
+            );
+        }
+        if let Some(world_data) = world.get_resource::<crate::world_data::WorldData>() {
+            crate::zones::spawn_map_creatures(&mut commands, world_data, content, true);
         }
     }
     queue.apply(world);
+}
+
+/// What a created copy spawns: its difficulty and the bosses its lock keeps dead.
+pub(crate) fn map_content(
+    instances: &InstanceManager,
+    store: &MapStore,
+    map: InMap,
+) -> crate::zones::MapContent {
+    crate::zones::MapContent {
+        map,
+        difficulty_id: instances
+            .copy_difficulty(map)
+            .map_or(0, |difficulty| difficulty.difficulty_id),
+        dead_bosses: crate::scripted_ai::instance_script::done_boss_entries(
+            store,
+            map.map_id,
+            instances.initial_done_bosses(map),
+        ),
+    }
 }
 
 /// The destination map streams its own tiles: forget the old map's.
@@ -312,17 +343,41 @@ fn reset_sent_tiles(world: &mut World, player: Entity) {
     }
 }
 
+/// The player's instance entrant: in a group the group's leader and dungeon
+/// difficulty, else its own (`Group::GetDifficultyID` / `Player::GetDifficultyID`).
 pub(crate) fn entrant_of(world: &World, player: Entity) -> InstanceEntrant {
     let character_id = world
         .get::<ClientId>(player)
         .expect("player has a ClientId")
         .0;
-    let group = world
-        .get_resource::<GroupRegistry>()
-        .and_then(|groups| groups.group_id_of(character_id));
+    let own_difficulty = world
+        .get::<super::DungeonDifficulty>(player)
+        .copied()
+        .unwrap_or_default()
+        .0;
+    entrant_for(
+        world.get_resource::<GroupRegistry>(),
+        character_id,
+        own_difficulty,
+    )
+}
+
+/// `InstanceEntrant` of `character_id` with dungeon difficulty `own_difficulty`.
+pub(crate) fn entrant_for(
+    groups: Option<&GroupRegistry>,
+    character_id: u64,
+    own_difficulty: u32,
+) -> InstanceEntrant {
+    let group = groups.and_then(|groups| groups.group_id_of(character_id));
     InstanceEntrant {
         character_id,
         group,
+        leader: groups
+            .and_then(|groups| groups.leader_of(character_id))
+            .unwrap_or(character_id),
+        difficulty_id: groups
+            .and_then(|groups| groups.dungeon_difficulty_of(character_id))
+            .unwrap_or(own_difficulty),
     }
 }
 
