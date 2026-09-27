@@ -788,3 +788,39 @@ fn a_hidden_target_leaves_its_observers_is_not_shown_to_new_ones_and_returns_whe
     run_fixed_ticks(&mut app, 1);
     assert!(visible_to(&app, first) && visible_to(&app, second));
 }
+
+#[test]
+fn a_decayed_corpse_is_hidden_from_players_who_arrive_later() {
+    let mut app = setup_interest_app();
+    let first = spawn_interest_observer(&mut app, pos(0.0, 0.0, 0.0));
+    let corpse = spawn_interest_target(&mut app, pos(10.0, 0.0, 0.0));
+    run_fixed_ticks(&mut app, 1);
+    let visible_to = |app: &App, connection| {
+        app.world()
+            .entity(corpse)
+            .get::<NetworkVisibility>()
+            .expect("a decayed corpse keeps its interest state")
+            .is_visible(connection)
+    };
+    assert!(visible_to(&app, first));
+
+    // `Creature::RemoveCorpse`: the decay timer ran out.
+    app.world_mut()
+        .entity_mut(corpse)
+        .insert(crate::combat::Corpse { remaining: 0.0 });
+    bevy::ecs::system::RunSystemOnce::run_system_once(
+        app.world_mut(),
+        crate::combat::corpse_decay_system,
+    )
+    .unwrap();
+    run_fixed_ticks(&mut app, 1);
+    assert!(!visible_to(&app, first), "the corpse leaves its observers");
+
+    // Replicon shows every entity to a new client unless interest hides it.
+    let second = spawn_interest_observer(&mut app, pos(5.0, 0.0, 0.0));
+    run_fixed_ticks(&mut app, 2);
+    assert!(
+        !visible_to(&app, second),
+        "a player arriving later does not see it"
+    );
+}

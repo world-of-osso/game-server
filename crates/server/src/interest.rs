@@ -305,9 +305,10 @@ fn on_network_visibility_added(
 }
 
 /// Taking `NetworkVisibility` off an entity hides it from every player that sees it:
-/// the entity leaves those clients, while it may keep `Replicate` (a decayed corpse
-/// that respawns). Removing `Replicate` alone marks nothing for the senders, so
-/// their copies would stay.
+/// the entity leaves those clients. Only for entities that stop replicating: one
+/// that keeps `Replicate` without `NetworkVisibility` is shown to every client that
+/// connects later, so hide those with `set_hidden`. Removing `Replicate` alone
+/// marks nothing for the senders, so their copies would stay.
 fn on_network_visibility_removed(
     trigger: On<Remove, NetworkVisibility>,
     states: Query<&NetworkVisibility>,

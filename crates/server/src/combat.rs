@@ -12,7 +12,7 @@ use crate::creature_ai::{SpawnPoint, WaypointState};
 use crate::creature_scripts::{TrainingDummy, health_loss};
 use crate::duel::DuelOpponent;
 use crate::faction::{FactionTemplates, UnitFaction};
-use crate::interest::{InterestDirtyQueue, NetworkVisibility, mark_interest_position_changed};
+use crate::interest::{InterestDirtyQueue, mark_interest_position_changed};
 use crate::item_stats::WeaponDamage;
 use crate::level_scaling::{ArmorConstants, CreatureArmor, ScalingItem, UnitScaling};
 use crate::melee::{self, Hand, MeleeOutcome, Victim};
@@ -967,9 +967,10 @@ pub(crate) fn kill_unit(world: &mut World, killer: Entity, victim: Entity) {
 }
 
 /// AzerothCore `Creature::Update` in `CORPSE` state: past `m_corpseRemoveTime` the
-/// corpse is removed from clients (`RemoveCorpse`) until it respawns. Dropping
-/// `NetworkVisibility` hides it from every observer; `Replicate` stays, and the
-/// respawn's new `NetworkVisibility` shows the NPC again.
+/// corpse is removed from clients (`RemoveCorpse`) until it respawns. Interest
+/// hides it from every observer, including players who arrive later (replicon
+/// shows an entity without `NetworkVisibility` to every new client); the respawn
+/// shows the NPC again.
 /// A dead summon goes with its corpse (`TempSummon::Update`: `DEAD` → `UnSummon`).
 pub(crate) fn corpse_decay_system(
     time: Res<Time>,
@@ -985,9 +986,10 @@ pub(crate) fn corpse_decay_system(
         if summon {
             commands.queue(move |world: &mut World| crate::zones::unsummon(world, entity));
         } else {
-            commands
-                .entity(entity)
-                .remove::<(Corpse, NetworkVisibility)>();
+            commands.entity(entity).remove::<Corpse>();
+            commands.queue(move |world: &mut World| {
+                crate::interest::set_hidden(world, entity, true);
+            });
         }
     }
 }
@@ -1191,10 +1193,10 @@ pub(crate) fn respawn_system(
         commands
             .entity(entity)
             .remove::<(DeathState, Corpse)>()
-            .insert((
-                Replicate::to_clients(NetworkTarget::All),
-                NetworkVisibility::default(),
-            ));
+            .insert(Replicate::to_clients(NetworkTarget::All));
+        commands.queue(move |world: &mut World| {
+            crate::interest::set_hidden(world, entity, false);
+        });
         commands.entity(entity).remove::<LastDamager>();
         commands.queue(move |world: &mut World| crate::scripted_ai::reinitialize(world, entity));
         events.push(CombatEvent {
