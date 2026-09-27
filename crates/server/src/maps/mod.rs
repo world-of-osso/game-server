@@ -102,6 +102,9 @@ impl Plugin for MapPlugin {
                     area_triggers::detect_area_trigger_teleports
                         .after(crate::networking::apply_terrain_gravity),
                     (difficulty::expire_instance_locks, unload_expired_instances).chain(),
+                    // complete_transfer runs in Update: the next interest update shows
+                    // the arrival its destination.
+                    transfer::announce_world_arrivals.after(crate::interest::InterestUpdate),
                 ),
             );
     }
