@@ -79,6 +79,26 @@ fn spawn_creatures<'a>(
                     spawn.guid, spawn.template_entry
                 )
             });
+        let entity = spawn_creature(
+            commands, world_data, template, map, replicate, spawn, &mut rng,
+        );
+        entities.insert(spawn.guid, entity);
+    }
+    insert_formation_members(commands, world_data, &entities);
+    entities
+}
+
+/// Spawn one creature of `template` with its AI, addon and script components.
+pub(crate) fn spawn_creature(
+    commands: &mut Commands,
+    world_data: &WorldData,
+    template: &CreatureTemplate,
+    map: crate::maps::InMap,
+    replicate: bool,
+    spawn: &CreatureSpawn,
+    rng: &mut impl rand::Rng,
+) -> Entity {
+    {
         let scaling = template
             .tuning
             .as_ref()
@@ -98,7 +118,7 @@ fn spawn_creatures<'a>(
                 template.armor,
             ),
         };
-        let display_id = choose_display_id(template, spawn, &mut rng);
+        let display_id = choose_display_id(template, spawn, rng);
         let bundle = creature_bundle(spawn, &template.name, health, display_id);
 
         let mut entity = commands.spawn((bundle, map));
@@ -128,13 +148,123 @@ fn spawn_creatures<'a>(
             template.detection_range,
         );
         crate::creature_scripts::insert_script_components(&mut entity, &template.script_name);
+        crate::scripted_ai::insert_script_name(&mut entity, &template.script_name);
+        insert_mana(&mut entity, world_data, template, level);
         if let Some(addon) = addon {
             insert_addon_components(&mut entity, addon);
         }
-        entities.insert(spawn.guid, entity.id());
+        entity.id()
     }
-    insert_formation_members(commands, world_data, &entities);
-    entities
+}
+
+/// Mana classes (paladin 2, mage 8: `ChrClasses.DisplayPower` mana) get
+/// creature_classlevelstats `basemana` × `ManaModifier`, full
+/// (Creature::UpdateLevelDependantStats → `SetCreateMana`, `SetInitialPowerValue`).
+fn insert_mana(
+    entity: &mut EntityCommands,
+    world_data: &WorldData,
+    template: &CreatureTemplate,
+    level: u8,
+) {
+    const MANA_CLASSES: [u8; 2] = [2, 8];
+    if !MANA_CLASSES.contains(&template.unit_class) {
+        return;
+    }
+    let base = world_data
+        .class_level_base_mana
+        .get(&(level, template.unit_class))
+        .copied()
+        .unwrap_or(0);
+    let max = (base as f32 * template.mana_modifier).round();
+    entity.insert((
+        shared::components::Mana { current: max, max },
+        crate::spell_cast::powers::PowerPools {
+            order: vec![shared::components::PowerType::Mana],
+            ..Default::default()
+        },
+    ));
+    if template.regenerates_power {
+        entity.insert(crate::spell_cast::powers::CreatureRegenTimer::default());
+    }
+}
+
+/// A creature summoned by `summoner` (`TempSummon`, `TEMPSUMMON_MANUAL_DESPAWN`):
+/// it never respawns, and its corpse's removal or its summoner's `SummonList`
+/// unsummons it.
+#[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
+pub struct TempSummon {
+    pub summoner: Entity,
+}
+
+/// `WorldObject::SummonCreature(entry, pos)`: a creature of template `entry` at the
+/// WoW position `[x, y, z, o]` in the summoner's map copy, replicated when the
+/// summoner is.
+pub(crate) fn summon_creature(
+    world: &mut World,
+    summoner: Entity,
+    entry: u32,
+    position: [f32; 4],
+) -> Option<Entity> {
+    let map = *world.get::<crate::maps::InMap>(summoner)?;
+    let zone_id = world.get::<Zone>(summoner).map_or(0, |zone| zone.id as u16);
+    let replicate = world.get::<Replicate>(summoner).is_some();
+    let spawn = CreatureSpawn {
+        guid: 0,
+        template_entry: entry,
+        map: map.map_id as u16,
+        zone_id,
+        position_x: position[0],
+        position_y: position[1],
+        position_z: position[2],
+        orientation: position[3],
+        wander_distance: 0.0,
+        movement_type: 0,
+        spawntimesecs: 0,
+        display_id: None,
+        unit_flags: None,
+    };
+    let mut queue = bevy::ecs::world::CommandQueue::default();
+    let summon = world.resource_scope(|world, world_data: Mut<WorldData>| {
+        let Some(template) = world_data.templates.get(&entry) else {
+            error!("SummonCreature: creature template {entry} does not exist");
+            return None;
+        };
+        let mut commands = Commands::new(&mut queue, world);
+        let summon = spawn_creature(
+            &mut commands,
+            &world_data,
+            template,
+            map,
+            replicate,
+            &spawn,
+            &mut rand::thread_rng(),
+        );
+        commands
+            .entity(summon)
+            .insert(TempSummon { summoner })
+            .remove::<RespawnDelay>();
+        Some(summon)
+    });
+    queue.apply(world);
+    if let Some(summon) = summon {
+        info!("{summoner} summoned creature {entry} as {summon} at {position:?}");
+    }
+    summon
+}
+
+/// `TempSummon::UnSummon`: the summoner's AI learns of it
+/// (`SummonedCreatureDespawn`) and the summon leaves the world.
+pub(crate) fn unsummon(world: &mut World, summon: Entity) {
+    let Some(summoner) = world
+        .get::<TempSummon>(summon)
+        .map(|summon| summon.summoner)
+    else {
+        return;
+    };
+    crate::scripted_ai::boss_ai::notify_summoner_despawn(world, summoner, summon);
+    if let Ok(entity) = world.get_entity_mut(summon) {
+        entity.despawn();
+    }
 }
 
 /// `creature_addon` mount and auras (Creature::LoadCreaturesAddon).
@@ -145,9 +275,17 @@ fn insert_addon_components(entity: &mut EntityCommands, addon: &CreatureAddon) {
         });
     }
     if !addon.auras.is_empty() {
-        entity.insert(AddonAuras(addon.auras.clone()));
+        entity.insert((
+            AddonAuras(addon.auras.clone()),
+            SpawnAddonAuras(addon.auras.clone()),
+        ));
     }
 }
+
+/// The `creature_addon.auras` a creature spawned with, applied again when it gets
+/// home from an evade (`HomeMovementGenerator::DoFinalize` → `LoadCreaturesAddon`).
+#[derive(Component, Debug, Clone)]
+pub(crate) struct SpawnAddonAuras(pub Vec<u32>);
 
 /// Link spawned followers to their spawned leader (FormationMgr::AddCreatureToGroup).
 fn insert_formation_members(
@@ -421,6 +559,8 @@ mod tests {
             }],
             tuning: None,
             armor: 0.0,
+            mana_modifier: 1.0,
+            regenerates_power: false,
         }
     }
 
@@ -472,7 +612,8 @@ mod tests {
                 ExperienceModifier REAL, type INTEGER, flags_extra INTEGER, speed_run REAL,
                 ScriptName TEXT, unit_class INTEGER, detection_range REAL, unit_flags INTEGER,
                 ContentTuningID INTEGER, HealthScalingExpansion INTEGER, LevelScalingDeltaMin INTEGER,
-                LevelScalingDeltaMax INTEGER, DamageModifier REAL, ArmorModifier REAL, subname TEXT);
+                LevelScalingDeltaMax INTEGER, DamageModifier REAL, ArmorModifier REAL, subname TEXT,
+                ManaModifier REAL, unit_flags2 INTEGER);
              CREATE TABLE expected_stat (ID INTEGER, Lvl INTEGER, ExpansionID INTEGER,
                 CreatureHealth REAL, CreatureAutoAttackDps REAL, CreatureArmor REAL,
                 ArmorConstant REAL);
@@ -481,8 +622,8 @@ mod tests {
              CREATE TABLE content_tuning_x_expected (ID INTEGER, ContentTuningID INTEGER,
                 ExpectedStatModID INTEGER, MinMythicPlusSeasonID INTEGER);
              CREATE TABLE creature_classlevelstats (level INTEGER, class INTEGER,
-                basehp0 INTEGER, basehp1 INTEGER, basehp2 INTEGER);
-             INSERT INTO creature_classlevelstats VALUES (1,1,42,42,42);
+                basehp0 INTEGER, basehp1 INTEGER, basehp2 INTEGER, basemana INTEGER);
+             INSERT INTO creature_classlevelstats VALUES (1,1,42,42,42,0);
              CREATE TABLE content_creature_template_model (CreatureID INTEGER, Idx INTEGER,
                 CreatureDisplayID INTEGER, DisplayScale REAL, Probability REAL);
              CREATE TABLE content_creature (guid INTEGER, id1 INTEGER, map INTEGER, zoneId INTEGER,
@@ -513,7 +654,7 @@ mod tests {
         for (index, angle) in angles.iter().enumerate() {
             let entry = 100 + index as u32;
             conn.execute(
-                "INSERT INTO content_creature_template VALUES (?1,1,1,1,0,1.0,1.0,'Loup — Écorché',0,0,1.0,1,0,1.14,'',1,20.0,0,0,0,0,0,1.0,1.0,'')",
+                "INSERT INTO content_creature_template VALUES (?1,1,1,1,0,1.0,1.0,'Loup — Écorché',0,0,1.0,1,0,1.14,'',1,20.0,0,0,0,0,0,1.0,1.0,'',1.0,0)",
                 [entry],
             )
             .unwrap();

@@ -86,6 +86,7 @@ fn run_tick(world: &mut World, unit: Entity, spell: &SpellInfo, tick: &Tick) {
         caster: tick.caster,
         spell,
         depth: 0,
+        dest: None,
     };
     let max_health = world.get::<Health>(unit).map_or(0.0, |health| health.max);
     match tick.aura_type {

@@ -68,6 +68,7 @@ mod quest_view;
 mod race_class;
 mod reputation;
 mod rest;
+mod scripted_ai;
 mod spell_cast;
 mod spell_info;
 mod stats;
@@ -169,6 +170,7 @@ fn add_world_plugins(app: &mut App) {
         .add_plugins(creature_ai::CreatureAiPlugin)
         .add_plugins(creature_aggro::CreatureAggroPlugin)
         .add_plugins(creature_scripts::CreatureScriptsPlugin)
+        .add_plugins(scripted_ai::ScriptedAiPlugin)
         .add_plugins(grid_activity::GridActivityPlugin)
         .add_plugins(stats::StatsPlugin)
         .add_plugins(combat::CombatPlugin)

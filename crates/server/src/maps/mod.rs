@@ -13,7 +13,7 @@ pub(crate) mod instances;
 mod login;
 pub(crate) mod persistence;
 pub(crate) mod store;
-mod transfer;
+pub(crate) mod transfer;
 
 use bevy::prelude::*;
 use shared::components::{Player, Position};
@@ -128,6 +128,9 @@ fn unload_expired_instances(
         }
     }
     info!("Unloaded instances {expired:?}");
+    commands.queue(move |world: &mut World| {
+        crate::scripted_ai::instance_script::unload_instance_scripts(world, &expired);
+    });
 }
 
 #[cfg(test)]

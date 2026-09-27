@@ -412,6 +412,76 @@ pub(crate) fn handle_kill(
     }
 }
 
+/// `.damage <amount>` (cs_misc `HandleDamageCommand`): the online character's target
+/// takes `amount` Normal-school damage from it through `Unit::DealDamage`.
+pub(crate) fn handle_damage(
+    db: &persistence::GameDatabase,
+    commands: &mut Commands,
+    players: &Query<(
+        Entity,
+        &mut Position,
+        &persistence::ClientId,
+        &mut shared::components::MovementControl,
+    )>,
+    name: &str,
+    amount: f32,
+) -> AdminResponse {
+    let Some(char_id) = persistence::find_character_id_by_name(&db.db, name) else {
+        return AdminResponse::Error(format!("character '{name}' not found"));
+    };
+    let Some(player) = players
+        .iter()
+        .find_map(|(entity, _, cid, _)| (cid.0 == char_id).then_some(entity))
+    else {
+        return AdminResponse::Error(format!("character '{name}' is not online"));
+    };
+    commands.queue(move |world: &mut World| {
+        let target = world
+            .get::<crate::networking::CombatTarget>(player)
+            .and_then(|target| target.0);
+        match target {
+            Some(target) => crate::combat::deal_direct_damage(world, player, target, amount),
+            None => warn!(".damage: {player} has no target"),
+        }
+    });
+    AdminResponse::Damaged {
+        character_name: name.to_owned(),
+        amount,
+    }
+}
+
+/// `.revive` (cs_misc `HandleReviveCommand`): `Player::ResurrectPlayer(1.0f)`.
+pub(crate) fn handle_revive(
+    db: &persistence::GameDatabase,
+    commands: &mut Commands,
+    players: &Query<(
+        Entity,
+        &mut Position,
+        &persistence::ClientId,
+        &mut shared::components::MovementControl,
+    )>,
+    name: &str,
+) -> AdminResponse {
+    let Some(char_id) = persistence::find_character_id_by_name(&db.db, name) else {
+        return AdminResponse::Error(format!("character '{name}' not found"));
+    };
+    let Some(player) = players
+        .iter()
+        .find_map(|(entity, _, cid, _)| (cid.0 == char_id).then_some(entity))
+    else {
+        return AdminResponse::Error(format!("character '{name}' is not online"));
+    };
+    commands.queue(move |world: &mut World| {
+        crate::death::resurrect_player(world, player);
+        if let Some(mut health) = world.get_mut::<shared::components::Health>(player) {
+            health.current = health.max;
+        }
+    });
+    AdminResponse::Revived {
+        character_name: name.to_owned(),
+    }
+}
+
 pub(crate) struct EquipmentAppearanceRequest<'a> {
     pub(crate) name: &'a str,
     pub(crate) slot_name: &'a str,

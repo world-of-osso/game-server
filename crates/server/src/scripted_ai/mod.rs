@@ -1,0 +1,514 @@
+//! Creature scripts selected by `creature_template.ScriptName`, ported from
+//! TrinityCore's `CreatureAI` / `ScriptedAI` / `BossAI` (game/AI/) with the
+//! instance scripts they report to (`InstanceScript`, game/Instances/).
+//!
+//! A creature whose ScriptName is registered (`the_stockade::creature_ai`) gets a
+//! `CreatureAiState` holding its `CreatureAi` (TrinityCore `RegisterCreatureAI`,
+//! created by `init_creature_ai` and `Reset` like `InitializeAI`). The hooks are
+//! called where the generic systems reach the TrinityCore call sites: engagement
+//! in `creature_aggro::add_threat` (`JustEngagedWith`), evade in
+//! `creature_aggro::enter_evade_mode` (`EnterEvadeMode` → `Reset`), death in
+//! `combat::insert_npc_death` (`JustDied`), damage in the melee and spell damage
+//! paths (`DamageTaken`), summons (`JustSummoned`, `SummonedCreatureDespawn`) and
+//! point movement (`MovementInform`). `UpdateAI` runs every tick of a living
+//! creature. A hook raised while the creature's own AI runs (a script killing
+//! itself) is queued and runs right after.
+//! See `docs/specs/boss-scripts.md`.
+
+pub mod boss_ai;
+pub mod creature_text;
+pub mod event_map;
+pub mod instance_script;
+pub mod movement;
+pub mod the_stockade;
+
+use std::collections::VecDeque;
+
+use bevy::prelude::*;
+use shared::casting::CastState;
+use shared::components::{Health, Player, ThreatTable};
+
+use crate::combat::DeathState;
+use crate::creature_ai::CreatureState;
+use crate::grid_activity::GridDormant;
+use crate::maps::InMap;
+use crate::networking::CombatTarget;
+
+pub use event_map::EventMap;
+
+pub struct ScriptedAiPlugin;
+
+impl Plugin for ScriptedAiPlugin {
+    fn build(&self, app: &mut App) {
+        app.init_resource::<instance_script::InstanceScripts>()
+            .add_systems(Startup, creature_text::load_creature_texts_startup)
+            .add_systems(
+                FixedUpdate,
+                (init_creature_ai, update_creature_ai)
+                    .chain()
+                    .after(crate::creature_aggro::update_victim_system)
+                    .before(crate::creature_ai::chase_system)
+                    .before(crate::combat::auto_attack_system),
+            )
+            .add_systems(
+                FixedUpdate,
+                movement::point_movement_system.before(crate::creature_ai::chase_system),
+            );
+    }
+}
+
+/// `creature_template.ScriptName` of a spawned creature with a registered AI.
+#[derive(Component, Debug, Clone)]
+pub struct CreatureScriptName(pub String);
+
+/// `ReactStates`: a passive creature neither attacks on sight nor picks a victim
+/// (`CreatureAI::UpdateVictim` stops its attack); an aggressive one does both.
+#[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum ReactState {
+    Passive,
+    #[default]
+    Aggressive,
+}
+
+/// `MovementGeneratorType` of a finished movement (`MovementInform`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MotionType {
+    /// `POINT_MOTION_TYPE`.
+    Point,
+}
+
+/// A `CreatureAI` hook with its arguments.
+#[derive(Debug, Clone, Copy)]
+pub enum Hook {
+    Reset,
+    JustEngagedWith(Entity),
+    JustDied(Option<Entity>),
+    /// `DamageTaken(attacker, damage)` with the health the damage was taken from.
+    DamageTaken {
+        attacker: Option<Entity>,
+        health_before: f32,
+        damage: f32,
+    },
+    EnterEvadeMode,
+    JustSummoned(Entity),
+    SummonedCreatureDespawn(Entity),
+    MovementInform(MotionType, u32),
+    UpdateAi(u32),
+}
+
+/// TrinityCore `CreatureAI` virtuals the Stockade scripts override. Defaults do
+/// what `CreatureAI`/`ScriptedAI` do when a script does not override them.
+pub trait CreatureAi: Send + Sync + 'static {
+    fn reset(&mut self, _ctx: &mut Ctx) {}
+    fn just_engaged_with(&mut self, _ctx: &mut Ctx, _who: Entity) {}
+    fn just_died(&mut self, _ctx: &mut Ctx, _killer: Option<Entity>) {}
+    fn damage_taken(&mut self, _ctx: &mut Ctx, _attacker: Option<Entity>, _damage: DamageTaken) {}
+    /// `CreatureAI::EnterEvadeMode`: the generic evade already ran
+    /// (`creature_aggro::enter_evade_mode`), then `Reset`.
+    fn enter_evade_mode(&mut self, ctx: &mut Ctx) {
+        self.reset(ctx);
+    }
+    fn just_summoned(&mut self, _ctx: &mut Ctx, _summon: Entity) {}
+    fn summoned_creature_despawn(&mut self, _ctx: &mut Ctx, _summon: Entity) {}
+    fn movement_inform(&mut self, _ctx: &mut Ctx, _kind: MotionType, _id: u32) {}
+    /// `ScriptedAI::UpdateAI`: keep the victim current.
+    fn update_ai(&mut self, ctx: &mut Ctx, _diff_ms: u32) {
+        ctx.update_victim();
+    }
+}
+
+/// The damage of one `DamageTaken` call and the health it was taken from.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct DamageTaken {
+    pub health_before: f32,
+    pub max_health: f32,
+    pub damage: f32,
+}
+
+impl DamageTaken {
+    /// `Unit::HealthBelowPctDamaged`: health minus the damage is below `pct` of max.
+    pub fn health_below_pct_damaged(&self, pct: f32) -> bool {
+        self.health_before - self.damage < self.max_health * pct / 100.0
+    }
+
+    /// `ScriptedAI::HealthAbovePct`, read while the damage is being dealt.
+    pub fn health_above_pct(&self, pct: f32) -> bool {
+        self.health_before > self.max_health * pct / 100.0
+    }
+}
+
+/// A creature's AI and the hooks raised while it was running.
+#[derive(Component)]
+pub struct CreatureAiState {
+    ai: Option<Box<dyn CreatureAi>>,
+    pending: VecDeque<Hook>,
+}
+
+/// `ScriptMgr` registration by ScriptName; `None` for names without a ported script.
+fn create_ai(world: &World, creature: Entity, script_name: &str) -> Option<Box<dyn CreatureAi>> {
+    the_stockade::creature_ai(world, creature, script_name)
+}
+
+/// A spawned creature with a ported ScriptName gets its AI as soon as it is in the
+/// world (`Creature::AIM_Initialize` at `AddToMap`).
+pub(crate) fn insert_script_name(entity: &mut EntityCommands, script_name: &str) {
+    if the_stockade::is_creature_script(script_name) {
+        entity
+            .insert(CreatureScriptName(script_name.to_owned()))
+            .queue(|entity: EntityWorldMut| {
+                let creature = entity.id();
+                entity
+                    .into_world_mut()
+                    .commands()
+                    .queue(move |world: &mut World| {
+                        initialize_ai(world, creature);
+                    });
+            });
+    }
+}
+
+/// `Creature::AIM_Create` + `InitializeAI` → `Reset`, for new and respawned creatures.
+fn init_creature_ai(world: &mut World) {
+    let pending: Vec<Entity> = world
+        .query_filtered::<Entity, (
+            With<CreatureScriptName>,
+            Without<CreatureAiState>,
+            Without<DeathState>,
+        )>()
+        .iter(world)
+        .collect();
+    for creature in pending {
+        initialize_ai(world, creature);
+    }
+}
+
+fn initialize_ai(world: &mut World, creature: Entity) {
+    let Some(name) = world
+        .get::<CreatureScriptName>(creature)
+        .map(|name| name.0.clone())
+    else {
+        return;
+    };
+    if world.get::<CreatureAiState>(creature).is_some() {
+        return;
+    }
+    let Some(ai) = create_ai(world, creature, &name) else {
+        // GetInstanceAI: outside its instance script's map the script does not run.
+        world.entity_mut(creature).remove::<CreatureScriptName>();
+        return;
+    };
+    world.entity_mut(creature).insert(CreatureAiState {
+        ai: Some(ai),
+        pending: VecDeque::new(),
+    });
+    dispatch(world, creature, Hook::Reset);
+}
+
+/// `Creature::Respawn`: the creature starts over with a new AI.
+pub(crate) fn reinitialize(world: &mut World, creature: Entity) {
+    if let Ok(mut entity) = world.get_entity_mut(creature) {
+        entity.remove::<CreatureAiState>();
+    }
+}
+
+/// `Creature::Update` (ALIVE) → `AIUpdateTick` → `UpdateAI(diff)`.
+fn update_creature_ai(world: &mut World) {
+    let diff_ms = world.resource::<Time>().delta().as_millis() as u32;
+    let creatures: Vec<Entity> = world
+        .query_filtered::<Entity, (
+            With<CreatureAiState>,
+            Without<DeathState>,
+            Without<GridDormant>,
+        )>()
+        .iter(world)
+        .collect();
+    for creature in creatures {
+        dispatch(world, creature, Hook::UpdateAi(diff_ms));
+    }
+}
+
+/// Run `hook` on `creature`'s AI, or queue it while that AI is running.
+pub(crate) fn dispatch(world: &mut World, creature: Entity, hook: Hook) {
+    let Some(mut state) = world.get_mut::<CreatureAiState>(creature) else {
+        return;
+    };
+    let Some(mut ai) = state.ai.take() else {
+        state.pending.push_back(hook);
+        return;
+    };
+    let mut next = Some(hook);
+    while let Some(hook) = next {
+        run_hook(world, creature, ai.as_mut(), hook);
+        next = world
+            .get_mut::<CreatureAiState>(creature)
+            .and_then(|mut state| state.pending.pop_front());
+    }
+    if let Some(mut state) = world.get_mut::<CreatureAiState>(creature) {
+        state.ai = Some(ai);
+    }
+}
+
+fn run_hook(world: &mut World, me: Entity, ai: &mut dyn CreatureAi, hook: Hook) {
+    if world.get_entity(me).is_err() {
+        return;
+    }
+    let mut ctx = Ctx { world, me };
+    match hook {
+        Hook::Reset => ai.reset(&mut ctx),
+        Hook::JustEngagedWith(who) => ai.just_engaged_with(&mut ctx, who),
+        Hook::JustDied(killer) => ai.just_died(&mut ctx, killer),
+        Hook::DamageTaken {
+            attacker,
+            health_before,
+            damage,
+        } => {
+            let max_health = ctx.world.get::<Health>(me).map_or(0.0, |health| health.max);
+            ai.damage_taken(
+                &mut ctx,
+                attacker,
+                DamageTaken {
+                    health_before,
+                    max_health,
+                    damage,
+                },
+            );
+        }
+        Hook::EnterEvadeMode => ai.enter_evade_mode(&mut ctx),
+        Hook::JustSummoned(summon) => ai.just_summoned(&mut ctx, summon),
+        Hook::SummonedCreatureDespawn(summon) => ai.summoned_creature_despawn(&mut ctx, summon),
+        Hook::MovementInform(kind, id) => ai.movement_inform(&mut ctx, kind, id),
+        Hook::UpdateAi(diff) => ai.update_ai(&mut ctx, diff),
+    }
+}
+
+/// `Unit::DealDamage` → `DamageTaken` for a scripted creature.
+pub(crate) fn damage_taken(
+    world: &mut World,
+    creature: Entity,
+    attacker: Option<Entity>,
+    health_before: f32,
+    damage: f32,
+) {
+    if world.get::<CreatureAiState>(creature).is_some() {
+        dispatch(
+            world,
+            creature,
+            Hook::DamageTaken {
+                attacker,
+                health_before,
+                damage,
+            },
+        );
+    }
+}
+
+/// The creature's world and its own entity: the `ScriptedAI` helpers
+/// (`me->...`, `DoCast*`, `Talk`, `SelectTarget`).
+pub struct Ctx<'w> {
+    pub world: &'w mut World,
+    pub me: Entity,
+}
+
+impl Ctx<'_> {
+    pub fn is_alive(&self) -> bool {
+        crate::spell_cast::targets::is_alive(self.world, self.me)
+            && self.world.get::<DeathState>(self.me).is_none()
+    }
+
+    /// `Unit::GetVictim`: the unit the creature chases and attacks.
+    pub fn victim(&self) -> Option<Entity> {
+        match self.world.get::<CreatureState>(self.me) {
+            Some(CreatureState::Pursuing { target }) => Entity::try_from_bits(*target),
+            _ => None,
+        }
+    }
+
+    /// `CreatureAI::IsEngaged`.
+    pub fn is_engaged(&self) -> bool {
+        self.is_alive()
+            && matches!(
+                self.world.get::<CreatureState>(self.me),
+                Some(CreatureState::Pursuing { .. })
+            )
+    }
+
+    /// `UNIT_STATE_CASTING`: a cast bar or channel is running.
+    pub fn is_casting(&self) -> bool {
+        self.world.get::<CastState>(self.me).is_some()
+    }
+
+    pub fn react_state(&self) -> ReactState {
+        self.world
+            .get::<ReactState>(self.me)
+            .copied()
+            .unwrap_or_default()
+    }
+
+    /// `Creature::SetReactState`.
+    pub fn set_react_state(&mut self, state: ReactState) {
+        self.world.entity_mut(self.me).insert(state);
+    }
+
+    /// `CreatureAI::UpdateVictim`: engaged and alive; a passive creature stops
+    /// attacking (`AttackStop`). Victim selection and the no-hostiles evade run in
+    /// `creature_aggro::update_victim_system`.
+    pub fn update_victim(&mut self) -> bool {
+        if !self.is_engaged() {
+            return false;
+        }
+        if self.react_state() == ReactState::Passive {
+            attack_stop(self.world, self.me);
+            return true;
+        }
+        self.victim().is_some()
+    }
+
+    /// `CreatureAI::Talk` → `CreatureTextMgr::SendChat`.
+    pub fn talk(&mut self, group: u8) {
+        creature_text::talk(self.world, self.me, group);
+    }
+
+    /// `UnitAI::DoCast(victim, spellId, triggered)`.
+    pub fn do_cast_at(&mut self, target: Option<Entity>, spell_id: u32, triggered: bool) {
+        if !triggered && self.is_casting() {
+            return;
+        }
+        let name = self
+            .world
+            .get::<shared::components::Npc>(self.me)
+            .map_or_else(String::new, |npc| npc.name.clone());
+        match crate::spell_cast::creature_cast(self.world, self.me, spell_id, target, triggered) {
+            Ok(()) => info!("{name} ({}) casts {spell_id} at {target:?}", self.me),
+            Err(failure) => debug!("{name} ({}) cast {spell_id} failed: {failure:?}", self.me),
+        }
+    }
+
+    /// `UnitAI::DoCastVictim`.
+    pub fn do_cast_victim(&mut self, spell_id: u32) {
+        if let Some(victim) = self.victim() {
+            self.do_cast_at(Some(victim), spell_id, false);
+        }
+    }
+
+    /// `UnitAI::DoCastSelf`.
+    pub fn do_cast_self(&mut self, spell_id: u32) {
+        let me = self.me;
+        self.do_cast_at(Some(me), spell_id, false);
+    }
+
+    /// `UnitAI::DoCastAOE`: no explicit target (a creature's spell needing a unit
+    /// target takes its victim, `Spell::InitExplicitTargets`).
+    pub fn do_cast_aoe(&mut self, spell_id: u32) {
+        self.do_cast_at(None, spell_id, false);
+    }
+
+    /// `UnitAI::DoCast(spellId)`: the target `UnitAI::FillAISpellInfo` derives
+    /// from the spell's first targets.
+    pub fn do_cast(&mut self, spell_id: u32) {
+        let target = match crate::spell_cast::ai_spell_target(self.world, spell_id) {
+            crate::spell_cast::AiTarget::SelfTarget => Some(self.me),
+            crate::spell_cast::AiTarget::Victim | crate::spell_cast::AiTarget::Debuff => {
+                self.victim()
+            }
+            crate::spell_cast::AiTarget::Enemy => self.select_target_random(0.0, false),
+        };
+        if target.is_some() {
+            self.do_cast_at(target, spell_id, false);
+        }
+    }
+
+    /// `UnitAI::SelectTarget(SelectTargetMethod::Random, 0, dist, playerOnly)`: a
+    /// random threat-list unit (`DefaultTargetSelector`: within `dist` yards when
+    /// `dist` > 0, a player when `player_only`, the current victim included).
+    pub fn select_target_random(&self, dist: f32, player_only: bool) -> Option<Entity> {
+        let threat = self.world.get::<ThreatTable>(self.me)?;
+        let me_pos = crate::spell_cast::targets::position(self.world, self.me)?;
+        let candidates: Vec<Entity> = threat
+            .entries()
+            .iter()
+            .filter_map(|entry| Entity::try_from_bits(entry.entity))
+            .filter(|&unit| {
+                crate::spell_cast::targets::is_alive(self.world, unit)
+                    && (!player_only || self.world.get::<Player>(unit).is_some())
+                    && (dist <= 0.0
+                        || crate::spell_cast::targets::position(self.world, unit)
+                            .is_some_and(|pos| pos.distance(me_pos) <= dist))
+            })
+            .collect();
+        if candidates.is_empty() {
+            return None;
+        }
+        let pick = rand::Rng::gen_range(&mut rand::thread_rng(), 0..candidates.len());
+        Some(candidates[pick])
+    }
+
+    /// `Unit::RemoveAllAuras`.
+    pub fn remove_all_auras(&mut self) {
+        crate::auras::remove_auras(
+            self.world,
+            self.me,
+            crate::auras::RemoveReason::Cancelled,
+            |_| true,
+        );
+    }
+
+    /// `WorldObject::SummonCreature(entry, pos)` (TEMPSUMMON_MANUAL_DESPAWN) at a
+    /// WoW position `[x, y, z, o]`; the summoner's `JustSummoned` follows.
+    pub fn summon_creature(&mut self, entry: u32, position: [f32; 4]) -> Option<Entity> {
+        let summon = crate::zones::summon_creature(self.world, self.me, entry, position)?;
+        dispatch(self.world, self.me, Hook::JustSummoned(summon));
+        Some(summon)
+    }
+
+    /// `MotionMaster::MovePoint(id, pos)` of `unit`, walking when it walks.
+    pub fn move_point(&mut self, unit: Entity, id: u32, target: shared::components::Position) {
+        movement::move_point(self.world, unit, id, target);
+    }
+
+    /// `Unit::SetWalk`.
+    pub fn set_walk(&mut self, unit: Entity, walk: bool) {
+        movement::set_walk(self.world, unit, walk);
+    }
+
+    pub fn position(&self) -> Option<shared::components::Position> {
+        self.world
+            .get::<shared::components::Position>(self.me)
+            .copied()
+    }
+
+    /// `Unit::KillSelf`.
+    pub fn kill_self(&mut self) {
+        crate::combat::kill_unit(self.world, self.me, self.me);
+    }
+
+    /// `CreatureAI::DoZoneInCombat(creature)`: every living player of the map
+    /// engages `creature`.
+    pub fn do_zone_in_combat(&mut self, creature: Entity) {
+        let Some(map) = self.world.get::<InMap>(creature).copied() else {
+            return;
+        };
+        for player in instance_script::players_in_map(self.world, map) {
+            if crate::spell_cast::targets::is_alive(self.world, player) {
+                crate::creature_aggro::add_threat(self.world, creature, player, 0.0);
+            }
+        }
+    }
+
+    /// The map copy's `InstanceScript` (`me->GetInstanceScript()`).
+    pub fn map(&self) -> Option<InMap> {
+        self.world.get::<InMap>(self.me).copied()
+    }
+}
+
+/// `Unit::AttackStop`: stop swinging at the victim.
+pub(crate) fn attack_stop(world: &mut World, unit: Entity) {
+    if let Some(mut target) = world.get_mut::<CombatTarget>(unit)
+        && target.0.is_some()
+    {
+        target.0 = None;
+    }
+    world.entity_mut(unit).remove::<crate::combat::AutoAttack>();
+}
+
+#[cfg(test)]
+mod tests;

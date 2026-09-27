@@ -147,6 +147,8 @@ pub struct MapStore {
     pub graveyard_zones: HashMap<u32, Vec<u32>>,
     /// `instance_template.parent` by dungeon map.
     pub instance_parents: HashMap<u32, u32>,
+    /// `instance_template.script` by dungeon map (`InstanceMap::CreateInstanceData`).
+    pub instance_scripts: HashMap<u32, String>,
 }
 
 impl MapStore {
@@ -231,6 +233,7 @@ pub fn load_map_store(conn: &Connection) -> rusqlite::Result<MapStore> {
         area_triggers: load_area_triggers(conn, &safe_locs)?,
         graveyard_zones: load_graveyard_zones(conn)?,
         instance_parents: load_instance_parents(conn)?,
+        instance_scripts: load_instance_scripts(conn)?,
         safe_locs,
     })
 }
@@ -387,6 +390,15 @@ fn load_graveyard_zones(conn: &Connection) -> rusqlite::Result<HashMap<u32, Vec<
         zones.entry(zone).or_default().push(safe_loc);
     }
     Ok(zones)
+}
+
+fn load_instance_scripts(conn: &Connection) -> rusqlite::Result<HashMap<u32, String>> {
+    let mut statement =
+        conn.prepare("SELECT map, script FROM tdb_instance_template WHERE script <> ''")?;
+    let rows = statement.query_map([], |row| {
+        Ok((row.get::<_, u32>(0)?, row.get::<_, String>(1)?))
+    })?;
+    rows.collect()
 }
 
 fn load_instance_parents(conn: &Connection) -> rusqlite::Result<HashMap<u32, u32>> {

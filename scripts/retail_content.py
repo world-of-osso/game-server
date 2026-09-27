@@ -567,6 +567,13 @@ def build_broadcast_text(conn):
     conn.execute("INSERT INTO content_broadcast_text SELECT * FROM broadcast_text WHERE ID NOT IN (SELECT ID FROM tdb_broadcast_text)")
 
 
+def build_creature_text(conn):
+    """content_creature_text: every TrinityCore creature_text row (CreatureTextMgr::LoadCreatureTexts loads
+    the whole table; scripts Talk by CreatureID and GroupID)."""
+    clone_table(conn, "tdb_creature_text", "content_creature_text")
+    conn.execute("INSERT INTO content_creature_text SELECT * FROM tdb_creature_text")
+
+
 def build_gossip_options(conn, menus, report):
     conn.execute("CREATE TEMP TABLE gossip_option_npc (npc INTEGER PRIMARY KEY, type INTEGER, flag INTEGER, icon INTEGER)")
     conn.executemany("INSERT INTO temp.gossip_option_npc VALUES (?, ?, ?, ?)",

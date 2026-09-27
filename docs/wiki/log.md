@@ -1,5 +1,9 @@
 # Wiki Log
 
+## [2026-09-27] systems | Boss scripts
+
+Created [[boss-scripts]]: TrinityCore CreatureAI/BossAI/InstanceScript/CreatureTextMgr port and the Stockade scripts (Hogger, Lord Overheat, Randolph Moloch, Warden Thelwater, Mortimer Moloch). Found that hiding an entity by removing `NetworkVisibility` leaks it to later clients.
+
 ## [2026-09-26] systems | Retail world content
 
 Updated [[content-import]], and renamed the spec `retail-spawn-source` to `retail-world-content`. Maps 0/1 now resolve from TrinityCore TDB1210:

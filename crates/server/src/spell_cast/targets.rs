@@ -4,18 +4,24 @@
 //! Relations come from `UnitFactionTemplate` reactions (`crate::faction`):
 //! an enemy is a valid attack target, an ally a unit the caster regards as
 //! friendly. The caster is always its own ally; its duel opponent is an enemy.
+//! An invisible unit is neither (`CanSeeOrDetect`), and a `NON_ATTACKABLE_2` one
+//! is no enemy (`WorldObject::IsValidAttackTarget`).
 //!
 //! Handled IDs: 0 none, 1 UNIT_CASTER, 6 UNIT_TARGET_ENEMY, 15
 //! UNIT_SRC_AREA_ENEMY, 16 UNIT_DEST_AREA_ENEMY, 18 DEST_CASTER, 21
 //! UNIT_TARGET_ALLY, 22 SRC_CASTER, 25 UNIT_TARGET_ANY, 30 UNIT_SRC_AREA_ALLY,
 //! 31 UNIT_DEST_AREA_ALLY, 53 DEST_TARGET_ENEMY, 63 DEST_TARGET_ANY, 132
-//! DEST_TARGET_ALLY. With no group or pet backend, 56 UNIT_CASTER_AREA_RAID
+//! DEST_TARGET_ALLY, 65 DEST_TARGET_BACK (the explicit target's position moved the
+//! effect radius behind it; collision is not modelled), 77 UNIT_CHANNEL_TARGET
+//! (the caster's channel target) and 28 DEST_DYNOBJ_ENEMY (the units a persistent
+//! area aura affects, `spell_cast::area_aura`). With no group or pet backend, 56 UNIT_CASTER_AREA_RAID
 //! and 120 UNIT_CASTER_AND_SUMMONS resolve to the caster, and 57
 //! UNIT_TARGET_RAID and 118 UNIT_TARGET_ALLY_OR_RAID to the ally target.
 //! Every other ID is unsupported and fails the cast.
 
 use bevy::prelude::*;
-use shared::components::{Health, Player, Position, UnitFactionTemplate};
+use shared::casting::{CastState, CastType};
+use shared::components::{Health, Player, Position, Rotation, UnitFactionTemplate};
 
 use crate::faction::{FactionTemplates, Reaction, UnitFaction};
 
@@ -43,6 +49,12 @@ enum Selector {
     CenterExplicit(Relation),
     AreaAroundSrc(Relation),
     AreaAroundDest(Relation),
+    /// Area center = the explicit target's position, the radius behind it.
+    DestTargetBack,
+    /// The caster's channel target.
+    ChannelTarget,
+    /// Units a persistent area aura affects: no unit at cast time.
+    DynObj(Relation),
 }
 
 fn selector(id: u32) -> Option<Selector> {
@@ -61,6 +73,9 @@ fn selector(id: u32) -> Option<Selector> {
         30 => Selector::AreaAroundSrc(Ally),
         16 => Selector::AreaAroundDest(Enemy),
         31 => Selector::AreaAroundDest(Ally),
+        28 => Selector::DynObj(Enemy),
+        65 => Selector::DestTargetBack,
+        77 => Selector::ChannelTarget,
         _ => return None,
     })
 }
@@ -83,6 +98,7 @@ pub fn explicit_requirement<'a>(
         .flat_map(|effect| effect.implicit_targets)
         .find_map(|id| match selector(id)? {
             Selector::Explicit(relation) | Selector::CenterExplicit(relation) => Some(relation),
+            Selector::DestTargetBack => Some(Relation::Any),
             _ => None,
         })
 }
@@ -113,6 +129,9 @@ pub fn relation_matches(world: &World, caster: Entity, target: Entity, relation:
     if caster == target {
         return relation == Relation::Ally;
     }
+    if world.get::<crate::auras::Invisible>(target).is_some() {
+        return false;
+    }
     // WorldObject::IsValidAttackTarget / IsValidAssistTarget (Object.cpp:2374, 2538): an
     // uninteractible unit is neither attacked nor assisted.
     if world
@@ -124,9 +143,13 @@ pub fn relation_matches(world: &World, caster: Entity, target: Entity, relation:
     // The duel opponent is hostile: attackable, never assisted.
     let dueling = dueling(world, caster, target);
     let templates = world.resource::<FactionTemplates>();
+    let target_entity = target;
     let (caster, target) = (unit_faction(world, caster), unit_faction(world, target));
+    let attackable = world
+        .get::<shared::components::UnitFlags>(target_entity)
+        .is_none_or(|flags| flags.is_attackable());
     match relation {
-        Relation::Enemy => dueling || templates.can_attack(caster, target),
+        Relation::Enemy => attackable && (dueling || templates.can_attack(caster, target)),
         _ => !dueling && templates.can_assist(caster, target),
     }
 }
@@ -215,6 +238,14 @@ pub fn select_targets(
             Selector::CenterExplicit(_) => {
                 center = explicit.and_then(|target| position(world, target));
             }
+            Selector::DestTargetBack => {
+                center = explicit.and_then(|target| behind(world, target, radius(effect, slot)));
+            }
+            Selector::ChannelTarget => {
+                selected_any = true;
+                units.extend(channel_target(world, caster));
+            }
+            Selector::DynObj(_) => selected_any = true,
             Selector::AreaAroundSrc(relation) => {
                 selected_any = true;
                 let src = center.unwrap_or(caster_pos);
@@ -250,9 +281,81 @@ pub fn select_targets(
     Ok(units)
 }
 
+/// Where an effect's destination targets put it (`SpellCastTargets::GetDstPos`),
+/// Bevy space, with the facing (WoW radians) a unit teleported there takes.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Dest {
+    pub position: Vec3,
+    pub orientation: f32,
+}
+
+/// WoW orientation of a unit (`Rotation.y` is the orientation + pi/2).
+pub fn orientation(world: &World, unit: Entity) -> f32 {
+    world
+        .get::<Rotation>(unit)
+        .map_or(0.0, |rotation| rotation.y - std::f32::consts::FRAC_PI_2)
+}
+
+/// `dist` yards behind `target` (`TARGET_DEST_TARGET_BACK`: `CalcDirectionAngle` pi
+/// from the target's facing), at the target's height.
+fn behind(world: &World, target: Entity, dist: f32) -> Option<Vec3> {
+    let pos = position(world, target)?;
+    let angle = orientation(world, target) + std::f32::consts::PI;
+    // WoW (x, y) offsets are Bevy (x, -z).
+    Some(Vec3::new(
+        pos.x + dist * angle.cos(),
+        pos.y,
+        pos.z - dist * angle.sin(),
+    ))
+}
+
+/// The unit the caster channels at (`Spell::m_targets` of its channel).
+fn channel_target(world: &World, caster: Entity) -> Option<Entity> {
+    let cast = world.get::<CastState>(caster)?;
+    (cast.cast_type == CastType::Channel && cast.target != 0)
+        .then(|| Entity::try_from_bits(cast.target))
+        .flatten()
+}
+
+/// The destination of one effect: the last of its slots that sets one
+/// (`SelectImplicitTargetDestTargets`, TargetB after TargetA); the facing is the
+/// explicit target's (`EffectTeleportUnits` takes it when the dest has none).
+pub fn effect_dest(
+    world: &World,
+    caster: Entity,
+    explicit: Option<Entity>,
+    effect: &SpellEffect,
+) -> Option<Dest> {
+    let mut dest = None;
+    for (slot, &id) in effect.implicit_targets.iter().enumerate() {
+        let point = match selector(id)? {
+            Selector::CenterCaster => position(world, caster),
+            Selector::CenterExplicit(_) => explicit.and_then(|target| position(world, target)),
+            Selector::DestTargetBack => {
+                explicit.and_then(|target| behind(world, target, radius(effect, slot)))
+            }
+            _ => continue,
+        };
+        let facing = explicit.map_or_else(
+            || orientation(world, caster),
+            |target| orientation(world, target),
+        );
+        dest = point.map(|position| Dest {
+            position,
+            orientation: facing,
+        });
+    }
+    dest
+}
+
+/// Radius of the effect's first target slot (`SpellEffectInfo::CalcRadius`).
+pub fn effect_radius(effect: &SpellEffect) -> f32 {
+    radius(effect, 0)
+}
+
 /// Living units within `radius` of `center` matching `relation`, nearest
 /// first, capped by `max_targets` (0 = no cap).
-fn area_units(
+pub(crate) fn area_units(
     world: &mut World,
     caster: Entity,
     center: Vec3,

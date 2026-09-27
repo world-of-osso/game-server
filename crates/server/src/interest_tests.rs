@@ -759,3 +759,32 @@ fn a_player_leaving_its_map_keeps_only_itself_until_it_arrives() {
     assert!(visible(&app, player));
     assert!(!visible(&app, neighbour));
 }
+
+#[test]
+fn a_hidden_target_leaves_its_observers_is_not_shown_to_new_ones_and_returns_when_shown() {
+    let mut app = setup_interest_app();
+    let first = spawn_interest_observer(&mut app, pos(0.0, 0.0, 0.0));
+    let target = spawn_interest_target(&mut app, pos(10.0, 0.0, 0.0));
+    run_fixed_ticks(&mut app, 1);
+    let visible_to = |app: &App, connection| {
+        app.world()
+            .entity(target)
+            .get::<NetworkVisibility>()
+            .unwrap()
+            .is_visible(connection)
+    };
+    assert!(visible_to(&app, first));
+    // Vanish: MOD_INVISIBILITY hides the unit from everyone.
+    set_hidden(app.world_mut(), target, true);
+    run_fixed_ticks(&mut app, 1);
+    assert!(!visible_to(&app, first));
+    let second = spawn_interest_observer(&mut app, pos(5.0, 0.0, 0.0));
+    run_fixed_ticks(&mut app, 2);
+    assert!(
+        !visible_to(&app, second),
+        "a player arriving later does not see it"
+    );
+    set_hidden(app.world_mut(), target, false);
+    run_fixed_ticks(&mut app, 1);
+    assert!(visible_to(&app, first) && visible_to(&app, second));
+}

@@ -354,3 +354,47 @@ pub(super) fn sync_unit_powers(
         }
     }
 }
+
+/// `CREATURE_REGEN_INTERVAL` (Creature.h), ms.
+const CREATURE_REGEN_INTERVAL_SECS: f32 = 2.0;
+/// `Creature::Regenerate(POWER_MANA)` for a creature without an owner:
+/// `(27 / 5 + 17) × Rate.Power.Mana` (1) mana per interval, in and out of combat.
+const CREATURE_MANA_PER_INTERVAL: f32 = 22.0;
+
+/// `m_regenTimer` of a creature with `UNIT_FLAG2_REGENERATE_POWER`.
+#[derive(Component, Debug, Clone, Copy)]
+pub struct CreatureRegenTimer(pub f32);
+
+impl Default for CreatureRegenTimer {
+    fn default() -> Self {
+        Self(CREATURE_REGEN_INTERVAL_SECS)
+    }
+}
+
+/// Creature mana regen every `CREATURE_REGEN_INTERVAL`, scaled by
+/// MOD_POWER_REGEN_PERCENT; none while evading (`!IsInEvadeMode()`).
+pub(super) fn regenerate_creature_mana(
+    time: Res<Time>,
+    mut creatures: Query<(
+        &mut CreatureRegenTimer,
+        &mut Mana,
+        Option<&crate::creature_ai::CreatureState>,
+        Option<&crate::auras::AuraStatMods>,
+    )>,
+) {
+    let dt = time.delta_secs();
+    for (mut timer, mut mana, state, mods) in &mut creatures {
+        timer.0 -= dt;
+        if timer.0 > 0.0 {
+            continue;
+        }
+        timer.0 += CREATURE_REGEN_INTERVAL_SECS;
+        let evading = state == Some(&crate::creature_ai::CreatureState::Returning);
+        if evading || mana.current >= mana.max {
+            continue;
+        }
+        let gain = CREATURE_MANA_PER_INTERVAL
+            * mods.map_or(1.0, |mods| mods.power_regen(PowerType::Mana as i32));
+        mana.current = (mana.current + gain).min(mana.max);
+    }
+}

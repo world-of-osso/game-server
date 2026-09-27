@@ -41,6 +41,8 @@ fn test_template(entry: u32, faction: u16, min_level: u8, max_level: u8) -> Crea
         models: Vec::new(),
         tuning: None,
         armor: 0.0,
+        mana_modifier: 1.0,
+        regenerates_power: false,
     }
 }
 

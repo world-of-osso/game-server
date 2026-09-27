@@ -157,6 +157,17 @@ enum AdminRequest {
     CombatLog {
         last_seconds: f64,
     },
+    /// TrinityCore `.damage <amount>`: the online character's target takes `amount`
+    /// damage from it (`Unit::DealDamage`, school Normal).
+    Damage {
+        character_name: String,
+        amount: f32,
+    },
+    /// TrinityCore `.revive`: a dead online character comes back to life with full
+    /// health (`Player::ResurrectPlayer(1.0f)`).
+    Revive {
+        character_name: String,
+    },
     Ping,
 }
 
@@ -308,6 +319,13 @@ enum AdminResponse {
         node: u32,
         node_name: String,
     },
+    Damaged {
+        character_name: String,
+        amount: f32,
+    },
+    Revived {
+        character_name: String,
+    },
     Pong,
     Error(String),
 }
@@ -422,6 +440,19 @@ fn parse_request(args: &[String]) -> AdminRequest {
         "set-credentials" => parse_set_credentials(args),
         "set-position" => parse_set_position(args),
         "teleport" => parse_teleport(args),
+        "revive" => {
+            require_args(args, 3, "revive <character_name>");
+            AdminRequest::Revive {
+                character_name: args[2].clone(),
+            }
+        }
+        "damage" => {
+            require_args(args, 4, "damage <character_name> <amount>");
+            AdminRequest::Damage {
+                character_name: args[2].clone(),
+                amount: args[3].parse().expect("amount must be a number"),
+            }
+        }
         "kill" => {
             require_args(args, 3, "kill <character_name>");
             AdminRequest::Kill {

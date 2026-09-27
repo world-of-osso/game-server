@@ -49,6 +49,11 @@ pub struct CreatureTemplate {
     /// Armor at `min_level` of an untuned template (ExpectedStat
     /// CreatureArmor × ArmorModifier); a tuned one reads `tuning.stats`.
     pub armor: f32,
+    /// `ManaModifier` (creature_template_difficulty): max mana is
+    /// creature_classlevelstats `basemana` × this (Creature::UpdateLevelDependantStats).
+    pub mana_modifier: f32,
+    /// `UNIT_FLAG2_REGENERATE_POWER` in `unit_flags2` (Creature::Regenerate).
+    pub regenerates_power: bool,
 }
 
 /// A template with a `ContentTuningID`: `min_level`/`max_level` are its
@@ -152,6 +157,8 @@ pub struct WorldData {
     pub formations: HashMap<u32, FormationInfo>,
     /// `creature_classlevelstats` basehp0..2 keyed by (level, class).
     pub class_level_base_hp: HashMap<(u8, u8), [u32; 3]>,
+    /// `creature_classlevelstats` basemana keyed by (level, class).
+    pub class_level_base_mana: HashMap<(u8, u8), u32>,
     pub armor_constants: ArmorConstants,
 }
 
@@ -170,7 +177,7 @@ pub fn load_world_data(path: &Path) -> WorldData {
 
     let expected_stats = load_expected_stats(&conn);
     let mut templates = load_templates(&conn, &expected_stats);
-    load_models(&conn, &mut templates);
+    load_template_models(&conn, &mut templates);
     let spawns = load_spawns(&conn);
     let spawns_by_map = build_spawns_by_map(&spawns);
     let waypoints = load_waypoints(&conn);
@@ -184,6 +191,7 @@ pub fn load_world_data(path: &Path) -> WorldData {
     );
     let formations = load_formations(&conn);
     let class_level_base_hp = load_class_level_base_hp(&conn);
+    let class_level_base_mana = load_class_level_base_mana(&conn);
     let armor_constants = expected_stats.armor_constants();
 
     info!(
@@ -205,6 +213,7 @@ pub fn load_world_data(path: &Path) -> WorldData {
         template_addons,
         formations,
         class_level_base_hp,
+        class_level_base_mana,
         armor_constants,
     }
 }
@@ -275,6 +284,59 @@ pub(crate) fn load_expected_stats(conn: &Connection) -> ExpectedStats {
     stats
 }
 
+/// expected_stat CreatureSpellDamage and CreatureAutoAttackDps (a later ID replaces
+/// an earlier one, as `_expectedStatsByLevel`).
+pub(crate) fn load_creature_spell_stats(
+    conn: &Connection,
+) -> crate::level_scaling::CreatureSpellStats {
+    let mut stmt = conn
+        .prepare(
+            "SELECT Lvl, ExpansionID, CreatureSpellDamage, CreatureAutoAttackDps
+             FROM expected_stat ORDER BY ID",
+        )
+        .expect("Failed to prepare expected_stat spell query");
+    let rows = stmt
+        .query_map(params![], |row| {
+            Ok((
+                (row.get::<_, i64>(0)? as u8, row.get::<_, i64>(1)? as i32),
+                (row.get::<_, f64>(2)? as f32, row.get::<_, f64>(3)? as f32),
+            ))
+        })
+        .expect("Failed to query expected_stat");
+    let by_level = rows
+        .map(|row| row.expect("Failed to read expected_stat row"))
+        .collect();
+    let mut stmt = conn
+        .prepare("SELECT ID, ExpansionID FROM content_tuning")
+        .expect("Failed to prepare content_tuning query");
+    let tuning_expansion = stmt
+        .query_map(params![], |row| {
+            Ok((row.get::<_, i64>(0)? as u32, row.get::<_, i64>(1)? as i32))
+        })
+        .expect("Failed to query content_tuning")
+        .map(|row| row.expect("Failed to read content_tuning row"))
+        .collect();
+    crate::level_scaling::CreatureSpellStats {
+        by_level,
+        tuning_expansion,
+    }
+}
+
+fn load_class_level_base_mana(conn: &Connection) -> HashMap<(u8, u8), u32> {
+    let mut stmt = conn
+        .prepare("SELECT level, class, basemana FROM creature_classlevelstats")
+        .expect("Failed to prepare creature_classlevelstats mana query");
+    stmt.query_map(params![], |row| {
+        Ok((
+            (row.get::<_, i64>(0)? as u8, row.get::<_, i64>(1)? as u8),
+            row.get(2)?,
+        ))
+    })
+    .expect("Failed to query creature_classlevelstats")
+    .map(|row| row.expect("Failed to read creature_classlevelstats row"))
+    .collect()
+}
+
 fn load_class_level_base_hp(conn: &Connection) -> HashMap<(u8, u8), [u32; 3]> {
     let mut stmt = conn
         .prepare("SELECT level, class, basehp0, basehp1, basehp2 FROM creature_classlevelstats")
@@ -293,6 +355,7 @@ fn load_class_level_base_hp(conn: &Connection) -> HashMap<(u8, u8), [u32; 3]> {
 const CREATURE_TYPE_CRITTER: i64 = 8;
 const CREATURE_FLAG_EXTRA_NO_XP: i64 = 0x40;
 const CREATURE_FLAG_EXTRA_TRIGGER: i64 = 0x80;
+const UNIT_FLAG2_REGENERATE_POWER: i64 = 0x800;
 /// TrinityCore `ObjectMgr::LoadCreatureModelInfo` `trigggerCreatureModelFileID`: the model files of
 /// invisible trigger displays.
 const TRIGGER_MODEL_FILE_DATA_IDS: &str = "124640, 124641, 124642, 343863, 439302";
@@ -350,6 +413,8 @@ fn template_from_row(row: &Row, expected: &ExpectedStats) -> rusqlite::Result<Cr
         models: Vec::new(),
         armor: expected.untuned_armor(row.get::<_, i64>(1)? as u8, unit_class, armor_modifier),
         tuning,
+        mana_modifier: row.get(25)?,
+        regenerates_power: row.get::<_, i64>(26)? & UNIT_FLAG2_REGENERATE_POWER != 0,
     })
 }
 
@@ -362,7 +427,8 @@ pub(crate) fn load_templates(
             "SELECT entry, minlevel, maxlevel, faction, npcflag, speed_walk, HealthModifier, name,
                     rank, ExperienceModifier, type, flags_extra, speed_run, ScriptName, unit_class, exp,
                     detection_range, unit_flags, ContentTuningID, HealthScalingExpansion,
-                    LevelScalingDeltaMin, LevelScalingDeltaMax, DamageModifier, ArmorModifier, subname
+                    LevelScalingDeltaMin, LevelScalingDeltaMax, DamageModifier, ArmorModifier, subname,
+                    ManaModifier, unit_flags2
              FROM content_creature_template",
         )
         .expect("Failed to prepare content_creature_template query");
@@ -379,7 +445,10 @@ pub(crate) fn load_templates(
     map
 }
 
-fn load_models(conn: &Connection, templates: &mut HashMap<u32, CreatureTemplate>) {
+pub(crate) fn load_template_models(
+    conn: &Connection,
+    templates: &mut HashMap<u32, CreatureTemplate>,
+) {
     let mut stmt = conn
         .prepare(&format!(
             "SELECT model.CreatureID, model.CreatureDisplayID, model.Probability,
@@ -634,6 +703,7 @@ fn startup_load_world_data(mut commands: Commands) {
     let prices = crate::bank::load_bank_tab_prices(&conn)
         .expect("Failed to load bank_tab; run scripts/db2.py import");
     commands.insert_resource(prices);
+    commands.insert_resource(load_creature_spell_stats(&conn));
 }
 
 pub struct WorldDataPlugin;

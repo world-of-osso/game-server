@@ -41,6 +41,7 @@ use crate::stats::CharacterStats;
 
 pub const EFFECT_SCHOOL_DAMAGE: u32 = 2;
 pub const EFFECT_HEAL: u32 = 10;
+pub const EFFECT_PERSISTENT_AREA_AURA: u32 = 27;
 pub const EFFECT_ENERGIZE: u32 = 30;
 pub const EFFECT_WEAPON_PERCENT_DAMAGE: u32 = 31;
 pub const EFFECT_TRIGGER_MISSILE: u32 = 32;
@@ -50,6 +51,7 @@ pub const EFFECT_TRIGGER_SPELL: u32 = 64;
 pub const EFFECT_INTERRUPT_CAST: u32 = 68;
 pub const EFFECT_NORMALIZED_WEAPON_DMG: u32 = 121;
 pub const EFFECT_HEAL_PCT: u32 = 136;
+pub const EFFECT_TELEPORT_UNITS: u32 = 252;
 
 /// Triggered spells may trigger further spells up to this depth.
 pub const MAX_TRIGGER_DEPTH: u8 = 3;
@@ -60,6 +62,8 @@ pub struct EffectCtx<'a> {
     pub spell: &'a SpellInfo,
     /// 0 for the requested spell, +1 per `TRIGGER_SPELL` hop.
     pub depth: u8,
+    /// The resolving effect's destination (`targets::effect_dest`).
+    pub dest: Option<super::targets::Dest>,
 }
 
 pub type EffectHandler = fn(&mut World, &EffectCtx, &SpellEffect, Entity);
@@ -79,6 +83,7 @@ pub fn handler(effect_id: u32) -> Option<EffectHandler> {
         EFFECT_TRIGGER_SPELL | EFFECT_TRIGGER_MISSILE => trigger_spell,
         EFFECT_INTERRUPT_CAST => interrupt_cast,
         EFFECT_HEAL_PCT => heal_pct,
+        EFFECT_TELEPORT_UNITS => teleport_units,
         crate::profession::EFFECT_CREATE_ITEM => crate::profession::effect_create_item,
         crate::profession::EFFECT_LEARN_SPELL => crate::profession::effect_learn_spell,
         crate::profession::EFFECT_SKILL_STEP => crate::profession::effect_skill_step,
@@ -128,14 +133,55 @@ pub(crate) fn power_stats(world: &World, unit: Entity) -> (f32, f32) {
         .map_or((0.0, 0.0), |stats| (stats.spell_power, stats.attack_power))
 }
 
-/// Base points with the caster's Points and PointsIndexN mods.
+const SPELL_ATTR0_SCALES_WITH_CREATURE_LEVEL: u32 = 0x0008_0000;
+const SPELL_ATTR12_USE_FLOAT_VALUES_FOR_SCALING_AMOUNTS: u32 = 0x0020_0000;
+
+/// `SpellEffectInfo::GetScalingExpectedStat` for the types a creature spell scales:
+/// school damage and damage auras scale with `CreatureSpellDamage` (true = the
+/// `CreatureAutoAttackDps` of `SPELL_ATTR0_SCALES_WITH_CREATURE_LEVEL`).
+fn scales_with_spell_damage(effect: &SpellEffect) -> bool {
+    match effect.effect {
+        EFFECT_SCHOOL_DAMAGE | EFFECT_WEAPON_DAMAGE => true,
+        _ if crate::auras::is_aura_effect(effect) => {
+            effect.aura == crate::auras::PERIODIC_DAMAGE_AURA
+        }
+        _ => false,
+    }
+}
+
+/// `SpellEffectInfo::CalcBaseValue` without SpellScaling: a creature's damage effect
+/// is `BasePoints`% of ExpectedStat CreatureSpellDamage at its level, rounded unless
+/// `SPELL_ATTR12_USE_FLOAT_VALUES_FOR_SCALING_AMOUNTS`. Players keep `BasePoints`
+/// (their class spells carry their damage in coefficients).
+fn calc_base_value(world: &World, caster: Entity, spell: &SpellInfo, effect: &SpellEffect) -> f32 {
+    let creature = world.get::<Npc>(caster).is_some();
+    let stats = world.get_resource::<crate::level_scaling::CreatureSpellStats>();
+    let (true, Some(stats)) = (creature && scales_with_spell_damage(effect), stats) else {
+        return effect.base_points;
+    };
+    let attribute = |index: usize| spell.misc.as_ref().map_or(0, |misc| misc.attributes[index]);
+    let auto_attack = attribute(0) & SPELL_ATTR0_SCALES_WITH_CREATURE_LEVEL != 0;
+    let level = world
+        .get::<shared::components::UnitLevel>(caster)
+        .map_or(1, |level| level.0);
+    let tuning = spell.misc.as_ref().map_or(0, |misc| misc.content_tuning_id);
+    let value = stats.evaluate(auto_attack, level, tuning) * effect.base_points / 100.0;
+    if attribute(12) & SPELL_ATTR12_USE_FLOAT_VALUES_FOR_SCALING_AMOUNTS != 0 {
+        value
+    } else {
+        value.round()
+    }
+}
+
+/// Base points (`calc_base_value`) with the caster's Points and PointsIndexN mods.
 pub(crate) fn modded_base_points(
     world: &World,
     caster: Entity,
     spell: &SpellInfo,
     effect: &SpellEffect,
 ) -> f32 {
-    let base = spell_mods::modify(world, caster, spell, SpellModOp::Points, effect.base_points);
+    let base_points = calc_base_value(world, caster, spell, effect);
+    let base = spell_mods::modify(world, caster, spell, SpellModOp::Points, base_points);
     match SpellModOp::points_index(effect.index) {
         Some(op) => spell_mods::modify(world, caster, spell, op, base),
         None => base,
@@ -161,8 +207,12 @@ pub(crate) fn scaled_amount(
     base + coefficient * spell_power + ap_coefficient * attack_power
 }
 
-/// One main-hand weapon hit; units without `CharacterStats` hit unarmed with 0 AP.
+/// One main-hand weapon hit. A creature (no `CharacterStats`) rolls its own weapon
+/// damage (`combat::creature_weapon_damage`, Unit::CalculateDamage).
 fn weapon_hit(world: &World, caster: Entity, normalized: bool) -> f32 {
+    if world.get::<CharacterStats>(caster).is_none() && world.get::<Npc>(caster).is_some() {
+        return crate::combat::creature_weapon_damage(&UnitScaling::of(world, caster));
+    }
     let (_, attack_power) = power_stats(world, caster);
     let weapon = world
         .get::<CharacterStats>(caster)
@@ -369,6 +419,9 @@ pub fn deal_damage(
         health_loss(training_dummy, scaled_loss),
     );
     let lethal = crate::death::apply_health_damage(&mut health, loss);
+    if loss > 0.0 {
+        crate::scripted_ai::damage_taken(world, target, Some(ctx.caster), before, loss);
+    }
     if duel_defeated {
         world.entity_mut(target).insert(crate::duel::DuelDefeated);
     }
@@ -592,4 +645,51 @@ fn interrupt_cast(world: &mut World, ctx: &EffectCtx, _effect: &SpellEffect, tar
     let mut event = log_amount(ctx, target, CombatLogKind::Interrupt);
     event.school_mask = school_mask;
     log_event(world, event);
+}
+
+/// 252 TELEPORT_UNITS (`Spell::EffectTeleportUnits`): the unit moves to the effect's
+/// destination facing its orientation (`NearTeleportTo`).
+fn teleport_units(world: &mut World, ctx: &EffectCtx, _effect: &SpellEffect, target: Entity) {
+    let Some(dest) = ctx.dest else {
+        debug!(
+            "Spell {}: TELEPORT_UNITS without a destination",
+            ctx.spell.id
+        );
+        return;
+    };
+    if world.get::<shared::components::Player>(target).is_some() {
+        let Some(map) = world.get::<crate::maps::InMap>(target).copied() else {
+            return;
+        };
+        let (x, y, z) =
+            crate::terrain_height::bevy_to_wow(dest.position.x, dest.position.y, dest.position.z);
+        crate::maps::transfer::teleport_to(
+            world,
+            target,
+            crate::maps::WorldLocation {
+                map_id: map.map_id,
+                position: Vec3::new(x, y, z),
+                orientation: dest.orientation,
+            },
+            crate::maps::transfer::TeleportOptions::default(),
+        );
+        return;
+    }
+    world.entity_mut(target).insert((
+        shared::components::Position {
+            x: dest.position.x,
+            y: dest.position.y,
+            z: dest.position.z,
+        },
+        shared::components::Rotation {
+            x: 0.0,
+            y: dest.orientation + std::f32::consts::FRAC_PI_2,
+            z: 0.0,
+        },
+    ));
+    crate::interest::mark_interest_position_changed(
+        world.get_resource::<crate::interest::InterestDirtyQueue>(),
+        target,
+    );
+    mark_dirty(world, target);
 }

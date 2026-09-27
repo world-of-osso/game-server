@@ -73,6 +73,22 @@ impl InterestDirtyQueue {
     }
 }
 
+/// Hide `entity` from every player (or show it again): its visibility is
+/// re-evaluated in the next interest update.
+pub(crate) fn set_hidden(world: &mut World, entity: Entity, hidden: bool) {
+    let Some(mut index) = world.get_resource_mut::<InterestIndex>() else {
+        return;
+    };
+    let changed = if hidden {
+        index.hidden.insert(entity)
+    } else {
+        index.hidden.remove(&entity)
+    };
+    if changed && index.target_positions.contains_key(&entity) {
+        index.dirty_targets.insert(entity);
+    }
+}
+
 pub(crate) fn mark_interest_position_changed(queue: Option<&InterestDirtyQueue>, entity: Entity) {
     if let Some(queue) = queue {
         queue.mark(entity);
@@ -107,6 +123,8 @@ struct InterestIndex {
     connection_by_player: HashMap<Entity, Entity>,
     dirty_targets: HashSet<Entity>,
     dirty_observers: HashSet<Entity>,
+    /// Targets no player sees (invisible units, `auras::unit_state`).
+    hidden: HashSet<Entity>,
 }
 
 impl InterestIndex {
@@ -118,6 +136,18 @@ impl InterestIndex {
         }
         self.target_positions.insert(entity, (position, map));
         self.dirty_targets.insert(entity);
+    }
+
+    /// Whether `observer` sees target `entity`: in its interest and not hidden.
+    fn observer_sees(
+        &self,
+        observer: &InterestObserver,
+        entity: Entity,
+        position: &Position,
+        map: Option<InMap>,
+    ) -> bool {
+        observer.sees(entity, position, map)
+            && (entity == observer.player || !self.hidden.contains(&entity))
     }
 
     fn remove_target(&mut self, entity: Entity) {
@@ -399,7 +429,7 @@ fn update_observer_visibility(
         let Ok((position, map, mut state)) = visibility_query.get_mut(entity) else {
             continue;
         };
-        if observer.sees(entity, position, map.copied()) {
+        if index.observer_sees(&observer, entity, position, map.copied()) {
             visible.insert(entity);
             if state.gain_visibility(connection) {
                 commands.gain_visibility(entity, connection);
@@ -431,8 +461,10 @@ fn update_target_visibility(
         return;
     };
 
+    let hidden = index.hidden.contains(&entity);
     for (&connection, observer) in index.observers.iter_mut() {
-        let should_be_visible = observer.sees(entity, &position, map);
+        let should_be_visible =
+            observer.sees(entity, &position, map) && (entity == observer.player || !hidden);
         apply_target_visibility_transition(
             &mut state,
             observer,

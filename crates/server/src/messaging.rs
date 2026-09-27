@@ -310,8 +310,13 @@ fn route_chat(
         },
         // Whisper echo only; the target is added below.
         ChatType::Whisper(_) => recipient.entity == sender.entity,
-        // Clients may not author system or broadcast messages.
-        ChatType::System | ChatType::ServerBroadcast => false,
+        // Clients may not author system, broadcast or creature messages.
+        ChatType::System
+        | ChatType::ServerBroadcast
+        | ChatType::MonsterSay(_)
+        | ChatType::MonsterYell(_)
+        | ChatType::MonsterEmote(_)
+        | ChatType::RaidBossEmote(_) => false,
     };
     let mut recipients: Vec<Entity> = online
         .iter()
