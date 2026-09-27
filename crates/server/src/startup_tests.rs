@@ -218,7 +218,7 @@ fn world_data_models_attached_to_templates() {
     let path = write_to_temp_sqlite(|conn| {
         conn.execute_batch(
             "INSERT INTO content_creature_template VALUES
-                (5,'Demon',NULL,10,10,35,0,1.0,1.5,1.0,0,1,0,1,2.0,1.0,'',0,0,0,1.0,'',20.0,0,0,0,0,1.0,1.0);
+                (5,'Demon',NULL,10,10,35,0,1.0,1.5,1.0,0,1,0,1,2.0,1.0,'',0,0,0,1.0,'',20.0,0,0,0,0,1.0,1.0,0);
              INSERT INTO content_creature_template_model VALUES (5,0,301,1.0,0.7);
              INSERT INTO content_creature_template_model VALUES (5,1,302,1.0,0.3);",
         )
