@@ -464,6 +464,29 @@ impl Harness {
         assert_eq!(registry.group_members(ids[0]).len(), ids.len());
     }
 
+    fn arrivals(&self, who: &Traveler) -> u32 {
+        self.app
+            .world()
+            .get::<shared::components::WorldArrival>(who.player)
+            .unwrap()
+            .0
+    }
+
+    /// Stockade creatures `who`'s connection sees.
+    fn visible_stockade_creatures(&mut self, who: &Traveler) -> usize {
+        let world = self.app.world_mut();
+        let mut query = world.query_filtered::<
+            (&InMap, &crate::interest::NetworkVisibility),
+            With<shared::components::Npc>,
+        >();
+        query
+            .iter(world)
+            .filter(|(map, visibility)| {
+                map.map_id == STOCKADE && visibility.is_visible(who.connection)
+            })
+            .count()
+    }
+
     /// (template, name, level) of every creature in `map`, sorted.
     fn creatures_in(&mut self, map: InMap) -> Vec<(u32, String, u8)> {
         let world = self.app.world_mut();
@@ -574,6 +597,48 @@ fn walking_into_the_stockade_entrance_transfers_the_player_into_a_copy_of_map_34
         .unwrap()
         .epoch;
     assert_eq!(epoch, 1, "the client adopts the arrival position");
+}
+
+/// `HandleMoveWorldportAck` sends the arriving player the destination's objects; the
+/// `WorldArrival` count rises in the frame that makes them visible, so both go out in
+/// one replication tick and the client knows its arrival is complete.
+#[test]
+fn the_arrival_count_rises_in_the_frame_the_stockade_creatures_become_visible() {
+    let Some(mut h) = harness_with_content_and(|app| {
+        app.add_plugins(crate::interest::InterestPlugin);
+    }) else {
+        return;
+    };
+    let player = h.spawn(
+        1,
+        STORMWIND,
+        STOCKADE_ENTRANCE_TRIGGER + Vec3::new(0.0, 0.0, 20.0),
+    );
+    h.walk_to(&player, STOCKADE_ENTRANCE_TRIGGER);
+    h.new_worlds(&player).pop().expect("NewWorld for map 34");
+    assert_eq!(h.arrivals(&player), 0);
+    assert_eq!(h.visible_stockade_creatures(&player), 0);
+
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<WorldPortAck>>(player.connection)
+        .unwrap()
+        .send::<TransferChannel>(WorldPortAck);
+    let mut frames = Vec::new();
+    for _ in 0..6 {
+        h.app.update();
+        frames.push((h.arrivals(&player), h.visible_stockade_creatures(&player)));
+    }
+    let arrived = frames
+        .iter()
+        .position(|&(arrivals, _)| arrivals == 1)
+        .unwrap_or_else(|| panic!("no arrival in {frames:?}"));
+    assert!(frames[arrived].1 > 0, "{frames:?}");
+    assert!(
+        frames[..arrived].iter().all(|&frame| frame == (0, 0)),
+        "{frames:?}"
+    );
+    assert!(frames[arrived..].iter().all(|&(arrivals, _)| arrivals == 1));
 }
 
 #[test]

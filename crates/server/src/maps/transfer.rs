@@ -12,7 +12,7 @@
 use bevy::ecs::world::CommandQueue;
 use bevy::prelude::*;
 use lightyear::prelude::*;
-use shared::components::{MovementControl, Player, Position, Rotation};
+use shared::components::{MovementControl, Player, Position, Rotation, WorldArrival};
 use shared::protocol::{
     NewWorld, TransferAbortReason, TransferAborted, TransferChannel, WorldPortAck,
 };
@@ -41,6 +41,11 @@ pub struct MapTransfer {
     pub options: TeleportOptions,
     pub origin: WorldLocation,
 }
+
+/// The player entered its destination map; its [`WorldArrival`] count rises once the
+/// interest update has shown it the destination's objects.
+#[derive(Component, Debug)]
+pub(crate) struct ArrivalPending;
 
 /// Teleport `player` to `destination`; false when it is refused or already in a
 /// transfer.
@@ -240,7 +245,9 @@ fn complete_transfer(world: &mut World, player: Entity) {
     if resolved.created {
         spawn_map_content(world, resolved.map);
     }
-    world.entity_mut(player).insert(resolved.map);
+    world
+        .entity_mut(player)
+        .insert((resolved.map, ArrivalPending));
     place_player(world, player, &transfer.destination);
     reset_sent_tiles(world, player);
     let corpse_here = world
@@ -258,6 +265,24 @@ fn complete_transfer(world: &mut World, player: Entity) {
         crate::death::resurrect_player(world, player);
     }
     info!("{player} entered map {:?}", resolved.map);
+}
+
+/// Count the arrivals the interest update just made visible: the new `WorldArrival`
+/// goes out in the replication tick that sends the destination's objects, so the
+/// client that sees it has them (Replicon applies a mutation only after the updates of
+/// its tick).
+pub(crate) fn announce_world_arrivals(
+    mut commands: Commands,
+    mut arrivals: Query<(Entity, &mut WorldArrival), With<ArrivalPending>>,
+    replication_dirty: Option<Res<ReplicationDirtyQueue>>,
+) {
+    for (player, mut arrival) in &mut arrivals {
+        arrival.0 += 1;
+        commands.entity(player).remove::<ArrivalPending>();
+        if let Some(queue) = replication_dirty.as_deref() {
+            queue.mark(player);
+        }
+    }
 }
 
 /// The destination refused the arriving player (it filled up meanwhile).

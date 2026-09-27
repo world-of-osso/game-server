@@ -7,7 +7,7 @@ use lightyear::prelude::server::Started;
 use lightyear::prelude::*;
 use lightyear_crossbeam::CrossbeamIo;
 use lightyear_replication::test_diagnostics;
-use shared::components::{Health, Position};
+use shared::components::{Health, Position, WorldArrival};
 use shared::protocol::InputChannel;
 use shared::protocol::PlayerInput;
 use std::sync::{Mutex, MutexGuard};
@@ -266,6 +266,86 @@ fn a_hidden_entity_leaves_the_client_and_returns_when_shown_again() {
         client_has_position(stepper.client_world_mut(0), 7.0),
         "the respawned NPC is shown again"
     );
+}
+
+/// A map arrival: the destination's creatures become visible and the player's
+/// `WorldArrival` rises in one server frame. The client never sees the new count
+/// before the creatures, so it can end its loading screen on the count.
+#[test]
+fn a_world_arrival_count_reaches_the_client_no_earlier_than_the_objects_shown_with_it() {
+    let _guard = integration_test_guard();
+    let mut stepper = Stepper::single_client();
+    let sender = stepper.client_of_entities[0];
+    let player = stepper
+        .server_world_mut()
+        .spawn((
+            Position {
+                x: -1.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            WorldArrival(0),
+            Replicate::to_clients(NetworkTarget::All),
+        ))
+        .id();
+    let creatures: Vec<Entity> = (0..94)
+        .map(|index| {
+            stepper
+                .server_world_mut()
+                .spawn((
+                    Position {
+                        x: 100.0 + index as f32,
+                        y: 0.0,
+                        z: 0.0,
+                    },
+                    Replicate::to_clients(NetworkTarget::All),
+                ))
+                .id()
+        })
+        .collect();
+    for &creature in &creatures {
+        stepper.server_world_mut().lose_visibility(creature, sender);
+    }
+    stepper.tick_step(10);
+    assert_eq!(client_arrivals(stepper.client_world_mut(0)), Some(0));
+
+    for &creature in &creatures {
+        stepper.server_world_mut().gain_visibility(creature, sender);
+        stepper
+            .server_app
+            .world()
+            .resource::<ReplicationDirtyQueue>()
+            .mark_for_sender(creature, sender);
+    }
+    stepper
+        .server_world_mut()
+        .get_mut::<WorldArrival>(player)
+        .unwrap()
+        .0 = 1;
+    stepper
+        .server_app
+        .world()
+        .resource::<ReplicationDirtyQueue>()
+        .mark(player);
+
+    let mut arrived = false;
+    for _ in 0..20 {
+        stepper.tick_step(1);
+        let world = stepper.client_world_mut(0);
+        let creatures_seen = (0..94)
+            .filter(|&index| client_has_position(world, 100.0 + index as f32))
+            .count();
+        if client_arrivals(world) == Some(1) {
+            assert_eq!(creatures_seen, 94, "arrival count before its creatures");
+            arrived = true;
+        }
+    }
+    assert!(arrived, "the arrival count reaches the client");
+}
+
+fn client_arrivals(world: &mut World) -> Option<u32> {
+    let mut query = world.query_filtered::<&WorldArrival, With<Replicated>>();
+    query.iter(world).next().map(|arrival| arrival.0)
 }
 
 #[test]
