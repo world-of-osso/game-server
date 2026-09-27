@@ -680,10 +680,16 @@ mod tests {
              INSERT INTO creature_classlevelstats VALUES (1,1,42,42,42,0);
              CREATE TABLE content_creature_template_model (CreatureID INTEGER, Idx INTEGER,
                 CreatureDisplayID INTEGER, DisplayScale REAL, Probability REAL);
+             CREATE TABLE content_creature_template_difficulty (entry INTEGER NOT NULL,
+            DifficultyID INTEGER NOT NULL, minlevel INTEGER NOT NULL, maxlevel INTEGER NOT NULL, exp INTEGER NOT NULL,
+            ContentTuningID INTEGER NOT NULL, HealthScalingExpansion INTEGER NOT NULL, LevelScalingDeltaMin INTEGER NOT NULL,
+            LevelScalingDeltaMax INTEGER NOT NULL, HealthModifier REAL NOT NULL, ManaModifier REAL NOT NULL,
+            ArmorModifier REAL NOT NULL, DamageModifier REAL NOT NULL, lootid INTEGER NOT NULL DEFAULT 0,
+            mingold INTEGER NOT NULL DEFAULT 0, maxgold INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (entry, DifficultyID));
              CREATE TABLE content_creature (guid INTEGER, id1 INTEGER, map INTEGER, zoneId INTEGER,
                 position_x REAL, position_y REAL, position_z REAL, wander_distance REAL,
                 MovementType INTEGER, orientation REAL, spawntimesecs INTEGER, modelid INTEGER,
-                unit_flags INTEGER);
+                unit_flags INTEGER, spawnDifficulties TEXT NOT NULL DEFAULT '0');
              CREATE TABLE creature_display_info (ID INTEGER PRIMARY KEY, ModelID INTEGER);
              CREATE TABLE creature_model_data (ID INTEGER PRIMARY KEY, FileDataID INTEGER);
              CREATE TABLE content_game_event_creature (guid INTEGER, eventEntry INTEGER);
@@ -718,7 +724,7 @@ mod tests {
             )
             .unwrap();
             conn.execute(
-                "INSERT INTO content_creature VALUES (?1,?1,0,0,-9000,-100,80,0,0,?2,120,0,0)",
+                "INSERT INTO content_creature VALUES (?1,?1,0,0,-9000,-100,80,0,0,?2,120,0,0,'0')",
                 rusqlite::params![entry, angle],
             )
             .unwrap();

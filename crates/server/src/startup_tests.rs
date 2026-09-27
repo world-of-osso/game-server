@@ -37,6 +37,12 @@ fn create_world_schema(conn: &rusqlite::Connection) {
             ID INTEGER PRIMARY KEY, ExpectedStatModID INTEGER, MinMythicPlusSeasonID INTEGER,
             ContentTuningID INTEGER
         );
+        CREATE TABLE content_creature_template_difficulty (entry INTEGER NOT NULL,
+            DifficultyID INTEGER NOT NULL, minlevel INTEGER NOT NULL, maxlevel INTEGER NOT NULL, exp INTEGER NOT NULL,
+            ContentTuningID INTEGER NOT NULL, HealthScalingExpansion INTEGER NOT NULL, LevelScalingDeltaMin INTEGER NOT NULL,
+            LevelScalingDeltaMax INTEGER NOT NULL, HealthModifier REAL NOT NULL, ManaModifier REAL NOT NULL,
+            ArmorModifier REAL NOT NULL, DamageModifier REAL NOT NULL, lootid INTEGER NOT NULL DEFAULT 0,
+            mingold INTEGER NOT NULL DEFAULT 0, maxgold INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (entry, DifficultyID));
         CREATE TABLE content_creature_template_model (
             CreatureID INTEGER, Idx INTEGER, CreatureDisplayID INTEGER,
             DisplayScale REAL, Probability REAL
@@ -46,7 +52,8 @@ fn create_world_schema(conn: &rusqlite::Connection) {
             zoneId INTEGER, areaId INTEGER,
             position_x REAL, position_y REAL, position_z REAL, orientation REAL,
             spawntimesecs INTEGER, wander_distance REAL, MovementType INTEGER,
-            modelid INTEGER NOT NULL DEFAULT 0, unit_flags INTEGER NOT NULL DEFAULT 0
+            modelid INTEGER NOT NULL DEFAULT 0, unit_flags INTEGER NOT NULL DEFAULT 0,
+            spawnDifficulties TEXT NOT NULL DEFAULT '0'
         );
         CREATE TABLE creature_display_info (ID INTEGER PRIMARY KEY, ModelID INTEGER);
         CREATE TABLE creature_model_data (ID INTEGER PRIMARY KEY, FileDataID INTEGER);

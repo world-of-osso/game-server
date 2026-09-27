@@ -819,7 +819,8 @@ mod tests {
                 )>,
             )>::new(app.world_mut());
             let (mut commands, players) = system_state.get_mut(app.world_mut()).unwrap();
-            let response = handle_damage(&game_db, &mut commands, &players, "Striker", amount);
+            let response =
+                handle_damage(&game_db, &mut commands, &players, "Striker", amount, None);
             system_state.apply(app.world_mut());
             response
         };
