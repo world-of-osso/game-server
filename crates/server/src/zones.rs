@@ -133,6 +133,7 @@ pub(crate) fn spawn_creature(
             UnitFactionTemplate(u32::from(template.faction)),
             UnitFlags(spawn.unit_flags.unwrap_or(template.unit_flags)),
             NpcFlags::from_azerothcore(template.npc_flags),
+            shared::components::CreatureMotion::Still,
         ));
         if replicate {
             entity.insert((

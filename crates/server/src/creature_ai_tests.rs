@@ -60,6 +60,8 @@ mod movement;
 mod return_to_spawn;
 #[path = "creature_ai_tests/state.rs"]
 mod state;
+#[path = "creature_ai_tests/stockade_chase.rs"]
+mod stockade_chase;
 #[path = "creature_ai_tests/wander.rs"]
 mod wander;
 #[path = "creature_ai_tests/waypoint.rs"]
