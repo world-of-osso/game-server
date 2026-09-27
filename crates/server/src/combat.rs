@@ -884,6 +884,15 @@ fn insert_npc_death(mut entity: EntityWorldMut) {
     let remaining = entity.get::<CorpseDelay>().map_or(0.0, |delay| delay.0);
     let killer = entity.get::<LastDamager>().map(|damager| damager.0);
     entity.insert((DeathState { respawn_timer }, Corpse { remaining }));
+    // A corpse does not run on (the movement systems skip it).
+    if let Some(mut motion) = entity.get_mut::<shared::components::CreatureMotion>()
+        && motion.set_if_neq(shared::components::CreatureMotion::Still)
+    {
+        let npc = entity.id();
+        entity.world_scope(|world| {
+            mark_replication_changed(world.get_resource::<ReplicationDirtyQueue>(), npc);
+        });
+    }
     crate::creature_aggro::forget_combat(&mut entity);
     let npc = entity.id();
     entity.world_scope(|world| {

@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use lightyear::prelude::ReplicationDirtyQueue;
-use shared::components::{Position, Rotation};
+use shared::components::{CreatureMotion, Position, Rotation};
 
 use crate::auras::AuraStatMods;
 use crate::combat::DeathState;
@@ -154,7 +154,7 @@ impl CreatureState {
 
 fn wander_system(
     time: Res<Time>,
-    dirty_queue: Option<Res<InterestDirtyQueue>>,
+    queues: MoveQueues,
     mut ground: Option<ResMut<GroundMap>>,
     mut query: Query<
         (
@@ -164,28 +164,124 @@ fn wander_system(
             &mut WanderState,
             Option<&CreatureState>,
             Option<&InMap>,
+            Bearing,
         ),
         (Without<DeathState>, Without<GridDormant>),
     >,
 ) {
     let dt = time.delta_secs();
-    for (entity, mut pos, spawn, mut state, creature_state, map) in &mut query {
+    for (entity, mut pos, spawn, mut state, creature_state, map, bearing) in &mut query {
         if matches!(creature_state, Some(s) if !s.is_idle()) {
             continue;
         }
-        let mut probe = |feet: Vec3| match (ground.as_deref_mut(), map) {
-            (Some(ground), Some(map)) => ground.ground_at(map.map_id, feet),
-            _ => GroundProbe::Unloaded,
-        };
-        match state.phase {
-            WanderPhase::Idle => tick_idle(&mut state, dt, spawn, *pos, &mut probe),
-            WanderPhase::Walking => {
-                let next_position = tick_walk(*pos, &mut state, spawn, dt, &mut probe);
-                if *pos != next_position {
-                    *pos = next_position;
-                    mark_interest_position_changed(dirty_queue.as_deref(), entity);
-                }
+        let mut probe = |feet: Vec3| probe_ground(ground.as_deref_mut(), map, feet);
+        let next_position = match state.phase {
+            WanderPhase::Idle => {
+                tick_idle(&mut state, dt, spawn, *pos, &mut probe);
+                *pos
             }
+            WanderPhase::Walking => tick_walk(*pos, &mut state, spawn, dt, &mut probe),
+        };
+        let stride = Stride::moving(*pos, next_position, CreatureMotion::Walk);
+        queues.apply(entity, &mut pos, bearing, stride);
+    }
+}
+
+/// The ground under `feet` on the creature's map; `Unloaded` without ground data.
+fn probe_ground(ground: Option<&mut GroundMap>, map: Option<&InMap>, feet: Vec3) -> GroundProbe {
+    match (ground, map) {
+        (Some(ground), Some(map)) => ground.ground_at(map.map_id, feet),
+        _ => GroundProbe::Unloaded,
+    }
+}
+
+/// Height a chasing or homing creature runs at from height `from_y`: the floor under it
+/// (`UpdateAllowedPositionZ`), else its height where no floor is known. Unlike a wanderer
+/// it may drop off a ledge: it has to reach its target or home.
+fn run_ground(probe: GroundProbe, from_y: f32) -> f32 {
+    match probe {
+        GroundProbe::Supported(floor) => floor,
+        GroundProbe::Unloaded | GroundProbe::Unsupported => from_y,
+    }
+}
+
+/// `Rotation.y` of a creature facing along Bevy `(dx, dz)`: WoW orientation + π/2, as spawns
+/// are placed (`creature_bundle`). `None` without a direction.
+pub(crate) fn facing_along(dx: f32, dz: f32) -> Option<f32> {
+    (dx.hypot(dz) > 1e-4).then(|| (-dz).atan2(dx) + std::f32::consts::FRAC_PI_2)
+}
+
+/// What a movement system did to a creature this tick.
+struct Stride {
+    position: Position,
+    motion: CreatureMotion,
+    /// `Rotation.y` to face, `None` to keep the facing.
+    facing: Option<f32>,
+}
+
+impl Stride {
+    fn still(at: Position) -> Self {
+        Self {
+            position: at,
+            motion: CreatureMotion::Still,
+            facing: None,
+        }
+    }
+
+    /// From `from` to `to` in `motion` (move spline orientation: facing the way it goes),
+    /// `Still` when it did not move.
+    fn moving(from: Position, to: Position, motion: CreatureMotion) -> Self {
+        let facing = facing_along(to.x - from.x, to.z - from.z);
+        Self {
+            position: to,
+            motion: if facing.is_some() {
+                motion
+            } else {
+                CreatureMotion::Still
+            },
+            facing,
+        }
+    }
+}
+
+/// A creature's facing and motion, replicated to clients.
+type Bearing = (
+    Option<&'static mut Rotation>,
+    Option<&'static mut CreatureMotion>,
+);
+
+#[derive(bevy::ecs::system::SystemParam)]
+pub(crate) struct MoveQueues<'w> {
+    interest: Option<Res<'w, InterestDirtyQueue>>,
+    replication: Option<Res<'w, ReplicationDirtyQueue>>,
+}
+
+impl MoveQueues<'_> {
+    /// Write `stride` back: the position (interest), the facing and motion (replication)
+    /// when they change.
+    fn apply(
+        &self,
+        entity: Entity,
+        position: &mut Mut<Position>,
+        (rotation, motion): (Option<Mut<Rotation>>, Option<Mut<CreatureMotion>>),
+        stride: Stride,
+    ) {
+        if **position != stride.position {
+            **position = stride.position;
+            mark_interest_position_changed(self.interest.as_deref(), entity);
+        }
+        let mut changed = false;
+        if let (Some(mut rotation), Some(facing)) = (rotation, stride.facing)
+            && rotation.y != facing
+        {
+            rotation.y = facing;
+            changed = true;
+        }
+        if let Some(mut motion) = motion {
+            changed |= motion.set_if_neq(stride.motion);
+        }
+        if changed && let Some(replication) = self.replication.as_deref() {
+            replication.mark(entity);
         }
     }
 }
@@ -297,21 +393,20 @@ pub fn move_toward(x: f32, y: f32, tx: f32, ty: f32, step: f32) -> (bool, f32, f
 fn waypoint_system(
     time: Res<Time>,
     world_data: Res<WorldData>,
-    dirty_queue: Option<Res<InterestDirtyQueue>>,
-    replication_dirty: Option<Res<ReplicationDirtyQueue>>,
+    queues: MoveQueues,
     mut query: Query<
         (
             Entity,
             &mut Position,
             &mut WaypointState,
-            Option<&mut Rotation>,
             Option<&CreatureState>,
+            Bearing,
         ),
         (Without<DeathState>, Without<GridDormant>),
     >,
 ) {
     let dt = time.delta_secs();
-    for (entity, mut pos, mut state, rotation, creature_state) in &mut query {
+    for (entity, mut pos, mut state, creature_state, bearing) in &mut query {
         state.moved = 0.0;
         if matches!(creature_state, Some(s) if !s.is_idle()) {
             continue;
@@ -322,16 +417,22 @@ fn waypoint_system(
         if path.points.is_empty() {
             continue;
         }
-        let (next_position, facing) = tick_waypoint(*pos, &mut state, path, dt);
-        if *pos != next_position {
-            *pos = next_position;
-            mark_interest_position_changed(dirty_queue.as_deref(), entity);
+        let (next_position, orientation) = tick_waypoint(*pos, &mut state, path, dt);
+        let leg = &path.points[state.current_index % path.points.len()];
+        let mut stride = Stride::moving(*pos, next_position, leg_motion(leg.move_type));
+        if let Some(orientation) = orientation {
+            stride.facing = Some(orientation + std::f32::consts::FRAC_PI_2);
         }
-        if let (Some(orientation), Some(mut rotation)) = (facing, rotation) {
-            rotation.y = orientation + std::f32::consts::FRAC_PI_2;
-            if let Some(replication_dirty) = replication_dirty.as_deref() {
-                replication_dirty.mark(entity);
-            }
+        queues.apply(entity, &mut pos, bearing, stride);
+    }
+}
+
+/// `waypoint_data.move_type` 0 walks; run, land and takeoff run (`WaypointState::speed`).
+fn leg_motion(move_type: WaypointMoveType) -> CreatureMotion {
+    match move_type {
+        WaypointMoveType::Walk => CreatureMotion::Walk,
+        WaypointMoveType::Run | WaypointMoveType::Land | WaypointMoveType::Takeoff => {
+            CreatureMotion::Run
         }
     }
 }
@@ -389,7 +490,7 @@ fn start_next_leg(state: &mut WaypointState, position: &Position, path_len: usiz
 /// `FormationReset(true, false)`, which leaves members' motion untouched).
 fn formation_system(
     world_data: Res<WorldData>,
-    dirty_queue: Option<Res<InterestDirtyQueue>>,
+    queues: MoveQueues,
     leaders: Query<
         (&Position, &WaypointState, Option<&CreatureState>),
         (
@@ -404,35 +505,34 @@ fn formation_system(
             &mut Position,
             &FormationMember,
             Option<&CreatureState>,
+            Bearing,
         ),
         (Without<DeathState>, Without<GridDormant>),
     >,
 ) {
-    for (entity, mut pos, member, member_state) in &mut members {
+    for (entity, mut pos, member, member_state, bearing) in &mut members {
         if matches!(member_state, Some(s) if !s.is_idle()) {
             continue;
         }
         let Ok((leader_pos, leg, leader_state)) = leaders.get(member.leader) else {
             continue;
         };
-        if leg.moved <= 0.0 || matches!(leader_state, Some(s) if !s.is_idle()) {
-            continue;
-        }
-        let Some(point) = world_data
+        let point = world_data
             .waypoints
             .get(&leg.path_id)
-            .and_then(|path| path.points.get(leg.current_index))
-        else {
-            continue;
+            .and_then(|path| path.points.get(leg.current_index));
+        let leading = leg.moved > 0.0 && !matches!(leader_state, Some(s) if !s.is_idle());
+        let stride = match point.filter(|_| leading) {
+            Some(point) => {
+                let slot = formation_slot(leg.leg_origin, point, member);
+                let (px, _, pz) = wow_to_bevy(point.position_x, point.position_y, point.position_z);
+                let leader_remaining = (px - leader_pos.x).hypot(pz - leader_pos.z);
+                let next_position = follow_leader_step(*pos, slot, leader_remaining, leg.moved);
+                Stride::moving(*pos, next_position, leg_motion(point.move_type))
+            }
+            None => Stride::still(*pos),
         };
-        let slot = formation_slot(leg.leg_origin, point, member);
-        let (px, _, pz) = wow_to_bevy(point.position_x, point.position_y, point.position_z);
-        let leader_remaining = (px - leader_pos.x).hypot(pz - leader_pos.z);
-        let next_position = follow_leader_step(*pos, slot, leader_remaining, leg.moved);
-        if *pos != next_position {
-            *pos = next_position;
-            mark_interest_position_changed(dirty_queue.as_deref(), entity);
-        }
+        queues.apply(entity, &mut pos, bearing, stride);
     }
 }
 
@@ -473,12 +573,13 @@ fn follow_leader_step(
 
 /// Run pursuing creatures toward their target each tick
 /// (`ChaseMovementGenerator`, run speed × the aura speed multiplier) until within
-/// `CHASE_REACH`, following the target's height so the 3D melee range check holds.
+/// `CHASE_REACH`, on the floor under it, facing the way it runs and, in reach, the target.
 /// A stunned or rooted creature does not move, nor does one casting a spell that
 /// movement would interrupt (`Unit::IsMovementPreventedByCasting`).
 pub(crate) fn chase_system(
     time: Res<Time>,
-    dirty_queue: Option<Res<InterestDirtyQueue>>,
+    queues: MoveQueues,
+    mut ground: Option<ResMut<GroundMap>>,
     mut chasers: Query<
         (
             Entity,
@@ -487,37 +588,48 @@ pub(crate) fn chase_system(
             &CreatureState,
             Option<&CastState>,
             Option<&AuraStatMods>,
+            Option<&InMap>,
+            Bearing,
         ),
         Without<GridDormant>,
     >,
     targets: Query<&Position, Without<SpawnPoint>>,
 ) {
     let dt = time.delta_secs();
-    for (entity, mut pos, spawn, state, cast, mods) in &mut chasers {
+    for (entity, mut pos, spawn, state, cast, mods, map, bearing) in &mut chasers {
         let CreatureState::Pursuing { target } = *state else {
             continue;
         };
         let speed = mods.map_or(1.0, |mods| mods.movement_speed);
         if speed <= 0.0 || cast.is_some_and(|cast| !cast.cast_while_moving) {
+            let stride = Stride::still(*pos);
+            queues.apply(entity, &mut pos, bearing, stride);
             continue;
         }
         let target_entity = Entity::from_bits(target);
         let Ok(target_pos) = targets.get(target_entity) else {
             continue; // target despawned or invalid
         };
-        let next_position = chase_step(
+        let mut next_position = chase_step(
             *pos,
             target_pos,
             spawn.speed_run * BASE_RUN_SPEED * speed * dt,
         );
-        if *pos != next_position {
-            *pos = next_position;
-            mark_interest_position_changed(dirty_queue.as_deref(), entity);
+        if next_position != *pos {
+            let feet = Vec3::new(next_position.x, pos.y, next_position.z);
+            next_position.y = run_ground(probe_ground(ground.as_deref_mut(), map, feet), pos.y);
         }
+        let mut stride = Stride::moving(*pos, next_position, CreatureMotion::Run);
+        if stride.facing.is_none() {
+            // In reach: `ChaseMovementGenerator` turns it to face the target (`SetInFront`).
+            stride.facing = facing_along(target_pos.x - pos.x, target_pos.z - pos.z);
+        }
+        queues.apply(entity, &mut pos, bearing, stride);
     }
 }
 
-/// Move up to `step` toward the point `CHASE_REACH` short of `target`.
+/// Move up to `step` across the ground toward the point `CHASE_REACH` short of `target`;
+/// the height is the caller's (the floor there).
 fn chase_step(position: Position, target: &Position, step: f32) -> Position {
     let gap = (target.x - position.x).hypot(target.z - position.z);
     let travel = (gap - CHASE_REACH).clamp(0.0, step);
@@ -527,7 +639,7 @@ fn chase_step(position: Position, target: &Position, step: f32) -> Position {
     let ratio = travel / gap;
     Position {
         x: position.x + (target.x - position.x) * ratio,
-        y: position.y + (target.y - position.y) * ratio,
+        y: position.y,
         z: position.z + (target.z - position.z) * ratio,
     }
 }
@@ -562,7 +674,8 @@ fn leash_check_system(
 /// `LoadCreaturesAddon`).
 fn return_to_spawn_system(
     time: Res<Time>,
-    dirty_queue: Option<Res<InterestDirtyQueue>>,
+    queues: MoveQueues,
+    mut ground: Option<ResMut<GroundMap>>,
     mut query: Query<
         (
             Entity,
@@ -571,27 +684,36 @@ fn return_to_spawn_system(
             &mut CreatureState,
             Option<&mut shared::components::Mana>,
             Option<&crate::zones::SpawnAddonAuras>,
+            Option<&InMap>,
+            Bearing,
         ),
         Without<GridDormant>,
     >,
     mut commands: Commands,
 ) {
     let dt = time.delta_secs();
-    for (entity, mut pos, spawn, mut state, mana, addon_auras) in &mut query {
+    for (entity, mut pos, spawn, mut state, mana, addon_auras, map, bearing) in &mut query {
         if *state != CreatureState::Returning {
             continue;
         }
         let speed = spawn.speed_run * BASE_RUN_SPEED;
         let (reached, new_x, new_z) = move_toward(pos.x, pos.z, spawn.x, spawn.z, speed * dt);
+        let y = if reached {
+            spawn.y
+        } else {
+            let feet = Vec3::new(new_x, pos.y, new_z);
+            run_ground(probe_ground(ground.as_deref_mut(), map, feet), pos.y)
+        };
         let next_position = Position {
             x: new_x,
-            y: if reached { spawn.y } else { pos.y },
+            y,
             z: new_z,
         };
-        if *pos != next_position {
-            *pos = next_position;
-            mark_interest_position_changed(dirty_queue.as_deref(), entity);
+        let mut stride = Stride::moving(*pos, next_position, CreatureMotion::Run);
+        if reached {
+            stride.motion = CreatureMotion::Still;
         }
+        queues.apply(entity, &mut pos, bearing, stride);
         if reached {
             *state = CreatureState::Idle;
             if let Some(mut mana) = mana

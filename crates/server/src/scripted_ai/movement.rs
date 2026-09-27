@@ -3,7 +3,7 @@
 //! AI gets `MovementInform(POINT_MOTION_TYPE, id)`.
 
 use bevy::prelude::*;
-use shared::components::Position;
+use shared::components::{CreatureMotion, Position, Rotation};
 
 use super::{Hook, MotionType};
 use crate::combat::DeathState;
@@ -48,26 +48,47 @@ pub(crate) fn point_movement_system(world: &mut World) {
     let dt = world.resource::<Time>().delta_secs();
     let mut arrived = Vec::new();
     let mut moved = Vec::new();
+    let mut bearing_changed = Vec::new();
     let mut movers = world.query_filtered::<(
         Entity,
         &mut Position,
         &PointMovement,
         &SpawnPoint,
         Has<Walking>,
+        Option<&mut Rotation>,
+        Option<&mut CreatureMotion>,
     ), Without<DeathState>>();
-    for (entity, mut position, movement, spawn, walking) in movers.iter_mut(world) {
-        let speed = if walking {
-            spawn.speed_walk * BASE_WALK_SPEED
+    for (entity, mut position, movement, spawn, walking, rotation, motion) in movers.iter_mut(world)
+    {
+        let (speed, gait) = if walking {
+            (spawn.speed_walk * BASE_WALK_SPEED, CreatureMotion::Walk)
         } else {
-            spawn.speed_run * BASE_RUN_SPEED
+            (spawn.speed_run * BASE_RUN_SPEED, CreatureMotion::Run)
         };
         let (next, reached) = step_toward(*position, movement.target, speed * dt);
+        let facing = crate::creature_ai::facing_along(next.x - position.x, next.z - position.z);
         if *position != next {
             *position = next;
             moved.push(entity);
         }
         if reached {
             arrived.push((entity, movement.id));
+        }
+        let gait = if reached { CreatureMotion::Still } else { gait };
+        let mut changed = motion.is_some_and(|mut motion| motion.set_if_neq(gait));
+        if let (Some(mut rotation), Some(facing)) = (rotation, facing)
+            && rotation.y != facing
+        {
+            rotation.y = facing;
+            changed = true;
+        }
+        if changed {
+            bearing_changed.push(entity);
+        }
+    }
+    if let Some(queue) = world.get_resource::<lightyear::prelude::ReplicationDirtyQueue>() {
+        for &entity in &bearing_changed {
+            queue.mark(entity);
         }
     }
     if let Some(queue) = world.get_resource::<InterestDirtyQueue>() {
