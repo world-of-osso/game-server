@@ -5,10 +5,13 @@ use shared::components::{Position, Rotation};
 use crate::auras::AuraStatMods;
 use crate::combat::DeathState;
 use crate::grid_activity::GridDormant;
+use crate::ground::{GroundMap, GroundProbe};
 use crate::interest::{InterestDirtyQueue, mark_interest_position_changed};
+use crate::maps::InMap;
 use crate::terrain_height::{bevy_to_wow, wow_to_bevy};
 use crate::world_data::{WaypointMoveType, WaypointPath, WaypointPoint, WorldData};
 use shared::casting::CastState;
+use shared::ground::STEP_UP_HEIGHT;
 
 /// Walk speed in world-units per second (base WoW walk speed).
 const BASE_WALK_SPEED: f32 = 2.5;
@@ -22,6 +25,9 @@ const CHASE_REACH: f32 = 2.0;
 /// Idle pause range in seconds after reaching a wander destination.
 const IDLE_MIN_SECS: f32 = 2.0;
 const IDLE_MAX_SECS: f32 = 5.0;
+/// Delay before a wanderer retries a destination it cannot walk to
+/// (`RandomMovementGenerator` `_timer.Reset(100)`).
+const RETRY_WANDER_SECS: f32 = 0.1;
 
 pub struct CreatureAiPlugin;
 
@@ -58,7 +64,7 @@ pub struct WanderState {
     pub target_x: f32,
     pub target_z: f32,
     pub idle_remaining: f32,
-    /// Simple counter incremented each tick, used for pseudo-random.
+    /// LCG state, advanced on each random pick.
     pub seed: u32,
 }
 
@@ -149,6 +155,7 @@ impl CreatureState {
 fn wander_system(
     time: Res<Time>,
     dirty_queue: Option<Res<InterestDirtyQueue>>,
+    mut ground: Option<ResMut<GroundMap>>,
     mut query: Query<
         (
             Entity,
@@ -156,19 +163,24 @@ fn wander_system(
             &SpawnPoint,
             &mut WanderState,
             Option<&CreatureState>,
+            Option<&InMap>,
         ),
         (Without<DeathState>, Without<GridDormant>),
     >,
 ) {
     let dt = time.delta_secs();
-    for (entity, mut pos, spawn, mut state, creature_state) in &mut query {
+    for (entity, mut pos, spawn, mut state, creature_state, map) in &mut query {
         if matches!(creature_state, Some(s) if !s.is_idle()) {
             continue;
         }
+        let mut probe = |feet: Vec3| match (ground.as_deref_mut(), map) {
+            (Some(ground), Some(map)) => ground.ground_at(map.map_id, feet),
+            _ => GroundProbe::Unloaded,
+        };
         match state.phase {
-            WanderPhase::Idle => tick_idle(&mut state, dt, spawn),
+            WanderPhase::Idle => tick_idle(&mut state, dt, spawn, *pos, &mut probe),
             WanderPhase::Walking => {
-                let next_position = tick_walk(*pos, &mut state, spawn, dt);
+                let next_position = tick_walk(*pos, &mut state, spawn, dt, &mut probe);
                 if *pos != next_position {
                     *pos = next_position;
                     mark_interest_position_changed(dirty_queue.as_deref(), entity);
@@ -178,17 +190,42 @@ fn wander_system(
     }
 }
 
-fn tick_idle(state: &mut WanderState, dt: f32, spawn: &SpawnPoint) {
+/// Height a wanderer walking from height `from_y` stands at over a column the ground
+/// `probe` judged: the floor (`UpdateAllowedPositionZ`), or `None` where the walk may not
+/// go, with no support or a drop deeper than a step, a ledge `PathGenerator` does not
+/// route over. Without ground data (`Unloaded`) the height is kept.
+fn wander_ground(probe: GroundProbe, from_y: f32) -> Option<f32> {
+    match probe {
+        GroundProbe::Unloaded => Some(from_y),
+        GroundProbe::Unsupported => None,
+        GroundProbe::Supported(floor) if from_y - floor > STEP_UP_HEIGHT => None,
+        GroundProbe::Supported(floor) => Some(floor),
+    }
+}
+
+/// `RandomMovementGenerator::SetRandomLocation`: a destination without ground is
+/// retried 100 ms later with a new random point.
+fn tick_idle(
+    state: &mut WanderState,
+    dt: f32,
+    spawn: &SpawnPoint,
+    position: Position,
+    probe: &mut impl FnMut(Vec3) -> GroundProbe,
+) {
     state.idle_remaining -= dt;
     if state.idle_remaining > 0.0 {
         return;
     }
     // Wander in Bevy horizontal plane (x, z).
     let (tx, tz) = pick_wander_point(spawn.x, spawn.z, spawn.wander_distance, state.seed);
+    state.seed = next_seed(state.seed);
+    if wander_ground(probe(Vec3::new(tx, position.y, tz)), position.y).is_none() {
+        state.idle_remaining = RETRY_WANDER_SECS;
+        return;
+    }
     state.target_x = tx;
     state.target_z = tz;
     state.phase = WanderPhase::Walking;
-    state.seed = state.seed.wrapping_add(1);
 }
 
 fn tick_walk(
@@ -196,6 +233,7 @@ fn tick_walk(
     state: &mut WanderState,
     spawn: &SpawnPoint,
     dt: f32,
+    probe: &mut impl FnMut(Vec3) -> GroundProbe,
 ) -> Position {
     let speed = spawn.speed_walk * BASE_WALK_SPEED;
     let (reached, new_x, new_z) = move_toward(
@@ -205,12 +243,16 @@ fn tick_walk(
         state.target_z,
         speed * dt,
     );
-    position.x = new_x;
-    position.z = new_z;
-    if reached {
+    let next_y = wander_ground(probe(Vec3::new(new_x, position.y, new_z)), position.y);
+    if let Some(y) = next_y {
+        position.x = new_x;
+        position.y = y;
+        position.z = new_z;
+    }
+    if reached || next_y.is_none() {
         state.phase = WanderPhase::Idle;
         state.idle_remaining = random_idle_secs(state.seed);
-        state.seed = state.seed.wrapping_add(1);
+        state.seed = next_seed(state.seed);
     }
     position
 }
@@ -229,8 +271,13 @@ fn random_idle_secs(seed: u32) -> f32 {
 
 /// Simple LCG producing a float in [0, 1).
 fn lcg_float(seed: u32) -> f32 {
-    let next = seed.wrapping_mul(1664525).wrapping_add(1013904223);
-    (next >> 8) as f32 / 16777216.0 // 2^24
+    (next_seed(seed) >> 8) as f32 / 16777216.0 // 2^24
+}
+
+/// The LCG's next state. Seeds one apart give nearly the same float, so a wanderer
+/// advancing its seed by one picked the same point every time.
+fn next_seed(seed: u32) -> u32 {
+    seed.wrapping_mul(1664525).wrapping_add(1013904223)
 }
 
 /// Move (x, y) toward (tx, ty) by at most `step`. Returns (reached, new_x, new_y).

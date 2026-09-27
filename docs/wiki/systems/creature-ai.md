@@ -16,8 +16,10 @@ Determined by `creature.movement_type` in SQLite (see [[world-data]]):
 
 `WanderState` is a two-phase state machine (`Idle` / `Walking`):
 
-- **Idle phase**: counts down `idle_remaining` (2–5s random); on expiry, picks a random target point using a simple LCG seeded per-creature
-- **Walking phase**: moves toward target at `speed_walk * BASE_WALK_SPEED (2.5 m/s)`; on arrival, transitions back to Idle with a new random pause
+- **Idle phase**: counts down `idle_remaining` (2–5s random); on expiry, picks a random target point using an LCG seeded with the spawn guid (the state advances per pick; advancing the seed by one picked nearly the same point every time). A target with no ground, or more than `STEP_UP_HEIGHT` (1.6 yd) below the creature, is refused and retried 100 ms later (`RandomMovementGenerator::SetRandomLocation` path failure, `_timer.Reset(100)`).
+- **Walking phase**: moves toward target at `speed_walk * BASE_WALK_SPEED (2.5 m/s)`; each step stands on the ground under it — the player rule ([[player-ground]] in game-engine: terrain and WMO floors, highest within 1.6 yd above the feet) through `GroundMap` and the creature's `InMap` (`UpdateAllowedPositionZ`). A step onto no support or a drop deeper than 1.6 yd ends the walk there. Without ground data (`Unloaded`) the height is kept. On arrival, transitions back to Idle with a new random pause
+
+Before this (2026-09-27) wanderers kept the spawn height: Stormwind Rat 20314034 walked through the wall by the Stockade entrance and hung 11 yd over the canal (86.7), 20314037 stayed 0.37 yd above the floor under its TDB z. Chase and return-to-spawn still do not follow the ground (chase lerps toward the target's height, return keeps its height until arrival).
 
 Wander respects `SpawnPoint.wander_distance` — targets are always within that radius of the spawn.
 

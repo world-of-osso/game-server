@@ -316,3 +316,7 @@ Created `systems/quests.md` (quest data, rules, runtime) and `specs/quests.md`; 
 ## [2026-09-26] update | Maps and dungeon instances
 
 [[zone-architecture]]: maps 0 and 1 and dungeon copies share one World by `InMap`; `maps` module (MapStore, InstanceManager, teleport_to/NewWorld/WorldPortAck, area trigger teleports, dungeon release, login map). Spec [instances](../specs/instances.md). [[meeting-stones]]: summons cross maps. [[game-objects]]: spawned per map copy.
+
+## [2026-09-27] update | Wander follows the ground
+
+[[creature-ai]]: wandering creatures step on terrain/WMO floors via `GroundMap`, refuse ledges and unsupported destinations, and the wander LCG advances its state (Stormwind Rats floating over the canal / above their floor).
