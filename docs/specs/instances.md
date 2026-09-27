@@ -9,6 +9,7 @@ Dungeons phase 1: several maps in one world, far teleports between them and dung
 - [x] Eastern Kingdoms (0) and Kalimdor (1) are hosted (`maps::HOSTED_CONTINENTS`): both spawn their creatures and game objects at startup (49,986 + 51,858 creatures, 3,179 + 2,436 game objects with `world-retail-phase169-20260926.db`). Other world maps are refused (`MapNotAllowed`). Creatures spawn only on maps the client has NPC appearance data for (`maps::NPC_APPEARANCE_MAPS`: 0, 1, 34).
 - [x] Visibility, creature aggro (`IsInMap` in `_IsTargetAcceptable`), spell area and explicit targets (`ObjectAccessor::GetUnit` searches the caster's map), grid activation, say/yell/emote range and group XP, quest and loot credit (`IsAtGroupRewardDistance`) only relate entities of one map copy. A creature whose victim leaves its map loses it and evades.
 - [x] Player ground is per map: the map's `Map.db2` WDT either names one global WMO (MPHD 0x1; the Stockade, WMO 108631 placed from the world origin) or ADT tiles.
+- [x] A living player below `Map::GetMinHeight` dies of `DAMAGE_FALL_TO_VOID` (MovementHandler.cpp:594-612) and is `OutOfBounds` until above it again. The minimum is -500 on a WMO-only map (the Stockade) and on tiles without MFBO; elsewhere it is the root ADT's MFBO minimum plane (`GridMap::getMinHeight`).
 - [x] The character's map is saved (`character_maps`) with its position; a player in a transfer is saved at its destination (`m_teleport_dest`). Characters without a row are on map 0.
 
 ### Teleports (`Player::TeleportTo`, Player.cpp:1225-1466)
