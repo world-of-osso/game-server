@@ -11,8 +11,8 @@ use lightyear::prelude::*;
 use rusqlite::{Connection, OpenFlags};
 use shared::casting::{CastState, CastType};
 use shared::components::{
-    CombatStatus, Health, Mana, Player, Position, Rotation, UnitFactionTemplate, UnitFlags,
-    UnitLevel,
+    CombatStatus, CreatureMotion, Health, Mana, Player, Position, Rotation, UnitFactionTemplate,
+    UnitFlags, UnitLevel,
 };
 use shared::protocol::{
     CastFailed, ChatMessage, ChatType, CombatLogEvent, CombatLogKind, EncounterDisengageUnit,
@@ -673,6 +673,12 @@ fn hogger_death_completes_the_encounter_and_warden_thelwater_arrives_and_speaks(
         start.distance(Vec3::new(138.369, 78.2932, -33.85627)) < 1.0,
         "{start}"
     );
+    let motion = |h: &Harness| *h.app.world().get::<CreatureMotion>(warden).unwrap();
+    assert_eq!(
+        motion(&h),
+        CreatureMotion::Run,
+        "runs to Hogger (plays Run)"
+    );
     // 31.4 yards at run speed 7 × 1.14286: about 3.9 s, then 1 s to the first yell.
     h.advance(5.2);
     let end = h.wow_position(warden);
@@ -680,6 +686,7 @@ fn hogger_death_completes_the_encounter_and_warden_thelwater_arrives_and_speaks(
         end.distance(Vec3::new(152.019, 106.198, -35.1896)) < 0.5,
         "{end}"
     );
+    assert_eq!(motion(&h), CreatureMotion::Still, "stands at its point");
     let warden_lines: Vec<String> = h
         .inbox(0)
         .chat

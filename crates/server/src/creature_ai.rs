@@ -207,7 +207,7 @@ fn run_ground(probe: GroundProbe, from_y: f32) -> f32 {
 
 /// `Rotation.y` of a creature facing along Bevy `(dx, dz)`: WoW orientation + π/2, as spawns
 /// are placed (`creature_bundle`). `None` without a direction.
-fn facing_along(dx: f32, dz: f32) -> Option<f32> {
+pub(crate) fn facing_along(dx: f32, dz: f32) -> Option<f32> {
     (dx.hypot(dz) > 1e-4).then(|| (-dz).atan2(dx) + std::f32::consts::FRAC_PI_2)
 }
 
