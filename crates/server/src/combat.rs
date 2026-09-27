@@ -200,6 +200,7 @@ fn start_attack_system(
         Option<&DuelOpponent>,
     )>,
     health: Query<&Health>,
+    unit_flags: Query<&shared::components::UnitFlags>,
     templates: Res<FactionTemplates>,
     mut commands: Commands,
     time: Res<Time>,
@@ -220,9 +221,15 @@ fn start_attack_system(
             .is_ok_and(|(_, _, opponent)| crate::duel::dueling(opponent, target))
     };
     let dead = |entity: Entity| health.get(entity).is_ok_and(|health| health.current <= 0.0);
+    // WorldObject::IsValidAttackTarget (Object.cpp:2374): not an uninteractible unit.
+    let uninteractible = |entity: Entity| {
+        unit_flags
+            .get(entity)
+            .is_ok_and(|flags| !flags.is_selectable())
+    };
     for (entity, target) in &query {
         let attackable = target.0.is_some_and(|target| {
-            !(dead(entity) || dead(target))
+            !(dead(entity) || dead(target) || uninteractible(target))
                 && (dueling(entity, target)
                     || match (unit_faction(entity), unit_faction(target)) {
                         (Some(attacker), Some(target)) => templates.can_attack(attacker, target),

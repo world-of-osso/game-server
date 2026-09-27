@@ -44,8 +44,11 @@ fn create_world_schema(conn: &rusqlite::Connection) {
             guid INTEGER PRIMARY KEY, id1 INTEGER, map INTEGER,
             zoneId INTEGER, areaId INTEGER,
             position_x REAL, position_y REAL, position_z REAL, orientation REAL,
-            spawntimesecs INTEGER, wander_distance REAL, MovementType INTEGER
+            spawntimesecs INTEGER, wander_distance REAL, MovementType INTEGER,
+            modelid INTEGER NOT NULL DEFAULT 0, unit_flags INTEGER NOT NULL DEFAULT 0
         );
+        CREATE TABLE creature_display_info (ID INTEGER PRIMARY KEY, ModelID INTEGER);
+        CREATE TABLE creature_model_data (ID INTEGER PRIMARY KEY, FileDataID INTEGER);
         CREATE TABLE content_game_event_creature (
             eventEntry INTEGER NOT NULL, guid INTEGER NOT NULL,
             PRIMARY KEY (guid, eventEntry)
@@ -96,8 +99,10 @@ fn world_data_loads_from_sqlite() {
                 (1,'Wolf',NULL,3,4,35,0, 1.0,1.4,1.0,0,1,0,1,1.0,1.0,'',1,0,0,1.0,'',20.0,0,0,0,0,1.0,1.0),
                 (2,'Boar',NULL,2,3,35,0, 1.0,1.2,1.0,0,1,0,1,1.0,1.0,'',0,0,0,1.0,'',20.0,0,0,0,0,1.0,1.0);
              INSERT INTO content_creature_template_model VALUES (1,0,100,1.0,1.0),(2,0,200,1.0,1.0);
-             INSERT INTO content_creature VALUES (10,1,0,1,1, 0.0,0.0,0.0,0.0, 300,5.0,1);
-             INSERT INTO content_creature VALUES (11,2,1,2,2, 10.0,20.0,30.0,0.0, 300,0.0,0);
+             INSERT INTO content_creature (guid, id1, map, zoneId, areaId, position_x, position_y,
+                position_z, orientation, spawntimesecs, wander_distance, MovementType) VALUES (10,1,0,1,1, 0.0,0.0,0.0,0.0, 300,5.0,1);
+             INSERT INTO content_creature (guid, id1, map, zoneId, areaId, position_x, position_y,
+                position_z, orientation, spawntimesecs, wander_distance, MovementType) VALUES (11,2,1,2,2, 10.0,20.0,30.0,0.0, 300,0.0,0);
              INSERT INTO content_waypoint_data VALUES (10,1, 1.0,2.0,3.0,0.0,0,0);
              INSERT INTO content_waypoint_data VALUES (10,2, 4.0,5.0,6.0,0.0,0,0);",
         )
@@ -126,7 +131,8 @@ fn world_data_loads_from_sqlite() {
 fn world_data_excludes_inactive_tournament_spawns_without_lowering_ordinary_npcs() {
     let path = write_to_temp_sqlite(|conn| {
         conn.execute_batch(
-            "INSERT INTO content_creature VALUES
+            "INSERT INTO content_creature (guid, id1, map, zoneId, areaId, position_x, position_y,
+                position_z, orientation, spawntimesecs, wander_distance, MovementType) VALUES
                 (96194,26012,0,0,0,-8918.51,-135.146,84.2136,0,180,0,0),
                 (96198,26760,0,0,0,-8914.73,-133.636,84.3208,0,180,0,0),
                 (96204,26075,0,0,0,-8911.02,-131.912,84.4265,0,180,0,0),
@@ -181,9 +187,12 @@ fn world_data_spawns_indexed_by_map() {
         conn.execute_batch(
             "INSERT INTO content_creature_template VALUES
                 (1,'Wolf',NULL,1,1,35,0,1.0,1.0,1.0,0,1,0,1,1.0,1.0,'',0,0,0,1.0,'',20.0,0,0,0,0,1.0,1.0);
-             INSERT INTO content_creature VALUES (1,1,0,1,1, 0.0,0.0,0.0,0.0, 300,0.0,0);
-             INSERT INTO content_creature VALUES (2,1,0,1,1, 1.0,0.0,0.0,0.0, 300,0.0,0);
-             INSERT INTO content_creature VALUES (3,1,1,1,1, 2.0,0.0,0.0,0.0, 300,0.0,0);",
+             INSERT INTO content_creature (guid, id1, map, zoneId, areaId, position_x, position_y,
+                position_z, orientation, spawntimesecs, wander_distance, MovementType) VALUES (1,1,0,1,1, 0.0,0.0,0.0,0.0, 300,0.0,0);
+             INSERT INTO content_creature (guid, id1, map, zoneId, areaId, position_x, position_y,
+                position_z, orientation, spawntimesecs, wander_distance, MovementType) VALUES (2,1,0,1,1, 1.0,0.0,0.0,0.0, 300,0.0,0);
+             INSERT INTO content_creature (guid, id1, map, zoneId, areaId, position_x, position_y,
+                position_z, orientation, spawntimesecs, wander_distance, MovementType) VALUES (3,1,1,1,1, 2.0,0.0,0.0,0.0, 300,0.0,0);",
         )
         .unwrap();
     });

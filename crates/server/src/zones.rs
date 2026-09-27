@@ -1,8 +1,8 @@
 use bevy::prelude::*;
 use lightyear::prelude::*;
 use shared::components::{
-    Health, ModelDisplay, Mounted, Npc, Position, Rotation, UnitFactionTemplate, UnitLevel,
-    UnitPowers, Zone,
+    Health, ModelDisplay, Mounted, Npc, Position, Rotation, UnitFactionTemplate, UnitFlags,
+    UnitLevel, UnitPowers, Zone,
 };
 use shared::protocol::NpcFlags;
 use std::collections::HashMap;
@@ -12,8 +12,8 @@ use crate::creature_ai::{FormationMember, SpawnPoint, WanderPhase, WanderState, 
 use crate::interest::NetworkVisibility;
 use crate::level_scaling::{CreatureArmor, ScaledStats};
 use crate::world_data::{
-    CreatureAddon, CreatureSpawn, CreatureTemplate, GROUP_AI_FLAG_FOLLOW_LEADER, TemplateTuning,
-    WorldData,
+    CreatureAddon, CreatureModelInfo, CreatureSpawn, CreatureTemplate, GROUP_AI_FLAG_FOLLOW_LEADER,
+    TemplateTuning, WorldData,
 };
 use shared::level_scaling::LevelScaling;
 
@@ -68,8 +68,8 @@ fn spawn_creatures<'a>(
     spawns: impl Iterator<Item = &'a CreatureSpawn>,
 ) -> HashMap<u32, Entity> {
     let mut entities = HashMap::new();
+    let mut rng = rand::thread_rng();
     for spawn in spawns {
-        let display_id = resolve_display_id(world_data, spawn.template_entry);
         let template = world_data
             .templates
             .get(&spawn.template_entry)
@@ -98,6 +98,7 @@ fn spawn_creatures<'a>(
                 template.armor,
             ),
         };
+        let display_id = choose_display_id(template, spawn, &mut rng);
         let bundle = creature_bundle(spawn, &template.name, health, display_id);
 
         let mut entity = commands.spawn((bundle, map));
@@ -110,6 +111,7 @@ fn spawn_creatures<'a>(
             CreatureArmor(armor),
             UnitPowers::default(),
             UnitFactionTemplate(u32::from(template.faction)),
+            UnitFlags(spawn.unit_flags.unwrap_or(template.unit_flags)),
             NpcFlags::from_azerothcore(template.npc_flags),
         ));
         if replicate {
@@ -247,13 +249,51 @@ fn creature_bundle(
     )
 }
 
-fn resolve_display_id(world_data: &WorldData, template_entry: u32) -> u32 {
-    world_data
-        .templates
-        .get(&template_entry)
-        .and_then(|t| t.models.first())
-        .map(|m| m.display_id)
-        .unwrap_or(0)
+/// `CreatureModel::DefaultInvisibleModel`: a trigger without an invisible model of its own.
+const DEFAULT_INVISIBLE_DISPLAY: u32 = 11_686;
+
+/// ObjectMgr::ChooseDisplayId (ObjectMgr.cpp:1601-1613): the spawn's modelid, else a model of the
+/// template by Probability, except that triggers take their first invisible model.
+fn choose_display_id(
+    template: &CreatureTemplate,
+    spawn: &CreatureSpawn,
+    rng: &mut impl rand::Rng,
+) -> u32 {
+    if let Some(display_id) = spawn.display_id {
+        return display_id;
+    }
+    if !template.trigger
+        && let Some(model) = random_valid_model(&template.models, rng)
+    {
+        return model.display_id;
+    }
+    template
+        .models
+        .iter()
+        .find(|model| model.is_trigger)
+        .map_or(DEFAULT_INVISIBLE_DISPLAY, |model| model.display_id)
+}
+
+/// CreatureTemplate::GetRandomValidModel (Creature.cpp:113-128): one model regardless of its
+/// Probability; otherwise weighted by Probability, uniform when every weight is 0
+/// (SelectRandomWeightedContainerElement).
+fn random_valid_model<'a>(
+    models: &'a [CreatureModelInfo],
+    rng: &mut impl rand::Rng,
+) -> Option<&'a CreatureModelInfo> {
+    if models.len() <= 1 {
+        return models.first();
+    }
+    let index =
+        match rand::distributions::WeightedIndex::new(models.iter().map(|model| model.probability))
+        {
+            Ok(weights) => rng.sample(weights),
+            Err(rand::distributions::WeightedError::AllWeightsZero) => {
+                rng.gen_range(0..models.len())
+            }
+            Err(error) => panic!("creature_template_model Probability: {error}"),
+        };
+    models.get(index)
 }
 
 /// Creature::ApplyLevelScaling (Creature.cpp:3122-3159): the ContentTuning
@@ -372,7 +412,13 @@ mod tests {
             script_name: String::new(),
             detection_range: 20.0,
             aggro_mode: crate::creature_aggro::AggroMode::Aggressive,
-            models: vec![CreatureModelInfo { display_id }],
+            trigger: false,
+            unit_flags: 0,
+            models: vec![CreatureModelInfo {
+                display_id,
+                probability: 1.0,
+                is_trigger: false,
+            }],
             tuning: None,
             armor: 0.0,
         }
@@ -410,6 +456,8 @@ mod tests {
             wander_distance: 0.0,
             movement_type: 0,
             spawntimesecs: 120,
+            display_id: None,
+            unit_flags: None,
         }
     }
 
@@ -439,7 +487,10 @@ mod tests {
                 CreatureDisplayID INTEGER, DisplayScale REAL, Probability REAL);
              CREATE TABLE content_creature (guid INTEGER, id1 INTEGER, map INTEGER, zoneId INTEGER,
                 position_x REAL, position_y REAL, position_z REAL, wander_distance REAL,
-                MovementType INTEGER, orientation REAL, spawntimesecs INTEGER);
+                MovementType INTEGER, orientation REAL, spawntimesecs INTEGER, modelid INTEGER,
+                unit_flags INTEGER);
+             CREATE TABLE creature_display_info (ID INTEGER PRIMARY KEY, ModelID INTEGER);
+             CREATE TABLE creature_model_data (ID INTEGER PRIMARY KEY, FileDataID INTEGER);
              CREATE TABLE content_game_event_creature (guid INTEGER, eventEntry INTEGER);
              CREATE TABLE content_waypoint_data (id INTEGER, point INTEGER, position_x REAL,
                 position_y REAL, position_z REAL, orientation REAL, delay INTEGER,
@@ -472,7 +523,7 @@ mod tests {
             )
             .unwrap();
             conn.execute(
-                "INSERT INTO content_creature VALUES (?1,?1,0,0,-9000,-100,80,0,0,?2,120)",
+                "INSERT INTO content_creature VALUES (?1,?1,0,0,-9000,-100,80,0,0,?2,120,0,0)",
                 rusqlite::params![entry, angle],
             )
             .unwrap();
@@ -499,16 +550,53 @@ mod tests {
         assert_eq!(count, angles.len());
     }
 
-    #[test]
-    fn display_id_from_template() {
-        let wd = make_world_data(vec![make_template(42, 1.0, 5555)], vec![]);
-        assert_eq!(resolve_display_id(&wd, 42), 5555);
+    fn model(display_id: u32, probability: f32, is_trigger: bool) -> CreatureModelInfo {
+        CreatureModelInfo {
+            display_id,
+            probability,
+            is_trigger,
+        }
+    }
+
+    fn choose_with_seed(template: &CreatureTemplate, spawn: &CreatureSpawn) -> u32 {
+        let mut rng = <rand::rngs::StdRng as rand::SeedableRng>::seed_from_u64(1);
+        choose_display_id(template, spawn, &mut rng)
     }
 
     #[test]
-    fn display_id_missing_template() {
-        let wd = make_world_data(vec![], vec![]);
-        assert_eq!(resolve_display_id(&wd, 999), 0);
+    fn a_single_model_is_chosen_even_with_probability_zero() {
+        let mut template = make_template(42, 1.0, 0);
+        template.models = vec![model(5555, 0.0, false)];
+        assert_eq!(
+            choose_with_seed(&template, &make_spawn(42, 0.0, 0.0, 0.0)),
+            5555
+        );
+    }
+
+    #[test]
+    fn a_spawn_modelid_overrides_the_template_models() {
+        let template = make_template(42, 1.0, 5555);
+        let mut spawn = make_spawn(42, 0.0, 0.0, 0.0);
+        spawn.display_id = Some(7777);
+        assert_eq!(choose_with_seed(&template, &spawn), 7777);
+    }
+
+    /// CreatureTemplate::GetFirstInvisibleModel: CreatureModel::DefaultInvisibleModel when the
+    /// trigger has no invisible model of its own.
+    #[test]
+    fn a_trigger_without_an_invisible_model_takes_the_default_invisible_display() {
+        let mut template = make_template(42, 1.0, 0);
+        template.trigger = true;
+        template.models = vec![model(169, 1.0, false)];
+        assert_eq!(
+            choose_with_seed(&template, &make_spawn(42, 0.0, 0.0, 0.0)),
+            11686
+        );
+        template.models.push(model(16925, 0.0, true));
+        assert_eq!(
+            choose_with_seed(&template, &make_spawn(42, 0.0, 0.0, 0.0)),
+            16925
+        );
     }
 
     #[test]

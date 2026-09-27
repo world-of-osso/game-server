@@ -245,7 +245,13 @@ mod tests {
             script_name: String::new(),
             detection_range: 20.0,
             aggro_mode: crate::creature_aggro::AggroMode::Aggressive,
-            models: vec![CreatureModelInfo { display_id: 1 }],
+            trigger: false,
+            unit_flags: 0,
+            models: vec![CreatureModelInfo {
+                display_id: 1,
+                probability: 1.0,
+                is_trigger: false,
+            }],
             tuning: None,
             armor: 0.0,
         }
@@ -264,6 +270,8 @@ mod tests {
             wander_distance: 0.0,
             movement_type: 0,
             spawntimesecs: 120,
+            display_id: None,
+            unit_flags: None,
         }
     }
 

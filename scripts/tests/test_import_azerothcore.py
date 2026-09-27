@@ -32,10 +32,11 @@ def tdb_tables():
     return script.split("TDB_TABLES=(", 1)[1].split(")", 1)[0].split()
 
 
-def tdb_creature(guid, entry, map_id, x, y, z, difficulties="0", phase_id=0, phase_group=0, terrain_swap=-1):
+def tdb_creature(guid, entry, map_id, x, y, z, difficulties="0", phase_id=0, phase_group=0, terrain_swap=-1,
+                 modelid=0, unit_flags="NULL"):
     """One TDB1210 `creature` row (28 columns, TrinityCore DDL order)."""
-    return (f"({guid},{entry},{map_id},0,0,'{difficulties}',0,{phase_id},{phase_group},{terrain_swap},0,1,"
-            f"{x},{y},{z},1.5,300,0,0,100,0,NULL,NULL,NULL,NULL,'',NULL,66044)")
+    return (f"({guid},{entry},{map_id},0,0,'{difficulties}',0,{phase_id},{phase_group},{terrain_swap},{modelid},1,"
+            f"{x},{y},{z},1.5,300,0,0,100,0,NULL,{unit_flags},NULL,NULL,'',NULL,66044)")
 
 
 def tdb_template(entry, name, faction, npcflag, classification=0, unit_class=1, flags_extra=0, script=""):
@@ -460,6 +461,32 @@ class CreatureEventImportTests(unittest.TestCase):
         self.assertEqual(reported[("tdb_creature", "guid=314")], "not base phase: terrainSwapMap 638")
         self.assertEqual(reported[("tdb_creature", "guid=317")], "not base phase: PhaseGroup 431")
         self.assertNotIn(("tdb_creature", "guid=316"), reported, "other maps keep AzerothCore spawns silently")
+
+    def test_retail_spawns_keep_their_modelid_and_unit_flags(self):
+        """TrinityCore `creature.modelid` and `unit_flags` override the template per spawn
+        (ObjectMgr::ChooseDisplayId, ChooseCreatureFlags); a modelid Retail CreatureDisplayInfo lacks is ignored."""
+        self.write_retail_spawn_fixture()
+        rows = (self.tdb / "creature.sql").read_text().rstrip(";\n") + "," + ",".join([
+            tdb_creature(318, 68, 0, -8901.0, 642.0, 99.7, modelid=33168, unit_flags=33554432),
+            tdb_creature(319, 68, 0, -8902.0, 643.0, 99.7, modelid=999999),
+        ]) + ";\n"
+        (self.tdb / "creature.sql").write_text(rows)
+        write_creature_display_ids(self.csv / db2.DEFAULT_BUILD, [3167, 33167, 33168])
+        result = self.run_import()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        offset = retail_content.RETAIL_GUID_OFFSET
+        with sqlite3.connect(self.db) as conn:
+            self.assertEqual(
+                conn.execute("SELECT guid, modelid, unit_flags FROM content_creature WHERE guid > ? ORDER BY guid",
+                             (offset,)).fetchall(),
+                [(offset + 311, 0, 0), (offset + 315, 0, 0), (offset + 318, 33168, 33554432), (offset + 319, 0, 0)],
+            )
+            self.assertEqual(conn.execute("SELECT modelid FROM content_creature WHERE guid = 120000").fetchone(), (0,),
+                             "AzerothCore spawns have no modelid")
+        with (self.root / "data/reports/content-dropped.csv").open(newline="") as handle:
+            reported = {(r["table"], r["key"]): (r["source_id"], r["reason"]) for r in csv.DictReader(handle)}
+        self.assertEqual(reported[("tdb_creature", "guid=319")],
+                         ("999999", "modelid absent from Retail CreatureDisplayInfo; the template's models apply"))
 
     def test_retail_stockade_spawns_replace_azerothcore_classic_stockade(self):
         """TrinityCore's DEFAULT_PHASE 169 spawns are base phase on every map; the Stockade (a party dungeon)

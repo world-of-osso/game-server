@@ -525,9 +525,15 @@ type GravityPlayerData<'w, 's> = Query<
         Option<&'static crate::death::PlayerDeathState>,
         &'static shared::components::MovementControl,
         &'static InMap,
+        Has<OutOfBounds>,
     ),
     With<Player>,
 >;
+
+/// `PLAYER_FLAGS_IS_OUT_OF_BOUNDS`: the player fell below `Map::GetMinHeight`. Cleared once
+/// they are above it again (a release or teleport moves them back).
+#[derive(Component, Debug)]
+pub struct OutOfBounds;
 
 /// Apply gravity and ground clamping (terrain and WMO floors) to all players each tick.
 pub(crate) fn apply_terrain_gravity(
@@ -537,19 +543,29 @@ pub(crate) fn apply_terrain_gravity(
     dirty_queue: Option<Res<InterestDirtyQueue>>,
     replication_dirty: Option<Res<ReplicationDirtyQueue>>,
     mut player_deaths: MessageWriter<crate::death::PlayerDeathTransition>,
+    mut commands: Commands,
 ) {
     let Some(mut ground) = ground else {
         return;
     };
     let dt = time.delta_secs();
-    for (entity, mut pos, mut vert_vel, mut fall_tracker, mut health, death_state, control, map) in
-        players.iter_mut()
+    for (
+        entity,
+        mut pos,
+        mut vert_vel,
+        mut fall_tracker,
+        mut health,
+        death_state,
+        control,
+        map,
+        out_of_bounds,
+    ) in players.iter_mut()
     {
         if control.controlled {
             continue;
         }
         let previous_health = *health;
-        let (next_pos, next_vert_vel, next_fall_tracker, next_health) = calculate_gravity_state(
+        let (next_pos, next_vert_vel, next_fall_tracker, mut next_health) = calculate_gravity_state(
             ground.ground_at(map.map_id, Vec3::new(pos.x, pos.y, pos.z)),
             *pos,
             *vert_vel,
@@ -558,6 +574,16 @@ pub(crate) fn apply_terrain_gravity(
             death_state,
             dt,
         );
+        let min_height =
+            ground.min_height(map.map_id, Vec3::new(next_pos.x, next_pos.y, next_pos.z));
+        let under_map = min_height.is_some_and(|min_height| next_pos.y < min_height);
+        let alive = death_state.is_none_or(|state| state.state == DeathState::Alive);
+        if under_map && alive && next_health.current > 0.0 {
+            fall_to_void(&mut next_health);
+            commands.entity(entity).insert(OutOfBounds);
+        } else if !under_map && out_of_bounds {
+            commands.entity(entity).remove::<OutOfBounds>();
+        }
         if *pos != next_pos {
             *pos = next_pos;
             mark_interest_position_changed(dirty_queue.as_deref(), entity);
@@ -577,6 +603,13 @@ pub(crate) fn apply_terrain_gravity(
             &mut player_deaths,
         );
     }
+}
+
+/// Below the map (MovementHandler.cpp:594-612): `EnvironmentalDamage(DAMAGE_FALL_TO_VOID,
+/// GetMaxHealth())`, then `KillPlayer` if that left the player alive.
+fn fall_to_void(health: &mut Health) {
+    crate::death::apply_health_damage(health, health.max);
+    health.current = 0.0;
 }
 
 fn apply_gravity_health_transition(

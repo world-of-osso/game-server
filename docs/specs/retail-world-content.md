@@ -38,6 +38,11 @@ Wowhead loot
 Creature templates and levels
 - [x] `content_creature_template` is AzerothCore's templates plus TrinityCore's template, difficulty-0 values and models for every Retail-spawned entry AzerothCore lacks.
 - [x] Every creature spawned on maps 0/1 wears a Retail CreatureDisplayInfo display. An AzerothCore template whose display is absent from Retail takes TrinityCore's models when both use the same name, when a reviewed override covers it, or when a Retail spawn references the entry. The last case covers TrinityCore renames: Pygmy Surf Crawler 3106 goes from display 1307 to 1938.
+- [x] Each spawn picks its display by `ObjectMgr::ChooseDisplayId` (ObjectMgr.cpp:1601-1613), once, when it spawns (`zones::choose_display_id`):
+  - the spawn's `creature.modelid` (`content_creature.modelid`, from TDB `creature.modelid`) wins. A modelid that Retail CreatureDisplayInfo lacks is dropped to 0 and reported. 183 spawns on maps 0/1/34 carry one, including every Stockade spawn.
+  - otherwise a template model by `Probability` (`GetRandomValidModel`): a single model is used even at Probability 0, and when every weight is 0 the pick is uniform (Stockade Guard 46405: 2989/2990/2992, never 2991).
+  - a template with `CREATURE_FLAG_EXTRA_TRIGGER` (0x80) takes its first invisible model (`GetFirstInvisibleModel`), else display 11686. A display is invisible when its CreatureModelData `FileDataID` is one of TrinityCore's trigger models (124640, 124641, 124642, 343863, 439302), read from `creature_model_data` (DB2 CreatureModelData). Summon Enabler Stalker 53488 gets 16925, not 169.
+- [x] Creatures replicate `UnitFlags`: the spawn's `creature.unit_flags` when nonzero, else the template's (`ChooseCreatureFlags`). Summon Enabler Stalker carries `UNIT_FLAG_NOT_SELECTABLE`. A `UNIT_FLAG_UNINTERACTIBLE` (NOT_SELECTABLE) unit is neither attacked nor assisted (`IsValidAttackTarget`/`IsValidAssistTarget`): no auto-attack, and explicit and area spells skip it. `SPELL_ATTR11_CAN_ASSIST_UNINTERACTIBLE` is not honoured.
 - [x] Every template TrinityCore tunes carries `ContentTuningID` (difficulty 0; Stockade entries difficulty 1).
   - `minlevel`/`maxlevel` are that ContentTuning's range, following TrinityCore `GetContentTuningData` under Expansion 11: calc types add +0, +1, +90 or +80, clamped to 1..123.
   - AzerothCore's fixed levels stay only where there is no ContentTuningID.
@@ -117,6 +122,8 @@ Server behaviour on Retail content
   - banker and auctioneer positions;
   - TrinityCore-only template;
   - patrol, escort, mount, aura, dummy, health and aggro on Retail guids.
+  - display choice: `summon_enabler_stalker_spawns_invisible_and_not_selectable`, `stockade_models_are_chosen_by_probability`, `models_without_weights_are_chosen_uniformly`.
+- `scripts/tests/test_import_azerothcore.py` `test_retail_spawns_keep_their_modelid_and_unit_flags`; `crates/server/src/zones.rs` unit tests (single model, spawn modelid, default invisible display).
 - `crates/server/src/startup_tests.rs` `world_db_*`: content tables present, Hogger at 1-30, no orphan spawns.
 - `crates/server/src/quest_rules_tests.rs`, `quest_tests.rs`: Retail Northshire chain and Riverpaw Gnoll Bounty; quest money per player level (`beating_them_back_pays_quest_money_for_the_players_level`, faction group, minimum level, AzerothCore fixed money); Beating Them Back! turned in at level 1 pays 55.
 - `scripts/tests/test_import_azerothcore.py` `ContentTuningLevelTests`: `MinLevelWithDelta`, scaling faction group.
@@ -137,7 +144,8 @@ Server behaviour on Retail content
   - Gossip conditions are not modelled: the lowest menu is used, and 4 NPCs have more than one.
 - [ ] **Waypoints and spawn overrides.**
   - TrinityCore `waypoint_path.Flags`/`Velocity` are ignored.
-  - Spawn `modelid`/`equipment_id` and spawn-level `npcflag`/`unit_flags` are not applied.
+  - Spawn `equipment_id` and spawn-level `npcflag` are not applied; spawn `unit_flags` reach `UnitFlags` only, not aggro (`AggroMode` reads the template's).
+  - `creature_model_info` (`DisplayID_Other_Gender`, the 50 % gender swap of `GetCreatureModelRandomGender`) is not imported.
   - Game object `Data24-34` (608 templates) are not in the AzerothCore schema.
 - [ ] **Gathering nodes.** Loot ids of Retail gathering nodes (type 50) are not remapped. The server spawns only mailboxes and guild vaults so far.
 

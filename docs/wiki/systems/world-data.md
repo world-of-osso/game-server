@@ -22,7 +22,7 @@ Source: `~/Repos/azerothcore/data/sql/base/db_world/`
 | `creature` | 149,678 | Source spawn instances, including event-only rows; runtime selection applies event membership |
 | `game_event_creature` | Source-dependent | Signed event membership keyed by spawn GUID and event ID |
 | `creature_template_model` | 40,213 | Display models per creature (DisplayID, scale, probability) |
-| `content_creature_template_model` | 40,186 | `creature_template_model` with Wrath-only displays replaced by TrinityCore Retail models ([[content-import]]); `world_data.rs` `load_models` reads this table, and spawns replicate the first model by `Idx` |
+| `content_creature_template_model` | 40,186 | `creature_template_model` with Wrath-only displays replaced by TrinityCore Retail models ([[content-import]]); `world_data.rs` `load_models` reads this table with each display's weight and trigger status; spawns choose one per TrinityCore `ChooseDisplayId` ([retail world content](../../specs/retail-world-content.md)) |
 | `content_creature` | 184,436 | Server-read spawns: TrinityCore Retail base-phase spawns on maps 0/1 (guid + 20,000,000), AzerothCore spawns elsewhere ([[content-import]], [retail-world-content](../../specs/retail-world-content.md)) |
 | `content_creature_template` | 34,667 | Server-read templates: AzerothCore's plus 4,720 TrinityCore templates for Retail-only entries; `ContentTuningID` + its level range for the 16,003 templates TrinityCore tunes |
 | `content_tuning` | 2,929 | Retail ContentTuning DB2, extracted from local CASC (`db2.py extract`) |

@@ -201,6 +201,32 @@ fn out_of_range_sends_cast_failed_to_owner() {
     assert_eq!(h.power(PowerType::Rage), 500.0);
 }
 
+/// WorldObject::IsValidAttackTarget (Object.cpp:2374): a UNIT_FLAG_UNINTERACTIBLE target
+/// (TrinityCore's name for NOT_SELECTABLE) is not a valid attack target.
+#[test]
+fn spell_on_a_not_selectable_npc_fails_with_invalid_target() {
+    let Some(mut h) = harness(Vec::new(), &[MORTAL_STRIKE], 1) else {
+        return;
+    };
+    h.set_power(PowerType::Rage, 500.0);
+    h.app
+        .world_mut()
+        .entity_mut(h.npc)
+        .insert(shared::components::UnitFlags(
+            shared::components::UnitFlags::NOT_SELECTABLE,
+        ));
+    h.cast_and_deliver(MORTAL_STRIKE, Some(h.npc));
+    assert_eq!(
+        std::mem::take(&mut h.inbox.failed),
+        vec![CastFailed {
+            spell_id: MORTAL_STRIKE,
+            reason: CastFailReason::InvalidTarget,
+            detail: None,
+        }]
+    );
+    assert_eq!(h.health(h.npc), 5000.0);
+}
+
 #[test]
 fn heal_clamps_to_max_and_logs_overheal() {
     let Some(mut h) = harness(Vec::new(), &[FLASH_HEAL], 5) else {

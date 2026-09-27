@@ -75,6 +75,8 @@ def build_spawns(conn, report):
     """content_creature and temp.retail_spawn (TrinityCore guid -> content guid)."""
     clone_table(conn, "creature", "content_creature")
     conn.execute(f"INSERT INTO content_creature SELECT * FROM creature WHERE map NOT IN ({MAP_LIST})")
+    # TrinityCore `creature.modelid`: the spawn's display instead of its template's (ObjectMgr::ChooseDisplayId).
+    conn.execute("ALTER TABLE content_creature ADD COLUMN modelid INTEGER NOT NULL DEFAULT 0")
     for guid, map_id in conn.execute(f"SELECT guid, map FROM creature WHERE map IN ({MAP_LIST}) ORDER BY guid"):
         report.drop("creature", f"guid={guid}", guid, f"map {map_id} spawn replaced by Retail spawns")
     conn.execute(f"""CREATE TEMP TABLE retail_spawn AS SELECT guid AS tdb_guid, guid + {RETAIL_GUID_OFFSET} AS guid
@@ -83,11 +85,21 @@ def build_spawns(conn, report):
     for guid, *phase in conn.execute(f"""SELECT guid, PhaseId, PhaseGroup, terrainSwapMap, spawnDifficulties
             FROM tdb_creature WHERE map IN ({MAP_LIST}) AND NOT ({BASE_PHASE}) ORDER BY guid"""):
         report.drop("tdb_creature", f"guid={guid}", guid, not_base_phase_reason(*phase))
+    # unit_flags NULL (the template's) becomes 0, which the server also reads as "the template's"; no TDB1210
+    # spawn overrides it with 0.
     conn.execute("""INSERT INTO content_creature (guid, id1, map, zoneId, areaId, equipment_id, position_x, position_y,
-            position_z, orientation, spawntimesecs, wander_distance, currentwaypoint, MovementType, ScriptName, VerifiedBuild)
+            position_z, orientation, spawntimesecs, wander_distance, currentwaypoint, MovementType, unit_flags, ScriptName,
+            VerifiedBuild, modelid)
         SELECT r.guid, c.id, c.map, c.zoneId, c.areaId, c.equipment_id, c.position_x, c.position_y, c.position_z,
-            c.orientation, c.spawntimesecs, c.wander_distance, c.currentwaypoint, c.MovementType, c.ScriptName, c.VerifiedBuild
+            c.orientation, c.spawntimesecs, c.wander_distance, c.currentwaypoint, c.MovementType, COALESCE(c.unit_flags, 0),
+            c.ScriptName, c.VerifiedBuild, c.modelid
         FROM temp.retail_spawn r JOIN tdb_creature c ON c.guid = r.tdb_guid""")
+    # ObjectMgr::LoadCreatures ignores a modelid without creature_model_info.
+    for guid, display in conn.execute("""SELECT guid, modelid FROM content_creature
+            WHERE modelid <> 0 AND modelid NOT IN (SELECT ID FROM creature_display_info) ORDER BY guid""").fetchall():
+        report.drop("tdb_creature", f"guid={guid - RETAIL_GUID_OFFSET}", display,
+                    "modelid absent from Retail CreatureDisplayInfo; the template's models apply")
+        conn.execute("UPDATE content_creature SET modelid = 0 WHERE guid = ?", (guid,))
 
 
 def content_tuning_levels(min_level, max_level, min_type, max_type):

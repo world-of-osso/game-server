@@ -61,7 +61,7 @@ TABLES = [
     "RandPropPoints", "ItemArmorQuality", "ItemArmorShield", "ItemArmorTotal",
     "ArmorLocation", "ItemDamageOneHand", "ItemDamageOneHandCaster",
     "ItemDamageTwoHand", "ItemDamageTwoHandCaster", "ItemSquishEra", "CurvePoint",
-    "DurabilityCosts", "DurabilityQuality", "GameObjectDisplayInfo", "BankTab", "CreatureDisplayInfo",
+    "DurabilityCosts", "DurabilityQuality", "GameObjectDisplayInfo", "BankTab", "CreatureDisplayInfo", "CreatureModelData",
     "SpellReagents", "SpellTotems", "TradeSkillCategory", "SkillRaceClassInfo", "TotemCategory",
     "ContentTuning", "QuestMoneyReward", "ExpectedStat", "ExpectedStatMod", "ContentTuningXExpected",
     "Map", "MapDifficulty", "AreaTrigger", "AreaTriggerActionSet",
