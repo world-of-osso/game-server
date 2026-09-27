@@ -500,6 +500,10 @@ fn dispatch(
         AdminRequest::Kill { character_name } => {
             handle_kill(db, commands, players, &character_name)
         }
+        AdminRequest::Damage {
+            character_name,
+            amount,
+        } => handle_damage(db, commands, players, &character_name, amount),
         AdminRequest::SetGold {
             character_name,
             copper,
@@ -755,6 +759,77 @@ mod tests {
             handle_taxi_learn(&game_db, &network, "Scout", 999_999),
             AdminResponse::Error("taxi node 999999 not found".into())
         );
+    }
+
+    #[test]
+    fn damage_hits_the_online_characters_target_and_a_lethal_amount_kills_it() {
+        let db = persistence::temp_database();
+        let (character_id, _) =
+            persistence::create_character(&db, 1, "Striker", 1, 1).expect("character");
+        let game_db = persistence::GameDatabase { db };
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        app.add_message::<crate::death::PlayerDeathTransition>();
+        app.update();
+        let npc = app
+            .world_mut()
+            .spawn((
+                shared::components::Npc {
+                    template_id: 46254,
+                    name: "Hogger".into(),
+                },
+                shared::components::Health {
+                    current: 500.0,
+                    max: 500.0,
+                },
+            ))
+            .id();
+        app.world_mut().spawn((
+            Position {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            shared::components::Health {
+                current: 100.0,
+                max: 100.0,
+            },
+            persistence::ClientId(character_id),
+            shared::components::MovementControl::default(),
+            crate::networking::CombatTarget(Some(npc)),
+        ));
+        let damage = |app: &mut App, amount: f32| {
+            let mut system_state = SystemState::<(
+                Commands,
+                Query<(
+                    Entity,
+                    &mut Position,
+                    &persistence::ClientId,
+                    &mut shared::components::MovementControl,
+                )>,
+            )>::new(app.world_mut());
+            let (mut commands, players) = system_state.get_mut(app.world_mut()).unwrap();
+            let response = handle_damage(&game_db, &mut commands, &players, "Striker", amount);
+            system_state.apply(app.world_mut());
+            response
+        };
+        assert_eq!(
+            damage(&mut app, 120.0),
+            AdminResponse::Damaged {
+                character_name: "Striker".into(),
+                amount: 120.0
+            }
+        );
+        let health = |app: &App| {
+            app.world()
+                .get::<shared::components::Health>(npc)
+                .unwrap()
+                .current
+        };
+        assert_eq!(health(&app), 380.0);
+        damage(&mut app, 1_000.0);
+        assert_eq!(health(&app), 0.0);
+        assert!(app.world().get::<crate::combat::DeathState>(npc).is_some());
     }
 
     #[test]

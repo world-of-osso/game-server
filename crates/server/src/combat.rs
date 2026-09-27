@@ -892,6 +892,60 @@ fn insert_npc_death(mut entity: EntityWorldMut) {
     });
 }
 
+/// `Unit::DealDamage(attacker, victim, damage)` without a spell (`DIRECT_DAMAGE`,
+/// school Normal; the `.damage` command): the victim loses `damage` over its health
+/// multiplier for the attacker, both enter combat, the victim's threat and
+/// `DamageTaken` follow, and a lethal hit kills it.
+pub(crate) fn deal_direct_damage(world: &mut World, attacker: Entity, victim: Entity, damage: f32) {
+    if !crate::spell_cast::targets::is_alive(world, victim) {
+        return;
+    }
+    let (attacker_scaling, victim_scaling) = (
+        UnitScaling::of(world, attacker),
+        UnitScaling::of(world, victim),
+    );
+    let loss = crate::level_scaling::health_loss(&attacker_scaling, &victim_scaling, damage);
+    let Some(mut health) = world.get_mut::<Health>(victim) else {
+        return;
+    };
+    let before = health.current;
+    let lethal = crate::death::apply_health_damage(&mut health, loss);
+    mark_replication_changed(world.get_resource::<ReplicationDirtyQueue>(), victim);
+    world.entity_mut(victim).insert(LastDamager(attacker));
+    enter_combat(world, attacker);
+    enter_combat(world, victim);
+    crate::creature_aggro::add_threat(world, victim, attacker, damage);
+    crate::spell_cast::log_event(
+        world,
+        CombatLogEvent {
+            source: Some(attacker.to_bits()),
+            target: Some(victim.to_bits()),
+            spell_id: None,
+            school_mask: 1,
+            amount: damage as i32,
+            overflow: (loss - before).max(0.0) as i32,
+            absorbed: 0,
+            resisted: 0,
+            blocked: 0,
+            crit: false,
+            periodic: false,
+            kind: CombatLogKind::Damage,
+        },
+    );
+    if loss > 0.0 {
+        crate::scripted_ai::damage_taken(world, victim, Some(attacker), before, loss);
+    }
+    if !lethal {
+        return;
+    }
+    if world.get::<Npc>(victim).is_some() {
+        mark_npc_dead_world(world, victim);
+    } else {
+        world.write_message(crate::death::PlayerDeathTransition { player: victim });
+    }
+    crate::spell_cast::log_event(world, death_log_event(attacker, victim));
+}
+
 /// `Unit::Kill(killer, victim)` outside a damage path (`Unit::KillSelf`): the
 /// victim dies at once.
 pub(crate) fn kill_unit(world: &mut World, killer: Entity, victim: Entity) {

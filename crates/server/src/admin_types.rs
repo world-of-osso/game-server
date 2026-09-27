@@ -188,6 +188,12 @@ pub enum AdminRequest {
         character_name: String,
         node: u32,
     },
+    /// TrinityCore `.damage <amount>`: the online character's target takes `amount`
+    /// damage from it (`Unit::DealDamage`, school Normal).
+    Damage {
+        character_name: String,
+        amount: f32,
+    },
     Ping,
 }
 
@@ -372,6 +378,10 @@ pub enum AdminResponse {
         character_name: String,
         node: u32,
         node_name: String,
+    },
+    Damaged {
+        character_name: String,
+        amount: f32,
     },
     Pong,
     Error(String),

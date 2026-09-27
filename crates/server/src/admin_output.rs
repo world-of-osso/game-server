@@ -143,6 +143,12 @@ fn print_character_response(response: &AdminResponse) -> bool {
         } => {
             println!("Position set: {character_name} -> ({x}, {y}, {z})");
         }
+        AdminResponse::Damaged {
+            character_name,
+            amount,
+        } => {
+            println!("Damaged: {character_name}'s target took {amount}");
+        }
         AdminResponse::Killed { character_name } => {
             println!("Killed: {character_name}");
         }
