@@ -316,3 +316,7 @@ Created `systems/quests.md` (quest data, rules, runtime) and `specs/quests.md`; 
 ## [2026-09-26] update | Maps and dungeon instances
 
 [[zone-architecture]]: maps 0 and 1 and dungeon copies share one World by `InMap`; `maps` module (MapStore, InstanceManager, teleport_to/NewWorld/WorldPortAck, area trigger teleports, dungeon release, login map). Spec [instances](../specs/instances.md). [[meeting-stones]]: summons cross maps. [[game-objects]]: spawned per map copy.
+
+## [2026-09-27] update | Dungeon difficulties and instance locks
+
+[[zone-architecture]]: copies at the entrant's dungeon difficulty (downscaled per MapDifficulty/Difficulty fallback), `InstanceLocks` (InstanceLockMgr port: temporary/permanent, instance-id bound shared state, encounter locks, Retail 15:00 UTC reset), lock persistence in game.redb, `ServerClock`. Spec [instances](../specs/instances.md) (Dungeon difficulty, Instance locks), [retail world content](../specs/retail-world-content.md) (spawnDifficulties, content_creature_template_difficulty, Grim Batol), [boss scripts](../specs/boss-scripts.md) (Grim Batol spell-less BossAI).

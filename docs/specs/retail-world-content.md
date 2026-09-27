@@ -1,6 +1,6 @@
 # Retail World Content
 
-On Eastern Kingdoms (map 0), Kalimdor (map 1) and The Stockade (map 34), world content comes from TrinityCore TDB1210.26091, the Retail 12.1.0 world DB. AzerothCore (Wrath 3.3.5) is used only where TrinityCore has nothing for the same NPC or quest.
+On Eastern Kingdoms (map 0), Kalimdor (map 1), The Stockade (map 34) and Grim Batol (map 670), world content comes from TrinityCore TDB1210.26091, the Retail 12.1.0 world DB. AzerothCore (Wrath 3.3.5) is used only where TrinityCore has nothing for the same NPC or quest.
 
 TrinityCore content covers:
 - creature and game object spawns;
@@ -21,12 +21,14 @@ How it works: [content import](../wiki/systems/content-import.md).
 ## What it must do
 
 Spawn and id rules
-- [x] Retail maps (0, 1, 34) take TrinityCore base-phase rows only: `PhaseId` 0 or 169, `PhaseGroup` 0, `terrainSwapMap` -1, and the map's spawn difficulty in `spawnDifficulties`. `DEFAULT_PHASE` 169 is unphased (`PhaseShift.h:31`, `PhasingHandler::InitDbPhaseShift`). The spawn difficulty follows the map's `Map.db2` InstanceType: open world 0 (`DIFFICULTY_NONE`), a party dungeon its instance difficulty, Normal (1) for every hosted copy; other instance types fail the import.
+- [x] Retail maps (0, 1, 34, 670) take TrinityCore base-phase rows only: `PhaseId` 0 or 169, `PhaseGroup` 0, `terrainSwapMap` -1, and one of the map's spawn difficulties in `spawnDifficulties`. `DEFAULT_PHASE` 169 is unphased (`PhaseShift.h:31`, `PhasingHandler::InitDbPhaseShift`). The spawn difficulties follow the map's `Map.db2` InstanceType: open world 0 (`DIFFICULTY_NONE`), a party dungeon every `MapDifficulty.db2` DifficultyID of the map (the Stockade 1; Grim Batol 1, 2, 8, 23); other instance types fail the import. `content_creature.spawnDifficulties` and `content_gameobject.spawnDifficulties` keep the spawn's difficulties the map offers ("0" on a continent, "1,2" for Grim Batol's 529 creatures).
   - This applies to `content_creature` and to `content_gameobject`.
   - Game objects whose only event membership is positive (holiday decorations) don't spawn.
   - Other maps keep AzerothCore's rows.
 - [x] Spawns (verified 2026-09-26, `world-stockade-20260926.db`; before → after the phase-169 and Stockade import): creatures map 0 45,317 → 50,930, map 1 49,853 → 52,309, map 34 93 → 143; game objects map 0 11,582 → 12,654, map 1 10,295 → 11,250, map 34 18 → 34. The Stockade's 143 creatures (Hogger, Lord Overheat, Randolph Moloch, Riverpaw and fire-elemental trash, prisoners, guards) replace AzerothCore's 93 Classic ones (Targorr, Bazil Thredd, ...); its game objects are 33 fires and a bonfire (Retail has no Stockade doors or chests).
-- [x] An entry's template values come from the `creature_template_difficulty` row of its spawns' difficulty. A Stockade entry's template values (ContentTuning, health, loot, gold) come from its `DifficultyID` 1 row (`CreatureTemplate::GetDifficulty`), else its `DifficultyID` 0 row: Difficulty.db2 (build 69933) falls Normal back to None. Hogger: ContentTuning 215 (10-30), LevelScalingDelta +2. Bruegal Ironknuckle keeps loot 1720. An entry spawned at two difficulties with different resolved rows fails the import.
+- [x] An entry's template values come from the `creature_template_difficulty` row of its spawns' difficulty (`CreatureTemplate::GetDifficulty`: the difficulty's row, else its `Difficulty.db2` `FallbackDifficultyID` chain Mythic → Heroic → Normal → None). `content_creature_template` takes the row of the entry's lowest spawn difficulty: a Stockade entry's (ContentTuning, health, loot, gold) its `DifficultyID` 1 row, else 0. Hogger: ContentTuning 215 (10-30), LevelScalingDelta +2. Bruegal Ironknuckle keeps loot 1720.
+- [x] `content_creature_template_difficulty` has one row per dungeon difficulty an entry spawns at (entry, DifficultyID, levels, exp, ContentTuningID, HealthScalingExpansion, LevelScalingDelta, Health/Mana/Armor/Damage modifiers, lootid, mingold, maxgold) from its resolved row: General Umbriss Normal ContentTuning 253 (30-35), Heroic 1118 (35); Trogg Dweller Heroic has no row and takes Normal's. 138 rows (Grim Batol).
+- [x] Loot per difficulty: the difficulty row's TrinityCore `LootID` (+20,000,000) when it has loot, else Wowhead drops of that difficulty's mode (entry + 30,000,000 at the lowest spawn difficulty, entry + 30,000,000 + difficulty × 1,000,000 at the others), else none and no money.
 - [x] Retail spawn guids are the TrinityCore guid + 20,000,000 (`RETAIL_GUID_OFFSET`), because 10 TrinityCore creature guids collide with AzerothCore spawns kept on other maps.
 - [x] TrinityCore loot template and reference ids are also + 20,000,000 (`TDB_LOOT_OFFSET`), in creature `lootid` and in chest and fishing-hole `Data1`.
 - [x] Raw AzerothCore tables, `tdb_*` tables and DB2 tables stay verbatim. Every dropped or replaced row is in `data/reports/content-dropped.csv` with its reason.
