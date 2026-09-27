@@ -281,6 +281,7 @@ def apply_policy(conn, wrath_spell_names, overrides_path, report):
     retail_content.build_loot(conn, report)
     retail_content.build_gossip(conn, report)
     retail_content.build_quests(conn, report)
+    retail_content.build_creature_text(conn)
 
 
 def main():

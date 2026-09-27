@@ -785,6 +785,27 @@ CREATE TABLE tdb_broadcast_text (
   PRIMARY KEY (ID, VerifiedBuild)
 );
 
+-- CreatureTextMgr::LoadCreatureTexts: what creatures say, yell and emote (Talk groups of boss
+-- scripts); a BroadcastTextId row takes its text from BroadcastText.
+DROP TABLE IF EXISTS tdb_creature_text;
+CREATE TABLE tdb_creature_text (
+  CreatureID INTEGER NOT NULL DEFAULT 0,
+  GroupID INTEGER NOT NULL DEFAULT 0,
+  ID INTEGER NOT NULL DEFAULT 0,
+  Text TEXT NOT NULL,
+  Type INTEGER NOT NULL DEFAULT 0,
+  Language INTEGER NOT NULL DEFAULT 0,
+  Probability REAL NOT NULL DEFAULT 0,
+  Emote INTEGER NOT NULL DEFAULT 0,
+  Duration INTEGER NOT NULL DEFAULT 0,
+  Sound INTEGER NOT NULL DEFAULT 0,
+  SoundPlayType INTEGER NOT NULL DEFAULT 0,
+  BroadcastTextId INTEGER NOT NULL DEFAULT 0,
+  TextRange INTEGER NOT NULL DEFAULT 0,
+  comment TEXT DEFAULT '',
+  PRIMARY KEY (CreatureID, GroupID, ID)
+);
+
 -- Map transfer data (ObjectMgr::LoadAreaTriggerTeleports, LoadWorldSafeLocs, LoadGraveyardZones,
 -- LoadInstanceTemplate): areatrigger teleport targets and graveyards of every map.
 DROP TABLE IF EXISTS tdb_areatrigger_teleport;
