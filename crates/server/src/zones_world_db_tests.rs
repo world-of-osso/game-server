@@ -896,6 +896,7 @@ fn display_counts(entry: u32) -> HashMap<u32, u32> {
         display_id: None,
         unit_flags: None,
         spawn_difficulties: vec![0],
+        equipment_id: 0,
     };
     let spawn = &spawn;
     let mut rng = <rand::rngs::StdRng as rand::SeedableRng>::seed_from_u64(34);
@@ -936,4 +937,73 @@ fn models_without_weights_are_chosen_uniformly() {
     for display in [35069, 35070] {
         assert!((1850..2150).contains(&criminal[&display]), "{criminal:?}");
     }
+}
+
+/// Stockade TDB1210 creature_addon / creature_template_addon poses (Creature::LoadCreaturesAddon):
+/// guard 375782 `emote` 333 (EMOTE_STATE_READY1H), guard 375779 StandState 3 (sleep, with aura
+/// 55474 Cosmetic - Sleep Zzz), guard 375776 has no spawn row and takes template 46405's
+/// StandState 1 (sit); Petty Criminal 375706 takes template 46382's StandState 3, 375707 its spawn
+/// row's 1, 375708 its spawn row's 0. Every row has SheathState 1 (melee weapons drawn).
+#[test]
+#[ignore]
+fn stockade_spawns_take_their_addon_pose() {
+    use shared::components::{SheathState, StandState, UnitPose};
+    const POSES: [(u32, StandState, u32); 6] = [
+        (RETAIL + 375_782, StandState::Stand, 333),
+        (RETAIL + 375_779, StandState::Sleep, 0),
+        (RETAIL + 375_776, StandState::Sit, 0),
+        (RETAIL + 375_706, StandState::Sleep, 0),
+        (RETAIL + 375_707, StandState::Sit, 0),
+        (RETAIL + 375_708, StandState::Stand, 0),
+    ];
+    const GUIDS: [u32; 6] = [
+        POSES[0].0, POSES[1].0, POSES[2].0, POSES[3].0, POSES[4].0, POSES[5].0,
+    ];
+    let app = patrol_app(&GUIDS);
+    for (guid, stand_state, emote_state) in POSES {
+        assert_eq!(
+            app.world().get::<UnitPose>(entity_of(&app, guid)),
+            Some(&UnitPose {
+                stand_state,
+                sheath_state: SheathState::Melee,
+                emote_state,
+            }),
+            "guid {guid}"
+        );
+    }
+}
+
+/// Creature::LoadEquipment(creature.equipment_id): Stockade Guard 375782 (equipment_id 1) wields
+/// TDB1210 creature_equip_template (46405, 1): item 5305 (ItemModifiedAppearance mod 0 ->
+/// ItemAppearance 1844 -> ItemDisplayInfo 7526, a one-hand weapon) and shield 1984 (appearance
+/// 337, display 1705); Petty Criminal 375706 (equipment_id 0) wields nothing.
+#[test]
+#[ignore]
+fn stockade_guard_wields_its_virtual_items() {
+    use shared::components::{EquipmentAppearance, EquipmentVisualSlot, EquippedAppearanceEntry};
+    const GUARD: u32 = RETAIL + 375_782;
+    const CRIMINAL: u32 = RETAIL + 375_706;
+    let app = patrol_app(&[GUARD, CRIMINAL]);
+    let entry = |slot, item_id, display_info_id, inventory_type| EquippedAppearanceEntry {
+        slot,
+        item_id: Some(item_id),
+        display_info_id: Some(display_info_id),
+        inventory_type,
+        hidden: false,
+    };
+    assert_eq!(
+        app.world()
+            .get::<EquipmentAppearance>(entity_of(&app, GUARD)),
+        Some(&EquipmentAppearance {
+            entries: vec![
+                entry(EquipmentVisualSlot::MainHand, 5305, 7526, 13),
+                entry(EquipmentVisualSlot::OffHand, 1984, 1705, 14),
+            ],
+        })
+    );
+    assert_eq!(
+        app.world()
+            .get::<EquipmentAppearance>(entity_of(&app, CRIMINAL)),
+        None
+    );
 }

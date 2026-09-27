@@ -485,6 +485,7 @@ fn slot_sort_key(slot: EquipmentVisualSlot) -> u8 {
         EquipmentVisualSlot::Feet => 10,
         EquipmentVisualSlot::MainHand => 11,
         EquipmentVisualSlot::OffHand => 12,
+        EquipmentVisualSlot::Ranged => 13,
     }
 }
 

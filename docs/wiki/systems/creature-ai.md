@@ -51,7 +51,9 @@ Who enters `Pursuing`, threat and target selection are [[creature-aggro]].
 
 ## Creature addon mount and auras
 
-Spawn-time `creature_addon`/`creature_template_addon` fields (`zones.rs`): `mount` → replicated `Mounted { mount_display_id }`; `auras` → self-cast through the aura runtime on the next FixedUpdate (`apply_addon_auras`; spells missing from `SpellStore` are logged). `bytes1` (stand state), `bytes2` (sheath), `emote` (`UNIT_NPC_EMOTESTATE`) and `visibilityDistanceType` are imported but not applied: the protocol has no persistent stand/emote state.
+Spawn-time `creature_addon`/`creature_template_addon` fields (`zones.rs`): `mount` → replicated `Mounted { mount_display_id }`; `auras` → self-cast through the aura runtime on the next FixedUpdate (`apply_addon_auras`; spells missing from `SpellStore` are logged). `bytes1` byte 0 (stand state), `bytes2` byte 0 (sheath state) and `emote` (`UnitData::EmoteState`) → replicated `UnitPose` (TrinityCore `Creature::LoadCreaturesAddon`; out-of-range stand/sheath values are truncated to 0 with an error, as `ObjectMgr::LoadCreatureTemplateAddons`). A spawn without an addon row stands with melee weapons drawn (`Creature::UpdateEntry` `SHEATH_STATE_MELEE`). `visibilityDistanceType` is imported but not applied.
+
+Equipment: `creature.equipment_id` picks the entry's `content_creature_equip_template` row (`Creature::LoadEquipment`; 0 none, -1 a random ID, summons ID 1). Its items become a replicated `EquipmentAppearance` (MainHand, OffHand, Ranged) with the ItemDisplayInfo of each (ItemID, AppearanceModID) `item_modified_appearance` row and the item's InventoryType; an item without either is left out with an error.
 
 ## SpawnPoint Component
 

@@ -1,8 +1,8 @@
 use bevy::prelude::*;
 use lightyear::prelude::*;
 use shared::components::{
-    Health, ModelDisplay, Mounted, Npc, Position, Rotation, UnitFactionTemplate, UnitFlags,
-    UnitLevel, UnitPowers, Zone,
+    EquipmentAppearance, Health, ModelDisplay, Mounted, Npc, Position, Rotation, SheathState,
+    UnitFactionTemplate, UnitFlags, UnitLevel, UnitPose, UnitPowers, Zone,
 };
 use shared::protocol::NpcFlags;
 use std::collections::HashMap;
@@ -187,6 +187,10 @@ pub(crate) fn spawn_creature(
             ));
         }
         let addon = world_data.addon_for(spawn);
+        entity.insert(unit_pose(addon));
+        if let Some(equipment) = creature_equipment(world_data, spawn, rng) {
+            entity.insert(equipment);
+        }
         insert_ai_components(&mut entity, spawn, template, addon, world_data);
         crate::creature_aggro::insert_aggro_components(
             &mut entity,
@@ -269,6 +273,8 @@ pub(crate) fn summon_creature(
         display_id: None,
         unit_flags: None,
         spawn_difficulties: Vec::new(),
+        // Creature::InitEntry: a summon loads its default equipment (LoadEquipment(1)).
+        equipment_id: 1,
     };
     let difficulty_id = world.get::<CreatureDifficulty>(summoner).map_or(0, |d| d.0);
     let mut queue = bevy::ecs::world::CommandQueue::default();
@@ -318,6 +324,38 @@ pub(crate) fn unsummon(world: &mut World, summon: Entity) {
     if let Ok(entity) = world.get_entity_mut(summon) {
         entity.despawn();
     }
+}
+
+/// Creature::UpdateEntry draws melee weapons (SHEATH_STATE_MELEE); the addon then sets
+/// its stand state, sheath state and emote state (Creature::LoadCreaturesAddon).
+fn unit_pose(addon: Option<&CreatureAddon>) -> UnitPose {
+    addon.map_or(
+        UnitPose {
+            sheath_state: SheathState::Melee,
+            ..UnitPose::default()
+        },
+        |addon| UnitPose {
+            stand_state: addon.stand_state,
+            sheath_state: addon.sheath_state,
+            emote_state: addon.emote_state,
+        },
+    )
+}
+
+/// Creature::LoadEquipment(creature.equipment_id): its entry's equipment of that ID,
+/// a random one for -1 (ObjectMgr::GetEquipmentInfo), none for 0.
+fn creature_equipment(
+    world_data: &WorldData,
+    spawn: &CreatureSpawn,
+    rng: &mut impl rand::Rng,
+) -> Option<EquipmentAppearance> {
+    let equipment = world_data.equipment.get(&spawn.template_entry)?;
+    let chosen = match spawn.equipment_id {
+        0 => return None,
+        -1 => equipment.values().nth(rng.gen_range(0..equipment.len())),
+        id => equipment.get(&(id as u8)),
+    }?;
+    (!chosen.entries.is_empty()).then(|| chosen.clone())
 }
 
 /// `creature_addon` mount and auras (Creature::LoadCreaturesAddon).
@@ -636,6 +674,49 @@ mod tests {
         }
     }
 
+    /// ObjectMgr::GetEquipmentInfo: equipment_id 2 picks ID 2, -1 one of the entry's IDs
+    /// (both, over 200 rolls), 0 and a missing ID none. Winterskorn Warrior 23664's
+    /// AzerothCore row (1, 33320, 13922) and an invented ID 2.
+    #[test]
+    fn creature_equipment_follows_equipment_id() {
+        use shared::components::{EquipmentVisualSlot, EquippedAppearanceEntry};
+        let appearance = |item_id, display_info_id| EquipmentAppearance {
+            entries: vec![EquippedAppearanceEntry {
+                slot: EquipmentVisualSlot::MainHand,
+                item_id: Some(item_id),
+                display_info_id: Some(display_info_id),
+                inventory_type: 13,
+                hidden: false,
+            }],
+        };
+        let world_data = WorldData {
+            equipment: HashMap::from([(
+                23_664,
+                std::collections::BTreeMap::from([
+                    (1, appearance(33_320, 45_000)),
+                    (2, appearance(13_922, 21_000)),
+                ]),
+            )]),
+            ..Default::default()
+        };
+        let spawn = |equipment_id| CreatureSpawn {
+            equipment_id,
+            ..make_spawn(23_664, 0.0, 0.0, 0.0)
+        };
+        let mut rng = <rand::rngs::StdRng as rand::SeedableRng>::seed_from_u64(7);
+        assert_eq!(
+            creature_equipment(&world_data, &spawn(2), &mut rng),
+            Some(appearance(13_922, 21_000))
+        );
+        assert_eq!(creature_equipment(&world_data, &spawn(0), &mut rng), None);
+        assert_eq!(creature_equipment(&world_data, &spawn(3), &mut rng), None);
+        let rolled: std::collections::HashSet<_> = (0..200)
+            .map(|_| creature_equipment(&world_data, &spawn(-1), &mut rng).unwrap())
+            .map(|equipment| equipment.entries[0].item_id)
+            .collect();
+        assert_eq!(rolled, [Some(33_320), Some(13_922)].into());
+    }
+
     fn make_spawn(entry: u32, x: f32, y: f32, z: f32) -> CreatureSpawn {
         CreatureSpawn {
             guid: 1,
@@ -652,6 +733,7 @@ mod tests {
             display_id: None,
             unit_flags: None,
             spawn_difficulties: vec![0],
+            equipment_id: 0,
         }
     }
 
@@ -689,7 +771,7 @@ mod tests {
              CREATE TABLE content_creature (guid INTEGER, id1 INTEGER, map INTEGER, zoneId INTEGER,
                 position_x REAL, position_y REAL, position_z REAL, wander_distance REAL,
                 MovementType INTEGER, orientation REAL, spawntimesecs INTEGER, modelid INTEGER,
-                unit_flags INTEGER, spawnDifficulties TEXT NOT NULL DEFAULT '0');
+                unit_flags INTEGER, spawnDifficulties TEXT NOT NULL DEFAULT '0', equipment_id INTEGER);
              CREATE TABLE creature_display_info (ID INTEGER PRIMARY KEY, ModelID INTEGER);
              CREATE TABLE creature_model_data (ID INTEGER PRIMARY KEY, FileDataID INTEGER);
              CREATE TABLE content_game_event_creature (guid INTEGER, eventEntry INTEGER);
@@ -697,9 +779,16 @@ mod tests {
                 position_y REAL, position_z REAL, orientation REAL, delay INTEGER,
                 move_type INTEGER);
              CREATE TABLE content_creature_addon (guid INTEGER, path_id INTEGER, mount INTEGER,
-                auras TEXT);
+                auras TEXT, bytes1 INTEGER, bytes2 INTEGER, emote INTEGER);
              CREATE TABLE content_creature_template_addon (entry INTEGER, path_id INTEGER,
-                mount INTEGER, auras TEXT);
+                mount INTEGER, auras TEXT, bytes1 INTEGER, bytes2 INTEGER, emote INTEGER);
+             CREATE TABLE content_creature_equip_template (CreatureID INTEGER, ID INTEGER,
+                ItemID1 INTEGER, AppearanceModID1 INTEGER, ItemID2 INTEGER, AppearanceModID2 INTEGER,
+                ItemID3 INTEGER, AppearanceModID3 INTEGER);
+             CREATE TABLE item (ID INTEGER PRIMARY KEY, InventoryType INTEGER);
+             CREATE TABLE item_modified_appearance (ItemID INTEGER, ItemAppearanceModifierID INTEGER,
+                ItemAppearanceID INTEGER);
+             CREATE TABLE item_appearance (ID INTEGER PRIMARY KEY, ItemDisplayInfoID INTEGER);
              CREATE TABLE content_creature_formations (leaderGUID INTEGER, memberGUID INTEGER,
                 dist REAL, angle REAL, groupAI INTEGER);",
         )
@@ -724,7 +813,7 @@ mod tests {
             )
             .unwrap();
             conn.execute(
-                "INSERT INTO content_creature VALUES (?1,?1,0,0,-9000,-100,80,0,0,?2,120,0,0,'0')",
+                "INSERT INTO content_creature VALUES (?1,?1,0,0,-9000,-100,80,0,0,?2,120,0,0,'0',0)",
                 rusqlite::params![entry, angle],
             )
             .unwrap();
