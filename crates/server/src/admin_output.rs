@@ -149,6 +149,7 @@ fn print_character_response(response: &AdminResponse) -> bool {
         } => {
             println!("Damaged: {character_name}'s target took {amount}");
         }
+        AdminResponse::Revived { character_name } => println!("Revived: {character_name}"),
         AdminResponse::Killed { character_name } => {
             println!("Killed: {character_name}");
         }

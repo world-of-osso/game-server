@@ -504,6 +504,9 @@ fn dispatch(
             character_name,
             amount,
         } => handle_damage(db, commands, players, &character_name, amount),
+        AdminRequest::Revive { character_name } => {
+            handle_revive(db, commands, players, &character_name)
+        }
         AdminRequest::SetGold {
             character_name,
             copper,
@@ -830,6 +833,68 @@ mod tests {
         damage(&mut app, 1_000.0);
         assert_eq!(health(&app), 0.0);
         assert!(app.world().get::<crate::combat::DeathState>(npc).is_some());
+    }
+
+    #[test]
+    fn revive_brings_a_dead_online_character_back_at_full_health() {
+        let db = persistence::temp_database();
+        let (character_id, _) =
+            persistence::create_character(&db, 1, "Fallen", 1, 1).expect("character");
+        let game_db = persistence::GameDatabase { db };
+        let mut app = App::new();
+        let player = app
+            .world_mut()
+            .spawn((
+                Position {
+                    x: 0.0,
+                    y: 0.0,
+                    z: 0.0,
+                },
+                shared::components::Health {
+                    current: 0.0,
+                    max: 46_500.0,
+                },
+                crate::death::PlayerDeathState {
+                    state: shared::death::DeathState::Dead,
+                    ..Default::default()
+                },
+                persistence::ClientId(character_id),
+                shared::components::MovementControl::default(),
+            ))
+            .id();
+        let mut system_state = SystemState::<(
+            Commands,
+            Query<(
+                Entity,
+                &mut Position,
+                &persistence::ClientId,
+                &mut shared::components::MovementControl,
+            )>,
+        )>::new(app.world_mut());
+        let (mut commands, players) = system_state.get_mut(app.world_mut()).unwrap();
+        let response = handle_revive(&game_db, &mut commands, &players, "Fallen");
+        system_state.apply(app.world_mut());
+        assert_eq!(
+            response,
+            AdminResponse::Revived {
+                character_name: "Fallen".into()
+            }
+        );
+        let world = app.world();
+        assert_eq!(
+            world
+                .get::<shared::components::Health>(player)
+                .unwrap()
+                .current,
+            46_500.0
+        );
+        assert_eq!(
+            world
+                .get::<crate::death::PlayerDeathState>(player)
+                .unwrap()
+                .state,
+            shared::death::DeathState::Alive
+        );
     }
 
     #[test]
