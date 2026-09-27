@@ -53,3 +53,10 @@ Dungeons phase 3: creature scripts selected by `creature_template.ScriptName`, p
 
 ## Out of scope
 - Instance locks, difficulties (phase 4), Dungeon Finder (phase 5), doors (the Stockade has none), `FAIL`/`_DespawnAtEvade` (unused by these scripts).
+
+## Live evidence (2026-09-27)
+Own server :5085 (world.db = `world-stockadebosses-20260927.db`, copied game.redb), one headless client (Xpbar, level 80 mage; bosses hit with `game-server-admin damage`), evidence in game-engine `data/diagnostics/stockadebosses-20260927/` (`server-run3-hogger.log` for Hogger, `server.log` for the others):
+- Hogger: pull yell, EncounterStart 1144 and Boss1TargetFrame (`02`, `ui-02`); Maddening Call and Vicious Slice debuffs on the player (`03`); a hit to 29% gave the center-screen "Hogger enrages!" (`04`); leaving him reset the encounter (EncounterEnd success false, frame hidden, full health, no enrage; `06`); death: "Yiiipe!", EncounterEnd success true, Warden Thelwater ran to (152.0, 106.2) and said all three lines (`07`, `08`, `ui-08`).
+- Lord Overheat: pull yell, Fireball chain, Overheat, Rain of Fire's dynamic object at the player, mana 4177/4313 on his boss frame (`11`-`13`); leaving reset him, a new pull and his death gave "FIRE... EXTINGUISHED!" and DONE (`14`).
+- Randolph Moloch: pull yell, Sweep and Wildly Stabbing (`20`, `21`); a hit to 70% gave "Randolph Moloch vanishes!", he left the client, Shadowstep brought him back beside the player (`22`, `23`); death yell, DONE, Mortimer walked to him, yelled and collapsed (`24`-`26`).
+- Not shown live: the second vanish, Rain of Fire's radius against a second player (unit tests cover both).
