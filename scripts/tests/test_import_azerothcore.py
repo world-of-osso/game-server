@@ -1373,8 +1373,8 @@ class LocalDb2ExtractTests(unittest.TestCase):
         cls.tables = {}
         for table, (fdid, layout) in db2.LOCAL_TABLES.items():
             columns = [(row[1], row[2]) for row in schema.execute(f"PRAGMA table_info({db2.table_name(table)})")]
-            header, rows = db2_casc.extract_rows(fdid, layout, columns)
-            cls.tables[table] = (header, {row[0]: row for row in rows})
+            header, rows = db2_casc.extract_rows(fdid, layout, columns, localized=table in db2.LOCALIZED_TABLES)
+            cls.tables[table] = (header, {row[header.index("ID")]: row for row in rows})
 
     def test_wago_rows_decode_identically(self):
         for table, line in WAGO_ROWS.items():
@@ -1388,6 +1388,18 @@ class LocalDb2ExtractTests(unittest.TestCase):
         # Difficulty_0..9 from one pallet-array field.
         self.assertEqual(len(self.tables["QuestMoneyReward"][1]), 130)
 
+    def test_localized_tables_read_enus_strings(self):
+        # Difficulty (non-inline ID, Name_lang the first field) and DungeonEncounter (inline ID,
+        # Name_lang before it) from their enUS copies.
+        header, difficulties = self.tables["Difficulty"]
+        name, fallback = header.index("Name_lang"), header.index("FallbackDifficultyID")
+        self.assertEqual([(difficulties[i][name], difficulties[i][fallback]) for i in (1, 2, 23)],
+                         [("Normal", 0), ("Heroic", 1), ("Mythic", 2)])
+        header, encounters = self.tables["DungeonEncounter"]
+        umbriss = dict(zip(header, encounters[1051]))
+        self.assertEqual((umbriss["Name_lang"], umbriss["MapID"], umbriss["DifficultyID"], umbriss["Bit"]),
+                         ("General Umbriss", 670, 0, 3))
+
     def test_relationship_map_is_the_last_column(self):
         # ExpectedStat.Lvl and ContentTuningXExpected.ContentTuningID come from the relationship map.
         self.assertEqual(self.tables["ExpectedStat"][0][-1], "Lvl")
@@ -1395,7 +1407,10 @@ class LocalDb2ExtractTests(unittest.TestCase):
 
     @unittest.skipUnless(WAGO_VERIFY.is_dir(), f"wago.tools exports not present at {WAGO_VERIFY}")
     def test_whole_tables_match_the_wago_exports(self):
+        # The localized tables have no wago.tools export here (never fetched).
         for table, (header, rows) in self.tables.items():
+            if table in db2.LOCALIZED_TABLES:
+                continue
             with self.subTest(table=table):
                 with (WAGO_VERIFY / f"{table}.csv").open(newline="") as handle:
                     exported = list(csv.reader(handle))

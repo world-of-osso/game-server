@@ -2,7 +2,8 @@
 # Add only the map-transfer tables (dungeons phase 1) to an existing world.db without
 # rebuilding it: TDB areatrigger_teleport, world_safe_locs, graveyard_zone, instance_template
 # (tdb_schema.sql DDL, data/reference/tdb1210 excerpts) and DB2 Map, MapDifficulty, AreaTrigger,
-# AreaTriggerActionSet (db2_schema.sql DDL, build CSVs). Every other table is left as it is.
+# AreaTriggerActionSet, Difficulty, DungeonEncounter (db2_schema.sql DDL, build CSVs). Every other
+# table is left as it is.
 # Usage: scripts/import-map-tables.sh [path/to/world.db]
 set -euo pipefail
 G="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -17,7 +18,7 @@ python3 "$G/scripts/mysql_dump.py" --db "$DB" \
 cd "$G/scripts" && python3 - "$DB" <<'PY'
 import re, sqlite3, sys
 import db2
-tables = ["Map", "MapDifficulty", "AreaTrigger", "AreaTriggerActionSet"]
+tables = ["Map", "MapDifficulty", "AreaTrigger", "AreaTriggerActionSet", "Difficulty", "DungeonEncounter"]
 schema = db2.SCHEMA_SQL.read_text()
 csv_dir = db2.DEFAULT_CSV_ROOT / db2.DEFAULT_BUILD
 ddl = "".join(
