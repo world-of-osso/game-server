@@ -452,6 +452,7 @@ pub(crate) struct PlayerInputParams<'w, 's> {
     players: Query<'w, 's, PlayerMovement, With<Player>>,
     /// A player in a map transfer (no `InMap`) does not move.
     on_map: Query<'w, 's, (), (With<Player>, With<InMap>)>,
+    death_states: Query<'w, 's, &'static crate::death::PlayerDeathState>,
     presence: Query<
         'w,
         's,
@@ -483,7 +484,12 @@ pub(crate) fn process_player_inputs(time: Res<Time>, mut params: PlayerInputPara
             .controls
             .get(link.0)
             .is_ok_and(|control| control.controlled);
-        if controlled || !params.on_map.contains(link.0) {
+        // A corpse (dead, not yet released) does not move.
+        let corpse = params
+            .death_states
+            .get(link.0)
+            .is_ok_and(|death| death.state == DeathState::Dead);
+        if controlled || corpse || !params.on_map.contains(link.0) {
             continue;
         }
         let moving = direction_length(&latest.direction) >= 0.001;

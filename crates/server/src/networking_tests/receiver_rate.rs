@@ -231,3 +231,23 @@ fn input_of_a_player_the_server_flies_is_dropped() {
     deliver_and_tick(&mut app, connection, vec![make_input(0.0, 0.0, 1.0)]);
     assert_position(&app, player, [0.0; 3]);
 }
+
+#[test]
+fn a_corpse_ignores_movement_input_and_a_ghost_moves() {
+    let (mut app, player, connection) = receiver_app();
+    app.world_mut()
+        .entity_mut(player)
+        .insert(crate::death::PlayerDeathState {
+            state: DeathState::Dead,
+            ..Default::default()
+        });
+    deliver_and_tick(&mut app, connection, vec![make_input(0.0, 0.0, 1.0)]);
+    assert_position(&app, player, [0.0; 3]);
+
+    app.world_mut()
+        .get_mut::<crate::death::PlayerDeathState>(player)
+        .unwrap()
+        .state = DeathState::Ghost;
+    deliver_and_tick(&mut app, connection, vec![make_input(0.0, 0.0, 1.0)]);
+    assert_position(&app, player, [0.0, 0.0, RUN_STEP]);
+}
