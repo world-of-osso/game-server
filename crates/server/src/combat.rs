@@ -26,8 +26,11 @@ use std::collections::VecDeque;
 /// Melee attack range in yards.
 const MELEE_RANGE: f32 = 5.0;
 /// Seconds between the auto-attack swings of units without `CharacterStats`
-/// (creatures); players swing at their weapon speed.
-const AUTO_ATTACK_INTERVAL: f32 = 2.0;
+/// (creatures, `BaseAttackTime` 2000 for every Stockade creature); players swing
+/// at their weapon speed.
+pub(crate) const AUTO_ATTACK_INTERVAL: f32 = 2.0;
+/// `Unit::GetUnitMissChance`: every victim's base melee miss chance, percent.
+const UNIT_MISS_CHANCE_PCT: f32 = 5.0;
 /// A swing of one hand pushes the other hand's timer to at least this
 /// (`ATTACK_DISPLAY_DELAY`, Unit.h:643; Unit::AttackerStateUpdate, Unit.cpp:2203-2230).
 const ATTACK_DISPLAY_DELAY: f32 = 0.2;
@@ -261,8 +264,18 @@ type AutoAttackers<'w, 's> = Query<
         &'static Position,
         Option<&'static AuraStatMods>,
         Option<&'static CharacterStats>,
+        SwingState<'static>,
     ),
 >;
+
+/// What else a swing reads of its attacker: a creature's haste (players fold it
+/// into `CharacterStats`) and the states that stop auto-attacks
+/// (`UNIT_STATE_CASTING`, `UNIT_STATE_STUNNED`).
+type SwingState<'a> = (
+    Option<&'a crate::stats::StatModifiers>,
+    Has<shared::casting::CastState>,
+    Option<&'a crate::auras::ActiveAuras>,
+);
 
 type AutoAttackTargets<'w, 's> = Query<
     'w,
@@ -276,6 +289,8 @@ type AutoAttackTargets<'w, 's> = Query<
         Has<TrainingDummy>,
         Option<&'static DuelOpponent>,
         TargetArmor<'static>,
+        Option<&'static shared::components::UnitFlags>,
+        Has<crate::auras::Invisible>,
     ),
 >;
 
@@ -304,18 +319,31 @@ pub(crate) fn auto_attack_system(time: Res<Time>, mut params: AutoAttackParams) 
     let mut events = Vec::new();
     let mut swings = Vec::new();
 
-    for (attacker_entity, combat_target, mut auto_attack, position, mods, stats) in
-        &mut params.attackers
+    for (
+        attacker_entity,
+        combat_target,
+        mut auto_attack,
+        position,
+        mods,
+        stats,
+        (stat_mods, casting, auras),
+    ) in &mut params.attackers
     {
         let Some(target_entity) = ready_auto_attack_target(combat_target, &mut auto_attack, dt)
         else {
             continue;
         };
+        // Unit::DoMeleeAttackIfReady / AttackerStateUpdate: no swing while casting
+        // or stunned; the swing timers keep running.
+        if casting || auras.is_some_and(|auras| auras.is_stunned()) {
+            continue;
+        }
         let attacker = Attacker {
             entity: attacker_entity,
             position,
             mods,
             stats,
+            haste_pct: stat_mods.map_or(0.0, |mods| mods.haste_pct),
         };
         for hand in [Hand::Main, Hand::Off] {
             let Some(outcome) = try_swing(
@@ -487,6 +515,8 @@ pub(crate) struct Attacker<'a> {
     /// Players: weapon, attack power, crit, haste and versatility. Units
     /// without it (creatures) swing their ExpectedStat or flat damage.
     pub stats: Option<&'a CharacterStats>,
+    /// Aura haste of a unit without `CharacterStats` (MOD_MELEE_HASTE).
+    pub haste_pct: f32,
 }
 
 impl Attacker<'_> {
@@ -501,11 +531,14 @@ impl Attacker<'_> {
     }
 
     /// Seconds to the hand's next swing: the weapon speed over haste for
-    /// players (Unit::ApplyAttackTimePercentMod), the flat interval otherwise.
+    /// players, the flat interval over aura haste otherwise
+    /// (Unit::ApplyAttackTimePercentMod), times the MOD_SPEED_SLOW_ALL multiplier.
     fn swing_time(&self, weapon: &WeaponDamage) -> f32 {
-        self.stats.map_or(AUTO_ATTACK_INTERVAL, |stats| {
-            melee::swing_time(weapon.speed, stats.haste_pct)
-        })
+        let slow = self.mods.map_or(1.0, |mods| mods.attack_cast_time_mult);
+        self.stats.map_or(
+            AUTO_ATTACK_INTERVAL / (1.0 + self.haste_pct / 100.0).max(0.01),
+            |stats| melee::swing_time(weapon.speed, stats.haste_pct),
+        ) * slow
     }
 }
 
@@ -533,17 +566,30 @@ fn swing_damage(
             melee::weapon_damage_range(weapon, stats.attack_power, stats.versatility_pct, hand),
             rand::Rng::r#gen(&mut rng),
         ),
-        None => scaling
-            .swing_damage_range(AUTO_ATTACK_INTERVAL)
-            .map_or(BASE_DAMAGE, |(min, max)| {
-                rand::Rng::gen_range(&mut rng, min..=max)
-            }),
+        None => creature_weapon_damage(scaling),
     };
     let done = attacker.mods.map_or(1.0, |mods| {
         mods.damage_done(PHYSICAL) * mods.autoattack_damage_mult
     });
     let taken = target_mods.map_or(1.0, |mods| mods.damage_taken(PHYSICAL));
     (base * done * taken).max(0.0).round()
+}
+
+/// A creature's main-hand weapon damage roll (Unit::CalculateDamage): its
+/// ExpectedStat range at `AUTO_ATTACK_INTERVAL`, `BASE_DAMAGE` when untuned.
+pub(crate) fn creature_weapon_damage(scaling: &UnitScaling) -> f32 {
+    scaling
+        .swing_damage_range(AUTO_ATTACK_INTERVAL)
+        .map_or(BASE_DAMAGE, |(min, max)| {
+            rand::Rng::gen_range(&mut rand::thread_rng(), min..=max)
+        })
+}
+
+/// A creature's melee spell miss chance in percent (`Unit::MeleeSpellMissChance`):
+/// the victim's `GetUnitMissChance` minus its MOD_HIT_CHANCE auras. (Creature
+/// auto-attacks do not roll the hit table.)
+pub(crate) fn creature_miss_chance(mods: Option<&AuraStatMods>) -> f32 {
+    (UNIT_MISS_CHANCE_PCT - mods.map_or(0.0, |mods| mods.melee_hit_chance_pct)).clamp(0.0, 100.0)
 }
 
 /// The target's armor against `attacker` (Unit::CalcArmorReducedDamage): a
@@ -639,13 +685,18 @@ fn try_swing(
         training_dummy,
         duel,
         armor,
+        flags,
+        invisible,
     )) = targets.get_mut(target_entity)
     else {
         return None;
     };
-    if !in_melee_range(attacker.position, target_pos) || health.current <= 0.0 {
+    // IsValidAttackTarget: an invisible or NON_ATTACKABLE_2 unit is not attacked.
+    let attackable = !invisible && flags.is_none_or(|flags| flags.is_attackable());
+    if !in_melee_range(attacker.position, target_pos) || health.current <= 0.0 || !attackable {
         return None;
     }
+    let health_before = health.current;
     let unit = |entity| {
         context.scaling.get(entity).map_or(
             UnitScaling::from_item((None, None, None)),
@@ -674,6 +725,18 @@ fn try_swing(
         health_loss(training_dummy, scaled_loss),
     );
     let became_lethal = crate::death::apply_health_damage(&mut health, loss);
+    if is_npc && loss > 0.0 {
+        let attacker_entity = attacker.entity;
+        commands.queue(move |world: &mut World| {
+            crate::scripted_ai::damage_taken(
+                world,
+                target_entity,
+                Some(attacker_entity),
+                health_before,
+                loss,
+            );
+        });
+    }
     if let Some(mut last_damager) = last_damager {
         last_damager.0 = attacker.entity;
     } else {
@@ -819,25 +882,55 @@ pub(crate) fn mark_npc_dead_world(world: &mut World, entity: Entity) {
 fn insert_npc_death(mut entity: EntityWorldMut) {
     let respawn_timer = entity.get::<RespawnDelay>().map_or(0.0, |delay| delay.0);
     let remaining = entity.get::<CorpseDelay>().map_or(0.0, |delay| delay.0);
+    let killer = entity.get::<LastDamager>().map(|damager| damager.0);
     entity.insert((DeathState { respawn_timer }, Corpse { remaining }));
     crate::creature_aggro::forget_combat(&mut entity);
     let npc = entity.id();
-    entity.world_scope(|world| combat_stop(world, npc));
+    entity.world_scope(|world| {
+        combat_stop(world, npc);
+        crate::scripted_ai::dispatch(world, npc, crate::scripted_ai::Hook::JustDied(killer));
+    });
+}
+
+/// `Unit::Kill(killer, victim)` outside a damage path (`Unit::KillSelf`): the
+/// victim dies at once.
+pub(crate) fn kill_unit(world: &mut World, killer: Entity, victim: Entity) {
+    let Some(mut health) = world.get_mut::<Health>(victim) else {
+        return;
+    };
+    if health.current <= 0.0 {
+        return;
+    }
+    health.current = 0.0;
+    mark_replication_changed(world.get_resource::<ReplicationDirtyQueue>(), victim);
+    world.entity_mut(victim).insert(LastDamager(killer));
+    if world.get::<Npc>(victim).is_some() {
+        mark_npc_dead_world(world, victim);
+    } else {
+        world.write_message(crate::death::PlayerDeathTransition { player: victim });
+    }
+    crate::spell_cast::log_event(world, death_log_event(killer, victim));
 }
 
 /// AzerothCore `Creature::Update` in `CORPSE` state: past `m_corpseRemoveTime` the
 /// corpse is removed from clients (`RemoveCorpse`) until it respawns. Dropping
 /// `NetworkVisibility` hides it from every observer; `Replicate` stays, and the
 /// respawn's new `NetworkVisibility` shows the NPC again.
+/// A dead summon goes with its corpse (`TempSummon::Update`: `DEAD` → `UnSummon`).
 pub(crate) fn corpse_decay_system(
     time: Res<Time>,
-    mut corpses: Query<(Entity, &mut Corpse)>,
+    mut corpses: Query<(Entity, &mut Corpse, Has<crate::zones::TempSummon>)>,
     mut commands: Commands,
 ) {
     let dt = time.delta_secs();
-    for (entity, mut corpse) in &mut corpses {
+    for (entity, mut corpse, summon) in &mut corpses {
         corpse.remaining -= dt;
-        if corpse.remaining <= 0.0 {
+        if corpse.remaining > 0.0 {
+            continue;
+        }
+        if summon {
+            commands.queue(move |world: &mut World| crate::zones::unsummon(world, entity));
+        } else {
             commands
                 .entity(entity)
                 .remove::<(Corpse, NetworkVisibility)>();
@@ -1005,14 +1098,17 @@ fn refresh_combat_state(
 /// `Motion_Initialize` → a new WaypointMovementGenerator at `i_path->begin()`).
 pub(crate) fn respawn_system(
     time: Res<Time>,
-    mut query: Query<(
-        Entity,
-        &mut DeathState,
-        &mut Health,
-        &SpawnPoint,
-        &mut Position,
-        Option<&mut WaypointState>,
-    )>,
+    mut query: Query<
+        (
+            Entity,
+            &mut DeathState,
+            &mut Health,
+            &SpawnPoint,
+            &mut Position,
+            Option<&mut WaypointState>,
+        ),
+        Without<crate::zones::TempSummon>,
+    >,
     mut commands: Commands,
     dirty_queue: Option<Res<InterestDirtyQueue>>,
     mut senders: Query<&mut MessageSender<CombatEvent>>,
@@ -1046,6 +1142,7 @@ pub(crate) fn respawn_system(
                 NetworkVisibility::default(),
             ));
         commands.entity(entity).remove::<LastDamager>();
+        commands.queue(move |world: &mut World| crate::scripted_ai::reinitialize(world, entity));
         events.push(CombatEvent {
             attacker: 0,
             target: entity.to_bits(),

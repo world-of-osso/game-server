@@ -40,6 +40,14 @@ pub struct AuraStatMods {
     /// MOD_SPEED_ALWAYS 129 × strongest MOD_DECREASE_SPEED 33; 0 while
     /// rooted or stunned (MOD_ROOT 26, MOD_ROOT_2 455, MOD_STUN 12).
     pub movement_speed: f32,
+    /// MOD_HIT_CHANCE 54, summed percent (`GetTotalAuraModifier` in
+    /// `Unit::MeleeSpellMissChance`).
+    pub melee_hit_chance_pct: f32,
+    /// Attack and cast time multiplier of MOD_SPEED_SLOW_ALL 252
+    /// (`HandleModCombatSpeedPct` → `ApplyAttackTimePercentMod` /
+    /// `ApplyCastTimePercentMod`): × 100 / (100 + amount) for a positive amount,
+    /// × (100 − amount) / 100 for a negative one.
+    pub attack_cast_time_mult: f32,
 }
 
 impl Default for AuraStatMods {
@@ -53,6 +61,8 @@ impl Default for AuraStatMods {
             rage_from_damage_dealt_pct: 0.0,
             power_regen_mult: Vec::new(),
             movement_speed: 1.0,
+            melee_hit_chance_pct: 0.0,
+            attack_cast_time_mult: 1.0,
         }
     }
 }
@@ -88,6 +98,15 @@ impl AuraStatMods {
 
 fn pct(amount: f32) -> f32 {
     1.0 + amount / 100.0
+}
+
+/// `Unit::ApplyAttackTimePercentMod(val, apply)` on the time multiplier.
+fn time_percent_mod(amount: f32) -> f32 {
+    if amount > 0.0 {
+        100.0 / (100.0 + amount)
+    } else {
+        (100.0 - amount) / 100.0
+    }
 }
 
 /// Add `amount` to the stats (index 0 Strength, 1 Agility, 2 Stamina,
@@ -200,6 +219,8 @@ fn apply_aura(acc: &mut Accumulator, aura: &AuraInstance) {
             MOD_SPEED_ALWAYS => acc.always *= pct(amount),
             MOD_DECREASE_SPEED => acc.slowest = acc.slowest.min(amount),
             MOD_ROOT | MOD_ROOT_2 | MOD_STUN => acc.immobile = true,
+            MOD_HIT_CHANCE => combat.melee_hit_chance_pct += amount,
+            MOD_SPEED_SLOW_ALL => combat.attack_cast_time_mult *= time_percent_mod(amount),
             _ => {}
         }
     }

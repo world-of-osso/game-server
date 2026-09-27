@@ -12,6 +12,8 @@
 //! `crate::auras::apply_aura`.
 //! See `docs/wiki/systems/spell-casting.md`.
 
+pub mod area_aura;
+pub mod creature;
 pub mod effects;
 pub mod powers;
 pub mod targets;
@@ -38,8 +40,9 @@ use crate::class_progression::KnownSpells;
 use crate::networking::{CombatTarget, Moving, PlayerLink};
 use crate::spell_info::{SpellInfo, SpellStore};
 use crate::stats::CharacterStats;
+pub(crate) use creature::{AiTarget, ai_spell_target, creature_cast};
 use effects::{EffectCtx, UnhandledEffects};
-use targets::Relation;
+use targets::{Dest, Relation};
 
 /// `SpellInterruptFlags::Movement`.
 const SPELL_INTERRUPT_MOVEMENT: u32 = 0x1;
@@ -69,6 +72,13 @@ impl Plugin for SpellCastPlugin {
                     powers::sync_unit_powers,
                 )
                     .chain(),
+            )
+            .add_systems(
+                FixedUpdate,
+                (
+                    powers::regenerate_creature_mana,
+                    area_aura::update_dynamic_objects.after(advance_casts),
+                ),
             );
     }
 }
@@ -299,7 +309,10 @@ fn cast_time_ms(world: &World, caster: Entity, spell: &SpellInfo) -> i32 {
         SpellModOp::ChangeCastTime,
         base as f32,
     );
-    (modded / haste.max(0.01)).max(0.0).round() as i32
+    let slow = world
+        .get::<crate::auras::AuraStatMods>(caster)
+        .map_or(1.0, |mods| mods.attack_cast_time_mult);
+    (modded / haste.max(0.01) * slow).max(0.0).round() as i32
 }
 
 /// Channel duration after Duration mods.
@@ -684,8 +697,9 @@ pub(crate) fn spell_costs(
             CostPool::Health => CastFailure::NotEnoughHealth,
         };
         let (current, max) = value.ok_or(missing.clone())?;
+        // Only a percentage cost reads the base; creatures have no CharacterStats.
         let base = match pool {
-            CostPool::Power(PowerType::Mana) => world
+            CostPool::Power(PowerType::Mana) if percent > 0.0 => world
                 .get::<CharacterStats>(caster)
                 .map(|stats| stats.base_mana)
                 .ok_or(missing.clone())?,
@@ -770,6 +784,10 @@ fn insert_cast_state(world: &mut World, caster: Entity, spell: &SpellInfo, cast:
 }
 
 fn start_gcd(world: &mut World, caster: Entity, spell: &SpellInfo) {
+    // Spell::CanHaveGlobalCooldown: only players and their controlled units.
+    if world.get::<Npc>(caster).is_some() {
+        return;
+    }
     let base_gcd_ms = spell
         .cooldowns
         .as_ref()
@@ -846,9 +864,18 @@ fn execute_cast(
     Ok(())
 }
 
-type TargetPlan = Vec<(usize, Vec<Entity>)>;
+/// One handled effect's unit targets and destination.
+struct PlannedEffect {
+    index: usize,
+    units: Vec<Entity>,
+    dest: Option<Dest>,
+}
 
-/// Targets of every handled effect, selected before any effect resolves.
+type TargetPlan = Vec<PlannedEffect>;
+
+/// Targets of every handled effect, selected before any effect resolves. A
+/// creature's melee-defense spell misses units by its miss chance
+/// (`creature::roll_spell_misses`).
 fn plan_targets(
     world: &mut World,
     caster: Entity,
@@ -865,8 +892,10 @@ fn plan_targets(
             targets::select_targets(world, caster, explicit, effect, cap).map_err(|id| {
                 CastFailure::Unsupported(format!("implicit target {id} not supported"))
             })?;
-        plan.push((index, units));
+        let dest = targets::effect_dest(world, caster, explicit, effect);
+        plan.push(PlannedEffect { index, units, dest });
     }
+    creature::roll_spell_misses(world, caster, spell, &mut plan);
     Ok(plan)
 }
 
@@ -882,15 +911,20 @@ fn resolve_effects(
             effects::log_unhandled(world, spell.id, effect.effect);
         }
     }
-    let ctx = EffectCtx {
-        caster,
-        spell,
-        depth,
-    };
     // Aura effects hitting the same unit form one aura (per-unit effect mask).
     let mut aura_masks: Vec<(Entity, u32)> = Vec::new();
-    for (index, units) in plan {
+    for PlannedEffect { index, units, dest } in plan {
         let effect = &spell.effects[*index];
+        let ctx = EffectCtx {
+            caster,
+            spell,
+            depth,
+            dest: *dest,
+        };
+        if effect.effect == effects::EFFECT_PERSISTENT_AREA_AURA {
+            area_aura::create(world, &ctx, effect);
+            continue;
+        }
         if crate::auras::is_aura_effect(effect) {
             for &unit in units {
                 match aura_masks.iter_mut().find(|(target, _)| *target == unit) {
@@ -937,7 +971,7 @@ fn push_hit_events(
     depth: u8,
 ) {
     let mut hit: Vec<Entity> = Vec::new();
-    for unit in plan.iter().flat_map(|(_, units)| units) {
+    for unit in plan.iter().flat_map(|planned| &planned.units) {
         if !hit.contains(unit) {
             hit.push(*unit);
         }

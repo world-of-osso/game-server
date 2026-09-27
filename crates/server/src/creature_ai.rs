@@ -2,11 +2,13 @@ use bevy::prelude::*;
 use lightyear::prelude::ReplicationDirtyQueue;
 use shared::components::{Position, Rotation};
 
+use crate::auras::AuraStatMods;
 use crate::combat::DeathState;
 use crate::grid_activity::GridDormant;
 use crate::interest::{InterestDirtyQueue, mark_interest_position_changed};
 use crate::terrain_height::{bevy_to_wow, wow_to_bevy};
 use crate::world_data::{WaypointMoveType, WaypointPath, WaypointPoint, WorldData};
+use shared::casting::CastState;
 
 /// Walk speed in world-units per second (base WoW walk speed).
 const BASE_WALK_SPEED: f32 = 2.5;
@@ -423,24 +425,44 @@ fn follow_leader_step(
 // -- Chase logic --
 
 /// Run pursuing creatures toward their target each tick
-/// (`ChaseMovementGenerator`, run speed) until within `CHASE_REACH`,
-/// following the target's height so the 3D melee range check holds.
+/// (`ChaseMovementGenerator`, run speed × the aura speed multiplier) until within
+/// `CHASE_REACH`, following the target's height so the 3D melee range check holds.
+/// A stunned or rooted creature does not move, nor does one casting a spell that
+/// movement would interrupt (`Unit::IsMovementPreventedByCasting`).
 pub(crate) fn chase_system(
     time: Res<Time>,
     dirty_queue: Option<Res<InterestDirtyQueue>>,
-    mut chasers: Query<(Entity, &mut Position, &SpawnPoint, &CreatureState), Without<GridDormant>>,
+    mut chasers: Query<
+        (
+            Entity,
+            &mut Position,
+            &SpawnPoint,
+            &CreatureState,
+            Option<&CastState>,
+            Option<&AuraStatMods>,
+        ),
+        Without<GridDormant>,
+    >,
     targets: Query<&Position, Without<SpawnPoint>>,
 ) {
     let dt = time.delta_secs();
-    for (entity, mut pos, spawn, state) in &mut chasers {
+    for (entity, mut pos, spawn, state, cast, mods) in &mut chasers {
         let CreatureState::Pursuing { target } = *state else {
             continue;
         };
+        let speed = mods.map_or(1.0, |mods| mods.movement_speed);
+        if speed <= 0.0 || cast.is_some_and(|cast| !cast.cast_while_moving) {
+            continue;
+        }
         let target_entity = Entity::from_bits(target);
         let Ok(target_pos) = targets.get(target_entity) else {
             continue; // target despawned or invalid
         };
-        let next_position = chase_step(*pos, target_pos, spawn.speed_run * BASE_RUN_SPEED * dt);
+        let next_position = chase_step(
+            *pos,
+            target_pos,
+            spawn.speed_run * BASE_RUN_SPEED * speed * dt,
+        );
         if *pos != next_position {
             *pos = next_position;
             mark_interest_position_changed(dirty_queue.as_deref(), entity);
@@ -488,17 +510,27 @@ fn leash_check_system(
 }
 
 /// Run evading creatures back to their spawn point (`MoveTargetedHome`,
-/// run speed), then transition to Idle.
+/// run speed), then transition to Idle. At home the creature's mana is full and
+/// its addon auras return (`HomeMovementGenerator::DoFinalize` → `SetSpawnHealth`,
+/// `LoadCreaturesAddon`).
 fn return_to_spawn_system(
     time: Res<Time>,
     dirty_queue: Option<Res<InterestDirtyQueue>>,
     mut query: Query<
-        (Entity, &mut Position, &SpawnPoint, &mut CreatureState),
+        (
+            Entity,
+            &mut Position,
+            &SpawnPoint,
+            &mut CreatureState,
+            Option<&mut shared::components::Mana>,
+            Option<&crate::zones::SpawnAddonAuras>,
+        ),
         Without<GridDormant>,
     >,
+    mut commands: Commands,
 ) {
     let dt = time.delta_secs();
-    for (entity, mut pos, spawn, mut state) in &mut query {
+    for (entity, mut pos, spawn, mut state, mana, addon_auras) in &mut query {
         if *state != CreatureState::Returning {
             continue;
         }
@@ -515,6 +547,16 @@ fn return_to_spawn_system(
         }
         if reached {
             *state = CreatureState::Idle;
+            if let Some(mut mana) = mana
+                && mana.current != mana.max
+            {
+                mana.current = mana.max;
+            }
+            if let Some(auras) = addon_auras {
+                commands
+                    .entity(entity)
+                    .insert(crate::zones::AddonAuras(auras.0.clone()));
+            }
         }
     }
 }

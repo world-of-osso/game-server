@@ -188,12 +188,13 @@ type Watchers<'w, 's> = Query<
         &'static UnitFactionTemplate,
         &'static CreatureState,
         &'static InMap,
+        Option<&'static crate::scripted_ai::ReactState>,
     ),
     (Without<DeathState>, Without<GridDormant>),
 >;
 
 /// `CreatureAI::MoveInLineOfSight` → `Creature::CanStartAttack`: an idle
-/// aggressive creature attacks the nearest valid player it is hostile to
+/// aggressive creature (`REACT_AGGRESSIVE`) attacks the nearest valid player it is hostile to
 /// inside its level-scaled aggro radius. There is no line-of-sight or
 /// Z-difference test: the server has no collision data and does not keep
 /// creature heights on the ground while they move.
@@ -204,8 +205,10 @@ fn aggro_on_sight_system(
     templates: Res<FactionTemplates>,
     mut commands: Commands,
 ) {
-    for (creature, position, range, level, scaling, faction, state, map) in &watchers {
-        if !state.is_idle() {
+    for (creature, position, range, level, scaling, faction, state, map, react) in &watchers {
+        let aggressive =
+            react.is_none_or(|react| *react == crate::scripted_ai::ReactState::Aggressive);
+        if !state.is_idle() || !aggressive {
             continue;
         }
         let nearest = players
@@ -242,6 +245,7 @@ type Engaged<'w, 's> = Query<
         &'static mut CreatureState,
         Option<&'static mut CombatTarget>,
         &'static InMap,
+        Option<&'static crate::scripted_ai::ReactState>,
     ),
     (Without<DeathState>, Without<GridDormant>),
 >;
@@ -250,17 +254,23 @@ type Engaged<'w, 's> = Query<
 /// entries that are no longer valid targets, attack the top-threat unit
 /// (a challenger needs 110% of the current target's threat in melee range,
 /// 130% beyond it: `ThreatMgr::getHostileTarget`), and evade when no valid
-/// target is left.
-fn update_victim_system(
+/// target is left. A passive creature keeps its victim without attacking it
+/// (`CreatureAI::UpdateVictim`, `scripted_ai::Ctx::update_victim`).
+pub(crate) fn update_victim_system(
     mut engaged: Engaged,
     victims: Victims,
     templates: Res<FactionTemplates>,
     mut commands: Commands,
 ) {
-    for (creature, position, faction, mut threat, mut state, combat_target, map) in &mut engaged {
+    for (creature, position, faction, mut threat, mut state, combat_target, map, react) in
+        &mut engaged
+    {
         let CreatureState::Pursuing { target } = *state else {
             continue;
         };
+        if react == Some(&crate::scripted_ai::ReactState::Passive) {
+            continue;
+        }
         let valid = |unit: u64| {
             Entity::try_from_bits(unit)
                 .is_some_and(|unit| valid_victim(&victims, &templates, faction.0, map, unit))
@@ -285,10 +295,15 @@ fn update_victim_system(
         let Some(victim) = threat.aggro_target(current, top_in_melee) else {
             continue;
         };
-        if victim == target {
+        let attacking = combat_target
+            .as_ref()
+            .is_some_and(|combat_target| combat_target.0.map(Entity::to_bits) == Some(victim));
+        if victim == target && attacking {
             continue;
         }
-        *state = CreatureState::Pursuing { target: victim };
+        if victim != target {
+            *state = CreatureState::Pursuing { target: victim };
+        }
         let victim = Entity::from_bits(victim);
         match combat_target {
             Some(mut combat_target) => combat_target.0 = Some(victim),
@@ -332,7 +347,8 @@ pub(crate) fn add_threat(world: &mut World, creature: Entity, attacker: Entity, 
     if let Some(mut threat) = world.get_mut::<ThreatTable>(creature) {
         threat.add_threat(attacker.to_bits(), amount);
     }
-    if world.get::<CreatureState>(creature) == Some(&CreatureState::Idle) {
+    let engages = world.get::<CreatureState>(creature) == Some(&CreatureState::Idle);
+    if engages {
         world.entity_mut(creature).insert((
             CreatureState::Pursuing {
                 target: attacker.to_bits(),
@@ -342,15 +358,33 @@ pub(crate) fn add_threat(world: &mut World, creature: Entity, attacker: Entity, 
     }
     crate::combat::enter_combat(world, creature);
     crate::combat::enter_combat(world, attacker);
+    if engages {
+        // Creature::AtEngage → CreatureAI::JustEngagedWith.
+        crate::scripted_ai::dispatch(
+            world,
+            creature,
+            crate::scripted_ai::Hook::JustEngagedWith(attacker),
+        );
+    }
 }
 
-/// `CreatureAI::EnterEvadeMode`: clear threat, stop combat (the creature
-/// and every unit auto-attacking it stop swinging), restore full health
-/// and run home (`MoveTargetedHome`).
+/// `CreatureAI::EnterEvadeMode`: `_EnterEvadeMode` (auras removed —
+/// `RemoveAurasOnEvade` —, cast interrupted, threat cleared, combat stopped: the
+/// creature and every unit auto-attacking it stop swinging, spell cooldowns
+/// reset), full health, run home (`MoveTargetedHome`), then the script's
+/// `EnterEvadeMode` / `Reset`. An evading creature does not evade again
+/// (`IsInEvadeMode`).
 pub(crate) fn enter_evade_mode(world: &mut World, creature: Entity) {
-    if world.get::<DeathState>(creature).is_some() {
+    if world.get::<DeathState>(creature).is_some()
+        || world.get::<CreatureState>(creature) == Some(&CreatureState::Returning)
+    {
         return;
     }
+    remove_auras_on_evade(world, creature);
+    crate::spell_cast::cancel_cast(world, creature);
+    world
+        .entity_mut(creature)
+        .remove::<crate::spell_cast::SpellHistory>();
     let mut entity = world.entity_mut(creature);
     entity.insert(CreatureState::Returning);
     if let Some(mut threat) = entity.get_mut::<ThreatTable>() {
@@ -368,6 +402,37 @@ pub(crate) fn enter_evade_mode(world: &mut World, creature: Entity) {
         }
     }
     crate::combat::combat_stop(world, creature);
+    crate::scripted_ai::dispatch(world, creature, crate::scripted_ai::Hook::EnterEvadeMode);
+}
+
+/// `SPELL_ATTR1_AURA_STAYS_AFTER_COMBAT`.
+const SPELL_ATTR1_AURA_STAYS_AFTER_COMBAT: u32 = 0x0200_0000;
+
+/// `Unit::RemoveAurasOnEvade`: every aura but those that stay after combat
+/// (vehicle and clone-caster auras are not modelled); addon auras come back at
+/// home (`creature_ai::return_to_spawn_system`).
+fn remove_auras_on_evade(world: &mut World, creature: Entity) {
+    let store = world.get_resource::<crate::spell_info::SpellStore>();
+    let stays: Vec<u32> = world
+        .get::<crate::auras::ActiveAuras>(creature)
+        .map(|auras| {
+            auras
+                .iter()
+                .filter(|aura| {
+                    store
+                        .and_then(|store| store.get(aura.spell_id))
+                        .and_then(|spell| spell.misc.as_ref())
+                        .is_some_and(|misc| {
+                            misc.attributes[1] & SPELL_ATTR1_AURA_STAYS_AFTER_COMBAT != 0
+                        })
+                })
+                .map(|aura| aura.instance_id)
+                .collect()
+        })
+        .unwrap_or_default();
+    crate::auras::remove_auras(world, creature, crate::auras::RemoveReason::Evade, |aura| {
+        !stays.contains(&aura.instance_id)
+    });
 }
 
 /// A dying creature forgets its fight (`Creature::setDeathState` →

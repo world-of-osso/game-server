@@ -254,6 +254,8 @@ mod tests {
             }],
             tuning: None,
             armor: 0.0,
+            mana_modifier: 1.0,
+            regenerates_power: false,
         }
     }
 

@@ -116,6 +116,40 @@ impl ExpectedStats {
     }
 }
 
+/// ExpectedStat `CreatureSpellDamage` and `CreatureAutoAttackDps` by `(Lvl,
+/// ExpansionID)`: what a creature spell's base points are a percentage of
+/// (`SpellEffectInfo::CalcBaseValue` → `EvaluateExpectedStat(stat, level,
+/// expansion, 0, CLASS_NONE)`, which applies no ExpectedStatMod).
+#[derive(Resource, Debug, Clone, Default, PartialEq)]
+pub struct CreatureSpellStats {
+    pub by_level: HashMap<(u8, i32), (f32, f32)>,
+    /// `ContentTuning.ExpansionID` by ID: a spell's `ContentTuningID` picks the
+    /// expansion (-2 without one).
+    pub tuning_expansion: HashMap<u32, i32>,
+}
+
+impl CreatureSpellStats {
+    /// `CreatureSpellDamage` (or `CreatureAutoAttackDps`) at `level` for a spell of
+    /// ContentTuning `content_tuning_id`; 1 when the level has no row
+    /// (DB2Manager::EvaluateExpectedStat).
+    pub fn evaluate(&self, auto_attack_dps: bool, level: u8, content_tuning_id: u32) -> f32 {
+        let expansion = self
+            .tuning_expansion
+            .get(&content_tuning_id)
+            .copied()
+            .unwrap_or(DEFAULT_EXPANSION);
+        self.by_level
+            .get(&(level, expansion))
+            .or_else(|| self.by_level.get(&(level, DEFAULT_EXPANSION)))
+            .map_or(
+                1.0,
+                |&(spell_damage, dps)| {
+                    if auto_attack_dps { dps } else { spell_damage }
+                },
+            )
+    }
+}
+
 /// ExpectedStat ArmorConstant by attacker level (index = level).
 #[derive(Resource, Debug, Clone, Default, PartialEq)]
 pub struct ArmorConstants(pub Vec<f32>);

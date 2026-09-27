@@ -472,6 +472,8 @@ fn world_data_with_one_spawn(npcflag: u32) -> WorldData {
                 models: vec![],
                 tuning: None,
                 armor: 0.0,
+                mana_modifier: 1.0,
+                regenerates_power: false,
             },
         )]
         .into_iter()

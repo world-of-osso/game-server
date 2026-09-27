@@ -19,6 +19,7 @@ pub mod procs;
 pub mod scripts;
 pub mod spell_mods;
 pub mod stat_mods;
+mod unit_state;
 
 use std::collections::HashSet;
 
@@ -36,11 +37,16 @@ use crate::spell_info::{SpellEffect, SpellInfo, SpellStore};
 use crate::stats::StatModifiers;
 pub use spell_mods::SpellModOp;
 pub use stat_mods::AuraStatMods;
+pub use unit_state::Invisible;
+
+/// SPELL_AURA_PERIODIC_DAMAGE.
+pub const PERIODIC_DAMAGE_AURA: u32 = handlers::PERIODIC_DAMAGE;
 
 /// SpellEffects IDs that apply an aura (`SpellEffect.aura` is the AuraType).
 /// 35 (party) and 65 (raid) area auras apply to their resolved targets only:
-/// there is no group backend.
-pub const AURA_EFFECTS: [u32; 3] = [6, 35, 65];
+/// there is no group backend. 27 PERSISTENT_AREA_AURA applies through its
+/// dynamic object (`spell_cast::area_aura`).
+pub const AURA_EFFECTS: [u32; 4] = [6, 27, 35, 65];
 
 const ATTR0_PASSIVE: u32 = 0x40;
 const ATTR0_DO_NOT_DISPLAY: u32 = 0x80;
@@ -509,6 +515,40 @@ fn aura_event(aura: &AuraInstance, target: Entity, kind: CombatLogKind) -> Comba
     }
 }
 
+/// A persistent area aura's application shares its dynamic object's expiry and
+/// tick phase (`DynObjAura` is one aura for every unit inside): the unit's aura of
+/// `spell_id` from `caster` ends at `expires_at` and ticks at `started_at + k × period`.
+pub fn align_area_aura(
+    world: &mut World,
+    unit: Entity,
+    caster: Entity,
+    spell_id: u32,
+    started_at: f64,
+    expires_at: f64,
+) {
+    let now = aura_now(world);
+    let Some(mut auras) = world.get_mut::<ActiveAuras>(unit) else {
+        return;
+    };
+    for aura in auras
+        .auras
+        .iter_mut()
+        .filter(|aura| aura.spell_id == spell_id && aura.caster == caster)
+    {
+        aura.expires_at = Some(expires_at);
+        for effect in aura
+            .effects
+            .iter_mut()
+            .filter(|effect| effect.period_ms > 0)
+        {
+            let period = f64::from(effect.period_ms) / 1000.0;
+            let elapsed_ticks = ((now - started_at) / period).floor().max(0.0);
+            effect.next_tick_at = started_at + (elapsed_ticks + 1.0) * period;
+        }
+    }
+    auras.dirty = true;
+}
+
 /// Apply (or refresh) the aura effects of one resolution on a target.
 pub fn apply_aura(world: &mut World, application: &AuraApplication) {
     let Some(spell) = lookup_spell(world, application.spell_id) else {
@@ -645,6 +685,7 @@ pub fn auras_changed(world: &mut World, unit: Entity) {
     if current != stats {
         world.entity_mut(unit).insert(stats);
     }
+    unit_state::reconcile(world, unit);
 }
 
 pub fn has_aura(world: &World, unit: Entity, spell_id: u32) -> bool {

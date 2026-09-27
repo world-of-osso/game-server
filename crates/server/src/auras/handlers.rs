@@ -25,12 +25,15 @@ pub enum AuraKind {
     ChargeMod,
     /// Blocks casting (`cast_blocker`); MOD_STUN also roots.
     CastBlock,
+    /// Unit state reconciled on every aura change (`unit_state.rs`).
+    UnitState,
 }
 
 pub const PERIODIC_DAMAGE: u32 = 3;
 pub const DUMMY: u32 = 4;
 pub const PERIODIC_HEAL: u32 = 8;
 pub const MOD_STUN: u32 = 12;
+pub const MOD_INVISIBILITY: u32 = 18;
 pub const OBS_MOD_HEALTH: u32 = 20;
 pub const PERIODIC_TRIGGER_SPELL: u32 = 23;
 pub const PERIODIC_ENERGIZE: u32 = 24;
@@ -40,6 +43,7 @@ pub const MOD_SILENCE: u32 = 27;
 pub const MOD_STAT: u32 = 29;
 pub const MOD_INCREASE_SPEED: u32 = 31;
 pub const MOD_DECREASE_SPEED: u32 = 33;
+pub const MOD_HIT_CHANCE: u32 = 54;
 pub const SCHOOL_IMMUNITY: u32 = 39;
 pub const PROC_TRIGGER_SPELL: u32 = 42;
 pub const MOD_PACIFY_SILENCE: u32 = 60;
@@ -48,6 +52,7 @@ pub const SCHOOL_ABSORB: u32 = 69;
 pub const MOD_DAMAGE_PERCENT_DONE: u32 = 79;
 pub const MOD_DAMAGE_PERCENT_TAKEN: u32 = 87;
 pub const PERIODIC_DAMAGE_PERCENT: u32 = 89;
+pub const MOD_UNATTACKABLE: u32 = 93;
 pub const ADD_FLAT_MODIFIER: u32 = 107;
 pub const ADD_PCT_MODIFIER: u32 = 108;
 pub const MOD_POWER_REGEN_PERCENT: u32 = 110;
@@ -66,6 +71,7 @@ pub const ADD_PCT_MODIFIER_BY_SPELL_LABEL: u32 = 218;
 pub const ADD_FLAT_MODIFIER_BY_SPELL_LABEL: u32 = 219;
 pub const PERIODIC_DUMMY: u32 = 226;
 pub const PROC_TRIGGER_SPELL_WITH_VALUE: u32 = 231;
+pub const MOD_SPEED_SLOW_ALL: u32 = 252;
 pub const MOD_SPELL_DAMAGE_FROM_CASTER: u32 = 271;
 pub const MOD_HEALING_RECEIVED: u32 = 283;
 pub const MOD_CRIT_PCT: u32 = 290;
@@ -114,7 +120,10 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | MOD_MELEE_RANGED_HASTE_2
         | MOD_AUTOATTACK_DAMAGE
         | MOD_RAGE_FROM_DAMAGE_DEALT
-        | MOD_MANA_REGEN_PCT => StatMod,
+        | MOD_MANA_REGEN_PCT
+        | MOD_HIT_CHANCE
+        | MOD_SPEED_SLOW_ALL => StatMod,
+        MOD_INVISIBILITY | MOD_UNATTACKABLE => UnitState,
         ADD_FLAT_MODIFIER
         | ADD_PCT_MODIFIER
         | ADD_PCT_MODIFIER_BY_SPELL_LABEL
