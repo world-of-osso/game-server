@@ -188,11 +188,13 @@ pub enum AdminRequest {
         character_name: String,
         node: u32,
     },
-    /// TrinityCore `.damage <amount>`: the online character's target takes `amount`
-    /// damage from it (`Unit::DealDamage`, school Normal).
+    /// TrinityCore `.damage <amount>`: the online character's target (or the unit
+    /// `target`, entity bits) takes `amount` damage from it (`Unit::DealDamage`, school
+    /// Normal).
     Damage {
         character_name: String,
         amount: f32,
+        target: Option<u64>,
     },
     /// TrinityCore `.revive`: a dead online character comes back to life with full
     /// health (`Player::ResurrectPlayer(1.0f)`).
@@ -212,6 +214,13 @@ pub enum AdminRequest {
     InstanceUnbind {
         character_name: String,
         map_id: Option<u32>,
+    },
+    /// TrinityCore `.npc info` for every creature of `entry` in map copy
+    /// (`map_id`, `instance_id`): level, health and the copy's difficulty.
+    NpcInfo {
+        map_id: u32,
+        instance_id: u32,
+        entry: u32,
     },
     Ping,
 }
@@ -416,6 +425,9 @@ pub enum AdminResponse {
     InstanceUnbound {
         character_name: String,
         count: usize,
+    },
+    NpcInfoList {
+        lines: Vec<String>,
     },
     Pong,
     Error(String),

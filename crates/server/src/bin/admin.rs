@@ -162,6 +162,7 @@ enum AdminRequest {
     Damage {
         character_name: String,
         amount: f32,
+        target: Option<u64>,
     },
     /// TrinityCore `.revive`: a dead online character comes back to life with full
     /// health (`Player::ResurrectPlayer(1.0f)`).
@@ -180,6 +181,12 @@ enum AdminRequest {
     InstanceUnbind {
         character_name: String,
         map_id: Option<u32>,
+    },
+    /// TrinityCore `.npc info` for the creatures of an entry in a map copy.
+    NpcInfo {
+        map_id: u32,
+        instance_id: u32,
+        entry: u32,
     },
     Ping,
 }
@@ -351,6 +358,9 @@ enum AdminResponse {
         character_name: String,
         count: usize,
     },
+    NpcInfoList {
+        lines: Vec<String>,
+    },
     Pong,
     Error(String),
 }
@@ -435,6 +445,7 @@ fn print_usage() {
     eprintln!("  game-server-admin clock-advance <seconds>");
     eprintln!("  game-server-admin instance-locks <character_name>");
     eprintln!("  game-server-admin instance-unbind <character_name> <map_id|all>");
+    eprintln!("  game-server-admin npc-info <map_id> <instance_id> <entry>");
 }
 
 fn parse_request(args: &[String]) -> AdminRequest {
@@ -475,10 +486,13 @@ fn parse_request(args: &[String]) -> AdminRequest {
             }
         }
         "damage" => {
-            require_args(args, 4, "damage <character_name> <amount>");
+            require_args(args, 4, "damage <character_name> <amount> [target_entity]");
             AdminRequest::Damage {
                 character_name: args[2].clone(),
                 amount: args[3].parse().expect("amount must be a number"),
+                target: args
+                    .get(4)
+                    .map(|bits| bits.parse().expect("target_entity must be entity bits")),
             }
         }
         "clock-advance" => {
@@ -499,6 +513,14 @@ fn parse_request(args: &[String]) -> AdminRequest {
                 character_name: args[2].clone(),
                 map_id: (args[3] != "all")
                     .then(|| args[3].parse().expect("map_id must be a number or all")),
+            }
+        }
+        "npc-info" => {
+            require_args(args, 5, "npc-info <map_id> <instance_id> <entry>");
+            AdminRequest::NpcInfo {
+                map_id: args[2].parse().expect("map_id must be a number"),
+                instance_id: args[3].parse().expect("instance_id must be a number"),
+                entry: args[4].parse().expect("entry must be a number"),
             }
         }
         "kill" => {

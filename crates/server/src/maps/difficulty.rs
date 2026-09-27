@@ -403,13 +403,25 @@ pub(crate) fn send_instance_saved(world: &mut World, players: &[Entity]) {
 
 /// Admin commands on the lock clock and instance locks.
 #[derive(bevy::ecs::system::SystemParam)]
-pub(crate) struct AdminInstances<'w> {
+pub(crate) struct AdminInstances<'w, 's> {
     clock: Option<ResMut<'w, ServerClock>>,
     instances: Option<ResMut<'w, InstanceManager>>,
     store: Option<Res<'w, MapStore>>,
+    creatures: Query<
+        'w,
+        's,
+        (
+            Entity,
+            &'static shared::components::Npc,
+            &'static shared::components::Health,
+            &'static InMap,
+            Option<&'static shared::components::UnitLevel>,
+            Option<&'static crate::zones::CreatureDifficulty>,
+        ),
+    >,
 }
 
-impl AdminInstances<'_> {
+impl AdminInstances<'_, '_> {
     pub(crate) fn dispatch(
         &mut self,
         request: &crate::admin_types::AdminRequest,
@@ -487,6 +499,35 @@ impl AdminInstances<'_> {
                     character_name: character_name.clone(),
                     count: reset.len(),
                 }
+            }
+            AdminRequest::NpcInfo {
+                map_id,
+                instance_id,
+                entry,
+            } => {
+                let map = InMap {
+                    map_id: *map_id,
+                    instance_id: *instance_id,
+                };
+                let lines = self
+                    .creatures
+                    .iter()
+                    .filter(|(_, npc, _, in_map, _, _)| {
+                        **in_map == map && npc.template_id == *entry
+                    })
+                    .map(|(entity, npc, health, _, level, difficulty)| {
+                        format!(
+                            "{} (entity {}) level {} health {}/{} difficulty {}",
+                            npc.name,
+                            entity.to_bits(),
+                            level.map_or(0, |level| level.0),
+                            health.current,
+                            health.max,
+                            difficulty.map_or(0, |difficulty| difficulty.0)
+                        )
+                    })
+                    .collect();
+                AdminResponse::NpcInfoList { lines }
             }
             _ => return None,
         })

@@ -150,6 +150,27 @@ fn print_character_response(response: &AdminResponse) -> bool {
             println!("Damaged: {character_name}'s target took {amount}");
         }
         AdminResponse::Revived { character_name } => println!("Revived: {character_name}"),
+        AdminResponse::ClockAdvanced { offset_secs, unix } => {
+            println!("Instance lock clock: offset {offset_secs} s, now {unix}");
+        }
+        AdminResponse::InstanceLockList {
+            character_name,
+            locks,
+        } => {
+            println!("Instance locks of {character_name}: {}", locks.len());
+            for lock in locks {
+                println!("  {lock}");
+            }
+        }
+        AdminResponse::InstanceUnbound {
+            character_name,
+            count,
+        } => println!("Unbound {count} instance locks of {character_name}"),
+        AdminResponse::NpcInfoList { lines } => {
+            for line in lines {
+                println!("{line}");
+            }
+        }
         AdminResponse::Killed { character_name } => {
             println!("Killed: {character_name}");
         }

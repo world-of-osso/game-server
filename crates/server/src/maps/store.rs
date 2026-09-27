@@ -140,10 +140,6 @@ impl MapDifficulty {
 /// `DIFFICULTY_NORMAL`, the player's default dungeon difficulty
 /// (`Player::GetDungeonDifficultyID` of a new character).
 pub const DIFFICULTY_NORMAL: u32 = 1;
-/// `DIFFICULTY_HEROIC`.
-pub const DIFFICULTY_HEROIC: u32 = 2;
-/// `DIFFICULTY_MYTHIC` (five-player Mythic).
-pub const DIFFICULTY_MYTHIC: u32 = 23;
 
 /// `DifficultyFlags::DIFFICULTY_FLAG_DEFAULT`.
 const DIFFICULTY_FLAG_DEFAULT: u32 = 0x02;

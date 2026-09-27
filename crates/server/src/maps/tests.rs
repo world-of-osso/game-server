@@ -742,6 +742,9 @@ fn releasing_in_the_stockade_resurrects_the_player_at_the_stockade_graveyard() {
 // --- Difficulties and instance locks (Grim Batol, map 670) ---
 
 const GRIM_BATOL: u32 = 670;
+/// `Difficulty.db2` Heroic and (five-player) Mythic.
+const DIFFICULTY_HEROIC: u32 = 2;
+const DIFFICULTY_MYTHIC: u32 = 23;
 /// `areatrigger_teleport` 6179 "Grim Batol Entrance" box center in the Twilight Highlands.
 const GRIM_BATOL_ENTRANCE_TRIGGER: Vec3 = Vec3::new(-4042.39, -3444.45, 295.0);
 /// `world_safe_locs` 3957 inside Grim Batol.
@@ -764,7 +767,7 @@ fn entrant_at(character_id: u64, difficulty_id: u32) -> InstanceEntrant {
 fn grim_batol_offers_three_difficulties_and_the_stockade_downscales_to_normal() {
     let Some(store) = map_store() else { return };
     let heroic = store
-        .downscaled_map_difficulty(GRIM_BATOL, store::DIFFICULTY_HEROIC)
+        .downscaled_map_difficulty(GRIM_BATOL, DIFFICULTY_HEROIC)
         .unwrap();
     assert_eq!(
         (
@@ -775,7 +778,7 @@ fn grim_batol_offers_three_difficulties_and_the_stockade_downscales_to_normal() 
         (2, store::ResetInterval::Daily, true)
     );
     let mythic = store
-        .downscaled_map_difficulty(GRIM_BATOL, store::DIFFICULTY_MYTHIC)
+        .downscaled_map_difficulty(GRIM_BATOL, DIFFICULTY_MYTHIC)
         .unwrap();
     assert_eq!(
         (
@@ -790,7 +793,7 @@ fn grim_batol_offers_three_difficulties_and_the_stockade_downscales_to_normal() 
         .unwrap();
     assert!(!normal.has_reset_schedule());
     // The Stockade has Normal only: Heroic and Mythic fall back (Mythic → Heroic → Normal).
-    for difficulty in [store::DIFFICULTY_HEROIC, store::DIFFICULTY_MYTHIC] {
+    for difficulty in [DIFFICULTY_HEROIC, DIFFICULTY_MYTHIC] {
         assert_eq!(
             store
                 .downscaled_map_difficulty(STOCKADE, difficulty)
@@ -799,17 +802,14 @@ fn grim_batol_offers_three_difficulties_and_the_stockade_downscales_to_normal() 
             store::DIFFICULTY_NORMAL
         );
     }
-    assert_eq!(
-        store.difficulty_entries[&store::DIFFICULTY_MYTHIC].name,
-        "Mythic"
-    );
+    assert_eq!(store.difficulty_entries[&DIFFICULTY_MYTHIC].name, "Mythic");
     assert!(
         !store.difficulty_entries[&8].can_select(),
         "Mythic Keystone is not selectable"
     );
     assert_eq!(
         store
-            .dungeon_encounter(1051, GRIM_BATOL, store::DIFFICULTY_HEROIC)
+            .dungeon_encounter(1051, GRIM_BATOL, DIFFICULTY_HEROIC)
             .map(|e| e.bit),
         Some(3)
     );
@@ -820,12 +820,7 @@ fn a_heroic_copy_is_created_at_heroic_and_normal_is_another_copy() {
     let Some(store) = map_store() else { return };
     let mut instances = InstanceManager::default();
     let heroic = instances
-        .create_map(
-            store,
-            GRIM_BATOL,
-            entrant_at(1, store::DIFFICULTY_HEROIC),
-            at(0.0),
-        )
+        .create_map(store, GRIM_BATOL, entrant_at(1, DIFFICULTY_HEROIC), at(0.0))
         .unwrap();
     // A change to Normal forgets the (unlocked) Heroic copy; even remembered, it is not entered.
     let normal = instances
@@ -847,12 +842,7 @@ fn a_heroic_copy_is_created_at_heroic_and_normal_is_another_copy() {
     );
     // The Stockade at Heroic is a Normal copy.
     let stockade = instances
-        .create_map(
-            store,
-            STOCKADE,
-            entrant_at(1, store::DIFFICULTY_HEROIC),
-            at(2.0),
-        )
+        .create_map(store, STOCKADE, entrant_at(1, DIFFICULTY_HEROIC), at(2.0))
         .unwrap();
     assert_eq!(
         instances
@@ -869,7 +859,7 @@ fn a_heroic_kill_locks_the_player_to_its_copy_which_comes_back_with_the_boss_dea
     let mut world = World::new();
     let player = world.spawn_empty().id();
     let mut instances = InstanceManager::default();
-    let heroic = entrant_at(1, store::DIFFICULTY_HEROIC);
+    let heroic = entrant_at(1, DIFFICULTY_HEROIC);
     let copy = instances
         .create_map(store, GRIM_BATOL, heroic, at(0.0))
         .unwrap()
@@ -898,22 +888,18 @@ fn a_heroic_kill_locks_the_player_to_its_copy_which_comes_back_with_the_boss_dea
         .create_map(
             store,
             GRIM_BATOL,
-            entrant_at(2, store::DIFFICULTY_HEROIC),
+            entrant_at(2, DIFFICULTY_HEROIC),
             at(2001.0),
         )
         .unwrap()
         .map;
     assert_eq!(
-        instances.cannot_enter(other, entrant_at(1, store::DIFFICULTY_HEROIC), SUNDAY_NOON),
+        instances.cannot_enter(other, entrant_at(1, DIFFICULTY_HEROIC), SUNDAY_NOON),
         Some(TransferAbortReason::LockedToDifferentInstance)
     );
     // ...but may after the daily reset, and Normal never locks.
     assert_eq!(
-        instances.cannot_enter(
-            other,
-            entrant_at(1, store::DIFFICULTY_HEROIC),
-            SUNDAY_RESET + 1
-        ),
+        instances.cannot_enter(other, entrant_at(1, DIFFICULTY_HEROIC), SUNDAY_RESET + 1),
         None
     );
     let normal = instances
@@ -934,7 +920,7 @@ fn an_expired_lock_resets_its_empty_copy() {
     let mut world = World::new();
     let player = world.spawn_empty().id();
     let mut instances = InstanceManager::default();
-    let heroic = entrant_at(1, store::DIFFICULTY_HEROIC);
+    let heroic = entrant_at(1, DIFFICULTY_HEROIC);
     let copy = instances
         .create_map(store, GRIM_BATOL, heroic, at(0.0))
         .unwrap()
@@ -1042,7 +1028,7 @@ fn heroic_grim_batol_spawns_heroic_creatures_and_a_boss_kill_keeps_its_copy() {
     h.app
         .world_mut()
         .entity_mut(hero.player)
-        .insert(DungeonDifficulty(store::DIFFICULTY_HEROIC));
+        .insert(DungeonDifficulty(DIFFICULTY_HEROIC));
     h.enter_grim_batol(&hero);
     h.enter_grim_batol(&casual);
     let (heroic, normal) = (h.map_of(&hero).unwrap(), h.map_of(&casual).unwrap());
@@ -1151,7 +1137,7 @@ fn the_player_picks_its_dungeon_difficulty_outside_instances_only() {
     let Some(mut h) = harness() else { return };
     let start = GRIM_BATOL_ENTRANCE_TRIGGER + Vec3::new(0.0, 0.0, 40.0);
     let player = h.spawn(1, EASTERN_KINGDOMS, start);
-    h.request_difficulty(&player, store::DIFFICULTY_HEROIC);
+    h.request_difficulty(&player, DIFFICULTY_HEROIC);
     assert_eq!(h.difficulty_messages(&player), vec![2]);
     assert_eq!(h.difficulty_of(&player), Some(2));
     // Mythic Keystone (8) is not selectable; nothing changes.
@@ -1168,7 +1154,7 @@ fn the_player_picks_its_dungeon_difficulty_outside_instances_only() {
             .difficulty_id,
         2
     );
-    h.request_difficulty(&player, store::DIFFICULTY_MYTHIC);
+    h.request_difficulty(&player, DIFFICULTY_MYTHIC);
     assert!(h.difficulty_messages(&player).is_empty());
     assert_eq!(h.difficulty_of(&player), Some(2));
 }
@@ -1180,9 +1166,9 @@ fn only_a_group_leader_sets_the_groups_difficulty_for_every_member() {
     let leader = h.spawn(1, EASTERN_KINGDOMS, start);
     let member = h.spawn(2, EASTERN_KINGDOMS, start);
     h.group(&[&leader, &member]);
-    h.request_difficulty(&member, store::DIFFICULTY_HEROIC);
+    h.request_difficulty(&member, DIFFICULTY_HEROIC);
     assert!(h.difficulty_messages(&member).is_empty());
-    h.request_difficulty(&leader, store::DIFFICULTY_MYTHIC);
+    h.request_difficulty(&leader, DIFFICULTY_MYTHIC);
     h.app.update();
     assert_eq!(h.difficulty_messages(&member), vec![23]);
     assert_eq!(
