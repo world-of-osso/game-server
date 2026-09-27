@@ -995,6 +995,53 @@ fn auto_attack_on_friendly_guard_is_rejected() {
     assert_eq!(app.world().get::<Health>(guard).unwrap().current, 100.0);
 }
 
+/// WorldObject::IsValidAttackTarget (Object.cpp:2374): a hostile NPC with
+/// UNIT_FLAG_UNINTERACTIBLE (NOT_SELECTABLE) cannot be auto-attacked.
+#[test]
+fn auto_attack_on_a_not_selectable_hostile_npc_is_rejected() {
+    let mut app = setup_combat_app();
+    let Some(templates) = crate::faction::world_db_faction_templates() else {
+        return;
+    };
+    app.insert_resource(templates);
+    let stalker = app
+        .world_mut()
+        .spawn((
+            pos(1.0, 0.0, 0.0),
+            Health {
+                current: 100.0,
+                max: 100.0,
+            },
+            Npc {
+                template_id: 53488,
+                name: "Summon Enabler Stalker".into(),
+            },
+            // FactionTemplate 25: Kobold Vermin, hostile to a Human player.
+            UnitFactionTemplate(25),
+            shared::components::UnitFlags(shared::components::UnitFlags::NOT_SELECTABLE),
+        ))
+        .id();
+    let player = app
+        .world_mut()
+        .spawn((
+            pos(0.0, 0.0, 0.0),
+            crate::maps::InMap::continent(0),
+            Player {
+                name: "Human".into(),
+                race: 1,
+                class: 1,
+                appearance: Default::default(),
+            },
+            UnitFactionTemplate(1),
+            CombatTarget(Some(stalker)),
+        ))
+        .id();
+    app.world_mut().run_schedule(FixedUpdate);
+    app.world_mut().run_schedule(FixedUpdate);
+    assert!(app.world().get::<AutoAttack>(player).is_none());
+    assert_eq!(app.world().get::<Health>(stalker).unwrap().current, 100.0);
+}
+
 #[test]
 fn auto_attack_on_hostile_kobold_swings() {
     // FactionTemplate 25: Kobold Vermin.

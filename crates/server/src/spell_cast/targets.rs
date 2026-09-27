@@ -113,6 +113,14 @@ pub fn relation_matches(world: &World, caster: Entity, target: Entity, relation:
     if caster == target {
         return relation == Relation::Ally;
     }
+    // WorldObject::IsValidAttackTarget / IsValidAssistTarget (Object.cpp:2374, 2538): an
+    // uninteractible unit is neither attacked nor assisted.
+    if world
+        .get::<shared::components::UnitFlags>(target)
+        .is_some_and(|flags| !flags.is_selectable())
+    {
+        return false;
+    }
     // The duel opponent is hostile: attackable, never assisted.
     let dueling = dueling(world, caster, target);
     let templates = world.resource::<FactionTemplates>();
