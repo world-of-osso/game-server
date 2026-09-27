@@ -32,6 +32,13 @@ const MODF_FLAG_HAS_SCALE: u16 = 0x4;
 const MODF_FLAG_FILEDATAID: u16 = 0x8;
 /// wowdev WDT MPHD `wdt_uses_global_map_obj`: the map is one WMO, placed by the WDT MODF.
 const MPHD_FLAG_GLOBAL_WMO: u32 = 0x1;
+/// `GridMap::getMinHeight` / `TerrainInfo::GetMinHeight` without flight bounds (no MFBO, or
+/// no grid at all as on a WMO-only map).
+const DEFAULT_MIN_HEIGHT: f32 = -500.0;
+/// TrinityCore `SIZE_OF_GRIDS`, `CENTER_GRID_ID`, `MAP_HALFSIZE`.
+const SIZE_OF_GRIDS: f32 = 533.3333;
+const CENTER_GRID_ID: i32 = 32;
+const MAP_HALFSIZE: f32 = 32.0 * SIZE_OF_GRIDS;
 
 /// What supports a player's feet.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -46,6 +53,8 @@ pub enum GroundProbe {
 struct TileGround {
     terrain: TerrainHeightMap,
     wmos: Vec<WmoCollision>,
+    /// Root ADT MFBO minimum corner heights (flight bounds), in file order.
+    flight_min: Option<[i16; 9]>,
 }
 
 /// Per-tile ADT FileDataIDs from the WDT MAID.
@@ -90,6 +99,7 @@ impl GroundMap {
             Some(TileGround {
                 terrain,
                 wmos: Vec::new(),
+                flight_min: None,
             }),
         );
         Self {
@@ -109,6 +119,16 @@ impl GroundMap {
             Some(Some(map)) => map.ground_at(feet),
             _ => GroundProbe::Unloaded,
         }
+    }
+
+    /// `Map::GetMinHeight` under `feet` on map `map_id`: below it a player is out of
+    /// bounds. `None` where the tile's terrain is not available.
+    pub fn min_height(&mut self, map_id: u32, feet: Vec3) -> Option<f32> {
+        if !self.maps.contains_key(&map_id) {
+            let loaded = self.open_map(map_id);
+            self.maps.insert(map_id, loaded);
+        }
+        self.maps.get_mut(&map_id)?.as_mut()?.min_height(feet)
     }
 
     fn open_map(&self, map_id: u32) -> Option<MapGround> {
@@ -176,6 +196,25 @@ impl MapGround {
         })
     }
 
+    fn min_height(&mut self, feet: Vec3) -> Option<f32> {
+        if self.global_wmo.is_some() {
+            return Some(DEFAULT_MIN_HEIGHT);
+        }
+        let tile = self.tile(bevy_to_tile(feet.x, feet.z))?;
+        let (wow_x, wow_y, _) = crate::terrain_height::bevy_to_wow(feet.x, feet.y, feet.z);
+        Some(tile.flight_min.map_or(DEFAULT_MIN_HEIGHT, |mins| {
+            grid_min_height(wow_x, wow_y, &mins)
+        }))
+    }
+
+    fn tile(&mut self, tile: (u32, u32)) -> Option<&TileGround> {
+        if !self.tiles.contains_key(&tile) {
+            let loaded = self.load_tile(tile);
+            self.tiles.insert(tile, loaded);
+        }
+        self.tiles.get(&tile)?.as_ref()
+    }
+
     fn ground_at(&mut self, feet: Vec3) -> GroundProbe {
         if let Some(wmo) = &self.global_wmo {
             return match shared::ground::ground_at(feet, None, std::slice::from_ref(wmo)) {
@@ -183,12 +222,7 @@ impl MapGround {
                 None => GroundProbe::Unsupported,
             };
         }
-        let tile = bevy_to_tile(feet.x, feet.z);
-        if !self.tiles.contains_key(&tile) {
-            let loaded = self.load_tile(tile);
-            self.tiles.insert(tile, loaded);
-        }
-        let Some(Some(tile)) = self.tiles.get(&tile) else {
+        let Some(tile) = self.tile(bevy_to_tile(feet.x, feet.z)) else {
             return GroundProbe::Unloaded;
         };
         let terrain = tile.terrain.height_at_bevy(feet.x, feet.z);
@@ -203,7 +237,7 @@ impl MapGround {
         let files = source.tiles[col as usize * MAP_TILES + row as usize];
         let data_dir = source.data_dir.clone();
         let started = std::time::Instant::now();
-        let terrain = match load_terrain(&data_dir, files.root) {
+        let (terrain, flight_min) = match load_terrain(&data_dir, files.root) {
             Ok(terrain) => terrain,
             Err(err) => {
                 warn!("Ground tile ({row}, {col}) has no terrain: {err}");
@@ -225,7 +259,11 @@ impl MapGround {
             wmos.len(),
             started.elapsed()
         );
-        Some(TileGround { terrain, wmos })
+        Some(TileGround {
+            terrain,
+            wmos,
+            flight_min,
+        })
     }
 
     fn place_wmo(&mut self, data_dir: &Path, placement: WmoPlacement) -> Option<WmoCollision> {
@@ -271,9 +309,74 @@ impl WmoPlacement {
     }
 }
 
-fn load_terrain(data_dir: &Path, fdid: u32) -> Result<TerrainHeightMap, String> {
+/// Root ADT heights and its MFBO minimum plane corners.
+fn load_terrain(
+    data_dir: &Path,
+    fdid: u32,
+) -> Result<(TerrainHeightMap, Option<[i16; 9]>), String> {
     let data = read_client_file(data_dir, "terrain", fdid, "adt")?;
-    parse_adt_heights(&data)
+    let flight_min = find_chunk(&data, b"MFBO")?
+        .map(|mfbo| -> Result<[i16; 9], String> {
+            let mut mins = [0; 9];
+            for (index, min) in mins.iter_mut().enumerate() {
+                *min = read_u16(mfbo, 18 + index * 2)? as i16;
+            }
+            Ok(mins)
+        })
+        .transpose()?;
+    Ok((parse_adt_heights(&data)?, flight_min))
+}
+
+/// GridMap::getMinHeight (GridMap.cpp:547-575) and its MFBO planes (GridMap.cpp:200-239): the
+/// grid is cut into eight triangles around its centre, each a plane through three of the nine
+/// MFBO minimum corners; the height is that plane's under WoW `(x, y)`.
+fn grid_min_height(x: f32, y: f32, mins: &[i16; 9]) -> f32 {
+    const INDICES: [[usize; 3]; 8] = [
+        [3, 0, 4],
+        [0, 1, 4],
+        [1, 2, 4],
+        [2, 5, 4],
+        [5, 8, 4],
+        [8, 7, 4],
+        [7, 6, 4],
+        [6, 3, 4],
+    ];
+    const BOUND_GRID_COORDS: [[f32; 2]; 9] = [
+        [0.0, 0.0],
+        [0.0, -266.66666],
+        [0.0, -533.33331],
+        [-266.66666, 0.0],
+        [-266.66666, -266.66666],
+        [-266.66666, -533.33331],
+        [-533.33331, 0.0],
+        [-533.33331, -266.66666],
+        [-533.33331, -533.33331],
+    ];
+    // Trinity::ComputeGridCoordSimple.
+    let grid_x = (CENTER_GRID_ID * 2 - 1) - (CENTER_GRID_ID as f32 - x / SIZE_OF_GRIDS) as i32;
+    let grid_y = (CENTER_GRID_ID * 2 - 1) - (CENTER_GRID_ID as f32 - y / SIZE_OF_GRIDS) as i32;
+    let double_grid_x = (-(x - MAP_HALFSIZE) / (SIZE_OF_GRIDS / 2.0)).floor() as i32;
+    let double_grid_y = (-(y - MAP_HALFSIZE) / (SIZE_OF_GRIDS / 2.0)).floor() as i32;
+    let gx = x - (grid_x - CENTER_GRID_ID + 1) as f32 * SIZE_OF_GRIDS;
+    let gy = y - (grid_y - CENTER_GRID_ID + 1) as f32 * SIZE_OF_GRIDS;
+    let quarter = match (double_grid_y & 1 != 0, double_grid_x & 1 != 0) {
+        (true, true) => 4 + usize::from(gx <= gy),
+        (true, false) => 2 + usize::from(-SIZE_OF_GRIDS - gx > gy),
+        (false, true) => 6 + usize::from(-SIZE_OF_GRIDS - gx <= gy),
+        (false, false) => usize::from(gx > gy),
+    };
+    let corner = |index: usize| {
+        let [cx, cy] = BOUND_GRID_COORDS[index];
+        Vec3::new(cx, cy, f32::from(mins[index]))
+    };
+    let [a, b, c] = INDICES[quarter].map(corner);
+    // G3D::Ray::intersection(Plane) from (gx, gy, 0) straight up: infinite unless the
+    // plane faces down.
+    let normal = (b - a).cross(c - a).normalize();
+    if normal.z >= 0.0 {
+        return f32::INFINITY;
+    }
+    a.z - (normal.x * (gx - a.x) + normal.y * (gy - a.y)) / normal.z
 }
 
 fn load_wmo_placements(data_dir: &Path, obj0_fdid: u32) -> Result<Vec<WmoPlacement>, String> {

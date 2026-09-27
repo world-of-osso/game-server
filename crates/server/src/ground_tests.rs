@@ -179,3 +179,125 @@ fn stockade_fall_points_are_outside_the_wmo_and_its_floors_hold_beside_them() {
     };
     assert!(corridor < -26.0 && corridor > -28.0, "floor {corridor}");
 }
+
+/// A living player at WoW `(x, y, z)` on `map_id` (WDT `wdt`) under up to `seconds` of server
+/// gravity, stopping when they die: their WoW z then, health, `PlayerDeathTransition`s and
+/// `OutOfBounds`.
+fn fall_for(
+    map_id: u32,
+    wdt: u32,
+    (x, y, z): (f32, f32, f32),
+    seconds: u32,
+) -> (f32, f32, usize, bool) {
+    let mut app = App::new();
+    app.add_plugins(bevy::MinimalPlugins)
+        .add_message::<crate::death::PlayerDeathTransition>()
+        .insert_resource(GroundMap::new(
+            &client_data_dir(),
+            std::collections::HashMap::from([(map_id, wdt)]),
+        ));
+    app.update();
+    let (bx, by, bz) = crate::terrain_height::wow_to_bevy(x, y, z);
+    let player = app
+        .world_mut()
+        .spawn((
+            Position {
+                x: bx,
+                y: by,
+                z: bz,
+            },
+            Health {
+                current: 100.0,
+                max: 100.0,
+            },
+            VerticalVelocity::default(),
+            FallTracker::grounded(by),
+            MovementControl::default(),
+            crate::maps::InMap {
+                map_id,
+                instance_id: 1,
+            },
+            Player {
+                name: "Faller".into(),
+                race: 1,
+                class: 1,
+                appearance: Default::default(),
+            },
+        ))
+        .id();
+    for _ in 0..seconds * 20 {
+        app.world_mut()
+            .resource_mut::<Time>()
+            .advance_by(Duration::from_millis(50));
+        app.world_mut()
+            .run_system_once(crate::networking::apply_terrain_gravity)
+            .unwrap();
+        if app.world().get::<Health>(player).unwrap().current <= 0.0 {
+            break;
+        }
+    }
+    app.update();
+    let deaths = app
+        .world()
+        .resource::<bevy::ecs::message::Messages<crate::death::PlayerDeathTransition>>()
+        .len();
+    let world = app.world();
+    (
+        world.get::<Position>(player).unwrap().y,
+        world.get::<Health>(player).unwrap().current,
+        deaths,
+        world
+            .get::<crate::networking::OutOfBounds>(player)
+            .is_some(),
+    )
+}
+
+/// Player::HandleFall under the map (MovementHandler.cpp:594-612): the Stockade has no grid,
+/// so `Map::GetMinHeight` is -500 (TerrainMgr.cpp:671). Teleported into the rock at (99, 77),
+/// the player falls, dies of DAMAGE_FALL_TO_VOID below -500 and is out of bounds.
+#[test]
+fn falling_out_of_the_stockade_kills_below_minus_500() {
+    let (z, health, deaths, out_of_bounds) =
+        fall_for(34, STOCKADE_WDT_FDID, (99.0, 77.0, -34.5), 30);
+
+    assert_eq!((health, deaths, out_of_bounds), (0.0, 1, true));
+    assert!((-501.0..-500.0).contains(&z), "died at {z}");
+
+    let (z, health, deaths, out_of_bounds) =
+        fall_for(34, STOCKADE_WDT_FDID, (99.0, 77.0, -34.5), 20);
+    assert_eq!(
+        (health, deaths, out_of_bounds),
+        (100.0, 0, false),
+        "still falling at {z}"
+    );
+}
+
+/// GridMap::getMinHeight (GridMap.cpp:547-575) over the MFBO minimum planes of Eastern
+/// Kingdoms tile (38, 40) (root ADT 779167: -1000 on its northern corners, -1237 on its
+/// southern edge). At (-4500, -3700) the plane is -1207.38: a player falling from -1200 dies
+/// there, not at -1000 or -500. At (-4500, -3210) the plane is -1000: -1100 is already under.
+#[test]
+fn mfbo_planes_bound_the_fall_on_a_continent_tile() {
+    let (z, health, deaths, out_of_bounds) =
+        fall_for(0, AZEROTH_WDT_FDID, (-4500.0, -3700.0, -1200.0), 1);
+    assert_eq!((health, deaths, out_of_bounds), (0.0, 1, true));
+    assert!((-1208.4..-1207.37).contains(&z), "died at {z}");
+
+    let (_, health, deaths, _) = fall_for(0, AZEROTH_WDT_FDID, (-4500.0, -3210.0, -1100.0), 1);
+    assert_eq!((health, deaths), (0.0, 1));
+}
+
+#[test]
+fn map_min_height_follows_the_mfbo_plane_under_the_feet() {
+    let mut ground = client_ground();
+    let feet = |x: f32, y: f32| {
+        let (bx, by, bz) = crate::terrain_height::wow_to_bevy(x, y, 0.0);
+        Vec3::new(bx, by, bz)
+    };
+    let min = |ground: &mut GroundMap, x, y| ground.min_height(0, feet(x, y)).unwrap();
+    assert!((min(&mut ground, -4500.0, -3700.0) - -1207.375).abs() < 0.01);
+    assert!((min(&mut ground, -4300.0, -3600.0) - -1118.5).abs() < 0.01);
+    assert!((min(&mut ground, -4700.0, -3650.0) - -1162.94).abs() < 0.01);
+    assert_eq!(min(&mut ground, -4500.0, -3210.0), -1000.0);
+    assert_eq!(min(&mut ground, -8820.0, 660.0), -1000.0);
+}
