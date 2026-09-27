@@ -373,10 +373,13 @@ impl Ctx<'_> {
         if !triggered && self.is_casting() {
             return;
         }
-        if let Err(failure) =
-            crate::spell_cast::creature_cast(self.world, self.me, spell_id, target, triggered)
-        {
-            debug!("{} cast {spell_id} failed: {failure:?}", self.me);
+        let name = self
+            .world
+            .get::<shared::components::Npc>(self.me)
+            .map_or_else(String::new, |npc| npc.name.clone());
+        match crate::spell_cast::creature_cast(self.world, self.me, spell_id, target, triggered) {
+            Ok(()) => info!("{name} ({}) casts {spell_id} at {target:?}", self.me),
+            Err(failure) => debug!("{name} ({}) cast {spell_id} failed: {failure:?}", self.me),
         }
     }
 
