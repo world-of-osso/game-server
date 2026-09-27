@@ -314,6 +314,21 @@ def build_addons(conn, report):
           AND a.entry NOT IN (SELECT entry FROM creature_template)""")
 
 
+def build_equipment(conn):
+    """creature_equip_template of the entry's spawn source: TrinityCore's (with AppearanceModIDs) for Retail-spawned
+    entries, AzerothCore's for the rest; creature.equipment_id picks the row (Creature::LoadEquipment)."""
+    conn.execute("DROP TABLE IF EXISTS content_creature_equip_template")
+    conn.execute("""CREATE TABLE content_creature_equip_template (CreatureID INTEGER NOT NULL, ID INTEGER NOT NULL,
+        ItemID1 INTEGER NOT NULL, AppearanceModID1 INTEGER NOT NULL, ItemID2 INTEGER NOT NULL,
+        AppearanceModID2 INTEGER NOT NULL, ItemID3 INTEGER NOT NULL, AppearanceModID3 INTEGER NOT NULL,
+        PRIMARY KEY (CreatureID, ID))""")
+    conn.execute("""INSERT INTO content_creature_equip_template SELECT CreatureID, ID, ItemID1, AppearanceModID1,
+        ItemID2, AppearanceModID2, ItemID3, AppearanceModID3 FROM tdb_creature_equip_template
+        WHERE CreatureID IN (SELECT entry FROM temp.retail_entry)""")
+    conn.execute("""INSERT INTO content_creature_equip_template SELECT CreatureID, ID, ItemID1, 0, ItemID2, 0, ItemID3, 0
+        FROM creature_equip_template WHERE CreatureID NOT IN (SELECT entry FROM temp.retail_entry)""")
+
+
 def build_waypoints(conn):
     """AzerothCore paths plus the TrinityCore paths of Retail addons (per-path move type onto every point)."""
     clone_table(conn, "waypoint_data", "content_waypoint_data")
@@ -358,6 +373,7 @@ def build_creatures(conn, report):
     conn.execute("""CREATE TEMP TABLE retail_entry AS SELECT DISTINCT id1 AS entry FROM content_creature
         WHERE guid IN (SELECT guid FROM temp.retail_spawn)""")
     conn.execute("CREATE UNIQUE INDEX temp.retail_entry_entry ON retail_entry(entry)")
+    build_equipment(conn)
 
 
 # --- Items, vendors and loot ---
