@@ -55,6 +55,7 @@ struct Data {
     spell_stats: CreatureSpellStats,
     spells: Vec<crate::spell_info::SpellInfo>,
     spawns: Vec<CreatureSpawn>,
+    maps: MapStore,
 }
 
 /// The five Stockade script creatures' templates.
@@ -118,6 +119,7 @@ fn data() -> Option<&'static Data> {
                     spawntimesecs: row.get(7)?,
                     display_id: None,
                     unit_flags: None,
+                    spawn_difficulties: vec![crate::maps::store::DIFFICULTY_NORMAL],
                 })
             })
             .unwrap()
@@ -134,6 +136,7 @@ fn data() -> Option<&'static Data> {
             spell_stats: crate::world_data::load_creature_spell_stats(&conn),
             spells,
             spawns,
+            maps: crate::maps::store::load_map_store(&conn).unwrap(),
         })
     })
     .as_ref()
@@ -191,10 +194,28 @@ fn stockade_app(data: &'static Data) -> App {
         display_gender: data.texts.display_gender.clone(),
     });
     app.insert_resource(data.spell_stats.clone());
-    let mut maps = MapStore::default();
-    maps.instance_scripts
-        .insert(34, INSTANCE_THE_STOCKADE.to_owned());
-    app.insert_resource(maps);
+    assert_eq!(
+        data.maps.instance_scripts.get(&34).map(String::as_str),
+        Some(INSTANCE_THE_STOCKADE)
+    );
+    // Copies 1 and 2 of the Stockade, Normal, created for two solo players.
+    let mut instances = crate::maps::InstanceManager::default();
+    for character_id in [1001, 1002] {
+        let entrant = crate::maps::instances::InstanceEntrant {
+            character_id,
+            group: None,
+            leader: character_id,
+            difficulty_id: crate::maps::store::DIFFICULTY_NORMAL,
+        };
+        let now = crate::maps::instances::Now {
+            elapsed: 0.0,
+            unix: 0,
+        };
+        instances.create_map(&data.maps, 34, entrant, now).unwrap();
+    }
+    assert!(instances.copy_difficulty(OTHER_COPY).is_some());
+    app.insert_resource(instances);
+    app.insert_resource(data.maps.clone());
     app
 }
 

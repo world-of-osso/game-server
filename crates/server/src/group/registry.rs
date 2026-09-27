@@ -26,6 +26,8 @@ pub struct OnlineMember {
     pub name: String,
     pub class: u8,
     pub level: u8,
+    /// `Player::GetDungeonDifficultyID`: a group it creates starts at it.
+    pub dungeon_difficulty: u32,
 }
 
 pub type OnlineView = HashMap<CharacterId, OnlineMember>;
@@ -53,6 +55,9 @@ pub enum GroupEffect {
     },
     /// Send the ready check state to every participant.
     ReadyCheck(GroupId),
+    /// `Player::SetDungeonDifficultyID` + `SendDungeonDifficulty`: the member now enters
+    /// dungeons at the group's difficulty.
+    DungeonDifficulty { to: CharacterId, difficulty_id: u32 },
 }
 
 #[derive(Clone, Debug)]
@@ -79,11 +84,14 @@ struct Group {
     /// Online entity and level last reported in a roster, to detect login, logout,
     /// relog and level-ups.
     reported_online: HashMap<CharacterId, Option<(u64, u8)>>,
+    /// `Group::m_dungeonDifficulty`, the leader's when the group formed.
+    dungeon_difficulty: u32,
 }
 
 impl Group {
-    fn new(leader: CharacterId) -> Self {
+    fn new(leader: CharacterId, dungeon_difficulty: u32) -> Self {
         Self {
+            dungeon_difficulty,
             raid: Raid::new(leader),
             is_raid: false,
             roles: RoleAssignments::default(),
@@ -110,6 +118,7 @@ struct Profile {
     name: String,
     class: u8,
     level: u8,
+    dungeon_difficulty: u32,
 }
 
 #[derive(bevy::prelude::Resource, Default)]
@@ -272,14 +281,26 @@ impl GroupRegistry {
         if is_raid {
             effects.push(notice(invitee, GroupMessageCode::RaidYouJoined, ""));
         }
+        // Group::AddMember: the joiner takes the group's dungeon difficulty.
+        effects.push(GroupEffect::DungeonDifficulty {
+            to: invitee,
+            difficulty_id: self.groups[&group_id].dungeon_difficulty,
+        });
         effects.push(GroupEffect::Roster(group_id));
         effects
     }
 
+    /// `Group::Create`: the group starts at its leader's dungeon difficulty.
     fn create_group(&mut self, leader: CharacterId) -> GroupId {
         self.next_group_id += 1;
         let id = self.next_group_id;
-        self.groups.insert(id, Group::new(leader));
+        let difficulty = self
+            .profiles
+            .get(&leader)
+            .map_or(crate::maps::store::DIFFICULTY_NORMAL, |profile| {
+                profile.dungeon_difficulty
+            });
+        self.groups.insert(id, Group::new(leader, difficulty));
         self.membership.insert(leader, id);
         id
     }
@@ -643,6 +664,7 @@ impl GroupRegistry {
                     name: member.name.clone(),
                     class: member.class,
                     level: member.level,
+                    dungeon_difficulty: member.dungeon_difficulty,
                 },
             );
         }
@@ -780,7 +802,43 @@ impl GroupRegistry {
         ))
     }
 
+    /// `Group::SetDungeonDifficultyID` from `HandleSetDungeonDifficultyOpcode`: only the
+    /// leader changes it (others are ignored, as TrinityCore returns silently); every
+    /// member takes it. `None` when `member` is not in a group.
+    pub fn set_dungeon_difficulty(
+        &mut self,
+        member: CharacterId,
+        difficulty_id: u32,
+    ) -> Option<Effects> {
+        let (group_id, group) = self.group_of(member)?;
+        if group.raid.leader != member || group.dungeon_difficulty == difficulty_id {
+            return Some(Vec::new());
+        }
+        let members = group.members();
+        self.groups
+            .get_mut(&group_id)
+            .expect("group exists")
+            .dungeon_difficulty = difficulty_id;
+        Some(
+            members
+                .into_iter()
+                .map(|to| GroupEffect::DungeonDifficulty { to, difficulty_id })
+                .collect(),
+        )
+    }
+
     // --- Lookups ---
+
+    /// `Group::GetLeaderGUID` of `member`'s group.
+    pub fn leader_of(&self, member: CharacterId) -> Option<CharacterId> {
+        self.group_of(member).map(|(_, group)| group.raid.leader)
+    }
+
+    /// `Group::GetDungeonDifficultyID` of `member`'s group.
+    pub fn dungeon_difficulty_of(&self, member: CharacterId) -> Option<u32> {
+        self.group_of(member)
+            .map(|(_, group)| group.dungeon_difficulty)
+    }
 
     /// The group `member` belongs to (`Player::GetGroup`).
     pub fn group_id_of(&self, member: CharacterId) -> Option<GroupId> {

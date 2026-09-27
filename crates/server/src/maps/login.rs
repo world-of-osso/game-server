@@ -10,7 +10,7 @@ use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 use shared::components::Position;
 
-use super::instances::{InstanceEntrant, ResolvedMap};
+use super::instances::{InstanceEntrant, Now, ResolvedMap};
 use super::{InMap, InstanceManager, MapStore, WorldLocation};
 use crate::game_objects::GameObjectSpawns;
 use crate::group::GroupRegistry;
@@ -22,6 +22,7 @@ pub(crate) struct LoginMaps<'w> {
     instances: ResMut<'w, InstanceManager>,
     groups: Option<Res<'w, GroupRegistry>>,
     time: Res<'w, Time>,
+    clock: Option<Res<'w, super::ServerClock>>,
     world_data: Option<Res<'w, WorldData>>,
     objects: Option<Res<'w, GameObjectSpawns>>,
 }
@@ -36,22 +37,19 @@ pub(crate) struct LoginPlace {
 }
 
 impl LoginMaps<'_> {
-    /// The copy and position for `character_id`, saved on `map_id` at `position`; `None`
-    /// when neither the saved map nor its go-back location can take the player.
+    /// The copy and position for `character_id` at dungeon difficulty `difficulty_id`,
+    /// saved on `map_id` at `position`; `None` when neither the saved map nor its
+    /// go-back location can take the player.
     pub fn resolve(
         &mut self,
         commands: &mut Commands,
         character_id: u64,
+        difficulty_id: u32,
         map_id: u32,
         position: Position,
     ) -> Option<LoginPlace> {
-        let entrant = InstanceEntrant {
-            character_id,
-            group: self
-                .groups
-                .as_ref()
-                .and_then(|groups| groups.group_id_of(character_id)),
-        };
+        let entrant: InstanceEntrant =
+            super::transfer::entrant_for(self.groups.as_deref(), character_id, difficulty_id);
         match self.enter(map_id, entrant) {
             Some(resolved) => {
                 let position = match (resolved.created, self.is_dungeon(map_id)) {
@@ -84,13 +82,16 @@ impl LoginMaps<'_> {
     }
 
     fn enter(&mut self, map_id: u32, entrant: InstanceEntrant) -> Option<ResolvedMap> {
-        let now = self.time.elapsed_secs_f64();
+        let now = Now {
+            elapsed: self.time.elapsed_secs_f64(),
+            unix: self.clock.as_deref().copied().unwrap_or_default().unix(),
+        };
         let resolved = self
             .instances
             .create_map(&self.store, map_id, entrant, now)
             .ok()?;
         self.instances
-            .cannot_enter(resolved.map, entrant)
+            .cannot_enter(resolved.map, entrant, now.unix)
             .is_none()
             .then_some(resolved)
     }
@@ -99,11 +100,17 @@ impl LoginMaps<'_> {
         if !resolved.created {
             return;
         }
-        if let Some(world_data) = &self.world_data {
-            crate::zones::spawn_map_creatures(commands, world_data, resolved.map, true);
-        }
+        let content = super::transfer::map_content(&self.instances, &self.store, resolved.map);
         if let Some(objects) = &self.objects {
-            crate::game_objects::spawn_map_game_objects(commands, objects, resolved.map);
+            crate::game_objects::spawn_map_game_objects(
+                commands,
+                objects,
+                resolved.map,
+                content.difficulty_id,
+            );
+        }
+        if let Some(world_data) = &self.world_data {
+            crate::zones::spawn_map_creatures(commands, world_data, content, true);
         }
     }
 

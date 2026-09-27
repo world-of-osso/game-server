@@ -1,9 +1,12 @@
 //! TrinityCore `InstanceScript` (game/Instances/InstanceScript.cpp): the boss
 //! encounter states of one dungeon copy, named by `instance_template.script`.
 //!
-//! A copy's script is created with every boss `NOT_STARTED` the first time one of
-//! its bosses needs it and lives until the copy unloads (`unload_instance_scripts`);
-//! a recreated copy starts fresh (instance locks are phase 4).
+//! A copy's script is created the first time one of its bosses needs it, with the
+//! bosses its instance lock saved `DONE` and every other boss `NOT_STARTED`
+//! (`InstanceMap::CreateInstanceData` → `InstanceScript::Load`), and lives until the
+//! copy unloads (`unload_instance_scripts`). A boss becoming `DONE` updates the copy's
+//! instance lock (`InstanceMap::UpdateInstanceLock`): the players inside are saved,
+//! and the newly saved ones told `InstanceSaveCreated`.
 //!
 //! `SetBossState` (InstanceScript.cpp:374-478) sends `EncounterStart` on
 //! `IN_PROGRESS` and `EncounterEnd` on `DONE` (success) to the copy's players, as
@@ -24,8 +27,6 @@ use shared::protocol::{
 use crate::maps::InMap;
 use crate::networking::PlayerLink;
 
-/// `DIFFICULTY_NORMAL`: every hosted dungeon copy (docs/specs/instances.md).
-const DIFFICULTY_NORMAL: u32 = 1;
 /// The priority TrinityCore scripts engage their boss frame with.
 const BOSS_FRAME_PRIORITY: u8 = 1;
 
@@ -45,12 +46,59 @@ pub struct BossInfo {
     pub encounter_id: u32,
 }
 
-/// An `InstanceScript`: its `instance_template.script` name and its bosses by
-/// boss id (`SetBossNumber`).
+/// An `InstanceScript`: its `instance_template.script` name, its bosses by boss id
+/// (`SetBossNumber`) and the boss creatures its `LoadObjectData(creatureData)` names
+/// (entry, boss id).
 #[derive(Debug, Clone, PartialEq)]
 pub struct InstanceScript {
     pub name: &'static str,
     pub bosses: Vec<BossInfo>,
+    pub boss_creatures: &'static [(u32, u32)],
+}
+
+impl InstanceScript {
+    /// `GetSaveData` boss states: the `DONE` bosses as a boss id mask.
+    pub fn done_bosses(&self) -> u32 {
+        self.bosses
+            .iter()
+            .enumerate()
+            .filter(|(_, boss)| boss.state == EncounterState::Done)
+            .fold(0, |mask, (boss_id, _)| mask | 1 << boss_id)
+    }
+
+    /// `InstanceScript::Load`: bosses saved `DONE` start `DONE`.
+    fn load(mut self, done_bosses: u32) -> Self {
+        for (boss_id, boss) in self.bosses.iter_mut().enumerate() {
+            if done_bosses & (1 << boss_id) != 0 {
+                boss.state = EncounterState::Done;
+            }
+        }
+        self
+    }
+}
+
+/// The instance script `instance_template.script` names, fresh.
+pub fn create_instance_script(name: &str) -> Option<InstanceScript> {
+    super::the_stockade::instance_script(name).or_else(|| super::grim_batol::instance_script(name))
+}
+
+/// The boss creature entries of `map_id`'s instance script whose boss id is in
+/// `done_bosses`: they do not spawn in a copy created with them `DONE` (TrinityCore
+/// keeps them dead through their saved respawn time).
+pub fn done_boss_entries(store: &crate::maps::MapStore, map_id: u32, done_bosses: u32) -> Vec<u32> {
+    store
+        .instance_scripts
+        .get(&map_id)
+        .and_then(|name| create_instance_script(name))
+        .map(|script| {
+            script
+                .boss_creatures
+                .iter()
+                .filter(|&&(_, boss_id)| done_bosses & (1 << boss_id) != 0)
+                .map(|&(entry, _)| entry)
+                .collect()
+        })
+        .unwrap_or_default()
 }
 
 #[derive(Resource, Debug, Default)]
@@ -66,7 +114,10 @@ fn instance_script(world: &mut World, map: InMap) -> Option<&mut InstanceScript>
         let name = world
             .get_resource::<crate::maps::MapStore>()
             .and_then(|store| store.instance_scripts.get(&map.map_id))?;
-        let script = super::the_stockade::instance_script(name)?;
+        let done_bosses = world
+            .get_resource::<crate::maps::InstanceManager>()
+            .map_or(0, |instances| instances.initial_done_bosses(map));
+        let script = create_instance_script(name)?.load(done_bosses);
         world
             .resource_mut::<InstanceScripts>()
             .0
@@ -109,32 +160,39 @@ pub fn set_boss_state(world: &mut World, map: InMap, boss_id: u32, state: Encoun
     let encounter_id = boss.encounter_id;
     info!("Instance {map:?}: boss {boss_id} (encounter {encounter_id}) {previous:?} -> {state:?}");
     let group_size = players_in_map(world, map).len() as u32;
+    let difficulty_id = world
+        .get_resource::<crate::maps::InstanceManager>()
+        .and_then(|instances| instances.copy_difficulty(map))
+        .map_or(0, |difficulty| difficulty.difficulty_id);
     match state {
         EncounterState::InProgress => send_to_players(
             world,
             map,
             EncounterStart {
                 encounter_id,
-                difficulty_id: DIFFICULTY_NORMAL,
+                difficulty_id,
                 group_size,
             },
         ),
-        EncounterState::Done => send_to_players(
-            world,
-            map,
-            EncounterEnd {
-                encounter_id,
-                difficulty_id: DIFFICULTY_NORMAL,
-                group_size,
-                success: true,
-            },
-        ),
+        EncounterState::Done => {
+            send_to_players(
+                world,
+                map,
+                EncounterEnd {
+                    encounter_id,
+                    difficulty_id,
+                    group_size,
+                    success: true,
+                },
+            );
+            update_instance_lock(world, map, encounter_id, difficulty_id);
+        }
         EncounterState::NotStarted if previous == EncounterState::InProgress => send_to_players(
             world,
             map,
             EncounterEnd {
                 encounter_id,
-                difficulty_id: DIFFICULTY_NORMAL,
+                difficulty_id,
                 group_size,
                 success: false,
             },
@@ -142,6 +200,35 @@ pub fn set_boss_state(world: &mut World, map: InMap, boss_id: u32, state: Encoun
         EncounterState::NotStarted => {}
     }
     true
+}
+
+/// `InstanceScript::SetBossState(DONE)` → `InstanceMap::UpdateInstanceLock` with the
+/// killed boss's `DungeonEncounter.Bit`.
+fn update_instance_lock(world: &mut World, map: InMap, encounter_id: u32, difficulty_id: u32) {
+    let Some(done_bosses) = world
+        .get_resource::<InstanceScripts>()
+        .and_then(|scripts| scripts.0.get(&map))
+        .map(InstanceScript::done_bosses)
+    else {
+        return;
+    };
+    let bit = world
+        .get_resource::<crate::maps::MapStore>()
+        .and_then(|store| store.dungeon_encounter(encounter_id, map.map_id, difficulty_id))
+        .map(|encounter| encounter.bit);
+    let players: Vec<(Entity, u64)> = players_in_map(world, map)
+        .into_iter()
+        .filter_map(|player| {
+            let character = world.get::<crate::persistence::ClientId>(player)?.0;
+            Some((player, character))
+        })
+        .collect();
+    let unix = crate::maps::difficulty::now(world).unix;
+    let Some(mut instances) = world.get_resource_mut::<crate::maps::InstanceManager>() else {
+        return;
+    };
+    let saved = instances.update_instance_lock(map, &players, done_bosses, bit, unix);
+    crate::maps::difficulty::send_instance_saved(world, &saved);
 }
 
 /// `SendEncounterUnit(ENCOUNTER_FRAME_ENGAGE, unit, priority)`.

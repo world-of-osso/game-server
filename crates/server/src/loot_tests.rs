@@ -488,7 +488,7 @@ fn a_poor_quality_drop_becomes_coins_at_its_sell_price() {
     // Kobold Vermin drops the grey Melted Candle (sell price 1 copper) 20 % of kills.
     let mut rng = rand::rngs::StdRng::seed_from_u64(7);
     let rolled = std::iter::repeat_with(|| {
-        tables.roll_creature(KOBOLD_VERMIN, &templates, |_| false, &mut rng)
+        tables.roll_creature(KOBOLD_VERMIN, 0, &templates, |_| false, &mut rng)
     })
     .find(|rolled| {
         rolled

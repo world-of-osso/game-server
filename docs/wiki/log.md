@@ -320,3 +320,7 @@ Created `systems/quests.md` (quest data, rules, runtime) and `specs/quests.md`; 
 ## [2026-09-27] update | Wander follows the ground
 
 [[creature-ai]]: wandering creatures step on terrain/WMO floors via `GroundMap`, refuse ledges and unsupported destinations, and the wander LCG advances its state (Stormwind Rats floating over the canal / above their floor).
+
+## [2026-09-27] update | Dungeon difficulties and instance locks
+
+[[zone-architecture]]: copies at the entrant's dungeon difficulty (downscaled per MapDifficulty/Difficulty fallback), `InstanceLocks` (InstanceLockMgr port: temporary/permanent, instance-id bound shared state, encounter locks, Retail 15:00 UTC reset), lock persistence in game.redb, `ServerClock`. Spec [instances](../specs/instances.md) (Dungeon difficulty, Instance locks), [retail world content](../specs/retail-world-content.md) (spawnDifficulties, content_creature_template_difficulty, Grim Batol), [boss scripts](../specs/boss-scripts.md) (Grim Batol spell-less BossAI).

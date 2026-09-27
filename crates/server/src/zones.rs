@@ -32,30 +32,70 @@ fn spawn_continent_creatures(mut commands: Commands, world_data: Res<WorldData>)
         let count = spawn_map_creatures(
             &mut commands,
             &world_data,
-            crate::maps::InMap::continent(map_id),
+            MapContent::continent(map_id),
             true,
         );
         info!("Spawned {count} creatures on map {map_id}");
     }
 }
 
-/// Spawn every creature of `map`'s map into that copy (none outside
-/// `NPC_APPEARANCE_MAPS`). When `replicate` is true, adds
-/// `Replicate` (requires lightyear plugins). Tests pass `false` to avoid that dependency.
+/// A map copy to fill: its difficulty (`Map::GetDifficultyID`, 0 on a continent) and
+/// the boss entries its instance lock keeps dead.
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) struct MapContent {
+    pub map: crate::maps::InMap,
+    pub difficulty_id: u32,
+    pub dead_bosses: Vec<u32>,
+}
+
+impl MapContent {
+    pub fn continent(map_id: u32) -> Self {
+        Self {
+            map: crate::maps::InMap::continent(map_id),
+            difficulty_id: 0,
+            dead_bosses: Vec::new(),
+        }
+    }
+}
+
+/// The difficulty a creature's map copy was created at (`Map::GetDifficultyID`), which
+/// picks its template's difficulty row and loot.
+#[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
+pub struct CreatureDifficulty(pub u32);
+
+/// Spawn every creature of the copy's map spawned at its difficulty (none outside
+/// `NPC_APPEARANCE_MAPS`), with the template of that difficulty, except the bosses
+/// kept dead. When `replicate` is true, adds `Replicate` (requires lightyear plugins).
+/// Tests pass `false` to avoid that dependency.
 pub(crate) fn spawn_map_creatures(
     commands: &mut Commands,
     world_data: &WorldData,
-    map: crate::maps::InMap,
+    content: MapContent,
     replicate: bool,
 ) -> u32 {
+    let map = content.map;
     if !crate::maps::NPC_APPEARANCE_MAPS.contains(&map.map_id) {
         return 0;
     }
     let Some(indices) = world_data.spawns_by_map.get(&(map.map_id as u16)) else {
         return 0;
     };
-    let spawns = indices.iter().map(|&idx| &world_data.spawns[idx]);
-    spawn_creatures(commands, world_data, map, replicate, spawns).len() as u32
+    let spawns = indices
+        .iter()
+        .map(|&idx| &world_data.spawns[idx])
+        .filter(|spawn| {
+            spawn.spawns_at(content.difficulty_id)
+                && !content.dead_bosses.contains(&spawn.template_entry)
+        });
+    spawn_creatures(
+        commands,
+        world_data,
+        map,
+        content.difficulty_id,
+        replicate,
+        spawns,
+    )
+    .len() as u32
 }
 
 /// Spawn `spawns` with their AI, addon and formation components; returns
@@ -64,6 +104,7 @@ fn spawn_creatures<'a>(
     commands: &mut Commands,
     world_data: &WorldData,
     map: crate::maps::InMap,
+    difficulty_id: u32,
     replicate: bool,
     spawns: impl Iterator<Item = &'a CreatureSpawn>,
 ) -> HashMap<u32, Entity> {
@@ -71,8 +112,7 @@ fn spawn_creatures<'a>(
     let mut rng = rand::thread_rng();
     for spawn in spawns {
         let template = world_data
-            .templates
-            .get(&spawn.template_entry)
+            .template_for(spawn.template_entry, difficulty_id)
             .unwrap_or_else(|| {
                 panic!(
                     "creature spawn {} references missing template {}",
@@ -82,6 +122,11 @@ fn spawn_creatures<'a>(
         let entity = spawn_creature(
             commands, world_data, template, map, replicate, spawn, &mut rng,
         );
+        if difficulty_id != 0 {
+            commands
+                .entity(entity)
+                .insert(CreatureDifficulty(difficulty_id));
+        }
         entities.insert(spawn.guid, entity);
     }
     insert_formation_members(commands, world_data, &entities);
@@ -149,7 +194,7 @@ pub(crate) fn spawn_creature(
             template.detection_range,
         );
         crate::creature_scripts::insert_script_components(&mut entity, &template.script_name);
-        crate::scripted_ai::insert_script_name(&mut entity, &template.script_name);
+        crate::scripted_ai::insert_script_name(&mut entity, &template.script_name, template.entry);
         insert_mana(&mut entity, world_data, template, level);
         if let Some(addon) = addon {
             insert_addon_components(&mut entity, addon);
@@ -223,10 +268,12 @@ pub(crate) fn summon_creature(
         spawntimesecs: 0,
         display_id: None,
         unit_flags: None,
+        spawn_difficulties: Vec::new(),
     };
+    let difficulty_id = world.get::<CreatureDifficulty>(summoner).map_or(0, |d| d.0);
     let mut queue = bevy::ecs::world::CommandQueue::default();
     let summon = world.resource_scope(|world, world_data: Mut<WorldData>| {
-        let Some(template) = world_data.templates.get(&entry) else {
+        let Some(template) = world_data.template_for(entry, difficulty_id) else {
             error!("SummonCreature: creature template {entry} does not exist");
             return None;
         };
@@ -244,6 +291,11 @@ pub(crate) fn summon_creature(
             .entity(summon)
             .insert(TempSummon { summoner })
             .remove::<RespawnDelay>();
+        if difficulty_id != 0 {
+            commands
+                .entity(summon)
+                .insert(CreatureDifficulty(difficulty_id));
+        }
         Some(summon)
     });
     queue.apply(world);
@@ -599,6 +651,7 @@ mod tests {
             spawntimesecs: 120,
             display_id: None,
             unit_flags: None,
+            spawn_difficulties: vec![0],
         }
     }
 
@@ -756,12 +809,7 @@ mod tests {
 
     /// Test-only system: spawns creatures without `Replicate` (which requires lightyear plugins).
     fn spawn_test(mut commands: Commands, world_data: Res<WorldData>) {
-        spawn_map_creatures(
-            &mut commands,
-            &world_data,
-            crate::maps::InMap::continent(0),
-            false,
-        );
+        spawn_map_creatures(&mut commands, &world_data, MapContent::continent(0), false);
     }
 
     fn run_spawn_system(wd: WorldData) -> App {

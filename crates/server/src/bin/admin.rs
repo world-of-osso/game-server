@@ -162,11 +162,31 @@ enum AdminRequest {
     Damage {
         character_name: String,
         amount: f32,
+        target: Option<u64>,
     },
     /// TrinityCore `.revive`: a dead online character comes back to life with full
     /// health (`Player::ResurrectPlayer(1.0f)`).
     Revive {
         character_name: String,
+    },
+    /// Shift the instance-lock clock by `seconds`.
+    ClockAdvance {
+        seconds: i64,
+    },
+    /// TrinityCore `.instance listbinds`.
+    InstanceLocks {
+        character_name: String,
+    },
+    /// TrinityCore `.instance unbind <mapid|all>`.
+    InstanceUnbind {
+        character_name: String,
+        map_id: Option<u32>,
+    },
+    /// TrinityCore `.npc info` for the creatures of an entry in a map copy.
+    NpcInfo {
+        map_id: u32,
+        instance_id: u32,
+        entry: u32,
     },
     Ping,
 }
@@ -326,6 +346,21 @@ enum AdminResponse {
     Revived {
         character_name: String,
     },
+    ClockAdvanced {
+        offset_secs: i64,
+        unix: i64,
+    },
+    InstanceLockList {
+        character_name: String,
+        locks: Vec<String>,
+    },
+    InstanceUnbound {
+        character_name: String,
+        count: usize,
+    },
+    NpcInfoList {
+        lines: Vec<String>,
+    },
     Pong,
     Error(String),
 }
@@ -407,6 +442,10 @@ fn print_usage() {
     eprintln!("  game-server-admin grant-equipment <character> <manifest.json>");
     eprintln!("  game-server-admin list-equipment <character>");
     eprintln!("  game-server-admin taxi-learn <character_name> <taxi_node_id>");
+    eprintln!("  game-server-admin clock-advance <seconds>");
+    eprintln!("  game-server-admin instance-locks <character_name>");
+    eprintln!("  game-server-admin instance-unbind <character_name> <map_id|all>");
+    eprintln!("  game-server-admin npc-info <map_id> <instance_id> <entry>");
 }
 
 fn parse_request(args: &[String]) -> AdminRequest {
@@ -447,10 +486,41 @@ fn parse_request(args: &[String]) -> AdminRequest {
             }
         }
         "damage" => {
-            require_args(args, 4, "damage <character_name> <amount>");
+            require_args(args, 4, "damage <character_name> <amount> [target_entity]");
             AdminRequest::Damage {
                 character_name: args[2].clone(),
                 amount: args[3].parse().expect("amount must be a number"),
+                target: args
+                    .get(4)
+                    .map(|bits| bits.parse().expect("target_entity must be entity bits")),
+            }
+        }
+        "clock-advance" => {
+            require_args(args, 3, "clock-advance <seconds>");
+            AdminRequest::ClockAdvance {
+                seconds: args[2].parse().expect("seconds must be an integer"),
+            }
+        }
+        "instance-locks" => {
+            require_args(args, 3, "instance-locks <character_name>");
+            AdminRequest::InstanceLocks {
+                character_name: args[2].clone(),
+            }
+        }
+        "instance-unbind" => {
+            require_args(args, 4, "instance-unbind <character_name> <map_id|all>");
+            AdminRequest::InstanceUnbind {
+                character_name: args[2].clone(),
+                map_id: (args[3] != "all")
+                    .then(|| args[3].parse().expect("map_id must be a number or all")),
+            }
+        }
+        "npc-info" => {
+            require_args(args, 5, "npc-info <map_id> <instance_id> <entry>");
+            AdminRequest::NpcInfo {
+                map_id: args[2].parse().expect("map_id must be a number"),
+                instance_id: args[3].parse().expect("instance_id must be a number"),
+                entry: args[4].parse().expect("entry must be a number"),
             }
         }
         "kill" => {

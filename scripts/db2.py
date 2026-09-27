@@ -64,7 +64,7 @@ TABLES = [
     "DurabilityCosts", "DurabilityQuality", "GameObjectDisplayInfo", "BankTab", "CreatureDisplayInfo", "CreatureModelData",
     "SpellReagents", "SpellTotems", "TradeSkillCategory", "SkillRaceClassInfo", "TotemCategory",
     "ContentTuning", "QuestMoneyReward", "ExpectedStat", "ExpectedStatMod", "ContentTuningXExpected",
-    "Map", "MapDifficulty", "AreaTrigger", "AreaTriggerActionSet",
+    "Map", "MapDifficulty", "AreaTrigger", "AreaTriggerActionSet", "Difficulty", "DungeonEncounter",
 ]
 # Extracted from local CASC by FileDataID (community listfile), pinned to the build's
 # WoWDBDefs layout hash: {table: (FileDataID, layout hash)}.
@@ -72,7 +72,10 @@ LOCAL_TABLES = {
     "ContentTuning": (1962930, 0xA3E13004), "QuestMoneyReward": (1139047, 0x01D6219A),
     "ExpectedStat": (1937326, 0x0FD90F9C), "ExpectedStatMod": (1969773, 0x8C41CCCE),
     "ContentTuningXExpected": (2976765, 0x897A4313),
+    "Difficulty": (1352127, 0xB810C351), "DungeonEncounter": (1347279, 0x35863DC4),
 }
+# LOCAL_TABLES with localized strings, read from their enUS copy (casc_locale.py).
+LOCALIZED_TABLES = {"Difficulty", "DungeonEncounter"}
 
 
 def table_name(db2_name):
@@ -148,9 +151,12 @@ def extract(build, csv_root):
     schema = sqlite3.connect(":memory:")
     schema.executescript(SCHEMA_SQL.read_text())
     for db2, (fdid, layout_hash) in LOCAL_TABLES.items():
-        columns = [(row[1], row[2]) for row in schema.execute(f"PRAGMA table_info({table_name(db2)})")]
-        header, rows = db2_casc.extract_rows(fdid, layout_hash, columns)
         target = out_dir / f"{db2}.csv"
+        if target.exists():
+            print(f"  have {target.name}")
+            continue
+        columns = [(row[1], row[2]) for row in schema.execute(f"PRAGMA table_info({table_name(db2)})")]
+        header, rows = db2_casc.extract_rows(fdid, layout_hash, columns, localized=db2 in LOCALIZED_TABLES)
         partial = target.with_suffix(".csv.part")
         with partial.open("w", newline="", encoding="utf-8") as handle:
             writer = csv.writer(handle)

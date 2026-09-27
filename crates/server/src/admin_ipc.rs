@@ -39,7 +39,7 @@ impl Plugin for AdminIpcPlugin {
 
 /// Resources needed by the admin IPC early-dispatch handlers.
 #[derive(SystemParam)]
-struct AdminResources<'w> {
+struct AdminResources<'w, 's> {
     time: Res<'w, Time>,
     combat_log: Res<'w, crate::combat::CombatLog>,
     ticket_mgr: ResMut<'w, shared::ticket::TicketManager>,
@@ -51,6 +51,7 @@ struct AdminResources<'w> {
     vendor_catalog: Option<Res<'w, crate::merchant::VendorCatalog>>,
     inventory_updates: ResMut<'w, crate::gold::GoldUpdateQueue>,
     changed_mailboxes: ResMut<'w, crate::mail::ChangedMailboxes>,
+    instances: crate::maps::difficulty::AdminInstances<'w, 's>,
 }
 
 /// Queries needed by the admin IPC dispatch loop.
@@ -151,7 +152,7 @@ fn dispatch_resource_commands(
     {
         return Some(handle_taxi_learn(db, &res.taxi, character_name, *node));
     }
-    None
+    res.instances.dispatch(request, db)
 }
 
 /// `grant-item`: store the items in the character's bags; an online owner gets the
@@ -503,10 +504,16 @@ fn dispatch(
         AdminRequest::Damage {
             character_name,
             amount,
-        } => handle_damage(db, commands, players, &character_name, amount),
+            target,
+        } => handle_damage(db, commands, players, &character_name, amount, target),
         AdminRequest::Revive { character_name } => {
             handle_revive(db, commands, players, &character_name)
         }
+        // Answered by AdminInstances unless the map data is not loaded.
+        AdminRequest::ClockAdvance { .. }
+        | AdminRequest::InstanceLocks { .. }
+        | AdminRequest::InstanceUnbind { .. }
+        | AdminRequest::NpcInfo { .. } => AdminResponse::Error("instance data not loaded".into()),
         AdminRequest::SetGold {
             character_name,
             copper,

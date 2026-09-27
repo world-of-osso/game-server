@@ -31,6 +31,11 @@ Dungeons phase 3: creature scripts selected by `creature_template.ScriptName`, p
 - [x] Randolph Moloch (46383, boss 0, encounter 1146): pull yell; Sweep 2-3 s then 6-7 s; Wildly Stabbing channel 4-5 s then 8-12 s; hits taking him below 71% (from above 59%) and below 41% (from above 29%) each vanish him once 1 s later: boss emote, auras cleared, Vanish, passive; 2 s later Shadowstep behind a random player, aggressive; death yell, Mortimer Moloch walks to him, yells at +4 s and collapses (emote, dies) at +7 s.
 - [x] A wipe resets every Stockade boss (deviation: TrinityCore's Hogger and Moloch `Reset` skip `_Reset`).
 
+### Grim Batol
+- [x] `instance_grim_batol` (map 670): 4 bosses (General Umbriss 39625, Forgemaster Throngus 40177, Drahga Shadowburner 40319, Erudax 40484; encounters 1051, 1050, 1048, 1049), `LoadObjectData(creatureData)`.
+- [x] Deviation: TrinityCore has no Grim Batol creature scripts, so no kill there sets a boss state or locks anyone. Each `creatureData` boss runs a spell-less `BossAI`: engage → `IN_PROGRESS`, wipe → `NOT_STARTED`, death → `DONE` (then the instance lock, docs/specs/instances.md). No boss abilities.
+- [x] An instance script created for a copy with an instance lock starts with the lock's `DONE` bosses (`InstanceScript::Load`); encounter messages carry the copy's difficulty.
+
 ## How it works
 - `docs/wiki/systems/boss-scripts.md`
 
@@ -52,7 +57,7 @@ Dungeons phase 3: creature scripts selected by `creature_template.ScriptName`, p
 - [ ] Player casters' damage base points are not ExpectedStat-scaled.
 
 ## Out of scope
-- Instance locks, difficulties (phase 4), Dungeon Finder (phase 5), doors (the Stockade has none), `FAIL`/`_DespawnAtEvade` (unused by these scripts).
+- Dungeon Finder (phase 5), doors (the Stockade has none), `FAIL`/`_DespawnAtEvade` (unused by these scripts), Grim Batol boss abilities.
 
 ## Live evidence (2026-09-27)
 Own server :5085 (world.db = `world-stockadebosses-20260927.db`, copied game.redb), one headless client (Xpbar, level 80 mage; bosses hit with `game-server-admin damage`), evidence in game-engine `data/diagnostics/stockadebosses-20260927/` (`server-run3-hogger.log` for Hogger, `server.log` for the others):

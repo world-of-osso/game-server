@@ -66,6 +66,7 @@ pub struct TemplateTuning {
 }
 
 /// `creature_template_model` row.
+#[derive(Clone)]
 pub struct CreatureModelInfo {
     pub display_id: u32,
     /// Weight of the model among the template's (`GetRandomValidModel`).
@@ -91,6 +92,17 @@ pub struct CreatureSpawn {
     pub display_id: Option<u32>,
     /// `creature.unit_flags`: the spawn's unit flags instead of its template's.
     pub unit_flags: Option<u32>,
+    /// `creature.spawnDifficulties`: the map copy difficulties it spawns in (0 on a
+    /// continent).
+    pub spawn_difficulties: Vec<u32>,
+}
+
+impl CreatureSpawn {
+    /// Whether the spawn is part of a copy at `difficulty_id` (`ObjectMgr`'s
+    /// `_mapObjectGuidsStore[{map, difficulty}]`).
+    pub fn spawns_at(&self, difficulty_id: u32) -> bool {
+        self.spawn_difficulties.contains(&difficulty_id)
+    }
 }
 
 pub struct WaypointPath {
@@ -145,6 +157,9 @@ pub const GROUP_AI_FLAG_FOLLOW_LEADER: u32 = 0x200;
 #[derive(Resource, Default)]
 pub struct WorldData {
     pub templates: HashMap<u32, CreatureTemplate>,
+    /// `content_creature_template_difficulty`: the template of an entry in a dungeon copy
+    /// at that difficulty (`CreatureTemplate::GetDifficulty`), keyed (entry, difficulty).
+    pub difficulty_templates: HashMap<(u32, u32), CreatureTemplate>,
     pub spawns: Vec<CreatureSpawn>,
     pub spawns_by_map: HashMap<u16, Vec<usize>>,
     /// Keyed by `waypoint_data.id` (path ID, not creature guid).
@@ -163,6 +178,14 @@ pub struct WorldData {
 }
 
 impl WorldData {
+    /// The template of `entry` in a map copy at `difficulty_id`: its difficulty row,
+    /// else its `content_creature_template` row.
+    pub fn template_for(&self, entry: u32, difficulty_id: u32) -> Option<&CreatureTemplate> {
+        self.difficulty_templates
+            .get(&(entry, difficulty_id))
+            .or_else(|| self.templates.get(&entry))
+    }
+
     /// AzerothCore `Creature::GetCreatureAddon`: the spawn's row, else its template's.
     pub fn addon_for(&self, spawn: &CreatureSpawn) -> Option<&CreatureAddon> {
         self.addons
@@ -178,6 +201,7 @@ pub fn load_world_data(path: &Path) -> WorldData {
     let expected_stats = load_expected_stats(&conn);
     let mut templates = load_templates(&conn, &expected_stats);
     load_template_models(&conn, &mut templates);
+    let difficulty_templates = load_difficulty_templates(&conn, &expected_stats, &templates);
     let spawns = load_spawns(&conn);
     let spawns_by_map = build_spawns_by_map(&spawns);
     let waypoints = load_waypoints(&conn);
@@ -206,6 +230,7 @@ pub fn load_world_data(path: &Path) -> WorldData {
 
     WorldData {
         templates,
+        difficulty_templates,
         spawns,
         spawns_by_map,
         waypoints,
@@ -445,6 +470,46 @@ pub(crate) fn load_templates(
     map
 }
 
+/// `content_creature_template_difficulty` rows: the entry's template with that
+/// difficulty's levels, ContentTuning, scaling expansion, level delta and modifiers.
+fn load_difficulty_templates(
+    conn: &Connection,
+    expected: &ExpectedStats,
+    templates: &HashMap<u32, CreatureTemplate>,
+) -> HashMap<(u32, u32), CreatureTemplate> {
+    let mut stmt = conn
+        .prepare(
+            "SELECT t.entry, d.minlevel, d.maxlevel, t.faction, t.npcflag, t.speed_walk,
+                    d.HealthModifier, t.name, t.rank, t.ExperienceModifier, t.type, t.flags_extra,
+                    t.speed_run, t.ScriptName, t.unit_class, d.exp, t.detection_range, t.unit_flags,
+                    d.ContentTuningID, d.HealthScalingExpansion, d.LevelScalingDeltaMin,
+                    d.LevelScalingDeltaMax, d.DamageModifier, d.ArmorModifier, t.subname,
+                    d.ManaModifier, t.unit_flags2, d.DifficultyID
+             FROM content_creature_template_difficulty d
+             JOIN content_creature_template t ON t.entry = d.entry",
+        )
+        .expect("Failed to prepare content_creature_template_difficulty query");
+    let rows = stmt
+        .query_map(params![], |row| {
+            Ok((
+                row.get::<_, i64>(27)? as u32,
+                template_from_row(row, expected)?,
+            ))
+        })
+        .expect("Failed to query content_creature_template_difficulty");
+    let mut map = HashMap::new();
+    for row in rows {
+        let (difficulty_id, mut template) =
+            row.expect("Failed to read content_creature_template_difficulty row");
+        template.models = templates
+            .get(&template.entry)
+            .map(|base| base.models.clone())
+            .unwrap_or_default();
+        map.insert((template.entry, difficulty_id), template);
+    }
+    map
+}
+
 pub(crate) fn load_template_models(
     conn: &Connection,
     templates: &mut HashMap<u32, CreatureTemplate>,
@@ -496,7 +561,20 @@ fn spawn_from_row(row: &Row) -> rusqlite::Result<CreatureSpawn> {
         spawntimesecs: row.get::<_, i64>(10)? as u32,
         display_id: nonzero(row.get(11)?),
         unit_flags: nonzero(row.get(12)?),
+        spawn_difficulties: parse_spawn_difficulties(&row.get::<_, String>(13)?),
     })
+}
+
+/// `ObjectMgr::ParseSpawnDifficulties`: comma-separated `Difficulty.db2` IDs.
+fn parse_spawn_difficulties(text: &str) -> Vec<u32> {
+    text.split(',')
+        .map(|token| {
+            token
+                .trim()
+                .parse()
+                .unwrap_or_else(|_| panic!("bad spawnDifficulties {text:?}"))
+        })
+        .collect()
 }
 
 /// 0 in a spawn override column means the template's value.
@@ -509,7 +587,8 @@ fn load_spawns(conn: &Connection) -> Vec<CreatureSpawn> {
     let mut stmt = conn
         .prepare(
             "SELECT guid, id1, map, zoneId, position_x, position_y, position_z,
-                    wander_distance, MovementType, orientation, spawntimesecs, modelid, unit_flags
+                    wander_distance, MovementType, orientation, spawntimesecs, modelid, unit_flags,
+                    spawnDifficulties
              FROM content_creature creature
              WHERE NOT EXISTS (
                  SELECT 1 FROM content_game_event_creature event WHERE event.guid = creature.guid

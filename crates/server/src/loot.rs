@@ -246,7 +246,7 @@ struct LootRolls<'w> {
 }
 
 impl LootRolls<'_> {
-    fn roll(&self, entry: u32, character_id: u64) -> Vec<Option<LootContent>> {
+    fn roll(&self, entry: u32, difficulty_id: u32, character_id: u64) -> Vec<Option<LootContent>> {
         let Some((db, templates)) = self.store.get() else {
             return Vec::new();
         };
@@ -265,9 +265,13 @@ impl LootRolls<'_> {
                 .as_deref()
                 .is_some_and(|quests| quest_needs_item(quests, &log, item_id, bag_count))
         };
-        let rolled = self
-            .tables
-            .roll_creature(entry, templates, needs, &mut rand::thread_rng());
+        let rolled = self.tables.roll_creature(
+            entry,
+            difficulty_id,
+            templates,
+            needs,
+            &mut rand::thread_rng(),
+        );
         loot_slots(rolled, &self.store.catalog)
     }
 }
@@ -283,6 +287,7 @@ type Killed<'w, 's> = Query<
         &'static crate::maps::InMap,
         &'static mut Corpse,
         &'static mut DeathState,
+        Option<&'static crate::zones::CreatureDifficulty>,
     ),
     Added<DeathState>,
 >;
@@ -295,7 +300,8 @@ fn generate_corpse_loot(
     mut senders: LootSenders,
     mut commands: Commands,
 ) {
-    for (corpse, npc, killer, position, map, mut decay, mut death) in &mut killed {
+    for (corpse, npc, killer, position, map, mut decay, mut death, difficulty) in &mut killed {
+        let difficulty_id = difficulty.map_or(0, |difficulty| difficulty.0);
         let Ok((killer_id, ..)) = players.get(killer.0) else {
             continue;
         };
@@ -306,7 +312,7 @@ fn generate_corpse_loot(
             &players,
             rolls.groups.as_deref(),
         ) {
-            let slots = rolls.roll(npc.template_id, character_id);
+            let slots = rolls.roll(npc.template_id, difficulty_id, character_id);
             if !slots.is_empty() {
                 loot.looters.insert(character_id, slots);
             }

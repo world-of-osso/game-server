@@ -79,6 +79,7 @@ fn patrol_app_with(guids: &'static [u32], extra: impl FnOnce(&mut App)) -> App {
                 &mut commands,
                 &world_data,
                 crate::maps::InMap::continent(0),
+                0,
                 false,
                 spawns,
             );
@@ -894,6 +895,7 @@ fn display_counts(entry: u32) -> HashMap<u32, u32> {
         spawntimesecs: 120,
         display_id: None,
         unit_flags: None,
+        spawn_difficulties: vec![0],
     };
     let spawn = &spawn;
     let mut rng = <rand::rngs::StdRng as rand::SeedableRng>::seed_from_u64(34);

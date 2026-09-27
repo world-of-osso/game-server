@@ -11,8 +11,9 @@ Handles the subset the local tables need: one or more unencrypted sections, inli
 IDs or a non-inline ID list (prepended as the first column), a relationship map (its
 foreign id appended as the last column), copy tables, and field
 compression none/bitpacked/common/pallet/pallet array/signed bitpacked. A pallet-array
-field expands to its array-count columns. String fields, inline arrays and sparse
-(offset-map) layouts fail.
+field expands to its array-count columns. String fields (TEXT columns) are read from a
+single section's string block; inline arrays and sparse (offset-map) layouts fail.
+Tables with localized strings are read from their enUS copy (casc_locale.py).
 """
 
 import os
@@ -52,12 +53,16 @@ def read_header(data):
                 common_size=common_size, pallet_size=pallet_size, section_count=section_count)
 
 
-def decode(data):
+def decode(data, text_columns=frozenset()):
     """(header, {id: [raw uint32 per column]}) for every record, copies included.
 
     With a non-inline ID list the ID is prepended as column 0; a pallet-array field
-    contributes its array-count values."""
+    contributes its array-count values. Columns in `text_columns` hold the string
+    their field's offset points at: the offset counts from the field's own byte in
+    the record (fields before them must not be arrays)."""
     header = read_header(data)
+    if text_columns and header["section_count"] != 1:
+        raise ValueError("string fields of a multi-section DB2 are not supported")
     if header["flags"] & 1:
         raise ValueError("sparse (offset map) DB2 layout is not supported")
     offset = 204
@@ -90,6 +95,7 @@ def decode(data):
     for file_offset, count, strings, id_list, copies, relations in sections:
         ids_at = file_offset + count * size + strings
         ids = struct.unpack_from(f"<{id_list // 4}I", data, ids_at) if id_list else None
+        text_fields = [column - (1 if ids else 0) for column in text_columns]
         # Section order: records, strings, ID list, copy table, relationship map
         # (entry count, min id, max id, then (foreign id, record index) pairs).
         relation_at = ids_at + id_list + 8 * copies
@@ -101,6 +107,9 @@ def decode(data):
         for record in range(count):
             bits = int.from_bytes(data[file_offset + record * size:file_offset + (record + 1) * size], "little")
             fields = [field_value(index, info, bits, pallets) for index, info in enumerate(infos)]
+            for index in text_fields:
+                at = file_offset + record * size + infos[index][0] // 8 + fields[index]
+                fields[index] = data[at:data.index(b"\0", at)].decode("utf-8")
             record_id = ids[record] if ids else fields[header["id_index"]]
             for index, info in enumerate(infos):
                 if info[3] == COMPRESSION_COMMON:
@@ -132,24 +141,32 @@ def field_value(index, info, bits, pallets):
 
 
 def typed(raw, sql_type):
+    if sql_type == "TEXT":
+        return raw
     if sql_type == "REAL":
         # The exact float32 value (a 7-digit rendering loses up to 3 significant digits).
         return struct.unpack('<f', struct.pack('<I', raw & 0xFFFFFFFF))[0]
     return struct.unpack("<i", struct.pack("<I", raw & 0xFFFFFFFF))[0]
 
 
-def extract_rows(fdid, layout_hash, columns):
-    """(column names, rows) of FileDataID `fdid`; columns = [(name, 'INTEGER'|'REAL')] from the DDL."""
-    with tempfile.TemporaryDirectory() as out_dir:
-        data = extract_fdid(fdid, out_dir).read_bytes()
-    header, rows = decode(data)
+def extract_rows(fdid, layout_hash, columns, localized=False):
+    """(column names, rows) of FileDataID `fdid`; columns = [(name, 'INTEGER'|'REAL'|'TEXT')] from the
+    DDL. A localized table is read from its enUS copy with its TEXT columns' strings."""
+    if localized:
+        import casc_locale
+        data = casc_locale.read_enus(fdid)
+    else:
+        with tempfile.TemporaryDirectory() as out_dir:
+            data = extract_fdid(fdid, out_dir).read_bytes()
+    text_columns = frozenset(i for i, (_, sql_type) in enumerate(columns) if sql_type == "TEXT")
+    header, rows = decode(data, text_columns if localized else frozenset())
     if header["layout_hash"] != layout_hash:
         raise SystemExit(f"FDID {fdid}: layout {header['layout_hash']:08X}, expected {layout_hash:08X}")
     widths = {len(values) for values in rows.values()}
     if widths != {len(columns)}:
         raise SystemExit(f"FDID {fdid}: decoded {sorted(widths)} columns, schema has {len(columns)}")
-    if any(sql_type == "TEXT" for _, sql_type in columns):
-        raise SystemExit(f"FDID {fdid}: string columns are not supported")
+    if not localized and any(sql_type == "TEXT" for _, sql_type in columns):
+        raise SystemExit(f"FDID {fdid}: string columns are read from localized tables only")
     return [name for name, _ in columns], [
         [typed(raw, sql_type) for raw, (_, sql_type) in zip(rows[record_id], columns)] for record_id in sorted(rows)
     ]

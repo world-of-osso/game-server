@@ -950,6 +950,7 @@ mod tests {
                     name: p.name.into(),
                     class: 1,
                     level: 10,
+                    dungeon_difficulty: crate::maps::store::DIFFICULTY_NORMAL,
                 };
                 (
                     p.character_id.expect("participant has a character id"),

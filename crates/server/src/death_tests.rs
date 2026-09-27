@@ -492,6 +492,7 @@ fn world_data_with_one_spawn(npcflag: u32) -> WorldData {
             spawntimesecs: 120,
             display_id: None,
             unit_flags: None,
+            spawn_difficulties: vec![0],
         }],
         spawns_by_map: [(0, vec![0])].into_iter().collect(),
         waypoints: default(),

@@ -12,14 +12,13 @@ table the server already reads. docs/specs/retail-world-content.md is the contra
 
 from content_common import clone_table
 
-RETAIL_MAPS = (0, 1, 34)
+RETAIL_MAPS = (0, 1, 34, 670)
 # TrinityCore's DEFAULT_PHASE 169 is unphased (PhaseShift.h:31, PhasingHandler::InitDbPhaseShift):
 # spawns in it are seen by everyone, like PhaseId 0.
 DEFAULT_PHASE = 169
-# The difficulty a map's spawns are loaded at, by Map.db2 InstanceType: open world (0) spawns at
-# DIFFICULTY_NONE, a dungeon copy (1, MAP_INSTANCE_PARTY) at its instance difficulty, which is
-# DIFFICULTY_NORMAL (1) for every hosted copy (docs/specs/instances.md).
-INSTANCE_TYPE_DIFFICULTY = {0: 0, 1: 1}
+# Map.db2 InstanceType of open world (0, spawns at DIFFICULTY_NONE) and party dungeons (1, MAP_INSTANCE: a copy
+# spawns at its difficulty, one of the map's MapDifficulty.db2 rows).
+INSTANCE_TYPE_WORLD, INSTANCE_TYPE_PARTY = 0, 1
 # TrinityCore guids reach 11.8M and 10 collide with kept AzerothCore spawns
 # (maps 229, 230, 530, 609); AzerothCore's reach 5.3M.
 RETAIL_GUID_OFFSET = 20_000_000
@@ -36,23 +35,37 @@ WRATH_HEALTH_EXPANSIONS = 2
 MAP_LIST = ", ".join(str(m) for m in RETAIL_MAPS)
 
 
-# `map` of the queried spawn table; temp.retail_map comes from create_retail_map_table.
-MAP_DIFFICULTY = "(SELECT r.difficulty FROM temp.retail_map r WHERE r.map_id = map)"
+# `map` and `spawnDifficulties` of the queried spawn table (unqualified: the only table with them), `r` a
+# temp.retail_map row (create_retail_map_table).
+SPAWN_DIFFICULTY_MATCH = "',' || replace(spawnDifficulties, ' ', '') || ',' LIKE '%,' || r.difficulty || ',%'"
+SPAWNS_ON_MAP = f"EXISTS (SELECT 1 FROM temp.retail_map r WHERE r.map_id = map AND {SPAWN_DIFFICULTY_MATCH})"
 BASE_PHASE = f"""(COALESCE(PhaseId, 0) IN (0, {DEFAULT_PHASE}) AND COALESCE(PhaseGroup, 0) = 0 AND terrainSwapMap = -1
-    AND ',' || replace(spawnDifficulties, ' ', '') || ',' LIKE '%,' || {MAP_DIFFICULTY} || ',%')"""
+    AND {SPAWNS_ON_MAP})"""
+# The spawn's difficulties the map offers, ascending ("0" on a continent): content_*.spawnDifficulties.
+SPAWN_DIFFICULTIES = f"""(SELECT group_concat(difficulty, ',') FROM (SELECT r.difficulty FROM temp.retail_map r
+    WHERE r.map_id = map AND {SPAWN_DIFFICULTY_MATCH} ORDER BY r.difficulty))"""
 
 
 def create_retail_map_table(conn):
-    """temp.retail_map: each RETAIL_MAPS map with the difficulty its spawns load at."""
+    """temp.retail_map: each (RETAIL_MAPS map, difficulty its copies spawn at): 0 for open world, every
+    MapDifficulty.db2 DifficultyID of a party dungeon."""
     rows = dict(conn.execute(f"SELECT ID, InstanceType FROM map WHERE ID IN ({MAP_LIST})"))
     missing = [m for m in RETAIL_MAPS if m not in rows]
-    unhosted = {m: t for m, t in rows.items() if t not in INSTANCE_TYPE_DIFFICULTY}
+    unhosted = {m: t for m, t in rows.items() if t not in (INSTANCE_TYPE_WORLD, INSTANCE_TYPE_PARTY)}
     if missing or unhosted:
         raise SystemExit(f"RETAIL_MAPS without a Map.db2 row {missing} or with an unhosted InstanceType {unhosted}")
     conn.execute("DROP TABLE IF EXISTS temp.retail_map")
-    conn.execute("CREATE TEMP TABLE retail_map (map_id INTEGER PRIMARY KEY, difficulty INTEGER NOT NULL)")
-    conn.executemany("INSERT INTO temp.retail_map VALUES (?, ?)",
-                     ((m, INSTANCE_TYPE_DIFFICULTY[t]) for m, t in sorted(rows.items())))
+    conn.execute("""CREATE TEMP TABLE retail_map (map_id INTEGER NOT NULL, difficulty INTEGER NOT NULL,
+        PRIMARY KEY (map_id, difficulty))""")
+    for map_id, instance_type in sorted(rows.items()):
+        if instance_type == INSTANCE_TYPE_WORLD:
+            difficulties = [0]
+        else:
+            difficulties = [d for (d,) in conn.execute(
+                "SELECT DISTINCT DifficultyID FROM map_difficulty WHERE MapID = ? ORDER BY DifficultyID", (map_id,))]
+            if not difficulties:
+                raise SystemExit(f"dungeon map {map_id} has no MapDifficulty.db2 row")
+        conn.executemany("INSERT INTO temp.retail_map VALUES (?, ?)", ((map_id, d) for d in difficulties))
 
 
 def retail_spawned_entries(conn):
@@ -77,6 +90,8 @@ def build_spawns(conn, report):
     conn.execute(f"INSERT INTO content_creature SELECT * FROM creature WHERE map NOT IN ({MAP_LIST})")
     # TrinityCore `creature.modelid`: the spawn's display instead of its template's (ObjectMgr::ChooseDisplayId).
     conn.execute("ALTER TABLE content_creature ADD COLUMN modelid INTEGER NOT NULL DEFAULT 0")
+    # TrinityCore `creature.spawnDifficulties` (the map's): the copy difficulties it spawns in.
+    conn.execute("ALTER TABLE content_creature ADD COLUMN spawnDifficulties TEXT NOT NULL DEFAULT '0'")
     for guid, map_id in conn.execute(f"SELECT guid, map FROM creature WHERE map IN ({MAP_LIST}) ORDER BY guid"):
         report.drop("creature", f"guid={guid}", guid, f"map {map_id} spawn replaced by Retail spawns")
     conn.execute(f"""CREATE TEMP TABLE retail_spawn AS SELECT guid AS tdb_guid, guid + {RETAIL_GUID_OFFSET} AS guid
@@ -87,12 +102,12 @@ def build_spawns(conn, report):
         report.drop("tdb_creature", f"guid={guid}", guid, not_base_phase_reason(*phase))
     # unit_flags NULL (the template's) becomes 0, which the server also reads as "the template's"; no TDB1210
     # spawn overrides it with 0.
-    conn.execute("""INSERT INTO content_creature (guid, id1, map, zoneId, areaId, equipment_id, position_x, position_y,
+    conn.execute(f"""INSERT INTO content_creature (guid, id1, map, zoneId, areaId, equipment_id, position_x, position_y,
             position_z, orientation, spawntimesecs, wander_distance, currentwaypoint, MovementType, unit_flags, ScriptName,
-            VerifiedBuild, modelid)
+            VerifiedBuild, modelid, spawnDifficulties)
         SELECT r.guid, c.id, c.map, c.zoneId, c.areaId, c.equipment_id, c.position_x, c.position_y, c.position_z,
             c.orientation, c.spawntimesecs, c.wander_distance, c.currentwaypoint, c.MovementType, COALESCE(c.unit_flags, 0),
-            c.ScriptName, c.VerifiedBuild, c.modelid
+            c.ScriptName, c.VerifiedBuild, c.modelid, {SPAWN_DIFFICULTIES}
         FROM temp.retail_spawn r JOIN tdb_creature c ON c.guid = r.tdb_guid""")
     # ObjectMgr::LoadCreatures ignores a modelid without creature_model_info.
     for guid, display in conn.execute("""SELECT guid, modelid FROM content_creature
@@ -146,22 +161,76 @@ def create_level_table(conn):
                 AllowedMinOffset, Flags FROM content_tuning""")))
 
 
+def difficulty_fallbacks(conn):
+    """Difficulty.db2 FallbackDifficultyID by ID (Mythic 23 -> Heroic 2 -> Normal 1 -> None 0)."""
+    return dict(conn.execute("SELECT ID, FallbackDifficultyID FROM difficulty"))
+
+
+def resolve_difficulty_rows(conn, spawned):
+    """{(entry, difficulty): creature_template_difficulty DifficultyID} for each spawned (entry, difficulty):
+    CreatureTemplate::GetDifficulty (Creature.cpp:252-262) takes the row of the difficulty, else of its
+    FallbackDifficultyID, down to DifficultyID 0; pairs with no row on that chain are left out."""
+    fallbacks = difficulty_fallbacks(conn)
+    rows = {}
+    for entry, difficulty in conn.execute("SELECT Entry, DifficultyID FROM tdb_creature_template_difficulty"):
+        rows.setdefault(entry, set()).add(difficulty)
+    resolved = {}
+    for entry, difficulty in spawned:
+        current, seen = difficulty, set()
+        while current not in rows.get(entry, ()):
+            if current == 0 or current in seen:
+                current = None
+                break
+            seen.add(current)
+            current = fallbacks.get(current, 0)
+        if current is not None:
+            resolved[(entry, difficulty)] = current
+    return resolved
+
+
 def create_difficulty_table(conn):
-    """temp.tdb_difficulty: the creature_template_difficulty row each entry uses (CreatureTemplate::GetDifficulty,
-    Creature.cpp:252-262) at the difficulty of its Retail spawns' map, DifficultyID 0 for entries spawned
-    nowhere. Difficulty.db2 (build 69933) falls Normal (1) back to None (0)."""
-    conn.execute(f"""CREATE TEMP TABLE spawn_difficulty AS SELECT DISTINCT c.id AS entry,
-            CASE WHEN EXISTS (SELECT 1 FROM tdb_creature_template_difficulty d
-                WHERE d.Entry = c.id AND d.DifficultyID = {MAP_DIFFICULTY}) THEN {MAP_DIFFICULTY} ELSE 0 END AS difficulty
-        FROM tdb_creature c WHERE map IN ({MAP_LIST}) AND {BASE_PHASE}""")
-    conn.execute(f"""CREATE TEMP TABLE spawn_map_difficulty AS SELECT DISTINCT id AS entry, {MAP_DIFFICULTY} AS difficulty
-        FROM tdb_creature WHERE map IN ({MAP_LIST}) AND {BASE_PHASE}""")
-    clash = conn.execute("SELECT entry FROM temp.spawn_difficulty GROUP BY entry HAVING count(*) > 1").fetchall()
-    if clash:
-        raise SystemExit(f"entries spawned at two difficulties with different creature_template_difficulty rows: {clash[:10]}")
+    """temp.spawn_map_difficulty: each (entry, difficulty) a Retail spawn of it spawns at.
+    temp.spawn_row: the creature_template_difficulty row each of those uses (resolve_difficulty_rows).
+    temp.tdb_difficulty: the row of the entry's lowest spawn difficulty, or DifficultyID 0 for entries spawned
+    nowhere, the entry's content_creature_template values."""
+    conn.execute(f"""CREATE TEMP TABLE spawn_map_difficulty AS SELECT DISTINCT c.id AS entry, r.difficulty
+        FROM tdb_creature c JOIN temp.retail_map r ON r.map_id = c.map
+        WHERE c.map IN ({MAP_LIST}) AND {BASE_PHASE}
+          AND {SPAWN_DIFFICULTY_MATCH}""")
+    spawned = conn.execute("SELECT entry, difficulty FROM temp.spawn_map_difficulty").fetchall()
+    resolved = resolve_difficulty_rows(conn, spawned)
+    conn.execute("CREATE TEMP TABLE spawn_row (entry INTEGER, difficulty INTEGER, row_difficulty INTEGER, "
+                 "PRIMARY KEY (entry, difficulty))")
+    conn.executemany("INSERT INTO temp.spawn_row VALUES (?, ?, ?)",
+                     ((entry, difficulty, row) for (entry, difficulty), row in sorted(resolved.items())))
     conn.execute("""CREATE TEMP TABLE tdb_difficulty AS SELECT d.* FROM tdb_creature_template_difficulty d
-        WHERE d.DifficultyID = COALESCE((SELECT s.difficulty FROM temp.spawn_difficulty s WHERE s.entry = d.Entry), 0)""")
+        WHERE d.DifficultyID = COALESCE((SELECT s.row_difficulty FROM temp.spawn_row s WHERE s.entry = d.Entry
+            ORDER BY s.difficulty LIMIT 1), 0)""")
     conn.execute("CREATE UNIQUE INDEX temp.tdb_difficulty_entry ON tdb_difficulty(Entry)")
+
+
+def build_template_difficulties(conn, report):
+    """content_creature_template_difficulty: for each dungeon difficulty a Retail entry spawns at, the template
+    values of its creature_template_difficulty row (ContentTuning levels, scaling, modifiers; loot and money come
+    with build_loot). The server uses it for creatures of a copy at that difficulty."""
+    conn.execute("DROP TABLE IF EXISTS content_creature_template_difficulty")
+    conn.execute("""CREATE TABLE content_creature_template_difficulty (entry INTEGER NOT NULL,
+        DifficultyID INTEGER NOT NULL, minlevel INTEGER NOT NULL, maxlevel INTEGER NOT NULL, exp INTEGER NOT NULL,
+        ContentTuningID INTEGER NOT NULL, HealthScalingExpansion INTEGER NOT NULL, LevelScalingDeltaMin INTEGER NOT NULL,
+        LevelScalingDeltaMax INTEGER NOT NULL, HealthModifier REAL NOT NULL, ManaModifier REAL NOT NULL,
+        ArmorModifier REAL NOT NULL, DamageModifier REAL NOT NULL, lootid INTEGER NOT NULL DEFAULT 0,
+        mingold INTEGER NOT NULL DEFAULT 0, maxgold INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (entry, DifficultyID))""")
+    conn.execute("""INSERT INTO content_creature_template_difficulty (entry, DifficultyID, minlevel, maxlevel, exp,
+            ContentTuningID, HealthScalingExpansion, LevelScalingDeltaMin, LevelScalingDeltaMax, HealthModifier,
+            ManaModifier, ArmorModifier, DamageModifier)
+        SELECT s.entry, s.difficulty, COALESCE(l.minlevel, 1), COALESCE(l.maxlevel, 1),
+            health_expansion(d.HealthScalingExpansion), d.ContentTuningID, d.HealthScalingExpansion,
+            d.LevelScalingDeltaMin, d.LevelScalingDeltaMax, d.HealthModifier, d.ManaModifier, d.ArmorModifier,
+            d.DamageModifier
+        FROM temp.spawn_row s
+        JOIN tdb_creature_template_difficulty d ON d.Entry = s.entry AND d.DifficultyID = s.row_difficulty
+        LEFT JOIN content_tuning_level l ON l.ID = d.ContentTuningID
+        WHERE s.difficulty > 0 AND s.entry IN (SELECT entry FROM content_creature_template)""")
 
 
 def build_templates(conn, report):
@@ -208,6 +277,7 @@ def build_templates(conn, report):
         fixed = "level 1" if not conn.execute("SELECT 1 FROM creature_template WHERE entry = ?", (entry,)).fetchone() \
             else "AzerothCore levels kept"
         report.drop("tdb_creature_template_difficulty", f"Entry={entry}", tuning, f"ContentTuningID not in ContentTuning; {fixed}")
+    build_template_difficulties(conn, report)
     retail_only = "SELECT entry FROM content_creature_template WHERE entry NOT IN (SELECT entry FROM creature_template)"
     conn.execute(f"""INSERT INTO content_creature_template_model
         SELECT CreatureID, Idx, CreatureDisplayID, DisplayScale, Probability, VerifiedBuild
@@ -357,15 +427,25 @@ def insert_tdb_loot(conn, table, where, report, offset_entry=True):
 
 
 def build_loot(conn, report):
-    """TrinityCore loot (ids + TDB_LOOT_OFFSET) for Retail-spawned creatures that have some, AzerothCore's otherwise."""
+    """TrinityCore loot (ids + TDB_LOOT_OFFSET) for Retail-spawned creatures that have some, AzerothCore's otherwise;
+    per dungeon difficulty from that difficulty's creature_template_difficulty row."""
     conn.execute("""CREATE TEMP TABLE retail_loot AS SELECT d.Entry AS entry, d.LootID AS loot_id, d.GoldMin, d.GoldMax
         FROM temp.tdb_difficulty d
         WHERE d.Entry IN (SELECT entry FROM temp.retail_entry)
           AND d.LootID IN (SELECT Entry FROM tdb_creature_loot_template)""")
+    conn.execute("""CREATE TEMP TABLE retail_difficulty_loot AS SELECT s.entry, s.difficulty, d.LootID AS loot_id,
+            d.GoldMin, d.GoldMax
+        FROM temp.spawn_row s JOIN tdb_creature_template_difficulty d ON d.Entry = s.entry AND d.DifficultyID = s.row_difficulty
+        WHERE s.difficulty > 0 AND d.LootID IN (SELECT Entry FROM tdb_creature_loot_template)""")
     conn.execute(f"""UPDATE content_creature_template SET lootid = l.loot_id + {TDB_LOOT_OFFSET},
             mingold = l.GoldMin, maxgold = l.GoldMax
         FROM temp.retail_loot l WHERE l.entry = content_creature_template.entry""")
-    insert_tdb_loot(conn, "creature_loot_template", "Entry IN (SELECT loot_id FROM temp.retail_loot)", report)
+    conn.execute(f"""UPDATE content_creature_template_difficulty SET lootid = l.loot_id + {TDB_LOOT_OFFSET},
+            mingold = l.GoldMin, maxgold = l.GoldMax
+        FROM temp.retail_difficulty_loot l
+        WHERE l.entry = content_creature_template_difficulty.entry AND l.difficulty = content_creature_template_difficulty.DifficultyID""")
+    insert_tdb_loot(conn, "creature_loot_template", """Entry IN (SELECT loot_id FROM temp.retail_loot
+        UNION SELECT loot_id FROM temp.retail_difficulty_loot)""", report)
     insert_tdb_loot(conn, "reference_loot_template", "1", report)
     insert_tdb_loot(conn, "gameobject_loot_template", "1", report)
     for container, item in conn.execute("""SELECT Entry, Item FROM content_item_loot_template
@@ -383,23 +463,33 @@ def build_loot(conn, report):
         report.drop("content_creature_template", f"entry={entry}", entry,
                     f"no loot table in either source; money {low}-{high} set to 0")
     conn.execute(f"UPDATE content_creature_template SET mingold = 0, maxgold = 0 WHERE {no_loot}")
+    conn.execute(f"UPDATE content_creature_template_difficulty SET mingold = 0, maxgold = 0 WHERE {no_loot}")
 
 
-# Wowhead-sourced loot template ids: entry + WOWHEAD_LOOT_OFFSET (TDB's reach 20.7M).
+# Wowhead-sourced loot template ids: entry + WOWHEAD_LOOT_OFFSET at an entry's lowest spawn difficulty (TDB's
+# reach 20.7M), entry + WOWHEAD_LOOT_OFFSET + difficulty * WOWHEAD_DIFFICULTY_STRIDE at its other dungeon
+# difficulties (entries stay below 1M).
 WOWHEAD_LOOT_OFFSET = 30_000_000
+WOWHEAD_DIFFICULTY_STRIDE = 1_000_000
 ITEM_CLASS_QUEST = 12
 
 
 def build_wowhead_loot(conn, report):
-    """Wowhead drops (wowhead_loot.py) for Retail-spawned creatures without TrinityCore loot: one ungrouped row per
-    item at the spawns' difficulty, Chance = count / outof, stack from Wowhead; Quest-class items need the quest.
-    Wowhead has no money data."""
-    conn.execute("""CREATE TEMP TABLE wowhead_entry AS SELECT DISTINCT w.entry, s.difficulty FROM wowhead_creature_drop w
+    """Wowhead drops (wowhead_loot.py) for Retail-spawned creatures without TrinityCore loot at a spawn difficulty:
+    one ungrouped row per item and difficulty, Chance = count / outof of that difficulty's mode, stack from
+    Wowhead; Quest-class items need the quest. Wowhead has no money data."""
+    conn.execute("""CREATE TEMP TABLE spawn_base_difficulty AS SELECT entry, min(difficulty) AS difficulty
+        FROM temp.spawn_map_difficulty GROUP BY entry""")
+    conn.execute(f"""CREATE TEMP TABLE wowhead_entry AS SELECT DISTINCT w.entry, s.difficulty,
+            CASE WHEN s.difficulty = b.difficulty THEN w.entry + {WOWHEAD_LOOT_OFFSET}
+                 ELSE w.entry + {WOWHEAD_LOOT_OFFSET} + s.difficulty * {WOWHEAD_DIFFICULTY_STRIDE} END AS loot_id,
+            s.difficulty = b.difficulty AS base
+        FROM wowhead_creature_drop w
         JOIN temp.spawn_map_difficulty s ON s.entry = w.entry AND s.difficulty = w.difficulty
-        WHERE w.entry IN (SELECT entry FROM temp.retail_entry) AND w.entry NOT IN (SELECT entry FROM temp.retail_loot)""")
-    several = conn.execute("SELECT entry FROM temp.wowhead_entry GROUP BY entry HAVING count(*) > 1").fetchall()
-    if several:
-        raise SystemExit(f"Wowhead-looted creatures spawned at several difficulties: {several[:10]}")
+        JOIN temp.spawn_base_difficulty b ON b.entry = w.entry
+        WHERE w.entry IN (SELECT entry FROM temp.retail_entry)
+          AND NOT (s.difficulty = b.difficulty AND w.entry IN (SELECT entry FROM temp.retail_loot))
+          AND NOT EXISTS (SELECT 1 FROM temp.retail_difficulty_loot l WHERE l.entry = w.entry AND l.difficulty = s.difficulty)""")
     for entry, scrape in conn.execute("""SELECT DISTINCT entry, scrape FROM wowhead_creature_drop
             WHERE entry NOT IN (SELECT entry FROM temp.wowhead_entry) ORDER BY entry""").fetchall():
         report.drop("wowhead_creature_drop", f"entry={entry}", entry,
@@ -407,13 +497,16 @@ def build_wowhead_loot(conn, report):
     rows = """FROM wowhead_creature_drop w JOIN temp.wowhead_entry e ON e.entry = w.entry AND e.difficulty = w.difficulty"""
     conn.execute(f"""INSERT INTO content_creature_loot_template
             (Entry, Item, Reference, Chance, QuestRequired, LootMode, GroupId, MinCount, MaxCount, Comment)
-        SELECT w.entry + {WOWHEAD_LOOT_OFFSET}, w.item, 0, 100.0 * w.count / w.outof, w.classs = {ITEM_CLASS_QUEST}, 1, 0,
+        SELECT e.loot_id, w.item, 0, 100.0 * w.count / w.outof, w.classs = {ITEM_CLASS_QUEST}, 1, 0,
             w.stack_min, w.stack_max, 'wowhead ' || w.scrape {rows} AND w.item IN (SELECT ID FROM content_item)""")
     for entry, item in conn.execute(f"""SELECT w.entry, w.item {rows}
             AND w.item NOT IN (SELECT ID FROM content_item) ORDER BY 1, 2""").fetchall():
         report.drop("wowhead_creature_drop", f"entry={entry}", item, "item not in Retail ItemSparse")
-    conn.execute(f"""UPDATE content_creature_template SET lootid = entry + {WOWHEAD_LOOT_OFFSET}, mingold = 0, maxgold = 0
-        WHERE entry IN (SELECT entry FROM temp.wowhead_entry)""")
+    conn.execute("""UPDATE content_creature_template SET lootid = e.loot_id, mingold = 0, maxgold = 0
+        FROM temp.wowhead_entry e WHERE e.entry = content_creature_template.entry AND e.base""")
+    conn.execute("""UPDATE content_creature_template_difficulty SET lootid = e.loot_id, mingold = 0, maxgold = 0
+        FROM temp.wowhead_entry e
+        WHERE e.entry = content_creature_template_difficulty.entry AND e.difficulty = content_creature_template_difficulty.DifficultyID""")
 
 
 # --- Game objects ---
@@ -441,12 +534,14 @@ def build_gameobjects(conn, report):
             AND {holiday} ORDER BY guid"""):
         report.drop("tdb_gameobject", f"guid={guid}", guid, "holiday spawn (positive game event only)")
     build_gameobject_templates(conn, report)
+    # TrinityCore `gameobject.spawnDifficulties` (the map's): the copy difficulties it spawns in.
+    conn.execute("ALTER TABLE content_gameobject ADD COLUMN spawnDifficulties TEXT NOT NULL DEFAULT '0'")
     conn.execute(f"""INSERT INTO content_gameobject (guid, id, map, zoneId, areaId, position_x, position_y, position_z,
             orientation, rotation0, rotation1, rotation2, rotation3, spawntimesecs, animprogress, state, ScriptName,
-            VerifiedBuild)
+            VerifiedBuild, spawnDifficulties)
         SELECT g.guid + {RETAIL_GUID_OFFSET}, g.id, g.map, g.zoneId, g.areaId, g.position_x, g.position_y, g.position_z,
             g.orientation, g.rotation0, g.rotation1, g.rotation2, g.rotation3, g.spawntimesecs, g.animprogress, g.state,
-            g.ScriptName, g.VerifiedBuild
+            g.ScriptName, g.VerifiedBuild, {SPAWN_DIFFICULTIES}
         FROM temp.retail_gameobject r JOIN tdb_gameobject g ON g.guid = r.tdb_guid
         WHERE g.id IN (SELECT entry FROM content_gameobject_template)""")
     for guid, entry in conn.execute("""SELECT tdb_guid, id FROM temp.retail_gameobject

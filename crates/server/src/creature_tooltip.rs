@@ -49,7 +49,7 @@ impl TooltipSources<'_> {
         );
         let item = |item_id| tooltip_item(item_id, catalog, items);
         let drops = loot
-            .drop_chances(entry, items)
+            .drop_chances(entry, 0, items)
             .into_iter()
             .filter_map(|(item_id, chance)| {
                 Some(TooltipDrop {

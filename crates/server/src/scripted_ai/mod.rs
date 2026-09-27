@@ -18,6 +18,7 @@
 pub mod boss_ai;
 pub mod creature_text;
 pub mod event_map;
+pub mod grim_batol;
 pub mod instance_script;
 pub mod movement;
 pub mod the_stockade;
@@ -57,7 +58,9 @@ impl Plugin for ScriptedAiPlugin {
     }
 }
 
-/// `creature_template.ScriptName` of a spawned creature with a registered AI.
+/// `creature_template.ScriptName` of a spawned creature with a registered AI; empty
+/// for a boss an instance script's `creatureData` names without a script of its own
+/// (Grim Batol's).
 #[derive(Component, Debug, Clone)]
 pub struct CreatureScriptName(pub String);
 
@@ -146,13 +149,18 @@ pub struct CreatureAiState {
 
 /// `ScriptMgr` registration by ScriptName; `None` for names without a ported script.
 fn create_ai(world: &World, creature: Entity, script_name: &str) -> Option<Box<dyn CreatureAi>> {
+    if script_name.is_empty() {
+        return grim_batol::creature_ai(world, creature);
+    }
     the_stockade::creature_ai(world, creature, script_name)
 }
 
-/// A spawned creature with a ported ScriptName gets its AI as soon as it is in the
-/// world (`Creature::AIM_Initialize` at `AddToMap`).
-pub(crate) fn insert_script_name(entity: &mut EntityCommands, script_name: &str) {
-    if the_stockade::is_creature_script(script_name) {
+/// A spawned creature with a ported ScriptName, or a scriptless Grim Batol boss
+/// (`entry`), gets its AI as soon as it is in the world (`Creature::AIM_Initialize`
+/// at `AddToMap`).
+pub(crate) fn insert_script_name(entity: &mut EntityCommands, script_name: &str, entry: u32) {
+    let scriptless_boss = script_name.is_empty() && grim_batol::boss_id_of(entry).is_some();
+    if the_stockade::is_creature_script(script_name) || scriptless_boss {
         entity
             .insert(CreatureScriptName(script_name.to_owned()))
             .queue(|entity: EntityWorldMut| {

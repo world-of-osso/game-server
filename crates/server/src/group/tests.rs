@@ -388,6 +388,7 @@ fn online(names: &[&str]) -> OnlineView {
                     name: (*name).into(),
                     class: 1,
                     level: 10,
+                    dungeon_difficulty: crate::maps::store::DIFFICULTY_NORMAL,
                 },
             )
         })

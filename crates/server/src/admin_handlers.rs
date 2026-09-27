@@ -425,6 +425,7 @@ pub(crate) fn handle_damage(
     )>,
     name: &str,
     amount: f32,
+    explicit_target: Option<u64>,
 ) -> AdminResponse {
     let Some(char_id) = persistence::find_character_id_by_name(&db.db, name) else {
         return AdminResponse::Error(format!("character '{name}' not found"));
@@ -436,9 +437,11 @@ pub(crate) fn handle_damage(
         return AdminResponse::Error(format!("character '{name}' is not online"));
     };
     commands.queue(move |world: &mut World| {
-        let target = world
-            .get::<crate::networking::CombatTarget>(player)
-            .and_then(|target| target.0);
+        let target = explicit_target.and_then(Entity::try_from_bits).or_else(|| {
+            world
+                .get::<crate::networking::CombatTarget>(player)
+                .and_then(|target| target.0)
+        });
         match target {
             Some(target) => crate::combat::deal_direct_damage(world, player, target, amount),
             None => warn!(".damage: {player} has no target"),

@@ -8,8 +8,10 @@
 //! (`area_triggers`).
 
 mod area_triggers;
+pub(crate) mod difficulty;
 pub(crate) mod graveyard;
 pub(crate) mod instances;
+pub(crate) mod locks;
 mod login;
 pub(crate) mod persistence;
 pub(crate) mod store;
@@ -18,6 +20,7 @@ pub(crate) mod transfer;
 use bevy::prelude::*;
 use shared::components::{Player, Position};
 
+pub(crate) use difficulty::{DungeonDifficulty, ServerClock};
 pub(crate) use instances::{HOSTED_CONTINENTS, InstanceManager, NPC_APPEARANCE_MAPS};
 pub(crate) use login::LoginMaps;
 pub(crate) use store::MapStore;
@@ -73,15 +76,32 @@ pub struct MapPlugin;
 impl Plugin for MapPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<InstanceManager>()
+            .init_resource::<ServerClock>()
+            .init_resource::<difficulty::DifficultyChanges>()
             .add_observer(track_player_added_to_map)
             .add_observer(track_player_removed_from_map)
-            .add_systems(Update, transfer::receive_world_port_acks)
+            .add_systems(PostStartup, load_instance_locks)
+            .add_systems(
+                Update,
+                (
+                    transfer::receive_world_port_acks,
+                    difficulty::receive_set_dungeon_difficulty,
+                    difficulty::apply_difficulty_changes,
+                    difficulty::send_dungeon_difficulty,
+                    difficulty::send_world_server_info,
+                    difficulty::receive_request_raid_info,
+                    difficulty::receive_reset_instances,
+                    difficulty::receive_set_saved_instance_extend,
+                    save_instance_locks,
+                )
+                    .chain(),
+            )
             .add_systems(
                 FixedUpdate,
                 (
                     area_triggers::detect_area_trigger_teleports
                         .after(crate::networking::apply_terrain_gravity),
-                    unload_expired_instances,
+                    (difficulty::expire_instance_locks, unload_expired_instances).chain(),
                 ),
             );
     }
@@ -103,10 +123,44 @@ fn track_player_removed_from_map(
     trigger: On<Discard, InMap>,
     players: Query<&InMap, With<Player>>,
     time: Res<Time>,
+    clock: Option<Res<ServerClock>>,
     mut instances: ResMut<InstanceManager>,
 ) {
     if let Ok(&map) = players.get(trigger.entity) {
-        instances.remove_player(map, trigger.entity, time.elapsed_secs_f64());
+        let now = instances::Now {
+            elapsed: time.elapsed_secs_f64(),
+            unix: clock.map_or_else(|| ServerClock::default().unix(), |clock| clock.unix()),
+        };
+        instances.remove_player(map, trigger.entity, now);
+    }
+}
+
+/// `InstanceLockMgr::Load`: the saved locks, their instance ids reserved.
+fn load_instance_locks(
+    db: Option<Res<crate::persistence::GameDatabase>>,
+    mut instances: ResMut<InstanceManager>,
+) {
+    let Some(db) = db else {
+        return;
+    };
+    let saved = persistence::load_instance_locks(&db.db);
+    let count: usize = saved.locks.values().map(|locks| locks.len()).sum();
+    *instances = InstanceManager::with_locks(locks::InstanceLocks::from_saved(saved));
+    info!("Loaded {count} instance locks");
+}
+
+/// Lock changes are written as they happen (TrinityCore commits each in its
+/// transaction).
+fn save_instance_locks(
+    db: Option<Res<crate::persistence::GameDatabase>>,
+    mut instances: ResMut<InstanceManager>,
+) {
+    if !instances.locks_dirty {
+        return;
+    }
+    instances.locks_dirty = false;
+    if let Some(db) = db {
+        persistence::save_instance_locks(&db.db, &instances.locks.saved());
     }
 }
 

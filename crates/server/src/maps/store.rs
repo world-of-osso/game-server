@@ -64,18 +64,116 @@ impl MapEntry {
     }
 }
 
+/// `MapDifficulty.ResetInterval` (`MapDifficultyResetInterval`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ResetInterval {
+    /// `MAP_DIFFICULTY_RESET_ANYTIME`: no reset schedule, no instance lock.
+    Anytime,
+    Daily,
+    Weekly,
+}
+
+impl ResetInterval {
+    fn from_db2(value: u32) -> Self {
+        match value {
+            1 => Self::Daily,
+            2 => Self::Weekly,
+            _ => Self::Anytime,
+        }
+    }
+}
+
+/// `MapDifficultyFlags::UseLootBasedLockInsteadOfInstanceLock`: locks per encounter.
+const MAP_DIFFICULTY_FLAG_ENCOUNTER_LOCKS: u32 = 0x02;
+/// `MapDifficultyFlags::DisableLockExtension`.
+const MAP_DIFFICULTY_FLAG_DISABLE_LOCK_EXTENSION: u32 = 0x10;
+
 /// `MapDifficulty.db2` row.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct MapDifficulty {
+    pub map_id: u32,
     pub difficulty_id: u32,
-    /// `ResetInterval`: 0 means no reset schedule (a normal dungeon).
-    pub reset_interval: u32,
+    /// `LockID`: difficulties of a map sharing it share instance locks (`InstanceLockKey`).
+    pub lock_id: u32,
+    pub reset_interval: ResetInterval,
     pub max_players: u32,
+    pub flags: u32,
+}
+
+impl MapDifficulty {
+    /// `MapDifficultyEntry::HasResetSchedule`.
+    pub fn has_reset_schedule(&self) -> bool {
+        self.reset_interval != ResetInterval::Anytime
+    }
+
+    /// `MapDifficultyEntry::IsUsingEncounterLocks`.
+    pub fn is_using_encounter_locks(&self) -> bool {
+        self.flags & MAP_DIFFICULTY_FLAG_ENCOUNTER_LOCKS != 0
+    }
+
+    /// `MapDb2Entries::IsInstanceIdBound` (no map is flex-locking among the hosted ones:
+    /// `MapFlags::FlexibleRaidLocking` is a raid flag).
+    pub fn is_instance_id_bound(&self) -> bool {
+        !self.is_using_encounter_locks()
+    }
+
+    /// `MapDifficultyEntry::IsExtendable`.
+    pub fn is_extendable(&self) -> bool {
+        self.flags & MAP_DIFFICULTY_FLAG_DISABLE_LOCK_EXTENSION == 0
+    }
+
+    /// `MapDifficultyEntry::GetRaidDuration`, seconds.
+    pub fn raid_duration_secs(&self) -> i64 {
+        match self.reset_interval {
+            ResetInterval::Anytime => 0,
+            ResetInterval::Daily => 86_400,
+            ResetInterval::Weekly => 604_800,
+        }
+    }
+
+    /// `MapDb2Entries::GetKey`.
+    pub fn lock_key(&self) -> (u32, u32) {
+        (self.map_id, self.lock_id)
+    }
 }
 
 /// `DIFFICULTY_NORMAL`, the player's default dungeon difficulty
 /// (`Player::GetDungeonDifficultyID` of a new character).
 pub const DIFFICULTY_NORMAL: u32 = 1;
+
+/// `DifficultyFlags::DIFFICULTY_FLAG_DEFAULT`.
+const DIFFICULTY_FLAG_DEFAULT: u32 = 0x02;
+/// `DifficultyFlags::DIFFICULTY_FLAG_CAN_SELECT`: selectable in the difficulty menu.
+const DIFFICULTY_FLAG_CAN_SELECT: u32 = 0x04;
+
+/// `Difficulty.db2` row.
+#[derive(Debug, Clone, PartialEq)]
+pub struct DifficultyEntry {
+    pub id: u32,
+    pub name: String,
+    pub instance_type: InstanceType,
+    /// `FallbackDifficultyID`: the difficulty used where a map or template has none of
+    /// this one (Mythic → Heroic → Normal → None).
+    pub fallback: u32,
+    pub flags: u32,
+}
+
+impl DifficultyEntry {
+    pub fn can_select(&self) -> bool {
+        self.flags & DIFFICULTY_FLAG_CAN_SELECT != 0
+    }
+}
+
+/// `DungeonEncounter.db2` row.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct DungeonEncounter {
+    pub id: u32,
+    pub map_id: u32,
+    /// -1 or 0: every difficulty of the map.
+    pub difficulty_id: i32,
+    /// The lock's `CompletedEncountersMask` bit.
+    pub bit: u32,
+}
 
 /// `AreaTrigger.db2` ShapeType of the teleport triggers (sphere and box only).
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -140,7 +238,12 @@ impl AreaTriggerTeleport {
 #[derive(Resource, Debug, Default, Clone)]
 pub struct MapStore {
     pub maps: HashMap<u32, MapEntry>,
+    /// `MapDifficulty.db2` by map, in `ID` order.
     pub difficulties: HashMap<u32, Vec<MapDifficulty>>,
+    /// `Difficulty.db2` by ID.
+    pub difficulty_entries: HashMap<u32, DifficultyEntry>,
+    /// `DungeonEncounter.db2` by ID.
+    pub dungeon_encounters: HashMap<u32, DungeonEncounter>,
     pub area_triggers: HashMap<u32, Vec<AreaTriggerTeleport>>,
     pub safe_locs: HashMap<u32, WorldLocation>,
     /// `graveyard_zone`: ghost zone → WorldSafeLocs ids.
@@ -156,13 +259,67 @@ impl MapStore {
         self.maps.get(&map_id)
     }
 
-    /// The difficulty a dungeon is created at. Players and groups keep the default
-    /// `DIFFICULTY_NORMAL` until difficulty selection exists (docs/specs/instances.md).
-    pub fn dungeon_difficulty(&self, map_id: u32) -> Option<&MapDifficulty> {
+    /// `DB2Manager::GetMapDifficultyData`.
+    pub fn map_difficulty(&self, map_id: u32, difficulty_id: u32) -> Option<&MapDifficulty> {
         self.difficulties
             .get(&map_id)?
             .iter()
-            .find(|difficulty| difficulty.difficulty_id == DIFFICULTY_NORMAL)
+            .find(|difficulty| difficulty.difficulty_id == difficulty_id)
+    }
+
+    /// `DB2Manager::GetDownscaledMapDifficultyData` (DB2Stores.cpp:2778-2797): the map's
+    /// row for `difficulty_id`, else for its `FallbackDifficultyID` chain, else the map's
+    /// default difficulty (`DIFFICULTY_FLAG_DEFAULT`, else its first one).
+    pub fn downscaled_map_difficulty(
+        &self,
+        map_id: u32,
+        difficulty_id: u32,
+    ) -> Option<&MapDifficulty> {
+        let mut current = difficulty_id;
+        loop {
+            if let Some(found) = self.map_difficulty(map_id, current) {
+                return Some(found);
+            }
+            if current == 0 {
+                break;
+            }
+            current = self
+                .difficulty_entries
+                .get(&current)
+                .map_or(0, |entry| entry.fallback);
+        }
+        self.default_map_difficulty(map_id)
+    }
+
+    /// `DB2Manager::GetDefaultMapDifficulty` (DB2Stores.cpp:2734-2765).
+    fn default_map_difficulty(&self, map_id: u32) -> Option<&MapDifficulty> {
+        let rows = self.difficulties.get(&map_id)?;
+        let known = || {
+            rows.iter()
+                .filter(|row| self.difficulty_entries.contains_key(&row.difficulty_id))
+        };
+        known()
+            .find(|row| {
+                self.difficulty_entries[&row.difficulty_id].flags & DIFFICULTY_FLAG_DEFAULT != 0
+            })
+            .or_else(|| known().next())
+    }
+
+    /// `DungeonEncounter.db2` row `encounter_id` of `map_id` at `difficulty_id`
+    /// (`BossInfo::GetDungeonEncounterForDifficulty`: a row for every difficulty is -1/0).
+    pub fn dungeon_encounter(
+        &self,
+        encounter_id: u32,
+        map_id: u32,
+        difficulty_id: u32,
+    ) -> Option<&DungeonEncounter> {
+        self.dungeon_encounters
+            .get(&encounter_id)
+            .filter(|encounter| {
+                encounter.map_id == map_id
+                    && (encounter.difficulty_id <= 0
+                        || encounter.difficulty_id as u32 == difficulty_id)
+            })
     }
 
     pub fn area_triggers_on(&self, map_id: u32) -> &[AreaTriggerTeleport] {
@@ -230,6 +387,8 @@ pub fn load_map_store(conn: &Connection) -> rusqlite::Result<MapStore> {
     Ok(MapStore {
         maps: load_maps(conn)?,
         difficulties: load_difficulties(conn)?,
+        difficulty_entries: load_difficulty_entries(conn)?,
+        dungeon_encounters: load_dungeon_encounters(conn)?,
         area_triggers: load_area_triggers(conn, &safe_locs)?,
         graveyard_zones: load_graveyard_zones(conn)?,
         instance_parents: load_instance_parents(conn)?,
@@ -276,24 +435,75 @@ fn map_from_row(row: &Row) -> rusqlite::Result<Option<MapEntry>> {
 
 fn load_difficulties(conn: &Connection) -> rusqlite::Result<HashMap<u32, Vec<MapDifficulty>>> {
     let mut statement = conn.prepare(
-        "SELECT MapID, DifficultyID, ResetInterval, MaxPlayers FROM map_difficulty ORDER BY ID",
+        "SELECT MapID, DifficultyID, LockID, ResetInterval, MaxPlayers, Flags
+         FROM map_difficulty ORDER BY ID",
     )?;
     let mut difficulties: HashMap<u32, Vec<MapDifficulty>> = HashMap::new();
     let rows = statement.query_map([], |row| {
-        Ok((
-            row.get::<_, u32>(0)?,
-            MapDifficulty {
-                difficulty_id: row.get(1)?,
-                reset_interval: row.get(2)?,
-                max_players: row.get(3)?,
-            },
-        ))
+        Ok(MapDifficulty {
+            map_id: row.get(0)?,
+            difficulty_id: row.get(1)?,
+            lock_id: row.get(2)?,
+            reset_interval: ResetInterval::from_db2(row.get(3)?),
+            max_players: row.get(4)?,
+            flags: row.get(5)?,
+        })
     })?;
     for row in rows {
-        let (map_id, difficulty) = row?;
-        difficulties.entry(map_id).or_default().push(difficulty);
+        let difficulty = row?;
+        difficulties
+            .entry(difficulty.map_id)
+            .or_default()
+            .push(difficulty);
     }
     Ok(difficulties)
+}
+
+fn load_difficulty_entries(conn: &Connection) -> rusqlite::Result<HashMap<u32, DifficultyEntry>> {
+    let mut statement = conn.prepare(
+        "SELECT ID, Name_lang, InstanceType, FallbackDifficultyID, Flags FROM difficulty",
+    )?;
+    let rows = statement.query_map([], |row| {
+        let id: u32 = row.get(0)?;
+        let name: String = row.get(1)?;
+        let instance_type: u32 = row.get(2)?;
+        let fallback: u32 = row.get(3)?;
+        let flags: u32 = row.get(4)?;
+        Ok(InstanceType::from_db2(instance_type).map(|instance_type| {
+            (
+                id,
+                DifficultyEntry {
+                    id,
+                    name,
+                    instance_type,
+                    fallback,
+                    flags,
+                },
+            )
+        }))
+    })?;
+    let mut entries = HashMap::new();
+    for row in rows {
+        if let Some((id, entry)) = row? {
+            entries.insert(id, entry);
+        }
+    }
+    Ok(entries)
+}
+
+fn load_dungeon_encounters(conn: &Connection) -> rusqlite::Result<HashMap<u32, DungeonEncounter>> {
+    let mut statement =
+        conn.prepare("SELECT ID, MapID, DifficultyID, Bit FROM dungeon_encounter")?;
+    let rows = statement.query_map([], |row| {
+        Ok(DungeonEncounter {
+            id: row.get(0)?,
+            map_id: row.get(1)?,
+            difficulty_id: row.get(2)?,
+            bit: row.get(3)?,
+        })
+    })?;
+    rows.map(|row| row.map(|encounter| (encounter.id, encounter)))
+        .collect()
 }
 
 /// `ObjectMgr::LoadWorldSafeLocs`: `Facing` is stored in degrees.
