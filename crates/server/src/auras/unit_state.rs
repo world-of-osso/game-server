@@ -1,7 +1,7 @@
 //! Unit state an aura set implies, reconciled on every aura change:
 //! - MOD_INVISIBILITY 18 (`HandleModInvisibility`): no player detects the invisible
-//!   unit (there are no invisibility detection auras), so it leaves every client
-//!   (`UpdateObjectVisibility`) and is no valid target (`CanSeeOrDetect` in
+//!   unit (there are no invisibility detection auras), so interest hides it from
+//!   every client (`UpdateObjectVisibility`) and it is no valid target (`CanSeeOrDetect` in
 //!   `IsValidAttackTarget`/`IsValidAssistTarget`, `spell_cast::targets`); the last
 //!   aura's removal shows it again.
 //! - MOD_UNATTACKABLE 93 (`HandleModUnattackable`): `UNIT_FLAG_NON_ATTACKABLE_2`
@@ -14,14 +14,14 @@ use shared::components::UnitFlags;
 
 use super::ActiveAuras;
 use super::handlers::{MOD_INVISIBILITY, MOD_UNATTACKABLE};
-use crate::interest::NetworkVisibility;
 
-/// Under a MOD_INVISIBILITY aura. `shown` records whether the unit was replicated
-/// to clients, so the aura's end shows it again.
+/// Under a MOD_INVISIBILITY aura (hidden in `interest`).
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
-pub struct Invisible {
-    shown: bool,
-}
+pub struct Invisible;
+
+/// Under a MOD_UNATTACKABLE aura: the aura set `NON_ATTACKABLE_2`.
+#[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
+struct Unattackable;
 
 fn has_type(auras: &ActiveAuras, aura_type: u32) -> bool {
     auras
@@ -36,41 +36,30 @@ pub(super) fn reconcile(world: &mut World, unit: Entity) {
     };
     let invisible = has_type(auras, MOD_INVISIBILITY);
     let unattackable = has_type(auras, MOD_UNATTACKABLE);
-    reconcile_invisibility(world, unit, invisible);
-    reconcile_unattackable(world, unit, unattackable);
-}
-
-fn reconcile_invisibility(world: &mut World, unit: Entity, invisible: bool) {
-    let current = world.get::<Invisible>(unit).copied();
-    match (invisible, current) {
-        (true, None) => {
-            let shown = world.get::<NetworkVisibility>(unit).is_some();
-            world
-                .entity_mut(unit)
-                .insert(Invisible { shown })
-                .remove::<NetworkVisibility>();
+    if invisible != world.get::<Invisible>(unit).is_some() {
+        if invisible {
+            world.entity_mut(unit).insert(Invisible);
+        } else {
+            world.entity_mut(unit).remove::<Invisible>();
         }
-        (false, Some(Invisible { shown })) => {
-            let mut entity = world.entity_mut(unit);
-            entity.remove::<Invisible>();
-            if shown {
-                entity.insert(NetworkVisibility::default());
-            }
-        }
-        _ => {}
+        crate::interest::set_hidden(world, unit, invisible);
+    }
+    if unattackable != world.get::<Unattackable>(unit).is_some() {
+        reconcile_unattackable(world, unit, unattackable);
     }
 }
 
+/// The first MOD_UNATTACKABLE aura sets the flag, the last one's removal clears it.
 fn reconcile_unattackable(world: &mut World, unit: Entity, unattackable: bool) {
-    let Some(flags) = world.get::<UnitFlags>(unit).copied() else {
-        return;
-    };
-    if flags.is_attackable() != unattackable {
-        return;
-    }
+    let flags = world
+        .get::<UnitFlags>(unit)
+        .copied()
+        .unwrap_or(UnitFlags(0));
     let next = if unattackable {
+        world.entity_mut(unit).insert(Unattackable);
         flags.0 | UnitFlags::NON_ATTACKABLE_2
     } else {
+        world.entity_mut(unit).remove::<Unattackable>();
         flags.0 & !UnitFlags::NON_ATTACKABLE_2
     };
     world.entity_mut(unit).insert(UnitFlags(next));
