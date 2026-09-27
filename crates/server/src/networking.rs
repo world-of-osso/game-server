@@ -466,49 +466,50 @@ pub(crate) struct PlayerInputParams<'w, 's> {
     auto_afk: ResMut<'w, crate::friends::AutoAfkScheduler>,
     dirty_queue: Option<Res<'w, InterestDirtyQueue>>,
     replication_dirty: Option<Res<'w, ReplicationDirtyQueue>>,
+    clocks: Local<'s, MovementClocks>,
 }
 
-/// Read PlayerInput messages and apply movement.
+/// Read PlayerInput messages and apply each one for the time it covers, within the
+/// player's movement bank.
 pub(crate) fn process_player_inputs(time: Res<Time>, mut params: PlayerInputParams) {
+    params.clocks.advance(time.delta_secs());
     for (mut receiver, link) in &mut params.receivers {
-        let mut latest = None;
-        let mut jumping = false;
-        let mut swimming_seen = false;
-        for input in receiver.receive() {
-            jumping |= input.jumping;
-            swimming_seen |= input.swimming;
-            latest = Some(input);
-        }
+        let inputs: Vec<PlayerInput> = receiver.receive().collect();
+        let Some(latest) = inputs.last() else {
+            continue;
+        };
         // The server drives a controlled player (taxi flight); its input is dropped.
         let controlled = params
             .controls
             .get(link.0)
             .is_ok_and(|control| control.controlled);
-        if let Some(mut input) = latest.filter(|_| !controlled && params.on_map.contains(link.0)) {
-            input.jumping = jumping;
-            crate::friends::mark_player_activity(
-                link.0,
-                &mut params.presence,
-                &mut params.auto_afk,
-                time.elapsed(),
-                params.replication_dirty.as_deref(),
-            );
-            if swimming_seen && params.mounted.contains(link.0) {
-                params.commands.entity(link.0).remove::<Mounted>();
-            }
-            let changes = apply_movement_input(&input, link.0, &mut params.players, &time);
-            params
-                .commands
-                .entity(link.0)
-                .insert(Moving(direction_length(&input.direction) >= 0.001));
-            if changes.position_changed {
-                mark_interest_position_changed(params.dirty_queue.as_deref(), link.0);
-            }
-            if changes.replicated_state_changed
-                && let Some(replication_dirty) = params.replication_dirty.as_deref()
-            {
-                replication_dirty.mark(link.0);
-            }
+        if controlled || !params.on_map.contains(link.0) {
+            continue;
+        }
+        let moving = direction_length(&latest.direction) >= 0.001;
+        crate::friends::mark_player_activity(
+            link.0,
+            &mut params.presence,
+            &mut params.auto_afk,
+            time.elapsed(),
+            params.replication_dirty.as_deref(),
+        );
+        if inputs.iter().any(|input| input.swimming) && params.mounted.contains(link.0) {
+            params.commands.entity(link.0).remove::<Mounted>();
+        }
+        let mut changes = MovementChanges::default();
+        for mut input in inputs {
+            input.elapsed_secs = params.clocks.grant(link.0, input.elapsed_secs);
+            changes = changes.merge(apply_movement_input(&input, link.0, &mut params.players));
+        }
+        params.commands.entity(link.0).insert(Moving(moving));
+        if changes.position_changed {
+            mark_interest_position_changed(params.dirty_queue.as_deref(), link.0);
+        }
+        if changes.replicated_state_changed
+            && let Some(replication_dirty) = params.replication_dirty.as_deref()
+        {
+            replication_dirty.mark(link.0);
         }
     }
 }

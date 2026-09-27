@@ -47,6 +47,9 @@ fn set_aura_speed(world: &mut World, player: Entity, movement_speed: f32) {
     });
 }
 
+/// One 20 fps client frame.
+const TEST_STEP_SECS: f32 = 0.05;
+
 fn make_input(dx: f32, dy: f32, dz: f32) -> PlayerInput {
     let facing_yaw = if dx.abs() > f32::EPSILON || dz.abs() > f32::EPSILON {
         dx.atan2(dz)
@@ -59,6 +62,7 @@ fn make_input(dx: f32, dy: f32, dz: f32) -> PlayerInput {
         jumping: false,
         running: true,
         swimming: false,
+        elapsed_secs: TEST_STEP_SECS,
     }
 }
 

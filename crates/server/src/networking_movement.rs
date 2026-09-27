@@ -1,3 +1,4 @@
+use bevy::platform::collections::HashMap;
 use bevy::prelude::*;
 use shared::components::{MovementSpeed, Player, Position, Rotation, VerticalVelocity};
 use shared::protocol::PlayerInput;
@@ -23,12 +24,49 @@ pub(super) struct MovementChanges {
     pub(super) replicated_state_changed: bool,
 }
 
-/// Apply a single movement input to the specified player entity.
+/// Longest movement step one input may apply (a client frame of 4 fps).
+pub(super) const MAX_INPUT_STEP_SECS: f32 = 0.25;
+/// Movement time a player may bank ahead of server time, absorbing network jitter.
+pub(super) const MOVEMENT_BANK_SECS: f32 = 0.5;
+
+/// Seconds of movement each player may still apply. Banks refill at server time up to
+/// `MOVEMENT_BANK_SECS`, so however many inputs arrive, a player moves no faster than
+/// real time allows. A player without an entry has a full bank.
+#[derive(Default)]
+pub(crate) struct MovementClocks(HashMap<Entity, f32>);
+
+impl MovementClocks {
+    pub(super) fn advance(&mut self, delta_secs: f32) {
+        self.0.retain(|_, bank| {
+            *bank += delta_secs;
+            *bank < MOVEMENT_BANK_SECS
+        });
+    }
+
+    /// The step an input asking for `requested_secs` may apply, taken from the bank.
+    pub(super) fn grant(&mut self, player: Entity, requested_secs: f32) -> f32 {
+        let bank = self.0.entry(player).or_insert(MOVEMENT_BANK_SECS);
+        let step = requested_secs.max(0.0).min(MAX_INPUT_STEP_SECS).min(*bank);
+        *bank -= step;
+        step
+    }
+}
+
+impl MovementChanges {
+    pub(super) fn merge(self, other: Self) -> Self {
+        Self {
+            position_changed: self.position_changed || other.position_changed,
+            replicated_state_changed: self.replicated_state_changed
+                || other.replicated_state_changed,
+        }
+    }
+}
+
+/// Apply one movement input for `input.elapsed_secs` to the specified player entity.
 pub(super) fn apply_movement_input(
     input: &PlayerInput,
     player_entity: Entity,
     players: &mut Query<PlayerMovement, With<Player>>,
-    time: &Time,
 ) -> MovementChanges {
     let Ok((mut position, mut rotation, mut speed, mut vertical_velocity, auras, cast_state)) =
         players.get_mut(player_entity)
@@ -48,7 +86,7 @@ pub(super) fn apply_movement_input(
         &mut position,
         speed.0,
         direction_length,
-        time.delta_secs(),
+        input.elapsed_secs,
     ) {
         changes.position_changed = true;
         changes.replicated_state_changed = true;
@@ -110,9 +148,6 @@ fn apply_input_translation(
         return false;
     }
     let scale = speed * delta_seconds / direction_length;
-    if !validate_move_distance(scale * direction_length, speed, delta_seconds) {
-        return false;
-    }
     let next_position = Position {
         x: position.x + input.direction[0] * scale,
         y: position.y + input.direction[1] * scale,
@@ -166,12 +201,6 @@ fn facing_alignment(facing_yaw: f32, direction: &[f32; 3], direction_length: f32
     let forward_x = facing_yaw.sin();
     let forward_z = facing_yaw.cos();
     (direction[0] * forward_x + direction[2] * forward_z) / direction_length
-}
-
-/// Reject movement if distance exceeds max speed with tolerance.
-pub(super) fn validate_move_distance(distance: f32, max_speed: f32, delta_seconds: f32) -> bool {
-    let max_distance = max_speed * delta_seconds * 1.5;
-    distance <= max_distance
 }
 
 pub(super) fn direction_length(direction: &[f32; 3]) -> f32 {
