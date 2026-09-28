@@ -16,6 +16,7 @@ Dungeons phases 1 and 4: several maps in one world, far teleports between them, 
 - [x] Same map: the player moves at once (`MovementControl` epoch).
 - [x] Other map: `Map::PlayerCannotEnter` (Map.cpp:1807-1852) is checked first; a refusal sends `TransferAborted` and the player stays. Otherwise its selection and combat stop, its cast is cancelled, its taxi flight ends, it leaves its map (no `InMap`, `MapTransfer`) and gets `NewWorld { map_id, map_directory, position, facing }`.
 - [x] `WorldPortAck` (`HandleMoveWorldportAck`, MovementHandler.cpp:189-384) adds the player to the copy `MapManager::CreateMap` gives it, after that copy's `CannotEnter`; a refused arrival sends `TransferAborted` and returns the player where it left from (TrinityCore uses the homebind, which the server has no data for). `TELE_REVIVE_AT_TELEPORT` resurrects on arrival, and so does entering the dungeon that holds the player's corpse.
+- [x] The arrival raises the player's replicated `WorldArrival` count in the frame the interest update makes the destination's objects visible, so it reaches the client in their replication tick and never before them; the client ends its loading screen on it.
 - [x] A player in a transfer does not move, fall or fight.
 
 ### Dungeon copies (`MapManager::CreateMap` MapManager.cpp:154-235, `FindInstanceIdForPlayer` :278-319)

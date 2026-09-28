@@ -253,6 +253,10 @@ impl InterestIndex {
 
 pub struct InterestPlugin;
 
+/// The fixed-tick update of which entities each player sees.
+#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
+pub(crate) struct InterestUpdate;
+
 impl Plugin for InterestPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<InterestDirtyQueue>()
@@ -262,7 +266,7 @@ impl Plugin for InterestPlugin {
             .add_observer(on_network_visibility_removed)
             .add_observer(on_player_link_added)
             .add_observer(on_player_link_removed)
-            .add_systems(FixedUpdate, update_interest)
+            .add_systems(FixedUpdate, update_interest.in_set(InterestUpdate))
             .add_systems(
                 PostUpdate,
                 forward_position_changes_to_replication.before(ReplicationSystems::Send),
