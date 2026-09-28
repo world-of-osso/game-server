@@ -53,6 +53,7 @@ mod meeting_stone;
 mod melee;
 mod merchant;
 mod messaging;
+mod mirror_timers;
 mod networking;
 mod npc_interaction;
 mod persistence;
@@ -166,6 +167,7 @@ fn add_world_plugins(app: &mut App) {
         .add_plugins(networking::ServerNetworkPlugin)
         .add_plugins(world_data::WorldDataPlugin)
         .add_plugins(ground::GroundPlugin)
+        .add_plugins(mirror_timers::MirrorTimerPlugin)
         .add_plugins(maps::MapPlugin)
         .add_plugins(zones::ZonePlugin)
         .add_plugins(creature_ai::CreatureAiPlugin)

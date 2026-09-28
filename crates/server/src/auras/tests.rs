@@ -429,6 +429,23 @@ fn movement_speed_takes_strongest_increase_and_slow_and_roots_stop() {
     assert_eq!(speed(&h), 0.0);
 }
 
+/// Unending Breath 5697: WATER_BREATHING 82 (spell_effect), so `getMaxTimer(BREATH_TIMER)`
+/// disables the breath timer.
+const UNENDING_BREATH: u32 = 5697;
+
+#[test]
+fn water_breathing_aura_marks_the_target_water_breathing() {
+    let Some(mut h) = harness(Vec::new(), &[UNENDING_BREATH], 16) else {
+        return;
+    };
+    let mods = |h: &Harness| h.app.world().get::<AuraStatMods>(h.caster).cloned();
+    assert!(!mods(&h).unwrap_or_default().water_breathing);
+    apply(&mut h.app, h.caster, h.caster, UNENDING_BREATH);
+    let mods = mods(&h).unwrap();
+    assert!(mods.water_breathing);
+    assert_eq!(mods.water_breathing_mult, 1.0);
+}
+
 #[test]
 fn stored_spells_carry_labels() {
     let Some(data) = world_db() else {

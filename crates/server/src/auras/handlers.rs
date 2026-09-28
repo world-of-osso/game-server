@@ -50,6 +50,7 @@ pub const MOD_PACIFY_SILENCE: u32 = 60;
 pub const MOD_CASTING_SPEED_NOT_STACK: u32 = 65;
 pub const SCHOOL_ABSORB: u32 = 69;
 pub const MOD_DAMAGE_PERCENT_DONE: u32 = 79;
+pub const WATER_BREATHING: u32 = 82;
 pub const MOD_DAMAGE_PERCENT_TAKEN: u32 = 87;
 pub const PERIODIC_DAMAGE_PERCENT: u32 = 89;
 pub const MOD_UNATTACKABLE: u32 = 93;
@@ -60,6 +61,7 @@ pub const MOD_HEALING_PCT: u32 = 118;
 pub const MOD_SPEED_ALWAYS: u32 = 129;
 pub const MOD_INCREASE_HEALTH_PERCENT: u32 = 133;
 pub const MOD_HEALING_DONE_PERCENT: u32 = 136;
+pub const MOD_WATER_BREATHING: u32 = 155;
 pub const MOD_TOTAL_STAT_PERCENTAGE: u32 = 137;
 pub const MOD_MELEE_HASTE: u32 = 138;
 pub const MOD_RANGED_HASTE: u32 = 140;
@@ -122,7 +124,9 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | MOD_RAGE_FROM_DAMAGE_DEALT
         | MOD_MANA_REGEN_PCT
         | MOD_HIT_CHANCE
-        | MOD_SPEED_SLOW_ALL => StatMod,
+        | MOD_SPEED_SLOW_ALL
+        | WATER_BREATHING
+        | MOD_WATER_BREATHING => StatMod,
         MOD_INVISIBILITY | MOD_UNATTACKABLE => UnitState,
         ADD_FLAT_MODIFIER
         | ADD_PCT_MODIFIER

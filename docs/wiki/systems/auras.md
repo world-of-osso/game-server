@@ -223,6 +223,7 @@ Every aura change recomputes two components, each written only when its value ch
 | `rage_from_damage_dealt_pct` | 213 | rage per melee swing dealt (summed percent) |
 | `power_regen_mult` | 110 (by power), 379 (mana) | regen |
 | `movement_speed` | 31, 129, 33, 26, 455, 12 | movement |
+| `water_breathing` / `water_breathing_mult` | WATER_BREATHING 82 / MOD_WATER_BREATHING 155 | breath timer ([[swimming-and-breath]]) |
 
 Aura amounts add SP/AP coefficients only for PERIODIC_DAMAGE 3, PERIODIC_HEAL 8 and SCHOOL_ABSORB 69; every other type uses its base points (Bloodlust 2825 is +30% haste regardless of spell power).
 
@@ -246,7 +247,7 @@ Aura amounts add SP/AP coefficients only for PERIODIC_DAMAGE 3, PERIODIC_HEAL 8 
 
 ## Coverage
 
-- Handled aura IDs (`handlers::kind`): 3, 4, 8, 12, 20, 23, 24, 25, 26, 27, 29, 31, 33, 39, 42, 60, 65, 69, 79, 87, 89, 107, 108, 110, 118, 129, 133, 136, 137, 138, 140, 192, 193, 213, 216, 218, 219, 226, 231, 271, 283, 290, 318, 342, 344, 379, 411, 453, 454, 455.
+- Handled aura IDs (`handlers::kind`): 3, 4, 8, 12, 20, 23, 24, 25, 26, 27, 29, 31, 33, 39, 42, 60, 65, 69, 79, 82, 87, 89, 107, 108, 110, 118, 129, 133, 136, 137, 138, 140, 155, 192, 193, 213, 216, 218, 219, 226, 231, 271, 283, 290, 318, 342, 344, 379, 411, 453, 454, 455.
 - Of the 95% cut (77 IDs, 6576 instances in [spell coverage](../../spell-coverage.md)), 36 IDs covering 5693 instances (87%) are handled. DUMMY 4 counts as handled, but through the empty script registry.
 - Unhandled cut IDs, all tracked and replicated:
   - no pet or summon system: 429, 382;

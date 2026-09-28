@@ -203,6 +203,25 @@ fn selected_player_replicates_its_persisted_level_as_unit_level() {
     );
 }
 
+/// The drowning system runs for players with `MirrorTimers`; a player enters the world
+/// with every timer off.
+#[test]
+fn selected_player_enters_the_world_with_mirror_timers_off() {
+    let db = test_db();
+    let account_id = 10;
+    let (character_id, _) = persistence::create_character(&db.db, account_id, "Diver", 1, 1)
+        .expect("character should be created");
+
+    let (app, player) = select_character_in_world(db, account_id, character_id);
+
+    assert_eq!(
+        app.world()
+            .entity(player)
+            .get::<crate::mirror_timers::MirrorTimers>(),
+        Some(&crate::mirror_timers::MirrorTimers::default())
+    );
+}
+
 #[test]
 fn selecting_zero_health_character_queues_one_death_transition() {
     let db = test_db();

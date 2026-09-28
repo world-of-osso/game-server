@@ -560,9 +560,10 @@ fn insert_player_spawn_components(
     init: PlayerInitState,
 ) -> crate::collection::PlayerCollectionState {
     let (_, by, _) = crate::terrain_height::wow_to_bevy(data.x, data.y, data.z);
-    commands
-        .entity(entity)
-        .insert(crate::networking::FallTracker::grounded(by));
+    commands.entity(entity).insert((
+        crate::networking::FallTracker::grounded(by),
+        crate::mirror_timers::MirrorTimers::default(),
+    ));
     crate::durability::insert_equipped_durability(commands, entity, data);
     insert_player_init_state(commands, entity, init)
 }

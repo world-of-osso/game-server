@@ -332,3 +332,7 @@ Created `systems/quests.md` (quest data, rules, runtime) and `specs/quests.md`; 
 ## [2026-09-28] update | Dungeon level conditions
 
 [[zone-architecture]]: `MapStore.difficulty_conditions` (MapDifficultyXCondition → PlayerCondition → `content_tuning_level`); `player_cannot_enter` refuses a player below a dungeon's ContentTuning minimum with `TransferAbortReason::Condition` (Stockade: level 10). Spec [instances](../specs/instances.md) (Level conditions).
+
+## [2026-09-28] create | Swimming and breath
+
+[[swimming-and-breath]]: the server reads MH2O terrain liquid and adopts the client's height ([player height](../specs/player-height.md)): swimmers within `SWIM_SPEED` × the bank between the seabed and `swim_top`, land heights between the ground and a jump/fall arc ceiling, no gravity on input ticks or for swimmers. TrinityCore mirror timers: breath (180 s, refill ×10), fatigue on MH2O deep water (60 s), drowning/exhaustion 20% every second, water breathing auras 82/155, stop on death ([breath and drowning](../specs/breath-and-drowning.md)). [[networking]] and [[auras]] updated.
