@@ -349,12 +349,14 @@ pub(crate) fn add_threat(world: &mut World, creature: Entity, attacker: Entity, 
     }
     let engages = world.get::<CreatureState>(creature) == Some(&CreatureState::Idle);
     if engages {
-        world.entity_mut(creature).insert((
+        let mut entity = world.entity_mut(creature);
+        entity.insert((
             CreatureState::Pursuing {
                 target: attacker.to_bits(),
             },
             CombatTarget(Some(attacker)),
         ));
+        stand_up_for_combat(&mut entity);
     }
     crate::combat::enter_combat(world, creature);
     crate::combat::enter_combat(world, attacker);
@@ -365,6 +367,24 @@ pub(crate) fn add_threat(world: &mut World, creature: Entity, attacker: Entity, 
             creature,
             crate::scripted_ai::Hook::JustEngagedWith(attacker),
         );
+    }
+}
+
+/// `Unit::Attack`: "Remove emote and stand state - will be restored on creature reset"
+/// (`SetEmoteState(EMOTE_ONESHOT_NONE)`, `SetStandState(UNIT_STAND_STATE_STAND)`).
+fn stand_up_for_combat(entity: &mut EntityWorldMut) {
+    if let Some(mut pose) = entity.get_mut::<shared::components::UnitPose>() {
+        let standing = shared::components::UnitPose {
+            stand_state: shared::components::StandState::Stand,
+            emote_state: 0,
+            ..*pose
+        };
+        if pose.set_if_neq(standing) {
+            let creature = entity.id();
+            if let Some(queue) = entity.world().get_resource::<ReplicationDirtyQueue>() {
+                queue.mark(creature);
+            }
+        }
     }
 }
 

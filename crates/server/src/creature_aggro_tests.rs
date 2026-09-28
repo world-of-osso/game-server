@@ -385,6 +385,49 @@ fn killing_the_only_target_makes_the_creature_evade_home_at_full_health() {
     assert_eq!(*app.world().get::<Position>(spider).unwrap(), at(0.0, 0.0));
 }
 
+/// `Unit::Attack`: an engaging creature drops its stand and emote state ("restored on
+/// creature reset"); `HomeMovementGenerator::DoFinalize` → `LoadCreaturesAddon` restores
+/// them at home. Petty Criminal 46382 (template StandState 3) and Stockade Guard 375782
+/// (emote 333), both SheathState 1.
+#[test]
+fn engaging_creature_stands_up_and_resumes_its_addon_pose_at_home() {
+    use shared::components::{SheathState, StandState, UnitPose};
+    let mut app = aggro_app();
+    let mut poses = Vec::new();
+    for (x, stand_state, emote_state) in
+        [(0.0, StandState::Sleep, 0), (3.0, StandState::Stand, 333)]
+    {
+        let creature = spawn_creature(&mut app, &FOREST_SPIDER, at(x, 0.0));
+        let pose = UnitPose {
+            stand_state,
+            sheath_state: SheathState::Melee,
+            emote_state,
+        };
+        app.world_mut()
+            .entity_mut(creature)
+            .insert((pose, crate::zones::SpawnPose(pose)));
+        poses.push((creature, pose));
+    }
+    let player = spawn_player(&mut app, at(10.0, 0.0), 5);
+    run(&mut app, 1);
+    let standing = UnitPose {
+        stand_state: StandState::Stand,
+        sheath_state: SheathState::Melee,
+        emote_state: 0,
+    };
+    for &(creature, _) in &poses {
+        add_threat(app.world_mut(), creature, player, 30.0);
+        assert_eq!(app.world().get::<UnitPose>(creature), Some(&standing));
+    }
+
+    app.world_mut().get_mut::<Health>(player).unwrap().current = 0.0;
+    run(&mut app, 60);
+    for (creature, pose) in poses {
+        assert_eq!(state(&app, creature), Some(CreatureState::Idle));
+        assert_eq!(app.world().get::<UnitPose>(creature), Some(&pose));
+    }
+}
+
 #[test]
 fn leashed_creature_evades_and_its_attackers_stop_swinging() {
     let mut app = aggro_app();

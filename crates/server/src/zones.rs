@@ -187,7 +187,8 @@ pub(crate) fn spawn_creature(
             ));
         }
         let addon = world_data.addon_for(spawn);
-        entity.insert(unit_pose(addon));
+        let pose = unit_pose(addon);
+        entity.insert((pose, SpawnPose(pose)));
         if let Some(equipment) = creature_equipment(world_data, spawn, rng) {
             entity.insert(equipment);
         }
@@ -377,6 +378,11 @@ fn insert_addon_components(entity: &mut EntityCommands, addon: &CreatureAddon) {
 /// home from an evade (`HomeMovementGenerator::DoFinalize` → `LoadCreaturesAddon`).
 #[derive(Component, Debug, Clone)]
 pub(crate) struct SpawnAddonAuras(pub Vec<u32>);
+
+/// The pose a creature's addon gives it at spawn, restored when it reaches home after an
+/// evade (`HomeMovementGenerator::DoFinalize` → `Creature::LoadCreaturesAddon`).
+#[derive(Component, Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) struct SpawnPose(pub UnitPose);
 
 /// Link spawned followers to their spawned leader (FormationMgr::AddCreatureToGroup).
 fn insert_formation_members(
