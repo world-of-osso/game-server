@@ -1,5 +1,9 @@
 # Wiki Log
 
+## [2026-09-28] systems | Client-reported player position
+
+Updated [[networking]] and [[tick-model]]: `PlayerInput` carries the client's position and teleport epoch; the server adopts it within speed × movement bank (TrinityCore `HandleMovementOpcode`) instead of re-simulating from the direction, which drifted the server's player from the Godot client's and let mobs hit players from a distance.
+
 ## [2026-09-27] systems | Boss scripts
 
 Created [[boss-scripts]]: TrinityCore CreatureAI/BossAI/InstanceScript/CreatureTextMgr port and the Stockade scripts (Hogger, Lord Overheat, Randolph Moloch, Warden Thelwater, Mortimer Moloch). Found that hiding an entity by removing `NetworkVisibility` leaks it to later clients.
