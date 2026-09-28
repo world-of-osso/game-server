@@ -196,18 +196,17 @@ fn inputs_apply_in_order_and_the_latest_facing_and_walk_state_remain() {
     );
 }
 
+/// The client's physics owns a jump: the reported height is adopted
+/// (networking_tests/client_height.rs) and the server starts no jump arc of its own.
 #[test]
-fn an_early_jump_survives_a_later_stopped_input() {
+fn a_jumping_input_starts_no_server_jump_arc() {
     let (mut app, player, connection) = receiver_app();
     let mut jump = make_input(0.0, 0.0, 1.0);
     jump.jumping = true;
     let stopped = reporting(jump.position, make_input(0.0, 0.0, 0.0));
     deliver_and_tick(&mut app, connection, vec![jump, stopped]);
     assert_position(&app, player, [0.0, 0.0, RUN_STEP]);
-    assert_eq!(
-        app.world().get::<VerticalVelocity>(player).unwrap().0,
-        shared::movement::JUMP_IMPULSE
-    );
+    assert_eq!(app.world().get::<VerticalVelocity>(player).unwrap().0, 0.0);
 }
 
 #[test]

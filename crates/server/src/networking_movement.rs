@@ -1,9 +1,11 @@
 use bevy::platform::collections::HashMap;
 use bevy::prelude::*;
-use shared::components::{MovementSpeed, Player, Position, Rotation, VerticalVelocity};
+use shared::components::{MovementSpeed, Player, Position, Rotation};
 use shared::protocol::PlayerInput;
 
+use super::FallTracker;
 use crate::auras::AuraStatMods;
+use crate::ground::{GroundMap, GroundProbe};
 
 pub(super) const DEFAULT_RUN_SPEED: f32 = 7.0;
 pub(super) const DEFAULT_WALK_SPEED: f32 = 2.5;
@@ -13,9 +15,9 @@ pub(super) type PlayerMovement = (
     &'static mut Position,
     &'static mut Rotation,
     &'static mut MovementSpeed,
-    &'static mut VerticalVelocity,
     Option<&'static AuraStatMods>,
     Option<&'static shared::casting::CastState>,
+    &'static mut FallTracker,
 );
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
@@ -64,17 +66,18 @@ impl MovementChanges {
     }
 }
 
-/// Apply one movement input to the specified player entity: move it across the ground to
-/// the position the client reports (`HandleMovementOpcode` → `UpdatePosition(pos)`), as far
-/// as its speed covers in the movement time its bank grants. Height stays the server's
-/// (gravity and the ground clamp).
+/// Apply one movement input to the specified player entity: move it to the position the
+/// client reports (`HandleMovementOpcode` → `UpdatePosition(pos)`), as far as its speed
+/// covers in the movement time its bank grants, at a height `terrain` allows
+/// (docs/specs/player-height.md). Without `terrain` the height stays the server's.
 pub(super) fn apply_movement_input(
     input: &PlayerInput,
     player_entity: Entity,
     players: &mut Query<PlayerMovement, With<Player>>,
     clocks: &mut MovementClocks,
+    mut terrain: Option<(&mut GroundMap, u32)>,
 ) -> MovementChanges {
-    let Ok((mut position, mut rotation, mut speed, mut vertical_velocity, auras, cast_state)) =
+    let Ok((mut position, mut rotation, mut speed, auras, cast_state, mut fall_tracker)) =
         players.get_mut(player_entity)
     else {
         return MovementChanges::default();
@@ -82,38 +85,175 @@ pub(super) fn apply_movement_input(
     if let Some(changes) = stop_for_blocking_cast(cast_state, &mut speed) {
         return changes;
     }
-    if input.jumping && vertical_velocity.0 == 0.0 {
-        vertical_velocity.0 = shared::movement::JUMP_IMPULSE;
-    }
     let mut changes = update_rotation_and_speed(input, auras, &mut rotation, &mut speed);
-    let target = Vec2::new(input.position[0], input.position[2]);
-    let current = Vec2::new(position.x, position.z);
-    let next = move_toward_reported(current, target, speed.0, |secs| {
+    let current = Vec3::new(position.x, position.y, position.z);
+    let reported = Vec3::from(input.position);
+    let swimming = input.swimming
+        && terrain.as_mut().is_some_and(|(ground, map_id)| {
+            swim_bounds(ground, *map_id, reported.with_y(current.y)).is_some()
+        });
+    let vertical_speed =
+        swimming.then(|| DEFAULT_SWIM_SPEED * auras.map_or(1.0, |mods| mods.movement_speed));
+    let mut next = move_toward_reported(current, reported, speed.0, vertical_speed, |secs| {
         clocks.grant(player_entity, secs)
     });
+    next.y = match terrain {
+        Some((ground, map_id)) => {
+            fall_tracker.report_height(input.jumping);
+            let player = JudgedPlayer {
+                current,
+                swimming,
+                jumping: input.jumping,
+                airborne: fall_tracker.airborne_state(),
+            };
+            judged_height(ground, map_id, player, next)
+        }
+        None => current.y,
+    };
     if next != current {
         position.x = next.x;
-        position.z = next.y;
+        position.y = next.y;
+        position.z = next.z;
         changes.position_changed = true;
         changes.replicated_state_changed = true;
     }
     changes
 }
 
+/// What the height rules know of the player an input moves.
+#[derive(Clone, Copy, Debug)]
+struct JudgedPlayer {
+    current: Vec3,
+    swimming: bool,
+    jumping: bool,
+    airborne: Option<Airborne>,
+}
+
+/// The height the player gets at `next`: within the swim bounds there while swimming,
+/// else within the land bounds.
+fn judged_height(ground: &mut GroundMap, map_id: u32, player: JudgedPlayer, next: Vec3) -> f32 {
+    let bounds = player
+        .swimming
+        .then(|| swim_bounds(ground, map_id, next.with_y(player.current.y)))
+        .flatten();
+    if let Some(bounds) = bounds {
+        return next.y.min(bounds.top).max(bounds.floor);
+    }
+    let envelope = LandEnvelope {
+        airborne: player.airborne,
+        jumping: player.jumping,
+    };
+    land_height(ground, map_id, player.current, next, envelope)
+}
+
 /// Where the player gets on the way from `current` to the client's `reported` point: all
-/// the way when `speed` covers it in the time `grant` allows for it, else that far.
+/// the way when `speed` (across the ground) and `vertical_speed` (swimming) cover it in the
+/// time `grant` allows for it, else that far along the way. Without a vertical speed, the
+/// height moves by the same fraction and is judged by the ground rules after.
 fn move_toward_reported(
-    current: Vec2,
-    reported: Vec2,
+    current: Vec3,
+    reported: Vec3,
     speed: f32,
+    vertical_speed: Option<f32>,
     grant: impl FnOnce(f32) -> f32,
-) -> Vec2 {
-    let distance = current.distance(reported);
-    if !reported.is_finite() || distance < 0.001 || speed <= 0.0 {
+) -> Vec3 {
+    if !reported.is_finite() || speed <= 0.0 {
         return current;
     }
-    let travel = speed * grant(distance / speed);
-    current + (reported - current) * (travel / distance).min(1.0)
+    let horizontal = current.xz().distance(reported.xz());
+    let vertical = (reported.y - current.y).abs();
+    let horizontal_secs = horizontal / speed;
+    let vertical_secs = vertical_speed.map_or(0.0, |vertical_speed| vertical / vertical_speed);
+    let requested = horizontal_secs.max(vertical_secs);
+    if requested < 0.001 / speed {
+        return current.with_y(reported.y);
+    }
+    let fraction = (grant(requested) / requested).min(1.0);
+    current + (reported - current) * fraction
+}
+
+/// Heights a swimmer may take: on or over the ground, no higher than floating under the
+/// surface.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub(super) struct SwimBounds {
+    pub(super) floor: f32,
+    pub(super) top: f32,
+}
+
+/// The swim bounds at `feet`, where the terrain water there stands `SWIM_DEPTH` over the
+/// ground; `None` where the player cannot swim.
+pub(super) fn swim_bounds(ground: &mut GroundMap, map_id: u32, feet: Vec3) -> Option<SwimBounds> {
+    let liquid = ground.liquid_at(map_id, feet)?;
+    let floor = match ground.ground_at(map_id, feet) {
+        GroundProbe::Supported(height) => height,
+        _ => liquid.depth_level,
+    };
+    let top = shared::movement::swim_top(liquid.level);
+    shared::movement::is_swimming(floor, floor, Some(liquid.level))
+        .then_some(SwimBounds { floor, top })
+}
+
+/// What bounds a height on land: how long the player has been off the ground and from
+/// where, and whether the input jumps.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub(super) struct LandEnvelope {
+    pub(super) airborne: Option<Airborne>,
+    pub(super) jumping: bool,
+}
+
+/// A player off the ground since `takeoff_y`, `secs` ago, with `impulse` upward speed.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub(super) struct Airborne {
+    pub(super) takeoff_y: f32,
+    pub(super) impulse: f32,
+    pub(super) secs: f32,
+}
+
+/// Slack over the highest height a jump or fall allows.
+const HEIGHT_TOLERANCE: f32 = 0.25;
+
+/// `next.y` held to the ground under `next` (probed from the server's height, so no report
+/// passes through a floor) and to the highest height the envelope allows. Unloaded ground
+/// keeps the server's height.
+fn land_height(
+    ground: &mut GroundMap,
+    map_id: u32,
+    current: Vec3,
+    next: Vec3,
+    envelope: LandEnvelope,
+) -> f32 {
+    let floor = match ground.ground_at(map_id, next.with_y(current.y)) {
+        GroundProbe::Supported(height) => height,
+        GroundProbe::Unsupported => f32::NEG_INFINITY,
+        GroundProbe::Unloaded => return current.y,
+    };
+    let ceiling = land_ceiling(current.y, floor, envelope);
+    next.y.min(ceiling).max(floor)
+}
+
+/// The highest height on land: without a jump the ground or where the player already is
+/// (no rise off the ground); a jump's or fall's arc from where it took off, over the
+/// movement bank's window of input jitter.
+pub(super) fn land_ceiling(current_y: f32, floor: f32, envelope: LandEnvelope) -> f32 {
+    match (envelope.airborne, envelope.jumping) {
+        (Some(airborne), _) => {
+            airborne.takeoff_y + highest_arc(airborne.impulse, airborne.secs) + HEIGHT_TOLERANCE
+        }
+        (None, true) => {
+            current_y + highest_arc(shared::movement::JUMP_IMPULSE, 0.0) + HEIGHT_TOLERANCE
+        }
+        (None, false) => (floor + super::GROUND_SNAP_THRESHOLD).max(current_y),
+    }
+}
+
+/// Highest point, over the takeoff, of a launch at `impulse` under `GRAVITY` between
+/// `secs - MOVEMENT_BANK_SECS` and `secs + MOVEMENT_BANK_SECS` after it.
+fn highest_arc(impulse: f32, secs: f32) -> f32 {
+    let gravity = shared::movement::GRAVITY;
+    let arc = |t: f32| impulse * t - 0.5 * gravity * t * t;
+    let earliest = (secs - MOVEMENT_BANK_SECS).max(0.0);
+    let latest = secs + MOVEMENT_BANK_SECS;
+    arc((impulse / gravity).clamp(earliest, latest))
 }
 
 fn stop_for_blocking_cast(

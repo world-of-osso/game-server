@@ -88,6 +88,8 @@ fn setup_app_with_time() -> App {
     app
 }
 
+#[path = "networking_tests/client_height.rs"]
+mod client_height;
 #[path = "networking_tests/death.rs"]
 mod death;
 #[path = "networking_tests/misc.rs"]

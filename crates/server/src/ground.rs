@@ -19,6 +19,7 @@ use shared::ground::{
     placement_rotation,
 };
 
+use crate::liquid::LiquidSample;
 use crate::terrain_height::{TerrainHeightMap, parse_adt_heights};
 
 /// The client's asset cache, relative to the server's working directory.
@@ -131,6 +132,16 @@ impl GroundMap {
         self.maps.get_mut(&map_id)?.as_mut()?.min_height(feet)
     }
 
+    /// The terrain liquid over `feet` on map `map_id` (`TerrainInfo::GetLiquidStatus`'s
+    /// grid lookup); `None` where there is none or the tile is not available.
+    pub fn liquid_at(&mut self, map_id: u32, feet: Vec3) -> Option<LiquidSample> {
+        if !self.maps.contains_key(&map_id) {
+            let loaded = self.open_map(map_id);
+            self.maps.insert(map_id, loaded);
+        }
+        self.maps.get_mut(&map_id)?.as_mut()?.liquid_at(feet)
+    }
+
     fn open_map(&self, map_id: u32) -> Option<MapGround> {
         let Some(&wdt) = self.wdts.get(&map_id) else {
             warn!("Map {map_id} has no WDT; no ground");
@@ -205,6 +216,15 @@ impl MapGround {
         Some(tile.flight_min.map_or(DEFAULT_MIN_HEIGHT, |mins| {
             grid_min_height(wow_x, wow_y, &mins)
         }))
+    }
+
+    fn liquid_at(&mut self, feet: Vec3) -> Option<LiquidSample> {
+        if self.global_wmo.is_some() {
+            return None;
+        }
+        let tile = self.tile(bevy_to_tile(feet.x, feet.z))?;
+        let (wow_x, wow_y, _) = crate::terrain_height::bevy_to_wow(feet.x, feet.y, feet.z);
+        tile.terrain.liquid_at(wow_x, wow_y)
     }
 
     fn tile(&mut self, tile: (u32, u32)) -> Option<&TileGround> {

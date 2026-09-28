@@ -87,6 +87,14 @@ pub(crate) struct FallTracker {
     peak_y: f32,
     last_y: f32,
     airborne: bool,
+    /// Height the player left the ground from, and seconds since (while `airborne`).
+    takeoff_y: f32,
+    air_secs: f32,
+    /// Upward speed the player left the ground with: `JUMP_IMPULSE` when a jumping input
+    /// took off, 0 for walking off a ledge.
+    jump_impulse: f32,
+    /// An input set the height this tick: gravity leaves it to the client's physics.
+    height_reported: bool,
     /// `MovementControl::epoch` of the position being tracked.
     epoch: u32,
 }
@@ -97,6 +105,10 @@ impl FallTracker {
             peak_y: y,
             last_y: y,
             airborne: false,
+            takeoff_y: y,
+            air_secs: 0.0,
+            jump_impulse: 0.0,
+            height_reported: false,
             epoch: 0,
         }
     }
@@ -111,6 +123,28 @@ impl FallTracker {
                 epoch,
                 ..Self::grounded(y)
             }
+        }
+    }
+
+    /// Off the ground: where from, how fast up and for how long.
+    fn airborne_state(&self) -> Option<movement::Airborne> {
+        self.airborne.then_some(movement::Airborne {
+            takeoff_y: self.takeoff_y,
+            impulse: self.jump_impulse,
+            secs: self.air_secs,
+        })
+    }
+
+    /// An input set the height this tick; a grounded one that jumps takes off with
+    /// `JUMP_IMPULSE`.
+    fn report_height(&mut self, jumping: bool) {
+        self.height_reported = true;
+        if !self.airborne {
+            self.jump_impulse = if jumping {
+                shared::movement::JUMP_IMPULSE
+            } else {
+                0.0
+            };
         }
     }
 }
@@ -468,6 +502,8 @@ pub(crate) struct PlayerInputParams<'w, 's> {
     dirty_queue: Option<Res<'w, InterestDirtyQueue>>,
     replication_dirty: Option<Res<'w, ReplicationDirtyQueue>>,
     clocks: Local<'s, MovementClocks>,
+    ground: Option<ResMut<'w, GroundMap>>,
+    maps: Query<'w, 's, &'static InMap>,
 }
 
 /// Read PlayerInput messages and move each player to the positions its client reports,
@@ -511,13 +547,16 @@ pub(crate) fn process_player_inputs(time: Res<Time>, mut params: PlayerInputPara
         if inputs.iter().any(|input| input.swimming) && params.mounted.contains(link.0) {
             params.commands.entity(link.0).remove::<Mounted>();
         }
+        let map_id = params.maps.get(link.0).map(|map| map.map_id).ok();
         let mut changes = MovementChanges::default();
         for input in inputs {
+            let terrain = params.ground.as_deref_mut().zip(map_id);
             changes = changes.merge(apply_movement_input(
                 &input,
                 link.0,
                 &mut params.players,
                 &mut params.clocks,
+                terrain,
             ));
         }
         params.commands.entity(link.0).insert(Moving(moving));
@@ -584,8 +623,12 @@ pub(crate) fn apply_terrain_gravity(
             continue;
         }
         let previous_health = *health;
+        let feet = Vec3::new(pos.x, pos.y, pos.z);
+        let surface = ground
+            .liquid_at(map.map_id, feet)
+            .map(|liquid| liquid.level);
         let (next_pos, next_vert_vel, next_fall_tracker, mut next_health) = calculate_gravity_state(
-            ground.ground_at(map.map_id, Vec3::new(pos.x, pos.y, pos.z)),
+            (ground.ground_at(map.map_id, feet), surface),
             *pos,
             *vert_vel,
             fall_tracker.for_epoch(control.epoch, pos.y),
@@ -653,7 +696,7 @@ fn apply_gravity_health_transition(
 }
 
 fn calculate_gravity_state(
-    ground: GroundProbe,
+    ground: (GroundProbe, Option<f32>),
     mut pos: Position,
     mut vert_vel: VerticalVelocity,
     mut fall_tracker: FallTracker,
@@ -662,9 +705,10 @@ fn calculate_gravity_state(
     dt: f32,
 ) -> (Position, VerticalVelocity, FallTracker, Health) {
     if death_state.is_some_and(|state| state.state != DeathState::Alive) {
-        fall_tracker.last_y = pos.y;
-        fall_tracker.peak_y = pos.y;
-        fall_tracker.airborne = false;
+        fall_tracker = FallTracker {
+            epoch: fall_tracker.epoch,
+            ..FallTracker::grounded(pos.y)
+        };
     } else {
         clamp_to_ground(
             ground,
@@ -678,9 +722,11 @@ fn calculate_gravity_state(
     (pos, vert_vel, fall_tracker, health)
 }
 
-/// Clamp a position (Bevy space) to its ground: apply vertical velocity and gravity.
+/// Clamp a position (Bevy space) to its ground: apply vertical velocity and gravity unless
+/// an input reported the height this tick; a swimmer (water `SWIM_DEPTH` over the feet at
+/// `surface`) has no gravity, and water ends a fall without damage.
 fn clamp_to_ground(
-    ground: GroundProbe,
+    (ground, surface): (GroundProbe, Option<f32>),
     pos: &mut Position,
     vert_vel: &mut VerticalVelocity,
     fall_tracker: &mut FallTracker,
@@ -693,9 +739,18 @@ fn clamp_to_ground(
         GroundProbe::Unsupported => f32::NEG_INFINITY,
         GroundProbe::Unloaded => return,
     };
+    let reported = std::mem::take(&mut fall_tracker.height_reported);
+    if shared::movement::is_swimming(pos.y, ground_y, surface) {
+        vert_vel.0 = 0.0;
+        pos.y = pos.y.max(ground_y);
+        *fall_tracker = FallTracker {
+            epoch: fall_tracker.epoch,
+            ..FallTracker::grounded(pos.y)
+        };
+        return;
+    }
 
-    // Apply vertical velocity (jump impulse)
-    if vert_vel.0 != 0.0 {
+    if !reported && vert_vel.0 != 0.0 {
         pos.y += vert_vel.0 * dt;
         vert_vel.0 -= GRAVITY * dt;
     }
@@ -703,14 +758,14 @@ fn clamp_to_ground(
     if pos.y < ground_y {
         pos.y = ground_y;
         vert_vel.0 = 0.0;
-    } else if vert_vel.0 == 0.0 && pos.y > ground_y + GROUND_SNAP_THRESHOLD {
+    } else if !reported && vert_vel.0 == 0.0 && pos.y > ground_y + GROUND_SNAP_THRESHOLD {
         pos.y -= GRAVITY * dt;
         if pos.y < ground_y {
             pos.y = ground_y;
         }
     }
 
-    apply_fall_damage_on_landing(fall_tracker, pos.y, ground_y, vert_vel.0, health);
+    apply_fall_damage_on_landing(fall_tracker, pos.y, ground_y, vert_vel.0, health, dt);
 }
 
 fn apply_fall_damage_on_landing(
@@ -719,13 +774,17 @@ fn apply_fall_damage_on_landing(
     ground_y: f32,
     vertical_velocity: f32,
     health: &mut Health,
+    dt: f32,
 ) {
     let now_airborne = current_y > ground_y + GROUND_SNAP_THRESHOLD || vertical_velocity > 0.0;
     if !fall_tracker.airborne && now_airborne {
         fall_tracker.airborne = true;
         fall_tracker.peak_y = fall_tracker.last_y.max(current_y).max(ground_y);
+        fall_tracker.takeoff_y = fall_tracker.last_y;
+        fall_tracker.air_secs = dt;
     } else if fall_tracker.airborne {
         fall_tracker.peak_y = fall_tracker.peak_y.max(fall_tracker.last_y).max(current_y);
+        fall_tracker.air_secs += dt;
     }
 
     // Landing is coming within snap reach: WMO floor heights carry float noise
@@ -739,6 +798,8 @@ fn apply_fall_damage_on_landing(
         }
         fall_tracker.airborne = false;
         fall_tracker.peak_y = ground_y;
+        fall_tracker.air_secs = 0.0;
+        fall_tracker.jump_impulse = 0.0;
     }
 
     fall_tracker.last_y = current_y;

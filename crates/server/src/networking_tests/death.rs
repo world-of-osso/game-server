@@ -30,8 +30,7 @@ fn lethal_fall_transitions_death_in_same_fixed_step() {
             FallTracker {
                 airborne: true,
                 peak_y: ground_y + 70.0,
-                last_y: ground_y,
-                epoch: 0,
+                ..FallTracker::grounded(ground_y)
             },
             Health {
                 current: 5.0,

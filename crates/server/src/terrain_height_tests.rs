@@ -26,7 +26,7 @@ fn asymmetric_plane_maps_rows_to_wow_x_and_columns_to_wow_y() {
             corner_y: 200.0,
             base_z: 50.0,
             heights,
-            water_level: None,
+            liquid: ChunkLiquid::default(),
         }],
     };
     for (row, col, expected) in [(2.0, 5.0, 80.0), (2.25, 5.75, 84.0), (7.5, 1.5, 128.0)] {
@@ -55,7 +55,7 @@ fn nonplanar_cell_uses_center_vertex_and_all_four_triangles() {
             corner_y: 200.0,
             base_z: 50.0,
             heights,
-            water_level: None,
+            liquid: ChunkLiquid::default(),
         }],
     };
     // Each off-center point is halfway from an edge midpoint to the center.
@@ -115,7 +115,7 @@ fn height_interpolation() {
             corner_y: 100.0,
             base_z: 50.0,
             heights,
-            water_level: None,
+            liquid: ChunkLiquid::default(),
         }],
     };
 
@@ -247,14 +247,14 @@ fn multiple_chunks_loaded_and_routed_correctly() {
                 corner_y: 100.0,
                 base_z: 50.0,
                 heights: [0.0; MCVT_COUNT],
-                water_level: None,
+                liquid: ChunkLiquid::default(),
             },
             ChunkHeight {
                 corner_x: 100.0 - CHUNK_SIZE,
                 corner_y: 100.0,
                 base_z: 80.0,
                 heights: [0.0; MCVT_COUNT],
-                water_level: None,
+                liquid: ChunkLiquid::default(),
             },
         ],
     };
@@ -285,7 +285,7 @@ fn height_at_exact_vertex_no_interpolation() {
             corner_y: 100.0,
             base_z: 100.0,
             heights,
-            water_level: None,
+            liquid: ChunkLiquid::default(),
         }],
     };
 
@@ -321,14 +321,14 @@ fn height_consistent_across_adjacent_chunk_boundary() {
                 corner_y: 100.0,
                 base_z: 0.0,
                 heights: heights_a,
-                water_level: None,
+                liquid: ChunkLiquid::default(),
             },
             ChunkHeight {
                 corner_x: boundary_x,
                 corner_y: 100.0,
                 base_z: 0.0,
                 heights: heights_b,
-                water_level: None,
+                liquid: ChunkLiquid::default(),
             },
         ],
     };
@@ -359,7 +359,7 @@ fn negative_terrain_height_underwater() {
             corner_y: 100.0,
             base_z: -10.0,
             heights,
-            water_level: None,
+            liquid: ChunkLiquid::default(),
         }],
     };
     let h = map.height_at(100.0, 100.0).unwrap();
@@ -371,28 +371,49 @@ fn negative_terrain_height_underwater() {
 
 #[test]
 fn water_surface_height_separate_from_terrain() {
+    // One flat layer over the whole chunk at 5.0, over terrain at -20.
+    let layer = crate::liquid::WaterLayer {
+        liquid_type: 2,
+        min_height: 5.0,
+        x_offset: 0,
+        y_offset: 0,
+        width: 8,
+        height: 8,
+        exists: [0xff; 8],
+        heights: Vec::new(),
+    };
     let map = TerrainHeightMap {
         chunks: vec![ChunkHeight {
             corner_x: 100.0,
             corner_y: 100.0,
-            base_z: -20.0, // terrain is underwater
+            base_z: -20.0,
             heights: [0.0; MCVT_COUNT],
-            water_level: Some(5.0), // water surface at 5.0
+            liquid: ChunkLiquid {
+                layers: vec![layer],
+                deep: 0,
+            },
         }],
     };
 
     let terrain = map.height_at(95.0, 95.0).unwrap();
-    let water = map.water_height_at(95.0, 95.0).unwrap();
+    let water = map.liquid_at(95.0, 95.0).unwrap();
     assert!((terrain - (-20.0)).abs() < 0.01, "terrain: {terrain}");
-    assert!((water - 5.0).abs() < 0.01, "water surface: {water}");
-    assert!(water > terrain, "water above terrain");
+    assert_eq!(
+        water,
+        LiquidSample {
+            level: 5.0,
+            depth_level: -20.0,
+            liquid_type: 2,
+            deep: false
+        }
+    );
 
-    // Chunk without water returns None for water_height
+    // Chunk without water returns None for the liquid.
     let dry_map = test_helpers::flat_terrain(100.0, 100.0, 50.0);
-    assert!(dry_map.water_height_at(95.0, 95.0).is_none());
+    assert!(dry_map.liquid_at(95.0, 95.0).is_none());
 
     // Outside loaded area returns None for both
-    assert!(map.water_height_at(200.0, 200.0).is_none());
+    assert!(map.liquid_at(200.0, 200.0).is_none());
 }
 
 #[test]
@@ -428,21 +449,21 @@ fn adt_hole_returns_none_for_missing_chunk() {
                 corner_y: 100.0,
                 base_z: 50.0,
                 heights: [0.0; MCVT_COUNT],
-                water_level: None,
+                liquid: ChunkLiquid::default(),
             },
             ChunkHeight {
                 corner_x: 100.0,
                 corner_y: 100.0 - CHUNK_SIZE,
                 base_z: 50.0,
                 heights: [0.0; MCVT_COUNT],
-                water_level: None,
+                liquid: ChunkLiquid::default(),
             },
             ChunkHeight {
                 corner_x: 100.0 - CHUNK_SIZE,
                 corner_y: 100.0 - CHUNK_SIZE,
                 base_z: 50.0,
                 heights: [0.0; MCVT_COUNT],
-                water_level: None,
+                liquid: ChunkLiquid::default(),
             },
             // Hole: no chunk at (100 - CHUNK_SIZE, 100)
         ],
@@ -478,7 +499,7 @@ fn height_query_1000_lookups_under_threshold() {
                 corner_y: 100.0 - row as f32 * CHUNK_SIZE,
                 base_z: 50.0,
                 heights: [0.0; MCVT_COUNT],
-                water_level: None,
+                liquid: ChunkLiquid::default(),
             });
         }
     }
@@ -563,4 +584,30 @@ fn height_matches_known_azerothcore_coordinates() {
         .height_at(x, y)
         .expect("Northshire must be within Azeroth 32,48");
     assert!((h - 81.83374).abs() < 0.001, "authored caravan ground: {h}");
+}
+
+/// The Godot swimming fixtures' deep-water spot on Azeroth 32,48 (game-engine
+/// docs/specs/swimming.md): live, the client floated at 142.74, feet 1.25 under this
+/// surface (liquid type 5, no deep mask).
+#[test]
+fn swim_spot_liquid_is_the_surface_the_client_floats_under() {
+    let path = "../../../game-engine/data/terrain/azeroth_32_48.adt";
+    let data = std::fs::read(path).expect("Azeroth 32,48 root ADT");
+    let map = parse_adt_heights(&data).unwrap();
+
+    let seabed = map.height_at(-8558.0, -490.0).unwrap();
+    let liquid = map
+        .liquid_at(-8558.0, -490.0)
+        .expect("water at the swim spot");
+
+    assert!((seabed - 140.04).abs() < 0.01, "seabed {seabed}");
+    assert!(
+        (liquid.level - 143.99).abs() < 0.01,
+        "surface {}",
+        liquid.level
+    );
+    assert_eq!(
+        (liquid.depth_level, liquid.liquid_type, liquid.deep),
+        (seabed, 5, false)
+    );
 }

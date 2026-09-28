@@ -10,7 +10,13 @@ fn input_routes_to_correct_player() {
     let _ = app
         .world_mut()
         .run_system_once(move |mut q: Query<PlayerMovement, With<Player>>| {
-            apply_movement_input(&input, player_a, &mut q, &mut MovementClocks::default());
+            apply_movement_input(
+                &input,
+                player_a,
+                &mut q,
+                &mut MovementClocks::default(),
+                None,
+            );
         });
 
     let pos_a = *app.world().entity(player_a).get::<Position>().unwrap();
@@ -31,7 +37,7 @@ fn input_updates_rotation() {
     let _ = app
         .world_mut()
         .run_system_once(move |mut q: Query<PlayerMovement, With<Player>>| {
-            apply_movement_input(&input, player, &mut q, &mut MovementClocks::default());
+            apply_movement_input(&input, player, &mut q, &mut MovementClocks::default(), None);
         });
     let rot = *app.world().entity(player).get::<Rotation>().unwrap();
     assert!((rot.y - 1.5).abs() < 1e-6);
@@ -46,7 +52,13 @@ fn identical_input_does_not_dirty_rotation_or_speed_but_real_changes_do() {
     let _ = app
         .world_mut()
         .run_system_once(move |mut q: Query<PlayerMovement, With<Player>>| {
-            apply_movement_input(&first_input, player, &mut q, &mut MovementClocks::default());
+            apply_movement_input(
+                &first_input,
+                player,
+                &mut q,
+                &mut MovementClocks::default(),
+                None,
+            );
         });
     let rotation_tick_after_first = app
         .world()
@@ -72,6 +84,7 @@ fn identical_input_does_not_dirty_rotation_or_speed_but_real_changes_do() {
                 player,
                 &mut q,
                 &mut MovementClocks::default(),
+                None,
             );
         });
     let rotation_tick_after_second = app
@@ -111,6 +124,7 @@ fn identical_input_does_not_dirty_rotation_or_speed_but_real_changes_do() {
                 player,
                 &mut q,
                 &mut MovementClocks::default(),
+                None,
             );
         });
     let rotation_tick_after_change = app
@@ -151,7 +165,7 @@ fn walk_speed_when_not_running() {
     let _ = app
         .world_mut()
         .run_system_once(move |mut q: Query<PlayerMovement, With<Player>>| {
-            apply_movement_input(&input, player, &mut q, &mut MovementClocks::default());
+            apply_movement_input(&input, player, &mut q, &mut MovementClocks::default(), None);
         });
     let speed = app.world().entity(player).get::<MovementSpeed>().unwrap();
     assert!((speed.0 - DEFAULT_WALK_SPEED).abs() < 1e-6);
@@ -166,7 +180,7 @@ fn the_reported_position_is_adopted_across_the_ground() {
     let _ = app
         .world_mut()
         .run_system_once(move |mut q: Query<PlayerMovement, With<Player>>| {
-            apply_movement_input(&input, player, &mut q, &mut MovementClocks::default());
+            apply_movement_input(&input, player, &mut q, &mut MovementClocks::default(), None);
         });
     let pos = *app.world().entity(player).get::<Position>().unwrap();
     assert_eq!((pos.x, pos.z), (0.2, 0.2));
@@ -191,7 +205,7 @@ fn walking_moves_at_most_2_5_yards_per_sec() {
     let _ = app
         .world_mut()
         .run_system_once(move |mut q: Query<PlayerMovement, With<Player>>| {
-            apply_movement_input(&input, player, &mut q, &mut MovementClocks::default());
+            apply_movement_input(&input, player, &mut q, &mut MovementClocks::default(), None);
         });
     let pos = *app.world().entity(player).get::<Position>().unwrap();
     let expected_x = DEFAULT_WALK_SPEED * MAX_INPUT_STEP_SECS;
@@ -212,7 +226,7 @@ fn running_moves_at_most_7_0_yards_per_sec() {
     let _ = app
         .world_mut()
         .run_system_once(move |mut q: Query<PlayerMovement, With<Player>>| {
-            apply_movement_input(&input, player, &mut q, &mut MovementClocks::default());
+            apply_movement_input(&input, player, &mut q, &mut MovementClocks::default(), None);
         });
     let pos = *app.world().entity(player).get::<Position>().unwrap();
     let expected_x = DEFAULT_RUN_SPEED * MAX_INPUT_STEP_SECS;
@@ -233,7 +247,7 @@ fn aura_speed_multiplier_scales_movement() {
     let _ = app
         .world_mut()
         .run_system_once(move |mut q: Query<PlayerMovement, With<Player>>| {
-            apply_movement_input(&input, player, &mut q, &mut MovementClocks::default());
+            apply_movement_input(&input, player, &mut q, &mut MovementClocks::default(), None);
         });
     let pos = *app.world().entity(player).get::<Position>().unwrap();
     let speed = app.world().entity(player).get::<MovementSpeed>().unwrap();
@@ -261,7 +275,13 @@ fn aura_speed_multiplier_scales_movement() {
     let _ = app
         .world_mut()
         .run_system_once(move |mut q: Query<PlayerMovement, With<Player>>| {
-            apply_movement_input(&input2, player, &mut q, &mut MovementClocks::default());
+            apply_movement_input(
+                &input2,
+                player,
+                &mut q,
+                &mut MovementClocks::default(),
+                None,
+            );
         });
     let pos2 = *app.world().entity(player).get::<Position>().unwrap();
     let expected_hasted = DEFAULT_RUN_SPEED * 1.30 * MAX_INPUT_STEP_SECS;
@@ -291,7 +311,7 @@ fn zero_effective_speed_does_not_dirty_position() {
     let _ = app
         .world_mut()
         .run_system_once(move |mut q: Query<PlayerMovement, With<Player>>| {
-            apply_movement_input(&input, player, &mut q, &mut MovementClocks::default());
+            apply_movement_input(&input, player, &mut q, &mut MovementClocks::default(), None);
         });
 
     assert_eq!(
@@ -321,7 +341,7 @@ fn root_prevents_movement() {
     let _ = app
         .world_mut()
         .run_system_once(move |mut q: Query<PlayerMovement, With<Player>>| {
-            apply_movement_input(&input, player, &mut q, &mut MovementClocks::default());
+            apply_movement_input(&input, player, &mut q, &mut MovementClocks::default(), None);
         });
 
     let pos = *app.world().entity(player).get::<Position>().unwrap();
@@ -349,12 +369,14 @@ fn backward_movement_at_reduced_speed() {
                 fwd_player,
                 &mut q,
                 &mut MovementClocks::default(),
+                None,
             );
             apply_movement_input(
                 &bwd_input,
                 bwd_player,
                 &mut q,
                 &mut MovementClocks::default(),
+                None,
             );
         });
 
@@ -412,18 +434,21 @@ fn strafing_speed_is_reduced_but_faster_than_backpedal() {
                 fwd_player,
                 &mut q,
                 &mut MovementClocks::default(),
+                None,
             );
             apply_movement_input(
                 &strafe_input,
                 strafe_player,
                 &mut q,
                 &mut MovementClocks::default(),
+                None,
             );
             apply_movement_input(
                 &backpedal_input,
                 backpedal_player,
                 &mut q,
                 &mut MovementClocks::default(),
+                None,
             );
         });
 

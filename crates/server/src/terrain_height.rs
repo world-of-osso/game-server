@@ -15,6 +15,8 @@ const UNIT_SIZE: f32 = CHUNK_SIZE / 8.0;
 /// Number of height floats per MCNK (9x9 outer + 8x8 inner).
 const MCVT_COUNT: usize = 145;
 
+use crate::liquid::{ChunkLiquid, LiquidSample, parse_mh2o};
+
 pub use shared::movement::GRAVITY;
 /// Small threshold before gravity kicks in (yards). Stricter than client for validation.
 pub const GROUND_SNAP_THRESHOLD: f32 = 0.1;
@@ -30,9 +32,8 @@ struct ChunkHeight {
     base_z: f32,
     /// 145 height floats from MCVT (9x9 outer + 8x8 inner grid).
     heights: [f32; MCVT_COUNT],
-    /// Water surface height (None = no water in this chunk).
-    #[cfg_attr(not(test), allow(dead_code))]
-    water_level: Option<f32>,
+    /// MH2O liquid of this chunk.
+    liquid: ChunkLiquid,
 }
 
 /// Parsed ADT terrain heights of one map tile for server-side collision.
@@ -71,13 +72,15 @@ impl TerrainHeightMap {
         })
     }
 
-    #[cfg(test)]
-    /// Look up water surface height at a WoW world position.
-    ///
-    /// Returns `None` if outside loaded terrain or chunk has no water.
-    pub fn water_height_at(&self, x: f32, y: f32) -> Option<f32> {
+    /// The terrain liquid over WoW `(x, y)`: `None` outside loaded terrain or where no
+    /// layer covers the point.
+    pub fn liquid_at(&self, x: f32, y: f32) -> Option<LiquidSample> {
         let chunk = self.find_chunk(x, y)?;
-        chunk.water_level
+        let liquid = chunk.liquid.sample(chunk.corner_x, chunk.corner_y, x, y)?;
+        Some(LiquidSample {
+            depth_level: interpolate_height(chunk, x, y),
+            ..liquid
+        })
     }
 }
 
@@ -115,11 +118,34 @@ fn interpolate_fan([tl, tr, bl, br]: [f32; 4], center: f32, col: f32, row: f32) 
 /// Parse an ADT file's raw bytes and return a `TerrainHeightMap` resource.
 pub fn parse_adt_heights(data: &[u8]) -> Result<TerrainHeightMap, String> {
     let payloads = collect_mcnk_payloads(data)?;
+    let mut liquids = match find_top_level_chunk(data, b"O2HM")? {
+        Some(mh2o) => parse_mh2o(mh2o)?,
+        None => Vec::new(),
+    }
+    .into_iter();
     let mut chunks = Vec::with_capacity(payloads.len());
     for payload in payloads {
-        chunks.push(parse_mcnk_height(payload)?);
+        let mut chunk = parse_mcnk_height(payload)?;
+        chunk.liquid = liquids.next().unwrap_or_default();
+        chunks.push(chunk);
     }
     Ok(TerrainHeightMap { chunks })
+}
+
+/// Payload of the first top-level chunk tagged `tag` (as stored, reversed).
+fn find_top_level_chunk<'a>(data: &'a [u8], tag: &[u8; 4]) -> Result<Option<&'a [u8]>, String> {
+    let mut off = 0usize;
+    while off + 8 <= data.len() {
+        let size = read_u32(data, off + 4)? as usize;
+        let payload = data
+            .get(off + 8..off + 8 + size)
+            .ok_or_else(|| format!("Chunk truncated at {off:#x}"))?;
+        if &data[off..off + 4] == tag {
+            return Ok(Some(payload));
+        }
+        off += 8 + size;
+    }
+    Ok(None)
 }
 
 /// Collect all KNCM (reversed MCNK) chunk payloads from the ADT.
@@ -162,7 +188,7 @@ fn parse_mcnk_height(payload: &[u8]) -> Result<ChunkHeight, String> {
         corner_y: pos_y,
         base_z: pos_z,
         heights,
-        water_level: None,
+        liquid: ChunkLiquid::default(),
     })
 }
 
@@ -241,7 +267,7 @@ pub mod test_helpers {
                 corner_y,
                 base_z: height,
                 heights: [0.0; MCVT_COUNT],
-                water_level: None,
+                liquid: ChunkLiquid::default(),
             }],
         }
     }

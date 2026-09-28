@@ -45,6 +45,7 @@ mod item_stats;
 mod item_templates;
 mod level_scaling;
 mod lfg;
+mod liquid;
 mod loot;
 mod mail;
 mod maps;
