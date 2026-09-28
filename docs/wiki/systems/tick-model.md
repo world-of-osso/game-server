@@ -70,7 +70,7 @@ Lightyear owns transport and replication schedules:
 
 Each connection receives a `ReplicationSender`; Lightyear 0.28.0 delegates send traversal to vendored `bevy_replicon` 0.41.1, with `ReplicationMetadata` enforcing a 50 ms cadence. Dirty-candidate processing avoids steady-state traversal of unchanged replication roots while preserving new-sender full sync, local visibility state, and mutation ACK/NACK retention.
 
-For each connection, `process_player_inputs` drains all received `PlayerInput` messages in one fixed tick but applies movement once using the latest continuous input. Earlier jump and swimming flags remain tick-local events: any jump requests the one application, and any swimming packet dismounts the player. This prevents packet arrival rate from multiplying the 50 ms simulation delta. The proof uses real Lightyear host delivery through `MessageReceiver` and the production `FixedUpdate` system (RED 5 at `7b7dc1a`, GREEN 5 at `e74b980`); it did not rebuild or restart the local server.
+For each connection, `process_player_inputs` drains all received `PlayerInput` messages in one fixed tick and moves the player toward each reported position in order, within the player's movement bank (see [[networking]]). The bank refills at server time, so packet arrival rate cannot move a player faster than its speed. Any jump or swimming flag in the batch remains a tick-local event.
 
 ## Lower-Frequency and State-Driven Work
 
