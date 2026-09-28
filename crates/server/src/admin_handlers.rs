@@ -158,6 +158,34 @@ pub(crate) fn handle_create_account(
     }
 }
 
+/// Create a default-appearance character on an existing account, validated like client creation.
+pub(crate) fn handle_create_character(
+    db: &persistence::GameDatabase,
+    username: &str,
+    name: &str,
+    race: u8,
+    class: u8,
+) -> AdminResponse {
+    let Some(account_id) = persistence_accounts::find_account_by_username(&db.db, username) else {
+        return AdminResponse::Error(format!("account '{username}' not found"));
+    };
+    match persistence::create_character_with_appearance(
+        &db.db,
+        account_id,
+        name,
+        race,
+        class,
+        CharacterAppearance::default(),
+    ) {
+        Ok((character_id, data)) => AdminResponse::CharacterCreated {
+            username: username.to_string(),
+            character_id,
+            name: data.name,
+        },
+        Err(e) => AdminResponse::Error(e),
+    }
+}
+
 pub(crate) fn handle_approve_registration(
     db: &persistence::GameDatabase,
     username: &str,

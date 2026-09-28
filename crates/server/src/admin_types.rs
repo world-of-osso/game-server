@@ -36,6 +36,12 @@ pub enum AdminRequest {
         username: String,
         password: String,
     },
+    CreateCharacter {
+        username: String,
+        name: String,
+        race: u8,
+        class: u8,
+    },
     KickAccount {
         username: String,
         reason: Option<String>,
@@ -268,6 +274,11 @@ pub enum AdminResponse {
     AccountCreated {
         account_id: u64,
         token: String,
+    },
+    CharacterCreated {
+        username: String,
+        character_id: u64,
+        name: String,
     },
     AccountKicked {
         username: String,

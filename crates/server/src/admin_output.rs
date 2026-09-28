@@ -89,6 +89,11 @@ fn print_simple_account_response(response: &AdminResponse) -> bool {
         AdminResponse::RegistrationApproved { account_id, token } => {
             print_registration_approved(*account_id, token);
         }
+        AdminResponse::CharacterCreated {
+            username,
+            character_id,
+            name,
+        } => println!("Character created: id={character_id} name={name} account={username}"),
         _ => return false,
     }
     true

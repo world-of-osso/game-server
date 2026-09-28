@@ -385,6 +385,12 @@ fn dispatch(
         AdminRequest::CreateAccount { username, password } => {
             handle_create_account(db, &username, &password)
         }
+        AdminRequest::CreateCharacter {
+            username,
+            name,
+            race,
+            class,
+        } => handle_create_character(db, &username, &name, race, class),
         AdminRequest::KickAccount { username, reason } => {
             match persistence_accounts::find_account_by_username(&db.db, &username) {
                 Some(account_id) => {
@@ -635,6 +641,48 @@ mod tests {
             },
         );
         (templates, catalog)
+    }
+
+    #[test]
+    fn create_character_adds_a_listed_character_to_the_named_account() {
+        let db = persistence::GameDatabase {
+            db: persistence::temp_database(),
+        };
+        persistence_accounts::register_account(&db.db, "fb_probe", "pw").expect("account");
+
+        let response = handle_create_character(&db, "fb_probe", "Probeone", 1, 2);
+
+        let AdminResponse::CharacterCreated { character_id, .. } = response else {
+            panic!("expected CharacterCreated, got {response:?}");
+        };
+        let AdminResponse::CharactersListed { characters } =
+            handle_list_characters(&db, Some("fb_probe"))
+        else {
+            panic!("listing failed");
+        };
+        assert_eq!(
+            characters
+                .iter()
+                .map(|c| (c.character_id, c.name.as_str(), c.race, c.class))
+                .collect::<Vec<_>>(),
+            vec![(character_id, "Probeone", 1, 2)]
+        );
+    }
+
+    #[test]
+    fn create_character_reports_unknown_account_and_invalid_names() {
+        let db = persistence::GameDatabase {
+            db: persistence::temp_database(),
+        };
+        assert!(matches!(
+            handle_create_character(&db, "nobody", "Probeone", 1, 2),
+            AdminResponse::Error(ref e) if e.contains("nobody")
+        ));
+        persistence_accounts::register_account(&db.db, "fb_probe", "pw").expect("account");
+        assert!(matches!(
+            handle_create_character(&db, "fb_probe", "x1", 1, 2),
+            AdminResponse::Error(_)
+        ));
     }
 
     #[test]

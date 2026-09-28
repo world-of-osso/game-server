@@ -49,6 +49,12 @@ enum AdminRequest {
         username: String,
         password: String,
     },
+    CreateCharacter {
+        username: String,
+        name: String,
+        race: u8,
+        class: u8,
+    },
     KickAccount {
         username: String,
         reason: Option<String>,
@@ -250,6 +256,11 @@ enum AdminResponse {
         account_id: u64,
         token: String,
     },
+    CharacterCreated {
+        username: String,
+        character_id: u64,
+        name: String,
+    },
     AccountKicked {
         username: String,
         disconnected: bool,
@@ -413,6 +424,7 @@ fn print_usage() {
     eprintln!("  game-server-admin check-account <username>");
     eprintln!("  game-server-admin check-password <username> <password>");
     eprintln!("  game-server-admin create-account <username> <password>");
+    eprintln!("  game-server-admin create-character <username> <name> <race> <class>");
     eprintln!("  game-server-admin kick-account <username> [reason]");
     eprintln!("  game-server-admin ban-account <username> [reason]");
     eprintln!("  game-server-admin unban-account <username>");
@@ -468,6 +480,7 @@ fn parse_request(args: &[String]) -> AdminRequest {
         "check-account" => parse_check_account(args),
         "check-password" => parse_check_password(args),
         "create-account" => parse_create_account(args),
+        "create-character" => parse_create_character(args),
         "kick-account" => parse_kick_account(args),
         "ban-account" => parse_ban_account(args),
         "unban-account" => parse_unban_account(args),
@@ -647,6 +660,16 @@ fn parse_create_account(args: &[String]) -> AdminRequest {
     AdminRequest::CreateAccount {
         username: args[2].clone(),
         password: args[3].clone(),
+    }
+}
+
+fn parse_create_character(args: &[String]) -> AdminRequest {
+    require_args(args, 6, "create-character <username> <name> <race> <class>");
+    AdminRequest::CreateCharacter {
+        username: args[2].clone(),
+        name: args[3].clone(),
+        race: parse_u8_arg("race", &args[4]),
+        class: parse_u8_arg("class", &args[5]),
     }
 }
 
