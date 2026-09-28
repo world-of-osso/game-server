@@ -275,6 +275,7 @@ mod tests {
             display_id: None,
             unit_flags: None,
             spawn_difficulties: vec![0],
+            equipment_id: 0,
         }
     }
 

@@ -1,6 +1,9 @@
 use bevy::prelude::*;
 use rusqlite::{Connection, OpenFlags, Row, params};
-use std::collections::HashMap;
+use shared::components::{
+    EquipmentAppearance, EquipmentVisualSlot, EquippedAppearanceEntry, SheathState, StandState,
+};
+use std::collections::{BTreeMap, HashMap};
 use std::path::Path;
 use std::sync::Arc;
 
@@ -95,6 +98,9 @@ pub struct CreatureSpawn {
     /// `creature.spawnDifficulties`: the map copy difficulties it spawns in (0 on a
     /// continent).
     pub spawn_difficulties: Vec<u32>,
+    /// `creature.equipment_id`: the `creature_equip_template` ID it wields, 0 none,
+    /// -1 a random one of its entry's.
+    pub equipment_id: i8,
 }
 
 impl CreatureSpawn {
@@ -139,6 +145,12 @@ pub struct CreatureAddon {
     /// Mount CreatureDisplayInfo ID.
     pub mount: u32,
     pub auras: Vec<u32>,
+    /// `bytes1` byte 0 (TrinityCore `StandState`).
+    pub stand_state: StandState,
+    /// `bytes2` byte 0 (TrinityCore `SheathState`).
+    pub sheath_state: SheathState,
+    /// `emote`: the Emotes.db2 ID looped as `UnitData::EmoteState`, 0 none.
+    pub emote_state: u32,
 }
 
 /// `creature_formations` row for a member other than its leader.
@@ -170,6 +182,9 @@ pub struct WorldData {
     pub template_addons: HashMap<u32, CreatureAddon>,
     /// `creature_formations` keyed by member guid (leaders' own rows omitted).
     pub formations: HashMap<u32, FormationInfo>,
+    /// `content_creature_equip_template` keyed by entry, then ID (ascending, as
+    /// ObjectMgr's `_equipmentInfoStore`).
+    pub equipment: HashMap<u32, BTreeMap<u8, EquipmentAppearance>>,
     /// `creature_classlevelstats` basehp0..2 keyed by (level, class).
     pub class_level_base_hp: HashMap<(u8, u8), [u32; 3]>,
     /// `creature_classlevelstats` basemana keyed by (level, class).
@@ -207,13 +222,15 @@ pub fn load_world_data(path: &Path) -> WorldData {
     let waypoints = load_waypoints(&conn);
     let addons = load_addons(
         &conn,
-        "SELECT guid, path_id, mount, auras FROM content_creature_addon",
+        "SELECT guid, path_id, mount, auras, bytes1, bytes2, emote FROM content_creature_addon",
     );
     let template_addons = load_addons(
         &conn,
-        "SELECT entry, path_id, mount, auras FROM content_creature_template_addon",
+        "SELECT entry, path_id, mount, auras, bytes1, bytes2, emote
+         FROM content_creature_template_addon",
     );
     let formations = load_formations(&conn);
+    let equipment = load_equipment(&conn);
     let class_level_base_hp = load_class_level_base_hp(&conn);
     let class_level_base_mana = load_class_level_base_mana(&conn);
     let armor_constants = expected_stats.armor_constants();
@@ -237,6 +254,7 @@ pub fn load_world_data(path: &Path) -> WorldData {
         addons,
         template_addons,
         formations,
+        equipment,
         class_level_base_hp,
         class_level_base_mana,
         armor_constants,
@@ -562,6 +580,7 @@ fn spawn_from_row(row: &Row) -> rusqlite::Result<CreatureSpawn> {
         display_id: nonzero(row.get(11)?),
         unit_flags: nonzero(row.get(12)?),
         spawn_difficulties: parse_spawn_difficulties(&row.get::<_, String>(13)?),
+        equipment_id: row.get::<_, i64>(14)? as i8,
     })
 }
 
@@ -588,7 +607,7 @@ fn load_spawns(conn: &Connection) -> Vec<CreatureSpawn> {
         .prepare(
             "SELECT guid, id1, map, zoneId, position_x, position_y, position_z,
                     wander_distance, MovementType, orientation, spawntimesecs, modelid, unit_flags,
-                    spawnDifficulties
+                    spawnDifficulties, equipment_id
              FROM content_creature creature
              WHERE NOT EXISTS (
                  SELECT 1 FROM content_game_event_creature event WHERE event.guid = creature.guid
@@ -661,13 +680,25 @@ fn load_waypoints(conn: &Connection) -> HashMap<u32, WaypointPath> {
 }
 
 fn addon_from_row(row: &Row) -> rusqlite::Result<(u32, CreatureAddon)> {
+    let key = row.get::<_, i64>(0)? as u32;
     let auras: Option<String> = row.get(3)?;
+    let stand_state = (row.get::<_, i64>(4)? & 0xFF) as u8;
+    let sheath_state = (row.get::<_, i64>(5)? & 0xFF) as u8;
     Ok((
-        row.get::<_, i64>(0)? as u32,
+        key,
         CreatureAddon {
             path_id: row.get::<_, i64>(1)? as u32,
             mount: row.get::<_, i64>(2)? as u32,
             auras: parse_addon_auras(auras.as_deref().unwrap_or("")),
+            stand_state: StandState::try_from(stand_state).unwrap_or_else(|value| {
+                error!("creature addon {key}: invalid stand state {value}, truncated to 0");
+                StandState::Stand
+            }),
+            sheath_state: SheathState::try_from(sheath_state).unwrap_or_else(|value| {
+                error!("creature addon {key}: invalid sheath state {value}, truncated to 0");
+                SheathState::Unarmed
+            }),
+            emote_state: row.get::<_, i64>(6)? as u32,
         },
     ))
 }
@@ -696,6 +727,81 @@ fn load_addons(conn: &Connection, sql: &str) -> HashMap<u32, CreatureAddon> {
         .expect("Failed to query creature addons");
     rows.map(|r| r.expect("Failed to read creature addon row"))
         .collect()
+}
+
+/// Virtual item slots `ItemID1..3` (TrinityCore `UnitData::VirtualItems`).
+const VIRTUAL_ITEM_SLOTS: [EquipmentVisualSlot; 3] = [
+    EquipmentVisualSlot::MainHand,
+    EquipmentVisualSlot::OffHand,
+    EquipmentVisualSlot::Ranged,
+];
+
+/// Each virtual item with the ItemDisplayInfo of its (ItemID, AppearanceModID)
+/// ItemModifiedAppearance and its Item.db2 InventoryType.
+const EQUIPMENT_QUERY: &str = "WITH virtual_item (entry, id, slot, item, modifier) AS (
+         SELECT CreatureID, ID, 0, ItemID1, AppearanceModID1 FROM content_creature_equip_template
+         WHERE ItemID1 <> 0
+         UNION ALL SELECT CreatureID, ID, 1, ItemID2, AppearanceModID2
+         FROM content_creature_equip_template WHERE ItemID2 <> 0
+         UNION ALL SELECT CreatureID, ID, 2, ItemID3, AppearanceModID3
+         FROM content_creature_equip_template WHERE ItemID3 <> 0)
+     SELECT v.entry, v.id, v.slot, v.item, v.modifier, a.ItemDisplayInfoID, i.InventoryType
+     FROM virtual_item v
+     LEFT JOIN item i ON i.ID = v.item
+     LEFT JOIN item_modified_appearance m
+         ON m.ItemID = v.item AND m.ItemAppearanceModifierID = v.modifier
+     LEFT JOIN item_appearance a ON a.ID = m.ItemAppearanceID
+     ORDER BY v.entry, v.id, v.slot";
+
+type VirtualItemRow = (u32, u8, usize, u32, u32, Option<u32>, Option<u8>);
+
+fn virtual_item_from_row(row: &Row) -> rusqlite::Result<VirtualItemRow> {
+    Ok((
+        row.get(0)?,
+        row.get(1)?,
+        row.get(2)?,
+        row.get(3)?,
+        row.get(4)?,
+        row.get(5)?,
+        row.get(6)?,
+    ))
+}
+
+/// ObjectMgr::LoadEquipmentTemplates; an item without an Item.db2 row or an
+/// appearance for its AppearanceModID is left out, with an error.
+fn load_equipment(conn: &Connection) -> HashMap<u32, BTreeMap<u8, EquipmentAppearance>> {
+    let mut stmt = conn
+        .prepare(EQUIPMENT_QUERY)
+        .expect("Failed to prepare content_creature_equip_template query");
+    let rows = stmt
+        .query_map(params![], virtual_item_from_row)
+        .expect("Failed to query content_creature_equip_template");
+    let mut equipment: HashMap<u32, BTreeMap<u8, EquipmentAppearance>> = HashMap::new();
+    for row in rows {
+        let (entry, id, slot, item, modifier, display, inventory_type) =
+            row.expect("Failed to read content_creature_equip_template row");
+        let items = &mut equipment
+            .entry(entry)
+            .or_default()
+            .entry(id)
+            .or_default()
+            .entries;
+        let (Some(display), Some(inventory_type)) = (display, inventory_type) else {
+            error!(
+                "creature_equip_template ({entry}, {id}) ItemID{}: item {item} has no Item.db2 row or no appearance for AppearanceModID {modifier}",
+                slot + 1
+            );
+            continue;
+        };
+        items.push(EquippedAppearanceEntry {
+            slot: VIRTUAL_ITEM_SLOTS[slot],
+            item_id: Some(item),
+            display_info_id: Some(display),
+            inventory_type,
+            hidden: false,
+        });
+    }
+    equipment
 }
 
 fn formation_from_row(row: &Row) -> rusqlite::Result<(u32, FormationInfo)> {

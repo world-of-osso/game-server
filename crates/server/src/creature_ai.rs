@@ -670,8 +670,8 @@ fn leash_check_system(
 
 /// Run evading creatures back to their spawn point (`MoveTargetedHome`,
 /// run speed), then transition to Idle. At home the creature's mana is full and
-/// its addon auras return (`HomeMovementGenerator::DoFinalize` → `SetSpawnHealth`,
-/// `LoadCreaturesAddon`).
+/// its addon auras and pose return (`HomeMovementGenerator::DoFinalize` →
+/// `SetSpawnHealth`, `LoadCreaturesAddon`).
 fn return_to_spawn_system(
     time: Res<Time>,
     queues: MoveQueues,
@@ -684,6 +684,7 @@ fn return_to_spawn_system(
             &mut CreatureState,
             Option<&mut shared::components::Mana>,
             Option<&crate::zones::SpawnAddonAuras>,
+            Option<(&crate::zones::SpawnPose, &mut shared::components::UnitPose)>,
             Option<&InMap>,
             Bearing,
         ),
@@ -692,7 +693,7 @@ fn return_to_spawn_system(
     mut commands: Commands,
 ) {
     let dt = time.delta_secs();
-    for (entity, mut pos, spawn, mut state, mana, addon_auras, map, bearing) in &mut query {
+    for (entity, mut pos, spawn, mut state, mana, addon_auras, pose, map, bearing) in &mut query {
         if *state != CreatureState::Returning {
             continue;
         }
@@ -725,6 +726,12 @@ fn return_to_spawn_system(
                 commands
                     .entity(entity)
                     .insert(crate::zones::AddonAuras(auras.0.clone()));
+            }
+            if let Some((spawn_pose, mut pose)) = pose
+                && pose.set_if_neq(spawn_pose.0)
+                && let Some(replication) = queues.replication.as_deref()
+            {
+                replication.mark(entity);
             }
         }
     }

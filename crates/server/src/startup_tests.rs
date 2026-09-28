@@ -53,8 +53,17 @@ fn create_world_schema(conn: &rusqlite::Connection) {
             position_x REAL, position_y REAL, position_z REAL, orientation REAL,
             spawntimesecs INTEGER, wander_distance REAL, MovementType INTEGER,
             modelid INTEGER NOT NULL DEFAULT 0, unit_flags INTEGER NOT NULL DEFAULT 0,
-            spawnDifficulties TEXT NOT NULL DEFAULT '0'
+            spawnDifficulties TEXT NOT NULL DEFAULT '0', equipment_id INTEGER NOT NULL DEFAULT 0
         );
+        CREATE TABLE content_creature_equip_template (
+            CreatureID INTEGER, ID INTEGER, ItemID1 INTEGER, AppearanceModID1 INTEGER,
+            ItemID2 INTEGER, AppearanceModID2 INTEGER, ItemID3 INTEGER, AppearanceModID3 INTEGER
+        );
+        CREATE TABLE item (ID INTEGER PRIMARY KEY, InventoryType INTEGER);
+        CREATE TABLE item_modified_appearance (
+            ItemID INTEGER, ItemAppearanceModifierID INTEGER, ItemAppearanceID INTEGER
+        );
+        CREATE TABLE item_appearance (ID INTEGER PRIMARY KEY, ItemDisplayInfoID INTEGER);
         CREATE TABLE creature_display_info (ID INTEGER PRIMARY KEY, ModelID INTEGER);
         CREATE TABLE creature_model_data (ID INTEGER PRIMARY KEY, FileDataID INTEGER);
         CREATE TABLE content_game_event_creature (

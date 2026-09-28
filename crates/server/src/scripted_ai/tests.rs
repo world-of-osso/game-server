@@ -120,6 +120,7 @@ fn data() -> Option<&'static Data> {
                     display_id: None,
                     unit_flags: None,
                     spawn_difficulties: vec![crate::maps::store::DIFFICULTY_NORMAL],
+                    equipment_id: 0,
                 })
             })
             .unwrap()

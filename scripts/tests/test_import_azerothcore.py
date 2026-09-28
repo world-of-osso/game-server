@@ -474,6 +474,30 @@ class CreatureEventImportTests(unittest.TestCase):
         self.assertEqual(reported[("tdb_creature", "guid=317")], "not base phase: PhaseGroup 431")
         self.assertNotIn(("tdb_creature", "guid=316"), reported, "other maps keep AzerothCore spawns silently")
 
+    def test_creature_equipment_follows_the_source_of_each_entrys_spawns(self):
+        """creature_equip_template (TrinityCore ObjectMgr::LoadEquipmentTemplates): a Retail-spawned entry takes
+        TrinityCore's rows with their AppearanceModIDs, every other entry keeps AzerothCore's."""
+        (self.sql / "creature_template.sql").write_text(
+            "INSERT INTO `creature_template` (entry,name) VALUES\n(952,'Brother Neals'),(46405,'Stockade Guard');\n")
+        (self.sql / "creature_equip_template.sql").write_text(
+            "INSERT INTO `creature_equip_template` VALUES\n(952,1,1906,0,0,18019),(46405,1,1899,0,0,18019);\n")
+        write_tdb(self.tdb, "creature", [tdb_creature(375776, 46405, 34, 78.6935, 15.392, -26.4396, difficulties="1",
+                                                      phase_id=169)])
+        write_tdb(self.tdb, "creature_template", [tdb_template(46405, "Stockade Guard", 11, 0)])
+        write_tdb(self.tdb, "creature_template_difficulty", [tdb_difficulty(46405, 1, 0, 0, 0, content_tuning=0)])
+        # TDB1210 creature_equip_template rows of Stockade Guard 46405 (the second is invented: a mod id).
+        write_tdb(self.tdb, "creature_equip_template", ["(46405,1,5305,0,0,1984,0,0,0,0,0,63305)",
+                                                        "(46405,2,5305,3,0,0,0,0,0,0,0,63305)"])
+        result = self.run_import()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        with sqlite3.connect(self.db) as conn:
+            self.assertEqual(
+                conn.execute("""SELECT CreatureID, ID, ItemID1, AppearanceModID1, ItemID2, AppearanceModID2, ItemID3,
+                    AppearanceModID3 FROM content_creature_equip_template ORDER BY CreatureID, ID""").fetchall(),
+                [(952, 1, 1906, 0, 0, 0, 0, 0), (46405, 1, 5305, 0, 1984, 0, 0, 0), (46405, 2, 5305, 3, 0, 0, 0, 0)],
+            )
+            self.assertEqual(conn.execute("SELECT equipment_id FROM content_creature").fetchall(), [(1,)])
+
     def test_retail_spawns_keep_their_modelid_and_unit_flags(self):
         """TrinityCore `creature.modelid` and `unit_flags` override the template per spawn
         (ObjectMgr::ChooseDisplayId, ChooseCreatureFlags); a modelid Retail CreatureDisplayInfo lacks is ignored."""
@@ -1085,6 +1109,7 @@ class AzerothCoreContentTests(unittest.TestCase):
         "item_template", "npc_vendor",
         "gameobject_template", "gameobject_template_addon", "gameobject",
         "creature", "creature_addon", "creature_template_addon", "creature_formations", "game_event_creature", "waypoint_data",
+        "creature_equip_template",
     )
 
     @classmethod
@@ -1134,6 +1159,16 @@ class AzerothCoreContentTests(unittest.TestCase):
         )
         # AzerothCore: Gladius item level 9, display 22078.
         self.assertEqual(self.rows("SELECT ItemLevel, displayid FROM item_template WHERE entry = 2488"), [(9, 22078)])
+
+    def test_stockade_guard_carries_trinitycore_equipment_and_winterskorn_warrior_azerothcores(self):
+        # TDB1210 creature_equip_template (46405,1,5305,0,0,1984,0,0,...): Stockade Guard's mace and shield,
+        # picked by every Stockade Guard spawn's equipment_id 1.
+        self.assertEqual(self.rows("""SELECT ItemID1, AppearanceModID1, ItemID2, AppearanceModID2, ItemID3
+            FROM content_creature_equip_template WHERE CreatureID = 46405 ORDER BY ID"""), [(5305, 0, 1984, 0, 0)])
+        self.assertEqual(self.rows("SELECT DISTINCT equipment_id FROM content_creature WHERE id1 = 46405"), [(1,)])
+        # AzerothCore (23664,1,33320,13922,0): Winterskorn Warrior (Howling Fjord) has no Retail spawn.
+        self.assertEqual(self.rows("""SELECT ItemID1, ItemID2, ItemID3 FROM content_creature_equip_template
+            WHERE CreatureID = 23664"""), [(33320, 13922, 0)])
 
     def test_goldshire_barkeep_water_uses_retail_price(self):
         self.assertEqual(self.rows("SELECT BuyPrice FROM item_template WHERE entry = 159"), [(25,)])

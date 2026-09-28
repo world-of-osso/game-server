@@ -176,6 +176,18 @@ CREATE TABLE creature_template_addon (
   PRIMARY KEY (entry)
 );
 
+-- Virtual items (main hand, off hand, ranged) of creature.equipment_id ID per entry.
+DROP TABLE IF EXISTS creature_equip_template;
+CREATE TABLE creature_equip_template (
+  CreatureID INTEGER NOT NULL DEFAULT 0,
+  ID INTEGER NOT NULL DEFAULT 1,
+  ItemID1 INTEGER NOT NULL DEFAULT 0,
+  ItemID2 INTEGER NOT NULL DEFAULT 0,
+  ItemID3 INTEGER NOT NULL DEFAULT 0,
+  VerifiedBuild INTEGER DEFAULT NULL,
+  PRIMARY KEY (CreatureID, ID)
+);
+
 -- angle is degrees; groupAI 0x200 = GROUP_AI_FLAG_FOLLOW_LEADER.
 DROP TABLE IF EXISTS creature_formations;
 CREATE TABLE creature_formations (
