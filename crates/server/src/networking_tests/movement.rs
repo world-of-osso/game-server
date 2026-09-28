@@ -10,7 +10,7 @@ fn input_routes_to_correct_player() {
     let _ = app
         .world_mut()
         .run_system_once(move |mut q: Query<PlayerMovement, With<Player>>| {
-            apply_movement_input(&input, player_a, &mut q);
+            apply_movement_input(&input, player_a, &mut q, &mut MovementClocks::default());
         });
 
     let pos_a = *app.world().entity(player_a).get::<Position>().unwrap();
@@ -25,17 +25,13 @@ fn input_updates_rotation() {
     let mut app = setup_app_with_time();
     let player = spawn_player(app.world_mut(), 0.0, 0.0, 0.0);
     let input = PlayerInput {
-        direction: [1.0, 0.0, 0.0],
         facing_yaw: 1.5,
-        jumping: false,
-        running: true,
-        swimming: false,
-        elapsed_secs: TEST_STEP_SECS,
+        ..make_input(1.0, 0.0, 0.0)
     };
     let _ = app
         .world_mut()
         .run_system_once(move |mut q: Query<PlayerMovement, With<Player>>| {
-            apply_movement_input(&input, player, &mut q);
+            apply_movement_input(&input, player, &mut q, &mut MovementClocks::default());
         });
     let rot = *app.world().entity(player).get::<Rotation>().unwrap();
     assert!((rot.y - 1.5).abs() < 1e-6);
@@ -45,19 +41,12 @@ fn input_updates_rotation() {
 fn identical_input_does_not_dirty_rotation_or_speed_but_real_changes_do() {
     let mut app = setup_app_with_time();
     let player = spawn_player(app.world_mut(), 0.0, 0.0, 0.0);
-    let first_input = PlayerInput {
-        direction: [0.0, 0.0, 0.0],
-        facing_yaw: 0.0,
-        jumping: false,
-        running: true,
-        swimming: false,
-        elapsed_secs: TEST_STEP_SECS,
-    };
+    let first_input = make_input(0.0, 0.0, 0.0);
 
     let _ = app
         .world_mut()
         .run_system_once(move |mut q: Query<PlayerMovement, With<Player>>| {
-            apply_movement_input(&first_input, player, &mut q);
+            apply_movement_input(&first_input, player, &mut q, &mut MovementClocks::default());
         });
     let rotation_tick_after_first = app
         .world()
@@ -74,18 +63,16 @@ fn identical_input_does_not_dirty_rotation_or_speed_but_real_changes_do() {
 
     app.update();
 
-    let second_input = PlayerInput {
-        direction: [0.0, 0.0, 0.0],
-        facing_yaw: 0.0,
-        jumping: false,
-        running: true,
-        swimming: false,
-        elapsed_secs: TEST_STEP_SECS,
-    };
+    let second_input = make_input(0.0, 0.0, 0.0);
     let _ = app
         .world_mut()
         .run_system_once(move |mut q: Query<PlayerMovement, With<Player>>| {
-            apply_movement_input(&second_input, player, &mut q);
+            apply_movement_input(
+                &second_input,
+                player,
+                &mut q,
+                &mut MovementClocks::default(),
+            );
         });
     let rotation_tick_after_second = app
         .world()
@@ -112,17 +99,19 @@ fn identical_input_does_not_dirty_rotation_or_speed_but_real_changes_do() {
     app.update();
 
     let changed_input = PlayerInput {
-        direction: [0.0, 0.0, 0.0],
         facing_yaw: 1.5,
-        jumping: false,
         running: false,
-        swimming: false,
-        elapsed_secs: TEST_STEP_SECS,
+        ..make_input(0.0, 0.0, 0.0)
     };
     let _ = app
         .world_mut()
         .run_system_once(move |mut q: Query<PlayerMovement, With<Player>>| {
-            apply_movement_input(&changed_input, player, &mut q);
+            apply_movement_input(
+                &changed_input,
+                player,
+                &mut q,
+                &mut MovementClocks::default(),
+            );
         });
     let rotation_tick_after_change = app
         .world()
@@ -156,71 +145,81 @@ fn walk_speed_when_not_running() {
     let mut app = setup_app_with_time();
     let player = spawn_player(app.world_mut(), 0.0, 0.0, 0.0);
     let input = PlayerInput {
-        direction: [1.0, 0.0, 0.0],
-        facing_yaw: std::f32::consts::FRAC_PI_2,
-        jumping: false,
         running: false,
-        swimming: false,
-        elapsed_secs: TEST_STEP_SECS,
+        ..make_input(1.0, 0.0, 0.0)
     };
     let _ = app
         .world_mut()
         .run_system_once(move |mut q: Query<PlayerMovement, With<Player>>| {
-            apply_movement_input(&input, player, &mut q);
+            apply_movement_input(&input, player, &mut q, &mut MovementClocks::default());
         });
     let speed = app.world().entity(player).get::<MovementSpeed>().unwrap();
     assert!((speed.0 - DEFAULT_WALK_SPEED).abs() < 1e-6);
 }
 
 #[test]
-fn walk_speed_moves_at_2_5_yards_per_sec() {
-    assert!((DEFAULT_WALK_SPEED - 2.5).abs() < 1e-6);
+fn the_reported_position_is_adopted_across_the_ground() {
     let mut app = setup_app_with_time();
     let player = spawn_player(app.world_mut(), 0.0, 0.0, 0.0);
-    let input = PlayerInput {
-        direction: [1.0, 0.0, 0.0],
-        facing_yaw: std::f32::consts::FRAC_PI_2,
-        jumping: false,
-        running: false,
-        swimming: false,
-        elapsed_secs: TEST_STEP_SECS,
-    };
+    // The client ran diagonally (W+D) while its wire direction is its facing.
+    let input = reporting([0.2, 5.0, 0.2], make_input(1.0, 0.0, 0.0));
     let _ = app
         .world_mut()
         .run_system_once(move |mut q: Query<PlayerMovement, With<Player>>| {
-            apply_movement_input(&input, player, &mut q);
+            apply_movement_input(&input, player, &mut q, &mut MovementClocks::default());
         });
-    let dt = TEST_STEP_SECS;
     let pos = *app.world().entity(player).get::<Position>().unwrap();
-    let expected_x = DEFAULT_WALK_SPEED * dt;
+    assert_eq!((pos.x, pos.z), (0.2, 0.2));
+    assert_eq!(
+        pos.y, 0.0,
+        "height stays the server's gravity and ground clamp"
+    );
+}
+
+#[test]
+fn walking_moves_at_most_2_5_yards_per_sec() {
+    assert!((DEFAULT_WALK_SPEED - 2.5).abs() < 1e-6);
+    let mut app = setup_app_with_time();
+    let player = spawn_player(app.world_mut(), 0.0, 0.0, 0.0);
+    let input = reporting(
+        FAR_X,
+        PlayerInput {
+            running: false,
+            ..make_input(1.0, 0.0, 0.0)
+        },
+    );
+    let _ = app
+        .world_mut()
+        .run_system_once(move |mut q: Query<PlayerMovement, With<Player>>| {
+            apply_movement_input(&input, player, &mut q, &mut MovementClocks::default());
+        });
+    let pos = *app.world().entity(player).get::<Position>().unwrap();
+    let expected_x = DEFAULT_WALK_SPEED * MAX_INPUT_STEP_SECS;
     assert!(
         (pos.x - expected_x).abs() < 1e-6,
-        "walk moved {}, expected {} (2.5 * {dt})",
+        "walk moved {}, expected {expected_x}",
         pos.x,
-        expected_x,
     );
     assert!((pos.y - 0.0).abs() < 1e-6, "y unchanged");
 }
 
 #[test]
-fn run_speed_moves_at_7_0_yards_per_sec() {
+fn running_moves_at_most_7_0_yards_per_sec() {
     assert!((DEFAULT_RUN_SPEED - 7.0).abs() < 1e-6);
     let mut app = setup_app_with_time();
     let player = spawn_player(app.world_mut(), 0.0, 0.0, 0.0);
-    let input = make_input(1.0, 0.0, 0.0);
+    let input = reporting(FAR_X, make_input(1.0, 0.0, 0.0));
     let _ = app
         .world_mut()
         .run_system_once(move |mut q: Query<PlayerMovement, With<Player>>| {
-            apply_movement_input(&input, player, &mut q);
+            apply_movement_input(&input, player, &mut q, &mut MovementClocks::default());
         });
-    let dt = TEST_STEP_SECS;
     let pos = *app.world().entity(player).get::<Position>().unwrap();
-    let expected_x = DEFAULT_RUN_SPEED * dt;
+    let expected_x = DEFAULT_RUN_SPEED * MAX_INPUT_STEP_SECS;
     assert!(
         (pos.x - expected_x).abs() < 1e-6,
-        "run moved {}, expected {} (7.0 * {dt})",
+        "run moved {}, expected {expected_x}",
         pos.x,
-        expected_x,
     );
 }
 
@@ -230,13 +229,12 @@ fn aura_speed_multiplier_scales_movement() {
     let player = spawn_player(app.world_mut(), 0.0, 0.0, 0.0);
     set_aura_speed(app.world_mut(), player, 0.50);
 
-    let input = make_input(1.0, 0.0, 0.0);
+    let input = reporting(FAR_X, make_input(1.0, 0.0, 0.0));
     let _ = app
         .world_mut()
         .run_system_once(move |mut q: Query<PlayerMovement, With<Player>>| {
-            apply_movement_input(&input, player, &mut q);
+            apply_movement_input(&input, player, &mut q, &mut MovementClocks::default());
         });
-    let dt = TEST_STEP_SECS;
     let pos = *app.world().entity(player).get::<Position>().unwrap();
     let speed = app.world().entity(player).get::<MovementSpeed>().unwrap();
     let expected_speed = DEFAULT_RUN_SPEED * 0.5;
@@ -245,7 +243,7 @@ fn aura_speed_multiplier_scales_movement() {
         "speed {}, expected {expected_speed}",
         speed.0,
     );
-    let expected_x = expected_speed * dt;
+    let expected_x = expected_speed * MAX_INPUT_STEP_SECS;
     assert!(
         (pos.x - expected_x).abs() < 1e-6,
         "moved {}, expected {expected_x}",
@@ -259,15 +257,14 @@ fn aura_speed_multiplier_scales_movement() {
         .unwrap()
         .x = 0.0;
 
-    let input2 = make_input(1.0, 0.0, 0.0);
+    let input2 = reporting(FAR_X, make_input(1.0, 0.0, 0.0));
     let _ = app
         .world_mut()
         .run_system_once(move |mut q: Query<PlayerMovement, With<Player>>| {
-            apply_movement_input(&input2, player, &mut q);
+            apply_movement_input(&input2, player, &mut q, &mut MovementClocks::default());
         });
-    let dt2 = TEST_STEP_SECS;
     let pos2 = *app.world().entity(player).get::<Position>().unwrap();
-    let expected_hasted = DEFAULT_RUN_SPEED * 1.30 * dt2;
+    let expected_hasted = DEFAULT_RUN_SPEED * 1.30 * MAX_INPUT_STEP_SECS;
     assert!(
         (pos2.x - expected_hasted).abs() < 1e-5,
         "hasted moved {}, expected {expected_hasted}",
@@ -294,7 +291,7 @@ fn zero_effective_speed_does_not_dirty_position() {
     let _ = app
         .world_mut()
         .run_system_once(move |mut q: Query<PlayerMovement, With<Player>>| {
-            apply_movement_input(&input, player, &mut q);
+            apply_movement_input(&input, player, &mut q, &mut MovementClocks::default());
         });
 
     assert_eq!(
@@ -324,7 +321,7 @@ fn root_prevents_movement() {
     let _ = app
         .world_mut()
         .run_system_once(move |mut q: Query<PlayerMovement, With<Player>>| {
-            apply_movement_input(&input, player, &mut q);
+            apply_movement_input(&input, player, &mut q, &mut MovementClocks::default());
         });
 
     let pos = *app.world().entity(player).get::<Position>().unwrap();
@@ -341,28 +338,24 @@ fn backward_movement_at_reduced_speed() {
     let fwd_player = spawn_player(app.world_mut(), 0.0, 0.0, 0.0);
     let bwd_player = spawn_player(app.world_mut(), 0.0, 0.0, 0.0);
 
-    let fwd_input = PlayerInput {
-        direction: [0.0, 0.0, 1.0],
-        facing_yaw: 0.0,
-        jumping: false,
-        running: true,
-        swimming: false,
-        elapsed_secs: TEST_STEP_SECS,
-    };
-    let bwd_input = PlayerInput {
-        direction: [0.0, 0.0, -1.0],
-        facing_yaw: 0.0,
-        jumping: false,
-        running: true,
-        swimming: false,
-        elapsed_secs: TEST_STEP_SECS,
-    };
+    let fwd_input = far_facing_forward([0.0, 0.0, 1.0]);
+    let bwd_input = far_facing_forward([0.0, 0.0, -1.0]);
 
     let _ = app
         .world_mut()
         .run_system_once(move |mut q: Query<PlayerMovement, With<Player>>| {
-            apply_movement_input(&fwd_input, fwd_player, &mut q);
-            apply_movement_input(&bwd_input, bwd_player, &mut q);
+            apply_movement_input(
+                &fwd_input,
+                fwd_player,
+                &mut q,
+                &mut MovementClocks::default(),
+            );
+            apply_movement_input(
+                &bwd_input,
+                bwd_player,
+                &mut q,
+                &mut MovementClocks::default(),
+            );
         });
 
     let fwd_speed = app
@@ -407,37 +400,31 @@ fn strafing_speed_is_reduced_but_faster_than_backpedal() {
     let strafe_player = spawn_player(app.world_mut(), 0.0, 0.0, 0.0);
     let backpedal_player = spawn_player(app.world_mut(), 0.0, 0.0, 0.0);
 
-    let fwd_input = PlayerInput {
-        direction: [0.0, 0.0, 1.0],
-        facing_yaw: 0.0,
-        jumping: false,
-        running: true,
-        swimming: false,
-        elapsed_secs: TEST_STEP_SECS,
-    };
-    let strafe_input = PlayerInput {
-        direction: [1.0, 0.0, 0.0],
-        facing_yaw: 0.0,
-        jumping: false,
-        running: true,
-        swimming: false,
-        elapsed_secs: TEST_STEP_SECS,
-    };
-    let backpedal_input = PlayerInput {
-        direction: [0.0, 0.0, -1.0],
-        facing_yaw: 0.0,
-        jumping: false,
-        running: true,
-        swimming: false,
-        elapsed_secs: TEST_STEP_SECS,
-    };
+    let fwd_input = far_facing_forward([0.0, 0.0, 1.0]);
+    let strafe_input = far_facing_forward([1.0, 0.0, 0.0]);
+    let backpedal_input = far_facing_forward([0.0, 0.0, -1.0]);
 
     let _ = app
         .world_mut()
         .run_system_once(move |mut q: Query<PlayerMovement, With<Player>>| {
-            apply_movement_input(&fwd_input, fwd_player, &mut q);
-            apply_movement_input(&strafe_input, strafe_player, &mut q);
-            apply_movement_input(&backpedal_input, backpedal_player, &mut q);
+            apply_movement_input(
+                &fwd_input,
+                fwd_player,
+                &mut q,
+                &mut MovementClocks::default(),
+            );
+            apply_movement_input(
+                &strafe_input,
+                strafe_player,
+                &mut q,
+                &mut MovementClocks::default(),
+            );
+            apply_movement_input(
+                &backpedal_input,
+                backpedal_player,
+                &mut q,
+                &mut MovementClocks::default(),
+            );
         });
 
     let fwd_speed = app
@@ -485,4 +472,15 @@ fn strafing_speed_is_reduced_but_faster_than_backpedal() {
         "strafe distance {strafe_dist} should be reduced from forward {fwd_dist}",
     );
     assert!(strafe_dist > backpedal_dist);
+}
+
+/// Running along `direction` while facing +z, reporting 10 yd that way: farther than
+/// any speed covers in one input.
+fn far_facing_forward(direction: [f32; 3]) -> PlayerInput {
+    PlayerInput {
+        direction,
+        facing_yaw: 0.0,
+        position: direction.map(|axis| axis * 10.0),
+        ..make_input(0.0, 0.0, 0.0)
+    }
 }

@@ -470,20 +470,28 @@ pub(crate) struct PlayerInputParams<'w, 's> {
     clocks: Local<'s, MovementClocks>,
 }
 
-/// Read PlayerInput messages and apply each one for the time it covers, within the
-/// player's movement bank.
+/// Read PlayerInput messages and move each player to the positions its client reports,
+/// within the player's movement bank.
 pub(crate) fn process_player_inputs(time: Res<Time>, mut params: PlayerInputParams) {
     params.clocks.advance(time.delta_secs());
     for (mut receiver, link) in &mut params.receivers {
-        let inputs: Vec<PlayerInput> = receiver.receive().collect();
+        let control = params
+            .controls
+            .get(link.0)
+            .ok()
+            .copied()
+            .unwrap_or_default();
+        // Input sent before the client adopted a server teleport is stale
+        // (`HandleMovementOpcode` ignores movement while `IsBeingTeleported`).
+        let inputs: Vec<PlayerInput> = receiver
+            .receive()
+            .filter(|input| input.epoch == control.epoch)
+            .collect();
         let Some(latest) = inputs.last() else {
             continue;
         };
         // The server drives a controlled player (taxi flight); its input is dropped.
-        let controlled = params
-            .controls
-            .get(link.0)
-            .is_ok_and(|control| control.controlled);
+        let controlled = control.controlled;
         // A corpse (dead, not yet released) does not move.
         let corpse = params
             .death_states
@@ -504,9 +512,13 @@ pub(crate) fn process_player_inputs(time: Res<Time>, mut params: PlayerInputPara
             params.commands.entity(link.0).remove::<Mounted>();
         }
         let mut changes = MovementChanges::default();
-        for mut input in inputs {
-            input.elapsed_secs = params.clocks.grant(link.0, input.elapsed_secs);
-            changes = changes.merge(apply_movement_input(&input, link.0, &mut params.players));
+        for input in inputs {
+            changes = changes.merge(apply_movement_input(
+                &input,
+                link.0,
+                &mut params.players,
+                &mut params.clocks,
+            ));
         }
         params.commands.entity(link.0).insert(Moving(moving));
         if changes.position_changed {

@@ -49,22 +49,35 @@ fn set_aura_speed(world: &mut World, player: Entity, movement_speed: f32) {
 
 /// One 20 fps client frame.
 const TEST_STEP_SECS: f32 = 0.05;
+/// A 7 yd/s run for one 20 fps frame.
+const RUN_STEP: f32 = DEFAULT_RUN_SPEED * TEST_STEP_SECS;
 
+/// The input of a client that ran one frame along `(dx, dz)` from the origin, facing it.
 fn make_input(dx: f32, dy: f32, dz: f32) -> PlayerInput {
     let facing_yaw = if dx.abs() > f32::EPSILON || dz.abs() > f32::EPSILON {
         dx.atan2(dz)
     } else {
         0.0
     };
+    let ran = Vec2::new(dx, dz).normalize_or_zero() * RUN_STEP;
     PlayerInput {
         direction: [dx, dy, dz],
         facing_yaw,
         jumping: false,
         running: true,
         swimming: false,
-        elapsed_secs: TEST_STEP_SECS,
+        position: [ran.x, 0.0, ran.y],
+        epoch: 0,
     }
 }
+
+/// `input` reporting that the client put the player at `position`.
+fn reporting(position: [f32; 3], input: PlayerInput) -> PlayerInput {
+    PlayerInput { position, ..input }
+}
+
+/// A report 10 yd along +x, farther than any speed covers in one input.
+const FAR_X: [f32; 3] = [10.0, 0.0, 0.0];
 
 fn setup_app_with_time() -> App {
     let mut app = App::new();
@@ -85,6 +98,8 @@ mod movement;
 mod physics;
 #[path = "networking_tests/receiver_rate.rs"]
 mod receiver_rate;
+#[path = "networking_tests/stockade_run.rs"]
+mod stockade_run;
 #[path = "networking_tests/terrain.rs"]
 mod terrain;
 #[path = "networking_tests/world_entry.rs"]

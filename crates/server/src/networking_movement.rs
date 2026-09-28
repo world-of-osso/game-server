@@ -24,14 +24,16 @@ pub(super) struct MovementChanges {
     pub(super) replicated_state_changed: bool,
 }
 
-/// Longest movement step one input may apply (a client frame of 4 fps).
+/// Longest movement one input may apply (a client frame of 4 fps).
 pub(super) const MAX_INPUT_STEP_SECS: f32 = 0.25;
-/// Movement time a player may bank ahead of server time, absorbing network jitter.
+/// Movement time a player may bank ahead of server time, absorbing network jitter and
+/// client frame hitches.
 pub(super) const MOVEMENT_BANK_SECS: f32 = 0.5;
 
 /// Seconds of movement each player may still apply. Banks refill at server time up to
-/// `MOVEMENT_BANK_SECS`, so however many inputs arrive, a player moves no faster than
-/// real time allows. A player without an entry has a full bank.
+/// `MOVEMENT_BANK_SECS`, so however many inputs arrive and however far they report, a
+/// player moves no faster than its speed over real time. A player without an entry has
+/// a full bank.
 #[derive(Default)]
 pub(crate) struct MovementClocks(HashMap<Entity, f32>);
 
@@ -43,7 +45,7 @@ impl MovementClocks {
         });
     }
 
-    /// The step an input asking for `requested_secs` may apply, taken from the bank.
+    /// The movement time an input needing `requested_secs` may apply, taken from the bank.
     pub(super) fn grant(&mut self, player: Entity, requested_secs: f32) -> f32 {
         let bank = self.0.entry(player).or_insert(MOVEMENT_BANK_SECS);
         let step = requested_secs.max(0.0).min(MAX_INPUT_STEP_SECS).min(*bank);
@@ -62,11 +64,15 @@ impl MovementChanges {
     }
 }
 
-/// Apply one movement input for `input.elapsed_secs` to the specified player entity.
+/// Apply one movement input to the specified player entity: move it across the ground to
+/// the position the client reports (`HandleMovementOpcode` → `UpdatePosition(pos)`), as far
+/// as its speed covers in the movement time its bank grants. Height stays the server's
+/// (gravity and the ground clamp).
 pub(super) fn apply_movement_input(
     input: &PlayerInput,
     player_entity: Entity,
     players: &mut Query<PlayerMovement, With<Player>>,
+    clocks: &mut MovementClocks,
 ) -> MovementChanges {
     let Ok((mut position, mut rotation, mut speed, mut vertical_velocity, auras, cast_state)) =
         players.get_mut(player_entity)
@@ -79,19 +85,35 @@ pub(super) fn apply_movement_input(
     if input.jumping && vertical_velocity.0 == 0.0 {
         vertical_velocity.0 = shared::movement::JUMP_IMPULSE;
     }
-    let (direction_length, mut changes) =
-        update_rotation_and_speed(input, auras, &mut rotation, &mut speed);
-    if apply_input_translation(
-        input,
-        &mut position,
-        speed.0,
-        direction_length,
-        input.elapsed_secs,
-    ) {
+    let mut changes = update_rotation_and_speed(input, auras, &mut rotation, &mut speed);
+    let target = Vec2::new(input.position[0], input.position[2]);
+    let current = Vec2::new(position.x, position.z);
+    let next = move_toward_reported(current, target, speed.0, |secs| {
+        clocks.grant(player_entity, secs)
+    });
+    if next != current {
+        position.x = next.x;
+        position.z = next.y;
         changes.position_changed = true;
         changes.replicated_state_changed = true;
     }
     changes
+}
+
+/// Where the player gets on the way from `current` to the client's `reported` point: all
+/// the way when `speed` covers it in the time `grant` allows for it, else that far.
+fn move_toward_reported(
+    current: Vec2,
+    reported: Vec2,
+    speed: f32,
+    grant: impl FnOnce(f32) -> f32,
+) -> Vec2 {
+    let distance = current.distance(reported);
+    if !reported.is_finite() || distance < 0.001 || speed <= 0.0 {
+        return current;
+    }
+    let travel = speed * grant(distance / speed);
+    current + (reported - current) * (travel / distance).min(1.0)
 }
 
 fn stop_for_blocking_cast(
@@ -117,7 +139,7 @@ fn update_rotation_and_speed(
     auras: Option<&AuraStatMods>,
     rotation: &mut Mut<'_, Rotation>,
     speed: &mut Mut<'_, MovementSpeed>,
-) -> (f32, MovementChanges) {
+) -> MovementChanges {
     let rotation_changed = rotation.y != input.facing_yaw;
     if rotation_changed {
         rotation.y = input.facing_yaw;
@@ -128,36 +150,10 @@ fn update_rotation_and_speed(
     if speed_changed {
         speed.0 = desired_speed;
     }
-    (
-        direction_length,
-        MovementChanges {
-            position_changed: false,
-            replicated_state_changed: rotation_changed || speed_changed,
-        },
-    )
-}
-
-fn apply_input_translation(
-    input: &PlayerInput,
-    position: &mut Mut<'_, Position>,
-    speed: f32,
-    direction_length: f32,
-    delta_seconds: f32,
-) -> bool {
-    if direction_length < 0.001 {
-        return false;
+    MovementChanges {
+        position_changed: false,
+        replicated_state_changed: rotation_changed || speed_changed,
     }
-    let scale = speed * delta_seconds / direction_length;
-    let next_position = Position {
-        x: position.x + input.direction[0] * scale,
-        y: position.y + input.direction[1] * scale,
-        z: position.z + input.direction[2] * scale,
-    };
-    if **position == next_position {
-        return false;
-    }
-    **position = next_position;
-    true
 }
 
 /// Compute effective movement speed from input, auras, and direction.
