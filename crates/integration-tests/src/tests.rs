@@ -432,7 +432,8 @@ fn client_message_received_by_server() {
         jumping: false,
         running: false,
         swimming: false,
-        elapsed_secs: 0.05,
+        position: [0.0, 0.0, 0.0],
+        epoch: 0,
     };
     // Register a system to collect messages before they get cleared in Last schedule
     stepper.server_app.init_resource::<ReceivedInputs>();
@@ -536,7 +537,8 @@ fn input_direction(direction: [f32; 3]) -> PlayerInput {
         jumping: false,
         running: false,
         swimming: false,
-        elapsed_secs: 0.05,
+        position: [0.0, 0.0, 0.0],
+        epoch: 0,
     }
 }
 
