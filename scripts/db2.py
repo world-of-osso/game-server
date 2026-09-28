@@ -65,6 +65,7 @@ TABLES = [
     "SpellReagents", "SpellTotems", "TradeSkillCategory", "SkillRaceClassInfo", "TotemCategory",
     "ContentTuning", "QuestMoneyReward", "ExpectedStat", "ExpectedStatMod", "ContentTuningXExpected",
     "Map", "MapDifficulty", "AreaTrigger", "AreaTriggerActionSet", "Difficulty", "DungeonEncounter",
+    "MapDifficultyXCondition", "PlayerCondition",
 ]
 # Extracted from local CASC by FileDataID (community listfile), pinned to the build's
 # WoWDBDefs layout hash: {table: (FileDataID, layout hash)}.
@@ -73,9 +74,10 @@ LOCAL_TABLES = {
     "ExpectedStat": (1937326, 0x0FD90F9C), "ExpectedStatMod": (1969773, 0x8C41CCCE),
     "ContentTuningXExpected": (2976765, 0x897A4313),
     "Difficulty": (1352127, 0xB810C351), "DungeonEncounter": (1347279, 0x35863DC4),
+    "MapDifficultyXCondition": (1375435, 0xD514B4CA),
 }
 # LOCAL_TABLES with localized strings, read from their enUS copy (casc_locale.py).
-LOCALIZED_TABLES = {"Difficulty", "DungeonEncounter"}
+LOCALIZED_TABLES = {"Difficulty", "DungeonEncounter", "MapDifficultyXCondition"}
 
 
 def table_name(db2_name):
