@@ -324,3 +324,7 @@ Created `systems/quests.md` (quest data, rules, runtime) and `specs/quests.md`; 
 ## [2026-09-27] update | Dungeon difficulties and instance locks
 
 [[zone-architecture]]: copies at the entrant's dungeon difficulty (downscaled per MapDifficulty/Difficulty fallback), `InstanceLocks` (InstanceLockMgr port: temporary/permanent, instance-id bound shared state, encounter locks, Retail 15:00 UTC reset), lock persistence in game.redb, `ServerClock`. Spec [instances](../specs/instances.md) (Dungeon difficulty, Instance locks), [retail world content](../specs/retail-world-content.md) (spawnDifficulties, content_creature_template_difficulty, Grim Batol), [boss scripts](../specs/boss-scripts.md) (Grim Batol spell-less BossAI).
+
+## [2026-09-28] update | Dungeon level conditions
+
+[[zone-architecture]]: `MapStore.difficulty_conditions` (MapDifficultyXCondition → PlayerCondition → `content_tuning_level`); `player_cannot_enter` refuses a player below a dungeon's ContentTuning minimum with `TransferAbortReason::Condition` (Stockade: level 10). Spec [instances](../specs/instances.md) (Level conditions).

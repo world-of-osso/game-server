@@ -184,7 +184,7 @@ fn a_full_stockade_copy_refuses_the_sixth_player_and_a_stranger_to_its_group() {
         instances.add_player(copy, world.spawn_empty().id());
     }
     assert_eq!(
-        instances.player_cannot_enter(store, STOCKADE, entrant(6, Some(7)), SUNDAY_NOON),
+        instances.player_cannot_enter(store, STOCKADE, entrant(6, Some(7)), 80, SUNDAY_NOON),
         Some(TransferAbortReason::MaxPlayers)
     );
     assert_eq!(
@@ -230,13 +230,33 @@ fn raids_and_world_maps_without_npc_data_are_not_hosted() {
     // Outland (530); Molten Core (409), a raid.
     for map_id in [530, 409] {
         assert_eq!(
-            instances.player_cannot_enter(store, map_id, entrant(1, None), SUNDAY_NOON),
+            instances.player_cannot_enter(store, map_id, entrant(1, None), 80, SUNDAY_NOON),
             Some(TransferAbortReason::MapNotAllowed),
             "map {map_id}"
         );
     }
     assert_eq!(
-        instances.player_cannot_enter(store, 1, entrant(1, None), SUNDAY_NOON),
+        instances.player_cannot_enter(store, 1, entrant(1, None), 1, SUNDAY_NOON),
+        None
+    );
+}
+
+/// The Culling of Stratholme (595) Normal: MapDifficulty 91's conditions (40817, 43808)
+/// carry no ContentTuning, so no level is required.
+const CULLING_OF_STRATHOLME: u32 = 595;
+
+#[test]
+fn a_level_one_player_may_enter_a_dungeon_without_a_level_condition() {
+    let Some(store) = map_store() else { return };
+    let instances = InstanceManager::default();
+    assert_eq!(
+        instances.player_cannot_enter(
+            store,
+            CULLING_OF_STRATHOLME,
+            entrant(1, None),
+            1,
+            SUNDAY_NOON
+        ),
         None
     );
 }
@@ -314,8 +334,16 @@ fn harness_with(setup: impl FnOnce(&mut App)) -> Option<Harness> {
     })
 }
 
+/// The level harness players have: every hosted dungeon's level condition admits it
+/// (Mythic Grim Batol, PlayerCondition 115171, needs 80).
+const TRAVELER_LEVEL: u8 = 80;
+
 impl Harness {
     fn spawn(&mut self, character_id: u64, map: InMap, at: Vec3) -> Traveler {
+        self.spawn_at_level(character_id, TRAVELER_LEVEL, map, at)
+    }
+
+    fn spawn_at_level(&mut self, character_id: u64, level: u8, map: InMap, at: Vec3) -> Traveler {
         let player = self
             .app
             .world_mut()
@@ -339,6 +367,7 @@ impl Harness {
                 },
                 MovementControl::default(),
                 CombatTarget(None),
+                shared::components::Level(level),
                 map,
             ))
             .id();
@@ -701,6 +730,51 @@ fn a_sixth_raid_member_is_refused_at_the_entrance_and_stays_in_stormwind() {
     );
     assert!(h.new_worlds(sixth).is_empty());
     assert_eq!(h.map_of(sixth), Some(STORMWIND));
+}
+
+/// Stockade MapDifficulty 8 (Normal) → MapDifficultyXCondition 132 → PlayerCondition 74354:
+/// ContentTuning 215 (levels 10-30), Flags 0x60 (`WithinOrAboveRecord` | `UseEffectiveLevel`).
+fn stockade_level_refusal() -> TransferAborted {
+    TransferAborted {
+        map_id: STOCKADE,
+        reason: TransferAbortReason::Condition(
+            "You must be at least level 10 to enter Stormwind Stockade.".into(),
+        ),
+    }
+}
+
+#[test]
+fn a_level_one_player_is_refused_at_the_stockade_entrance_and_stays_in_stormwind() {
+    let Some(mut h) = harness() else { return };
+    let player = h.spawn_at_level(
+        1,
+        1,
+        STORMWIND,
+        STOCKADE_ENTRANCE_TRIGGER + Vec3::new(0.0, 0.0, 20.0),
+    );
+    h.walk_to(&player, STOCKADE_ENTRANCE_TRIGGER);
+
+    assert_eq!(h.aborts(&player), vec![stockade_level_refusal()]);
+    assert!(h.new_worlds(&player).is_empty());
+    assert_eq!(h.map_of(&player), Some(STORMWIND));
+    assert!(close(h.position(&player), STOCKADE_ENTRANCE_TRIGGER));
+}
+
+#[test]
+fn level_nine_is_refused_and_level_ten_enters_the_stockade() {
+    let Some(mut h) = harness() else { return };
+    let start = STOCKADE_ENTRANCE_TRIGGER + Vec3::new(0.0, 0.0, 20.0);
+    let nine = h.spawn_at_level(1, 9, STORMWIND, start);
+    let ten = h.spawn_at_level(2, 10, STORMWIND, start);
+
+    h.walk_to(&nine, STOCKADE_ENTRANCE_TRIGGER);
+    assert_eq!(h.aborts(&nine), vec![stockade_level_refusal()]);
+    assert_eq!(h.map_of(&nine), Some(STORMWIND));
+
+    let new_world = h.enter_stockade(&ten);
+    assert_eq!(new_world.map_id, STOCKADE);
+    assert!(h.aborts(&ten).is_empty());
+    assert_eq!(h.map_of(&ten).map(|map| map.map_id), Some(STOCKADE));
 }
 
 #[test]

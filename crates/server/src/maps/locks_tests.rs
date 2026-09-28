@@ -22,6 +22,7 @@ const UMBRISS_BIT: u32 = 3;
 
 fn heroic() -> MapDifficulty {
     MapDifficulty {
+        id: 346,
         map_id: GRIM_BATOL,
         difficulty_id: 2,
         lock_id: 0,
@@ -33,6 +34,7 @@ fn heroic() -> MapDifficulty {
 
 fn mythic() -> MapDifficulty {
     MapDifficulty {
+        id: 5475,
         map_id: GRIM_BATOL,
         difficulty_id: 23,
         lock_id: 251,
@@ -44,6 +46,7 @@ fn mythic() -> MapDifficulty {
 
 fn normal() -> MapDifficulty {
     MapDifficulty {
+        id: 345,
         map_id: GRIM_BATOL,
         difficulty_id: 1,
         lock_id: 0,

@@ -12,7 +12,7 @@
 use bevy::ecs::world::CommandQueue;
 use bevy::prelude::*;
 use lightyear::prelude::*;
-use shared::components::{MovementControl, Player, Position, Rotation, WorldArrival};
+use shared::components::{Level, MovementControl, Player, Position, Rotation, WorldArrival};
 use shared::protocol::{
     NewWorld, TransferAbortReason, TransferAborted, TransferChannel, WorldPortAck,
 };
@@ -63,11 +63,13 @@ pub(crate) fn teleport_to(
         return true;
     }
     let entrant = entrant_of(world, player);
+    let level = world.get::<Level>(player).expect("player has a Level").0;
     let unix = super::difficulty::now(world).unix;
     let refused = world.resource::<InstanceManager>().player_cannot_enter(
         world.resource::<MapStore>(),
         destination.map_id,
         entrant,
+        level,
         unix,
     );
     if let Some(reason) = refused {
