@@ -1,5 +1,5 @@
-//! Map data read at startup: `Map.db2` / `MapDifficulty.db2` entries, area trigger
-//! teleports (`AreaTrigger.db2` shapes + TDB `areatrigger_teleport` →
+//! Map data read at startup: `Map.db2` / `MapDifficulty.db2` entries and their
+//! `MapDifficultyXCondition.db2` level conditions, area trigger teleports (`AreaTrigger.db2` shapes + TDB `areatrigger_teleport` →
 //! `world_safe_locs`) and graveyards (`graveyard_zone`).
 
 use std::collections::HashMap;
@@ -91,6 +91,7 @@ const MAP_DIFFICULTY_FLAG_DISABLE_LOCK_EXTENSION: u32 = 0x10;
 /// `MapDifficulty.db2` row.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct MapDifficulty {
+    pub id: u32,
     pub map_id: u32,
     pub difficulty_id: u32,
     /// `LockID`: difficulties of a map sharing it share instance locks (`InstanceLockKey`).
@@ -134,6 +135,39 @@ impl MapDifficulty {
     /// `MapDb2Entries::GetKey`.
     pub fn lock_key(&self) -> (u32, u32) {
         (self.map_id, self.lock_id)
+    }
+}
+
+/// `PlayerConditionFlags::WithinOrAboveRecord`: the ContentTuning maximum level does not
+/// apply.
+const PLAYER_CONDITION_WITHIN_OR_ABOVE_RECORD: u32 = 0x20;
+/// `PlayerConditionFlags::Disabled`: the condition is always met.
+const PLAYER_CONDITION_DISABLED: u32 = 0x100;
+
+/// A `MapDifficultyXCondition.db2` row whose `PlayerCondition` names a ContentTuning: the
+/// level range `ConditionMgr::IsPlayerMeetingCondition` (ConditionMgr.cpp:2929-2953)
+/// requires. The other `PlayerCondition` fields (ModifierTree: boosted characters, class
+/// trials, Timerunners) are not evaluated; `PlayerCondition.MinLevel` is ignored as
+/// TrinityCore does.
+#[derive(Debug, Clone, PartialEq)]
+pub struct MapDifficultyCondition {
+    /// `FailureDescription`, else the `PlayerCondition`'s `Failure_description`.
+    pub failure_text: String,
+    /// ContentTuning `MinLevel` (`content_tuning_level`).
+    pub min_level: u8,
+    /// ContentTuning `MaxLevel`; 0 under `WithinOrAboveRecord`.
+    pub max_level: u8,
+}
+
+impl MapDifficultyCondition {
+    pub fn is_met(&self, level: u8) -> bool {
+        level >= self.min_level && (self.max_level == 0 || level <= self.max_level)
+    }
+
+    /// The failure text with `$pcMinLevel` resolved to the required level.
+    pub fn failure(&self) -> String {
+        self.failure_text
+            .replace("$pcMinLevel", &self.min_level.to_string())
     }
 }
 
@@ -240,6 +274,9 @@ pub struct MapStore {
     pub maps: HashMap<u32, MapEntry>,
     /// `MapDifficulty.db2` by map, in `ID` order.
     pub difficulties: HashMap<u32, Vec<MapDifficulty>>,
+    /// Level conditions by `MapDifficulty.db2` ID, in `OrderIndex` order
+    /// (`DB2Manager::GetMapDifficultyConditions`).
+    pub difficulty_conditions: HashMap<u32, Vec<MapDifficultyCondition>>,
     /// `Difficulty.db2` by ID.
     pub difficulty_entries: HashMap<u32, DifficultyEntry>,
     /// `DungeonEncounter.db2` by ID.
@@ -265,6 +302,19 @@ impl MapStore {
             .get(&map_id)?
             .iter()
             .find(|difficulty| difficulty.difficulty_id == difficulty_id)
+    }
+
+    /// The first level condition of MapDifficulty `map_difficulty_id` a player at `level`
+    /// fails (`Player::Satisfy`, Player.cpp:20071-20082).
+    pub fn unmet_condition(
+        &self,
+        map_difficulty_id: u32,
+        level: u8,
+    ) -> Option<&MapDifficultyCondition> {
+        self.difficulty_conditions
+            .get(&map_difficulty_id)?
+            .iter()
+            .find(|condition| !condition.is_met(level))
     }
 
     /// `DB2Manager::GetDownscaledMapDifficultyData` (DB2Stores.cpp:2778-2797): the map's
@@ -387,6 +437,7 @@ pub fn load_map_store(conn: &Connection) -> rusqlite::Result<MapStore> {
     Ok(MapStore {
         maps: load_maps(conn)?,
         difficulties: load_difficulties(conn)?,
+        difficulty_conditions: load_difficulty_conditions(conn)?,
         difficulty_entries: load_difficulty_entries(conn)?,
         dungeon_encounters: load_dungeon_encounters(conn)?,
         area_triggers: load_area_triggers(conn, &safe_locs)?,
@@ -435,18 +486,19 @@ fn map_from_row(row: &Row) -> rusqlite::Result<Option<MapEntry>> {
 
 fn load_difficulties(conn: &Connection) -> rusqlite::Result<HashMap<u32, Vec<MapDifficulty>>> {
     let mut statement = conn.prepare(
-        "SELECT MapID, DifficultyID, LockID, ResetInterval, MaxPlayers, Flags
+        "SELECT ID, MapID, DifficultyID, LockID, ResetInterval, MaxPlayers, Flags
          FROM map_difficulty ORDER BY ID",
     )?;
     let mut difficulties: HashMap<u32, Vec<MapDifficulty>> = HashMap::new();
     let rows = statement.query_map([], |row| {
         Ok(MapDifficulty {
-            map_id: row.get(0)?,
-            difficulty_id: row.get(1)?,
-            lock_id: row.get(2)?,
-            reset_interval: ResetInterval::from_db2(row.get(3)?),
-            max_players: row.get(4)?,
-            flags: row.get(5)?,
+            id: row.get(0)?,
+            map_id: row.get(1)?,
+            difficulty_id: row.get(2)?,
+            lock_id: row.get(3)?,
+            reset_interval: ResetInterval::from_db2(row.get(4)?),
+            max_players: row.get(5)?,
+            flags: row.get(6)?,
         })
     })?;
     for row in rows {
@@ -457,6 +509,53 @@ fn load_difficulties(conn: &Connection) -> rusqlite::Result<HashMap<u32, Vec<Map
             .push(difficulty);
     }
     Ok(difficulties)
+}
+
+/// Conditions whose `PlayerCondition` has a ContentTuning level range; a condition
+/// without one, or naming no `PlayerCondition` row, is met (`IsPlayerMeetingCondition`
+/// finds nothing to check).
+fn load_difficulty_conditions(
+    conn: &Connection,
+) -> rusqlite::Result<HashMap<u32, Vec<MapDifficultyCondition>>> {
+    let mut statement = conn.prepare(
+        "SELECT x.MapDifficultyID, x.FailureDescription_lang, p.Failure_description_lang,
+                p.Flags, l.minlevel, l.maxlevel
+         FROM map_difficulty_x_condition x
+         JOIN player_condition p ON p.ID = x.PlayerConditionID
+         JOIN content_tuning_level l ON l.ID = p.ContentTuningID
+         WHERE p.Flags & ?1 = 0
+         ORDER BY x.MapDifficultyID, x.OrderIndex",
+    )?;
+    let rows = statement.query_map([PLAYER_CONDITION_DISABLED], |row| {
+        let own_text: String = row.get(1)?;
+        let flags: u32 = row.get(3)?;
+        let max_level: u8 = row.get(5)?;
+        Ok((
+            row.get::<_, u32>(0)?,
+            MapDifficultyCondition {
+                failure_text: if own_text.is_empty() {
+                    row.get(2)?
+                } else {
+                    own_text
+                },
+                min_level: row.get(4)?,
+                max_level: if flags & PLAYER_CONDITION_WITHIN_OR_ABOVE_RECORD != 0 {
+                    0
+                } else {
+                    max_level
+                },
+            },
+        ))
+    })?;
+    let mut conditions: HashMap<u32, Vec<MapDifficultyCondition>> = HashMap::new();
+    for row in rows {
+        let (map_difficulty_id, condition) = row?;
+        conditions
+            .entry(map_difficulty_id)
+            .or_default()
+            .push(condition);
+    }
+    Ok(conditions)
 }
 
 fn load_difficulty_entries(conn: &Connection) -> rusqlite::Result<HashMap<u32, DifficultyEntry>> {

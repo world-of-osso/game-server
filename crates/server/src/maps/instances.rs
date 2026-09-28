@@ -403,14 +403,16 @@ impl InstanceManager {
     }
 
     /// `Map::PlayerCannotEnter` (Map.cpp:1807-1852), checked before a far teleport:
-    /// the map must offer a difficulty the entrant's downscales to, and the copy the
-    /// entrant is bound to must admit it. World maps other than the hosted continents,
+    /// the map must offer a difficulty the entrant's downscales to, a player at `level`
+    /// must meet its level conditions (`Player::Satisfy`), and the copy the entrant is
+    /// bound to must admit it. World maps other than the hosted continents,
     /// raids, battlegrounds and scenarios are not hosted.
     pub fn player_cannot_enter(
         &self,
         store: &MapStore,
         map_id: u32,
         entrant: InstanceEntrant,
+        level: u8,
         unix: i64,
     ) -> Option<TransferAbortReason> {
         if HOSTED_CONTINENTS.contains(&map_id) {
@@ -421,8 +423,11 @@ impl InstanceManager {
         };
         match entry.instance_type {
             InstanceType::Party => {
-                if Self::entry_difficulty(store, map_id, entrant).is_none() {
+                let Some(difficulty) = Self::entry_difficulty(store, map_id, entrant) else {
                     return Some(TransferAbortReason::Difficulty(entrant.difficulty_id));
+                };
+                if let Some(condition) = store.unmet_condition(difficulty.id, level) {
+                    return Some(TransferAbortReason::Condition(condition.failure()));
                 }
                 self.find_instance(store, map_id, entrant, unix)
                     .and_then(|map| self.cannot_enter(map, entrant, unix))
