@@ -3,9 +3,11 @@
 //! An aura is a debuff by these per-effect marks, not by who cast it
 //! (`AuraApplication::_InitFlags`, SpellAuras.cpp:113-147).
 //!
-//! Not modelled: `spell_custom_attr` negative marks (TrinityCore reads them first) and the
-//! marks of already-initialized triggered spells, which TrinityCore reads in load order;
-//! here a triggered spell is always evaluated fresh.
+//! Every effect and aura case of `_isPositiveEffectImpl` is ported. Not modelled:
+//! - `spell_custom_attr` negative marks (TrinityCore reads them first);
+//! - the marks of already-initialized triggered spells, which TrinityCore reads in load
+//!   order; here a triggered spell is always evaluated fresh;
+//! - `SpellEffectInfo::CalcValue` scaling: base points are the raw `EffectBasePointsF`.
 
 use std::collections::HashSet;
 

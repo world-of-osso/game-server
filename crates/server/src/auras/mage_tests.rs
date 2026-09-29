@@ -150,3 +150,17 @@ fn effect_positivity_follows_trinitycore() {
     assert_eq!(negative(589) & 1, 1);
     assert_eq!(negative(21562), 0);
 }
+
+#[test]
+fn arcane_intellect_cast_on_a_friendly_player_stays_a_buff() {
+    let Some(mut h) = harness(Vec::new(), &[ARCANE_INTELLECT], MAGE) else {
+        return;
+    };
+    let ally = crate::spell_cast::test_harness::spawn_player(&mut h.app, 1, 2.0);
+    h.advance(1);
+    h.cast(ARCANE_INTELLECT, Some(ally));
+    h.advance(5);
+    let buff = view(&h, ally, ARCANE_INTELLECT).expect("Arcane Intellect on the ally");
+    assert!(!buff.harmful, "{buff:?}");
+    assert_eq!(buff.caster, Some(h.caster.to_bits()));
+}
