@@ -260,14 +260,19 @@ impl AttackRules<'_, '_> {
     }
 }
 
+/// Creatures whose AI target changed.
+type RetargetedCreatures<'w, 's> = Query<
+    'w,
+    's,
+    (Entity, &'static CombatTarget, Option<&'static AutoAttack>),
+    (Changed<CombatTarget>, Without<Player>),
+>;
+
 /// A creature's AI attacks by setting its `CombatTarget` (`Unit::Attack`, which
 /// for creatures engages the victim, Unit.cpp:5950-5952); a target it cannot
 /// attack, or none, stops the attack. Players attack only through `AttackSwing`.
 fn creature_attack_system(
-    query: Query<
-        (Entity, &CombatTarget, Option<&AutoAttack>),
-        (Changed<CombatTarget>, Without<Player>),
-    >,
+    query: RetargetedCreatures,
     rules: AttackRules,
     mut commands: Commands,
     time: Res<Time>,
