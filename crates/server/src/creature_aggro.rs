@@ -200,36 +200,46 @@ type Watchers<'w, 's> = Query<
 /// creature heights on the ground while they move.
 fn aggro_on_sight_system(
     watchers: Watchers,
-    players: Query<Entity, With<Player>>,
+    players: Query<(Entity, &Position, &InMap), With<Player>>,
     victims: Victims,
     templates: Res<FactionTemplates>,
     mut commands: Commands,
 ) {
+    let players: Vec<(Entity, Position, InMap)> = players
+        .iter()
+        .map(|(player, position, map)| (player, *position, *map))
+        .collect();
+    if players.is_empty() {
+        return;
+    }
     for (creature, position, range, level, scaling, faction, state, map, react) in &watchers {
         let aggressive =
             react.is_none_or(|react| *react == crate::scripted_ai::ReactState::Aggressive);
         if !state.is_idle() || !aggressive {
             continue;
         }
-        let nearest = players
+        // A victim shares the creature's map copy, and no level or detection
+        // range gives a radius beyond MAX_AGGRO_RADIUS.
+        let in_reach = players
             .iter()
-            .filter_map(|player| {
-                let (player_pos, _, player_faction, player_level, ..) = victims.get(player).ok()?;
+            .filter_map(|(player, player_pos, player_map)| {
                 let distance = distance(position, player_pos);
-                // No level or detection range gives a radius beyond MAX_AGGRO_RADIUS.
-                if distance > MAX_AGGRO_RADIUS {
-                    return None;
-                }
+                (player_map == map && distance <= MAX_AGGRO_RADIUS).then_some((*player, distance))
+            });
+        let nearest = in_reach
+            .filter(|&(player, distance)| {
+                let Ok((_, _, player_faction, player_level, ..)) = victims.get(player) else {
+                    return false;
+                };
                 let player_level = player_level.map_or(1, |l| l.0);
                 // Creature::GetAttackDistance: both levels against each other.
                 let creature_level = level_for_viewer(*level, scaling, player_level);
                 let radius = aggro_radius(range.0, creature_level, player_level);
                 let hostile = templates.reaction(faction.0, player_faction.map_or(0, |f| f.0))
                     == Reaction::Hostile;
-                (distance <= radius
+                distance <= radius
                     && hostile
-                    && valid_victim(&victims, &templates, faction.0, map, player))
-                .then_some((player, distance))
+                    && valid_victim(&victims, &templates, faction.0, map, player)
             })
             .min_by(|a, b| a.1.total_cmp(&b.1));
         if let Some((player, _)) = nearest {
