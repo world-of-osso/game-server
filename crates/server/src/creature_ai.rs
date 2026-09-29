@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use lightyear::prelude::ReplicationDirtyQueue;
-use shared::components::{CreatureMotion, Position, Rotation};
+use shared::components::{CreatureMotion, MovementSpeed, Position, Rotation};
 
 use crate::auras::{AuraStatMods, Confused};
 use crate::combat::DeathState;
@@ -195,7 +195,8 @@ fn wander_system(
             }
             WanderPhase::Walking => tick_walk(*pos, &mut state, spawn, dt, &mut probe),
         };
-        let stride = Stride::moving(*pos, next_position, CreatureMotion::Walk);
+        let speed = spawn.speed_walk * BASE_WALK_SPEED;
+        let stride = Stride::moving(*pos, next_position, CreatureMotion::Walk, speed);
         queues.apply(entity, &mut pos, bearing, stride);
     }
 }
@@ -230,6 +231,8 @@ struct Stride {
     motion: CreatureMotion,
     /// `Rotation.y` to face, `None` to keep the facing.
     facing: Option<f32>,
+    /// Yards per second of `motion`'s gait (walk or run speed after auras).
+    speed: f32,
 }
 
 impl Stride {
@@ -238,12 +241,13 @@ impl Stride {
             position: at,
             motion: CreatureMotion::Still,
             facing: None,
+            speed: 0.0,
         }
     }
 
-    /// From `from` to `to` in `motion` (move spline orientation: facing the way it goes),
-    /// `Still` when it did not move.
-    fn moving(from: Position, to: Position, motion: CreatureMotion) -> Self {
+    /// From `from` to `to` in `motion` at `speed` (move spline orientation: facing the
+    /// way it goes), `Still` when it did not move.
+    fn moving(from: Position, to: Position, motion: CreatureMotion, speed: f32) -> Self {
         let facing = facing_along(to.x - from.x, to.z - from.z);
         Self {
             position: to,
@@ -253,14 +257,18 @@ impl Stride {
                 CreatureMotion::Still
             },
             facing,
+            speed,
         }
     }
 }
 
-/// A creature's facing and motion, replicated to clients.
+/// A creature's facing, motion and the speed it moves at, replicated to clients
+/// (TrinityCore sends `SMSG_MOVE_SET_WALK_SPEED`/`RUN_SPEED` to the unit's viewers; the
+/// client paces the walk and run clips by it).
 type Bearing = (
     Option<&'static mut Rotation>,
     Option<&'static mut CreatureMotion>,
+    Option<&'static mut MovementSpeed>,
 );
 
 #[derive(bevy::ecs::system::SystemParam)]
@@ -276,7 +284,11 @@ impl MoveQueues<'_> {
         &self,
         entity: Entity,
         position: &mut Mut<Position>,
-        (rotation, motion): (Option<Mut<Rotation>>, Option<Mut<CreatureMotion>>),
+        (rotation, motion, speed): (
+            Option<Mut<Rotation>>,
+            Option<Mut<CreatureMotion>>,
+            Option<Mut<MovementSpeed>>,
+        ),
         stride: Stride,
     ) {
         if **position != stride.position {
@@ -292,6 +304,11 @@ impl MoveQueues<'_> {
         }
         if let Some(mut motion) = motion {
             changed |= motion.set_if_neq(stride.motion);
+        }
+        if let Some(mut speed) = speed
+            && stride.motion != CreatureMotion::Still
+        {
+            changed |= speed.set_if_neq(MovementSpeed(stride.speed));
         }
         if changed && let Some(replication) = self.replication.as_deref() {
             replication.mark(entity);
@@ -432,7 +449,8 @@ fn waypoint_system(
         }
         let (next_position, orientation) = tick_waypoint(*pos, &mut state, path, dt);
         let leg = &path.points[state.current_index % path.points.len()];
-        let mut stride = Stride::moving(*pos, next_position, leg_motion(leg.move_type));
+        let speed = state.speed(leg.move_type);
+        let mut stride = Stride::moving(*pos, next_position, leg_motion(leg.move_type), speed);
         if let Some(orientation) = orientation {
             stride.facing = Some(orientation + std::f32::consts::FRAC_PI_2);
         }
@@ -541,7 +559,8 @@ fn formation_system(
                 let (px, _, pz) = wow_to_bevy(point.position_x, point.position_y, point.position_z);
                 let leader_remaining = (px - leader_pos.x).hypot(pz - leader_pos.z);
                 let next_position = follow_leader_step(*pos, slot, leader_remaining, leg.moved);
-                Stride::moving(*pos, next_position, leg_motion(point.move_type))
+                let speed = leg.speed(point.move_type);
+                Stride::moving(*pos, next_position, leg_motion(point.move_type), speed)
             }
             None => Stride::still(*pos),
         };
@@ -623,16 +642,13 @@ pub(crate) fn chase_system(
         let Ok(target_pos) = targets.get(target_entity) else {
             continue; // target despawned or invalid
         };
-        let mut next_position = chase_step(
-            *pos,
-            target_pos,
-            spawn.speed_run * BASE_RUN_SPEED * speed * dt,
-        );
+        let run_speed = spawn.speed_run * BASE_RUN_SPEED * speed;
+        let mut next_position = chase_step(*pos, target_pos, run_speed * dt);
         if next_position != *pos {
             let feet = Vec3::new(next_position.x, pos.y, next_position.z);
             next_position.y = run_ground(probe_ground(ground.as_deref_mut(), map, feet), pos.y);
         }
-        let mut stride = Stride::moving(*pos, next_position, CreatureMotion::Run);
+        let mut stride = Stride::moving(*pos, next_position, CreatureMotion::Run, run_speed);
         if stride.facing.is_none() {
             // In reach: `ChaseMovementGenerator` turns it to face the target (`SetInFront`).
             stride.facing = facing_along(target_pos.x - pos.x, target_pos.z - pos.z);
@@ -691,7 +707,7 @@ fn confused_movement_system(
         } else {
             confused_step(*pos, &mut confused, speed * dt, dt, &mut probe)
         };
-        let stride = Stride::moving(*pos, next_position, CreatureMotion::Walk);
+        let stride = Stride::moving(*pos, next_position, CreatureMotion::Walk, speed);
         queues.apply(entity, &mut pos, bearing, stride);
     }
 }
@@ -819,7 +835,7 @@ fn return_to_spawn_system(
             y,
             z: new_z,
         };
-        let mut stride = Stride::moving(*pos, next_position, CreatureMotion::Run);
+        let mut stride = Stride::moving(*pos, next_position, CreatureMotion::Run, speed);
         if reached {
             stride.motion = CreatureMotion::Still;
         }

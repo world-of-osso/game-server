@@ -515,3 +515,58 @@ fn frostbolt_chills_the_pulled_spy_to_half_its_run_speed_for_8_seconds() {
         "{recovered} yd in 0.5 s after Chilled"
     );
 }
+
+fn replicated_speed(h: &Harness) -> f32 {
+    h.app
+        .world()
+        .get::<shared::components::MovementSpeed>(h.npc)
+        .unwrap()
+        .0
+}
+
+#[test]
+fn the_spy_replicates_the_speed_of_its_gait_chilled_run_then_sheep_walk() {
+    // Clients pace the spy's Run and the sheep's Walk clips by this speed.
+    let Some((mut h, _)) = spy_harness() else {
+        return;
+    };
+    h.app
+        .world_mut()
+        .entity_mut(h.npc)
+        .insert(shared::components::MovementSpeed(0.0));
+    h.app.world_mut().get_mut::<Position>(h.caster).unwrap().x = -20.0;
+    h.advance(30);
+    h.cast_and_deliver(FROSTBOLT, Some(h.npc));
+    for _ in 0..60 {
+        if !frostbolt_hits(&h).is_empty() {
+            break;
+        }
+        h.advance(1);
+    }
+    h.advance(2);
+    assert_eq!(
+        h.app.world().get::<CreatureMotion>(h.npc),
+        Some(&CreatureMotion::Run)
+    );
+    assert!(
+        (replicated_speed(&h) - 3.0).abs() < 1e-4,
+        "{}",
+        replicated_speed(&h)
+    );
+    // Chilled wears off before it is polymorphed; the sheep walks at 2.5 yd/s.
+    h.advance(9000 / 50);
+    cast_polymorph(&mut h);
+    let mut walked = false;
+    for _ in 0..(8000 / 50) {
+        h.advance(1);
+        if h.app.world().get::<CreatureMotion>(h.npc) == Some(&CreatureMotion::Walk) {
+            walked = true;
+            assert!(
+                (replicated_speed(&h) - 2.5).abs() < 1e-4,
+                "{}",
+                replicated_speed(&h)
+            );
+        }
+    }
+    assert!(walked, "the sheep never walked");
+}

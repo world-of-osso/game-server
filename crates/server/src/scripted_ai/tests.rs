@@ -764,7 +764,8 @@ fn hogger_wipe_resets_the_encounter_and_a_new_pull_starts_it_again() {
     assert!(!h.inbox(0).ends[0].success);
     assert_eq!(h.inbox(0).disengages.len(), 1);
     assert!(!h.has_aura(hogger, 86736), "RemoveAurasOnEvade");
-    assert_eq!(h.health(hogger).current, h.health(hogger).max);
+    // `_EnterEvadeMode` keeps its health (regeneration refills it once home).
+    assert!(h.health(hogger).current < h.health(hogger).max);
     // Revive and pull again: the pull yell, the encounter start and Maddening
     // Call's first timer come back once.
     h.app.world_mut().get_mut::<Health>(player).unwrap().current = 1_000_000.0;

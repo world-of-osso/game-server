@@ -179,6 +179,8 @@ pub(crate) fn spawn_creature(
             UnitFlags(spawn.unit_flags.unwrap_or(template.unit_flags)),
             NpcFlags::from_azerothcore(template.npc_flags),
             shared::components::CreatureMotion::Still,
+            // Set by the movement systems while it moves (`creature_ai::Bearing`).
+            shared::components::MovementSpeed(0.0),
         ));
         if replicate {
             entity.insert((

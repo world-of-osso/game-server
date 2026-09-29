@@ -3,7 +3,7 @@
 //! AI gets `MovementInform(POINT_MOTION_TYPE, id)`.
 
 use bevy::prelude::*;
-use shared::components::{CreatureMotion, Position, Rotation};
+use shared::components::{CreatureMotion, MovementSpeed, Position, Rotation};
 
 use super::{Hook, MotionType};
 use crate::combat::DeathState;
@@ -57,8 +57,10 @@ pub(crate) fn point_movement_system(world: &mut World) {
         Has<Walking>,
         Option<&mut Rotation>,
         Option<&mut CreatureMotion>,
+        Option<&mut MovementSpeed>,
     ), Without<DeathState>>();
-    for (entity, mut position, movement, spawn, walking, rotation, motion) in movers.iter_mut(world)
+    for (entity, mut position, movement, spawn, walking, rotation, motion, replicated_speed) in
+        movers.iter_mut(world)
     {
         let (speed, gait) = if walking {
             (spawn.speed_walk * BASE_WALK_SPEED, CreatureMotion::Walk)
@@ -76,6 +78,11 @@ pub(crate) fn point_movement_system(world: &mut World) {
         }
         let gait = if reached { CreatureMotion::Still } else { gait };
         let mut changed = motion.is_some_and(|mut motion| motion.set_if_neq(gait));
+        if let Some(mut replicated_speed) = replicated_speed
+            && gait != CreatureMotion::Still
+        {
+            changed |= replicated_speed.set_if_neq(MovementSpeed(speed));
+        }
         if let (Some(mut rotation), Some(facing)) = (rotation, facing)
             && rotation.y != facing
         {
