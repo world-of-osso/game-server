@@ -4,8 +4,11 @@ use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 use shared::components::{Health, Player, Position};
 
-use super::{CharacterData, GameDatabase, load_character, save_character};
+use redb::ReadableTable;
+
+use super::{CHARACTER_CORPSES, CHARACTERS, CharacterData, GameDatabase};
 use crate::death::PlayerDeathState;
+use crate::maps::persistence::CHARACTER_MAPS;
 use crate::maps::{InMap, MapTransfer};
 
 /// Marker component linking a player entity to its character_id for periodic saves.
@@ -57,21 +60,16 @@ pub(super) fn save_dirty_characters(
     }
     let Some(db) = db else { return };
 
-    let mut saved_count = 0;
-    for entity in unsaved.drain() {
-        let Ok((position, health, player, client_id, death, map, transfer)) =
-            players.players.get(entity)
-        else {
-            continue;
-        };
-        let map_id = crate::maps::saved_map_id(map, transfer);
-        save_live_character(&db.db, client_id.0, player, position, health, death, map_id);
-        saved_count += 1;
-    }
-    if saved_count == 0 {
+    let characters: Vec<_> = unsaved
+        .drain()
+        .filter_map(|entity| players.players.get(entity).ok())
+        .map(live_character)
+        .collect();
+    if characters.is_empty() {
         return;
     }
-    info!("Periodic save: {} characters written", saved_count);
+    save_live_characters(&db.db, &characters);
+    info!("Periodic save: {} characters written", characters.len());
 }
 
 pub(super) fn flush_all_characters_on_exit(
@@ -85,18 +83,38 @@ pub(super) fn flush_all_characters_on_exit(
 
     let Some(db) = db else { return };
 
-    let mut saved_count = 0usize;
-    for (position, health, player, client_id, death, map, transfer) in players.iter() {
-        let map_id = crate::maps::saved_map_id(map, transfer);
-        save_live_character(&db.db, client_id.0, player, position, health, death, map_id);
-        saved_count += 1;
+    let characters: Vec<_> = players.iter().map(live_character).collect();
+    if characters.is_empty() {
+        return;
     }
-    if saved_count > 0 {
-        info!("Shutdown save: {} characters written", saved_count);
+    save_live_characters(&db.db, &characters);
+    info!("Shutdown save: {} characters written", characters.len());
+}
+
+/// What `save_live_character` writes for one player.
+struct LiveCharacter<'a> {
+    character_id: u64,
+    player: &'a Player,
+    position: &'a Position,
+    health: &'a Health,
+    death: Option<&'a PlayerDeathState>,
+    map_id: u32,
+}
+
+fn live_character<'a>(
+    (position, health, player, client_id, death, map, transfer): <DirtyPlayerData as bevy::ecs::query::QueryData>::Item<'a, '_>,
+) -> LiveCharacter<'a> {
+    LiveCharacter {
+        character_id: client_id.0,
+        player,
+        position,
+        health,
+        death,
+        map_id: crate::maps::saved_map_id(map, transfer),
     }
 }
 
-/// Save a player's live state (periodic, logout and shutdown saves).
+/// Save a player's live state (logout and single-character saves).
 pub fn save_live_character(
     db: &redb::Database,
     character_id: u64,
@@ -106,12 +124,67 @@ pub fn save_live_character(
     death: Option<&PlayerDeathState>,
     map_id: u32,
 ) {
-    crate::maps::persistence::save_character_map(db, character_id, map_id);
-    let mut data = load_character(db, character_id)
-        .unwrap_or_else(|| CharacterData::from_components(player, position, health));
-    data.sync_live_components(player, position, health);
-    save_character(db, character_id, &data);
-    super::save_corpse(db, character_id, ghost_corpse(death).as_ref());
+    save_live_characters(
+        db,
+        &[LiveCharacter {
+            character_id,
+            player,
+            position,
+            health,
+            death,
+            map_id,
+        }],
+    );
+}
+
+/// All characters in one write transaction: one commit (and disk sync) per save,
+/// not three per character.
+fn save_live_characters(db: &redb::Database, characters: &[LiveCharacter]) {
+    let txn = db.begin_write().expect("Failed to begin write txn");
+    {
+        let mut maps = txn
+            .open_table(CHARACTER_MAPS)
+            .expect("Failed to open character maps table");
+        let mut rows = txn
+            .open_table(CHARACTERS)
+            .expect("Failed to open characters table");
+        let mut corpses = txn
+            .open_table(CHARACTER_CORPSES)
+            .expect("Failed to open corpse table");
+        for character in characters {
+            let id = character.character_id;
+            maps.insert(id, character.map_id)
+                .expect("Failed to save character map");
+            let mut data = rows
+                .get(id)
+                .expect("Failed to read character")
+                .map(|guard| {
+                    CharacterData::decode_compatible(guard.value())
+                        .expect("Failed to decode character")
+                })
+                .unwrap_or_else(|| {
+                    CharacterData::from_components(
+                        character.player,
+                        character.position,
+                        character.health,
+                    )
+                });
+            data.sync_live_components(character.player, character.position, character.health);
+            rows.insert(id, bitcode::encode(&data).as_slice())
+                .expect("Failed to insert character");
+            match ghost_corpse(character.death) {
+                Some(corpse) => corpses
+                    .insert(id, bitcode::encode(&corpse).as_slice())
+                    .map(drop)
+                    .expect("Failed to insert corpse"),
+                None => corpses
+                    .remove(id)
+                    .map(drop)
+                    .expect("Failed to remove corpse"),
+            }
+        }
+    }
+    txn.commit().expect("Failed to commit live character save");
 }
 
 /// Only a released ghost keeps its corpse across logins (AzerothCore saves

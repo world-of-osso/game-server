@@ -652,27 +652,6 @@ pub fn load_corpse(db: &Database, character_id: u64) -> Option<CorpseData> {
         .map(|guard| bitcode::decode(guard.value()).expect("decode corpse"))
 }
 
-/// Store the ghost's corpse, or forget it (`None`) once the character is alive.
-pub fn save_corpse(db: &Database, character_id: u64, corpse: Option<&CorpseData>) {
-    let txn = db.begin_write().expect("Failed to begin write txn");
-    {
-        let mut table = txn
-            .open_table(CHARACTER_CORPSES)
-            .expect("Failed to open corpse table");
-        match corpse {
-            Some(corpse) => {
-                table
-                    .insert(character_id, bitcode::encode(corpse).as_slice())
-                    .expect("Failed to insert corpse");
-            }
-            None => {
-                table.remove(character_id).expect("Failed to remove corpse");
-            }
-        }
-    }
-    txn.commit().expect("Failed to commit corpse save");
-}
-
 pub fn load_pvp(db: &Database, character_id: u64) -> crate::pvp::PlayerPvpProgress {
     let txn = db.begin_read().expect("Failed to begin read txn");
     let table = txn

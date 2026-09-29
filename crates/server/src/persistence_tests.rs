@@ -690,6 +690,75 @@ fn a_player_who_stops_moving_before_the_save_tick_is_still_saved() {
     assert_eq!(stored_position(db, character_id).0, 25.0);
 }
 
+fn spawn_saved_player(app: &mut App, name: &str, map_id: u32, x: f32) -> u64 {
+    let db = &app.world().resource::<GameDatabase>().db;
+    let (character_id, _) = create_character(db, 1, name, 1, 1).unwrap();
+    app.world_mut().spawn((
+        crate::maps::InMap::continent(map_id),
+        Player {
+            name: name.into(),
+            race: 1,
+            class: 1,
+            appearance: CharacterAppearance::default(),
+        },
+        ClientId(character_id),
+        Position { x, y: 0.0, z: 0.0 },
+        Health {
+            current: 100.0,
+            max: 100.0,
+        },
+    ));
+    character_id
+}
+
+#[test]
+fn periodic_save_writes_every_changed_player_with_map_and_corpse() {
+    let mut app = App::new();
+    app.add_plugins(MinimalPlugins);
+    app.add_systems(FixedUpdate, persistence_runtime::save_dirty_characters);
+    app.insert_resource(GameDatabase {
+        db: temp_database(),
+    });
+    let walker = spawn_saved_player(&mut app, "Walker", 0, 25.0);
+    let ghost = spawn_saved_player(&mut app, "Spirit", 1, -40.0);
+    let corpse = shared::death::Corpse {
+        player: ghost,
+        map_id: 1,
+        x: 1.0,
+        y: 2.0,
+        z: 3.0,
+        created_at: 1234,
+    };
+    let ghost_entity = app
+        .world_mut()
+        .query::<(Entity, &ClientId)>()
+        .iter(app.world())
+        .find(|(_, id)| id.0 == ghost)
+        .map(|(entity, _)| entity)
+        .unwrap();
+    app.world_mut()
+        .entity_mut(ghost_entity)
+        .insert(crate::death::PlayerDeathState {
+            state: shared::death::DeathState::Ghost,
+            corpse: Some(corpse.clone()),
+            graveyard: None,
+        });
+    for _ in 0..300 {
+        app.world_mut().run_schedule(FixedUpdate);
+    }
+    let db = &app.world().resource::<GameDatabase>().db;
+    assert_eq!(stored_position(db, walker).0, 25.0);
+    assert_eq!(stored_position(db, ghost).0, -40.0);
+    assert_eq!(crate::maps::persistence::load_character_map(db, walker), 0);
+    assert_eq!(crate::maps::persistence::load_character_map(db, ghost), 1);
+    assert!(load_corpse(db, walker).is_none());
+    let saved = load_corpse(db, ghost).expect("ghost keeps its corpse");
+    assert_eq!(
+        (saved.map_id, saved.x, saved.y, saved.z, saved.created_at),
+        (1, 1.0, 2.0, 3.0, 1234)
+    );
+}
+
 fn peacebloom(item_guid: u64) -> InventoryItemData {
     InventoryItemData {
         item_guid,
