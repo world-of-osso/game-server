@@ -344,3 +344,7 @@ Created `systems/quests.md` (quest data, rules, runtime) and `specs/quests.md`; 
 ## [2026-09-29] investigation | Drowning on :5000
 
 [[swimming-and-breath]]: no drowning damage in the live fixture was server clock lag (4 000 ticks in 326 s), not the timer, damage or replication path; a private-instance run drowned every second and replicated. Regression test through character select added.
+
+## [2026-09-29] investigation | Server tick lag
+
+[[server-tick-lag]]: the debug :5000 server fell behind real time because frames over 50 ms (and over the 250 ms clamp under load) lost simulation time. Frame/system instrumentation (`frame_stats`, `system-timings` feature), dormant-creature filters for power, UnitTarget and regen, cached aura queries, aggro reach prefilter, one-transaction character saves, Entity-hashed interest maps. Debug with three clients: 36–64 ms → 15–29 ms per frame; release 0.8 ms idle.

@@ -131,7 +131,7 @@ Keep Bevy's bounded fixed-step catch-up behavior for the first implementation:
 - Time beyond the clamp is discarded rather than replayed as an unbounded backlog.
 - No custom sleep, spin loop, or second simulation clock should be added.
 
-Implementation should expose fixed steps per outer update and schedule duration before changing this policy. The design favors bounded recovery over an indefinitely growing simulation backlog.
+`frame_stats.rs` logs fixed steps and outer-update work per 10 s of wall time; [[server-tick-lag]] measured the clamp losing time on the debug build. The design favors bounded recovery over an indefinitely growing simulation backlog.
 
 ## Replication Boundary
 
@@ -226,3 +226,4 @@ A future zone or instance design may place zone-filtered systems inside the Move
 - [[persistence]] — character save boundaries and storage ownership
 - [[recurring-loop-elimination]] — state- and dirty-driven replacements for recurring scans
 - [[open-questions]] — unresolved tick-rate and instance decisions
+- [[server-tick-lag]] — measured frame cost, lost ticks and hot paths
