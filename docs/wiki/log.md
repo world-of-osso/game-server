@@ -348,3 +348,7 @@ Created `systems/quests.md` (quest data, rules, runtime) and `specs/quests.md`; 
 ## [2026-09-29] investigation | Server tick lag
 
 [[server-tick-lag]]: the debug :5000 server fell behind real time because frames over 50 ms (and over the 250 ms clamp under load) lost simulation time. Frame/system instrumentation (`frame_stats`, `system-timings` feature), dormant-creature filters for power, UnitTarget and regen, cached aura queries, aggro reach prefilter, one-transaction character saves, Entity-hashed interest maps. Debug with three clients: 36–64 ms → 15–29 ms per frame; release 0.8 ms idle.
+
+## [2026-09-29] feature | Replicated player motion
+
+Players replicate `PlayerMotion`, Retail `MovementFlags` (FORWARD, BACKWARD, STRAFE_LEFT/RIGHT, WALKING, FALLING, SWIMMING), set from each applied `PlayerInput` and written only on change; the stop input clears the moving bits. The Godot client animates other players from it (walk/run/strafe/backpedal/swim/jump). See [[networking]], spec [player-motion](../specs/player-motion.md).
