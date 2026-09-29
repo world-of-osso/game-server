@@ -403,7 +403,11 @@ fn killing_the_only_target_makes_the_creature_evade_home_and_restores_its_health
     run(&mut app, 40);
     assert_eq!(state(&app, spider), Some(CreatureState::Idle));
     assert_eq!(*app.world().get::<Position>(spider).unwrap(), at(0.0, 0.0));
-    assert_eq!(health(&app, spider), 100.0, "a non-regenerating creature heals at home");
+    assert_eq!(
+        health(&app, spider),
+        100.0,
+        "a non-regenerating creature heals at home"
+    );
 }
 
 /// `Unit::Attack`: an engaging creature drops its stand and emote state ("restored on

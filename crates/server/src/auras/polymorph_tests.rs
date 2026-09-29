@@ -400,7 +400,11 @@ fn evading_spy_keeps_its_damage_until_home_then_regenerates_a_third_every_2_seco
     let wounded = (max_health / 10.0).floor();
     h.app.world_mut().get_mut::<Health>(h.npc).unwrap().current = wounded;
     // The mage dies: no valid target is left and the spy evades.
-    h.app.world_mut().get_mut::<Health>(h.caster).unwrap().current = 0.0;
+    h.app
+        .world_mut()
+        .get_mut::<Health>(h.caster)
+        .unwrap()
+        .current = 0.0;
     h.advance(1);
     assert_eq!(
         h.app.world().get::<CreatureState>(h.npc),
@@ -413,8 +417,8 @@ fn evading_spy_keeps_its_damage_until_home_then_regenerates_a_third_every_2_seco
         h.advance(1);
         let health = h.health(h.npc);
         if health != previous {
-            let evading = h.app.world().get::<CreatureState>(h.npc)
-                == Some(&CreatureState::Returning);
+            let evading =
+                h.app.world().get::<CreatureState>(h.npc) == Some(&CreatureState::Returning);
             assert!(!evading, "healed while evading");
             healed.push(health - previous);
             previous = health;
@@ -460,10 +464,16 @@ fn spy_chases_at_its_run_speed_and_wanders_polymorphed_at_its_walk_speed() {
     let steps = spy_steps(&mut h, 10_000 / 50);
     let walking: Vec<f32> = steps.into_iter().filter(|&step| step > 0.0).collect();
     assert!(walking.len() > 10, "the sheep barely moved: {walking:?}");
-    let full = walking.iter().filter(|&&step| (step - 0.125).abs() < 1e-3).count();
+    let full = walking
+        .iter()
+        .filter(|&&step| (step - 0.125).abs() < 1e-3)
+        .count();
     assert!(
         walking.iter().all(|&step| step <= 0.125 + 1e-3),
         "faster than 2.5 yd/s: {walking:?}"
     );
-    assert!(full * 2 > walking.len(), "mostly full 0.125 yd strides: {walking:?}");
+    assert!(
+        full * 2 > walking.len(),
+        "mostly full 0.125 yd strides: {walking:?}"
+    );
 }
