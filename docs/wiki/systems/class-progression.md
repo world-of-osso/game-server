@@ -30,7 +30,7 @@ The known list is built in learn order:
    - `AcquireMethod` 0 (trainer/other) is excluded, for example Contemplation 121183 and Consecration 81297.
    - `required_level` must be at most the level.
    - `RaceMasks` must be zero or include the race bit. Summon Warhorse 13819 is Human/Dwarf/Dark Iron; Thalassian Warhorse 34769 is Blood Elf.
-2. The active spec's `specialization_spells`, in `DisplayOrder`.
+2. The active spec's `specialization_spells`, in `DisplayOrder`, whose `spell_levels.SpellLevel` is at most the level (TrinityCore `Player::LearnSpecializationSpells`). Arms at 10 has Mastery: Master of Arms 1258398 but not Seasoned Soldier 279423 (11) or Plate Specialization 86101 (27); Holy at 10 lacks Beacon of Light 53563 (16).
 3. The spec's mastery spells.
 4. Talent spells of the active spec's trait config, including granted nodes ([[talents]]). A Retribution level 20 Paladin knows the granted Hammer of Wrath 1241288 and Greater Judgment 231663; switching to Holy swaps them for Lay on Hands 633 and Divine Steed 190784.
 
@@ -52,6 +52,7 @@ The list is stored in the `KnownSpells` component. Cast validation should call `
   - A new Orc Warrior gets Slam 1464 on slot 0 and Attack 88163 on slot 1.
 - **Overrides:** a button of a spell that an applied talent overrides now holds the talent spell. When the talent is removed and its spell is no longer known, the button goes back to the baseline spell. Both send `ActionBarSnapshot` and persist the bar. The rewrite also runs on enter world.
 - A spell button whose spell stops being known (spec change or lower level) is removed. The server then sends `ActionBarSnapshot` and persists the bar.
+- **Pushed spells:** each newly learned non-passive, non-mount spell (level-up, admin `set-level`, spec change, talent commit) goes to the first empty slot 0–11 in learn order unless already on the bar, as Retail `SPELL_PUSHED_TO_ACTIONBAR`; a full main bar takes none. A level 1 Warrior at level 2 gets Charge 100 on slot 2; switching Retribution to Holy fills the freed slots with Holy's actives.
 
 ## Messages (TalentChannel)
 

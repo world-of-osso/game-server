@@ -336,3 +336,7 @@ Created `systems/quests.md` (quest data, rules, runtime) and `specs/quests.md`; 
 ## [2026-09-28] create | Swimming and breath
 
 [[swimming-and-breath]]: the server reads MH2O terrain liquid and adopts the client's height ([player height](../specs/player-height.md)): swimmers within `SWIM_SPEED` × the bank between the seabed and `swim_top`, land heights between the ground and a jump/fall arc ceiling, no gravity on input ticks or for swimmers. TrinityCore mirror timers: breath (180 s, refill ×10), fatigue on MH2O deep water (60 s), drowning/exhaustion 20% every second, water breathing auras 82/155, stop on death ([breath and drowning](../specs/breath-and-drowning.md)). [[networking]] and [[auras]] updated.
+
+## [2026-09-28] update | Spec spells by level, pushed action bar spells
+
+[[class-progression]]: spec spells wait for their `SpellLevel` like TrinityCore `LearnSpecializationSpells`, and newly learned actives fill the first empty main bar slots (Retail `SPELL_PUSHED_TO_ACTIONBAR`).
