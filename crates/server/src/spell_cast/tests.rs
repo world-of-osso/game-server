@@ -595,3 +595,48 @@ fn physical_spell_damage_takes_the_creatures_armor() {
     let damage = 5000.0 - h.health(npc);
     assert!((354.0..=373.0).contains(&damage), "{damage}");
 }
+
+#[test]
+fn dormant_creature_holds_its_mana_until_its_grid_is_active_again() {
+    let Some(mut h) = harness(Vec::new(), &[], 5) else {
+        return;
+    };
+    let npc = h.npc;
+    h.app.world_mut().entity_mut(npc).insert((
+        Mana {
+            current: 0.0,
+            max: 100.0,
+        },
+        super::powers::PowerPools {
+            order: vec![PowerType::Mana],
+            ..Default::default()
+        },
+        super::powers::CreatureRegenTimer::default(),
+        UnitPowers::default(),
+        crate::grid_activity::GridDormant,
+    ));
+    // 3 s dormant: past the 2 s creature regen interval.
+    h.advance(60);
+    assert_eq!(h.app.world().get::<Mana>(npc).unwrap().current, 0.0);
+    assert!(
+        h.app
+            .world()
+            .get::<UnitPowers>(npc)
+            .unwrap()
+            .entries
+            .is_empty()
+    );
+
+    h.app
+        .world_mut()
+        .entity_mut(npc)
+        .remove::<crate::grid_activity::GridDormant>();
+    h.advance(41);
+    assert_eq!(h.app.world().get::<Mana>(npc).unwrap().current, 22.0);
+    let entries = &h.app.world().get::<UnitPowers>(npc).unwrap().entries;
+    assert_eq!(entries.len(), 1);
+    assert_eq!(
+        (entries[0].power, entries[0].current, entries[0].max),
+        (PowerType::Mana, 22, 100)
+    );
+}

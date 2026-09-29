@@ -19,6 +19,7 @@ use lightyear::prelude::ReplicationDirtyQueue;
 use rusqlite::Connection;
 use shared::components::{CombatStatus, Mana, Player, PowerEntry, PowerType, UnitPowers};
 
+use crate::grid_activity::GridDormant;
 use crate::spell_info::ClassSpells;
 
 /// Alternate (encounter/quest/mount) bars are not class resources.
@@ -247,6 +248,7 @@ type RegenQuery<'w, 's> = Query<
         Option<&'static crate::auras::AuraStatMods>,
         Option<&'static crate::stats::CharacterStats>,
     ),
+    Without<GridDormant>,
 >;
 
 /// Out of combat: `RegenPeace` after `RegenInterruptTimeMS` since leaving
@@ -324,33 +326,36 @@ fn regenerated(
 
 /// Mirror pools (and `Mana`) into replicated `UnitPowers`; floor fractions.
 pub(super) fn sync_unit_powers(
-    mut units: Query<(Entity, &PowerPools, Option<&Mana>, &mut UnitPowers)>,
+    mut units: Query<(Entity, &PowerPools, Option<&Mana>, &mut UnitPowers), Without<GridDormant>>,
     dirty: Option<Res<ReplicationDirtyQueue>>,
 ) {
     for (entity, pools, mana, mut powers) in &mut units {
-        let entries = pools
-            .order
-            .iter()
-            .map(|&power| {
-                let (current, max) = if power == PowerType::Mana {
-                    mana.map_or((0.0, 0.0), |mana| (mana.current, mana.max))
-                } else {
-                    pools
-                        .get(power)
-                        .map_or((0.0, 0.0), |pool| (pool.current, pool.max))
-                };
-                PowerEntry {
-                    power,
-                    current: current.floor() as i32,
-                    max: max.floor() as i32,
-                }
-            })
-            .collect::<Vec<_>>();
-        if powers.entries != entries {
-            powers.entries = entries;
-            if let Some(dirty) = &dirty {
-                dirty.mark(entity);
+        let entry = |power: PowerType| {
+            let (current, max) = if power == PowerType::Mana {
+                mana.map_or((0.0, 0.0), |mana| (mana.current, mana.max))
+            } else {
+                pools
+                    .get(power)
+                    .map_or((0.0, 0.0), |pool| (pool.current, pool.max))
+            };
+            PowerEntry {
+                power,
+                current: current.floor() as i32,
+                max: max.floor() as i32,
             }
+        };
+        let unchanged = powers.entries.len() == pools.order.len()
+            && pools
+                .order
+                .iter()
+                .zip(&powers.entries)
+                .all(|(&power, current)| entry(power) == *current);
+        if unchanged {
+            continue;
+        }
+        powers.entries = pools.order.iter().map(|&power| entry(power)).collect();
+        if let Some(dirty) = &dirty {
+            dirty.mark(entity);
         }
     }
 }
@@ -375,12 +380,15 @@ impl Default for CreatureRegenTimer {
 /// MOD_POWER_REGEN_PERCENT; none while evading (`!IsInEvadeMode()`).
 pub(super) fn regenerate_creature_mana(
     time: Res<Time>,
-    mut creatures: Query<(
-        &mut CreatureRegenTimer,
-        &mut Mana,
-        Option<&crate::creature_ai::CreatureState>,
-        Option<&crate::auras::AuraStatMods>,
-    )>,
+    mut creatures: Query<
+        (
+            &mut CreatureRegenTimer,
+            &mut Mana,
+            Option<&crate::creature_ai::CreatureState>,
+            Option<&crate::auras::AuraStatMods>,
+        ),
+        Without<GridDormant>,
+    >,
 ) {
     let dt = time.delta_secs();
     for (mut timer, mut mana, state, mods) in &mut creatures {

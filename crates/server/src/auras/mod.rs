@@ -993,13 +993,48 @@ pub fn sync_passives(world: &mut World, unit: Entity, source: AuraSource, spells
     }
 }
 
+type AuraUnit = (
+    Entity,
+    &'static mut ActiveAuras,
+    Option<&'static shared::components::Health>,
+    Option<&'static shared::components::CombatStatus>,
+    Option<&'static crate::class_progression::ActiveSpec>,
+);
+
+/// Units that have auras to update. A living unit without auras has nothing to
+/// interrupt, tick or expire, so only its combat and spec tracking advances here
+/// (as `state_interrupts` would), keeping a later aura from seeing a stale
+/// transition.
+fn units_with_auras(
+    world: &mut World,
+    units: &mut QueryState<AuraUnit, Without<GridDormant>>,
+) -> Vec<Entity> {
+    let mut with_auras = Vec::new();
+    for (entity, mut auras, health, combat, spec) in units.iter_mut(world) {
+        if !auras.auras.is_empty() {
+            with_auras.push(entity);
+            continue;
+        }
+        if !health.is_some_and(|health| health.current > 0.0) {
+            continue;
+        }
+        let in_combat = combat.is_some_and(|status| status.0);
+        let spec = spec.map(|spec| spec.0);
+        if auras.in_combat != in_combat || auras.spec != spec {
+            let tracking = auras.bypass_change_detection();
+            tracking.in_combat = in_combat;
+            tracking.spec = spec;
+        }
+    }
+    with_auras
+}
+
 /// Death, state interrupts (movement, combat, spec), lost casters,
 /// periodic ticks, then expiry. Dormant creatures catch up on reactivation
 /// (expiry and tick times are absolute).
-fn update_auras(world: &mut World) {
+fn update_auras(world: &mut World, units: &mut QueryState<AuraUnit, Without<GridDormant>>) {
     let now = aura_now(world);
-    let mut units = world.query_filtered::<Entity, (With<ActiveAuras>, Without<GridDormant>)>();
-    let units: Vec<Entity> = units.iter(world).collect();
+    let units = units_with_auras(world, units);
     for unit in units {
         if !targets::is_alive(world, unit) {
             remove_on_death(world, unit);
@@ -1099,10 +1134,11 @@ fn state_interrupts(world: &mut World, unit: Entity) {
 
 /// Rebuild `UnitAuras` for units whose auras changed; remaining times are
 /// taken at send time and the client counts down.
-fn sync_unit_auras(world: &mut World) {
+fn sync_unit_auras(
+    world: &mut World,
+    units: &mut QueryState<(Entity, &mut ActiveAuras, &mut UnitAuras), Without<GridDormant>>,
+) {
     let now = aura_now(world);
-    let mut units =
-        world.query_filtered::<(Entity, &mut ActiveAuras, &mut UnitAuras), Without<GridDormant>>();
     let mut changed = Vec::new();
     for (entity, mut auras, mut view) in units.iter_mut(world) {
         if !auras.dirty {

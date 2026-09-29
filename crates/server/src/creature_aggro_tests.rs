@@ -263,6 +263,21 @@ fn tuned_creature_aggro_radius_uses_its_level_against_the_player() {
 }
 
 #[test]
+fn long_detection_range_is_capped_at_max_aggro_radius() {
+    let mut app = aggro_app();
+    let spider = spawn_creature(&mut app, &FOREST_SPIDER, at(0.0, 0.0));
+    // 80 yd detection against a level 1 player would be 84 yd; the cap is 45.
+    app.world_mut().entity_mut(spider).insert(AggroRange(80.0));
+    spawn_player(&mut app, at(46.0, 0.0), 1);
+    run(&mut app, 10);
+    assert_eq!(state(&app, spider), Some(CreatureState::Idle));
+
+    let near = spawn_player(&mut app, at(0.0, 44.0), 1);
+    run(&mut app, 1);
+    assert_eq!(state(&app, spider), pursuing(near));
+}
+
+#[test]
 fn nearest_hostile_player_is_attacked_first() {
     let mut app = aggro_app();
     let spider = spawn_creature(&mut app, &FOREST_SPIDER, at(0.0, 0.0));

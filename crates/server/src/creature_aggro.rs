@@ -216,6 +216,10 @@ fn aggro_on_sight_system(
             .filter_map(|player| {
                 let (player_pos, _, player_faction, player_level, ..) = victims.get(player).ok()?;
                 let distance = distance(position, player_pos);
+                // No level or detection range gives a radius beyond MAX_AGGRO_RADIUS.
+                if distance > MAX_AGGRO_RADIUS {
+                    return None;
+                }
                 let player_level = player_level.map_or(1, |l| l.0);
                 // Creature::GetAttackDistance: both levels against each other.
                 let creature_level = level_for_viewer(*level, scaling, player_level);

@@ -2,7 +2,7 @@
 
 use shared::casting::CastState;
 use shared::components::{
-    AuraView, Health, Mana, Player, Position, UnitAuras, UnitFactionTemplate,
+    AuraView, CombatStatus, Health, Mana, Player, Position, UnitAuras, UnitFactionTemplate,
 };
 use shared::protocol::{CancelAura, CombatChannel, CombatLogEvent, CombatLogKind};
 
@@ -155,6 +155,31 @@ fn dormant_creature_skips_aura_ticks_then_catches_up_on_reactivation() {
     assert_eq!(h.health(h.npc), 5000.0 - direct - 8.0 * 12.0);
     assert!(auras_of(&h, h.npc, SHADOW_WORD_PAIN).is_empty());
     assert!(view_of(&h, h.npc, SHADOW_WORD_PAIN).is_none());
+}
+
+/// AuraInterruptFlags EnteringCombat (0x10000000) only.
+const SHROUDING: u32 = 28548;
+
+#[test]
+fn combat_entered_without_auras_does_not_interrupt_a_later_aura() {
+    let Some(mut h) = harness(Vec::new(), &[SHROUDING], 5) else {
+        return;
+    };
+    let npc = h.npc;
+    h.app.world_mut().entity_mut(npc).insert(CombatStatus(true));
+    h.advance(2);
+    apply(&mut h.app, npc, npc, SHROUDING);
+    h.advance(2);
+    assert_eq!(auras_of(&h, npc, SHROUDING).len(), 1);
+
+    h.app
+        .world_mut()
+        .entity_mut(npc)
+        .insert(CombatStatus(false));
+    h.advance(2);
+    h.app.world_mut().entity_mut(npc).insert(CombatStatus(true));
+    h.advance(1);
+    assert!(auras_of(&h, npc, SHROUDING).is_empty());
 }
 
 #[test]
