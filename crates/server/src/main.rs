@@ -29,6 +29,7 @@ mod equipment_admin_types;
 mod experience;
 mod faction;
 mod faction_reaction;
+mod frame_stats;
 mod friends;
 mod game_objects;
 mod gold;
@@ -115,7 +116,10 @@ fn add_runtime_plugins(app: &mut App) {
     })
     .insert_resource(ReplicationMetadata::new(Duration::from_secs_f64(
         1.0 / TICK_RATE_HZ,
-    )));
+    )))
+    .add_plugins(frame_stats::FrameStatsPlugin {
+        budget: Duration::from_secs_f64(1.0 / TICK_RATE_HZ),
+    });
 }
 
 fn add_game_plugins(app: &mut App) {
