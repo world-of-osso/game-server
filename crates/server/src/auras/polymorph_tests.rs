@@ -20,6 +20,8 @@ const POLYMORPH: u32 = 118;
 const FROSTBOLT: u32 = 116;
 /// Frostbolt's TRIGGER_MISSILE spell: 2.448 × SP school damage, `SPELL_ATTR3_NOT_A_PROC`.
 const FROSTBOLT_DAMAGE: u32 = 228597;
+/// Chilled, cast on each Frostbolt hit by `spell_mage_frostbolt`: MOD_DECREASE_SPEED 50% for 8 s.
+const CHILLED: u32 = 205708;
 const KOBOLD_VERMIN: u32 = 6;
 /// Kobold Vermin's only `creature_template_model` display.
 const KOBOLD_DISPLAY: u32 = 10913;
@@ -56,7 +58,7 @@ fn world_data() -> WorldData {
 fn polymorph_harness(max_health: f32) -> Option<Harness> {
     let mut h = harness_with_plugins(
         Vec::new(),
-        &[POLYMORPH, FROSTBOLT, FROSTBOLT_DAMAGE],
+        &[POLYMORPH, FROSTBOLT, FROSTBOLT_DAMAGE, CHILLED],
         MAGE,
         false,
         |app| {
@@ -158,13 +160,14 @@ fn polymorph_turns_the_attacking_kobold_into_a_wandering_sheep_that_stops_swingi
         h.app.world().get::<UnitTarget>(h.npc),
         Some(&UnitTarget(None))
     );
-    let reference = *h.app.world().get::<Position>(h.npc).unwrap();
+    // Where its confusion began (it may already have taken a step since).
+    let (x, z) = h.app.world().get::<Confused>(h.npc).unwrap().reference;
     let health = h.health(h.caster);
     let mut walked = false;
     for _ in 0..(8000 / 50) {
         h.advance(1);
         let at = h.app.world().get::<Position>(h.npc).unwrap();
-        let from_reference = (at.x - reference.x).hypot(at.z - reference.z);
+        let from_reference = (at.x - x).hypot(at.z - z);
         assert!(
             from_reference <= 2.01,
             "{from_reference} yd from where it was polymorphed"
@@ -397,6 +400,8 @@ fn evading_spy_keeps_its_damage_until_home_then_regenerates_a_third_every_2_seco
         return;
     };
     kobold_attacks(&mut h);
+    // Its home is 10 yd away: 1.7 s of running back at 6 yd/s.
+    h.app.world_mut().get_mut::<SpawnPoint>(h.npc).unwrap().x += 10.0;
     let wounded = (max_health / 10.0).floor();
     h.app.world_mut().get_mut::<Health>(h.npc).unwrap().current = wounded;
     // The mage dies: no valid target is left and the spy evades.
@@ -475,5 +480,38 @@ fn spy_chases_at_its_run_speed_and_wanders_polymorphed_at_its_walk_speed() {
     assert!(
         full * 2 > walking.len(),
         "mostly full 0.125 yd strides: {walking:?}"
+    );
+}
+
+#[test]
+fn frostbolt_chills_the_pulled_spy_to_half_its_run_speed_for_8_seconds() {
+    let Some((mut h, _)) = spy_harness() else {
+        return;
+    };
+    // 38 yd apart, inside Frostbolt's 40 yd range; 8 s at 3 yd/s stays inside the 40 yd leash.
+    h.app.world_mut().get_mut::<Position>(h.caster).unwrap().x = -35.0;
+    h.advance(30);
+    h.cast_and_deliver(FROSTBOLT, Some(h.npc));
+    for _ in 0..60 {
+        if !frostbolt_hits(&h).is_empty() {
+            break;
+        }
+        h.advance(1);
+    }
+    assert_eq!(frostbolt_hits(&h).len(), 1, "{:?}", h.inbox.failed);
+    let chill = auras_of_spell(&h, CHILLED);
+    assert_eq!(chill.duration_ms, 8000);
+    h.advance(1);
+    let chilled: f32 = spy_steps(&mut h, 20).iter().sum();
+    assert!((chilled - 3.0).abs() < 0.05, "chilled: {chilled} yd in 1 s");
+    h.advance(7200 / 50);
+    assert!(
+        !has_aura(h.app.world(), h.npc, CHILLED),
+        "Chilled lasts 8 s"
+    );
+    let recovered: f32 = spy_steps(&mut h, 10).iter().sum();
+    assert!(
+        (recovered - 3.0).abs() < 0.05,
+        "{recovered} yd in 0.5 s after Chilled"
     );
 }

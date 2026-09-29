@@ -16,6 +16,7 @@ pub mod area_aura;
 pub mod creature;
 pub mod effects;
 pub mod powers;
+mod scripts;
 pub mod targets;
 #[cfg(test)]
 pub(crate) mod test_harness;
@@ -1140,6 +1141,7 @@ fn push_hit_events(
                 damage,
             },
         );
+        scripts::on_hit(world, caster, spell.id, target, depth);
     }
 }
 

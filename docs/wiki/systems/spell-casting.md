@@ -131,6 +131,8 @@ TRIGGER_SPELL:
 - The triggered spell ignores cost, cooldown, GCD and cast time.
 - Depth is capped at `MAX_TRIGGER_DEPTH` = 3 hops, the same as the coverage closure.
 
+Spell scripts (`spell_cast/scripts.rs`, TrinityCore `spell_script_names` `OnHit`): after a spell's hit event on each unit, `scripts::on_hit` runs behaviour the data does not carry. Frostbolt 116 casts Chilled 205708 (MOD_DECREASE_SPEED 50%, 8 s) on the unit it hit (`spell_mage_frostbolt::HandleChilled`, spell_mage.cpp:986-990): a Frostbolt-pulled Blackrock Spy chases at 3 yd/s instead of 6. Before 2026-09-29 no script ran, so Frostbolt never slowed.
+
 Formulas:
 - **Scaled amount:** `BasePoints + BonusCoefficient × SP + BonusCoefficientFromAP × AP`.
   - SP and AP are `CharacterStats.spell_power` / `attack_power` ([[character-stats]]).
