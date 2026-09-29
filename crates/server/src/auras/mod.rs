@@ -1228,3 +1228,6 @@ mod tests;
 
 #[cfg(test)]
 mod polymorph_tests;
+
+#[cfg(test)]
+mod mage_tests;

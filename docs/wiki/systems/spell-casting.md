@@ -131,6 +131,9 @@ TRIGGER_SPELL:
 - The triggered spell ignores cost, cooldown, GCD and cast time.
 - Depth is capped at `MAX_TRIGGER_DEPTH` = 3 hops, the same as the coverage closure.
 
+Spell scripts (`spell_cast/scripts.rs`, TrinityCore `SpellScript`): behaviour the DB2 effects do not carry, keyed by spell ID. `on_hit` runs once per distinct planned unit after the spell's effects and auras resolved there (`SpellHitFn`, `Spell::DoSpellHitOnUnit`), before the hit proc events.
+- Frostbolt 116: its only effect is TRIGGER_MISSILE 32 to 228597 (SCHOOL_DAMAGE); neither carries a slow. The hook casts Chilled 205708 (APPLY_AURA MOD_DECREASE_SPEED 33, -50%, `SpellDuration` 31 = 8 s, `SPELL_ATTR0_AURA_IS_DEBUFF`) at the hit unit, triggered (TrinityCore `spell_mage_frostbolt::HandleChilled`, spell_mage.cpp:978-995, registered on 116 in sql/old/9.x/world/22012_2022_03_06/2022_02_10_02_world.sql:5).
+
 Formulas:
 - **Scaled amount:** `BasePoints + BonusCoefficient × SP + BonusCoefficientFromAP × AP`.
   - SP and AP are `CharacterStats.spell_power` / `attack_power` ([[character-stats]]).
