@@ -31,6 +31,11 @@ impl NetworkVisibility {
         self.visible_senders.contains(&sender)
     }
 
+    /// The client connections this entity is replicated to.
+    pub(crate) fn visible_senders(&self) -> impl Iterator<Item = Entity> + '_ {
+        self.visible_senders.iter().copied()
+    }
+
     pub(crate) fn gain_visibility(&mut self, sender: Entity) -> bool {
         self.visible_senders.insert(sender)
     }

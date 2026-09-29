@@ -14,7 +14,7 @@ use shared::components::{
 };
 use shared::protocol::{
     CancelAura, CastFailed, CombatChannel, CombatLogEvent, ProtocolPlugin, SpellCastIntent,
-    SpellChargesUpdate, SpellCooldownUpdate, StopSpellCast,
+    SpellChargesUpdate, SpellCooldownUpdate, SpellGo, StopSpellCast,
 };
 
 use super::powers::{PowerPools, PowerTypeTable, load_power_type_table};
@@ -155,9 +155,14 @@ pub(crate) fn spawn_npc(app: &mut App, x: f32) -> Entity {
 }
 
 pub(crate) fn spawn_connection(app: &mut App, player: Entity) -> Entity {
+    spawn_peer_connection(app, player, 1)
+}
+
+/// An authenticated in-world connection of local peer `peer` playing `player`.
+pub(crate) fn spawn_peer_connection(app: &mut App, player: Entity, peer: u64) -> Entity {
     app.world_mut()
         .spawn((
-            RemoteId(PeerId::Local(1)),
+            RemoteId(PeerId::Local(peer)),
             Connected,
             HostClient { buffer: Vec::new() },
             Authenticated { account_id: 1 },
@@ -180,6 +185,8 @@ pub(crate) fn spawn_connection(app: &mut App, player: Entity) -> Entity {
                 MessageReceiver::<SpellChargesUpdate>::default(),
                 MessageSender::<CombatLogEvent>::default(),
                 MessageReceiver::<CombatLogEvent>::default(),
+                MessageSender::<SpellGo>::default(),
+                MessageReceiver::<SpellGo>::default(),
             ),
         ))
         .id()

@@ -15,7 +15,7 @@ incremental = true
 opt-level = 2
 
 [patch."https://github.com/world-of-osso/shared-protocol.git"]
-shared = { path = "../shared-protocol" }
+shared = { path = "../shared-protocol-spellanim" }
 
 [patch.crates-io]
 bevy_replicon = { path = "vendor/bevy_replicon" }

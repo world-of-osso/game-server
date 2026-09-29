@@ -29,7 +29,7 @@ use shared::casting::{CastState, CastTickResult, CastType};
 use shared::components::{Health, Npc, Player, PowerType};
 use shared::protocol::{
     CastFailed, CombatChannel, CombatLogEvent, CombatLogKind, SpellCastIntent, SpellChargesUpdate,
-    SpellCooldownUpdate, StopSpellCast,
+    SpellCooldownUpdate, SpellGo, StopSpellCast,
 };
 use shared::spell_data::CastFailReason;
 
@@ -37,6 +37,7 @@ use crate::auras::procs::{self, AuraEvent};
 use crate::auras::{AuraApplication, AuraSource, ChargeMods, SpellModOp, spell_mods};
 use crate::auth::{Authenticated, InWorld};
 use crate::class_progression::KnownSpells;
+use crate::interest::NetworkVisibility;
 use crate::networking::{CombatTarget, Moving, PlayerLink};
 use crate::spell_info::{SpellInfo, SpellStore};
 use crate::stats::CharacterStats;
@@ -376,6 +377,39 @@ pub(crate) fn log_event(world: &mut World, event: CombatLogEvent) {
     for unit in units {
         send_to_owner(world, unit, event.clone());
     }
+}
+
+/// `SMSG_SPELL_GO` to every client that replicates the caster: the connections that
+/// see it through interest, or every authenticated client for a unit replicated
+/// without `NetworkVisibility`.
+fn broadcast_spell_go(world: &mut World, message: SpellGo) {
+    let Some(caster) = Entity::try_from_bits(message.caster) else {
+        return;
+    };
+    let receivers: Vec<Entity> = match world.get::<NetworkVisibility>(caster) {
+        Some(visibility) => visibility.visible_senders().collect(),
+        None => world
+            .query_filtered::<Entity, With<Authenticated>>()
+            .iter(world)
+            .collect(),
+    };
+    for connection in receivers {
+        if let Some(mut sender) = world.get_mut::<MessageSender<SpellGo>>(connection) {
+            sender.send::<CombatChannel>(message.clone());
+        }
+    }
+}
+
+/// The units a planned cast lands on, in plan order, each once.
+fn hit_targets(plan: &TargetPlan) -> Vec<u64> {
+    let mut hits = Vec::new();
+    for unit in plan.iter().flat_map(|effect| &effect.units) {
+        let bits = unit.to_bits();
+        if !hits.contains(&bits) {
+            hits.push(bits);
+        }
+    }
+    hits
 }
 
 fn cast_event(
@@ -846,6 +880,15 @@ fn execute_cast(
     log_event(
         world,
         cast_event(caster, explicit, spell, CombatLogKind::CastSuccess),
+    );
+    broadcast_spell_go(
+        world,
+        SpellGo {
+            caster: caster.to_bits(),
+            target: explicit.map(Entity::to_bits),
+            hit_targets: hit_targets(&plan),
+            spell_id: spell.id,
+        },
     );
     procs::push_event(
         world,

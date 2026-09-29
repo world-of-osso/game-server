@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 use shared::casting::CastState;
 use shared::components::{CombatStatus, Health, Mana, Position, PowerType, UnitPowers};
-use shared::protocol::{CastFailed, CombatLogKind, SpellCooldownUpdate};
+use shared::protocol::{CastFailed, CombatLogKind, SpellCooldownUpdate, SpellGo};
 use shared::spell_data::CastFailReason;
 
 use crate::class_progression::KnownSpells;
@@ -21,6 +21,8 @@ const FROSTBOLT: u32 = 116;
 /// Frostbolt's TRIGGER_MISSILE (32) spell: SCHOOL_DAMAGE 2.448 × SP, Variance 0.05.
 const FROSTBOLT_DAMAGE: u32 = 228597;
 const CHARGE: u32 = 100;
+const SLAM: u32 = 1464;
+const BATTLE_SHOUT: u32 = 6673;
 
 #[test]
 fn warrior_gets_rage_pool_replicated_as_unit_powers() {
@@ -638,5 +640,61 @@ fn dormant_creature_holds_its_mana_until_its_grid_is_active_again() {
     assert_eq!(
         (entries[0].power, entries[0].current, entries[0].max),
         (PowerType::Mana, 22, 100)
+    );
+}
+
+/// `SpellGo`s each connection receives while `frames` frames run (lightyear clears
+/// unread messages every frame).
+fn receive_spell_go(h: &mut Harness, connections: &[Entity], frames: usize) -> Vec<Vec<SpellGo>> {
+    let mut received = vec![Vec::new(); connections.len()];
+    for _ in 0..frames {
+        h.app.update();
+        for (inbox, &connection) in received.iter_mut().zip(connections) {
+            inbox.extend(drain::<SpellGo>(&mut h.app, connection));
+        }
+    }
+    received
+}
+
+#[test]
+fn spell_go_reaches_every_client_replicating_the_caster_with_its_hit_units() {
+    let Some(mut h) = harness(Vec::new(), &[SLAM, BATTLE_SHOUT], 1) else {
+        return;
+    };
+    h.set_power(PowerType::Rage, 1000.0);
+    let observer = spawn_player(&mut h.app, 1, 2.0);
+    let observer_connection = spawn_peer_connection(&mut h.app, observer, 2);
+    let distant = spawn_player(&mut h.app, 1, 500.0);
+    let distant_connection = spawn_peer_connection(&mut h.app, distant, 3);
+    // Interest: the caster is replicated to its own client and the nearby observer.
+    let mut visibility = crate::interest::NetworkVisibility::default();
+    visibility.gain_visibility(h.connection);
+    visibility.gain_visibility(observer_connection);
+    h.app.world_mut().entity_mut(h.caster).insert(visibility);
+    let connections = [h.connection, observer_connection, distant_connection];
+
+    h.cast(SLAM, Some(h.npc));
+    // Slam's damage lands on the target; a caster-targeted effect adds the caster.
+    let slam = SpellGo {
+        caster: h.caster.to_bits(),
+        target: Some(h.npc.to_bits()),
+        hit_targets: vec![h.npc.to_bits(), h.caster.to_bits()],
+        spell_id: SLAM,
+    };
+    assert_eq!(
+        receive_spell_go(&mut h, &connections, 5),
+        vec![vec![slam.clone()], vec![slam], Vec::new()]
+    );
+
+    // Past the global cooldown: the self-buff lands on the caster.
+    h.advance(40);
+    h.cast(BATTLE_SHOUT, None);
+    let shouts = receive_spell_go(&mut h, &connections, 5).swap_remove(1);
+    assert_eq!(shouts.len(), 1, "{shouts:?}");
+    assert_eq!(shouts[0].spell_id, BATTLE_SHOUT);
+    assert_eq!(shouts[0].target, None);
+    assert!(
+        shouts[0].hit_targets.contains(&h.caster.to_bits()),
+        "{shouts:?}"
     );
 }
