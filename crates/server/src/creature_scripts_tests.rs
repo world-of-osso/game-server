@@ -127,10 +127,13 @@ fn melee_swings_on_the_dummy_reach_the_attackers_combat_log() {
             (caster, npc, 1)
         );
         // Unarmed 1-2 + 100 AP / 6 × 2.0 s = 34-35 over the dummy's 3 health,
-        // unless missed, dodged or parried.
+        // unless missed, dodged or parried; a partial block subtracts `blocked`.
         match swing.kind {
             CombatLogKind::Damage => {
-                assert!((34..=35).contains(&swing.amount), "{swing:?}");
+                assert!(
+                    (34..=35).contains(&(swing.amount + swing.blocked)),
+                    "{swing:?}"
+                );
                 assert_eq!(swing.overflow, swing.amount - 3);
             }
             CombatLogKind::Miss(_) => assert_eq!(swing.amount, 0),
