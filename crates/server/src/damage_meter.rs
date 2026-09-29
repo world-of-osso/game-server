@@ -9,6 +9,12 @@
 //! source's DPS is its damage over the session's duration. The owner gets
 //! `DamageMeterSnapshot` when a session starts or ends and every
 //! `SEND_INTERVAL_SECS` while one runs or has new damage.
+//!
+//! Retail's UI only reads aggregated sessions from `C_DamageMeter` and never the combat
+//! log (DamageMeterSessionWindow.lua:561-579), but where Retail aggregates, server or
+//! client engine, is not visible in its files. The server does it here because a client
+//! never receives its group members' spell damage lines (`log_event` sends them only to
+//! the source's and target's owners).
 
 use std::collections::HashMap;
 
