@@ -365,7 +365,12 @@ pub(crate) fn update_mirror_timers(
         let tick = handle_drowning(&mut timers, exposure, breathing, time_diff_ms);
         if !tick.damage.is_empty() {
             let killed = deal_environmental_damage(&mut health, tick.damage.len());
-            report_damage(entity, killed, replication_dirty.as_deref(), &mut player_deaths);
+            report_damage(
+                entity,
+                killed,
+                replication_dirty.as_deref(),
+                &mut player_deaths,
+            );
         }
         if !tick.messages.is_empty() {
             outgoing.push((entity, tick.messages));
