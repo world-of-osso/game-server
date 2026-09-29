@@ -35,6 +35,12 @@ const CONFUSED_PAUSE_SECS: (f32, f32) = (0.8, 1.5);
 /// Delay before a confused unit retries a point it cannot walk to (`_timer.Reset(100)`).
 const RETRY_CONFUSED_SECS: f32 = 0.1;
 
+/// Living, active creatures that are not confused: their wander, waypoint and
+/// formation movement runs.
+type Roaming = (Without<DeathState>, Without<GridDormant>, Without<Confused>);
+/// Active creatures that are not confused: chase and leash run.
+type ActiveUncontrolled = (Without<GridDormant>, Without<Confused>);
+
 pub struct CreatureAiPlugin;
 
 impl Plugin for CreatureAiPlugin {
@@ -173,7 +179,7 @@ fn wander_system(
             Option<&InMap>,
             Bearing,
         ),
-        (Without<DeathState>, Without<GridDormant>, Without<Confused>),
+        Roaming,
     >,
 ) {
     let dt = time.delta_secs();
@@ -409,7 +415,7 @@ fn waypoint_system(
             Option<&CreatureState>,
             Bearing,
         ),
-        (Without<DeathState>, Without<GridDormant>, Without<Confused>),
+        Roaming,
     >,
 ) {
     let dt = time.delta_secs();
@@ -514,7 +520,7 @@ fn formation_system(
             Option<&CreatureState>,
             Bearing,
         ),
-        (Without<DeathState>, Without<GridDormant>, Without<Confused>),
+        Roaming,
     >,
 ) {
     for (entity, mut pos, member, member_state, bearing) in &mut members {
@@ -598,7 +604,7 @@ pub(crate) fn chase_system(
             Option<&InMap>,
             Bearing,
         ),
-        (Without<GridDormant>, Without<Confused>),
+        ActiveUncontrolled,
     >,
     targets: Query<&Position, Without<SpawnPoint>>,
 ) {
@@ -653,6 +659,16 @@ fn chase_step(position: Position, target: &Position, step: f32) -> Position {
 
 // -- Confused movement --
 
+type ConfusedMover = (
+    Entity,
+    &'static mut Position,
+    &'static SpawnPoint,
+    &'static mut Confused,
+    Option<&'static AuraStatMods>,
+    Option<&'static InMap>,
+    Bearing,
+);
+
 /// `ConfusedMovementGenerator`: a confused creature walks (walk speed × the aura speed
 /// multiplier) to a random point up to `CONFUSED_REACH` either way from where its
 /// confusion began, pauses `CONFUSED_PAUSE_SECS`, and picks the next; it holds still
@@ -662,18 +678,7 @@ fn confused_movement_system(
     time: Res<Time>,
     queues: MoveQueues,
     mut ground: Option<ResMut<GroundMap>>,
-    mut query: Query<
-        (
-            Entity,
-            &mut Position,
-            &SpawnPoint,
-            &mut Confused,
-            Option<&AuraStatMods>,
-            Option<&InMap>,
-            Bearing,
-        ),
-        (Without<DeathState>, Without<GridDormant>),
-    >,
+    mut query: Query<ConfusedMover, (Without<DeathState>, Without<GridDormant>)>,
 ) {
     let dt = time.delta_secs();
     for (entity, mut pos, spawn, mut confused, mods, map, bearing) in &mut query {
@@ -753,10 +758,7 @@ fn beyond_leash(pos: &Position, spawn: &SpawnPoint) -> bool {
 /// (`enter_evade_mode`: threat cleared, combat stopped, health restored,
 /// Returning).
 fn leash_check_system(
-    query: Query<
-        (Entity, &Position, &SpawnPoint, &CreatureState),
-        (Without<GridDormant>, Without<Confused>),
-    >,
+    query: Query<(Entity, &Position, &SpawnPoint, &CreatureState), ActiveUncontrolled>,
     mut commands: Commands,
 ) {
     for (entity, pos, spawn, state) in &query {

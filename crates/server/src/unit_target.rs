@@ -48,15 +48,18 @@ type CreatureTargets<'w, 's, F> = Query<
     F,
 >;
 
+/// Active creatures whose chase state changed or that became confused.
+type Retargeted = (
+    Or<(Changed<CreatureState>, Added<Confused>)>,
+    Without<GridDormant>,
+);
+
 /// Active creatures whose state or confusion changed, plus creatures whose grid just
 /// woke: a change made while dormant is not seen by the `Changed` scan, and no player
 /// is in range of a dormant creature to read its target.
 fn sync_creature_unit_target(
     mut commands: Commands,
-    changed: CreatureTargets<(
-        Or<(Changed<CreatureState>, Added<Confused>)>,
-        Without<GridDormant>,
-    )>,
+    changed: CreatureTargets<Retargeted>,
     all: CreatureTargets<()>,
     mut woke: RemovedComponents<GridDormant>,
     mut unconfused: RemovedComponents<Confused>,
