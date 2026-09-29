@@ -764,7 +764,7 @@ mod tests {
                 ScriptName TEXT, unit_class INTEGER, detection_range REAL, unit_flags INTEGER,
                 ContentTuningID INTEGER, HealthScalingExpansion INTEGER, LevelScalingDeltaMin INTEGER,
                 LevelScalingDeltaMax INTEGER, DamageModifier REAL, ArmorModifier REAL, subname TEXT,
-                ManaModifier REAL, unit_flags2 INTEGER);
+                ManaModifier REAL, unit_flags2 INTEGER, RegenHealth INTEGER);
              CREATE TABLE expected_stat (ID INTEGER, Lvl INTEGER, ExpansionID INTEGER,
                 CreatureHealth REAL, CreatureAutoAttackDps REAL, CreatureArmor REAL,
                 ArmorConstant REAL);
@@ -818,7 +818,7 @@ mod tests {
         for (index, angle) in angles.iter().enumerate() {
             let entry = 100 + index as u32;
             conn.execute(
-                "INSERT INTO content_creature_template VALUES (?1,1,1,1,0,1.0,1.0,'Loup — Écorché',0,0,1.0,1,0,1.14,'',1,20.0,0,0,0,0,0,1.0,1.0,'',1.0,0)",
+                "INSERT INTO content_creature_template VALUES (?1,1,1,1,0,1.0,1.0,'Loup — Écorché',0,0,1.0,1,0,1.14,'',1,20.0,0,0,0,0,0,1.0,1.0,'',1.0,0,1)",
                 [entry],
             )
             .unwrap();
