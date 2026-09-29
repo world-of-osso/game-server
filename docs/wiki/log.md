@@ -1,5 +1,9 @@
 # Wiki Log
 
+## [2026-09-29] systems | Auto-attack only from AttackSwing
+
+Selecting a hostile unit no longer starts auto-attack or combat. Players attack through `AttackSwing` (TrinityCore `CMSG_ATTACK_SWING` → `Unit::Attack`) and stop through `AttackStop`. The server echoes `AttackStart`/`AttackStopped` to viewers. `AutoAttack` now holds its victim. Creatures still attack through their AI target. Casts of `SPELL_ATTR0_CANCELS_AUTO_ATTACK_COMBAT` spells stop the caster's auto-attack. Updated [[combat]] and [[factions]].
+
 ## [2026-09-28] systems | Client-reported player position
 
 Updated [[networking]] and [[tick-model]]: `PlayerInput` carries the client's position and teleport epoch; the server adopts it within speed × movement bank (TrinityCore `HandleMovementOpcode`) instead of re-simulating from the direction, which drifted the server's player from the Godot client's and let mobs hit players from a distance.

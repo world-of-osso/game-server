@@ -8,20 +8,33 @@ Combat logic is split across two crates: `shared/src/formulas/` holds pure comba
 
 Runs in `FixedUpdate`. Systems in order:
 
-1. `start_attack_system` — reacts to `Changed<CombatTarget>`; inserts `AutoAttack` and `CombatState` for a target, and removes `AutoAttack` when the target is cleared
-2. `auto_attack_system` — processes only entities with active `AutoAttack`, ticks the main- and off-hand swing timers, checks melee range (5 yards), and swings: players their weapon through the hit table and armor ([[player-damage]]), creatures `BASE_DAMAGE` or their ExpectedStat damage through armor; then per-target damage and health multipliers ([[level-scaling]]). It emits damage or miss/dodge/parry events and handles lethal NPC transitions
+1. `creature_attack_system` and `process_attack_messages` — start and stop auto-attack (see [Starting and stopping auto-attack](#starting-and-stopping-auto-attack))
+2. `auto_attack_system` — processes only entities with `AutoAttack`, swings at `AutoAttack.victim`, ticks the main- and off-hand swing timers, checks melee range (5 yards), and swings: players their weapon through the hit table and armor ([[player-damage]]), creatures `BASE_DAMAGE` or their ExpectedStat damage through armor; then per-target damage and health multipliers ([[level-scaling]]). It emits damage or miss/dodge/parry events and handles lethal NPC transitions
 3. `maintain_in_combat_state_system` — expires `CombatState` after 5s of no engagement
 4. `respawn_system` — ticks `DeathState.respawn_timer` (default 60s), restores HP and position to `SpawnPoint`, re-adds `Replicate` and `NetworkVisibility`
 
 All combat events are broadcast over `CombatChannel` (reliable ordered) and logged to a server-side `CombatLog` ring buffer (capacity 10,000 entries). Melee damage, NPC death, and NPC respawn events retain this broadcast and logging path.
 
-## Inactive Auto-Attack Participation (`152ccbd`)
+## Starting and stopping auto-attack
 
-Before `152ccbd`, clearing `CombatTarget` retained `AutoAttack { active: false }`. The fixed-step `auto_attack_system` therefore continued validating and iterating those entities forever, even though `ready_auto_attack_target` returned without changing timers, health, combat events, or combat state. `start_attack_system` now removes `AutoAttack` when the target becomes `None`; component presence represents active auto-attack participation. It also skips targets that fail `can_attack` ([[factions]]), so selecting a friendly guard neither swings nor enters combat.
+Selecting a unit never attacks it. TrinityCore `HandleSetSelectionOpcode` (MiscHandler.cpp:396-399) only sets the selection, and `SetTarget` here only writes `CombatTarget`. `AutoAttack { victim }` is TrinityCore's `m_attacking` with `UNIT_STATE_MELEE_ATTACKING`. A player's victim is separate from its selection: `Player::SetTarget` is a no-op (Player.h:1920). Component presence means the unit is attacking.
 
-Target acquisition still inserts an active `AutoAttack` with a zero timer, so the first swing and existing cooldown cadence are unchanged. Clearing a target still leaves `CombatState` available for the existing combat-grace timeout, and active combat, damage, death, respawn, and reliable event behavior remain unchanged.
+- **Players** start with `AttackSwing { target }` (`CMSG_ATTACK_SWING`, `HandleAttackSwingOpcode`, CombatHandler.cpp:28-61).
+  - An unknown unit, or one that fails `IsValidAttackTarget`, gets `AttackStopped` back. That covers dead units (Object.cpp:2367), uninteractible units (Object.cpp:2374), and faction or duel refusals ([[factions]]).
+  - A dead attacker's request fails silently (`Unit::Attack`, Unit.cpp:5876).
+  - A new victim keeps the running swing timers. Repeating the current victim changes nothing (Unit.cpp:5906-5931).
+  - `AttackStop` (`CMSG_ATTACK_STOP`) runs `Unit::AttackStop`.
+- **Creatures** attack through their AI's `CombatTarget` (`Changed<CombatTarget>`, `Without<Player>`). `Unit::Attack` engages the victim for a creature (Unit.cpp:5950-5952), so they enter combat at once.
+- **Combat.** A player enters combat with the first swing (`AttackerStateUpdate` → `AtTargetAttacked`, Unit.cpp:2271), not with the request. After that, `maintain_in_combat_state_system` keeps an attacking unit in combat.
+- **Stops.** `combat::attack_stop` removes `AutoAttack` and sends `AttackStopped { attacker, victim, now_dead }` (`SendMeleeAttackStop`, Unit.cpp:2550-2556). Every stop goes through it:
+  - `CMSG_ATTACK_STOP`
+  - `combat_stop` (the unit's and its attackers', `CombatStop` → `RemoveAllAttackers`, Unit.cpp:6029-6044), for death (`setDeathState`, Unit.cpp:9185-9187), evade, map transfer and duel end
+  - scripted AI `AttackStop`
+  - a completed cast of a `SPELL_ATTR0_CANCELS_AUTO_ATTACK_COMBAT` spell (Polymorph, Gouge; `Spell::finish`, Spell.cpp:4448-4450). Channels stop at cast start, not at channel end.
+- **Echoes.** `AttackStart { attacker, victim }` (`SMSG_ATTACK_START`, `SendMeleeAttackStart`) and `AttackStopped` go to every client replicating the attacker (`spell_cast::send_to_set`, TrinityCore `SendMessageToSet`).
+- **Selection changes.** The server does not stop auto-attack when the selection changes. The client sends `AttackSwing` for a new attackable selection and `AttackStop` otherwise.
 
-The RED test at `/tmp/claude/game-server/autoattack-inactive-removal-red.log` failed because the inactive component remained. The focused GREEN test at `/tmp/claude/game-server/autoattack-inactive-removal-green.log` passed after the removal. `cargo fmt` and Rust readability evidence are recorded for the commit. This documents a correctness-preserving participation fix; no live CPU or Character-stage claim is made before runtime measurement.
+Tests: `combat_tests/attack_requests.rs` (selection neither swings nor enters combat; swing, echo, first-swing combat; stop; switch keeps the timer; friendly, corpse, uninteractible and unknown refusals; victim death; Polymorph).
 
 ## Replicated Unit Target
 
