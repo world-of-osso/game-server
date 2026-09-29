@@ -261,9 +261,11 @@ pub(crate) fn send_dungeon_difficulty(world: &mut World) {
 }
 
 /// `SMSG_WORLD_SERVER_INFO` when a player is added to a map: the copy's difficulty.
-pub(crate) fn send_world_server_info(world: &mut World) {
-    let entered: Vec<(Entity, InMap)> = world
-        .query_filtered::<(Entity, &InMap), (With<Player>, Changed<InMap>)>()
+pub(crate) fn send_world_server_info(
+    world: &mut World,
+    entered: &mut QueryState<(Entity, &InMap), (With<Player>, Changed<InMap>)>,
+) {
+    let entered: Vec<(Entity, InMap)> = entered
         .iter(world)
         .map(|(player, map)| (player, *map))
         .collect();
