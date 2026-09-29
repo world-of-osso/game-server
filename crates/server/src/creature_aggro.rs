@@ -405,7 +405,7 @@ fn stand_up_for_combat(entity: &mut EntityWorldMut) {
 /// `CreatureAI::EnterEvadeMode`: `_EnterEvadeMode` (auras removed —
 /// `RemoveAurasOnEvade` —, cast interrupted, threat cleared, combat stopped: the
 /// creature and every unit auto-attacking it stop swinging, spell cooldowns
-/// reset), full health, run home (`MoveTargetedHome`), then the script's
+/// reset), run home (`MoveTargetedHome`) with its health untouched, then the script's
 /// `EnterEvadeMode` / `Reset`. An evading creature does not evade again
 /// (`IsInEvadeMode`).
 pub(crate) fn enter_evade_mode(world: &mut World, creature: Entity) {
@@ -426,14 +426,6 @@ pub(crate) fn enter_evade_mode(world: &mut World, creature: Entity) {
     }
     if let Some(mut target) = entity.get_mut::<CombatTarget>() {
         target.0 = None;
-    }
-    if let Some(mut health) = entity.get_mut::<Health>()
-        && health.current != health.max
-    {
-        health.current = health.max;
-        if let Some(queue) = world.get_resource::<ReplicationDirtyQueue>() {
-            queue.mark(creature);
-        }
     }
     crate::combat::combat_stop(world, creature);
     crate::scripted_ai::dispatch(world, creature, crate::scripted_ai::Hook::EnterEvadeMode);

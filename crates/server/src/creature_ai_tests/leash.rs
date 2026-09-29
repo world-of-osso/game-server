@@ -130,10 +130,7 @@ fn leash_evade_beyond_distance() {
     assert!(threat.is_empty(), "threat table should be cleared");
 
     let health = app.world().entity(creature).get::<Health>().unwrap();
-    assert_eq!(
-        health.current, health.max,
-        "health should be fully restored"
-    );
+    assert_eq!(health.current, 50.0, "evade leaves health to regeneration");
 }
 
 #[test]

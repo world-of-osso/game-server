@@ -110,7 +110,7 @@ fn chase_then_leash_evade() {
     assert!(threat.is_empty(), "threat should be cleared on evade");
 
     let health = app.world().entity(chaser).get::<Health>().unwrap();
-    assert_eq!(health.current, 100.0, "health should be restored on evade");
+    assert_eq!(health.current, 50.0, "evade leaves health to regeneration");
 }
 
 #[test]

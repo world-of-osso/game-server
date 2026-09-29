@@ -28,6 +28,8 @@ const SHEEP_DISPLAYS: [u32; 2] = [856, 857];
 const TRAINING_DUMMY: u32 = 44548;
 /// Northshire Blackrock Spy: ContentTuning 73 (levels 1-30), humanoid.
 const BLACKROCK_SPY: u32 = 49874;
+/// Blackrock Spy `faction`: FactionTemplate 7, neutral to players.
+const SPY_FACTION: u32 = 7;
 /// Polymorph `SpellCastTimes` 90 (1.7 s) and `SpellDuration` 3 (60 s), in 50 ms frames.
 const POLYMORPH_CAST_FRAMES: usize = 1700 / 50;
 const POLYMORPH_DURATION_FRAMES: usize = 60_000 / 50;
@@ -291,24 +293,28 @@ fn polymorph_cannot_target_a_mechanical_training_dummy() {
     assert!(!polymorphed(&h));
 }
 
-#[test]
-fn frostbolt_breaks_polymorph_on_a_level_scaled_blackrock_spy() {
-    // A level-30 spy scaled to the level-10 mage: Frostbolt's ~245 damage costs it far
-    // more of its native health, and 10% of that health is what breaks Polymorph.
-    let Some(mut h) = polymorph_harness(1.0) else {
-        return;
-    };
-    let stats = h.app.world().resource::<WorldData>().templates[&BLACKROCK_SPY]
+/// The kobold made into the Northshire Blackrock Spy a level-10 mage sees: native level
+/// 30 (ContentTuning 73) with its level-30 health, neutral FactionTemplate 7, and the
+/// `AggroMode` and detection range its template gives a world spawn (flags_extra 0:
+/// Aggressive, 20 yd).
+fn spy_harness() -> Option<(Harness, f32)> {
+    let mut h = polymorph_harness(1.0)?;
+    let template = &h.app.world().resource::<WorldData>().templates[&BLACKROCK_SPY];
+    let stats = template
         .tuning
         .as_ref()
         .expect("the spy is tuned")
         .stats
         .clone();
+    let (speed_walk, speed_run) = (template.speed_walk, template.speed_run);
     let max_health = stats.max_health(30);
     h.app.world_mut().entity_mut(h.caster).insert(UnitLevel(10));
     let mut spy = h.app.world_mut().entity_mut(h.npc);
     spy.get_mut::<Npc>().unwrap().template_id = BLACKROCK_SPY;
+    let mut spawn = spy.get::<SpawnPoint>().unwrap().clone();
+    (spawn.speed_walk, spawn.speed_run) = (speed_walk, speed_run);
     spy.insert((
+        spawn,
         shared::level_scaling::LevelScaling {
             content_tuning_id: 73,
             min_level: 1,
@@ -321,7 +327,26 @@ fn frostbolt_breaks_polymorph_on_a_level_scaled_blackrock_spy() {
             current: max_health,
             max: max_health,
         },
+        shared::components::UnitFactionTemplate(SPY_FACTION),
     ));
+    let mut commands = h.app.world_mut().commands();
+    let mut entity = commands.entity(h.npc);
+    crate::creature_aggro::insert_aggro_components(
+        &mut entity,
+        crate::creature_aggro::AggroMode::Aggressive,
+        20.0,
+    );
+    h.app.world_mut().flush();
+    Some((h, max_health))
+}
+
+#[test]
+fn frostbolt_breaks_polymorph_on_a_level_scaled_blackrock_spy() {
+    // A level-30 spy scaled to the level-10 mage: Frostbolt's ~245 damage costs it far
+    // more of its native health, and 10% of that health is what breaks Polymorph.
+    let Some((mut h, max_health)) = spy_harness() else {
+        return;
+    };
     kobold_attacks(&mut h);
     cast_polymorph(&mut h);
     let hit = frostbolt_hits(&h).len();
@@ -336,4 +361,109 @@ fn frostbolt_breaks_polymorph_on_a_level_scaled_blackrock_spy() {
     );
     assert!(!polymorphed(&h), "the spy's health loss breaks it");
     assert_eq!(display(&h), KOBOLD_DISPLAY);
+}
+
+#[test]
+fn neutral_spy_ignores_a_nearby_mage_then_fights_back_and_keeps_the_frostbolt_damage() {
+    let Some((mut h, max_health)) = spy_harness() else {
+        return;
+    };
+    // FactionTemplate 7 is neutral to the Human mage 3 yd away: no aggro on sight.
+    h.advance(4000 / 50);
+    assert_eq!(
+        h.app.world().get::<CreatureState>(h.npc),
+        Some(&CreatureState::Idle)
+    );
+    assert_eq!(h.health(h.caster), 1000.0);
+    cast_frostbolt(&mut h);
+    assert_eq!(frostbolt_hits(&h).len(), 1, "{:?}", h.inbox.failed);
+    assert_eq!(
+        h.app.world().get::<CreatureState>(h.npc),
+        Some(&CreatureState::Pursuing {
+            target: h.caster.to_bits()
+        })
+    );
+    let wounded = h.health(h.npc);
+    assert!(wounded < max_health);
+    // Engaged and not polymorphed: 3 regeneration intervals pass without healing.
+    h.advance(6000 / 50);
+    assert_eq!(h.health(h.npc), wounded, "the spy healed while engaged");
+    assert!(h.health(h.caster) < 1000.0, "the spy fights back");
+}
+
+#[test]
+fn evading_spy_keeps_its_damage_until_home_then_regenerates_a_third_every_2_seconds() {
+    let Some((mut h, max_health)) = spy_harness() else {
+        return;
+    };
+    kobold_attacks(&mut h);
+    let wounded = (max_health / 10.0).floor();
+    h.app.world_mut().get_mut::<Health>(h.npc).unwrap().current = wounded;
+    // The mage dies: no valid target is left and the spy evades.
+    h.app.world_mut().get_mut::<Health>(h.caster).unwrap().current = 0.0;
+    h.advance(1);
+    assert_eq!(
+        h.app.world().get::<CreatureState>(h.npc),
+        Some(&CreatureState::Returning)
+    );
+    assert_eq!(h.health(h.npc), wounded, "evading does not restore health");
+    let mut healed = Vec::new();
+    let mut previous = wounded;
+    for _ in 0..(8000 / 50) {
+        h.advance(1);
+        let health = h.health(h.npc);
+        if health != previous {
+            let evading = h.app.world().get::<CreatureState>(h.npc)
+                == Some(&CreatureState::Returning);
+            assert!(!evading, "healed while evading");
+            healed.push(health - previous);
+            previous = health;
+        }
+    }
+    let third = (max_health / 3.0).floor();
+    assert_eq!(healed.len(), 3, "{healed:?}");
+    assert_eq!(&healed[..2], &[third, third]);
+    assert_eq!(h.health(h.npc), max_health);
+}
+
+fn spy_position(h: &Harness) -> Position {
+    *h.app.world().get::<Position>(h.npc).unwrap()
+}
+
+/// Ground distance the spy covers in each of `frames` 50 ms frames.
+fn spy_steps(h: &mut Harness, frames: usize) -> Vec<f32> {
+    (0..frames)
+        .map(|_| {
+            let from = spy_position(h);
+            h.advance(1);
+            let to = spy_position(h);
+            (to.x - from.x).hypot(to.z - from.z)
+        })
+        .collect()
+}
+
+#[test]
+fn spy_chases_at_its_run_speed_and_wanders_polymorphed_at_its_walk_speed() {
+    // Blackrock Spy speed_run 0.857143 × 7 yd/s (baseMoveSpeed[MOVE_RUN]) = 6 yd/s;
+    // ConfusedMovementGenerator walks it (SetWalk): speed_walk 1 × 2.5 yd/s.
+    let Some((mut h, _)) = spy_harness() else {
+        return;
+    };
+    kobold_attacks(&mut h);
+    h.app.world_mut().get_mut::<Position>(h.caster).unwrap().x = -25.0;
+    h.advance(1);
+    let chase: f32 = spy_steps(&mut h, 20).iter().sum();
+    assert!((chase - 6.0).abs() < 0.05, "chased {chase} yd in 1 s");
+    h.app.world_mut().get_mut::<Position>(h.caster).unwrap().x = spy_position(&h).x - 3.0;
+    h.advance(2000 / 50);
+    cast_polymorph(&mut h);
+    let steps = spy_steps(&mut h, 10_000 / 50);
+    let walking: Vec<f32> = steps.into_iter().filter(|&step| step > 0.0).collect();
+    assert!(walking.len() > 10, "the sheep barely moved: {walking:?}");
+    let full = walking.iter().filter(|&&step| (step - 0.125).abs() < 1e-3).count();
+    assert!(
+        walking.iter().all(|&step| step <= 0.125 + 1e-3),
+        "faster than 2.5 yd/s: {walking:?}"
+    );
+    assert!(full * 2 > walking.len(), "mostly full 0.125 yd strides: {walking:?}");
 }

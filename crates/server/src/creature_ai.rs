@@ -773,7 +773,10 @@ fn leash_check_system(
 /// Run evading creatures back to their spawn point (`MoveTargetedHome`,
 /// run speed), then transition to Idle. At home the creature's mana is full and
 /// its addon auras and pose return (`HomeMovementGenerator::DoFinalize` →
-/// `SetSpawnHealth`, `LoadCreaturesAddon`).
+/// `SetSpawnHealth`, `LoadCreaturesAddon`). `SetSpawnHealth` restores health only
+/// for a creature without `RegenHealth` ("otherwise it would immediately go back to
+/// full health anyway"): full, as `curHealthPct` is not loaded. A regenerating
+/// creature heals by `Creature::RegenerateHealth` once it is no longer evading.
 fn return_to_spawn_system(
     time: Res<Time>,
     queues: MoveQueues,
@@ -789,13 +792,17 @@ fn return_to_spawn_system(
             Option<(&crate::zones::SpawnPose, &mut shared::components::UnitPose)>,
             Option<&InMap>,
             Bearing,
+            Option<&mut shared::components::Health>,
+            Has<crate::spell_cast::powers::CreatureHealthRegenTimer>,
         ),
         Without<GridDormant>,
     >,
     mut commands: Commands,
 ) {
     let dt = time.delta_secs();
-    for (entity, mut pos, spawn, mut state, mana, addon_auras, pose, map, bearing) in &mut query {
+    for (entity, mut pos, spawn, mut state, mana, addon_auras, pose, map, bearing, health, regen) in
+        &mut query
+    {
         if *state != CreatureState::Returning {
             continue;
         }
@@ -823,6 +830,14 @@ fn return_to_spawn_system(
                 && mana.current != mana.max
             {
                 mana.current = mana.max;
+            }
+            if let Some(mut health) = health.filter(|_| !regen)
+                && health.current != health.max
+            {
+                health.current = health.max;
+                if let Some(replication) = queues.replication.as_deref() {
+                    replication.mark(entity);
+                }
             }
             if let Some(auras) = addon_auras {
                 commands

@@ -49,7 +49,7 @@ A creature under MOD_CONFUSE 5 (Polymorph) carries `auras::Confused`, anchored w
 
 ## Leash and Evade
 
-`leash_check_system` runs after chase each tick. A pursuing creature more than **40 yards** (2D distance) from its `SpawnPoint` evades through `creature_aggro::enter_evade_mode` (threat cleared, `combat_stop`, full health, `CreatureState` → `Returning`; see [[creature-aggro]]).
+`leash_check_system` runs after chase each tick. A pursuing creature more than **40 yards** (2D distance) from its `SpawnPoint` evades through `creature_aggro::enter_evade_mode` (threat cleared, `combat_stop`, health unchanged, `CreatureState` → `Returning`; see [[creature-aggro]]).
 
 `return_to_spawn_system` then runs the creature back to its spawn point at `speed_run × 7` yd/s (`MoveTargetedHome` runs by default). On arrival, `CreatureState` → `Idle` and normal AI resumes.
 

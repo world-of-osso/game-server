@@ -40,7 +40,7 @@ It does nothing for a creature without a threat list, dead, at 0 health, or `Ret
 
 ## Evade and death
 
-`enter_evade_mode` (`CreatureAI::EnterEvadeMode`), from `update_victim_system` or `creature_ai::leash_check_system` (40 yd from spawn): `Returning`, threat reset, `CombatTarget(None)`, full health (replication marked dirty), then `combat::combat_stop` so the creature and everyone auto-attacking it stop. `return_to_spawn_system` runs it home, then `Idle`.
+`enter_evade_mode` (`CreatureAI::EnterEvadeMode`), from `update_victim_system` or `creature_ai::leash_check_system` (40 yd from spawn): `Returning`, threat reset, `CombatTarget(None)`, health untouched (TrinityCore `CreatureAI::_EnterEvadeMode`), then `combat::combat_stop` so the creature and everyone auto-attacking it stop. `return_to_spawn_system` runs it home, then `Idle`; at home a creature without `CreatureHealthRegenTimer` (no `RegenHealth`) gets full health (`SetSpawnHealth`, which TrinityCore skips for regenerating creatures because regeneration refills them), the others regenerate a third every 2 s from then on. Before 2026-09-29 evade restored full health at once, so a pulled mob that killed its target snapped back to full the instant it evaded.
 
 `combat::insert_npc_death` calls `forget_combat`: threat reset, `Idle`, `CombatTarget(None)`, so a corpse does not chase and respawns idle.
 

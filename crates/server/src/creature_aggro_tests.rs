@@ -381,7 +381,7 @@ fn highest_threat_attacker_takes_aggro_past_the_threshold() {
 }
 
 #[test]
-fn killing_the_only_target_makes_the_creature_evade_home_at_full_health() {
+fn killing_the_only_target_makes_the_creature_evade_home_and_restores_its_health_there() {
     let mut app = aggro_app();
     let spider = spawn_creature(&mut app, &FOREST_SPIDER, at(0.0, 0.0));
     let player = spawn_player(&mut app, at(10.0, 0.0), 5);
@@ -394,7 +394,8 @@ fn killing_the_only_target_makes_the_creature_evade_home_at_full_health() {
     app.world_mut().get_mut::<Health>(player).unwrap().current = 0.0;
     run(&mut app, 1);
     assert_eq!(state(&app, spider), Some(CreatureState::Returning));
-    assert_eq!(health(&app, spider), 100.0, "evade restores health");
+    // `_EnterEvadeMode` leaves health alone; `SetSpawnHealth` restores it at home.
+    assert_eq!(health(&app, spider), 70.0, "evading keeps its health");
     assert!(app.world().get::<ThreatTable>(spider).unwrap().is_empty());
     assert_eq!(app.world().get::<CombatTarget>(spider).unwrap().0, None);
     assert!(app.world().get::<AutoAttack>(spider).is_none());
@@ -402,6 +403,7 @@ fn killing_the_only_target_makes_the_creature_evade_home_at_full_health() {
     run(&mut app, 40);
     assert_eq!(state(&app, spider), Some(CreatureState::Idle));
     assert_eq!(*app.world().get::<Position>(spider).unwrap(), at(0.0, 0.0));
+    assert_eq!(health(&app, spider), 100.0, "a non-regenerating creature heals at home");
 }
 
 /// `Unit::Attack`: an engaging creature drops its stand and emote state ("restored on
@@ -468,7 +470,7 @@ fn leashed_creature_evades_and_its_attackers_stop_swinging() {
         }
     }
     assert!(evaded, "spider evades beyond its leash");
-    assert_eq!(health(&app, spider), 100.0);
+    assert!(health(&app, spider) < 100.0, "evading keeps the damage");
     assert!(
         app.world().get::<AutoAttack>(player).is_none(),
         "evade stops the player's auto-attack"
