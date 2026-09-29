@@ -3,6 +3,8 @@ use crate::stats::CharacterStats;
 use bevy::ecs::system::RunSystemOnce;
 use shared::components::{Player, UnitLevel};
 
+#[path = "combat_tests/attack_requests.rs"]
+mod attack_requests;
 #[path = "combat_tests/death.rs"]
 mod death;
 #[path = "combat_tests/player_damage.rs"]
@@ -69,11 +71,7 @@ fn spawn_attacker(app: &mut App, position: Position, target: Entity) -> Entity {
         .spawn((
             position,
             CombatTarget(Some(target)),
-            AutoAttack {
-                timer: 0.0,
-                off_hand_timer: 0.0,
-                active: true,
-            },
+            AutoAttack::new(target),
             crate::maps::InMap::continent(0),
             Player {
                 name: "test".into(),
@@ -96,13 +94,7 @@ fn run_attack_tick(app: &mut App) {
     let _ = app.world_mut().run_system_once(
         |time: Res<Time>,
          mut commands: Commands,
-         mut attackers: Query<(
-            Entity,
-            &CombatTarget,
-            &mut AutoAttack,
-            &Position,
-            Option<&CharacterStats>,
-        )>,
+         mut attackers: Query<(Entity, &mut AutoAttack, &Position, Option<&CharacterStats>)>,
          mut targets: AutoAttackTargets,
          scaling: Query<ScalingItem<'static>>,
          armor_constants: Option<Res<ArmorConstants>>,
@@ -113,11 +105,8 @@ fn run_attack_tick(app: &mut App) {
                 scaling: &scaling,
                 armor_constants: armor_constants.as_deref(),
             };
-            for (entity, combat_target, mut aa, position, stats) in &mut attackers {
-                if !aa.active {
-                    continue;
-                }
-                let Some(te) = combat_target.0 else { continue };
+            for (entity, mut aa, position, stats) in &mut attackers {
+                let te = aa.victim;
                 aa.timer -= dt;
                 aa.off_hand_timer -= dt;
                 let attacker = Attacker {
@@ -416,20 +405,14 @@ fn active_combat_maintenance_does_not_dirty_true_status() {
 }
 
 #[test]
-fn combat_flag_expires_after_grace_period_once_target_is_cleared() {
+fn combat_flag_expires_after_grace_period_once_auto_attack_stops() {
     let mut app = setup_app();
     let target = spawn_target(&mut app, pos(1.0, 0.0, 0.0), 100.0);
     let attacker = spawn_attacker(&mut app, pos(0.0, 0.0, 0.0), target);
 
     run_attack_tick(&mut app);
-    app.world_mut()
-        .entity_mut(attacker)
-        .insert(CombatTarget(None));
-    let _ = app.world_mut().run_system_once(start_attack_system);
-    assert!(
-        app.world().entity(attacker).get::<AutoAttack>().is_none(),
-        "clearing the combat target should remove the inactive auto-attack"
-    );
+    attack_stop(app.world_mut(), attacker);
+    assert!(app.world().entity(attacker).get::<AutoAttack>().is_none());
 
     app.world_mut()
         .resource_mut::<Time>()
@@ -775,64 +758,6 @@ fn a_killed_npc_respawns_in_its_killers_melee_range_at_full_health() {
     assert!(app.world().get::<AutoAttack>(player).is_none());
 }
 
-/// AzerothCore `Unit::Attack` (Unit.cpp:7241-7243) refuses dead victims:
-/// targeting a corpse does not start auto-attack.
-#[test]
-fn targeting_a_corpse_does_not_start_auto_attack() {
-    let mut app = setup_combat_app();
-    let corpse = spawn_target(&mut app, pos(1.0, 0.0, 0.0), 0.0);
-    app.world_mut().entity_mut(corpse).insert(Npc {
-        template_id: 6,
-        name: "Kobold Vermin".into(),
-    });
-    let player = spawn_player(&mut app, pos(0.0, 0.0, 0.0));
-
-    app.world_mut().get_mut::<CombatTarget>(player).unwrap().0 = Some(corpse);
-    app.world_mut().run_schedule(FixedUpdate);
-
-    assert!(app.world().get::<AutoAttack>(player).is_none());
-}
-
-/// A second player targets the NPC in the same tick another player's swing
-/// kills it: the kill's `CombatStop` covers the new attacker too.
-#[test]
-fn targeting_an_npc_in_the_tick_it_dies_leaves_no_auto_attack() {
-    let mut app = setup_combat_app();
-    let kobold = spawn_target(&mut app, pos(1.0, 0.0, 0.0), BASE_DAMAGE);
-    app.world_mut().entity_mut(kobold).insert(Npc {
-        template_id: 6,
-        name: "Kobold Vermin".into(),
-    });
-    let killer = spawn_attacker(&mut app, pos(0.0, 0.0, 0.0), kobold);
-    let latecomer = spawn_player(&mut app, pos(0.0, 0.0, 1.0));
-    app.world_mut()
-        .get_mut::<CombatTarget>(latecomer)
-        .unwrap()
-        .0 = Some(kobold);
-
-    app.world_mut().run_schedule(FixedUpdate);
-
-    assert!(app.world().get::<DeathState>(kobold).is_some(), "killed");
-    assert!(app.world().get::<AutoAttack>(killer).is_none());
-    assert!(app.world().get::<AutoAttack>(latecomer).is_none());
-}
-
-fn spawn_player(app: &mut App, position: Position) -> Entity {
-    app.world_mut()
-        .spawn((
-            position,
-            CombatTarget(None),
-            crate::maps::InMap::continent(0),
-            Player {
-                name: "test".into(),
-                race: 1,
-                class: 1,
-                appearance: Default::default(),
-            },
-        ))
-        .id()
-}
-
 #[test]
 fn respawn_delay_is_spawntimesecs_plus_rank_corpse_decay() {
     // Northshire Guard: spawntimesecs 430, normal rank.
@@ -945,114 +870,6 @@ fn combat_log_records_all_event_types() {
     }
 }
 
-/// Human player (FactionTemplate 1) targeting an NPC of `template` in melee
-/// range, full CombatPlugin with the world.db faction templates.
-fn target_npc_with_template(template: u32) -> Option<(App, Entity, Entity)> {
-    let mut app = setup_combat_app();
-    app.insert_resource(crate::faction::world_db_faction_templates()?);
-    let npc = app
-        .world_mut()
-        .spawn((
-            pos(1.0, 0.0, 0.0),
-            Health {
-                current: 100.0,
-                max: 100.0,
-            },
-            Npc {
-                template_id: 68,
-                name: "Stormwind City Guard".into(),
-            },
-            UnitFactionTemplate(template),
-        ))
-        .id();
-    let player = app
-        .world_mut()
-        .spawn((
-            pos(0.0, 0.0, 0.0),
-            crate::maps::InMap::continent(0),
-            Player {
-                name: "Human".into(),
-                race: 1,
-                class: 1,
-                appearance: Default::default(),
-            },
-            UnitFactionTemplate(1),
-            CombatTarget(Some(npc)),
-        ))
-        .id();
-    app.world_mut().run_schedule(FixedUpdate);
-    app.world_mut().run_schedule(FixedUpdate);
-    Some((app, player, npc))
-}
-
-#[test]
-fn auto_attack_on_friendly_guard_is_rejected() {
-    // FactionTemplate 11: Stormwind City Guard.
-    let Some((app, player, guard)) = target_npc_with_template(11) else {
-        return;
-    };
-    assert!(app.world().get::<AutoAttack>(player).is_none());
-    assert!(app.world().get::<CombatStatus>(player).is_none());
-    assert_eq!(app.world().get::<Health>(guard).unwrap().current, 100.0);
-}
-
-/// WorldObject::IsValidAttackTarget (Object.cpp:2374): a hostile NPC with
-/// UNIT_FLAG_UNINTERACTIBLE (NOT_SELECTABLE) cannot be auto-attacked.
-#[test]
-fn auto_attack_on_a_not_selectable_hostile_npc_is_rejected() {
-    let mut app = setup_combat_app();
-    let Some(templates) = crate::faction::world_db_faction_templates() else {
-        return;
-    };
-    app.insert_resource(templates);
-    let stalker = app
-        .world_mut()
-        .spawn((
-            pos(1.0, 0.0, 0.0),
-            Health {
-                current: 100.0,
-                max: 100.0,
-            },
-            Npc {
-                template_id: 53488,
-                name: "Summon Enabler Stalker".into(),
-            },
-            // FactionTemplate 25: Kobold Vermin, hostile to a Human player.
-            UnitFactionTemplate(25),
-            shared::components::UnitFlags(shared::components::UnitFlags::NOT_SELECTABLE),
-        ))
-        .id();
-    let player = app
-        .world_mut()
-        .spawn((
-            pos(0.0, 0.0, 0.0),
-            crate::maps::InMap::continent(0),
-            Player {
-                name: "Human".into(),
-                race: 1,
-                class: 1,
-                appearance: Default::default(),
-            },
-            UnitFactionTemplate(1),
-            CombatTarget(Some(stalker)),
-        ))
-        .id();
-    app.world_mut().run_schedule(FixedUpdate);
-    app.world_mut().run_schedule(FixedUpdate);
-    assert!(app.world().get::<AutoAttack>(player).is_none());
-    assert_eq!(app.world().get::<Health>(stalker).unwrap().current, 100.0);
-}
-
-#[test]
-fn auto_attack_on_hostile_kobold_swings() {
-    // FactionTemplate 25: Kobold Vermin.
-    let Some((app, player, kobold)) = target_npc_with_template(25) else {
-        return;
-    };
-    assert!(app.world().get::<AutoAttack>(player).is_some());
-    assert_eq!(app.world().get::<Health>(kobold).unwrap().current, 90.0);
-}
-
 #[test]
 fn human_melee_on_training_dummy_logs_every_swing_and_never_kills_it() {
     let mut app = setup_combat_app();
@@ -1091,6 +908,7 @@ fn human_melee_on_training_dummy_logs_every_swing_and_never_kills_it() {
             },
             UnitFactionTemplate(1),
             CombatTarget(Some(dummy)),
+            AutoAttack::new(dummy),
         ))
         .id();
     app.world_mut().run_schedule(FixedUpdate);
@@ -1108,7 +926,7 @@ fn human_melee_on_training_dummy_logs_every_swing_and_never_kills_it() {
         })
         .map(|entry| entry.event.amount)
         .collect();
-    // The first swing lands in the tick the target is set.
+    // The first swing lands in the first tick.
     assert_eq!(
         swings,
         vec![BASE_DAMAGE; 4],

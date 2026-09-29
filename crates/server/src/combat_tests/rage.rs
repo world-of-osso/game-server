@@ -15,12 +15,17 @@ fn warrior(known: &[u32]) -> Option<Harness> {
     Some(h)
 }
 
-/// `start_attack_system` starts the auto-attack on the target change.
+/// The caster attacks through `CMSG_ATTACK_SWING`, arriving 3 frames later; the
+/// NPC through its AI target, in the next frame.
 fn attack(h: &mut Harness, attacker: Entity, target: Entity) {
-    h.app
-        .world_mut()
-        .entity_mut(attacker)
-        .insert(CombatTarget(Some(target)));
+    if attacker == h.caster {
+        h.attack(target);
+    } else {
+        h.app
+            .world_mut()
+            .entity_mut(attacker)
+            .insert(CombatTarget(Some(target)));
+    }
 }
 
 #[test]
@@ -30,8 +35,8 @@ fn each_swing_dealt_gives_swing_time_times_1_75_rage() {
     };
     let (caster, npc) = (h.caster, h.npc);
     attack(&mut h, caster, npc);
-    // Swings in the frame after the target change and 2 s later: 2.0 s × 1.75 = 3.5 rage (35 raw) each.
-    h.advance(2);
+    // Swings in the frame the request arrives and 2 s later: 2.0 s × 1.75 = 3.5 rage (35 raw) each.
+    h.advance(3);
     assert_eq!(h.power(PowerType::Rage), 35.0);
     h.advance(43);
     assert_eq!(h.power(PowerType::Rage), 70.0);
@@ -44,7 +49,7 @@ fn rage_from_damage_dealt_auras_scale_swing_rage() {
     };
     let (caster, npc) = (h.caster, h.npc);
     attack(&mut h, caster, npc);
-    h.advance(2);
+    h.advance(3);
     // 3.5 rage × (1 + 250%) = 12.25, rounded to 12.3 rage.
     assert_eq!(h.power(PowerType::Rage), 123.0);
 }

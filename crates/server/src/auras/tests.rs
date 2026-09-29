@@ -7,7 +7,6 @@ use shared::components::{
 use shared::protocol::{CancelAura, CombatChannel, CombatLogEvent, CombatLogKind};
 
 use super::*;
-use crate::networking::CombatTarget;
 use crate::spell_cast::test_harness::{Harness, harness, varied, world_db};
 
 const SHADOW_WORD_PAIN: u32 = 589;
@@ -326,10 +325,7 @@ fn passive_proc_trigger_fires_on_melee_swing() {
     assert_eq!(passive.len(), 1, "known passive auto-applied");
     assert!(passive[0].passive && passive[0].hidden && passive[0].expires_at.is_none());
     let npc = h.npc;
-    h.app
-        .world_mut()
-        .entity_mut(h.caster)
-        .insert(CombatTarget(Some(npc)));
+    h.attack(npc);
     // Ten 2 s unarmed swings; missed, dodged and parried ones do not proc.
     h.advance(3 + 9 * 40);
     let landed = h

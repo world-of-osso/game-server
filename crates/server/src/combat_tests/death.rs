@@ -50,11 +50,7 @@ fn lethal_player_auto_attack_transitions_death_in_same_fixed_step() {
         .spawn((
             pos(0.0, 0.0, 0.0),
             CombatTarget(Some(target)),
-            AutoAttack {
-                timer: 0.0,
-                off_hand_timer: 0.0,
-                active: true,
-            },
+            AutoAttack::new(target),
             Npc {
                 template_id: 6,
                 name: "Kobold Vermin".into(),
@@ -225,10 +221,8 @@ fn lethal_melee_swing_on_an_npc_logs_death_after_the_damage() {
         current: 5.0,
         max: 5.0,
     });
-    h.app
-        .world_mut()
-        .entity_mut(h.caster)
-        .insert(CombatTarget(Some(h.npc)));
+    let npc = h.npc;
+    h.attack(npc);
     // Ten 2 s swings: the first that is not missed, dodged or parried kills.
     h.advance(5 + 9 * 40);
 
@@ -262,14 +256,10 @@ fn lethal_melee_swing_on_a_player_logs_death_to_the_victim() {
         max: 100.0,
     });
     let (caster, npc) = (h.caster, h.npc);
-    h.app.world_mut().entity_mut(npc).insert((
-        CombatTarget(Some(caster)),
-        AutoAttack {
-            timer: 0.0,
-            off_hand_timer: 0.0,
-            active: true,
-        },
-    ));
+    h.app
+        .world_mut()
+        .entity_mut(npc)
+        .insert((CombatTarget(Some(caster)), AutoAttack::new(caster)));
     h.advance(5);
 
     let (caster, npc) = (Some(caster.to_bits()), Some(npc.to_bits()));

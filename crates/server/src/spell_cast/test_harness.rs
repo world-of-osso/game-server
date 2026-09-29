@@ -13,8 +13,9 @@ use shared::components::{
     CombatStatus, Health, Level, Mana, Npc, Player, Position, PowerType, UnitFactionTemplate,
 };
 use shared::protocol::{
-    CancelAura, CastFailed, CombatChannel, CombatLogEvent, ProtocolPlugin, SpellCastIntent,
-    SpellChargesUpdate, SpellCooldownUpdate, SpellGo, StopSpellCast,
+    AttackStart, AttackStop, AttackStopped, AttackSwing, CancelAura, CastFailed, CombatChannel,
+    CombatLogEvent, ProtocolPlugin, SetTarget, SpellCastIntent, SpellChargesUpdate,
+    SpellCooldownUpdate, SpellGo, StopSpellCast,
 };
 
 use super::powers::{PowerPools, PowerTypeTable, load_power_type_table};
@@ -98,6 +99,8 @@ pub(crate) struct Inbox {
     pub(crate) cooldowns: Vec<SpellCooldownUpdate>,
     pub(crate) charges: Vec<SpellChargesUpdate>,
     pub(crate) log: Vec<CombatLogEvent>,
+    pub(crate) attack_starts: Vec<AttackStart>,
+    pub(crate) attack_stops: Vec<AttackStopped>,
 }
 
 pub(crate) fn spawn_player(app: &mut App, class: u8, x: f32) -> Entity {
@@ -119,6 +122,7 @@ pub(crate) fn spawn_player(app: &mut App, class: u8, x: f32) -> Entity {
             // Human.
             UnitFactionTemplate(1),
             Moving(false),
+            crate::networking::CombatTarget::default(),
             // In combat so rage does not decay mid-test (rage test toggles it).
             CombatStatus(true),
             CharacterStats {
@@ -188,6 +192,18 @@ pub(crate) fn spawn_peer_connection(app: &mut App, player: Entity, peer: u64) ->
                 MessageSender::<SpellGo>::default(),
                 MessageReceiver::<SpellGo>::default(),
             ),
+            (
+                MessageSender::<AttackSwing>::default(),
+                MessageReceiver::<AttackSwing>::default(),
+                MessageSender::<AttackStop>::default(),
+                MessageReceiver::<AttackStop>::default(),
+                MessageSender::<AttackStart>::default(),
+                MessageReceiver::<AttackStart>::default(),
+                MessageSender::<AttackStopped>::default(),
+                MessageReceiver::<AttackStopped>::default(),
+                MessageSender::<SetTarget>::default(),
+                MessageReceiver::<SetTarget>::default(),
+            ),
         ))
         .id()
 }
@@ -217,6 +233,7 @@ pub(crate) fn harness_with(
     app.add_plugins(super::SpellCastPlugin);
     app.add_plugins(crate::auras::AuraPlugin);
     app.add_plugins(crate::creature_scripts::CreatureScriptsPlugin);
+    app.add_systems(Update, crate::messaging::process_target_messages);
     if computed_stats {
         app.add_plugins(crate::stats::StatsPlugin);
     }
@@ -289,6 +306,37 @@ impl Harness {
             });
     }
 
+    /// `CMSG_SET_SELECTION`: select `target`, or clear the selection.
+    pub(crate) fn select(&mut self, target: Option<Entity>) {
+        self.app
+            .world_mut()
+            .get_mut::<MessageSender<SetTarget>>(self.connection)
+            .unwrap()
+            .send::<CombatChannel>(SetTarget {
+                target_entity: target.map(Entity::to_bits),
+            });
+    }
+
+    /// `CMSG_ATTACK_SWING` at `target`; like a cast, it arrives 3 frames later.
+    pub(crate) fn attack(&mut self, target: Entity) {
+        self.app
+            .world_mut()
+            .get_mut::<MessageSender<AttackSwing>>(self.connection)
+            .unwrap()
+            .send::<CombatChannel>(AttackSwing {
+                target: target.to_bits(),
+            });
+    }
+
+    /// `CMSG_ATTACK_STOP`.
+    pub(crate) fn stop_attack(&mut self) {
+        self.app
+            .world_mut()
+            .get_mut::<MessageSender<AttackStop>>(self.connection)
+            .unwrap()
+            .send::<CombatChannel>(AttackStop);
+    }
+
     /// Send + HostClient loopback delivery takes 3 frames (as in the old
     /// cast presentation tests); the cast resolves in the receiving frame.
     pub(crate) fn cast_and_deliver(&mut self, spell_id: u32, target: Option<Entity>) {
@@ -312,6 +360,12 @@ impl Harness {
             inbox
                 .log
                 .extend(drain::<CombatLogEvent>(&mut self.app, self.connection));
+            inbox
+                .attack_starts
+                .extend(drain::<AttackStart>(&mut self.app, self.connection));
+            inbox
+                .attack_stops
+                .extend(drain::<AttackStopped>(&mut self.app, self.connection));
         }
     }
 

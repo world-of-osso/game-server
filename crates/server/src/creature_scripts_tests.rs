@@ -106,10 +106,7 @@ fn melee_swings_on_the_dummy_reach_the_attackers_combat_log() {
     let Some(mut h) = dummy_harness() else {
         return;
     };
-    h.app
-        .world_mut()
-        .entity_mut(h.caster)
-        .insert(crate::networking::CombatTarget(Some(h.npc)));
+    h.attack(h.npc);
     // Swings at 0 s and 2 s.
     h.advance(45);
 
@@ -152,10 +149,7 @@ fn evade_stops_out_of_range_attackers_and_they_leave_combat() {
         return;
     };
     let (caster, dummy) = (h.caster, h.npc);
-    h.app
-        .world_mut()
-        .entity_mut(caster)
-        .insert(crate::networking::CombatTarget(Some(dummy)));
+    h.attack(dummy);
     h.advance(3);
     h.app
         .world_mut()

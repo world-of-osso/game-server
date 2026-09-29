@@ -107,7 +107,6 @@ mod combat {
 
     use super::*;
     use crate::auth::InWorld;
-    use crate::networking::CombatTarget;
     use crate::spell_cast::test_harness::{Harness, harness, spawn_player, varied};
     use lightyear::connection::host::HostClient;
     use shared::components::PowerType;
@@ -237,11 +236,8 @@ mod combat {
             return;
         };
         d.start();
-        let (caster, opponent) = (d.h.caster, d.opponent);
-        d.h.app
-            .world_mut()
-            .entity_mut(caster)
-            .insert(CombatTarget(Some(opponent)));
+        let opponent = d.opponent;
+        d.h.attack(opponent);
         d.h.advance(3);
         // One unarmed swing: 1-2 + 100 AP / 6 × 2.0 s = 34-35, or a 5% miss.
         let swings: Vec<_> =
@@ -276,10 +272,7 @@ mod combat {
             current: 300.0,
             max: 1000.0,
         });
-        d.h.app
-            .world_mut()
-            .entity_mut(caster)
-            .insert(CombatTarget(Some(opponent)));
+        d.h.attack(opponent);
         d.h.advance(1);
         d.h.cast_and_deliver(MORTAL_STRIKE, Some(opponent));
 

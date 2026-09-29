@@ -154,8 +154,12 @@ fn health(app: &App, unit: Entity) -> f32 {
     app.world().get::<Health>(unit).unwrap().current
 }
 
+/// The player selects `target` and auto-attacks it (`CMSG_ATTACK_SWING` accepted).
 fn attack(app: &mut App, player: Entity, target: Entity) {
     app.world_mut().get_mut::<CombatTarget>(player).unwrap().0 = Some(target);
+    app.world_mut()
+        .entity_mut(player)
+        .insert(AutoAttack::new(target));
 }
 
 #[test]

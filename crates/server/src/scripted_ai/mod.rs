@@ -515,7 +515,7 @@ pub(crate) fn attack_stop(world: &mut World, unit: Entity) {
     {
         target.0 = None;
     }
-    world.entity_mut(unit).remove::<crate::combat::AutoAttack>();
+    crate::combat::attack_stop(world, unit);
 }
 
 #[cfg(test)]

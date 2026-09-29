@@ -379,14 +379,15 @@ pub(crate) fn log_event(world: &mut World, event: CombatLogEvent) {
     }
 }
 
-/// `SMSG_SPELL_GO` to every client that replicates the caster: the connections that
-/// see it through interest, or every authenticated client for a unit replicated
-/// without `NetworkVisibility`.
-fn broadcast_spell_go(world: &mut World, message: SpellGo) {
-    let Some(caster) = Entity::try_from_bits(message.caster) else {
-        return;
-    };
-    let receivers: Vec<Entity> = match world.get::<NetworkVisibility>(caster) {
+/// Send to every client that replicates `unit` (TrinityCore `SendMessageToSet`): the
+/// connections that see it through interest, or every authenticated client for a unit
+/// replicated without `NetworkVisibility`.
+pub(crate) fn send_to_set<M: lightyear::prelude::Message + Clone>(
+    world: &mut World,
+    unit: Entity,
+    message: M,
+) {
+    let receivers: Vec<Entity> = match world.get::<NetworkVisibility>(unit) {
         Some(visibility) => visibility.visible_senders().collect(),
         None => world
             .query_filtered::<Entity, With<Authenticated>>()
@@ -394,9 +395,16 @@ fn broadcast_spell_go(world: &mut World, message: SpellGo) {
             .collect(),
     };
     for connection in receivers {
-        if let Some(mut sender) = world.get_mut::<MessageSender<SpellGo>>(connection) {
+        if let Some(mut sender) = world.get_mut::<MessageSender<M>>(connection) {
             sender.send::<CombatChannel>(message.clone());
         }
+    }
+}
+
+/// `SMSG_SPELL_GO` to every client that replicates the caster.
+fn broadcast_spell_go(world: &mut World, message: SpellGo) {
+    if let Some(caster) = Entity::try_from_bits(message.caster) {
+        send_to_set(world, caster, message);
     }
 }
 

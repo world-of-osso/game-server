@@ -3,7 +3,8 @@ use bevy::prelude::*;
 use lightyear::prelude::*;
 use shared::components::{CombatStatus, Health, Npc, Player, Position, UnitFactionTemplate};
 use shared::protocol::{
-    CombatChannel, CombatEvent, CombatEventType, CombatLogEvent, CombatLogKind, MissKind,
+    AttackStart, AttackStop, AttackStopped, AttackSwing, CombatChannel, CombatEvent,
+    CombatEventType, CombatLogEvent, CombatLogKind, MissKind,
 };
 
 use crate::auras::AuraStatMods;
@@ -16,7 +17,7 @@ use crate::interest::{InterestDirtyQueue, mark_interest_position_changed};
 use crate::item_stats::WeaponDamage;
 use crate::level_scaling::{ArmorConstants, CreatureArmor, ScalingItem, UnitScaling};
 use crate::melee::{self, Hand, MeleeOutcome, Victim};
-use crate::networking::CombatTarget;
+use crate::networking::{CombatTarget, PlayerLink};
 use crate::spell_cast::powers::PowerPools;
 use crate::stats::CharacterStats;
 use shared::components::PowerType;
@@ -105,9 +106,9 @@ impl Plugin for CombatPlugin {
         app.add_systems(
             FixedUpdate,
             (
-                // A target set in the tick of a kill is attacking before the
-                // kill's `CombatStop` runs.
-                start_attack_system.before(auto_attack_system),
+                // An attack started in the tick of a kill is attacking before
+                // the kill's `CombatStop` runs.
+                (creature_attack_system, process_attack_messages).before(auto_attack_system),
                 auto_attack_system,
                 maintain_in_combat_state_system,
                 corpse_decay_system.before(respawn_system),
@@ -117,13 +118,25 @@ impl Plugin for CombatPlugin {
     }
 }
 
-/// Tracks the swing timers for auto-attacks: the main hand and, for a unit
-/// with an off-hand weapon, the off hand.
+/// A unit auto-attacking `victim` (TrinityCore `m_attacking` with
+/// `UNIT_STATE_MELEE_ATTACKING`), and its swing timers: the main hand and, for a
+/// unit with an off-hand weapon, the off hand. A player's victim is separate from
+/// its selection (`Player::SetTarget` is a no-op, Player.h:1920).
 #[derive(Component, Debug)]
 pub struct AutoAttack {
     pub timer: f32,
     pub off_hand_timer: f32,
-    pub active: bool,
+    pub victim: Entity,
+}
+
+impl AutoAttack {
+    pub fn new(victim: Entity) -> Self {
+        Self {
+            timer: 0.0,
+            off_hand_timer: 0.0,
+            victim,
+        }
+    }
 }
 
 /// Marks a dead NPC awaiting respawn.
@@ -191,67 +204,179 @@ struct CombatState {
     expires_at: f64,
 }
 
-/// When CombatTarget changes to an attackable unit, activate auto-attack.
-/// When None or not attackable (for example a friendly guard), deactivate.
-/// Dead units neither attack nor are attacked (AzerothCore `Unit::Attack`,
-/// Unit.cpp:7241-7243).
-fn start_attack_system(
-    query: Query<(Entity, &CombatTarget), Changed<CombatTarget>>,
-    factions: Query<(
-        Option<&UnitFactionTemplate>,
-        Has<Player>,
-        Option<&DuelOpponent>,
-    )>,
-    health: Query<&Health>,
-    unit_flags: Query<&shared::components::UnitFlags>,
-    templates: Res<FactionTemplates>,
-    mut commands: Commands,
-    time: Res<Time>,
-) {
-    let combat_expires_at = time.elapsed_secs_f64() + COMBAT_GRACE_SECS;
-    let unit_faction = |entity: Entity| {
-        factions
-            .get(entity)
+/// `WorldObject::IsValidAttackTarget` and `Unit::Attack`'s own checks as far as
+/// they are modelled: living units only (Object.cpp:2367, Unit.cpp:5876), no
+/// uninteractible victim (Object.cpp:2374), hostile factions or duel opponents.
+#[derive(SystemParam)]
+struct AttackRules<'w, 's> {
+    factions: Query<
+        'w,
+        's,
+        (
+            Option<&'static UnitFactionTemplate>,
+            Has<Player>,
+            Option<&'static DuelOpponent>,
+        ),
+    >,
+    health: Query<'w, 's, &'static Health>,
+    unit_flags: Query<'w, 's, &'static shared::components::UnitFlags>,
+    templates: Res<'w, FactionTemplates>,
+}
+
+impl AttackRules<'_, '_> {
+    fn dead(&self, unit: Entity) -> bool {
+        self.health
+            .get(unit)
+            .is_ok_and(|health| health.current <= 0.0)
+    }
+
+    fn unit_faction(&self, unit: Entity) -> Option<UnitFaction> {
+        self.factions
+            .get(unit)
             .ok()
             .map(|(template, is_player, _)| UnitFaction {
                 template: template.map_or(0, |template| template.0),
                 is_player,
             })
-    };
-    let dueling = |attacker: Entity, target: Entity| {
-        factions
+    }
+
+    fn valid_attack_target(&self, attacker: Entity, victim: Entity) -> bool {
+        let uninteractible = self
+            .unit_flags
+            .get(victim)
+            .is_ok_and(|flags| !flags.is_selectable());
+        let dueling = self
+            .factions
             .get(attacker)
-            .is_ok_and(|(_, _, opponent)| crate::duel::dueling(opponent, target))
-    };
-    let dead = |entity: Entity| health.get(entity).is_ok_and(|health| health.current <= 0.0);
-    // WorldObject::IsValidAttackTarget (Object.cpp:2374): not an uninteractible unit.
-    let uninteractible = |entity: Entity| {
-        unit_flags
-            .get(entity)
-            .is_ok_and(|flags| !flags.is_selectable())
-    };
-    for (entity, target) in &query {
-        let attackable = target.0.is_some_and(|target| {
-            !(dead(entity) || dead(target) || uninteractible(target))
-                && (dueling(entity, target)
-                    || match (unit_faction(entity), unit_faction(target)) {
-                        (Some(attacker), Some(target)) => templates.can_attack(attacker, target),
-                        _ => false,
-                    })
-        });
-        if attackable {
-            commands.entity(entity).insert((
-                AutoAttack {
-                    timer: 0.0,
-                    off_hand_timer: 0.0,
-                    active: true,
-                },
-                active_combat_state(combat_expires_at),
-            ));
-        } else if let Ok(mut cmd) = commands.get_entity(entity) {
-            cmd.remove::<AutoAttack>();
+            .is_ok_and(|(_, _, opponent)| crate::duel::dueling(opponent, victim));
+        attacker != victim
+            && !self.dead(victim)
+            && !uninteractible
+            && (dueling
+                || match (self.unit_faction(attacker), self.unit_faction(victim)) {
+                    (Some(attacker), Some(victim)) => self.templates.can_attack(attacker, victim),
+                    _ => false,
+                })
+    }
+}
+
+/// A creature's AI attacks by setting its `CombatTarget` (`Unit::Attack`, which
+/// for creatures engages the victim, Unit.cpp:5950-5952); a target it cannot
+/// attack, or none, stops the attack. Players attack only through `AttackSwing`.
+fn creature_attack_system(
+    query: Query<
+        (Entity, &CombatTarget, Option<&AutoAttack>),
+        (Changed<CombatTarget>, Without<Player>),
+    >,
+    rules: AttackRules,
+    mut commands: Commands,
+    time: Res<Time>,
+) {
+    let combat_expires_at = time.elapsed_secs_f64() + COMBAT_GRACE_SECS;
+    for (creature, target, current) in &query {
+        match target.0 {
+            Some(victim)
+                if !rules.dead(creature) && rules.valid_attack_target(creature, victim) =>
+            {
+                start_attack(&mut commands, creature, victim, current);
+                commands
+                    .entity(creature)
+                    .insert(active_combat_state(combat_expires_at));
+            }
+            _ => {
+                commands.queue(move |world: &mut World| attack_stop(world, creature));
+            }
         }
     }
+}
+
+/// `WorldSession::HandleAttackSwingOpcode` (CombatHandler.cpp:28-61): an unknown or
+/// invalid victim answers `SMSG_ATTACK_STOP`; otherwise `Unit::Attack(victim, true)`,
+/// which a dead attacker's request fails silently (Unit.cpp:5876). Combat starts
+/// with the first swing (`AttackerStateUpdate` → `AtTargetAttacked`), not here.
+/// `HandleAttackStopOpcode` (CombatHandler.cpp:63-66): `Unit::AttackStop`.
+fn process_attack_messages(
+    mut swings: Query<(&mut MessageReceiver<AttackSwing>, &PlayerLink)>,
+    mut stops: Query<(&mut MessageReceiver<AttackStop>, &PlayerLink)>,
+    attacking: Query<&AutoAttack>,
+    rules: AttackRules,
+    mut commands: Commands,
+) {
+    for (mut receiver, link) in &mut swings {
+        let player = link.0;
+        for request in receiver.receive() {
+            let victim = Entity::try_from_bits(request.target)
+                .filter(|&victim| rules.health.contains(victim));
+            match victim {
+                Some(victim) if rules.valid_attack_target(player, victim) => {
+                    if !rules.dead(player) {
+                        start_attack(&mut commands, player, victim, attacking.get(player).ok());
+                    }
+                }
+                victim => commands.queue(move |world: &mut World| {
+                    send_attack_stopped(world, player, victim);
+                }),
+            }
+        }
+    }
+    for (mut receiver, link) in &mut stops {
+        let player = link.0;
+        if receiver.receive().count() > 0 {
+            commands.queue(move |world: &mut World| attack_stop(world, player));
+        }
+    }
+}
+
+/// `Unit::Attack(victim, true)`: a new victim keeps the running swing timers and
+/// is announced with `SMSG_ATTACK_START` (`SendMeleeAttackStart`, Unit.cpp:2542);
+/// attacking the current victim again changes nothing (Unit.cpp:5906-5924).
+fn start_attack(
+    commands: &mut Commands,
+    attacker: Entity,
+    victim: Entity,
+    current: Option<&AutoAttack>,
+) {
+    if current.is_some_and(|current| current.victim == victim) {
+        return;
+    }
+    let auto_attack = current.map_or(AutoAttack::new(victim), |current| AutoAttack {
+        victim,
+        ..*current
+    });
+    commands.entity(attacker).insert(auto_attack);
+    commands.queue(move |world: &mut World| {
+        let message = AttackStart {
+            attacker: attacker.to_bits(),
+            victim: victim.to_bits(),
+        };
+        crate::spell_cast::send_to_set(world, attacker, message);
+    });
+}
+
+/// `Unit::AttackStop` (Unit.cpp:5982-6009): stop swinging and announce it with
+/// `SMSG_ATTACK_STOP`. A unit that is not attacking sends nothing.
+pub(crate) fn attack_stop(world: &mut World, unit: Entity) {
+    let Ok(mut entity) = world.get_entity_mut(unit) else {
+        return;
+    };
+    let Some(auto_attack) = entity.take::<AutoAttack>() else {
+        return;
+    };
+    send_attack_stopped(world, unit, Some(auto_attack.victim));
+}
+
+/// `Unit::SendMeleeAttackStop` (Unit.cpp:2550-2556): `NowDead` is the attacker's
+/// own death.
+fn send_attack_stopped(world: &mut World, attacker: Entity, victim: Option<Entity>) {
+    let now_dead = world
+        .get::<Health>(attacker)
+        .is_some_and(|health| health.current <= 0.0);
+    let message = AttackStopped {
+        attacker: attacker.to_bits(),
+        victim: victim.map(Entity::to_bits),
+        now_dead,
+    };
+    crate::spell_cast::send_to_set(world, attacker, message);
 }
 
 type AutoAttackers<'w, 's> = Query<
@@ -259,7 +384,6 @@ type AutoAttackers<'w, 's> = Query<
     's,
     (
         Entity,
-        &'static CombatTarget,
         &'static mut AutoAttack,
         &'static Position,
         Option<&'static AuraStatMods>,
@@ -319,20 +443,12 @@ pub(crate) fn auto_attack_system(time: Res<Time>, mut params: AutoAttackParams) 
     let mut events = Vec::new();
     let mut swings = Vec::new();
 
-    for (
-        attacker_entity,
-        combat_target,
-        mut auto_attack,
-        position,
-        mods,
-        stats,
-        (stat_mods, casting, auras),
-    ) in &mut params.attackers
+    for (attacker_entity, mut auto_attack, position, mods, stats, (stat_mods, casting, auras)) in
+        &mut params.attackers
     {
-        let Some(target_entity) = ready_auto_attack_target(combat_target, &mut auto_attack, dt)
-        else {
-            continue;
-        };
+        auto_attack.timer -= dt;
+        auto_attack.off_hand_timer -= dt;
+        let target_entity = auto_attack.victim;
         // Unit::DoMeleeAttackIfReady / AttackerStateUpdate: no swing while casting
         // or stunned; the swing timers keep running.
         if casting || auras.is_some_and(|auras| auras.is_stunned()) {
@@ -422,27 +538,13 @@ fn combat_timing(time: &Time) -> (f64, f64) {
     (elapsed, elapsed + COMBAT_GRACE_SECS)
 }
 
-fn ready_auto_attack_target(
-    combat_target: &CombatTarget,
-    auto_attack: &mut AutoAttack,
-    delta_seconds: f32,
-) -> Option<Entity> {
-    if !auto_attack.active {
-        return None;
-    }
-    auto_attack.timer -= delta_seconds;
-    auto_attack.off_hand_timer -= delta_seconds;
-    combat_target.0
-}
-
 type CombatMaintenanceQuery<'w, 's> = Query<
     'w,
     's,
     (
         Entity,
         &'static mut CombatState,
-        Option<&'static CombatTarget>,
-        Option<&'static AutoAttack>,
+        Has<AutoAttack>,
         Option<&'static CombatStatus>,
     ),
 >;
@@ -454,10 +556,8 @@ fn maintain_in_combat_state_system(
 ) {
     let combat_expires_at = time.elapsed_secs_f64() + COMBAT_GRACE_SECS;
     let now = time.elapsed_secs_f64();
-    for (entity, mut combat_state, combat_target, auto_attack, combat_status) in &mut query {
-        let actively_engaged = combat_target.and_then(|target| target.0).is_some()
-            && auto_attack.is_some_and(|auto_attack| auto_attack.active);
-        if actively_engaged {
+    for (entity, mut combat_state, auto_attacking, combat_status) in &mut query {
+        if auto_attacking {
             combat_state.expires_at = combat_expires_at;
             if !combat_status.is_some_and(|status| status.0) {
                 commands.entity(entity).insert(CombatStatus(true));
@@ -1008,17 +1108,18 @@ pub(crate) fn corpse_decay_system(
 /// (`ClearInCombat`). The attackers leave combat once their grace runs out.
 pub(crate) fn combat_stop(world: &mut World, unit: Entity) {
     let attackers: Vec<Entity> = world
-        .query_filtered::<(Entity, &CombatTarget), With<AutoAttack>>()
+        .query::<(Entity, &AutoAttack)>()
         .iter(world)
-        .filter(|(_, target)| target.0 == Some(unit))
+        .filter(|(_, auto_attack)| auto_attack.victim == unit)
         .map(|(attacker, _)| attacker)
         .collect();
     for attacker in attackers {
-        world.entity_mut(attacker).remove::<AutoAttack>();
+        attack_stop(world, attacker);
     }
+    attack_stop(world, unit);
     world
         .entity_mut(unit)
-        .remove::<(AutoAttack, CombatState)>()
+        .remove::<CombatState>()
         .insert(CombatStatus(false));
 }
 
