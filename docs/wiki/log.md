@@ -1,5 +1,9 @@
 # Wiki Log
 
+## [2026-09-29] systems | Polymorph
+
+Updated [[auras]] (new Crowd control section, procs) and [[creature-ai]] (confused movement). Polymorph 118 now works: TRANSFORM 56 swaps `ModelDisplay` to the Polymorphed Sheep and restores it, MOD_CONFUSE 5 stops swings/casts/target and wanders the creature, 10% of max health in damage breaks it (TrinityCore `HandleBreakableCCAuraProc`), and polymorphed creatures regenerate. Findings: spell hit procs carried no damage, and triggered spells (Frostbolt's missile) never procced; TrinityCore lets `SPELL_ATTR3_NOT_A_PROC`/`CAN_PROC_FROM_PROCS` through. Proc damage must be the level-scaled health loss, or Frostbolt could not break Polymorph on a scaled level-30 Blackrock Spy.
+
 ## [2026-09-29] systems | Auto-attack only from AttackSwing
 
 Selecting a hostile unit no longer starts auto-attack or combat. Players attack through `AttackSwing` (TrinityCore `CMSG_ATTACK_SWING` → `Unit::Attack`) and stop through `AttackStop`. The server echoes `AttackStart`/`AttackStopped` to viewers. `AutoAttack` now holds its victim. Creatures still attack through their AI target. Casts of `SPELL_ATTR0_CANCELS_AUTO_ATTACK_COMBAT` spells stop the caster's auto-attack. Updated [[combat]] and [[factions]].

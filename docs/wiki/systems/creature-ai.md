@@ -43,6 +43,10 @@ Wander, waypoint and formation systems skip entities with `DeathState`. Every sp
 
 Who enters `Pursuing`, threat and target selection are [[creature-aggro]].
 
+## Confused movement
+
+A creature under MOD_CONFUSE 5 (Polymorph) carries `auras::Confused`, anchored where it was confused. `confused_movement_system` replaces chase, wander, waypoint, formation and leash for it (`MoveConfused` on `MOTION_SLOT_CONTROLLED`): it walks at `speed_walk × 2.5` × the aura speed multiplier to a random point up to 2 yd either way from the anchor (`4 × frand − 2` yd at a random angle), pauses 0.8-1.5 s, and picks the next; it holds still while its speed is 0; a point without ground is retried after 100 ms. See [[auras]].
+
 ## Leash and Evade
 
 `leash_check_system` runs after chase each tick. A pursuing creature more than **40 yards** (2D distance) from its `SpawnPoint` evades through `creature_aggro::enter_evade_mode` (threat cleared, `combat_stop`, full health, `CreatureState` → `Returning`; see [[creature-aggro]]).
