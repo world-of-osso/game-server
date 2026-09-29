@@ -107,3 +107,46 @@ fn arcane_intellect_on_a_hostile_target_buffs_the_mage_with_3_percent_intellect(
         intellect(&h)
     );
 }
+
+/// `FactionTemplate` 7 "Creature": the Northshire Blackrock Spy's, neutral to players.
+const NEUTRAL_CREATURE: u32 = 7;
+
+#[test]
+fn polymorph_is_a_debuff_on_a_neutral_creature_by_its_negative_effects() {
+    let Some(mut h) = harness(Vec::new(), &[POLYMORPH], MAGE) else {
+        return;
+    };
+    h.app
+        .world_mut()
+        .entity_mut(h.npc)
+        .insert(shared::components::UnitFactionTemplate(NEUTRAL_CREATURE));
+    assert!(!crate::spell_cast::targets::is_hostile(
+        h.app.world(),
+        h.caster,
+        h.npc
+    ));
+    h.cast(POLYMORPH, Some(h.npc));
+    h.advance(POLYMORPH_FRAMES);
+    let polymorph = view(&h, h.npc, POLYMORPH).expect("Polymorph on the neutral creature");
+    assert!(polymorph.harmful, "{polymorph:?}");
+}
+
+#[test]
+fn effect_positivity_follows_trinitycore() {
+    let Some(data) = crate::spell_cast::test_harness::world_db() else {
+        return;
+    };
+    let negative = |id: u32| {
+        crate::spell_info::positivity::negative_effects(
+            &data.store,
+            data.store.get(id).expect("spell"),
+        )
+    };
+    // MOD_CONFUSE and TRANSFORM on an enemy target; MOD_SCALE stays positive.
+    assert_eq!(negative(POLYMORPH), 0b011);
+    assert_eq!(negative(CHILLED), 0b1);
+    assert_eq!(negative(ARCANE_INTELLECT), 0);
+    // Shadow Word: Pain PERIODIC_DAMAGE; Power Word: Fortitude +Stamina.
+    assert_eq!(negative(589) & 1, 1);
+    assert_eq!(negative(21562), 0);
+}

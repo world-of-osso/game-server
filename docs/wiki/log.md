@@ -364,3 +364,7 @@ Players replicate `PlayerMotion`, Retail `MovementFlags` (FORWARD, BACKWARD, STR
 ## [2026-09-29] fix | Frostbolt's Chilled slow
 
 [[spell-casting]]: spell scripts (`on_hit`) added; Frostbolt 116 casts Chilled 205708 on its hit unit, as TrinityCore `spell_mage_frostbolt`. Before, no aura followed a Frostbolt: neither 116 nor 228597 carries MOD_DECREASE_SPEED. Tests in `auras/mage_tests.rs` also cover Polymorph's replicated debuff and Arcane Intellect's +3% Intellect.
+
+## [2026-09-29] fix | Debuffs by effect positivity
+
+[[auras]]: an aura's harmful flag follows TrinityCore `_InitFlags` and ported effect positivity instead of caster hostility; Polymorph on the neutral Blackrock Spy replicated as a buff before.

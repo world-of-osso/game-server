@@ -9,8 +9,9 @@
 //!   periodic effect or `SPELL_ATTR3_DOT_STACKING_RULE`; otherwise the new
 //!   aura replaces the old one.
 //!
-//! Harmful: `SPELL_ATTR0_AURA_IS_DEBUFF`, else hostile caster (without
-//! `SPELL_ATTR4_AURA_IS_BUFF`). Hidden: passive or
+//! Harmful (`AuraApplication::_InitFlags`): from itself or a non-friendly caster, an aura
+//! with a negative applied effect (`spell_info::positivity`); from a friendly caster, one
+//! without a positive applied effect. Hidden: passive or
 //! `SPELL_ATTR0_DO_NOT_DISPLAY_SPELLBOOK_AURA_ICON_COMBAT_LOG`.
 
 mod handlers;
@@ -50,12 +51,10 @@ pub const AURA_EFFECTS: [u32; 4] = [6, 27, 35, 65];
 
 const ATTR0_PASSIVE: u32 = 0x40;
 const ATTR0_DO_NOT_DISPLAY: u32 = 0x80;
-const ATTR0_AURA_IS_DEBUFF: u32 = 0x0400_0000;
 const ATTR0_NO_AURA_CANCEL: u32 = 0x8000_0000;
 const ATTR1_AURA_UNIQUE: u32 = 0x800;
 const ATTR3_DOT_STACKING_RULE: u32 = 0x80;
 const ATTR3_ALLOW_AURA_WHILE_DEAD: u32 = 0x0010_0000;
-const ATTR4_AURA_IS_BUFF: u32 = 0x1000;
 
 /// `DispelType` 7 matches every dispel type.
 const DISPEL_ALL: u32 = 7;
@@ -371,11 +370,22 @@ fn lookup_spell(world: &World, spell_id: u32) -> Option<SpellInfo> {
         .cloned()
 }
 
-fn is_harmful(world: &World, spell: &SpellInfo, caster: Entity, target: Entity) -> bool {
-    if attributes(spell, 0) & ATTR0_AURA_IS_DEBUFF != 0 {
-        return true;
+/// `AuraApplication::_InitFlags` (SpellAuras.cpp:113-147) for the applied `effect_mask`.
+fn is_harmful(
+    world: &World,
+    spell: &SpellInfo,
+    caster: Entity,
+    target: Entity,
+    effect_mask: u32,
+) -> bool {
+    let negative = world.get_resource::<SpellStore>().map_or(0, |store| {
+        crate::spell_info::positivity::negative_effects(store, spell)
+    });
+    if caster == target || !targets::is_friendly(world, caster, target) {
+        negative & effect_mask != 0
+    } else {
+        effect_mask & !negative == 0
     }
-    attributes(spell, 4) & ATTR4_AURA_IS_BUFF == 0 && targets::is_hostile(world, caster, target)
 }
 
 fn duration_ms(world: &World, caster: Entity, spell: &SpellInfo, passive: bool) -> u32 {
@@ -480,7 +490,13 @@ fn build_instance(
         charges: charges.clamp(0.0, 255.0) as u8,
         passive,
         hidden: passive || attributes(spell, 0) & ATTR0_DO_NOT_DISPLAY != 0,
-        harmful: is_harmful(world, spell, caster, application.target),
+        harmful: is_harmful(
+            world,
+            spell,
+            caster,
+            application.target,
+            application.effect_mask & aura_effect_mask(spell),
+        ),
         dispel_type: spell
             .categories
             .as_ref()

@@ -23,7 +23,7 @@ This is a simplified TrinityCore `Aura::CanStackWith`:
 
 ### Classification
 
-- **Harmful:** `SPELL_ATTR0_AURA_IS_DEBUFF`, or a hostile caster when the spell lacks `SPELL_ATTR4_AURA_IS_BUFF`. Hostility follows the cast pipeline rule: player vs NPC.
+- **Harmful** (`AuraApplication::_InitFlags`, SpellAuras.cpp:113-147): from itself or a caster not friendly to the target, an aura with a negative applied effect; from a friendly caster, an aura with no positive applied effect. Effect positivity is `spell_info::positivity`, a port of `SpellInfo::_InitializeSpellPositivity` / `_isPositiveEffectImpl` (SpellInfo.cpp:4612-5105): `SPELL_ATTR0_AURA_IS_DEBUFF` and `SPELL_ATTR4_AURA_IS_BUFF` first, then effect and aura types, base-point signs and enemy implicit targets. Polymorph 118 (MOD_CONFUSE, TRANSFORM at an enemy target) is a debuff on the neutral Blackrock Spy (`FactionTemplate` 7), which the old hostility rule made a buff. `spell_custom_attr` marks are not modelled.
 - **Hidden:** passive (`SPELL_ATTR0` 0x40), or `SPELL_ATTR0_DO_NOT_DISPLAY_SPELLBOOK_AURA_ICON_COMBAT_LOG` (0x80).
 - **From player:** the caster has `Player` at application.
 - **Dispel type:** `spell_categories.DispelType`.
