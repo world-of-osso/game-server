@@ -247,3 +247,24 @@ fn the_victims_death_stops_the_attack_and_announces_it() {
     assert_eq!(victim(&h), None);
     assert_eq!(h.inbox.attack_stops, vec![stopped(&h, Some(npc))]);
 }
+
+/// `Spell::finish` (Spell.cpp:4448-4450): Polymorph (118) has
+/// SPELL_ATTR0_CANCELS_AUTO_ATTACK_COMBAT, so its cast ends the caster's auto-attack.
+#[test]
+fn a_cast_that_cancels_auto_attack_stops_it() {
+    const POLYMORPH: u32 = 118;
+    let Some(mut h) = harness(Vec::new(), &[POLYMORPH], 8) else {
+        return;
+    };
+    let npc = h.npc;
+    h.attack(npc);
+    h.advance(3);
+    assert_eq!(victim(&h), Some(npc));
+    h.cast_and_deliver(POLYMORPH, Some(npc));
+    // The 1.5 s cast.
+    h.advance(35);
+
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert_eq!(victim(&h), None);
+    assert_eq!(h.inbox.attack_stops, vec![stopped(&h, Some(npc))]);
+}

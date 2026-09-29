@@ -49,6 +49,8 @@ use targets::{Dest, Relation};
 const SPELL_INTERRUPT_MOVEMENT: u32 = 0x1;
 /// `SpellAuraInterruptFlags::Moving | Turning`.
 const CHANNEL_INTERRUPT_MOVING: u32 = 0x8 | 0x10;
+/// SPELL_ATTR0_CANCELS_AUTO_ATTACK_COMBAT (Polymorph, Gouge, Blind, ...).
+const SPELL_ATTR0_CANCELS_AUTO_ATTACK_COMBAT: u32 = 0x0010_0000;
 /// SPELL_ATTR1_IS_CHANNELLED / SPELL_ATTR1_IS_SELF_CHANNELLED.
 const SPELL_ATTR1_CHANNELED: u32 = 0x4 | 0x40;
 /// `SpellPower.PowerType` -2 costs health.
@@ -912,6 +914,10 @@ fn execute_cast(
     );
     resolve_effects(world, caster, spell, &plan, 0);
     spell_mods::consume_charges(world, caster, spell);
+    // Spell::finish (Spell.cpp:4448-4450): some spells stop the caster's auto-attack.
+    if attributes(spell, 0) & SPELL_ATTR0_CANCELS_AUTO_ATTACK_COMBAT != 0 {
+        crate::combat::attack_stop(world, caster);
+    }
     Ok(())
 }
 
