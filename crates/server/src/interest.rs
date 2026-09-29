@@ -1,5 +1,7 @@
-use std::collections::{HashMap, HashSet};
 use std::sync::Mutex;
+
+use bevy::ecs::entity::{EntityHashMap, EntityHashSet};
+use bevy::platform::collections::HashMap;
 
 use bevy::prelude::*;
 use bevy_replicon::server::visibility::client_visibility::ClientVisibility;
@@ -20,7 +22,7 @@ type InterestBucket = (InMap, i32, i32);
 
 #[derive(Component, Default)]
 pub(crate) struct NetworkVisibility {
-    visible_senders: HashSet<Entity>,
+    visible_senders: EntityHashSet,
 }
 
 impl NetworkVisibility {
@@ -40,8 +42,8 @@ impl NetworkVisibility {
 
 #[derive(Default)]
 struct InterestDirtyEntities {
-    interest: HashSet<Entity>,
-    replication: HashSet<Entity>,
+    interest: EntityHashSet,
+    replication: EntityHashSet,
 }
 
 #[derive(Resource, Default)]
@@ -101,7 +103,7 @@ struct InterestObserver {
     position: Position,
     /// `None` while the player is in a map transfer: it sees only itself.
     map: Option<InMap>,
-    visible: HashSet<Entity>,
+    visible: EntityHashSet,
 }
 
 impl InterestObserver {
@@ -116,15 +118,15 @@ impl InterestObserver {
 
 #[derive(Resource, Default)]
 struct InterestIndex {
-    buckets: HashMap<InterestBucket, HashSet<Entity>>,
-    target_buckets: HashMap<Entity, InterestBucket>,
-    target_positions: HashMap<Entity, (Position, Option<InMap>)>,
-    observers: HashMap<Entity, InterestObserver>,
-    connection_by_player: HashMap<Entity, Entity>,
-    dirty_targets: HashSet<Entity>,
-    dirty_observers: HashSet<Entity>,
+    buckets: HashMap<InterestBucket, EntityHashSet>,
+    target_buckets: EntityHashMap<InterestBucket>,
+    target_positions: EntityHashMap<(Position, Option<InMap>)>,
+    observers: EntityHashMap<InterestObserver>,
+    connection_by_player: EntityHashMap<Entity>,
+    dirty_targets: EntityHashSet,
+    dirty_observers: EntityHashSet,
     /// Targets no player sees (invisible units, `auras::unit_state`).
-    hidden: HashSet<Entity>,
+    hidden: EntityHashSet,
 }
 
 impl InterestIndex {
@@ -181,7 +183,7 @@ impl InterestIndex {
                 player,
                 position,
                 map,
-                visible: HashSet::new(),
+                visible: EntityHashSet::default(),
             },
         );
         self.dirty_observers.insert(connection);
@@ -234,8 +236,8 @@ impl InterestIndex {
         self.dirty_targets.insert(entity);
     }
 
-    fn nearby_targets(&self, map: Option<InMap>, position: &Position) -> HashSet<Entity> {
-        let mut candidates = HashSet::new();
+    fn nearby_targets(&self, map: Option<InMap>, position: &Position) -> EntityHashSet {
+        let mut candidates = EntityHashSet::default();
         let Some(map) = map else {
             return candidates;
         };
@@ -428,7 +430,7 @@ fn update_observer_visibility(
     let mut candidates = index.nearby_targets(observer.map, &observer.position);
     candidates.extend(observer.visible.iter().copied());
     candidates.insert(observer.player);
-    let mut visible = HashSet::new();
+    let mut visible = EntityHashSet::default();
 
     for entity in candidates {
         let Ok((position, map, mut state)) = visibility_query.get_mut(entity) else {
