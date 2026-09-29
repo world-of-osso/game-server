@@ -90,6 +90,8 @@ pub struct SpecSpell {
     pub spell_id: u32,
     pub overrides_spell_id: u32,
     pub display_order: u32,
+    /// `spell_levels.SpellLevel` (DifficultyID 0); 0 when the spell has no levels row.
+    pub required_level: u32,
     /// SPELL_ATTR0_PASSIVE.
     pub passive: bool,
 }
@@ -212,9 +214,11 @@ fn load_specs(conn: &Connection, class_id: u8) -> rusqlite::Result<Vec<SpecInfo>
 
 fn load_spec_spells(conn: &Connection, spec_id: u32) -> rusqlite::Result<Vec<SpecSpell>> {
     let mut stmt = conn.prepare_cached(
-        "SELECT s.SpellID, s.OverridesSpellID, s.DisplayOrder, COALESCE(m.Attributes_0, 0)
+        "SELECT s.SpellID, s.OverridesSpellID, s.DisplayOrder, COALESCE(m.Attributes_0, 0),
+                COALESCE(l.SpellLevel, 0)
          FROM specialization_spells s JOIN spell_name n ON n.ID = s.SpellID
          LEFT JOIN spell_misc m ON m.SpellID = s.SpellID AND m.DifficultyID = 0
+         LEFT JOIN spell_levels l ON l.SpellID = s.SpellID AND l.DifficultyID = 0
          WHERE s.SpecID = ?1 ORDER BY s.DisplayOrder, s.ID",
     )?;
     let rows = stmt.query_map([spec_id], |r| {
@@ -222,6 +226,7 @@ fn load_spec_spells(conn: &Connection, spec_id: u32) -> rusqlite::Result<Vec<Spe
             spell_id: uint(r, 0)?,
             overrides_spell_id: uint(r, 1)?,
             display_order: uint(r, 2)?,
+            required_level: uint(r, 4)?,
             passive: uint(r, 3)? & ATTR0_PASSIVE != 0,
         })
     })?;

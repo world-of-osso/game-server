@@ -230,6 +230,91 @@ fn stored(app: &App, character_id: u64) -> ProgressionData {
     load_progression(&app.world().resource::<GameDatabase>().db, character_id).unwrap()
 }
 
+/// TrinityCore `Player::LearnSpecializationSpells` skips spec spells whose
+/// `SpellLevel` is above the player level: Arms gets Mastery: Master of Arms
+/// 1258398 at 10, Seasoned Soldier 279423 at 11 and Plate Specialization 86101 at 27.
+#[test]
+fn spec_spells_wait_for_their_spell_level() {
+    let Some(classes) = class_spells() else {
+        return;
+    };
+    let level_10 = known_ids(&classes, HUMAN, WARRIOR, 10, SPEC_ARMS);
+    assert!(level_10.contains(&260708), "Sweeping Strikes (level 0)");
+    assert!(level_10.contains(&1258398), "Mastery: Master of Arms (10)");
+    assert!(!level_10.contains(&279423), "Seasoned Soldier is level 11");
+    assert!(
+        !level_10.contains(&86101),
+        "Plate Specialization is level 27"
+    );
+
+    let level_27 = known_ids(&classes, HUMAN, WARRIOR, 27, SPEC_ARMS);
+    assert!(level_27.contains(&279423));
+    assert!(level_27.contains(&86101));
+}
+
+/// Retail pushes each newly learned active spell to the first empty main
+/// action bar slot (`SPELL_PUSHED_TO_ACTIONBAR`, `IconIntroTracker`).
+#[test]
+fn learned_spells_fill_first_empty_main_bar_slots() {
+    const SLAM: u32 = 1464;
+    const ATTACK: u32 = 88163;
+    const CHARGE: u32 = 100;
+    const SHIELD_SLAM: u32 = 23922;
+    const HAMSTRING: u32 = 1715;
+    let Some(classes) = class_spells() else {
+        return;
+    };
+    let db = temp_database();
+    let (character_id, _) =
+        persistence::create_character(&db, 1, "Varian", HUMAN, WARRIOR).unwrap();
+    let mut app = setup_app(db, classes);
+    let player = spawn_player(&mut app, character_id, HUMAN, WARRIOR, 1);
+    advance(&mut app);
+    drain(&mut app, player);
+    // Occupy slot 3 so Shield Slam skips it.
+    send_request(
+        &mut app,
+        player,
+        SetActionButton {
+            slot: 3,
+            action: Some(ActionRef::Item(6948)),
+        },
+    );
+
+    set_live_level(app.world_mut(), character_id, 2);
+    advance(&mut app);
+    let charge_bar = vec![
+        (0, ActionRef::Spell(SLAM)),
+        (1, ActionRef::Spell(ATTACK)),
+        (2, ActionRef::Spell(CHARGE)),
+        (3, ActionRef::Item(6948)),
+    ];
+    assert_eq!(
+        received::<ActionBarSnapshot>(&mut app, player),
+        vec![ActionBarSnapshot {
+            slots: charge_bar.clone(),
+        }]
+    );
+
+    set_live_level(app.world_mut(), character_id, 4);
+    advance(&mut app);
+    let mut bar = charge_bar;
+    bar.extend([
+        (4, ActionRef::Spell(SHIELD_SLAM)),
+        (5, ActionRef::Spell(HAMSTRING)),
+    ]);
+    assert_eq!(
+        received::<ActionBarSnapshot>(&mut app, player),
+        vec![ActionBarSnapshot { slots: bar.clone() }]
+    );
+    let saved: Vec<_> = stored(&app, character_id)
+        .action_bar
+        .into_iter()
+        .map(|(slot, action)| (slot, action_from_data(action)))
+        .collect();
+    assert_eq!(saved, bar);
+}
+
 #[test]
 fn new_warrior_enters_world_with_known_spells_and_default_bar() {
     let Some(classes) = class_spells() else {
@@ -315,13 +400,13 @@ fn paladin_switch_retribution_to_holy_sends_deltas_and_prunes_bar() {
     );
     // The last two of each list are granted talents: Retribution's Hammer of
     // Wrath 1241288 and Greater Judgment 231663; Holy's Lay on Hands 633 and
-    // Divine Steed 190784 (node group 8479).
+    // Divine Steed 190784 (node group 8479). Plate Specialization 86539 is level 27.
     assert_eq!(
         received::<SpellsUnlearned>(&mut app, player),
         vec![SpellsUnlearned {
             spells: vec![
-                85256, 86539, 137027, 162698, 267316, 342348, 403876, 404752, 412314, 462096,
-                404834, 384376, 1258011, 1241288, 231663,
+                85256, 137027, 162698, 267316, 342348, 403876, 404752, 412314, 462096, 404834,
+                384376, 1258011, 1241288, 231663,
             ],
         }]
     );
@@ -329,22 +414,46 @@ fn paladin_switch_retribution_to_holy_sends_deltas_and_prunes_bar() {
         received::<SpellsLearned>(&mut app, player),
         vec![SpellsLearned {
             spells: vec![
-                53563, 86103, 137029, 162701, 183997, 212056, 275773, 4987, 289941, 53651, 498,
-                82326, 415091, 428076, 440013, 462093, 231642, 1258016, 633, 190784,
+                53563, 137029, 162701, 183997, 275773, 4987, 289941, 53651, 82326, 415091, 428076,
+                440013, 462093, 231642, 1258016, 633, 190784,
             ],
         }]
     );
+    // Retribution buttons are pruned; Holy's new actives fill the empty slots in
+    // learn order (Beacon of Light, Judgment, Cleanse, Holy Light, Shield of the
+    // Righteous, Cleanse Toxins, Lay on Hands, Divine Steed).
+    let holy_bar: Vec<(u8, u32)> = [
+        CRUSADER_STRIKE,
+        53563,
+        275773,
+        4987,
+        82326,
+        415091,
+        440013,
+        633,
+        190784,
+    ]
+    .into_iter()
+    .enumerate()
+    .map(|(slot, spell)| (slot as u8, spell))
+    .collect();
     assert_eq!(
         received::<ActionBarSnapshot>(&mut app, player),
         vec![ActionBarSnapshot {
-            slots: vec![(0, ActionRef::Spell(CRUSADER_STRIKE))],
+            slots: holy_bar
+                .iter()
+                .map(|&(slot, spell)| (slot, ActionRef::Spell(spell)))
+                .collect(),
         }]
     );
     assert_eq!(
         stored(&app, 7),
         ProgressionData {
             spec_id: SPEC_HOLY,
-            action_bar: vec![(0, ActionRefData::Spell(CRUSADER_STRIKE))],
+            action_bar: holy_bar
+                .iter()
+                .map(|&(slot, spell)| (slot, ActionRefData::Spell(spell)))
+                .collect(),
         }
     );
 }
@@ -481,18 +590,21 @@ fn level_changes_send_learned_spells_and_leave_initial_spec_at_unlock() {
     );
     let learned = received::<SpellsLearned>(&mut app, player);
     assert_eq!(learned.len(), 1);
-    // Divine Shield 642 and Sense Undead 5502 are level 10; Beacon of Light 53563 is Holy.
-    for spell_id in [642, 5502, 53563, 183997] {
+    // Divine Shield 642 and Sense Undead 5502 are level 10, Mastery: Lightbringer 183997 is
+    // Holy's; Holy's Beacon of Light 53563 has SpellLevel 16.
+    for spell_id in [642, 5502, 183997] {
         assert!(learned[0].spells.contains(&spell_id), "missing {spell_id}");
     }
     assert!(!learned[0].spells.contains(&REDEMPTION));
+    assert!(!learned[0].spells.contains(&53563));
 
+    // Holy Light 82326 is a Holy spell of SpellLevel 11.
     set_live_level(app.world_mut(), 4, 13);
     advance(&mut app);
     assert_eq!(
         received::<SpellsLearned>(&mut app, player),
         vec![SpellsLearned {
-            spells: vec![REDEMPTION],
+            spells: vec![REDEMPTION, 82326],
         }]
     );
     assert!(received::<SpecializationChanged>(&mut app, player).is_empty());
@@ -971,8 +1083,12 @@ fn final_verdict_replaces_templars_verdict_in_known_spells_and_bar() {
     );
     let learned = received::<SpellsLearned>(&mut app, player);
     assert!(learned[0].spells.contains(&FINAL_VERDICT_SPELL));
+    // Blade of Justice 184575 and Divine Storm 53385 are pushed to the first empty
+    // slots; Final Verdict takes Templar's Verdict's button.
     let replaced = vec![
         (0, ActionRef::Spell(CRUSADER_STRIKE)),
+        (1, ActionRef::Spell(184575)),
+        (2, ActionRef::Spell(53385)),
         (5, ActionRef::Spell(FINAL_VERDICT_SPELL)),
     ];
     assert_eq!(
@@ -985,6 +1101,8 @@ fn final_verdict_replaces_templars_verdict_in_known_spells_and_bar() {
         stored(&app, 9).action_bar,
         vec![
             (0, ActionRefData::Spell(CRUSADER_STRIKE)),
+            (1, ActionRefData::Spell(184575)),
+            (2, ActionRefData::Spell(53385)),
             (5, ActionRefData::Spell(FINAL_VERDICT_SPELL)),
         ]
     );
@@ -1012,6 +1130,8 @@ fn final_verdict_replaces_templars_verdict_in_known_spells_and_bar() {
     );
     let restored = vec![
         (0, ActionRef::Spell(CRUSADER_STRIKE)),
+        (1, ActionRef::Spell(184575)),
+        (2, ActionRef::Spell(53385)),
         (5, ActionRef::Spell(TEMPLARS_VERDICT)),
     ];
     assert_eq!(
@@ -1022,6 +1142,8 @@ fn final_verdict_replaces_templars_verdict_in_known_spells_and_bar() {
         stored(&app, 9).action_bar,
         vec![
             (0, ActionRefData::Spell(CRUSADER_STRIKE)),
+            (1, ActionRefData::Spell(184575)),
+            (2, ActionRefData::Spell(53385)),
             (5, ActionRefData::Spell(TEMPLARS_VERDICT)),
         ]
     );

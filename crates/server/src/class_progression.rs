@@ -157,8 +157,9 @@ fn resolve_spec(class: &ClassInfo, level: u8, requested: u32) -> Option<&SpecInf
 }
 
 /// Auto-learned class spells up to `level` for the race, then the spec's spells
-/// and mastery, then talent spells, without duplicates and without the spells
-/// the talents override.
+/// up to `level` (TrinityCore `Player::LearnSpecializationSpells` skips spells whose
+/// `SpellLevel` is above the player level) and mastery, then talent spells, without
+/// duplicates and without the spells the talents override.
 fn compute_known_spells(
     class: &ClassInfo,
     race: u8,
@@ -179,10 +180,14 @@ fn compute_known_spells(
             passive: spell.passive,
         });
     let spec_spells = spec.into_iter().flat_map(|spec| {
-        let spells = spec.spells.iter().map(|spell| KnownSpell {
-            spell_id: spell.spell_id,
-            passive: spell.passive,
-        });
+        let spells = spec
+            .spells
+            .iter()
+            .filter(move |spell| spell.required_level <= u32::from(level))
+            .map(|spell| KnownSpell {
+                spell_id: spell.spell_id,
+                passive: spell.passive,
+            });
         let masteries = spec.mastery_spells.iter().map(|&spell_id| KnownSpell {
             spell_id,
             passive: true,
@@ -207,7 +212,19 @@ fn compute_known_spells(
 /// Known non-passive spells in learn order on slots 0..12, without class
 /// mounts (`LearnableSpell.mount`).
 fn default_action_bar(class: Option<&ClassInfo>, known: &[KnownSpell]) -> BTreeMap<u8, ActionRef> {
-    let is_mount = |spell_id| {
+    default_action_bar_candidates(class, known)
+        .take(DEFAULT_BAR_SLOTS)
+        .enumerate()
+        .map(|(slot, spell_id)| (slot as u8, ActionRef::Spell(spell_id)))
+        .collect()
+}
+
+/// Known non-passive, non-mount spells in learn order.
+fn default_action_bar_candidates<'a>(
+    class: Option<&'a ClassInfo>,
+    known: &'a [KnownSpell],
+) -> impl Iterator<Item = u32> + 'a {
+    let is_mount = move |spell_id| {
         class.is_some_and(|class| {
             class
                 .learnable
@@ -217,11 +234,36 @@ fn default_action_bar(class: Option<&ClassInfo>, known: &[KnownSpell]) -> BTreeM
     };
     known
         .iter()
-        .filter(|spell| !spell.passive && !is_mount(spell.spell_id))
-        .take(DEFAULT_BAR_SLOTS)
-        .enumerate()
-        .map(|(slot, spell)| (slot as u8, ActionRef::Spell(spell.spell_id)))
-        .collect()
+        .filter(move |spell| !spell.passive && !is_mount(spell.spell_id))
+        .map(|spell| spell.spell_id)
+}
+
+/// Retail pushes each newly learned active spell to the first empty main action bar
+/// slot (`SPELL_PUSHED_TO_ACTIONBAR`, `IconIntroTracker`), in learn order; spells
+/// already on the bar, passives and class mounts are not pushed. Returns true when
+/// any slot was filled.
+fn push_learned_spells(
+    bar: &mut BTreeMap<u8, ActionRef>,
+    class: Option<&ClassInfo>,
+    known: &[KnownSpell],
+    learned: &[u32],
+) -> bool {
+    let mut pushed = false;
+    let pushable = default_action_bar_candidates(class, known)
+        .filter(|spell_id| learned.contains(spell_id))
+        .collect::<Vec<_>>();
+    for spell_id in pushable {
+        let action = ActionRef::Spell(spell_id);
+        if bar.values().any(|existing| *existing == action) {
+            continue;
+        }
+        let Some(slot) = (0..DEFAULT_BAR_SLOTS as u8).find(|slot| !bar.contains_key(slot)) else {
+            break;
+        };
+        bar.insert(slot, action);
+        pushed = true;
+    }
+    pushed
 }
 
 /// Remove spell buttons for spells that are not known. Returns true when any was removed.
@@ -495,7 +537,7 @@ type ProgressionPlayer = (
 /// bar buttons for unlearned spells and persist. `TraitConfigSnapshot` is sent when the spec or config changed, or
 /// always with `always_send_traits`.
 fn refresh_player(
-    (_, _, client_id, mut spec, mut known, mut bar, mut traits): (
+    (player, _, client_id, mut spec, mut known, mut bar, mut traits): (
         &Player,
         &Level,
         &ClientId,
@@ -506,6 +548,7 @@ fn refresh_player(
     ),
     evaluated: Evaluated,
     always_send_traits: bool,
+    classes: &ClassSpells,
     db: &GameDatabase,
     connection: Entity,
     senders: &mut ProgressionSenders,
@@ -539,7 +582,9 @@ fn refresh_player(
         send(
             &mut senders.learned,
             connection,
-            SpellsLearned { spells: learned },
+            SpellsLearned {
+                spells: learned.clone(),
+            },
         );
     }
     let rewritten = apply_spell_overrides(
@@ -549,7 +594,13 @@ fn refresh_player(
         &new_known,
     );
     let pruned = prune_unknown_spells(&mut bar.0, &new_known);
-    let bar_changed = rewritten || pruned;
+    let pushed = push_learned_spells(
+        &mut bar.0,
+        class_info(classes, player.class),
+        &evaluated.known,
+        &learned,
+    );
+    let bar_changed = rewritten || pruned || pushed;
     if bar_changed {
         send(&mut senders.bar, connection, bar_snapshot(&bar));
     }
@@ -606,7 +657,15 @@ fn process_set_specialization(
             let evaluated = evaluate(&classes, entry.0, entry.1.0, request.spec_id, |spec| {
                 configs.spec(spec).to_vec()
             });
-            refresh_player(entry, evaluated, false, &db, connection, &mut senders);
+            refresh_player(
+                entry,
+                evaluated,
+                false,
+                &classes,
+                &db,
+                connection,
+                &mut senders,
+            );
         }
     }
 }
@@ -679,7 +738,15 @@ fn process_commit_trait_config(
             };
             send(&mut senders.commit, connection, result);
             let evaluated = evaluate(&classes, entry.0, entry.1.0, spec_id, |_| purchases);
-            refresh_player(entry, evaluated, true, &db, connection, &mut senders);
+            refresh_player(
+                entry,
+                evaluated,
+                true,
+                &classes,
+                &db,
+                connection,
+                &mut senders,
+            );
         }
     }
 }
@@ -749,7 +816,15 @@ fn sync_level_changes(
                 load_trait_configs(&db.db, entry.2.0).spec(spec).to_vec()
             }
         });
-        refresh_player(entry, evaluated, false, &db, connection, &mut senders);
+        refresh_player(
+            entry,
+            evaluated,
+            false,
+            &classes,
+            &db,
+            connection,
+            &mut senders,
+        );
     }
 }
 
