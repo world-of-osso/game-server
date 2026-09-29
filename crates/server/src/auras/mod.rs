@@ -37,7 +37,7 @@ use crate::spell_info::{SpellEffect, SpellInfo, SpellStore};
 use crate::stats::StatModifiers;
 pub use spell_mods::SpellModOp;
 pub use stat_mods::AuraStatMods;
-pub use unit_state::Invisible;
+pub use unit_state::{Confused, Invisible, is_polymorphed};
 
 /// SPELL_AURA_PERIODIC_DAMAGE.
 pub const PERIODIC_DAMAGE_AURA: u32 = handlers::PERIODIC_DAMAGE;
@@ -260,10 +260,25 @@ impl ActiveAuras {
 
     /// Under a `SPELL_AURA_MOD_STUN` effect (AzerothCore `UNIT_STATE_STUNNED`).
     pub fn is_stunned(&self) -> bool {
+        self.has_type(handlers::MOD_STUN)
+    }
+
+    /// Under a `SPELL_AURA_MOD_CONFUSE` effect (TrinityCore `UNIT_STATE_CONFUSED`).
+    pub fn is_confused(&self) -> bool {
+        self.has_type(handlers::MOD_CONFUSE)
+    }
+
+    /// `UNIT_STATE_CANNOT_AUTOATTACK`: stunned or confused (fear and charges are
+    /// not modelled).
+    pub fn cannot_auto_attack(&self) -> bool {
+        self.is_stunned() || self.is_confused()
+    }
+
+    fn has_type(&self, aura_type: u32) -> bool {
         self.auras
             .iter()
             .flat_map(|aura| &aura.effects)
-            .any(|effect| effect.aura_type == handlers::MOD_STUN)
+            .any(|effect| effect.aura_type == aura_type)
     }
 
     pub fn has_spell(&self, spell_id: u32) -> bool {
@@ -430,7 +445,7 @@ fn build_instance(
         spell_mods::modify(world, caster, spell, SpellModOp::MaxAuraStacks, max_stacks);
     let charges = options.map_or(0.0, |options| options.proc_charges.max(0) as f32);
     let charges = spell_mods::modify(world, caster, spell, SpellModOp::ProcCharges, charges);
-    let effects = spell
+    let mut effects: Vec<AuraEffectState> = spell
         .effects
         .iter()
         .filter(|effect| {
@@ -438,6 +453,19 @@ fn build_instance(
         })
         .map(|effect| build_effect(world, caster, spell, effect, now))
         .collect();
+    // AuraEffect::CalculateAmount: breakable crowd control of a spell with proc flags
+    // holds 10% of the target's max health (CountPctFromMaxHealth) against damage.
+    if options.is_some_and(|options| options.proc_type_mask != [0; 2]) {
+        let max_health = world
+            .get::<shared::components::Health>(application.target)
+            .map_or(0.0, |health| health.max);
+        for effect in effects
+            .iter_mut()
+            .filter(|effect| handlers::breaks_on_damage(effect.aura_type))
+        {
+            effect.amount = (max_health * 0.1).floor();
+        }
+    }
     AuraInstance {
         instance_id: 0,
         spell_id: spell.id,
@@ -777,11 +805,13 @@ pub fn absorb_damage(world: &mut World, unit: Entity, school_mask: u32, amount: 
 }
 
 /// Why crowd control forbids `spell` now: MOD_STUN 12 blocks every spell
-/// without `SPELL_ATTR5_ALLOW_WHILE_STUNNED`; MOD_SILENCE 27 blocks
+/// without `SPELL_ATTR5_ALLOW_WHILE_STUNNED`, MOD_CONFUSE 5 every spell without
+/// `SPELL_ATTR5_ALLOW_WHILE_CONFUSED` (`Spell::CheckCasterAuras`); MOD_SILENCE 27 blocks
 /// `PreventionType` silence (1) spells and MOD_PACIFY 25 pacify (2) spells;
 /// MOD_PACIFY_SILENCE 60 does both.
 pub fn cast_blocker(world: &World, caster: Entity, spell: &SpellInfo) -> Option<CastBlock> {
     const ATTR5_ALLOW_WHILE_STUNNED: u32 = 0x8;
+    const ATTR5_ALLOW_WHILE_CONFUSED: u32 = 0x0004_0000;
     const PREVENTION_SILENCE: u32 = 1;
     const PREVENTION_PACIFY: u32 = 2;
     let auras = world.get::<ActiveAuras>(caster)?;
@@ -808,6 +838,9 @@ pub fn cast_blocker(world: &World, caster: Entity, spell: &SpellInfo) -> Option<
     {
         return Some(CastBlock::Pacified);
     }
+    if attributes(spell, 5) & ATTR5_ALLOW_WHILE_CONFUSED == 0 && has(&[handlers::MOD_CONFUSE]) {
+        return Some(CastBlock::Confused);
+    }
     None
 }
 
@@ -816,6 +849,7 @@ pub enum CastBlock {
     Stunned,
     Silenced,
     Pacified,
+    Confused,
 }
 
 /// Charge auras of one charge category (TrinityCore `SpellHistory`
@@ -1191,3 +1225,6 @@ fn receive_cancel_aura(world: &mut World) {
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod polymorph_tests;

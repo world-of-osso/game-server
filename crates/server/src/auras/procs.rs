@@ -10,20 +10,30 @@
 //! - one of its effects is a trigger type (`handlers::can_proc`);
 //! - for spell events, the event spell matches the aura's `SpellClassSet` and
 //!   the union of the trigger effects' `SpellClassMask` (when non-zero);
-//! - the event does not come from a triggered spell (`can_proc`);
+//! - the event does not come from a triggered spell (`can_proc`), unless the aura
+//!   has `SPELL_ATTR3_CAN_PROC_FROM_PROCS` or the triggered spell
+//!   `SPELL_ATTR3_NOT_A_PROC`, and it is not the aura's own trigger spell;
 //! - `ProcCategoryRecovery` has elapsed;
 //! - the roll passes: RPPM (`SpellProcsPerMinute.BaseProcRate`, TrinityCore
 //!   `CalcPPMProcChance`) when present, else `ProcChance` (ProcChance mods
 //!   applied).
 //!
+//! A breakable crowd-control effect (`handlers::breaks_on_damage`) takes part
+//! only in events that dealt damage, except its own spell's
+//! (`AuraEffect::CheckEffectProc`).
+//!
 //! A proc casts each PROC_TRIGGER_SPELL(_WITH_VALUE) `EffectTriggerSpell`
-//! from the aura's unit at the other party (or itself), runs the aura's
-//! script `on_proc`, then spends one charge.
+//! from the aura's unit at the other party (or itself), takes the event's damage
+//! off each breakable crowd-control effect and removes the aura when one reaches 0
+//! (`HandleBreakableCCAuraProc`), runs the aura's script `on_proc`, then spends
+//! one charge.
 
 use bevy::prelude::*;
 
 use super::handlers::{self, PROC_TRIGGER_SPELL, PROC_TRIGGER_SPELL_WITH_VALUE};
-use super::{ActiveAuras, AuraInstance, SpellModOp, aura_now, scripts, spell_mods};
+use super::{
+    ActiveAuras, AuraEffectState, AuraInstance, SpellModOp, aura_now, scripts, spell_mods,
+};
 use crate::spell_info::{SpellInfo, SpellStore};
 
 pub const PROC_KILL: u32 = 0x2;
@@ -99,6 +109,8 @@ pub struct AuraEvent {
     /// False for events of triggered spells (they interrupt but never proc).
     pub can_proc: bool,
     pub periodic: bool,
+    /// Damage the event dealt to `target` (after absorbs); 0 for no damage.
+    pub damage: f32,
 }
 
 #[derive(Resource, Debug, Default)]
@@ -175,28 +187,74 @@ fn handle_side(
         interrupt_flags(mask, event.periodic),
         event.spell_id,
     );
-    if !event.can_proc {
-        return;
-    }
     let event_spell = event.spell_id.and_then(|id| {
         world
             .get_resource::<SpellStore>()
             .and_then(|store| store.get(id))
             .cloned()
     });
+    let event_not_a_proc = event_spell
+        .as_ref()
+        .is_some_and(|spell| attributes3(spell) & SPELL_ATTR3_NOT_A_PROC != 0);
     let candidates: Vec<u32> = world
         .get::<ActiveAuras>(unit)
         .map(|auras| {
             auras
                 .iter()
-                .filter(|aura| proc_matches(world, aura, mask, event_spell.as_ref()))
+                .filter(|aura| {
+                    event.can_proc || triggered_can_proc(world, aura, event, event_not_a_proc)
+                })
+                .filter(|aura| proc_matches(world, aura, mask, event_spell.as_ref(), event))
                 .map(|aura| aura.instance_id)
                 .collect()
         })
         .unwrap_or_default();
     for id in candidates {
-        try_proc(world, unit, other, id);
+        try_proc(world, unit, other, id, event);
     }
+}
+
+/// `SPELL_ATTR3_NOT_A_PROC`: a triggered spell with it procs auras like a cast one.
+const SPELL_ATTR3_NOT_A_PROC: u32 = 0x200;
+/// `SPELL_ATTR3_CAN_PROC_FROM_PROCS`: the aura procs from triggered spells too.
+const SPELL_ATTR3_CAN_PROC_FROM_PROCS: u32 = 0x0400_0000;
+
+fn attributes3(spell: &SpellInfo) -> u32 {
+    spell.misc.as_ref().map_or(0, |misc| misc.attributes[3])
+}
+
+/// `Aura::GetProcEffectMask` for an event of a triggered spell: the aura procs when it
+/// has `SPELL_ATTR3_CAN_PROC_FROM_PROCS` or the spell `SPELL_ATTR3_NOT_A_PROC`, but never
+/// from its own trigger spell (`IsTriggeredByAura`). `PROC_ATTR_TRIGGERED_CAN_PROC`
+/// (`spell_proc`) is not imported.
+fn triggered_can_proc(
+    world: &World,
+    aura: &AuraInstance,
+    event: &AuraEvent,
+    event_not_a_proc: bool,
+) -> bool {
+    let own_trigger = aura
+        .effects
+        .iter()
+        .any(|effect| effect.trigger_spell != 0 && Some(effect.trigger_spell) == event.spell_id);
+    if own_trigger {
+        return false;
+    }
+    event_not_a_proc
+        || world
+            .get_resource::<SpellStore>()
+            .and_then(|store| store.get(aura.spell_id))
+            .is_some_and(|spell| attributes3(spell) & SPELL_ATTR3_CAN_PROC_FROM_PROCS != 0)
+}
+
+/// `AuraEffect::CheckEffectProc` for `effect`: a breakable crowd-control effect
+/// needs damage, and not its own spell's (TrinityCore exempts that while the aura is
+/// at full duration, i.e. the applying hit; periodic ticks of a CC spell are not modelled).
+fn effect_checks_proc(aura: &AuraInstance, effect: &AuraEffectState, event: &AuraEvent) -> bool {
+    if !handlers::breaks_on_damage(effect.aura_type) {
+        return true;
+    }
+    event.damage > 0.0 && event.spell_id != Some(aura.spell_id)
 }
 
 fn proc_mask(world: &World, aura: &AuraInstance) -> [u32; 2] {
@@ -212,16 +270,15 @@ fn proc_matches(
     aura: &AuraInstance,
     mask: [u32; 2],
     event_spell: Option<&SpellInfo>,
+    event: &AuraEvent,
 ) -> bool {
     let proc_mask = proc_mask(world, aura);
     if proc_mask[0] & mask[0] == 0 && proc_mask[1] & mask[1] == 0 {
         return false;
     }
-    if !aura
-        .effects
-        .iter()
-        .any(|effect| handlers::can_proc(effect.aura_type))
-    {
+    if !aura.effects.iter().any(|effect| {
+        handlers::can_proc(effect.aura_type) && effect_checks_proc(aura, effect, event)
+    }) {
         return false;
     }
     if mask[0] & SPELL_PROC_MASK == 0 {
@@ -284,7 +341,7 @@ fn proc_chance(world: &mut World, unit: Entity, id: u32, now: f64) -> f32 {
     spell_mods::modify(world, unit, &spell, SpellModOp::ProcChance, chance)
 }
 
-fn try_proc(world: &mut World, unit: Entity, other: Option<Entity>, id: u32) {
+fn try_proc(world: &mut World, unit: Entity, other: Option<Entity>, id: u32, event: &AuraEvent) {
     let now = aura_now(world);
     let ready = world
         .get::<ActiveAuras>(unit)
@@ -314,10 +371,45 @@ fn try_proc(world: &mut World, unit: Entity, other: Option<Entity>, id: u32) {
             PROC_TRIGGER_DEPTH,
         );
     }
+    if break_crowd_control(world, unit, &aura, event) {
+        return;
+    }
     scripts::run_proc(world, unit, &aura, other);
     if aura.charges > 0 {
         super::spend_charge(world, unit, id);
     }
+}
+
+/// `HandleBreakableCCAuraProc`: the damage comes off each breakable effect's amount;
+/// one at 0 or below removes the aura. True when the aura was removed.
+fn break_crowd_control(
+    world: &mut World,
+    unit: Entity,
+    aura: &AuraInstance,
+    event: &AuraEvent,
+) -> bool {
+    let Some(mut auras) = world.get_mut::<ActiveAuras>(unit) else {
+        return false;
+    };
+    let Some(stored) = auras.bypass_change_detection().get_mut(aura.instance_id) else {
+        return false;
+    };
+    let mut broken = false;
+    for effect in stored.effects.iter_mut().filter(|effect| {
+        handlers::breaks_on_damage(effect.aura_type) && effect_checks_proc(aura, effect, event)
+    }) {
+        effect.amount -= event.damage;
+        broken |= effect.amount <= 0.0;
+    }
+    if broken {
+        super::remove_instance(
+            world,
+            unit,
+            aura.instance_id,
+            super::RemoveReason::Interrupted,
+        );
+    }
+    broken
 }
 
 fn start_proc_cooldown(world: &mut World, unit: Entity, id: u32, now: f64) -> Option<AuraInstance> {

@@ -112,6 +112,37 @@ fn unit_faction(world: &World, entity: Entity) -> UnitFaction {
     }
 }
 
+/// `CREATURE_TYPE_HUMANOID`: what a player is (`Player::GetCreatureType` outside
+/// shapeshift forms, which are not modelled).
+const CREATURE_TYPE_HUMANOID: u8 = 7;
+
+/// `SpellInfo::CheckTargetCreatureType`: a spell with `TargetCreatureType` affects only
+/// units whose type bit (`1 << (type - 1)`) it has; a unit without a type passes.
+/// Creatures take their template's `type`.
+pub fn creature_type_allowed(world: &World, spell: &SpellInfo, target: Entity) -> bool {
+    let allowed = spell
+        .target_restrictions
+        .as_ref()
+        .map_or(0, |restrictions| restrictions.target_creature_type);
+    if allowed == 0 {
+        return true;
+    }
+    let creature_type = if world.get::<Player>(target).is_some() {
+        CREATURE_TYPE_HUMANOID
+    } else {
+        world
+            .get::<shared::components::Npc>(target)
+            .and_then(|npc| {
+                world
+                    .get_resource::<crate::world_data::WorldData>()?
+                    .templates
+                    .get(&npc.template_id)
+            })
+            .map_or(0, |template| template.creature_type)
+    };
+    creature_type == 0 || allowed & (1 << (creature_type - 1)) != 0
+}
+
 /// `caster` regards `target` as hostile (selects the hostile spell range).
 pub fn is_hostile(world: &World, caster: Entity, target: Entity) -> bool {
     if dueling(world, caster, target) {

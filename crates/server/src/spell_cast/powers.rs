@@ -17,7 +17,7 @@ use std::path::Path;
 use bevy::prelude::*;
 use lightyear::prelude::ReplicationDirtyQueue;
 use rusqlite::Connection;
-use shared::components::{CombatStatus, Mana, Player, PowerEntry, PowerType, UnitPowers};
+use shared::components::{CombatStatus, Health, Mana, Player, PowerEntry, PowerType, UnitPowers};
 
 use crate::grid_activity::GridDormant;
 use crate::spell_info::ClassSpells;
@@ -365,6 +365,60 @@ const CREATURE_REGEN_INTERVAL_SECS: f32 = 2.0;
 /// `Creature::Regenerate(POWER_MANA)` for a creature without an owner:
 /// `(27 / 5 + 17) × Rate.Power.Mana` (1) mana per interval, in and out of combat.
 const CREATURE_MANA_PER_INTERVAL: f32 = 22.0;
+
+/// `m_regenTimer` of a creature with `RegenHealth`, for its health.
+#[derive(Component, Debug, Clone, Copy)]
+pub struct CreatureHealthRegenTimer(pub f32);
+
+impl Default for CreatureHealthRegenTimer {
+    fn default() -> Self {
+        Self(CREATURE_REGEN_INTERVAL_SECS)
+    }
+}
+
+/// `Creature::RegenerateHealth` every `CREATURE_REGEN_INTERVAL` for a creature without
+/// an owner: a third of its max health, while not engaged or while polymorphed
+/// (`!IsEngaged() || IsPolymorphed()`); none while evading. MOD_HEALTH_REGEN_PERCENT and
+/// MOD_REGEN are not modelled.
+pub(super) fn regenerate_creature_health(world: &mut World) {
+    let dt = world.resource::<Time>().delta_secs();
+    let mut creatures =
+        world.query_filtered::<(Entity, &mut CreatureHealthRegenTimer), Without<GridDormant>>();
+    let due: Vec<Entity> = creatures
+        .iter_mut(world)
+        .filter_map(|(entity, mut timer)| {
+            timer.0 -= dt;
+            if timer.0 > 0.0 {
+                return None;
+            }
+            timer.0 += CREATURE_REGEN_INTERVAL_SECS;
+            Some(entity)
+        })
+        .collect();
+    for creature in due {
+        let state = world.get::<crate::creature_ai::CreatureState>(creature);
+        if state == Some(&crate::creature_ai::CreatureState::Returning) {
+            continue;
+        }
+        let engaged = matches!(
+            state,
+            Some(crate::creature_ai::CreatureState::Pursuing { .. })
+        );
+        if engaged && !crate::auras::is_polymorphed(world, creature) {
+            continue;
+        }
+        let Some(mut health) = world.get_mut::<Health>(creature) else {
+            continue;
+        };
+        if health.current <= 0.0 || health.current >= health.max {
+            continue;
+        }
+        health.current = (health.current + (health.max / 3.0).floor()).min(health.max);
+        if let Some(dirty) = world.get_resource::<ReplicationDirtyQueue>() {
+            dirty.mark(creature);
+        }
+    }
+}
 
 /// `m_regenTimer` of a creature with `UNIT_FLAG2_REGENERATE_POWER`.
 #[derive(Component, Debug, Clone, Copy)]

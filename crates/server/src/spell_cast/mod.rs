@@ -61,6 +61,7 @@ pub struct SpellCastPlugin;
 impl Plugin for SpellCastPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<UnhandledEffects>()
+            .init_resource::<ResolvingHits>()
             .add_systems(Startup, powers::load_power_type_table_startup)
             .add_systems(
                 Update,
@@ -80,6 +81,7 @@ impl Plugin for SpellCastPlugin {
                 FixedUpdate,
                 (
                     powers::regenerate_creature_mana,
+                    powers::regenerate_creature_health,
                     area_aura::update_dynamic_objects.after(advance_casts),
                 ),
             );
@@ -122,14 +124,15 @@ impl CastFailure {
             Self::UnknownSpell => (R::NotSupported, Some("unknown spell".into())),
             Self::NotKnown => (R::NotSupported, Some("spell not known".into())),
             Self::CasterDead => (R::CasterDead, None),
-            Self::CrowdControlled(block) => (
-                match block {
-                    crate::auras::CastBlock::Stunned => R::Stunned,
-                    crate::auras::CastBlock::Silenced => R::Silenced,
-                    crate::auras::CastBlock::Pacified => R::Pacified,
-                },
-                None,
-            ),
+            Self::CrowdControlled(block) => match block {
+                crate::auras::CastBlock::Stunned => (R::Stunned, None),
+                crate::auras::CastBlock::Silenced => (R::Silenced, None),
+                crate::auras::CastBlock::Pacified => (R::Pacified, None),
+                // SPELL_FAILED_CONFUSED has no CastFailReason in shared-protocol yet.
+                crate::auras::CastBlock::Confused => {
+                    (R::NotSupported, Some("Can't do that while confused".into()))
+                }
+            },
             Self::InProgress => (R::SpellInProgress, None),
             Self::SchoolLockedOut => (R::SchoolLockedOut, None),
             Self::OnGlobalCooldown => (R::OnGlobalCooldown, None),
@@ -673,7 +676,10 @@ fn validate_target(
     };
     // A unit of another map copy is not found (`ObjectAccessor::GetUnit` searches the
     // caster's map).
-    if !targets::is_alive(world, target) || !targets::same_map(world, caster, target) {
+    if !targets::is_alive(world, target)
+        || !targets::same_map(world, caster, target)
+        || !targets::creature_type_allowed(world, spell, target)
+    {
         return Err(CastFailure::InvalidTarget);
     }
     if target != caster {
@@ -910,6 +916,7 @@ fn execute_cast(
             spell_id: Some(spell.id),
             can_proc: true,
             periodic: false,
+            damage: 0.0,
         },
     );
     resolve_effects(world, caster, spell, &plan, 0);
@@ -968,6 +975,13 @@ fn resolve_effects(
             effects::log_unhandled(world, spell.id, effect.effect);
         }
     }
+    if let Some(mut resolving) = world.get_resource_mut::<ResolvingHits>() {
+        resolving.0.push(HitFrame {
+            caster,
+            spell_id: spell.id,
+            damage: Vec::new(),
+        });
+    }
     // Aura effects hitting the same unit form one aura (per-unit effect mask).
     let mut aura_masks: Vec<(Entity, u32)> = Vec::new();
     for PlannedEffect { index, units, dest } in plan {
@@ -1016,22 +1030,90 @@ fn resolve_effects(
             },
         );
     }
-    push_hit_events(world, caster, spell, plan, depth);
+    let damage = world
+        .get_resource_mut::<ResolvingHits>()
+        .and_then(|mut resolving| resolving.0.pop())
+        .map_or_else(Vec::new, |frame| frame.damage);
+    push_hit_events(world, caster, spell, plan, depth, &damage);
 }
 
-/// One proc event per distinct unit the spell landed on.
+/// Direct damage of the spells resolving now, gathered per unit for their hit events
+/// (TrinityCore's hit proc carries the damage with TAKE_ANY_DAMAGE,
+/// `Spell::TargetInfo::DoDamageAndTriggers`). One frame per resolution in progress,
+/// innermost last: a triggered spell resolves inside its trigger's frame.
+#[derive(Resource, Debug, Default)]
+pub(crate) struct ResolvingHits(Vec<HitFrame>);
+
+#[derive(Debug)]
+struct HitFrame {
+    caster: Entity,
+    spell_id: u32,
+    damage: Vec<(Entity, f32)>,
+}
+
+/// Add `amount` dealt to `target` to the innermost resolution of `spell_id` by
+/// `caster`; false when that spell is not resolving (its damage gets its own event).
+pub(crate) fn record_hit_damage(
+    world: &mut World,
+    caster: Entity,
+    spell_id: u32,
+    target: Entity,
+    amount: f32,
+) -> bool {
+    let Some(mut resolving) = world.get_resource_mut::<ResolvingHits>() else {
+        return false;
+    };
+    let Some(frame) = resolving
+        .0
+        .last_mut()
+        .filter(|frame| frame.caster == caster && frame.spell_id == spell_id)
+    else {
+        return false;
+    };
+    match frame.damage.iter_mut().find(|(unit, _)| *unit == target) {
+        Some((_, total)) => *total += amount,
+        None => frame.damage.push((target, amount)),
+    }
+    true
+}
+
+/// One proc event per distinct unit the spell landed on, with the direct damage it
+/// took (TAKE_ANY_DAMAGE when above 0); damage to a unit outside the plan gets a
+/// damage-only event.
 fn push_hit_events(
     world: &mut World,
     caster: Entity,
     spell: &SpellInfo,
     plan: &TargetPlan,
     depth: u8,
+    damage: &[(Entity, f32)],
 ) {
     let mut hit: Vec<Entity> = Vec::new();
     for unit in plan.iter().flat_map(|planned| &planned.units) {
         if !hit.contains(unit) {
             hit.push(*unit);
         }
+    }
+    let damage_to = |unit: Entity| {
+        damage
+            .iter()
+            .find(|(target, _)| *target == unit)
+            .map_or(0.0, |(_, amount)| *amount)
+    };
+    for &(target, amount) in damage.iter().filter(|(unit, _)| !hit.contains(unit)) {
+        procs::push_event(
+            world,
+            AuraEvent {
+                actor: caster,
+                target: Some(target),
+                actor_mask: [0; 2],
+                target_mask: [procs::PROC_TAKE_ANY_DAMAGE, 0],
+                spell_id: Some(spell.id),
+                can_proc: depth == 0,
+                periodic: false,
+                damage: amount,
+            },
+        );
     }
     for target in hit {
         // Spell::DoSpellHitOnUnit (Spell.cpp:2879-2882): a spell landing on a
@@ -1040,7 +1122,11 @@ fn push_hit_events(
             crate::creature_aggro::add_threat(world, target, caster, 0.0);
         }
         let harmful = targets::is_hostile(world, caster, target);
-        let (actor_mask, target_mask) = procs::spell_hit_masks(spell, harmful);
+        let (actor_mask, mut target_mask) = procs::spell_hit_masks(spell, harmful);
+        let damage = damage_to(target);
+        if damage > 0.0 {
+            target_mask |= procs::PROC_TAKE_ANY_DAMAGE;
+        }
         procs::push_event(
             world,
             AuraEvent {
@@ -1051,6 +1137,7 @@ fn push_hit_events(
                 spell_id: Some(spell.id),
                 can_proc: depth == 0,
                 periodic: false,
+                damage,
             },
         );
     }

@@ -1,10 +1,12 @@
 //! Replicated `UnitTarget` (target-of-target) mirrors each unit's current
 //! target: players from `CombatTarget` (SetTarget), NPCs from their
-//! `CreatureState::Pursuing` chase target. Written only on change.
+//! `CreatureState::Pursuing` chase target, none while confused
+//! (`Unit::SetConfused` → `SetTarget(Empty)`). Written only on change.
 
 use bevy::prelude::*;
 use shared::components::UnitTarget;
 
+use crate::auras::Confused;
 use crate::creature_ai::CreatureState;
 use crate::grid_activity::GridDormant;
 use crate::networking::CombatTarget;
@@ -34,22 +36,38 @@ fn sync_player_unit_target(
     }
 }
 
-type CreatureTargets<'w, 's, F> =
-    Query<'w, 's, (Entity, &'static CreatureState, Option<&'static UnitTarget>), F>;
+type CreatureTargets<'w, 's, F> = Query<
+    'w,
+    's,
+    (
+        Entity,
+        &'static CreatureState,
+        Has<Confused>,
+        Option<&'static UnitTarget>,
+    ),
+    F,
+>;
 
-/// Active creatures whose state changed, plus creatures whose grid just woke:
-/// a change made while dormant is not seen by the `Changed` scan, and no player
+/// Active creatures whose state or confusion changed, plus creatures whose grid just
+/// woke: a change made while dormant is not seen by the `Changed` scan, and no player
 /// is in range of a dormant creature to read its target.
 fn sync_creature_unit_target(
     mut commands: Commands,
-    changed: CreatureTargets<(Changed<CreatureState>, Without<GridDormant>)>,
+    changed: CreatureTargets<(
+        Or<(Changed<CreatureState>, Added<Confused>)>,
+        Without<GridDormant>,
+    )>,
     all: CreatureTargets<()>,
     mut woke: RemovedComponents<GridDormant>,
+    mut unconfused: RemovedComponents<Confused>,
 ) {
-    let woke = woke.read().filter_map(|entity| all.get(entity).ok());
-    for (entity, state, current) in changed.iter().chain(woke) {
+    let resync = woke
+        .read()
+        .chain(unconfused.read())
+        .filter_map(|entity| all.get(entity).ok());
+    for (entity, state, confused, current) in changed.iter().chain(resync) {
         let target = match *state {
-            CreatureState::Pursuing { target } => Some(target),
+            CreatureState::Pursuing { target } if !confused => Some(target),
             _ => None,
         };
         write_if_changed(&mut commands, entity, current, target);

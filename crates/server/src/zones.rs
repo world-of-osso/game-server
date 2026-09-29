@@ -201,6 +201,9 @@ pub(crate) fn spawn_creature(
         crate::creature_scripts::insert_script_components(&mut entity, &template.script_name);
         crate::scripted_ai::insert_script_name(&mut entity, &template.script_name, template.entry);
         insert_mana(&mut entity, world_data, template, level);
+        if template.regenerates_health {
+            entity.insert(crate::spell_cast::powers::CreatureHealthRegenTimer::default());
+        }
         if let Some(addon) = addon {
             insert_addon_components(&mut entity, addon);
         }
@@ -494,9 +497,14 @@ fn choose_display_id(
     spawn: &CreatureSpawn,
     rng: &mut impl rand::Rng,
 ) -> u32 {
-    if let Some(display_id) = spawn.display_id {
-        return display_id;
-    }
+    spawn
+        .display_id
+        .unwrap_or_else(|| template_display_id(template, rng))
+}
+
+/// `ObjectMgr::ChooseDisplayId` without spawn data: a model of the template by
+/// Probability; triggers take their first invisible model.
+pub(crate) fn template_display_id(template: &CreatureTemplate, rng: &mut impl rand::Rng) -> u32 {
     if !template.trigger
         && let Some(model) = random_valid_model(&template.models, rng)
     {
@@ -658,6 +666,7 @@ mod tests {
             armor: 0.0,
             mana_modifier: 1.0,
             regenerates_power: false,
+            regenerates_health: true,
         }
     }
 

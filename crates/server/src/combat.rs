@@ -399,7 +399,7 @@ type AutoAttackers<'w, 's> = Query<
 
 /// What else a swing reads of its attacker: a creature's haste (players fold it
 /// into `CharacterStats`) and the states that stop auto-attacks
-/// (`UNIT_STATE_CASTING`, `UNIT_STATE_STUNNED`).
+/// (`UNIT_STATE_CASTING`, `UNIT_STATE_CANNOT_AUTOATTACK`).
 type SwingState<'a> = (
     Option<&'a crate::stats::StatModifiers>,
     Has<shared::casting::CastState>,
@@ -454,9 +454,9 @@ pub(crate) fn auto_attack_system(time: Res<Time>, mut params: AutoAttackParams) 
         auto_attack.timer -= dt;
         auto_attack.off_hand_timer -= dt;
         let target_entity = auto_attack.victim;
-        // Unit::DoMeleeAttackIfReady / AttackerStateUpdate: no swing while casting
-        // or stunned; the swing timers keep running.
-        if casting || auras.is_some_and(|auras| auras.is_stunned()) {
+        // Unit::DoMeleeAttackIfReady / AttackerStateUpdate: no swing while casting,
+        // stunned or confused; the swing timers keep running.
+        if casting || auras.is_some_and(|auras| auras.cannot_auto_attack()) {
             continue;
         }
         let attacker = Attacker {
@@ -597,6 +597,7 @@ fn swing_aura_events(attacker: Entity, target: Entity, outcome: &SwingOutcome) -
         spell_id: None,
         can_proc: true,
         periodic: false,
+        damage: outcome.damage,
     }];
     if outcome.npc_died || outcome.player_died {
         events.push(AuraEvent {
@@ -607,6 +608,7 @@ fn swing_aura_events(attacker: Entity, target: Entity, outcome: &SwingOutcome) -
             spell_id: None,
             can_proc: true,
             periodic: false,
+            damage: 0.0,
         });
     }
     events

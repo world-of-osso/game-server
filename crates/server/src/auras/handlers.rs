@@ -31,6 +31,8 @@ pub enum AuraKind {
 
 pub const PERIODIC_DAMAGE: u32 = 3;
 pub const DUMMY: u32 = 4;
+pub const MOD_CONFUSE: u32 = 5;
+pub const MOD_FEAR: u32 = 7;
 pub const PERIODIC_HEAL: u32 = 8;
 pub const MOD_STUN: u32 = 12;
 pub const MOD_INVISIBILITY: u32 = 18;
@@ -44,6 +46,7 @@ pub const MOD_STAT: u32 = 29;
 pub const MOD_INCREASE_SPEED: u32 = 31;
 pub const MOD_DECREASE_SPEED: u32 = 33;
 pub const MOD_HIT_CHANCE: u32 = 54;
+pub const TRANSFORM: u32 = 56;
 pub const SCHOOL_IMMUNITY: u32 = 39;
 pub const PROC_TRIGGER_SPELL: u32 = 42;
 pub const MOD_PACIFY_SILENCE: u32 = 60;
@@ -127,7 +130,7 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | MOD_SPEED_SLOW_ALL
         | WATER_BREATHING
         | MOD_WATER_BREATHING => StatMod,
-        MOD_INVISIBILITY | MOD_UNATTACKABLE => UnitState,
+        MOD_INVISIBILITY | MOD_UNATTACKABLE | MOD_CONFUSE | TRANSFORM => UnitState,
         ADD_FLAT_MODIFIER
         | ADD_PCT_MODIFIER
         | ADD_PCT_MODIFIER_BY_SPELL_LABEL
@@ -152,6 +155,9 @@ pub fn can_proc(aura_type: u32) -> bool {
         aura_type,
         DUMMY
             | PERIODIC_DUMMY
+            | MOD_CONFUSE
+            | MOD_FEAR
+            | TRANSFORM
             | PROC_TRIGGER_SPELL
             | PROC_TRIGGER_SPELL_WITH_VALUE
             | MOD_STUN
@@ -163,6 +169,18 @@ pub fn can_proc(aura_type: u32) -> bool {
             | MOD_SPELL_DAMAGE_FROM_CASTER
             | MOD_POWER_REGEN_PERCENT
             | MOD_MELEE_HASTE
+    )
+}
+
+/// Crowd control that damage breaks (TrinityCore `AuraEffect::HandleBreakableCCAuraProc`):
+/// with `ProcTypeMask` set, the amount is 10% of the target's max health
+/// (`AuraEffect::CalculateAmount`) and each damaging proc takes the damage off it
+/// (`CheckEffectProc` requires damage). MOD_ROOT_2 is in `HandleProc`'s list but not
+/// `isTriggerAura`, so it never procs there.
+pub fn breaks_on_damage(aura_type: u32) -> bool {
+    matches!(
+        aura_type,
+        MOD_CONFUSE | MOD_FEAR | MOD_STUN | MOD_ROOT | TRANSFORM
     )
 }
 

@@ -57,6 +57,8 @@ pub struct CreatureTemplate {
     pub mana_modifier: f32,
     /// `UNIT_FLAG2_REGENERATE_POWER` in `unit_flags2` (Creature::Regenerate).
     pub regenerates_power: bool,
+    /// `RegenHealth` (Creature::CanRegenerateHealth).
+    pub regenerates_health: bool,
 }
 
 /// A template with a `ContentTuningID`: `min_level`/`max_level` are its
@@ -458,6 +460,7 @@ fn template_from_row(row: &Row, expected: &ExpectedStats) -> rusqlite::Result<Cr
         tuning,
         mana_modifier: row.get(25)?,
         regenerates_power: row.get::<_, i64>(26)? & UNIT_FLAG2_REGENERATE_POWER != 0,
+        regenerates_health: row.get::<_, i64>(27)? != 0,
     })
 }
 
@@ -471,7 +474,7 @@ pub(crate) fn load_templates(
                     rank, ExperienceModifier, type, flags_extra, speed_run, ScriptName, unit_class, exp,
                     detection_range, unit_flags, ContentTuningID, HealthScalingExpansion,
                     LevelScalingDeltaMin, LevelScalingDeltaMax, DamageModifier, ArmorModifier, subname,
-                    ManaModifier, unit_flags2
+                    ManaModifier, unit_flags2, RegenHealth
              FROM content_creature_template",
         )
         .expect("Failed to prepare content_creature_template query");
@@ -502,7 +505,7 @@ fn load_difficulty_templates(
                     t.speed_run, t.ScriptName, t.unit_class, d.exp, t.detection_range, t.unit_flags,
                     d.ContentTuningID, d.HealthScalingExpansion, d.LevelScalingDeltaMin,
                     d.LevelScalingDeltaMax, d.DamageModifier, d.ArmorModifier, t.subname,
-                    d.ManaModifier, t.unit_flags2, d.DifficultyID
+                    d.ManaModifier, t.unit_flags2, t.RegenHealth, d.DifficultyID
              FROM content_creature_template_difficulty d
              JOIN content_creature_template t ON t.entry = d.entry",
         )
@@ -510,7 +513,7 @@ fn load_difficulty_templates(
     let rows = stmt
         .query_map(params![], |row| {
             Ok((
-                row.get::<_, i64>(27)? as u32,
+                row.get::<_, i64>(28)? as u32,
                 template_from_row(row, expected)?,
             ))
         })

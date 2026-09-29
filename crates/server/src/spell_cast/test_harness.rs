@@ -222,6 +222,17 @@ pub(crate) fn harness_with(
     class: u8,
     computed_stats: bool,
 ) -> Option<Harness> {
+    harness_with_plugins(extra, ids, class, computed_stats, |_| {})
+}
+
+/// `harness_with` plus the plugins `add_plugins` adds before the app is finished.
+pub(crate) fn harness_with_plugins(
+    extra: Vec<SpellInfo>,
+    ids: &[u32],
+    class: u8,
+    computed_stats: bool,
+    add_plugins: impl FnOnce(&mut App),
+) -> Option<Harness> {
     let data = world_db()?;
     let mut app = App::new();
     app.add_plugins((MinimalPlugins, bevy::state::app::StatesPlugin));
@@ -237,6 +248,7 @@ pub(crate) fn harness_with(
     if computed_stats {
         app.add_plugins(crate::stats::StatsPlugin);
     }
+    add_plugins(&mut app);
     app.insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
         Duration::from_millis(50),
     ));

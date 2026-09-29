@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use lightyear::prelude::ReplicationDirtyQueue;
 use shared::components::{CreatureMotion, Position, Rotation};
 
-use crate::auras::AuraStatMods;
+use crate::auras::{AuraStatMods, Confused};
 use crate::combat::DeathState;
 use crate::grid_activity::GridDormant;
 use crate::ground::{GroundMap, GroundProbe};
@@ -28,6 +28,12 @@ const IDLE_MAX_SECS: f32 = 5.0;
 /// Delay before a wanderer retries a destination it cannot walk to
 /// (`RandomMovementGenerator` `_timer.Reset(100)`).
 const RETRY_WANDER_SECS: f32 = 0.1;
+/// `ConfusedMovementGenerator::SetTargetLocation`: a point up to this far either way
+/// from where the confusion began, then a pause of `urand(800, 1500)` ms.
+const CONFUSED_REACH: f32 = 2.0;
+const CONFUSED_PAUSE_SECS: (f32, f32) = (0.8, 1.5);
+/// Delay before a confused unit retries a point it cannot walk to (`_timer.Reset(100)`).
+const RETRY_CONFUSED_SECS: f32 = 0.1;
 
 pub struct CreatureAiPlugin;
 
@@ -39,6 +45,7 @@ impl Plugin for CreatureAiPlugin {
                 wander_system,
                 (waypoint_system, formation_system).chain(),
                 (chase_system, leash_check_system, return_to_spawn_system).chain(),
+                confused_movement_system,
             ),
         );
     }
@@ -166,7 +173,7 @@ fn wander_system(
             Option<&InMap>,
             Bearing,
         ),
-        (Without<DeathState>, Without<GridDormant>),
+        (Without<DeathState>, Without<GridDormant>, Without<Confused>),
     >,
 ) {
     let dt = time.delta_secs();
@@ -402,7 +409,7 @@ fn waypoint_system(
             Option<&CreatureState>,
             Bearing,
         ),
-        (Without<DeathState>, Without<GridDormant>),
+        (Without<DeathState>, Without<GridDormant>, Without<Confused>),
     >,
 ) {
     let dt = time.delta_secs();
@@ -507,7 +514,7 @@ fn formation_system(
             Option<&CreatureState>,
             Bearing,
         ),
-        (Without<DeathState>, Without<GridDormant>),
+        (Without<DeathState>, Without<GridDormant>, Without<Confused>),
     >,
 ) {
     for (entity, mut pos, member, member_state, bearing) in &mut members {
@@ -591,7 +598,7 @@ pub(crate) fn chase_system(
             Option<&InMap>,
             Bearing,
         ),
-        Without<GridDormant>,
+        (Without<GridDormant>, Without<Confused>),
     >,
     targets: Query<&Position, Without<SpawnPoint>>,
 ) {
@@ -644,6 +651,96 @@ fn chase_step(position: Position, target: &Position, step: f32) -> Position {
     }
 }
 
+// -- Confused movement --
+
+/// `ConfusedMovementGenerator`: a confused creature walks (walk speed × the aura speed
+/// multiplier) to a random point up to `CONFUSED_REACH` either way from where its
+/// confusion began, pauses `CONFUSED_PAUSE_SECS`, and picks the next; it holds still
+/// while it cannot move (`UNIT_STATE_NOT_MOVE`). It overrides chase, wander and
+/// waypoints (`MOTION_SLOT_CONTROLLED`). A point without ground under it is retried.
+fn confused_movement_system(
+    time: Res<Time>,
+    queues: MoveQueues,
+    mut ground: Option<ResMut<GroundMap>>,
+    mut query: Query<
+        (
+            Entity,
+            &mut Position,
+            &SpawnPoint,
+            &mut Confused,
+            Option<&AuraStatMods>,
+            Option<&InMap>,
+            Bearing,
+        ),
+        (Without<DeathState>, Without<GridDormant>),
+    >,
+) {
+    let dt = time.delta_secs();
+    for (entity, mut pos, spawn, mut confused, mods, map, bearing) in &mut query {
+        let speed =
+            spawn.speed_walk * BASE_WALK_SPEED * mods.map_or(1.0, |mods| mods.movement_speed);
+        let mut probe = |feet: Vec3| probe_ground(ground.as_deref_mut(), map, feet);
+        let next_position = if speed <= 0.0 {
+            confused.destination = None;
+            *pos
+        } else {
+            confused_step(*pos, &mut confused, speed * dt, dt, &mut probe)
+        };
+        let stride = Stride::moving(*pos, next_position, CreatureMotion::Walk);
+        queues.apply(entity, &mut pos, bearing, stride);
+    }
+}
+
+/// One tick of confused movement: pause, pick a point (`SetTargetLocation`), or walk
+/// toward it.
+fn confused_step(
+    mut position: Position,
+    confused: &mut Confused,
+    step: f32,
+    dt: f32,
+    probe: &mut impl FnMut(Vec3) -> GroundProbe,
+) -> Position {
+    let Some((tx, tz)) = confused.destination else {
+        confused.wait_secs -= dt;
+        if confused.wait_secs > 0.0 {
+            return position;
+        }
+        let (tx, tz) = confused_point(confused.reference);
+        if wander_ground(probe(Vec3::new(tx, position.y, tz)), position.y).is_none() {
+            confused.wait_secs = RETRY_CONFUSED_SECS;
+            return position;
+        }
+        confused.destination = Some((tx, tz));
+        return position;
+    };
+    let (reached, nx, nz) = move_toward(position.x, position.z, tx, tz, step);
+    let next_y = wander_ground(probe(Vec3::new(nx, position.y, nz)), position.y);
+    if let Some(y) = next_y {
+        position.x = nx;
+        position.y = y;
+        position.z = nz;
+    }
+    if reached || next_y.is_none() {
+        confused.destination = None;
+        confused.wait_secs = rand::Rng::gen_range(
+            &mut rand::thread_rng(),
+            CONFUSED_PAUSE_SECS.0..=CONFUSED_PAUSE_SECS.1,
+        );
+    }
+    position
+}
+
+/// `4 * frand(0, 1) - 2` yards at a random angle from `reference`.
+fn confused_point(reference: (f32, f32)) -> (f32, f32) {
+    let mut rng = rand::thread_rng();
+    let distance = rand::Rng::gen_range(&mut rng, -CONFUSED_REACH..=CONFUSED_REACH);
+    let angle = rand::Rng::gen_range(&mut rng, 0.0..std::f32::consts::TAU);
+    (
+        reference.0 + distance * angle.cos(),
+        reference.1 + distance * angle.sin(),
+    )
+}
+
 /// Check if position exceeds leash distance from spawn (2D, ignoring height).
 fn beyond_leash(pos: &Position, spawn: &SpawnPoint) -> bool {
     let dx = pos.x - spawn.x;
@@ -656,7 +753,10 @@ fn beyond_leash(pos: &Position, spawn: &SpawnPoint) -> bool {
 /// (`enter_evade_mode`: threat cleared, combat stopped, health restored,
 /// Returning).
 fn leash_check_system(
-    query: Query<(Entity, &Position, &SpawnPoint, &CreatureState), Without<GridDormant>>,
+    query: Query<
+        (Entity, &Position, &SpawnPoint, &CreatureState),
+        (Without<GridDormant>, Without<Confused>),
+    >,
     mut commands: Commands,
 ) {
     for (entity, pos, spawn, state) in &query {

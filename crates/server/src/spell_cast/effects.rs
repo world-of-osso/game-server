@@ -440,15 +440,25 @@ pub fn deal_damage(
     event.crit = crit;
     event.periodic = periodic;
     log_event(world, event);
-    if amount > 0.0 {
-        push_damage_event(world, ctx, target, periodic);
+    if amount > 0.0
+        && (periodic || !super::record_hit_damage(world, ctx.caster, ctx.spell.id, target, amount))
+    {
+        push_damage_event(world, ctx, target, periodic, amount);
     }
     if lethal {
         kill(world, ctx.caster, target, ctx.depth == 0);
     }
 }
 
-fn push_damage_event(world: &mut World, ctx: &EffectCtx, target: Entity, periodic: bool) {
+/// Damage outside a spell's hit event: periodic ticks, and damage by a spell that is
+/// not resolving (scripts).
+fn push_damage_event(
+    world: &mut World,
+    ctx: &EffectCtx,
+    target: Entity,
+    periodic: bool,
+    damage: f32,
+) {
     let (actor, taken) = if periodic {
         (
             procs::PROC_DEAL_HARMFUL_PERIODIC,
@@ -467,6 +477,7 @@ fn push_damage_event(world: &mut World, ctx: &EffectCtx, target: Entity, periodi
             spell_id: Some(ctx.spell.id),
             can_proc: ctx.depth == 0,
             periodic,
+            damage,
         },
     );
 }
@@ -488,6 +499,7 @@ fn kill(world: &mut World, killer: Entity, target: Entity, can_proc: bool) {
             spell_id: None,
             can_proc,
             periodic: false,
+            damage: 0.0,
         },
     );
 }
@@ -556,6 +568,7 @@ pub fn apply_heal(
                 spell_id: Some(ctx.spell.id),
                 can_proc: ctx.depth == 0,
                 periodic: true,
+                damage: 0.0,
             },
         );
     }

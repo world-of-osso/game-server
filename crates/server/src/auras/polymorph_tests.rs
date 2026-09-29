@@ -1,0 +1,289 @@
+//! Polymorph 118 on real world.db data: a level-10 mage's cast turns an attacking
+//! Kobold Vermin into the Polymorphed Sheep (template 16372), which stops swinging and
+//! wanders; Frostbolt damage past 10% of its health breaks it, expiry ends it, and
+//! both restore the kobold's display. Skipped when data/world.db is absent.
+
+use rusqlite::{Connection, OpenFlags};
+use shared::casting::CastState;
+use shared::components::{
+    CreatureMotion, Health, ModelDisplay, Npc, Position, UnitLevel, UnitTarget,
+};
+use shared::protocol::CastFailed;
+use shared::spell_data::CastFailReason;
+
+use super::*;
+use crate::creature_ai::{CreatureState, SpawnPoint};
+use crate::spell_cast::test_harness::{Harness, harness_with_plugins};
+use crate::world_data::WorldData;
+
+const POLYMORPH: u32 = 118;
+const FROSTBOLT: u32 = 116;
+/// Frostbolt's TRIGGER_MISSILE spell: 2.448 × SP school damage, `SPELL_ATTR3_NOT_A_PROC`.
+const FROSTBOLT_DAMAGE: u32 = 228597;
+const KOBOLD_VERMIN: u32 = 6;
+/// Kobold Vermin's only `creature_template_model` display.
+const KOBOLD_DISPLAY: u32 = 10913;
+/// Polymorph effect 1 TRANSFORM MiscValue: Polymorphed Sheep, displays 856 and 857.
+const SHEEP_DISPLAYS: [u32; 2] = [856, 857];
+const TRAINING_DUMMY: u32 = 44548;
+/// Polymorph `SpellCastTimes` 90 (1.7 s) and `SpellDuration` 3 (60 s), in 50 ms frames.
+const POLYMORPH_CAST_FRAMES: usize = 1700 / 50;
+const POLYMORPH_DURATION_FRAMES: usize = 60_000 / 50;
+const MAGE: u8 = 8;
+
+/// Templates of the kobold, the sheep and the training dummy, with their models.
+fn world_data() -> WorldData {
+    let path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/world.db");
+    let conn = Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+    let expected = crate::world_data::load_expected_stats(&conn);
+    let mut templates = crate::world_data::load_templates(&conn, &expected);
+    templates.retain(|entry, _| [KOBOLD_VERMIN, 16372, TRAINING_DUMMY].contains(entry));
+    crate::world_data::load_template_models(&conn, &mut templates);
+    WorldData {
+        templates,
+        ..Default::default()
+    }
+}
+
+/// The harness mage (Polymorph, Frostbolt) and its kobold spawned as a world creature:
+/// spawn point, level, kobold display, a Reactive threat list, creature AI and aggro.
+/// With `max_health` the kobold holds 10% of it against damage.
+fn polymorph_harness(max_health: f32) -> Option<Harness> {
+    let mut h = harness_with_plugins(
+        Vec::new(),
+        &[POLYMORPH, FROSTBOLT, FROSTBOLT_DAMAGE],
+        MAGE,
+        false,
+        |app| {
+            app.insert_resource(world_data());
+            app.add_plugins((
+                crate::creature_ai::CreatureAiPlugin,
+                crate::creature_aggro::CreatureAggroPlugin,
+                crate::unit_target::UnitTargetPlugin,
+            ));
+        },
+    )?;
+    let position = *h.app.world().get::<Position>(h.npc).unwrap();
+    let mut npc = h.app.world_mut().entity_mut(h.npc);
+    npc.insert((
+        Health {
+            current: max_health,
+            max: max_health,
+        },
+        UnitLevel(5),
+        ModelDisplay {
+            display_id: KOBOLD_DISPLAY,
+        },
+        CreatureMotion::Still,
+        SpawnPoint {
+            x: position.x,
+            y: position.y,
+            z: position.z,
+            wander_distance: 0.0,
+            speed_walk: 1.0,
+            speed_run: 1.14286,
+        },
+        crate::spell_cast::powers::CreatureHealthRegenTimer::default(),
+    ));
+    let mut commands = h.app.world_mut().commands();
+    let mut entity = commands.entity(h.npc);
+    crate::creature_aggro::insert_aggro_components(
+        &mut entity,
+        crate::creature_aggro::AggroMode::Reactive,
+        0.0,
+    );
+    h.app.world_mut().flush();
+    h.advance(1);
+    Some(h)
+}
+
+fn display(h: &Harness) -> u32 {
+    h.app.world().get::<ModelDisplay>(h.npc).unwrap().display_id
+}
+
+fn polymorphed(h: &Harness) -> bool {
+    has_aura(h.app.world(), h.npc, POLYMORPH)
+}
+
+/// The kobold attacks the mage (`AttackStart`) until one swing has landed.
+fn kobold_attacks(h: &mut Harness) {
+    let (npc, caster) = (h.npc, h.caster);
+    crate::creature_aggro::attack_start(h.app.world_mut(), npc, caster);
+    for _ in 0..100 {
+        h.advance(1);
+        if h.health(h.caster) < 1000.0 {
+            return;
+        }
+    }
+    panic!("the kobold never hit the mage");
+}
+
+/// Cast Polymorph at the kobold and let the 1.7 s cast finish.
+fn cast_polymorph(h: &mut Harness) {
+    h.cast_and_deliver(POLYMORPH, Some(h.npc));
+    assert!(
+        h.app.world().get::<CastState>(h.caster).is_some(),
+        "{:?}",
+        h.inbox.failed
+    );
+    h.advance(POLYMORPH_CAST_FRAMES + 2);
+    assert!(polymorphed(h), "{:?}", h.inbox.failed);
+}
+
+/// Frostbolt once the GCD is over; the missile lands within 2 s.
+fn cast_frostbolt(h: &mut Harness) {
+    h.advance(30);
+    h.cast_and_deliver(FROSTBOLT, Some(h.npc));
+    h.advance(2000 / 50 + 40);
+}
+
+#[test]
+fn polymorph_turns_the_attacking_kobold_into_a_wandering_sheep_that_stops_swinging() {
+    let Some(mut h) = polymorph_harness(5000.0) else {
+        return;
+    };
+    kobold_attacks(&mut h);
+    cast_polymorph(&mut h);
+    assert!(SHEEP_DISPLAYS.contains(&display(&h)), "{}", display(&h));
+    let aura = auras_of_spell(&h, POLYMORPH);
+    assert_eq!(aura.duration_ms, 60_000);
+    assert!(aura.harmful);
+    // No target shown while confused (SetConfused → SetTarget(Empty)).
+    assert_eq!(
+        h.app.world().get::<UnitTarget>(h.npc),
+        Some(&UnitTarget(None))
+    );
+    let reference = *h.app.world().get::<Position>(h.npc).unwrap();
+    let health = h.health(h.caster);
+    let mut walked = false;
+    for _ in 0..(8000 / 50) {
+        h.advance(1);
+        let at = h.app.world().get::<Position>(h.npc).unwrap();
+        let from_reference = (at.x - reference.x).hypot(at.z - reference.z);
+        assert!(
+            from_reference <= 2.01,
+            "{from_reference} yd from where it was polymorphed"
+        );
+        walked |= h.app.world().get::<CreatureMotion>(h.npc) == Some(&CreatureMotion::Walk);
+    }
+    assert!(walked, "the sheep wanders at walk");
+    assert_eq!(h.health(h.caster), health, "the sheep swung at the mage");
+    // Still engaged with the mage, and still the kobold under the sheep.
+    assert_eq!(
+        h.app.world().get::<CreatureState>(h.npc),
+        Some(&CreatureState::Pursuing {
+            target: h.caster.to_bits()
+        })
+    );
+    assert_eq!(
+        h.app.world().get::<Npc>(h.npc).unwrap().template_id,
+        KOBOLD_VERMIN
+    );
+}
+
+fn auras_of_spell(h: &Harness, spell_id: u32) -> AuraInstance {
+    h.app
+        .world()
+        .get::<ActiveAuras>(h.npc)
+        .and_then(|auras| auras.iter().find(|aura| aura.spell_id == spell_id).cloned())
+        .expect("aura on the kobold")
+}
+
+#[test]
+fn frostbolt_damage_past_a_tenth_of_its_health_breaks_polymorph_and_the_kobold_fights_again() {
+    // 10% of 4000 = 400 against Frostbolt's ~245 (2.448 × SP 100): the second one breaks it.
+    let Some(mut h) = polymorph_harness(4000.0) else {
+        return;
+    };
+    kobold_attacks(&mut h);
+    cast_polymorph(&mut h);
+    cast_frostbolt(&mut h);
+    // Read the hit from the log: polymorph regeneration heals the kobold meanwhile.
+    let hits = frostbolt_hits(&h);
+    assert_eq!(hits.len(), 1, "{:?}", h.inbox.failed);
+    assert!((230..=260).contains(&hits[0]), "{hits:?}");
+    assert!(polymorphed(&h), "one Frostbolt is below the 400 threshold");
+    assert!(SHEEP_DISPLAYS.contains(&display(&h)));
+    cast_frostbolt(&mut h);
+    assert_eq!(frostbolt_hits(&h).len(), 2);
+    assert!(!polymorphed(&h), "the second Frostbolt breaks it");
+    assert_eq!(display(&h), KOBOLD_DISPLAY);
+    assert!(h.app.world().get::<Confused>(h.npc).is_none());
+    let health = h.health(h.caster);
+    h.advance(100);
+    assert!(h.health(h.caster) < health, "the kobold attacks again");
+    assert_eq!(
+        h.app.world().get::<UnitTarget>(h.npc),
+        Some(&UnitTarget(Some(h.caster.to_bits())))
+    );
+}
+
+fn frostbolt_hits(h: &Harness) -> Vec<i32> {
+    h.inbox
+        .log
+        .iter()
+        .filter(|event| {
+            event.kind == shared::protocol::CombatLogKind::Damage
+                && event.spell_id == Some(FROSTBOLT_DAMAGE)
+        })
+        .map(|event| event.amount)
+        .collect()
+}
+
+#[test]
+fn polymorph_expires_after_60_seconds_and_restores_the_kobold() {
+    let Some(mut h) = polymorph_harness(5000.0) else {
+        return;
+    };
+    kobold_attacks(&mut h);
+    cast_polymorph(&mut h);
+    h.advance(POLYMORPH_DURATION_FRAMES - 60);
+    assert!(polymorphed(&h));
+    assert!(SHEEP_DISPLAYS.contains(&display(&h)));
+    h.advance(80);
+    assert!(!polymorphed(&h));
+    assert_eq!(display(&h), KOBOLD_DISPLAY);
+    let health = h.health(h.caster);
+    h.advance(100);
+    assert!(h.health(h.caster) < health, "the kobold attacks again");
+}
+
+#[test]
+fn polymorphed_kobold_regenerates_a_third_of_its_health_every_2_seconds() {
+    let Some(mut h) = polymorph_harness(900.0) else {
+        return;
+    };
+    kobold_attacks(&mut h);
+    h.app.world_mut().get_mut::<Health>(h.npc).unwrap().current = 100.0;
+    // Engaged and not polymorphed: no regeneration (Creature::Update `!IsEngaged()`).
+    h.advance(2000 / 50 + 2);
+    assert_eq!(h.health(h.npc), 100.0);
+    cast_polymorph(&mut h);
+    let mut gains = Vec::new();
+    for _ in 0..(2000 / 50 + 2) {
+        let before = h.health(h.npc);
+        h.advance(1);
+        if h.health(h.npc) != before {
+            gains.push(h.health(h.npc) - before);
+        }
+    }
+    assert!(!gains.is_empty(), "no regeneration within one 2 s interval");
+    assert!(gains.iter().all(|&gain| gain == 300.0), "{gains:?}");
+}
+
+#[test]
+fn polymorph_cannot_target_a_mechanical_training_dummy() {
+    let Some(mut h) = polymorph_harness(5000.0) else {
+        return;
+    };
+    h.app.world_mut().get_mut::<Npc>(h.npc).unwrap().template_id = TRAINING_DUMMY;
+    h.cast_and_deliver(POLYMORPH, Some(h.npc));
+    assert_eq!(
+        h.inbox
+            .failed
+            .last()
+            .map(|failed: &CastFailed| failed.reason),
+        Some(CastFailReason::InvalidTarget)
+    );
+    assert!(!polymorphed(&h));
+}

@@ -639,6 +639,7 @@ fn world_with_creature(entry: u32, min_level: u8) -> crate::world_data::WorldDat
         armor: 0.0,
         mana_modifier: 1.0,
         regenerates_power: false,
+        regenerates_health: true,
     };
     crate::world_data::WorldData {
         templates: std::collections::HashMap::from([(entry, template)]),
