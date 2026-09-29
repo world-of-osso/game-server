@@ -75,6 +75,8 @@ mod scripted_ai;
 mod spell_cast;
 mod spell_info;
 mod stats;
+#[cfg(feature = "system-timings")]
+mod system_timings;
 mod taxi;
 mod teleport;
 mod terrain_height;
@@ -110,7 +112,7 @@ fn add_runtime_plugins(app: &mut App) {
         )),
     )
     .add_plugins(bevy::state::app::StatesPlugin)
-    .add_plugins(bevy::log::LogPlugin::default())
+    .add_plugins(log_plugin())
     .add_plugins(ServerPlugins {
         tick_duration: Duration::from_secs_f64(1.0 / TICK_RATE_HZ),
     })
@@ -120,6 +122,14 @@ fn add_runtime_plugins(app: &mut App) {
     .add_plugins(frame_stats::FrameStatsPlugin {
         budget: Duration::from_secs_f64(1.0 / TICK_RATE_HZ),
     });
+}
+
+fn log_plugin() -> bevy::log::LogPlugin {
+    bevy::log::LogPlugin {
+        #[cfg(feature = "system-timings")]
+        custom_layer: system_timings::system_timing_layer,
+        ..default()
+    }
 }
 
 fn add_game_plugins(app: &mut App) {
