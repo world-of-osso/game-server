@@ -22,6 +22,7 @@ mod creature_ai;
 mod creature_scripts;
 mod creature_tooltip;
 mod currency;
+mod damage_meter;
 mod death;
 mod duel;
 mod durability;
@@ -191,6 +192,7 @@ fn add_world_plugins(app: &mut App) {
         .add_plugins(grid_activity::GridActivityPlugin)
         .add_plugins(stats::StatsPlugin)
         .add_plugins(combat::CombatPlugin)
+        .add_plugins(damage_meter::DamageMeterPlugin)
         .add_plugins(unit_target::UnitTargetPlugin)
         .add_plugins(npc_interaction::NpcInteractionPlugin)
         .add_plugins(merchant::MerchantPlugin)

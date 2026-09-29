@@ -373,6 +373,7 @@ pub(crate) fn send_to_owner<M: lightyear::prelude::Message + Clone>(
 
 /// Send to the owners of the event's source and target (once each).
 pub(crate) fn log_event(world: &mut World, event: CombatLogEvent) {
+    crate::damage_meter::record_damage(world, &event);
     let mut units: Vec<Entity> = [event.source, event.target]
         .into_iter()
         .flatten()
