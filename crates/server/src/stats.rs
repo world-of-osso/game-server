@@ -415,6 +415,12 @@ pub(crate) fn update_character_stats(
         };
         stats.main_hand = gear.main_hand;
         stats.off_hand = gear.off_hand;
+        if *unit_stats != stats.primary {
+            debug!(
+                "{entity} primary stats {:?} -> {:?}, spell power {}",
+                *unit_stats, stats.primary, stats.spell_power
+            );
+        }
         let mut changed = unit_stats.set_if_neq(stats.primary);
         changed |= ratings.set_if_neq(stats.ratings);
         changed |= health.set_if_neq(Health {
