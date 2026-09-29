@@ -534,6 +534,11 @@ pub(crate) fn process_player_inputs(time: Res<Time>, mut params: PlayerInputPara
             .get(link.0)
             .is_ok_and(|death| death.state == DeathState::Dead);
         if controlled || corpse || !params.on_map.contains(link.0) {
+            stop_held_player(
+                link.0,
+                &mut params.players,
+                params.replication_dirty.as_deref(),
+            );
             continue;
         }
         let moving = direction_length(&latest.direction) >= 0.001;
@@ -568,6 +573,23 @@ pub(crate) fn process_player_inputs(time: Res<Time>, mut params: PlayerInputPara
         {
             replication_dirty.mark(link.0);
         }
+    }
+}
+
+/// A player whose input the server drops (taxi, corpse, map transfer) stops moving for
+/// other clients.
+fn stop_held_player(
+    player: Entity,
+    players: &mut Query<PlayerMovement, With<Player>>,
+    replication_dirty: Option<&ReplicationDirtyQueue>,
+) {
+    let Ok((.., mut motion)) = players.get_mut(player) else {
+        return;
+    };
+    if stop_motion(&mut motion).replicated_state_changed
+        && let Some(replication_dirty) = replication_dirty
+    {
+        replication_dirty.mark(player);
     }
 }
 

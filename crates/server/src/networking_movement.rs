@@ -1,6 +1,6 @@
 use bevy::platform::collections::HashMap;
 use bevy::prelude::*;
-use shared::components::{MovementSpeed, Player, Position, Rotation};
+use shared::components::{MovementSpeed, Player, PlayerMotion, Position, Rotation};
 use shared::protocol::PlayerInput;
 
 use super::FallTracker;
@@ -18,6 +18,7 @@ pub(super) type PlayerMovement = (
     Option<&'static AuraStatMods>,
     Option<&'static shared::casting::CastState>,
     &'static mut FallTracker,
+    &'static mut PlayerMotion,
 );
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
@@ -77,15 +78,24 @@ pub(super) fn apply_movement_input(
     clocks: &mut MovementClocks,
     mut terrain: Option<(&mut GroundMap, u32)>,
 ) -> MovementChanges {
-    let Ok((mut position, mut rotation, mut speed, auras, cast_state, mut fall_tracker)) =
-        players.get_mut(player_entity)
+    let Ok((
+        mut position,
+        mut rotation,
+        mut speed,
+        auras,
+        cast_state,
+        mut fall_tracker,
+        mut motion,
+    )) = players.get_mut(player_entity)
     else {
         return MovementChanges::default();
     };
     if let Some(changes) = stop_for_blocking_cast(cast_state, &mut speed) {
-        return changes;
+        let stopped = stop_motion(&mut motion);
+        return changes.merge(stopped);
     }
-    let mut changes = update_rotation_and_speed(input, auras, &mut rotation, &mut speed);
+    let mut changes = update_rotation_and_speed(input, auras, &mut rotation, &mut speed)
+        .merge(set_motion(&mut motion, input_motion(input)));
     let current = Vec3::new(position.x, position.y, position.z);
     let reported = Vec3::from(input.position);
     let swimming = input.swimming
@@ -256,6 +266,63 @@ fn highest_arc(impulse: f32, secs: f32) -> f32 {
     arc((impulse / gravity).clamp(earliest, latest))
 }
 
+/// Retail `MovementFlags` of an input, as the client's `CMSG_MOVE_*` carries them: the
+/// wire direction (its animation direction, `movement_to_direction`) against the facing
+/// sets FORWARD/BACKWARD/STRAFE_LEFT/STRAFE_RIGHT, the run toggle WALKING, the swim
+/// SWIMMING and a jump in the air FALLING.
+pub(super) fn input_motion(input: &PlayerInput) -> PlayerMotion {
+    let length = direction_length(&input.direction);
+    let mut flags = 0;
+    if length > 0.001 {
+        let forward = facing_alignment(input.facing_yaw, &input.direction, length);
+        let right = right_alignment(input.facing_yaw, &input.direction, length);
+        for (alignment, positive, negative) in [
+            (forward, PlayerMotion::FORWARD, PlayerMotion::BACKWARD),
+            (right, PlayerMotion::STRAFE_RIGHT, PlayerMotion::STRAFE_LEFT),
+        ] {
+            if alignment > 0.5 {
+                flags |= positive;
+            } else if alignment < -0.5 {
+                flags |= negative;
+            }
+        }
+    }
+    for (set, flag) in [
+        (!input.running, PlayerMotion::WALKING),
+        (input.swimming, PlayerMotion::SWIMMING),
+        (input.jumping, PlayerMotion::FALLING),
+    ] {
+        if set {
+            flags |= flag;
+        }
+    }
+    PlayerMotion(flags)
+}
+
+/// The flags without movement: what a stop input leaves (walk and swim mode).
+fn stopped_motion(motion: PlayerMotion) -> PlayerMotion {
+    const MOVING: u32 = PlayerMotion::FORWARD
+        | PlayerMotion::BACKWARD
+        | PlayerMotion::STRAFE_LEFT
+        | PlayerMotion::STRAFE_RIGHT
+        | PlayerMotion::FALLING;
+    PlayerMotion(motion.0 & !MOVING)
+}
+
+/// Write `next` only when it differs, so unchanged flags do not replicate.
+fn set_motion(motion: &mut Mut<'_, PlayerMotion>, next: PlayerMotion) -> MovementChanges {
+    MovementChanges {
+        position_changed: false,
+        replicated_state_changed: motion.set_if_neq(next),
+    }
+}
+
+/// Stop a player the server holds still (a blocking cast, a corpse).
+pub(super) fn stop_motion(motion: &mut Mut<'_, PlayerMotion>) -> MovementChanges {
+    let stopped = stopped_motion(**motion);
+    set_motion(motion, stopped)
+}
+
 fn stop_for_blocking_cast(
     cast_state: Option<&shared::casting::CastState>,
     speed: &mut Mut<'_, MovementSpeed>,
@@ -337,6 +404,12 @@ fn facing_alignment(facing_yaw: f32, direction: &[f32; 3], direction_length: f32
     let forward_x = facing_yaw.sin();
     let forward_z = facing_yaw.cos();
     (direction[0] * forward_x + direction[2] * forward_z) / direction_length
+}
+
+/// How far `direction` points to the facing's right, `(-forward.z, forward.x)` (the
+/// client's strafe right).
+fn right_alignment(facing_yaw: f32, direction: &[f32; 3], direction_length: f32) -> f32 {
+    (-direction[0] * facing_yaw.cos() + direction[2] * facing_yaw.sin()) / direction_length
 }
 
 pub(super) fn direction_length(direction: &[f32; 3]) -> f32 {

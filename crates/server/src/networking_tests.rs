@@ -25,6 +25,7 @@ fn spawn_player(world: &mut World, x: f32, y: f32, z: f32) -> Entity {
                 z: 0.0,
             },
             MovementSpeed(DEFAULT_RUN_SPEED),
+            shared::components::PlayerMotion::default(),
             VerticalVelocity::default(),
             FallTracker::grounded(y),
             crate::maps::InMap::continent(0),
@@ -98,6 +99,8 @@ mod misc;
 mod movement;
 #[path = "networking_tests/physics.rs"]
 mod physics;
+#[path = "networking_tests/player_motion.rs"]
+mod player_motion;
 #[path = "networking_tests/receiver_rate.rs"]
 mod receiver_rate;
 #[path = "networking_tests/stockade_run.rs"]

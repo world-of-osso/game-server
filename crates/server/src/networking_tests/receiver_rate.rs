@@ -4,7 +4,7 @@ use lightyear::prelude::{AppMessageExt, PeerId};
 use shared::protocol::InputChannel;
 use std::time::Duration;
 
-fn receiver_app() -> (App, Entity, Entity) {
+pub(super) fn receiver_app() -> (App, Entity, Entity) {
     let mut app = App::new();
     app.add_plugins(MinimalPlugins);
     app.add_plugins(bevy::state::app::StatesPlugin);
@@ -31,7 +31,7 @@ fn receiver_app() -> (App, Entity, Entity) {
     (app, player, connection)
 }
 
-fn deliver_and_tick(app: &mut App, connection: Entity, inputs: Vec<PlayerInput>) {
+pub(super) fn deliver_and_tick(app: &mut App, connection: Entity, inputs: Vec<PlayerInput>) {
     let count = inputs.len();
     for input in inputs {
         app.world_mut()

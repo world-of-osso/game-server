@@ -1,8 +1,8 @@
 use bevy::prelude::*;
 use lightyear::prelude::*;
 use shared::components::{
-    CombatRatings, Gold, GuildMembership, Health, Level, Mana, MovementSpeed, Player, Position,
-    Rotation, UnitFactionTemplate, UnitLevel, UnitStats, VerticalVelocity,
+    CombatRatings, Gold, GuildMembership, Health, Level, Mana, MovementSpeed, Player, PlayerMotion,
+    Position, Rotation, UnitFactionTemplate, UnitLevel, UnitStats, VerticalVelocity,
 };
 use shared::protocol::{
     AuthChannel, CreateCharacter, CreateCharacterResponse, DeleteCharacter,
@@ -514,6 +514,7 @@ fn build_player_runtime_components(character_id: u64, level: u16) -> impl Bundle
             z: 0.0,
         },
         MovementSpeed(DEFAULT_RUN_SPEED),
+        PlayerMotion::default(),
         VerticalVelocity::default(),
         UnitStats::default(),
         CombatRatings::default(),
