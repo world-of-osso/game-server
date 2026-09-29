@@ -713,3 +713,46 @@ fn re_entering_the_world_keeps_where_the_old_session_moved_to() {
             .unwrap();
     assert_eq!((stored.x, stored.y, stored.z), (-10550.8, 1034.49, 59.07));
 }
+
+/// Fbloading (292 health) entered through character select onto the Northshire lake bed
+/// (azeroth 32,48, WoW -8558, -490, seabed 140.04): with the real `GroundMap` and
+/// `update_mirror_timers`, breath runs out 180 s of server time after the dive and drowning
+/// hits 58-59 health (20% + urand(0, 1)) every second.
+#[test]
+fn a_selected_player_on_the_lake_bed_drowns_every_second_after_180_s() {
+    let db = test_db();
+    let account_id = 11;
+    let (character_id, _) = persistence::create_character(&db.db, account_id, "Fbloading", 1, 1)
+        .expect("character should be created");
+    let mut data = persistence::load_character(&db.db, character_id).unwrap();
+    (data.x, data.y, data.z) = (-8558.0, -490.0, 140.04);
+    (data.health, data.max_health) = (292.0, 292.0);
+    persistence::save_character(&db.db, character_id, &data);
+
+    let (mut app, player) = select_character_in_world(db, account_id, character_id);
+    app.insert_resource(crate::ground::GroundMap::new(
+        &std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../game-engine/data"),
+        std::collections::HashMap::from([(0, 775_971)]),
+    ));
+    app.add_systems(FixedUpdate, crate::mirror_timers::update_mirror_timers);
+    let mut hits = Vec::new();
+    let mut last = 292.0;
+    for tick in 0..20 * 184 {
+        let mut time = Time::<()>::default();
+        time.advance_by(Duration::from_millis(50));
+        app.insert_resource(time);
+        app.world_mut().run_schedule(FixedUpdate);
+        let health = app.world().get::<Health>(player).unwrap().current;
+        if health < last {
+            hits.push((tick, last - health));
+        }
+        last = health;
+    }
+
+    let ticks: Vec<usize> = hits.iter().map(|(tick, _)| *tick).collect();
+    assert_eq!(ticks, vec![3601, 3621, 3641, 3661]);
+    assert!(
+        hits.iter().all(|(_, hit)| (58.0..=59.0).contains(hit)),
+        "{hits:?}"
+    );
+}

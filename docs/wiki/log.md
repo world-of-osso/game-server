@@ -340,3 +340,7 @@ Created `systems/quests.md` (quest data, rules, runtime) and `specs/quests.md`; 
 ## [2026-09-28] update | Spec spells by level, pushed action bar spells
 
 [[class-progression]]: spec spells wait for their `SpellLevel` like TrinityCore `LearnSpecializationSpells`, and newly learned actives fill the first empty main bar slots (Retail `SPELL_PUSHED_TO_ACTIONBAR`).
+
+## [2026-09-29] investigation | Drowning on :5000
+
+[[swimming-and-breath]]: no drowning damage in the live fixture was server clock lag (4 000 ticks in 326 s), not the timer, damage or replication path; a private-instance run drowned every second and replicated. Regression test through character select added.
