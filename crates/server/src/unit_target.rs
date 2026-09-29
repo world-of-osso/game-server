@@ -6,6 +6,7 @@ use bevy::prelude::*;
 use shared::components::UnitTarget;
 
 use crate::creature_ai::CreatureState;
+use crate::grid_activity::GridDormant;
 use crate::networking::CombatTarget;
 
 pub struct UnitTargetPlugin;
@@ -33,11 +34,20 @@ fn sync_player_unit_target(
     }
 }
 
+type CreatureTargets<'w, 's, F> =
+    Query<'w, 's, (Entity, &'static CreatureState, Option<&'static UnitTarget>), F>;
+
+/// Active creatures whose state changed, plus creatures whose grid just woke:
+/// a change made while dormant is not seen by the `Changed` scan, and no player
+/// is in range of a dormant creature to read its target.
 fn sync_creature_unit_target(
     mut commands: Commands,
-    query: Query<(Entity, &CreatureState, Option<&UnitTarget>), Changed<CreatureState>>,
+    changed: CreatureTargets<(Changed<CreatureState>, Without<GridDormant>)>,
+    all: CreatureTargets<()>,
+    mut woke: RemovedComponents<GridDormant>,
 ) {
-    for (entity, state, current) in &query {
+    let woke = woke.read().filter_map(|entity| all.get(entity).ok());
+    for (entity, state, current) in changed.iter().chain(woke) {
         let target = match *state {
             CreatureState::Pursuing { target } => Some(target),
             _ => None,
@@ -180,5 +190,36 @@ mod tests {
         *app.world_mut().get_mut::<CreatureState>(npc).unwrap() = CreatureState::Returning;
         app.update();
         assert_eq!(app.world().get::<UnitTarget>(npc), Some(&UnitTarget(None)));
+    }
+
+    #[test]
+    fn state_changed_while_dormant_reaches_the_target_on_wake() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        app.add_plugins(UnitTargetPlugin);
+        let player = app.world_mut().spawn_empty().id();
+        let npc = app
+            .world_mut()
+            .spawn((
+                CreatureState::Pursuing {
+                    target: player.to_bits(),
+                },
+                GridDormant,
+            ))
+            .id();
+        app.update();
+        app.update();
+        *app.world_mut().get_mut::<CreatureState>(npc).unwrap() = CreatureState::Pursuing {
+            target: player.to_bits(),
+        };
+        app.update();
+        assert_eq!(app.world().get::<UnitTarget>(npc), None);
+
+        app.world_mut().entity_mut(npc).remove::<GridDormant>();
+        app.update();
+        assert_eq!(
+            app.world().get::<UnitTarget>(npc),
+            Some(&UnitTarget(Some(player.to_bits())))
+        );
     }
 }
