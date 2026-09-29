@@ -109,7 +109,8 @@ pub struct AuraEvent {
     /// False for events of triggered spells (they interrupt but never proc).
     pub can_proc: bool,
     pub periodic: bool,
-    /// Damage the event dealt to `target` (after absorbs); 0 for no damage.
+    /// Damage the event dealt to `target` after absorbs, in its health units (level
+    /// scaling); 0 for no damage.
     pub damage: f32,
 }
 

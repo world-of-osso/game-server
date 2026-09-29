@@ -26,6 +26,8 @@ const KOBOLD_DISPLAY: u32 = 10913;
 /// Polymorph effect 1 TRANSFORM MiscValue: Polymorphed Sheep, displays 856 and 857.
 const SHEEP_DISPLAYS: [u32; 2] = [856, 857];
 const TRAINING_DUMMY: u32 = 44548;
+/// Northshire Blackrock Spy: ContentTuning 73 (levels 1-30), humanoid.
+const BLACKROCK_SPY: u32 = 49874;
 /// Polymorph `SpellCastTimes` 90 (1.7 s) and `SpellDuration` 3 (60 s), in 50 ms frames.
 const POLYMORPH_CAST_FRAMES: usize = 1700 / 50;
 const POLYMORPH_DURATION_FRAMES: usize = 60_000 / 50;
@@ -37,7 +39,8 @@ fn world_data() -> WorldData {
     let conn = Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
     let expected = crate::world_data::load_expected_stats(&conn);
     let mut templates = crate::world_data::load_templates(&conn, &expected);
-    templates.retain(|entry, _| [KOBOLD_VERMIN, 16372, TRAINING_DUMMY].contains(entry));
+    templates
+        .retain(|entry, _| [KOBOLD_VERMIN, 16372, TRAINING_DUMMY, BLACKROCK_SPY].contains(entry));
     crate::world_data::load_template_models(&conn, &mut templates);
     WorldData {
         templates,
@@ -286,4 +289,51 @@ fn polymorph_cannot_target_a_mechanical_training_dummy() {
         Some(CastFailReason::InvalidTarget)
     );
     assert!(!polymorphed(&h));
+}
+
+#[test]
+fn frostbolt_breaks_polymorph_on_a_level_scaled_blackrock_spy() {
+    // A level-30 spy scaled to the level-10 mage: Frostbolt's ~245 damage costs it far
+    // more of its native health, and 10% of that health is what breaks Polymorph.
+    let Some(mut h) = polymorph_harness(1.0) else {
+        return;
+    };
+    let stats = h.app.world().resource::<WorldData>().templates[&BLACKROCK_SPY]
+        .tuning
+        .as_ref()
+        .expect("the spy is tuned")
+        .stats
+        .clone();
+    let max_health = stats.max_health(30);
+    h.app.world_mut().entity_mut(h.caster).insert(UnitLevel(10));
+    let mut spy = h.app.world_mut().entity_mut(h.npc);
+    spy.get_mut::<Npc>().unwrap().template_id = BLACKROCK_SPY;
+    spy.insert((
+        shared::level_scaling::LevelScaling {
+            content_tuning_id: 73,
+            min_level: 1,
+            max_level: 30,
+            delta: 0,
+        },
+        crate::level_scaling::ScaledStats(stats),
+        UnitLevel(30),
+        Health {
+            current: max_health,
+            max: max_health,
+        },
+    ));
+    kobold_attacks(&mut h);
+    cast_polymorph(&mut h);
+    let hit = frostbolt_hits(&h).len();
+    cast_frostbolt(&mut h);
+    let hits = frostbolt_hits(&h);
+    assert_eq!(hits.len(), hit + 1, "{:?}", h.inbox.failed);
+    assert!(
+        (hits[hit] as f32) < max_health * 0.1,
+        "the dealt damage {} alone is below the threshold {}",
+        hits[hit],
+        max_health * 0.1
+    );
+    assert!(!polymorphed(&h), "the spy's health loss breaks it");
+    assert_eq!(display(&h), KOBOLD_DISPLAY);
 }

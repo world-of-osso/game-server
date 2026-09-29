@@ -440,10 +440,13 @@ pub fn deal_damage(
     event.crit = crit;
     event.periodic = periodic;
     log_event(world, event);
+    // Proc events carry the damage in the target's health units (level scaling), which
+    // breakable crowd control compares with the target's max health.
     if amount > 0.0
-        && (periodic || !super::record_hit_damage(world, ctx.caster, ctx.spell.id, target, amount))
+        && (periodic
+            || !super::record_hit_damage(world, ctx.caster, ctx.spell.id, target, scaled_loss))
     {
-        push_damage_event(world, ctx, target, periodic, amount);
+        push_damage_event(world, ctx, target, periodic, scaled_loss);
     }
     if lethal {
         kill(world, ctx.caster, target, ctx.depth == 0);

@@ -597,7 +597,7 @@ fn swing_aura_events(attacker: Entity, target: Entity, outcome: &SwingOutcome) -
         spell_id: None,
         can_proc: true,
         periodic: false,
-        damage: outcome.damage,
+        damage: outcome.scaled_loss,
     }];
     if outcome.npc_died || outcome.player_died {
         events.push(AuraEvent {
@@ -752,6 +752,8 @@ struct SwingOutcome {
     hand: Hand,
     kind: MeleeOutcome,
     damage: f32,
+    /// `damage` in the target's health units (level scaling).
+    scaled_loss: f32,
     blocked: f32,
     /// Damage beyond the target's health before the swing.
     overkill: f32,
@@ -856,6 +858,7 @@ fn try_swing(
         hand,
         kind,
         damage,
+        scaled_loss,
         blocked,
         overkill,
         weapon_speed: weapon.speed,
