@@ -270,7 +270,7 @@ fn highest_arc(impulse: f32, secs: f32) -> f32 {
 /// wire direction (its animation direction, `movement_to_direction`) against the facing
 /// sets FORWARD/BACKWARD/STRAFE_LEFT/STRAFE_RIGHT, the run toggle WALKING, the swim
 /// SWIMMING and a jump in the air FALLING.
-pub(super) fn input_motion(input: &PlayerInput) -> PlayerMotion {
+fn input_motion(input: &PlayerInput) -> PlayerMotion {
     let length = direction_length(&input.direction);
     let mut flags = 0;
     if length > 0.001 {
