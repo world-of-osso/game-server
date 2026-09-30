@@ -293,6 +293,87 @@ fn wire_mail_gold_first_still_waits_for_inbox_and_ignores_wrong_object() {
 }
 
 #[test]
+fn wire_mail_money_waits_for_initial_own_gold() {
+    let mut h = Harness::new(EconomyOperation::MailTakeMoney { mail_id: 9 });
+    h.tick();
+    h.mailbox_role();
+    h.reply::<_, MailChannel>(mailbox(200, false));
+    assert!(h.requests::<MailRequest>().is_empty());
+    h.app.world_mut().spawn(shared::components::Gold(100));
+    h.tick();
+    assert!(h.requests::<MailRequest>().is_empty());
+    h.money(100);
+    assert_eq!(
+        h.requests::<MailRequest>(),
+        &[MailRequest {
+            object: 77,
+            mail_id: 9,
+            action: MailAction::TakeMoney
+        }]
+    );
+    assert!(h.exit().is_none());
+}
+
+#[test]
+fn wire_mail_bag_first_does_not_complete_until_fixed_slot_removed() {
+    let mut h = Harness::new(EconomyOperation::MailTakeAttachment {
+        mail_id: 9,
+        slot: 5,
+    });
+    h.tick();
+    h.reply::<_, InventoryChannel>(InventorySnapshot {
+        bags: vec![BagContents {
+            bag: 0,
+            size: 16,
+            items: vec![BagSlotItem {
+                slot: 1,
+                item: item(3),
+            }],
+        }],
+    });
+    h.reply::<_, MailChannel>(mailbox(0, true));
+    assert!(h.requests::<MailRequest>().is_empty());
+    h.mailbox_role();
+    assert_eq!(h.requests::<MailRequest>().len(), 1);
+    h.reply::<_, InventoryChannel>(InventoryDelta {
+        changes: vec![InventorySlotChange {
+            location: ItemLocation::Bag { bag: 0, slot: 1 },
+            item: Some(item(5)),
+        }],
+    });
+    assert!(h.exit().is_none());
+    h.reply::<_, MailChannel>(mailbox(0, true));
+    assert!(h.exit().is_none());
+    h.reply::<_, MailChannel>(mailbox(0, false));
+    assert_eq!(h.exit(), Some(AppExit::Success));
+}
+
+#[test]
+fn wire_mail_initial_rejection_closure_and_timeout_block_claims() {
+    for mode in ["failed", "closed", "timeout"] {
+        let mut h = Harness::new(EconomyOperation::MailTakeMoney { mail_id: 9 });
+        h.tick();
+        h.reply::<_, MailChannel>(mailbox(200, false));
+        match mode {
+            "failed" => h.reply::<_, InteractionChannel>(InteractionFailed {
+                npc: 77,
+                error: InteractionError::TooFarAway,
+            }),
+            "closed" => h.reply::<_, InteractionChannel>(InteractionClosed { npc: 77 }),
+            _ => {
+                h.app.world_mut().resource_mut::<EconomyFlow>().started =
+                    std::time::Instant::now() - Duration::from_secs(11);
+                h.tick();
+            }
+        }
+        assert_eq!(h.exit(), Some(AppExit::Error(1.try_into().unwrap())));
+        h.tick();
+        assert!(h.requests::<MailRequest>().is_empty());
+        assert_eq!(h.requests::<UseGameObject>().len(), 1);
+    }
+}
+
+#[test]
 fn wire_mail_rejections_close_and_deadlines_never_retry() {
     for mode in ["failed", "closed", "timeout"] {
         let mut h = Harness::new(EconomyOperation::MailTakeMoney { mail_id: 9 });

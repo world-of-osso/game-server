@@ -278,6 +278,27 @@ fn prepare_attachment_proof(
     }))
 }
 
+fn confirm_attachment_claim(
+    header: &MailHeader,
+    bags: &MerchantState,
+    slot: u8,
+    item_id: u32,
+    count: u64,
+) -> Option<String> {
+    let still_attached = header
+        .attachments
+        .iter()
+        .any(|attachment| attachment.slot == slot);
+    let bag_count = bags.count(item_id);
+    if still_attached || bag_count < count {
+        return None;
+    }
+    Some(format!(
+        "attachment claim confirmed by inbox and inventory: mail_id={} slot={slot} item_id={item_id} count={bag_count}",
+        header.mail_id
+    ))
+}
+
 fn confirm_claim(mail: &MailState, gold: Option<u64>) -> Option<String> {
     let inbox = mail.inbox.as_ref()?;
     match mail.expected.as_ref()? {
@@ -306,17 +327,7 @@ fn confirm_claim(mail: &MailState, gold: Option<u64>) -> Option<String> {
                 .mails
                 .iter()
                 .find(|header| header.mail_id == *mail_id)?;
-            let still_attached = header
-                .attachments
-                .iter()
-                .any(|attachment| attachment.slot == *slot);
-            let bag_count = mail.bags.count(*item_id);
-            if still_attached || bag_count < *count {
-                return None;
-            }
-            Some(format!(
-                "attachment claim confirmed by inbox and inventory: mail_id={mail_id} slot={slot} item_id={item_id} count={bag_count}"
-            ))
+            confirm_attachment_claim(header, &mail.bags, *slot, *item_id, *count)
         }
     }
 }

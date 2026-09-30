@@ -573,12 +573,30 @@ mod tests {
                 "11",
             ],
         ] {
+            let command = args[1];
             let cli = Cli::try_parse_from(std::iter::once("game-cli").chain(args)).unwrap();
             let CliCommand::Economy(action) = build_action(cli).command else {
                 panic!("expected economy action");
             };
             assert_eq!(action.npc, 77);
             assert_eq!(action.gossip_option, None);
+            match (command, action.operation) {
+                ("list", EconomyOperation::MailList)
+                | (
+                    "take-money",
+                    EconomyOperation::MailTakeMoney {
+                        mail_id: 9_000_000_000,
+                    },
+                )
+                | (
+                    "take-attachment",
+                    EconomyOperation::MailTakeAttachment {
+                        mail_id: 9,
+                        slot: 11,
+                    },
+                ) => {}
+                _ => panic!("incorrect parsed mail operation"),
+            }
         }
         for args in [
             vec!["mail", "list", "--npc", "77"],
