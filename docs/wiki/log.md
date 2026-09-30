@@ -1,5 +1,9 @@
 # Wiki Log
 
+## [2026-09-30] systems | Economy catalog importer
+
+Created [[economy-catalog]] and indexed it. Read-only world.db and timestamped public TSM snapshots supply runtime item metadata, market maps and explicit spawned merchant/profession/expansion assignments. Jillian Tanner 5565:0:165 has 224 classic Leatherworking recipes, 312 markets and 33 raw gatherables; quantity follows profession.rs raw rounding, not points + 1. Report records selected price/popularity provenance, exclusions and explicit empty-production warnings. Midnight 11 remains blocked: 115 CREATE_ITEM output spells, six Fishing mappings, 109 missing mappings, no Leatherworking mapping or claimed new Silvermoon spawn. Runtime integration and spec acceptance remain separate.
+
 ## [2026-09-30] systems | Spell travel time
 
 Updated [[spell-casting]] and [[combat]]. Spells with a missile `Speed` now land after their flight (TrinityCore `Spell::HandleDelayed`, `spell_cast/missiles.rs`): `SpellGo`, `CastSuccess` and combat at launch; damage, auras, threat, procs and the combat log at the hit. Before, Frostbolt's damage number showed about 0.4 s before the client's missile arrived. Also: periodic ticks start no combat (TC `DealDamage`), so a DoT alone no longer keeps a dummy or PvP fight going, and creatures drop victims more than 103 yd from home 10 s after their last direct damage (TC `CanCreatureAttack`).
