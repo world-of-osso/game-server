@@ -30,7 +30,11 @@ pub(super) fn search_auctions_matching(
     }
 }
 
-fn matches_search_query(auction: &AuctionData, query: &AuctionSearchQuery, needle: &str) -> bool {
+pub(super) fn matches_search_query(
+    auction: &AuctionData,
+    query: &AuctionSearchQuery,
+    needle: &str,
+) -> bool {
     query.item_id.is_none_or(|id| auction.item.item_id == id)
         && quality_matches(auction, query)
         && level_matches(auction, query)
@@ -112,7 +116,7 @@ fn compare_listing(
     directed.then_with(|| a.auction_id.cmp(&b.auction_id))
 }
 
-fn auction_time_rank(time_left: AuctionTimeLeft) -> u8 {
+pub(super) fn auction_time_rank(time_left: AuctionTimeLeft) -> u8 {
     match time_left {
         AuctionTimeLeft::Short => 0,
         AuctionTimeLeft::Medium => 1,
@@ -174,7 +178,7 @@ const TIME_LEFT_SHORT_SECS: u64 = 60;
 const TIME_LEFT_MEDIUM_SECS: u64 = 60 * 30;
 const TIME_LEFT_LONG_SECS: u64 = 60 * 60 * 6;
 
-fn time_left(expires_at_unix_secs: u64, now: u64) -> AuctionTimeLeft {
+pub(super) fn time_left(expires_at_unix_secs: u64, now: u64) -> AuctionTimeLeft {
     let remaining = expires_at_unix_secs.saturating_sub(now);
     if remaining <= TIME_LEFT_SHORT_SECS {
         AuctionTimeLeft::Short

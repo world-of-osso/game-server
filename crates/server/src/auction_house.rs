@@ -17,15 +17,16 @@ use crate::persistence::{
     mail_store::{self, MailData, MailItemData, MailSender},
 };
 
+mod browse;
 mod handlers;
 mod operations;
 mod queries;
 
 use self::handlers::{
     expire_auctions, initialize_auction_state, process_bid_list_requests, process_bid_requests,
-    process_buyout_requests, process_cancel_requests, process_create_requests,
-    process_inventory_requests, process_open_requests, process_owned_requests,
-    process_query_requests,
+    process_browse_requests, process_buyout_requests, process_cancel_requests,
+    process_create_requests, process_inventory_requests, process_open_requests,
+    process_owned_requests, process_query_requests,
 };
 pub(crate) use self::operations::deposit_cost;
 pub(crate) use self::operations::seller_sale_mail;
@@ -77,6 +78,7 @@ impl Plugin for AuctionHousePlugin {
         app.add_systems(Update, initialize_auction_state);
         app.add_systems(Update, process_open_requests);
         app.add_systems(Update, process_query_requests);
+        app.add_systems(Update, process_browse_requests);
         app.add_systems(Update, process_inventory_requests);
         app.add_systems(Update, process_owned_requests);
         app.add_systems(Update, process_bid_list_requests);

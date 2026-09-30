@@ -71,23 +71,74 @@ pub(super) fn search_for_viewer(
         return search_auctions(auctions, query);
     }
     super::queries::search_auctions_matching(auctions, query, |auction| {
-        let Some(template) = templates.and_then(|templates| templates.get(auction.item.item_id))
-        else {
-            return false;
-        };
-        if query
-            .class_id
-            .is_some_and(|class| class != template.scaling.class_id)
-        {
-            return false;
-        }
-        if !query.usable_only {
-            return true;
-        }
-        viewer.is_some_and(|(race, class, level)| {
+        auction_matches_viewer(auction, query, templates, viewer)
+    })
+}
+
+pub(super) fn auction_matches_viewer(
+    auction: &AuctionData,
+    query: &AuctionSearchQuery,
+    templates: Option<&crate::item_templates::ItemTemplates>,
+    viewer: Option<(u8, u8, u16)>,
+) -> bool {
+    if query.class_id.is_none() && !query.usable_only {
+        return true;
+    }
+    let Some(template) = templates.and_then(|templates| templates.get(auction.item.item_id)) else {
+        return false;
+    };
+    if query
+        .class_id
+        .is_some_and(|class| class != template.scaling.class_id)
+    {
+        return false;
+    }
+    !query.usable_only
+        || viewer.is_some_and(|(race, class, level)| {
             template.required_level <= level && template.allows(class, race)
         })
-    })
+}
+
+pub(super) fn process_browse_requests(
+    mut receivers: SessionReceiver<shared::protocol::QueryAuctionBrowse>,
+    state: Res<AuctionHouseState>,
+    templates: Option<Res<crate::item_templates::ItemTemplates>>,
+    links: Query<&crate::networking::PlayerLink>,
+    players: Query<(
+        &shared::components::Player,
+        Option<&shared::components::Level>,
+    )>,
+    mut senders: Query<&mut MessageSender<shared::protocol::AuctionBrowseResults>>,
+    mut rejections: Query<&mut MessageSender<AuctionOperationResponse>>,
+) {
+    for_each_session_request(&mut receivers, |entity, _, house, mut req| {
+        let Some(house) = house else {
+            send_auction_message(&mut rejections, entity, err(NO_AUCTIONEER));
+            return;
+        };
+        req.query.faction = house;
+        let viewer = links
+            .get(entity)
+            .ok()
+            .and_then(|link| players.get(link.0).ok())
+            .map(|(player, level)| {
+                (
+                    player.race,
+                    player.class,
+                    level.map_or(1, |level| u16::from(level.0)),
+                )
+            });
+        send_auction_message(
+            &mut senders,
+            entity,
+            super::browse::browse_for_viewer(
+                &state.auctions,
+                &req.query,
+                templates.as_deref(),
+                viewer,
+            ),
+        );
+    });
 }
 
 pub(super) fn process_query_requests(
