@@ -144,7 +144,7 @@ Formulas:
 - **Weapon hit:** a roll in the main hand's `[min, max]` + `AP / 6 × speed`; 121 uses the weapon type's normalized speed. Main-hand damage comes from the equipped weapon ([[character-stats]] Gear), unarmed 1–2 at 2.0 s.
 
 Damage and heal side effects:
-- Damage sets `LastDamager` and puts source and target in combat (`combat::enter_combat`, 5 s grace).
+- Damage sets `LastDamager` and puts source and target in combat with each other (`combat_refs::set_in_combat_with`, [[combat]] Combat State).
 - A lethal hit on an NPC applies `DeathState` and removes `Replicate`.
 - A lethal hit on a player writes `PlayerDeathTransition`.
 

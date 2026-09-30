@@ -142,7 +142,8 @@ fn melee_swings_on_the_dummy_reach_the_attackers_combat_log() {
 }
 
 /// Evade → `CombatStop` → `RemoveAllAttackers`: a player still auto-attacking
-/// the dummy from out of range stops, and leaves combat after the grace.
+/// the dummy from out of range stops, and its combat with the dummy has ended with
+/// the dummy's: auto-attack alone keeps nobody in combat.
 #[test]
 fn evade_stops_out_of_range_attackers_and_they_leave_combat() {
     let Some(mut h) = dummy_harness() else {
@@ -169,8 +170,6 @@ fn evade_stops_out_of_range_attackers_and_they_leave_combat() {
             .is_none(),
         "the evade stops the attacker's auto-attack"
     );
-    // The attacker's own 5 s combat grace then runs out.
-    h.advance(110);
     assert_eq!(
         h.app.world().get::<CombatStatus>(caster),
         Some(&CombatStatus(false))

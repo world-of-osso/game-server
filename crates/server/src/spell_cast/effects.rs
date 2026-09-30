@@ -430,8 +430,7 @@ pub fn deal_damage(
     world
         .entity_mut(target)
         .insert(crate::combat::LastDamager(ctx.caster));
-    crate::combat::enter_combat(world, ctx.caster);
-    crate::combat::enter_combat(world, target);
+    crate::combat_refs::set_in_combat_with(world, ctx.caster, target);
     crate::creature_aggro::add_threat(world, target, ctx.caster, amount);
     let mut event = log_amount(ctx, target, CombatLogKind::Damage);
     event.amount = amount as i32;

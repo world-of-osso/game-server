@@ -1,7 +1,7 @@
 use super::*;
 use crate::stats::CharacterStats;
 use bevy::ecs::system::RunSystemOnce;
-use shared::components::{Player, UnitLevel};
+use shared::components::{CombatStatus, Player, UnitLevel};
 
 #[path = "combat_tests/attack_requests.rs"]
 mod attack_requests;
@@ -83,10 +83,8 @@ fn spawn_attacker(app: &mut App, position: Position, target: Entity) -> Entity {
         .id()
 }
 
-fn run_maintain_combat_state_tick(app: &mut App) {
-    let _ = app
-        .world_mut()
-        .run_system_once(maintain_in_combat_state_system);
+fn run_expire_combat_refs_tick(app: &mut App) {
+    crate::combat_refs::expire_combat_refs_system(app.world_mut());
 }
 
 /// Run auto-attack logic without needing lightyear MessageSender.
@@ -97,10 +95,8 @@ fn run_attack_tick(app: &mut App) {
          mut attackers: Query<(Entity, &mut AutoAttack, &Position, Option<&CharacterStats>)>,
          mut targets: AutoAttackTargets,
          scaling: Query<ScalingItem<'static>>,
-         armor_constants: Option<Res<ArmorConstants>>,
-         combat_statuses: Query<&CombatStatus>| {
+         armor_constants: Option<Res<ArmorConstants>>| {
             let dt = time.delta_secs();
-            let combat_expires_at = time.elapsed_secs_f64() + COMBAT_GRACE_SECS;
             let context = SwingContext {
                 scaling: &scaling,
                 armor_constants: armor_constants.as_deref(),
@@ -128,18 +124,9 @@ fn run_attack_tick(app: &mut App) {
                     )
                     .is_some()
                     {
-                        refresh_combat_state(
-                            &mut commands,
-                            &combat_statuses,
-                            entity,
-                            combat_expires_at,
-                        );
-                        refresh_combat_state(
-                            &mut commands,
-                            &combat_statuses,
-                            te,
-                            combat_expires_at,
-                        );
+                        commands.queue(move |world: &mut World| {
+                            crate::combat_refs::set_in_combat_with(world, entity, te);
+                        });
                     }
                 }
             }
@@ -372,10 +359,7 @@ fn active_combat_maintenance_does_not_dirty_true_status() {
     let mut app = setup_app();
     let target = spawn_target(&mut app, pos(1.0, 0.0, 0.0), 100.0);
     let attacker = spawn_attacker(&mut app, pos(0.0, 0.0, 0.0), target);
-    let expires_at = app.world().resource::<Time>().elapsed_secs_f64() + COMBAT_GRACE_SECS;
-    app.world_mut()
-        .entity_mut(attacker)
-        .insert(active_combat_state(expires_at));
+    crate::combat_refs::set_in_combat_with(app.world_mut(), attacker, target);
     app.update();
 
     let tick_before = app
@@ -385,7 +369,7 @@ fn active_combat_maintenance_does_not_dirty_true_status() {
         .unwrap()
         .last_changed();
 
-    run_maintain_combat_state_tick(&mut app);
+    run_expire_combat_refs_tick(&mut app);
 
     assert!(
         app.world()
@@ -405,7 +389,7 @@ fn active_combat_maintenance_does_not_dirty_true_status() {
 }
 
 #[test]
-fn combat_flag_expires_after_grace_period_once_auto_attack_stops() {
+fn combat_with_a_threatless_target_expires_five_seconds_after_the_last_swing() {
     let mut app = setup_app();
     let target = spawn_target(&mut app, pos(1.0, 0.0, 0.0), 100.0);
     let attacker = spawn_attacker(&mut app, pos(0.0, 0.0, 0.0), target);
@@ -416,26 +400,28 @@ fn combat_flag_expires_after_grace_period_once_auto_attack_stops() {
 
     app.world_mut()
         .resource_mut::<Time>()
-        .advance_by(std::time::Duration::from_secs_f64(COMBAT_GRACE_SECS - 1.0));
-    run_maintain_combat_state_tick(&mut app);
+        .advance_by(std::time::Duration::from_secs_f64(
+            crate::combat_refs::PVP_COMBAT_TIMEOUT_SECS - 1.0,
+        ));
+    run_expire_combat_refs_tick(&mut app);
     assert!(
         app.world()
             .entity(attacker)
             .get::<CombatStatus>()
             .is_some_and(|flag| flag.0),
-        "combat flag should stay active during grace period"
+        "combat flag should stay active for 5 s after the swing"
     );
 
     app.world_mut()
         .resource_mut::<Time>()
         .advance_by(std::time::Duration::from_secs_f64(2.0));
-    run_maintain_combat_state_tick(&mut app);
+    run_expire_combat_refs_tick(&mut app);
     assert!(
         app.world()
             .entity(attacker)
             .get::<CombatStatus>()
             .is_some_and(|flag| !flag.0),
-        "combat flag should clear after grace period"
+        "combat flag should clear 5 s after the swing"
     );
 }
 

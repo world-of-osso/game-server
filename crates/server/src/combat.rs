@@ -1,7 +1,7 @@
 use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 use lightyear::prelude::*;
-use shared::components::{CombatStatus, Health, Npc, Player, Position, UnitFactionTemplate};
+use shared::components::{Health, Npc, Player, Position, UnitFactionTemplate};
 use shared::protocol::{
     AttackStart, AttackStop, AttackStopped, AttackSwing, CombatChannel, CombatEvent,
     CombatEventType, CombatLogEvent, CombatLogKind, MissKind,
@@ -37,7 +37,6 @@ const UNIT_MISS_CHANCE_PCT: f32 = 5.0;
 const ATTACK_DISPLAY_DELAY: f32 = 0.2;
 /// Base melee damage per swing of units without ExpectedStat damage.
 const BASE_DAMAGE: f32 = 10.0;
-const COMBAT_GRACE_SECS: f64 = 5.0;
 /// Retail rage per second of swing time for each auto-attack dealt (SimC
 /// `sc_warrior.cpp` `melee_t::base_rage_generation`), before
 /// MOD_RAGE_FROM_DAMAGE_DEALT (the spec passives' rage multipliers).
@@ -110,7 +109,7 @@ impl Plugin for CombatPlugin {
                 // the kill's `CombatStop` runs.
                 (creature_attack_system, process_attack_messages).before(auto_attack_system),
                 auto_attack_system,
-                maintain_in_combat_state_system,
+                crate::combat_refs::expire_combat_refs_system,
                 corpse_decay_system.before(respawn_system),
                 respawn_system,
             ),
@@ -199,11 +198,6 @@ fn corpse_decay_secs(rank: u8) -> u32 {
 #[derive(Component, Debug, Clone, Copy)]
 pub struct LastDamager(pub Entity);
 
-#[derive(Component, Debug, Clone, Copy)]
-struct CombatState {
-    expires_at: f64,
-}
-
 /// `WorldObject::IsValidAttackTarget` and `Unit::Attack`'s own checks as far as
 /// they are modelled: living units only (Object.cpp:2367, Unit.cpp:5876), no
 /// uninteractible victim (Object.cpp:2374), hostile factions or duel opponents.
@@ -271,22 +265,16 @@ type RetargetedCreatures<'w, 's> = Query<
 /// A creature's AI attacks by setting its `CombatTarget` (`Unit::Attack`, which
 /// for creatures engages the victim, Unit.cpp:5950-5952); a target it cannot
 /// attack, or none, stops the attack. Players attack only through `AttackSwing`.
-fn creature_attack_system(
-    query: RetargetedCreatures,
-    rules: AttackRules,
-    mut commands: Commands,
-    time: Res<Time>,
-) {
-    let combat_expires_at = time.elapsed_secs_f64() + COMBAT_GRACE_SECS;
+fn creature_attack_system(query: RetargetedCreatures, rules: AttackRules, mut commands: Commands) {
     for (creature, target, current) in &query {
         match target.0 {
             Some(victim)
                 if !rules.dead(creature) && rules.valid_attack_target(creature, victim) =>
             {
                 start_attack(&mut commands, creature, victim, current);
-                commands
-                    .entity(creature)
-                    .insert(active_combat_state(combat_expires_at));
+                commands.queue(move |world: &mut World| {
+                    crate::combat_refs::set_in_combat_with(world, creature, victim);
+                });
             }
             _ => {
                 commands.queue(move |world: &mut World| attack_stop(world, creature));
@@ -435,7 +423,6 @@ pub(crate) struct AutoAttackParams<'w, 's> {
     senders: Query<'w, 's, &'static mut MessageSender<CombatEvent>>,
     combat_log: ResMut<'w, CombatLog>,
     commands: Commands<'w, 's>,
-    combat_statuses: Query<'w, 's, &'static CombatStatus>,
     replication_dirty: Option<Res<'w, ReplicationDirtyQueue>>,
     player_deaths: MessageWriter<'w, crate::death::PlayerDeathTransition>,
     aura_events: Option<ResMut<'w, PendingAuraEvents>>,
@@ -444,7 +431,7 @@ pub(crate) struct AutoAttackParams<'w, 's> {
 /// Process auto-attacks: tick timers, deal damage when in range and timer ready.
 pub(crate) fn auto_attack_system(time: Res<Time>, mut params: AutoAttackParams) {
     let dt = time.delta_secs();
-    let (elapsed, combat_expires_at) = combat_timing(&time);
+    let elapsed = time.elapsed_secs_f64();
     let mut events = Vec::new();
     let mut swings = Vec::new();
 
@@ -485,14 +472,7 @@ pub(crate) fn auto_attack_system(time: Res<Time>, mut params: AutoAttackParams) 
         }
     }
     for (attacker, target, outcome) in swings {
-        record_swing(
-            &mut params,
-            &mut events,
-            attacker,
-            target,
-            outcome,
-            combat_expires_at,
-        );
+        record_swing(&mut params, &mut events, attacker, target, outcome);
     }
 
     broadcast_events(
@@ -509,15 +489,10 @@ fn record_swing(
     attacker_entity: Entity,
     target_entity: Entity,
     outcome: SwingOutcome,
-    combat_expires_at: f64,
 ) {
-    refresh_combatants(
-        &mut params.commands,
-        &params.combat_statuses,
-        attacker_entity,
-        target_entity,
-        combat_expires_at,
-    );
+    params.commands.queue(move |world: &mut World| {
+        crate::combat_refs::set_in_combat_with(world, attacker_entity, target_entity);
+    });
     mark_replication_changed(params.replication_dirty.as_deref(), target_entity);
     // Procs default to normal and critical hits (SpellMgr::LoadSpellProcs
     // HitMask 0); dodge- and parry-triggered procs are not modelled.
@@ -536,47 +511,6 @@ fn record_swing(
         target_entity,
         outcome,
     );
-}
-
-fn combat_timing(time: &Time) -> (f64, f64) {
-    let elapsed = time.elapsed_secs_f64();
-    (elapsed, elapsed + COMBAT_GRACE_SECS)
-}
-
-type CombatMaintenanceQuery<'w, 's> = Query<
-    'w,
-    's,
-    (
-        Entity,
-        &'static mut CombatState,
-        Has<AutoAttack>,
-        Option<&'static CombatStatus>,
-    ),
->;
-
-fn maintain_in_combat_state_system(
-    time: Res<Time>,
-    mut query: CombatMaintenanceQuery,
-    mut commands: Commands,
-) {
-    let combat_expires_at = time.elapsed_secs_f64() + COMBAT_GRACE_SECS;
-    let now = time.elapsed_secs_f64();
-    for (entity, mut combat_state, auto_attacking, combat_status) in &mut query {
-        if auto_attacking {
-            combat_state.expires_at = combat_expires_at;
-            if !combat_status.is_some_and(|status| status.0) {
-                commands.entity(entity).insert(CombatStatus(true));
-            }
-            continue;
-        }
-        if now >= combat_state.expires_at {
-            let mut entity_commands = commands.entity(entity);
-            if combat_status.is_none_or(|status| status.0) {
-                entity_commands.insert(CombatStatus(false));
-            }
-            entity_commands.remove::<CombatState>();
-        }
-    }
 }
 
 /// Melee swing proc/interrupt events: DEAL/TAKE_MELEE_SWING and
@@ -1031,8 +965,7 @@ pub(crate) fn deal_direct_damage(world: &mut World, attacker: Entity, victim: En
     let lethal = crate::death::apply_health_damage(&mut health, loss);
     mark_replication_changed(world.get_resource::<ReplicationDirtyQueue>(), victim);
     world.entity_mut(victim).insert(LastDamager(attacker));
-    enter_combat(world, attacker);
-    enter_combat(world, victim);
+    crate::combat_refs::set_in_combat_with(world, attacker, victim);
     crate::creature_aggro::add_threat(world, victim, attacker, damage);
     crate::spell_cast::log_event(
         world,
@@ -1113,9 +1046,10 @@ pub(crate) fn corpse_decay_system(
     }
 }
 
-/// AzerothCore `Unit::CombatStop`: `unit` stops attacking (`AttackStop`), its
-/// attackers stop attacking it (`RemoveAllAttackers`) and it leaves combat
-/// (`ClearInCombat`). The attackers leave combat once their grace runs out.
+/// `Unit::CombatStop` (TC Unit.cpp:6029-6055): `unit` stops attacking (`AttackStop`),
+/// its attackers stop attacking it (`RemoveAllAttackers`), and every combat reference
+/// it holds ends (`EndAllPvECombat`, `EndAllPvPCombat`), so each unit it fought leaves
+/// combat unless it still fights another.
 pub(crate) fn combat_stop(world: &mut World, unit: Entity) {
     let attackers: Vec<Entity> = world
         .query::<(Entity, &AutoAttack)>()
@@ -1127,38 +1061,7 @@ pub(crate) fn combat_stop(world: &mut World, unit: Entity) {
         attack_stop(world, attacker);
     }
     attack_stop(world, unit);
-    world
-        .entity_mut(unit)
-        .remove::<CombatState>()
-        .insert(CombatStatus(false));
-}
-
-/// Put `entity` in combat for the grace period (spell damage dealt or taken).
-pub(crate) fn enter_combat(world: &mut World, entity: Entity) {
-    let expires_at = world.resource::<Time>().elapsed_secs_f64() + COMBAT_GRACE_SECS;
-    let in_combat = world
-        .get::<CombatStatus>(entity)
-        .is_some_and(|status| status.0);
-    let mut entity = world.entity_mut(entity);
-    entity.insert(CombatState { expires_at });
-    if !in_combat {
-        entity.insert(CombatStatus(true));
-    }
-}
-
-fn active_combat_state(expires_at: f64) -> (CombatState, CombatStatus) {
-    (CombatState { expires_at }, CombatStatus(true))
-}
-
-fn refresh_combatants(
-    commands: &mut Commands,
-    combat_statuses: &Query<&CombatStatus>,
-    attacker: Entity,
-    target: Entity,
-    expires_at: f64,
-) {
-    refresh_combat_state(commands, combat_statuses, attacker, expires_at);
-    refresh_combat_state(commands, combat_statuses, target, expires_at);
+    crate::combat_refs::end_all_combat(world, unit);
 }
 
 fn record_swing_events(
@@ -1254,19 +1157,6 @@ fn take_hit_rage_cooldown(world: &mut World, unit: Entity) -> bool {
 
 fn change_rage(world: &mut World, unit: Entity, raw: f32) {
     crate::spell_cast::powers::change_power(world, unit, PowerType::Rage, raw);
-}
-
-fn refresh_combat_state(
-    commands: &mut Commands,
-    combat_statuses: &Query<&CombatStatus>,
-    entity: Entity,
-    expires_at: f64,
-) {
-    let mut entity_commands = commands.entity(entity);
-    entity_commands.insert(CombatState { expires_at });
-    if !combat_statuses.get(entity).is_ok_and(|status| status.0) {
-        entity_commands.insert(CombatStatus(true));
-    }
 }
 
 /// Tick respawn timers and restore dead NPCs when ready. A patroller
