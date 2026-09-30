@@ -11,6 +11,8 @@ ah open
 ah search [--text TEXT] [--page 0] [--page-size 50]
           [--sort name|min-bid|buyout|time-left|quality|required-level]
           [--direction asc|desc] [--item-id ID] [--class-id RETAIL_CLASS_ID]
+          [--quality QUALITY] [--min-level LEVEL] [--max-level LEVEL] [--usable-only]
+ah browse [same arguments as ah search]
 ah inventory
 ah owned
 ah bids
@@ -24,6 +26,14 @@ merchant buy --slot SLOT --item-id ID [--count 1]
 ```
 
 Page indices are zero-based; page sizes are 1–100. Prices are integer copper. Search prints the server-returned query, total/returned rows, listing data, and `request_response_ms`, measured from sending the search request to receiving results (excludes authentication and opening). The server chooses the auction house from the auctioneer session, not a CLI faction override.
+
+`ah search` remains the flat listing operation. `ah browse` sends `QueryAuctionBrowse` only after the auctioneer role and successful open; it waits exclusively for `AuctionBrowseResults`, never flat search results. Browse prints `request_response_ms`, the returned query, `total_results` (distinct matching items before paging), `returned` (items on this page), and each item's ID/name/quality/required level, global `total_quantity`, and `lowest_unit_price` in copper. Quantities and unit prices retain the server's 64-bit values. Both commands expose quality, level bounds, and usable-only filters; the server applies them.
+
+Example (append the auth/server/NPC arguments described above):
+
+```text
+ah browse --text Linen --class-id 7 --quality 1 --min-level 1 --max-level 80 --usable-only --page-size 1 --page 0 --sort buyout --direction asc
+```
 
 Merchant list waits for the vendor role and its inventory. Buy waits for the initial bag snapshot and vendor list, validates slot/item against that list, sends the purchase, and waits for the resulting bag item-count increase. `--count` is purchases, not individual items: each yields the vendor's `stack_count`. A refreshed limited-stock list alone is not purchase success.
 
@@ -55,8 +65,8 @@ Do this **before native engine economy testing**. Do not point mutation probes a
 ## Targeted development proof
 
 ```sh
-cargo test -p client --bin game-cli economy_cli -- --nocapture
-cargo test -p client --lib economy:: -- --nocapture
+CARGO_TARGET_DIR=/tmp/game-client-economy-target cargo test -p client --bin game-cli economy_cli -- --nocapture
+CARGO_TARGET_DIR=/tmp/game-client-economy-target cargo test -p client --lib economy:: -- --nocapture
 ```
 
-These are client/parser/transport proofs, not live server economy acceptance. Live smoke needs the isolated server recipe above.
+Browse proofs cover shared search-argument parsing, role/open ordering, exact grouped request transport through HostClient, ignoring flat responses, grouped completion, rejection/timeout, and 64-bit global quantity/price reporting. Existing flat search and merchant proofs remain unchanged. These are client/parser/transport proofs, not live server economy acceptance. Live smoke needs the isolated server recipe above.

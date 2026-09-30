@@ -165,6 +165,8 @@ struct EconomyArgs {
 enum AhCommands {
     Open(EconomyArgs),
     Search(SearchArgs),
+    /// Group auctions by item, with global quantity and lowest unit price
+    Browse(SearchArgs),
     Inventory(EconomyArgs),
     Owned(EconomyArgs),
     Bids(EconomyArgs),
@@ -200,6 +202,14 @@ struct SearchArgs {
     /// Retail item class ID
     #[arg(long)]
     class_id: Option<u8>,
+    #[arg(long)]
+    quality: Option<u8>,
+    #[arg(long)]
+    min_level: Option<u16>,
+    #[arg(long)]
+    max_level: Option<u16>,
+    #[arg(long)]
+    usable_only: bool,
 }
 
 #[derive(Parser)]
@@ -261,12 +271,13 @@ fn economy_action(args: EconomyArgs, operation: EconomyOperation) -> CliAction {
 }
 
 fn ah_action(command: AhCommands) -> CliAction {
+    let grouped = matches!(&command, AhCommands::Browse(_));
     match command {
         AhCommands::Open(a) => economy_action(a, EconomyOperation::Open),
         AhCommands::Inventory(a) => economy_action(a, EconomyOperation::Inventory),
         AhCommands::Owned(a) => economy_action(a, EconomyOperation::Owned),
         AhCommands::Bids(a) => economy_action(a, EconomyOperation::Bids),
-        AhCommands::Search(a) => {
+        AhCommands::Search(a) | AhCommands::Browse(a) => {
             let sort_field = match a.sort.as_str() {
                 "min-bid" => AuctionSortField::MinBid,
                 "buyout" => AuctionSortField::Buyout,
@@ -276,22 +287,31 @@ fn ah_action(command: AhCommands) -> CliAction {
                 "name" => AuctionSortField::Name,
                 _ => unreachable!("clap validates sort"),
             };
+            let query = AuctionSearchQuery {
+                text: a.text,
+                page: a.page,
+                page_size: a.page_size,
+                sort_field,
+                sort_dir: if a.direction == "desc" {
+                    AuctionSortDir::Desc
+                } else {
+                    AuctionSortDir::Asc
+                },
+                item_id: a.item_id,
+                class_id: a.class_id,
+                quality: a.quality,
+                min_level: a.min_level,
+                max_level: a.max_level,
+                usable_only: a.usable_only,
+                ..Default::default()
+            };
             economy_action(
                 a.context,
-                EconomyOperation::Search(AuctionSearchQuery {
-                    text: a.text,
-                    page: a.page,
-                    page_size: a.page_size,
-                    sort_field,
-                    sort_dir: if a.direction == "desc" {
-                        AuctionSortDir::Desc
-                    } else {
-                        AuctionSortDir::Asc
-                    },
-                    item_id: a.item_id,
-                    class_id: a.class_id,
-                    ..Default::default()
-                }),
+                if grouped {
+                    EconomyOperation::Browse(query)
+                } else {
+                    EconomyOperation::Search(query)
+                },
             )
         }
         AhCommands::Create(a) => economy_action(
@@ -467,6 +487,98 @@ fn action_from_token(args: TokenArgs, command: CliCommand) -> CliAction {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn economy_cli_browse_and_search_preserve_all_filters() {
+        for command in ["browse", "search"] {
+            let cli = Cli::try_parse_from([
+                "game-cli",
+                "ah",
+                command,
+                "--npc",
+                "77",
+                "--token",
+                "fixture",
+                "--gossip-option",
+                "3",
+                "--text",
+                "Linen",
+                "--page",
+                "1",
+                "--page-size",
+                "2",
+                "--sort",
+                "buyout",
+                "--direction",
+                "desc",
+                "--item-id",
+                "2589",
+                "--class-id",
+                "7",
+                "--quality",
+                "1",
+                "--min-level",
+                "10",
+                "--max-level",
+                "80",
+                "--usable-only",
+            ])
+            .unwrap();
+            let CliCommand::Economy(action) = build_action(cli).command else {
+                panic!("expected economy action");
+            };
+            assert_eq!(action.npc, 77);
+            assert_eq!(action.gossip_option, Some(3));
+            let query = match (command, action.operation) {
+                ("browse", EconomyOperation::Browse(query)) => query,
+                ("search", EconomyOperation::Search(query)) => query,
+                _ => panic!("wrong operation"),
+            };
+            assert_eq!(
+                query,
+                AuctionSearchQuery {
+                    text: "Linen".into(),
+                    page: 1,
+                    page_size: 2,
+                    sort_field: AuctionSortField::Buyout,
+                    sort_dir: AuctionSortDir::Desc,
+                    item_id: Some(2589),
+                    class_id: Some(7),
+                    quality: Some(1),
+                    min_level: Some(10),
+                    max_level: Some(80),
+                    usable_only: true,
+                    ..Default::default()
+                }
+            );
+        }
+    }
+
+    #[test]
+    fn economy_cli_browse_defaults_and_invalid_controls() {
+        let cli = Cli::try_parse_from(["game-cli", "ah", "browse", "--npc", "77"]).unwrap();
+        let CliCommand::Economy(action) = build_action(cli).command else {
+            panic!("expected economy action");
+        };
+        let EconomyOperation::Browse(query) = action.operation else {
+            panic!("expected grouped browse");
+        };
+        assert_eq!(query, AuctionSearchQuery::default());
+        for (flag, value) in [
+            ("--page-size", "0"),
+            ("--page-size", "101"),
+            ("--quality", "256"),
+            ("--min-level", "65536"),
+            ("--max-level", "65536"),
+            ("--sort", "unknown"),
+            ("--direction", "unknown"),
+        ] {
+            assert!(
+                Cli::try_parse_from(["game-cli", "ah", "browse", "--npc", "77", flag, value])
+                    .is_err()
+            );
+        }
+    }
 
     #[test]
     fn economy_cli_accepts_actions_and_search_controls() {

@@ -59,6 +59,7 @@ struct Senders<'w, 's> {
     gossip: Query<'w, 's, &'static mut MessageSender<SelectGossipOption>>,
     open: Query<'w, 's, &'static mut MessageSender<OpenAuctionHouse>>,
     search: Query<'w, 's, &'static mut MessageSender<QueryAuctions>>,
+    browse: Query<'w, 's, &'static mut MessageSender<QueryAuctionBrowse>>,
     inventory: Query<'w, 's, &'static mut MessageSender<QueryAuctionInventory>>,
     owned: Query<'w, 's, &'static mut MessageSender<QueryOwnedAuctions>>,
     bids: Query<'w, 's, &'static mut MessageSender<QueryBidAuctions>>,
@@ -76,6 +77,7 @@ struct Receivers<'w, 's> {
     closed: Query<'w, 's, &'static mut MessageReceiver<InteractionClosed>>,
     house: Query<'w, 's, &'static mut MessageReceiver<AuctionHouseOpened>>,
     search: Query<'w, 's, &'static mut MessageReceiver<AuctionSearchResults>>,
+    browse: Query<'w, 's, &'static mut MessageReceiver<AuctionBrowseResults>>,
     inventory: Query<'w, 's, &'static mut MessageReceiver<AuctionInventorySnapshot>>,
     owned: Query<'w, 's, &'static mut MessageReceiver<OwnedAuctionListResponse>>,
     bids: Query<'w, 's, &'static mut MessageReceiver<BidAuctionListResponse>>,
@@ -321,6 +323,19 @@ fn receive_auction(
             }
         }
     }
+    for mut receiver in &mut receivers.browse {
+        for response in receiver.receive() {
+            if flow.phase == Phase::Awaiting
+                && matches!(action.operation, EconomyOperation::Browse(_))
+            {
+                finish(
+                    flow,
+                    exit,
+                    Ok(format_browse(&response, flow.started.elapsed())),
+                );
+            }
+        }
+    }
     for mut receiver in &mut receivers.inventory {
         for response in receiver.receive() {
             if flow.phase == Phase::Awaiting
@@ -345,6 +360,19 @@ fn receive_auction(
             }
         }
     }
+}
+
+fn format_browse(response: &AuctionBrowseResults, elapsed: Duration) -> String {
+    let elapsed_ms = elapsed.as_secs_f64() * 1000.0;
+    format!(
+        "browse request_response_ms={elapsed_ms:.3} page={} page_size={} total_results={} returned={} query={:?}\n{:#?}",
+        response.query.page,
+        response.query.page_size,
+        response.total_results,
+        response.items.len(),
+        response.query,
+        response.items
+    )
 }
 
 fn receive_merchant_failure(
@@ -372,6 +400,12 @@ fn dispatch_request(
         EconomyOperation::Search(query) => send::<_, AuctionChannel>(
             &mut senders.search,
             QueryAuctions {
+                query: query.clone(),
+            },
+        )?,
+        EconomyOperation::Browse(query) => send::<_, AuctionChannel>(
+            &mut senders.browse,
+            QueryAuctionBrowse {
                 query: query.clone(),
             },
         )?,

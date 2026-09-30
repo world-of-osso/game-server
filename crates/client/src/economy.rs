@@ -14,6 +14,7 @@ impl EconomyOperation {
 pub enum EconomyOperation {
     Open,
     Search(AuctionSearchQuery),
+    Browse(AuctionSearchQuery),
     Inventory,
     Owned,
     Bids,

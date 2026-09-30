@@ -55,6 +55,7 @@ impl Harness {
         harness.request::<SelectGossipOption>();
         harness.request::<OpenAuctionHouse>();
         harness.request::<QueryAuctions>();
+        harness.request::<QueryAuctionBrowse>();
         harness.request::<QueryAuctionInventory>();
         harness.request::<QueryOwnedAuctions>();
         harness.request::<QueryBidAuctions>();
@@ -68,6 +69,7 @@ impl Harness {
         harness.pair::<InteractionClosed>();
         harness.pair::<AuctionHouseOpened>();
         harness.pair::<AuctionSearchResults>();
+        harness.pair::<AuctionBrowseResults>();
         harness.pair::<AuctionInventorySnapshot>();
         harness.pair::<OwnedAuctionListResponse>();
         harness.pair::<BidAuctionListResponse>();
@@ -185,6 +187,122 @@ fn wire_search_waits_for_gossip_role_and_open_then_preserves_query() {
     assert_eq!(h.exit(), Some(AppExit::Success));
     h.tick();
     assert_eq!(h.requests::<QueryAuctions>().len(), 1);
+}
+
+fn browse_response(query: AuctionSearchQuery) -> AuctionBrowseResults {
+    AuctionBrowseResults {
+        query,
+        total_results: 4,
+        items: vec![AuctionBrowseItem {
+            item_id: 2589,
+            name: "Linen".into(),
+            quality: 1,
+            required_level: 10,
+            lowest_unit_price: 5_000_000_000,
+            total_quantity: 6_000_000_000,
+        }],
+    }
+}
+
+#[test]
+fn wire_browse_waits_for_role_open_and_grouped_response_only() {
+    let query = AuctionSearchQuery {
+        text: "Linen".into(),
+        page: 1,
+        page_size: 2,
+        sort_field: AuctionSortField::Buyout,
+        sort_dir: AuctionSortDir::Desc,
+        item_id: Some(2589),
+        class_id: Some(7),
+        quality: Some(1),
+        min_level: Some(10),
+        max_level: Some(80),
+        usable_only: true,
+        ..Default::default()
+    };
+    let mut h = Harness::new(EconomyOperation::Browse(query.clone()));
+    h.tick();
+    assert_eq!(h.requests::<InteractNpc>(), &[InteractNpc { npc: 77 }]);
+    assert!(h.requests::<QueryAuctionBrowse>().is_empty());
+    h.reply::<_, AuctionChannel>(browse_response(query.clone()));
+    assert!(h.exit().is_none());
+    h.reply::<_, InteractionChannel>(InteractionOpened {
+        npc: 77,
+        kind: InteractionKind::Role(NpcRole::AuctionHouse),
+    });
+    assert_eq!(h.requests::<OpenAuctionHouse>(), &[OpenAuctionHouse]);
+    assert!(h.requests::<QueryAuctionBrowse>().is_empty());
+    h.reply::<_, AuctionChannel>(AuctionHouseOpened {
+        success: true,
+        error: None,
+    });
+    assert_eq!(
+        h.requests::<QueryAuctionBrowse>(),
+        &[QueryAuctionBrowse {
+            query: query.clone()
+        }]
+    );
+    assert!(h.requests::<QueryAuctions>().is_empty());
+    h.reply::<_, AuctionChannel>(AuctionSearchResults {
+        query: query.clone(),
+        total_results: 8,
+        results: Vec::new(),
+    });
+    assert!(h.exit().is_none());
+    h.reply::<_, AuctionChannel>(browse_response(query));
+    assert_eq!(h.exit(), Some(AppExit::Success));
+    h.tick();
+    assert_eq!(h.requests::<QueryAuctionBrowse>().len(), 1);
+}
+
+#[test]
+fn wire_browse_rejection_and_timeout_exit_nonzero() {
+    let mut h = Harness::new(EconomyOperation::Browse(Default::default()));
+    h.tick();
+    h.reply::<_, InteractionChannel>(InteractionOpened {
+        npc: 77,
+        kind: InteractionKind::Role(NpcRole::AuctionHouse),
+    });
+    h.reply::<_, AuctionChannel>(AuctionHouseOpened {
+        success: false,
+        error: Some("not interacting".into()),
+    });
+    assert_eq!(h.exit(), Some(AppExit::Error(1.try_into().unwrap())));
+    assert!(h.requests::<QueryAuctionBrowse>().is_empty());
+
+    let mut h = Harness::new(EconomyOperation::Browse(Default::default()));
+    h.open_auction();
+    h.reply::<_, AuctionChannel>(AuctionOperationResponse {
+        success: false,
+        message: "browse rejected".into(),
+    });
+    assert_eq!(h.exit(), Some(AppExit::Error(1.try_into().unwrap())));
+
+    let mut h = Harness::new(EconomyOperation::Browse(Default::default()));
+    h.open_auction();
+    h.app.world_mut().resource_mut::<EconomyFlow>().started =
+        std::time::Instant::now() - Duration::from_secs(11);
+    h.tick();
+    assert_eq!(h.exit(), Some(AppExit::Error(1.try_into().unwrap())));
+    assert_eq!(h.requests::<QueryAuctionBrowse>().len(), 1);
+}
+
+#[test]
+fn browse_report_preserves_distinct_totals_and_global_u64_values() {
+    let report = format_browse(
+        &browse_response(AuctionSearchQuery {
+            page: 1,
+            page_size: 2,
+            ..Default::default()
+        }),
+        Duration::from_micros(12500),
+    );
+    assert!(report.starts_with(
+        "browse request_response_ms=12.500 page=1 page_size=2 total_results=4 returned=1 query="
+    ));
+    assert!(report.contains("item_id: 2589"));
+    assert!(report.contains("lowest_unit_price: 5000000000"));
+    assert!(report.contains("total_quantity: 6000000000"));
 }
 
 #[test]
