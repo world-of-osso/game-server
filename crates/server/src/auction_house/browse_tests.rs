@@ -271,6 +271,7 @@ fn browse_300k_cpu_under_200ms() {
         template.scaling.class_id = 7;
         templates.0.entry(item).or_insert(template);
     }
+    let mut slowest = Duration::ZERO;
     for (text, class, usable, page, expected) in [
         ("", None, false, 0, 75_000),
         ("Item", None, false, 1, 75_000),
@@ -281,11 +282,14 @@ fn browse_300k_cpu_under_200ms() {
         query.usable_only = usable;
         query.page = page;
         query.sort_field = AuctionSortField::Buyout;
+        let cpu_before = thread_cpu_ticks();
         let start = Instant::now();
         let result = browse_for_viewer(&auctions, &query, Some(&templates), Some((1, 1, 20)));
         let elapsed = start.elapsed();
+        let cpu_ticks = thread_cpu_ticks() - cpu_before;
+        slowest = slowest.max(elapsed);
         println!(
-            "300k auctions, 75k items, text={text:?}, class={class:?}, usable={usable}, page={page}, CPU={elapsed:?}"
+            "300k auctions, 75k items, text={text:?}, class={class:?}, usable={usable}, page={page}, wall={elapsed:?}, thread_cpu_ticks={cpu_ticks}"
         );
         assert_eq!(result.total_results, expected);
         assert_eq!(result.items.len(), 50);
@@ -296,11 +300,24 @@ fn browse_300k_cpu_under_200ms() {
                 .iter()
                 .all(|i| i.total_quantity == 80 && i.lowest_unit_price == 21)
         );
-        assert!(
-            elapsed < Duration::from_millis(200),
-            "query CPU {elapsed:?}"
-        );
     }
+    assert!(
+        slowest < Duration::from_millis(200),
+        "query wall {slowest:?}"
+    );
+}
+
+/// Linux clock ticks expose descheduling separately from the wall-time gate.
+/// Convert with the host's `getconf CLK_TCK`, not an assumed tick frequency.
+fn thread_cpu_ticks() -> u64 {
+    let stat = std::fs::read_to_string("/proc/thread-self/stat").expect("thread CPU stat");
+    let (_, fields) = stat.rsplit_once(')').expect("thread comm terminator");
+    fields
+        .split_whitespace()
+        .skip(11)
+        .take(2)
+        .map(|ticks| ticks.parse::<u64>().expect("thread CPU ticks"))
+        .sum()
 }
 
 #[test]
