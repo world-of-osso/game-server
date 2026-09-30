@@ -335,12 +335,17 @@ pub(crate) fn duration_ms(world: &World, caster: Entity, spell: &SpellInfo) -> i
     modify(world, caster, spell, SpellModOp::Duration, base as f32).round() as i32
 }
 
-/// Effects that have a handler or apply an aura; only these select targets.
+/// Effects that have a handler, apply an aura or run a script hook; only
+/// these select targets.
 fn handled_effects(spell: &SpellInfo) -> impl Iterator<Item = &crate::spell_info::SpellEffect> {
     spell
         .effects
         .iter()
-        .filter(|effect| effects::is_handled(effect))
+        .filter(|effect| selects_targets(spell, effect))
+}
+
+fn selects_targets(spell: &SpellInfo, effect: &crate::spell_info::SpellEffect) -> bool {
+    effects::is_handled(effect) || scripts::on_effect_hit(spell.id, effect.index).is_some()
 }
 
 fn max_targets(spell: &SpellInfo) -> u32 {
@@ -952,13 +957,16 @@ fn plan_targets(
     let cap = max_targets(spell);
     let mut plan = Vec::new();
     for (index, effect) in spell.effects.iter().enumerate() {
-        if !effects::is_handled(effect) {
+        if !selects_targets(spell, effect) {
             continue;
         }
-        let units =
+        let mut units =
             targets::select_targets(world, caster, explicit, effect, cap).map_err(|id| {
                 CastFailure::Unsupported(format!("implicit target {id} not supported"))
             })?;
+        if let Some(filter) = scripts::area_target_filter(spell.id, effect.index) {
+            filter(spell, explicit, &mut units);
+        }
         let dest = targets::effect_dest(world, caster, explicit, effect);
         plan.push(PlannedEffect { index, units, dest });
     }
@@ -974,7 +982,7 @@ fn resolve_effects(
     depth: u8,
 ) {
     for effect in &spell.effects {
-        if !effects::is_handled(effect) {
+        if !selects_targets(spell, effect) {
             effects::log_unhandled(world, spell.id, effect.effect);
         }
     }
@@ -1012,12 +1020,18 @@ fn resolve_effects(
             handler(world, &ctx, effect);
             continue;
         }
-        let Some(handler) = effects::handler(effect.effect) else {
-            continue;
-        };
+        let handler = effects::handler(effect.effect);
+        let hook = scripts::on_effect_hit(spell.id, effect.index);
         for &unit in units {
-            if world.get_entity(unit).is_ok() {
+            if let Some(handler) = handler
+                && world.get_entity(unit).is_ok()
+            {
                 handler(world, &ctx, effect, unit);
+            }
+            if let Some(hook) = hook
+                && world.get_entity(unit).is_ok()
+            {
+                hook(world, caster, unit, depth);
             }
         }
     }
@@ -1384,5 +1398,7 @@ fn complete_cast(world: &mut World, caster: Entity, spell_id: u32, target: Optio
     }
 }
 
+#[cfg(test)]
+mod new_class_tests;
 #[cfg(test)]
 mod tests;

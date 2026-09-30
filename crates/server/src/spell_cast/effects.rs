@@ -577,7 +577,7 @@ pub fn apply_heal(
     }
 }
 
-/// 30 ENERGIZE: BasePoints raw units of power `EffectMiscValue_0`.
+/// 30 ENERGIZE: spell-modified base points in raw units of `EffectMiscValue_0`.
 fn energize(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, target: Entity) {
     let Some(power) = PowerType::from_db(effect.misc_values[0]) else {
         debug!(
@@ -586,7 +586,8 @@ fn energize(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, target: En
         );
         return;
     };
-    energize_unit(world, ctx, target, power, effect.base_points, false);
+    let amount = modded_base_points(world, ctx.caster, ctx.spell, effect);
+    energize_unit(world, ctx, target, power, amount, false);
 }
 
 /// Add `amount` raw units of `power`, clamped; logs Energize with the excess.

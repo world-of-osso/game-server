@@ -519,3 +519,42 @@ fn set_credentials_enables_password_login() {
     let (other_id, _) = login_with_credentials(&db, Some(&token2), "", "").unwrap();
     assert_eq!(account_id, other_id);
 }
+
+/// Monk, Demon Hunter and Evoker creation: start level, map and position, and
+/// the refused race/class combinations leave no character behind.
+#[test]
+fn new_class_characters_start_at_their_level_and_location() {
+    use crate::maps::persistence::load_character_map;
+
+    let db = temp_database();
+    let (account_id, _) = register_account(&db, "fb_newclass", "fbtest").unwrap();
+
+    let (monk, data) = create_character(&db, account_id, "Monkling", 1, 10).unwrap();
+    assert_eq!((data.level, data.x, data.y), (1, -8949.0, -132.0));
+    assert_eq!(load_character_map(&db, monk), 0);
+
+    let (dh, data) = create_character(&db, account_id, "Illidariel", 4, 12).unwrap();
+    assert_eq!((data.level, data.x, data.y), (8, 10311.0, 832.0));
+    assert_eq!(load_character_map(&db, dh), 1, "Shadowglen is on Kalimdor");
+
+    let (evoker, data) = create_character(&db, account_id, "Scalecommand", 52, 13).unwrap();
+    assert_eq!((data.level, data.x, data.y), (10, -8841.06, 489.656));
+    assert_eq!(load_character_map(&db, evoker), 0, "Stormwind");
+
+    let (evoker, data) = create_character(&db, account_id, "Scaleborn", 70, 13).unwrap();
+    assert_eq!((data.level, data.x, data.y), (10, 1798.27, -4363.27));
+    assert_eq!(load_character_map(&db, evoker), 1, "Orgrimmar");
+
+    for (name, race, class) in [
+        ("Humandh", 1, 12),
+        ("Orcvoker", 2, 13),
+        ("Dracmonk", 52, 10),
+    ] {
+        assert_eq!(
+            create_character(&db, account_id, name, race, class).map(|(id, _)| id),
+            Err(format!("Class {class} is not available for race {race}"))
+        );
+    }
+    assert_eq!(list_characters_for_account(&db, account_id).len(), 4);
+    assert_eq!(load_character(&db, dh).unwrap().level, 8);
+}

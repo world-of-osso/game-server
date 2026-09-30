@@ -1149,3 +1149,6 @@ fn final_verdict_replaces_templars_verdict_in_known_spells_and_bar() {
         ]
     );
 }
+
+#[path = "class_progression_new_class_tests.rs"]
+mod new_classes;
