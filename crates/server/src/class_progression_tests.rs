@@ -1149,3 +1149,13 @@ fn final_verdict_replaces_templars_verdict_in_known_spells_and_bar() {
         ]
     );
 }
+
+#[test]
+fn paladin_learns_boundless_conviction_for_five_holy_power() {
+    let Some(classes) = class_spells() else {
+        return;
+    };
+    // Boundless Conviction 115675 (MOD_MAX_POWER +2 Holy Power): SkillLineAbility
+    // 26101, AcquireMethod 2.
+    assert!(known_ids(&classes, HUMAN, PALADIN, 10, SPEC_RETRIBUTION).contains(&115675));
+}

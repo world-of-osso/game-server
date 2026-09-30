@@ -18,6 +18,7 @@ mod handlers;
 mod periodic;
 pub mod procs;
 pub mod scripts;
+pub mod shapeshift;
 pub mod spell_mods;
 pub mod stat_mods;
 mod unit_state;
@@ -67,6 +68,7 @@ impl Plugin for AuraPlugin {
             .init_resource::<UnhandledAuras>()
             .init_resource::<scripts::AuraScripts>()
             .init_resource::<PendingPassiveSync>()
+            .add_systems(Startup, shapeshift::load_shapeshift_forms_startup)
             .add_systems(
                 Update,
                 (
@@ -637,6 +639,9 @@ pub fn apply_aura(world: &mut World, application: &AuraApplication) {
         .cloned()
         .expect("aura just stored");
     if kind == CombatLogKind::AuraApplied {
+        if shapeshift::aura_form(&aura).is_some() {
+            shapeshift::remove_other_forms(world, target, id);
+        }
         scripts::run_apply(world, target, &aura);
     }
     log_event(world, aura_event(&aura, target, kind));

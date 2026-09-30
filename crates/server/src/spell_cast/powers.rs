@@ -56,6 +56,14 @@ impl PowerTypeTable {
         self.powers.get(&power)
     }
 
+    /// `ChrClasses.DisplayPower` of `class_id`.
+    pub fn display_power(&self, class_id: u8) -> Option<PowerType> {
+        self.display_power
+            .get(&class_id)
+            .copied()
+            .and_then(PowerType::from_db)
+    }
+
     /// Class powers, primary (`DisplayPower`) first, then ascending DB ID.
     pub fn class_powers(&self, class_id: u8, class_power_types: &[i32]) -> Vec<PowerType> {
         let display = self.display_power.get(&class_id).copied();
@@ -206,6 +214,9 @@ pub fn change_power(
     delta: f32,
 ) -> Option<f32> {
     let (current, max) = power_value(world, entity, power)?;
+    if power == PowerType::Runes && world.get::<super::runes::Runes>(entity).is_some() {
+        return Some(change_runes(world, entity, delta));
+    }
     let next = (current + delta).clamp(0.0, max);
     if power == PowerType::Mana {
         world.get_mut::<Mana>(entity)?.current = next;
@@ -213,6 +224,31 @@ pub fn change_power(
         world.get_mut::<PowerPools>(entity)?.get_mut(power)?.current = next;
     }
     Some(next - current)
+}
+
+/// Spend (negative) or refill (positive) whole runes; returns the applied change.
+fn change_runes(world: &mut World, entity: Entity, delta: f32) -> f32 {
+    let cooldown = super::runes::rune_cooldown_secs(
+        world.get::<crate::auras::AuraStatMods>(entity),
+        world.get::<crate::stats::CharacterStats>(entity),
+    );
+    let mut runes = world
+        .get_mut::<super::runes::Runes>(entity)
+        .expect("checked by change_power");
+    let count = delta.abs().round() as usize;
+    let changed = if delta < 0.0 {
+        -(runes.spend(count, cooldown) as f32)
+    } else {
+        runes.refill(count) as f32
+    };
+    let ready = runes.ready() as f32;
+    if let Some(pool) = world
+        .get_mut::<PowerPools>(entity)
+        .and_then(|pools| pools.into_inner().get_mut(PowerType::Runes))
+    {
+        pool.current = ready;
+    }
+    changed
 }
 
 /// Give players their class pools once `ClassSpells` and the table are loaded.
@@ -232,9 +268,38 @@ pub(super) fn init_player_powers(
             .find(|class| class.class_id == player.class)
             .map_or(&[][..], |class| class.power_types.as_slice());
         let order = table.class_powers(player.class, class_power_types);
+        let pools = PowerPools::from_table(&table, order);
+        if let Some(runes) = pools.get(PowerType::Runes) {
+            commands
+                .entity(entity)
+                .insert(super::runes::Runes::new(runes.max as usize));
+        }
         commands
             .entity(entity)
-            .insert((PowerPools::from_table(&table, order), UnitPowers::default()));
+            .insert((pools, UnitPowers::default()));
+    }
+}
+
+/// `Player::UpdateMaxPower`: `MaxBasePower` plus MOD_INCREASE_ENERGY and MOD_MAX_POWER
+/// (TOTAL_VALUE flat), rounded; `SetMaxPower` clamps the current value.
+pub(super) fn update_max_powers(
+    table: Option<Res<PowerTypeTable>>,
+    mut units: Query<(&mut PowerPools, &crate::auras::AuraStatMods), Without<GridDormant>>,
+) {
+    let Some(table) = table else {
+        return;
+    };
+    for (mut pools, mods) in &mut units {
+        for pool in pools.bypass_change_detection().pools.iter_mut() {
+            let Some(info) = table.get(pool.power) else {
+                continue;
+            };
+            let max = (info.max_base_power as f32 + mods.max_power_flat(pool.power as i32)).round();
+            if pool.max != max {
+                pool.max = max.max(0.0);
+                pool.current = pool.current.min(pool.max);
+            }
+        }
     }
 }
 
@@ -275,7 +340,13 @@ pub(super) fn regenerate_powers(
             pools.out_of_combat_since = now;
         }
         let out_of_combat_ms = ((now - pools.out_of_combat_since) * 1000.0) as u32;
-        for pool in pools.bypass_change_detection().pools.iter_mut() {
+        // Runes act as cooldowns (`runes::regenerate_runes`).
+        for pool in pools
+            .bypass_change_detection()
+            .pools
+            .iter_mut()
+            .filter(|pool| pool.power != PowerType::Runes)
+        {
             let Some(info) = table.get(pool.power) else {
                 continue;
             };

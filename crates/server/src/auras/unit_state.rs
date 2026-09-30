@@ -14,7 +14,8 @@
 //!   target (`SetTarget(Empty)`). The last aura's removal ends it.
 //! - TRANSFORM 56 (`HandleAuraTransform`, `RestoreDisplayId`): the newest transform aura,
 //!   a harmful one first, shows a model of the creature template in its MiscValue
-//!   (`ObjectMgr::ChooseDisplayId`); with none left the native display returns.
+//!   (`ObjectMgr::ChooseDisplayId`); else a MOD_SHAPESHIFT 36 form shows its model
+//!   (`shapeshift`); with neither left the native display returns.
 
 use bevy::prelude::*;
 use lightyear::prelude::ReplicationDirtyQueue;
@@ -41,11 +42,20 @@ pub struct Confused {
     pub wait_secs: f32,
 }
 
-/// Under a TRANSFORM aura: the aura instance whose display shows, and the display
-/// to restore when no transform is left.
+/// The aura whose display shows instead of the native one.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DisplaySource {
+    /// A TRANSFORM aura instance.
+    Transform(u32),
+    /// A MOD_SHAPESHIFT aura instance.
+    Form(u32),
+}
+
+/// Under a TRANSFORM or MOD_SHAPESHIFT aura: the aura whose display shows, and the
+/// display to restore when neither is left.
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Transformed {
-    pub instance_id: u32,
+    pub source: DisplaySource,
     pub native_display_id: u32,
 }
 
@@ -77,7 +87,8 @@ pub(super) fn reconcile(world: &mut World, unit: Entity) {
     if confused != world.get::<Confused>(unit).is_some() {
         reconcile_confused(world, unit, confused);
     }
-    reconcile_transform(world, unit);
+    reconcile_display(world, unit);
+    super::shapeshift::reconcile_display_power(world, unit);
 }
 
 /// `Unit::SetControlled(UNIT_STATE_CONFUSED)`: applying stops the cast (`CastStop`) and
@@ -113,19 +124,53 @@ fn shown_transform(auras: &ActiveAuras) -> Option<&AuraInstance> {
     transforms.find(|aura| aura.harmful).or(Some(newest))
 }
 
-/// Show the display of the shown transform aura, or restore the native display.
-fn reconcile_transform(world: &mut World, unit: Entity) {
-    let shown = world
-        .get::<ActiveAuras>(unit)
-        .and_then(shown_transform)
-        .map(|aura| (aura.instance_id, aura.spell_id, transform_entry(aura)));
+/// `Unit::RestoreDisplayId`: the shown transform aura, else the shapeshift form's model,
+/// else the native display.
+fn shown_display(world: &World, unit: Entity) -> Option<(DisplaySource, u32)> {
+    let auras = world.get::<ActiveAuras>(unit)?;
+    if let Some(aura) = shown_transform(auras) {
+        return Some((DisplaySource::Transform(aura.instance_id), aura.spell_id));
+    }
+    let (aura, _) = super::shapeshift::current_form(auras)?;
+    Some((DisplaySource::Form(aura.instance_id), aura.spell_id))
+}
+
+/// The display `source` shows; `None` when its model cannot be resolved.
+fn source_display(
+    world: &World,
+    unit: Entity,
+    source: DisplaySource,
+    spell_id: u32,
+) -> Option<u32> {
+    let auras = world.get::<ActiveAuras>(unit)?;
+    match source {
+        DisplaySource::Transform(instance_id) => {
+            let entry = transform_entry(auras.get(instance_id)?);
+            transform_display(world, spell_id, entry)
+        }
+        DisplaySource::Form(instance_id) => {
+            let form = super::shapeshift::aura_form(auras.get(instance_id)?)?;
+            let display = world
+                .get_resource::<super::shapeshift::ShapeshiftForms>()
+                .and_then(|forms| forms.display_id(form));
+            if display.is_none() {
+                debug!("Shapeshift {spell_id}: form {form} has no display");
+            }
+            display
+        }
+    }
+}
+
+/// Show the display of the shown transform or form aura, or restore the native display.
+fn reconcile_display(world: &mut World, unit: Entity) {
+    let shown = shown_display(world, unit);
     let current = world.get::<Transformed>(unit).copied();
     let display = match (shown, current) {
-        (Some((instance_id, _, _)), Some(current)) if current.instance_id == instance_id => {
+        (Some((source, _)), Some(current)) if current.source == source => {
             return;
         }
-        (Some((instance_id, spell_id, entry)), _) => {
-            let Some(display_id) = transform_display(world, spell_id, entry) else {
+        (Some((source, spell_id)), _) => {
+            let Some(display_id) = source_display(world, unit, source, spell_id) else {
                 return;
             };
             let Some(native_display_id) =
@@ -137,11 +182,11 @@ fn reconcile_transform(world: &mut World, unit: Entity) {
                             .map(|model| model.display_id)
                     })
             else {
-                debug!("Transform {spell_id} on {unit}: no ModelDisplay to replace");
+                debug!("Display of {spell_id} on {unit}: no ModelDisplay to replace");
                 return;
             };
             world.entity_mut(unit).insert(Transformed {
-                instance_id,
+                source,
                 native_display_id,
             });
             display_id
@@ -167,12 +212,16 @@ const MAGE_POLYMORPH_FLAG: u32 = 0x0100_0000;
 /// `Unit::IsPolymorphed`: the shown transform is `SPELL_SPECIFIC_MAGE_POLYMORPH` (a mage
 /// spell with family flag 0x1000000 whose effect 0 is MOD_CONFUSE).
 pub fn is_polymorphed(world: &World, unit: Entity) -> bool {
-    let Some(transformed) = world.get::<Transformed>(unit) else {
+    let Some(Transformed {
+        source: DisplaySource::Transform(instance_id),
+        ..
+    }) = world.get::<Transformed>(unit).copied()
+    else {
         return false;
     };
     let Some(aura) = world
         .get::<ActiveAuras>(unit)
-        .and_then(|auras| auras.get(transformed.instance_id))
+        .and_then(|auras| auras.get(instance_id))
     else {
         return false;
     };
