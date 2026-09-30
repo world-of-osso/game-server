@@ -185,6 +185,77 @@ class CatalogTests(unittest.TestCase):
         self.assertEqual(report["coverage"]["11:165"]["eligible"], 1)
         self.assertEqual(report["assignments"][0]["spawn_count"], 1)
 
+    def test_vendor_output_overflow_excluded_with_original_input_prices_and_provenance(
+        self,
+    ):
+        for output_anchor in [5302341052, 4000000000]:
+            with self.subTest(output_anchor=output_anchor):
+                self.write_csv(
+                    self.items,
+                    ["itemId", "marketValue", "saleRate", "soldPerDay", "updatedAt"],
+                    [
+                        [
+                            i,
+                            output_anchor if i == 2302 else 1000,
+                            "0.125",
+                            "2.5",
+                            "items-time",
+                        ]
+                        for i in [2302, 2318, 2320, 2304, 900]
+                    ],
+                )
+                self.write_csv(
+                    self.commodities,
+                    ["itemId", "marketValue", "updatedAt"],
+                    [[2318, 5302341052, "commodity-time"]],
+                )
+                config, report = self.success()
+                self.assertEqual(
+                    [r["spell_id"] for r in config["merchants"][0]["recipes"]], [2152]
+                )
+                self.assertEqual(config["markets"]["2318"]["anchor_price"], 5302341052)
+                self.assertEqual(config["markets"]["2318"]["max_price"], 6362809263)
+                self.assertNotIn("2302", config["markets"])
+                exclusions = [
+                    row for row in report["excluded_recipes"] if row["spell_id"] == 2149
+                ]
+                self.assertEqual(len(exclusions), 1)
+                exclusion = exclusions[0]
+                self.assertEqual(
+                    exclusion["reason"], "merchant_output_price_exceeds_u32"
+                )
+                self.assertEqual(exclusion["output_item_id"], 2302)
+                self.assertEqual(exclusion["vendor_price_limit"], 4294967295)
+                self.assertEqual(
+                    exclusion["output_market"]["anchor_price"], output_anchor
+                )
+                self.assertEqual(
+                    exclusion["output_market"]["max_price"],
+                    (output_anchor * 12000 + 9999) // 10000,
+                )
+                provenance = report["market_provenance"]["2302"]
+                self.assertEqual(provenance["market_value"], str(output_anchor))
+                self.assertEqual(provenance["price_source"], "items")
+                self.assertEqual(provenance["price_updated_at"], "items-time")
+                self.assertEqual(report["assignments"][0]["eligible_recipe_count"], 1)
+                self.assertEqual(report["coverage"]["0:165"]["excluded"], 1)
+
+    def test_vendor_output_u32_max_is_supported(self):
+        self.write_csv(
+            self.items,
+            ["itemId", "marketValue", "saleRate", "soldPerDay", "updatedAt"],
+            [
+                [i, 4294967295 if i == 2302 else 1000, 0, 0, "now"]
+                for i in [2302, 2318, 2320, 2304, 900]
+            ],
+        )
+        tuning = self.root / "tuning.json"
+        tuning.write_text(json.dumps({"min_price_bps": 10000, "max_price_bps": 10000}))
+        config, report = self.success("--tuning", str(tuning))
+        self.assertEqual(len(config["merchants"][0]["recipes"]), 2)
+        self.assertEqual(config["markets"]["2302"]["max_price"], 4294967295)
+        self.assertEqual(report["excluded_recipes"], [])
+
     def test_raw_quantity_rounds_half_up_and_clamps_to_one(self):
         for spell, points in [
             (1100, 0),

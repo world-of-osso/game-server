@@ -1,5 +1,9 @@
 # Wiki Log
 
+## [2026-09-30] systems | Merchant output price boundary
+
+Updated [[economy-catalog]]: recipes whose output range exceeds existing u32 vendor prices are excluded with unchanged market values, protocol limit and TSM provenance. Input-only AH markets retain u64 prices. Read-only Lara 1295:0:165 import excludes one recipe (10621/output 8345), leaving 223; main owns fixture regeneration and startup proof.
+
 ## [2026-09-30] systems | Global auction browse contract
 
 Added [auction house spec](../specs/auction-house.md) and [[auction-house]]; linked [[bot-economy]] and index. Inspected shared `88bc3fe`: distinct browse messages with per-item price/quantity and distinct total, unchanged flat shapes. Inspected server flat/session/class/usability boundaries; grouped server, CLI and native integration remain concurrent and unverified. Recorded ItemID → real AuctionID flow, actual-coordinate/listing-price evidence and CLI-first then engine <200 ms request/response goal. Reported optimized flat 300k/144 ms helper timing is not network acceptance; grouped performance pending. No acceptance checked; no code or owned CLI/engine docs changed.

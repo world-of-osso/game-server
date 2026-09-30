@@ -266,6 +266,8 @@ def recipe_failure(effects, reagent, content, markets, output):
         return "missing_content_item", []
     if not referenced <= markets.keys():
         return "missing_supported_market", []
+    if markets[output]["max_price"] > U32_MAX:
+        return "merchant_output_price_exceeds_u32", []
     return None, sorted([item, count] for item, count in ingredients.items())
 
 
@@ -337,6 +339,11 @@ def inspect_recipes(db, markets):
             coverage[key]["candidates"] += 1
             if reason:
                 coverage[key]["excluded"] += 1
+                price_details = (
+                    {"output_market": markets[output], "vendor_price_limit": U32_MAX}
+                    if reason == "merchant_output_price_exceeds_u32"
+                    else {}
+                )
                 excluded.append(
                     {
                         "spell_id": spell,
@@ -344,6 +351,7 @@ def inspect_recipes(db, markets):
                         "expansion": expansion,
                         "parent_profession": parent,
                         "reason": reason,
+                        **price_details,
                     }
                 )
                 continue
@@ -561,9 +569,14 @@ def main():
         ) as db:
             db.row_factory = sqlite3.Row
             config, report = build_catalog(db, markets, args.merchant, tuning)
+        reported_market_ids = set(config["markets"]) | {
+            str(row["output_item_id"])
+            for row in report["excluded_recipes"]
+            if row["reason"] == "merchant_output_price_exceeds_u32"
+        }
         snapshot_report["market_provenance"] = {
             item: snapshot_report["market_provenance"][item]
-            for item in config["markets"]
+            for item in sorted(reported_market_ids)
         }
         report.update(snapshot_report)
         report["tuning"] = tuning
