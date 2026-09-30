@@ -416,6 +416,45 @@ fn unit_runes_replicate_ready_times_with_waiting_runes_starting_later() {
     assert_eq!(runes_view(&h).ready_in_ms, [0; 6]);
 }
 
+#[test]
+fn rune_replication_sends_haste_scaled_duration_and_resends_rate_changes() {
+    let mut h = harness(Vec::new(), &[], DEATH_KNIGHT).expect("resource fixture requires world.db");
+    h.advance(1);
+    h.app
+        .world_mut()
+        .get_mut::<crate::stats::CharacterStats>(h.caster)
+        .unwrap()
+        .haste_pct = 100.0;
+    spend_runes(&mut h, 5.0);
+    h.advance(1);
+    let view = runes_view(&h);
+    assert_eq!(view.duration_ms, 5_000);
+    for (actual, expected) in view
+        .ready_in_ms
+        .iter()
+        .zip([4_950, 4_950, 4_950, 9_950, 9_950, 0])
+    {
+        assert!(actual.abs_diff(expected) <= 20, "{view:?}");
+    }
+    h.advance(20);
+    assert_eq!(runes_view(&h), view);
+    h.app
+        .world_mut()
+        .get_mut::<crate::stats::CharacterStats>(h.caster)
+        .unwrap()
+        .haste_pct = 0.0;
+    h.advance(1);
+    let view = runes_view(&h);
+    assert_eq!(view.duration_ms, 10_000);
+    for (actual, expected) in view
+        .ready_in_ms
+        .iter()
+        .zip([3_900, 3_900, 3_900, 13_900, 13_900, 0])
+    {
+        assert!(actual.abs_diff(expected) <= 20, "{view:?}");
+    }
+}
+
 fn power_entry(h: &Harness, power: PowerType) -> shared::components::PowerEntry {
     h.app
         .world()
