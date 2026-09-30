@@ -27,6 +27,7 @@ use self::handlers::{
     process_inventory_requests, process_open_requests, process_owned_requests,
     process_query_requests,
 };
+#[cfg(test)]
 pub(crate) use self::operations::deposit_cost;
 use self::operations::{
     buyout_auction, cancel_auction, complete_sale, create_auction, deliver_mail, place_bid,
