@@ -6228,9 +6228,11 @@ name = "shared"
 version = "0.1.0"
 dependencies = [
  "bevy",
+ "bevy_replicon",
  "bitcode",
  "lightyear",
  "serde",
+ "tracing",
 ]
 
 [[package]]
