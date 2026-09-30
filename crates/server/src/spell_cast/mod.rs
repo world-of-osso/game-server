@@ -17,6 +17,7 @@ pub mod creature;
 pub mod effects;
 mod missiles;
 pub mod powers;
+mod reflect;
 pub mod runes;
 pub mod scripts;
 pub mod targets;
@@ -903,7 +904,7 @@ fn execute_cast(
     let explicit = validate_target(world, caster, spell, explicit)?;
     let costs = spell_costs(world, caster, spell)?;
     crate::profession::check_cast_items(world, caster, spell)?;
-    let plan = plan_targets(world, caster, spell, explicit)?;
+    let plan = plan_targets(world, caster, spell, explicit, false)?;
     spend_costs(world, caster, &costs);
     crate::profession::take_reagents(world, caster, spell);
     start_cooldowns(world, caster, spell);
@@ -931,6 +932,7 @@ fn execute_cast(
             can_proc: true,
             periodic: false,
             damage: 0.0,
+            reflected: false,
         },
     );
     missiles::launch(world, caster, spell, plan, 0);
@@ -943,36 +945,107 @@ fn execute_cast(
 }
 
 /// One handled effect's unit targets and destination.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct PlannedEffect {
     index: usize,
     units: Vec<Entity>,
     dest: Option<Dest>,
+    /// A chained effect's damage and healing multiplier per unit: `EffectChainAmplitude`
+    /// to the power of the unit's place in the chain (`m_damageMultipliers`,
+    /// Spell.cpp:1840-1844, 8631-8636). Empty for an unchained effect.
+    chain_multipliers: Vec<(Entity, f32)>,
+}
+
+impl PlannedEffect {
+    fn chain_multiplier(&self, unit: Entity) -> f32 {
+        self.chain_multipliers
+            .iter()
+            .find(|(chained, _)| *chained == unit)
+            .map_or(1.0, |(_, multiplier)| *multiplier)
+    }
 }
 
 type TargetPlan = Vec<PlannedEffect>;
 
+/// The first effect whose targets `Spell::SelectSpellTargets` selects together with
+/// effect `index` (Spell.cpp:741-781): an effect with the same implicit targets and, for
+/// area selections, the same radii. Its selection (its chain) serves both.
+fn target_group_leader(spell: &SpellInfo, index: usize) -> usize {
+    let effect = &spell.effects[index];
+    spell.effects[..index]
+        .iter()
+        .position(|other| {
+            other.effect != 0
+                && other.implicit_targets == effect.implicit_targets
+                && other.attributes & EFFECT_ATTR_PLAYERS_ONLY
+                    == effect.attributes & EFFECT_ATTR_PLAYERS_ONLY
+                && (!targets::selects_area(effect)
+                    || (other.radius[0] == effect.radius[0] && other.radius[1] == effect.radius[1]))
+        })
+        .unwrap_or(index)
+}
+
+/// `SpellEffectAttributes::PlayersOnly` (DBCEnums.h:2432).
+const EFFECT_ATTR_PLAYERS_ONLY: u32 = 0x0000_4000;
+
 /// Targets of every handled effect, selected before any effect resolves. A
 /// creature's melee-defense spell misses units by its miss chance
 /// (`creature::roll_spell_misses`).
+/// `ignore_target_check` (`TRIGGERED_IGNORE_TARGET_CHECK`, Spell.cpp:3489-3491): the
+/// explicit unit is hit whatever its relation to the caster, as a reflected Frostbolt's
+/// triggered damage hits its own caster.
 fn plan_targets(
     world: &mut World,
     caster: Entity,
     spell: &SpellInfo,
     explicit: Option<Entity>,
+    ignore_target_check: bool,
 ) -> Result<TargetPlan, CastFailure> {
     let cap = max_targets(spell);
     let mut plan = Vec::new();
+    // Units per leading effect (`processedEffectsMaskForSpell`).
+    let mut selected: Vec<(usize, Vec<Entity>)> = Vec::new();
     for (index, effect) in spell.effects.iter().enumerate() {
         if !effects::is_handled(effect) {
             continue;
         }
-        let units =
-            targets::select_targets(world, caster, explicit, effect, cap).map_err(|id| {
-                CastFailure::Unsupported(format!("implicit target {id} not supported"))
-            })?;
+        let leader = target_group_leader(spell, index);
+        let units = match selected.iter().find(|(selected, _)| *selected == leader) {
+            Some((_, units)) => units.clone(),
+            None => {
+                let units = targets::select_targets(
+                    world,
+                    caster,
+                    explicit,
+                    spell,
+                    &spell.effects[leader],
+                    cap,
+                    ignore_target_check,
+                )
+                .map_err(|id| {
+                    CastFailure::Unsupported(format!("implicit target {id} not supported"))
+                })?;
+                selected.push((leader, units.clone()));
+                units
+            }
+        };
+        let chain_multipliers = if spell.effects[leader].chain_targets > 1 {
+            std::iter::successors(Some(1.0), |multiplier| {
+                Some(multiplier * effect.chain_amplitude)
+            })
+            .zip(&units)
+            .map(|(multiplier, &unit)| (unit, multiplier))
+            .collect()
+        } else {
+            Vec::new()
+        };
         let dest = targets::effect_dest(world, caster, explicit, effect);
-        plan.push(PlannedEffect { index, units, dest });
+        plan.push(PlannedEffect {
+            index,
+            units,
+            dest,
+            chain_multipliers,
+        });
     }
     creature::roll_spell_misses(world, caster, spell, &mut plan);
     Ok(plan)
@@ -999,13 +1072,17 @@ fn resolve_effects(
     }
     // Aura effects hitting the same unit form one aura (per-unit effect mask).
     let mut aura_masks: Vec<(Entity, u32)> = Vec::new();
-    for PlannedEffect { index, units, dest } in plan {
+    for planned in plan {
+        let PlannedEffect {
+            index, units, dest, ..
+        } = planned;
         let effect = &spell.effects[*index];
         let ctx = EffectCtx {
             caster,
             spell,
             depth,
             dest: *dest,
+            chain_multiplier: 1.0,
         };
         if effect.effect == effects::EFFECT_PERSISTENT_AREA_AURA {
             area_aura::create(world, &ctx, effect);
@@ -1029,6 +1106,10 @@ fn resolve_effects(
         };
         for &unit in units {
             if world.get_entity(unit).is_ok() {
+                let ctx = EffectCtx {
+                    chain_multiplier: planned.chain_multiplier(unit),
+                    ..ctx
+                };
                 handler(world, &ctx, effect, unit);
             }
         }
@@ -1183,6 +1264,7 @@ fn push_hit_events(
                 can_proc: depth == 0,
                 periodic: false,
                 damage: amount,
+                reflected: false,
             },
         );
     }
@@ -1209,6 +1291,7 @@ fn push_hit_events(
                 can_proc: depth == 0,
                 periodic: false,
                 damage,
+                reflected: false,
             },
         );
     }
@@ -1238,7 +1321,8 @@ pub(crate) fn cast_triggered(
         warn!("Triggered spell {spell_id} not found");
         return;
     };
-    match plan_targets(world, caster, &spell, explicit) {
+    // `TRIGGERED_FULL_MASK` includes `TRIGGERED_IGNORE_TARGET_CHECK`.
+    match plan_targets(world, caster, &spell, explicit, true) {
         Ok(plan) => missiles::launch(world, caster, &spell, plan, depth),
         Err(failure) => warn!("Triggered spell {spell_id} skipped: {failure:?}"),
     }

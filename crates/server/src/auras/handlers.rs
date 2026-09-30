@@ -27,6 +27,8 @@ pub enum AuraKind {
     CastBlock,
     /// Unit state reconciled on every aura change (`unit_state.rs`).
     UnitState,
+    /// Chance to reflect a spell back to its caster (`reflect_chance`).
+    Reflect,
 }
 
 pub const PERIODIC_DAMAGE: u32 = 3;
@@ -42,6 +44,7 @@ pub const PERIODIC_ENERGIZE: u32 = 24;
 pub const MOD_PACIFY: u32 = 25;
 pub const MOD_ROOT: u32 = 26;
 pub const MOD_SILENCE: u32 = 27;
+pub const REFLECT_SPELLS: u32 = 28;
 pub const MOD_STAT: u32 = 29;
 pub const MOD_INCREASE_SPEED: u32 = 31;
 pub const MOD_INCREASE_ENERGY: u32 = 35;
@@ -54,6 +57,7 @@ pub const PROC_TRIGGER_SPELL: u32 = 42;
 pub const MOD_PACIFY_SILENCE: u32 = 60;
 pub const MOD_CASTING_SPEED_NOT_STACK: u32 = 65;
 pub const SCHOOL_ABSORB: u32 = 69;
+pub const REFLECT_SPELLS_SCHOOL: u32 = 74;
 pub const MOD_DAMAGE_PERCENT_DONE: u32 = 79;
 pub const WATER_BREATHING: u32 = 82;
 pub const MOD_DAMAGE_PERCENT_TAKEN: u32 = 87;
@@ -147,6 +151,7 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         SCHOOL_IMMUNITY => SchoolImmunity,
         MOD_SPELL_DAMAGE_FROM_CASTER => DamageFromCaster,
         MOD_MAX_CHARGES | CHARGE_RECOVERY_MOD | CHARGE_RECOVERY_MULTIPLIER => ChargeMod,
+        REFLECT_SPELLS | REFLECT_SPELLS_SCHOOL => Reflect,
         _ => return None,
     })
 }
@@ -176,7 +181,15 @@ pub fn can_proc(aura_type: u32) -> bool {
             | MOD_SPELL_DAMAGE_FROM_CASTER
             | MOD_POWER_REGEN_PERCENT
             | MOD_MELEE_HASTE
+            | REFLECT_SPELLS
+            | REFLECT_SPELLS_SCHOOL
     )
+}
+
+/// SPELL_AURA_REFLECT_SPELLS(_SCHOOL): auras that proc only off a reflect
+/// (`SpellMgr::LoadSpellProcs` `PROC_HIT_REFLECT`, SpellMgr.cpp:1847-1851).
+pub fn reflects(aura_type: u32) -> bool {
+    matches!(aura_type, REFLECT_SPELLS | REFLECT_SPELLS_SCHOOL)
 }
 
 /// Crowd control that damage breaks (TrinityCore `AuraEffect::HandleBreakableCCAuraProc`):

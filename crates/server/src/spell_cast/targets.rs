@@ -246,13 +246,16 @@ fn radius(effect: &SpellEffect, slot: usize) -> f32 {
 
 /// Unit targets of one effect. Errors name an unsupported target ID. An
 /// effect whose slots select no unit and no area (both 0) hits the explicit
-/// target, else the caster.
+/// target, else the caster. `ignore_relation` takes the explicit unit whatever the
+/// caster's relation to it.
 pub fn select_targets(
     world: &mut World,
     caster: Entity,
     explicit: Option<Entity>,
+    spell: &SpellInfo,
     effect: &SpellEffect,
     max_targets: u32,
+    ignore_relation: bool,
 ) -> Result<Vec<Entity>, u32> {
     let caster_pos = position(world, caster).unwrap_or_default();
     let mut center = None;
@@ -268,9 +271,14 @@ pub fn select_targets(
             }
             Selector::Explicit(relation) => {
                 selected_any = true;
-                units.extend(
-                    explicit.filter(|&target| relation_matches(world, caster, target, relation)),
-                );
+                if let Some(target) = explicit.filter(|&target| {
+                    ignore_relation || relation_matches(world, caster, target, relation)
+                }) {
+                    units.push(target);
+                    units.extend(chain_targets(
+                        world, caster, spell, effect, target, relation,
+                    ));
+                }
             }
             Selector::CenterCaster => center = Some(caster_pos),
             Selector::CenterExplicit(_) => {
@@ -317,6 +325,84 @@ pub fn select_targets(
     }
     units.dedup();
     Ok(units)
+}
+
+/// `SPELL_ATTR2_CHAIN_FROM_CASTER` (SharedDefines.h:522).
+const SPELL_ATTR2_CHAIN_FROM_CASTER: u32 = 0x0000_1000;
+/// `SpellEffectAttributes::ChainFromInitialTarget` (DBCEnums.h:2425).
+const EFFECT_ATTR_CHAIN_FROM_INITIAL_TARGET: u32 = 0x0000_0080;
+
+/// `Spell::SelectImplicitChainTargets` / `SearchChainTargets` (Spell.cpp:1832-1864,
+/// 2216-2320): after `target`, up to `EffectChainTargets - 1` more units matching
+/// `relation`, each the living one nearest the chain source within the jump radius
+/// (7.5 yd ranged, 5 yd melee, 10 yd otherwise), searched within the jump radius ×
+/// the jumps left. The source moves to each unit found, unless the spell chains from
+/// the caster (`SPELL_ATTR2_CHAIN_FROM_CASTER`, searched over the spell range) or the
+/// effect from its initial target (`ChainFromInitialTarget`). Line of sight, the
+/// `SPELL_ATTR5_MELEE_CHAIN_TARGETING` front arc (facing is not modelled) and the
+/// ChainTargets / ChainJumpDistance spell mods are not modelled.
+pub fn chain_targets(
+    world: &mut World,
+    caster: Entity,
+    spell: &SpellInfo,
+    effect: &SpellEffect,
+    target: Entity,
+    relation: Relation,
+) -> Vec<Entity> {
+    if effect.chain_targets <= 1 {
+        return Vec::new();
+    }
+    let jumps = (effect.chain_targets - 1) as usize;
+    let defense = spell
+        .categories
+        .as_ref()
+        .map_or(0, |categories| categories.defense_type);
+    let jump_radius = match defense {
+        3 => 7.5,
+        2 => 5.0,
+        _ => 10.0,
+    };
+    let from_caster = spell.misc.as_ref().map_or(0, |misc| misc.attributes[2])
+        & SPELL_ATTR2_CHAIN_FROM_CASTER
+        != 0;
+    let from_initial = effect.attributes & EFFECT_ATTR_CHAIN_FROM_INITIAL_TARGET != 0;
+    let search_radius = if from_caster {
+        spell_range(spell, relation == Relation::Enemy).1
+    } else if from_initial {
+        jump_radius
+    } else {
+        jump_radius * jumps as f32
+    };
+    let mut source = if from_caster { caster } else { target };
+    let Some(search_center) = position(world, source) else {
+        return Vec::new();
+    };
+    let mut candidates: Vec<Entity> =
+        area_units(world, caster, search_center, search_radius, relation, 0)
+            .into_iter()
+            .filter(|&unit| unit != target)
+            .collect();
+    let mut chain = Vec::new();
+    while chain.len() < jumps {
+        let Some(from) = position(world, source) else {
+            break;
+        };
+        let nearest = candidates
+            .iter()
+            .enumerate()
+            .filter_map(|(slot, &unit)| Some((slot, position(world, unit)?.distance(from))))
+            .filter(|&(_, distance)| distance <= jump_radius)
+            .min_by(|a, b| a.1.total_cmp(&b.1));
+        let Some((slot, _)) = nearest else {
+            break;
+        };
+        let unit = candidates.remove(slot);
+        if !from_caster && !from_initial {
+            source = unit;
+        }
+        chain.push(unit);
+    }
+    chain
 }
 
 /// Where an effect's destination targets put it (`SpellCastTargets::GetDstPos`),
@@ -384,6 +470,17 @@ pub fn effect_dest(
         });
     }
     dest
+}
+
+/// Whether a slot of `effect` selects units in an area (the selections whose radius
+/// `Spell::SelectSpellTargets` compares: Spell.cpp:757-775).
+pub fn selects_area(effect: &SpellEffect) -> bool {
+    effect.implicit_targets.iter().any(|&id| {
+        matches!(
+            selector(id),
+            Some(Selector::AreaAroundSrc(_) | Selector::AreaAroundDest(_))
+        )
+    })
 }
 
 /// Radius of the effect's first target slot (`SpellEffectInfo::CalcRadius`).

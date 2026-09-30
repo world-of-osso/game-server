@@ -16,6 +16,7 @@
 
 use bevy::prelude::*;
 
+use super::reflect::{self, Reflection};
 use super::{PlannedEffect, TargetPlan, attributes, is_channeled, now, resolve_effects};
 use crate::spell_info::{SpellInfo, SpellStore};
 
@@ -28,6 +29,10 @@ const MIN_MISSILE_DISTANCE: f32 = 5.0;
 /// destination (`SpellCastTargets::HasDst`).
 const DEST_TARGETS: [u32; 5] = [18, 53, 63, 65, 132];
 
+/// `SPELL_ATTR4_BOUNCY_CHAIN_MISSILES` (SharedDefines.h:602): "Hits area targets over
+/// time instead of all at once".
+const SPELL_ATTR4_BOUNCY_CHAIN_MISSILES: u32 = 0x0004_0000;
+
 /// Spell hits in flight, resolved by `resolve_due_hits`.
 #[derive(Resource, Debug, Default)]
 pub(crate) struct PendingSpellHits(Vec<PendingHit>);
@@ -37,10 +42,27 @@ struct PendingHit {
     due: f64,
     caster: Entity,
     spell_id: u32,
-    plan: TargetPlan,
     depth: u8,
-    /// Each unit target and whether it was alive at launch (`TargetInfo::IsAlive`).
-    alive_at_launch: Vec<(Entity, bool)>,
+    landing: Landing,
+}
+
+/// What a hit in flight does when it lands.
+#[derive(Debug)]
+enum Landing {
+    /// The plan's units, each with whether it was alive at launch (`TargetInfo::IsAlive`).
+    Units {
+        plan: TargetPlan,
+        alive_at_launch: Vec<(Entity, bool)>,
+    },
+    /// A spell `reflector` reflected: `plan` resolves on the caster, if the reflector is
+    /// still there in the alive state it had at launch.
+    Reflected {
+        reflector: Entity,
+        alive_at_launch: bool,
+        plan: TargetPlan,
+    },
+    /// The missile reaches `reflector`: its reflect aura procs.
+    ReflectProc { reflector: Entity },
 }
 
 /// Resolve `plan` now if the spell has no travel time, else schedule each hit.
@@ -51,33 +73,36 @@ pub(super) fn launch(
     plan: TargetPlan,
     depth: u8,
 ) {
+    let reflections: Vec<(Entity, Reflection)> = super::hit_units(&plan)
+        .into_iter()
+        .filter_map(|unit| Some((unit, reflect::roll(world, caster, spell, unit)?)))
+        .collect();
     // `PreprocessSpellLaunch` (Spell.cpp:8538-8541): only the caster enters combat.
     for target in super::hit_units(&plan) {
         if super::starts_combat(world, caster, target, spell) {
             crate::combat_refs::set_in_combat_with_suppressed(world, caster, target);
         }
     }
-    let groups = hit_groups(world, caster, spell, plan);
+    for &(unit, reflection) in &reflections {
+        reflect::log_miss(world, caster, spell, unit, reflection);
+    }
+    let delays = hit_delays(world, caster, spell, &plan);
     let launched = now(world);
-    for (delay, plan) in groups {
-        if delay <= 0.0 {
-            hit(world, caster, spell, &plan, depth);
+    let (plan, reflected) = split_reflected(plan, &reflections, caster);
+    for (delay, landing) in landings(world, plan, reflected, &delays) {
+        if delay == 0 {
+            land_now(world, caster, spell, depth, landing);
             continue;
         }
-        let alive_at_launch = super::hit_units(&plan)
-            .into_iter()
-            .map(|unit| (unit, super::targets::is_alive(world, unit)))
-            .collect();
         world
             .get_resource_or_init::<PendingSpellHits>()
             .0
             .push(PendingHit {
-                due: launched + delay,
+                due: launched + delay as f64 / 1000.0,
                 caster,
                 spell_id: spell.id,
-                plan,
                 depth,
-                alive_at_launch,
+                landing,
             });
     }
 }
@@ -99,42 +124,66 @@ pub(super) fn resolve_due_hits(world: &mut World) {
         due
     };
     for hit in due {
-        land(world, hit);
+        if world.get_entity(hit.caster).is_err() {
+            continue;
+        }
+        let Some(spell) = world
+            .get_resource::<SpellStore>()
+            .and_then(|store| store.get(hit.spell_id))
+            .cloned()
+        else {
+            continue;
+        };
+        land_now(world, hit.caster, &spell, hit.depth, hit.landing);
     }
 }
 
-fn land(world: &mut World, hit: PendingHit) {
-    if world.get_entity(hit.caster).is_err() {
-        return;
-    }
-    let Some(spell) = world
-        .get_resource::<SpellStore>()
-        .and_then(|store| store.get(hit.spell_id))
-        .cloned()
-    else {
-        return;
-    };
-    let reachable: Vec<Entity> = hit
-        .alive_at_launch
-        .iter()
-        .filter(|&&(unit, alive)| {
-            world.get_entity(unit).is_ok() && super::targets::is_alive(world, unit) == alive
-        })
-        .map(|&(unit, _)| unit)
-        .collect();
-    let plan: TargetPlan = hit
-        .plan
-        .into_iter()
-        .map(|planned| PlannedEffect {
-            units: planned
-                .units
+fn land_now(world: &mut World, caster: Entity, spell: &SpellInfo, depth: u8, landing: Landing) {
+    match landing {
+        Landing::Units {
+            plan,
+            alive_at_launch,
+        } => {
+            let reachable: Vec<Entity> = alive_at_launch
+                .iter()
+                .filter(|&&(unit, alive)| reachable(world, unit, alive))
+                .map(|&(unit, _)| unit)
+                .collect();
+            let plan = plan
                 .into_iter()
-                .filter(|unit| reachable.contains(unit))
-                .collect(),
-            ..planned
-        })
-        .collect();
-    self::hit(world, hit.caster, &spell, &plan, hit.depth);
+                .map(|planned| PlannedEffect {
+                    units: planned
+                        .units
+                        .into_iter()
+                        .filter(|unit| reachable.contains(unit))
+                        .collect(),
+                    ..planned
+                })
+                .collect();
+            hit(world, caster, spell, &plan, depth);
+        }
+        Landing::Reflected {
+            reflector,
+            alive_at_launch,
+            plan,
+        } => {
+            if !reachable(world, reflector, alive_at_launch) {
+                return;
+            }
+            // `PreprocessTarget` engages the target, which is still the reflector.
+            if super::starts_combat(world, caster, reflector, spell) {
+                crate::combat_refs::set_in_combat_with(world, reflector, caster);
+            }
+            resolve_effects(world, caster, spell, &plan, depth);
+        }
+        Landing::ReflectProc { reflector } => reflect::proc_reflector(world, caster, reflector),
+    }
+}
+
+/// `TargetInfo::PreprocessTarget` / `DoTargetSpellHit` (Spell.cpp:2746-2748, 2807): the
+/// unit is still in the world and alive as it was at launch.
+fn reachable(world: &World, unit: Entity, alive_at_launch: bool) -> bool {
+    world.get_entity(unit).is_ok() && super::targets::is_alive(world, unit) == alive_at_launch
 }
 
 /// `TargetInfo::PreprocessTarget` (Spell.cpp:2763-2764): each unit the spell lands on
@@ -149,33 +198,155 @@ fn hit(world: &mut World, caster: Entity, spell: &SpellInfo, plan: &TargetPlan, 
     resolve_effects(world, caster, spell, plan, depth);
 }
 
-/// The plan split by hit delay in seconds, earliest first. Effects without unit
-/// targets (areas, summons) go with the earliest hit.
-fn hit_groups(
+/// The plan without its reflected and deflected units, and per reflector the effects
+/// that would have hit it, turned on the caster (with the reflector's chain multiplier).
+fn split_reflected(
+    plan: TargetPlan,
+    reflections: &[(Entity, Reflection)],
+    caster: Entity,
+) -> (TargetPlan, Vec<(Entity, TargetPlan)>) {
+    let reflected = reflections
+        .iter()
+        .filter(|(_, reflection)| *reflection == Reflection::Reflect)
+        .map(|&(reflector, _)| {
+            let turned = plan
+                .iter()
+                .filter(|planned| planned.units.contains(&reflector))
+                .map(|planned| PlannedEffect {
+                    index: planned.index,
+                    units: vec![caster],
+                    dest: planned.dest,
+                    chain_multipliers: vec![(caster, planned.chain_multiplier(reflector))],
+                })
+                .collect();
+            (reflector, turned)
+        })
+        .collect();
+    // An effect left without its units drops out, rather than resolving as unitless.
+    let plan = plan
+        .into_iter()
+        .filter_map(|planned| {
+            let had_units = !planned.units.is_empty();
+            let units: Vec<Entity> = planned
+                .units
+                .iter()
+                .copied()
+                .filter(|unit| !reflections.iter().any(|(reflector, _)| reflector == unit))
+                .collect();
+            (units.len() > 0 || !had_units).then(|| PlannedEffect { units, ..planned })
+        })
+        .collect();
+    (plan, reflected)
+}
+
+/// Every landing with its delay in ms, earliest first: the plan split by hit delay
+/// (effects without unit targets, such as areas and summons, go with the earliest hit),
+/// and per reflector its aura proc at its delay and the reflected spell at 1.5 × it
+/// ("Increase time interval for reflected spells by 1.5", Spell.cpp:2543-2544).
+fn landings(
+    world: &World,
+    plan: TargetPlan,
+    reflected: Vec<(Entity, TargetPlan)>,
+    delays: &[(Entity, u64)],
+) -> Vec<(u64, Landing)> {
+    let delay_of = |unit: Entity| {
+        delays
+            .iter()
+            .find(|(delayed, _)| *delayed == unit)
+            .map_or(0, |(_, delay)| *delay)
+    };
+    let units = super::hit_units(&plan);
+    let mut moments: Vec<u64> = units.iter().map(|&unit| delay_of(unit)).collect();
+    moments.sort_unstable();
+    moments.dedup();
+    let unitless_moment = moments
+        .first()
+        .copied()
+        .unwrap_or_else(|| delays.iter().map(|(_, delay)| *delay).min().unwrap_or(0));
+    if moments.is_empty() && plan.iter().any(|planned| planned.units.is_empty()) {
+        moments.push(unitless_moment);
+    }
+    let mut landings: Vec<(u64, Landing)> = moments
+        .iter()
+        .enumerate()
+        .map(|(slot, &moment)| {
+            let plan: TargetPlan = plan
+                .iter()
+                .filter_map(|planned| {
+                    let units: Vec<Entity> = planned
+                        .units
+                        .iter()
+                        .copied()
+                        .filter(|&unit| delay_of(unit) == moment)
+                        .collect();
+                    let unitless = planned.units.is_empty() && slot == 0;
+                    (!units.is_empty() || unitless).then(|| PlannedEffect {
+                        units,
+                        ..planned.clone()
+                    })
+                })
+                .collect();
+            let alive_at_launch = super::hit_units(&plan)
+                .into_iter()
+                .map(|unit| (unit, super::targets::is_alive(world, unit)))
+                .collect();
+            (
+                moment,
+                Landing::Units {
+                    plan,
+                    alive_at_launch,
+                },
+            )
+        })
+        .collect();
+    for (reflector, plan) in reflected {
+        let delay = delay_of(reflector);
+        landings.push((delay, Landing::ReflectProc { reflector }));
+        landings.push((
+            delay + (delay >> 1),
+            Landing::Reflected {
+                reflector,
+                alive_at_launch: super::targets::is_alive(world, reflector),
+                plan,
+            },
+        ));
+    }
+    landings.sort_by_key(|(delay, _)| *delay);
+    landings
+}
+
+/// Each unit target's hit delay in ms (`Spell::AddUnitTarget`, Spell.cpp:2486-2518),
+/// in plan order. Without travel time every delay is 0. A destination spell is one
+/// missile over the caster's exact distance (`CalculateDelayMomentForDst`) for every
+/// unit. Otherwise a unit is `LaunchDelay` plus the flight from the caster, except with
+/// `SPELL_ATTR4_BOUNCY_CHAIN_MISSILES`: a unit after the first that shares an effect
+/// with an earlier one is hit the flight from the latest such unit after it, without
+/// another `LaunchDelay`. The caster's own entry is 0.
+fn hit_delays(
     world: &World,
     caster: Entity,
     spell: &SpellInfo,
-    plan: TargetPlan,
-) -> Vec<(f64, TargetPlan)> {
+    plan: &TargetPlan,
+) -> Vec<(Entity, u64)> {
+    let units = super::hit_units(plan);
     let misc = spell.misc.as_ref();
     let speed = misc.map_or(0.0, |misc| misc.speed);
     let launch_delay = misc.map_or(0.0, |misc| misc.launch_delay);
     let min_duration = misc.map_or(0.0, |misc| misc.min_duration);
     let speed_is_delay = attributes(spell, 9) & SPELL_ATTR9_MISSILE_SPEED_IS_DELAY_IN_SEC != 0;
     if is_channeled(spell) || (speed <= 0.0 && launch_delay <= 0.0 && !speed_is_delay) {
-        return vec![(0.0, plan)];
+        return units.into_iter().map(|unit| (unit, 0)).collect();
     }
-    // `Spell::AddUnitTarget` (Spell.cpp:2508-2515): unit targets count at least 5 yd.
-    let flight = |distance: f32| -> f64 {
-        let travel = if speed_is_delay {
+    let travel = |distance: f32| -> f32 {
+        if speed_is_delay {
             speed.max(min_duration)
         } else if speed > 0.0 {
             (distance / speed).max(min_duration)
         } else {
             0.0
-        };
-        f64::from(launch_delay + travel)
+        }
     };
+    let to_ms = |secs: f32| (f64::from(secs) * 1000.0).floor() as u64;
     let origin = position(world, caster);
     let dest = plan
         .iter()
@@ -187,59 +358,43 @@ fn hit_groups(
         })
         .find_map(|planned| planned.dest);
     if let Some(dest) = dest {
-        // `CalculateDelayMomentForDst`: one missile over the caster's exact distance.
         let distance = origin.map_or(0.0, |origin| origin.distance(dest.position));
-        return vec![(flight(distance), plan)];
+        let delay = to_ms(launch_delay + travel(distance));
+        return units.into_iter().map(|unit| (unit, delay)).collect();
     }
-    let mut delays: Vec<(Entity, f64)> = super::hit_units(&plan)
-        .into_iter()
-        .map(|unit| {
-            let delay = if unit == caster {
-                0.0
-            } else {
-                let distance = origin
-                    .zip(position(world, unit))
-                    .map_or(0.0, |(from, to)| from.distance(to));
-                flight(distance.max(MIN_MISSILE_DISTANCE))
-            };
-            (unit, (delay * 1000.0).floor() / 1000.0)
-        })
-        .collect();
-    delays.sort_by(|a, b| a.1.total_cmp(&b.1));
-    let mut moments: Vec<f64> = delays.iter().map(|&(_, delay)| delay).collect();
-    moments.dedup();
-    if moments.is_empty() {
-        moments.push(0.0);
+    let bouncy = attributes(spell, 4) & SPELL_ATTR4_BOUNCY_CHAIN_MISSILES != 0;
+    let effect_mask = |unit: Entity| -> u64 {
+        plan.iter()
+            .filter(|planned| planned.units.contains(&unit))
+            .fold(0, |mask, planned| mask | 1 << planned.index)
+    };
+    let mut delays: Vec<(Entity, u64)> = Vec::with_capacity(units.len());
+    for unit in units {
+        if unit == caster {
+            delays.push((unit, 0));
+            continue;
+        }
+        let mask = effect_mask(unit);
+        let previous = bouncy
+            .then(|| {
+                delays
+                    .iter()
+                    .rev()
+                    .find(|&&(earlier, _)| effect_mask(earlier) & mask != 0)
+                    .copied()
+            })
+            .flatten();
+        let (source, start, launch) = match previous {
+            Some((earlier, delay)) => (position(world, earlier), delay, 0.0),
+            None => (origin, 0, launch_delay),
+        };
+        let distance = source
+            .zip(position(world, unit))
+            .map_or(0.0, |(from, to)| from.distance(to));
+        let flight = launch + travel(distance.max(MIN_MISSILE_DISTANCE));
+        delays.push((unit, start + to_ms(flight)));
     }
-    moments
-        .iter()
-        .enumerate()
-        .map(|(index, &moment)| {
-            let group: Vec<Entity> = delays
-                .iter()
-                .filter(|&&(_, delay)| delay == moment)
-                .map(|&(unit, _)| unit)
-                .collect();
-            let plan = plan
-                .iter()
-                .filter_map(|planned| {
-                    let units: Vec<Entity> = planned
-                        .units
-                        .iter()
-                        .copied()
-                        .filter(|unit| group.contains(unit))
-                        .collect();
-                    let unitless = planned.units.is_empty() && index == 0;
-                    (!units.is_empty() || unitless).then(|| PlannedEffect {
-                        index: planned.index,
-                        units,
-                        dest: planned.dest,
-                    })
-                })
-                .collect();
-            (moment, plan)
-        })
-        .collect()
+    delays
 }
 
 fn position(world: &World, unit: Entity) -> Option<Vec3> {

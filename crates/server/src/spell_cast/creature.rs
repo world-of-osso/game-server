@@ -55,7 +55,7 @@ pub(crate) fn creature_cast(
         return Err(CastFailure::CasterDead);
     }
     let explicit = validate_target(world, caster, &spell, explicit)?;
-    let plan = plan_targets(world, caster, &spell, explicit)?;
+    let plan = plan_targets(world, caster, &spell, explicit, false)?;
     log_event(
         world,
         cast_event(caster, explicit, &spell, CombatLogKind::CastSuccess),
