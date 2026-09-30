@@ -19,4 +19,6 @@ shared = { path = "../shared-protocol" }
 
 [patch.crates-io]
 bevy_replicon = { path = "vendor/bevy_replicon" }
+# Per-client server disconnect; see ../shared-protocol/vendor/lightyear_netcode/UPSTREAM.md.
+lightyear_netcode = { path = "../shared-protocol/vendor/lightyear_netcode" }
 lightyear_replication = { path = "vendor/lightyear_replication" }

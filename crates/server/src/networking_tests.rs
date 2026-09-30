@@ -93,6 +93,8 @@ fn setup_app_with_time() -> App {
 mod client_height;
 #[path = "networking_tests/death.rs"]
 mod death;
+#[path = "networking_tests/forced_disconnect.rs"]
+mod forced_disconnect;
 #[path = "networking_tests/misc.rs"]
 mod misc;
 #[path = "networking_tests/movement.rs"]
