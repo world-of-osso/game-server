@@ -31,6 +31,26 @@ fn load_fixture_refuses_existing_database_without_changing_bytes() {
 }
 
 #[test]
+fn load_fixture_claim_reopens_and_preserves_reserved_counters() -> FixtureResult<()> {
+    let dir = tempfile::tempdir()?;
+    let path = dir.path().join("owned.redb");
+    claim_database_path(&path)?;
+    let db = Database::create(&path)?;
+    persistence::create_tables(&db);
+    reserve_fixture_ids(&db)?;
+    drop(db);
+    let reopened = Database::open(&path)?;
+    assert_eq!(persistence::next_id(&reopened, "auction"), OFFER_COUNT + 1);
+    assert_eq!(
+        persistence::next_id(&reopened, "item_instance"),
+        OFFER_COUNT + 1
+    );
+    assert_eq!(persistence::next_id(&reopened, "character"), SELLER_ID + 1);
+    assert!(persistence::load_auctions(&reopened).is_empty());
+    Ok(())
+}
+
+#[test]
 #[ignore = "explicit owned DB/catalog/world/expiry env inputs required; writes 300k offers"]
 fn produce_owned_300k_auction_fixture() -> FixtureResult<()> {
     assert_eq!(std::env::var("AH_FIXTURE_OWNER")?, OWNER);
@@ -42,6 +62,9 @@ fn produce_owned_300k_auction_fixture() -> FixtureResult<()> {
         expiry > unix_now() + 3600,
         "expiry must be over an hour in the future"
     );
+    expiry
+        .checked_add(OFFER_COUNT - 1)
+        .ok_or("expiry range overflows u64")?;
     let config: Config = serde_json::from_slice(&std::fs::read(&catalog_path)?)?;
     let templates = load_item_templates(&world_path)?;
     let item_ids = eligible_item_ids(&config, &templates)?;
@@ -89,6 +112,9 @@ fn eligible_item_ids(config: &Config, templates: &ItemTemplates) -> FixtureResul
     {
         eligible.insert(recipe.output_item_id);
         eligible.extend(recipe.ingredients.iter().map(|&(id, _)| id));
+    }
+    if eligible.len() as u64 > OFFER_COUNT / 51 {
+        return Err("catalog has too many distinct items for a second offer page per item".into());
     }
     if eligible.len() <= 50 {
         return Err(
