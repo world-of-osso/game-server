@@ -164,9 +164,9 @@ pub(super) fn regenerate_runes(
     }
 }
 
-/// `(depletion order, duration ms)` of the last `UnitRunes` send.
+/// `(depletion order, duration ms, rune count)` of the last `UnitRunes` send.
 #[derive(Component, Debug, Clone, Default, PartialEq)]
-pub struct RunesSent(Vec<u8>, u32);
+pub struct RunesSent(Vec<u8>, u32, usize);
 
 type RuneSyncQuery<'w, 's> = Query<
     'w,
@@ -191,7 +191,7 @@ pub(super) fn sync_unit_runes(
     for (entity, runes, mods, stats, sent) in &units {
         let duration = rune_cooldown_secs(mods, stats);
         let duration_ms = (duration * 1000.0).round() as u32;
-        let key = RunesSent(runes.order.clone(), duration_ms);
+        let key = RunesSent(runes.order.clone(), duration_ms, runes.cooldowns.len());
         if sent == Some(&key) {
             continue;
         }

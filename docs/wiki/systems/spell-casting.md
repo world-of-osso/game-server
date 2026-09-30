@@ -159,7 +159,9 @@ Damage and heal side effects:
 - **Mana** stays in the legacy `Mana` component, with its max from `stats.rs`. `PowerPools` only orders it. Retirement: move mana into `PowerPools` and delete `Mana` when the client reads `UnitPowers`.
 - **Units:** pools hold the raw DB2 values, the same units as `SpellPower` costs and ENERGIZE.
   - Rage, Runic Power, Soul Shards, Lunar Power and Pain are tenths (`DisplayModifier` 10). Insanity is hundredths.
-  - `UnitPowers` sends the raw `current`/`max` floored to integers. The client divides by the display modifier for `PowerType`.
+  - `UnitPowers` sends raw `current`/`max` floored to integers, `partial` fractional thousandths and signed `regen_per_sec`; `charged_points` contains the aura-derived 1-based combo-point indices. The client divides by the display modifier for `PowerType`.
+  - Resend on whole value, max, rate, display order or charged-point changes, not partial alone. The sent fraction includes that tick's regeneration. The rate becomes zero on the tick a pool reaches its max or decay center.
+  - `UnitRunes` sends `duration_ms` and rune-indexed `ready_in_ms`; queued runes include their wait, so values can exceed duration. Resend on depletion-order, duration or rune-count changes, not countdown ticks. A max-only rune passive must update the view even when every rune is ready.
 - **Regen** (raw units per second, TrinityCore `Player::Regenerate`):
   - In combat: `RegenCombat`.
   - Out of combat: `RegenPeace`, starting only after `RegenInterruptTimeMS` since leaving combat.

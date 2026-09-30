@@ -368,7 +368,7 @@ pub(super) fn regenerate_powers(
             } else {
                 next.max(limit)
             };
-            pool.regen_per_sec = rate;
+            pool.regen_per_sec = if pool.current == limit { 0.0 } else { rate };
         }
         let mut mana_rate = 0.0;
         if let Some(mut mana) = mana
@@ -377,6 +377,9 @@ pub(super) fn regenerate_powers(
             let base_mana = stats.map_or(0.0, |stats| stats.base_mana);
             mana_rate = base_mana * MANA_REGEN_BASE_PCT_PER_SEC * regen_mult(PowerType::Mana);
             mana.current = (mana.current + mana_rate * dt).min(mana.max);
+            if mana.current == mana.max {
+                mana_rate = 0.0;
+            }
         }
         pools.bypass_change_detection().mana_regen_per_sec = mana_rate;
     }

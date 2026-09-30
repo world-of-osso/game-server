@@ -1,5 +1,9 @@
 # Wiki Log
 
+## [2026-09-30] systems | Class-resource replication
+
+Updated [[spell-casting]] with fractional power/rate, charged-point and indexed rune send contracts. Targeted RED exposed rates left nonzero for one tick at pool limits and stale ready-rune counts when only max changed. Runic Longevity also changes rune regen, so its full aura masked the latter failure; the count test isolates its max-power effect. End-to-end wire/client rendering remains main's integration gate.
+
 ## [2026-09-30] systems | Combat references
 
 Updated [[combat]] (new Combat State section) and [[spell-casting]]. Combat is now TrinityCore's `CombatManager`: pairwise references, no timeout against a creature with a threat list, 5 s for PvP and threat-less creatures (training dummies), and `combat_stop` ends both sides. Before, every unit had its own 5 s timer after its last hit, refreshed every tick while it had `AutoAttack`: a caster auto-attacking a dummy from range stayed in combat 5 s past the dummy's evade (a 10 s tail on one Frostbolt), a kill left 5 s of combat, and a lull over 5 s in a real fight dropped combat. The damage meter's session duration is combat time, so its DPS followed.
