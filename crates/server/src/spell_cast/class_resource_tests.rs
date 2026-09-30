@@ -374,6 +374,138 @@ fn unit_runes_replicate_ready_times_with_waiting_runes_starting_later() {
     assert_eq!(runes_view(&h), view);
 }
 
+fn power_entry(h: &Harness, power: PowerType) -> shared::components::PowerEntry {
+    h.app
+        .world()
+        .get::<UnitPowers>(h.caster)
+        .unwrap()
+        .entries
+        .iter()
+        .find(|entry| entry.power == power)
+        .unwrap()
+        .clone()
+}
+
+#[test]
+fn replication_energy_stops_predicting_on_the_tick_it_reaches_max() {
+    let mut h = harness(Vec::new(), &[], ROGUE).expect("resource fixture requires world.db");
+    h.advance(1);
+    h.set_power(PowerType::Energy, 99.75);
+    h.advance(1);
+    let entry = power_entry(&h, PowerType::Energy);
+    assert_eq!(h.power(PowerType::Energy), 100.0);
+    assert_eq!(
+        (entry.current, entry.partial, entry.regen_per_sec),
+        (100, 0, 0.0)
+    );
+}
+
+#[test]
+fn replication_rage_stops_predicting_on_the_tick_it_reaches_zero() {
+    let mut h = harness(Vec::new(), &[], 1).expect("resource fixture requires world.db");
+    h.advance(1);
+    h.set_power(PowerType::Rage, 0.25);
+    h.app
+        .world_mut()
+        .get_mut::<shared::components::CombatStatus>(h.caster)
+        .unwrap()
+        .0 = false;
+    h.advance(1);
+    let entry = power_entry(&h, PowerType::Rage);
+    assert_eq!(h.power(PowerType::Rage), 0.0);
+    assert_eq!(
+        (entry.current, entry.partial, entry.regen_per_sec),
+        (0, 0, 0.0)
+    );
+}
+
+#[test]
+fn replication_mana_stops_predicting_on_the_tick_it_reaches_max() {
+    let mut h = harness(Vec::new(), &[], PALADIN).expect("resource fixture requires world.db");
+    h.advance(1);
+    h.app
+        .world_mut()
+        .get_mut::<shared::components::Mana>(h.caster)
+        .unwrap()
+        .current = 9_999.0;
+    h.advance(1);
+    let entry = power_entry(&h, PowerType::Mana);
+    assert_eq!(
+        (entry.current, entry.partial, entry.regen_per_sec),
+        (10_000, 0, 0.0)
+    );
+}
+
+#[test]
+fn replication_rune_count_tracks_a_max_power_passive_without_a_spend() {
+    const RUNIC_LONGEVITY: u32 = 194653;
+    let mut h = harness(Vec::new(), &[RUNIC_LONGEVITY], DEATH_KNIGHT)
+        .expect("resource fixture requires world.db");
+    let caster = h.caster;
+    h.app
+        .world_mut()
+        .entity_mut(caster)
+        .insert(crate::class_progression::KnownSpells::fixture(Vec::new()));
+    h.advance(3);
+    assert_eq!(runes_view(&h).ready_in_ms, [0; 6]);
+    h.app
+        .world_mut()
+        .entity_mut(caster)
+        .insert(crate::class_progression::KnownSpells::fixture(vec![
+            RUNIC_LONGEVITY,
+        ]));
+    h.advance(3);
+    assert_eq!(replicated(&h, PowerType::Runes), (7, 7));
+    assert_eq!(runes_view(&h).ready_in_ms, [0; 7]);
+    h.app
+        .world_mut()
+        .entity_mut(caster)
+        .insert(crate::class_progression::KnownSpells::fixture(Vec::new()));
+    h.advance(3);
+    assert_eq!(replicated(&h, PowerType::Runes), (6, 6));
+    assert_eq!(runes_view(&h).ready_in_ms, [0; 6]);
+}
+
+#[test]
+fn replication_forms_send_energy_regen_and_combat_dependent_rage_decay() {
+    let mut h = harness(Vec::new(), &[CAT_FORM, BEAR_FORM], DRUID)
+        .expect("resource fixture requires world.db");
+    h.cast_and_deliver(CAT_FORM, None);
+    h.set_power(PowerType::Energy, 20.25);
+    h.advance(1);
+    let entry = power_entry(&h, PowerType::Energy);
+    assert_eq!(primary_power(&h), PowerType::Energy);
+    assert_eq!(
+        (entry.current, entry.partial, entry.regen_per_sec),
+        (20, 750, 10.0)
+    );
+
+    h.advance(40);
+    h.cast_and_deliver(BEAR_FORM, None);
+    h.set_power(PowerType::Rage, 100.0);
+    h.advance(1);
+    assert_eq!(primary_power(&h), PowerType::Rage);
+    assert_eq!(power_entry(&h, PowerType::Rage).regen_per_sec, 0.0);
+    h.app
+        .world_mut()
+        .get_mut::<shared::components::CombatStatus>(h.caster)
+        .unwrap()
+        .0 = false;
+    h.advance(1);
+    let entry = power_entry(&h, PowerType::Rage);
+    assert_eq!(
+        (entry.current, entry.partial, entry.regen_per_sec),
+        (99, 375, -12.5)
+    );
+    h.app
+        .world_mut()
+        .get_mut::<shared::components::CombatStatus>(h.caster)
+        .unwrap()
+        .0 = true;
+    h.advance(1);
+    assert_eq!(power_entry(&h, PowerType::Rage).regen_per_sec, 0.0);
+}
+
 const EVOKER: u8 = 13;
 /// Evoker `chr_classes_x_power_types` without the alternate bars (Evoker is not in
 /// `ClassSpells` yet).
