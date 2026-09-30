@@ -18,6 +18,8 @@ pub struct MarketChanges {
     pub deleted_auctions: Vec<u64>,
     /// Existing rows that must still match, checked while holding the write transaction.
     pub expected_auctions: Vec<(u64, AuctionData)>,
+    /// Inventory snapshots checked under the same write lock, before any changes.
+    pub expected_inventories: Vec<(u64, InventoryData)>,
     pub inventories: Vec<(u64, InventoryData)>,
     pub records: Vec<(u64, InventoryRecord)>,
     /// Full replacements, applied before appending `mails`.
@@ -62,6 +64,7 @@ pub fn commit_market(
     let commit = || -> StoreResult<()> {
         let txn = db.begin_write()?;
         check_expected_auctions(&txn, &changes.expected_auctions)?;
+        check_expected_inventories(&txn, &changes.expected_inventories)?;
         if let Some(state) = state {
             txn.open_table(STATE)?
                 .insert(STATE_KEY, bitcode::encode(state).as_slice())?;
@@ -91,6 +94,27 @@ fn check_expected_auctions(
             .map_err(|error| format!("decode auction {id}: {error}"))?;
         if persisted != *expected_row {
             return Err(format!("auction {id} changed since it was read").into());
+        }
+    }
+    Ok(())
+}
+
+fn check_expected_inventories(
+    txn: &WriteTransaction,
+    expected: &[(u64, InventoryData)],
+) -> StoreResult<()> {
+    if expected.is_empty() {
+        return Ok(());
+    }
+    let table = txn.open_table(INVENTORIES)?;
+    for (id, expected_row) in expected {
+        let row = table
+            .get(*id)?
+            .ok_or_else(|| format!("inventory {id} no longer exists"))?;
+        let persisted: InventoryData = bitcode::decode(row.value())
+            .map_err(|error| format!("decode inventory {id}: {error}"))?;
+        if persisted != *expected_row {
+            return Err(format!("inventory {id} changed since it was read").into());
         }
     }
     Ok(())

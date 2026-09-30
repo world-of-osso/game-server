@@ -23,6 +23,7 @@ struct ValidatedAuction {
     source: InventoryItemData,
     item_index: usize,
     deposit: u64,
+    inventory: InventoryData,
 }
 
 fn validate_auction_request(req: &CreateAuction) -> Result<(), AuctionOperationResponse> {
@@ -64,6 +65,7 @@ fn validate_create_auction(
         source,
         item_index: index,
         deposit,
+        inventory,
     })
 }
 
@@ -133,7 +135,7 @@ pub(super) fn create_auction(
         Err(response) => return response,
     };
 
-    let mut inventory = persistence::load_inventory(db, character_id);
+    let mut inventory = validated.inventory.clone();
     inventory.gold -= validated.deposit;
     if inventory.items[validated.item_index].stack_count == req.stack_count {
         inventory.items.remove(validated.item_index);
@@ -160,6 +162,7 @@ pub(super) fn create_auction(
     };
     let changes = MarketChanges {
         auctions: vec![auction.clone()],
+        expected_inventories: vec![(character_id, validated.inventory)],
         inventories: vec![(character_id, inventory)],
         ..Default::default()
     };
@@ -194,6 +197,9 @@ fn stage_previous_bidder_refund(
     }
     let refund = auction.current_bid.unwrap_or(0);
     let mut inventory = persistence::load_inventory(db, previous_bidder);
+    changes
+        .expected_inventories
+        .push((previous_bidder, inventory.clone()));
     inventory.gold = inventory.gold.saturating_add(refund);
     changes.inventories.push((previous_bidder, inventory));
     changes.mails.push((
@@ -234,9 +240,11 @@ pub(super) fn place_bid(
     if bidder_inventory.gold < additional {
         return err("not enough gold");
     }
+    let expected_inventory = bidder_inventory.clone();
     bidder_inventory.gold -= additional;
     let mut changes = MarketChanges {
         expected_auctions: vec![(auction_id, auction.clone())],
+        expected_inventories: vec![(character_id, expected_inventory)],
         inventories: vec![(character_id, bidder_inventory)],
         ..Default::default()
     };
@@ -287,10 +295,12 @@ pub(super) fn buyout_auction(
     if buyer_inventory.gold < additional {
         return err("not enough gold");
     }
+    let expected_inventory = buyer_inventory.clone();
     buyer_inventory.gold -= additional;
     let mut changes = MarketChanges {
         expected_auctions: vec![(auction_id, auction.clone())],
         deleted_auctions: vec![auction_id],
+        expected_inventories: vec![(character_id, expected_inventory)],
         inventories: vec![(character_id, buyer_inventory)],
         mails: sale_mails(db, auction, character_id, price),
         ..Default::default()

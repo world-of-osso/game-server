@@ -382,3 +382,152 @@ fn record_helper_persists_layout_instances_character_and_inventory() {
     );
     assert_eq!(load_state(&db).unwrap(), Some(state(1)));
 }
+
+#[test]
+fn inventory_snapshot_guard_rejects_missing_changed_and_corrupt_rows_before_settlement() {
+    for scenario in ["missing", "changed", "corrupt"] {
+        let file = tempfile::NamedTempFile::new().unwrap();
+        let db = Database::create(file.path()).unwrap();
+        let expected = InventoryData {
+            gold: 1_000,
+            items: vec![item()],
+        };
+        commit_market(
+            &db,
+            Some(&state(1)),
+            &MarketChanges {
+                inventories: vec![(7, expected.clone())],
+                ..Default::default()
+            },
+        )
+        .unwrap();
+        let tx = db.begin_write().unwrap();
+        {
+            let mut table = tx.open_table(INVENTORIES).unwrap();
+            match scenario {
+                "missing" => {
+                    table.remove(7).unwrap();
+                }
+                "changed" => {
+                    table
+                        .insert(
+                            7,
+                            bitcode::encode(&InventoryData {
+                                gold: 999,
+                                ..expected.clone()
+                            })
+                            .as_slice(),
+                        )
+                        .unwrap();
+                }
+                _ => {
+                    table.insert(7, b"corrupt".as_slice()).unwrap();
+                }
+            }
+        }
+        tx.commit().unwrap();
+        let result = commit_market(
+            &db,
+            Some(&state(2)),
+            &MarketChanges {
+                expected_inventories: vec![(7, expected)],
+                inventories: vec![(
+                    7,
+                    InventoryData {
+                        gold: 600,
+                        items: vec![],
+                    },
+                )],
+                auctions: vec![auction(1)],
+                mails: vec![(7, mail(1))],
+                ..Default::default()
+            },
+        );
+        let error = result.unwrap_err();
+        assert!(error.contains("inventory 7"), "{error}");
+        drop(db);
+        let db = Database::open(file.path()).unwrap();
+        assert_eq!(load_state(&db).unwrap(), Some(state(1)));
+        let tx = db.begin_read().unwrap();
+        let inventories = tx.open_table(INVENTORIES).unwrap();
+        let row = inventories.get(7).unwrap();
+        match scenario {
+            "missing" => assert!(row.is_none()),
+            "changed" => assert_eq!(
+                bitcode::decode::<InventoryData>(row.unwrap().value())
+                    .unwrap()
+                    .gold,
+                999
+            ),
+            _ => assert_eq!(row.unwrap().value(), b"corrupt"),
+        }
+        let auctions = tx.open_table(AUCTIONS).unwrap();
+        assert!(auctions.get(1).unwrap().is_none());
+    }
+}
+
+#[test]
+fn concurrent_inventory_guard_lists_same_source_exactly_once_after_reopen() {
+    let file = tempfile::NamedTempFile::new().unwrap();
+    let db = Arc::new(Database::create(file.path()).unwrap());
+    let inventory = InventoryData {
+        gold: 1_000,
+        items: vec![item()],
+    };
+    commit_market(
+        &db,
+        Some(&state(1)),
+        &MarketChanges {
+            inventories: vec![(7, inventory.clone())],
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    let barrier = Arc::new(Barrier::new(2));
+    let workers: Vec<_> = (1..=2)
+        .map(|id| {
+            let db = db.clone();
+            let barrier = barrier.clone();
+            let expected = inventory.clone();
+            std::thread::spawn(move || {
+                let changes = MarketChanges {
+                    expected_inventories: vec![(7, expected)],
+                    inventories: vec![(
+                        7,
+                        InventoryData {
+                            gold: 980,
+                            items: vec![],
+                        },
+                    )],
+                    auctions: vec![auction(id)],
+                    mails: vec![(7, mail(id))],
+                    ..Default::default()
+                };
+                barrier.wait();
+                commit_market(&db, Some(&state(2)), &changes)
+            })
+        })
+        .collect();
+    let successes = workers
+        .into_iter()
+        .map(|worker| worker.join().unwrap())
+        .filter(|result| result.is_ok())
+        .count();
+    assert_eq!(successes, 1);
+    drop(db);
+    let db = Database::open(file.path()).unwrap();
+    assert_eq!(load_state(&db).unwrap(), Some(state(2)));
+    let tx = db.begin_read().unwrap();
+    assert_eq!(tx.open_table(AUCTIONS).unwrap().len().unwrap(), 1);
+    assert_eq!(
+        read_row::<InventoryData>(&db, INVENTORIES, 7),
+        Some(InventoryData {
+            gold: 980,
+            items: vec![]
+        })
+    );
+    assert_eq!(
+        read_row::<Vec<MailData>>(&db, MAILBOXES, 7).unwrap().len(),
+        1
+    );
+}
