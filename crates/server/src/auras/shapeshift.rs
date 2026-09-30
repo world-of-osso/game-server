@@ -1,0 +1,120 @@
+//! MOD_SHAPESHIFT 36 (`AuraEffect::HandleAuraModShapeshift`): one form at a time, whose
+//! `SpellShapeshiftForm` row gives the model (`Unit::GetModelForForm`; the display shows
+//! through `unit_state`'s transform/form/native priority) and whose form picks the display
+//! power (`Unit::CalculateDisplayPowerType`), the first entry of `UnitPowers`.
+
+use std::collections::HashMap;
+use std::path::Path;
+
+use bevy::prelude::*;
+use rusqlite::Connection;
+use shared::components::{Player, PowerType};
+
+use super::handlers::MOD_SHAPESHIFT;
+use super::{ActiveAuras, AuraInstance, RemoveReason};
+use crate::spell_cast::powers::{PowerPools, PowerTypeTable};
+
+/// `ShapeshiftForm` IDs (`SpellAuraDefines.h`) with a fixed display power.
+const FORM_CAT: i32 = 1;
+const FORM_TRAVEL: i32 = 3;
+const FORM_BEAR: i32 = 5;
+const FORM_GHOUL: i32 = 7;
+const FORM_DIRE_BEAR: i32 = 8;
+const FORM_GHOST_WOLF: i32 = 16;
+
+/// `SpellShapeshiftForm.CreatureDisplayID` by form ID.
+#[derive(Resource, Debug, Default)]
+pub struct ShapeshiftForms(HashMap<i32, u32>);
+
+impl ShapeshiftForms {
+    /// `GetModelForForm` fallback: the form's own display (0 keeps the current model).
+    /// The race/gender `ChrCustomizationDisplayInfo` choice is not modelled.
+    pub fn display_id(&self, form: i32) -> Option<u32> {
+        self.0.get(&form).copied().filter(|&display| display != 0)
+    }
+}
+
+pub fn load_shapeshift_forms(conn: &Connection) -> rusqlite::Result<ShapeshiftForms> {
+    let mut stmt = conn.prepare("SELECT ID, CreatureDisplayID FROM spell_shapeshift_form")?;
+    let forms = stmt
+        .query_map([], |r| {
+            Ok((r.get::<_, i64>(0)? as i32, r.get::<_, i64>(1)? as u32))
+        })?
+        .collect::<rusqlite::Result<_>>()?;
+    Ok(ShapeshiftForms(forms))
+}
+
+pub(super) fn load_shapeshift_forms_startup(mut commands: Commands) {
+    let path = Path::new(crate::spell_info::WORLD_DB_PATH);
+    let forms = if path.exists() {
+        let conn = Connection::open_with_flags(path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
+            .expect("Failed to open world.db for shapeshift forms");
+        load_shapeshift_forms(&conn).expect("Failed to load spell_shapeshift_form from world.db")
+    } else {
+        warn!("world.db not found, shapeshift forms empty");
+        ShapeshiftForms::default()
+    };
+    commands.insert_resource(forms);
+}
+
+/// The form of `aura`'s MOD_SHAPESHIFT effect (`EffectMiscValue_0`).
+pub(super) fn aura_form(aura: &AuraInstance) -> Option<i32> {
+    aura.effects
+        .iter()
+        .find(|effect| effect.aura_type == MOD_SHAPESHIFT)
+        .map(|effect| effect.misc_values[0])
+}
+
+/// The unit's shapeshift aura and its form; `remove_other_forms` keeps at most one.
+pub(super) fn current_form(auras: &ActiveAuras) -> Option<(&AuraInstance, i32)> {
+    auras
+        .auras
+        .iter()
+        .rev()
+        .find_map(|aura| aura_form(aura).map(|form| (aura, form)))
+}
+
+/// "remove other shapeshift before applying a new one":
+/// `RemoveAurasByType(SPELL_AURA_MOD_SHAPESHIFT, ObjectGuid::Empty, GetBase())`.
+pub(super) fn remove_other_forms(world: &mut World, unit: Entity, keep_instance: u32) {
+    super::remove_auras(world, unit, RemoveReason::Cancelled, |aura| {
+        aura.instance_id != keep_instance && aura_form(aura).is_some()
+    });
+}
+
+/// `Unit::CalculateDisplayPowerType` without MOD_POWER_DISPLAY and vehicles.
+fn display_power(form: Option<i32>, class_display: Option<PowerType>) -> Option<PowerType> {
+    match form {
+        Some(FORM_CAT | FORM_GHOUL) => Some(PowerType::Energy),
+        Some(FORM_BEAR | FORM_DIRE_BEAR) => Some(PowerType::Rage),
+        Some(FORM_TRAVEL | FORM_GHOST_WOLF) => Some(PowerType::Mana),
+        _ => class_display,
+    }
+}
+
+/// `Player::InitDataForForm` → `UpdateDisplayPower`: the display power leads `order`,
+/// the rest follow in ascending DB ID (`PowerTypeTable::class_powers`).
+pub(super) fn reconcile_display_power(world: &mut World, unit: Entity) {
+    let Some(class) = world.get::<Player>(unit).map(|player| player.class) else {
+        return;
+    };
+    let form = world
+        .get::<ActiveAuras>(unit)
+        .and_then(current_form)
+        .map(|(_, form)| form);
+    let class_display = world
+        .get_resource::<PowerTypeTable>()
+        .and_then(|table| table.display_power(class));
+    let Some(display) = display_power(form, class_display) else {
+        return;
+    };
+    let Some(mut pools) = world.get_mut::<PowerPools>(unit) else {
+        return;
+    };
+    if !pools.order.contains(&display) || pools.order.first() == Some(&display) {
+        return;
+    }
+    pools
+        .order
+        .sort_by_key(|&power| (power != display, power as i32));
+}

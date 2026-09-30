@@ -44,6 +44,8 @@ pub const MOD_ROOT: u32 = 26;
 pub const MOD_SILENCE: u32 = 27;
 pub const MOD_STAT: u32 = 29;
 pub const MOD_INCREASE_SPEED: u32 = 31;
+pub const MOD_INCREASE_ENERGY: u32 = 35;
+pub const MOD_SHAPESHIFT: u32 = 36;
 pub const MOD_DECREASE_SPEED: u32 = 33;
 pub const MOD_HIT_CHANCE: u32 = 54;
 pub const TRANSFORM: u32 = 56;
@@ -88,6 +90,8 @@ pub const MOD_MAX_CHARGES: u32 = 411;
 pub const CHARGE_RECOVERY_MOD: u32 = 453;
 pub const CHARGE_RECOVERY_MULTIPLIER: u32 = 454;
 pub const MOD_ROOT_2: u32 = 455;
+pub const MOD_MAX_POWER: u32 = 418;
+pub const SET_POWER_POINT_CHARGE: u32 = 494;
 
 pub fn kind(aura_type: u32) -> Option<AuraKind> {
     use AuraKind::*;
@@ -129,8 +133,11 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | MOD_HIT_CHANCE
         | MOD_SPEED_SLOW_ALL
         | WATER_BREATHING
-        | MOD_WATER_BREATHING => StatMod,
-        MOD_INVISIBILITY | MOD_UNATTACKABLE | MOD_CONFUSE | TRANSFORM => UnitState,
+        | MOD_WATER_BREATHING
+        | MOD_INCREASE_ENERGY
+        | MOD_MAX_POWER
+        | SET_POWER_POINT_CHARGE => StatMod,
+        MOD_INVISIBILITY | MOD_UNATTACKABLE | MOD_CONFUSE | TRANSFORM | MOD_SHAPESHIFT => UnitState,
         ADD_FLAT_MODIFIER
         | ADD_PCT_MODIFIER
         | ADD_PCT_MODIFIER_BY_SPELL_LABEL

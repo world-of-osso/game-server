@@ -36,6 +36,12 @@ pub struct AuraStatMods {
     /// MOD_POWER_REGEN_PERCENT 110 by DB2 power type; MOD_MANA_REGEN_PCT
     /// 379 is folded into power type 0.
     pub power_regen_mult: Vec<(i32, f32)>,
+    /// MOD_INCREASE_ENERGY 35 and MOD_MAX_POWER 418 by DB2 power type, summed raw
+    /// units (TrinityCore `HandleStatFlatModifier(UNIT_MOD_POWER_START + misc, TOTAL_VALUE)`).
+    pub max_power_flat: Vec<(i32, f32)>,
+    /// SET_POWER_POINT_CHARGE 494 (NYI in TrinityCore): the 1-based combo point
+    /// indexes in MiscValue are charged (retail `GetUnitChargedPowerPoints`), ascending.
+    pub charged_power_points: Vec<u8>,
     /// Run speed multiplier: strongest MOD_INCREASE_SPEED 31 × every
     /// MOD_SPEED_ALWAYS 129 × strongest MOD_DECREASE_SPEED 33; 0 while
     /// rooted or stunned (MOD_ROOT 26, MOD_ROOT_2 455, MOD_STUN 12).
@@ -64,6 +70,8 @@ impl Default for AuraStatMods {
             autoattack_damage_mult: 1.0,
             rage_from_damage_dealt_pct: 0.0,
             power_regen_mult: Vec::new(),
+            max_power_flat: Vec::new(),
+            charged_power_points: Vec::new(),
             movement_speed: 1.0,
             melee_hit_chance_pct: 0.0,
             attack_cast_time_mult: 1.0,
@@ -99,6 +107,14 @@ impl AuraStatMods {
             .filter(|(power, _)| *power == power_type)
             .map(|(_, mult)| mult)
             .product()
+    }
+
+    pub fn max_power_flat(&self, power_type: i32) -> f32 {
+        self.max_power_flat
+            .iter()
+            .filter(|(power, _)| *power == power_type)
+            .map(|(_, amount)| amount)
+            .sum()
     }
 }
 
@@ -221,6 +237,16 @@ fn apply_aura(acc: &mut Accumulator, aura: &AuraInstance) {
                 multiply_entry(&mut combat.power_regen_mult, misc, pct(amount))
             }
             MOD_MANA_REGEN_PCT => multiply_entry(&mut combat.power_regen_mult, 0, pct(amount)),
+            MOD_INCREASE_ENERGY | MOD_MAX_POWER => combat.max_power_flat.push((misc, amount)),
+            SET_POWER_POINT_CHARGE => {
+                if let Ok(point) = u8::try_from(misc)
+                    && point > 0
+                    && !combat.charged_power_points.contains(&point)
+                {
+                    combat.charged_power_points.push(point);
+                    combat.charged_power_points.sort_unstable();
+                }
+            }
             MOD_INCREASE_SPEED => acc.fastest = acc.fastest.max(amount),
             MOD_SPEED_ALWAYS => acc.always *= pct(amount),
             MOD_DECREASE_SPEED => acc.slowest = acc.slowest.min(amount),

@@ -1,5 +1,9 @@
 # Wiki Log
 
+## [2026-09-30] systems | Class-resource replication
+
+Updated [[spell-casting]] with fractional power/rate, charged-point and indexed rune send contracts. Targeted RED exposed rates left nonzero for one tick at pool limits and stale ready-rune counts when only max changed. Runic Longevity also changes rune regen, so its full aura masked the latter failure; the count test isolates its max-power effect. End-to-end wire/client rendering remains main's integration gate.
+
 ## [2026-09-30] systems | Combat references
 
 Updated [[combat]] (new Combat State section) and [[spell-casting]]. Combat is now TrinityCore's `CombatManager`: pairwise references, no timeout against a creature with a threat list, 5 s for PvP and threat-less creatures (training dummies), and `combat_stop` ends both sides. Before, every unit had its own 5 s timer after its last hit, refreshed every tick while it had `AutoAttack`: a caster auto-attacking a dummy from range stayed in combat 5 s past the dummy's evade (a 10 s tail on one Frostbolt), a kill left 5 s of combat, and a lull over 5 s in a real fight dropped combat. The damage meter's session duration is combat time, so its DPS followed.
@@ -372,3 +376,7 @@ Players replicate `PlayerMotion`, Retail `MovementFlags` (FORWARD, BACKWARD, STR
 ## [2026-09-29] fix | Debuffs by effect positivity
 
 [[auras]]: an aura's harmful flag follows TrinityCore `_InitFlags` and ported effect positivity instead of caster hostility; Polymorph on the neutral Blackrock Spy replicated as a buff before.
+
+## [2026-09-30] feature | Class secondary resources
+
+[[spell-casting]], [[auras]]: aura max power (35/418; Holy Power 5, Chi 5/6), druid forms switch display power and model (MOD_SHAPESHIFT 36), Death Knight runes as per-rune cooldowns with 3 recharging, SET_POWER_POINT_CHARGE 494 charged combo points. Monk, Demon Hunter and Evoker remain unplayable, so Chi and Essence have no player yet.
