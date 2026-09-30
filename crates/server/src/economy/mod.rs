@@ -77,8 +77,17 @@ impl Config {
                 ));
             }
         }
+        if self.gatherer_capital > crate::gold::MAX_MONEY {
+            return Err("gatherer capital exceeds the game money limit".into());
+        }
         for market in self.markets.values() {
             model::quote_price(market, 0)?;
+            if market.max_price > u64::from(u32::MAX) || market.popularity_bps > 10_000 {
+                return Err(format!(
+                    "market {} exceeds protocol price or popularity bounds",
+                    market.item_id
+                ));
+            }
         }
         Ok(())
     }
