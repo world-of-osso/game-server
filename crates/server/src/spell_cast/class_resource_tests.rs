@@ -659,3 +659,38 @@ fn essence_regenerates_a_fifth_per_second_and_replicates_the_partial_and_rate() 
         .unwrap();
     assert_eq!((entry.current, entry.max, entry.regen_per_sec), (5, 5, 0.0));
 }
+
+/// A player spawns without `ModelDisplay` (its native model is its race and sex). Cat
+/// Form still shows its display (Unit::SetDisplayId, 115603), and cancelling it gives the
+/// native model back (RestoreDisplayId): `ModelDisplay` goes away.
+#[test]
+fn a_player_without_model_display_shows_cat_form_and_gets_its_native_model_back() {
+    let Some(mut h) = harness(Vec::new(), &[CAT_FORM], DRUID) else {
+        return;
+    };
+    let caster = h.caster;
+    assert!(
+        h.app
+            .world()
+            .get::<shared::components::ModelDisplay>(caster)
+            .is_none()
+    );
+    h.cast_and_deliver(CAT_FORM, None);
+    h.advance(1);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert_eq!(display(&h), 115603);
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        caster,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == CAT_FORM,
+    );
+    h.advance(1);
+    assert!(!crate::auras::has_aura(h.app.world(), caster, CAT_FORM));
+    assert!(
+        h.app
+            .world()
+            .get::<shared::components::ModelDisplay>(caster)
+            .is_none()
+    );
+}
