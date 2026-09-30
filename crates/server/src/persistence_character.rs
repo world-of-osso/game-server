@@ -437,7 +437,8 @@ const ORGRIMMAR: StartLocation = start(1, 1798.27, -4363.27, 102.848);
 /// map 1481) and Dracthyr in the Forbidden Reach (map 2570); neither zone is
 /// implemented. These locations lack the class intro, its quests and its
 /// starting gear. Retire when class starting zones (Mardum, Forbidden Reach) are
-/// implemented.
+/// implemented. Newly cataloged Kul Tiran/Earthen/Haranir Monks retain the
+/// existing Northshire placeholder below until their race starts are authored.
 pub(crate) fn start_location(race: u8) -> StartLocation {
     match race {
         1 => start(0, -8949.0, -132.0, 83.0),     // Human — Northshire

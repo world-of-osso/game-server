@@ -520,6 +520,32 @@ fn set_credentials_enables_password_login() {
     assert_eq!(account_id, other_id);
 }
 
+#[test]
+fn new_class_monk_characters_cover_additional_authored_races() {
+    let db = temp_database();
+    let (account_id, _) = register_account(&db, "fb_moremonks", "fbtest").unwrap();
+    for (name, race, level, bit, faction) in [
+        ("Kulmonk", 32, 10, 31, 1),
+        ("Earthenhorde", 84, 10, 17, 2),
+        ("Earthenally", 85, 10, 18, 3),
+        ("Haranirally", 86, 1, 20, 4),
+        ("Haranirhorde", 91, 10, 19, 116),
+    ] {
+        let (id, data) = create_character(&db, account_id, name, race, 10).unwrap();
+        assert_eq!(data.level, level);
+        assert_eq!(load_character(&db, id).unwrap().level, level);
+        assert!(crate::race_class::race_mask_allows([1 << bit, 0], race));
+        assert!(!crate::race_class::race_mask_allows([1 << 3, 0], race));
+        assert_eq!(crate::faction::faction_template_for_race(race), faction);
+        // Existing placeholder placement is retained until race starts are authored.
+        assert_eq!((data.x, data.y), (-8949.0, -132.0));
+        for class in [12, 13] {
+            assert!(crate::race_class::validate_race_class(race, class).is_err());
+        }
+    }
+    assert_eq!(list_characters_for_account(&db, account_id).len(), 5);
+}
+
 /// Monk, Demon Hunter and Evoker creation: start level, map and position, and
 /// the refused race/class combinations leave no character behind.
 #[test]

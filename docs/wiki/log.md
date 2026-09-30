@@ -2,7 +2,7 @@
 
 ## [2026-09-30] systems | Bounded new-class server slice
 
-Updated [[class-progression]] and [[spell-casting]] for Monk/DH/Evoker creation, start levels, progression and six basic spells; added `docs/specs/new-classes.md`. Local ChrClasses/ChrRaces verified max(class, race) levels (1/8/10 for ordinary Monk/DH/Dracthyr Evoker); locally extracted CharBaseInfo confirmed the supported-race gates, including Void Elf DH. ENERGIZE previously ignored point modifiers, so Tiger Palm gained zero Windwalker Chi. Existing modifiers now supply the authored +2. Powers ownership, engine UI/live fixtures and delayed starting zones remain separate work.
+Updated [[class-progression]] and [[spell-casting]] for Monk/DH/Evoker creation, start levels, progression and six basic spells; added `docs/specs/new-classes.md`. Local ChrClasses/ChrRaces verified max(class, race) levels (1/8/10 for ordinary Monk/DH/Dracthyr Evoker); locally extracted CharBaseInfo confirmed the supported-race gates, including Void Elf DH. ENERGIZE previously ignored point modifiers, so Tiger Palm gained zero Windwalker Chi. Existing modifiers now supply the authored +2. Additional authored Monk gates cover Kul Tiran 32, Earthen 84/85 and Haranir 86/91, using local race bits/levels and unchanged placeholder placement. Powers ownership, engine UI/live fixtures and delayed starting zones remain separate work.
 
 ## [2026-09-29] systems | Polymorph
 

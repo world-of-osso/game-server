@@ -4,8 +4,8 @@ Server creation, progression and six basic spells for classes 10, 12 and 13. Imp
 
 ## What it must do
 
-- [x] Accept authored race/class gates within the existing server race catalog: Monk on existing non-Dracthyr races, Demon Hunter on Night Elf/Blood Elf/Void Elf, Evoker on Alliance/Horde Dracthyr; reject unsupported pairs without persisting a character.
-- [x] Persist new-class starting levels as max(ChrClasses.StartingLevel, ChrRaces.StartingLevel): ordinary-race Monk 1, Night Elf/Blood Elf DH 8, allied-race Monk/DH 10, Dracthyr Evoker 10.
+- [ ] Accept local CharBaseInfo race/class gates: Monk on all 29 authored non-Dracthyr races, Demon Hunter on Night Elf/Blood Elf/Void Elf, Evoker on Alliance/Horde Dracthyr; reject unsupported pairs without persisting a character.
+- [ ] Persist new-class starting levels as max(ChrClasses.StartingLevel, ChrRaces.StartingLevel): ordinary-race Monk 1, Night Elf/Blood Elf DH 8, allied-race Monk/DH 10, Dracthyr Evoker 10.
 - [x] Load class skill lines, authored specializations and level/spec learnable spells; deliver known-spell and action-bar snapshots and level-up deltas through existing progression.
 - [x] Tiger Palm and Blackout Kick deal damage and use authored Energy/Chi costs; Windwalker Tiger Palm gains the Chi amount from its passive spell modifier.
 - [x] Demon's Bite generates Fury and deals damage; Chaos Strike spends 40 Fury and triggers both damage hits, or fails without sufficient Fury.
@@ -32,7 +32,6 @@ Server creation, progression and six basic spells for classes 10, 12 and 13. Imp
 
 ## Known gaps (current cycle)
 
-- [ ] Local CharBaseInfo also authors Monk on Kul Tiran 32, Earthen 84/85 and Haranir 86/91; these races remain unsupported by the existing server catalog.
 - [ ] Live creation/casting through Godot and actual UDP remain main integration work; HostClient tests do not prove them.
 - [ ] Full class rotations, talent/proc parity and extra specialization effects are not proven by six basic spell tests.
 
@@ -42,3 +41,4 @@ Server creation, progression and six basic spells for classes 10, 12 and 13. Imp
 - Powers/runes, Essence regeneration, spec/form pool selection and resource replication: powers agent owns them.
 - Engine UI, class art and DH/Dracthyr customization: separate engine slice.
 - Death Knight starting levels: unchanged outside this slice.
+- Other classes on newly cataloged Kul Tiran/Earthen/Haranir races: only Monk is enabled by this class-scoped slice; their existing Northshire placeholder placement is retained until race starts are authored.

@@ -20,6 +20,8 @@ struct PlayableRace {
 
 const PANDAREN_CLASSES: &[u8] = &[1, 3, 4, 5, 7, 8, 10];
 const DRACTHYR_CLASSES: &[u8] = &[1, 3, 4, 5, 8, 9, 13];
+/// Newly cataloged races expose only the class covered by this server slice.
+const MONK_CLASSES: &[u8] = &[10];
 
 const PLAYABLE_RACES: &[PlayableRace] = &[
     race(1, 0, &[1, 2, 3, 4, 5, 6, 8, 9, 10]),       // Human
@@ -42,12 +44,17 @@ const PLAYABLE_RACES: &[PlayableRace] = &[
     race(29, 28, &[1, 3, 4, 5, 6, 8, 9, 10, 12]),    // Void Elf
     race(30, 29, &[1, 2, 3, 5, 6, 8, 10]),           // Lightforged Draenei
     race(31, 30, &[1, 2, 3, 4, 5, 6, 7, 8, 10, 11]), // Zandalari Troll
+    race(32, 31, MONK_CLASSES),                      // Kul Tiran
     race(34, 11, &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]),  // Dark Iron Dwarf
     race(35, 12, &[1, 3, 4, 5, 7, 8, 9, 10]),        // Vulpera
     race(36, 13, &[1, 3, 4, 5, 6, 7, 8, 10]),        // Mag'har Orc
     race(37, 14, &[1, 3, 4, 5, 6, 8, 9, 10]),        // Mechagnome
     race(52, 16, DRACTHYR_CLASSES),                  // Dracthyr (Alliance)
     race(70, 15, DRACTHYR_CLASSES),                  // Dracthyr (Horde)
+    race(84, 17, MONK_CLASSES),                      // Earthen (Horde)
+    race(85, 18, MONK_CLASSES),                      // Earthen (Alliance)
+    race(86, 20, MONK_CLASSES),                      // Haranir (Alliance)
+    race(91, 19, MONK_CLASSES),                      // Haranir (Horde)
 ];
 
 const fn race(id: u8, race_bit: u8, classes: &'static [u8]) -> PlayableRace {
@@ -84,7 +91,7 @@ pub fn validate_race_class(race: u8, class: u8) -> Result<(), String> {
 pub fn start_level(race: u8, class: u8) -> u8 {
     let class_level: u8 = if class == 12 { 8 } else { 1 };
     let race_level = match race {
-        27..=31 | 34..=37 | 52 | 70 => 10,
+        27..=32 | 34..=37 | 52 | 70 | 84 | 85 | 91 => 10,
         _ => 1,
     };
     class_level.max(race_level)
@@ -141,6 +148,11 @@ mod tests {
             (25, 10),
             (26, 10),
             (37, 10),
+            (32, 10),
+            (84, 10),
+            (85, 10),
+            (86, 10),
+            (91, 10),
             (4, 12),
             (10, 12),
             (29, 12),
@@ -178,6 +190,15 @@ mod tests {
         assert_eq!(start_level(1, 10), 1);
         assert_eq!(start_level(29, 12), 10, "race level exceeds DH level");
         assert_eq!(start_level(37, 10), 10, "allied race Monk");
+        assert_eq!(start_level(32, 10), 10, "Kul Tiran Monk");
+        assert_eq!(start_level(84, 10), 10, "Earthen Horde Monk");
+        assert_eq!(start_level(85, 10), 10, "Earthen Alliance Monk");
+        assert_eq!(
+            start_level(86, 10),
+            1,
+            "Haranir Alliance authored race level"
+        );
+        assert_eq!(start_level(91, 10), 10, "Haranir Horde authored race level");
         assert_eq!(start_level(1, 1), 1);
     }
 
