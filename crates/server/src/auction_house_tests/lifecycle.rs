@@ -641,3 +641,58 @@ fn relist_after_expired_auction() {
     assert!(relist.success);
     assert_eq!(state.auctions.len(), 1);
 }
+
+#[test]
+fn atomic_expiry_mail_failure_preserves_persisted_and_published_auction() {
+    let db = persistence::temp_database();
+    let mut auction = test_auction(91, "Copper Ore", 1, 1);
+    auction.expires_at_unix_secs = unix_now() - 1;
+    auction.deposit = 37;
+    persistence::save_auction(&db, &auction);
+    super::settlement::corrupt_auction_mailbox(&db, 1);
+    let mut app = App::new();
+    app.insert_resource(GameDatabase { db });
+    app.insert_resource(AuctionHouseState {
+        auctions: [(91, auction.clone())].into(),
+        ..Default::default()
+    });
+    app.add_systems(Update, super::super::handlers::expire_auctions);
+    app.update();
+    assert_eq!(
+        app.world().resource::<AuctionHouseState>().auctions[&91],
+        auction
+    );
+    assert_eq!(
+        persistence::load_auctions(&app.world().resource::<GameDatabase>().db),
+        vec![auction]
+    );
+}
+
+#[test]
+fn atomic_expiry_stale_snapshot_cannot_duplicate_sale_mails() {
+    let db = persistence::temp_database();
+    let mut auction = test_auction(91, "Copper Ore", 1, 1);
+    auction.current_bid = Some(1_001);
+    auction.current_bidder_character_id = Some(2);
+    auction.deposit = 37;
+    auction.expires_at_unix_secs = unix_now() - 1;
+    persistence::save_auction(&db, &auction);
+    let mut app = App::new();
+    app.insert_resource(GameDatabase { db });
+    app.insert_resource(AuctionHouseState {
+        auctions: [(91, auction.clone())].into(),
+        ..Default::default()
+    });
+    app.add_systems(Update, super::super::handlers::expire_auctions);
+    app.update();
+    app.world_mut()
+        .resource_mut::<AuctionHouseState>()
+        .auctions
+        .insert(91, auction);
+    app.update();
+    let db = &app.world().resource::<GameDatabase>().db;
+    assert!(persistence::load_auctions(db).is_empty());
+    assert_eq!(mail_store::load_mailbox(db, 1).len(), 1);
+    assert_eq!(mail_store::load_mailbox(db, 1)[0].money, 988);
+    assert_eq!(mail_store::load_mailbox(db, 2).len(), 1);
+}

@@ -567,3 +567,157 @@ fn buyout_above_the_u32_copper_range_pays_the_seller_in_full() {
     let seller_mail = mail_store::load_mailbox(&db, seller_id);
     assert_eq!(seller_mail[0].money, 9_500_000_000 + deposit);
 }
+
+fn atomic_fixture(db: &redb::Database) -> AuctionHouseState {
+    for id in [1, 2, 3] {
+        persistence::save_inventory(
+            db,
+            id,
+            &InventoryData {
+                gold: 10_000,
+                items: vec![],
+            },
+        );
+    }
+    let mut auction = test_auction(91, "Copper Ore", 1, 1);
+    auction.deposit = 37;
+    auction.buyout_price = Some(1_001);
+    persistence::save_auction(db, &auction);
+    AuctionHouseState {
+        auctions: [(91, auction)].into(),
+        ..Default::default()
+    }
+}
+
+pub(super) fn corrupt_auction_mailbox(db: &redb::Database, recipient: u64) {
+    let tx = db.begin_write().unwrap();
+    tx.open_table(mail_store::MAILBOXES)
+        .unwrap()
+        .insert(recipient, b"invalid".as_slice())
+        .unwrap();
+    tx.commit().unwrap();
+}
+
+#[test]
+fn atomic_stale_bid_buyout_cancel_leave_all_balances_and_memory_unchanged() {
+    for operation in ["bid", "buyout", "cancel"] {
+        let db = persistence::temp_database();
+        let mut state = atomic_fixture(&db);
+        let original = state.auctions[&91].clone();
+        persistence::delete_auction(&db, 91);
+        let response = match operation {
+            "bid" => place_bid(&db, &mut state, 2, 91, 100),
+            "buyout" => buyout_auction(&db, &mut state, 2, 91),
+            _ => cancel_auction(&db, &mut state, 1, 91),
+        };
+        assert!(
+            !response.success,
+            "{operation} must reject stale settlement"
+        );
+        assert_eq!(state.auctions[&91], original);
+        assert!(persistence::load_auctions(&db).is_empty());
+        for id in [1, 2, 3] {
+            assert_eq!(persistence::load_inventory(&db, id).gold, 10_000);
+            assert!(mail_store::load_mailbox(&db, id).is_empty());
+        }
+    }
+}
+
+#[test]
+fn atomic_mail_failure_rolls_back_buyout_bid_and_cancel_before_publication() {
+    for operation in ["bid", "buyout", "cancel"] {
+        let db = persistence::temp_database();
+        let mut state = atomic_fixture(&db);
+        if operation != "cancel" {
+            let auction = state.auctions.get_mut(&91).unwrap();
+            auction.current_bid = Some(100);
+            auction.current_bidder_character_id = Some(3);
+            persistence::save_auction(&db, auction);
+        }
+        let original = state.auctions[&91].clone();
+        corrupt_auction_mailbox(&db, if operation == "bid" { 3 } else { 1 });
+        let response = match operation {
+            "bid" => place_bid(&db, &mut state, 2, 91, 200),
+            "buyout" => buyout_auction(&db, &mut state, 2, 91),
+            _ => cancel_auction(&db, &mut state, 1, 91),
+        };
+        assert!(
+            !response.success,
+            "{operation} must return transaction failure"
+        );
+        assert_eq!(state.auctions[&91], original);
+        assert_eq!(persistence::load_auctions(&db), vec![original]);
+        for id in [1, 2, 3] {
+            assert_eq!(persistence::load_inventory(&db, id).gold, 10_000);
+        }
+        assert!(mail_store::load_mailbox(&db, 2).is_empty());
+    }
+}
+
+#[test]
+fn atomic_concurrent_duplicate_buyout_charges_and_delivers_once() {
+    use std::sync::{Arc, Barrier};
+    let db = Arc::new(persistence::temp_database());
+    let state = atomic_fixture(&db);
+    let barrier = Arc::new(Barrier::new(2));
+    let workers: Vec<_> = (0..2)
+        .map(|_| {
+            let db = db.clone();
+            let barrier = barrier.clone();
+            let mut state = AuctionHouseState {
+                auctions: state.auctions.clone(),
+                ..Default::default()
+            };
+            std::thread::spawn(move || {
+                barrier.wait();
+                buyout_auction(&db, &mut state, 2, 91).success
+            })
+        })
+        .collect();
+    assert_eq!(
+        workers
+            .into_iter()
+            .map(|worker| worker.join().unwrap())
+            .filter(|success| *success)
+            .count(),
+        1
+    );
+    assert_eq!(persistence::load_inventory(&db, 2).gold, 8_999);
+    assert!(persistence::load_auctions(&db).is_empty());
+    let seller_mail = mail_store::load_mailbox(&db, 1);
+    assert_eq!(seller_mail.len(), 1);
+    assert_eq!(seller_mail[0].money, 988);
+    assert_eq!(mail_store::load_mailbox(&db, 2).len(), 1);
+}
+
+#[test]
+fn atomic_restart_rebid_outbid_buyout_persists_exact_escrow_and_delivery() {
+    let file = tempfile::NamedTempFile::new().unwrap();
+    let db = redb::Database::create(file.path()).unwrap();
+    persistence::create_tables(&db);
+    let mut state = atomic_fixture(&db);
+    assert!(place_bid(&db, &mut state, 2, 91, 100).success);
+    assert!(place_bid(&db, &mut state, 2, 91, 200).success);
+    assert_eq!(persistence::load_inventory(&db, 2).gold, 9_800);
+    drop(db);
+    let db = redb::Database::open(file.path()).unwrap();
+    let mut state = AuctionHouseState {
+        auctions: persistence::load_auctions(&db)
+            .into_iter()
+            .map(|a| (a.auction_id, a))
+            .collect(),
+        ..Default::default()
+    };
+    assert!(place_bid(&db, &mut state, 3, 91, 300).success);
+    assert_eq!(persistence::load_inventory(&db, 2).gold, 10_000);
+    assert!(buyout_auction(&db, &mut state, 3, 91).success);
+    drop(db);
+    let db = redb::Database::open(file.path()).unwrap();
+    assert!(persistence::load_auctions(&db).is_empty());
+    assert_eq!(persistence::load_inventory(&db, 3).gold, 8_999);
+    assert_eq!(mail_store::load_mailbox(&db, 1)[0].money, 988);
+    assert_eq!(mail_store::load_mailbox(&db, 2).len(), 1);
+    let delivery = mail_store::load_mailbox(&db, 3);
+    assert_eq!(delivery.len(), 1);
+    assert_eq!(delivery[0].items[0].item.item_guid, 91);
+}
