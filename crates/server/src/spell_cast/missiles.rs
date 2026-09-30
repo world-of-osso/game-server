@@ -23,6 +23,10 @@ use crate::spell_info::{SpellInfo, SpellStore};
 const SPELL_ATTR9_MISSILE_SPEED_IS_DELAY_IN_SEC: u32 = 0x0000_0010;
 /// `Spell::AddUnitTarget`: distances under 5 yd count as 5 ("@todo this is a hack").
 const MIN_MISSILE_DISTANCE: f32 = 5.0;
+/// The destination targets `targets::selector` handles (`TARGET_DEST_*`: caster 18,
+/// target enemy 53, any 63, back 65, ally 132); `TARGET_SRC_CASTER` 22 is a source, not a
+/// destination (`SpellCastTargets::HasDst`).
+const DEST_TARGETS: [u32; 5] = [18, 53, 63, 65, 132];
 
 /// Spell hits in flight, resolved by `resolve_due_hits`.
 #[derive(Resource, Debug, Default)]
@@ -160,7 +164,16 @@ fn hit_groups(
         f64::from(launch_delay + travel)
     };
     let origin = position(world, caster);
-    if let Some(dest) = plan.iter().find_map(|planned| planned.dest) {
+    let dest = plan
+        .iter()
+        .filter(|planned| {
+            spell.effects[planned.index]
+                .implicit_targets
+                .iter()
+                .any(|id| DEST_TARGETS.contains(id))
+        })
+        .find_map(|planned| planned.dest);
+    if let Some(dest) = dest {
         // `CalculateDelayMomentForDst`: one missile over the caster's exact distance.
         let distance = origin.map_or(0.0, |origin| origin.distance(dest.position));
         return vec![(flight(distance), plan)];
