@@ -331,4 +331,104 @@ fn set_power_point_charge_auras_charge_their_combo_point_indexes() {
         |aura| aura.spell_id != ECHOING_REPRIMAND_ALL,
     );
     assert_eq!(charged_points(&h), [2, 3, 4, 5]);
+    h.advance(1);
+    let powers = h.app.world().get::<UnitPowers>(caster).unwrap();
+    assert_eq!(powers.charged_points, [2, 3, 4, 5]);
+}
+
+fn runes_view(h: &Harness) -> shared::components::UnitRunes {
+    h.app
+        .world()
+        .get::<shared::components::UnitRunes>(h.caster)
+        .unwrap()
+        .clone()
+}
+
+#[test]
+fn unit_runes_replicate_ready_times_with_waiting_runes_starting_later() {
+    let Some(mut h) = harness(Vec::new(), &[], DEATH_KNIGHT) else {
+        return;
+    };
+    h.advance(1);
+    assert_eq!(
+        runes_view(&h),
+        shared::components::UnitRunes {
+            duration_ms: 10_000,
+            ready_in_ms: vec![0; 6],
+        }
+    );
+    spend_runes(&mut h, 5.0);
+    h.advance(1);
+    let view = runes_view(&h);
+    assert_eq!(view.duration_ms, 10_000);
+    // Runes 0-2 recharge (one tick in); 3 and 4 start when 0 and 1 finish.
+    for (index, expected) in [9_950, 9_950, 9_950, 19_950, 19_950, 0]
+        .into_iter()
+        .enumerate()
+    {
+        let actual = view.ready_in_ms[index];
+        assert!(actual.abs_diff(expected) <= 20, "rune {index}: {view:?}");
+    }
+    // No resend while the order holds: the client counts down.
+    h.advance(20);
+    assert_eq!(runes_view(&h), view);
+}
+
+const EVOKER: u8 = 13;
+/// Evoker `chr_classes_x_power_types` without the alternate bars (Evoker is not in
+/// `ClassSpells` yet).
+const EVOKER_POOLS: &[PowerType] = &[PowerType::Mana, PowerType::Essence];
+
+#[test]
+fn essence_regenerates_a_fifth_per_second_and_replicates_the_partial_and_rate() {
+    let Some(mut h) = harness(Vec::new(), &[], EVOKER) else {
+        return;
+    };
+    let table = power_table(world_db().unwrap());
+    let caster = h.caster;
+    h.app
+        .world_mut()
+        .entity_mut(caster)
+        .insert(super::powers::PowerPools::from_table(
+            &table,
+            EVOKER_POOLS.to_vec(),
+        ));
+    h.advance(1);
+    h.set_power(PowerType::Essence, 2.0);
+    // 3 s at `RegenCombat` 0.2/s: 2.6 essence.
+    h.advance(60);
+    let essence = h.power(PowerType::Essence);
+    assert!((essence - 2.6).abs() < 0.02, "{essence}");
+    let powers = h.app.world().get::<UnitPowers>(caster).unwrap().clone();
+    let entry = powers
+        .entries
+        .iter()
+        .find(|entry| entry.power == PowerType::Essence)
+        .unwrap();
+    assert_eq!(entry.current, 2);
+    assert!((entry.regen_per_sec - 0.2).abs() < 1e-6, "{entry:?}");
+    // Sent when the pool was set to 2.0; the fraction alone does not resend.
+    assert_eq!(entry.partial, 0, "{entry:?}");
+
+    // Crossing 3.0 resends with the fraction at that tick (3.0 at +2 s).
+    h.advance(42);
+    let powers = h.app.world().get::<UnitPowers>(caster).unwrap();
+    let entry = powers
+        .entries
+        .iter()
+        .find(|entry| entry.power == PowerType::Essence)
+        .unwrap();
+    assert_eq!(entry.current, 3);
+    assert!(entry.partial < 60, "{entry:?}");
+
+    // Full: the rate drops to 0 and is resent.
+    h.set_power(PowerType::Essence, 5.0);
+    h.advance(2);
+    let powers = h.app.world().get::<UnitPowers>(caster).unwrap();
+    let entry = powers
+        .entries
+        .iter()
+        .find(|entry| entry.power == PowerType::Essence)
+        .unwrap();
+    assert_eq!((entry.current, entry.max, entry.regen_per_sec), (5, 5, 0.0));
 }

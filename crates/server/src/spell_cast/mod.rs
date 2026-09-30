@@ -78,6 +78,7 @@ impl Plugin for SpellCastPlugin {
                     runes::regenerate_runes,
                     advance_casts.after(crate::networking::process_player_inputs),
                     powers::sync_unit_powers,
+                    runes::sync_unit_runes,
                 )
                     .chain(),
             )

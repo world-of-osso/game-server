@@ -4,7 +4,8 @@
 //! cost checks read it like any pool.
 
 use bevy::prelude::*;
-use shared::components::PowerType;
+use lightyear::prelude::ReplicationDirtyQueue;
+use shared::components::{PowerType, UnitRunes};
 
 use super::powers::PowerPools;
 use crate::grid_activity::GridDormant;
@@ -160,5 +161,54 @@ pub(super) fn regenerate_runes(
             runes.bypass_change_detection().regenerate(dt);
         }
         pool.current = runes.ready() as f32;
+    }
+}
+
+/// `(depletion order, duration ms)` of the last `UnitRunes` send.
+#[derive(Component, Debug, Clone, Default, PartialEq)]
+pub struct RunesSent(Vec<u8>, u32);
+
+type RuneSyncQuery<'w, 's> = Query<
+    'w,
+    's,
+    (
+        Entity,
+        &'static Runes,
+        Option<&'static crate::auras::AuraStatMods>,
+        Option<&'static crate::stats::CharacterStats>,
+        Option<&'static RunesSent>,
+    ),
+    Without<GridDormant>,
+>;
+
+/// Replicate `UnitRunes` when a rune is spent or finishes (the depletion order changes)
+/// or the rune cooldown changes; the client counts down `ready_in_ms` in between.
+pub(super) fn sync_unit_runes(
+    mut commands: Commands,
+    units: RuneSyncQuery,
+    dirty: Option<Res<ReplicationDirtyQueue>>,
+) {
+    for (entity, runes, mods, stats, sent) in &units {
+        let duration = rune_cooldown_secs(mods, stats);
+        let duration_ms = (duration * 1000.0).round() as u32;
+        let key = RunesSent(runes.order.clone(), duration_ms);
+        if sent == Some(&key) {
+            continue;
+        }
+        let ready_in_ms = runes
+            .ready_in(duration)
+            .into_iter()
+            .map(|secs| (secs * 1000.0).round() as u32)
+            .collect();
+        commands.entity(entity).insert((
+            UnitRunes {
+                duration_ms,
+                ready_in_ms,
+            },
+            key,
+        ));
+        if let Some(dirty) = &dirty {
+            dirty.mark(entity);
+        }
     }
 }

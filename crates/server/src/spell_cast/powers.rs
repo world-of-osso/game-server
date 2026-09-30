@@ -151,6 +151,8 @@ pub struct PowerPool {
     pub power: PowerType,
     pub current: f32,
     pub max: f32,
+    /// Signed raw units per second the last regen tick applied (0 idle).
+    pub regen_per_sec: f32,
 }
 
 /// Server-authoritative powers of a unit. `order` lists every power (mana
@@ -161,6 +163,8 @@ pub struct PowerPools {
     pub pools: Vec<PowerPool>,
     /// When the unit last left combat (regen interrupt timer), seconds.
     pub out_of_combat_since: f64,
+    /// Mana per second the last regen tick applied (0 idle or full).
+    pub mana_regen_per_sec: f32,
 }
 
 impl PowerPools {
@@ -174,6 +178,7 @@ impl PowerPools {
                     power,
                     current: info.map_or(0.0, |info| info.default_power as f32),
                     max: info.map_or(0.0, |info| info.max_base_power as f32),
+                    regen_per_sec: 0.0,
                 }
             })
             .collect();
@@ -181,6 +186,7 @@ impl PowerPools {
             order,
             pools,
             out_of_combat_since: 0.0,
+            mana_regen_per_sec: 0.0,
         }
     }
 
@@ -350,81 +356,118 @@ pub(super) fn regenerate_powers(
             let Some(info) = table.get(pool.power) else {
                 continue;
             };
-            let next = regenerated(
-                pool.current,
-                pool.max,
-                info,
-                in_combat,
-                out_of_combat_ms,
-                dt * regen_mult(pool.power),
-            );
-            pool.current = next;
+            let step = regen_step(pool.current, pool.max, info, in_combat, out_of_combat_ms);
+            let Some((rate, limit)) = step else {
+                pool.regen_per_sec = 0.0;
+                continue;
+            };
+            let rate = rate * regen_mult(pool.power);
+            let next = pool.current + rate * dt;
+            pool.current = if rate > 0.0 {
+                next.min(limit)
+            } else {
+                next.max(limit)
+            };
+            pool.regen_per_sec = rate;
         }
+        let mut mana_rate = 0.0;
         if let Some(mut mana) = mana
             && mana.current < mana.max
         {
             let base_mana = stats.map_or(0.0, |stats| stats.base_mana);
-            let gain = base_mana * MANA_REGEN_BASE_PCT_PER_SEC * dt * regen_mult(PowerType::Mana);
-            mana.current = (mana.current + gain).min(mana.max);
+            mana_rate = base_mana * MANA_REGEN_BASE_PCT_PER_SEC * regen_mult(PowerType::Mana);
+            mana.current = (mana.current + mana_rate * dt).min(mana.max);
         }
+        pools.bypass_change_detection().mana_regen_per_sec = mana_rate;
     }
 }
 
-fn regenerated(
+/// Signed rate (raw units per second, before aura multipliers) and the value it
+/// stops at, or `None` while the pool does not move.
+fn regen_step(
     current: f32,
     max: f32,
     info: &PowerTypeInfo,
     in_combat: bool,
     out_of_combat_ms: u32,
-    dt: f32,
-) -> f32 {
-    if in_combat {
-        return (current + info.regen_combat * dt).clamp(0.0, max);
-    }
-    if out_of_combat_ms < info.regen_interrupt_ms || info.regen_peace == 0.0 {
-        return current;
-    }
-    let step = info.regen_peace.abs() * dt;
-    let center = info.center_power as f32;
-    if info.regen_peace > 0.0 {
-        (current + step).min(max)
-    } else if current > center {
-        (current - step).max(center)
+) -> Option<(f32, f32)> {
+    let (rate, limit) = if in_combat {
+        let rate = info.regen_combat;
+        (rate, if rate > 0.0 { max } else { 0.0 })
     } else {
-        (current + step).min(center)
-    }
+        if out_of_combat_ms < info.regen_interrupt_ms {
+            return None;
+        }
+        let center = info.center_power as f32;
+        let peace = info.regen_peace;
+        if peace > 0.0 {
+            (peace, max)
+        } else if current > center {
+            (peace, center)
+        } else {
+            (-peace, center)
+        }
+    };
+    (rate != 0.0 && current != limit).then_some((rate, limit))
 }
 
-/// Mirror pools (and `Mana`) into replicated `UnitPowers`; floor fractions.
+/// Mirror pools (and `Mana`) into replicated `UnitPowers`: whole units floored, the
+/// fraction as `partial` thousandths, the regen rate and the charged combo points.
+/// Resent only when a whole value, max, rate or charged point changes; the client
+/// predicts the fraction from the rate in between (retail sends power updates, not
+/// per-tick fractions, and `UnitPartialPower` is client-side).
 pub(super) fn sync_unit_powers(
-    mut units: Query<(Entity, &PowerPools, Option<&Mana>, &mut UnitPowers), Without<GridDormant>>,
+    mut units: Query<
+        (
+            Entity,
+            &PowerPools,
+            Option<&Mana>,
+            Option<&crate::auras::AuraStatMods>,
+            &mut UnitPowers,
+        ),
+        Without<GridDormant>,
+    >,
     dirty: Option<Res<ReplicationDirtyQueue>>,
 ) {
-    for (entity, pools, mana, mut powers) in &mut units {
+    for (entity, pools, mana, mods, mut powers) in &mut units {
         let entry = |power: PowerType| {
-            let (current, max) = if power == PowerType::Mana {
-                mana.map_or((0.0, 0.0), |mana| (mana.current, mana.max))
+            let (current, max, rate) = if power == PowerType::Mana {
+                mana.map_or((0.0, 0.0, 0.0), |mana| {
+                    (mana.current, mana.max, pools.mana_regen_per_sec)
+                })
             } else {
-                pools
-                    .get(power)
-                    .map_or((0.0, 0.0), |pool| (pool.current, pool.max))
+                pools.get(power).map_or((0.0, 0.0, 0.0), |pool| {
+                    (pool.current, pool.max, pool.regen_per_sec)
+                })
             };
             PowerEntry {
                 power,
                 current: current.floor() as i32,
                 max: max.floor() as i32,
+                partial: ((current - current.floor()) * 1000.0).floor() as u16,
+                regen_per_sec: rate,
             }
         };
-        let unchanged = powers.entries.len() == pools.order.len()
-            && pools
-                .order
+        let entries: Vec<PowerEntry> = pools.order.iter().map(|&power| entry(power)).collect();
+        let charged_points = mods.map_or_else(Vec::new, |mods| mods.charged_power_points.clone());
+        let same_except_partial = |a: &PowerEntry, b: &PowerEntry| {
+            (a.power, a.current, a.max, a.regen_per_sec)
+                == (b.power, b.current, b.max, b.regen_per_sec)
+        };
+        let unchanged = powers.charged_points == charged_points
+            && powers.entries.len() == entries.len()
+            && powers
+                .entries
                 .iter()
-                .zip(&powers.entries)
-                .all(|(&power, current)| entry(power) == *current);
+                .zip(&entries)
+                .all(|(sent, next)| same_except_partial(sent, next));
         if unchanged {
             continue;
         }
-        powers.entries = pools.order.iter().map(|&power| entry(power)).collect();
+        *powers = UnitPowers {
+            entries,
+            charged_points,
+        };
         if let Some(dirty) = &dirty {
             dirty.mark(entity);
         }

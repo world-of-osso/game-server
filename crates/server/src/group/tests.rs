@@ -827,7 +827,10 @@ fn member_states_carry_live_health_power_death_and_debuffs_for_every_member() {
                 power: PowerType::Mana,
                 current: 300,
                 max: 500,
+                partial: 0,
+                regen_per_sec: 0.0,
             }],
+            charged_points: Vec::new(),
         },
         UnitAuras {
             auras: vec![debuff.clone(), buff],
@@ -850,6 +853,8 @@ fn member_states_carry_live_health_power_death_and_debuffs_for_every_member() {
             power: PowerType::Mana,
             current: 300,
             max: 500,
+            partial: 0,
+            regen_per_sec: 0.0,
         })
     );
     assert_eq!(changed[0].death, DeathState::Ghost);
