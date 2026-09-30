@@ -63,6 +63,7 @@ fn text_query(text: &str) -> AuctionSearchQuery {
         sort_field: AuctionSortField::Name,
         sort_dir: AuctionSortDir::Asc,
         faction: 0,
+        ..Default::default()
     }
 }
 
@@ -74,3 +75,199 @@ mod lifecycle;
 mod search;
 #[path = "auction_house_tests/settlement.rs"]
 mod settlement;
+
+mod bounded_slice {
+    use super::*;
+
+    #[test]
+    fn durations_use_days_and_weeks() {
+        assert_eq!(duration_secs(AuctionDuration::Short), 86_400);
+        assert_eq!(duration_secs(AuctionDuration::Medium), 604_800);
+        assert_eq!(duration_secs(AuctionDuration::Long), 1_209_600);
+    }
+
+    #[test]
+    fn expired_unsold_returns_deposit_and_item_once_cancellation_forfeits() {
+        let db = persistence::temp_database();
+        let mut app = App::new();
+        let mut state = AuctionHouseState::default();
+        for (id, name) in [(1, "Player Seller"), (2, "Bot Seller")] {
+            let mut auction = test_auction(id, "Iron Ore", 1, 1);
+            auction.seller_character_id = id;
+            auction.seller_name = name.into();
+            auction.expires_at_unix_secs = unix_now() - 1;
+            auction.deposit = 123;
+            auction.item.stack_count = 17;
+            auction.stack_count = 17;
+            persistence::save_auction(&db, &auction);
+            state.auctions.insert(id, auction);
+        }
+        let mut cancelled = test_auction(3, "Copper Ore", 1, 1);
+        cancelled.seller_character_id = 3;
+        cancelled.deposit = 456;
+        persistence::save_auction(&db, &cancelled);
+        state.auctions.insert(3, cancelled);
+        assert!(cancel_auction(&db, &mut state, 3, 3).success);
+        assert_eq!(mail_store::load_mailbox(&db, 3)[0].money, 0);
+        app.insert_resource(GameDatabase { db });
+        app.insert_resource(state);
+        app.add_systems(Update, super::super::handlers::expire_auctions);
+        app.update();
+        app.update();
+        let db = &app.world().resource::<GameDatabase>().db;
+        assert!(persistence::load_auctions(db).is_empty());
+        for id in [1, 2] {
+            let mail = mail_store::load_mailbox(db, id);
+            assert_eq!(mail.len(), 1);
+            assert_eq!(mail[0].money, 123);
+            assert_eq!(mail[0].items.len(), 1);
+            assert_eq!(mail[0].items[0].item.stack_count, 17);
+            assert_eq!(mail[0].items[0].item.item_guid, id);
+        }
+    }
+
+    fn expected_order(
+        a: &AuctionData,
+        b: &AuctionData,
+        query: &AuctionSearchQuery,
+    ) -> std::cmp::Ordering {
+        let order = match query.sort_field {
+            AuctionSortField::Name => a.item.name.cmp(&b.item.name),
+            AuctionSortField::MinBid => a.min_bid.cmp(&b.min_bid),
+            AuctionSortField::Buyout => a
+                .buyout_price
+                .unwrap_or(u64::MAX)
+                .cmp(&b.buyout_price.unwrap_or(u64::MAX)),
+            AuctionSortField::TimeLeft => time_bucket(a).cmp(&time_bucket(b)),
+            AuctionSortField::Quality => a.item.quality.cmp(&b.item.quality),
+            AuctionSortField::RequiredLevel => a.item.required_level.cmp(&b.item.required_level),
+        };
+        let directed = match query.sort_dir {
+            AuctionSortDir::Asc => order,
+            AuctionSortDir::Desc => order.reverse(),
+        };
+        directed.then_with(|| a.auction_id.cmp(&b.auction_id))
+    }
+
+    fn time_bucket(auction: &AuctionData) -> u8 {
+        match auction.expires_at_unix_secs.saturating_sub(unix_now()) {
+            0..=60 => 0,
+            61..=1800 => 1,
+            1801..=21600 => 2,
+            _ => 3,
+        }
+    }
+
+    #[test]
+    fn all_sorts_match_filtered_multi_page_reference_with_id_ties() {
+        let auctions: HashMap<_, _> = (1..=360)
+            .map(|id| {
+                let mut a = test_auction(
+                    id,
+                    if id % 2 == 0 {
+                        "Iron Ore"
+                    } else {
+                        "Copper Ore"
+                    },
+                    (id % 4) as u8,
+                    (id % 20) as u16,
+                );
+                a.min_bid = (id % 7) * 100;
+                a.buyout_price = (id % 5 != 0).then_some((id % 9) * 200);
+                a.faction = (id % 3) as u8;
+                a.expires_at_unix_secs = unix_now() + [30, 900, 7200, 86400][id as usize % 4];
+                (id, a)
+            })
+            .collect();
+        for field in [
+            AuctionSortField::Name,
+            AuctionSortField::MinBid,
+            AuctionSortField::Buyout,
+            AuctionSortField::TimeLeft,
+            AuctionSortField::Quality,
+            AuctionSortField::RequiredLevel,
+        ] {
+            for dir in [AuctionSortDir::Asc, AuctionSortDir::Desc] {
+                for filtered in [false, true] {
+                    let mut query = text_query(if filtered { "iRoN" } else { "" });
+                    query.sort_field = field;
+                    query.sort_dir = dir;
+                    query.page_size = 7;
+                    if filtered {
+                        query.quality = Some(2);
+                        query.min_level = Some(2);
+                        query.max_level = Some(14);
+                        query.faction = 1;
+                    }
+                    let mut expected: Vec<_> = auctions
+                        .values()
+                        .filter(|a| {
+                            !filtered
+                                || (a.item.name == "Iron Ore"
+                                    && a.item.quality == 2
+                                    && (2..=14).contains(&a.item.required_level)
+                                    && a.faction != 2)
+                        })
+                        .collect();
+                    expected.sort_by(|a, b| expected_order(a, b, &query));
+                    assert!(expected.len() > 14);
+                    for page in 0..=(expected.len() / 7 + 1) {
+                        query.page = page as u32;
+                        let result = search_auctions(&auctions, &query);
+                        assert_eq!(result.total_results as usize, expected.len());
+                        let ids: Vec<_> = result.results.iter().map(|a| a.auction_id).collect();
+                        let expected_ids: Vec<_> = expected
+                            .iter()
+                            .skip(page * 7)
+                            .take(7)
+                            .map(|a| a.auction_id)
+                            .collect();
+                        assert_eq!(
+                            ids, expected_ids,
+                            "field={field:?} dir={dir:?} page={page} filtered={filtered}"
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn query_300k_listings_under_200ms() {
+        let auctions: HashMap<_, _> = (1..=300_000)
+            .map(|id| {
+                let mut a = test_auction(
+                    id,
+                    &format!("Iron Ore {:04}", id % 1024),
+                    (id % 5) as u8,
+                    (id % 80) as u16,
+                );
+                a.min_bid = (id * 7919) % 1_000_000;
+                a.buyout_price = Some(a.min_bid * 2);
+                a.stack_count = (id % 200 + 1) as u32;
+                a.item.stack_count = a.stack_count;
+                a.faction = (id % 3) as u8;
+                (id, a)
+            })
+            .collect();
+        for (text, field, page) in [
+            ("", AuctionSortField::Name, 0),
+            ("", AuctionSortField::MinBid, 2000),
+            ("iRoN", AuctionSortField::Buyout, 1),
+        ] {
+            let mut query = text_query(text);
+            query.sort_field = field;
+            query.page = page;
+            let start = std::time::Instant::now();
+            let result = search_auctions(&auctions, &query);
+            let elapsed = start.elapsed();
+            eprintln!("300k query text={text:?} field={field:?} page={page}: {elapsed:?}");
+            assert_eq!(result.total_results, 300_000);
+            assert_eq!(result.results.len(), 50);
+            assert!(
+                elapsed < Duration::from_millis(200),
+                "query took {elapsed:?}"
+            );
+        }
+    }
+}

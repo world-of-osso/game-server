@@ -6,20 +6,23 @@ pub(super) fn search_auctions(
     auctions: &HashMap<u64, AuctionData>,
     query: &AuctionSearchQuery,
 ) -> AuctionSearchResults {
+    search_auctions_matching(auctions, query, |_| true)
+}
+
+pub(super) fn search_auctions_matching(
+    auctions: &HashMap<u64, AuctionData>,
+    query: &AuctionSearchQuery,
+    additional_match: impl Fn(&AuctionData) -> bool,
+) -> AuctionSearchResults {
     let needle = query.text.to_ascii_lowercase();
     let mut listings: Vec<_> = auctions
         .values()
         .filter(|auction| matches_search_query(auction, query, &needle))
-        .map(to_listing_summary)
+        .filter(|auction| additional_match(auction))
         .collect();
-
-    listings.sort_by(|a, b| compare_listing(a, b, query.sort_field));
-    if matches!(query.sort_dir, AuctionSortDir::Desc) {
-        listings.reverse();
-    }
-
     let total_results = listings.len() as u32;
-    let results = paged_listings(listings, query);
+    let now = unix_now();
+    let results = paged_listings(&mut listings, query, now);
     AuctionSearchResults {
         query: query.clone(),
         total_results,
@@ -28,10 +31,11 @@ pub(super) fn search_auctions(
 }
 
 fn matches_search_query(auction: &AuctionData, query: &AuctionSearchQuery, needle: &str) -> bool {
-    name_matches(auction, needle)
+    query.item_id.is_none_or(|id| auction.item.item_id == id)
         && quality_matches(auction, query)
         && level_matches(auction, query)
         && faction_matches(auction, query)
+        && name_matches(auction, needle)
 }
 
 fn name_matches(auction: &AuctionData, needle: &str) -> bool {
@@ -58,32 +62,54 @@ fn faction_matches(auction: &AuctionData, query: &AuctionSearchQuery) -> bool {
 }
 
 fn paged_listings(
-    listings: Vec<AuctionListingSummary>,
+    listings: &mut [&AuctionData],
     query: &AuctionSearchQuery,
+    now: u64,
 ) -> Vec<AuctionListingSummary> {
     let page_size = query.page_size.clamp(1, MAX_PAGE_SIZE) as usize;
-    let start = query.page as usize * page_size;
-    listings.into_iter().skip(start).take(page_size).collect()
+    let start = (query.page as usize).saturating_mul(page_size);
+    if start >= listings.len() {
+        return Vec::new();
+    }
+    let compare = |a: &&AuctionData, b: &&AuctionData| compare_listing(a, b, query, now);
+    if start > 0 {
+        listings.select_nth_unstable_by(start, compare);
+    }
+    let remaining = &mut listings[start..];
+    if remaining.len() > page_size {
+        remaining.select_nth_unstable_by(page_size, compare);
+    }
+    let page_len = remaining.len().min(page_size);
+    let page = &mut remaining[..page_len];
+    page.sort_unstable_by(compare);
+    page.iter()
+        .map(|auction| to_listing_summary_at(auction, now))
+        .collect()
 }
 
 fn compare_listing(
-    a: &AuctionListingSummary,
-    b: &AuctionListingSummary,
-    field: AuctionSortField,
+    a: &AuctionData,
+    b: &AuctionData,
+    query: &AuctionSearchQuery,
+    now: u64,
 ) -> std::cmp::Ordering {
-    match field {
+    let order = match query.sort_field {
         AuctionSortField::Name => a.item.name.cmp(&b.item.name),
         AuctionSortField::MinBid => a.min_bid.cmp(&b.min_bid),
         AuctionSortField::Buyout => a
             .buyout_price
             .unwrap_or(u64::MAX)
             .cmp(&b.buyout_price.unwrap_or(u64::MAX)),
-        AuctionSortField::TimeLeft => {
-            auction_time_rank(a.time_left).cmp(&auction_time_rank(b.time_left))
-        }
+        AuctionSortField::TimeLeft => auction_time_rank(time_left(a.expires_at_unix_secs, now))
+            .cmp(&auction_time_rank(time_left(b.expires_at_unix_secs, now))),
         AuctionSortField::Quality => a.item.quality.cmp(&b.item.quality),
         AuctionSortField::RequiredLevel => a.item.required_level.cmp(&b.item.required_level),
-    }
+    };
+    let directed = match query.sort_dir {
+        AuctionSortDir::Asc => order,
+        AuctionSortDir::Desc => order.reverse(),
+    };
+    directed.then_with(|| a.auction_id.cmp(&b.auction_id))
 }
 
 fn auction_time_rank(time_left: AuctionTimeLeft) -> u8 {
@@ -120,6 +146,10 @@ fn to_inventory_item(item: InventoryItemData) -> AuctionInventoryItem {
 }
 
 pub(super) fn to_listing_summary(auction: &AuctionData) -> AuctionListingSummary {
+    to_listing_summary_at(auction, unix_now())
+}
+
+fn to_listing_summary_at(auction: &AuctionData, now: u64) -> AuctionListingSummary {
     AuctionListingSummary {
         auction_id: auction.auction_id,
         item: to_inventory_item(auction.item.clone()),
@@ -129,7 +159,7 @@ pub(super) fn to_listing_summary(auction: &AuctionData) -> AuctionListingSummary
         current_bid: auction.current_bid,
         min_next_bid: min_next_bid(auction),
         buyout_price: auction.buyout_price,
-        time_left: time_left(auction.expires_at_unix_secs),
+        time_left: time_left(auction.expires_at_unix_secs, now),
     }
 }
 
@@ -144,8 +174,8 @@ const TIME_LEFT_SHORT_SECS: u64 = 60;
 const TIME_LEFT_MEDIUM_SECS: u64 = 60 * 30;
 const TIME_LEFT_LONG_SECS: u64 = 60 * 60 * 6;
 
-fn time_left(expires_at_unix_secs: u64) -> AuctionTimeLeft {
-    let remaining = expires_at_unix_secs.saturating_sub(unix_now());
+fn time_left(expires_at_unix_secs: u64, now: u64) -> AuctionTimeLeft {
+    let remaining = expires_at_unix_secs.saturating_sub(now);
     if remaining <= TIME_LEFT_SHORT_SECS {
         AuctionTimeLeft::Short
     } else if remaining <= TIME_LEFT_MEDIUM_SECS {
@@ -157,15 +187,15 @@ fn time_left(expires_at_unix_secs: u64) -> AuctionTimeLeft {
     }
 }
 
-pub(super) fn duration_secs(duration: AuctionDuration) -> u64 {
+pub(crate) fn duration_secs(duration: AuctionDuration) -> u64 {
     match duration {
-        AuctionDuration::Short => 60 * 30,
-        AuctionDuration::Medium => 60 * 60 * 2,
-        AuctionDuration::Long => 60 * 60 * 8,
+        AuctionDuration::Short => 24 * 60 * 60,
+        AuctionDuration::Medium => 7 * 24 * 60 * 60,
+        AuctionDuration::Long => 14 * 24 * 60 * 60,
     }
 }
 
-pub(super) fn unix_now() -> u64 {
+pub(crate) fn unix_now() -> u64 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .unwrap_or_default()
