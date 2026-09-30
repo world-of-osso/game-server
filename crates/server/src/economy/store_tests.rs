@@ -397,6 +397,8 @@ fn inventory_snapshot_guard_rejects_missing_changed_and_corrupt_rows_before_sett
             Some(&state(1)),
             &MarketChanges {
                 inventories: vec![(7, expected.clone())],
+                auctions: vec![auction(1)],
+                mails: vec![(7, mail(1))],
                 ..Default::default()
             },
         )
@@ -438,8 +440,8 @@ fn inventory_snapshot_guard_rejects_missing_changed_and_corrupt_rows_before_sett
                         items: vec![],
                     },
                 )],
-                auctions: vec![auction(1)],
-                mails: vec![(7, mail(1))],
+                auctions: vec![auction(2)],
+                mails: vec![(7, mail(2))],
                 ..Default::default()
             },
         );
@@ -462,7 +464,12 @@ fn inventory_snapshot_guard_rejects_missing_changed_and_corrupt_rows_before_sett
             _ => assert_eq!(row.unwrap().value(), b"corrupt"),
         }
         let auctions = tx.open_table(AUCTIONS).unwrap();
-        assert!(auctions.get(1).unwrap().is_none());
+        assert!(auctions.get(2).unwrap().is_none());
+        assert_eq!(read_row::<AuctionData>(&db, AUCTIONS, 1), Some(auction(1)));
+        assert_eq!(
+            read_row::<Vec<MailData>>(&db, MAILBOXES, 7),
+            Some(vec![mail(1)])
+        );
     }
 }
 
