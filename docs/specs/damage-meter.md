@@ -17,7 +17,7 @@ Retail's UI reads only aggregated sessions (`C_DamageMeter.GetCombatSessionFromT
 - [x] The owner gets `DamageMeterSnapshot { current, overall }` on `CombatChannel` when a session starts or ends, and at most every 1 s while one runs or has new damage; nothing while idle.
 - [ ] Pets and guardians (`RedirectSourceToOwner`), healing, absorbs, interrupts, dispels, damage taken, deaths and the other `DamageMeterType`s are not tracked.
 - [ ] Only the current and overall sessions are kept; Retail lists past sessions (`GetAvailableCombatSessions`) and can reset them (`ResetAllCombatSessions`).
-- [ ] A session against a training dummy includes the 5 s after the last hit before the dummy's combat ends (as in TC). TC puts a caster in combat when its spell launches (Spell.cpp:8538-8541); here combat starts at the hit, so a session starts at the first hit.
+- [ ] A session against a training dummy includes the 5 s after the last hit before the dummy's combat ends (as in TC). Combat starts when a harmful spell launches (Spell.cpp:8538-8541); spells have no travel time here, so that is also its hit.
 - [ ] Retail's session boundaries for a group (who must be in combat, whether a far-away member's combat counts) are not documented in the files; here any online member in combat keeps the session running.
 
 ## Tests

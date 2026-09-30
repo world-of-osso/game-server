@@ -13,9 +13,12 @@
 //! `npc_training_dummy` ends each attacker's combat 5 s after its last hit
 //! (npcs_special.cpp:1382-1415).
 //!
-//! Not modelled: suppressed references (vanish, feign death, spell missiles in flight:
-//! TC puts the caster in combat at launch, Spell.cpp:8538-8541; here both sides enter
-//! at the hit), pets and guardians.
+//! A harmful spell with initial aggro starts combat when it launches
+//! (`spell_cast::starts_combat`, Spell.cpp:8538-8541), before any damage.
+//!
+//! Not modelled: suppressed references (vanish, feign death, the target's side of a
+//! missile in flight: spells have no travel time here, so launch and hit are one
+//! moment), pets and guardians.
 
 use std::collections::HashMap;
 

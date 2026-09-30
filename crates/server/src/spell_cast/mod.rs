@@ -54,6 +54,10 @@ const CHANNEL_INTERRUPT_MOVING: u32 = 0x8 | 0x10;
 const SPELL_ATTR0_CANCELS_AUTO_ATTACK_COMBAT: u32 = 0x0010_0000;
 /// SPELL_ATTR1_IS_CHANNELLED / SPELL_ATTR1_IS_SELF_CHANNELLED.
 const SPELL_ATTR1_CHANNELED: u32 = 0x4 | 0x40;
+/// `SpellInfo::HasInitialAggro` (SpellInfo.cpp:1925-1928): none of these.
+const SPELL_ATTR1_NO_THREAT: u32 = 0x0000_0400;
+const SPELL_ATTR2_NO_INITIAL_THREAT: u32 = 0x0040_0000;
+const SPELL_ATTR4_NO_HARMFUL_THREAT: u32 = 0x0000_0010;
 /// `SpellPower.PowerType` -2 costs health.
 const POWER_HEALTH: i32 = -2;
 
@@ -1041,6 +1045,31 @@ fn resolve_effects(
     push_hit_events(world, caster, spell, plan, depth, &damage);
 }
 
+/// `Spell::PreprocessSpellLaunch` (Spell.cpp:8538-8541) puts the caster in combat with
+/// each unit its spell launches at, and `TargetInfo::PreprocessTarget`
+/// (Spell.cpp:2763-2764) the unit with the caster when it lands: a unit the caster can
+/// attack (TC: not `IsFriendlyTo`), a harmful spell (or one that dispels), with initial aggro or at an
+/// engaged unit. Spells have no travel time here, so launch and hit are one moment.
+fn starts_combat(world: &World, caster: Entity, target: Entity, spell: &SpellInfo) -> bool {
+    let initial_aggro = attributes(spell, 1) & SPELL_ATTR1_NO_THREAT == 0
+        && attributes(spell, 2) & SPELL_ATTR2_NO_INITIAL_THREAT == 0
+        && attributes(spell, 4) & SPELL_ATTR4_NO_HARMFUL_THREAT == 0;
+    let engaged = world
+        .get::<shared::components::CombatStatus>(target)
+        .is_some_and(|status| status.0);
+    let harmful = world
+        .get_resource::<SpellStore>()
+        .is_some_and(|store| crate::spell_info::positivity::negative_effects(store, spell) != 0)
+        || spell
+            .effects
+            .iter()
+            .any(|effect| effect.effect == effects::EFFECT_DISPEL);
+    caster != target
+        && targets::relation_matches(world, caster, target, Relation::Enemy)
+        && harmful
+        && (initial_aggro || engaged)
+}
+
 /// Distinct units of the plan, in plan order.
 fn hit_units(plan: &TargetPlan) -> Vec<Entity> {
     let mut hit: Vec<Entity> = Vec::new();
@@ -1144,6 +1173,9 @@ fn push_hit_events(
         );
     }
     for target in hit {
+        if starts_combat(world, caster, target, spell) {
+            crate::combat_refs::set_in_combat_with(world, caster, target);
+        }
         // Spell::DoSpellHitOnUnit (Spell.cpp:2879-2882): a spell landing on a
         // unit the caster can attack starts combat with it.
         if targets::relation_matches(world, caster, target, Relation::Enemy) {

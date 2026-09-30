@@ -135,3 +135,60 @@ fn a_despawned_opponent_ends_the_fight_and_the_dead_cannot_begin_one() {
     set_in_combat_with(app.world_mut(), hero, hero);
     assert!(!in_combat(&app, hero));
 }
+
+/// Agony 980: an instant harmful periodic-damage aura, first tick 2 s after the hit.
+const AGONY: u32 = 980;
+/// Polymorph 118: harmful, 1.7 s cast, `SPELL_ATTR1_NO_THREAT` (no initial aggro).
+const POLYMORPH: u32 = 118;
+
+fn out_of_combat_harness(
+    spell: u32,
+    class: u8,
+) -> Option<crate::spell_cast::test_harness::Harness> {
+    let mut h = crate::spell_cast::test_harness::harness(Vec::new(), &[spell], class)?;
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(CombatStatus(false));
+    Some(h)
+}
+
+fn harness_in_combat(h: &crate::spell_cast::test_harness::Harness, unit: Entity) -> bool {
+    h.app
+        .world()
+        .get::<CombatStatus>(unit)
+        .is_some_and(|status| status.0)
+}
+
+#[test]
+fn a_harmful_spell_starts_combat_when_it_lands_before_any_damage() {
+    let Some(mut h) = out_of_combat_harness(AGONY, 9) else {
+        return;
+    };
+    h.cast_and_deliver(AGONY, Some(h.npc));
+    h.advance(1);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert!(
+        h.inbox
+            .log
+            .iter()
+            .all(|event| event.kind != shared::protocol::CombatLogKind::Damage),
+        "no tick yet"
+    );
+    assert!(harness_in_combat(&h, h.caster) && harness_in_combat(&h, h.npc));
+}
+
+#[test]
+fn a_spell_without_initial_aggro_does_not_start_combat_with_an_unengaged_unit() {
+    let Some(mut h) = out_of_combat_harness(POLYMORPH, 8) else {
+        return;
+    };
+    h.app
+        .world_mut()
+        .entity_mut(h.npc)
+        .insert(CombatStatus(false));
+    h.cast_and_deliver(POLYMORPH, Some(h.npc));
+    h.advance(1700 / 50 + 2);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert!(!harness_in_combat(&h, h.caster) && !harness_in_combat(&h, h.npc));
+}
