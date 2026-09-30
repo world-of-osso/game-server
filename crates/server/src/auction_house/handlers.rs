@@ -235,35 +235,51 @@ pub(super) fn expire_auctions(db: Option<Res<GameDatabase>>, mut state: ResMut<A
         .map(|auction| auction.auction_id)
         .collect();
     for auction_id in expired {
-        let Some(auction) = state.auctions.remove(&auction_id) else {
+        let Some(auction) = state.auctions.get(&auction_id) else {
             continue;
         };
-        expire_single_auction(&db.db, auction_id, &auction);
+        match expire_single_auction(&db.db, auction) {
+            Ok(()) => {
+                state.auctions.remove(&auction_id);
+            }
+            Err(error) => error!(auction_id, %error, "auction expiry settlement failed"),
+        }
     }
 }
 
-fn expire_single_auction(db: &redb::Database, auction_id: u64, auction: &AuctionData) {
-    persistence::delete_auction(db, auction_id);
-    if let Some(winner_id) = auction.current_bidder_character_id {
-        complete_sale(
+fn expire_single_auction(db: &redb::Database, auction: &AuctionData) -> Result<(), String> {
+    let mails = if let Some(winner_id) = auction.current_bidder_character_id {
+        super::operations::sale_mails(
             db,
             auction,
             winner_id,
             auction.current_bid.unwrap_or(auction.min_bid),
-        );
-        return;
-    }
-    deliver_mail(
+        )
+    } else {
+        vec![(
+            auction.seller_character_id,
+            super::operations::build_auction_mail(
+                db,
+                "Auction expired",
+                &format!(
+                    "Your auction for {} expired without a buyer.",
+                    auction.item.name
+                ),
+                auction.deposit,
+                Some(auction.item.clone()),
+            ),
+        )]
+    };
+    crate::economy::store::commit_market(
         db,
-        auction.seller_character_id,
-        "Auction expired",
-        &format!(
-            "Your auction for {} expired without a buyer.",
-            auction.item.name
-        ),
-        auction.deposit,
-        Some(auction.item.clone()),
-    );
+        None,
+        &crate::economy::store::MarketChanges {
+            expected_auctions: vec![(auction.auction_id, auction.clone())],
+            deleted_auctions: vec![auction.auction_id],
+            mails,
+            ..Default::default()
+        },
+    )
 }
 
 pub(super) fn create_auction_with_gold_update(

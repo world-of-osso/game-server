@@ -1,4 +1,5 @@
 use super::*;
+use crate::economy::store::{MarketChanges, commit_market};
 
 /// Deposit = vendor_sell_price * stack_count * duration_multiplier.
 pub(crate) fn deposit_cost(
@@ -139,8 +140,6 @@ pub(super) fn create_auction(
     } else {
         inventory.items[validated.item_index].stack_count -= req.stack_count;
     }
-    persistence::save_inventory(db, character_id, &inventory);
-
     let auction = AuctionData {
         auction_id: persistence::next_id(db, "auction"),
         seller_character_id: character_id,
@@ -159,7 +158,14 @@ pub(super) fn create_auction(
         faction: house,
         deposit: validated.deposit,
     };
-    persistence::save_auction(db, &auction);
+    let changes = MarketChanges {
+        auctions: vec![auction.clone()],
+        inventories: vec![(character_id, inventory)],
+        ..Default::default()
+    };
+    if let Err(error) = commit_market(db, None, &changes) {
+        return err(&error);
+    }
     state.auctions.insert(auction.auction_id, auction);
     ok("auction created")
 }
@@ -173,29 +179,36 @@ fn previous_bid_credit(auction: &AuctionData, character_id: u64) -> u64 {
     }
 }
 
-/// Refund the previous bidder's gold and send outbid notification mail.
-fn refund_previous_bidder(db: &redb::Database, auction: &AuctionData, new_bidder: u64) {
-    let Some(prev_bidder) = auction.current_bidder_character_id else {
+/// Stage the refund alongside the new bid; never publish money before settlement.
+fn stage_previous_bidder_refund(
+    db: &redb::Database,
+    auction: &AuctionData,
+    new_bidder: u64,
+    changes: &mut MarketChanges,
+) {
+    let Some(previous_bidder) = auction.current_bidder_character_id else {
         return;
     };
-    if prev_bidder == new_bidder {
+    if previous_bidder == new_bidder {
         return;
     }
     let refund = auction.current_bid.unwrap_or(0);
-    let mut prev_inventory = persistence::load_inventory(db, prev_bidder);
-    prev_inventory.gold = prev_inventory.gold.saturating_add(refund);
-    persistence::save_inventory(db, prev_bidder, &prev_inventory);
-    deliver_mail(
-        db,
-        prev_bidder,
-        "Outbid",
-        &format!(
-            "You have been outbid on {}. Your {} gold has been refunded.",
-            auction.item.name, refund
+    let mut inventory = persistence::load_inventory(db, previous_bidder);
+    inventory.gold = inventory.gold.saturating_add(refund);
+    changes.inventories.push((previous_bidder, inventory));
+    changes.mails.push((
+        previous_bidder,
+        build_auction_mail(
+            db,
+            "Outbid",
+            &format!(
+                "You have been outbid on {}. Your {} gold has been refunded.",
+                auction.item.name, refund
+            ),
+            0,
+            None,
         ),
-        0,
-        None,
-    );
+    ));
 }
 
 pub(super) fn place_bid(
@@ -205,7 +218,7 @@ pub(super) fn place_bid(
     auction_id: u64,
     amount: u64,
 ) -> AuctionOperationResponse {
-    let Some(auction) = state.auctions.get_mut(&auction_id) else {
+    let Some(auction) = state.auctions.get(&auction_id) else {
         return err("auction not found");
     };
     if auction.seller_character_id == character_id {
@@ -222,24 +235,34 @@ pub(super) fn place_bid(
         return err("not enough gold");
     }
     bidder_inventory.gold -= additional;
-    persistence::save_inventory(db, character_id, &bidder_inventory);
-
-    refund_previous_bidder(db, auction, character_id);
-
-    auction.current_bid = Some(amount);
-    auction.current_bidder_character_id = Some(character_id);
-
-    if let Some(buyout) = auction.buyout_price
-        && amount >= buyout
-    {
-        let auction = state.auctions.remove(&auction_id).expect("auction present");
-        persistence::delete_auction(db, auction_id);
-        complete_sale(db, &auction, character_id, amount);
-        return ok("bid met buyout — auction sold");
+    let mut changes = MarketChanges {
+        expected_auctions: vec![(auction_id, auction.clone())],
+        inventories: vec![(character_id, bidder_inventory)],
+        ..Default::default()
+    };
+    stage_previous_bidder_refund(db, auction, character_id, &mut changes);
+    let sold = auction.buyout_price.is_some_and(|buyout| amount >= buyout);
+    let mut updated = auction.clone();
+    updated.current_bid = Some(amount);
+    updated.current_bidder_character_id = Some(character_id);
+    if sold {
+        changes.deleted_auctions.push(auction_id);
+        changes
+            .mails
+            .extend(sale_mails(db, auction, character_id, amount));
+    } else {
+        changes.auctions.push(updated.clone());
     }
-
-    persistence::save_auction(db, auction);
-    ok("bid placed")
+    if let Err(error) = commit_market(db, None, &changes) {
+        return err(&error);
+    }
+    if sold {
+        state.auctions.remove(&auction_id);
+        ok("bid met buyout — auction sold")
+    } else {
+        state.auctions.insert(auction_id, updated);
+        ok("bid placed")
+    }
 }
 
 pub(super) fn buyout_auction(
@@ -248,40 +271,35 @@ pub(super) fn buyout_auction(
     character_id: u64,
     auction_id: u64,
 ) -> AuctionOperationResponse {
-    let Some(auction) = state.auctions.remove(&auction_id) else {
+    let Some(auction) = state.auctions.get(&auction_id) else {
         return err("auction not found");
     };
     if auction.seller_character_id == character_id {
-        state.auctions.insert(auction_id, auction);
         return err("cannot buy out your own auction");
     }
     let Some(price) = auction.buyout_price else {
-        state.auctions.insert(auction_id, auction);
         return err("auction has no buyout price");
     };
 
     let mut buyer_inventory = persistence::load_inventory(db, character_id);
-    let credit = previous_bid_credit(&auction, character_id);
+    let credit = previous_bid_credit(auction, character_id);
     let additional = price.saturating_sub(credit);
     if buyer_inventory.gold < additional {
-        state.auctions.insert(auction_id, auction);
         return err("not enough gold");
     }
     buyer_inventory.gold -= additional;
-    persistence::save_inventory(db, character_id, &buyer_inventory);
-
-    if let Some(prev_bidder) = auction.current_bidder_character_id
-        && prev_bidder != character_id
-    {
-        let mut prev_inventory = persistence::load_inventory(db, prev_bidder);
-        prev_inventory.gold = prev_inventory
-            .gold
-            .saturating_add(auction.current_bid.unwrap_or(0));
-        persistence::save_inventory(db, prev_bidder, &prev_inventory);
+    let mut changes = MarketChanges {
+        expected_auctions: vec![(auction_id, auction.clone())],
+        deleted_auctions: vec![auction_id],
+        inventories: vec![(character_id, buyer_inventory)],
+        mails: sale_mails(db, auction, character_id, price),
+        ..Default::default()
+    };
+    stage_previous_bidder_refund(db, auction, character_id, &mut changes);
+    if let Err(error) = commit_market(db, None, &changes) {
+        return err(&error);
     }
-
-    persistence::delete_auction(db, auction_id);
-    complete_sale(db, &auction, character_id, price);
+    state.auctions.remove(&auction_id);
     ok("auction bought out")
 }
 
@@ -300,76 +318,95 @@ pub(super) fn cancel_auction(
     if auction.current_bidder_character_id.is_some() {
         return err("cannot cancel an auction that already has bids");
     }
-    let auction = state.auctions.remove(&auction_id).expect("auction present");
-    persistence::delete_auction(db, auction_id);
-    deliver_mail(
-        db,
-        character_id,
-        "Auction cancelled",
-        &format!("Your auction for {} was cancelled.", auction.item.name),
-        0,
-        Some(auction.item),
-    );
+    let changes = MarketChanges {
+        expected_auctions: vec![(auction_id, auction.clone())],
+        deleted_auctions: vec![auction_id],
+        mails: vec![(
+            character_id,
+            build_auction_mail(
+                db,
+                "Auction cancelled",
+                &format!("Your auction for {} was cancelled.", auction.item.name),
+                0,
+                Some(auction.item.clone()),
+            ),
+        )],
+        ..Default::default()
+    };
+    if let Err(error) = commit_market(db, None, &changes) {
+        return err(&error);
+    }
+    state.auctions.remove(&auction_id);
     ok("auction cancelled")
 }
 
-pub(super) fn complete_sale(
+/// Seller settlement shared by player and economy purchases.
+pub(crate) fn seller_sale_mail(
+    db: &redb::Database,
+    auction: &AuctionData,
+    sale_price: u64,
+) -> (u64, MailData) {
+    let house_fee = (u128::from(sale_price) * u128::from(HOUSE_CUT_BPS) / 10_000) as u64;
+    let seller_proceeds = sale_price
+        .saturating_sub(house_fee)
+        .saturating_add(auction.deposit);
+    (
+        auction.seller_character_id,
+        build_auction_mail(
+            db,
+            "Auction sold",
+            &format!("Your auction for {} sold.", auction.item.name),
+            seller_proceeds,
+            None,
+        ),
+    )
+}
+
+pub(crate) fn sale_mails(
     db: &redb::Database,
     auction: &AuctionData,
     buyer_character_id: u64,
     sale_price: u64,
-) {
-    let house_fee = sale_price.saturating_mul(HOUSE_CUT_BPS) / 10_000;
-    let seller_proceeds = sale_price
-        .saturating_sub(house_fee)
-        .saturating_add(auction.deposit);
-    deliver_mail(
-        db,
-        auction.seller_character_id,
-        "Auction sold",
-        &format!("Your auction for {} sold.", auction.item.name),
-        seller_proceeds,
-        None,
-    );
-    deliver_mail(
-        db,
-        buyer_character_id,
-        "Auction won",
-        &format!("You won {}.", auction.item.name),
-        0,
-        Some(auction.item.clone()),
-    );
+) -> Vec<(u64, MailData)> {
+    vec![
+        seller_sale_mail(db, auction, sale_price),
+        (
+            buyer_character_id,
+            build_auction_mail(
+                db,
+                "Auction won",
+                &format!("You won {}.", auction.item.name),
+                0,
+                Some(auction.item.clone()),
+            ),
+        ),
+    ]
 }
 
-/// Instant Auction House mail (AzerothCore `MailDraft` from `MAIL_AUCTION`).
-pub(super) fn deliver_mail(
+/// Build instant Auction House mail without delivering it before the market commit.
+pub(crate) fn build_auction_mail(
     db: &redb::Database,
-    character_id: u64,
     subject: &str,
     body: &str,
     money: u64,
     item: Option<InventoryItemData>,
-) {
+) -> MailData {
     let now = unix_now();
-    mail_store::deliver_mail(
-        db,
-        character_id,
-        MailData {
-            mail_id: persistence::next_id(db, "mail"),
-            sender: MailSender::AuctionHouse,
-            subject: subject.to_string(),
-            body: body.to_string(),
-            items: item
-                .into_iter()
-                .map(|item| MailItemData { slot: 0, item })
-                .collect(),
-            money,
-            cod: 0,
-            delivers_at: now,
-            expires_at: now + shared::mail::MAIL_EXPIRY_SECS,
-            read: false,
-            returned: false,
-            cod_payment: false,
-        },
-    );
+    MailData {
+        mail_id: persistence::next_id(db, "mail"),
+        sender: MailSender::AuctionHouse,
+        subject: subject.to_string(),
+        body: body.to_string(),
+        items: item
+            .into_iter()
+            .map(|item| MailItemData { slot: 0, item })
+            .collect(),
+        money,
+        cod: 0,
+        delivers_at: now,
+        expires_at: now + shared::mail::MAIL_EXPIRY_SECS,
+        read: false,
+        returned: false,
+        cod_payment: false,
+    }
 }
