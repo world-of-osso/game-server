@@ -21,6 +21,8 @@ use shared::protocol::{
 };
 
 mod auth_flow;
+mod economy;
+pub use economy::{EconomyAction, EconomyOperation};
 mod chat_actions;
 mod response_handlers;
 
@@ -62,6 +64,7 @@ pub enum CliCommand {
     ChatSend(String),
     ChatListen,
     GuildChat(String),
+    Economy(EconomyAction),
 }
 
 /// Resource describing the CLI action to perform.
@@ -118,7 +121,7 @@ struct StartTime(std::time::Instant);
 // -- Public API --
 
 /// Build and run the headless CLI app. Blocks until exit.
-pub fn run(action: CliAction) {
+pub fn run(action: CliAction) -> AppExit {
     let mut app = App::new();
     app.add_plugins(
         MinimalPlugins.set(bevy::app::ScheduleRunnerPlugin::run_loop(
@@ -135,7 +138,8 @@ pub fn run(action: CliAction) {
     register_resources(&mut app, &action);
     register_systems(&mut app);
     register_observers(&mut app);
-    app.run();
+    economy::register(&mut app);
+    app.run()
 }
 
 fn register_resources(app: &mut App, action: &CliAction) {
