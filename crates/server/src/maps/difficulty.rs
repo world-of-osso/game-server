@@ -471,7 +471,7 @@ mod admin_game_object_tests {
             })
         );
         assert_eq!(world.get::<Position>(object).unwrap().y, 94.875);
-        assert_eq!(world.entities().len(), 4);
+        assert_eq!(world.query::<&GameObjectInfo>().iter(&world).count(), 4);
     }
 
     #[test]
