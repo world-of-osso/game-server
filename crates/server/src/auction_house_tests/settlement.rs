@@ -784,3 +784,29 @@ fn atomic_concurrent_create_lists_source_item_and_charges_deposit_once() {
             .any(|item| item.item_guid == source.item_guid)
     );
 }
+
+#[test]
+fn atomic_expired_deadline_rejects_bid_and_buyout_before_sweep() {
+    for operation in ["bid", "buyout"] {
+        let db = persistence::temp_database();
+        let mut state = atomic_fixture(&db);
+        let auction = state.auctions.get_mut(&91).unwrap();
+        auction.expires_at_unix_secs = unix_now() - 1;
+        persistence::save_auction(&db, auction);
+        let original = auction.clone();
+        let response = if operation == "bid" {
+            place_bid(&db, &mut state, 2, 91, 100)
+        } else {
+            buyout_auction(&db, &mut state, 2, 91)
+        };
+        assert!(
+            !response.success,
+            "{operation} must reject an expired deadline"
+        );
+        assert_eq!(state.auctions[&91], original);
+        assert_eq!(persistence::load_auctions(&db), vec![original]);
+        assert_eq!(persistence::load_inventory(&db, 2).gold, 10_000);
+        assert!(mail_store::load_mailbox(&db, 1).is_empty());
+        assert!(mail_store::load_mailbox(&db, 2).is_empty());
+    }
+}
