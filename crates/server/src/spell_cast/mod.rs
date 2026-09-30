@@ -347,12 +347,17 @@ pub(crate) fn duration_ms(world: &World, caster: Entity, spell: &SpellInfo) -> i
     modify(world, caster, spell, SpellModOp::Duration, base as f32).round() as i32
 }
 
-/// Effects that have a handler or apply an aura; only these select targets.
+/// Effects that have a handler, apply an aura or run a script hook; only
+/// these select targets.
 fn handled_effects(spell: &SpellInfo) -> impl Iterator<Item = &crate::spell_info::SpellEffect> {
     spell
         .effects
         .iter()
-        .filter(|effect| effects::is_handled(effect))
+        .filter(|effect| selects_targets(spell, effect))
+}
+
+fn selects_targets(spell: &SpellInfo, effect: &crate::spell_info::SpellEffect) -> bool {
+    effects::is_handled(effect) || scripts::on_effect_hit(spell.id, effect.index).is_some()
 }
 
 fn max_targets(spell: &SpellInfo) -> u32 {
@@ -734,6 +739,28 @@ pub(crate) fn spell_costs(
     caster: Entity,
     spell: &SpellInfo,
 ) -> Result<Vec<(CostPool, f32)>, CastFailure> {
+    applicable_costs(world, caster, spell)?
+        .into_iter()
+        .map(|(pool, amount, current)| {
+            if current < amount {
+                Err(match pool {
+                    CostPool::Power(power) => CastFailure::NotEnoughPower(power),
+                    CostPool::Health => CastFailure::NotEnoughHealth,
+                })
+            } else {
+                Ok((pool, amount))
+            }
+        })
+        .collect()
+}
+
+/// The costs `spell_costs` checks, with the caster's current value of each pool,
+/// without requiring the caster to afford them.
+pub(crate) fn applicable_costs(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+) -> Result<Vec<(CostPool, f32, f32)>, CastFailure> {
     let mut costs = Vec::new();
     for cost in spell.power_costs.iter().filter(|cost| {
         cost.required_aura_spell_id == 0
@@ -774,10 +801,7 @@ pub(crate) fn spell_costs(
             Some(op) => modify(world, caster, spell, op, amount_with(base)).max(0.0),
             None => amount_with(base),
         };
-        if current < amount {
-            return Err(missing);
-        }
-        costs.push((pool, amount));
+        costs.push((pool, amount, current));
     }
     Ok(costs)
 }
@@ -1006,11 +1030,11 @@ fn plan_targets(
     // Units per leading effect (`processedEffectsMaskForSpell`).
     let mut selected: Vec<(usize, Vec<Entity>)> = Vec::new();
     for (index, effect) in spell.effects.iter().enumerate() {
-        if !effects::is_handled(effect) {
+        if !selects_targets(spell, effect) {
             continue;
         }
         let leader = target_group_leader(spell, index);
-        let units = match selected.iter().find(|(selected, _)| *selected == leader) {
+        let mut units = match selected.iter().find(|(selected, _)| *selected == leader) {
             Some((_, units)) => units.clone(),
             None => {
                 let units = targets::select_targets(
@@ -1029,6 +1053,9 @@ fn plan_targets(
                 units
             }
         };
+        if let Some(filter) = scripts::area_target_filter(spell.id, effect.index) {
+            filter(spell, explicit, &mut units);
+        }
         let chain_multipliers = if spell.effects[leader].chain_targets > 1 {
             std::iter::successors(Some(1.0), |multiplier| {
                 Some(multiplier * effect.chain_amplitude)
@@ -1059,7 +1086,7 @@ fn resolve_effects(
     depth: u8,
 ) {
     for effect in &spell.effects {
-        if !effects::is_handled(effect) {
+        if !selects_targets(spell, effect) {
             effects::log_unhandled(world, spell.id, effect.effect);
         }
     }
@@ -1101,16 +1128,22 @@ fn resolve_effects(
             handler(world, &ctx, effect);
             continue;
         }
-        let Some(handler) = effects::handler(effect.effect) else {
-            continue;
-        };
+        let handler = effects::handler(effect.effect);
+        let hook = scripts::on_effect_hit(spell.id, effect.index);
         for &unit in units {
-            if world.get_entity(unit).is_ok() {
+            if let Some(handler) = handler
+                && world.get_entity(unit).is_ok()
+            {
                 let ctx = EffectCtx {
                     chain_multiplier: planned.chain_multiplier(unit),
                     ..ctx
                 };
                 handler(world, &ctx, effect, unit);
+            }
+            if let Some(hook) = hook
+                && world.get_entity(unit).is_ok()
+            {
+                hook(world, caster, unit, depth);
             }
         }
     }
@@ -1513,5 +1546,7 @@ fn complete_cast(world: &mut World, caster: Entity, spell_id: u32, target: Optio
 
 #[cfg(test)]
 mod class_resource_tests;
+#[cfg(test)]
+mod new_class_tests;
 #[cfg(test)]
 mod tests;

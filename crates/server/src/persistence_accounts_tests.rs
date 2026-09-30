@@ -317,8 +317,8 @@ fn create_character_rejects_invalid_class_and_race_class_combination() {
     let db = temp_database();
     let (account_id, _) = register_account(&db, "user1", "pass").unwrap();
     assert_eq!(
-        create_character(&db, account_id, "Monk", 1, 10),
-        Err("Invalid class id 10".to_string())
+        create_character(&db, account_id, "Adventurer", 1, 14),
+        Err("Invalid class id 14".to_string())
     );
     assert_eq!(
         create_character(&db, account_id, "Druid", 3, 11),
@@ -518,4 +518,84 @@ fn set_credentials_enables_password_login() {
     let (account_id, _) = login_with_credentials(&db, None, "aliasuser", "newpass").unwrap();
     let (other_id, _) = login_with_credentials(&db, Some(&token2), "", "").unwrap();
     assert_eq!(account_id, other_id);
+}
+
+#[test]
+fn new_class_monk_characters_cover_additional_authored_races() {
+    let db = temp_database();
+    let (account_id, _) = register_account(&db, "fb_moremonks", "fbtest").unwrap();
+    for (name, race, level, bit, faction) in [
+        ("Kulmonk", 32, 10, 31, 1),
+        ("Earthenhorde", 84, 10, 17, 2),
+        ("Earthenally", 85, 10, 18, 3),
+        ("Haranirally", 86, 1, 20, 4),
+        ("Haranirhorde", 91, 10, 19, 116),
+    ] {
+        let (id, data) = create_character(&db, account_id, name, race, 10).unwrap();
+        assert_eq!(data.level, level);
+        assert_eq!(load_character(&db, id).unwrap().level, level);
+        assert!(crate::race_class::race_mask_allows([1 << bit, 0], race));
+        assert!(!crate::race_class::race_mask_allows([1 << 3, 0], race));
+        assert_eq!(crate::faction::faction_template_for_race(race), faction);
+        // Race starts are not implemented: the faction capital stands in.
+        let capital = if faction == 1 || faction == 3 || faction == 4 {
+            (-8841.06, 489.656)
+        } else {
+            (1798.27, -4363.27)
+        };
+        assert_eq!((data.x, data.y), capital, "{name}");
+        for class in [12, 13] {
+            assert!(crate::race_class::validate_race_class(race, class).is_err());
+        }
+    }
+    assert_eq!(list_characters_for_account(&db, account_id).len(), 5);
+}
+
+/// Monk, Demon Hunter and Evoker creation: start level, map and position, and
+/// the refused race/class combinations leave no character behind.
+#[test]
+fn new_class_characters_start_at_their_level_and_location() {
+    use crate::maps::persistence::load_character_map;
+
+    let db = temp_database();
+    let (account_id, _) = register_account(&db, "fb_newclass", "fbtest").unwrap();
+
+    let (monk, data) = create_character(&db, account_id, "Monkling", 1, 10).unwrap();
+    assert_eq!((data.level, data.x, data.y), (1, -8949.0, -132.0));
+    assert_eq!(load_character_map(&db, monk), 0);
+
+    let (dh, data) = create_character(&db, account_id, "Illidariel", 4, 12).unwrap();
+    assert_eq!((data.level, data.x, data.y), (8, 10311.0, 832.0));
+    assert_eq!(load_character_map(&db, dh), 1, "Shadowglen is on Kalimdor");
+
+    let (evoker, data) = create_character(&db, account_id, "Scalecommand", 52, 13).unwrap();
+    assert_eq!((data.level, data.x, data.y), (10, -8841.06, 489.656));
+    assert_eq!(load_character_map(&db, evoker), 0, "Stormwind");
+
+    let (evoker, data) = create_character(&db, account_id, "Scaleborn", 70, 13).unwrap();
+    assert_eq!((data.level, data.x, data.y), (10, 1798.27, -4363.27));
+    assert_eq!(load_character_map(&db, evoker), 1, "Orgrimmar");
+
+    for (name, race, class, level) in [
+        ("Bloodhunter", 10, 12, 8),
+        ("Voidhunter", 29, 12, 10),
+        ("Alliedmonk", 37, 10, 10),
+    ] {
+        let (id, data) = create_character(&db, account_id, name, race, class).unwrap();
+        assert_eq!(data.level, level);
+        assert_eq!(load_character(&db, id).unwrap().level, level);
+    }
+
+    for (name, race, class) in [
+        ("Humandh", 1, 12),
+        ("Orcvoker", 2, 13),
+        ("Dracmonk", 52, 10),
+    ] {
+        assert_eq!(
+            create_character(&db, account_id, name, race, class).map(|(id, _)| id),
+            Err(format!("Class {class} is not available for race {race}"))
+        );
+    }
+    assert_eq!(list_characters_for_account(&db, account_id).len(), 7);
+    assert_eq!(load_character(&db, dh).unwrap().level, 8);
 }

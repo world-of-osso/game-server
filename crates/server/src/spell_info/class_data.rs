@@ -9,7 +9,7 @@ use super::load::{int, uint};
 use super::trait_data::{TraitTree, load_trait_tree};
 
 /// ChrClasses ID -> class skill line (skill_line CategoryID 7). Character creation classes only.
-const CLASS_SKILL_LINES: [(u8, u32); 10] = [
+const CLASS_SKILL_LINES: [(u8, u32); 13] = [
     (1, 840),
     (2, 800),
     (3, 795),
@@ -19,7 +19,10 @@ const CLASS_SKILL_LINES: [(u8, u32); 10] = [
     (7, 924),
     (8, 904),
     (9, 849),
+    (10, 829),
     (11, 798),
+    (12, 1848),
+    (13, 2810),
 ];
 pub(crate) const MAX_LEVEL: u32 = 90;
 /// SkillLineAbilityAcquireMethod::NeverLearned (TrinityCore DBCEnums.h).
