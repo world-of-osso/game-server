@@ -1,5 +1,38 @@
 use super::*;
-use crate::auction_house::tests::{test_auction, text_query};
+
+fn test_auction(id: u64, name: &str, quality: u8, required_level: u16) -> AuctionData {
+    AuctionData {
+        auction_id: id,
+        seller_character_id: 1,
+        seller_name: "Seller".into(),
+        item: InventoryItemData {
+            item_guid: id,
+            item_id: 42,
+            name: name.into(),
+            quality,
+            required_level,
+            stack_count: 1,
+            vendor_sell_price: 1,
+            unique_auction: false,
+        },
+        stack_count: 1,
+        min_bid: 100,
+        current_bid: None,
+        current_bidder_character_id: None,
+        buyout_price: Some(200),
+        expires_at_unix_secs: unix_now() + 3600,
+        faction: 0,
+        deposit: 0,
+    }
+}
+
+fn text_query(text: &str) -> AuctionSearchQuery {
+    AuctionSearchQuery {
+        text: text.into(),
+        page_size: 50,
+        ..Default::default()
+    }
+}
 
 #[test]
 fn first_page_all_sorts_keep_ascending_id_ties_and_count_every_match() {
