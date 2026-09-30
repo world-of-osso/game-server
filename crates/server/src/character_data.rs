@@ -23,6 +23,35 @@ pub struct CharacterData {
     pub durability: Vec<DurabilityEntryData>,
 }
 
+// Appearance written before the Dracthyr visage form (shared-protocol 88bc3fe).
+#[derive(bitcode::Decode)]
+struct LegacyCharacterAppearanceV3 {
+    sex: u8,
+    skin_color: u8,
+    face: u8,
+    eye_color: u8,
+    hair_style: u8,
+    hair_color: u8,
+    facial_style: u8,
+    customization_choices: Vec<shared::components::CustomizationChoiceSelection>,
+}
+
+#[derive(bitcode::Decode)]
+struct LegacyCharacterDataV6 {
+    name: String,
+    x: f32,
+    y: f32,
+    z: f32,
+    health: f32,
+    max_health: f32,
+    race: u8,
+    class: u8,
+    level: u16,
+    appearance: LegacyCharacterAppearanceV3,
+    equipment_appearance: EquipmentAppearance,
+    durability: Vec<DurabilityEntryData>,
+}
+
 // Frozen seven-byte appearance used by records written before additional choices.
 #[derive(bitcode::Decode)]
 struct LegacyCharacterAppearanceV2 {
@@ -141,8 +170,9 @@ impl CharacterData {
 }
 
 fn decode_legacy_character_data(bytes: &[u8]) -> Result<CharacterData, bitcode::Error> {
-    bitcode::decode::<LegacyCharacterDataV5>(bytes)
-        .map(character_data_from_v5)
+    bitcode::decode::<LegacyCharacterDataV6>(bytes)
+        .map(character_data_from_v6)
+        .or_else(|_| bitcode::decode::<LegacyCharacterDataV5>(bytes).map(character_data_from_v5))
         .or_else(|_| {
             bitcode::decode::<LegacyCharacterDataV2>(bytes).map(character_data_from_legacy_v2)
         })
@@ -168,6 +198,7 @@ fn upgrade_appearance_v2(appearance: LegacyCharacterAppearanceV2) -> CharacterAp
         hair_color: appearance.hair_color,
         facial_style: appearance.facial_style,
         customization_choices: Vec::new(),
+        visage: None,
     }
 }
 
@@ -181,6 +212,7 @@ fn upgrade_appearance_v1(appearance: LegacyCharacterAppearanceV1) -> CharacterAp
         hair_color: appearance.hair_color,
         facial_style: appearance.facial_style,
         customization_choices: Vec::new(),
+        visage: None,
     }
 }
 
@@ -249,6 +281,28 @@ fn character_data_from_v4(legacy: LegacyCharacterDataV4) -> CharacterData {
     )
 }
 
+fn character_data_from_v6(legacy: LegacyCharacterDataV6) -> CharacterData {
+    let durability = legacy.durability;
+    let old = legacy.appearance;
+    let mut data = upgrade_legacy!(
+        legacy,
+        CharacterAppearance {
+            sex: old.sex,
+            skin_color: old.skin_color,
+            face: old.face,
+            eye_color: old.eye_color,
+            hair_style: old.hair_style,
+            hair_color: old.hair_color,
+            facial_style: old.facial_style,
+            customization_choices: old.customization_choices,
+            visage: None,
+        },
+        legacy.equipment_appearance
+    );
+    data.durability = durability;
+    data
+}
+
 fn character_data_from_v5(legacy: LegacyCharacterDataV5) -> CharacterData {
     let durability = legacy.durability;
     let mut data = upgrade_legacy!(
@@ -258,4 +312,77 @@ fn character_data_from_v5(legacy: LegacyCharacterDataV5) -> CharacterData {
     );
     data.durability = durability;
     data
+}
+
+#[cfg(test)]
+mod visage_upgrade_tests {
+    use super::*;
+    use shared::components::CustomizationChoiceSelection;
+
+    /// The layout written before `CharacterAppearance.visage` (shared-protocol 88bc3fe).
+    #[derive(bitcode::Encode)]
+    struct AppearanceV3 {
+        sex: u8,
+        skin_color: u8,
+        face: u8,
+        eye_color: u8,
+        hair_style: u8,
+        hair_color: u8,
+        facial_style: u8,
+        customization_choices: Vec<CustomizationChoiceSelection>,
+    }
+
+    #[derive(bitcode::Encode)]
+    struct DataV6 {
+        name: String,
+        x: f32,
+        y: f32,
+        z: f32,
+        health: f32,
+        max_health: f32,
+        race: u8,
+        class: u8,
+        level: u16,
+        appearance: AppearanceV3,
+        equipment_appearance: EquipmentAppearance,
+        durability: Vec<DurabilityEntryData>,
+    }
+
+    #[test]
+    fn records_written_before_the_visage_form_load_without_one() {
+        let bytes = bitcode::encode(&DataV6 {
+            name: "Elara".into(),
+            x: 1.0,
+            y: 2.0,
+            z: 3.0,
+            health: 90.0,
+            max_health: 100.0,
+            race: 4,
+            class: 12,
+            level: 8,
+            appearance: AppearanceV3 {
+                sex: 1,
+                skin_color: 2,
+                face: 3,
+                eye_color: 4,
+                hair_style: 5,
+                hair_color: 6,
+                facial_style: 7,
+                customization_choices: vec![CustomizationChoiceSelection {
+                    option_id: 48,
+                    choice_id: 790,
+                }],
+            },
+            equipment_appearance: EquipmentAppearance::default(),
+            durability: Vec::new(),
+        });
+        let data = CharacterData::decode_compatible(&bytes).unwrap();
+        assert_eq!(
+            (data.name.as_str(), data.level, data.class),
+            ("Elara", 8, 12)
+        );
+        assert_eq!(data.appearance.hair_color, 6);
+        assert_eq!(data.appearance.customization_choices[0].choice_id, 790);
+        assert_eq!(data.appearance.visage, None);
+    }
 }

@@ -914,6 +914,7 @@ fn parse_set_appearance(args: &[String]) -> AdminRequest {
             hair_color: parse_u8_arg("hair_color", &args[8]),
             facial_style: parse_u8_arg("facial_style", &args[9]),
             customization_choices: Vec::new(),
+            visage: None,
         },
     }
 }

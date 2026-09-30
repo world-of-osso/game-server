@@ -249,6 +249,7 @@ fn barber_shop_appearance(
         hair_color: requested.hair_color,
         facial_style: requested.facial_style,
         customization_choices: current.customization_choices.clone(),
+        visage: current.visage.clone(),
     }
 }
 
@@ -316,6 +317,7 @@ mod tests {
             hair_color: 5,
             facial_style: 6,
             customization_choices: Vec::new(),
+            visage: None,
         }
     }
 
@@ -392,6 +394,7 @@ mod tests {
             hair_color: 3,
             facial_style: 4,
             customization_choices: Vec::new(),
+            visage: None,
         };
 
         let applied = barber_shop_appearance(&current, requested);

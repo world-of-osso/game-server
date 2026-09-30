@@ -210,6 +210,7 @@ fn character_appearance(args: &CreateCharacterArgs) -> CharacterAppearance {
         hair_color: args.hair_color,
         facial_style: args.facial_style,
         customization_choices: Vec::new(),
+        visage: None,
     }
 }
 
@@ -301,6 +302,7 @@ mod tests {
                 hair_color: 6,
                 facial_style: 7,
                 customization_choices: Vec::new(),
+                visage: None,
             }
         );
     }
