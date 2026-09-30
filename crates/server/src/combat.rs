@@ -16,7 +16,7 @@ use crate::faction::{FactionTemplates, UnitFaction};
 use crate::interest::{InterestDirtyQueue, mark_interest_position_changed};
 use crate::item_stats::WeaponDamage;
 use crate::level_scaling::{ArmorConstants, CreatureArmor, ScalingItem, UnitScaling};
-use crate::melee::{self, Hand, MeleeOutcome, Victim};
+use crate::melee::{self, Hand, MeleeOutcome, Swinger, Victim};
 use crate::networking::{CombatTarget, PlayerLink};
 use crate::spell_cast::powers::PowerPools;
 use crate::stats::CharacterStats;
@@ -382,6 +382,7 @@ type AutoAttackers<'w, 's> = Query<
         Option<&'static AuraStatMods>,
         Option<&'static CharacterStats>,
         SwingState<'static>,
+        Has<Npc>,
     ),
 >;
 
@@ -408,8 +409,21 @@ type AutoAttackTargets<'w, 's> = Query<
         TargetArmor<'static>,
         Option<&'static shared::components::UnitFlags>,
         Has<crate::auras::Invisible>,
+        CanAvoid<'static>,
     ),
 >;
+
+/// What decides whether a victim can dodge, parry or block: casting
+/// (`IsNonMeleeSpellCast`) or controlled (`UNIT_STATE_CONTROLLED`: stunned or
+/// confused here) it cannot (Unit.cpp:2408-2413).
+type CanAvoid<'a> = (
+    Has<shared::casting::CastState>,
+    Option<&'a crate::auras::ActiveAuras>,
+);
+
+fn can_avoid((casting, auras): (bool, Option<&crate::auras::ActiveAuras>)) -> bool {
+    !casting && !auras.is_some_and(|auras| auras.is_stunned() || auras.is_confused())
+}
 
 /// A creature's own armor or a player's gear armor.
 type TargetArmor<'a> = (Option<&'a CreatureArmor>, Option<&'a CharacterStats>);
@@ -435,8 +449,15 @@ pub(crate) fn auto_attack_system(time: Res<Time>, mut params: AutoAttackParams) 
     let mut events = Vec::new();
     let mut swings = Vec::new();
 
-    for (attacker_entity, mut auto_attack, position, mods, stats, (stat_mods, casting, auras)) in
-        &mut params.attackers
+    for (
+        attacker_entity,
+        mut auto_attack,
+        position,
+        mods,
+        stats,
+        (stat_mods, casting, auras),
+        creature,
+    ) in &mut params.attackers
     {
         auto_attack.timer -= dt;
         auto_attack.off_hand_timer -= dt;
@@ -452,6 +473,7 @@ pub(crate) fn auto_attack_system(time: Res<Time>, mut params: AutoAttackParams) 
             mods,
             stats,
             haste_pct: stat_mods.map_or(0.0, |mods| mods.haste_pct),
+            creature,
         };
         for hand in [Hand::Main, Hand::Off] {
             let Some(outcome) = try_swing(
@@ -560,6 +582,8 @@ pub(crate) struct Attacker<'a> {
     pub stats: Option<&'a CharacterStats>,
     /// Aura haste of a unit without `CharacterStats` (MOD_MELEE_HASTE).
     pub haste_pct: f32,
+    /// A creature (`Npc`): it rolls the creature side of the hit table.
+    pub creature: bool,
 }
 
 impl Attacker<'_> {
@@ -665,23 +689,51 @@ pub(crate) fn armor_mitigated(
         })
 }
 
-/// The hit-table result of a player's swing; units without `CharacterStats`
-/// always hit. `level_difference` is the target's level against the
-/// attacker minus the attacker's against it.
-fn roll_outcome(attacker: &Attacker, target_is_npc: bool, level_difference: i32) -> MeleeOutcome {
-    let Some(stats) = attacker.stats else {
-        return MeleeOutcome::Hit;
+/// The hit-table result of a swing (Unit::RollMeleeOutcomeAgainst): a creature's
+/// miss chance or a player's crit chance and dual wielding, against `victim`. A player
+/// without `CharacterStats` (no class stat data) always hits.
+fn roll_outcome(attacker: &Attacker, victim: Victim, can_avoid: bool) -> MeleeOutcome {
+    let swinger = match (attacker.creature, attacker.stats) {
+        (true, _) => Swinger::Creature {
+            miss_pct: creature_miss_chance(attacker.mods),
+        },
+        (false, Some(stats)) => Swinger::Player {
+            crit_pct: stats.crit_pct,
+            dual_wield: stats.off_hand.is_some(),
+        },
+        (false, None) => return MeleeOutcome::Hit,
     };
-    let victim = if target_is_npc {
-        Victim::Creature { level_difference }
-    } else {
-        Victim::Player
-    };
-    let chances = melee::player_swing_chances(victim, stats.crit_pct, stats.off_hand.is_some());
+    let chances = melee::swing_chances(swinger, victim, can_avoid);
     melee::roll_melee_outcome(
         &chances,
         rand::Rng::gen_range(&mut rand::thread_rng(), 0..10_000),
     )
+}
+
+/// Who the swing lands on: a creature (by level difference), or a player's
+/// avoidance; a unit without `CharacterStats` avoids nothing.
+fn swing_victim(is_npc: bool, player: Option<&CharacterStats>, level_difference: i32) -> Victim {
+    if is_npc {
+        Victim::Creature { level_difference }
+    } else {
+        Victim::Player(player.map_or_else(Default::default, |stats| stats.defense))
+    }
+}
+
+/// Share of a blocked swing the victim stops: a creature 30%, a player its shield
+/// against the attacker's level armor constant.
+fn blocked_pct(
+    victim: Victim,
+    attacker: &UnitScaling,
+    target: &UnitScaling,
+    constants: Option<&ArmorConstants>,
+) -> f32 {
+    match victim {
+        Victim::Creature { .. } => melee::CREATURE_BLOCKED_PCT,
+        Victim::Player(defense) => constants
+            .and_then(|constants| constants.at(attacker.level_against(target)))
+            .map_or(0.0, |constant| defense.blocked_pct(constant)),
+    }
 }
 
 struct SwingOutcome {
@@ -732,6 +784,7 @@ fn try_swing(
         armor,
         flags,
         invisible,
+        avoidance,
     )) = targets.get_mut(target_entity)
     else {
         return None;
@@ -758,8 +811,14 @@ fn try_swing(
         &target,
         context.armor_constants,
     );
-    let kind = roll_outcome(attacker, is_npc, level_difference);
-    let (outcome_damage, blocked) = melee::outcome_damage(armored, kind, level_difference);
+    let victim = swing_victim(is_npc, armor.1, level_difference);
+    let kind = roll_outcome(attacker, victim, can_avoid(avoidance));
+    let (outcome_damage, blocked) = melee::outcome_damage(
+        armored,
+        kind,
+        level_difference,
+        blocked_pct(victim, &attacker_scaling, &target, context.armor_constants),
+    );
     let damage = crate::level_scaling::damage_dealt(&attacker_scaling, &target, outcome_damage);
     let scaled_loss = crate::level_scaling::health_loss(&attacker_scaling, &target, damage);
     let overkill = (scaled_loss - health.current).max(0.0);
@@ -828,13 +887,17 @@ fn distance(a: &Position, b: &Position) -> f32 {
     (dx * dx + dy * dy + dz * dz).sqrt()
 }
 
-/// A swing's `CombatEvent`: melee damage, or the avoidance without an amount.
+/// A swing's `CombatEvent` (`SMSG_ATTACKER_STATE_UPDATE` `HitInfo`): a crit, a partial
+/// block with the damage that got through, a hit (glancing included), or the avoidance
+/// without an amount.
 fn build_swing_event(attacker: Entity, target: Entity, outcome: &SwingOutcome) -> CombatEvent {
     let event_type = match outcome.kind {
         MeleeOutcome::Miss => CombatEventType::Miss,
         MeleeOutcome::Dodge => CombatEventType::Dodge,
         MeleeOutcome::Parry => CombatEventType::Parry,
-        _ => CombatEventType::MeleeDamage,
+        MeleeOutcome::Crit => CombatEventType::CriticalHit,
+        MeleeOutcome::Block => CombatEventType::Block,
+        MeleeOutcome::Glancing | MeleeOutcome::Hit => CombatEventType::MeleeDamage,
     };
     CombatEvent {
         attacker: attacker.to_bits(),

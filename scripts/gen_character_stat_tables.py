@@ -44,6 +44,9 @@ RATINGS = {
     "HASTE": "Haste - Spell",
     "MASTERY": "Mastery",
     "VERSATILITY": "Versatility - Damage Done",
+    "DODGE": "Dodge",
+    "PARRY": "Parry",
+    "BLOCK": "Block",
 }
 ROW = re.compile(r"\{\s*(-?\d+),\s*(-?\d+),\s*(-?\d+),\s*(-?\d+),\s*(-?\d+)\s*\}")
 
