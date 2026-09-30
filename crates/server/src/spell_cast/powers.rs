@@ -376,10 +376,18 @@ impl Default for CreatureHealthRegenTimer {
     }
 }
 
-/// `Creature::RegenerateHealth` every `CREATURE_REGEN_INTERVAL` for a creature without
-/// an owner: a third of its max health, while not engaged or while polymorphed
-/// (`!IsEngaged() || IsPolymorphed()`); none while evading. MOD_HEALTH_REGEN_PERCENT and
-/// MOD_REGEN are not modelled.
+/// Polymorphed regeneration interval and share of max health per interval. The user's
+/// Retail observation (2026-09-29): a sheep regains 5% of its max health every second,
+/// empty to full in 20 s. TrinityCore instead gives `maxValue / 3` per
+/// `CREATURE_REGEN_INTERVAL` (Creature.cpp:1023), which heals a sheep in 6 s.
+const POLYMORPH_REGEN_INTERVAL_SECS: f32 = 1.0;
+const POLYMORPH_REGEN_SHARE: f32 = 0.05;
+
+/// `Creature::RegenerateHealth` for a creature without an owner: none while evading;
+/// while polymorphed 5% of its max health every second (above); otherwise, while not
+/// engaged (`!IsEngaged()`), a third of its max health every `CREATURE_REGEN_INTERVAL`.
+/// The timer restarts at the interval of the state the tick found. MOD_HEALTH_REGEN_PERCENT
+/// and MOD_REGEN are not modelled.
 pub(super) fn regenerate_creature_health(world: &mut World) {
     let dt = world.resource::<Time>().delta_secs();
     let mut creatures =
@@ -388,14 +396,19 @@ pub(super) fn regenerate_creature_health(world: &mut World) {
         .iter_mut(world)
         .filter_map(|(entity, mut timer)| {
             timer.0 -= dt;
-            if timer.0 > 0.0 {
-                return None;
-            }
-            timer.0 += CREATURE_REGEN_INTERVAL_SECS;
-            Some(entity)
+            (timer.0 <= 0.0).then_some(entity)
         })
         .collect();
     for creature in due {
+        let polymorphed = crate::auras::is_polymorphed(world, creature);
+        let interval = if polymorphed {
+            POLYMORPH_REGEN_INTERVAL_SECS
+        } else {
+            CREATURE_REGEN_INTERVAL_SECS
+        };
+        if let Some(mut timer) = world.get_mut::<CreatureHealthRegenTimer>(creature) {
+            timer.0 += interval;
+        }
         let state = world.get::<crate::creature_ai::CreatureState>(creature);
         if state == Some(&crate::creature_ai::CreatureState::Returning) {
             continue;
@@ -404,7 +417,7 @@ pub(super) fn regenerate_creature_health(world: &mut World) {
             state,
             Some(crate::creature_ai::CreatureState::Pursuing { .. })
         );
-        if engaged && !crate::auras::is_polymorphed(world, creature) {
+        if engaged && !polymorphed {
             continue;
         }
         let Some(mut health) = world.get_mut::<Health>(creature) else {
@@ -413,7 +426,12 @@ pub(super) fn regenerate_creature_health(world: &mut World) {
         if health.current <= 0.0 || health.current >= health.max {
             continue;
         }
-        health.current = (health.current + (health.max / 3.0).floor()).min(health.max);
+        let gain = if polymorphed {
+            (health.max * POLYMORPH_REGEN_SHARE).floor()
+        } else {
+            (health.max / 3.0).floor()
+        };
+        health.current = (health.current + gain).min(health.max);
         if let Some(dirty) = world.get_resource::<ReplicationDirtyQueue>() {
             dirty.mark(creature);
         }

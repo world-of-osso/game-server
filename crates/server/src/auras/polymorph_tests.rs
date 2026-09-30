@@ -256,8 +256,9 @@ fn polymorph_expires_after_60_seconds_and_restores_the_kobold() {
     assert!(h.health(h.caster) < health, "the kobold attacks again");
 }
 
+/// The user's Retail observation: a sheep regains 5% of its max health every second.
 #[test]
-fn polymorphed_kobold_regenerates_a_third_of_its_health_every_2_seconds() {
+fn polymorphed_kobold_regenerates_5_percent_of_its_health_every_second() {
     let Some(mut h) = polymorph_harness(900.0) else {
         return;
     };
@@ -267,16 +268,20 @@ fn polymorphed_kobold_regenerates_a_third_of_its_health_every_2_seconds() {
     h.advance(2000 / 50 + 2);
     assert_eq!(h.health(h.npc), 100.0);
     cast_polymorph(&mut h);
-    let mut gains = Vec::new();
-    for _ in 0..(2000 / 50 + 2) {
+    // The first polymorphed tick may come from the 2 s timer already running.
+    let mut samples = Vec::new();
+    for frame in 0..(6000 / 50) {
         let before = h.health(h.npc);
         h.advance(1);
         if h.health(h.npc) != before {
-            gains.push(h.health(h.npc) - before);
+            samples.push((frame, h.health(h.npc) - before));
         }
     }
-    assert!(!gains.is_empty(), "no regeneration within one 2 s interval");
-    assert!(gains.iter().all(|&gain| gain == 300.0), "{gains:?}");
+    assert!(samples.len() >= 5, "{samples:?}");
+    assert!(samples.iter().all(|&(_, gain)| gain == 45.0), "{samples:?}");
+    // One second (20 frames) between ticks after the first.
+    let gaps: Vec<i32> = samples.windows(2).map(|w| w[1].0 - w[0].0).collect();
+    assert!(gaps[1..].iter().all(|&gap| gap == 20), "{samples:?}");
 }
 
 #[test]
