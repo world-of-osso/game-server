@@ -23,7 +23,7 @@ Gatherer bots supply auction-house materials; merchant bots buy ingredients, cra
 
 ### Read-only diagnosis
 
-- [ ] `game-server-admin economy-status` reports last cycle, each merchant entry/gold/capital cap, stock batches with remaining ingredient cost, paid material lots, cumulative customer spending/refunds/withdrawals and gatherer actor totals through existing same-UID admin IPC. Missing initialization is an explicit error. No economic mutation, clock stepping or public protocol changes.
+- [x] `game-server-admin economy-status` reports last cycle, each merchant entry/gold/capital cap, stock batches with remaining ingredient cost, paid material lots, cumulative customer spending/refunds/withdrawals and gatherer actor totals through existing same-UID admin IPC. Missing initialization is an explicit error. No economic mutation, clock stepping or public protocol changes.
 
 ### Durability and acceptance
 

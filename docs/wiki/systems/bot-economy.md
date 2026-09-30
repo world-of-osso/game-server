@@ -20,11 +20,11 @@ Integration inventory observed September 30, 2026. The [tracked spec](../../spec
 
 `game-server-admin economy-status` uses the existing same-UID admin socket and prints a JSON snapshot of initialized in-memory state, not a fresh database read. `last_cycle` is the stored Unix-seconds cycle timestamp. Each merchant includes entry, gold, configured capital cap, stock batches (remaining ingredient cost, quantity, price and expiry) and paid material lots (remaining quantity and cost). A persisted merchant absent from current config has a null cap. Cumulative `customer_spent`, `refund_issued` and `withdrawn` retain model field names; money is in copper. `gatherers` maps item IDs to seller character IDs; `gatherer_count` counts those actors. Auction listing totals are not included.
 
-Missing/uninitialized Economy returns `economy not initialized`; missing Config returns `economy config not loaded`. The snapshot handler borrows both resources read-only, never runs a cycle, changes the clock or persists data. Tests assert exact concrete values and unchanged state; live server diagnosis remains main-owned.
+Missing/uninitialized Economy returns `economy not initialized`; missing Config returns `economy config not loaded`. The snapshot handler borrows both resources read-only, never runs a cycle, changes the clock or persists data. At code revision `944df30`, `cargo test -p server --bins economy_status -- --nocapture` passed all three targeted tests (exact values/unchanged state, missing initialization, CLI parsing/decoding). Live server diagnosis remains main-owned.
 
 ## Evidence limits
 
-`economy/model_tests.rs` contains behavioral examples for crafting costs, expiry and shared capacity. No test execution or live acceptance evidence was supplied to this audit. All spec requirements therefore remain unchecked. Concurrent code changes must be evaluated at their own revision; this inventory is not a sign-off on those changes.
+`economy/model_tests.rs` contains behavioral examples for crafting costs, expiry and shared capacity. No test execution or live acceptance evidence was supplied to this audit. Economy gameplay requirements remain unchecked; read-only diagnosis has the targeted proof above. Concurrent code changes must be evaluated at their own revision; this inventory is not a sign-off on those changes.
 
 No economy importer path, complete bot runtime connection, current expansion-11 dataset coverage, restart proof or client query timing was established. Configuration examples and model fixture numbers are not approved economy policy.
 
