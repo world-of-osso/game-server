@@ -4087,8 +4087,6 @@ dependencies = [
 [[package]]
 name = "lightyear_netcode"
 version = "0.28.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7f009241f6954e89fc2417f10488deee00cca08028e4eb20b7ad8c4954fc8832"
 dependencies = [
  "aeronet_io",
  "bevy_app",
@@ -6231,6 +6229,8 @@ dependencies = [
  "bevy_replicon",
  "bitcode",
  "lightyear",
+ "lightyear_messages",
+ "lightyear_replication",
  "serde",
  "tracing",
 ]

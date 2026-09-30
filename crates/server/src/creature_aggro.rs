@@ -401,8 +401,7 @@ pub(crate) fn add_threat(world: &mut World, creature: Entity, attacker: Entity, 
         ));
         stand_up_for_combat(&mut entity);
     }
-    crate::combat::enter_combat(world, creature);
-    crate::combat::enter_combat(world, attacker);
+    crate::combat_refs::set_in_combat_with(world, creature, attacker);
     if engages {
         // Creature::AtEngage → CreatureAI::JustEngagedWith.
         crate::scripted_ai::dispatch(
