@@ -75,8 +75,9 @@ pub struct TraitLoadout {
     entries: Vec<ConfigEntry>,
     unspent: Vec<(u32, i32)>,
     spells: Vec<KnownSpell>,
-    /// `(TraitDefinition.OverridesSpellID, SpellID)` of the applied talents:
-    /// the baseline spell is not known and its bar buttons show the talent.
+    /// `(TraitDefinition.OverridesSpellID, SpellID)` of the applied talents, then
+    /// `(SpecializationSpells.OverridesSpellID, SpellID)` of the spec's learned spells:
+    /// the baseline spell is not known and its bar buttons show the replacement.
     overrides: Vec<(u32, u32)>,
 }
 
@@ -405,6 +406,7 @@ fn evaluate(
             .iter()
             .filter(|entry| entry.overrides_spell_id != 0)
             .map(|entry| (entry.overrides_spell_id, entry.spell_id))
+            .chain(spec_overrides(spec, level))
             .collect(),
         entries,
     };
@@ -415,6 +417,18 @@ fn evaluate(
         traits,
         traits_reset,
     }
+}
+
+/// `(SpecializationSpells.OverridesSpellID, SpellID)` of the spec spells learned at
+/// `level` (TrinityCore `Player::LearnSpecializationSpells` → `AddOverrideSpell`):
+/// Havoc's Demon's Bite 162243 replaces the baseline 344859 like a talent override.
+fn spec_overrides(spec: Option<&SpecInfo>, level: u8) -> impl Iterator<Item = (u32, u32)> + '_ {
+    spec.into_iter()
+        .flat_map(|spec| &spec.spells)
+        .filter(move |spell| {
+            spell.overrides_spell_id != 0 && spell.required_level <= u32::from(level)
+        })
+        .map(|spell| (spell.overrides_spell_id, spell.spell_id))
 }
 
 fn trait_snapshot(spec: ActiveSpec, traits: &TraitLoadout) -> TraitConfigSnapshot {

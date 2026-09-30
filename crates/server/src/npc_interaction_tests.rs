@@ -240,6 +240,8 @@ impl Harness {
     fn browse(&mut self) {
         self.send::<_, AuctionChannel>(QueryAuctions {
             query: AuctionSearchQuery {
+                item_id: None,
+                class_id: None,
                 text: String::new(),
                 page: 0,
                 page_size: 50,

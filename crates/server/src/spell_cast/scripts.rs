@@ -53,29 +53,76 @@ fn chaos_strike_initial(world: &mut World, caster: Entity, target: Entity, depth
     super::cast_triggered(world, caster, CHAOS_STRIKE, Some(target), depth + 1);
 }
 
+/// Energizing Flame (Evoker passive): DUMMY 0, the percent of Living Flame's mana
+/// cost refunded when it hits an enemy.
+const ENERGIZING_FLAME: u32 = 400_006;
+
 /// `spell_evo_living_flame::HandleHitTarget` (spell_evoker.cpp:505-530): heal a
-/// unit the caster can assist, damage any other. The Energizing Flame mana
-/// refund (`HandleLaunchTarget`) is not implemented.
+/// unit the caster can assist, damage any other; `HandleLaunchTarget` refunds
+/// Energizing Flame's percent of the mana cost on an enemy.
 fn living_flame(world: &mut World, caster: Entity, target: Entity, depth: u8) {
-    let spell = if relation_matches(world, caster, target, Relation::Ally) {
-        LIVING_FLAME_HEAL
-    } else {
-        LIVING_FLAME_DAMAGE
+    if relation_matches(world, caster, target, Relation::Ally) {
+        super::cast_triggered(world, caster, LIVING_FLAME_HEAL, Some(target), depth + 1);
+        return;
+    }
+    refund_energizing_flame(world, caster);
+    super::cast_triggered(world, caster, LIVING_FLAME_DAMAGE, Some(target), depth + 1);
+}
+
+fn refund_energizing_flame(world: &mut World, caster: Entity) {
+    if !crate::auras::has_aura(world, caster, ENERGIZING_FLAME) {
+        return;
+    }
+    let store = world.resource::<crate::spell_info::SpellStore>();
+    let (Some(living_flame), Some(energizing)) =
+        (store.get(LIVING_FLAME), store.get(ENERGIZING_FLAME))
+    else {
+        return;
     };
-    super::cast_triggered(world, caster, spell, Some(target), depth + 1);
+    let percent = energizing
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .map_or(0.0, |effect| effect.base_points);
+    let living_flame = living_flame.clone();
+    let mana_cost: f32 = super::applicable_costs(world, caster, &living_flame)
+        .unwrap_or_default()
+        .into_iter()
+        .filter(|(pool, ..)| *pool == super::CostPool::Power(shared::components::PowerType::Mana))
+        .map(|(_, amount, _)| amount)
+        .sum();
+    if mana_cost > 0.0 {
+        super::powers::change_power(
+            world,
+            caster,
+            shared::components::PowerType::Mana,
+            mana_cost * percent / 100.0,
+        );
+    }
 }
 
 /// `spell_evo_azure_strike::FilterTargets` (spell_evoker.cpp:94-107): the explicit
-/// target plus up to effect 0's value minus one others. TrinityCore picks the
-/// others at random; this keeps the first ones selected.
+/// target plus effect 0's value minus one others picked at random
+/// (`Trinity::Containers::RandomResize`).
 fn azure_strike_targets(spell: &SpellInfo, explicit: Option<Entity>, units: &mut Vec<Entity>) {
+    pick_azure_strike_targets(spell, explicit, units, &mut rand::thread_rng());
+}
+
+fn pick_azure_strike_targets(
+    spell: &SpellInfo,
+    explicit: Option<Entity>,
+    units: &mut Vec<Entity>,
+    rng: &mut impl rand::Rng,
+) {
+    use rand::seq::SliceRandom;
     let count = spell
         .effects
         .iter()
         .find(|effect| effect.index == 0)
         .map_or(1, |effect| effect.base_points.max(1.0) as usize);
     units.retain(|&unit| Some(unit) != explicit);
-    units.truncate(count - 1);
+    let others: Vec<Entity> = units.choose_multiple(rng, count - 1).copied().collect();
+    *units = others;
     units.extend(explicit);
 }
 
@@ -93,4 +140,42 @@ pub fn on_hit(spell_id: u32) -> Option<HitHook> {
 /// Chilled at the hit unit, triggered.
 fn frostbolt_chilled(world: &mut World, caster: Entity, target: Entity, depth: u8) {
     super::cast_triggered(world, caster, CHILLED, Some(target), depth + 1);
+}
+
+#[cfg(test)]
+mod tests {
+    use rand::SeedableRng;
+    use rand::rngs::StdRng;
+
+    use super::*;
+    use crate::spell_info::SpellEffect;
+
+    /// Azure Strike's second target is random among the other enemies in the area.
+    #[test]
+    fn azure_strike_keeps_the_target_and_one_random_other() {
+        let mut spell = SpellInfo::default();
+        spell.effects.push(SpellEffect {
+            index: 0,
+            base_points: 2.0,
+            ..Default::default()
+        });
+        let mut world = World::new();
+        let target = world.spawn_empty().id();
+        let others: Vec<Entity> = (0..4).map(|_| world.spawn_empty().id()).collect();
+        let mut picked = std::collections::HashSet::new();
+        for seed in 0..32 {
+            let mut units = others.clone();
+            units.insert(1, target);
+            pick_azure_strike_targets(
+                &spell,
+                Some(target),
+                &mut units,
+                &mut StdRng::seed_from_u64(seed),
+            );
+            assert_eq!(units.len(), 2);
+            assert_eq!(units[1], target);
+            picked.insert(units[0]);
+        }
+        assert!(picked.len() > 1, "always the same other: {picked:?}");
+    }
 }

@@ -130,6 +130,25 @@ fn demon_hunter_levels_8_to_10_learn_torment_then_havoc() {
     for spell_id in [DEMONS_BITE, CHAOS_STRIKE] {
         assert!(learned[0].spells.contains(&spell_id), "missing {spell_id}");
     }
+    // Havoc's SpecializationSpells replace the baselines (OverridesSpellID
+    // 344859/344862/344865): they are unlearned and their bar buttons move over.
+    let unlearned = received::<SpellsUnlearned>(&mut app, player);
+    assert_eq!(unlearned.len(), 1);
+    for spell_id in [DEMONS_BITE_INITIAL, CHAOS_STRIKE_INITIAL, FEL_RUSH_INITIAL] {
+        assert!(
+            unlearned[0].spells.contains(&spell_id),
+            "{spell_id} stays known"
+        );
+    }
+    let known = app.world().get::<KnownSpells>(player).unwrap();
+    assert!(!known.contains(DEMONS_BITE_INITIAL) && known.contains(DEMONS_BITE));
+    let bar = &app.world().get::<ActionBar>(player).unwrap().0;
+    let on_bar = |spell_id| {
+        bar.values()
+            .any(|action| *action == ActionRef::Spell(spell_id))
+    };
+    assert!(on_bar(DEMONS_BITE) && on_bar(CHAOS_STRIKE) && on_bar(195_072));
+    assert!(!on_bar(DEMONS_BITE_INITIAL) && !on_bar(CHAOS_STRIKE_INITIAL));
 }
 
 /// Dracthyr start at 10, so a new Evoker is Devastation with its baseline

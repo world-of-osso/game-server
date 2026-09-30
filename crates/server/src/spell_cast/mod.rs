@@ -738,6 +738,28 @@ pub(crate) fn spell_costs(
     caster: Entity,
     spell: &SpellInfo,
 ) -> Result<Vec<(CostPool, f32)>, CastFailure> {
+    applicable_costs(world, caster, spell)?
+        .into_iter()
+        .map(|(pool, amount, current)| {
+            if current < amount {
+                Err(match pool {
+                    CostPool::Power(power) => CastFailure::NotEnoughPower(power),
+                    CostPool::Health => CastFailure::NotEnoughHealth,
+                })
+            } else {
+                Ok((pool, amount))
+            }
+        })
+        .collect()
+}
+
+/// The costs `spell_costs` checks, with the caster's current value of each pool,
+/// without requiring the caster to afford them.
+pub(crate) fn applicable_costs(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+) -> Result<Vec<(CostPool, f32, f32)>, CastFailure> {
     let mut costs = Vec::new();
     for cost in spell.power_costs.iter().filter(|cost| {
         cost.required_aura_spell_id == 0
@@ -778,10 +800,7 @@ pub(crate) fn spell_costs(
             Some(op) => modify(world, caster, spell, op, amount_with(base)).max(0.0),
             None => amount_with(base),
         };
-        if current < amount {
-            return Err(missing);
-        }
-        costs.push((pool, amount));
+        costs.push((pool, amount, current));
     }
     Ok(costs)
 }
@@ -1442,8 +1461,8 @@ fn complete_cast(world: &mut World, caster: Entity, spell_id: u32, target: Optio
 }
 
 #[cfg(test)]
-mod new_class_tests;
-#[cfg(test)]
 mod class_resource_tests;
+#[cfg(test)]
+mod new_class_tests;
 #[cfg(test)]
 mod tests;

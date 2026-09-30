@@ -221,3 +221,24 @@ fn azure_strike_hits_the_target_and_one_other_enemy() {
     assert!(hit.contains(&h.npc.to_bits()));
     assert!(extra.iter().any(|unit| hit.contains(&unit.to_bits())));
 }
+
+/// Energizing Flame 400006 refunds 80% (effect 0) of Living Flame's mana cost
+/// when it hits an enemy: 12% of 10 000 base mana = 1 200 spent, 960 back.
+#[test]
+fn energizing_flame_refunds_most_of_living_flames_mana() {
+    let ids = [LIVING_FLAME, DEVASTATION_EVOKER, 400_006];
+    let Some(mut h) = harness(Vec::new(), &ids, EVOKER) else {
+        return;
+    };
+    h.advance(1);
+    h.cast_and_deliver(LIVING_FLAME, Some(h.npc));
+    h.advance(40);
+    assert_eq!(damaged_by(&mut h, 361_500), vec![h.npc.to_bits()]);
+    let mana = h
+        .app
+        .world()
+        .get::<shared::components::Mana>(h.caster)
+        .unwrap()
+        .current;
+    assert!((9_760.0..=9_860.0).contains(&mana), "mana {mana}");
+}
