@@ -153,6 +153,13 @@ pub fn is_hostile(world: &World, caster: Entity, target: Entity) -> bool {
     templates.reaction(caster.template, target.template) == Reaction::Hostile
 }
 
+/// `Unit::IsFriendlyTo`: the caster's reaction to the target is friendly.
+pub fn is_friendly(world: &World, caster: Entity, target: Entity) -> bool {
+    let templates = world.resource::<FactionTemplates>();
+    let (caster, target) = (unit_faction(world, caster), unit_faction(world, target));
+    templates.reaction(caster.template, target.template) == Reaction::Friendly
+}
+
 pub fn relation_matches(world: &World, caster: Entity, target: Entity, relation: Relation) -> bool {
     if relation == Relation::Any {
         return true;

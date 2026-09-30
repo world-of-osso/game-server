@@ -12,6 +12,7 @@
 
 mod class_data;
 mod load;
+pub mod positivity;
 mod trait_data;
 
 use std::path::Path;

@@ -16,7 +16,7 @@ pub mod area_aura;
 pub mod creature;
 pub mod effects;
 pub mod powers;
-mod scripts;
+pub mod scripts;
 pub mod targets;
 #[cfg(test)]
 pub(crate) mod test_harness;
@@ -372,8 +372,10 @@ pub(crate) fn send_to_owner<M: lightyear::prelude::Message + Clone>(
     }
 }
 
-/// Send to the owners of the event's source and target (once each).
+/// Send to the owners of the event's source and target (once each); damage also counts
+/// on the damage meters.
 pub(crate) fn log_event(world: &mut World, event: CombatLogEvent) {
+    crate::damage_meter::record_damage(world, &event);
     let mut units: Vec<Entity> = [event.source, event.target]
         .into_iter()
         .flatten()
@@ -1031,11 +1033,41 @@ fn resolve_effects(
             },
         );
     }
+    run_hit_scripts(world, caster, spell, plan, depth);
     let damage = world
         .get_resource_mut::<ResolvingHits>()
         .and_then(|mut resolving| resolving.0.pop())
         .map_or_else(Vec::new, |frame| frame.damage);
     push_hit_events(world, caster, spell, plan, depth, &damage);
+}
+
+/// Distinct units of the plan, in plan order.
+fn hit_units(plan: &TargetPlan) -> Vec<Entity> {
+    let mut hit: Vec<Entity> = Vec::new();
+    for unit in plan.iter().flat_map(|planned| &planned.units) {
+        if !hit.contains(unit) {
+            hit.push(*unit);
+        }
+    }
+    hit
+}
+
+/// The spell's `OnHit` script on every unit it landed on (`Spell::DoSpellHitOnUnit`).
+fn run_hit_scripts(
+    world: &mut World,
+    caster: Entity,
+    spell: &SpellInfo,
+    plan: &TargetPlan,
+    depth: u8,
+) {
+    let Some(hook) = scripts::on_hit(spell.id) else {
+        return;
+    };
+    for unit in hit_units(plan) {
+        if world.get_entity(unit).is_ok() {
+            hook(world, caster, unit, depth);
+        }
+    }
 }
 
 /// Direct damage of the spells resolving now, gathered per unit for their hit events
@@ -1089,12 +1121,7 @@ fn push_hit_events(
     depth: u8,
     damage: &[(Entity, f32)],
 ) {
-    let mut hit: Vec<Entity> = Vec::new();
-    for unit in plan.iter().flat_map(|planned| &planned.units) {
-        if !hit.contains(unit) {
-            hit.push(*unit);
-        }
-    }
+    let hit = hit_units(plan);
     let damage_to = |unit: Entity| {
         damage
             .iter()
@@ -1141,7 +1168,6 @@ fn push_hit_events(
                 damage,
             },
         );
-        scripts::on_hit(world, caster, spell.id, target, depth);
     }
 }
 

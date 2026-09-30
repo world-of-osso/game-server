@@ -360,3 +360,11 @@ Created `systems/quests.md` (quest data, rules, runtime) and `specs/quests.md`; 
 ## [2026-09-29] feature | Replicated player motion
 
 Players replicate `PlayerMotion`, Retail `MovementFlags` (FORWARD, BACKWARD, STRAFE_LEFT/RIGHT, WALKING, FALLING, SWIMMING), set from each applied `PlayerInput` and written only on change; the stop input clears the moving bits. The Godot client animates other players from it (walk/run/strafe/backpedal/swim/jump). See [[networking]], spec [player-motion](../specs/player-motion.md).
+
+## [2026-09-29] fix | Frostbolt's Chilled slow
+
+[[spell-casting]]: spell scripts (`on_hit`) added; Frostbolt 116 casts Chilled 205708 on its hit unit, as TrinityCore `spell_mage_frostbolt`. Before, no aura followed a Frostbolt: neither 116 nor 228597 carries MOD_DECREASE_SPEED. Tests in `auras/mage_tests.rs` also cover Polymorph's replicated debuff and Arcane Intellect's +3% Intellect.
+
+## [2026-09-29] fix | Debuffs by effect positivity
+
+[[auras]]: an aura's harmful flag follows TrinityCore `_InitFlags` and ported effect positivity instead of caster hostility; Polymorph on the neutral Blackrock Spy replicated as a buff before.
