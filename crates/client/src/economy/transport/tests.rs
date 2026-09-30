@@ -188,6 +188,54 @@ fn wire_search_waits_for_gossip_role_and_open_then_preserves_query() {
 }
 
 #[test]
+fn wire_open_requires_house_confirmation() {
+    let mut h = Harness::new(EconomyOperation::Open);
+    h.tick();
+    h.reply::<_, InteractionChannel>(InteractionOpened {
+        npc: 77,
+        kind: InteractionKind::Role(NpcRole::AuctionHouse),
+    });
+    assert_eq!(h.requests::<OpenAuctionHouse>(), &[OpenAuctionHouse]);
+    assert!(h.exit().is_none());
+    h.reply::<_, AuctionChannel>(AuctionHouseOpened {
+        success: true,
+        error: None,
+    });
+    assert_eq!(h.exit(), Some(AppExit::Success));
+    assert!(h.requests::<QueryAuctions>().is_empty());
+}
+
+#[test]
+fn wire_unoffered_gossip_fails_before_house_open() {
+    let mut h = Harness::new(EconomyOperation::Inventory);
+    h.tick();
+    h.reply::<_, InteractionChannel>(InteractionOpened {
+        npc: 77,
+        kind: InteractionKind::Gossip(GossipMenu {
+            menu_id: 1,
+            text: "Hello".into(),
+            options: vec![GossipMenuOption {
+                option_id: 4,
+                icon: 0,
+                text: "Auction!".into(),
+            }],
+        }),
+    });
+    assert_eq!(h.exit(), Some(AppExit::Error(1.try_into().unwrap())));
+    assert!(h.requests::<SelectGossipOption>().is_empty());
+    assert!(h.requests::<OpenAuctionHouse>().is_empty());
+}
+
+#[test]
+fn wire_interaction_close_aborts_pending_mutation() {
+    let mut h = Harness::new(EconomyOperation::Buyout(BuyoutAuction { auction_id: 9 }));
+    h.open_auction();
+    h.reply::<_, InteractionChannel>(InteractionClosed { npc: 77 });
+    assert_eq!(h.exit(), Some(AppExit::Error(1.try_into().unwrap())));
+    assert_eq!(h.requests::<BuyoutAuction>().len(), 1);
+}
+
+#[test]
 fn wire_auction_reads_wait_for_their_own_response() {
     let mut h = Harness::new(EconomyOperation::Inventory);
     h.open_auction();
