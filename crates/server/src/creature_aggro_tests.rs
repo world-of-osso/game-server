@@ -479,6 +479,11 @@ fn leashed_creature_evades_and_its_attackers_stop_swinging() {
         app.world().get::<AutoAttack>(player).is_none(),
         "evade stops the player's auto-attack"
     );
+    assert_eq!(
+        app.world().get::<CombatStatus>(player),
+        Some(&CombatStatus(false)),
+        "the evade ends the player's combat at once (`CombatStop`)"
+    );
 
     // Evading creatures ignore damage and do not re-aggro on the way home.
     add_threat(app.world_mut(), spider, player, 50.0);
@@ -501,6 +506,11 @@ fn killed_creature_forgets_its_fight() {
     attack(&mut app, player, spider);
     run(&mut app, 2);
     assert!(app.world().get::<DeathState>(spider).is_some());
+    assert_eq!(
+        app.world().get::<CombatStatus>(player),
+        Some(&CombatStatus(false)),
+        "the kill ends the player's only fight at once"
+    );
     assert_eq!(state(&app, spider), Some(CreatureState::Idle));
     assert!(app.world().get::<ThreatTable>(spider).unwrap().is_empty());
     let position = *app.world().get::<Position>(spider).unwrap();

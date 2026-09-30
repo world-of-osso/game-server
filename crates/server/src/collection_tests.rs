@@ -134,6 +134,38 @@ fn summon_mount_is_blocked_while_in_combat() {
 }
 
 #[test]
+fn mounting_is_blocked_through_a_lull_in_a_fight_and_allowed_once_the_creature_dies() {
+    let mut app = App::new();
+    app.add_plugins(MinimalPlugins);
+    app.add_systems(Update, crate::combat_refs::expire_combat_refs_system);
+    app.insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+        std::time::Duration::from_millis(100),
+    ));
+    let health = shared::components::Health {
+        current: 100.0,
+        max: 100.0,
+    };
+    let player = app.world_mut().spawn(health).id();
+    let wolf = app
+        .world_mut()
+        .spawn((health, shared::components::ThreatTable::default()))
+        .id();
+    crate::combat_refs::set_in_combat_with(app.world_mut(), player, wolf);
+    let mount_error = |app: &App| {
+        let in_combat = app.world().get::<CombatStatus>(player).unwrap().0;
+        combat_locked_request_error::<SummonMount>(in_combat)
+    };
+    // 8 s without a hit.
+    for _ in 0..80 {
+        app.update();
+    }
+    assert_eq!(mount_error(&app), Some("cannot mount while in combat"));
+
+    crate::combat::combat_stop(app.world_mut(), wolf);
+    assert_eq!(mount_error(&app), None);
+}
+
+#[test]
 fn dismiss_mount_is_not_blocked_while_in_combat() {
     let error = combat_locked_request_error::<DismissMount>(CombatStatus(true).0);
 

@@ -430,6 +430,40 @@ fn refusals_use_retail_taxi_errors() {
 }
 
 #[test]
+fn flying_is_refused_through_a_lull_in_a_fight_and_allowed_once_the_creature_dies() {
+    let Some(mut h) = harness() else { return };
+    h.app
+        .add_systems(Update, crate::combat_refs::expire_combat_refs_system);
+    let dungar = h.spawn_dungar();
+    h.learn(&[STORMWIND, SENTINEL_HILL]);
+    h.set_gold(12);
+    h.talk_to_dungar(dungar);
+    let wolf = h
+        .app
+        .world_mut()
+        .spawn((
+            Health {
+                current: 100.0,
+                max: 100.0,
+            },
+            shared::components::ThreatTable::default(),
+        ))
+        .id();
+    crate::combat_refs::set_in_combat_with(h.app.world_mut(), h.player, wolf);
+    // 8 s without a hit: the fight with a creature does not time out.
+    for _ in 0..160 {
+        h.app.update();
+    }
+    h.fly_to(dungar, SENTINEL_HILL);
+    assert_eq!(h.failures(), vec![TaxiError::InCombat]);
+
+    crate::combat::combat_stop(h.app.world_mut(), wolf);
+    h.fly_to(dungar, SENTINEL_HILL);
+    assert!(h.failures().is_empty());
+    assert!(h.app.world().get::<TaxiFlight>(h.player).is_some());
+}
+
+#[test]
 fn a_flight_steps_through_its_points_at_the_given_distance() {
     let mut flight = TaxiFlight {
         points: vec![Vec3::new(10.0, 0.0, 0.0), Vec3::new(10.0, 0.0, 10.0)],

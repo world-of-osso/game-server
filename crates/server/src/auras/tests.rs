@@ -182,6 +182,26 @@ fn combat_entered_without_auras_does_not_interrupt_a_later_aura() {
 }
 
 #[test]
+fn a_fight_starting_interrupts_an_entering_combat_aura() {
+    let Some(mut h) = harness(Vec::new(), &[SHROUDING], 5) else {
+        return;
+    };
+    let (caster, npc) = (h.caster, h.npc);
+    h.app
+        .world_mut()
+        .entity_mut(caster)
+        .insert(CombatStatus(false));
+    h.advance(2);
+    apply(&mut h.app, caster, caster, SHROUDING);
+    h.advance(2);
+    assert_eq!(auras_of(&h, caster, SHROUDING).len(), 1);
+
+    crate::combat_refs::set_in_combat_with(h.app.world_mut(), caster, npc);
+    h.advance(1);
+    assert!(auras_of(&h, caster, SHROUDING).is_empty());
+}
+
+#[test]
 fn renew_heals_every_tick() {
     let Some(mut h) = harness(Vec::new(), &[RENEW], 5) else {
         return;
