@@ -227,6 +227,9 @@ pub(super) fn place_bid(
     let Some(auction) = state.auctions.get(&auction_id) else {
         return err("auction not found");
     };
+    if auction.expires_at_unix_secs <= unix_now() {
+        return err("auction has expired");
+    }
     if auction.seller_character_id == character_id {
         return err("cannot bid on your own auction");
     }
@@ -282,6 +285,9 @@ pub(super) fn buyout_auction(
     let Some(auction) = state.auctions.get(&auction_id) else {
         return err("auction not found");
     };
+    if auction.expires_at_unix_secs <= unix_now() {
+        return err("auction has expired");
+    }
     if auction.seller_character_id == character_id {
         return err("cannot buy out your own auction");
     }
