@@ -23,19 +23,13 @@ const AZURE_STRIKE: u32 = 362_969;
 /// Makes Living Flame cost 12% of base mana (SpellPower RequiredAuraSpellID).
 const DEVASTATION_EVOKER: u32 = 356_809;
 
-fn damage_to(h: &Harness, target: shared::components::Health) -> f32 {
-    let _ = h;
-    target.max - target.current
-}
-
 fn damage_taken(h: &Harness, unit: bevy::prelude::Entity) -> f32 {
     let health = h
         .app
         .world()
         .get::<shared::components::Health>(unit)
-        .unwrap()
-        .clone();
-    damage_to(h, health)
+        .unwrap();
+    health.max - health.current
 }
 
 fn damaged_by(h: &mut Harness, spell_id: u32) -> Vec<u64> {
