@@ -160,4 +160,54 @@ fn new_evoker_enters_as_devastation_with_core_spells_on_the_bar() {
             .any(|(_, action)| *action == ActionRef::Spell(spell_id))
     };
     assert!(on_bar(LIVING_FLAME) && on_bar(AZURE_STRIKE));
+    assert!(
+        !known_ids(
+            app.world().resource::<ClassSpells>(),
+            DRACTHYR_ALLIANCE,
+            EVOKER,
+            10,
+            0
+        )
+        .contains(&361_227)
+    );
+    drain(&mut app, player);
+    set_live_level(app.world_mut(), 13, 12);
+    advance(&mut app);
+    assert_eq!(
+        received::<SpellsLearned>(&mut app, player),
+        vec![SpellsLearned {
+            spells: vec![361_227]
+        }],
+    );
+}
+
+#[test]
+fn new_classes_switch_specs_and_persist_their_authored_spell_grants() {
+    let classes = class_spells().expect("new-class progression requires local world.db");
+    let mut app = setup_app(temp_database(), classes);
+    for (id, race, class, spec_id, passive, active) in [
+        (101, HUMAN, MONK, 269, 137_025, 124_146),
+        (102, NIGHT_ELF, DEMON_HUNTER, 581, 212_613, 203_783),
+        (103, DRACTHYR_ALLIANCE, EVOKER, 1468, 356_810, 360_823),
+    ] {
+        let player = spawn_player(&mut app, id, race, class, 10);
+        advance(&mut app);
+        drain(&mut app, player);
+        send_request(&mut app, player, SetSpecialization { spec_id });
+        assert_eq!(
+            received::<SpecializationChanged>(&mut app, player),
+            vec![SpecializationChanged { spec_id }],
+        );
+        let known = app.world().get::<KnownSpells>(player).unwrap();
+        assert!(
+            known.contains(passive),
+            "class {class} spec passive {passive}"
+        );
+        assert!(known.contains(active), "class {class} spec spell {active}");
+        assert_eq!(stored(&app, id).spec_id, spec_id);
+        let learned = received::<SpellsLearned>(&mut app, player);
+        assert_eq!(learned.len(), 1);
+        assert!(learned[0].spells.contains(&passive));
+        assert!(learned[0].spells.contains(&active));
+    }
 }

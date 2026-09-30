@@ -5,13 +5,20 @@
 ## Race and class validation
 
 - world.db has no `chr_races` or `CharBaseInfo` table. `race_class.rs` therefore holds the race→class table, copied from the client character-creation data (`game-engine src/scenes/char_create/data.rs` RACES).
-- The table covers 24 races (Pandaren 24/25/26 included) and classes 1–9 and 11. Dracthyr, Earthen and Haranir are not in the table.
+- The table covers 26 races (Pandaren 24/25/26 and Dracthyr 52/70 included) and classes 1–13. Monk 10 is available on all 24 non-Dracthyr races; DH 12 on Night Elf/Blood Elf/Void Elf (4/10/29); Evoker 13 only on Dracthyr. The new-class gates were checked against locally extracted CharBaseInfo FDID 1343386 (WDC5 layout FEC46FB7).
+- Kul Tiran 32, Earthen 84/85 and Haranir 86/91 have authored Monk rows but remain absent from this existing server race catalog. New-class support does not implement these extra race catalogs or starting locations.
 - The same file holds each race's `ChrRaces.PlayableRaceBit` (`game-engine data/ChrRaces.csv`). DB2 `RaceMasks` use this bit.
 - Character creation and `SelectCharacter` both call `validate_race_class` and reject a failing character. The errors are:
   - `Invalid race id N`
   - `Invalid class id N`
   - `Class C is not available for race R`
 - The fallback race list and the dead `chr_races` query are removed.
+
+## New-character start levels and temporary locations
+
+`race_class::start_level` applies max(class start, race start) for the new classes, copied from local 12.1.0.69933 ChrClasses/ChrRaces. Ordinary-race Monk starts at 1; Night Elf/Blood Elf DH at 8; allied-race Monk/Void Elf DH at 10; Dracthyr Evoker at 10. Death Knight class starts remain unchanged outside this slice.
+
+`persistence_character::default_character_data` persists the level at creation. Demon Hunters use the existing race location. Dracthyr use Stormwind (map 0) or Orgrimmar (map 1) by faction. This workaround omits class intro quests/gear because starting zones were delayed; retire when class starting zones (Mardum, Forbidden Reach) are implemented. No class zones or intro content are added.
 
 ## Specialization
 
@@ -87,6 +94,8 @@ The list is stored in the `KnownSpells` component. Cast validation should call `
 
 - [class_progression.rs](../../../crates/server/src/class_progression.rs) — components, rules, systems
 - [class_progression_tests.rs](../../../crates/server/src/class_progression_tests.rs) — real world.db + temp redb tests
+- [class_progression_new_class_tests.rs](../../../crates/server/src/class_progression_new_class_tests.rs) — Monk/DH/Evoker start, level-up and spec grants
+- [new-class spec](../../specs/new-classes.md) — bounded server contract and integration exclusions
 - [race_class.rs](../../../crates/server/src/race_class.rs) — race/class table, race bits
 - [persistence_progression.rs](../../../crates/server/src/persistence_progression.rs) — `character_progression` table
 

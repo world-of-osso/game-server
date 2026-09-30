@@ -129,6 +129,12 @@ mod tests {
     /// Demon Hunter for Night Elf, Blood Elf and Void Elf, Evoker for Dracthyr.
     #[test]
     fn new_classes_follow_retail_char_base_info() {
+        // Every supported non-Dracthyr race has an authored Monk row.
+        for race in [
+            1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 22, 24, 25, 26, 27, 28, 29, 30, 31, 34, 35, 36, 37,
+        ] {
+            assert_eq!(validate_race_class(race, 10), Ok(()), "Monk race {race}");
+        }
         for (race, class) in [
             (1, 10),
             (2, 10),

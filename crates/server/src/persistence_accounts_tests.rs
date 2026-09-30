@@ -545,6 +545,16 @@ fn new_class_characters_start_at_their_level_and_location() {
     assert_eq!((data.level, data.x, data.y), (10, 1798.27, -4363.27));
     assert_eq!(load_character_map(&db, evoker), 1, "Orgrimmar");
 
+    for (name, race, class, level) in [
+        ("Bloodhunter", 10, 12, 8),
+        ("Voidhunter", 29, 12, 10),
+        ("Alliedmonk", 37, 10, 10),
+    ] {
+        let (id, data) = create_character(&db, account_id, name, race, class).unwrap();
+        assert_eq!(data.level, level);
+        assert_eq!(load_character(&db, id).unwrap().level, level);
+    }
+
     for (name, race, class) in [
         ("Humandh", 1, 12),
         ("Orcvoker", 2, 13),
@@ -555,6 +565,6 @@ fn new_class_characters_start_at_their_level_and_location() {
             Err(format!("Class {class} is not available for race {race}"))
         );
     }
-    assert_eq!(list_characters_for_account(&db, account_id).len(), 4);
+    assert_eq!(list_characters_for_account(&db, account_id).len(), 7);
     assert_eq!(load_character(&db, dh).unwrap().level, 8);
 }

@@ -119,7 +119,7 @@ Registry: `effects::handler(effect_id)`. Unhandled effect IDs are skipped and lo
 | 2 | SCHOOL_DAMAGE | scaled amount (below), crit, shared death path |
 | 6, 35, 65 | APPLY_AURA, APPLY_AREA_AURA_PARTY/RAID | grouped per target, `auras::apply_aura` |
 | 10 | HEAL | scaled amount, crit, clamped to max, overheal logged |
-| 30 | ENERGIZE | `BasePoints` raw units of power `EffectMiscValue_0`, clamped, excess logged |
+| 30 | ENERGIZE | Points/PointsIndexN-modified base points in raw units of `EffectMiscValue_0`, clamped, excess logged |
 | 31 | WEAPON_PERCENT_DAMAGE | `BasePoints`% of a weapon hit |
 | 38 | DISPEL | `auras::dispel` of `EffectMiscValue_0`, up to `BasePoints` (min 1) auras |
 | 58, 121 | WEAPON_DAMAGE, NORMALIZED_WEAPON_DMG | weapon hit + `BasePoints` |
@@ -134,6 +134,12 @@ TRIGGER_SPELL:
 Spell scripts (`spell_cast/scripts.rs`, TrinityCore `SpellScript`): behaviour the DB2 effects do not carry, keyed by spell ID. `on_hit` runs once per distinct planned unit after the spell's effects and auras resolved there (`SpellHitFn`, `Spell::DoSpellHitOnUnit`), before the hit proc events.
 - Frostbolt 116: its only effect is TRIGGER_MISSILE 32 to 228597 (SCHOOL_DAMAGE); neither carries a slow. The hook casts Chilled 205708 (APPLY_AURA MOD_DECREASE_SPEED 33, -50%, `SpellDuration` 31 = 8 s, `SPELL_ATTR0_AURA_IS_DEBUFF`) at the hit unit, triggered (TrinityCore `spell_mage_frostbolt::HandleChilled`, spell_mage.cpp:978-995, registered on 116 in sql/old/9.x/world/22012_2022_03_06/2022_02_10_02_world.sql:5).
   A Frostbolt-pulled Blackrock Spy chases at 3 yd/s instead of 6 (game-server `polymorph_tests.rs`).
+
+New-class scripts use per-effect `on_effect_hit` hooks; a DUMMY effect with a hook participates in target validation/planning rather than being silently skipped. `area_target_filter` narrows selected area targets before hit resolution.
+- Chaos Strike Initial 344862 effect 0 triggers 162794, whose effects trigger the existing damage spells 222031/199547 (TrinityCore `spell_dh_chaos_strike_initial`).
+- Living Flame 361469 effect 0 triggers heal 361509 for an assistable target or damage 361500 otherwise (`spell_evo_living_flame`). Energizing Flame's mana refund remains unimplemented.
+- Azure Strike 362969 effect 1 retains the explicit enemy plus effect 0's baseline count minus one other selected enemy (`spell_evo_azure_strike`). Other enemies are nearest-first, not TrinityCore's random selection; count-changing talent modifiers remain unimplemented.
+- Tiger Palm 100780 already has SCHOOL_DAMAGE and ENERGIZE effects. ENERGIZE now applies existing spell-point modifiers: Windwalker passive 1258122 adds 2 Chi to effect 1's zero baseline. Blackout Kick uses existing damage and aura-gated cost handlers. Power pool sizing/spec/form selection remains separate powers-agent work.
 
 Formulas:
 - **Scaled amount:** `BasePoints + BonusCoefficient × SP + BonusCoefficientFromAP × AP`.
@@ -179,6 +185,8 @@ Damage and heal side effects:
 - [spell_cast/powers.rs](../../../crates/server/src/spell_cast/powers.rs) — `PowerTypeTable`, pools, regen, `UnitPowers`
 - [spell_cast/tests.rs](../../../crates/server/src/spell_cast/tests.rs) — real-DB App tests
 - [spell_cast/test_harness.rs](../../../crates/server/src/spell_cast/test_harness.rs) — shared real-DB harness (also used by aura tests)
+- [spell_cast/new_class_tests.rs](../../../crates/server/src/spell_cast/new_class_tests.rs) — six core spells with local DB2 and HostClient delivery
+- [new-class spec](../../specs/new-classes.md) — bounded behavior and remaining integration work
 - [spec](../../specs/cast-presentation.md)
 
 ## See Also

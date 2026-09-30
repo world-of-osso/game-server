@@ -1,6 +1,6 @@
 # Monk, Demon Hunter and Evoker — server slice
 
-Server creation, progression and six basic spells for classes 10, 12 and 13. Implementation details: [[../wiki/systems/class-progression]] and [spell casting](../wiki/systems/spell-casting.md).
+Server creation, progression and six basic spells for classes 10, 12 and 13. Implementation details: [class progression](../wiki/systems/class-progression.md) and [spell casting](../wiki/systems/spell-casting.md).
 
 ## What it must do
 
@@ -32,6 +32,7 @@ Server creation, progression and six basic spells for classes 10, 12 and 13. Imp
 
 ## Known gaps (current cycle)
 
+- [ ] Local CharBaseInfo also authors Monk on Kul Tiran 32, Earthen 84/85 and Haranir 86/91; these races remain unsupported by the existing server catalog.
 - [ ] Live creation/casting through Godot and actual UDP remain main integration work; HostClient tests do not prove them.
 - [ ] Full class rotations, talent/proc parity and extra specialization effects are not proven by six basic spell tests.
 

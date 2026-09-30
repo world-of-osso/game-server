@@ -160,6 +160,33 @@ fn living_flame_casts_for_2_seconds_spends_mana_and_damages_enemy() {
     assert!((8_800.0..=8_900.0).contains(&mana), "mana {mana}");
 }
 
+#[test]
+fn living_flame_heals_an_ally_without_damaging_the_enemy() {
+    let ids = [LIVING_FLAME, DEVASTATION_EVOKER, 361_500, 361_509];
+    let mut h = harness(Vec::new(), &ids, EVOKER).expect("local world.db required");
+    let ally = spawn_player(&mut h.app, 1, 2.0);
+    h.app
+        .world_mut()
+        .get_mut::<shared::components::Health>(ally)
+        .unwrap()
+        .current = 100.0;
+    h.advance(1);
+    h.cast_and_deliver(LIVING_FLAME, Some(ally));
+    assert_eq!(h.health(ally), 100.0, "still casting");
+    h.advance(40);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert!(h.health(ally) > 100.0);
+    assert_eq!(damage_taken(&h, h.npc), 0.0);
+    assert!(
+        h.inbox
+            .log
+            .iter()
+            .any(|event| event.kind == CombatLogKind::Heal
+                && event.spell_id == Some(361_509)
+                && event.target == Some(ally.to_bits()))
+    );
+}
+
 /// Azure Strike's area damage lands on the target and one more enemy
 /// (effect 0: 2 targets), not on every enemy in range.
 #[test]
