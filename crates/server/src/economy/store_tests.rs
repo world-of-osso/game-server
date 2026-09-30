@@ -2,7 +2,7 @@ use super::*;
 use crate::persistence::inventory_store::{ItemInstanceData, ItemPlacementData};
 use crate::persistence::mail_store::{MAILBOXES, MailSender};
 use crate::persistence::{CharacterData, InventoryItemData};
-use redb::ReadableDatabase;
+use redb::{ReadableDatabase, ReadableTableMetadata};
 use std::collections::HashMap;
 use std::sync::{Arc, Barrier};
 
