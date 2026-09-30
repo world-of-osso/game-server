@@ -14,10 +14,13 @@ use shared::protocol::{
 use crate::auth::InWorld;
 use crate::persistence::{
     self, AuctionData, GameDatabase, InventoryData, InventoryItemData,
-    mail_store::{self, MailData, MailItemData, MailSender},
+    mail_store::{MailData, MailItemData, MailSender},
 };
 
 mod browse;
+#[cfg(test)]
+use crate::persistence::mail_store;
+
 mod handlers;
 mod operations;
 mod queries;
