@@ -548,22 +548,32 @@ fn expired_auction_without_bid_returns_item_to_seller() {
 
     let auction = state.auctions.remove(&auction_id).expect("auction");
     assert!(auction.current_bidder_character_id.is_none());
-    persistence::delete_auction(&db, auction_id);
-    deliver_mail(
+    crate::economy::store::commit_market(
         &db,
-        auction.seller_character_id,
-        "Auction expired",
-        &format!(
-            "Your auction for {} expired without a buyer.",
-            auction.item.name
-        ),
-        0,
-        Some(auction.item.clone()),
-    );
+        None,
+        &crate::economy::store::MarketChanges {
+            deleted_auctions: vec![auction_id],
+            mails: vec![(
+                auction.seller_character_id,
+                super::super::operations::build_auction_mail(
+                    &db,
+                    "Auction expired",
+                    &format!(
+                        "Your auction for {} expired without a buyer.",
+                        auction.item.name
+                    ),
+                    auction.deposit,
+                    Some(auction.item.clone()),
+                ),
+            )],
+            ..Default::default()
+        },
+    )
+    .unwrap();
 
     let seller_mail = mail_store::load_mailbox(&db, seller_id);
     assert_eq!(seller_mail.len(), 1);
-    assert_eq!(seller_mail[0].money, 0);
+    assert_eq!(seller_mail[0].money, auction.deposit);
     let returned_item = seller_mail[0]
         .items
         .first()
@@ -601,15 +611,25 @@ fn relist_after_expired_auction() {
         .unwrap()
         .expires_at_unix_secs = 0;
     let auction = state.auctions.remove(&auction_id).unwrap();
-    persistence::delete_auction(&db, auction_id);
-    deliver_mail(
+    crate::economy::store::commit_market(
         &db,
-        seller_id,
-        "Auction expired",
-        "expired",
-        0,
-        Some(auction.item),
-    );
+        None,
+        &crate::economy::store::MarketChanges {
+            deleted_auctions: vec![auction_id],
+            mails: vec![(
+                seller_id,
+                super::super::operations::build_auction_mail(
+                    &db,
+                    "Auction expired",
+                    "expired",
+                    auction.deposit,
+                    Some(auction.item),
+                ),
+            )],
+            ..Default::default()
+        },
+    )
+    .unwrap();
 
     let mail = mail_store::load_mailbox(&db, seller_id);
     take_mail(

@@ -337,8 +337,16 @@ fn expired_auction_with_bid_awards_winner_and_pays_seller() {
     let auction = state.auctions.remove(&auction_id).expect("auction");
     let winner_id = auction.current_bidder_character_id.expect("has bidder");
     let winning_bid = auction.current_bid.unwrap_or(auction.min_bid);
-    persistence::delete_auction(&db, auction_id);
-    complete_sale(&db, &auction, winner_id, winning_bid);
+    crate::economy::store::commit_market(
+        &db,
+        None,
+        &crate::economy::store::MarketChanges {
+            deleted_auctions: vec![auction_id],
+            mails: super::super::operations::sale_mails(&db, &auction, winner_id, winning_bid),
+            ..Default::default()
+        },
+    )
+    .unwrap();
 
     let seller_mail = mail_store::load_mailbox(&db, seller_id);
     assert_eq!(seller_mail.len(), 1);
