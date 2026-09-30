@@ -274,6 +274,20 @@ class CatalogTests(unittest.TestCase):
         self.assertEqual(reasons[1005], "missing_supported_market")
         self.assertEqual(reasons[1006], "missing_output_expansion")
 
+    def test_linen_cloth_is_a_gathered_input_not_a_device(self):
+        with closing(sqlite3.connect(self.db)) as con, con:
+            con.execute("INSERT INTO content_item(ID,ClassID,SubclassID,Name) VALUES (2589,7,5,'Linen Cloth')")
+            con.execute("INSERT INTO content_item(ID,ClassID,SubclassID,Name) VALUES (4392,7,3,'Advanced Target Dummy')")
+            con.execute("INSERT INTO item_sparse VALUES (2589,0)")
+            con.execute("INSERT INTO item_sparse VALUES (4392,0)")
+        self.recipe(1008,2302,[(2589,2),(4392,1)])
+        self.write_csv(self.items,["itemId","marketValue","saleRate","soldPerDay","updatedAt"],
+            [[i,1000,"0.125","2.5","2026-09-30T08:19:11Z"] for i in [2302,2318,2320,2304,900,2589,4392]])
+        config,report=self.success()
+        self.assertIn(2589,config["gatherables"])
+        self.assertNotIn(4392,config["gatherables"])
+        self.assertIn(4392,report["non_gathering_ingredient_ids"])
+
     def test_crafted_ingredients_never_classified_as_gathered(self):
         self.recipe(1007, 2302, [(2304, 1), (2318, 1)])
         _, report = self.success()

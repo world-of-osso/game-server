@@ -39,7 +39,7 @@ DEFAULT_TUNING = {
 I32_MAX = 2**31 - 1
 U32_MAX = 2**32 - 1
 U64_MAX = 2**64 - 1
-PRIMARY_SUBCLASSES = {3, 6, 7, 9}  # Cloth, leather, metal/stone, herbs.
+PRIMARY_SUBCLASSES = {5, 6, 7, 9}  # Cloth, leather, metal/stone, herbs.
 
 
 def retry_delay(header, attempt):
