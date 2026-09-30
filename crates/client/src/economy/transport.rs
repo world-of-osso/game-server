@@ -1,6 +1,9 @@
 use super::*;
 use std::collections::HashMap;
 
+#[cfg(test)]
+mod tests;
+
 #[derive(Resource, Default)]
 struct MerchantState {
     vendor: Option<VendorInventory>,
@@ -83,7 +86,7 @@ struct Receivers<'w, 's> {
     bag_delta: Query<'w, 's, &'static mut MessageReceiver<InventoryDelta>>,
 }
 
-pub(super) fn register(app: &mut App) {
+pub(crate) fn register(app: &mut App) {
     app.init_resource::<EconomyFlow>();
     app.init_resource::<MerchantState>();
     app.add_systems(Update, economy_system);
