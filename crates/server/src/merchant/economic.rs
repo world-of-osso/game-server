@@ -129,6 +129,7 @@ pub(super) fn buy(
         error!("economic vendor {entry} quote: {error}");
         MerchantError::NotEnoughMoney
     })?;
+    let expected_inventory = persistence::load_inventory(shop.db(), customer.character_id);
     let mut inventory = shop.load(customer.character_id)?;
     if inventory.gold() < price {
         return Err(MerchantError::NotEnoughMoney);
@@ -153,6 +154,7 @@ pub(super) fn buy(
         .ok_or(MerchantError::TooMuchGold)?;
     let gold = inventory.gold();
     let changes = MarketChanges {
+        expected_inventories: vec![(customer.character_id, expected_inventory)],
         records: vec![(customer.character_id, inventory.into_record())],
         ..Default::default()
     };

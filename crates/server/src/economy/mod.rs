@@ -165,7 +165,7 @@ fn initialize_economy(
         &store::MarketChanges::default(),
     )
     .expect("persist initialized economy");
-    economy.initialized = true;
+    *economy = Economy::from_state(std::mem::take(&mut economy.state));
 }
 
 fn update_economy(

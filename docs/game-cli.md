@@ -47,12 +47,13 @@ Do this **before native engine economy testing**. Do not point mutation probes a
 
    ```sh
    GAME_SERVER_DB_PATH="$PWD/data/cli-smoke/game.redb" \
+   GAME_SERVER_BIND_IP=127.0.0.1 \
    GAME_SERVER_PORT=5098 \
    GAME_SERVER_ADMIN_SOCKET="$PWD/data/cli-smoke/admin.sock" \
    target/debug/game-server
    ```
 
-   Create `data/cli-smoke/` first. Keep `data/world.db` unchanged. Set the same admin-socket environment for every admin command below. Keep the server running; do not restart the shared server.
+   Create `data/cli-smoke/` first. `GAME_SERVER_BIND_IP` defaults to all IPv4 interfaces; fixtures explicitly bind loopback. Invalid IPs or ports stop startup rather than selecting another listener. Keep `data/world.db` unchanged. Set the same admin-socket environment for every admin command below. Keep the server running; do not restart the shared server.
 
 2. Use `game-server-admin create-account` / `create-character` with their help syntax to create separate seller and buyer accounts, exactly one character each. Login via `game-cli login --server 127.0.0.1:5098 --username NAME --password PASSWORD`; retain each token separately (`--token` on later calls prevents saved-token ambiguity). Seed seller inventory with `game-server-admin grant-item SELLER 2589 4`; seed money with `set-gold CHARACTER 100000` for both accounts.
 

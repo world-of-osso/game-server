@@ -69,11 +69,14 @@ fn gather_resources(
                 items: Vec::new(),
             };
             post_resource_supply(
-                db, next, config, now, draw, changes, item_id, seller, inventory, 0,
+                db, config, now, draw, changes, item_id, seller, inventory, 0,
             )?;
             continue;
         };
         let mut inventory = persistence::load_inventory(db, seller);
+        changes
+            .expected_inventories
+            .push((seller, inventory.clone()));
         let mail = mail_store::load_mailbox(db, seller);
         let proceeds =
             mail.iter()
@@ -100,7 +103,7 @@ fn gather_resources(
         }
         let listed = active.get(&(seller, item_id)).copied().unwrap_or(0);
         post_resource_supply(
-            db, next, config, now, draw, changes, item_id, seller, inventory, listed,
+            db, config, now, draw, changes, item_id, seller, inventory, listed,
         )?;
     }
     Ok(())
@@ -108,7 +111,6 @@ fn gather_resources(
 
 fn post_resource_supply(
     db: &redb::Database,
-    next: &mut EconomyState,
     config: &Config,
     now: u64,
     draw: &mut impl FnMut() -> u64,
@@ -168,7 +170,6 @@ fn post_resource_supply(
     }
     changes.inventories.push((seller, inventory));
     // IDs are allocated separately, but supply, deposits and actor identity commit together.
-    let _ = next;
     Ok(())
 }
 
