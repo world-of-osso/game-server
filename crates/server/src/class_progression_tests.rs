@@ -401,27 +401,30 @@ fn paladin_switch_retribution_to_holy_sends_deltas_and_prunes_bar() {
     // The last two of each list are granted talents: Retribution's Hammer of
     // Wrath 1241288 and Greater Judgment 231663; Holy's Lay on Hands 633 and
     // Divine Steed 190784 (node group 8479). Plate Specialization 86539 is level 27.
+    // Holy's SpecializationSpells override Shield of the Righteous 53600 (→ 415091)
+    // and Judgment 20271 (→ 275773), so those baselines are unlearned first.
     assert_eq!(
         received::<SpellsUnlearned>(&mut app, player),
         vec![SpellsUnlearned {
             spells: vec![
-                85256, 137027, 162698, 267316, 342348, 403876, 404752, 412314, 462096, 404834,
-                384376, 1258011, 1241288, 231663,
+                53600, 20271, 85256, 137027, 162698, 267316, 342348, 403876, 404752, 412314,
+                462096, 404834, 384376, 1258011, 1241288, 231663,
             ],
         }]
     );
+    // Holy's Cleanse 4987 overrides its Cleanse Toxins 440013, which is not learned.
     assert_eq!(
         received::<SpellsLearned>(&mut app, player),
         vec![SpellsLearned {
             spells: vec![
                 53563, 137029, 162701, 183997, 275773, 4987, 289941, 53651, 82326, 415091, 428076,
-                440013, 462093, 231642, 1258016, 633, 190784,
+                462093, 231642, 1258016, 633, 190784,
             ],
         }]
     );
     // Retribution buttons are pruned; Holy's new actives fill the empty slots in
     // learn order (Beacon of Light, Judgment, Cleanse, Holy Light, Shield of the
-    // Righteous, Cleanse Toxins, Lay on Hands, Divine Steed).
+    // Righteous, Lay on Hands, Divine Steed); Cleanse replaces Cleanse Toxins.
     let holy_bar: Vec<(u8, u32)> = [
         CRUSADER_STRIKE,
         53563,
@@ -429,7 +432,6 @@ fn paladin_switch_retribution_to_holy_sends_deltas_and_prunes_bar() {
         4987,
         82326,
         415091,
-        440013,
         633,
         190784,
     ]
@@ -582,10 +584,11 @@ fn level_changes_send_learned_spells_and_leave_initial_spec_at_unlock() {
         received::<SpecializationChanged>(&mut app, player),
         vec![SpecializationChanged { spec_id: SPEC_HOLY }]
     );
+    // Holy replaces Shield of the Righteous 53600 and Judgment 20271 (spec overrides).
     assert_eq!(
         received::<SpellsUnlearned>(&mut app, player),
         vec![SpellsUnlearned {
-            spells: vec![417383],
+            spells: vec![53600, 20271, 417383],
         }]
     );
     let learned = received::<SpellsLearned>(&mut app, player);

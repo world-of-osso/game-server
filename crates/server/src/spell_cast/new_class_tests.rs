@@ -143,7 +143,8 @@ fn living_flame_casts_for_2_seconds_spends_mana_and_damages_enemy() {
     h.cast_and_deliver(LIVING_FLAME, Some(h.npc));
     assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
     assert_eq!(damage_taken(&h, h.npc), 0.0, "still casting");
-    h.advance(40);
+    // 2 s cast, then the 361500 missile's flight (Speed 45).
+    h.advance(80);
     assert_eq!(damaged_by(&mut h, 361_500), vec![h.npc.to_bits()]);
     let mana = h
         .app
@@ -151,7 +152,8 @@ fn living_flame_casts_for_2_seconds_spends_mana_and_damages_enemy() {
         .get::<shared::components::Mana>(h.caster)
         .unwrap()
         .current;
-    assert!((8_800.0..=8_900.0).contains(&mana), "mana {mana}");
+    // 1 200 spent, then up to 4 s of 1%-of-base-mana regen per second.
+    assert!((8_800.0..=9_200.0).contains(&mana), "mana {mana}");
 }
 
 #[test]
@@ -167,7 +169,8 @@ fn living_flame_heals_an_ally_without_damaging_the_enemy() {
     h.advance(1);
     h.cast_and_deliver(LIVING_FLAME, Some(ally));
     assert_eq!(h.health(ally), 100.0, "still casting");
-    h.advance(40);
+    // 2 s cast, then the 361509 missile's flight (Speed 40).
+    h.advance(80);
     assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
     assert!(h.health(ally) > 100.0);
     assert_eq!(damage_taken(&h, h.npc), 0.0);
@@ -226,13 +229,23 @@ fn azure_strike_hits_the_target_and_one_other_enemy() {
 /// when it hits an enemy: 12% of 10 000 base mana = 1 200 spent, 960 back.
 #[test]
 fn energizing_flame_refunds_most_of_living_flames_mana() {
-    let ids = [LIVING_FLAME, DEVASTATION_EVOKER, 400_006];
+    let ids = [LIVING_FLAME, DEVASTATION_EVOKER, 361_500, 400_006];
     let Some(mut h) = harness(Vec::new(), &ids, EVOKER) else {
         return;
     };
     h.advance(1);
     h.cast_and_deliver(LIVING_FLAME, Some(h.npc));
-    h.advance(40);
+    // 2 s cast, then the 361500 missile's flight (Speed 45).
+    h.advance(80);
+    eprintln!(
+        "failed {:?} log {:?}",
+        h.inbox.failed,
+        h.inbox
+            .log
+            .iter()
+            .map(|e| (e.kind, e.spell_id))
+            .collect::<Vec<_>>()
+    );
     assert_eq!(damaged_by(&mut h, 361_500), vec![h.npc.to_bits()]);
     let mana = h
         .app
@@ -240,5 +253,6 @@ fn energizing_flame_refunds_most_of_living_flames_mana() {
         .get::<shared::components::Mana>(h.caster)
         .unwrap()
         .current;
-    assert!((9_760.0..=9_860.0).contains(&mana), "mana {mana}");
+    // 1 200 spent, 960 refunded, then up to 4 s of regen.
+    assert!((9_760.0..=10_000.0).contains(&mana), "mana {mana}");
 }
