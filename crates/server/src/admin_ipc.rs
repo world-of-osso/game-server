@@ -620,6 +620,23 @@ mod tests {
     use super::*;
     use bevy::ecs::system::SystemState;
 
+    #[test]
+    fn admin_dispatcher_initializes_object_lookup_and_player_movement_together() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .init_resource::<crate::combat::CombatLog>()
+            .init_resource::<shared::ticket::TicketManager>()
+            .init_resource::<shared::motd::Motd>()
+            .init_resource::<shared::motd::Autobroadcast>()
+            .init_resource::<crate::taxi::TaxiNetwork>()
+            .init_resource::<crate::gold::GoldUpdateQueue>()
+            .init_resource::<crate::mail::ChangedMailboxes>();
+        let (_sender, receiver) = mpsc::channel::<AdminCommand>();
+        app.insert_non_send(receiver)
+            .add_systems(Update, poll_admin_ipc);
+        app.update();
+    }
+
     use crate::persistence_accounts;
 
     /// Linen Cloth (2589): `content_item` name and a 1000 stack (world.db, Retail 12.1).

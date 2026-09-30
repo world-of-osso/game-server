@@ -502,6 +502,7 @@ pub(crate) struct AdminInstances<'w, 's> {
             &'static shared::components::Position,
             &'static InMap,
         ),
+        Without<crate::persistence::ClientId>,
     >,
     creatures: Query<
         'w,

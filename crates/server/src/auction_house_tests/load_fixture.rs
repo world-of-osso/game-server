@@ -7,7 +7,7 @@ use crate::economy::{
 };
 use crate::item_templates::{ItemTemplates, load_item_templates};
 use crate::persistence::{self, AuctionData, InventoryItemData, NEXT_IDS};
-use redb::{Database, ReadableDatabase, ReadableTable};
+use redb::{Database, ReadableDatabase};
 use shared::protocol::AuctionSearchQuery;
 use std::{
     collections::{BTreeSet, HashMap},
