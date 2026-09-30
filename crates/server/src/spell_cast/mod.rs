@@ -982,6 +982,11 @@ fn resolve_effects(
             effects::log_unhandled(world, spell.id, effect.effect);
         }
     }
+    for target in hit_units(plan) {
+        if starts_combat(world, caster, target, spell) {
+            crate::combat_refs::set_in_combat_with(world, caster, target);
+        }
+    }
     if let Some(mut resolving) = world.get_resource_mut::<ResolvingHits>() {
         resolving.0.push(HitFrame {
             caster,
@@ -1049,7 +1054,8 @@ fn resolve_effects(
 /// each unit its spell launches at, and `TargetInfo::PreprocessTarget`
 /// (Spell.cpp:2763-2764) the unit with the caster when it lands: a unit the caster can
 /// attack (TC: not `IsFriendlyTo`), a harmful spell (or one that dispels), with initial aggro or at an
-/// engaged unit. Spells have no travel time here, so launch and hit are one moment.
+/// engaged unit. Spells have no travel time here, so launch and hit are one moment,
+/// before the spell's effects (its damage) resolve.
 fn starts_combat(world: &World, caster: Entity, target: Entity, spell: &SpellInfo) -> bool {
     let initial_aggro = attributes(spell, 1) & SPELL_ATTR1_NO_THREAT == 0
         && attributes(spell, 2) & SPELL_ATTR2_NO_INITIAL_THREAT == 0
@@ -1173,9 +1179,6 @@ fn push_hit_events(
         );
     }
     for target in hit {
-        if starts_combat(world, caster, target, spell) {
-            crate::combat_refs::set_in_combat_with(world, caster, target);
-        }
         // Spell::DoSpellHitOnUnit (Spell.cpp:2879-2882): a spell landing on a
         // unit the caster can attack starts combat with it.
         if targets::relation_matches(world, caster, target, Relation::Enemy) {

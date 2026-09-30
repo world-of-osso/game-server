@@ -11,7 +11,7 @@ Creatures with `creature_template.ScriptName = 'npc_training_dummy'` behave like
 - [x] Health is the AzerothCore creature health (`Creature::SelectLevel`): `ceil(creature_classlevelstats.basehp<exp> × HealthModifier)`, so HealthModifier 0.000187 gives Grandmaster's (31144, level 80) 3 health and Expert's (32666, level 60) 1.
 - [x] The dummy never attacks back and never moves (MovementType 0 spawns, no creature melee).
 - [x] Each attacker's combat with the dummy ends five seconds after that attacker's last damage (TC `npc_training_dummy::_combatTimer`, npcs_special.cpp:1382-1415; a dummy has no threat list, so its combat references time out, `combat_refs.rs`), and the attacker leaves combat then unless it fights something else; auto-attacking from out of range keeps nobody in combat. When the last attacker's combat ends the dummy evades like AzerothCore's after its 5 s `resetTimer`: auras other units put on it are removed (`_EnterEvadeMode` → `RemoveEvadeAuras`), and players still auto-attacking it stop (`CombatStop` → `RemoveAllAttackers`).
-- [ ] TC does not restart an attacker's timer on periodic damage (`DamageTaken`, `damageType == DOT`); here every damage hit does.
+- [x] Periodic damage does not restart an attacker's timer (TC `DamageTaken`, `damageType == DOT`): a DoT's ticks alone leave the attacker out of combat 5 s after the spell landed.
 
 ## Tests asserting this spec
 

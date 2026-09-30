@@ -17,7 +17,7 @@ use shared::components::{
 use shared::level_scaling::{LevelScaling, level_for_viewer};
 
 use crate::combat::DeathState;
-use crate::creature_ai::{CreatureState, chase_system};
+use crate::creature_ai::{CreatureState, SpawnPoint, chase_system};
 use crate::death::PlayerDeathState;
 use crate::faction::{FactionTemplates, Reaction, UnitFaction};
 use crate::grid_activity::GridDormant;
@@ -34,6 +34,14 @@ const MAX_LEVEL_DIFF_BELOW: i32 = -25;
 /// `ATTACK_DISTANCE` (ObjectDefines.h:25): melee range for the threat
 /// swap threshold.
 const ATTACK_DISTANCE: f32 = 5.0;
+/// `Creature::CanCreatureAttack` (Creature.cpp:2741-2755): a victim farther than this
+/// from the creature's home is out of reach: the continent visibility range
+/// (`Visibility.Distance.Continents` = 100, worldserver.conf.dist:2365; under the
+/// 2 × `SIZE_OF_GRID_CELL` = 133 yd cap) plus both default combat reaches (1.5).
+const HOME_REACH: f32 = 100.0 + 2.0 * 1.5;
+/// `MAX_AGGRO_RESET_TIME` (Unit.h:44): after direct damage, a creature ignores
+/// the home distance of its victims this long.
+const MAX_AGGRO_RESET_SECS: f64 = 10.0;
 
 const CREATURE_TYPE_CRITTER: u32 = 8;
 const CREATURE_TYPE_NON_COMBAT_PET: u32 = 12;
@@ -266,9 +274,53 @@ type Engaged<'w, 's> = Query<
         Option<&'static mut CombatTarget>,
         &'static InMap,
         Option<&'static crate::scripted_ai::ReactState>,
+        (
+            Option<&'static SpawnPoint>,
+            Option<&'static LastDamagedTime>,
+        ),
     ),
     (Without<DeathState>, Without<GridDormant>),
 >;
+
+/// `Creature::SetLastDamagedTime`: until when direct damage exempts the creature's
+/// victims from the home distance check.
+#[derive(Component, Debug, Clone, Copy, PartialEq)]
+pub(crate) struct LastDamagedTime(f64);
+
+/// `Unit::DealDamage` (Unit.cpp:1085-1089): direct damage taken by a creature, not
+/// periodic damage ("DoT's and Thorns / Retribution Aura do not contribute to this").
+pub(crate) fn note_damage_taken(world: &mut World, victim: Entity) {
+    if world.get::<Player>(victim).is_some() {
+        return;
+    }
+    let until = world.resource::<Time>().elapsed_secs_f64() + MAX_AGGRO_RESET_SECS;
+    if let Ok(mut entity) = world.get_entity_mut(victim) {
+        entity.insert(LastDamagedTime(until));
+    }
+}
+
+/// `Creature::CanCreatureAttack` (Creature.cpp:2731-2755): outside a dungeon, and
+/// unless it took direct damage in the last `MAX_AGGRO_RESET_SECS`, a creature only
+/// keeps attacking a victim within `HOME_REACH` of its home. A rooted or stationary
+/// creature thus drops a player who walks away and, with no victim left, evades.
+/// Not modelled: world bosses (always checked), taunt auras, `CanNotReachTarget`
+/// (no path data).
+fn within_reach_of_home(
+    home: Option<&SpawnPoint>,
+    last_damaged: Option<&LastDamagedTime>,
+    now: f64,
+    dungeon: bool,
+    victim: &Position,
+) -> bool {
+    let Some(home) = home else {
+        return true;
+    };
+    if dungeon || last_damaged.is_some_and(|damaged| damaged.0 > now) {
+        return true;
+    }
+    let (dx, dy, dz) = (victim.x - home.x, victim.y - home.y, victim.z - home.z);
+    dx * dx + dy * dy + dz * dz <= HOME_REACH * HOME_REACH
+}
 
 /// `CreatureAI::UpdateVictim` / `Creature::SelectVictim`: drop threat
 /// entries that are no longer valid targets, attack the top-threat unit
@@ -277,14 +329,30 @@ type Engaged<'w, 's> = Query<
 /// target is left. A passive creature keeps its victim without attacking it
 /// (`CreatureAI::UpdateVictim`, `scripted_ai::Ctx::update_victim`).
 pub(crate) fn update_victim_system(
+    time: Res<Time>,
     mut engaged: Engaged,
     victims: Victims,
     templates: Res<FactionTemplates>,
+    maps: Option<Res<crate::maps::MapStore>>,
     mut commands: Commands,
 ) {
-    for (creature, position, faction, mut threat, mut state, combat_target, map, react) in
-        &mut engaged
+    let now = time.elapsed_secs_f64();
+    for (
+        creature,
+        position,
+        faction,
+        mut threat,
+        mut state,
+        combat_target,
+        map,
+        react,
+        (home, last_damaged),
+    ) in &mut engaged
     {
+        let dungeon = maps
+            .as_deref()
+            .and_then(|maps| maps.map(map.map_id))
+            .is_some_and(|entry| entry.is_dungeon());
         let CreatureState::Pursuing { target } = *state else {
             continue;
         };
@@ -292,8 +360,12 @@ pub(crate) fn update_victim_system(
             continue;
         }
         let valid = |unit: u64| {
-            Entity::try_from_bits(unit)
-                .is_some_and(|unit| valid_victim(&victims, &templates, faction.0, map, unit))
+            Entity::try_from_bits(unit).is_some_and(|unit| {
+                valid_victim(&victims, &templates, faction.0, map, unit)
+                    && victims.get(unit).is_ok_and(|(victim, ..)| {
+                        within_reach_of_home(home, last_damaged, now, dungeon, victim)
+                    })
+            })
         };
         let current = valid(target).then_some(target);
         if current.is_none() {
@@ -444,6 +516,8 @@ pub(crate) fn enter_evade_mode(world: &mut World, creature: Entity) {
     }
     remove_auras_on_evade(world, creature);
     crate::spell_cast::cancel_cast(world, creature);
+    // `CreatureAI::_EnterEvadeMode`: `SetLastDamagedTime(0)` (CreatureAI.cpp:317).
+    world.entity_mut(creature).remove::<LastDamagedTime>();
     world
         .entity_mut(creature)
         .remove::<crate::spell_cast::SpellHistory>();

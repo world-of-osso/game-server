@@ -44,6 +44,7 @@ Tests: `combat_tests/attack_requests.rs` (selection neither swings nor enters co
 - Player-versus-player references end 5 s after their last refresh (`PVP_COMBAT_TIMEOUT`, CombatManager.h:84).
 - Creatures without a threat list (triggers, critters, training dummies) have no AI that would end their fights, so their references time out after 5 s too, like TC `npc_training_dummy` (npcs_special.cpp:1382-1415).
 - A harmful spell (or a dispel) with initial aggro (`SpellInfo::HasInitialAggro`: none of `SPELL_ATTR1_NO_THREAT`, `SPELL_ATTR2_NO_INITIAL_THREAT`, `SPELL_ATTR4_NO_HARMFUL_THREAT`), or any harmful spell at an engaged unit, puts caster and target in combat when it launches (`Spell::PreprocessSpellLaunch`, Spell.cpp:8538-8541; `PreprocessTarget`, Spell.cpp:2763-2764): Agony before its first tick. Polymorph has `NO_THREAT`, so it starts no combat with an idle unit.
+- `Unit::DealDamage` starts no combat itself (Unit.cpp:1085-1092): spell damage's combat comes from the spell's launch, and threat adds it for creatures. So periodic ticks refresh no PvP reference and no training dummy's timer.
 - Not modelled: suppressed references (vanish, feign death, the target's side of a missile in flight: spells have no travel time here), pets.
 
 Tests: `combat_refs_tests.rs` (lull, two opponents, PvP timeout, threat-less timeout, despawn, dead refused, Agony at launch, Polymorph without initial aggro).

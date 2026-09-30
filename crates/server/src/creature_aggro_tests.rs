@@ -491,6 +491,65 @@ fn leashed_creature_evades_and_its_attackers_stop_swinging() {
     assert_eq!(state(&app, spider), Some(CreatureState::Returning));
 }
 
+fn in_combat(app: &App, unit: Entity) -> bool {
+    app.world()
+        .get::<CombatStatus>(unit)
+        .is_some_and(|status| status.0)
+}
+
+/// `Creature::CanCreatureAttack`: a rooted spider cannot chase or leash, but a victim
+/// more than 103 yd from its home stops being a target once 10 s have passed since the
+/// spider last took direct damage; with none left it evades, ending the fight.
+#[test]
+fn a_rooted_creature_drops_a_far_victim_after_the_aggro_reset_time_and_evades() {
+    let mut app = aggro_app();
+    let spider = spawn_creature(&mut app, &FOREST_SPIDER, at(0.0, 0.0));
+    app.world_mut()
+        .entity_mut(spider)
+        .insert(crate::auras::AuraStatMods {
+            movement_speed: 0.0,
+            ..Default::default()
+        });
+    let player = spawn_player(&mut app, at(3.0, 0.0), 5);
+    attack(&mut app, player, spider);
+    run(&mut app, 2);
+    assert!(health(&app, spider) < 100.0, "the player hit it");
+
+    *app.world_mut().get_mut::<Position>(player).unwrap() = at(120.0, 0.0);
+    // 9 s after the hit: still engaged, though the player is out of reach.
+    run(&mut app, 180);
+    assert_eq!(state(&app, spider), pursuing(player));
+    assert!(in_combat(&app, player));
+
+    run(&mut app, 30);
+    // Evaded: home already (rooted at its spawn point), so Returning is brief.
+    assert!(matches!(
+        state(&app, spider),
+        Some(CreatureState::Returning | CreatureState::Idle)
+    ));
+    assert!(app.world().get::<ThreatTable>(spider).unwrap().is_empty());
+    assert!(!in_combat(&app, player) && !in_combat(&app, spider));
+}
+
+#[test]
+fn a_rooted_creature_keeps_a_victim_within_reach_of_its_home() {
+    let mut app = aggro_app();
+    let spider = spawn_creature(&mut app, &FOREST_SPIDER, at(0.0, 0.0));
+    app.world_mut()
+        .entity_mut(spider)
+        .insert(crate::auras::AuraStatMods {
+            movement_speed: 0.0,
+            ..Default::default()
+        });
+    let player = spawn_player(&mut app, at(3.0, 0.0), 5);
+    attack(&mut app, player, spider);
+    run(&mut app, 2);
+    *app.world_mut().get_mut::<Position>(player).unwrap() = at(60.0, 0.0);
+    run(&mut app, 400);
+    assert_eq!(state(&app, spider), pursuing(player));
+    assert!(in_combat(&app, player));
+}
+
 #[test]
 fn killed_creature_forgets_its_fight() {
     let mut app = aggro_app();

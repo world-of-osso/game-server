@@ -145,7 +145,18 @@ fn mounting_is_blocked_through_a_lull_in_a_fight_and_allowed_once_the_creature_d
         current: 100.0,
         max: 100.0,
     };
-    let player = app.world_mut().spawn(health).id();
+    let player = app
+        .world_mut()
+        .spawn((
+            health,
+            shared::components::Player {
+                name: "Rider".into(),
+                race: 1,
+                class: 1,
+                appearance: Default::default(),
+            },
+        ))
+        .id();
     let wolf = app
         .world_mut()
         .spawn((health, shared::components::ThreatTable::default()))
