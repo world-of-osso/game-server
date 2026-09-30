@@ -1,5 +1,9 @@
 # Wiki Log
 
+## [2026-09-30] systems | Read-only economy admin snapshot
+
+Updated [[bot-economy]] with `game-server-admin economy-status`, snapshot fields, copper/timestamp units and missing-initialization errors. Exact-value state and CLI tests added; live server diagnosis remains main-owned, with no economics tuning or data mutation.
+
 ## [2026-09-30] reference | Live GameObject admin lookup
 
 Updated [[dev-commands]] with read-only `game-object-info <map_id> <instance_id> <entry>`: runtime entity bits and WoW coordinates for normal mailbox interaction, never inferred from spawn GUIDs. Targeted tests cover concrete mailbox output, map/copy/entry filtering, and not-found results; live server/CLI integration remains main-owned.

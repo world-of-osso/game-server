@@ -52,6 +52,8 @@ struct AdminResources<'w, 's> {
     inventory_updates: ResMut<'w, crate::gold::GoldUpdateQueue>,
     changed_mailboxes: ResMut<'w, crate::mail::ChangedMailboxes>,
     instances: crate::maps::difficulty::AdminInstances<'w, 's>,
+    economy: Option<Res<'w, crate::economy::Economy>>,
+    economy_config: Option<Res<'w, crate::economy::Config>>,
 }
 
 /// Queries needed by the admin IPC dispatch loop.
@@ -109,6 +111,12 @@ fn dispatch_resource_commands(
     db: &persistence::GameDatabase,
     res: &mut AdminResources,
 ) -> Option<AdminResponse> {
+    if let AdminRequest::EconomyStatus = request {
+        return Some(crate::economy::admin_status(
+            res.economy.as_deref(),
+            res.economy_config.as_deref(),
+        ));
+    }
     if let AdminRequest::CombatLog { last_seconds } = request {
         return Some(handle_combat_log(&res.combat_log, &res.time, *last_seconds));
     }
@@ -515,6 +523,7 @@ fn dispatch(
         AdminRequest::Revive { character_name } => {
             handle_revive(db, commands, players, &character_name)
         }
+        AdminRequest::EconomyStatus => AdminResponse::Error("economy not initialized".into()),
         // Answered by AdminInstances unless the map data is not loaded.
         AdminRequest::ClockAdvance { .. }
         | AdminRequest::InstanceLocks { .. }

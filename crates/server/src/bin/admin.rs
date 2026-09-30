@@ -199,6 +199,7 @@ enum AdminRequest {
         instance_id: u32,
         entry: u32,
     },
+    EconomyStatus,
     Ping,
 }
 
@@ -216,6 +217,9 @@ struct CombatLogSummary {
 
 #[derive(Debug, Serialize, Deserialize)]
 enum AdminResponse {
+    EconomyStatus {
+        status: serde_json::Value,
+    },
     CombatLogEntries {
         count: usize,
         entries: Vec<CombatLogSummary>,
@@ -424,6 +428,7 @@ fn main() {
 fn print_usage() {
     eprintln!("Usage:");
     eprintln!("  game-server-admin ping");
+    eprintln!("  game-server-admin economy-status");
     eprintln!("  game-server-admin list-accounts");
     eprintln!("  game-server-admin list-characters [username]");
     eprintln!("  game-server-admin find-character <name>");
@@ -482,6 +487,7 @@ fn parse_request(args: &[String]) -> AdminRequest {
             }
         }
         "ping" => AdminRequest::Ping,
+        "economy-status" => AdminRequest::EconomyStatus,
         "list-accounts" => AdminRequest::ListAccounts,
         "list-characters" => parse_list_characters(args),
         "find-character" => parse_find_character(args),
@@ -948,6 +954,25 @@ mod tests {
 
     fn args(words: &[&str]) -> Vec<String> {
         words.iter().map(|word| word.to_string()).collect()
+    }
+
+    #[test]
+    fn economy_status_parses_read_only_request() {
+        let request = parse_request(&args(&["game-server-admin", "economy-status"]));
+        assert_eq!(
+            serde_json::to_value(request).unwrap(),
+            serde_json::json!("EconomyStatus")
+        );
+        let response: AdminResponse = serde_json::from_value(serde_json::json!({
+            "EconomyStatus": { "status": { "last_cycle": 60, "merchants": [] } }
+        }))
+        .unwrap();
+        assert_eq!(
+            serde_json::to_value(response).unwrap(),
+            serde_json::json!({
+                "EconomyStatus": { "status": { "last_cycle": 60, "merchants": [] } }
+            })
+        );
     }
 
     #[test]

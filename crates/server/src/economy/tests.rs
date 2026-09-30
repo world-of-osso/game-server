@@ -2,6 +2,82 @@ use super::*;
 use crate::persistence;
 use model::{MerchantState, Recipe, StockBatch};
 
+#[test]
+fn economy_status_reports_exact_state_without_mutation() {
+    let (mut config, mut state) = fixture();
+    config.merchants[0].entry = 1295;
+    config.merchants[0].capital_limit = 9000;
+    state.merchants.clear();
+    state.merchants.insert(
+        1295,
+        MerchantState {
+            gold: 4567,
+            stock: vec![StockBatch {
+                id: 12,
+                item_id: 2304,
+                count: 3,
+                ingredient_cost: 47,
+                unit_price: 100,
+                expires_at: 86460,
+            }],
+            materials: vec![model::MaterialLot {
+                item_id: 2318,
+                count: 7,
+                ingredient_cost: 123,
+            }],
+        },
+    );
+    state.merchants.insert(3532, MerchantState::default());
+    state.gatherers.insert(2318, 42);
+    state.last_cycle = 60;
+    state.next_batch_id = 13;
+    state.customer_spent = 234;
+    state.refund_issued = 56;
+    state.withdrawn = 78;
+    let economy = Economy::from_state(state.clone());
+    let response = admin_status(Some(&economy), Some(&config));
+    assert_eq!(
+        serde_json::to_value(response).unwrap(),
+        serde_json::json!({
+            "EconomyStatus": { "status": {
+                "last_cycle": 60,
+                "merchants": [
+                    { "entry": 1295, "gold": 4567, "capital_cap": 9000,
+                      "stock": [{ "id": 12, "item_id": 2304, "count": 3,
+                        "ingredient_cost": 47, "unit_price": 100, "expires_at": 86460 }],
+                      "materials": [{ "item_id": 2318, "count": 7, "ingredient_cost": 123 }] },
+                    { "entry": 3532, "gold": 0, "capital_cap": null, "stock": [], "materials": [] }
+                ],
+                "gatherers": { "2318": 42 }, "gatherer_count": 1,
+                "customer_spent": 234, "refund_issued": 56, "withdrawn": 78
+            }}
+        })
+    );
+    assert_eq!(economy.state, state);
+    assert_eq!(config.merchants[0].capital_limit, 9000);
+}
+
+#[test]
+fn economy_status_reports_missing_initialization() {
+    let (config, _) = fixture();
+    let uninitialized = Economy::default();
+    for (economy, config) in [
+        (None, Some(&config)),
+        (Some(&uninitialized), Some(&config)),
+        (Some(&uninitialized), None),
+    ] {
+        assert_eq!(
+            admin_status(economy, config),
+            crate::admin_types::AdminResponse::Error("economy not initialized".into())
+        );
+    }
+    let initialized = Economy::from_state(EconomyState::default());
+    assert_eq!(
+        admin_status(Some(&initialized), None),
+        crate::admin_types::AdminResponse::Error("economy config not loaded".into())
+    );
+}
+
 fn fixture() -> (Config, EconomyState) {
     let recipe = Recipe {
         spell_id: 2152,

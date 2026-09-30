@@ -16,6 +16,12 @@ Integration inventory observed September 30, 2026. The [tracked spec](../../spec
 - Persistence: [[persistence]] describes redb mutable storage and SQLite reference data. Model serialization is not atomic transaction/restart proof.
 - Client: `crates/client/src/bin/game_cli.rs` is the headless protocol surface. Live CLI proof must precede engine acceptance; native auction UI documentation is maintained separately in game-engine.
 
+## Read-only admin diagnosis
+
+`game-server-admin economy-status` uses the existing same-UID admin socket and prints a JSON snapshot of initialized in-memory state, not a fresh database read. `last_cycle` is the stored Unix-seconds cycle timestamp. Each merchant includes entry, gold, configured capital cap, stock batches (remaining ingredient cost, quantity, price and expiry) and paid material lots (remaining quantity and cost). A persisted merchant absent from current config has a null cap. Cumulative `customer_spent`, `refund_issued` and `withdrawn` retain model field names; money is in copper. `gatherers` maps item IDs to seller character IDs; `gatherer_count` counts those actors. Auction listing totals are not included.
+
+Missing/uninitialized Economy returns `economy not initialized`; missing Config returns `economy config not loaded`. The snapshot handler borrows both resources read-only, never runs a cycle, changes the clock or persists data. Tests assert exact concrete values and unchanged state; live server diagnosis remains main-owned.
+
 ## Evidence limits
 
 `economy/model_tests.rs` contains behavioral examples for crafting costs, expiry and shared capacity. No test execution or live acceptance evidence was supplied to this audit. All spec requirements therefore remain unchecked. Concurrent code changes must be evaluated at their own revision; this inventory is not a sign-off on those changes.
@@ -26,6 +32,7 @@ No economy importer path, complete bot runtime connection, current expansion-11 
 
 - [Bot economy spec](../../specs/bot-economy.md) — approved contract and acceptance gaps.
 - [Auction house spec](../../specs/auction-house.md) — global browse, flat selection and CLI-first latency contract.
+- [Economy snapshot](../../../crates/server/src/economy/mod.rs) and [admin dispatch](../../../crates/server/src/admin_ipc.rs) — read-only diagnosis.
 - [Economy model](../../../crates/server/src/economy/model.rs) — inspected accounting helpers.
 - [Model tests](../../../crates/server/src/economy/model_tests.rs) — candidate model coverage, not executed here.
 - [Auction queries](../../../crates/server/src/auction_house/queries.rs) — inspected search/paging boundary.

@@ -110,6 +110,45 @@ pub struct Economy {
     initialized: bool,
 }
 
+/// Snapshot only: do not initialize, cycle, persist or read the clock.
+pub(crate) fn admin_status(
+    economy: Option<&Economy>,
+    config: Option<&Config>,
+) -> crate::admin_types::AdminResponse {
+    use crate::admin_types::AdminResponse;
+    let Some(economy) = economy.filter(|economy| economy.initialized) else {
+        return AdminResponse::Error("economy not initialized".into());
+    };
+    let Some(config) = config else {
+        return AdminResponse::Error("economy config not loaded".into());
+    };
+    let state = &economy.state;
+    let merchants: Vec<_> = state
+        .merchants
+        .iter()
+        .map(|(&entry, merchant)| {
+            serde_json::json!({
+                "entry": entry,
+                "gold": merchant.gold,
+                "capital_cap": config.merchant(entry).map(|merchant| merchant.capital_limit),
+                "stock": merchant.stock,
+                "materials": merchant.materials,
+            })
+        })
+        .collect();
+    AdminResponse::EconomyStatus {
+        status: serde_json::json!({
+            "last_cycle": state.last_cycle,
+            "merchants": merchants,
+            "gatherers": state.gatherers,
+            "gatherer_count": state.gatherers.len(),
+            "customer_spent": state.customer_spent,
+            "refund_issued": state.refund_issued,
+            "withdrawn": state.withdrawn,
+        }),
+    }
+}
+
 pub struct EconomyPlugin;
 impl Economy {
     pub fn from_state(state: EconomyState) -> Self {

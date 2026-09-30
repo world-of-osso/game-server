@@ -21,6 +21,10 @@ Gatherer bots supply auction-house materials; merchant bots buy ingredients, cra
 - [ ] Unsold stock expires after 24 hours. Refund only the actual recorded ingredient expenditure attributable to the remaining stock, never sale price or prospective profit; sold units cannot also receive expiry refunds.
 - [ ] Merchant capital is capped; overflow is withdrawn rather than available for further spending.
 
+### Read-only diagnosis
+
+- [ ] `game-server-admin economy-status` reports last cycle, each merchant entry/gold/capital cap, stock batches with remaining ingredient cost, paid material lots, cumulative customer spending/refunds/withdrawals and gatherer actor totals through existing same-UID admin IPC. Missing initialization is an explicit error. No economic mutation, clock stepping or public protocol changes.
+
 ### Durability and acceptance
 
 - [ ] Ingredient purchases, crafting, stock sales, expiry refunds and capital withdrawals persist transactionally. Restart preserves stock, costs, balances and deadlines without lost or duplicated effects.
@@ -52,7 +56,9 @@ Observed integration points, not a claim that the bot pipeline is connected:
 
 ## Tests asserting this spec
 
-Candidate coverage only; no commands were run in this docs-only audit:
+Read-only diagnosis tests: `crates/server/src/economy/tests.rs` asserts exact concrete state and missing initialization; `crates/server/src/bin/admin.rs` asserts command parsing and response decoding.
+
+Other candidate coverage from the earlier docs-only audit:
 
 - `crates/server/src/economy/model_tests.rs` — model tests include shared capacity, recorded-cost expiry and crafting; not persistence, live protocol or importer proof.
 - `crates/server/src/auction_house_tests.rs` — auction tests; concurrent edits are not accepted proof until executed against their exact revision.

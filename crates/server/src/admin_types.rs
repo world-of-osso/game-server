@@ -234,12 +234,16 @@ pub enum AdminRequest {
         instance_id: u32,
         entry: u32,
     },
+    EconomyStatus,
     Ping,
 }
 
 /// IPC response from server to CLI.
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub enum AdminResponse {
+    EconomyStatus {
+        status: serde_json::Value,
+    },
     EquipmentListed {
         character_id: u64,
         character_name: String,

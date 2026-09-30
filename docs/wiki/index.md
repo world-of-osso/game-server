@@ -59,7 +59,7 @@ Server gameplay systems.
 | [[creature-aggro]] | AggroMode per template, level-scaled aggro radius, threat from damage/harmful spells, top-threat victim, evade (AzerothCore CreatureAI) |
 | [[inventory]] | Owner-only bag/equipment snapshots and deltas, bag placements and item-instance tables, Retail swap/split/destroy/equip validation, data gaps |
 | [[quests]] | Quest content load, AzerothCore accept/prerequisite/marker rules, per-player giver markers, kill and bag-item progress, turn-in rewards, quest log persistence and deltas |
-| [[bot-economy]] | Approved economy spec, inspected pure model and integration boundaries; runtime, restart, CLI/engine and latency proof outstanding; importer documented in [[economy-catalog]] |
+| [[bot-economy]] | Approved economy spec, integration boundaries and read-only admin economy-status snapshot; live runtime/restart/client/latency proof outstanding; importer in [[economy-catalog]] |
 | [[auction-house]] | Distinct global ItemID browse API, preserved flat AuctionID selection, source audit and pending CLI-first/native/request-response proof |
 | [[economy-catalog]] | Read-only world.db/TSM importer, explicit merchant assignments, u32 vendor-output exclusions with u64 input anchors, price provenance and honest Midnight mapping gaps |
 | [[merchant]] | Vendor lists from content_npc_vendor (references, limited stock restock), buy/sell/buyback (12 session slots), repair cost from AzerothCore MaxDurability + Retail DurabilityCosts/Quality |
