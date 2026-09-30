@@ -321,6 +321,75 @@ fn thread_cpu_ticks() -> u64 {
 }
 
 #[test]
+fn cached_item_matching_still_filters_each_inconsistent_snapshot() {
+    let mut auctions = HashMap::new();
+    for id in 1..=6 {
+        let mut auction = offer(id, 1, 3, Some(id * 100));
+        auction.item.name = "Iron sword".into();
+        auction.item.quality = 2;
+        auction.item.required_level = 10;
+        auction.faction = 1;
+        match id {
+            2 => auction.item.name = "Copper ore".into(),
+            3 => auction.item.quality = 3,
+            4 => auction.item.required_level = 30,
+            5 => auction.faction = 2,
+            _ => {}
+        }
+        auctions.insert(id, auction);
+    }
+    let mut query = text_query("IRON");
+    query.quality = Some(2);
+    query.max_level = Some(20);
+    query.faction = 1;
+    let result = browse(&auctions, &query);
+    assert_eq!(result.total_results, 1);
+    assert_eq!(result.items[0].total_quantity, 6);
+    assert_eq!(result.items[0].lowest_unit_price, 34);
+    query.text = "copper".into();
+    let result = browse(&auctions, &query);
+    assert_eq!(result.total_results, 1);
+    assert_eq!(result.items[0].name, "Copper ore");
+    assert_eq!(result.items[0].total_quantity, 3);
+    assert_eq!(result.items[0].lowest_unit_price, 67);
+}
+
+#[test]
+fn ascii_case_insensitive_search_preserves_literal_non_ascii_and_empty_queries() {
+    let mut auctions = HashMap::new();
+    for (id, name) in [(1, "Étain Sword"), (2, "étain Ore"), (3, "IRON Sword")] {
+        let mut auction = offer(id, id as u32, 3, Some(300));
+        auction.item.name = name.into();
+        auctions.insert(id, auction);
+    }
+    for (text, expected) in [
+        ("", vec![3, 1, 2]),
+        ("ÉTAIN", vec![1]),
+        ("étAIN", vec![2]),
+        ("iRoN", vec![3]),
+        ("n sW", vec![3, 1]),
+        ("much longer absent item name", vec![]),
+    ] {
+        let query = text_query(text);
+        let result = browse(&auctions, &query);
+        assert_eq!(
+            result.items.iter().map(|i| i.item_id).collect::<Vec<_>>(),
+            expected,
+            "{text:?}"
+        );
+        let flat = super::super::queries::search_auctions(&auctions, &query);
+        assert_eq!(
+            flat.results
+                .iter()
+                .map(|i| i.item.item_id)
+                .collect::<Vec<_>>(),
+            expected,
+            "flat {text:?}"
+        );
+    }
+}
+
+#[test]
 fn fractional_prices_sort_exactly_even_when_displayed_copper_ties() {
     let auctions = HashMap::from([
         (1, offer(1, 1, 2, Some(3))),

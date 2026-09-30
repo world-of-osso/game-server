@@ -84,6 +84,25 @@ impl<'a> BrowseGroup<'a> {
     }
 }
 
+/// Viewer requirements depend only on item ID and immutable template/viewer
+/// data, so cache them once. Snapshot fields still filter every auction.
+struct BrowseCandidate<'a> {
+    viewer_matches: bool,
+    group: Option<BrowseGroup<'a>>,
+}
+
+impl<'a> BrowseCandidate<'a> {
+    fn include_if_matching(&mut self, auction: &'a AuctionData, needle: &str) {
+        if !self.viewer_matches || !super::queries::name_matches(auction, needle) {
+            return;
+        }
+        match &mut self.group {
+            Some(group) => group.include(auction),
+            None => self.group = Some(BrowseGroup::from_auction(auction)),
+        }
+    }
+}
+
 pub(super) fn browse_for_viewer(
     auctions: &HashMap<u64, AuctionData>,
     query: &AuctionSearchQuery,
@@ -91,29 +110,46 @@ pub(super) fn browse_for_viewer(
     viewer: Option<(u8, u8, u16)>,
 ) -> AuctionBrowseResults {
     let now = unix_now();
+    let groups = group_matching_auctions(auctions, query, templates, viewer, now);
+    let total_results = u32::try_from(groups.len()).expect("distinct u32 item IDs fit u32 count");
+    AuctionBrowseResults {
+        query: query.clone(),
+        total_results,
+        items: page_groups(groups, query, now),
+    }
+}
+
+fn group_matching_auctions<'a>(
+    auctions: &'a HashMap<u64, AuctionData>,
+    query: &AuctionSearchQuery,
+    templates: Option<&crate::item_templates::ItemTemplates>,
+    viewer: Option<(u8, u8, u16)>,
+    now: u64,
+) -> Vec<BrowseGroup<'a>> {
     let needle = query.text.to_ascii_lowercase();
-    let mut groups: HashMap<u32, BrowseGroup<'_>> = HashMap::new();
+    let mut candidates: HashMap<u32, BrowseCandidate<'_>> = HashMap::new();
     for auction in auctions.values() {
         if auction.expires_at_unix_secs <= now || auction.stack_count == 0 {
             continue;
         }
-        if !super::queries::matches_search_query(auction, query, &needle)
-            || !super::handlers::auction_matches_viewer(auction, query, templates, viewer)
-        {
+        // Defer name matching until after the cached viewer requirement.
+        if !super::queries::matches_search_query(auction, query, "") {
             continue;
         }
-        groups
+        let candidate = candidates
             .entry(auction.item.item_id)
-            .and_modify(|group| group.include(auction))
-            .or_insert_with(|| BrowseGroup::from_auction(auction));
+            .or_insert_with(|| BrowseCandidate {
+                viewer_matches: super::handlers::auction_matches_viewer(
+                    auction, query, templates, viewer,
+                ),
+                group: None,
+            });
+        candidate.include_if_matching(auction, &needle);
     }
-    let total_results = u32::try_from(groups.len()).expect("distinct u32 item IDs fit u32 count");
-    let items = page_groups(groups.into_values().collect(), query, now);
-    AuctionBrowseResults {
-        query: query.clone(),
-        total_results,
-        items,
-    }
+    candidates
+        .into_values()
+        .filter_map(|candidate| candidate.group)
+        .collect()
 }
 
 fn page_groups(

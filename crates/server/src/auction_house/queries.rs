@@ -42,8 +42,14 @@ pub(super) fn matches_search_query(
         && name_matches(auction, needle)
 }
 
-fn name_matches(auction: &AuctionData, needle: &str) -> bool {
-    needle.is_empty() || auction.item.name.to_ascii_lowercase().contains(needle)
+pub(super) fn name_matches(auction: &AuctionData, needle: &str) -> bool {
+    needle.is_empty()
+        || auction
+            .item
+            .name
+            .as_bytes()
+            .windows(needle.len())
+            .any(|window| window.eq_ignore_ascii_case(needle.as_bytes()))
 }
 
 fn quality_matches(auction: &AuctionData, query: &AuctionSearchQuery) -> bool {
