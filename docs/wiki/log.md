@@ -1,5 +1,9 @@
 # Wiki Log
 
+## [2026-09-30] systems | Chains, bouncy missiles, spell reflection
+
+Updated [[spell-casting]]: chain targeting with per-jump amplitude, shared target selection for effects with identical targets, `SPELL_ATTR4_BOUNCY_CHAIN_MISSILES` timing, spell reflection and triggered spells ignoring their explicit target's relation.
+
 ## [2026-09-30] systems | Missile targets engage at impact
 
 Updated [[combat]]. `CombatRefs` tracks per-side suppression: a spell's launch puts only the caster in combat (TC `SetInCombatWith(target, true)`), the hit engages the target. Admin `set-level` on an online character now refills health and mana (`GiveLevel` → `SetFullHealth`). The trade tests lost their process-global resolution counter, which other trade apps in the parallel suite bumped.
