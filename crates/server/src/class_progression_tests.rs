@@ -1165,3 +1165,32 @@ fn paladin_learns_boundless_conviction_for_five_holy_power() {
     // 26101, AcquireMethod 2.
     assert!(known_ids(&classes, HUMAN, PALADIN, 10, SPEC_RETRIBUTION).contains(&115675));
 }
+
+/// `.character level` resets XP to 0 whether the character is online (SetXP(0)) or not
+/// (CHAR_UPD_LEVEL `xp = 0`): cs_character.cpp:770-792.
+#[test]
+fn admin_set_level_resets_xp_online_and_offline() {
+    use bevy::ecs::system::RunSystemOnce;
+
+    use crate::admin_handlers::handle_set_level;
+    use crate::persistence_progression::{load_xp, save_xp};
+
+    let db = temp_database();
+    let (online, _) = persistence::create_character(&db, 1, "Uther", HUMAN, PALADIN).unwrap();
+    let (offline, _) = persistence::create_character(&db, 1, "Turalyon", HUMAN, PALADIN).unwrap();
+    save_xp(&db, online, 500);
+    save_xp(&db, offline, 700);
+    let mut app = App::new();
+    app.insert_resource(GameDatabase { db });
+    app.world_mut()
+        .spawn((ClientId(online), Level(1), UnitLevel(1)));
+    for name in ["Uther", "Turalyon"] {
+        app.world_mut()
+            .run_system_once(move |db: Res<GameDatabase>, mut commands: Commands| {
+                handle_set_level(&db, &mut commands, name, 5)
+            })
+            .unwrap();
+    }
+    let db = &app.world().resource::<GameDatabase>().db;
+    assert_eq!((load_xp(db, online), load_xp(db, offline)), (0, 0));
+}
