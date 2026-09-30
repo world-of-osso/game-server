@@ -1,6 +1,14 @@
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::{
+    cmp::Ordering,
+    collections::BinaryHeap,
+    time::{SystemTime, UNIX_EPOCH},
+};
 
 use super::*;
+
+#[cfg(test)]
+#[path = "search_first_page_tests.rs"]
+mod search_first_page_tests;
 
 pub(super) fn search_auctions(
     auctions: &HashMap<u64, AuctionData>,
@@ -15,14 +23,18 @@ pub(super) fn search_auctions_matching(
     additional_match: impl Fn(&AuctionData) -> bool,
 ) -> AuctionSearchResults {
     let needle = query.text.to_ascii_lowercase();
-    let mut listings: Vec<_> = auctions
+    let listings = auctions
         .values()
         .filter(|auction| matches_search_query(auction, query, &needle))
-        .filter(|auction| additional_match(auction))
-        .collect();
-    let total_results = listings.len() as u32;
+        .filter(|auction| additional_match(auction));
     let now = unix_now();
-    let results = paged_listings(&mut listings, query, now);
+    let (total_results, results) = if query.page == 0 {
+        first_page_listings(listings, query, now)
+    } else {
+        let mut listings: Vec<_> = listings.collect();
+        let total_results = listings.len() as u32;
+        (total_results, paged_listings(&mut listings, query, now))
+    };
     AuctionSearchResults {
         query: query.clone(),
         total_results,
@@ -69,6 +81,61 @@ fn level_matches(auction: &AuctionData, query: &AuctionSearchQuery) -> bool {
 
 fn faction_matches(auction: &AuctionData, query: &AuctionSearchQuery) -> bool {
     query.faction == 0 || auction.faction == 0 || auction.faction == query.faction
+}
+
+struct RankedListing<'a> {
+    auction: &'a AuctionData,
+    query: &'a AuctionSearchQuery,
+    now: u64,
+}
+
+impl PartialEq for RankedListing<'_> {
+    fn eq(&self, other: &Self) -> bool {
+        self.cmp(other) == Ordering::Equal
+    }
+}
+
+impl Eq for RankedListing<'_> {}
+
+impl PartialOrd for RankedListing<'_> {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for RankedListing<'_> {
+    fn cmp(&self, other: &Self) -> Ordering {
+        compare_listing(self.auction, other.auction, self.query, self.now)
+    }
+}
+
+fn first_page_listings<'a>(
+    listings: impl Iterator<Item = &'a AuctionData>,
+    query: &'a AuctionSearchQuery,
+    now: u64,
+) -> (u32, Vec<AuctionListingSummary>) {
+    let page_size = query.page_size.clamp(1, MAX_PAGE_SIZE) as usize;
+    let mut best = BinaryHeap::with_capacity(page_size);
+    let mut total_results = 0;
+    for auction in listings {
+        total_results += 1;
+        let candidate = RankedListing {
+            auction,
+            query,
+            now,
+        };
+        if best.len() < page_size {
+            best.push(candidate);
+        } else if best.peek().is_some_and(|worst| candidate < *worst) {
+            *best.peek_mut().expect("full first-page heap") = candidate;
+        }
+    }
+    let results = best
+        .into_sorted_vec()
+        .into_iter()
+        .map(|listing| to_listing_summary_at(listing.auction, now))
+        .collect();
+    (total_results, results)
 }
 
 fn paged_listings(
