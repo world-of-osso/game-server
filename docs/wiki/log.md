@@ -1,5 +1,9 @@
 # Wiki Log
 
+## [2026-09-30] systems | Missile targets engage at impact
+
+Updated [[combat]]. `CombatRefs` tracks per-side suppression: a spell's launch puts only the caster in combat (TC `SetInCombatWith(target, true)`), the hit engages the target. Admin `set-level` on an online character now refills health and mana (`GiveLevel` → `SetFullHealth`). The trade tests lost their process-global resolution counter, which other trade apps in the parallel suite bumped.
+
 ## [2026-09-30] systems | Spell travel time
 
 Updated [[spell-casting]] and [[combat]]. Spells with a missile `Speed` now land after their flight (TrinityCore `Spell::HandleDelayed`, `spell_cast/missiles.rs`): `SpellGo`, `CastSuccess` and combat at launch; damage, auras, threat, procs and the combat log at the hit. Before, Frostbolt's damage number showed about 0.4 s before the client's missile arrived. Also: periodic ticks start no combat (TC `DealDamage`), so a DoT alone no longer keeps a dummy or PvP fight going, and creatures drop victims more than 103 yd from home 10 s after their last direct damage (TC `CanCreatureAttack`).
