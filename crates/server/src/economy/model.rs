@@ -47,6 +47,82 @@ pub struct StockBatch {
 pub struct MerchantState {
     pub gold: u64,
     pub stock: Vec<StockBatch>,
+    pub materials: Vec<MaterialLot>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Encode, Decode)]
+pub struct MaterialLot {
+    pub item_id: u32,
+    pub count: u32,
+    /// Total paid cost still attributable to unused ingredients.
+    pub ingredient_cost: u64,
+}
+
+/// Craft from already-paid lots in purchase order, retaining unused quantities and costs.
+/// Errors leave materials, stock and gold unchanged; crafting never charges the wallet.
+pub fn craft_from_materials(
+    state: &mut MerchantState,
+    config: &MerchantConfig,
+    recipe: &Recipe,
+    unit_price: u64,
+    now: u64,
+    batch_id: u64,
+) -> Result<(), String> {
+    let expires_at = validate_craft(state, config, recipe, unit_price, now, batch_id)?;
+    let mut materials = state.materials.clone();
+    let ingredient_cost =
+        recipe
+            .ingredients
+            .iter()
+            .try_fold(0_u64, |total, &(item_id, count)| {
+                let cost = consume_material_lots(&mut materials, item_id, count)?;
+                total
+                    .checked_add(cost)
+                    .ok_or_else(|| "consumed ingredient cost overflows".to_string())
+            })?;
+    materials.retain(|lot| lot.count > 0);
+    state.stock.push(StockBatch {
+        id: batch_id,
+        item_id: recipe.output_item_id,
+        count: recipe.output_count,
+        ingredient_cost,
+        unit_price,
+        expires_at,
+    });
+    state.materials = materials;
+    Ok(())
+}
+
+fn consume_material_lots(
+    materials: &mut [MaterialLot],
+    item_id: u32,
+    mut count: u32,
+) -> Result<u64, String> {
+    let mut cost = 0_u64;
+    for lot in materials
+        .iter_mut()
+        .filter(|lot| lot.item_id == item_id && lot.count > 0)
+    {
+        if count == 0 {
+            break;
+        }
+        let consumed = count.min(lot.count);
+        let consumed_cost = prorate_cost(lot.ingredient_cost, consumed, lot.count);
+        cost = cost
+            .checked_add(consumed_cost)
+            .ok_or_else(|| "consumed ingredient cost overflows".to_string())?;
+        lot.count -= consumed;
+        lot.ingredient_cost -= consumed_cost;
+        count -= consumed;
+    }
+    if count != 0 {
+        return Err(format!("missing {count} units of ingredient {item_id}"));
+    }
+    Ok(cost)
+}
+
+fn prorate_cost(cost: u64, count: u32, total_count: u32) -> u64 {
+    (u128::from(cost) * u128::from(count) / u128::from(total_count)) as u64
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, Encode, Decode)]
@@ -104,9 +180,9 @@ pub fn sell_stock(
         .unit_price
         .checked_mul(u64::from(count))
         .ok_or_else(|| format!("sale price overflows for batch {batch_id}"))?;
-    let sold_cost = u128::from(batch.ingredient_cost) * u128::from(count) / u128::from(batch.count);
+    let sold_cost = prorate_cost(batch.ingredient_cost, count, batch.count);
     let item_id = batch.item_id;
-    batch.ingredient_cost -= sold_cost as u64;
+    batch.ingredient_cost -= sold_cost;
     batch.count -= count;
     if batch.count == 0 {
         state.stock.remove(index);
@@ -125,18 +201,11 @@ pub fn craft_stock(
     now: u64,
     batch_id: u64,
 ) -> Result<(), String> {
-    validate_recipe(config, recipe)?;
-    validate_craft_capacity(state, config.capacity, recipe.output_count, batch_id)?;
-    if unit_price == 0 {
-        return Err("crafted unit price must be positive".to_string());
-    }
+    let expires_at = validate_craft(state, config, recipe, unit_price, now, batch_id)?;
     let gold = state
         .gold
         .checked_sub(total_ingredient_cost)
         .ok_or_else(|| "merchant cannot afford ingredients".to_string())?;
-    let expires_at = now
-        .checked_add(STOCK_LIFETIME_SECONDS)
-        .ok_or_else(|| "stock expiry timestamp overflows".to_string())?;
     state.stock.push(StockBatch {
         id: batch_id,
         item_id: recipe.output_item_id,
@@ -147,6 +216,23 @@ pub fn craft_stock(
     });
     state.gold = gold;
     Ok(())
+}
+
+fn validate_craft(
+    state: &MerchantState,
+    config: &MerchantConfig,
+    recipe: &Recipe,
+    unit_price: u64,
+    now: u64,
+    batch_id: u64,
+) -> Result<u64, String> {
+    validate_recipe(config, recipe)?;
+    validate_craft_capacity(state, config.capacity, recipe.output_count, batch_id)?;
+    if unit_price == 0 {
+        return Err("crafted unit price must be positive".to_string());
+    }
+    now.checked_add(STOCK_LIFETIME_SECONDS)
+        .ok_or_else(|| "stock expiry timestamp overflows".to_string())
 }
 
 fn validate_recipe(config: &MerchantConfig, recipe: &Recipe) -> Result<(), String> {
