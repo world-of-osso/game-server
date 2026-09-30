@@ -32,7 +32,9 @@ Server creation, progression and six basic spells for classes 10, 12 and 13. Imp
 
 ## Known gaps (current cycle)
 
-- [ ] Live creation/casting through Godot and actual UDP remain main integration work; HostClient tests do not prove them.
+- [x] Live over UDP, 2026-09-30, private server on 5100: game-engine `godot/tests/new_class_live.gd` created a Human Monk, a Night Elf Demon Hunter and an Alliance Dracthyr Evoker through the Godot creation screens. They entered at level 1 in Northshire, level 8 in Shadowglen and level 10 at the Stormwind flight master. Each was teleported to a Northshire Training Dummy, where Tiger Palm, Demon's Bite (25 Fury) and Living Flame (180 damage) hit. Captures are in game-engine `data/diagnostics/newclasses-2026-09-30/`.
+- [ ] Unimplemented effects in the six spells: Living Flame's Energizing Flame mana refund. Azure Strike picks the first extra target it finds, where TrinityCore picks at random. Spec `OverridesSpellID` is not applied: the level-8 baseline Demon's Bite and Chaos Strike stay known next to Havoc's versions, and both resolve.
+- [ ] The Death Knight (8) and other allied-race start levels are not applied.
 - [ ] Full class rotations, talent/proc parity and extra specialization effects are not proven by six basic spell tests.
 
 ## Out of scope
