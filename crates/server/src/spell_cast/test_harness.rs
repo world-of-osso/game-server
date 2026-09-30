@@ -62,6 +62,12 @@ pub(crate) fn power_table(data: &WorldData) -> PowerTypeTable {
     load_power_type_table(&conn).unwrap()
 }
 
+pub(crate) fn shapeshift_forms(data: &WorldData) -> crate::auras::shapeshift::ShapeshiftForms {
+    let conn =
+        Connection::open_with_flags(&data.powers_db, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+    crate::auras::shapeshift::load_shapeshift_forms(&conn).unwrap()
+}
+
 pub(crate) fn class_spells(data: &WorldData) -> ClassSpells {
     ClassSpells {
         classes: data
@@ -264,6 +270,7 @@ pub(crate) fn harness_with_plugins(
     let known = KnownSpells::fixture(spells.iter().map(|spell| spell.id).collect());
     app.insert_resource(SpellStore::fixture(spells));
     app.insert_resource(power_table(data));
+    app.insert_resource(shapeshift_forms(data));
     app.insert_resource(class_spells(data));
     app.insert_resource(crate::faction::world_db_faction_templates()?);
     let caster = spawn_player(&mut app, class, 0.0);

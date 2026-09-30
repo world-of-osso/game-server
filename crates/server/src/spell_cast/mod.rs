@@ -17,6 +17,7 @@ pub mod creature;
 pub mod effects;
 mod missiles;
 pub mod powers;
+pub mod runes;
 pub mod scripts;
 pub mod targets;
 #[cfg(test)]
@@ -78,10 +79,13 @@ impl Plugin for SpellCastPlugin {
                 FixedUpdate,
                 (
                     powers::init_player_powers,
+                    powers::update_max_powers,
                     powers::regenerate_powers,
+                    runes::regenerate_runes,
                     advance_casts.after(crate::networking::process_player_inputs),
                     missiles::resolve_due_hits,
                     powers::sync_unit_powers,
+                    runes::sync_unit_runes,
                 )
                     .chain(),
             )
@@ -1423,5 +1427,7 @@ fn complete_cast(world: &mut World, caster: Entity, spell_id: u32, target: Optio
     }
 }
 
+#[cfg(test)]
+mod class_resource_tests;
 #[cfg(test)]
 mod tests;
