@@ -68,6 +68,39 @@ fn fixture() -> (Config, EconomyState) {
 }
 
 #[test]
+fn economy_config_accepts_u64_input_prices_but_bounds_vendor_outputs() {
+    let (mut config, _) = fixture();
+    let high = u64::from(u32::MAX) + 10;
+    let input = config.markets.get_mut(&2318).unwrap();
+    input.anchor_price = high;
+    input.min_price = high;
+    input.max_price = high;
+    assert!(
+        config.validate().is_ok(),
+        "u64 AH ingredient prices are valid"
+    );
+    let output = config.markets.get_mut(&2304).unwrap();
+    output.anchor_price = u64::from(u32::MAX);
+    output.min_price = output.anchor_price;
+    output.max_price = output.anchor_price;
+    assert!(
+        config.validate().is_ok(),
+        "u32 maximum is a valid vendor quote"
+    );
+    config.markets.get_mut(&2304).unwrap().max_price += 1;
+    assert!(
+        config.validate().is_err(),
+        "overflowing vendor output must fail explicitly"
+    );
+    config.markets.get_mut(&2304).unwrap().max_price -= 1;
+    config.markets.get_mut(&2318).unwrap().popularity_bps = 10001;
+    assert!(
+        config.validate().is_err(),
+        "input popularity bounds remain independent of price width"
+    );
+}
+
+#[test]
 fn economy_cycle_buys_real_auction_materials_and_persists_crafted_stock() {
     let db = persistence::temp_database();
     let (config, mut state) = fixture();
