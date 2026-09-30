@@ -1,5 +1,9 @@
 # Wiki Log
 
+## [2026-09-30] reference | Owned auction load fixture
+
+Added [[auction-load-fixture]]: explicit ignored 300k-offer producer using real importer catalog, read-only item templates, `AuctionData` and central market commits. Documents atomic nonexisting-file ownership, reserved counters, complete reopen equality and meaningful grouped/ItemID second-page assertions. No production-policy or network-latency acceptance claim; main owns invocation and CLI proof.
+
 ## [2026-09-30] systems | Read-only economy admin snapshot
 
 Updated [[bot-economy]] with `game-server-admin economy-status`, snapshot fields, copper/timestamp units and missing-initialization errors. Exact-value state and CLI tests added; live server diagnosis remains main-owned, with no economics tuning or data mutation.

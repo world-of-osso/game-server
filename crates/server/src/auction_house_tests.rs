@@ -1,5 +1,8 @@
 use super::*;
 use crate::gold::GoldUpdateQueue;
+
+#[path = "auction_house_tests/load_fixture.rs"]
+mod load_fixture;
 use crate::persistence;
 
 /// Take a mail's money and items at a mailbox (`TakeInboxMoney`, `TakeInboxItem`).

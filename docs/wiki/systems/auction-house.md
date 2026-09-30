@@ -28,6 +28,10 @@ No acceptance box was checked. Shared serialization proves only encoded data sur
 
 User reports canonical master `a6a704f` saved clean and functional. This audit neither changes nor certifies that checkout. All server doc edits occur only in the server worktree; CLI/engine-owned docs remain untouched. Shared-protocol currently has only character-customization and protocol-check specs, no relevant AH documentation to update.
 
+## Load fixture
+
+[[auction-load-fixture]] documents the explicitly invoked disposable 300k-offer database producer, ownership guards and persistence/pagination assertions. Its scale is a test boundary, not production listing policy; actual CLI latency remains main's proof boundary.
+
 ## Sources
 
 - [Auction house spec](../../specs/auction-house.md) — exact requirements and pending acceptance.
