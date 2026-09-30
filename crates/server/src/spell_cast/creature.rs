@@ -13,8 +13,8 @@ use shared::components::Npc;
 use shared::protocol::{CombatLogKind, MissKind};
 
 use super::{
-    CastFailure, TargetPlan, cast_event, handled_effects, log_event, plan_targets, resolve_effects,
-    start_cast, targets, validate_target,
+    CastFailure, TargetPlan, cast_event, handled_effects, log_event, plan_targets, start_cast,
+    targets, validate_target,
 };
 use crate::creature_ai::CreatureState;
 use crate::spell_info::{SpellInfo, SpellStore};
@@ -60,7 +60,7 @@ pub(crate) fn creature_cast(
         world,
         cast_event(caster, explicit, &spell, CombatLogKind::CastSuccess),
     );
-    resolve_effects(world, caster, &spell, &plan, TRIGGERED_DEPTH);
+    super::missiles::launch(world, caster, &spell, plan, TRIGGERED_DEPTH);
     Ok(())
 }
 

@@ -17,8 +17,7 @@
 //! (`spell_cast::starts_combat`, Spell.cpp:8538-8541), before any damage.
 //!
 //! Not modelled: suppressed references (vanish, feign death, the target's side of a
-//! missile in flight: spells have no travel time here, so launch and hit are one
-//! moment), pets and guardians.
+//! missile in flight: here the target enters combat at launch too), pets and guardians.
 
 use std::collections::HashMap;
 

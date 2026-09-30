@@ -611,7 +611,8 @@ fn spell_damage_on_neutral_creature_puts_the_damage_on_its_threat_list() {
     };
     let boar = spawn_harness_boar(&mut h, 20.0);
     h.cast_and_deliver(FIREBALL, Some(boar));
-    h.advance(40);
+    // 1.75 s cast, then 20 yd at 45 yd/s (0.44 s).
+    h.advance(50);
     // SP coefficient 3.8812 × spell power 100 = 388 ± 2.5%.
     let damage = 5000.0 - h.health(boar);
     assert!(

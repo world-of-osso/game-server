@@ -357,10 +357,33 @@ fn a_session_against_a_creature_ends_at_its_death_not_five_seconds_later() {
     let current = latest_current(&mut client);
     assert!(!current.active);
     assert_eq!(current.total_amount, first + second);
-    // From the first hit to the kill: one Frostbolt cycle (63 frames, 3.15 s).
-    assert!((3.0..3.3).contains(&current.duration_secs), "{current:?}");
+    // From the first launch to the kill: one Frostbolt cycle (63 frames, 3.15 s) plus
+    // the flight at 3 yd (counted as 5 yd: 5 / 35 = 0.14 s).
+    assert!((3.2..3.4).contains(&current.duration_secs), "{current:?}");
     let dps = current.sources[0].amount_per_second;
     assert!((dps - (first + second) as f32 / current.duration_secs).abs() < 1e-3);
+}
+
+#[test]
+fn a_one_shot_kill_lasts_the_missile_s_flight() {
+    let Some(mut client) = frostbolt_client() else {
+        return;
+    };
+    make_fighting_creature(&mut client.h);
+    let npc = client.h.npc;
+    let world = client.h.app.world_mut();
+    *world.get_mut::<Position>(npc).unwrap() = Position {
+        x: 20.0,
+        y: 0.0,
+        z: 0.0,
+    };
+    world.get_mut::<Health>(npc).unwrap().current = 1.0;
+    client.frostbolt_hit();
+    client.advance(5);
+    let current = latest_current(&mut client);
+    assert!(!current.active);
+    // Combat from the launch to the kill: 20 yd / 35 yd/s = 0.571 s.
+    assert!((0.5..=0.65).contains(&current.duration_secs), "{current:?}");
 }
 
 #[test]

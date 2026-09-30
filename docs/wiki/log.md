@@ -1,5 +1,9 @@
 # Wiki Log
 
+## [2026-09-30] systems | Spell travel time
+
+Updated [[spell-casting]] and [[combat]]. Spells with a missile `Speed` now land after their flight (TrinityCore `Spell::HandleDelayed`, `spell_cast/missiles.rs`): `SpellGo`, `CastSuccess` and combat at launch; damage, auras, threat, procs and the combat log at the hit. Before, Frostbolt's damage number showed about 0.4 s before the client's missile arrived. Also: periodic ticks start no combat (TC `DealDamage`), so a DoT alone no longer keeps a dummy or PvP fight going, and creatures drop victims more than 103 yd from home 10 s after their last direct damage (TC `CanCreatureAttack`).
+
 ## [2026-09-30] systems | Combat references
 
 Updated [[combat]] (new Combat State section) and [[spell-casting]]. Combat is now TrinityCore's `CombatManager`: pairwise references, no timeout against a creature with a threat list, 5 s for PvP and threat-less creatures (training dummies), and `combat_stop` ends both sides. Before, every unit had its own 5 s timer after its last hit, refreshed every tick while it had `AutoAttack`: a caster auto-attacking a dummy from range stayed in combat 5 s past the dummy's evade (a 10 s tail on one Frostbolt), a kill left 5 s of combat, and a lull over 5 s in a real fight dropped combat. The damage meter's session duration is combat time, so its DPS followed.

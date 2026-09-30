@@ -46,4 +46,4 @@ Server-side spell casting in `crates/server/src/spell_cast/`: validation, cast b
 
 ## Out of scope
 
-- Learned-spell permissions (known-spells task), haste-scaled GCD, spell travel time, ground-targeted spells (target 87).
+- Learned-spell permissions (known-spells task), haste-scaled GCD, ground-targeted spells (target 87). Spell travel time: [spell-casting wiki](../wiki/systems/spell-casting.md) Execute.

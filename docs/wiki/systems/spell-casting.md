@@ -34,8 +34,8 @@ Server-authoritative spell casting in `crates/server/src/spell_cast/`. `SpellCas
    - plan all targets;
    - spend costs;
    - start cooldown and charges;
-   - log `CastSuccess`;
-   - resolve effects in index order, with each target's aura effects applied as one aura after the other effects;
+   - log `CastSuccess`, send `SpellGo`, and put caster and targets in combat (`starts_combat`, [[combat]] Combat State);
+   - resolve effects in index order, with each target's aura effects applied as one aura after the other effects. A spell with a missile `Speed` or `LaunchDelay` resolves on each unit target after its flight (`spell_cast/missiles.rs`, TrinityCore `Spell::HandleDelayed`): `LaunchDelay + max(max(distance, 5) / Speed, MinDuration)` (Spell.cpp:2486-2518), one missile for a destination spell (`CalculateDelayMomentForDst`, Spell.cpp:880-896). The delay is fixed at launch; a target that moved is still hit, one that died or left the world is not (Spell.cpp:2746-2748, 2807). Frostbolt at 20 yd lands 0.57 s after `SpellGo`; its damage, Chilled, threat, procs and combat log come then. Speed-0 spells resolve in the launch tick;
    - push proc events (cast success, one spell hit per distinct target) and spend charged spell mods.
    - A failed completion sends `CastFailed`.
 6. **Cancel:** stop requests, caster death and movement all remove `CastState`. An ended channel removes its caster's auras of that spell (`auras::channel_ended`) and the ritual objects it held (`meeting_stone::ritual::channel_ended`).
