@@ -175,3 +175,42 @@ fn evade_stops_out_of_range_attackers_and_they_leave_combat() {
         Some(&CombatStatus(false))
     );
 }
+
+/// Agony 980: instant harmful periodic damage, a tick every 2 s for 18 s.
+const AGONY: u32 = 980;
+
+/// TC `npc_training_dummy::DamageTaken`: periodic damage (`DOT`) does not restart an
+/// attacker's 5 s combat timer, and `Unit::DealDamage` starts no combat itself.
+#[test]
+fn periodic_ticks_do_not_keep_the_attacker_in_combat_with_the_dummy() {
+    let Some(mut h) = crate::spell_cast::test_harness::harness(Vec::new(), &[AGONY], 9) else {
+        return;
+    };
+    h.app
+        .world_mut()
+        .entity_mut(h.npc)
+        .insert(TrainingDummy::default());
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(CombatStatus(false));
+    h.cast_and_deliver(AGONY, Some(h.npc));
+    let caster_in_combat = |h: &Harness| {
+        h.app
+            .world()
+            .get::<CombatStatus>(h.caster)
+            .is_some_and(|status| status.0)
+    };
+    h.advance(90);
+    assert!(caster_in_combat(&h), "4.5 s after the cast");
+    h.advance(30);
+    assert!(
+        !caster_in_combat(&h),
+        "6 s after the cast, ticks notwithstanding"
+    );
+    let ticks = std::mem::take(&mut h.inbox.log)
+        .into_iter()
+        .filter(|event| event.kind == CombatLogKind::Damage && event.periodic)
+        .count();
+    assert!(ticks >= 2, "Agony ticked {ticks} times");
+}

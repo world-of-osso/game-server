@@ -479,11 +479,75 @@ fn leashed_creature_evades_and_its_attackers_stop_swinging() {
         app.world().get::<AutoAttack>(player).is_none(),
         "evade stops the player's auto-attack"
     );
+    assert_eq!(
+        app.world().get::<CombatStatus>(player),
+        Some(&CombatStatus(false)),
+        "the evade ends the player's combat at once (`CombatStop`)"
+    );
 
     // Evading creatures ignore damage and do not re-aggro on the way home.
     add_threat(app.world_mut(), spider, player, 50.0);
     run(&mut app, 1);
     assert_eq!(state(&app, spider), Some(CreatureState::Returning));
+}
+
+fn in_combat(app: &App, unit: Entity) -> bool {
+    app.world()
+        .get::<CombatStatus>(unit)
+        .is_some_and(|status| status.0)
+}
+
+/// `Creature::CanCreatureAttack`: a rooted spider cannot chase or leash, but a victim
+/// more than 103 yd from its home stops being a target once 10 s have passed since the
+/// spider last took direct damage; with none left it evades, ending the fight.
+#[test]
+fn a_rooted_creature_drops_a_far_victim_after_the_aggro_reset_time_and_evades() {
+    let mut app = aggro_app();
+    let spider = spawn_creature(&mut app, &FOREST_SPIDER, at(0.0, 0.0));
+    app.world_mut()
+        .entity_mut(spider)
+        .insert(crate::auras::AuraStatMods {
+            movement_speed: 0.0,
+            ..Default::default()
+        });
+    let player = spawn_player(&mut app, at(3.0, 0.0), 5);
+    attack(&mut app, player, spider);
+    run(&mut app, 2);
+    assert!(health(&app, spider) < 100.0, "the player hit it");
+
+    *app.world_mut().get_mut::<Position>(player).unwrap() = at(120.0, 0.0);
+    // 9 s after the hit: still engaged, though the player is out of reach.
+    run(&mut app, 180);
+    assert_eq!(state(&app, spider), pursuing(player));
+    assert!(in_combat(&app, player));
+
+    run(&mut app, 30);
+    // Evaded: home already (rooted at its spawn point), so Returning is brief.
+    assert!(matches!(
+        state(&app, spider),
+        Some(CreatureState::Returning | CreatureState::Idle)
+    ));
+    assert!(app.world().get::<ThreatTable>(spider).unwrap().is_empty());
+    assert!(!in_combat(&app, player) && !in_combat(&app, spider));
+}
+
+#[test]
+fn a_rooted_creature_keeps_a_victim_within_reach_of_its_home() {
+    let mut app = aggro_app();
+    let spider = spawn_creature(&mut app, &FOREST_SPIDER, at(0.0, 0.0));
+    app.world_mut()
+        .entity_mut(spider)
+        .insert(crate::auras::AuraStatMods {
+            movement_speed: 0.0,
+            ..Default::default()
+        });
+    let player = spawn_player(&mut app, at(3.0, 0.0), 5);
+    attack(&mut app, player, spider);
+    run(&mut app, 2);
+    *app.world_mut().get_mut::<Position>(player).unwrap() = at(60.0, 0.0);
+    run(&mut app, 400);
+    assert_eq!(state(&app, spider), pursuing(player));
+    assert!(in_combat(&app, player));
 }
 
 #[test]
@@ -501,6 +565,11 @@ fn killed_creature_forgets_its_fight() {
     attack(&mut app, player, spider);
     run(&mut app, 2);
     assert!(app.world().get::<DeathState>(spider).is_some());
+    assert_eq!(
+        app.world().get::<CombatStatus>(player),
+        Some(&CombatStatus(false)),
+        "the kill ends the player's only fight at once"
+    );
     assert_eq!(state(&app, spider), Some(CreatureState::Idle));
     assert!(app.world().get::<ThreatTable>(spider).unwrap().is_empty());
     let position = *app.world().get::<Position>(spider).unwrap();
@@ -542,7 +611,8 @@ fn spell_damage_on_neutral_creature_puts_the_damage_on_its_threat_list() {
     };
     let boar = spawn_harness_boar(&mut h, 20.0);
     h.cast_and_deliver(FIREBALL, Some(boar));
-    h.advance(40);
+    // 1.75 s cast, then 20 yd at 45 yd/s (0.44 s).
+    h.advance(50);
     // SP coefficient 3.8812 × spell power 100 = 388 ± 2.5%.
     let damage = 5000.0 - h.health(boar);
     assert!(

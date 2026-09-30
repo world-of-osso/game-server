@@ -283,6 +283,13 @@ mod combat {
         assert!(world.get::<DuelOpponent>(caster).is_none());
         assert!(world.get::<DuelOpponent>(opponent).is_none());
         assert!(world.get::<crate::combat::AutoAttack>(caster).is_none());
+        // The duel's end stops both duelists' combat at once, not 5 s after the hit.
+        for duelist in [caster, opponent] {
+            assert_eq!(
+                world.get::<shared::components::CombatStatus>(duelist),
+                Some(&shared::components::CombatStatus(false))
+            );
+        }
         assert!(
             world
                 .get::<crate::death::PlayerDeathState>(opponent)

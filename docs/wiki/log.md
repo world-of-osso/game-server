@@ -4,9 +4,21 @@
 
 Updated [[class-progression]] and [[spell-casting]] for Monk/DH/Evoker creation, start levels, progression and six basic spells; added `docs/specs/new-classes.md`. Local ChrClasses/ChrRaces verified max(class, race) levels (1/8/10 for ordinary Monk/DH/Dracthyr Evoker); locally extracted CharBaseInfo confirmed the supported-race gates, including Void Elf DH. ENERGIZE previously ignored point modifiers, so Tiger Palm gained zero Windwalker Chi. Existing modifiers now supply the authored +2. Additional authored Monk gates cover Kul Tiran 32, Earthen 84/85 and Haranir 86/91, using local race bits/levels and unchanged placeholder placement. Powers ownership, engine UI/live fixtures and delayed starting zones remain separate work.
 
+## [2026-09-30] systems | Spell travel time
+
+Updated [[spell-casting]] and [[combat]]. Spells with a missile `Speed` now land after their flight (TrinityCore `Spell::HandleDelayed`, `spell_cast/missiles.rs`): `SpellGo`, `CastSuccess` and combat at launch; damage, auras, threat, procs and the combat log at the hit. Before, Frostbolt's damage number showed about 0.4 s before the client's missile arrived. Also: periodic ticks start no combat (TC `DealDamage`), so a DoT alone no longer keeps a dummy or PvP fight going, and creatures drop victims more than 103 yd from home 10 s after their last direct damage (TC `CanCreatureAttack`).
+
+## [2026-09-30] systems | Class-resource replication
+
+Updated [[spell-casting]] with fractional power/rate, charged-point and indexed rune send contracts. Targeted RED exposed rates left nonzero for one tick at pool limits and stale ready-rune counts when only max changed. Runic Longevity also changes rune regen, so its full aura masked the latter failure; the count test isolates its max-power effect. End-to-end wire/client rendering remains main's integration gate.
+
 ## [2026-09-30] systems | Combat references
 
 Updated [[combat]] (new Combat State section) and [[spell-casting]]. Combat is now TrinityCore's `CombatManager`: pairwise references, no timeout against a creature with a threat list, 5 s for PvP and threat-less creatures (training dummies), and `combat_stop` ends both sides. Before, every unit had its own 5 s timer after its last hit, refreshed every tick while it had `AutoAttack`: a caster auto-attacking a dummy from range stayed in combat 5 s past the dummy's evade (a 10 s tail on one Frostbolt), a kill left 5 s of combat, and a lull over 5 s in a real fight dropped combat. The damage meter's session duration is combat time, so its DPS followed.
+
+## [2026-09-30] systems | Bot economy contract audit
+
+Created [bot-economy spec](../specs/bot-economy.md) and [[bot-economy]] integration inventory. Recorded user-approved auction terms, recipe/expansion constraints, shared finite capacity, bounded consumers, recorded-cost expiry refunds, capped capital and persistence/CLI-first/engine/latency gates. All acceptance remains unchecked: inspected model helpers and candidate tests are not runtime or restart proof. Economy importer and expansion-11/new Silvermoon data coverage remain unestablished. No numerical tuning promoted from fixtures to policy.
 
 ## [2026-09-29] systems | Polymorph
 
@@ -376,3 +388,7 @@ Players replicate `PlayerMotion`, Retail `MovementFlags` (FORWARD, BACKWARD, STR
 ## [2026-09-29] fix | Debuffs by effect positivity
 
 [[auras]]: an aura's harmful flag follows TrinityCore `_InitFlags` and ported effect positivity instead of caster hostility; Polymorph on the neutral Blackrock Spy replicated as a buff before.
+
+## [2026-09-30] feature | Class secondary resources
+
+[[spell-casting]], [[auras]]: aura max power (35/418; Holy Power 5, Chi 5/6), druid forms switch display power and model (MOD_SHAPESHIFT 36), Death Knight runes as per-rune cooldowns with 3 recharging, SET_POWER_POINT_CHARGE 494 charged combo points. Monk, Demon Hunter and Evoker remain unplayable, so Chi and Essence have no player yet.

@@ -966,6 +966,9 @@ pub(crate) fn deal_direct_damage(world: &mut World, attacker: Entity, victim: En
     mark_replication_changed(world.get_resource::<ReplicationDirtyQueue>(), victim);
     world.entity_mut(victim).insert(LastDamager(attacker));
     crate::combat_refs::set_in_combat_with(world, attacker, victim);
+    if loss > 0.0 {
+        crate::creature_aggro::note_damage_taken(world, victim);
+    }
     crate::creature_aggro::add_threat(world, victim, attacker, damage);
     crate::spell_cast::log_event(
         world,
@@ -1075,6 +1078,9 @@ fn record_swing_events(
     events.push(build_swing_event(attacker, target, &outcome));
     let damage = outcome.damage;
     commands.queue(move |world: &mut World| {
+        if damage > 0.0 {
+            crate::creature_aggro::note_damage_taken(world, target);
+        }
         crate::creature_aggro::add_threat(world, target, attacker, damage);
     });
     let rage_secs = match outcome.hand {

@@ -326,6 +326,33 @@ fn rage_decays_out_of_combat_only() {
     assert_eq!(powers.entries[0].current, rage.floor() as i32);
 }
 
+#[test]
+fn rage_holds_through_a_lull_in_a_fight_and_decays_once_the_creature_dies() {
+    let Some(mut h) = harness(Vec::new(), &[], 1) else {
+        return;
+    };
+    let (caster, npc) = (h.caster, h.npc);
+    h.app
+        .world_mut()
+        .entity_mut(npc)
+        .insert(shared::components::ThreatTable::default());
+    h.app
+        .world_mut()
+        .entity_mut(caster)
+        .insert(CombatStatus(false));
+    crate::combat_refs::set_in_combat_with(h.app.world_mut(), caster, npc);
+    h.set_power(PowerType::Rage, 500.0);
+    // 8 s without a hit: the fight with a creature does not time out.
+    h.advance(160);
+    assert_eq!(h.power(PowerType::Rage), 500.0, "no decay in combat");
+
+    crate::combat::combat_stop(h.app.world_mut(), npc);
+    h.advance(40);
+    // RegenPeace -12.5 raw/s over 2 s.
+    let rage = h.power(PowerType::Rage);
+    assert!((474.0..=476.0).contains(&rage), "rage {rage}");
+}
+
 /// Synthetic chain 900001 → 900002 → … each energizing 10 raw rage on the
 /// caster and triggering the next.
 fn trigger_chain(length: u32) -> Vec<SpellInfo> {

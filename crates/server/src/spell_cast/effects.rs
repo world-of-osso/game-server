@@ -430,7 +430,12 @@ pub fn deal_damage(
     world
         .entity_mut(target)
         .insert(crate::combat::LastDamager(ctx.caster));
-    crate::combat_refs::set_in_combat_with(world, ctx.caster, target);
+    // `Unit::DealDamage` (Unit.cpp:1085-1092) starts no combat itself: the spell's
+    // launch did (`spell_cast::starts_combat`), and threat does for creatures. So a
+    // periodic tick refreshes no PvP or training dummy combat.
+    if !periodic && loss > 0.0 {
+        crate::creature_aggro::note_damage_taken(world, target);
+    }
     crate::creature_aggro::add_threat(world, target, ctx.caster, amount);
     let mut event = log_amount(ctx, target, CombatLogKind::Damage);
     event.amount = amount as i32;

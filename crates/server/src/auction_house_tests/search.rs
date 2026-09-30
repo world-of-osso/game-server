@@ -270,6 +270,7 @@ fn sort_by_price_time_remaining_and_name() {
                 sort_field: field,
                 sort_dir: dir,
                 faction: 0,
+                ..Default::default()
             },
         )
     };
@@ -317,6 +318,7 @@ fn pagination_respects_page_boundaries() {
                 sort_field: AuctionSortField::Name,
                 sort_dir: AuctionSortDir::Asc,
                 faction: 0,
+                ..Default::default()
             },
         )
     };

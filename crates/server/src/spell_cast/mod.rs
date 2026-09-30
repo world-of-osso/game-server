@@ -15,7 +15,9 @@
 pub mod area_aura;
 pub mod creature;
 pub mod effects;
+mod missiles;
 pub mod powers;
+pub mod runes;
 pub mod scripts;
 pub mod targets;
 #[cfg(test)]
@@ -54,6 +56,10 @@ const CHANNEL_INTERRUPT_MOVING: u32 = 0x8 | 0x10;
 const SPELL_ATTR0_CANCELS_AUTO_ATTACK_COMBAT: u32 = 0x0010_0000;
 /// SPELL_ATTR1_IS_CHANNELLED / SPELL_ATTR1_IS_SELF_CHANNELLED.
 const SPELL_ATTR1_CHANNELED: u32 = 0x4 | 0x40;
+/// `SpellInfo::HasInitialAggro` (SpellInfo.cpp:1925-1928): none of these.
+const SPELL_ATTR1_NO_THREAT: u32 = 0x0000_0400;
+const SPELL_ATTR2_NO_INITIAL_THREAT: u32 = 0x0040_0000;
+const SPELL_ATTR4_NO_HARMFUL_THREAT: u32 = 0x0000_0010;
 /// `SpellPower.PowerType` -2 costs health.
 const POWER_HEALTH: i32 = -2;
 
@@ -63,6 +69,7 @@ impl Plugin for SpellCastPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<UnhandledEffects>()
             .init_resource::<ResolvingHits>()
+            .init_resource::<missiles::PendingSpellHits>()
             .add_systems(Startup, powers::load_power_type_table_startup)
             .add_systems(
                 Update,
@@ -72,9 +79,13 @@ impl Plugin for SpellCastPlugin {
                 FixedUpdate,
                 (
                     powers::init_player_powers,
+                    powers::update_max_powers,
                     powers::regenerate_powers,
+                    runes::regenerate_runes,
                     advance_casts.after(crate::networking::process_player_inputs),
+                    missiles::resolve_due_hits,
                     powers::sync_unit_powers,
+                    runes::sync_unit_runes,
                 )
                     .chain(),
             )
@@ -927,7 +938,7 @@ fn execute_cast(
             damage: 0.0,
         },
     );
-    resolve_effects(world, caster, spell, &plan, 0);
+    missiles::launch(world, caster, spell, plan, 0);
     spell_mods::consume_charges(world, caster, spell);
     // Spell::finish (Spell.cpp:4448-4450): some spells stop the caster's auto-attack.
     if attributes(spell, 0) & SPELL_ATTR0_CANCELS_AUTO_ATTACK_COMBAT != 0 {
@@ -937,6 +948,7 @@ fn execute_cast(
 }
 
 /// One handled effect's unit targets and destination.
+#[derive(Debug)]
 struct PlannedEffect {
     index: usize,
     units: Vec<Entity>,
@@ -1053,6 +1065,37 @@ fn resolve_effects(
         .and_then(|mut resolving| resolving.0.pop())
         .map_or_else(Vec::new, |frame| frame.damage);
     push_hit_events(world, caster, spell, plan, depth, &damage);
+}
+
+/// `Spell::PreprocessSpellLaunch` (Spell.cpp:8538-8541) puts the caster in combat with
+/// each unit its spell launches at, and `TargetInfo::PreprocessTarget`
+/// (Spell.cpp:2763-2764) the unit with the caster when it lands: a unit the caster can
+/// attack (TC: not `IsFriendlyTo`), a harmful spell (or one that dispels), with initial
+/// aggro or at an engaged unit. Both sides enter at launch (`missiles::launch`); TC
+/// suppresses the target's side until the missile lands, which is not modelled.
+pub(super) fn starts_combat(
+    world: &World,
+    caster: Entity,
+    target: Entity,
+    spell: &SpellInfo,
+) -> bool {
+    let initial_aggro = attributes(spell, 1) & SPELL_ATTR1_NO_THREAT == 0
+        && attributes(spell, 2) & SPELL_ATTR2_NO_INITIAL_THREAT == 0
+        && attributes(spell, 4) & SPELL_ATTR4_NO_HARMFUL_THREAT == 0;
+    let engaged = world
+        .get::<shared::components::CombatStatus>(target)
+        .is_some_and(|status| status.0);
+    let harmful = world
+        .get_resource::<SpellStore>()
+        .is_some_and(|store| crate::spell_info::positivity::negative_effects(store, spell) != 0)
+        || spell
+            .effects
+            .iter()
+            .any(|effect| effect.effect == effects::EFFECT_DISPEL);
+    caster != target
+        && targets::relation_matches(world, caster, target, Relation::Enemy)
+        && harmful
+        && (initial_aggro || engaged)
 }
 
 /// Distinct units of the plan, in plan order.
@@ -1210,7 +1253,7 @@ pub(crate) fn cast_triggered(
         return;
     };
     match plan_targets(world, caster, &spell, explicit) {
-        Ok(plan) => resolve_effects(world, caster, &spell, &plan, depth),
+        Ok(plan) => missiles::launch(world, caster, &spell, plan, depth),
         Err(failure) => warn!("Triggered spell {spell_id} skipped: {failure:?}"),
     }
 }
@@ -1400,5 +1443,7 @@ fn complete_cast(world: &mut World, caster: Entity, spell_id: u32, target: Optio
 
 #[cfg(test)]
 mod new_class_tests;
+#[cfg(test)]
+mod class_resource_tests;
 #[cfg(test)]
 mod tests;

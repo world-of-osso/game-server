@@ -48,7 +48,7 @@ Server gameplay systems.
 | [[talents]] | DB2 trait trees per class, TrinityCore-style config validation (visibility, gates, prerequisites, choice/hero nodes, level point budgets), `character_traits`, commit/snapshot messages, talent spells in KnownSpells |
 | [[spell-info]] | SpellStore (every DB2 spell, all effects/costs/options at DifficultyID 0, charge categories), ClassSpells, raw power-cost units, load cost |
 | [[character-stats]] | Retail 12.x player stats: SimC class/race base stats, CASC hppersta/basemp/combatratings, spec main stat and mastery, `StatModifiers` aura fold-in, base-mana costs, gaps (no gear/weapon data) |
-| [[spell-casting]] | Cast pipeline (validation, cast bars/channels, costs, GCD/cooldowns/charges), implicit targets, effect handlers, combat log scope, power pools/regen, UnitPowers, known-spell check |
+| [[spell-casting]] | Cast pipeline (validation, cast bars/channels, costs, GCD/cooldowns/charges), implicit targets, effect handlers, combat log scope, fractional power/rate and rune replication, known-spell check |
 | [[auras]] | Aura runtime: stacking/refresh, periodic ticks, procs, interrupt flags, dispel, crowd control, spell modifiers (class mask + SpellLabel), `StatModifiers` fold-in, UnitAuras replication, handled aura IDs |
 | [[tick-model]] | Observed server loop: 50ms runner/fixed cadence, schedule ownership, explicit ordering, completed player-death and broad auto-AFK scan reductions, maintenance gates, and IPC boundary |
 | [[zone-architecture]] | Maps 0 and 1 plus dungeon copies in one World by `InMap`; map transfers (NewWorld/WorldPortAck), InstanceManager, area trigger teleports; per-zone sets still proposed |
@@ -59,6 +59,7 @@ Server gameplay systems.
 | [[creature-aggro]] | AggroMode per template, level-scaled aggro radius, threat from damage/harmful spells, top-threat victim, evade (AzerothCore CreatureAI) |
 | [[inventory]] | Owner-only bag/equipment snapshots and deltas, bag placements and item-instance tables, Retail swap/split/destroy/equip validation, data gaps |
 | [[quests]] | Quest content load, AzerothCore accept/prerequisite/marker rules, per-player giver markers, kill and bag-item progress, turn-in rewards, quest log persistence and deltas |
+| [[bot-economy]] | Approved economy spec, inspected pure model and integration boundaries; runtime/importer, restart, CLI/engine and latency proof outstanding |
 | [[merchant]] | Vendor lists from content_npc_vendor (references, limited stock restock), buy/sell/buyback (12 session slots), repair cost from AzerothCore MaxDurability + Retail DurabilityCosts/Quality |
 | [[npc-interaction]] | Replicated `NpcFlags` (AzerothCore→Retail bits), `InteractNpc` validation (TrinityCore GetNPCIfCanInteractWith, 8.5 yd), gossip menus from world.db, role routing, per-frame session close, auction house gated on an auctioneer session and its faction house |
 | [[experience]] | Retail kill XP (gtXp, grey/zero-difference, elite, expansion /10, group split), QuestXP DB2 with low-level reduction, GiveXP level-ups, `character_xp`, health/mana refill, protocol gaps |
