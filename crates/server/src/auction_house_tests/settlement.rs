@@ -721,3 +721,58 @@ fn atomic_restart_rebid_outbid_buyout_persists_exact_escrow_and_delivery() {
     assert_eq!(delivery.len(), 1);
     assert_eq!(delivery[0].items[0].item.item_guid, 91);
 }
+
+#[test]
+fn atomic_concurrent_create_lists_source_item_and_charges_deposit_once() {
+    use std::sync::{Arc, Barrier};
+    let db = Arc::new(persistence::temp_database());
+    let (seller, _) = persistence::create_character_with_test_bags(&db, 1, "Seller", 1, 1).unwrap();
+    let mut inventory = persistence::load_inventory(&db, seller);
+    inventory.items[0].stack_count = 1;
+    let source = inventory.items[0].clone();
+    let initial_gold = inventory.gold;
+    persistence::save_inventory(&db, seller, &inventory);
+    let barrier = Arc::new(Barrier::new(8));
+    let workers: Vec<_> = (0..8)
+        .map(|_| {
+            let db = db.clone();
+            let barrier = barrier.clone();
+            let item_guid = source.item_guid;
+            std::thread::spawn(move || {
+                barrier.wait();
+                create_auction(
+                    &db,
+                    &mut AuctionHouseState::default(),
+                    seller,
+                    0,
+                    &CreateAuction {
+                        item_guid,
+                        stack_count: 1,
+                        min_bid: 100,
+                        buyout_price: Some(500),
+                        duration: AuctionDuration::Short,
+                    },
+                )
+                .success
+            })
+        })
+        .collect();
+    let successes = workers
+        .into_iter()
+        .map(|worker| worker.join().unwrap())
+        .filter(|success| *success)
+        .count();
+    assert_eq!(successes, 1);
+    assert_eq!(persistence::load_auctions(&db).len(), 1);
+    let inventory = persistence::load_inventory(&db, seller);
+    assert_eq!(
+        inventory.gold,
+        initial_gold - deposit_cost(source.vendor_sell_price, 1, AuctionDuration::Short)
+    );
+    assert!(
+        !inventory
+            .items
+            .iter()
+            .any(|item| item.item_guid == source.item_guid)
+    );
+}
