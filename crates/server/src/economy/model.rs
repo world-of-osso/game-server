@@ -192,34 +192,6 @@ pub fn sell_stock(
     Ok((item_id, price))
 }
 
-/// Craft one recipe run using the exact aggregate cost paid for its ingredients.
-/// The caller supplies the pre-purchase wallet and commits purchases and this state atomically.
-pub fn craft_stock(
-    state: &mut MerchantState,
-    config: &MerchantConfig,
-    recipe: &Recipe,
-    total_ingredient_cost: u64,
-    unit_price: u64,
-    now: u64,
-    batch_id: u64,
-) -> Result<(), String> {
-    let expires_at = validate_craft(state, config, recipe, unit_price, now, batch_id)?;
-    let gold = state
-        .gold
-        .checked_sub(total_ingredient_cost)
-        .ok_or_else(|| "merchant cannot afford ingredients".to_string())?;
-    state.stock.push(StockBatch {
-        id: batch_id,
-        item_id: recipe.output_item_id,
-        count: recipe.output_count,
-        ingredient_cost: total_ingredient_cost,
-        unit_price,
-        expires_at,
-    });
-    state.gold = gold;
-    Ok(())
-}
-
 fn validate_craft(
     state: &MerchantState,
     config: &MerchantConfig,

@@ -86,54 +86,6 @@ fn missing_materials_after_partial_consumption_leave_everything_unchanged() {
 }
 
 #[test]
-fn material_crafting_reuses_validation_without_mutation() {
-    let initial = MerchantState {
-        materials: vec![lot(300, 10, 21)],
-        ..merchant()
-    };
-    let cfg = config();
-    let wrong_expansion = Recipe {
-        expansion: 3,
-        ..recipe()
-    };
-    let invalid = Recipe {
-        ingredients: vec![(300, 0)],
-        ..recipe()
-    };
-    let invalid_cfg = MerchantConfig {
-        recipes: vec![invalid.clone()],
-        ..config()
-    };
-    let cases = [
-        (cfg.clone(), recipe(), 0, 10),
-        (cfg.clone(), recipe(), 8, u64::MAX),
-        (cfg.clone(), wrong_expansion, 8, 10),
-        (invalid_cfg, invalid, 8, 10),
-        (
-            MerchantConfig {
-                capacity: 2,
-                ..config()
-            },
-            recipe(),
-            8,
-            10,
-        ),
-    ];
-    for (cfg, r, price, now) in cases {
-        let mut state = initial.clone();
-        assert!(craft_from_materials(&mut state, &cfg, &r, price, now, 7).is_err());
-        assert_eq!(state, initial);
-    }
-    let mut state = initial;
-    craft_from_materials(&mut state, &cfg, &recipe(), 8, 10, 7).unwrap();
-    let before = state.clone();
-    for id in [7, 8] {
-        assert!(craft_from_materials(&mut state, &cfg, &recipe(), 8, 10, id).is_err());
-        assert_eq!(state, before);
-    }
-}
-
-#[test]
 fn material_cost_overflow_is_atomic_and_large_proration_is_exact() {
     let r = Recipe {
         ingredients: vec![(300, 1), (301, 1)],
@@ -206,27 +158,41 @@ fn batch() -> StockBatch {
 }
 
 #[test]
-fn crafting_pays_real_cost_and_sets_exact_day_expiry() {
-    let mut state = merchant();
-    craft_stock(&mut state, &config(), &recipe(), 10, 8, 10, 7).unwrap();
-    assert_eq!(state.gold, 90);
+fn crafting_consumes_paid_cost_and_sets_exact_day_expiry() {
+    let mut state = MerchantState {
+        materials: vec![lot(300, 2, 10)],
+        ..merchant()
+    };
+    craft_from_materials(&mut state, &config(), &recipe(), 8, 10, 7).unwrap();
+    assert_eq!(state.gold, 100);
+    assert!(state.materials.is_empty());
     assert_eq!(state.stock, vec![batch()]);
 }
 
 #[test]
 fn capacity_is_shared_across_products_without_reservation() {
-    let mut state = merchant();
+    let mut state = MerchantState {
+        materials: vec![lot(300, 4, 20)],
+        ..merchant()
+    };
     let mut other = recipe();
     other.spell_id = 101;
     other.output_item_id = 201;
     let mut cfg = config();
     cfg.recipes.push(other.clone());
-    craft_stock(&mut state, &cfg, &recipe(), 10, 8, 10, 7).unwrap();
+    let too_small = MerchantConfig {
+        capacity: 2,
+        ..cfg.clone()
+    };
     let before = state.clone();
-    assert!(craft_stock(&mut state, &cfg, &other, 10, 8, 10, 8).is_err());
+    assert!(craft_from_materials(&mut state, &too_small, &recipe(), 8, 10, 7).is_err());
+    assert_eq!(state, before);
+    craft_from_materials(&mut state, &cfg, &recipe(), 8, 10, 7).unwrap();
+    let before = state.clone();
+    assert!(craft_from_materials(&mut state, &cfg, &other, 8, 10, 8).is_err());
     assert_eq!(state, before);
     sell_stock(&mut state, 7, 1).unwrap();
-    craft_stock(&mut state, &cfg, &other, 10, 8, 10, 8).unwrap();
+    craft_from_materials(&mut state, &cfg, &other, 8, 10, 8).unwrap();
     assert_eq!(state.stock.iter().map(|b| b.count).sum::<u32>(), 5);
 }
 
@@ -322,10 +288,13 @@ fn credit_respects_limit_and_returns_exact_excess_without_overflow() {
 #[test]
 fn crafting_rejects_invalid_inputs_without_changing_state() {
     let cfg = config();
-    let mut state = merchant();
-    for (cost, price, now) in [(101, 8, 10), (10, 0, 10), (10, 8, u64::MAX)] {
+    let mut state = MerchantState {
+        materials: vec![lot(300, 4, 20)],
+        ..merchant()
+    };
+    for (price, now) in [(0, 10), (8, u64::MAX)] {
         let before = state.clone();
-        assert!(craft_stock(&mut state, &cfg, &recipe(), cost, price, now, 7).is_err());
+        assert!(craft_from_materials(&mut state, &cfg, &recipe(), price, now, 7).is_err());
         assert_eq!(state, before);
     }
     for invalid in [
@@ -355,12 +324,12 @@ fn crafting_rejects_invalid_inputs_without_changing_state() {
         },
     ] {
         let before = state.clone();
-        assert!(craft_stock(&mut state, &cfg, &invalid, 10, 8, 10, 7).is_err());
+        assert!(craft_from_materials(&mut state, &cfg, &invalid, 8, 10, 7).is_err());
         assert_eq!(state, before);
     }
-    craft_stock(&mut state, &cfg, &recipe(), 10, 8, 10, 7).unwrap();
+    craft_from_materials(&mut state, &cfg, &recipe(), 8, 10, 7).unwrap();
     let before = state.clone();
-    assert!(craft_stock(&mut state, &cfg, &recipe(), 10, 8, 10, 7).is_err());
+    assert!(craft_from_materials(&mut state, &cfg, &recipe(), 8, 10, 7).is_err());
     assert_eq!(state, before);
 }
 
@@ -598,9 +567,12 @@ fn crafting_validates_configured_recipe_not_only_membership() {
             recipes: vec![invalid.clone()],
             ..config()
         };
-        let mut state = merchant();
+        let mut state = MerchantState {
+            materials: vec![lot(300, 2, 10)],
+            ..merchant()
+        };
         let before = state.clone();
-        assert!(craft_stock(&mut state, &cfg, &invalid, 10, 8, 10, 7).is_err());
+        assert!(craft_from_materials(&mut state, &cfg, &invalid, 8, 10, 7).is_err());
         assert_eq!(state, before);
     }
 }
