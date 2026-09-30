@@ -519,7 +519,10 @@ fn dispatch(
         AdminRequest::ClockAdvance { .. }
         | AdminRequest::InstanceLocks { .. }
         | AdminRequest::InstanceUnbind { .. }
-        | AdminRequest::NpcInfo { .. } => AdminResponse::Error("instance data not loaded".into()),
+        | AdminRequest::NpcInfo { .. }
+        | AdminRequest::GameObjectInfo { .. } => {
+            AdminResponse::Error("instance data not loaded".into())
+        }
         AdminRequest::SetGold {
             character_name,
             copper,

@@ -20,7 +20,7 @@ External resources, tooling, data sources, development workflow.
 | Page | Summary |
 |------|---------|
 | [[reference-repos]] | AzerothCore (architecture + data), Rustbolt Core (Rust patterns), SpacetimeDB (rejected), wow-engine (sibling renderer) |
-| [[dev-commands]] | cargo run, cargo test, run-tests.sh, admin CLI via SSH, dependency versions |
+| [[dev-commands]] | cargo run, cargo test, run-tests.sh, admin CLI via SSH, live GameObject lookup, dependency versions |
 | [[crate-structure]] | Three crates (shared, server, client) with purpose and module breakdown |
 | [[code-health]] | 4,838 symbols, 88 untested production candidates, dead-code situation, top hotspots |
 

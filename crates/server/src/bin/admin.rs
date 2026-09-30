@@ -194,6 +194,11 @@ enum AdminRequest {
         instance_id: u32,
         entry: u32,
     },
+    GameObjectInfo {
+        map_id: u32,
+        instance_id: u32,
+        entry: u32,
+    },
     Ping,
 }
 
@@ -372,6 +377,9 @@ enum AdminResponse {
     NpcInfoList {
         lines: Vec<String>,
     },
+    GameObjectInfoList {
+        lines: Vec<String>,
+    },
     Pong,
     Error(String),
 }
@@ -458,6 +466,7 @@ fn print_usage() {
     eprintln!("  game-server-admin instance-locks <character_name>");
     eprintln!("  game-server-admin instance-unbind <character_name> <map_id|all>");
     eprintln!("  game-server-admin npc-info <map_id> <instance_id> <entry>");
+    eprintln!("  game-server-admin game-object-info <map_id> <instance_id> <entry>");
 }
 
 fn parse_request(args: &[String]) -> AdminRequest {
@@ -531,6 +540,14 @@ fn parse_request(args: &[String]) -> AdminRequest {
         "npc-info" => {
             require_args(args, 5, "npc-info <map_id> <instance_id> <entry>");
             AdminRequest::NpcInfo {
+                map_id: args[2].parse().expect("map_id must be a number"),
+                instance_id: args[3].parse().expect("instance_id must be a number"),
+                entry: args[4].parse().expect("entry must be a number"),
+            }
+        }
+        "game-object-info" => {
+            require_args(args, 5, "game-object-info <map_id> <instance_id> <entry>");
+            AdminRequest::GameObjectInfo {
                 map_id: args[2].parse().expect("map_id must be a number"),
                 instance_id: args[3].parse().expect("instance_id must be a number"),
                 entry: args[4].parse().expect("entry must be a number"),
@@ -931,6 +948,23 @@ mod tests {
 
     fn args(words: &[&str]) -> Vec<String> {
         words.iter().map(|word| word.to_string()).collect()
+    }
+
+    #[test]
+    fn game_object_info_parses_map_copy_and_entry() {
+        let request = parse_request(&args(&[
+            "game-server-admin",
+            "game-object-info",
+            "0",
+            "7",
+            "197134",
+        ]));
+        assert_eq!(
+            serde_json::to_value(request).unwrap(),
+            serde_json::json!({
+                "GameObjectInfo": { "map_id": 0, "instance_id": 7, "entry": 197134 }
+            })
+        );
     }
 
     #[test]

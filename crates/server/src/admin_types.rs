@@ -228,6 +228,12 @@ pub enum AdminRequest {
         instance_id: u32,
         entry: u32,
     },
+    /// Read-only lookup of live objects by entry in a map copy.
+    GameObjectInfo {
+        map_id: u32,
+        instance_id: u32,
+        entry: u32,
+    },
     Ping,
 }
 
@@ -438,6 +444,9 @@ pub enum AdminResponse {
         count: usize,
     },
     NpcInfoList {
+        lines: Vec<String>,
+    },
+    GameObjectInfoList {
         lines: Vec<String>,
     },
     Pong,

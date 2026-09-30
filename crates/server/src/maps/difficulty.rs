@@ -403,12 +403,106 @@ pub(crate) fn send_instance_saved(world: &mut World, players: &[Entity]) {
     }
 }
 
+#[cfg(test)]
+mod admin_game_object_tests {
+    use super::*;
+    use bevy::ecs::system::SystemState;
+    use shared::{components::Position, protocol::GameObjectInfo};
+
+    fn spawn_mailbox(world: &mut World, map: InMap, entry: u32) -> Entity {
+        world
+            .spawn((
+                GameObjectInfo {
+                    entry,
+                    go_type: shared::protocol::GAMEOBJECT_TYPE_MAILBOX,
+                    display_id: 1907,
+                    name: "Mailbox".into(),
+                    scale: 1.0,
+                },
+                // Runtime Position uses Bevy axes, not the reported WoW axes.
+                Position {
+                    x: -8810.13,
+                    y: 94.875,
+                    z: -646.57,
+                },
+                map,
+            ))
+            .id()
+    }
+
+    fn lookup(world: &mut World, entry: u32) -> crate::admin_types::AdminResponse {
+        let request = serde_json::from_value(serde_json::json!({
+            "GameObjectInfo": { "map_id": 0, "instance_id": 0, "entry": entry }
+        }))
+        .expect("admin IPC accepts game-object-info");
+        let db = GameDatabase {
+            db: crate::persistence::temp_database(),
+        };
+        let mut state = SystemState::<AdminInstances>::new(world);
+        state
+            .get_mut(world)
+            .unwrap()
+            .dispatch(&request, &db)
+            .expect("lookup handled")
+    }
+
+    #[test]
+    fn game_object_info_returns_live_entity_bits_and_world_coordinates() {
+        let mut world = World::new();
+        spawn_mailbox(&mut world, InMap::continent(1), 197134);
+        spawn_mailbox(
+            &mut world,
+            InMap {
+                map_id: 0,
+                instance_id: 7,
+            },
+            197134,
+        );
+        spawn_mailbox(&mut world, InMap::continent(0), 999);
+        let object = spawn_mailbox(&mut world, InMap::continent(0), 197134);
+        let response = lookup(&mut world, 197134);
+        assert_eq!(
+            serde_json::to_value(response).unwrap(),
+            serde_json::json!({
+                "GameObjectInfoList": { "lines": [format!(
+                    "Mailbox (entity {}) entry 197134 display 1907 map 0 instance 0 world (-8810.13, 646.57, 94.875)",
+                    object.to_bits()
+                )] }
+            })
+        );
+        assert_eq!(world.get::<Position>(object).unwrap().y, 94.875);
+        assert_eq!(world.entities().len(), 4);
+    }
+
+    #[test]
+    fn game_object_info_reports_missing_object_in_requested_map_copy() {
+        let mut world = World::new();
+        spawn_mailbox(&mut world, InMap::continent(1), 197134);
+        assert_eq!(
+            lookup(&mut world, 197134),
+            crate::admin_types::AdminResponse::Error(
+                "game object entry 197134 not found in map 0 instance 0".into()
+            )
+        );
+    }
+}
+
 /// Admin commands on the lock clock and instance locks.
 #[derive(bevy::ecs::system::SystemParam)]
 pub(crate) struct AdminInstances<'w, 's> {
     clock: Option<ResMut<'w, ServerClock>>,
     instances: Option<ResMut<'w, InstanceManager>>,
     store: Option<Res<'w, MapStore>>,
+    game_objects: Query<
+        'w,
+        's,
+        (
+            Entity,
+            &'static shared::protocol::GameObjectInfo,
+            &'static shared::components::Position,
+            &'static InMap,
+        ),
+    >,
     creatures: Query<
         'w,
         's,
@@ -530,6 +624,36 @@ impl AdminInstances<'_, '_> {
                     })
                     .collect();
                 AdminResponse::NpcInfoList { lines }
+            }
+            AdminRequest::GameObjectInfo {
+                map_id,
+                instance_id,
+                entry,
+            } => {
+                let map = InMap {
+                    map_id: *map_id,
+                    instance_id: *instance_id,
+                };
+                let lines: Vec<_> = self
+                    .game_objects
+                    .iter()
+                    .filter(|(_, info, _, in_map)| **in_map == map && info.entry == *entry)
+                    .map(|(entity, info, position, _)| {
+                        let world = crate::game_objects::wow_position(position);
+                        format!(
+                            "{} (entity {}) entry {} display {} map {} instance {} world ({}, {}, {})",
+                            info.name, entity.to_bits(), info.entry, info.display_id,
+                            map_id, instance_id, world.x, world.y, world.z
+                        )
+                    })
+                    .collect();
+                if lines.is_empty() {
+                    AdminResponse::Error(format!(
+                        "game object entry {entry} not found in map {map_id} instance {instance_id}"
+                    ))
+                } else {
+                    AdminResponse::GameObjectInfoList { lines }
+                }
             }
             _ => return None,
         })

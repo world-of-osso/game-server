@@ -1,5 +1,9 @@
 # Wiki Log
 
+## [2026-09-30] reference | Live GameObject admin lookup
+
+Updated [[dev-commands]] with read-only `game-object-info <map_id> <instance_id> <entry>`: runtime entity bits and WoW coordinates for normal mailbox interaction, never inferred from spawn GUIDs. Targeted tests cover concrete mailbox output, map/copy/entry filtering, and not-found results; live server/CLI integration remains main-owned.
+
 ## [2026-09-30] systems | Merchant output price boundary
 
 Updated [[economy-catalog]]: recipes whose output range exceeds existing u32 vendor prices are excluded with unchanged market values, protocol limit and TSM provenance. Input-only AH markets retain u64 prices. Read-only Lara 1295:0:165 import excludes one recipe (10621/output 8345), leaving 223; main owns fixture regeneration and startup proof.
