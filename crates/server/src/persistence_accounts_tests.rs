@@ -317,8 +317,8 @@ fn create_character_rejects_invalid_class_and_race_class_combination() {
     let db = temp_database();
     let (account_id, _) = register_account(&db, "user1", "pass").unwrap();
     assert_eq!(
-        create_character(&db, account_id, "Monk", 1, 10),
-        Err("Invalid class id 10".to_string())
+        create_character(&db, account_id, "Adventurer", 1, 14),
+        Err("Invalid class id 14".to_string())
     );
     assert_eq!(
         create_character(&db, account_id, "Druid", 3, 11),
