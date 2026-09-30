@@ -233,6 +233,28 @@ mod bounded_slice {
     }
 
     #[test]
+    fn exact_item_and_additional_filters_precede_count_and_paging() {
+        let auctions: HashMap<_, _> = (1..=160)
+            .map(|id| {
+                let mut auction = test_auction(id, "Iron Ore", 1, 1);
+                auction.item.item_id = if id % 2 == 0 { 42 } else { 43 };
+                (id, auction)
+            })
+            .collect();
+        let mut query = text_query("");
+        query.item_id = Some(42);
+        query.page_size = 10;
+        query.page = 1;
+        let result =
+            super::super::queries::search_auctions_matching(&auctions, &query, |auction| {
+                auction.auction_id % 3 == 0
+            });
+        assert_eq!(result.total_results, 26);
+        let ids: Vec<_> = result.results.iter().map(|a| a.auction_id).collect();
+        assert_eq!(ids, (11..=20).map(|index| index * 6).collect::<Vec<_>>());
+    }
+
+    #[test]
     fn query_300k_listings_under_200ms() {
         let auctions: HashMap<_, _> = (1..=300_000)
             .map(|id| {
