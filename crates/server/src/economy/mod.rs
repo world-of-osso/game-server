@@ -68,6 +68,17 @@ impl Config {
                         ));
                     }
                 }
+                let output_market = &self.markets[&recipe.output_item_id];
+                if output_market.max_price > u64::from(u32::MAX) {
+                    return Err(format!(
+                        "merchant {} recipe {} output {} max price {} exceeds vendor protocol limit {}",
+                        merchant.entry,
+                        recipe.spell_id,
+                        recipe.output_item_id,
+                        output_market.max_price,
+                        u32::MAX
+                    ));
+                }
             }
         }
         for item_id in &self.gatherables {
@@ -82,10 +93,10 @@ impl Config {
         }
         for market in self.markets.values() {
             model::quote_price(market, 0)?;
-            if market.max_price > u64::from(u32::MAX) || market.popularity_bps > 10_000 {
+            if market.popularity_bps > 10_000 {
                 return Err(format!(
-                    "market {} exceeds protocol price or popularity bounds",
-                    market.item_id
+                    "market {} popularity {} exceeds 10000 bps",
+                    market.item_id, market.popularity_bps
                 ));
             }
         }
