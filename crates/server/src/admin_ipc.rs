@@ -29,7 +29,7 @@ pub struct AdminIpcPlugin;
 
 impl Plugin for AdminIpcPlugin {
     fn build(&self, app: &mut App) {
-        let (receiver, guard) = init();
+        let (receiver, guard) = init().unwrap_or_else(|error| panic!("admin ipc: {error}"));
 
         app.insert_non_send(receiver)
             .insert_non_send(guard)

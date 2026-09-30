@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::mpsc;
 
 use peercred_ipc::{Connection, Server};
@@ -23,12 +23,29 @@ impl Drop for SocketGuard {
     }
 }
 
-/// Spawn the IPC server on a tokio runtime in a background thread.
-pub(super) fn init() -> (mpsc::Receiver<AdminCommand>, SocketGuard) {
-    let path = socket_path();
+/// Make `path` free for this server's admin socket: a socket file nothing listens on
+/// (left by a server that did not shut down) is removed; one a running server answers
+/// on is refused, so a second server never takes a live server's socket.
+pub(super) fn claim_socket_path(path: &Path) -> Result<(), String> {
+    if !path.exists() {
+        return Ok(());
+    }
+    if std::os::unix::net::UnixStream::connect(path).is_ok() {
+        return Err(format!(
+            "admin socket {} is in use by a running game server; set \
+             GAME_SERVER_ADMIN_SOCKET to another path for this server",
+            path.display()
+        ));
+    }
+    std::fs::remove_file(path)
+        .map_err(|error| format!("remove stale admin socket {}: {error}", path.display()))
+}
 
-    // Remove stale socket from a previous run.
-    let _ = std::fs::remove_file(&path);
+/// Spawn the IPC server on a tokio runtime in a background thread. Fails when a live
+/// server holds the socket path (`claim_socket_path`).
+pub(super) fn init() -> Result<(mpsc::Receiver<AdminCommand>, SocketGuard), String> {
+    let path = socket_path();
+    claim_socket_path(&path)?;
 
     let (tx, rx) = mpsc::channel();
     let socket_path = path.clone();
@@ -40,7 +57,7 @@ pub(super) fn init() -> (mpsc::Receiver<AdminCommand>, SocketGuard) {
         rt.block_on(serve(socket_path, tx));
     });
 
-    (rx, SocketGuard { path })
+    Ok((rx, SocketGuard { path }))
 }
 
 async fn serve(path: PathBuf, tx: mpsc::Sender<AdminCommand>) {
@@ -91,5 +108,48 @@ async fn handle_connection(mut connection: Connection, tx: mpsc::Sender<AdminCom
 
     if let Err(error) = connection.write(&response).await {
         eprintln!("admin ipc: write error: {error}");
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::os::unix::net::UnixListener;
+
+    use super::claim_socket_path;
+
+    fn temp_socket(name: &str) -> std::path::PathBuf {
+        let dir = std::env::temp_dir().join(format!("admin-ipc-{}-{name}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        dir.join("admin.sock")
+    }
+
+    /// A second server does not take over a socket a live server listens on.
+    #[test]
+    fn a_live_admin_socket_is_refused_and_left_alone() {
+        let path = temp_socket("live");
+        let _ = std::fs::remove_file(&path);
+        let live = UnixListener::bind(&path).unwrap();
+        let error = claim_socket_path(&path).unwrap_err();
+        assert!(
+            error.contains("in use") && error.contains("GAME_SERVER_ADMIN_SOCKET"),
+            "{error}"
+        );
+        assert!(path.exists());
+        // The first server still accepts connections.
+        let _client = std::os::unix::net::UnixStream::connect(&path).unwrap();
+        live.accept().unwrap();
+    }
+
+    /// A socket file nothing listens on (a killed server's) is removed; a missing one is fine.
+    #[test]
+    fn a_stale_admin_socket_file_is_replaced() {
+        let path = temp_socket("stale");
+        let _ = std::fs::remove_file(&path);
+        drop(UnixListener::bind(&path).unwrap());
+        assert!(path.exists());
+        assert_eq!(claim_socket_path(&path), Ok(()));
+        assert!(!path.exists());
+        assert_eq!(claim_socket_path(&path), Ok(()));
+        UnixListener::bind(&path).unwrap();
     }
 }
