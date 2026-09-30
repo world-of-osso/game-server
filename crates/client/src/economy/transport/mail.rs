@@ -39,7 +39,7 @@ struct MailIo<'w, 's> {
 
 impl MailIo<'_, '_> {
     fn own_gold(&self) -> Option<u64> {
-        let remote = Entity::try_from_bits(self.selected.0?).ok()?;
+        let remote = Entity::try_from_bits(self.selected.0?)?;
         self.managers.iter().find_map(|manager| {
             let local = manager.entity_mapper.remote_to_local.get(&remote)?;
             self.gold.get(*local).ok().map(|gold| gold.0)
@@ -134,6 +134,15 @@ fn receive_mail_session(
             }
         }
     }
+    receive_mail_role(object, flow, io, exit);
+}
+
+fn receive_mail_role(
+    object: u64,
+    flow: &mut EconomyFlow,
+    io: &mut MailIo,
+    exit: &mut MessageWriter<AppExit>,
+) {
     for mut receiver in &mut io.opened {
         for opened in receiver.receive() {
             if opened.npc != object || flow.phase != Phase::Interaction {
@@ -167,25 +176,8 @@ fn advance_mail(
             finish(flow, exit, Ok(format!("mailbox {inbox:#?}")));
             return;
         }
-        match prepare_claim(&action.operation, mail, io.own_gold()) {
-            Ok(Some((mail_id, claim, proof))) => {
-                if let Err(error) = send::<_, MailChannel>(
-                    &mut io.request,
-                    MailRequest {
-                        object: action.npc,
-                        mail_id,
-                        action: claim,
-                    },
-                ) {
-                    finish(flow, exit, Err(error));
-                    return;
-                }
-                mail.expected = Some(proof);
-                flow.phase = Phase::Awaiting;
-                flow.started = std::time::Instant::now();
-            }
-            Ok(None) => {}
-            Err(error) => finish(flow, exit, Err(error)),
+        if let Err(error) = send_mail_claim(action, flow, mail, io) {
+            finish(flow, exit, Err(error));
         }
     }
     if flow.phase == Phase::Awaiting {
@@ -193,6 +185,30 @@ fn advance_mail(
             finish(flow, exit, Ok(report));
         }
     }
+}
+
+fn send_mail_claim(
+    action: &EconomyAction,
+    flow: &mut EconomyFlow,
+    mail: &mut MailState,
+    io: &mut MailIo,
+) -> Result<(), String> {
+    let Some((mail_id, claim, proof)) = prepare_claim(&action.operation, mail, io.own_gold())?
+    else {
+        return Ok(());
+    };
+    send::<_, MailChannel>(
+        &mut io.request,
+        MailRequest {
+            object: action.npc,
+            mail_id,
+            action: claim,
+        },
+    )?;
+    mail.expected = Some(proof);
+    flow.phase = Phase::Awaiting;
+    flow.started = std::time::Instant::now();
+    Ok(())
 }
 
 fn prepare_claim(
@@ -213,40 +229,53 @@ fn prepare_claim(
         .and_then(|inbox| inbox.mails.iter().find(|header| header.mail_id == mail_id))
         .ok_or_else(|| format!("Mail {mail_id} is not in the delivered inbox"))?;
     let proof = match action {
-        MailAction::TakeMoney => {
-            if header.money == 0 {
-                return Err(format!("Mail {mail_id} has no money"));
-            }
-            let Some(gold) = gold else {
-                return Ok(None);
-            };
-            let expected = gold
-                .checked_add(header.money)
-                .ok_or("Claim money overflow")?;
-            ClaimProof::Money {
-                mail_id,
-                gold: expected,
-            }
-        }
-        MailAction::TakeAttachment { slot } => {
-            let attachment = header
-                .attachments
-                .iter()
-                .find(|attachment| attachment.slot == slot)
-                .ok_or_else(|| format!("Mail {mail_id} has no attachment slot {slot}"))?;
-            if !mail.bags.inventory_ready {
-                return Ok(None);
-            }
-            ClaimProof::Attachment {
-                mail_id,
-                slot,
-                item_id: attachment.item.item_id,
-                count: mail.bags.count(attachment.item.item_id) + u64::from(attachment.item.count),
-            }
-        }
+        MailAction::TakeMoney => prepare_money_proof(header, gold)?,
+        MailAction::TakeAttachment { slot } => prepare_attachment_proof(header, slot, &mail.bags)?,
         _ => unreachable!("only claim actions constructed above"),
     };
-    Ok(Some((mail_id, action, proof)))
+    Ok(proof.map(|proof| (mail_id, action, proof)))
+}
+
+fn prepare_money_proof(
+    header: &MailHeader,
+    gold: Option<u64>,
+) -> Result<Option<ClaimProof>, String> {
+    if header.money == 0 {
+        return Err(format!("Mail {} has no money", header.mail_id));
+    }
+    let Some(gold) = gold else {
+        return Ok(None);
+    };
+    let expected = gold
+        .checked_add(header.money)
+        .ok_or("Claim money overflow")?;
+    Ok(Some(ClaimProof::Money {
+        mail_id: header.mail_id,
+        gold: expected,
+    }))
+}
+
+fn prepare_attachment_proof(
+    header: &MailHeader,
+    slot: u8,
+    bags: &MerchantState,
+) -> Result<Option<ClaimProof>, String> {
+    let attachment = header
+        .attachments
+        .iter()
+        .find(|attachment| attachment.slot == slot)
+        .ok_or_else(|| format!("Mail {} has no attachment slot {slot}", header.mail_id))?;
+    if !bags.inventory_ready {
+        return Ok(None);
+    }
+    let item_id = attachment.item.item_id;
+    let count = bags.count(item_id) + u64::from(attachment.item.count);
+    Ok(Some(ClaimProof::Attachment {
+        mail_id: header.mail_id,
+        slot,
+        item_id,
+        count,
+    }))
 }
 
 fn confirm_claim(mail: &MailState, gold: Option<u64>) -> Option<String> {
