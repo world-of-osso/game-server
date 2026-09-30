@@ -115,3 +115,36 @@ fn a_spell_without_missile_speed_lands_in_its_launch_tick() {
     let frames = frames_from_launch_to_damage(&mut h, MORTAL_STRIKE, MORTAL_STRIKE, 20, |_| {});
     assert_eq!(frames, Some(0));
 }
+
+fn in_combat(h: &Harness, unit: bevy::prelude::Entity) -> bool {
+    h.app
+        .world()
+        .get::<shared::components::CombatStatus>(unit)
+        .is_some_and(|status| status.0)
+}
+
+/// `PreprocessSpellLaunch` (Spell.cpp:8538-8541) puts the caster in combat and holds
+/// the target's side suppressed; `PreprocessTarget` (Spell.cpp:2763-2764) engages the
+/// target when the Frostbolt lands.
+#[test]
+fn a_missile_target_enters_combat_when_the_missile_lands_not_at_launch() {
+    let Some(mut h) = mage() else {
+        return;
+    };
+    for unit in [h.caster, h.npc] {
+        h.app
+            .world_mut()
+            .entity_mut(unit)
+            .insert(shared::components::CombatStatus(false));
+    }
+    place_npc(&mut h, 20.0);
+    h.cast(FROSTBOLT, Some(h.npc));
+    let mut in_flight = None;
+    let frames = frames_from_launch_to_damage(&mut h, FROSTBOLT, FROSTBOLT_DAMAGE, 80, |h| {
+        in_flight = Some((in_combat(h, h.caster), in_combat(h, h.npc)));
+    })
+    .expect("the Frostbolt lands");
+    assert!(frames > 0);
+    assert_eq!(in_flight, Some((true, false)), "(caster, target) in flight");
+    assert!(in_combat(&h, h.caster) && in_combat(&h, h.npc));
+}

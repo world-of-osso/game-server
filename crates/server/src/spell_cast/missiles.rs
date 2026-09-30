@@ -1,5 +1,5 @@
 //! Spell travel time: TrinityCore `Spell::HandleDelayed`. A spell with a missile
-//! speed launches (SpellGo, CastSuccess, combat, costs) at once and lands on each
+//! speed launches (SpellGo, CastSuccess, the caster's combat, costs) at once and lands on each
 //! unit target after its hit delay (`Spell::AddUnitTarget`, Spell.cpp:2486-2518):
 //! `LaunchDelay + max(max(distance, 5) / Speed, MinDuration)` seconds, or
 //! `LaunchDelay + max(Speed, MinDuration)` with `SPELL_ATTR9_MISSILE_SPEED_IS_DELAY_IN_SEC`.
@@ -51,16 +51,17 @@ pub(super) fn launch(
     plan: TargetPlan,
     depth: u8,
 ) {
+    // `PreprocessSpellLaunch` (Spell.cpp:8538-8541): only the caster enters combat.
     for target in super::hit_units(&plan) {
         if super::starts_combat(world, caster, target, spell) {
-            crate::combat_refs::set_in_combat_with(world, caster, target);
+            crate::combat_refs::set_in_combat_with_suppressed(world, caster, target);
         }
     }
     let groups = hit_groups(world, caster, spell, plan);
     let launched = now(world);
     for (delay, plan) in groups {
         if delay <= 0.0 {
-            resolve_effects(world, caster, spell, &plan, depth);
+            hit(world, caster, spell, &plan, depth);
             continue;
         }
         let alive_at_launch = super::hit_units(&plan)
@@ -133,7 +134,19 @@ fn land(world: &mut World, hit: PendingHit) {
             ..planned
         })
         .collect();
-    resolve_effects(world, hit.caster, &spell, &plan, hit.depth);
+    self::hit(world, hit.caster, &spell, &plan, hit.depth);
+}
+
+/// `TargetInfo::PreprocessTarget` (Spell.cpp:2763-2764): each unit the spell lands on
+/// enters combat with the caster, lifting the suppression of its launch reference;
+/// then the effects resolve.
+fn hit(world: &mut World, caster: Entity, spell: &SpellInfo, plan: &TargetPlan, depth: u8) {
+    for target in super::hit_units(plan) {
+        if super::starts_combat(world, caster, target, spell) {
+            crate::combat_refs::set_in_combat_with(world, target, caster);
+        }
+    }
+    resolve_effects(world, caster, spell, plan, depth);
 }
 
 /// The plan split by hit delay in seconds, earliest first. Effects without unit

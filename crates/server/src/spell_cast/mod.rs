@@ -1057,8 +1057,8 @@ fn resolve_effects(
 /// each unit its spell launches at, and `TargetInfo::PreprocessTarget`
 /// (Spell.cpp:2763-2764) the unit with the caster when it lands: a unit the caster can
 /// attack (TC: not `IsFriendlyTo`), a harmful spell (or one that dispels), with initial
-/// aggro or at an engaged unit. Both sides enter at launch (`missiles::launch`); TC
-/// suppresses the target's side until the missile lands, which is not modelled.
+/// aggro or at an engaged unit. At launch the target's side is suppressed until the
+/// spell lands (`missiles::launch`, `missiles::hit`).
 pub(super) fn starts_combat(
     world: &World,
     caster: Entity,
