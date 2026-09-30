@@ -430,15 +430,15 @@ const STORMWIND: StartLocation = start(0, -8841.06, 489.656, 109.607);
 /// Orgrimmar flight master (TaxiNodes 23, ContinentID 1).
 const ORGRIMMAR: StartLocation = start(1, 1798.27, -4363.27, 102.848);
 
-/// Starting location per race. Demon Hunters start at their race's location
-/// and Dracthyr (52 Alliance, 70 Horde) in Stormwind/Orgrimmar.
+/// Starting location per race. Demon Hunters start at their race's location;
+/// Dracthyr, Kul Tiran, Earthen and Haranir in Stormwind/Orgrimmar by faction.
 ///
 /// WORKAROUND: Retail starts Demon Hunters in Mardum (TrinityCore playercreateinfo
 /// map 1481) and Dracthyr in the Forbidden Reach (map 2570); neither zone is
 /// implemented. These locations lack the class intro, its quests and its
 /// starting gear. Retire when class starting zones (Mardum, Forbidden Reach) are
-/// implemented. Newly cataloged Kul Tiran/Earthen/Haranir Monks retain the
-/// existing Northshire placeholder below until their race starts are authored.
+/// implemented. The Kul Tiran, Earthen and Haranir race starts are not implemented
+/// either; the capitals stand in for them until those zones exist.
 pub(crate) fn start_location(race: u8) -> StartLocation {
     match race {
         1 => start(0, -8949.0, -132.0, 83.0),     // Human — Northshire
@@ -452,9 +452,9 @@ pub(crate) fn start_location(race: u8) -> StartLocation {
         10 => start(530, 10349.0, -6357.0, 33.0), // Blood Elf — Sunstrider Isle
         11 => start(530, -3961.0, -13931.0, 100.0), // Draenei — Crash Site
         22 => start(0, -1451.0, 1403.0, 35.0),    // Worgen — Gilneas
-        52 => STORMWIND,                          // Dracthyr (Alliance)
-        70 => ORGRIMMAR,                          // Dracthyr (Horde)
-        _ => start(0, -8949.0, -132.0, 83.0),     // Fallback to Human start
+        52 | 32 | 85 | 86 => STORMWIND, // Dracthyr, Kul Tiran, Earthen, Haranir (Alliance)
+        70 | 84 | 91 => ORGRIMMAR,      // Dracthyr, Earthen, Haranir (Horde)
+        _ => start(0, -8949.0, -132.0, 83.0), // Fallback to Human start
     }
 }
 

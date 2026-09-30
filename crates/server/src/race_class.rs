@@ -20,8 +20,10 @@ struct PlayableRace {
 
 const PANDAREN_CLASSES: &[u8] = &[1, 3, 4, 5, 7, 8, 10];
 const DRACTHYR_CLASSES: &[u8] = &[1, 3, 4, 5, 8, 9, 13];
-/// Newly cataloged races expose only the class covered by this server slice.
-const MONK_CLASSES: &[u8] = &[10];
+/// CharBaseInfo classes of Kul Tiran, Earthen and Haranir (Adventurer 14 is not playable).
+const KUL_TIRAN_CLASSES: &[u8] = &[1, 3, 4, 5, 6, 7, 8, 9, 10, 11];
+const EARTHEN_CLASSES: &[u8] = &[1, 2, 3, 4, 5, 7, 8, 9, 10];
+const HARANIR_CLASSES: &[u8] = &[1, 3, 4, 5, 7, 8, 9, 10, 11];
 
 const PLAYABLE_RACES: &[PlayableRace] = &[
     race(1, 0, &[1, 2, 3, 4, 5, 6, 8, 9, 10]),       // Human
@@ -44,17 +46,17 @@ const PLAYABLE_RACES: &[PlayableRace] = &[
     race(29, 28, &[1, 3, 4, 5, 6, 8, 9, 10, 12]),    // Void Elf
     race(30, 29, &[1, 2, 3, 5, 6, 8, 10]),           // Lightforged Draenei
     race(31, 30, &[1, 2, 3, 4, 5, 6, 7, 8, 10, 11]), // Zandalari Troll
-    race(32, 31, MONK_CLASSES),                      // Kul Tiran
+    race(32, 31, KUL_TIRAN_CLASSES),                 // Kul Tiran
     race(34, 11, &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]),  // Dark Iron Dwarf
     race(35, 12, &[1, 3, 4, 5, 7, 8, 9, 10]),        // Vulpera
     race(36, 13, &[1, 3, 4, 5, 6, 7, 8, 10]),        // Mag'har Orc
     race(37, 14, &[1, 3, 4, 5, 6, 8, 9, 10]),        // Mechagnome
     race(52, 16, DRACTHYR_CLASSES),                  // Dracthyr (Alliance)
     race(70, 15, DRACTHYR_CLASSES),                  // Dracthyr (Horde)
-    race(84, 17, MONK_CLASSES),                      // Earthen (Horde)
-    race(85, 18, MONK_CLASSES),                      // Earthen (Alliance)
-    race(86, 20, MONK_CLASSES),                      // Haranir (Alliance)
-    race(91, 19, MONK_CLASSES),                      // Haranir (Horde)
+    race(84, 17, EARTHEN_CLASSES),                   // Earthen (Horde)
+    race(85, 18, EARTHEN_CLASSES),                   // Earthen (Alliance)
+    race(86, 20, HARANIR_CLASSES),                   // Haranir (Alliance)
+    race(91, 19, HARANIR_CLASSES),                   // Haranir (Horde)
 ];
 
 const fn race(id: u8, race_bit: u8, classes: &'static [u8]) -> PlayableRace {
@@ -89,6 +91,13 @@ pub fn validate_race_class(race: u8, class: u8) -> Result<(), String> {
 /// allied races and Dracthyr 10. Death Knight starts remain unchanged in
 /// this bounded new-class slice.
 pub fn start_level(race: u8, class: u8) -> u8 {
+    const NEW_CLASSES: [u8; 3] = [10, 12, 13];
+    /// Races this slice made creatable: Kul Tiran, Dracthyr, Earthen, Haranir.
+    const NEW_RACES: [u8; 7] = [32, 52, 70, 84, 85, 86, 91];
+    if !NEW_CLASSES.contains(&class) && !NEW_RACES.contains(&race) {
+        // The older classes of the older races keep level 1.
+        return 1;
+    }
     let class_level: u8 = if class == 12 { 8 } else { 1 };
     let race_level = match race {
         27..=32 | 34..=37 | 52 | 70 | 84 | 85 | 91 => 10,
@@ -181,6 +190,26 @@ mod tests {
         }
     }
 
+    /// CharBaseInfo: Kul Tiran has no Paladin, Earthen no Death Knight or Druid,
+    /// Haranir no Paladin or Death Knight.
+    #[test]
+    fn kul_tiran_earthen_and_haranir_follow_char_base_info() {
+        for (race, class) in [
+            (32, 1),
+            (32, 6),
+            (32, 11),
+            (84, 2),
+            (85, 9),
+            (86, 11),
+            (91, 7),
+        ] {
+            assert_eq!(validate_race_class(race, class), Ok(()), "{race}/{class}");
+        }
+        for (race, class) in [(32, 2), (84, 6), (85, 11), (86, 2), (91, 6)] {
+            assert!(validate_race_class(race, class).is_err(), "{race}/{class}");
+        }
+    }
+
     #[test]
     fn demon_hunters_start_at_8_and_dracthyr_at_10() {
         assert_eq!(start_level(4, 12), 8);
@@ -200,6 +229,8 @@ mod tests {
         );
         assert_eq!(start_level(91, 10), 10, "Haranir Horde authored race level");
         assert_eq!(start_level(1, 1), 1);
+        assert_eq!(start_level(29, 8), 1, "older class on an older allied race");
+        assert_eq!(start_level(32, 1), 10, "Kul Tiran Warrior");
     }
 
     #[test]

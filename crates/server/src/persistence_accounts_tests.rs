@@ -537,8 +537,13 @@ fn new_class_monk_characters_cover_additional_authored_races() {
         assert!(crate::race_class::race_mask_allows([1 << bit, 0], race));
         assert!(!crate::race_class::race_mask_allows([1 << 3, 0], race));
         assert_eq!(crate::faction::faction_template_for_race(race), faction);
-        // Existing placeholder placement is retained until race starts are authored.
-        assert_eq!((data.x, data.y), (-8949.0, -132.0));
+        // Race starts are not implemented: the faction capital stands in.
+        let capital = if faction == 1 || faction == 3 || faction == 4 {
+            (-8841.06, 489.656)
+        } else {
+            (1798.27, -4363.27)
+        };
+        assert_eq!((data.x, data.y), capital, "{name}");
         for class in [12, 13] {
             assert!(crate::race_class::validate_race_class(race, class).is_err());
         }
