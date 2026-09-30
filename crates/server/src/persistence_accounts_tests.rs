@@ -599,3 +599,21 @@ fn new_class_characters_start_at_their_level_and_location() {
     assert_eq!(list_characters_for_account(&db, account_id).len(), 7);
     assert_eq!(load_character(&db, dh).unwrap().level, 8);
 }
+
+/// Player::GetStartLevel (Player.cpp:24384-24398): a Death Knight is created at 8, an
+/// allied race at 10 whatever its class, and a Human Warrior at 1.
+#[test]
+fn death_knights_and_allied_races_start_at_their_trinitycore_levels() {
+    let db = temp_database();
+    let (account_id, _) = register_account(&db, "fb_startlevel", "fbtest").unwrap();
+    for (name, race, class, level) in [
+        ("Deathlord", 1, 6, 8),
+        ("Voidmage", 29, 8, 10),
+        ("Ironknight", 34, 6, 10),
+        ("Plainwarrior", 1, 1, 1),
+    ] {
+        let (id, data) = create_character(&db, account_id, name, race, class).unwrap();
+        assert_eq!(data.level, level, "{name}");
+        assert_eq!(load_character(&db, id).unwrap().level, level, "{name}");
+    }
+}

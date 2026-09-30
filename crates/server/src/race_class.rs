@@ -86,24 +86,46 @@ pub fn validate_race_class(race: u8, class: u8) -> Result<(), String> {
     Ok(())
 }
 
-/// New-class start levels are max(ChrClasses.StartingLevel,
-/// ChrRaces.StartingLevel), DB2 12.1.0.69933: Monk 1, DH 8, Evoker 1;
-/// allied races and Dracthyr 10. Death Knight starts remain unchanged in
-/// this bounded new-class slice.
+/// Races with `ChrRacesFlag::IsAlliedRace` 0x80000 in DB2 12.1.0.69933 `ChrRaces.Flags`
+/// (game-engine `godot/core/data/db2/12.1.0.69933/ChrRaces.csv`; DBCEnums.h:370). The
+/// server loads no ChrRaces data: world.db has no `chr_races` table.
+const ALLIED_RACES: [u8; 14] = [27, 28, 29, 30, 31, 32, 34, 35, 36, 37, 84, 85, 86, 91];
+const RACE_PANDAREN_ALLIANCE: u8 = 25;
+const RACE_PANDAREN_HORDE: u8 = 26;
+const RACE_DRACTHYR_ALLIANCE: u8 = 52;
+const RACE_DRACTHYR_HORDE: u8 = 70;
+const CLASS_DEATH_KNIGHT: u8 = 6;
+const CLASS_DEMON_HUNTER: u8 = 12;
+/// worldserver.conf.dist:934-958 defaults: StartPlayerLevel, StartDeathKnightPlayerLevel,
+/// StartDemonHunterPlayerLevel, StartAlliedRacePlayerLevel.
+const START_PLAYER_LEVEL: u8 = 1;
+const START_DEATH_KNIGHT_LEVEL: u8 = 8;
+const START_DEMON_HUNTER_LEVEL: u8 = 8;
+const START_ALLIED_RACE_LEVEL: u8 = 10;
+
+/// Player::GetStartLevel (Player.cpp:24384-24398): 1, or 10 for an allied race or
+/// Dracthyr; a Death Knight at least 8 (a Pandaren one at least 10), a Demon Hunter at
+/// least 8. Monk and Evoker take their race's level.
 pub fn start_level(race: u8, class: u8) -> u8 {
-    const NEW_CLASSES: [u8; 3] = [10, 12, 13];
-    /// Races this slice made creatable: Kul Tiran, Dracthyr, Earthen, Haranir.
-    const NEW_RACES: [u8; 7] = [32, 52, 70, 84, 85, 86, 91];
-    if !NEW_CLASSES.contains(&class) && !NEW_RACES.contains(&race) {
-        // The older classes of the older races keep level 1.
-        return 1;
-    }
-    let class_level: u8 = if class == 12 { 8 } else { 1 };
-    let race_level = match race {
-        27..=32 | 34..=37 | 52 | 70 | 84 | 85 | 91 => 10,
-        _ => 1,
+    let mut level = if ALLIED_RACES.contains(&race)
+        || race == RACE_DRACTHYR_ALLIANCE
+        || race == RACE_DRACTHYR_HORDE
+    {
+        START_ALLIED_RACE_LEVEL
+    } else {
+        START_PLAYER_LEVEL
     };
-    class_level.max(race_level)
+    if class == CLASS_DEATH_KNIGHT {
+        let class_level = if race == RACE_PANDAREN_ALLIANCE || race == RACE_PANDAREN_HORDE {
+            START_ALLIED_RACE_LEVEL
+        } else {
+            START_DEATH_KNIGHT_LEVEL
+        };
+        level = level.max(class_level);
+    } else if class == CLASS_DEMON_HUNTER {
+        level = level.max(START_DEMON_HUNTER_LEVEL);
+    }
+    level
 }
 
 /// True when a DB2 `RaceMasks` pair (low, high 32 bits) allows the race.
@@ -211,26 +233,25 @@ mod tests {
     }
 
     #[test]
-    fn demon_hunters_start_at_8_and_dracthyr_at_10() {
-        assert_eq!(start_level(4, 12), 8);
-        assert_eq!(start_level(10, 12), 8);
-        assert_eq!(start_level(52, 13), 10);
-        assert_eq!(start_level(70, 1), 10);
-        assert_eq!(start_level(1, 10), 1);
-        assert_eq!(start_level(29, 12), 10, "race level exceeds DH level");
-        assert_eq!(start_level(37, 10), 10, "allied race Monk");
-        assert_eq!(start_level(32, 10), 10, "Kul Tiran Monk");
-        assert_eq!(start_level(84, 10), 10, "Earthen Horde Monk");
-        assert_eq!(start_level(85, 10), 10, "Earthen Alliance Monk");
-        assert_eq!(
-            start_level(86, 10),
-            1,
-            "Haranir Alliance authored race level"
-        );
-        assert_eq!(start_level(91, 10), 10, "Haranir Horde authored race level");
-        assert_eq!(start_level(1, 1), 1);
-        assert_eq!(start_level(29, 8), 1, "older class on an older allied race");
+    fn start_levels_follow_player_get_start_level() {
+        assert_eq!(start_level(1, 1), 1, "Human Warrior");
+        assert_eq!(start_level(1, 10), 1, "Human Monk");
+        assert_eq!(start_level(1, 6), 8, "Human Death Knight");
+        assert_eq!(start_level(5, 6), 8, "Undead Death Knight");
+        assert_eq!(start_level(4, 12), 8, "Night Elf Demon Hunter");
+        assert_eq!(start_level(10, 12), 8, "Blood Elf Demon Hunter");
+        assert_eq!(start_level(52, 13), 10, "Dracthyr Evoker");
+        assert_eq!(start_level(70, 1), 10, "Dracthyr Warrior");
+        assert_eq!(start_level(29, 8), 10, "Void Elf Mage (allied race)");
+        assert_eq!(start_level(29, 12), 10, "Void Elf Demon Hunter");
+        assert_eq!(start_level(34, 6), 10, "Dark Iron Dwarf Death Knight");
+        assert_eq!(start_level(37, 10), 10, "Mechagnome Monk");
         assert_eq!(start_level(32, 1), 10, "Kul Tiran Warrior");
+        assert_eq!(start_level(84, 10), 10, "Earthen Monk");
+        // IsAlliedRace, whatever the authored ChrRaces.StartingLevel (1).
+        assert_eq!(start_level(86, 10), 10, "Haranir Alliance Monk");
+        assert_eq!(start_level(91, 10), 10, "Haranir Horde Monk");
+        assert_eq!(start_level(25, 10), 1, "Pandaren Monk");
     }
 
     #[test]
