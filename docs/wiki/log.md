@@ -1,5 +1,9 @@
 # Wiki Log
 
+## [2026-09-30] specs | Creature hit table and player avoidance
+
+Updated [[player-damage]] spec: creatures roll the hit table (5% miss, 5% crit) against a player's TC-master avoidance; crits and blocks are sent as `CriticalHit` / `Block`.
+
 ## [2026-09-30] systems | Chains, bouncy missiles, spell reflection
 
 Updated [[spell-casting]]: chain targeting with per-jump amplitude, shared target selection for effects with identical targets, `SPELL_ATTR4_BOUNCY_CHAIN_MISSILES` timing, spell reflection and triggered spells ignoring their explicit target's relation.
