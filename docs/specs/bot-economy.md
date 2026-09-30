@@ -25,7 +25,7 @@ Gatherer bots supply auction-house materials; merchant bots buy ingredients, cra
 
 - [ ] Ingredient purchases, crafting, stock sales, expiry refunds and capital withdrawals persist transactionally. Restart preserves stock, costs, balances and deadlines without lost or duplicated effects.
 - [ ] First prove the economy through `game-cli`, adding necessary actions, before engine acceptance. Exercise actual auctioneer/vendor interactions and persisted transactions, not only pure model helpers.
-- [ ] Then prove the fully working auction house in the engine, including browse/search/paging, create, bid, buyout, cancel and resulting inventory/gold/mail state.
+- [ ] Then prove the fully working auction house in the engine, including browse/search/paging, create, bid, buyout, cancel and resulting inventory/gold/mail state. [Auction house contract](auction-house.md) defines global grouped browse through the new distinct endpoint, ItemID drilldown and real AuctionID selection; existing flat shapes remain unchanged.
 - [ ] Auction queries complete in less than 200 ms. Record request/response measurement boundary, population, query and paging workload, revision and results; model-only timing is not client acceptance proof.
 
 Only the durations, stock lifetime and query limit above are approved numerical policy. Price bounds, capacity, customer budgets, popularity weights, capital caps and simulation cadence require explicit configuration; example/test values are not approved tuning.
@@ -33,6 +33,7 @@ Only the durations, stock lifetime and query limit above are approved numerical 
 ## How it works
 
 - [Bot economy system inventory](../wiki/systems/bot-economy.md)
+- [Global browse and auction selection](../wiki/systems/auction-house.md)
 - [Merchant flow](../wiki/systems/merchant.md)
 - [Profession recipe data and crafting](../wiki/systems/professions.md)
 - [Persistence](../wiki/systems/persistence.md)
@@ -62,7 +63,7 @@ Candidate coverage only; no commands were run in this docs-only audit:
 - [ ] Connect and prove configurable importer/reference data, bot auction supply and merchant transactions.
 - [ ] Establish real expansion-11 recipe/output data and eligible merchant/NPC spawn availability.
 - [ ] Prove equal auction terms and unsold deposit refund for bot and player paths.
-- [ ] Prove restart/crash-boundary accounting, CLI-first flow, engine auction flow and query latency.
+- [ ] Prove restart/crash-boundary accounting, CLI-first flow, engine auction flow and query latency. Grouped performance remains pending; reported optimized flat 300k-listing/144 ms helper timing is not request/response acceptance.
 
 ## Out of scope
 

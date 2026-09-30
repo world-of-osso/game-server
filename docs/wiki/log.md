@@ -1,5 +1,9 @@
 # Wiki Log
 
+## [2026-09-30] systems | Global auction browse contract
+
+Added [auction house spec](../specs/auction-house.md) and [[auction-house]]; linked [[bot-economy]] and index. Inspected shared `88bc3fe`: distinct browse messages with per-item price/quantity and distinct total, unchanged flat shapes. Inspected server flat/session/class/usability boundaries; grouped server, CLI and native integration remain concurrent and unverified. Recorded ItemID → real AuctionID flow, actual-coordinate/listing-price evidence and CLI-first then engine <200 ms request/response goal. Reported optimized flat 300k/144 ms helper timing is not network acceptance; grouped performance pending. No acceptance checked; no code or owned CLI/engine docs changed.
+
 ## [2026-09-30] systems | Economy catalog importer
 
 Created [[economy-catalog]] and indexed it. Read-only world.db and timestamped public TSM snapshots supply runtime item metadata, market maps and explicit spawned merchant/profession/expansion assignments. Jillian Tanner 5565:0:165 has 224 classic Leatherworking recipes, 312 markets and 33 raw gatherables; quantity follows profession.rs raw rounding, not points + 1. Report records selected price/popularity provenance, exclusions and explicit empty-production warnings. Midnight 11 remains blocked: 115 CREATE_ITEM output spells, six Fishing mappings, 109 missing mappings, no Leatherworking mapping or claimed new Silvermoon spawn. Runtime integration and spec acceptance remain separate.

@@ -10,7 +10,7 @@ Integration inventory observed September 30, 2026. The [tracked spec](../../spec
 
 ## Integration boundaries
 
-- Auction operations: `auction_house/operations.rs` creates listings and charges deposits; `auction_house/queries.rs` filters, sorts and pages an in-memory listing collection. Query latency needs measurement against actual client requests and representative populations.
+- Auction operations: `auction_house/operations.rs` creates listings and charges deposits; `auction_house/queries.rs` filters, sorts and pages flat listings. [[auction-house]] owns the new distinct grouped wire contract and integration proof matrix: global item browse → ItemID → flat real AuctionID. Query latency needs actual request/response measurement; reported flat helper timing is not acceptance.
 - Vendor requests: [[merchant]] documents the current catalog, limited vendor stock and player inventory persistence. Bot-crafted stock must be connected and proven at this request boundary; ordinary vendor restocking is not bot-stock evidence.
 - Recipes: [[professions]] identifies `skill_line_ability`, `spell_reagents` and spell `CREATE_ITEM` data. These are useful integration sources, not proof of complete expansion-11 recipes/output eligibility or new Silvermoon merchant spawns.
 - Persistence: [[persistence]] describes redb mutable storage and SQLite reference data. Model serialization is not atomic transaction/restart proof.
@@ -25,6 +25,7 @@ No economy importer path, complete bot runtime connection, current expansion-11 
 ## Sources
 
 - [Bot economy spec](../../specs/bot-economy.md) — approved contract and acceptance gaps.
+- [Auction house spec](../../specs/auction-house.md) — global browse, flat selection and CLI-first latency contract.
 - [Economy model](../../../crates/server/src/economy/model.rs) — inspected accounting helpers.
 - [Model tests](../../../crates/server/src/economy/model_tests.rs) — candidate model coverage, not executed here.
 - [Auction queries](../../../crates/server/src/auction_house/queries.rs) — inspected search/paging boundary.
@@ -32,6 +33,8 @@ No economy importer path, complete bot runtime connection, current expansion-11 
 
 ## See Also
 
+- [[auction-house]] — grouped API, source links and pending CLI/native/performance proof.
+- [[economy-catalog]] — importer and measured source-price provenance, not live auction listing prices.
 - [[merchant]] — current player purchase boundary.
 - [[professions]] — recipe/reagent reference sources.
 - [[persistence]] — durable transaction integration.
