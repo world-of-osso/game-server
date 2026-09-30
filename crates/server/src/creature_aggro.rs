@@ -11,7 +11,9 @@
 
 use bevy::prelude::*;
 use lightyear::prelude::ReplicationDirtyQueue;
-use shared::components::{Health, Player, Position, ThreatTable, UnitFactionTemplate, UnitLevel};
+use shared::components::{
+    Health, Player, Position, ThreatTable, UnitFactionTemplate, UnitLevel, UnitThreatList,
+};
 use shared::level_scaling::{LevelScaling, level_for_viewer};
 
 use crate::combat::DeathState;
@@ -45,7 +47,11 @@ impl Plugin for CreatureAggroPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(
             FixedUpdate,
-            (aggro_on_sight_system, update_victim_system)
+            (
+                aggro_on_sight_system,
+                update_victim_system,
+                replicate_threat_list_system,
+            )
                 .chain()
                 .before(chase_system),
         );
@@ -324,6 +330,29 @@ pub(crate) fn update_victim_system(
             None => {
                 commands.entity(creature).insert(CombatTarget(Some(victim)));
             }
+        }
+    }
+}
+
+/// `ThreatManager::SendThreatListToClients` membership: a creature's replicated
+/// `UnitThreatList` holds the units on its `ThreatTable`, re-sent only when they change
+/// (threat amounts are not sent). Clients show a creature with them on it as fighting
+/// them (nameplate visibility, hostile colour).
+fn replicate_threat_list_system(
+    creatures: Query<(Entity, &ThreatTable, Option<&UnitThreatList>), Changed<ThreatTable>>,
+    dirty: Option<Res<ReplicationDirtyQueue>>,
+    mut commands: Commands,
+) {
+    for (creature, threat, replicated) in &creatures {
+        let units: Vec<u64> = threat.entries().iter().map(|entry| entry.entity).collect();
+        if replicated.is_some_and(|replicated| replicated.0 == units)
+            || (replicated.is_none() && units.is_empty())
+        {
+            continue;
+        }
+        commands.entity(creature).insert(UnitThreatList(units));
+        if let Some(dirty) = &dirty {
+            dirty.mark(creature);
         }
     }
 }

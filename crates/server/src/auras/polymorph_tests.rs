@@ -570,3 +570,42 @@ fn the_spy_replicates_the_speed_of_its_gait_chilled_run_then_sheep_walk() {
     }
     assert!(walked, "the sheep never walked");
 }
+
+fn replicated_threat_list(h: &Harness) -> Option<Vec<u64>> {
+    h.app
+        .world()
+        .get::<shared::components::UnitThreatList>(h.npc)
+        .map(|list| list.0.clone())
+}
+
+#[test]
+fn the_pulled_spy_replicates_the_mage_on_its_threat_list_through_polymorph_until_it_evades() {
+    // Clients colour a neutral creature's plate hostile while they are on this list.
+    let Some((mut h, _)) = spy_harness() else {
+        return;
+    };
+    h.advance(20);
+    assert_eq!(replicated_threat_list(&h), None, "unpulled: no list");
+    cast_frostbolt(&mut h);
+    let mage = h.caster.to_bits();
+    assert_eq!(replicated_threat_list(&h), Some(vec![mage]));
+    cast_polymorph(&mut h);
+    h.advance(40);
+    assert!(polymorphed(&h));
+    assert_eq!(
+        replicated_threat_list(&h),
+        Some(vec![mage]),
+        "kept while confused"
+    );
+    h.app
+        .world_mut()
+        .get_mut::<Health>(h.caster)
+        .unwrap()
+        .current = 0.0;
+    h.advance(2);
+    assert_eq!(
+        replicated_threat_list(&h),
+        Some(Vec::new()),
+        "cleared on evade"
+    );
+}
