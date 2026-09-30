@@ -321,8 +321,26 @@ fn set_power_point_charge_auras_charge_their_combo_point_indexes() {
     apply_self_aura(&mut h, SUPERCHARGE_5);
     apply_self_aura(&mut h, SUPERCHARGE_1);
     assert_eq!(charged_points(&h), [1, 5]);
+    h.advance(1);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<UnitPowers>(h.caster)
+            .unwrap()
+            .charged_points,
+        [1, 5]
+    );
     apply_self_aura(&mut h, ECHOING_REPRIMAND_ALL);
     assert_eq!(charged_points(&h), [1, 2, 3, 4, 5]);
+    h.advance(1);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<UnitPowers>(h.caster)
+            .unwrap()
+            .charged_points,
+        [1, 2, 3, 4, 5]
+    );
     let caster = h.caster;
     crate::auras::remove_auras(
         h.app.world_mut(),
@@ -334,6 +352,21 @@ fn set_power_point_charge_auras_charge_their_combo_point_indexes() {
     h.advance(1);
     let powers = h.app.world().get::<UnitPowers>(caster).unwrap();
     assert_eq!(powers.charged_points, [2, 3, 4, 5]);
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        caster,
+        crate::auras::RemoveReason::Consumed,
+        |_| true,
+    );
+    h.advance(1);
+    assert!(
+        h.app
+            .world()
+            .get::<UnitPowers>(caster)
+            .unwrap()
+            .charged_points
+            .is_empty()
+    );
 }
 
 fn runes_view(h: &Harness) -> shared::components::UnitRunes {
@@ -372,6 +405,15 @@ fn unit_runes_replicate_ready_times_with_waiting_runes_starting_later() {
     // No resend while the order holds: the client counts down.
     h.advance(20);
     assert_eq!(runes_view(&h), view);
+    h.advance(180);
+    let completed = runes_view(&h);
+    assert_eq!(&completed.ready_in_ms[..3], &[0; 3]);
+    assert_eq!(completed.ready_in_ms[5], 0);
+    for &remaining in &completed.ready_in_ms[3..5] {
+        assert!((9_900..=10_000).contains(&remaining), "{completed:?}");
+    }
+    h.advance(201);
+    assert_eq!(runes_view(&h).ready_in_ms, [0; 6]);
 }
 
 fn power_entry(h: &Harness, power: PowerType) -> shared::components::PowerEntry {
@@ -439,8 +481,17 @@ fn replication_mana_stops_predicting_on_the_tick_it_reaches_max() {
 #[test]
 fn replication_rune_count_tracks_a_max_power_passive_without_a_spend() {
     const RUNIC_LONGEVITY: u32 = 194653;
-    let mut h = harness(Vec::new(), &[RUNIC_LONGEVITY], DEATH_KNIGHT)
-        .expect("resource fixture requires world.db");
+    // The real passive also adds rune regen (aura 110), changing duration and
+    // masking a missing rune-count send. Isolate its +1 max-power effect.
+    let mut passive = world_db()
+        .expect("resource fixture requires world.db")
+        .store
+        .get(RUNIC_LONGEVITY)
+        .unwrap()
+        .clone();
+    passive.effects.retain(|effect| effect.aura == 418);
+    let mut h =
+        harness(vec![passive], &[], DEATH_KNIGHT).expect("resource fixture requires world.db");
     let caster = h.caster;
     h.app
         .world_mut()
@@ -527,8 +578,13 @@ fn essence_regenerates_a_fifth_per_second_and_replicates_the_partial_and_rate() 
         ));
     h.advance(1);
     h.set_power(PowerType::Essence, 2.0);
-    // 3 s at `RegenCombat` 0.2/s: 2.6 essence.
-    h.advance(60);
+    h.advance(1);
+    let first = power_entry(&h, PowerType::Essence);
+    assert_eq!(first.current, 2);
+    assert!((9..=10).contains(&first.partial), "{first:?}");
+    assert!((first.regen_per_sec - 0.2).abs() < 1e-6, "{first:?}");
+    // 3 s at `RegenCombat` 0.2/s: 2.6 essence, without a partial-only resend.
+    h.advance(59);
     let essence = h.power(PowerType::Essence);
     assert!((essence - 2.6).abs() < 0.02, "{essence}");
     let powers = h.app.world().get::<UnitPowers>(caster).unwrap().clone();
@@ -539,8 +595,8 @@ fn essence_regenerates_a_fifth_per_second_and_replicates_the_partial_and_rate() 
         .unwrap();
     assert_eq!(entry.current, 2);
     assert!((entry.regen_per_sec - 0.2).abs() < 1e-6, "{entry:?}");
-    // Sent when the pool was set to 2.0; the fraction alone does not resend.
-    assert_eq!(entry.partial, 0, "{entry:?}");
+    // The first send includes the regen tick; fraction changes alone do not resend.
+    assert_eq!(*entry, first);
 
     // Crossing 3.0 resends with the fraction at that tick (3.0 at +2 s).
     h.advance(42);
@@ -555,7 +611,7 @@ fn essence_regenerates_a_fifth_per_second_and_replicates_the_partial_and_rate() 
 
     // Full: the rate drops to 0 and is resent.
     h.set_power(PowerType::Essence, 5.0);
-    h.advance(2);
+    h.advance(1);
     let powers = h.app.world().get::<UnitPowers>(caster).unwrap();
     let entry = powers
         .entries
