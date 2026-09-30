@@ -368,3 +368,7 @@ Players replicate `PlayerMotion`, Retail `MovementFlags` (FORWARD, BACKWARD, STR
 ## [2026-09-29] fix | Debuffs by effect positivity
 
 [[auras]]: an aura's harmful flag follows TrinityCore `_InitFlags` and ported effect positivity instead of caster hostility; Polymorph on the neutral Blackrock Spy replicated as a buff before.
+
+## [2026-09-30] feature | Class secondary resources
+
+[[spell-casting]], [[auras]]: aura max power (35/418; Holy Power 5, Chi 5/6), druid forms switch display power and model (MOD_SHAPESHIFT 36), Death Knight runes as per-rune cooldowns with 3 recharging, SET_POWER_POINT_CHARGE 494 charged combo points. Monk, Demon Hunter and Evoker remain unplayable, so Chi and Essence have no player yet.

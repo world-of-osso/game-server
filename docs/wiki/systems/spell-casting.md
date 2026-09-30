@@ -153,6 +153,9 @@ Damage and heal side effects:
 - **Pool list:** the class list comes from `chr_classes_x_power_types`, minus the alternate bars 10/23/24/25.
 - **Order:** `chr_classes.DisplayPower` first, then ascending ID. Example: DK = Runic Power, Runes.
 - **Initial values:** each non-mana pool starts at `DefaultPower`, with max `MaxBasePower`.
+- **Max** (`Player::UpdateMaxPower`): `MaxBasePower` + MOD_INCREASE_ENERGY 35 + MOD_MAX_POWER 418 of that power ([[auras]]), rounded; a lower max clamps current. `power_type` holds the retail base, passives the rest: Holy Power 3 + Boundless Conviction 115675 (+2, auto-learned) = 5; Chi 4 + Windwalker Monk 1258122 (+1) = 5, + Ascension 115396 = 6; Runes 6 + Runic Longevity 194653.
+- **Display power** (`Unit::CalculateDisplayPowerType`): Cat Form and Ghoul → Energy, Bear/Dire Bear → Rage, Travel/Ghost Wolf → Mana, otherwise `DisplayPower`. The display power leads `order` (the first `UnitPowers` entry); the rest stay ascending. See MOD_SHAPESHIFT in [[auras]].
+- **Runes** (`spell_cast/runes.rs`, TrinityCore `Runes`, `SetRuneCooldown`, `Player::RegenerateAll`, `Spell::TakeRunePower`): per-rune cooldowns, not a regenerating pool. A spent rune (lowest ready index first) gets the rune cooldown and joins the back of the depletion order; only the first 3 (`MAX_RECHARGING_RUNES`) recharge, a finished rune leaves the order and its leftover time is dropped. The Runes pool holds the ready count, so costs check it like any pool; ENERGIZE of runes finishes the front of the order. Cooldown: 10 s (`RUNE_BASE_COOLDOWN`) ÷ (MOD_POWER_REGEN_PERCENT on runes × (1 + haste)); TrinityCore multiplies by (1 − pct) instead.
 - **Mana** stays in the legacy `Mana` component, with its max from `stats.rs`. `PowerPools` only orders it. Retirement: move mana into `PowerPools` and delete `Mana` when the client reads `UnitPowers`.
 - **Units:** pools hold the raw DB2 values, the same units as `SpellPower` costs and ENERGIZE.
   - Rage, Runic Power, Soul Shards, Lunar Power and Pain are tenths (`DisplayModifier` 10). Insanity is hundredths.
@@ -177,6 +180,8 @@ Damage and heal side effects:
 - [spell_cast/targets.rs](../../../crates/server/src/spell_cast/targets.rs) — implicit targets, range
 - [spell_cast/effects.rs](../../../crates/server/src/spell_cast/effects.rs) — handlers, damage/heal paths
 - [spell_cast/powers.rs](../../../crates/server/src/spell_cast/powers.rs) — `PowerTypeTable`, pools, regen, `UnitPowers`
+- [spell_cast/runes.rs](../../../crates/server/src/spell_cast/runes.rs) — Death Knight rune cooldowns
+- [spell_cast/class_resource_tests.rs](../../../crates/server/src/spell_cast/class_resource_tests.rs) — maxima, forms, runes, charged points
 - [spell_cast/tests.rs](../../../crates/server/src/spell_cast/tests.rs) — real-DB App tests
 - [spell_cast/test_harness.rs](../../../crates/server/src/spell_cast/test_harness.rs) — shared real-DB harness (also used by aura tests)
 - [spec](../../specs/cast-presentation.md)
