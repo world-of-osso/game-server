@@ -31,7 +31,8 @@ pub(crate) const CHARACTERS: TableDefinition<u64, &[u8]> = TableDefinition::new(
 
 /// Inventory table: PlayerId (u64) -> serialized inventory (bytes).
 /// Inventory table: character_id -> bitcode `InventoryData` (gold in `u64` copper).
-const INVENTORIES: TableDefinition<u64, &[u8]> = TableDefinition::new("character_inventories");
+pub(crate) const INVENTORIES: TableDefinition<u64, &[u8]> =
+    TableDefinition::new("character_inventories");
 /// Inventories written before gold became `u64` (gold in `u32` copper); moved into
 /// `INVENTORIES` and dropped at startup.
 pub(crate) const LEGACY_INVENTORIES: TableDefinition<u64, &[u8]> =
@@ -92,7 +93,7 @@ const IGNORE_LISTS: TableDefinition<u64, &[u8]> = TableDefinition::new("ignore_l
 const COLLECTIONS: TableDefinition<u64, &[u8]> = TableDefinition::new("collections");
 
 /// Active auction table: auction_id (u64) -> bitcode `AuctionData` (money in `u64` copper).
-const AUCTIONS: TableDefinition<u64, &[u8]> = TableDefinition::new("auction_listings");
+pub(crate) const AUCTIONS: TableDefinition<u64, &[u8]> = TableDefinition::new("auction_listings");
 /// Auctions written before auction money became `u64`; moved into `AUCTIONS` and
 /// dropped at startup.
 pub(crate) const LEGACY_AUCTIONS: TableDefinition<u64, &[u8]> = TableDefinition::new("auctions");

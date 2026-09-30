@@ -261,7 +261,7 @@ fn expire_single_auction(db: &redb::Database, auction_id: u64, auction: &Auction
             "Your auction for {} expired without a buyer.",
             auction.item.name
         ),
-        0,
+        auction.deposit,
         Some(auction.item.clone()),
     );
 }

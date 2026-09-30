@@ -12,6 +12,10 @@ Updated [[spell-casting]] with fractional power/rate, charged-point and indexed 
 
 Updated [[combat]] (new Combat State section) and [[spell-casting]]. Combat is now TrinityCore's `CombatManager`: pairwise references, no timeout against a creature with a threat list, 5 s for PvP and threat-less creatures (training dummies), and `combat_stop` ends both sides. Before, every unit had its own 5 s timer after its last hit, refreshed every tick while it had `AutoAttack`: a caster auto-attacking a dummy from range stayed in combat 5 s past the dummy's evade (a 10 s tail on one Frostbolt), a kill left 5 s of combat, and a lull over 5 s in a real fight dropped combat. The damage meter's session duration is combat time, so its DPS followed.
 
+## [2026-09-30] systems | Bot economy contract audit
+
+Created [bot-economy spec](../specs/bot-economy.md) and [[bot-economy]] integration inventory. Recorded user-approved auction terms, recipe/expansion constraints, shared finite capacity, bounded consumers, recorded-cost expiry refunds, capped capital and persistence/CLI-first/engine/latency gates. All acceptance remains unchecked: inspected model helpers and candidate tests are not runtime or restart proof. Economy importer and expansion-11/new Silvermoon data coverage remain unestablished. No numerical tuning promoted from fixtures to policy.
+
 ## [2026-09-29] systems | Polymorph
 
 Updated [[auras]] (new Crowd control section, procs) and [[creature-ai]] (confused movement). Polymorph 118 now works: TRANSFORM 56 swaps `ModelDisplay` to the Polymorphed Sheep and restores it, MOD_CONFUSE 5 stops swings/casts/target and wanders the creature, 10% of max health in damage breaks it (TrinityCore `HandleBreakableCCAuraProc`), and polymorphed creatures regenerate. Findings: spell hit procs carried no damage, and triggered spells (Frostbolt's missile) never procced; TrinityCore lets `SPELL_ATTR3_NOT_A_PROC`/`CAN_PROC_FROM_PROCS` through. Proc damage must be the level-scaled health loss, or Frostbolt could not break Polymorph on a scaled level-30 Blackrock Spy.
