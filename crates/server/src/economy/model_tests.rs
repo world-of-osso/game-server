@@ -1,5 +1,171 @@
 use super::*;
 
+fn lot(item_id: u32, count: u32, ingredient_cost: u64) -> MaterialLot {
+    MaterialLot {
+        item_id,
+        count,
+        ingredient_cost,
+    }
+}
+
+#[test]
+fn whole_paid_stack_funds_two_crafts_and_preserves_residue_and_refund() {
+    let mut state = MerchantState {
+        gold: 89, // Whole five-unit stack already bought for 11 gold.
+        materials: vec![lot(300, 5, 11)],
+        ..Default::default()
+    };
+    let cfg = MerchantConfig {
+        capacity: 6,
+        ..config()
+    };
+    craft_from_materials(&mut state, &cfg, &recipe(), 8, 10, 7).unwrap();
+    assert_eq!(state.materials, vec![lot(300, 3, 7)]);
+    assert_eq!(state.stock[0].ingredient_cost, 4);
+    craft_from_materials(&mut state, &cfg, &recipe(), 8, 10, 8).unwrap();
+    assert_eq!(state.materials, vec![lot(300, 1, 3)]);
+    assert_eq!(state.stock[1].ingredient_cost, 4);
+    assert_eq!(state.stock[0].expires_at, 86_410);
+    assert_eq!(state.gold, 89);
+    assert_eq!(sell_stock(&mut state, 7, 1).unwrap(), (200, 8));
+    assert_eq!(state.stock[0].ingredient_cost, 3);
+    let refund = expire_stock(&mut state, 86_410).unwrap();
+    assert_eq!(refund, 7);
+    assert_eq!(1 + refund + state.materials[0].ingredient_cost, 11);
+    assert_eq!(state.materials, vec![lot(300, 1, 3)]);
+    assert_eq!(state.gold, 89);
+}
+
+#[test]
+fn materials_consumption_is_fifo_across_lots_and_duplicate_ingredient_rows() {
+    let r = Recipe {
+        ingredients: vec![(300, 2), (301, 1), (300, 1)],
+        ..recipe()
+    };
+    let cfg = MerchantConfig {
+        recipes: vec![r.clone()],
+        ..config()
+    };
+    let mut state = MerchantState {
+        materials: vec![
+            lot(300, 1, 3),
+            lot(301, 2, 5),
+            lot(300, 4, 11),
+            lot(999, 2, 7),
+        ],
+        ..Default::default()
+    };
+    craft_from_materials(&mut state, &cfg, &r, 8, 10, 7).unwrap();
+    assert_eq!(state.stock[0].ingredient_cost, 10); // 3 + 2 + 5, rounding stays in residue.
+    assert_eq!(
+        state.materials,
+        vec![lot(301, 1, 3), lot(300, 2, 6), lot(999, 2, 7)]
+    );
+    assert_eq!(state.gold, 0);
+}
+
+#[test]
+fn missing_materials_after_partial_consumption_leave_everything_unchanged() {
+    let r = Recipe {
+        ingredients: vec![(300, 2), (301, 1)],
+        ..recipe()
+    };
+    let cfg = MerchantConfig {
+        recipes: vec![r.clone()],
+        ..config()
+    };
+    for materials in [vec![], vec![lot(300, 1, 5)], vec![lot(300, 3, 7)]] {
+        let mut state = MerchantState {
+            materials,
+            ..merchant()
+        };
+        let before = state.clone();
+        assert!(craft_from_materials(&mut state, &cfg, &r, 8, 10, 7).is_err());
+        assert_eq!(state, before);
+    }
+}
+
+#[test]
+fn material_crafting_reuses_validation_without_mutation() {
+    let initial = MerchantState {
+        materials: vec![lot(300, 10, 21)],
+        ..merchant()
+    };
+    let cfg = config();
+    let wrong_expansion = Recipe {
+        expansion: 3,
+        ..recipe()
+    };
+    let invalid = Recipe {
+        ingredients: vec![(300, 0)],
+        ..recipe()
+    };
+    let invalid_cfg = MerchantConfig {
+        recipes: vec![invalid.clone()],
+        ..config()
+    };
+    let cases = [
+        (cfg.clone(), recipe(), 0, 10),
+        (cfg.clone(), recipe(), 8, u64::MAX),
+        (cfg.clone(), wrong_expansion, 8, 10),
+        (invalid_cfg, invalid, 8, 10),
+        (
+            MerchantConfig {
+                capacity: 2,
+                ..config()
+            },
+            recipe(),
+            8,
+            10,
+        ),
+    ];
+    for (cfg, r, price, now) in cases {
+        let mut state = initial.clone();
+        assert!(craft_from_materials(&mut state, &cfg, &r, price, now, 7).is_err());
+        assert_eq!(state, initial);
+    }
+    let mut state = initial;
+    craft_from_materials(&mut state, &cfg, &recipe(), 8, 10, 7).unwrap();
+    let before = state.clone();
+    for id in [7, 8] {
+        assert!(craft_from_materials(&mut state, &cfg, &recipe(), 8, 10, id).is_err());
+        assert_eq!(state, before);
+    }
+}
+
+#[test]
+fn material_cost_overflow_is_atomic_and_large_proration_is_exact() {
+    let r = Recipe {
+        ingredients: vec![(300, 1), (301, 1)],
+        ..recipe()
+    };
+    let cfg = MerchantConfig {
+        recipes: vec![r.clone()],
+        ..config()
+    };
+    let mut state = MerchantState {
+        materials: vec![lot(300, 1, u64::MAX), lot(301, 1, 1)],
+        ..merchant()
+    };
+    let before = state.clone();
+    assert!(craft_from_materials(&mut state, &cfg, &r, 8, 10, 7).is_err());
+    assert_eq!(state, before);
+    let r = Recipe {
+        ingredients: vec![(300, u32::MAX - 1)],
+        ..recipe()
+    };
+    let cfg = MerchantConfig {
+        recipes: vec![r.clone()],
+        ..config()
+    };
+    state.materials = vec![lot(300, u32::MAX, u64::MAX)];
+    craft_from_materials(&mut state, &cfg, &r, 8, 10, 7).unwrap();
+    let cost = (u128::from(u64::MAX) * u128::from(u32::MAX - 1) / u128::from(u32::MAX)) as u64;
+    assert_eq!(state.stock[0].ingredient_cost, cost);
+    assert_eq!(state.materials, vec![lot(300, 1, u64::MAX - cost)]);
+    assert_eq!(state.gold, 100);
+}
+
 fn recipe() -> Recipe {
     Recipe {
         spell_id: 100,
@@ -24,6 +190,7 @@ fn merchant() -> MerchantState {
     MerchantState {
         gold: 100,
         stock: vec![],
+        ..Default::default()
     }
 }
 
@@ -68,6 +235,7 @@ fn partial_sales_leave_exact_refundable_cost_and_do_not_credit_gold() {
     let mut state = MerchantState {
         gold: 90,
         stock: vec![batch()],
+        ..Default::default()
     };
     assert_eq!(sell_stock(&mut state, 7, 1).unwrap(), (200, 8));
     assert_eq!(state.stock[0].ingredient_cost, 7);
@@ -84,6 +252,7 @@ fn expiry_is_inclusive_and_idempotent() {
     let mut state = MerchantState {
         gold: 0,
         stock: vec![batch()],
+        ..Default::default()
     };
     assert_eq!(expire_stock(&mut state, 86_409).unwrap(), 0);
     assert_eq!(state.stock.len(), 1);
@@ -96,6 +265,7 @@ fn selling_all_removes_batch_and_rejects_invalid_quantities_atomically() {
     let mut state = MerchantState {
         gold: 0,
         stock: vec![batch()],
+        ..Default::default()
     };
     for (id, count) in [(7, 0), (7, 4), (8, 1)] {
         let before = state.clone();
@@ -113,6 +283,7 @@ fn sale_price_overflow_does_not_modify_stock() {
     let mut state = MerchantState {
         gold: 0,
         stock: vec![item],
+        ..Default::default()
     };
     let before = state.clone();
     assert!(sell_stock(&mut state, 7, 2).is_err());
@@ -128,6 +299,7 @@ fn expiry_refund_overflow_does_not_remove_any_batches() {
     let mut state = MerchantState {
         gold: 0,
         stock: vec![first, second],
+        ..Default::default()
     };
     let before = state.clone();
     assert!(expire_stock(&mut state, 86_410).is_err());
@@ -201,6 +373,7 @@ fn large_partial_sale_prorates_without_intermediate_overflow() {
     let mut state = MerchantState {
         gold: 0,
         stock: vec![item],
+        ..Default::default()
     };
     let sold = u32::MAX - 1;
     assert_eq!(
@@ -289,6 +462,7 @@ fn consumers_obey_supplied_budget_quantity_and_draw_limits() {
         let mut state = MerchantState {
             gold: 90,
             stock: vec![batch()],
+            ..Default::default()
         };
         assert_eq!(
             consume_stock(
@@ -324,6 +498,7 @@ fn consumer_selection_uses_popularity_and_excludes_unaffordable_goods() {
     let initial = MerchantState {
         gold: 0,
         stock: vec![batch(), other, ignored],
+        ..Default::default()
     };
     for (draw, sold_index) in [(0, 0), (1, 1), (3, 1), (4, 0)] {
         let mut state = initial.clone();
@@ -364,6 +539,7 @@ fn missing_or_mismatched_market_data_is_atomic_error() {
     let mut state = MerchantState {
         gold: 0,
         stock: vec![batch()],
+        ..Default::default()
     };
     for market in [
         BTreeMap::new(),
@@ -437,6 +613,7 @@ fn persisted_state_round_trips_all_accounting_fields() {
             MerchantState {
                 gold: 90,
                 stock: vec![batch()],
+                materials: vec![lot(300, 5, 11)],
             },
         )]),
         last_cycle: 5,
@@ -444,6 +621,7 @@ fn persisted_state_round_trips_all_accounting_fields() {
         customer_spent: 12,
         refund_issued: 4,
         withdrawn: 3,
+        ..Default::default()
     };
     let bytes = bitcode::encode(&state);
     assert_eq!(bitcode::decode::<EconomyState>(&bytes).unwrap(), state);
