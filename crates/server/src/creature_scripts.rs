@@ -17,11 +17,13 @@ impl Plugin for CreatureScriptsPlugin {
 /// AzerothCore `npc_training_dummy` (scripts/World/npcs_special.cpp).
 /// `DamageTaken` sets the damage to 0, so the dummy never loses health and
 /// never dies, while the combat log still reports the full hit (it is sent
-/// before `DealDamage`). Its 5 s `resetTimer`, restarted by every hit, is the
-/// shared combat grace, which only damage refreshes; when it runs out the
-/// dummy evades: `_EnterEvadeMode` → `RemoveEvadeAuras` strips the auras
-/// others put on it and `CombatStop` → `RemoveAllAttackers` stops the players
-/// still auto-attacking it (out of range, so no hit refreshes the timer).
+/// before `DealDamage`). A dummy has no threat list, so each attacker's combat
+/// with it ends 5 s after that attacker's last hit (`combat_refs`; TC
+/// `npc_training_dummy::_combatTimer`, npcs_special.cpp:1382-1415). When the
+/// last one ends the dummy evades like AzerothCore's after its 5 s `resetTimer`:
+/// `_EnterEvadeMode` → `RemoveEvadeAuras` strips the auras others put on it and
+/// `CombatStop` → `RemoveAllAttackers` stops the players still auto-attacking
+/// it (out of range, so no hit refreshes their combat).
 #[derive(Component, Debug, Default)]
 pub struct TrainingDummy {
     /// `CombatStatus` seen last tick, to catch the evade.

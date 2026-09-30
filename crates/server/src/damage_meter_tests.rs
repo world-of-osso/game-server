@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use shared::components::{Health, Position};
+use shared::components::{CombatStatus, Health, Position};
 use shared::protocol::{DamageMeterSnapshot, ProtocolPlugin};
 
 use super::*;
@@ -191,7 +191,8 @@ impl Client {
         hits[0].amount as u64
     }
 
-    /// Advance until the caster's combat (5 s grace after the hit) ends.
+    /// Advance until the caster's combat ends (5 s after the hit against the harness
+    /// NPC, which has no threat list).
     fn leave_combat(&mut self) {
         for _ in 0..200 {
             self.advance(1);
@@ -240,7 +241,7 @@ fn frostbolt_damage_reaches_current_and_overall_and_a_second_combat_is_a_new_ses
     let ended = ended.last().expect("a snapshot when combat ends");
     let current = ended.current.as_ref().unwrap();
     assert_eq!((current.session_id, current.active), (1, false));
-    // In combat from the hit to the end of the 5 s grace.
+    // In combat from the hit until 5 s after it.
     assert!((5.0..6.5).contains(&current.duration_secs), "{current:?}");
     let dps = current.sources[0].amount_per_second;
     assert!((dps - first as f32 / current.duration_secs).abs() < 1e-3);
@@ -259,6 +260,144 @@ fn frostbolt_damage_reaches_current_and_overall_and_a_second_combat_is_a_new_ses
             .abs()
             < 1e-3
     );
+}
+
+/// The harness NPC turned into a training dummy (`npc_training_dummy`) 20 yd away,
+/// out of the caster's melee range.
+fn make_distant_dummy(h: &mut Harness) {
+    h.app.world_mut().entity_mut(h.npc).insert((
+        crate::creature_scripts::TrainingDummy::default(),
+        Position {
+            x: 20.0,
+            y: 0.0,
+            z: 0.0,
+        },
+    ));
+}
+
+#[test]
+fn auto_attack_out_of_range_does_not_stretch_a_dummy_session_past_its_evade() {
+    let Some(h) = frostbolt_harness() else {
+        return;
+    };
+    let mut client = Client {
+        h,
+        received: Vec::new(),
+    };
+    make_distant_dummy(&mut client.h);
+    // Tab-targeting starts auto-attack; the dummy is out of melee range.
+    let npc = client.h.npc;
+    client.h.attack(npc);
+    client.frostbolt_hit();
+    client.leave_combat();
+    let latest = client.take().pop().expect("a snapshot when combat ends");
+    let current = latest.current.unwrap();
+    assert!(!current.active);
+    // The dummy ends combat 5 s after its last hit (TC npc_training_dummy); nothing
+    // keeps the caster in combat past that.
+    assert!((5.0..6.5).contains(&current.duration_secs), "{current:?}");
+}
+
+/// The harness NPC with a threat list, so the fight with it lasts until it dies or
+/// evades.
+fn make_fighting_creature(h: &mut Harness) {
+    h.app.world_mut().entity_mut(h.npc).insert((
+        shared::components::ThreatTable::default(),
+        crate::creature_ai::CreatureState::Idle,
+    ));
+}
+
+fn frostbolt_client() -> Option<Client> {
+    Some(Client {
+        h: frostbolt_harness()?,
+        received: Vec::new(),
+    })
+}
+
+fn caster_in_combat(client: &Client) -> bool {
+    client
+        .h
+        .app
+        .world()
+        .get::<CombatStatus>(client.h.caster)
+        .is_some_and(|status| status.0)
+}
+
+fn latest_current(client: &mut Client) -> DamageMeterSession {
+    client
+        .take()
+        .pop()
+        .and_then(|snapshot| snapshot.current)
+        .expect("a snapshot with a current session")
+}
+
+#[test]
+fn a_session_against_a_creature_ends_at_its_death_not_five_seconds_later() {
+    let Some(mut client) = frostbolt_client() else {
+        return;
+    };
+    make_fighting_creature(&mut client.h);
+    let first = client.frostbolt_hit();
+    // The next Frostbolt kills it.
+    let npc = client.h.npc;
+    client
+        .h
+        .app
+        .world_mut()
+        .get_mut::<Health>(npc)
+        .unwrap()
+        .current = 1.0;
+    let second = client.frostbolt_hit();
+    assert!(
+        !caster_in_combat(&client),
+        "the kill ends the caster's combat"
+    );
+    client.advance(5);
+
+    let current = latest_current(&mut client);
+    assert!(!current.active);
+    assert_eq!(current.total_amount, first + second);
+    // From the first hit to the kill: one Frostbolt cycle (63 frames, 3.15 s).
+    assert!((3.0..3.3).contains(&current.duration_secs), "{current:?}");
+    let dps = current.sources[0].amount_per_second;
+    assert!((dps - (first + second) as f32 / current.duration_secs).abs() < 1e-3);
+}
+
+#[test]
+fn a_lull_in_a_fight_with_a_creature_does_not_split_the_session() {
+    let Some(mut client) = frostbolt_client() else {
+        return;
+    };
+    make_fighting_creature(&mut client.h);
+    client.frostbolt_hit();
+    // 8 s without a hit: 11 s between the Frostbolts.
+    client.advance(160);
+    client.frostbolt_hit();
+    let current = latest_current(&mut client);
+    assert_eq!((current.session_id, current.active), (1, true));
+    assert!(current.duration_secs > 11.0, "{current:?}");
+}
+
+#[test]
+fn hits_on_a_dummy_a_few_seconds_apart_are_one_session_and_a_longer_gap_starts_another() {
+    let Some(mut client) = frostbolt_client() else {
+        return;
+    };
+    make_distant_dummy(&mut client.h);
+    // Back to back: 3.15 s between the hits.
+    client.frostbolt_hit();
+    client.frostbolt_hit();
+    // 2 s more: 3.9 s between the hits.
+    client.advance(15);
+    client.frostbolt_hit();
+    let current = latest_current(&mut client);
+    assert_eq!((current.session_id, current.active), (1, true));
+
+    // 6.15 s between the hits: combat with the dummy ended 5 s after the last one.
+    client.advance(60);
+    client.frostbolt_hit();
+    let current = latest_current(&mut client);
+    assert_eq!((current.session_id, current.active), (2, true));
 }
 
 // --- ECS: groups ---
@@ -314,8 +453,9 @@ fn damage_line(source: Entity, target: Entity, amount: i32) -> CombatLogEvent {
     }
 }
 
-#[test]
-fn a_group_member_s_damage_and_combat_reach_every_member_s_meter() {
+/// A meter app with the mage (character 1) and the warrior (2) grouped, and an
+/// ungrouped rogue (3).
+fn group_app() -> (App, Entity, Entity, Entity) {
     let mut app = App::new();
     app.add_plugins((MinimalPlugins, bevy::state::app::StatesPlugin));
     app.add_plugins(lightyear::prelude::server::ServerPlugins {
@@ -331,7 +471,6 @@ fn a_group_member_s_damage_and_combat_reach_every_member_s_meter() {
     let mage = spawn_member(&mut app, 1, "Fbmage", 8);
     let warrior = spawn_member(&mut app, 2, "Fbwarrior", 1);
     let outsider = spawn_member(&mut app, 3, "Fbrogue", 4);
-    let mob = app.world_mut().spawn_empty().id();
     let online: OnlineView = [
         (1, member(mage, "Fbmage", 8)),
         (2, member(warrior, "Fbwarrior", 1)),
@@ -345,6 +484,13 @@ fn a_group_member_s_damage_and_combat_reach_every_member_s_meter() {
     assert_eq!(registry.group_members(1).len(), 2);
     app.insert_resource(registry);
     app.update();
+    (app, mage, warrior, outsider)
+}
+
+#[test]
+fn a_group_member_s_damage_and_combat_reach_every_member_s_meter() {
+    let (mut app, mage, warrior, outsider) = group_app();
+    let mob = app.world_mut().spawn_empty().id();
 
     // The warrior fights; the mage stays out of combat.
     app.world_mut()
@@ -397,4 +543,38 @@ fn a_group_member_s_damage_and_combat_reach_every_member_s_meter() {
         .insert(CombatStatus(false));
     app.update();
     assert!(!app.world().get::<DamageMeter>(mage).unwrap().is_active());
+}
+
+#[test]
+fn a_group_member_s_fight_keeps_one_session_through_a_lull_until_the_creature_dies() {
+    let (mut app, mage, warrior, _) = group_app();
+    app.add_systems(Update, crate::combat_refs::expire_combat_refs_system);
+    let wolf = app
+        .world_mut()
+        .spawn((
+            Health {
+                current: 100.0,
+                max: 100.0,
+            },
+            shared::components::ThreatTable::default(),
+        ))
+        .id();
+    crate::combat_refs::set_in_combat_with(app.world_mut(), warrior, wolf);
+    record_damage(app.world_mut(), &damage_line(warrior, wolf, 250));
+    // 8 s without a hit.
+    for _ in 0..160 {
+        app.update();
+    }
+    record_damage(app.world_mut(), &damage_line(warrior, wolf, 150));
+    app.update();
+    let meter = app.world().get::<DamageMeter>(mage).unwrap();
+    let current = meter.snapshot(0.0, mage).current.unwrap();
+    assert_eq!((current.session_id, current.total_amount), (1, 400));
+    assert!(meter.is_active());
+
+    // The wolf dies: `CombatStop` ends the warrior's fight, and the group's session.
+    crate::combat::combat_stop(app.world_mut(), wolf);
+    app.update();
+    assert!(!app.world().get::<DamageMeter>(mage).unwrap().is_active());
+    assert!(!app.world().get::<DamageMeter>(warrior).unwrap().is_active());
 }

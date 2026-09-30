@@ -4,6 +4,10 @@
 
 Updated [[class-progression]] and [[spell-casting]] for Monk/DH/Evoker creation, start levels, progression and six basic spells; added `docs/specs/new-classes.md`. Local ChrClasses/ChrRaces verified max(class, race) levels (1/8/10 for ordinary Monk/DH/Dracthyr Evoker); locally extracted CharBaseInfo confirmed the supported-race gates, including Void Elf DH. ENERGIZE previously ignored point modifiers, so Tiger Palm gained zero Windwalker Chi. Existing modifiers now supply the authored +2. Additional authored Monk gates cover Kul Tiran 32, Earthen 84/85 and Haranir 86/91, using local race bits/levels and unchanged placeholder placement. Powers ownership, engine UI/live fixtures and delayed starting zones remain separate work.
 
+## [2026-09-30] systems | Combat references
+
+Updated [[combat]] (new Combat State section) and [[spell-casting]]. Combat is now TrinityCore's `CombatManager`: pairwise references, no timeout against a creature with a threat list, 5 s for PvP and threat-less creatures (training dummies), and `combat_stop` ends both sides. Before, every unit had its own 5 s timer after its last hit, refreshed every tick while it had `AutoAttack`: a caster auto-attacking a dummy from range stayed in combat 5 s past the dummy's evade (a 10 s tail on one Frostbolt), a kill left 5 s of combat, and a lull over 5 s in a real fight dropped combat. The damage meter's session duration is combat time, so its DPS followed.
+
 ## [2026-09-29] systems | Polymorph
 
 Updated [[auras]] (new Crowd control section, procs) and [[creature-ai]] (confused movement). Polymorph 118 now works: TRANSFORM 56 swaps `ModelDisplay` to the Polymorphed Sheep and restores it, MOD_CONFUSE 5 stops swings/casts/target and wanders the creature, 10% of max health in damage breaks it (TrinityCore `HandleBreakableCCAuraProc`), and polymorphed creatures regenerate. Findings: spell hit procs carried no damage, and triggered spells (Frostbolt's missile) never procced; TrinityCore lets `SPELL_ATTR3_NOT_A_PROC`/`CAN_PROC_FROM_PROCS` through. Proc damage must be the level-scaled health loss, or Frostbolt could not break Polymorph on a scaled level-30 Blackrock Spy.

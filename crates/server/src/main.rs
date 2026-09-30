@@ -17,6 +17,7 @@ mod character_stats_data;
 mod class_progression;
 mod collection;
 mod combat;
+mod combat_refs;
 mod creature_aggro;
 mod creature_ai;
 mod creature_scripts;

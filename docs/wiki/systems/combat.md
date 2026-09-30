@@ -25,7 +25,7 @@ Selecting a unit never attacks it. TrinityCore `HandleSetSelectionOpcode` (MiscH
   - A new victim keeps the running swing timers. Repeating the current victim changes nothing (Unit.cpp:5906-5931).
   - `AttackStop` (`CMSG_ATTACK_STOP`) runs `Unit::AttackStop`.
 - **Creatures** attack through their AI's `CombatTarget` (`Changed<CombatTarget>`, `Without<Player>`). `Unit::Attack` engages the victim for a creature (Unit.cpp:5950-5952), so they enter combat at once.
-- **Combat.** A player enters combat with the first swing (`AttackerStateUpdate` → `AtTargetAttacked`, Unit.cpp:2271), not with the request. After that, `maintain_in_combat_state_system` keeps an attacking unit in combat.
+- **Combat.** A player enters combat with the first swing (`AttackerStateUpdate` → `AtTargetAttacked`, Unit.cpp:2271), not with the request. Auto-attack alone keeps nobody in combat; see Combat State.
 - **Stops.** `combat::attack_stop` removes `AutoAttack` and sends `AttackStopped { attacker, victim, now_dead }` (`SendMeleeAttackStop`, Unit.cpp:2550-2556). Every stop goes through it:
   - `CMSG_ATTACK_STOP`
   - `combat_stop` (the unit's and its attackers', `CombatStop` → `RemoveAllAttackers`, Unit.cpp:6029-6044), for death (`setDeathState`, Unit.cpp:9185-9187), evade, map transfer and duel end
@@ -35,6 +35,17 @@ Selecting a unit never attacks it. TrinityCore `HandleSetSelectionOpcode` (MiscH
 - **Selection changes.** The server does not stop auto-attack when the selection changes. The client sends `AttackSwing` for a new attackable selection and `AttackStop` otherwise.
 
 Tests: `combat_tests/attack_requests.rs` (selection neither swings nor enters combat; swing, echo, first-swing combat; stop; switch keeps the timer; friendly, corpse, uninteractible and unknown refusals; victim death; Polymorph).
+
+## Combat State
+
+`combat_refs.rs` is TrinityCore's `CombatManager` (Combat/CombatManager.h:27-46): each pair of units fighting holds a reference, and `CombatStatus` is whether a unit holds any. Swings, spell damage, `.damage`, threat (`add_threat`) and a creature's attack call `set_in_combat_with(a, b)`; `combat_stop` (death, evade, map transfer, duel end) ends every reference of the unit on both sides, so the units it fought leave combat at once unless they fight something else.
+
+- A reference with a creature that has a threat list never times out: the fight lasts until the creature dies or evades, however long the lull.
+- Player-versus-player references end 5 s after their last refresh (`PVP_COMBAT_TIMEOUT`, CombatManager.h:84).
+- Creatures without a threat list (triggers, critters, training dummies) have no AI that would end their fights, so their references time out after 5 s too, like TC `npc_training_dummy` (npcs_special.cpp:1382-1415).
+- Not modelled: suppressed references (vanish, feign death; TC puts a caster in combat at spell launch, Spell.cpp:8538-8541, here at the hit), pets.
+
+Tests: `combat_refs_tests.rs` (lull, two opponents, PvP timeout, threat-less timeout, despawn, dead refused).
 
 ## Replicated Unit Target
 
