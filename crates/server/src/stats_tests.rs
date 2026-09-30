@@ -178,6 +178,10 @@ fn enter_world_app(db: GameDatabase, spells: SpellStore, classes: ClassSpells) -
     app.init_resource::<crate::maps::InstanceManager>();
     app.add_systems(Update, crate::auth_character::process_select_character);
     app.add_plugins(StatsPlugin);
+    app.add_systems(
+        Update,
+        crate::experience::refill_after_level_up.after(update_character_stats),
+    );
     app.finish();
     app.cleanup();
     app
@@ -274,15 +278,22 @@ fn entering_world_rescales_persisted_health_and_follows_spec_and_admin_level() {
         crate::admin_types::AdminResponse::LevelSet { level: 10, .. }
     ));
     app.update();
-    // Paladin L10 Sta 555 × 2; the 50% health ratio carries over.
+    // Paladin L10 Sta 555 × 2. The level change refills the half-health
+    // character (Player::GiveLevel → SetFullHealth).
     assert_eq!(
         *app.world().get::<Health>(player).unwrap(),
         Health {
-            current: 555.0,
+            current: 1110.0,
             max: 1110.0
         }
     );
-    assert_eq!(app.world().get::<Mana>(player).unwrap().max, 1000.0);
+    assert_eq!(
+        *app.world().get::<Mana>(player).unwrap(),
+        Mana {
+            current: 1000.0,
+            max: 1000.0
+        }
+    );
 }
 
 #[test]

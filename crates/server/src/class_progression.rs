@@ -879,17 +879,28 @@ fn apply_action_button(
 }
 
 /// Apply an admin level change to the online player, if any. `Level` changes
-/// drive `sync_level_changes`; `UnitLevel` follows when present.
+/// drive `sync_level_changes`; `UnitLevel` follows when present. A new level
+/// refills health and mana like a level-up (Player::GiveLevel, Player.cpp:2202-2271,
+/// which the online `.character level` calls: cs_character.cpp:770).
 pub(crate) fn set_live_level(world: &mut World, character_id: u64, level: u8) {
-    let mut players = world.query::<(&ClientId, &mut Level, Option<&mut UnitLevel>)>();
-    for (client_id, mut player_level, unit_level) in players.iter_mut(world) {
+    let mut players = world.query::<(Entity, &ClientId, &mut Level, Option<&mut UnitLevel>)>();
+    let mut changed = Vec::new();
+    for (entity, client_id, mut player_level, unit_level) in players.iter_mut(world) {
         if client_id.0 != character_id {
             continue;
+        }
+        if player_level.0 != level {
+            changed.push(entity);
         }
         player_level.0 = level;
         if let Some(mut unit_level) = unit_level {
             unit_level.0 = level;
         }
+    }
+    for entity in changed {
+        world
+            .entity_mut(entity)
+            .insert(crate::experience::RefillAfterLevelUp);
     }
 }
 
