@@ -51,6 +51,11 @@ impl Harness {
             ))
             .id();
         let mut harness = Self { app, connection };
+        harness.request::<UseGameObject>();
+        harness.request::<MailRequest>();
+        harness.pair::<MailboxContents>();
+        harness.pair::<MailFailed>();
+        harness.app.init_resource::<SelectedCharacterId>();
         harness.request::<InteractNpc>();
         harness.request::<SelectGossipOption>();
         harness.request::<OpenAuctionHouse>();
@@ -123,6 +128,226 @@ impl Harness {
             success: true,
             error: None,
         });
+    }
+}
+
+fn mailbox(money: u64, attached: bool) -> MailboxContents {
+    MailboxContents {
+        object: 77,
+        now: 100,
+        mails: vec![MailHeader {
+            mail_id: 9,
+            sender: "Auction House".into(),
+            subject: "Sold".into(),
+            body: "Proceeds".into(),
+            money,
+            cod: 0,
+            attachments: if attached {
+                vec![MailAttachment {
+                    slot: 5,
+                    item: item(2),
+                    name: "Linen".into(),
+                    quality: 1,
+                }]
+            } else {
+                vec![]
+            },
+            expires_at: 10000,
+            read: false,
+            returned: false,
+            from_player: false,
+            returnable: false,
+        }],
+    }
+}
+
+impl Harness {
+    fn mailbox_role(&mut self) {
+        self.reply::<_, InteractionChannel>(InteractionOpened {
+            npc: 77,
+            kind: InteractionKind::Role(NpcRole::Mailbox),
+        });
+    }
+    fn money(&mut self, copper: u64) -> Entity {
+        let remote = Entity::from_bits(999);
+        let local = self
+            .app
+            .world_mut()
+            .spawn(shared::components::Gold(copper))
+            .id();
+        self.app.world_mut().resource_mut::<SelectedCharacterId>().0 = Some(remote.to_bits());
+        self.app
+            .world_mut()
+            .get_mut::<MessageManager>(self.connection)
+            .unwrap()
+            .entity_mapper
+            .insert(remote, local);
+        self.tick();
+        local
+    }
+}
+
+#[test]
+fn wire_mail_list_uses_object_and_waits_for_matching_role_and_inbox() {
+    let mut h = Harness::new(EconomyOperation::MailList);
+    h.tick();
+    assert_eq!(
+        h.requests::<UseGameObject>(),
+        &[UseGameObject { object: 77 }]
+    );
+    assert!(h.requests::<InteractNpc>().is_empty());
+    let mut wrong = mailbox(5000000000, true);
+    wrong.object = 78;
+    h.reply::<_, MailChannel>(wrong);
+    h.reply::<_, MailChannel>(mailbox(5000000000, true));
+    assert!(h.exit().is_none());
+    h.reply::<_, InteractionChannel>(InteractionOpened {
+        npc: 78,
+        kind: InteractionKind::Role(NpcRole::Mailbox),
+    });
+    assert!(h.exit().is_none());
+    h.mailbox_role();
+    assert_eq!(h.exit(), Some(AppExit::Success));
+    assert!(h.requests::<OpenAuctionHouse>().is_empty());
+    assert!(h.requests::<MailRequest>().is_empty());
+}
+
+#[test]
+fn wire_mail_money_requires_inbox_removal_and_own_gold_update() {
+    let mut h = Harness::new(EconomyOperation::MailTakeMoney { mail_id: 9 });
+    let own = h.money(100);
+    h.mailbox_role();
+    h.reply::<_, MailChannel>(mailbox(5000000000, false));
+    assert_eq!(
+        h.requests::<MailRequest>(),
+        &[MailRequest {
+            object: 77,
+            mail_id: 9,
+            action: MailAction::TakeMoney
+        }]
+    );
+    assert!(h.exit().is_none());
+    h.app
+        .world_mut()
+        .spawn(shared::components::Gold(5000000100));
+    h.reply::<_, MailChannel>(mailbox(0, false));
+    assert!(h.exit().is_none());
+    h.app
+        .world_mut()
+        .entity_mut(own)
+        .insert(shared::components::Gold(5000000100));
+    h.tick();
+    assert_eq!(h.exit(), Some(AppExit::Success));
+    assert_eq!(h.requests::<MailRequest>().len(), 1);
+}
+
+#[test]
+fn wire_mail_attachment_requires_bag_increase_and_fixed_slot_removal() {
+    let mut h = Harness::new(EconomyOperation::MailTakeAttachment {
+        mail_id: 9,
+        slot: 5,
+    });
+    h.tick();
+    h.mailbox_role();
+    h.reply::<_, MailChannel>(mailbox(0, true));
+    assert!(h.requests::<MailRequest>().is_empty());
+    h.reply::<_, InventoryChannel>(InventorySnapshot { bags: vec![] });
+    assert_eq!(
+        h.requests::<MailRequest>(),
+        &[MailRequest {
+            object: 77,
+            mail_id: 9,
+            action: MailAction::TakeAttachment { slot: 5 }
+        }]
+    );
+    h.reply::<_, MailChannel>(mailbox(0, false));
+    assert!(h.exit().is_none());
+    h.reply::<_, InventoryChannel>(InventoryDelta {
+        changes: vec![InventorySlotChange {
+            location: ItemLocation::Bag { bag: 0, slot: 2 },
+            item: Some(item(2)),
+        }],
+    });
+    assert_eq!(h.exit(), Some(AppExit::Success));
+    assert_eq!(h.requests::<MailRequest>().len(), 1);
+}
+
+#[test]
+fn wire_mail_gold_first_still_waits_for_inbox_and_ignores_wrong_object() {
+    let mut h = Harness::new(EconomyOperation::MailTakeMoney { mail_id: 9 });
+    let own = h.money(100);
+    h.mailbox_role();
+    h.reply::<_, MailChannel>(mailbox(200, false));
+    h.app
+        .world_mut()
+        .entity_mut(own)
+        .insert(shared::components::Gold(300));
+    h.tick();
+    assert!(h.exit().is_none());
+    let mut wrong = mailbox(0, false);
+    wrong.object = 78;
+    h.reply::<_, MailChannel>(wrong);
+    assert!(h.exit().is_none());
+    h.reply::<_, MailChannel>(mailbox(0, false));
+    assert_eq!(h.exit(), Some(AppExit::Success));
+}
+
+#[test]
+fn wire_mail_rejections_close_and_deadlines_never_retry() {
+    for mode in ["failed", "closed", "timeout"] {
+        let mut h = Harness::new(EconomyOperation::MailTakeMoney { mail_id: 9 });
+        h.money(100);
+        h.mailbox_role();
+        h.app.world_mut().resource_mut::<EconomyFlow>().started =
+            std::time::Instant::now() - Duration::from_secs(9);
+        h.reply::<_, MailChannel>(mailbox(200, false));
+        assert!(h.app.world().resource::<EconomyFlow>().started.elapsed() < Duration::from_secs(1));
+        h.reply::<_, MailChannel>(MailFailed {
+            object: 78,
+            error: MailError::NotInteracting,
+        });
+        assert!(h.exit().is_none());
+        match mode {
+            "failed" => h.reply::<_, MailChannel>(MailFailed {
+                object: 77,
+                error: MailError::TooMuchGold,
+            }),
+            "closed" => h.reply::<_, InteractionChannel>(InteractionClosed { npc: 77 }),
+            _ => {
+                h.app.world_mut().resource_mut::<EconomyFlow>().started =
+                    std::time::Instant::now() - Duration::from_secs(11);
+                h.tick();
+            }
+        }
+        assert_eq!(h.exit(), Some(AppExit::Error(1.try_into().unwrap())));
+        h.tick();
+        assert_eq!(h.requests::<MailRequest>().len(), 1);
+    }
+}
+
+#[test]
+fn wire_mail_wrong_role_missing_mail_and_invalid_slot_fail_without_mutations() {
+    let mut h = Harness::new(EconomyOperation::MailList);
+    h.tick();
+    h.reply::<_, InteractionChannel>(InteractionOpened {
+        npc: 77,
+        kind: InteractionKind::Role(NpcRole::Vendor),
+    });
+    assert_eq!(h.exit(), Some(AppExit::Error(1.try_into().unwrap())));
+    for operation in [
+        EconomyOperation::MailTakeMoney { mail_id: 10 },
+        EconomyOperation::MailTakeAttachment {
+            mail_id: 9,
+            slot: 0,
+        },
+    ] {
+        let mut h = Harness::new(operation);
+        h.tick();
+        h.mailbox_role();
+        h.reply::<_, InventoryChannel>(InventorySnapshot { bags: vec![] });
+        h.reply::<_, MailChannel>(mailbox(200, true));
+        assert_eq!(h.exit(), Some(AppExit::Error(1.try_into().unwrap())));
+        assert!(h.requests::<MailRequest>().is_empty());
     }
 }
 

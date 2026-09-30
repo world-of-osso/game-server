@@ -1,6 +1,8 @@
 use super::*;
 use std::collections::HashMap;
 
+mod mail;
+
 #[cfg(test)]
 mod tests;
 
@@ -91,6 +93,7 @@ struct Receivers<'w, 's> {
 pub(crate) fn register(app: &mut App) {
     app.init_resource::<EconomyFlow>();
     app.init_resource::<MerchantState>();
+    mail::register(app);
     app.add_systems(Update, economy_system);
 }
 
@@ -143,7 +146,7 @@ fn economy_system(
     let CliCommand::Economy(action) = &action.command else {
         return;
     };
-    if flow.phase == Phase::Done {
+    if flow.phase == Phase::Done || action.operation.is_mail() {
         return;
     }
     // Inventory and vendor responses use different channels from interaction.
@@ -396,7 +399,10 @@ fn dispatch_request(
     senders: &mut Senders,
 ) -> Result<bool, String> {
     match &action.operation {
-        EconomyOperation::Open => return Ok(false),
+        EconomyOperation::Open
+        | EconomyOperation::MailList
+        | EconomyOperation::MailTakeMoney { .. }
+        | EconomyOperation::MailTakeAttachment { .. } => return Ok(false),
         EconomyOperation::Search(query) => send::<_, AuctionChannel>(
             &mut senders.search,
             QueryAuctions {

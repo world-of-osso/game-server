@@ -23,6 +23,9 @@ enum Commands {
     /// Merchant operations (requires a nearby vendor's server entity bits)
     #[command(subcommand)]
     Merchant(MerchantCommands),
+    /// Standard inbox claims at a nearby mailbox GameObject
+    #[command(subcommand)]
+    Mail(MailCommands),
     /// Connect, authenticate, print character list, exit
     Login(LoginArgs),
     /// Register a new account
@@ -180,6 +183,64 @@ enum AhCommands {
 enum MerchantCommands {
     List(EconomyArgs),
     Buy(MerchantBuyArgs),
+}
+
+#[derive(Parser, Clone)]
+struct MailArgs {
+    #[command(flatten)]
+    auth: TokenArgs,
+    /// Mailbox GameObject server entity bits, NOT template entry/spawn GUID
+    #[arg(long)]
+    object: u64,
+}
+
+#[derive(Parser)]
+struct MailIdArgs {
+    #[command(flatten)]
+    context: MailArgs,
+    #[arg(long)]
+    mail_id: u64,
+}
+
+#[derive(Parser)]
+struct MailAttachmentArgs {
+    #[command(flatten)]
+    mail: MailIdArgs,
+    /// Fixed attachment slot from mail list, NOT its position in the list
+    #[arg(long)]
+    slot: u8,
+}
+
+#[derive(Subcommand)]
+enum MailCommands {
+    List(MailArgs),
+    TakeMoney(MailIdArgs),
+    TakeAttachment(MailAttachmentArgs),
+}
+
+fn mail_action(command: MailCommands) -> CliAction {
+    let (args, operation) = match command {
+        MailCommands::List(a) => (a, EconomyOperation::MailList),
+        MailCommands::TakeMoney(a) => (
+            a.context,
+            EconomyOperation::MailTakeMoney { mail_id: a.mail_id },
+        ),
+        MailCommands::TakeAttachment(a) => (
+            a.mail.context,
+            EconomyOperation::MailTakeAttachment {
+                mail_id: a.mail.mail_id,
+                slot: a.slot,
+            },
+        ),
+    };
+    action_from_token(
+        args.auth,
+        CliCommand::Economy(EconomyAction {
+            npc: args.object,
+            gossip_option: None,
+            operation,
+        }),
+    )
 }
 
 #[derive(Parser)]
@@ -378,6 +439,7 @@ fn build_action(cli: Cli) -> CliAction {
     match cli.command {
         Commands::Ah(command) => ah_action(command),
         Commands::Merchant(command) => merchant_action(command),
+        Commands::Mail(command) => mail_action(command),
         Commands::Login(args) => login_action(args),
         Commands::Status(args) => action_from_token(args, CliCommand::Status),
         Commands::Register(args) => register_action(args),
@@ -487,6 +549,62 @@ fn action_from_token(args: TokenArgs, command: CliCommand) -> CliAction {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn economy_cli_mail_requires_object_and_claim_identifiers() {
+        for args in [
+            vec!["mail", "list", "--object", "77"],
+            vec![
+                "mail",
+                "take-money",
+                "--object",
+                "77",
+                "--mail-id",
+                "9000000000",
+            ],
+            vec![
+                "mail",
+                "take-attachment",
+                "--object",
+                "77",
+                "--mail-id",
+                "9",
+                "--slot",
+                "11",
+            ],
+        ] {
+            let cli = Cli::try_parse_from(std::iter::once("game-cli").chain(args)).unwrap();
+            let CliCommand::Economy(action) = build_action(cli).command else {
+                panic!("expected economy action");
+            };
+            assert_eq!(action.npc, 77);
+            assert_eq!(action.gossip_option, None);
+        }
+        for args in [
+            vec!["mail", "list", "--npc", "77"],
+            vec!["mail", "take-money", "--object", "77"],
+            vec![
+                "mail",
+                "take-attachment",
+                "--object",
+                "77",
+                "--mail-id",
+                "9",
+            ],
+            vec![
+                "mail",
+                "take-attachment",
+                "--object",
+                "77",
+                "--mail-id",
+                "9",
+                "--slot",
+                "256",
+            ],
+        ] {
+            assert!(Cli::try_parse_from(std::iter::once("game-cli").chain(args)).is_err());
+        }
+    }
 
     #[test]
     fn economy_cli_browse_and_search_preserve_all_filters() {

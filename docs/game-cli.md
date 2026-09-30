@@ -2,7 +2,7 @@
 
 `game-cli` keeps the existing token login flow, selects the account's first character, enters the world, and interacts with `--npc <server-entity-bits>`. This is NOT a creature template entry or spawn GUID. The character must already stand within interaction range of that NPC.
 
-All actions accept `--server <ip:port>`, `--token <token>` (otherwise the saved token), `--npc <bits>`, and optional `--gossip-option <option-id>`. If the NPC offers gossip, the CLI prints its menu and fails unless the supplied option is offered. It waits for the requested role; every AH action then sends `OpenAuctionHouse` and waits for success before the operation.
+AH and merchant actions accept `--server <ip:port>`, `--token <token>` (otherwise the saved token), `--npc <bits>`, and optional `--gossip-option <option-id>`. If the NPC offers gossip, the CLI prints its menu and fails unless the supplied option is offered. It waits for the requested role; every AH action then sends `OpenAuctionHouse` and waits for success before the operation.
 
 ## Actions
 
@@ -23,6 +23,9 @@ ah buyout --auction-id ID
 ah cancel --auction-id ID
 merchant list
 merchant buy --slot SLOT --item-id ID [--count 1]
+mail list --object MAILBOX_ENTITY_BITS
+mail take-money --object MAILBOX_ENTITY_BITS --mail-id ID
+mail take-attachment --object MAILBOX_ENTITY_BITS --mail-id ID --slot SLOT
 ```
 
 Page indices are zero-based; page sizes are 1–100. Prices are integer copper. Search prints the server-returned query, total/returned rows, listing data, and `request_response_ms`, measured from sending the search request to receiving results (excludes authentication and opening). The server chooses the auction house from the auctioneer session, not a CLI faction override.
@@ -37,7 +40,13 @@ ah browse --text Linen --class-id 7 --quality 1 --min-level 1 --max-level 80 --u
 
 Merchant list waits for the vendor role and its inventory. Buy waits for the initial bag snapshot and vendor list, validates slot/item against that list, sends the purchase, and waits for the resulting bag item-count increase. `--count` is purchases, not individual items: each yields the vendor's `stack_count`. A refreshed limited-stock list alone is not purchase success.
 
-Rejections and interaction closures print explicit failures and exit nonzero. Startup/auth has a 10-second deadline; interaction/opening has a 10-second deadline, and each dispatched operation gets a new 10-second deadline. A timeout does NOT prove a mutation was rejected: inspect inventory/owned/bids before retrying. Mutations are never automatically retried.
+Mail actions accept `--server` and `--token`, but require `--object`, not `--npc` or `--gossip-option`. Supply a nearby Mailbox GameObject's live server entity bits, not its template entry or spawn GUID. Opening sends `UseGameObject` and waits for that object's `Mailbox` role plus matching `MailboxContents`; no auctioneer session or remote AH-mail API is used. `mail list` prints the standard delivered inbox including mail IDs, sender/subject/body, copper, COD, and fixed attachment slots/items. Use the printed attachment `slot`, not its position in the list. Each command authenticates and opens a new mailbox session.
+
+Money claims wait for an initial own-player replicated Gold value and inbox, send one `TakeMoney`, then require the mail's money to become zero and the own-player gold to equal baseline plus attached copper. Attachment claims wait for the initial bags and inbox, send one `TakeAttachment { slot }`, then require that fixed slot to disappear and the bag item count to increase by its attached count. Updates may arrive in either order; neither sending a request nor an inbox-only update proves success. Existing server COD rules apply to attachment claims; this CLI does not send mail or redesign COD.
+
+Mailbox entity lookup is operator input: obtain the live GameObject entity bits and coordinates from server inspection; `npc-info` results are not mailbox IDs. Place the character within mailbox interaction range before running these commands. After buyout/cancel, inspect buyer/seller `mail list`, claim returned/won attachments and seller proceeds separately, and record each update-backed confirmation before native testing. This lookup and live proof remain operator-owned.
+
+Rejections and interaction closures print explicit failures and exit nonzero. Startup/auth has a 10-second deadline; interaction/opening has a 10-second deadline, and each dispatched operation gets a new 10-second deadline. A timeout does NOT prove a mutation was rejected: inspect inventory/owned/bids or mailbox and money before retrying. Mutations are never automatically retried.
 
 ## Isolated-server smoke recipe (operator-run)
 
@@ -69,5 +78,7 @@ Do this **before native engine economy testing**. Do not point mutation probes a
 CARGO_TARGET_DIR=/tmp/game-client-economy-target cargo test -p client --bin game-cli economy_cli -- --nocapture
 CARGO_TARGET_DIR=/tmp/game-client-economy-target cargo test -p client --lib economy:: -- --nocapture
 ```
+
+Mail parser and HostClient proofs cover GameObject use rather than NPC interaction, matching mailbox role/object gating, exact fixed-slot claim payloads, initial inventory/money prerequisites, both update orders, rejection/closure, fresh claim deadlines, and no automatic mutation retries. Money fixtures exceed 32-bit copper. These tests do not prove live delivery or claims.
 
 Browse proofs cover shared search-argument parsing, role/open ordering, exact grouped request transport through HostClient, ignoring flat responses, grouped completion, rejection/timeout, and 64-bit global quantity/price reporting. Existing flat search and merchant proofs remain unchanged. These are client/parser/transport proofs, not live server economy acceptance. Live smoke needs the isolated server recipe above.

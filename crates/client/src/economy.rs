@@ -5,6 +5,13 @@ mod transport;
 pub(super) use transport::register;
 
 impl EconomyOperation {
+    fn is_mail(&self) -> bool {
+        matches!(
+            self,
+            Self::MailList | Self::MailTakeMoney { .. } | Self::MailTakeAttachment { .. }
+        )
+    }
+
     fn is_merchant(&self) -> bool {
         matches!(self, Self::MerchantList | Self::MerchantBuy { .. })
     }
@@ -22,6 +29,9 @@ pub enum EconomyOperation {
     Bid(PlaceBid),
     Buyout(BuyoutAuction),
     Cancel(CancelAuction),
+    MailList,
+    MailTakeMoney { mail_id: u64 },
+    MailTakeAttachment { mail_id: u64, slot: u8 },
     MerchantList,
     MerchantBuy { slot: u32, item_id: u32, count: u32 },
 }
