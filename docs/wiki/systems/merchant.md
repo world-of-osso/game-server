@@ -1,7 +1,5 @@
 # Merchant
 
-Bot-crafted dynamic inventory is a separate, unverified integration: see [[bot-economy]] and its [contract](../../specs/bot-economy.md). Existing vendor restocking below does not establish bot stock behavior.
-
 Vendors in `crates/server/src/merchant.rs`, with `merchant/catalog.rs` (the world.db vendor lists) and `merchant/stock.rs` (limited stock and buyback). The spec is [merchant](../../specs/merchant.md). Opening the vendor role is covered by [npc-interaction](npc-interaction.md).
 
 ## Flow

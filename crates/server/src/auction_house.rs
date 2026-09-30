@@ -27,12 +27,14 @@ use self::handlers::{
     process_inventory_requests, process_open_requests, process_owned_requests,
     process_query_requests,
 };
-pub(crate) use self::operations::deposit_cost;
+#[cfg(test)]
+use self::operations::deposit_cost;
 use self::operations::{
     buyout_auction, cancel_auction, complete_sale, create_auction, deliver_mail, place_bid,
 };
-pub(crate) use self::queries::{duration_secs, unix_now};
-use self::queries::{inventory_snapshot, min_next_bid, search_auctions, to_listing_summary};
+use self::queries::{
+    duration_secs, inventory_snapshot, min_next_bid, search_auctions, to_listing_summary, unix_now,
+};
 
 const MAX_PAGE_SIZE: u32 = 50;
 const HOUSE_CUT_BPS: u64 = 500;
@@ -65,9 +67,9 @@ fn auction_expiration_due(time: Res<Time>, mut cadence: Local<AuctionExpirationC
 }
 
 #[derive(Resource, Default)]
-pub(crate) struct AuctionHouseState {
-    pub(crate) initialized: bool,
-    pub(crate) auctions: HashMap<u64, AuctionData>,
+struct AuctionHouseState {
+    initialized: bool,
+    auctions: HashMap<u64, AuctionData>,
 }
 
 pub struct AuctionHousePlugin;

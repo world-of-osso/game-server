@@ -231,9 +231,9 @@ fn max_auction_slots_per_character_enforced() {
 
 #[test]
 fn duration_tiers_set_correct_expiry() {
-    assert_eq!(duration_secs(AuctionDuration::Short), 86_400);
-    assert_eq!(duration_secs(AuctionDuration::Medium), 604_800);
-    assert_eq!(duration_secs(AuctionDuration::Long), 1_209_600);
+    assert_eq!(duration_secs(AuctionDuration::Short), 30 * 60);
+    assert_eq!(duration_secs(AuctionDuration::Medium), 2 * 60 * 60);
+    assert_eq!(duration_secs(AuctionDuration::Long), 8 * 60 * 60);
 
     let db = persistence::temp_database();
     let (seller_id, _) =
@@ -241,9 +241,9 @@ fn duration_tiers_set_correct_expiry() {
     let now = unix_now();
 
     for (duration, expected_secs) in [
-        (AuctionDuration::Short, 86_400),
-        (AuctionDuration::Medium, 604_800),
-        (AuctionDuration::Long, 1_209_600),
+        (AuctionDuration::Short, 30 * 60),
+        (AuctionDuration::Medium, 2 * 60 * 60),
+        (AuctionDuration::Long, 8 * 60 * 60),
     ] {
         let source_item = persistence::load_inventory(&db, seller_id).items[0].clone();
         let mut state = AuctionHouseState::default();
