@@ -4,13 +4,13 @@ use model::{MerchantState, Recipe, StockBatch};
 
 fn fixture() -> (Config, EconomyState) {
     let recipe = Recipe {
-        spell_id: 2149,
+        spell_id: 2152,
         expansion: 0,
-        output_item_id: 2302,
+        output_item_id: 2304,
         output_count: 1,
-        ingredients: vec![(2318, 2)],
+        ingredients: vec![(2318, 1)],
     };
-    let markets = [(2318, 10), (2302, 100)]
+    let markets = [(2318, 10), (2304, 100)]
         .into_iter()
         .map(|(item_id, price)| {
             (
@@ -33,23 +33,20 @@ fn fixture() -> (Config, EconomyState) {
         gatherables: vec![2318],
         customer_budget: 0,
         customer_quantity: 0,
-        items: [
-            (2318, "Light Leather"),
-            (2302, "Handstitched Leather Boots"),
-        ]
-        .into_iter()
-        .map(|(id, name)| {
-            (
-                id,
-                ItemMetadata {
-                    name: name.into(),
-                    quality: 1,
-                    required_level: 1,
-                    vendor_sell_price: 1,
-                },
-            )
-        })
-        .collect(),
+        items: [(2318, "Light Leather"), (2304, "Light Armor Kit")]
+            .into_iter()
+            .map(|(id, name)| {
+                (
+                    id,
+                    ItemMetadata {
+                        name: name.into(),
+                        quality: 1,
+                        required_level: 1,
+                        vendor_sell_price: 1,
+                    },
+                )
+            })
+            .collect(),
         markets,
         merchants: vec![MerchantConfig {
             entry: 3532,
@@ -78,9 +75,11 @@ fn economy_cycle_buys_real_auction_materials_and_persists_crafted_stock() {
     run_cycle(&db, &mut auctions, &mut state, &config, 1000, &mut || 1).unwrap();
     let merchant = &state.merchants[&3532];
     assert_eq!(merchant.stock.len(), 1);
-    assert_eq!(merchant.stock[0].item_id, 2302);
-    assert_eq!(merchant.stock[0].ingredient_cost, 20);
+    assert_eq!(merchant.stock[0].item_id, 2304);
+    assert_eq!(merchant.stock[0].ingredient_cost, 10);
     assert_eq!(merchant.gold, 980);
+    assert_eq!(merchant.materials[0].count, 1);
+    assert_eq!(merchant.materials[0].ingredient_cost, 10);
     assert_eq!(store::load_state(&db).unwrap(), Some(state.clone()));
     let persisted: BTreeMap<_, _> = persistence::load_auctions(&db)
         .into_iter()
@@ -111,7 +110,7 @@ fn economy_expiry_refunds_paid_cost_once_and_never_sale_price() {
         .stock
         .push(StockBatch {
             id: 1,
-            item_id: 2302,
+            item_id: 2304,
             count: 1,
             ingredient_cost: 20,
             unit_price: 100,
@@ -140,7 +139,7 @@ fn economy_customers_consume_with_global_quantity_and_budget_limits() {
     merchant.gold = 950;
     merchant.stock.push(StockBatch {
         id: 1,
-        item_id: 2302,
+        item_id: 2304,
         count: 2,
         ingredient_cost: 40,
         unit_price: 100,
