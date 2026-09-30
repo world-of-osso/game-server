@@ -1,7 +1,5 @@
 # Professions
 
-For merchant-bot use of recipe data, see [[bot-economy]]. Existing player crafting below does not prove the economy importer or expansion-specific merchant coverage.
-
 Professions in `crates/server/src/profession.rs`, with `profession/data.rs` (world.db data) and `profession/trainer.rs` (trainer frames). The spec is [professions](../../specs/professions.md). Opening the trainer role is covered by [npc-interaction](npc-interaction.md); crafting casts go through [spell-casting](spell-casting.md).
 
 ## Model

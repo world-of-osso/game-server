@@ -260,6 +260,8 @@ fn sort_by_price_time_remaining_and_name() {
         search_auctions(
             &state.auctions,
             &AuctionSearchQuery {
+                item_id: None,
+                class_id: None,
                 text: String::new(),
                 page: 0,
                 page_size: 50,
@@ -270,7 +272,6 @@ fn sort_by_price_time_remaining_and_name() {
                 sort_field: field,
                 sort_dir: dir,
                 faction: 0,
-                ..Default::default()
             },
         )
     };
@@ -308,6 +309,8 @@ fn pagination_respects_page_boundaries() {
         search_auctions(
             &state.auctions,
             &AuctionSearchQuery {
+                item_id: None,
+                class_id: None,
                 text: String::new(),
                 page: page_num,
                 page_size,
@@ -318,7 +321,6 @@ fn pagination_respects_page_boundaries() {
                 sort_field: AuctionSortField::Name,
                 sort_dir: AuctionSortDir::Asc,
                 faction: 0,
-                ..Default::default()
             },
         )
     };
