@@ -127,6 +127,8 @@ fn prorate_cost(cost: u64, count: u32, total_count: u32) -> u64 {
 
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, Encode, Decode)]
 pub struct EconomyState {
+    /// Economic seller IDs allocated from the character ID sequence; not login characters.
+    pub gatherers: BTreeMap<u32, u64>,
     pub merchants: BTreeMap<u32, MerchantState>,
     pub last_cycle: u64,
     pub next_batch_id: u64,

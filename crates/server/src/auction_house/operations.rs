@@ -1,7 +1,7 @@
 use super::*;
 
 /// Deposit = vendor_sell_price * stack_count * duration_multiplier.
-pub(super) fn deposit_cost(
+pub(crate) fn deposit_cost(
     vendor_sell_price: u32,
     stack_count: u32,
     duration: AuctionDuration,
