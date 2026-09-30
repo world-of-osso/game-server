@@ -15,8 +15,8 @@ Server-side spell casting in `crates/server/src/spell_cast/`: validation, cast b
 - [x] Emit `CombatLogEvent` (CastStart, CastSuccess, Damage, Heal, Energize, Interrupt, Death) to source and target owners.
 - [x] Reject player casts of spells not in `KnownSpells` (`NotSupported`, "spell not known"); NPC casters exempt.
 - [x] Maintain class power pools with DB2 regen/decay; replicate `UnitPowers` (player `UnitLevel` belongs to class progression; NPC `UnitLevel` from the template).
-- [ ] Replicate raw whole power, fractional thousandths, signed regen rate, and charged combo-point indices. Resend on whole value, max, rate, display order or charged-point changes, not fraction alone; report zero rate on the tick a pool reaches its limit.
-- [ ] Replicate indexed rune ready times and full recharge duration, including queued runes' wait. Resend on spend, completion, duration or rune-count changes, not countdown ticks.
+- [x] Replicate raw whole power, fractional thousandths, signed regen rate, and charged combo-point indices. Resend on whole value, max, rate, display order or charged-point changes, not fraction alone; report zero rate on the tick a pool reaches its limit.
+- [x] Replicate indexed rune ready times and full recharge duration, including queued runes' wait. Resend on spend, completion, duration or rune-count changes, not countdown ticks.
 - [x] Use contract `CastFailReason` variants directly; `NotSupported` names the cause in `detail`.
 
 ## How it works
