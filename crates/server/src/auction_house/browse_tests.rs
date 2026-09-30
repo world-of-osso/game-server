@@ -254,7 +254,7 @@ fn class_and_usable_requirements_share_flat_viewer_logic_before_paging() {
 }
 
 #[test]
-#[ignore = "optimized CPU measurement; run explicitly with --release --ignored --nocapture"]
+#[ignore = "CPU measurement; run with profile.test.package.server.opt-level=2 and --ignored --nocapture"]
 fn browse_300k_cpu_under_200ms() {
     use std::time::{Duration, Instant};
     let mut auctions = HashMap::with_capacity(300_000);
@@ -299,6 +299,212 @@ fn browse_300k_cpu_under_200ms() {
         assert!(
             elapsed < Duration::from_millis(200),
             "query CPU {elapsed:?}"
+        );
+    }
+}
+
+#[test]
+fn fractional_prices_sort_exactly_even_when_displayed_copper_ties() {
+    let auctions = HashMap::from([
+        (1, offer(1, 1, 2, Some(3))),
+        (2, offer(2, 2, 3, Some(4))),
+        (3, offer(3, 3, u32::MAX, Some(u64::MAX))),
+        (4, offer(4, 3, u32::MAX - 1, Some(u64::MAX - 1))),
+    ]);
+    let mut query = text_query("");
+    query.sort_field = AuctionSortField::Buyout;
+    let result = browse(&auctions, &query);
+    assert_eq!(
+        result.items.iter().map(|i| i.item_id).collect::<Vec<_>>(),
+        vec![2, 1, 3]
+    );
+    assert_eq!(result.items[0].lowest_unit_price, 2);
+    assert_eq!(result.items[1].lowest_unit_price, 2);
+    assert_eq!(result.items[2].lowest_unit_price, 4_294_967_297);
+    assert_eq!(result.items[2].total_quantity, u64::from(u32::MAX) * 2 - 1);
+    query.sort_dir = AuctionSortDir::Desc;
+    assert_eq!(
+        browse(&auctions, &query)
+            .items
+            .iter()
+            .map(|i| i.item_id)
+            .collect::<Vec<_>>(),
+        vec![3, 1, 2]
+    );
+}
+
+mod session {
+    use super::*;
+    use crate::faction::FactionTemplates;
+    use crate::faction_reaction::FactionTemplateEntry;
+    use crate::networking::PlayerLink;
+    use crate::npc_interaction::{ActiveInteraction, NpcInteractionPlugin};
+    use lightyear::connection::host::HostClient;
+    use shared::components::{Health, Npc, Position, UnitFactionTemplate};
+    use shared::protocol::{
+        InteractNpc, InteractionChannel, NpcFlags, ProtocolPlugin, QueryAuctionBrowse,
+    };
+
+    #[derive(Resource, Default)]
+    struct Inbox {
+        results: Vec<AuctionBrowseResults>,
+        errors: Vec<AuctionOperationResponse>,
+    }
+
+    fn collect(
+        mut results: Query<&mut MessageReceiver<AuctionBrowseResults>>,
+        mut errors: Query<&mut MessageReceiver<AuctionOperationResponse>>,
+        mut inbox: ResMut<Inbox>,
+    ) {
+        for mut receiver in &mut results {
+            inbox.results.extend(receiver.receive());
+        }
+        for mut receiver in &mut errors {
+            inbox.errors.extend(receiver.receive());
+        }
+    }
+
+    fn advance(app: &mut App) {
+        for _ in 0..3 {
+            app.update();
+        }
+    }
+
+    fn request(app: &mut App, connection: Entity) {
+        app.world_mut()
+            .get_mut::<MessageSender<QueryAuctionBrowse>>(connection)
+            .unwrap()
+            .send::<AuctionChannel>(QueryAuctionBrowse {
+                query: text_query(""),
+            });
+        advance(app);
+    }
+
+    #[test]
+    fn loopback_browse_rejects_without_session_overrides_house_and_closes_out_of_range() {
+        let mut app = App::new();
+        app.add_plugins((MinimalPlugins, bevy::state::app::StatesPlugin));
+        app.add_plugins(lightyear::prelude::server::ServerPlugins {
+            tick_duration: Duration::from_millis(50),
+        });
+        app.add_plugins(ProtocolPlugin);
+        app.init_resource::<Inbox>();
+        app.insert_resource(FactionTemplates(HashMap::from([(
+            1,
+            FactionTemplateEntry {
+                id: 1,
+                faction_group: 2,
+                ..Default::default()
+            },
+        )])));
+        app.add_plugins(NpcInteractionPlugin);
+        app.init_resource::<crate::gold::GoldUpdateQueue>();
+        app.add_plugins(AuctionHousePlugin);
+        app.add_systems(First, collect);
+        let mut auctions = HashMap::new();
+        for (id, faction) in [(1, 1), (2, 2), (3, 0)] {
+            let mut auction = offer(id, id as u32, 3, Some(300));
+            auction.faction = faction;
+            auctions.insert(id, auction);
+        }
+        app.insert_resource(AuctionHouseState {
+            initialized: true,
+            auctions,
+        });
+        app.finish();
+        app.cleanup();
+        let position = Position {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+        };
+        let health = Health {
+            current: 100.0,
+            max: 100.0,
+        };
+        let player = app
+            .world_mut()
+            .spawn((position, health, UnitFactionTemplate(1)))
+            .id();
+        let npc = app
+            .world_mut()
+            .spawn((
+                Npc {
+                    template_id: 8719,
+                    name: "Auctioneer".into(),
+                },
+                NpcFlags(NpcFlags::AUCTIONEER),
+                position,
+                health,
+                UnitFactionTemplate(1),
+            ))
+            .id();
+        let connection = app
+            .world_mut()
+            .spawn((
+                RemoteId(PeerId::Local(1)),
+                Connected,
+                HostClient { buffer: Vec::new() },
+                InWorld { character_id: 1 },
+                PlayerLink(player),
+                MessageSender::<QueryAuctionBrowse>::default(),
+                MessageReceiver::<QueryAuctionBrowse>::default(),
+                MessageSender::<AuctionBrowseResults>::default(),
+                MessageReceiver::<AuctionBrowseResults>::default(),
+                MessageSender::<AuctionOperationResponse>::default(),
+                MessageReceiver::<AuctionOperationResponse>::default(),
+                MessageSender::<InteractNpc>::default(),
+                MessageReceiver::<InteractNpc>::default(),
+            ))
+            .id();
+        advance(&mut app);
+        request(&mut app, connection);
+        {
+            let mut inbox = app.world_mut().resource_mut::<Inbox>();
+            assert!(inbox.results.is_empty());
+            assert_eq!(
+                std::mem::take(&mut inbox.errors),
+                vec![err(super::super::super::handlers::NO_AUCTIONEER)]
+            );
+        }
+        app.world_mut()
+            .get_mut::<MessageSender<InteractNpc>>(connection)
+            .unwrap()
+            .send::<InteractionChannel>(InteractNpc { npc: npc.to_bits() });
+        advance(&mut app);
+        assert_eq!(
+            app.world()
+                .get::<ActiveInteraction>(connection)
+                .unwrap()
+                .auction_house,
+            Some(1)
+        );
+        request(&mut app, connection);
+        {
+            let mut inbox = app.world_mut().resource_mut::<Inbox>();
+            assert!(inbox.errors.is_empty());
+            let results = std::mem::take(&mut inbox.results);
+            assert_eq!(results.len(), 1);
+            assert_eq!(results[0].query.faction, 1);
+            assert_eq!(results[0].total_results, 2);
+            assert_eq!(
+                results[0]
+                    .items
+                    .iter()
+                    .map(|i| i.item_id)
+                    .collect::<Vec<_>>(),
+                vec![1, 3]
+            );
+        }
+        app.world_mut().get_mut::<Position>(player).unwrap().x = 20.0;
+        advance(&mut app);
+        assert!(app.world().get::<ActiveInteraction>(connection).is_none());
+        request(&mut app, connection);
+        let inbox = app.world().resource::<Inbox>();
+        assert!(inbox.results.is_empty());
+        assert_eq!(
+            inbox.errors,
+            vec![err(super::super::super::handlers::NO_AUCTIONEER)]
         );
     }
 }
