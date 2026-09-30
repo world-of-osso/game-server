@@ -462,6 +462,7 @@ fn scheduled_auction_expiration_runs_at_most_once_per_second() {
     let mut first = test_auction(1, "First item", 1, 1);
     first.seller_character_id = seller_id;
     first.expires_at_unix_secs = unix_now();
+    persistence::save_auction(&app.world().resource::<GameDatabase>().db, &first);
     app.world_mut()
         .resource_mut::<AuctionHouseState>()
         .auctions
@@ -482,6 +483,7 @@ fn scheduled_auction_expiration_runs_at_most_once_per_second() {
     let mut second = test_auction(2, "Second item", 1, 1);
     second.seller_character_id = seller_id;
     second.expires_at_unix_secs = unix_now();
+    persistence::save_auction(&app.world().resource::<GameDatabase>().db, &second);
     app.world_mut()
         .resource_mut::<AuctionHouseState>()
         .auctions
