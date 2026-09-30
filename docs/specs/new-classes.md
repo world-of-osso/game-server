@@ -33,7 +33,9 @@ Server creation, progression and six basic spells for classes 10, 12 and 13. Imp
 ## Known gaps (current cycle)
 
 - [x] Live over UDP, 2026-09-30, private server on 5100: game-engine `godot/tests/new_class_live.gd` created a Human Monk, a Night Elf Demon Hunter and an Alliance Dracthyr Evoker through the Godot creation screens. They entered at level 1 in Northshire, level 8 in Shadowglen and level 10 at the Stormwind flight master. Each was teleported to a Northshire Training Dummy, where Tiger Palm, Demon's Bite (25 Fury) and Living Flame (180 damage) hit. Captures are in game-engine `data/diagnostics/newclasses-2026-09-30/`.
-- [ ] Unimplemented effects in the six spells: Living Flame's Energizing Flame mana refund. Azure Strike picks the first extra target it finds, where TrinityCore picks at random. Spec `OverridesSpellID` is not applied: the level-8 baseline Demon's Bite and Chaos Strike stay known next to Havoc's versions, and both resolve.
+- [x] Havoc's SpecializationSpells OverridesSpellID replace the baselines (TrinityCore `Player::LearnSpecializationSpells` → `AddOverrideSpell`). Demon's Bite 344859, Chaos Strike 344862 and Fel Rush 344865 are unlearned at 10, and their bar buttons move to 162243/162794/195072. The same rule now replaces Holy Paladin's Judgment 20271, Shield of the Righteous 53600 and Cleanse Toxins 440013.
+- [x] Energizing Flame 400006 refunds its effect-0 percent (80) of Living Flame's mana cost on an enemy hit. Azure Strike picks its other target at random (`RandomResize`).
+- [x] Kul Tiran, Earthen and Haranir accept their CharBaseInfo classes, not only Monk. They start at the faction capital (Stormwind/Orgrimmar) as a workaround until their race starts exist. Older classes of the older races keep level 1.
 - [ ] Older classes keep start level 1: Death Knight's 8 and the allied races' 10 are not applied to them.
 - [ ] Full class rotations, talent/proc parity and extra specialization effects are not proven by six basic spell tests.
 
