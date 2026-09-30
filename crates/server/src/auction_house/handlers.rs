@@ -61,9 +61,44 @@ pub(super) fn process_open_requests(
     });
 }
 
+pub(super) fn search_for_viewer(
+    auctions: &HashMap<u64, AuctionData>,
+    query: &AuctionSearchQuery,
+    templates: Option<&crate::item_templates::ItemTemplates>,
+    viewer: Option<(u8, u8, u16)>,
+) -> AuctionSearchResults {
+    if query.class_id.is_none() && !query.usable_only {
+        return search_auctions(auctions, query);
+    }
+    super::queries::search_auctions_matching(auctions, query, |auction| {
+        let Some(template) = templates.and_then(|templates| templates.get(auction.item.item_id))
+        else {
+            return false;
+        };
+        if query
+            .class_id
+            .is_some_and(|class| class != template.scaling.class_id)
+        {
+            return false;
+        }
+        if !query.usable_only {
+            return true;
+        }
+        viewer.is_some_and(|(race, class, level)| {
+            template.required_level <= level && template.allows(class, race)
+        })
+    })
+}
+
 pub(super) fn process_query_requests(
     mut receivers: SessionReceiver<QueryAuctions>,
     state: Res<AuctionHouseState>,
+    templates: Option<Res<crate::item_templates::ItemTemplates>>,
+    links: Query<&crate::networking::PlayerLink>,
+    players: Query<(
+        &shared::components::Player,
+        Option<&shared::components::Level>,
+    )>,
     mut senders: Query<&mut MessageSender<AuctionSearchResults>>,
     mut rejections: Query<&mut MessageSender<AuctionOperationResponse>>,
 ) {
@@ -73,10 +108,21 @@ pub(super) fn process_query_requests(
             return;
         };
         req.query.faction = house;
+        let viewer = links
+            .get(entity)
+            .ok()
+            .and_then(|link| players.get(link.0).ok())
+            .map(|(player, level)| {
+                (
+                    player.race,
+                    player.class,
+                    level.map_or(1, |level| u16::from(level.0)),
+                )
+            });
         send_auction_message(
             &mut senders,
             entity,
-            search_auctions(&state.auctions, &req.query),
+            search_for_viewer(&state.auctions, &req.query, templates.as_deref(), viewer),
         );
     });
 }

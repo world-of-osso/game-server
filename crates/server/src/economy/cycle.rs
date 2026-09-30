@@ -4,7 +4,7 @@ use super::{
     store::{self, MarketChanges},
 };
 use crate::auction_house::{AuctionHouseState, deposit_cost, duration_secs};
-use crate::persistence::mail_store::{self, MailData, MailSender};
+use crate::persistence::mail_store;
 use crate::persistence::{self, AuctionData, InventoryData, InventoryItemData};
 use shared::protocol::AuctionDuration;
 use std::collections::{BTreeMap, HashSet};
@@ -290,7 +290,6 @@ fn rotate_merchants(
             config,
             book,
             changes,
-            now,
         )?;
         let available = recipe.ingredients.iter().all(|(id, count)| {
             merchant
@@ -326,7 +325,6 @@ fn acquire_ingredients(
     config: &Config,
     book: &mut PurchaseBook<'_>,
     changes: &mut MarketChanges,
-    now: u64,
 ) -> Result<(), String> {
     for &(item_id, needed) in &recipe.ingredients {
         let owned: u64 = merchant
@@ -362,25 +360,9 @@ fn acquire_ingredients(
                 .push((auction.auction_id, auction.clone()));
             changes.deleted_auctions.push(auction.auction_id);
         }
-        let fee = price.saturating_mul(500) / 10_000;
-        let proceeds = price - fee + auction.deposit;
-        changes.mails.push((
-            auction.seller_character_id,
-            MailData {
-                mail_id: persistence::next_id(db, "mail"),
-                sender: MailSender::AuctionHouse,
-                subject: "Auction sold".into(),
-                body: format!("Your auction for {} sold.", auction.item.name),
-                items: Vec::new(),
-                money: proceeds,
-                cod: 0,
-                delivers_at: now,
-                expires_at: now + shared::mail::MAIL_EXPIRY_SECS,
-                read: false,
-                returned: false,
-                cod_payment: false,
-            },
-        ));
+        changes
+            .mails
+            .push(crate::auction_house::seller_sale_mail(db, auction, price));
     }
     Ok(())
 }

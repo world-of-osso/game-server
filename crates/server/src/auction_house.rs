@@ -28,9 +28,8 @@ use self::handlers::{
     process_query_requests,
 };
 pub(crate) use self::operations::deposit_cost;
-use self::operations::{
-    buyout_auction, cancel_auction, complete_sale, create_auction, deliver_mail, place_bid,
-};
+pub(crate) use self::operations::seller_sale_mail;
+use self::operations::{buyout_auction, cancel_auction, create_auction, place_bid};
 pub(crate) use self::queries::{duration_secs, unix_now};
 use self::queries::{inventory_snapshot, min_next_bid, search_auctions, to_listing_summary};
 

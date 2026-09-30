@@ -75,6 +75,8 @@ mod lifecycle;
 mod search;
 #[path = "auction_house_tests/settlement.rs"]
 mod settlement;
+#[path = "auction_house_tests/viewer.rs"]
+mod viewer;
 
 mod bounded_slice {
     use super::*;
