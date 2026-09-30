@@ -261,6 +261,42 @@ fn frostbolt_damage_reaches_current_and_overall_and_a_second_combat_is_a_new_ses
     );
 }
 
+/// The harness NPC turned into a training dummy (`npc_training_dummy`) 20 yd away,
+/// out of the caster's melee range.
+fn make_distant_dummy(h: &mut Harness) {
+    h.app.world_mut().entity_mut(h.npc).insert((
+        crate::creature_scripts::TrainingDummy::default(),
+        Position {
+            x: 20.0,
+            y: 0.0,
+            z: 0.0,
+        },
+    ));
+}
+
+#[test]
+fn auto_attack_out_of_range_does_not_stretch_a_dummy_session_past_its_evade() {
+    let Some(h) = frostbolt_harness() else {
+        return;
+    };
+    let mut client = Client {
+        h,
+        received: Vec::new(),
+    };
+    make_distant_dummy(&mut client.h);
+    // Tab-targeting starts auto-attack; the dummy is out of melee range.
+    let npc = client.h.npc;
+    client.h.attack(npc);
+    client.frostbolt_hit();
+    client.leave_combat();
+    let latest = client.take().pop().expect("a snapshot when combat ends");
+    let current = latest.current.unwrap();
+    assert!(!current.active);
+    // The dummy ends combat 5 s after its last hit (TC npc_training_dummy); nothing
+    // keeps the caster in combat past that.
+    assert!((5.0..6.5).contains(&current.duration_secs), "{current:?}");
+}
+
 // --- ECS: groups ---
 
 fn spawn_member(app: &mut App, character: CharacterId, name: &str, class: u8) -> Entity {
