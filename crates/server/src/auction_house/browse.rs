@@ -1,5 +1,7 @@
 use std::cmp::Ordering;
 
+use bevy::platform::collections::HashMap as BrowseMap;
+
 use super::*;
 use shared::protocol::{AuctionBrowseItem, AuctionBrowseResults};
 
@@ -127,7 +129,7 @@ fn group_matching_auctions<'a>(
     now: u64,
 ) -> Vec<BrowseGroup<'a>> {
     let needle = query.text.to_ascii_lowercase();
-    let mut candidates: HashMap<u32, BrowseCandidate<'_>> = HashMap::new();
+    let mut candidates: BrowseMap<u32, BrowseCandidate<'_>> = BrowseMap::new();
     for auction in auctions.values() {
         if auction.expires_at_unix_secs <= now || auction.stack_count == 0 {
             continue;
