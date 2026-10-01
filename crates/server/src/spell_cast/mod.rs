@@ -95,6 +95,7 @@ impl Plugin for SpellCastPlugin {
                 (
                     powers::regenerate_creature_mana,
                     powers::regenerate_creature_health,
+                    powers::regenerate_player_health,
                     area_aura::update_dynamic_objects.after(advance_casts),
                 ),
             );
@@ -1549,5 +1550,7 @@ fn complete_cast(world: &mut World, caster: Entity, spell_id: u32, target: Optio
 mod class_resource_tests;
 #[cfg(test)]
 mod new_class_tests;
+#[cfg(test)]
+mod regen_tests;
 #[cfg(test)]
 mod tests;
