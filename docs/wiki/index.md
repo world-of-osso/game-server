@@ -19,6 +19,7 @@ External resources, tooling, data sources, development workflow.
 
 | Page | Summary |
 |------|---------|
+| [[crafting-reference-import]] | Seven pinned Midnight crafting tables, exact schema/provenance, atomic staging import and modern-resolver handoff |
 | [[reference-repos]] | AzerothCore (architecture + data), Rustbolt Core (Rust patterns), SpacetimeDB (rejected), wow-engine (sibling renderer) |
 | [[auction-load-fixture]] | Executed owned 300k-offer/311-real-ID producer; reopen/counter/second-page proof, linked separate CLI latency ledger |
 | [[dev-commands]] | cargo run, cargo test, run-tests.sh, admin CLI via SSH, live GameObject lookup, dependency versions |

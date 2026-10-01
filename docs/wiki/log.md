@@ -1,5 +1,9 @@
 # Wiki Log
 
+## [2026-10-01] reference | Bounded crafting reference import
+
+Added [[crafting-reference-import]] and its spec: seven pinned local-CASC/WagoCSV tables, complete unknown-preserving schema, float32 conversion, validated duplicate spell relationship parent, deterministic provenance and atomic staging-only replacement. Concrete WDC5/CSV and real-source joins cover invalid-source and SQL rollback. Economy catalog/content policy and live data remain untouched; modern resolver handoff stays separate.
+
 ## [2026-10-01] systems | Bot return accounting and final acceptance
 
 Updated [[bot-economy]] and [[auction-house]] with independent CLI/restart/native gates and real bot/player parity across 1/7/14-day auctions. Fixed delivered bot attachments being discarded during collection: returned inventory now persists and is consumed by relisting, including GUID-preserving whole stacks and split quantities; rollback/reopen regressions pass. Recorded twelve pinned loopback samples at 60.282–121.623 ms without a universal latency claim. Missing Midnight/Silvermoon content and operator cap-reduction reconciliation remain explicit limits.
