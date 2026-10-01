@@ -603,3 +603,157 @@ fn economy_customers_consume_with_global_quantity_and_budget_limits() {
     assert_eq!(state.merchants[&3532].gold, 1000);
     assert_eq!(state.withdrawn, 50);
 }
+
+fn returned_goods_fixture(
+    db: &redb::Database,
+) -> (
+    Config,
+    EconomyState,
+    u64,
+    Vec<persistence::mail_store::MailData>,
+) {
+    use persistence::mail_store::{MailData, MailItemData, MailSender};
+    let (mut config, mut state) = fixture();
+    config.merchants.clear();
+    state.merchants.clear();
+    let seller = persistence::next_id(db, "character");
+    state.gatherers.insert(2318, seller);
+    state.last_cycle = 1000;
+    let items = [(2318, 4, 15), (2304, 3, 42)].map(|(item_id, count, value)| {
+        persistence::InventoryItemData {
+            item_guid: persistence::next_id(db, "item_instance"),
+            item_id,
+            name: config.items[&item_id].name.clone(),
+            quality: 1,
+            required_level: 1,
+            stack_count: count,
+            vendor_sell_price: value,
+            unique_auction: false,
+        }
+    });
+    let delivered = MailData {
+        mail_id: 1,
+        sender: MailSender::AuctionHouse,
+        subject: "Returned goods".into(),
+        body: String::new(),
+        items: items
+            .into_iter()
+            .enumerate()
+            .map(|(slot, item)| MailItemData {
+                slot: slot as u8,
+                item,
+            })
+            .collect(),
+        money: 20,
+        cod: 0,
+        delivers_at: 1000,
+        expires_at: 100_000,
+        read: false,
+        returned: false,
+        cod_payment: false,
+    };
+    let pending = MailData {
+        mail_id: 2,
+        delivers_at: 2000,
+        ..delivered.clone()
+    };
+    let mailbox = vec![delivered, pending];
+    store::commit_market(
+        db,
+        Some(&state),
+        &store::MarketChanges {
+            inventories: vec![(
+                seller,
+                persistence::InventoryData {
+                    gold: 900,
+                    items: vec![],
+                },
+            )],
+            mailboxes: vec![(seller, mailbox.clone())],
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    (config, state, seller, mailbox)
+}
+
+#[test]
+fn economy_collector_preserves_every_delivered_attachment_and_pending_mail() {
+    let db = persistence::temp_database();
+    let (mut config, mut state, seller, mailbox) = returned_goods_fixture(&db);
+    config.gatherer_listing_limit = 0;
+    let mut auctions = AuctionHouseState::default();
+    run_cycle(&db, &mut auctions, &mut state, &config, 1060, &mut || {
+        panic!("no supply requested")
+    })
+    .unwrap();
+    let expected_items: Vec<_> = mailbox[0]
+        .items
+        .iter()
+        .map(|attachment| attachment.item.clone())
+        .collect();
+    assert_eq!(
+        persistence::load_inventory(&db, seller),
+        persistence::InventoryData {
+            gold: 920,
+            items: expected_items.clone()
+        }
+    );
+    assert_eq!(
+        persistence::mail_store::load_mailbox(&db, seller),
+        vec![mailbox[1].clone()]
+    );
+    run_cycle(&db, &mut auctions, &mut state, &config, 1120, &mut || {
+        panic!("no supply requested")
+    })
+    .unwrap();
+    assert_eq!(
+        persistence::load_inventory(&db, seller).items,
+        expected_items
+    );
+    assert_eq!(persistence::load_inventory(&db, seller).gold, 920);
+    assert!(auctions.auctions.is_empty());
+}
+
+#[test]
+fn economy_failed_collector_commit_keeps_mail_items_and_runtime_state() {
+    let db = persistence::temp_database();
+    let (mut config, mut state, seller, mailbox) = returned_goods_fixture(&db);
+    config.gatherer_listing_limit = 1;
+    let before = state.clone();
+    let mut auctions = AuctionHouseState::default();
+    let mut competing_inventory = persistence::load_inventory(&db, seller);
+    competing_inventory.gold -= 1;
+    let mut draws = [1, 0, 0].into_iter();
+    let error = run_cycle(&db, &mut auctions, &mut state, &config, 1060, &mut || {
+        // A real competing inventory write between snapshot and market commit.
+        persistence::save_inventory(&db, seller, &competing_inventory);
+        draws.next().expect("one attempted listing")
+    })
+    .unwrap_err();
+    assert!(
+        error.contains("commit market") && error.contains("changed since"),
+        "{error}"
+    );
+    assert_eq!(state, before);
+    assert_eq!(store::load_state(&db).unwrap(), Some(before));
+    assert!(auctions.auctions.is_empty());
+    assert!(persistence::load_auctions(&db).is_empty());
+    assert_eq!(
+        persistence::load_inventory(&db, seller),
+        competing_inventory
+    );
+    assert_eq!(persistence::mail_store::load_mailbox(&db, seller), mailbox);
+    run_cycle(&db, &mut auctions, &mut state, &config, 1060, &mut || 1).unwrap();
+    let listed = auctions.auctions.values().next().unwrap();
+    assert_eq!(listed.item.item_id, 2318);
+    assert_eq!(listed.stack_count, 2);
+    let inventory = persistence::load_inventory(&db, seller);
+    assert_eq!(
+        inventory.items[0].item_guid,
+        mailbox[0].items[0].item.item_guid
+    );
+    assert_eq!(inventory.items[0].stack_count + listed.stack_count, 4);
+    assert_eq!(inventory.items[1], mailbox[0].items[1].item);
+    assert_eq!(inventory.gold, 919 - listed.deposit);
+}

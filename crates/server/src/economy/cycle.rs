@@ -80,26 +80,7 @@ fn gather_resources(
         changes
             .expected_inventories
             .push((seller, inventory.clone()));
-        let mail = mail_store::load_mailbox(db, seller);
-        let proceeds =
-            mail.iter()
-                .filter(|mail| mail.is_delivered(now))
-                .try_fold(0u64, |sum, mail| {
-                    sum.checked_add(mail.money)
-                        .ok_or("gatherer mail money overflows")
-                })?;
-        let kept = mail
-            .into_iter()
-            .filter(|mail| !mail.is_delivered(now))
-            .collect();
-        changes.mailboxes.push((seller, kept));
-        let room = config.gatherer_capital.saturating_sub(inventory.gold);
-        let credit = proceeds.min(room);
-        inventory.gold += credit;
-        next.withdrawn = next
-            .withdrawn
-            .checked_add(proceeds - credit)
-            .ok_or("withdrawal accounting overflows")?;
+        collect_gatherer_mail(db, next, config, now, seller, &mut inventory, changes)?;
         if market.popularity_bps == 0 {
             changes.inventories.push((seller, inventory));
             continue;
@@ -126,16 +107,26 @@ fn post_resource_supply(
     let market = &config.markets[&item_id];
     let target = (u64::from(config.gatherer_listing_limit) * u64::from(market.popularity_bps)
         / 10_000) as u32;
-    let metadata = &config.items[&item_id];
     for _ in listed..target {
-        let count = (draw() % u64::from(config.gatherer_stack_max) + 1) as u32;
+        let requested = (draw() % u64::from(config.gatherer_stack_max) + 1) as u32;
+        let retained = inventory
+            .items
+            .iter()
+            .position(|item| item.item_id == item_id);
+        let (count, vendor_value) = match retained {
+            Some(index) => {
+                let item = &inventory.items[index];
+                (requested.min(item.stack_count), item.vendor_sell_price)
+            }
+            None => (requested, config.items[&item_id].vendor_sell_price),
+        };
         let durations = [
             AuctionDuration::Short,
             AuctionDuration::Medium,
             AuctionDuration::Long,
         ];
         let duration = durations[(draw() % 3) as usize];
-        let deposit = deposit_cost(metadata.vendor_sell_price, count, duration);
+        let deposit = deposit_cost(vendor_value, count, duration);
         if inventory.gold < deposit {
             break;
         }
@@ -143,22 +134,14 @@ fn post_resource_supply(
         let price = unit_price
             .checked_mul(u64::from(count))
             .ok_or("gatherer stack price overflows")?;
+        let item = take_or_gather_resource(db, config, &mut inventory, item_id, retained, count);
         inventory.gold -= deposit;
         let auction_id = persistence::next_id(db, "auction");
         changes.auctions.push(AuctionData {
             auction_id,
             seller_character_id: seller,
             seller_name: format!("Gatherer {item_id}"),
-            item: InventoryItemData {
-                item_guid: persistence::next_id(db, "item_instance"),
-                item_id,
-                name: metadata.name.clone(),
-                quality: metadata.quality,
-                required_level: metadata.required_level,
-                stack_count: count,
-                vendor_sell_price: metadata.vendor_sell_price,
-                unique_auction: false,
-            },
+            item,
             stack_count: count,
             min_bid: price,
             current_bid: None,
@@ -174,6 +157,70 @@ fn post_resource_supply(
     changes.inventories.push((seller, inventory));
     // IDs are allocated separately, but supply, deposits and actor identity commit together.
     Ok(())
+}
+
+fn collect_gatherer_mail(
+    db: &redb::Database,
+    next: &mut EconomyState,
+    config: &Config,
+    now: u64,
+    seller: u64,
+    inventory: &mut InventoryData,
+    changes: &mut MarketChanges,
+) -> Result<(), String> {
+    let (delivered, pending): (Vec<_>, Vec<_>) = mail_store::load_mailbox(db, seller)
+        .into_iter()
+        .partition(|mail| mail.is_delivered(now));
+    let proceeds = delivered.iter().try_fold(0u64, |sum, mail| {
+        sum.checked_add(mail.money)
+            .ok_or("gatherer mail money overflows")
+    })?;
+    inventory.items.extend(
+        delivered
+            .into_iter()
+            .flat_map(|mail| mail.items)
+            .map(|attachment| attachment.item),
+    );
+    changes.mailboxes.push((seller, pending));
+    let room = config.gatherer_capital.saturating_sub(inventory.gold);
+    let credit = proceeds.min(room);
+    inventory.gold += credit;
+    next.withdrawn = next
+        .withdrawn
+        .checked_add(proceeds - credit)
+        .ok_or("withdrawal accounting overflows")?;
+    Ok(())
+}
+
+fn take_or_gather_resource(
+    db: &redb::Database,
+    config: &Config,
+    inventory: &mut InventoryData,
+    item_id: u32,
+    retained: Option<usize>,
+    count: u32,
+) -> InventoryItemData {
+    if let Some(index) = retained {
+        if inventory.items[index].stack_count == count {
+            return inventory.items.remove(index);
+        }
+        let mut split = inventory.items[index].clone();
+        inventory.items[index].stack_count -= count;
+        split.stack_count = count;
+        split.item_guid = persistence::next_id(db, "item_instance");
+        return split;
+    }
+    let metadata = &config.items[&item_id];
+    InventoryItemData {
+        item_guid: persistence::next_id(db, "item_instance"),
+        item_id,
+        name: metadata.name.clone(),
+        quality: metadata.quality,
+        required_level: metadata.required_level,
+        stack_count: count,
+        vendor_sell_price: metadata.vendor_sell_price,
+        unique_auction: false,
+    }
 }
 
 struct PurchaseBook<'a> {

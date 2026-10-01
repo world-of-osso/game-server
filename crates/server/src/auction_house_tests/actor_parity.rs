@@ -291,7 +291,7 @@ fn assert_actor_lifecycle(duration: AuctionDuration, seconds: u64, deposit: u64,
     }
     // Gatherer has no login character: its real cycle claims mail, caps capital,
     // and records surplus as withdrawn. Stop new supply through market demand.
-    config.markets.get_mut(&2318).unwrap().popularity_bps = 0;
+    config.gatherer_listing_limit = 0;
     let mut economy = store::load_state(&db).unwrap().unwrap();
     let now = unix_now().max(economy.last_cycle + 60);
     run_cycle(
@@ -304,6 +304,15 @@ fn assert_actor_lifecycle(duration: AuctionDuration, seconds: u64, deposit: u64,
     )
     .expect("gatherer claims settlement mail");
     assert_eq!(persistence::load_inventory(&db, bot).gold, CAPITAL);
+    assert_eq!(
+        persistence::load_inventory(&db, bot).items,
+        if sold {
+            Vec::new()
+        } else {
+            vec![offers[0].item.clone()]
+        },
+        "collector must retain exact expired stack and GUID"
+    );
     assert_eq!(economy.withdrawn, if sold { 950 } else { 0 });
     assert_eq!(
         persistence::load_inventory(&db, player).gold,
@@ -351,4 +360,133 @@ fn leather_count(db: &redb::Database, actor: u64) -> u32 {
         .filter(|item| item.item_id == 2318)
         .map(|item| item.stack_count)
         .sum()
+}
+
+#[test]
+fn gatherer_relists_expired_goods_before_generating_supply() {
+    for requested in [2, COUNT, 8] {
+        assert_returned_stack_relisting(requested);
+    }
+}
+
+fn assert_returned_stack_relisting(requested: u32) {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("returned-stack.redb");
+    let mut db = redb::Database::create(&path).unwrap();
+    persistence::create_tables(&db);
+    let (mut config, offers, _) = create_actor_pair(&db, AuctionDuration::Short, 86_400, 60);
+    let offer = &offers[0];
+    let bot = offer.seller_character_id;
+    for original in &offers {
+        let mut due = original.clone();
+        due.expires_at_unix_secs = unix_now() - 1;
+        persistence::save_auction(&db, &due);
+    }
+    db = run_expiry(db);
+    assert_eq!(
+        mail_store::load_mailbox(&db, bot)[0].items[0].item,
+        offer.item
+    );
+    config.gatherer_listing_limit = 0;
+    let now = unix_now();
+    let mut economy = store::load_state(&db).unwrap().unwrap();
+    run_cycle(
+        &db,
+        &mut reload_auctions(&db),
+        &mut economy,
+        &config,
+        now + 60,
+        &mut || panic!("zero listing target"),
+    )
+    .unwrap();
+    assert_eq!(
+        persistence::load_inventory(&db, bot).items,
+        vec![offer.item.clone()]
+    );
+    db = reopen(db, &path);
+    economy = store::load_state(&db).unwrap().unwrap();
+    run_cycle(
+        &db,
+        &mut reload_auctions(&db),
+        &mut economy,
+        &config,
+        now + 120,
+        &mut || panic!("claim must not repeat"),
+    )
+    .unwrap();
+    assert_eq!(
+        persistence::load_inventory(&db, bot).items,
+        vec![offer.item.clone()]
+    );
+
+    config.gatherer_listing_limit = 1;
+    config.gatherer_stack_max = 8;
+    // Relisting uses the retained item's value, not changed catalog metadata.
+    config.items.get_mut(&2318).unwrap().vendor_sell_price = 999;
+    let mut auctions = reload_auctions(&db);
+    let mut draws = [u64::from(requested - 1), 1, 0].into_iter();
+    run_cycle(
+        &db,
+        &mut auctions,
+        &mut economy,
+        &config,
+        now + 180,
+        &mut || draws.next().expect("quantity, duration, price"),
+    )
+    .unwrap();
+    assert!(draws.next().is_none());
+    assert_eq!(auctions.auctions.len(), 1);
+    let relisted = auctions.auctions.values().next().unwrap();
+    let listed_count = requested.min(COUNT);
+    assert_eq!(relisted.stack_count, listed_count);
+    assert_eq!(
+        relisted.deposit,
+        deposit_cost(15, listed_count, AuctionDuration::Medium)
+    );
+    assert_eq!(relisted.expires_at_unix_secs, now + 180 + 604_800);
+    assert_eq!(relisted.buyout_price, Some(250 * u64::from(listed_count)));
+    if requested < COUNT {
+        assert_ne!(relisted.item.item_guid, offer.item.item_guid);
+    } else {
+        assert_eq!(relisted.item.item_guid, offer.item.item_guid);
+    }
+    assert_eq!(
+        relisted.item,
+        InventoryItemData {
+            item_guid: relisted.item.item_guid,
+            stack_count: listed_count,
+            ..offer.item.clone()
+        }
+    );
+    let inventory = persistence::load_inventory(&db, bot);
+    let remaining = COUNT - listed_count;
+    assert_eq!(
+        inventory.items,
+        if remaining == 0 {
+            vec![]
+        } else {
+            vec![InventoryItemData {
+                stack_count: remaining,
+                ..offer.item.clone()
+            }]
+        }
+    );
+    assert_eq!(inventory.gold, CAPITAL - relisted.deposit);
+    assert_eq!(leather_count(&db, bot) + relisted.stack_count, COUNT);
+    let persisted_offer = relisted.clone();
+    db = reopen(db, &path);
+    economy = store::load_state(&db).unwrap().unwrap();
+    config.gatherer_listing_limit = 0;
+    run_cycle(
+        &db,
+        &mut reload_auctions(&db),
+        &mut economy,
+        &config,
+        now + 240,
+        &mut || panic!("no new listing"),
+    )
+    .unwrap();
+    assert_eq!(persistence::load_inventory(&db, bot), inventory);
+    assert_eq!(persistence::load_auctions(&db), vec![persisted_offer]);
+    assert!(mail_store::load_mailbox(&db, bot).is_empty());
 }
