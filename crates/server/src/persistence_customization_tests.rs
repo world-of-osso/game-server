@@ -105,6 +105,7 @@ fn expected_character() -> CharacterData {
             hair_color: 6,
             facial_style: 7,
             customization_choices: Vec::new(),
+            visage: None,
         },
         equipment_appearance: frozen.equipment_appearance,
         durability: frozen.durability,

@@ -30,7 +30,11 @@ Server creation, progression and six basic spells for classes 10, 12 and 13. Imp
 - `crates/server/src/class_progression_new_class_tests.rs`: real DB2-derived progression and owner-message snapshots/deltas.
 - `crates/server/src/spell_cast/new_class_tests.rs`: real spell rows, Bevy effects and HostClient message delivery.
 
+- [x] A Dracthyr's visage form (`CharacterAppearance.visage`, shared-protocol branch `visage`) is stored with its appearance. Records written before the field load with none (`LegacyCharacterDataV6`), the barber shop keeps it, and creation refuses a visage form for any other race.
+
 ## Known gaps (current cycle)
+
+- [ ] No race's racial spells are learned: the `Racial - *` skill lines (Haranir 2930, Earthen 2895, Dracthyr 2808, …) are not granted. Racial stat modifiers follow SimC `__gt_race_stats`, which has zeros for Dracthyr, Earthen and Haranir.
 
 - [x] Live over UDP, 2026-09-30, private server on 5100: game-engine `godot/tests/new_class_live.gd` created a Human Monk, a Night Elf Demon Hunter and an Alliance Dracthyr Evoker through the Godot creation screens. They entered at level 1 in Northshire, level 8 in Shadowglen and level 10 at the Stormwind flight master. Each was teleported to a Northshire Training Dummy, where Tiger Palm, Demon's Bite (25 Fury) and Living Flame (180 damage) hit. Captures are in game-engine `data/diagnostics/newclasses-2026-09-30/`.
 - [x] Havoc's SpecializationSpells OverridesSpellID replace the baselines (TrinityCore `Player::LearnSpecializationSpells` → `AddOverrideSpell`). Demon's Bite 344859, Chaos Strike 344862 and Fel Rush 344865 are unlearned at 10, and their bar buttons move to 162243/162794/195072. The same rule now replaces Holy Paladin's Judgment 20271, Shield of the Righteous 53600 and Cleanse Toxins 440013.

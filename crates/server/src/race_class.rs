@@ -128,6 +128,11 @@ pub fn start_level(race: u8, class: u8) -> u8 {
     level
 }
 
+/// Dracthyr (52 Alliance, 70 Horde) also have the visage form (ChrRaces 75).
+pub fn has_visage_form(race: u8) -> bool {
+    matches!(race, 52 | 70)
+}
+
 /// True when a DB2 `RaceMasks` pair (low, high 32 bits) allows the race.
 /// An all-zero mask allows every race.
 pub fn race_mask_allows(race_masks: [u32; 2], race: u8) -> bool {

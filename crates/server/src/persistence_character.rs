@@ -392,6 +392,9 @@ pub fn create_character_with_appearance(
     }
     check_name_available(db, name)?;
     crate::race_class::validate_race_class(race, class)?;
+    if appearance.visage.is_some() && !crate::race_class::has_visage_form(race) {
+        return Err(format!("Race {race} has no visage form"));
+    }
     let character_id = next_id(db, "character");
     let data = default_character_data(name, race, class, appearance);
     save_new_character(db, account_id, character_id, name, &data);

@@ -618,3 +618,47 @@ fn death_knights_and_allied_races_start_at_their_trinitycore_levels() {
         assert_eq!(load_character(&db, id).unwrap().level, level, "{name}");
     }
 }
+
+/// A Dracthyr stores its visage form with its dragon form; another race may not send one.
+#[test]
+fn dracthyr_keep_their_visage_form_and_other_races_cannot_send_one() {
+    use shared::components::{CharacterAppearance, CustomizationChoiceSelection, FormAppearance};
+
+    let db = temp_database();
+    let (account_id, _) = register_account(&db, "fb_visage", "fbtest").unwrap();
+    let appearance = CharacterAppearance {
+        sex: 1,
+        skin_color: 2,
+        visage: Some(FormAppearance {
+            hair_style: 3,
+            customization_choices: vec![CustomizationChoiceSelection {
+                option_id: 2064,
+                choice_id: 30012,
+            }],
+            ..FormAppearance::default()
+        }),
+        ..CharacterAppearance::default()
+    };
+    let (id, _) = crate::persistence::create_character_with_appearance(
+        &db,
+        account_id,
+        "Scalesong",
+        52,
+        13,
+        appearance.clone(),
+    )
+    .unwrap();
+    assert_eq!(load_character(&db, id).unwrap().appearance, appearance);
+    assert_eq!(
+        crate::persistence::create_character_with_appearance(
+            &db,
+            account_id,
+            "Humanvisage",
+            1,
+            1,
+            appearance,
+        )
+        .map(|(id, _)| id),
+        Err("Race 1 has no visage form".to_string())
+    );
+}
