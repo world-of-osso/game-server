@@ -251,9 +251,11 @@ pub(crate) fn send_mail(
     }
     let items = take_attachments(db, &mut model, &request.attachments)?;
     model.set_gold(model.gold() - cost);
-    let same_account = persistence::find_account_id_for_character(db, sender_id)
-        == persistence::find_account_id_for_character(db, recipient_id);
-    let delivers_at = now + shared::mail::delivery_delay(!items.is_empty(), same_account);
+    let delivers_at = now
+        + shared::mail::delivery_delay(
+            !items.is_empty(),
+            same_account(db, sender_id, recipient_id),
+        );
     let cod = if items.is_empty() { 0 } else { request.cod };
     let mail = MailData {
         mail_id: persistence::next_id(db, "mail"),
@@ -283,19 +285,31 @@ pub(crate) fn send_mail(
     })
 }
 
-/// A new mail from `mail`'s recipient back to its sender (AzerothCore
-/// `Mail::returnToSender` via `MailDraft` with `MAIL_CHECK_MASK_RETURNED`).
-fn returned_mail(db: &Database, mail: MailData, from: MailSender, now: u64) -> MailData {
+fn same_account(db: &Database, a: u64, b: u64) -> bool {
+    persistence::find_account_id_for_character(db, a)
+        == persistence::find_account_id_for_character(db, b)
+}
+
+/// A new mail from `mail`'s recipient back to `to`, its sender (TrinityCore
+/// `MailDraft::SendReturnToSender` with `MAIL_CHECK_MASK_RETURNED`): items going to
+/// another account's character wait the delivery delay.
+fn returned_mail(db: &Database, mail: MailData, from: u64, to: u64, now: u64) -> MailData {
+    let name = persistence::load_character(db, from).map_or_else(String::new, |c| c.name);
+    let delivers_at =
+        now + shared::mail::delivery_delay(!mail.items.is_empty(), same_account(db, from, to));
     MailData {
         mail_id: persistence::next_id(db, "mail"),
-        sender: from,
+        sender: MailSender::Player {
+            character_id: from,
+            name,
+        },
         subject: mail.subject,
         body: mail.body,
         items: mail.items,
         money: mail.money,
         cod: 0,
-        delivers_at: now,
-        expires_at: now + shared::mail::MAIL_EXPIRY_SECS,
+        delivers_at,
+        expires_at: delivers_at + shared::mail::MAIL_EXPIRY_SECS,
         read: false,
         returned: true,
         cod_payment: false,
@@ -470,8 +484,7 @@ fn return_mail(
         return Err(MailError::Internal);
     };
     let mail = mails.remove(index);
-    let name = persistence::load_character(db, character_id).map_or_else(String::new, |c| c.name);
-    let back = returned_mail(db, mail, MailSender::Player { character_id, name }, now);
+    let back = returned_mail(db, mail, character_id, to, now);
     let txn = db.begin_write().expect("Failed to begin mail return");
     write_mailbox(&txn, character_id, &mails);
     push_mail(&txn, to, back);
@@ -493,19 +506,13 @@ pub(crate) fn expire_mail(db: &Database, now: u64) -> Vec<u64> {
         if expired.is_empty() {
             continue;
         }
-        let name =
-            persistence::load_character(db, character_id).map_or_else(String::new, |c| c.name);
         let returns: Vec<(u64, MailData)> = expired
             .into_iter()
             .filter_map(|mail| match mail.sender {
                 MailSender::Player {
                     character_id: to, ..
                 } if mail.returnable() && !mail.is_empty() => {
-                    let from = MailSender::Player {
-                        character_id,
-                        name: name.clone(),
-                    };
-                    Some((to, returned_mail(db, mail, from, now)))
+                    Some((to, returned_mail(db, mail, character_id, to, now)))
                 }
                 _ => None,
             })

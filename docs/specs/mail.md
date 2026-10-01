@@ -24,6 +24,7 @@ Player mail at Mailbox game objects, following Retail with AzerothCore rules (`M
 - [x] Taking an item needs bag space (`InventoryFull`). The first item taken pays the C.O.D. (`CodInsufficientMoney`), which is mailed to the sender as a C.O.D. payment.
 - [x] Taking money is refused past the gold cap (`TooMuchGold`).
 - [x] Player mail that is not returned and not a C.O.D. payment is returnable: Return sends it back once with its items and money. Returnable mail still holding items or money cannot be deleted (`CannotDelete`); anything else can.
+- [x] Returned items going to a character on another account wait the 3600 s delivery delay, like a send (TrinityCore `MailDraft::SendReturnToSender`, `Mail.cpp:168-192`); money and letters return at once.
 - [x] Expired mail goes back to its sender when returnable and not empty, otherwise it is deleted with its items.
 - [x] `PendingMail` lists the senders of the newest three unread delivered mails; it is sent on entering the world and whenever that list changes.
 
@@ -32,3 +33,4 @@ Player mail at Mailbox game objects, following Retail with AzerothCore rules (`M
 
 ## Gaps
 - No mail from NPCs with the `MAILBOX` npc flag, no stationery, no reply-to thread, no "Open All" server shortcut.
+- Cross-faction mail follows the player default (TrinityCore grants `RBAC_PERM_TWO_SIDE_INTERACTION_MAIL` only to moderators); the TrinityCore exception for all-account-bound attachments is not modelled, nor are its conjured / expiring item refusals (item templates carry no such flags).
