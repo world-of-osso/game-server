@@ -3,6 +3,7 @@
 import csv
 from contextlib import closing
 import importlib.util
+import hashlib
 import json
 from pathlib import Path
 import sqlite3
@@ -164,6 +165,280 @@ class CatalogTests(unittest.TestCase):
                 "INSERT INTO modified_crafting_reagent_slot VALUES ('Fixture',421,0,0,?,0,0,0)",
                 (reagent_type,),
             )
+
+    def published_fixture(self, count=2, item=2318, placeholder=False, spell=1200):
+        """External HTML contract fixture, parsed by the real source adapter."""
+        import published_reagents
+
+        cache = self.root / "published-cache"
+        cache.mkdir(exist_ok=True)
+        href = "/spell=999" if placeholder else f"/item={item}"
+        html = f'''<html><head><script id="data.page.info" type="application/json">
+            {{"entityType":6,"entityId":{spell}}}</script></head><body>
+            <h2 id="icon-list-heading-reagents">Reagents</h2>
+            <table class="icon-list">
+            <tr data-icon-list-quantity="{count}"><td><a href="{href}">Required material</a></td></tr>
+            <tr data-icon-list-quantity="1"><td><a href="/item=2320">Thread</a></td></tr>
+            </table></body></html>'''.encode()
+        (cache / f"spell-{spell}.html").write_bytes(html)
+        metadata = {
+            "source_url": f"https://www.wowhead.com/spell={spell}",
+            "sha256": hashlib.sha256(html).hexdigest(),
+            "captured_utc": "2026-10-01T10:00:00Z",
+            "provenance": {
+                "kind": "published-spell-page",
+                "capture_method": "http-get",
+                "timestamp_basis": "retrieval-time",
+                "native_capture": False,
+            },
+        }
+        (cache / f"spell-{spell}.json").write_text(json.dumps(metadata))
+        record = published_reagents.load_record(cache, spell)
+        snapshot = self.root / "published.json"
+        snapshot.write_text(
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "skillup_line": 2915,
+                    "effect": 288,
+                    "records": [record],
+                }
+            )
+        )
+        return snapshot, cache, record
+
+    def published_modern_recipe(self):
+        self.modern_recipe(ingredients=[(2320, 1)])
+        with closing(sqlite3.connect(self.db)) as con, con:
+            con.executescript("""
+                INSERT INTO modified_crafting_spell_slot VALUES (15388,1200,0,421,0,2,0);
+                INSERT INTO modified_crafting_reagent_slot VALUES ('Basic',421,0,0,0,0,0,0);
+                INSERT INTO modified_crafting_category VALUES (50,'Basic','',0,0,0);
+                INSERT INTO mcr_slot_x_mcr_category VALUES (1,50,0,421);
+                INSERT INTO modified_crafting_reagent_item VALUES (700,'',50,0,0,0,0);
+                UPDATE item_sparse SET ModifiedCraftingReagentItemID=700 WHERE ID=2318;
+            """)
+
+    def published_success(self, snapshot, cache):
+        return self.success(
+            "--merchant",
+            "3533:11:165",
+            "--published-reagents",
+            str(snapshot),
+            "--published-reagent-cache",
+            str(cache),
+        )
+
+    def test_published_verified_required_table_enables_modern_and_keeps_classic(self):
+        baseline, _ = self.success()
+        self.published_modern_recipe()
+        snapshot, cache, record = self.published_fixture()
+        config, report = self.published_success(snapshot, cache)
+        self.assertEqual(config["merchants"][0], baseline["merchants"][0])
+        recipe = next(
+            r for r in config["merchants"][-1]["recipes"] if r["spell_id"] == 1200
+        )
+        self.assertEqual(
+            recipe,
+            {
+                "spell_id": 1200,
+                "expansion": 11,
+                "output_item_id": 900,
+                "output_count": 3,
+                "ingredients": [[2318, 2], [2320, 1]],
+            },
+        )
+        modern = report["modern_recipes"][0]
+        self.assertIsNone(modern["reason"])
+        self.assertEqual(
+            modern["reagent_provenance"],
+            {
+                key: record[key]
+                for key in ("source_url", "sha256", "captured_utc", "provenance")
+            },
+        )
+        self.assertFalse(modern["reagent_provenance"]["provenance"]["native_capture"])
+        self.assertEqual(
+            report["ingredient_sources"]["2318"]["route"], "gathered_auction"
+        )
+        # Remove every native mention: 2318 must still be inspected from evidence.
+        with closing(sqlite3.connect(self.db)) as con, con:
+            con.execute("UPDATE spell_reagents SET Reagent_0=2320 WHERE SpellID!=1200")
+        _, report = self.published_success(snapshot, cache)
+        self.assertEqual(
+            report["ingredient_sources"]["2318"]["route"], "gathered_auction"
+        )
+        with closing(sqlite3.connect(self.db)) as con:
+            self.assertEqual(
+                con.execute(
+                    "SELECT Effect,EffectItemType FROM spell_effect WHERE SpellID=1200"
+                ).fetchone(),
+                (288, 0),
+            )
+            self.assertEqual(
+                con.execute(
+                    "SELECT Reagent_0,ReagentCount_0 FROM spell_reagents WHERE SpellID=1200"
+                ).fetchone(),
+                (2320, 1),
+            )
+
+    def test_published_invalid_counts_materials_and_placeholders_remain_ineligible(
+        self,
+    ):
+        self.published_modern_recipe()
+        for values in (
+            {"count": 3},
+            {"item": 999999},
+            {"placeholder": True},
+            {"spell": 1201},
+        ):
+            with self.subTest(values=values):
+                snapshot, cache, _ = self.published_fixture(**values)
+                config, report = self.published_success(snapshot, cache)
+                self.assertNotIn(
+                    1200, [r["spell_id"] for r in config["merchants"][-1]["recipes"]]
+                )
+                self.assertIsNotNone(report["modern_recipes"][0]["reason"])
+
+    def test_published_stale_hash_or_corrupt_snapshot_fails_before_outputs(self):
+        self.published_modern_recipe()
+        for corruption in ("hash", "json", "wrong_spell"):
+            with self.subTest(corruption=corruption):
+                snapshot, cache, _ = self.published_fixture()
+                if corruption == "hash":
+                    page = cache / "spell-1200.html"
+                    page.write_bytes(page.read_bytes() + b"changed")
+                elif corruption == "json":
+                    snapshot.write_text("{broken")
+                else:
+                    payload = json.loads(snapshot.read_text())
+                    payload["records"][0]["spell_id"] = 1201
+                    snapshot.write_text(json.dumps(payload))
+                result = self.invoke(
+                    "--merchant",
+                    "3533:11:165",
+                    "--published-reagents",
+                    str(snapshot),
+                    "--published-reagent-cache",
+                    str(cache),
+                )
+                self.assertNotEqual(result.returncode, 0)
+                self.assertFalse((self.root / "config.json").exists())
+                self.assertFalse((self.root / "report.json").exists())
+
+    def test_published_uses_shared_content_market_and_source_checks(self):
+        self.published_modern_recipe()
+        snapshot, cache, _ = self.published_fixture()
+        original = self.db.read_bytes()
+        for sql, expected in (
+            ("DELETE FROM content_item WHERE ID=2318", "missing_content_item"),
+            (
+                "UPDATE content_npc_vendor SET maxcount=1,incrtime=60 WHERE item=2320",
+                "unsupported_ingredient_source",
+            ),
+        ):
+            with self.subTest(reason=expected):
+                self.db.write_bytes(original)
+                with closing(sqlite3.connect(self.db)) as con, con:
+                    con.execute(sql)
+                config, report = self.published_success(snapshot, cache)
+                self.assertNotIn(
+                    1200, [r["spell_id"] for r in config["merchants"][-1]["recipes"]]
+                )
+                self.assertEqual(report["modern_recipes"][0]["reason"], expected)
+        self.db.write_bytes(original)
+        self.write_csv(
+            self.items,
+            ["itemId", "marketValue", "saleRate", "soldPerDay", "updatedAt"],
+            [[i, 1000, 0, 1, "now"] for i in (2302, 2320, 2304, 900)],
+        )
+        _, report = self.published_success(snapshot, cache)
+        self.assertEqual(
+            report["modern_recipes"][0]["reason"], "missing_supported_market"
+        )
+
+    def test_published_preserves_output_failures_and_u32_price_limit(self):
+        self.published_modern_recipe()
+        snapshot, cache, _ = self.published_fixture()
+        original = self.db.read_bytes()
+        for sql, reason, output_reason in (
+            (
+                "UPDATE spell_effect SET Variance=1 WHERE SpellID=1200",
+                "non_deterministic_output",
+                None,
+            ),
+            (
+                "UPDATE crafting_data SET CraftedItemID=0 WHERE ID=1200",
+                "unresolved_quality_output",
+                "unresolved_quality_output",
+            ),
+            (
+                "UPDATE crafting_data SET CraftedTreasureID=77 WHERE ID=1200",
+                "unresolved_crafted_treasure",
+                "unresolved_crafted_treasure",
+            ),
+        ):
+            with self.subTest(reason=reason):
+                self.db.write_bytes(original)
+                with closing(sqlite3.connect(self.db)) as con, con:
+                    con.execute(sql)
+                _, report = self.published_success(snapshot, cache)
+                row = report["modern_recipes"][0]
+                self.assertEqual(row["reason"], reason)
+                self.assertEqual(row["output_resolution_reason"], output_reason)
+                self.assertIsNone(row["reagent_resolution_reason"])
+        self.db.write_bytes(original)
+        self.write_csv(
+            self.items,
+            ["itemId", "marketValue", "saleRate", "soldPerDay", "updatedAt"],
+            [
+                [i, 4000000000 if i == 900 else 1000, 0, 1, "now"]
+                for i in (2302, 2318, 2320, 2304, 900)
+            ],
+        )
+        _, report = self.published_success(snapshot, cache)
+        self.assertEqual(
+            report["modern_recipes"][0]["reason"], "merchant_output_price_exceeds_u32"
+        )
+
+    def test_published_native_source_and_fixed_recraft_restrictions(self):
+        self.published_modern_recipe()
+        snapshot, cache, _ = self.published_fixture()
+        original = self.db.read_bytes()
+        for sql in (
+            "UPDATE spell_reagents SET ReagentSource_0=1 WHERE SpellID=1200",
+            "UPDATE spell_reagents SET ReagentReCraftCount_0=1 WHERE SpellID=1200",
+            "UPDATE modified_crafting_reagent_slot SET ReagentSource=1",
+        ):
+            with self.subTest(sql=sql):
+                self.db.write_bytes(original)
+                with closing(sqlite3.connect(self.db)) as con, con:
+                    con.execute(sql)
+                config, report = self.published_success(snapshot, cache)
+                self.assertNotIn(
+                    1200, [r["spell_id"] for r in config["merchants"][-1]["recipes"]]
+                )
+                self.assertIsNotNone(report["modern_recipes"][0]["reason"])
+        self.db.write_bytes(original)
+        with closing(sqlite3.connect(self.db)) as con, con:
+            con.execute("UPDATE modified_crafting_spell_slot SET ReagentReCraftCount=1")
+        config, _ = self.published_success(snapshot, cache)
+        recipe = next(
+            r for r in config["merchants"][-1]["recipes"] if r["spell_id"] == 1200
+        )
+        self.assertEqual(recipe["ingredients"], [[2318, 2], [2320, 1]])
+
+    def test_published_cli_requires_paired_inputs(self):
+        snapshot, cache, _ = self.published_fixture()
+        for args in (
+            ("--published-reagents", str(snapshot)),
+            ("--published-reagent-cache", str(cache)),
+        ):
+            with self.subTest(args=args):
+                result = self.invoke("--merchant", "3532:0:165", *args)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertFalse((self.root / "config.json").exists())
+                self.assertFalse((self.root / "report.json").exists())
 
     def test_modern_direct_fixed_recipe_and_provenance(self):
         self.modern_recipe()

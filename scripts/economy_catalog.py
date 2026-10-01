@@ -223,7 +223,7 @@ def round_output_count(points):
     return math.floor(max(1, points) + 0.5)
 
 
-def recipe_failure(effects, reagent, content, markets, output, sources):
+def output_count_failure(effects):
     if len(effects) != 1 or effects[0]["Effect"] not in (24, 288):
         return "multiple_or_special_effects", []
     effect = effects[0]
@@ -244,6 +244,10 @@ def recipe_failure(effects, reagent, content, markets, output, sources):
         or effect["GroupSizeBasePointsCoefficient"] != 1
     ):
         return "non_deterministic_output", []
+    return None, []
+
+
+def fixed_recipe_inputs(reagent):
     if reagent is None:
         return "missing_reagents", []
     ingredients = Counter()
@@ -265,6 +269,11 @@ def recipe_failure(effects, reagent, content, markets, output, sources):
             return "special_reagents", []
     if not ingredients:
         return "missing_reagents", []
+    return None, sorted([item, count] for item, count in ingredients.items())
+
+
+def ingredient_failure(ingredients, content, markets, output, sources):
+    ingredients = dict(ingredients)
     referenced = {output, *ingredients}
     if not referenced <= content.keys():
         return "missing_content_item", []
@@ -283,6 +292,32 @@ def recipe_failure(effects, reagent, content, markets, output, sources):
     if markets[output]["max_price"] > U32_MAX:
         return "merchant_output_price_exceeds_u32", []
     return None, sorted([item, count] for item, count in ingredients.items())
+
+
+def recipe_failure(effects, reagent, content, markets, output, sources):
+    reason, ingredients = output_count_failure(effects)
+    if reason is None:
+        reason, ingredients = fixed_recipe_inputs(reagent)
+    if reason is None:
+        reason, ingredients = ingredient_failure(
+            ingredients, content, markets, output, sources
+        )
+    return reason, ingredients
+
+
+def published_recipe_inputs(db, candidate, record):
+    """Crosscheck selected external evidence; never clear output failures."""
+    from economy_recipe_evidence import crosscheck_published_inputs
+
+    candidate["reagent_provenance"] = {
+        key: record[key]
+        for key in ("source_url", "sha256", "captured_utc", "provenance")
+    }
+    reason, ingredients = crosscheck_published_inputs(db, candidate["spell_id"], record)
+    candidate["reagent_resolution_reason"] = reason
+    if reason is None:
+        reason = candidate["output_resolution_reason"]
+    return reason, ingredients
 
 
 def expand_vendor_rows(raw, entry, seen):
@@ -525,7 +560,7 @@ def resolve_modern_output(effect, references):
     }
 
 
-def inspect_recipes(db, markets):
+def inspect_recipes(db, markets, published_records=None):
     references = modern_crafting_references(db)
     content = {
         row["ID"]: row
@@ -589,6 +624,13 @@ def inspect_recipes(db, markets):
         for index in range(8)
         if row[f"Reagent_{index}"] in content
     }
+    if published_records is not None:
+        ingredient_ids.update(
+            item
+            for record in published_records.values()
+            for item, _ in record["items"]
+            if item in content
+        )
     sources, unsupported_vendor_rows = inspect_sources(
         db, content, crafted, ingredient_ids
     )
@@ -622,7 +664,18 @@ def inspect_recipes(db, markets):
                     unmapped.append(dict(candidate))
                 continue
             reason, ingredients = candidate["reason"], []
-            if reason is None:
+            record = (
+                published_records.get(spell) if published_records is not None else None
+            )
+            if is_modern and record is not None:
+                reason, ingredients = published_recipe_inputs(db, candidate, record)
+                if reason is None:
+                    reason, _ = output_count_failure(effects[spell])
+                if reason is None:
+                    reason, ingredients = ingredient_failure(
+                        ingredients, content, markets, output, sources
+                    )
+            elif reason is None:
                 reason, ingredients = recipe_failure(
                     effects[spell],
                     reagents.get(spell),
@@ -760,8 +813,8 @@ def inspect_assignment(db, assignment):
     }
 
 
-def build_catalog(db, markets, assignments, tuning):
-    eligible, content, sources, report = inspect_recipes(db, markets)
+def build_catalog(db, markets, assignments, tuning, published_records=None):
+    eligible, content, sources, report = inspect_recipes(db, markets, published_records)
     report["assignments"] = [
         inspect_assignment(db, assignment) for assignment in assignments
     ]
@@ -893,6 +946,16 @@ def main():
     parser.add_argument("--items", type=Path)
     parser.add_argument("--commodities", type=Path)
     parser.add_argument(
+        "--published-reagents",
+        type=Path,
+        help="explicit published required-reagent snapshot; never fetched automatically",
+    )
+    parser.add_argument(
+        "--published-reagent-cache",
+        type=Path,
+        help="cached HTML and acquisition metadata validating the selected snapshot",
+    )
+    parser.add_argument(
         "--merchant", action="append", required=True, type=parse_assignment
     )
     parser.add_argument(
@@ -906,6 +969,17 @@ def main():
     )
     args = parser.parse_args()
     try:
+        if (args.published_reagents is None) != (args.published_reagent_cache is None):
+            raise ValueError(
+                "--published-reagents and --published-reagent-cache must be paired"
+            )
+        published_records = None
+        if args.published_reagents is not None:
+            from economy_recipe_evidence import load_published_evidence
+
+            published_records = load_published_evidence(
+                args.published_reagents, args.published_reagent_cache
+            )
         if len({assignment[0] for assignment in args.merchant}) != len(args.merchant):
             raise ValueError(
                 "duplicate merchant entry; one explicit assignment per merchant"
@@ -929,7 +1003,9 @@ def main():
             sqlite3.connect(args.db.resolve().as_uri() + "?mode=ro", uri=True)
         ) as db:
             db.row_factory = sqlite3.Row
-            config, report = build_catalog(db, markets, args.merchant, tuning)
+            config, report = build_catalog(
+                db, markets, args.merchant, tuning, published_records
+            )
         reported_market_ids = set(config["markets"]) | {
             str(row["output_item_id"])
             for row in report["excluded_recipes"]
