@@ -510,27 +510,96 @@ pub struct PlayerHealthRegen {
     pub fraction: f32,
 }
 
-/// Health one `Player::RegenerateHealth` tick adds before `m_healthFraction`
-/// (Player.cpp:1741-1781, `Rate.Health` 1): a third of max while polymorphed; out of
-/// combat 20% of max / level below level 15, else 1.5% of max; nothing in combat.
-/// MOD_HEALTH_REGEN_PERCENT, MOD_REGEN, MOD_REGEN_DURING_COMBAT,
-/// MOD_HEALTH_REGEN_IN_COMBAT, `m_baseHealthRegen` and the 1.5× while not standing are
-/// not modelled.
-pub(super) fn player_health_regen(level: u8, max: f32, in_combat: bool, polymorphed: bool) -> f32 {
-    if polymorphed {
-        max / 3.0
-    } else if in_combat {
-        0.0
-    } else if level < 15 {
-        0.20 * max / f32::from(level.max(1))
-    } else {
-        0.015 * max
+/// What `Player::RegenerateHealth` reads of a player.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub(super) struct HealthRegenInputs {
+    pub level: u8,
+    pub max: f32,
+    pub in_combat: bool,
+    pub polymorphed: bool,
+    /// `IsStandState()`: not sitting, asleep or kneeling.
+    pub standing: bool,
+    /// MOD_HEALTH_REGEN_PERCENT 88 multiplier.
+    pub regen_mult: f32,
+    /// MOD_REGEN 84, health per 5 s.
+    pub mod_regen: f32,
+    /// MOD_REGEN_DURING_COMBAT 116 percent, while any is applied.
+    pub regen_during_combat_pct: Option<f32>,
+    /// MOD_HEALTH_REGEN_IN_COMBAT 161, health per tick, while any is applied.
+    pub regen_in_combat: Option<f32>,
+    /// `m_baseHealthRegen`: gear `ITEM_MOD_HEALTH_REGEN`, health per 5 s.
+    pub base_health_regen: f32,
+}
+
+impl HealthRegenInputs {
+    fn of(world: &World, player: Entity, max: f32) -> Self {
+        let mods = world.get::<crate::auras::AuraStatMods>(player);
+        Self {
+            level: world
+                .get::<shared::components::Level>(player)
+                .map_or(1, |level| level.0),
+            max,
+            in_combat: world
+                .get::<CombatStatus>(player)
+                .is_some_and(|status| status.0),
+            polymorphed: crate::auras::is_polymorphed(world, player),
+            standing: crate::stand_state::stand_state(world, player).is_stand(),
+            regen_mult: mods.map_or(1.0, |mods| mods.health_regen_mult),
+            mod_regen: mods.map_or(0.0, |mods| mods.mod_regen),
+            regen_during_combat_pct: mods.and_then(|mods| mods.regen_during_combat_pct),
+            regen_in_combat: mods.and_then(|mods| mods.health_regen_in_combat),
+            base_health_regen: world
+                .get::<crate::stats::CharacterStats>(player)
+                .map_or(0.0, |stats| stats.health_regen),
+        }
     }
+
+    /// `Player::RegenerateAll` (Player.cpp:1626) runs `RegenerateHealth` out of combat,
+    /// or polymorphed, or with gear health regen, MOD_REGEN_DURING_COMBAT or
+    /// MOD_HEALTH_REGEN_IN_COMBAT.
+    fn regenerates(&self) -> bool {
+        !self.in_combat
+            || self.polymorphed
+            || self.base_health_regen != 0.0
+            || self.regen_during_combat_pct.is_some()
+            || self.regen_in_combat.is_some()
+    }
+}
+
+/// Health one `Player::RegenerateHealth` tick adds before `m_healthFraction`
+/// (Player.cpp:1742-1781, `Rate.Health` 1): a third of max while polymorphed. Out of
+/// combat 20% of max / level below level 15, else 1.5% of max, times
+/// MOD_HEALTH_REGEN_PERCENT, plus 0.4 × MOD_REGEN (per 5 s to per 2 s); in combat with
+/// MOD_REGEN_DURING_COMBAT `Rate.Health` × its percent. Either way ×1.5 while not
+/// standing. Always plus MOD_HEALTH_REGEN_IN_COMBAT and `m_baseHealthRegen` / 2.5.
+pub(super) fn player_health_regen(inputs: &HealthRegenInputs) -> f32 {
+    let mut add = 0.0;
+    if inputs.polymorphed {
+        add = inputs.max / 3.0;
+    } else if !inputs.in_combat || inputs.regen_during_combat_pct.is_some() {
+        add = 1.0;
+        if !inputs.in_combat {
+            add = if inputs.level < 15 {
+                0.20 * inputs.max / f32::from(inputs.level.max(1))
+            } else {
+                0.015 * inputs.max
+            };
+            add *= inputs.regen_mult;
+            add += inputs.mod_regen * 0.4;
+        } else if let Some(pct) = inputs.regen_during_combat_pct {
+            add *= pct / 100.0;
+        }
+        if !inputs.standing {
+            add *= 1.5;
+        }
+    }
+    add + inputs.regen_in_combat.unwrap_or(0.0) + inputs.base_health_regen / 2.5
 }
 
 /// `Player::RegenerateAll` health: while alive (`Player::Update` `IsAlive()`) the timer
 /// counts up and every 2 s `RegenerateHealth` adds the whole part of the tick's health plus
-/// `m_healthFraction`, keeping the remainder; reaching max sets max and clears it.
+/// `m_healthFraction`, keeping the remainder; reaching max sets max and clears it. A
+/// negative tick adds nothing and keeps the fraction.
 pub(crate) fn regenerate_player_health(world: &mut World) {
     let dt_ms = world.resource::<Time>().delta().as_millis() as u32;
     let mut players = world.query_filtered::<(
@@ -554,23 +623,21 @@ pub(crate) fn regenerate_player_health(world: &mut World) {
         })
         .collect();
     for player in due {
-        let polymorphed = crate::auras::is_polymorphed(world, player);
-        let in_combat = world
-            .get::<CombatStatus>(player)
-            .is_some_and(|status| status.0);
-        let level = world
-            .get::<shared::components::Level>(player)
-            .map_or(1, |level| level.0);
         let Some(health) = world.get::<Health>(player).copied() else {
             continue;
         };
-        if health.current >= health.max {
+        let inputs = HealthRegenInputs::of(world, player, health.max);
+        if health.current >= health.max || !inputs.regenerates() {
+            continue;
+        }
+        let tick = player_health_regen(&inputs);
+        if tick < 0.0 {
             continue;
         }
         let mut regen = world
             .get_mut::<PlayerHealthRegen>(player)
             .expect("queried above");
-        let add = player_health_regen(level, health.max, in_combat, polymorphed) + regen.fraction;
+        let add = tick + regen.fraction;
         let whole = add.trunc();
         if whole == 0.0 {
             continue;

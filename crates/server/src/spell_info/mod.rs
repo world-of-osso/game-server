@@ -50,6 +50,8 @@ pub struct SpellInfo {
     pub categories: Option<Box<SpellCategories>>,
     pub cooldowns: Option<Box<SpellCooldownInfo>>,
     pub levels: Option<Box<SpellLevels>>,
+    /// `spell_scaling`: the level range its SpellScaling effect amounts scale over.
+    pub scaling: Option<SpellScaling>,
     pub class_options: Option<Box<SpellClassOptions>>,
     pub shapeshift: Option<Box<SpellShapeshift>>,
     pub interrupts: Option<Box<SpellInterrupts>>,
@@ -224,6 +226,13 @@ pub struct SpellLevels {
     pub max_level: u32,
     pub spell_level: u32,
     pub max_passive_aura_level: u32,
+}
+
+/// `SpellScalingEntry`: 0 leaves that end of the level range open.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Serialize)]
+pub struct SpellScaling {
+    pub min_scaling_level: u32,
+    pub max_scaling_level: u32,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize)]

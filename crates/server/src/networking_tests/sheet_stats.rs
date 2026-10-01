@@ -14,7 +14,7 @@ use std::time::Duration;
 /// Notched Shortsword (ilvl 5): +1 Agility, +1 Stamina.
 const NOTCHED_SHORTSWORD: u32 = 727;
 
-fn network_server(address: std::net::SocketAddr, world_db: &std::path::Path) -> App {
+pub(super) fn network_server(address: std::net::SocketAddr, world_db: &std::path::Path) -> App {
     let mut server = App::new();
     server.add_plugins((
         bevy::MinimalPlugins,
@@ -43,7 +43,7 @@ fn network_server(address: std::net::SocketAddr, world_db: &std::path::Path) -> 
     server
 }
 
-fn network_client(address: std::net::SocketAddr, client_id: u64) -> (App, Entity) {
+pub(super) fn network_client(address: std::net::SocketAddr, client_id: u64) -> (App, Entity) {
     let mut client = App::new();
     client.add_plugins((
         bevy::MinimalPlugins,
@@ -78,7 +78,7 @@ fn network_client(address: std::net::SocketAddr, client_id: u64) -> (App, Entity
     (client, entity)
 }
 
-fn advance(server: &mut App, clients: &mut [App], frames: usize) {
+pub(super) fn advance(server: &mut App, clients: &mut [App], frames: usize) {
     for _ in 0..frames {
         server.update();
         for client in clients.iter_mut() {

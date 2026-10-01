@@ -191,3 +191,48 @@ fn a_glancing_swing_is_flagged_in_the_combat_log() {
     assert!(!swings.is_empty(), "{:?}", h.inbox.log);
     assert!(swings.iter().all(|&glancing| glancing), "{swings:?}");
 }
+
+/// Unit::RollMeleeOutcomeAgainst (Unit.cpp:2422-2424) crits a player who is not standing
+/// unless the swing misses, and the swing's `DealDamage` (Unit.cpp:1185-1186) stands
+/// the player up: each swing at a re-seated player is a crit or a miss.
+#[test]
+fn a_creature_swing_crits_a_sitting_player_and_stands_it_up() {
+    use shared::components::{PlayerStandState, StandState};
+    let mut app = setup_replication_app();
+    let victim = player_target(&mut app, PlayerDefense::default());
+    let creature = app
+        .world_mut()
+        .spawn((
+            pos(0.0, 0.0, 0.0),
+            AutoAttack::new(victim),
+            crate::maps::InMap::continent(0),
+            Npc {
+                template_id: 1,
+                name: "Fixture wolf".into(),
+            },
+        ))
+        .id();
+    for seated in [StandState::Sit, StandState::Sleep, StandState::Kneel]
+        .into_iter()
+        .cycle()
+        .take(20)
+    {
+        app.world_mut()
+            .entity_mut(victim)
+            .insert(PlayerStandState(seated));
+        swing_events(&mut app, creature, 1);
+        assert_eq!(
+            app.world().get::<PlayerStandState>(victim),
+            Some(&PlayerStandState(StandState::Stand))
+        );
+    }
+    let events = swing_events(&mut app, creature, 0);
+    assert_eq!(events.len(), 20);
+    assert!(
+        events
+            .iter()
+            .all(|kind| matches!(kind, CombatEventType::CriticalHit | CombatEventType::Miss)),
+        "{events:?}"
+    );
+    assert!(events.contains(&CombatEventType::CriticalHit));
+}

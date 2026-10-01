@@ -515,6 +515,7 @@ fn build_player_runtime_components(character_id: u64, level: u16) -> impl Bundle
         },
         MovementSpeed(DEFAULT_RUN_SPEED),
         PlayerMotion::default(),
+        shared::components::PlayerStandState::default(),
         VerticalVelocity::default(),
         UnitStats::default(),
         CombatRatings::default(),

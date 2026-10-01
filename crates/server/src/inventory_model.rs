@@ -737,16 +737,9 @@ impl InventoryModel {
         Ok(())
     }
 
-    /// Item on-use spells need item spell data, which the server does not load.
-    pub(crate) fn use_item(&self, location: ItemLocation) -> OpResult {
-        let item = self.existing(location)?;
-        Err(error(
-            InventoryErrorReason::CantDoRightNow,
-            format!(
-                "item {} has no on-use spell data on the server",
-                item.item_id
-            ),
-        ))
+    /// The id of the item at `location`.
+    pub(crate) fn item_id_at(&self, location: ItemLocation) -> Result<u32, InventoryError> {
+        Ok(self.existing(location)?.item_id)
     }
 
     pub(crate) fn gold(&self) -> u64 {

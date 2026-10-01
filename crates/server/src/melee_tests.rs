@@ -61,6 +61,7 @@ fn equal_level_creature_chances_are_trinitycore_base_values() {
             glancing: 0.0,
             block: 3.0,
             crit: 5.0,
+            crit_sitting: false,
         }
     );
 }
@@ -164,6 +165,7 @@ fn a_creature_swings_into_a_players_avoidance_and_crits_five_percent() {
         parry: 5.0,
         block: 5.0,
         shield_block: 0.0,
+        sitting: false,
     };
     let chances = swing_chances(
         Swinger::Creature { miss_pct: 5.0 },
@@ -179,6 +181,7 @@ fn a_creature_swings_into_a_players_avoidance_and_crits_five_percent() {
             glancing: 0.0,
             block: 5.0,
             crit: 5.0,
+            crit_sitting: false,
         }
     );
     // Miss [0, 500), dodge [500, 700), parry [700, 1200), block [1200, 1700),
@@ -223,4 +226,42 @@ fn a_players_shield_stops_its_block_value_share_of_a_blocked_swing() {
         ..PlayerDefense::default()
     };
     assert!((wall.blocked_pct(750.0) - 85.0).abs() < 1e-3);
+}
+
+/// Unit::RollMeleeOutcomeAgainst (Unit.cpp:2418-2424): a swing at a player who sits,
+/// sleeps or kneels crits unless it misses, ahead of dodge, parry and block; with no
+/// crit chance it walks the normal table.
+#[test]
+fn a_swing_at_a_sitting_player_crits_unless_it_misses() {
+    let sitting = PlayerDefense {
+        dodge: 3.0,
+        parry: 5.0,
+        block: 5.0,
+        sitting: true,
+        ..PlayerDefense::default()
+    };
+    let chances = swing_chances(
+        Swinger::Creature { miss_pct: 5.0 },
+        Victim::Player(sitting),
+        true,
+    );
+    assert!(chances.crit_sitting);
+    assert_eq!(roll_melee_outcome(&chances, 499), MeleeOutcome::Miss);
+    assert_eq!(roll_melee_outcome(&chances, 500), MeleeOutcome::Crit);
+    assert_eq!(roll_melee_outcome(&chances, 9999), MeleeOutcome::Crit);
+    let no_crit = MeleeChances {
+        crit: 0.0,
+        ..chances
+    };
+    assert_eq!(roll_melee_outcome(&no_crit, 500), MeleeOutcome::Dodge);
+    assert_eq!(roll_melee_outcome(&no_crit, 9999), MeleeOutcome::Hit);
+    let standing = swing_chances(
+        Swinger::Creature { miss_pct: 5.0 },
+        Victim::Player(PlayerDefense {
+            sitting: false,
+            ..sitting
+        }),
+        true,
+    );
+    assert_eq!(roll_melee_outcome(&standing, 500), MeleeOutcome::Dodge);
 }

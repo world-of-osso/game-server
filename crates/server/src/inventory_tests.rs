@@ -66,7 +66,6 @@ fn setup_app_with(db: Database, extra: impl FnOnce(&mut App)) -> App {
     app.register_message::<SwapItem>();
     app.register_message::<SplitItem>();
     app.register_message::<DestroyItem>();
-    app.register_message::<UseItem>();
     app.register_message::<EquipItem>();
     app.register_message::<SortBags>();
     app.register_message::<InitiateTrade>();
@@ -131,7 +130,6 @@ fn spawn_client(app: &mut App, account_id: u64, name: &str) -> Client {
     add_message_pair::<SwapItem>(app, connection);
     add_message_pair::<SplitItem>(app, connection);
     add_message_pair::<DestroyItem>(app, connection);
-    add_message_pair::<UseItem>(app, connection);
     add_message_pair::<EquipItem>(app, connection);
     add_message_pair::<InitiateTrade>(app, connection);
     add_message_pair::<AcceptTrade>(app, connection);
@@ -460,30 +458,6 @@ fn invalid_bag_slot_returns_inventory_error() {
     assert_eq!(
         persistence::load_inventory(db(&app), client.character_id),
         before
-    );
-}
-
-#[test]
-fn using_item_without_spell_data_returns_clear_error() {
-    let mut app = setup_app(persistence::temp_database());
-    let client = spawn_client(&mut app, 1, "Bagger");
-    enter_world(&mut app, &client);
-
-    request(
-        &mut app,
-        &client,
-        UseItem {
-            location: bag(0),
-            target: None,
-        },
-    );
-
-    let errors = received::<InventoryError>(&mut app, &client);
-    assert_eq!(errors.len(), 1);
-    assert_eq!(errors[0].reason, InventoryErrorReason::CantDoRightNow);
-    assert_eq!(
-        errors[0].detail.as_deref(),
-        Some("item 2589 has no on-use spell data on the server")
     );
 }
 

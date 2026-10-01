@@ -8,6 +8,14 @@ use shared::components::MovementControl;
 
 use crate::interest::{InterestDirtyQueue, mark_interest_position_changed};
 
+/// `teleported` from an exclusive system.
+pub(crate) fn teleported_in(world: &mut World, player: Entity) {
+    mark_interest_position_changed(world.get_resource::<InterestDirtyQueue>(), player);
+    if let Some(mut control) = world.get_mut::<MovementControl>(player) {
+        control.epoch = control.epoch.wrapping_add(1);
+    }
+}
+
 /// Call after writing a player's `Position` server-side.
 pub(crate) fn teleported(
     dirty_queue: Option<&InterestDirtyQueue>,

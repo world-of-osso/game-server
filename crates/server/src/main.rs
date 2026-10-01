@@ -13,6 +13,7 @@ mod bank_storage;
 mod bank_test_harness;
 mod barber_shop;
 mod calendar;
+mod chair;
 mod character_stats_data;
 mod class_progression;
 mod collection;
@@ -47,6 +48,7 @@ mod interest;
 mod inventory;
 mod item_stats;
 mod item_templates;
+mod item_use;
 mod level_scaling;
 mod lfg;
 mod liquid;
@@ -78,6 +80,8 @@ mod scripted_ai;
 mod sheet_visibility;
 mod spell_cast;
 mod spell_info;
+mod spell_scaling_data;
+mod stand_state;
 mod stats;
 #[cfg(feature = "system-timings")]
 mod system_timings;
@@ -160,6 +164,7 @@ fn add_social_plugins(app: &mut App) {
         .add_plugins(item_templates::ItemTemplatesPlugin)
         .add_plugins(item_stats::ItemScalingPlugin)
         .add_plugins(inventory::InventoryPlugin)
+        .add_plugins(item_use::ItemUsePlugin)
         .add_plugins(appearance_collection::AppearanceCollectionPlugin)
         .add_plugins(quest_data::QuestDataPlugin)
         .add_plugins(quest::QuestPlugin)
@@ -178,6 +183,7 @@ fn add_progression_plugins(app: &mut App) {
         .add_plugins(profession::ProfessionPlugin)
         .add_plugins(reputation::ReputationPlugin)
         .add_plugins(rest::RestPlugin)
+        .add_plugins(stand_state::StandStatePlugin)
         .add_plugins(class_progression::ClassProgressionPlugin);
 }
 

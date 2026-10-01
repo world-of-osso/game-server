@@ -12,7 +12,7 @@ use redb::Database;
 use shared::components::{EquipmentAppearance, Player};
 use shared::protocol::{
     DestroyItem, EquipItem, EquipmentSnapshot, InventoryChannel, InventoryDelta, InventoryError,
-    InventoryErrorReason, InventorySnapshot, SortBags, SplitItem, SwapItem, UseItem,
+    InventoryErrorReason, InventorySnapshot, SortBags, SplitItem, SwapItem,
 };
 
 use crate::appearance_collection::AppearanceSourceItems;
@@ -48,7 +48,6 @@ impl Plugin for InventoryPlugin {
                 process_swap_requests,
                 process_split_requests,
                 process_destroy_requests,
-                process_use_requests,
                 process_equip_requests,
                 process_sort_requests,
             ),
@@ -251,21 +250,6 @@ fn process_destroy_requests(
         &mut updates,
         &mut errors,
         |model, req, _| model.destroy(req.location, req.count),
-    );
-}
-
-fn process_use_requests(
-    mut receivers: Requests<UseItem>,
-    store: InventoryStore,
-    mut updates: ResMut<GoldUpdateQueue>,
-    mut errors: ErrorSenders,
-) {
-    process_requests(
-        &mut receivers,
-        store,
-        &mut updates,
-        &mut errors,
-        |model, req, _| model.use_item(req.location),
     );
 }
 
