@@ -63,7 +63,7 @@ Server gameplay systems.
 | [[quests]] | Quest content load, AzerothCore accept/prerequisite/marker rules, per-player giver markers, kill and bag-item progress, turn-in rewards, quest log persistence and deltas |
 | [[bot-economy]] | Direct suppliers and bounded real merchant CLI/cost/cap proof; auction restart/mail/latency ledger in [[auction-house]], bounded native and final source audits PASS; content gaps in [[economy-catalog]] |
 | [[auction-house]] | Global ItemID browse and real AuctionID actions; exact saved CLI/restart/mail, twelve pinned loopback samples and bounded native and final source audits PASS |
-| [[economy-catalog]] | Read-only world.db/TSM importer, evidence-based gathered/market inputs, exact unlimited supplier contracts, provenance, price bounds and Midnight mapping gaps |
+| [[economy-catalog]] | Read-only world.db/TSM importer, gathered/market inputs, supplier contracts and price bounds; corrected Midnight staging evidence linked separately |
 | [[merchant]] | Vendor lists from content_npc_vendor (references, limited stock restock), buy/sell/buyback (12 session slots), repair cost from AzerothCore MaxDurability + Retail DurabilityCosts/Quality |
 | [[npc-interaction]] | Replicated `NpcFlags` (AzerothCore→Retail bits), `InteractNpc` validation (TrinityCore GetNPCIfCanInteractWith, 8.5 yd), gossip menus from world.db, role routing, per-frame session close, auction house gated on an auctioneer session and its faction house |
 | [[experience]] | Retail kill XP (gtXp, grey/zero-difference, elite, expansion /10, group split), QuestXP DB2 with low-level reduction, GiveXP level-ups, `character_xp`, health/mana refill, protocol gaps |
@@ -71,6 +71,8 @@ Server gameplay systems.
 ## investigations/
 
 Debug logs and root cause analyses.
+
+- [[midnight-economy-content]] — effect-288/Skillup2915 correction, published evidence, diagnostic staging catalog, genuine city-NPC gap and pending publication/preflight gates.
 
 | Page | Summary |
 |------|---------|

@@ -4,6 +4,7 @@ import csv
 from contextlib import closing
 import hashlib
 import importlib
+import io
 import json
 from pathlib import Path
 import sqlite3
@@ -17,7 +18,7 @@ from unittest.mock import patch
 
 SCRIPTS = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(SCRIPTS))
-SOURCE = SCRIPTS.parent / "data/reference/midnight-20261001"
+SOURCE = SCRIPTS.parent / "data/reference/crafting/12.1.0.69933"
 
 
 def wdc5(layout, values, *, noninline=False, parent=None, encrypted=False):
@@ -171,6 +172,86 @@ class FixtureImportTests(unittest.TestCase):
             for t in self.pins
         )
 
+    def test_check_validates_sources_without_opening_database(self):
+        before = self.db.read_bytes()
+        with (
+            patch.object(self.mod, "TABLES", self.pins),
+            patch.object(
+                sys,
+                "argv",
+                ["crafting_data.py", "--check", "--source-dir", str(self.source)],
+            ),
+            patch.object(
+                self.mod.sqlite3, "connect", side_effect=AssertionError("DB opened")
+            ),
+        ):
+            with patch("sys.stdout", new_callable=io.StringIO) as output:
+                self.mod.main()
+            report = json.loads(output.getvalue())
+        self.assertEqual([row["rows"] for row in report], [1] * 7)
+        self.assertEqual(self.db.read_bytes(), before)
+
+    def test_check_rejects_layout_header_hash_count_and_missing_source(self):
+        cases = (
+            (
+                "4545611.db2",
+                lambda b: b[:156] + struct.pack("<I", 0xBAD) + b[160:],
+                "layout",
+            ),
+            (
+                "4545611.db2",
+                lambda b: b[:136] + struct.pack("<I", 2) + b[140:],
+                "count",
+            ),
+            (
+                "ModifiedCraftingCategory.csv",
+                lambda b: b.replace(b"DisplayName_lang", b"WrongHeader"),
+                "header",
+            ),
+            (
+                "ModifiedCraftingCategory.csv",
+                lambda b: b.replace(b"Quality cloth", b"Other cloth"),
+                "SHA-256",
+            ),
+            ("MCRSlotXMCRCategory.csv", None, "MCRSlotXMCRCategory.csv"),
+        )
+        before = self.db.read_bytes()
+        for filename, mutate, error in cases:
+            with self.subTest(error=error):
+                path = self.source / filename
+                original = path.read_bytes()
+                if mutate is None:
+                    path.unlink()
+                else:
+                    path.write_bytes(mutate(original))
+                try:
+                    with (
+                        patch.object(self.mod, "TABLES", self.pins),
+                        patch.object(
+                            sys,
+                            "argv",
+                            [
+                                "crafting_data.py",
+                                "--check",
+                                "--source-dir",
+                                str(self.source),
+                            ],
+                        ),
+                        patch.object(
+                            self.mod.sqlite3,
+                            "connect",
+                            side_effect=AssertionError("DB opened"),
+                        ),
+                    ):
+                        with patch("sys.stderr", new_callable=io.StringIO) as output:
+                            with self.assertRaises(SystemExit) as exit_result:
+                                self.mod.main()
+                        self.assertEqual(exit_result.exception.code, 1)
+                        self.assertIn(error, output.getvalue())
+                    self.assertEqual(self.db.read_bytes(), before)
+                finally:
+                    path.write_bytes(original)
+
     def test_decoder_float_parent_and_join(self):
         report = self.import_fixture()
         with closing(sqlite3.connect(self.db)) as conn, conn:
@@ -307,6 +388,49 @@ class FixtureImportTests(unittest.TestCase):
 
 
 class RealSourceTests(unittest.TestCase):
+    def test_pinned_cli_check_without_database_argument(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(SCRIPTS / "crafting_data.py"),
+                    "--check",
+                    "--source-dir",
+                    str(SOURCE),
+                ],
+                cwd=tmp,
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            report = json.loads(result.stdout)
+            self.assertEqual(
+                [r["rows"] for r in report], [2785, 1687, 12769, 393, 598, 623, 910]
+            )
+            self.assertEqual(list(Path(tmp).iterdir()), [])
+
+    def test_check_rejects_database_argument(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            db = Path(tmp) / "sentinel.db"
+            db.write_bytes(b"do not touch")
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(SCRIPTS / "crafting_data.py"),
+                    "--check",
+                    "--db",
+                    str(db),
+                    "--source-dir",
+                    str(SOURCE),
+                ],
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+            self.assertNotEqual(result.returncode, 0)
+            self.assertEqual(db.read_bytes(), b"do not touch")
+
     def test_pinned_cli_staging_import_and_real_joins(self):
         with tempfile.TemporaryDirectory() as tmp:
             db = Path(tmp) / "staging.db"

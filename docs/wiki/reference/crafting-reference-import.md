@@ -10,6 +10,10 @@ python scripts/crafting_data.py --db /absolute/staging.db --source-dir /absolute
 
 Python interface: `import_data(db, source_dir)` returns the same seven-element provenance list printed as JSON by the CLI. No extraction, downloads, source writes or implicit path selection. Existing unrelated tables remain untouched. All source parsing/validation completes before opening the destination; seven DROP/CREATE/INSERT operations share one explicit `BEGIN IMMEDIATE` transaction. SQLite failures roll back schema and rows. Connections close explicitly.
 
+## Rebuild preflight
+
+`crafting_data.py --check --source-dir PATH` validates all seven pinned sources without opening or changing a destination database. `import-azerothcore.sh` uses `CRAFTING_SOURCE_DIR`, defaulting to `data/reference/crafting/12.1.0.69933`, and performs this preflight before deleting its old database. It then imports the references after the ordinary DB2 tables and before content projection. Missing or mismatched source files stop the rebuild before mutation; no compatibility fallback is used. Commits `357086b`/`9fb6dfc` have eleven importer and six bounded rebuild-fixture passing tests, including sentinel-byte preservation.
+
 ## Source and layout pins
 
 | SQLite table | Source | Rows | Layout |
@@ -52,7 +56,7 @@ Its decoder returns eight values: inline `$relation$SpellID` plus an appended re
 
 ## Resolver handoff
 
-Reference data only; no resolver changes. User-supplied downstream constraints: CraftItem effect 288 maps `EffectMiscValue0` to `crafting_data.ID`; SkillupSkillLineID 2915 contains 105 modern recipes, not an absence claim. Resolver must distinguish direct `CraftedItemID` from quality variants via `crafting_data_item_quality.CraftingDataID`. Spell-slot joins use `modified_crafting_spell_slot.SpellID`, then `ModifiedCraftingReagentSlotID`; category links use `mcr_slot_x_mcr_category`, with reagent definitions in `modified_crafting_reagent_item`. This importer does not interpret effect 288 or assert the 105-recipe count.
+Reference data only; no resolver changes. Observed downstream source relationships: CraftItem effect 288 maps `EffectMiscValue0` to `crafting_data.ID`; SkillupSkillLineID 2915 contains 105 modern recipes, not an absence claim. Resolver must distinguish direct `CraftedItemID` from quality variants via `crafting_data_item_quality.CraftingDataID`. Spell-slot joins use `modified_crafting_spell_slot.SpellID`, then `ModifiedCraftingReagentSlotID`; category links use `mcr_slot_x_mcr_category`, with reagent definitions in `modified_crafting_reagent_item`. This importer does not interpret effect 288 or assert the 105-recipe count.
 
 ## Proof ledger
 

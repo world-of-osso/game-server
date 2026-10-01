@@ -1,5 +1,13 @@
 # Wiki Log
 
+## [2026-10-01] systems | Verified crafting reference publication
+
+Published the verified crafting references and additive Retail item projection to local `world.db` after the ingestion gate. The independent publication report confirms existing rows and unrelated tables remain unchanged; [[midnight-economy-content]] owns the exact counts, source provenance and diagnostic limits. Rebuild preflight is tested and documented in [[crafting-reference-import]]. The active Classic catalog was not replaced, no production service was restarted, and genuine new Silvermoon merchant placement remains unavailable.
+
+## [2026-10-01] investigations | Corrected Midnight economy source diagnosis
+
+Added [[midnight-economy-content]] after checking existing investigations; corrected [[economy-catalog]] and bot-economy spec, linked index and marked historical effect-24 inference superseded. Saved staging evidence replaces missing-recipe claims with modern membership/resolution and published-reagent coverage; genuine city placement and Spark/quality/native-bonus limits remain. Source publication and agent75 CLI preflight remain pending. Preserved independently owned reference-schema/pipeline docs. Docs only; no source/data writes, tests, operations, delegation or push.
+
 ## [2026-10-01] reference | Bounded crafting reference import
 
 Added [[crafting-reference-import]] and its spec: seven pinned local-CASC/WagoCSV tables, complete unknown-preserving schema, float32 conversion, validated duplicate spell relationship parent, deterministic provenance and atomic staging-only replacement. Concrete WDC5/CSV and real-source joins cover invalid-source and SQL rollback. Economy catalog/content policy and live data remain untouched; modern resolver handoff stays separate.
@@ -45,7 +53,9 @@ Updated [[economy-catalog]]: recipes whose output range exceeds existing u32 ven
 
 Added [auction house spec](../specs/auction-house.md) and [[auction-house]]; linked [[bot-economy]] and index. Inspected shared `88bc3fe`: distinct browse messages with per-item price/quantity and distinct total, unchanged flat shapes. Inspected server flat/session/class/usability boundaries; grouped server, CLI and native integration remain concurrent and unverified. Recorded ItemID → real AuctionID flow, actual-coordinate/listing-price evidence and CLI-first then engine <200 ms request/response goal. Reported optimized flat 300k/144 ms helper timing is not network acceptance; grouped performance pending. No acceptance checked; no code or owned CLI/engine docs changed.
 
-## [2026-09-30] systems | Economy catalog importer
+## [2026-09-30] systems | Economy catalog importer (Midnight diagnosis superseded)
+
+Correction 2026-10-01: [[midnight-economy-content]] supersedes the effect-24-only inference below; modern Skillup2915/effect288 recipes exist. Historical counts are not modern coverage.
 
 Created [[economy-catalog]] and indexed it. Read-only world.db and timestamped public TSM snapshots supply runtime item metadata, market maps and explicit spawned merchant/profession/expansion assignments. Jillian Tanner 5565:0:165 has 224 classic Leatherworking recipes, 312 markets and 33 raw gatherables; quantity follows profession.rs raw rounding, not points + 1. Report records selected price/popularity provenance, exclusions and explicit empty-production warnings. Midnight 11 remains blocked: 115 CREATE_ITEM output spells, six Fishing mappings, 109 missing mappings, no Leatherworking mapping or claimed new Silvermoon spawn. Runtime integration and spec acceptance remain separate.
 

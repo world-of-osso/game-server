@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Import seven pinned Midnight reference tables into an explicit staging SQLite DB."""
+"""Validate seven pinned Midnight reference tables or import into explicit SQLite DB."""
 
 import argparse
 import csv
@@ -258,18 +258,25 @@ def import_data(db, source_dir):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument(
-        "--db", type=Path, required=True, help="explicit staging SQLite database"
+    mode = parser.add_mutually_exclusive_group(required=True)
+    mode.add_argument("--db", type=Path, help="explicit staging SQLite database")
+    mode.add_argument(
+        "--check",
+        action="store_true",
+        help="validate all pinned sources without DB writes",
     )
     parser.add_argument(
         "--source-dir",
         type=Path,
         required=True,
-        help="pinned midnight-20261001 snapshot",
+        help="pinned build 12.1.0.69933 snapshot",
     )
     args = parser.parse_args()
     try:
-        report = import_data(args.db, args.source_dir)
+        if args.check:
+            _, report = load_sources(args.source_dir, read_schema())
+        else:
+            report = import_data(args.db, args.source_dir)
     except (OSError, ValueError, sqlite3.Error) as error:
         parser.exit(1, f"crafting import failed: {error}\n")
     print(json.dumps(report, indent=2, sort_keys=True))

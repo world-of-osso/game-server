@@ -46,6 +46,7 @@ import db2  # noqa: E402
 import retail_content  # noqa: E402
 import wowhead_loot  # noqa: E402
 from content_common import Report, clone_table  # noqa: E402
+from economy_crafting import crafting_item_ids  # noqa: E402
 
 PROJECT_DIR = SCRIPT_DIR.parent
 WRATH_BUILD = "3.4.0.47659"
@@ -260,6 +261,12 @@ def build_creature_models(conn, overrides, report):
 
 
 def apply_policy(conn, wrath_spell_names, overrides_path, report):
+    crafting_items = crafting_item_ids(conn)
+    for item_id in sorted(crafting_items):
+        for table in ("item_sparse", "item"):
+            if conn.execute(f"SELECT 1 FROM {table} WHERE ID=?", (item_id,)).fetchone() is None:
+                report.drop(table, f"ID={item_id}", item_id, "crafting item missing Retail source row")
+                crafting_items.discard(item_id)
     retail_content.create_retail_map_table(conn)
     wowhead_loot.load_wowhead_drops(conn, wowhead_loot.wowhead_root())
     retail_items = dict(conn.execute("SELECT ID, Display_lang FROM item_sparse"))
@@ -269,7 +276,7 @@ def apply_policy(conn, wrath_spell_names, overrides_path, report):
     spell_map, _ = map_ids(wrath_spell_names, retail_spells, overrides["spell"])
     create_map_table(conn, "item_map", item_map)
     create_map_table(conn, "spell_map", spell_map)
-    build_items(conn, item_map, item_reasons, retail_content.tdb_item_ids(conn), report)
+    build_items(conn, item_map, item_reasons, retail_content.tdb_item_ids(conn) | crafting_items, report)
     build_vendors(conn, report)
     build_quests(conn, item_map, spell_map, report)
     build_loot(conn, report)
