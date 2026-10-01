@@ -261,6 +261,7 @@ fn learned_spells_fill_first_empty_main_bar_slots() {
     const CHARGE: u32 = 100;
     const SHIELD_SLAM: u32 = 23922;
     const HAMSTRING: u32 = 1715;
+    const WILL_TO_SURVIVE: u32 = 59752;
     let Some(classes) = class_spells() else {
         return;
     };
@@ -283,11 +284,13 @@ fn learned_spells_fill_first_empty_main_bar_slots() {
 
     set_live_level(app.world_mut(), character_id, 2);
     advance(&mut app);
+    // Will to Survive 59752, the Human racial, took slot 2 at creation.
     let charge_bar = vec![
         (0, ActionRef::Spell(SLAM)),
         (1, ActionRef::Spell(ATTACK)),
-        (2, ActionRef::Spell(CHARGE)),
+        (2, ActionRef::Spell(WILL_TO_SURVIVE)),
         (3, ActionRef::Item(6948)),
+        (4, ActionRef::Spell(CHARGE)),
     ];
     assert_eq!(
         received::<ActionBarSnapshot>(&mut app, player),
@@ -300,8 +303,8 @@ fn learned_spells_fill_first_empty_main_bar_slots() {
     advance(&mut app);
     let mut bar = charge_bar;
     bar.extend([
-        (4, ActionRef::Spell(SHIELD_SLAM)),
-        (5, ActionRef::Spell(HAMSTRING)),
+        (5, ActionRef::Spell(SHIELD_SLAM)),
+        (6, ActionRef::Spell(HAMSTRING)),
     ]);
     assert_eq!(
         received::<ActionBarSnapshot>(&mut app, player),
@@ -326,11 +329,15 @@ fn new_warrior_enters_world_with_known_spells_and_default_bar() {
     let player = spawn_player(&mut app, character_id, ORC, WARRIOR, 1);
     advance(&mut app);
 
-    // Warrior 137047, Parry 3127, Block 123829 and Initial Warrior 325446 are passive.
+    // Warrior 137047, Parry 3127, Block 123829 and Initial Warrior 325446 are passive;
+    // the Orc racial line gives Blood Fury 20572, Hardiness 20573, Command 21563 and
+    // Languages 79743.
     assert_eq!(
         received::<KnownSpellsSnapshot>(&mut app, player),
         vec![KnownSpellsSnapshot {
-            spells: vec![137047, 1464, 3127, 88163, 123829, 325446],
+            spells: vec![
+                137047, 1464, 3127, 88163, 123829, 20572, 20573, 21563, 79743, 325446
+            ],
         }]
     );
     assert_eq!(
@@ -339,7 +346,11 @@ fn new_warrior_enters_world_with_known_spells_and_default_bar() {
             spec_id: SPEC_WARRIOR_INITIAL,
         }]
     );
-    let default_bar = vec![(0, ActionRef::Spell(1464)), (1, ActionRef::Spell(88163))];
+    let default_bar = vec![
+        (0, ActionRef::Spell(1464)),
+        (1, ActionRef::Spell(88163)),
+        (2, ActionRef::Spell(20572)),
+    ];
     assert_eq!(
         received::<ActionBarSnapshot>(&mut app, player),
         vec![ActionBarSnapshot {
@@ -352,7 +363,8 @@ fn new_warrior_enters_world_with_known_spells_and_default_bar() {
             spec_id: SPEC_WARRIOR_INITIAL,
             action_bar: vec![
                 (0, ActionRefData::Spell(1464)),
-                (1, ActionRefData::Spell(88163))
+                (1, ActionRefData::Spell(88163)),
+                (2, ActionRefData::Spell(20572))
             ],
         }
     );
@@ -502,7 +514,12 @@ fn set_action_button_validates_slot_and_known_spell() {
     let player = spawn_player(&mut app, 3, ORC, WARRIOR, 1);
     advance(&mut app);
     drain(&mut app, player);
-    let default_bar = vec![(0, ActionRef::Spell(1464)), (1, ActionRef::Spell(88163))];
+    // Slam, Attack and the Orc racial Blood Fury 20572.
+    let default_bar = vec![
+        (0, ActionRef::Spell(1464)),
+        (1, ActionRef::Spell(88163)),
+        (2, ActionRef::Spell(20572)),
+    ];
 
     send_request(
         &mut app,
@@ -560,6 +577,7 @@ fn set_action_button_validates_slot_and_known_spell() {
         stored(&app, 3).action_bar,
         vec![
             (1, ActionRefData::Spell(88163)),
+            (2, ActionRefData::Spell(20572)),
             (7, ActionRefData::Spell(1464)),
             (119, ActionRefData::Item(6948)),
         ]
@@ -1033,7 +1051,11 @@ fn new_human_paladin_default_bar_skips_class_mounts() {
     assert_eq!(
         received::<ActionBarSnapshot>(&mut app, player),
         vec![ActionBarSnapshot {
-            slots: vec![(0, ActionRef::Spell(CRUSADER_STRIKE))],
+            // Will to Survive 59752, the Human racial, follows.
+            slots: vec![
+                (0, ActionRef::Spell(CRUSADER_STRIKE)),
+                (1, ActionRef::Spell(59752))
+            ],
         }]
     );
 }
@@ -1164,6 +1186,71 @@ fn paladin_learns_boundless_conviction_for_five_holy_power() {
     // Boundless Conviction 115675 (MOD_MAX_POWER +2 Holy Power): SkillLineAbility
     // 26101, AcquireMethod 2.
     assert!(known_ids(&classes, HUMAN, PALADIN, 10, SPEC_RETRIBUTION).contains(&115675));
+}
+
+/// `.character level` resets XP to 0 whether the character is online (SetXP(0)) or not
+/// (CHAR_UPD_LEVEL `xp = 0`): cs_character.cpp:770-792.
+#[test]
+fn admin_set_level_resets_xp_online_and_offline() {
+    use bevy::ecs::system::RunSystemOnce;
+
+    use crate::admin_handlers::handle_set_level;
+    use crate::persistence_progression::{load_xp, save_xp};
+
+    let db = temp_database();
+    let (online, _) = persistence::create_character(&db, 1, "Uther", HUMAN, PALADIN).unwrap();
+    let (offline, _) = persistence::create_character(&db, 1, "Turalyon", HUMAN, PALADIN).unwrap();
+    save_xp(&db, online, 500);
+    save_xp(&db, offline, 700);
+    let mut app = App::new();
+    app.insert_resource(GameDatabase { db });
+    app.world_mut()
+        .spawn((ClientId(online), Level(1), UnitLevel(1)));
+    for name in ["Uther", "Turalyon"] {
+        app.world_mut()
+            .run_system_once(move |db: Res<GameDatabase>, mut commands: Commands| {
+                handle_set_level(&db, &mut commands, name, 5)
+            })
+            .unwrap();
+    }
+    let db = &app.world().resource::<GameDatabase>().db;
+    assert_eq!((load_xp(db, online), load_xp(db, offline)), (0, 0));
+}
+
+/// Player::LearnDefaultSkills / LearnSkillRewardedSpells (Player.cpp:25275-25291,
+/// 25407-25457): each race's racial skill line rewards its abilities at creation, by
+/// race (and class) mask. Human 754: Will to Survive 59752, The Human Spirit 20598;
+/// Orc 125: Blood Fury 20572 (Warrior class mask 45), Hardiness 20573; Haranir 2930:
+/// Thorn Bloom 1237885, Lash Out 1238623, One With Nature 1238648. No race gets
+/// another's racials.
+#[test]
+fn racial_skill_lines_reward_each_races_racials() {
+    let Some(classes) = class_spells() else {
+        return;
+    };
+    const ORC: u8 = 2;
+    const HARANIR_HORDE: u8 = 91;
+    const HARANIR_ALLIANCE: u8 = 86;
+    const MONK: u8 = 10;
+    let human = known_ids(&classes, HUMAN, WARRIOR, 1, 0);
+    let orc = known_ids(&classes, ORC, WARRIOR, 1, 0);
+    for spell in [59752, 20598] {
+        assert!(human.contains(&spell), "Human Warrior lacks {spell}");
+        assert!(!orc.contains(&spell), "Orc Warrior knows Human {spell}");
+    }
+    for spell in [20572, 20573] {
+        assert!(orc.contains(&spell), "Orc Warrior lacks {spell}");
+        assert!(!human.contains(&spell), "Human Warrior knows Orc {spell}");
+    }
+    for race in [HARANIR_HORDE, HARANIR_ALLIANCE] {
+        let haranir = known_ids(&classes, race, MONK, 10, 0);
+        for spell in [1237885, 1238623, 1238648] {
+            assert!(
+                haranir.contains(&spell),
+                "Haranir {race} Monk lacks {spell}"
+            );
+        }
+    }
 }
 
 /// Frostbolt 116 is the mage baseline (SkillLineAbility 43444, level 1);

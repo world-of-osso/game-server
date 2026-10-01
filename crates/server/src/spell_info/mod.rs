@@ -126,7 +126,9 @@ pub struct SpellEffect {
     pub amplitude: f32,
     pub aura_period_ms: u32,
     pub chain_amplitude: f32,
-    pub chain_targets: u32,
+    /// `EffectChainTargets`: units the effect jumps to, the first included (signed:
+    /// some rows hold -10).
+    pub chain_targets: i32,
     pub item_type: u32,
     pub mechanic: u32,
     pub points_per_resource: f32,

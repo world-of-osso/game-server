@@ -140,6 +140,17 @@ fn run(app: &mut App, updates: usize) {
     }
 }
 
+/// MOD_HIT_CHANCE 100: the creature's swings never miss (Unit::MeleeSpellMissChance), so
+/// its first swing at a player without avoidance lands.
+fn never_misses(app: &mut App, creature: Entity) {
+    app.world_mut()
+        .entity_mut(creature)
+        .insert(crate::auras::AuraStatMods {
+            melee_hit_chance_pct: 100.0,
+            ..Default::default()
+        });
+}
+
 fn state(app: &App, creature: Entity) -> Option<CreatureState> {
     app.world().get::<CreatureState>(creature).cloned()
 }
@@ -197,6 +208,7 @@ fn aggro_mode_follows_template_flags() {
 fn hostile_spider_aggroes_player_in_radius_chases_and_hits() {
     let mut app = aggro_app();
     let spider = spawn_creature(&mut app, &FOREST_SPIDER, at(0.0, 0.0));
+    never_misses(&mut app, spider);
     let player = spawn_player(&mut app, at(15.0, 0.0), 5);
 
     run(&mut app, 1);
@@ -315,6 +327,7 @@ fn dead_ghost_and_flying_players_are_not_aggroed() {
 fn neutral_boar_ignores_player_until_hit_then_fights_back() {
     let mut app = aggro_app();
     let boar = spawn_creature(&mut app, &STONETUSK_BOAR, at(0.0, 0.0));
+    never_misses(&mut app, boar);
     let player = spawn_player(&mut app, at(3.0, 0.0), 5);
     run(&mut app, 10);
     assert_eq!(state(&app, boar), Some(CreatureState::Idle));
@@ -648,6 +661,7 @@ fn hostile_civilian_ignores_nearby_player_until_hit() {
         ..FOREST_SPIDER
     };
     let kobold = spawn_creature(&mut app, &civilian, at(0.0, 0.0));
+    never_misses(&mut app, kobold);
     let player = spawn_player(&mut app, at(3.0, 0.0), 5);
     run(&mut app, 10);
     assert_eq!(state(&app, kobold), Some(CreatureState::Idle));

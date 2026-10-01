@@ -276,7 +276,7 @@ fn load_effects(conn: &Connection, lookups: &Lookups, spells: &mut Spells) -> ru
                 amplitude: real(r, 7)?,
                 aura_period_ms: uint(r, 8)?,
                 chain_amplitude: real(r, 9)?,
-                chain_targets: uint(r, 10)?,
+                chain_targets: sint(r, 10)?,
                 item_type: uint(r, 11)?,
                 mechanic: uint(r, 12)?,
                 points_per_resource: real(r, 13)?,

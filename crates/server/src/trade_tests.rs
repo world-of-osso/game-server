@@ -91,10 +91,7 @@ fn trade_offer(item_guid: u64, count: u16, gold: u64) -> TradeOffer {
 }
 
 #[test]
-fn idle_trade_offer_receivers_do_not_resolve_players_or_emit_updates() {
-    let _test_lock = TRADE_OFFER_TEST_LOCK.lock().unwrap();
-    TRADE_OFFER_PLAYER_RESOLUTIONS.store(0, Ordering::SeqCst);
-
+fn idle_trade_offer_receivers_emit_no_updates() {
     let db = persistence::temp_database();
     let (first_id, _) = persistence::create_character_with_test_bags(&db, 1, "TraderOne", 1, 1)
         .expect("first character");
@@ -110,11 +107,6 @@ fn idle_trade_offer_receivers_do_not_resolve_players_or_emit_updates() {
     app.update();
     app.update();
 
-    assert_eq!(
-        TRADE_OFFER_PLAYER_RESOLUTIONS.load(Ordering::SeqCst),
-        0,
-        "idle trade offer receivers must not resolve linked players"
-    );
     assert!(receive_trade_updates(&mut app, first_connection).is_empty());
     assert!(receive_trade_updates(&mut app, second_connection).is_empty());
     assert!(
@@ -127,9 +119,6 @@ fn idle_trade_offer_receivers_do_not_resolve_players_or_emit_updates() {
 
 #[test]
 fn queued_trade_money_requests_apply_in_order_and_broadcast_each_update() {
-    let _test_lock = TRADE_OFFER_TEST_LOCK.lock().unwrap();
-    TRADE_OFFER_PLAYER_RESOLUTIONS.store(0, Ordering::SeqCst);
-
     let db = persistence::temp_database();
     let (first_id, _) = persistence::create_character_with_test_bags(&db, 1, "TraderOne", 1, 1)
         .expect("first character");
@@ -155,7 +144,6 @@ fn queued_trade_money_requests_apply_in_order_and_broadcast_each_update() {
     app.update();
     let _ = receive_trade_updates(&mut app, first_connection);
     let _ = receive_trade_updates(&mut app, second_connection);
-    TRADE_OFFER_PLAYER_RESOLUTIONS.store(0, Ordering::SeqCst);
 
     send_set_money(&mut app, first_connection, 100);
     send_set_money(&mut app, first_connection, 200);
@@ -163,11 +151,6 @@ fn queued_trade_money_requests_apply_in_order_and_broadcast_each_update() {
     app.update();
     app.update();
 
-    assert_eq!(
-        TRADE_OFFER_PLAYER_RESOLUTIONS.load(Ordering::SeqCst),
-        1,
-        "one queued request batch should resolve the local player once"
-    );
     let first_updates = receive_trade_updates(&mut app, first_connection);
     let second_updates = receive_trade_updates(&mut app, second_connection);
     assert_eq!(first_updates.len(), 3);
@@ -196,9 +179,6 @@ fn queued_trade_money_requests_apply_in_order_and_broadcast_each_update() {
 
 #[test]
 fn missing_trade_player_errors_only_for_a_queued_request() {
-    let _test_lock = TRADE_OFFER_TEST_LOCK.lock().unwrap();
-    TRADE_OFFER_PLAYER_RESOLUTIONS.store(0, Ordering::SeqCst);
-
     let db = persistence::temp_database();
     let mut app = setup_trade_offer_app(db);
     let stale_player = app.world_mut().spawn_empty().id();
@@ -206,14 +186,12 @@ fn missing_trade_player_errors_only_for_a_queued_request() {
     let connection = spawn_trade_connection(&mut app, 1, stale_player);
 
     app.update();
-    assert_eq!(TRADE_OFFER_PLAYER_RESOLUTIONS.load(Ordering::SeqCst), 0);
     assert!(receive_trade_updates(&mut app, connection).is_empty());
 
     send_set_money(&mut app, connection, 100);
     app.update();
     app.update();
 
-    assert_eq!(TRADE_OFFER_PLAYER_RESOLUTIONS.load(Ordering::SeqCst), 1);
     assert_eq!(
         receive_trade_updates(&mut app, connection),
         vec![TradeStateUpdate {

@@ -1,5 +1,21 @@
 # Wiki Log
 
+## [2026-09-30] systems | Start levels, forms on players, transforms, admin socket
+
+Updated [[class-progression]]: TrinityCore start levels for Death Knights and allied races. Players without `ModelDisplay` get their form display and lose it on restore. TRANSFORM with MiscValue 0 keeps the display; an unknown template shows the pink pig 16358. A second server no longer takes a live server's admin socket.
+
+## [2026-09-30] specs | Creature hit table and player avoidance
+
+Updated [[player-damage]] spec: creatures roll the hit table (5% miss, 5% crit) against a player's TC-master avoidance; crits and blocks are sent as `CriticalHit` / `Block`.
+
+## [2026-09-30] systems | Chains, bouncy missiles, spell reflection
+
+Updated [[spell-casting]]: chain targeting with per-jump amplitude, shared target selection for effects with identical targets, `SPELL_ATTR4_BOUNCY_CHAIN_MISSILES` timing, spell reflection and triggered spells ignoring their explicit target's relation.
+
+## [2026-09-30] systems | Missile targets engage at impact
+
+Updated [[combat]]. `CombatRefs` tracks per-side suppression: a spell's launch puts only the caster in combat (TC `SetInCombatWith(target, true)`), the hit engages the target. Admin `set-level` on an online character now refills health and mana (`GiveLevel` → `SetFullHealth`). The trade tests lost their process-global resolution counter, which other trade apps in the parallel suite bumped.
+
 ## [2026-09-30] systems | Bounded new-class server slice
 
 Updated [[class-progression]] and [[spell-casting]] for Monk/DH/Evoker creation, start levels, progression and six basic spells; added `docs/specs/new-classes.md`. Local ChrClasses/ChrRaces verified max(class, race) levels (1/8/10 for ordinary Monk/DH/Dracthyr Evoker); locally extracted CharBaseInfo confirmed the supported-race gates, including Void Elf DH. ENERGIZE previously ignored point modifiers, so Tiger Palm gained zero Windwalker Chi. Existing modifiers now supply the authored +2. Additional authored Monk gates cover Kul Tiran 32, Earthen 84/85 and Haranir 86/91, using local race bits/levels and unchanged placeholder placement. Powers ownership, engine UI/live fixtures and delayed starting zones remain separate work.

@@ -14,12 +14,13 @@ use shared::formulas::sum_equipment_stats;
 use shared::protocol::EquipmentSlot;
 
 use crate::character_stats_data::{
-    BASE_MANA, CLASS_BASE_STATS, CRIT_RATING, HASTE_RATING, HP_PER_STAMINA, MASTERY_RATING,
-    RACE_STAT_MODS, VERSATILITY_RATING,
+    BASE_MANA, BLOCK_RATING, CLASS_BASE_STATS, CRIT_RATING, DODGE_RATING, HASTE_RATING,
+    HP_PER_STAMINA, MASTERY_RATING, PARRY_RATING, RACE_STAT_MODS, VERSATILITY_RATING,
 };
-use crate::class_progression::ActiveSpec;
+use crate::class_progression::{ActiveSpec, KnownSpells};
 use crate::item_stats::{ItemScalingTables, WeaponDamage, item_stats};
 use crate::item_templates::ItemTemplates;
+use crate::melee::PlayerDefense;
 use crate::spell_info::{ClassInfo, ClassSpells, SpellStore};
 
 /// Every player has 5% base crit (SimC `dbc_t::all_crit_base`).
@@ -113,6 +114,8 @@ pub struct CharacterStats {
     pub main_hand: WeaponDamage,
     /// An equipped off-hand weapon swings too.
     pub off_hand: Option<WeaponDamage>,
+    /// Dodge, parry and block (`player_defense`).
+    pub defense: PlayerDefense,
 }
 
 pub struct StatsPlugin;
@@ -265,6 +268,104 @@ pub fn compute_character_stats(
         armor: ratings.armor,
         main_hand: WeaponDamage::UNARMED,
         off_hand: None,
+        defense: PlayerDefense::default(),
+    })
+}
+
+/// SPELL_EFFECT_PARRY 22 and SPELL_EFFECT_BLOCK 23: a player who knows such a spell
+/// can parry or block (Spell::EffectParry / EffectBlock, SpellEffects.cpp:3703-3719).
+const EFFECT_PARRY: u32 = 22;
+const EFFECT_BLOCK: u32 = 23;
+/// `ActivePlayerData` base parry and block (StatSystem.cpp:497, 664).
+const BASE_PARRY_PCT: f32 = 5.0;
+const BASE_BLOCK_PCT: f32 = 5.0;
+/// `ShieldBlock` per point of shield armor (Player.cpp:8144).
+const SHIELD_BLOCK_PER_ARMOR: f32 = 2.5;
+/// Diminishing-return `k`, dodge and parry caps by class 1-13 (StatSystem.cpp:596-697).
+const DIMINISHING_K: [f32; 13] = [
+    0.956, 0.956, 0.988, 0.988, 0.983, 0.956, 0.988, 0.983, 0.983, 0.983, 0.972, 0.983, 0.988,
+];
+const DODGE_CAP: [f32; 13] = [
+    65.63144, 65.63144, 145.560408, 145.560408, 150.37594, 65.63144, 145.560408, 150.37594,
+    150.37594, 145.560408, 116.890707, 145.560408, 145.560408,
+];
+const PARRY_CAP: [f32; 13] = [
+    65.63144, 65.63144, 145.560408, 145.560408, 0.0, 65.63144, 145.560408, 0.0, 0.0, 90.6425, 0.0,
+    65.63144, 0.0,
+];
+
+/// What a player's avoidance depends on besides its class, level and ratings.
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
+pub struct DefenseInputs {
+    pub can_parry: bool,
+    pub can_block: bool,
+    /// A main- or off-hand weapon is equipped (Unit::GetUnitParryChance, Unit.cpp:2795-2799).
+    pub has_weapon: bool,
+    /// The equipped shield's armor, if any.
+    pub shield_armor: Option<f32>,
+}
+
+/// TrinityCore master's player avoidance: `Player::UpdateDodgePercentage`,
+/// `UpdateParryPercentage` and `UpdateBlockPercentage` (StatSystem.cpp:490-507,
+/// 657-715) without aura modifiers. Dodge is its rating after diminishing returns
+/// (`GetDodgeFromAgility` gives nothing, Player.cpp:5031); parry 5% plus its rating after
+/// diminishing returns, for a class with a parry cap that can parry and holds a weapon;
+/// block 5% plus its rating, for one that can block and holds a shield.
+pub fn player_defense(
+    class: u8,
+    level: u8,
+    ratings: &CombatRatings,
+    inputs: DefenseInputs,
+) -> PlayerDefense {
+    let (Some(level), Some(class_index)) = (level_index(level), usize::from(class).checked_sub(1))
+    else {
+        return PlayerDefense::default();
+    };
+    let (Some(&k), Some(&dodge_cap), Some(&parry_cap)) = (
+        DIMINISHING_K.get(class_index),
+        DODGE_CAP.get(class_index),
+        PARRY_CAP.get(class_index),
+    ) else {
+        return PlayerDefense::default();
+    };
+    // CalculateDiminishingReturns (StatSystem.cpp:616-636): c·x / (x + c·k) + nondiminishing.
+    let diminished = |cap: f32, nondiminishing: f32, diminishing: f32| {
+        if diminishing + cap * k == 0.0 {
+            return nondiminishing;
+        }
+        cap * diminishing / (diminishing + cap * k) + nondiminishing
+    };
+    let parry = if inputs.can_parry && parry_cap > 0.0 && inputs.has_weapon {
+        diminished(
+            parry_cap,
+            BASE_PARRY_PCT,
+            ratings.parry / PARRY_RATING[level],
+        )
+    } else {
+        0.0
+    };
+    let shield_armor = inputs.shield_armor.filter(|_| inputs.can_block);
+    PlayerDefense {
+        dodge: diminished(dodge_cap, 0.0, ratings.dodge / DODGE_RATING[level]),
+        parry,
+        block: shield_armor.map_or(0.0, |_| {
+            BASE_BLOCK_PCT + ratings.block / BLOCK_RATING[level]
+        }),
+        shield_block: inputs
+            .shield_armor
+            .map_or(0.0, |armor| armor * SHIELD_BLOCK_PER_ARMOR),
+    }
+}
+
+/// Whether `known` holds a spell with `effect` (`Player::m_canParry` / `m_canBlock`).
+fn knows_effect(known: Option<&KnownSpells>, spells: Option<&SpellStore>, effect: u32) -> bool {
+    let (Some(known), Some(spells)) = (known, spells) else {
+        return false;
+    };
+    known.iter().any(|id| {
+        spells
+            .get(id)
+            .is_some_and(|spell| spell.effects.iter().any(|e| e.effect == effect))
     })
 }
 
@@ -310,6 +411,8 @@ impl ItemData<'_> {
             blocks: Vec::new(),
             main_hand: WeaponDamage::UNARMED,
             off_hand: None,
+            has_weapon: false,
+            shield_armor: None,
         };
         let (Some(templates), Some(tables), Some(equipped)) =
             (self.templates.as_deref(), self.tables.as_deref(), equipped)
@@ -322,9 +425,18 @@ impl ItemData<'_> {
             };
             let stats = item_stats(template, tables);
             gear.blocks.push(stats.block);
+            if template.inventory_type == INVTYPE_SHIELD && slot == EquipmentSlot::OffHand {
+                gear.shield_armor = Some(stats.block.secondary.armor);
+            }
             match (slot, stats.weapon) {
-                (EquipmentSlot::MainHand, Some(weapon)) => gear.main_hand = weapon,
-                (EquipmentSlot::OffHand, Some(weapon)) => gear.off_hand = Some(weapon),
+                (EquipmentSlot::MainHand, Some(weapon)) => {
+                    gear.main_hand = weapon;
+                    gear.has_weapon = true;
+                }
+                (EquipmentSlot::OffHand, Some(weapon)) => {
+                    gear.off_hand = Some(weapon);
+                    gear.has_weapon = true;
+                }
                 _ => {}
             }
         }
@@ -336,9 +448,21 @@ struct Gear {
     blocks: Vec<ItemStatBlock>,
     main_hand: WeaponDamage,
     off_hand: Option<WeaponDamage>,
+    has_weapon: bool,
+    shield_armor: Option<f32>,
 }
 
+/// `InventoryType` Shield.
+const INVTYPE_SHIELD: u8 = 14;
+
 /// Compute new current value preserving the current-to-max ratio.
+///
+/// A deliberate deviation from TrinityCore, whose `Unit::SetMaxHealth` only clamps the
+/// current value (and whose login sets `min(saved, max)`, Player.cpp:18736): every
+/// max-health or max-mana change here keeps the percentage, at login and in session.
+/// Retail keeps the percentage when maximum health changes in session (TrinityCore
+/// does too for MOD_INCREASE_HEALTH_PERCENT), and characters saved with the old
+/// 100-health placeholder rely on the ratio to log in at their saved share.
 fn rescaled_current(current: f32, old_max: f32, new_max: f32) -> f32 {
     let ratio = if old_max > 0.0 {
         current / old_max
@@ -354,6 +478,7 @@ type StatsQuery = (
     &'static Level,
     Option<&'static ActiveSpec>,
     Option<&'static EquippedItems>,
+    Option<&'static KnownSpells>,
     Option<&'static StatModifiers>,
     &'static mut UnitStats,
     &'static mut CombatRatings,
@@ -366,6 +491,7 @@ type StatsFilter = Or<(
     Changed<Level>,
     Changed<ActiveSpec>,
     Changed<EquippedItems>,
+    Changed<KnownSpells>,
     Changed<StatModifiers>,
 )>;
 
@@ -384,6 +510,7 @@ pub(crate) fn update_character_stats(
         level,
         spec,
         equipped,
+        known,
         mods,
         mut unit_stats,
         mut ratings,
@@ -415,6 +542,17 @@ pub(crate) fn update_character_stats(
         };
         stats.main_hand = gear.main_hand;
         stats.off_hand = gear.off_hand;
+        stats.defense = player_defense(
+            player.class,
+            level.0,
+            &stats.ratings,
+            DefenseInputs {
+                can_parry: knows_effect(known, spells.as_deref(), EFFECT_PARRY),
+                can_block: knows_effect(known, spells.as_deref(), EFFECT_BLOCK),
+                has_weapon: gear.has_weapon,
+                shield_armor: gear.shield_armor,
+            },
+        );
         if *unit_stats != stats.primary {
             debug!(
                 "{entity} primary stats {:?} -> {:?}, spell power {}",

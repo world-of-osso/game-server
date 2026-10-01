@@ -13,12 +13,15 @@ Auto-attack
 - [x] Swing rage uses the unhasted weapon speed, halved for the off hand (CalcMeleeAttackRageGain, Unit.cpp:2239-2249).
 - [x] Units without `CharacterStats` (creatures) keep their ExpectedStat or flat 10 swing every 2 s.
 
-Hit table (player swings; one roll in 0..10000, Unit::RollMeleeOutcomeAgainst, Unit.cpp:2378-2488)
+Hit table (player and creature swings; one roll in 0..10000, Unit::RollMeleeOutcomeAgainst, Unit.cpp:2378-2488)
 - [x] Miss 5% (Unit::GetUnitMissChance, Unit.cpp:2825-2830), +19% while an off-hand weapon is equipped (Unit.cpp:12509-12512).
 - [x] Against a creature: dodge 3%, parry 6%, block 3%, each +1.5% per level the creature is above the player (Unit.cpp:2749-2861). A block stops 30% (Unit::GetBlockPercent, Unit.h:1000).
 - [x] Glancing blows only against creatures 4 or more levels above: 10% + 10% per level, for 10% less damage per level, at most 30% (Unit.cpp:2444-2454, 1474-1486).
 - [x] Crit at the player's crit chance doubles the damage (Unit.cpp:1429-1436).
-- [x] Against a player only the miss applies: player dodge, parry and block are not modelled.
+- [x] A creature swings with 5% miss less its MOD_HIT_CHANCE auras (Unit::MeleeSpellMissChance) and 5% crit (Unit::GetUnitCriticalChanceDone, Unit.cpp:2885-2890); a player without `CharacterStats` (no class stat data) always hits.
+- [x] Against a player the victim's own avoidance applies (TrinityCore master, StatSystem.cpp:490-715): dodge is dodge rating after the class diminishing return (`GetDodgeFromAgility` is a stub, Player.cpp:5031); parry is 5% plus parry rating after diminishing returns, for a class with a parry cap that knows a `SPELL_EFFECT_PARRY` spell and holds a weapon; block is 5% plus block rating for one that knows a `SPELL_EFFECT_BLOCK` spell and holds a shield. A player's block stops `ShieldBlock` (shield armor × 2.5) / (`ShieldBlock` + the attacker's level ArmorConstant), at most 85% (Player::GetBlockPercent, Player.cpp:26838-26847).
+- [x] A victim that is casting, stunned or confused cannot dodge, parry or block (Unit.cpp:2408-2413).
+- [x] Crits reach clients as `CombatEventType::CriticalHit` and blocks as `CombatEventType::Block` with the damage that got through (`HITINFO_CRITICALHIT` / `HITINFO_BLOCK`); a glancing blow is `MeleeDamage`.
 - [x] Misses, dodges and parries do no damage, are logged as `CombatLogKind::Miss(Miss | Dodge | Parry)` and `CombatEventType::Miss | Dodge | Parry`, and raise no procs (proc HitMask defaults to normal and critical hits).
 
 Armor
@@ -57,7 +60,9 @@ Examples
 
 ## Tests asserting this spec
 
-- `crates/server/src/melee_tests.rs` — weapon damage, off hand, roll, haste, hit-table chances and order, outcomes, armor.
+- `crates/server/src/melee_tests.rs` — weapon damage, off hand, roll, haste, hit-table chances and order (player and creature swingers, a victim that cannot avoid), outcomes, a player's shield block share, armor.
+- `crates/server/src/combat_tests/outcomes.rs` — a crit is sent as `CriticalHit`; a creature's swing meets a player's block (`Block`) and parry (`Parry`); a casting player cannot parry.
+- `crates/server/src/stats_tests.rs` `player_avoidance_follows_trinitycore_master` — parry, block, dodge rating diminishing returns.
 - `crates/server/src/combat_tests/player_damage.rs` — a swing through Hogger's armor, the weapon-speed/haste timer, full crit chance, the off-hand timer and damage, a level 10 warrior killing Hogger with the Worn Shortsword (real item data).
 - `crates/server/src/level_scaling_tests.rs` — tuned armor at the attacker's level, untuned armor and ArmorConstants.
 - `crates/server/src/spell_cast/tests.rs` — `level_10_mage_frostbolt_deals_spell_power_times_its_coefficient`, `a_spell_crit_doubles_the_damage`, `physical_spell_damage_takes_the_creatures_armor`.
@@ -67,7 +72,10 @@ Examples
 ## Known gaps (current cycle)
 
 - [ ] Facing is not modelled: every swing lands in front, so creatures parry and block from behind.
-- [ ] Player dodge, parry and block, crushing blows and creature swings' hit table (miss, crit) are not modelled; creatures always hit.
+- [x] A glancing swing sets `CombatLogEvent.glancing` (`HITINFO_GLANCING`, Retail CLEU SWING_DAMAGE `glancing`). Patch 6.0.2 kept glancing blows only against creatures 4 or more levels above, as TrinityCore does.
+- [ ] Crushing blows are not modelled or carried: whether Retail 12.x still produces them is unverified (3.0.2 moved them to creatures 4+ levels above), and TrinityCore master's `attackerLevel - victimLevel * 1000 - 1500` is always negative (Unit.cpp:2475).
+- [ ] Avoidance auras (MOD_DODGE/PARRY/BLOCK_PERCENT), creature crit auras, the attacker's MOD_ATTACKER_MELEE_CRIT_CHANCE on the victim, sitting victims being crit, evading victims (`MELEE_HIT_EVADE`), `CREATURE_FLAG_EXTRA_NO_PARRY/NO_BLOCK/NO_CRIT` and totems are not modelled.
+- [ ] Block 107 is on the general Defense skill line 95, which class progression does not learn, so players do not block yet; Parry is on class skill lines (Warrior 3127, Death Knight 82246).
 - [ ] Hit rating and expertise (TrinityCore `m_modMeleeHitChance`, GetExpertiseDodgeOrParryReduction), MOD_CRIT_DAMAGE_BONUS and armor penetration are not modelled.
 - [ ] Ranged auto-shot does not exist on the server; ranged weapons do not swing.
 - [ ] Dual wield is not tracked: the inventory refuses one-handers in the off hand, so only off-hand-only weapons swing there.

@@ -7,6 +7,8 @@ use shared::components::{CombatStatus, Player, UnitLevel};
 mod attack_requests;
 #[path = "combat_tests/death.rs"]
 mod death;
+#[path = "combat_tests/outcomes.rs"]
+mod outcomes;
 #[path = "combat_tests/player_damage.rs"]
 mod player_damage;
 #[path = "combat_tests/rage.rs"]
@@ -111,6 +113,7 @@ fn run_attack_tick(app: &mut App) {
                     mods: None,
                     stats,
                     haste_pct: 0.0,
+                    creature: false,
                 };
                 for hand in [Hand::Main, Hand::Off] {
                     if try_swing(

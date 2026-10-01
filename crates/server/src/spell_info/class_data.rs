@@ -55,6 +55,24 @@ pub struct ClassInfo {
     pub specs: Vec<SpecInfo>,
     /// Class talent tree (class, spec and hero nodes).
     pub traits: TraitTree,
+    /// The racial skill lines this class gets (`racial_skill_lines`).
+    pub racial: Vec<RacialSkillLine>,
+}
+
+/// A racial skill line (`skill_line` CategoryID 5 or 9) a `skill_race_class_info` row
+/// with Availability 1 gives a class: TrinityCore's player-create skills
+/// (ObjectMgr.cpp:4066-4078), learned by `Player::LearnDefaultSkills` and their
+/// abilities by `LearnSkillRewardedSpells` (Player.cpp:25275-25291, 25407-25457).
+#[derive(Debug, Serialize)]
+pub struct RacialSkillLine {
+    pub skill_line: u32,
+    /// `RaceMasks_0/_1`: the races that get the line (all-zero: every race).
+    pub race_masks: [u32; 2],
+    /// `MinLevel`: the line is learned from this level.
+    pub min_level: u32,
+    /// Its `skill_line_ability` rows for the class (`ClassMask` 0 or with its bit), not
+    /// NeverLearned, sorted by required level then spell ID.
+    pub abilities: Vec<LearnableSpell>,
 }
 
 /// A `skill_line_ability` row on the class skill line.
@@ -115,10 +133,56 @@ pub(crate) fn load_class_spells(conn: &Connection) -> rusqlite::Result<ClassSpel
                 learnable: load_learnable(conn, class_id, skill_line)?,
                 specs: load_specs(conn, class_id)?,
                 traits: load_trait_tree(conn, skill_line)?,
+                racial: racial_skill_lines(conn, class_id)?,
             })
         })
         .collect::<rusqlite::Result<_>>()?;
     Ok(ClassSpells { classes })
+}
+
+/// `skill_line` categories holding the racial lines: 5 (Racial - Pandaren) and 9
+/// (Racial - <race>, but also Riding, All Classes and All - Warbands).
+const RACIAL_SKILL_CATEGORIES: &str = "5, 9";
+/// Riding (762): race-limited like a racial line but granted by level, not race.
+const RIDING_SKILL_LINE: u32 = 762;
+
+/// The racial skill lines `class_id` gets: Availability 1 rows of those categories that
+/// are limited to some races (not `RaceMasks` -1/-1, not Riding), whose `ClassMask` is
+/// -1, 0 or has the class bit (ObjectMgr.cpp:4070-4075). TrinityCore also learns the
+/// other default skills this way (weapons, armor, languages, Defense, Riding, All
+/// Classes); those are not granted here.
+fn racial_skill_lines(conn: &Connection, class_id: u8) -> rusqlite::Result<Vec<RacialSkillLine>> {
+    let mut stmt = conn.prepare(&format!(
+        "SELECT r.SkillID, r.ClassMask, r.RaceMasks_0, r.RaceMasks_1, r.MinLevel
+         FROM skill_race_class_info r
+         JOIN skill_line s ON s.ID = r.SkillID
+         WHERE r.Availability = 1 AND s.CategoryID IN ({RACIAL_SKILL_CATEGORIES})
+           AND NOT (r.RaceMasks_0 = -1 AND r.RaceMasks_1 = -1)
+           AND r.SkillID != {RIDING_SKILL_LINE}
+         ORDER BY r.SkillID, r.ID"
+    ))?;
+    let rows = stmt.query_map([], |r| {
+        Ok((
+            uint(r, 0)?,
+            int(r, 1)?,
+            [uint(r, 2)?, uint(r, 3)?],
+            uint(r, 4)?,
+        ))
+    })?;
+    let bit = i64::from(class_bit(class_id));
+    let mut lines = Vec::new();
+    for row in rows {
+        let (skill_line, class_mask, race_masks, min_level) = row?;
+        if class_mask == -1 || class_mask == 0 || class_mask & bit != 0 {
+            lines.push(RacialSkillLine {
+                skill_line,
+                race_masks,
+                min_level,
+                abilities: load_learnable(conn, class_id, skill_line)?,
+            });
+        }
+    }
+    Ok(lines)
 }
 
 fn class_bit(class_id: u8) -> u32 {

@@ -17,6 +17,7 @@ const HUMAN: u8 = 1;
 const ORC: u8 = 2;
 const WARRIOR: u8 = 1;
 const PALADIN: u8 = 2;
+const MAGE: u8 = 8;
 const SPEC_HOLY: u32 = 65;
 
 fn paladin_80_holy() -> StatInputs {
@@ -178,6 +179,10 @@ fn enter_world_app(db: GameDatabase, spells: SpellStore, classes: ClassSpells) -
     app.init_resource::<crate::maps::InstanceManager>();
     app.add_systems(Update, crate::auth_character::process_select_character);
     app.add_plugins(StatsPlugin);
+    app.add_systems(
+        Update,
+        crate::experience::refill_after_level_up.after(update_character_stats),
+    );
     app.finish();
     app.cleanup();
     app
@@ -274,15 +279,22 @@ fn entering_world_rescales_persisted_health_and_follows_spec_and_admin_level() {
         crate::admin_types::AdminResponse::LevelSet { level: 10, .. }
     ));
     app.update();
-    // Paladin L10 Sta 555 × 2; the 50% health ratio carries over.
+    // Paladin L10 Sta 555 × 2. The level change refills the half-health
+    // character (Player::GiveLevel → SetFullHealth).
     assert_eq!(
         *app.world().get::<Health>(player).unwrap(),
         Health {
-            current: 555.0,
+            current: 1110.0,
             max: 1110.0
         }
     );
-    assert_eq!(app.world().get::<Mana>(player).unwrap().max, 1000.0);
+    assert_eq!(
+        *app.world().get::<Mana>(player).unwrap(),
+        Mana {
+            current: 1000.0,
+            max: 1000.0
+        }
+    );
 }
 
 #[test]
@@ -336,4 +348,59 @@ fn secondary_dr_follows_curve_21024() {
     input.gear_ratings.crit = 2300.0;
     let stats = compute_character_stats(&input, None).unwrap();
     assert!((stats.crit_pct - 52.0).abs() < 1e-3, "{}", stats.crit_pct);
+}
+
+/// TC master avoidance (StatSystem.cpp:490-715): a level 10 Warrior with a weapon, a
+/// shield, Parry and Block parries 5%, blocks 5% and dodges nothing without rating;
+/// 10% of dodge rating diminishes to 65.63144 × 10 / (10 + 65.63144 × 0.956) = 9.022%.
+#[test]
+fn player_avoidance_follows_trinitycore_master() {
+    let inputs = DefenseInputs {
+        can_parry: true,
+        can_block: true,
+        has_weapon: true,
+        shield_armor: Some(100.0),
+    };
+    let none = player_defense(WARRIOR, 10, &CombatRatings::default(), inputs);
+    assert_eq!(
+        none,
+        PlayerDefense {
+            dodge: 0.0,
+            parry: 5.0,
+            block: 5.0,
+            shield_block: 250.0,
+        }
+    );
+    let rated = player_defense(
+        WARRIOR,
+        10,
+        &CombatRatings {
+            dodge: 10.0 * crate::character_stats_data::DODGE_RATING[9],
+            ..default()
+        },
+        inputs,
+    );
+    assert!((rated.dodge - 9.0223).abs() < 1e-3, "{}", rated.dodge);
+    // No Parry spell, no weapon or no parry cap (Mage) parries nothing; no Block spell
+    // or no shield blocks nothing.
+    let unarmed = DefenseInputs {
+        has_weapon: false,
+        ..inputs
+    };
+    assert_eq!(
+        player_defense(WARRIOR, 10, &CombatRatings::default(), unarmed).parry,
+        0.0
+    );
+    assert_eq!(
+        player_defense(MAGE, 10, &CombatRatings::default(), inputs).parry,
+        0.0
+    );
+    let no_block = DefenseInputs {
+        can_block: false,
+        ..inputs
+    };
+    assert_eq!(
+        player_defense(WARRIOR, 10, &CombatRatings::default(), no_block).block,
+        0.0
+    );
 }

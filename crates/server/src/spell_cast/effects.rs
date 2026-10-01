@@ -64,6 +64,8 @@ pub struct EffectCtx<'a> {
     pub depth: u8,
     /// The resolving effect's destination (`targets::effect_dest`).
     pub dest: Option<super::targets::Dest>,
+    /// The target's chain damage and healing multiplier (1 unchained).
+    pub chain_multiplier: f32,
 }
 
 pub type EffectHandler = fn(&mut World, &EffectCtx, &SpellEffect, Entity);
@@ -310,7 +312,7 @@ fn school_damage(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, targe
     let amount = with_variance(
         scaled_amount(world, ctx.caster, ctx.spell, effect),
         effect.variance,
-    );
+    ) * ctx.chain_multiplier;
     let (amount, crit) = with_crit(world, ctx.caster, ctx.spell, amount);
     deal_damage(world, ctx, target, amount, crit, false);
 }
@@ -318,14 +320,16 @@ fn school_damage(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, targe
 /// 58 WEAPON_DAMAGE and 121 NORMALIZED_WEAPON_DMG: weapon hit + BasePoints.
 fn weapon_damage(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, target: Entity) {
     let normalized = effect.effect == EFFECT_NORMALIZED_WEAPON_DMG;
-    let base = weapon_hit(world, ctx.caster, normalized) + effect.base_points;
+    let base =
+        (weapon_hit(world, ctx.caster, normalized) + effect.base_points) * ctx.chain_multiplier;
     let (amount, crit) = with_crit(world, ctx.caster, ctx.spell, base);
     deal_damage(world, ctx, target, amount, crit, false);
 }
 
 /// 31 WEAPON_PERCENT_DAMAGE: BasePoints% of a weapon hit.
 fn weapon_percent_damage(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, target: Entity) {
-    let base = weapon_hit(world, ctx.caster, false) * effect.base_points / 100.0;
+    let base =
+        weapon_hit(world, ctx.caster, false) * effect.base_points / 100.0 * ctx.chain_multiplier;
     let (amount, crit) = with_crit(world, ctx.caster, ctx.spell, base);
     deal_damage(world, ctx, target, amount, crit, false);
 }
@@ -342,6 +346,7 @@ fn log_amount(ctx: &EffectCtx, target: Entity, kind: CombatLogKind) -> CombatLog
         resisted: 0,
         blocked: 0,
         crit: false,
+        glancing: false,
         periodic: false,
         kind,
     }
@@ -485,6 +490,7 @@ fn push_damage_event(
             can_proc: ctx.depth == 0,
             periodic,
             damage,
+            reflected: false,
         },
     );
 }
@@ -507,6 +513,7 @@ fn kill(world: &mut World, killer: Entity, target: Entity, can_proc: bool) {
             can_proc,
             periodic: false,
             damage: 0.0,
+            reflected: false,
         },
     );
 }
@@ -515,7 +522,7 @@ fn heal(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, target: Entity
     let amount = with_variance(
         scaled_amount(world, ctx.caster, ctx.spell, effect),
         effect.variance,
-    );
+    ) * ctx.chain_multiplier;
     let (amount, crit) = with_crit(world, ctx.caster, ctx.spell, amount);
     apply_heal(world, ctx, target, amount, crit, false);
 }
@@ -527,7 +534,7 @@ fn heal_pct(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, target: En
         world,
         ctx,
         target,
-        max * effect.base_points / 100.0,
+        max * effect.base_points / 100.0 * ctx.chain_multiplier,
         false,
         false,
     );
@@ -576,6 +583,7 @@ pub fn apply_heal(
                 can_proc: ctx.depth == 0,
                 periodic: true,
                 damage: 0.0,
+                reflected: false,
             },
         );
     }

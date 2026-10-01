@@ -157,7 +157,8 @@ fn resolve_spec(class: &ClassInfo, level: u8, requested: u32) -> Option<&SpecInf
         .or_else(|| chosen.next())
 }
 
-/// Auto-learned class spells up to `level` for the race, then the spec's spells
+/// Auto-learned class spells up to `level` for the race, the race's racial skill line
+/// spells, then the spec's spells
 /// up to `level` (TrinityCore `Player::LearnSpecializationSpells` skips spells whose
 /// `SpellLevel` is above the player level) and mastery, then talent spells, without
 /// duplicates and without the spells the talents override.
@@ -180,6 +181,26 @@ fn compute_known_spells(
             spell_id: spell.spell_id,
             passive: spell.passive,
         });
+    // The race's skill lines (Player::LearnDefaultSkills, Player.cpp:25275-25291) and the
+    // abilities they reward (LearnSkillRewardedSpells, Player.cpp:25407-25457): Human
+    // Will to Survive, Orc Blood Fury, Haranir Thorn Bloom.
+    let racial = class
+        .racial
+        .iter()
+        .filter(move |line| {
+            race_mask_allows(line.race_masks, race) && line.min_level <= u32::from(level)
+        })
+        .flat_map(|line| &line.abilities)
+        .filter(move |spell| {
+            AUTO_LEARN_METHODS.contains(&spell.acquire_method)
+                && spell.required_level <= u32::from(level)
+                && race_mask_allows(spell.race_masks, race)
+        })
+        .map(|spell| KnownSpell {
+            spell_id: spell.spell_id,
+            passive: spell.passive,
+        });
+    let learnable = learnable.chain(racial);
     let spec_spells = spec.into_iter().flat_map(|spec| {
         let spells = spec
             .spells
@@ -893,17 +914,28 @@ fn apply_action_button(
 }
 
 /// Apply an admin level change to the online player, if any. `Level` changes
-/// drive `sync_level_changes`; `UnitLevel` follows when present.
+/// drive `sync_level_changes`; `UnitLevel` follows when present. A new level
+/// refills health and mana like a level-up (Player::GiveLevel, Player.cpp:2202-2271,
+/// which the online `.character level` calls: cs_character.cpp:770).
 pub(crate) fn set_live_level(world: &mut World, character_id: u64, level: u8) {
-    let mut players = world.query::<(&ClientId, &mut Level, Option<&mut UnitLevel>)>();
-    for (client_id, mut player_level, unit_level) in players.iter_mut(world) {
+    let mut players = world.query::<(Entity, &ClientId, &mut Level, Option<&mut UnitLevel>)>();
+    let mut changed = Vec::new();
+    for (entity, client_id, mut player_level, unit_level) in players.iter_mut(world) {
         if client_id.0 != character_id {
             continue;
+        }
+        if player_level.0 != level {
+            changed.push(entity);
         }
         player_level.0 = level;
         if let Some(mut unit_level) = unit_level {
             unit_level.0 = level;
         }
+    }
+    for entity in changed {
+        world
+            .entity_mut(entity)
+            .insert(crate::experience::RefillAfterLevelUp);
     }
 }
 

@@ -515,7 +515,7 @@ fn send_xp_updates(
     }
 }
 
-fn refill_after_level_up(
+pub(crate) fn refill_after_level_up(
     mut commands: Commands,
     mut players: Query<(Entity, &mut Health, Option<&mut Mana>), With<RefillAfterLevelUp>>,
     replication_dirty: Option<Res<ReplicationDirtyQueue>>,

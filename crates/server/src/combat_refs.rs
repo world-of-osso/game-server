@@ -14,10 +14,13 @@
 //! (npcs_special.cpp:1382-1415).
 //!
 //! A harmful spell with initial aggro starts combat when it launches
-//! (`spell_cast::starts_combat`, Spell.cpp:8538-8541), before any damage.
+//! (`spell_cast::starts_combat`, Spell.cpp:8538-8541), before any damage. The reference
+//! it makes is suppressed on the target's side ("This will only cause combat - the
+//! target will engage once the projectile hits"): the caster is in combat, the target
+//! is not until the spell lands and refreshes the reference (Spell.cpp:2763-2764,
+//! `CombatReference::Refresh`, CombatManager.cpp:88-106).
 //!
-//! Not modelled: suppressed references (vanish, feign death, the target's side of a
-//! missile in flight: here the target enters combat at launch too), pets and guardians.
+//! Not modelled: the other suppressions (vanish, feign death), pets and guardians.
 
 use std::collections::HashMap;
 
@@ -29,30 +32,58 @@ use crate::creature_ai::CreatureState;
 /// `PvPCombatReference::PVP_COMBAT_TIMEOUT` (CombatManager.h:84).
 pub(crate) const PVP_COMBAT_TIMEOUT_SECS: f64 = 5.0;
 
-/// A unit's combat references: the other unit, and when a timed reference ends (`None`
-/// for a PvE reference, which never times out).
+/// A unit's combat references by the other unit.
 #[derive(Component, Debug, Default)]
-pub(crate) struct CombatRefs(HashMap<Entity, Option<f64>>);
+pub(crate) struct CombatRefs(HashMap<Entity, CombatRef>);
+
+/// One side of a combat reference.
+#[derive(Clone, Copy, Debug)]
+struct CombatRef {
+    /// When a timed reference ends; `None` for a PvE reference, which never times out.
+    expires_at: Option<f64>,
+    /// Held without putting this side in combat (`CombatReference::IsSuppressedFor`).
+    suppressed: bool,
+}
 
 /// `CombatManager::SetInCombatWith`: `a` and `b` are in combat with each other, and a
 /// timed reference between them restarts its timeout (`RefreshTimer`). Refused like
 /// `CombatManager::CanBeginCombat` (CombatManager.cpp:24-58) for the same unit twice, a
 /// dead unit or an evading creature.
 pub(crate) fn set_in_combat_with(world: &mut World, a: Entity, b: Entity) {
+    begin_combat(world, a, b, false);
+}
+
+/// `SetInCombatWith(b, addSecondUnitSuppressed = true)` (CombatManager.cpp:191-218): a new
+/// reference puts only `a` in combat; `b` holds it suppressed. An existing reference is
+/// refreshed instead, which lifts both sides' suppression.
+pub(crate) fn set_in_combat_with_suppressed(world: &mut World, a: Entity, b: Entity) {
+    begin_combat(world, a, b, true);
+}
+
+fn begin_combat(world: &mut World, a: Entity, b: Entity, suppress_b: bool) {
     if !can_begin_combat(world, a, b) {
         return;
     }
+    let existing = world
+        .get::<CombatRefs>(a)
+        .is_some_and(|refs| refs.0.contains_key(&b));
     let timed = !holds_fight(world, a) || !holds_fight(world, b) || both_players(world, a, b);
     let expires_at =
         timed.then(|| world.resource::<Time>().elapsed_secs_f64() + PVP_COMBAT_TIMEOUT_SECS);
-    for (unit, other) in [(a, b), (b, a)] {
+    for (unit, other, suppressed) in [(a, b, false), (b, a, suppress_b && !existing)] {
         world
             .entity_mut(unit)
             .entry::<CombatRefs>()
             .or_default()
             .get_mut()
             .0
-            .insert(other, expires_at);
+            .insert(
+                other,
+                CombatRef {
+                    expires_at,
+                    suppressed,
+                },
+            );
         update_combat_status(world, unit);
     }
 }
@@ -87,8 +118,9 @@ pub(crate) fn expire_combat_refs_system(world: &mut World) {
             let gone: Vec<Entity> = refs
                 .0
                 .iter()
-                .filter(|&(&other, expires_at)| {
-                    expires_at.is_some_and(|at| now >= at) || world.get_entity(other).is_err()
+                .filter(|&(&other, reference)| {
+                    reference.expires_at.is_some_and(|at| now >= at)
+                        || world.get_entity(other).is_err()
                 })
                 .map(|(&other, _)| other)
                 .collect();
@@ -126,11 +158,11 @@ fn both_players(world: &World, a: Entity, b: Entity) -> bool {
 }
 
 /// `CombatManager::UpdateOwnerCombatState`: `CombatStatus` follows whether `unit` holds
-/// a reference, written only when it changes.
+/// a reference not suppressed for it, written only when it changes.
 fn update_combat_status(world: &mut World, unit: Entity) {
     let in_combat = world
         .get::<CombatRefs>(unit)
-        .is_some_and(|refs| !refs.0.is_empty());
+        .is_some_and(|refs| refs.0.values().any(|reference| !reference.suppressed));
     let current = world.get::<CombatStatus>(unit).map(|status| status.0);
     if current != Some(in_combat) {
         world.entity_mut(unit).insert(CombatStatus(in_combat));
