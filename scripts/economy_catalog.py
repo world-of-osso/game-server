@@ -509,7 +509,8 @@ def resolve_modern_output(effect, references):
     else:
         output = crafting["CraftedItemID"]
     modified_slots = slots[effect["SpellID"]]
-    if reason is None and modified_slots:
+    output_reason = reason
+    if modified_slots:
         reason = "unresolved_modified_reagent_requirements"
     return {
         "spell_id": effect["SpellID"],
@@ -517,6 +518,7 @@ def resolve_modern_output(effect, references):
         "crafting_data_id": crafting_id,
         "crafting_data": crafting,
         "quality_item_ids": quality[crafting_id],
+        "output_resolution_reason": output_reason,
         "output_item_id": output,
         "modified_slots": modified_slots,
         "reason": reason,

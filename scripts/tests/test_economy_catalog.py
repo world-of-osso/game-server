@@ -259,6 +259,24 @@ class CatalogTests(unittest.TestCase):
         self.assertEqual(quality["quality_item_ids"], [900])
         self.assertIsNone(quality["output_item_id"])
 
+    def test_modified_slots_always_excluded_with_separate_unresolved_output_evidence(
+        self,
+    ):
+        self.modern_recipe(1240, output=0)
+        self.add_modified_slot(1240)
+        with closing(sqlite3.connect(self.db)) as con, con:
+            con.execute("INSERT INTO crafting_data_item_quality VALUES (1,900,1240)")
+        config, report = self.success("--merchant", "3533:11:165")
+        self.assertEqual(
+            [r["spell_id"] for r in config["merchants"][-1]["recipes"]], [500]
+        )
+        row = next(r for r in report["excluded_recipes"] if r["spell_id"] == 1240)
+        self.assertEqual(row["reason"], "unresolved_modified_reagent_requirements")
+        self.assertEqual(row["output_resolution_reason"], "unresolved_quality_output")
+        self.assertEqual(row["quality_item_ids"], [900])
+        self.assertIsNone(row["output_item_id"])
+        self.assertNotIn("ingredients", row)
+
     def test_modern_output_expansion_and_fixed_reagent_checks(self):
         self.modern_recipe(1230)
         self.modern_recipe(1231)
