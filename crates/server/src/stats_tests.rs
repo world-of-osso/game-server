@@ -311,6 +311,7 @@ fn equal_recompute_does_not_mark_health_changed() {
             Level(10),
             UnitStats::default(),
             CombatRatings::default(),
+            shared::components::DerivedStats::default(),
             Health {
                 current: 100.0,
                 max: 100.0,
@@ -403,4 +404,73 @@ fn player_avoidance_follows_trinitycore_master() {
         player_defense(WARRIOR, 10, &CombatRatings::default(), no_block).block,
         0.0
     );
+}
+
+const SPEC_ARCANE: u32 = 62;
+/// Death Speaker Robes, Death Speaker Mantle, Silk-Threaded Trousers: Intellect,
+/// Stamina, Critical Strike, Haste and Versatility cloth.
+const CASTER_CLOTH: [(EquipmentSlot, u32); 3] = [
+    (EquipmentSlot::Chest, 6682),
+    (EquipmentSlot::Shoulder, 6685),
+    (EquipmentSlot::Legs, 1929),
+];
+
+/// A level 20 human Arcane mage in the three cloth pieces, as the server spawns
+/// players: `update_character_stats` fills the owner-only `DerivedStats`.
+#[test]
+fn level_20_arcane_mage_in_caster_cloth_derives_sheet_stats() {
+    let Some((spells, classes)) = world_spell_data() else {
+        return;
+    };
+    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/world.db");
+    let mut world = World::new();
+    world.insert_resource(spells);
+    world.insert_resource(classes);
+    world.insert_resource(crate::item_templates::load_item_templates(&path).unwrap());
+    world.insert_resource(crate::item_stats::load_item_scaling_tables(&path).unwrap());
+    let mage = world
+        .spawn((
+            Player {
+                name: "Jaina".into(),
+                race: HUMAN,
+                class: MAGE,
+                appearance: default(),
+            },
+            Level(20),
+            ActiveSpec(SPEC_ARCANE),
+            EquippedItems {
+                items: CASTER_CLOTH.to_vec(),
+            },
+            UnitStats::default(),
+            CombatRatings::default(),
+            DerivedStats::default(),
+            Health {
+                current: 1.0,
+                max: 1.0,
+            },
+        ))
+        .id();
+    world.run_system_once(update_character_stats).unwrap();
+
+    // Squished to item level 11-12: robes +3 Int, +2 haste, +4 vers; mantle +2 Int,
+    // +3 crit, +2 haste; trousers +3 Int, +4 haste, +2 vers.
+    let derived = *world.get::<DerivedStats>(mage).unwrap();
+    // Mage L20 base Int 58 + 8 gear; Intellect is Arcane's main stat.
+    assert_eq!(derived.spell_power, 66.0);
+    // Mage ChrClasses AttackPowerPerStrength and AttackPowerPerAgility are 0.
+    assert_eq!(derived.attack_power, 0.0);
+    // gtCombatRatings L20 rating per 1%: crit 4.4319696, haste 4.2392755,
+    // versatility 5.202747; all below the 30% diminishing-returns knee.
+    let close = |actual: f32, expected: f32| (actual - expected).abs() < 1e-4;
+    assert!(
+        close(derived.crit_pct, 5.0 + 3.0 / 4.431_969_6),
+        "{derived:?}"
+    );
+    assert!(close(derived.haste_pct, 8.0 / 4.239_275_5), "{derived:?}");
+    assert!(
+        close(derived.versatility_pct, 6.0 / 5.202_747),
+        "{derived:?}"
+    );
+    // 8 base mastery points × Savant's 1.32 coefficient.
+    assert!(close(derived.mastery_pct, 10.56), "{derived:?}");
 }

@@ -290,6 +290,7 @@ pub(crate) fn harness_with_plugins(
                 },
                 shared::components::UnitStats::default(),
                 shared::components::CombatRatings::default(),
+                shared::components::DerivedStats::default(),
             ));
     }
     app.world_mut().entity_mut(caster).insert(known);

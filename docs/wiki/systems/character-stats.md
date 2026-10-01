@@ -2,7 +2,7 @@
 
 `StatsPlugin` (`crates/server/src/stats.rs`) computes player stats in the retail 12.x model. Players spawn with default `UnitStats` and the health persisted in redb. `update_character_stats` then computes their stats on the first frame, and again whenever `Level`, `ActiveSpec`, `EquippedItems` or `StatModifiers` changes. It writes:
 
-- the effective `UnitStats` and `CombatRatings`;
+- the effective `UnitStats` and `CombatRatings`, and `DerivedStats` (`CharacterStats::derived`: spell power, attack power and the crit/haste/mastery/versatility percentages);
 - `Health.max` and `Mana.max`, keeping each current value at the same fraction of the new max;
 - the server-only `CharacterStats` component, read by the [[spell-casting]] effects and costs.
 
@@ -143,7 +143,7 @@ The spawned `Health` comes from redb. The first recompute keeps the persisted ra
   - `octclasscombatratingscalar`;
   - multiplicative haste stacking;
   - dodge, parry and block from stats.
-- **Replication:** `CharacterStats` is server-only. `Health` and `Mana` replicate to every observer; `UnitStats` and `CombatRatings` only to the owning connection (`sheet_visibility.rs`: `SheetOwner(connection)`, set on `PlayerLink` insert, is a replicon visibility filter scoped to those two components). They feed the client's character sheet; its crit/haste/mastery/versatility percentages are not replicated.
+- **Replication:** `CharacterStats` is server-only. `Health` and `Mana` replicate to every observer; `UnitStats`, `CombatRatings` and `DerivedStats` only to the owning connection (`sheet_visibility.rs`: `SheetOwner(connection)`, set on `PlayerLink` insert, is a replicon visibility filter scoped to those three components). They feed the client's character sheet and its spell tooltips (spell/attack power scaled effect points).
 - **Shared formulas:** shared-protocol `formulas/rating_data.rs` interleaves a level column into every sixth entry and ends at level 80, and `rating_to_percent` divides by `raw × 100`, which is 100× too small.
   - The server no longer calls any of them.
   - They are scheduled for deletion in shared-protocol.

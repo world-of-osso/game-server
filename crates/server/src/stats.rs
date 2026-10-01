@@ -3,13 +3,15 @@
 //! `compute_character_stats` turns class/race/level base stats, gear and
 //! optional aura `StatModifiers` into `CharacterStats`. `update_character_stats`
 //! applies the result on world entry and whenever level, spec, gear or
-//! modifiers change: it writes the effective `UnitStats` / `CombatRatings`,
-//! `Health.max` and `Mana.max`, rescaling current values by their ratio.
+//! modifiers change: it writes the effective `UnitStats` / `CombatRatings` /
+//! `DerivedStats`, `Health.max` and `Mana.max`, rescaling current values by their ratio.
 //! Sources and formulas: `docs/wiki/systems/character-stats.md`.
 
 use bevy::prelude::*;
 use lightyear::prelude::ReplicationDirtyQueue;
-use shared::components::{CombatRatings, Health, ItemStatBlock, Level, Mana, Player, UnitStats};
+use shared::components::{
+    CombatRatings, DerivedStats, Health, ItemStatBlock, Level, Mana, Player, UnitStats,
+};
 use shared::formulas::sum_equipment_stats;
 use shared::protocol::EquipmentSlot;
 
@@ -116,6 +118,25 @@ pub struct CharacterStats {
     pub off_hand: Option<WeaponDamage>,
     /// Dodge, parry and block (`player_defense`).
     pub defense: PlayerDefense,
+}
+
+impl CharacterStats {
+    /// What the owner's character sheet and spell tooltips read. TrinityCore keeps the
+    /// same values in `ActivePlayerData`: spell power (`Unit::SpellBaseDamageBonusDone`,
+    /// Unit.cpp:7101-7119), crit (`UpdateCritPercentage` / `UpdateSpellCritChance`,
+    /// StatSystem.cpp:509-546, 717-729), mastery (`UpdateMastery`, StatSystem.cpp:549-559)
+    /// and versatility (`GetRatingBonusValue(CR_VERSATILITY_DAMAGE_DONE)`,
+    /// Player.cpp:5172-5178).
+    pub fn derived(&self) -> DerivedStats {
+        DerivedStats {
+            spell_power: self.spell_power,
+            attack_power: self.attack_power,
+            crit_pct: self.crit_pct,
+            haste_pct: self.haste_pct,
+            mastery_pct: self.mastery_pct,
+            versatility_pct: self.versatility_pct,
+        }
+    }
 }
 
 pub struct StatsPlugin;
@@ -482,6 +503,7 @@ type StatsQuery = (
     Option<&'static StatModifiers>,
     &'static mut UnitStats,
     &'static mut CombatRatings,
+    &'static mut DerivedStats,
     &'static mut Health,
     Option<&'static mut Mana>,
 );
@@ -514,6 +536,7 @@ pub(crate) fn update_character_stats(
         mods,
         mut unit_stats,
         mut ratings,
+        mut derived,
         mut health,
         mana,
     ) in &mut players
@@ -561,6 +584,7 @@ pub(crate) fn update_character_stats(
         }
         let mut changed = unit_stats.set_if_neq(stats.primary);
         changed |= ratings.set_if_neq(stats.ratings);
+        changed |= derived.set_if_neq(stats.derived());
         changed |= health.set_if_neq(Health {
             current: rescaled_current(health.current, health.max, stats.max_health),
             max: stats.max_health,
