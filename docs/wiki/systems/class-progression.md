@@ -14,6 +14,10 @@
   - `Class C is not available for race R`
 - The fallback race list and the dead `chr_races` query are removed.
 
+## Racial spells
+
+Each race's racial skill line is learned at creation and as levels rise (TrinityCore `Player::LearnDefaultSkills` and `LearnSkillRewardedSpells`, Player.cpp:25275-25291, 25407-25457). The racial lines are the `skill_race_class_info` rows with Availability 1 in skill-line categories 5 and 9 that are limited to some races (not Riding 762 or the all-race lines). Their automatic `skill_line_ability` spells are added by race and class mask: Human Will to Survive 59752, Orc Blood Fury 20572, Haranir Thorn Bloom 1237885. Active racials join the default bar after the class spells. TrinityCore learns the other default skills the same way (weapons, armor, languages, Defense, Riding, All Classes); those are not granted.
+
 ## New-character start levels and temporary locations
 
 `race_class::start_level` follows Player::GetStartLevel (Player.cpp:24384-24398): 1, or 10 for an IsAlliedRace race (ChrRaces.Flags 0x80000) or Dracthyr; a Death Knight at least 8 (a Pandaren one 10); a Demon Hunter at least 8. The allied-race list is hardcoded from the 12.1.0.69933 ChrRaces export because the server loads no ChrRaces data.

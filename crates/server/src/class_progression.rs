@@ -157,7 +157,8 @@ fn resolve_spec(class: &ClassInfo, level: u8, requested: u32) -> Option<&SpecInf
         .or_else(|| chosen.next())
 }
 
-/// Auto-learned class spells up to `level` for the race, then the spec's spells
+/// Auto-learned class spells up to `level` for the race, the race's racial skill line
+/// spells, then the spec's spells
 /// up to `level` (TrinityCore `Player::LearnSpecializationSpells` skips spells whose
 /// `SpellLevel` is above the player level) and mastery, then talent spells, without
 /// duplicates and without the spells the talents override.
@@ -180,6 +181,26 @@ fn compute_known_spells(
             spell_id: spell.spell_id,
             passive: spell.passive,
         });
+    // The race's skill lines (Player::LearnDefaultSkills, Player.cpp:25275-25291) and the
+    // abilities they reward (LearnSkillRewardedSpells, Player.cpp:25407-25457): Human
+    // Will to Survive, Orc Blood Fury, Haranir Thorn Bloom.
+    let racial = class
+        .racial
+        .iter()
+        .filter(move |line| {
+            race_mask_allows(line.race_masks, race) && line.min_level <= u32::from(level)
+        })
+        .flat_map(|line| &line.abilities)
+        .filter(move |spell| {
+            AUTO_LEARN_METHODS.contains(&spell.acquire_method)
+                && spell.required_level <= u32::from(level)
+                && race_mask_allows(spell.race_masks, race)
+        })
+        .map(|spell| KnownSpell {
+            spell_id: spell.spell_id,
+            passive: spell.passive,
+        });
+    let learnable = learnable.chain(racial);
     let spec_spells = spec.into_iter().flat_map(|spec| {
         let spells = spec
             .spells
