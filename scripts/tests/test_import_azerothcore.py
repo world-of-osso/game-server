@@ -1719,6 +1719,19 @@ class AzerothCoreContentTests(unittest.TestCase):
         self.assertEqual(
             self.rows("SELECT KillCredit1, KillCredit2 FROM content_creature_template WHERE entry = 1922"), [(118, 0)])
 
+    def test_spray_water_hits_vineyard_fires_whose_smart_script_gives_credit(self):
+        # Extinguishing Hope (26391): Spray Water 80208's implicit targets are Northshire Vineyards
+        # Fire Triggers 42940 (CONDITION_OBJECT_ENTRY_GUID, TYPEID_UNIT), whose SmartAI gives
+        # kill credit to the invoker on its spell hit.
+        self.assertEqual(
+            self.rows("SELECT SourceTypeOrReferenceId, SourceGroup, ConditionTypeOrReference, ConditionValue1,"
+                      " ConditionValue2 FROM tdb_conditions WHERE SourceEntry = 80208"),
+            [(13, 1, 31, 3, 42940)])
+        self.assertEqual(
+            self.rows("SELECT event_type, event_param1, action_type, action_param1, target_type FROM tdb_smart_scripts"
+                      " WHERE entryorguid = 42940 AND source_type = 0 AND id = 2"),
+            [(8, 80208, 33, 42940, 7)])
+
     def test_goldshire_weaponsmith_corina_steele_sells_basic_weapons(self):
         self.assertEqual(
             self.rows(
