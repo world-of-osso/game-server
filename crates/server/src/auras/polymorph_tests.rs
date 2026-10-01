@@ -615,9 +615,10 @@ fn the_pulled_spy_replicates_the_mage_on_its_threat_list_through_polymorph_until
     );
 }
 
-/// Tentacle of Isorath Transform 84861: TRANSFORM into creature 45409, a template world.db
-/// does not hold. Citizen Costume 73815: TRANSFORM with MiscValue 0.
-const UNKNOWN_TEMPLATE_TRANSFORM: u32 = 84_861;
+/// A copy of Tentacle of Isorath Transform 84861 whose TRANSFORM names creature 999999999,
+/// which no world.db holds. Citizen Costume 73815: TRANSFORM with MiscValue 0.
+const UNKNOWN_TEMPLATE_TRANSFORM: u32 = 900_002;
+const TENTACLE_TRANSFORM: u32 = 84_861;
 const CITIZEN_COSTUME: u32 = 73_815;
 
 fn apply_transform(h: &mut Harness, spell_id: u32) {
@@ -646,9 +647,19 @@ fn apply_transform(h: &mut Harness, spell_id: u32) {
 /// special-cased spell) keeps the unit's display.
 #[test]
 fn transforms_without_a_template_follow_trinitycore() {
+    let Some(data) = crate::spell_cast::test_harness::world_db() else {
+        return;
+    };
+    let mut unknown = data.store.get(TENTACLE_TRANSFORM).unwrap().clone();
+    unknown.id = UNKNOWN_TEMPLATE_TRANSFORM;
+    for effect in &mut unknown.effects {
+        if effect.aura == crate::auras::handlers::TRANSFORM {
+            effect.misc_values[0] = 999_999_999;
+        }
+    }
     let Some(mut h) = harness_with_plugins(
-        Vec::new(),
-        &[UNKNOWN_TEMPLATE_TRANSFORM, CITIZEN_COSTUME],
+        vec![unknown],
+        &[CITIZEN_COSTUME],
         MAGE,
         false,
         |app| {
