@@ -37,7 +37,7 @@ use crate::persistence::mail_store::{
 };
 use crate::persistence::{self, GameDatabase};
 
-/// AzerothCore `HandleSendMail` recipient cap.
+/// TrinityCore `HandleSendMail`: a mailbox holding more than this takes no more mail.
 const MAX_MAILS_PER_RECIPIENT: usize = 100;
 /// How often delivery, expiry and `PendingMail` are checked.
 const MAIL_TICK: Duration = Duration::from_secs(1);
@@ -239,7 +239,7 @@ pub(crate) fn send_mail(
     if request.attachments.len() > MAX_MAIL_ATTACHMENTS {
         return Err(MailError::TooManyAttachments);
     }
-    if load_mailbox(db, recipient_id).len() >= MAX_MAILS_PER_RECIPIENT {
+    if load_mailbox(db, recipient_id).len() > MAX_MAILS_PER_RECIPIENT {
         return Err(MailError::RecipientMailboxFull);
     }
     let mut model = load(db, templates, sender_id)?;
@@ -251,11 +251,10 @@ pub(crate) fn send_mail(
     }
     let items = take_attachments(db, &mut model, &request.attachments)?;
     model.set_gold(model.gold() - cost);
-    let delivers_at = now
-        + shared::mail::delivery_delay(
-            !items.is_empty(),
-            same_account(db, sender_id, recipient_id),
-        );
+    // TrinityCore `HandleSendMail`: mail between guild members arrives instantly.
+    let instant =
+        same_account(db, sender_id, recipient_id) || same_guild(db, sender_id, recipient_id);
+    let delivers_at = now + shared::mail::delivery_delay(!items.is_empty(), instant);
     let cod = if items.is_empty() { 0 } else { request.cod };
     let mail = MailData {
         mail_id: persistence::next_id(db, "mail"),
@@ -283,6 +282,11 @@ pub(crate) fn send_mail(
         gold: vec![(sender_id, gold)],
         mailboxes: vec![sender_id, recipient_id],
     })
+}
+
+fn same_guild(db: &Database, a: u64, b: u64) -> bool {
+    let guild = |id| persistence::load_character_guild(db, id).map(|g| g.guild_id);
+    guild(a).is_some_and(|id| guild(b) == Some(id))
 }
 
 fn same_account(db: &Database, a: u64, b: u64) -> bool {

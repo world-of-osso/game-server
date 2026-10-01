@@ -13,8 +13,8 @@ Player mail at Mailbox game objects, following Retail with AzerothCore rules (`M
 - [x] Postage is 30c per attached item, 30c for a letter; the sender pays postage plus the money sent (`NotEnoughMoney`).
 - [x] At most 12 attachments (`TooManyAttachments`), each a bag item of the sender, once (`InvalidAttachment`), not soulbound or a quest item (`BoundItem`).
 - [x] Money and C.O.D. are exclusive (`Internal`); C.O.D. without items is dropped.
-- [x] The recipient is found by name, case-insensitively (`RecipientNotFound`); not yourself (`ToSelf`), not the other faction (`WrongFaction`, AzerothCore `AllowTwoSide.Interaction.Mail` 0), fewer than 100 mails (`RecipientMailboxFull`).
-- [x] Items to a character on another account arrive after 3600 s (AzerothCore `MailDeliveryDelay`); everything else arrives at once. `game-server-admin mail-deliver-now <character>` delivers mail in transit now.
+- [x] The recipient is found by name, case-insensitively (`RecipientNotFound`); not yourself (`ToSelf`), not the other faction (`WrongFaction`, AzerothCore `AllowTwoSide.Interaction.Mail` 0); a recipient already holding more than 100 mails is full (`RecipientMailboxFull`, TrinityCore `mailsCount > 100`).
+- [x] Items to a character on another account arrive after 3600 s (AzerothCore `MailDeliveryDelay`) unless both are in the same guild (TrinityCore `HandleSendMail`); everything else arrives at once. `game-server-admin mail-deliver-now <character>` delivers mail in transit now.
 - [x] Mail expires 30 days after delivery, C.O.D. mail after 3 days.
 - [x] Subject and body are cut to 64 and 500 letters.
 - [x] Removing the items, paying, and delivering happen in one database transaction.

@@ -399,3 +399,45 @@ fn pending_senders_are_the_newest_three_unread_delivered() {
         vec!["Tradea".to_string(), "Auction House".into(), "Old".into()]
     );
 }
+
+#[test]
+fn a_mailbox_takes_mail_until_it_holds_more_than_a_hundred() {
+    // TrinityCore `HandleSendMail`: `mailsCount > 100` is MAIL_ERR_RECIPIENT_CAP_REACHED.
+    let Some(mut h) = harness() else { return };
+    let recipient = h.create_alt("Buyer");
+    let from = MailSender::Player {
+        character_id: h.character_id,
+        name: "Banker".into(),
+    };
+    for mail_id in 1..=100 {
+        mail_store::deliver_mail(h.db(), recipient, parcel(mail_id, from.clone(), 1_000));
+    }
+    let mailbox = h.open_mailbox();
+    send(&mut h, mailbox, letter("Buyer"));
+    assert_eq!(h.take::<MailSent>().len(), 1, "{:?}", failures(&mut h));
+    send(&mut h, mailbox, letter("Buyer"));
+    assert_eq!(failures(&mut h), vec![MailError::RecipientMailboxFull]);
+    assert_eq!(load_mailbox(h.db(), recipient).len(), 101);
+}
+
+#[test]
+fn item_mail_between_guild_members_arrives_at_once() {
+    // TrinityCore `HandleSendMail`: "Mail sent between guild members arrives instantly".
+    let Some(mut h) = harness() else { return };
+    let recipient = h.create_on_account(2, "Tradeb", 1);
+    for member in [h.character_id, recipient] {
+        persistence::set_character_guild_by_id(h.db(), member, 7, "Postmasters").unwrap();
+    }
+    let linen = h.guid_of(LINEN);
+    let mailbox = h.open_mailbox();
+    send(
+        &mut h,
+        mailbox,
+        SendMail {
+            attachments: vec![linen],
+            ..letter("Tradeb")
+        },
+    );
+    assert_eq!(h.take::<MailSent>().len(), 1, "{:?}", failures(&mut h));
+    assert!(load_mailbox(h.db(), recipient)[0].is_delivered(unix_now()));
+}
