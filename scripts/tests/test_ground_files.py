@@ -1,8 +1,10 @@
 """The ground files deploy.sh ships, listed from the real world.db and client cache."""
 
 from pathlib import Path
+import shutil
 import subprocess
 import sys
+import tempfile
 import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -36,6 +38,25 @@ class GroundFilesTest(unittest.TestCase):
         self.assertEqual(len(self.files), len(set(self.files)))
         self.assertEqual([path for path in self.files if not (CACHE / path).is_file()], [])
         self.assertIn(f"{len(self.files)} cached files", self.summary)
+
+
+@unittest.skipUnless(WORLD_DB.is_file() and CACHE.is_dir(), "needs data/world.db and ../game-engine/data")
+class MissingGroundFilesTest(unittest.TestCase):
+    def test_missing_lists_the_absent_stockade_group_under_map_34(self):
+        with tempfile.TemporaryDirectory() as cache:
+            cache = Path(cache)
+            for path in ["terrain/791060.wdt"] + [f"models/{fdid}.wmo" for fdid in range(108631, 108643)]:
+                (cache / path).parent.mkdir(exist_ok=True)
+                shutil.copy(CACHE / path, cache / path)
+            run = subprocess.run(
+                [sys.executable, ROOT / "scripts/ground_files.py", "--world-db", WORLD_DB, "--cache", cache, "--missing"],
+                capture_output=True, text=True, check=True,
+            )
+        missing = run.stdout.splitlines()
+        self.assertIn("34\tmodels/108643.wmo", missing)
+        self.assertNotIn("34\tmodels/108642.wmo", missing)
+        self.assertNotIn("34\tterrain/791060.wdt", missing)
+        self.assertIn("0\tterrain/775971.wdt", missing)
 
 
 if __name__ == "__main__":

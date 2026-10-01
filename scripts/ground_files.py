@@ -8,7 +8,8 @@ MODF WMO placed by FileDataID (flag 0x8) and its GFID group files (`models/<fdid
 
 Prints the cached files' paths relative to the cache, one per line (rsync
 --files-from). The summary on stderr counts the files the cache does not hold: those
-tiles and WMOs have no ground on the server until they are extracted.
+tiles and WMOs have no ground on the server until they are extracted. `--missing`
+prints those instead, as `<map id>\t<path>` (the first map that references each).
 """
 
 import argparse
@@ -52,6 +53,7 @@ class GroundFiles:
         self.present = []
         self.missing = []
         self.seen = set()
+        self.map_id = None
 
     def read(self, relative):
         """The file's bytes once (None if already listed or not cached)."""
@@ -60,7 +62,7 @@ class GroundFiles:
         self.seen.add(relative)
         path = self.cache / relative
         if not path.is_file():
-            self.missing.append(relative)
+            self.missing.append((self.map_id, relative))
             return None
         self.present.append(relative)
         return path.read_bytes()
@@ -111,15 +113,20 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--world-db", type=Path, required=True)
     parser.add_argument("--cache", type=Path, required=True, help="game-engine/data")
+    parser.add_argument("--missing", action="store_true", help="list the uncached files instead")
     args = parser.parse_args()
     files = GroundFiles(args.cache)
     maps = spawned_map_wdts(args.world_db)
-    for _, wdt in maps:
+    for map_id, wdt in maps:
         if wdt:
+            files.map_id = map_id
             files.add_map(wdt)
     size = sum((args.cache / relative).stat().st_size for relative in files.present)
-    print("\n".join(files.present))
-    missing_wdts = sum(1 for path in files.missing if path.endswith(".wdt"))
+    if args.missing:
+        print("\n".join(f"{map_id}\t{path}" for map_id, path in files.missing))
+    else:
+        print("\n".join(files.present))
+    missing_wdts = sum(1 for _, path in files.missing if path.endswith(".wdt"))
     print(
         f"{len(maps)} spawned maps: {len(files.present)} cached files, {size / 1e6:.1f} MB; "
         f"not cached: {missing_wdts} WDTs, {len(files.missing) - missing_wdts} ADT/WMO files",
