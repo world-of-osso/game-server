@@ -72,7 +72,8 @@ Additional behavioral source and saved proof (no suites rerun for this docs-only
 
 ## Known gaps (current cycle)
 
-- [ ] Import missing expansion-11 recipe mappings and new Silvermoon merchant/spawn content before claiming that catalog is populated. The generated initial catalog is Classic leatherworking, not a Midnight substitute.
+- [ ] Require a genuine placed new Silvermoon city merchant before claiming the requested city catalog is available; no diagnostic NPC substitution. Corrected modern recipe/source staging evidence and pending publication gates: [Midnight investigation](../wiki/investigations/midnight-economy-content.md). Active catalog remains Classic Leatherworking.
+- [ ] Support currently unresolved Spark requirements, quality-only outputs and native bonus/quality cases before claiming full Retail crafting coverage. Published reagent pages are not native C_TradeSkillUI captures.
 - [ ] Existing over-cap wallets are not reduced when an operator lowers the cap. Normal credits are capped.
 
 Acceptance covers the recorded configurations, atomic failure/reopen tests and actual CLI/native workflows—not every recipe, arbitrary crash timing, WAN/concurrent latency, or guaranteed product availability. No production deployment was performed.
