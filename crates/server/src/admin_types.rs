@@ -228,12 +228,22 @@ pub enum AdminRequest {
         instance_id: u32,
         entry: u32,
     },
+    /// Read-only lookup of live objects by entry in a map copy.
+    GameObjectInfo {
+        map_id: u32,
+        instance_id: u32,
+        entry: u32,
+    },
+    EconomyStatus,
     Ping,
 }
 
 /// IPC response from server to CLI.
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub enum AdminResponse {
+    EconomyStatus {
+        status: serde_json::Value,
+    },
     EquipmentListed {
         character_id: u64,
         character_name: String,
@@ -438,6 +448,9 @@ pub enum AdminResponse {
         count: usize,
     },
     NpcInfoList {
+        lines: Vec<String>,
+    },
+    GameObjectInfoList {
         lines: Vec<String>,
     },
     Pong,

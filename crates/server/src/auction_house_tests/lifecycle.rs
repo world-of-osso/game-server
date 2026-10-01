@@ -231,9 +231,9 @@ fn max_auction_slots_per_character_enforced() {
 
 #[test]
 fn duration_tiers_set_correct_expiry() {
-    assert_eq!(duration_secs(AuctionDuration::Short), 30 * 60);
-    assert_eq!(duration_secs(AuctionDuration::Medium), 2 * 60 * 60);
-    assert_eq!(duration_secs(AuctionDuration::Long), 8 * 60 * 60);
+    assert_eq!(duration_secs(AuctionDuration::Short), 86_400);
+    assert_eq!(duration_secs(AuctionDuration::Medium), 604_800);
+    assert_eq!(duration_secs(AuctionDuration::Long), 1_209_600);
 
     let db = persistence::temp_database();
     let (seller_id, _) =
@@ -241,9 +241,9 @@ fn duration_tiers_set_correct_expiry() {
     let now = unix_now();
 
     for (duration, expected_secs) in [
-        (AuctionDuration::Short, 30 * 60),
-        (AuctionDuration::Medium, 2 * 60 * 60),
-        (AuctionDuration::Long, 8 * 60 * 60),
+        (AuctionDuration::Short, 86_400),
+        (AuctionDuration::Medium, 604_800),
+        (AuctionDuration::Long, 1_209_600),
     ] {
         let source_item = persistence::load_inventory(&db, seller_id).items[0].clone();
         let mut state = AuctionHouseState::default();
@@ -462,6 +462,7 @@ fn scheduled_auction_expiration_runs_at_most_once_per_second() {
     let mut first = test_auction(1, "First item", 1, 1);
     first.seller_character_id = seller_id;
     first.expires_at_unix_secs = unix_now();
+    persistence::save_auction(&app.world().resource::<GameDatabase>().db, &first);
     app.world_mut()
         .resource_mut::<AuctionHouseState>()
         .auctions
@@ -482,6 +483,7 @@ fn scheduled_auction_expiration_runs_at_most_once_per_second() {
     let mut second = test_auction(2, "Second item", 1, 1);
     second.seller_character_id = seller_id;
     second.expires_at_unix_secs = unix_now();
+    persistence::save_auction(&app.world().resource::<GameDatabase>().db, &second);
     app.world_mut()
         .resource_mut::<AuctionHouseState>()
         .auctions
@@ -548,22 +550,32 @@ fn expired_auction_without_bid_returns_item_to_seller() {
 
     let auction = state.auctions.remove(&auction_id).expect("auction");
     assert!(auction.current_bidder_character_id.is_none());
-    persistence::delete_auction(&db, auction_id);
-    deliver_mail(
+    crate::economy::store::commit_market(
         &db,
-        auction.seller_character_id,
-        "Auction expired",
-        &format!(
-            "Your auction for {} expired without a buyer.",
-            auction.item.name
-        ),
-        0,
-        Some(auction.item.clone()),
-    );
+        None,
+        &crate::economy::store::MarketChanges {
+            deleted_auctions: vec![auction_id],
+            mails: vec![(
+                auction.seller_character_id,
+                super::super::operations::build_auction_mail(
+                    &db,
+                    "Auction expired",
+                    &format!(
+                        "Your auction for {} expired without a buyer.",
+                        auction.item.name
+                    ),
+                    auction.deposit,
+                    Some(auction.item.clone()),
+                ),
+            )],
+            ..Default::default()
+        },
+    )
+    .unwrap();
 
     let seller_mail = mail_store::load_mailbox(&db, seller_id);
     assert_eq!(seller_mail.len(), 1);
-    assert_eq!(seller_mail[0].money, 0);
+    assert_eq!(seller_mail[0].money, auction.deposit);
     let returned_item = seller_mail[0]
         .items
         .first()
@@ -601,15 +613,25 @@ fn relist_after_expired_auction() {
         .unwrap()
         .expires_at_unix_secs = 0;
     let auction = state.auctions.remove(&auction_id).unwrap();
-    persistence::delete_auction(&db, auction_id);
-    deliver_mail(
+    crate::economy::store::commit_market(
         &db,
-        seller_id,
-        "Auction expired",
-        "expired",
-        0,
-        Some(auction.item),
-    );
+        None,
+        &crate::economy::store::MarketChanges {
+            deleted_auctions: vec![auction_id],
+            mails: vec![(
+                seller_id,
+                super::super::operations::build_auction_mail(
+                    &db,
+                    "Auction expired",
+                    "expired",
+                    auction.deposit,
+                    Some(auction.item),
+                ),
+            )],
+            ..Default::default()
+        },
+    )
+    .unwrap();
 
     let mail = mail_store::load_mailbox(&db, seller_id);
     take_mail(
@@ -640,4 +662,59 @@ fn relist_after_expired_auction() {
     );
     assert!(relist.success);
     assert_eq!(state.auctions.len(), 1);
+}
+
+#[test]
+fn atomic_expiry_mail_failure_preserves_persisted_and_published_auction() {
+    let db = persistence::temp_database();
+    let mut auction = test_auction(91, "Copper Ore", 1, 1);
+    auction.expires_at_unix_secs = unix_now() - 1;
+    auction.deposit = 37;
+    persistence::save_auction(&db, &auction);
+    super::settlement::corrupt_auction_mailbox(&db, 1);
+    let mut app = App::new();
+    app.insert_resource(GameDatabase { db });
+    app.insert_resource(AuctionHouseState {
+        auctions: [(91, auction.clone())].into(),
+        ..Default::default()
+    });
+    app.add_systems(Update, super::super::handlers::expire_auctions);
+    app.update();
+    assert_eq!(
+        app.world().resource::<AuctionHouseState>().auctions[&91],
+        auction
+    );
+    assert_eq!(
+        persistence::load_auctions(&app.world().resource::<GameDatabase>().db),
+        vec![auction]
+    );
+}
+
+#[test]
+fn atomic_expiry_stale_snapshot_cannot_duplicate_sale_mails() {
+    let db = persistence::temp_database();
+    let mut auction = test_auction(91, "Copper Ore", 1, 1);
+    auction.current_bid = Some(1_001);
+    auction.current_bidder_character_id = Some(2);
+    auction.deposit = 37;
+    auction.expires_at_unix_secs = unix_now() - 1;
+    persistence::save_auction(&db, &auction);
+    let mut app = App::new();
+    app.insert_resource(GameDatabase { db });
+    app.insert_resource(AuctionHouseState {
+        auctions: [(91, auction.clone())].into(),
+        ..Default::default()
+    });
+    app.add_systems(Update, super::super::handlers::expire_auctions);
+    app.update();
+    app.world_mut()
+        .resource_mut::<AuctionHouseState>()
+        .auctions
+        .insert(91, auction);
+    app.update();
+    let db = &app.world().resource::<GameDatabase>().db;
+    assert!(persistence::load_auctions(db).is_empty());
+    assert_eq!(mail_store::load_mailbox(db, 1).len(), 1);
+    assert_eq!(mail_store::load_mailbox(db, 1)[0].money, 988);
+    assert_eq!(mail_store::load_mailbox(db, 2).len(), 1);
 }

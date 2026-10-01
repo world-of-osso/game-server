@@ -118,11 +118,14 @@ pub(crate) fn push_mail(txn: &WriteTransaction, character_id: u64, mail: MailDat
         .expect("write mailbox");
 }
 
-/// Add `mail` to a character's mailbox in its own transaction.
+/// Fixture delivery uses the runtime market transaction path.
+#[cfg(test)]
 pub fn deliver_mail(db: &Database, character_id: u64, mail: MailData) {
-    let txn = db.begin_write().expect("Failed to begin mailbox write");
-    push_mail(&txn, character_id, mail);
-    txn.commit().expect("Failed to commit mailbox write");
+    let changes = crate::economy::store::MarketChanges {
+        mails: vec![(character_id, mail)],
+        ..Default::default()
+    };
+    crate::economy::store::commit_market(db, None, &changes).expect("deliver mail fixture");
 }
 
 /// Every mailbox (for the expiry sweep).

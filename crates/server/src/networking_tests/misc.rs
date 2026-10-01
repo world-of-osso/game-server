@@ -1,11 +1,4 @@
 use super::*;
-use std::sync::{Mutex, OnceLock};
-
-fn env_lock() -> &'static Mutex<()> {
-    static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
-    LOCK.get_or_init(|| Mutex::new(()))
-}
-
 #[test]
 fn chat_message_sender_override() {
     let mut msg = ChatMessage {
@@ -63,29 +56,4 @@ fn deferred_player_despawn_ignores_entities_already_despawned() {
         result.is_ok(),
         "queue_player_despawn should ignore entities already despawned before cleanup flushes"
     );
-}
-
-#[test]
-fn server_port_defaults_when_env_missing() {
-    let _guard = env_lock().lock().unwrap();
-    unsafe { std::env::remove_var("GAME_SERVER_PORT") };
-    assert_eq!(server_port(), DEFAULT_SERVER_PORT);
-}
-
-#[test]
-fn server_port_reads_env_override() {
-    let _guard = env_lock().lock().unwrap();
-    unsafe { std::env::set_var("GAME_SERVER_PORT", "55123") };
-    assert_eq!(server_port(), 55123);
-    unsafe { std::env::remove_var("GAME_SERVER_PORT") };
-}
-
-#[test]
-fn server_port_rejects_invalid_env_values() {
-    let _guard = env_lock().lock().unwrap();
-    unsafe { std::env::set_var("GAME_SERVER_PORT", "invalid") };
-    assert_eq!(server_port(), DEFAULT_SERVER_PORT);
-    unsafe { std::env::set_var("GAME_SERVER_PORT", "0") };
-    assert_eq!(server_port(), DEFAULT_SERVER_PORT);
-    unsafe { std::env::remove_var("GAME_SERVER_PORT") };
 }

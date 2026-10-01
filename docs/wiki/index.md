@@ -19,8 +19,10 @@ External resources, tooling, data sources, development workflow.
 
 | Page | Summary |
 |------|---------|
+| [[crafting-reference-import]] | Seven pinned Midnight crafting tables, exact schema/provenance, atomic staging import and modern-resolver handoff |
 | [[reference-repos]] | AzerothCore (architecture + data), Rustbolt Core (Rust patterns), SpacetimeDB (rejected), wow-engine (sibling renderer) |
-| [[dev-commands]] | cargo run, cargo test, run-tests.sh, admin CLI via SSH, dependency versions |
+| [[auction-load-fixture]] | Executed owned 300k-offer/311-real-ID producer; reopen/counter/second-page proof, linked separate CLI latency ledger |
+| [[dev-commands]] | cargo run, cargo test, run-tests.sh, admin CLI via SSH, live GameObject lookup, dependency versions |
 | [[crate-structure]] | Three crates (shared, server, client) with purpose and module breakdown |
 | [[code-health]] | 4,838 symbols, 88 untested production candidates, dead-code situation, top hotspots |
 
@@ -59,6 +61,9 @@ Server gameplay systems.
 | [[creature-aggro]] | AggroMode per template, level-scaled aggro radius, threat from damage/harmful spells, top-threat victim, evade (AzerothCore CreatureAI) |
 | [[inventory]] | Owner-only bag/equipment snapshots and deltas, bag placements and item-instance tables, Retail swap/split/destroy/equip validation, data gaps |
 | [[quests]] | Quest content load, AzerothCore accept/prerequisite/marker rules, per-player giver markers, kill and bag-item progress, turn-in rewards, quest log persistence and deltas |
+| [[bot-economy]] | Direct suppliers and bounded real merchant CLI/cost/cap proof; auction restart/mail/latency ledger in [[auction-house]], bounded native and final source audits PASS; content gaps in [[economy-catalog]] |
+| [[auction-house]] | Global ItemID browse and real AuctionID actions; exact saved CLI/restart/mail, twelve pinned loopback samples and bounded native and final source audits PASS |
+| [[economy-catalog]] | Read-only world.db/TSM importer, evidence-based gathered/market inputs, exact unlimited supplier contracts, provenance, price bounds and Midnight mapping gaps |
 | [[merchant]] | Vendor lists from content_npc_vendor (references, limited stock restock), buy/sell/buyback (12 session slots), repair cost from AzerothCore MaxDurability + Retail DurabilityCosts/Quality |
 | [[npc-interaction]] | Replicated `NpcFlags` (AzerothCore→Retail bits), `InteractNpc` validation (TrinityCore GetNPCIfCanInteractWith, 8.5 yd), gossip menus from world.db, role routing, per-frame session close, auction house gated on an auctioneer session and its faction house |
 | [[experience]] | Retail kill XP (gtXp, grey/zero-difference, elite, expansion /10, group split), QuestXP DB2 with low-level reduction, GiveXP level-ups, `character_xp`, health/mana refill, protocol gaps |

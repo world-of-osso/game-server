@@ -1,5 +1,8 @@
 //! Real-DB tests against data/world.db; each test skips when the DB is absent.
 
+#[path = "merchant_economy_tests.rs"]
+mod economic;
+
 use std::path::PathBuf;
 use std::time::Duration;
 

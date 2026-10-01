@@ -1,0 +1,1003 @@
+"""Concrete SQLite/CSV importer boundary tests; stdlib only."""
+
+import csv
+from contextlib import closing
+import importlib.util
+import json
+from pathlib import Path
+import sqlite3
+import subprocess
+import sys
+import tempfile
+import threading
+import unittest
+import urllib.error
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+SCRIPT = Path(__file__).resolve().parents[1] / "economy_catalog.py"
+sys.path.insert(0, str(SCRIPT.parent))
+
+
+class CatalogTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.root = Path(self.tmp.name)
+        self.db = self.root / "world.db"
+        con = sqlite3.connect(self.db)
+        con.executescript("""
+            CREATE TABLE content_item(ID INTEGER PRIMARY KEY, ClassID INTEGER, SubclassID INTEGER,
+                Name TEXT DEFAULT 'Fixture item', Quality INTEGER DEFAULT 1,
+                RequiredLevel INTEGER DEFAULT 5, SellPrice INTEGER DEFAULT 25,
+                BuyPrice INTEGER DEFAULT 10, VendorStackCount INTEGER DEFAULT 1);
+            CREATE TABLE item_sparse(ID INTEGER PRIMARY KEY, ExpansionID INTEGER,
+                ModifiedCraftingReagentItemID INTEGER DEFAULT 0);
+            CREATE TABLE skill_line(ID INTEGER PRIMARY KEY, ParentSkillLineID INTEGER);
+            CREATE TABLE skill_line_ability(Spell INTEGER, SkillLine INTEGER,
+                SkillupSkillLineID INTEGER DEFAULT 0);
+            CREATE TABLE spell_effect(SpellID INTEGER, DifficultyID INTEGER, Effect INTEGER,
+                EffectItemType INTEGER, EffectBasePointsF REAL, Variance REAL,
+                Coefficient REAL, EffectRealPointsPerLevel REAL, EffectPointsPerResource REAL,
+                ResourceCoefficient REAL, GroupSizeBasePointsCoefficient REAL, ScalingClass INTEGER,
+                EffectMiscValue_0 INTEGER DEFAULT 0);
+            CREATE TABLE content_creature_template(entry INTEGER, name TEXT, npcflag INTEGER);
+            CREATE TABLE content_creature(guid INTEGER, id1 INTEGER, id2 INTEGER, id3 INTEGER, map INTEGER);
+            CREATE TABLE content_game_event_creature(guid INTEGER,eventEntry INTEGER);
+            CREATE TABLE content_npc_vendor(entry INTEGER, slot INTEGER, item INTEGER,
+                maxcount INTEGER, incrtime INTEGER, ExtendedCost INTEGER);
+            CREATE TABLE content_creature_loot_template(Entry INTEGER, Item INTEGER,
+                Reference INTEGER, Chance REAL, QuestRequired INTEGER, MinCount INTEGER, MaxCount INTEGER);
+            CREATE TABLE content_gameobject_loot_template AS SELECT * FROM content_creature_loot_template;
+            CREATE TABLE content_item_loot_template AS SELECT * FROM content_creature_loot_template;
+            INSERT INTO content_creature_loot_template VALUES (15651,2318,0,0.119,0,1,1);
+            INSERT INTO content_npc_vendor VALUES (3532,9,2320,0,0,0);
+            INSERT INTO skill_line VALUES (165,0),(2532,165),(2915,165),(164,0);
+            INSERT INTO content_creature_template VALUES (3532,'Pyrewood Leatherworker',128);
+            INSERT INTO content_creature VALUES (1,3532,0,0,0);
+        """)
+        con.executescript((SCRIPT.parent / "crafting_schema.sql").read_text())
+        columns = ",".join(
+            f"{prefix}_{i} INTEGER DEFAULT 0"
+            for prefix in [
+                "Reagent",
+                "ReagentCount",
+                "ReagentReCraftCount",
+                "ReagentSource",
+            ]
+            for i in range(8)
+        )
+        con.execute(f"CREATE TABLE spell_reagents(SpellID INTEGER,{columns})")
+        con.executemany(
+            "INSERT INTO content_item(ID,ClassID,SubclassID) VALUES (?,?,?)",
+            [(2302, 4, 1), (2318, 7, 6), (2320, 7, 0), (2304, 7, 6), (900, 4, 1)],
+        )
+        con.executemany(
+            "INSERT INTO item_sparse(ID,ExpansionID) VALUES (?,?)",
+            [(2302, 0), (2318, 0), (2320, 0), (2304, 0), (900, 11)],
+        )
+        con.commit()
+        con.close()
+        self.recipe(2149, 2302, [(2318, 2), (2320, 1)])
+        self.recipe(2152, 2304, [(2318, 1)])
+        self.recipe(500, 900, [(2318, 1)], skill=2915)
+        self.items = self.root / "items.csv"
+        self.commodities = self.root / "commodities.csv"
+        self.write_csv(
+            self.items,
+            ["itemId", "marketValue", "saleRate", "soldPerDay", "updatedAt"],
+            [
+                [i, 1000, "0.125", "2.5", "2026-09-30T08:19:11Z"]
+                for i in [2302, 2318, 2320, 2304, 900]
+            ],
+        )
+        self.write_csv(
+            self.commodities,
+            ["itemId", "marketValue", "minBuyout", "updatedAt"],
+            [[2318, 2000, 2100, "2026-09-30T15:23:54Z"]],
+        )
+
+    def write_csv(self, path, header, rows):
+        with path.open("w", newline="") as f:
+            writer = csv.writer(f)
+            writer.writerow(header)
+            writer.writerows(rows)
+
+    def recipe(
+        self, spell, output, ingredients, skill=2532, points=1, variance=0, source=0
+    ):
+        with closing(sqlite3.connect(self.db)) as con, con:
+            con.execute(
+                "INSERT INTO skill_line_ability(Spell,SkillLine) VALUES (?,?)",
+                (spell, skill),
+            )
+            con.execute(
+                "INSERT INTO spell_effect VALUES (?,0,24,?,?,?,0,0,0,0,1,0,0)",
+                (spell, output, points, variance),
+            )
+            fields = ["SpellID"]
+            values = [spell]
+            for i, (item, count) in enumerate(ingredients):
+                fields.extend(
+                    [f"Reagent_{i}", f"ReagentCount_{i}", f"ReagentSource_{i}"]
+                )
+                values.extend([item, count, source])
+            con.execute(
+                f"INSERT INTO spell_reagents ({','.join(fields)}) VALUES ({','.join('?' for _ in fields)})",
+                values,
+            )
+
+    def modern_recipe(self, spell=1200, output=900, points=2.5, ingredients=None):
+        self.recipe(
+            spell,
+            output,
+            ingredients or [(2318, 2), (2320, 1)],
+            skill=165,
+            points=points,
+        )
+        with closing(sqlite3.connect(self.db)) as con, con:
+            con.execute(
+                "INSERT INTO content_creature_template SELECT 3533,'Modern vendor',128 WHERE NOT EXISTS (SELECT 1 FROM content_creature_template WHERE entry=3533)"
+            )
+            con.execute(
+                "INSERT INTO content_creature SELECT 3533,3533,0,0,0 WHERE NOT EXISTS (SELECT 1 FROM content_creature WHERE guid=3533)"
+            )
+            con.execute(
+                "UPDATE skill_line_ability SET SkillupSkillLineID=2915 WHERE Spell=?",
+                (spell,),
+            )
+            con.execute(
+                "UPDATE spell_effect SET Effect=288,EffectItemType=0,EffectMiscValue_0=? WHERE SpellID=?",
+                (spell, spell),
+            )
+            con.execute(
+                "INSERT INTO crafting_data VALUES (?,0,0,?,0,0,0,0,0,0,0,0,0,0,0,0)",
+                (spell, output),
+            )
+
+    def add_modified_slot(self, spell=1200, reagent_type=0):
+        with closing(sqlite3.connect(self.db)) as con, con:
+            con.execute(
+                "INSERT INTO modified_crafting_spell_slot VALUES (15388,?,0,421,0,140,80)",
+                (spell,),
+            )
+            con.execute(
+                "INSERT INTO modified_crafting_reagent_slot VALUES ('Fixture',421,0,0,?,0,0,0)",
+                (reagent_type,),
+            )
+
+    def test_modern_direct_fixed_recipe_and_provenance(self):
+        self.modern_recipe()
+        config, report = self.success("--merchant", "3533:11:165")
+        self.assertEqual(
+            config["merchants"][-1]["recipes"],
+            [
+                {
+                    "spell_id": 500,
+                    "expansion": 11,
+                    "output_item_id": 900,
+                    "output_count": 1,
+                    "ingredients": [[2318, 1]],
+                },
+                {
+                    "spell_id": 1200,
+                    "expansion": 11,
+                    "output_item_id": 900,
+                    "output_count": 3,
+                    "ingredients": [[2318, 2], [2320, 1]],
+                },
+            ],
+        )
+        self.assertEqual(report["coverage"]["11:165"]["candidates"], 2)
+        modern = report["modern_recipes"][0]
+        self.assertEqual(modern["spell_id"], 1200)
+        self.assertEqual(modern["crafting_data_id"], 1200)
+        self.assertEqual(modern["output_item_id"], 900)
+        self.assertEqual(
+            modern["skill_line_abilities"],
+            [{"skill_line_id": 165, "skillup_skill_line_id": 2915}],
+        )
+        self.assertIsNone(modern["reason"])
+        self.assertEqual(modern["effect"], 288)
+
+    def test_modern_slots_unresolved_even_with_templates_and_markets(self):
+        for reagent_type in (0, 1, 2, 3):
+            with self.subTest(reagent_type=reagent_type):
+                spell = 1210 + reagent_type
+                self.modern_recipe(spell)
+                with closing(sqlite3.connect(self.db)) as con, con:
+                    con.execute("DELETE FROM modified_crafting_spell_slot")
+                    con.execute("DELETE FROM modified_crafting_reagent_slot")
+                self.add_modified_slot(spell, reagent_type)
+                config, report = self.success("--merchant", "3533:11:165")
+                self.assertNotIn(
+                    spell, [r["spell_id"] for r in config["merchants"][-1]["recipes"]]
+                )
+                row = next(
+                    r for r in report["excluded_recipes"] if r["spell_id"] == spell
+                )
+                self.assertEqual(
+                    row["reason"], "unresolved_modified_reagent_requirements"
+                )
+                slot = row["modified_slots"][0]
+                self.assertEqual(
+                    (
+                        slot["ID"],
+                        slot["ModifiedCraftingReagentSlotID"],
+                        slot["ReagentType"],
+                        slot["ReagentCount"],
+                        slot["ReagentReCraftCount"],
+                    ),
+                    (15388, 421, reagent_type, 140, 80),
+                )
+
+    def test_modern_unresolved_outputs_never_use_effect_item_or_quality_id(self):
+        reasons = {
+            1220: "missing_crafting_data",
+            1221: "unresolved_quality_output",
+            1222: "unresolved_crafted_treasure",
+            1223: "unresolved_crafting_data_type",
+        }
+        for spell in reasons:
+            self.modern_recipe(spell)
+        with closing(sqlite3.connect(self.db)) as con, con:
+            con.execute("DELETE FROM crafting_data WHERE ID=1220")
+            con.execute("UPDATE crafting_data SET CraftedItemID=0 WHERE ID=1221")
+            con.execute("INSERT INTO crafting_data_item_quality VALUES (1,900,1221)")
+            con.execute("UPDATE crafting_data SET CraftedTreasureID=77 WHERE ID=1222")
+            con.execute("UPDATE crafting_data SET Type=1 WHERE ID=1223")
+            con.execute(
+                "UPDATE spell_effect SET EffectItemType=900 WHERE SpellID BETWEEN 1220 AND 1223"
+            )
+        config, report = self.success("--merchant", "3533:11:165")
+        self.assertEqual(
+            [r["spell_id"] for r in config["merchants"][-1]["recipes"]], [500]
+        )
+        self.assertEqual(
+            {r["spell_id"]: r["reason"] for r in report["modern_recipes"]}, reasons
+        )
+        quality = next(r for r in report["modern_recipes"] if r["spell_id"] == 1221)
+        self.assertEqual(quality["quality_item_ids"], [900])
+        self.assertIsNone(quality["output_item_id"])
+
+    def test_modified_slots_always_excluded_with_separate_unresolved_output_evidence(
+        self,
+    ):
+        self.modern_recipe(1240, output=0)
+        self.add_modified_slot(1240)
+        with closing(sqlite3.connect(self.db)) as con, con:
+            con.execute("INSERT INTO crafting_data_item_quality VALUES (1,900,1240)")
+        config, report = self.success("--merchant", "3533:11:165")
+        self.assertEqual(
+            [r["spell_id"] for r in config["merchants"][-1]["recipes"]], [500]
+        )
+        row = next(r for r in report["excluded_recipes"] if r["spell_id"] == 1240)
+        self.assertEqual(row["reason"], "unresolved_modified_reagent_requirements")
+        self.assertEqual(row["output_resolution_reason"], "unresolved_quality_output")
+        self.assertEqual(row["quality_item_ids"], [900])
+        self.assertIsNone(row["output_item_id"])
+        self.assertNotIn("ingredients", row)
+
+    def test_modern_output_expansion_and_fixed_reagent_checks(self):
+        self.modern_recipe(1230)
+        self.modern_recipe(1231)
+        self.modern_recipe(1232, output=2302)
+        self.modern_recipe(1233)
+        self.modern_recipe(1234)
+        self.modern_recipe(1235)
+        with closing(sqlite3.connect(self.db)) as con, con:
+            con.execute(
+                "UPDATE spell_reagents SET ReagentSource_0=1 WHERE SpellID=1230"
+            )
+            con.execute(
+                "UPDATE spell_reagents SET ReagentReCraftCount_0=1 WHERE SpellID=1231"
+            )
+            con.execute("DELETE FROM spell_reagents WHERE SpellID=1233")
+            con.execute("UPDATE spell_effect SET Variance=0.5 WHERE SpellID=1234")
+            con.execute("UPDATE crafting_data SET CraftedItemID=99999 WHERE ID=1235")
+        config, report = self.success("--merchant", "3533:11:165")
+        self.assertEqual(
+            [r["spell_id"] for r in config["merchants"][-1]["recipes"]], [500]
+        )
+        self.assertIn(1232, [r["spell_id"] for r in config["merchants"][0]["recipes"]])
+        self.assertEqual(
+            {r["spell_id"]: r["reason"] for r in report["excluded_recipes"]},
+            {
+                1230: "special_reagents",
+                1231: "special_reagents",
+                1233: "missing_reagents",
+                1234: "non_deterministic_output",
+                1235: "missing_output_expansion",
+            },
+        )
+
+    def test_missing_reference_tables_fail_import_even_for_classic(self):
+        with closing(sqlite3.connect(self.db)) as con, con:
+            con.execute("DROP TABLE crafting_data")
+        result = self.invoke("--merchant", "3532:0:165")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("crafting_data.py", result.stderr)
+        self.assertIn("crafting_data", result.stderr)
+
+    def invoke(self, *args):
+        result = subprocess.run(
+            [
+                sys.executable,
+                str(SCRIPT),
+                "--db",
+                str(self.db),
+                "--items",
+                str(self.items),
+                "--commodities",
+                str(self.commodities),
+                "--output",
+                str(self.root / "config.json"),
+                "--report",
+                str(self.root / "report.json"),
+                *args,
+            ],
+            capture_output=True,
+            text=True,
+        )
+        return result
+
+    def success(self, *args):
+        result = self.invoke("--merchant", "3532:0:165", *args)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        return json.loads((self.root / "config.json").read_text()), json.loads(
+            (self.root / "report.json").read_text()
+        )
+
+    def test_real_recipe_quantity_expansion_and_measured_markets(self):
+        config, report = self.success()
+        recipes = config["merchants"][0]["recipes"]
+        self.assertEqual(
+            recipes,
+            [
+                {
+                    "spell_id": 2149,
+                    "expansion": 0,
+                    "output_item_id": 2302,
+                    "output_count": 1,
+                    "ingredients": [[2318, 2], [2320, 1]],
+                },
+                {
+                    "spell_id": 2152,
+                    "expansion": 0,
+                    "output_item_id": 2304,
+                    "output_count": 1,
+                    "ingredients": [[2318, 1]],
+                },
+            ],
+        )
+        self.assertEqual(
+            config["markets"]["2318"],
+            {
+                "item_id": 2318,
+                "anchor_price": 2000,
+                "min_price": 1600,
+                "max_price": 2400,
+                "popularity_bps": 1250,
+            },
+        )
+        self.assertNotIn("900", config["markets"])
+        self.assertEqual(report["gathering_item_ids"], [2318])
+        self.assertEqual(config["gatherables"], [2318])
+        self.assertGreater(config["gatherer_capital"], 0)
+        self.assertEqual(
+            config["items"]["2318"],
+            {
+                "name": "Fixture item",
+                "quality": 1,
+                "required_level": 5,
+                "vendor_sell_price": 25,
+            },
+        )
+        self.assertEqual(report["coverage"]["11:165"]["eligible"], 1)
+        self.assertEqual(report["assignments"][0]["spawn_count"], 1)
+
+    def test_vendor_output_overflow_excluded_with_original_input_prices_and_provenance(
+        self,
+    ):
+        for output_anchor in [5302341052, 4000000000]:
+            with self.subTest(output_anchor=output_anchor):
+                self.write_csv(
+                    self.items,
+                    ["itemId", "marketValue", "saleRate", "soldPerDay", "updatedAt"],
+                    [
+                        [
+                            i,
+                            output_anchor if i == 2302 else 1000,
+                            "0.125",
+                            "2.5",
+                            "items-time",
+                        ]
+                        for i in [2302, 2318, 2320, 2304, 900]
+                    ],
+                )
+                self.write_csv(
+                    self.commodities,
+                    ["itemId", "marketValue", "updatedAt"],
+                    [[2318, 5302341052, "commodity-time"]],
+                )
+                config, report = self.success()
+                self.assertEqual(
+                    [r["spell_id"] for r in config["merchants"][0]["recipes"]], [2152]
+                )
+                self.assertEqual(config["markets"]["2318"]["anchor_price"], 5302341052)
+                self.assertEqual(config["markets"]["2318"]["max_price"], 6362809263)
+                self.assertNotIn("2302", config["markets"])
+                exclusions = [
+                    row for row in report["excluded_recipes"] if row["spell_id"] == 2149
+                ]
+                self.assertEqual(len(exclusions), 1)
+                exclusion = exclusions[0]
+                self.assertEqual(
+                    exclusion["reason"], "merchant_output_price_exceeds_u32"
+                )
+                self.assertEqual(exclusion["output_item_id"], 2302)
+                self.assertEqual(exclusion["vendor_price_limit"], 4294967295)
+                self.assertEqual(
+                    exclusion["output_market"]["anchor_price"], output_anchor
+                )
+                self.assertEqual(
+                    exclusion["output_market"]["max_price"],
+                    (output_anchor * 12000 + 9999) // 10000,
+                )
+                provenance = report["market_provenance"]["2302"]
+                self.assertEqual(provenance["market_value"], str(output_anchor))
+                self.assertEqual(provenance["price_source"], "items")
+                self.assertEqual(provenance["price_updated_at"], "items-time")
+                self.assertEqual(report["assignments"][0]["eligible_recipe_count"], 1)
+                self.assertEqual(report["coverage"]["0:165"]["excluded"], 1)
+
+    def test_vendor_output_u32_max_is_supported(self):
+        self.write_csv(
+            self.items,
+            ["itemId", "marketValue", "saleRate", "soldPerDay", "updatedAt"],
+            [
+                [i, 4294967295 if i == 2302 else 1000, 0, 0, "now"]
+                for i in [2302, 2318, 2320, 2304, 900]
+            ],
+        )
+        tuning = self.root / "tuning.json"
+        tuning.write_text(json.dumps({"min_price_bps": 10000, "max_price_bps": 10000}))
+        config, report = self.success("--tuning", str(tuning))
+        self.assertEqual(len(config["merchants"][0]["recipes"]), 2)
+        self.assertEqual(config["markets"]["2302"]["max_price"], 4294967295)
+        self.assertEqual(report["excluded_recipes"], [])
+
+    def test_raw_quantity_rounds_half_up_and_clamps_to_one(self):
+        for spell, points in [
+            (1100, 0),
+            (1101, 1.49),
+            (1102, 1.5),
+            (1103, 2.5),
+            (1104, -2),
+        ]:
+            self.recipe(spell, 2302, [(2318, 1)], points=points)
+        config, _ = self.success()
+        counts = {
+            r["spell_id"]: r["output_count"] for r in config["merchants"][0]["recipes"]
+        }
+        self.assertEqual(
+            {spell: counts[spell] for spell in range(1100, 1105)},
+            {1100: 1, 1101: 1, 1102: 2, 1103: 3, 1104: 1},
+        )
+        self.assertEqual(counts[2149], 1)
+
+    def test_report_preserves_price_and_popularity_provenance(self):
+        _, report = self.success()
+        self.assertEqual(
+            report["market_provenance"]["2318"],
+            {
+                "price_source": "commodities",
+                "market_value": "2000",
+                "price_updated_at": "2026-09-30T15:23:54Z",
+                "popularity_source": "items",
+                "sale_rate": "0.125",
+                "sold_per_day": "2.5",
+                "popularity_updated_at": "2026-09-30T08:19:11Z",
+            },
+        )
+        self.assertEqual(report["market_provenance"]["2302"]["price_source"], "items")
+        self.assertEqual(report["market_provenance"]["2302"]["market_value"], "1000")
+        self.assertEqual(
+            report["snapshots"]["items"]["updated_at"], ["2026-09-30T08:19:11Z"]
+        )
+        self.assertEqual(
+            report["snapshots"]["commodities"]["updated_at"], ["2026-09-30T15:23:54Z"]
+        )
+
+    def test_midnight_missing_profession_mapping_reported(self):
+        self.recipe(501, 900, [(2318, 1)], skill=2915)
+        with closing(sqlite3.connect(self.db)) as con, con:
+            con.execute("DELETE FROM skill_line_ability WHERE Spell=501")
+        _, report = self.success()
+        self.assertEqual(
+            report["output_spell_coverage"]["11"],
+            {
+                "create_item_spells": 2,
+                "profession_mapped": 1,
+                "missing_profession_mapping": 1,
+            },
+        )
+        self.assertEqual(
+            report["unmapped_output_spells"],
+            [{"spell_id": 501, "output_item_id": 900, "expansion": 11}],
+        )
+
+    def test_midnight_is_eleven_not_twelve(self):
+        result = self.invoke("--merchant", "3532:11:165")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        config = json.loads((self.root / "config.json").read_text())
+        self.assertEqual(
+            [r["spell_id"] for r in config["merchants"][0]["recipes"]], [500]
+        )
+
+    def test_excludes_missing_content_tsm_random_and_special_reagents(self):
+        self.recipe(1001, 2302, [(9999, 1)])
+        self.recipe(1002, 2302, [(2318, 1)], variance=0.5)
+        self.recipe(1003, 2302, [(2318, 1)], source=1)
+        self.recipe(1004, 2302, [(2318, 1)], points=float("inf"))
+        with closing(sqlite3.connect(self.db)) as con, con:
+            con.execute(
+                "INSERT INTO content_item(ID,ClassID,SubclassID) VALUES (9998,7,9)"
+            )
+        self.recipe(1005, 2302, [(9998, 1)])
+        self.recipe(1006, 9997, [(2318, 1)])
+        config, report = self.success()
+        self.assertEqual(len(config["merchants"][0]["recipes"]), 2)
+        reasons = {r["spell_id"]: r["reason"] for r in report["excluded_recipes"]}
+        self.assertEqual(reasons[1001], "missing_content_item")
+        self.assertEqual(reasons[1002], "non_deterministic_output")
+        self.assertEqual(reasons[1003], "special_reagents")
+        self.assertEqual(reasons[1004], "non_deterministic_output")
+        self.assertEqual(reasons[1005], "missing_supported_market")
+        self.assertEqual(reasons[1006], "missing_output_expansion")
+
+    def test_linen_cloth_is_a_gathered_input_not_a_device(self):
+        with closing(sqlite3.connect(self.db)) as con, con:
+            con.execute(
+                "INSERT INTO content_item(ID,ClassID,SubclassID,Name) VALUES (2589,7,5,'Linen Cloth')"
+            )
+            con.execute(
+                "INSERT INTO content_item(ID,ClassID,SubclassID,Name) VALUES (4392,7,3,'Advanced Target Dummy')"
+            )
+            con.execute(
+                "INSERT INTO content_creature_loot_template VALUES (3,2589,0,15,0,1,3)"
+            )
+            con.execute("INSERT INTO item_sparse(ID,ExpansionID) VALUES (2589,0)")
+            con.execute("INSERT INTO item_sparse(ID,ExpansionID) VALUES (4392,0)")
+        self.recipe(1008, 2302, [(2589, 2), (4392, 1)])
+        self.write_csv(
+            self.items,
+            ["itemId", "marketValue", "saleRate", "soldPerDay", "updatedAt"],
+            [
+                [i, 1000, "0.125", "2.5", "2026-09-30T08:19:11Z"]
+                for i in [2302, 2318, 2320, 2304, 900, 2589, 4392]
+            ],
+        )
+        config, report = self.success()
+        self.assertIn(2589, config["gatherables"])
+        self.assertNotIn(4392, config["gatherables"])
+        self.assertIn(4392, report["non_gathering_ingredient_ids"])
+
+    def test_light_leather_direct_loot_survives_conversion_and_mixed_vendor(self):
+        self.recipe(2881, 2318, [(2934, 3)])
+        with closing(sqlite3.connect(self.db)) as con, con:
+            con.execute("INSERT INTO content_npc_vendor VALUES (3532,1,2318,10,60,0)")
+            con.execute(
+                "INSERT INTO content_gameobject_loot_template VALUES (1570,2318,0,16.3,0,1,1)"
+            )
+            con.execute(
+                "INSERT INTO content_item_loot_template VALUES (6353,2318,0,30.7,0,1,2)"
+            )
+        config, report = self.success()
+        self.assertIn(2318, config["gatherables"])
+        self.assertNotIn("2318", config["vendor_supplies"])
+        source = report["ingredient_sources"]["2318"]
+        self.assertEqual(source["route"], "gathered_auction")
+        self.assertEqual(source["crafted_spell_ids"], [2881])
+        self.assertEqual(
+            {r["table"] for r in source["direct_loot"]},
+            {
+                "content_creature_loot_template",
+                "content_gameobject_loot_template",
+                "content_item_loot_template",
+            },
+        )
+        self.assertNotIn(2318, report["secondary_crafting_item_ids"])
+
+    def test_subclass_five_threads_use_actual_spawned_supplier_not_gathering(self):
+        with closing(sqlite3.connect(self.db)) as con, con:
+            con.execute(
+                "UPDATE content_item SET SubclassID=5,BuyPrice=10 WHERE ID=2320"
+            )
+            con.execute(
+                "INSERT INTO content_item(ID,ClassID,SubclassID,BuyPrice) VALUES (2321,7,5,100),(4291,7,5,500)"
+            )
+            con.execute(
+                "INSERT INTO content_creature_template VALUES (66,'Supplier',128),(1,'Unspawned',128),(2,'Not vendor',0)"
+            )
+            con.execute("INSERT INTO content_creature VALUES (2,66,0,0,0),(3,2,0,0,0)")
+            con.executemany(
+                "INSERT INTO content_npc_vendor VALUES (?,?,?,?,?,?)",
+                [
+                    (66, 9, 2320, 0, 0, 0),
+                    (66, 10, 2321, 0, 0, 0),
+                    (66, 11, 4291, 0, 0, 0),
+                    (1, 0, 2320, 0, 0, 0),
+                    (2, 0, 2320, 0, 0, 0),
+                    (66, 1, 2320, 0, 0, 123),
+                ],
+            )
+        self.recipe(1009, 2302, [(2321, 2), (4291, 1)])
+        self.write_csv(
+            self.items,
+            ["itemId", "marketValue", "saleRate", "soldPerDay", "updatedAt"],
+            [[i, 1000, 0, 0, "now"] for i in [2302, 2318, 2320, 2304, 900, 2321, 4291]],
+        )
+        config, report = self.success()
+        self.assertEqual(config["gatherables"], [2318])
+        self.assertEqual(
+            config["vendor_supplies"],
+            {
+                "2320": {
+                    "vendor_entry": 66,
+                    "slot": 0,
+                    "purchase_price": 10,
+                    "buy_count": 1,
+                    "max_count": 0,
+                    "restock_secs": 0,
+                },
+                "2321": {
+                    "vendor_entry": 66,
+                    "slot": 1,
+                    "purchase_price": 100,
+                    "buy_count": 1,
+                    "max_count": 0,
+                    "restock_secs": 0,
+                },
+                "4291": {
+                    "vendor_entry": 66,
+                    "slot": 2,
+                    "purchase_price": 500,
+                    "buy_count": 1,
+                    "max_count": 0,
+                    "restock_secs": 0,
+                },
+            },
+        )
+        self.assertEqual(
+            report["ingredient_sources"]["2320"]["route"], "vendor_supplier"
+        )
+        self.assertEqual(
+            report["ingredient_sources"]["2320"]["supplier"]["database_slot"], 9
+        )
+        self.assertEqual(
+            {r["reason"] for r in report["unsupported_vendor_rows"]},
+            {"vendor_not_spawned", "not_supported_vendor", "extended_cost"},
+        )
+
+    def test_vendor_bundle_price_and_runtime_reference_slots(self):
+        with closing(sqlite3.connect(self.db)) as con, con:
+            con.execute(
+                "UPDATE content_item SET BuyPrice=31,VendorStackCount=3 WHERE ID=2320"
+            )
+            con.execute("DELETE FROM content_npc_vendor")
+            con.executemany(
+                "INSERT INTO content_npc_vendor VALUES (?,?,?,?,?,?)",
+                [
+                    (3532, 1, 9999, 0, 0, 0),
+                    (3532, 2, -777, 0, 0, 0),
+                    (777, 1, 2302, 0, 0, 0),
+                    (777, 2, 2320, 0, 0, 0),
+                ],
+            )
+        config, report = self.success()
+        self.assertEqual(
+            config["vendor_supplies"]["2320"],
+            {
+                "vendor_entry": 3532,
+                "slot": 1,
+                "purchase_price": 31,
+                "buy_count": 3,
+                "max_count": 0,
+                "restock_secs": 0,
+            },
+        )
+        self.assertEqual(
+            report["ingredient_sources"]["2320"]["supplier"]["source_entry"], 777
+        )
+
+    def test_supplier_purchase_does_not_require_an_auction_market(self):
+        self.write_csv(
+            self.items,
+            ["itemId", "marketValue", "saleRate", "soldPerDay", "updatedAt"],
+            [[i, 1000, 0, 0, "now"] for i in [2302, 2318, 2304, 900]],
+        )
+        config, report = self.success()
+        self.assertEqual(
+            [r["spell_id"] for r in config["merchants"][0]["recipes"]], [2149, 2152]
+        )
+        self.assertEqual(config["vendor_supplies"]["2320"]["purchase_price"], 10)
+        self.assertNotIn("2320", config["markets"])
+        self.assertIn("2320", config["items"])
+        self.assertEqual(
+            report["ingredient_sources"]["2320"]["route"], "vendor_supplier"
+        )
+
+    def test_gathering_requires_actual_nonquest_direct_loot(self):
+        with closing(sqlite3.connect(self.db)) as con, con:
+            con.execute("UPDATE content_creature_loot_template SET QuestRequired=1")
+        config, report = self.success()
+        self.assertEqual(config["gatherables"], [])
+        self.assertEqual(report["ingredient_sources"]["2318"]["direct_loot"], [])
+        self.assertEqual(
+            report["ingredient_sources"]["2318"]["route"], "market_auction"
+        )
+
+    def test_inactive_event_supplier_does_not_replace_active_vendor(self):
+        with closing(sqlite3.connect(self.db)) as con, con:
+            con.execute(
+                "INSERT INTO content_creature_template VALUES (66,'Event vendor',128)"
+            )
+            con.execute("INSERT INTO content_creature VALUES (2,66,0,0,0)")
+            con.execute("INSERT INTO content_game_event_creature VALUES (2,12)")
+            con.execute("INSERT INTO content_npc_vendor VALUES (66,1,2320,0,0,0)")
+        config, report = self.success()
+        self.assertEqual(config["vendor_supplies"]["2320"]["vendor_entry"], 3532)
+        self.assertIn(
+            "vendor_not_spawned",
+            {r["reason"] for r in report["unsupported_vendor_rows"]},
+        )
+
+    def test_limited_only_supplier_is_explicit_not_infinite_inventory(self):
+        with closing(sqlite3.connect(self.db)) as con, con:
+            con.execute("UPDATE content_npc_vendor SET maxcount=5,incrtime=60")
+        config, report = self.success()
+        self.assertEqual(config["vendor_supplies"], {})
+        self.assertEqual(
+            [r["spell_id"] for r in config["merchants"][0]["recipes"]], [2152]
+        )
+        self.assertEqual(
+            report["unsupported_vendor_rows"][0]["reason"], "limited_stock"
+        )
+        self.assertEqual(report["unsupported_vendor_rows"][0]["max_count"], 5)
+        self.assertEqual(report["unsupported_vendor_rows"][0]["restock_secs"], 60)
+
+    def test_invalid_vendor_only_supplier_is_explicit_not_auction_fallback(self):
+        with closing(sqlite3.connect(self.db)) as con, con:
+            con.execute("UPDATE content_npc_vendor SET maxcount=5,incrtime=0")
+        config, report = self.success()
+        self.assertNotIn(2320, config["gatherables"])
+        self.assertNotIn("2320", config["vendor_supplies"])
+        self.assertEqual(
+            [r["spell_id"] for r in config["merchants"][0]["recipes"]], [2152]
+        )
+        self.assertEqual(report["ingredient_sources"]["2320"]["route"], "unsupported")
+        self.assertEqual(
+            report["unsupported_vendor_rows"][0]["reason"], "invalid_stock_restock"
+        )
+        self.assertEqual(
+            next(r for r in report["excluded_recipes"] if r["spell_id"] == 2149)[
+                "reason"
+            ],
+            "unsupported_ingredient_source",
+        )
+
+    def test_crafted_ingredients_never_classified_as_gathered(self):
+        self.recipe(1007, 2302, [(2304, 1), (2318, 1)])
+        with closing(sqlite3.connect(self.db)) as con, con:
+            con.execute(
+                "INSERT INTO content_item_loot_template VALUES (6353,2304,0,10,0,1,1)"
+            )
+            con.execute("INSERT INTO content_npc_vendor VALUES (3532,1,2304,0,0,0)")
+        config, report = self.success()
+        self.assertEqual(report["gathering_item_ids"], [2318])
+        self.assertNotIn("2304", config["vendor_supplies"])
+        self.assertEqual(
+            report["ingredient_sources"]["2304"]["route"], "crafted_auction"
+        )
+        self.assertIn(2304, report["secondary_crafting_item_ids"])
+        self.assertIn(2304, report["non_gathering_ingredient_ids"])
+
+    def test_unspawned_and_non_vendor_assignment_rejected_with_report(self):
+        with closing(sqlite3.connect(self.db)) as con, con:
+            con.execute("DELETE FROM content_creature")
+        result = self.invoke("--merchant", "3532:0:165")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertFalse((self.root / "config.json").exists())
+        report = json.loads((self.root / "report.json").read_text())
+        self.assertEqual(report["assignments"][0]["error"], "merchant_not_spawned")
+        with closing(sqlite3.connect(self.db)) as con, con:
+            con.execute("INSERT INTO content_creature VALUES (1,3532,0,0,0)")
+            con.execute("UPDATE content_creature_template SET npcflag=0")
+        result = self.invoke("--merchant", "3532:0:165")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("merchant_not_vendor", (self.root / "report.json").read_text())
+
+    def test_assignment_required_and_tuning_editable(self):
+        self.assertNotEqual(self.invoke().returncode, 0)
+        tuning = self.root / "tuning.json"
+        tuning.write_text(
+            json.dumps({"customer_budget": 42, "capacity": 8, "capital_limit": 900})
+        )
+        config, _ = self.success("--tuning", str(tuning))
+        self.assertEqual(config["customer_budget"], 42)
+        self.assertEqual(config["merchants"][0]["capacity"], 8)
+        self.assertEqual(config["merchants"][0]["capital_limit"], 900)
+        tuning.write_text('{"capacity": -1}')
+        self.assertNotEqual(
+            self.invoke("--merchant", "3532:0:165", "--tuning", str(tuning)).returncode,
+            0,
+        )
+
+    def test_missing_popularity_schema_fails_no_vendor_price_fallback(self):
+        self.write_csv(self.items, ["itemId", "marketValue"], [[2318, 0]])
+        result = self.invoke("--merchant", "3532:0:165")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("saleRate", result.stderr)
+
+    def test_zero_popularity_is_observed_not_replaced(self):
+        self.write_csv(
+            self.items,
+            ["itemId", "marketValue", "saleRate", "soldPerDay", "updatedAt"],
+            [[i, 1000, 0, 0, "now"] for i in [2302, 2318, 2320, 2304, 900]],
+        )
+        config, _ = self.success()
+        self.assertEqual(config["markets"]["2302"]["popularity_bps"], 0)
+
+    def test_multiple_effects_and_recraft_reagents_reported(self):
+        self.recipe(1101, 2302, [(2318, 1)])
+        self.recipe(1102, 2302, [(2318, 1)])
+        with closing(sqlite3.connect(self.db)) as con, con:
+            con.execute(
+                "INSERT INTO spell_effect VALUES (1101,0,24,2304,1,0,0,0,0,0,1,0,0)"
+            )
+            con.execute(
+                "UPDATE spell_reagents SET ReagentReCraftCount_0=1 WHERE SpellID=1102"
+            )
+        _, report = self.success()
+        reasons = {r["spell_id"]: r["reason"] for r in report["excluded_recipes"]}
+        self.assertEqual(reasons[1101], "multiple_or_special_effects")
+        self.assertEqual(reasons[1102], "special_reagents")
+
+    def test_metadata_invalid_template_fails_explicitly(self):
+        with closing(sqlite3.connect(self.db)) as con, con:
+            con.execute("UPDATE content_item SET RequiredLevel=-1 WHERE ID=2318")
+        result = self.invoke("--merchant", "3532:0:165")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("invalid RequiredLevel", result.stderr)
+        self.assertFalse((self.root / "config.json").exists())
+
+    def test_bad_market_rows_excluded_zero_popularity_preserved(self):
+        self.write_csv(
+            self.items,
+            ["itemId", "marketValue", "saleRate", "soldPerDay", "updatedAt"],
+            [
+                [2302, 1000, 0, 0, "now"],
+                [2318, 1000, "NaN", 1, "now"],
+                [2320, 1000, 0.1, 1, "now"],
+                [2304, 0, 0.1, 1, "now"],
+                [900, 1000, 1.1, 1, "now"],
+            ],
+        )
+        config, report = self.success()
+        self.assertEqual(config["merchants"][0]["recipes"], [])
+        self.assertEqual(len(report["excluded_market_rows"]), 3)
+        self.assertEqual(report["assignments"][0]["eligible_recipe_count"], 0)
+        self.assertEqual(report["assignments"][0]["warning"], "no_supported_recipes")
+        self.assertEqual(config["markets"], {})
+        self.assertEqual(config["items"], {})
+        self.assertEqual(config["gatherables"], [])
+
+    def test_unsupported_midnight_assignment_warns_without_producing_goods(self):
+        with closing(sqlite3.connect(self.db)) as con, con:
+            con.execute("DELETE FROM skill_line_ability WHERE Spell=500")
+        result = self.invoke("--merchant", "3532:11:165")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("no_supported_recipes", result.stderr)
+        config = json.loads((self.root / "config.json").read_text())
+        report = json.loads((self.root / "report.json").read_text())
+        self.assertEqual(config["merchants"][0]["recipes"], [])
+        self.assertEqual(config["gatherables"], [])
+        self.assertEqual(config["items"], {})
+        self.assertEqual(config["markets"], {})
+        self.assertEqual(
+            report["output_spell_coverage"]["11"],
+            {
+                "create_item_spells": 1,
+                "profession_mapped": 0,
+                "missing_profession_mapping": 1,
+            },
+        )
+
+    def test_expansion_outside_runtime_i32_rejected(self):
+        result = self.invoke("--merchant", "3532:2147483648:165")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertFalse((self.root / "config.json").exists())
+
+    def test_invalid_commodity_price_never_uses_region_or_vendor_price(self):
+        self.write_csv(
+            self.commodities,
+            ["itemId", "marketValue", "updatedAt"],
+            [[2318, 0, "2026-09-30T15:23:54Z"]],
+        )
+        config, report = self.success()
+        self.assertEqual(config["merchants"][0]["recipes"], [])
+        self.assertEqual(
+            report["excluded_market_rows"],
+            [{"item_id": 2318, "reason": "invalid item ID or copper price"}],
+        )
+        self.assertNotIn("2318", report["market_provenance"])
+
+
+class DownloadTests(unittest.TestCase):
+    def test_http_retry_after_then_saved_snapshot_and_permanent_error(self):
+        spec = importlib.util.spec_from_file_location("catalog", SCRIPT)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+
+        class Handler(BaseHTTPRequestHandler):
+            attempts = 0
+
+            def log_message(self, *args):
+                return
+
+            def do_GET(self):
+                Handler.attempts += 1
+                if self.path == "/permanent":
+                    self.send_error(404)
+                    return
+                if self.path == "/retry" and Handler.attempts == 1:
+                    self.send_response(429)
+                    self.send_header("Retry-After", "0")
+                    self.end_headers()
+                    return
+                if self.path == "/exhaust":
+                    self.send_response(503)
+                    self.send_header("Retry-After", "0")
+                    self.end_headers()
+                    return
+                if self.path == "/dated" and Handler.attempts == 5:
+                    self.send_response(429)
+                    self.send_header("Retry-After", "Wed, 30 Sep 2020 00:00:00 GMT")
+                    self.end_headers()
+                    return
+                if self.path == "/bounded":
+                    self.send_response(503)
+                    self.send_header("Retry-After", "999")
+                    self.end_headers()
+                    return
+                self.send_response(200)
+                self.end_headers()
+                self.wfile.write(b"itemId,marketValue\n2318,2000\n")
+
+        server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        self.addCleanup(server.server_close)
+        self.addCleanup(server.shutdown)
+        with tempfile.TemporaryDirectory() as tmp:
+            target = Path(tmp) / "items.csv"
+            url = f"http://127.0.0.1:{server.server_port}"
+            module.fetch_snapshot(url + "/retry", target)
+            self.assertEqual(target.read_bytes(), b"itemId,marketValue\n2318,2000\n")
+            self.assertEqual(Handler.attempts, 2)
+            with self.assertRaises(urllib.error.HTTPError):
+                module.fetch_snapshot(url + "/permanent", target)
+            self.assertEqual(Handler.attempts, 3)
+            with self.assertRaises(ValueError):
+                module.fetch_snapshot(url + "/bounded", target)
+            self.assertEqual(Handler.attempts, 4)
+            module.fetch_snapshot(url + "/dated", target)
+            self.assertEqual(Handler.attempts, 6)
+            with self.assertRaises(urllib.error.HTTPError):
+                module.fetch_snapshot(url + "/exhaust", target)
+            self.assertEqual(Handler.attempts, 10)
+            self.assertEqual(target.read_bytes(), b"itemId,marketValue\n2318,2000\n")
+
+
+if __name__ == "__main__":
+    unittest.main()

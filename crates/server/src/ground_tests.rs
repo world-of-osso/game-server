@@ -301,3 +301,30 @@ fn map_min_height_follows_the_mfbo_plane_under_the_feet() {
     assert_eq!(min(&mut ground, -4500.0, -3210.0), -1000.0);
     assert_eq!(min(&mut ground, -8820.0, 660.0), -1000.0);
 }
+
+#[test]
+fn azeroth_ground_opens_at_startup_from_the_client_cache() {
+    let mut ground = client_ground();
+
+    assert_eq!(ground.open_now(0), Ok(()));
+    // Northshire, below the ridge the Blackrock Spy spawns on: terrain 76.14.
+    let (x, _, z) = crate::terrain_height::wow_to_bevy(-8966.63, -192.0, 76.0);
+    let GroundProbe::Supported(floor) = ground.ground_at(0, Vec3::new(x, 81.04, z)) else {
+        panic!("no Northshire ground");
+    };
+    assert!((floor - 76.14).abs() < 0.01, "floor {floor}");
+}
+
+#[test]
+fn missing_client_cache_fails_naming_the_azeroth_wdt() {
+    let missing = std::env::temp_dir().join("no-such-game-engine-data");
+    let mut ground = GroundMap::new(
+        &missing,
+        std::collections::HashMap::from([(0, AZEROTH_WDT_FDID)]),
+    );
+
+    let err = ground.open_now(0).unwrap_err();
+
+    let wdt = missing.join("terrain/775971.wdt");
+    assert!(err.starts_with(&format!("{}: ", wdt.display())), "{err}");
+}
