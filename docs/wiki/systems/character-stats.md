@@ -143,7 +143,7 @@ The spawned `Health` comes from redb. The first recompute keeps the persisted ra
   - `octclasscombatratingscalar`;
   - multiplicative haste stacking;
   - dodge, parry and block from stats.
-- **Replication:** `CharacterStats` is server-only. The client sees only `UnitStats`, `CombatRatings`, `Health` and `Mana`.
+- **Replication:** `CharacterStats` is server-only. `Health` and `Mana` replicate to every observer; `UnitStats` and `CombatRatings` only to the owning connection (`sheet_visibility.rs`: `SheetOwner(connection)`, set on `PlayerLink` insert, is a replicon visibility filter scoped to those two components). They feed the client's character sheet; its crit/haste/mastery/versatility percentages are not replicated.
 - **Shared formulas:** shared-protocol `formulas/rating_data.rs` interleaves a level column into every sixth entry and ends at level 80, and `rating_to_percent` divides by `raw × 100`, which is 100× too small.
   - The server no longer calls any of them.
   - They are scheduled for deletion in shared-protocol.

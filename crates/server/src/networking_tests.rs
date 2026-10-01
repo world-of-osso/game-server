@@ -105,6 +105,8 @@ mod physics;
 mod player_motion;
 #[path = "networking_tests/receiver_rate.rs"]
 mod receiver_rate;
+#[path = "networking_tests/sheet_stats.rs"]
+mod sheet_stats;
 #[path = "networking_tests/stockade_run.rs"]
 mod stockade_run;
 #[path = "networking_tests/terrain.rs"]

@@ -75,6 +75,7 @@ mod race_class;
 mod reputation;
 mod rest;
 mod scripted_ai;
+mod sheet_visibility;
 mod spell_cast;
 mod spell_info;
 mod stats;
@@ -211,6 +212,7 @@ fn add_world_plugins(app: &mut App) {
         .add_plugins(spell_cast::SpellCastPlugin)
         .add_plugins(auras::AuraPlugin)
         .add_plugins(interest::InterestPlugin)
+        .add_plugins(sheet_visibility::SheetVisibilityPlugin)
         .add_plugins(admin_ipc::AdminIpcPlugin);
 }
 
