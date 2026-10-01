@@ -287,9 +287,10 @@ fn tick_gains(h: &mut Harness, ticks: usize) -> Vec<f32> {
 }
 
 /// Regeneration 20555 (Troll racial): MOD_HEALTH_REGEN_PERCENT 10 makes the level 10
-/// out-of-combat tick 22 instead of 20; its MOD_REGEN_DURING_COMBAT 10 lets health
-/// regenerate in combat at `Rate.Health` × 10% = 0.1 per tick into `m_healthFraction`:
-/// ten f32 tenths fall just short of 1, so the first whole point lands on the 11th tick.
+/// out-of-combat tick 22 instead of 20. Its MOD_REGEN_DURING_COMBAT 10 lets health
+/// regenerate in combat, but only `Rate.Health` × 10% = 0.1 per tick, and
+/// `RegenerateHealth` keeps `m_healthFraction` only from ticks that add a whole point
+/// (`if (!integerValue) return;`), so in combat it never adds any.
 #[test]
 fn troll_regeneration_raises_regen_and_keeps_a_trickle_in_combat() {
     const REGENERATION: u32 = 20_555;
@@ -316,9 +317,7 @@ fn troll_regeneration_raises_regen_and_keeps_a_trickle_in_combat() {
     };
     assert!((super::powers::player_health_regen(&inputs) - 0.1).abs() < 1e-6);
     set_combat(&mut h, true);
-    let gains = tick_gains(&mut h, 11);
-    assert_eq!(gains[..10], [0.0; 10]);
-    assert_eq!(gains[10], 1.0);
+    assert_eq!(tick_gains(&mut h, 12), vec![0.0; 12]);
 }
 
 /// Vitality 20885 (enchant): MOD_HEALTH_REGEN_IN_COMBAT 8 adds 8 health every tick,

@@ -133,7 +133,9 @@ fn on_use_from_row(row: &Row) -> rusqlite::Result<Option<OnUseSpell>> {
         charges: row.get(APPEARANCE_COLUMN + 2)?,
         cooldown: crate::spell_cast::ItemCooldown {
             category: row.get(APPEARANCE_COLUMN + 3)?,
-            category_ms: row.get(APPEARANCE_COLUMN + 4)?,
+            // -1 keeps the spell's own category cooldown (`SpellHistory::GetCooldownDurations`
+            // takes the item's only when >= 0), which the cast starts anyway.
+            category_ms: row.get::<_, i32>(APPEARANCE_COLUMN + 4)?.max(0) as u32,
         },
     }))
 }
