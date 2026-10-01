@@ -40,6 +40,8 @@ import sqlite3
 import sys
 from pathlib import Path
 
+import derived_merchants
+
 SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
 import db2  # noqa: E402
@@ -51,6 +53,7 @@ from economy_crafting import crafting_item_ids  # noqa: E402
 PROJECT_DIR = SCRIPT_DIR.parent
 WRATH_BUILD = "3.4.0.47659"
 DEFAULT_OVERRIDES = SCRIPT_DIR / "content_overrides.csv"
+DEFAULT_DERIVED_MERCHANTS = SCRIPT_DIR / "derived-merchants.json"
 DEFAULT_REPORT = PROJECT_DIR / "data/reports/content-dropped.csv"
 
 REWARD_ITEMS = [(f"RewardItem{n}", f"RewardAmount{n}") for n in range(1, 5)] + [
@@ -260,23 +263,48 @@ def build_creature_models(conn, overrides, report):
             FROM tdb_creature_template_model WHERE CreatureID = ?""", (entry, retail_entry))
 
 
-def apply_policy(conn, wrath_spell_names, overrides_path, report):
+def apply_policy(
+    conn, wrath_spell_names, overrides_path, report, derived_merchant_records=()
+):
     crafting_items = crafting_item_ids(conn)
     for item_id in sorted(crafting_items):
         for table in ("item_sparse", "item"):
-            if conn.execute(f"SELECT 1 FROM {table} WHERE ID=?", (item_id,)).fetchone() is None:
-                report.drop(table, f"ID={item_id}", item_id, "crafting item missing Retail source row")
+            if (
+                conn.execute(f"SELECT 1 FROM {table} WHERE ID=?", (item_id,)).fetchone()
+                is None
+            ):
+                report.drop(
+                    table,
+                    f"ID={item_id}",
+                    item_id,
+                    "crafting item missing Retail source row",
+                )
                 crafting_items.discard(item_id)
     retail_content.create_retail_map_table(conn)
     wowhead_loot.load_wowhead_drops(conn, wowhead_loot.wowhead_root())
     retail_items = dict(conn.execute("SELECT ID, Display_lang FROM item_sparse"))
     retail_spells = dict(conn.execute("SELECT ID, Name_lang FROM spell_name"))
     overrides = load_overrides(overrides_path, conn)
-    item_map, item_reasons = map_ids(dict(conn.execute("SELECT entry, name FROM item_template")), retail_items, overrides["item"])
+    item_map, item_reasons = map_ids(
+        dict(conn.execute("SELECT entry, name FROM item_template")),
+        retail_items,
+        overrides["item"],
+    )
     spell_map, _ = map_ids(wrath_spell_names, retail_spells, overrides["spell"])
     create_map_table(conn, "item_map", item_map)
     create_map_table(conn, "spell_map", spell_map)
-    build_items(conn, item_map, item_reasons, retail_content.tdb_item_ids(conn) | crafting_items, report)
+    merchant_items = {
+        vendor["item"]
+        for merchant in derived_merchant_records
+        for vendor in merchant["vendors"]
+    }
+    build_items(
+        conn,
+        item_map,
+        item_reasons,
+        retail_content.tdb_item_ids(conn) | crafting_items | merchant_items,
+        report,
+    )
     build_vendors(conn, report)
     build_quests(conn, item_map, spell_map, report)
     build_loot(conn, report)
@@ -289,13 +317,20 @@ def apply_policy(conn, wrath_spell_names, overrides_path, report):
     retail_content.build_gossip(conn, report)
     retail_content.build_quests(conn, report)
     retail_content.build_creature_text(conn)
+    if derived_merchant_records:
+        derived_merchants.apply_derived_merchants(conn, derived_merchant_records)
 
 
 def main():
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     parser.add_argument("--db", type=Path, default=PROJECT_DIR / "data/world.db")
     parser.add_argument("--csv-root", type=Path, default=db2.DEFAULT_CSV_ROOT)
     parser.add_argument("--overrides", type=Path, default=DEFAULT_OVERRIDES)
+    parser.add_argument(
+        "--derived-merchants", type=Path, default=DEFAULT_DERIVED_MERCHANTS
+    )
     parser.add_argument("--report", type=Path, default=DEFAULT_REPORT)
     parser.add_argument("--check", action="store_true")
     args = parser.parse_args()
@@ -303,6 +338,7 @@ def main():
     missing = [str(p) for p in (wrath_path, args.overrides) if not p.is_file()]
     if missing:
         raise SystemExit(f"Missing content policy inputs: {', '.join(missing)}")
+    merchants = derived_merchants.load_manifest(args.derived_merchants)
     if args.check:
         return
     wrath_spell_names = read_wrath_spell_names(wrath_path)
@@ -310,7 +346,7 @@ def main():
     conn = sqlite3.connect(args.db, isolation_level=None)
     try:
         conn.execute("BEGIN")
-        apply_policy(conn, wrath_spell_names, args.overrides, report)
+        apply_policy(conn, wrath_spell_names, args.overrides, report, merchants)
         conn.execute("COMMIT")
     except BaseException:
         if conn.in_transaction:
@@ -320,7 +356,12 @@ def main():
         conn.close()
     report.write(args.report)
     conn = sqlite3.connect(f"file:{args.db}?mode=ro", uri=True)
-    for name in sorted(r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name LIKE 'content_%'")):
+    for name in sorted(
+        r[0]
+        for r in conn.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name LIKE 'content_%'"
+        )
+    ):
         print(f"  {name}: {conn.execute(f'SELECT count(*) FROM {name}').fetchone()[0]}")
     conn.close()
     for table, count in sorted(report.counts.items()):

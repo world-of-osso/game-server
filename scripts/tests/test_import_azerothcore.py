@@ -168,6 +168,7 @@ class CreatureEventImportTests(unittest.TestCase):
             "retail_content.py",
             "wowhead_loot.py",
             "content_policy.py",
+            "derived_merchants.py",
             "economy_crafting.py",
             "tdb_schema.sql",
             "crafting_data.py",
@@ -177,6 +178,7 @@ class CreatureEventImportTests(unittest.TestCase):
         (scripts / "content_overrides.csv").write_text(
             "kind,source_id,retail_id,source_name,retail_name,reason\n"
         )
+        (scripts / "derived-merchants.json").write_text("[]\n")
         self.crafting = self.root / "data/reference/crafting/12.1.0.69933"
         self.crafting.mkdir(parents=True)
         for table in crafting_data.TABLES:
@@ -224,14 +226,164 @@ class CreatureEventImportTests(unittest.TestCase):
         env.pop("CRAFTING_SOURCE_DIR", None)
         if crafting_source is not None:
             env["CRAFTING_SOURCE_DIR"] = str(crafting_source)
-        return subprocess.run(
-            [str(self.root / "scripts/import-azerothcore.sh"), str(self.sql)],
-            env=env,
-            capture_output=True,
-            text=True,
-            timeout=10,
-            check=False,
+        try:
+            return subprocess.run(
+                [str(self.root / "scripts/import-azerothcore.sh"), str(self.sql)],
+                env=env,
+                capture_output=True,
+                text=True,
+                timeout=10,
+                check=False,
+            )
+        except subprocess.TimeoutExpired as error:
+            self.fail(
+                f"Importer timed out: stdout={error.stdout!r}; stderr={error.stderr!r}"
+            )
+
+    def test_derived_merchant_survives_two_full_rebuilds(self):
+        merchant = {
+            "entry": 243531,
+            "name": "Zaralda",
+            "minlevel": 80,
+            "maxlevel": 90,
+            "display_id": 138959,
+            "guid": 1000243531,
+            "map": 0,
+            "area_id": 15969,
+            "position_x": 8728.991197265625,
+            "position_y": -4547.716015625,
+            "position_z": 23.438097,
+            "orientation": 0.0,
+            "source_url": "https://www.wowhead.com/npc=243531/zaralda",
+            "placement_kind": "derived",
+            "vendors": [
+                {
+                    "slot": 0,
+                    "item": 251665,
+                    "buy_price": 700,
+                    "buy_count": 1,
+                    "maxcount": 0,
+                    "incrtime": 0,
+                    "extended_cost": 0,
+                }
+            ],
+        }
+        (self.root / "scripts/derived-merchants.json").write_text(
+            json.dumps([merchant])
         )
+        write_tdb(
+            self.tdb, "creature_template", [tdb_template(243531, "Zaralda", 0, 0)]
+        )
+        write_tdb(
+            self.tdb,
+            "creature_template_difficulty",
+            [tdb_difficulty(243531, 1, 0, 0, 0, content_tuning=0, health_expansion=11)],
+        )
+        write_tdb(
+            self.tdb,
+            "creature_template_model",
+            [
+                tdb_row(
+                    "creature_template_model",
+                    CreatureID=243531,
+                    Idx=0,
+                    CreatureDisplayID=138959,
+                    DisplayScale=1,
+                    Probability=1,
+                    VerifiedBuild=69497,
+                )
+            ],
+        )
+        write_db2_rows(
+            self.csv / db2.DEFAULT_BUILD, "CreatureDisplayInfo", [{"ID": 138959}]
+        )
+        write_db2_rows(
+            self.csv / db2.DEFAULT_BUILD,
+            "Item",
+            [{"ID": 251665, "ClassID": 7, "SubclassID": 5}],
+        )
+        write_db2_rows(
+            self.csv / db2.DEFAULT_BUILD,
+            "ItemSparse",
+            [
+                {
+                    "ID": 251665,
+                    "Display_lang": "Silverleaf Thread",
+                    "BuyPrice": 700,
+                    "VendorStackCount": 1,
+                    "Stackable": 1000,
+                }
+            ],
+        )
+        for _ in range(2):
+            result = self.run_import()
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            with closing(sqlite3.connect(self.db)) as conn:
+                self.assertEqual(
+                    conn.execute(
+                        "SELECT name,minlevel,maxlevel,npcflag FROM content_creature_template "
+                        "WHERE entry=243531"
+                    ).fetchone(),
+                    ("Zaralda", 80, 90, 128),
+                )
+                self.assertEqual(
+                    conn.execute(
+                        "SELECT CreatureDisplayID FROM content_creature_template_model "
+                        "WHERE CreatureID=243531"
+                    ).fetchall(),
+                    [(138959,)],
+                )
+                self.assertEqual(
+                    conn.execute(
+                        "SELECT guid,map,areaId,position_x,position_y,position_z,orientation "
+                        "FROM content_creature WHERE id1=243531"
+                    ).fetchall(),
+                    [
+                        (
+                            1000243531,
+                            0,
+                            15969,
+                            8728.991197265625,
+                            -4547.716015625,
+                            23.438097,
+                            0.0,
+                        )
+                    ],
+                )
+                self.assertEqual(
+                    conn.execute(
+                        "SELECT item,maxcount,incrtime,ExtendedCost FROM content_npc_vendor "
+                        "WHERE entry=243531"
+                    ).fetchall(),
+                    [(251665, 0, 0, 0)],
+                )
+                self.assertEqual(
+                    conn.execute(
+                        "SELECT BuyPrice,VendorStackCount FROM content_item WHERE ID=251665"
+                    ).fetchone(),
+                    (700, 1),
+                )
+                self.assertEqual(
+                    conn.execute(
+                        "SELECT COUNT(*) FROM tdb_creature WHERE id=243531"
+                    ).fetchone(),
+                    (0,),
+                )
+
+    def test_invalid_derived_manifest_preserves_existing_database_bytes(self):
+        with closing(sqlite3.connect(self.db)) as conn, conn:
+            conn.execute("CREATE TABLE sentinel (value TEXT)")
+            conn.execute(
+                "INSERT INTO sentinel VALUES ('keep before importer deletion')"
+            )
+        before = self.db.read_bytes()
+        path = self.root / "scripts/derived-merchants.json"
+        for contents in ("not json", "[{}]"):
+            with self.subTest(contents=contents):
+                path.write_text(contents)
+                result = self.run_import()
+                self.assertNotEqual(result.returncode, 0)
+                self.assertEqual(self.db.read_bytes(), before)
 
     def test_invalid_crafting_snapshot_preserves_existing_database_bytes(self):
         with closing(sqlite3.connect(self.db)) as conn, conn:
