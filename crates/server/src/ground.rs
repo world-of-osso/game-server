@@ -523,9 +523,20 @@ impl Plugin for GroundPlugin {
     }
 }
 
-/// After `WorldDataPlugin` has loaded the `MapStore` (Startup).
+/// After `WorldDataPlugin` has loaded the `MapStore` (Startup). Without the client's
+/// terrain every creature keeps its spawn height wherever it runs, so the server refuses
+/// to start instead.
 fn open_ground_map(mut commands: Commands, maps: Res<crate::maps::MapStore>) {
     let data_dir = Path::new(CLIENT_DATA_DIR);
+    let terrain = data_dir.join("terrain");
+    if !terrain.is_dir() {
+        let cwd = std::env::current_dir().unwrap_or_default();
+        panic!(
+            "No ground: {} is not a directory (relative to the working directory {}); run the server from a checkout beside game-engine",
+            terrain.display(),
+            cwd.display()
+        );
+    }
     let wdts = maps
         .maps
         .values()
