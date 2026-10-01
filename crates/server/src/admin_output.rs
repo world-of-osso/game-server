@@ -213,6 +213,12 @@ fn print_character_response(response: &AdminResponse) -> bool {
         } => {
             println!("Mail delivered: {character_name} <- {count} mail");
         }
+        AdminResponse::QuestCompleted {
+            character_name,
+            quest_id,
+        } => {
+            println!("Quest objectives complete: {character_name} quest {quest_id}");
+        }
         AdminResponse::DurabilitySet {
             character_name,
             percent,

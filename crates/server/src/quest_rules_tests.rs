@@ -283,3 +283,21 @@ fn azerothcore_quest_pays_its_fixed_reward_money() {
         -250
     );
 }
+
+#[test]
+fn quest_complete_fills_the_vineyard_fires_but_needs_the_quest_in_the_log() {
+    let Some(db) = test_quest_db() else { return };
+    const EXTINGUISHING_HOPE: u32 = 26391;
+    let mut log = log_with(&[EXTINGUISHING_HOPE], &[]);
+
+    complete_counted_objectives(db, &mut log, EXTINGUISHING_HOPE).expect("in log");
+
+    let quest = &db.quests[&EXTINGUISHING_HOPE];
+    let counts = objective_counts(quest, log.active(EXTINGUISHING_HOPE).unwrap(), no_items);
+    assert_eq!(counts, [8]);
+    assert!(objectives_done(quest, &counts));
+    assert_eq!(
+        complete_counted_objectives(db, &mut log, BEATING_THEM_BACK),
+        Err(format!("quest {BEATING_THEM_BACK} is not in the log"))
+    );
+}

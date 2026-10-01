@@ -51,6 +51,8 @@ struct AdminResources<'w, 's> {
     vendor_catalog: Option<Res<'w, crate::merchant::VendorCatalog>>,
     inventory_updates: ResMut<'w, crate::gold::GoldUpdateQueue>,
     changed_mailboxes: ResMut<'w, crate::mail::ChangedMailboxes>,
+    quests: Option<Res<'w, crate::quest_data::QuestDb>>,
+    quest_dirty: Option<ResMut<'w, crate::quest::QuestDirty>>,
     instances: crate::maps::difficulty::AdminInstances<'w, 's>,
     economy: Option<Res<'w, crate::economy::Economy>>,
     economy_config: Option<Res<'w, crate::economy::Config>>,
@@ -146,6 +148,22 @@ fn dispatch_resource_commands(
             (*item_id, *count),
         ));
     }
+    if let AdminRequest::QuestComplete {
+        character_name,
+        quest_id,
+    } = request
+    {
+        let (Some(quests), Some(dirty)) = (&res.quests, &mut res.quest_dirty) else {
+            return Some(AdminResponse::Error("quest data not loaded".into()));
+        };
+        return Some(handle_quest_complete(
+            db,
+            quests,
+            dirty,
+            character_name,
+            *quest_id,
+        ));
+    }
     if let AdminRequest::MailDeliverNow { character_name } = request {
         return Some(handle_mail_deliver_now(
             db,
@@ -189,6 +207,31 @@ fn handle_grant_item(
             }
         }
         Err(error) => AdminResponse::Error(format!("grant {count} x {item_id} to {name}: {error}")),
+    }
+}
+
+/// `quest-complete`: the quest's counted objectives done; an online owner gets the
+/// `QuestLogUpdate` and quest giver markers through `QuestDirty`.
+fn handle_quest_complete(
+    db: &persistence::GameDatabase,
+    quests: &crate::quest_data::QuestDb,
+    dirty: &mut crate::quest::QuestDirty,
+    name: &str,
+    quest_id: u32,
+) -> AdminResponse {
+    let Some(character_id) = persistence::find_character_id_by_name(&db.db, name) else {
+        return AdminResponse::Error(format!("character '{name}' not found"));
+    };
+    let mut log = persistence::quest_store::load_quest_log(&db.db, character_id);
+    if let Err(error) = crate::quest_rules::complete_counted_objectives(quests, &mut log, quest_id)
+    {
+        return AdminResponse::Error(format!("{name}: {error}"));
+    }
+    persistence::quest_store::save_quest_log(&db.db, character_id, &log);
+    dirty.0.insert(character_id);
+    AdminResponse::QuestCompleted {
+        character_name: name.to_owned(),
+        quest_id,
     }
 }
 
@@ -373,6 +416,7 @@ fn dispatch(
         AdminRequest::Ping => AdminResponse::Pong,
         AdminRequest::CombatLog { .. }
         | AdminRequest::GrantItem { .. }
+        | AdminRequest::QuestComplete { .. }
         | AdminRequest::MailDeliverNow { .. } => {
             // Handled in poll_admin_ipc before dispatch is called
             unreachable!()
@@ -745,6 +789,42 @@ mod tests {
             vec![(2589, 4, "Linen Cloth")]
         );
         assert!(updates.changed_inventories().contains(&character_id));
+    }
+
+    #[test]
+    fn quest_complete_saves_the_finished_objectives_and_marks_the_log_dirty() {
+        let Some(quests) = crate::quest_data::test_quest_db() else {
+            return;
+        };
+        let db = persistence::GameDatabase {
+            db: persistence::temp_database(),
+        };
+        let (character_id, _) =
+            persistence::create_character(&db.db, 1, "Quester", 1, 1).expect("character");
+        let mut dirty = crate::quest::QuestDirty::default();
+        assert!(matches!(
+            handle_quest_complete(&db, quests, &mut dirty, "Quester", 26391),
+            AdminResponse::Error(ref e) if e.contains("not in the log")
+        ));
+        let mut log = persistence::quest_store::load_quest_log(&db.db, character_id);
+        log.active.push(persistence::quest_store::ActiveQuestData {
+            quest_id: 26391,
+            counts: vec![3],
+        });
+        persistence::quest_store::save_quest_log(&db.db, character_id, &log);
+
+        let response = handle_quest_complete(&db, quests, &mut dirty, "Quester", 26391);
+
+        assert_eq!(
+            response,
+            AdminResponse::QuestCompleted {
+                character_name: "Quester".into(),
+                quest_id: 26391
+            }
+        );
+        let saved = persistence::quest_store::load_quest_log(&db.db, character_id);
+        assert_eq!(saved.active(26391).unwrap().counts, [8]);
+        assert!(dirty.0.contains(&character_id));
     }
 
     #[test]

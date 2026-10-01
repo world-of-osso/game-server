@@ -210,6 +210,32 @@ pub(crate) fn objectives_done(quest: &QuestTemplate, counts: &[u32]) -> bool {
         .all(|(objective, &count)| count >= objective.required)
 }
 
+/// TrinityCore `.quest complete` for the counted objectives: every kill and object
+/// objective of `quest_id` in the log reaches its requirement; item objectives stay
+/// bag counts. Errs when the quest is not in the log.
+pub(crate) fn complete_counted_objectives(
+    db: &QuestDb,
+    log: &mut QuestLogData,
+    quest_id: u32,
+) -> Result<(), String> {
+    let quest = db
+        .quests
+        .get(&quest_id)
+        .ok_or_else(|| format!("quest {quest_id} unknown"))?;
+    let active = log
+        .active
+        .iter_mut()
+        .find(|active| active.quest_id == quest_id)
+        .ok_or_else(|| format!("quest {quest_id} is not in the log"))?;
+    active.counts.resize(quest.objectives.len(), 0);
+    for (objective, count) in quest.objectives.iter().zip(&mut active.counts) {
+        if objective.kind != QuestObjectiveKind::Item {
+            *count = objective.required;
+        }
+    }
+    Ok(())
+}
+
 /// `KilledMonsterCredit`: add one kill to every unfinished objective of a quest
 /// in the log that counts `creature_entry`. Returns whether anything changed.
 pub(crate) fn credit_kill(db: &QuestDb, log: &mut QuestLogData, creature_entry: u32) -> bool {
