@@ -408,9 +408,21 @@ QUEST_ITEM_COLUMNS = ([f"RewardItem{n}" for n in range(1, 5)] + [f"ItemDrop{n}" 
 TDB_LOOT_TABLES = ("creature_loot_template", "gameobject_loot_template", "reference_loot_template", "item_loot_template")
 
 
+# CharacterLoadoutEntry::IsForNewCharacter (DB2Structure.h:664).
+NEW_CHARACTER_LOADOUT = 9
+# ACTION_BUTTON_ITEM (Player.h:374).
+ACTION_BUTTON_ITEM = 0x80
+
+
 def tdb_item_ids(conn):
-    """Retail item ids TrinityCore's vendors, loot and quests and Wowhead's drops reference that Retail ItemSparse has."""
+    """Retail item ids TrinityCore's vendors, loot, quests and new-character kit and Wowhead's drops
+    reference that Retail ItemSparse has. The kit: CharacterLoadout Purpose 9 items
+    (CharacterLoadoutEntry::IsForNewCharacter), playercreateinfo_item and item action buttons."""
     sources = [f"SELECT item FROM tdb_npc_vendor WHERE type = {VENDOR_ITEM}"]
+    sources += [f"""SELECT ItemID FROM character_loadout_item WHERE CharacterLoadoutID IN
+                    (SELECT ID FROM character_loadout WHERE Purpose = {NEW_CHARACTER_LOADOUT})""",
+                "SELECT itemid FROM tdb_playercreateinfo_item",
+                f"SELECT action FROM tdb_playercreateinfo_action WHERE type = {ACTION_BUTTON_ITEM}"]
     sources += [f"SELECT Item FROM tdb_{table} WHERE ItemType = {LOOT_ITEM}" for table in TDB_LOOT_TABLES]
     sources += ["SELECT item FROM wowhead_creature_drop",
                 "SELECT Entry FROM tdb_item_loot_template",

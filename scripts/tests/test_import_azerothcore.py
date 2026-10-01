@@ -440,6 +440,37 @@ class CreatureEventImportTests(unittest.TestCase):
             self.assertEqual(conn.execute("SELECT Id, Greeting FROM tdb_trainer").fetchall(), [(163, "TDB greeting")])
             self.assertEqual(conn.execute("SELECT * FROM tdb_creature_trainer").fetchall(), [(1346, 163, 4353, 0)])
 
+    def test_new_character_kit_items_join_content_item(self):
+        csv_dir = self.csv / db2.DEFAULT_BUILD
+        # Human Mage new-character loadout 1277 (Purpose 9) gives the Bent Staff 35 and the
+        # Hearthstone 6948; loadout 14 (Purpose 0) is not a new-character loadout.
+        write_db2_rows(csv_dir, "CharacterLoadout", [
+            {"ID": 1277, "ChrClassID": 8, "Purpose": 9, "ModID": 75, "RaceMasks_0": 1},
+            {"ID": 14, "ChrClassID": 6, "Purpose": 0}])
+        write_db2_rows(csv_dir, "CharacterLoadoutItem", [
+            {"ID": 16396, "CharacterLoadoutID": 1277, "ItemID": 35},
+            {"ID": 16397, "CharacterLoadoutID": 1277, "ItemID": 6948},
+            {"ID": 16, "CharacterLoadoutID": 14, "ItemID": 58257}])
+        write_db2_rows(csv_dir, "ItemSparse", [
+            {"ID": item, "Display_lang": name} for item, name in
+            ((35, "Bent Staff"), (6948, "Hearthstone"), (58257, "Highland Spring Water"),
+             (40582, "Scourgestone"), (117, "Tough Jerky"))])
+        write_tdb(self.tdb, "playercreateinfo_item", ["(0,6,40582,-1)"])
+        write_tdb(self.tdb, "playercreateinfo_action", ["(1,8,0,116,0)", "(7,6,83,117,128)"])
+        result = self.run_import()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        with closing(sqlite3.connect(self.db)) as conn:
+            self.assertEqual(
+                conn.execute("SELECT ID, Name FROM content_item ORDER BY ID").fetchall(),
+                [(35, "Bent Staff"), (117, "Tough Jerky"), (6948, "Hearthstone"), (40582, "Scourgestone")])
+            self.assertEqual(conn.execute("SELECT * FROM tdb_playercreateinfo_item").fetchall(), [(0, 6, 40582, -1)])
+            self.assertEqual(
+                conn.execute("SELECT * FROM tdb_playercreateinfo_action ORDER BY race").fetchall(),
+                [(1, 8, 0, 116, 0), (7, 6, 83, 117, 128)])
+            self.assertEqual(
+                conn.execute("SELECT ItemID FROM character_loadout_item WHERE CharacterLoadoutID = 1277"
+                             " ORDER BY ID").fetchall(), [(35,), (6948,)])
+
     def test_missing_tdb_excerpt_does_not_destroy_existing_database(self):
         (self.tdb / "skill_tiers.sql").unlink()
         self.db.write_bytes(b"existing database must survive failed preflight")
