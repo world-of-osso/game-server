@@ -571,6 +571,73 @@ pub(crate) fn cast_granted(
     result
 }
 
+/// The cooldown an item effect puts on its spell's category (`ItemEffect`
+/// `SpellCategoryID` / `CategoryCoolDownMSec`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct ItemCooldown {
+    pub category: u32,
+    pub category_ms: u32,
+}
+
+/// `Player::CastItemUseSpell` (Player.cpp:8790-8838): cast an item's on-use spell as the
+/// player, spellbook aside, unless the item effect's category is cooling down
+/// (`SPELL_FAILED_NOT_READY`); a started cast puts the category on that cooldown
+/// (`SpellHistory::StartCooldown` with the item's `CategoryCoolDownMSec`).
+pub(crate) fn cast_item_spell(
+    world: &mut World,
+    caster: Entity,
+    spell_id: u32,
+    target: Option<Entity>,
+    cooldown: ItemCooldown,
+) -> Result<(), CastFailure> {
+    let now = now(world);
+    let cooling = cooldown.category != 0
+        && world.get::<SpellHistory>(caster).is_some_and(|history| {
+            history
+                .category_ready_at
+                .get(&cooldown.category)
+                .is_some_and(|&ready| ready > now)
+        });
+    if cooling {
+        let (reason, detail) = CastFailure::OnCooldown.to_contract();
+        send_to_owner(
+            world,
+            caster,
+            CastFailed {
+                spell_id,
+                reason,
+                detail,
+            },
+        );
+        return Err(CastFailure::OnCooldown);
+    }
+    cast_granted(world, caster, spell_id, target)?;
+    if cooldown.category != 0 && cooldown.category_ms > 0 {
+        world
+            .entity_mut(caster)
+            .entry::<SpellHistory>()
+            .or_default()
+            .get_mut()
+            .category_ready_at
+            .insert(
+                cooldown.category,
+                now + f64::from(cooldown.category_ms) / 1000.0,
+            );
+        send_to_owner(
+            world,
+            caster,
+            SpellCooldownUpdate {
+                spell_id,
+                category: cooldown.category,
+                duration_ms: cooldown.category_ms,
+                remaining_ms: cooldown.category_ms,
+                is_gcd: false,
+            },
+        );
+    }
+    Ok(())
+}
+
 fn request_cast(
     world: &mut World,
     caster: Entity,
@@ -815,6 +882,7 @@ fn start_cast(
     explicit: Option<Entity>,
 ) -> Result<(), CastFailure> {
     let target = validate_start(world, caster, spell, explicit)?;
+    crate::stand_state::stand_to_cast(world, caster, attributes(spell, 0));
     start_gcd(world, caster, spell);
     let cast_ms = cast_time_ms(world, caster, spell);
     if cast_ms > 0 {
@@ -1187,17 +1255,21 @@ pub(super) fn starts_combat(
     let engaged = world
         .get::<shared::components::CombatStatus>(target)
         .is_some_and(|status| status.0);
-    let harmful = world
+    caster != target
+        && targets::relation_matches(world, caster, target, Relation::Enemy)
+        && attacks_with(world, spell)
+        && (initial_aggro || engaged)
+}
+
+/// A harmful spell or one that dispels (`!IsPositive() || HasEffect(SPELL_EFFECT_DISPEL)`).
+fn attacks_with(world: &World, spell: &SpellInfo) -> bool {
+    world
         .get_resource::<SpellStore>()
         .is_some_and(|store| crate::spell_info::positivity::negative_effects(store, spell) != 0)
         || spell
             .effects
             .iter()
-            .any(|effect| effect.effect == effects::EFFECT_DISPEL);
-    caster != target
-        && targets::relation_matches(world, caster, target, Relation::Enemy)
-        && harmful
-        && (initial_aggro || engaged)
+            .any(|effect| effect.effect == effects::EFFECT_DISPEL)
 }
 
 /// Distinct units of the plan, in plan order.
@@ -1308,6 +1380,9 @@ fn push_hit_events(
         // unit the caster can attack starts combat with it.
         if targets::relation_matches(world, caster, target, Relation::Enemy) {
             crate::creature_aggro::add_threat(world, target, caster, 0.0);
+            if attacks_with(world, spell) {
+                crate::stand_state::stand_on_hostile_spell(world, target, attributes(spell, 3));
+            }
         }
         let harmful = targets::is_hostile(world, caster, target);
         let (actor_mask, mut target_mask) = procs::spell_hit_masks(spell, harmful);

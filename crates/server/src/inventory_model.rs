@@ -737,16 +737,30 @@ impl InventoryModel {
         Ok(())
     }
 
-    /// Item on-use spells need item spell data, which the server does not load.
-    pub(crate) fn use_item(&self, location: ItemLocation) -> OpResult {
+    /// The spell using the item at `location` casts (`Player::ProcessItemCast`,
+    /// Player.cpp:31665-31691): an equippable item is used only when equipped.
+    pub(crate) fn use_spell(
+        &self,
+        location: ItemLocation,
+    ) -> Result<crate::item_templates::OnUseSpell, InventoryError> {
         let item = self.existing(location)?;
-        Err(error(
-            InventoryErrorReason::CantDoRightNow,
-            format!(
-                "item {} has no on-use spell data on the server",
-                item.item_id
-            ),
-        ))
+        let template = self.template(item);
+        if template.is_some_and(|template| template.inventory_type != 0)
+            && !matches!(location, ItemLocation::Equipment(_))
+        {
+            return Err(error(
+                InventoryErrorReason::ItemNotFound,
+                format!("item {} is used only when equipped", item.item_id),
+            ));
+        }
+        template
+            .and_then(|template| template.on_use)
+            .ok_or_else(|| {
+                error(
+                    InventoryErrorReason::CantDoRightNow,
+                    format!("item {} has no on-use spell", item.item_id),
+                )
+            })
     }
 
     pub(crate) fn gold(&self) -> u64 {

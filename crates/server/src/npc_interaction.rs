@@ -20,7 +20,7 @@ use bevy::prelude::*;
 use lightyear::prelude::*;
 use shared::components::{CombatStatus, Health, Npc, Position, UnitFactionTemplate};
 use shared::protocol::{
-    CloseInteraction, GAMEOBJECT_TYPE_GUILD_BANK, GAMEOBJECT_TYPE_MAILBOX,
+    CloseInteraction, GAMEOBJECT_TYPE_CHAIR, GAMEOBJECT_TYPE_GUILD_BANK, GAMEOBJECT_TYPE_MAILBOX,
     GAMEOBJECT_TYPE_MEETINGSTONE, GAMEOBJECT_TYPE_RITUAL, GameObjectInfo, InteractNpc,
     InteractionChannel, InteractionClosed, InteractionError, InteractionFailed, InteractionKind,
     InteractionOpened, NpcFlags, NpcRole, SelectGossipOption, UseGameObject,
@@ -173,6 +173,7 @@ impl InteractionWorld<'_, '_> {
             GAMEOBJECT_TYPE_GUILD_BANK => ObjectUse::Role(NpcRole::GuildBanker),
             GAMEOBJECT_TYPE_MAILBOX => ObjectUse::Role(NpcRole::Mailbox),
             GAMEOBJECT_TYPE_MEETINGSTONE | GAMEOBJECT_TYPE_RITUAL => ObjectUse::Spell,
+            GAMEOBJECT_TYPE_CHAIR => ObjectUse::Chair,
             _ => return Err(InteractionError::InvalidTarget),
         };
         let (player_position, player_health, _) = self
@@ -215,6 +216,8 @@ enum ObjectUse {
     Role(NpcRole),
     /// Casts the object's spell (`meeting_stone::use_object`).
     Spell,
+    /// Seats the user (`chair::sit`).
+    Chair,
 }
 
 fn distance(a: &Position, b: &Position) -> f32 {
@@ -322,6 +325,13 @@ fn process_game_object_uses(
                     let player = link.0;
                     commands.queue(move |world: &mut World| {
                         crate::meeting_stone::use_object(world, player, object);
+                    });
+                    continue;
+                }
+                Ok((object, ObjectUse::Chair)) => {
+                    let player = link.0;
+                    commands.queue(move |world: &mut World| {
+                        crate::chair::sit(world, player, object);
                     });
                     continue;
                 }

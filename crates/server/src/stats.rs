@@ -123,6 +123,8 @@ pub struct CharacterStats {
     pub off_hand: Option<WeaponDamage>,
     /// Dodge, parry and block (`player_defense`).
     pub defense: PlayerDefense,
+    /// `m_baseHealthRegen`: the gear's `ITEM_MOD_HEALTH_REGEN`, health per 5 s.
+    pub health_regen: f32,
 }
 
 impl CharacterStats {
@@ -320,6 +322,7 @@ pub fn compute_character_stats(
         main_hand: WeaponDamage::UNARMED,
         off_hand: None,
         defense: PlayerDefense::default(),
+        health_regen: 0.0,
     })
 }
 
@@ -405,6 +408,7 @@ pub fn player_defense(
         shield_block: inputs
             .shield_armor
             .map_or(0.0, |armor| armor * SHIELD_BLOCK_PER_ARMOR),
+        sitting: false,
     }
 }
 
@@ -464,6 +468,7 @@ impl ItemData<'_> {
             off_hand: None,
             has_weapon: false,
             shield_armor: None,
+            health_regen: 0.0,
         };
         let (Some(templates), Some(tables), Some(equipped)) =
             (self.templates.as_deref(), self.tables.as_deref(), equipped)
@@ -476,6 +481,7 @@ impl ItemData<'_> {
             };
             let stats = item_stats(template, tables);
             gear.blocks.push(stats.block);
+            gear.health_regen += stats.health_regen;
             if template.inventory_type == INVTYPE_SHIELD && slot == EquipmentSlot::OffHand {
                 gear.shield_armor = Some(stats.block.secondary.armor);
             }
@@ -501,6 +507,7 @@ struct Gear {
     off_hand: Option<WeaponDamage>,
     has_weapon: bool,
     shield_armor: Option<f32>,
+    health_regen: f32,
 }
 
 /// `InventoryType` Shield.
@@ -598,6 +605,7 @@ pub(crate) fn update_character_stats(
         };
         stats.main_hand = gear.main_hand;
         stats.off_hand = gear.off_hand;
+        stats.health_regen = gear.health_regen;
         stats.defense = player_defense(
             player.class,
             level.0,

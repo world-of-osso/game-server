@@ -128,6 +128,7 @@ pub(crate) fn spawn_player(app: &mut App, class: u8, x: f32) -> Entity {
             Level(10),
             // Human.
             UnitFactionTemplate(1),
+            shared::components::PlayerStandState::default(),
             Moving(false),
             crate::networking::CombatTarget::default(),
             // In combat so rage does not decay mid-test (rage test toggles it).
@@ -186,6 +187,8 @@ pub(crate) fn spawn_peer_connection(app: &mut App, player: Entity, peer: u64) ->
                 MessageReceiver::<StopSpellCast>::default(),
                 MessageSender::<CancelAura>::default(),
                 MessageReceiver::<CancelAura>::default(),
+                MessageSender::<shared::protocol::StandStateIntent>::default(),
+                MessageReceiver::<shared::protocol::StandStateIntent>::default(),
             ),
             (
                 MessageSender::<CastFailed>::default(),
@@ -253,6 +256,7 @@ pub(crate) fn harness_with_plugins(
     app.add_plugins(super::SpellCastPlugin);
     app.add_plugins(crate::auras::AuraPlugin);
     app.add_plugins(crate::creature_scripts::CreatureScriptsPlugin);
+    app.add_plugins(crate::stand_state::StandStatePlugin);
     app.add_systems(Update, crate::messaging::process_target_messages);
     if computed_stats {
         app.add_plugins(crate::stats::StatsPlugin);

@@ -109,6 +109,8 @@ mod receiver_rate;
 mod regen;
 #[path = "networking_tests/sheet_stats.rs"]
 mod sheet_stats;
+#[path = "networking_tests/stand_state.rs"]
+mod stand_state;
 #[path = "networking_tests/stockade_run.rs"]
 mod stockade_run;
 #[path = "networking_tests/terrain.rs"]

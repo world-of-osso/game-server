@@ -430,6 +430,7 @@ fn player_avoidance_follows_trinitycore_master() {
             parry: 5.0,
             block: 5.0,
             shield_block: 250.0,
+            sitting: false,
         }
     );
     let rated = player_defense(

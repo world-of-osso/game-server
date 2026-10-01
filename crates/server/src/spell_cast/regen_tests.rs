@@ -232,14 +232,152 @@ fn runic_power_holds_in_combat_and_decays_out_of_combat() {
     assert!((runic - 475.0).abs() < 0.01, "{runic}");
 }
 
+fn level_10_inputs(in_combat: bool) -> super::powers::HealthRegenInputs {
+    super::powers::HealthRegenInputs {
+        level: 10,
+        max: 1110.0,
+        in_combat,
+        polymorphed: false,
+        standing: true,
+        regen_mult: 1.0,
+        mod_regen: 0.0,
+        regen_during_combat_pct: None,
+        regen_in_combat: None,
+        base_health_regen: 0.0,
+    }
+}
+
 #[test]
 fn polymorphed_player_regains_a_third_of_max_health_per_tick_even_in_combat() {
-    assert_eq!(
-        super::powers::player_health_regen(10, 1110.0, true, true),
-        370.0
+    let regen = super::powers::player_health_regen;
+    let polymorphed = super::powers::HealthRegenInputs {
+        polymorphed: true,
+        ..level_10_inputs(true)
+    };
+    assert_eq!(regen(&polymorphed), 370.0);
+    assert_eq!(regen(&level_10_inputs(true)), 0.0);
+}
+
+/// Apply every aura effect of `spell_id` from the caster to itself.
+fn self_aura(h: &mut Harness, spell_id: u32) {
+    let caster = h.caster;
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster,
+            target: caster,
+            spell_id,
+            effect_mask: u32::MAX,
+            source: crate::auras::AuraSource::Cast,
+        },
     );
-    assert_eq!(
-        super::powers::player_health_regen(10, 1110.0, true, false),
-        0.0
-    );
+}
+
+/// Health gained over each of `ticks` 2 s regen ticks.
+fn tick_gains(h: &mut Harness, ticks: usize) -> Vec<f32> {
+    let mut gains = Vec::new();
+    let mut last = h.health(h.caster);
+    for _ in 0..ticks {
+        h.advance(FRAMES_PER_TICK);
+        let now = h.health(h.caster);
+        gains.push(now - last);
+        last = now;
+    }
+    gains
+}
+
+/// Regeneration 20555 (Troll racial): MOD_HEALTH_REGEN_PERCENT 10 makes the level 10
+/// out-of-combat tick 22 instead of 20. Its MOD_REGEN_DURING_COMBAT 10 lets health
+/// regenerate in combat, but only `Rate.Health` × 10% = 0.1 per tick, and
+/// `RegenerateHealth` keeps `m_healthFraction` only from ticks that add a whole point
+/// (`if (!integerValue) return;`), so in combat it never adds any.
+#[test]
+fn troll_regeneration_raises_regen_and_keeps_a_trickle_in_combat() {
+    const REGENERATION: u32 = 20_555;
+    let Some(mut h) = harness(Vec::new(), &[REGENERATION], MAGE) else {
+        return;
+    };
+    h.advance(1);
+    set_combat(&mut h, false);
+    set_health(&mut h, 100.0, 1000.0);
+    self_aura(&mut h, REGENERATION);
+    h.advance(FRAMES_PER_TICK);
+    assert_eq!(tick_gains(&mut h, 3), vec![22.0; 3]);
+    let mods = h
+        .app
+        .world()
+        .get::<crate::auras::AuraStatMods>(h.caster)
+        .unwrap();
+    let inputs = super::powers::HealthRegenInputs {
+        regen_mult: mods.health_regen_mult,
+        mod_regen: mods.mod_regen,
+        regen_during_combat_pct: mods.regen_during_combat_pct,
+        regen_in_combat: mods.health_regen_in_combat,
+        ..level_10_inputs(true)
+    };
+    assert!((super::powers::player_health_regen(&inputs) - 0.1).abs() < 1e-6);
+    set_combat(&mut h, true);
+    assert_eq!(tick_gains(&mut h, 12), vec![0.0; 12]);
+}
+
+/// Vitality 20885 (enchant): MOD_HEALTH_REGEN_IN_COMBAT 8 adds 8 health every tick,
+/// in combat too.
+#[test]
+fn vitality_regenerates_eight_health_per_tick_in_combat() {
+    const VITALITY: u32 = 20_885;
+    let Some(mut h) = harness(Vec::new(), &[VITALITY], MAGE) else {
+        return;
+    };
+    h.advance(1);
+    set_health(&mut h, 100.0, 1000.0);
+    self_aura(&mut h, VITALITY);
+    h.advance(FRAMES_PER_TICK);
+    assert_eq!(tick_gains(&mut h, 3), vec![8.0; 3]);
+}
+
+/// Food 1127 (Conjured Pumpernickel 1487): MOD_REGEN scaled by SpellScaling, class
+/// -2 Consumable at level 10 (1000) × 0.25 = 250 health per 5 s, 100 per tick. It
+/// sits the player down, so the level 10 tick is (20 + 100) × 1.5 = 180.
+#[test]
+fn pumpernickel_mod_regen_heals_its_scaled_amount_seated() {
+    const PUMPERNICKEL_FOOD: u32 = 1127;
+    let Some(mut h) = harness(Vec::new(), &[PUMPERNICKEL_FOOD], MAGE) else {
+        return;
+    };
+    h.advance(1);
+    set_combat(&mut h, false);
+    set_health(&mut h, 100.0, 1000.0);
+    let caster = h.caster;
+    h.app
+        .world_mut()
+        .entity_mut(caster)
+        .insert(shared::components::UnitLevel(10));
+    self_aura(&mut h, PUMPERNICKEL_FOOD);
+    let mods = h
+        .app
+        .world()
+        .get::<crate::auras::AuraStatMods>(h.caster)
+        .unwrap();
+    assert_eq!(mods.mod_regen, 250.0);
+    h.advance(FRAMES_PER_TICK);
+    assert_eq!(tick_gains(&mut h, 2), vec![180.0; 2]);
+}
+
+/// `m_baseHealthRegen` (gear ITEM_MOD_HEALTH_REGEN 5 per 5 s) adds 2 health every tick
+/// and keeps regeneration running in combat (Player.cpp:1626, 1780).
+#[test]
+fn gear_health_regen_adds_its_share_every_tick_in_combat() {
+    let Some(mut h) = harness(Vec::new(), &[], MAGE) else {
+        return;
+    };
+    h.advance(1);
+    set_health(&mut h, 100.0, 1000.0);
+    let caster = h.caster;
+    h.app
+        .world_mut()
+        .get_mut::<crate::stats::CharacterStats>(caster)
+        .unwrap()
+        .health_regen = 5.0;
+    h.advance(FRAMES_PER_TICK);
+    assert_eq!(tick_gains(&mut h, 3), vec![2.0; 3]);
 }

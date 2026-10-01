@@ -56,6 +56,7 @@ const ATTR0_NO_AURA_CANCEL: u32 = 0x8000_0000;
 const ATTR1_AURA_UNIQUE: u32 = 0x800;
 const ATTR3_DOT_STACKING_RULE: u32 = 0x80;
 const ATTR3_ALLOW_AURA_WHILE_DEAD: u32 = 0x0010_0000;
+const ATTR5_EXTRA_INITIAL_PERIOD: u32 = 0x200;
 
 /// `DispelType` 7 matches every dispel type.
 const DISPEL_ALL: u32 = 7;
@@ -437,7 +438,13 @@ fn build_effect(
         period_ms,
         trigger_spell: effect.trigger_spell,
         class_mask: effect.spell_class_mask,
-        next_tick_at: now + f64::from(period_ms) / 1000.0,
+        // `AuraEffect::ResetPeriodic` (SpellAuraEffects.cpp:957-960): with
+        // SPELL_ATTR5_EXTRA_INITIAL_PERIOD the first tick lands on apply.
+        next_tick_at: if attributes(spell, 5) & ATTR5_EXTRA_INITIAL_PERIOD != 0 {
+            now
+        } else {
+            now + f64::from(period_ms) / 1000.0
+        },
         absorb_remaining: amount.max(0.0),
     }
 }
@@ -617,6 +624,23 @@ pub fn apply_aura(world: &mut World, application: &AuraApplication) {
     }
     log_unhandled_types(world, &instance);
     ensure_aura_components(world, target);
+    if let Some(specific) = food_drink(&spell) {
+        let excluded: Vec<u32> = world
+            .get::<ActiveAuras>(target)
+            .expect("aura components ensured")
+            .iter()
+            .map(|aura| aura.spell_id)
+            .filter(|&id| id != spell.id)
+            .filter(|&id| {
+                lookup_spell(world, id)
+                    .and_then(|other| food_drink(&other))
+                    .is_some_and(|other| specific.excludes(other))
+            })
+            .collect();
+        remove_auras(world, target, RemoveReason::Replaced, |aura| {
+            excluded.contains(&aura.spell_id)
+        });
+    }
     let coexist = instance.harmful
         || instance.effects.iter().any(|effect| effect.period_ms > 0)
         || attributes(&spell, 3) & ATTR3_DOT_STACKING_RULE != 0;
@@ -644,9 +668,55 @@ pub fn apply_aura(world: &mut World, application: &AuraApplication) {
             shapeshift::remove_other_forms(world, target, id);
         }
         scripts::run_apply(world, target, &aura);
+        let stuns = aura
+            .effects
+            .iter()
+            .any(|effect| effect.aura_type == handlers::MOD_STUN);
+        crate::stand_state::on_aura_applied(world, target, aura.interrupt_flags, stuns);
     }
     log_event(world, aura_event(&aura, target, kind));
     auras_changed(world, target);
+}
+
+/// `SPELL_SPECIFIC_FOOD`, `_DRINK` or `_FOOD_AND_DRINK` (SpellInfo.cpp:2815-2845).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct FoodDrink {
+    food: bool,
+    drink: bool,
+}
+
+impl FoodDrink {
+    /// `SpellInfo::IsAuraExclusiveBySpecificWith` (SpellInfo.cpp:2082-2091): food
+    /// excludes food, drink drink, and food and drink both.
+    fn excludes(self, other: Self) -> bool {
+        (self.food && other.food) || (self.drink && other.drink)
+    }
+}
+
+/// A `SPELLFAMILY_GENERIC` spell with the Standing interrupt flag is food when it has a
+/// MOD_REGEN or OBS_MOD_HEALTH aura and drink with MOD_POWER_REGEN or OBS_MOD_POWER.
+fn food_drink(spell: &SpellInfo) -> Option<FoodDrink> {
+    let generic = spell
+        .class_options
+        .as_ref()
+        .is_none_or(|options| options.spell_class_set == 0);
+    let seated = spell.interrupts.as_ref().is_some_and(|interrupts| {
+        interrupts.aura_interrupt_flags[0] & crate::stand_state::AURA_INTERRUPT_STANDING != 0
+    });
+    if !generic || !seated {
+        return None;
+    }
+    let has = |types: [u32; 2]| {
+        spell
+            .effects
+            .iter()
+            .any(|effect| is_aura_effect(effect) && types.contains(&effect.aura))
+    };
+    let specific = FoodDrink {
+        food: has([handlers::MOD_REGEN, handlers::OBS_MOD_HEALTH]),
+        drink: has([handlers::MOD_POWER_REGEN, handlers::OBS_MOD_POWER]),
+    };
+    (specific.food || specific.drink).then_some(specific)
 }
 
 /// Why an aura left its unit.
@@ -665,6 +735,8 @@ pub enum RemoveReason {
     CasterGone,
     /// The creature evaded (`RemoveEvadeAuras`).
     Evade,
+    /// A new aura its spell specific excludes took its place (food by food).
+    Replaced,
 }
 
 fn announce_removed(world: &mut World, unit: Entity, aura: &AuraInstance) {

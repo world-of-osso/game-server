@@ -488,6 +488,10 @@ Players replicate `PlayerMotion`, Retail `MovementFlags` (FORWARD, BACKWARD, STR
 
 [[spell-casting]], [[experience]]: players regenerate health every 2 s out of combat (TrinityCore `Player::RegenerateHealth`); before, only creatures did, so a damaged player stayed damaged forever (observed 666/1110 and 1109/1110). Level-up fills `SetToMaxOnLevelUp` pools (adds Energy). A max-health rescale truncates to whole points. Live: Godot client on a private server, 666 → 1110 in 20 ticks of 22/23.
 
+## [2026-10-01] feature | Player stand state, food and drink
+
+[[stand-state]], [[spell-casting]], [[auras]]: players sit, sleep, kneel and take chairs (`PlayerStandState`, replicated); moving, hits, hostile spells, casting and death stand them up; food and drink sit a standing eater and end on standing; sitting regenerates ×1.5 and is crit by every melee swing that lands. Health regen auras 84/88/116/161 and gear health regen; SpellScaling effect amounts; OBS_MOD_POWER drink ticks. Item use builds on questsrv 22cf305 and adds the item category cooldown, peaceful-only refusal in combat and expendable consumption.
+
 ## [2026-10-01] feature | New-character kit
 
 [[new-character-kit]]: new characters get the TrinityCore a352b1fa `Player::Create` kit. It places CharacterLoadout Purpose 9 items (with playercreateinfo_item overrides) through `StoreNewItemInBestSlots` and the backpack second pass, and stores the playercreateinfo_action buttons. [[class-progression]] now teaches every default skill line's spells (LearnDefaultSkills) instead of only racial lines, and the server-invented default bar is gone. `ItemTemplate::allows` now checks PlayableRaceBit. Gaps: kit bags, jewelry and second one-handers stay in the backpack (no bag containers, no jewelry storage, no dual wield), and level-10 starts lose create buttons to spec resolution and pruning.

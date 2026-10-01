@@ -58,6 +58,16 @@ pub struct AuraStatMods {
     pub water_breathing: bool,
     /// MOD_WATER_BREATHING 155 breath duration multiplier (`GetTotalAuraMultiplier`).
     pub water_breathing_mult: f32,
+    /// MOD_HEALTH_REGEN_PERCENT 88 (`GetTotalAuraMultiplier`).
+    pub health_regen_mult: f32,
+    /// MOD_REGEN 84, summed health per 5 s (`GetTotalAuraModifier`).
+    pub mod_regen: f32,
+    /// MOD_REGEN_DURING_COMBAT 116, summed percent; `Some` while any is applied
+    /// (`HasAuraType`).
+    pub regen_during_combat_pct: Option<f32>,
+    /// MOD_HEALTH_REGEN_IN_COMBAT 161, summed health per regen tick; `Some` while any
+    /// is applied.
+    pub health_regen_in_combat: Option<f32>,
 }
 
 impl Default for AuraStatMods {
@@ -77,6 +87,10 @@ impl Default for AuraStatMods {
             attack_cast_time_mult: 1.0,
             water_breathing: false,
             water_breathing_mult: 1.0,
+            health_regen_mult: 1.0,
+            mod_regen: 0.0,
+            regen_during_combat_pct: None,
+            health_regen_in_combat: None,
         }
     }
 }
@@ -255,6 +269,12 @@ fn apply_aura(acc: &mut Accumulator, aura: &AuraInstance) {
             MOD_SPEED_SLOW_ALL => combat.attack_cast_time_mult *= time_percent_mod(amount),
             WATER_BREATHING => combat.water_breathing = true,
             MOD_WATER_BREATHING => combat.water_breathing_mult *= pct(amount),
+            MOD_HEALTH_REGEN_PERCENT => combat.health_regen_mult *= pct(amount),
+            MOD_REGEN => combat.mod_regen += amount,
+            MOD_REGEN_DURING_COMBAT => *combat.regen_during_combat_pct.get_or_insert(0.0) += amount,
+            MOD_HEALTH_REGEN_IN_COMBAT => {
+                *combat.health_regen_in_combat.get_or_insert(0.0) += amount
+            }
             _ => {}
         }
     }

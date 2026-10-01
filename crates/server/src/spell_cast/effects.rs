@@ -137,6 +137,8 @@ pub(crate) fn power_stats(world: &World, unit: Entity) -> (f32, f32) {
 }
 
 const SPELL_ATTR0_SCALES_WITH_CREATURE_LEVEL: u32 = 0x0008_0000;
+const SPELL_ATTR10_USE_SPELL_BASE_LEVEL_FOR_SCALING: u32 = 0x0000_1000;
+const SPELL_ATTR11_SCALES_WITH_ITEM_LEVEL: u32 = 0x0000_0004;
 const SPELL_ATTR12_USE_FLOAT_VALUES_FOR_SCALING_AMOUNTS: u32 = 0x0020_0000;
 
 /// `SpellEffectInfo::GetScalingExpectedStat` for the types a creature spell scales:
@@ -152,27 +154,87 @@ fn scales_with_spell_damage(effect: &SpellEffect) -> bool {
     }
 }
 
-/// `SpellEffectInfo::CalcBaseValue` without SpellScaling: a creature's damage effect
-/// is `BasePoints`% of ExpectedStat CreatureSpellDamage at its level, rounded unless
-/// `SPELL_ATTR12_USE_FLOAT_VALUES_FOR_SCALING_AMOUNTS`. Players keep `BasePoints`
-/// (their class spells carry their damage in coefficients).
+/// `SpellEffectInfo::CalcBaseValue` (SpellInfo.cpp:662-760). An effect with a scaling
+/// `Coefficient` is its scaling class column of gtSpellScaling at the caster's level
+/// (clamped to the spell's SpellScaling range, or its base level with
+/// `SPELL_ATTR10_USE_SPELL_BASE_LEVEL_FOR_SCALING`) × the coefficient, at least 1 when
+/// positive. Otherwise a creature's damage effect is `BasePoints`% of ExpectedStat
+/// CreatureSpellDamage at its level, and everything else `BasePoints` (player class
+/// spells carry their damage in coefficients). Both round unless
+/// `SPELL_ATTR12_USE_FLOAT_VALUES_FOR_SCALING_AMOUNTS`. Not modelled: item-level
+/// scaling (`SPELL_ATTR11_SCALES_WITH_ITEM_LEVEL` spells keep `BasePoints`), the target's
+/// level of `SPELL_ATTR8_USE_TARGETS_LEVEL_FOR_SPELL_SCALING` and the casting item's
+/// level multipliers of classes -6 and -7.
 fn calc_base_value(world: &World, caster: Entity, spell: &SpellInfo, effect: &SpellEffect) -> f32 {
+    let attribute = |index: usize| spell.misc.as_ref().map_or(0, |misc| misc.attributes[index]);
+    let level = world
+        .get::<shared::components::UnitLevel>(caster)
+        .map_or(1, |level| level.0);
+    let round = |value: f32| {
+        if attribute(12) & SPELL_ATTR12_USE_FLOAT_VALUES_FOR_SCALING_AMOUNTS != 0 {
+            value
+        } else {
+            value.round()
+        }
+    };
+    if effect.coefficient != 0.0 && attribute(11) & SPELL_ATTR11_SCALES_WITH_ITEM_LEVEL == 0 {
+        let base_level = spell.levels.as_ref().map_or(0, |levels| levels.base_level);
+        let level = if base_level > 0
+            && attribute(10) & SPELL_ATTR10_USE_SPELL_BASE_LEVEL_FOR_SCALING != 0
+        {
+            base_level
+        } else {
+            u32::from(level)
+        };
+        return round(spell_scaling_value(spell, effect, level));
+    }
     let creature = world.get::<Npc>(caster).is_some();
     let stats = world.get_resource::<crate::level_scaling::CreatureSpellStats>();
     let (true, Some(stats)) = (creature && scales_with_spell_damage(effect), stats) else {
         return effect.base_points;
     };
-    let attribute = |index: usize| spell.misc.as_ref().map_or(0, |misc| misc.attributes[index]);
     let auto_attack = attribute(0) & SPELL_ATTR0_SCALES_WITH_CREATURE_LEVEL != 0;
-    let level = world
-        .get::<shared::components::UnitLevel>(caster)
-        .map_or(1, |level| level.0);
     let tuning = spell.misc.as_ref().map_or(0, |misc| misc.content_tuning_id);
-    let value = stats.evaluate(auto_attack, level, tuning) * effect.base_points / 100.0;
-    if attribute(12) & SPELL_ATTR12_USE_FLOAT_VALUES_FOR_SCALING_AMOUNTS != 0 {
-        value
+    round(stats.evaluate(auto_attack, level, tuning) * effect.base_points / 100.0)
+}
+
+/// The SpellScaling amount of `effect` at `level`, before rounding: the
+/// `GetSpellScalingColumnForClass` column of its scaling class (0 for a class column,
+/// all 0 in this build, or class 0) × `Coefficient`, raised to 1 when in (0, 1).
+pub(crate) fn spell_scaling_value(spell: &SpellInfo, effect: &SpellEffect, level: u32) -> f32 {
+    use crate::spell_scaling_data::SPELL_SCALING;
+    let mut level = level;
+    if let Some(scaling) = spell.scaling {
+        if scaling.min_scaling_level > level {
+            level = scaling.min_scaling_level;
+        }
+        if scaling.max_scaling_level != 0 && scaling.max_scaling_level < level {
+            level = scaling.max_scaling_level;
+        }
+    }
+    let column = match effect.scaling_class {
+        -1 | -7 => Some(0),
+        -2 => Some(1),
+        -3 => Some(2),
+        -4 => Some(3),
+        -5 => Some(4),
+        -6 => Some(5),
+        -8 => Some(6),
+        -9 => Some(7),
+        -10 => Some(8),
+        _ => None,
+    };
+    let row = (level as usize)
+        .checked_sub(1)
+        .and_then(|index| SPELL_SCALING.get(index));
+    let value = match (row, column) {
+        (Some(row), Some(column)) => row[column] * effect.coefficient,
+        _ => 0.0,
+    };
+    if value > 0.0 && value < 1.0 {
+        1.0
     } else {
-        value.round()
+        value
     }
 }
 
@@ -441,6 +503,9 @@ pub fn deal_damage(
     // periodic tick refreshes no PvP or training dummy combat.
     if !periodic && loss > 0.0 {
         crate::creature_aggro::note_damage_taken(world, target);
+    }
+    if !periodic {
+        crate::stand_state::stand_on_damage(world, target);
     }
     crate::creature_aggro::add_threat(world, target, ctx.caster, amount);
     let mut event = log_amount(ctx, target, CombatLogKind::Damage);

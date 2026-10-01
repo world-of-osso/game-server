@@ -26,6 +26,7 @@ fn content_item_rows_load_inventory_attributes() {
             allowable_race: u64::MAX,
             scaling: sword.scaling,
             appearance_id: Some(154),
+            on_use: None,
         }
     );
     assert!(sword.allows(1, 1));
@@ -38,6 +39,28 @@ fn content_item_rows_load_inventory_attributes() {
     assert!(!fist.allows(1, 1));
     assert!(fist.binds_on_pickup());
     assert_eq!(fist.appearance_id, Some(2288));
+    // Milly's Fire Extinguisher (Extinguishing Hope) casts Spray Water.
+    assert_eq!(
+        templates
+            .get(58362)
+            .unwrap()
+            .on_use
+            .map(|on_use| on_use.spell_id),
+        Some(80199)
+    );
+    assert_eq!(linen.on_use, None);
+    // Tough Hunk of Bread: expendable Food in the 1 s "Item - Food" category 11.
+    assert_eq!(
+        templates.get(4540).unwrap().on_use,
+        Some(OnUseSpell {
+            spell_id: 1_291_822,
+            charges: -1,
+            cooldown: crate::spell_cast::ItemCooldown {
+                category: 11,
+                category_ms: 1000,
+            },
+        })
+    );
     // Wildgrove Haranir Longbow, Hunter-only: AllowableRaces_0 1572864 holds the
     // PlayableRaceBits of Haranir Horde 91 (19) and Alliance 86 (20).
     let longbow = templates.get(266263).unwrap();
