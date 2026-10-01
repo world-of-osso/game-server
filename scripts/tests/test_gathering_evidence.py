@@ -126,6 +126,12 @@ class GatheringEvidenceTests(unittest.TestCase):
             with self.subTest(replacement=replacement), self.assertRaises(ValueError):
                 self.module().parse_published_skinning(html, 238511)
 
+    def test_overridden_skinning_identity_properties_rejected(self):
+        for override in ["id: 'dropped-by',", "template: 'zone',"]:
+            html = page(238511).replace("name: WH.TERMS.skinnedfrom,", override)
+            with self.subTest(override=override), self.assertRaises(ValueError):
+                self.module().parse_published_skinning(html, 238511)
+
     def test_nonfinite_json_observation_fields_rejected(self):
         html = page(238511).replace('"name": "Venomous Mournbat"', '"name": NaN')
         with self.assertRaises(ValueError):

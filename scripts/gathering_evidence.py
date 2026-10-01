@@ -107,6 +107,11 @@ def extract_skinning_rows(script):
         data = list(re.finditer(r"^\s*data\s*:\s*", block, re.MULTILINE))
         if len(data) != 1:
             raise ValueError("Skinning Listview requires one raw JSON data array")
+        header = block[: data[0].start()]
+        for property_name in ("template", "id"):
+            properties = re.findall(rf"(?:\A|[,\n])\s*{property_name}\s*:", header)
+            if len(properties) != 1:
+                raise ValueError(f"Duplicate skinning Listview {property_name}")
         payload = block[data[0].end() :]
         records, end = DECODER.raw_decode(payload)
         if not re.fullmatch(r"\s*,?\s*", payload[end:]) or not isinstance(
