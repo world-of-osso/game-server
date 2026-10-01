@@ -311,6 +311,7 @@ fn equal_recompute_does_not_mark_health_changed() {
             Level(10),
             UnitStats::default(),
             CombatRatings::default(),
+            shared::components::DerivedStats::default(),
             Health {
                 current: 100.0,
                 max: 100.0,
@@ -354,6 +355,7 @@ fn max_health_change_keeps_whole_health_points() {
                 Level(10),
                 UnitStats::default(),
                 CombatRatings::default(),
+                DerivedStats::default(),
                 Health { current, max },
             ))
             .id()
@@ -373,16 +375,40 @@ fn max_health_change_keeps_whole_health_points() {
 
 #[test]
 fn secondary_dr_follows_curve_21024() {
-    assert_eq!(secondary_dr(10.0), 10.0);
-    assert_eq!(secondary_dr(30.0), 30.0);
-    assert_eq!(secondary_dr(45.0), 43.0);
-    assert_eq!(secondary_dr(250.0), 126.0);
+    assert_eq!(curve_value(&SECONDARY_DR_CURVE, 10.0), 10.0);
+    assert_eq!(curve_value(&SECONDARY_DR_CURVE, 30.0), 30.0);
+    assert_eq!(curve_value(&SECONDARY_DR_CURVE, 45.0), 43.0);
+    assert_eq!(curve_value(&SECONDARY_DR_CURVE, 250.0), 126.0);
     // 46 crit rating = 1% at level 90: 2300 rating = 50% raw → 47% after DR.
     let mut input = paladin_80_holy();
     input.level = 90;
     input.gear_ratings.crit = 2300.0;
     let stats = compute_character_stats(&input, None).unwrap();
     assert!((stats.crit_pct - 52.0).abs() < 1e-3, "{}", stats.crit_pct);
+}
+
+/// Leech, avoidance and speed ratings diminish on curve 21025: at level 20 (gtCombatRatings
+/// Lifesteal 6.648049399, Avoidance 3.545626346, Speed 1.108008233 per 1%) 12% raw leech
+/// keeps 11.6%, 5% avoidance stays whole and 30% raw speed keeps 21%.
+#[test]
+fn tertiary_ratings_follow_curve_21025() {
+    let mut input = paladin_80_holy();
+    input.level = 20;
+    input.gear_ratings.leech = 6.648_049_4 * 12.0;
+    input.gear_ratings.avoidance = 3.545_626_3 * 5.0;
+    input.gear_ratings.speed = 1.108_008_2 * 30.0;
+    let derived = compute_character_stats(&input, None).unwrap().derived();
+    let close = |actual: f32, expected: f32| (actual - expected).abs() < 1e-3;
+    assert!(close(derived.leech_pct, 11.6), "{derived:?}");
+    assert!(close(derived.avoidance_pct, 5.0), "{derived:?}");
+    assert!(close(derived.speed_pct, 21.0), "{derived:?}");
+    assert_eq!(
+        compute_character_stats(&paladin_80_holy(), None)
+            .unwrap()
+            .derived()
+            .leech_pct,
+        0.0
+    );
 }
 
 /// TC master avoidance (StatSystem.cpp:490-715): a level 10 Warrior with a weapon, a
@@ -438,4 +464,73 @@ fn player_avoidance_follows_trinitycore_master() {
         player_defense(WARRIOR, 10, &CombatRatings::default(), no_block).block,
         0.0
     );
+}
+
+const SPEC_ARCANE: u32 = 62;
+/// Death Speaker Robes, Death Speaker Mantle, Silk-Threaded Trousers: Intellect,
+/// Stamina, Critical Strike, Haste and Versatility cloth.
+const CASTER_CLOTH: [(EquipmentSlot, u32); 3] = [
+    (EquipmentSlot::Chest, 6682),
+    (EquipmentSlot::Shoulder, 6685),
+    (EquipmentSlot::Legs, 1929),
+];
+
+/// A level 20 human Arcane mage in the three cloth pieces, as the server spawns
+/// players: `update_character_stats` fills the owner-only `DerivedStats`.
+#[test]
+fn level_20_arcane_mage_in_caster_cloth_derives_sheet_stats() {
+    let Some((spells, classes)) = world_spell_data() else {
+        return;
+    };
+    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/world.db");
+    let mut world = World::new();
+    world.insert_resource(spells);
+    world.insert_resource(classes);
+    world.insert_resource(crate::item_templates::load_item_templates(&path).unwrap());
+    world.insert_resource(crate::item_stats::load_item_scaling_tables(&path).unwrap());
+    let mage = world
+        .spawn((
+            Player {
+                name: "Jaina".into(),
+                race: HUMAN,
+                class: MAGE,
+                appearance: default(),
+            },
+            Level(20),
+            ActiveSpec(SPEC_ARCANE),
+            EquippedItems {
+                items: CASTER_CLOTH.to_vec(),
+            },
+            UnitStats::default(),
+            CombatRatings::default(),
+            DerivedStats::default(),
+            Health {
+                current: 1.0,
+                max: 1.0,
+            },
+        ))
+        .id();
+    world.run_system_once(update_character_stats).unwrap();
+
+    // Squished to item level 11-12: robes +3 Int, +2 haste, +4 vers; mantle +2 Int,
+    // +3 crit, +2 haste; trousers +3 Int, +4 haste, +2 vers.
+    let derived = *world.get::<DerivedStats>(mage).unwrap();
+    // Mage L20 base Int 58 + 8 gear; Intellect is Arcane's main stat.
+    assert_eq!(derived.spell_power, 66.0);
+    // Mage ChrClasses AttackPowerPerStrength and AttackPowerPerAgility are 0.
+    assert_eq!(derived.attack_power, 0.0);
+    // gtCombatRatings L20 rating per 1%: crit 4.4319696, haste 4.2392755,
+    // versatility 5.202747; all below the 30% diminishing-returns knee.
+    let close = |actual: f32, expected: f32| (actual - expected).abs() < 1e-4;
+    assert!(
+        close(derived.crit_pct, 5.0 + 3.0 / 4.431_969_6),
+        "{derived:?}"
+    );
+    assert!(close(derived.haste_pct, 8.0 / 4.239_275_5), "{derived:?}");
+    assert!(
+        close(derived.versatility_pct, 6.0 / 5.202_747),
+        "{derived:?}"
+    );
+    // 8 base mastery points × Savant's 1.32 coefficient.
+    assert!(close(derived.mastery_pct, 10.56), "{derived:?}");
 }

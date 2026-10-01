@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 use shared::casting::CastState;
 use shared::components::{CombatStatus, Health, Mana, Position, PowerType, UnitPowers};
-use shared::protocol::{CastFailed, CombatLogKind, SpellCooldownUpdate, SpellGo};
+use shared::protocol::{CastFailed, CombatLogKind, SpellCooldownUpdate, SpellFailure, SpellGo};
 use shared::spell_data::CastFailReason;
 
 use crate::class_progression::KnownSpells;
@@ -724,4 +724,104 @@ fn spell_go_reaches_every_client_replicating_the_caster_with_its_hit_units() {
         shouts[0].hit_targets.contains(&h.caster.to_bits()),
         "{shouts:?}"
     );
+}
+
+/// Each connection's messages of type `M` while `frames` frames run.
+fn receive<M: lightyear::prelude::Message>(
+    h: &mut Harness,
+    connections: &[Entity],
+    frames: usize,
+) -> Vec<Vec<M>> {
+    let mut received: Vec<Vec<M>> = connections.iter().map(|_| Vec::new()).collect();
+    for _ in 0..frames {
+        h.app.update();
+        for (inbox, &connection) in received.iter_mut().zip(connections) {
+            inbox.extend(drain::<M>(&mut h.app, connection));
+        }
+    }
+    received
+}
+
+/// The caster's own client and a nearby observer replicate it; a distant client does not.
+fn observed(h: &mut Harness, unit: Entity) -> [Entity; 3] {
+    let observer = spawn_player(&mut h.app, 1, 2.0);
+    let observer_connection = spawn_peer_connection(&mut h.app, observer, 2);
+    let distant = spawn_player(&mut h.app, 1, 500.0);
+    let distant_connection = spawn_peer_connection(&mut h.app, distant, 3);
+    let mut visibility = crate::interest::NetworkVisibility::default();
+    visibility.gain_visibility(h.connection);
+    visibility.gain_visibility(observer_connection);
+    h.app.world_mut().entity_mut(unit).insert(visibility);
+    [h.connection, observer_connection, distant_connection]
+}
+
+/// `Spell::update` cancels a moving caster's cast (`cancel()`, SPELL_FAILED_INTERRUPTED)
+/// and `Spell::SendInterrupted` tells the caster's set (Spell.cpp:3613, 5177).
+#[test]
+fn moving_cancel_sends_spell_failure_to_the_casters_set() {
+    let Some(mut h) = harness(Vec::new(), &[FIREBALL], 8) else {
+        return;
+    };
+    let caster = h.caster;
+    let connections = observed(&mut h, caster);
+    h.cast(FIREBALL, Some(h.npc));
+    h.advance(3);
+    assert!(h.app.world().get::<CastState>(h.caster).is_some());
+    h.app.world_mut().get_mut::<Moving>(h.caster).unwrap().0 = true;
+    let failure = SpellFailure {
+        caster: h.caster.to_bits(),
+        spell_id: FIREBALL,
+        reason: CastFailReason::Interrupted,
+        failed_by: None,
+    };
+    assert_eq!(
+        receive::<SpellFailure>(&mut h, &connections, 3),
+        vec![vec![failure.clone()], vec![failure], Vec::new()]
+    );
+}
+
+/// `Spell::EffectInterruptCast`: `InterruptSpell(..., SPELL_FAILED_INTERRUPTED_COMBAT, ...,
+/// m_caster->GetGUID())` names the kicker as `FailedBy` (SpellEffects.cpp:3015).
+#[test]
+fn kick_sends_interrupted_combat_failure_naming_the_kicker() {
+    let Some(mut h) = harness(Vec::new(), &[KICK, FIREBALL], 4) else {
+        return;
+    };
+    let npc = h.npc;
+    let connections = observed(&mut h, npc);
+    h.app
+        .world_mut()
+        .entity_mut(h.npc)
+        .insert(CastState::normal(FIREBALL, 0, 1.75, true));
+    h.cast(KICK, Some(h.npc));
+    let failure = SpellFailure {
+        caster: h.npc.to_bits(),
+        spell_id: FIREBALL,
+        reason: CastFailReason::InterruptedCombat,
+        failed_by: Some(h.caster.to_bits()),
+    };
+    assert_eq!(
+        receive::<SpellFailure>(&mut h, &connections, 3),
+        vec![vec![failure.clone()], vec![failure], Vec::new()]
+    );
+}
+
+/// A cast that completes and a channel that runs out resolve without a failure.
+#[test]
+fn completed_casts_and_channels_send_no_spell_failure() {
+    let Some(mut h) = harness(Vec::new(), &[FIREBALL], 8) else {
+        return;
+    };
+    let npc = h.npc;
+    let connections = observed(&mut h, npc);
+    h.app
+        .world_mut()
+        .entity_mut(h.npc)
+        .insert(CastState::channel(5143, 0, 0.5, 0.25, true));
+    let received = receive::<SpellFailure>(&mut h, &connections, 60);
+    assert!(
+        h.app.world().get::<CastState>(h.npc).is_none(),
+        "channel ran out"
+    );
+    assert_eq!(received, vec![Vec::new(), Vec::new(), Vec::new()]);
 }

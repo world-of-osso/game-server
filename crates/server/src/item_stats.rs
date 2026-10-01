@@ -199,6 +199,10 @@ fn add_stat(block: &mut ItemStatBlock, stat: i8, value: f32) {
         36 => ratings.haste += value,
         40 => ratings.versatility += value,
         49 => ratings.mastery += value,
+        // ITEM_MOD_CR_SPEED / CR_LIFESTEAL / CR_AVOIDANCE (ItemTemplate.h:86-88).
+        61 => ratings.speed += value,
+        62 => ratings.leech += value,
+        63 => ratings.avoidance += value,
         _ => {}
     }
 }
@@ -209,8 +213,9 @@ fn add_primaries(stats: &mut UnitStats, value: f32, str: bool, agi: bool, int: b
     stats.intellect += if int { value } else { 0.0 };
 }
 
+/// SimC `util::is_combat_rating` for the modelled stats.
 fn is_rating(stat: i8) -> bool {
-    matches!(stat, 32 | 36 | 40 | 49)
+    matches!(stat, 32 | 36 | 40 | 49 | 61 | 62 | 63)
 }
 
 /// SimC `scaled_stat`: `round(alloc × budget × 0.0001 − socket penalty)`

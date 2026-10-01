@@ -29,6 +29,7 @@ use lightyear::prelude::ReplicationDirtyQueue;
 use shared::casting::CastState;
 use shared::components::{Health, Npc, PowerType};
 use shared::protocol::{CombatLogEvent, CombatLogKind, MissKind};
+use shared::spell_data::CastFailReason;
 
 use super::{SpellHistory, log_event, now};
 use crate::auras::procs::{self, AuraEvent};
@@ -663,7 +664,13 @@ fn interrupt_cast(world: &mut World, ctx: &EffectCtx, _effect: &SpellEffect, tar
         .as_ref()
         .and_then(|misc| misc.duration)
         .map_or(0, |duration| duration.duration_ms.max(0));
-    super::cancel_cast(world, target);
+    // `Spell::EffectInterruptCast`: SPELL_FAILED_INTERRUPTED_COMBAT, failed by the kicker.
+    super::interrupt_cast(
+        world,
+        target,
+        CastFailReason::InterruptedCombat,
+        Some(ctx.caster),
+    );
     let until = now(world) + lockout_ms as f64 / 1000.0;
     world
         .entity_mut(target)
