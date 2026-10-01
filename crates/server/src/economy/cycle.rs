@@ -1,6 +1,8 @@
 use super::{
     Config, VendorSupply,
-    model::{self, ConsumerPolicy, EconomyState, MaterialLot, MerchantState, Recipe},
+    model::{
+        self, ConsumerPolicy, EconomyState, MaterialLot, MerchantConfig, MerchantState, Recipe,
+    },
     store::{self, MarketChanges},
 };
 use crate::auction_house::{AuctionHouseState, deposit_cost, duration_secs};
@@ -238,85 +240,137 @@ fn rotate_merchants(
     book: &mut PurchaseBook<'_>,
     changes: &mut MarketChanges,
 ) -> Result<(), String> {
-    let mut budget = config.customer_budget;
-    let mut quantity = config.customer_quantity;
+    let mut policy = ConsumerPolicy {
+        quantity_limit: config.customer_quantity,
+        budget: config.customer_budget,
+    };
     for business in &config.merchants {
-        let merchant = next
-            .merchants
-            .get_mut(&business.entry)
-            .ok_or_else(|| format!("merchant {} lacks persisted capital", business.entry))?;
-        let refund = model::expire_stock(merchant, now)?;
-        next.refund_issued = next
-            .refund_issued
-            .checked_add(refund)
-            .ok_or("refund accounting overflows")?;
-        let excess = model::credit_capital(merchant, refund, business.capital_limit);
-        next.withdrawn = next
-            .withdrawn
-            .checked_add(excess)
-            .ok_or("withdrawal accounting overflows")?;
-        let policy = ConsumerPolicy {
-            quantity_limit: quantity,
-            budget,
-        };
-        let draws = (0..quantity).map(|_| draw()).collect::<Vec<_>>();
-        let (spent, bought) = model::consume_stock(merchant, &config.markets, &policy, &draws)?;
-        budget -= spent;
-        quantity -= bought;
-        next.customer_spent = next
-            .customer_spent
-            .checked_add(spent)
-            .ok_or("customer accounting overflows")?;
-        let excess = model::credit_capital(merchant, spent, business.capital_limit);
-        next.withdrawn = next
-            .withdrawn
-            .checked_add(excess)
-            .ok_or("withdrawal accounting overflows")?;
-        if business.recipes.is_empty() {
-            continue;
-        }
-        let recipe = &business.recipes[(draw() % business.recipes.len() as u64) as usize];
-        let stock_count: u64 = merchant
-            .stock
-            .iter()
-            .map(|batch| u64::from(batch.count))
-            .sum();
-        if stock_count + u64::from(recipe.output_count) > u64::from(business.capacity) {
-            continue;
-        }
-        acquire_ingredients(
-            db,
-            merchant,
-            recipe,
-            business.capacity,
-            config,
-            book,
-            changes,
-        )?;
-        let available = recipe.ingredients.iter().all(|(id, count)| {
-            merchant
-                .materials
-                .iter()
-                .filter(|lot| lot.item_id == *id)
-                .map(|lot| u64::from(lot.count))
-                .sum::<u64>()
-                >= u64::from(*count)
-        });
-        if !available {
-            continue;
-        }
-        let market = &config.markets[&recipe.output_item_id];
-        let price = model::quote_price(market, draw())?;
-        let batch_id = next
-            .next_batch_id
-            .checked_add(1)
-            .ok_or("batch ID exhausted")?;
-        match model::craft_from_materials(merchant, business, recipe, price, now, batch_id) {
-            Ok(()) => next.next_batch_id = batch_id,
-            Err(error) => return Err(error),
-        }
+        expire_merchant_stock(next, business, now)?;
+        consume_merchant_stock(next, business, config, &mut policy, draw)?;
+        produce_merchant_stock(db, next, business, config, now, draw, book, changes)?;
     }
     Ok(())
+}
+
+fn expire_merchant_stock(
+    next: &mut EconomyState,
+    business: &MerchantConfig,
+    now: u64,
+) -> Result<(), String> {
+    let merchant = next
+        .merchants
+        .get_mut(&business.entry)
+        .ok_or_else(|| format!("merchant {} lacks persisted capital", business.entry))?;
+    let refund = model::expire_stock(merchant, now)?;
+    next.refund_issued = next
+        .refund_issued
+        .checked_add(refund)
+        .ok_or("refund accounting overflows")?;
+    let excess = model::credit_capital(merchant, refund, business.capital_limit);
+    next.withdrawn = next
+        .withdrawn
+        .checked_add(excess)
+        .ok_or("withdrawal accounting overflows")?;
+    Ok(())
+}
+
+fn consume_merchant_stock(
+    next: &mut EconomyState,
+    business: &MerchantConfig,
+    config: &Config,
+    policy: &mut ConsumerPolicy,
+    draw: &mut impl FnMut() -> u64,
+) -> Result<(), String> {
+    let merchant = next
+        .merchants
+        .get_mut(&business.entry)
+        .ok_or_else(|| format!("merchant {} lacks persisted capital", business.entry))?;
+    let draws = (0..policy.quantity_limit)
+        .map(|_| draw())
+        .collect::<Vec<_>>();
+    let (spent, bought) = model::consume_stock(merchant, &config.markets, policy, &draws)?;
+    policy.budget -= spent;
+    policy.quantity_limit -= bought;
+    next.customer_spent = next
+        .customer_spent
+        .checked_add(spent)
+        .ok_or("customer accounting overflows")?;
+    let excess = model::credit_capital(merchant, spent, business.capital_limit);
+    next.withdrawn = next
+        .withdrawn
+        .checked_add(excess)
+        .ok_or("withdrawal accounting overflows")?;
+    Ok(())
+}
+
+fn produce_merchant_stock(
+    db: &redb::Database,
+    next: &mut EconomyState,
+    business: &MerchantConfig,
+    config: &Config,
+    now: u64,
+    draw: &mut impl FnMut() -> u64,
+    book: &mut PurchaseBook<'_>,
+    changes: &mut MarketChanges,
+) -> Result<(), String> {
+    let merchant = next
+        .merchants
+        .get_mut(&business.entry)
+        .ok_or_else(|| format!("merchant {} lacks persisted capital", business.entry))?;
+    let Some(recipe) = select_recipe_with_capacity(merchant, business, draw) else {
+        return Ok(());
+    };
+    acquire_ingredients(
+        db,
+        merchant,
+        recipe,
+        business.capacity,
+        config,
+        book,
+        changes,
+    )?;
+    if !has_recipe_materials(merchant, recipe) {
+        return Ok(());
+    }
+    let market = &config.markets[&recipe.output_item_id];
+    let price = model::quote_price(market, draw())?;
+    let batch_id = next
+        .next_batch_id
+        .checked_add(1)
+        .ok_or("batch ID exhausted")?;
+    model::craft_from_materials(merchant, business, recipe, price, now, batch_id)?;
+    next.next_batch_id = batch_id;
+    Ok(())
+}
+
+fn select_recipe_with_capacity<'a>(
+    merchant: &MerchantState,
+    business: &'a MerchantConfig,
+    draw: &mut impl FnMut() -> u64,
+) -> Option<&'a Recipe> {
+    if business.recipes.is_empty() {
+        return None;
+    }
+    let recipe = &business.recipes[(draw() % business.recipes.len() as u64) as usize];
+    let stock_count: u64 = merchant
+        .stock
+        .iter()
+        .map(|batch| u64::from(batch.count))
+        .sum();
+    let fits = stock_count + u64::from(recipe.output_count) <= u64::from(business.capacity);
+    fits.then_some(recipe)
+}
+
+fn has_recipe_materials(merchant: &MerchantState, recipe: &Recipe) -> bool {
+    recipe.ingredients.iter().all(|(id, count)| {
+        merchant
+            .materials
+            .iter()
+            .filter(|lot| lot.item_id == *id)
+            .map(|lot| u64::from(lot.count))
+            .sum::<u64>()
+            >= u64::from(*count)
+    })
 }
 
 /// Buy only whole bundles covering the deficit; retain every paid surplus item.

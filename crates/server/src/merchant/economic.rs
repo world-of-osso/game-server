@@ -76,6 +76,15 @@ fn offered_item(shop: &Shop, buyer: Buyer, batch: &model::StockBatch) -> Option<
     })
 }
 
+struct Purchase {
+    item_id: u32,
+    count: u32,
+    template: ItemTemplate,
+    buyer: Buyer,
+    goods: VendorGoods,
+    price: u64,
+}
+
 pub(super) fn buy(
     shop: &mut Shop,
     customer: &mut Customer,
@@ -83,35 +92,64 @@ pub(super) fn buy(
     entry: u32,
     req: BuyItem,
 ) -> MerchantResult {
+    let (business, mut state) = clone_purchase_state(shop, entry)?;
+    let merchant = state
+        .merchants
+        .get_mut(&entry)
+        .ok_or(MerchantError::ItemNotFound)?;
+    let purchase = validate_and_sell_requested_stock(shop, customer, merchant, entry, &req)?;
+    let (inventory, expected_inventory) =
+        load_and_store_purchase(shop, customer, &purchase, req.destination)?;
+    let excess = model::credit_capital(merchant, purchase.price, business.capital_limit);
+    state.withdrawn = state
+        .withdrawn
+        .checked_add(excess)
+        .ok_or(MerchantError::TooMuchGold)?;
+    commit_and_publish_purchase(
+        shop,
+        customer,
+        vendor,
+        entry,
+        purchase.buyer,
+        state,
+        inventory,
+        expected_inventory,
+    )
+}
+
+fn clone_purchase_state(
+    shop: &Shop,
+    entry: u32,
+) -> Result<(model::MerchantConfig, model::EconomyState), MerchantError> {
     let business = shop
         .economy_config
         .as_ref()
         .and_then(|config| config.merchant(entry))
         .cloned()
         .ok_or(MerchantError::ItemNotFound)?;
-    let mut state = shop
+    let state = shop
         .economy
         .as_ref()
         .ok_or(MerchantError::ItemNotFound)?
         .state
         .clone();
-    let merchant = state
-        .merchants
-        .get_mut(&entry)
-        .ok_or(MerchantError::ItemNotFound)?;
+    Ok((business, state))
+}
+
+fn validate_and_sell_requested_stock(
+    shop: &Shop,
+    customer: &Customer,
+    merchant: &mut model::MerchantState,
+    entry: u32,
+    req: &BuyItem,
+) -> Result<Purchase, MerchantError> {
     let batch = merchant
         .stock
         .iter()
         .find(|batch| batch.id == u64::from(req.slot) && batch.item_id == req.item_id)
         .cloned()
         .ok_or(MerchantError::ItemNotFound)?;
-    if batch.expires_at <= crate::auction_house::unix_now() {
-        return Err(MerchantError::SoldOut);
-    }
-    let count = req.count.max(1);
-    if count > batch.count {
-        return Err(MerchantError::SoldOut);
-    }
+    let count = validate_stock_count(&batch, req.count, crate::auction_house::unix_now())?;
     let template = shop
         .template(batch.item_id)
         .ok_or(MerchantError::ItemNotFound)?;
@@ -129,29 +167,75 @@ pub(super) fn buy(
         error!("economic vendor {entry} quote: {error}");
         MerchantError::NotEnoughMoney
     })?;
-    let expected_inventory = persistence::load_inventory(shop.db(), customer.character_id);
-    let mut inventory = shop.load(customer.character_id)?;
-    if inventory.gold() < price {
+    Ok(Purchase {
+        item_id: batch.item_id,
+        count,
+        template,
+        buyer,
+        goods,
+        price,
+    })
+}
+
+fn validate_stock_count(
+    batch: &model::StockBatch,
+    requested: u32,
+    now: u64,
+) -> Result<u32, MerchantError> {
+    if batch.expires_at <= now {
+        return Err(MerchantError::SoldOut);
+    }
+    let count = requested.max(1);
+    if count > batch.count {
+        return Err(MerchantError::SoldOut);
+    }
+    Ok(count)
+}
+
+fn validate_purchase_inventory(inventory: &InventoryModel, purchase: &Purchase) -> MerchantResult {
+    if inventory.gold() < purchase.price {
         return Err(MerchantError::NotEnoughMoney);
     }
-    if goods.max_count > 0 && inventory.owned_count(batch.item_id) + count > goods.max_count {
+    if purchase.goods.max_count > 0
+        && inventory.owned_count(purchase.item_id) + purchase.count > purchase.goods.max_count
+    {
         return Err(MerchantError::CantCarryMore);
     }
+    Ok(())
+}
+
+fn load_and_store_purchase(
+    shop: &Shop,
+    customer: &Customer,
+    purchase: &Purchase,
+    destination: Option<shared::protocol::ItemLocation>,
+) -> Result<(InventoryModel, persistence::InventoryData), MerchantError> {
+    let expected_inventory = persistence::load_inventory(shop.db(), customer.character_id);
+    let mut inventory = shop.load(customer.character_id)?;
+    validate_purchase_inventory(&inventory, purchase)?;
     store_purchase_item(
         shop,
         &mut inventory,
-        &goods,
-        template,
-        batch.item_id,
-        count,
-        req.destination,
+        &purchase.goods,
+        purchase.template,
+        purchase.item_id,
+        purchase.count,
+        destination,
     )?;
-    inventory.set_gold(inventory.gold() - price);
-    let excess = model::credit_capital(merchant, price, business.capital_limit);
-    state.withdrawn = state
-        .withdrawn
-        .checked_add(excess)
-        .ok_or(MerchantError::TooMuchGold)?;
+    inventory.set_gold(inventory.gold() - purchase.price);
+    Ok((inventory, expected_inventory))
+}
+
+fn commit_and_publish_purchase(
+    shop: &mut Shop,
+    customer: &Customer,
+    vendor: Entity,
+    entry: u32,
+    buyer: Buyer,
+    state: model::EconomyState,
+    inventory: InventoryModel,
+    expected_inventory: persistence::InventoryData,
+) -> MerchantResult {
     let gold = inventory.gold();
     let changes = MarketChanges {
         expected_inventories: vec![(customer.character_id, expected_inventory)],

@@ -94,6 +94,12 @@ impl Config {
         if self.cycle_secs == 0 || self.gatherer_stack_max == 0 {
             return Err("economy cycle and gathering stack limit must be positive".into());
         }
+        self.validate_merchants()?;
+        self.validate_gatherables()?;
+        self.validate_markets()
+    }
+
+    fn validate_merchants(&self) -> Result<(), String> {
         for merchant in &self.merchants {
             if merchant.capital_limit > crate::gold::MAX_MONEY || merchant.capacity == 0 {
                 return Err(format!(
@@ -102,35 +108,56 @@ impl Config {
                 ));
             }
             for recipe in &merchant.recipes {
-                if recipe.expansion != merchant.expansion {
-                    return Err(format!(
-                        "recipe {} crosses merchant expansion",
-                        recipe.spell_id
-                    ));
-                }
-                for item_id in std::iter::once(recipe.output_item_id)
-                    .chain(recipe.ingredients.iter().map(|(id, _)| *id))
-                {
-                    if !self.markets.contains_key(&item_id) || !self.items.contains_key(&item_id) {
-                        return Err(format!(
-                            "recipe {} lacks market/item metadata for {item_id}",
-                            recipe.spell_id
-                        ));
-                    }
-                }
-                let output_market = &self.markets[&recipe.output_item_id];
-                if output_market.max_price > u64::from(u32::MAX) {
-                    return Err(format!(
-                        "merchant {} recipe {} output {} max price {} exceeds vendor protocol limit {}",
-                        merchant.entry,
-                        recipe.spell_id,
-                        recipe.output_item_id,
-                        output_market.max_price,
-                        u32::MAX
-                    ));
-                }
+                self.validate_recipe(merchant, recipe)?;
             }
         }
+        Ok(())
+    }
+
+    fn validate_recipe(
+        &self,
+        merchant: &MerchantConfig,
+        recipe: &model::Recipe,
+    ) -> Result<(), String> {
+        if recipe.expansion != merchant.expansion {
+            return Err(format!(
+                "recipe {} crosses merchant expansion",
+                recipe.spell_id
+            ));
+        }
+        for item_id in std::iter::once(recipe.output_item_id)
+            .chain(recipe.ingredients.iter().map(|(id, _)| *id))
+        {
+            if !self.markets.contains_key(&item_id) || !self.items.contains_key(&item_id) {
+                return Err(format!(
+                    "recipe {} lacks market/item metadata for {item_id}",
+                    recipe.spell_id
+                ));
+            }
+        }
+        self.validate_output_price(merchant, recipe)
+    }
+
+    fn validate_output_price(
+        &self,
+        merchant: &MerchantConfig,
+        recipe: &model::Recipe,
+    ) -> Result<(), String> {
+        let output_market = &self.markets[&recipe.output_item_id];
+        if output_market.max_price > u64::from(u32::MAX) {
+            return Err(format!(
+                "merchant {} recipe {} output {} max price {} exceeds vendor protocol limit {}",
+                merchant.entry,
+                recipe.spell_id,
+                recipe.output_item_id,
+                output_market.max_price,
+                u32::MAX
+            ));
+        }
+        Ok(())
+    }
+
+    fn validate_gatherables(&self) -> Result<(), String> {
         for item_id in &self.gatherables {
             if !self.markets.contains_key(item_id) || !self.items.contains_key(item_id) {
                 return Err(format!(
@@ -141,6 +168,10 @@ impl Config {
         if self.gatherer_capital > crate::gold::MAX_MONEY {
             return Err("gatherer capital exceeds the game money limit".into());
         }
+        Ok(())
+    }
+
+    fn validate_markets(&self) -> Result<(), String> {
         for market in self.markets.values() {
             model::quote_price(market, 0)?;
             if market.popularity_bps > 10_000 {
