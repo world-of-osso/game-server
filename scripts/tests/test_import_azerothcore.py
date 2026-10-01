@@ -1,6 +1,7 @@
 """Exercise the real importer without touching the development world database."""
 
 import csv
+from contextlib import closing
 import json
 import os
 from pathlib import Path
@@ -111,12 +112,15 @@ def write_content_tuning(csv_dir, rows):
 def write_header_only_csvs(csv_dir):
     """Write one header-only CSV per DB2 table, headers taken from db2_schema.sql."""
     csv_dir.mkdir(parents=True)
-    schema = sqlite3.connect(":memory:")
-    schema.executescript(db2.SCHEMA_SQL.read_text())
-    for name in db2.TABLES:
-        columns = [row[1] for row in schema.execute(f"PRAGMA table_info({db2.table_name(name)})")]
-        with (csv_dir / f"{name}.csv").open("w", newline="") as handle:
-            csv.writer(handle).writerow(columns)
+    with closing(sqlite3.connect(":memory:")) as schema:
+        schema.executescript(db2.SCHEMA_SQL.read_text())
+        for name in db2.TABLES:
+            columns = [
+                row[1]
+                for row in schema.execute(f"PRAGMA table_info({db2.table_name(name)})")
+            ]
+            with (csv_dir / f"{name}.csv").open("w", newline="") as handle:
+                csv.writer(handle).writerow(columns)
 
 
 def write_creature_display_ids(csv_dir, ids):
@@ -153,12 +157,26 @@ class CreatureEventImportTests(unittest.TestCase):
         scripts = self.root / "scripts"
         scripts.mkdir()
         (self.root / "data").mkdir()
-        for name in ("import-azerothcore.sh", "world_schema.sql", "db2.py", "db2_casc.py", "db2_schema.sql", "mysql_dump.py",
-                     "content_common.py", "retail_content.py", "wowhead_loot.py",
-                     "content_policy.py", "economy_crafting.py", "tdb_schema.sql",
-                     "crafting_data.py", "crafting_schema.sql"):
+        for name in (
+            "import-azerothcore.sh",
+            "world_schema.sql",
+            "db2.py",
+            "db2_casc.py",
+            "db2_schema.sql",
+            "mysql_dump.py",
+            "content_common.py",
+            "retail_content.py",
+            "wowhead_loot.py",
+            "content_policy.py",
+            "economy_crafting.py",
+            "tdb_schema.sql",
+            "crafting_data.py",
+            "crafting_schema.sql",
+        ):
             shutil.copy2(SCRIPTS / name, scripts / name)
-        (scripts / "content_overrides.csv").write_text("kind,source_id,retail_id,source_name,retail_name,reason\n")
+        (scripts / "content_overrides.csv").write_text(
+            "kind,source_id,retail_id,source_name,retail_name,reason\n"
+        )
         self.crafting = self.root / "data/reference/crafting/12.1.0.69933"
         self.crafting.mkdir(parents=True)
         for table in crafting_data.TABLES:
@@ -216,7 +234,7 @@ class CreatureEventImportTests(unittest.TestCase):
         )
 
     def test_invalid_crafting_snapshot_preserves_existing_database_bytes(self):
-        with sqlite3.connect(self.db) as conn:
+        with closing(sqlite3.connect(self.db)) as conn, conn:
             conn.execute("CREATE TABLE sentinel (value TEXT)")
             conn.execute("INSERT INTO sentinel VALUES ('survive preflight')")
         before = self.db.read_bytes()
@@ -308,7 +326,7 @@ class CreatureEventImportTests(unittest.TestCase):
         self.crafting.rename(relocated)
         result = self.run_import(relocated)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        with sqlite3.connect(self.db) as conn:
+        with closing(sqlite3.connect(self.db)) as conn:
             for table in crafting_data.TABLES:
                 self.assertEqual(
                     conn.execute(f"SELECT COUNT(*) FROM {table.name}").fetchone()[0],
@@ -372,7 +390,7 @@ class CreatureEventImportTests(unittest.TestCase):
     def test_preserves_signed_memberships_and_spawn_coordinates(self):
         result = self.run_import()
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        with sqlite3.connect(self.db) as conn:
+        with closing(sqlite3.connect(self.db)) as conn:
             memberships = conn.execute(
                 "SELECT eventEntry,guid FROM game_event_creature ORDER BY guid,eventEntry"
             ).fetchall()
@@ -448,7 +466,7 @@ class CreatureEventImportTests(unittest.TestCase):
         (self.sql / "npc_vendor.sql").write_text("INSERT INTO `npc_vendor` VALUES\n(54,0,2488,0,0,0,0),(54,0,2489,0,0,0,0);\n")
         result = self.run_import()
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        with sqlite3.connect(self.db) as conn:
+        with closing(sqlite3.connect(self.db)) as conn:
             self.assertEqual(
                 conn.execute(
                     "SELECT q.ID, q.LogTitle, t.name FROM quest_template q"
