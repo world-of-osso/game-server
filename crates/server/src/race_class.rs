@@ -24,6 +24,9 @@ const DRACTHYR_CLASSES: &[u8] = &[1, 3, 4, 5, 8, 9, 13];
 const KUL_TIRAN_CLASSES: &[u8] = &[1, 3, 4, 5, 6, 7, 8, 9, 10, 11];
 const EARTHEN_CLASSES: &[u8] = &[1, 2, 3, 4, 5, 7, 8, 9, 10];
 const HARANIR_CLASSES: &[u8] = &[1, 3, 4, 5, 7, 8, 9, 10, 11];
+/// Skyborne classes from WoW Forever 1.60.1 CharBaseInfo (FileDataID 1343386).
+const SKYBORNE_95_CLASSES: &[u8] = &[1, 3, 4, 8, 11];
+const SKYBORNE_96_CLASSES: &[u8] = &[1, 3, 4, 7, 11];
 
 const PLAYABLE_RACES: &[PlayableRace] = &[
     race(1, 0, &[1, 2, 3, 4, 5, 6, 8, 9, 10]),       // Human
@@ -57,6 +60,10 @@ const PLAYABLE_RACES: &[PlayableRace] = &[
     race(85, 18, EARTHEN_CLASSES),                   // Earthen (Alliance)
     race(86, 20, HARANIR_CLASSES),                   // Haranir (Alliance)
     race(91, 19, HARANIR_CLASSES),                   // Haranir (Horde)
+    // Race bits are the retail placeholder rows' PlayableRaceBit until Forever's
+    // ChrRaces confirms them.
+    race(95, 32, SKYBORNE_95_CLASSES), // Skyborne
+    race(96, 33, SKYBORNE_96_CLASSES), // Skyborne
 ];
 
 const fn race(id: u8, race_bit: u8, classes: &'static [u8]) -> PlayableRace {
@@ -274,6 +281,31 @@ mod tests {
         assert_eq!(start_level(86, 10), 10, "Haranir Alliance Monk");
         assert_eq!(start_level(91, 10), 10, "Haranir Horde Monk");
         assert_eq!(start_level(25, 10), 1, "Pandaren Monk");
+    }
+
+    #[test]
+    fn skyborne_follows_forever_char_base_info() {
+        for class in [1, 3, 4, 8, 11] {
+            assert_eq!(validate_race_class(95, class), Ok(()), "95/{class}");
+        }
+        for class in [1, 3, 4, 7, 11] {
+            assert_eq!(validate_race_class(96, class), Ok(()), "96/{class}");
+        }
+        for (race, class) in [(95, 7), (96, 8), (95, 2), (96, 10)] {
+            assert_eq!(
+                validate_race_class(race, class),
+                Err(format!("Class {class} is not available for race {race}")),
+            );
+        }
+    }
+
+    #[test]
+    fn skyborne_race_bits_use_high_race_mask_word() {
+        // PlayableRaceBit 32/33 live in RaceMasks_1 bits 0/1.
+        assert!(race_mask_allows([0, 1], 95));
+        assert!(!race_mask_allows([0, 1], 96));
+        assert!(race_mask_allows([0, 2], 96));
+        assert!(!race_mask_allows([u32::MAX, 0], 95));
     }
 
     #[test]
