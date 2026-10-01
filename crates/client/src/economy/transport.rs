@@ -345,16 +345,26 @@ fn receive_interaction_opened(
 ) {
     for mut receiver in &mut receivers.opened {
         for response in receiver.receive() {
-            match flow.opened(action, response) {
-                Ok(Some(choice)) => {
-                    if let Err(error) = send::<_, InteractionChannel>(&mut senders.gossip, choice) {
-                        finish(flow, exit, Err(error));
-                    }
-                }
-                Ok(None) => {}
-                Err(error) => finish(flow, exit, Err(error)),
+            dispatch_opened_interaction(action, response, flow, senders, exit);
+        }
+    }
+}
+
+fn dispatch_opened_interaction(
+    action: &EconomyAction,
+    response: InteractionOpened,
+    flow: &mut EconomyFlow,
+    senders: &mut Senders,
+    exit: &mut MessageWriter<AppExit>,
+) {
+    match flow.opened(action, response) {
+        Ok(Some(choice)) => {
+            if let Err(error) = send::<_, InteractionChannel>(&mut senders.gossip, choice) {
+                finish(flow, exit, Err(error));
             }
         }
+        Ok(None) => {}
+        Err(error) => finish(flow, exit, Err(error)),
     }
 }
 
