@@ -1,5 +1,54 @@
 # Wiki Log
 
+## [2026-10-01] reference | Bounded crafting reference import
+
+Added [[crafting-reference-import]] and its spec: seven pinned local-CASC/WagoCSV tables, complete unknown-preserving schema, float32 conversion, validated duplicate spell relationship parent, deterministic provenance and atomic staging-only replacement. Concrete WDC5/CSV and real-source joins cover invalid-source and SQL rollback. Economy catalog/content policy and live data remain untouched; modern resolver handoff stays separate.
+
+## [2026-10-01] systems | Bot return accounting and final acceptance
+
+Updated [[bot-economy]] and [[auction-house]] with independent CLI/restart/native gates and real bot/player parity across 1/7/14-day auctions. Fixed delivered bot attachments being discarded during collection: returned inventory now persists and is consumed by relisting, including GUID-preserving whole stacks and split quantities; rollback/reopen regressions pass. Recorded twelve pinned loopback samples at 60.282–121.623 ms without a universal latency claim. Missing Midnight/Silvermoon content and operator cap-reduction reconciliation remain explicit limits.
+
+## [2026-10-01] ledger | Final bounded economy/AH receipts
+
+Updated [[bot-economy]], [[auction-house]], [[economy-catalog]] and specs from saved artifacts: pinned `eb649f85` binaries/twelve CLI samples, exact live totals, historical default failure/focused delta passes, sibling native ledger `5b27878f` and agent51 bounded PASS. Preserved cap-reconciliation and Midnight/Silvermoon blockers, provisional tuning and pending agent52/main readiness decision. Docs only; no test/build/ops reruns.
+
+
+## [2026-10-01] specs/systems/reference | Exact economy capability and saved proof ledger
+
+Updated bot-economy and auction-house specs/wiki, economy-catalog, auction-load-fixture and index from current `8193d7e` source (including `b0153e4`, importer `13241e0`, runtime `cd9b690`) and saved `/home/osso/.cache/economy-cli-20260930/a54a0ad0` JSON receipts. Ledger separates 300000/311-real-ID producer proof from live 300075-offer CLI workload; records five request-response samples, actual auction actions/refusals, normal restart/mail outcomes and three-boot supplier costs/purchase/cap accounting. Checked bullets are bounded receipts, not broad tests, guaranteed products or universal latency/concurrency policy. Restricted recipe2149/capacity3/customer0/cycle2 fixture is not production policy. Midnight mappings/new Silvermoon remain content gaps; native AH/mail source implemented, live engine proof IN PROGRESS. Canonical restoration is user-reported; server work isolated. Docs only; no engine docs, code, data, operations, delegation or push.
+
+## [2026-10-01] systems | Direct supplier runtime
+
+Updated [[bot-economy]] and its spec with exclusive supplier selection, exact whole-bundle payments, retained paid leftovers and pre-cycle rejection of limited/extended-cost suppliers. Uses existing central market commit and persisted cycle timestamp. Added supplier rejection/failure tests and corrected the no-fallback auction fixture to exercise an affordable, price-bounded offer. Live CLI/native/load proof remains main-owned.
+
+## [2026-10-01] systems | Ingredient sourcing and direct suppliers
+
+Updated [[economy-catalog]]: direct loot preserves raw Light Leather 2318 despite conversion 2881; subclass 5 alone does not gather vendor-only threads 2320/2321/4291. Config gains `vendor_supplies` with exact bundle `purchase_price`, positive `buy_count`, expanded runtime slot and stock fields. Deterministic active spawned unlimited suppliers only; limited/extended-cost/invalid/unavailable rows remain explicit, unsupported vendor-only inputs exclude recipes. Secondary crafted goods remain AH inputs. Runtime purchase and live integration remain main-owned.
+
+## [2026-09-30] reference | Owned auction load fixture
+
+Added [[auction-load-fixture]]: explicit ignored 300k-offer producer using real importer catalog, read-only item templates, `AuctionData` and central market commits. Documents atomic nonexisting-file ownership, reserved counters, complete reopen equality and meaningful grouped/ItemID second-page assertions. No production-policy or network-latency acceptance claim; main owns invocation and CLI proof.
+
+## [2026-09-30] systems | Read-only economy admin snapshot
+
+Updated [[bot-economy]] with `game-server-admin economy-status`, snapshot fields, copper/timestamp units and missing-initialization errors. Exact-value state and CLI tests added; live server diagnosis remains main-owned, with no economics tuning or data mutation.
+
+## [2026-09-30] reference | Live GameObject admin lookup
+
+Updated [[dev-commands]] with read-only `game-object-info <map_id> <instance_id> <entry>`: runtime entity bits and WoW coordinates for normal mailbox interaction, never inferred from spawn GUIDs. Targeted tests cover concrete mailbox output, map/copy/entry filtering, and not-found results; live server/CLI integration remains main-owned.
+
+## [2026-09-30] systems | Merchant output price boundary
+
+Updated [[economy-catalog]]: recipes whose output range exceeds existing u32 vendor prices are excluded with unchanged market values, protocol limit and TSM provenance. Input-only AH markets retain u64 prices. Read-only Lara 1295:0:165 import excludes one recipe (10621/output 8345), leaving 223; main owns fixture regeneration and startup proof.
+
+## [2026-09-30] systems | Global auction browse contract
+
+Added [auction house spec](../specs/auction-house.md) and [[auction-house]]; linked [[bot-economy]] and index. Inspected shared `88bc3fe`: distinct browse messages with per-item price/quantity and distinct total, unchanged flat shapes. Inspected server flat/session/class/usability boundaries; grouped server, CLI and native integration remain concurrent and unverified. Recorded ItemID → real AuctionID flow, actual-coordinate/listing-price evidence and CLI-first then engine <200 ms request/response goal. Reported optimized flat 300k/144 ms helper timing is not network acceptance; grouped performance pending. No acceptance checked; no code or owned CLI/engine docs changed.
+
+## [2026-09-30] systems | Economy catalog importer
+
+Created [[economy-catalog]] and indexed it. Read-only world.db and timestamped public TSM snapshots supply runtime item metadata, market maps and explicit spawned merchant/profession/expansion assignments. Jillian Tanner 5565:0:165 has 224 classic Leatherworking recipes, 312 markets and 33 raw gatherables; quantity follows profession.rs raw rounding, not points + 1. Report records selected price/popularity provenance, exclusions and explicit empty-production warnings. Midnight 11 remains blocked: 115 CREATE_ITEM output spells, six Fishing mappings, 109 missing mappings, no Leatherworking mapping or claimed new Silvermoon spawn. Runtime integration and spec acceptance remain separate.
+
 ## [2026-10-01] systems | Transform templates kept by the import
 
 The import keeps TrinityCore templates that TRANSFORM auras name though nothing spawns them; `scripts/add_transform_templates.py` adds them to an imported world.db additively (2,411 templates). With it the server logs no unknown-template transforms at startup (10 before).
@@ -35,6 +84,10 @@ Updated [[spell-casting]] with fractional power/rate, charged-point and indexed 
 ## [2026-09-30] systems | Combat references
 
 Updated [[combat]] (new Combat State section) and [[spell-casting]]. Combat is now TrinityCore's `CombatManager`: pairwise references, no timeout against a creature with a threat list, 5 s for PvP and threat-less creatures (training dummies), and `combat_stop` ends both sides. Before, every unit had its own 5 s timer after its last hit, refreshed every tick while it had `AutoAttack`: a caster auto-attacking a dummy from range stayed in combat 5 s past the dummy's evade (a 10 s tail on one Frostbolt), a kill left 5 s of combat, and a lull over 5 s in a real fight dropped combat. The damage meter's session duration is combat time, so its DPS followed.
+
+## [2026-09-30] systems | Bot economy contract audit
+
+Created [bot-economy spec](../specs/bot-economy.md) and [[bot-economy]] integration inventory. Recorded user-approved auction terms, recipe/expansion constraints, shared finite capacity, bounded consumers, recorded-cost expiry refunds, capped capital and persistence/CLI-first/engine/latency gates. All acceptance remains unchecked: inspected model helpers and candidate tests are not runtime or restart proof. Economy importer and expansion-11/new Silvermoon data coverage remain unestablished. No numerical tuning promoted from fixtures to policy.
 
 ## [2026-09-29] systems | Polymorph
 

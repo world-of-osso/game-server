@@ -657,15 +657,9 @@ fn transforms_without_a_template_follow_trinitycore() {
             effect.misc_values[0] = 999_999_999;
         }
     }
-    let Some(mut h) = harness_with_plugins(
-        vec![unknown],
-        &[CITIZEN_COSTUME],
-        MAGE,
-        false,
-        |app| {
-            app.insert_resource(world_data());
-        },
-    ) else {
+    let Some(mut h) = harness_with_plugins(vec![unknown], &[CITIZEN_COSTUME], MAGE, false, |app| {
+        app.insert_resource(world_data());
+    }) else {
         return;
     };
     let npc = h.npc;

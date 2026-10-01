@@ -27,6 +27,7 @@ mod damage_meter;
 mod death;
 mod duel;
 mod durability;
+mod economy;
 mod equipment_admin_types;
 mod experience;
 mod faction;
@@ -167,6 +168,7 @@ fn add_social_plugins(app: &mut App) {
 fn add_progression_plugins(app: &mut App) {
     app.add_plugins(gold::GoldPlugin)
         .add_plugins(auction_house::AuctionHousePlugin)
+        .add_plugins(economy::EconomyPlugin)
         .add_plugins(collection::CollectionPlugin)
         .add_plugins(currency::CurrencyPlugin)
         .add_plugins(durability::DurabilityPlugin)

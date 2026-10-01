@@ -2,7 +2,7 @@
 use shared::protocol::*;
 
 use super::DailyReset;
-use crate::bank_test_harness::{Harness, LINEN, harness};
+use crate::bank_test_harness::{Harness, LINEN, PEACEBLOOM, harness, harness_at};
 use crate::persistence::banks::{
     GUILD_BANK_USAGE, GuildTabRights, load_guild, load_guild_bank_usage, save_guild,
     save_guild_member_rank,
@@ -345,4 +345,128 @@ fn using_the_stockade_bonfire_or_a_fire_is_refused_as_an_invalid_target() {
         );
         assert!(h.take::<InteractionOpened>().is_empty());
     }
+}
+
+/// A second member of the guild, logged in on its own connection at the vault.
+fn second_member(h: &mut Harness, vault: bevy::prelude::Entity) -> (u64, bevy::prelude::Entity) {
+    let member = h.create_alt("Teller");
+    set_character_guild_by_id(h.db(), member, GUILD, "Bank Testers").unwrap();
+    save_guild_member_rank(h.db(), member, 1);
+    let mut guild = load_guild(h.db(), GUILD);
+    guild.ranks[1].tabs[0] = GuildTabRights {
+        view: true,
+        deposit: true,
+        withdrawals_per_day: 5,
+    };
+    save_guild(h.db(), GUILD, &guild);
+    let connection = h.connect_character(member, "Teller");
+    h.use_object_from(connection, vault);
+    (member, connection)
+}
+
+#[test]
+fn deposits_and_withdrawals_refresh_every_member_with_the_vault_open() {
+    let Some(mut h) = harness() else { return };
+    let vault = leader_with_tab(&mut h);
+    let (member, teller) = second_member(&mut h, vault);
+    let opened = h
+        .take_for::<GuildBankContents>(teller)
+        .pop()
+        .expect("member vault opened");
+    assert!(slot_items(&opened.tabs[0]).is_empty());
+    h.take::<GuildBankContents>();
+
+    // The Guild Master deposits; the member's open frame shows it without asking.
+    deposit_linen(&mut h, vault);
+    assert_eq!(slot_items(&contents(&mut h).tabs[0]), vec![(0, LINEN, 20)]);
+    let seen = h
+        .take_for::<GuildBankContents>(teller)
+        .pop()
+        .expect("member refreshed");
+    assert_eq!(slot_items(&seen.tabs[0]), vec![(0, LINEN, 20)]);
+    assert_eq!(seen.tabs[0].remaining_withdrawals, Some(5));
+
+    // The member withdraws it; the Guild Master's frame empties and the member's stack
+    // allowance drops.
+    h.send_from::<_, GuildBankChannel>(
+        teller,
+        GuildBankWithdraw {
+            object: vault.to_bits(),
+            tab: 0,
+            slot: 0,
+        },
+    );
+    let mine = h
+        .take_for::<GuildBankContents>(teller)
+        .pop()
+        .expect("member answer");
+    assert!(slot_items(&mine.tabs[0]).is_empty());
+    assert_eq!(mine.tabs[0].remaining_withdrawals, Some(4));
+    assert!(slot_items(&contents(&mut h).tabs[0]).is_empty());
+    let linen: u32 = crate::persistence::load_inventory(h.db(), member)
+        .items
+        .iter()
+        .filter(|item| item.item_id == LINEN)
+        .map(|item| item.stack_count)
+        .sum();
+    // The member's own 20 starter Linen plus the withdrawn stack.
+    assert_eq!(linen, 40);
+    assert_eq!(h.count_of(LINEN), 0);
+}
+
+#[test]
+fn character_and_guild_banks_survive_reopening_the_game_database() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("game.redb");
+    let character = {
+        let Some(mut h) = harness_at(&path, "Banker") else {
+            return;
+        };
+        let vault = leader_with_tab(&mut h);
+        deposit_linen(&mut h, vault);
+        h.send::<_, GuildBankChannel>(GuildBankMoneyTransfer {
+            object: vault.to_bits(),
+            copper: 50_000,
+            deposit: true,
+        });
+        let npc = h.open_banker();
+        h.send::<_, BankChannel>(BankPurchaseTab {
+            npc: npc.to_bits(),
+            bank: BankType::Character,
+        });
+        let peacebloom = h.guid_of(PEACEBLOOM);
+        h.send::<_, BankChannel>(BankDeposit {
+            npc: npc.to_bits(),
+            bank: BankType::Character,
+            tab: 0,
+            item_guid: peacebloom,
+        });
+        assert!(h.take::<BankFailed>().is_empty());
+        h.character_id
+        // The server App, and with it the open database, drops here.
+    };
+    let Some(mut h) = harness_at(&path, "Restarted") else {
+        return;
+    };
+    h.play_as(character);
+    h.open_banker();
+    let bank = h
+        .take::<BankContents>()
+        .into_iter()
+        .find(|contents| contents.bank == BankType::Character)
+        .expect("character bank sent");
+    let stored: Vec<_> = bank.tabs[0]
+        .slots
+        .iter()
+        .flatten()
+        .map(|item| item.item_id)
+        .collect();
+    assert_eq!(stored, vec![PEACEBLOOM]);
+    assert_eq!(h.count_of(PEACEBLOOM), 0);
+    // 200g - 100g guild tab - 5g deposited - 1g bank tab.
+    assert_eq!(h.gold(), 2_000_000 - 1_000_000 - 50_000 - 10_000);
+    h.open_vault();
+    let guild = contents(&mut h);
+    assert_eq!(slot_items(&guild.tabs[0]), vec![(0, LINEN, 20)]);
+    assert_eq!(guild.money, 50_000);
 }

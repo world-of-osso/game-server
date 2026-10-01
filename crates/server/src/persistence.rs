@@ -31,7 +31,8 @@ pub(crate) const CHARACTERS: TableDefinition<u64, &[u8]> = TableDefinition::new(
 
 /// Inventory table: PlayerId (u64) -> serialized inventory (bytes).
 /// Inventory table: character_id -> bitcode `InventoryData` (gold in `u64` copper).
-const INVENTORIES: TableDefinition<u64, &[u8]> = TableDefinition::new("character_inventories");
+pub(crate) const INVENTORIES: TableDefinition<u64, &[u8]> =
+    TableDefinition::new("character_inventories");
 /// Inventories written before gold became `u64` (gold in `u32` copper); moved into
 /// `INVENTORIES` and dropped at startup.
 pub(crate) const LEGACY_INVENTORIES: TableDefinition<u64, &[u8]> =
@@ -92,7 +93,7 @@ const IGNORE_LISTS: TableDefinition<u64, &[u8]> = TableDefinition::new("ignore_l
 const COLLECTIONS: TableDefinition<u64, &[u8]> = TableDefinition::new("collections");
 
 /// Active auction table: auction_id (u64) -> bitcode `AuctionData` (money in `u64` copper).
-const AUCTIONS: TableDefinition<u64, &[u8]> = TableDefinition::new("auction_listings");
+pub(crate) const AUCTIONS: TableDefinition<u64, &[u8]> = TableDefinition::new("auction_listings");
 /// Auctions written before auction money became `u64`; moved into `AUCTIONS` and
 /// dropped at startup.
 pub(crate) const LEGACY_AUCTIONS: TableDefinition<u64, &[u8]> = TableDefinition::new("auctions");
@@ -841,29 +842,23 @@ pub fn load_auctions(db: &Database) -> Vec<AuctionData> {
         .collect()
 }
 
+/// Fixture writes use the same atomic market path as runtime operations.
+#[cfg(test)]
 pub fn save_auction(db: &Database, auction: &AuctionData) {
-    let bytes = bitcode::encode(auction);
-    let txn = db.begin_write().expect("Failed to begin write txn");
-    {
-        let mut table = txn
-            .open_table(AUCTIONS)
-            .expect("Failed to open auctions table");
-        table
-            .insert(auction.auction_id, bytes.as_slice())
-            .expect("Failed to insert auction");
-    }
-    txn.commit().expect("Failed to commit auction save");
+    let changes = crate::economy::store::MarketChanges {
+        auctions: vec![auction.clone()],
+        ..Default::default()
+    };
+    crate::economy::store::commit_market(db, None, &changes).expect("save auction fixture");
 }
 
+#[cfg(test)]
 pub fn delete_auction(db: &Database, auction_id: u64) {
-    let txn = db.begin_write().expect("Failed to begin write txn");
-    {
-        let mut table = txn
-            .open_table(AUCTIONS)
-            .expect("Failed to open auctions table");
-        table.remove(auction_id).expect("Failed to remove auction");
-    }
-    txn.commit().expect("Failed to commit auction delete");
+    let changes = crate::economy::store::MarketChanges {
+        deleted_auctions: vec![auction_id],
+        ..Default::default()
+    };
+    crate::economy::store::commit_market(db, None, &changes).expect("delete auction fixture");
 }
 
 /// Atomic increment for NEXT_IDS table. Returns the new ID (starts at 1).

@@ -1,6 +1,6 @@
 use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
-use core::net::{IpAddr, Ipv4Addr, SocketAddr};
+use core::net::SocketAddr;
 use lightyear::prelude::server::*;
 use lightyear::prelude::*;
 use shared::components::{Health, Mounted, Npc, Player, Position, VerticalVelocity};
@@ -23,7 +23,8 @@ use crate::terrain_height::{GRAVITY, GROUND_SNAP_THRESHOLD};
 mod movement;
 use movement::*;
 
-const DEFAULT_SERVER_PORT: u16 = 5000;
+#[path = "networking_binding.rs"]
+mod binding;
 /// Squared radius for immediate visibility grant on world entry (matches interest system).
 const INITIAL_VISIBILITY_RADIUS_SQ: f32 = 100.0 * 100.0;
 type LinkStatusData = (Has<Connected>, Has<ClientOf>, Has<ReplicationSender>);
@@ -207,7 +208,7 @@ impl Plugin for ServerNetworkPlugin {
 }
 
 fn start_server(mut commands: Commands) {
-    let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), server_port());
+    let addr = server_address();
     let entity = commands
         .spawn((
             LocalAddr(addr),
@@ -219,19 +220,18 @@ fn start_server(mut commands: Commands) {
     info!("Server listening on {addr}");
 }
 
-fn server_port() -> u16 {
-    match std::env::var("GAME_SERVER_PORT") {
-        Ok(value) => match value.parse::<u16>() {
-            Ok(0) | Err(_) => {
-                warn!(
-                    "Invalid GAME_SERVER_PORT={value:?}; falling back to default {DEFAULT_SERVER_PORT}"
-                );
-                DEFAULT_SERVER_PORT
-            }
-            Ok(port) => port,
-        },
-        Err(_) => DEFAULT_SERVER_PORT,
-    }
+fn server_address() -> SocketAddr {
+    let read = |name: &str| {
+        std::env::var_os(name).map(|value| {
+            value
+                .into_string()
+                .unwrap_or_else(|_| panic!("{name} must be valid UTF-8"))
+        })
+    };
+    let ip = read("GAME_SERVER_BIND_IP");
+    let port = read("GAME_SERVER_PORT");
+    binding::parse_server_address(ip.as_deref(), port.as_deref())
+        .unwrap_or_else(|error| panic!("server binding configuration: {error}"))
 }
 
 /// When a new transport link is established, insert a ReplicationSender.

@@ -36,6 +36,17 @@ game-server-admin list-equipment <character>
 
 `grant-equipment` requires exactly `item_id`, `name`, `quality`, `required_level`, `inventory_type`, `vendor_sell_price`, `allowable_class`, and `allowable_race` for every array entry; unknown fields are rejected. See [the contract](../../specs/admin-equipment.md).
 
+### Live GameObject lookup
+
+```bash
+game-server-admin game-object-info <map_id> <instance_id> <entry>
+game-server-admin game-object-info 0 0 197134
+```
+
+Read-only admin IPC lookup, following `npc-info`'s runtime resource-query path. Returns every matching live GameObject's entity bits, entry, display ID, name, map copy, and WoW world `(x, y, z)` coordinates. No matching object returns an explicit not-found error.
+
+Use the returned entity bits for `game-cli mail open`; entry IDs and database spawn GUIDs are not runtime entity IDs. The reported coordinates are the object's world origin, suitable for positioning within interaction reach. Lookup does not open or claim mail. See [[game-objects]] for interaction reach validation.
+
 ## World Data
 
 ```bash

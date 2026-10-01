@@ -29,15 +29,18 @@ pub(crate) const LINEN: u32 = 2589;
 pub(crate) const PEACEBLOOM: u32 = 2447;
 pub(crate) const COPPER_ORE: u32 = 2770;
 
+/// Messages the server sent, with the connection they went to.
 #[derive(Resource)]
-struct Inbox<M>(Vec<M>);
+struct Inbox<M>(Vec<(Entity, M)>);
 
 fn collect<M: lightyear::prelude::Message>(
-    mut receivers: Query<&mut MessageReceiver<M>>,
+    mut receivers: Query<(Entity, &mut MessageReceiver<M>)>,
     mut inbox: ResMut<Inbox<M>>,
 ) {
-    for mut receiver in &mut receivers {
-        inbox.0.extend(receiver.receive());
+    for (connection, mut receiver) in &mut receivers {
+        inbox
+            .0
+            .extend(receiver.receive().map(|message| (connection, message)));
     }
 }
 
@@ -59,6 +62,18 @@ pub(crate) struct Harness {
 }
 
 pub(crate) fn harness() -> Option<Harness> {
+    harness_with(persistence::temp_database(), "Banker")
+}
+
+/// A harness on the game database file at `path`, created or reopened as a server
+/// start does; its first character is `name`.
+pub(crate) fn harness_at(path: &std::path::Path, name: &str) -> Option<Harness> {
+    let db = redb::Database::create(path).unwrap();
+    persistence::create_tables(&db);
+    harness_with(db, name)
+}
+
+fn harness_with(db: redb::Database, name: &str) -> Option<Harness> {
     let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/world.db");
     if !path.exists() {
         eprintln!("skipping: {} not found", path.display());
@@ -87,9 +102,7 @@ pub(crate) fn harness() -> Option<Harness> {
     app.insert_resource(load_gossip_catalog(&conn).unwrap());
     app.insert_resource(load_item_templates(&path).unwrap());
     app.insert_resource(load_bank_tab_prices(&conn).unwrap());
-    app.insert_resource(GameDatabase {
-        db: persistence::temp_database(),
-    });
+    app.insert_resource(GameDatabase { db });
     app.init_resource::<GoldUpdateQueue>();
     app.add_plugins((
         NpcInteractionPlugin,
@@ -99,12 +112,25 @@ pub(crate) fn harness() -> Option<Harness> {
     ));
     app.finish();
     app.cleanup();
-    let character_id = create_character(&mut app, "Banker");
+    let character_id = create_character(&mut app, name);
+    let (connection, player) = spawn_connection(&mut app, 1, character_id, name);
+    app.update();
+    Some(Harness {
+        app,
+        conn,
+        connection,
+        player,
+        character_id,
+    })
+}
+
+/// A logged-in connection (peer `peer`) whose player is `name` at the origin.
+fn spawn_connection(app: &mut App, peer: u64, character_id: u64, name: &str) -> (Entity, Entity) {
     let player = app
         .world_mut()
         .spawn((
             Player {
-                name: "Banker".into(),
+                name: name.into(),
                 race: 1,
                 class: 1,
                 appearance: CharacterAppearance::default(),
@@ -125,7 +151,7 @@ pub(crate) fn harness() -> Option<Harness> {
     let connection = app
         .world_mut()
         .spawn((
-            RemoteId(PeerId::Local(1)),
+            RemoteId(PeerId::Local(peer)),
             Connected,
             HostClient { buffer: Vec::new() },
             Authenticated {
@@ -174,14 +200,7 @@ pub(crate) fn harness() -> Option<Harness> {
             ),
         ))
         .id();
-    app.update();
-    Some(Harness {
-        app,
-        conn,
-        connection,
-        player,
-        character_id,
-    })
+    (connection, player)
 }
 
 fn create_character(app: &mut App, name: &str) -> u64 {
@@ -218,9 +237,19 @@ impl Harness {
     }
 
     pub fn send<M: lightyear::prelude::Message, C: Channel>(&mut self, message: M) {
+        let connection = self.connection;
+        self.send_from::<M, C>(connection, message);
+    }
+
+    /// Send as the connection `connection`.
+    pub fn send_from<M: lightyear::prelude::Message, C: Channel>(
+        &mut self,
+        connection: Entity,
+        message: M,
+    ) {
         self.app
             .world_mut()
-            .get_mut::<MessageSender<M>>(self.connection)
+            .get_mut::<MessageSender<M>>(connection)
             .unwrap()
             .send::<C>(message);
         for _ in 0..3 {
@@ -228,8 +257,28 @@ impl Harness {
         }
     }
 
+    /// What the server sent the harness connection since the last take.
     pub fn take<M: lightyear::prelude::Message>(&mut self) -> Vec<M> {
-        std::mem::take(&mut self.app.world_mut().resource_mut::<Inbox<M>>().0)
+        let connection = self.connection;
+        self.take_for(connection)
+    }
+
+    /// What the server sent `connection` since the last take.
+    pub fn take_for<M: lightyear::prelude::Message>(&mut self, connection: Entity) -> Vec<M> {
+        let mut inbox = self.app.world_mut().resource_mut::<Inbox<M>>();
+        let (taken, kept) = std::mem::take(&mut inbox.0)
+            .into_iter()
+            .partition(|(to, _)| *to == connection);
+        inbox.0 = kept;
+        taken.into_iter().map(|(_, message)| message).collect()
+    }
+
+    /// Log a second character of the account in on its own connection; returns it.
+    pub fn connect_character(&mut self, character_id: u64, name: &str) -> Entity {
+        let peer = 1_000 + character_id;
+        let (connection, _) = spawn_connection(&mut self.app, peer, character_id, name);
+        self.app.update();
+        connection
     }
 
     pub fn move_player(&mut self, x: f32) {
@@ -354,6 +403,17 @@ impl Harness {
         // The guild bank goes out one frame after the role opens.
         self.app.update();
         object
+    }
+
+    /// `connection` uses the already spawned game object `object`.
+    pub fn use_object_from(&mut self, connection: Entity, object: Entity) {
+        self.send_from::<_, InteractionChannel>(
+            connection,
+            UseGameObject {
+                object: object.to_bits(),
+            },
+        );
+        self.app.update();
     }
 
     /// Spawn the Goldshire mailbox (TrinityCore guid 209585 + 20,000,000) 2 yd away and use it.

@@ -38,6 +38,7 @@ use crate::persistence::inventory_store::save_inventory_record;
 use crate::persistence::{self, GameDatabase, InventoryItemData};
 
 mod catalog;
+mod economic;
 mod stock;
 
 #[cfg(test)]
@@ -114,6 +115,8 @@ struct Shop<'w, 's> {
     db: Option<Res<'w, GameDatabase>>,
     templates: Option<Res<'w, ItemTemplates>>,
     catalog: Res<'w, VendorCatalog>,
+    economy_config: Option<Res<'w, crate::economy::Config>>,
+    economy: Option<ResMut<'w, crate::economy::Economy>>,
     stock: ResMut<'w, VendorStock>,
     time: Res<'w, Time>,
     gold: ResMut<'w, GoldUpdateQueue>,
@@ -180,6 +183,9 @@ impl Shop<'_, '_> {
         let (entry, can_repair) = self.npcs.get(vendor).map_or((0, false), |(npc, flags)| {
             (npc.template_id, flags.contains(NpcFlags::REPAIR))
         });
+        if economic::is_business(self, entry) {
+            return economic::vendor_inventory(self, vendor, entry, buyer, can_repair);
+        }
         let slots: Vec<VendorSlot> = self.catalog.items(entry).to_vec();
         let now = self.now();
         let items = slots
@@ -359,6 +365,9 @@ fn process_buyback_requests(mut requests: Requests<BuybackItemRequest>, mut shop
 fn buy(shop: &mut Shop, customer: &mut Customer, req: BuyItem) -> MerchantResult {
     let vendor = customer.vendor_for(req.npc)?;
     let entry = shop.vendor_entry(vendor)?;
+    if economic::is_business(shop, entry) {
+        return economic::buy(shop, customer, vendor, entry, req);
+    }
     let slot = shop
         .catalog
         .items(entry)
