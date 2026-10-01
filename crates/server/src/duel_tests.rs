@@ -300,6 +300,7 @@ mod combat {
         d.h.cast_and_deliver(MORTAL_STRIKE, Some(opponent));
         d.h.advance(60);
         assert!(d.damage_to_opponent().is_empty());
-        assert_eq!(d.h.health(opponent), 1.0);
+        // Out of combat the loser regenerates again (Player::RegenerateHealth).
+        assert!(d.h.health(opponent) >= 1.0);
     }
 }
