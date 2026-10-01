@@ -29,11 +29,11 @@ pub struct StandStatePlugin;
 
 impl Plugin for StandStatePlugin {
     fn build(&self, app: &mut App) {
+        // Unread messages do not outlive their frame, so requests are read every frame.
+        app.add_systems(Update, receive_stand_state_requests);
         app.add_systems(
             FixedUpdate,
-            (receive_stand_state_requests, stand_up_moving_players)
-                .chain()
-                .after(crate::networking::process_player_inputs),
+            stand_up_moving_players.after(crate::networking::process_player_inputs),
         );
     }
 }

@@ -288,8 +288,8 @@ fn tick_gains(h: &mut Harness, ticks: usize) -> Vec<f32> {
 
 /// Regeneration 20555 (Troll racial): MOD_HEALTH_REGEN_PERCENT 10 makes the level 10
 /// out-of-combat tick 22 instead of 20; its MOD_REGEN_DURING_COMBAT 10 lets health
-/// regenerate in combat at `Rate.Health` × 10% = 0.1 per tick, a whole point every 10
-/// ticks.
+/// regenerate in combat at `Rate.Health` × 10% = 0.1 per tick into `m_healthFraction`:
+/// ten f32 tenths fall just short of 1, so the first whole point lands on the 11th tick.
 #[test]
 fn troll_regeneration_raises_regen_and_keeps_a_trickle_in_combat() {
     const REGENERATION: u32 = 20_555;
@@ -316,8 +316,9 @@ fn troll_regeneration_raises_regen_and_keeps_a_trickle_in_combat() {
     };
     assert!((super::powers::player_health_regen(&inputs) - 0.1).abs() < 1e-6);
     set_combat(&mut h, true);
-    let gained: f32 = tick_gains(&mut h, 10).iter().sum();
-    assert_eq!(gained, 1.0);
+    let gains = tick_gains(&mut h, 11);
+    assert_eq!(gains[..10], [0.0; 10]);
+    assert_eq!(gains[10], 1.0);
 }
 
 /// Vitality 20885 (enchant): MOD_HEALTH_REGEN_IN_COMBAT 8 adds 8 health every tick,
@@ -347,6 +348,11 @@ fn pumpernickel_mod_regen_heals_its_scaled_amount_seated() {
     h.advance(1);
     set_combat(&mut h, false);
     set_health(&mut h, 100.0, 1000.0);
+    let caster = h.caster;
+    h.app
+        .world_mut()
+        .entity_mut(caster)
+        .insert(shared::components::UnitLevel(10));
     self_aura(&mut h, PUMPERNICKEL_FOOD);
     let mods = h
         .app
