@@ -171,7 +171,13 @@ fn print_character_response(response: &AdminResponse) -> bool {
             character_name,
             count,
         } => println!("Unbound {count} instance locks of {character_name}"),
-        AdminResponse::NpcInfoList { lines } => {
+        AdminResponse::EconomyStatus { status } => {
+            println!(
+                "{}",
+                serde_json::to_string_pretty(status).expect("serialize economy status")
+            );
+        }
+        AdminResponse::NpcInfoList { lines } | AdminResponse::GameObjectInfoList { lines } => {
             for line in lines {
                 println!("{line}");
             }

@@ -61,9 +61,95 @@ pub(super) fn process_open_requests(
     });
 }
 
+pub(super) fn search_for_viewer(
+    auctions: &HashMap<u64, AuctionData>,
+    query: &AuctionSearchQuery,
+    templates: Option<&crate::item_templates::ItemTemplates>,
+    viewer: Option<(u8, u8, u16)>,
+) -> AuctionSearchResults {
+    if query.class_id.is_none() && !query.usable_only {
+        return search_auctions(auctions, query);
+    }
+    super::queries::search_auctions_matching(auctions, query, |auction| {
+        auction_matches_viewer(auction, query, templates, viewer)
+    })
+}
+
+pub(super) fn auction_matches_viewer(
+    auction: &AuctionData,
+    query: &AuctionSearchQuery,
+    templates: Option<&crate::item_templates::ItemTemplates>,
+    viewer: Option<(u8, u8, u16)>,
+) -> bool {
+    if query.class_id.is_none() && !query.usable_only {
+        return true;
+    }
+    let Some(template) = templates.and_then(|templates| templates.get(auction.item.item_id)) else {
+        return false;
+    };
+    if query
+        .class_id
+        .is_some_and(|class| class != template.scaling.class_id)
+    {
+        return false;
+    }
+    !query.usable_only
+        || viewer.is_some_and(|(race, class, level)| {
+            template.required_level <= level && template.allows(class, race)
+        })
+}
+
+pub(super) fn process_browse_requests(
+    mut receivers: SessionReceiver<shared::protocol::QueryAuctionBrowse>,
+    state: Res<AuctionHouseState>,
+    templates: Option<Res<crate::item_templates::ItemTemplates>>,
+    links: Query<&crate::networking::PlayerLink>,
+    players: Query<(
+        &shared::components::Player,
+        Option<&shared::components::Level>,
+    )>,
+    mut senders: Query<&mut MessageSender<shared::protocol::AuctionBrowseResults>>,
+    mut rejections: Query<&mut MessageSender<AuctionOperationResponse>>,
+) {
+    for_each_session_request(&mut receivers, |entity, _, house, mut req| {
+        let Some(house) = house else {
+            send_auction_message(&mut rejections, entity, err(NO_AUCTIONEER));
+            return;
+        };
+        req.query.faction = house;
+        let viewer = links
+            .get(entity)
+            .ok()
+            .and_then(|link| players.get(link.0).ok())
+            .map(|(player, level)| {
+                (
+                    player.race,
+                    player.class,
+                    level.map_or(1, |level| u16::from(level.0)),
+                )
+            });
+        send_auction_message(
+            &mut senders,
+            entity,
+            super::browse::browse_for_viewer(
+                &state.auctions,
+                &req.query,
+                templates.as_deref(),
+                viewer,
+            ),
+        );
+    });
+}
+
 pub(super) fn process_query_requests(
     mut receivers: SessionReceiver<QueryAuctions>,
     state: Res<AuctionHouseState>,
+    templates: Option<Res<crate::item_templates::ItemTemplates>>,
+    links: Query<&crate::networking::PlayerLink>,
+    players: Query<(
+        &shared::components::Player,
+        Option<&shared::components::Level>,
+    )>,
     mut senders: Query<&mut MessageSender<AuctionSearchResults>>,
     mut rejections: Query<&mut MessageSender<AuctionOperationResponse>>,
 ) {
@@ -73,10 +159,21 @@ pub(super) fn process_query_requests(
             return;
         };
         req.query.faction = house;
+        let viewer = links
+            .get(entity)
+            .ok()
+            .and_then(|link| players.get(link.0).ok())
+            .map(|(player, level)| {
+                (
+                    player.race,
+                    player.class,
+                    level.map_or(1, |level| u16::from(level.0)),
+                )
+            });
         send_auction_message(
             &mut senders,
             entity,
-            search_auctions(&state.auctions, &req.query),
+            search_for_viewer(&state.auctions, &req.query, templates.as_deref(), viewer),
         );
     });
 }
@@ -235,35 +332,51 @@ pub(super) fn expire_auctions(db: Option<Res<GameDatabase>>, mut state: ResMut<A
         .map(|auction| auction.auction_id)
         .collect();
     for auction_id in expired {
-        let Some(auction) = state.auctions.remove(&auction_id) else {
+        let Some(auction) = state.auctions.get(&auction_id) else {
             continue;
         };
-        expire_single_auction(&db.db, auction_id, &auction);
+        match expire_single_auction(&db.db, auction) {
+            Ok(()) => {
+                state.auctions.remove(&auction_id);
+            }
+            Err(error) => error!(auction_id, %error, "auction expiry settlement failed"),
+        }
     }
 }
 
-fn expire_single_auction(db: &redb::Database, auction_id: u64, auction: &AuctionData) {
-    persistence::delete_auction(db, auction_id);
-    if let Some(winner_id) = auction.current_bidder_character_id {
-        complete_sale(
+fn expire_single_auction(db: &redb::Database, auction: &AuctionData) -> Result<(), String> {
+    let mails = if let Some(winner_id) = auction.current_bidder_character_id {
+        super::operations::sale_mails(
             db,
             auction,
             winner_id,
             auction.current_bid.unwrap_or(auction.min_bid),
-        );
-        return;
-    }
-    deliver_mail(
+        )
+    } else {
+        vec![(
+            auction.seller_character_id,
+            super::operations::build_auction_mail(
+                db,
+                "Auction expired",
+                &format!(
+                    "Your auction for {} expired without a buyer.",
+                    auction.item.name
+                ),
+                auction.deposit,
+                Some(auction.item.clone()),
+            ),
+        )]
+    };
+    crate::economy::store::commit_market(
         db,
-        auction.seller_character_id,
-        "Auction expired",
-        &format!(
-            "Your auction for {} expired without a buyer.",
-            auction.item.name
-        ),
-        0,
-        Some(auction.item.clone()),
-    );
+        None,
+        &crate::economy::store::MarketChanges {
+            expected_auctions: vec![(auction.auction_id, auction.clone())],
+            deleted_auctions: vec![auction.auction_id],
+            mails,
+            ..Default::default()
+        },
+    )
 }
 
 pub(super) fn create_auction_with_gold_update(

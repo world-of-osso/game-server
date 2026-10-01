@@ -276,6 +276,8 @@ fn returned_mail_goes_back_once_and_letters_delete() {
     assert_eq!(back.len(), 1);
     assert!(back[0].returned && !back[0].returnable());
     assert_eq!(back[0].items[0].item.item_guid, peacebloom);
+    // Same account: no delivery delay for the returned items.
+    assert!(back[0].is_delivered(unix_now()));
     h.play_as(sender);
     let mailbox = h.open_mailbox();
     act(&mut h, mailbox, back[0].mail_id, MailAction::Return);
@@ -338,6 +340,11 @@ fn expired_player_mail_is_returned_and_auction_mail_deleted() {
     assert_eq!(back.len(), 1);
     assert!(back[0].returned);
     assert_eq!(back[0].items[0].item.item_guid, 9_001);
+    // TrinityCore `MailDraft::SendReturnToSender`: items going back to another
+    // account's character wait the delivery delay.
+    let expired_at = 1_000 + 30 * DAY;
+    assert_eq!(back[0].delivers_at, expired_at + 3_600);
+    assert_eq!(back[0].expires_at, back[0].delivers_at + 30 * DAY);
     assert_eq!(
         back[0].sender,
         MailSender::Player {
@@ -391,4 +398,46 @@ fn pending_senders_are_the_newest_three_unread_delivered() {
         pending_senders(&mails, 1_000),
         vec!["Tradea".to_string(), "Auction House".into(), "Old".into()]
     );
+}
+
+#[test]
+fn a_mailbox_takes_mail_until_it_holds_more_than_a_hundred() {
+    // TrinityCore `HandleSendMail`: `mailsCount > 100` is MAIL_ERR_RECIPIENT_CAP_REACHED.
+    let Some(mut h) = harness() else { return };
+    let recipient = h.create_alt("Buyer");
+    let from = MailSender::Player {
+        character_id: h.character_id,
+        name: "Banker".into(),
+    };
+    for mail_id in 1..=100 {
+        mail_store::deliver_mail(h.db(), recipient, parcel(mail_id, from.clone(), 1_000));
+    }
+    let mailbox = h.open_mailbox();
+    send(&mut h, mailbox, letter("Buyer"));
+    assert_eq!(h.take::<MailSent>().len(), 1, "{:?}", failures(&mut h));
+    send(&mut h, mailbox, letter("Buyer"));
+    assert_eq!(failures(&mut h), vec![MailError::RecipientMailboxFull]);
+    assert_eq!(load_mailbox(h.db(), recipient).len(), 101);
+}
+
+#[test]
+fn item_mail_between_guild_members_arrives_at_once() {
+    // TrinityCore `HandleSendMail`: "Mail sent between guild members arrives instantly".
+    let Some(mut h) = harness() else { return };
+    let recipient = h.create_on_account(2, "Tradeb", 1);
+    for member in [h.character_id, recipient] {
+        persistence::set_character_guild_by_id(h.db(), member, 7, "Postmasters").unwrap();
+    }
+    let linen = h.guid_of(LINEN);
+    let mailbox = h.open_mailbox();
+    send(
+        &mut h,
+        mailbox,
+        SendMail {
+            attachments: vec![linen],
+            ..letter("Tradeb")
+        },
+    );
+    assert_eq!(h.take::<MailSent>().len(), 1, "{:?}", failures(&mut h));
+    assert!(load_mailbox(h.db(), recipient)[0].is_delivered(unix_now()));
 }

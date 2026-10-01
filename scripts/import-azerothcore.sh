@@ -21,6 +21,8 @@ DB2_CSV_ROOT="${DB2_CSV_ROOT:-$PROJECT_DIR/../game-engine/data/db2}"
 # TrinityCore Retail world DB excerpts: trainer tables and skill_tiers for profession trainers,
 # creature tables for Retail displays and the Retail spawns of maps 0/1 (content_policy.py).
 TDB_DIR="${TDB_DIR:-$PROJECT_DIR/data/reference/tdb1210}"
+# Seven hash/layout/count-pinned Midnight crafting reference files.
+CRAFTING_SOURCE_DIR="${CRAFTING_SOURCE_DIR:-$PROJECT_DIR/data/reference/crafting/12.1.0.69933}"
 
 # Tables loaded from same-named dumps in $SQL_DIR (<table>.sql); DDL in world_schema.sql.
 DUMP_TABLES=(
@@ -68,6 +70,7 @@ for table in "${TDB_TABLES[@]}"; do
 done
 
 python3 "$SCRIPT_DIR/db2.py" check --csv-root "$DB2_CSV_ROOT"
+python3 "$SCRIPT_DIR/crafting_data.py" --check --source-dir "$CRAFTING_SOURCE_DIR"
 python3 "$SCRIPT_DIR/content_policy.py" --check --csv-root "$DB2_CSV_ROOT"
 
 rm -f "$DB_PATH" "$DB_PATH-wal" "$DB_PATH-shm"
@@ -90,6 +93,11 @@ python3 "$SCRIPT_DIR/mysql_dump.py" --db "$DB_PATH" --schema "$SCRIPT_DIR/tdb_sc
 
 echo "  Importing DB2 tables ..."
 python3 "$SCRIPT_DIR/db2.py" import --csv-root "$DB2_CSV_ROOT" --db "$DB_PATH"
+
+# --- Pinned crafting references (required by content_policy.py) ---
+
+echo "  Importing crafting reference tables ..."
+python3 "$SCRIPT_DIR/crafting_data.py" --db "$DB_PATH" --source-dir "$CRAFTING_SOURCE_DIR"
 
 # --- Retail-first content tables (content_*, see content_policy.py) ---
 

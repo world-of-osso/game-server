@@ -105,7 +105,8 @@ fn after_login(
         | CliCommand::ChatListen
         | CliCommand::GuildChat(_)
         | CliCommand::GuildInvite { .. }
-        | CliCommand::GuildAccept => {
+        | CliCommand::GuildAccept
+        | CliCommand::Economy(_) => {
             select_first_character(char_list, next_state, senders, exit);
         }
         CliCommand::Register => unreachable!(),
@@ -362,6 +363,9 @@ pub(super) fn timeout_system(
 ) {
     let elapsed = start.0.elapsed().as_secs();
     if matches!(action.command, CliCommand::ChatListen) && *state.get() == CliState::InWorld {
+        return;
+    }
+    if matches!(action.command, CliCommand::Economy(_)) && *state.get() == CliState::InWorld {
         return;
     }
     if elapsed > 10 {
