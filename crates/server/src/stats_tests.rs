@@ -336,6 +336,41 @@ fn equal_recompute_does_not_mark_health_changed() {
     );
 }
 
+/// A max change keeps the health share in whole points (TrinityCore health is integer):
+/// 999/1000 becomes 1108/1110, not a fractional 1108.89 the client shows as 1108 forever;
+/// an exact half stays exact.
+#[test]
+fn max_health_change_keeps_whole_health_points() {
+    let mut world = World::new();
+    let spawn = |world: &mut World, current: f32, max: f32| {
+        world
+            .spawn((
+                Player {
+                    name: "Probe".into(),
+                    race: HUMAN,
+                    class: WARRIOR,
+                    appearance: default(),
+                },
+                Level(10),
+                UnitStats::default(),
+                CombatRatings::default(),
+                Health { current, max },
+            ))
+            .id()
+    };
+    let damaged = spawn(&mut world, 999.0, 1000.0);
+    let half = spawn(&mut world, 50.0, 100.0);
+    world.run_system_once(update_character_stats).unwrap();
+    assert_eq!(
+        *world.get::<Health>(damaged).unwrap(),
+        Health {
+            current: 1108.0,
+            max: 1110.0
+        }
+    );
+    assert_eq!(world.get::<Health>(half).unwrap().current, 555.0);
+}
+
 #[test]
 fn secondary_dr_follows_curve_21024() {
     assert_eq!(secondary_dr(10.0), 10.0);

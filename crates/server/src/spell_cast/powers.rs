@@ -42,7 +42,12 @@ pub struct PowerTypeInfo {
     pub regen_interrupt_ms: u32,
     pub regen_peace: f32,
     pub regen_combat: f32,
+    /// `PowerTypeFlags::SetToMaxOnLevelUp` (0x1000): `Player::GiveLevel` fills it.
+    pub set_to_max_on_level_up: bool,
 }
+
+/// `PowerTypeFlags::SetToMaxOnLevelUp` (DBCEnums.h).
+const POWER_TYPE_FLAG_SET_TO_MAX_ON_LEVEL_UP: i64 = 0x1000;
 
 /// `power_type` rows by `PowerTypeEnum`, plus `chr_classes.DisplayPower`.
 #[derive(Resource, Debug, Default)]
@@ -54,6 +59,14 @@ pub struct PowerTypeTable {
 impl PowerTypeTable {
     pub fn get(&self, power: PowerType) -> Option<&PowerTypeInfo> {
         self.powers.get(&power)
+    }
+
+    #[cfg(test)]
+    pub fn fixture(infos: impl IntoIterator<Item = PowerTypeInfo>) -> Self {
+        Self {
+            powers: infos.into_iter().map(|info| (info.power, info)).collect(),
+            display_power: HashMap::new(),
+        }
     }
 
     /// `ChrClasses.DisplayPower` of `class_id`.
@@ -85,7 +98,7 @@ impl PowerTypeTable {
 pub fn load_power_type_table(conn: &Connection) -> rusqlite::Result<PowerTypeTable> {
     let mut stmt = conn.prepare(
         "SELECT PowerTypeEnum, MinPower, MaxBasePower, CenterPower, DefaultPower,
-                DisplayModifier, RegenInterruptTimeMS, RegenPeace, RegenCombat
+                DisplayModifier, RegenInterruptTimeMS, RegenPeace, RegenCombat, Flags
          FROM power_type ORDER BY ID",
     )?;
     let rows = stmt.query_map([], |r| {
@@ -99,11 +112,12 @@ pub fn load_power_type_table(conn: &Connection) -> rusqlite::Result<PowerTypeTab
             r.get::<_, i64>(6)? as u32,
             r.get::<_, f64>(7)? as f32,
             r.get::<_, f64>(8)? as f32,
+            r.get::<_, i64>(9)?,
         ))
     })?;
     let mut powers = HashMap::new();
     for row in rows {
-        let (id, min, max, center, default, display, interrupt, peace, combat) = row?;
+        let (id, min, max, center, default, display, interrupt, peace, combat, flags) = row?;
         let Some(power) = PowerType::from_db(id) else {
             continue;
         };
@@ -118,6 +132,7 @@ pub fn load_power_type_table(conn: &Connection) -> rusqlite::Result<PowerTypeTab
             regen_interrupt_ms: interrupt,
             regen_peace: peace,
             regen_combat: combat,
+            set_to_max_on_level_up: flags & POWER_TYPE_FLAG_SET_TO_MAX_ON_LEVEL_UP != 0,
         });
     }
     let mut stmt = conn.prepare("SELECT ID, DisplayPower FROM chr_classes")?;
@@ -280,9 +295,11 @@ pub(super) fn init_player_powers(
                 .entity(entity)
                 .insert(super::runes::Runes::new(runes.max as usize));
         }
-        commands
-            .entity(entity)
-            .insert((pools, UnitPowers::default()));
+        commands.entity(entity).insert((
+            pools,
+            UnitPowers::default(),
+            PlayerHealthRegen::default(),
+        ));
     }
 }
 
@@ -318,6 +335,7 @@ type RegenQuery<'w, 's> = Query<
         Option<&'static CombatStatus>,
         Option<&'static crate::auras::AuraStatMods>,
         Option<&'static crate::stats::CharacterStats>,
+        Option<&'static crate::death::PlayerDeathState>,
     ),
     Without<GridDormant>,
 >;
@@ -328,8 +346,9 @@ type RegenQuery<'w, 's> = Query<
 /// combat: `RegenCombat`. Rates (regen and decay) scale by the aura power
 /// regen multiplier (MOD_POWER_REGEN_PERCENT, MOD_MANA_REGEN_PCT). Mana
 /// (`power_type` rate 0) regenerates `MANA_REGEN_BASE_PCT_PER_SEC` of base
-/// mana, scaled by the same multiplier.
-pub(super) fn regenerate_powers(
+/// mana, scaled by the same multiplier. Dead players do not regenerate
+/// (`Player::Update` calls `RegenerateAll` only `IsAlive()`, Player.cpp:1026-1030).
+pub(crate) fn regenerate_powers(
     time: Res<Time>,
     table: Option<Res<PowerTypeTable>>,
     mut units: RegenQuery,
@@ -339,7 +358,10 @@ pub(super) fn regenerate_powers(
     };
     let dt = time.delta_secs();
     let now = time.elapsed_secs_f64();
-    for (mut pools, mana, combat, mods, stats) in &mut units {
+    for (mut pools, mana, combat, mods, stats, death) in &mut units {
+        if death.is_some_and(|death| death.state != shared::death::DeathState::Alive) {
+            continue;
+        }
         let regen_mult = |power: PowerType| mods.map_or(1.0, |mods| mods.power_regen(power as i32));
         let in_combat = combat.is_some_and(|status| status.0);
         if in_combat {
@@ -419,7 +441,7 @@ fn regen_step(
 /// Resent only when a whole value, max, rate or charged point changes; the client
 /// predicts the fraction from the rate in between (retail sends power updates, not
 /// per-tick fractions, and `UnitPartialPower` is client-side).
-pub(super) fn sync_unit_powers(
+pub(crate) fn sync_unit_powers(
     mut units: Query<
         (
             Entity,
@@ -473,6 +495,96 @@ pub(super) fn sync_unit_powers(
         };
         if let Some(dirty) = &dirty {
             dirty.mark(entity);
+        }
+    }
+}
+
+/// `Player::RegenerateAll` regenerates health whenever `m_regenTimerCount` reaches 2000 ms
+/// (Player.cpp:1623-1629).
+const PLAYER_HEALTH_REGEN_INTERVAL_MS: u32 = 2000;
+
+/// `m_regenTimerCount` (ms) and `m_healthFraction` of a player.
+#[derive(Component, Debug, Clone, Copy, Default, PartialEq)]
+pub struct PlayerHealthRegen {
+    pub timer_ms: u32,
+    pub fraction: f32,
+}
+
+/// Health one `Player::RegenerateHealth` tick adds before `m_healthFraction`
+/// (Player.cpp:1741-1781, `Rate.Health` 1): a third of max while polymorphed; out of
+/// combat 20% of max / level below level 15, else 1.5% of max; nothing in combat.
+/// MOD_HEALTH_REGEN_PERCENT, MOD_REGEN, MOD_REGEN_DURING_COMBAT,
+/// MOD_HEALTH_REGEN_IN_COMBAT, `m_baseHealthRegen` and the 1.5× while not standing are
+/// not modelled.
+pub(super) fn player_health_regen(level: u8, max: f32, in_combat: bool, polymorphed: bool) -> f32 {
+    if polymorphed {
+        max / 3.0
+    } else if in_combat {
+        0.0
+    } else if level < 15 {
+        0.20 * max / f32::from(level.max(1))
+    } else {
+        0.015 * max
+    }
+}
+
+/// `Player::RegenerateAll` health: while alive (`Player::Update` `IsAlive()`) the timer
+/// counts up and every 2 s `RegenerateHealth` adds the whole part of the tick's health plus
+/// `m_healthFraction`, keeping the remainder; reaching max sets max and clears it.
+pub(crate) fn regenerate_player_health(world: &mut World) {
+    let dt_ms = world.resource::<Time>().delta().as_millis() as u32;
+    let mut players = world.query_filtered::<(
+        Entity,
+        &mut PlayerHealthRegen,
+        &Health,
+        Option<&crate::death::PlayerDeathState>,
+    ), Without<GridDormant>>();
+    let due: Vec<Entity> = players
+        .iter_mut(world)
+        .filter(|(_, _, health, death)| {
+            health.current > 0.0
+                && death.is_none_or(|death| death.state == shared::death::DeathState::Alive)
+        })
+        .filter_map(|(entity, mut regen, ..)| {
+            regen.timer_ms += dt_ms;
+            (regen.timer_ms >= PLAYER_HEALTH_REGEN_INTERVAL_MS).then(|| {
+                regen.timer_ms -= PLAYER_HEALTH_REGEN_INTERVAL_MS;
+                entity
+            })
+        })
+        .collect();
+    for player in due {
+        let polymorphed = crate::auras::is_polymorphed(world, player);
+        let in_combat = world
+            .get::<CombatStatus>(player)
+            .is_some_and(|status| status.0);
+        let level = world
+            .get::<shared::components::Level>(player)
+            .map_or(1, |level| level.0);
+        let Some(health) = world.get::<Health>(player).copied() else {
+            continue;
+        };
+        if health.current >= health.max {
+            continue;
+        }
+        let mut regen = world
+            .get_mut::<PlayerHealthRegen>(player)
+            .expect("queried above");
+        let add = player_health_regen(level, health.max, in_combat, polymorphed) + regen.fraction;
+        let whole = add.trunc();
+        if whole == 0.0 {
+            continue;
+        }
+        let current = if health.current + whole < health.max {
+            regen.fraction = add - whole;
+            health.current + whole
+        } else {
+            regen.fraction = 0.0;
+            health.max
+        };
+        world.get_mut::<Health>(player).expect("read above").current = current;
+        if let Some(dirty) = world.get_resource::<ReplicationDirtyQueue>() {
+            dirty.mark(player);
         }
     }
 }

@@ -471,3 +471,7 @@ Players replicate `PlayerMotion`, Retail `MovementFlags` (FORWARD, BACKWARD, STR
 ## [2026-09-30] feature | Class secondary resources
 
 [[spell-casting]], [[auras]]: aura max power (35/418; Holy Power 5, Chi 5/6), druid forms switch display power and model (MOD_SHAPESHIFT 36), Death Knight runes as per-rune cooldowns with 3 recharging, SET_POWER_POINT_CHARGE 494 charged combo points. Monk, Demon Hunter and Evoker remain unplayable, so Chi and Essence have no player yet.
+
+## [2026-10-01] fix | Player health regeneration
+
+[[spell-casting]], [[experience]]: players regenerate health every 2 s out of combat (TrinityCore `Player::RegenerateHealth`); before, only creatures did, so a damaged player stayed damaged forever (observed 666/1110 and 1109/1110). Level-up fills `SetToMaxOnLevelUp` pools (adds Energy). A max-health rescale truncates to whole points. Live: Godot client on a private server, 666 → 1110 in 20 ticks of 22/23.

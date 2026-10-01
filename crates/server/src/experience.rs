@@ -21,7 +21,7 @@ use std::collections::HashSet;
 
 use bevy::prelude::*;
 use lightyear::prelude::*;
-use shared::components::{Health, Level, Mana, Npc, Player, Position, UnitLevel};
+use shared::components::{Health, Level, Mana, Npc, Player, Position, PowerType, UnitLevel};
 use shared::death::DeathState as PlayerLifeState;
 use shared::level_scaling::{LevelScaling, gray_level, level_for_viewer};
 use shared::protocol::{ExperienceChannel, LogXpGain, PlayerXpUpdate, XpGainReason};
@@ -34,6 +34,7 @@ use crate::networking::PlayerLink;
 use crate::persistence::{self, ClientId, GameDatabase};
 use crate::persistence_progression::{load_xp, save_xp};
 use crate::rest::PlayerRestState;
+use crate::spell_cast::powers::{PowerPools, PowerTypeTable};
 use crate::world_data::WorldData;
 use crate::xp_data::{QUEST_XP, XP_DIVISOR, XP_PER_KILL, XP_TO_NEXT_LEVEL};
 
@@ -515,15 +516,37 @@ fn send_xp_updates(
     }
 }
 
+type RefillQuery = (
+    Entity,
+    &'static mut Health,
+    Option<&'static mut Mana>,
+    Option<&'static mut PowerPools>,
+);
+
+/// `Player::GiveLevel` (Player.cpp:2266-2270): `SetFullHealth`, then `SetFullPower` for
+/// every class power whose `PowerType` has `SetToMaxOnLevelUp` (Mana, Energy, Soul Shards,
+/// Essence); Rage, Focus and Runic Power keep their value.
 pub(crate) fn refill_after_level_up(
     mut commands: Commands,
-    mut players: Query<(Entity, &mut Health, Option<&mut Mana>), With<RefillAfterLevelUp>>,
+    mut players: Query<RefillQuery, With<RefillAfterLevelUp>>,
+    table: Option<Res<PowerTypeTable>>,
     replication_dirty: Option<Res<ReplicationDirtyQueue>>,
 ) {
-    for (entity, mut health, mana) in &mut players {
+    let fills = |power: PowerType| {
+        table
+            .as_deref()
+            .and_then(|table| table.get(power))
+            .is_some_and(|info| info.set_to_max_on_level_up)
+    };
+    for (entity, mut health, mana, pools) in &mut players {
         health.current = health.max;
-        if let Some(mut mana) = mana {
+        if let Some(mut mana) = mana.filter(|_| fills(PowerType::Mana)) {
             mana.current = mana.max;
+        }
+        if let Some(mut pools) = pools {
+            for pool in pools.pools.iter_mut().filter(|pool| fills(pool.power)) {
+                pool.current = pool.max;
+            }
         }
         commands.entity(entity).remove::<RefillAfterLevelUp>();
         if let Some(dirty) = replication_dirty.as_deref() {
