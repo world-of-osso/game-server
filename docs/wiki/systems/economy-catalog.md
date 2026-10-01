@@ -78,7 +78,7 @@ Config top-level fields: `cycle_secs`, `gatherer_listing_limit`, `gatherer_stack
 | All mapped profession/output candidates (before vendor-price filtering) | 7,041; 2,600 eligible | Historical read-only production report; counts are membership candidates, not guaranteed unique spells |
 | Classic Leatherworking vendor-price filtering, Lara 1295:0:165 | 223 supported recipes; one price exclusion: spell 10621/output 8345, anchor 5,302,341,052, max 6,362,809,263 copper | Read-only in-memory import of existing September 30 snapshots; saved `default-catalog-generation.json` now records successful default generation; bounded live startup/flows are linked below |
 | Historical Midnight effect-24 slice | 115 output spells; six mapped Fishing candidates, zero eligible | Old report only; does not measure effect-288 Leatherworking |
-| Corrected Midnight staging coverage | See [[midnight-economy-content]] | Modern membership, reference joins, published requirements and diagnostic catalog; publication pending |
+| Corrected Midnight staging coverage | See [[midnight-economy-content]] | Verified modern membership, reference joins and explicit published requirements; canonical publication and remaining city-placement gap are recorded there |
 
 The old claim of zero Leatherworking ability rows/missing Midnight recipe mappings was an importer/query error, not proof of missing source data. Effect-24-only coverage cannot establish modern crafting coverage. A genuine placed new Silvermoon merchant remains a separate source-content gap.
 

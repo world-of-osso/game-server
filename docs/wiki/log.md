@@ -1,5 +1,9 @@
 # Wiki Log
 
+## [2026-10-01] systems | Verified crafting reference publication
+
+Published the verified crafting references and additive Retail item projection to local `world.db` after the ingestion gate. The independent publication report confirms existing rows and unrelated tables remain unchanged; [[midnight-economy-content]] owns the exact counts, source provenance and diagnostic limits. Rebuild preflight is tested and documented in [[crafting-reference-import]]. The active Classic catalog was not replaced, no production service was restarted, and genuine new Silvermoon merchant placement remains unavailable.
+
 ## [2026-10-01] investigations | Corrected Midnight economy source diagnosis
 
 Added [[midnight-economy-content]] after checking existing investigations; corrected [[economy-catalog]] and bot-economy spec, linked index and marked historical effect-24 inference superseded. Saved staging evidence replaces missing-recipe claims with modern membership/resolution and published-reagent coverage; genuine city placement and Spark/quality/native-bonus limits remain. Source publication and agent75 CLI preflight remain pending. Preserved independently owned reference-schema/pipeline docs. Docs only; no source/data writes, tests, operations, delegation or push.
