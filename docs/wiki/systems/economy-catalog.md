@@ -76,7 +76,7 @@ Config top-level fields: `cycle_secs`, `gatherer_listing_limit`, `gatherer_stack
 | Boundary | Measured result | Proof |
 |---|---|---|
 | All mapped profession/output candidates (before vendor-price filtering) | 7,041; 2,600 eligible | Historical read-only production report; counts are membership candidates, not guaranteed unique spells |
-| Classic Leatherworking vendor-price filtering, Lara 1295:0:165 | 223 supported recipes; one price exclusion: spell 10621/output 8345, anchor 5,302,341,052, max 6,362,809,263 copper | Read-only in-memory import of existing September 30 snapshots; generated fixture regeneration and startup acceptance belong to main |
+| Classic Leatherworking vendor-price filtering, Lara 1295:0:165 | 223 supported recipes; one price exclusion: spell 10621/output 8345, anchor 5,302,341,052, max 6,362,809,263 copper | Read-only in-memory import of existing September 30 snapshots; saved `default-catalog-generation.json` now records successful default generation; bounded live startup/flows are linked below |
 | Midnight effect-24 output spells | 115; 6 profession-mapped; 109 missing ability mappings | `output_spell_coverage["11"]` and `unmapped_output_spells` |
 | Midnight mapped recipes | 6 Fishing candidates, zero eligible; every one lacks a content item | Per-recipe exclusion report |
 | Midnight Leatherworking | Zero ability rows for skill line 2915 | Read-only SQLite query, not an invented alternate mapping |
@@ -84,6 +84,8 @@ Config top-level fields: `cycle_secs`, `gatherer_listing_limit`, `gatherer_stack
 There are no expansion-11 effect-157 outputs in this DB; additional output-bearing effects 169 (24 spells) and 296 (18 spells) are outside the existing profession CREATE_ITEM handler and this importer slice. Broader coverage needs actual profession ability data, content templates and explicit spawned vendor/expansion/profession assignments. Reassigning Jillian to Midnight would not fill missing source data. No claim of new Silvermoon merchant availability is made.
 
 ## Current acceptance boundary (October 1, 2026)
+
+`default-catalog-generation.json` exit 0 writes `data/economy/config.json` and report: 311 markets, 27 gatherables, 223 recipes. Saved `catalog-current.json`/`catalog-current-report.json` explicitly assign Lara Moore 1295:0:165 (classic Leatherworking), with 11 supplier ingredients. This replaces the historical Jillian default (see `previous-default-config.json`), not the promised Midnight/new Silvermoon catalog. Missing expansion-11 mappings/content and eligible spawns remain a blocker. No fabricated or substitute content acceptance. [[auction-house]] owns final pinned CLI/native and pending-source-gate evidence; [[bot-economy]] owns cap-reconciliation limits.
 
 Saved `catalog-current-report.json` under `/home/osso/.cache/economy-cli-20260930/a54a0ad0` records Lara Moore 1295:0:165 with one spawn and 223 eligible recipes. Its `output_spell_coverage["11"]` is exactly 115 CREATE_ITEM spells, six profession-mapped and 109 missing mappings; `coverage["11:356"]` has six candidates, zero eligible and six excluded. Modern recipe source and explicit new Silvermoon assignment remain content gaps, not completed scope. Existing additional-effect counts above do not imply importer support.
 

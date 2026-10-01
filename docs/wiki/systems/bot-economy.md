@@ -1,10 +1,10 @@
 # Bot economy
 
-Current source inspected October 1, 2026 at `8193d7e`, including server/shared integration `b0153e4`, importer `13241e0` and supplier runtime `cd9b690`. The [tracked spec](../../specs/bot-economy.md) owns approved behavior. Bounded live CLI proof exists; native AH/mail source is implemented but live engine proof is IN PROGRESS.
+Current source inspected October 1, 2026 at `8193d7e`, including server/shared integration `b0153e4`, importer `13241e0` and supplier runtime `cd9b690`. The [tracked spec](../../specs/bot-economy.md) owns approved behavior. Bounded live CLI and native AH/mail audit PASS exist. [[auction-house]] owns the pinned final CLI, native links and historical/focused source receipts; fresh source checker agent52 remains pending.
 
 ## Observed model
 
-`crates/server/src/economy/model.rs` contains `MerchantState` with gold and a vector of `StockBatch` records. Each batch records remaining quantity, ingredient expenditure, unit price and expiry. `craft_stock` validates recipe expansion and configured membership, checks shared quantity capacity and affordability, and records stock. `sell_stock` removes sold quantity and its proportional ingredient cost, retaining rounding remainder in unsold stock. `expire_stock` removes expired batches and returns remaining ingredient cost; callers must credit and persist the refund. `credit_capital` credits available headroom and returns overflow for caller accounting. It does not reduce an already-over-limit wallet, so maintaining the cap across configuration/restart boundaries requires integration proof.
+`crates/server/src/economy/model.rs` contains `MerchantState` with gold and a vector of `StockBatch` records. Each batch records remaining quantity, ingredient expenditure, unit price and expiry. `craft_stock` validates recipe expansion and configured membership, checks shared quantity capacity and affordability, and records stock. `sell_stock` removes sold quantity and its proportional ingredient cost, retaining rounding remainder in unsold stock. `expire_stock` removes expired batches and returns remaining ingredient cost; callers must credit and persist the refund. `credit_capital` credits available headroom and returns overflow for caller accounting. It does not reduce an already-over-limit wallet, so existing over-cap wallets after reducing the configured cap remain a known configuration-reconciliation limitation. Capped credits are not unconditional-cap proof.
 
 `quote_price` maps a supplied draw into price bounds. `consume_stock` applies quantity/budget limits to supplied draws and removes purchased units from a cloned state before publishing the result. These helpers do not themselves purchase auction ingredients, commit storage transactions, schedule cycles or serve vendor requests. Their existence cannot establish those behaviors.
 
@@ -39,14 +39,18 @@ Saved evidence root: `/home/osso/.cache/economy-cli-20260930/a54a0ad0`. [[auctio
 | Gatherer supply and atomic cycle | `supplier-live-status-start.json`, `merchant-produced.json`; inspected `cycle.rs`/`store.rs` | Live gatherer 2318 and paid lots/stock; central commit precedes state publication |
 | Direct supplier and actual recipe | `merchant-proof-catalog.json`, `merchant-produced.json` | Lara Moore 1295, classic expansion 0, recipe 2149: two Light Leather 2318 plus one Coarse Thread 2320 produce one boot 2302. Supplier entry 66/runtime slot 8 sells thread for exactly 10 copper per one-item bundle |
 | Exact recorded costs and finite stock | `merchant-produced.json` | Three one-boot batches: ingredient costs 16160/14222/16448 copper; quotes 326982/345551/356166. Leather remainder one item/cost 8430; merchant gold 944740, cumulative withdrawn 36333 |
-| Actual player merchant purchase | `cli-merchant-list-proof.json`, `cli-merchant-buy-proof.json`, `merchant-after-player-buy.json` | CLI bought slot 1 at actual price 326982, inventory confirms boot. Only batches 2/3 remain; merchant gold capped at 1000000, cumulative withdrawn 324102. Merchant-sale overflow is 271722 = 944740 + 326982 - 1000000. Global withdrawn increased 287769; these snapshots do not isolate the additional 16047 from other economy withdrawals |
-| Auction CLI/restart/mail and sampled latency | [[auction-house]] | Saved request/response and normal restart proof; not crash injection or native acceptance |
-| Simulated consumption, expiry and failure boundaries | `model_tests.rs`, `economy/tests.rs`, `merchant/economic_tests.rs` source | Behavioral tests exist; no fresh execution receipt established here for complete current-revision coverage |
-| Modern content and native acceptance | [[economy-catalog]] and [[auction-house]] | Midnight/new Silvermoon content gap; live engine proof IN PROGRESS |
+| Actual player merchant purchase | `cli-merchant-list-proof.json`, `cli-merchant-buy-proof.json`, `merchant-after-player-buy.json` | CLI bought slot 1 at actual price 326982, inventory confirms boot. Only batches 2/3 remain; merchant gold capped at 1000000, cumulative withdrawn 324102. Merchant-sale overflow is 271722 = 944740 + 326982 - 1000000. Global withdrawn increased 287769; purchase overflow is only 271722, leaving 16047 outside purchase attribution. Correction `0f88f87` preserves this distinction |
+| Auction CLI/restart/mail and sampled latency | [[auction-house]] | Saved request/response and normal restart proof; not crash injection; native has separate bounded receipts |
+| Simulated consumption, expiry and failure boundaries | `/tmp/economy-readability-25ee348/ledger.json` and saved output | 47 scoped economy/merchant tests passed; exact revision/hashes and limits in [[auction-house]]; not full-catalog live/crash acceptance |
+| Modern content and native acceptance | [[economy-catalog]] and [[auction-house]] | Midnight/new Silvermoon data blocker; bounded native audit PASS, not full conversion |
 
 The merchant catalog deliberately restricts real recipe 2149, shared capacity 3, customer budget/quantity 0 and cycle 2 seconds to bound the flow. These are test-fixture restrictions, not production policy, reserved product slots or guaranteed boots availability. Full catalog empty stock was diagnosed as a sourcing boundary; user explicitly chose direct vendor-only supply rather than fabricated gatherer thread or an AH fallback. Importer/runtime commits `13241e0`/`cd9b690` implement that choice. Full-catalog product availability remains unproven and is not guaranteed.
 
 The normal auction restart proves the recorded buyer/seller state only. It does not establish restart/crash-boundary coverage for every merchant procurement, expiry, customer or withdrawal transition. Saved build receipts are not broad-suite acceptance, and the artifact directory label is not an exact revision stamp for every run. Canonical master was restored and server work remains isolated (user-reported state, not changed or recertified here).
+
+## Final ledger boundary (October 1, 2026)
+
+[[auction-house]] records twelve pinned CLI samples, six workloads/two cycles, historical default-profile failure and focused fixes, plus sibling native docs at `5b27878f`; no broad final PASS while agent52 is pending. [[economy-catalog]] records generated default Lara Moore 1295 classic Leatherworking: 223 recipes, 27 gatherables, 11 suppliers. That explicit classic assignment is not the requested Midnight/new Silvermoon catalog. Missing source mappings/spawns remain a blocker, not an implementation exclusion or substitute acceptance. Limited suppliers and unsupported recipe effects are implementation exclusions; numeric importer defaults remain provisional tuning.
 
 ## Sources
 
@@ -61,7 +65,7 @@ The normal auction restart proves the recorded buyer/seller state only. It does 
 
 ## See Also
 
-- [[auction-house]] — grouped API and exact CLI/restart/mail/sampled-performance ledger; native proof pending.
+- [[auction-house]] — grouped API and exact CLI/restart/mail/sampled-performance ledger; bounded native proof and pending fresh source checker.
 - [[economy-catalog]] — importer and measured source-price provenance, not live auction listing prices.
 - [[merchant]] — current player purchase boundary.
 - [[professions]] — recipe/reagent reference sources.

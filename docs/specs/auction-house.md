@@ -1,6 +1,6 @@
 # Auction house
 
-Global item browse selects an ItemID; existing flat search then selects a real AuctionID for bid or buyout. Server sources live in `crates/server/src/auction_house/`; shared-protocol commit `88bc3fe` adds the distinct browse API. See [implementation and evidence](../wiki/systems/auction-house.md). Current server/shared integration includes `b0153e4`. Checked bullets cover exact saved CLI observations only; native AH/mail source is implemented, live engine proof IN PROGRESS.
+Global item browse selects an ItemID; existing flat search then selects a real AuctionID for bid or buyout. Server sources live in `crates/server/src/auction_house/`; shared-protocol commit `88bc3fe` adds the distinct browse API. See [implementation and evidence](../wiki/systems/auction-house.md). Current server/shared integration includes `b0153e4`. Checked bullets cover bounded saved observations, including native audit PASS; fresh final source checker agent52 remains pending.
 
 ## What it must do
 
@@ -14,12 +14,12 @@ Global item browse selects an ItemID; existing flat search then selects a real A
 
 ### Live acceptance
 
-- [x] Saved CLI grouped all-item pages 0/1 and Leather text query, flat name search and ItemID 2318 page 1 return meaningful populated results. [Exact ledger](../wiki/systems/auction-house.md) records 311 distinct items and live total 300075 offers; it does not certify every filter combination.
+- [x] Saved CLI grouped all-item pages 0/1 and Leather text query, flat name search and ItemID 2318 page 1 return meaningful populated results. [Exact ledger](../wiki/systems/auction-house.md) records 311 distinct items and final live total 300068 offers (historical sample 300075); it does not certify every filter combination.
 - [x] Saved CLI short/medium/long posts, bid107/buyout107/cancel108, three refusal cases, normal restart balances and mail claims succeed at the [recorded boundary](../wiki/systems/auction-house.md).
-- [x] Five recorded CLI request-response samples measure 60.790/60.626/90.548/80.651/70.409 ms on one owned loopback server. [Workloads and limits](../wiki/systems/auction-house.md) define this proof, not a universal concurrency SLA.
+- [x] Twelve revision-pinned CLI request-response samples across six workloads/two cycles measure 60.282–121.623 ms on one owned loopback server. [Workloads and limits](../wiki/systems/auction-house.md) define this proof, not a universal concurrency SLA.
 
 - [ ] Prove browse/filter/paging/drilldown and create/bid/buyout/cancel through `game-cli` first, using actual auctioneer coordinates and interactions, actual listing prices and persisted inventory/gold/mail outcomes. No fallback global price proxy substitutes for listing evidence.
-- [ ] Then prove the same fully working auction house in the native engine; replace page-local browse aggregates with server grouped results.
+- [x] Bounded native seller/buyer/large/mail sequences pass saved exit-0 runs and independent agent51 audit, using server grouped results and real AuctionID actions. [Sibling engine proof](../wiki/systems/auction-house.md#bounded-native-audit) owns details and limits; not clean world assets or full conversion.
 - [ ] Auction query request-to-response latency is below 200 ms. Record revision, population, workload, paging, client and timing boundary; separately measure grouped browse and flat drilldown.
 
 Auction durations, equal bot/player fees and expiry returns are owned by [bot economy](bot-economy.md), not redefined here.
@@ -53,8 +53,8 @@ Behavioral source plus saved evidence; no suites rerun by this docs audit:
 ## Known gaps (current cycle)
 
 - [ ] Prove server global aggregation, class/usability/faction filtering and distinct-item paging on the implemented revision.
-- [ ] Complete subsequent native-engine grouped-to-flat transactions and mail acceptance; source implementation and partial native artifacts are not live completion.
-- [ ] Stamp exact measured workload revisions and extend latency coverage beyond the five passing loopback samples; no concurrency or remote-client SLA is established.
+- [ ] Extend bounded native grouped-to-flat/mail acceptance beyond the documented sequences only when required; sending/COD and broader engine conversion are not certified here.
+- [ ] Fresh source checker agent52 pending; main decides full-goal readiness. Final build is pinned and twelve CLI samples pass, but no concurrency or remote-client SLA is established.
 
 ## Out of scope
 
