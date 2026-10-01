@@ -150,19 +150,7 @@ fn validate_and_sell_requested_stock(
         .cloned()
         .ok_or(MerchantError::ItemNotFound)?;
     let count = validate_stock_count(&batch, req.count, crate::auction_house::unix_now())?;
-    let template = shop
-        .template(batch.item_id)
-        .ok_or(MerchantError::ItemNotFound)?;
-    let buyer = shop.buyer(customer.player);
-    if !buyer.offered(&template) {
-        return Err(MerchantError::ItemNotFound);
-    }
-    let goods = shop
-        .catalog
-        .goods
-        .get(&batch.item_id)
-        .cloned()
-        .ok_or(MerchantError::ItemNotFound)?;
+    let (template, buyer, goods) = validate_offered_goods(shop, customer.player, batch.item_id)?;
     let (_, price) = model::sell_stock(merchant, batch.id, count).map_err(|error| {
         error!("economic vendor {entry} quote: {error}");
         MerchantError::NotEnoughMoney
@@ -175,6 +163,25 @@ fn validate_and_sell_requested_stock(
         goods,
         price,
     })
+}
+
+fn validate_offered_goods(
+    shop: &Shop,
+    player: Entity,
+    item_id: u32,
+) -> Result<(ItemTemplate, Buyer, VendorGoods), MerchantError> {
+    let template = shop.template(item_id).ok_or(MerchantError::ItemNotFound)?;
+    let buyer = shop.buyer(player);
+    if !buyer.offered(&template) {
+        return Err(MerchantError::ItemNotFound);
+    }
+    let goods = shop
+        .catalog
+        .goods
+        .get(&item_id)
+        .cloned()
+        .ok_or(MerchantError::ItemNotFound)?;
+    Ok((template, buyer, goods))
 }
 
 fn validate_stock_count(
