@@ -61,7 +61,7 @@ fn tail(log: &str) -> String {
 }
 
 #[test]
-fn server_without_azeroth_ground_exits_at_startup_naming_the_wdt() {
+fn server_without_ground_exits_at_startup_naming_the_missing_files() {
     let cwd = tempfile::tempdir().unwrap();
     let missing = cwd.path().join("no-ground");
     let mut server = start_server(cwd.path(), Some(&missing));
@@ -71,10 +71,11 @@ fn server_without_azeroth_ground_exits_at_startup_naming_the_wdt() {
     let status =
         status.unwrap_or_else(|| panic!("server started without ground:\n{}", tail(&stderr)));
     assert!(!status.success(), "{status}");
-    let wdt = missing.join("terrain/775971.wdt");
     assert!(
-        stderr.contains(&format!("No ground on map 0 from {}", missing.display()))
-            && stderr.contains(&format!("{}: No such file or directory", wdt.display())),
+        stderr.contains(&format!(
+            "No ground from {} (set GAME_SERVER_GROUND_DIR): ",
+            missing.display()
+        )) && stderr.contains("files missing: map 0: terrain/775971.wdt, "),
         "{}",
         tail(&stderr)
     );
@@ -94,13 +95,14 @@ fn server_started_outside_the_checkout_loads_ground_beside_the_checkout() {
         "{}",
         tail(&stderr)
     );
-    let gap_files =
-        std::fs::read_to_string(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("ground_gaps.tsv"))
-            .unwrap()
-            .lines()
-            .count();
+    let gap_files = std::fs::read_to_string(
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("src/ground_gaps.tsv"),
+    )
+    .unwrap()
+    .lines()
+    .count();
     assert!(
-        stderr.contains(&format!("Known ground gap: {gap_files} files of ")),
+        stderr.contains(&format!("Ground known gaps: {gap_files} files of maps ")),
         "{}",
         tail(&stderr)
     );
@@ -140,11 +142,10 @@ fn server_missing_a_spawned_maps_wmo_group_exits_at_startup_naming_map_and_file(
     let status = status
         .unwrap_or_else(|| panic!("server started without map 34 ground:\n{}", tail(&stderr)));
     assert!(!status.success(), "{status}");
-    let group = ground.join("models/108643.wmo");
     assert!(
         stderr.contains(&format!(
-            "No ground on map 34: {} is missing",
-            group.display()
+            "No ground from {} (set GAME_SERVER_GROUND_DIR): 1 files missing: map 34: models/108643.wmo",
+            ground.display()
         )),
         "{}",
         tail(&stderr)

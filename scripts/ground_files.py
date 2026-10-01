@@ -7,9 +7,8 @@ WMO, else every MAID tile's root and `_obj0` ADT (`terrain/<fdid>.adt`); each `_
 MODF WMO placed by FileDataID (flag 0x8) and its GFID group files (`models/<fdid>.wmo`).
 
 Prints the cached files' paths relative to the cache, one per line (rsync
---files-from). The summary on stderr counts the files the cache does not hold: those
-tiles and WMOs have no ground on the server until they are extracted. `--missing`
-prints those instead, as `<map id>\t<path>` (the first map that references each).
+--files-from); `--missing` prints the uncached ones with their map instead. The summary on stderr counts the files the cache does not hold: those
+tiles and WMOs have no ground on the server until they are extracted.
 """
 
 import argparse
@@ -22,6 +21,8 @@ MPHD_FLAG_GLOBAL_WMO = 0x1
 MAID_ENTRY_SIZE = 32
 MODF_ENTRY_SIZE = 64
 MODF_FLAG_FILEDATAID = 0x8
+# What the server's `GroundMap::missing_files` reports for a map without a WDT.
+NO_WDT = "no WDT FileDataID"
 
 
 def chunks(data):
@@ -50,13 +51,19 @@ def modf_wmos(modf, by_fdid):
 class GroundFiles:
     def __init__(self, cache):
         self.cache = cache
-        self.present = []
+        self.present = {}
+        # (map id, path) of each file a map needs that the cache does not hold: a WMO
+        # several maps place is missing on each of them, as the server checks per map.
         self.missing = []
         self.seen = set()
         self.map_id = None
 
+    def start_map(self, map_id):
+        self.map_id = map_id
+        self.seen = set()
+
     def read(self, relative):
-        """The file's bytes once (None if already listed or not cached)."""
+        """The file's bytes once per map (None if already read or not cached)."""
         if relative in self.seen:
             return None
         self.seen.add(relative)
@@ -64,15 +71,18 @@ class GroundFiles:
         if not path.is_file():
             self.missing.append((self.map_id, relative))
             return None
-        self.present.append(relative)
+        self.present[relative] = None
         return path.read_bytes()
 
     def add_wmo(self, fdid):
         root = self.read(f"models/{fdid}.wmo")
         if root is None:
             return
-        gfid = chunks(root).get(b"GFID", b"")
-        for offset in range(0, len(gfid) - 3, 4):
+        found = chunks(root)
+        # The root's MOHD group count of GFID entries (`group_file_data_ids`).
+        count = struct.unpack_from("<I", found.get(b"MOHD", bytes(8)), 4)[0]
+        gfid = found.get(b"GFID", b"")
+        for offset in range(0, min(len(gfid), count * 4) - 3, 4):
             group = struct.unpack_from("<I", gfid, offset)[0]
             if group:
                 self.read(f"models/{group}.wmo")
@@ -104,8 +114,8 @@ def spawned_map_wdts(world_db):
     """(map id, WdtFileDataID) of every map with a `content_creature` spawn."""
     connection = sqlite3.connect(f"file:{world_db}?mode=ro", uri=True)
     return connection.execute(
-        """SELECT DISTINCT map.ID, map.WdtFileDataID FROM content_creature creature
-           JOIN map ON map.ID = creature.map ORDER BY map.ID"""
+        """SELECT DISTINCT creature.map, map.WdtFileDataID FROM content_creature creature
+           LEFT JOIN map ON map.ID = creature.map ORDER BY creature.map"""
     ).fetchall()
 
 
@@ -113,20 +123,24 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--world-db", type=Path, required=True)
     parser.add_argument("--cache", type=Path, required=True, help="game-engine/data")
-    parser.add_argument("--missing", action="store_true", help="list the uncached files instead")
+    parser.add_argument(
+        "--missing", action="store_true", help="print `map id<TAB>path` of the uncached files instead"
+    )
     args = parser.parse_args()
     files = GroundFiles(args.cache)
     maps = spawned_map_wdts(args.world_db)
     for map_id, wdt in maps:
+        files.start_map(map_id)
         if wdt:
-            files.map_id = map_id
             files.add_map(wdt)
+        else:
+            files.missing.append((map_id, NO_WDT))
     size = sum((args.cache / relative).stat().st_size for relative in files.present)
     if args.missing:
         print("\n".join(f"{map_id}\t{path}" for map_id, path in files.missing))
     else:
         print("\n".join(files.present))
-    missing_wdts = sum(1 for _, path in files.missing if path.endswith(".wdt"))
+    missing_wdts = sum(1 for _, path in files.missing if path.endswith(".wdt") or path == NO_WDT)
     print(
         f"{len(maps)} spawned maps: {len(files.present)} cached files, {size / 1e6:.1f} MB; "
         f"not cached: {missing_wdts} WDTs, {len(files.missing) - missing_wdts} ADT/WMO files",

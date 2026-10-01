@@ -303,11 +303,10 @@ fn map_min_height_follows_the_mfbo_plane_under_the_feet() {
 }
 
 #[test]
-fn azeroth_ground_opens_at_startup_from_the_client_cache() {
+fn northshire_ground_under_the_blackrock_spy_is_the_terrain() {
     let mut ground = client_ground();
 
-    assert_eq!(ground.open_now(0), Ok(()));
-    // Northshire, below the ridge the Blackrock Spy spawns on: terrain 76.14.
+    // Below the ridge the Blackrock Spy spawns on (81.04): terrain 76.14.
     let (x, _, z) = crate::terrain_height::wow_to_bevy(-8966.63, -192.0, 76.0);
     let GroundProbe::Supported(floor) = ground.ground_at(0, Vec3::new(x, 81.04, z)) else {
         panic!("no Northshire ground");
@@ -316,121 +315,35 @@ fn azeroth_ground_opens_at_startup_from_the_client_cache() {
 }
 
 #[test]
-fn missing_client_cache_fails_naming_the_azeroth_wdt() {
-    let missing = std::env::temp_dir().join("no-such-game-engine-data");
-    let mut ground = GroundMap::new(
-        &missing,
-        std::collections::HashMap::from([(0, AZEROTH_WDT_FDID)]),
-    );
+fn cached_stockade_has_every_ground_file_and_a_missing_cache_lacks_the_wdt() {
+    let wdts = std::collections::HashMap::from([(34, STOCKADE_WDT_FDID)]);
+    let cached = GroundMap::new(&client_data_dir(), wdts.clone());
+    let missing = GroundMap::new(&std::env::temp_dir().join("no-such-game-engine-data"), wdts);
 
-    let err = ground.open_now(0).unwrap_err();
-
-    let wdt = missing.join("terrain/775971.wdt");
-    assert!(err.starts_with(&format!("{}: ", wdt.display())), "{err}");
-}
-
-/// A client cache holding the Stockade's WDT, its WMO 108631 and every GFID group of it
-/// but `without`.
-fn stockade_cache(without: &str) -> tempfile::TempDir {
-    let root = read_client_file(&client_data_dir(), "models", 108_631, "wmo").unwrap();
-    let groups = group_file_data_ids(&root).unwrap();
-    let cache = tempfile::tempdir().unwrap();
-    let files = [format!("terrain/{STOCKADE_WDT_FDID}.wdt")]
-        .into_iter()
-        .chain(
-            [108_631]
-                .into_iter()
-                .chain(groups)
-                .map(|fdid| format!("models/{fdid}.wmo")),
-        );
-    for path in files.filter(|path| path != without) {
-        let target = cache.path().join(&path);
-        std::fs::create_dir_all(target.parent().unwrap()).unwrap();
-        std::fs::copy(client_data_dir().join(&path), target).unwrap();
-    }
-    cache
-}
-
-fn check_stockade(cache: &Path, known_gaps: &[&str]) -> Result<KnownGroundGaps, String> {
-    check_spawned_ground(
-        cache,
-        &HashMap::from([(34, STOCKADE_WDT_FDID)]),
-        &BTreeSet::from([34]),
-        &known_gaps.iter().copied().collect(),
-    )
+    assert_eq!(cached.missing_files(34), Vec::<String>::new());
+    assert_eq!(missing.missing_files(34), ["terrain/791060.wdt"]);
+    assert_eq!(missing.missing_files(1), [NO_WDT]);
 }
 
 #[test]
-fn spawned_map_with_all_its_ground_files_passes() {
-    let cache = stockade_cache("");
+fn spawned_ground_check_fails_on_missing_files_except_the_known_gaps() {
+    let ground = GroundMap::new(
+        &std::env::temp_dir().join("no-such-game-engine-data"),
+        std::collections::HashMap::from([(0, AZEROTH_WDT_FDID), (34, STOCKADE_WDT_FDID)]),
+    );
+    let gaps = HashSet::from([(34, "terrain/791060.wdt".to_string())]);
+
+    let check = check_spawned_ground(&ground, [34, 0, 1], &gaps);
 
     assert_eq!(
-        check_stockade(cache.path(), &[]),
-        Ok(KnownGroundGaps::default())
+        check,
+        SpawnedGroundCheck {
+            missing: vec![
+                "map 0: terrain/775971.wdt".into(),
+                format!("map 1: {NO_WDT}"),
+            ],
+            known_gaps: vec![34],
+            known_gap_files: 1,
+        }
     );
-}
-
-#[test]
-fn spawned_map_missing_a_wmo_group_fails_naming_map_and_file() {
-    let cache = stockade_cache("models/108643.wmo");
-
-    let err = check_stockade(cache.path(), &[]).unwrap_err();
-
-    let group = cache.path().join("models/108643.wmo");
-    assert_eq!(
-        err,
-        format!("No ground on map 34: {} is missing", group.display())
-    );
-}
-
-#[test]
-fn missing_file_on_the_known_gap_list_is_counted_for_its_map() {
-    let cache = stockade_cache("models/108631.wmo");
-
-    let gaps = check_stockade(cache.path(), &["models/108631.wmo"]).unwrap();
-
-    assert_eq!(gaps.by_map, BTreeMap::from([(34, 1)]));
-}
-
-#[test]
-fn spawned_transport_without_a_wdt_needs_no_ground() {
-    // Map 582, "Transport: Rut'theran to Auberdine": Map.db2 WdtFileDataID 0.
-    let gaps = check_spawned_ground(
-        Path::new("/nonexistent"),
-        &HashMap::from([(582, 0)]),
-        &BTreeSet::from([582]),
-        &HashSet::new(),
-    )
-    .unwrap();
-
-    assert_eq!(gaps.without_wdt, 1);
-}
-
-#[test]
-fn tile_map_lists_each_missing_tile_root_and_obj0_adt() {
-    let cache = tempfile::tempdir().unwrap();
-    let wdt = format!("terrain/{AZEROTH_WDT_FDID}.wdt");
-    std::fs::create_dir_all(cache.path().join("terrain")).unwrap();
-    std::fs::copy(client_data_dir().join(&wdt), cache.path().join(&wdt)).unwrap();
-
-    let missing = missing_ground_files(cache.path(), AZEROTH_WDT_FDID).unwrap();
-
-    // MAID (32, 48), Northshire: root 778027, obj0 778028.
-    for path in ["terrain/778027.adt", "terrain/778028.adt"] {
-        assert!(missing.iter().any(|missing| missing == path), "{path}");
-    }
-    assert!(!missing.iter().any(|path| path.starts_with("models/")));
-}
-
-#[test]
-fn shipped_known_gaps_name_one_ground_file_per_line() {
-    for line in KNOWN_GROUND_GAPS.lines() {
-        let fields: Vec<_> = line.split('\t').collect();
-        assert!(
-            matches!(fields.as_slice(), [map, path, "absent" | "encrypted"]
-                if map.parse::<u32>().is_ok()
-                    && (path.starts_with("terrain/") || path.starts_with("models/"))),
-            "{line}"
-        );
-    }
 }
