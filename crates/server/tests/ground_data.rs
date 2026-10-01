@@ -61,7 +61,7 @@ fn tail(log: &str) -> String {
 }
 
 #[test]
-fn server_without_azeroth_ground_exits_at_startup_naming_the_wdt() {
+fn server_without_ground_exits_at_startup_naming_the_missing_files() {
     let cwd = tempfile::tempdir().unwrap();
     let missing = cwd.path().join("no-ground");
     let mut server = start_server(cwd.path(), Some(&missing));
@@ -71,10 +71,11 @@ fn server_without_azeroth_ground_exits_at_startup_naming_the_wdt() {
     let status =
         status.unwrap_or_else(|| panic!("server started without ground:\n{}", tail(&stderr)));
     assert!(!status.success(), "{status}");
-    let wdt = missing.join("terrain/775971.wdt");
     assert!(
-        stderr.contains(&format!("No ground on map 0 from {}", missing.display()))
-            && stderr.contains(&format!("{}: No such file or directory", wdt.display())),
+        stderr.contains(&format!(
+            "No ground from {} (set GAME_SERVER_GROUND_DIR): ",
+            missing.display()
+        )) && stderr.contains("files missing: map 0: terrain/775971.wdt, "),
         "{}",
         tail(&stderr)
     );

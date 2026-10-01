@@ -303,11 +303,10 @@ fn map_min_height_follows_the_mfbo_plane_under_the_feet() {
 }
 
 #[test]
-fn azeroth_ground_opens_at_startup_from_the_client_cache() {
+fn northshire_ground_under_the_blackrock_spy_is_the_terrain() {
     let mut ground = client_ground();
 
-    assert_eq!(ground.open_now(0), Ok(()));
-    // Northshire, below the ridge the Blackrock Spy spawns on: terrain 76.14.
+    // Below the ridge the Blackrock Spy spawns on (81.04): terrain 76.14.
     let (x, _, z) = crate::terrain_height::wow_to_bevy(-8966.63, -192.0, 76.0);
     let GroundProbe::Supported(floor) = ground.ground_at(0, Vec3::new(x, 81.04, z)) else {
         panic!("no Northshire ground");
@@ -316,15 +315,35 @@ fn azeroth_ground_opens_at_startup_from_the_client_cache() {
 }
 
 #[test]
-fn missing_client_cache_fails_naming_the_azeroth_wdt() {
-    let missing = std::env::temp_dir().join("no-such-game-engine-data");
-    let mut ground = GroundMap::new(
-        &missing,
-        std::collections::HashMap::from([(0, AZEROTH_WDT_FDID)]),
+fn cached_stockade_has_every_ground_file_and_a_missing_cache_lacks_the_wdt() {
+    let wdts = std::collections::HashMap::from([(34, STOCKADE_WDT_FDID)]);
+    let cached = GroundMap::new(&client_data_dir(), wdts.clone());
+    let missing = GroundMap::new(&std::env::temp_dir().join("no-such-game-engine-data"), wdts);
+
+    assert_eq!(cached.missing_files(34), Vec::<String>::new());
+    assert_eq!(missing.missing_files(34), ["terrain/791060.wdt"]);
+    assert_eq!(missing.missing_files(1), [NO_WDT]);
+}
+
+#[test]
+fn spawned_ground_check_fails_on_missing_files_except_the_known_gaps() {
+    let ground = GroundMap::new(
+        &std::env::temp_dir().join("no-such-game-engine-data"),
+        std::collections::HashMap::from([(0, AZEROTH_WDT_FDID), (34, STOCKADE_WDT_FDID)]),
     );
+    let gaps = HashSet::from([(34, "terrain/791060.wdt".to_string())]);
 
-    let err = ground.open_now(0).unwrap_err();
+    let check = check_spawned_ground(&ground, [34, 0, 1], &gaps);
 
-    let wdt = missing.join("terrain/775971.wdt");
-    assert!(err.starts_with(&format!("{}: ", wdt.display())), "{err}");
+    assert_eq!(
+        check,
+        SpawnedGroundCheck {
+            missing: vec![
+                "map 0: terrain/775971.wdt".into(),
+                format!("map 1: {NO_WDT}"),
+            ],
+            known_gaps: vec![34],
+            known_gap_files: 1,
+        }
+    );
 }

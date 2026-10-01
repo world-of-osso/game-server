@@ -9,7 +9,7 @@
 //! `_obj0` ADT FileDataIDs; the `_obj0` MODF places WMOs by FileDataID, and each WMO
 //! root's GFID names its group files.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
@@ -25,8 +25,11 @@ use crate::terrain_height::{TerrainHeightMap, parse_adt_heights};
 
 /// Overrides the client asset cache the ground loads from.
 const GROUND_DIR_ENV: &str = "GAME_SERVER_GROUND_DIR";
-/// Eastern Kingdoms: the server does not start without its ground.
-const REQUIRED_GROUND_MAP: u32 = 0;
+/// `map id<TAB>file` of the spawned maps' ground files local CASC cannot provide
+/// (`scripts/extract_ground.py --failed`): the server starts without them.
+const KNOWN_GROUND_GAPS: &str = include_str!("ground_gaps.tsv");
+/// What `GroundMap::missing_files` reports for a map without a WDT.
+const NO_WDT: &str = "no WDT FileDataID";
 const TILE_SIZE: f32 = shared::navmesh::TILE_SIZE;
 const MAP_TILES: usize = 64;
 /// MAID entry: root, obj0, obj1, tex0, lod, map texture, map normal, minimap FDIDs.
@@ -112,15 +115,21 @@ impl GroundMap {
         }
     }
 
-    /// Opens map `map_id` now; the error names the file that is missing or unreadable.
-    pub fn open_now(&mut self, map_id: u32) -> Result<(), String> {
-        let &wdt = self
-            .wdts
-            .get(&map_id)
-            .ok_or_else(|| format!("map {map_id} has no WDT in Map.db2"))?;
-        let map = MapGround::open(&self.data_dir, wdt)?;
-        self.maps.insert(map_id, Some(map));
-        Ok(())
+    /// The ground files of map `map_id` the cache does not hold, relative to it
+    /// (`terrain/<fdid>.wdt|adt`, `models/<fdid>.wmo`, with why when one does not parse):
+    /// its WDT, then each MAID tile's root and `_obj0` ADT and the WMO roots and groups
+    /// the WDT or the `_obj0` MODF place. `NO_WDT` for a map without one.
+    pub fn missing_files(&self, map_id: u32) -> Vec<String> {
+        let mut check = FileCheck {
+            data_dir: &self.data_dir,
+            missing: Vec::new(),
+            wmos: HashSet::new(),
+        };
+        match self.wdts.get(&map_id) {
+            Some(&wdt) if wdt != 0 => check.map(wdt),
+            _ => check.missing.push(NO_WDT.into()),
+        }
+        check.missing
     }
 
     /// Ground under `feet` (Bevy space) on map `map_id`, loading the map and its tile on
@@ -315,6 +324,107 @@ impl MapGround {
         let groups = self.wmo_models[&placement.fdid].clone();
         Some(WmoCollision::new(placement.world_from_local(), groups))
     }
+}
+
+/// Walks one map's ground files as `MapGround` loads them, without parsing terrain or
+/// collision.
+struct FileCheck<'a> {
+    data_dir: &'a Path,
+    missing: Vec<String>,
+    wmos: HashSet<u32>,
+}
+
+impl FileCheck<'_> {
+    fn read(&mut self, dir: &str, fdid: u32, ext: &str) -> Option<Vec<u8>> {
+        let data = std::fs::read(self.data_dir.join(format!("{dir}/{fdid}.{ext}"))).ok();
+        if data.is_none() {
+            self.missing.push(format!("{dir}/{fdid}.{ext}"));
+        }
+        data
+    }
+
+    fn exists(&mut self, dir: &str, fdid: u32, ext: &str) {
+        let path = format!("{dir}/{fdid}.{ext}");
+        if !self.data_dir.join(&path).is_file() {
+            self.missing.push(path);
+        }
+    }
+
+    fn unparsed(&mut self, dir: &str, fdid: u32, ext: &str, err: String) {
+        self.missing.push(format!("{dir}/{fdid}.{ext}: {err}"));
+    }
+
+    fn map(&mut self, wdt_fdid: u32) {
+        let Some(wdt) = self.read("terrain", wdt_fdid, "wdt") else {
+            return;
+        };
+        match wdt_ground(&wdt) {
+            Ok(WdtGround::GlobalWmo(fdid)) => self.wmo(fdid),
+            Ok(WdtGround::Tiles(tiles)) => tiles.into_iter().for_each(|tile| self.tile(tile)),
+            Err(err) => self.unparsed("terrain", wdt_fdid, "wdt", err),
+        }
+    }
+
+    fn tile(&mut self, tile: TileFiles) {
+        if tile.root != 0 {
+            self.exists("terrain", tile.root, "adt");
+        }
+        if tile.obj0 == 0 {
+            return;
+        }
+        let Some(obj0) = self.read("terrain", tile.obj0, "adt") else {
+            return;
+        };
+        match placed_wmos(&obj0) {
+            Ok(wmos) => wmos.into_iter().for_each(|fdid| self.wmo(fdid)),
+            Err(err) => self.unparsed("terrain", tile.obj0, "adt", err),
+        }
+    }
+
+    fn wmo(&mut self, fdid: u32) {
+        if !self.wmos.insert(fdid) {
+            return;
+        }
+        let Some(root) = self.read("models", fdid, "wmo") else {
+            return;
+        };
+        match group_file_data_ids(&root) {
+            Ok(groups) => groups
+                .into_iter()
+                .for_each(|group| self.exists("models", group, "wmo")),
+            Err(err) => self.unparsed("models", fdid, "wmo", err),
+        }
+    }
+}
+
+enum WdtGround {
+    /// The WDT MODF's WMO (MPHD flag 0x1).
+    GlobalWmo(u32),
+    Tiles(Vec<TileFiles>),
+}
+
+fn wdt_ground(wdt: &[u8]) -> Result<WdtGround, String> {
+    let mphd = find_chunk(wdt, b"MPHD")?.ok_or("WDT has no MPHD")?;
+    if read_u32(mphd, 0)? & MPHD_FLAG_GLOBAL_WMO == 0 {
+        return parse_maid(wdt).map(WdtGround::Tiles);
+    }
+    let modf = find_chunk(wdt, b"MODF")?.ok_or("global-WMO WDT has no MODF")?;
+    let entry = modf
+        .get(..MODF_ENTRY_SIZE)
+        .ok_or("global-WMO WDT MODF is empty")?;
+    Ok(WdtGround::GlobalWmo(parse_modf_entry(entry)?.fdid))
+}
+
+/// WMO FileDataIDs an `_obj0` MODF places (entries by path are skipped, as on load).
+fn placed_wmos(obj0: &[u8]) -> Result<Vec<u32>, String> {
+    let Some(modf) = find_chunk(obj0, b"MODF")? else {
+        return Ok(Vec::new());
+    };
+    Ok(modf
+        .chunks_exact(MODF_ENTRY_SIZE)
+        .filter_map(|entry| parse_modf_entry(entry).ok())
+        .map(|placement| placement.fdid)
+        .collect())
 }
 
 /// `(row, col)` of the map tile containing Bevy `(x, z)`; the row comes from
@@ -546,25 +656,87 @@ fn ground_data_dir() -> PathBuf {
     )
 }
 
-/// After `WorldDataPlugin` has loaded the `MapStore` (Startup). Without ground every
-/// creature keeps its spawn height wherever it runs, so the server refuses to start
-/// unless `REQUIRED_GROUND_MAP` opens.
-fn open_ground_map(mut commands: Commands, maps: Res<crate::maps::MapStore>) {
+/// After `WorldDataPlugin` has loaded the `MapStore` and the spawns (Startup). Without
+/// ground every creature keeps its spawn height wherever it runs, so the server refuses
+/// to start while a map with creature spawns misses a ground file other than the
+/// `KNOWN_GROUND_GAPS`.
+fn open_ground_map(
+    mut commands: Commands,
+    maps: Res<crate::maps::MapStore>,
+    world: Res<crate::world_data::WorldData>,
+) {
     let data_dir = ground_data_dir();
     let wdts = maps
         .maps
         .values()
         .map(|entry| (entry.id, entry.wdt_file_data_id))
         .collect();
-    let mut ground = GroundMap::new(&data_dir, wdts);
-    if let Err(err) = ground.open_now(REQUIRED_GROUND_MAP) {
+    let ground = GroundMap::new(&data_dir, wdts);
+    let spawned = world.spawns_by_map.keys().map(|&map| u32::from(map));
+    let check = check_spawned_ground(&ground, spawned, &known_ground_gaps());
+    if !check.missing.is_empty() {
         panic!(
-            "No ground on map {REQUIRED_GROUND_MAP} from {} (set {GROUND_DIR_ENV}): {err}",
-            data_dir.display()
+            "No ground from {} (set {GROUND_DIR_ENV}): {} files missing: {}",
+            data_dir.display(),
+            check.missing.len(),
+            check.missing[..check.missing.len().min(20)].join(", ")
+        );
+    }
+    if !check.known_gaps.is_empty() {
+        warn!(
+            "Ground known gaps: {} files of maps {:?} are not in local CASC (ground_gaps.tsv); creatures there keep their spawn height",
+            check.known_gap_files, check.known_gaps
         );
     }
     info!("Ground loads from {}", data_dir.display());
     commands.insert_resource(ground);
+}
+
+fn known_ground_gaps() -> HashSet<(u32, String)> {
+    KNOWN_GROUND_GAPS
+        .lines()
+        .filter_map(|line| line.split_once('\t'))
+        .map(|(map, file)| {
+            (
+                map.parse().expect("ground_gaps.tsv map id"),
+                file.to_string(),
+            )
+        })
+        .collect()
+}
+
+#[derive(Debug, Default, PartialEq)]
+struct SpawnedGroundCheck {
+    /// `map <id>: <file>` of each missing file not among the known gaps.
+    missing: Vec<String>,
+    /// Maps missing only known-gap files, ascending.
+    known_gaps: Vec<u32>,
+    known_gap_files: usize,
+}
+
+fn check_spawned_ground(
+    ground: &GroundMap,
+    spawned: impl IntoIterator<Item = u32>,
+    gaps: &HashSet<(u32, String)>,
+) -> SpawnedGroundCheck {
+    let mut maps: Vec<u32> = spawned.into_iter().collect();
+    maps.sort_unstable();
+    let mut check = SpawnedGroundCheck::default();
+    for map in maps {
+        let mut gap = false;
+        for file in ground.missing_files(map) {
+            if gaps.contains(&(map, file.clone())) {
+                gap = true;
+                check.known_gap_files += 1;
+            } else {
+                check.missing.push(format!("map {map}: {file}"));
+            }
+        }
+        if gap {
+            check.known_gaps.push(map);
+        }
+    }
+    check
 }
 
 #[cfg(test)]

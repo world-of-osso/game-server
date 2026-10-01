@@ -53,15 +53,19 @@ def main():
     parser.add_argument("--engine", type=Path, required=True, help="game-engine checkout (data/casc)")
     parser.add_argument("--failed", type=Path, required=True)
     args = parser.parse_args()
-    failed = {}
+    failed = set()
     if args.failed.is_file():
         for line in args.failed.read_text().splitlines():
             map_id, path = line.split("\t")
-            failed[path] = int(map_id)
+            failed.add((int(map_id), path))
     while True:
-        todo = [(map_id, path) for map_id, path in missing_files(args.world_db, args.cache) if path not in failed]
+        todo = [(map_id, path) for map_id, path in missing_files(args.world_db, args.cache) if (map_id, path) not in failed]
         if not todo:
             break
+        # Nothing to extract for a map without a WDT (`ground_files.NO_WDT`).
+        for map_id, path in todo:
+            if not path.startswith(("terrain/", "models/")):
+                failed.add((map_id, path))
         for directory in ("terrain", "models"):
             paths = sorted({path for _, path in todo if path.startswith(directory + "/")})
             fdids = [int(Path(path).stem) for path in paths]
@@ -69,8 +73,8 @@ def main():
             # A file written under another sniffed extension is not where the server reads it.
             for map_id, path in todo:
                 if path.startswith(directory + "/") and not (args.cache / path).is_file():
-                    failed.setdefault(path, map_id)
-        args.failed.write_text("".join(f"{map_id}\t{path}\n" for path, map_id in sorted(failed.items())))
+                    failed.add((map_id, path))
+        args.failed.write_text("".join(f"{map_id}\t{path}\n" for map_id, path in sorted(failed)))
         print(f"{len(failed)} failed so far", flush=True)
 
 
