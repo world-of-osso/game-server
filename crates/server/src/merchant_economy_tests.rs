@@ -30,6 +30,7 @@ fn economic_merchant_purchase_uses_finite_stock_and_atomic_player_payment() {
         gatherer_stack_max: 1,
         gatherer_capital: 0,
         gatherables: Vec::new(),
+        vendor_supplies: Default::default(),
         customer_budget: 0,
         customer_quantity: 0,
         items: Default::default(),
