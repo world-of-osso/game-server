@@ -471,6 +471,43 @@ class CreatureEventImportTests(unittest.TestCase):
                 conn.execute("SELECT ItemID FROM character_loadout_item WHERE CharacterLoadoutID = 1277"
                              " ORDER BY ID").fetchall(), [(35,), (6948,)])
 
+    def test_add_player_create_info_adds_exactly_the_import_rows_to_an_older_database(self):
+        """add_player_create_info.py on a database imported before the kit tables builds them and the kit
+        content_item rows as the import does, and changes nothing else."""
+        csv_dir = self.csv / db2.DEFAULT_BUILD
+        write_db2_rows(csv_dir, "CharacterLoadout", [
+            {"ID": 1277, "ChrClassID": 8, "Purpose": 9, "ModID": 75, "RaceMasks_0": 1}])
+        write_db2_rows(csv_dir, "CharacterLoadoutItem", [{"ID": 16396, "CharacterLoadoutID": 1277, "ItemID": 35}])
+        write_db2_rows(csv_dir, "ItemEffect", [{"ID": 8696, "SpellCategoryID": 11, "SpellID": 27094}])
+        write_db2_rows(csv_dir, "ItemXItemEffect", [{"ID": 1, "ItemEffectID": 8696, "ItemID": 41751}])
+        write_db2_rows(csv_dir, "ItemSparse", [
+            {"ID": 35, "Display_lang": "Bent Staff"}, {"ID": 40582, "Display_lang": "Scourgestone"}])
+        write_tdb(self.tdb, "playercreateinfo_item", ["(0,6,40582,-1)"])
+        write_tdb(self.tdb, "playercreateinfo_action", ["(1,8,0,116,0)"])
+        result = self.run_import()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        kit_tables = ("character_loadout", "character_loadout_item", "item_effect", "item_x_item_effect",
+                      "tdb_playercreateinfo_action", "tdb_playercreateinfo_item")
+        with closing(sqlite3.connect(self.db)) as conn, conn:
+            expected = {t: conn.execute(f"SELECT * FROM {t} ORDER BY 1, 2, 3").fetchall()
+                        for t in kit_tables + ("content_item",)}
+            builds = conn.execute("SELECT * FROM db2_build ORDER BY table_name").fetchall()
+            # The database as the import built it before the kit tables.
+            for table in kit_tables:
+                conn.execute(f"DROP TABLE {table}")
+            conn.execute("DELETE FROM content_item WHERE ID IN (35, 40582)")
+            conn.execute("DELETE FROM db2_build WHERE table_name IN"
+                         " ('character_loadout', 'character_loadout_item', 'item_effect', 'item_x_item_effect')")
+        result = subprocess.run([sys.executable, str(SCRIPTS / "add_player_create_info.py"), "--db", str(self.db),
+                                 "--csv-root", str(self.csv), "--tdb-dir", str(self.tdb)],
+                                capture_output=True, text=True, timeout=60, check=False)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("added 2 kit items to content_item", result.stdout)
+        with closing(sqlite3.connect(self.db)) as conn:
+            for table, rows in expected.items():
+                self.assertEqual(conn.execute(f"SELECT * FROM {table} ORDER BY 1, 2, 3").fetchall(), rows, table)
+            self.assertEqual(conn.execute("SELECT * FROM db2_build ORDER BY table_name").fetchall(), builds)
+
     def test_missing_tdb_excerpt_does_not_destroy_existing_database(self):
         (self.tdb / "skill_tiers.sql").unlink()
         self.db.write_bytes(b"existing database must survive failed preflight")
