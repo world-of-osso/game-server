@@ -6,6 +6,15 @@ unresolved row details, and eligible (only completeness of this published table)
 Invalid identity/structure/counts raise ValueError. CLI writes schema_version=1,
 skillup_line, effect=288, and records containing that result plus source_url,
 sha256, captured_utc, provenance. DB2 crosschecks remain the consumer's job.
+
+External HTML contract: required rows have one reagent anchor and matching positive
+counts. Only the published empty icon-list-tree disclosure controls are ignored.
+In a declared icon-list-reagents table, entity paths identify roots and descendants;
+each descendant must match its item/spell link and follow an existing expandable
+ancestor with alternating item/spell nodes. Validated descendants are decomposition,
+not additional costs. Hidden roots remain required. The sole control-only footer
+contains the known Expand All / Collapse All buttons targeting that same table.
+Unknown controls, malformed rows/paths/counts fail; non-item roots stay unresolved.
 """
 
 import argparse
@@ -64,6 +73,11 @@ class ReagentParser(HTMLParser):
         self.row = None
         self.quantity_text = None
         self.html_closed = False
+        self.table_id = None
+        self.tree_rows = {}
+        self.footer_seen = False
+        self.anchor = None
+        self.button = None
 
     def handle_starttag(self, tag, attrs):
         attributes = dict(attrs)
@@ -89,6 +103,11 @@ class ReagentParser(HTMLParser):
             and self.waiting_table
             and "icon-list" in attributes.get("class", "").split()
         ):
+            if len(attributes) != len(attrs):
+                raise ValueError("Duplicate attributes in required table")
+            self.table_id = attributes.get("id")
+            if self.table_id not in {None, "icon-list-reagents"}:
+                raise ValueError("Unexpected required table ID")
             self.waiting_table = False
             self.stack = ["table"]
             return
@@ -101,12 +120,19 @@ class ReagentParser(HTMLParser):
         if tag == "tr":
             if self.row is not None or self.stack[-1] not in {"table", "tbody"}:
                 raise ValueError("Malformed reagent row")
+            if self.footer_seen:
+                raise ValueError("Required row after control footer")
+            count = attributes.get("data-icon-list-quantity")
             self.row = {
-                "count": positive_u32(
-                    attributes.get("data-icon-list-quantity"), "row count"
-                ),
+                "attrs": attributes,
+                "count": positive_u32(count, "row count")
+                if count is not None
+                else None,
                 "links": [],
                 "quantities": [],
+                "disclosures": [],
+                "buttons": [],
+                "cells": 0,
             }
         elif self.row is None and tag not in {"tbody"}:
             raise ValueError("Content outside reagent row")
@@ -117,8 +143,22 @@ class ReagentParser(HTMLParser):
     def capture_row_tag(self, tag, attrs):
         if self.row is None:
             return
+        if self.anchor is not None and self.anchor.get("disclosure"):
+            raise ValueError("Markup inside disclosure control")
+        if self.row["count"] is None:
+            self.capture_footer_tag(tag, attrs)
+            return
+        if tag == "button":
+            raise ValueError("Footer control inside required reagent row")
         if tag == "a":
-            self.row["links"].append({"href": attrs.get("href", ""), "text": ""})
+            if self.anchor is not None:
+                raise ValueError("Nested reagent anchor")
+            if "icon-list-tree" in attrs.get("class", "").split():
+                self.capture_disclosure(attrs)
+                self.anchor = {"disclosure": True, "text": ""}
+            else:
+                self.anchor = {"href": attrs.get("href", ""), "text": ""}
+                self.row["links"].append(self.anchor)
         if tag != "tr" and "data-icon-list-quantity" in attrs:
             self.row["quantities"].append(
                 positive_u32(attrs["data-icon-list-quantity"], "display count")
@@ -128,13 +168,61 @@ class ReagentParser(HTMLParser):
                 raise ValueError("Nested quantity display")
             self.quantity_text = ""
 
+    def capture_disclosure(self, attrs):
+        inert = {
+            "class": "icon-list-tree disclosure-off",
+            "style": "pointer-events:none; visibility:hidden",
+        }
+        expandable = {
+            "class": "icon-list-tree disclosure-off",
+            "href": "javascript:",
+            "id": f"icon-list-tree.{self.row['attrs'].get('id')}",
+            "onclick": "WH.IconList.toggle(this)",
+        }
+        if attrs != inert and not (self.row["attrs"].get("id") and attrs == expandable):
+            raise ValueError("Unknown disclosure control")
+        if self.row["disclosures"]:
+            raise ValueError("Duplicate disclosure control")
+        self.row["disclosures"].append(attrs == expandable)
+
+    def capture_footer_tag(self, tag, attrs):
+        if self.table_id != "icon-list-reagents" or self.row["attrs"]:
+            raise ValueError("Missing required row count or undeclared footer table")
+        if tag == "tr":
+            return
+        if tag == "td" and self.stack[-1] == "tr" and not attrs:
+            self.row["cells"] += 1
+            return
+        if tag != "button" or self.stack[-1] != "td":
+            raise ValueError("Unknown control footer content")
+        for action, icon, label in [
+            ("true", "plus", "Expand All"),
+            ("false", "minus", "Collapse All"),
+        ]:
+            expected = {
+                "class": f"btn btn-small fa fa-{icon}",
+                "onclick": f'WH.IconList.alterAll("{self.table_id}", {action})',
+                "style": "margin-right:0.5em",
+                "type": "button",
+            }
+            if attrs == expected:
+                self.button = {"label": label, "text": ""}
+                self.row["buttons"].append(self.button)
+                return
+        raise ValueError("Unknown control footer button")
+
     def handle_data(self, data):
         if self.identity_text is not None:
             self.identity_text += data
-        if self.row is not None and "a" in self.stack:
-            self.row["links"][-1]["text"] += data
+        if self.anchor is not None:
+            self.anchor["text"] += data
         if self.quantity_text is not None:
             self.quantity_text += data
+        if self.row is not None and self.row["count"] is None:
+            if self.button is not None:
+                self.button["text"] += data
+            elif data.strip():
+                raise ValueError("Unexpected control footer text")
 
     def handle_endtag(self, tag):
         if tag == "html":
@@ -154,6 +242,14 @@ class ReagentParser(HTMLParser):
                 positive_u32(self.quantity_text.strip(), "visible count")
             )
             self.quantity_text = None
+        if tag == "a":
+            if self.anchor.get("disclosure") and self.anchor["text"].strip():
+                raise ValueError("Nonempty disclosure control")
+            self.anchor = None
+        if tag == "button":
+            if self.button["text"] != self.button["label"]:
+                raise ValueError("Unknown control footer label")
+            self.button = None
         if tag == "tr":
             self.finish_row()
         self.stack.pop()
@@ -161,12 +257,52 @@ class ReagentParser(HTMLParser):
             self.table_done = True
 
     def finish_row(self):
-        if len(self.row["links"]) != 1:
-            raise ValueError("Required row must contain exactly one reagent link")
-        if any(count != self.row["count"] for count in self.row["quantities"]):
-            raise ValueError("Conflicting required row counts")
-        self.rows.append(self.row)
+        if self.row["count"] is None:
+            labels = [button["label"] for button in self.row["buttons"]]
+            if self.row["cells"] != 2 or labels != ["Expand All", "Collapse All"]:
+                raise ValueError("Missing or malformed control footer")
+            self.footer_seen = True
+        else:
+            if len(self.row["links"]) != 1:
+                raise ValueError("Required row must contain exactly one reagent link")
+            if any(count != self.row["count"] for count in self.row["quantities"]):
+                raise ValueError("Conflicting required row counts")
+            if not self.validate_tree_row():
+                self.rows.append(self.row)
         self.row = None
+
+    def validate_tree_row(self):
+        """Return True only for a validated descendant, never merely a hidden row."""
+        row_id = self.row["attrs"].get("id")
+        if row_id is None:
+            if any(self.row["disclosures"]):
+                raise ValueError("Expandable row has no declared entity path")
+            return False
+        if self.table_id is None or not re.fullmatch(
+            re.escape(self.table_id) + r"(?:\.(?:3|6)-[0-9]+)+", row_id
+        ):
+            raise ValueError("Invalid reagent tree path or undeclared table ID")
+        if row_id in self.tree_rows:
+            raise ValueError("Duplicate reagent tree path")
+        nodes = row_id.split(".")[1:]
+        for node in nodes:
+            positive_u32(node.split("-")[1], "tree entity ID")
+        kind, entity_id = nodes[-1].split("-")
+        entity = "item" if kind == "3" else "spell"
+        link = self.row["links"][0]["href"]
+        if not re.fullmatch(rf"/{entity}={entity_id}(?:/[^?#]*)?", link):
+            raise ValueError("Reagent tree path does not match entity link")
+        descendant = len(nodes) > 1
+        if descendant:
+            parent = row_id.rsplit(".", 1)[0]
+            if not self.tree_rows.get(parent):
+                raise ValueError("Missing or nonexpandable reagent tree ancestor")
+            if nodes[-2].split("-")[0] == kind:
+                raise ValueError("Reagent tree must alternate items and spells")
+            if self.row["attrs"].get("style") != "display:none":
+                raise ValueError("Reagent tree descendant is not declared hidden")
+        self.tree_rows[row_id] = any(self.row["disclosures"])
+        return descendant
 
 
 def parse_published_reagents(html, spell_id) -> dict:

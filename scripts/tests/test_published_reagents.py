@@ -27,6 +27,23 @@ SPARK_ROW = """<tr data-icon-list-quantity="2"><th align="right" id="icon-list-i
 OPTIONAL = """<h2 class="heading-size-3">Optional Reagents</h2><table class="icon-list"><tr data-icon-list-quantity="1"><th></th><td><a href="/items?filter=243;391;0"><span>Add Embellishment (#391)</span></a></td></tr></table>"""
 
 
+# Exact required table subset of cached spell-1237550.html, including its tree.
+TREE_TABLE = """<table class="icon-list" id="icon-list-reagents">
+<tr id="icon-list-reagents.3-251665" data-icon-list-quantity="40"><th align="right" id="icon-list-icon1"></th><td><a class="icon-list-tree disclosure-off" style="pointer-events:none; visibility:hidden"></a><a href="/item=251665/silverleaf-thread" class="q1">Silverleaf Thread</a><span class="icon-list-quantity-wrapper" data-icon-list-quantity="40">&nbsp;(<span class="icon-list-quantity">40</span>)</span></td></tr>
+<tr id="icon-list-reagents.3-236951" data-icon-list-quantity="40"><th align="right" id="icon-list-icon2"></th><td><a class="icon-list-tree disclosure-off" style="pointer-events:none; visibility:hidden"></a><a href="/item=236951/mote-of-wild-magic" class="q3">Mote of Wild Magic</a><span class="icon-list-quantity-wrapper" data-icon-list-quantity="40">&nbsp;(<span class="icon-list-quantity">40</span>)</span></td></tr>
+<tr id="icon-list-reagents.3-245345" data-icon-list-quantity="20"><th align="right" id="icon-list-icon3"></th><td><a class="icon-list-tree disclosure-off" href="javascript:" id="icon-list-tree.icon-list-reagents.3-245345" onclick="WH.IconList.toggle(this)"></a><a href="/item=245345/fused-vitality" class="q3">Fused Vitality</a><span class="icon-list-quantity-wrapper" data-icon-list-quantity="20">&nbsp;(<span class="icon-list-quantity">20</span>)</span></td></tr>
+<tr id="icon-list-reagents.3-245345.6-1293502" style="display:none" data-icon-list-quantity="20"><th align="right" id="icon-list-icon4"></th><td style="padding-left:1em"><a class="icon-list-tree disclosure-off" href="javascript:" id="icon-list-tree.icon-list-reagents.3-245345.6-1293502" onclick="WH.IconList.toggle(this)"></a><a href="/spell=1293502/dnt-fused-vitality" class="q">[DNT] Fused Vitality</a><span class="icon-list-quantity-wrapper" data-icon-list-quantity="20">&nbsp;(<span class="icon-list-quantity">20</span>)</span></td></tr>
+<tr id="icon-list-reagents.3-245345.6-1293502.3-274267" style="display:none" data-icon-list-quantity="40"><th align="right" id="icon-list-icon5"></th><td style="padding-left:2em"><a class="icon-list-tree disclosure-off" style="pointer-events:none; visibility:hidden"></a><a href="/item=274267/fused-vitality" class="q3">Fused Vitality</a><span class="icon-list-quantity-wrapper" data-icon-list-quantity="40">&nbsp;(<span class="icon-list-quantity">40</span>)</span></td></tr>
+<tr id="icon-list-reagents.3-241281" data-icon-list-quantity="5"><th align="right" id="icon-list-icon6"></th><td><a class="icon-list-tree disclosure-off" style="pointer-events:none; visibility:hidden"></a><a href="/item=241281/composite-flora" class="q2">Composite Flora</a><span class="icon-list-quantity-wrapper" data-icon-list-quantity="5">&nbsp;(<span class="icon-list-quantity">5</span>)</span></td></tr>
+<tr id="icon-list-reagents.3-244633" data-icon-list-quantity="1"><th align="right" id="icon-list-icon7"></th><td><a class="icon-list-tree disclosure-off" style="pointer-events:none; visibility:hidden"></a><a href="/item=244633/infused-scalewoven-hide" class="q3">Infused Scalewoven Hide</a><span class="icon-list-quantity-wrapper" data-icon-list-quantity="1">&nbsp;(<span class="icon-list-quantity">1</span>)</span></td></tr>
+<tr><td></td><td><button class="btn btn-small fa fa-plus" onclick="WH.IconList.alterAll(&quot;icon-list-reagents&quot;, true)" style="margin-right:0.5em" type="button">Expand All</button><button class="btn btn-small fa fa-minus" onclick="WH.IconList.alterAll(&quot;icon-list-reagents&quot;, false)" style="margin-right:0.5em" type="button">Collapse All</button></td></tr></table>"""
+TREE_ITEMS = [[236951, 40], [241281, 5], [244633, 1], [245345, 20], [251665, 40]]
+
+
+def tree_page(table=TREE_TABLE):
+    return page("", 1237550).replace('<table class="icon-list"></table>', table, 1)
+
+
 def page(rows=VEST_ROWS, spell=1237528):
     return f"""<html><body><script type="application/json" id="data.page.info">{{"commentsLocked":false,"entityId":{spell},"entityType":6}}</script><h2 id="icon-list-heading-reagents" class="heading-size-3">Reagents</h2><table class="icon-list">{rows}</table>{OPTIONAL}</body></html>"""
 
@@ -34,6 +51,97 @@ def page(rows=VEST_ROWS, spell=1237528):
 class PublishedReagentTests(unittest.TestCase):
     def setUp(self):
         self.assertIsNotNone(adapter, "published_reagents adapter not implemented")
+
+    def test_crafting_tree_charges_only_five_primary_items(self):
+        parsed = adapter.parse_published_reagents(tree_page(), 1237550)
+        self.assertEqual(
+            parsed,
+            {
+                "spell_id": 1237550,
+                "items": TREE_ITEMS,
+                "unresolved": [],
+                "eligible": True,
+            },
+        )
+        self.assertNotIn(274267, [item for item, _count in parsed["items"]])
+
+    def test_tree_does_not_omit_hidden_root_or_required_spark(self):
+        table = TREE_TABLE.replace(
+            'id="icon-list-reagents.3-251665" data-',
+            'id="icon-list-reagents.3-251665" style="display:none" data-',
+        ).replace("<tr><td></td>", SPARK_ROW + "<tr><td></td>")
+        parsed = adapter.parse_published_reagents(tree_page(table), 1237550)
+        self.assertEqual(parsed["items"], TREE_ITEMS)
+        self.assertFalse(parsed["eligible"])
+        self.assertEqual(
+            parsed["unresolved"],
+            [
+                {
+                    "row": 6,
+                    "href": "/items?filter=243;401;0",
+                    "text": "Spark (#401)",
+                    "count": 2,
+                    "reason": "non-item link",
+                }
+            ],
+        )
+
+    def test_tree_rejects_malformed_hierarchy_and_required_rows(self):
+        lines = TREE_TABLE.splitlines()
+        variants = [
+            TREE_TABLE.replace('id="icon-list-reagents"', 'id="another-table"', 1),
+            TREE_TABLE.replace('id="icon-list-reagents"', "", 1),
+            TREE_TABLE.replace(".6-1293502.3-274267", ".6-999.3-274267"),
+            TREE_TABLE.replace(".3-245345.6-1293502", ".3-245345.3-1293502"),
+            TREE_TABLE.replace("/item=274267/", "/item=999/"),
+            TREE_TABLE.replace("/spell=1293502/", "/currency=1293502/"),
+            TREE_TABLE.replace('quantity="40">&nbsp;', 'quantity="41">&nbsp;', 1),
+            TREE_TABLE.replace(
+                'style="display:none" data-icon-list-quantity="20"',
+                'style="display:none"',
+            ),
+            TREE_TABLE.replace('style="display:none"', "", 1),
+            "\n".join(lines[:3] + lines[4:]),  # Missing intermediate root.
+            "\n".join(lines[:4] + lines[5:]),  # Missing spell ancestor.
+            "\n".join(lines[:4] + [lines[5], lines[4]] + lines[6:]),
+            TREE_TABLE.replace(lines[4], lines[4] + lines[4]),
+            TREE_TABLE.replace('data-icon-list-quantity="5"', "", 1),
+            TREE_TABLE.replace("/item=241281/", "/item=0/"),
+        ]
+        for table in variants:
+            with self.subTest(table=table), self.assertRaises(ValueError):
+                adapter.parse_published_reagents(tree_page(table), 1237550)
+
+    def test_tree_rejects_unknown_or_malformed_controls(self):
+        variants = [
+            TREE_TABLE.replace("WH.IconList.toggle(this)", "unknown(this)", 1),
+            TREE_TABLE.replace(
+                "icon-list-tree.icon-list-reagents.3-245345",
+                "icon-list-tree.icon-list-reagents.3-999",
+                1,
+            ),
+            TREE_TABLE.replace("visibility:hidden", "visibility:visible", 1),
+            TREE_TABLE.replace(
+                'visibility:hidden"></a>', 'visibility:hidden">item</a>', 1
+            ),
+            TREE_TABLE.replace("WH.IconList.alterAll", "unknown", 1),
+            TREE_TABLE.replace("Expand All", "Unknown control"),
+            TREE_TABLE.replace(
+                "Collapse All</button>",
+                'Collapse All</button><a href="/item=999/test">extra</a>',
+            ),
+            TREE_TABLE.replace("Collapse All</button>", "Collapse All</button>extra"),
+            TREE_TABLE.replace(
+                "Collapse All</button>", "Collapse All</button><span></span>"
+            ),
+            TREE_TABLE.replace(
+                "<tr><td></td>", '<tr data-icon-list-quantity="1"><td></td>'
+            ),
+            TREE_TABLE.replace("</table>", VEST_ROWS + "</table>", 1),
+        ]
+        for table in variants:
+            with self.subTest(table=table), self.assertRaises(ValueError):
+                adapter.parse_published_reagents(tree_page(table), 1237550)
 
     def test_required_items_sorted_optional_ignored(self):
         parsed = adapter.parse_published_reagents(page(), 1237528)
