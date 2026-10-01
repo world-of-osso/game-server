@@ -54,7 +54,7 @@
   - `Level` and `UnitLevel` are set.
   - Class progression sends spell and spec deltas and the trait budget ([[class-progression]]).
   - Stats are recomputed ([[character-stats]]).
-  - `RefillAfterLevelUp` sets health and mana to the new maxima after `update_character_stats`. Retail `GiveLevel` refills only health and mana (`SetToMaxOnLevelUp`).
+  - `RefillAfterLevelUp` sets health to the new max after `update_character_stats`, and every pool whose `power_type` has `SetToMaxOnLevelUp` (0x1000: Mana, Energy, Soul Shards, Essence) to its max (TrinityCore `Player::GiveLevel`). Rage, Focus and Runic Power keep their value. Admin `set-level` takes the same path.
 - redb `character_xp`: `character_id` → u32 XP into the current level. The row is removed with the character.
 
 ## Messages (ExperienceChannel, owner only)

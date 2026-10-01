@@ -1,5 +1,9 @@
 # Wiki Log
 
+## [2026-10-01] investigations | Browser-observed Silvermoon merchant
+
+Updated [[midnight-economy-content]] from saved browser-cli Zaralda evidence: NPC243531, Leatherworking Supplies, all 34 sells rows extracted without individual item navigation, two thread/floss costs700 and raw stack/availability, plus Silvermoon uiMap2393 marker43.2,55.8. Canonical item rows confirm price700 and bundle1 for both reagents; neither appears in the 15 staged recipes. Preserved patch12.0.0 provenance, generic thread736 discrepancy, unverified stock/restock semantics, and missing runtime x/y/z/facing. Linked parsed/raw temporary artifacts. Classic/catalog unchanged.
+
 ## [2026-10-01] systems | Verified crafting reference publication
 
 Published the verified crafting references and additive Retail item projection to local `world.db` after the ingestion gate. The independent publication report confirms existing rows and unrelated tables remain unchanged; [[midnight-economy-content]] owns the exact counts, source provenance and diagnostic limits. Rebuild preflight is tested and documented in [[crafting-reference-import]]. The active Classic catalog was not replaced, no production service was restarted, and genuine new Silvermoon merchant placement remains unavailable.
@@ -471,3 +475,7 @@ Players replicate `PlayerMotion`, Retail `MovementFlags` (FORWARD, BACKWARD, STR
 ## [2026-09-30] feature | Class secondary resources
 
 [[spell-casting]], [[auras]]: aura max power (35/418; Holy Power 5, Chi 5/6), druid forms switch display power and model (MOD_SHAPESHIFT 36), Death Knight runes as per-rune cooldowns with 3 recharging, SET_POWER_POINT_CHARGE 494 charged combo points. Monk, Demon Hunter and Evoker remain unplayable, so Chi and Essence have no player yet.
+
+## [2026-10-01] fix | Player health regeneration
+
+[[spell-casting]], [[experience]]: players regenerate health every 2 s out of combat (TrinityCore `Player::RegenerateHealth`); before, only creatures did, so a damaged player stayed damaged forever (observed 666/1110 and 1109/1110). Level-up fills `SetToMaxOnLevelUp` pools (adds Energy). A max-health rescale truncates to whole points. Live: Godot client on a private server, 666 → 1110 in 20 ticks of 22/23.

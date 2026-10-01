@@ -201,9 +201,40 @@ fn award_app() -> App {
     app
 }
 
+/// `power_type` rows 1-4 (Mana, Rage, Energy): Flags 12480 and 29824 carry
+/// `SetToMaxOnLevelUp` 0x1000, Rage's 8192 does not.
+fn level_up_power_table() -> PowerTypeTable {
+    let info =
+        |power, max_base_power, set_to_max_on_level_up| crate::spell_cast::powers::PowerTypeInfo {
+            power,
+            min_power: 0,
+            max_base_power,
+            center_power: 0,
+            default_power: 0,
+            display_modifier: 1,
+            regen_interrupt_ms: 0,
+            regen_peace: 0.0,
+            regen_combat: 0.0,
+            set_to_max_on_level_up,
+        };
+    PowerTypeTable::fixture([
+        info(PowerType::Mana, 0, true),
+        info(PowerType::Rage, 1000, false),
+        info(PowerType::Energy, 100, true),
+    ])
+}
+
 #[test]
-fn crossing_the_threshold_saves_level_and_xp_and_refills_health_and_mana() {
+fn crossing_the_threshold_saves_level_and_xp_and_fills_health_mana_and_energy_not_rage() {
     let mut app = award_app();
+    let table = level_up_power_table();
+    let mut pools = PowerPools::from_table(
+        &table,
+        vec![PowerType::Energy, PowerType::Mana, PowerType::Rage],
+    );
+    pools.get_mut(PowerType::Energy).unwrap().current = 20.0;
+    pools.get_mut(PowerType::Rage).unwrap().current = 500.0;
+    app.insert_resource(table);
     let db = &app.world().resource::<GameDatabase>().db;
     let (character_id, _) = persistence::create_character(db, 1, "Leveler", 1, 2).unwrap();
     save_xp(db, character_id, 200);
@@ -227,6 +258,7 @@ fn crossing_the_threshold_saves_level_and_xp_and_refills_health_and_mana() {
                 current: 5.0,
                 max: 50.0,
             },
+            pools,
         ))
         .id();
 
@@ -241,6 +273,9 @@ fn crossing_the_threshold_saves_level_and_xp_and_refills_health_and_mana() {
     assert_eq!(app.world().get::<UnitLevel>(player), Some(&UnitLevel(2)));
     assert_eq!(app.world().get::<Health>(player).unwrap().current, 100.0);
     assert_eq!(app.world().get::<Mana>(player).unwrap().current, 50.0);
+    let pools = app.world().get::<PowerPools>(player).unwrap();
+    assert_eq!(pools.get(PowerType::Energy).unwrap().current, 100.0);
+    assert_eq!(pools.get(PowerType::Rage).unwrap().current, 500.0);
     let db = &app.world().resource::<GameDatabase>().db;
     assert_eq!(load_xp(db, character_id), 50);
     assert_eq!(

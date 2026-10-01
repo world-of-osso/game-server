@@ -291,7 +291,7 @@ fn open_vendor(interaction: Option<&ActiveInteraction>) -> Option<Entity> {
 }
 
 /// Run `handle` for each request; a refusal answers `MerchantFailed` for its NPC.
-fn process<M: lightyear::prelude::Message>(
+fn process<M: lightyear::prelude::Message + std::fmt::Debug>(
     requests: &mut Requests<M>,
     shop: &mut Shop,
     npc_of: impl Fn(&M) -> u64,
@@ -311,6 +311,11 @@ fn process<M: lightyear::prelude::Message>(
         };
         for request in receiver.receive() {
             let npc = npc_of(&request);
+            // One line per decoded vendor request: the server-side record of what a client sent.
+            info!(
+                "merchant request character={} {request:?}",
+                customer.character_id
+            );
             if let Err(error) = handle(shop, &mut customer, request) {
                 shop.fail(connection, npc, error);
             }
@@ -565,13 +570,14 @@ fn repair(shop: &mut Shop, customer: &mut Customer, req: RepairItem) -> Merchant
         return Err(MerchantError::NotInteracting);
     }
     let mut model = shop.load(customer.character_id)?;
+    // TrinityCore `HandleRepairItemOpcode` repairs the item if the player has it and
+    // answers nothing; only equipped items carry durability, so any other guid is a no-op.
     let only: Option<EquipmentVisualSlot> = match req.item_guid {
         None => None,
-        Some(guid) => Some(
-            model
-                .equipped_visual_slot(guid)
-                .ok_or(MerchantError::ItemNotFound)?,
-        ),
+        Some(guid) => match model.equipped_visual_slot(guid) {
+            Some(slot) => Some(slot),
+            None => return Ok(()),
+        },
     };
     let Ok(mut durability) = shop.durability.get_mut(customer.player) else {
         return Err(MerchantError::ItemNotFound);
