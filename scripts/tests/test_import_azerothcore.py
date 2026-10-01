@@ -1,10 +1,8 @@
 """Exercise the real importer without touching the development world database."""
 
 import csv
-from contextlib import closing
 import json
 import os
-from pathlib import Path
 import shutil
 import sqlite3
 import struct
@@ -12,13 +10,15 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from contextlib import closing
+from pathlib import Path
 
 SCRIPTS = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(SCRIPTS))
-import content_policy  # noqa: E402
-import retail_content  # noqa: E402
-import db2  # noqa: E402
-import crafting_data  # noqa: E402
+import content_policy
+import crafting_data
+import db2
+import retail_content
 
 CRAFTING_SOURCE = SCRIPTS.parent / "data/reference/crafting/12.1.0.69933"
 
@@ -70,12 +70,18 @@ def tdb_gameobject_template(entry, kind, display, name, data0=0, data1=0, data34
 
 def tdb_row(table, **values):
     """A positional TDB1210 `table` INSERT tuple; columns from tdb_schema.sql, unset ones 0 / ''."""
-    schema = sqlite3.connect(":memory:")
-    schema.executescript((SCRIPTS / "tdb_schema.sql").read_text())
     cells = []
-    for _, name, sql_type, *_ in schema.execute(f"PRAGMA table_info(tdb_{table})"):
-        value = values.pop(name, "" if sql_type == "TEXT" else 0)
-        cells.append("NULL" if value is None else repr(value) if isinstance(value, str) else str(value))
+    with closing(sqlite3.connect(":memory:")) as schema:
+        schema.executescript((SCRIPTS / "tdb_schema.sql").read_text())
+        for _, name, sql_type, *_ in schema.execute(f"PRAGMA table_info(tdb_{table})"):
+            value = values.pop(name, "" if sql_type == "TEXT" else 0)
+            cells.append(
+                "NULL"
+                if value is None
+                else repr(value)
+                if isinstance(value, str)
+                else str(value)
+            )
     if values:
         raise KeyError(f"tdb_{table} has no columns {sorted(values)}")
     return "(" + ",".join(cells) + ")"
@@ -168,6 +174,7 @@ class CreatureEventImportTests(unittest.TestCase):
             "retail_content.py",
             "wowhead_loot.py",
             "content_policy.py",
+            "derived_merchants.py",
             "economy_crafting.py",
             "tdb_schema.sql",
             "crafting_data.py",
@@ -177,6 +184,7 @@ class CreatureEventImportTests(unittest.TestCase):
         (scripts / "content_overrides.csv").write_text(
             "kind,source_id,retail_id,source_name,retail_name,reason\n"
         )
+        (scripts / "derived-merchants.json").write_text("[]\n")
         self.crafting = self.root / "data/reference/crafting/12.1.0.69933"
         self.crafting.mkdir(parents=True)
         for table in crafting_data.TABLES:
@@ -224,14 +232,164 @@ class CreatureEventImportTests(unittest.TestCase):
         env.pop("CRAFTING_SOURCE_DIR", None)
         if crafting_source is not None:
             env["CRAFTING_SOURCE_DIR"] = str(crafting_source)
-        return subprocess.run(
-            [str(self.root / "scripts/import-azerothcore.sh"), str(self.sql)],
-            env=env,
-            capture_output=True,
-            text=True,
-            timeout=10,
-            check=False,
+        try:
+            return subprocess.run(
+                [str(self.root / "scripts/import-azerothcore.sh"), str(self.sql)],
+                env=env,
+                capture_output=True,
+                text=True,
+                timeout=30,
+                check=False,
+            )
+        except subprocess.TimeoutExpired as error:
+            self.fail(
+                f"Importer timed out: stdout={error.stdout!r}; stderr={error.stderr!r}"
+            )
+
+    def test_derived_merchant_survives_two_full_rebuilds(self):
+        merchant = {
+            "entry": 243531,
+            "name": "Zaralda",
+            "minlevel": 80,
+            "maxlevel": 90,
+            "display_id": 138959,
+            "guid": 1000243531,
+            "map": 0,
+            "area_id": 15969,
+            "position_x": 8728.991197265625,
+            "position_y": -4547.716015625,
+            "position_z": 23.438097,
+            "orientation": 0.0,
+            "source_url": "https://www.wowhead.com/npc=243531/zaralda",
+            "placement_kind": "derived",
+            "vendors": [
+                {
+                    "slot": 0,
+                    "item": 251665,
+                    "buy_price": 700,
+                    "buy_count": 1,
+                    "maxcount": 0,
+                    "incrtime": 0,
+                    "extended_cost": 0,
+                }
+            ],
+        }
+        (self.root / "scripts/derived-merchants.json").write_text(
+            json.dumps([merchant])
         )
+        write_tdb(
+            self.tdb, "creature_template", [tdb_template(243531, "Zaralda", 0, 0)]
+        )
+        write_tdb(
+            self.tdb,
+            "creature_template_difficulty",
+            [tdb_difficulty(243531, 1, 0, 0, 0, content_tuning=0, health_expansion=11)],
+        )
+        write_tdb(
+            self.tdb,
+            "creature_template_model",
+            [
+                tdb_row(
+                    "creature_template_model",
+                    CreatureID=243531,
+                    Idx=0,
+                    CreatureDisplayID=138959,
+                    DisplayScale=1,
+                    Probability=1,
+                    VerifiedBuild=69497,
+                )
+            ],
+        )
+        write_db2_rows(
+            self.csv / db2.DEFAULT_BUILD, "CreatureDisplayInfo", [{"ID": 138959}]
+        )
+        write_db2_rows(
+            self.csv / db2.DEFAULT_BUILD,
+            "Item",
+            [{"ID": 251665, "ClassID": 7, "SubclassID": 5}],
+        )
+        write_db2_rows(
+            self.csv / db2.DEFAULT_BUILD,
+            "ItemSparse",
+            [
+                {
+                    "ID": 251665,
+                    "Display_lang": "Silverleaf Thread",
+                    "BuyPrice": 700,
+                    "VendorStackCount": 1,
+                    "Stackable": 1000,
+                }
+            ],
+        )
+        for _ in range(2):
+            result = self.run_import()
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            with closing(sqlite3.connect(self.db)) as conn:
+                self.assertEqual(
+                    conn.execute(
+                        "SELECT name,minlevel,maxlevel,npcflag FROM content_creature_template "
+                        "WHERE entry=243531"
+                    ).fetchone(),
+                    ("Zaralda", 80, 90, 128),
+                )
+                self.assertEqual(
+                    conn.execute(
+                        "SELECT CreatureDisplayID FROM content_creature_template_model "
+                        "WHERE CreatureID=243531"
+                    ).fetchall(),
+                    [(138959,)],
+                )
+                self.assertEqual(
+                    conn.execute(
+                        "SELECT guid,map,areaId,position_x,position_y,position_z,orientation "
+                        "FROM content_creature WHERE id1=243531"
+                    ).fetchall(),
+                    [
+                        (
+                            1000243531,
+                            0,
+                            15969,
+                            8728.991197265625,
+                            -4547.716015625,
+                            23.438097,
+                            0.0,
+                        )
+                    ],
+                )
+                self.assertEqual(
+                    conn.execute(
+                        "SELECT item,maxcount,incrtime,ExtendedCost FROM content_npc_vendor "
+                        "WHERE entry=243531"
+                    ).fetchall(),
+                    [(251665, 0, 0, 0)],
+                )
+                self.assertEqual(
+                    conn.execute(
+                        "SELECT BuyPrice,VendorStackCount FROM content_item WHERE ID=251665"
+                    ).fetchone(),
+                    (700, 1),
+                )
+                self.assertEqual(
+                    conn.execute(
+                        "SELECT COUNT(*) FROM tdb_creature WHERE id=243531"
+                    ).fetchone(),
+                    (0,),
+                )
+
+    def test_invalid_derived_manifest_preserves_existing_database_bytes(self):
+        with closing(sqlite3.connect(self.db)) as conn, conn:
+            conn.execute("CREATE TABLE sentinel (value TEXT)")
+            conn.execute(
+                "INSERT INTO sentinel VALUES ('keep before importer deletion')"
+            )
+        before = self.db.read_bytes()
+        path = self.root / "scripts/derived-merchants.json"
+        for contents in ("not json", "[{}]"):
+            with self.subTest(contents=contents):
+                path.write_text(contents)
+                result = self.run_import()
+                self.assertNotEqual(result.returncode, 0)
+                self.assertEqual(self.db.read_bytes(), before)
 
     def test_invalid_crafting_snapshot_preserves_existing_database_bytes(self):
         with closing(sqlite3.connect(self.db)) as conn, conn:
@@ -353,12 +511,32 @@ class CreatureEventImportTests(unittest.TestCase):
                     for row in sorted(items, key=lambda row: row["ID"])
                 ],
             )
-            sparse_fields = (
-                "ID ItemLevel RequiredLevel BuyPrice SellPrice VendorStackCount Stackable MaxCount "
-                "InventoryType Bonding ItemDelay DmgVariance AllowableClass AllowableRaces_0 "
-                "AllowableRaces_1 RequiredSkill RequiredSkillRank StartQuestID ItemSet "
-                "Flags_0 Flags_1 Flags_2 Flags_3 Flags_4"
-            ).split()
+            sparse_fields = [
+                "ID",
+                "ItemLevel",
+                "RequiredLevel",
+                "BuyPrice",
+                "SellPrice",
+                "VendorStackCount",
+                "Stackable",
+                "MaxCount",
+                "InventoryType",
+                "Bonding",
+                "ItemDelay",
+                "DmgVariance",
+                "AllowableClass",
+                "AllowableRaces_0",
+                "AllowableRaces_1",
+                "RequiredSkill",
+                "RequiredSkillRank",
+                "StartQuestID",
+                "ItemSet",
+                "Flags_0",
+                "Flags_1",
+                "Flags_2",
+                "Flags_3",
+                "Flags_4",
+            ]
             sparse_fields += [
                 field
                 for index in range(10)
@@ -433,7 +611,7 @@ class CreatureEventImportTests(unittest.TestCase):
         (self.tdb / "creature_trainer.sql").write_text("INSERT INTO `creature_trainer` VALUES (1346,163,4353,0);\n")
         result = self.run_import()
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        with sqlite3.connect(self.db) as conn:
+        with closing(sqlite3.connect(self.db)) as conn, conn:
             tables = {name for (name,) in conn.execute("SELECT name FROM sqlite_master WHERE type = 'table'")}
             for dead in ("trainer", "trainer_spell", "npc_trainer", "creature_default_trainer", "content_trainer_spell"):
                 self.assertNotIn(dead, tables)
@@ -571,7 +749,7 @@ class CreatureEventImportTests(unittest.TestCase):
         )
         result = self.run_import()
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        with sqlite3.connect(self.db) as conn:
+        with closing(sqlite3.connect(self.db)) as conn, conn:
             self.assertEqual(
                 conn.execute("SELECT guid, path_id, mount, auras FROM creature_addon ORDER BY guid").fetchall(),
                 [(76, 0, 0, None), (79968, 799680, 2410, "1244 7164")],
@@ -650,7 +828,7 @@ class CreatureEventImportTests(unittest.TestCase):
         result = self.run_import()
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         offset = retail_content.RETAIL_GUID_OFFSET
-        with sqlite3.connect(self.db) as conn:
+        with closing(sqlite3.connect(self.db)) as conn, conn:
             self.assertEqual(
                 conn.execute("SELECT guid, id1, map, position_x, position_y, spawntimesecs FROM content_creature"
                              " ORDER BY guid").fetchall(),
@@ -749,7 +927,7 @@ class CreatureEventImportTests(unittest.TestCase):
         self.write_transform_fixture()
         result = self.run_import()
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        with sqlite3.connect(self.db) as conn:
+        with closing(sqlite3.connect(self.db)) as conn, conn:
             self.assertEqual(
                 conn.execute("SELECT entry, name, faction FROM content_creature_template WHERE entry IN (45409, 2455)"
                              " ORDER BY entry").fetchall(),
@@ -773,7 +951,7 @@ class CreatureEventImportTests(unittest.TestCase):
         result = self.run_import()
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         tables = ("content_creature_template", "content_creature_template_model", "content_creature_template_addon")
-        with sqlite3.connect(self.db) as conn:
+        with closing(sqlite3.connect(self.db)) as conn, conn:
             expected = {t: sorted(conn.execute(f"SELECT * FROM {t}").fetchall()) for t in tables}
             # The database as the import built it before the rule.
             for table, column in zip(tables, ("entry", "CreatureID", "entry")):
@@ -784,7 +962,7 @@ class CreatureEventImportTests(unittest.TestCase):
                                 capture_output=True, text=True, timeout=60, check=False)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn("added 1 transform templates", result.stdout)
-        with sqlite3.connect(self.db) as conn:
+        with closing(sqlite3.connect(self.db)) as conn:
             for table in tables:
                 rows = sorted(conn.execute(f"SELECT * FROM {table}").fetchall())
                 self.assertEqual(rows, expected[table], table)
@@ -807,7 +985,7 @@ class CreatureEventImportTests(unittest.TestCase):
                                                         "(46405,2,5305,3,0,0,0,0,0,0,0,63305)"])
         result = self.run_import()
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        with sqlite3.connect(self.db) as conn:
+        with closing(sqlite3.connect(self.db)) as conn, conn:
             self.assertEqual(
                 conn.execute("""SELECT CreatureID, ID, ItemID1, AppearanceModID1, ItemID2, AppearanceModID2, ItemID3,
                     AppearanceModID3 FROM content_creature_equip_template ORDER BY CreatureID, ID""").fetchall(),
@@ -828,7 +1006,7 @@ class CreatureEventImportTests(unittest.TestCase):
         result = self.run_import()
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         offset = retail_content.RETAIL_GUID_OFFSET
-        with sqlite3.connect(self.db) as conn:
+        with closing(sqlite3.connect(self.db)) as conn, conn:
             self.assertEqual(
                 conn.execute("SELECT guid, modelid, unit_flags FROM content_creature WHERE guid > ? ORDER BY guid",
                              (offset,)).fetchall(),
@@ -891,7 +1069,7 @@ class CreatureEventImportTests(unittest.TestCase):
         result = self.run_import()
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         offset = retail_content.RETAIL_GUID_OFFSET
-        with sqlite3.connect(self.db) as conn:
+        with closing(sqlite3.connect(self.db)) as conn, conn:
             self.assertEqual(
                 conn.execute("SELECT guid, id1, map, position_x FROM content_creature ORDER BY guid").fetchall(),
                 [(offset + 16397, 16123, 0, -8900.0), (offset + 375720, 46254, 34, 158.016),
@@ -974,7 +1152,7 @@ class CreatureEventImportTests(unittest.TestCase):
         result = self.run_import()
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         offset = retail_content.RETAIL_GUID_OFFSET
-        with sqlite3.connect(self.db) as conn:
+        with closing(sqlite3.connect(self.db)) as conn, conn:
             self.assertEqual(
                 conn.execute("SELECT guid, id1, spawnDifficulties FROM content_creature WHERE map = 670 ORDER BY guid")
                 .fetchall(),
@@ -1049,7 +1227,7 @@ class CreatureEventImportTests(unittest.TestCase):
         result = self.run_import()
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         loot = retail_content.TDB_LOOT_OFFSET
-        with sqlite3.connect(self.db) as conn:
+        with closing(sqlite3.connect(self.db)) as conn, conn:
             self.assertEqual(
                 conn.execute("SELECT entry, slot, item FROM content_npc_vendor ORDER BY entry, slot").fetchall(),
                 [(54, 1, 2489), (54, 2, 200000), (999, 0, 2488)],
@@ -1110,7 +1288,7 @@ class CreatureEventImportTests(unittest.TestCase):
         result = self.run_import()
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         offset = retail_content.RETAIL_GUID_OFFSET
-        with sqlite3.connect(self.db) as conn:
+        with closing(sqlite3.connect(self.db)) as conn, conn:
             self.assertEqual(
                 conn.execute("SELECT guid, id, map, position_x, rotation2, spawntimesecs, state FROM content_gameobject"
                              " ORDER BY guid").fetchall(),
@@ -1176,7 +1354,7 @@ class CreatureEventImportTests(unittest.TestCase):
             tdb_row("broadcast_text", Text="", Text1="Retail text", ID=3001, VerifiedBuild=66044)])
         result = self.run_import()
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        with sqlite3.connect(self.db) as conn:
+        with closing(sqlite3.connect(self.db)) as conn, conn:
             self.assertEqual(
                 conn.execute("SELECT entry, gossip_menu_id FROM content_creature_template ORDER BY entry").fetchall(),
                 [(68, 9001), (2455, 1291), (26012, 0), (42384, 9000)],
@@ -1262,7 +1440,7 @@ class CreatureEventImportTests(unittest.TestCase):
         write_tdb(self.tdb, "quest_poi_points", [tdb_row("quest_poi_points", QuestID=26150, Idx1=0, Idx2=0, X=-9000, Y=-80, Z=90)])
         result = self.run_import()
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        with sqlite3.connect(self.db) as conn:
+        with closing(sqlite3.connect(self.db)) as conn, conn:
             self.assertEqual(
                 conn.execute("SELECT ID, QuestLevel, MinLevel, ContentTuningID, RewardMoney, RewardXPDifficulty, Flags,"
                              " AllowableRaces, LogTitle, LogDescription, QuestCompletionLog FROM content_quest_template"
@@ -1349,7 +1527,7 @@ class CreatureEventImportTests(unittest.TestCase):
         )
         result = self.run_import()
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        with sqlite3.connect(self.db) as conn:
+        with closing(sqlite3.connect(self.db)) as conn, conn:
             self.assertEqual(
                 conn.execute("SELECT CreatureID, Idx, CreatureDisplayID, VerifiedBuild FROM content_creature_template_model"
                              " ORDER BY CreatureID").fetchall(),
@@ -1372,7 +1550,7 @@ class CreatureEventImportTests(unittest.TestCase):
         self.write_wrath_only_display_fixture()
         result = self.run_import()
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        with sqlite3.connect(self.db) as conn:
+        with closing(sqlite3.connect(self.db)) as conn, conn:
             self.assertEqual(
                 conn.execute("SELECT CreatureDisplayID FROM content_creature_template_model WHERE CreatureID = 2349").fetchall(),
                 [(6808,)],
@@ -1389,7 +1567,7 @@ class CreatureEventImportTests(unittest.TestCase):
             "INSERT INTO `creature` VALUES\n" + tdb_creature(401, 2349, 1, 10.0, 10.0, 1.0) + ";\n")
         result = self.run_import()
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        with sqlite3.connect(self.db) as conn:
+        with closing(sqlite3.connect(self.db)) as conn, conn:
             self.assertEqual(
                 conn.execute("SELECT CreatureDisplayID FROM content_creature_template_model WHERE CreatureID = 2349").fetchall(),
                 [(520,)],
@@ -1609,7 +1787,7 @@ class Db2ReimportTests(unittest.TestCase):
         with (self.csv_dir / "SpellName.csv").open("a", newline="") as handle:
             csv.writer(handle).writerow([35395, "Crusader Strike"])
         self.db = root / "world.db"
-        with sqlite3.connect(self.db) as conn:
+        with closing(sqlite3.connect(self.db)) as conn, conn:
             conn.execute("CREATE TABLE chr_races (ID INTEGER PRIMARY KEY, Name TEXT)")
             conn.execute("INSERT INTO chr_races VALUES (1, 'Human')")
 
@@ -1617,7 +1795,7 @@ class Db2ReimportTests(unittest.TestCase):
         for _ in range(2):
             result = run_db2_import(self.csv_root, self.db)
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        with sqlite3.connect(self.db) as conn:
+        with closing(sqlite3.connect(self.db)) as conn, conn:
             self.assertEqual(conn.execute("SELECT ID, Name_lang FROM spell_name").fetchall(), [(35395, "Crusader Strike")])
             self.assertEqual(conn.execute("SELECT * FROM chr_races").fetchall(), [(1, "Human")])
             self.assertEqual(conn.execute("SELECT count(*) FROM db2_build").fetchone()[0], len(db2.TABLES))
@@ -1628,7 +1806,7 @@ class Db2ReimportTests(unittest.TestCase):
         result = run_db2_import(self.csv_root, self.db)
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("SpellName.csv header does not match spell_name", result.stderr)
-        with sqlite3.connect(self.db) as conn:
+        with closing(sqlite3.connect(self.db)) as conn, conn:
             self.assertEqual(conn.execute("SELECT ID, Name_lang FROM spell_name").fetchall(), [(35395, "Crusader Strike")])
 
 
@@ -1778,8 +1956,7 @@ class ContentTuningLevelTests(unittest.TestCase):
         self.assertEqual([retail_content.scaling_faction_group(f) for f in (0, 0x08, 0x10, 0x18)], [0, 5, 3, 5])
 
 
-import db2_casc  # noqa: E402
-
+import db2_casc
 
 WAGO_VERIFY = SCRIPTS.parent / "data/reference/wago-verify"
 # Rows copied from wago.tools' 12.1.0.69933 exports (data/reference/wago-verify); wago prints

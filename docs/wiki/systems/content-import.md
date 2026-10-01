@@ -31,6 +31,10 @@ Quest, vendor, loot, gossip and item content comes from AzerothCore (Wrath 3.3.5
 
 `mysql_dump.py` tokenizes dump `INSERT`s and decodes MySQL string escapes before binding parameters. The previous awk/sed path rewrote only `\'`, so 168 creature names were stored with literal backslashes (`Remy \"Two Times\"`); they now load as `Remy "Two Times"`. `--schema` runs `world_schema.sql` inside the load transaction, so the dump tables can be reloaded into a populated `world.db` without touching DB2 tables, and a failed parse rolls back. The full script still deletes and rebuilds `world.db`.
 
+## Derived merchant rebuild provenance
+
+Verified 2026-10-01: tracked [`scripts/derived-merchants.json`](../../../scripts/derived-merchants.json) records user-approved approximate Zaralda placement and two source-backed unlimited suppliers. `content_policy.py --derived-merchants` loads the required manifest on `--check` before destructive rebuild; invalid/missing provenance stops preflight. Integration commit `e43f4d3` follows terrain `830157a` and publisher `94e6d88`. [[midnight-economy-content]] owns exact source/terrain coordinates, local publication deltas and evidence paths; this is not a captured Retail spawn or independent integration acceptance. Classic catalog and running service are unchanged.
+
 ## ID mapping measurements
 
 Reproduce with `scripts/content_mapping.py --db data/world.db` (CSV defaults: the db2.py root). The Retail CSVs (Item, ItemSparse, ItemAppearance, ItemModifiedAppearance, ItemDisplayInfo, ItemXBonusTree, SpellName, CreatureDisplayInfo, CreatureModelData, QuestV2, QuestLineXQuest, TaxiNodes, TaxiPath, TaxiPathNode) and the Wrath Classic `3.4.0.47659` CSVs (SpellName, CreatureDisplayInfo, CreatureModelData, TaxiNodes, TaxiPath) are wago.tools exports under the db2.py CSV root `game-engine/data/db2/<build>/` (one root for every build; `3.4.0.47659/` holds the Wrath Classic files). Wrath Classic stands in for 3.3.5 names because AzerothCore ships no spell names or display data. "Name" comparisons are exact; case-only differences are counted separately.

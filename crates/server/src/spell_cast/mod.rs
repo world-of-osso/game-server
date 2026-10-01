@@ -33,7 +33,7 @@ use shared::casting::{CastState, CastTickResult, CastType};
 use shared::components::{Health, Npc, Player, PowerType};
 use shared::protocol::{
     CastFailed, CombatChannel, CombatLogEvent, CombatLogKind, SpellCastIntent, SpellChargesUpdate,
-    SpellCooldownUpdate, SpellGo, StopSpellCast,
+    SpellCooldownUpdate, SpellFailure, SpellGo, StopSpellCast,
 };
 use shared::spell_data::CastFailReason;
 
@@ -1448,19 +1448,58 @@ fn start_cooldowns(world: &mut World, caster: Entity, spell: &SpellInfo) {
 
 // --- Cast progress ---
 
-/// Remove an active cast (stop, movement, death, interrupt).
+/// Interrupt an active cast (stop, movement, death, crowd control, teleport, evade):
+/// `Spell::cancel` with SPELL_FAILED_INTERRUPTED.
 pub(crate) fn cancel_cast(world: &mut World, caster: Entity) {
+    interrupt_cast(world, caster, CastFailReason::Interrupted, None);
+}
+
+/// `Spell::cancel(result, ..., failedBy)`: end the cast and tell the caster's set why
+/// (`Spell::SendInterrupted`, Spell.cpp:3613, 5177).
+pub(crate) fn interrupt_cast(
+    world: &mut World,
+    caster: Entity,
+    reason: CastFailReason,
+    failed_by: Option<Entity>,
+) {
+    let Some(cast) = end_cast(world, caster) else {
+        return;
+    };
+    send_spell_failure(world, caster, cast.spell_id, reason, failed_by);
+}
+
+/// `SMSG_SPELL_FAILURE` to every client that replicates the caster.
+fn send_spell_failure(
+    world: &mut World,
+    caster: Entity,
+    spell_id: u32,
+    reason: CastFailReason,
+    failed_by: Option<Entity>,
+) {
+    send_to_set(
+        world,
+        caster,
+        SpellFailure {
+            caster: caster.to_bits(),
+            spell_id,
+            reason,
+            failed_by: failed_by.map(Entity::to_bits),
+        },
+    );
+}
+
+/// Remove an active cast without reporting it: a channel ran out or handed over.
+pub(crate) fn end_cast(world: &mut World, caster: Entity) -> Option<CastState> {
     world
         .entity_mut(caster)
         .remove::<crate::profession::CraftQueue>();
-    let Some(cast) = world.entity_mut(caster).take::<CastState>() else {
-        return;
-    };
+    let cast = world.entity_mut(caster).take::<CastState>()?;
     mark_dirty(world, caster);
     if cast.cast_type == CastType::Channel {
         crate::auras::channel_ended(world, caster, cast.spell_id);
         crate::meeting_stone::ritual::channel_ended(world, caster, cast.spell_id);
     }
+    Some(cast)
 }
 
 pub(crate) fn receive_stop_requests(world: &mut World) {
@@ -1514,7 +1553,9 @@ pub(crate) fn advance_casts(world: &mut World) {
         match result {
             // Channel periodic effects tick as auras (`crate::auras`).
             CastTickResult::InProgress | CastTickResult::ChannelTick => {}
-            CastTickResult::ChannelComplete => cancel_cast(world, caster),
+            CastTickResult::ChannelComplete => {
+                end_cast(world, caster);
+            }
             CastTickResult::Completed => {
                 world.entity_mut(caster).remove::<CastState>();
                 complete_cast(world, caster, spell_id, target);
@@ -1534,6 +1575,8 @@ fn complete_cast(world: &mut World, caster: Entity, spell_id: u32, target: Optio
     if let Err(failure) = execute_and_channel(world, caster, &spell, target) {
         debug!("Cast of {spell_id} by {caster} failed on completion: {failure:?}");
         let (reason, detail) = failure.to_contract();
+        // `Spell::cast` cleanup: SendCastResult to the caster, SendInterrupted to its set.
+        send_spell_failure(world, caster, spell_id, reason, None);
         send_to_owner(
             world,
             caster,

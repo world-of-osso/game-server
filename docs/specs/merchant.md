@@ -33,6 +33,8 @@ Server-side vendors: the list, buy, sell, buyback and repair, following AzerothC
 - [x] Repair (`RepairItem { item_guid }`, where `None` means all equipped items) works only at a `REPAIR` NPC.
   - Each item costs `lost * DurabilityCosts[ItemLevel][class/subclass] * DurabilityQuality[(Quality+1)*2]`, at least 1 copper.
   - Items the remaining money can't cover stay damaged and the request answers `NotEnoughMoney`.
+  - `Some(guid)` repairs only that equipped item. Any other guid (a bag item, which has no durability) changes nothing and answers nothing, as TrinityCore `HandleRepairItemOpcode` (NPCHandler.cpp:748).
+- [x] Every decoded vendor request is logged once (`merchant request character=<id> <request>`).
 - [x] Durability belongs to equipped items with `item_template.MaxDurability > 0`, matched by `content_item.SourceEntry`. A newly equipped item starts at full durability.
 - [x] Changing from the old per-slot profile: at login a saved current value is capped to the item's max, an equipped item without `MaxDurability` (e.g. Recruit's Boots 40) loses its durability slot, and a newly equipped item starts at full durability instead of taking over the slot's value.
 - [x] Admin `set-gold <character> <copper>` sets the money and replicates it live. `set-durability <character> <percent>` sets every equipped item to that percent of its max.
@@ -44,7 +46,7 @@ Server-side vendors: the list, buy, sell, buyback and repair, following AzerothC
 ## Tests asserting this spec
 
 - `crates/server/src/merchant_tests.rs`: real world.db vendors.
-  - Godric Rothgar 1213: armor list and prices, buy the vest for 89 copper, refusals, a purchase that doesn't fit, repair all for 16 copper, partial repair.
+  - Godric Rothgar 1213: armor list and prices, buy the vest for 89 copper, refusals, a purchase that doesn't fit, repair all for 16 copper, partial repair, repairing only the equipped vest for 8 copper, a bag item's guid ignored.
   - Brother Danil 152: water at 5 per purchase stacking to 20, no sell price, no repair.
   - Tharynn Bouden 66: the limited pattern sells out.
   - Also: linen sale and buyback, restock timing, 13th sale, admin commands.

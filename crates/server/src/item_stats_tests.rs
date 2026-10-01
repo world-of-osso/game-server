@@ -105,6 +105,32 @@ fn vendetta_at_tooltip_level_83_has_rating_and_damage() {
     );
 }
 
+/// No content item carries a tertiary stat, so Vendetta's crit allocation stands in for
+/// each: ITEM_MOD_CR_SPEED 61, CR_LIFESTEAL 62 and CR_AVOIDANCE 63 are combat ratings
+/// (SimC `util::is_combat_rating`) and scale like its 13 Critical Strike.
+#[test]
+fn tertiary_allocations_scale_as_combat_ratings() {
+    let Some((templates, tables)) = world_data() else {
+        return;
+    };
+    let vendetta = at_item_level(&templates, VENDETTA, 83);
+    let crit = vendetta
+        .scaling
+        .stats
+        .iter()
+        .position(|alloc| alloc.stat == 32)
+        .unwrap();
+    let with_stat = |stat: i8| {
+        let mut template = vendetta;
+        template.scaling.stats[crit].stat = stat;
+        item_stats(&template, &tables).block.secondary
+    };
+    assert_eq!(with_stat(61).speed, 13.0);
+    assert_eq!(with_stat(62).leech, 13.0);
+    assert_eq!(with_stat(63).avoidance, 13.0);
+    assert_eq!(with_stat(62).crit, 0.0);
+}
+
 #[test]
 fn forlorn_breastplate_of_war_stats_and_armor() {
     let Some((templates, tables)) = world_data() else {
