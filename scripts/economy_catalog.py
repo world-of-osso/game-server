@@ -40,6 +40,8 @@ I32_MAX = 2**31 - 1
 U32_MAX = 2**32 - 1
 U64_MAX = 2**64 - 1
 PRIMARY_SUBCLASSES = {5, 6, 7, 9}  # Cloth, leather, metal/stone, herbs.
+# Explicit raw conversion exception; direct loot is still required.
+RAW_CONVERSION_ITEMS = {2318}
 
 
 def retry_delay(header, attempt):
@@ -219,7 +221,7 @@ def round_output_count(points):
     return math.floor(max(1, points) + 0.5)
 
 
-def recipe_failure(effects, reagent, content, markets, output):
+def recipe_failure(effects, reagent, content, markets, output, sources):
     if len(effects) != 1 or effects[0]["Effect"] != 24:
         return "multiple_or_special_effects", []
     effect = effects[0]
@@ -264,18 +266,206 @@ def recipe_failure(effects, reagent, content, markets, output):
     referenced = {output, *ingredients}
     if not referenced <= content.keys():
         return "missing_content_item", []
-    if not referenced <= markets.keys():
+    market_inputs = {
+        item for item in ingredients if sources[item]["route"] != "vendor_supplier"
+    }
+    if not {output, *market_inputs} <= markets.keys():
         return "missing_supported_market", []
+    unsupported = [
+        item for item in ingredients if sources[item]["route"] == "unsupported"
+    ]
+    if unsupported:
+        return "unsupported_ingredient_source", sorted(
+            [item, count] for item, count in ingredients.items()
+        )
     if markets[output]["max_price"] > U32_MAX:
         return "merchant_output_price_exceeds_u32", []
     return None, sorted([item, count] for item, count in ingredients.items())
+
+
+def expand_vendor_rows(raw, entry, seen):
+    """Match MerchantCatalog reference order and stock filtering before slot indexing."""
+    if entry in seen:
+        return []
+    seen.add(entry)
+    result = []
+    for row in raw.get(entry, []):
+        if row["item"] < 0:
+            result.extend(expand_vendor_rows(raw, -row["item"], seen))
+        elif (row["maxcount"] == 0) == (row["incrtime"] == 0):
+            result.append(row)
+    return result
+
+
+def vendor_row_failure(row, goods):
+    if (row["maxcount"] == 0) != (row["incrtime"] == 0):
+        return "invalid_stock_restock"
+    if any(
+        type(row[key]) is not int or not 0 <= row[key] <= U32_MAX
+        for key in ("entry", "slot", "maxcount", "incrtime")
+    ):
+        return "invalid_vendor_amount"
+    price, count = goods["BuyPrice"], goods["VendorStackCount"]
+    if type(price) is not int or not 0 <= price <= U32_MAX:
+        return "invalid_buy_price"
+    if type(count) is not int or not 0 < count <= U32_MAX:
+        return "invalid_buy_count"
+    return None
+
+
+def inspect_suppliers(db, content, ingredient_ids):
+    raw, suppliers, rejected = defaultdict(list), defaultdict(list), []
+    rows = list(db.execute("SELECT * FROM content_npc_vendor ORDER BY entry,slot,item"))
+    for row in rows:
+        if row["ExtendedCost"] == 0:
+            raw[row["entry"]].append(row)
+        elif row["item"] in ingredient_ids:
+            rejected.append(
+                {
+                    "item_id": row["item"],
+                    "source_entry": row["entry"],
+                    "database_slot": row["slot"],
+                    "reason": "extended_cost",
+                }
+            )
+    templates = {
+        row["entry"]: row["npcflag"]
+        for row in db.execute("SELECT entry,npcflag FROM content_creature_template")
+    }
+    spawned = {
+        row[0]
+        for row in db.execute("""
+        SELECT id1 FROM content_creature creature
+        WHERE NOT EXISTS (SELECT 1 FROM content_game_event_creature event WHERE event.guid=creature.guid)
+        OR EXISTS (SELECT 1 FROM content_game_event_creature event
+                   WHERE event.guid=creature.guid AND event.eventEntry<0)
+    """)
+    }
+    for entry in sorted(raw):
+        # Filter missing goods and truncate exactly where the runtime catalog does.
+        expanded = [
+            row
+            for row in expand_vendor_rows(raw, entry, set())
+            if row["item"] in content
+        ]
+        for slot, row in enumerate(expanded):
+            item = row["item"]
+            if item not in ingredient_ids:
+                continue
+            provenance = {
+                "vendor_entry": entry,
+                "source_entry": row["entry"],
+                "database_slot": row["slot"],
+                "item_id": item,
+                "buy_price": content[item]["BuyPrice"],
+                "extended_cost": row["ExtendedCost"],
+                "buy_count": content[item]["VendorStackCount"],
+                "max_count": row["maxcount"],
+                "restock_secs": row["incrtime"],
+            }
+            reason = vendor_row_failure(row, content[item])
+            if not templates.get(entry, 0) & 128:
+                reason = "not_supported_vendor"
+            elif entry not in spawned:
+                reason = "vendor_not_spawned"
+            elif slot >= 150:
+                reason = "catalog_slot_limit"
+            elif reason is None and row["maxcount"] > 0:
+                reason = "limited_stock"
+            if reason:
+                rejected.append({**provenance, "reason": reason})
+                continue
+            goods = content[item]
+            suppliers[item].append(
+                {
+                    **provenance,
+                    "supply": {
+                        "vendor_entry": entry,
+                        "slot": slot,
+                        "purchase_price": goods["BuyPrice"],
+                        "buy_count": goods["VendorStackCount"],
+                        "max_count": row["maxcount"],
+                        "restock_secs": row["incrtime"],
+                    },
+                }
+            )
+    for row in rows:
+        if row["ExtendedCost"] == 0 and row["item"] in ingredient_ids:
+            reason = vendor_row_failure(row, content[row["item"]])
+            if reason == "invalid_stock_restock":
+                rejected.append(
+                    {
+                        "item_id": row["item"],
+                        "source_entry": row["entry"],
+                        "database_slot": row["slot"],
+                        "reason": reason,
+                    }
+                )
+    return (
+        suppliers,
+        rejected,
+        {row["item"] for row in rows if row["item"] in ingredient_ids},
+    )
+
+
+def inspect_sources(db, content, crafted, ingredient_ids):
+    direct_loot, producers = defaultdict(list), defaultdict(set)
+    for table in (
+        "content_creature_loot_template",
+        "content_gameobject_loot_template",
+        "content_item_loot_template",
+    ):
+        for row in db.execute(
+            f"SELECT Entry,Item,Reference,Chance,QuestRequired,MinCount,MaxCount FROM {table}"
+        ):
+            if (
+                row["Item"] in ingredient_ids
+                and row["Reference"] == 0
+                and row["QuestRequired"] == 0
+                and row["Chance"] >= 0
+                and 0 < row["MinCount"] <= row["MaxCount"] <= U32_MAX
+            ):
+                direct_loot[row["Item"]].append({"table": table, **dict(row)})
+    for (
+        row
+    ) in db.execute("""SELECT DISTINCT e.EffectItemType,e.SpellID FROM spell_effect e
+        JOIN skill_line_ability a ON a.Spell=e.SpellID WHERE e.Effect IN (24,157)"""):
+        producers[row[0]].add(row[1])
+    suppliers, rejected, vendor_items = inspect_suppliers(db, content, ingredient_ids)
+    sources = {}
+    for item in sorted(ingredient_ids):
+        goods = content[item]
+        raw_gathered = (
+            bool(direct_loot[item])
+            and goods["ClassID"] == 7
+            and goods["SubclassID"] in PRIMARY_SUBCLASSES
+        )
+        source = {
+            "direct_loot": direct_loot[item],
+            "crafted_spell_ids": sorted(producers[item]),
+            "vendor_candidates": suppliers[item],
+        }
+        if raw_gathered and (item not in crafted or item in RAW_CONVERSION_ITEMS):
+            source["route"] = "gathered_auction"
+        elif item in crafted:
+            source["route"] = "crafted_auction"
+        elif suppliers[item] and not direct_loot[item]:
+            source.update(route="vendor_supplier", supplier=suppliers[item][0])
+        elif item in vendor_items and not direct_loot[item]:
+            source.update(route="unsupported", reason="no_supported_vendor_supplier")
+        else:
+            source.update(
+                route="market_auction", reason="not_a_proven_raw_gathered_resource"
+            )
+        sources[item] = source
+    return sources, rejected
 
 
 def inspect_recipes(db, markets):
     content = {
         row["ID"]: row
         for row in db.execute(
-            "SELECT ID,ClassID,SubclassID,Name,Quality,RequiredLevel,SellPrice FROM content_item"
+            "SELECT ID,ClassID,SubclassID,Name,Quality,RequiredLevel,SellPrice,BuyPrice,VendorStackCount FROM content_item"
         )
     }
     expansions = {
@@ -305,6 +495,15 @@ def inspect_recipes(db, markets):
         JOIN skill_line_ability a ON a.Spell=e.SpellID WHERE e.Effect IN (24,157)
     """)
     }
+    ingredient_ids = {
+        row[f"Reagent_{index}"]
+        for row in reagents.values()
+        for index in range(8)
+        if row[f"Reagent_{index}"] in content
+    }
+    sources, unsupported_vendor_rows = inspect_sources(
+        db, content, crafted, ingredient_ids
+    )
     eligible, excluded, coverage = defaultdict(list), [], defaultdict(Counter)
     output_spells, mapped_spells, unmapped = defaultdict(set), defaultdict(set), []
     for spell, rows in sorted(effects.items()):
@@ -330,7 +529,7 @@ def inspect_recipes(db, markets):
         output = outputs[0]
         expansion = expansions.get(output)
         reason, ingredients = recipe_failure(
-            rows, reagents.get(spell), content, markets, output
+            rows, reagents.get(spell), content, markets, output, sources
         )
         if expansion is None or not 0 <= expansion <= I32_MAX:
             reason = "missing_output_expansion"
@@ -351,6 +550,11 @@ def inspect_recipes(db, markets):
                         "expansion": expansion,
                         "parent_profession": parent,
                         "reason": reason,
+                        **(
+                            {"ingredients": ingredients}
+                            if reason == "unsupported_ingredient_source"
+                            else {}
+                        ),
                         **price_details,
                     }
                 )
@@ -368,8 +572,9 @@ def inspect_recipes(db, markets):
     return (
         eligible,
         content,
-        crafted,
+        sources,
         {
+            "unsupported_vendor_rows": unsupported_vendor_rows,
             "unmapped_output_spells": unmapped,
             "output_spell_coverage": {
                 key: {
@@ -422,7 +627,7 @@ def inspect_assignment(db, assignment):
 
 
 def build_catalog(db, markets, assignments, tuning):
-    eligible, content, crafted, report = inspect_recipes(db, markets)
+    eligible, content, sources, report = inspect_recipes(db, markets)
     report["assignments"] = [
         inspect_assignment(db, assignment) for assignment in assignments
     ]
@@ -449,18 +654,37 @@ def build_catalog(db, markets, assignments, tuning):
             for item, _ in recipe["ingredients"]:
                 referenced.add(item)
                 ingredients.add(item)
-    gatherables = sorted(
+    source_ids = ingredients | {
         item
-        for item in ingredients
-        if item not in crafted
-        and content[item]["ClassID"] == 7
-        and content[item]["SubclassID"] in PRIMARY_SUBCLASSES
+        for row in report["excluded_recipes"]
+        if row["reason"] == "unsupported_ingredient_source"
+        and (row["expansion"], row["parent_profession"])
+        in {(expansion, parent) for _, expansion, parent in assignments}
+        for item, _ in row["ingredients"]
+    }
+    report["ingredient_sources"] = {
+        str(item): sources[item] for item in sorted(source_ids)
+    }
+    report["unsupported_vendor_rows"] = [
+        row for row in report["unsupported_vendor_rows"] if row["item_id"] in source_ids
+    ]
+    gatherables = sorted(
+        item for item in ingredients if sources[item]["route"] == "gathered_auction"
     )
+    vendor_supplies = {
+        str(item): sources[item]["supplier"]["supply"]
+        for item in sorted(ingredients)
+        if sources[item]["route"] == "vendor_supplier"
+    }
     report["gathering_item_ids"] = gatherables
     report["non_gathering_ingredient_ids"] = sorted(ingredients - set(gatherables))
-    report["secondary_crafting_item_ids"] = sorted(ingredients & crafted)
+    report["secondary_crafting_item_ids"] = sorted(
+        item for item in ingredients if sources[item]["route"] == "crafted_auction"
+    )
     report["vendor_or_other_supply_item_ids"] = sorted(
-        ingredients - crafted - set(gatherables)
+        item
+        for item in ingredients
+        if sources[item]["route"] not in {"gathered_auction", "crafted_auction"}
     )
     config_keys = [
         "cycle_secs",
@@ -490,8 +714,11 @@ def build_catalog(db, markets, assignments, tuning):
         }
     config.update(
         gatherables=gatherables,
+        vendor_supplies=vendor_supplies,
         items=metadata,
-        markets={str(item): markets[item] for item in sorted(referenced)},
+        markets={
+            str(item): markets[item] for item in sorted(referenced) if item in markets
+        },
         merchants=merchants,
     )
     return config, report

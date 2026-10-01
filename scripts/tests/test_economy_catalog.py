@@ -27,7 +27,8 @@ class CatalogTests(unittest.TestCase):
         con.executescript("""
             CREATE TABLE content_item(ID INTEGER PRIMARY KEY, ClassID INTEGER, SubclassID INTEGER,
                 Name TEXT DEFAULT 'Fixture item', Quality INTEGER DEFAULT 1,
-                RequiredLevel INTEGER DEFAULT 5, SellPrice INTEGER DEFAULT 25);
+                RequiredLevel INTEGER DEFAULT 5, SellPrice INTEGER DEFAULT 25,
+                BuyPrice INTEGER DEFAULT 10, VendorStackCount INTEGER DEFAULT 1);
             CREATE TABLE item_sparse(ID INTEGER PRIMARY KEY, ExpansionID INTEGER);
             CREATE TABLE skill_line(ID INTEGER PRIMARY KEY, ParentSkillLineID INTEGER);
             CREATE TABLE skill_line_ability(Spell INTEGER, SkillLine INTEGER);
@@ -37,6 +38,15 @@ class CatalogTests(unittest.TestCase):
                 ResourceCoefficient REAL, GroupSizeBasePointsCoefficient REAL, ScalingClass INTEGER);
             CREATE TABLE content_creature_template(entry INTEGER, name TEXT, npcflag INTEGER);
             CREATE TABLE content_creature(guid INTEGER, id1 INTEGER, id2 INTEGER, id3 INTEGER, map INTEGER);
+            CREATE TABLE content_game_event_creature(guid INTEGER,eventEntry INTEGER);
+            CREATE TABLE content_npc_vendor(entry INTEGER, slot INTEGER, item INTEGER,
+                maxcount INTEGER, incrtime INTEGER, ExtendedCost INTEGER);
+            CREATE TABLE content_creature_loot_template(Entry INTEGER, Item INTEGER,
+                Reference INTEGER, Chance REAL, QuestRequired INTEGER, MinCount INTEGER, MaxCount INTEGER);
+            CREATE TABLE content_gameobject_loot_template AS SELECT * FROM content_creature_loot_template;
+            CREATE TABLE content_item_loot_template AS SELECT * FROM content_creature_loot_template;
+            INSERT INTO content_creature_loot_template VALUES (15651,2318,0,0.119,0,1,1);
+            INSERT INTO content_npc_vendor VALUES (3532,9,2320,0,0,0);
             INSERT INTO skill_line VALUES (165,0),(2532,165),(2915,165),(164,0);
             INSERT INTO content_creature_template VALUES (3532,'Pyrewood Leatherworker',128);
             INSERT INTO content_creature VALUES (1,3532,0,0,0);
@@ -353,6 +363,9 @@ class CatalogTests(unittest.TestCase):
             con.execute(
                 "INSERT INTO content_item(ID,ClassID,SubclassID,Name) VALUES (4392,7,3,'Advanced Target Dummy')"
             )
+            con.execute(
+                "INSERT INTO content_creature_loot_template VALUES (3,2589,0,15,0,1,3)"
+            )
             con.execute("INSERT INTO item_sparse VALUES (2589,0)")
             con.execute("INSERT INTO item_sparse VALUES (4392,0)")
         self.recipe(1008, 2302, [(2589, 2), (4392, 1)])
@@ -369,10 +382,224 @@ class CatalogTests(unittest.TestCase):
         self.assertNotIn(4392, config["gatherables"])
         self.assertIn(4392, report["non_gathering_ingredient_ids"])
 
+    def test_light_leather_direct_loot_survives_conversion_and_mixed_vendor(self):
+        self.recipe(2881, 2318, [(2934, 3)])
+        with closing(sqlite3.connect(self.db)) as con, con:
+            con.execute("INSERT INTO content_npc_vendor VALUES (3532,1,2318,10,60,0)")
+            con.execute(
+                "INSERT INTO content_gameobject_loot_template VALUES (1570,2318,0,16.3,0,1,1)"
+            )
+            con.execute(
+                "INSERT INTO content_item_loot_template VALUES (6353,2318,0,30.7,0,1,2)"
+            )
+        config, report = self.success()
+        self.assertIn(2318, config["gatherables"])
+        self.assertNotIn("2318", config["vendor_supplies"])
+        source = report["ingredient_sources"]["2318"]
+        self.assertEqual(source["route"], "gathered_auction")
+        self.assertEqual(source["crafted_spell_ids"], [2881])
+        self.assertEqual(
+            {r["table"] for r in source["direct_loot"]},
+            {
+                "content_creature_loot_template",
+                "content_gameobject_loot_template",
+                "content_item_loot_template",
+            },
+        )
+        self.assertNotIn(2318, report["secondary_crafting_item_ids"])
+
+    def test_subclass_five_threads_use_actual_spawned_supplier_not_gathering(self):
+        with closing(sqlite3.connect(self.db)) as con, con:
+            con.execute(
+                "UPDATE content_item SET SubclassID=5,BuyPrice=10 WHERE ID=2320"
+            )
+            con.execute(
+                "INSERT INTO content_item(ID,ClassID,SubclassID,BuyPrice) VALUES (2321,7,5,100),(4291,7,5,500)"
+            )
+            con.execute(
+                "INSERT INTO content_creature_template VALUES (66,'Supplier',128),(1,'Unspawned',128),(2,'Not vendor',0)"
+            )
+            con.execute("INSERT INTO content_creature VALUES (2,66,0,0,0),(3,2,0,0,0)")
+            con.executemany(
+                "INSERT INTO content_npc_vendor VALUES (?,?,?,?,?,?)",
+                [
+                    (66, 9, 2320, 0, 0, 0),
+                    (66, 10, 2321, 0, 0, 0),
+                    (66, 11, 4291, 0, 0, 0),
+                    (1, 0, 2320, 0, 0, 0),
+                    (2, 0, 2320, 0, 0, 0),
+                    (66, 1, 2320, 0, 0, 123),
+                ],
+            )
+        self.recipe(1009, 2302, [(2321, 2), (4291, 1)])
+        self.write_csv(
+            self.items,
+            ["itemId", "marketValue", "saleRate", "soldPerDay", "updatedAt"],
+            [[i, 1000, 0, 0, "now"] for i in [2302, 2318, 2320, 2304, 900, 2321, 4291]],
+        )
+        config, report = self.success()
+        self.assertEqual(config["gatherables"], [2318])
+        self.assertEqual(
+            config["vendor_supplies"],
+            {
+                "2320": {
+                    "vendor_entry": 66,
+                    "slot": 0,
+                    "purchase_price": 10,
+                    "buy_count": 1,
+                    "max_count": 0,
+                    "restock_secs": 0,
+                },
+                "2321": {
+                    "vendor_entry": 66,
+                    "slot": 1,
+                    "purchase_price": 100,
+                    "buy_count": 1,
+                    "max_count": 0,
+                    "restock_secs": 0,
+                },
+                "4291": {
+                    "vendor_entry": 66,
+                    "slot": 2,
+                    "purchase_price": 500,
+                    "buy_count": 1,
+                    "max_count": 0,
+                    "restock_secs": 0,
+                },
+            },
+        )
+        self.assertEqual(
+            report["ingredient_sources"]["2320"]["route"], "vendor_supplier"
+        )
+        self.assertEqual(
+            report["ingredient_sources"]["2320"]["supplier"]["database_slot"], 9
+        )
+        self.assertEqual(
+            {r["reason"] for r in report["unsupported_vendor_rows"]},
+            {"vendor_not_spawned", "not_supported_vendor", "extended_cost"},
+        )
+
+    def test_vendor_bundle_price_and_runtime_reference_slots(self):
+        with closing(sqlite3.connect(self.db)) as con, con:
+            con.execute(
+                "UPDATE content_item SET BuyPrice=31,VendorStackCount=3 WHERE ID=2320"
+            )
+            con.execute("DELETE FROM content_npc_vendor")
+            con.executemany(
+                "INSERT INTO content_npc_vendor VALUES (?,?,?,?,?,?)",
+                [
+                    (3532, 1, 9999, 0, 0, 0),
+                    (3532, 2, -777, 0, 0, 0),
+                    (777, 1, 2302, 0, 0, 0),
+                    (777, 2, 2320, 0, 0, 0),
+                ],
+            )
+        config, report = self.success()
+        self.assertEqual(
+            config["vendor_supplies"]["2320"],
+            {
+                "vendor_entry": 3532,
+                "slot": 1,
+                "purchase_price": 31,
+                "buy_count": 3,
+                "max_count": 0,
+                "restock_secs": 0,
+            },
+        )
+        self.assertEqual(
+            report["ingredient_sources"]["2320"]["supplier"]["source_entry"], 777
+        )
+
+    def test_supplier_purchase_does_not_require_an_auction_market(self):
+        self.write_csv(
+            self.items,
+            ["itemId", "marketValue", "saleRate", "soldPerDay", "updatedAt"],
+            [[i, 1000, 0, 0, "now"] for i in [2302, 2318, 2304, 900]],
+        )
+        config, report = self.success()
+        self.assertEqual(
+            [r["spell_id"] for r in config["merchants"][0]["recipes"]], [2149, 2152]
+        )
+        self.assertEqual(config["vendor_supplies"]["2320"]["purchase_price"], 10)
+        self.assertNotIn("2320", config["markets"])
+        self.assertIn("2320", config["items"])
+        self.assertEqual(
+            report["ingredient_sources"]["2320"]["route"], "vendor_supplier"
+        )
+
+    def test_gathering_requires_actual_nonquest_direct_loot(self):
+        with closing(sqlite3.connect(self.db)) as con, con:
+            con.execute("UPDATE content_creature_loot_template SET QuestRequired=1")
+        config, report = self.success()
+        self.assertEqual(config["gatherables"], [])
+        self.assertEqual(report["ingredient_sources"]["2318"]["direct_loot"], [])
+        self.assertEqual(
+            report["ingredient_sources"]["2318"]["route"], "market_auction"
+        )
+
+    def test_inactive_event_supplier_does_not_replace_active_vendor(self):
+        with closing(sqlite3.connect(self.db)) as con, con:
+            con.execute(
+                "INSERT INTO content_creature_template VALUES (66,'Event vendor',128)"
+            )
+            con.execute("INSERT INTO content_creature VALUES (2,66,0,0,0)")
+            con.execute("INSERT INTO content_game_event_creature VALUES (2,12)")
+            con.execute("INSERT INTO content_npc_vendor VALUES (66,1,2320,0,0,0)")
+        config, report = self.success()
+        self.assertEqual(config["vendor_supplies"]["2320"]["vendor_entry"], 3532)
+        self.assertIn(
+            "vendor_not_spawned",
+            {r["reason"] for r in report["unsupported_vendor_rows"]},
+        )
+
+    def test_limited_only_supplier_is_explicit_not_infinite_inventory(self):
+        with closing(sqlite3.connect(self.db)) as con, con:
+            con.execute("UPDATE content_npc_vendor SET maxcount=5,incrtime=60")
+        config, report = self.success()
+        self.assertEqual(config["vendor_supplies"], {})
+        self.assertEqual(
+            [r["spell_id"] for r in config["merchants"][0]["recipes"]], [2152]
+        )
+        self.assertEqual(
+            report["unsupported_vendor_rows"][0]["reason"], "limited_stock"
+        )
+        self.assertEqual(report["unsupported_vendor_rows"][0]["max_count"], 5)
+        self.assertEqual(report["unsupported_vendor_rows"][0]["restock_secs"], 60)
+
+    def test_invalid_vendor_only_supplier_is_explicit_not_auction_fallback(self):
+        with closing(sqlite3.connect(self.db)) as con, con:
+            con.execute("UPDATE content_npc_vendor SET maxcount=5,incrtime=0")
+        config, report = self.success()
+        self.assertNotIn(2320, config["gatherables"])
+        self.assertNotIn("2320", config["vendor_supplies"])
+        self.assertEqual(
+            [r["spell_id"] for r in config["merchants"][0]["recipes"]], [2152]
+        )
+        self.assertEqual(report["ingredient_sources"]["2320"]["route"], "unsupported")
+        self.assertEqual(
+            report["unsupported_vendor_rows"][0]["reason"], "invalid_stock_restock"
+        )
+        self.assertEqual(
+            next(r for r in report["excluded_recipes"] if r["spell_id"] == 2149)[
+                "reason"
+            ],
+            "unsupported_ingredient_source",
+        )
+
     def test_crafted_ingredients_never_classified_as_gathered(self):
         self.recipe(1007, 2302, [(2304, 1), (2318, 1)])
-        _, report = self.success()
+        with closing(sqlite3.connect(self.db)) as con, con:
+            con.execute(
+                "INSERT INTO content_item_loot_template VALUES (6353,2304,0,10,0,1,1)"
+            )
+            con.execute("INSERT INTO content_npc_vendor VALUES (3532,1,2304,0,0,0)")
+        config, report = self.success()
         self.assertEqual(report["gathering_item_ids"], [2318])
+        self.assertNotIn("2304", config["vendor_supplies"])
+        self.assertEqual(
+            report["ingredient_sources"]["2304"]["route"], "crafted_auction"
+        )
+        self.assertIn(2304, report["secondary_crafting_item_ids"])
         self.assertIn(2304, report["non_gathering_ingredient_ids"])
 
     def test_unspawned_and_non_vendor_assignment_rejected_with_report(self):

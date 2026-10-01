@@ -1,5 +1,9 @@
 # Wiki Log
 
+## [2026-10-01] systems | Ingredient sourcing and direct suppliers
+
+Updated [[economy-catalog]]: direct loot preserves raw Light Leather 2318 despite conversion 2881; subclass 5 alone does not gather vendor-only threads 2320/2321/4291. Config gains `vendor_supplies` with exact bundle `purchase_price`, positive `buy_count`, expanded runtime slot and stock fields. Deterministic active spawned unlimited suppliers only; limited/extended-cost/invalid/unavailable rows remain explicit, unsupported vendor-only inputs exclude recipes. Secondary crafted goods remain AH inputs. Runtime purchase and live integration remain main-owned.
+
 ## [2026-09-30] reference | Owned auction load fixture
 
 Added [[auction-load-fixture]]: explicit ignored 300k-offer producer using real importer catalog, read-only item templates, `AuctionData` and central market commits. Documents atomic nonexisting-file ownership, reserved counters, complete reopen equality and meaningful grouped/ItemID second-page assertions. No production-policy or network-latency acceptance claim; main owns invocation and CLI proof.

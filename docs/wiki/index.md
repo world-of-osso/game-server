@@ -62,7 +62,7 @@ Server gameplay systems.
 | [[quests]] | Quest content load, AzerothCore accept/prerequisite/marker rules, per-player giver markers, kill and bag-item progress, turn-in rewards, quest log persistence and deltas |
 | [[bot-economy]] | Approved economy spec, integration boundaries and read-only admin economy-status snapshot; live runtime/restart/client/latency proof outstanding; importer in [[economy-catalog]] |
 | [[auction-house]] | Distinct global ItemID browse API, preserved flat AuctionID selection, source audit and pending CLI-first/native/request-response proof |
-| [[economy-catalog]] | Read-only world.db/TSM importer, explicit merchant assignments, u32 vendor-output exclusions with u64 input anchors, price provenance and honest Midnight mapping gaps |
+| [[economy-catalog]] | Read-only world.db/TSM importer, evidence-based gathered/market inputs, exact unlimited supplier contracts, provenance, price bounds and Midnight mapping gaps |
 | [[merchant]] | Vendor lists from content_npc_vendor (references, limited stock restock), buy/sell/buyback (12 session slots), repair cost from AzerothCore MaxDurability + Retail DurabilityCosts/Quality |
 | [[npc-interaction]] | Replicated `NpcFlags` (AzerothCore→Retail bits), `InteractNpc` validation (TrinityCore GetNPCIfCanInteractWith, 8.5 yd), gossip menus from world.db, role routing, per-frame session close, auction house gated on an auctioneer session and its faction house |
 | [[experience]] | Retail kill XP (gtXp, grey/zero-difference, elite, expansion /10, group split), QuestXP DB2 with low-level reduction, GiveXP level-ups, `character_xp`, health/mana refill, protocol gaps |
