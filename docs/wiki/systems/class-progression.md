@@ -16,9 +16,9 @@
 
 ## New-character start levels and temporary locations
 
-`race_class::start_level` applies max(class start, race start) for the new classes, copied from local 12.1.0.69933 ChrClasses/ChrRaces. Ordinary-race Monk starts at 1; Night Elf/Blood Elf DH at 8; allied-race Monk/Void Elf DH at 10; Dracthyr Evoker at 10. Death Knight class starts remain unchanged outside this slice.
+`race_class::start_level` follows Player::GetStartLevel (Player.cpp:24384-24398): 1, or 10 for an IsAlliedRace race (ChrRaces.Flags 0x80000) or Dracthyr; a Death Knight at least 8 (a Pandaren one 10); a Demon Hunter at least 8. The allied-race list is hardcoded from the 12.1.0.69933 ChrRaces export because the server loads no ChrRaces data.
 
-`persistence_character::default_character_data` persists the level at creation. Demon Hunters use the existing race location. Dracthyr use Stormwind (map 0) or Orgrimmar (map 1) by faction. This workaround omits class intro quests/gear because starting zones were delayed; retire when class starting zones (Mardum, Forbidden Reach) are implemented. No class zones or intro content are added. Kul Tiran/Earthen/Haranir Monks retain the pre-existing Northshire placeholder placement; no new location fallback was added. Replace that placeholder when their race starts are authored. Local ChrRaces gives Haranir Alliance 86 level 1 and Horde 91 level 10; these values are preserved rather than normalized.
+`persistence_character::default_character_data` persists the level at creation. Demon Hunters use the existing race location. Dracthyr use Stormwind (map 0) or Orgrimmar (map 1) by faction. This workaround omits class intro quests/gear because starting zones were delayed; retire when class starting zones (Mardum, Forbidden Reach) are implemented. No class zones or intro content are added. Kul Tiran/Earthen/Haranir Monks retain the pre-existing Northshire placeholder placement; no new location fallback was added. Replace that placeholder when their race starts are authored. Haranir Alliance 86 has IsAlliedRace, so it starts at 10 although ChrRaces.StartingLevel says 1.
 
 ## Specialization
 

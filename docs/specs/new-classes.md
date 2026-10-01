@@ -5,7 +5,7 @@ Server creation, progression and six basic spells for classes 10, 12 and 13. Imp
 ## What it must do
 
 - [x] Accept local CharBaseInfo race/class gates: Monk on all 29 authored non-Dracthyr races, Demon Hunter on Night Elf/Blood Elf/Void Elf, Evoker on Alliance/Horde Dracthyr; reject unsupported pairs without persisting a character.
-- [x] Persist new-class starting levels as max(ChrClasses.StartingLevel, ChrRaces.StartingLevel): ordinary-race Monk 1, Night Elf/Blood Elf DH 8, allied-race Monk/DH 10, Dracthyr Evoker 10.
+- [x] Persist starting levels as Player::GetStartLevel (Player.cpp:24384-24398): 1, or 10 for an IsAlliedRace race (ChrRaces.Flags 0x80000) or Dracthyr; a Death Knight at least 8 (a Pandaren one 10); a Demon Hunter at least 8: ordinary-race Monk 1, Night Elf/Blood Elf DH 8, allied-race classes (Haranir Alliance included) 10, Dracthyr 10, Death Knight 8.
 - [x] Load class skill lines, authored specializations and level/spec learnable spells; deliver known-spell and action-bar snapshots and level-up deltas through existing progression.
 - [x] Tiger Palm and Blackout Kick deal damage and use authored Energy/Chi costs; Windwalker Tiger Palm gains the Chi amount from its passive spell modifier.
 - [x] Demon's Bite generates Fury and deals damage; Chaos Strike spends 40 Fury and triggers both damage hits, or fails without sufficient Fury.
@@ -35,8 +35,7 @@ Server creation, progression and six basic spells for classes 10, 12 and 13. Imp
 - [x] Live over UDP, 2026-09-30, private server on 5100: game-engine `godot/tests/new_class_live.gd` created a Human Monk, a Night Elf Demon Hunter and an Alliance Dracthyr Evoker through the Godot creation screens. They entered at level 1 in Northshire, level 8 in Shadowglen and level 10 at the Stormwind flight master. Each was teleported to a Northshire Training Dummy, where Tiger Palm, Demon's Bite (25 Fury) and Living Flame (180 damage) hit. Captures are in game-engine `data/diagnostics/newclasses-2026-09-30/`.
 - [x] Havoc's SpecializationSpells OverridesSpellID replace the baselines (TrinityCore `Player::LearnSpecializationSpells` → `AddOverrideSpell`). Demon's Bite 344859, Chaos Strike 344862 and Fel Rush 344865 are unlearned at 10, and their bar buttons move to 162243/162794/195072. The same rule now replaces Holy Paladin's Judgment 20271, Shield of the Righteous 53600 and Cleanse Toxins 440013.
 - [x] Energizing Flame 400006 refunds its effect-0 percent (80) of Living Flame's mana cost on an enemy hit. Azure Strike picks its other target at random (`RandomResize`).
-- [x] Kul Tiran, Earthen and Haranir accept their CharBaseInfo classes, not only Monk. They start at the faction capital (Stormwind/Orgrimmar) as a workaround until their race starts exist. Older classes of the older races keep level 1.
-- [ ] Older classes keep start level 1: Death Knight's 8 and the allied races' 10 are not applied to them.
+- [x] Kul Tiran, Earthen and Haranir accept their CharBaseInfo classes, not only Monk. They start at the faction capital (Stormwind/Orgrimmar) as a workaround until their race starts exist. 
 - [ ] Full class rotations, talent/proc parity and extra specialization effects are not proven by six basic spell tests.
 
 ## Out of scope
@@ -44,5 +43,4 @@ Server creation, progression and six basic spells for classes 10, 12 and 13. Imp
 - Starting zones: user delayed them. Temporary race starts and faction capitals omit class intro quests/gear; retire when class starting zones (Mardum, Forbidden Reach) are implemented.
 - Powers/runes, Essence regeneration, spec/form pool selection and resource replication: powers agent owns them.
 - Engine UI, class art and DH/Dracthyr customization: separate engine slice.
-- Death Knight starting levels: unchanged outside this slice.
 - Other classes on newly cataloged Kul Tiran/Earthen/Haranir races: only Monk is enabled by this class-scoped slice; their existing Northshire placeholder placement is retained until race starts are authored.

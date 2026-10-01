@@ -1,5 +1,9 @@
 # Wiki Log
 
+## [2026-09-30] systems | Start levels, forms on players, transforms, admin socket
+
+Updated [[class-progression]]: TrinityCore start levels for Death Knights and allied races. Players without `ModelDisplay` get their form display and lose it on restore. TRANSFORM with MiscValue 0 keeps the display; an unknown template shows the pink pig 16358. A second server no longer takes a live server's admin socket.
+
 ## [2026-09-30] specs | Creature hit table and player avoidance
 
 Updated [[player-damage]] spec: creatures roll the hit table (5% miss, 5% crit) against a player's TC-master avoidance; crits and blocks are sent as `CriticalHit` / `Block`.
