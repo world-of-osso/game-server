@@ -72,7 +72,8 @@ Additional behavioral source and saved proof (no suites rerun for this docs-only
 
 ## Known gaps (current cycle)
 
-- [ ] Require a genuine placed new Silvermoon city merchant before claiming the requested city catalog is available; no diagnostic NPC substitution. Corrected modern recipe/source staging evidence and pending publication gates: [Midnight investigation](../wiki/investigations/midnight-economy-content.md). Active catalog remains Classic Leatherworking.
+- [x] Former merchant source-data gap resolved locally: genuine Zaralda with approved approximate ground placement, authentic native identity and explicitly derived merchant role; no diagnostic NPC substitution. Combined default preserves Classic data and adds Midnight content; scoped catalog/CLI/restart artifact gate103 PASS. [Evidence and exact limits](../wiki/investigations/midnight-economy-content.md).
+- [ ] Native Zaralda acceptance remains blocked (0/3 attempts). Prove actual window/title, ray-pick, authored item tooltip and close flow after world readiness; private CLI proof does not close this gate. [Native blocker](../wiki/investigations/midnight-economy-content.md#native-acceptance-blocker). Overall goal remains open.
 - [ ] Support currently unresolved Spark requirements, quality-only outputs and native bonus/quality cases before claiming full Retail crafting coverage. Published reagent pages are not native C_TradeSkillUI captures.
 - [ ] Existing over-cap wallets are not reduced when an operator lowers the cap. Normal credits are capped.
 

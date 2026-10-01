@@ -1,5 +1,9 @@
 # Wiki Log
 
+## [2026-10-01] investigations/systems/spec | Combined Zaralda catalog and native blocker
+
+Updated [[midnight-economy-content]], [[economy-catalog]], [bot spec Known gaps](../specs/bot-economy.md#known-gaps-current-cycle) and index. Recorded closure 30/30 zero-warning proof, retained additive data proof, scoped gate103 catalog/CLI/restart PASS and later established combined status. Corrected raw TDB flag 0 versus source-observed derived content flag 128; no native vendor-flag inheritance claim. Former merchant data gap resolved locally; native 0/3 and overall goal remain open. Linked [engine fixture documentation](../../../game-engine/docs/wiki/reference/test-assets.md#zaralda-native-merchant-fixture-2026-10-01). No new test/build/service operations; historical unchanged-Classic/pending-gate entries below describe earlier checkpoints.
+
 ## [2026-10-01] investigations/systems | Approved derived Zaralda publication
 
 Updated [[midnight-economy-content]], [[content-import]], [[economy-catalog]] and index after committed terrain `830157a`, publisher `94e6d88`, integration `e43f4d3` and local publication. Recorded native template/model/difficulty identity, actual CASC ground sampling, explicit approximate placement/local facing policy, tracked required-manifest rebuild preflight and protected additive publication. Two thread/floss suppliers only; unsupported currency rows excluded. Removed obsolete identity/stock/exact-capture blockers; preserved recipe limitations, unchanged Classic catalog/service and pending independent integration gate. Bounded development GREEN is not accepted integration or full-goal completion. The source-backed Zaralda candidate catalog validates with15recipes/21markets/2gatherables; live acceptance remains pending.
