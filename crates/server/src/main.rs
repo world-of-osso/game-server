@@ -90,6 +90,7 @@ mod unit_target;
 mod who;
 mod world_data;
 mod world_map;
+mod world_time;
 mod xp_data;
 mod zones;
 
@@ -187,6 +188,7 @@ fn add_world_plugins(app: &mut App) {
         .add_plugins(world_data::WorldDataPlugin)
         .add_plugins(ground::GroundPlugin)
         .add_plugins(mirror_timers::MirrorTimerPlugin)
+        .add_plugins(world_time::WorldTimePlugin)
         .add_plugins(maps::MapPlugin)
         .add_plugins(zones::ZonePlugin)
         .add_plugins(creature_ai::CreatureAiPlugin)

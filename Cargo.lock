@@ -6177,6 +6177,7 @@ dependencies = [
  "bevy",
  "bevy_replicon",
  "bitcode",
+ "chrono",
  "lightyear",
  "peercred-ipc",
  "rand 0.8.5",
