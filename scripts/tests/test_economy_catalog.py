@@ -15,6 +15,7 @@ import urllib.error
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 SCRIPT = Path(__file__).resolve().parents[1] / "economy_catalog.py"
+sys.path.insert(0, str(SCRIPT.parent))
 
 
 class CatalogTests(unittest.TestCase):
@@ -29,13 +30,16 @@ class CatalogTests(unittest.TestCase):
                 Name TEXT DEFAULT 'Fixture item', Quality INTEGER DEFAULT 1,
                 RequiredLevel INTEGER DEFAULT 5, SellPrice INTEGER DEFAULT 25,
                 BuyPrice INTEGER DEFAULT 10, VendorStackCount INTEGER DEFAULT 1);
-            CREATE TABLE item_sparse(ID INTEGER PRIMARY KEY, ExpansionID INTEGER);
+            CREATE TABLE item_sparse(ID INTEGER PRIMARY KEY, ExpansionID INTEGER,
+                ModifiedCraftingReagentItemID INTEGER DEFAULT 0);
             CREATE TABLE skill_line(ID INTEGER PRIMARY KEY, ParentSkillLineID INTEGER);
-            CREATE TABLE skill_line_ability(Spell INTEGER, SkillLine INTEGER);
+            CREATE TABLE skill_line_ability(Spell INTEGER, SkillLine INTEGER,
+                SkillupSkillLineID INTEGER DEFAULT 0);
             CREATE TABLE spell_effect(SpellID INTEGER, DifficultyID INTEGER, Effect INTEGER,
                 EffectItemType INTEGER, EffectBasePointsF REAL, Variance REAL,
                 Coefficient REAL, EffectRealPointsPerLevel REAL, EffectPointsPerResource REAL,
-                ResourceCoefficient REAL, GroupSizeBasePointsCoefficient REAL, ScalingClass INTEGER);
+                ResourceCoefficient REAL, GroupSizeBasePointsCoefficient REAL, ScalingClass INTEGER,
+                EffectMiscValue_0 INTEGER DEFAULT 0);
             CREATE TABLE content_creature_template(entry INTEGER, name TEXT, npcflag INTEGER);
             CREATE TABLE content_creature(guid INTEGER, id1 INTEGER, id2 INTEGER, id3 INTEGER, map INTEGER);
             CREATE TABLE content_game_event_creature(guid INTEGER,eventEntry INTEGER);
@@ -51,6 +55,7 @@ class CatalogTests(unittest.TestCase):
             INSERT INTO content_creature_template VALUES (3532,'Pyrewood Leatherworker',128);
             INSERT INTO content_creature VALUES (1,3532,0,0,0);
         """)
+        con.executescript((SCRIPT.parent / "crafting_schema.sql").read_text())
         columns = ",".join(
             f"{prefix}_{i} INTEGER DEFAULT 0"
             for prefix in [
@@ -67,7 +72,7 @@ class CatalogTests(unittest.TestCase):
             [(2302, 4, 1), (2318, 7, 6), (2320, 7, 0), (2304, 7, 6), (900, 4, 1)],
         )
         con.executemany(
-            "INSERT INTO item_sparse VALUES (?,?)",
+            "INSERT INTO item_sparse(ID,ExpansionID) VALUES (?,?)",
             [(2302, 0), (2318, 0), (2320, 0), (2304, 0), (900, 11)],
         )
         con.commit()
@@ -101,9 +106,12 @@ class CatalogTests(unittest.TestCase):
         self, spell, output, ingredients, skill=2532, points=1, variance=0, source=0
     ):
         with closing(sqlite3.connect(self.db)) as con, con:
-            con.execute("INSERT INTO skill_line_ability VALUES (?,?)", (spell, skill))
             con.execute(
-                "INSERT INTO spell_effect VALUES (?,0,24,?,?,?,0,0,0,0,1,0)",
+                "INSERT INTO skill_line_ability(Spell,SkillLine) VALUES (?,?)",
+                (spell, skill),
+            )
+            con.execute(
+                "INSERT INTO spell_effect VALUES (?,0,24,?,?,?,0,0,0,0,1,0,0)",
                 (spell, output, points, variance),
             )
             fields = ["SpellID"]
@@ -117,6 +125,180 @@ class CatalogTests(unittest.TestCase):
                 f"INSERT INTO spell_reagents ({','.join(fields)}) VALUES ({','.join('?' for _ in fields)})",
                 values,
             )
+
+    def modern_recipe(self, spell=1200, output=900, points=2.5, ingredients=None):
+        self.recipe(
+            spell,
+            output,
+            ingredients or [(2318, 2), (2320, 1)],
+            skill=165,
+            points=points,
+        )
+        with closing(sqlite3.connect(self.db)) as con, con:
+            con.execute(
+                "INSERT INTO content_creature_template SELECT 3533,'Modern vendor',128 WHERE NOT EXISTS (SELECT 1 FROM content_creature_template WHERE entry=3533)"
+            )
+            con.execute(
+                "INSERT INTO content_creature SELECT 3533,3533,0,0,0 WHERE NOT EXISTS (SELECT 1 FROM content_creature WHERE guid=3533)"
+            )
+            con.execute(
+                "UPDATE skill_line_ability SET SkillupSkillLineID=2915 WHERE Spell=?",
+                (spell,),
+            )
+            con.execute(
+                "UPDATE spell_effect SET Effect=288,EffectItemType=0,EffectMiscValue_0=? WHERE SpellID=?",
+                (spell, spell),
+            )
+            con.execute(
+                "INSERT INTO crafting_data VALUES (?,0,0,?,0,0,0,0,0,0,0,0,0,0,0,0)",
+                (spell, output),
+            )
+
+    def add_modified_slot(self, spell=1200, reagent_type=0):
+        with closing(sqlite3.connect(self.db)) as con, con:
+            con.execute(
+                "INSERT INTO modified_crafting_spell_slot VALUES (15388,?,0,421,0,140,80)",
+                (spell,),
+            )
+            con.execute(
+                "INSERT INTO modified_crafting_reagent_slot VALUES ('Fixture',421,0,0,?,0,0,0)",
+                (reagent_type,),
+            )
+
+    def test_modern_direct_fixed_recipe_and_provenance(self):
+        self.modern_recipe()
+        config, report = self.success("--merchant", "3533:11:165")
+        self.assertEqual(
+            config["merchants"][-1]["recipes"],
+            [
+                {
+                    "spell_id": 500,
+                    "expansion": 11,
+                    "output_item_id": 900,
+                    "output_count": 1,
+                    "ingredients": [[2318, 1]],
+                },
+                {
+                    "spell_id": 1200,
+                    "expansion": 11,
+                    "output_item_id": 900,
+                    "output_count": 3,
+                    "ingredients": [[2318, 2], [2320, 1]],
+                },
+            ],
+        )
+        self.assertEqual(report["coverage"]["11:165"]["candidates"], 2)
+        modern = report["modern_recipes"][0]
+        self.assertEqual(modern["spell_id"], 1200)
+        self.assertEqual(modern["crafting_data_id"], 1200)
+        self.assertEqual(modern["output_item_id"], 900)
+        self.assertEqual(
+            modern["skill_line_abilities"],
+            [{"skill_line_id": 165, "skillup_skill_line_id": 2915}],
+        )
+        self.assertIsNone(modern["reason"])
+        self.assertEqual(modern["effect"], 288)
+
+    def test_modern_slots_unresolved_even_with_templates_and_markets(self):
+        for reagent_type in (0, 1, 2, 3):
+            with self.subTest(reagent_type=reagent_type):
+                spell = 1210 + reagent_type
+                self.modern_recipe(spell)
+                with closing(sqlite3.connect(self.db)) as con, con:
+                    con.execute("DELETE FROM modified_crafting_spell_slot")
+                    con.execute("DELETE FROM modified_crafting_reagent_slot")
+                self.add_modified_slot(spell, reagent_type)
+                config, report = self.success("--merchant", "3533:11:165")
+                self.assertNotIn(
+                    spell, [r["spell_id"] for r in config["merchants"][-1]["recipes"]]
+                )
+                row = next(
+                    r for r in report["excluded_recipes"] if r["spell_id"] == spell
+                )
+                self.assertEqual(
+                    row["reason"], "unresolved_modified_reagent_requirements"
+                )
+                slot = row["modified_slots"][0]
+                self.assertEqual(
+                    (
+                        slot["ID"],
+                        slot["ModifiedCraftingReagentSlotID"],
+                        slot["ReagentType"],
+                        slot["ReagentCount"],
+                        slot["ReagentReCraftCount"],
+                    ),
+                    (15388, 421, reagent_type, 140, 80),
+                )
+
+    def test_modern_unresolved_outputs_never_use_effect_item_or_quality_id(self):
+        reasons = {
+            1220: "missing_crafting_data",
+            1221: "unresolved_quality_output",
+            1222: "unresolved_crafted_treasure",
+            1223: "unresolved_crafting_data_type",
+        }
+        for spell in reasons:
+            self.modern_recipe(spell)
+        with closing(sqlite3.connect(self.db)) as con, con:
+            con.execute("DELETE FROM crafting_data WHERE ID=1220")
+            con.execute("UPDATE crafting_data SET CraftedItemID=0 WHERE ID=1221")
+            con.execute("INSERT INTO crafting_data_item_quality VALUES (1,900,1221)")
+            con.execute("UPDATE crafting_data SET CraftedTreasureID=77 WHERE ID=1222")
+            con.execute("UPDATE crafting_data SET Type=1 WHERE ID=1223")
+            con.execute(
+                "UPDATE spell_effect SET EffectItemType=900 WHERE SpellID BETWEEN 1220 AND 1223"
+            )
+        config, report = self.success("--merchant", "3533:11:165")
+        self.assertEqual(
+            [r["spell_id"] for r in config["merchants"][-1]["recipes"]], [500]
+        )
+        self.assertEqual(
+            {r["spell_id"]: r["reason"] for r in report["modern_recipes"]}, reasons
+        )
+        quality = next(r for r in report["modern_recipes"] if r["spell_id"] == 1221)
+        self.assertEqual(quality["quality_item_ids"], [900])
+        self.assertIsNone(quality["output_item_id"])
+
+    def test_modern_output_expansion_and_fixed_reagent_checks(self):
+        self.modern_recipe(1230)
+        self.modern_recipe(1231)
+        self.modern_recipe(1232, output=2302)
+        self.modern_recipe(1233)
+        self.modern_recipe(1234)
+        self.modern_recipe(1235)
+        with closing(sqlite3.connect(self.db)) as con, con:
+            con.execute(
+                "UPDATE spell_reagents SET ReagentSource_0=1 WHERE SpellID=1230"
+            )
+            con.execute(
+                "UPDATE spell_reagents SET ReagentReCraftCount_0=1 WHERE SpellID=1231"
+            )
+            con.execute("DELETE FROM spell_reagents WHERE SpellID=1233")
+            con.execute("UPDATE spell_effect SET Variance=0.5 WHERE SpellID=1234")
+            con.execute("UPDATE crafting_data SET CraftedItemID=99999 WHERE ID=1235")
+        config, report = self.success("--merchant", "3533:11:165")
+        self.assertEqual(
+            [r["spell_id"] for r in config["merchants"][-1]["recipes"]], [500]
+        )
+        self.assertIn(1232, [r["spell_id"] for r in config["merchants"][0]["recipes"]])
+        self.assertEqual(
+            {r["spell_id"]: r["reason"] for r in report["excluded_recipes"]},
+            {
+                1230: "special_reagents",
+                1231: "special_reagents",
+                1233: "missing_reagents",
+                1234: "non_deterministic_output",
+                1235: "missing_output_expansion",
+            },
+        )
+
+    def test_missing_reference_tables_fail_import_even_for_classic(self):
+        with closing(sqlite3.connect(self.db)) as con, con:
+            con.execute("DROP TABLE crafting_data")
+        result = self.invoke("--merchant", "3532:0:165")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("crafting_data.py", result.stderr)
+        self.assertIn("crafting_data", result.stderr)
 
     def invoke(self, *args):
         result = subprocess.run(
@@ -366,8 +548,8 @@ class CatalogTests(unittest.TestCase):
             con.execute(
                 "INSERT INTO content_creature_loot_template VALUES (3,2589,0,15,0,1,3)"
             )
-            con.execute("INSERT INTO item_sparse VALUES (2589,0)")
-            con.execute("INSERT INTO item_sparse VALUES (4392,0)")
+            con.execute("INSERT INTO item_sparse(ID,ExpansionID) VALUES (2589,0)")
+            con.execute("INSERT INTO item_sparse(ID,ExpansionID) VALUES (4392,0)")
         self.recipe(1008, 2302, [(2589, 2), (4392, 1)])
         self.write_csv(
             self.items,
@@ -653,7 +835,7 @@ class CatalogTests(unittest.TestCase):
         self.recipe(1102, 2302, [(2318, 1)])
         with closing(sqlite3.connect(self.db)) as con, con:
             con.execute(
-                "INSERT INTO spell_effect VALUES (1101,0,24,2304,1,0,0,0,0,0,1,0)"
+                "INSERT INTO spell_effect VALUES (1101,0,24,2304,1,0,0,0,0,0,1,0,0)"
             )
             con.execute(
                 "UPDATE spell_reagents SET ReagentReCraftCount_0=1 WHERE SpellID=1102"
