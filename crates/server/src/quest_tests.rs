@@ -62,6 +62,11 @@ fn item_templates() -> ItemTemplates {
 }
 
 fn setup_app() -> Option<App> {
+    setup_app_with(|_| {})
+}
+
+/// `setup_app` plus the plugins `add_plugins` adds before the app is finished.
+fn setup_app_with(add_plugins: impl FnOnce(&mut App)) -> Option<App> {
     let quests = test_quest_db()?.clone();
     let mut app = App::new();
     app.add_plugins(MinimalPlugins);
@@ -79,6 +84,7 @@ fn setup_app() -> Option<App> {
     app.add_plugins(crate::inventory::InventoryPlugin);
     app.add_plugins(QuestPlugin);
     app.add_plugins(crate::experience::ExperiencePlugin);
+    add_plugins(&mut app);
     app.finish();
     app.cleanup();
     Some(app)
@@ -905,3 +911,6 @@ fn a_gray_forest_wolf_kill_counts_as_a_prowler() {
     kill(&mut app, &client, PROWLER, 1);
     assert_eq!(frontier(&app), Some(vec![3, 0]));
 }
+
+#[path = "quest_spell_tests.rs"]
+mod spell;

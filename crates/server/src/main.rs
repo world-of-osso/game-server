@@ -19,6 +19,7 @@ mod class_progression;
 mod collection;
 mod combat;
 mod combat_refs;
+mod conditions;
 mod creature_aggro;
 mod creature_ai;
 mod creature_scripts;
@@ -164,6 +165,7 @@ fn add_social_plugins(app: &mut App) {
         .add_plugins(trade::TradePlugin)
         .add_plugins(item_templates::ItemTemplatesPlugin)
         .add_plugins(player_create_info::PlayerCreateInfoPlugin)
+        .add_plugins(conditions::ConditionsPlugin)
         .add_plugins(item_stats::ItemScalingPlugin)
         .add_plugins(inventory::InventoryPlugin)
         .add_plugins(appearance_collection::AppearanceCollectionPlugin)

@@ -21,6 +21,7 @@ pub mod event_map;
 pub mod grim_batol;
 pub mod instance_script;
 pub mod movement;
+pub mod smart_ai;
 pub mod the_stockade;
 
 use std::collections::VecDeque;
@@ -43,6 +44,7 @@ impl Plugin for ScriptedAiPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<instance_script::InstanceScripts>()
             .add_systems(Startup, creature_text::load_creature_texts_startup)
+            .add_systems(Startup, smart_ai::startup_load_smart_scripts)
             .add_systems(
                 FixedUpdate,
                 (init_creature_ai, update_creature_ai)
@@ -97,6 +99,11 @@ pub enum Hook {
     SummonedCreatureDespawn(Entity),
     MovementInform(MotionType, u32),
     UpdateAi(u32),
+    /// `SpellHit(caster, spellInfo)`.
+    SpellHit {
+        caster: Entity,
+        spell_id: u32,
+    },
 }
 
 /// TrinityCore `CreatureAI` virtuals the Stockade scripts override. Defaults do
@@ -114,6 +121,7 @@ pub trait CreatureAi: Send + Sync + 'static {
     fn just_summoned(&mut self, _ctx: &mut Ctx, _summon: Entity) {}
     fn summoned_creature_despawn(&mut self, _ctx: &mut Ctx, _summon: Entity) {}
     fn movement_inform(&mut self, _ctx: &mut Ctx, _kind: MotionType, _id: u32) {}
+    fn spell_hit(&mut self, _ctx: &mut Ctx, _caster: Entity, _spell_id: u32) {}
     /// `ScriptedAI::UpdateAI`: keep the victim current.
     fn update_ai(&mut self, ctx: &mut Ctx, _diff_ms: u32) {
         ctx.update_victim();
@@ -147,32 +155,48 @@ pub struct CreatureAiState {
     pending: VecDeque<Hook>,
 }
 
-/// `ScriptMgr` registration by ScriptName; `None` for names without a ported script.
+/// `ScriptMgr` registration by ScriptName, else the `AIName` SmartAI; `None` for names
+/// without a ported script.
 fn create_ai(world: &World, creature: Entity, script_name: &str) -> Option<Box<dyn CreatureAi>> {
+    if script_name == SMART_AI {
+        let entry = world.get::<shared::components::Npc>(creature)?.template_id;
+        return smart_ai::creature_ai(world, entry);
+    }
     if script_name.is_empty() {
         return grim_batol::creature_ai(world, creature);
     }
     the_stockade::creature_ai(world, creature, script_name)
 }
 
-/// A spawned creature with a ported ScriptName, or a scriptless Grim Batol boss
-/// (`entry`), gets its AI as soon as it is in the world (`Creature::AIM_Initialize`
-/// at `AddToMap`).
+/// `CreatureScriptName` of a creature running `SmartAI` (its `AIName`, no ScriptName).
+const SMART_AI: &str = "SmartAI";
+
+/// A spawned creature with a ported ScriptName, a scriptless Grim Batol boss
+/// (`entry`) or SmartAI rows for its entry gets its AI as soon as it is in the world
+/// (`Creature::AIM_Initialize` at `AddToMap`; `FactorySelector::SelectAI` prefers the
+/// ScriptName).
 pub(crate) fn insert_script_name(entity: &mut EntityCommands, script_name: &str, entry: u32) {
     let scriptless_boss = script_name.is_empty() && grim_batol::boss_id_of(entry).is_some();
-    if the_stockade::is_creature_script(script_name) || scriptless_boss {
+    let script_name = if the_stockade::is_creature_script(script_name) || scriptless_boss {
+        Some(script_name.to_owned())
+    } else {
+        None
+    };
+    entity.queue(move |entity: EntityWorldMut| {
+        let creature = entity.id();
         entity
-            .insert(CreatureScriptName(script_name.to_owned()))
-            .queue(|entity: EntityWorldMut| {
-                let creature = entity.id();
-                entity
-                    .into_world_mut()
-                    .commands()
-                    .queue(move |world: &mut World| {
-                        initialize_ai(world, creature);
-                    });
+            .into_world_mut()
+            .commands()
+            .queue(move |world: &mut World| {
+                let name = script_name
+                    .or_else(|| smart_ai::has_script(world, entry).then(|| SMART_AI.to_owned()));
+                let Some(name) = name else {
+                    return;
+                };
+                world.entity_mut(creature).insert(CreatureScriptName(name));
+                initialize_ai(world, creature);
             });
-    }
+    });
 }
 
 /// `Creature::AIM_Create` + `InitializeAI` → `Reset`, for new and respawned creatures.
@@ -286,6 +310,7 @@ fn run_hook(world: &mut World, me: Entity, ai: &mut dyn CreatureAi, hook: Hook) 
         Hook::SummonedCreatureDespawn(summon) => ai.summoned_creature_despawn(&mut ctx, summon),
         Hook::MovementInform(kind, id) => ai.movement_inform(&mut ctx, kind, id),
         Hook::UpdateAi(diff) => ai.update_ai(&mut ctx, diff),
+        Hook::SpellHit { caster, spell_id } => ai.spell_hit(&mut ctx, caster, spell_id),
     }
 }
 
@@ -307,6 +332,14 @@ pub(crate) fn damage_taken(
                 damage,
             },
         );
+    }
+}
+
+/// `Spell::TargetInfo::DoDamageAndTriggers` → `CreatureAI::SpellHit` (Spell.cpp:3013-3018)
+/// for a scripted creature a spell landed on.
+pub(crate) fn spell_hit(world: &mut World, creature: Entity, caster: Entity, spell_id: u32) {
+    if world.get::<CreatureAiState>(creature).is_some() {
+        dispatch(world, creature, Hook::SpellHit { caster, spell_id });
     }
 }
 
@@ -482,6 +515,26 @@ impl Ctx<'_> {
         self.world
             .get::<shared::components::Position>(self.me)
             .copied()
+    }
+
+    /// `Player::KilledMonsterCredit(entry)` for each player tapping the creature
+    /// (`SMART_ACTION_CALL_KILLEDMONSTER` without a target, SmartScript.cpp:928-942).
+    pub fn credit_tappers(&mut self, entry: u32) {
+        let tappers = self
+            .world
+            .get::<crate::creature_tap::CreatureTap>(self.me)
+            .map_or_else(Vec::new, |tap| tap.tappers.clone());
+        let mut players = self
+            .world
+            .query_filtered::<(Entity, &crate::persistence::ClientId), With<Player>>();
+        let tapping: Vec<Entity> = players
+            .iter(self.world)
+            .filter(|(_, id)| tappers.contains(&id.0))
+            .map(|(player, _)| player)
+            .collect();
+        for player in tapping {
+            crate::quest::killed_monster_credit(self.world, player, entry);
+        }
     }
 
     /// `Unit::KillSelf`.

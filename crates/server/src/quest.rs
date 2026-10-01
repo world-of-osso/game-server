@@ -32,7 +32,9 @@ use crate::networking::PlayerLink;
 use crate::persistence::quest_store::{QuestLogData, load_quest_log, save_quest_log};
 use crate::persistence::{self, ClientId, GameDatabase, InventoryData};
 use crate::quest_data::QuestDb;
-use crate::quest_rules::{QuestPlayer, credit_area_trigger, credit_killed_creature, giver_status};
+use crate::quest_rules::{
+    QuestPlayer, credit_area_trigger, credit_kill, credit_killed_creature, giver_status,
+};
 use crate::quest_view::{QuestLogView, bag_count, diff_log, log_entries, log_snapshot, view_of};
 
 #[path = "quest_requests.rs"]
@@ -183,6 +185,26 @@ fn credit_quest_kills(
             }
         }
     }
+}
+
+/// `Player::KilledMonsterCredit(entry)` outside a kill (scripts): one kill of `entry` for
+/// `player`'s quests that count it.
+pub(crate) fn killed_monster_credit(world: &mut World, player: Entity, entry: u32) {
+    let Some(character_id) = world.get::<ClientId>(player).map(|id| id.0) else {
+        return;
+    };
+    let (Some(db), Some(quests)) = (
+        world.get_resource::<GameDatabase>(),
+        world.get_resource::<QuestDb>(),
+    ) else {
+        return;
+    };
+    let mut log = load_quest_log(&db.db, character_id);
+    if !credit_kill(quests, &mut log, entry) {
+        return;
+    }
+    save_quest_log(&db.db, character_id, &log);
+    world.resource_mut::<QuestDirty>().0.insert(character_id);
 }
 
 /// The quest area triggers the player stands in on its current map.

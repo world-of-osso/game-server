@@ -41,6 +41,8 @@ use crate::spell_info::{SpellEffect, SpellInfo};
 use crate::stats::CharacterStats;
 
 pub const EFFECT_SCHOOL_DAMAGE: u32 = 2;
+/// `SPELL_EFFECT_DUMMY`: no generic effect (`Spell::EffectDummy` runs scripts only).
+pub const EFFECT_DUMMY: u32 = 3;
 pub const EFFECT_HEAL: u32 = 10;
 pub const EFFECT_PERSISTENT_AREA_AURA: u32 = 27;
 pub const EFFECT_ENERGIZE: u32 = 30;
