@@ -1,48 +1,51 @@
 # Auction house
 
-Read-only audit on September 30, 2026 separates the new global item-browse wire contract from existing flat auction search and unverified concurrent integration. [Auction house spec](../../specs/auction-house.md) owns browse/selection/latency requirements; [[bot-economy]] links economy terms.
+Current server source inspected October 1, 2026 at `8193d7e`, including server/shared integration `b0153e4`. The [spec](../../specs/auction-house.md) owns requirements. CLI proof exists; native AH/mail source is implemented but live engine proof is IN PROGRESS, not complete.
 
-## Wire contract
+## Current implementation
 
-Shared-protocol commit `88bc3feb68054d3ef7e032af08f7a5f2e801b7de` adds `QueryAuctionBrowse { query: AuctionSearchQuery }` and `AuctionBrowseResults { query, total_results, items }`. `AuctionBrowseItem` contains `item_id: u32`, `name: String`, `quality: u8`, `required_level: u16`, `lowest_unit_price: u64` and `total_quantity: u64`. Source comments define the price as lowest effective unit price rounded up to integer copper, and the total as matching distinct items before pagination. This commit does not define an additional commodity policy or replace flat query/result fields.
+Shared browse messages remain distinct from flat search: `QueryAuctionBrowse` returns `AuctionBrowseResults` with ItemID, metadata, lowest unit price and total quantity. A grouped row has no AuctionID. Selecting its ItemID uses exact-item `QueryAuctions`; transactions use a real returned AuctionID.
 
-Registration adds client-to-server browse requests and server-to-client browse responses. Existing `QueryAuctions` / `AuctionSearchResults` still return individual `AuctionListingSummary` rows with real `auction_id` values. Flow: grouped browse selects ItemID → exact-item flat query selects AuctionID → existing bid/buyout operation. The grouped row carries no AuctionID and cannot itself be bought.
+`browse.rs` filters expired/zero-count offers and applies item, text, quality, level, session house and viewer class/usability eligibility before global aggregation. Price comparisons retain rational stack prices until copper ceiling at serialization; quantities cover all eligible listings. Distinct-item paging follows aggregation with ItemID tie-breaking. `handlers.rs` requires the auctioneer session and overrides the requested house. Flat `queries.rs` retains listing results and AuctionID tie-breaking, using a bounded heap for first pages and partial selection for later pages.
 
-## Observed server boundary
+## Saved proof ledger
 
-At audit time, `queries.rs` contained flat `search_auctions_matching`: filter all auctions, count matching listings, then select/sort a page. It did not contain grouped browse. Flat sorting uses AuctionID as a deterministic tie-breaker. `handlers.rs` contained `process_query_requests`, not a grouped request handler; it requires an open auctioneer session and overwrites the requested faction with the session house. `search_for_viewer` applies template class and required-level/race/class usability filtering before flat paging. Missing templates/viewers do not satisfy requested usability.
+Evidence root: `/home/osso/.cache/economy-cli-20260930/a54a0ad0`. Files are saved observations, not commands rerun by this documentation update. The directory name is a run label, not proof that every artifact was built at revision `a54a0ad0`. Current source includes importer `13241e0`, runtime `cd9b690` and fixture follow-up `8193d7e`; saved build outputs alone do not stamp every workload with an exact Git SHA. No current-revision broad-suite certification is inferred.
 
-The grouped implementation must apply those eligibility boundaries before global per-item price/quantity aggregation, then sort/page distinct items. Global means all eligible listings in the auctioneer's house, not all houses and not a fetched-page aggregate. Main and agent22 are implementing this server boundary in `/home/osso/.worktrees/game-server-bot-economy`; this audit is not their verification gate.
-
-## Integration and proof matrix
-
-| Boundary | Observed state | Proof level / remaining work |
+| Capability | Exact evidence | Proof / limits |
 |---|---|---|
-| Shared browse API | New types/directions in `88bc3fe`; flat shapes unchanged by that diff | Read-only commit inspection; serialization test exists, not run here |
-| Server global distinct items, price, quantity, class/usability/faction, paging | Concurrent work; absent from inspected query/handler snapshot | Behavioral aggregation and live request proof pending |
-| Flat search | Existing full-population filters and listing paging | Reported optimized helper benchmark: 300k listings, 144 ms; not independently rerun or network acceptance |
-| CLI grouped → ItemID → real AuctionID | Agent24 owns CLI integration and `docs/game-cli.md` | CLI acceptance must run first; pending |
-| Native grouped display | Agent23 replacing page-local aggregates; owns engine `auction-house-ui.md` | Native acceptance follows CLI; pending |
+| Real load population and meaningful second pages | `load-producer-final.json`: 300000 offers, 311 real ItemIDs; grouped pages 50/50; ItemID 4264 has 965 offers and second page 50; next auction/item/character IDs 300002/300002/3 | Producer test passed, full reopen/counter/helper assertions; not network timing |
+| CLI grouped browse, text search and flat paging | `perf-group-page0.json`, `perf-group-page1.json`, `perf-group-text.json`, `perf-flat-name.json`, `perf-flat-item-page1.json` | Actual CLI request/response; workload details below |
+| Posting and real AuctionID actions | `create-short.json`, `create-medium.json`, `create-long.json`, `owned-after-post.json`; `buyer-bid.json`, `buyer-buyout.json`, `seller-cancel.json` | Short/medium/long posts; bid and buyout 107, cancel 108; long 109 remains active |
+| Refusal boundary | `reject-own-buyout.json`, `reject-underbid.json`, `reject-out-of-range.json` | Exit 1 with own-auction, minimum-next-bid and too-far-away errors respectively |
+| Restart and mail settlement | `restart-boundary.json`, `restart-buyer-inventory.json`, `restart-seller-inventory.json`, mailbox and claim artifacts | Buyer 99800, seller 99909 after restart. Buyer mail 10 attachment claims one Linen Cloth; seller mail 9 money 203 claims to gold 100112; mail 11 return claims to total 10 Linen Cloth. Normal restart, not crash injection |
+| Native AH/mail | Saved native build/run/pane evidence is partial | Source implemented; live engine browse/actions/mail proof IN PROGRESS |
 
-No acceptance box was checked. Shared serialization proves only encoded data survives a round trip, not server aggregation. Grouped performance is pending. Request/response proof must include actual NPC coordinates/session and actual listing prices, not a fallback global price proxy, plus revision/population/workload and persisted outcomes. The sub-200 ms goal includes client request-to-response timing, not just a pure helper.
+### Request-response performance
 
-User reports canonical master `a6a704f` saved clean and functional. This audit neither changes nor certifies that checkout. All server doc edits occur only in the server worktree; CLI/engine-owned docs remain untouched. Shared-protocol currently has only character-customization and protocol-check specs, no relevant AH documentation to update.
+`perf-summary.json` records client request-to-matching-response milliseconds, not model/helper time. All samples returned 50 rows, page size 50, session faction 1, no class/quality/level/usability restriction.
 
-## Load fixture
+| Workload | Page / sort | Matching total | Milliseconds |
+|---|---|---:|---:|
+| Grouped all items | 0 / buyout ascending | 311 distinct items | 60.790 |
+| Grouped all items | 1 / buyout ascending | 311 distinct items | 60.626 |
+| Grouped text Leather | 0 / name ascending | 75 distinct items | 90.548 |
+| Flat all listings | 0 / name ascending | 300075 offers | 80.651 |
+| Flat ItemID 2318 | 1 / buyout ascending | 970 offers | 70.409 |
 
-[[auction-load-fixture]] documents the explicitly invoked disposable 300k-offer database producer, ownership guards and persistence/pagination assertions. Its scale is a test boundary, not production listing policy; actual CLI latency remains main's proof boundary.
+The producer seeded 300000 offers; the live flat output reports 300075, not exactly 300000. Every sampled workload is below 200 ms on one owned loopback server. This is neither a universal concurrency SLA nor proof of every filter/sort combination, remote latency, percentiles or current-revision reproducibility. Exact workload revision stamping remains a gap.
 
 ## Sources
 
-- [Auction house spec](../../specs/auction-house.md) — exact requirements and pending acceptance.
-- [Shared gameplay messages](/syncthing/Sync/Projects/world-of-osso/shared-protocol/src/protocol/gameplay_messages.rs), [registration](/syncthing/Sync/Projects/world-of-osso/shared-protocol/src/protocol/registration.rs), [wire tests](/syncthing/Sync/Projects/world-of-osso/shared-protocol/tests/auction_query.rs) — inspected `88bc3fe` API additions.
-- [Server queries](../../../crates/server/src/auction_house/queries.rs), [handlers](../../../crates/server/src/auction_house/handlers.rs), [operations](../../../crates/server/src/auction_house/operations.rs) — inspected flat/session/action boundaries.
-- [Auction tests](../../../crates/server/src/auction_house_tests.rs) and [NPC tests](../../../crates/server/src/npc_interaction_tests.rs) — candidate behavior/benchmark/session coverage, not executed here.
-- [CLI documentation](../../game-cli.md) and [native engine spec](/syncthing/Sync/Projects/world-of-osso/game-engine/docs/specs/auction-house-ui.md) — separately owned integration surfaces; concurrent updates not acceptance evidence.
+- [Spec](../../specs/auction-house.md) — acceptance contract.
+- [Grouped browse](../../../crates/server/src/auction_house/browse.rs), [behavioral tests](../../../crates/server/src/auction_house/browse_tests.rs) — source inspected; test existence alone is not an execution receipt.
+- [Handlers](../../../crates/server/src/auction_house/handlers.rs), [flat queries](../../../crates/server/src/auction_house/queries.rs), [operations](../../../crates/server/src/auction_house/operations.rs) — current session/search/transaction boundaries.
+- [CLI](../../../crates/client/src/bin/game_cli.rs) — client acceptance surface; saved JSON artifacts above retain exact outputs.
 
 ## See Also
 
-- [[bot-economy]] — supply and auction terms; CLI-first economy acceptance.
-- [[npc-interaction]] — actual NPC validation, session house and faction routing.
-- [[mail]] — settlement delivery.
-- [[persistence]] — inventory/gold durability.
+- [[auction-load-fixture]] — producer ownership and reopen assertions.
+- [[bot-economy]] — supplier/merchant proof, auction terms and remaining acceptance.
+- [[mail]] — settlement implementation.
+- [[npc-interaction]] — session validation.
+- [[persistence]] — durable state.

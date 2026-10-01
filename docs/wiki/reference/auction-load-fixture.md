@@ -45,6 +45,12 @@ Seller character ID 1 is explicitly fixture-only economic ownership, not a login
 
 Real browse/search helpers prove populated, nonoverlapping first/second grouped pages and first/second ItemID offer pages after reopening. Output `AH_FIXTURE_PAGES` reports actual page/offer counts; `AH_FIXTURE` reports ownership, paths, offer/distinct counts, expiry range and next IDs. These are persistence/helper assertions, **not** the actual CLI request/response `<200ms` acceptance measurement. Fixture changes no house caps, production policies, layout or protocol.
 
+## Saved execution proof (October 1, 2026)
+
+`/home/osso/.cache/economy-cli-20260930/a54a0ad0/load-producer-final.json` records a passing producer run: 300000 offers, 311 real ItemIDs, grouped first/second pages 50/50, ItemID 4264 with 965 offers and second page 50. Next auction/item-instance/character IDs are 300002/300002/3. This supersedes a merely planned producer invocation, not production policy. Saved `load-fixture-tests.json` separately records two passing ownership/counter tests and the opt-in producer ignored in that invocation.
+
+[[auction-house]] owns subsequent actual CLI timing: the live flat population is 300075, not exactly the producer's 300000. Those five sampled loopback workloads are request-response proof, not a universal concurrency SLA. Artifact run label is not an exact Git revision stamp.
+
 ## Sources
 
 - [Producer and assertions](../../../crates/server/src/auction_house_tests/load_fixture.rs).

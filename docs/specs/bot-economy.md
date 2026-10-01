@@ -1,6 +1,6 @@
 # Bot economy
 
-Gatherer bots supply auction-house materials; merchant bots buy ingredients, craft real recipes and sell finite stock through the merchant window. Server integration belongs in `crates/server/src/economy/`, auction-house and merchant handlers; reference-data import belongs in `scripts/`. See [system inventory](../wiki/systems/bot-economy.md). Requirements below are user-approved; implementation and end-to-end proof remain unverified.
+Gatherer bots supply auction-house materials; merchant bots buy ingredients, craft real recipes and sell finite stock through the merchant window. Server integration belongs in `crates/server/src/economy/`, auction-house and merchant handlers; reference-data import belongs in `scripts/`. See [system inventory](../wiki/systems/bot-economy.md). Requirements below are user-approved. Current source includes server/shared integration `b0153e4`, importer `13241e0` and supplier runtime `cd9b690`; bounded CLI proof is recorded in the wiki, while native live acceptance remains IN PROGRESS.
 
 ## What it must do
 
@@ -27,6 +27,10 @@ Gatherer bots supply auction-house materials; merchant bots buy ingredients, cra
 
 ### Durability and acceptance
 
+- [x] Bounded real supplier fixture produces three boots with recorded ingredient costs and permits a CLI purchase from the same finite stock, crediting capped merchant proceeds and recording excess. Exact fixture and receipts: [capability ledger](../wiki/systems/bot-economy.md). This does not certify all production recipes or policies.
+- [x] Saved CLI auction flow posts short/medium/long, bids and buys out 107, cancels 108, rejects own buyout/underbid/out-of-range, and preserves observed buyer/seller balances through normal restart and mail claims. Exact proof: [auction ledger](../wiki/systems/auction-house.md).
+- [x] Five saved grouped/flat CLI request-response workloads are below 200 ms on one owned loopback server with live flat total 300075 offers. Exact timings/population: [performance ledger](../wiki/systems/auction-house.md). No universal concurrency SLA is implied.
+
 - [ ] Ingredient purchases, crafting, stock sales, expiry refunds and capital withdrawals persist transactionally. Restart preserves stock, costs, balances and deadlines without lost or duplicated effects.
 - [ ] First prove the economy through `game-cli`, adding necessary actions, before engine acceptance. Exercise actual auctioneer/vendor interactions and persisted transactions, not only pure model helpers.
 - [ ] Then prove the fully working auction house in the engine, including browse/search/paging, create, bid, buyout, cancel and resulting inventory/gold/mail state. [Auction house contract](auction-house.md) defines global grouped browse through the new distinct endpoint, ItemID drilldown and real AuctionID selection; existing flat shapes remain unchanged.
@@ -44,7 +48,7 @@ Only the durations, stock lifetime and query limit above are approved numerical 
 
 ## Implementation inventory
 
-Observed integration points, not a claim that the bot pipeline is connected:
+Current implementation inventory (source inspection is distinct from acceptance proof):
 
 - `crates/server/src/economy/model.rs` — pure merchant stock, ingredient-cost accounting, price bounds, consumers and capital helpers.
 - `crates/server/src/auction_house/operations.rs` — auction creation, deposits and sale operations.
@@ -52,24 +56,26 @@ Observed integration points, not a claim that the bot pipeline is connected:
 - `crates/server/src/merchant.rs`, `merchant/catalog.rs`, `merchant/stock.rs` — existing vendor requests, catalog and stock.
 - `crates/server/src/profession/data.rs` — existing profession/recipe/reagent reference loading.
 - `crates/client/src/bin/game_cli.rs` — headless client acceptance surface; concurrent additions require separate verification.
-- `scripts/` — existing reference import integration area; economy importer path and coverage not established by this audit.
+- `scripts/economy_catalog.py` — real recipe/output eligibility, loot/supplier sourcing and timestamped market provenance; reports unsupported content.
+- `crates/server/src/economy/mod.rs`, `cycle.rs`, `store.rs` — configuration, scheduled gatherer/procurement/crafting/customer/expiry cycles and atomic market persistence.
+- `crates/server/src/merchant/economic.rs` — finite stock listing and player purchase with capped proceeds.
 
 ## Tests asserting this spec
 
 Read-only diagnosis tests: `crates/server/src/economy/tests.rs` asserts exact concrete state and missing initialization; `crates/server/src/bin/admin.rs` asserts command parsing and response decoding.
 
-Other candidate coverage from the earlier docs-only audit:
+Additional behavioral source and saved proof (no suites rerun for this docs-only update):
 
 - `crates/server/src/economy/model_tests.rs` — model tests include shared capacity, recorded-cost expiry and crafting; not persistence, live protocol or importer proof.
 - `crates/server/src/auction_house_tests.rs` — auction tests; concurrent edits are not accepted proof until executed against their exact revision.
-- Live CLI/restart and engine acceptance artifacts — not supplied.
+- Saved JSON receipts under `/home/osso/.cache/economy-cli-20260930/a54a0ad0` — exact [merchant](../wiki/systems/bot-economy.md) and [auction](../wiki/systems/auction-house.md) ledgers; checked bullets above cover only these bounded observations. Native live proof remains IN PROGRESS.
 
 ## Known gaps (current cycle)
 
-- [ ] Connect and prove configurable importer/reference data, bot auction supply and merchant transactions.
+- [ ] Extend bounded importer/runtime/CLI proof to full-catalog merchant behavior, simulated customers and expiry; do not infer guaranteed products from the restricted fixture.
 - [ ] Establish real expansion-11 recipe/output data and eligible merchant/NPC spawn availability.
 - [ ] Prove equal auction terms and unsold deposit refund for bot and player paths.
-- [ ] Prove restart/crash-boundary accounting, CLI-first flow, engine auction flow and query latency. Grouped performance remains pending; reported optimized flat 300k-listing/144 ms helper timing is not request/response acceptance.
+- [ ] Prove merchant restart/crash-boundary accounting and native AH/mail flow. CLI auction restart/mail and sampled request-response latency are proven only at the ledger's stated boundary; stamp exact workload revisions and extend performance coverage before broader claims.
 
 ## Out of scope
 

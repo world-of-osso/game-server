@@ -1,5 +1,9 @@
 # Wiki Log
 
+## [2026-10-01] specs/systems/reference | Exact economy capability and saved proof ledger
+
+Updated bot-economy and auction-house specs/wiki, economy-catalog, auction-load-fixture and index from current `8193d7e` source (including `b0153e4`, importer `13241e0`, runtime `cd9b690`) and saved `/home/osso/.cache/economy-cli-20260930/a54a0ad0` JSON receipts. Ledger separates 300000/311-real-ID producer proof from live 300075-offer CLI workload; records five request-response samples, actual auction actions/refusals, normal restart/mail outcomes and three-boot supplier costs/purchase/cap accounting. Checked bullets are bounded receipts, not broad tests, guaranteed products or universal latency/concurrency policy. Restricted recipe2149/capacity3/customer0/cycle2 fixture is not production policy. Midnight mappings/new Silvermoon remain content gaps; native AH/mail source implemented, live engine proof IN PROGRESS. Canonical restoration is user-reported; server work isolated. Docs only; no engine docs, code, data, operations, delegation or push.
+
 ## [2026-10-01] systems | Direct supplier runtime
 
 Updated [[bot-economy]] and its spec with exclusive supplier selection, exact whole-bundle payments, retained paid leftovers and pre-cycle rejection of limited/extended-cost suppliers. Uses existing central market commit and persisted cycle timestamp. Added supplier rejection/failure tests and corrected the no-fallback auction fixture to exercise an affordable, price-bounded offer. Live CLI/native/load proof remains main-owned.

@@ -51,7 +51,7 @@ Profession-produced intermediates remain `crafted_auction`, even if a loot/vendo
 
 Vendor-only ingredients use `vendor_supplier`, never AH-availability fallback. Select the lowest `(vendor_entry, runtime_slot)` among supported **unlimited** suppliers. Supplier must have vendor flag 128 and an active `content_creature.id1` spawn, using the runtime's inactive-event selection. Expand negative-item vendor references once in SQL `entry,slot,item` order, filter missing item templates and invalid stock/restock pairs, and truncate to 150 slots exactly as `MerchantCatalog` does. Config `slot` is the zero-based expanded runtime index; report `database_slot` and `source_entry` retain original row provenance. Only `ExtendedCost=0`, valid exact BuyPrice/VendorStackCount and stock fields are supported. Limited-only rows, extended costs, unspawned/nonvendor entries, invalid counts/prices/restock and catalog overflow are explicit `unsupported_vendor_rows`. A vendor-only ingredient with no supported supplier becomes `unsupported`; dependent recipes are excluded as `unsupported_ingredient_source`, not silently converted into market demand or fake gathering.
 
-`vendor_supplies` maps item-ID strings to `{vendor_entry, slot, purchase_price, buy_count, max_count, restock_secs}`. **`purchase_price` is exact `content_item.BuyPrice` copper per bundle**, not a rounded per-item price; `buy_count` is exact positive `VendorStackCount`. For example 31 copper buys three items as one purchase. Stock `max_count` and `restock_secs` originate in `content_npc_vendor.maxcount/incrtime`; this cycle selects only zero/zero unlimited stock. These fields are the contract coordinated with main; runtime purchasing and integration remain main-owned. No runtime support or live inventory mutation is claimed.
+`vendor_supplies` maps item-ID strings to `{vendor_entry, slot, purchase_price, buy_count, max_count, restock_secs}`. **`purchase_price` is exact `content_item.BuyPrice` copper per bundle**, not a rounded per-item price; `buy_count` is exact positive `VendorStackCount`. For example 31 copper buys three items as one purchase. Stock `max_count` and `restock_secs` originate in `content_npc_vendor.maxcount/incrtime`; this cycle selects only zero/zero unlimited stock. These fields are the contract coordinated with main; runtime purchasing is implemented in `cd9b690` after importer `13241e0`. [[bot-economy]] owns exact live supplier/merchant receipts; this importer page does not independently certify runtime transitions.
 
 ## Provisional tuning and format
 
@@ -82,6 +82,12 @@ Config top-level fields: `cycle_secs`, `gatherer_listing_limit`, `gatherer_stack
 | Midnight Leatherworking | Zero ability rows for skill line 2915 | Read-only SQLite query, not an invented alternate mapping |
 
 There are no expansion-11 effect-157 outputs in this DB; additional output-bearing effects 169 (24 spells) and 296 (18 spells) are outside the existing profession CREATE_ITEM handler and this importer slice. Broader coverage needs actual profession ability data, content templates and explicit spawned vendor/expansion/profession assignments. Reassigning Jillian to Midnight would not fill missing source data. No claim of new Silvermoon merchant availability is made.
+
+## Current acceptance boundary (October 1, 2026)
+
+Saved `catalog-current-report.json` under `/home/osso/.cache/economy-cli-20260930/a54a0ad0` records Lara Moore 1295:0:165 with one spawn and 223 eligible recipes. Its `output_spell_coverage["11"]` is exactly 115 CREATE_ITEM spells, six profession-mapped and 109 missing mappings; `coverage["11:356"]` has six candidates, zero eligible and six excluded. Modern recipe source and explicit new Silvermoon assignment remain content gaps, not completed scope. Existing additional-effect counts above do not imply importer support.
+
+Full-catalog empty stock led to the user-approved direct vendor-only sourcing choice, not invented thread gathering or guaranteed stock. The live acceptance catalog deliberately narrows actual recipe 2149 to shared capacity 3, disables customers and uses a two-second cycle. This is bounded test input, not production tuning or product availability policy. [[bot-economy]] owns costs and purchase proof; [[auction-house]] owns actual listing prices and latency, not TSM proxies.
 
 ## Sources
 
