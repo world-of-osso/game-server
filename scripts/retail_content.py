@@ -739,6 +739,14 @@ def build_gossip_options(conn, menus, report):
 
 # TrinityCore QuestObjectiveType values the AzerothCore quest shape holds.
 OBJECTIVE_MONSTER, OBJECTIVE_ITEM, OBJECTIVE_GAMEOBJECT, OBJECTIVE_PLAYERKILLS = 0, 1, 2, 9
+# QUEST_OBJECTIVE_AREATRIGGER: held as AzerothCore's exploration flag plus areatrigger_involvedrelation.
+OBJECTIVE_AREATRIGGER = 10
+# TrinityCore QuestFlags a quest completes through (Player::CanCompleteQuest needs Explored):
+# QUEST_FLAGS_COMPLETION_EVENT 0x2 | QUEST_FLAGS_COMPLETION_AREA_TRIGGER 0x4 (QuestDef.h:215-216).
+QUEST_FLAGS_COMPLETION_EXPLORED = 0x2 | 0x4
+# AzerothCore QUEST_SPECIAL_FLAGS_EXPLORATION_OR_EVENT (QuestDef.h:161): the quest completes when an
+# area is explored or a script event happens. TrinityCore's 0x2 is AUTO_PUSH_TO_PARTY (QuestDef.h:321).
+SPECIAL_FLAGS_EXPLORATION_OR_EVENT = 0x2
 QUEST_MONEY_DIFFICULTIES = 10
 NPC_OR_GO_SLOTS, ITEM_SLOTS = 4, 6
 # AzerothCore column ← TrinityCore column, same meaning.
@@ -795,6 +803,7 @@ def build_quests(conn, report):
     insert_quest_templates(conn, quests, report)
     map_quest_objectives(conn, quests, report)
     build_quest_children(conn, quests, report)
+    map_quest_exploration(conn, quests, report)
     build_quest_relations(conn, report)
 
 
@@ -863,6 +872,8 @@ def map_quest_objectives(conn, quests, report):
             slots["item"].append((object_id, amount))
         elif kind == OBJECTIVE_PLAYERKILLS:
             slots["kills"] = amount
+        elif kind == OBJECTIVE_AREATRIGGER:
+            continue  # map_quest_exploration
         elif kind in (OBJECTIVE_MONSTER, OBJECTIVE_GAMEOBJECT, OBJECTIVE_ITEM):
             report.drop("tdb_quest_objectives", f"QuestID={quest} ID={objective}", object_id,
                         f"more objectives of type {kind} than the AzerothCore quest shape holds")
@@ -877,6 +888,35 @@ def map_quest_objectives(conn, quests, report):
             values |= {f"RequiredItemId{n}": item, f"RequiredItemCount{n}": amount}
         conn.execute(f"UPDATE content_quest_template SET {', '.join(f'{c} = ?' for c in values)} WHERE ID = ?",
                      (*values.values(), quest))
+
+
+def map_quest_exploration(conn, quests, report):
+    """QUEST_OBJECTIVE_AREATRIGGER and the completion flags → AzerothCore's EXPLORATION_OR_EVENT special flag;
+    TrinityCore's areatrigger_involvedrelation plus each objective's own trigger → content_areatrigger_involvedrelation.
+
+    ObjectMgr::LoadQuestAreaTriggers (ObjectMgr.cpp:6436-6494) keeps a relation only for a quest with
+    QUEST_FLAGS_COMPLETION_AREA_TRIGGER or an area trigger objective, and adds every objective's ObjectID."""
+    for (quest,) in conn.execute(f"""SELECT ID FROM content_quest_template_addon WHERE ID IN ({quests})
+            AND SpecialFlags & {SPECIAL_FLAGS_EXPLORATION_OR_EVENT} ORDER BY ID""").fetchall():
+        report.drop("tdb_quest_template_addon", f"ID={quest} SpecialFlags", SPECIAL_FLAGS_EXPLORATION_OR_EVENT,
+                    "QUEST_SPECIAL_FLAGS_AUTO_PUSH_TO_PARTY not modelled; cleared")
+    conn.execute(f"""UPDATE content_quest_template_addon SET SpecialFlags = SpecialFlags & ~{SPECIAL_FLAGS_EXPLORATION_OR_EVENT}
+        WHERE ID IN ({quests})""")
+    explored = f"""SELECT ID FROM content_quest_template WHERE ID IN ({quests}) AND (Flags & {QUEST_FLAGS_COMPLETION_EXPLORED}
+        OR ID IN (SELECT QuestID FROM tdb_quest_objectives WHERE Type = {OBJECTIVE_AREATRIGGER}))"""
+    conn.execute(f"""INSERT OR IGNORE INTO content_quest_template_addon (ID) SELECT ID FROM ({explored})""")
+    conn.execute(f"""UPDATE content_quest_template_addon SET SpecialFlags = SpecialFlags | {SPECIAL_FLAGS_EXPLORATION_OR_EVENT}
+        WHERE ID IN ({explored})""")
+    conn.execute(f"DELETE FROM content_areatrigger_involvedrelation WHERE quest IN ({quests})")
+    triggers = f"""SELECT id, quest FROM tdb_areatrigger_involvedrelation UNION
+        SELECT ObjectID, QuestID FROM tdb_quest_objectives WHERE Type = {OBJECTIVE_AREATRIGGER} AND ObjectID > 0"""
+    kept = f"quest IN ({explored}) AND id IN (SELECT ID FROM area_trigger)"
+    for trigger, quest in conn.execute(f"""SELECT id, quest FROM ({triggers}) WHERE quest IN ({quests}) AND NOT ({kept})
+            ORDER BY id""").fetchall():
+        report.drop("tdb_areatrigger_involvedrelation", f"id={trigger}", quest,
+                    "quest has no area trigger objective or completion flag, or AreaTrigger.db2 lacks the id")
+    conn.execute(f"""INSERT OR IGNORE INTO content_areatrigger_involvedrelation (id, quest)
+        SELECT id, quest FROM ({triggers}) WHERE quest IN ({quests}) AND {kept}""")
 
 
 def build_quest_children(conn, quests, report):

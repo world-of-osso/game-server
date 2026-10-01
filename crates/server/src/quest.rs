@@ -16,20 +16,22 @@ use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 use lightyear::prelude::*;
 use redb::Database;
-use shared::components::{Level, Npc, Player, Position};
+use shared::components::{Level, MovementControl, Npc, Player, Position};
+use shared::death::DeathState as PlayerLifeState;
 use shared::protocol::{
     QuestChannel, QuestGiverStatusEntry, QuestGiverStatusMultiple, QuestLogSnapshot, QuestLogUpdate,
 };
 
 use crate::auth::{Authenticated, InWorld};
 use crate::combat::{DeathState, LastDamager};
+use crate::death::PlayerDeathState;
 use crate::gold::GoldUpdateQueue;
 use crate::group::GroupRegistry;
 use crate::networking::PlayerLink;
 use crate::persistence::quest_store::{QuestLogData, load_quest_log, save_quest_log};
 use crate::persistence::{self, ClientId, GameDatabase, InventoryData};
 use crate::quest_data::QuestDb;
-use crate::quest_rules::{QuestPlayer, credit_kill, giver_status};
+use crate::quest_rules::{QuestPlayer, credit_area_trigger, credit_kill, giver_status};
 use crate::quest_view::{QuestLogView, bag_count, diff_log, log_entries, log_snapshot, view_of};
 
 #[path = "quest_requests.rs"]
@@ -85,6 +87,7 @@ impl Plugin for QuestPlugin {
             PostUpdate,
             (
                 credit_quest_kills,
+                credit_quest_area_triggers,
                 mark_quest_inputs_changed,
                 send_quest_updates,
             )
@@ -209,6 +212,90 @@ fn credit_quest_kills(
                 save_quest_log(db, character_id, &log);
                 dirty.0.insert(character_id);
             }
+        }
+    }
+}
+
+/// The quest area triggers the player stands in on its current map.
+#[derive(Component, Debug, Clone, PartialEq, Eq)]
+pub(crate) struct QuestTriggerPresence {
+    map: crate::maps::InMap,
+    inside: Vec<u32>,
+}
+
+type TriggerPlayers<'w, 's> = Query<
+    'w,
+    's,
+    (
+        Entity,
+        &'static ClientId,
+        &'static Position,
+        &'static crate::maps::InMap,
+        Option<&'static MovementControl>,
+        Option<&'static PlayerDeathState>,
+        Option<&'static QuestTriggerPresence>,
+    ),
+    (With<Player>, Changed<Position>),
+>;
+
+/// Quest triggers containing a WoW-space point on `map_id`.
+fn quest_triggers_at(quests: &QuestDb, map_id: u32, point: Vec3) -> Vec<u32> {
+    quests
+        .area_triggers
+        .get(&map_id)
+        .into_iter()
+        .flatten()
+        .filter(|trigger| trigger.shape.contains(trigger.center, point))
+        .map(|trigger| trigger.id)
+        .collect()
+}
+
+/// `WorldSession::HandleAreaTriggerOpcode` (MiscHandler.cpp:479-564) for the quest
+/// triggers: the Retail client reports entering a trigger, here the server sees the
+/// position cross into one (as `maps::area_triggers` does for teleports). A first
+/// position on a map only records the triggers it stands in. A player in flight
+/// triggers nothing; only a living one explores (`IsAlive() && packet.Entered`).
+fn credit_quest_area_triggers(
+    mut commands: Commands,
+    players: TriggerPlayers,
+    store: QuestStore,
+    mut dirty: ResMut<QuestDirty>,
+) {
+    let Some((db, quests)) = store.get() else {
+        return;
+    };
+    for (player, character, position, &map, control, death, presence) in &players {
+        let (x, y, z) = crate::terrain_height::bevy_to_wow(position.x, position.y, position.z);
+        let inside = quest_triggers_at(quests, map.map_id, Vec3::new(x, y, z));
+        let entered: Vec<u32> = match presence {
+            Some(presence) if presence.map == map => inside
+                .iter()
+                .copied()
+                .filter(|trigger| !presence.inside.contains(trigger))
+                .collect(),
+            _ => Vec::new(),
+        };
+        if presence.is_none_or(|presence| presence.map != map || presence.inside != inside) {
+            commands
+                .entity(player)
+                .insert(QuestTriggerPresence { map, inside });
+        }
+        let in_flight = control.is_some_and(|control| control.controlled);
+        let alive = death.is_none_or(|death| death.state == PlayerLifeState::Alive);
+        if entered.is_empty() || in_flight || !alive {
+            continue;
+        }
+        let mut log = load_quest_log(db, character.0);
+        let mut changed = false;
+        for trigger in quests.area_triggers[&map.map_id]
+            .iter()
+            .filter(|trigger| entered.contains(&trigger.id))
+        {
+            changed |= credit_area_trigger(quests, &mut log, &trigger.quests);
+        }
+        if changed {
+            save_quest_log(db, character.0, &log);
+            dirty.0.insert(character.0);
         }
     }
 }

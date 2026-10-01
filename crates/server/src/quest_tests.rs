@@ -39,6 +39,15 @@ const THEY_SENT_ASSASSINS: u32 = 28797;
 const WESTBROOK_GARRISON_NEEDS_HELP: u32 = 239;
 const RIVERPAW_GNOLL_BOUNTY: u32 = 11;
 const PAINTED_GNOLL_ARMBAND: u32 = 782;
+/// Elwynn's exploration quests (TrinityCore QUEST_OBJECTIVE_AREATRIGGER, ObjectID -1):
+/// Marshal Dughan sends you to scout the Fargodeep Mine (62), then the Jasperlode Mine (76).
+const MARSHAL_DUGHAN: u32 = 240;
+const THE_FARGODEEP_MINE: u32 = 62;
+const THE_JASPERLODE_MINE: u32 = 76;
+/// `AreaTrigger.db2` 88 (involved with 62): a 10 yd sphere inside the Fargodeep Mine.
+const FARGODEEP_TRIGGER: (f32, f32, f32) = (-9843.54, 127.525, 5.3698);
+/// `AreaTrigger.db2` 87 (involved with 76): a 30 yd sphere at the Jasperlode Mine.
+const JASPERLODE_TRIGGER: (f32, f32, f32) = (-9077.34, -552.925, 60.3476);
 const MILITIA_BUCKLER: u32 = 2249;
 const URCHINS_PANTS: u32 = 2238;
 
@@ -637,5 +646,120 @@ fn quest_giver_out_of_range_is_too_far() {
             quest_id: BEATING_THEM_BACK,
             reason: QuestFailedReason::TooFar,
         }]
+    );
+}
+
+/// Moves the player to a WoW-space point and runs a frame.
+fn walk_to(app: &mut App, client: &Client, (x, y, z): (f32, f32, f32)) {
+    let (x, y, z) = crate::terrain_height::wow_to_bevy(x, y, z);
+    *app.world_mut()
+        .get_mut::<Position>(client.player)
+        .expect("player position") = Position { x, y, z };
+    app.update();
+}
+
+fn entry_completed(app: &mut App, client: &Client, quest_id: u32) -> Option<bool> {
+    received::<QuestLogUpdate>(app, client)
+        .into_iter()
+        .flat_map(|update| update.changed)
+        .filter(|entry| entry.quest_id == quest_id)
+        .map(|entry| entry.completed)
+        .last()
+}
+
+#[test]
+fn exploration_quests_complete_only_when_the_player_enters_their_mine() {
+    let Some(mut app) = setup_app() else { return };
+    let client = spawn_client(&mut app, 5);
+    let dughan = spawn_npc(&mut app, MARSHAL_DUGHAN, 2.0);
+    enter_world(&mut app, &client);
+
+    accept(&mut app, &client, dughan, THE_FARGODEEP_MINE);
+    let entry = last_update(&mut app, &client).changed.remove(0);
+    assert_eq!(entry.quest_id, THE_FARGODEEP_MINE);
+    assert!(!entry.completed, "accepting does not explore the mine");
+    assert!(
+        entry.objectives.is_empty(),
+        "the protocol has no exploration kind"
+    );
+    request(
+        &mut app,
+        &client,
+        QuestGiverCompleteQuest {
+            npc: dughan,
+            quest_id: THE_FARGODEEP_MINE,
+        },
+    );
+    assert!(!received::<QuestGiverRequestItems>(&mut app, &client)[0].can_complete);
+
+    // Approach: 11 yd from the 10 yd sphere's center is outside it.
+    let (x, y, z) = FARGODEEP_TRIGGER;
+    walk_to(&mut app, &client, (x + 11.0, y, z));
+    walk_to(&mut app, &client, (x + 10.5, y, z));
+    assert_eq!(entry_completed(&mut app, &client, THE_FARGODEEP_MINE), None);
+    walk_to(&mut app, &client, (x + 2.0, y, z));
+    assert_eq!(
+        entry_completed(&mut app, &client, THE_FARGODEEP_MINE),
+        Some(true)
+    );
+    assert_eq!(
+        load_quest_log(db(&app), client.character_id)
+            .active(THE_FARGODEEP_MINE)
+            .map(|active| active.counts.clone()),
+        Some(vec![1])
+    );
+
+    walk_to(&mut app, &client, (0.0, 0.0, 0.0));
+    turn_in(&mut app, &client, dughan, THE_FARGODEEP_MINE, None);
+    assert_eq!(
+        received::<QuestGiverQuestComplete>(&mut app, &client)[0].quest_id,
+        THE_FARGODEEP_MINE
+    );
+
+    accept(&mut app, &client, dughan, THE_JASPERLODE_MINE);
+    assert_eq!(
+        entry_completed(&mut app, &client, THE_JASPERLODE_MINE),
+        Some(false)
+    );
+    // The Fargodeep trigger does not explore the Jasperlode Mine.
+    walk_to(&mut app, &client, (x + 20.0, y, z));
+    walk_to(&mut app, &client, FARGODEEP_TRIGGER);
+    assert_eq!(
+        entry_completed(&mut app, &client, THE_JASPERLODE_MINE),
+        None
+    );
+    let (x, y, z) = JASPERLODE_TRIGGER;
+    walk_to(&mut app, &client, (x + 40.0, y, z));
+    walk_to(&mut app, &client, (x + 25.0, y, z));
+    assert_eq!(
+        entry_completed(&mut app, &client, THE_JASPERLODE_MINE),
+        Some(true)
+    );
+}
+
+#[test]
+fn a_ghost_entering_the_mine_does_not_explore_it() {
+    let Some(mut app) = setup_app() else { return };
+    let client = spawn_client(&mut app, 5);
+    let dughan = spawn_npc(&mut app, MARSHAL_DUGHAN, 2.0);
+    enter_world(&mut app, &client);
+    accept(&mut app, &client, dughan, THE_FARGODEEP_MINE);
+    received::<QuestLogUpdate>(&mut app, &client);
+
+    let (x, y, z) = FARGODEEP_TRIGGER;
+    walk_to(&mut app, &client, (x + 30.0, y, z));
+    app.world_mut()
+        .entity_mut(client.player)
+        .insert(crate::death::PlayerDeathState {
+            state: shared::death::DeathState::Ghost,
+            ..Default::default()
+        });
+    walk_to(&mut app, &client, FARGODEEP_TRIGGER);
+    assert_eq!(entry_completed(&mut app, &client, THE_FARGODEEP_MINE), None);
+    assert_eq!(
+        load_quest_log(db(&app), client.character_id)
+            .active(THE_FARGODEEP_MINE)
+            .map(|active| active.counts.clone()),
+        Some(vec![0])
     );
 }

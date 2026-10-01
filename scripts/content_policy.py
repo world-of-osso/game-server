@@ -65,6 +65,7 @@ QUEST_CHILDREN = {
     "quest_poi": "QuestID", "quest_poi_points": "QuestID",
     "creature_queststarter": "quest", "creature_questender": "quest",
     "gameobject_queststarter": "quest", "gameobject_questender": "quest",
+    "areatrigger_involvedrelation": "quest",
 }
 LOOT_TABLES = ["creature_loot_template", "gameobject_loot_template", "reference_loot_template", "item_loot_template"]
 # SkillLineAbilityAcquireMethod AutomaticCharLevel / LearnedOrAutomaticCharLevel (TrinityCore DBCEnums.h):

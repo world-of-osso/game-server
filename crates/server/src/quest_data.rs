@@ -12,15 +12,44 @@ use bevy::prelude::*;
 use rusqlite::{Connection, OpenFlags, Row};
 use shared::protocol::{QuestObjectiveKind, QuestPoiPoint, QuestPoiSnapshot, QuestRepeatability};
 
+use crate::maps::store::AreaTriggerShape;
+
 /// `Flags` bits (AzerothCore `QuestFlags`).
 const QUEST_FLAGS_DAILY: u32 = 0x1000;
 const QUEST_FLAGS_WEEKLY: u32 = 0x8000;
 /// `SpecialFlags` bit (AzerothCore `QUEST_SPECIAL_FLAGS_REPEATABLE`).
 const QUEST_SPECIAL_FLAGS_REPEATABLE: u32 = 0x1;
 
+/// `SpecialFlags` bit (AzerothCore `QUEST_SPECIAL_FLAGS_EXPLORATION_OR_EVENT`): the
+/// quest also needs an area explored or a scripted event (`AreaExploredOrEventHappens`).
+const QUEST_SPECIAL_FLAGS_EXPLORATION_OR_EVENT: u32 = 0x2;
+
+/// What an objective counts. The protocol kinds plus AzerothCore's exploration/event
+/// requirement (TrinityCore `QUEST_OBJECTIVE_AREATRIGGER` or a completion flag, mapped
+/// by content import), which the protocol has no kind for and the client never sees.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum ObjectiveKind {
+    Monster,
+    GameObject,
+    Item,
+    /// Set by entering one of the quest's `areatrigger_involvedrelation` triggers.
+    ExplorationOrEvent,
+}
+
+impl ObjectiveKind {
+    pub fn protocol(self) -> Option<QuestObjectiveKind> {
+        match self {
+            Self::Monster => Some(QuestObjectiveKind::Monster),
+            Self::GameObject => Some(QuestObjectiveKind::GameObject),
+            Self::Item => Some(QuestObjectiveKind::Item),
+            Self::ExplorationOrEvent => None,
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct ObjectiveDef {
-    pub kind: QuestObjectiveKind,
+    pub kind: ObjectiveKind,
     pub object_id: u32,
     pub required: u32,
     pub text: String,
@@ -123,6 +152,18 @@ pub(crate) struct QuestDb {
     pub pois: HashMap<u32, Vec<QuestPoiSnapshot>>,
     /// `quest_money_reward`: copper by quest level (ID) and RewardMoneyDifficulty.
     pub money_rewards: HashMap<u8, [u32; 10]>,
+    /// `areatrigger_involvedrelation` triggers by map (`ObjectMgr::GetQuestsForAreaTrigger`).
+    pub area_triggers: HashMap<u32, Vec<QuestAreaTrigger>>,
+}
+
+/// An `AreaTrigger.db2` row that explores quests.
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) struct QuestAreaTrigger {
+    pub id: u32,
+    /// WoW coordinates.
+    pub center: Vec3,
+    pub shape: AreaTriggerShape,
+    pub quests: Vec<u32>,
 }
 
 impl QuestDb {
@@ -176,7 +217,8 @@ fn item_pairs(
 }
 
 /// Creature/game object objectives (`RequiredNpcOrGo1-4`, negative = game
-/// object) then item objectives (`RequiredItemId1-6`), Wrath objective order.
+/// object) then item objectives (`RequiredItemId1-6`), Wrath objective order, then the
+/// exploration/event requirement.
 fn objectives_from_row(row: &Row, names: &ContentNames) -> rusqlite::Result<Vec<ObjectiveDef>> {
     let mut objectives = Vec::new();
     for index in 1..=4 {
@@ -187,12 +229,12 @@ fn objectives_from_row(row: &Row, names: &ContentNames) -> rusqlite::Result<Vec<
         }
         let authored = text(row, &format!("ObjectiveText{index}"))?;
         let (kind, object_id) = if id > 0 {
-            (QuestObjectiveKind::Monster, id as u32)
+            (ObjectiveKind::Monster, id as u32)
         } else {
-            (QuestObjectiveKind::GameObject, id.unsigned_abs() as u32)
+            (ObjectiveKind::GameObject, id.unsigned_abs() as u32)
         };
         let text = match (authored.is_empty(), names.creatures.get(&object_id)) {
-            (true, Some(name)) if kind == QuestObjectiveKind::Monster => format!("{name} slain"),
+            (true, Some(name)) if kind == ObjectiveKind::Monster => format!("{name} slain"),
             _ => authored,
         };
         objectives.push(ObjectiveDef {
@@ -204,7 +246,7 @@ fn objectives_from_row(row: &Row, names: &ContentNames) -> rusqlite::Result<Vec<
     }
     for (item_id, required) in item_pairs(row, "RequiredItemId", "RequiredItemCount", 6)? {
         objectives.push(ObjectiveDef {
-            kind: QuestObjectiveKind::Item,
+            kind: ObjectiveKind::Item,
             object_id: item_id,
             required,
             text: names
@@ -212,6 +254,14 @@ fn objectives_from_row(row: &Row, names: &ContentNames) -> rusqlite::Result<Vec<
                 .get(&item_id)
                 .map(|item| item.name.clone())
                 .unwrap_or_default(),
+        });
+    }
+    if int(row, "SpecialFlags")? as u32 & QUEST_SPECIAL_FLAGS_EXPLORATION_OR_EVENT != 0 {
+        objectives.push(ObjectiveDef {
+            kind: ObjectiveKind::ExplorationOrEvent,
+            object_id: 0,
+            required: 1,
+            text: text(row, "AreaDescription")?,
         });
     }
     Ok(objectives)
@@ -290,7 +340,7 @@ fn referenced_item_ids(quest: &QuestTemplate) -> impl Iterator<Item = u32> + '_ 
     let objective_items = quest
         .objectives
         .iter()
-        .filter(|objective| objective.kind == QuestObjectiveKind::Item)
+        .filter(|objective| objective.kind == ObjectiveKind::Item)
         .map(|objective| objective.object_id);
     quest
         .reward_items
@@ -436,7 +486,52 @@ pub(crate) fn load_quest_db(path: &Path) -> rusqlite::Result<QuestDb> {
     db.items = names.items;
     db.pois = load_pois(&conn)?;
     db.money_rewards = load_money_rewards(&conn)?;
+    db.area_triggers = load_area_triggers(&conn)?;
     Ok(db)
+}
+
+const AREA_TRIGGER_QUERY: &str = "SELECT a.ID, a.ContinentID, a.Pos_0, a.Pos_1, a.Pos_2, \
+     a.ShapeType, a.Radius, a.Box_length, a.Box_width, a.Box_height, a.Box_yaw, r.quest \
+     FROM content_areatrigger_involvedrelation r JOIN area_trigger a ON a.ID = r.id \
+     ORDER BY a.ID, r.quest";
+
+/// `ObjectMgr::LoadQuestAreaTriggers`; a trigger of an unmodelled shape is skipped.
+fn load_area_triggers(conn: &Connection) -> rusqlite::Result<HashMap<u32, Vec<QuestAreaTrigger>>> {
+    let mut statement = conn.prepare(AREA_TRIGGER_QUERY)?;
+    let mut triggers: HashMap<u32, Vec<QuestAreaTrigger>> = HashMap::new();
+    let rows = statement.query_map([], |row| {
+        let float =
+            |index: usize| -> rusqlite::Result<f32> { Ok(row.get::<_, f64>(index)? as f32) };
+        Ok((
+            row.get::<_, u32>(0)?,
+            row.get::<_, u32>(1)?,
+            Vec3::new(float(2)?, float(3)?, float(4)?),
+            AreaTriggerShape::from_db2(
+                row.get(5)?,
+                float(6)?,
+                [float(7)?, float(8)?, float(9)?, float(10)?],
+            ),
+            row.get::<_, u32>(11)?,
+        ))
+    })?;
+    for row in rows {
+        let (id, map_id, center, shape, quest) = row?;
+        let Some(shape) = shape else {
+            warn!("Quest area trigger {id} has an unsupported shape; skipped");
+            continue;
+        };
+        let on_map = triggers.entry(map_id).or_default();
+        match on_map.last_mut() {
+            Some(trigger) if trigger.id == id => trigger.quests.push(quest),
+            _ => on_map.push(QuestAreaTrigger {
+                id,
+                center,
+                shape,
+                quests: vec![quest],
+            }),
+        }
+    }
+    Ok(triggers)
 }
 
 fn load_money_rewards(conn: &Connection) -> rusqlite::Result<HashMap<u8, [u32; 10]>> {

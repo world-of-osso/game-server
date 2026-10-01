@@ -825,6 +825,14 @@ CREATE TABLE tdb_creature_text (
 
 -- Map transfer data (ObjectMgr::LoadAreaTriggerTeleports, LoadWorldSafeLocs, LoadGraveyardZones,
 -- LoadInstanceTemplate): areatrigger teleport targets and graveyards of every map.
+-- AreaTrigger.db2 id -> quest whose QUEST_OBJECTIVE_AREATRIGGER (ObjectID -1) it completes
+-- (ObjectMgr::LoadQuestAreaTriggers).
+DROP TABLE IF EXISTS tdb_areatrigger_involvedrelation;
+CREATE TABLE tdb_areatrigger_involvedrelation (
+  id INTEGER PRIMARY KEY,
+  quest INTEGER NOT NULL DEFAULT 0
+);
+
 DROP TABLE IF EXISTS tdb_areatrigger_teleport;
 CREATE TABLE tdb_areatrigger_teleport (
   ID INTEGER PRIMARY KEY,

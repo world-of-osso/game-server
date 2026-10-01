@@ -3,11 +3,11 @@
 //! `GetQuestDialogStatus` / `KilledMonsterCredit`.
 use shared::protocol::{
     MAX_QUEST_LOG_SIZE, QuestFailedReason, QuestGiverQuestEntry, QuestGiverQuestState,
-    QuestGiverStatus, QuestObjectiveKind,
+    QuestGiverStatus,
 };
 
 use crate::persistence::quest_store::{ActiveQuestData, QuestLogData};
-use crate::quest_data::{QuestDb, QuestMoneyScaling, QuestTemplate};
+use crate::quest_data::{ObjectiveKind, QuestDb, QuestMoneyScaling, QuestTemplate};
 
 /// Quests this many levels below the player are trivial
 /// (`CONFIG_QUEST_LOW_LEVEL_HIDE_DIFF` default).
@@ -194,7 +194,7 @@ pub(crate) fn objective_counts(
         .enumerate()
         .map(|(index, objective)| {
             let current = match objective.kind {
-                QuestObjectiveKind::Item => bag_count(objective.object_id),
+                ObjectiveKind::Item => bag_count(objective.object_id),
                 _ => active.counts.get(index).copied().unwrap_or(0),
             };
             current.min(objective.required)
@@ -229,7 +229,7 @@ pub(crate) fn complete_counted_objectives(
         .ok_or_else(|| format!("quest {quest_id} is not in the log"))?;
     active.counts.resize(quest.objectives.len(), 0);
     for (objective, count) in quest.objectives.iter().zip(&mut active.counts) {
-        if objective.kind != QuestObjectiveKind::Item {
+        if objective.kind != ObjectiveKind::Item {
             *count = objective.required;
         }
     }
@@ -246,11 +246,36 @@ pub(crate) fn credit_kill(db: &QuestDb, log: &mut QuestLogData, creature_entry: 
         };
         active.counts.resize(quest.objectives.len(), 0);
         for (objective, count) in quest.objectives.iter().zip(&mut active.counts) {
-            if objective.kind == QuestObjectiveKind::Monster
+            if objective.kind == ObjectiveKind::Monster
                 && objective.object_id == creature_entry
                 && *count < objective.required
             {
                 *count += 1;
+                changed = true;
+            }
+        }
+    }
+    changed
+}
+
+/// `WorldSession::HandleAreaTriggerOpcode` (MiscHandler.cpp:521-558) for an entered
+/// trigger: every quest in the log the trigger explores (`GetQuestsForAreaTrigger`)
+/// whose exploration is not done yet gets it (`AreaExploredOrEventHappens`). Returns
+/// whether anything changed.
+pub(crate) fn credit_area_trigger(db: &QuestDb, log: &mut QuestLogData, quests: &[u32]) -> bool {
+    let mut changed = false;
+    for active in log
+        .active
+        .iter_mut()
+        .filter(|active| quests.contains(&active.quest_id))
+    {
+        let Some(quest) = db.quests.get(&active.quest_id) else {
+            continue;
+        };
+        active.counts.resize(quest.objectives.len(), 0);
+        for (objective, count) in quest.objectives.iter().zip(&mut active.counts) {
+            if objective.kind == ObjectiveKind::ExplorationOrEvent && *count < objective.required {
+                *count = objective.required;
                 changed = true;
             }
         }
@@ -269,7 +294,7 @@ pub(crate) fn quest_needs_item(
     log.active.iter().any(|active| {
         db.quests.get(&active.quest_id).is_some_and(|quest| {
             quest.objectives.iter().any(|objective| {
-                objective.kind == QuestObjectiveKind::Item
+                objective.kind == ObjectiveKind::Item
                     && objective.object_id == item_id
                     && bag_count(item_id) < objective.required
             })
