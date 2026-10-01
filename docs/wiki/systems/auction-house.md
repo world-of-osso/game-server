@@ -73,6 +73,10 @@ Runtime readability delta `/tmp/economy-readability-25ee348/ledger.json`: execut
 
 Native seller/buyer/large/mail manifests (`native-seller-run3.json`, `native-buyer-run.json`, `native-large-run.json`, `native-mail-run6.json`) and saved logs exit 0; independent agent51 bounded audit PASS. Detailed engine receipts at commit `5b27878f`: [auction runtime ledger](/syncthing/Sync/Projects/world-of-osso/game-engine/docs/wiki/systems/auction-house-ui.md#saved-native-runtime-proof-2026-10-01) and [mail receiving ledger](/syncthing/Sync/Projects/world-of-osso/game-engine/docs/wiki/systems/trade-and-mail.md#saved-native-receiving-proof-2026-10-01). Supersedes IN PROGRESS for those sequences only; no clean world rendering/assets or full Godot conversion claim.
 
+## Final returned-goods follow-up
+
+`16414b5` corrects bot attachment collection without changing query, CLI or native sources. Final format/all-target check at `fad180f` passed without warnings; independent report: `/tmp/claude/bot-return-final-verify-20261001/`. Current binary hashes and source revision are in `returned-goods-build-manifest.json`. Six fresh CLI workloads at that binary returned in 60.268–90.744 ms, including both grouped pages, text, flat name, ItemID page 1 and category/usability; full receipts are `returned-final-performance.json` and `returned-final-*.json` under the evidence root. This remains owned-loopback sampled acceptance, not a universal SLA.
+
 ## Sources
 
 - [Spec](../../specs/auction-house.md) — acceptance contract.
