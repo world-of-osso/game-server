@@ -127,7 +127,7 @@ The aura runtime ([[auras]]) inserts or updates it, and `Changed<StatModifiers>`
 
 ## Existing characters
 
-The spawned `Health` comes from redb. The first recompute keeps the persisted ratio: a character saved at 50/100 enters as 23 250/46 500 at level 80, and full stays full. The periodic save writes the new max back, and the redb format is unchanged.
+The spawned `Health` comes from redb. The first recompute keeps the persisted ratio: a character saved at 50/100 enters as 23 250/46 500 at level 80, and full stays full. The rescaled value is truncated to whole points (999/1000 → 1108/1110), as TrinityCore's integer health. The periodic save writes the new max back, and the redb format is unchanged.
 
 ## Gaps
 
