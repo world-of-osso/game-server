@@ -19,7 +19,7 @@ struct Created {
     bar: Vec<(u8, ActionRefData)>,
 }
 
-pub(crate) fn create(kit: &OwnedKit, name: &str, race: u8, class: u8) -> Created {
+fn create(kit: &OwnedKit, name: &str, race: u8, class: u8) -> Created {
     let db = temp_database();
     let (id, data) = create_character_with_appearance(
         &db,
