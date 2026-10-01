@@ -445,7 +445,7 @@ def inspect_suppliers(db, content, ingredient_ids):
     )
 
 
-def inspect_sources(db, content, crafted, ingredient_ids):
+def inspect_sources(db, content, crafted, ingredient_ids, skinning_evidence=None):
     direct_loot, producers = defaultdict(list), defaultdict(set)
     for table in (
         "content_creature_loot_template",
@@ -480,6 +480,7 @@ def inspect_sources(db, content, crafted, ingredient_ids):
     sources = {}
     for item in sorted(ingredient_ids):
         goods = content[item]
+        published_skinning = (skinning_evidence or {}).get(item)
         raw_gathered = (
             bool(direct_loot[item])
             and goods["ClassID"] == 7
@@ -490,7 +491,18 @@ def inspect_sources(db, content, crafted, ingredient_ids):
             "crafted_spell_ids": sorted(producers[item]),
             "vendor_candidates": suppliers[item],
         }
-        if raw_gathered and (item not in crafted or item in RAW_CONVERSION_ITEMS):
+        published_raw_skin = (
+            published_skinning is not None
+            and goods["ClassID"] == 7
+            and goods["SubclassID"] == 6
+            and item not in crafted
+            and not producers[item]
+        )
+        if published_skinning is not None:
+            source["published_skinning"] = published_skinning
+        if published_raw_skin or (
+            raw_gathered and (item not in crafted or item in RAW_CONVERSION_ITEMS)
+        ):
             source["route"] = "gathered_auction"
         elif item in crafted:
             source["route"] = "crafted_auction"
@@ -560,7 +572,7 @@ def resolve_modern_output(effect, references):
     }
 
 
-def inspect_recipes(db, markets, published_records=None):
+def inspect_recipes(db, markets, published_records=None, skinning_evidence=None):
     references = modern_crafting_references(db)
     content = {
         row["ID"]: row
@@ -632,7 +644,7 @@ def inspect_recipes(db, markets, published_records=None):
             if item in content
         )
     sources, unsupported_vendor_rows = inspect_sources(
-        db, content, crafted, ingredient_ids
+        db, content, crafted, ingredient_ids, skinning_evidence
     )
     eligible, excluded, coverage = defaultdict(list), [], defaultdict(Counter)
     output_spells, mapped_spells, unmapped = defaultdict(set), defaultdict(set), []
@@ -813,8 +825,12 @@ def inspect_assignment(db, assignment):
     }
 
 
-def build_catalog(db, markets, assignments, tuning, published_records=None):
-    eligible, content, sources, report = inspect_recipes(db, markets, published_records)
+def build_catalog(
+    db, markets, assignments, tuning, published_records=None, skinning_evidence=None
+):
+    eligible, content, sources, report = inspect_recipes(
+        db, markets, published_records, skinning_evidence
+    )
     report["assignments"] = [
         inspect_assignment(db, assignment) for assignment in assignments
     ]
@@ -956,6 +972,11 @@ def main():
         help="cached HTML and acquisition metadata validating the selected snapshot",
     )
     parser.add_argument(
+        "--published-skinning-cache",
+        type=Path,
+        help="explicit offline item HTML cache selected by paired acquisition metadata",
+    )
+    parser.add_argument(
         "--merchant", action="append", required=True, type=parse_assignment
     )
     parser.add_argument(
@@ -972,6 +993,13 @@ def main():
         if (args.published_reagents is None) != (args.published_reagent_cache is None):
             raise ValueError(
                 "--published-reagents and --published-reagent-cache must be paired"
+            )
+        skinning_evidence = None
+        if args.published_skinning_cache is not None:
+            from gathering_evidence import load_published_skinning_evidence
+
+            skinning_evidence = load_published_skinning_evidence(
+                args.published_skinning_cache
             )
         published_records = None
         if args.published_reagents is not None:
@@ -1004,7 +1032,7 @@ def main():
         ) as db:
             db.row_factory = sqlite3.Row
             config, report = build_catalog(
-                db, markets, args.merchant, tuning, published_records
+                db, markets, args.merchant, tuning, published_records, skinning_evidence
             )
         reported_market_ids = set(config["markets"]) | {
             str(row["output_item_id"])
