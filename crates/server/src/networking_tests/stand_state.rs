@@ -90,7 +90,10 @@ fn another_client_sees_a_player_sit_kneel_and_stand() {
         ));
     }
     advance(&mut server, &mut clients, 150);
-    assert_eq!(seen_stand_state(&mut clients[1], "Alice"), Some(StandState::Stand));
+    assert_eq!(
+        seen_stand_state(&mut clients[1], "Alice"),
+        Some(StandState::Stand)
+    );
 
     for state in [StandState::Sit, StandState::Kneel, StandState::Stand] {
         request(&mut clients[0], alice_entity, state);
@@ -104,6 +107,9 @@ fn another_client_sees_a_player_sit_kneel_and_stand() {
             Some(state),
             "Bob sees Alice {state:?}"
         );
-        assert_eq!(seen_stand_state(&mut clients[1], "Bob"), Some(StandState::Stand));
+        assert_eq!(
+            seen_stand_state(&mut clients[1], "Bob"),
+            Some(StandState::Stand)
+        );
     }
 }

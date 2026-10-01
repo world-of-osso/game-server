@@ -1,8 +1,6 @@
-//! Using real food and water from the bags on real 50 ms ticks against data/world.db
-//! (skipped when absent or without its `item_effect` tables).
+//! Using real food and water from the bags (`process_use_requests`) on real 50 ms ticks
+//! against data/world.db (skipped when absent or without its `item_effect` tables).
 
-use bevy::prelude::*;
-use lightyear::prelude::*;
 use shared::components::{CombatStatus, Health, PlayerStandState, PowerType, StandState};
 use shared::protocol::{
     CastFailed, InventoryChannel, InventoryError, InventoryErrorReason, ItemLocation, UseItem,
@@ -36,8 +34,8 @@ fn world_db() -> std::path::PathBuf {
 /// its backpack, in order from slot 0.
 fn eater(items: &[u32], count: u32) -> Option<Eater> {
     let mut h = harness(Vec::new(), &[BREAD_FOOD, WATER_DRINK], MAGE)?;
-    let on_use = match load_item_on_use_spells(&world_db()) {
-        Ok(spells) => spells,
+    let templates = match crate::item_templates::load_item_templates(&world_db()) {
+        Ok(templates) => templates,
         Err(error) => {
             eprintln!("skipping: world.db has no item_effect data: {error}");
             return None;
@@ -59,11 +57,9 @@ fn eater(items: &[u32], count: u32) -> Option<Eater> {
         })
         .collect();
     persistence::save_inventory(&db, character_id, &InventoryData { gold: 0, items });
-    let templates = crate::item_templates::load_item_templates(&world_db()).unwrap();
     let app = &mut h.app;
     app.insert_resource(crate::persistence::GameDatabase { db });
     app.insert_resource(templates);
-    app.insert_resource(on_use);
     app.init_resource::<crate::gold::GoldUpdateQueue>();
     app.add_systems(Update, process_use_requests);
     app.world_mut().entity_mut(h.connection).insert((
@@ -105,7 +101,12 @@ fn use_slot(eater: &mut Eater, index: u8) {
 }
 
 fn count_of(eater: &Eater, item_id: u32) -> u32 {
-    let db = &eater.h.app.world().resource::<crate::persistence::GameDatabase>().db;
+    let db = &eater
+        .h
+        .app
+        .world()
+        .resource::<crate::persistence::GameDatabase>()
+        .db;
     persistence::load_inventory(db, eater.character_id)
         .items
         .iter()

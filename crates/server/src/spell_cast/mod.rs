@@ -587,6 +587,7 @@ pub(crate) fn cast_item_spell(
     world: &mut World,
     caster: Entity,
     spell_id: u32,
+    target: Option<Entity>,
     cooldown: ItemCooldown,
 ) -> Result<(), CastFailure> {
     let now = now(world);
@@ -610,7 +611,7 @@ pub(crate) fn cast_item_spell(
         );
         return Err(CastFailure::OnCooldown);
     }
-    cast_granted(world, caster, spell_id, None)?;
+    cast_granted(world, caster, spell_id, target)?;
     if cooldown.category != 0 && cooldown.category_ms > 0 {
         world
             .entity_mut(caster)

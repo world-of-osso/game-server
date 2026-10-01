@@ -48,7 +48,6 @@ mod interest;
 mod inventory;
 mod item_stats;
 mod item_templates;
-mod item_use;
 mod level_scaling;
 mod lfg;
 mod liquid;
@@ -164,7 +163,6 @@ fn add_social_plugins(app: &mut App) {
         .add_plugins(item_templates::ItemTemplatesPlugin)
         .add_plugins(item_stats::ItemScalingPlugin)
         .add_plugins(inventory::InventoryPlugin)
-        .add_plugins(item_use::ItemUsePlugin)
         .add_plugins(appearance_collection::AppearanceCollectionPlugin)
         .add_plugins(quest_data::QuestDataPlugin)
         .add_plugins(quest::QuestPlugin)

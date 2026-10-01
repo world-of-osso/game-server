@@ -28,6 +28,20 @@ pub struct ItemTemplate {
     /// `ItemAppearanceModifierID` (Retail's default source). `None` for items
     /// without an appearance (cloth, potions, rings, trinkets).
     pub appearance_id: Option<u32>,
+    /// What using the item casts: its first `ITEM_SPELLTRIGGER_ON_USE` effect by
+    /// `LegacySlotIndex` (`ItemXItemEffect` -> `ItemEffect`, TriggerType 0).
+    pub on_use: Option<OnUseSpell>,
+}
+
+/// An item's on-use `ItemEffect`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct OnUseSpell {
+    pub spell_id: u32,
+    /// Negative: the item is expendable and a cast uses one up (`ItemEffect.Charges`,
+    /// `Spell::TakeCastItem`).
+    pub charges: i32,
+    /// `SpellCategoryID` / `CategoryCoolDownMSec`.
+    pub cooldown: crate::spell_cast::ItemCooldown,
 }
 
 pub const BIND_ON_PICKUP: u8 = 1;
@@ -77,8 +91,13 @@ const ITEM_QUERY: &str = "SELECT c.ID, c.InventoryType, c.Stackable, c.Bonding, 
      c.StatModifier_bonusStat_8, c.StatPercentEditor_8, s.StatPercentageOfSocket_8, \
      c.StatModifier_bonusStat_9, c.StatPercentEditor_9, s.StatPercentageOfSocket_9, \
      (SELECT m.ItemAppearanceID FROM item_modified_appearance m WHERE m.ItemID = c.ID \
-      AND m.ItemAppearanceID != 0 ORDER BY m.ItemAppearanceModifierID, m.OrderIndex LIMIT 1) \
-     FROM content_item c JOIN item_sparse s ON s.ID = c.ID";
+      AND m.ItemAppearanceID != 0 ORDER BY m.ItemAppearanceModifierID, m.OrderIndex LIMIT 1), \
+     u.SpellID, u.Charges, u.SpellCategoryID, u.CategoryCoolDownMSec \
+     FROM content_item c JOIN item_sparse s ON s.ID = c.ID \
+     LEFT JOIN (SELECT x.ItemID, e.SpellID, e.Charges, e.SpellCategoryID, e.CategoryCoolDownMSec, \
+      ROW_NUMBER() OVER (PARTITION BY x.ItemID ORDER BY e.LegacySlotIndex, e.ID) AS slot \
+      FROM item_x_item_effect x JOIN item_effect e ON e.ID = x.ItemEffectID \
+      WHERE e.TriggerType = 0 AND e.SpellID > 0) u ON u.ItemID = c.ID AND u.slot = 1";
 const FIRST_STAT_COLUMN: usize = 16;
 const APPEARANCE_COLUMN: usize = FIRST_STAT_COLUMN + 10 * 3;
 
@@ -105,6 +124,20 @@ fn scaling_from_row(row: &Row) -> rusqlite::Result<ItemScaling> {
     })
 }
 
+fn on_use_from_row(row: &Row) -> rusqlite::Result<Option<OnUseSpell>> {
+    let Some(spell_id) = row.get::<_, Option<u32>>(APPEARANCE_COLUMN + 1)? else {
+        return Ok(None);
+    };
+    Ok(Some(OnUseSpell {
+        spell_id,
+        charges: row.get(APPEARANCE_COLUMN + 2)?,
+        cooldown: crate::spell_cast::ItemCooldown {
+            category: row.get(APPEARANCE_COLUMN + 3)?,
+            category_ms: row.get(APPEARANCE_COLUMN + 4)?,
+        },
+    }))
+}
+
 fn template_from_row(row: &Row) -> rusqlite::Result<(u32, ItemTemplate)> {
     let low: i64 = row.get(6)?;
     let high: i64 = row.get(7)?;
@@ -117,6 +150,7 @@ fn template_from_row(row: &Row) -> rusqlite::Result<(u32, ItemTemplate)> {
         allowable_race: (u64::from(high as u32) << 32) | u64::from(low as u32),
         scaling: scaling_from_row(row)?,
         appearance_id: row.get(APPEARANCE_COLUMN)?,
+        on_use: on_use_from_row(row)?,
     };
     Ok((row.get(0)?, template))
 }

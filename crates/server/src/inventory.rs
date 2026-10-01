@@ -12,7 +12,7 @@ use redb::Database;
 use shared::components::{EquipmentAppearance, Player};
 use shared::protocol::{
     DestroyItem, EquipItem, EquipmentSnapshot, InventoryChannel, InventoryDelta, InventoryError,
-    InventoryErrorReason, InventorySnapshot, SortBags, SplitItem, SwapItem,
+    InventoryErrorReason, InventorySnapshot, SortBags, SplitItem, SwapItem, UseItem,
 };
 
 use crate::appearance_collection::AppearanceSourceItems;
@@ -48,6 +48,7 @@ impl Plugin for InventoryPlugin {
                 process_swap_requests,
                 process_split_requests,
                 process_destroy_requests,
+                process_use_requests,
                 process_equip_requests,
                 process_sort_requests,
             ),
@@ -253,6 +254,108 @@ fn process_destroy_requests(
     );
 }
 
+/// `WorldSession::HandleUseItemOpcode` → `Player::ProcessItemCast` → `CastItemUseSpell`
+/// (SpellHandler.cpp:49-63, Player.cpp:31665-31740, 8790-8840): the item's on-use spell
+/// is cast as a spell the item grants (no spellbook check) at the requested target,
+/// else the player's current target. Refusals answer `InventoryError`; the cast path
+/// answers its own `CastFailed`.
+fn process_use_requests(world: &mut World) {
+    let mut receivers = world.query_filtered::<(
+        Entity,
+        &InWorld,
+        &crate::networking::PlayerLink,
+        &mut MessageReceiver<UseItem>,
+    ), With<Authenticated>>();
+    let requests: Vec<_> = receivers
+        .iter_mut(world)
+        .flat_map(|(connection, in_world, link, mut receiver)| {
+            let (character_id, player) = (in_world.character_id, link.0);
+            receiver
+                .receive()
+                .map(move |request| (connection, character_id, player, request))
+                .collect::<Vec<_>>()
+        })
+        .collect();
+    for (connection, character_id, player, request) in requests {
+        if let Err(error) = use_item(world, character_id, player, &request) {
+            if let Some(mut sender) = world.get_mut::<MessageSender<InventoryError>>(connection) {
+                sender.send::<InventoryChannel>(error);
+            }
+        }
+    }
+}
+
+/// `SPELL_ATTR0_NOT_IN_COMBAT_ONLY_PEACEFUL` (SharedDefines.h:464).
+const SPELL_ATTR0_NOT_IN_COMBAT_ONLY_PEACEFUL: u32 = 0x1000_0000;
+
+/// One use: the item must be there (equipped, if equippable) with an on-use spell
+/// that, in combat, allows combat (`SpellInfo::CanBeUsedInCombat`,
+/// `EQUIP_ERR_NOT_IN_COMBAT`). Once the spell starts, an expendable item loses one from
+/// its stack (`Spell::TakeCastItem`).
+fn use_item(
+    world: &mut World,
+    character_id: u64,
+    player: Entity,
+    request: &UseItem,
+) -> Result<(), InventoryError> {
+    let (db, templates) = use_store(world)?;
+    let model = load_model(db, templates, character_id)?;
+    let on_use = model.use_spell(request.location)?;
+    let in_combat = world
+        .get::<shared::components::CombatStatus>(player)
+        .is_some_and(|status| status.0);
+    let peaceful_only = world
+        .get_resource::<crate::spell_info::SpellStore>()
+        .and_then(|store| store.get(on_use.spell_id))
+        .and_then(|spell| spell.misc.as_ref())
+        .is_some_and(|misc| misc.attributes[0] & SPELL_ATTR0_NOT_IN_COMBAT_ONLY_PEACEFUL != 0);
+    if in_combat && peaceful_only {
+        return Err(error(
+            InventoryErrorReason::NotInCombat,
+            format!("spell {} cannot be used in combat", on_use.spell_id),
+        ));
+    }
+    let target = request
+        .target
+        .and_then(Entity::try_from_bits)
+        .filter(|&target| world.get_entity(target).is_ok())
+        .or_else(|| {
+            world
+                .get::<crate::networking::CombatTarget>(player)
+                .and_then(|target| target.0)
+        });
+    let spell = on_use.spell_id;
+    if let Err(failure) =
+        crate::spell_cast::cast_item_spell(world, player, spell, target, on_use.cooldown)
+    {
+        debug!("Item use spell {spell} by {player} failed: {failure:?}");
+        return Ok(());
+    }
+    if on_use.charges < 0 {
+        let (db, templates) = use_store(world)?;
+        let mut model = load_model(db, templates, character_id)?;
+        model.destroy(request.location, 1)?;
+        save_inventory_record(db, character_id, &model.into_record());
+        world
+            .resource_mut::<GoldUpdateQueue>()
+            .record_items(character_id);
+    }
+    Ok(())
+}
+
+fn use_store(world: &World) -> Result<(&Database, &ItemTemplates), InventoryError> {
+    match (
+        world.get_resource::<GameDatabase>(),
+        world.get_resource::<ItemTemplates>(),
+    ) {
+        (Some(db), Some(templates)) => Ok((&db.db, templates)),
+        _ => Err(error(
+            InventoryErrorReason::InternalBagError,
+            "no inventory database or item templates",
+        )),
+    }
+}
+
 fn process_equip_requests(
     mut receivers: Requests<EquipItem>,
     store: InventoryStore,
@@ -348,6 +451,10 @@ fn send_inventory_deltas(
         }
     }
 }
+
+#[cfg(test)]
+#[path = "item_use_tests.rs"]
+mod item_use_tests;
 
 #[cfg(test)]
 #[path = "inventory_tests.rs"]
