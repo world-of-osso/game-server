@@ -355,6 +355,7 @@ fn max_health_change_keeps_whole_health_points() {
                 Level(10),
                 UnitStats::default(),
                 CombatRatings::default(),
+                DerivedStats::default(),
                 Health { current, max },
             ))
             .id()
@@ -374,16 +375,40 @@ fn max_health_change_keeps_whole_health_points() {
 
 #[test]
 fn secondary_dr_follows_curve_21024() {
-    assert_eq!(secondary_dr(10.0), 10.0);
-    assert_eq!(secondary_dr(30.0), 30.0);
-    assert_eq!(secondary_dr(45.0), 43.0);
-    assert_eq!(secondary_dr(250.0), 126.0);
+    assert_eq!(curve_value(&SECONDARY_DR_CURVE, 10.0), 10.0);
+    assert_eq!(curve_value(&SECONDARY_DR_CURVE, 30.0), 30.0);
+    assert_eq!(curve_value(&SECONDARY_DR_CURVE, 45.0), 43.0);
+    assert_eq!(curve_value(&SECONDARY_DR_CURVE, 250.0), 126.0);
     // 46 crit rating = 1% at level 90: 2300 rating = 50% raw → 47% after DR.
     let mut input = paladin_80_holy();
     input.level = 90;
     input.gear_ratings.crit = 2300.0;
     let stats = compute_character_stats(&input, None).unwrap();
     assert!((stats.crit_pct - 52.0).abs() < 1e-3, "{}", stats.crit_pct);
+}
+
+/// Leech, avoidance and speed ratings diminish on curve 21025: at level 20 (gtCombatRatings
+/// Lifesteal 6.648049399, Avoidance 3.545626346, Speed 1.108008233 per 1%) 12% raw leech
+/// keeps 11.6%, 5% avoidance stays whole and 30% raw speed keeps 21%.
+#[test]
+fn tertiary_ratings_follow_curve_21025() {
+    let mut input = paladin_80_holy();
+    input.level = 20;
+    input.gear_ratings.leech = 6.648_049_4 * 12.0;
+    input.gear_ratings.avoidance = 3.545_626_3 * 5.0;
+    input.gear_ratings.speed = 1.108_008_2 * 30.0;
+    let derived = compute_character_stats(&input, None).unwrap().derived();
+    let close = |actual: f32, expected: f32| (actual - expected).abs() < 1e-3;
+    assert!(close(derived.leech_pct, 11.6), "{derived:?}");
+    assert!(close(derived.avoidance_pct, 5.0), "{derived:?}");
+    assert!(close(derived.speed_pct, 21.0), "{derived:?}");
+    assert_eq!(
+        compute_character_stats(&paladin_80_holy(), None)
+            .unwrap()
+            .derived()
+            .leech_pct,
+        0.0
+    );
 }
 
 /// TC master avoidance (StatSystem.cpp:490-715): a level 10 Warrior with a weapon, a
