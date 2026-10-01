@@ -71,8 +71,11 @@ class GroundFiles:
         root = self.read(f"models/{fdid}.wmo")
         if root is None:
             return
-        gfid = chunks(root).get(b"GFID", b"")
-        for offset in range(0, len(gfid) - 3, 4):
+        found = chunks(root)
+        # The root's MOHD group count of GFID entries (`group_file_data_ids`).
+        count = struct.unpack_from("<I", found.get(b"MOHD", bytes(8)), 4)[0]
+        gfid = found.get(b"GFID", b"")
+        for offset in range(0, min(len(gfid), count * 4) - 3, 4):
             group = struct.unpack_from("<I", gfid, offset)[0]
             if group:
                 self.read(f"models/{group}.wmo")
