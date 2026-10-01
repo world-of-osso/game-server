@@ -463,13 +463,16 @@ const INVTYPE_SHIELD: u8 = 14;
 /// Retail keeps the percentage when maximum health changes in session (TrinityCore
 /// does too for MOD_INCREASE_HEALTH_PERCENT), and characters saved with the old
 /// 100-health placeholder rely on the ratio to log in at their saved share.
+/// Truncated to whole units as TrinityCore's integer health and power fields
+/// (`CalculatePct(GetMaxHealth(), percent)` into `uint32`, SpellAuraEffects.cpp:4204).
 fn rescaled_current(current: f32, old_max: f32, new_max: f32) -> f32 {
-    let ratio = if old_max > 0.0 {
-        current / old_max
+    // Multiply first: whole-unit products are exact, so an exact share stays whole.
+    let scaled = if old_max > 0.0 {
+        current * new_max / old_max
     } else {
-        1.0
+        new_max
     };
-    (new_max * ratio).min(new_max)
+    scaled.min(new_max).trunc()
 }
 
 type StatsQuery = (

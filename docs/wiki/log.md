@@ -472,7 +472,10 @@ Players replicate `PlayerMotion`, Retail `MovementFlags` (FORWARD, BACKWARD, STR
 
 [[spell-casting]], [[auras]]: aura max power (35/418; Holy Power 5, Chi 5/6), druid forms switch display power and model (MOD_SHAPESHIFT 36), Death Knight runes as per-rune cooldowns with 3 recharging, SET_POWER_POINT_CHARGE 494 charged combo points. Monk, Demon Hunter and Evoker remain unplayable, so Chi and Essence have no player yet.
 
+## [2026-10-01] fix | Player health regeneration
+
+[[spell-casting]], [[experience]]: players regenerate health every 2 s out of combat (TrinityCore `Player::RegenerateHealth`); before, only creatures did, so a damaged player stayed damaged forever (observed 666/1110 and 1109/1110). Level-up fills `SetToMaxOnLevelUp` pools (adds Energy). A max-health rescale truncates to whole points. Live: Godot client on a private server, 666 → 1110 in 20 ticks of 22/23.
+
 ## [2026-10-01] feature | New-character kit
 
 [[new-character-kit]]: new characters get the TrinityCore a352b1fa `Player::Create` kit. It places CharacterLoadout Purpose 9 items (with playercreateinfo_item overrides) through `StoreNewItemInBestSlots` and the backpack second pass, and stores the playercreateinfo_action buttons. [[class-progression]] now teaches every default skill line's spells (LearnDefaultSkills) instead of only racial lines, and the server-invented default bar is gone. `ItemTemplate::allows` now checks PlayableRaceBit. Gaps: kit bags, jewelry and second one-handers stay in the backpack (no bag containers, no jewelry storage, no dual wield), and level-10 starts lose create buttons to spec resolution and pruning.
-
