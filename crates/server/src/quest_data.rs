@@ -154,6 +154,8 @@ pub(crate) struct QuestDb {
     pub money_rewards: HashMap<u8, [u32; 10]>,
     /// `areatrigger_involvedrelation` triggers by map (`ObjectMgr::GetQuestsForAreaTrigger`).
     pub area_triggers: HashMap<u32, Vec<QuestAreaTrigger>>,
+    /// Creature entry -> its `KillCredit1`/`KillCredit2` entries (`Player::KilledMonster`).
+    pub kill_credits: HashMap<u32, Vec<u32>>,
 }
 
 /// An `AreaTrigger.db2` row that explores quests.
@@ -324,6 +326,21 @@ fn load_creature_names(conn: &Connection) -> rusqlite::Result<HashMap<u32, Strin
     rows.collect()
 }
 
+fn load_kill_credits(conn: &Connection) -> rusqlite::Result<HashMap<u32, Vec<u32>>> {
+    let mut statement = conn.prepare(
+        "SELECT entry, KillCredit1, KillCredit2 FROM content_creature_template \
+         WHERE KillCredit1 <> 0 OR KillCredit2 <> 0",
+    )?;
+    let rows = statement.query_map([], |row| {
+        let credits: [u32; 2] = [row.get(1)?, row.get(2)?];
+        Ok((
+            row.get::<_, u32>(0)?,
+            credits.into_iter().filter(|&credit| credit != 0).collect(),
+        ))
+    })?;
+    rows.collect()
+}
+
 fn load_relations(conn: &Connection, table: &str) -> rusqlite::Result<HashMap<u32, Vec<u32>>> {
     let mut statement =
         conn.prepare(&format!("SELECT id, quest FROM {table} ORDER BY id, quest"))?;
@@ -487,6 +504,7 @@ pub(crate) fn load_quest_db(path: &Path) -> rusqlite::Result<QuestDb> {
     db.pois = load_pois(&conn)?;
     db.money_rewards = load_money_rewards(&conn)?;
     db.area_triggers = load_area_triggers(&conn)?;
+    db.kill_credits = load_kill_credits(&conn)?;
     Ok(db)
 }
 

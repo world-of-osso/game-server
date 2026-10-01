@@ -236,6 +236,25 @@ pub(crate) fn complete_counted_objectives(
     Ok(())
 }
 
+/// `Player::KilledMonster`: kill credit for the creature's entry, then for each of its
+/// `KillCredit1`/`KillCredit2` entries (Player.cpp:16652-16662). Returns whether anything
+/// changed.
+pub(crate) fn credit_killed_creature(
+    db: &QuestDb,
+    log: &mut QuestLogData,
+    creature_entry: u32,
+) -> bool {
+    let credits = db
+        .kill_credits
+        .get(&creature_entry)
+        .map_or(&[][..], Vec::as_slice);
+    std::iter::once(creature_entry)
+        .chain(credits.iter().copied())
+        .fold(false, |changed, entry| {
+            credit_kill(db, log, entry) | changed
+        })
+}
+
 /// `KilledMonsterCredit`: add one kill to every unfinished objective of a quest
 /// in the log that counts `creature_entry`. Returns whether anything changed.
 pub(crate) fn credit_kill(db: &QuestDb, log: &mut QuestLogData, creature_entry: u32) -> bool {

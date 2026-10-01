@@ -278,6 +278,12 @@ def build_templates(conn, report):
     conn.create_function("health_expansion", 1, health_expansion, deterministic=True)
     insert_tdb_templates(conn, "SELECT id1 FROM content_creature WHERE guid IN (SELECT guid FROM temp.retail_spawn)")
     insert_tdb_templates(conn, TRANSFORM_ENTRIES)
+    # Retail quest objectives count Retail kill credits (Player::KilledMonster credits the entry
+    # and its KillCredit1/2): an AzerothCore template TrinityCore also has takes them.
+    conn.execute("""UPDATE content_creature_template SET KillCredit1 = t.KillCredit1, KillCredit2 = t.KillCredit2
+        FROM tdb_creature_template t
+        WHERE t.entry = content_creature_template.entry
+          AND content_creature_template.entry IN (SELECT entry FROM creature_template)""")
     # AzerothCore templates TrinityCore also tunes take its ContentTuning range, and the
     # difficulty-0 scaling expansion, level delta and modifiers ExpectedStat is scaled by.
     conn.execute("""UPDATE content_creature_template SET ContentTuningID = d.ContentTuningID,

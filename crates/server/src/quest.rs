@@ -32,7 +32,7 @@ use crate::networking::PlayerLink;
 use crate::persistence::quest_store::{QuestLogData, load_quest_log, save_quest_log};
 use crate::persistence::{self, ClientId, GameDatabase, InventoryData};
 use crate::quest_data::QuestDb;
-use crate::quest_rules::{QuestPlayer, credit_area_trigger, credit_kill, giver_status};
+use crate::quest_rules::{QuestPlayer, credit_area_trigger, credit_killed_creature, giver_status};
 use crate::quest_view::{QuestLogView, bag_count, diff_log, log_entries, log_snapshot, view_of};
 
 #[path = "quest_requests.rs"]
@@ -177,7 +177,7 @@ fn credit_quest_kills(
                 .filter(|&character| gets_credit(character))
         {
             let mut log = load_quest_log(db, character_id);
-            if credit_kill(quests, &mut log, npc.template_id) {
+            if credit_killed_creature(quests, &mut log, npc.template_id) {
                 save_quest_log(db, character_id, &log);
                 dirty.0.insert(character_id);
             }

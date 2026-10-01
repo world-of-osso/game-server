@@ -1712,6 +1712,13 @@ class AzerothCoreContentTests(unittest.TestCase):
             [(783, 1, "Deputy Willem", "Marshal McBride")],
         )
 
+    def test_gray_forest_wolf_takes_retail_kill_credit_for_prowlers(self):
+        # Protect the Frontier (52) counts "Prowler or Forest Wolf slain" on Prowler 118; TDB1210 Gray
+        # Forest Wolf 1922 has KillCredit1 118, AzerothCore 0.
+        self.assertEqual(self.rows("SELECT KillCredit1 FROM creature_template WHERE entry = 1922"), [(0,)])
+        self.assertEqual(
+            self.rows("SELECT KillCredit1, KillCredit2 FROM content_creature_template WHERE entry = 1922"), [(118, 0)])
+
     def test_goldshire_weaponsmith_corina_steele_sells_basic_weapons(self):
         self.assertEqual(
             self.rows(

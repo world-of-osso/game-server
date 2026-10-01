@@ -878,3 +878,30 @@ fn a_worg_only_soldiers_fought_credits_nobody() {
     assert_eq!(worg_kills(&app, &client), Some(vec![0]));
     assert!(kill_xp(&mut app, &client).is_empty());
 }
+
+/// Guard Thomas (Eastvale Logging Camp) gives Protect the Frontier.
+const GUARD_THOMAS: u32 = 261;
+const PROTECT_THE_FRONTIER: u32 = 52;
+const PROWLER: u32 = 118;
+/// `KillCredit1` 118: counts as a Prowler.
+const GRAY_FOREST_WOLF: u32 = 1922;
+
+#[test]
+fn a_gray_forest_wolf_kill_counts_as_a_prowler() {
+    let Some(mut app) = setup_app() else {
+        return;
+    };
+    let client = spawn_client(&mut app, 1);
+    let thomas = spawn_npc(&mut app, GUARD_THOMAS, 2.0);
+    enter_world(&mut app, &client);
+    accept(&mut app, &client, thomas, PROTECT_THE_FRONTIER);
+    let frontier = |app: &App| {
+        load_quest_log(db(app), client.character_id)
+            .active(PROTECT_THE_FRONTIER)
+            .map(|active| active.counts.clone())
+    };
+    assert_eq!(frontier(&app), Some(vec![0, 0]));
+    kill(&mut app, &client, GRAY_FOREST_WOLF, 2);
+    kill(&mut app, &client, PROWLER, 1);
+    assert_eq!(frontier(&app), Some(vec![3, 0]));
+}
