@@ -14,7 +14,7 @@ sys.path.insert(0, str(SCRIPTS))
 
 import content_policy
 from content_common import Report
-from test_import_azerothcore import write_db2_rows, write_header_only_csvs
+from test_import_azerothcore import write_db2_rows
 
 
 class CraftingItemTests(unittest.TestCase):
@@ -33,7 +33,12 @@ class CraftingItemTests(unittest.TestCase):
         ):
             self.db.executescript((SCRIPTS / schema).read_text())
         self.csv_root = self.root / "csv"
-        write_header_only_csvs(self.csv_root)
+        self.csv_root.mkdir()
+        for db2_name, table in (("ItemSparse", "item_sparse"), ("Item", "item")):
+            with (self.csv_root / f"{db2_name}.csv").open("w", newline="") as handle:
+                csv.writer(handle).writerow(
+                    row[1] for row in self.db.execute(f"PRAGMA table_info({table})")
+                )
         self.source_rows(
             "ItemSparse",
             "item_sparse",
@@ -120,8 +125,10 @@ class CraftingItemTests(unittest.TestCase):
         return self.db.execute("SELECT * FROM content_item ORDER BY ID").fetchall()
 
     def test_existing_2302_preserved_and_new_244612_uses_exact_retail_fields(self):
+        self.db.execute("UPDATE spell_reagents SET Reagent_2=2302,ReagentCount_2=1")
         before = self.rows()
         result = self.module().project_crafting_items(self.db)
+        self.assertEqual(result["existing"], [2302])
         self.assertEqual(
             self.db.execute("SELECT * FROM content_item WHERE ID=2302").fetchall(),
             before,
@@ -239,6 +246,33 @@ class CraftingItemTests(unittest.TestCase):
         )
         self.assertNotEqual(result.returncode, 0)
         self.assertFalse(absent.exists())
+
+    def test_cli_invalid_projection_rolls_back_and_writes_no_success_report(self):
+        import subprocess
+
+        self.db.execute(
+            "ALTER TABLE content_item ADD COLUMN Valid INTEGER CHECK (typeof(ItemLevel)='integer')"
+        )
+        self.db.execute("UPDATE item_sparse SET ItemLevel='invalid' WHERE ID=244612")
+        self.db.commit()
+        before = self.rows()
+        report = self.root / "failed.json"
+        result = subprocess.run(
+            [
+                sys.executable,
+                str(SCRIPTS / "crafting_items.py"),
+                "--db",
+                str(self.path),
+                "--report",
+                str(report),
+            ],
+            capture_output=True,
+            text=True,
+        )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("CHECK constraint failed", result.stderr)
+        self.assertEqual(self.rows(), before)
+        self.assertFalse(report.exists())
 
     def test_full_rebuild_keeps_outputs_fixed_reagents_and_category_alternatives(self):
         self.db.execute(
