@@ -72,7 +72,7 @@ Server gameplay systems.
 
 Debug logs and root cause analyses.
 
-- [[midnight-economy-content]] — effect-288/Skillup2915 correction, published evidence, diagnostic staging catalog, genuine city-NPC gap and pending publication/preflight gates.
+- [[midnight-economy-content]] — effect-288/Skillup2915 correction, published references, approved approximate Zaralda placement and two local suppliers; recipe limits and independent integration gate remain.
 
 | Page | Summary |
 |------|---------|

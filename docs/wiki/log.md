@@ -1,5 +1,9 @@
 # Wiki Log
 
+## [2026-10-01] investigations/systems | Approved derived Zaralda publication
+
+Updated [[midnight-economy-content]], [[content-import]], [[economy-catalog]] and index after committed terrain `830157a`, publisher `94e6d88`, integration `e43f4d3` and local publication. Recorded native template/model/difficulty identity, actual CASC ground sampling, explicit approximate placement/local facing policy, tracked required-manifest rebuild preflight and protected additive publication. Two thread/floss suppliers only; unsupported currency rows excluded. Removed obsolete identity/stock/exact-capture blockers; preserved recipe limitations, unchanged Classic catalog/service and pending independent integration gate. Bounded development GREEN is not accepted integration or full-goal completion. The source-backed Zaralda candidate catalog validates with15recipes/21markets/2gatherables; live acceptance remains pending.
+
 ## [2026-10-01] investigations | Browser-observed Silvermoon merchant
 
 Updated [[midnight-economy-content]] from saved browser-cli Zaralda evidence: NPC243531, Leatherworking Supplies, all 34 sells rows extracted without individual item navigation, two thread/floss costs700 and raw stack/availability, plus Silvermoon uiMap2393 marker43.2,55.8. Canonical item rows confirm price700 and bundle1 for both reagents; neither appears in the 15 staged recipes. Preserved patch12.0.0 provenance and generic thread736 discrepancy. Follow-up item listings explicitly show unlimited stock and bundle1; corrected the overstated Retail-captured elevation/facing gate. Derived placement remains a user decision under the no-fabricated-spawns contract. Linked parsed/raw temporary artifacts. Classic/catalog unchanged.
