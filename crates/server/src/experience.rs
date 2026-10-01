@@ -27,7 +27,8 @@ use shared::level_scaling::{LevelScaling, gray_level, level_for_viewer};
 use shared::protocol::{ExperienceChannel, LogXpGain, PlayerXpUpdate, XpGainReason};
 
 use crate::auth::InWorld;
-use crate::combat::{DeathState, LastDamager};
+use crate::combat::DeathState;
+use crate::creature_tap::CreatureTap;
 use crate::death::PlayerDeathState;
 use crate::group::GroupRegistry;
 use crate::networking::PlayerLink;
@@ -99,6 +100,9 @@ pub(crate) struct KillVictim {
     pub elite: bool,
     pub experience_modifier: f32,
     pub gives_experience: bool,
+    /// `1 - 2 * m_PlayerDamageReq / max health` while players dealt less than half
+    /// its health (`creature_tap::CreatureTap::xp_factor`).
+    pub player_damage_factor: f32,
 }
 
 impl KillVictim {
@@ -116,7 +120,7 @@ pub(crate) fn kill_gain(player_level: u8, victim: &KillVictim) -> u32 {
     }
     let gain = base_gain(player_level, victim.level_for(player_level));
     let elite = if victim.elite { 2.0 } else { 1.0 };
-    (gain as f32 * elite * victim.experience_modifier) as u32
+    (gain as f32 * elite * victim.experience_modifier * victim.player_damage_factor) as u32
 }
 
 /// `Trinity::XP::xp_in_group_rate` outside raids.
@@ -326,6 +330,7 @@ fn victim_of(
         elite: matches!(template.rank, 1 | 2),
         experience_modifier: template.experience_modifier,
         gives_experience: template.gives_experience,
+        player_damage_factor: 1.0,
     })
 }
 
@@ -342,7 +347,8 @@ type KillPlayers<'w, 's> = Query<
     With<Player>,
 >;
 
-/// Kill XP for NPC deaths credited to a player (`LastDamager`).
+/// Kill XP for each tapper of a dead creature (`creature_tap`), as `KillRewarder::Reward`:
+/// a grouped tapper's group once, an ungrouped tapper alone.
 fn award_kill_xp(
     killed: Query<
         (
@@ -350,7 +356,8 @@ fn award_kill_xp(
             &Npc,
             &UnitLevel,
             Option<&LevelScaling>,
-            &LastDamager,
+            &CreatureTap,
+            &Health,
             &Position,
             &crate::maps::InMap,
         ),
@@ -364,44 +371,55 @@ fn award_kill_xp(
     let Some(world_data) = world_data else {
         return;
     };
-    for (npc_entity, npc, level, scaling, killer, position, map) in &killed {
-        let Ok((killer_id, ..)) = players.get(killer.0) else {
+    for (npc_entity, npc, level, scaling, tap, health, position, map) in &killed {
+        let Some(mut victim) = victim_of(&world_data, npc, level, scaling) else {
             continue;
         };
-        let Some(victim) = victim_of(&world_data, npc, level, scaling) else {
-            continue;
-        };
-        let group = groups
-            .as_deref()
-            .map_or_else(Vec::new, |groups| groups.group_members(killer_id.0));
-        let members: Vec<KillMember> = players
-            .iter()
-            .filter(|(id, _, member_position, _, member_map)| {
-                id.0 == killer_id.0
-                    || (group.contains(&id.0)
-                        && *member_map == map
-                        && distance(member_position, position) <= GROUP_XP_DISTANCE)
-            })
-            .map(|(id, level, _, death, _)| KillMember {
-                character_id: id.0,
-                level: level.0,
-                alive: is_alive(death),
-                is_killer: id.0 == killer_id.0,
-            })
-            .collect();
-        let rewards = kill_rewards(&victim, &members, !group.is_empty());
-        awards.0.extend(
-            rewards
-                .shares
-                .into_iter()
-                .map(|(character_id, amount)| XpAward {
-                    character_id,
-                    amount,
-                    victim: Some(npc_entity),
-                    group_bonus: rewards.group_bonus,
-                    reason: XpGainReason::Kill,
-                }),
-        );
+        victim.player_damage_factor = tap.xp_factor(health.max);
+        let mut processed_groups: Vec<u64> = Vec::new();
+        for &killer in tap.tappers.iter().filter(|&&tapper| {
+            players
+                .iter()
+                .any(|(id, .., tapper_map)| id.0 == tapper && tapper_map == map)
+        }) {
+            let group = groups
+                .as_deref()
+                .map_or_else(Vec::new, |groups| groups.group_members(killer));
+            if let Some(&group_key) = group.iter().min() {
+                if processed_groups.contains(&group_key) {
+                    continue;
+                }
+                processed_groups.push(group_key);
+            }
+            let members: Vec<KillMember> = players
+                .iter()
+                .filter(|(id, _, member_position, _, member_map)| {
+                    id.0 == killer
+                        || (group.contains(&id.0)
+                            && *member_map == map
+                            && distance(member_position, position) <= GROUP_XP_DISTANCE)
+                })
+                .map(|(id, level, _, death, _)| KillMember {
+                    character_id: id.0,
+                    level: level.0,
+                    alive: is_alive(death),
+                    is_killer: id.0 == killer,
+                })
+                .collect();
+            let rewards = kill_rewards(&victim, &members, !group.is_empty());
+            awards.0.extend(
+                rewards
+                    .shares
+                    .into_iter()
+                    .map(|(character_id, amount)| XpAward {
+                        character_id,
+                        amount,
+                        victim: Some(npc_entity),
+                        group_bonus: rewards.group_bonus,
+                        reason: XpGainReason::Kill,
+                    }),
+            );
+        }
     }
 }
 

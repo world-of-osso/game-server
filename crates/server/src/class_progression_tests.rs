@@ -762,7 +762,7 @@ fn world_with_creature(entry: u32, min_level: u8) -> crate::world_data::WorldDat
 #[test]
 fn kill_xp_crossing_level_10_levels_up_and_sends_learned_spells() {
     use crate::auth::InWorld;
-    use crate::combat::{DeathState, LastDamager};
+    use crate::combat::DeathState;
     use crate::persistence_progression::{load_xp, save_xp};
     use shared::components::{Npc, Position};
     use shared::protocol::{LogXpGain, PlayerXpUpdate, XpGainReason};
@@ -812,7 +812,11 @@ fn kill_xp_crossing_level_10_levels_up_and_sends_learned_spells() {
             UnitLevel(9),
             origin,
             crate::maps::InMap::continent(0),
-            LastDamager(player),
+            crate::creature_tap::CreatureTap::tapped_by(character_id),
+            shared::components::Health {
+                current: 0.0,
+                max: 100.0,
+            },
             DeathState {
                 respawn_timer: 60.0,
             },

@@ -284,7 +284,7 @@ fn kill(app: &mut App, client: &Client, template_id: u32, count: usize) {
                 name: String::new(),
             },
             origin(),
-            LastDamager(client.player),
+            crate::creature_tap::CreatureTap::tapped_by(client.character_id),
             DeathState {
                 respawn_timer: 60.0,
             },
@@ -762,4 +762,119 @@ fn a_ghost_entering_the_mine_does_not_explore_it() {
             .map(|active| active.counts.clone()),
         Some(vec![0])
     );
+}
+
+/// Stormwind Infantry (Northshire): fights the Blackrock Worgs.
+const STORMWIND_INFANTRY: u32 = 49869;
+
+fn spawn_worg(app: &mut App) -> Entity {
+    app.world_mut()
+        .spawn((
+            crate::maps::InMap::continent(0),
+            Npc {
+                template_id: BLACKROCK_WORG,
+                name: "Blackrock Worg".into(),
+            },
+            Position {
+                x: 3.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            shared::components::UnitLevel(2),
+            shared::components::Health {
+                current: 100.0,
+                max: 100.0,
+            },
+        ))
+        .id()
+}
+
+/// `Unit::DealDamage(attacker, worg, damage)`, then a frame for the rewards.
+fn hit(app: &mut App, attacker: Entity, victim: Entity, damage: f32) {
+    crate::combat::deal_direct_damage(app.world_mut(), attacker, victim, damage);
+    app.update();
+}
+
+fn worg_kills(app: &App, client: &Client) -> Option<Vec<u32>> {
+    load_quest_log(db(app), client.character_id)
+        .active(BEATING_THEM_BACK)
+        .map(|active| active.counts.clone())
+}
+
+fn kill_xp(app: &mut App, client: &Client) -> Vec<u32> {
+    received::<LogXpGain>(app, client)
+        .into_iter()
+        .filter(|gain| gain.reason == XpGainReason::Kill)
+        .map(|gain| gain.amount)
+        .collect()
+}
+
+fn beating_them_back_accepted() -> Option<(App, Client, Entity)> {
+    let mut app = setup_app()?;
+    // The worg's creature template, for kill XP.
+    app.insert_resource(crate::world_data::load_world_data(
+        &std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/world.db"),
+    ));
+    let client = spawn_client(&mut app, 1);
+    let mcbride = spawn_npc(&mut app, MARSHAL_MCBRIDE, 2.0);
+    enter_world(&mut app, &client);
+    accept(&mut app, &client, mcbride, BEATING_THEM_BACK);
+    received::<QuestLogUpdate>(&mut app, &client);
+    let soldier = app
+        .world_mut()
+        .spawn((
+            crate::maps::InMap::continent(0),
+            Npc {
+                template_id: STORMWIND_INFANTRY,
+                name: "Stormwind Infantry".into(),
+            },
+            origin(),
+        ))
+        .id();
+    Some((app, client, soldier))
+}
+
+#[test]
+fn a_worg_a_soldier_wounded_and_the_player_killed_credits_the_player() {
+    let Some((mut app, client, soldier)) = beating_them_back_accepted() else {
+        return;
+    };
+    let worg = spawn_worg(&mut app);
+    hit(&mut app, soldier, worg, 60.0);
+    hit(&mut app, client.player, worg, 40.0);
+    assert!(app.world().get::<DeathState>(worg).is_some());
+    assert_eq!(worg_kills(&app, &client), Some(vec![1]));
+    // The player dealt 40 of the 50 health it needed for full XP: 1 - 2 * 10 / 100.
+    let partial = kill_xp(&mut app, &client);
+
+    let worg = spawn_worg(&mut app);
+    hit(&mut app, client.player, worg, 100.0);
+    assert_eq!(worg_kills(&app, &client), Some(vec![2]));
+    let full = kill_xp(&mut app, &client);
+    assert_eq!(partial.len(), 1);
+    assert_eq!(partial, vec![(full[0] as f32 * 0.8) as u32]);
+}
+
+#[test]
+fn a_worg_the_player_tapped_and_a_soldier_finished_credits_the_player() {
+    let Some((mut app, client, soldier)) = beating_them_back_accepted() else {
+        return;
+    };
+    let worg = spawn_worg(&mut app);
+    hit(&mut app, client.player, worg, 10.0);
+    hit(&mut app, soldier, worg, 90.0);
+    assert!(app.world().get::<DeathState>(worg).is_some());
+    assert_eq!(worg_kills(&app, &client), Some(vec![1]));
+}
+
+#[test]
+fn a_worg_only_soldiers_fought_credits_nobody() {
+    let Some((mut app, client, soldier)) = beating_them_back_accepted() else {
+        return;
+    };
+    let worg = spawn_worg(&mut app);
+    hit(&mut app, soldier, worg, 100.0);
+    assert!(app.world().get::<DeathState>(worg).is_some());
+    assert_eq!(worg_kills(&app, &client), Some(vec![0]));
+    assert!(kill_xp(&mut app, &client).is_empty());
 }

@@ -516,7 +516,9 @@ pub(crate) fn enter_evade_mode(world: &mut World, creature: Entity) {
     }
     remove_auras_on_evade(world, creature);
     crate::spell_cast::cancel_cast(world, creature);
-    // `CreatureAI::_EnterEvadeMode`: `SetLastDamagedTime(0)` (CreatureAI.cpp:317).
+    // `CreatureAI::_EnterEvadeMode`: `SetTappedBy(nullptr)`, `ResetPlayerDamageReq`,
+    // `SetLastDamagedTime(0)` (CreatureAI.cpp:313-317).
+    crate::creature_tap::clear(world, creature);
     world.entity_mut(creature).remove::<LastDamagedTime>();
     world
         .entity_mut(creature)

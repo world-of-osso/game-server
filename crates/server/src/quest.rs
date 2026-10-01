@@ -3,9 +3,9 @@
 //!
 //! Requests (`quest_requests`) load the character's `QuestLogData` and
 //! `InventoryData` from redb, apply, save, and mark the character in
-//! `QuestDirty`. Kill credit comes from NPC deaths (`Added<DeathState>` +
-//! `LastDamager`, as reputation does) for the killer and group members within
-//! reward distance. Item objectives read bag counts, so any inventory change
+//! `QuestDirty`. Kill credit comes from NPC deaths (`Added<DeathState>`) for the
+//! creature's rewarded players (`creature_tap`: its tappers and their groups within
+//! reward distance). Item objectives read bag counts, so any inventory change
 //! recorded in `GoldUpdateQueue` marks the owner dirty; level changes do too.
 //! In `PostUpdate` each dirty character's log is diffed against the last view
 //! sent (`QuestLogUpdate`) and the markers of every NPC its connection queried
@@ -23,7 +23,8 @@ use shared::protocol::{
 };
 
 use crate::auth::{Authenticated, InWorld};
-use crate::combat::{DeathState, LastDamager};
+use crate::combat::DeathState;
+use crate::creature_tap::{CreatureTap, RewardPlayers, distance, rewarded_characters};
 use crate::death::PlayerDeathState;
 use crate::gold::GoldUpdateQueue;
 use crate::group::GroupRegistry;
@@ -36,10 +37,6 @@ use crate::quest_view::{QuestLogView, bag_count, diff_log, log_entries, log_snap
 
 #[path = "quest_requests.rs"]
 mod quest_requests;
-
-/// Group members this close to the killed creature share kill credit
-/// (TrinityCore `CONFIG_GROUP_XP_DISTANCE` default).
-const GROUP_REWARD_DISTANCE: f32 = 74.0;
 
 /// Characters whose quest log or quest markers must be re-sent.
 #[derive(Resource, Default)]
@@ -150,49 +147,13 @@ fn send_initial_quest_log(
     }
 }
 
-pub(crate) type PlayerPositions<'w, 's> = Query<
-    'w,
-    's,
-    (
-        &'static ClientId,
-        &'static Position,
-        &'static crate::maps::InMap,
-    ),
-    With<Player>,
->;
-
-fn distance(a: &Position, b: &Position) -> f32 {
-    ((a.x - b.x).powi(2) + (a.y - b.y).powi(2) + (a.z - b.z).powi(2)).sqrt()
-}
-
-/// The killer plus its group members within reward distance of the creature, in its
-/// map copy (`Player::IsAtGroupRewardDistance`).
-pub(crate) fn credited_characters(
-    killer: u64,
-    (creature_map, creature): (&crate::maps::InMap, &Position),
-    players: &PlayerPositions,
-    groups: Option<&GroupRegistry>,
-) -> Vec<u64> {
-    let members = groups.map_or_else(Vec::new, |groups| groups.group_members(killer));
-    if members.is_empty() {
-        return vec![killer];
-    }
-    members
-        .into_iter()
-        .filter(|&member| {
-            member == killer
-                || players.iter().any(|(id, position, map)| {
-                    id.0 == member
-                        && map == creature_map
-                        && distance(position, creature) <= GROUP_REWARD_DISTANCE
-                })
-        })
-        .collect()
-}
-
+/// `KillRewarder::_RewardKillCredit` (KillRewarder.cpp:177-188) for every rewarded
+/// player of a dead creature (`creature_tap`): a grouped player needs to be alive or
+/// without a corpse.
 fn credit_quest_kills(
-    killed: Query<(&Npc, &LastDamager, &Position, &crate::maps::InMap), Added<DeathState>>,
-    players: PlayerPositions,
+    killed: Query<(&Npc, &CreatureTap, &Position, &crate::maps::InMap), Added<DeathState>>,
+    players: RewardPlayers,
+    lives: Query<(&ClientId, Option<&PlayerDeathState>), With<Player>>,
     groups: Option<Res<GroupRegistry>>,
     store: QuestStore,
     mut dirty: ResMut<QuestDirty>,
@@ -200,12 +161,20 @@ fn credit_quest_kills(
     let Some((db, quests)) = store.get() else {
         return;
     };
-    for (npc, killer, position, map) in &killed {
-        let Ok((killer_id, ..)) = players.get(killer.0) else {
-            continue;
-        };
+    let gets_credit = |character: u64| {
+        let grouped = groups
+            .as_deref()
+            .is_some_and(|groups| !groups.group_members(character).is_empty());
+        !grouped
+            || lives.iter().any(|(id, death)| {
+                id.0 == character && death.is_none_or(|death| death.state == PlayerLifeState::Alive)
+            })
+    };
+    for (npc, tap, position, map) in &killed {
         for character_id in
-            credited_characters(killer_id.0, (map, position), &players, groups.as_deref())
+            rewarded_characters(&tap.tappers, (map, position), &players, groups.as_deref())
+                .into_iter()
+                .filter(|&character| gets_credit(character))
         {
             let mut log = load_quest_log(db, character_id);
             if credit_kill(quests, &mut log, npc.template_id) {

@@ -488,6 +488,7 @@ pub fn deal_damage(
     );
     let lethal = crate::death::apply_health_damage(&mut health, loss);
     if loss > 0.0 {
+        crate::creature_tap::record_damage(world, target, ctx.caster, before, loss);
         crate::scripted_ai::damage_taken(world, target, Some(ctx.caster), before, loss);
     }
     if duel_defeated {
