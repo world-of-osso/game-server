@@ -517,3 +517,138 @@ fn initiation_refusals_follow_azerothcore_order() {
     assert_eq!(initiation_refusal(ok, stunned), Some("Target is stunned"));
     assert_eq!(initiation_refusal(ok, horde), Some("Target is unfriendly."));
 }
+
+/// Linen and gold held by both players together.
+fn totals(h: &TradeHarness) -> (u32, u64) {
+    let (a_id, b_id) = (h.a.character_id, h.b.character_id);
+    (
+        h.count(a_id, LINEN) + h.count(b_id, LINEN),
+        h.inventory(a_id).gold + h.inventory(b_id).gold,
+    )
+}
+
+#[test]
+fn any_offer_change_after_an_accept_resets_both_accepts() {
+    let Some(mut h) = trade_harness() else { return };
+    let (a, b) = (h.a.connection, h.b.connection);
+    let (a_id, b_id) = (h.a.character_id, h.b.character_id);
+    let (a_linen, b_linen) = (h.count(a_id, LINEN), h.count(b_id, LINEN));
+    h.open_trade();
+    h.send(a, offer(0, h.guid(a_id, LINEN), 5));
+    h.send(a, ConfirmTrade);
+    h.send(b, ConfirmTrade);
+    h.take(a);
+    h.take(b);
+    // Completed above; reopen and accept once, then each kind of change.
+    assert_eq!(h.count(b_id, LINEN), b_linen + 5);
+    h.open_trade();
+    let linen = h.guid(a_id, LINEN);
+    for change in 0..3 {
+        h.send(a, offer(0, linen, 1));
+        h.send(a, ConfirmTrade);
+        let seen = h.take(b).pop().unwrap().trade.unwrap();
+        assert!(seen.other.accepted, "change {change}: accept shown");
+        match change {
+            0 => h.send(a, SetTradeMoney { copper: 3 }),
+            1 => h.send(b, offer(1, h.guid(b_id, LINEN), 1)),
+            _ => h.send(a, ClearTradeItem { slot: 0 }),
+        }
+        let view = h.take(b).pop().unwrap().trade.unwrap();
+        assert!(
+            !view.player.accepted && !view.other.accepted,
+            "change {change}: both accepts reset"
+        );
+        h.take(a);
+        // The other side's accept alone completes nothing.
+        h.send(b, ConfirmTrade);
+        assert!(h.trading(a_id));
+        h.send(b, CancelTradeAccept);
+        h.send(b, ClearTradeItem { slot: 1 });
+        h.take(a);
+        h.take(b);
+    }
+    assert_eq!(h.count(a_id, LINEN), a_linen - 5);
+    assert_eq!(h.count(b_id, LINEN), b_linen + 5);
+}
+
+#[test]
+fn an_offered_stack_that_left_the_bags_refuses_without_moving_anything() {
+    let Some(mut h) = trade_harness() else { return };
+    let (a, b) = (h.a.connection, h.b.connection);
+    let (a_id, b_id) = (h.a.character_id, h.b.character_id);
+    h.open_trade();
+    h.send(a, offer(0, h.guid(a_id, LINEN), 20));
+    h.send(a, SetTradeMoney { copper: 100 });
+    h.send(b, offer(0, h.guid(b_id, PEACEBLOOM), 4));
+    // The offered linen is destroyed while the window is open.
+    let mut gone = h.inventory(a_id);
+    gone.items.retain(|item| item.item_id != LINEN);
+    persistence::save_inventory(h.db(), a_id, &gone);
+    let before = (h.inventory(a_id), h.inventory(b_id));
+    h.send(a, ConfirmTrade);
+    h.send(b, ConfirmTrade);
+
+    assert_eq!(h.errors(a), vec!["The item was not found.".to_string()]);
+    assert_eq!(h.errors(b), vec!["The item was not found.".to_string()]);
+    assert!(h.trading(a_id));
+    assert_eq!((h.inventory(a_id), h.inventory(b_id)), before);
+}
+
+#[test]
+fn offered_money_spent_before_the_exchange_refuses_it() {
+    let Some(mut h) = trade_harness() else { return };
+    let (a, b) = (h.a.connection, h.b.connection);
+    let (a_id, b_id) = (h.a.character_id, h.b.character_id);
+    let mut rich = h.inventory(a_id);
+    rich.gold = 1_000;
+    persistence::save_inventory(h.db(), a_id, &rich);
+    h.open_trade();
+    h.send(a, SetTradeMoney { copper: 1_000 });
+    h.send(b, offer(0, h.guid(b_id, PEACEBLOOM), 4));
+    let mut spent = h.inventory(a_id);
+    spent.gold = 400;
+    persistence::save_inventory(h.db(), a_id, &spent);
+    let before = (h.inventory(a_id), h.inventory(b_id));
+    h.send(a, ConfirmTrade);
+    h.send(b, ConfirmTrade);
+
+    assert_eq!(
+        h.errors(a),
+        vec!["You don't have enough money.".to_string()]
+    );
+    assert_eq!(h.errors(b), vec!["Trade failed.".to_string()]);
+    assert!(h.trading(a_id));
+    assert_eq!((h.inventory(a_id), h.inventory(b_id)), before);
+}
+
+#[test]
+fn one_stack_in_two_slots_or_a_part_stack_never_duplicates() {
+    let Some(mut h) = trade_harness() else { return };
+    let (a, b) = (h.a.connection, h.b.connection);
+    let (a_id, b_id) = (h.a.character_id, h.b.character_id);
+    let total = totals(&h);
+    let a_linen = h.count(a_id, LINEN);
+    let linen = h.guid(a_id, LINEN);
+    h.open_trade();
+    h.send(a, offer(0, linen, 7));
+    h.send(a, offer(1, linen, 7));
+    assert_eq!(h.errors(a), vec!["The item was not found.".to_string()]);
+    // More than the stack holds is refused too.
+    h.send(a, offer(2, linen, u16::try_from(a_linen + 1).unwrap()));
+    assert_eq!(h.errors(a), vec!["The item was not found.".to_string()]);
+    h.send(a, ConfirmTrade);
+    h.send(b, ConfirmTrade);
+
+    assert_eq!(h.messages(b), vec!["Trade complete.".to_string()]);
+    assert_eq!(h.count(a_id, LINEN), a_linen - 7);
+    assert_eq!(h.count(b_id, LINEN), total.0 - a_linen + 7);
+    assert_eq!(totals(&h), total);
+    // The part left behind keeps its instance; the 7 moved as a new one.
+    assert_eq!(h.guid(a_id, LINEN), linen);
+    assert!(
+        h.inventory(b_id)
+            .items
+            .iter()
+            .all(|item| item.item_guid != linen)
+    );
+}
