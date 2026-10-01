@@ -1,6 +1,7 @@
 """Exercise the real importer without touching the development world database."""
 
 import csv
+from contextlib import closing
 import json
 import os
 from pathlib import Path
@@ -17,6 +18,9 @@ sys.path.insert(0, str(SCRIPTS))
 import content_policy  # noqa: E402
 import retail_content  # noqa: E402
 import db2  # noqa: E402
+import crafting_data  # noqa: E402
+
+CRAFTING_SOURCE = SCRIPTS.parent / "data/reference/crafting/12.1.0.69933"
 
 AZEROTHCORE_SQL = Path(os.environ.get("AZEROTHCORE_SQL", "/home/osso/Repos/azerothcore/data/sql/base/db_world"))
 
@@ -108,12 +112,15 @@ def write_content_tuning(csv_dir, rows):
 def write_header_only_csvs(csv_dir):
     """Write one header-only CSV per DB2 table, headers taken from db2_schema.sql."""
     csv_dir.mkdir(parents=True)
-    schema = sqlite3.connect(":memory:")
-    schema.executescript(db2.SCHEMA_SQL.read_text())
-    for name in db2.TABLES:
-        columns = [row[1] for row in schema.execute(f"PRAGMA table_info({db2.table_name(name)})")]
-        with (csv_dir / f"{name}.csv").open("w", newline="") as handle:
-            csv.writer(handle).writerow(columns)
+    with closing(sqlite3.connect(":memory:")) as schema:
+        schema.executescript(db2.SCHEMA_SQL.read_text())
+        for name in db2.TABLES:
+            columns = [
+                row[1]
+                for row in schema.execute(f"PRAGMA table_info({db2.table_name(name)})")
+            ]
+            with (csv_dir / f"{name}.csv").open("w", newline="") as handle:
+                csv.writer(handle).writerow(columns)
 
 
 def write_creature_display_ids(csv_dir, ids):
@@ -150,11 +157,30 @@ class CreatureEventImportTests(unittest.TestCase):
         scripts = self.root / "scripts"
         scripts.mkdir()
         (self.root / "data").mkdir()
-        for name in ("import-azerothcore.sh", "world_schema.sql", "db2.py", "db2_casc.py", "db2_schema.sql", "mysql_dump.py",
-                     "content_common.py", "retail_content.py", "wowhead_loot.py",
-                     "content_policy.py", "tdb_schema.sql"):
+        for name in (
+            "import-azerothcore.sh",
+            "world_schema.sql",
+            "db2.py",
+            "db2_casc.py",
+            "db2_schema.sql",
+            "mysql_dump.py",
+            "content_common.py",
+            "retail_content.py",
+            "wowhead_loot.py",
+            "content_policy.py",
+            "economy_crafting.py",
+            "tdb_schema.sql",
+            "crafting_data.py",
+            "crafting_schema.sql",
+        ):
             shutil.copy2(SCRIPTS / name, scripts / name)
-        (scripts / "content_overrides.csv").write_text("kind,source_id,retail_id,source_name,retail_name,reason\n")
+        (scripts / "content_overrides.csv").write_text(
+            "kind,source_id,retail_id,source_name,retail_name,reason\n"
+        )
+        self.crafting = self.root / "data/reference/crafting/12.1.0.69933"
+        self.crafting.mkdir(parents=True)
+        for table in crafting_data.TABLES:
+            shutil.copy2(CRAFTING_SOURCE / table.filename, self.crafting / table.filename)
         self.sql = self.root / "source"
         self.sql.mkdir()
         for name in dump_tables():
@@ -193,20 +219,178 @@ class CreatureEventImportTests(unittest.TestCase):
         for name in tdb_tables():
             (self.tdb / f"{name}.sql").write_text("-- empty fixture\n")
 
-    def run_import(self):
+    def run_import(self, crafting_source=None):
+        env = {**os.environ, "DB2_CSV_ROOT": str(self.csv), "TDB_DIR": str(self.tdb)}
+        env.pop("CRAFTING_SOURCE_DIR", None)
+        if crafting_source is not None:
+            env["CRAFTING_SOURCE_DIR"] = str(crafting_source)
         return subprocess.run(
             [str(self.root / "scripts/import-azerothcore.sh"), str(self.sql)],
-            env={**os.environ, "DB2_CSV_ROOT": str(self.csv), "TDB_DIR": str(self.tdb)},
+            env=env,
             capture_output=True,
             text=True,
             timeout=10,
             check=False,
         )
 
+    def test_invalid_crafting_snapshot_preserves_existing_database_bytes(self):
+        with closing(sqlite3.connect(self.db)) as conn, conn:
+            conn.execute("CREATE TABLE sentinel (value TEXT)")
+            conn.execute("INSERT INTO sentinel VALUES ('survive preflight')")
+        before = self.db.read_bytes()
+        # Last source missing/corrupt proves all seven are checked before deletion.
+        path = self.crafting / "MCRSlotXMCRCategory.csv"
+        original = path.read_bytes()
+        cases = (
+            (None, "MCRSlotXMCRCategory.csv"),
+            (original.replace(b"ModifiedCraftingCategoryID", b"WrongHeader"), "header"),
+            (original.replace(b",0,", b",1,", 1), "SHA-256"),
+        )
+        for contents, error in cases:
+            with self.subTest(error=error):
+                if contents is None:
+                    path.unlink()
+                else:
+                    path.write_bytes(contents)
+                result = self.run_import()
+                self.assertNotEqual(result.returncode, 0)
+                self.assertEqual(self.db.read_bytes(), before)
+                self.assertIn(error, result.stderr)
+        path.write_bytes(original)
+
+    def test_rebuild_imports_real_crafting_references_and_source_complete_items(self):
+        csv_dir = self.csv / db2.DEFAULT_BUILD
+        write_db2_rows(
+            csv_dir,
+            "SpellEffect",
+            [
+                {
+                    "ID": 1234236,
+                    "SpellID": 1237486,
+                    "Effect": 288,
+                    "EffectMiscValue_0": 3978,
+                },
+            ],
+        )
+        write_db2_rows(
+            csv_dir,
+            "SpellReagents",
+            [
+                {"ID": 1, "SpellID": 1237486, "Reagent_0": 2318, "ReagentCount_0": 2},
+            ],
+        )
+        items = [
+            {
+                "ID": 244612,
+                "Display_lang": "Row Walker's Deflectors",
+                "OverallQualityID": 4,
+                "ItemLevel": 197,
+                "RequiredLevel": 80,
+                "BuyPrice": 2506951,
+                "SellPrice": 501390,
+                "Stackable": 1,
+                "InventoryType": 9,
+                "Bonding": 1,
+                "ItemSet": 1966,
+                "StatModifier_bonusStat_0": 73,
+                "StatPercentEditor_0": 5259,
+            },
+            {"ID": 2318, "Display_lang": "Light Leather", "Stackable": 1000},
+            {
+                "ID": 238511,
+                "Display_lang": "Void-Tempered Leather",
+                "ModifiedCraftingReagentItemID": 560,
+                "Stackable": 1000,
+            },
+            {
+                "ID": 238512,
+                "Display_lang": "Void-Tempered Leather",
+                "ModifiedCraftingReagentItemID": 560,
+                "Stackable": 1000,
+            },
+        ]
+        write_db2_rows(csv_dir, "ItemSparse", items)
+        write_db2_rows(
+            csv_dir,
+            "Item",
+            [
+                {"ID": 244612, "ClassID": 4, "SubclassID": 2},
+                *(
+                    {"ID": item_id, "ClassID": 7, "SubclassID": 6}
+                    for item_id in (2318, 238511, 238512)
+                ),
+            ],
+        )
+        # Explicit override must work independently of the stable default.
+        relocated = self.root / "crafting-snapshot"
+        self.crafting.rename(relocated)
+        result = self.run_import(relocated)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        with closing(sqlite3.connect(self.db)) as conn:
+            for table in crafting_data.TABLES:
+                self.assertEqual(
+                    conn.execute(f"SELECT COUNT(*) FROM {table.name}").fetchone()[0],
+                    table.count,
+                )
+            self.assertEqual(
+                conn.execute(
+                    "SELECT CraftedItemID FROM crafting_data WHERE ID=3978"
+                ).fetchone(),
+                (244612,),
+            )
+            self.assertEqual(
+                conn.execute(
+                    "SELECT SpellID,ReagentCount FROM modified_crafting_spell_slot WHERE ID=15388"
+                ).fetchone(),
+                (1237486, 140),
+            )
+            self.assertEqual(
+                conn.execute(
+                    "SELECT ID,Name,Stackable,SourceEntry FROM content_item ORDER BY ID"
+                ).fetchall(),
+                [
+                    (row["ID"], row["Display_lang"], row["Stackable"], None)
+                    for row in sorted(items, key=lambda row: row["ID"])
+                ],
+            )
+            sparse_fields = (
+                "ID ItemLevel RequiredLevel BuyPrice SellPrice VendorStackCount Stackable MaxCount "
+                "InventoryType Bonding ItemDelay DmgVariance AllowableClass AllowableRaces_0 "
+                "AllowableRaces_1 RequiredSkill RequiredSkillRank StartQuestID ItemSet "
+                "Flags_0 Flags_1 Flags_2 Flags_3 Flags_4"
+            ).split()
+            sparse_fields += [
+                field
+                for index in range(10)
+                for field in (
+                    f"StatModifier_bonusStat_{index}",
+                    f"StatPercentEditor_{index}",
+                )
+            ]
+            # Assert every public item field, not just IDs/names or nonzero columns.
+            cursor = conn.execute("SELECT * FROM content_item ORDER BY ID")
+            projected = [
+                dict(zip((col[0] for col in cursor.description), row)) for row in cursor
+            ]
+            expected = []
+            for item in sorted(items, key=lambda row: row["ID"]):
+                expected.append(
+                    {
+                        **{field: item.get(field, 0) for field in sparse_fields},
+                        "Name": item["Display_lang"],
+                        "Quality": item.get("OverallQualityID", 0),
+                        "ClassID": 4 if item["ID"] == 244612 else 7,
+                        "SubclassID": 2 if item["ID"] == 244612 else 6,
+                        "DisplayInfoID": None,
+                        "SourceEntry": None,
+                    }
+                )
+            self.assertEqual(projected, expected)
+
     def test_preserves_signed_memberships_and_spawn_coordinates(self):
         result = self.run_import()
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        with sqlite3.connect(self.db) as conn:
+        with closing(sqlite3.connect(self.db)) as conn:
             memberships = conn.execute(
                 "SELECT eventEntry,guid FROM game_event_creature ORDER BY guid,eventEntry"
             ).fetchall()
@@ -282,7 +466,7 @@ class CreatureEventImportTests(unittest.TestCase):
         (self.sql / "npc_vendor.sql").write_text("INSERT INTO `npc_vendor` VALUES\n(54,0,2488,0,0,0,0),(54,0,2489,0,0,0,0);\n")
         result = self.run_import()
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        with sqlite3.connect(self.db) as conn:
+        with closing(sqlite3.connect(self.db)) as conn:
             self.assertEqual(
                 conn.execute(
                     "SELECT q.ID, q.LogTitle, t.name FROM quest_template q"
@@ -1188,6 +1372,8 @@ class AzerothCoreContentTests(unittest.TestCase):
             [sys.executable, str(SCRIPTS / "mysql_dump.py"), "--db", str(cls.db), "--schema", str(SCRIPTS / "tdb_schema.sql"),
              "--prefix", "tdb_"] + [f"{name}={TDB_DIR / (name + '.sql')}" for name in tdb_tables()],
             [sys.executable, str(SCRIPTS / "db2.py"), "import", "--csv-root", str(PINNED_CSV_ROOT), "--db", str(cls.db)],
+            [sys.executable, str(SCRIPTS / "crafting_data.py"), "--db", str(cls.db),
+             "--source-dir", str(CRAFTING_SOURCE)],
             [sys.executable, str(SCRIPTS / "content_policy.py"), "--db", str(cls.db), "--report", str(cls.report),
              "--csv-root", str(PINNED_CSV_ROOT)],
         ]
