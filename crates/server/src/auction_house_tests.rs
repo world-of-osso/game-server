@@ -70,6 +70,8 @@ fn text_query(text: &str) -> AuctionSearchQuery {
     }
 }
 
+#[path = "auction_house_tests/actor_parity.rs"]
+mod actor_parity;
 #[path = "auction_house_tests/core.rs"]
 mod core;
 #[path = "auction_house_tests/lifecycle.rs"]
