@@ -1165,3 +1165,25 @@ fn paladin_learns_boundless_conviction_for_five_holy_power() {
     // 26101, AcquireMethod 2.
     assert!(known_ids(&classes, HUMAN, PALADIN, 10, SPEC_RETRIBUTION).contains(&115675));
 }
+
+/// Frostbolt 116 is the mage baseline (SkillLineAbility 43444, level 1);
+/// SpecializationSpells 4 (Arcane 62: Arcane Blast 30451) and 5 (Fire 63:
+/// Fireball 133) override it at level 10, while Frost 64 and Initial 1449 keep it.
+#[test]
+fn level_10_mage_specs_replace_frostbolt_like_retail() {
+    let Some(classes) = class_spells() else {
+        return;
+    };
+    const MAGE: u8 = 8;
+    let bolts = |level, spec| {
+        let known = known_ids(&classes, HUMAN, MAGE, level, spec);
+        [116, 133, 30451]
+            .into_iter()
+            .filter(|id| known.contains(id))
+            .collect::<Vec<u32>>()
+    };
+    assert_eq!(bolts(10, 62), vec![30451]);
+    assert_eq!(bolts(10, 63), vec![133]);
+    assert_eq!(bolts(10, 64), vec![116]);
+    assert_eq!(bolts(9, 1449), vec![116]);
+}

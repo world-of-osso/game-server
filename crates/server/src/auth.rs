@@ -346,6 +346,7 @@ mod tests {
                     choice_id: 6109,
                 },
             ],
+            visage: None,
         };
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("characters.redb");

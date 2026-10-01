@@ -329,6 +329,7 @@ fn customization_migration_reopens_all_earlier_schemas() {
         hair_color: 5,
         facial_style: 6,
         customization_choices: Vec::new(),
+        visage: None,
     };
     let fixtures = [
         (
@@ -526,6 +527,7 @@ fn load_character_decodes_previous_appearance_records_without_equipment() {
             hair_color: 5,
             facial_style: 6,
             customization_choices: Vec::new(),
+            visage: None,
         }
     );
     assert_eq!(loaded.equipment_appearance, EquipmentAppearance::default());
@@ -613,6 +615,7 @@ fn sync_live_components_preserves_existing_equipment_appearance() {
             hair_color: 6,
             facial_style: 7,
             customization_choices: Vec::new(),
+            visage: None,
         },
     };
     let pos = Position {
