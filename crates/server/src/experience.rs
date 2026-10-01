@@ -516,20 +516,19 @@ fn send_xp_updates(
     }
 }
 
+type RefillQuery = (
+    Entity,
+    &'static mut Health,
+    Option<&'static mut Mana>,
+    Option<&'static mut PowerPools>,
+);
+
 /// `Player::GiveLevel` (Player.cpp:2266-2270): `SetFullHealth`, then `SetFullPower` for
 /// every class power whose `PowerType` has `SetToMaxOnLevelUp` (Mana, Energy, Soul Shards,
 /// Essence); Rage, Focus and Runic Power keep their value.
 pub(crate) fn refill_after_level_up(
     mut commands: Commands,
-    mut players: Query<
-        (
-            Entity,
-            &mut Health,
-            Option<&mut Mana>,
-            Option<&mut PowerPools>,
-        ),
-        With<RefillAfterLevelUp>,
-    >,
+    mut players: Query<RefillQuery, With<RefillAfterLevelUp>>,
     table: Option<Res<PowerTypeTable>>,
     replication_dirty: Option<Res<ReplicationDirtyQueue>>,
 ) {
