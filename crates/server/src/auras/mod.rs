@@ -556,6 +556,7 @@ fn aura_event(aura: &AuraInstance, target: Entity, kind: CombatLogKind) -> Comba
         resisted: 0,
         blocked: 0,
         crit: false,
+        glancing: false,
         periodic: false,
         kind,
     }
@@ -755,6 +756,29 @@ pub fn is_immune(world: &World, unit: Entity, school_mask: u32) -> bool {
             effect.aura_type == handlers::SCHOOL_IMMUNITY
                 && effect.misc_values[0] as u32 & school != 0
         })
+    })
+}
+
+/// Chance in percent that `unit` reflects a spell of `school_mask`
+/// (`WorldObject::SpellHitResult`, Object.cpp:1971-1978): REFLECT_SPELLS amounts plus
+/// REFLECT_SPELLS_SCHOOL amounts whose MiscValue school mask covers the spell's.
+pub fn reflect_chance(world: &World, unit: Entity, school_mask: u32) -> f32 {
+    let school = school_or_physical(school_mask);
+    world.get::<ActiveAuras>(unit).map_or(0.0, |auras| {
+        auras
+            .iter()
+            .flat_map(|aura| {
+                aura.effects
+                    .iter()
+                    .map(move |effect| (effect, aura.stack_multiplier()))
+            })
+            .filter(|(effect, _)| match effect.aura_type {
+                handlers::REFLECT_SPELLS => true,
+                handlers::REFLECT_SPELLS_SCHOOL => effect.misc_values[0] as u32 & school != 0,
+                _ => false,
+            })
+            .map(|(effect, stacks)| effect.amount * stacks)
+            .sum()
     })
 }
 

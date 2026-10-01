@@ -35,7 +35,7 @@ Server-authoritative spell casting in `crates/server/src/spell_cast/`. `SpellCas
    - spend costs;
    - start cooldown and charges;
    - log `CastSuccess`, send `SpellGo`, and put caster and targets in combat (`starts_combat`, [[combat]] Combat State);
-   - resolve effects in index order, with each target's aura effects applied as one aura after the other effects. A spell with a missile `Speed` or `LaunchDelay` resolves on each unit target after its flight (`spell_cast/missiles.rs`, TrinityCore `Spell::HandleDelayed`): `LaunchDelay + max(max(distance, 5) / Speed, MinDuration)` (Spell.cpp:2486-2518), one missile for a destination spell (`CalculateDelayMomentForDst`, Spell.cpp:880-896). The delay is fixed at launch; a target that moved is still hit, one that died or left the world is not (Spell.cpp:2746-2748, 2807). Frostbolt at 20 yd lands 0.57 s after `SpellGo`; its damage, Chilled, threat, procs and combat log come then. Speed-0 spells resolve in the launch tick;
+   - resolve effects in index order, with each target's aura effects applied as one aura after the other effects. A spell with a missile `Speed` or `LaunchDelay` resolves on each unit target after its flight (`spell_cast/missiles.rs`, TrinityCore `Spell::HandleDelayed`): `LaunchDelay + max(max(distance, 5) / Speed, MinDuration)` (Spell.cpp:2486-2518), one missile for a destination spell (`CalculateDelayMomentForDst`, Spell.cpp:880-896). The delay is fixed at launch; a target that moved is still hit, one that died or left the world is not (Spell.cpp:2746-2748, 2807). Frostbolt at 20 yd lands 0.57 s after `SpellGo`; its damage, Chilled, threat, procs and combat log come then. With `SPELL_ATTR4_BOUNCY_CHAIN_MISSILES` (Avenger's Shield) each chained unit is hit the flight from the unit before it after that unit's hit, without another `LaunchDelay` (Spell.cpp:2489-2505). Spell reflection (`spell_cast/reflect.rs`, `WorldObject::SpellHitResult`, Object.cpp:1947-1978): a reflectable spell (`m_canReflect`: magic and not `IS_ABILITY`, or `ALLOW_SPELL_REFLECTION`; not `NO_REFLECTION`, `NO_IMMUNITIES` or passive) rolls each unit target's REFLECT_SPELLS(_SCHOOL) chance at launch; a reflect logs `Miss(Reflect)` with the launch, procs the reflect aura (`PROC_HIT_REFLECT`, which reflect auras alone proc off) at the target's delay and resolves the spell on its caster at 1.5 × that delay (Spell.cpp:2524-2545); `REFLECTION_ONLY_DEFENDS` deflects instead. A Frostbolt into Spell Reflection 23920 at 20 yd spends its charge at 0.57 s and hits the mage at 0.86 s. Speed-0 spells resolve in the launch tick;
    - push proc events (cast success, one spell hit per distinct target) and spend charged spell mods.
    - A failed completion sends `CastFailed`.
 6. **Cancel:** stop requests, caster death and movement all remove `CastState`. An ended channel removes its caster's auras of that spell (`auras::channel_ended`) and the ritual objects it held (`meeting_stone::ritual::channel_ended`).
@@ -109,6 +109,9 @@ Relations come from faction reactions ([[factions]]): enemy = `can_attack`, ally
 - Radius: slot A uses `EffectRadiusIndex_0`; slot B uses `_1`, falling back to `_0` (TrinityCore `CalcRadius`).
 - Area results are nearest first, capped by `SpellTargetRestrictions.MaxTargets`.
 - Any other ID (for example 87 DEST_DEST, 104 cone, 47 front) fails the cast when it belongs to a handled effect.
+- Effects with the same implicit targets (and, for areas, the same radii) share the first one's selection, as `Spell::SelectSpellTargets` (Spell.cpp:741-781): Avenger's Shield's interrupt and silence hit every unit its damage chains to.
+- Chains (`targets::chain_targets`, `Spell::SearchChainTargets`, Spell.cpp:2216-2320): an explicit unit target with `EffectChainTargets` > 1 jumps to the living unit nearest the last one within the jump radius (7.5 yd ranged, 5 yd melee, 10 yd otherwise), searched within the radius × the jumps left; `SPELL_ATTR2_CHAIN_FROM_CASTER` searches from the caster over the spell range and `ChainFromInitialTarget` keeps the first target as the source. Each jump multiplies damage and healing by `EffectChainAmplitude` (`m_damageMultipliers`, Spell.cpp:8631-8636). Not modelled: line of sight, the melee front arc (`SPELL_ATTR5_MELEE_CHAIN_TARGETING`), chain heal (target 45 is unsupported) and the ChainTargets/ChainJumpDistance/ChainAmplitude spell mods.
+- Triggered spells take their explicit unit whatever its relation to the caster (`TRIGGERED_IGNORE_TARGET_CHECK`, Spell.cpp:3489-3491).
 
 ## Effects
 
@@ -119,7 +122,7 @@ Registry: `effects::handler(effect_id)`. Unhandled effect IDs are skipped and lo
 | 2 | SCHOOL_DAMAGE | scaled amount (below), crit, shared death path |
 | 6, 35, 65 | APPLY_AURA, APPLY_AREA_AURA_PARTY/RAID | grouped per target, `auras::apply_aura` |
 | 10 | HEAL | scaled amount, crit, clamped to max, overheal logged |
-| 30 | ENERGIZE | `BasePoints` raw units of power `EffectMiscValue_0`, clamped, excess logged |
+| 30 | ENERGIZE | Points/PointsIndexN-modified base points in raw units of `EffectMiscValue_0`, clamped, excess logged |
 | 31 | WEAPON_PERCENT_DAMAGE | `BasePoints`% of a weapon hit |
 | 38 | DISPEL | `auras::dispel` of `EffectMiscValue_0`, up to `BasePoints` (min 1) auras |
 | 58, 121 | WEAPON_DAMAGE, NORMALIZED_WEAPON_DMG | weapon hit + `BasePoints` |
@@ -134,6 +137,12 @@ TRIGGER_SPELL:
 Spell scripts (`spell_cast/scripts.rs`, TrinityCore `SpellScript`): behaviour the DB2 effects do not carry, keyed by spell ID. `on_hit` runs once per distinct planned unit after the spell's effects and auras resolved there (`SpellHitFn`, `Spell::DoSpellHitOnUnit`), before the hit proc events.
 - Frostbolt 116: its only effect is TRIGGER_MISSILE 32 to 228597 (SCHOOL_DAMAGE); neither carries a slow. The hook casts Chilled 205708 (APPLY_AURA MOD_DECREASE_SPEED 33, -50%, `SpellDuration` 31 = 8 s, `SPELL_ATTR0_AURA_IS_DEBUFF`) at the hit unit, triggered (TrinityCore `spell_mage_frostbolt::HandleChilled`, spell_mage.cpp:978-995, registered on 116 in sql/old/9.x/world/22012_2022_03_06/2022_02_10_02_world.sql:5).
   A Frostbolt-pulled Blackrock Spy chases at 3 yd/s instead of 6 (game-server `polymorph_tests.rs`).
+
+New-class scripts use per-effect `on_effect_hit` hooks; a DUMMY effect with a hook participates in target validation/planning rather than being silently skipped. `area_target_filter` narrows selected area targets before hit resolution.
+- Chaos Strike Initial 344862 effect 0 triggers 162794, whose effects trigger the existing damage spells 222031/199547 (TrinityCore `spell_dh_chaos_strike_initial`).
+- Living Flame 361469 effect 0 triggers heal 361509 for an assistable target or damage 361500 otherwise (`spell_evo_living_flame`). Energizing Flame's mana refund remains unimplemented.
+- Azure Strike 362969 effect 1 retains the explicit enemy plus effect 0's baseline count minus one other selected enemy (`spell_evo_azure_strike`). Other enemies are nearest-first, not TrinityCore's random selection; count-changing talent modifiers remain unimplemented.
+- Tiger Palm 100780 already has SCHOOL_DAMAGE and ENERGIZE effects. ENERGIZE now applies existing spell-point modifiers: Windwalker passive 1258122 adds 2 Chi to effect 1's zero baseline. Blackout Kick uses existing damage and aura-gated cost handlers. Power pool sizing/spec/form selection remains separate powers-agent work.
 
 Formulas:
 - **Scaled amount:** `BasePoints + BonusCoefficient × SP + BonusCoefficientFromAP × AP`.
@@ -186,6 +195,8 @@ Damage and heal side effects:
 - [spell_cast/class_resource_tests.rs](../../../crates/server/src/spell_cast/class_resource_tests.rs) — maxima, forms, runes, charged points
 - [spell_cast/tests.rs](../../../crates/server/src/spell_cast/tests.rs) — real-DB App tests
 - [spell_cast/test_harness.rs](../../../crates/server/src/spell_cast/test_harness.rs) — shared real-DB harness (also used by aura tests)
+- [spell_cast/new_class_tests.rs](../../../crates/server/src/spell_cast/new_class_tests.rs) — six core spells with local DB2 and HostClient delivery
+- [new-class spec](../../specs/new-classes.md) — bounded behavior and remaining integration work
 - [spec](../../specs/cast-presentation.md)
 
 ## See Also

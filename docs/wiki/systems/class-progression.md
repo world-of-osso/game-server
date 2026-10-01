@@ -5,13 +5,24 @@
 ## Race and class validation
 
 - world.db has no `chr_races` or `CharBaseInfo` table. `race_class.rs` therefore holds the race→class table, copied from the client character-creation data (`game-engine src/scenes/char_create/data.rs` RACES).
-- The table covers 24 races (Pandaren 24/25/26 included) and classes 1–9 and 11. Dracthyr, Earthen and Haranir are not in the table.
+- The table covers 31 races and classes 1–13. Monk 10 is available on all 29 non-Dracthyr races authored by local CharBaseInfo; DH 12 on Night Elf/Blood Elf/Void Elf (4/10/29); Evoker 13 only on Dracthyr (52/70). Gates were checked against locally extracted CharBaseInfo FDID 1343386 (WDC5 layout FEC46FB7).
+- Kul Tiran 32, Earthen 84/85 and Haranir 86/91 expose only Monk in this bounded new-class slice. Their other authored classes are not enabled here.
 - The same file holds each race's `ChrRaces.PlayableRaceBit` (`game-engine data/ChrRaces.csv`). DB2 `RaceMasks` use this bit.
 - Character creation and `SelectCharacter` both call `validate_race_class` and reject a failing character. The errors are:
   - `Invalid race id N`
   - `Invalid class id N`
   - `Class C is not available for race R`
 - The fallback race list and the dead `chr_races` query are removed.
+
+## Racial spells
+
+Each race's racial skill line is learned at creation and as levels rise (TrinityCore `Player::LearnDefaultSkills` and `LearnSkillRewardedSpells`, Player.cpp:25275-25291, 25407-25457). The racial lines are the `skill_race_class_info` rows with Availability 1 in skill-line categories 5 and 9 that are limited to some races (not Riding 762 or the all-race lines). Their automatic `skill_line_ability` spells are added by race and class mask: Human Will to Survive 59752, Orc Blood Fury 20572, Haranir Thorn Bloom 1237885. Active racials join the default bar after the class spells. TrinityCore learns the other default skills the same way (weapons, armor, languages, Defense, Riding, All Classes); those are not granted.
+
+## New-character start levels and temporary locations
+
+`race_class::start_level` follows Player::GetStartLevel (Player.cpp:24384-24398): 1, or 10 for an IsAlliedRace race (ChrRaces.Flags 0x80000) or Dracthyr; a Death Knight at least 8 (a Pandaren one 10); a Demon Hunter at least 8. The allied-race list is hardcoded from the 12.1.0.69933 ChrRaces export because the server loads no ChrRaces data.
+
+`persistence_character::default_character_data` persists the level at creation. Demon Hunters use the existing race location. Dracthyr use Stormwind (map 0) or Orgrimmar (map 1) by faction. This workaround omits class intro quests/gear because starting zones were delayed; retire when class starting zones (Mardum, Forbidden Reach) are implemented. No class zones or intro content are added. Kul Tiran/Earthen/Haranir Monks retain the pre-existing Northshire placeholder placement; no new location fallback was added. Replace that placeholder when their race starts are authored. Haranir Alliance 86 has IsAlliedRace, so it starts at 10 although ChrRaces.StartingLevel says 1.
 
 ## Specialization
 
@@ -87,6 +98,8 @@ The list is stored in the `KnownSpells` component. Cast validation should call `
 
 - [class_progression.rs](../../../crates/server/src/class_progression.rs) — components, rules, systems
 - [class_progression_tests.rs](../../../crates/server/src/class_progression_tests.rs) — real world.db + temp redb tests
+- [class_progression_new_class_tests.rs](../../../crates/server/src/class_progression_new_class_tests.rs) — Monk/DH/Evoker start, level-up and spec grants
+- [new-class spec](../../specs/new-classes.md) — bounded server contract and integration exclusions
 - [race_class.rs](../../../crates/server/src/race_class.rs) — race/class table, race bits
 - [persistence_progression.rs](../../../crates/server/src/persistence_progression.rs) — `character_progression` table
 

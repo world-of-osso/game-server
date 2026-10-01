@@ -38,15 +38,20 @@ fn haste_shortens_the_swing() {
     assert!((swing_time(2.6, 30.0) - 2.0).abs() < 1e-6);
 }
 
+fn player(crit_pct: f32, dual_wield: bool) -> Swinger {
+    Swinger::Player {
+        crit_pct,
+        dual_wield,
+    }
+}
+
+fn creature_at(level_difference: i32) -> Victim {
+    Victim::Creature { level_difference }
+}
+
 #[test]
 fn equal_level_creature_chances_are_trinitycore_base_values() {
-    let chances = player_swing_chances(
-        Victim::Creature {
-            level_difference: 0,
-        },
-        5.0,
-        false,
-    );
+    let chances = swing_chances(player(5.0, false), creature_at(0), true);
     assert_eq!(
         chances,
         MeleeChances {
@@ -62,37 +67,23 @@ fn equal_level_creature_chances_are_trinitycore_base_values() {
 
 #[test]
 fn higher_creatures_avoid_more_and_glance_from_four_levels_up() {
-    let three = player_swing_chances(
-        Victim::Creature {
-            level_difference: 3,
-        },
-        5.0,
-        false,
-    );
+    let three = swing_chances(player(5.0, false), creature_at(3), true);
     assert_eq!((three.dodge, three.parry, three.block), (7.5, 10.5, 7.5));
     assert_eq!(three.glancing, 0.0);
-    let four = player_swing_chances(
-        Victim::Creature {
-            level_difference: 4,
-        },
-        5.0,
-        false,
-    );
+    let four = swing_chances(player(5.0, false), creature_at(4), true);
     assert_eq!(four.glancing, 50.0);
     // A creature below the attacker gets no level bonus.
-    let lower = player_swing_chances(
-        Victim::Creature {
-            level_difference: -5,
-        },
-        5.0,
-        false,
-    );
+    let lower = swing_chances(player(5.0, false), creature_at(-5), true);
     assert_eq!((lower.dodge, lower.parry, lower.block), (3.0, 6.0, 3.0));
 }
 
 #[test]
-fn dual_wield_adds_19_percent_miss_and_players_only_miss() {
-    let chances = player_swing_chances(Victim::Player, 12.0, true);
+fn dual_wield_adds_19_percent_miss_against_a_player_without_avoidance() {
+    let chances = swing_chances(
+        player(12.0, true),
+        Victim::Player(PlayerDefense::default()),
+        true,
+    );
     assert_eq!(
         chances,
         MeleeChances {
@@ -105,13 +96,7 @@ fn dual_wield_adds_19_percent_miss_and_players_only_miss() {
 
 #[test]
 fn one_roll_walks_the_table_in_order() {
-    let chances = player_swing_chances(
-        Victim::Creature {
-            level_difference: 0,
-        },
-        5.0,
-        false,
-    );
+    let chances = swing_chances(player(5.0, false), creature_at(0), true);
     // Miss [0, 500), dodge [500, 800), parry [800, 1400), block [1400, 1700),
     // crit [1700, 2200), hit above.
     let outcome = |roll| roll_melee_outcome(&chances, roll);
@@ -128,28 +113,34 @@ fn one_roll_walks_the_table_in_order() {
 
 #[test]
 fn full_crit_chance_crits_every_swing_that_is_not_avoided() {
-    let chances = player_swing_chances(
-        Victim::Creature {
-            level_difference: 0,
-        },
-        100.0,
-        false,
-    );
+    let chances = swing_chances(player(100.0, false), creature_at(0), true);
     assert_eq!(roll_melee_outcome(&chances, 1700), MeleeOutcome::Crit);
     assert_eq!(roll_melee_outcome(&chances, 9999), MeleeOutcome::Crit);
 }
 
 #[test]
 fn crit_doubles_block_stops_30_percent_and_avoidance_does_nothing() {
-    assert_eq!(outcome_damage(11.0, MeleeOutcome::Crit, 0), (22.0, 0.0));
-    assert_eq!(outcome_damage(11.0, MeleeOutcome::Hit, 0), (11.0, 0.0));
-    assert_eq!(outcome_damage(11.0, MeleeOutcome::Block, 0), (8.0, 3.0));
+    assert_eq!(
+        outcome_damage(11.0, MeleeOutcome::Crit, 0, CREATURE_BLOCKED_PCT),
+        (22.0, 0.0)
+    );
+    assert_eq!(
+        outcome_damage(11.0, MeleeOutcome::Hit, 0, CREATURE_BLOCKED_PCT),
+        (11.0, 0.0)
+    );
+    assert_eq!(
+        outcome_damage(11.0, MeleeOutcome::Block, 0, CREATURE_BLOCKED_PCT),
+        (8.0, 3.0)
+    );
     for avoided in [MeleeOutcome::Miss, MeleeOutcome::Dodge, MeleeOutcome::Parry] {
-        assert_eq!(outcome_damage(11.0, avoided, 0), (0.0, 0.0));
+        assert_eq!(
+            outcome_damage(11.0, avoided, 0, CREATURE_BLOCKED_PCT),
+            (0.0, 0.0)
+        );
     }
     // 10% per level, at most 30%.
     assert_eq!(
-        outcome_damage(100.0, MeleeOutcome::Glancing, 4),
+        outcome_damage(100.0, MeleeOutcome::Glancing, 4, CREATURE_BLOCKED_PCT),
         (70.0, 0.0)
     );
 }
@@ -162,4 +153,74 @@ fn armor_mitigation_is_armor_over_armor_plus_the_attackers_constant() {
     // Capped at 85%; 1 - 0.85 is 0.14999998 in f32, as in TrinityCore.
     assert_eq!(armor_reduced_damage(100.0, 100_000.0, 210.0), 14.0);
     assert_eq!(armor_reduced_damage(16.0, 0.0, 210.0), 16.0);
+}
+
+/// Unit::RollMeleeOutcomeAgainst for a creature swinging at a player: the player's
+/// avoidance, the creature's 5% crit (Unit.cpp:2885-2890) and no glancing.
+#[test]
+fn a_creature_swings_into_a_players_avoidance_and_crits_five_percent() {
+    let defense = PlayerDefense {
+        dodge: 2.0,
+        parry: 5.0,
+        block: 5.0,
+        shield_block: 0.0,
+    };
+    let chances = swing_chances(
+        Swinger::Creature { miss_pct: 5.0 },
+        Victim::Player(defense),
+        true,
+    );
+    assert_eq!(
+        chances,
+        MeleeChances {
+            miss: 5.0,
+            dodge: 2.0,
+            parry: 5.0,
+            glancing: 0.0,
+            block: 5.0,
+            crit: 5.0,
+        }
+    );
+    // Miss [0, 500), dodge [500, 700), parry [700, 1200), block [1200, 1700),
+    // crit [1700, 2200).
+    assert_eq!(roll_melee_outcome(&chances, 1199), MeleeOutcome::Parry);
+    assert_eq!(roll_melee_outcome(&chances, 1200), MeleeOutcome::Block);
+    assert_eq!(roll_melee_outcome(&chances, 2199), MeleeOutcome::Crit);
+    // A creature 10 levels above its victim never glances.
+    let far_above = swing_chances(Swinger::Creature { miss_pct: 5.0 }, creature_at(10), true);
+    assert_eq!(far_above.glancing, 0.0);
+}
+
+/// A victim casting or controlled cannot dodge, parry or block (Unit.cpp:2408-2413).
+#[test]
+fn a_victim_that_cannot_avoid_only_meets_miss_and_crit() {
+    let chances = swing_chances(player(10.0, false), creature_at(0), false);
+    assert_eq!(
+        chances,
+        MeleeChances {
+            miss: 5.0,
+            crit: 10.0,
+            ..MeleeChances::default()
+        }
+    );
+}
+
+/// Player::GetBlockPercent: ShieldBlock 250 (100 shield armor × 2.5) against a
+/// 750 armor constant stops 25% of a blocked swing; capped at 85%.
+#[test]
+fn a_players_shield_stops_its_block_value_share_of_a_blocked_swing() {
+    let defense = PlayerDefense {
+        shield_block: 250.0,
+        ..PlayerDefense::default()
+    };
+    assert_eq!(defense.blocked_pct(750.0), 25.0);
+    assert_eq!(
+        outcome_damage(100.0, MeleeOutcome::Block, 0, defense.blocked_pct(750.0)),
+        (75.0, 25.0)
+    );
+    let wall = PlayerDefense {
+        shield_block: 1.0e6,
+        ..PlayerDefense::default()
+    };
+    assert!((wall.blocked_pct(750.0) - 85.0).abs() < 1e-3);
 }

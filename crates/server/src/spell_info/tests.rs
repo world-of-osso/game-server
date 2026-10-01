@@ -82,7 +82,7 @@ fn store_indexes_every_spell_name_row() {
         .unwrap();
     assert_eq!(store.len(), names);
     let class_ids: Vec<u8> = classes.classes.iter().map(|c| c.class_id).collect();
-    assert_eq!(class_ids, [1, 2, 3, 4, 5, 6, 7, 8, 9, 11]);
+    assert_eq!(class_ids, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]);
 }
 
 #[test]

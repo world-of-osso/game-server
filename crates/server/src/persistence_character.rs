@@ -392,9 +392,13 @@ pub fn create_character_with_appearance(
     }
     check_name_available(db, name)?;
     crate::race_class::validate_race_class(race, class)?;
+    if appearance.visage.is_some() && !crate::race_class::has_visage_form(race) {
+        return Err(format!("Race {race} has no visage form"));
+    }
     let character_id = next_id(db, "character");
     let data = default_character_data(name, race, class, appearance);
     save_new_character(db, account_id, character_id, name, &data);
+    crate::maps::persistence::save_character_map(db, character_id, start_location(race).map_id);
     save_inventory(db, character_id, &InventoryData::default());
     Ok((character_id, data))
 }
@@ -411,22 +415,49 @@ fn check_name_available(db: &Database, name: &str) -> Result<(), String> {
     Ok(())
 }
 
-/// Build default CharacterData for a new character at Northshire spawn.
-/// Starting position per race (WoW coordinates).
-fn starting_position(race: u8) -> (f32, f32, f32) {
+/// Where a new character enters the world: `map_id` and WoW coordinates.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub(crate) struct StartLocation {
+    pub map_id: u32,
+    pub x: f32,
+    pub y: f32,
+    pub z: f32,
+}
+
+const fn start(map_id: u32, x: f32, y: f32, z: f32) -> StartLocation {
+    StartLocation { map_id, x, y, z }
+}
+
+/// Stormwind flight master (TaxiNodes 2, ContinentID 0).
+const STORMWIND: StartLocation = start(0, -8841.06, 489.656, 109.607);
+/// Orgrimmar flight master (TaxiNodes 23, ContinentID 1).
+const ORGRIMMAR: StartLocation = start(1, 1798.27, -4363.27, 102.848);
+
+/// Starting location per race. Demon Hunters start at their race's location;
+/// Dracthyr, Kul Tiran, Earthen and Haranir in Stormwind/Orgrimmar by faction.
+///
+/// WORKAROUND: Retail starts Demon Hunters in Mardum (TrinityCore playercreateinfo
+/// map 1481) and Dracthyr in the Forbidden Reach (map 2570); neither zone is
+/// implemented. These locations lack the class intro, its quests and its
+/// starting gear. Retire when class starting zones (Mardum, Forbidden Reach) are
+/// implemented. The Kul Tiran, Earthen and Haranir race starts are not implemented
+/// either; the capitals stand in for them until those zones exist.
+pub(crate) fn start_location(race: u8) -> StartLocation {
     match race {
-        1 => (-8949.0, -132.0, 83.0),     // Human — Northshire
-        2 => (-618.0, -4251.0, 38.0),     // Orc — Valley of Trials
-        3 => (-6240.0, 331.0, 383.0),     // Dwarf — Coldridge Valley
-        4 => (10311.0, 832.0, 1326.0),    // Night Elf — Shadowglen
-        5 => (1676.0, 1677.0, 121.0),     // Undead — Deathknell
-        6 => (-2917.0, -257.0, 53.0),     // Tauren — Red Cloud Mesa
-        7 => (-6240.0, 331.0, 383.0),     // Gnome — Coldridge Valley (shared)
-        8 => (-618.0, -4251.0, 38.0),     // Troll — Valley of Trials (shared)
-        10 => (10349.0, -6357.0, 33.0),   // Blood Elf — Sunstrider Isle
-        11 => (-3961.0, -13931.0, 100.0), // Draenei — Crash Site
-        22 => (-1451.0, 1403.0, 35.0),    // Worgen — Gilneas
-        _ => (-8949.0, -132.0, 83.0),     // Fallback to Human start
+        1 => start(0, -8949.0, -132.0, 83.0),     // Human — Northshire
+        2 => start(1, -618.0, -4251.0, 38.0),     // Orc — Valley of Trials
+        3 => start(0, -6240.0, 331.0, 383.0),     // Dwarf — Coldridge Valley
+        4 => start(1, 10311.0, 832.0, 1326.0),    // Night Elf — Shadowglen
+        5 => start(0, 1676.0, 1677.0, 121.0),     // Undead — Deathknell
+        6 => start(1, -2917.0, -257.0, 53.0),     // Tauren — Red Cloud Mesa
+        7 => start(0, -6240.0, 331.0, 383.0),     // Gnome — Coldridge Valley (shared)
+        8 => start(1, -618.0, -4251.0, 38.0),     // Troll — Valley of Trials (shared)
+        10 => start(530, 10349.0, -6357.0, 33.0), // Blood Elf — Sunstrider Isle
+        11 => start(530, -3961.0, -13931.0, 100.0), // Draenei — Crash Site
+        22 => start(0, -1451.0, 1403.0, 35.0),    // Worgen — Gilneas
+        52 | 32 | 85 | 86 => STORMWIND, // Dracthyr, Kul Tiran, Earthen, Haranir (Alliance)
+        70 | 84 | 91 => ORGRIMMAR,      // Dracthyr, Earthen, Haranir (Horde)
+        _ => start(0, -8949.0, -132.0, 83.0), // Fallback to Human start
     }
 }
 
@@ -436,7 +467,7 @@ fn default_character_data(
     class: u8,
     appearance: CharacterAppearance,
 ) -> CharacterData {
-    let (x, y, z) = starting_position(race);
+    let StartLocation { x, y, z, .. } = start_location(race);
     CharacterData {
         name: name.to_string(),
         x,
@@ -446,7 +477,7 @@ fn default_character_data(
         max_health: 100.0,
         race,
         class,
-        level: 1,
+        level: u16::from(crate::race_class::start_level(race, class)),
         appearance,
         equipment_appearance: Default::default(),
         durability: Vec::new(),

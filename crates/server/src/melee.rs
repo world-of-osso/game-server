@@ -1,6 +1,7 @@
-//! Player melee swings and armor (docs/specs/player-damage.md), as
-//! TrinityCore master (a352b1fa) resolves them, except the weapon-power
-//! coefficient, which is Retail's:
+//! Melee swings and armor (docs/specs/player-damage.md), as TrinityCore master
+//! (a352b1fa) resolves them, except the weapon-power coefficient, which is Retail's.
+//! Players and creatures both roll the hit table; a player victim meets its own
+//! avoidance (`PlayerDefense`, `stats::player_defense`):
 //! - swing damage: Player::CalculateMinMaxDamage (StatSystem.cpp:435-485) and
 //!   Unit::CalculateDamage (Unit.cpp:2490-2539);
 //! - hit table: Unit::RollMeleeOutcomeAgainst (Unit.cpp:2378-2488) with the
@@ -29,7 +30,9 @@ const CREATURE_BLOCK_PCT: f32 = 3.0;
 /// Added per level the creature is above the attacker (Unit.cpp:2765).
 const AVOIDANCE_PCT_PER_LEVEL: f32 = 1.5;
 /// Share of a blocked swing a creature stops (Unit::GetBlockPercent, Unit.h:1000).
-const CREATURE_BLOCKED_PCT: f32 = 30.0;
+pub const CREATURE_BLOCKED_PCT: f32 = 30.0;
+/// A creature's crit chance (Unit::GetUnitCriticalChanceDone, Unit.cpp:2885-2890).
+const CREATURE_CRIT_PCT: f32 = 5.0;
 /// Armor mitigation cap (Unit.cpp:1775).
 const MAX_ARMOR_MITIGATION: f32 = 0.85;
 
@@ -71,14 +74,49 @@ pub fn swing_time(weapon_speed: f32, haste_pct: f32) -> f32 {
     weapon_speed / (1.0 + haste_pct / 100.0)
 }
 
+/// Who swings, for the miss and crit chances it brings.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum Swinger {
+    /// A player: its crit chance and whether it dual wields.
+    Player { crit_pct: f32, dual_wield: bool },
+    /// A creature: its miss chance against the victim (`combat::creature_miss_chance`);
+    /// it crits `CREATURE_CRIT_PCT`.
+    Creature { miss_pct: f32 },
+}
+
 /// Who a swing lands on, for the avoidance it meets.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Victim {
     /// `level_difference`: the creature's level against the attacker minus
     /// the attacker's level against it.
-    Creature { level_difference: i32 },
-    /// Player dodge, parry and block are not modelled (0).
-    Player,
+    Creature {
+        level_difference: i32,
+    },
+    Player(PlayerDefense),
+}
+
+/// A player's avoidance in percent (`ActivePlayerData` Dodge/Parry/BlockPercentage,
+/// `stats::player_defense`) and its `ShieldBlock` value.
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
+pub struct PlayerDefense {
+    pub dodge: f32,
+    pub parry: f32,
+    pub block: f32,
+    /// Shield armor × 2.5 (Player::_ApplyItemBonuses, Player.cpp:8141-8145); 0 without
+    /// a shield.
+    pub shield_block: f32,
+}
+
+impl PlayerDefense {
+    /// Share of a blocked swing the shield stops, in percent: `ShieldBlock` against the
+    /// attacker's level armor constant, at most 85% (Player::GetBlockPercent,
+    /// Player.cpp:26838-26847).
+    pub fn blocked_pct(&self, armor_constant: f32) -> f32 {
+        if self.shield_block + armor_constant == 0.0 {
+            return 0.0;
+        }
+        (self.shield_block / (self.shield_block + armor_constant)).min(MAX_ARMOR_MITIGATION) * 100.0
+    }
 }
 
 /// Hit-table chances in percent, in roll order.
@@ -92,30 +130,47 @@ pub struct MeleeChances {
     pub crit: f32,
 }
 
-/// A player's auto-attack chances against `victim`. Facing is not modelled:
-/// every swing lands in front, so creatures always parry and block.
-pub fn player_swing_chances(victim: Victim, crit_pct: f32, dual_wield: bool) -> MeleeChances {
-    let miss = BASE_MISS_PCT + if dual_wield { DUAL_WIELD_MISS_PCT } else { 0.0 };
-    let Victim::Creature { level_difference } = victim else {
-        return MeleeChances {
-            miss,
-            crit: crit_pct,
-            ..MeleeChances::default()
-        };
+/// An auto-attack's chances. Facing is not modelled: every swing lands in front, so
+/// the victim can always parry and block, unless `can_avoid` is false (a victim
+/// casting or controlled avoids nothing, Unit.cpp:2408-2413). Only a player glances,
+/// against a creature 4 or more levels above (Unit.cpp:2440-2450).
+pub fn swing_chances(swinger: Swinger, victim: Victim, can_avoid: bool) -> MeleeChances {
+    let (miss, crit, player) = match swinger {
+        Swinger::Player {
+            crit_pct,
+            dual_wield,
+        } => (
+            BASE_MISS_PCT + if dual_wield { DUAL_WIELD_MISS_PCT } else { 0.0 },
+            crit_pct,
+            true,
+        ),
+        Swinger::Creature { miss_pct } => (miss_pct, CREATURE_CRIT_PCT, false),
     };
-    let level_bonus = AVOIDANCE_PCT_PER_LEVEL * level_difference.max(0) as f32;
+    let (dodge, parry, block, glancing) = match victim {
+        Victim::Creature { level_difference } => {
+            let level_bonus = AVOIDANCE_PCT_PER_LEVEL * level_difference.max(0) as f32;
+            let glancing = if player && level_difference > 3 {
+                10.0 + 10.0 * level_difference as f32
+            } else {
+                0.0
+            };
+            (
+                CREATURE_DODGE_PCT + level_bonus,
+                CREATURE_PARRY_PCT + level_bonus,
+                CREATURE_BLOCK_PCT + level_bonus,
+                glancing,
+            )
+        }
+        Victim::Player(defense) => (defense.dodge, defense.parry, defense.block, 0.0),
+    };
+    let avoid = |chance: f32| if can_avoid { chance } else { 0.0 };
     MeleeChances {
         miss,
-        dodge: CREATURE_DODGE_PCT + level_bonus,
-        parry: CREATURE_PARRY_PCT + level_bonus,
-        // Only against creatures 4 or more levels above (Unit.cpp:2446-2454).
-        glancing: if level_difference > 3 {
-            10.0 + 10.0 * level_difference as f32
-        } else {
-            0.0
-        },
-        block: CREATURE_BLOCK_PCT + level_bonus,
-        crit: crit_pct,
+        dodge: avoid(dodge),
+        parry: avoid(parry),
+        glancing,
+        block: avoid(block),
+        crit,
     }
 }
 
@@ -163,8 +218,14 @@ pub fn roll_melee_outcome(chances: &MeleeChances, roll: u32) -> MeleeOutcome {
 
 /// Damage after the outcome and the amount blocked: misses, dodges and
 /// parries do none, a crit doubles, a glancing blow loses 10% per level of
-/// difference (at most 3), a block stops 30%.
-pub fn outcome_damage(damage: f32, outcome: MeleeOutcome, level_difference: i32) -> (f32, f32) {
+/// difference (at most 3), a block stops `blocked_pct` (`CREATURE_BLOCKED_PCT`
+/// for a creature, `PlayerDefense::blocked_pct` for a player).
+pub fn outcome_damage(
+    damage: f32,
+    outcome: MeleeOutcome,
+    level_difference: i32,
+    blocked_pct: f32,
+) -> (f32, f32) {
     match outcome {
         MeleeOutcome::Miss | MeleeOutcome::Dodge | MeleeOutcome::Parry => (0.0, 0.0),
         MeleeOutcome::Crit => (damage * 2.0, 0.0),
@@ -173,7 +234,7 @@ pub fn outcome_damage(damage: f32, outcome: MeleeOutcome, level_difference: i32)
             ((reduce * damage).trunc(), 0.0)
         }
         MeleeOutcome::Block => {
-            let blocked = (damage * CREATURE_BLOCKED_PCT / 100.0).trunc();
+            let blocked = (damage * blocked_pct / 100.0).trunc();
             (damage - blocked, blocked)
         }
         MeleeOutcome::Hit => (damage, 0.0),

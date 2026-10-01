@@ -474,6 +474,71 @@ class CreatureEventImportTests(unittest.TestCase):
         self.assertEqual(reported[("tdb_creature", "guid=317")], "not base phase: PhaseGroup 431")
         self.assertNotIn(("tdb_creature", "guid=316"), reported, "other maps keep AzerothCore spawns silently")
 
+    def write_transform_fixture(self):
+        """Tentacle of Isorath Transform 84861 names TrinityCore creature 45409, which nothing spawns."""
+        self.write_retail_spawn_fixture()
+        templates = (self.tdb / "creature_template.sql").read_text().rstrip().rstrip(";")
+        (self.tdb / "creature_template.sql").write_text(
+            templates + "," + tdb_template(45409, "Tentacle of Iso\\'rath", 2324, 0) + ";\n")
+        models = (self.tdb / "creature_template_model.sql").read_text().rstrip().rstrip(";")
+        (self.tdb / "creature_template_model.sql").write_text(models + ",(45409,0,34432,1,1,66044);\n")
+        difficulties = (self.tdb / "creature_template_difficulty.sql").read_text().rstrip().rstrip(";")
+        (self.tdb / "creature_template_difficulty.sql").write_text(
+            difficulties + "," + tdb_difficulty(45409, 1, 0, 0, 0) + ";\n")
+        addons = (self.tdb / "creature_template_addon.sql").read_text().rstrip().rstrip(";")
+        (self.tdb / "creature_template_addon.sql").write_text(addons + ",(45409,0,0,0,1,0,0,1,0,0,0,0,0,0,'');\n")
+        write_db2_rows(self.csv / db2.DEFAULT_BUILD, "SpellEffect", [
+            {"ID": 1, "SpellID": 84861, "Effect": 6, "EffectAura": 56, "EffectMiscValue_0": 45409},
+            # An AzerothCore template stays AzerothCore's; MiscValue 0 names nothing.
+            {"ID": 2, "SpellID": 2, "Effect": 6, "EffectAura": 56, "EffectMiscValue_0": 2455},
+            {"ID": 3, "SpellID": 73815, "Effect": 6, "EffectAura": 56, "EffectMiscValue_0": 0}])
+
+    def test_templates_spells_transform_into_are_kept_without_a_spawn(self):
+        self.write_transform_fixture()
+        result = self.run_import()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        with sqlite3.connect(self.db) as conn:
+            self.assertEqual(
+                conn.execute("SELECT entry, name, faction FROM content_creature_template WHERE entry IN (45409, 2455)"
+                             " ORDER BY entry").fetchall(),
+                [(2455, "Olivia Burnside", 12), (45409, "Tentacle of Iso'rath", 2324)],
+            )
+            self.assertEqual(
+                conn.execute("SELECT CreatureID, CreatureDisplayID FROM content_creature_template_model"
+                             " WHERE CreatureID = 45409").fetchall(),
+                [(45409, 34432)],
+            )
+            self.assertEqual(
+                conn.execute("SELECT entry FROM content_creature_template_addon ORDER BY entry").fetchall(),
+                [(42384,), (45409,)],
+            )
+            self.assertEqual(conn.execute("SELECT count(*) FROM content_creature WHERE id1 = 45409").fetchone()[0], 0)
+
+    def test_add_transform_templates_adds_exactly_the_import_rows_to_an_older_database(self):
+        """add_transform_templates.py on a database imported before the rule adds the rows the import now
+        keeps and changes nothing else."""
+        self.write_transform_fixture()
+        result = self.run_import()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        tables = ("content_creature_template", "content_creature_template_model", "content_creature_template_addon")
+        with sqlite3.connect(self.db) as conn:
+            expected = {t: sorted(conn.execute(f"SELECT * FROM {t}").fetchall()) for t in tables}
+            # The database as the import built it before the rule.
+            for table, column in zip(tables, ("entry", "CreatureID", "entry")):
+                conn.execute(f"DELETE FROM {table} WHERE {column} = 45409")
+            older = {t: sorted(conn.execute(f"SELECT * FROM {t}").fetchall()) for t in tables}
+            spawns = conn.execute("SELECT * FROM content_creature ORDER BY guid").fetchall()
+        result = subprocess.run([sys.executable, str(SCRIPTS / "add_transform_templates.py"), "--db", str(self.db)],
+                                capture_output=True, text=True, timeout=60, check=False)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("added 1 transform templates", result.stdout)
+        with sqlite3.connect(self.db) as conn:
+            for table in tables:
+                rows = sorted(conn.execute(f"SELECT * FROM {table}").fetchall())
+                self.assertEqual(rows, expected[table], table)
+                self.assertTrue(set(older[table]) <= set(rows), f"{table}: a row changed")
+            self.assertEqual(conn.execute("SELECT * FROM content_creature ORDER BY guid").fetchall(), spawns)
+
     def test_creature_equipment_follows_the_source_of_each_entrys_spawns(self):
         """creature_equip_template (TrinityCore ObjectMgr::LoadEquipmentTemplates): a Retail-spawned entry takes
         TrinityCore's rows with their AppearanceModIDs, every other entry keeps AzerothCore's."""

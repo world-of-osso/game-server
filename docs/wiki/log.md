@@ -28,6 +28,30 @@ Added [auction house spec](../specs/auction-house.md) and [[auction-house]]; lin
 
 Created [[economy-catalog]] and indexed it. Read-only world.db and timestamped public TSM snapshots supply runtime item metadata, market maps and explicit spawned merchant/profession/expansion assignments. Jillian Tanner 5565:0:165 has 224 classic Leatherworking recipes, 312 markets and 33 raw gatherables; quantity follows profession.rs raw rounding, not points + 1. Report records selected price/popularity provenance, exclusions and explicit empty-production warnings. Midnight 11 remains blocked: 115 CREATE_ITEM output spells, six Fishing mappings, 109 missing mappings, no Leatherworking mapping or claimed new Silvermoon spawn. Runtime integration and spec acceptance remain separate.
 
+## [2026-10-01] systems | Transform templates kept by the import
+
+The import keeps TrinityCore templates that TRANSFORM auras name though nothing spawns them; `scripts/add_transform_templates.py` adds them to an imported world.db additively (2,411 templates). With it the server logs no unknown-template transforms at startup (10 before).
+
+## [2026-09-30] systems | Start levels, forms on players, transforms, admin socket
+
+Updated [[class-progression]]: TrinityCore start levels for Death Knights and allied races. Players without `ModelDisplay` get their form display and lose it on restore. TRANSFORM with MiscValue 0 keeps the display; an unknown template shows the pink pig 16358. A second server no longer takes a live server's admin socket.
+
+## [2026-09-30] specs | Creature hit table and player avoidance
+
+Updated [[player-damage]] spec: creatures roll the hit table (5% miss, 5% crit) against a player's TC-master avoidance; crits and blocks are sent as `CriticalHit` / `Block`.
+
+## [2026-09-30] systems | Chains, bouncy missiles, spell reflection
+
+Updated [[spell-casting]]: chain targeting with per-jump amplitude, shared target selection for effects with identical targets, `SPELL_ATTR4_BOUNCY_CHAIN_MISSILES` timing, spell reflection and triggered spells ignoring their explicit target's relation.
+
+## [2026-09-30] systems | Missile targets engage at impact
+
+Updated [[combat]]. `CombatRefs` tracks per-side suppression: a spell's launch puts only the caster in combat (TC `SetInCombatWith(target, true)`), the hit engages the target. Admin `set-level` on an online character now refills health and mana (`GiveLevel` → `SetFullHealth`). The trade tests lost their process-global resolution counter, which other trade apps in the parallel suite bumped.
+
+## [2026-09-30] systems | Bounded new-class server slice
+
+Updated [[class-progression]] and [[spell-casting]] for Monk/DH/Evoker creation, start levels, progression and six basic spells; added `docs/specs/new-classes.md`. Local ChrClasses/ChrRaces verified max(class, race) levels (1/8/10 for ordinary Monk/DH/Dracthyr Evoker); locally extracted CharBaseInfo confirmed the supported-race gates, including Void Elf DH. ENERGIZE previously ignored point modifiers, so Tiger Palm gained zero Windwalker Chi. Existing modifiers now supply the authored +2. Additional authored Monk gates cover Kul Tiran 32, Earthen 84/85 and Haranir 86/91, using local race bits/levels and unchanged placeholder placement. Powers ownership, engine UI/live fixtures and delayed starting zones remain separate work.
+
 ## [2026-09-30] systems | Spell travel time
 
 Updated [[spell-casting]] and [[combat]]. Spells with a missile `Speed` now land after their flight (TrinityCore `Spell::HandleDelayed`, `spell_cast/missiles.rs`): `SpellGo`, `CastSuccess` and combat at launch; damage, auras, threat, procs and the combat log at the hit. Before, Frostbolt's damage number showed about 0.4 s before the client's missile arrived. Also: periodic ticks start no combat (TC `DealDamage`), so a DoT alone no longer keeps a dummy or PvP fight going, and creatures drop victims more than 103 yd from home 10 s after their last direct damage (TC `CanCreatureAttack`).

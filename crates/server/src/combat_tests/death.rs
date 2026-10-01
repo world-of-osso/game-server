@@ -5,6 +5,15 @@ use crate::persistence::ClientId;
 use shared::components::EquipmentVisualSlot;
 use shared::death::DeathState as PlayerDeathKind;
 
+/// MOD_HIT_CHANCE 100: a creature that never misses (Unit::MeleeSpellMissChance), so a
+/// fixture's lethal swing lands; it may still crit.
+fn never_misses() -> crate::auras::AuraStatMods {
+    crate::auras::AuraStatMods {
+        melee_hit_chance_pct: 100.0,
+        ..Default::default()
+    }
+}
+
 #[test]
 fn lethal_player_auto_attack_transitions_death_in_same_fixed_step() {
     let mut app = App::new();
@@ -55,6 +64,7 @@ fn lethal_player_auto_attack_transitions_death_in_same_fixed_step() {
                 template_id: 6,
                 name: "Kobold Vermin".into(),
             },
+            never_misses(),
         ))
         .id();
 
@@ -165,6 +175,7 @@ fn a_player_resurrected_in_melee_range_is_not_attacked_by_its_killer() {
                 name: "Kobold Vermin".into(),
             },
             CombatTarget(Some(player)),
+            never_misses(),
         ))
         .id();
     app.world_mut()
@@ -256,10 +267,11 @@ fn lethal_melee_swing_on_a_player_logs_death_to_the_victim() {
         max: 100.0,
     });
     let (caster, npc) = (h.caster, h.npc);
-    h.app
-        .world_mut()
-        .entity_mut(npc)
-        .insert((CombatTarget(Some(caster)), AutoAttack::new(caster)));
+    h.app.world_mut().entity_mut(npc).insert((
+        CombatTarget(Some(caster)),
+        AutoAttack::new(caster),
+        never_misses(),
+    ));
     h.advance(5);
 
     let (caster, npc) = (Some(caster.to_bits()), Some(npc.to_bits()));

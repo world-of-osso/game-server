@@ -614,3 +614,76 @@ fn the_pulled_spy_replicates_the_mage_on_its_threat_list_through_polymorph_until
         "cleared on evade"
     );
 }
+
+/// A copy of Tentacle of Isorath Transform 84861 whose TRANSFORM names creature 999999999,
+/// which no world.db holds. Citizen Costume 73815: TRANSFORM with MiscValue 0.
+const UNKNOWN_TEMPLATE_TRANSFORM: u32 = 900_002;
+const TENTACLE_TRANSFORM: u32 = 84_861;
+const CITIZEN_COSTUME: u32 = 73_815;
+
+fn apply_transform(h: &mut Harness, spell_id: u32) {
+    let spell = h
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(spell_id)
+        .unwrap()
+        .clone();
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: h.npc,
+            target: h.npc,
+            spell_id,
+            effect_mask: crate::auras::aura_effect_mask(&spell),
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+    h.advance(1);
+}
+
+/// AuraEffect::HandleAuraTransform (SpellAuraEffects.cpp:2090-2242): a transform into an
+/// unknown template shows the pink pig 16358 until it ends; one with MiscValue 0 (not a
+/// special-cased spell) keeps the unit's display.
+#[test]
+fn transforms_without_a_template_follow_trinitycore() {
+    let Some(data) = crate::spell_cast::test_harness::world_db() else {
+        return;
+    };
+    let mut unknown = data.store.get(TENTACLE_TRANSFORM).unwrap().clone();
+    unknown.id = UNKNOWN_TEMPLATE_TRANSFORM;
+    for effect in &mut unknown.effects {
+        if effect.aura == crate::auras::handlers::TRANSFORM {
+            effect.misc_values[0] = 999_999_999;
+        }
+    }
+    let Some(mut h) = harness_with_plugins(
+        vec![unknown],
+        &[CITIZEN_COSTUME],
+        MAGE,
+        false,
+        |app| {
+            app.insert_resource(world_data());
+        },
+    ) else {
+        return;
+    };
+    let npc = h.npc;
+    h.app.world_mut().entity_mut(npc).insert(ModelDisplay {
+        display_id: KOBOLD_DISPLAY,
+    });
+    apply_transform(&mut h, UNKNOWN_TEMPLATE_TRANSFORM);
+    assert_eq!(display(&h), 16358);
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        npc,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == UNKNOWN_TEMPLATE_TRANSFORM,
+    );
+    h.advance(1);
+    assert_eq!(display(&h), KOBOLD_DISPLAY);
+
+    apply_transform(&mut h, CITIZEN_COSTUME);
+    assert!(crate::auras::has_aura(h.app.world(), npc, CITIZEN_COSTUME));
+    assert_eq!(display(&h), KOBOLD_DISPLAY);
+}

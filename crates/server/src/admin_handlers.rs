@@ -231,6 +231,9 @@ pub(crate) fn handle_set_level(
     };
     data.level = level;
     persistence::save_character(&db.db, char_id, &data);
+    // `.character level` resets XP online (SetXP(0)) and offline (CHAR_UPD_LEVEL
+    // `xp = 0`): cs_character.cpp:770-792, CharacterDatabase.cpp:557.
+    crate::persistence_progression::save_xp(&db.db, char_id, 0);
     commands.queue(move |world: &mut World| {
         crate::class_progression::set_live_level(world, char_id, level as u8);
     });

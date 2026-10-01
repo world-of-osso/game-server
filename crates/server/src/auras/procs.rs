@@ -112,6 +112,9 @@ pub struct AuraEvent {
     /// Damage the event dealt to `target` after absorbs, in its health units (level
     /// scaling); 0 for no damage.
     pub damage: f32,
+    /// `PROC_HIT_REFLECT`: `target` reflected the actor's spell (`ProcReflectDelayed`,
+    /// Spell.cpp:2412-2436). Only reflect auras proc off it, and only off it.
+    pub reflected: bool,
 }
 
 #[derive(Resource, Debug, Default)]
@@ -275,6 +278,13 @@ fn proc_matches(
 ) -> bool {
     let proc_mask = proc_mask(world, aura);
     if proc_mask[0] & mask[0] == 0 && proc_mask[1] & mask[1] == 0 {
+        return false;
+    }
+    let reflect_aura = aura
+        .effects
+        .iter()
+        .any(|effect| handlers::reflects(effect.aura_type));
+    if reflect_aura != event.reflected {
         return false;
     }
     if !aura.effects.iter().any(|effect| {

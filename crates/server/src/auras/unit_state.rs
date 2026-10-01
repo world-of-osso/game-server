@@ -52,11 +52,13 @@ pub enum DisplaySource {
 }
 
 /// Under a TRANSFORM or MOD_SHAPESHIFT aura: the aura whose display shows, and the
-/// display to restore when neither is left.
+/// display to restore when neither is left. `None` for a unit that had no
+/// `ModelDisplay`: a player, whose native display is its race and sex model (which
+/// clients resolve themselves), gets it back by losing `ModelDisplay`.
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Transformed {
     pub source: DisplaySource,
-    pub native_display_id: u32,
+    pub native_display_id: Option<u32>,
 }
 
 fn has_type(auras: &ActiveAuras, aura_type: u32) -> bool {
@@ -173,23 +175,17 @@ fn reconcile_display(world: &mut World, unit: Entity) {
             let Some(display_id) = source_display(world, unit, source, spell_id) else {
                 return;
             };
-            let Some(native_display_id) =
-                current
-                    .map(|current| current.native_display_id)
-                    .or_else(|| {
-                        world
-                            .get::<ModelDisplay>(unit)
-                            .map(|model| model.display_id)
-                    })
-            else {
-                debug!("Display of {spell_id} on {unit}: no ModelDisplay to replace");
-                return;
+            let native_display_id = match current {
+                Some(current) => current.native_display_id,
+                None => world
+                    .get::<ModelDisplay>(unit)
+                    .map(|model| model.display_id),
             };
             world.entity_mut(unit).insert(Transformed {
                 source,
                 native_display_id,
             });
-            display_id
+            Some(display_id)
         }
         (None, Some(current)) => {
             world.entity_mut(unit).remove::<Transformed>();
@@ -197,9 +193,15 @@ fn reconcile_display(world: &mut World, unit: Entity) {
         }
         (None, None) => return,
     };
-    world.entity_mut(unit).insert(ModelDisplay {
-        display_id: display,
-    });
+    // Unit::SetDisplayId / RestoreDisplayId.
+    match display {
+        Some(display_id) => {
+            world.entity_mut(unit).insert(ModelDisplay { display_id });
+        }
+        None => {
+            world.entity_mut(unit).remove::<ModelDisplay>();
+        }
+    }
     if let Some(dirty) = world.get_resource::<ReplicationDirtyQueue>() {
         dirty.mark(unit);
     }
@@ -248,22 +250,27 @@ fn transform_entry(aura: &AuraInstance) -> i32 {
         .map_or(0, |effect| effect.misc_values[0])
 }
 
-/// A display of creature template `entry` (`ObjectMgr::ChooseDisplayId`). MiscValue 0
-/// (TrinityCore's per-spell racial displays) and unknown templates are logged and
-/// change nothing.
+/// The pink pig TrinityCore shows for a transform into an unknown creature template.
+const UNKNOWN_TEMPLATE_DISPLAY: u32 = 16358;
+
+/// The display a TRANSFORM aura shows (AuraEffect::HandleAuraTransform,
+/// SpellAuraEffects.cpp:2090-2242): a model of creature template `entry`
+/// (`ObjectMgr::ChooseDisplayId`); the pink pig 16358, with an error, for an entry with no
+/// template. MiscValue 0 changes no display: TrinityCore's per-spell special cases
+/// (Orb of Deception's racial models, Murloc Costume, Corsair Costume, 53806) are not
+/// modelled, and every other spell (Citizen Costume 73815) keeps the current display.
 fn transform_display(world: &World, spell_id: u32, entry: i32) -> Option<u32> {
-    let template = u32::try_from(entry)
-        .ok()
-        .filter(|&entry| entry != 0)
-        .and_then(|entry| {
-            world
-                .get_resource::<crate::world_data::WorldData>()?
-                .templates
-                .get(&entry)
-        });
+    let entry = u32::try_from(entry).ok().filter(|&entry| entry != 0)?;
+    let template = world
+        .get_resource::<crate::world_data::WorldData>()?
+        .templates
+        .get(&entry);
     let Some(template) = template else {
-        error!("Transform {spell_id}: no creature template {entry} for its display");
-        return None;
+        error!(
+            "Auras: unknown creature id = {entry} (only need its modelid) From Spell Aura \
+             Transform in Spell ID = {spell_id}"
+        );
+        return Some(UNKNOWN_TEMPLATE_DISPLAY);
     };
     Some(crate::zones::template_display_id(
         template,

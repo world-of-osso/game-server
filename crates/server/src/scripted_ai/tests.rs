@@ -382,6 +382,7 @@ impl Harness {
             spell: &spell,
             depth: 0,
             dest: None,
+            chain_multiplier: 1.0,
         };
         deal_damage(world, &ctx, boss, amount, false, false);
     }
