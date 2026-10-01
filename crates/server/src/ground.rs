@@ -2,7 +2,8 @@
 //! shared rule the client predicts with (`shared::ground`,
 //! game-engine docs/specs/wmo-floor-collision.md).
 //!
-//! Maps load on first use from the client's asset cache (`../game-engine/data`): the
+//! Maps load on first use from the client's asset cache (`GAME_SERVER_GROUND_DIR`, else
+//! `game-engine/data` beside this checkout): the
 //! map's WDT (`Map.db2` WdtFileDataID) either names one global WMO (MPHD flag 0x1, a
 //! WMO-only dungeon such as the Stockade) or, through MAID, each tile's root and
 //! `_obj0` ADT FileDataIDs; the `_obj0` MODF places WMOs by FileDataID, and each WMO
@@ -22,8 +23,10 @@ use shared::ground::{
 use crate::liquid::LiquidSample;
 use crate::terrain_height::{TerrainHeightMap, parse_adt_heights};
 
-/// The client's asset cache, relative to the server's working directory.
-const CLIENT_DATA_DIR: &str = "../game-engine/data";
+/// Overrides the client asset cache the ground loads from.
+const GROUND_DIR_ENV: &str = "GAME_SERVER_GROUND_DIR";
+/// Eastern Kingdoms: the server does not start without its ground.
+const REQUIRED_GROUND_MAP: u32 = 0;
 const TILE_SIZE: f32 = shared::navmesh::TILE_SIZE;
 const MAP_TILES: usize = 64;
 /// MAID entry: root, obj0, obj1, tex0, lod, map texture, map normal, minimap FDIDs.
@@ -107,6 +110,17 @@ impl GroundMap {
             maps: HashMap::from([(0, Some(map))]),
             ..default()
         }
+    }
+
+    /// Opens map `map_id` now; the error names the file that is missing or unreadable.
+    pub fn open_now(&mut self, map_id: u32) -> Result<(), String> {
+        let &wdt = self
+            .wdts
+            .get(&map_id)
+            .ok_or_else(|| format!("map {map_id} has no WDT in Map.db2"))?;
+        let map = MapGround::open(&self.data_dir, wdt)?;
+        self.maps.insert(map_id, Some(map));
+        Ok(())
     }
 
     /// Ground under `feet` (Bevy space) on map `map_id`, loading the map and its tile on
@@ -523,27 +537,34 @@ impl Plugin for GroundPlugin {
     }
 }
 
-/// After `WorldDataPlugin` has loaded the `MapStore` (Startup). Without the client's
-/// terrain every creature keeps its spawn height wherever it runs, so the server refuses
-/// to start instead.
+/// Where the ground loads from: `GAME_SERVER_GROUND_DIR`, else the client's asset cache
+/// beside this checkout (not the working directory).
+fn ground_data_dir() -> PathBuf {
+    std::env::var_os(GROUND_DIR_ENV).map_or_else(
+        || Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../game-engine/data"),
+        PathBuf::from,
+    )
+}
+
+/// After `WorldDataPlugin` has loaded the `MapStore` (Startup). Without ground every
+/// creature keeps its spawn height wherever it runs, so the server refuses to start
+/// unless `REQUIRED_GROUND_MAP` opens.
 fn open_ground_map(mut commands: Commands, maps: Res<crate::maps::MapStore>) {
-    let data_dir = Path::new(CLIENT_DATA_DIR);
-    let terrain = data_dir.join("terrain");
-    if !terrain.is_dir() {
-        let cwd = std::env::current_dir().unwrap_or_default();
-        panic!(
-            "No ground: {} is not a directory (relative to the working directory {}); run the server from a checkout beside game-engine",
-            terrain.display(),
-            cwd.display()
-        );
-    }
+    let data_dir = ground_data_dir();
     let wdts = maps
         .maps
         .values()
         .map(|entry| (entry.id, entry.wdt_file_data_id))
         .collect();
+    let mut ground = GroundMap::new(&data_dir, wdts);
+    if let Err(err) = ground.open_now(REQUIRED_GROUND_MAP) {
+        panic!(
+            "No ground on map {REQUIRED_GROUND_MAP} from {} (set {GROUND_DIR_ENV}): {err}",
+            data_dir.display()
+        );
+    }
     info!("Ground loads from {}", data_dir.display());
-    commands.insert_resource(GroundMap::new(data_dir, wdts));
+    commands.insert_resource(ground);
 }
 
 #[cfg(test)]
