@@ -55,24 +55,62 @@ pub struct ClassInfo {
     pub specs: Vec<SpecInfo>,
     /// Class talent tree (class, spec and hero nodes).
     pub traits: TraitTree,
-    /// The racial skill lines this class gets (`racial_skill_lines`).
-    pub racial: Vec<RacialSkillLine>,
+    /// The default skill lines this class gets besides `skill_line` (`default_skill_lines`).
+    pub default_skills: Vec<DefaultSkillLine>,
 }
 
-/// A racial skill line (`skill_line` CategoryID 5 or 9) a `skill_race_class_info` row
-/// with Availability 1 gives a class: TrinityCore's player-create skills
-/// (ObjectMgr.cpp:4066-4078), learned by `Player::LearnDefaultSkills` and their
-/// abilities by `LearnSkillRewardedSpells` (Player.cpp:25275-25291, 25407-25457).
+/// A default skill line a `skill_race_class_info` row with Availability 1 gives a class:
+/// TrinityCore's player-create skills (ObjectMgr.cpp:4064-4078), learned by
+/// `Player::LearnDefaultSkills` and their abilities by `LearnSkillRewardedSpells`
+/// (Player.cpp:25275-25291, 25407-25457).
 #[derive(Debug, Serialize)]
-pub struct RacialSkillLine {
+pub struct DefaultSkillLine {
     pub skill_line: u32,
     /// `RaceMasks_0/_1`: the races that get the line (all-zero: every race).
     pub race_masks: [u32; 2],
     /// `MinLevel`: the line is learned from this level.
     pub min_level: u32,
+    /// How the line's starting skill value is set.
+    pub range: SkillRange,
     /// Its `skill_line_ability` rows for the class (`ClassMask` 0 or with its bit), not
     /// NeverLearned, sorted by required level then spell ID.
     pub abilities: Vec<LearnableSpell>,
+}
+
+/// `GetSkillRangeType` (ObjectMgr.cpp:9009-9030): the starting value
+/// `Player::LearnDefaultSkill` (Player.cpp:25293-25336) gives a default skill line.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+pub enum SkillRange {
+    /// A `tdb_skill_tiers` row: its first tier value is the maximum.
+    Rank { max: u32, always_max: bool },
+    /// Runeforging and armor lines: always 1.
+    Mono,
+    /// Languages: 300.
+    Language,
+    /// Everything else: up to 5 per level.
+    Level { always_max: bool },
+}
+
+impl SkillRange {
+    /// Starting value: 1, the maximum for `SKILL_FLAG_ALWAYS_MAX_VALUE` lines, and
+    /// `(level - 1) * 5` (at least 1, at most the maximum) for a Death Knight.
+    pub fn value(self, class_id: u8, level: u8) -> u32 {
+        let start = |max: u32, always_max: bool| {
+            if always_max {
+                max
+            } else if class_id == CLASS_DEATH_KNIGHT {
+                ((u32::from(level) - 1) * 5).clamp(1, max.max(1))
+            } else {
+                1
+            }
+        };
+        match self {
+            Self::Rank { max, always_max } => start(max, always_max),
+            Self::Mono => 1,
+            Self::Language => 300,
+            Self::Level { always_max } => start(u32::from(level) * 5, always_max),
+        }
+    }
 }
 
 /// A `skill_line_ability` row on the class skill line.
@@ -85,6 +123,8 @@ pub struct LearnableSpell {
     pub required_level: u32,
     pub supersedes_spell: u32,
     pub race_masks: [u32; 2],
+    /// `MinSkillLineRank`: an AutomaticSkillRank spell needs this skill value.
+    pub min_skill_rank: u32,
     /// SPELL_ATTR0_PASSIVE.
     pub passive: bool,
     /// An effect applies SPELL_AURA_MOUNTED (class mounts such as Summon Warhorse 13819).
@@ -133,51 +173,70 @@ pub(crate) fn load_class_spells(conn: &Connection) -> rusqlite::Result<ClassSpel
                 learnable: load_learnable(conn, class_id, skill_line)?,
                 specs: load_specs(conn, class_id)?,
                 traits: load_trait_tree(conn, skill_line)?,
-                racial: racial_skill_lines(conn, class_id)?,
+                default_skills: default_skill_lines(conn, class_id, skill_line)?,
             })
         })
         .collect::<rusqlite::Result<_>>()?;
     Ok(ClassSpells { classes })
 }
 
-/// `skill_line` categories holding the racial lines: 5 (Racial - Pandaren) and 9
-/// (Racial - <race>, but also Riding, All Classes and All - Warbands).
-const RACIAL_SKILL_CATEGORIES: &str = "5, 9";
-/// Riding (762): race-limited like a racial line but granted by level, not race.
-const RIDING_SKILL_LINE: u32 = 762;
+/// `SKILL_FLAG_ALWAYS_MAX_VALUE` (DBCEnums.h:2394).
+const SKILL_FLAG_ALWAYS_MAX_VALUE: u32 = 0x10;
+/// `SKILL_RUNEFORGING` (SharedDefines.h:6015).
+const SKILL_RUNEFORGING: u32 = 960;
+/// `SKILL_CATEGORY_ARMOR` / `SKILL_CATEGORY_LANGUAGES` (SharedDefines.h:6380-6382).
+const SKILL_CATEGORY_ARMOR: u32 = 8;
+const SKILL_CATEGORY_LANGUAGES: u32 = 10;
+const CLASS_DEATH_KNIGHT: u8 = 6;
 
-/// The racial skill lines `class_id` gets: Availability 1 rows of those categories that
-/// are limited to some races (not `RaceMasks` -1/-1, not Riding), whose `ClassMask` is
-/// -1, 0 or has the class bit (ObjectMgr.cpp:4070-4075). TrinityCore also learns the
-/// other default skills this way (weapons, armor, languages, Defense, Riding, All
-/// Classes); those are not granted here.
-fn racial_skill_lines(conn: &Connection, class_id: u8) -> rusqlite::Result<Vec<RacialSkillLine>> {
-    let mut stmt = conn.prepare(&format!(
-        "SELECT r.SkillID, r.ClassMask, r.RaceMasks_0, r.RaceMasks_1, r.MinLevel
+/// The default skill lines `class_id` gets besides its class line: Availability 1 rows
+/// whose `ClassMask` is -1, 0 or has the class bit (ObjectMgr.cpp:4070-4075), by
+/// skill line then row ID. Rows of lines without a `skill_line` entry are skipped
+/// (`SKILL_RANGE_NONE`).
+fn default_skill_lines(
+    conn: &Connection,
+    class_id: u8,
+    class_skill_line: u32,
+) -> rusqlite::Result<Vec<DefaultSkillLine>> {
+    let mut stmt = conn.prepare(
+        "SELECT r.SkillID, r.ClassMask, r.RaceMasks_0, r.RaceMasks_1, r.MinLevel, r.Flags,
+                s.CategoryID, t.Value1
          FROM skill_race_class_info r
          JOIN skill_line s ON s.ID = r.SkillID
-         WHERE r.Availability = 1 AND s.CategoryID IN ({RACIAL_SKILL_CATEGORIES})
-           AND NOT (r.RaceMasks_0 = -1 AND r.RaceMasks_1 = -1)
-           AND r.SkillID != {RIDING_SKILL_LINE}
-         ORDER BY r.SkillID, r.ID"
-    ))?;
-    let rows = stmt.query_map([], |r| {
+         LEFT JOIN tdb_skill_tiers t ON t.ID = r.SkillTierID
+         WHERE r.Availability = 1 AND r.SkillID != ?1
+         ORDER BY r.SkillID, r.ID",
+    )?;
+    let rows = stmt.query_map([class_skill_line], |r| {
         Ok((
             uint(r, 0)?,
             int(r, 1)?,
             [uint(r, 2)?, uint(r, 3)?],
             uint(r, 4)?,
+            uint(r, 5)?,
+            uint(r, 6)?,
+            r.get::<_, Option<u32>>(7)?,
         ))
     })?;
     let bit = i64::from(class_bit(class_id));
     let mut lines = Vec::new();
     for row in rows {
-        let (skill_line, class_mask, race_masks, min_level) = row?;
+        let (skill_line, class_mask, race_masks, min_level, flags, category, tier_max) = row?;
         if class_mask == -1 || class_mask == 0 || class_mask & bit != 0 {
-            lines.push(RacialSkillLine {
+            let always_max = flags & SKILL_FLAG_ALWAYS_MAX_VALUE != 0;
+            let range = match tier_max {
+                Some(max) => SkillRange::Rank { max, always_max },
+                None if skill_line == SKILL_RUNEFORGING || category == SKILL_CATEGORY_ARMOR => {
+                    SkillRange::Mono
+                }
+                None if category == SKILL_CATEGORY_LANGUAGES => SkillRange::Language,
+                None => SkillRange::Level { always_max },
+            };
+            lines.push(DefaultSkillLine {
                 skill_line,
                 race_masks,
                 min_level,
+                range,
                 abilities: load_learnable(conn, class_id, skill_line)?,
             });
         }
@@ -217,7 +276,8 @@ fn load_learnable(
         "SELECT a.Spell, a.ClassMask, a.AcquireMethod, COALESCE(l.SpellLevel, 0),
                 a.SupercedesSpell, a.RaceMasks_0, a.RaceMasks_1, COALESCE(m.Attributes_0, 0),
                 EXISTS(SELECT 1 FROM spell_effect e
-                       WHERE e.SpellID = a.Spell AND e.EffectAura = ?2)
+                       WHERE e.SpellID = a.Spell AND e.EffectAura = ?2),
+                a.MinSkillLineRank
          FROM skill_line_ability a
          JOIN spell_name n ON n.ID = a.Spell
          LEFT JOIN spell_levels l ON l.SpellID = a.Spell AND l.DifficultyID = 0
@@ -233,6 +293,7 @@ fn load_learnable(
             required_level: uint(r, 3)?,
             supersedes_spell: uint(r, 4)?,
             race_masks: [uint(r, 5)?, uint(r, 6)?],
+            min_skill_rank: uint(r, 9)?,
             passive: uint(r, 7)? & ATTR0_PASSIVE != 0,
             mount: uint(r, 8)? != 0,
         })

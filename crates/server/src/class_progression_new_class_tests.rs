@@ -152,14 +152,19 @@ fn demon_hunter_levels_8_to_10_learn_torment_then_havoc() {
 }
 
 /// Dracthyr start at 10, so a new Evoker is Devastation with its baseline
-/// Living Flame, Azure Strike and Disintegrate.
+/// Living Flame, Azure Strike and Disintegrate; its create actions put Living
+/// Flame and Azure Strike on the bar.
 #[test]
 fn new_evoker_enters_as_devastation_with_core_spells_on_the_bar() {
     let Some(classes) = class_spells() else {
         return;
     };
-    let mut app = setup_app(temp_database(), classes);
-    let player = spawn_player(&mut app, 13, DRACTHYR_ALLIANCE, EVOKER, 10);
+    let db = temp_database();
+    let Some(character_id) = create_with_kit(&db, "Kalecgos", DRACTHYR_ALLIANCE, EVOKER) else {
+        return;
+    };
+    let mut app = setup_app(db, classes);
+    let player = spawn_player(&mut app, character_id, DRACTHYR_ALLIANCE, EVOKER, 10);
     advance(&mut app);
     assert_eq!(
         received::<SpecializationChanged>(&mut app, player),
@@ -190,7 +195,7 @@ fn new_evoker_enters_as_devastation_with_core_spells_on_the_bar() {
         .contains(&361_227)
     );
     drain(&mut app, player);
-    set_live_level(app.world_mut(), 13, 12);
+    set_live_level(app.world_mut(), character_id, 12);
     advance(&mut app);
     assert_eq!(
         received::<SpellsLearned>(&mut app, player),

@@ -646,6 +646,7 @@ fn dracthyr_keep_their_visage_form_and_other_races_cannot_send_one() {
         52,
         13,
         appearance.clone(),
+        &crate::player_create_info::OwnedKit::bare().kit(),
     )
     .unwrap();
     assert_eq!(load_character(&db, id).unwrap().appearance, appearance);
@@ -657,6 +658,7 @@ fn dracthyr_keep_their_visage_form_and_other_races_cannot_send_one() {
             1,
             1,
             appearance,
+            &crate::player_create_info::OwnedKit::bare().kit(),
         )
         .map(|(id, _)| id),
         Err("Race 1 has no visage form".to_string())

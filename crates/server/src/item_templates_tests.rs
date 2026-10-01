@@ -38,4 +38,10 @@ fn content_item_rows_load_inventory_attributes() {
     assert!(!fist.allows(1, 1));
     assert!(fist.binds_on_pickup());
     assert_eq!(fist.appearance_id, Some(2288));
+    // Wildgrove Haranir Longbow, Hunter-only: AllowableRaces_0 1572864 holds the
+    // PlayableRaceBits of Haranir Horde 91 (19) and Alliance 86 (20).
+    let longbow = templates.get(266263).unwrap();
+    assert!(longbow.allows(3, 86));
+    assert!(longbow.allows(3, 91));
+    assert!(!longbow.allows(3, 1));
 }

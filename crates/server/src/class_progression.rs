@@ -35,10 +35,12 @@ pub const SPEC_UNLOCK_LEVEL: u8 = 10;
 const INITIAL_SPEC_ORDER_INDEX: u32 = 4;
 /// Action bar slots 0..=119.
 pub const ACTION_BAR_SLOTS: u8 = 120;
-const DEFAULT_BAR_SLOTS: usize = 12;
+/// Main action bar slots 0..=11, where learned spells are pushed.
+const MAIN_BAR_SLOTS: u8 = 12;
 /// SkillLineAbilityAcquireMethod AutomaticSkillRank, AutomaticCharLevel and
-/// LearnedOrAutomaticCharLevel: learned without a trainer.
+/// LearnedOrAutomaticCharLevel: learned without a trainer (DBCEnums.h:2376-2382).
 const AUTO_LEARN_METHODS: [u32; 3] = [1, 2, 4];
+const ACQUIRE_AUTOMATIC_SKILL_RANK: u32 = 1;
 
 /// Spells the player knows, in learn order. Cast validation reads this.
 #[derive(Component, Debug, Clone, Default, PartialEq, Eq)]
@@ -157,8 +159,8 @@ fn resolve_spec(class: &ClassInfo, level: u8, requested: u32) -> Option<&SpecInf
         .or_else(|| chosen.next())
 }
 
-/// Auto-learned class spells up to `level` for the race, the race's racial skill line
-/// spells, then the spec's spells
+/// Auto-learned class spells up to `level` for the race, the default skill line
+/// spells (`default_skill_spells`), then the spec's spells
 /// up to `level` (TrinityCore `Player::LearnSpecializationSpells` skips spells whose
 /// `SpellLevel` is above the player level) and mastery, then talent spells, without
 /// duplicates and without the spells the talents override.
@@ -181,26 +183,8 @@ fn compute_known_spells(
             spell_id: spell.spell_id,
             passive: spell.passive,
         });
-    // The race's skill lines (Player::LearnDefaultSkills, Player.cpp:25275-25291) and the
-    // abilities they reward (LearnSkillRewardedSpells, Player.cpp:25407-25457): Human
-    // Will to Survive, Orc Blood Fury, Haranir Thorn Bloom.
-    let racial = class
-        .racial
-        .iter()
-        .filter(move |line| {
-            race_mask_allows(line.race_masks, race) && line.min_level <= u32::from(level)
-        })
-        .flat_map(|line| &line.abilities)
-        .filter(move |spell| {
-            AUTO_LEARN_METHODS.contains(&spell.acquire_method)
-                && spell.required_level <= u32::from(level)
-                && race_mask_allows(spell.race_masks, race)
-        })
-        .map(|spell| KnownSpell {
-            spell_id: spell.spell_id,
-            passive: spell.passive,
-        });
-    let learnable = learnable.chain(racial);
+    let defaults = default_skill_spells(class, race, level);
+    let learnable = learnable.chain(defaults);
     let spec_spells = spec.into_iter().flat_map(|spec| {
         let spells = spec
             .spells
@@ -231,18 +215,44 @@ fn compute_known_spells(
     known
 }
 
-/// Known non-passive spells in learn order on slots 0..12, without class
-/// mounts (`LearnableSpell.mount`).
-fn default_action_bar(class: Option<&ClassInfo>, known: &[KnownSpell]) -> BTreeMap<u8, ActionRef> {
-    default_action_bar_candidates(class, known)
-        .take(DEFAULT_BAR_SLOTS)
-        .enumerate()
-        .map(|(slot, spell_id)| (slot as u8, ActionRef::Spell(spell_id)))
-        .collect()
+/// Abilities of the default skill lines (Player::LearnDefaultSkills, Player.cpp:25275-25291):
+/// per skill line the first row by ID for the race whose `MinLevel` is reached, and its
+/// auto-learned abilities for the race up to `level` (LearnSkillRewardedSpells,
+/// Player.cpp:25407-25457). An AutomaticSkillRank ability needs the line's starting
+/// value to reach its `MinSkillLineRank`.
+fn default_skill_spells(class: &ClassInfo, race: u8, level: u8) -> Vec<KnownSpell> {
+    let mut learned_lines = Vec::new();
+    let mut spells = Vec::new();
+    for line in &class.default_skills {
+        if learned_lines.contains(&line.skill_line)
+            || !race_mask_allows(line.race_masks, race)
+            || line.min_level > u32::from(level)
+        {
+            continue;
+        }
+        learned_lines.push(line.skill_line);
+        let value = line.range.value(class.class_id, level);
+        spells.extend(
+            line.abilities
+                .iter()
+                .filter(|spell| {
+                    AUTO_LEARN_METHODS.contains(&spell.acquire_method)
+                        && (spell.acquire_method != ACQUIRE_AUTOMATIC_SKILL_RANK
+                            || value >= spell.min_skill_rank)
+                        && spell.required_level <= u32::from(level)
+                        && race_mask_allows(spell.race_masks, race)
+                })
+                .map(|spell| KnownSpell {
+                    spell_id: spell.spell_id,
+                    passive: spell.passive,
+                }),
+        );
+    }
+    spells
 }
 
 /// Known non-passive, non-mount spells in learn order.
-fn default_action_bar_candidates<'a>(
+fn pushable_spells<'a>(
     class: Option<&'a ClassInfo>,
     known: &'a [KnownSpell],
 ) -> impl Iterator<Item = u32> + 'a {
@@ -271,7 +281,7 @@ fn push_learned_spells(
     learned: &[u32],
 ) -> bool {
     let mut pushed = false;
-    let pushable = default_action_bar_candidates(class, known)
+    let pushable = pushable_spells(class, known)
         .filter(|spell_id| learned.contains(spell_id))
         .collect::<Vec<_>>();
     for spell_id in pushable {
@@ -279,7 +289,7 @@ fn push_learned_spells(
         if bar.values().any(|existing| *existing == action) {
             continue;
         }
-        let Some(slot) = (0..DEFAULT_BAR_SLOTS as u8).find(|slot| !bar.contains_key(slot)) else {
+        let Some(slot) = (0..MAIN_BAR_SLOTS).find(|slot| !bar.contains_key(slot)) else {
             break;
         };
         bar.insert(slot, action);
@@ -523,7 +533,7 @@ fn init_player_progression(
                 .iter()
                 .map(|&(slot, action)| (slot, action_from_data(action)))
                 .collect(),
-            None => default_action_bar(class_info(&classes, player.class), &evaluated.known),
+            None => BTreeMap::new(),
         });
         let overrides = &evaluated.traits.overrides;
         let rewritten = apply_spell_overrides(&mut bar.0, &[], overrides, &known);

@@ -4,12 +4,14 @@ use std::collections::BTreeSet;
 
 const MAX_CHARACTERS_PER_ACCOUNT: usize = 10;
 
+use crate::persistence::inventory_store::save_inventory_record;
+use crate::persistence::next_id;
 use crate::persistence::{
     ACCOUNT_CHARACTERS, CHARACTER_GUILDS, CHARACTER_NAMES, CHARACTERS, GUILD_MEMBER_NOTES,
     GUILD_PROFILES, PENDING_GUILD_INVITES,
 };
-use crate::persistence::{next_id, save_inventory};
 use crate::persistence_types::*;
+use crate::player_create_info::NewCharacterKit;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GuildMemberRecord {
@@ -350,7 +352,7 @@ pub(crate) fn load_account_char_ids(db: &Database, account_id: u64) -> Vec<u64> 
     }
 }
 
-/// Create a new character for an account. Returns the character or an error.
+/// Test fixture: a new character with an empty kit (no items, no action buttons).
 #[cfg(test)]
 pub fn create_character(
     db: &Database,
@@ -359,6 +361,7 @@ pub fn create_character(
     race: u8,
     class: u8,
 ) -> Result<(u64, CharacterData), String> {
+    let bare = crate::player_create_info::OwnedKit::bare();
     create_character_with_appearance(
         db,
         account_id,
@@ -366,6 +369,7 @@ pub fn create_character(
         race,
         class,
         CharacterAppearance::default(),
+        &bare.kit(),
     )
 }
 
@@ -376,6 +380,7 @@ pub fn create_character_with_appearance(
     race: u8,
     class: u8,
     appearance: CharacterAppearance,
+    kit: &NewCharacterKit,
 ) -> Result<(u64, CharacterData), String> {
     let trimmed = name.trim();
     if trimmed.len() < 2 {
@@ -397,10 +402,14 @@ pub fn create_character_with_appearance(
     }
     let character_id = next_id(db, "character");
     let data = default_character_data(name, race, class, appearance);
-    save_new_character(db, account_id, character_id, name, &data);
+    let progression = kit.starting_progression(race, class)?;
+    let mut mint = || next_id(db, "item_instance");
+    let inventory = kit.starting_inventory(data, &mut mint)?;
+    save_new_character(db, account_id, character_id, name, &inventory.character);
     crate::maps::persistence::save_character_map(db, character_id, start_location(race).map_id);
-    save_inventory(db, character_id, &InventoryData::default());
-    Ok((character_id, data))
+    save_inventory_record(db, character_id, &inventory);
+    crate::persistence_progression::save_progression(db, character_id, &progression);
+    Ok((character_id, inventory.character))
 }
 
 /// Check that a character name is not already taken.
@@ -542,7 +551,7 @@ pub(crate) fn create_character_with_test_bags(
             item(2770, "Copper Ore", 10, 25),
         ],
     };
-    save_inventory(db, created.0, &bags);
+    crate::persistence::save_inventory(db, created.0, &bags);
     Ok(created)
 }
 

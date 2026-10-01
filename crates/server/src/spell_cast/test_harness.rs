@@ -84,7 +84,7 @@ pub(crate) fn class_spells(data: &WorldData) -> ClassSpells {
                 learnable: Vec::new(),
                 specs: Vec::new(),
                 traits: class.traits.clone(),
-                racial: Vec::new(),
+                default_skills: Vec::new(),
             })
             .collect(),
     }
