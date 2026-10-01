@@ -421,7 +421,9 @@ fn placed_wmos(obj0: &[u8]) -> Result<Vec<u32>, String> {
         return Ok(Vec::new());
     };
     Ok(modf
-        .chunks_exact(MODF_ENTRY_SIZE)
+        .as_chunks::<MODF_ENTRY_SIZE>()
+        .0
+        .iter()
         .filter_map(|entry| parse_modf_entry(entry).ok())
         .map(|placement| placement.fdid)
         .collect())
