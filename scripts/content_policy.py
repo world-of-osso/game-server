@@ -44,11 +44,11 @@ import derived_merchants
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
-import db2  # noqa: E402
-import retail_content  # noqa: E402
-import wowhead_loot  # noqa: E402
-from content_common import Report, clone_table  # noqa: E402
-from economy_crafting import crafting_item_ids  # noqa: E402
+import db2
+import retail_content
+import wowhead_loot
+from content_common import Report, clone_table
+from economy_crafting import crafting_item_ids
 
 PROJECT_DIR = SCRIPT_DIR.parent
 WRATH_BUILD = "3.4.0.47659"

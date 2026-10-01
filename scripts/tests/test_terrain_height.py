@@ -1,12 +1,12 @@
 """Root ADT sampling using authored chunk axes and four-triangle fans."""
 
 import importlib.util
-from pathlib import Path
 import struct
 import subprocess
 import sys
 import tempfile
 import unittest
+from pathlib import Path
 
 SCRIPT = Path(__file__).resolve().parents[1] / "terrain_height.py"
 SIZE = 100.0 / 3.0
@@ -152,12 +152,12 @@ class TerrainHeightTest(unittest.TestCase):
                 "--world-y",
                 str(ORIGIN_Y - 8 * SIZE - 3.5 * UNIT),
             ]
-            result = subprocess.run(args, capture_output=True, text=True)
+            result = subprocess.run(args, capture_output=True, text=True, check=False)
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertEqual(float(result.stdout), 150.0)
             self.assertEqual(result.stderr, "")
             path.write_bytes(terrain())
-            result = subprocess.run(args, capture_output=True, text=True)
+            result = subprocess.run(args, capture_output=True, text=True, check=False)
             self.assertNotEqual(result.returncode, 0)
             self.assertEqual(result.stdout, "")
             self.assertIn("MCVT", result.stderr)

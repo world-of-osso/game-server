@@ -3,16 +3,16 @@
 import copy
 import importlib.util
 import json
-from pathlib import Path
 import sqlite3
 import sys
 import tempfile
 import unittest
+from pathlib import Path
 
 SCRIPTS = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(SCRIPTS))
-from content_common import clone_table
 import retail_content
+from content_common import clone_table
 
 if importlib.util.find_spec("derived_merchants"):
     import derived_merchants as adapter
@@ -249,6 +249,16 @@ class DerivedMerchantTests(unittest.TestCase):
         record["vendors"] = []
         self.assert_rejected_without_writes(record, "vendors")
 
+    def test_non_object_vendor_rejected_without_writes(self):
+        record = merchant()
+        record["vendors"][1] = None
+        before = snapshot(self.conn)
+        with self.conn:
+            self.conn.execute("BEGIN")
+            with self.assertRaisesRegex(TypeError, "vendor: expected an object"):
+                adapter.apply_derived_merchants(self.conn, [record])
+            self.assertEqual(snapshot(self.conn), before)
+
     def test_vendor_limits_currency_missing_and_mismatched_evidence_rejected(self):
         for field, value in (
             ("maxcount", 1),
@@ -358,13 +368,15 @@ class DerivedMerchantTests(unittest.TestCase):
             WHEN NEW.entry=243531 BEGIN SELECT RAISE(ABORT, 'publication failed'); END""")
         self.conn.commit()
         before = snapshot(self.conn)
-        with self.assertRaisesRegex(sqlite3.IntegrityError, "publication failed"):
-            with self.conn:
-                self.conn.execute("BEGIN")
-                self.conn.execute(
-                    "INSERT INTO content_creature (guid, id1) VALUES (123, 456)"
-                )
-                adapter.apply_derived_merchants(self.conn, [merchant()])
+        with (
+            self.assertRaisesRegex(sqlite3.IntegrityError, "publication failed"),
+            self.conn,
+        ):
+            self.conn.execute("BEGIN")
+            self.conn.execute(
+                "INSERT INTO content_creature (guid, id1) VALUES (123, 456)"
+            )
+            adapter.apply_derived_merchants(self.conn, [merchant()])
         self.assertEqual(snapshot(self.conn), before)
 
     def test_requires_caller_transaction_and_supports_empty_manifest(self):
@@ -393,15 +405,16 @@ class DerivedMerchantTests(unittest.TestCase):
             path = Path(directory) / "merchants.json"
             path.write_text(json.dumps([merchant()]))
             self.assertEqual(adapter.load_manifest(path), [merchant()])
-            for data in (
-                {"merchants": []},
-                [None],
-                [{"entry": 243531}],
-                [merchant(), merchant()],
+            for data, error in (
+                ({"merchants": []}, TypeError),
+                ([None], TypeError),
+                ([{"entry": 243531}], ValueError),
+                ([merchant(), merchant()], ValueError),
             ):
-                path.write_text(json.dumps(data))
-                with self.assertRaises(ValueError):
-                    adapter.load_manifest(path)
+                with self.subTest(data=data):
+                    path.write_text(json.dumps(data))
+                    with self.assertRaises(error):
+                        adapter.load_manifest(path)
             path.write_text("[NaN]")
             with self.assertRaises(ValueError):
                 adapter.load_manifest(path)

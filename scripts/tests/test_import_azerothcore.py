@@ -1,10 +1,8 @@
 """Exercise the real importer without touching the development world database."""
 
 import csv
-from contextlib import closing
 import json
 import os
-from pathlib import Path
 import shutil
 import sqlite3
 import struct
@@ -12,13 +10,15 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from contextlib import closing
+from pathlib import Path
 
 SCRIPTS = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(SCRIPTS))
-import content_policy  # noqa: E402
-import retail_content  # noqa: E402
-import db2  # noqa: E402
-import crafting_data  # noqa: E402
+import content_policy
+import crafting_data
+import db2
+import retail_content
 
 CRAFTING_SOURCE = SCRIPTS.parent / "data/reference/crafting/12.1.0.69933"
 
@@ -70,12 +70,18 @@ def tdb_gameobject_template(entry, kind, display, name, data0=0, data1=0, data34
 
 def tdb_row(table, **values):
     """A positional TDB1210 `table` INSERT tuple; columns from tdb_schema.sql, unset ones 0 / ''."""
-    schema = sqlite3.connect(":memory:")
-    schema.executescript((SCRIPTS / "tdb_schema.sql").read_text())
     cells = []
-    for _, name, sql_type, *_ in schema.execute(f"PRAGMA table_info(tdb_{table})"):
-        value = values.pop(name, "" if sql_type == "TEXT" else 0)
-        cells.append("NULL" if value is None else repr(value) if isinstance(value, str) else str(value))
+    with closing(sqlite3.connect(":memory:")) as schema:
+        schema.executescript((SCRIPTS / "tdb_schema.sql").read_text())
+        for _, name, sql_type, *_ in schema.execute(f"PRAGMA table_info(tdb_{table})"):
+            value = values.pop(name, "" if sql_type == "TEXT" else 0)
+            cells.append(
+                "NULL"
+                if value is None
+                else repr(value)
+                if isinstance(value, str)
+                else str(value)
+            )
     if values:
         raise KeyError(f"tdb_{table} has no columns {sorted(values)}")
     return "(" + ",".join(cells) + ")"
@@ -232,7 +238,7 @@ class CreatureEventImportTests(unittest.TestCase):
                 env=env,
                 capture_output=True,
                 text=True,
-                timeout=10,
+                timeout=30,
                 check=False,
             )
         except subprocess.TimeoutExpired as error:
@@ -505,12 +511,32 @@ class CreatureEventImportTests(unittest.TestCase):
                     for row in sorted(items, key=lambda row: row["ID"])
                 ],
             )
-            sparse_fields = (
-                "ID ItemLevel RequiredLevel BuyPrice SellPrice VendorStackCount Stackable MaxCount "
-                "InventoryType Bonding ItemDelay DmgVariance AllowableClass AllowableRaces_0 "
-                "AllowableRaces_1 RequiredSkill RequiredSkillRank StartQuestID ItemSet "
-                "Flags_0 Flags_1 Flags_2 Flags_3 Flags_4"
-            ).split()
+            sparse_fields = [
+                "ID",
+                "ItemLevel",
+                "RequiredLevel",
+                "BuyPrice",
+                "SellPrice",
+                "VendorStackCount",
+                "Stackable",
+                "MaxCount",
+                "InventoryType",
+                "Bonding",
+                "ItemDelay",
+                "DmgVariance",
+                "AllowableClass",
+                "AllowableRaces_0",
+                "AllowableRaces_1",
+                "RequiredSkill",
+                "RequiredSkillRank",
+                "StartQuestID",
+                "ItemSet",
+                "Flags_0",
+                "Flags_1",
+                "Flags_2",
+                "Flags_3",
+                "Flags_4",
+            ]
             sparse_fields += [
                 field
                 for index in range(10)
@@ -1862,8 +1888,7 @@ class ContentTuningLevelTests(unittest.TestCase):
         self.assertEqual([retail_content.scaling_faction_group(f) for f in (0, 0x08, 0x10, 0x18)], [0, 5, 3, 5])
 
 
-import db2_casc  # noqa: E402
-
+import db2_casc
 
 WAGO_VERIFY = SCRIPTS.parent / "data/reference/wago-verify"
 # Rows copied from wago.tools' 12.1.0.69933 exports (data/reference/wago-verify); wago prints

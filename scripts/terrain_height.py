@@ -8,8 +8,8 @@ MCNK index_y advances world X rows; index_x advances world Y columns.
 
 import argparse
 import math
-from pathlib import Path
 import struct
+from pathlib import Path
 
 CHUNK_SIZE = 100.0 / 3.0
 UNIT_SIZE = CHUNK_SIZE / 8.0

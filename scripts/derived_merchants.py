@@ -60,7 +60,7 @@ SPAWN_COLUMNS = (
 
 def require_fields(record, fields, label, optional=()):
     if not isinstance(record, dict):
-        raise ValueError(f"{label}: expected an object with explicit evidence")
+        raise TypeError(f"{label}: expected an object with explicit evidence")
     missing, unsupported = (
         fields - record.keys(),
         record.keys() - fields - set(optional),
@@ -163,7 +163,7 @@ def load_manifest(path):
         Path(path).read_text(encoding="utf-8"), parse_constant=reject_json_constant
     )
     if not isinstance(records, list):
-        raise ValueError("manifest: expected a JSON list of merchants")
+        raise TypeError("manifest: expected a JSON list of merchants")
     validate_manifest(records)
     return records
 
