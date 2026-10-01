@@ -196,8 +196,11 @@ pub(super) fn validate_offered_item(
 /// Why an accepted exchange was refused; each side sees its own Retail text.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum ExchangeRefusal {
-    /// `character_id` no longer has an offered item or the offered money.
+    /// `character_id` no longer has an offered item.
     OfferGone(u64),
+    /// `character_id` no longer has the offered money (TrinityCore
+    /// `HandleAcceptTradeOpcode` `EQUIP_ERR_NOT_ENOUGH_MONEY`).
+    NotEnoughMoney(u64),
     /// `character_id` has no room for what they receive.
     BagFull(u64),
     /// `character_id` would pass the gold cap.
@@ -209,6 +212,8 @@ impl ExchangeRefusal {
     pub(super) fn message_for(self, viewer: u64) -> &'static str {
         match self {
             Self::OfferGone(_) => ERR_ITEM_NOT_FOUND,
+            Self::NotEnoughMoney(who) if who == viewer => ERR_NOT_ENOUGH_MONEY,
+            Self::NotEnoughMoney(_) => "Trade failed.",
             Self::BagFull(who) if who == viewer => "Trade failed, you don't have enough space.", // ERR_TRADE_BAG_FULL
             Self::BagFull(_) => "Trade failed, target doesn't have enough space.", // ERR_TRADE_TARGET_BAG_FULL
             Self::TooMuchGold(who) if who == viewer => "At gold limit", // ERR_TOO_MUCH_GOLD
@@ -217,9 +222,10 @@ impl ExchangeRefusal {
     }
 }
 
-/// AzerothCore `HandleAcceptTradeOpcode`: both sides' items leave their bags, money
-/// moves, each side stores what it receives, and both inventories are written in
-/// one transaction. Nothing changes when anything does not fit.
+/// AzerothCore `HandleAcceptTradeOpcode`: the money is checked first, then both
+/// sides' items leave their bags, money moves, each side stores what it receives,
+/// and both inventories are written in one transaction. Nothing changes when
+/// anything is missing or does not fit.
 pub(super) fn execute_completed_trade(
     db: &redb::Database,
     templates: &ItemTemplates,
@@ -229,11 +235,6 @@ pub(super) fn execute_completed_trade(
     let load = |id| load_model(db, templates, id).map_err(|_| ExchangeRefusal::OfferGone(id));
     let mut initiator = load(trade.initiator)?;
     let mut target = load(trade.target)?;
-    let mut mint = || persistence::next_id(db, "item_instance");
-    let to_target = take_offered_items(&mut initiator, &trade.initiator_offer, &mut mint)
-        .ok_or(ExchangeRefusal::OfferGone(trade.initiator))?;
-    let to_initiator = take_offered_items(&mut target, &trade.target_offer, &mut mint)
-        .ok_or(ExchangeRefusal::OfferGone(trade.target))?;
     let initiator_gold = exchanged_gold(
         &initiator,
         trade.initiator,
@@ -246,6 +247,11 @@ pub(super) fn execute_completed_trade(
         trade.target_offer.gold,
         trade.initiator_offer.gold,
     )?;
+    let mut mint = || persistence::next_id(db, "item_instance");
+    let to_target = take_offered_items(&mut initiator, &trade.initiator_offer, &mut mint)
+        .ok_or(ExchangeRefusal::OfferGone(trade.initiator))?;
+    let to_initiator = take_offered_items(&mut target, &trade.target_offer, &mut mint)
+        .ok_or(ExchangeRefusal::OfferGone(trade.target))?;
     store_received(&mut initiator, to_initiator, templates, &mut mint)
         .ok_or(ExchangeRefusal::BagFull(trade.initiator))?;
     store_received(&mut target, to_target, templates, &mut mint)
@@ -271,7 +277,7 @@ fn exchanged_gold(
     let left = model
         .gold()
         .checked_sub(given)
-        .ok_or(ExchangeRefusal::OfferGone(character_id))?;
+        .ok_or(ExchangeRefusal::NotEnoughMoney(character_id))?;
     left.checked_add(received)
         .filter(|gold| *gold <= MAX_MONEY)
         .ok_or(ExchangeRefusal::TooMuchGold(character_id))
