@@ -528,7 +528,8 @@ fn new_class_monk_characters_cover_additional_authored_races() {
         ("Kulmonk", 32, 10, 31, 1),
         ("Earthenhorde", 84, 10, 17, 2),
         ("Earthenally", 85, 10, 18, 3),
-        ("Haranirally", 86, 1, 20, 4),
+        // IsAlliedRace: 10 (Player::GetStartLevel), whatever ChrRaces.StartingLevel (1).
+        ("Haranirally", 86, 10, 20, 4),
         ("Haranirhorde", 91, 10, 19, 116),
     ] {
         let (id, data) = create_character(&db, account_id, name, race, 10).unwrap();

@@ -661,6 +661,7 @@ fn hostile_civilian_ignores_nearby_player_until_hit() {
         ..FOREST_SPIDER
     };
     let kobold = spawn_creature(&mut app, &civilian, at(0.0, 0.0));
+    never_misses(&mut app, kobold);
     let player = spawn_player(&mut app, at(3.0, 0.0), 5);
     run(&mut app, 10);
     assert_eq!(state(&app, kobold), Some(CreatureState::Idle));
