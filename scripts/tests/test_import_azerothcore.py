@@ -611,7 +611,7 @@ class CreatureEventImportTests(unittest.TestCase):
         (self.tdb / "creature_trainer.sql").write_text("INSERT INTO `creature_trainer` VALUES (1346,163,4353,0);\n")
         result = self.run_import()
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        with sqlite3.connect(self.db) as conn:
+        with closing(sqlite3.connect(self.db)) as conn, conn:
             tables = {name for (name,) in conn.execute("SELECT name FROM sqlite_master WHERE type = 'table'")}
             for dead in ("trainer", "trainer_spell", "npc_trainer", "creature_default_trainer", "content_trainer_spell"):
                 self.assertNotIn(dead, tables)
@@ -681,7 +681,7 @@ class CreatureEventImportTests(unittest.TestCase):
         )
         result = self.run_import()
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        with sqlite3.connect(self.db) as conn:
+        with closing(sqlite3.connect(self.db)) as conn, conn:
             self.assertEqual(
                 conn.execute("SELECT guid, path_id, mount, auras FROM creature_addon ORDER BY guid").fetchall(),
                 [(76, 0, 0, None), (79968, 799680, 2410, "1244 7164")],
@@ -760,7 +760,7 @@ class CreatureEventImportTests(unittest.TestCase):
         result = self.run_import()
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         offset = retail_content.RETAIL_GUID_OFFSET
-        with sqlite3.connect(self.db) as conn:
+        with closing(sqlite3.connect(self.db)) as conn, conn:
             self.assertEqual(
                 conn.execute("SELECT guid, id1, map, position_x, position_y, spawntimesecs FROM content_creature"
                              " ORDER BY guid").fetchall(),
@@ -859,7 +859,7 @@ class CreatureEventImportTests(unittest.TestCase):
         self.write_transform_fixture()
         result = self.run_import()
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        with sqlite3.connect(self.db) as conn:
+        with closing(sqlite3.connect(self.db)) as conn, conn:
             self.assertEqual(
                 conn.execute("SELECT entry, name, faction FROM content_creature_template WHERE entry IN (45409, 2455)"
                              " ORDER BY entry").fetchall(),
@@ -917,7 +917,7 @@ class CreatureEventImportTests(unittest.TestCase):
                                                         "(46405,2,5305,3,0,0,0,0,0,0,0,63305)"])
         result = self.run_import()
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        with sqlite3.connect(self.db) as conn:
+        with closing(sqlite3.connect(self.db)) as conn, conn:
             self.assertEqual(
                 conn.execute("""SELECT CreatureID, ID, ItemID1, AppearanceModID1, ItemID2, AppearanceModID2, ItemID3,
                     AppearanceModID3 FROM content_creature_equip_template ORDER BY CreatureID, ID""").fetchall(),
@@ -938,7 +938,7 @@ class CreatureEventImportTests(unittest.TestCase):
         result = self.run_import()
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         offset = retail_content.RETAIL_GUID_OFFSET
-        with sqlite3.connect(self.db) as conn:
+        with closing(sqlite3.connect(self.db)) as conn, conn:
             self.assertEqual(
                 conn.execute("SELECT guid, modelid, unit_flags FROM content_creature WHERE guid > ? ORDER BY guid",
                              (offset,)).fetchall(),
@@ -1001,7 +1001,7 @@ class CreatureEventImportTests(unittest.TestCase):
         result = self.run_import()
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         offset = retail_content.RETAIL_GUID_OFFSET
-        with sqlite3.connect(self.db) as conn:
+        with closing(sqlite3.connect(self.db)) as conn, conn:
             self.assertEqual(
                 conn.execute("SELECT guid, id1, map, position_x FROM content_creature ORDER BY guid").fetchall(),
                 [(offset + 16397, 16123, 0, -8900.0), (offset + 375720, 46254, 34, 158.016),
@@ -1084,7 +1084,7 @@ class CreatureEventImportTests(unittest.TestCase):
         result = self.run_import()
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         offset = retail_content.RETAIL_GUID_OFFSET
-        with sqlite3.connect(self.db) as conn:
+        with closing(sqlite3.connect(self.db)) as conn, conn:
             self.assertEqual(
                 conn.execute("SELECT guid, id1, spawnDifficulties FROM content_creature WHERE map = 670 ORDER BY guid")
                 .fetchall(),
@@ -1159,7 +1159,7 @@ class CreatureEventImportTests(unittest.TestCase):
         result = self.run_import()
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         loot = retail_content.TDB_LOOT_OFFSET
-        with sqlite3.connect(self.db) as conn:
+        with closing(sqlite3.connect(self.db)) as conn, conn:
             self.assertEqual(
                 conn.execute("SELECT entry, slot, item FROM content_npc_vendor ORDER BY entry, slot").fetchall(),
                 [(54, 1, 2489), (54, 2, 200000), (999, 0, 2488)],
@@ -1220,7 +1220,7 @@ class CreatureEventImportTests(unittest.TestCase):
         result = self.run_import()
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         offset = retail_content.RETAIL_GUID_OFFSET
-        with sqlite3.connect(self.db) as conn:
+        with closing(sqlite3.connect(self.db)) as conn, conn:
             self.assertEqual(
                 conn.execute("SELECT guid, id, map, position_x, rotation2, spawntimesecs, state FROM content_gameobject"
                              " ORDER BY guid").fetchall(),
@@ -1286,7 +1286,7 @@ class CreatureEventImportTests(unittest.TestCase):
             tdb_row("broadcast_text", Text="", Text1="Retail text", ID=3001, VerifiedBuild=66044)])
         result = self.run_import()
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        with sqlite3.connect(self.db) as conn:
+        with closing(sqlite3.connect(self.db)) as conn, conn:
             self.assertEqual(
                 conn.execute("SELECT entry, gossip_menu_id FROM content_creature_template ORDER BY entry").fetchall(),
                 [(68, 9001), (2455, 1291), (26012, 0), (42384, 9000)],
@@ -1372,7 +1372,7 @@ class CreatureEventImportTests(unittest.TestCase):
         write_tdb(self.tdb, "quest_poi_points", [tdb_row("quest_poi_points", QuestID=26150, Idx1=0, Idx2=0, X=-9000, Y=-80, Z=90)])
         result = self.run_import()
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        with sqlite3.connect(self.db) as conn:
+        with closing(sqlite3.connect(self.db)) as conn, conn:
             self.assertEqual(
                 conn.execute("SELECT ID, QuestLevel, MinLevel, ContentTuningID, RewardMoney, RewardXPDifficulty, Flags,"
                              " AllowableRaces, LogTitle, LogDescription, QuestCompletionLog FROM content_quest_template"
@@ -1459,7 +1459,7 @@ class CreatureEventImportTests(unittest.TestCase):
         )
         result = self.run_import()
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        with sqlite3.connect(self.db) as conn:
+        with closing(sqlite3.connect(self.db)) as conn, conn:
             self.assertEqual(
                 conn.execute("SELECT CreatureID, Idx, CreatureDisplayID, VerifiedBuild FROM content_creature_template_model"
                              " ORDER BY CreatureID").fetchall(),
@@ -1482,7 +1482,7 @@ class CreatureEventImportTests(unittest.TestCase):
         self.write_wrath_only_display_fixture()
         result = self.run_import()
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        with sqlite3.connect(self.db) as conn:
+        with closing(sqlite3.connect(self.db)) as conn, conn:
             self.assertEqual(
                 conn.execute("SELECT CreatureDisplayID FROM content_creature_template_model WHERE CreatureID = 2349").fetchall(),
                 [(6808,)],
@@ -1499,7 +1499,7 @@ class CreatureEventImportTests(unittest.TestCase):
             "INSERT INTO `creature` VALUES\n" + tdb_creature(401, 2349, 1, 10.0, 10.0, 1.0) + ";\n")
         result = self.run_import()
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        with sqlite3.connect(self.db) as conn:
+        with closing(sqlite3.connect(self.db)) as conn, conn:
             self.assertEqual(
                 conn.execute("SELECT CreatureDisplayID FROM content_creature_template_model WHERE CreatureID = 2349").fetchall(),
                 [(520,)],
@@ -1719,7 +1719,7 @@ class Db2ReimportTests(unittest.TestCase):
         with (self.csv_dir / "SpellName.csv").open("a", newline="") as handle:
             csv.writer(handle).writerow([35395, "Crusader Strike"])
         self.db = root / "world.db"
-        with sqlite3.connect(self.db) as conn:
+        with closing(sqlite3.connect(self.db)) as conn, conn:
             conn.execute("CREATE TABLE chr_races (ID INTEGER PRIMARY KEY, Name TEXT)")
             conn.execute("INSERT INTO chr_races VALUES (1, 'Human')")
 
@@ -1727,7 +1727,7 @@ class Db2ReimportTests(unittest.TestCase):
         for _ in range(2):
             result = run_db2_import(self.csv_root, self.db)
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        with sqlite3.connect(self.db) as conn:
+        with closing(sqlite3.connect(self.db)) as conn, conn:
             self.assertEqual(conn.execute("SELECT ID, Name_lang FROM spell_name").fetchall(), [(35395, "Crusader Strike")])
             self.assertEqual(conn.execute("SELECT * FROM chr_races").fetchall(), [(1, "Human")])
             self.assertEqual(conn.execute("SELECT count(*) FROM db2_build").fetchone()[0], len(db2.TABLES))
@@ -1738,7 +1738,7 @@ class Db2ReimportTests(unittest.TestCase):
         result = run_db2_import(self.csv_root, self.db)
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("SpellName.csv header does not match spell_name", result.stderr)
-        with sqlite3.connect(self.db) as conn:
+        with closing(sqlite3.connect(self.db)) as conn, conn:
             self.assertEqual(conn.execute("SELECT ID, Name_lang FROM spell_name").fetchall(), [(35395, "Crusader Strike")])
 
 
