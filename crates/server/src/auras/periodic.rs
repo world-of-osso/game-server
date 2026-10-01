@@ -144,10 +144,8 @@ fn obs_mod_power(world: &mut World, ctx: &EffectCtx, unit: Entity, tick: &Tick) 
         );
         return;
     };
-    let max = world
-        .get::<crate::spell_cast::powers::PowerPools>(unit)
-        .and_then(|pools| pools.get(power))
-        .map_or(0.0, |pool| pool.max);
+    let max =
+        crate::spell_cast::powers::power_value(world, unit, power).map_or(0.0, |(_, max)| max);
     if max == 0.0 {
         return;
     }

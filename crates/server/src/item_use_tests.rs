@@ -1,7 +1,7 @@
 //! Using real food and water from the bags (`process_use_requests`) on real 50 ms ticks
 //! against data/world.db (skipped when absent or without its `item_effect` tables).
 
-use shared::components::{CombatStatus, Health, PlayerStandState, PowerType, StandState};
+use shared::components::{CombatStatus, Health, PlayerStandState, StandState};
 use shared::protocol::{
     CastFailed, InventoryChannel, InventoryError, InventoryErrorReason, ItemLocation, UseItem,
 };
@@ -24,6 +24,7 @@ const WATER_DRINK: u32 = 1_291_950;
 struct Eater {
     h: Harness,
     character_id: u64,
+    errors: Vec<InventoryError>,
 }
 
 fn world_db() -> std::path::PathBuf {
@@ -76,7 +77,11 @@ fn eater(items: &[u32], count: u32) -> Option<Eater> {
         current: 100.0,
         max: 1000.0,
     });
-    Some(Eater { h, character_id })
+    Some(Eater {
+        h,
+        character_id,
+        errors: Vec::new(),
+    })
 }
 
 fn app_world(h: &mut Harness) -> &mut World {
@@ -87,7 +92,9 @@ fn slot(slot: u8) -> ItemLocation {
     ItemLocation::Bag { bag: 0, slot }
 }
 
-/// `CMSG_USE_ITEM` for the backpack slot; it arrives and resolves 3 frames later.
+/// `CMSG_USE_ITEM` for the backpack slot; it arrives and resolves 3 frames later, and
+/// a refusal comes back within 3 more (drained every frame: unread loopback messages
+/// do not outlive their frame).
 fn use_slot(eater: &mut Eater, index: u8) {
     let connection = eater.h.connection;
     app_world(&mut eater.h)
@@ -97,7 +104,11 @@ fn use_slot(eater: &mut Eater, index: u8) {
             location: slot(index),
             target: None,
         });
-    eater.h.advance(3);
+    for _ in 0..6 {
+        eater.h.advance(1);
+        let errors = drain::<InventoryError>(&mut eater.h.app, connection);
+        eater.errors.extend(errors);
+    }
 }
 
 fn count_of(eater: &Eater, item_id: u32) -> u32 {
@@ -126,7 +137,7 @@ fn auras(eater: &Eater) -> Vec<u32> {
 }
 
 fn errors(eater: &mut Eater) -> Vec<InventoryError> {
-    drain::<InventoryError>(&mut eater.h.app, eater.h.connection)
+    std::mem::take(&mut eater.errors)
 }
 
 /// Eating the bread casts its food on the player, who sits down and heals 3% of max
@@ -198,21 +209,34 @@ fn water_restores_a_percent_of_mana_each_second_beside_food() {
     let Some(mut eater) = eater(&[BREAD, WATER], 5) else {
         return;
     };
-    eater.h.set_power(PowerType::Mana, 0.0);
-    let max = {
-        let pools = eater
+    let caster = eater.h.caster;
+    // Mana lives in the `Mana` component, not `PowerPools`; without base mana it does
+    // not regenerate, so every gain is the drink's.
+    app_world(&mut eater.h)
+        .get_mut::<shared::components::Mana>(caster)
+        .unwrap()
+        .current = 0.0;
+    app_world(&mut eater.h)
+        .get_mut::<crate::stats::CharacterStats>(caster)
+        .unwrap()
+        .base_mana = 0.0;
+    let mana = |eater: &Eater| {
+        *eater
             .h
             .app
             .world()
-            .get::<crate::spell_cast::powers::PowerPools>(eater.h.caster)
-            .unwrap();
-        pools.get(PowerType::Mana).unwrap().max
+            .get::<shared::components::Mana>(eater.h.caster)
+            .unwrap()
     };
+    let max = mana(&eater).max;
     use_slot(&mut eater, 1);
     assert_eq!(auras(&eater), vec![WATER_DRINK]);
     assert_eq!(count_of(&eater, WATER), 4);
-    let first = eater.h.power(PowerType::Mana);
-    assert!(first >= (max / 100.0).trunc(), "{first} of {max}");
+    // The drink's first tick lands on apply: 1% of 10 000.
+    let first = mana(&eater).current;
+    assert_eq!(first, (max / 100.0).trunc(), "{first} of {max}");
+    eater.h.advance(41);
+    assert_eq!(mana(&eater).current - first, 2.0 * (max / 100.0).trunc());
     use_slot(&mut eater, 0);
     let mut active = auras(&eater);
     active.sort_unstable();
