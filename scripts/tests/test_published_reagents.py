@@ -1,5 +1,6 @@
 """Published Wowhead reagent contracts; concrete subsets of cached spell pages."""
 
+from contextlib import closing, redirect_stderr
 import hashlib
 import importlib.util
 import json
@@ -9,8 +10,8 @@ import sys
 import tempfile
 import unittest
 from unittest.mock import patch
-from urllib.error import HTTPError
-from io import BytesIO
+from urllib.error import HTTPError, URLError
+from io import BytesIO, StringIO
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 if importlib.util.find_spec("published_reagents"):
@@ -147,10 +148,11 @@ class PublishedReagentTests(unittest.TestCase):
     def test_candidate_query_uses_actual_spell_not_ability_id(self):
         with tempfile.TemporaryDirectory() as root:
             db = Path(root) / "fixture.db"
-            with sqlite3.connect(db) as con:
+            with closing(sqlite3.connect(db)) as con:
                 con.executescript(
                     "CREATE TABLE skill_line_ability(ID,Spell,SkillupSkillLineID); CREATE TABLE spell_effect(SpellID,Effect); INSERT INTO skill_line_ability VALUES(7,1237528,2915),(8,1237486,2915),(9,999,165),(10,1237528,2915),(11,555,2915); INSERT INTO spell_effect VALUES(1237528,288),(1237486,288),(999,288),(555,24);"
                 )
+                con.commit()
             before = db.read_bytes()
             self.assertEqual(adapter.find_spell_ids(db, 2915), [1237486, 1237528])
             self.assertEqual(db.read_bytes(), before)
@@ -207,8 +209,81 @@ class PublishedReagentTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 adapter.load_record(cache, 1237528)
 
+    def test_rejects_cache_without_acquisition_metadata(self):
+        with tempfile.TemporaryDirectory() as root:
+            cache = Path(root)
+            (cache / "spell-1237528.html").write_text(page())
+            with (
+                self.assertRaises(ValueError),
+                patch.object(adapter, "fetch_page") as fetch,
+            ):
+                adapter.load_record(cache, 1237528)
+            fetch.assert_not_called()
+
+    def test_does_not_retry_permanent_transport_error(self):
+        with (
+            patch.object(
+                adapter, "urlopen", side_effect=URLError("unknown URL scheme")
+            ) as opener,
+            patch.object(adapter.time, "sleep") as sleep,
+        ):
+            with self.assertRaises(URLError):
+                adapter.fetch_page("https://www.wowhead.com/spell=1237528")
+            self.assertEqual(opener.call_count, 1)
+            sleep.assert_not_called()
+
+    def test_cli_cached_records_preserve_db_and_wrapper_contract(self):
+        with tempfile.TemporaryDirectory(
+            dir=Path(__file__).resolve().parents[2]
+        ) as root:
+            root = Path(root)
+            db = root / "fixture.db"
+            cache = root / "cache"
+            output = root / "evidence.json"
+            with closing(sqlite3.connect(db)) as con:
+                con.executescript(
+                    "CREATE TABLE skill_line_ability(Spell,SkillupSkillLineID); CREATE TABLE spell_effect(SpellID,Effect); INSERT INTO skill_line_ability VALUES(1237528,2915),(1237486,2915); INSERT INTO spell_effect VALUES(1237528,288),(1237486,288);"
+                )
+                con.commit()
+            before = db.read_bytes()
+            with patch.object(
+                adapter,
+                "fetch_page",
+                side_effect=[
+                    page().encode(),
+                    page(VEST_ROWS + SPARK_ROW, 1237486).encode(),
+                ],
+            ):
+                adapter.load_record(cache, 1237528)
+                adapter.load_record(cache, 1237486)
+            argv = [
+                "--db",
+                str(db),
+                "--skillup-line",
+                "2915",
+                "--cache-dir",
+                str(cache),
+                "--output",
+                str(output),
+            ]
+            with patch.object(adapter, "fetch_page") as fetch:
+                self.assertEqual(adapter.main(argv), 0)
+                fetch.assert_not_called()
+            self.assertEqual(db.read_bytes(), before)
+            wrapper = json.loads(output.read_text())
+            self.assertEqual(wrapper["schema_version"], 1)
+            self.assertEqual(wrapper["skillup_line"], 2915)
+            self.assertEqual(wrapper["effect"], 288)
+            self.assertEqual(
+                [r["spell_id"] for r in wrapper["records"]], [1237486, 1237528]
+            )
+            self.assertEqual([r["eligible"] for r in wrapper["records"]], [False, True])
+            with self.assertRaises(ValueError):
+                adapter.main(argv[:-1] + [str(db)])
+            self.assertEqual(db.read_bytes(), before)
+
     def test_cli_requires_explicit_arguments_and_rejects_tmp_cache(self):
-        with self.assertRaises(SystemExit):
+        with self.assertRaises(SystemExit), redirect_stderr(StringIO()):
             adapter.main([])
         with self.assertRaises(ValueError):
             adapter.main(

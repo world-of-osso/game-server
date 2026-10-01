@@ -18,6 +18,7 @@ import json
 from pathlib import Path
 import random
 import re
+import socket
 import sqlite3
 import time
 from urllib.error import HTTPError, URLError
@@ -256,7 +257,15 @@ def fetch_page(url):
             if error.code not in {408, 429, 500, 502, 503, 504} or attempt == 2:
                 raise
             delay = retry_delay(attempt, error.headers.get("Retry-After"))
-        except (URLError, TimeoutError):
+        except URLError as error:
+            reason = error.reason
+            transient = isinstance(reason, (TimeoutError, ConnectionError)) or (
+                isinstance(reason, socket.gaierror) and reason.errno == socket.EAI_AGAIN
+            )
+            if not transient or attempt == 2:
+                raise
+            delay = retry_delay(attempt, None)
+        except (TimeoutError, ConnectionError):
             if attempt == 2:
                 raise
             delay = retry_delay(attempt, None)
@@ -267,17 +276,12 @@ def fetch_page(url):
     raise AssertionError("Unreachable retry state")
 
 
-def utc_timestamp(timestamp=None):
-    date = (
-        datetime.now(timezone.utc)
-        if timestamp is None
-        else datetime.fromtimestamp(timestamp, timezone.utc)
-    )
-    return date.isoformat().replace("+00:00", "Z")
+def utc_timestamp():
+    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
 def load_record(cache_dir, spell_id):
-    """Cache HTML + acquisition metadata; preexisting raw captures use labeled mtime."""
+    """Cache HTML + acquisition metadata; never invent provenance for raw files."""
     spell_id = positive_u32(spell_id, "spell ID")
     cache = Path(cache_dir)
     cache.mkdir(parents=True, exist_ok=True)
@@ -286,20 +290,9 @@ def load_record(cache_dir, spell_id):
     source_url = f"https://www.wowhead.com/spell={spell_id}"
     if page_path.exists():
         raw = page_path.read_bytes()
-        if metadata_path.exists():
-            metadata = json.loads(metadata_path.read_text())
-        else:
-            metadata = {
-                "source_url": source_url,
-                "sha256": hashlib.sha256(raw).hexdigest(),
-                "captured_utc": utc_timestamp(page_path.stat().st_mtime),
-                "provenance": {
-                    "kind": "published-spell-page",
-                    "capture_method": "existing-cache",
-                    "timestamp_basis": "cache-file-mtime",
-                    "native_capture": False,
-                },
-            }
+        if not metadata_path.exists():
+            raise ValueError(f"Missing acquisition metadata: {metadata_path}")
+        metadata = json.loads(metadata_path.read_text())
     else:
         raw = fetch_page(source_url)
         metadata = {
@@ -314,15 +307,30 @@ def load_record(cache_dir, spell_id):
             },
         }
         page_path.write_bytes(raw)
+        metadata_path.write_text(json.dumps(metadata, indent=2) + "\n")
     if (
         metadata["sha256"] != hashlib.sha256(raw).hexdigest()
         or metadata["source_url"] != source_url
     ):
         raise ValueError(f"Cache source/hash mismatch for spell {spell_id}")
     parsed = parse_published_reagents(raw.decode("utf-8"), spell_id)
-    if not metadata_path.exists():
-        metadata_path.write_text(json.dumps(metadata, indent=2) + "\n")
-    return {**parsed, **metadata}
+    timestamp = metadata["captured_utc"]
+    if not isinstance(timestamp, str) or not timestamp.endswith("Z"):
+        raise ValueError("Cache requires a UTC acquisition timestamp")
+    datetime.fromisoformat(timestamp)
+    provenance = metadata["provenance"]
+    if (
+        provenance.get("kind") != "published-spell-page"
+        or provenance.get("native_capture") is not False
+    ):
+        raise ValueError("Cache is not published-page evidence")
+    return {
+        **parsed,
+        "source_url": source_url,
+        "sha256": metadata["sha256"],
+        "captured_utc": timestamp,
+        "provenance": provenance,
+    }
 
 
 def main(argv=None):
@@ -335,6 +343,10 @@ def main(argv=None):
     cache = args.cache_dir.resolve()
     if cache.is_relative_to("/tmp") or cache.is_relative_to("/var/tmp"):
         raise ValueError("Cache must be persistent, outside /tmp and /var/tmp")
+    if args.output.resolve() == args.db.resolve() or (
+        args.output.exists() and args.output.samefile(args.db)
+    ):
+        raise ValueError("Output must not overwrite the source database")
     spell_ids = find_spell_ids(args.db, args.skillup_line)
     records = [load_record(cache, spell_id) for spell_id in spell_ids]
     wrapper = {
