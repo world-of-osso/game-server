@@ -149,6 +149,34 @@ fn economy_system(
     if flow.phase == Phase::Done || action.operation.is_mail() {
         return;
     }
+    receive_merchant_inventory(action, &mut merchant, &mut receivers);
+    if *state.get() != CliState::InWorld {
+        return;
+    }
+    if let Err(error) = send_initial_interaction(action, &mut flow, &mut senders) {
+        finish(&mut flow, &mut exit, Err(error));
+        return;
+    }
+    receive_economy_responses(action, &mut flow, &mut senders, &mut receivers, &mut exit);
+    if flow.phase == Phase::Done {
+        return;
+    }
+    send_auction_open(&mut flow, &mut senders, &mut exit);
+    if report_merchant_list(action, &mut flow, &merchant, &mut exit) {
+        return;
+    }
+    send_pending_request(action, &mut flow, &mut merchant, &mut senders, &mut exit);
+    report_merchant_purchase(action, &mut flow, &merchant, &mut exit);
+    if let Some(error) = flow.timeout(flow.started.elapsed()) {
+        finish(&mut flow, &mut exit, Err(error));
+    }
+}
+
+fn receive_merchant_inventory(
+    action: &EconomyAction,
+    merchant: &mut MerchantState,
+    receivers: &mut Receivers,
+) {
     // Inventory and vendor responses use different channels from interaction.
     // Retain them even if they arrive before InteractionOpened.
     for mut receiver in &mut receivers.bag_snapshot {
@@ -168,45 +196,74 @@ fn economy_system(
             }
         }
     }
-    if *state.get() != CliState::InWorld {
-        return;
-    }
+}
+
+fn send_initial_interaction(
+    action: &EconomyAction,
+    flow: &mut EconomyFlow,
+    senders: &mut Senders,
+) -> Result<(), String> {
     if let Some(request) = flow.begin(action) {
-        if let Err(error) = send::<_, InteractionChannel>(&mut senders.interact, request) {
-            finish(&mut flow, &mut exit, Err(error));
-            return;
-        }
+        send::<_, InteractionChannel>(&mut senders.interact, request)?;
     }
-    receive_interaction(action, &mut flow, &mut senders, &mut receivers, &mut exit);
-    receive_auction(action, &mut flow, &mut receivers, &mut exit);
-    receive_merchant_failure(action, &mut flow, &mut receivers, &mut exit);
-    if flow.phase == Phase::Done {
-        return;
-    }
+    Ok(())
+}
+
+fn send_auction_open(
+    flow: &mut EconomyFlow,
+    senders: &mut Senders,
+    exit: &mut MessageWriter<AppExit>,
+) {
     if flow.phase == Phase::Opening && !flow.open_sent {
         match send::<_, AuctionChannel>(&mut senders.open, OpenAuctionHouse) {
             Ok(()) => {
                 flow.open_sent = true;
             }
-            Err(error) => finish(&mut flow, &mut exit, Err(error)),
+            Err(error) => finish(flow, exit, Err(error)),
         }
     }
+}
+
+fn report_merchant_list(
+    action: &EconomyAction,
+    flow: &mut EconomyFlow,
+    merchant: &MerchantState,
+    exit: &mut MessageWriter<AppExit>,
+) -> bool {
     if flow.phase == Phase::Request && matches!(action.operation, EconomyOperation::MerchantList) {
         if let Some(vendor) = &merchant.vendor {
-            finish(&mut flow, &mut exit, Ok(format!("merchant {vendor:#?}")));
-            return;
+            finish(flow, exit, Ok(format!("merchant {vendor:#?}")));
+            return true;
         }
     }
+    false
+}
+
+fn send_pending_request(
+    action: &EconomyAction,
+    flow: &mut EconomyFlow,
+    merchant: &mut MerchantState,
+    senders: &mut Senders,
+    exit: &mut MessageWriter<AppExit>,
+) {
     if flow.phase == Phase::Request {
-        match dispatch_request(action, &mut merchant, &mut senders) {
+        match dispatch_request(action, merchant, senders) {
             Ok(true) => {
                 flow.phase = Phase::Awaiting;
                 flow.started = std::time::Instant::now();
             }
             Ok(false) => {}
-            Err(error) => finish(&mut flow, &mut exit, Err(error)),
+            Err(error) => finish(flow, exit, Err(error)),
         }
     }
+}
+
+fn report_merchant_purchase(
+    action: &EconomyAction,
+    flow: &mut EconomyFlow,
+    merchant: &MerchantState,
+    exit: &mut MessageWriter<AppExit>,
+) {
     if let EconomyOperation::MerchantBuy { item_id, .. } = action.operation {
         if flow.phase == Phase::Awaiting
             && merchant
@@ -214,8 +271,8 @@ fn economy_system(
                 .is_some_and(|expected| merchant.count(item_id) >= expected)
         {
             finish(
-                &mut flow,
-                &mut exit,
+                flow,
+                exit,
                 Ok(format!(
                     "purchase confirmed by inventory: item_id={item_id} count={}",
                     merchant.count(item_id)
@@ -223,15 +280,35 @@ fn economy_system(
             );
         }
     }
-    if let Some(error) = flow.timeout(flow.started.elapsed()) {
-        finish(&mut flow, &mut exit, Err(error));
-    }
+}
+
+fn receive_economy_responses(
+    action: &EconomyAction,
+    flow: &mut EconomyFlow,
+    senders: &mut Senders,
+    receivers: &mut Receivers,
+    exit: &mut MessageWriter<AppExit>,
+) {
+    receive_interaction(action, flow, senders, receivers, exit);
+    receive_auction(action, flow, receivers, exit);
+    receive_merchant_failure(action, flow, receivers, exit);
 }
 
 fn receive_interaction(
     action: &EconomyAction,
     flow: &mut EconomyFlow,
     senders: &mut Senders,
+    receivers: &mut Receivers,
+    exit: &mut MessageWriter<AppExit>,
+) {
+    receive_interaction_failure(action, flow, receivers, exit);
+    receive_interaction_closed(action, flow, receivers, exit);
+    receive_interaction_opened(action, flow, senders, receivers, exit);
+}
+
+fn receive_interaction_failure(
+    action: &EconomyAction,
+    flow: &mut EconomyFlow,
     receivers: &mut Receivers,
     exit: &mut MessageWriter<AppExit>,
 ) {
@@ -242,6 +319,14 @@ fn receive_interaction(
             }
         }
     }
+}
+
+fn receive_interaction_closed(
+    action: &EconomyAction,
+    flow: &mut EconomyFlow,
+    receivers: &mut Receivers,
+    exit: &mut MessageWriter<AppExit>,
+) {
     for mut receiver in &mut receivers.closed {
         for response in receiver.receive() {
             if response.npc == action.npc {
@@ -249,6 +334,15 @@ fn receive_interaction(
             }
         }
     }
+}
+
+fn receive_interaction_opened(
+    action: &EconomyAction,
+    flow: &mut EconomyFlow,
+    senders: &mut Senders,
+    receivers: &mut Receivers,
+    exit: &mut MessageWriter<AppExit>,
+) {
     for mut receiver in &mut receivers.opened {
         for response in receiver.receive() {
             match flow.opened(action, response) {
@@ -273,6 +367,21 @@ fn receive_auction(
     if action.operation.is_merchant() {
         return;
     }
+    receive_auction_open(action, flow, receivers, exit);
+    receive_auction_operation(action, flow, receivers, exit);
+    receive_auction_search(action, flow, receivers, exit);
+    receive_auction_browse(action, flow, receivers, exit);
+    receive_auction_inventory(action, flow, receivers, exit);
+    receive_owned_auctions(action, flow, receivers, exit);
+    receive_bid_auctions(action, flow, receivers, exit);
+}
+
+fn receive_auction_open(
+    action: &EconomyAction,
+    flow: &mut EconomyFlow,
+    receivers: &mut Receivers,
+    exit: &mut MessageWriter<AppExit>,
+) {
     for mut receiver in &mut receivers.house {
         for response in receiver.receive() {
             if flow.phase != Phase::Opening {
@@ -287,6 +396,14 @@ fn receive_auction(
             }
         }
     }
+}
+
+fn receive_auction_operation(
+    action: &EconomyAction,
+    flow: &mut EconomyFlow,
+    receivers: &mut Receivers,
+    exit: &mut MessageWriter<AppExit>,
+) {
     for mut receiver in &mut receivers.operation {
         for response in receiver.receive() {
             if !response.success {
@@ -304,28 +421,35 @@ fn receive_auction(
             }
         }
     }
+}
+
+fn receive_auction_search(
+    action: &EconomyAction,
+    flow: &mut EconomyFlow,
+    receivers: &mut Receivers,
+    exit: &mut MessageWriter<AppExit>,
+) {
     for mut receiver in &mut receivers.search {
         for response in receiver.receive() {
             if flow.phase == Phase::Awaiting
                 && matches!(action.operation, EconomyOperation::Search(_))
             {
-                let elapsed = flow.started.elapsed().as_secs_f64() * 1000.0;
                 finish(
                     flow,
                     exit,
-                    Ok(format!(
-                        "search request_response_ms={elapsed:.3} page={} page_size={} total_results={} returned={} query={:?}\n{:#?}",
-                        response.query.page,
-                        response.query.page_size,
-                        response.total_results,
-                        response.results.len(),
-                        response.query,
-                        response.results
-                    )),
+                    Ok(format_search(&response, flow.started.elapsed())),
                 );
             }
         }
     }
+}
+
+fn receive_auction_browse(
+    action: &EconomyAction,
+    flow: &mut EconomyFlow,
+    receivers: &mut Receivers,
+    exit: &mut MessageWriter<AppExit>,
+) {
     for mut receiver in &mut receivers.browse {
         for response in receiver.receive() {
             if flow.phase == Phase::Awaiting
@@ -339,6 +463,14 @@ fn receive_auction(
             }
         }
     }
+}
+
+fn receive_auction_inventory(
+    action: &EconomyAction,
+    flow: &mut EconomyFlow,
+    receivers: &mut Receivers,
+    exit: &mut MessageWriter<AppExit>,
+) {
     for mut receiver in &mut receivers.inventory {
         for response in receiver.receive() {
             if flow.phase == Phase::Awaiting
@@ -348,6 +480,14 @@ fn receive_auction(
             }
         }
     }
+}
+
+fn receive_owned_auctions(
+    action: &EconomyAction,
+    flow: &mut EconomyFlow,
+    receivers: &mut Receivers,
+    exit: &mut MessageWriter<AppExit>,
+) {
     for mut receiver in &mut receivers.owned {
         for response in receiver.receive() {
             if flow.phase == Phase::Awaiting && matches!(action.operation, EconomyOperation::Owned)
@@ -356,6 +496,14 @@ fn receive_auction(
             }
         }
     }
+}
+
+fn receive_bid_auctions(
+    action: &EconomyAction,
+    flow: &mut EconomyFlow,
+    receivers: &mut Receivers,
+    exit: &mut MessageWriter<AppExit>,
+) {
     for mut receiver in &mut receivers.bids {
         for response in receiver.receive() {
             if flow.phase == Phase::Awaiting && matches!(action.operation, EconomyOperation::Bids) {
@@ -363,6 +511,19 @@ fn receive_auction(
             }
         }
     }
+}
+
+fn format_search(response: &AuctionSearchResults, elapsed: Duration) -> String {
+    let elapsed = elapsed.as_secs_f64() * 1000.0;
+    format!(
+        "search request_response_ms={elapsed:.3} page={} page_size={} total_results={} returned={} query={:?}\n{:#?}",
+        response.query.page,
+        response.query.page_size,
+        response.total_results,
+        response.results.len(),
+        response.query,
+        response.results
+    )
 }
 
 fn format_browse(response: &AuctionBrowseResults, elapsed: Duration) -> String {
