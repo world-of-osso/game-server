@@ -15,7 +15,7 @@ use shared::components::{
 use shared::protocol::{
     AttackStart, AttackStop, AttackStopped, AttackSwing, CancelAura, CastFailed, CombatChannel,
     CombatLogEvent, ProtocolPlugin, SetTarget, SpellCastIntent, SpellChargesUpdate,
-    SpellCooldownUpdate, SpellGo, StopSpellCast,
+    SpellCooldownUpdate, SpellFailure, SpellGo, StopSpellCast,
 };
 
 use super::powers::{PowerPools, PowerTypeTable, load_power_type_table};
@@ -84,7 +84,7 @@ pub(crate) fn class_spells(data: &WorldData) -> ClassSpells {
                 learnable: Vec::new(),
                 specs: Vec::new(),
                 traits: class.traits.clone(),
-                racial: Vec::new(),
+                default_skills: Vec::new(),
             })
             .collect(),
     }
@@ -201,6 +201,8 @@ pub(crate) fn spawn_peer_connection(app: &mut App, player: Entity, peer: u64) ->
                 MessageReceiver::<CombatLogEvent>::default(),
                 MessageSender::<SpellGo>::default(),
                 MessageReceiver::<SpellGo>::default(),
+                MessageSender::<SpellFailure>::default(),
+                MessageReceiver::<SpellFailure>::default(),
             ),
             (
                 MessageSender::<AttackSwing>::default(),
@@ -294,6 +296,7 @@ pub(crate) fn harness_with_plugins(
                 },
                 shared::components::UnitStats::default(),
                 shared::components::CombatRatings::default(),
+                shared::components::DerivedStats::default(),
             ));
     }
     app.world_mut().entity_mut(caster).insert(known);

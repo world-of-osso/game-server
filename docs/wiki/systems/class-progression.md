@@ -14,9 +14,26 @@
   - `Class C is not available for race R`
 - The fallback race list and the dead `chr_races` query are removed.
 
-## Racial spells
+## Default skill spells
 
-Each race's racial skill line is learned at creation and as levels rise (TrinityCore `Player::LearnDefaultSkills` and `LearnSkillRewardedSpells`, Player.cpp:25275-25291, 25407-25457). The racial lines are the `skill_race_class_info` rows with Availability 1 in skill-line categories 5 and 9 that are limited to some races (not Riding 762 or the all-race lines). Their automatic `skill_line_ability` spells are added by race and class mask: Human Will to Survive 59752, Orc Blood Fury 20572, Haranir Thorn Bloom 1237885. Active racials join the default bar after the class spells. TrinityCore learns the other default skills the same way (weapons, armor, languages, Defense, Riding, All Classes); those are not granted.
+Every default skill line gives its spells at creation and as levels rise. TrinityCore teaches them with `Player::LearnDefaultSkills` and `LearnSkillRewardedSpells` (Player.cpp:25275-25336, 25407-25457).
+
+- **Lines:** `ClassInfo.default_skills` holds the `skill_race_class_info` rows with Availability 1 whose ClassMask allows the class. The class's own line is excluded because it is `learnable`. Rows are ordered by skill line, then row ID.
+- **Row choice:** for each skill line, the first row whose `RaceMasks` allow the race and whose `MinLevel` is reached is used.
+- **Spells:** the row's auto-learned abilities that match the race and are at or below the level. Examples:
+  - Human Will to Survive 59752, Orc Blood Fury 20572, Haranir Thorn Bloom 1237885
+  - weapon and armor passives: One-Handed Swords 201, Cloth 9078
+  - languages: Language Orcish 669
+  - GENERIC Auto Attack 6603
+  - All Classes Recuperate 1231411
+- **Skill value:** an AutomaticSkillRank ability also needs the line's starting skill value (`SkillRange::value`, `LearnDefaultSkill`):
+  - 1 by default
+  - 300 for languages
+  - the maximum for `SKILL_FLAG_ALWAYS_MAX_VALUE` lines
+  - `(level - 1) * 5` for a Death Knight
+  
+  Garrison Enchanting 161211 needs 35, so only a Death Knight at level 8 or higher learns it.
+- The server keeps no skill values itself.
 
 ## New-character start levels and temporary locations
 
@@ -55,12 +72,9 @@ The list is stored in the `KnownSpells` component. Cast validation should call `
 - `SetActionButton` with `Spell(id)` requires a known spell. `Item`/`Macro` refs are stored as given, and `None` clears the slot.
   - Accepted requests are persisted and get no reply.
   - Rejected requests are answered with the unchanged `ActionBarSnapshot`.
-- **Default bar:** when a character has no progression record, its first 12 known non-passive spells go on slots 0–11 in learn order.
-  - Known spells come only from the class skill line, the spec and talents, so profession and riding spells never qualify.
-  - Class mounts are skipped: learnables with a `spell_effect.EffectAura` 78 (SPELL_AURA_MOUNTED) effect (`LearnableSpell.mount`). A new Human Paladin knows Summon Warhorse 13819 and Summon Charger 23214 but its bar is only Crusader Strike 35395 on slot 0.
-  - Other utility spells without a mount aura still qualify, for example Sense Undead 5502 at level 10.
-  - Saved bars of existing characters are not changed.
-  - A new Orc Warrior gets Slam 1464 on slot 0 and Attack 88163 on slot 1.
+- **Create bar:** character creation stores the race/class `playercreateinfo_action` buttons ([[new-character-kit]]). A character without a progression record enters with an empty bar.
+  - A new Orc Warrior has Slam 1464 (0), Blood Fury 20572 (9), Recuperate 1231411 (10), Attack 88163 (72) and Blood Fury (81).
+  - Entering the world prunes buttons whose spells are not known; TrinityCore keeps them. [[new-character-kit]] lists the affected buttons.
 - **Overrides:** a button of a spell that an applied talent overrides now holds the talent spell. When the talent is removed and its spell is no longer known, the button goes back to the baseline spell. Both send `ActionBarSnapshot` and persist the bar. The rewrite also runs on enter world.
 - A spell button whose spell stops being known (spec change or lower level) is removed. The server then sends `ActionBarSnapshot` and persists the bar.
 - **Pushed spells:** each newly learned non-passive, non-mount spell (level-up, admin `set-level`, spec change, talent commit) goes to the first empty slot 0–11 in learn order unless already on the bar, as Retail `SPELL_PUSHED_TO_ACTIONBAR`; a full main bar takes none. A level 1 Warrior at level 2 gets Charge 100 on slot 2; switching Retribution to Holy fills the freed slots with Holy's actives.
@@ -107,4 +121,5 @@ The list is stored in the `KnownSpells` component. Cast validation should call `
 
 - [[spell-info]] — `ClassSpells` learnables, specs, passive flags
 - [[talents]] — trait trees, validation, `character_traits`
+- [[new-character-kit]] — creation items and action buttons
 - [[persistence]] — redb tables

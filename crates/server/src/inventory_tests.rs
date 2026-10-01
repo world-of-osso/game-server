@@ -644,6 +644,7 @@ fn equipping_real_weapon_updates_character_stats_and_main_hand() {
         Level(5),
         UnitStats::default(),
         CombatRatings::default(),
+        shared::components::DerivedStats::default(),
         Health {
             current: 1.0,
             max: 1.0,

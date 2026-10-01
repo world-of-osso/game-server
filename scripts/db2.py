@@ -66,6 +66,7 @@ TABLES = [
     "ContentTuning", "QuestMoneyReward", "ExpectedStat", "ExpectedStatMod", "ContentTuningXExpected",
     "Map", "MapDifficulty", "AreaTrigger", "AreaTriggerActionSet", "Difficulty", "DungeonEncounter",
     "MapDifficultyXCondition", "PlayerCondition",
+    "CharacterLoadout", "CharacterLoadoutItem", "ItemEffect", "ItemXItemEffect",
 ]
 # Extracted from local CASC by FileDataID (community listfile), pinned to the build's
 # WoWDBDefs layout hash: {table: (FileDataID, layout hash)}.

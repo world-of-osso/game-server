@@ -38,6 +38,7 @@ Server gameplay systems.
 | [[game-objects]] | Guild Vault and Mailbox spawns from content_gameobject, GeoBox reach check, UseGameObject |
 | [[stand-state]] | Player sit/sleep/kneel/chair state: requests, stand-up rules, seated food and drink, sitting regen and auto-crit, chairs, item use |
 | [[meeting-stones]] | Meeting stone summons: GameObject::Use checks, 59782 cast and channel, TRANS_DOOR ritual portal, SUMMON_PLAYER offer, accept teleport |
+| [[new-character-kit]] | TrinityCore Player::Create kit: CharacterLoadout items equipped/stored, playercreateinfo_action bar, server inventory gaps (bags, jewelry, dual wield) |
 | [[trade]] | Trade sessions, AzerothCore initiation checks, one-transaction exchange through InventoryModel, refusal keeps the window open |
 | [[mail]] | Player and Auction House mail: per-character redb mailboxes, one-transaction send/take/return, delivery delay, expiry sweep, PendingMail |
 | [[professions]] | Retail skill lines (parent + expansion child), TDB1210 trainers, crafting through the spell pipeline (reagents, tools, CREATE_ITEM, TrinityCore skill-up chances) |
@@ -73,7 +74,7 @@ Server gameplay systems.
 
 Debug logs and root cause analyses.
 
-- [[midnight-economy-content]] — effect-288/Skillup2915 correction, published evidence, diagnostic staging catalog, genuine city-NPC gap and pending publication/preflight gates.
+- [[midnight-economy-content]] — effect-288/Skillup2915 correction, published references, approved approximate Zaralda placement and two local suppliers; recipe limits and independent integration gate remain.
 
 | Page | Summary |
 |------|---------|

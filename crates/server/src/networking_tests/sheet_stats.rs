@@ -1,12 +1,13 @@
-//! Character sheet stats over real UDP: a player receives its own `UnitStats` and
-//! `CombatRatings`, never another player's, and equipping gear updates them.
+//! Character sheet stats over real UDP: a player receives its own `UnitStats`,
+//! `CombatRatings` and `DerivedStats`, never another player's, and equipping gear
+//! updates them.
 
 use super::*;
 use crate::item_stats::load_item_scaling_tables;
 use crate::sheet_visibility::SheetVisibilityPlugin;
 use crate::stats::{EquippedItems, StatsPlugin};
 use lightyear::prelude::client::{ClientPlugins, Connect, NetcodeClient};
-use shared::components::{CombatRatings, Level, Player, UnitStats};
+use shared::components::{CombatRatings, DerivedStats, Level, Player, UnitStats};
 use shared::protocol::EquipmentSlot;
 use std::net::UdpSocket;
 use std::time::Duration;
@@ -104,6 +105,7 @@ fn spawn_warrior(server: &mut App, name: &str, x: f32) -> Entity {
             Level(5),
             UnitStats::default(),
             CombatRatings::default(),
+            DerivedStats::default(),
             Health {
                 current: 1.0,
                 max: 1.0,
@@ -123,6 +125,16 @@ fn seen_player(client: &mut App, name: &str) -> Option<Option<UnitStats>> {
         .iter(client.world())
         .find(|(player, _)| player.name == name)
         .map(|(_, stats)| stats.copied())
+}
+
+/// The named player's `DerivedStats` as one client sees them, if replicated.
+fn seen_derived(client: &mut App, name: &str) -> Option<Option<DerivedStats>> {
+    client
+        .world_mut()
+        .query::<(&Player, Option<&DerivedStats>)>()
+        .iter(client.world())
+        .find(|(player, _)| player.name == name)
+        .map(|(_, derived)| derived.copied())
 }
 
 #[test]
@@ -181,6 +193,17 @@ fn each_player_receives_only_its_own_sheet_stats_and_equipping_updates_them() {
         "Bob sees Alice without her sheet stats"
     );
     assert!(seen_player(&mut clients[1], "Bob").unwrap().is_some());
+    let alice_derived = seen_derived(&mut clients[0], "Alice")
+        .unwrap()
+        .expect("Alice receives her own derived stats");
+    assert_eq!(
+        alice_derived,
+        *server.world().get::<DerivedStats>(alice).unwrap()
+    );
+    // Every player's 5% base crit.
+    assert_eq!(alice_derived.crit_pct, 5.0);
+    assert_eq!(seen_derived(&mut clients[0], "Bob"), Some(None));
+    assert_eq!(seen_derived(&mut clients[1], "Alice"), Some(None));
 
     server.world_mut().entity_mut(alice).insert(EquippedItems {
         items: vec![(EquipmentSlot::MainHand, NOTCHED_SHORTSWORD)],
@@ -195,4 +218,5 @@ fn each_player_receives_only_its_own_sheet_stats_and_equipping_updates_them() {
         Some(None),
         "equipping does not leak Alice's stats to Bob"
     );
+    assert_eq!(seen_derived(&mut clients[1], "Alice"), Some(None));
 }

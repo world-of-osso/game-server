@@ -49,6 +49,7 @@ struct AdminResources<'w, 's> {
     interest_dirty: Option<Res<'w, crate::interest::InterestDirtyQueue>>,
     item_templates: Option<Res<'w, crate::item_templates::ItemTemplates>>,
     vendor_catalog: Option<Res<'w, crate::merchant::VendorCatalog>>,
+    create_info: Option<Res<'w, crate::player_create_info::PlayerCreateInfos>>,
     inventory_updates: ResMut<'w, crate::gold::GoldUpdateQueue>,
     changed_mailboxes: ResMut<'w, crate::mail::ChangedMailboxes>,
     quests: Option<Res<'w, crate::quest_data::QuestDb>>,
@@ -146,6 +147,27 @@ fn dispatch_resource_commands(
             &mut res.inventory_updates,
             character_name,
             (*item_id, *count),
+        ));
+    }
+    if let AdminRequest::CreateCharacter {
+        username,
+        name,
+        race,
+        class,
+    } = request
+    {
+        let (Some(create_info), Some(templates), Some(catalog)) =
+            (&res.create_info, &res.item_templates, &res.vendor_catalog)
+        else {
+            return Some(AdminResponse::Error("player create info not loaded".into()));
+        };
+        let kit = crate::player_create_info::NewCharacterKit {
+            create_info,
+            templates,
+            catalog,
+        };
+        return Some(handle_create_character(
+            db, &kit, username, name, *race, *class,
         ));
     }
     if let AdminRequest::QuestComplete {
@@ -416,6 +438,7 @@ fn dispatch(
         AdminRequest::Ping => AdminResponse::Pong,
         AdminRequest::CombatLog { .. }
         | AdminRequest::GrantItem { .. }
+        | AdminRequest::CreateCharacter { .. }
         | AdminRequest::QuestComplete { .. }
         | AdminRequest::MailDeliverNow { .. } => {
             // Handled in poll_admin_ipc before dispatch is called
@@ -437,12 +460,6 @@ fn dispatch(
         AdminRequest::CreateAccount { username, password } => {
             handle_create_account(db, &username, &password)
         }
-        AdminRequest::CreateCharacter {
-            username,
-            name,
-            race,
-            class,
-        } => handle_create_character(db, &username, &name, race, class),
         AdminRequest::KickAccount { username, reason } => {
             match persistence_accounts::find_account_by_username(&db.db, &username) {
                 Some(account_id) => {
@@ -723,7 +740,14 @@ mod tests {
         };
         persistence_accounts::register_account(&db.db, "fb_probe", "pw").expect("account");
 
-        let response = handle_create_character(&db, "fb_probe", "Probeone", 1, 2);
+        let response = handle_create_character(
+            &db,
+            &crate::player_create_info::OwnedKit::bare().kit(),
+            "fb_probe",
+            "Probeone",
+            1,
+            2,
+        );
 
         let AdminResponse::CharacterCreated { character_id, .. } = response else {
             panic!("expected CharacterCreated, got {response:?}");
@@ -748,12 +772,19 @@ mod tests {
             db: persistence::temp_database(),
         };
         assert!(matches!(
-            handle_create_character(&db, "nobody", "Probeone", 1, 2),
+            handle_create_character(&db, &crate::player_create_info::OwnedKit::bare().kit(), "nobody", "Probeone", 1, 2),
             AdminResponse::Error(ref e) if e.contains("nobody")
         ));
         persistence_accounts::register_account(&db.db, "fb_probe", "pw").expect("account");
         assert!(matches!(
-            handle_create_character(&db, "fb_probe", "x1", 1, 2),
+            handle_create_character(
+                &db,
+                &crate::player_create_info::OwnedKit::bare().kit(),
+                "fb_probe",
+                "x1",
+                1,
+                2
+            ),
             AdminResponse::Error(_)
         ));
     }

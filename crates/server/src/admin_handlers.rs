@@ -161,6 +161,7 @@ pub(crate) fn handle_create_account(
 /// Create a default-appearance character on an existing account, validated like client creation.
 pub(crate) fn handle_create_character(
     db: &persistence::GameDatabase,
+    kit: &crate::player_create_info::NewCharacterKit,
     username: &str,
     name: &str,
     race: u8,
@@ -176,6 +177,7 @@ pub(crate) fn handle_create_character(
         race,
         class,
         CharacterAppearance::default(),
+        kit,
     ) {
         Ok((character_id, data)) => AdminResponse::CharacterCreated {
             username: username.to_string(),

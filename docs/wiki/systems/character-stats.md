@@ -2,7 +2,7 @@
 
 `StatsPlugin` (`crates/server/src/stats.rs`) computes player stats in the retail 12.x model. Players spawn with default `UnitStats` and the health persisted in redb. `update_character_stats` then computes their stats on the first frame, and again whenever `Level`, `ActiveSpec`, `EquippedItems` or `StatModifiers` changes. It writes:
 
-- the effective `UnitStats` and `CombatRatings`;
+- the effective `UnitStats` and `CombatRatings`, and `DerivedStats` (`CharacterStats::derived`: spell power, attack power, the crit/haste/mastery/versatility percentages and leech/avoidance/speed);
 - `Health.max` and `Mana.max`, keeping each current value at the same fraction of the new max;
 - the server-only `CharacterStats` component, read by the [[spell-casting]] effects and costs.
 
@@ -42,7 +42,7 @@ NPCs have no `CharacterStats`, so their spell power, attack power and crit are 0
 8. **Mastery %** = (8 + DR(mastery rating / rating-per-point) + `mastery_points`) × mastery coefficient.
 9. **Armor** = gear armor rating.
 
-DR is the server's `secondary_dr`, curve 21024 from SimC `item_scaling.inc` (12.0.1.66709), applied as in `player_t::apply_combat_rating_dr`. It is the identity up to 30%. Rating conversion and DR exist only in `stats.rs`; the server does not use `shared::formulas` rating functions.
+DR is curve 21024 from SimC `item_scaling.inc` (12.0.1.66709), applied as in `player_t::apply_combat_rating_dr`. It is the identity up to 30%. Tertiary ratings (gear `ITEM_MOD_CR_SPEED` 61, `CR_LIFESTEAL` 62, `CR_AVOIDANCE` 63) convert with gtCombatRatings Speed/Lifesteal/Avoidance and diminish on curve 21025 (`DIMINISHING_RETURN_TERTIARY_CR_CURVE`, identity up to 10%); no content item carries one today. Rating conversion and DR exist only in `stats.rs`; the server does not use `shared::formulas` rating functions.
 
 Rating units follow SimC `rating_t::init`: the game-table value is the rating needed for 1%, or for 1 mastery point.
 
@@ -134,7 +134,7 @@ The spawned `Health` comes from redb. The first recompute keeps the persisted ra
 ### Gear
 
 - **Scaled item levels:** Wowhead shows some old items at a level other than ItemSparse `ItemLevel` (Vendetta 20 at 83, Riverpaw Leather Vest 6 at 80, Forlorn Breastplate 35 at 34). The source of that scaling (drop context bonus lists, ContentTuning, `PlayerLevelToItemLevelCurveID`) is not identified; the server uses the static, squished level. ItemBonus/bonus-tree levels are not applied.
-- **Not modeled:** sockets and gems, enchants, tertiary stats (leech, avoidance, speed), bonus armor, ranged swings. Auto-attacks swing `main_hand` and `off_hand` ([[player-damage]]).
+- **Not modeled:** sockets and gems, enchants, the effects of leech, avoidance and speed (only their sheet percentages), bonus armor, ranged swings. Auto-attacks swing `main_hand` and `off_hand` ([[player-damage]]).
 - **Admin grant:** `grant-equipment` writes equipment without the inventory change queue, so an online player's `EquippedItems` updates at the next inventory change or relog.
 
 ### Other
@@ -143,7 +143,7 @@ The spawned `Health` comes from redb. The first recompute keeps the persisted ra
   - `octclasscombatratingscalar`;
   - multiplicative haste stacking;
   - dodge, parry and block from stats.
-- **Replication:** `CharacterStats` is server-only. `Health` and `Mana` replicate to every observer; `UnitStats` and `CombatRatings` only to the owning connection (`sheet_visibility.rs`: `SheetOwner(connection)`, set on `PlayerLink` insert, is a replicon visibility filter scoped to those two components). They feed the client's character sheet; its crit/haste/mastery/versatility percentages are not replicated.
+- **Replication:** `CharacterStats` is server-only. `Health` and `Mana` replicate to every observer; `UnitStats`, `CombatRatings` and `DerivedStats` only to the owning connection (`sheet_visibility.rs`: `SheetOwner(connection)`, set on `PlayerLink` insert, is a replicon visibility filter scoped to those three components). They feed the client's character sheet and its spell tooltips (spell/attack power scaled effect points).
 - **Shared formulas:** shared-protocol `formulas/rating_data.rs` interleaves a level column into every sixth entry and ends at level 80, and `rating_to_percent` divides by `raw × 100`, which is 100× too small.
   - The server no longer calls any of them.
   - They are scheduled for deletion in shared-protocol.

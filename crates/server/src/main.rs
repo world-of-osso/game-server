@@ -66,6 +66,7 @@ mod persistence_accounts;
 mod persistence_character;
 mod persistence_progression;
 mod persistence_types;
+mod player_create_info;
 mod profession;
 mod pvp;
 mod quest;
@@ -161,6 +162,7 @@ fn add_social_plugins(app: &mut App) {
         .add_plugins(inspect::InspectPlugin)
         .add_plugins(trade::TradePlugin)
         .add_plugins(item_templates::ItemTemplatesPlugin)
+        .add_plugins(player_create_info::PlayerCreateInfoPlugin)
         .add_plugins(item_stats::ItemScalingPlugin)
         .add_plugins(inventory::InventoryPlugin)
         .add_plugins(appearance_collection::AppearanceCollectionPlugin)

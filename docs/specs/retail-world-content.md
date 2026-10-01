@@ -31,6 +31,7 @@ Spawn and id rules
 - [x] Loot per difficulty: the difficulty row's TrinityCore `LootID` (+20,000,000) when it has loot, else Wowhead drops of that difficulty's mode (entry + 30,000,000 at the lowest spawn difficulty, entry + 30,000,000 + difficulty × 1,000,000 at the others), else none and no money.
 - [x] Retail spawn guids are the TrinityCore guid + 20,000,000 (`RETAIL_GUID_OFFSET`), because 10 TrinityCore creature guids collide with AzerothCore spawns kept on other maps.
 - [x] TrinityCore loot template and reference ids are also + 20,000,000 (`TDB_LOOT_OFFSET`), in creature `lootid` and in chest and fishing-hole `Data1`.
+- [x] Explicitly approved derived merchant placements may supplement missing native spawns using genuine merchant identity, native template/model rows, source-backed vendor data, and an approximate UI-map point grounded in client terrain. Derived coordinates and local facing/default policies must remain labelled, never represented as native Retail capture. Rebuilds retain the configured placement and supplier rows; invalid required manifests fail preflight before database deletion. Source tables and unrelated content remain unchanged. Zaralda 243531 is the approved current case; currency/limited-stock suppliers remain unsupported.
 - [x] Raw AzerothCore tables, `tdb_*` tables and DB2 tables stay verbatim. Every dropped or replaced row is in `data/reports/content-dropped.csv` with its reason.
 - [x] Newton Burnside stands at the Retail bank counter (-8908.35, 639.24). Auctioneer Jaxon stands above the Retail auction house floor (z 99.62 > 98.06).
 
@@ -114,8 +115,14 @@ Server behaviour on Retail content
 - `crates/server/src/npc_interaction/gossip.rs`: reads the `content_gossip_*` and `content_npc_text` tables
 - `crates/server/src/quest_data.rs`, `loot/tables.rs`: read `content_creature_template`
 
+- `scripts/derived_merchants.py`, `scripts/derived-merchants.json` — validated, explicitly derived merchant publication inputs.
+- `scripts/terrain_height.py` — client ADT triangle-height sampling for derived placement.
+
 ## Tests asserting this spec
 
+- `scripts/tests/test_derived_merchants.py` — source identity, price/bundle, atomicity, preservation, idempotency and collision behavior.
+- `scripts/tests/test_terrain_height.py` — concrete terrain heights, axis/tile checks and invalid height data.
+- `scripts/tests/test_import_azerothcore.py` `test_derived_merchant_survives_two_full_rebuilds`, `test_invalid_derived_manifest_preserves_existing_database_bytes` — full importer persistence and preflight preservation.
 - `scripts/tests/test_import_azerothcore.py`
   - Fixtures: Retail spawns; Stockade spawns (`test_retail_stockade_spawns_replace_azerothcore_classic_stockade`); vendors and loot; game objects; gossip; quests.
   - `ContentTuningLevelTests`.

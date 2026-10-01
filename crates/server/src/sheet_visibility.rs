@@ -1,11 +1,11 @@
-//! Owner-only character sheet stats. `UnitStats` and `CombatRatings` replicate with
+//! Owner-only character sheet stats. `UnitStats`, `CombatRatings` and `DerivedStats` replicate with
 //! the player entity, but only the owning connection sees them: Retail sends a
 //! player's stat fields to that player alone (`UF::ActivePlayerData` owner fields).
 
 use bevy::prelude::*;
 use bevy_replicon::prelude::{AppVisibilityExt, VisibilityFilter};
 use lightyear::prelude::ReplicationDirtyQueue;
-use shared::components::{CombatRatings, UnitStats};
+use shared::components::{CombatRatings, DerivedStats, UnitStats};
 
 use crate::networking::PlayerLink;
 
@@ -17,7 +17,7 @@ pub struct SheetOwner(pub Entity);
 
 impl VisibilityFilter for SheetOwner {
     type ClientComponent = Self;
-    type Scope = (UnitStats, CombatRatings);
+    type Scope = (UnitStats, CombatRatings, DerivedStats);
 
     fn is_visible(&self, client: Entity, _component: Option<&Self>) -> bool {
         client == self.0

@@ -10,6 +10,7 @@ use rusqlite::{Connection, OpenFlags};
 use super::*;
 use crate::persistence::{self, temp_database};
 use crate::persistence_progression::load_trait_configs;
+use crate::player_create_info::PlayerCreateInfos;
 use crate::spell_info::load_class_spells;
 
 const HUMAN: u8 = 1;
@@ -35,6 +36,21 @@ fn class_spells() -> Option<ClassSpells> {
     }
     let conn = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
     Some(load_class_spells(&conn).expect("load class spells"))
+}
+
+/// A character created with the data/world.db kit (items and create actions).
+fn create_with_kit(db: &redb::Database, name: &str, race: u8, class: u8) -> Option<u64> {
+    let kit = crate::player_create_info::OwnedKit::from_world_db()?;
+    let created = persistence::create_character_with_appearance(
+        db,
+        1,
+        name,
+        race,
+        class,
+        Default::default(),
+        &kit.kit(),
+    );
+    Some(created.unwrap().0)
 }
 
 fn known_ids(classes: &ClassSpells, race: u8, class_id: u8, level: u8, spec: u32) -> Vec<u32> {
@@ -262,35 +278,40 @@ fn learned_spells_fill_first_empty_main_bar_slots() {
     const SHIELD_SLAM: u32 = 23922;
     const HAMSTRING: u32 = 1715;
     const WILL_TO_SURVIVE: u32 = 59752;
+    const RECUPERATE: u32 = 1231411;
     let Some(classes) = class_spells() else {
         return;
     };
     let db = temp_database();
-    let (character_id, _) =
-        persistence::create_character(&db, 1, "Varian", HUMAN, WARRIOR).unwrap();
+    let Some(character_id) = create_with_kit(&db, "Varian", HUMAN, WARRIOR) else {
+        return;
+    };
     let mut app = setup_app(db, classes);
     let player = spawn_player(&mut app, character_id, HUMAN, WARRIOR, 1);
     advance(&mut app);
     drain(&mut app, player);
-    // Occupy slot 3 so Shield Slam skips it.
+    // Occupy slot 1 so Charge skips it.
     send_request(
         &mut app,
         player,
         SetActionButton {
-            slot: 3,
+            slot: 1,
             action: Some(ActionRef::Item(6948)),
         },
     );
 
     set_live_level(app.world_mut(), character_id, 2);
     advance(&mut app);
-    // Will to Survive 59752, the Human racial, took slot 2 at creation.
+    // playercreateinfo_action (1, 1): Slam, Will to Survive, Recuperate, and Attack
+    // and Will to Survive on the stance bar.
     let charge_bar = vec![
         (0, ActionRef::Spell(SLAM)),
-        (1, ActionRef::Spell(ATTACK)),
-        (2, ActionRef::Spell(WILL_TO_SURVIVE)),
-        (3, ActionRef::Item(6948)),
-        (4, ActionRef::Spell(CHARGE)),
+        (1, ActionRef::Item(6948)),
+        (2, ActionRef::Spell(CHARGE)),
+        (9, ActionRef::Spell(WILL_TO_SURVIVE)),
+        (10, ActionRef::Spell(RECUPERATE)),
+        (72, ActionRef::Spell(ATTACK)),
+        (81, ActionRef::Spell(WILL_TO_SURVIVE)),
     ];
     assert_eq!(
         received::<ActionBarSnapshot>(&mut app, player),
@@ -303,9 +324,10 @@ fn learned_spells_fill_first_empty_main_bar_slots() {
     advance(&mut app);
     let mut bar = charge_bar;
     bar.extend([
-        (5, ActionRef::Spell(SHIELD_SLAM)),
-        (6, ActionRef::Spell(HAMSTRING)),
+        (3, ActionRef::Spell(SHIELD_SLAM)),
+        (4, ActionRef::Spell(HAMSTRING)),
     ]);
+    bar.sort_by_key(|&(slot, _)| slot);
     assert_eq!(
         received::<ActionBarSnapshot>(&mut app, player),
         vec![ActionBarSnapshot { slots: bar.clone() }]
@@ -318,62 +340,134 @@ fn learned_spells_fill_first_empty_main_bar_slots() {
     assert_eq!(saved, bar);
 }
 
+/// Player::Create (Player.cpp:505-511): a new Orc Warrior knows its class and
+/// default skill line spells and enters with its playercreateinfo_action buttons.
 #[test]
-fn new_warrior_enters_world_with_known_spells_and_default_bar() {
+fn new_orc_warrior_enters_world_with_default_skill_spells_and_create_actions() {
     let Some(classes) = class_spells() else {
         return;
     };
     let db = temp_database();
-    let (character_id, _) = persistence::create_character(&db, 1, "Garrosh", ORC, WARRIOR).unwrap();
+    let Some(character_id) = create_with_kit(&db, "Garrosh", ORC, WARRIOR) else {
+        return;
+    };
     let mut app = setup_app(db, classes);
     let player = spawn_player(&mut app, character_id, ORC, WARRIOR, 1);
     advance(&mut app);
 
-    // Warrior 137047, Parry 3127, Block 123829 and Initial Warrior 325446 are passive;
-    // the Orc racial line gives Blood Fury 20572, Hardiness 20573, Command 21563 and
-    // Languages 79743.
-    assert_eq!(
-        received::<KnownSpellsSnapshot>(&mut app, player),
-        vec![KnownSpellsSnapshot {
-            spells: vec![
-                137047, 1464, 3127, 88163, 123829, 20572, 20573, 21563, 79743, 325446
-            ],
-        }]
-    );
+    let known = received::<KnownSpellsSnapshot>(&mut app, player);
+    assert_eq!(known.len(), 1);
+    let known = &known[0].spells;
+    // The class line first: Warrior 137047, Slam 1464, Parry 3127, Attack 88163, Block 123829.
+    assert_eq!(known[..5], [137047, 1464, 3127, 88163, 123829]);
+    // Default skill lines: Racial - Orc (Blood Fury 20572, Hardiness 20573, Command
+    // 21563, Languages 79743), Language: Orcish 669, One-Handed Swords 201, GENERIC
+    // Auto Attack 6603, All Classes Recuperate 1231411.
+    for spell in [20572, 20573, 21563, 79743, 669, 201, 6603, 1231411] {
+        assert!(known.contains(&spell), "Orc Warrior lacks {spell}");
+    }
+    // Garrison Enchanting 161211 (line 1830, AutomaticSkillRank 35) needs a skill value
+    // the level 1 starting value 1 does not reach; Language Common 668 is not Orcish.
+    for spell in [161211, 668] {
+        assert!(!known.contains(&spell), "Orc Warrior knows {spell}");
+    }
     assert_eq!(
         received::<SpecializationChanged>(&mut app, player),
         vec![SpecializationChanged {
             spec_id: SPEC_WARRIOR_INITIAL,
         }]
     );
-    let default_bar = vec![
-        (0, ActionRef::Spell(1464)),
-        (1, ActionRef::Spell(88163)),
-        (2, ActionRef::Spell(20572)),
+    // playercreateinfo_action (2, 1): Slam, Blood Fury, Recuperate; Attack and Blood
+    // Fury on the stance bar.
+    let create_actions = [
+        (0, 1464),
+        (9, 20572),
+        (10, 1231411),
+        (72, 88163),
+        (81, 20572),
     ];
     assert_eq!(
         received::<ActionBarSnapshot>(&mut app, player),
         vec![ActionBarSnapshot {
-            slots: default_bar.clone(),
+            slots: create_actions
+                .iter()
+                .map(|&(slot, spell)| (slot, ActionRef::Spell(spell)))
+                .collect(),
         }]
     );
     assert_eq!(
         stored(&app, character_id),
         ProgressionData {
             spec_id: SPEC_WARRIOR_INITIAL,
-            action_bar: vec![
-                (0, ActionRefData::Spell(1464)),
-                (1, ActionRefData::Spell(88163)),
-                (2, ActionRefData::Spell(20572))
-            ],
+            action_bar: create_actions
+                .iter()
+                .map(|&(slot, spell)| (slot, ActionRefData::Spell(spell)))
+                .collect(),
         }
     );
-    assert!(
-        app.world()
-            .get::<KnownSpells>(player)
-            .unwrap()
-            .contains(1464)
-    );
+}
+
+/// Create action buttons that entering the world prunes (`init_player_progression`:
+/// spell overrides first, then unknown spells) for each playable race/class at its
+/// start level.
+fn pruned_create_actions(
+    classes: &ClassSpells,
+    create_info: &PlayerCreateInfos,
+) -> Vec<(u8, u8, u8, u32)> {
+    let mut pruned = Vec::new();
+    for (race, class) in crate::race_class::playable_pairs() {
+        let level = crate::race_class::start_level(race, class);
+        let player = Player {
+            name: "Probe".into(),
+            race,
+            class,
+            appearance: Default::default(),
+        };
+        let evaluated = evaluate(classes, &player, level, 0, |_| Vec::new());
+        let known = KnownSpells(evaluated.known.iter().map(|spell| spell.spell_id).collect());
+        let actions = &create_info.get(race, class).unwrap().actions;
+        let mut bar: BTreeMap<u8, ActionRef> = actions
+            .iter()
+            .map(|&(slot, action)| (slot, action_from_data(action)))
+            .collect();
+        apply_spell_overrides(&mut bar, &[], &evaluated.traits.overrides, &known);
+        prune_unknown_spells(&mut bar, &known);
+        for &(slot, action) in actions {
+            if let (ActionRefData::Spell(spell), None) = (action, bar.get(&slot)) {
+                pruned.push((race, class, slot, spell));
+            }
+        }
+    }
+    pruned.sort();
+    pruned
+}
+
+/// TrinityCore keeps a button whose spell the player does not know
+/// (`IsActionButtonDataValid` only checks that the spell exists); the server prunes
+/// it on entering the world. Below level 10 that drops: the Pandaren Warrior's
+/// buttons 11 and 83 (TDB rows of type spell with the Small Rice Cake item id 77273,
+/// spell Lava Eruption), every Death Knight's Blood Boil 50842 (SpellLevel 17, the
+/// Death Knight starts at 8) and the Demon Hunter's Felsaber 200175 (a Mounts line
+/// spell nothing teaches).
+#[test]
+fn create_action_spells_below_level_10_survive_entering_the_world() {
+    let Some(classes) = class_spells() else {
+        return;
+    };
+    let Some(kit) = crate::player_create_info::OwnedKit::from_world_db() else {
+        return;
+    };
+    let pruned: Vec<_> = pruned_create_actions(&classes, &kit.create_info)
+        .into_iter()
+        .filter(|&(race, class, _, _)| crate::race_class::start_level(race, class) < 10)
+        .collect();
+    let mut expected = vec![(24, 1, 11, 77273), (24, 1, 83, 77273)];
+    for race in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 22] {
+        expected.push((race, 6, 4, 50842));
+    }
+    expected.extend([(4, 12, 11, 200175), (10, 12, 11, 200175)]);
+    expected.sort();
+    assert_eq!(pruned, expected);
 }
 
 #[test]
@@ -514,12 +608,8 @@ fn set_action_button_validates_slot_and_known_spell() {
     let player = spawn_player(&mut app, 3, ORC, WARRIOR, 1);
     advance(&mut app);
     drain(&mut app, player);
-    // Slam, Attack and the Orc racial Blood Fury 20572.
-    let default_bar = vec![
-        (0, ActionRef::Spell(1464)),
-        (1, ActionRef::Spell(88163)),
-        (2, ActionRef::Spell(20572)),
-    ];
+    // A character without a progression record has an empty bar.
+    let default_bar = Vec::new();
 
     send_request(
         &mut app,
@@ -576,8 +666,6 @@ fn set_action_button_validates_slot_and_known_spell() {
     assert_eq!(
         stored(&app, 3).action_bar,
         vec![
-            (1, ActionRefData::Spell(88163)),
-            (2, ActionRefData::Spell(20572)),
             (7, ActionRefData::Spell(1464)),
             (119, ActionRefData::Item(6948)),
         ]
@@ -1034,27 +1122,30 @@ fn spec_change_loads_the_other_specs_saved_config() {
 }
 
 #[test]
-fn new_human_paladin_default_bar_skips_class_mounts() {
+fn new_human_paladin_bar_is_its_create_actions_without_class_mounts() {
     let Some(classes) = class_spells() else {
         return;
     };
     let db = temp_database();
-    let (character_id, _) = persistence::create_character(&db, 1, "Uther", HUMAN, PALADIN).unwrap();
+    let Some(character_id) = create_with_kit(&db, "Uther", HUMAN, PALADIN) else {
+        return;
+    };
     let mut app = setup_app(db, classes);
     let player = spawn_player(&mut app, character_id, HUMAN, PALADIN, 1);
     advance(&mut app);
 
-    // Summon Warhorse 13819 and Summon Charger 23214 (EffectAura 78 MOUNTED)
-    // are known from level 1 and used to take slots 0 and 1.
+    // Summon Warhorse 13819 and Summon Charger 23214 (EffectAura 78 MOUNTED) are
+    // known from level 1 but no create action holds them.
     let known = app.world().get::<KnownSpells>(player).unwrap();
     assert!(known.contains(13819) && known.contains(23214));
     assert_eq!(
         received::<ActionBarSnapshot>(&mut app, player),
         vec![ActionBarSnapshot {
-            // Will to Survive 59752, the Human racial, follows.
+            // playercreateinfo_action (1, 2): Crusader Strike, Will to Survive, Recuperate.
             slots: vec![
                 (0, ActionRef::Spell(CRUSADER_STRIKE)),
-                (1, ActionRef::Spell(59752))
+                (9, ActionRef::Spell(59752)),
+                (10, ActionRef::Spell(1231411)),
             ],
         }]
     );

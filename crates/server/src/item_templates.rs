@@ -19,7 +19,7 @@ pub struct ItemTemplate {
     pub required_level: u16,
     /// One-based class bits; -1 = every class.
     pub allowable_class: i64,
-    /// One-based race bits (`AllowableRaces_1` high word, `_0` low word).
+    /// `ChrRaces.PlayableRaceBit` bits (`AllowableRaces_1` high word, `_0` low word).
     pub allowable_race: u64,
     /// Stat, armor and weapon inputs (`item_stats::item_stats`).
     pub scaling: ItemScaling,
@@ -52,7 +52,9 @@ impl ItemTemplate {
     pub fn allows(&self, class: u8, race: u8) -> bool {
         let class_ok = self.allowable_class == -1
             || one_based_bit(class).is_some_and(|bit| self.allowable_class as u64 & bit != 0);
-        let race_ok = one_based_bit(race).is_some_and(|bit| self.allowable_race & bit != 0);
+        // TrinityCore `Player::CanUseItem` (Player.cpp:11221): `GetAllowableRace().HasRace(race)`.
+        let race_ok = crate::race_class::race_bit(race)
+            .is_some_and(|bit| self.allowable_race & (1 << bit) != 0);
         class_ok && race_ok
     }
 

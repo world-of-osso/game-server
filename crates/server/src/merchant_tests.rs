@@ -647,6 +647,75 @@ fn repair_stops_at_the_money_left_and_needs_a_repairing_vendor() {
     assert_eq!(durability(&h), vec![(55, 55), (25, 35)]);
 }
 
+/// Grants `item_id` and equips it from the bags; returns its guid.
+fn equip(h: &mut Harness, item_id: u32) -> u64 {
+    h.grant(item_id, 1);
+    let world = h.app.world();
+    let db = &world.resource::<GameDatabase>().db;
+    let mut model =
+        crate::inventory::load_model(db, world.resource::<ItemTemplates>(), h.character_id)
+            .unwrap();
+    let (from, stack) = model
+        .view()
+        .into_iter()
+        .find(|(location, stack)| {
+            stack.item_id == item_id && matches!(location, ItemLocation::Bag { .. })
+        })
+        .unwrap();
+    model.auto_equip(from).unwrap();
+    crate::persistence::inventory_store::save_inventory_record(
+        db,
+        h.character_id,
+        &model.into_record(),
+    );
+    stack.item_guid
+}
+
+#[test]
+fn repairing_one_item_repairs_only_that_equipped_item() {
+    let Some(mut h) = harness() else { return };
+    let vest = equip(&mut h, TARNISHED_CHAIN_VEST);
+    equip(&mut h, LARGE_ROUND_SHIELD);
+    damage_gear(&mut h);
+    let godric = h.open(GODRIC_ROTHGAR);
+
+    h.send::<_, MerchantChannel>(RepairItem {
+        npc: godric.to_bits(),
+        item_guid: Some(vest),
+    });
+
+    assert!(h.failures().is_empty());
+    // The vest's 11 points cost 8 copper; the shield stays damaged.
+    assert_eq!(h.inventory().gold, 100_000 - 8);
+    assert_eq!(durability(&h), vec![(55, 55), (25, 35)]);
+}
+
+#[test]
+fn repairing_a_bag_item_is_ignored_as_trinitycore_does() {
+    // TrinityCore `HandleRepairItemOpcode` (NPCHandler.cpp:748): an item without
+    // durability repairs for nothing and answers nothing. Bag items carry none here.
+    let Some(mut h) = harness() else { return };
+    damage_gear(&mut h);
+    h.grant(LINEN, 1);
+    let linen = h
+        .inventory()
+        .items
+        .iter()
+        .find(|item| item.item_id == LINEN)
+        .unwrap()
+        .item_guid;
+    let godric = h.open(GODRIC_ROTHGAR);
+
+    h.send::<_, MerchantChannel>(RepairItem {
+        npc: godric.to_bits(),
+        item_guid: Some(linen),
+    });
+
+    assert!(h.failures().is_empty());
+    assert_eq!(h.inventory().gold, 100_000);
+    assert_eq!(durability(&h), vec![(44, 55), (25, 35)]);
+}
+
 #[test]
 fn admin_set_gold_persists_and_queues_the_live_money() {
     use bevy::ecs::system::RunSystemOnce;
