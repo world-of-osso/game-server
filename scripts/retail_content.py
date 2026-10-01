@@ -233,17 +233,18 @@ def build_template_difficulties(conn, report):
         WHERE s.difficulty > 0 AND s.entry IN (SELECT entry FROM content_creature_template)""")
 
 
-def build_templates(conn, report):
-    """content_creature_template: AzerothCore's, plus TrinityCore's for spawned entries AzerothCore lacks."""
-    clone_table(conn, "creature_template", "content_creature_template")
-    conn.execute("INSERT INTO content_creature_template SELECT * FROM creature_template")
-    for column in ("ContentTuningID", "HealthScalingExpansion", "LevelScalingDeltaMin", "LevelScalingDeltaMax"):
-        conn.execute(f"ALTER TABLE content_creature_template ADD COLUMN {column} INTEGER NOT NULL DEFAULT 0")
-    create_level_table(conn)
-    create_difficulty_table(conn)
-    conn.create_function("health_expansion", 1, health_expansion, deterministic=True)
+# Creature entries spells name in a TRANSFORM aura's MiscValue (SPELL_AURA_TRANSFORM 56): the
+# server shows a model of that template (AuraEffect::HandleAuraTransform). They need a template
+# though nothing spawns them.
+TRANSFORM_ENTRIES = "SELECT EffectMiscValue_0 FROM spell_effect WHERE EffectAura = 56 AND EffectMiscValue_0 > 0"
+
+
+def insert_tdb_templates(conn, entries):
+    """TrinityCore's templates (difficulty 0 values, ContentTuning levels) of the `entries` query AzerothCore lacks
+    and content_creature_template does not hold yet. Needs temp.tdb_difficulty, content_tuning_level and
+    health_expansion."""
     # npcflag's high word is npcflag2. Levels are the ContentTuning range (level 1 without one).
-    conn.execute("""INSERT INTO content_creature_template (entry, KillCredit1, KillCredit2, name, subname, IconName,
+    conn.execute(f"""INSERT INTO content_creature_template (entry, KillCredit1, KillCredit2, name, subname, IconName,
             minlevel, maxlevel, exp, faction, npcflag, speed_walk, speed_run, scale, rank, dmgschool, DamageModifier,
             BaseAttackTime, RangeAttackTime, BaseVariance, RangeVariance, unit_class, unit_flags, unit_flags2, family,
             type, type_flags, VehicleId, mingold, maxgold, AIName, MovementType, HealthModifier, ManaModifier,
@@ -260,8 +261,23 @@ def build_templates(conn, report):
         FROM tdb_creature_template t
         JOIN temp.tdb_difficulty d ON d.Entry = t.entry
         LEFT JOIN content_tuning_level l ON l.ID = d.ContentTuningID
-        WHERE t.entry IN (SELECT id1 FROM content_creature WHERE guid IN (SELECT guid FROM temp.retail_spawn))
-          AND t.entry NOT IN (SELECT entry FROM creature_template)""")
+        WHERE t.entry IN ({entries})
+          AND t.entry NOT IN (SELECT entry FROM creature_template)
+          AND t.entry NOT IN (SELECT entry FROM content_creature_template)""")
+
+
+def build_templates(conn, report):
+    """content_creature_template: AzerothCore's, plus TrinityCore's for spawned entries AzerothCore lacks and for
+    entries a spell transforms into (TRANSFORM_ENTRIES)."""
+    clone_table(conn, "creature_template", "content_creature_template")
+    conn.execute("INSERT INTO content_creature_template SELECT * FROM creature_template")
+    for column in ("ContentTuningID", "HealthScalingExpansion", "LevelScalingDeltaMin", "LevelScalingDeltaMax"):
+        conn.execute(f"ALTER TABLE content_creature_template ADD COLUMN {column} INTEGER NOT NULL DEFAULT 0")
+    create_level_table(conn)
+    create_difficulty_table(conn)
+    conn.create_function("health_expansion", 1, health_expansion, deterministic=True)
+    insert_tdb_templates(conn, "SELECT id1 FROM content_creature WHERE guid IN (SELECT guid FROM temp.retail_spawn)")
+    insert_tdb_templates(conn, TRANSFORM_ENTRIES)
     # AzerothCore templates TrinityCore also tunes take its ContentTuning range, and the
     # difficulty-0 scaling expansion, level delta and modifiers ExpectedStat is scaled by.
     conn.execute("""UPDATE content_creature_template SET ContentTuningID = d.ContentTuningID,
@@ -295,20 +311,23 @@ def build_templates(conn, report):
         conn.execute("DELETE FROM content_creature WHERE guid = ?", (guid,))
 
 
+# TrinityCore addon columns as AzerothCore packs them: UNIT_FIELD_BYTES_1 (stand state, vis flags, anim tier)
+# and BYTES_2 (sheath, PvP flags).
+ADDON_COLUMNS = """PathId, mount, StandState | (VisFlags << 16) | (AnimTier << 24), SheathState | (PvPFlags << 8),
+        emote, visibilityDistanceType, auras"""
+
+
 def build_addons(conn, report):
     clone_table(conn, "creature_addon", "content_creature_addon")
     conn.execute("INSERT INTO content_creature_addon SELECT * FROM creature_addon WHERE guid IN (SELECT guid FROM content_creature)")
     for (guid,) in conn.execute("SELECT guid FROM creature_addon WHERE guid NOT IN (SELECT guid FROM content_creature)"):
         report.drop("creature_addon", f"guid={guid}", guid, "spawn replaced by Retail spawns")
-    # AzerothCore packs UNIT_FIELD_BYTES_1 (stand state, vis flags, anim tier) and BYTES_2 (sheath, PvP flags).
-    addon_columns = """PathId, mount, StandState | (VisFlags << 16) | (AnimTier << 24), SheathState | (PvPFlags << 8),
-        emote, visibilityDistanceType, auras"""
-    conn.execute(f"""INSERT INTO content_creature_addon SELECT r.guid, {addon_columns}
+    conn.execute(f"""INSERT INTO content_creature_addon SELECT r.guid, {ADDON_COLUMNS}
         FROM tdb_creature_addon a JOIN temp.retail_spawn r ON r.tdb_guid = a.guid
         WHERE r.guid IN (SELECT guid FROM content_creature)""")
     clone_table(conn, "creature_template_addon", "content_creature_template_addon")
     conn.execute("INSERT INTO content_creature_template_addon SELECT * FROM creature_template_addon")
-    conn.execute(f"""INSERT INTO content_creature_template_addon SELECT a.entry, {addon_columns}
+    conn.execute(f"""INSERT INTO content_creature_template_addon SELECT a.entry, {ADDON_COLUMNS}
         FROM tdb_creature_template_addon a
         WHERE a.entry IN (SELECT entry FROM content_creature_template)
           AND a.entry NOT IN (SELECT entry FROM creature_template)""")

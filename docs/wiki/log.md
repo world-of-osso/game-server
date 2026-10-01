@@ -1,5 +1,9 @@
 # Wiki Log
 
+## [2026-10-01] systems | Transform templates kept by the import
+
+The import keeps TrinityCore templates that TRANSFORM auras name though nothing spawns them; `scripts/add_transform_templates.py` adds them to an imported world.db additively (2,411 templates). With it the server logs no unknown-template transforms at startup (10 before).
+
 ## [2026-09-30] systems | Start levels, forms on players, transforms, admin socket
 
 Updated [[class-progression]]: TrinityCore start levels for Death Knights and allied races. Players without `ModelDisplay` get their form display and lose it on restore. TRANSFORM with MiscValue 0 keeps the display; an unknown template shows the pink pig 16358. A second server no longer takes a live server's admin socket.
