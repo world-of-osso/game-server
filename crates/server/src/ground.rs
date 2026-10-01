@@ -9,7 +9,7 @@
 //! `_obj0` ADT FileDataIDs; the `_obj0` MODF places WMOs by FileDataID, and each WMO
 //! root's GFID names its group files.
 
-use std::collections::HashMap;
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
@@ -27,6 +27,9 @@ use crate::terrain_height::{TerrainHeightMap, parse_adt_heights};
 const GROUND_DIR_ENV: &str = "GAME_SERVER_GROUND_DIR";
 /// Eastern Kingdoms: the server does not start without its ground.
 const REQUIRED_GROUND_MAP: u32 = 0;
+/// `<map id>\t<path>\t<absent|encrypted>`: ground files local CASC cannot produce
+/// (scripts/extract_ground.py); a spawned map missing only these still starts.
+const KNOWN_GROUND_GAPS: &str = include_str!("../ground_gaps.tsv");
 const TILE_SIZE: f32 = shared::navmesh::TILE_SIZE;
 const MAP_TILES: usize = 64;
 /// MAID entry: root, obj0, obj1, tex0, lod, map texture, map normal, minimap FDIDs.
@@ -529,6 +532,123 @@ fn read_vec3(data: &[u8], offset: usize) -> Result<[f32; 3], String> {
     ])
 }
 
+/// Ground files of spawned maps that are missing but listed in `KNOWN_GROUND_GAPS`.
+#[derive(Debug, Default, PartialEq)]
+pub(crate) struct KnownGroundGaps {
+    /// Missing file count by map id.
+    pub(crate) by_map: BTreeMap<u32, usize>,
+    /// Spawned maps without a WDT (`Map.db2` WdtFileDataID 0: transports).
+    pub(crate) without_wdt: usize,
+}
+
+/// Every file `MapGround` reads for each spawned map must be in `data_dir`, unless
+/// `known_gaps` lists its path; the error names the first map and file that is missing.
+pub(crate) fn check_spawned_ground(
+    data_dir: &Path,
+    wdts: &HashMap<u32, u32>,
+    spawned_maps: &BTreeSet<u32>,
+    known_gaps: &HashSet<&str>,
+) -> Result<KnownGroundGaps, String> {
+    let mut gaps = KnownGroundGaps::default();
+    for &map_id in spawned_maps {
+        let wdt = wdts.get(&map_id).copied().unwrap_or(0);
+        if wdt == 0 {
+            gaps.without_wdt += 1;
+            continue;
+        }
+        for path in missing_ground_files(data_dir, wdt)? {
+            if !known_gaps.contains(path.as_str()) {
+                return Err(format!(
+                    "No ground on map {map_id}: {} is missing",
+                    data_dir.join(&path).display()
+                ));
+            }
+            *gaps.by_map.entry(map_id).or_default() += 1;
+        }
+    }
+    Ok(gaps)
+}
+
+/// Paths (under `data_dir`) of the files the ground of the map with WDT `wdt_fdid` reads
+/// that are missing: the WDT; its global WMO, or every MAID tile's root and `_obj0` ADT
+/// and the WMOs those `_obj0` MODFs place; each WMO root's GFID groups.
+fn missing_ground_files(data_dir: &Path, wdt_fdid: u32) -> Result<Vec<String>, String> {
+    let mut files = GroundFileCheck {
+        data_dir,
+        missing: Vec::new(),
+        wmos: HashSet::new(),
+    };
+    let Some(wdt) = files.read("terrain", wdt_fdid, "wdt")? else {
+        return Ok(files.missing);
+    };
+    let mphd = find_chunk(&wdt, b"MPHD")?.ok_or("WDT has no MPHD")?;
+    if read_u32(mphd, 0)? & MPHD_FLAG_GLOBAL_WMO != 0 {
+        let modf = find_chunk(&wdt, b"MODF")?.ok_or("global-WMO WDT has no MODF")?;
+        let entry = modf
+            .get(..MODF_ENTRY_SIZE)
+            .ok_or("global-WMO WDT MODF is empty")?;
+        files.check_wmo(parse_modf_entry(entry)?.fdid)?;
+        return Ok(files.missing);
+    }
+    for tile in parse_maid(&wdt)? {
+        if tile.root != 0 {
+            files.read_exists("terrain", tile.root, "adt");
+        }
+        if tile.obj0 != 0 && files.read_exists("terrain", tile.obj0, "adt") {
+            for placement in load_wmo_placements(data_dir, tile.obj0)? {
+                files.check_wmo(placement.fdid)?;
+            }
+        }
+    }
+    Ok(files.missing)
+}
+
+struct GroundFileCheck<'a> {
+    data_dir: &'a Path,
+    missing: Vec<String>,
+    /// WMO roots already checked: tiles share them.
+    wmos: HashSet<u32>,
+}
+
+impl GroundFileCheck<'_> {
+    /// Whether `<dir>/<fdid>.<ext>` exists, recording it as missing if not.
+    fn read_exists(&mut self, dir: &str, fdid: u32, ext: &str) -> bool {
+        let path = format!("{dir}/{fdid}.{ext}");
+        let exists = self.data_dir.join(&path).is_file();
+        if !exists {
+            self.missing.push(path);
+        }
+        exists
+    }
+
+    fn read(&mut self, dir: &str, fdid: u32, ext: &str) -> Result<Option<Vec<u8>>, String> {
+        if !self.read_exists(dir, fdid, ext) {
+            return Ok(None);
+        }
+        read_client_file(self.data_dir, dir, fdid, ext).map(Some)
+    }
+
+    fn check_wmo(&mut self, root_fdid: u32) -> Result<(), String> {
+        if !self.wmos.insert(root_fdid) {
+            return Ok(());
+        }
+        let Some(root) = self.read("models", root_fdid, "wmo")? else {
+            return Ok(());
+        };
+        for group in group_file_data_ids(&root).map_err(|err| format!("WMO {root_fdid}: {err}"))? {
+            self.read_exists("models", group, "wmo");
+        }
+        Ok(())
+    }
+}
+
+fn known_ground_gaps() -> HashSet<&'static str> {
+    KNOWN_GROUND_GAPS
+        .lines()
+        .filter_map(|line| line.split('\t').nth(1))
+        .collect()
+}
+
 pub struct GroundPlugin;
 
 impl Plugin for GroundPlugin {
@@ -546,10 +666,15 @@ fn ground_data_dir() -> PathBuf {
     )
 }
 
-/// After `WorldDataPlugin` has loaded the `MapStore` (Startup). Without ground every
-/// creature keeps its spawn height wherever it runs, so the server refuses to start
-/// unless `REQUIRED_GROUND_MAP` opens.
-fn open_ground_map(mut commands: Commands, maps: Res<crate::maps::MapStore>) {
+/// After `WorldDataPlugin` has loaded the `MapStore` and spawns (Startup). Without ground
+/// every creature keeps its spawn height wherever it runs, so the server refuses to start
+/// unless `REQUIRED_GROUND_MAP` opens and every map with creature spawns has all its
+/// ground files, `KNOWN_GROUND_GAPS` aside.
+fn open_ground_map(
+    mut commands: Commands,
+    maps: Res<crate::maps::MapStore>,
+    world: Res<crate::world_data::WorldData>,
+) {
     let data_dir = ground_data_dir();
     let wdts = maps
         .maps
@@ -563,6 +688,25 @@ fn open_ground_map(mut commands: Commands, maps: Res<crate::maps::MapStore>) {
             data_dir.display()
         );
     }
+    let spawned_maps = world
+        .spawns_by_map
+        .keys()
+        .map(|&map| u32::from(map))
+        .collect();
+    let gaps = check_spawned_ground(&data_dir, &ground.wdts, &spawned_maps, &known_ground_gaps())
+        .unwrap_or_else(|err| panic!("{err} (set {GROUND_DIR_ENV})"));
+    let gap_files: usize = gaps.by_map.values().sum();
+    warn!(
+        "Known ground gap: {gap_files} files of {} spawned maps are absent or encrypted in \
+         local CASC (ground_gaps.tsv), so those parts have no ground: {:?}",
+        gaps.by_map.len(),
+        gaps.by_map
+    );
+    info!(
+        "Ground of {} spawned maps complete; {} spawned maps have no WDT (transports)",
+        spawned_maps.len() - gaps.by_map.len() - gaps.without_wdt,
+        gaps.without_wdt
+    );
     info!("Ground loads from {}", data_dir.display());
     commands.insert_resource(ground);
 }

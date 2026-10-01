@@ -94,4 +94,59 @@ fn server_started_outside_the_checkout_loads_ground_beside_the_checkout() {
         "{}",
         tail(&stderr)
     );
+    let gap_files =
+        std::fs::read_to_string(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("ground_gaps.tsv"))
+            .unwrap()
+            .lines()
+            .count();
+    assert!(
+        stderr.contains(&format!("Known ground gap: {gap_files} files of ")),
+        "{}",
+        tail(&stderr)
+    );
+}
+
+/// The client cache with `terrain/` whole and every `models/` file but `without`, by symlink.
+fn cache_without(dir: &Path, without: &str) {
+    let cache = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../../game-engine/data")
+        .canonicalize()
+        .unwrap();
+    std::os::unix::fs::symlink(cache.join("terrain"), dir.join("terrain")).unwrap();
+    std::fs::create_dir(dir.join("models")).unwrap();
+    for entry in std::fs::read_dir(cache.join("models")).unwrap() {
+        let name = entry.unwrap().file_name();
+        if name != without {
+            std::os::unix::fs::symlink(
+                cache.join("models").join(&name),
+                dir.join("models").join(&name),
+            )
+            .unwrap();
+        }
+    }
+}
+
+#[test]
+fn server_missing_a_spawned_maps_wmo_group_exits_at_startup_naming_map_and_file() {
+    let cwd = tempfile::tempdir().unwrap();
+    let ground = cwd.path().join("ground");
+    std::fs::create_dir(&ground).unwrap();
+    // The Stockade (map 34) is WMO 108631; 108643 is one of its groups.
+    cache_without(&ground, "108643.wmo");
+    let mut server = start_server(cwd.path(), Some(&ground));
+
+    let (status, stderr) = wait_for(&mut server, cwd.path(), "Ground loads from");
+
+    let status = status
+        .unwrap_or_else(|| panic!("server started without map 34 ground:\n{}", tail(&stderr)));
+    assert!(!status.success(), "{status}");
+    let group = ground.join("models/108643.wmo");
+    assert!(
+        stderr.contains(&format!(
+            "No ground on map 34: {} is missing",
+            group.display()
+        )),
+        "{}",
+        tail(&stderr)
+    );
 }

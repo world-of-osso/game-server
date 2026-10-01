@@ -29,7 +29,7 @@ def missing_files(world_db, cache):
         capture_output=True, text=True, check=True,
     )
     print(run.stderr.strip(), file=sys.stderr)
-    return [tuple(line.split("\t")) for line in run.stdout.splitlines()]
+    return [tuple(line.split("\t")) for line in run.stdout.splitlines() if line]
 
 
 def extract_batch(casc_local, engine, stage, fdids):
