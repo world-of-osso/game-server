@@ -475,3 +475,7 @@ Players replicate `PlayerMotion`, Retail `MovementFlags` (FORWARD, BACKWARD, STR
 ## [2026-10-01] fix | Player health regeneration
 
 [[spell-casting]], [[experience]]: players regenerate health every 2 s out of combat (TrinityCore `Player::RegenerateHealth`); before, only creatures did, so a damaged player stayed damaged forever (observed 666/1110 and 1109/1110). Level-up fills `SetToMaxOnLevelUp` pools (adds Energy). A max-health rescale truncates to whole points. Live: Godot client on a private server, 666 → 1110 in 20 ticks of 22/23.
+
+## [2026-10-01] feature | Player stand state, food and drink
+
+[[stand-state]], [[spell-casting]], [[auras]]: players sit, sleep, kneel and take chairs (`PlayerStandState`, replicated); moving, hits, hostile spells, casting and death stand them up; food and drink sit a standing eater and end on standing; sitting regenerates ×1.5 and is crit by every melee swing that lands. Health regen auras 84/88/116/161 and gear health regen; SpellScaling effect amounts; OBS_MOD_POWER drink ticks. Item use builds on questsrv 22cf305 and adds the item category cooldown, peaceful-only refusal in combat and expendable consumption.
