@@ -1,6 +1,6 @@
 # Auction house
 
-Current server source inspected October 1, 2026 at `8193d7e`, including server/shared integration `b0153e4`. The [spec](../../specs/auction-house.md) owns requirements. Bounded CLI/native audit PASS exists; fresh final source checker agent52 remains pending. Final receipts below supersede historical gaps only within their scope.
+Current server source inspected October 1, 2026 at `8193d7e`, including server/shared integration `b0153e4`. The [spec](../../specs/auction-house.md) owns requirements. Bounded CLI/native audit PASS exists; independent final delta and actor-parity gates pass their recorded scopes. Final receipts below supersede historical gaps only within their scope.
 
 ## Current implementation
 
@@ -67,7 +67,7 @@ Range 60.282–121.623 ms, all below 200 ms. Final live totals are 300068 offers
 
 Shallow heap correction `11374529`: `/tmp/economy-shallow-prefix-20261001/default-green.json` records 16 passed, exit 0; 300k name page 0 60.956102 ms, MinBid page 2000 152.447265 ms, iRoN buyout page 1 71.805398 ms. `optimized-green.json`: six passed, exit 0; corresponding 51.194362/31.698731/28.875537 ms. These are model-query tests, not CLI timing. `proof-ledger.json` records scope hashes and later ledger revision `0f88f87`.
 
-Runtime readability delta `/tmp/economy-readability-25ee348/ledger.json`: executed revision `25ee348`, scoped economy/merchant tests exit 0, 47 passed; hashes and unchanged relevant scope through `eb649f85`. Client `/tmp/game-client-readability-tests-final.log`: 24 passed, exit 0. Fresh source checker agent52 pending; main alone decides all-source/full-goal-ready after its result. Stable source and subset receipts are not a final whole-project gate.
+Runtime readability delta `/tmp/economy-readability-25ee348/ledger.json`: executed revision `25ee348`, scoped economy/merchant tests exit 0, 47 passed; hashes and unchanged relevant scope through `eb649f85`. Client `/tmp/game-client-readability-tests-final.log`: 24 passed, exit 0. Independent final delta PASS: `/tmp/economy-delta-verify-20261001/report.md`; actor-parity PASS: `/tmp/economy-actor-parity-final-20261001/`. The later returned-goods regression has focused proof in `/tmp/claude/bot-return-proof-ledger.md`. Stable source and subset receipts are not a final whole-project gate.
 
 ### Bounded native audit
 

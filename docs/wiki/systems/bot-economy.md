@@ -1,6 +1,6 @@
 # Bot economy
 
-Current source inspected October 1, 2026 at `8193d7e`, including server/shared integration `b0153e4`, importer `13241e0` and supplier runtime `cd9b690`. The [tracked spec](../../specs/bot-economy.md) owns approved behavior. Bounded live CLI and native AH/mail audit PASS exist. [[auction-house]] owns the pinned final CLI, native links and historical/focused source receipts; fresh source checker agent52 remains pending.
+Current source inspected October 1, 2026 at `8193d7e`, including server/shared integration `b0153e4`, importer `13241e0` and supplier runtime `cd9b690`. The [tracked spec](../../specs/bot-economy.md) owns approved behavior. Bounded live CLI and native AH/mail audit PASS exist. [[auction-house]] owns the pinned final CLI, native links and historical/focused source receipts; the final delta and actor-parity gates passed; the returned-goods follow-up has focused regression proof.
 
 ## Observed model
 
@@ -30,6 +30,10 @@ Supplier tests in `economy/tests.rs` cover mixed auction/supplier costs, capital
 
 Missing/uninitialized Economy returns `economy not initialized`; missing Config returns `economy config not loaded`. The snapshot handler borrows both resources read-only, never runs a cycle, changes the clock or persists data. At code revision `944df30`, `cargo test -p server --bins economy_status -- --nocapture` passed all three targeted tests (exact values/unchanged state, missing initialization, CLI parsing/decoding). Live server diagnosis remains main-owned.
 
+## Returned gatherer goods
+
+`16414b5` fixes collection after auction expiry: the old collector credited money and deleted delivered mail but dropped its attachments. Delivered items now move unchanged into the gatherer's inventory in the same market transaction. Relisting consumes retained goods before new gathering; whole stacks keep their GUID, splits get a new GUID, and deposits use the retained item's vendor value. Failed commits retain the original mail/inventory/state; retry claims once. Regression proof: `/tmp/claude/bot-return-proof-ledger.md`, 48 economy tests and 3 actor tests passed, including real expiry → collection → reopen and split/whole relisting.
+
 ## Current capability and proof ledger
 
 Saved evidence root: `/home/osso/.cache/economy-cli-20260930/a54a0ad0`. [[auction-house]] owns exact auction action/restart/mail/performance receipts and revision limitations. No tests or live operations were rerun for this docs update.
@@ -50,7 +54,7 @@ The normal auction restart proves the recorded buyer/seller state only. It does 
 
 ## Final ledger boundary (October 1, 2026)
 
-[[auction-house]] records twelve pinned CLI samples, six workloads/two cycles, historical default-profile failure and focused fixes, plus sibling native docs at `5b27878f`; no broad final PASS while agent52 is pending. [[economy-catalog]] records generated default Lara Moore 1295 classic Leatherworking: 223 recipes, 27 gatherables, 11 suppliers. That explicit classic assignment is not the requested Midnight/new Silvermoon catalog. Missing source mappings/spawns remain a blocker, not an implementation exclusion or substitute acceptance. Limited suppliers and unsupported recipe effects are implementation exclusions; numeric importer defaults remain provisional tuning.
+[[auction-house]] records twelve pinned CLI samples, six workloads/two cycles, historical default-profile failure and focused fixes, plus sibling native docs at `5b27878f`; independent final delta PASS is recorded in `/tmp/economy-delta-verify-20261001/report.md`, not a fresh whole-project suite. [[economy-catalog]] records generated default Lara Moore 1295 classic Leatherworking: 223 recipes, 27 gatherables, 11 suppliers. That explicit classic assignment is not the requested Midnight/new Silvermoon catalog. Missing source mappings/spawns remain a blocker, not an implementation exclusion or substitute acceptance. Limited suppliers and unsupported recipe effects are implementation exclusions; numeric importer defaults remain provisional tuning.
 
 ## Sources
 

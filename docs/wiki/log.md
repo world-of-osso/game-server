@@ -1,5 +1,9 @@
 # Wiki Log
 
+## [2026-10-01] systems | Bot return accounting and final acceptance
+
+Updated [[bot-economy]] and [[auction-house]] with independent CLI/restart/native gates and real bot/player parity across 1/7/14-day auctions. Fixed delivered bot attachments being discarded during collection: returned inventory now persists and is consumed by relisting, including GUID-preserving whole stacks and split quantities; rollback/reopen regressions pass. Recorded twelve pinned loopback samples at 60.282–121.623 ms without a universal latency claim. Missing Midnight/Silvermoon content and operator cap-reduction reconciliation remain explicit limits.
+
 ## [2026-10-01] ledger | Final bounded economy/AH receipts
 
 Updated [[bot-economy]], [[auction-house]], [[economy-catalog]] and specs from saved artifacts: pinned `eb649f85` binaries/twelve CLI samples, exact live totals, historical default failure/focused delta passes, sibling native ledger `5b27878f` and agent51 bounded PASS. Preserved cap-reconciliation and Midnight/Silvermoon blockers, provisional tuning and pending agent52/main readiness decision. Docs only; no test/build/ops reruns.
