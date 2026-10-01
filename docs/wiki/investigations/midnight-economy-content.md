@@ -33,6 +33,8 @@ Both rows retain raw `cost: [[700, [], []]]`. A read-only canonical `world.db` q
 
 The saved mapper places Zaralda in **Silvermoon City**, **uiMapId 2393**, under location **15969**, with marker **43.2, 55.8**. These are UI-map marker coordinates, not runtime world x/y/z or facing. This closes the published merchant-identity/listing gap, not the genuine placed runtime merchant gate. No merchant data was imported or activated; Classic/catalog remains unchanged.
 
+The sibling engine's pinned `game-engine/data/db2/12.1.0.69933/UiMapAssignment.csv` has assignment 68573 for UI map 2393, map 0, area 15969, with UI bounds `(0,0)–(1,1)` and world-region bounds `(7902.083, -6141.666)–(9772.916, -3335.416)`. This supplies a map-area transform, not a spawn: it cannot establish Zaralda's elevation or facing. Read-only checks found no entry 243531 in canonical `tdb_creature` or `content_creature`.
+
 The 15 currently staged eligible recipes require neither item. The published-reagent comparison found Silverleaf Thread in 30 other recipe records, outside this staged set. Zaralda therefore does not supply a missing ingredient for the currently eligible recipes; merchant publication and further recipe eligibility remain distinct work.
 
 ## Remaining gates and limits
