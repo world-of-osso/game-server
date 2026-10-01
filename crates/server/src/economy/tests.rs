@@ -107,6 +107,7 @@ fn fixture() -> (Config, EconomyState) {
         gatherer_stack_max: 2,
         gatherer_capital: 1000,
         gatherables: vec![2318],
+        vendor_supplies: BTreeMap::new(),
         customer_budget: 0,
         customer_quantity: 0,
         items: [(2318, "Light Leather"), (2304, "Light Armor Kit")]
@@ -174,6 +175,340 @@ fn economy_config_accepts_u64_input_prices_but_bounds_vendor_outputs() {
         config.validate().is_err(),
         "input popularity bounds remain independent of price width"
     );
+}
+
+fn supplier_fixture() -> (Config, EconomyState) {
+    let (mut config, state) = fixture();
+    config.merchants[0].recipes[0].ingredients.push((2320, 2));
+    config.items.insert(
+        2320,
+        ItemMetadata {
+            name: "Coarse Thread".into(),
+            quality: 1,
+            required_level: 0,
+            vendor_sell_price: 2,
+        },
+    );
+    config.markets.insert(
+        2320,
+        MarketItem {
+            item_id: 2320,
+            anchor_price: 99,
+            min_price: 99,
+            max_price: 99,
+            popularity_bps: 10000,
+        },
+    );
+    let mut json = serde_json::to_value(config).unwrap();
+    json["vendor_supplies"] = serde_json::json!({
+        "2320": { "vendor_entry": 2225, "slot": 0, "purchase_price": 10,
+            "buy_count": 1, "max_count": 0, "restock_secs": 0 }
+    });
+    (serde_json::from_value(json).unwrap(), state)
+}
+
+#[test]
+fn economy_supplier_thread_uses_actual_price_with_raw_auction_materials() {
+    let db = persistence::temp_database();
+    let (config, mut state) = supplier_fixture();
+    let mut auctions = AuctionHouseState::default();
+    run_cycle(&db, &mut auctions, &mut state, &config, 1000, &mut || 1).unwrap();
+    let merchant = &state.merchants[&3532];
+    assert_eq!(
+        merchant.stock.len(),
+        1,
+        "thread is bought without an AH offer"
+    );
+    assert_eq!(merchant.stock[0].ingredient_cost, 30);
+    assert_eq!(
+        merchant.gold, 960,
+        "20 leather stack + 20 actual thread price"
+    );
+    assert_eq!(
+        merchant.materials,
+        vec![model::MaterialLot {
+            item_id: 2318,
+            count: 1,
+            ingredient_cost: 10,
+        }]
+    );
+    assert_eq!(store::load_state(&db).unwrap(), Some(state.clone()));
+    assert!(auctions.auctions.values().all(|a| a.item.item_id != 2320));
+}
+
+#[test]
+fn economy_supplier_capital_refusal_keeps_payment_and_materials_unchanged() {
+    let db = persistence::temp_database();
+    let (mut config, mut state) = supplier_fixture();
+    config.gatherables.clear();
+    let merchant = state.merchants.get_mut(&3532).unwrap();
+    merchant.gold = 19;
+    merchant.materials.push(model::MaterialLot {
+        item_id: 2318,
+        count: 1,
+        ingredient_cost: 10,
+    });
+    let before = merchant.clone();
+    run_cycle(
+        &db,
+        &mut AuctionHouseState::default(),
+        &mut state,
+        &config,
+        1000,
+        &mut || 0,
+    )
+    .unwrap();
+    assert_eq!(
+        state.merchants[&3532], before,
+        "cannot afford two 10-copper purchases"
+    );
+}
+
+#[test]
+fn economy_supplier_never_substitutes_an_auction_when_supplier_is_unaffordable() {
+    let db = persistence::temp_database();
+    let (config, mut state) = supplier_fixture();
+    let mut auctions = AuctionHouseState::default();
+    let offer = persistence::AuctionData {
+        auction_id: 77,
+        seller_character_id: 88,
+        seller_name: "Thread seller".into(),
+        item: persistence::InventoryItemData {
+            item_guid: 99,
+            item_id: 2320,
+            name: "Coarse Thread".into(),
+            quality: 1,
+            required_level: 0,
+            stack_count: 2,
+            vendor_sell_price: 2,
+            unique_auction: false,
+        },
+        stack_count: 2,
+        min_bid: 2,
+        current_bid: None,
+        current_bidder_character_id: None,
+        buyout_price: Some(2),
+        expires_at_unix_secs: 2000,
+        faction: 0,
+        deposit: 0,
+    };
+    let mut config = config;
+    config.gatherables.clear();
+    let market = config.markets.get_mut(&2320).unwrap();
+    market.anchor_price = 1;
+    market.min_price = 1;
+    market.max_price = 1;
+    state.merchants.get_mut(&3532).unwrap().gold = 19;
+    state
+        .merchants
+        .get_mut(&3532)
+        .unwrap()
+        .materials
+        .push(model::MaterialLot {
+            item_id: 2318,
+            count: 1,
+            ingredient_cost: 10,
+        });
+    store::commit_market(
+        &db,
+        Some(&state),
+        &store::MarketChanges {
+            auctions: vec![offer.clone()],
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    auctions.auctions.insert(77, offer.clone());
+    let before = state.merchants[&3532].clone();
+    run_cycle(&db, &mut auctions, &mut state, &config, 1000, &mut || 0).unwrap();
+    assert_eq!(state.merchants[&3532], before);
+    assert_eq!(auctions.auctions[&77], offer);
+    assert_eq!(persistence::load_auctions(&db), vec![offer.clone()]);
+    assert!(persistence::mail_store::load_mailbox(&db, 88).is_empty());
+
+    state.merchants.get_mut(&3532).unwrap().gold = 1000;
+    run_cycle(&db, &mut auctions, &mut state, &config, 1060, &mut || 0).unwrap();
+    assert_eq!(
+        state.merchants[&3532].gold, 980,
+        "supplier wins even over a cheaper auction"
+    );
+    assert_eq!(state.merchants[&3532].stock[0].ingredient_cost, 30);
+    assert_eq!(auctions.auctions[&77], offer);
+    assert!(persistence::mail_store::load_mailbox(&db, 88).is_empty());
+}
+
+#[test]
+fn economy_supplier_bundle_leftovers_survive_database_reopen_and_refund_exactly() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("supplier.redb");
+    let db = redb::Database::create(&path).unwrap();
+    let (mut config, mut state) = supplier_fixture();
+    config.gatherables.clear();
+    // Actual Refreshing Spring Water bundle: five items for five copper.
+    config.merchants[0].recipes[0].ingredients[1] = (159, 2);
+    config.items.insert(
+        159,
+        ItemMetadata {
+            name: "Refreshing Spring Water".into(),
+            quality: 1,
+            required_level: 0,
+            vendor_sell_price: 1,
+        },
+    );
+    config.markets.insert(
+        159,
+        MarketItem {
+            item_id: 159,
+            anchor_price: 1,
+            min_price: 1,
+            max_price: 1,
+            popularity_bps: 10000,
+        },
+    );
+    let mut json = serde_json::to_value(&config).unwrap();
+    json["vendor_supplies"] = serde_json::json!({
+        "159": { "vendor_entry": 2352, "slot": 0, "purchase_price": 5,
+            "buy_count": 5, "max_count": 0, "restock_secs": 0 }
+    });
+    config = serde_json::from_value(json).unwrap();
+    state
+        .merchants
+        .get_mut(&3532)
+        .unwrap()
+        .materials
+        .push(model::MaterialLot {
+            item_id: 2318,
+            count: 2,
+            ingredient_cost: 20,
+        });
+    let mut auctions = AuctionHouseState::default();
+    run_cycle(&db, &mut auctions, &mut state, &config, 1000, &mut || 0).unwrap();
+    assert_eq!(state.merchants[&3532].gold, 995);
+    assert_eq!(state.merchants[&3532].stock[0].ingredient_cost, 12);
+    drop(db);
+    let db = redb::Database::open(&path).unwrap();
+    let mut restored = store::load_state(&db).unwrap().unwrap();
+    run_cycle(&db, &mut auctions, &mut restored, &config, 1001, &mut || 0).unwrap();
+    assert_eq!(restored, state, "restart cannot repeat cycle payment");
+    run_cycle(&db, &mut auctions, &mut restored, &config, 1060, &mut || 0).unwrap();
+    let merchant = &restored.merchants[&3532];
+    assert_eq!(
+        merchant.gold, 995,
+        "second craft uses retained paid lot without charging"
+    );
+    assert_eq!(
+        merchant
+            .stock
+            .iter()
+            .map(|b| b.ingredient_cost)
+            .sum::<u64>(),
+        24
+    );
+    assert_eq!(
+        merchant.materials,
+        vec![model::MaterialLot {
+            item_id: 159,
+            count: 1,
+            ingredient_cost: 1
+        }]
+    );
+    config.merchants[0].recipes.clear();
+    run_cycle(
+        &db,
+        &mut auctions,
+        &mut restored,
+        &config,
+        1000 + model::STOCK_LIFETIME_SECONDS + 60,
+        &mut || 0,
+    )
+    .unwrap();
+    assert_eq!(restored.refund_issued, 24);
+    assert_eq!(restored.merchants[&3532].gold, 1000);
+    assert_eq!(restored.withdrawn, 19);
+    assert_eq!(restored.merchants[&3532].materials[0].ingredient_cost, 1);
+}
+
+#[test]
+fn economy_supplier_full_output_capacity_prevents_procurement() {
+    let db = persistence::temp_database();
+    let (mut config, mut state) = supplier_fixture();
+    config.gatherables.clear();
+    state
+        .merchants
+        .get_mut(&3532)
+        .unwrap()
+        .stock
+        .push(StockBatch {
+            id: 1,
+            item_id: 2304,
+            count: 2,
+            ingredient_cost: 20,
+            unit_price: 100,
+            expires_at: 2000,
+        });
+    let before = state.merchants[&3532].clone();
+    run_cycle(
+        &db,
+        &mut AuctionHouseState::default(),
+        &mut state,
+        &config,
+        1000,
+        &mut || 0,
+    )
+    .unwrap();
+    assert_eq!(state.merchants[&3532], before);
+}
+
+#[test]
+fn economy_supplier_rejects_limited_stock_without_partial_cycle_commit() {
+    let db = persistence::temp_database();
+    let (config, mut state) = supplier_fixture();
+    let mut json = serde_json::to_value(config).unwrap();
+    json["vendor_supplies"]["2320"]["max_count"] = 10.into();
+    json["vendor_supplies"]["2320"]["restock_secs"] = 60.into();
+    let config: Config = serde_json::from_value(json).unwrap();
+    let before = state.clone();
+    let mut auctions = AuctionHouseState::default();
+    let error = run_cycle(&db, &mut auctions, &mut state, &config, 1000, &mut || 0).unwrap_err();
+    assert!(error.contains("limited"), "{error}");
+    assert_eq!(state, before);
+    assert!(auctions.auctions.is_empty());
+    assert!(store::load_state(&db).unwrap().is_none());
+    assert!(persistence::load_auctions(&db).is_empty());
+}
+
+#[test]
+fn economy_supplier_rejects_extended_cost_without_partial_cycle_commit() {
+    let db = persistence::temp_database();
+    let (config, mut state) = supplier_fixture();
+    let mut json = serde_json::to_value(config).unwrap();
+    json["vendor_supplies"]["2320"]["extended_cost"] = 42.into();
+    let config: Config = serde_json::from_value(json).unwrap();
+    let before = state.clone();
+    let mut auctions = AuctionHouseState::default();
+    let error = run_cycle(&db, &mut auctions, &mut state, &config, 1000, &mut || 0).unwrap_err();
+    assert!(error.contains("extended"), "{error}");
+    assert_eq!(state, before);
+    assert!(auctions.auctions.is_empty());
+    assert!(store::load_state(&db).unwrap().is_none());
+    assert!(persistence::load_auctions(&db).is_empty());
+}
+
+#[test]
+fn economy_supplier_failed_cycle_does_not_publish_payment_or_gatherer_supply() {
+    let db = persistence::temp_database();
+    let (config, mut state) = supplier_fixture();
+    state.next_batch_id = u64::MAX;
+    let before = state.clone();
+    let mut auctions = AuctionHouseState::default();
+    let error = run_cycle(&db, &mut auctions, &mut state, &config, 1000, &mut || 1).unwrap_err();
+    assert!(error.contains("batch ID"), "{error}");
+    assert_eq!(state, before);
+    assert!(auctions.auctions.is_empty());
+    assert!(store::load_state(&db).unwrap().is_none());
+    assert!(persistence::load_auctions(&db).is_empty());
+    assert_eq!(persistence::load_inventory(&db, 1).gold, 0);
+    assert!(persistence::mail_store::load_mailbox(&db, 1).is_empty());
 }
 
 #[test]

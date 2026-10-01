@@ -19,6 +19,23 @@ pub struct ItemMetadata {
     pub vendor_sell_price: u32,
 }
 
+/// One supplier row from the expanded VendorCatalog. Limited stock is unsupported.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct VendorSupply {
+    pub vendor_entry: u32,
+    /// Zero-based index in the expanded vendor catalog.
+    pub slot: u32,
+    /// Actual BuyPrice in copper per purchase yielding `buy_count` items.
+    pub purchase_price: u64,
+    pub buy_count: u32,
+    /// VendorSlot.maxcount (supplier stock), not the item ownership limit.
+    pub max_count: u32,
+    pub restock_secs: u32,
+    /// Omitted by copper-only importer rows; nonzero token/item costs are unsupported.
+    #[serde(default)]
+    pub extended_cost: u32,
+}
+
 #[derive(Resource, Clone, Debug, Serialize, Deserialize)]
 pub struct Config {
     pub cycle_secs: u64,
@@ -26,6 +43,7 @@ pub struct Config {
     pub gatherer_stack_max: u32,
     pub gatherer_capital: u64,
     pub gatherables: Vec<u32>,
+    pub vendor_supplies: BTreeMap<u32, VendorSupply>,
     pub customer_budget: u64,
     pub customer_quantity: u32,
     pub items: BTreeMap<u32, ItemMetadata>,
@@ -40,7 +58,39 @@ impl Config {
             .find(|merchant| merchant.entry == entry)
     }
 
+    fn validate_vendor_supplies(&self) -> Result<(), String> {
+        for (&item_id, supply) in &self.vendor_supplies {
+            if supply.max_count != 0 || supply.restock_secs != 0 {
+                return Err(format!(
+                    "supplier item {item_id} has unsupported limited stock"
+                ));
+            }
+            if supply.extended_cost != 0 {
+                return Err(format!(
+                    "supplier item {item_id} has unsupported extended cost"
+                ));
+            }
+            if supply.vendor_entry == 0 || supply.buy_count == 0 || supply.purchase_price == 0 {
+                return Err(format!(
+                    "supplier item {item_id} requires a vendor, positive bundle and price"
+                ));
+            }
+            if !self.items.contains_key(&item_id) || !self.markets.contains_key(&item_id) {
+                return Err(format!(
+                    "supplier item {item_id} lacks market/item metadata"
+                ));
+            }
+            if self.gatherables.contains(&item_id) {
+                return Err(format!(
+                    "supplier item {item_id} cannot also be a gatherable"
+                ));
+            }
+        }
+        Ok(())
+    }
+
     fn validate(&self) -> Result<(), String> {
+        self.validate_vendor_supplies()?;
         if self.cycle_secs == 0 || self.gatherer_stack_max == 0 {
             return Err("economy cycle and gathering stack limit must be positive".into());
         }

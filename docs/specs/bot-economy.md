@@ -12,7 +12,7 @@ Gatherer bots supply auction-house materials; merchant bots buy ingredients, cra
 
 ### Merchant production and inventory
 
-- [ ] Merchants purchase actual ingredients and craft real ingredient recipes, recording actual ingredient expenditure attributable to the resulting stock.
+- [ ] Merchants purchase actual ingredients and craft real ingredient recipes, recording actual ingredient expenditure attributable to the resulting stock. Configured vendor-only ingredients are purchased directly from actual unlimited suppliers at their copper bundle price, never substituted with auction offers. Paid bundle leftovers persist for later crafting. Limited-stock and extended-cost suppliers are explicitly unsupported; genuine gathering resources remain auction-sourced.
 - [ ] Crafted output is restricted to the merchant's configured expansion. Midnight expansion ID 11 and new Silvermoon are the requested example; unavailable current NPC spawns must be reported as a data gap, not silently substituted or claimed available.
 - [ ] Prices vary within configured bounds. A data-driven configurable core and importer supply recipes, output-expansion eligibility and market policy; fixed examples must not substitute for real reference data.
 - [ ] All products compete for finite shared merchant inventory capacity. No per-product reserved stock or guaranteed availability is allowed.

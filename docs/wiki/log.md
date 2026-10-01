@@ -1,5 +1,9 @@
 # Wiki Log
 
+## [2026-10-01] systems | Direct supplier runtime
+
+Updated [[bot-economy]] and its spec with exclusive supplier selection, exact whole-bundle payments, retained paid leftovers and pre-cycle rejection of limited/extended-cost suppliers. Uses existing central market commit and persisted cycle timestamp. Added supplier rejection/failure tests and corrected the no-fallback auction fixture to exercise an affordable, price-bounded offer. Live CLI/native/load proof remains main-owned.
+
 ## [2026-10-01] systems | Ingredient sourcing and direct suppliers
 
 Updated [[economy-catalog]]: direct loot preserves raw Light Leather 2318 despite conversion 2881; subclass 5 alone does not gather vendor-only threads 2320/2321/4291. Config gains `vendor_supplies` with exact bundle `purchase_price`, positive `buy_count`, expanded runtime slot and stock fields. Deterministic active spawned unlimited suppliers only; limited/extended-cost/invalid/unavailable rows remain explicit, unsupported vendor-only inputs exclude recipes. Secondary crafted goods remain AH inputs. Runtime purchase and live integration remain main-owned.

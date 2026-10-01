@@ -1,5 +1,5 @@
 use super::{
-    Config,
+    Config, VendorSupply,
     model::{self, ConsumerPolicy, EconomyState, MaterialLot, MerchantState, Recipe},
     store::{self, MarketChanges},
 };
@@ -18,6 +18,7 @@ pub fn run_cycle(
     now: u64,
     draw: &mut impl FnMut() -> u64,
 ) -> Result<Vec<u64>, String> {
+    config.validate_vendor_supplies()?;
     if economy.last_cycle != 0 && now.saturating_sub(economy.last_cycle) < config.cycle_secs {
         return Ok(Vec::new());
     }
@@ -318,6 +319,32 @@ fn rotate_merchants(
     Ok(())
 }
 
+/// Buy only whole bundles covering the deficit; retain every paid surplus item.
+fn purchase_supplier_material(
+    merchant: &mut MerchantState,
+    item_id: u32,
+    deficit: u64,
+    supply: &VendorSupply,
+) -> Result<(), String> {
+    let bundles = deficit.div_ceil(u64::from(supply.buy_count));
+    let count = bundles * u64::from(supply.buy_count);
+    let count = u32::try_from(count)
+        .map_err(|_| format!("supplier item {item_id} bundle quantity overflows"))?;
+    let price = bundles
+        .checked_mul(supply.purchase_price)
+        .ok_or_else(|| format!("supplier item {item_id} purchase cost overflows"))?;
+    if price > merchant.gold {
+        return Ok(());
+    }
+    merchant.gold -= price;
+    merchant.materials.push(MaterialLot {
+        item_id,
+        count,
+        ingredient_cost: price,
+    });
+    Ok(())
+}
+
 fn acquire_ingredients(
     db: &redb::Database,
     merchant: &mut MerchantState,
@@ -335,6 +362,10 @@ fn acquire_ingredients(
             .map(|lot| u64::from(lot.count))
             .sum();
         if owned >= u64::from(needed) {
+            continue;
+        }
+        if let Some(supply) = config.vendor_supplies.get(&item_id) {
+            purchase_supplier_material(merchant, item_id, u64::from(needed) - owned, supply)?;
             continue;
         }
         let limit = capacity.saturating_mul(needed).saturating_sub(owned as u32);

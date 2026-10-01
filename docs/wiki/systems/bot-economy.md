@@ -16,6 +16,14 @@ Integration inventory observed September 30, 2026. The [tracked spec](../../spec
 - Persistence: [[persistence]] describes redb mutable storage and SQLite reference data. Model serialization is not atomic transaction/restart proof.
 - Client: `crates/client/src/bin/game_cli.rs` is the headless protocol surface. Live CLI proof must precede engine acceptance; native auction UI documentation is maintained separately in game-engine.
 
+## Direct supplier procurement
+
+`Config.vendor_supplies` maps ingredient ItemID to a `VendorSupply` row imported from actual spawned suppliers; [[economy-catalog]] owns that provenance. `purchase_price` is the full copper price per `buy_count` bundle, not an auction unit quote. The runtime rejects limited/restocking rows, nonzero extended costs, invalid bundles and supplier/gatherable overlap before cycle work.
+
+`economy/cycle.rs` selects configured supplier sourcing exclusively, including when an auction is cheaper or the supplier is unaffordable. It buys only whole bundles covering the recipe deficit within available capital. Output capacity is checked before procurement. Purchases become paid `MaterialLot` records; `craft_from_materials` consumes proportional costs and retains surplus quantity and rounding cost. Supplier payments, leftover lots, crafted stock, refunds and the cycle timestamp use the existing single `commit_market` transaction before publishing runtime state. No supplier stock/restocking framework is introduced.
+
+Supplier tests in `economy/tests.rs` cover mixed auction/supplier costs, capital refusal, exclusive source selection, full output capacity, bundle leftovers through database reopen, exact capped refunds, unsupported supplier rejection and failure before market commit. These are bounded runtime tests, not live CLI/native acceptance or crash-injection proof.
+
 ## Read-only admin diagnosis
 
 `game-server-admin economy-status` uses the existing same-UID admin socket and prints a JSON snapshot of initialized in-memory state, not a fresh database read. `last_cycle` is the stored Unix-seconds cycle timestamp. Each merchant includes entry, gold, configured capital cap, stock batches (remaining ingredient cost, quantity, price and expiry) and paid material lots (remaining quantity and cost). A persisted merchant absent from current config has a null cap. Cumulative `customer_spent`, `refund_issued` and `withdrawn` retain model field names; money is in copper. `gatherers` maps item IDs to seller character IDs; `gatherer_count` counts those actors. Auction listing totals are not included.
@@ -33,6 +41,7 @@ No economy importer path, complete bot runtime connection, current expansion-11 
 - [Bot economy spec](../../specs/bot-economy.md) — approved contract and acceptance gaps.
 - [Auction house spec](../../specs/auction-house.md) — global browse, flat selection and CLI-first latency contract.
 - [Economy snapshot](../../../crates/server/src/economy/mod.rs) and [admin dispatch](../../../crates/server/src/admin_ipc.rs) — read-only diagnosis.
+- [Economy cycle](../../../crates/server/src/economy/cycle.rs) and [supplier tests](../../../crates/server/src/economy/tests.rs) — direct sourcing and bounded persistence boundaries.
 - [Economy model](../../../crates/server/src/economy/model.rs) — inspected accounting helpers.
 - [Model tests](../../../crates/server/src/economy/model_tests.rs) — candidate model coverage, not executed here.
 - [Auction queries](../../../crates/server/src/auction_house/queries.rs) — inspected search/paging boundary.
