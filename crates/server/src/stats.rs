@@ -456,6 +456,13 @@ struct Gear {
 const INVTYPE_SHIELD: u8 = 14;
 
 /// Compute new current value preserving the current-to-max ratio.
+///
+/// A deliberate deviation from TrinityCore, whose `Unit::SetMaxHealth` only clamps the
+/// current value (and whose login sets `min(saved, max)`, Player.cpp:18736): every
+/// max-health or max-mana change here keeps the percentage, at login and in session.
+/// Retail keeps the percentage when maximum health changes in session (TrinityCore
+/// does too for MOD_INCREASE_HEALTH_PERCENT), and characters saved with the old
+/// 100-health placeholder rely on the ratio to log in at their saved share.
 fn rescaled_current(current: f32, old_max: f32, new_max: f32) -> f32 {
     let ratio = if old_max > 0.0 {
         current / old_max

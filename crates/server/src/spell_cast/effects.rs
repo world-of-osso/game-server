@@ -346,6 +346,7 @@ fn log_amount(ctx: &EffectCtx, target: Entity, kind: CombatLogKind) -> CombatLog
         resisted: 0,
         blocked: 0,
         crit: false,
+        glancing: false,
         periodic: false,
         kind,
     }

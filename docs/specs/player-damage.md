@@ -72,7 +72,8 @@ Examples
 ## Known gaps (current cycle)
 
 - [ ] Facing is not modelled: every swing lands in front, so creatures parry and block from behind.
-- [ ] Crushing blows are not modelled (TrinityCore master's `attackerLevel - victimLevel * 1000 - 1500` is always negative, Unit.cpp:2475). Glancing and crushing are not flagged in `CombatLogEvent`.
+- [x] A glancing swing sets `CombatLogEvent.glancing` (`HITINFO_GLANCING`, Retail CLEU SWING_DAMAGE `glancing`). Patch 6.0.2 kept glancing blows only against creatures 4 or more levels above, as TrinityCore does.
+- [ ] Crushing blows are not modelled or carried: whether Retail 12.x still produces them is unverified (3.0.2 moved them to creatures 4+ levels above), and TrinityCore master's `attackerLevel - victimLevel * 1000 - 1500` is always negative (Unit.cpp:2475).
 - [ ] Avoidance auras (MOD_DODGE/PARRY/BLOCK_PERCENT), creature crit auras, the attacker's MOD_ATTACKER_MELEE_CRIT_CHANCE on the victim, sitting victims being crit, evading victims (`MELEE_HIT_EVADE`), `CREATURE_FLAG_EXTRA_NO_PARRY/NO_BLOCK/NO_CRIT` and totems are not modelled.
 - [ ] Block 107 is on the general Defense skill line 95, which class progression does not learn, so players do not block yet; Parry is on class skill lines (Warrior 3127, Death Knight 82246).
 - [ ] Hit rating and expertise (TrinityCore `m_modMeleeHitChance`, GetExpertiseDodgeOrParryReduction), MOD_CRIT_DAMAGE_BONUS and armor penetration are not modelled.

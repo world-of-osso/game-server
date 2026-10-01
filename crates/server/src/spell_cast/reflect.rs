@@ -111,6 +111,7 @@ pub(super) fn log_miss(
             resisted: 0,
             blocked: 0,
             crit: false,
+            glancing: false,
             periodic: false,
             kind: CombatLogKind::Miss(kind),
         },

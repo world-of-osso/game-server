@@ -556,6 +556,7 @@ fn aura_event(aura: &AuraInstance, target: Entity, kind: CombatLogKind) -> Comba
         resisted: 0,
         blocked: 0,
         crit: false,
+        glancing: false,
         periodic: false,
         kind,
     }

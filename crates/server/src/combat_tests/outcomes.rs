@@ -162,3 +162,32 @@ fn a_casting_player_cannot_parry() {
         "{events:?}"
     );
 }
+
+/// A level 10 player's swing at a level 18 creature glances whenever it is not avoided
+/// (miss 5%, dodge 15%, parry 18%, then glancing 10% + 10% per level = 90%,
+/// Unit.cpp:2440-2450), and its combat log line says so
+/// (`HITINFO_GLANCING`, CLEU SWING_DAMAGE `glancing`).
+#[test]
+fn a_glancing_swing_is_flagged_in_the_combat_log() {
+    let Some(mut h) = crate::spell_cast::test_harness::harness(Vec::new(), &[], 1) else {
+        return;
+    };
+    let npc = h.npc;
+    h.app
+        .world_mut()
+        .entity_mut(npc)
+        .insert(shared::components::UnitLevel(18));
+    h.attack(npc);
+    h.advance(800);
+    let swings: Vec<bool> = h
+        .inbox
+        .log
+        .iter()
+        .filter(|event| {
+            event.kind == shared::protocol::CombatLogKind::Damage && event.spell_id.is_none()
+        })
+        .map(|event| event.glancing)
+        .collect();
+    assert!(!swings.is_empty(), "{:?}", h.inbox.log);
+    assert!(swings.iter().all(|&glancing| glancing), "{swings:?}");
+}

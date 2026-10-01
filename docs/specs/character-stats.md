@@ -12,6 +12,7 @@ Players get retail 12.x stats on the server. See [character stats](../wiki/syste
 - [x] Count gear Str/Agi/Int only when they match the spec's main stat.
 - [x] Fold in aura `StatModifiers` after base and gear.
 - [x] Rescale existing characters' persisted health on login without changing the redb format.
+- [x] Deliberate deviation from TrinityCore: its `Unit::SetMaxHealth` only clamps the current value and its login sets `min(saved, max)` (Player.cpp:18736); here every max change keeps the percentage, at login and in session. Retail keeps the percentage for in-session max-health changes (TrinityCore too, for MOD_INCREASE_HEALTH_PERCENT), and characters saved with the old 100-health placeholder rely on it. A level change still refills (Player::GiveLevel).
 
 ## How it works
 
