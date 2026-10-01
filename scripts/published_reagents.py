@@ -251,12 +251,23 @@ def fetch_page(url):
     """Three ordinary GET attempts; no 403 retries or access-control evasion."""
     for attempt in range(3):
         try:
-            with urlopen(Request(url, method="GET"), timeout=30) as response:
+            request = Request(
+                url,
+                method="GET",
+                headers={
+                    "User-Agent": "world-of-osso-published-reagents/1",
+                    "Accept": "text/html",
+                },
+            )
+            with urlopen(request, timeout=30) as response:
                 return response.read()
         except HTTPError as error:
-            if error.code not in {408, 429, 500, 502, 503, 504} or attempt == 2:
-                raise
-            delay = retry_delay(attempt, error.headers.get("Retry-After"))
+            try:
+                if error.code not in {408, 429, 500, 502, 503, 504} or attempt == 2:
+                    raise
+                delay = retry_delay(attempt, error.headers.get("Retry-After"))
+            finally:
+                error.close()
         except URLError as error:
             reason = error.reason
             transient = isinstance(reason, (TimeoutError, ConnectionError)) or (

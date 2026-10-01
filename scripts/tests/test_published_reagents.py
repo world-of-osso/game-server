@@ -157,6 +157,40 @@ class PublishedReagentTests(unittest.TestCase):
             self.assertEqual(adapter.find_spell_ids(db, 2915), [1237486, 1237528])
             self.assertEqual(db.read_bytes(), before)
 
+    def test_fetch_identifies_ordinary_public_http_requests(self):
+        from http.server import BaseHTTPRequestHandler, HTTPServer
+        from threading import Thread
+
+        class PublicPage(BaseHTTPRequestHandler):
+            def do_GET(self):
+                identified = self.headers.get("User-Agent", "").startswith(
+                    "world-of-osso-"
+                )
+                html_requested = self.headers.get("Accept") == "text/html"
+                self.send_response(200 if identified and html_requested else 403)
+                self.end_headers()
+                if identified and html_requested:
+                    self.wfile.write(page().encode())
+
+            def log_message(self, *_args):
+                return
+
+        server = HTTPServer(("127.0.0.1", 0), PublicPage)
+        thread = Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        try:
+            raw = adapter.fetch_page(
+                f"http://127.0.0.1:{server.server_port}/spell=1237528"
+            )
+            self.assertEqual(
+                adapter.parse_published_reagents(raw.decode(), 1237528)["items"],
+                [[238511, 15], [238513, 25]],
+            )
+        finally:
+            server.shutdown()
+            server.server_close()
+            thread.join()
+
     def test_fetch_retries_transient_but_not_forbidden(self):
         url = "https://www.wowhead.com/spell=1237528"
         transient = HTTPError(url, 503, "temporary", {"Retry-After": "2"}, None)
