@@ -29,7 +29,7 @@ Saved browser-cli evidence from [Zaralda on Wowhead](https://www.wowhead.com/npc
 | Silverleaf Thread | 251665 | 700 | `[1]` | `-1` |
 | Embroidery Floss | 251691 | 700 | `[1]` | `-1` |
 
-Both rows retain raw `cost: [[700, [], []]]`. A read-only canonical `world.db` query confirms both `content_item` rows have `BuyPrice = 700` and `VendorStackCount = 1`. A separately observed generic item listing shows Silverleaf Thread at **736**, versus **700** on the NPC listing; the reason for that listing discrepancy remains unverified. Raw `avail: -1` does not establish runtime unlimited-stock semantics or restock behavior; `stack: [1]` is preserved without asserting the runtime purchase contract.
+Both rows retain raw `cost: [[700, [], []]]`. A read-only canonical `world.db` query confirms both `content_item` rows have `BuyPrice = 700` and `VendorStackCount = 1`. A separately observed generic item listing shows Silverleaf Thread at **736**, versus **700** on the NPC listing; the reason for that listing discrepancy remains unverified. Follow-up browser inspection of both item pages shows Zaralda with **Stock `∞`**, **Stack `1`**, and **Cost 7 silver** in their Sold by tables. This explicitly supports unlimited supplier stock and single-item purchases; raw `avail: -1` is consistent with that display. No restock interval is shown, but limited-stock restock timing is not a prerequisite for these unlimited suppliers.
 
 The saved mapper places Zaralda in **Silvermoon City**, **uiMapId 2393**, under location **15969**, with marker **43.2, 55.8**. These are UI-map marker coordinates, not runtime world x/y/z or facing. This closes the published merchant-identity/listing gap, not the genuine placed runtime merchant gate. No merchant data was imported or activated; Classic/catalog remains unchanged.
 
@@ -41,8 +41,8 @@ The 15 currently staged eligible recipes require neither item. The published-rea
 
 - Independent ingestion gate passed 114 distinct targeted tests; `/tmp/midnight-ingestion-verify-357086b/report.md` records exact scope and caveats. A separate read-only publication gate checks the canonical data.
 - Rebuild preflight is implemented and tested: eleven reference-import and six bounded rebuild tests passed. `CRAFTING_SOURCE_DIR` defaults to `data/reference/crafting/12.1.0.69933`; validation happens before database deletion. [[crafting-reference-import]] owns the command and schema details.
-- A genuine placed city merchant is still required: Zaralda's published identity and UI marker do not supply runtime x/y/z/facing; diagnostic reassignment cannot satisfy it.
-- Availability/restock semantics remain unverified; the 34-row browser extraction is listing evidence, not runtime purchase proof. The two reagent prices and bundle counts match canonical item data, but vendor rows remain absent.
+- A genuine placed city merchant is still required; diagnostic reassignment cannot satisfy it. The spec does not require Retail-captured elevation or facing. The UI marker and map transform support an approximate horizontal location; sampled terrain could establish ground height, but deriving a new placement rather than importing a genuine spawn record requires a user decision under the no-fabricated-spawns contract.
+- Unlimited supplier stock, prices and bundle counts are supported for thread/floss. Vendor rows and an integrated runtime purchase remain absent; these are implementation/acceptance gaps, not missing stock evidence.
 - Spark placeholders, quality-only outputs and native bonus/quality behavior remain unsupported; published HTML is not a native crafting capture.
 - Nine missing ItemSparse rows remain reported, not fabricated or silently replaced.
 
@@ -58,6 +58,8 @@ Publication evidence is retained under `data/reference/midnight-20261001/`; brow
 - [Importer](../../../scripts/economy_catalog.py) — effect-288 resolution and eligibility boundary.
 - [Zaralda NPC listing](https://www.wowhead.com/npc=243531/zaralda) — browser-observed merchant identity and sells listing, 2026-10-01.
 - [Parsed browser evidence](/tmp/wowhead-midnight-merchants-20261001/zaralda-observed.json), [raw HTML/listing log](/tmp/wowhead-midnight-merchants-20261001/npc-html-listing-observation.log) and [raw sells observation log](/tmp/wowhead-midnight-merchants-20261001/npc-sells-observation.log) — all 34 extracted rows and UI mapper; temporary local artifacts, not durable repository data. Patch context and generic-listing 736 comparison are browser-agent observations supplied with this docs update.
+
+Follow-up stock screenshots: `/tmp/wowhead-midnight-merchants-20261001/silverleaf-thread-visible.jpg` and `embroidery-floss-visible.jpg`. Source pages: [Silverleaf Thread](https://www.wowhead.com/item=251665/silverleaf-thread) and [Embroidery Floss](https://www.wowhead.com/item=251691/embroidery-floss).
 
 ## See Also
 

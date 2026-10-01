@@ -2,7 +2,7 @@
 
 ## [2026-10-01] investigations | Browser-observed Silvermoon merchant
 
-Updated [[midnight-economy-content]] from saved browser-cli Zaralda evidence: NPC243531, Leatherworking Supplies, all 34 sells rows extracted without individual item navigation, two thread/floss costs700 and raw stack/availability, plus Silvermoon uiMap2393 marker43.2,55.8. Canonical item rows confirm price700 and bundle1 for both reagents; neither appears in the 15 staged recipes. Preserved patch12.0.0 provenance, generic thread736 discrepancy, unverified stock/restock semantics, and missing runtime x/y/z/facing. Linked parsed/raw temporary artifacts. Classic/catalog unchanged.
+Updated [[midnight-economy-content]] from saved browser-cli Zaralda evidence: NPC243531, Leatherworking Supplies, all 34 sells rows extracted without individual item navigation, two thread/floss costs700 and raw stack/availability, plus Silvermoon uiMap2393 marker43.2,55.8. Canonical item rows confirm price700 and bundle1 for both reagents; neither appears in the 15 staged recipes. Preserved patch12.0.0 provenance and generic thread736 discrepancy. Follow-up item listings explicitly show unlimited stock and bundle1; corrected the overstated Retail-captured elevation/facing gate. Derived placement remains a user decision under the no-fabricated-spawns contract. Linked parsed/raw temporary artifacts. Classic/catalog unchanged.
 
 ## [2026-10-01] systems | Verified crafting reference publication
 
