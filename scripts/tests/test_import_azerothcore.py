@@ -1414,6 +1414,7 @@ class CreatureEventImportTests(unittest.TestCase):
         rows = (self.tdb / "creature.sql").read_text().rstrip(";\n") + "," + tdb_creature(319, 823, 0, -8933.0, -136.0, 83.0)
         (self.tdb / "creature.sql").write_text(rows + ";\n")
         write_db2_rows(self.csv / db2.DEFAULT_BUILD, "QuestV2", [{"ID": 783}, {"ID": 999}, {"ID": 26150}])
+        write_db2_rows(self.csv / db2.DEFAULT_BUILD, "AreaTrigger", [{"ID": 5000}])
         write_db2_rows(self.csv / db2.DEFAULT_BUILD, "SpellName", [{"ID": 8326, "Name_lang": "Ghost"}])
         # ContentTuning 6 tops out at 30: QuestMoneyReward level 30, difficulty 5.
         write_db2_rows(self.csv / db2.DEFAULT_BUILD, "QuestMoneyReward", [{"ID": 30, "Difficulty_5": 1235}])
@@ -1473,16 +1474,18 @@ class CreatureEventImportTests(unittest.TestCase):
                              [(68, 783)])
             self.assertEqual(conn.execute("SELECT ID, RewardText FROM content_quest_offer_reward").fetchall(),
                              [(783, "Well done.")])
-            self.assertEqual(conn.execute("SELECT ID, PrevQuestID FROM content_quest_template_addon").fetchall(),
-                             [(783, 0)], "AzerothCore addon kept where TrinityCore has none")
+            self.assertEqual(conn.execute("SELECT ID, PrevQuestID, SpecialFlags FROM content_quest_template_addon").fetchall(),
+                             [(783, 0, 2)], "AzerothCore addon kept where TrinityCore has none; the area trigger"
+                             " objective sets EXPLORATION_OR_EVENT")
+            self.assertEqual(conn.execute("SELECT id, quest FROM content_areatrigger_involvedrelation").fetchall(),
+                             [(5000, 783)], "the area trigger objective's own trigger explores the quest")
             self.assertEqual(conn.execute("SELECT QuestID, id, ObjectiveIndex, MapID, WorldMapAreaId, Flags"
                                           " FROM content_quest_poi").fetchall(), [(26150, 0, -1, 0, 37, 3)])
             self.assertEqual(conn.execute("SELECT QuestID, Idx1, Idx2, X, Y FROM content_quest_poi_points").fetchall(),
                              [(26150, 0, 0, -9000, -80)])
         with (self.root / "data/reports/content-dropped.csv").open(newline="") as handle:
             reported = {(r["table"], r["key"], r["source_id"]): r["reason"] for r in csv.DictReader(handle)}
-        self.assertEqual(reported[("tdb_quest_objectives", "QuestID=783 ID=3", "5000")],
-                         "objective type 10 not supported")
+        self.assertNotIn(("tdb_quest_objectives", "QuestID=783 ID=3", "5000"), reported)
         self.assertEqual(reported[("tdb_quest_template", "ID=26150 RewardChoiceItemID1", "999999")],
                          "item not in Retail ItemSparse; zeroed")
         self.assertEqual(reported[("tdb_quest_template", "ID=26150 RewardDisplaySpell1", "77777")],
