@@ -3,7 +3,10 @@ set -euo pipefail
 
 SERVER_HOST="sakuin"
 SERVER_DIR="/opt/game-server"
-TERRAIN_DIR="/opt/game-engine/data/terrain"
+# Client asset cache the ground loads from (GAME_SERVER_GROUND_DIR, crates/server/src/ground.rs).
+GROUND_DIR="/opt/game-engine/data"
+GROUND_LIST="$(mktemp)"
+trap 'rm -f "$GROUND_LIST"' EXIT
 
 echo "Building release..."
 cargo build --release -p server
@@ -14,7 +17,12 @@ ssh "$SERVER_HOST" "mv ${SERVER_DIR}/server.new ${SERVER_DIR}/server"
 
 echo "Uploading data..."
 scp data/world.db "${SERVER_HOST}:${SERVER_DIR}/data/world.db"
-scp ../game-engine/data/terrain/azeroth_32_48.adt "${SERVER_HOST}:${TERRAIN_DIR}/azeroth_32_48.adt"
+
+echo "Uploading ground (WDTs, ADTs and WMOs of the spawned maps)..."
+python3 scripts/ground_files.py --world-db data/world.db --cache ../game-engine/data > "$GROUND_LIST"
+rsync -a --files-from="$GROUND_LIST" ../game-engine/data/ "${SERVER_HOST}:${GROUND_DIR}/"
+# The binary's default ground path is this checkout's; without the variable it refuses to start.
+ssh "$SERVER_HOST" "mkdir -p /etc/systemd/system/game-server.service.d && printf '[Service]\nEnvironment=GAME_SERVER_GROUND_DIR=${GROUND_DIR}\n' > /etc/systemd/system/game-server.service.d/ground.conf && systemctl daemon-reload"
 
 echo "Restarting service..."
 ssh "$SERVER_HOST" "systemctl restart game-server"
