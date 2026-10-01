@@ -121,6 +121,11 @@ pub enum AdminRequest {
         item_id: u32,
         count: u32,
     },
+    /// TrinityCore `.quest complete`: the quest's kill and object objectives done.
+    QuestComplete {
+        character_name: String,
+        quest_id: u32,
+    },
     /// Deliver the character's mail still in transit now.
     MailDeliverNow {
         character_name: String,
@@ -356,6 +361,10 @@ pub enum AdminResponse {
     MailDelivered {
         character_name: String,
         count: usize,
+    },
+    QuestCompleted {
+        character_name: String,
+        quest_id: u32,
     },
     DurabilitySet {
         character_name: String,

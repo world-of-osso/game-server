@@ -134,6 +134,10 @@ enum AdminRequest {
         item_id: u32,
         count: u32,
     },
+    QuestComplete {
+        character_name: String,
+        quest_id: u32,
+    },
     /// Deliver the character's mail still in transit now.
     MailDeliverNow {
         character_name: String,
@@ -337,6 +341,10 @@ enum AdminResponse {
         character_name: String,
         count: usize,
     },
+    QuestCompleted {
+        character_name: String,
+        quest_id: u32,
+    },
     DurabilitySet {
         character_name: String,
         percent: u32,
@@ -456,6 +464,7 @@ fn print_usage() {
     eprintln!("  game-server-admin set-gold <character_name> <copper>");
     eprintln!("  game-server-admin grant-item <character_name> <item_id> <count>");
     eprintln!("  game-server-admin mail-deliver-now <character_name>");
+    eprintln!("  game-server-admin quest-complete <character_name> <quest_id>");
     eprintln!("  game-server-admin set-durability <character_name> <percent>");
     eprintln!(
         "  game-server-admin set-appearance <character_name> <sex> <skin_color> <face> <eye_color> <hair_style> <hair_color> <facial_style>"
@@ -568,6 +577,13 @@ fn parse_request(args: &[String]) -> AdminRequest {
         "combat-log" => parse_combat_log(args),
         "set-gold" => parse_set_gold(args),
         "grant-item" => parse_grant_item(args),
+        "quest-complete" => {
+            require_args(args, 4, "quest-complete <character_name> <quest_id>");
+            AdminRequest::QuestComplete {
+                character_name: args[2].clone(),
+                quest_id: parse_number(&args[3], "quest_id"),
+            }
+        }
         "mail-deliver-now" => {
             require_args(args, 3, "mail-deliver-now <character_name>");
             AdminRequest::MailDeliverNow {
@@ -1044,6 +1060,21 @@ mod tests {
                 withdraw_gold: true,
                 gold_per_day: 50_000
             }
+        ));
+    }
+
+    #[test]
+    fn parse_quest_complete_request() {
+        let request = parse_request(&args(&[
+            "game-server-admin",
+            "quest-complete",
+            "Quester",
+            "26391",
+        ]));
+        assert!(matches!(
+            request,
+            AdminRequest::QuestComplete { ref character_name, quest_id: 26391 }
+                if character_name == "Quester"
         ));
     }
 

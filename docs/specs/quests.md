@@ -20,13 +20,15 @@ Quest givers, the quest log and objective tracking for the Retail-style quest di
 ## Tests asserting this spec
 
 - `crates/server/src/quest_tests.rs` — real rows through the message path: A Threat Within (783) Willem → McBride persisted with Kobold Camp Cleanup (7) offered next; 7 blocked until 783 turned in; 7 progresses on Kobold Vermin kills and pays 25 copper; Brotherhood of Thieves (18) counts bag bandanas, rejects a missing choice, grants Militia Hammer; abandon; untrack persists across re-entry; out-of-range giver.
-- `crates/server/src/quest_rules_tests.rs` — markers, prerequisites, kill credit, trivial level, race mask, log cap.
+- `crates/server/src/quest_rules_tests.rs` — markers, prerequisites, kill credit, trivial level, race mask, log cap, `quest-complete` objective fill.
+- `crates/server/src/admin_ipc.rs` tests — `quest-complete` persists the filled counts and marks the log dirty.
 - shared-protocol `src/protocol_quest_tests.rs` — wire round trips, marker order, registration.
 
 ## Known gaps (current cycle)
 
 - [ ] Game object objectives never progress (game object templates/spawns are not imported); explore/area-trigger objectives have no data.
 - [ ] Wrath race masks: `AllowableRaces` 1101/690 lists Wrath races only, so post-Wrath races (Worgen, Void Elf, Pandaren, ...) fail race-restricted quests.
+- [ ] Spell-credit objectives (Extinguishing Hope 26391's Vineyard Fires from Milly's Extinguisher) never progress; admin `quest-complete <character> <quest_id>` (TrinityCore `.quest complete`) fills a logged quest's kill/object objectives for tests.
 - [ ] Daily/weekly quests have no reset; they are one-time. Timed quests, `RequiredFactionId`/reputation, skill requirements, reward spells, reputation rewards and `ItemDrop` quest-item drops are not applied.
 - [ ] Creature `KillCredit1/2` entries do not give credit; kill credit ignores tap rules and dead group members.
 - [ ] `zone` in `QuestEntrySnapshot` is empty (no area names server-side); clients resolve `sort_id`. POI `world_map_area_id` is a Wrath `WorldMapArea` id, not a Retail `UiMap` id.
