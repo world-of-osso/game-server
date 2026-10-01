@@ -96,6 +96,73 @@ fn first_page_all_sorts_keep_ascending_id_ties_and_count_every_match() {
 }
 
 #[test]
+fn filtered_shallow_deep_and_overflow_pages_match_full_sort() {
+    let now = unix_now();
+    let auctions: HashMap<_, _> = (1..=4096)
+        .map(|id| {
+            let rank = id % 3;
+            let name = if id % 7 == 0 {
+                "Copper Ore"
+            } else {
+                ["Iron A", "Iron B", "Iron C"][rank as usize]
+            };
+            let mut auction = test_auction(id, name, rank as u8, rank as u16);
+            auction.item.item_id = if id % 11 == 0 { 43 } else { 42 };
+            auction.min_bid = rank * 100;
+            auction.buyout_price = [Some(100), Some(200), None][rank as usize];
+            auction.expires_at_unix_secs = now + [30, 900, 7200][rank as usize];
+            (id, auction)
+        })
+        .collect();
+    for field in [
+        AuctionSortField::Name,
+        AuctionSortField::MinBid,
+        AuctionSortField::Buyout,
+        AuctionSortField::TimeLeft,
+        AuctionSortField::Quality,
+        AuctionSortField::RequiredLevel,
+    ] {
+        for dir in [AuctionSortDir::Asc, AuctionSortDir::Desc] {
+            let mut query = text_query("iRoN");
+            query.item_id = Some(42);
+            query.sort_field = field;
+            query.sort_dir = dir;
+            let mut expected: Vec<_> = auctions
+                .values()
+                .filter(|a| {
+                    a.auction_id % 7 != 0 && a.auction_id % 11 != 0 && a.auction_id % 5 != 0
+                })
+                .collect();
+            expected.sort_by(|a, b| compare_listing(a, b, &query, now));
+            assert!(expected.len() > 100);
+            for requested_size in [0, 7, 50, 99] {
+                query.page_size = requested_size;
+                let page_size = requested_size.clamp(1, 50) as usize;
+                let last_page = expected.len().div_ceil(page_size) as u32;
+                for page in [1, 3, 30, last_page - 1, last_page, u32::MAX] {
+                    query.page = page;
+                    let result =
+                        search_auctions_matching(&auctions, &query, |a| a.auction_id % 5 != 0);
+                    let start = (page as usize).saturating_mul(page_size);
+                    let expected_page: Vec<_> = expected
+                        .iter()
+                        .skip(start)
+                        .take(page_size)
+                        .map(|a| to_listing_summary_at(a, now))
+                        .collect();
+                    assert_eq!(result.total_results as usize, expected.len());
+                    assert_eq!(result.query, query);
+                    assert_eq!(
+                        result.results, expected_page,
+                        "{field:?} {dir:?} size={requested_size} page={page}"
+                    );
+                }
+            }
+        }
+    }
+}
+
+#[test]
 fn first_page_returns_short_and_empty_filtered_results() {
     let auctions = HashMap::from([
         (1, test_auction(1, "Iron Ore", 1, 1)),

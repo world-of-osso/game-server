@@ -28,8 +28,9 @@ pub(super) fn search_auctions_matching(
         .filter(|auction| matches_search_query(auction, query, &needle))
         .filter(|auction| additional_match(auction));
     let now = unix_now();
-    let (total_results, results) = if query.page == 0 {
-        first_page_listings(listings, query, now)
+    let (total_results, results) = if let Some((start, end)) = bounded_prefix(query, auctions.len())
+    {
+        prefix_page_listings(listings, query, now, start, end)
     } else {
         let mut listings: Vec<_> = listings.collect();
         let total_results = listings.len() as u32;
@@ -109,13 +110,34 @@ impl Ord for RankedListing<'_> {
     }
 }
 
-fn first_page_listings<'a>(
+fn bounded_prefix(query: &AuctionSearchQuery, input_len: usize) -> Option<(usize, usize)> {
+    let page_size = query.page_size.clamp(1, MAX_PAGE_SIZE) as usize;
+    let start = (query.page as usize).checked_mul(page_size)?;
+    let end = start.checked_add(page_size)?;
+    // Both paths scan all input for exact filtering/counts and order the final page.
+    // Limit prefix ordering work k*ceil(log2(k)) to the vector partition span n
+    // plus final-page ordering p*ceil(log2(p)). This is a work/space bound, not
+    // a worst-case time bound: heap replacements can still cost O(n log k).
+    // Use the input upper bound without a second filtering pass; selective queries
+    // may retain fewer than k entries. Deep prefixes instead use O(n) nth selection.
+    let prefix_work = ordering_work(end)?;
+    let selection_work = input_len.checked_add(ordering_work(page_size)?)?;
+    (prefix_work <= selection_work).then_some((start, end))
+}
+
+fn ordering_work(len: usize) -> Option<usize> {
+    let height = usize::BITS - (len - 1).leading_zeros();
+    len.checked_mul(height as usize)
+}
+
+fn prefix_page_listings<'a>(
     listings: impl Iterator<Item = &'a AuctionData>,
     query: &'a AuctionSearchQuery,
     now: u64,
+    start: usize,
+    end: usize,
 ) -> (u32, Vec<AuctionListingSummary>) {
-    let page_size = query.page_size.clamp(1, MAX_PAGE_SIZE) as usize;
-    let mut best = BinaryHeap::with_capacity(page_size);
+    let mut best = BinaryHeap::with_capacity(end);
     let mut total_results = 0;
     for auction in listings {
         total_results += 1;
@@ -124,15 +146,16 @@ fn first_page_listings<'a>(
             query,
             now,
         };
-        if best.len() < page_size {
+        if best.len() < end {
             best.push(candidate);
         } else if best.peek().is_some_and(|worst| candidate < *worst) {
-            *best.peek_mut().expect("full first-page heap") = candidate;
+            *best.peek_mut().expect("full prefix heap") = candidate;
         }
     }
     let results = best
         .into_sorted_vec()
         .into_iter()
+        .skip(start)
         .map(|listing| to_listing_summary_at(listing.auction, now))
         .collect();
     (total_results, results)
