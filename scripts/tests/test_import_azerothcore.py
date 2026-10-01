@@ -883,7 +883,7 @@ class CreatureEventImportTests(unittest.TestCase):
         result = self.run_import()
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         tables = ("content_creature_template", "content_creature_template_model", "content_creature_template_addon")
-        with sqlite3.connect(self.db) as conn:
+        with closing(sqlite3.connect(self.db)) as conn, conn:
             expected = {t: sorted(conn.execute(f"SELECT * FROM {t}").fetchall()) for t in tables}
             # The database as the import built it before the rule.
             for table, column in zip(tables, ("entry", "CreatureID", "entry")):
@@ -894,7 +894,7 @@ class CreatureEventImportTests(unittest.TestCase):
                                 capture_output=True, text=True, timeout=60, check=False)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn("added 1 transform templates", result.stdout)
-        with sqlite3.connect(self.db) as conn:
+        with closing(sqlite3.connect(self.db)) as conn:
             for table in tables:
                 rows = sorted(conn.execute(f"SELECT * FROM {table}").fetchall())
                 self.assertEqual(rows, expected[table], table)
