@@ -6188,6 +6188,7 @@ dependencies = [
  "bitcode",
  "chrono",
  "lightyear",
+ "los",
  "peercred-ipc",
  "rand 0.8.5",
  "redb",

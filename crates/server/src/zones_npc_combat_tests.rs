@@ -344,19 +344,16 @@ fn a_player_hitting_an_invader_that_fights_infantry_taps_it_and_keeps_swinging()
 }
 
 /// Mean wall time of one 50 ms tick of the creature, combat and aggro plugins running
-/// the 292 world.db spawns within 300 yd of the Northshire infantry, after a warm-up
-/// (`cargo test --release -p server northshire_tick_cost -- --ignored --nocapture`).
-#[test]
-#[ignore]
-fn northshire_tick_cost() {
-    let center = spawn_of(INFANTRY);
+/// the world.db spawns within 300 yd of WoW `(x, y)` on map 0 and a level 1 human player
+/// at the first spawn, after a warm-up; with the line of sight bake loaded when `los`.
+fn tick_cost(x: f32, y: f32, los: bool) -> Option<(usize, std::time::Duration)> {
     let spawns: Vec<CreatureSpawn> = world_data()
         .spawns
         .iter()
         .filter(|spawn| {
             spawn.map == 0
-                && (spawn.position_x - center.position_x).abs() < 300.0
-                && (spawn.position_y - center.position_y).abs() < 300.0
+                && (spawn.position_x - x).abs() < 300.0
+                && (spawn.position_y - y).abs() < 300.0
         })
         .map(|spawn| CreatureSpawn {
             wander_distance: spawn.wander_distance,
@@ -368,13 +365,138 @@ fn northshire_tick_cost() {
         })
         .collect();
     let count = spawns.len();
-    let Some(mut app) = fight_app(spawns) else {
-        return;
+    let first = (
+        spawns[0].position_x,
+        spawns[0].position_y,
+        spawns[0].position_z,
+    );
+    let mut app = if los {
+        los_fight_app(spawns)?
+    } else {
+        fight_app(spawns)?
     };
+    player_at(&mut app, first.0, first.1, first.2);
     run(&mut app, 20 * 30);
     let ticks = 20 * 120;
     let start = std::time::Instant::now();
     run(&mut app, ticks);
-    let mean = start.elapsed() / ticks as u32;
-    println!("northshire_tick_cost: {count} spawns, {mean:?} per tick");
+    Some((count, start.elapsed() / ticks as u32))
+}
+
+fn print_tick_cost(zone: &str, x: f32, y: f32) {
+    for los in [false, true] {
+        if let Some((count, mean)) = tick_cost(x, y, los) {
+            println!("{zone}_tick_cost: {count} spawns, LOS {los}: {mean:?} per tick");
+        }
+    }
+}
+
+/// `cargo test --release -p server _tick_cost -- --ignored --nocapture --test-threads 1`
+#[test]
+#[ignore]
+fn northshire_tick_cost() {
+    let center = spawn_of(INFANTRY);
+    print_tick_cost("northshire", center.position_x, center.position_y);
+}
+
+/// Stormwind's Trade District.
+#[test]
+#[ignore]
+fn stormwind_tick_cost() {
+    print_tick_cost("stormwind", -8830.0, 630.0);
+}
+
+/// `fight_app` with the line of sight baked in the ground directory (`los-bake --map 0`).
+fn los_fight_app(spawns: Vec<CreatureSpawn>) -> Option<App> {
+    let mut app = fight_app(spawns)?;
+    let dir = crate::ground::ground_data_dir().join("los");
+    app.insert_resource(crate::line_of_sight::LineOfSight::load(&dir).unwrap());
+    Some(app)
+}
+
+/// A level 60 Blackrock Invader (faction 14, hostile to all) standing at WoW `(x, y, z)`:
+/// a 45 yd aggro radius against a level 1 player.
+fn invader_at(x: f32, y: f32, z: f32) -> CreatureSpawn {
+    CreatureSpawn {
+        position_x: x,
+        position_y: y,
+        position_z: z,
+        ..placed(spawn_of(INVADER), 42_937, 0.0)
+    }
+}
+
+fn level_60(app: &mut App, creature: Entity) {
+    app.world_mut()
+        .entity_mut(creature)
+        .insert(UnitLevel(60))
+        .remove::<shared::level_scaling::LevelScaling>();
+}
+
+/// A level 1 human male player standing at WoW `(x, y, z)`.
+fn player_at(app: &mut App, x: f32, y: f32, z: f32) -> Entity {
+    let (x, y, z) = crate::terrain_height::wow_to_bevy(x, y, z);
+    app.world_mut()
+        .spawn((
+            Position { x, y, z },
+            crate::maps::InMap::continent(0),
+            Player {
+                name: "Anduin".into(),
+                race: 1,
+                class: 1,
+                appearance: Default::default(),
+            },
+            Health {
+                current: 100_000.0,
+                max: 100_000.0,
+            },
+            UnitLevel(1),
+            UnitFactionTemplate(crate::faction::faction_template_for_race(1)),
+            CombatTarget::default(),
+        ))
+        .id()
+}
+
+/// Stormwind's outer wall west of the main gate: the invader on the street behind it
+/// (floor heights from the LOS bake), the player on the Elwynn side 40 yd away.
+const STREET: (f32, f32, f32) = (-8831.9, 492.8, 98.26);
+const BEHIND_THE_WALL: (f32, f32, f32) = (-8862.27, 471.05, 83.10);
+/// The same street 20 yd from the invader, nothing between them.
+const UP_THE_STREET: (f32, f32, f32) = (-8845.9, 506.8, 98.26);
+
+fn aggro_at(creature: (f32, f32, f32), player: (f32, f32, f32)) -> Option<bool> {
+    let mut app = los_fight_app(vec![invader_at(creature.0, creature.1, creature.2)])?;
+    let invader = spawned(&app, 0);
+    level_60(&mut app, invader);
+    let player = player_at(&mut app, player.0, player.1, player.2);
+    run(&mut app, NOTIFY_TICKS);
+    Some(state(&app, invader) == pursuing(player))
+}
+
+#[test]
+#[ignore]
+fn a_creature_behind_the_stormwind_wall_does_not_aggro_a_player_it_would_in_the_open() {
+    let Some(open) = aggro_at(STREET, UP_THE_STREET) else {
+        return;
+    };
+    assert!(open, "the invader attacks the player up the street");
+    assert_eq!(
+        aggro_at(STREET, BEHIND_THE_WALL),
+        Some(false),
+        "the wall hides the player"
+    );
+}
+
+#[test]
+#[ignore]
+fn a_creature_in_northshire_abbey_aggroes_a_player_through_the_doorway() {
+    // The invader in the hall, the player on the steps of the west door 30 yd away.
+    assert_eq!(
+        aggro_at((-8896.5, -173.8, 81.58), (-8909.2, -146.6, 81.95)),
+        Some(true)
+    );
+    // The same line 4 yd to the side runs through the wall beside the door.
+    assert_eq!(
+        aggro_at((-8892.875, -172.11, 81.58), (-8905.575, -144.91, 81.96)),
+        Some(false)
+    );
 }

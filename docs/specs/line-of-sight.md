@@ -26,7 +26,11 @@ Retail's LOS errors ("can see it, not in line of sight") are the bugs to avoid.
   kneel, sleep, dead), times unit scale. Models with no eye geometry use their head bone's position
   in the current pose. Mounted units use the rider's eyes on the mount. User decision 2026-10-02:
   "the character models literally have eyes"; the Head/Helm attachment heights are not used.
-- The bake writes this eye point per display ID and stand state for the server.
+- The bake writes this eye point per display ID and stand state for the server
+  (`eye_heights.tsv`: model space, the display's scales applied, `source` eyes or head), posed
+  at the first frame of the state's animation. A model without the state's sequence (e.g. the
+  human models have no Dead) holds its Stand eye. `player_displays.tsv` maps race and sex to the
+  character display (`ChrRaceXChrModel` → `ChrModel.DisplayID`).
 
 ## Player casts: witness ray
 - The client searches for a clear segment from its eye point to any point inside the target's body
@@ -43,6 +47,16 @@ Retail's LOS errors ("can see it, not in line of sight") are the bugs to avoid.
 - Creature aggro, creature-vs-creature checks and creature casts use a server search: from the
   creature's eye point to the target's eyes, chest and feet. LOS holds if any ray is clear.
 - Runs only when an aggro or cast check needs it. Tick cost is measured as for creature aggro.
+- Chest is halfway between the target's feet and eyes. The eye point is turned to the unit's
+  facing. Aggro rays run last, after every other `CanStartAttack` test, nearest candidate
+  first, stopping at the first one seen.
+- Creature casts at a unit target fail with "not in line of sight" unless the spell has
+  `SPELL_ATTR2_IGNORE_LINE_OF_SIGHT` (TrinityCore `Spell::CheckCast`), at cast start and finish.
+- The server loads the bake from `<ground dir>/los` (`GAME_SERVER_GROUND_DIR`, else
+  `game-engine/data`): the eye table at startup (it refuses to start without it), each map's
+  tiles on first use. A map without baked tiles has nothing that blocks. A unit whose display
+  and stand state have no eye row (model not extracted, or no eyes and no head bone) is not
+  LOS-checked. Not modelled yet: mounted eyes, unit scale (`OBJECT_FIELD_SCALE`).
 
 ## Bake and raycast (part 1, `crates/los`)
 - `los-bake` (feature `bake`) writes `<out>/<map>/<row>_<col>.los`, `<out>/<map>/report.txt` and
@@ -53,5 +67,9 @@ Retail's LOS errors ("can see it, not in line of sight") are the bugs to avoid.
 - Each triangle is stored once, in the tile holding its centroid. A query tests the tiles under the
   segment and one ring around them. A segment touching a surface at either end is not blocked.
 - Global-WMO maps (dungeons) are not baked yet.
+- Run: `cargo run --release -p los --features bake --bin los-bake -- --data ../game-engine/data
+  --world-db data/world.db --out ../game-engine/data/los --map 0 --all` (per map; `--no-eyes`
+  skips the eye table). Map 0 is 1176 tiles, 6.3 GB, under 10 minutes (debug, opt-level 2). `deploy.sh` ships the
+  whole `los/` directory beside the ground files and stops when the eye table is missing.
 - Resolved: the Head attachment (id 20) sits on a static root bone in most models, so the eye point
   comes from the eye geometry instead (see Eye point).

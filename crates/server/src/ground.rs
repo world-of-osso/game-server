@@ -651,7 +651,7 @@ impl Plugin for GroundPlugin {
 
 /// Where the ground loads from: `GAME_SERVER_GROUND_DIR`, else the client's asset cache
 /// beside this checkout (not the working directory).
-fn ground_data_dir() -> PathBuf {
+pub(crate) fn ground_data_dir() -> PathBuf {
     std::env::var_os(GROUND_DIR_ENV).map_or_else(
         || Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../game-engine/data"),
         PathBuf::from,

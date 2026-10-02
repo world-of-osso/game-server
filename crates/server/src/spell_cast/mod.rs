@@ -59,6 +59,8 @@ const SPELL_ATTR0_CANCELS_AUTO_ATTACK_COMBAT: u32 = 0x0010_0000;
 const SPELL_ATTR1_CHANNELED: u32 = 0x4 | 0x40;
 /// `SpellInfo::HasInitialAggro` (SpellInfo.cpp:1925-1928): none of these.
 const SPELL_ATTR1_NO_THREAT: u32 = 0x0000_0400;
+/// `SPELL_ATTR2_IGNORE_LINE_OF_SIGHT` (SharedDefines.h:512).
+const SPELL_ATTR2_IGNORE_LINE_OF_SIGHT: u32 = 0x0000_0004;
 const SPELL_ATTR2_NO_INITIAL_THREAT: u32 = 0x0040_0000;
 const SPELL_ATTR4_NO_HARMFUL_THREAT: u32 = 0x0000_0010;
 /// `SpellPower.PowerType` -2 costs health.
@@ -120,6 +122,8 @@ pub enum CastFailure {
     InvalidTarget,
     OutOfRange,
     TooClose,
+    /// `SPELL_FAILED_LINE_OF_SIGHT`.
+    LineOfSight,
     NotEnoughPower(PowerType),
     NotEnoughHealth,
     /// Missing `SpellReagents` item (its name).
@@ -157,6 +161,8 @@ impl CastFailure {
             Self::InvalidTarget => (R::InvalidTarget, None),
             Self::OutOfRange => (R::OutOfRange, None),
             Self::TooClose => (R::TooClose, None),
+            // SPELL_FAILED_LINE_OF_SIGHT has no CastFailReason in shared-protocol yet.
+            Self::LineOfSight => (R::NotSupported, Some("Target not in line of sight".into())),
             Self::NotEnoughPower(power) => (R::NotEnoughResource, Some(format!("{power:?}"))),
             Self::NotEnoughHealth => (R::NotEnoughResource, Some("Health".into())),
             // SPELL_FAILED_REAGENTS, SPELL_FAILED_TOTEM_CATEGORY, ERR_INV_FULL
@@ -791,6 +797,14 @@ fn validate_target(
         }
         if distance < min {
             return Err(CastFailure::TooClose);
+        }
+        // `Spell::CheckCast` → `IsWithinLOS` (Spell.cpp:5996-6013, 9259-9272): a creature
+        // caster's ray search (player casts carry a witness ray, not yet checked).
+        if world.get::<Npc>(caster).is_some()
+            && attributes(spell, 2) & SPELL_ATTR2_IGNORE_LINE_OF_SIGHT == 0
+            && !crate::line_of_sight::sees_in_world(world, caster, target)
+        {
+            return Err(CastFailure::LineOfSight);
         }
     }
     Ok(Some(target))

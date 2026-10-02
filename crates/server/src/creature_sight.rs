@@ -12,7 +12,10 @@
 //! copy, updated from the interest queue's relocations, so a pass visits only the moved
 //! creatures and their 3x3 cells, never every creature.
 //!
-//! Not modelled: line of sight and the Z range (`CREATURE_Z_ATTACK_RANGE`; no collision
+//! Line of sight is the server search of `crate::line_of_sight`, run only for a pair that
+//! may otherwise start a fight.
+//!
+//! Not modelled: the Z range (`CREATURE_Z_ATTACK_RANGE`; no collision
 //! data, as for players), `IsNeutralToAll` (needs `Faction.ReputationIndex`, not imported;
 //! no imported creature template is both hostile-by-default and group-less),
 //! `IsEngagedBy`, stealth detection, no-gray-aggro (off by default).
@@ -212,10 +215,13 @@ struct SightParams<'w, 's> {
     world_data: Option<Res<'w, WorldData>>,
     maps: Option<Res<'w, crate::maps::MapStore>>,
     time: Res<'w, Time>,
+    bodies: Query<'w, 's, crate::line_of_sight::BodyParts<'static>>,
+    los: Option<Res<'w, crate::line_of_sight::LineOfSight>>,
 }
 
 /// One unit as `CanStartAttack` sees it.
 struct UnitView<'a> {
+    entity: Entity,
     position: &'a Position,
     map: InMap,
     level: UnitLevel,
@@ -244,6 +250,7 @@ impl SightParams<'_, '_> {
             (dead, dormant),
         ) = self.units.get(unit).ok()?;
         (health.current > 0.0 && !dead && !dormant).then(|| UnitView {
+            entity: unit,
             position,
             map: *map,
             level: *level,
@@ -293,6 +300,17 @@ impl SightParams<'_, '_> {
                 self.dungeon(me.map),
                 who.position,
             )
+            && self.sees(watcher, who.entity, me.map)
+    }
+
+    /// `IsWithinLOSInMap` (`CanStartAttack`), checked last: it casts rays.
+    fn sees(&self, watcher: Entity, who: Entity, map: InMap) -> bool {
+        match (self.bodies.get(watcher), self.bodies.get(who)) {
+            (Ok(me), Ok(them)) => {
+                crate::line_of_sight::unit_sees(self.los.as_deref(), map, me, them)
+            }
+            _ => false,
+        }
     }
 
     /// `Creature::CanStartAttack(who, force = false)` for a creature `who`, with the

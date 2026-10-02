@@ -24,6 +24,7 @@ crates/
 - `cargo run -p server --bin game-server` — Start server (binds to 0.0.0.0:5000)
 - `cargo test` — Run all tests
 - `./run-tests.sh` — cargo test + clippy
+- `cargo run --release -p los --features bake --bin los-bake -- --data ../game-engine/data --world-db data/world.db --out ../game-engine/data/los --map 0 --all` — Bake map 0's LOS tiles and the eye table (rerun per client build or world.db display change; the server and `deploy.sh` need `../game-engine/data/los/eye_heights.tsv`). See docs/specs/line-of-sight.md.
 - `ssh sakuin /opt/game-server/game-server-admin <command>` — Admin CLI (runs on sakuin via IPC socket)
 - Edition 2024, rust-version 1.95
 - Bevy 0.19, lightyear 0.28, redb 3, bitcode 0.6, rusqlite 0.35

@@ -210,14 +210,16 @@ type Watchers<'w, 's> = Query<
 
 /// `CreatureAI::MoveInLineOfSight` → `Creature::CanStartAttack`: an idle
 /// aggressive creature (`REACT_AGGRESSIVE`) attacks the nearest valid player it is hostile to
-/// inside its level-scaled aggro radius. There is no line-of-sight or
-/// Z-difference test: the server has no collision data and does not keep
-/// creature heights on the ground while they move.
+/// inside its level-scaled aggro radius and in its line of sight
+/// (`Creature::CanStartAttack` → `IsWithinLOSInMap`; `crate::line_of_sight`). There is
+/// no Z-difference test.
 fn aggro_on_sight_system(
     watchers: Watchers,
     players: Query<(Entity, &Position, &InMap), With<Player>>,
     victims: Victims,
     templates: Res<FactionTemplates>,
+    bodies: Query<crate::line_of_sight::BodyParts>,
+    los: Option<Res<crate::line_of_sight::LineOfSight>>,
     mut commands: Commands,
 ) {
     let players: Vec<(Entity, Position, InMap)> = players
@@ -241,7 +243,7 @@ fn aggro_on_sight_system(
                 let distance = distance(position, player_pos);
                 (player_map == map && distance <= MAX_AGGRO_RADIUS).then_some((*player, distance))
             });
-        let nearest = in_reach
+        let mut candidates: Vec<(Entity, f32)> = in_reach
             .filter(|&(player, distance)| {
                 let Ok((_, _, player_faction, player_level, ..)) = victims.get(player) else {
                     return false;
@@ -256,8 +258,18 @@ fn aggro_on_sight_system(
                     && hostile
                     && valid_victim(&victims, &templates, faction.0, map, player)
             })
-            .min_by(|a, b| a.1.total_cmp(&b.1));
-        if let Some((player, _)) = nearest {
+            .collect();
+        // The nearest one it sees: rays only until one is seen.
+        candidates.sort_by(|a, b| a.1.total_cmp(&b.1));
+        let seen = candidates.into_iter().find(|&(player, _)| {
+            match (bodies.get(creature), bodies.get(player)) {
+                (Ok(me), Ok(them)) => {
+                    crate::line_of_sight::unit_sees(los.as_deref(), *map, me, them)
+                }
+                _ => false,
+            }
+        });
+        if let Some((player, _)) = seen {
             commands.queue(move |world: &mut World| attack_start(world, creature, player));
         }
     }

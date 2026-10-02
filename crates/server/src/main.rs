@@ -53,6 +53,7 @@ mod item_stats;
 mod item_templates;
 mod level_scaling;
 mod lfg;
+mod line_of_sight;
 mod liquid;
 mod loot;
 mod mail;
@@ -197,6 +198,7 @@ fn add_world_plugins(app: &mut App) {
         .add_plugins(networking::ServerNetworkPlugin)
         .add_plugins(world_data::WorldDataPlugin)
         .add_plugins(ground::GroundPlugin)
+        .add_plugins(line_of_sight::LineOfSightPlugin)
         .add_plugins(mirror_timers::MirrorTimerPlugin)
         .add_plugins(world_time::WorldTimePlugin)
         .add_plugins(maps::MapPlugin)
