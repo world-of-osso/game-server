@@ -602,6 +602,36 @@ def build_gameobjects(conn, report):
         report.drop("tdb_gameobject", f"guid={guid}", entry, "template dropped")
 
 
+# TrinityCore SpawnObjectType of pool_members.type (SpawnData.h): creature, gameobject, child pool.
+POOL_CREATURE, POOL_GAMEOBJECT, POOL_POOL = 0, 1, 2
+
+
+def build_pools(conn, report):
+    """PoolMgr spawn pools (PoolMgr::LoadFromDB): every TDB pool_template and game_event_pool row, and the
+    pool_members of the Retail spawns (creature and gameobject spawnId at their content guid) and child pools."""
+    conn.execute("DROP TABLE IF EXISTS content_pool_template")
+    conn.execute("""CREATE TABLE content_pool_template (entry INTEGER NOT NULL PRIMARY KEY,
+        max_limit INTEGER NOT NULL, description TEXT)""")
+    conn.execute("INSERT INTO content_pool_template SELECT entry, max_limit, description FROM tdb_pool_template")
+    conn.execute("DROP TABLE IF EXISTS content_pool_members")
+    conn.execute("""CREATE TABLE content_pool_members (type INTEGER NOT NULL, spawnId INTEGER NOT NULL,
+        poolSpawnId INTEGER NOT NULL, chance REAL NOT NULL, description TEXT, PRIMARY KEY (type, spawnId))""")
+    spawns = {POOL_CREATURE: "content_creature", POOL_GAMEOBJECT: "content_gameobject"}
+    for member_type, table in spawns.items():
+        conn.execute(f"""INSERT INTO content_pool_members
+            SELECT type, spawnId + {RETAIL_GUID_OFFSET}, poolSpawnId, chance, description FROM tdb_pool_members
+            WHERE type = ? AND spawnId + {RETAIL_GUID_OFFSET} IN (SELECT guid FROM {table})""", (member_type,))
+        for (guid,) in conn.execute(f"""SELECT spawnId FROM tdb_pool_members WHERE type = ?
+                AND spawnId + {RETAIL_GUID_OFFSET} NOT IN (SELECT guid FROM {table}) ORDER BY spawnId""",
+                                    (member_type,)).fetchall():
+            report.drop("tdb_pool_members", f"type={member_type} spawnId={guid}", guid, f"spawn not in {table}")
+    conn.execute(f"INSERT INTO content_pool_members SELECT * FROM tdb_pool_members WHERE type = {POOL_POOL}")
+    conn.execute("DROP TABLE IF EXISTS content_game_event_pool")
+    conn.execute("""CREATE TABLE content_game_event_pool (eventEntry INTEGER NOT NULL,
+        pool_entry INTEGER NOT NULL PRIMARY KEY)""")
+    conn.execute("INSERT INTO content_game_event_pool SELECT eventEntry, pool_entry FROM tdb_game_event_pool")
+
+
 def build_gameobject_templates(conn, report):
     """TrinityCore's template (Data0-23, chest loot ids offset) replaces AzerothCore's for Retail-spawned entries."""
     retail = "SELECT DISTINCT id FROM temp.retail_gameobject"

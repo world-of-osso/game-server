@@ -1261,7 +1261,8 @@ fn change_rage(world: &mut World, unit: Entity, raw: f32) {
     crate::spell_cast::powers::change_power(world, unit, PowerType::Rage, raw);
 }
 
-/// Tick respawn timers and restore dead NPCs when ready. A patroller
+/// Tick respawn timers and restore dead NPCs when ready; a pooled creature's pool
+/// re-picks instead (`spawn_pools::respawn_pooled`). A patroller
 /// restarts its path from the first point (AzerothCore `Creature::Respawn` →
 /// `Motion_Initialize` → a new WaypointMovementGenerator at `i_path->begin()`).
 pub(crate) fn respawn_system(
@@ -1274,6 +1275,7 @@ pub(crate) fn respawn_system(
             &SpawnPoint,
             &mut Position,
             Option<&mut WaypointState>,
+            Has<crate::spawn_pools::PooledSpawn>,
         ),
         Without<crate::zones::TempSummon>,
     >,
@@ -1286,9 +1288,15 @@ pub(crate) fn respawn_system(
     let elapsed = time.elapsed_secs_f64();
     let mut events = Vec::new();
 
-    for (entity, mut death, mut health, spawn, mut pos, waypoint) in &mut query {
+    for (entity, mut death, mut health, spawn, mut pos, waypoint, pooled) in &mut query {
         death.respawn_timer -= dt;
         if death.respawn_timer > 0.0 {
+            continue;
+        }
+        if pooled {
+            commands.queue(move |world: &mut World| {
+                crate::spawn_pools::respawn_pooled(world, entity);
+            });
             continue;
         }
         let (next_health, next_position) = respawned_state(*health, *pos, spawn);
