@@ -9,6 +9,7 @@ fn mob(level: u8) -> KillVictim {
         elite: false,
         experience_modifier: 1.0,
         gives_experience: true,
+        player_damage_factor: 1.0,
     }
 }
 
@@ -95,6 +96,7 @@ fn group_members_see_a_tuned_kill_at_their_own_level() {
 fn critters_give_nothing() {
     let critter = KillVictim {
         gives_experience: false,
+        player_damage_factor: 1.0,
         ..mob(10)
     };
     assert_eq!(kill_gain(10, &critter), 0);

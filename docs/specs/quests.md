@@ -10,6 +10,7 @@ Quest givers, the quest log and objective tracking for the Retail-style quest di
 - [x] `QuestGiverAcceptQuest` checks level (`MinLevel`, addon `MaxLevel`), class and race masks, already in log / already done (non-repeatable), prerequisites (`PrevQuestID` and reverse `NextQuestID`, AzerothCore sign rules), positive exclusive groups, `RewardNextQuest` chains, 35-quest log cap. Accepted quests are auto-watched; a `StartItem` is given.
 - [x] Kill objectives count creature kills by the killer and group members within 74 yards of the creature (melee and spell kills).
 - [x] Item objectives count the items in the bags, whatever path added them; removing items lowers progress.
+- [x] Exploration/event quests (AzerothCore `SpecialFlags` 2; content import maps TrinityCore `QUEST_OBJECTIVE_AREATRIGGER` and `QUEST_FLAGS_COMPLETION_EVENT`/`_AREA_TRIGGER` to it) are not complete on accept. A living player not in flight walking into one of the quest's `areatrigger_involvedrelation` triggers (`AreaTrigger.db2` sphere or box) explores it (`HandleAreaTriggerOpcode` → `AreaExploredOrEventHappens`); a first position on a map only records the triggers it stands in. The requirement has no protocol objective kind, so it shows only through the entry's `completed`.
 - [x] `QuestGiverCompleteQuest` at the ender answers `QuestGiverOfferReward` when objectives are done, else `QuestGiverRequestItems{can_complete: false}`.
 - [x] `QuestGiverChooseReward` requires a valid choice when choice items exist, free bag cells for every granted item, and gold for negative `RewardMoney`; destroys required and provided items; grants money and items; marks the quest turned in; grants QuestXP experience ([experience](experience.md)); answers `QuestGiverQuestComplete` (with its `xp`); offers the chain's next quest (`QuestGiverQuestDetails`) when the same NPC starts it.
 - [x] `AbandonQuest` removes the quest and its provided start item; `SetQuestWatched` toggles tracking.
@@ -19,14 +20,15 @@ Quest givers, the quest log and objective tracking for the Retail-style quest di
 
 ## Tests asserting this spec
 
-- `crates/server/src/quest_tests.rs` — real rows through the message path: A Threat Within (783) Willem → McBride persisted with Kobold Camp Cleanup (7) offered next; 7 blocked until 783 turned in; 7 progresses on Kobold Vermin kills and pays 25 copper; Brotherhood of Thieves (18) counts bag bandanas, rejects a missing choice, grants Militia Hammer; abandon; untrack persists across re-entry; out-of-range giver.
+- `crates/server/src/quest_tests.rs` — real rows through the message path: The Fargodeep Mine (62) and The Jasperlode Mine (76) stay incomplete until the player enters trigger 88 / 87 (not a ghost, not the other mine's trigger); A Threat Within (783) Willem → McBride persisted with Kobold Camp Cleanup (7) offered next; 7 blocked until 783 turned in; 7 progresses on Kobold Vermin kills and pays 25 copper; Brotherhood of Thieves (18) counts bag bandanas, rejects a missing choice, grants Militia Hammer; abandon; untrack persists across re-entry; out-of-range giver.
 - `crates/server/src/quest_rules_tests.rs` — markers, prerequisites, kill credit, trivial level, race mask, log cap, `quest-complete` objective fill.
 - `crates/server/src/admin_ipc.rs` tests — `quest-complete` persists the filled counts and marks the log dirty.
 - shared-protocol `src/protocol_quest_tests.rs` — wire round trips, marker order, registration.
 
 ## Known gaps (current cycle)
 
-- [ ] Game object objectives never progress (game object templates/spawns are not imported); explore/area-trigger objectives have no data.
+- [ ] Game object objectives never progress (game object templates/spawns are not imported).
+- [ ] Event quests (escorts, scripted events: `QUEST_FLAGS_COMPLETION_EVENT` with no trigger) cannot complete: no script sets the event.
 - [ ] Wrath race masks: `AllowableRaces` 1101/690 lists Wrath races only, so post-Wrath races (Worgen, Void Elf, Pandaren, ...) fail race-restricted quests.
 - [ ] Spell-credit objectives (Extinguishing Hope 26391's Vineyard Fires from Milly's Extinguisher) never progress; admin `quest-complete <character> <quest_id>` (TrinityCore `.quest complete`) fills a logged quest's kill/object objectives for tests.
 - [ ] Daily/weekly quests have no reset; they are one-time. Timed quests, `RequiredFactionId`/reputation, skill requirements, reward spells, reputation rewards and `ItemDrop` quest-item drops are not applied.

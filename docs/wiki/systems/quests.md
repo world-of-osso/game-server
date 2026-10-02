@@ -4,7 +4,7 @@ Requirements and gaps: [quests spec](../../specs/quests.md).
 
 ## Data
 
-`quest_data.rs` loads `QuestDb` at startup from world.db ([[content-import]] Retail-first tables): `content_quest_template` + `_addon` + `_offer_reward` + `_request_items`, creature starters/enders, `content_quest_poi` + `_points`, creature names (objective text "`<name>` slain" when `ObjectiveText` is empty) and `content_item` rows the quests reference (names and attributes for granted items). Objectives keep Wrath order: `RequiredNpcOrGo1-4` (negative = game object) then `RequiredItemId1-6`.
+`quest_data.rs` loads `QuestDb` at startup from world.db ([[content-import]] Retail-first tables): `content_quest_template` + `_addon` + `_offer_reward` + `_request_items`, creature starters/enders, `content_quest_poi` + `_points`, creature names (objective text "`<name>` slain" when `ObjectiveText` is empty) and `content_item` rows the quests reference (names and attributes for granted items). Objectives keep Wrath order: `RequiredNpcOrGo1-4` (negative = game object) then `RequiredItemId1-6`, then, for `SpecialFlags` 2 (`QUEST_SPECIAL_FLAGS_EXPLORATION_OR_EVENT`), a server-only `ExplorationOrEvent` objective (required 1, text `AreaDescription`) that the protocol view leaves out. `content_areatrigger_involvedrelation` joined with `AreaTrigger.db2` (`area_trigger`) gives `QuestDb::area_triggers` (map → trigger shape + quests).
 
 Link tables follow AzerothCore `ObjectMgr::LoadQuests`: `prev_quests[q]` = `PrevQuestID` of q plus every quest whose `NextQuestID` is q (sign kept); `prev_chain_quests` from `RewardNextQuest`; `exclusive_groups`.
 
@@ -21,7 +21,7 @@ Pure functions over `QuestDb` + `QuestLogData` + `QuestPlayer{level, race, class
 - Storage: redb `quest_logs` (character id → `QuestLogData{active: [ActiveQuestData{quest_id, counts}], rewarded (sorted), watched}`).
 - `send_initial_quest_log` (`Added<InWorld>`) sends `QuestLogSnapshot` and stores the view in `SentQuestLog`.
 - `process_quest_requests` (Update) drains all eight request types; each loads the log and inventory, applies, saves, and inserts the character into `QuestDirty`. Bag/gold edits go through `persistence::save_inventory` + `GoldUpdateQueue`, so [[inventory]] deltas and gold replication follow.
-- PostUpdate, before `send_inventory_deltas`: `credit_quest_kills` (`Added<DeathState>` + `LastDamager`, as reputation), `mark_quest_inputs_changed` (characters in `GoldUpdateQueue::changed_inventories` and `Changed<Level>`), `send_quest_updates` (diff against `SentQuestLog` → `QuestLogUpdate`; markers for `QueriedQuestGivers` → `QuestGiverStatusMultiple`).
+- PostUpdate, before `send_inventory_deltas`: `credit_quest_kills` (`Added<DeathState>` + `LastDamager`, as reputation), `credit_quest_area_triggers` (`Changed<Position>`: `QuestTriggerPresence` remembers the triggers the player stands in per map; a newly entered one explores its quests in the log, as `maps::area_triggers` does for teleports), `mark_quest_inputs_changed` (characters in `GoldUpdateQueue::changed_inventories` and `Changed<Level>`), `send_quest_updates` (diff against `SentQuestLog` → `QuestLogUpdate`; markers for `QueriedQuestGivers` → `QuestGiverStatusMultiple`).
 
 Marker delivery is query-driven rather than replicated because the marker depends on the viewer; the connection remembers queried NPCs so changes push without a new query.
 

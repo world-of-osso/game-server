@@ -825,6 +825,14 @@ CREATE TABLE tdb_creature_text (
 
 -- Map transfer data (ObjectMgr::LoadAreaTriggerTeleports, LoadWorldSafeLocs, LoadGraveyardZones,
 -- LoadInstanceTemplate): areatrigger teleport targets and graveyards of every map.
+-- AreaTrigger.db2 id -> quest whose QUEST_OBJECTIVE_AREATRIGGER (ObjectID -1) it completes
+-- (ObjectMgr::LoadQuestAreaTriggers).
+DROP TABLE IF EXISTS tdb_areatrigger_involvedrelation;
+CREATE TABLE tdb_areatrigger_involvedrelation (
+  id INTEGER PRIMARY KEY,
+  quest INTEGER NOT NULL DEFAULT 0
+);
+
 DROP TABLE IF EXISTS tdb_areatrigger_teleport;
 CREATE TABLE tdb_areatrigger_teleport (
   ID INTEGER PRIMARY KEY,
@@ -878,4 +886,66 @@ CREATE TABLE tdb_playercreateinfo_item (
   itemid INTEGER NOT NULL DEFAULT 0,
   amount INTEGER NOT NULL DEFAULT 1,
   PRIMARY KEY (race, class, itemid)
+);
+
+DROP TABLE IF EXISTS tdb_conditions;
+CREATE TABLE tdb_conditions (
+  SourceTypeOrReferenceId INTEGER NOT NULL DEFAULT 0,
+  SourceGroup INTEGER NOT NULL DEFAULT 0,
+  SourceEntry INTEGER NOT NULL DEFAULT 0,
+  SourceId INTEGER NOT NULL DEFAULT 0,
+  ElseGroup INTEGER NOT NULL DEFAULT 0,
+  ConditionTypeOrReference INTEGER NOT NULL DEFAULT 0,
+  ConditionTarget INTEGER NOT NULL DEFAULT 0,
+  ConditionValue1 INTEGER NOT NULL DEFAULT 0,
+  ConditionValue2 INTEGER NOT NULL DEFAULT 0,
+  ConditionValue3 INTEGER NOT NULL DEFAULT 0,
+  ConditionStringValue1 TEXT NOT NULL DEFAULT '',
+  NegativeCondition INTEGER NOT NULL DEFAULT 0,
+  ErrorType INTEGER NOT NULL DEFAULT 0,
+  ErrorTextId INTEGER NOT NULL DEFAULT 0,
+  ScriptName TEXT NOT NULL DEFAULT '',
+  Comment TEXT,
+  PRIMARY KEY (SourceTypeOrReferenceId, SourceGroup, SourceEntry, SourceId, ElseGroup, ConditionTypeOrReference,
+    ConditionTarget, ConditionValue1, ConditionValue2, ConditionValue3, ConditionStringValue1)
+);
+
+DROP TABLE IF EXISTS tdb_smart_scripts;
+CREATE TABLE tdb_smart_scripts (
+  entryorguid INTEGER NOT NULL DEFAULT 0,
+  source_type INTEGER NOT NULL DEFAULT 0,
+  id INTEGER NOT NULL DEFAULT 0,
+  link INTEGER NOT NULL DEFAULT 0,
+  Difficulties TEXT NOT NULL DEFAULT '',
+  event_type INTEGER NOT NULL DEFAULT 0,
+  event_phase_mask INTEGER NOT NULL DEFAULT 0,
+  event_chance INTEGER NOT NULL DEFAULT 100,
+  event_flags INTEGER NOT NULL DEFAULT 0,
+  event_param1 INTEGER NOT NULL DEFAULT 0,
+  event_param2 INTEGER NOT NULL DEFAULT 0,
+  event_param3 INTEGER NOT NULL DEFAULT 0,
+  event_param4 INTEGER NOT NULL DEFAULT 0,
+  event_param5 INTEGER NOT NULL DEFAULT 0,
+  event_param_string TEXT NOT NULL DEFAULT '',
+  action_type INTEGER NOT NULL DEFAULT 0,
+  action_param1 INTEGER NOT NULL DEFAULT 0,
+  action_param2 INTEGER NOT NULL DEFAULT 0,
+  action_param3 INTEGER NOT NULL DEFAULT 0,
+  action_param4 INTEGER NOT NULL DEFAULT 0,
+  action_param5 INTEGER NOT NULL DEFAULT 0,
+  action_param6 INTEGER NOT NULL DEFAULT 0,
+  action_param7 INTEGER NOT NULL DEFAULT 0,
+  action_param_string TEXT,
+  target_type INTEGER NOT NULL DEFAULT 0,
+  target_param1 INTEGER NOT NULL DEFAULT 0,
+  target_param2 INTEGER NOT NULL DEFAULT 0,
+  target_param3 INTEGER NOT NULL DEFAULT 0,
+  target_param4 INTEGER NOT NULL DEFAULT 0,
+  target_param_string TEXT,
+  target_x REAL NOT NULL DEFAULT 0,
+  target_y REAL NOT NULL DEFAULT 0,
+  target_z REAL NOT NULL DEFAULT 0,
+  target_o REAL NOT NULL DEFAULT 0,
+  comment TEXT NOT NULL DEFAULT '',
+  PRIMARY KEY (entryorguid, source_type, id, link)
 );

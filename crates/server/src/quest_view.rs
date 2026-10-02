@@ -9,7 +9,7 @@ use shared::protocol::{
 
 use crate::persistence::quest_store::{ActiveQuestData, QuestLogData};
 use crate::persistence::{self, InventoryData, InventoryItemData};
-use crate::quest_data::{QuestDb, QuestTemplate};
+use crate::quest_data::{ObjectiveKind, QuestDb, QuestTemplate};
 use crate::quest_rules::{QuestPlayer, objective_counts, objectives_done, quest_money};
 
 /// Quest log entries by quest id, as last sent to a client.
@@ -59,18 +59,22 @@ pub(crate) fn grant_item(
     });
 }
 
+/// The objectives the protocol has a kind for; the exploration/event requirement only
+/// shows through the entry's `completed`.
 fn objective_snapshots(quest: &QuestTemplate, counts: &[u32]) -> Vec<QuestObjectiveSnapshot> {
     quest
         .objectives
         .iter()
         .zip(counts)
-        .map(|(objective, &current)| QuestObjectiveSnapshot {
-            text: objective.text.clone(),
-            current,
-            required: objective.required,
-            completed: current >= objective.required,
-            kind: objective.kind,
-            object_id: objective.object_id,
+        .filter_map(|(objective, &current)| {
+            Some(QuestObjectiveSnapshot {
+                text: objective.text.clone(),
+                current,
+                required: objective.required,
+                completed: current >= objective.required,
+                kind: objective.kind.protocol()?,
+                object_id: objective.object_id,
+            })
         })
         .collect()
 }
@@ -189,7 +193,7 @@ pub(crate) fn required_items(quests: &QuestDb, quest: &QuestTemplate) -> Vec<Que
     let items: Vec<(u32, u32)> = quest
         .objectives
         .iter()
-        .filter(|objective| objective.kind == shared::protocol::QuestObjectiveKind::Item)
+        .filter(|objective| objective.kind == ObjectiveKind::Item)
         .map(|objective| (objective.object_id, objective.required))
         .collect();
     reward_items(quests, &items)

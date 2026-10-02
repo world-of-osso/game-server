@@ -13,6 +13,7 @@ Quest, vendor, loot, gossip and item content comes from AzerothCore (Wrath 3.3.5
 | `quest_offer_reward` / `quest_request_items` | 8,660 / 7,757 | Turn-in and progress text |
 | `quest_poi` / `quest_poi_points` | 18,771 / 57,166 | Quest map blobs |
 | `creature_queststarter` / `creature_questender` | 7,445 / 7,901 | NPC → quest |
+| `areatrigger_involvedrelation` | 76 | AreaTrigger.db2 id → exploration quest |
 | `gameobject_queststarter` / `gameobject_questender` | 457 / 457 | Object → quest |
 | `gameobject_template` / `gameobject_template_addon` / `gameobject` | 21,581 / 21,493 / 96,459 | Game object templates and spawns ([[game-objects]]) |
 | `npc_vendor` | 37,585 (2,018 vendors) | Vendor item lists; negative `item` = reference to another vendor |

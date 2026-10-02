@@ -75,7 +75,8 @@ Quests
   - `quest_objectives` map to shape as follows:
     - monster → `RequiredNpcOrGo`; game object → a negative `RequiredNpcOrGo`;
     - item → `RequiredItemId`;
-    - player kills → `RequiredPlayerKills`.
+    - player kills → `RequiredPlayerKills`;
+    - area trigger, or quest flag `COMPLETION_EVENT`/`COMPLETION_AREA_TRIGGER` (0x2/0x4) → AzerothCore `SpecialFlags` 2 (`EXPLORATION_OR_EVENT`); TrinityCore's own `SpecialFlags` 2 (`AUTO_PUSH_TO_PARTY`, 2 quests) is cleared and reported. `content_areatrigger_involvedrelation` holds TrinityCore's `areatrigger_involvedrelation` rows plus each area trigger objective's own trigger, for quests with that flag and triggers in `AreaTrigger.db2` (`ObjectMgr::LoadQuestAreaTriggers`); other quests keep AzerothCore's rows.
   - Other objective types are reported.
 - [x] Retail-spawned NPCs and objects give and end TrinityCore relations only. AzerothCore relations of other entries stay.
 - [x] Reward-item and choice-reward groups:

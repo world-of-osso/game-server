@@ -287,6 +287,7 @@ fn energize_adds_raw_units() {
         .world_mut()
         .entity_mut(h.caster)
         .insert(CombatStatus(true));
+    charge_range(&mut h);
     h.cast_and_deliver(CHARGE, Some(h.npc));
     assert_eq!(h.power(PowerType::Rage), 200.0, "Charge: 20 rage = 200 raw");
     h.advance(2);

@@ -10,7 +10,8 @@
 //! Handled IDs: 0 none, 1 UNIT_CASTER, 6 UNIT_TARGET_ENEMY, 15
 //! UNIT_SRC_AREA_ENEMY, 16 UNIT_DEST_AREA_ENEMY, 18 DEST_CASTER, 21
 //! UNIT_TARGET_ALLY, 22 SRC_CASTER, 25 UNIT_TARGET_ANY, 30 UNIT_SRC_AREA_ALLY,
-//! 31 UNIT_DEST_AREA_ALLY, 53 DEST_TARGET_ENEMY, 63 DEST_TARGET_ANY, 132
+//! 31 UNIT_DEST_AREA_ALLY, 53 DEST_TARGET_ENEMY, 60 UNIT_CONE_ENTRY (units ahead of the
+//! caster that meet the effect's `conditions`), 63 DEST_TARGET_ANY, 132
 //! DEST_TARGET_ALLY, 65 DEST_TARGET_BACK (the explicit target's position moved the
 //! effect radius behind it; collision is not modelled), 77 UNIT_CHANNEL_TARGET
 //! (the caster's channel target) and 28 DEST_DYNOBJ_ENEMY (the units a persistent
@@ -55,6 +56,9 @@ enum Selector {
     ChannelTarget,
     /// Units a persistent area aura affects: no unit at cast time.
     DynObj(Relation),
+    /// Units in the cone ahead of the caster meeting the effect's conditions
+    /// (`TARGET_CHECK_ENTRY`).
+    ConeEntry,
 }
 
 fn selector(id: u32) -> Option<Selector> {
@@ -76,6 +80,7 @@ fn selector(id: u32) -> Option<Selector> {
         28 => Selector::DynObj(Enemy),
         65 => Selector::DestTargetBack,
         77 => Selector::ChannelTarget,
+        60 => Selector::ConeEntry,
         _ => return None,
     })
 }
@@ -304,6 +309,16 @@ pub fn select_targets(
                     max_targets,
                 ));
             }
+            Selector::ConeEntry => {
+                selected_any = true;
+                units.extend(cone_entry_units(
+                    world,
+                    caster,
+                    spell,
+                    effect,
+                    radius(effect, slot),
+                ));
+            }
             Selector::AreaAroundDest(relation) => {
                 selected_any = true;
                 let dest = center
@@ -325,6 +340,52 @@ pub fn select_targets(
     }
     units.dedup();
     Ok(units)
+}
+
+/// `Spell::SelectImplicitConeTargets` with `TARGET_CHECK_ENTRY` (Spell.cpp:1273-1324):
+/// living units of the caster's map inside the `radius` cylinder around it
+/// (`WorldObjectSpellAreaTargetCheck`) and within `ConeDegrees` of its facing
+/// (`WorldObjectSpellConeTargetCheck`, `HasInArc`), whatever their faction, that meet the
+/// effect's implicit target conditions (`WorldObjectSpellTargetCheck`, Spell.cpp:9309-9397).
+/// `ConeDegrees` 0 leaves only units straight ahead; the boundary-radius exemption and the
+/// cone-back and line variants are not modelled.
+fn cone_entry_units(
+    world: &mut World,
+    caster: Entity,
+    spell: &SpellInfo,
+    effect: &SpellEffect,
+    radius: f32,
+) -> Vec<Entity> {
+    let Some(origin) = position(world, caster) else {
+        return Vec::new();
+    };
+    let facing = orientation(world, caster);
+    let half_arc = spell
+        .target_restrictions
+        .as_ref()
+        .map_or(0.0, |restrictions| restrictions.cone_degrees)
+        .to_radians()
+        / 2.0;
+    let caster_map = world.get::<crate::maps::InMap>(caster).copied();
+    let mut query = world.query::<(Entity, &Position, &Health, &crate::maps::InMap)>();
+    let in_cone: Vec<Entity> = query
+        .iter(world)
+        .filter(|(_, _, health, map)| health.current > 0.0 && Some(**map) == caster_map)
+        .filter(|(_, pos, ..)| {
+            // WoW (x, y) is Bevy (x, -z); height is Bevy y.
+            let (dx, dy) = (pos.x - origin.x, origin.z - pos.z);
+            let within = dx.hypot(dy) <= radius && (pos.y - origin.y).abs() <= radius;
+            let angle = dy.atan2(dx) - facing;
+            let relative = angle.sin().atan2(angle.cos());
+            within && relative.abs() <= half_arc
+        })
+        .map(|(entity, ..)| entity)
+        .collect();
+    let conditions = world.resource::<crate::conditions::SpellTargetConditions>();
+    in_cone
+        .into_iter()
+        .filter(|&unit| conditions.target_meets(world, spell.id, effect.index, unit))
+        .collect()
 }
 
 /// `SPELL_ATTR2_CHAIN_FROM_CASTER` (SharedDefines.h:522).
