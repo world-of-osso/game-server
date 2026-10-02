@@ -10,13 +10,17 @@ use std::path::Path;
 
 use bevy::prelude::*;
 use rusqlite::{Connection, OpenFlags, Row};
-use shared::protocol::{QuestObjectiveKind, QuestPoiPoint, QuestPoiSnapshot, QuestRepeatability};
+use shared::protocol::{
+    QuestMarkerClass, QuestObjectiveKind, QuestPoiPoint, QuestPoiSnapshot, QuestRepeatability,
+};
 
 use crate::maps::store::AreaTriggerShape;
 
 /// `Flags` bits (AzerothCore `QuestFlags`).
 const QUEST_FLAGS_DAILY: u32 = 0x1000;
 const QUEST_FLAGS_WEEKLY: u32 = 0x8000;
+/// `FlagsEx` bit (TrinityCore `QUEST_FLAGS_EX_LEGENDARY`, QuestDef.h:260).
+const QUEST_FLAGS_EX_LEGENDARY: u32 = 0x100;
 /// `SpecialFlags` bit (AzerothCore `QUEST_SPECIAL_FLAGS_REPEATABLE`).
 const QUEST_SPECIAL_FLAGS_REPEATABLE: u32 = 0x1;
 
@@ -80,6 +84,8 @@ pub(crate) struct QuestTemplate {
     pub sort_id: i32,
     pub suggested_group: u8,
     pub flags: u32,
+    /// TrinityCore `FlagsEx` (tdb_quest_template); 0 for quests TrinityCore lacks.
+    pub flags_ex: u32,
     pub special_flags: u32,
     /// Race bits (`1 << (race - 1)` in the imported Wrath data); 0 = any.
     pub allowable_races: u32,
@@ -115,6 +121,20 @@ impl QuestTemplate {
             QuestRepeatability::Weekly
         } else {
             QuestRepeatability::Normal
+        }
+    }
+
+    /// The giver marker kind TrinityCore `Player::GetQuestDialogStatus` picks
+    /// (Player.cpp:16167-16241) among those world.db has the data for: legendary
+    /// before daily/weekly. Important, meta, calling and campaign need the QuestInfo
+    /// and Campaign DB2s, which world.db does not import.
+    pub fn marker_class(&self) -> QuestMarkerClass {
+        if self.flags_ex & QUEST_FLAGS_EX_LEGENDARY != 0 {
+            QuestMarkerClass::Legendary
+        } else if self.repeatability() != QuestRepeatability::Normal {
+            QuestMarkerClass::Repeatable
+        } else {
+            QuestMarkerClass::Normal
         }
     }
 
@@ -180,8 +200,10 @@ impl QuestDb {
 const QUEST_QUERY: &str = "SELECT q.*, a.MaxLevel, a.AllowableClasses, a.PrevQuestID, \
      a.NextQuestID, a.ExclusiveGroup, a.ProvidedItemCount, a.SpecialFlags, \
      o.RewardText, r.CompletionText, t.MinLevelWithDelta AS TuningMinLevelWithDelta, \
-     t.maxlevel AS TuningMaxLevel, t.ScalingFactionGroup AS TuningScalingFactionGroup \
+     t.maxlevel AS TuningMaxLevel, t.ScalingFactionGroup AS TuningScalingFactionGroup, \
+     tq.FlagsEx \
      FROM content_quest_template q \
+     LEFT JOIN tdb_quest_template tq ON tq.ID = q.ID \
      LEFT JOIN content_tuning_level t ON t.ID = q.ContentTuningID \
      LEFT JOIN content_quest_template_addon a ON a.ID = q.ID \
      LEFT JOIN content_quest_offer_reward o ON o.ID = q.ID \
@@ -282,6 +304,7 @@ fn quest_from_row(
         sort_id: int(row, "QuestSortID")? as i32,
         suggested_group: int(row, "SuggestedGroupNum")?.clamp(0, 255) as u8,
         flags: int(row, "Flags")? as u32,
+        flags_ex: int(row, "FlagsEx")? as u32,
         special_flags: int(row, "SpecialFlags")? as u32,
         allowable_races: int(row, "AllowableRaces")? as u32,
         allowable_classes: int(row, "AllowableClasses")? as u32,

@@ -1,5 +1,7 @@
 //! Rules against real world.db rows (Northshire); each test skips when the DB is absent.
-use shared::protocol::{QuestFailedReason, QuestGiverQuestState, QuestGiverStatus};
+use shared::protocol::{
+    QuestFailedReason, QuestGiverQuestState, QuestGiverStatus, QuestMarkerClass,
+};
 
 use super::*;
 use crate::quest_data::test_quest_db;
@@ -69,7 +71,7 @@ fn mcbride_offers_a_warrior_beating_them_back_but_not_its_follow_ups() {
     );
     assert_eq!(
         giver_status(db, &log, HUMAN_WARRIOR, MARSHAL_MCBRIDE, no_items),
-        QuestGiverStatus::Available
+        QuestGiverStatus::Available(QuestMarkerClass::Normal)
     );
 }
 
@@ -105,11 +107,11 @@ fn willem_marks_reward_for_join_the_battle_and_then_offers_they_sent_assassins()
 
     assert_eq!(
         giver_status(db, &accepted, HUMAN_WARRIOR, DEPUTY_WILLEM, no_items),
-        QuestGiverStatus::Reward
+        QuestGiverStatus::Reward(QuestMarkerClass::Normal)
     );
     assert_eq!(
         giver_status(db, &turned_in, HUMAN_WARRIOR, DEPUTY_WILLEM, no_items),
-        QuestGiverStatus::Available
+        QuestGiverStatus::Available(QuestMarkerClass::Normal)
     );
     let offered: Vec<u32> =
         giver_quest_list(db, &turned_in, HUMAN_WARRIOR, DEPUTY_WILLEM, no_items)
@@ -137,7 +139,7 @@ fn six_blackrock_worg_kills_complete_beating_them_back() {
     assert!(is_complete_in_log(db, &log, BEATING_THEM_BACK, no_items));
     assert_eq!(
         giver_status(db, &log, HUMAN_WARRIOR, MARSHAL_MCBRIDE, no_items),
-        QuestGiverStatus::Reward
+        QuestGiverStatus::Reward(QuestMarkerClass::Normal)
     );
 }
 
@@ -160,7 +162,7 @@ fn level_ten_sees_beating_them_back_as_a_normal_quest() {
             MARSHAL_MCBRIDE,
             no_items
         ),
-        QuestGiverStatus::Available
+        QuestGiverStatus::Available(QuestMarkerClass::Normal)
     );
 }
 
@@ -299,5 +301,86 @@ fn quest_complete_fills_the_vineyard_fires_but_needs_the_quest_in_the_log() {
     assert_eq!(
         complete_counted_objectives(db, &mut log, BEATING_THEM_BACK),
         Err(format!("quest {BEATING_THEM_BACK} is not in the log"))
+    );
+}
+
+const ANACHRONOS: u32 = 15192;
+/// On a Wing and a Prayer: legendary (`FlagsEx` 0x100, tdb_quest_template), MinLevel
+/// 35, any race or class, no previous quest.
+const ON_A_WING_AND_A_PRAYER: u32 = 29193;
+const PUBLIC_RELATIONS_AGENT: u32 = 37675;
+/// A Perfect Puff of Perfume, A Cloudlet of Classy Cologne, Bonbon Blitz: dailies
+/// (`Flags` 0x1000) she starts and ends, no level floor.
+const HER_DAILIES: [u32; 3] = [24629, 24635, 24636];
+const KORE: u32 = 16503;
+/// Warrior Training: QuestLevel 2, MinLevel 1.
+const WARRIOR_TRAINING: u32 = 9289;
+
+fn at_level(level: u8) -> QuestPlayer {
+    QuestPlayer {
+        level,
+        ..HUMAN_WARRIOR
+    }
+}
+
+/// TrinityCore `Player::GetQuestDialogStatus` (Player.cpp:16234, 16245): a legendary
+/// quest is `LegendaryQuest` once the level allows it and `FutureLegendaryQuest` below.
+#[test]
+fn anachronos_marks_his_legendary_quest_by_level() {
+    let Some(db) = test_quest_db() else { return };
+    let log = QuestLogData::default();
+    let status = |level| giver_status(db, &log, at_level(level), ANACHRONOS, no_items);
+
+    let quest = &db.quests[&ON_A_WING_AND_A_PRAYER];
+    assert_eq!(quest.min_level, 35);
+    assert_eq!(
+        status(35),
+        QuestGiverStatus::Available(QuestMarkerClass::Legendary)
+    );
+    assert_eq!(
+        start_state(db, &log, at_level(35), quest),
+        Some(QuestGiverStatus::Available(QuestMarkerClass::Legendary))
+    );
+    // At 30 his other quests outrank it at the giver; the quest itself is Future.
+    assert_eq!(
+        start_state(db, &log, at_level(30), quest),
+        Some(QuestGiverStatus::Future(QuestMarkerClass::Legendary))
+    );
+}
+
+/// Player.cpp:16194/16239: a daily quest is `RepeatableQuest` to offer and
+/// `RepeatableReward` while it is in the log unfinished.
+#[test]
+fn public_relations_agent_marks_her_daily_quest_repeatable() {
+    let Some(db) = test_quest_db() else { return };
+    let status =
+        |log: &QuestLogData| giver_status(db, log, at_level(10), PUBLIC_RELATIONS_AGENT, no_items);
+
+    assert_eq!(
+        status(&QuestLogData::default()),
+        QuestGiverStatus::Available(QuestMarkerClass::Repeatable)
+    );
+    assert_eq!(
+        status(&log_with(&HER_DAILIES, &[])),
+        QuestGiverStatus::Incomplete(QuestMarkerClass::Repeatable)
+    );
+}
+
+/// Player.cpp:16227: more than `Quests.LowLevelHideDiff` (4) levels above a fixed-level
+/// quest it is `Trivial`.
+#[test]
+fn kore_marks_warrior_training_trivial_above_level_six() {
+    let Some(db) = test_quest_db() else { return };
+    let log = QuestLogData::default();
+    let status = |level| giver_status(db, &log, at_level(level), KORE, no_items);
+
+    assert_eq!(db.quests[&WARRIOR_TRAINING].level, 2);
+    assert_eq!(
+        status(6),
+        QuestGiverStatus::Available(QuestMarkerClass::Normal)
+    );
+    assert_eq!(
+        status(7),
+        QuestGiverStatus::Trivial(QuestMarkerClass::Normal)
     );
 }

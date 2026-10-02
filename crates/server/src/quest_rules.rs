@@ -3,7 +3,7 @@
 //! `GetQuestDialogStatus` / `KilledMonsterCredit`.
 use shared::protocol::{
     MAX_QUEST_LOG_SIZE, QuestFailedReason, QuestGiverQuestEntry, QuestGiverQuestState,
-    QuestGiverStatus,
+    QuestGiverStatus, QuestMarkerClass,
 };
 
 use crate::persistence::quest_store::{ActiveQuestData, QuestLogData};
@@ -335,7 +335,8 @@ pub(crate) fn is_complete_in_log(
 }
 
 /// How a starter quest appears to this player, if at all
-/// (`CanSeeStartQuest` then `SatisfyQuestLevel` and the trivial check).
+/// (`CanSeeStartQuest` then `SatisfyQuestLevel` and the trivial check,
+/// TrinityCore Player.cpp:16221-16250).
 fn start_state(
     db: &QuestDb,
     log: &QuestLogData,
@@ -346,13 +347,18 @@ fn start_state(
     if i32::from(player.level) + HIGH_LEVEL_HIDE_DIFF < i32::from(quest.min_level) {
         return None;
     }
+    let class = quest.marker_class();
     if level_ok(player, quest).is_err() {
-        return Some(QuestGiverStatus::Unavailable);
+        // Future statuses have no daily/weekly kind.
+        return Some(QuestGiverStatus::Future(match class {
+            QuestMarkerClass::Repeatable => QuestMarkerClass::Normal,
+            class => class,
+        }));
     }
     if i32::from(player.level) > quest_level(quest, player) + LOW_LEVEL_HIDE_DIFF {
-        Some(QuestGiverStatus::LowLevelAvailable)
+        Some(QuestGiverStatus::Trivial(class))
     } else {
-        Some(QuestGiverStatus::Available)
+        Some(QuestGiverStatus::Available(class))
     }
 }
 
@@ -385,10 +391,10 @@ pub(crate) fn giver_status(
 ) -> QuestGiverStatus {
     let ending = quests_of(&db.enders, creature_entry)
         .iter()
-        .filter_map(|&id| end_state(db, log, id, &bag_count))
-        .map(|state| match state {
-            QuestGiverQuestState::Complete => QuestGiverStatus::Reward,
-            _ => QuestGiverStatus::Incomplete,
+        .filter_map(|&id| Some((db.quests.get(&id)?, end_state(db, log, id, &bag_count)?)))
+        .map(|(quest, state)| match state {
+            QuestGiverQuestState::Complete => QuestGiverStatus::Reward(quest.marker_class()),
+            _ => QuestGiverStatus::Incomplete(quest.marker_class()),
         });
     let starting = quests_of(&db.starters, creature_entry)
         .iter()
@@ -426,8 +432,10 @@ pub(crate) fn giver_quest_list(
         .iter()
         .filter_map(|id| db.quests.get(id))
         .filter_map(|quest| match start_state(db, log, player, quest)? {
-            QuestGiverStatus::Available => Some(list_entry(quest, QuestGiverQuestState::Available)),
-            QuestGiverStatus::LowLevelAvailable => {
+            QuestGiverStatus::Available(_) => {
+                Some(list_entry(quest, QuestGiverQuestState::Available))
+            }
+            QuestGiverStatus::Trivial(_) => {
                 Some(list_entry(quest, QuestGiverQuestState::LowLevelAvailable))
             }
             _ => None,
