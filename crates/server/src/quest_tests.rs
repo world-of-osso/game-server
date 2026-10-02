@@ -39,6 +39,15 @@ const THEY_SENT_ASSASSINS: u32 = 28797;
 const WESTBROOK_GARRISON_NEEDS_HELP: u32 = 239;
 const RIVERPAW_GNOLL_BOUNTY: u32 = 11;
 const PAINTED_GNOLL_ARMBAND: u32 = 782;
+/// Elwynn's exploration quests (TrinityCore QUEST_OBJECTIVE_AREATRIGGER, ObjectID -1):
+/// Marshal Dughan sends you to scout the Fargodeep Mine (62), then the Jasperlode Mine (76).
+const MARSHAL_DUGHAN: u32 = 240;
+const THE_FARGODEEP_MINE: u32 = 62;
+const THE_JASPERLODE_MINE: u32 = 76;
+/// `AreaTrigger.db2` 88 (involved with 62): a 10 yd sphere inside the Fargodeep Mine.
+const FARGODEEP_TRIGGER: (f32, f32, f32) = (-9843.54, 127.525, 5.3698);
+/// `AreaTrigger.db2` 87 (involved with 76): a 30 yd sphere at the Jasperlode Mine.
+const JASPERLODE_TRIGGER: (f32, f32, f32) = (-9077.34, -552.925, 60.3476);
 const MILITIA_BUCKLER: u32 = 2249;
 const URCHINS_PANTS: u32 = 2238;
 
@@ -53,6 +62,11 @@ fn item_templates() -> ItemTemplates {
 }
 
 fn setup_app() -> Option<App> {
+    setup_app_with(|_| {})
+}
+
+/// `setup_app` plus the plugins `add_plugins` adds before the app is finished.
+fn setup_app_with(add_plugins: impl FnOnce(&mut App)) -> Option<App> {
     let quests = test_quest_db()?.clone();
     let mut app = App::new();
     app.add_plugins(MinimalPlugins);
@@ -70,6 +84,7 @@ fn setup_app() -> Option<App> {
     app.add_plugins(crate::inventory::InventoryPlugin);
     app.add_plugins(QuestPlugin);
     app.add_plugins(crate::experience::ExperiencePlugin);
+    add_plugins(&mut app);
     app.finish();
     app.cleanup();
     Some(app)
@@ -275,7 +290,7 @@ fn kill(app: &mut App, client: &Client, template_id: u32, count: usize) {
                 name: String::new(),
             },
             origin(),
-            LastDamager(client.player),
+            crate::creature_tap::CreatureTap::tapped_by(client.character_id),
             DeathState {
                 respawn_timer: 60.0,
             },
@@ -639,3 +654,263 @@ fn quest_giver_out_of_range_is_too_far() {
         }]
     );
 }
+
+/// Moves the player to a WoW-space point and runs a frame.
+fn walk_to(app: &mut App, client: &Client, (x, y, z): (f32, f32, f32)) {
+    let (x, y, z) = crate::terrain_height::wow_to_bevy(x, y, z);
+    *app.world_mut()
+        .get_mut::<Position>(client.player)
+        .expect("player position") = Position { x, y, z };
+    app.update();
+}
+
+fn entry_completed(app: &mut App, client: &Client, quest_id: u32) -> Option<bool> {
+    received::<QuestLogUpdate>(app, client)
+        .into_iter()
+        .flat_map(|update| update.changed)
+        .filter(|entry| entry.quest_id == quest_id)
+        .map(|entry| entry.completed)
+        .last()
+}
+
+#[test]
+fn exploration_quests_complete_only_when_the_player_enters_their_mine() {
+    let Some(mut app) = setup_app() else { return };
+    let client = spawn_client(&mut app, 5);
+    let dughan = spawn_npc(&mut app, MARSHAL_DUGHAN, 2.0);
+    enter_world(&mut app, &client);
+
+    accept(&mut app, &client, dughan, THE_FARGODEEP_MINE);
+    let entry = last_update(&mut app, &client).changed.remove(0);
+    assert_eq!(entry.quest_id, THE_FARGODEEP_MINE);
+    assert!(!entry.completed, "accepting does not explore the mine");
+    assert!(
+        entry.objectives.is_empty(),
+        "the protocol has no exploration kind"
+    );
+    request(
+        &mut app,
+        &client,
+        QuestGiverCompleteQuest {
+            npc: dughan,
+            quest_id: THE_FARGODEEP_MINE,
+        },
+    );
+    assert!(!received::<QuestGiverRequestItems>(&mut app, &client)[0].can_complete);
+
+    // Approach: 11 yd from the 10 yd sphere's center is outside it.
+    let (x, y, z) = FARGODEEP_TRIGGER;
+    walk_to(&mut app, &client, (x + 11.0, y, z));
+    walk_to(&mut app, &client, (x + 10.5, y, z));
+    assert_eq!(entry_completed(&mut app, &client, THE_FARGODEEP_MINE), None);
+    walk_to(&mut app, &client, (x + 2.0, y, z));
+    assert_eq!(
+        entry_completed(&mut app, &client, THE_FARGODEEP_MINE),
+        Some(true)
+    );
+    assert_eq!(
+        load_quest_log(db(&app), client.character_id)
+            .active(THE_FARGODEEP_MINE)
+            .map(|active| active.counts.clone()),
+        Some(vec![1])
+    );
+
+    walk_to(&mut app, &client, (0.0, 0.0, 0.0));
+    turn_in(&mut app, &client, dughan, THE_FARGODEEP_MINE, None);
+    assert_eq!(
+        received::<QuestGiverQuestComplete>(&mut app, &client)[0].quest_id,
+        THE_FARGODEEP_MINE
+    );
+
+    accept(&mut app, &client, dughan, THE_JASPERLODE_MINE);
+    assert_eq!(
+        entry_completed(&mut app, &client, THE_JASPERLODE_MINE),
+        Some(false)
+    );
+    // The Fargodeep trigger does not explore the Jasperlode Mine.
+    walk_to(&mut app, &client, (x + 20.0, y, z));
+    walk_to(&mut app, &client, FARGODEEP_TRIGGER);
+    assert_eq!(
+        entry_completed(&mut app, &client, THE_JASPERLODE_MINE),
+        None
+    );
+    let (x, y, z) = JASPERLODE_TRIGGER;
+    walk_to(&mut app, &client, (x + 40.0, y, z));
+    walk_to(&mut app, &client, (x + 25.0, y, z));
+    assert_eq!(
+        entry_completed(&mut app, &client, THE_JASPERLODE_MINE),
+        Some(true)
+    );
+}
+
+#[test]
+fn a_ghost_entering_the_mine_does_not_explore_it() {
+    let Some(mut app) = setup_app() else { return };
+    let client = spawn_client(&mut app, 5);
+    let dughan = spawn_npc(&mut app, MARSHAL_DUGHAN, 2.0);
+    enter_world(&mut app, &client);
+    accept(&mut app, &client, dughan, THE_FARGODEEP_MINE);
+    received::<QuestLogUpdate>(&mut app, &client);
+
+    let (x, y, z) = FARGODEEP_TRIGGER;
+    walk_to(&mut app, &client, (x + 30.0, y, z));
+    app.world_mut()
+        .entity_mut(client.player)
+        .insert(crate::death::PlayerDeathState {
+            state: shared::death::DeathState::Ghost,
+            ..Default::default()
+        });
+    walk_to(&mut app, &client, FARGODEEP_TRIGGER);
+    assert_eq!(entry_completed(&mut app, &client, THE_FARGODEEP_MINE), None);
+    assert_eq!(
+        load_quest_log(db(&app), client.character_id)
+            .active(THE_FARGODEEP_MINE)
+            .map(|active| active.counts.clone()),
+        Some(vec![0])
+    );
+}
+
+/// Stormwind Infantry (Northshire): fights the Blackrock Worgs.
+const STORMWIND_INFANTRY: u32 = 49869;
+
+fn spawn_worg(app: &mut App) -> Entity {
+    app.world_mut()
+        .spawn((
+            crate::maps::InMap::continent(0),
+            Npc {
+                template_id: BLACKROCK_WORG,
+                name: "Blackrock Worg".into(),
+            },
+            Position {
+                x: 3.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            shared::components::UnitLevel(2),
+            shared::components::Health {
+                current: 100.0,
+                max: 100.0,
+            },
+        ))
+        .id()
+}
+
+/// `Unit::DealDamage(attacker, worg, damage)`, then a frame for the rewards.
+fn hit(app: &mut App, attacker: Entity, victim: Entity, damage: f32) {
+    crate::combat::deal_direct_damage(app.world_mut(), attacker, victim, damage);
+    app.update();
+}
+
+fn worg_kills(app: &App, client: &Client) -> Option<Vec<u32>> {
+    load_quest_log(db(app), client.character_id)
+        .active(BEATING_THEM_BACK)
+        .map(|active| active.counts.clone())
+}
+
+fn kill_xp(app: &mut App, client: &Client) -> Vec<u32> {
+    received::<LogXpGain>(app, client)
+        .into_iter()
+        .filter(|gain| gain.reason == XpGainReason::Kill)
+        .map(|gain| gain.amount)
+        .collect()
+}
+
+fn beating_them_back_accepted() -> Option<(App, Client, Entity)> {
+    let mut app = setup_app()?;
+    // The worg's creature template, for kill XP.
+    app.insert_resource(crate::world_data::load_world_data(
+        &std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/world.db"),
+    ));
+    let client = spawn_client(&mut app, 1);
+    let mcbride = spawn_npc(&mut app, MARSHAL_MCBRIDE, 2.0);
+    enter_world(&mut app, &client);
+    accept(&mut app, &client, mcbride, BEATING_THEM_BACK);
+    received::<QuestLogUpdate>(&mut app, &client);
+    let soldier = app
+        .world_mut()
+        .spawn((
+            crate::maps::InMap::continent(0),
+            Npc {
+                template_id: STORMWIND_INFANTRY,
+                name: "Stormwind Infantry".into(),
+            },
+            origin(),
+        ))
+        .id();
+    Some((app, client, soldier))
+}
+
+#[test]
+fn a_worg_a_soldier_wounded_and_the_player_killed_credits_the_player() {
+    let Some((mut app, client, soldier)) = beating_them_back_accepted() else {
+        return;
+    };
+    let worg = spawn_worg(&mut app);
+    hit(&mut app, soldier, worg, 60.0);
+    hit(&mut app, client.player, worg, 40.0);
+    assert!(app.world().get::<DeathState>(worg).is_some());
+    assert_eq!(worg_kills(&app, &client), Some(vec![1]));
+    // The player dealt 40 of the 50 health it needed for full XP: 1 - 2 * 10 / 100.
+    let partial = kill_xp(&mut app, &client);
+
+    let worg = spawn_worg(&mut app);
+    hit(&mut app, client.player, worg, 100.0);
+    assert_eq!(worg_kills(&app, &client), Some(vec![2]));
+    let full = kill_xp(&mut app, &client);
+    assert_eq!(partial.len(), 1);
+    assert_eq!(partial, vec![(full[0] as f32 * 0.8) as u32]);
+}
+
+#[test]
+fn a_worg_the_player_tapped_and_a_soldier_finished_credits_the_player() {
+    let Some((mut app, client, soldier)) = beating_them_back_accepted() else {
+        return;
+    };
+    let worg = spawn_worg(&mut app);
+    hit(&mut app, client.player, worg, 10.0);
+    hit(&mut app, soldier, worg, 90.0);
+    assert!(app.world().get::<DeathState>(worg).is_some());
+    assert_eq!(worg_kills(&app, &client), Some(vec![1]));
+}
+
+#[test]
+fn a_worg_only_soldiers_fought_credits_nobody() {
+    let Some((mut app, client, soldier)) = beating_them_back_accepted() else {
+        return;
+    };
+    let worg = spawn_worg(&mut app);
+    hit(&mut app, soldier, worg, 100.0);
+    assert!(app.world().get::<DeathState>(worg).is_some());
+    assert_eq!(worg_kills(&app, &client), Some(vec![0]));
+    assert!(kill_xp(&mut app, &client).is_empty());
+}
+
+/// Guard Thomas (Eastvale Logging Camp) gives Protect the Frontier.
+const GUARD_THOMAS: u32 = 261;
+const PROTECT_THE_FRONTIER: u32 = 52;
+const PROWLER: u32 = 118;
+/// `KillCredit1` 118: counts as a Prowler.
+const GRAY_FOREST_WOLF: u32 = 1922;
+
+#[test]
+fn a_gray_forest_wolf_kill_counts_as_a_prowler() {
+    let Some(mut app) = setup_app() else {
+        return;
+    };
+    let client = spawn_client(&mut app, 1);
+    let thomas = spawn_npc(&mut app, GUARD_THOMAS, 2.0);
+    enter_world(&mut app, &client);
+    accept(&mut app, &client, thomas, PROTECT_THE_FRONTIER);
+    let frontier = |app: &App| {
+        load_quest_log(db(app), client.character_id)
+            .active(PROTECT_THE_FRONTIER)
+            .map(|active| active.counts.clone())
+    };
+    assert_eq!(frontier(&app), Some(vec![0, 0]));
+    kill(&mut app, &client, GRAY_FOREST_WOLF, 2);
+    kill(&mut app, &client, PROWLER, 1);
+    assert_eq!(frontier(&app), Some(vec![3, 0]));
+}
+
+#[path = "quest_spell_tests.rs"]
+mod spell;

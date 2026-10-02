@@ -312,6 +312,16 @@ pub(crate) fn harness_with_plugins(
     })
 }
 
+/// Charge's target (its DUMMY effect, `TARGET_UNIT_TARGET_ENEMY`) must stand within
+/// SpellRange 95, 8-25 yards: move the kobold to 10 yards.
+pub(crate) fn charge_range(h: &mut Harness) {
+    h.app.world_mut().entity_mut(h.npc).insert(Position {
+        x: 10.0,
+        y: 0.0,
+        z: 0.0,
+    });
+}
+
 pub(crate) fn drain<M: lightyear::prelude::Message>(app: &mut App, connection: Entity) -> Vec<M> {
     app.world_mut()
         .get_mut::<MessageReceiver<M>>(connection)

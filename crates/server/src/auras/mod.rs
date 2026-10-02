@@ -810,6 +810,17 @@ pub fn auras_changed(world: &mut World, unit: Entity) {
     unit_state::reconcile(world, unit);
 }
 
+/// `Unit::GetAuraCount`: the stacks of every aura of `spell_id` on `unit`.
+pub fn aura_count(world: &World, unit: Entity, spell_id: u32) -> u32 {
+    world.get::<ActiveAuras>(unit).map_or(0, |auras| {
+        auras
+            .iter()
+            .filter(|aura| aura.spell_id == spell_id)
+            .map(|aura| u32::from(aura.stacks.max(1)))
+            .sum()
+    })
+}
+
 pub fn has_aura(world: &World, unit: Entity, spell_id: u32) -> bool {
     world
         .get::<ActiveAuras>(unit)

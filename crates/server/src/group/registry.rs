@@ -158,6 +158,17 @@ impl GroupRegistry {
             .unwrap_or_default()
     }
 
+    /// The members of the character's subgroup (`Group::SameSubGroup`; a party is one
+    /// subgroup), including itself; empty when ungrouped.
+    pub fn subgroup_members(&self, member: CharacterId) -> Vec<CharacterId> {
+        self.group_of(member)
+            .and_then(|(_, group)| {
+                let subgroup = group.raid.subgroup_of(member)?;
+                Some(group.raid.subgroups[subgroup].clone())
+            })
+            .unwrap_or_default()
+    }
+
     // --- Commands ---
 
     pub fn invite(

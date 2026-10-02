@@ -26,6 +26,7 @@ fn asymmetric_plane_maps_rows_to_wow_x_and_columns_to_wow_y() {
             corner_y: 200.0,
             base_z: 50.0,
             heights,
+            holes: 0,
             liquid: ChunkLiquid::default(),
         }],
     };
@@ -55,6 +56,7 @@ fn nonplanar_cell_uses_center_vertex_and_all_four_triangles() {
             corner_y: 200.0,
             base_z: 50.0,
             heights,
+            holes: 0,
             liquid: ChunkLiquid::default(),
         }],
     };
@@ -115,6 +117,7 @@ fn height_interpolation() {
             corner_y: 100.0,
             base_z: 50.0,
             heights,
+            holes: 0,
             liquid: ChunkLiquid::default(),
         }],
     };
@@ -247,6 +250,7 @@ fn multiple_chunks_loaded_and_routed_correctly() {
                 corner_y: 100.0,
                 base_z: 50.0,
                 heights: [0.0; MCVT_COUNT],
+                holes: 0,
                 liquid: ChunkLiquid::default(),
             },
             ChunkHeight {
@@ -254,6 +258,7 @@ fn multiple_chunks_loaded_and_routed_correctly() {
                 corner_y: 100.0,
                 base_z: 80.0,
                 heights: [0.0; MCVT_COUNT],
+                holes: 0,
                 liquid: ChunkLiquid::default(),
             },
         ],
@@ -285,6 +290,7 @@ fn height_at_exact_vertex_no_interpolation() {
             corner_y: 100.0,
             base_z: 100.0,
             heights,
+            holes: 0,
             liquid: ChunkLiquid::default(),
         }],
     };
@@ -321,6 +327,7 @@ fn height_consistent_across_adjacent_chunk_boundary() {
                 corner_y: 100.0,
                 base_z: 0.0,
                 heights: heights_a,
+                holes: 0,
                 liquid: ChunkLiquid::default(),
             },
             ChunkHeight {
@@ -328,6 +335,7 @@ fn height_consistent_across_adjacent_chunk_boundary() {
                 corner_y: 100.0,
                 base_z: 0.0,
                 heights: heights_b,
+                holes: 0,
                 liquid: ChunkLiquid::default(),
             },
         ],
@@ -359,6 +367,7 @@ fn negative_terrain_height_underwater() {
             corner_y: 100.0,
             base_z: -10.0,
             heights,
+            holes: 0,
             liquid: ChunkLiquid::default(),
         }],
     };
@@ -388,6 +397,7 @@ fn water_surface_height_separate_from_terrain() {
             corner_y: 100.0,
             base_z: -20.0,
             heights: [0.0; MCVT_COUNT],
+            holes: 0,
             liquid: ChunkLiquid {
                 layers: vec![layer],
                 deep: 0,
@@ -449,6 +459,7 @@ fn adt_hole_returns_none_for_missing_chunk() {
                 corner_y: 100.0,
                 base_z: 50.0,
                 heights: [0.0; MCVT_COUNT],
+                holes: 0,
                 liquid: ChunkLiquid::default(),
             },
             ChunkHeight {
@@ -456,6 +467,7 @@ fn adt_hole_returns_none_for_missing_chunk() {
                 corner_y: 100.0 - CHUNK_SIZE,
                 base_z: 50.0,
                 heights: [0.0; MCVT_COUNT],
+                holes: 0,
                 liquid: ChunkLiquid::default(),
             },
             ChunkHeight {
@@ -463,6 +475,7 @@ fn adt_hole_returns_none_for_missing_chunk() {
                 corner_y: 100.0 - CHUNK_SIZE,
                 base_z: 50.0,
                 heights: [0.0; MCVT_COUNT],
+                holes: 0,
                 liquid: ChunkLiquid::default(),
             },
             // Hole: no chunk at (100 - CHUNK_SIZE, 100)
@@ -499,6 +512,7 @@ fn height_query_1000_lookups_under_threshold() {
                 corner_y: 100.0 - row as f32 * CHUNK_SIZE,
                 base_z: 50.0,
                 heights: [0.0; MCVT_COUNT],
+                holes: 0,
                 liquid: ChunkLiquid::default(),
             });
         }
@@ -610,4 +624,16 @@ fn swim_spot_liquid_is_the_surface_the_client_floats_under() {
         (liquid.depth_level, liquid.liquid_type, liquid.deep),
         (seabed, 5, false)
     );
+}
+
+/// A low-res hole bit covers a 2x2 block of quads: bit 5 (row 1, col 1) is quads 2..=3
+/// on rows 2..=3.
+#[test]
+fn low_res_hole_bit_covers_its_two_by_two_quads() {
+    let mask = widen_low_res_holes(1 << 5);
+    let holes: Vec<(u32, u32)> = (0..64)
+        .filter(|bit| mask >> bit & 1 != 0)
+        .map(|bit| (bit / 8, bit % 8))
+        .collect();
+    assert_eq!(holes, vec![(2, 2), (2, 3), (3, 2), (3, 3)]);
 }

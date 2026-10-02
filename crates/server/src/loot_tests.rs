@@ -167,7 +167,7 @@ impl Harness {
                     current: 0.0,
                     max: 100.0,
                 },
-                LastDamager(self.looter.player),
+                crate::creature_tap::CreatureTap::tapped_by(self.looter.character_id),
                 RespawnDelay::for_spawn(180, 0),
                 CorpseDelay::for_rank(0),
             ))

@@ -12,6 +12,8 @@ Server-side vendors: the list, buy, sell, buyback and repair, following AzerothC
   - Prices come from `content_item.BuyPrice`, with one purchase = `VendorStackCount` items.
   - `usable` means the class, race and level requirements are met.
   - `can_repair` is set from `NPCFlags::REPAIR`.
+  - `guild_repair_money` (at a repairer) is the guild money the player may spend on repairs now (TrinityCore `GetMemberAvailableMoneyForRepairItems`, Guild.cpp:3040-3047: the guild money capped by the rank's daily allowance left; unlimited for the Guild Master). `None` outside a guild or for a rank without `GR_RIGHT_WITHDRAW_REPAIR` (Retail `CanGuildBankRepair`).
+  - `max_durability` is the item's `MaxDurability` (`None` without durability), for the Retail merchant tooltip's `DURABILITY_TEMPLATE`.
 - [x] Every request must name the NPC whose vendor frame is open, otherwise it gets `MerchantFailed(NotInteracting)`. Range, combat and death are handled by `npc_interaction`, which closes the frame.
 - [x] Buy: `count` purchases cost `BuyPrice * count`.
   - Refused with `ItemNotFound` when the slot does not hold that item or the item is filtered out.
@@ -34,13 +36,19 @@ Server-side vendors: the list, buy, sell, buyback and repair, following AzerothC
   - Each item costs `lost * DurabilityCosts[ItemLevel][class/subclass] * DurabilityQuality[(Quality+1)*2]`, at least 1 copper.
   - Items the remaining money can't cover stay damaged and the request answers `NotEnoughMoney`.
   - `Some(guid)` repairs only that equipped item. Any other guid (a bag item, which has no durability) changes nothing and answers nothing, as TrinityCore `HandleRepairItemOpcode` (NPCHandler.cpp:748).
+- [x] Guild bank repair (`RepairItem { item_guid: None, guild_bank: true }`, Retail `RepairAllItems(true)`; TrinityCore `HandleRepairItemOpcode` `UseGuildBank`, NPCHandler.cpp:389-420, applies it to repair-all only, so `Some(guid)` with the flag pays personally):
+  - The player's rank needs `GR_RIGHT_WITHDRAW_REPAIR`, else `GuildPermissions` ("You don't have permission to do that."); a player without a guild gets the same.
+  - Damaged items are repaired cheapest first while their running total fits `guild_repair_money`; the total is taken from the guild money once (TrinityCore `Player::DurabilityRepairAll(guildBank = true)`, Player.cpp:4636-4669). The player's own money is never touched.
+  - The repair counts against the rank's daily allowance (`gold_per_day`), the same allowance gold withdrawals use (`_GetMemberRemainingMoney`, Guild.cpp:3358-3371), and writes a `RepairMoney` entry to the guild bank money log (`GUILD_BANK_LOG_REPAIR_MONEY`, `HandleMemberWithdrawMoney(repair = true)`, Guild.cpp:2080-2124).
+  - Items left damaged answer `GuildNotEnoughMoney` ("The guild bank does not have enough money"); when nothing fits, nothing changes and nothing is logged. TrinityCore answers neither error; the personal repair's `NotEnoughMoney` is the precedent.
+  - After a guild repair the vendor list is sent again with the new `guild_repair_money`, and guild members with the vault open get the new bank.
 - [x] Every decoded vendor request is logged once (`merchant request character=<id> <request>`).
 - [x] Durability belongs to equipped items with `item_template.MaxDurability > 0`, matched by `content_item.SourceEntry`. A newly equipped item starts at full durability.
 - [x] Changing from the old per-slot profile: at login a saved current value is capped to the item's max, an equipped item without `MaxDurability` (e.g. Recruit's Boots 40) loses its durability slot, and a newly equipped item starts at full durability instead of taking over the slot's value.
 - [x] Admin `set-gold <character> <copper>` sets the money and replicates it live. `set-durability <character> <percent>` sets every equipped item to that percent of its max.
 - [ ] No reputation price discount (`GetReputationPriceDiscount`): NPC factions are not mapped to reputation factions.
 - [ ] Items with a Wrath `ExtendedCost` (12,887 rows) are skipped, because Retail `ItemExtendedCost` is not imported.
-- [ ] No vendor conditions, no refundable purchases, no guild-bank repair; no per-bag junk-sell exclusion flags (`BagSlotFlags::ExcludeJunkSell`).
+- [ ] No vendor conditions, no refundable purchases; no per-bag junk-sell exclusion flags (`BagSlotFlags::ExcludeJunkSell`).
 - [ ] Bag items have no durability, so selling damaged items and repairing bag items do not apply.
 
 ## Tests asserting this spec
@@ -52,5 +60,6 @@ Server-side vendors: the list, buy, sell, buyback and repair, following AzerothC
   - Also: linen sale and buyback, restock timing, 13th sale, admin commands.
   - Buy into a slot: the vest onto backpack slot 10; water stacking onto its slot and refused on the linen slot; 17 water + 5 fills to 20 and stores 2, then a full stack refuses.
   - Sell All Junk: 2 Ruined Pelt, 1 Broken Fang, 3 Chipped Claw pay 28 copper into 3 buyback slots; refused with the vendor closed.
+- `crates/server/src/merchant_guild_repair_tests.rs`: guild repair at Godric Rothgar: the Guild Master's 16 copper from a 1000-copper bank, logged; a Member without the right and a guildless player refused; a 10-copper allowance repairs the vest only, then 2 copper left covers nothing; a 5-copper bank refuses; withdrawals and repairs share one allowance; repairing one item with the flag pays personally.
 - `crates/server/src/durability.rs` tests: MaxDurability per item, cost formula, world.db DB2 costs.
 - `crates/server/src/bin/admin.rs` tests: set-gold / set-durability parsing.

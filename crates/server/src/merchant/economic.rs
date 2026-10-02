@@ -33,6 +33,7 @@ pub(super) fn vendor_inventory(
     VendorInventory {
         npc: vendor.to_bits(),
         can_repair,
+        guild_repair_money: None,
         items,
     }
 }
@@ -73,6 +74,7 @@ fn offered_item(shop: &Shop, buyer: Buyer, batch: &model::StockBatch) -> Option<
         max_stack: template.max_stack,
         num_available: Some(batch.count),
         usable: buyer.can_use(&template),
+        max_durability: shop.durability_rules.max_durability(batch.item_id),
     })
 }
 
@@ -258,7 +260,7 @@ fn commit_and_publish_purchase(
         .expect("economic state validated")
         .state = state;
     shop.gold.record(customer.character_id, gold);
-    shop.send_inventory(customer.connection, vendor, buyer);
+    shop.send_inventory(customer.connection, vendor, buyer, customer.character_id);
     Ok(())
 }
 

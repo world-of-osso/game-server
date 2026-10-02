@@ -851,6 +851,13 @@ fn try_swing(
     if is_npc && loss > 0.0 {
         let attacker_entity = attacker.entity;
         commands.queue(move |world: &mut World| {
+            crate::creature_tap::record_damage(
+                world,
+                target_entity,
+                attacker_entity,
+                health_before,
+                loss,
+            );
             crate::scripted_ai::damage_taken(
                 world,
                 target_entity,
@@ -1076,6 +1083,7 @@ pub(crate) fn deal_direct_damage(world: &mut World, attacker: Entity, victim: En
         },
     );
     if loss > 0.0 {
+        crate::creature_tap::record_damage(world, victim, attacker, before, loss);
         crate::scripted_ai::damage_taken(world, victim, Some(attacker), before, loss);
     }
     if !lethal {
@@ -1301,7 +1309,9 @@ pub(crate) fn respawn_system(
         commands.queue(move |world: &mut World| {
             crate::interest::set_hidden(world, entity, false);
         });
-        commands.entity(entity).remove::<LastDamager>();
+        commands
+            .entity(entity)
+            .remove::<(LastDamager, crate::creature_tap::CreatureTap)>();
         commands.queue(move |world: &mut World| crate::scripted_ai::reinitialize(world, entity));
         events.push(CombatEvent {
             attacker: 0,
