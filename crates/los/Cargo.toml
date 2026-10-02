@@ -1,0 +1,22 @@
+[package]
+name = "los"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+# Bevy's math types (bevy 0.19 re-exports glam 0.32), without Bevy: the client links this too.
+glam = "0.32"
+# Bake only: spawned creature displays from world.db and model names from the listfile.
+rusqlite = { version = "0.35", features = ["bundled"], optional = true }
+
+[features]
+bake = ["dep:rusqlite"]
+
+[[bin]]
+name = "los-bake"
+path = "src/bin/los-bake.rs"
+required-features = ["bake"]
+
+[dev-dependencies]
+tempfile = "3"
