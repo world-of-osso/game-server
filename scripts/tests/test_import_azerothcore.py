@@ -262,6 +262,9 @@ class CreatureEventImportTests(unittest.TestCase):
             "orientation": 0.0,
             "source_url": "https://www.wowhead.com/npc=243531/zaralda",
             "placement_kind": "derived",
+            "source_reaction": [1, 1],
+            "derived_faction_template": 35,
+            "faction_policy": "derived friendly-both mapping from Wowhead React A/H q2 green; not a Retail faction capture",
             "vendors": [
                 {
                     "slot": 0,
@@ -305,6 +308,11 @@ class CreatureEventImportTests(unittest.TestCase):
         )
         write_db2_rows(
             self.csv / db2.DEFAULT_BUILD,
+            "FactionTemplate",
+            [{"ID": 35, "Faction": 31, "FriendGroup": 1, "Friend_0": 31}],
+        )
+        write_db2_rows(
+            self.csv / db2.DEFAULT_BUILD,
             "Item",
             [{"ID": 251665, "ClassID": 7, "SubclassID": 5}],
         )
@@ -327,10 +335,10 @@ class CreatureEventImportTests(unittest.TestCase):
             with closing(sqlite3.connect(self.db)) as conn:
                 self.assertEqual(
                     conn.execute(
-                        "SELECT name,minlevel,maxlevel,npcflag FROM content_creature_template "
+                        "SELECT name,minlevel,maxlevel,npcflag,faction FROM content_creature_template "
                         "WHERE entry=243531"
                     ).fetchone(),
-                    ("Zaralda", 80, 90, 128),
+                    ("Zaralda", 80, 90, 128, 35),
                 )
                 self.assertEqual(
                     conn.execute(
