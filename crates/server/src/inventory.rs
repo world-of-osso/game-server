@@ -409,8 +409,10 @@ fn send_inventory_deltas(
     mut connections: DeltaConnections,
     mut players: Query<(&mut EquipmentAppearance, Option<&mut EquippedItems>), With<Player>>,
     dirty_queue: Option<Res<ReplicationDirtyQueue>>,
-    mut senders: Query<&mut MessageSender<InventoryDelta>>,
-    mut snapshot_senders: Query<&mut MessageSender<InventorySnapshot>>,
+    mut senders: Query<(
+        &mut MessageSender<InventoryDelta>,
+        &mut MessageSender<InventorySnapshot>,
+    )>,
 ) {
     let changed = updates.take_changed_inventories();
     let Some((db, templates)) = store.get() else {
@@ -435,14 +437,12 @@ fn send_inventory_deltas(
         let equipped = model.equipped_items();
         save_inventory_record(db, in_world.character_id, &model.into_record());
         let changes = diff_views(&sent.0, &view);
-        if changes.iter().any(changes_bag_slot)
-            && let Ok(mut sender) = snapshot_senders.get_mut(connection)
-        {
-            sender.send::<InventoryChannel>(snapshot);
-        }
         if !changes.is_empty()
-            && let Ok(mut sender) = senders.get_mut(connection)
+            && let Ok((mut sender, mut snapshot_sender)) = senders.get_mut(connection)
         {
+            if changes.iter().any(changes_bag_slot) {
+                snapshot_sender.send::<InventoryChannel>(snapshot);
+            }
             sender.send::<InventoryChannel>(InventoryDelta { changes });
             sent.0 = view;
         }
