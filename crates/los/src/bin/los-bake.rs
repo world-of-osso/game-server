@@ -6,14 +6,14 @@
 //! los-bake --out DIR --map 0 --probe AX,AY,AZ:BX,BY,BZ   (WoW coordinates)
 //!
 //! Writes `<out>/<map>/<row>_<col>.los`, `<out>/<map>/report.txt` and
-//! `<out>/eye_heights.tsv`.
+//! `<out>/eye_heights.tsv` and `<out>/player_displays.tsv`.
 
 use std::fmt::Write as _;
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 
 use los::bake::{Baker, DEFAULT_THICKNESS_CUTOFF, TileStats, eye};
-use los::eye::{EYE_TABLE_FILE, EyeTable};
+use los::eye::{EYE_TABLE_FILE, EyeTable, PLAYER_DISPLAYS_FILE};
 use los::{LosMap, LosTile, MAP_TILES, Vec3, tile_file_name, tile_of};
 
 const RAY_SAMPLES: usize = 2000;
@@ -81,31 +81,51 @@ fn run() -> Result<(), String> {
     }
     report_dropped(&mut report, &baker);
     if !args.no_eyes {
-        let (rows, stats) = eye::eye_rows(&data, &world_db)?;
-        let table = out.join(EYE_TABLE_FILE);
-        std::fs::write(&table, EyeTable::to_tsv(&rows))
-            .map_err(|err| format!("{}: {err}", table.display()))?;
-        writeln!(
-            report,
-            "\nEye heights ({}): {} displays, {} rows; model not extracted: {}, no Head attachment: {}, \
-             (display, stand state) without the state's animation: {}; unreadable models ({}):",
-            table.display(),
-            stats.displays,
-            stats.rows,
-            stats.missing_model,
-            stats.no_head,
-            stats.missing_pose,
-            stats.errors.len(),
-        )
-        .unwrap();
-        for error in &stats.errors {
-            writeln!(report, "{error}").unwrap();
-        }
+        report_eyes(&mut report, &data, &world_db, &out)?;
     }
     let report_path = map_dir.join("report.txt");
     std::fs::write(&report_path, &report)
         .map_err(|err| format!("{}: {err}", report_path.display()))?;
     eprintln!("report: {}", report_path.display());
+    Ok(())
+}
+
+fn report_eyes(
+    report: &mut String,
+    data: &Path,
+    world_db: &Path,
+    out: &Path,
+) -> Result<(), String> {
+    let (rows, stats) = eye::eye_rows(data, world_db)?;
+    let write = |name: &str, text: String| {
+        let path = out.join(name);
+        std::fs::write(&path, text).map_err(|err| format!("{}: {err}", path.display()))
+    };
+    write(EYE_TABLE_FILE, EyeTable::to_tsv(&rows))?;
+    write(
+        PLAYER_DISPLAYS_FILE,
+        EyeTable::players_to_tsv(&eye::player_displays(data)?),
+    )?;
+    writeln!(
+        report,
+        "\nEye points ({}): {} displays, {} rows; from eye geometry: {}, from the head bone: {}, \
+         neither: {}, model not extracted: {}; (display, stand state) holding the Stand eye \
+         (no sequence): {}, without its .anim extracted: {}; unreadable models ({}):",
+        out.join(EYE_TABLE_FILE).display(),
+        stats.displays,
+        stats.rows,
+        stats.from_eyes,
+        stats.from_head,
+        stats.no_eye,
+        stats.missing_model,
+        stats.stand_pose,
+        stats.missing_anim,
+        stats.errors.len(),
+    )
+    .unwrap();
+    for error in &stats.errors {
+        writeln!(report, "{error}").unwrap();
+    }
     Ok(())
 }
 

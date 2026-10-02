@@ -1,27 +1,31 @@
-//! M2 opaque geometry (primary skin) and the Head attachment posed by a sequence.
+//! M2 opaque geometry (primary skin), and the eye geometry or head bone posed by a
+//! sequence.
 
+use std::borrow::Cow;
 use std::collections::HashMap;
 
 use glam::{Mat4, Quat, Vec3};
 
-use super::chunks::{Result, array_at, f32x3_at, find, i16_at, records, u16_at, u32_at, u32s};
+use super::chunks::{
+    Result, array_at, bytes, f32x3_at, find, i16_at, records, u16_at, u32_at, u32s,
+};
 
 const MD20_SEQUENCES: usize = 0x1C;
 const MD20_BONES: usize = 0x2C;
 const MD20_VERTICES: usize = 0x3C;
 const MD20_MATERIALS: usize = 0x70;
-const MD20_ATTACHMENTS: usize = 0xF0;
 const VERTEX_SIZE: usize = 48;
 const SUBMESH_SIZE: usize = 48;
 const BATCH_SIZE: usize = 24;
 const BONE_SIZE: usize = 88;
 const SEQUENCE_SIZE: usize = 64;
-const ATTACHMENT_SIZE: usize = 40;
 /// M2 material blend mode of an opaque batch (`M2BLEND_OPAQUE`); 1 is alpha-keyed, the
 /// rest blend.
 const BLEND_OPAQUE: u16 = 0;
-/// Attachment id `Head` (wowdev M2 attachment table; 11 is the helm).
-pub const ATTACHMENT_HEAD: u32 = 20;
+/// M2CompBone `key_bone_id` of the head (wowdev key bone table).
+const KEY_BONE_HEAD: i32 = 6;
+/// Geoset group of the eyes (`skinSectionId / 100`; wowdev geoset 17xx "eyeglows").
+pub const GEOSET_GROUP_EYES: u16 = 17;
 /// M2Sequence flags: keyframes in this file (else in the `.anim` file), alias of
 /// `aliasNext`.
 const SEQUENCE_IN_FILE: u32 = 0x20;
@@ -125,6 +129,56 @@ impl<'a> M2File<'a> {
         }
         Ok((opaque, dropped))
     }
+    /// The vertices of the skin's submeshes in geoset `group` (`skinSectionId / 100`),
+    /// each once, in model file coordinates with their bone influences.
+    pub fn geoset_vertices(&self, skin: &[u8], group: u16) -> Result<Vec<SkinnedVertex>> {
+        if !skin.starts_with(b"SKIN") {
+            return Err("skin has no SKIN magic".into());
+        }
+        let lookup = records(skin, array_at(skin, 4)?, 2, u16_at)?;
+        let submeshes = records(skin, array_at(skin, 28)?, SUBMESH_SIZE, |data, offset| {
+            Ok((
+                u16_at(data, offset)?,
+                usize::from(u16_at(data, offset + 4)?),
+                usize::from(u16_at(data, offset + 6)?),
+            ))
+        })?;
+        let (count, offset) = array_at(self.md20, MD20_VERTICES)?;
+        let mut vertices: Vec<usize> = Vec::new();
+        for &(section, start, len) in &submeshes {
+            if section / 100 != group {
+                continue;
+            }
+            let range = lookup
+                .get(start..start + len)
+                .ok_or_else(|| format!("submesh vertices {start}+{len} past {}", lookup.len()))?;
+            vertices.extend(range.iter().map(|&vertex| usize::from(vertex)));
+        }
+        vertices.sort_unstable();
+        vertices.dedup();
+        vertices
+            .into_iter()
+            .map(|vertex| {
+                if vertex >= count {
+                    return Err(format!("skin vertex {vertex} past {count}"));
+                }
+                let base = offset + vertex * VERTEX_SIZE;
+                Ok(SkinnedVertex {
+                    position: Vec3::from(f32x3_at(self.md20, base)?),
+                    weights: bytes(self.md20, base + 12)?,
+                    bones: bytes(self.md20, base + 16)?,
+                })
+            })
+            .collect()
+    }
+}
+
+/// A model vertex and the bones that move it.
+pub struct SkinnedVertex {
+    pub position: Vec3,
+    /// Out of 255.
+    pub weights: [u8; 4],
+    pub bones: [u8; 4],
 }
 
 fn afid(data: &[u8]) -> Vec<(u16, u16, u32)> {
@@ -150,20 +204,13 @@ struct Sequence {
     alias_next: u16,
 }
 
-struct Attachment {
-    id: u32,
-    bone: usize,
-    position: [f32; 3],
-}
-
-/// Bones, sequences and attachments: from the MD20, or from the `.skel` its SKID names.
+/// Bones and sequences: from the MD20, or from the `.skel` its SKID names.
 pub struct Skeleton<'a> {
     /// The blob the bone and track offsets point into.
     bones_blob: &'a [u8],
     bones_offset: usize,
     bone_count: usize,
     sequences: Vec<Sequence>,
-    attachments: Vec<Attachment>,
     anim_files: Vec<(u16, u16, u32)>,
     /// Track chunk of `.anim` files: `AFM2` for MD20 bones, `AFSB` for skeleton bones.
     anim_tag: &'static [u8; 4],
@@ -177,7 +224,6 @@ impl<'a> Skeleton<'a> {
             bones_offset,
             bone_count,
             sequences: sequences(m2.md20, array_at(m2.md20, MD20_SEQUENCES)?)?,
-            attachments: attachments(m2.md20, array_at(m2.md20, MD20_ATTACHMENTS)?)?,
             anim_files: m2.anim_files.clone(),
             anim_tag: b"AFM2",
         })
@@ -187,44 +233,40 @@ impl<'a> Skeleton<'a> {
         let skb1 = find(skel, b"SKB1").ok_or("skeleton has no SKB1")?;
         let sks1 = find(skel, b"SKS1").ok_or("skeleton has no SKS1")?;
         let (bone_count, bones_offset) = array_at(skb1, 0)?;
-        let attachments = match find(skel, b"SKA1") {
-            Some(ska1) => attachments(ska1, array_at(ska1, 0)?)?,
-            None => Vec::new(),
-        };
         Ok(Self {
             bones_blob: skb1,
             bones_offset,
             bone_count,
             sequences: sequences(sks1, array_at(sks1, 8)?)?,
-            attachments,
             anim_files: afid(skel),
             anim_tag: b"AFSB",
         })
     }
 
-    pub fn has_attachment(&self, attachment: u32) -> bool {
-        self.attachments.iter().any(|found| found.id == attachment)
+    /// The bone whose `key_bone_id` is the head.
+    pub fn head_bone(&self) -> Result<Option<usize>> {
+        for bone in 0..self.bone_count {
+            let key = u32_at(self.bones_blob, self.bones_offset + bone * BONE_SIZE)? as i32;
+            if key == KEY_BONE_HEAD {
+                return Ok(Some(bone));
+            }
+        }
+        Ok(None)
     }
 
-    /// The `attachment`'s position in model file coordinates, posed at the first frame of
-    /// animation `anim` (variation 0); `None` when the model has no such attachment or
-    /// sequence, or the sequence's `.anim` file is not extracted.
-    pub fn posed_attachment(
+    /// The skeleton at the first frame of animation `anim` (variation 0); `None` when the
+    /// model has no such sequence or its `.anim` file is not extracted.
+    pub fn pose(
         &self,
-        attachment: u32,
         anim: u16,
         load_anim: &mut dyn FnMut(u32) -> Option<Vec<u8>>,
-    ) -> Result<Option<[f32; 3]>> {
-        let Some(attachment) = self.attachments.iter().find(|found| found.id == attachment) else {
-            return Ok(None);
-        };
+    ) -> Result<Option<Pose<'_>>> {
         let Some(sequence) = self.sequence_index(anim) else {
             return Ok(None);
         };
         let seq = &self.sequences[sequence];
-        let anim_data;
-        let elements: &[u8] = if seq.flags & SEQUENCE_IN_FILE != 0 {
-            self.bones_blob
+        let elements = if seq.flags & SEQUENCE_IN_FILE != 0 {
+            Cow::Borrowed(self.bones_blob)
         } else {
             let Some(&(_, _, fdid)) = self
                 .anim_files
@@ -236,16 +278,18 @@ impl<'a> Skeleton<'a> {
             let Some(file) = load_anim(fdid) else {
                 return Ok(None);
             };
-            anim_data = anim_track_chunk(&file, self.anim_tag).to_vec();
-            &anim_data
+            Cow::Owned(anim_track_chunk(&file, self.anim_tag).to_vec())
         };
-        let mut world: HashMap<usize, Mat4> = HashMap::new();
-        let matrix = self.bone_world(attachment.bone, sequence, elements, &mut world)?;
-        Ok(Some(
-            matrix
-                .transform_point3(Vec3::from(attachment.position))
-                .to_array(),
-        ))
+        Ok(Some(Pose {
+            skeleton: self,
+            sequence,
+            elements,
+            world: HashMap::new(),
+        }))
+    }
+
+    pub fn has_sequence(&self, anim: u16) -> bool {
+        self.sequence_index(anim).is_some()
     }
 
     /// Sequence index of `anim`'s variation 0, through aliases.
@@ -265,25 +309,63 @@ impl<'a> Skeleton<'a> {
         None
     }
 
-    /// Model-space matrix of `bone` at the sequence's first frame:
+    fn pivot(&self, bone: usize) -> Result<Vec3> {
+        f32x3_at(self.bones_blob, self.bones_offset + bone * BONE_SIZE + 0x4C).map(Vec3::from)
+    }
+}
+
+/// A skeleton posed at one sequence's first frame.
+pub struct Pose<'s> {
+    skeleton: &'s Skeleton<'s>,
+    sequence: usize,
+    /// Where the sequence's keyframes live: the bones blob or the `.anim` track chunk.
+    elements: Cow<'s, [u8]>,
+    world: HashMap<usize, Mat4>,
+}
+
+impl Pose<'_> {
+    /// Where `vertex` is drawn, in model file coordinates.
+    pub fn skin(&mut self, vertex: &SkinnedVertex) -> Result<Vec3> {
+        let mut posed = Vec3::ZERO;
+        let mut total = 0.0;
+        for (&bone, &weight) in vertex.bones.iter().zip(&vertex.weights) {
+            if weight == 0 {
+                continue;
+            }
+            let weight = f32::from(weight) / 255.0;
+            posed += self
+                .bone(usize::from(bone))?
+                .transform_point3(vertex.position)
+                * weight;
+            total += weight;
+        }
+        if total == 0.0 {
+            return Err("vertex has no bone weights".into());
+        }
+        Ok(posed / total)
+    }
+
+    /// Where `bone`'s pivot is, in model file coordinates.
+    pub fn bone_position(&mut self, bone: usize) -> Result<Vec3> {
+        let pivot = self.skeleton.pivot(bone)?;
+        Ok(self.bone(bone)?.transform_point3(pivot))
+    }
+
+    /// Model-space matrix of `bone`:
     /// `parent * T(pivot) * T(translation) * R(rotation) * S(scale) * T(-pivot)`.
-    fn bone_world(
-        &self,
-        bone: usize,
-        sequence: usize,
-        elements: &[u8],
-        world: &mut HashMap<usize, Mat4>,
-    ) -> Result<Mat4> {
-        if let Some(matrix) = world.get(&bone) {
+    fn bone(&mut self, bone: usize) -> Result<Mat4> {
+        if let Some(matrix) = self.world.get(&bone) {
             return Ok(*matrix);
         }
-        if bone >= self.bone_count {
-            return Err(format!("bone {bone} past {} bones", self.bone_count));
+        let skeleton = self.skeleton;
+        if bone >= skeleton.bone_count {
+            return Err(format!("bone {bone} past {} bones", skeleton.bone_count));
         }
-        let base = self.bones_offset + bone * BONE_SIZE;
-        let blob = self.bones_blob;
+        let base = skeleton.bones_offset + bone * BONE_SIZE;
+        let blob = skeleton.bones_blob;
+        let (sequence, elements) = (self.sequence, &*self.elements);
         let parent = i16_at(blob, base + 0x08)?;
-        let pivot = Vec3::from(f32x3_at(blob, base + 0x4C)?);
+        let pivot = skeleton.pivot(bone)?;
         let translation = first_key(blob, base + 0x10, sequence, elements, 12, f32x3_at)?
             .map_or(Vec3::ZERO, Vec3::from);
         let rotation = first_key(blob, base + 0x24, sequence, elements, 8, |data, offset| {
@@ -303,11 +385,11 @@ impl<'a> Skeleton<'a> {
             * Mat4::from_scale_rotation_translation(scale, rotation, Vec3::ZERO)
             * Mat4::from_translation(-pivot);
         let matrix = if parent >= 0 && (parent as usize) != bone {
-            self.bone_world(parent as usize, sequence, elements, world)? * local
+            self.bone(parent as usize)? * local
         } else {
             local
         };
-        world.insert(bone, matrix);
+        self.world.insert(bone, matrix);
         Ok(matrix)
     }
 }
@@ -352,16 +434,6 @@ fn sequences(data: &[u8], array: (usize, usize)) -> Result<Vec<Sequence>> {
             variation: u16_at(data, offset + 2)?,
             flags: u32_at(data, offset + 0x0C)?,
             alias_next: u16_at(data, offset + 0x3E)?,
-        })
-    })
-}
-
-fn attachments(data: &[u8], array: (usize, usize)) -> Result<Vec<Attachment>> {
-    records(data, array, ATTACHMENT_SIZE, |data, offset| {
-        Ok(Attachment {
-            id: u32_at(data, offset)?,
-            bone: usize::from(u16_at(data, offset + 4)?),
-            position: f32x3_at(data, offset + 8)?,
         })
     })
 }

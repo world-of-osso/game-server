@@ -354,27 +354,13 @@ impl Baker {
             .read("models", &format!("{fdid}.m2"))
             .map_err(|err| err.to_string())?;
         let file = m2::M2File::parse(&data)?;
-        let skin = self.read_skin(fdid, file.skin_fdid)?;
+        let skin = primary_skin(&self.data.join("models"), fdid, file.skin_fdid)?;
         let (triangles, dropped) = file.opaque_triangles(&skin)?;
         let triangles = triangles
             .into_iter()
             .map(|tri| tri.map(adt::file_to_bevy))
             .collect();
         Ok(ModelGeometry::new(triangles, dropped))
-    }
-
-    /// The primary skin: `models/<SFID>.skin`, else the path-named `<fdid>00.skin`.
-    fn read_skin(&self, fdid: u32, skin_fdid: Option<u32>) -> Result<Vec<u8>> {
-        let names = skin_fdid
-            .map(|skin| format!("{skin}.skin"))
-            .into_iter()
-            .chain([format!("{fdid}00.skin")]);
-        for name in names {
-            if let Ok(data) = self.read("models", &name) {
-                return Ok(data);
-            }
-        }
-        Err(format!("no skin (SFID {skin_fdid:?}) extracted"))
     }
 
     fn wmo(&mut self, fdid: u32) -> Option<Rc<WmoModel>> {
@@ -507,4 +493,19 @@ fn index_triangles(triangles: &[[Vec3; 3]]) -> (Vec<Vec3>, Vec<[u32; 3]>) {
         })
         .collect();
     (vertices, indexed)
+}
+
+/// Model `fdid`'s primary skin: `models/<SFID>.skin`, else the path-named
+/// `<fdid>00.skin`.
+pub(crate) fn primary_skin(models: &Path, fdid: u32, skin_fdid: Option<u32>) -> Result<Vec<u8>> {
+    let names = skin_fdid
+        .map(|skin| format!("{skin}.skin"))
+        .into_iter()
+        .chain([format!("{fdid}00.skin")]);
+    for name in names {
+        if let Ok(data) = std::fs::read(models.join(name)) {
+            return Ok(data);
+        }
+    }
+    Err(format!("no skin (SFID {skin_fdid:?}) extracted"))
 }
