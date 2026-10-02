@@ -391,6 +391,9 @@ fn tick_cost(x: f32, y: f32, los: bool) -> Option<(usize, std::time::Duration, O
     let per_tick = rays_before
         .zip(rays(&app))
         .map(|(before, after)| (after - before) as f64 / ticks as f64);
+    if let Some(warm_up) = rays_before {
+        println!("LOS rays in the {} warm-up ticks: {warm_up}", 20 * 30);
+    }
     Some((count, elapsed / ticks as u32, per_tick))
 }
 
