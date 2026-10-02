@@ -363,6 +363,7 @@ fn record_helper_persists_layout_instances_character_and_inventory() {
             slot: 1,
         }],
         equipped: vec![],
+        bag_slots: vec![],
         instances: HashMap::from([(501, ItemInstanceData { soulbound: true })]),
     };
     commit_market(

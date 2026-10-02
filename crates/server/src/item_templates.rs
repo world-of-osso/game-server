@@ -31,6 +31,10 @@ pub struct ItemTemplate {
     /// What using the item casts: its first `ITEM_SPELLTRIGGER_ON_USE` effect by
     /// `LegacySlotIndex` (`ItemXItemEffect` -> `ItemEffect`, TriggerType 0).
     pub on_use: Option<OnUseSpell>,
+    /// `ContainerSlots`: bag capacity, 0 for non-containers.
+    pub container_slots: u8,
+    /// `BagFamily`: `BAG_FAMILY_MASK_*` bits a profession bag accepts.
+    pub bag_family: u32,
 }
 
 /// An item's on-use `ItemEffect`.
@@ -48,6 +52,24 @@ pub const BIND_ON_PICKUP: u8 = 1;
 pub const BIND_ON_EQUIP: u8 = 2;
 pub const BIND_QUEST: u8 = 4;
 
+const ITEM_CLASS_CONTAINER: u8 = 1;
+const ITEM_SUBCLASS_REAGENT_CONTAINER: u8 = 11;
+/// `ITEM_FLAG2_USED_IN_A_TRADESKILL` (ItemTemplate.h:257), `IsCraftingReagent`.
+const ITEM_FLAG2_USED_IN_A_TRADESKILL: i64 = 0x8000_0000;
+/// `BAG_FAMILY_MASK_*` a profession container subclass requires (ItemTemplate.h:336-355).
+const CONTAINER_FAMILIES: [(u8, u32); 10] = [
+    (1, 0x4),      // soul: soul shards
+    (2, 0x20),     // herb
+    (3, 0x40),     // enchanting
+    (4, 0x80),     // engineering
+    (5, 0x200),    // gem
+    (6, 0x400),    // mining
+    (7, 0x8),      // leatherworking
+    (8, 0x10),     // inscription
+    (9, 0x8000),   // tackle: fishing
+    (10, 0x10000), // cooking
+];
+
 impl ItemTemplate {
     pub fn allows(&self, class: u8, race: u8) -> bool {
         let class_ok = self.allowable_class == -1
@@ -56,6 +78,30 @@ impl ItemTemplate {
         let race_ok = crate::race_class::race_bit(race)
             .is_some_and(|bit| self.allowable_race & (1 << bit) != 0);
         class_ok && race_ok
+    }
+
+    pub fn is_reagent_bag(&self) -> bool {
+        self.scaling.class_id == ITEM_CLASS_CONTAINER
+            && self.scaling.subclass_id == ITEM_SUBCLASS_REAGENT_CONTAINER
+    }
+
+    /// TrinityCore `ItemCanGoIntoBag` (Item.cpp:250-322) for containers: a plain bag
+    /// takes anything, a reagent bag crafting reagents, a profession bag items of its
+    /// bag family.
+    pub fn can_go_into_bag(&self, bag: &ItemTemplate) -> bool {
+        if bag.scaling.class_id != ITEM_CLASS_CONTAINER {
+            return false;
+        }
+        match bag.scaling.subclass_id {
+            0 => true,
+            ITEM_SUBCLASS_REAGENT_CONTAINER => {
+                self.scaling.flags2 & ITEM_FLAG2_USED_IN_A_TRADESKILL != 0
+            }
+            subclass => CONTAINER_FAMILIES
+                .iter()
+                .find(|(family_subclass, _)| *family_subclass == subclass)
+                .is_some_and(|(_, mask)| self.bag_family & mask != 0),
+        }
     }
 
     /// Soulbound as soon as it is owned.
@@ -94,7 +140,8 @@ const ITEM_QUERY: &str = "SELECT c.ID, c.InventoryType, c.Stackable, c.Bonding, 
      c.StatModifier_bonusStat_9, c.StatPercentEditor_9, s.StatPercentageOfSocket_9, \
      (SELECT m.ItemAppearanceID FROM item_modified_appearance m WHERE m.ItemID = c.ID \
       AND m.ItemAppearanceID != 0 ORDER BY m.ItemAppearanceModifierID, m.OrderIndex LIMIT 1), \
-     u.SpellID, u.Charges, u.SpellCategoryID, u.CategoryCoolDownMSec \
+     u.SpellID, u.Charges, u.SpellCategoryID, u.CategoryCoolDownMSec, \
+     s.ContainerSlots, s.BagFamily \
      FROM content_item c JOIN item_sparse s ON s.ID = c.ID \
      LEFT JOIN (SELECT x.ItemID, e.SpellID, e.Charges, e.SpellCategoryID, e.CategoryCoolDownMSec, \
       ROW_NUMBER() OVER (PARTITION BY x.ItemID ORDER BY e.LegacySlotIndex, e.ID) AS slot \
@@ -155,6 +202,8 @@ fn template_from_row(row: &Row) -> rusqlite::Result<(u32, ItemTemplate)> {
         scaling: scaling_from_row(row)?,
         appearance_id: row.get(APPEARANCE_COLUMN)?,
         on_use: on_use_from_row(row)?,
+        container_slots: row.get(APPEARANCE_COLUMN + 5)?,
+        bag_family: row.get(APPEARANCE_COLUMN + 6)?,
     };
     Ok((row.get(0)?, template))
 }

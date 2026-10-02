@@ -3,7 +3,8 @@
 //! Enter world sends `InventorySnapshot` + `EquipmentSnapshot`. Item requests run
 //! against `InventoryModel`, persist, and record the character in
 //! `GoldUpdateQueue`; `send_inventory_deltas` then diffs the persisted state
-//! against the last view sent to the owner. Trade, auction mail and profession
+//! against the last view sent to the owner; a changed bag slot also resends
+//! `InventorySnapshot`, whose container sizes follow the equipped bags. Trade, auction mail and profession
 //! paths record the same queue, so their item changes reach the owner as deltas.
 use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
@@ -12,7 +13,8 @@ use redb::Database;
 use shared::components::{EquipmentAppearance, Player};
 use shared::protocol::{
     DestroyItem, EquipItem, EquipmentSnapshot, InventoryChannel, InventoryDelta, InventoryError,
-    InventoryErrorReason, InventorySnapshot, SortBags, SplitItem, SwapItem, UseItem,
+    InventoryErrorReason, InventorySlotChange, InventorySnapshot, ItemLocation, SortBags,
+    SplitItem, SwapItem, UseItem,
 };
 
 use crate::appearance_collection::AppearanceSourceItems;
@@ -408,6 +410,7 @@ fn send_inventory_deltas(
     mut players: Query<(&mut EquipmentAppearance, Option<&mut EquippedItems>), With<Player>>,
     dirty_queue: Option<Res<ReplicationDirtyQueue>>,
     mut senders: Query<&mut MessageSender<InventoryDelta>>,
+    mut snapshot_senders: Query<&mut MessageSender<InventorySnapshot>>,
 ) {
     let changed = updates.take_changed_inventories();
     let Some((db, templates)) = store.get() else {
@@ -424,6 +427,7 @@ fn send_inventory_deltas(
             continue;
         };
         let view = model.view();
+        let snapshot = model.inventory_snapshot();
         commands
             .entity(connection)
             .insert(AppearanceSourceItems(model.appearance_sources()));
@@ -431,6 +435,11 @@ fn send_inventory_deltas(
         let equipped = model.equipped_items();
         save_inventory_record(db, in_world.character_id, &model.into_record());
         let changes = diff_views(&sent.0, &view);
+        if changes.iter().any(changes_bag_slot)
+            && let Ok(mut sender) = snapshot_senders.get_mut(connection)
+        {
+            sender.send::<InventoryChannel>(snapshot);
+        }
         if !changes.is_empty()
             && let Ok(mut sender) = senders.get_mut(connection)
         {
@@ -450,6 +459,11 @@ fn send_inventory_deltas(
             }
         }
     }
+}
+
+/// A bag slot's item changed, so its container's size may have too.
+fn changes_bag_slot(change: &InventorySlotChange) -> bool {
+    matches!(change.location, ItemLocation::Equipment(slot) if slot.bag_index().is_some())
 }
 
 #[cfg(test)]

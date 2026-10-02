@@ -9,12 +9,18 @@ use redb::{Database, ReadableDatabase, ReadableTable, TableDefinition, WriteTran
 
 use super::equipment::{EQUIPMENT, EquippedItem};
 use super::{
-    CHARACTERS, CharacterData, INVENTORIES, InventoryData, load_character, load_inventory,
+    CHARACTERS, CharacterData, INVENTORIES, InventoryData, InventoryItemData, load_character,
+    load_inventory,
 };
 
 /// Bag layout: character_id (u64) -> bitcode `Vec<ItemPlacementData>`.
 pub(crate) const INVENTORY_LAYOUTS: TableDefinition<u64, &[u8]> =
     TableDefinition::new("inventory_layouts");
+
+/// Equipped bags: character_id (u64) -> bitcode `Vec<EquippedBagData>`. Kept apart
+/// from `EQUIPMENT`, whose rows are keyed by the visual slot bags don't have.
+pub(crate) const BAG_SLOTS: TableDefinition<u64, &[u8]> =
+    TableDefinition::new("character_bag_slots");
 
 /// Item instance attributes: item_guid (u64) -> bitcode `ItemInstanceData`.
 /// Keyed by guid so attributes follow the item through trade, mail and auctions.
@@ -26,6 +32,13 @@ pub struct ItemPlacementData {
     pub item_guid: u64,
     pub bag: u8,
     pub slot: u8,
+}
+
+/// The bag equipped in bag slot `bag` (1-4 bags, 5 the reagent bag).
+#[derive(bitcode::Encode, bitcode::Decode, Debug, Clone, PartialEq)]
+pub struct EquippedBagData {
+    pub bag: u8,
+    pub item: InventoryItemData,
 }
 
 /// Per-instance item state (template attributes live in `ItemTemplates`).
@@ -41,6 +54,7 @@ pub struct InventoryRecord {
     pub inventory: InventoryData,
     pub placements: Vec<ItemPlacementData>,
     pub equipped: Vec<EquippedItem>,
+    pub bag_slots: Vec<EquippedBagData>,
     pub instances: HashMap<u64, ItemInstanceData>,
 }
 
@@ -56,11 +70,16 @@ pub fn load_inventory_record(db: &Database, character_id: u64) -> Option<Invento
         &txn.open_table(EQUIPMENT).expect("open equipment"),
         character_id,
     );
+    let bag_slots: Vec<EquippedBagData> = read_row(
+        &txn.open_table(BAG_SLOTS).expect("open bag slots"),
+        character_id,
+    );
     let table = txn.open_table(ITEM_INSTANCES).expect("open item instances");
     let guids = inventory
         .items
         .iter()
         .chain(equipped.iter().map(|entry| &entry.item))
+        .chain(bag_slots.iter().map(|entry| &entry.item))
         .map(|item| item.item_guid);
     let instances = guids
         .filter_map(|guid| {
@@ -74,6 +93,7 @@ pub fn load_inventory_record(db: &Database, character_id: u64) -> Option<Invento
         inventory,
         placements,
         equipped,
+        bag_slots,
         instances,
     })
 }
@@ -120,10 +140,11 @@ pub(crate) fn write_inventory_record(
     character_id: u64,
     record: &InventoryRecord,
 ) {
-    let rows: [(TableDefinition<u64, &[u8]>, Vec<u8>); 4] = [
+    let rows: [(TableDefinition<u64, &[u8]>, Vec<u8>); 5] = [
         (INVENTORIES, bitcode::encode(&record.inventory)),
         (INVENTORY_LAYOUTS, bitcode::encode(&record.placements)),
         (EQUIPMENT, bitcode::encode(&record.equipped)),
+        (BAG_SLOTS, bitcode::encode(&record.bag_slots)),
         (CHARACTERS, bitcode::encode(&record.character)),
     ];
     for (definition, bytes) in rows {

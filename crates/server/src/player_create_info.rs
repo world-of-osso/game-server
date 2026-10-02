@@ -282,6 +282,7 @@ impl NewCharacterKit<'_> {
             inventory: Default::default(),
             placements: Vec::new(),
             equipped: Vec::new(),
+            bag_slots: Vec::new(),
             instances: HashMap::new(),
         };
         let mut model = InventoryModel::from_record(empty, self.templates, mint);
