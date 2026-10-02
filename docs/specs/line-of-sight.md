@@ -67,20 +67,24 @@ Retail's LOS errors ("can see it, not in line of sight") are the bugs to avoid.
   `SPELL_ATTR2_IGNORE_LINE_OF_SIGHT` (TrinityCore `Spell::CheckCast`), at cast start and finish.
 - The server loads the bake from `<ground dir>/los` (`GAME_SERVER_GROUND_DIR`, else
   `game-engine/data`): the eye table at startup (it refuses to start without it), each map's
-  tiles on first use. A map without baked tiles has nothing that blocks. The bake covers every
-  creature template display; a unit whose display and stand state still have no eye row
-  (`SIT_CHAIR`, which has no established animation, or a display outside world.db) is logged once
-  and is out of everyone's line of sight. Not modelled yet: mounted eyes, unit scale
+  tiles on first use. A map without baked tiles has nothing that blocks. A unit whose display and
+  stand state have no eye row (`SIT_CHAIR`, which has no established animation, or a skipped
+  template display that a script spawns) fails closed: it is out of everyone's line of sight, and
+  the server logs it once per display, naming the first unit (creature entry and entity) that
+  showed it. Not modelled yet: mounted eyes, unit scale
   (`OBJECT_FIELD_SCALE`).
 
 ## Bake and raycast (`crates/los`, runtime in `shared::los`)
 - The runtime (tile files, segment queries, eye table, `Body`) is shared-protocol `shared::los`,
   which the server and the Godot client link; `crates/los` is the bake and re-exports it.
-- The eye table covers every `content_creature_template_model` display, spawn display overrides and
-  the `ChrModel` character displays. `scripts/los-extract-models.py --world-db data/world.db
+- The eye table must cover every display a spawned creature shows (its template's models and spawn
+  display overrides) and every `ChrModel` character display: the bake fails when any of them lacks
+  a row in any stand state. The other `content_creature_template_model` displays (summons,
+  transforms) bake when they can; those that cannot are skipped and listed in `report.txt` with
+  why (no `CreatureDisplayInfo` row, a model without geometry, a sequence whose `.anim` the model
+  does not name). User decision 2026-10-02. `scripts/los-extract-models.py --world-db data/world.db
   --engine ../game-engine` first extracts from local CASC whatever of those models, primary skins,
-  skeletons and stand-state `.anim` files is missing. The bake fails rather than write a table
-  without every stand state of every covered display.
+  skeletons and stand-state `.anim` files is missing.
 - `los-bake` (feature `bake`) writes `<out>/<map>/<row>_<col>.los`, `<out>/<map>/report.txt` and
   `<out>/eye_heights.tsv` from game-engine `data/`. The report lists per tile the triangle counts,
   file size, loaded memory, mean time per 30-yd ray, and every doodad model dropped as thin.

@@ -56,9 +56,11 @@ fn facing(yaw: f32) -> Rotation {
 fn search(h: &Harness) -> (Option<WitnessRay>, WitnessRay) {
     let world = h.app.world();
     let los = world.resource::<LineOfSight>();
-    let body = |unit: Entity| {
-        let unit = world.entity(unit);
+    let body = |id: Entity| {
+        let unit = world.entity(id);
         los.body((
+            id,
+            unit.get::<shared::components::Npc>(),
             unit.get::<Position>().unwrap(),
             unit.get::<Rotation>(),
             unit.get::<ModelDisplay>(),
@@ -152,6 +154,27 @@ fn the_wall_beside_the_abbey_door_blocks_the_same_line_moved_aside() {
     assert_eq!(found, None);
     assert_eq!(
         cast(&mut h, Some(straight)),
+        Some(CastFailReason::LineOfSight)
+    );
+}
+
+/// Template display 251 has no `CreatureDisplayInfo` row, so the bake skips it: a
+/// creature a script shows it with is out of line of sight (fail closed), not skipped.
+#[test]
+fn a_creature_showing_a_display_without_an_eye_row_is_out_of_line_of_sight() {
+    let Some(mut h) = harness_at((-8909.2, -146.6, 81.95), (-8896.5, -173.8, 81.58)) else {
+        return;
+    };
+    let sees = |h: &Harness| crate::line_of_sight::sees_in_world(h.app.world(), h.npc, h.caster);
+    assert!(sees(&h), "the kobold sees the mage through the doorway");
+    let witness = search(&h).0.expect("a clear ray through the doorway");
+    h.app
+        .world_mut()
+        .entity_mut(h.npc)
+        .insert(ModelDisplay { display_id: 251 });
+    assert!(!sees(&h));
+    assert_eq!(
+        cast(&mut h, Some(witness)),
         Some(CastFailReason::LineOfSight)
     );
 }

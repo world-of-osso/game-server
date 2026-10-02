@@ -120,6 +120,15 @@ fn report_eyes(
         stats.stand_pose,
     )
     .unwrap();
+    writeln!(
+        report,
+        "Skipped template displays no spawn or player shows ({}):",
+        stats.skipped.len()
+    )
+    .unwrap();
+    for (display, why) in &stats.skipped {
+        writeln!(report, "{display}\t{why}").unwrap();
+    }
     Ok(())
 }
 

@@ -345,8 +345,9 @@ fn a_player_hitting_an_invader_that_fights_infantry_taps_it_and_keeps_swinging()
 
 /// Mean wall time of one 50 ms tick of the creature, combat and aggro plugins running
 /// the world.db spawns within 300 yd of WoW `(x, y)` on map 0 and a level 1 human player
-/// at the first spawn, after a warm-up; with the line of sight bake loaded when `los`.
-fn tick_cost(x: f32, y: f32, los: bool) -> Option<(usize, std::time::Duration)> {
+/// at the first spawn, after a warm-up; with the line of sight bake loaded when `los`,
+/// and then the LOS segments tested per tick.
+fn tick_cost(x: f32, y: f32, los: bool) -> Option<(usize, std::time::Duration, Option<f64>)> {
     let spawns: Vec<CreatureSpawn> = world_data()
         .spawns
         .iter()
@@ -378,15 +379,28 @@ fn tick_cost(x: f32, y: f32, los: bool) -> Option<(usize, std::time::Duration)> 
     player_at(&mut app, first.0, first.1, first.2);
     run(&mut app, 20 * 30);
     let ticks = 20 * 120;
+    let rays = |app: &App| {
+        app.world()
+            .get_resource::<crate::line_of_sight::LineOfSight>()
+            .map(|los| los.rays())
+    };
+    let rays_before = rays(&app);
     let start = std::time::Instant::now();
     run(&mut app, ticks);
-    Some((count, start.elapsed() / ticks as u32))
+    let elapsed = start.elapsed();
+    let per_tick = rays_before
+        .zip(rays(&app))
+        .map(|(before, after)| (after - before) as f64 / ticks as f64);
+    Some((count, elapsed / ticks as u32, per_tick))
 }
 
 fn print_tick_cost(zone: &str, x: f32, y: f32) {
     for los in [false, true] {
-        if let Some((count, mean)) = tick_cost(x, y, los) {
-            println!("{zone}_tick_cost: {count} spawns, LOS {los}: {mean:?} per tick");
+        if let Some((count, mean, rays)) = tick_cost(x, y, los) {
+            println!(
+                "{zone}_tick_cost: {count} spawns, LOS {los}: {mean:?} per tick, LOS rays per \
+                 tick {rays:?}"
+            );
         }
     }
 }

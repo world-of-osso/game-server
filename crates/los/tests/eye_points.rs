@@ -4,7 +4,7 @@
 
 use std::path::PathBuf;
 
-use los::bake::eye::eye_rows_of;
+use los::bake::eye::{EyeStats, eye_rows_of};
 use los::eye::{EyeRow, EyeSource};
 
 /// `ChrModel` displays of human male and female, gnome male, tauren male.
@@ -19,15 +19,19 @@ const INVADER: u32 = 33142;
 const STAND: u8 = 0;
 const SIT: u8 = 1;
 
-fn rows(displays: &[u32]) -> Vec<EyeRow> {
+fn bake(required: &[u32], optional: &[u32]) -> Result<(Vec<EyeRow>, EyeStats), String> {
     let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    let (rows, stats) = eye_rows_of(
+    eye_rows_of(
         &root.join("../../../game-engine/data"),
         &root.join("../../data/world.db"),
-        displays,
+        required,
+        optional,
     )
-    .unwrap();
-    assert!(stats.errors.is_empty(), "{:?}", stats.errors);
+}
+
+fn rows(displays: &[u32]) -> Vec<EyeRow> {
+    let (rows, stats) = bake(displays, &[]).unwrap();
+    assert!(stats.skipped.is_empty(), "{:?}", stats.skipped);
     for row in &rows {
         println!(
             "{}\t{}\t{:?}\t{:.3}\t{:.3}\t{:.3}",
@@ -86,4 +90,22 @@ fn playable_races_and_creatures_have_eye_points_in_proportion() {
             "display {display} eye above its feet"
         );
     }
+}
+
+/// Template display 251 has no `CreatureDisplayInfo` row; 31004 shows
+/// invisiblestalker_noanims.m2, which has no geometry (an inverted bounding box). No
+/// spawn shows either.
+#[test]
+fn unspawned_displays_without_eyes_are_skipped_and_spawned_ones_must_bake() {
+    let (rows, stats) = bake(&[KOBOLD], &[251, 31004]).unwrap();
+    assert!(rows.iter().all(|row| row.display == KOBOLD));
+    let skipped: Vec<u32> = stats.skipped.iter().map(|(display, _)| *display).collect();
+    assert_eq!(skipped, [251, 31004], "{:?}", stats.skipped);
+    assert!(
+        stats.skipped[1].1.contains("bounding box"),
+        "{:?}",
+        stats.skipped
+    );
+    let err = bake(&[KOBOLD, 31004], &[]).unwrap_err();
+    assert!(err.contains("31004"), "{err}");
 }

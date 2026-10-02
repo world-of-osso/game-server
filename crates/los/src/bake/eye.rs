@@ -1,5 +1,4 @@
-//! The eye table: the eye point of every spawned creature display and playable character
-//! model, per stand state (`crate::eye`), and the character display of each playable race
+//! The eye table: the eye point of every creature display and playable character model, per stand state (`crate::eye`), and the character display of each playable race
 //! and sex.
 
 use std::collections::HashMap;
@@ -14,11 +13,8 @@ use crate::eye::{EyeRow, EyeSource, STAND_STATE_ANIMS};
 
 #[derive(Default, Debug)]
 pub struct EyeStats {
+    /// Displays with rows.
     pub displays: usize,
-    /// Displays whose model is not extracted.
-    pub missing_model: usize,
-    /// Models that do not parse, with why.
-    pub errors: Vec<String>,
     /// Displays by eye source.
     pub from_eyes: usize,
     pub from_head: usize,
@@ -28,9 +24,9 @@ pub struct EyeStats {
     /// (display, stand state) pairs whose model has no sequence for the state: they hold
     /// the Stand eye.
     pub stand_pose: usize,
-    /// (display, stand state) pairs whose sequence's `.anim` file is not extracted.
-    pub missing_anim: usize,
     pub rows: usize,
+    /// Optional displays without rows, and why.
+    pub skipped: Vec<(u32, String)>,
 }
 
 /// One model's eyes: where they come from and the eye point per stand state; `None` when
@@ -43,92 +39,113 @@ struct ModelEyes {
 }
 
 struct Display {
-    id: u32,
     model_fdid: u32,
     scale: f32,
 }
 
-/// Rows for the displays `world_db` spawns and the `ChrModel.csv` character displays,
-/// read from `data` (game-engine `data/`).
+/// Rows for the displays spawned creatures show and the `ChrModel.csv` character
+/// displays, which must all bake, and for every other creature template display
+/// (summons and transforms), skipped with why when it cannot; read from `data`
+/// (game-engine `data/`).
 pub fn eye_rows(data: &Path, world_db: &Path) -> Result<(Vec<EyeRow>, EyeStats)> {
-    eye_rows_of(data, world_db, &baked_display_ids(data, world_db)?)
+    let required = required_display_ids(data, world_db)?;
+    let optional = template_display_ids(world_db)?;
+    eye_rows_of(data, world_db, &required, &optional)
 }
 
-/// Rows for `display_ids`.
+/// Rows for `required` (an error when any cannot bake) and `optional` displays.
 pub fn eye_rows_of(
     data: &Path,
     world_db: &Path,
-    display_ids: &[u32],
+    required: &[u32],
+    optional: &[u32],
 ) -> Result<(Vec<EyeRow>, EyeStats)> {
-    let displays = displays(world_db, display_ids)?;
-    let mut stats = EyeStats {
-        displays: displays.len(),
-        ..EyeStats::default()
-    };
-    // `Err` with an empty message: the model is not extracted.
+    let mut ids: Vec<(u32, bool)> = required.iter().map(|&id| (id, true)).collect();
+    ids.extend(
+        optional
+            .iter()
+            .filter(|id| !required.contains(id))
+            .map(|&id| (id, false)),
+    );
+    ids.sort_unstable();
+    ids.dedup_by_key(|(id, _)| *id);
+    let displays = displays(world_db, ids.iter().map(|&(id, _)| id))?;
+    let mut stats = EyeStats::default();
     let mut models: HashMap<u32, Result<ModelEyes>> = HashMap::new();
-    let models_dir = data.join("models");
     let mut rows = Vec::new();
-    for display in displays {
-        let fdid = display.model_fdid;
-        let eyes = models.entry(fdid).or_insert_with(|| {
-            if !models_dir.join(format!("{fdid}.m2")).is_file() {
-                return Err(String::new());
+    let mut failed = Vec::new();
+    for (id, needed) in ids {
+        let display_rows = displays
+            .get(&id)
+            .ok_or_else(|| "no CreatureDisplayInfo row with a model".to_string())
+            .and_then(|display| {
+                let model = models
+                    .entry(display.model_fdid)
+                    .or_insert_with(|| extracted_model_eyes(data, display.model_fdid));
+                let model = model.as_ref().map_err(|err| err.clone())?;
+                rows_of(id, display, model)
+            });
+        match display_rows {
+            Ok((display_rows, model_source, stand_pose)) => {
+                match model_source {
+                    EyeSource::Eyes => stats.from_eyes += 1,
+                    EyeSource::Head => stats.from_head += 1,
+                    EyeSource::Bounds => stats.from_bounds += 1,
+                }
+                stats.stand_pose += stand_pose;
+                stats.displays += 1;
+                rows.extend(display_rows);
             }
-            model_eyes(data, fdid).map_err(|err| {
-                stats.errors.push(format!("model {fdid}: {err}"));
-                err
-            })
-        });
-        let model = match eyes {
-            Ok(model) => model,
-            Err(err) => {
-                stats.missing_model += usize::from(err.is_empty());
-                continue;
-            }
-        };
-        match model.source {
-            EyeSource::Eyes => stats.from_eyes += 1,
-            EyeSource::Head => stats.from_head += 1,
-            EyeSource::Bounds => stats.from_bounds += 1,
+            Err(why) if needed => failed.push((id, why)),
+            Err(why) => stats.skipped.push((id, why)),
         }
-        stats.stand_pose += model.stand_pose;
-        for &(state, eye) in &model.eyes {
-            let Some(eye) = eye else {
-                stats.missing_anim += 1;
-                continue;
-            };
-            rows.push(EyeRow {
-                display: display.id,
+    }
+    if !failed.is_empty() {
+        // A spawned or player unit without an eye row could not be LOS-checked.
+        return Err(format!(
+            "eye table incomplete: spawned or player displays without every stand state \
+             (run scripts/los-extract-models.py): {failed:?}"
+        ));
+    }
+    stats.rows = rows.len();
+    Ok((rows, stats))
+}
+
+/// Model `fdid`'s eyes; an error naming the model when it is not extracted or cannot
+/// be read.
+fn extracted_model_eyes(data: &Path, fdid: u32) -> Result<ModelEyes> {
+    if !data.join("models").join(format!("{fdid}.m2")).is_file() {
+        return Err(format!("model {fdid} not extracted"));
+    }
+    model_eyes(data, fdid).map_err(|err| format!("model {fdid}: {err}"))
+}
+
+/// Display `id`'s row per stand state, its eye source and how many states hold the
+/// Stand eye; an error when a state's `.anim` file is not extracted.
+fn rows_of(
+    id: u32,
+    display: &Display,
+    model: &ModelEyes,
+) -> Result<(Vec<EyeRow>, EyeSource, usize)> {
+    let rows = model
+        .eyes
+        .iter()
+        .map(|&(state, eye)| {
+            let eye = eye.ok_or_else(|| {
+                format!(
+                    "model {}: stand state {state} .anim not extracted",
+                    display.model_fdid
+                )
+            })?;
+            Ok(EyeRow {
+                display: id,
                 stand_state: state,
                 source: model.source,
                 eye: (eye * display.scale).to_array(),
-            });
-        }
-    }
-    rows.sort_by_key(|row| (row.display, row.stand_state));
-    stats.rows = rows.len();
-    let mut states: HashMap<u32, usize> = HashMap::new();
-    for row in &rows {
-        *states.entry(row.display).or_default() += 1;
-    }
-    let mut incomplete: Vec<u32> = display_ids
-        .iter()
-        .copied()
-        .filter(|id| states.get(id).copied().unwrap_or(0) < STAND_STATE_ANIMS.len())
-        .collect();
-    incomplete.sort_unstable();
-    incomplete.dedup();
-    if !incomplete.is_empty() || !stats.errors.is_empty() {
-        // A unit without an eye row could not be LOS-checked: no partial table.
-        return Err(format!(
-            "eye table incomplete: displays without every stand state {incomplete:?}; model \
-             not extracted: {}, .anim not extracted: {} (run scripts/los-extract-models.py); \
-             unreadable models: {:?}",
-            stats.missing_model, stats.missing_anim, stats.errors
-        ));
-    }
-    Ok((rows, stats))
+            })
+        })
+        .collect::<Result<Vec<_>>>()?;
+    Ok((rows, model.source, model.stand_pose))
 }
 
 /// The eye point of model `fdid` per stand state: the centroid of its eye geometry, else
@@ -211,27 +228,43 @@ fn open_db(world_db: &Path) -> Result<rusqlite::Connection> {
         .map_err(|err| format!("{}: {err}", world_db.display()))
 }
 
-/// Every creature template display (summons and transforms show displays no spawn
-/// does), spawn display overrides and the `ChrModel.csv` character displays.
-fn baked_display_ids(data: &Path, world_db: &Path) -> Result<Vec<u32>> {
-    let mut ids: Vec<u32> = open_db(world_db)?
-        .prepare(
-            "SELECT CreatureDisplayID FROM content_creature_template_model
-             UNION SELECT CAST(modelid AS INTEGER) FROM content_creature WHERE modelid != 0",
-        )
-        .and_then(|mut statement| {
-            statement
-                .query_map([], |row| row.get::<_, u32>(0))?
-                .collect::<rusqlite::Result<Vec<u32>>>()
-        })
-        .map_err(|err| format!("spawned displays: {err}"))?;
+/// The displays spawned creatures show (their templates' models and spawn overrides)
+/// and the `ChrModel.csv` character displays.
+fn required_display_ids(data: &Path, world_db: &Path) -> Result<Vec<u32>> {
+    let mut ids = query_ids(
+        world_db,
+        "SELECT m.CreatureDisplayID FROM content_creature c
+           JOIN content_creature_template_model m ON m.CreatureID = c.id1
+         UNION SELECT CAST(modelid AS INTEGER) FROM content_creature WHERE modelid != 0",
+    )?;
     ids.extend(chr_model_displays(data)?.into_values());
     ids.sort_unstable();
     ids.dedup();
     Ok(ids)
 }
 
-fn displays(world_db: &Path, ids: &[u32]) -> Result<Vec<Display>> {
+/// Every creature template display: summons and transforms show displays no spawn does.
+fn template_display_ids(world_db: &Path) -> Result<Vec<u32>> {
+    query_ids(
+        world_db,
+        "SELECT DISTINCT CreatureDisplayID FROM content_creature_template_model",
+    )
+}
+
+fn query_ids(world_db: &Path, sql: &str) -> Result<Vec<u32>> {
+    open_db(world_db)?
+        .prepare(sql)
+        .and_then(|mut statement| {
+            statement
+                .query_map([], |row| row.get::<_, u32>(0))?
+                .collect::<rusqlite::Result<Vec<u32>>>()
+        })
+        .map_err(|err| format!("display ids: {err}"))
+}
+
+/// The model and scale of each of `ids` that has a `CreatureDisplayInfo` row with a
+/// model.
+fn displays(world_db: &Path, ids: impl Iterator<Item = u32>) -> Result<HashMap<u32, Display>> {
     let db = open_db(world_db)?;
     let mut statement = db
         .prepare(
@@ -240,8 +273,8 @@ fn displays(world_db: &Path, ids: &[u32]) -> Result<Vec<Display>> {
               WHERE d.ID = ?1",
         )
         .map_err(|err| err.to_string())?;
-    let mut displays = Vec::new();
-    for &id in ids {
+    let mut displays = HashMap::new();
+    for id in ids {
         let row = statement.query_row([id], |row| {
             Ok((
                 row.get::<_, u32>(2)?,
@@ -251,11 +284,13 @@ fn displays(world_db: &Path, ids: &[u32]) -> Result<Vec<Display>> {
         });
         match row {
             Ok((model_fdid, display_scale, model_scale)) if model_fdid != 0 => {
-                displays.push(Display {
+                displays.insert(
                     id,
-                    model_fdid,
-                    scale: (display_scale * model_scale) as f32,
-                })
+                    Display {
+                        model_fdid,
+                        scale: (display_scale * model_scale) as f32,
+                    },
+                );
             }
             Ok(_) | Err(rusqlite::Error::QueryReturnedNoRows) => {}
             Err(err) => return Err(format!("display {id}: {err}")),

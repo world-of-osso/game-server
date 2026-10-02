@@ -4,21 +4,23 @@
 //!
 //! The bake output (`los-bake --out <ground dir>/los`) loads from the ground directory:
 //! the eye table at startup, each map's tiles on first use. A map without baked tiles
-//! has nothing that blocks. The bake covers every creature template display; a unit whose
-//! display and stand state still have no eye row (stand state `SIT_CHAIR`, which has no
-//! established animation, or a display outside world.db) is logged once and sees nothing
-//! and is seen by nothing.
+//! has nothing that blocks. The bake covers every spawned and player display and the
+//! creature template displays it can; a unit whose display and stand state have no eye
+//! row (stand state `SIT_CHAIR`, which has no established animation, or a skipped display
+//! a script summons) is logged once per display, naming the first unit that showed it,
+//! and sees nothing and is seen by nothing.
 
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use bevy::math::Vec3;
 use bevy::prelude::*;
 use los::eye::EyeTable;
 use los::{Body, LosMap};
 use shared::components::{
-    ModelDisplay, Player, PlayerStandState, Position, Rotation, StandState, UnitPose,
+    ModelDisplay, Npc, Player, PlayerStandState, Position, Rotation, StandState, UnitPose,
 };
 use shared::protocol::WitnessRay;
 
@@ -41,12 +43,16 @@ pub struct LineOfSight {
     eyes: EyeTable,
     /// Baked tiles per map id, loaded on first use.
     maps: Mutex<HashMap<u32, LosMap>>,
-    /// `(display, stand state)` without an eye row, logged once each.
-    missing: Mutex<HashSet<(u32, u8)>>,
+    /// Displays without an eye row, logged once each.
+    missing: Mutex<HashSet<u32>>,
+    /// Segments tested against the bake so far.
+    rays: AtomicU64,
 }
 
-/// What places a unit's eyes: its components.
+/// What places a unit's eyes: its components (the entity and `Npc` name it in logs).
 pub(crate) type BodyParts<'a> = (
+    Entity,
+    Option<&'a Npc>,
     &'a Position,
     Option<&'a Rotation>,
     Option<&'a ModelDisplay>,
@@ -63,6 +69,7 @@ impl LineOfSight {
             eyes: EyeTable::load(dir)?,
             maps: Mutex::new(HashMap::new()),
             missing: Mutex::new(HashSet::new()),
+            rays: AtomicU64::new(0),
         })
     }
 
@@ -71,7 +78,7 @@ impl LineOfSight {
     /// eye row.
     pub fn body(
         &self,
-        (position, rotation, display, pose, player, player_stand): BodyParts,
+        (entity, npc, position, rotation, display, pose, player, player_stand): BodyParts,
     ) -> Option<Body> {
         let (display, stand_state) = match (player, display) {
             (Some(player), _) => (
@@ -95,16 +102,17 @@ impl LineOfSight {
             (None, None) => (0, StandState::Stand),
         };
         let Some(eye) = self.eyes.eye(display, stand_state as u8) else {
-            if self
-                .missing
-                .lock()
-                .unwrap()
-                .insert((display, stand_state as u8))
-            {
+            if self.missing.lock().unwrap().insert(display) {
+                // The first unit to show it: a spawn, or a creature a script summoned.
                 let (display_id, dir) = (display, self.dir.display());
+                let unit = npc.map_or_else(
+                    || format!("{entity}"),
+                    |npc| format!("{} (entry {}, {entity})", npc.name, npc.template_id),
+                );
                 error!(
                     "Display {display_id} in stand state {stand_state:?} has no eye row in \
-                     {dir}: units showing it are out of everyone's line of sight"
+                     {dir} (first shown by {unit}): units showing it are out of everyone's \
+                     line of sight"
                 );
             }
             return None;
@@ -120,7 +128,21 @@ impl LineOfSight {
     /// The first of `target`'s eyes, chest and feet a clear ray from `watcher`'s eyes
     /// reaches on map `map`.
     pub fn witness(&self, map: InMap, watcher: &Body, target: &Body) -> Option<Vec3> {
-        self.with_map(map, |tiles| tiles.witness(watcher.eyes, target))
+        let found = self.with_map(map, |tiles| tiles.witness(watcher.eyes, target));
+        let aims = target.aim_points();
+        // The search stops at the first clear aim point.
+        let rays = found.map_or(aims.len(), |end| {
+            aims.iter()
+                .position(|&aim| aim == end)
+                .map_or(aims.len(), |i| i + 1)
+        });
+        self.rays.fetch_add(rays as u64, Ordering::Relaxed);
+        found
+    }
+
+    /// Segments tested against the bake so far.
+    pub fn rays(&self) -> u64 {
+        self.rays.load(Ordering::Relaxed)
     }
 
     /// Whether `watcher` sees `target` on map `map`: a clear ray from its eyes to the
@@ -131,6 +153,7 @@ impl LineOfSight {
 
     /// Whether the segment `a..b` crosses no baked triangle of map `map`.
     pub fn clear(&self, map: InMap, a: Vec3, b: Vec3) -> bool {
+        self.rays.fetch_add(1, Ordering::Relaxed);
         self.with_map(map, |tiles| tiles.clear(a, b))
     }
 
@@ -164,6 +187,8 @@ pub(crate) fn unit_sees(
 fn parts_in_world(world: &World, unit: Entity) -> Option<BodyParts<'_>> {
     let entity = world.get_entity(unit).ok()?;
     Some((
+        unit,
+        entity.get::<Npc>(),
         entity.get::<Position>()?,
         entity.get::<Rotation>(),
         entity.get::<ModelDisplay>(),
