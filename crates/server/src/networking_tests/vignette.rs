@@ -1,13 +1,14 @@
 //! Creature vignettes over real UDP against the imported world.db
 //! (`cargo test -p server vignette -- --ignored`): Doomwalker (creature_template
-//! 167749, VignetteID 6520, spawn guid 30800000 on map 1) shows its vignette to a
-//! player within the interest radius, not to one beyond it, and loses it on death
-//! until it respawns (TrinityCore Vignette.cpp, `Unit::setDeathState`).
+//! 167749, VignetteID 6520, content_creature guid 30800000 on map 1, a game event 89
+//! spawn) shows its vignette to a player within the interest radius, not to one beyond
+//! it, and loses it on death until it respawns (TrinityCore Vignette.cpp,
+//! `Unit::setDeathState`).
 
 use super::regen::{advance, network_client};
 use super::*;
 use crate::interest::{InterestDirtyQueue, mark_interest_position_changed};
-use crate::world_data::{WorldData, load_world_data};
+use crate::world_data::{WorldData, load_spawn, load_world_data};
 use bevy::ecs::system::RunSystemOnce;
 use shared::components::{Npc, UnitVignette};
 use std::net::UdpSocket;
@@ -30,9 +31,7 @@ fn network_server(address: std::net::SocketAddr) -> App {
     ));
     server.init_resource::<crate::combat::CombatLog>();
     server.add_systems(FixedUpdate, crate::combat::respawn_system);
-    server.insert_resource(load_world_data(
-        &PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/world.db"),
-    ));
+    server.insert_resource(load_world_data(&world_db()));
     server.add_observer(on_new_link);
     server.add_observer(on_player_link_inserted);
     let entity = server
@@ -47,15 +46,17 @@ fn network_server(address: std::net::SocketAddr) -> App {
     server
 }
 
+fn world_db() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/world.db")
+}
+
+/// Doomwalker's content_creature row, spawned as its game event would.
 fn spawn_doomwalker(server: &mut App) -> Entity {
+    let conn = rusqlite::Connection::open(world_db()).unwrap();
+    let spawn = load_spawn(&conn, DOOMWALKER_GUID).expect("Doomwalker in content_creature");
     server
         .world_mut()
-        .run_system_once(|mut commands: Commands, data: Res<WorldData>| {
-            let spawn = data
-                .spawns
-                .iter()
-                .find(|spawn| spawn.guid == DOOMWALKER_GUID)
-                .expect("Doomwalker spawn in world.db");
+        .run_system_once(move |mut commands: Commands, data: Res<WorldData>| {
             let template = data.template_for(spawn.template_entry, 0).unwrap();
             crate::zones::spawn_creature(
                 &mut commands,
@@ -63,7 +64,7 @@ fn spawn_doomwalker(server: &mut App) -> Entity {
                 template,
                 crate::maps::InMap::continent(1),
                 true,
-                spawn,
+                &spawn,
                 &mut rand::thread_rng(),
             )
         })
