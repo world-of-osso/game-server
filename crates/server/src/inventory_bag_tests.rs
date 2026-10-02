@@ -4,6 +4,7 @@
 use shared::protocol::InventoryErrorReason as Reason;
 
 use super::*;
+use crate::persistence::InventoryItemData;
 use crate::persistence::inventory_store::EquippedBagData;
 
 fn cell(bag: u8, slot: u8) -> ItemLocation {
@@ -257,5 +258,83 @@ fn equipped_bags_and_their_items_survive_a_database_reopen() {
             slot: 4,
             item: stack(linen, LINEN, 20),
         }]
+    );
+}
+
+/// A character with the Simply Stitched Reagent Bag equipped (backpack slots 0-2
+/// hold linen, peacebloom and ore; 3-15 are free) and its loaded model.
+fn reagent_bag_model(app: &mut App) -> InventoryModel {
+    let (client, _) = bagger(app, &[(REAGENT_BAG, "Simply Stitched Reagent Bag")]);
+    request(app, &client, EquipItem { from: bag(3) });
+    assert_eq!(errors(app, &client), vec![]);
+    let templates = app.world().resource::<ItemTemplates>();
+    load_model(db(app), templates, client.character_id).unwrap()
+}
+
+/// `store_item` of `count` fresh `item_id`, guids minted from 9000.
+fn store_new(model: &mut InventoryModel, item_id: u32, count: u32) -> Result<(), Reason> {
+    let mut next = 9000;
+    let mut mint = || {
+        next += 1;
+        next
+    };
+    let item = InventoryItemData {
+        item_guid: mint(),
+        item_id,
+        name: String::new(),
+        quality: 1,
+        required_level: 0,
+        stack_count: count,
+        vendor_sell_price: 0,
+        unique_auction: false,
+    };
+    let template = *test_templates().get(item_id).unwrap();
+    model
+        .store_item(item, template, &mut mint)
+        .map_err(|error| error.reason)
+}
+
+/// TrinityCore `Player::CanStoreItem` (Player.cpp:10444-10451): a new crafting
+/// reagent (`ITEM_FLAG2_USED_IN_A_TRADESKILL`) takes free reagent bag slots before
+/// the backpack and bags, and only what does not fit there spills over.
+#[test]
+fn new_reagents_fill_the_reagent_bag_first_and_overflow_to_the_backpack() {
+    let mut app = setup_app(persistence::temp_database());
+    let mut model = reagent_bag_model(&mut app);
+
+    // 980 top up the backpack's 20 linen, 32 full stacks fill the reagent bag,
+    // 500 spill into the first free backpack slot.
+    store_new(&mut model, LINEN, 980 + 32 * 1000 + 500).unwrap();
+
+    let view = model.view();
+    let count = |location| view.get(&location).map(|item| item.count);
+    assert_eq!(count(bag(0)), Some(1000));
+    assert!((0..32).all(|slot| count(cell(5, slot)) == Some(1000)));
+    assert_eq!(count(bag(3)), Some(500));
+    assert_eq!(count(bag(4)), None);
+}
+
+/// A non-reagent never lands in the reagent bag, and neither the fit check nor the
+/// free-slot count (Retail `CalculateTotalNumberOfFreeBagSlots`, bags 0-4) counts
+/// its empty cells.
+#[test]
+fn non_reagents_ignore_reagent_bag_space() {
+    let mut app = setup_app(persistence::temp_database());
+    let mut model = reagent_bag_model(&mut app);
+    assert_eq!(model.free_cells(), 13, "backpack slots 3-15");
+
+    for _ in 3..16 {
+        store_new(&mut model, WORN_SHORTSWORD, 1).unwrap();
+    }
+
+    assert_eq!(model.free_cells(), 0);
+    assert_eq!(
+        store_new(&mut model, WORN_SHORTSWORD, 1),
+        Err(Reason::InvFull)
+    );
+    let view = model.view();
+    assert!((0..32).all(|slot| !view.contains_key(&cell(5, slot))));
+    assert!(
+        (3..16).all(|slot| view.get(&bag(slot)).map(|item| item.item_id) == Some(WORN_SHORTSWORD))
     );
 }
