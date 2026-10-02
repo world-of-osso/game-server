@@ -27,7 +27,7 @@ use super::MeetingStoneData;
 use crate::interest::NetworkVisibility;
 use crate::networking::CombatTarget;
 use crate::spell_cast::effects::EffectCtx;
-use crate::spell_cast::{cancel_cast, cast_triggered, duration_ms, now};
+use crate::spell_cast::{cast_triggered, duration_ms, end_cast, now};
 use crate::spell_info::SpellEffect;
 
 pub(crate) const EFFECT_TRANS_DOOR: u32 = 50;
@@ -143,7 +143,8 @@ pub(crate) fn use_ritual(world: &mut World, user: Entity, object: Entity) {
         }
         return;
     }
-    cancel_cast(world, ritual.owner);
+    // The summoning channel hands over to the summon spell: no failure is reported.
+    end_cast(world, ritual.owner);
     let target = world
         .get::<CombatTarget>(ritual.owner)
         .and_then(|target| target.0);

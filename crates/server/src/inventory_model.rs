@@ -737,16 +737,30 @@ impl InventoryModel {
         Ok(())
     }
 
-    /// Item on-use spells need item spell data, which the server does not load.
-    pub(crate) fn use_item(&self, location: ItemLocation) -> OpResult {
+    /// The spell using the item at `location` casts (`Player::ProcessItemCast`,
+    /// Player.cpp:31665-31691): an equippable item is used only when equipped.
+    pub(crate) fn use_spell(
+        &self,
+        location: ItemLocation,
+    ) -> Result<crate::item_templates::OnUseSpell, InventoryError> {
         let item = self.existing(location)?;
-        Err(error(
-            InventoryErrorReason::CantDoRightNow,
-            format!(
-                "item {} has no on-use spell data on the server",
-                item.item_id
-            ),
-        ))
+        let template = self.template(item);
+        if template.is_some_and(|template| template.inventory_type != 0)
+            && !matches!(location, ItemLocation::Equipment(_))
+        {
+            return Err(error(
+                InventoryErrorReason::ItemNotFound,
+                format!("item {} is used only when equipped", item.item_id),
+            ));
+        }
+        template
+            .and_then(|template| template.on_use)
+            .ok_or_else(|| {
+                error(
+                    InventoryErrorReason::CantDoRightNow,
+                    format!("item {} has no on-use spell", item.item_id),
+                )
+            })
     }
 
     pub(crate) fn gold(&self) -> u64 {
@@ -936,6 +950,108 @@ impl InventoryModel {
             left -= count;
         }
         Ok(())
+    }
+
+    /// TrinityCore `Player::StoreNewItemInBestSlots` (Player.cpp:561-596): equip the
+    /// items one at a time into free slots they may occupy, then store the rest in
+    /// the bags like `store_item`.
+    pub(crate) fn store_new_item_in_best_slots(
+        &mut self,
+        item: InventoryItemData,
+        template: ItemTemplate,
+        mint: &mut impl FnMut() -> u64,
+    ) -> OpResult {
+        self.templates.insert(item.item_id, template);
+        let mut guid = Some(item.item_guid);
+        let mut left = item.stack_count;
+        while left > 0 {
+            let Some(slot) = self.free_equip_slot(&item) else {
+                break;
+            };
+            let item_guid = guid.take().unwrap_or_else(&mut *mint);
+            let copy = InventoryItemData {
+                item_guid,
+                stack_count: 1,
+                ..item.clone()
+            };
+            self.equip_new(copy, slot)?;
+            left -= 1;
+        }
+        if left == 0 {
+            return Ok(());
+        }
+        let item_guid = guid.unwrap_or_else(&mut *mint);
+        let rest = InventoryItemData {
+            item_guid,
+            stack_count: left,
+            ..item
+        };
+        self.store_item(rest, template, mint)
+    }
+
+    /// `Player::Create` second pass (Player.cpp:525-554): each backpack item in slot
+    /// order is equipped when it now has a free slot (an off hand stored before its
+    /// main hand was equipped); the others move to the first free backpack slot up to
+    /// their own (`CanStoreItem` counts the moving item's slot as free).
+    pub(crate) fn equip_backpack_items(&mut self) -> OpResult {
+        let backpack = usize::from(shared::protocol::BACKPACK_BAG);
+        for cell in 0..self.bags[backpack].len() {
+            let Some(item) = self.bags[backpack][cell].take() else {
+                continue;
+            };
+            if let Some(slot) = self.free_equip_slot(&item) {
+                self.equip_new(item, slot)?;
+                continue;
+            }
+            let target = self.bags[backpack]
+                .iter()
+                .position(Option::is_none)
+                .expect("the item's own slot is free");
+            self.bags[backpack][target] = Some(item);
+        }
+        Ok(())
+    }
+
+    /// `Player::FindEquipSlot` with NULL_SLOT and no swap (Player.cpp:9211-9411): the
+    /// first empty slot the item may occupy. The off hand is not free under a
+    /// two-hander (`IsTwoHandUsed`), and a one-hander gets no off hand without dual
+    /// wield (`validate_equip`).
+    fn free_equip_slot(&self, item: &InventoryItemData) -> Option<EquipmentSlot> {
+        EquipmentSlot::for_inventory_type(self.inventory_type(item))
+            .iter()
+            .copied()
+            .find(|&slot| {
+                slot.visual_slot().is_some()
+                    && !self.equipped.contains_key(&slot)
+                    && !(slot == EquipmentSlot::OffHand && self.two_hand_used())
+                    && self.validate_equip(item, slot).is_ok()
+            })
+    }
+
+    fn two_hand_used(&self) -> bool {
+        self.equipped
+            .get(&EquipmentSlot::MainHand)
+            .is_some_and(|item| TWO_HAND_TYPES.contains(&self.inventory_type(item)))
+    }
+
+    /// `Player::EquipNewItem` then `AutoUnequipOffhandIfNeed` (Player.cpp:26123-26167):
+    /// a two-hander moves the off-hand item to a free bag slot.
+    fn equip_new(&mut self, item: InventoryItemData, slot: EquipmentSlot) -> OpResult {
+        self.with_appearance_sync(|model| {
+            model.equipped.insert(slot, item);
+            model.bind_on_equip(slot);
+            if !(model.two_hand_used() && model.equipped.contains_key(&EquipmentSlot::OffHand)) {
+                return Ok(());
+            }
+            let (bag, cell) = model.first_free_cell().ok_or_else(|| {
+                error(
+                    InventoryErrorReason::InvFull,
+                    "no free bag slot for the off-hand item",
+                )
+            })?;
+            model.bags[bag][cell] = model.equipped.remove(&EquipmentSlot::OffHand);
+            Ok(())
+        })
     }
 
     /// TrinityCore `CanStoreNewItem(bag, slot)` + `StoreNewItem` for a purchase

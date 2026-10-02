@@ -110,6 +110,7 @@ fn run_tick(world: &mut World, unit: Entity, spell: &SpellInfo, tick: &Tick) {
             true,
         ),
         PERIODIC_ENERGIZE => energize(world, &ctx, unit, tick),
+        OBS_MOD_POWER => obs_mod_power(world, &ctx, unit, tick),
         PERIODIC_TRIGGER_SPELL => crate::spell_cast::cast_triggered(
             world,
             tick.caster,
@@ -131,6 +132,31 @@ fn run_tick(world: &mut World, unit: Entity, spell: &SpellInfo, tick: &Tick) {
             spell.id
         ),
     }
+}
+
+/// `AuraEffect::HandleObsModPowerAuraTick` (SpellAuraEffects.cpp): the amount percent
+/// of the MiscValue power's max (`CalculatePct`, truncated); nothing without that pool.
+fn obs_mod_power(world: &mut World, ctx: &EffectCtx, unit: Entity, tick: &Tick) {
+    let Some(power) = PowerType::from_db(tick.misc) else {
+        debug!(
+            "Spell {}: periodic power of unknown power {}",
+            ctx.spell.id, tick.misc
+        );
+        return;
+    };
+    let max =
+        crate::spell_cast::powers::power_value(world, unit, power).map_or(0.0, |(_, max)| max);
+    if max == 0.0 {
+        return;
+    }
+    effects::energize_unit(
+        world,
+        ctx,
+        unit,
+        power,
+        (max * tick.amount / 100.0).trunc(),
+        true,
+    );
 }
 
 fn energize(world: &mut World, ctx: &EffectCtx, unit: Entity, tick: &Tick) {

@@ -212,15 +212,17 @@ fn renew_heals_every_tick() {
         .unwrap()
         .current = 500.0;
     h.cast_and_deliver(RENEW, None);
-    // PERIODIC_HEAL 0.60928 × SP 100 = 60.9 → 61 every 3 s for 15 s.
+    // PERIODIC_HEAL 0.60928 × SP 100 = 60.9 → 61 on apply (Renew has
+    // SPELL_ATTR5_EXTRA_INITIAL_PERIOD) and every 3 s for 15 s: 6 ticks
+    // (`AuraEffect::GetTotalTicks`, SpellAuraEffects.cpp:945-946).
     h.advance(frames_for(15_000) + 4);
     let ticks: Vec<_> = log_of(&h, CombatLogKind::Heal, RENEW)
         .into_iter()
         .filter(|event| event.periodic)
         .collect();
-    assert_eq!(ticks.len(), 5);
+    assert_eq!(ticks.len(), 6);
     assert!(ticks.iter().all(|tick| tick.amount == 61));
-    assert_eq!(h.health(h.caster), 500.0 + 5.0 * 61.0);
+    assert_eq!(h.health(h.caster), 500.0 + 6.0 * 61.0);
 }
 
 #[test]

@@ -3,19 +3,22 @@
 //! `compute_character_stats` turns class/race/level base stats, gear and
 //! optional aura `StatModifiers` into `CharacterStats`. `update_character_stats`
 //! applies the result on world entry and whenever level, spec, gear or
-//! modifiers change: it writes the effective `UnitStats` / `CombatRatings`,
-//! `Health.max` and `Mana.max`, rescaling current values by their ratio.
+//! modifiers change: it writes the effective `UnitStats` / `CombatRatings` /
+//! `DerivedStats`, `Health.max` and `Mana.max`, rescaling current values by their ratio.
 //! Sources and formulas: `docs/wiki/systems/character-stats.md`.
 
 use bevy::prelude::*;
 use lightyear::prelude::ReplicationDirtyQueue;
-use shared::components::{CombatRatings, Health, ItemStatBlock, Level, Mana, Player, UnitStats};
+use shared::components::{
+    CombatRatings, DerivedStats, Health, ItemStatBlock, Level, Mana, Player, UnitStats,
+};
 use shared::formulas::sum_equipment_stats;
 use shared::protocol::EquipmentSlot;
 
 use crate::character_stats_data::{
-    BASE_MANA, BLOCK_RATING, CLASS_BASE_STATS, CRIT_RATING, DODGE_RATING, HASTE_RATING,
-    HP_PER_STAMINA, MASTERY_RATING, PARRY_RATING, RACE_STAT_MODS, VERSATILITY_RATING,
+    AVOIDANCE_RATING, BASE_MANA, BLOCK_RATING, CLASS_BASE_STATS, CRIT_RATING, DODGE_RATING,
+    HASTE_RATING, HP_PER_STAMINA, LEECH_RATING, MASTERY_RATING, PARRY_RATING, RACE_STAT_MODS,
+    SPEED_RATING, VERSATILITY_RATING,
 };
 use crate::class_progression::{ActiveSpec, KnownSpells};
 use crate::item_stats::{ItemScalingTables, WeaponDamage, item_stats};
@@ -109,6 +112,10 @@ pub struct CharacterStats {
     pub haste_pct: f32,
     pub mastery_pct: f32,
     pub versatility_pct: f32,
+    /// Tertiary ratings after their diminishing returns.
+    pub leech_pct: f32,
+    pub avoidance_pct: f32,
+    pub speed_pct: f32,
     pub armor: f32,
     /// Main-hand swing data; unarmed without a weapon.
     pub main_hand: WeaponDamage,
@@ -116,6 +123,31 @@ pub struct CharacterStats {
     pub off_hand: Option<WeaponDamage>,
     /// Dodge, parry and block (`player_defense`).
     pub defense: PlayerDefense,
+    /// `m_baseHealthRegen`: the gear's `ITEM_MOD_HEALTH_REGEN`, health per 5 s.
+    pub health_regen: f32,
+}
+
+impl CharacterStats {
+    /// What the owner's character sheet and spell tooltips read. TrinityCore keeps the
+    /// same values in `ActivePlayerData`: spell power (`Unit::SpellBaseDamageBonusDone`,
+    /// Unit.cpp:7101-7119), crit (`UpdateCritPercentage` / `UpdateSpellCritChance`,
+    /// StatSystem.cpp:509-546, 717-729), mastery (`UpdateMastery`, StatSystem.cpp:549-559)
+    /// and versatility (`GetRatingBonusValue(CR_VERSATILITY_DAMAGE_DONE)`,
+    /// Player.cpp:5172-5178). Leech, avoidance and speed fill `ActivePlayerData`
+    /// `Lifesteal`, `Avoidance` and `Speed` (UpdateFields.h:417, 1399-1400).
+    pub fn derived(&self) -> DerivedStats {
+        DerivedStats {
+            spell_power: self.spell_power,
+            attack_power: self.attack_power,
+            crit_pct: self.crit_pct,
+            haste_pct: self.haste_pct,
+            mastery_pct: self.mastery_pct,
+            versatility_pct: self.versatility_pct,
+            leech_pct: self.leech_pct,
+            avoidance_pct: self.avoidance_pct,
+            speed_pct: self.speed_pct,
+        }
+    }
 }
 
 pub struct StatsPlugin;
@@ -208,24 +240,42 @@ const SECONDARY_DR_CURVE: [(f32, f32); 8] = [
     (200.0, 126.0),
 ];
 
+/// Leech, avoidance and speed diminishing returns, curve 21025 (TrinityCore
+/// `GlobalCurve::SpeedDiminishing` / `AvoidanceDiminishing` / `LifestealDiminishing`,
+/// DBCEnums.h:1178-1181); SimC `DIMINISHING_RETURN_TERTIARY_CR_CURVE`, `item_scaling.inc`.
+const TERTIARY_DR_CURVE: [(f32, f32); 7] = [
+    (0.0, 0.0),
+    (0.5, 0.5),
+    (10.0, 10.0),
+    (15.0, 14.0),
+    (20.0, 17.0),
+    (25.0, 19.0),
+    (100.0, 49.0),
+];
+
 /// Piecewise-linear lookup, clamped to the curve's ends.
-fn secondary_dr(value: f32) -> f32 {
-    let upper = SECONDARY_DR_CURVE
+fn curve_value(curve: &[(f32, f32)], value: f32) -> f32 {
+    let upper = curve
         .iter()
         .position(|&(x, _)| x >= value)
-        .unwrap_or(SECONDARY_DR_CURVE.len() - 1);
-    if upper == 0 || value >= SECONDARY_DR_CURVE[upper].0 {
-        return SECONDARY_DR_CURVE[upper].1;
+        .unwrap_or(curve.len() - 1);
+    if upper == 0 || value >= curve[upper].0 {
+        return curve[upper].1;
     }
-    let (x0, y0) = SECONDARY_DR_CURVE[upper - 1];
-    let (x1, y1) = SECONDARY_DR_CURVE[upper];
+    let (x0, y0) = curve[upper - 1];
+    let (x1, y1) = curve[upper];
     y0 + (value - x0) / (x1 - x0) * (y1 - y0)
 }
 
 /// Rating → percent (mastery: points) after DR. `per_point` is the
 /// gtCombatRatings value: rating for 1% or 1 mastery point (SimC `rating_t::init`).
 fn rating_value(rating: f32, per_point: f32) -> f32 {
-    secondary_dr(rating / per_point)
+    curve_value(&SECONDARY_DR_CURVE, rating / per_point)
+}
+
+/// Tertiary rating → percent after DR (Player::ApplyRatingDiminishing, Player.cpp:5180-5225).
+fn tertiary_rating_value(rating: f32, per_point: f32) -> f32 {
+    curve_value(&TERTIARY_DR_CURVE, rating / per_point)
 }
 
 /// Retail stats for `input`, with aura `mods` folded in. `None` for a class
@@ -265,10 +315,14 @@ pub fn compute_character_stats(
         mastery_pct: mastery_points * input.mastery_coefficient,
         versatility_pct: rating_value(ratings.versatility, VERSATILITY_RATING[level])
             + mods.versatility_pct,
+        leech_pct: tertiary_rating_value(ratings.leech, LEECH_RATING[level]),
+        avoidance_pct: tertiary_rating_value(ratings.avoidance, AVOIDANCE_RATING[level]),
+        speed_pct: tertiary_rating_value(ratings.speed, SPEED_RATING[level]),
         armor: ratings.armor,
         main_hand: WeaponDamage::UNARMED,
         off_hand: None,
         defense: PlayerDefense::default(),
+        health_regen: 0.0,
     })
 }
 
@@ -354,6 +408,7 @@ pub fn player_defense(
         shield_block: inputs
             .shield_armor
             .map_or(0.0, |armor| armor * SHIELD_BLOCK_PER_ARMOR),
+        sitting: false,
     }
 }
 
@@ -413,6 +468,7 @@ impl ItemData<'_> {
             off_hand: None,
             has_weapon: false,
             shield_armor: None,
+            health_regen: 0.0,
         };
         let (Some(templates), Some(tables), Some(equipped)) =
             (self.templates.as_deref(), self.tables.as_deref(), equipped)
@@ -425,6 +481,7 @@ impl ItemData<'_> {
             };
             let stats = item_stats(template, tables);
             gear.blocks.push(stats.block);
+            gear.health_regen += stats.health_regen;
             if template.inventory_type == INVTYPE_SHIELD && slot == EquipmentSlot::OffHand {
                 gear.shield_armor = Some(stats.block.secondary.armor);
             }
@@ -450,6 +507,7 @@ struct Gear {
     off_hand: Option<WeaponDamage>,
     has_weapon: bool,
     shield_armor: Option<f32>,
+    health_regen: f32,
 }
 
 /// `InventoryType` Shield.
@@ -485,6 +543,7 @@ type StatsQuery = (
     Option<&'static StatModifiers>,
     &'static mut UnitStats,
     &'static mut CombatRatings,
+    &'static mut DerivedStats,
     &'static mut Health,
     Option<&'static mut Mana>,
 );
@@ -517,6 +576,7 @@ pub(crate) fn update_character_stats(
         mods,
         mut unit_stats,
         mut ratings,
+        mut derived,
         mut health,
         mana,
     ) in &mut players
@@ -545,6 +605,7 @@ pub(crate) fn update_character_stats(
         };
         stats.main_hand = gear.main_hand;
         stats.off_hand = gear.off_hand;
+        stats.health_regen = gear.health_regen;
         stats.defense = player_defense(
             player.class,
             level.0,
@@ -564,6 +625,7 @@ pub(crate) fn update_character_stats(
         }
         let mut changed = unit_stats.set_if_neq(stats.primary);
         changed |= ratings.set_if_neq(stats.ratings);
+        changed |= derived.set_if_neq(stats.derived());
         changed |= health.set_if_neq(Health {
             current: rescaled_current(health.current, health.max, stats.max_health),
             max: stats.max_health,

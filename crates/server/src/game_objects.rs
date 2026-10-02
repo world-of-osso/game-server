@@ -1,7 +1,8 @@
 //! World game objects from world.db `content_gameobject` (docs/wiki/systems/game-objects.md).
 //!
 //! Guild Vaults (`GAMEOBJECT_TYPE_GUILD_BANK`), Mailboxes
-//! (`GAMEOBJECT_TYPE_MAILBOX`), meeting stones (`GAMEOBJECT_TYPE_MEETINGSTONE`) and the
+//! (`GAMEOBJECT_TYPE_MAILBOX`), meeting stones (`GAMEOBJECT_TYPE_MEETINGSTONE`), chairs
+//! (`GAMEOBJECT_TYPE_CHAIR`, `chair`) and the
 //! non-usable decoration (`GAMEOBJECT_TYPE_GENERIC`) and spell foci
 //! (`GAMEOBJECT_TYPE_SPELL_FOCUS`: fires, bonfires) spawn for now, into each copy of their
 //! map (`maps`); other types become spawns by widening `SPAWN_QUERY`. Summoning portals spawn at runtime (`meeting_stone::ritual`). A spawned object
@@ -21,8 +22,9 @@ use lightyear::prelude::*;
 use rusqlite::{Connection, Row};
 use shared::components::{Position, Rotation};
 use shared::protocol::{
-    GAMEOBJECT_TYPE_GENERIC, GAMEOBJECT_TYPE_GUILD_BANK, GAMEOBJECT_TYPE_MAILBOX,
-    GAMEOBJECT_TYPE_MEETINGSTONE, GAMEOBJECT_TYPE_SPELL_FOCUS, GameObjectInfo,
+    GAMEOBJECT_TYPE_CHAIR, GAMEOBJECT_TYPE_GENERIC, GAMEOBJECT_TYPE_GUILD_BANK,
+    GAMEOBJECT_TYPE_MAILBOX, GAMEOBJECT_TYPE_MEETINGSTONE, GAMEOBJECT_TYPE_SPELL_FOCUS,
+    GameObjectInfo,
 };
 
 use crate::interest::NetworkVisibility;
@@ -34,11 +36,11 @@ pub(crate) const GAME_OBJECT_INTERACT_DISTANCE: f32 = 5.0;
 const SPAWN_QUERY: &str = "SELECT g.guid, g.id, g.position_x, g.position_y, g.position_z, \
      g.orientation, t.type, t.displayId, t.name, t.size, \
      d.GeoBox_0, d.GeoBox_1, d.GeoBox_2, d.GeoBox_3, d.GeoBox_4, d.GeoBox_5, g.map, \
-     g.spawnDifficulties \
+     g.spawnDifficulties, t.Data0, t.Data1 \
      FROM content_gameobject g \
      JOIN content_gameobject_template t ON t.entry = g.id \
      JOIN game_object_display_info d ON d.ID = t.displayId \
-     WHERE t.type IN (?1, ?2, ?3, ?4, ?5) ORDER BY g.guid";
+     WHERE t.type IN (?1, ?2, ?3, ?4, ?5, ?6) ORDER BY g.guid";
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GameObjectSpawn {
@@ -52,6 +54,8 @@ pub struct GameObjectSpawn {
     /// `gameobject.spawnDifficulties`: the copy difficulties it spawns in (0 on a
     /// continent).
     pub spawn_difficulties: Vec<u32>,
+    /// A `GAMEOBJECT_TYPE_CHAIR`'s seats.
+    pub chair: Option<crate::chair::Chair>,
 }
 
 /// Model box in object space (WoW axes, unscaled) plus the spawn's facing.
@@ -102,6 +106,11 @@ fn spawn_from_row(row: &Row) -> rusqlite::Result<GameObjectSpawn> {
             scale: scale as f32,
             orientation: row.get::<_, f64>(5)? as f32,
         },
+        chair: (row.get::<_, u8>(6)? == GAMEOBJECT_TYPE_CHAIR)
+            .then(|| -> rusqlite::Result<_> {
+                Ok(crate::chair::Chair::new(row.get(18)?, row.get(19)?))
+            })
+            .transpose()?,
         spawn_difficulties: row
             .get::<_, String>(17)?
             .split(',')
@@ -124,6 +133,7 @@ pub fn load_game_object_spawns(conn: &Connection) -> rusqlite::Result<GameObject
             GAMEOBJECT_TYPE_MEETINGSTONE,
             GAMEOBJECT_TYPE_GENERIC,
             GAMEOBJECT_TYPE_SPELL_FOCUS,
+            GAMEOBJECT_TYPE_CHAIR,
         ],
         spawn_from_row,
     )?;
@@ -182,12 +192,15 @@ pub(crate) fn spawn_map_game_objects(
     });
     let mut count = 0;
     for spawn in spawns {
-        commands.spawn((
+        let mut object = commands.spawn((
             game_object_bundle(spawn),
             map,
             Replicate::to_clients(NetworkTarget::All),
             NetworkVisibility::default(),
         ));
+        if let Some(chair) = &spawn.chair {
+            object.insert(chair.clone());
+        }
         count += 1;
     }
     count

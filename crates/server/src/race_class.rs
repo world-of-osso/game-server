@@ -71,6 +71,18 @@ fn playable_race(race: u8) -> Option<&'static PlayableRace> {
     PLAYABLE_RACES.iter().find(|entry| entry.id == race)
 }
 
+/// Every playable (race, class) combination, by race then class.
+pub fn playable_pairs() -> impl Iterator<Item = (u8, u8)> {
+    PLAYABLE_RACES
+        .iter()
+        .flat_map(|entry| entry.classes.iter().map(move |&class| (entry.id, class)))
+}
+
+/// `ChrRaces.PlayableRaceBit` of a playable race (TrinityCore `RaceMask::GetRaceBit`).
+pub fn race_bit(race: u8) -> Option<u8> {
+    playable_race(race).map(|entry| entry.race_bit)
+}
+
 /// Reject classes outside `PLAYABLE_CLASSES`, unknown races, and combinations
 /// the race cannot play.
 pub fn validate_race_class(race: u8, class: u8) -> Result<(), String> {
@@ -139,11 +151,16 @@ pub fn race_mask_allows(race_masks: [u32; 2], race: u8) -> bool {
     if race_masks == [0, 0] {
         return true;
     }
-    let Some(entry) = playable_race(race) else {
+    race_mask_has_race(race_masks, race)
+}
+
+/// TrinityCore `RaceMask::HasRace`: the race's bit is set (an all-zero mask has none).
+pub fn race_mask_has_race(race_masks: [u32; 2], race: u8) -> bool {
+    let Some(bit) = race_bit(race) else {
         return false;
     };
     let mask = u64::from(race_masks[0]) | (u64::from(race_masks[1]) << 32);
-    mask & (1 << entry.race_bit) != 0
+    mask & (1 << bit) != 0
 }
 
 #[cfg(test)]

@@ -174,6 +174,7 @@ pub(super) fn load_spell_store(conn: &Connection) -> rusqlite::Result<SpellStore
     load_categories(conn, &mut spells)?;
     load_cooldowns(conn, &mut spells)?;
     load_levels(conn, &mut spells)?;
+    load_scaling(conn, &mut spells)?;
     load_class_options(conn, &mut spells)?;
     load_shapeshift(conn, &mut spells)?;
     load_interrupts(conn, &mut spells)?;
@@ -419,6 +420,21 @@ fn load_levels(conn: &Connection, spells: &mut Spells) -> rusqlite::Result<()> {
             })
         },
         |spell, levels| spell.levels = Some(Box::new(levels)),
+    )
+}
+
+fn load_scaling(conn: &Connection, spells: &mut Spells) -> rusqlite::Result<()> {
+    fill(
+        conn,
+        spells,
+        "SELECT SpellID, MinScalingLevel, MaxScalingLevel FROM spell_scaling",
+        |r| {
+            Ok(SpellScaling {
+                min_scaling_level: uint(r, 1)?,
+                max_scaling_level: uint(r, 2)?,
+            })
+        },
+        |spell, scaling| spell.scaling = Some(scaling),
     )
 }
 

@@ -19,7 +19,8 @@ DB_PATH="$PROJECT_DIR/data/world.db"
 SQL_DIR="${1:-/home/osso/Repos/azerothcore/data/sql/base/db_world}"
 DB2_CSV_ROOT="${DB2_CSV_ROOT:-$PROJECT_DIR/../game-engine/data/db2}"
 # TrinityCore Retail world DB excerpts: trainer tables and skill_tiers for profession trainers,
-# creature tables for Retail displays and the Retail spawns of maps 0/1 (content_policy.py).
+# creature tables for Retail displays and the Retail spawns of maps 0/1 (content_policy.py),
+# playercreateinfo_action/_item for the new-character kit.
 TDB_DIR="${TDB_DIR:-$PROJECT_DIR/data/reference/tdb1210}"
 # Seven hash/layout/count-pinned Midnight crafting reference files.
 CRAFTING_SOURCE_DIR="${CRAFTING_SOURCE_DIR:-$PROJECT_DIR/data/reference/crafting/12.1.0.69933}"
@@ -58,6 +59,7 @@ TDB_TABLES=(
     npc_vendor gossip_menu gossip_menu_option npc_text creature_template_gossip broadcast_text creature_text
     creature_loot_template gameobject_loot_template reference_loot_template item_loot_template
     areatrigger_teleport world_safe_locs graveyard_zone instance_template
+    playercreateinfo_action playercreateinfo_item
 )
 TDB_ARGS=()
 for table in "${TDB_TABLES[@]}"; do

@@ -33,7 +33,7 @@ use shared::casting::{CastState, CastTickResult, CastType};
 use shared::components::{Health, Npc, Player, PowerType};
 use shared::protocol::{
     CastFailed, CombatChannel, CombatLogEvent, CombatLogKind, SpellCastIntent, SpellChargesUpdate,
-    SpellCooldownUpdate, SpellGo, StopSpellCast,
+    SpellCooldownUpdate, SpellFailure, SpellGo, StopSpellCast,
 };
 use shared::spell_data::CastFailReason;
 
@@ -571,6 +571,73 @@ pub(crate) fn cast_granted(
     result
 }
 
+/// The cooldown an item effect puts on its spell's category (`ItemEffect`
+/// `SpellCategoryID` / `CategoryCoolDownMSec`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct ItemCooldown {
+    pub category: u32,
+    pub category_ms: u32,
+}
+
+/// `Player::CastItemUseSpell` (Player.cpp:8790-8838): cast an item's on-use spell as the
+/// player, spellbook aside, unless the item effect's category is cooling down
+/// (`SPELL_FAILED_NOT_READY`); a started cast puts the category on that cooldown
+/// (`SpellHistory::StartCooldown` with the item's `CategoryCoolDownMSec`).
+pub(crate) fn cast_item_spell(
+    world: &mut World,
+    caster: Entity,
+    spell_id: u32,
+    target: Option<Entity>,
+    cooldown: ItemCooldown,
+) -> Result<(), CastFailure> {
+    let now = now(world);
+    let cooling = cooldown.category != 0
+        && world.get::<SpellHistory>(caster).is_some_and(|history| {
+            history
+                .category_ready_at
+                .get(&cooldown.category)
+                .is_some_and(|&ready| ready > now)
+        });
+    if cooling {
+        let (reason, detail) = CastFailure::OnCooldown.to_contract();
+        send_to_owner(
+            world,
+            caster,
+            CastFailed {
+                spell_id,
+                reason,
+                detail,
+            },
+        );
+        return Err(CastFailure::OnCooldown);
+    }
+    cast_granted(world, caster, spell_id, target)?;
+    if cooldown.category != 0 && cooldown.category_ms > 0 {
+        world
+            .entity_mut(caster)
+            .entry::<SpellHistory>()
+            .or_default()
+            .get_mut()
+            .category_ready_at
+            .insert(
+                cooldown.category,
+                now + f64::from(cooldown.category_ms) / 1000.0,
+            );
+        send_to_owner(
+            world,
+            caster,
+            SpellCooldownUpdate {
+                spell_id,
+                category: cooldown.category,
+                duration_ms: cooldown.category_ms,
+                remaining_ms: cooldown.category_ms,
+                is_gcd: false,
+            },
+        );
+    }
+    Ok(())
+}
+
 fn request_cast(
     world: &mut World,
     caster: Entity,
@@ -815,6 +882,7 @@ fn start_cast(
     explicit: Option<Entity>,
 ) -> Result<(), CastFailure> {
     let target = validate_start(world, caster, spell, explicit)?;
+    crate::stand_state::stand_to_cast(world, caster, attributes(spell, 0));
     start_gcd(world, caster, spell);
     let cast_ms = cast_time_ms(world, caster, spell);
     if cast_ms > 0 {
@@ -1187,17 +1255,21 @@ pub(super) fn starts_combat(
     let engaged = world
         .get::<shared::components::CombatStatus>(target)
         .is_some_and(|status| status.0);
-    let harmful = world
+    caster != target
+        && targets::relation_matches(world, caster, target, Relation::Enemy)
+        && attacks_with(world, spell)
+        && (initial_aggro || engaged)
+}
+
+/// A harmful spell or one that dispels (`!IsPositive() || HasEffect(SPELL_EFFECT_DISPEL)`).
+fn attacks_with(world: &World, spell: &SpellInfo) -> bool {
+    world
         .get_resource::<SpellStore>()
         .is_some_and(|store| crate::spell_info::positivity::negative_effects(store, spell) != 0)
         || spell
             .effects
             .iter()
-            .any(|effect| effect.effect == effects::EFFECT_DISPEL);
-    caster != target
-        && targets::relation_matches(world, caster, target, Relation::Enemy)
-        && harmful
-        && (initial_aggro || engaged)
+            .any(|effect| effect.effect == effects::EFFECT_DISPEL)
 }
 
 /// Distinct units of the plan, in plan order.
@@ -1308,6 +1380,9 @@ fn push_hit_events(
         // unit the caster can attack starts combat with it.
         if targets::relation_matches(world, caster, target, Relation::Enemy) {
             crate::creature_aggro::add_threat(world, target, caster, 0.0);
+            if attacks_with(world, spell) {
+                crate::stand_state::stand_on_hostile_spell(world, target, attributes(spell, 3));
+            }
         }
         let harmful = targets::is_hostile(world, caster, target);
         let (actor_mask, mut target_mask) = procs::spell_hit_masks(spell, harmful);
@@ -1448,19 +1523,58 @@ fn start_cooldowns(world: &mut World, caster: Entity, spell: &SpellInfo) {
 
 // --- Cast progress ---
 
-/// Remove an active cast (stop, movement, death, interrupt).
+/// Interrupt an active cast (stop, movement, death, crowd control, teleport, evade):
+/// `Spell::cancel` with SPELL_FAILED_INTERRUPTED.
 pub(crate) fn cancel_cast(world: &mut World, caster: Entity) {
+    interrupt_cast(world, caster, CastFailReason::Interrupted, None);
+}
+
+/// `Spell::cancel(result, ..., failedBy)`: end the cast and tell the caster's set why
+/// (`Spell::SendInterrupted`, Spell.cpp:3613, 5177).
+pub(crate) fn interrupt_cast(
+    world: &mut World,
+    caster: Entity,
+    reason: CastFailReason,
+    failed_by: Option<Entity>,
+) {
+    let Some(cast) = end_cast(world, caster) else {
+        return;
+    };
+    send_spell_failure(world, caster, cast.spell_id, reason, failed_by);
+}
+
+/// `SMSG_SPELL_FAILURE` to every client that replicates the caster.
+fn send_spell_failure(
+    world: &mut World,
+    caster: Entity,
+    spell_id: u32,
+    reason: CastFailReason,
+    failed_by: Option<Entity>,
+) {
+    send_to_set(
+        world,
+        caster,
+        SpellFailure {
+            caster: caster.to_bits(),
+            spell_id,
+            reason,
+            failed_by: failed_by.map(Entity::to_bits),
+        },
+    );
+}
+
+/// Remove an active cast without reporting it: a channel ran out or handed over.
+pub(crate) fn end_cast(world: &mut World, caster: Entity) -> Option<CastState> {
     world
         .entity_mut(caster)
         .remove::<crate::profession::CraftQueue>();
-    let Some(cast) = world.entity_mut(caster).take::<CastState>() else {
-        return;
-    };
+    let cast = world.entity_mut(caster).take::<CastState>()?;
     mark_dirty(world, caster);
     if cast.cast_type == CastType::Channel {
         crate::auras::channel_ended(world, caster, cast.spell_id);
         crate::meeting_stone::ritual::channel_ended(world, caster, cast.spell_id);
     }
+    Some(cast)
 }
 
 pub(crate) fn receive_stop_requests(world: &mut World) {
@@ -1514,7 +1628,9 @@ pub(crate) fn advance_casts(world: &mut World) {
         match result {
             // Channel periodic effects tick as auras (`crate::auras`).
             CastTickResult::InProgress | CastTickResult::ChannelTick => {}
-            CastTickResult::ChannelComplete => cancel_cast(world, caster),
+            CastTickResult::ChannelComplete => {
+                end_cast(world, caster);
+            }
             CastTickResult::Completed => {
                 world.entity_mut(caster).remove::<CastState>();
                 complete_cast(world, caster, spell_id, target);
@@ -1534,6 +1650,8 @@ fn complete_cast(world: &mut World, caster: Entity, spell_id: u32, target: Optio
     if let Err(failure) = execute_and_channel(world, caster, &spell, target) {
         debug!("Cast of {spell_id} by {caster} failed on completion: {failure:?}");
         let (reason, detail) = failure.to_contract();
+        // `Spell::cast` cleanup: SendCastResult to the caster, SendInterrupted to its set.
+        send_spell_failure(world, caster, spell_id, reason, None);
         send_to_owner(
             world,
             caster,

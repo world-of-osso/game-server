@@ -366,6 +366,7 @@ mod tests {
                 request.race,
                 request.class,
                 request.appearance,
+                &crate::player_create_info::OwnedKit::bare().kit(),
             )
             .unwrap();
             assert_eq!(data.appearance, appearance);

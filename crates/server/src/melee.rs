@@ -105,6 +105,9 @@ pub struct PlayerDefense {
     /// Shield armor × 2.5 (Player::_ApplyItemBonuses, Player.cpp:8141-8145); 0 without
     /// a shield.
     pub shield_block: f32,
+    /// Sitting, asleep or kneeling (`!IsStandState()`): every swing that does not miss
+    /// crits (Unit.cpp:2422-2424).
+    pub sitting: bool,
 }
 
 impl PlayerDefense {
@@ -128,6 +131,9 @@ pub struct MeleeChances {
     pub glancing: f32,
     pub block: f32,
     pub crit: f32,
+    /// The victim is a player not standing: a swing that does not miss crits when
+    /// `crit` is above 0 (Unit.cpp:2422-2424).
+    pub crit_sitting: bool,
 }
 
 /// An auto-attack's chances. Facing is not modelled: every swing lands in front, so
@@ -146,6 +152,7 @@ pub fn swing_chances(swinger: Swinger, victim: Victim, can_avoid: bool) -> Melee
         ),
         Swinger::Creature { miss_pct } => (miss_pct, CREATURE_CRIT_PCT, false),
     };
+    let crit_sitting = matches!(victim, Victim::Player(defense) if defense.sitting);
     let (dodge, parry, block, glancing) = match victim {
         Victim::Creature { level_difference } => {
             let level_bonus = AVOIDANCE_PCT_PER_LEVEL * level_difference.max(0) as f32;
@@ -171,6 +178,7 @@ pub fn swing_chances(swinger: Swinger, victim: Victim, can_avoid: bool) -> Melee
         glancing,
         block: avoid(block),
         crit,
+        crit_sitting,
     }
 }
 
@@ -195,6 +203,10 @@ impl MeleeOutcome {
 /// One roll in 0..10000 against the chances, each truncated to hundredths
 /// of a percent, in the order miss, dodge, parry, glancing, block, crit.
 pub fn roll_melee_outcome(chances: &MeleeChances, roll: u32) -> MeleeOutcome {
+    let miss = (chances.miss * 100.0) as i32;
+    if chances.crit_sitting && (roll as i32) >= miss.max(0) && (chances.crit * 100.0) as i32 > 0 {
+        return MeleeOutcome::Crit;
+    }
     let table = [
         (chances.miss, MeleeOutcome::Miss),
         (chances.dodge, MeleeOutcome::Dodge),

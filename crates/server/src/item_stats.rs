@@ -90,6 +90,9 @@ pub struct ItemStats {
     pub item_level: u16,
     pub block: ItemStatBlock,
     pub weapon: Option<WeaponDamage>,
+    /// `ITEM_MOD_HEALTH_REGEN` 46 (ItemTemplate.h:71): health per 5 s, in and out of
+    /// combat (`ApplyHealthRegenBonus`, Player.cpp:8060-8061).
+    pub health_regen: f32,
 }
 
 /// RandPropPoints row: `[Epic, Superior, Good][suffix type]` float budgets.
@@ -181,6 +184,8 @@ fn ilvl_row<T: Copy>(table: &[T], item_level: u16) -> Option<T> {
     table.get(usize::from(item_level).checked_sub(1)?).copied()
 }
 
+const ITEM_MOD_HEALTH_REGEN: i8 = 46;
+
 /// `ITEM_MOD_*` stats the server models.
 fn add_stat(block: &mut ItemStatBlock, stat: i8, value: f32) {
     let primary = &mut block.primary;
@@ -199,6 +204,10 @@ fn add_stat(block: &mut ItemStatBlock, stat: i8, value: f32) {
         36 => ratings.haste += value,
         40 => ratings.versatility += value,
         49 => ratings.mastery += value,
+        // ITEM_MOD_CR_SPEED / CR_LIFESTEAL / CR_AVOIDANCE (ItemTemplate.h:86-88).
+        61 => ratings.speed += value,
+        62 => ratings.leech += value,
+        63 => ratings.avoidance += value,
         _ => {}
     }
 }
@@ -209,8 +218,9 @@ fn add_primaries(stats: &mut UnitStats, value: f32, str: bool, agi: bool, int: b
     stats.intellect += if int { value } else { 0.0 };
 }
 
+/// SimC `util::is_combat_rating` for the modelled stats.
 fn is_rating(stat: i8) -> bool {
-    matches!(stat, 32 | 36 | 40 | 49)
+    matches!(stat, 32 | 36 | 40 | 49 | 61 | 62 | 63)
 }
 
 /// SimC `scaled_stat`: `round(alloc × budget × 0.0001 − socket penalty)`
@@ -339,10 +349,15 @@ pub fn item_stats(template: &ItemTemplate, tables: &ItemScalingTables) -> ItemSt
     let ilvl = tables.item_level(item);
     let budget = stat_budget(tables, item, slot, ilvl);
     let mut block = ItemStatBlock::default();
+    let mut health_regen = 0.0;
     if budget > 0.0 {
         for alloc in item.stats.iter().filter(|alloc| alloc.allocation > 0) {
             let value = scaled_stat(alloc, budget, ilvl, multiplier_column(slot));
-            add_stat(&mut block, alloc.stat, value);
+            if alloc.stat == ITEM_MOD_HEALTH_REGEN {
+                health_regen += value;
+            } else {
+                add_stat(&mut block, alloc.stat, value);
+            }
         }
     }
     block.secondary.armor = armor(tables, item, slot, ilvl) as f32;
@@ -350,6 +365,7 @@ pub fn item_stats(template: &ItemTemplate, tables: &ItemScalingTables) -> ItemSt
         item_level: ilvl,
         block,
         weapon: weapon(tables, item, slot, ilvl),
+        health_regen,
     }
 }
 

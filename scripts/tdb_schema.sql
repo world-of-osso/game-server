@@ -858,3 +858,24 @@ CREATE TABLE tdb_instance_template (
   parent INTEGER NOT NULL,
   script TEXT NOT NULL DEFAULT ''
 );
+
+-- New-character kit (ObjectMgr::LoadPlayerInfo): action buttons, and item overrides
+-- applied over the CharacterLoadout DB2 items (amount -1 removes the item).
+DROP TABLE IF EXISTS tdb_playercreateinfo_action;
+CREATE TABLE tdb_playercreateinfo_action (
+  race INTEGER NOT NULL DEFAULT 0,
+  class INTEGER NOT NULL DEFAULT 0,
+  button INTEGER NOT NULL DEFAULT 0,
+  action INTEGER NOT NULL DEFAULT 0,
+  type INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (race, class, button)
+);
+
+DROP TABLE IF EXISTS tdb_playercreateinfo_item;
+CREATE TABLE tdb_playercreateinfo_item (
+  race INTEGER NOT NULL DEFAULT 0,
+  class INTEGER NOT NULL DEFAULT 0,
+  itemid INTEGER NOT NULL DEFAULT 0,
+  amount INTEGER NOT NULL DEFAULT 1,
+  PRIMARY KEY (race, class, itemid)
+);

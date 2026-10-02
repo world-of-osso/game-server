@@ -200,11 +200,13 @@ fn handle_side(
     let event_not_a_proc = event_spell
         .as_ref()
         .is_some_and(|spell| attributes3(spell) & SPELL_ATTR3_NOT_A_PROC != 0);
+    let standing = crate::stand_state::stand_state(world, unit).is_stand();
     let candidates: Vec<u32> = world
         .get::<ActiveAuras>(unit)
         .map(|auras| {
             auras
                 .iter()
+                .filter(|aura| standing || procs_while_sitting(world, aura))
                 .filter(|aura| {
                     event.can_proc || triggered_can_proc(world, aura, event, event_not_a_proc)
                 })
@@ -216,6 +218,19 @@ fn handle_side(
     for id in candidates {
         try_proc(world, unit, other, id, event);
     }
+}
+
+/// `SPELL_ATTR4_ALLOW_PROC_WHILE_SITTING` (SharedDefines.h:603).
+const SPELL_ATTR4_ALLOW_PROC_WHILE_SITTING: u32 = 0x0008_0000;
+
+/// `Aura::GetProcEffectMask` (SpellAuras.cpp:1967-1969): an aura of a unit that sits,
+/// sleeps or kneels procs only with `SPELL_ATTR4_ALLOW_PROC_WHILE_SITTING`.
+fn procs_while_sitting(world: &World, aura: &AuraInstance) -> bool {
+    world
+        .get_resource::<SpellStore>()
+        .and_then(|store| store.get(aura.spell_id))
+        .and_then(|spell| spell.misc.as_ref())
+        .is_some_and(|misc| misc.attributes[4] & SPELL_ATTR4_ALLOW_PROC_WHILE_SITTING != 0)
 }
 
 /// `SPELL_ATTR3_NOT_A_PROC`: a triggered spell with it procs auras like a cast one.

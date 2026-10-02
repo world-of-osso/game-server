@@ -16,7 +16,7 @@ use crate::faction::{FactionTemplates, UnitFaction};
 use crate::interest::{InterestDirtyQueue, mark_interest_position_changed};
 use crate::item_stats::WeaponDamage;
 use crate::level_scaling::{ArmorConstants, CreatureArmor, ScalingItem, UnitScaling};
-use crate::melee::{self, Hand, MeleeOutcome, Swinger, Victim};
+use crate::melee::{self, Hand, MeleeOutcome, PlayerDefense, Swinger, Victim};
 use crate::networking::{CombatTarget, PlayerLink};
 use crate::spell_cast::powers::PowerPools;
 use crate::stats::CharacterStats;
@@ -410,6 +410,7 @@ type AutoAttackTargets<'w, 's> = Query<
         Option<&'static shared::components::UnitFlags>,
         Has<crate::auras::Invisible>,
         CanAvoid<'static>,
+        Option<&'static shared::components::PlayerStandState>,
     ),
 >;
 
@@ -711,12 +712,21 @@ fn roll_outcome(attacker: &Attacker, victim: Victim, can_avoid: bool) -> MeleeOu
 }
 
 /// Who the swing lands on: a creature (by level difference), or a player's
-/// avoidance; a unit without `CharacterStats` avoids nothing.
-fn swing_victim(is_npc: bool, player: Option<&CharacterStats>, level_difference: i32) -> Victim {
+/// avoidance and whether it is not standing; a unit without `CharacterStats` avoids
+/// nothing.
+fn swing_victim(
+    is_npc: bool,
+    player: Option<&CharacterStats>,
+    level_difference: i32,
+    sitting: bool,
+) -> Victim {
     if is_npc {
         Victim::Creature { level_difference }
     } else {
-        Victim::Player(player.map_or_else(Default::default, |stats| stats.defense))
+        Victim::Player(PlayerDefense {
+            sitting,
+            ..player.map_or_else(Default::default, |stats| stats.defense)
+        })
     }
 }
 
@@ -785,6 +795,7 @@ fn try_swing(
         flags,
         invisible,
         avoidance,
+        stand_state,
     )) = targets.get_mut(target_entity)
     else {
         return None;
@@ -811,8 +822,16 @@ fn try_swing(
         &target,
         context.armor_constants,
     );
-    let victim = swing_victim(is_npc, armor.1, level_difference);
+    let sitting = stand_state.is_some_and(|state| !state.0.is_stand());
+    let victim = swing_victim(is_npc, armor.1, level_difference, sitting);
     let kind = roll_outcome(attacker, victim, can_avoid(avoidance));
+    // Unit::DealMeleeDamage → DealDamage (Unit.cpp:1185-1186): every swing, missed or
+    // not, stands a player victim up.
+    if stand_state.is_some_and(|state| state.0 != shared::components::StandState::Stand) {
+        commands.queue(move |world: &mut World| {
+            crate::stand_state::stand_on_damage(world, target_entity)
+        });
+    }
     let (outcome_damage, blocked) = melee::outcome_damage(
         armored,
         kind,
@@ -1032,6 +1051,7 @@ pub(crate) fn deal_direct_damage(world: &mut World, attacker: Entity, victim: En
     let lethal = crate::death::apply_health_damage(&mut health, loss);
     mark_replication_changed(world.get_resource::<ReplicationDirtyQueue>(), victim);
     world.entity_mut(victim).insert(LastDamager(attacker));
+    crate::stand_state::stand_on_damage(world, victim);
     crate::combat_refs::set_in_combat_with(world, attacker, victim);
     if loss > 0.0 {
         crate::creature_aggro::note_damage_taken(world, victim);

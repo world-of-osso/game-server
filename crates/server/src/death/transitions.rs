@@ -88,6 +88,14 @@ pub(super) fn process_player_death_transitions(
         params
             .commands
             .queue(move |world: &mut World| crate::combat::combat_stop(world, player_entity));
+        // `Unit::setDeathState` (Unit.cpp:9218) stands the unit up.
+        params.commands.queue(move |world: &mut World| {
+            crate::stand_state::set_stand_state(
+                world,
+                player_entity,
+                shared::components::StandState::Stand,
+            )
+        });
         if let Some(conn_entity) = connection_for_player(player_entity, &params.connections) {
             send_update(
                 conn_entity,

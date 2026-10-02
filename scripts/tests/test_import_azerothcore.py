@@ -611,12 +611,80 @@ class CreatureEventImportTests(unittest.TestCase):
         (self.tdb / "creature_trainer.sql").write_text("INSERT INTO `creature_trainer` VALUES (1346,163,4353,0);\n")
         result = self.run_import()
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        with sqlite3.connect(self.db) as conn:
+        with closing(sqlite3.connect(self.db)) as conn, conn:
             tables = {name for (name,) in conn.execute("SELECT name FROM sqlite_master WHERE type = 'table'")}
             for dead in ("trainer", "trainer_spell", "npc_trainer", "creature_default_trainer", "content_trainer_spell"):
                 self.assertNotIn(dead, tables)
             self.assertEqual(conn.execute("SELECT Id, Greeting FROM tdb_trainer").fetchall(), [(163, "TDB greeting")])
             self.assertEqual(conn.execute("SELECT * FROM tdb_creature_trainer").fetchall(), [(1346, 163, 4353, 0)])
+
+    def test_new_character_kit_items_join_content_item(self):
+        csv_dir = self.csv / db2.DEFAULT_BUILD
+        # Human Mage new-character loadout 1277 (Purpose 9) gives the Bent Staff 35 and the
+        # Hearthstone 6948; loadout 14 (Purpose 0) is not a new-character loadout.
+        write_db2_rows(csv_dir, "CharacterLoadout", [
+            {"ID": 1277, "ChrClassID": 8, "Purpose": 9, "ModID": 75, "RaceMasks_0": 1},
+            {"ID": 14, "ChrClassID": 6, "Purpose": 0}])
+        write_db2_rows(csv_dir, "CharacterLoadoutItem", [
+            {"ID": 16396, "CharacterLoadoutID": 1277, "ItemID": 35},
+            {"ID": 16397, "CharacterLoadoutID": 1277, "ItemID": 6948},
+            {"ID": 16, "CharacterLoadoutID": 14, "ItemID": 58257}])
+        write_db2_rows(csv_dir, "ItemSparse", [
+            {"ID": item, "Display_lang": name} for item, name in
+            ((35, "Bent Staff"), (6948, "Hearthstone"), (58257, "Highland Spring Water"),
+             (40582, "Scourgestone"), (117, "Tough Jerky"))])
+        write_tdb(self.tdb, "playercreateinfo_item", ["(0,6,40582,-1)"])
+        write_tdb(self.tdb, "playercreateinfo_action", ["(1,8,0,116,0)", "(7,6,83,117,128)"])
+        result = self.run_import()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        with closing(sqlite3.connect(self.db)) as conn:
+            self.assertEqual(
+                conn.execute("SELECT ID, Name FROM content_item ORDER BY ID").fetchall(),
+                [(35, "Bent Staff"), (117, "Tough Jerky"), (6948, "Hearthstone"), (40582, "Scourgestone")])
+            self.assertEqual(conn.execute("SELECT * FROM tdb_playercreateinfo_item").fetchall(), [(0, 6, 40582, -1)])
+            self.assertEqual(
+                conn.execute("SELECT * FROM tdb_playercreateinfo_action ORDER BY race").fetchall(),
+                [(1, 8, 0, 116, 0), (7, 6, 83, 117, 128)])
+            self.assertEqual(
+                conn.execute("SELECT ItemID FROM character_loadout_item WHERE CharacterLoadoutID = 1277"
+                             " ORDER BY ID").fetchall(), [(35,), (6948,)])
+
+    def test_add_player_create_info_adds_exactly_the_import_rows_to_an_older_database(self):
+        """add_player_create_info.py on a database imported before the kit tables builds them and the kit
+        content_item rows as the import does, and changes nothing else."""
+        csv_dir = self.csv / db2.DEFAULT_BUILD
+        write_db2_rows(csv_dir, "CharacterLoadout", [
+            {"ID": 1277, "ChrClassID": 8, "Purpose": 9, "ModID": 75, "RaceMasks_0": 1}])
+        write_db2_rows(csv_dir, "CharacterLoadoutItem", [{"ID": 16396, "CharacterLoadoutID": 1277, "ItemID": 35}])
+        write_db2_rows(csv_dir, "ItemEffect", [{"ID": 8696, "SpellCategoryID": 11, "SpellID": 27094}])
+        write_db2_rows(csv_dir, "ItemXItemEffect", [{"ID": 1, "ItemEffectID": 8696, "ItemID": 41751}])
+        write_db2_rows(csv_dir, "ItemSparse", [
+            {"ID": 35, "Display_lang": "Bent Staff"}, {"ID": 40582, "Display_lang": "Scourgestone"}])
+        write_tdb(self.tdb, "playercreateinfo_item", ["(0,6,40582,-1)"])
+        write_tdb(self.tdb, "playercreateinfo_action", ["(1,8,0,116,0)"])
+        result = self.run_import()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        kit_tables = ("character_loadout", "character_loadout_item", "item_effect", "item_x_item_effect",
+                      "tdb_playercreateinfo_action", "tdb_playercreateinfo_item")
+        with closing(sqlite3.connect(self.db)) as conn, conn:
+            expected = {t: conn.execute(f"SELECT * FROM {t} ORDER BY 1, 2, 3").fetchall()
+                        for t in kit_tables + ("content_item",)}
+            builds = conn.execute("SELECT * FROM db2_build ORDER BY table_name").fetchall()
+            # The database as the import built it before the kit tables.
+            for table in kit_tables:
+                conn.execute(f"DROP TABLE {table}")
+            conn.execute("DELETE FROM content_item WHERE ID IN (35, 40582)")
+            conn.execute("DELETE FROM db2_build WHERE table_name IN"
+                         " ('character_loadout', 'character_loadout_item', 'item_effect', 'item_x_item_effect')")
+        result = subprocess.run([sys.executable, str(SCRIPTS / "add_player_create_info.py"), "--db", str(self.db),
+                                 "--csv-root", str(self.csv), "--tdb-dir", str(self.tdb)],
+                                capture_output=True, text=True, timeout=60, check=False)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("added 2 kit items to content_item", result.stdout)
+        with closing(sqlite3.connect(self.db)) as conn:
+            for table, rows in expected.items():
+                self.assertEqual(conn.execute(f"SELECT * FROM {table} ORDER BY 1, 2, 3").fetchall(), rows, table)
+            self.assertEqual(conn.execute("SELECT * FROM db2_build ORDER BY table_name").fetchall(), builds)
 
     def test_missing_tdb_excerpt_does_not_destroy_existing_database(self):
         (self.tdb / "skill_tiers.sql").unlink()
@@ -681,7 +749,7 @@ class CreatureEventImportTests(unittest.TestCase):
         )
         result = self.run_import()
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        with sqlite3.connect(self.db) as conn:
+        with closing(sqlite3.connect(self.db)) as conn, conn:
             self.assertEqual(
                 conn.execute("SELECT guid, path_id, mount, auras FROM creature_addon ORDER BY guid").fetchall(),
                 [(76, 0, 0, None), (79968, 799680, 2410, "1244 7164")],
@@ -760,7 +828,7 @@ class CreatureEventImportTests(unittest.TestCase):
         result = self.run_import()
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         offset = retail_content.RETAIL_GUID_OFFSET
-        with sqlite3.connect(self.db) as conn:
+        with closing(sqlite3.connect(self.db)) as conn, conn:
             self.assertEqual(
                 conn.execute("SELECT guid, id1, map, position_x, position_y, spawntimesecs FROM content_creature"
                              " ORDER BY guid").fetchall(),
@@ -859,7 +927,7 @@ class CreatureEventImportTests(unittest.TestCase):
         self.write_transform_fixture()
         result = self.run_import()
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        with sqlite3.connect(self.db) as conn:
+        with closing(sqlite3.connect(self.db)) as conn, conn:
             self.assertEqual(
                 conn.execute("SELECT entry, name, faction FROM content_creature_template WHERE entry IN (45409, 2455)"
                              " ORDER BY entry").fetchall(),
@@ -917,7 +985,7 @@ class CreatureEventImportTests(unittest.TestCase):
                                                         "(46405,2,5305,3,0,0,0,0,0,0,0,63305)"])
         result = self.run_import()
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        with sqlite3.connect(self.db) as conn:
+        with closing(sqlite3.connect(self.db)) as conn, conn:
             self.assertEqual(
                 conn.execute("""SELECT CreatureID, ID, ItemID1, AppearanceModID1, ItemID2, AppearanceModID2, ItemID3,
                     AppearanceModID3 FROM content_creature_equip_template ORDER BY CreatureID, ID""").fetchall(),
@@ -938,7 +1006,7 @@ class CreatureEventImportTests(unittest.TestCase):
         result = self.run_import()
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         offset = retail_content.RETAIL_GUID_OFFSET
-        with sqlite3.connect(self.db) as conn:
+        with closing(sqlite3.connect(self.db)) as conn, conn:
             self.assertEqual(
                 conn.execute("SELECT guid, modelid, unit_flags FROM content_creature WHERE guid > ? ORDER BY guid",
                              (offset,)).fetchall(),
@@ -1001,7 +1069,7 @@ class CreatureEventImportTests(unittest.TestCase):
         result = self.run_import()
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         offset = retail_content.RETAIL_GUID_OFFSET
-        with sqlite3.connect(self.db) as conn:
+        with closing(sqlite3.connect(self.db)) as conn, conn:
             self.assertEqual(
                 conn.execute("SELECT guid, id1, map, position_x FROM content_creature ORDER BY guid").fetchall(),
                 [(offset + 16397, 16123, 0, -8900.0), (offset + 375720, 46254, 34, 158.016),
@@ -1084,7 +1152,7 @@ class CreatureEventImportTests(unittest.TestCase):
         result = self.run_import()
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         offset = retail_content.RETAIL_GUID_OFFSET
-        with sqlite3.connect(self.db) as conn:
+        with closing(sqlite3.connect(self.db)) as conn, conn:
             self.assertEqual(
                 conn.execute("SELECT guid, id1, spawnDifficulties FROM content_creature WHERE map = 670 ORDER BY guid")
                 .fetchall(),
@@ -1159,7 +1227,7 @@ class CreatureEventImportTests(unittest.TestCase):
         result = self.run_import()
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         loot = retail_content.TDB_LOOT_OFFSET
-        with sqlite3.connect(self.db) as conn:
+        with closing(sqlite3.connect(self.db)) as conn, conn:
             self.assertEqual(
                 conn.execute("SELECT entry, slot, item FROM content_npc_vendor ORDER BY entry, slot").fetchall(),
                 [(54, 1, 2489), (54, 2, 200000), (999, 0, 2488)],
@@ -1220,7 +1288,7 @@ class CreatureEventImportTests(unittest.TestCase):
         result = self.run_import()
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         offset = retail_content.RETAIL_GUID_OFFSET
-        with sqlite3.connect(self.db) as conn:
+        with closing(sqlite3.connect(self.db)) as conn, conn:
             self.assertEqual(
                 conn.execute("SELECT guid, id, map, position_x, rotation2, spawntimesecs, state FROM content_gameobject"
                              " ORDER BY guid").fetchall(),
@@ -1286,7 +1354,7 @@ class CreatureEventImportTests(unittest.TestCase):
             tdb_row("broadcast_text", Text="", Text1="Retail text", ID=3001, VerifiedBuild=66044)])
         result = self.run_import()
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        with sqlite3.connect(self.db) as conn:
+        with closing(sqlite3.connect(self.db)) as conn, conn:
             self.assertEqual(
                 conn.execute("SELECT entry, gossip_menu_id FROM content_creature_template ORDER BY entry").fetchall(),
                 [(68, 9001), (2455, 1291), (26012, 0), (42384, 9000)],
@@ -1372,7 +1440,7 @@ class CreatureEventImportTests(unittest.TestCase):
         write_tdb(self.tdb, "quest_poi_points", [tdb_row("quest_poi_points", QuestID=26150, Idx1=0, Idx2=0, X=-9000, Y=-80, Z=90)])
         result = self.run_import()
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        with sqlite3.connect(self.db) as conn:
+        with closing(sqlite3.connect(self.db)) as conn, conn:
             self.assertEqual(
                 conn.execute("SELECT ID, QuestLevel, MinLevel, ContentTuningID, RewardMoney, RewardXPDifficulty, Flags,"
                              " AllowableRaces, LogTitle, LogDescription, QuestCompletionLog FROM content_quest_template"
@@ -1459,7 +1527,7 @@ class CreatureEventImportTests(unittest.TestCase):
         )
         result = self.run_import()
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        with sqlite3.connect(self.db) as conn:
+        with closing(sqlite3.connect(self.db)) as conn, conn:
             self.assertEqual(
                 conn.execute("SELECT CreatureID, Idx, CreatureDisplayID, VerifiedBuild FROM content_creature_template_model"
                              " ORDER BY CreatureID").fetchall(),
@@ -1482,7 +1550,7 @@ class CreatureEventImportTests(unittest.TestCase):
         self.write_wrath_only_display_fixture()
         result = self.run_import()
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        with sqlite3.connect(self.db) as conn:
+        with closing(sqlite3.connect(self.db)) as conn, conn:
             self.assertEqual(
                 conn.execute("SELECT CreatureDisplayID FROM content_creature_template_model WHERE CreatureID = 2349").fetchall(),
                 [(6808,)],
@@ -1499,7 +1567,7 @@ class CreatureEventImportTests(unittest.TestCase):
             "INSERT INTO `creature` VALUES\n" + tdb_creature(401, 2349, 1, 10.0, 10.0, 1.0) + ";\n")
         result = self.run_import()
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        with sqlite3.connect(self.db) as conn:
+        with closing(sqlite3.connect(self.db)) as conn, conn:
             self.assertEqual(
                 conn.execute("SELECT CreatureDisplayID FROM content_creature_template_model WHERE CreatureID = 2349").fetchall(),
                 [(520,)],
@@ -1719,7 +1787,7 @@ class Db2ReimportTests(unittest.TestCase):
         with (self.csv_dir / "SpellName.csv").open("a", newline="") as handle:
             csv.writer(handle).writerow([35395, "Crusader Strike"])
         self.db = root / "world.db"
-        with sqlite3.connect(self.db) as conn:
+        with closing(sqlite3.connect(self.db)) as conn, conn:
             conn.execute("CREATE TABLE chr_races (ID INTEGER PRIMARY KEY, Name TEXT)")
             conn.execute("INSERT INTO chr_races VALUES (1, 'Human')")
 
@@ -1727,7 +1795,7 @@ class Db2ReimportTests(unittest.TestCase):
         for _ in range(2):
             result = run_db2_import(self.csv_root, self.db)
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        with sqlite3.connect(self.db) as conn:
+        with closing(sqlite3.connect(self.db)) as conn, conn:
             self.assertEqual(conn.execute("SELECT ID, Name_lang FROM spell_name").fetchall(), [(35395, "Crusader Strike")])
             self.assertEqual(conn.execute("SELECT * FROM chr_races").fetchall(), [(1, "Human")])
             self.assertEqual(conn.execute("SELECT count(*) FROM db2_build").fetchone()[0], len(db2.TABLES))
@@ -1738,7 +1806,7 @@ class Db2ReimportTests(unittest.TestCase):
         result = run_db2_import(self.csv_root, self.db)
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("SpellName.csv header does not match spell_name", result.stderr)
-        with sqlite3.connect(self.db) as conn:
+        with closing(sqlite3.connect(self.db)) as conn, conn:
             self.assertEqual(conn.execute("SELECT ID, Name_lang FROM spell_name").fetchall(), [(35395, "Crusader Strike")])
 
 

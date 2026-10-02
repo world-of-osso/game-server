@@ -39,6 +39,7 @@ pub const PERIODIC_HEAL: u32 = 8;
 pub const MOD_STUN: u32 = 12;
 pub const MOD_INVISIBILITY: u32 = 18;
 pub const OBS_MOD_HEALTH: u32 = 20;
+pub const OBS_MOD_POWER: u32 = 21;
 pub const PERIODIC_TRIGGER_SPELL: u32 = 23;
 pub const PERIODIC_ENERGIZE: u32 = 24;
 pub const MOD_PACIFY: u32 = 25;
@@ -60,17 +61,22 @@ pub const SCHOOL_ABSORB: u32 = 69;
 pub const REFLECT_SPELLS_SCHOOL: u32 = 74;
 pub const MOD_DAMAGE_PERCENT_DONE: u32 = 79;
 pub const WATER_BREATHING: u32 = 82;
+pub const MOD_REGEN: u32 = 84;
+pub const MOD_POWER_REGEN: u32 = 85;
 pub const MOD_DAMAGE_PERCENT_TAKEN: u32 = 87;
+pub const MOD_HEALTH_REGEN_PERCENT: u32 = 88;
 pub const PERIODIC_DAMAGE_PERCENT: u32 = 89;
 pub const MOD_UNATTACKABLE: u32 = 93;
 pub const ADD_FLAT_MODIFIER: u32 = 107;
 pub const ADD_PCT_MODIFIER: u32 = 108;
 pub const MOD_POWER_REGEN_PERCENT: u32 = 110;
+pub const MOD_REGEN_DURING_COMBAT: u32 = 116;
 pub const MOD_HEALING_PCT: u32 = 118;
 pub const MOD_SPEED_ALWAYS: u32 = 129;
 pub const MOD_INCREASE_HEALTH_PERCENT: u32 = 133;
 pub const MOD_HEALING_DONE_PERCENT: u32 = 136;
 pub const MOD_WATER_BREATHING: u32 = 155;
+pub const MOD_HEALTH_REGEN_IN_COMBAT: u32 = 161;
 pub const MOD_TOTAL_STAT_PERCENTAGE: u32 = 137;
 pub const MOD_MELEE_HASTE: u32 = 138;
 pub const MOD_RANGED_HASTE: u32 = 140;
@@ -103,6 +109,7 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         PERIODIC_DAMAGE
         | PERIODIC_HEAL
         | OBS_MOD_HEALTH
+        | OBS_MOD_POWER
         | PERIODIC_TRIGGER_SPELL
         | PERIODIC_ENERGIZE
         | PERIODIC_DAMAGE_PERCENT => Periodic,
@@ -140,7 +147,11 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | MOD_WATER_BREATHING
         | MOD_INCREASE_ENERGY
         | MOD_MAX_POWER
-        | SET_POWER_POINT_CHARGE => StatMod,
+        | SET_POWER_POINT_CHARGE
+        | MOD_REGEN
+        | MOD_HEALTH_REGEN_PERCENT
+        | MOD_REGEN_DURING_COMBAT
+        | MOD_HEALTH_REGEN_IN_COMBAT => StatMod,
         MOD_INVISIBILITY | MOD_UNATTACKABLE | MOD_CONFUSE | TRANSFORM | MOD_SHAPESHIFT => UnitState,
         ADD_FLAT_MODIFIER
         | ADD_PCT_MODIFIER

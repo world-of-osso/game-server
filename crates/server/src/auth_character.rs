@@ -1,8 +1,8 @@
 use bevy::prelude::*;
 use lightyear::prelude::*;
 use shared::components::{
-    CombatRatings, Gold, GuildMembership, Health, Level, Mana, MovementSpeed, Player, PlayerMotion,
-    Position, Rotation, UnitFactionTemplate, UnitLevel, UnitStats, VerticalVelocity,
+    CombatRatings, DerivedStats, Gold, GuildMembership, Health, Level, Mana, MovementSpeed, Player,
+    PlayerMotion, Position, Rotation, UnitFactionTemplate, UnitLevel, UnitStats, VerticalVelocity,
 };
 use shared::protocol::{
     AuthChannel, CreateCharacter, CreateCharacterResponse, DeleteCharacter,
@@ -13,8 +13,11 @@ use std::collections::HashSet;
 
 use crate::auth::{Authenticated, InWorld, SentTiles};
 use crate::interest::NetworkVisibility;
+use crate::item_templates::ItemTemplates;
+use crate::merchant::VendorCatalog;
 use crate::networking::{CombatTarget, PlayerLink, queue_player_despawn, send_load_terrain};
 use crate::persistence::{self, CharacterData, ClientId, GameDatabase};
+use crate::player_create_info::{NewCharacterKit, PlayerCreateInfos};
 use crate::profession::PlayerProfessions;
 
 /// Default run speed in yards per second (WoW run speed).
@@ -28,12 +31,20 @@ pub fn process_create_character(
         &mut MessageReceiver<CreateCharacter>,
     )>,
     db: Option<Res<GameDatabase>>,
+    create_info: Res<PlayerCreateInfos>,
+    templates: Res<ItemTemplates>,
+    catalog: Res<VendorCatalog>,
     mut senders: Query<&mut MessageSender<CreateCharacterResponse>>,
 ) {
     let Some(db) = db.as_ref() else { return };
+    let kit = NewCharacterKit {
+        create_info: &create_info,
+        templates: &templates,
+        catalog: &catalog,
+    };
     let requests = collect_create_requests(&mut receivers);
     for (entity, account_id, req) in requests {
-        handle_create(entity, account_id, &req, db, &mut senders);
+        handle_create(entity, account_id, &req, db, &kit, &mut senders);
     }
 }
 
@@ -52,6 +63,7 @@ fn handle_create(
     account_id: u64,
     req: &CreateCharacter,
     db: &GameDatabase,
+    kit: &NewCharacterKit,
     senders: &mut Query<&mut MessageSender<CreateCharacterResponse>>,
 ) {
     let Ok(mut sender) = senders.get_mut(entity) else {
@@ -64,6 +76,7 @@ fn handle_create(
         req.race,
         req.class,
         req.appearance.clone(),
+        kit,
     ) {
         Ok((cid, data)) => {
             let entry = shared::protocol::CharacterListEntry {
@@ -515,9 +528,11 @@ fn build_player_runtime_components(character_id: u64, level: u16) -> impl Bundle
         },
         MovementSpeed(DEFAULT_RUN_SPEED),
         PlayerMotion::default(),
+        shared::components::PlayerStandState::default(),
         VerticalVelocity::default(),
         UnitStats::default(),
         CombatRatings::default(),
+        DerivedStats::default(),
         Level(level as u8),
         UnitLevel(level as u8),
         ClientId(character_id),
