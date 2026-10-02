@@ -13,7 +13,7 @@ use shared::components::EquippedAppearanceEntry;
 use shared::protocol::{
     BACKPACK_SLOTS, BAG_COUNT, BagContents, BagSlotItem, EquipmentSlot, EquipmentSnapshot,
     EquippedItem as EquippedItemView, InventoryError, InventoryErrorReason, InventorySlotChange,
-    InventorySnapshot, ItemDurability, ItemLocation, ItemStack,
+    InventorySnapshot, ItemDurability, ItemLocation, ItemStack, REAGENT_BAG,
 };
 
 use crate::item_templates::{BIND_ON_EQUIP, ItemTemplate, ItemTemplates};
@@ -154,21 +154,25 @@ impl InventoryModel {
             .is_some_and(Option::is_none)
     }
 
+    /// Empty cells of the backpack and bags 1-4 (Retail
+    /// `CalculateTotalNumberOfFreeBagSlots`); the reagent bag holds only reagents.
     pub(crate) fn free_cells(&self) -> usize {
-        self.bags
+        self.bags[..usize::from(REAGENT_BAG)]
             .iter()
             .flatten()
             .filter(|cell| cell.is_none())
             .count()
     }
 
-    /// First empty cell, in bag order, of a container `item` may go into.
+    /// First empty cell of a container `item` may go into: profession and reagent
+    /// bags before the containers that take anything (TrinityCore
+    /// `Player::CanStoreItem`, Player.cpp:10433-10491), each in bag order.
     fn first_free_cell(&self, item: &InventoryItemData) -> Option<(usize, usize)> {
-        self.bags.iter().enumerate().find_map(|(bag, cells)| {
-            if !self.accepts(bag, item) {
-                return None;
-            }
-            cells
+        let (specialty, general): (Vec<usize>, Vec<usize>) = (0..self.bags.len())
+            .filter(|&bag| self.accepts(bag, item))
+            .partition(|&bag| !self.is_general_container(bag));
+        specialty.into_iter().chain(general).find_map(|bag| {
+            self.bags[bag]
                 .iter()
                 .position(Option::is_none)
                 .map(|slot| (bag, slot))
