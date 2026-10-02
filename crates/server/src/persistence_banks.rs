@@ -2,7 +2,7 @@
 //! guilds (ranks, bank tabs, money), guild member ranks, daily guild bank usage and
 //! guild bank logs. Every bank move writes the bank and the owner's inventory in one
 //! transaction (`save_bank_move`).
-use redb::{Database, ReadableDatabase, TableDefinition, WriteTransaction};
+use redb::{Database, ReadableDatabase, ReadableTable, TableDefinition, WriteTransaction};
 
 use crate::bank_storage::BankTabData;
 use crate::persistence::inventory_store::{InventoryRecord, write_inventory_record};

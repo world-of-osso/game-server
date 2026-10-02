@@ -260,7 +260,7 @@ fn commit_and_publish_purchase(
         .expect("economic state validated")
         .state = state;
     shop.gold.record(customer.character_id, gold);
-    shop.send_inventory(customer.connection, vendor, buyer);
+    shop.send_inventory(customer.connection, vendor, buyer, customer.character_id);
     Ok(())
 }
 

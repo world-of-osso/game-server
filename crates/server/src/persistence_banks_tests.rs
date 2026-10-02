@@ -1,6 +1,7 @@
 //! The guild layout migration (version 0 -> 1: `GR_RIGHT_WITHDRAW_REPAIR`).
 use super::*;
 use crate::persistence::create_tables;
+use redb::ReadableTable;
 
 /// `GuildBankLogKindData` before `RepairMoney`.
 #[derive(bitcode::Encode)]
@@ -194,7 +195,32 @@ fn canonical_game_database_migrates() {
             assert_eq!(rank.withdraw_repair, index <= 1);
         }
     }
-    eprintln!("{} guilds migrated", before.len());
+    let txn = db.begin_read().unwrap();
+    let count = |rows: redb::Range<'_, u64, _>| rows.count();
+    let members = count(
+        txn.open_table(crate::persistence::CHARACTER_GUILDS)
+            .unwrap()
+            .iter()
+            .unwrap(),
+    );
+    let ranked = txn
+        .open_table(GUILD_MEMBER_RANKS)
+        .unwrap()
+        .iter()
+        .unwrap()
+        .count();
+    let logs = txn.open_table(GUILD_BANK_LOGS).unwrap();
+    let mut entries = 0;
+    for row in logs.iter().unwrap() {
+        let (guild_id, _) = row.unwrap();
+        let logs = load_guild_bank_logs(&db, guild_id.value());
+        entries += logs.money.len() + logs.tabs.iter().map(Vec::len).sum::<usize>();
+    }
+    drop(txn);
+    eprintln!(
+        "{} stored guilds migrated; {members} guild members, {ranked} stored ranks, {entries} log entries read",
+        before.len()
+    );
     let txn = db.begin_write().unwrap();
     assert_eq!(
         crate::persistence::layout_version(&txn, GUILD_LAYOUT_KEY),
