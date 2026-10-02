@@ -5,8 +5,10 @@ edition.workspace = true
 rust-version.workspace = true
 
 [dependencies]
-# Bevy's math types (bevy 0.19 re-exports glam 0.32), without Bevy: the client links this too.
+# Bake math: the glam that bevy 0.19 re-exports, so its Vec3 is `shared::los::Vec3`.
 glam = "0.32"
+# The LOS runtime the bake writes for (`shared::los`).
+shared = { git = "https://github.com/world-of-osso/shared-protocol.git", rev = "e25c79d" }
 # Bake only: spawned creature displays from world.db and model names from the listfile.
 rusqlite = { version = "0.35", features = ["bundled"], optional = true }
 

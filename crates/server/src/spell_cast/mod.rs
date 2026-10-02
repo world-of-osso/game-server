@@ -33,7 +33,7 @@ use shared::casting::{CastState, CastTickResult, CastType};
 use shared::components::{Health, Npc, Player, PowerType};
 use shared::protocol::{
     CastFailed, CombatChannel, CombatLogEvent, CombatLogKind, SpellCastIntent, SpellChargesUpdate,
-    SpellCooldownUpdate, SpellFailure, SpellGo, StopSpellCast,
+    SpellCooldownUpdate, SpellFailure, SpellGo, StopSpellCast, WitnessRay,
 };
 use shared::spell_data::CastFailReason;
 
@@ -161,8 +161,7 @@ impl CastFailure {
             Self::InvalidTarget => (R::InvalidTarget, None),
             Self::OutOfRange => (R::OutOfRange, None),
             Self::TooClose => (R::TooClose, None),
-            // SPELL_FAILED_LINE_OF_SIGHT has no CastFailReason in shared-protocol yet.
-            Self::LineOfSight => (R::NotSupported, Some("Target not in line of sight".into())),
+            Self::LineOfSight => (R::LineOfSight, None),
             Self::NotEnoughPower(power) => (R::NotEnoughResource, Some(format!("{power:?}"))),
             Self::NotEnoughHealth => (R::NotEnoughResource, Some("Health".into())),
             // SPELL_FAILED_REAGENTS, SPELL_FAILED_TOTEM_CATEGORY, ERR_INV_FULL
@@ -537,6 +536,7 @@ pub(crate) fn cast_for_player(
         spell_id: Some(spell_id),
         spell: String::new(),
         target_entity: None,
+        witness: None,
     };
     request_cast(world, player, &request).map_err(|(spell_id, failure)| {
         let (reason, detail) = failure.to_contract();
@@ -566,7 +566,7 @@ pub(crate) fn cast_granted(
         .and_then(|store| store.get(spell_id))
         .cloned()
         .ok_or(CastFailure::UnknownSpell)
-        .and_then(|spell| start_cast(world, caster, &spell, target));
+        .and_then(|spell| start_cast(world, caster, &spell, target, None));
     if let Err(failure) = &result {
         let (reason, detail) = failure.to_contract();
         send_to_owner(
@@ -678,7 +678,8 @@ fn request_cast(
                 .get::<CombatTarget>(caster)
                 .and_then(|target| target.0)
         });
-    start_cast(world, caster, &spell, explicit).map_err(|failure| (spell.id, failure))
+    start_cast(world, caster, &spell, explicit, request.witness)
+        .map_err(|failure| (spell.id, failure))
 }
 
 /// Player requests are limited to known class and profession spells; NPC
@@ -705,6 +706,7 @@ fn validate_start(
     caster: Entity,
     spell: &SpellInfo,
     explicit: Option<Entity>,
+    witness: Option<WitnessRay>,
 ) -> Result<Option<Entity>, CastFailure> {
     if !targets::is_alive(world, caster) {
         return Err(CastFailure::CasterDead);
@@ -726,7 +728,7 @@ fn validate_start(
             "implicit target {id} not supported"
         )));
     }
-    let target = validate_target(world, caster, spell, explicit)?;
+    let target = validate_target(world, caster, spell, explicit, Sight::Start(witness))?;
     spell_costs(world, caster, spell)?;
     crate::profession::check_cast_items(world, caster, spell)?;
     Ok(target)
@@ -757,13 +759,37 @@ fn validate_history(world: &World, caster: Entity, spell: &SpellInfo) -> Result<
     Ok(())
 }
 
-/// Explicit target rules: required relation, alive, range. Friendly spells
-/// with no valid ally target fall back to the caster (retail auto self-cast).
+/// Line of sight evidence when a cast checks its unit target (docs/specs/line-of-sight.md).
+#[derive(Clone, Copy, Debug)]
+pub(crate) enum Sight {
+    /// Cast start: a creature searches; a player's cast carries its witness ray.
+    Start(Option<WitnessRay>),
+    /// Cast finish: a creature searches again; a player's witness was checked at start.
+    Finish,
+}
+
+/// `Spell::CheckCast` → `IsWithinLOS` (Spell.cpp:5996-6013, 9259-9272): a creature's ray
+/// search, a player's witness ray.
+fn in_line_of_sight(world: &World, caster: Entity, target: Entity, sight: Sight) -> bool {
+    if world.get::<Npc>(caster).is_some() {
+        return crate::line_of_sight::sees_in_world(world, caster, target);
+    }
+    match sight {
+        Sight::Start(witness) => {
+            crate::line_of_sight::witness_holds(world, caster, target, witness)
+        }
+        Sight::Finish => true,
+    }
+}
+
+/// Explicit target rules: required relation, alive, range, line of sight. Friendly
+/// spells with no valid ally target fall back to the caster (retail auto self-cast).
 fn validate_target(
     world: &World,
     caster: Entity,
     spell: &SpellInfo,
     explicit: Option<Entity>,
+    sight: Sight,
 ) -> Result<Option<Entity>, CastFailure> {
     let Some(relation) = targets::explicit_requirement(handled_effects(spell)) else {
         return Ok(explicit);
@@ -798,11 +824,8 @@ fn validate_target(
         if distance < min {
             return Err(CastFailure::TooClose);
         }
-        // `Spell::CheckCast` → `IsWithinLOS` (Spell.cpp:5996-6013, 9259-9272): a creature
-        // caster's ray search (player casts carry a witness ray, not yet checked).
-        if world.get::<Npc>(caster).is_some()
-            && attributes(spell, 2) & SPELL_ATTR2_IGNORE_LINE_OF_SIGHT == 0
-            && !crate::line_of_sight::sees_in_world(world, caster, target)
+        if attributes(spell, 2) & SPELL_ATTR2_IGNORE_LINE_OF_SIGHT == 0
+            && !in_line_of_sight(world, caster, target, sight)
         {
             return Err(CastFailure::LineOfSight);
         }
@@ -899,8 +922,9 @@ fn start_cast(
     caster: Entity,
     spell: &SpellInfo,
     explicit: Option<Entity>,
+    witness: Option<WitnessRay>,
 ) -> Result<(), CastFailure> {
-    let target = validate_start(world, caster, spell, explicit)?;
+    let target = validate_start(world, caster, spell, explicit, witness)?;
     crate::stand_state::stand_to_cast(world, caster, attributes(spell, 0));
     start_gcd(world, caster, spell);
     let cast_ms = cast_time_ms(world, caster, spell);
@@ -1014,7 +1038,7 @@ fn execute_cast(
     if !targets::is_alive(world, caster) {
         return Err(CastFailure::CasterDead);
     }
-    let explicit = validate_target(world, caster, spell, explicit)?;
+    let explicit = validate_target(world, caster, spell, explicit, Sight::Finish)?;
     let costs = spell_costs(world, caster, spell)?;
     crate::profession::check_cast_items(world, caster, spell)?;
     let plan = plan_targets(world, caster, spell, explicit, false)?;
@@ -1688,6 +1712,8 @@ fn complete_cast(world: &mut World, caster: Entity, spell_id: u32, target: Optio
 
 #[cfg(test)]
 mod class_resource_tests;
+#[cfg(test)]
+mod line_of_sight_tests;
 #[cfg(test)]
 mod new_class_tests;
 #[cfg(test)]

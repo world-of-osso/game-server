@@ -332,6 +332,16 @@ pub(crate) fn drain<M: lightyear::prelude::Message>(app: &mut App, connection: E
 
 impl Harness {
     pub(crate) fn cast(&mut self, spell_id: u32, target: Option<Entity>) {
+        self.cast_witnessed(spell_id, target, None);
+    }
+
+    /// A cast carrying the line of sight `witness` ray.
+    pub(crate) fn cast_witnessed(
+        &mut self,
+        spell_id: u32,
+        target: Option<Entity>,
+        witness: Option<shared::protocol::WitnessRay>,
+    ) {
         self.app
             .world_mut()
             .get_mut::<MessageSender<SpellCastIntent>>(self.connection)
@@ -340,6 +350,7 @@ impl Harness {
                 spell_id: Some(spell_id),
                 spell: String::new(),
                 target_entity: target.map(Entity::to_bits),
+                witness,
             });
     }
 

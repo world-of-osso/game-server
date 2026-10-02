@@ -24,10 +24,11 @@ Retail's LOS errors ("can see it, not in line of sight") are the bugs to avoid.
 - Rays start at the caster's eyes, from the model's own eye geometry: the centroid of the eye
   vertices (the eyeglow geoset, group 17), skinned by their bones in the current pose (stand, sit,
   kneel, sleep, dead), times unit scale. Models with no eye geometry use their head bone's position
-  in the current pose. Mounted units use the rider's eyes on the mount. User decision 2026-10-02:
+  in the current pose; models with neither use the top centre of the model's bounding box (MD20
+  `bounding_box`) in every state, and the bake fails when even that is missing. Mounted units use the rider's eyes on the mount. User decision 2026-10-02:
   "the character models literally have eyes"; the Head/Helm attachment heights are not used.
 - The bake writes this eye point per display ID and stand state for the server
-  (`eye_heights.tsv`: model space, the display's scales applied, `source` eyes or head), posed
+  (`eye_heights.tsv`: model space, the display's scales applied, `source` eyes, head or bounds), posed
   at the first frame of the state's animation. A model without the state's sequence (e.g. the
   human models have no Dead) holds its Stand eye. `player_displays.tsv` maps race and sex to the
   character display (`ChrRaceXChrModel` → `ChrModel.DisplayID`).
@@ -41,7 +42,19 @@ Retail's LOS errors ("can see it, not in line of sight") are the bugs to avoid.
      tolerance;
   3. the segment crosses no baked triangle.
 - No witness ray (or a blocked one) fails with "not in line of sight". There is no fallback search.
-- This is a protocol change: casts carry the witness segment.
+- This is a protocol change: casts carry the witness segment (`SpellCastIntent.witness`,
+  `WitnessRay { start, end }`); the failure is `CastFailReason::LineOfSight` ("Target not in line of
+  sight", `SPELL_FAILED_LINE_OF_SIGHT`).
+- The client searches as creatures do: from its eye point (its drawn position and facing) to the
+  target's eyes, chest and feet (its newest replicated position and facing), over the same bake
+  through `shared::los` (`data/los`), and sends the first clear segment, or none.
+- Body volume: the capsule of radius 0.388 yd (TrinityCore `DEFAULT_PLAYER_BOUNDING_RADIUS`) around
+  the segment from the target's feet to its eye point. Tolerances (chosen, not Retail): start 1 yd
+  from the server's caster eye point; end 2 yd outside the volume (about 0.3 s of running).
+- Checked when a player's cast starts, for unit-targeted spells without
+  `SPELL_ATTR2_IGNORE_LINE_OF_SIGHT`. Not checked again when a cast-time spell finishes (the client's
+  segment describes the start). Casts the server starts for a player without a request (item use,
+  game objects, profession crafts) carry no witness, so at another unit they fail.
 
 ## Creatures (no client)
 - Creature aggro, creature-vs-creature checks and creature casts use a server search: from the
@@ -54,11 +67,20 @@ Retail's LOS errors ("can see it, not in line of sight") are the bugs to avoid.
   `SPELL_ATTR2_IGNORE_LINE_OF_SIGHT` (TrinityCore `Spell::CheckCast`), at cast start and finish.
 - The server loads the bake from `<ground dir>/los` (`GAME_SERVER_GROUND_DIR`, else
   `game-engine/data`): the eye table at startup (it refuses to start without it), each map's
-  tiles on first use. A map without baked tiles has nothing that blocks. A unit whose display
-  and stand state have no eye row (model not extracted, or no eyes and no head bone) is not
-  LOS-checked. Not modelled yet: mounted eyes, unit scale (`OBJECT_FIELD_SCALE`).
+  tiles on first use. A map without baked tiles has nothing that blocks. The bake covers every
+  creature template display; a unit whose display and stand state still have no eye row
+  (`SIT_CHAIR`, which has no established animation, or a display outside world.db) is logged once
+  and is out of everyone's line of sight. Not modelled yet: mounted eyes, unit scale
+  (`OBJECT_FIELD_SCALE`).
 
-## Bake and raycast (part 1, `crates/los`)
+## Bake and raycast (`crates/los`, runtime in `shared::los`)
+- The runtime (tile files, segment queries, eye table, `Body`) is shared-protocol `shared::los`,
+  which the server and the Godot client link; `crates/los` is the bake and re-exports it.
+- The eye table covers every `content_creature_template_model` display, spawn display overrides and
+  the `ChrModel` character displays. `scripts/los-extract-models.py --world-db data/world.db
+  --engine ../game-engine` first extracts from local CASC whatever of those models, primary skins,
+  skeletons and stand-state `.anim` files is missing. The bake fails rather than write a table
+  without every stand state of every covered display.
 - `los-bake` (feature `bake`) writes `<out>/<map>/<row>_<col>.los`, `<out>/<map>/report.txt` and
   `<out>/eye_heights.tsv` from game-engine `data/`. The report lists per tile the triangle counts,
   file size, loaded memory, mean time per 30-yd ray, and every doodad model dropped as thin.

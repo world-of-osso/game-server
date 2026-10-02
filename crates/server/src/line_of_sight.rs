@@ -1,28 +1,39 @@
-//! Creature line of sight (docs/specs/line-of-sight.md, Creatures): a ray search over the
-//! baked LOS tiles (`crates/los`) from the creature's eye point to the target's eyes,
-//! chest and feet. LOS holds when any ray is clear.
+//! Line of sight (docs/specs/line-of-sight.md) over the baked LOS tiles (`shared::los`):
+//! creatures search from their eye point to the target's eyes, chest and feet (LOS holds
+//! when any ray is clear); player casts carry a witness ray the server checks.
 //!
 //! The bake output (`los-bake --out <ground dir>/los`) loads from the ground directory:
 //! the eye table at startup, each map's tiles on first use. A map without baked tiles
-//! has nothing that blocks; a unit whose display and stand state have no eye row (model
-//! not extracted, or neither eye geometry nor a head bone) is not LOS-checked.
+//! has nothing that blocks. The bake covers every creature template display; a unit whose
+//! display and stand state still have no eye row (stand state `SIT_CHAIR`, which has no
+//! established animation, or a display outside world.db) is logged once and sees nothing
+//! and is seen by nothing.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
 use bevy::math::Vec3;
 use bevy::prelude::*;
-use los::LosMap;
 use los::eye::EyeTable;
+use los::{Body, LosMap};
 use shared::components::{
     ModelDisplay, Player, PlayerStandState, Position, Rotation, StandState, UnitPose,
 };
+use shared::protocol::WitnessRay;
 
 use crate::maps::InMap;
 
 /// The ground directory's subdirectory the bake writes to.
 const LOS_DIR: &str = "los";
+/// How far a witness ray may start from the caster's eye point as the server places it:
+/// the client sends the cast from its own, newer position (one movement report at run
+/// speed, 7 yd/s, is well under this).
+pub(crate) const WITNESS_START_TOLERANCE: f32 = 1.0;
+/// How far outside the target's body volume a witness ray may end: the client saw the
+/// target where the server had it a round trip and an interpolation delay ago (about
+/// 0.3 s at run speed).
+pub(crate) const WITNESS_END_TOLERANCE: f32 = 2.0;
 
 #[derive(Resource)]
 pub struct LineOfSight {
@@ -30,20 +41,8 @@ pub struct LineOfSight {
     eyes: EyeTable,
     /// Baked tiles per map id, loaded on first use.
     maps: Mutex<HashMap<u32, LosMap>>,
-}
-
-/// Where a unit stands and sees from, in Bevy space.
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub struct Body {
-    pub feet: Vec3,
-    pub eyes: Vec3,
-}
-
-impl Body {
-    /// Halfway between the feet and the eyes.
-    fn chest(&self) -> Vec3 {
-        (self.feet + self.eyes) * 0.5
-    }
+    /// `(display, stand state)` without an eye row, logged once each.
+    missing: Mutex<HashSet<(u32, u8)>>,
 }
 
 /// What places a unit's eyes: its components.
@@ -63,11 +62,13 @@ impl LineOfSight {
             dir: dir.to_path_buf(),
             eyes: EyeTable::load(dir)?,
             maps: Mutex::new(HashMap::new()),
+            missing: Mutex::new(HashSet::new()),
         })
     }
 
     /// The unit's feet and eyes: the eye point of its display (a player's race and sex
-    /// display) in its stand state, turned to its facing. `None` without an eye row.
+    /// display) in its stand state, turned to its facing. `None`, logged once, without an
+    /// eye row.
     pub fn body(
         &self,
         (position, rotation, display, pose, player, player_stand): BodyParts,
@@ -75,47 +76,75 @@ impl LineOfSight {
         let (display, stand_state) = match (player, display) {
             (Some(player), _) => (
                 self.eyes
-                    .player_display(player.race, player.appearance.sex)?,
+                    .player_display(player.race, player.appearance.sex)
+                    .unwrap_or_else(|| {
+                        panic!(
+                            "{}: no character display for race {} sex {}",
+                            self.dir.display(),
+                            player.race,
+                            player.appearance.sex
+                        )
+                    }),
                 player_stand.map_or(StandState::Stand, |stand| stand.0),
             ),
             (None, Some(display)) => (
                 display.display_id,
                 pose.map_or(StandState::Stand, |pose| pose.stand_state),
             ),
-            (None, None) => return None,
+            // `Unit::RestoreDisplayId` of a unit spawned without a display.
+            (None, None) => (0, StandState::Stand),
         };
-        let [forward, left, up] = self.eyes.eye(display, stand_state as u8)?;
-        // `Rotation.y` is the WoW orientation plus a quarter turn (zones.rs spawn).
-        let orientation = rotation.map_or(0.0, |rotation| rotation.y) - std::f32::consts::FRAC_PI_2;
-        let (sin, cos) = orientation.sin_cos();
-        let wow_x = forward * cos - left * sin;
-        let wow_y = forward * sin + left * cos;
+        let Some(eye) = self.eyes.eye(display, stand_state as u8) else {
+            if self
+                .missing
+                .lock()
+                .unwrap()
+                .insert((display, stand_state as u8))
+            {
+                let (display_id, dir) = (display, self.dir.display());
+                error!(
+                    "Display {display_id} in stand state {stand_state:?} has no eye row in \
+                     {dir}: units showing it are out of everyone's line of sight"
+                );
+            }
+            return None;
+        };
         let feet = Vec3::new(position.x, position.y, position.z);
-        Some(Body {
+        Some(Body::placed(
             feet,
-            eyes: feet + Vec3::new(wow_x, up, -wow_y),
-        })
+            rotation.map_or(0.0, |rotation| rotation.y),
+            eye,
+        ))
+    }
+
+    /// The first of `target`'s eyes, chest and feet a clear ray from `watcher`'s eyes
+    /// reaches on map `map`.
+    pub fn witness(&self, map: InMap, watcher: &Body, target: &Body) -> Option<Vec3> {
+        self.with_map(map, |tiles| tiles.witness(watcher.eyes, target))
     }
 
     /// Whether `watcher` sees `target` on map `map`: a clear ray from its eyes to the
     /// target's eyes, chest or feet.
     pub fn sees(&self, map: InMap, watcher: &Body, target: &Body) -> bool {
+        self.witness(map, watcher, target).is_some()
+    }
+
+    /// Whether the segment `a..b` crosses no baked triangle of map `map`.
+    pub fn clear(&self, map: InMap, a: Vec3, b: Vec3) -> bool {
+        self.with_map(map, |tiles| tiles.clear(a, b))
+    }
+
+    fn with_map<T>(&self, map: InMap, query: impl FnOnce(&mut LosMap) -> Result<T, String>) -> T {
         let mut maps = self.maps.lock().unwrap();
         let tiles = maps
             .entry(map.map_id)
             .or_insert_with(|| LosMap::new(&self.dir.join(map.map_id.to_string())));
-        [target.eyes, target.chest(), target.feet]
-            .into_iter()
-            .any(|point| {
-                tiles
-                    .clear(watcher.eyes, point)
-                    .unwrap_or_else(|err| panic!("LOS tile of map {}: {err}", map.map_id))
-            })
+        query(tiles).unwrap_or_else(|err| panic!("LOS tile of map {}: {err}", map.map_id))
     }
 }
 
-/// Whether `watcher` sees `target` (both in `map`); true when either has no eye row or
-/// no LOS is loaded.
+/// Whether `watcher` sees `target` (both in `map`); true when no LOS is loaded (an app
+/// without the bake, as unit tests run), false when either has no eye row.
 pub(crate) fn unit_sees(
     los: Option<&LineOfSight>,
     map: InMap,
@@ -127,8 +156,21 @@ pub(crate) fn unit_sees(
     };
     match (los.body(watcher), los.body(target)) {
         (Some(watcher), Some(target)) => los.sees(map, &watcher, &target),
-        _ => true,
+        _ => false,
     }
+}
+
+/// The body parts of `unit` in `world`; `None` without a position.
+fn parts_in_world(world: &World, unit: Entity) -> Option<BodyParts<'_>> {
+    let entity = world.get_entity(unit).ok()?;
+    Some((
+        entity.get::<Position>()?,
+        entity.get::<Rotation>(),
+        entity.get::<ModelDisplay>(),
+        entity.get::<UnitPose>(),
+        entity.get::<Player>(),
+        entity.get::<PlayerStandState>(),
+    ))
 }
 
 /// [`unit_sees`] for two entities of `world`.
@@ -136,23 +178,44 @@ pub(crate) fn sees_in_world(world: &World, watcher: Entity, target: Entity) -> b
     let Some(map) = world.get::<InMap>(watcher).copied() else {
         return true;
     };
-    let parts = |unit: Entity| -> Option<BodyParts> {
-        let entity = world.get_entity(unit).ok()?;
-        Some((
-            entity.get::<Position>()?,
-            entity.get::<Rotation>(),
-            entity.get::<ModelDisplay>(),
-            entity.get::<UnitPose>(),
-            entity.get::<Player>(),
-            entity.get::<PlayerStandState>(),
-        ))
-    };
-    match (parts(watcher), parts(target)) {
+    match (
+        parts_in_world(world, watcher),
+        parts_in_world(world, target),
+    ) {
         (Some(watcher), Some(target)) => {
             unit_sees(world.get_resource::<LineOfSight>(), map, watcher, target)
         }
         _ => true,
     }
+}
+
+/// A player cast's witness ray (spec, Player casts): it starts within
+/// [`WITNESS_START_TOLERANCE`] of the caster's eye point, ends inside the target's body
+/// volume grown by [`WITNESS_END_TOLERANCE`], both at the server's current positions, and
+/// crosses no baked triangle. No witness fails; true when no LOS is loaded.
+pub(crate) fn witness_holds(
+    world: &World,
+    caster: Entity,
+    target: Entity,
+    witness: Option<WitnessRay>,
+) -> bool {
+    let (Some(los), Some(map)) = (
+        world.get_resource::<LineOfSight>(),
+        world.get::<InMap>(caster).copied(),
+    ) else {
+        return true;
+    };
+    let Some(witness) = witness else {
+        return false;
+    };
+    let body = |unit| parts_in_world(world, unit).and_then(|parts| los.body(parts));
+    let (Some(caster), Some(target)) = (body(caster), body(target)) else {
+        return false;
+    };
+    let (start, end) = (Vec3::from(witness.start), Vec3::from(witness.end));
+    start.distance(caster.eyes) <= WITNESS_START_TOLERANCE
+        && target.contains(end, WITNESS_END_TOLERANCE)
+        && los.clear(map, start, end)
 }
 
 pub struct LineOfSightPlugin;

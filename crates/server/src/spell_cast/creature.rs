@@ -13,8 +13,8 @@ use shared::components::Npc;
 use shared::protocol::{CombatLogKind, MissKind};
 
 use super::{
-    CastFailure, TargetPlan, cast_event, handled_effects, log_event, plan_targets, start_cast,
-    targets, validate_target,
+    CastFailure, Sight, TargetPlan, cast_event, handled_effects, log_event, plan_targets,
+    start_cast, targets, validate_target,
 };
 use crate::creature_ai::CreatureState;
 use crate::spell_info::{SpellInfo, SpellStore};
@@ -49,12 +49,12 @@ pub(crate) fn creature_cast(
     let needs_unit = targets::explicit_requirement(handled_effects(&spell)).is_some();
     let explicit = target.or_else(|| needs_unit.then(|| victim(world, caster)).flatten());
     if !triggered {
-        return start_cast(world, caster, &spell, explicit);
+        return start_cast(world, caster, &spell, explicit, None);
     }
     if !targets::is_alive(world, caster) {
         return Err(CastFailure::CasterDead);
     }
-    let explicit = validate_target(world, caster, &spell, explicit)?;
+    let explicit = validate_target(world, caster, &spell, explicit, Sight::Start(None))?;
     let plan = plan_targets(world, caster, &spell, explicit, false)?;
     log_event(
         world,
