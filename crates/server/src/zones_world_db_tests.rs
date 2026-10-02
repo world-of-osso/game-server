@@ -1007,3 +1007,26 @@ fn stockade_guard_wields_its_virtual_items() {
         None
     );
 }
+
+/// Timber (1132, guid 305397, rank 4) and Hogger (448, rank 1) spawn with the
+/// `CreatureClassification` of their `creature_template.rank`.
+const TIMBER: u32 = RETAIL + 305_397;
+
+#[test]
+#[ignore]
+fn timber_spawns_rare_and_hogger_elite() {
+    let app = patrol_app(&[TIMBER, HOGGER]);
+    let classification = |guid| {
+        *app.world()
+            .get::<shared::components::CreatureClassification>(entity_of(&app, guid))
+            .expect("spawned creatures carry their classification")
+    };
+    assert_eq!(
+        classification(TIMBER),
+        shared::components::CreatureClassification::Rare
+    );
+    assert_eq!(
+        classification(HOGGER),
+        shared::components::CreatureClassification::Elite
+    );
+}

@@ -1,8 +1,8 @@
 use bevy::prelude::*;
 use lightyear::prelude::*;
 use shared::components::{
-    EquipmentAppearance, Health, ModelDisplay, Mounted, Npc, Position, Rotation, SheathState,
-    UnitFactionTemplate, UnitFlags, UnitLevel, UnitPose, UnitPowers, Zone,
+    CreatureClassification, EquipmentAppearance, Health, ModelDisplay, Mounted, Npc, Position,
+    Rotation, SheathState, UnitFactionTemplate, UnitFlags, UnitLevel, UnitPose, UnitPowers, Zone,
 };
 use shared::protocol::NpcFlags;
 use std::collections::HashMap;
@@ -173,6 +173,8 @@ pub(crate) fn spawn_creature(
         // NPC power pools need creature class/level stats, which are not imported.
         entity.insert((
             UnitLevel(level),
+            CreatureClassification::from_rank(template.rank)
+                .expect("creature_template.rank is validated when loaded"),
             CreatureArmor(armor),
             UnitPowers::default(),
             UnitFactionTemplate(u32::from(template.faction)),
