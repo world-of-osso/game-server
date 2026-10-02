@@ -23,6 +23,7 @@ mod conditions;
 mod creature_aggro;
 mod creature_ai;
 mod creature_scripts;
+mod creature_sight;
 mod creature_tap;
 mod creature_tooltip;
 mod currency;

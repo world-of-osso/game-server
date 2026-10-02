@@ -26,7 +26,7 @@ use crate::networking::CombatTarget;
 use crate::taxi::TaxiFlight;
 
 /// `MAX_AGGRO_RADIUS` (Unit.h:45).
-const MAX_AGGRO_RADIUS: f32 = 45.0;
+pub(crate) const MAX_AGGRO_RADIUS: f32 = 45.0;
 /// Minimum aggro radius of a non-pet creature (`GetAggroRange`).
 const MIN_AGGRO_RADIUS: f32 = 5.0;
 /// `GetAggroRange` caps the level difference at 25 below the creature.
@@ -53,6 +53,7 @@ pub struct CreatureAggroPlugin;
 
 impl Plugin for CreatureAggroPlugin {
     fn build(&self, app: &mut App) {
+        app.add_plugins(crate::creature_sight::CreatureSightPlugin);
         app.add_systems(
             FixedUpdate,
             (
@@ -305,7 +306,7 @@ pub(crate) fn note_damage_taken(world: &mut World, victim: Entity) {
 /// creature thus drops a player who walks away and, with no victim left, evades.
 /// Not modelled: world bosses (always checked), taunt auras, `CanNotReachTarget`
 /// (no path data).
-fn within_reach_of_home(
+pub(crate) fn within_reach_of_home(
     home: Option<&SpawnPoint>,
     last_damaged: Option<&LastDamagedTime>,
     now: f64,

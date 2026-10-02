@@ -17,6 +17,13 @@ World creatures attack players: hostile creatures aggro players that come near, 
 - [x] Dead players, ghosts and players on a flight path are never aggroed.
 - [x] Aggro puts the creature and the player in combat, starts the creature's chase and its auto-attack on the player.
 
+### Creature versus creature (`CreatureRelocationNotifier`, `Creature::CanStartAttack`): `crates/server/src/creature_sight.rs`
+
+- [x] Once a second, each creature that moved, spawned or woke is offered to the creatures in its 3x3 cells of 45 yards (`NpcGrid`) and they to it; no per-tick scan of all creatures.
+- [x] An idle aggressive creature attacks the nearest creature within its aggro radius (each side's level against the other) whose FactionTemplate reaction is Hostile and that it can attack; both enter combat, chase and swing. Stormwind Infantry (2321) and a Blackrock Invader (14) fight; the Infantry and the Blackrock Worg (32) are neutral and never do (the Northshire "fight" is emote 333).
+- [x] Creatures immune to NPCs (`unit_flags` 0x200) neither attack nor are attacked; civilians never start a fight but fight back.
+- [ ] Line of sight, the Z attack range, `IsNeutralToAll`, `CallAssistance` and GuardAI.
+
 ### Aggro on being attacked
 
 - [x] Melee and direct spell damage add threat equal to the damage dealt; an idle creature starts attacking the attacker (`Unit::DealDamage` → `AddThreat`, `CombatStart`).
