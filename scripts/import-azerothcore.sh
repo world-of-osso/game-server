@@ -21,6 +21,7 @@ DB2_CSV_ROOT="${DB2_CSV_ROOT:-$PROJECT_DIR/../game-engine/data/db2}"
 # TrinityCore Retail world DB excerpts: trainer tables and skill_tiers for profession trainers,
 # creature tables for Retail displays and the Retail spawns of maps 0/1 (content_policy.py),
 # playercreateinfo_action/_item for the new-character kit.
+# pool_template/pool_members/game_event_pool: PoolMgr spawn pools of the Retail spawns (content_pool_*).
 TDB_DIR="${TDB_DIR:-$PROJECT_DIR/data/reference/tdb1210}"
 # Seven hash/layout/count-pinned Midnight crafting reference files.
 CRAFTING_SOURCE_DIR="${CRAFTING_SOURCE_DIR:-$PROJECT_DIR/data/reference/crafting/12.1.0.69933}"
@@ -61,6 +62,7 @@ TDB_TABLES=(
     creature_loot_template gameobject_loot_template reference_loot_template item_loot_template
     areatrigger_teleport world_safe_locs graveyard_zone instance_template conditions smart_scripts
     playercreateinfo_action playercreateinfo_item
+    pool_template pool_members game_event_pool
 )
 TDB_ARGS=()
 for table in "${TDB_TABLES[@]}"; do

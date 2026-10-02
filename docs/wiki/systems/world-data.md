@@ -34,6 +34,7 @@ Source: `~/Repos/azerothcore/data/sql/base/db_world/`
 | `creature_addon` | 35,153 | Per-spawn path_id, mount, bytes1/2, emote, visibility, auras |
 | `creature_template_addon` | 11,983 | Same fields per template entry; fallback when a spawn has no row |
 | `creature_formations` | 5,829 | leaderGUID/memberGUID, dist, angle (degrees), groupAI, point_1/2 |
+| `content_pool_template` / `content_pool_members` / `content_game_event_pool` | 3,993 / 4,832 / 30 | TrinityCore spawn pools of the Retail spawns (493 creature, 1,499 gameobject members, 2,840 child pools); `spawn_pools.rs` spawns `max_limit` members per pool and re-picks on respawn ([retail world content](../../specs/retail-world-content.md)). Added to an existing world.db by `scripts/import-spawn-pools.sh` |
 | `content_creature_equip_template` | 13,529 | Virtual items (main hand, off hand, ranged: ItemID + AppearanceModID) per (entry, `creature.equipment_id`): TrinityCore's rows (`tdb_creature_equip_template`, 42,035) for Retail-spawned entries, AzerothCore's (`creature_equip_template`, 10,851) for the rest. Added to an existing world.db by `scripts/import-creature-equipment.sh` |
 
 Quest, vendor, trainer, loot, gossip and item tables are imported from the same dumps; tables, row counts, the Wrath→Retail ID mapping and the derived Retail-first `content_*` tables (the ones the server should read) are in [[content-import]]. No server code reads them yet.

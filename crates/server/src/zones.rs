@@ -5,12 +5,13 @@ use shared::components::{
     UnitFactionTemplate, UnitFlags, UnitLevel, UnitPose, UnitPowers, Zone,
 };
 use shared::protocol::NpcFlags;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use crate::combat::{CorpseDelay, RespawnDelay};
 use crate::creature_ai::{FormationMember, SpawnPoint, WanderPhase, WanderState, WaypointState};
 use crate::interest::NetworkVisibility;
 use crate::level_scaling::{CreatureArmor, ScaledStats};
+use crate::spawn_pools::{MapPools, PoolSpawns, PooledSpawn};
 use crate::world_data::{
     CreatureAddon, CreatureModelInfo, CreatureSpawn, CreatureTemplate, GROUP_AI_FLAG_FOLLOW_LEADER,
     TemplateTuning, WorldData,
@@ -80,22 +81,73 @@ pub(crate) fn spawn_map_creatures(
     let Some(indices) = world_data.spawns_by_map.get(&(map.map_id as u16)) else {
         return 0;
     };
+    let (pool_spawns, picked) = world_data
+        .pools
+        .init_map(map.map_id as u16, &mut rand::thread_rng());
+    let picked: HashSet<u32> = picked.into_iter().collect();
     let spawns = indices
         .iter()
         .map(|&idx| &world_data.spawns[idx])
         .filter(|spawn| {
-            spawn.spawns_at(content.difficulty_id)
+            (world_data.pools.creature_pool(spawn.guid).is_none() || picked.contains(&spawn.guid))
+                && spawn.spawns_at(content.difficulty_id)
                 && !content.dead_bosses.contains(&spawn.template_entry)
         });
-    spawn_creatures(
+    let entities = spawn_creatures(
         commands,
         world_data,
         map,
         content.difficulty_id,
         replicate,
         spawns,
-    )
-    .len() as u32
+    );
+    let mut map_pools = MapPools {
+        spawns: pool_spawns,
+        entities: HashMap::new(),
+        difficulty_id: content.difficulty_id,
+        replicate,
+    };
+    for guid in picked {
+        if let Some(&entity) = entities.get(&guid) {
+            commands.entity(entity).insert(PooledSpawn(guid));
+            map_pools.entities.insert(guid, entity);
+        }
+    }
+    commands.queue(move |world: &mut World| {
+        world
+            .get_resource_or_init::<PoolSpawns>()
+            .0
+            .insert(map, map_pools);
+    });
+    entities.len() as u32
+}
+
+/// The pooled creature spawns `guids` a pool picked in `map`'s copy; returns the entity
+/// of each spawn guid.
+pub(crate) fn spawn_pooled_creatures(
+    commands: &mut Commands,
+    world_data: &WorldData,
+    map: crate::maps::InMap,
+    map_pools: &MapPools,
+    guids: &[u32],
+) -> HashMap<u32, Entity> {
+    let indices = &world_data.spawns_by_map[&(map.map_id as u16)];
+    let spawns = indices
+        .iter()
+        .map(|&idx| &world_data.spawns[idx])
+        .filter(|spawn| guids.contains(&spawn.guid) && spawn.spawns_at(map_pools.difficulty_id));
+    let entities = spawn_creatures(
+        commands,
+        world_data,
+        map,
+        map_pools.difficulty_id,
+        map_pools.replicate,
+        spawns,
+    );
+    for (&guid, &entity) in &entities {
+        commands.entity(entity).insert(PooledSpawn(guid));
+    }
+    entities
 }
 
 /// Spawn `spawns` with their AI, addon and formation components; returns
@@ -629,6 +681,10 @@ fn patrol_path(addon: Option<&CreatureAddon>, world_data: &WorldData) -> Option<
 #[cfg(test)]
 #[path = "zones_world_db_tests.rs"]
 mod world_db_tests;
+
+#[cfg(test)]
+#[path = "spawn_pools_world_db_tests.rs"]
+mod spawn_pools_world_db_tests;
 
 #[cfg(test)]
 #[path = "zones_npc_combat_tests.rs"]

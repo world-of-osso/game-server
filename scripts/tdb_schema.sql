@@ -949,3 +949,28 @@ CREATE TABLE tdb_smart_scripts (
   comment TEXT NOT NULL DEFAULT '',
   PRIMARY KEY (entryorguid, source_type, id, link)
 );
+
+DROP TABLE IF EXISTS tdb_pool_template;
+CREATE TABLE tdb_pool_template (
+  entry INTEGER NOT NULL DEFAULT 0,
+  max_limit INTEGER NOT NULL DEFAULT 0,
+  description TEXT,
+  PRIMARY KEY (entry)
+);
+
+DROP TABLE IF EXISTS tdb_pool_members;
+CREATE TABLE tdb_pool_members (
+  type INTEGER NOT NULL,
+  spawnId INTEGER NOT NULL,
+  poolSpawnId INTEGER NOT NULL,
+  chance REAL NOT NULL,
+  description TEXT,
+  PRIMARY KEY (type, spawnId)
+);
+
+DROP TABLE IF EXISTS tdb_game_event_pool;
+CREATE TABLE tdb_game_event_pool (
+  eventEntry INTEGER NOT NULL,
+  pool_entry INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (pool_entry)
+);

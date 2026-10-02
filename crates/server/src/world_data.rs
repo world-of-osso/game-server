@@ -192,6 +192,8 @@ pub struct WorldData {
     /// `creature_classlevelstats` basemana keyed by (level, class).
     pub class_level_base_mana: HashMap<(u8, u8), u32>,
     pub armor_constants: ArmorConstants,
+    /// `content_pool_*` spawn pools (PoolMgr).
+    pub pools: crate::spawn_pools::SpawnPools,
 }
 
 impl WorldData {
@@ -236,6 +238,8 @@ pub fn load_world_data(path: &Path) -> WorldData {
     let class_level_base_hp = load_class_level_base_hp(&conn);
     let class_level_base_mana = load_class_level_base_mana(&conn);
     let armor_constants = expected_stats.armor_constants();
+    let pools = crate::spawn_pools::SpawnPools::load(&conn)
+        .expect("Failed to load content_pool_*; run scripts/import-spawn-pools.sh");
 
     info!(
         "WorldData loaded: {} templates, {} spawns, {} maps, {} waypoint paths, {} addons, {} formation members",
@@ -260,6 +264,7 @@ pub fn load_world_data(path: &Path) -> WorldData {
         class_level_base_hp,
         class_level_base_mana,
         armor_constants,
+        pools,
     }
 }
 

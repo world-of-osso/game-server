@@ -30,6 +30,8 @@ Retail tdb_* tables (mysql_dump.py --prefix tdb_) and the Retail DB2 tables
   every spawned entry AzerothCore lacks; every template TrinityCore tunes carries its
   ContentTuningID and that ContentTuning's level range (the server scales within it).
   Addons, formations, waypoints and event memberships follow the spawns' source.
+- content_pool_template/_members, content_game_event_pool: TrinityCore's spawn pools (PoolMgr) of the
+  Retail spawns; AzerothCore's pools are not imported (no AzerothCore-sourced map spawns creatures).
 
 Every dropped row or zeroed reward is written to --report. Runs in one transaction.
 """
@@ -313,6 +315,7 @@ def apply_policy(
     build_creature_models(conn, overrides["creature"], report)
     retail_content.build_creatures(conn, report)
     retail_content.build_gameobjects(conn, report)
+    retail_content.build_pools(conn, report)
     retail_content.build_vendors(conn, report)
     retail_content.build_loot(conn, report)
     retail_content.build_gossip(conn, report)
