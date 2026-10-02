@@ -22,8 +22,9 @@ pub struct EyeStats {
     /// Displays by eye source.
     pub from_eyes: usize,
     pub from_head: usize,
-    /// Displays whose model has neither eye geometry nor a head bone.
-    pub no_eye: usize,
+    /// Displays whose model has neither eye geometry nor a head bone: the bounding box
+    /// top.
+    pub from_bounds: usize,
     /// (display, stand state) pairs whose model has no sequence for the state: they hold
     /// the Stand eye.
     pub stand_pose: usize,
@@ -65,7 +66,7 @@ pub fn eye_rows_of(
         ..EyeStats::default()
     };
     // `Err` with an empty message: the model is not extracted.
-    let mut models: HashMap<u32, Result<Option<ModelEyes>>> = HashMap::new();
+    let mut models: HashMap<u32, Result<ModelEyes>> = HashMap::new();
     let models_dir = data.join("models");
     let mut rows = Vec::new();
     for display in displays {
@@ -80,11 +81,7 @@ pub fn eye_rows_of(
             })
         });
         let model = match eyes {
-            Ok(Some(model)) => model,
-            Ok(None) => {
-                stats.no_eye += 1;
-                continue;
-            }
+            Ok(model) => model,
             Err(err) => {
                 stats.missing_model += usize::from(err.is_empty());
                 continue;
@@ -93,6 +90,7 @@ pub fn eye_rows_of(
         match model.source {
             EyeSource::Eyes => stats.from_eyes += 1,
             EyeSource::Head => stats.from_head += 1,
+            EyeSource::Bounds => stats.from_bounds += 1,
         }
         stats.stand_pose += model.stand_pose;
         for &(state, eye) in &model.eyes {
@@ -110,13 +108,34 @@ pub fn eye_rows_of(
     }
     rows.sort_by_key(|row| (row.display, row.stand_state));
     stats.rows = rows.len();
+    let mut states: HashMap<u32, usize> = HashMap::new();
+    for row in &rows {
+        *states.entry(row.display).or_default() += 1;
+    }
+    let mut incomplete: Vec<u32> = display_ids
+        .iter()
+        .copied()
+        .filter(|id| states.get(id).copied().unwrap_or(0) < STAND_STATE_ANIMS.len())
+        .collect();
+    incomplete.sort_unstable();
+    incomplete.dedup();
+    if !incomplete.is_empty() || !stats.errors.is_empty() {
+        // A unit without an eye row could not be LOS-checked: no partial table.
+        return Err(format!(
+            "eye table incomplete: displays without every stand state {incomplete:?}; model \
+             not extracted: {}, .anim not extracted: {} (run scripts/los-extract-models.py); \
+             unreadable models: {:?}",
+            stats.missing_model, stats.missing_anim, stats.errors
+        ));
+    }
     Ok((rows, stats))
 }
 
 /// The eye point of model `fdid` per stand state: the centroid of its eye geometry, else
 /// its head bone, posed in the state's animation; a state whose sequence the model lacks
-/// holds the Stand pose. `None` without eye geometry or a head bone.
-fn model_eyes(data: &Path, fdid: u32) -> Result<Option<ModelEyes>> {
+/// holds the Stand pose. Without eye geometry or a head bone, the top centre of its
+/// bounding box in every state; an error without that either.
+fn model_eyes(data: &Path, fdid: u32) -> Result<ModelEyes> {
     let models = data.join("models");
     let bytes = std::fs::read(models.join(format!("{fdid}.m2"))).map_err(|err| err.to_string())?;
     let m2 = M2File::parse(&bytes)?;
@@ -137,7 +156,17 @@ fn model_eyes(data: &Path, fdid: u32) -> Result<Option<ModelEyes>> {
     let source = match (eye_vertices.is_empty(), head) {
         (false, _) => EyeSource::Eyes,
         (true, Some(_)) => EyeSource::Head,
-        (true, None) => return Ok(None),
+        (true, None) => {
+            let top = m2.bounds_top()?;
+            return Ok(ModelEyes {
+                source: EyeSource::Bounds,
+                eyes: STAND_STATE_ANIMS
+                    .iter()
+                    .map(|&(state, _)| (state, Some(top)))
+                    .collect(),
+                stand_pose: 0,
+            });
+        }
     };
     let mut load_anim =
         |anim_fdid: u32| std::fs::read(models.join(format!("{anim_fdid}.anim"))).ok();
@@ -170,11 +199,11 @@ fn model_eyes(data: &Path, fdid: u32) -> Result<Option<ModelEyes>> {
         stand_pose += usize::from(eye.is_none());
         eyes.push((state, eye.unwrap_or(stand)));
     }
-    Ok(Some(ModelEyes {
+    Ok(ModelEyes {
         source,
         eyes,
         stand_pose,
-    }))
+    })
 }
 
 fn open_db(world_db: &Path) -> Result<rusqlite::Connection> {
@@ -182,12 +211,12 @@ fn open_db(world_db: &Path) -> Result<rusqlite::Connection> {
         .map_err(|err| format!("{}: {err}", world_db.display()))
 }
 
-/// The displays `world_db` spawns and the `ChrModel.csv` character displays.
+/// Every creature template display (summons and transforms show displays no spawn
+/// does), spawn display overrides and the `ChrModel.csv` character displays.
 fn baked_display_ids(data: &Path, world_db: &Path) -> Result<Vec<u32>> {
     let mut ids: Vec<u32> = open_db(world_db)?
         .prepare(
-            "SELECT m.CreatureDisplayID FROM content_creature c
-               JOIN content_creature_template_model m ON m.CreatureID = c.id1
+            "SELECT CreatureDisplayID FROM content_creature_template_model
              UNION SELECT CAST(modelid AS INTEGER) FROM content_creature WHERE modelid != 0",
         )
         .and_then(|mut statement| {

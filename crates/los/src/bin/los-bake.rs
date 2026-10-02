@@ -109,23 +109,17 @@ fn report_eyes(
     writeln!(
         report,
         "\nEye points ({}): {} displays, {} rows; from eye geometry: {}, from the head bone: {}, \
-         neither: {}, model not extracted: {}; (display, stand state) holding the Stand eye \
-         (no sequence): {}, without its .anim extracted: {}; unreadable models ({}):",
+         from the bounding box top: {}; (display, stand state) holding the Stand eye \
+         (no sequence): {}",
         out.join(EYE_TABLE_FILE).display(),
         stats.displays,
         stats.rows,
         stats.from_eyes,
         stats.from_head,
-        stats.no_eye,
-        stats.missing_model,
+        stats.from_bounds,
         stats.stand_pose,
-        stats.missing_anim,
-        stats.errors.len(),
     )
     .unwrap();
-    for error in &stats.errors {
-        writeln!(report, "{error}").unwrap();
-    }
     Ok(())
 }
 

@@ -14,6 +14,8 @@ const MD20_SEQUENCES: usize = 0x1C;
 const MD20_BONES: usize = 0x2C;
 const MD20_VERTICES: usize = 0x3C;
 const MD20_MATERIALS: usize = 0x70;
+/// `CAaBox bounding_box`: min then max corner, model file coordinates.
+const MD20_BOUNDING_BOX: usize = 0xA0;
 const VERTEX_SIZE: usize = 48;
 const SUBMESH_SIZE: usize = 48;
 const BATCH_SIZE: usize = 24;
@@ -56,6 +58,21 @@ impl<'a> M2File<'a> {
             skeleton_fdid: find(data, b"SKID").and_then(|skid| u32s(skid).first().copied()),
             anim_files: afid(data),
         })
+    }
+
+    /// The top centre of the model's bounding box (a flat model's box has no height); an
+    /// error for an inverted box, which a model without geometry has.
+    pub fn bounds_top(&self) -> Result<Vec3> {
+        let min = Vec3::from(f32x3_at(self.md20, MD20_BOUNDING_BOX)?);
+        let max = Vec3::from(f32x3_at(self.md20, MD20_BOUNDING_BOX + 12)?);
+        if !(max.cmpge(min).all() && min.is_finite() && max.is_finite()) {
+            return Err(format!("empty bounding box {min}..{max}"));
+        }
+        Ok(Vec3::new(
+            (min.x + max.x) * 0.5,
+            (min.y + max.y) * 0.5,
+            max.z,
+        ))
     }
 
     /// Triangles of the skin's submeshes whose base batch is opaque, in model file
