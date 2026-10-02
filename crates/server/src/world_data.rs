@@ -1,7 +1,8 @@
 use bevy::prelude::*;
 use rusqlite::{Connection, OpenFlags, Row, params};
 use shared::components::{
-    EquipmentAppearance, EquipmentVisualSlot, EquippedAppearanceEntry, SheathState, StandState,
+    CreatureClassification, EquipmentAppearance, EquipmentVisualSlot, EquippedAppearanceEntry,
+    SheathState, StandState,
 };
 use std::collections::{BTreeMap, HashMap};
 use std::path::Path;
@@ -30,7 +31,7 @@ pub struct CreatureTemplate {
     pub unit_class: u8,
     /// `exp`: which `creature_classlevelstats.basehp<exp>` column applies.
     pub expansion: u8,
-    /// `rank`: 1 elite, 2 rare elite (Retail `CreatureClassifications`).
+    /// `rank`: a valid [`CreatureClassification`] (1 elite, 2 rare elite, 4 rare …).
     pub rank: u8,
     /// `ExperienceModifier` (TrinityCore `ModExperience`).
     pub experience_modifier: f32,
@@ -410,6 +411,21 @@ const UNIT_FLAG2_REGENERATE_POWER: i64 = 0x800;
 /// invisible trigger displays.
 const TRIGGER_MODEL_FILE_DATA_IDS: &str = "124640, 124641, 124642, 343863, 439302";
 
+/// `creature_template.rank` at `index`, rejected unless it names a `CreatureClassification`.
+fn classification_rank(row: &Row, index: usize) -> rusqlite::Result<u8> {
+    let rank = row.get::<_, i64>(index)?;
+    u8::try_from(rank)
+        .ok()
+        .filter(|&rank| CreatureClassification::from_rank(rank).is_some())
+        .ok_or_else(|| {
+            rusqlite::Error::FromSqlConversionFailure(
+                index,
+                rusqlite::types::Type::Integer,
+                format!("creature_template.rank {rank} is no CreatureClassification").into(),
+            )
+        })
+}
+
 fn template_from_row(row: &Row, expected: &ExpectedStats) -> rusqlite::Result<CreatureTemplate> {
     let unit_class = row.get::<_, i64>(14)? as u8;
     let health_modifier = row.get(6)?;
@@ -443,7 +459,7 @@ fn template_from_row(row: &Row, expected: &ExpectedStats) -> rusqlite::Result<Cr
         name: row.get(7)?,
         subname: row.get::<_, Option<String>>(24)?.unwrap_or_default(),
         creature_type: row.get::<_, i64>(10)? as u8,
-        rank: row.get::<_, i64>(8)? as u8,
+        rank: classification_rank(row, 8)?,
         experience_modifier: row.get(9)?,
         gives_experience: row.get::<_, i64>(10)? != CREATURE_TYPE_CRITTER
             && row.get::<_, i64>(11)? & CREATURE_FLAG_EXTRA_NO_XP == 0,
