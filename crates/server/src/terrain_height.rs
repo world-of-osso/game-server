@@ -14,6 +14,8 @@ const CHUNK_SIZE: f32 = 100.0 / 3.0;
 const UNIT_SIZE: f32 = CHUNK_SIZE / 8.0;
 /// Number of height floats per MCNK (9x9 outer + 8x8 inner).
 const MCVT_COUNT: usize = 145;
+/// MCNK flag: the header's 0x14 holds an 8x8 hole mask instead of ofsHeight/ofsNormal.
+const MCNK_FLAG_HIGH_RES_HOLES: u32 = 0x10000;
 
 use crate::liquid::{ChunkLiquid, LiquidSample, parse_mh2o};
 
@@ -32,6 +34,8 @@ struct ChunkHeight {
     base_z: f32,
     /// 145 height floats from MCVT (9x9 outer + 8x8 inner grid).
     heights: [f32; MCVT_COUNT],
+    /// Holes as an 8x8 quad mask, bit `row * 8 + col` (the low-res 4x4 mask widened).
+    holes: u64,
     /// MH2O liquid of this chunk.
     liquid: ChunkLiquid,
 }
@@ -45,10 +49,13 @@ pub struct TerrainHeightMap {
 impl TerrainHeightMap {
     /// Look up the interpolated terrain height at a WoW world position.
     ///
-    /// Returns `None` if the position is outside all loaded terrain chunks.
+    /// Returns `None` outside all loaded terrain chunks and in a terrain hole, which has no
+    /// terrain (TrinityCore `GridMap::getHeight` returns `INVALID_HEIGHT` there).
     pub fn height_at(&self, x: f32, y: f32) -> Option<f32> {
         let chunk = self.find_chunk(x, y)?;
-        Some(interpolate_height(chunk, x, y))
+        let (row, col) = chunk_quad(chunk, x, y);
+        let hole = chunk.holes >> (row * 8 + col) & 1 != 0;
+        (!hole).then(|| interpolate_height(chunk, x, y))
     }
 
     /// Find the chunk containing the given WoW (x, y) position.
@@ -84,12 +91,24 @@ impl TerrainHeightMap {
     }
 }
 
+/// The chunk's quad grid position of WoW `(x, y)`: fractional (row, col) from its corner.
+fn chunk_grid_position(chunk: &ChunkHeight, x: f32, y: f32) -> (f32, f32) {
+    (
+        (chunk.corner_x - x).clamp(0.0, CHUNK_SIZE) / UNIT_SIZE,
+        (chunk.corner_y - y).clamp(0.0, CHUNK_SIZE) / UNIT_SIZE,
+    )
+}
+
+/// The (row, col) of the chunk quad holding WoW `(x, y)`.
+fn chunk_quad(chunk: &ChunkHeight, x: f32, y: f32) -> (usize, usize) {
+    let (row_f, col_f) = chunk_grid_position(chunk, x, y);
+    ((row_f as usize).min(7), (col_f as usize).min(7))
+}
+
 /// Sample the authored four-triangle fan, including its inner center vertex.
 fn interpolate_height(chunk: &ChunkHeight, x: f32, y: f32) -> f32 {
-    let row_f = (chunk.corner_x - x).clamp(0.0, CHUNK_SIZE) / UNIT_SIZE;
-    let col_f = (chunk.corner_y - y).clamp(0.0, CHUNK_SIZE) / UNIT_SIZE;
-    let row = (row_f as usize).min(7);
-    let col = (col_f as usize).min(7);
+    let (row_f, col_f) = chunk_grid_position(chunk, x, y);
+    let (row, col) = chunk_quad(chunk, x, y);
     let h = |r: usize, c: usize| chunk.heights[r * 17 + c];
     let corners = [
         h(row, col),
@@ -182,14 +201,28 @@ fn parse_mcnk_height(payload: &[u8]) -> Result<ChunkHeight, String> {
     let pos_z = read_f32(payload, 0x70)?; // WoW Z (base height)
 
     let heights = find_mcvt(&payload[128..])?;
+    let holes = if read_u32(payload, 0)? & MCNK_FLAG_HIGH_RES_HOLES != 0 {
+        u64::from(read_u32(payload, 0x14)?) | u64::from(read_u32(payload, 0x18)?) << 32
+    } else {
+        widen_low_res_holes(read_u32(payload, 0x3c)? as u16)
+    };
 
     Ok(ChunkHeight {
         corner_x: pos_x,
         corner_y: pos_y,
         base_z: pos_z,
         heights,
+        holes,
         liquid: ChunkLiquid::default(),
     })
+}
+
+/// The 4x4 low-res hole mask (bit `row * 4 + col`, each a 2x2 block of quads) as an 8x8
+/// quad mask.
+fn widen_low_res_holes(low: u16) -> u64 {
+    (0..64)
+        .filter(|bit| low >> ((bit / 8 / 2) * 4 + (bit % 8) / 2) & 1 != 0)
+        .fold(0, |mask, bit| mask | 1 << bit)
 }
 
 /// Scan sub-chunks after the 128-byte MCNK header for TVCM (reversed MCVT).
@@ -267,6 +300,7 @@ pub mod test_helpers {
                 corner_y,
                 base_z: height,
                 heights: [0.0; MCVT_COUNT],
+                holes: 0,
                 liquid: ChunkLiquid::default(),
             }],
         }

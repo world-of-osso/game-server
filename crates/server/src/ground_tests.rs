@@ -347,3 +347,31 @@ fn spawned_ground_check_fails_on_missing_files_except_the_known_gaps() {
         }
     );
 }
+
+/// The Jasperlode Mine's south mouth (azeroth_33_49 MCNK 1,3 high-res holes 0xc0c0) is a
+/// terrain hole under the mine's WMO floor: TrinityCore `GridMap::getHeight` returns
+/// `INVALID_HEIGHT` there. Beside the hole the terrain is 61.5; in it the ground is the
+/// mine floor (Kobold Miner 281565 spawns on it at 62.95), not the hole's interpolated
+/// surface rising into the hill.
+#[test]
+fn jasperlode_mouth_hole_has_no_terrain_and_its_ground_is_the_mine_floor() {
+    let mut ground = client_ground();
+    let probe = |ground: &mut GroundMap, wow_x: f32, wow_y: f32, wow_z: f32| {
+        let (x, y, z) = crate::terrain_height::wow_to_bevy(wow_x, wow_y, wow_z);
+        ground.ground_at(0, Vec3::new(x, y, z))
+    };
+
+    let GroundProbe::Supported(beside) = probe(&mut ground, -9176.0, -595.8, 61.5) else {
+        panic!("no terrain beside the hole");
+    };
+    assert!((beside - 61.5).abs() < 0.1, "terrain {beside}");
+    let GroundProbe::Supported(floor) = probe(&mut ground, -9172.45, -599.435, 62.95) else {
+        panic!("no ground under the Kobold Miner");
+    };
+    assert!((floor - 62.95).abs() < 0.2, "mine floor {floor}");
+    // Under the mouth's floor, in the hole, there is nothing to stand on.
+    assert_eq!(
+        probe(&mut ground, -9172.0, -595.8, 58.0),
+        GroundProbe::Unsupported
+    );
+}
