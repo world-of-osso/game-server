@@ -11,8 +11,11 @@
 //! `GUILD_BANKLOG_MAX_RECORDS` entries. Daily counts reset at the configured hour
 //! (`DailyReset`). Every change is sent to each member with the vault open.
 //!
-//! Gaps: no item moves inside the bank, no partial stack withdrawals, no guild
-//! repairs, no Guild Control UI (ranks and rights are set with game-server-admin).
+//! Guild repairs (TrinityCore `GR_RIGHT_WITHDRAW_REPAIR`) spend the same daily
+//! allowance; `merchant` takes them through `guild_repair_money` / `pay_guild_repair`.
+//!
+//! Gaps: no item moves inside the bank, no partial stack withdrawals, no Guild
+//! Control UI (ranks and rights are set with game-server-admin).
 
 use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
@@ -35,8 +38,8 @@ use crate::item_templates::{BIND_QUEST, ItemTemplate, ItemTemplates};
 use crate::npc_interaction::ActiveInteraction;
 use crate::persistence::banks::{
     BankOwner, GUILD_MASTER_RANK, GuildBankLogData, GuildBankLogKindData, GuildBankLogs,
-    GuildBankUsage, GuildData, load_guild, load_guild_bank_logs, load_guild_bank_usage,
-    load_guild_member_rank, save_bank_move,
+    GuildBankUsage, GuildData, GuildRankData, load_guild, load_guild_bank_logs,
+    load_guild_bank_usage, load_guild_member_rank, save_bank_move,
 };
 use crate::persistence::{self, GameDatabase};
 
@@ -111,7 +114,7 @@ type GuildBankResult = Result<(), GuildBankError>;
 
 /// Guilds whose bank changed this frame.
 #[derive(Resource, Default)]
-struct ChangedGuilds(Vec<u32>);
+pub(crate) struct ChangedGuilds(pub(crate) Vec<u32>);
 
 /// A guild member at the vault, with everything their rank allows.
 struct Member {
@@ -157,8 +160,16 @@ fn tab_rights(guild: &GuildData, rank: u8, tab: usize) -> (bool, bool, Option<u3
     )
 }
 
-/// Copper per day `rank` may withdraw (`None` unlimited).
-fn gold_allowance(guild: &GuildData, rank: u8) -> Option<u64> {
+/// Whether `rank` holds a right; the Guild Master holds every one.
+fn has_right(guild: &GuildData, rank: u8, right: fn(&GuildRankData) -> bool) -> bool {
+    rank == GUILD_MASTER_RANK || guild.ranks.get(usize::from(rank)).is_some_and(right)
+}
+
+/// Copper per day `rank` may take from the guild money (`None` unlimited): TrinityCore
+/// `_GetMemberRemainingMoney` (Guild.cpp:3358-3371) gives a rank with
+/// `GR_RIGHT_WITHDRAW_REPAIR` or `GR_RIGHT_WITHDRAW_GOLD` its `BankMoneyPerDay`, one
+/// allowance for withdrawals and repairs.
+fn money_allowance(guild: &GuildData, rank: u8) -> Option<u64> {
     if rank == GUILD_MASTER_RANK {
         return None;
     }
@@ -166,9 +177,72 @@ fn gold_allowance(guild: &GuildData, rank: u8) -> Option<u64> {
         guild
             .ranks
             .get(usize::from(rank))
-            .filter(|rank| rank.withdraw_gold)
+            .filter(|rank| rank.withdraw_gold || rank.withdraw_repair)
             .map_or(0, |rank| rank.gold_per_day),
     )
+}
+
+/// Copper per day `rank` may withdraw as gold (`None` unlimited).
+fn gold_allowance(guild: &GuildData, rank: u8) -> Option<u64> {
+    if has_right(guild, rank, |rank| rank.withdraw_gold) {
+        money_allowance(guild, rank)
+    } else {
+        Some(0)
+    }
+}
+
+/// The guild money `character_id` may spend on repairs now: TrinityCore
+/// `GetMemberAvailableMoneyForRepairItems` (Guild.cpp:3040-3047), the guild money capped by
+/// the allowance left today. `None` outside a guild or for a rank without
+/// `GR_RIGHT_WITHDRAW_REPAIR` (Retail `CanGuildBankRepair`).
+pub(crate) fn guild_repair_money(db: &Database, character_id: u64, day: i64) -> Option<u64> {
+    let (member, _) = member(db, Entity::PLACEHOLDER, character_id, None)?;
+    let guild = load_guild(db, member.guild_id);
+    if !has_right(&guild, member.rank, |rank| rank.withdraw_repair) {
+        return None;
+    }
+    let used = usage_today(db, &member, day).copper_withdrawn;
+    Some(match money_allowance(&guild, member.rank) {
+        None => guild.money,
+        Some(limit) => limit.saturating_sub(used).min(guild.money),
+    })
+}
+
+/// Take `copper` of repairs from the guild money: TrinityCore
+/// `HandleMemberWithdrawMoney(repair = true)` (Guild.cpp:2080-2124) counts it against the
+/// member's daily allowance and logs `GUILD_BANK_LOG_REPAIR_MONEY` in the money log.
+/// The caller sized `copper` to `guild_repair_money`. Returns the guild id.
+pub(crate) fn pay_guild_repair(db: &Database, character_id: u64, day: i64, copper: u64) -> u32 {
+    let (member, _) = member(db, Entity::PLACEHOLDER, character_id, None)
+        .expect("guild repair paid by a guild member");
+    let mut guild = load_guild(db, member.guild_id);
+    guild.money = guild
+        .money
+        .checked_sub(copper)
+        .expect("guild repair within the guild money");
+    let mut usage = usage_today(db, &member, day);
+    usage.copper_withdrawn += copper;
+    let mut logs = load_guild_bank_logs(db, member.guild_id);
+    logs.push(
+        None,
+        GuildBankLogData {
+            kind: GuildBankLogKindData::RepairMoney,
+            actor: member.name.clone(),
+            item_id: 0,
+            item_name: String::new(),
+            count: 0,
+            copper,
+            time: unix_now(),
+        },
+    );
+    let owner = BankOwner::Guild {
+        guild_id: member.guild_id,
+        guild: &guild,
+        logs: &logs,
+        usage: Some(&usage),
+    };
+    save_bank_move(db, character_id, owner, None);
+    member.guild_id
 }
 
 /// Today's usage of `member`, reset when the day or the guild changed.
@@ -705,6 +779,7 @@ fn log_kind(kind: GuildBankLogKindData) -> GuildBankLogKind {
         GuildBankLogKindData::DepositMoney => GuildBankLogKind::DepositMoney,
         GuildBankLogKindData::WithdrawMoney => GuildBankLogKind::WithdrawMoney,
         GuildBankLogKindData::BuyTab => GuildBankLogKind::BuyTab,
+        GuildBankLogKindData::RepairMoney => GuildBankLogKind::RepairMoney,
     }
 }
 

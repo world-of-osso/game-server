@@ -95,6 +95,12 @@ enum AdminRequest {
         withdraw_gold: bool,
         gold_per_day: u64,
     },
+    /// Guild bank repair right of a rank (TrinityCore `GR_RIGHT_WITHDRAW_REPAIR`).
+    SetGuildBankRepairRight {
+        guild_id: u32,
+        rank: u8,
+        withdraw_repair: bool,
+    },
     SetLevel {
         character_name: String,
         level: u16,
@@ -458,6 +464,7 @@ fn print_usage() {
     eprintln!(
         "  game-server-admin set-guild-bank-rights <guild_id> <rank> gold <withdraw 0|1> <copper_per_day>"
     );
+    eprintln!("  game-server-admin set-guild-bank-rights <guild_id> <rank> repair <0|1>");
     eprintln!("  game-server-admin set-level <character_name> <level>");
     eprintln!("  game-server-admin set-credentials <token> <username> <password>");
     eprintln!("  game-server-admin set-position <character_name> <x> <y> <z>");
@@ -813,7 +820,7 @@ fn parse_set_guild_rank(args: &[String]) -> AdminRequest {
 }
 
 fn parse_set_guild_bank_rights(args: &[String]) -> AdminRequest {
-    const USAGE: &str = "set-guild-bank-rights <guild_id> <rank> tab <tab> <view 0|1> <deposit 0|1> <stacks_per_day> | <guild_id> <rank> gold <withdraw 0|1> <copper_per_day>";
+    const USAGE: &str = "set-guild-bank-rights <guild_id> <rank> tab <tab> <view 0|1> <deposit 0|1> <stacks_per_day> | <guild_id> <rank> gold <withdraw 0|1> <copper_per_day> | <guild_id> <rank> repair <0|1>";
     require_args(args, 5, USAGE);
     let guild_id = parse_number(&args[2], "guild_id");
     let rank = parse_small(&args[3], "rank");
@@ -839,6 +846,14 @@ fn parse_set_guild_bank_rights(args: &[String]) -> AdminRequest {
                     eprintln!("Invalid copper_per_day: {}", args[6]);
                     std::process::exit(1);
                 }),
+            }
+        }
+        "repair" => {
+            require_args(args, 6, USAGE);
+            AdminRequest::SetGuildBankRepairRight {
+                guild_id,
+                rank,
+                withdraw_repair: parse_flag(&args[5], "repair"),
             }
         }
         _ => {
@@ -1059,6 +1074,22 @@ mod tests {
                 rank: 3,
                 withdraw_gold: true,
                 gold_per_day: 50_000
+            }
+        ));
+        let repair = parse_request(&args(&[
+            "game-server-admin",
+            "set-guild-bank-rights",
+            "7",
+            "3",
+            "repair",
+            "1",
+        ]));
+        assert!(matches!(
+            repair,
+            AdminRequest::SetGuildBankRepairRight {
+                guild_id: 7,
+                rank: 3,
+                withdraw_repair: true
             }
         ));
     }

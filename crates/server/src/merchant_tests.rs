@@ -2,6 +2,8 @@
 
 #[path = "merchant_economy_tests.rs"]
 mod economic;
+#[path = "merchant_guild_repair_tests.rs"]
+mod guild_repair;
 
 use std::path::PathBuf;
 use std::time::Duration;
@@ -616,6 +618,7 @@ fn godric_repairs_all_damaged_gear_for_the_azerothcore_cost() {
     h.send::<_, MerchantChannel>(RepairItem {
         npc: godric.to_bits(),
         item_guid: None,
+        guild_bank: false,
     });
 
     assert!(h.failures().is_empty());
@@ -632,6 +635,7 @@ fn repair_stops_at_the_money_left_and_needs_a_repairing_vendor() {
     h.send::<_, MerchantChannel>(RepairItem {
         npc: danil.to_bits(),
         item_guid: None,
+        guild_bank: false,
     });
     assert_eq!(h.failures(), vec![MerchantError::NotInteracting]);
 
@@ -640,6 +644,7 @@ fn repair_stops_at_the_money_left_and_needs_a_repairing_vendor() {
     h.send::<_, MerchantChannel>(RepairItem {
         npc: godric.to_bits(),
         item_guid: None,
+        guild_bank: false,
     });
 
     assert_eq!(h.failures(), vec![MerchantError::NotEnoughMoney]);
@@ -682,6 +687,7 @@ fn repairing_one_item_repairs_only_that_equipped_item() {
     h.send::<_, MerchantChannel>(RepairItem {
         npc: godric.to_bits(),
         item_guid: Some(vest),
+        guild_bank: false,
     });
 
     assert!(h.failures().is_empty());
@@ -709,6 +715,7 @@ fn repairing_a_bag_item_is_ignored_as_trinitycore_does() {
     h.send::<_, MerchantChannel>(RepairItem {
         npc: godric.to_bits(),
         item_guid: Some(linen),
+        guild_bank: false,
     });
 
     assert!(h.failures().is_empty());

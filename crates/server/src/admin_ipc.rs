@@ -544,6 +544,14 @@ fn dispatch(
             rank_data.gold_per_day = gold_per_day;
             Ok(())
         }),
+        AdminRequest::SetGuildBankRepairRight {
+            guild_id,
+            rank,
+            withdraw_repair,
+        } => handle_set_guild_bank_rights(db, guild_id, rank, |rank_data| {
+            rank_data.withdraw_repair = withdraw_repair;
+            Ok(())
+        }),
         AdminRequest::SetLevel {
             character_name,
             level,

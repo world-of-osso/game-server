@@ -53,6 +53,11 @@ impl ItemDurability {
         self.0.get(&item_id).copied().filter(|info| info.max > 0)
     }
 
+    /// `MaxDurability` of a new item; `None` for items without durability.
+    pub fn max_durability(&self, item_id: u32) -> Option<u32> {
+        self.info(item_id).map(|info| info.max)
+    }
+
     /// Copper to restore `lost` points (at least 1, AzerothCore `if (costs == 0) costs = 1`);
     /// `None` if the item can't be repaired.
     pub fn repair_cost(&self, item_id: u32, lost: u32) -> Option<u32> {

@@ -33,18 +33,19 @@ The client frames are specified in game-engine `docs/specs/bank-frame.md` and `d
 - [x] Every request must name the open banker, otherwise `NotInteracting`. The bank and the bags are written in one transaction.
 
 ### Guild bank
-- [x] Ranks follow AzerothCore `_CreateDefaultGuildRanks`: Guild Master, Officer, Veteran, Member, Initiate.
+- [x] Ranks follow TrinityCore `_CreateDefaultGuildRanks` (Guild.cpp:3184-3188): Guild Master, Officer, Veteran, Member, Initiate. Guild Master and Officer hold `GR_RIGHT_ALL` (gold withdrawal and guild repair), the others neither.
   - `create-guild` makes the character Guild Master.
   - Members without a stored rank hold Initiate.
   - The guild roster shows the stored rank name.
-- [x] The Guild Master has every right, unlimited. Other ranks have per-tab view, deposit and stacks-per-day rights, plus a gold-per-day allowance when `withdraw_gold` is set.
+- [x] The Guild Master has every right, unlimited. Other ranks have per-tab view, deposit and stacks-per-day rights, plus a gold-per-day allowance when `withdraw_gold` or `withdraw_repair` (TrinityCore `GR_RIGHT_WITHDRAW_REPAIR`) is set. Gold withdrawals and guild repairs (game-server `docs/specs/merchant.md`) spend that one allowance (`_GetMemberRemainingMoney`); withdrawing gold needs `withdraw_gold`.
+- [x] Guilds stored before the repair right (layout version 0, `server_settings` `guild_layout_version` unset) are rewritten once at startup to version 1: rank 0 and 1 get `withdraw_repair`, the others don't, as TrinityCore's default ranks; everything else is kept.
 - [x] Players without a guild get `NotInGuild`.
 - [x] Deposit needs view and deposit rights, and refuses soulbound (`BoundItem`) and quest items.
 - [x] Withdraw needs view rights and a remaining daily stack (`WithdrawLimit`).
 - [x] Money deposit and withdraw follow the allowance and guild balance (`NotEnoughGuildMoney`). Daily counts reset at `GAME_SERVER_DAILY_RESET_HOUR_UTC` (default 15).
 - [x] Only the Guild Master buys tabs (Retail `BankTab` guild prices: 100g–5000g, 6 tabs) and sets tab name, icon and text.
-- [x] Item moves are logged per tab and money moves in the money log. Each log keeps its last 25 entries (`GUILD_BANKLOG_MAX_RECORDS`). `GuildBankQueryLog` sends them, with the item name and age.
-- [x] Admin commands `set-guild-rank <character> <rank>` and `set-guild-bank-rights <guild> <rank> tab|gold ...` edit ranks and rights. The Guild Master rank itself can't be edited.
+- [x] Item moves are logged per tab and money moves (deposits, withdrawals, tab purchases, guild repairs) in the money log. Each log keeps its last 25 entries (`GUILD_BANKLOG_MAX_RECORDS`). `GuildBankQueryLog` sends them, with the item name and age.
+- [x] Admin commands `set-guild-rank <character> <rank>` and `set-guild-bank-rights <guild> <rank> tab|gold|repair ...` edit ranks and rights. The Guild Master rank itself can't be edited.
 
 ## How it works
 - [banks](../wiki/systems/banks.md)
@@ -68,6 +69,7 @@ The client frames are specified in game-engine `docs/specs/bank-frame.md` and `d
 - `crates/server/src/bank_storage_tests.rs`
 - `crates/server/src/bank_tests.rs`
 - `crates/server/src/guild_bank_tests.rs`
+- `crates/server/src/persistence_banks_tests.rs`: version 0 guilds get the default repair rights once, logs written before `RepairMoney` still read; `canonical_game_database_migrates` (ignored; `GAME_SERVER_MIGRATION_DB`) on a copy of a real database
 - `crates/server/src/bin/admin.rs` (`parse_guild_rank_and_bank_rights_requests`)
 - `scripts/tests/test_import_azerothcore.py` (`test_stormwind_guild_vaults_keep_retail_display_and_spawns`, `test_retail_bank_tab_prices`)
 
@@ -79,5 +81,5 @@ The client frames are specified in game-engine `docs/specs/bank-frame.md` and `d
 
 ## Out of scope
 - Sorting, search, the expansion filter and the tab icon picker (deferred by decision).
-- Partial stack moves and moves inside a bank; guild bank repairs; the Guild Control UI (ranks are set by admin).
+- Partial stack moves and moves inside a bank; the Guild Control UI (ranks are set by admin).
 - Game objects other than type 34; maps other than 0.
