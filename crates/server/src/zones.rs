@@ -646,6 +646,8 @@ mod tests {
             name: "Fixture wolf".into(),
             subname: String::new(),
             creature_type: 1,
+            family: 0,
+            type_flags: 0,
             min_level: 1,
             max_level: 1,
             faction: 0,
@@ -770,7 +772,8 @@ mod tests {
                 ScriptName TEXT, unit_class INTEGER, detection_range REAL, unit_flags INTEGER,
                 ContentTuningID INTEGER, HealthScalingExpansion INTEGER, LevelScalingDeltaMin INTEGER,
                 LevelScalingDeltaMax INTEGER, DamageModifier REAL, ArmorModifier REAL, subname TEXT,
-                ManaModifier REAL, unit_flags2 INTEGER, RegenHealth INTEGER);
+                ManaModifier REAL, unit_flags2 INTEGER, RegenHealth INTEGER, family INTEGER,
+                type_flags INTEGER);
              CREATE TABLE expected_stat (ID INTEGER, Lvl INTEGER, ExpansionID INTEGER,
                 CreatureHealth REAL, CreatureAutoAttackDps REAL, CreatureArmor REAL,
                 ArmorConstant REAL);
@@ -824,7 +827,7 @@ mod tests {
         for (index, angle) in angles.iter().enumerate() {
             let entry = 100 + index as u32;
             conn.execute(
-                "INSERT INTO content_creature_template VALUES (?1,1,1,1,0,1.0,1.0,'Loup — Écorché',0,0,1.0,1,0,1.14,'',1,20.0,0,0,0,0,0,1.0,1.0,'',1.0,0,1)",
+                "INSERT INTO content_creature_template VALUES (?1,1,1,1,0,1.0,1.0,'Loup — Écorché',0,0,1.0,1,0,1.14,'',1,20.0,0,0,0,0,0,1.0,1.0,'',1.0,0,1,0,0)",
                 [entry],
             )
             .unwrap();

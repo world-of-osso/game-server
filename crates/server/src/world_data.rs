@@ -19,6 +19,10 @@ pub struct CreatureTemplate {
     pub subname: String,
     /// `type`: Retail `CreatureType` (1 Beast … 7 Humanoid, 8 Critter …).
     pub creature_type: u8,
+    /// `family`: Retail `CreatureFamily` ID, 0 none.
+    pub family: u32,
+    /// `type_flags`: Retail `CreatureTypeFlags` of the difficulty row (TAMEABLE, TAMEABLE_EXOTIC …).
+    pub type_flags: u32,
     pub min_level: u8,
     pub max_level: u8,
     pub faction: u16,
@@ -438,6 +442,8 @@ fn template_from_row(row: &Row, expected: &ExpectedStats) -> rusqlite::Result<Cr
         name: row.get(7)?,
         subname: row.get::<_, Option<String>>(24)?.unwrap_or_default(),
         creature_type: row.get::<_, i64>(10)? as u8,
+        family: row.get::<_, i64>(28)? as u32,
+        type_flags: row.get::<_, i64>(29)? as u32,
         rank: row.get::<_, i64>(8)? as u8,
         experience_modifier: row.get(9)?,
         gives_experience: row.get::<_, i64>(10)? != CREATURE_TYPE_CRITTER
@@ -474,7 +480,7 @@ pub(crate) fn load_templates(
                     rank, ExperienceModifier, type, flags_extra, speed_run, ScriptName, unit_class, exp,
                     detection_range, unit_flags, ContentTuningID, HealthScalingExpansion,
                     LevelScalingDeltaMin, LevelScalingDeltaMax, DamageModifier, ArmorModifier, subname,
-                    ManaModifier, unit_flags2, RegenHealth
+                    ManaModifier, unit_flags2, RegenHealth, family, type_flags
              FROM content_creature_template",
         )
         .expect("Failed to prepare content_creature_template query");
@@ -505,7 +511,8 @@ fn load_difficulty_templates(
                     t.speed_run, t.ScriptName, t.unit_class, d.exp, t.detection_range, t.unit_flags,
                     d.ContentTuningID, d.HealthScalingExpansion, d.LevelScalingDeltaMin,
                     d.LevelScalingDeltaMax, d.DamageModifier, d.ArmorModifier, t.subname,
-                    d.ManaModifier, t.unit_flags2, t.RegenHealth, d.DifficultyID
+                    d.ManaModifier, t.unit_flags2, t.RegenHealth, t.family, t.type_flags,
+                    d.DifficultyID
              FROM content_creature_template_difficulty d
              JOIN content_creature_template t ON t.entry = d.entry",
         )
@@ -513,7 +520,7 @@ fn load_difficulty_templates(
     let rows = stmt
         .query_map(params![], |row| {
             Ok((
-                row.get::<_, i64>(28)? as u32,
+                row.get::<_, i64>(30)? as u32,
                 template_from_row(row, expected)?,
             ))
         })

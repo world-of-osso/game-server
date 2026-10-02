@@ -89,6 +89,7 @@ mod stand_state;
 mod stats;
 #[cfg(feature = "system-timings")]
 mod system_timings;
+mod tame;
 mod taxi;
 mod teleport;
 mod terrain_height;
