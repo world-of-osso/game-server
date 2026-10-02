@@ -159,7 +159,11 @@ pub struct LineOfSightPlugin;
 
 impl Plugin for LineOfSightPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(PostStartup, open_line_of_sight);
+        // Ground errors name the missing ground files first; the LOS bake sits beside them.
+        app.add_systems(
+            PostStartup,
+            open_line_of_sight.after(crate::ground::open_ground_map),
+        );
     }
 }
 

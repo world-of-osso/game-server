@@ -662,7 +662,7 @@ pub(crate) fn ground_data_dir() -> PathBuf {
 /// ground every creature keeps its spawn height wherever it runs, so the server refuses
 /// to start while a map with creature spawns misses a ground file other than the
 /// `KNOWN_GROUND_GAPS`.
-fn open_ground_map(
+pub(crate) fn open_ground_map(
     mut commands: Commands,
     maps: Res<crate::maps::MapStore>,
     world: Res<crate::world_data::WorldData>,
