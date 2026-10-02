@@ -54,11 +54,7 @@ fn sight_app() -> App {
     )));
     app.insert_resource(crate::world_data::WorldData::default());
     app.insert_resource(faction_templates());
-    app.add_plugins((
-        CombatPlugin,
-        CreatureAiPlugin,
-        CreatureAggroPlugin,
-    ));
+    app.add_plugins((CombatPlugin, CreatureAiPlugin, CreatureAggroPlugin));
     app.update();
     app
 }
@@ -196,9 +192,7 @@ fn dead(app: &App, unit: Entity) -> bool {
 /// Move `unit` as a movement system does: new position, relocation marked.
 fn move_to(app: &mut App, unit: Entity, position: Position) {
     *app.world_mut().get_mut::<Position>(unit).unwrap() = position;
-    app.world()
-        .resource::<InterestDirtyQueue>()
-        .mark(unit);
+    app.world().resource::<InterestDirtyQueue>().mark(unit);
 }
 
 #[test]
@@ -211,7 +205,9 @@ fn a_soldier_and_a_hostile_orc_in_range_fight_until_one_dies_and_the_other_goes_
     assert_eq!(state(&app, soldier), pursuing(orc), "the soldier attacks");
     assert_eq!(state(&app, orc), pursuing(soldier), "the orc attacks");
     assert_eq!(
-        app.world().get::<AutoAttack>(soldier).map(|swing| swing.victim),
+        app.world()
+            .get::<AutoAttack>(soldier)
+            .map(|swing| swing.victim),
         Some(orc)
     );
     assert_eq!(
@@ -281,7 +277,11 @@ fn a_civilian_orc_never_starts_a_fight_but_fights_back() {
         .insert(crate::scripted_ai::ReactState::Passive);
 
     run(&mut app, 2 * NOTIFY_TICKS);
-    assert_eq!(state(&app, orc), CreatureState::Idle, "a civilian never starts");
+    assert_eq!(
+        state(&app, orc),
+        CreatureState::Idle,
+        "a civilian never starts"
+    );
 
     app.world_mut()
         .entity_mut(soldier)
@@ -290,7 +290,11 @@ fn a_civilian_orc_never_starts_a_fight_but_fights_back() {
     run(&mut app, NOTIFY_TICKS + 1);
     assert_eq!(state(&app, soldier), pursuing(orc));
     run(&mut app, 60);
-    assert_eq!(state(&app, orc), pursuing(soldier), "it fights back when hit");
+    assert_eq!(
+        state(&app, orc),
+        pursuing(soldier),
+        "it fights back when hit"
+    );
 }
 
 #[test]
@@ -344,7 +348,9 @@ fn a_player_hitting_an_orc_that_fights_a_soldier_keeps_swinging_until_it_dies() 
             break;
         }
         assert_eq!(
-            app.world().get::<AutoAttack>(player).map(|swing| swing.victim),
+            app.world()
+                .get::<AutoAttack>(player)
+                .map(|swing| swing.victim),
             Some(orc),
             "the player's auto-attack is still on the orc after {ticks} ticks"
         );

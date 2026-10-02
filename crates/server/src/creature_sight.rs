@@ -230,8 +230,19 @@ struct UnitView<'a> {
 impl SightParams<'_, '_> {
     /// A living, active creature in the world.
     fn view(&self, unit: Entity) -> Option<UnitView<'_>> {
-        let (position, map, health, level, scaling, faction, flags, state, npc, invisible, (dead, dormant)) =
-            self.units.get(unit).ok()?;
+        let (
+            position,
+            map,
+            health,
+            level,
+            scaling,
+            faction,
+            flags,
+            state,
+            npc,
+            invisible,
+            (dead, dormant),
+        ) = self.units.get(unit).ok()?;
         (health.current > 0.0 && !dead && !dormant).then(|| UnitView {
             position,
             map: *map,
@@ -289,7 +300,13 @@ impl SightParams<'_, '_> {
     /// `Creature::CanStartAttack(who, force = false)` for a creature `who`, with the
     /// faction, evade and map parts of `CanCreatureAttack`. The caller checked the home
     /// distance.
-    fn can_start_attack(&self, me: &UnitView, who: &UnitView, detection: f32, distance: f32) -> bool {
+    fn can_start_attack(
+        &self,
+        me: &UnitView,
+        who: &UnitView,
+        detection: f32,
+        distance: f32,
+    ) -> bool {
         // IsImmuneToNPC (who is not player-controlled); no non-combat pets.
         if me.flags & UNIT_FLAG_IMMUNE_TO_NPC != 0 || self.non_combat_pet(who.template) {
             return false;

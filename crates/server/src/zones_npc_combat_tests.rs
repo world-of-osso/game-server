@@ -141,9 +141,14 @@ fn dead(app: &App, unit: Entity) -> bool {
 fn northshire_infantry_and_the_worg_beside_it_are_neutral_and_never_fight() {
     let infantry = spawn_of(INFANTRY);
     let worg = spawn_of(WORG_BY_INFANTRY);
-    assert_eq!((infantry.template_entry, worg.template_entry), (49_869, 49_871));
-    let Some(mut app) = fight_app(vec![placed(infantry, 49_869, 0.0), placed(worg, 49_871, 2.0)])
-    else {
+    assert_eq!(
+        (infantry.template_entry, worg.template_entry),
+        (49_869, 49_871)
+    );
+    let Some(mut app) = fight_app(vec![
+        placed(infantry, 49_869, 0.0),
+        placed(worg, 49_871, 2.0),
+    ]) else {
         return;
     };
     let (soldier, worg) = (spawned(&app, 0), spawned(&app, 1));
@@ -171,12 +176,26 @@ fn northshire_infantry_and_a_blackrock_invader_fight_until_one_dies_or_evades() 
     let (soldier, invader) = (spawned(&app, 0), spawned(&app, 1));
 
     run(&mut app, NOTIFY_TICKS + 1);
-    assert_eq!(state(&app, soldier), pursuing(invader), "the soldier attacks");
-    assert_eq!(state(&app, invader), pursuing(soldier), "the invader attacks");
+    assert_eq!(
+        state(&app, soldier),
+        pursuing(invader),
+        "the soldier attacks"
+    );
+    assert_eq!(
+        state(&app, invader),
+        pursuing(soldier),
+        "the invader attacks"
+    );
 
     run(&mut app, 100);
-    assert!(health(&app, soldier).0 < health(&app, soldier).1, "the invader hits");
-    assert!(health(&app, invader).0 < health(&app, invader).1, "the soldier hits");
+    assert!(
+        health(&app, soldier).0 < health(&app, soldier).1,
+        "the invader hits"
+    );
+    assert!(
+        health(&app, invader).0 < health(&app, invader).1,
+        "the soldier hits"
+    );
 
     let mut ticks = 0;
     while !dead(&app, soldier) && !dead(&app, invader) {
@@ -190,12 +209,24 @@ fn northshire_infantry_and_a_blackrock_invader_fight_until_one_dies_or_evades() 
             );
         }
     }
-    let survivor = if dead(&app, invader) { soldier } else { invader };
+    let survivor = if dead(&app, invader) {
+        soldier
+    } else {
+        invader
+    };
     run(&mut app, 200);
-    assert_eq!(state(&app, survivor), CreatureState::Idle, "the survivor is home");
+    assert_eq!(
+        state(&app, survivor),
+        CreatureState::Idle,
+        "the survivor is home"
+    );
     assert!(app.world().get::<AutoAttack>(survivor).is_none());
     assert!(
-        app.world().get::<ThreatTable>(survivor).unwrap().top_threat().is_none(),
+        app.world()
+            .get::<ThreatTable>(survivor)
+            .unwrap()
+            .top_threat()
+            .is_none(),
         "its fight is over"
     );
 }
@@ -296,14 +327,54 @@ fn a_player_hitting_an_invader_that_fights_infantry_taps_it_and_keeps_swinging()
             break;
         }
         assert_eq!(
-            app.world().get::<AutoAttack>(player).map(|swing| swing.victim),
+            app.world()
+                .get::<AutoAttack>(player)
+                .map(|swing| swing.victim),
             Some(invader),
             "the player's auto-attack is still on after {ticks} ticks"
         );
     }
     assert_eq!(
-        app.world().get::<CreatureTap>(invader).map(|tap| tap.tappers.clone()),
+        app.world()
+            .get::<CreatureTap>(invader)
+            .map(|tap| tap.tappers.clone()),
         Some(vec![7]),
         "the player's own damage tapped it"
     );
+}
+
+/// Mean wall time of one 50 ms tick of the creature, combat and aggro plugins running
+/// the 292 world.db spawns within 300 yd of the Northshire infantry, after a warm-up
+/// (`cargo test --release -p server northshire_tick_cost -- --ignored --nocapture`).
+#[test]
+#[ignore]
+fn northshire_tick_cost() {
+    let center = spawn_of(INFANTRY);
+    let spawns: Vec<CreatureSpawn> = world_data()
+        .spawns
+        .iter()
+        .filter(|spawn| {
+            spawn.map == 0
+                && (spawn.position_x - center.position_x).abs() < 300.0
+                && (spawn.position_y - center.position_y).abs() < 300.0
+        })
+        .map(|spawn| CreatureSpawn {
+            wander_distance: spawn.wander_distance,
+            movement_type: spawn.movement_type,
+            display_id: spawn.display_id,
+            unit_flags: spawn.unit_flags,
+            equipment_id: spawn.equipment_id,
+            ..placed(spawn, spawn.template_entry, 0.0)
+        })
+        .collect();
+    let count = spawns.len();
+    let Some(mut app) = fight_app(spawns) else {
+        return;
+    };
+    run(&mut app, 20 * 30);
+    let ticks = 20 * 120;
+    let start = std::time::Instant::now();
+    run(&mut app, ticks);
+    let mean = start.elapsed() / ticks as u32;
+    println!("northshire_tick_cost: {count} spawns, {mean:?} per tick");
 }

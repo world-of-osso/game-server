@@ -1,5 +1,5 @@
-use bevy::prelude::*;
 use bevy::ecs::entity::EntityHashMap;
+use bevy::prelude::*;
 use lightyear::prelude::ReplicationDirtyQueue;
 use shared::components::{CreatureMotion, MovementSpeed, Position, Rotation};
 
@@ -672,7 +672,12 @@ fn victim_positions(
     let positions = units.p1();
     victims
         .into_iter()
-        .filter_map(|victim| positions.get(victim).ok().map(|position| (victim, *position)))
+        .filter_map(|victim| {
+            positions
+                .get(victim)
+                .ok()
+                .map(|position| (victim, *position))
+        })
         .collect()
 }
 
