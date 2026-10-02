@@ -49,6 +49,10 @@ impl NetworkVisibility {
 struct InterestDirtyEntities {
     interest: EntityHashSet,
     replication: EntityHashSet,
+    /// Units whose position changed since `creature_sight` last read them: TrinityCore
+    /// marks one relocation for both visibility and AI (`Map::CreatureRelocation` →
+    /// `AddToNotify(NOTIFY_VISIBILITY_CHANGED)`).
+    relocated: EntityHashSet,
 }
 
 #[derive(Resource, Default)]
@@ -59,6 +63,17 @@ impl InterestDirtyQueue {
         let mut dirty = self.0.lock().expect("interest dirty queue poisoned");
         dirty.interest.insert(entity);
         dirty.replication.insert(entity);
+        dirty.relocated.insert(entity);
+    }
+
+    /// Units that moved since the last call (AI relocation notifies).
+    pub(crate) fn drain_relocated(&self) -> Vec<Entity> {
+        self.0
+            .lock()
+            .expect("interest dirty queue poisoned")
+            .relocated
+            .drain()
+            .collect()
     }
 
     fn drain_interest(&self) -> Vec<Entity> {

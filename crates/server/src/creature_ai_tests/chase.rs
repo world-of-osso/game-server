@@ -258,3 +258,59 @@ fn chase_handles_despawned_target() {
     assert_eq!(pos.x, 5.0, "position unchanged for invalid target");
     assert_eq!(pos.z, 5.0, "position unchanged for invalid target");
 }
+
+/// A creature fighting another creature runs to it: the victim's own `SpawnPoint`
+/// does not hide it from the chase (TrinityCore `ChaseMovementGenerator` follows any unit).
+#[test]
+fn chase_runs_toward_a_creature_victim() {
+    use bevy::ecs::system::RunSystemOnce;
+
+    let mut app = App::new();
+    app.add_plugins(bevy::MinimalPlugins);
+    app.update();
+    app.update();
+
+    let spawn_at = |x: f32| SpawnPoint {
+        x,
+        y: 0.0,
+        z: 0.0,
+        wander_distance: 0.0,
+        speed_walk: 1.0,
+        speed_run: 1.0,
+    };
+    let worg = app
+        .world_mut()
+        .spawn((
+            Position {
+                x: 20.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            spawn_at(20.0),
+            CreatureState::Idle,
+        ))
+        .id();
+    let soldier = app
+        .world_mut()
+        .spawn((
+            Position {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            spawn_at(0.0),
+            CreatureState::Pursuing {
+                target: worg.to_bits(),
+            },
+        ))
+        .id();
+
+    app.world_mut().run_system_once(chase_system).unwrap();
+
+    let soldier_x = app.world().get::<Position>(soldier).unwrap().x;
+    assert!(
+        soldier_x > 0.0,
+        "the soldier runs toward the worg, got x {soldier_x}"
+    );
+    assert_eq!(app.world().get::<Position>(worg).unwrap().x, 20.0);
+}

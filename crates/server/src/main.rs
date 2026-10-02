@@ -21,6 +21,7 @@ mod combat;
 mod combat_refs;
 mod conditions;
 mod creature_aggro;
+mod creature_sight;
 mod creature_ai;
 mod creature_scripts;
 mod creature_tap;

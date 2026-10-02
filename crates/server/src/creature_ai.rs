@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use bevy::ecs::entity::EntityHashMap;
 use lightyear::prelude::ReplicationDirtyQueue;
 use shared::components::{CreatureMotion, MovementSpeed, Position, Rotation};
 
@@ -144,7 +145,7 @@ pub struct FormationMember {
 }
 
 /// High-level creature behavior state. Overrides wander/waypoint when non-idle.
-#[derive(Component, Debug, Clone, PartialEq, Default)]
+#[derive(Component, Debug, Clone, Copy, PartialEq, Default)]
 pub enum CreatureState {
     /// Normal behavior — wander or waypoint patrol runs as usual.
     #[default]
@@ -612,23 +613,11 @@ pub(crate) fn chase_system(
     time: Res<Time>,
     queues: MoveQueues,
     mut ground: Option<ResMut<GroundMap>>,
-    mut chasers: Query<
-        (
-            Entity,
-            &mut Position,
-            &SpawnPoint,
-            &CreatureState,
-            Option<&CastState>,
-            Option<&AuraStatMods>,
-            Option<&InMap>,
-            Bearing,
-        ),
-        ActiveUncontrolled,
-    >,
-    targets: Query<&Position, Without<SpawnPoint>>,
+    mut units: ParamSet<(Query<Chaser, ActiveUncontrolled>, Query<&Position>)>,
 ) {
     let dt = time.delta_secs();
-    for (entity, mut pos, spawn, state, cast, mods, map, bearing) in &mut chasers {
+    let targets = victim_positions(&mut units);
+    for (entity, mut pos, spawn, state, cast, mods, map, bearing) in &mut units.p0() {
         let CreatureState::Pursuing { target } = *state else {
             continue;
         };
@@ -638,8 +627,7 @@ pub(crate) fn chase_system(
             queues.apply(entity, &mut pos, bearing, stride);
             continue;
         }
-        let target_entity = Entity::from_bits(target);
-        let Ok(target_pos) = targets.get(target_entity) else {
+        let Some(target_pos) = targets.get(&Entity::from_bits(target)) else {
             continue; // target despawned or invalid
         };
         let run_speed = spawn.speed_run * BASE_RUN_SPEED * speed;
@@ -655,6 +643,37 @@ pub(crate) fn chase_system(
         }
         queues.apply(entity, &mut pos, bearing, stride);
     }
+}
+
+type Chaser = (
+    Entity,
+    &'static mut Position,
+    &'static SpawnPoint,
+    &'static CreatureState,
+    Option<&'static CastState>,
+    Option<&'static AuraStatMods>,
+    Option<&'static InMap>,
+    Bearing,
+);
+
+/// Where each chased unit stands at the start of the chase step. A victim may be a
+/// creature that moves in the same step (a soldier and the worg it fights).
+fn victim_positions(
+    units: &mut ParamSet<(Query<Chaser, ActiveUncontrolled>, Query<&Position>)>,
+) -> EntityHashMap<Position> {
+    let victims: Vec<Entity> = units
+        .p0()
+        .iter()
+        .filter_map(|(_, _, _, state, ..)| match *state {
+            CreatureState::Pursuing { target } => Entity::try_from_bits(target),
+            _ => None,
+        })
+        .collect();
+    let positions = units.p1();
+    victims
+        .into_iter()
+        .filter_map(|victim| positions.get(victim).ok().map(|position| (victim, *position)))
+        .collect()
 }
 
 /// Move up to `step` across the ground toward the point `CHASE_REACH` short of `target`;

@@ -631,6 +631,10 @@ fn patrol_path(addon: Option<&CreatureAddon>, world_data: &WorldData) -> Option<
 mod world_db_tests;
 
 #[cfg(test)]
+#[path = "zones_npc_combat_tests.rs"]
+mod npc_combat_tests;
+
+#[cfg(test)]
 mod tests {
     use super::*;
     use crate::world_data::{CreatureModelInfo, CreatureSpawn, CreatureTemplate};
