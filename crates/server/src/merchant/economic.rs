@@ -33,6 +33,7 @@ pub(super) fn vendor_inventory(
     VendorInventory {
         npc: vendor.to_bits(),
         can_repair,
+        guild_repair_money: None,
         items,
     }
 }
@@ -73,6 +74,7 @@ fn offered_item(shop: &Shop, buyer: Buyer, batch: &model::StockBatch) -> Option<
         max_stack: template.max_stack,
         num_available: Some(batch.count),
         usable: buyer.can_use(&template),
+        max_durability: shop.durability_rules.max_durability(batch.item_id),
     })
 }
 

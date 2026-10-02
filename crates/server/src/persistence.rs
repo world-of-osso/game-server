@@ -312,6 +312,32 @@ pub(crate) fn create_tables(db: &Database) {
     migrate_legacy_characters(db);
     migrate_legacy_auctions(db);
     mail_store::migrate_legacy_mailboxes(db, crate::guild_bank::unix_now());
+    banks::migrate_guild_ranks(db);
+}
+
+/// Version of a persisted layout, stored as `SERVER_SETTINGS` `key` (`u32` little-endian);
+/// 0 when never written.
+pub(crate) fn layout_version(txn: &redb::WriteTransaction, key: &str) -> u32 {
+    let table = txn
+        .open_table(SERVER_SETTINGS)
+        .expect("Failed to open server_settings for a layout version");
+    table
+        .get(key)
+        .expect("Failed to read layout version")
+        .map_or(0, |row| {
+            let bytes: [u8; 4] = row
+                .value()
+                .try_into()
+                .unwrap_or_else(|_| panic!("layout version {key} is not a u32"));
+            u32::from_le_bytes(bytes)
+        })
+}
+
+pub(crate) fn set_layout_version(txn: &redb::WriteTransaction, key: &str, version: u32) {
+    txn.open_table(SERVER_SETTINGS)
+        .expect("Failed to open server_settings for a layout version")
+        .insert(key, version.to_le_bytes().as_slice())
+        .expect("Failed to write layout version");
 }
 
 /// Move every row of the `u32`-money `auctions` table into `auction_listings` and

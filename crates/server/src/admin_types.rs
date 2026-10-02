@@ -82,6 +82,12 @@ pub enum AdminRequest {
         withdraw_gold: bool,
         gold_per_day: u64,
     },
+    /// Guild bank repair right of a rank (TrinityCore `GR_RIGHT_WITHDRAW_REPAIR`).
+    SetGuildBankRepairRight {
+        guild_id: u32,
+        rank: u8,
+        withdraw_repair: bool,
+    },
     SetLevel {
         character_name: String,
         level: u16,

@@ -5,7 +5,8 @@
 //! `HandleSellItemOpcode` and `HandleBuybackItem` (Handlers/ItemHandler.cpp) and
 //! `Player::BuyItemFromVendorSlot` (Player.cpp:10651); repair is
 //! `HandleRepairItemOpcode` (Handlers/NPCHandler.cpp:748) with
-//! `Player::DurabilityRepairAll`/`DurabilityRepair` (Player.cpp:4736-4752). A request whose NPC is not
+//! `Player::DurabilityRepairAll`/`DurabilityRepair` (Player.cpp:4736-4752); guild bank
+//! repairs follow TrinityCore `DurabilityRepairAll(guildBank = true)`. A request whose NPC is not
 //! the connection's open vendor is refused; `close_invalid_interactions` already
 //! closes the frame once the player walks out of range. Money and bags change in
 //! one `InventoryModel` save and reach the owner through `GoldUpdateQueue`.
@@ -30,6 +31,9 @@ use crate::auth::InWorld;
 use crate::durability::{EquippedDurability, ItemDurability};
 use crate::faction::faction_for_race;
 use crate::gold::{GoldUpdateQueue, MAX_MONEY};
+use crate::guild_bank::{
+    ChangedGuilds, DailyReset, guild_repair_money, pay_guild_repair, unix_now,
+};
 use crate::inventory::{inventory_model::InventoryModel, load_model};
 use crate::item_templates::{BIND_ON_PICKUP, ItemTemplate, ItemTemplates};
 use crate::networking::PlayerLink;
@@ -61,6 +65,8 @@ impl Plugin for MerchantPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<VendorCatalog>()
             .init_resource::<VendorStock>()
+            .init_resource::<DailyReset>()
+            .init_resource::<ChangedGuilds>()
             .add_systems(
                 Update,
                 (
@@ -124,6 +130,8 @@ struct Shop<'w, 's> {
     players: Query<'w, 's, (&'static Player, Option<&'static Level>)>,
     durability_rules: Res<'w, ItemDurability>,
     durability: Query<'w, 's, &'static mut EquippedDurability>,
+    reset: Res<'w, DailyReset>,
+    changed_guilds: ResMut<'w, ChangedGuilds>,
     inventories: Query<'w, 's, &'static mut MessageSender<VendorInventory>>,
     buybacks: Query<'w, 's, &'static mut MessageSender<BuybackList>>,
     failures: Query<'w, 's, &'static mut MessageSender<MerchantFailed>>,
@@ -176,10 +184,26 @@ impl Shop<'_, '_> {
         self.gold.record(character_id, gold);
     }
 
+    /// The vendor list `customer` sees, with the guild money they may spend here on
+    /// repairs (Retail `CanGuildBankRepair` / `GetGuildBankWithdrawMoney`).
+    fn vendor_inventory(
+        &mut self,
+        vendor: Entity,
+        buyer: Buyer,
+        character_id: u64,
+    ) -> VendorInventory {
+        let mut inventory = self.vendor_items(vendor, buyer);
+        if inventory.can_repair {
+            let day = self.reset.day(unix_now());
+            inventory.guild_repair_money = guild_repair_money(self.db(), character_id, day);
+        }
+        inventory
+    }
+
     /// The vendor list the player sees (AzerothCore `SendListInventory`):
     /// filtered items are left out, sold-out items too, and every item keeps
     /// its catalog slot index.
-    fn vendor_inventory(&mut self, vendor: Entity, buyer: Buyer) -> VendorInventory {
+    fn vendor_items(&mut self, vendor: Entity, buyer: Buyer) -> VendorInventory {
         let (entry, can_repair) = self.npcs.get(vendor).map_or((0, false), |(npc, flags)| {
             (npc.template_id, flags.contains(NpcFlags::REPAIR))
         });
@@ -213,18 +237,26 @@ impl Shop<'_, '_> {
                     max_stack: template.max_stack.max(1),
                     num_available: available,
                     usable: buyer.can_use(&template),
+                    max_durability: self.durability_rules.max_durability(slot.item_id),
                 })
             })
             .collect();
         VendorInventory {
             npc: vendor.to_bits(),
             can_repair,
+            guild_repair_money: None,
             items,
         }
     }
 
-    fn send_inventory(&mut self, connection: Entity, vendor: Entity, buyer: Buyer) {
-        let inventory = self.vendor_inventory(vendor, buyer);
+    fn send_inventory(
+        &mut self,
+        connection: Entity,
+        vendor: Entity,
+        buyer: Buyer,
+        character_id: u64,
+    ) {
+        let inventory = self.vendor_inventory(vendor, buyer, character_id);
         if let Ok(mut sender) = self.inventories.get_mut(connection) {
             sender.send::<MerchantChannel>(inventory);
         }
@@ -334,17 +366,23 @@ fn init_buyback_slots(mut commands: Commands, entered: Query<Entity, Added<InWor
 /// sends `SMSG_LIST_INVENTORY` when the vendor gossip option is picked.
 fn send_vendor_lists(
     opened: Query<
-        (Entity, &PlayerLink, &ActiveInteraction, &BuybackSlots),
+        (
+            Entity,
+            &InWorld,
+            &PlayerLink,
+            &ActiveInteraction,
+            &BuybackSlots,
+        ),
         Changed<ActiveInteraction>,
     >,
     mut shop: Shop,
 ) {
-    for (connection, link, interaction, buyback) in &opened {
+    for (connection, in_world, link, interaction, buyback) in &opened {
         let Some(vendor) = open_vendor(Some(interaction)) else {
             continue;
         };
         let buyer = shop.buyer(link.0);
-        shop.send_inventory(connection, vendor, buyer);
+        shop.send_inventory(connection, vendor, buyer, in_world.character_id);
         shop.send_buyback(connection, buyback);
     }
 }
@@ -441,7 +479,7 @@ fn buy(shop: &mut Shop, customer: &mut Customer, req: BuyItem) -> MerchantResult
     if slot.maxcount > 0 {
         shop.stock
             .consume(vendor, req.slot, slot, goods.buy_count, items, now);
-        shop.send_inventory(customer.connection, vendor, buyer);
+        shop.send_inventory(customer.connection, vendor, buyer, customer.character_id);
     }
     Ok(())
 }
@@ -569,6 +607,10 @@ fn repair(shop: &mut Shop, customer: &mut Customer, req: RepairItem) -> Merchant
     if !repairs {
         return Err(MerchantError::NotInteracting);
     }
+    // TrinityCore `HandleRepairItemOpcode` uses the guild bank for repair-all only.
+    if req.guild_bank && req.item_guid.is_none() {
+        return guild_repair(shop, customer, vendor);
+    }
     let mut model = shop.load(customer.character_id)?;
     // TrinityCore `HandleRepairItemOpcode` repairs the item if the player has it and
     // answers nothing; only equipped items carry durability, so any other guid is a no-op.
@@ -612,6 +654,61 @@ fn repair(shop: &mut Shop, customer: &mut Customer, req: RepairItem) -> Merchant
     }
     if short {
         return Err(MerchantError::NotEnoughMoney);
+    }
+    Ok(())
+}
+
+/// TrinityCore `Player::DurabilityRepairAll(guildBank = true)` (Player.cpp:4636-4669):
+/// damaged items are repaired cheapest first while the guild money left for the player
+/// (`GetMemberAvailableMoneyForRepairItems`) covers them, and the total is taken once
+/// (`Guild::HandleMemberWithdrawMoney(repair = true)`); the player's own money is never
+/// touched. TrinityCore answers nothing; we answer `ERR_GUILD_PERMISSIONS` to a rank
+/// without `GR_RIGHT_WITHDRAW_REPAIR` and `ERR_GUILD_NOT_ENOUGH_MONEY` when items stay
+/// damaged, as the personal repair answers `ERR_NOT_ENOUGH_MONEY`.
+fn guild_repair(shop: &mut Shop, customer: &mut Customer, vendor: Entity) -> MerchantResult {
+    let day = shop.reset.day(unix_now());
+    let available = guild_repair_money(shop.db(), customer.character_id, day)
+        .ok_or(MerchantError::GuildPermissions)?;
+    let Ok(durability) = shop.durability.get(customer.player) else {
+        return Err(MerchantError::ItemNotFound);
+    };
+    let mut costs: Vec<(usize, u64)> = durability
+        .slots
+        .iter()
+        .enumerate()
+        .filter_map(|(index, entry)| {
+            let cost = shop
+                .durability_rules
+                .repair_cost(entry.item_id, entry.max - entry.current)?;
+            (cost > 0).then_some((index, u64::from(cost)))
+        })
+        .collect();
+    costs.sort_by_key(|&(_, cost)| cost);
+    let mut total = 0;
+    let mut repaired = Vec::new();
+    for &(index, cost) in &costs {
+        if total + cost > available {
+            break;
+        }
+        total += cost;
+        repaired.push(index);
+    }
+    if total > 0 {
+        let mut durability = shop
+            .durability
+            .get_mut(customer.player)
+            .expect("read above");
+        for index in &repaired {
+            let entry = &mut durability.slots[*index];
+            entry.current = entry.max;
+        }
+        let guild_id = pay_guild_repair(shop.db(), customer.character_id, day, total);
+        shop.changed_guilds.0.push(guild_id);
+        let buyer = shop.buyer(customer.player);
+        shop.send_inventory(customer.connection, vendor, buyer, customer.character_id);
+    }
+    if repaired.len() < costs.len() {
+        return Err(MerchantError::GuildNotEnoughMoney);
     }
     Ok(())
 }

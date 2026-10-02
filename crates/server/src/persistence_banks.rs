@@ -45,6 +45,9 @@ pub struct GuildRankData {
     pub name: String,
     /// AzerothCore `GR_RIGHT_WITHDRAW_GOLD`.
     pub withdraw_gold: bool,
+    /// TrinityCore `GR_RIGHT_WITHDRAW_REPAIR` (Guild.h:123): repairs paid from the guild
+    /// bank, out of the same daily allowance as gold withdrawals.
+    pub withdraw_repair: bool,
     /// Copper per day (AzerothCore `BankMoneyPerDay`).
     pub gold_per_day: u64,
     /// One entry per guild bank tab (`GUILD_BANK_MAX_TABS`).
@@ -62,13 +65,15 @@ pub struct GuildData {
 pub const GUILD_MASTER_RANK: u8 = 0;
 
 impl Default for GuildData {
-    /// AzerothCore `Guild::_CreateDefaultGuildRanks`: Guild Master and Officer get
-    /// `GR_RIGHT_ALL` (gold withdrawal included), the others chat rights only; no
-    /// rank but the Guild Master has bank tab rights or a gold allowance.
+    /// TrinityCore `Guild::_CreateDefaultGuildRanks` (Guild.cpp:3184-3188): Guild Master
+    /// and Officer get `GR_RIGHT_ALL` (gold withdrawal and guild repair included), the
+    /// others chat rights only; no rank but the Guild Master has bank tab rights or a
+    /// gold allowance.
     fn default() -> Self {
-        let rank = |name: &str, withdraw_gold: bool| GuildRankData {
+        let rank = |name: &str, all_rights: bool| GuildRankData {
             name: name.into(),
-            withdraw_gold,
+            withdraw_gold: all_rights,
+            withdraw_repair: all_rights,
             gold_per_day: 0,
             tabs: vec![GuildTabRights::default(); shared::protocol::GUILD_BANK_MAX_TABS],
         };
@@ -109,6 +114,8 @@ pub enum GuildBankLogKindData {
     DepositMoney,
     WithdrawMoney,
     BuyTab,
+    /// TrinityCore `GUILD_BANK_LOG_REPAIR_MONEY`.
+    RepairMoney,
 }
 
 #[derive(bitcode::Encode, bitcode::Decode, Debug, Clone, PartialEq)]
@@ -273,6 +280,88 @@ pub fn save_bank_move(
     txn.commit().expect("Failed to commit bank write");
 }
 
+/// `GuildRankData` before `withdraw_repair` (guild rank layout version 0).
+#[derive(bitcode::Encode, bitcode::Decode)]
+struct GuildRankDataV0 {
+    name: String,
+    withdraw_gold: bool,
+    gold_per_day: u64,
+    tabs: Vec<GuildTabRights>,
+}
+
+#[derive(bitcode::Encode, bitcode::Decode)]
+struct GuildDataV0 {
+    ranks: Vec<GuildRankDataV0>,
+    money: u64,
+    tabs: Vec<BankTabData>,
+}
+
+/// `SERVER_SETTINGS` key of the `GuildData` layout version.
+pub(crate) const GUILD_LAYOUT_KEY: &str = "guild_layout_version";
+/// 1: ranks carry `withdraw_repair`.
+pub(crate) const GUILD_LAYOUT_VERSION: u32 = 1;
+
+impl From<GuildDataV0> for GuildData {
+    /// Version 0 ranks get `GR_RIGHT_WITHDRAW_REPAIR` as TrinityCore's default ranks
+    /// hold it (`_CreateDefaultGuildRanks`, Guild.cpp:3184-3188): `GR_RIGHT_ALL` for the
+    /// Guild Master (rank 0) and the Officer (rank 1), chat rights only below.
+    fn from(old: GuildDataV0) -> Self {
+        let ranks = old
+            .ranks
+            .into_iter()
+            .enumerate()
+            .map(|(index, rank)| GuildRankData {
+                name: rank.name,
+                withdraw_gold: rank.withdraw_gold,
+                withdraw_repair: index <= 1,
+                gold_per_day: rank.gold_per_day,
+                tabs: rank.tabs,
+            })
+            .collect();
+        Self {
+            ranks,
+            money: old.money,
+            tabs: old.tabs,
+        }
+    }
+}
+
+/// Rewrite every stored guild from layout version 0 to 1 in one transaction, once.
+pub(crate) fn migrate_guild_ranks(db: &Database) {
+    let txn = db
+        .begin_write()
+        .expect("Failed to begin guild layout migration");
+    if super::layout_version(&txn, GUILD_LAYOUT_KEY) >= GUILD_LAYOUT_VERSION {
+        return;
+    }
+    let migrated = {
+        let mut table = txn
+            .open_table(GUILDS)
+            .expect("Failed to open guilds for migration");
+        let rows: Vec<(u32, GuildData)> = table
+            .iter()
+            .expect("Failed to iterate guilds")
+            .map(|row| {
+                let (key, value) = row.expect("Failed to read guild row");
+                let old: GuildDataV0 = bitcode::decode(value.value()).unwrap_or_else(|error| {
+                    panic!("Failed to migrate guild {}: {error:?}", key.value())
+                });
+                (key.value(), old.into())
+            })
+            .collect();
+        for (guild_id, guild) in &rows {
+            table
+                .insert(*guild_id, bitcode::encode(guild).as_slice())
+                .expect("Failed to write migrated guild");
+        }
+        rows.len()
+    };
+    super::set_layout_version(&txn, GUILD_LAYOUT_KEY, GUILD_LAYOUT_VERSION);
+    txn.commit()
+        .expect("Failed to commit guild layout migration");
+    bevy::log::info!("Migrated {migrated} guilds to layout version {GUILD_LAYOUT_VERSION}");
+}
+
 pub(crate) fn create_bank_tables(txn: &WriteTransaction) {
     let _ = txn.open_table(CHARACTER_BANKS);
     let _ = txn.open_table(ACCOUNT_BANKS);
@@ -281,3 +370,7 @@ pub(crate) fn create_bank_tables(txn: &WriteTransaction) {
     let _ = txn.open_table(GUILD_BANK_USAGE);
     let _ = txn.open_table(GUILD_BANK_LOGS);
 }
+
+#[cfg(test)]
+#[path = "persistence_banks_tests.rs"]
+mod tests;
