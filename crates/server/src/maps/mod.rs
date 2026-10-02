@@ -186,6 +186,9 @@ fn unload_expired_instances(
     }
     info!("Unloaded instances {expired:?}");
     commands.queue(move |world: &mut World| {
+        if let Some(mut pools) = world.get_resource_mut::<crate::spawn_pools::PoolSpawns>() {
+            pools.0.retain(|map, _| !expired.contains(map));
+        }
         crate::scripted_ai::instance_script::unload_instance_scripts(world, &expired);
     });
 }

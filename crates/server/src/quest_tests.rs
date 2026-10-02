@@ -13,8 +13,8 @@ use shared::protocol::{
     QuestGiverAcceptQuest, QuestGiverChooseReward, QuestGiverCompleteQuest, QuestGiverHello,
     QuestGiverOfferReward, QuestGiverQueryQuest, QuestGiverQuestComplete, QuestGiverQuestDetails,
     QuestGiverQuestList, QuestGiverQuestState, QuestGiverRequestItems, QuestGiverStatus,
-    QuestGiverStatusEntry, QuestGiverStatusQuery, QuestRewardItem, SetQuestWatched, SortBags,
-    SplitItem, SwapItem, UseItem, XpGainReason,
+    QuestGiverStatusEntry, QuestGiverStatusQuery, QuestMarkerClass, QuestRewardItem,
+    SetQuestWatched, SortBags, SplitItem, SwapItem, UseItem, XpGainReason,
 };
 
 use super::*;
@@ -327,7 +327,10 @@ fn join_the_battle_accepted_from_mcbride_and_turned_in_at_willem_is_persisted() 
     );
     assert_eq!(
         statuses(&mut app, &client, &[mcbride, willem]),
-        vec![QuestGiverStatus::Available, QuestGiverStatus::None]
+        vec![
+            QuestGiverStatus::Available(QuestMarkerClass::Normal),
+            QuestGiverStatus::None
+        ]
     );
 
     request(&mut app, &client, QuestGiverHello { npc: mcbride });
@@ -356,7 +359,7 @@ fn join_the_battle_accepted_from_mcbride_and_turned_in_at_willem_is_persisted() 
         .unwrap();
     assert!(markers.statuses.contains(&QuestGiverStatusEntry {
         npc: willem,
-        status: QuestGiverStatus::Reward,
+        status: QuestGiverStatus::Reward(QuestMarkerClass::Normal),
     }));
 
     request(
@@ -410,7 +413,7 @@ fn join_the_battle_accepted_from_mcbride_and_turned_in_at_willem_is_persisted() 
     );
     assert_eq!(
         statuses(&mut app, &client, &[willem]),
-        vec![QuestGiverStatus::Available]
+        vec![QuestGiverStatus::Available(QuestMarkerClass::Normal)]
     );
 }
 
@@ -598,7 +601,7 @@ fn abandoning_beating_them_back_removes_it_and_mcbride_offers_it_again() {
     assert!(saved.active.is_empty() && saved.rewarded.is_empty());
     assert_eq!(
         statuses(&mut app, &client, &[mcbride]),
-        vec![QuestGiverStatus::Available]
+        vec![QuestGiverStatus::Available(QuestMarkerClass::Normal)]
     );
 }
 

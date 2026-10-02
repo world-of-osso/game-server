@@ -87,6 +87,14 @@ fn create_world_schema(conn: &rusqlite::Connection) {
             leaderGUID INTEGER, memberGUID INTEGER PRIMARY KEY, dist REAL, angle REAL,
             groupAI INTEGER, point_1 INTEGER, point_2 INTEGER
         );
+        CREATE TABLE content_pool_template (entry INTEGER NOT NULL PRIMARY KEY,
+            max_limit INTEGER NOT NULL, description TEXT);
+        CREATE TABLE content_pool_members (type INTEGER NOT NULL, spawnId INTEGER NOT NULL,
+            poolSpawnId INTEGER NOT NULL, chance REAL NOT NULL, description TEXT,
+            PRIMARY KEY (type, spawnId));
+        CREATE TABLE content_gameobject (guid INTEGER PRIMARY KEY, map INTEGER);
+        CREATE TABLE content_game_event_pool (eventEntry INTEGER NOT NULL,
+            pool_entry INTEGER NOT NULL PRIMARY KEY);
         CREATE TABLE creature_classlevelstats (
             level INTEGER, class INTEGER, basehp0 INTEGER, basehp1 INTEGER, basehp2 INTEGER,
             basemana INTEGER NOT NULL DEFAULT 0
