@@ -495,3 +495,15 @@ Players replicate `PlayerMotion`, Retail `MovementFlags` (FORWARD, BACKWARD, STR
 ## [2026-10-01] feature | New-character kit
 
 [[new-character-kit]]: new characters get the TrinityCore a352b1fa `Player::Create` kit. It places CharacterLoadout Purpose 9 items (with playercreateinfo_item overrides) through `StoreNewItemInBestSlots` and the backpack second pass, and stores the playercreateinfo_action buttons. [[class-progression]] now teaches every default skill line's spells (LearnDefaultSkills) instead of only racial lines, and the server-invented default bar is gone. `ItemTemplate::allows` now checks PlayableRaceBit. Gaps: kit bags, jewelry and second one-handers stay in the backpack (no bag containers, no jewelry storage, no dual wield), and level-10 starts lose create buttons to spec resolution and pruning.
+
+## [2026-10-01] docs | Zaralda paired-protocol and renderer boundary (task date)
+
+Updated [[midnight-economy-content]], [[economy-catalog]] and index: historical 0/3 retained; paired jc35z10fr8/current server shared7ba6223 reached auth/InWorld, then genuine appearance run hit model binding failure. Linked engine model/gear SSOT for appearance preservation/geoset caveat and 016b0fce/207aea4e CPU-only fix evidence. New native build/live-window gate pending main; catalog/CLI proof does not close overall goal. Evidence task date retained, no new runtime verification or docs-update tests/builds/commits.
+
+## 2026-10-01 — Zaralda derived-friendly/native boundary (evidence date)
+
+Recorded supplied d4708c9/6aa2e27 SQL/rebuild receipts and approved Zaralda-only derived faction policy; linked manifest/spec/publication SSOT. Native faction-0 attack supersedes earlier pick blocker; independent scope gate and native faction-35 acceptance remain pending. Evidence dated October 1, not a new runtime verification timestamp. Docs-only update; no code/data/PLAN changes, commits, builds, tests or service actions.
+
+## 2026-10-01 — Zaralda final observed-proof reconciliation (task evidence)
+
+Updated existing Zaralda SSOT and linked specs/reference/index: native-friendly exit0 / 529.10s now observes actual merchant pick/title/tooltip/backpack/close. Retained historical RED attempts, independent gate114 source/import proof and renderer/cache limits; gate116 artifact audit gives scoped PASS for the saved native flow and three current AH receipts. Server SSOT separates current three AH receipts from pinned old-binary performance. Prior uncommitted docs preserved; no tests, builds, commits, data/source/PLAN edits or service operations.

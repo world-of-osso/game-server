@@ -63,7 +63,29 @@ Sibling fixture `game-engine/godot/tests/world_zaralda_merchant_flow.gd` at **79
 | `native-retry` | Authenticated, world attached two units and actual player coordinates; still Loading at 240 seconds, 22,199 objects queued / 4,643 spawned | None |
 | `native-texture-fixed` | Same pre-authentication 5-second timeout after real local-CASC texture 6243047 extraction | None |
 
-Artifacts: [`game-engine/data/diagnostics/zaralda-20261001/`](../../../../game-engine/data/diagnostics/zaralda-20261001/). Texture extraction is not proof of an auth/Loading fix. LiquidObject42 and wrapper/protocol warnings remain limits, not established causes of this merchant data issue. Native window/title, item tooltip and ray-pick remain **unproven**; general native root cause remains unresolved. No fourth blind probe, runtime code fix or Depot build was performed; successful authentication on attempt two does not establish a stale protocol. Overall goal remains open.
+Artifacts: [`game-engine/data/diagnostics/zaralda-20261001/`](../../../../game-engine/data/diagnostics/zaralda-20261001/). Texture extraction is not proof of an auth/Loading fix. These three attempts are historical, not the current diagnosis. These are historical RED attempts; the later observed native success below supersedes their unreached interaction boundary, not their logs.
+
+### Paired protocol and renderer follow-up (verified task date 2026-10-01)
+
+Main's paired Depot snapshot **jc35z10fr8** and current server build use shared protocol **7ba6223**. Earlier concrete protocol mismatch is superseded by matched authentication and InWorld observation; this does not certify merchant interaction. The genuine-appearance run still failed native pick after model-root attachment failure. [Engine model/gear investigation](../../../../game-engine/docs/wiki/investigations/npc-stance-gear.md#zaralda-rigid-waist-binding-verified-task-date-2026-10-01) owns actual bone data, additive appearance preservation/geoset caveat, binding fix **016b0fce/207aea4e**, and bounded Depot CPU **27/27** evidence. Do not duplicate that renderer/data chain here.
+
+Later supplied native evidence reached a Buy cursor on actual Zaralda, then dispatched AutoAttack with raw faction 0: health **10080 → 7767**, followed by merchant despawn after attack. Vendor bit 128 alone was insufficient. Renderer and fixture follow-up now lives in the linked engine investigation; this observation does not prove a merchant window.
+
+### Approved derived friendly reaction (evidence date 2026-10-01)
+
+User approved mapping only Zaralda's published Wowhead React `[1,1]` (A/H q2 green) to existing **FactionTemplate 35**. This is derived friendly-both policy, **not captured Retail FactionID**. [Retail content spec](../../specs/retail-world-content.md) owns exact reaction/template semantics and strict historical-comment upgrade requirements; [derived manifest](../../../scripts/derived-merchants.json) owns the evidence and approved mapping. No general NPC fallback or Enemy UI bypass is authorized.
+
+Main commits **d4708c9** and rebuild test **6aa2e27** apply this bounded policy while preserving raw TDB faction 0, model and vendor fields. Supplied targeted SQL evidence is **20 PASS** plus **two full rebuilds GREEN**; these are main's receipts, not tests run by this docs update. Local canonical publication changes only Zaralda's content faction **0 → 35** and approved provenance comment. Retained [publication report](../../../data/reference/midnight-20261001/derived-friendly-publication.json) and [backup](../../../data/reference/midnight-20261001/world-before-derived-friendly.db) own the publication delta.
+
+Independent source/import gate114 now records scoped proof in `/tmp/zaralda-friendly-verify-20261001/report.md`: 30/30 process tests and changed-file Ruff PASS; all 231 tables, schemas and 10,224,187 rows compared, unchanged counts and only two changed cells (content faction and provenance comment). Raw faction 0 remains intact. Its saved browser log lacks DOM/CSS q2 evidence; main separately rechecked actual browser DOM q2 in supplied `/tmp/pi-tool` browser observations. These are distinct evidence scopes; no new capture timestamp is inferred.
+
+### Observed native success (task evidence 2026-10-01)
+
+[`native-friendly`](../../../../game-engine/data/diagnostics/zaralda-20261001/native-friendly/) records fixture **d2084de7**, exit **0**, **529.10 seconds** on owned private server **5197**. `zaralda-evidence.json` records authenticated **InWorld**, actual Zaralda **UnitPick 4294916904**, **Buy** cursor, real **Zaralda** MerchantFrame title, authored **Smuggler's Leather Wristbands / ItemID 244586 / In Stock 1** tooltip and visible backpack. `01-zaralda-merchant.png` and `02-zaralda-closed.png`, with the exit-0 flow, retain merchant/open and close evidence. This resolves the formerly blocked native interaction boundary as **observed scoped proof**; independent artifact gate116 gives scoped PASS for the saved native flow and current AH receipts. No whole-world, every-recipe, clean-warning or encrypted-geoset completeness PASS. Source/import gate114 and renderer checks are independent of this visual observation.
+
+### Current owned-server AH receipts
+
+[`current-ah-0.json`](../../../data/diagnostics/zaralda-20261001/current-ah-0.json), [`current-ah-1.json`](../../../data/diagnostics/zaralda-20261001/current-ah-1.json), and [`current-ah-2.json`](../../../data/diagnostics/zaralda-20261001/current-ah-2.json) record **40.177 / 100.820 / 50.617 ms**, each below **200 ms**. Grouped total **28**, page size **1**, page0 **8150** versus page1 **4338** proves distinct populated pages; flat ItemID **238511** total **6**. These are current private-server receipts, distinct from pinned old-binary 300k / 60–90 ms proof. Main reports `git diff eb649f8 HEAD` empty for queries/browse/operations; unchanged source does not repin the old runtime measurement. No production/default server restart; only owned 5197 was used.
 
 ## Remaining gates and limits
 
@@ -72,9 +94,11 @@ Artifacts: [`game-engine/data/diagnostics/zaralda-20261001/`](../../../../game-e
 - Approved derived placement and two supplier rows are locally published; merchant identity, unlimited stock and lack of exact Retail capture are no longer blockers. Diagnostic Lara reassignment still cannot substitute for Zaralda.
 - Latest source **e9d281f**: independent fixture/reimport closure **30/30**, zero warnings, and changed-file Ruff PASS in `/tmp/zaralda-closure-verify-20261001/report.md`. Prior unchanged-scope publisher **15/15**, terrain **11/11** and other-file Ruff remain valid in `/tmp/zaralda-final-verify-20261001/report.md`; that earlier report's fixture timeout/warnings are superseded only for the closure run. No intermittent host-stall remediation is claimed.
 - Retained data proof: **225 tables**, identical prior schema and **10,081,961 prior rows preserved**, exactly **five authorized additions**. Persistent rebuilds retain authentic native TDB template/model and difficulty identity; two-full-rebuild fixture proof passes. Source-only thread/floss supplier boundary remains unchanged.
-- Gate103's scoped artifact PASS and private CLI purchase/restart/combined-config receipts do not close native acceptance. Do not mark the full goal complete.
+- Gate103 catalog/CLI/restart proof remains separate from the observed native success. Independent native artifact gate116 gives scoped PASS; no whole-world or full-Retail coverage claim.
 - Spark placeholders, quality-only outputs and native bonus/quality behavior remain unsupported; published HTML is not a native crafting capture.
 - Nine missing ItemSparse rows remain reported, not fabricated or silently replaced.
+
+Independent final report: `/tmp/zaralda-native-final-verify-20261001/report.md` and `proofcoverage.md`. It accepts actual native pick/open/item tooltip/backpack/close plus current 40.177/100.820/50.617 ms AH receipts, with enough results to prove distinct pages. Owned loopback5197 and all owned agent slices were stopped; other user services remain untouched.
 
 ## Sources
 
