@@ -357,8 +357,13 @@ fn handled_effects(spell: &SpellInfo) -> impl Iterator<Item = &crate::spell_info
         .filter(|effect| selects_targets(spell, effect))
 }
 
+/// A `SPELL_EFFECT_DUMMY` effect does nothing itself but selects its targets, which the
+/// spell then hits (`CreatureAI::SpellHit`); one at an unmodelled implicit target selects
+/// nothing instead of failing the cast.
 fn selects_targets(spell: &SpellInfo, effect: &crate::spell_info::SpellEffect) -> bool {
-    effects::is_handled(effect) || scripts::on_effect_hit(spell.id, effect.index).is_some()
+    effects::is_handled(effect)
+        || scripts::on_effect_hit(spell.id, effect.index).is_some()
+        || (effect.effect == effects::EFFECT_DUMMY && targets::unsupported_target(effect).is_none())
 }
 
 fn max_targets(spell: &SpellInfo) -> u32 {
@@ -1230,6 +1235,9 @@ fn resolve_effects(
         );
     }
     run_hit_scripts(world, caster, spell, plan, depth);
+    for unit in hit_units(plan) {
+        crate::scripted_ai::spell_hit(world, unit, caster, spell.id);
+    }
     let damage = world
         .get_resource_mut::<ResolvingHits>()
         .and_then(|mut resolving| resolving.0.pop())

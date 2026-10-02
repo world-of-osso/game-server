@@ -534,6 +534,7 @@ fn charge_auras_add_a_charge_and_shorten_recovery() {
         return;
     };
     h.advance(1);
+    crate::spell_cast::test_harness::charge_range(&mut h);
     h.cast_and_deliver(CHARGE, Some(h.npc));
     h.advance(2);
     let charges = std::mem::take(&mut h.inbox.charges);

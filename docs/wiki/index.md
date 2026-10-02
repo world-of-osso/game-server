@@ -74,7 +74,7 @@ Server gameplay systems.
 
 Debug logs and root cause analyses.
 
-- [[midnight-economy-content]] — effect-288/Skillup2915 correction, additive Zaralda publication and preserved Classic+Midnight default; scoped catalog/CLI/restart artifact PASS, native acceptance blocked 0/3.
+- [[midnight-economy-content]] — effect-288/Skillup2915 correction, additive Zaralda publication and preserved Classic+Midnight default; scoped catalog/CLI/restart artifact PASS; historical 0/3 superseded by native torso pick then faction-0 AutoAttack; approved Zaralda-only derived template 35 published, source/import gate114 scoped PASS; native-friendly exit0 observed, independent artifact gate116 scoped PASS.
 
 | Page | Summary |
 |------|---------|
@@ -82,3 +82,5 @@ Debug logs and root cause analyses.
 | [[recurring-loop-elimination]] | Tests-first reductions and eliminations across auction, terrain, friends, auto-AFK, interest, Lightyear, Who roster, gold, durability, calendar, trade-offer, inactive auto-attack, rest-state, and player-death scans; broad death/auto-AFK scans are eliminated while wider scheduler/dirty-boundary requirements remain partial |
 | [[server-tick-lag]] | :5000 simulation at 55–70% speed: frame/system instrumentation, dormant-creature scans, per-character save syncs, SipHash interest maps; debug/release/opt-level measurements with 1–3 clients |
 | [[tick-loop-audit]] | Exhaustive recurring-schedule audit: 103 registrations / 130 expanded systems; seven narrow removal slices plus player-death and broad auto-AFK scan reductions complete, while preserved Lightyear, interest, friends, and terrain requirements remain partial alongside persistence/order risks and receiver-fan-out measurement |
+
+- [Zaralda observed native success](investigations/midnight-economy-content.md#observed-native-success-task-evidence-2026-10-01) — saved exit0 interaction; source/import and renderer gates distinct; independent artifact gate116 scoped PASS, no whole-world PASS.

@@ -70,10 +70,11 @@ Additional behavioral source and saved proof (no suites rerun for this docs-only
 - `crates/server/src/auction_house_tests.rs` and `auction_house_tests/actor_parity.rs` — real gatherer/player creation, buyout, expiry, claims and redb reopen across all three durations. `2ec5fb3`: two actor-parity tests pass; deposits 60/120/240, fee 50 on a 1000-copper sale, unsold item/deposit returned once.
 - Saved JSON receipts under `/home/osso/.cache/economy-cli-20260930/a54a0ad0` — exact [merchant](../wiki/systems/bot-economy.md) and [auction](../wiki/systems/auction-house.md) ledgers; checked bullets above cover only these bounded observations. Independent final delta PASS is recorded in `/tmp/economy-delta-verify-20261001/report.md`; native audit scope and retained content errors are linked there.
 
+- [x] Former merchant source-data gap resolved locally: genuine Zaralda with approved approximate ground placement, authentic native identity and explicitly derived merchant role; no diagnostic NPC substitution. Combined default preserves Classic data and adds Midnight content; scoped catalog/CLI/restart artifact gate103 PASS. [Evidence and exact limits](../wiki/investigations/midnight-economy-content.md).
+- [x] Native Zaralda observed flow: actual pick/Buy cursor, title, authored244586 stock1 tooltip, backpack and close; [saved proof](../wiki/investigations/midnight-economy-content.md#observed-native-success-task-evidence-2026-10-01). Not blanket world/recipe acceptance.
+
 ## Known gaps (current cycle)
 
-- [x] Former merchant source-data gap resolved locally: genuine Zaralda with approved approximate ground placement, authentic native identity and explicitly derived merchant role; no diagnostic NPC substitution. Combined default preserves Classic data and adds Midnight content; scoped catalog/CLI/restart artifact gate103 PASS. [Evidence and exact limits](../wiki/investigations/midnight-economy-content.md).
-- [ ] Native Zaralda acceptance remains blocked (0/3 attempts). Prove actual window/title, ray-pick, authored item tooltip and close flow after world readiness; private CLI proof does not close this gate. [Native blocker](../wiki/investigations/midnight-economy-content.md#native-acceptance-blocker). Overall goal remains open.
 - [ ] Support currently unresolved Spark requirements, quality-only outputs and native bonus/quality cases before claiming full Retail crafting coverage. Published reagent pages are not native C_TradeSkillUI captures.
 - [ ] Existing over-cap wallets are not reduced when an operator lowers the cap. Normal credits are capped.
 

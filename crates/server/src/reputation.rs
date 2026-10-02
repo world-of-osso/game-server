@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use lightyear::prelude::*;
-use shared::components::{Level, Npc};
+use shared::components::{Level, Npc, Position};
 use shared::protocol::{
     ReputationChannel, ReputationEntrySnapshot, ReputationSnapshot, ReputationStateUpdate,
 };
@@ -10,9 +10,11 @@ use shared::reputation::{
 };
 
 use crate::auth::{Authenticated, InWorld};
-use crate::combat::{DeathState, LastDamager};
+use crate::combat::DeathState;
+use crate::creature_tap::{CreatureTap, RewardPlayers, rewarded_characters};
+use crate::group::GroupRegistry;
 use crate::networking::PlayerLink;
-use crate::persistence::{self, GameDatabase};
+use crate::persistence::{self, ClientId, GameDatabase};
 use crate::world_data::WorldData;
 
 const BASE_MOB_KILL_REP: i32 = 10;
@@ -59,9 +61,13 @@ fn send_initial_reputation_snapshot(
     }
 }
 
+/// `KillRewarder::_RewardReputation` for every rewarded player of a dead creature
+/// (`creature_tap`).
 fn process_npc_kill_reputation(
-    killed_npcs: Query<(&Npc, &LastDamager), Added<DeathState>>,
-    mut players: Query<(&Level, &mut CharacterReputation)>,
+    killed_npcs: Query<(&Npc, &CreatureTap, &Position, &crate::maps::InMap), Added<DeathState>>,
+    reward_players: RewardPlayers,
+    groups: Option<Res<GroupRegistry>>,
+    mut players: Query<(Entity, &ClientId, &Level, &mut CharacterReputation)>,
     connections: Query<(Entity, &PlayerLink, &InWorld), With<Authenticated>>,
     world_data: Res<WorldData>,
     registry: Res<ReputationRegistry>,
@@ -69,21 +75,32 @@ fn process_npc_kill_reputation(
     mut senders: Query<&mut MessageSender<ReputationStateUpdate>>,
 ) {
     let Some(db) = db else { return };
-    for (npc, last_damager) in &killed_npcs {
-        let Ok((level, mut reputation)) = players.get_mut(last_damager.0) else {
+    let rewarded = killed_npcs.iter().flat_map(|(npc, tap, position, map)| {
+        rewarded_characters(
+            &tap.tappers,
+            (map, position),
+            &reward_players,
+            groups.as_deref(),
+        )
+        .into_iter()
+        .map(|character| (npc.template_id, character))
+    });
+    for (template_id, character) in rewarded.collect::<Vec<_>>() {
+        let Some((player, _, level, mut reputation)) =
+            players.iter_mut().find(|(_, id, ..)| id.0 == character)
+        else {
             continue;
         };
         let Some(snapshot_message) = apply_npc_kill_reputation(
             &mut reputation,
             level.0,
-            npc.template_id,
+            template_id,
             &world_data,
             &registry.0,
         ) else {
             continue;
         };
-        let Some((conn_entity, character_id)) = connection_for_player(&connections, last_damager.0)
-        else {
+        let Some((conn_entity, character_id)) = connection_for_player(&connections, player) else {
             continue;
         };
         persistence::save_reputation(&db.db, character_id, &reputation);

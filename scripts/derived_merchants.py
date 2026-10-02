@@ -27,8 +27,18 @@ MERCHANT_FIELDS = {
     "orientation",
     "source_url",
     "placement_kind",
+    "source_reaction",
+    "derived_faction_template",
+    "faction_policy",
     "vendors",
 }
+FACTION_POLICY_FIELDS = {
+    "source_reaction",
+    "derived_faction_template",
+    "faction_policy",
+}
+FACTION_POLICY = "derived friendly-both mapping from Wowhead React A/H q2 green; not a Retail faction capture"
+SPAWN_PROVENANCE_PREFIX = "derived placement; local policies: orientation=0, stationary, schema-default respawn; "
 VENDOR_FIELDS = {
     "slot",
     "item",
@@ -127,6 +137,7 @@ def validate_merchant(record):
         or not urlsplit(source).netloc
     ):
         raise ValueError("source_url: missing HTTP(S) provenance")
+    validate_faction_policy(record)
     vendors = record["vendors"]
     if not isinstance(vendors, list) or not vendors:
         raise ValueError("vendors: explicit nonempty vendor evidence required")
@@ -137,6 +148,47 @@ def validate_merchant(record):
             raise ValueError("vendors: duplicate slot or item")
         slots.add(vendor["slot"])
         items.add(vendor["item"])
+
+
+def validate_faction_policy(record):
+    if record["source_reaction"] != [1, 1] or any(
+        type(value) is not int for value in record["source_reaction"]
+    ):
+        raise ValueError(
+            "source_reaction: only explicitly approved Wowhead [1,1] is supported"
+        )
+    if (
+        type(record["derived_faction_template"]) is not int
+        or record["derived_faction_template"] != 35
+    ):
+        raise ValueError(
+            "derived_faction_template: only approved mapping 35 is supported"
+        )
+    if record["faction_policy"] != FACTION_POLICY:
+        raise ValueError(
+            "faction_policy: must label approved runtime mapping as derived"
+        )
+    if record["entry"] != 243531 or record["name"] != "Zaralda":
+        raise ValueError("entry/name: faction mapping approved only for Zaralda 243531")
+    if record["source_url"] != "https://www.wowhead.com/npc=243531/zaralda":
+        raise ValueError("source_url: faction mapping requires approved Zaralda source")
+
+
+def validate_faction_template(conn):
+    # Verify the existing DB2 row, never synthesize an unknown-faction fallback.
+    columns = (
+        ("Faction", "Flags", "FactionGroup", "FriendGroup", "EnemyGroup")
+        + tuple(f"Enemies_{index}" for index in range(8))
+        + tuple(f"Friend_{index}" for index in range(8))
+    )
+    row = conn.execute(
+        f"SELECT {', '.join(columns)} FROM faction_template WHERE ID = 35"
+    ).fetchone()
+    expected = (31, 0, 0, 1, 0) + (0,) * 8 + (31,) + (0,) * 7
+    if row is None or tuple(row) != expected:
+        raise ValueError(
+            "faction_template 35: missing or mismatched friendly-player-group/no-enemy mapping"
+        )
 
 
 def validate_manifest(merchants):
@@ -169,9 +221,8 @@ def load_manifest(path):
 
 
 def spawn_values(record):
-    provenance = (
-        "derived placement; local policies: orientation=0, stationary, schema-default respawn; "
-        + json.dumps(record, sort_keys=True, separators=(",", ":"), allow_nan=False)
+    provenance = SPAWN_PROVENANCE_PREFIX + json.dumps(
+        record, sort_keys=True, separators=(",", ":"), allow_nan=False
     )
     return (
         record["guid"],
@@ -198,10 +249,30 @@ def validate_spawn(conn, record):
         f"SELECT {', '.join(SPAWN_COLUMNS)} FROM content_creature WHERE guid = ?",
         (guid,),
     ).fetchone()
-    if existing is not None and tuple(existing) != spawn_values(record):
-        raise ValueError(
-            f"guid {guid}: collision with unrelated or changed content spawn"
+    if existing is None or tuple(existing) == spawn_values(record):
+        return
+    if tuple(existing)[:-1] == spawn_values(record)[:-1] and matches_prior_provenance(
+        existing[-1], record
+    ):
+        return
+    raise ValueError(f"guid {guid}: collision with unrelated or changed content spawn")
+
+
+def matches_prior_provenance(comment, record):
+    if not isinstance(comment, str) or not comment.startswith(SPAWN_PROVENANCE_PREFIX):
+        return False
+    try:
+        prior = json.loads(
+            comment[len(SPAWN_PROVENANCE_PREFIX) :], parse_constant=reject_json_constant
         )
+    except (TypeError, ValueError):
+        return False
+    # Only the old approved record lacking these new fields may be upgraded.
+    # Placement, identity, vendors and all prior provenance must remain exact.
+    approved_prior = {
+        key: value for key, value in record.items() if key not in FACTION_POLICY_FIELDS
+    }
+    return prior == approved_prior
 
 
 def validate_identity(conn, record):
@@ -294,8 +365,13 @@ def insert_merchant(conn, record, models):
     # entry has already been validated as an integer; this helper accepts a SQL query.
     retail_content.insert_tdb_templates(conn, str(entry))
     conn.execute(
-        "UPDATE content_creature_template SET npcflag = npcflag | 128, minlevel = ?, maxlevel = ? WHERE entry = ?",
-        (record["minlevel"], record["maxlevel"], entry),
+        "UPDATE content_creature_template SET npcflag = npcflag | 128, minlevel = ?, maxlevel = ?, faction = ? WHERE entry = ?",
+        (
+            record["minlevel"],
+            record["maxlevel"],
+            record["derived_faction_template"],
+            entry,
+        ),
     )
     for model in models:
         if not conn.execute(
@@ -312,6 +388,11 @@ def insert_merchant(conn, record, models):
         conn.execute(
             f"INSERT INTO content_creature ({', '.join(SPAWN_COLUMNS)}) VALUES ({', '.join('?' for _ in SPAWN_COLUMNS)})",
             spawn_values(record),
+        )
+    else:
+        conn.execute(
+            "UPDATE content_creature SET Comment = ? WHERE guid = ? AND Comment != ?",
+            (spawn_values(record)[-1], record["guid"], spawn_values(record)[-1]),
         )
     for vendor in record["vendors"]:
         if not conn.execute(
@@ -336,6 +417,7 @@ def apply_derived_merchants(conn, merchants):
     validate_manifest(records)
     source_models = []
     for record in records:
+        validate_faction_template(conn)
         models = validate_identity(conn, record)
         validate_vendor_sources(conn, record)
         validate_spawn(conn, record)

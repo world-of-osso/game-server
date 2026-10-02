@@ -3,9 +3,9 @@
 //!
 //! Requests (`quest_requests`) load the character's `QuestLogData` and
 //! `InventoryData` from redb, apply, save, and mark the character in
-//! `QuestDirty`. Kill credit comes from NPC deaths (`Added<DeathState>` +
-//! `LastDamager`, as reputation does) for the killer and group members within
-//! reward distance. Item objectives read bag counts, so any inventory change
+//! `QuestDirty`. Kill credit comes from NPC deaths (`Added<DeathState>`) for the
+//! creature's rewarded players (`creature_tap`: its tappers and their groups within
+//! reward distance). Item objectives read bag counts, so any inventory change
 //! recorded in `GoldUpdateQueue` marks the owner dirty; level changes do too.
 //! In `PostUpdate` each dirty character's log is diffed against the last view
 //! sent (`QuestLogUpdate`) and the markers of every NPC its connection queried
@@ -16,28 +16,29 @@ use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 use lightyear::prelude::*;
 use redb::Database;
-use shared::components::{Level, Npc, Player, Position};
+use shared::components::{Level, MovementControl, Npc, Player, Position};
+use shared::death::DeathState as PlayerLifeState;
 use shared::protocol::{
     QuestChannel, QuestGiverStatusEntry, QuestGiverStatusMultiple, QuestLogSnapshot, QuestLogUpdate,
 };
 
 use crate::auth::{Authenticated, InWorld};
-use crate::combat::{DeathState, LastDamager};
+use crate::combat::DeathState;
+use crate::creature_tap::{CreatureTap, RewardPlayers, distance, rewarded_characters};
+use crate::death::PlayerDeathState;
 use crate::gold::GoldUpdateQueue;
 use crate::group::GroupRegistry;
 use crate::networking::PlayerLink;
 use crate::persistence::quest_store::{QuestLogData, load_quest_log, save_quest_log};
 use crate::persistence::{self, ClientId, GameDatabase, InventoryData};
 use crate::quest_data::QuestDb;
-use crate::quest_rules::{QuestPlayer, credit_kill, giver_status};
+use crate::quest_rules::{
+    QuestPlayer, credit_area_trigger, credit_kill, credit_killed_creature, giver_status,
+};
 use crate::quest_view::{QuestLogView, bag_count, diff_log, log_entries, log_snapshot, view_of};
 
 #[path = "quest_requests.rs"]
 mod quest_requests;
-
-/// Group members this close to the killed creature share kill credit
-/// (TrinityCore `CONFIG_GROUP_XP_DISTANCE` default).
-const GROUP_REWARD_DISTANCE: f32 = 74.0;
 
 /// Characters whose quest log or quest markers must be re-sent.
 #[derive(Resource, Default)]
@@ -85,6 +86,7 @@ impl Plugin for QuestPlugin {
             PostUpdate,
             (
                 credit_quest_kills,
+                credit_quest_area_triggers,
                 mark_quest_inputs_changed,
                 send_quest_updates,
             )
@@ -147,49 +149,13 @@ fn send_initial_quest_log(
     }
 }
 
-pub(crate) type PlayerPositions<'w, 's> = Query<
-    'w,
-    's,
-    (
-        &'static ClientId,
-        &'static Position,
-        &'static crate::maps::InMap,
-    ),
-    With<Player>,
->;
-
-fn distance(a: &Position, b: &Position) -> f32 {
-    ((a.x - b.x).powi(2) + (a.y - b.y).powi(2) + (a.z - b.z).powi(2)).sqrt()
-}
-
-/// The killer plus its group members within reward distance of the creature, in its
-/// map copy (`Player::IsAtGroupRewardDistance`).
-pub(crate) fn credited_characters(
-    killer: u64,
-    (creature_map, creature): (&crate::maps::InMap, &Position),
-    players: &PlayerPositions,
-    groups: Option<&GroupRegistry>,
-) -> Vec<u64> {
-    let members = groups.map_or_else(Vec::new, |groups| groups.group_members(killer));
-    if members.is_empty() {
-        return vec![killer];
-    }
-    members
-        .into_iter()
-        .filter(|&member| {
-            member == killer
-                || players.iter().any(|(id, position, map)| {
-                    id.0 == member
-                        && map == creature_map
-                        && distance(position, creature) <= GROUP_REWARD_DISTANCE
-                })
-        })
-        .collect()
-}
-
+/// `KillRewarder::_RewardKillCredit` (KillRewarder.cpp:177-188) for every rewarded
+/// player of a dead creature (`creature_tap`): a grouped player needs to be alive or
+/// without a corpse.
 fn credit_quest_kills(
-    killed: Query<(&Npc, &LastDamager, &Position, &crate::maps::InMap), Added<DeathState>>,
-    players: PlayerPositions,
+    killed: Query<(&Npc, &CreatureTap, &Position, &crate::maps::InMap), Added<DeathState>>,
+    players: RewardPlayers,
+    lives: Query<(&ClientId, Option<&PlayerDeathState>), With<Player>>,
     groups: Option<Res<GroupRegistry>>,
     store: QuestStore,
     mut dirty: ResMut<QuestDirty>,
@@ -197,18 +163,130 @@ fn credit_quest_kills(
     let Some((db, quests)) = store.get() else {
         return;
     };
-    for (npc, killer, position, map) in &killed {
-        let Ok((killer_id, ..)) = players.get(killer.0) else {
-            continue;
-        };
+    let gets_credit = |character: u64| {
+        let grouped = groups
+            .as_deref()
+            .is_some_and(|groups| !groups.group_members(character).is_empty());
+        !grouped
+            || lives.iter().any(|(id, death)| {
+                id.0 == character && death.is_none_or(|death| death.state == PlayerLifeState::Alive)
+            })
+    };
+    for (npc, tap, position, map) in &killed {
         for character_id in
-            credited_characters(killer_id.0, (map, position), &players, groups.as_deref())
+            rewarded_characters(&tap.tappers, (map, position), &players, groups.as_deref())
+                .into_iter()
+                .filter(|&character| gets_credit(character))
         {
             let mut log = load_quest_log(db, character_id);
-            if credit_kill(quests, &mut log, npc.template_id) {
+            if credit_killed_creature(quests, &mut log, npc.template_id) {
                 save_quest_log(db, character_id, &log);
                 dirty.0.insert(character_id);
             }
+        }
+    }
+}
+
+/// `Player::KilledMonsterCredit(entry)` outside a kill (scripts): one kill of `entry` for
+/// `player`'s quests that count it.
+pub(crate) fn killed_monster_credit(world: &mut World, player: Entity, entry: u32) {
+    let Some(character_id) = world.get::<ClientId>(player).map(|id| id.0) else {
+        return;
+    };
+    let (Some(db), Some(quests)) = (
+        world.get_resource::<GameDatabase>(),
+        world.get_resource::<QuestDb>(),
+    ) else {
+        return;
+    };
+    let mut log = load_quest_log(&db.db, character_id);
+    if !credit_kill(quests, &mut log, entry) {
+        return;
+    }
+    save_quest_log(&db.db, character_id, &log);
+    world.resource_mut::<QuestDirty>().0.insert(character_id);
+}
+
+/// The quest area triggers the player stands in on its current map.
+#[derive(Component, Debug, Clone, PartialEq, Eq)]
+pub(crate) struct QuestTriggerPresence {
+    map: crate::maps::InMap,
+    inside: Vec<u32>,
+}
+
+type TriggerPlayers<'w, 's> = Query<
+    'w,
+    's,
+    (
+        Entity,
+        &'static ClientId,
+        &'static Position,
+        &'static crate::maps::InMap,
+        Option<&'static MovementControl>,
+        Option<&'static PlayerDeathState>,
+        Option<&'static QuestTriggerPresence>,
+    ),
+    (With<Player>, Changed<Position>),
+>;
+
+/// Quest triggers containing a WoW-space point on `map_id`.
+fn quest_triggers_at(quests: &QuestDb, map_id: u32, point: Vec3) -> Vec<u32> {
+    quests
+        .area_triggers
+        .get(&map_id)
+        .into_iter()
+        .flatten()
+        .filter(|trigger| trigger.shape.contains(trigger.center, point))
+        .map(|trigger| trigger.id)
+        .collect()
+}
+
+/// `WorldSession::HandleAreaTriggerOpcode` (MiscHandler.cpp:479-564) for the quest
+/// triggers: the Retail client reports entering a trigger, here the server sees the
+/// position cross into one (as `maps::area_triggers` does for teleports). A first
+/// position on a map only records the triggers it stands in. A player in flight
+/// triggers nothing; only a living one explores (`IsAlive() && packet.Entered`).
+fn credit_quest_area_triggers(
+    mut commands: Commands,
+    players: TriggerPlayers,
+    store: QuestStore,
+    mut dirty: ResMut<QuestDirty>,
+) {
+    let Some((db, quests)) = store.get() else {
+        return;
+    };
+    for (player, character, position, &map, control, death, presence) in &players {
+        let (x, y, z) = crate::terrain_height::bevy_to_wow(position.x, position.y, position.z);
+        let inside = quest_triggers_at(quests, map.map_id, Vec3::new(x, y, z));
+        let entered: Vec<u32> = match presence {
+            Some(presence) if presence.map == map => inside
+                .iter()
+                .copied()
+                .filter(|trigger| !presence.inside.contains(trigger))
+                .collect(),
+            _ => Vec::new(),
+        };
+        if presence.is_none_or(|presence| presence.map != map || presence.inside != inside) {
+            commands
+                .entity(player)
+                .insert(QuestTriggerPresence { map, inside });
+        }
+        let in_flight = control.is_some_and(|control| control.controlled);
+        let alive = death.is_none_or(|death| death.state == PlayerLifeState::Alive);
+        if entered.is_empty() || in_flight || !alive {
+            continue;
+        }
+        let mut log = load_quest_log(db, character.0);
+        let mut changed = false;
+        for trigger in quests.area_triggers[&map.map_id]
+            .iter()
+            .filter(|trigger| entered.contains(&trigger.id))
+        {
+            changed |= credit_area_trigger(quests, &mut log, &trigger.quests);
+        }
+        if changed {
+            save_quest_log(db, character.0, &log);
+            dirty.0.insert(character.0);
         }
     }
 }

@@ -209,7 +209,7 @@ pub struct DungeonEncounter {
     pub bit: u32,
 }
 
-/// `AreaTrigger.db2` ShapeType of the teleport triggers (sphere and box only).
+/// `AreaTrigger.db2` ShapeType of the teleport and quest triggers (sphere and box only).
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum AreaTriggerShape {
     Sphere {
@@ -239,15 +239,32 @@ pub struct AreaTriggerTeleport {
     pub target: WorldLocation,
 }
 
-impl AreaTriggerTeleport {
-    /// TrinityCore `Player::IsInAreaTrigger` shape test at `point` (WoW coordinates):
-    /// `IsInDist` for a sphere, `Position::IsWithinBox` for a box.
-    pub fn contains(&self, point: Vec3) -> bool {
-        match self.shape {
-            AreaTriggerShape::Sphere { radius } => {
-                point.distance_squared(self.center) < radius * radius
-            }
-            AreaTriggerShape::Box {
+impl AreaTriggerShape {
+    /// `ShapeType` 0 (sphere) or 1 (box) from the `AreaTrigger.db2` columns `Radius` and
+    /// `Box_length/width/height/yaw`; other shapes are not modelled.
+    pub(crate) fn from_db2(
+        shape_type: u32,
+        radius: f32,
+        [length, width, height, yaw]: [f32; 4],
+    ) -> Option<Self> {
+        match shape_type {
+            0 => Some(Self::Sphere { radius }),
+            1 => Some(Self::Box {
+                half_length: length / 2.0,
+                half_width: width / 2.0,
+                half_height: height / 2.0,
+                yaw,
+            }),
+            _ => None,
+        }
+    }
+
+    /// TrinityCore `Player::IsInAreaTrigger` shape test of a trigger at `center` at
+    /// `point` (WoW coordinates): `IsInDist` for a sphere, `Position::IsWithinBox` for a box.
+    pub fn contains(&self, center: Vec3, point: Vec3) -> bool {
+        match *self {
+            Self::Sphere { radius } => point.distance_squared(center) < radius * radius,
+            Self::Box {
                 half_length,
                 half_width,
                 half_height,
@@ -255,15 +272,21 @@ impl AreaTriggerTeleport {
             } => {
                 let rotation = std::f64::consts::TAU - f64::from(yaw);
                 let (sin, cos) = rotation.sin_cos();
-                let dx = f64::from(point.x - self.center.x);
-                let dy = f64::from(point.y - self.center.y);
+                let dx = f64::from(point.x - center.x);
+                let dy = f64::from(point.y - center.y);
                 let rot_x = (dx * cos - dy * sin) as f32;
                 let rot_y = (dy * cos + dx * sin) as f32;
                 rot_x.abs() <= half_length
                     && rot_y.abs() <= half_width
-                    && (point.z - self.center.z).abs() <= half_height
+                    && (point.z - center.z).abs() <= half_height
             }
         }
+    }
+}
+
+impl AreaTriggerTeleport {
+    pub fn contains(&self, point: Vec3) -> bool {
+        self.shape.contains(self.center, point)
     }
 }
 
@@ -644,16 +667,11 @@ fn load_area_triggers(
     let rows = statement.query_map([], |row| {
         let float =
             |index: usize| -> rusqlite::Result<f32> { Ok(row.get::<_, f64>(index)? as f32) };
-        let shape = match row.get::<_, u32>(5)? {
-            0 => Some(AreaTriggerShape::Sphere { radius: float(6)? }),
-            1 => Some(AreaTriggerShape::Box {
-                half_length: float(7)? / 2.0,
-                half_width: float(8)? / 2.0,
-                half_height: float(9)? / 2.0,
-                yaw: float(10)?,
-            }),
-            _ => None,
-        };
+        let shape = AreaTriggerShape::from_db2(
+            row.get(5)?,
+            float(6)?,
+            [float(7)?, float(8)?, float(9)?, float(10)?],
+        );
         Ok((
             row.get::<_, u32>(0)?,
             row.get::<_, u32>(1)?,

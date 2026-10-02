@@ -1,7 +1,7 @@
 //! Creature loot (docs/specs/loot-frame.md): Retail personal loot on corpses.
 //!
-//! When an NPC dies, the killer (`LastDamager`) and its group members within
-//! `GROUP_REWARD_DISTANCE` (`quest::credited_characters`, as for kill credit) each get their own roll of the creature's loot tables
+//! When an NPC dies, each of its tappers (`creature_tap`; open-world personal loot,
+//! Unit.cpp:11383-11397) in its map gets their own roll of the creature's loot tables
 //! (`tables::LootTables::roll_creature`) and coins. Each of them is told the corpse
 //! is lootable. Requests follow AzerothCore `WorldSession::HandleLootOpcode`,
 //! `HandleAutostoreLootItemOpcode` and `HandleLootMoneyOpcode` (Handlers/
@@ -16,7 +16,7 @@
 //! loot, AzerothCore Unit.cpp:14312). `auto` takes every slot at once.
 //!
 //! Out of scope: group loot methods (round robin, need/greed rolls, master loot),
-//! coin splitting, tapping by first damage, chest and item loot.
+//! coin splitting, dungeon round-robin loot, chest and item loot.
 
 use std::collections::HashMap;
 
@@ -31,9 +31,9 @@ use shared::protocol::{
 };
 
 use crate::auth::InWorld;
-use crate::combat::{Corpse, DeathState, LastDamager, corpse_looted};
+use crate::combat::{Corpse, DeathState, corpse_looted};
+use crate::creature_tap::{CreatureTap, RewardPlayers};
 use crate::gold::{GoldUpdateQueue, MAX_MONEY};
-use crate::group::GroupRegistry;
 use crate::inventory::load_model;
 use crate::item_templates::ItemTemplates;
 use crate::merchant::VendorCatalog;
@@ -42,7 +42,6 @@ use crate::npc_interaction::INTERACTION_DISTANCE;
 use crate::persistence::inventory_store::save_inventory_record;
 use crate::persistence::quest_store::load_quest_log;
 use crate::persistence::{self, GameDatabase, InventoryItemData};
-use crate::quest::{PlayerPositions, credited_characters};
 use crate::quest_data::QuestDb;
 use crate::quest_rules::quest_needs_item;
 
@@ -242,7 +241,6 @@ struct LootRolls<'w> {
     tables: Res<'w, LootTables>,
     store: LootStore<'w>,
     quests: Option<Res<'w, QuestDb>>,
-    groups: Option<Res<'w, GroupRegistry>>,
 }
 
 impl LootRolls<'_> {
@@ -282,8 +280,7 @@ type Killed<'w, 's> = Query<
     (
         Entity,
         &'static Npc,
-        &'static LastDamager,
-        &'static Position,
+        Option<&'static CreatureTap>,
         &'static crate::maps::InMap,
         &'static mut Corpse,
         &'static mut DeathState,
@@ -294,24 +291,21 @@ type Killed<'w, 's> = Query<
 
 fn generate_corpse_loot(
     mut killed: Killed,
-    players: PlayerPositions,
+    players: RewardPlayers,
     connections: Query<(Entity, &InWorld)>,
     rolls: LootRolls,
     mut senders: LootSenders,
     mut commands: Commands,
 ) {
-    for (corpse, npc, killer, position, map, mut decay, mut death, difficulty) in &mut killed {
+    for (corpse, npc, tap, map, mut decay, mut death, difficulty) in &mut killed {
         let difficulty_id = difficulty.map_or(0, |difficulty| difficulty.0);
-        let Ok((killer_id, ..)) = players.get(killer.0) else {
-            continue;
-        };
         let mut loot = CorpseLoot::default();
-        for character_id in credited_characters(
-            killer_id.0,
-            (map, position),
-            &players,
-            rolls.groups.as_deref(),
-        ) {
+        let tappers = tap.map_or(&[][..], |tap| tap.tappers.as_slice());
+        for &character_id in tappers.iter().filter(|&&tapper| {
+            players
+                .iter()
+                .any(|(id, _, at)| id.0 == tapper && at == map)
+        }) {
             let slots = rolls.roll(npc.template_id, difficulty_id, character_id);
             if !slots.is_empty() {
                 loot.looters.insert(character_id, slots);

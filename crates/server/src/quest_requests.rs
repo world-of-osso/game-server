@@ -9,8 +9,8 @@ use shared::protocol::{
     AbandonQuest, QuestChannel, QuestFailed, QuestFailedReason, QuestGiverAcceptQuest,
     QuestGiverChooseReward, QuestGiverCompleteQuest, QuestGiverHello, QuestGiverOfferReward,
     QuestGiverQueryQuest, QuestGiverQuestComplete, QuestGiverQuestDetails, QuestGiverQuestList,
-    QuestGiverRequestItems, QuestGiverStatusMultiple, QuestGiverStatusQuery, QuestObjectiveKind,
-    QuestRewardItem, SetQuestWatched,
+    QuestGiverRequestItems, QuestGiverStatusMultiple, QuestGiverStatusQuery, QuestRewardItem,
+    SetQuestWatched,
 };
 
 use super::{QueriedQuestGivers, QuestDirty, QuestStore, distance, giver_statuses, quest_player};
@@ -25,7 +25,7 @@ use crate::persistence::quest_store::{
     ActiveQuestData, QuestLogData, load_quest_log, save_quest_log,
 };
 use crate::persistence::{self, InventoryData};
-use crate::quest_data::{QuestDb, QuestTemplate};
+use crate::quest_data::{ObjectiveKind, QuestDb, QuestTemplate};
 use crate::quest_rules::{
     QuestPlayer, can_take, ends, giver_quest_list, is_complete_in_log, quest_money, starts,
 };
@@ -532,7 +532,7 @@ impl<'a> QuestSession<'a, '_, '_> {
 /// `RewardQuest` destroys the required items and the provided start item.
 fn take_quest_items(inventory: &mut InventoryData, quest: &QuestTemplate) {
     for objective in &quest.objectives {
-        if objective.kind == QuestObjectiveKind::Item {
+        if objective.kind == ObjectiveKind::Item {
             remove_items(inventory, objective.object_id, objective.required);
         }
     }

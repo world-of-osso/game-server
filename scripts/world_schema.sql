@@ -415,6 +415,14 @@ CREATE TABLE gameobject_questender (
   PRIMARY KEY (id, quest)
 );
 
+-- AreaTrigger.db2 id -> exploration quest (ObjectMgr::LoadAreaTriggerQuestRelations).
+DROP TABLE IF EXISTS areatrigger_involvedrelation;
+CREATE TABLE areatrigger_involvedrelation (
+  id INTEGER NOT NULL DEFAULT 0,
+  quest INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (id, quest)
+);
+
 DROP TABLE IF EXISTS npc_vendor;
 CREATE TABLE npc_vendor (
   entry INTEGER NOT NULL DEFAULT 0,
