@@ -22,6 +22,8 @@ tokio = { version = "1", features = ["rt-multi-thread"] }
 peercred-ipc = { git = "https://github.com/Osso/peercred-ipc.git", tag = "v0.2.0" }
 rusqlite = { version = "0.35", features = ["bundled"] }
 serde_json = "1"
+# Local wall clock for the game time (GameTime::GetWowTime).
+chrono = { version = "0.4", default-features = false, features = ["clock"] }
 
 [features]
 # Diagnostic: log per-system wall time every 10 s (enables Bevy system spans).
