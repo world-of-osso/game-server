@@ -92,6 +92,8 @@ fn create_world_schema(conn: &rusqlite::Connection) {
             poolSpawnId INTEGER NOT NULL, chance REAL NOT NULL, description TEXT,
             PRIMARY KEY (type, spawnId));
         CREATE TABLE content_gameobject (guid INTEGER PRIMARY KEY, map INTEGER);
+        CREATE TABLE tdb_creature_template (entry INTEGER PRIMARY KEY, VignetteID INTEGER);
+        CREATE TABLE vignette (ID INTEGER PRIMARY KEY, Flags INTEGER);
         CREATE TABLE content_game_event_pool (eventEntry INTEGER NOT NULL,
             pool_entry INTEGER NOT NULL PRIMARY KEY);
         CREATE TABLE creature_classlevelstats (
