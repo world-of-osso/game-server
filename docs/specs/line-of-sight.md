@@ -21,9 +21,12 @@ Retail's LOS errors ("can see it, not in line of sight") are the bugs to avoid.
   access. Measure memory per loaded tile and time per ray.
 
 ## Eye point
-- Rays start at the caster's eyes: the model's Head attachment, times unit scale, in the current
-  pose (mounted: the rider's head on the mount; sitting, kneeling and dead have their own heights).
-- The bake writes an eye-height table per display ID and stand state for the server.
+- Rays start at the caster's eyes, from the model's own eye geometry: the centroid of the eye
+  vertices (the eyeglow geoset, group 17), skinned by their bones in the current pose (stand, sit,
+  kneel, sleep, dead), times unit scale. Models with no eye geometry use their head bone's position
+  in the current pose. Mounted units use the rider's eyes on the mount. User decision 2026-10-02:
+  "the character models literally have eyes"; the Head/Helm attachment heights are not used.
+- The bake writes this eye point per display ID and stand state for the server.
 
 ## Player casts: witness ray
 - The client searches for a clear segment from its eye point to any point inside the target's body
@@ -50,7 +53,5 @@ Retail's LOS errors ("can see it, not in line of sight") are the bugs to avoid.
 - Each triangle is stored once, in the tile holding its centroid. A query tests the tiles under the
   segment and one ring around them. A segment touching a surface at either end is not blocked.
 - Global-WMO maps (dungeons) are not baked yet.
-- Open question: the Head attachment (id 20) sits on a static root bone in most models (HD human
-  male: 2.149 yd in every stand state). Only 22 of 17,994 tabled displays change eye height with
-  stand state. The Helm attachment (id 11) follows the head bone (human male: stand 1.85, sit 0.79,
-  sleep 0.14 yd). The table uses Head as decided until the user chooses.
+- Resolved: the Head attachment (id 20) sits on a static root bone in most models, so the eye point
+  comes from the eye geometry instead (see Eye point).
