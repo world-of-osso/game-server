@@ -1021,6 +1021,7 @@ fn insert_npc_death(mut entity: EntityWorldMut) {
     let remaining = entity.get::<CorpseDelay>().map_or(0.0, |delay| delay.0);
     let killer = entity.get::<LastDamager>().map(|damager| damager.0);
     entity.insert((DeathState { respawn_timer }, Corpse { remaining }));
+    crate::vignettes::on_death(&mut entity);
     // A corpse does not run on (the movement systems skip it).
     if let Some(mut motion) = entity.get_mut::<shared::components::CreatureMotion>()
         && motion.set_if_neq(shared::components::CreatureMotion::Still)
@@ -1274,6 +1275,7 @@ pub(crate) fn respawn_system(
             &SpawnPoint,
             &mut Position,
             Option<&mut WaypointState>,
+            Option<&crate::vignettes::CreatureVignette>,
         ),
         Without<crate::zones::TempSummon>,
     >,
@@ -1286,7 +1288,7 @@ pub(crate) fn respawn_system(
     let elapsed = time.elapsed_secs_f64();
     let mut events = Vec::new();
 
-    for (entity, mut death, mut health, spawn, mut pos, waypoint) in &mut query {
+    for (entity, mut death, mut health, spawn, mut pos, waypoint, vignette) in &mut query {
         death.respawn_timer -= dt;
         if death.respawn_timer > 0.0 {
             continue;
@@ -1302,10 +1304,13 @@ pub(crate) fn respawn_system(
         if let Some(mut waypoint) = waypoint {
             waypoint.restart((spawn.x, spawn.z));
         }
-        commands
-            .entity(entity)
+        let mut respawned = commands.entity(entity);
+        respawned
             .remove::<(DeathState, Corpse)>()
             .insert(Replicate::to_clients(NetworkTarget::All));
+        if let Some(&vignette) = vignette {
+            crate::vignettes::show(&mut respawned, vignette);
+        }
         commands.queue(move |world: &mut World| {
             crate::interest::set_hidden(world, entity, false);
         });
