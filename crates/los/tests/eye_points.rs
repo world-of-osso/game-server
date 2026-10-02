@@ -18,6 +18,7 @@ const TIMBER_WOLF: u32 = 31048;
 const INVADER: u32 = 33142;
 const STAND: u8 = 0;
 const SIT: u8 = 1;
+const SIT_CHAIR: u8 = 2;
 
 fn bake(required: &[u32], optional: &[u32]) -> Result<(Vec<EyeRow>, EyeStats), String> {
     let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
@@ -52,6 +53,8 @@ fn human_male_eyes_drop_when_he_sits() {
     let rows = rows(&[HUMAN_MALE]);
     let stand = eye(&rows, HUMAN_MALE, STAND);
     let sit = eye(&rows, HUMAN_MALE, SIT);
+    // SIT_CHAIR has no established animation: it holds the Stand eye.
+    assert_eq!(eye(&rows, HUMAN_MALE, SIT_CHAIR).eye, stand.eye);
     assert_eq!(stand.source, EyeSource::Eyes);
     // A ~1.9 yd tall man's eyes, a little under the top of his head and in front of the
     // body's axis.

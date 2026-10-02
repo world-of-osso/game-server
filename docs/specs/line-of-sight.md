@@ -30,7 +30,10 @@ Retail's LOS errors ("can see it, not in line of sight") are the bugs to avoid.
 - The bake writes this eye point per display ID and stand state for the server
   (`eye_heights.tsv`: model space, the display's scales applied, `source` eyes, head or bounds), posed
   at the first frame of the state's animation. A model without the state's sequence (e.g. the
-  human models have no Dead) holds its Stand eye. `player_displays.tsv` maps race and sex to the
+  human models have no Dead) holds its Stand eye. `SIT_CHAIR` (stand state 2) holds the Stand eye too: no
+  Retail animation is established for it (uncited; TrinityCore, AzerothCore, WMVx, wow_client,
+  WoWee, WebWowViewerCpp and solarityclient map it to none; chairs seat units in states 4-6). User
+  decision 2026-10-02. `player_displays.tsv` maps race and sex to the
   character display (`ChrRaceXChrModel` → `ChrModel.DisplayID`).
 
 ## Player casts: witness ray
@@ -67,9 +70,8 @@ Retail's LOS errors ("can see it, not in line of sight") are the bugs to avoid.
   `SPELL_ATTR2_IGNORE_LINE_OF_SIGHT` (TrinityCore `Spell::CheckCast`), at cast start and finish.
 - The server loads the bake from `<ground dir>/los` (`GAME_SERVER_GROUND_DIR`, else
   `game-engine/data`): the eye table at startup (it refuses to start without it), each map's
-  tiles on first use. A map without baked tiles has nothing that blocks. A unit whose display and
-  stand state have no eye row (`SIT_CHAIR`, which has no established animation, or a skipped
-  template display that a script spawns) fails closed: it is out of everyone's line of sight, and
+  tiles on first use. A map without baked tiles has nothing that blocks. A unit whose display has no eye
+  row (a skipped template display that a script spawns) fails closed: it is out of everyone's line of sight, and
   the server logs it once per display, naming the first unit (creature entry and entity) that
   showed it. Not modelled yet: mounted eyes, unit scale
   (`OBJECT_FIELD_SCALE`).

@@ -9,7 +9,7 @@ use glam::Vec3;
 use super::chunks::Result;
 use super::m2::{GEOSET_GROUP_EYES, M2File, Skeleton};
 use super::primary_skin;
-use crate::eye::{EyeRow, EyeSource, STAND_STATE_ANIMS};
+use crate::eye::{EyeRow, EyeSource, STAND_EYE_STATES, STAND_STATE_ANIMS};
 
 #[derive(Default, Debug)]
 pub struct EyeStats {
@@ -179,7 +179,9 @@ fn model_eyes(data: &Path, fdid: u32) -> Result<ModelEyes> {
                 source: EyeSource::Bounds,
                 eyes: STAND_STATE_ANIMS
                     .iter()
-                    .map(|&(state, _)| (state, Some(top)))
+                    .map(|&(state, _)| state)
+                    .chain(STAND_EYE_STATES)
+                    .map(|state| (state, Some(top)))
                     .collect(),
                 stand_pose: 0,
             });
@@ -216,6 +218,7 @@ fn model_eyes(data: &Path, fdid: u32) -> Result<ModelEyes> {
         stand_pose += usize::from(eye.is_none());
         eyes.push((state, eye.unwrap_or(stand)));
     }
+    eyes.extend(STAND_EYE_STATES.map(|state| (state, stand)));
     Ok(ModelEyes {
         source,
         eyes,

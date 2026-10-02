@@ -5,10 +5,9 @@
 //! The bake output (`los-bake --out <ground dir>/los`) loads from the ground directory:
 //! the eye table at startup, each map's tiles on first use. A map without baked tiles
 //! has nothing that blocks. The bake covers every spawned and player display and the
-//! creature template displays it can; a unit whose display and stand state have no eye
-//! row (stand state `SIT_CHAIR`, which has no established animation, or a skipped display
-//! a script summons) is logged once per display, naming the first unit that showed it,
-//! and sees nothing and is seen by nothing.
+//! creature template displays it can; a unit whose display has no eye row (a skipped
+//! display a script summons) is logged once per display, naming the first unit that
+//! showed it, and sees nothing and is seen by nothing.
 
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
