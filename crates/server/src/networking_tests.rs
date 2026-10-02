@@ -117,5 +117,7 @@ mod stand_state;
 mod stockade_run;
 #[path = "networking_tests/terrain.rs"]
 mod terrain;
+#[path = "networking_tests/vignette.rs"]
+mod vignette;
 #[path = "networking_tests/world_entry.rs"]
 mod world_entry;

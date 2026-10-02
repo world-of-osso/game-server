@@ -236,6 +236,9 @@ pub(crate) fn spawn_creature(
             // Set by the movement systems while it moves (`creature_ai::Bearing`).
             shared::components::MovementSpeed(0.0),
         ));
+        if let Some(&vignette) = world_data.vignettes.get(&template.entry) {
+            crate::vignettes::show(&mut entity, vignette);
+        }
         if replicate {
             entity.insert((
                 Replicate::to_clients(NetworkTarget::All),

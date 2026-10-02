@@ -195,6 +195,8 @@ pub struct WorldData {
     pub armor_constants: ArmorConstants,
     /// `content_pool_*` spawn pools (PoolMgr).
     pub pools: crate::spawn_pools::SpawnPools,
+    /// `creature_template.VignetteID`'s `Vignette` row, keyed by template entry.
+    pub(crate) vignettes: HashMap<u32, crate::vignettes::CreatureVignette>,
 }
 
 impl WorldData {
@@ -241,6 +243,7 @@ pub fn load_world_data(path: &Path) -> WorldData {
     let armor_constants = expected_stats.armor_constants();
     let pools = crate::spawn_pools::SpawnPools::load(&conn)
         .expect("Failed to load content_pool_*; run scripts/import-spawn-pools.sh");
+    let vignettes = crate::vignettes::load_creature_vignettes(&conn);
 
     info!(
         "WorldData loaded: {} templates, {} spawns, {} maps, {} waypoint paths, {} addons, {} formation members",
@@ -266,6 +269,7 @@ pub fn load_world_data(path: &Path) -> WorldData {
         class_level_base_mana,
         armor_constants,
         pools,
+        vignettes,
     }
 }
 
@@ -625,21 +629,34 @@ fn nonzero(value: i64) -> Option<u32> {
     (value != 0).then_some(value as u32)
 }
 
+/// `content_creature` columns `spawn_from_row` reads.
+const SPAWN_COLUMNS: &str = "guid, id1, map, zoneId, position_x, position_y, position_z,
+    wander_distance, MovementType, orientation, spawntimesecs, modelid, unit_flags,
+    spawnDifficulties, equipment_id";
+
+/// The `content_creature` row `guid`, whether or not a game event gates it.
+#[cfg(test)]
+pub(crate) fn load_spawn(conn: &Connection, guid: u32) -> rusqlite::Result<CreatureSpawn> {
+    conn.query_row(
+        &format!("SELECT {SPAWN_COLUMNS} FROM content_creature WHERE guid = ?1"),
+        params![guid],
+        spawn_from_row,
+    )
+}
+
 fn load_spawns(conn: &Connection) -> Vec<CreatureSpawn> {
     // No events are activated yet. Negative memberships spawn while inactive.
     let mut stmt = conn
-        .prepare(
-            "SELECT guid, id1, map, zoneId, position_x, position_y, position_z,
-                    wander_distance, MovementType, orientation, spawntimesecs, modelid, unit_flags,
-                    spawnDifficulties, equipment_id
+        .prepare(&format!(
+            "SELECT {SPAWN_COLUMNS}
              FROM content_creature creature
              WHERE NOT EXISTS (
                  SELECT 1 FROM content_game_event_creature event WHERE event.guid = creature.guid
              ) OR EXISTS (
                  SELECT 1 FROM content_game_event_creature event
                  WHERE event.guid = creature.guid AND event.eventEntry < 0
-             )",
-        )
+             )"
+        ))
         .expect("Failed to prepare content_creature query");
 
     let rows = stmt

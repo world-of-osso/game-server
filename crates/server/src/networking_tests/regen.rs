@@ -47,7 +47,7 @@ fn network_server(address: std::net::SocketAddr) -> App {
     server
 }
 
-fn network_client(address: std::net::SocketAddr, client_id: u64) -> (App, Entity) {
+pub(super) fn network_client(address: std::net::SocketAddr, client_id: u64) -> (App, Entity) {
     let mut client = App::new();
     client.add_plugins((
         bevy::MinimalPlugins,
@@ -82,7 +82,7 @@ fn network_client(address: std::net::SocketAddr, client_id: u64) -> (App, Entity
     (client, entity)
 }
 
-fn advance(server: &mut App, client: &mut App, frames: usize) {
+pub(super) fn advance(server: &mut App, client: &mut App, frames: usize) {
     for _ in 0..frames {
         server.update();
         client.update();

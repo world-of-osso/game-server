@@ -96,6 +96,7 @@ mod terrain_height;
 mod trade;
 mod trait_config;
 mod unit_target;
+mod vignettes;
 mod who;
 mod world_data;
 mod world_map;
