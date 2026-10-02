@@ -275,26 +275,24 @@ impl SightParams<'_, '_> {
             .is_some_and(|entry| entry.is_dungeon())
     }
 
-    /// `CreatureAI::MoveInLineOfSight(who)` for creature `who`: how far `watcher` is from
-    /// it when `watcher` would attack it, else `None`.
-    fn sight(&self, watcher: Entity, who: Entity) -> Option<f32> {
-        let (range, state, react, home, last_damaged) = self.watchers.get(watcher).ok()?;
+    /// `CreatureAI::MoveInLineOfSight(who)` of creature `watcher` (seen as `me`) for a
+    /// creature `who` `distance` yards away: whether `watcher` attacks it.
+    fn sight(&self, watcher: Entity, me: &UnitView, who: &UnitView, distance: f32) -> bool {
+        let Ok((range, state, react, home, last_damaged)) = self.watchers.get(watcher) else {
+            return false;
+        };
         // `me->IsEngaged()`, `HasReactState(REACT_AGGRESSIVE)`.
         if !state.is_idle() || react.is_some_and(|react| *react != ReactState::Aggressive) {
-            return None;
+            return false;
         }
-        let me = self.view(watcher)?;
-        let target = self.view(who)?;
-        let distance = distance(me.position, target.position);
-        let can_start = self.can_start_attack(&me, &target, range.0, distance)
+        self.can_start_attack(me, who, range.0, distance)
             && crate::creature_aggro::within_reach_of_home(
                 home,
                 last_damaged,
                 self.time.elapsed_secs_f64(),
                 self.dungeon(me.map),
-                target.position,
-            );
-        can_start.then_some(distance)
+                who.position,
+            )
     }
 
     /// `Creature::CanStartAttack(who, force = false)` for a creature `who`, with the
@@ -355,22 +353,34 @@ fn creature_sight_system(
     }
     pass.elapsed = 0.0;
     let mut nearest: EntityHashMap<(Entity, f32)> = EntityHashMap::default();
-    let mut offer = |watcher: Entity, who: Entity| {
-        if let Some(distance) = params.sight(watcher, who) {
-            let best = nearest.entry(watcher).or_insert((who, distance));
-            if distance < best.1 {
-                *best = (who, distance);
-            }
+    let mut offer = |watcher: Entity, who: Entity, distance: f32| {
+        let best = nearest.entry(watcher).or_insert((who, distance));
+        if distance < best.1 {
+            *best = (who, distance);
         }
     };
     for moved in std::mem::take(&mut pass.pending) {
-        let Some((map, position)) = params.view(moved).map(|view| (view.map, *view.position))
-        else {
+        let Some(mover) = params.view(moved) else {
             continue;
         };
-        for other in grid.near(map, &position).filter(|&other| other != moved) {
-            offer(moved, other);
-            offer(other, moved);
+        for other in grid
+            .near(mover.map, mover.position)
+            .filter(|&other| other != moved)
+        {
+            let Some(seen) = params.view(other) else {
+                continue;
+            };
+            // No aggro radius exceeds `MAX_AGGRO_RADIUS`.
+            let gap = distance(mover.position, seen.position);
+            if gap > MAX_AGGRO_RADIUS {
+                continue;
+            }
+            if params.sight(moved, &mover, &seen, gap) {
+                offer(moved, other, gap);
+            }
+            if params.sight(other, &seen, &mover, gap) {
+                offer(other, moved, gap);
+            }
         }
     }
     for (watcher, (target, _)) in nearest {
