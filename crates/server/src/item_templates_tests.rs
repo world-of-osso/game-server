@@ -27,6 +27,8 @@ fn content_item_rows_load_inventory_attributes() {
             scaling: sword.scaling,
             appearance_id: Some(154),
             on_use: None,
+            container_slots: 0,
+            bag_family: 0,
         }
     );
     assert!(sword.allows(1, 1));
@@ -67,4 +69,36 @@ fn content_item_rows_load_inventory_attributes() {
     assert!(longbow.allows(3, 86));
     assert!(longbow.allows(3, 91));
     assert!(!longbow.allows(3, 1));
+}
+
+/// TrinityCore `ItemCanGoIntoBag` on real containers: Small Brown Pouch (plain,
+/// 6 slots), Simply Stitched Reagent Bag (32) and Herb Pouch (12, herbs).
+#[test]
+fn containers_take_only_the_items_their_type_allows() {
+    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/world.db");
+    if !path.exists() {
+        eprintln!("skipping: {} not found", path.display());
+        return;
+    }
+    let templates = load_item_templates(&path).unwrap();
+    let item = |id| *templates.get(id).unwrap();
+    let (pouch, reagent_bag, herb_pouch) = (item(4496), item(194019), item(22250));
+    let (sword, linen, peacebloom) = (item(25), item(2589), item(2447));
+
+    assert_eq!(
+        (
+            pouch.container_slots,
+            reagent_bag.container_slots,
+            herb_pouch.container_slots
+        ),
+        (6, 32, 12)
+    );
+    assert!(!pouch.is_reagent_bag());
+    assert!(reagent_bag.is_reagent_bag());
+    assert!(sword.can_go_into_bag(&pouch));
+    assert!(linen.can_go_into_bag(&reagent_bag));
+    assert!(!sword.can_go_into_bag(&reagent_bag));
+    assert!(peacebloom.can_go_into_bag(&herb_pouch));
+    assert!(!linen.can_go_into_bag(&herb_pouch));
+    assert!(!linen.can_go_into_bag(&sword), "a sword is no container");
 }

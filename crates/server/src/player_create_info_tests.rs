@@ -9,12 +9,13 @@ use crate::persistence::inventory_store::load_inventory_record;
 use crate::persistence::{create_character_with_appearance, temp_database};
 use crate::persistence_progression::load_progression;
 
-/// What a created character owns: equipped `(slot, item)`, backpack `(slot, item, count)`
-/// and the stored action bar.
+/// What a created character owns: equipped `(slot, item)`, equipped bags
+/// `(container, item)`, backpack `(slot, item, count)` and the stored action bar.
 #[derive(Debug, PartialEq)]
 struct Created {
     level: u16,
     equipped: Vec<(Slot, u32)>,
+    bags: Vec<(u8, u32)>,
     backpack: Vec<(u8, u32, u32)>,
     bar: Vec<(u8, ActionRefData)>,
 }
@@ -63,7 +64,7 @@ fn create(kit: &OwnedKit, name: &str, race: u8, class: u8) -> Created {
                 .iter()
                 .find(|item| item.item_guid == placement.item_guid)
                 .unwrap();
-            assert_eq!(placement.bag, 0, "bags 1-4 hold nothing");
+            assert_eq!(placement.bag, 0, "the kit fits the backpack");
             (placement.slot, item.item_id, item.stack_count)
         })
         .collect();
@@ -73,9 +74,16 @@ fn create(kit: &OwnedKit, name: &str, race: u8, class: u8) -> Created {
         record.inventory.items.len(),
         "every item placed"
     );
+    let mut bags: Vec<_> = record
+        .bag_slots
+        .iter()
+        .map(|entry| (entry.bag, entry.item.item_id))
+        .collect();
+    bags.sort();
     Created {
         level: data.level,
         equipped,
+        bags,
         backpack,
         bar: load_progression(&db, id).unwrap().action_bar,
     }
@@ -110,6 +118,7 @@ fn human_mage_equips_the_mage_loadout_and_keeps_the_hearthstone_in_the_backpack(
                 (Slot::Hands, 187762), // Mage's Mitts
                 (Slot::MainHand, 35),  // Bent Staff
             ],
+            bags: vec![],
             backpack: vec![(0, HEARTHSTONE, 1)],
             // Frostbolt, Will to Survive.
             bar: spells(&[(0, 116), (9, 59752), (10, RECUPERATE)]),
@@ -138,6 +147,7 @@ fn orc_warrior_equips_sword_and_shield() {
                 (Slot::MainHand, 25),  // Worn Shortsword
                 (Slot::OffHand, 2362), // Worn Wooden Shield
             ],
+            bags: vec![],
             backpack: vec![(0, HEARTHSTONE, 1)],
             // Slam, Blood Fury, Recuperate; Attack and Blood Fury on the stance bar.
             bar: spells(&[
@@ -170,10 +180,10 @@ fn human_rogue_keeps_the_second_dagger_in_the_backpack() {
     );
 }
 
-/// Loadout 1288 (Human Death Knight, level 8): four Deathweave Bags (bags 1-4 have no
-/// container support), jewelry (no neck/finger storage), ten Black Mushrooms (food:
-/// 10 for a Death Knight); playercreateinfo_item (0, 6, 40582, -1) removes the
-/// Scourgestone.
+/// Loadout 1288 (Human Death Knight, level 8): four Deathweave Bags equip into bag
+/// slots 1-4 (`StoreNewItemInBestSlots` -> `FindEquipSlot` INVTYPE_BAG), jewelry (no
+/// neck/finger storage), ten Black Mushrooms (food: 10 for a Death Knight);
+/// playercreateinfo_item (0, 6, 40582, -1) removes the Scourgestone.
 #[test]
 fn human_death_knight_gets_plate_bags_jewelry_and_ten_mushrooms() {
     let Some(kit) = OwnedKit::from_world_db() else {
@@ -194,15 +204,12 @@ fn human_death_knight_gets_plate_bags_jewelry_and_ten_mushrooms() {
                 (Slot::Hands, 34649),
                 (Slot::Back, 34659),
             ],
+            bags: vec![(1, 38145), (2, 38145), (3, 38145), (4, 38145)],
             backpack: vec![
-                (0, 38145, 1),
-                (1, 38145, 1),
-                (2, 38145, 1),
-                (3, 38145, 1),
-                (4, 34657, 1), // Choker of Damnation
-                (5, 34658, 1), // Plague Band
-                (6, 38147, 1), // Corrupted Band
-                (7, 41751, 10),
+                (0, 34657, 1), // Choker of Damnation
+                (1, 34658, 1), // Plague Band
+                (2, 38147, 1), // Corrupted Band
+                (3, 41751, 10),
             ],
             // Rune Strike, Death Coil, Death and Decay, Blood Boil, Death Grip; button 2's
             // spell 45477 is not in Retail SpellName, so IsActionButtonDataValid drops it.
@@ -239,11 +246,9 @@ fn haranir_hunter_equips_race_locked_gear_and_bow() {
             (Slot::MainHand, 266263), // Wildgrove Haranir Longbow
         ]
     );
-    // Large Red Sack, Hearthstone, Haranir Footlocker.
-    assert_eq!(
-        created.backpack,
-        vec![(0, 157787, 1), (1, HEARTHSTONE, 1), (2, 270431, 1)]
-    );
+    // Large Red Sack equipped; Hearthstone, Haranir Footlocker.
+    assert_eq!(created.bags, vec![(1, 157787)]);
+    assert_eq!(created.backpack, vec![(0, HEARTHSTONE, 1), (1, 270431, 1)]);
     assert_eq!(
         created.bar,
         spells(&[
@@ -277,6 +282,7 @@ fn pandaren_monk_gets_four_sugarcane_stalks() {
                 (Slot::Legs, 72020),
                 (Slot::Wrist, 77526),
             ],
+            bags: vec![],
             backpack: vec![(0, 77272, 4), (1, HEARTHSTONE, 1)],
             // Tiger Palm, Quaking Palm.
             bar: spells(&[(0, 100780), (9, 107079), (10, RECUPERATE)]),
@@ -284,8 +290,8 @@ fn pandaren_monk_gets_four_sugarcane_stalks() {
     );
 }
 
-/// Loadout 1647 (Dracthyr Evoker, level 10): Evokers get no weapon; the four bags,
-/// rings, amulet and trinkets stay in the backpack.
+/// Loadout 1647 (Dracthyr Evoker, level 10): Evokers get no weapon; the four Large
+/// Green Bags equip into bag slots 1-4, rings, amulet and trinkets stay in the backpack.
 #[test]
 fn dracthyr_evoker_wears_mail_and_carries_bags_and_jewelry() {
     let Some(kit) = OwnedKit::from_world_db() else {
@@ -306,18 +312,18 @@ fn dracthyr_evoker_wears_mail_and_carries_bags_and_jewelry() {
         ]
     );
     assert_eq!(
+        created.bags,
+        vec![(1, 188213), (2, 188213), (3, 188213), (4, 188213)]
+    );
+    assert_eq!(
         created.backpack,
         vec![
-            (0, 188213, 1),
-            (1, 188812, 1),
-            (2, 188813, 1),
-            (3, 188814, 1),
-            (4, 188816, 1),
-            (5, 188817, 1),
-            (6, 188213, 1),
-            (7, 188213, 1),
-            (8, 188213, 1),
-            (9, HEARTHSTONE, 1),
+            (0, 188812, 1),
+            (1, 188813, 1),
+            (2, 188814, 1),
+            (3, 188816, 1),
+            (4, 188817, 1),
+            (5, HEARTHSTONE, 1),
         ]
     );
     assert_eq!(
@@ -333,7 +339,8 @@ fn dracthyr_evoker_wears_mail_and_carries_bags_and_jewelry() {
 }
 
 /// Loadout 1346 (Night Elf Demon Hunter, level 8): one Warglaive equips, the second
-/// waits in the backpack (no dual wield); Illidari Rations are food, 4.
+/// waits in the backpack (no dual wield); the four Demon Hide Satchels equip into bag
+/// slots 1-4; Illidari Rations are food, 4.
 #[test]
 fn night_elf_demon_hunter_equips_one_warglaive() {
     let Some(kit) = OwnedKit::from_world_db() else {
@@ -357,20 +364,20 @@ fn night_elf_demon_hunter_equips_one_warglaive() {
         ]
     );
     assert_eq!(
+        created.bags,
+        vec![(1, 123958), (2, 123958), (3, 123958), (4, 123958)]
+    );
+    assert_eq!(
         created.backpack,
         vec![
-            (0, 123958, 1),
-            (1, 123958, 1),
-            (2, 123958, 1),
-            (3, 123958, 1),
-            (4, 112459, 1),
-            (5, 112460, 1),
-            (6, 112461, 1),
-            (7, 129181, 1),
-            (8, 123959, 1),
-            (9, 123960, 1),
-            (10, 132752, 4),
-            (11, HEARTHSTONE, 1),
+            (0, 112459, 1),
+            (1, 112460, 1),
+            (2, 112461, 1),
+            (3, 129181, 1),
+            (4, 123959, 1),
+            (5, 123960, 1),
+            (6, 132752, 4),
+            (7, HEARTHSTONE, 1),
         ]
     );
     assert_eq!(
@@ -406,7 +413,7 @@ fn every_playable_pair_has_a_loadout_and_creates() {
             );
         }
         let created = create(&kit, "Probe", race, class);
-        let owned = created.equipped.len() + created.backpack.len();
+        let owned = created.equipped.len() + created.bags.len() + created.backpack.len();
         let expected: usize = info
             .items
             .iter()

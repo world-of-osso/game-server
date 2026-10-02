@@ -17,6 +17,11 @@ const PEACEBLOOM: u32 = 2447;
 const COPPER_ORE: u32 = 2770;
 const WORN_SHORTSWORD: u32 = 25;
 const VERIGANS_FIST: u32 = 6953;
+const SMALL_BROWN_POUCH: u32 = 4496;
+const BLUE_LEATHER_BAG: u32 = 856;
+const REAGENT_BAG: u32 = 194019;
+/// `ITEM_FLAG2_USED_IN_A_TRADESKILL` in `Flags_1` of linen, peacebloom and copper ore.
+const TRADESKILL_FLAGS2: i64 = -2_147_475_456;
 
 /// `content_item` rows for the items these tests use (world.db, Retail 12.1).
 fn test_templates() -> ItemTemplates {
@@ -30,13 +35,30 @@ fn test_templates() -> ItemTemplates {
             allowable_race: u64::MAX,
             ..ItemTemplate::default()
         };
+    let reagent = |mut template: ItemTemplate| {
+        template.scaling.flags2 = TRADESKILL_FLAGS2;
+        template
+    };
+    // Class 1 (container), `ContainerSlots`; subclass 11 is a reagent bag.
+    let container = |container_slots, subclass_id| ItemTemplate {
+        container_slots,
+        scaling: crate::item_stats::ItemScaling {
+            class_id: 1,
+            subclass_id,
+            ..Default::default()
+        },
+        ..template(18, 1, 0, 0, -1)
+    };
     ItemTemplates(
         [
             (WORN_SHORTSWORD, template(21, 1, 2, 1, -1)),
-            (LINEN, template(0, 1000, 0, 0, -1)),
-            (PEACEBLOOM, template(0, 1000, 0, 0, -1)),
-            (COPPER_ORE, template(0, 1000, 0, 0, -1)),
+            (LINEN, reagent(template(0, 1000, 0, 0, -1))),
+            (PEACEBLOOM, reagent(template(0, 1000, 0, 0, -1))),
+            (COPPER_ORE, reagent(template(0, 1000, 0, 0, -1))),
             (VERIGANS_FIST, template(17, 1, 1, 0, 2)),
+            (SMALL_BROWN_POUCH, container(6, 0)),
+            (BLUE_LEATHER_BAG, container(8, 0)),
+            (REAGENT_BAG, container(32, 11)),
         ]
         .into_iter()
         .collect(),
@@ -245,7 +267,7 @@ fn enter_world_sends_owner_snapshots_with_granted_items() {
     let bags = &snapshots[0].bags;
     assert_eq!(
         bags.iter().map(|b| (b.bag, b.size)).collect::<Vec<_>>(),
-        vec![(0, 16), (1, 0), (2, 0), (3, 0), (4, 0)]
+        vec![(0, 16), (1, 0), (2, 0), (3, 0), (4, 0), (5, 0)]
     );
     assert_eq!(
         bags[0].items,
@@ -754,3 +776,6 @@ fn an_equipped_sword_dropped_on_an_empty_bag_slot_is_unequipped_there() {
         .unwrap();
     assert!(appearance.entries.is_empty());
 }
+
+#[path = "inventory_bag_tests.rs"]
+mod bags;

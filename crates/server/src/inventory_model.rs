@@ -2,8 +2,9 @@
 //! Retail item moves, and writes the result back.
 //!
 //! Item rules come from `content_item` (`ItemTemplates`): inventory type, stack
-//! size, required level, class/race masks and bonding. Gaps: bags 1-4 have no
-//! container support (size 0), dual wield and weapon/armor skills are not tracked
+//! size, required level, class/race masks, bonding and container size/type.
+//! Containers 1-4 and the reagent bag (5) are as large as the bag equipped in
+//! their bag slot. Gaps: dual wield and weapon/armor skills are not tracked
 //! (one-handers go to the main hand only), and neck, finger, trinket and ranged
 //! slots have no server storage.
 use std::collections::{BTreeMap, HashMap, HashSet};
@@ -17,7 +18,9 @@ use shared::protocol::{
 
 use crate::item_templates::{BIND_ON_EQUIP, ItemTemplate, ItemTemplates};
 use crate::persistence::equipment::EquippedItem;
-use crate::persistence::inventory_store::{InventoryRecord, ItemInstanceData, ItemPlacementData};
+use crate::persistence::inventory_store::{
+    EquippedBagData, InventoryRecord, ItemInstanceData, ItemPlacementData,
+};
 use crate::persistence::{CharacterData, InventoryItemData};
 use crate::stats::EquippedItems;
 
@@ -45,14 +48,6 @@ pub(crate) fn error(reason: InventoryErrorReason, detail: impl Into<String>) -> 
     }
 }
 
-fn bag_size(bag: u8) -> usize {
-    if bag == 0 {
-        usize::from(BACKPACK_SLOTS)
-    } else {
-        0
-    }
-}
-
 impl InventoryModel {
     /// `mint` allocates a fresh item guid (for duplicate guids and splits).
     pub(crate) fn from_record(
@@ -65,12 +60,11 @@ impl InventoryModel {
             .items
             .iter()
             .chain(record.equipped.iter().map(|entry| &entry.item))
+            .chain(record.bag_slots.iter().map(|entry| &entry.item))
             .filter_map(|item| Some((item.item_id, *templates.get(item.item_id)?)))
             .collect();
         let mut model = Self {
-            bags: (0..BAG_COUNT)
-                .map(|bag| vec![None; bag_size(bag)])
-                .collect(),
+            bags: vec![Vec::new(); usize::from(BAG_COUNT)],
             overflow: Vec::new(),
             equipped: BTreeMap::new(),
             instances: record.instances,
@@ -83,6 +77,11 @@ impl InventoryModel {
                 .equipped
                 .insert(EquipmentSlot::from_visual_slot(entry.slot), entry.item);
         }
+        for entry in record.bag_slots {
+            let slot = EquipmentSlot::from_bag_index(entry.bag).expect("saved bag slot");
+            model.equipped.insert(slot, entry.item);
+        }
+        model.sync_containers();
         model.load_bag_items(record.inventory.items, &record.placements, mint);
         model.bind_owned_pickup_items();
         model
@@ -132,14 +131,16 @@ impl InventoryModel {
                 continue;
             }
             match placed.get(&item.item_guid) {
-                Some(&(bag, slot)) if self.cell_is_free(bag, slot) => {
+                Some(&(bag, slot))
+                    if self.cell_is_free(bag, slot) && self.accepts(usize::from(bag), &item) =>
+                {
                     self.bags[usize::from(bag)][usize::from(slot)] = Some(item);
                 }
                 _ => unplaced.push(item),
             }
         }
         for item in unplaced {
-            match self.first_free_cell() {
+            match self.first_free_cell(&item) {
                 Some((bag, slot)) => self.bags[bag][slot] = Some(item),
                 None => self.overflow.push(item),
             }
@@ -161,13 +162,77 @@ impl InventoryModel {
             .count()
     }
 
-    fn first_free_cell(&self) -> Option<(usize, usize)> {
+    /// First empty cell, in bag order, of a container `item` may go into.
+    fn first_free_cell(&self, item: &InventoryItemData) -> Option<(usize, usize)> {
         self.bags.iter().enumerate().find_map(|(bag, cells)| {
+            if !self.accepts(bag, item) {
+                return None;
+            }
             cells
                 .iter()
                 .position(Option::is_none)
                 .map(|slot| (bag, slot))
         })
+    }
+
+    /// Container `bag`'s capacity: the backpack's, else its equipped bag's
+    /// `ContainerSlots` (0 when the bag slot is empty).
+    fn container_size(&self, bag: u8) -> usize {
+        let Some(slot) = EquipmentSlot::from_bag_index(bag) else {
+            return usize::from(BACKPACK_SLOTS);
+        };
+        self.equipped
+            .get(&slot)
+            .and_then(|item| self.template(item))
+            .map_or(0, |template| usize::from(template.container_slots))
+    }
+
+    /// Resize containers whose bag slot changed. Callers move a bag only when it is
+    /// empty (or move its items along), so a resized container never holds items.
+    fn sync_containers(&mut self) {
+        for bag in 0..BAG_COUNT {
+            let size = self.container_size(bag);
+            let cells = &mut self.bags[usize::from(bag)];
+            if cells.len() != size {
+                assert!(
+                    cells.iter().all(Option::is_none),
+                    "container {bag} resized while holding items"
+                );
+                *cells = vec![None; size];
+            }
+        }
+    }
+
+    /// TrinityCore `ItemCanGoIntoBag`: the backpack takes anything; a bag neither
+    /// itself nor items its type refuses (a reagent bag holds only reagents).
+    fn accepts(&self, bag: usize, item: &InventoryItemData) -> bool {
+        let Some(slot) = EquipmentSlot::from_bag_index(bag as u8) else {
+            return true;
+        };
+        self.equipped.get(&slot).is_some_and(|container| {
+            container.item_guid != item.item_guid && self.fits_container(item, container)
+        })
+    }
+
+    fn fits_container(&self, item: &InventoryItemData, container: &InventoryItemData) -> bool {
+        let Some(container) = self.template(container) else {
+            return false;
+        };
+        self.template(item)
+            .copied()
+            .unwrap_or_default()
+            .can_go_into_bag(container)
+    }
+
+    /// `EQUIP_ERR_WRONG_BAG_TYPE` when `item` may not be put at `location`.
+    fn check_bag_type(&self, location: ItemLocation, item: &InventoryItemData) -> OpResult {
+        match location {
+            ItemLocation::Bag { bag, .. } if !self.accepts(usize::from(bag), item) => Err(error(
+                InventoryErrorReason::WrongBagType,
+                format!("item {} does not go in container {bag}", item.item_id),
+            )),
+            _ => Ok(()),
+        }
     }
 
     pub(crate) fn into_record(self) -> InventoryRecord {
@@ -185,16 +250,15 @@ impl InventoryModel {
             }
         }
         items.extend(self.overflow);
-        let equipped = self
-            .equipped
-            .into_iter()
-            .filter_map(|(slot, item)| {
-                Some(EquippedItem {
-                    slot: slot.visual_slot()?,
-                    item,
-                })
-            })
-            .collect();
+        let mut equipped = Vec::new();
+        let mut bag_slots = Vec::new();
+        for (slot, item) in self.equipped {
+            if let Some(bag) = slot.bag_index() {
+                bag_slots.push(EquippedBagData { bag, item });
+            } else if let Some(slot) = slot.visual_slot() {
+                equipped.push(EquippedItem { slot, item });
+            }
+        }
         InventoryRecord {
             character: self.character,
             inventory: crate::persistence::InventoryData {
@@ -203,6 +267,7 @@ impl InventoryModel {
             },
             placements,
             equipped,
+            bag_slots,
             instances: self.instances,
         }
     }
@@ -273,7 +338,7 @@ impl InventoryModel {
         let bags = (0..BAG_COUNT)
             .map(|bag| BagContents {
                 bag,
-                size: bag_size(bag) as u8,
+                size: self.bags[usize::from(bag)].len() as u8,
                 items: view
                     .iter()
                     .filter_map(|(location, item)| match location {
@@ -319,7 +384,7 @@ impl InventoryModel {
                     ))
                 }
             }
-            ItemLocation::Equipment(slot) if slot.visual_slot().is_none() => Err(error(
+            ItemLocation::Equipment(slot) if !has_storage(slot) => Err(error(
                 InventoryErrorReason::WrongSlot,
                 format!("server has no storage for equipment slot {slot:?}"),
             )),
@@ -378,6 +443,18 @@ impl InventoryModel {
             .map_or(0, |template| template.inventory_type)
     }
 
+    /// Slots `item` may occupy, preferred first: a reagent bag goes only in the
+    /// reagent bag slot (TrinityCore `Player::FindEquipSlot`, Player.cpp:9296-9302).
+    fn equip_slots(&self, item: &InventoryItemData) -> &'static [EquipmentSlot] {
+        if self
+            .template(item)
+            .is_some_and(ItemTemplate::is_reagent_bag)
+        {
+            return &[EquipmentSlot::ReagentBag];
+        }
+        EquipmentSlot::for_inventory_type(self.inventory_type(item))
+    }
+
     /// Items without a template never stack.
     fn max_stack(&self, item: &InventoryItemData) -> u32 {
         self.template(item).map_or(1, |template| template.max_stack)
@@ -426,7 +503,9 @@ impl InventoryModel {
 
     /// Retail `CMSG_SWAP_ITEM` / `SWAP_INV_ITEM`: move, equip, unequip or swap.
     pub(crate) fn swap(&mut self, from: ItemLocation, to: ItemLocation) -> OpResult {
-        self.with_appearance_sync(|model| model.move_item(from, to))
+        let result = self.with_appearance_sync(|model| model.move_item(from, to));
+        self.sync_containers();
+        result
     }
 
     fn move_item(&mut self, from: ItemLocation, to: ItemLocation) -> OpResult {
@@ -434,6 +513,11 @@ impl InventoryModel {
         self.check_location(to)?;
         if from == to {
             return Ok(());
+        }
+        if let (ItemLocation::Equipment(slot), ItemLocation::Bag { bag, .. }) = (from, to)
+            && self.get(to).is_none()
+        {
+            self.check_unequip_bag(slot, bag)?;
         }
         match (from, to) {
             (_, ItemLocation::Equipment(slot)) => self.equip_into(from, slot),
@@ -445,6 +529,10 @@ impl InventoryModel {
                 Ok(())
             }
             _ => {
+                self.check_bag_type(to, self.get(from).expect("validated source"))?;
+                if let Some(displaced) = self.get(to) {
+                    self.check_bag_type(from, displaced)?;
+                }
                 let moving = self.take(from);
                 let displaced = self.take(to);
                 self.put(to, moving);
@@ -468,6 +556,33 @@ impl InventoryModel {
 
     /// Move up to `count` items from `from` onto the stack at `to`, capped at the
     /// stack size; an emptied source stack is removed.
+    /// TrinityCore `Player::SwapItem` (Player.cpp:12641-12655) moving the bag in
+    /// `slot` to an empty cell of container `bag`: not into itself
+    /// (`EQUIP_ERR_BAG_IN_BAG`), and only when empty (`CanUnequipItem`,
+    /// `EQUIP_ERR_DESTROY_NONEMPTY_BAG`).
+    fn check_unequip_bag(&self, slot: EquipmentSlot, bag: u8) -> OpResult {
+        let Some(own) = slot.bag_index() else {
+            return Ok(());
+        };
+        if own == bag {
+            return Err(error(
+                InventoryErrorReason::BagInBag,
+                format!("bag {own} cannot go inside itself"),
+            ));
+        }
+        self.check_bag_empty(own)
+    }
+
+    fn check_bag_empty(&self, bag: u8) -> OpResult {
+        if self.bags[usize::from(bag)].iter().any(Option::is_some) {
+            return Err(error(
+                InventoryErrorReason::DestroyNonemptyBag,
+                format!("bag {bag} still holds items"),
+            ));
+        }
+        Ok(())
+    }
+
     fn merge_stacks(&mut self, from: ItemLocation, to: ItemLocation, count: u32) {
         let (
             ItemLocation::Bag { bag, slot },
@@ -501,7 +616,7 @@ impl InventoryModel {
     pub(crate) fn auto_equip(&mut self, from: ItemLocation) -> OpResult {
         let item = self.existing(from)?;
         if let ItemLocation::Equipment(_) = from {
-            let (bag, slot) = self.first_free_cell().ok_or_else(|| {
+            let (bag, slot) = self.first_free_cell(item).ok_or_else(|| {
                 error(
                     InventoryErrorReason::InvFull,
                     "no free bag slot to unequip into",
@@ -513,14 +628,14 @@ impl InventoryModel {
             };
             return self.swap(from, to);
         }
-        let slots = EquipmentSlot::for_inventory_type(self.inventory_type(item));
+        let slots = self.equip_slots(item);
         let Some(first) = slots.first() else {
             return Err(not_equippable(self.inventory_type(item)));
         };
         let valid: Vec<EquipmentSlot> = slots
             .iter()
             .copied()
-            .filter(|slot| slot.visual_slot().is_some() && self.validate_equip(item, *slot).is_ok())
+            .filter(|slot| has_storage(*slot) && self.validate_equip(item, *slot).is_ok())
             .collect();
         let target = valid
             .iter()
@@ -532,7 +647,7 @@ impl InventoryModel {
 
     fn validate_equip(&self, item: &InventoryItemData, slot: EquipmentSlot) -> OpResult {
         let inventory_type = self.inventory_type(item);
-        let allowed = EquipmentSlot::for_inventory_type(inventory_type);
+        let allowed = self.equip_slots(item);
         if allowed.is_empty() {
             return Err(not_equippable(inventory_type));
         }
@@ -574,6 +689,9 @@ impl InventoryModel {
     /// Equip the item at `source` into `slot`. The previous occupant returns to
     /// `source`; a conflicting other-hand item goes to a free bag slot.
     fn equip_into(&mut self, source: ItemLocation, slot: EquipmentSlot) -> OpResult {
+        if let Some(bag) = slot.bag_index() {
+            return self.equip_bag(source, bag);
+        }
         let item = self.existing(source)?;
         self.validate_equip(item, slot)?;
         if let (Some(previous), ItemLocation::Equipment(source_slot)) =
@@ -582,6 +700,76 @@ impl InventoryModel {
             self.validate_equip(previous, source_slot)?;
         }
         self.finish_equip(source, slot)
+    }
+
+    /// TrinityCore `Player::SwapItem` (Player.cpp:12589-12900) into bag slot `bag`.
+    /// Between bag slots the bags swap with their contents. From a cell, the bag
+    /// replaced goes to that cell and its items move into the new bag, which must
+    /// take every one (`EQUIP_ERR_BAG_IN_BAG`) and have room (`EQUIP_ERR_CANT_SWAP`);
+    /// a bag cannot replace the bag it sits in (`EQUIP_ERR_CANT_SWAP`).
+    fn equip_bag(&mut self, source: ItemLocation, bag: u8) -> OpResult {
+        let slot = EquipmentSlot::from_bag_index(bag).expect("bag slot");
+        let item = self.existing(source)?;
+        self.validate_equip(item, slot)?;
+        let (cell_bag, cell) = match source {
+            ItemLocation::Equipment(from_slot) => {
+                let from_bag = from_slot.bag_index().expect("only bag slots hold bags");
+                if let Some(previous) = self.equipped.get(&slot) {
+                    self.validate_equip(previous, from_slot)?;
+                }
+                let moving = self.equipped.remove(&from_slot);
+                let previous = self.take(ItemLocation::Equipment(slot));
+                self.put(ItemLocation::Equipment(slot), moving);
+                self.put(source, previous);
+                self.bags.swap(usize::from(bag), usize::from(from_bag));
+                return Ok(());
+            }
+            ItemLocation::Bag { bag, slot } => (bag, slot),
+        };
+        if cell_bag == bag {
+            return Err(error(
+                InventoryErrorReason::CantSwap,
+                format!("the bag in container {bag} cannot replace it"),
+            ));
+        }
+        let contents: Vec<InventoryItemData> = self.bags[usize::from(bag)]
+            .iter()
+            .flatten()
+            .cloned()
+            .collect();
+        if let Some(previous) = self.equipped.get(&slot) {
+            self.check_bag_type(source, previous)?;
+            if contents
+                .iter()
+                .any(|content| !self.fits_container(content, item))
+            {
+                return Err(error(
+                    InventoryErrorReason::BagInBag,
+                    format!("bag {} cannot hold the items of bag {bag}", item.item_id),
+                ));
+            }
+            let size = self
+                .template(item)
+                .map_or(0, |t| usize::from(t.container_slots));
+            if contents.len() > size {
+                return Err(error(
+                    InventoryErrorReason::CantSwap,
+                    format!("{} items do not fit a {size}-slot bag", contents.len()),
+                ));
+            }
+        }
+        let moving = self.take(source);
+        let previous = self
+            .equipped
+            .insert(slot, moving.expect("validated source"));
+        self.bags[usize::from(cell_bag)][usize::from(cell)] = previous;
+        self.bags[usize::from(bag)] = Vec::new();
+        self.sync_containers();
+        for (cell, content) in self.bags[usize::from(bag)].iter_mut().zip(contents) {
+            *cell = Some(content);
+        }
+        self.bind_on_equip(slot);
+        Ok(())
     }
 
     fn finish_equip(&mut self, source: ItemLocation, slot: EquipmentSlot) -> OpResult {
@@ -594,7 +782,8 @@ impl InventoryModel {
             self.bind_on_equip(slot);
             return Ok(());
         };
-        match self.first_free_cell() {
+        let other = self.equipped.get(&conflict).expect("conflicting item");
+        match self.first_free_cell(other) {
             Some((bag, cell)) => {
                 let other = self.take(ItemLocation::Equipment(conflict));
                 let to = ItemLocation::Bag {
@@ -687,6 +876,7 @@ impl InventoryModel {
                 ),
             ));
         }
+        self.check_bag_type(to, source)?;
         if let Some(target) = self.get(to) {
             let fits = target.item_id == source.item_id
                 && target.stack_count + count <= self.max_stack(target);
@@ -718,11 +908,18 @@ impl InventoryModel {
 
     /// Retail `CMSG_DESTROY_ITEM`: 0 or at least the stack size destroys the stack.
     pub(crate) fn destroy(&mut self, location: ItemLocation, count: u32) -> OpResult {
-        self.with_appearance_sync(|model| model.destroy_count(location, count))
+        let result = self.with_appearance_sync(|model| model.destroy_count(location, count));
+        self.sync_containers();
+        result
     }
 
     fn destroy_count(&mut self, location: ItemLocation, count: u32) -> OpResult {
         let item = self.existing(location)?;
+        if let ItemLocation::Equipment(slot) = location
+            && let Some(bag) = slot.bag_index()
+        {
+            self.check_bag_empty(bag)?;
+        }
         if count == 0 || count >= item.stack_count {
             let removed = self.take(location).expect("validated item");
             self.instances.remove(&removed.item_guid);
@@ -922,7 +1119,7 @@ impl InventoryModel {
     ) -> OpResult {
         self.templates.insert(item.item_id, template);
         let max_stack = template.max_stack.max(1);
-        if self.room_for(item.item_id, max_stack) < item.stack_count {
+        if self.room_for(&item, max_stack) < item.stack_count {
             return Err(error(
                 InventoryErrorReason::InvFull,
                 format!("no room for {} of item {}", item.stack_count, item.item_id),
@@ -941,7 +1138,7 @@ impl InventoryModel {
         }
         let mut guid = Some(item.item_guid);
         while left > 0 {
-            let (bag, slot) = self.first_free_cell().expect("room was counted");
+            let (bag, slot) = self.first_free_cell(&item).expect("room was counted");
             let count = left.min(max_stack);
             let mut stack = item.clone();
             stack.item_guid = guid.take().unwrap_or_else(&mut *mint);
@@ -1017,15 +1214,12 @@ impl InventoryModel {
     /// two-hander (`IsTwoHandUsed`), and a one-hander gets no off hand without dual
     /// wield (`validate_equip`).
     fn free_equip_slot(&self, item: &InventoryItemData) -> Option<EquipmentSlot> {
-        EquipmentSlot::for_inventory_type(self.inventory_type(item))
-            .iter()
-            .copied()
-            .find(|&slot| {
-                slot.visual_slot().is_some()
-                    && !self.equipped.contains_key(&slot)
-                    && !(slot == EquipmentSlot::OffHand && self.two_hand_used())
-                    && self.validate_equip(item, slot).is_ok()
-            })
+        self.equip_slots(item).iter().copied().find(|&slot| {
+            has_storage(slot)
+                && !self.equipped.contains_key(&slot)
+                && !(slot == EquipmentSlot::OffHand && self.two_hand_used())
+                && self.validate_equip(item, slot).is_ok()
+        })
     }
 
     fn two_hand_used(&self) -> bool {
@@ -1039,11 +1233,13 @@ impl InventoryModel {
     fn equip_new(&mut self, item: InventoryItemData, slot: EquipmentSlot) -> OpResult {
         self.with_appearance_sync(|model| {
             model.equipped.insert(slot, item);
+            model.sync_containers();
             model.bind_on_equip(slot);
             if !(model.two_hand_used() && model.equipped.contains_key(&EquipmentSlot::OffHand)) {
                 return Ok(());
             }
-            let (bag, cell) = model.first_free_cell().ok_or_else(|| {
+            let off_hand = &model.equipped[&EquipmentSlot::OffHand];
+            let (bag, cell) = model.first_free_cell(off_hand).ok_or_else(|| {
                 error(
                     InventoryErrorReason::InvFull,
                     "no free bag slot for the off-hand item",
@@ -1074,6 +1270,7 @@ impl InventoryModel {
         };
         self.check_location(location)?;
         self.templates.insert(item.item_id, template);
+        self.check_bag_type(location, &item)?;
         let max_stack = template.max_stack.max(1);
         let room_here = match self.get(location) {
             None => max_stack,
@@ -1087,7 +1284,7 @@ impl InventoryModel {
                 ));
             }
         };
-        if self.room_for(item.item_id, max_stack) < item.stack_count {
+        if self.room_for(&item, max_stack) < item.stack_count {
             return Err(error(
                 InventoryErrorReason::InvFull,
                 format!("no room for {} of item {}", item.stack_count, item.item_id),
@@ -1119,14 +1316,17 @@ impl InventoryModel {
         self.store_item(item, template, mint)
     }
 
-    /// Items of `item_id` the bags can still take: free slots plus room on its stacks.
-    fn room_for(&self, item_id: u32, max_stack: u32) -> u32 {
+    /// Items like `item` the bags can still take: free slots of containers it may go
+    /// into plus room on its stacks.
+    fn room_for(&self, item: &InventoryItemData, max_stack: u32) -> u32 {
         self.bags
             .iter()
-            .flatten()
+            .enumerate()
+            .filter(|(bag, _)| self.accepts(*bag, item))
+            .flat_map(|(_, cells)| cells)
             .map(|cell| match cell {
                 None => max_stack,
-                Some(other) if other.item_id == item_id => {
+                Some(other) if other.item_id == item.item_id => {
                     max_stack.saturating_sub(other.stack_count)
                 }
                 Some(_) => 0,
@@ -1135,6 +1335,8 @@ impl InventoryModel {
     }
 
     /// Compact bag items: quality descending, then item id, then larger stacks first.
+    /// Specialty bags (reagent, profession) fill first with the items they take,
+    /// then the rest go to the containers that take anything.
     pub(crate) fn sort_bags(&mut self) -> OpResult {
         let mut items: Vec<_> = self
             .bags
@@ -1148,11 +1350,55 @@ impl InventoryModel {
                 .then(a.item_id.cmp(&b.item_id))
                 .then(b.stack_count.cmp(&a.stack_count))
         });
-        for (cell, item) in self.bags.iter_mut().flatten().zip(items) {
-            *cell = Some(item);
+        let specialty: Vec<usize> = (1..self.bags.len())
+            .filter(|&bag| !self.is_general_container(bag))
+            .collect();
+        let mut rest = Vec::new();
+        for item in items {
+            let cell = specialty
+                .iter()
+                .filter(|&&bag| self.accepts(bag, &item))
+                .find_map(|&bag| {
+                    let slot = self.bags[bag].iter().position(Option::is_none)?;
+                    Some((bag, slot))
+                });
+            match cell {
+                Some((bag, slot)) => self.bags[bag][slot] = Some(item),
+                None => rest.push(item),
+            }
+        }
+        let general: Vec<usize> = (0..self.bags.len())
+            .filter(|&bag| self.is_general_container(bag))
+            .collect();
+        let mut cells = general
+            .into_iter()
+            .flat_map(|bag| (0..self.bags[bag].len()).map(move |slot| (bag, slot)))
+            .collect::<Vec<_>>()
+            .into_iter();
+        for item in rest {
+            match cells.next() {
+                Some((bag, slot)) => self.bags[bag][slot] = Some(item),
+                None => self.overflow.push(item),
+            }
         }
         Ok(())
     }
+
+    /// The backpack or a bag of `ITEM_SUBCLASS_CONTAINER` (takes any item).
+    fn is_general_container(&self, bag: usize) -> bool {
+        let Some(slot) = EquipmentSlot::from_bag_index(bag as u8) else {
+            return true;
+        };
+        self.equipped
+            .get(&slot)
+            .and_then(|item| self.template(item))
+            .is_some_and(|template| template.scaling.subclass_id == 0)
+    }
+}
+
+/// Equipment slots the server stores: visual slots and bag slots.
+fn has_storage(slot: EquipmentSlot) -> bool {
+    slot.visual_slot().is_some() || slot.bag_index().is_some()
 }
 
 fn not_equippable(inventory_type: u8) -> InventoryError {
