@@ -52,6 +52,7 @@ Creature templates and levels
   - a template with `CREATURE_FLAG_EXTRA_TRIGGER` (0x80) takes its first invisible model (`GetFirstInvisibleModel`), else display 11686. A display is invisible when its CreatureModelData `FileDataID` is one of TrinityCore's trigger models (124640, 124641, 124642, 343863, 439302), read from `creature_model_data` (DB2 CreatureModelData). Summon Enabler Stalker 53488 gets 16925, not 169.
 - [x] Creatures replicate `UnitFlags`: the spawn's `creature.unit_flags` when nonzero, else the template's (`ChooseCreatureFlags`). Summon Enabler Stalker carries `UNIT_FLAG_NOT_SELECTABLE`. A `UNIT_FLAG_UNINTERACTIBLE` (NOT_SELECTABLE) unit is neither attacked nor assisted (`IsValidAttackTarget`/`IsValidAssistTarget`): no auto-attack, and explicit and area spells skip it. `SPELL_ATTR11_CAN_ASSIST_UNINTERACTIBLE` is not honoured.
 - [x] Every template TrinityCore tunes carries `ContentTuningID` (difficulty 0; Stockade entries difficulty 1).
+- [x] An AzerothCore template TrinityCore also has takes TrinityCore's `type`, `family` and its difficulty row's `TypeFlags` (taming, [hunter taming](hunter-taming.md)): Old Blanchy 582 is a Beast of family 299 with TAMEABLE, not a Critter.
   - `minlevel`/`maxlevel` are that ContentTuning's range, following TrinityCore `GetContentTuningData` under Expansion 11: calc types add +0, +1, +90 or +80, clamped to 1..123.
   - AzerothCore's fixed levels stay only where there is no ContentTuningID.
   - Examples: Hogger 1-30; Homeless Stormwind Citizen 5-30.

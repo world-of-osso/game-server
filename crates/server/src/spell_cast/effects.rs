@@ -95,6 +95,8 @@ pub fn handler(effect_id: u32) -> Option<EffectHandler> {
         crate::meeting_stone::summon::EFFECT_SUMMON_PLAYER => {
             crate::meeting_stone::summon::effect_summon_player
         }
+        crate::hunter_pet::EFFECT_TAME_CREATURE => crate::hunter_pet::effect_tame_creature,
+        crate::hunter_pet::EFFECT_DISMISS_PET => crate::hunter_pet::effect_dismiss_pet,
         _ => return None,
     })
 }
@@ -108,6 +110,7 @@ pub fn cast_handler(effect_id: u32) -> Option<CastEffectHandler> {
         crate::meeting_stone::ritual::EFFECT_TRANS_DOOR => {
             crate::meeting_stone::ritual::effect_trans_door
         }
+        crate::hunter_pet::EFFECT_SUMMON_PET => crate::hunter_pet::effect_summon_pet,
         _ => return None,
     })
 }

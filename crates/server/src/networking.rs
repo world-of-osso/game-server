@@ -166,7 +166,7 @@ pub struct ChatHistoryEntry {
 /// Marks an entity for deferred despawn (next frame), allowing lightyear to process
 /// the removal of Replicate/NetworkVisibility before the entity disappears.
 #[derive(Component)]
-struct PendingDespawn;
+pub(crate) struct PendingDespawn;
 
 pub struct ServerNetworkPlugin;
 

@@ -1,7 +1,7 @@
 use bevy::ecs::entity::EntityHashMap;
 use bevy::prelude::*;
 use lightyear::prelude::ReplicationDirtyQueue;
-use shared::components::{CreatureMotion, MovementSpeed, Position, Rotation};
+use shared::components::{CreatureMotion, Health, MovementSpeed, Position, Rotation};
 
 use crate::auras::{AuraStatMods, Confused};
 use crate::combat::DeathState;
@@ -53,6 +53,7 @@ impl Plugin for CreatureAiPlugin {
                 (waypoint_system, formation_system).chain(),
                 (chase_system, leash_check_system, return_to_spawn_system).chain(),
                 confused_movement_system,
+                follow_owner_system,
             ),
         );
     }
@@ -142,6 +143,24 @@ pub struct FormationMember {
     pub follow_dist: f32,
     /// Radians, relative to the leader's direction of travel.
     pub follow_angle: f32,
+}
+
+/// `FollowMovementGenerator` toward `owner` at `PET_FOLLOW_DIST` and `PET_FOLLOW_ANGLE`
+/// (`Unit::GetMotionMaster()->MoveFollow` of a pet, PetDefines.h:98-99).
+#[derive(Component, Debug, Clone, Copy, PartialEq)]
+pub struct FollowOwner {
+    pub owner: Entity,
+    /// `UNIT_STATE_FOLLOW_MOVE`: on its way to the follow point.
+    moving: bool,
+}
+
+impl FollowOwner {
+    pub fn new(owner: Entity) -> Self {
+        Self {
+            owner,
+            moving: false,
+        }
+    }
 }
 
 /// High-level creature behavior state. Overrides wander/waypoint when non-idle.
@@ -695,6 +714,139 @@ fn chase_step(position: Position, target: &Position, step: f32) -> Position {
         y: position.y,
         z: position.z + (target.z - position.z) * ratio,
     }
+}
+
+// -- Follow logic --
+
+/// `PET_FOLLOW_DIST`.
+const PET_FOLLOW_DIST: f32 = 1.0;
+/// `PET_FOLLOW_ANGLE`: behind the owner, within `ChaseAngle`'s default tolerance of π/4.
+const PET_FOLLOW_ANGLE: f32 = std::f32::consts::PI;
+const PET_FOLLOW_ANGLE_TOLERANCE: f32 = std::f32::consts::FRAC_PI_4;
+/// `DEFAULT_PLAYER_COMBAT_REACH` of the owner and, without creature model data, of the pet.
+const FOLLOW_COMBAT_REACH: f32 = 1.5;
+/// `FOLLOW_RANGE_TOLERANCE` (FollowMovementGenerator.cpp).
+const FOLLOW_RANGE_TOLERANCE: f32 = 1.0;
+
+type Follower = (
+    Entity,
+    &'static mut Position,
+    &'static mut FollowOwner,
+    &'static Health,
+    Option<&'static CastState>,
+    Option<&'static AuraStatMods>,
+    Option<&'static InMap>,
+    Bearing,
+);
+
+/// Where an owner stands and how fast it runs.
+#[derive(Clone, Copy)]
+struct Leader {
+    position: Position,
+    rotation_y: f32,
+    speed: f32,
+}
+
+/// `FollowMovementGenerator::Update` for a pet: once its owner is farther than both combat
+/// reaches plus `PET_FOLLOW_DIST` and `FOLLOW_RANGE_TOLERANCE`, it runs to the point that
+/// far from the owner at its current angle around it, clamped to `PET_FOLLOW_ANGLE` ±
+/// π/4, on the floor, and on arrival faces the owner's way (`SetFacing`). It runs at the
+/// owner's speed scaled by `Unit::UpdateSpeed`'s catch-up factor: 0.75 + 0.05 per yard
+/// beyond `PET_FOLLOW_DIST`, within 1-1.3. It holds still while it cannot move, casts
+/// a spell movement would interrupt, or is dead. Paths are straight (no `PathGenerator`).
+fn follow_owner_system(
+    time: Res<Time>,
+    queues: MoveQueues,
+    mut ground: Option<ResMut<GroundMap>>,
+    mut units: ParamSet<(
+        Query<Follower, ActiveUncontrolled>,
+        Query<(&Position, Option<&Rotation>, Option<&MovementSpeed>)>,
+    )>,
+) {
+    let dt = time.delta_secs();
+    let owners: Vec<Entity> = units
+        .p0()
+        .iter()
+        .map(|(_, _, follow, ..)| follow.owner)
+        .collect();
+    let owner_query = units.p1();
+    let leaders: EntityHashMap<Leader> = owners
+        .into_iter()
+        .filter_map(|owner| {
+            let (position, rotation, speed) = owner_query.get(owner).ok()?;
+            Some((
+                owner,
+                Leader {
+                    position: *position,
+                    rotation_y: rotation.map_or(0.0, |rotation| rotation.y),
+                    speed: speed.map_or(BASE_RUN_SPEED, |speed| speed.0),
+                },
+            ))
+        })
+        .collect();
+    for (entity, mut pos, mut follow, health, cast, mods, map, bearing) in &mut units.p0() {
+        let Some(leader) = leaders.get(&follow.owner) else {
+            continue;
+        };
+        let speed_mod = mods.map_or(1.0, |mods| mods.movement_speed);
+        if health.current <= 0.0
+            || speed_mod <= 0.0
+            || cast.is_some_and(|cast| !cast.cast_while_moving)
+        {
+            follow.moving = false;
+            let here = *pos;
+            queues.apply(entity, &mut pos, bearing, Stride::still(here));
+            continue;
+        }
+        let reach = 2.0 * FOLLOW_COMBAT_REACH + PET_FOLLOW_DIST;
+        let gap = (leader.position.x - pos.x).hypot(leader.position.z - pos.z);
+        if !follow.moving && gap <= reach + FOLLOW_RANGE_TOLERANCE {
+            let here = *pos;
+            queues.apply(entity, &mut pos, bearing, Stride::still(here));
+            continue;
+        }
+        let point = follow_point(&leader, *pos, reach);
+        let run_speed = leader.speed * speed_mod * catch_up_factor(gap);
+        let (reached, x, z) = move_toward(pos.x, pos.z, point.0, point.1, run_speed * dt);
+        let mut next_position = Position { x, y: pos.y, z };
+        if next_position != *pos {
+            let feet = Vec3::new(x, pos.y, z);
+            next_position.y = run_ground(probe_ground(ground.as_deref_mut(), map, feet), pos.y);
+        }
+        let mut stride = Stride::moving(*pos, next_position, CreatureMotion::Run, run_speed);
+        follow.moving = !reached;
+        if reached {
+            stride.motion = CreatureMotion::Still;
+            stride.facing = Some(leader.rotation_y);
+        }
+        queues.apply(entity, &mut pos, bearing, stride);
+    }
+}
+
+/// Bevy (x, z) `reach` yards from the owner at the follower's angle around it, clamped to
+/// `PET_FOLLOW_ANGLE` ± `PET_FOLLOW_ANGLE_TOLERANCE` (`ChaseAngle::IsAngleOkay`).
+fn follow_point(leader: &Leader, follower: Position, reach: f32) -> (f32, f32) {
+    use std::f32::consts::{PI, TAU};
+    let orientation = leader.rotation_y - std::f32::consts::FRAC_PI_2;
+    // WoW (x, y) offsets are Bevy (x, -z).
+    let (dx, dy) = (
+        follower.x - leader.position.x,
+        -(follower.z - leader.position.z),
+    );
+    let relative = (dy.atan2(dx) - orientation).rem_euclid(TAU);
+    let off = (relative - PET_FOLLOW_ANGLE + PI).rem_euclid(TAU) - PI;
+    let angle =
+        PET_FOLLOW_ANGLE + off.clamp(-PET_FOLLOW_ANGLE_TOLERANCE, PET_FOLLOW_ANGLE_TOLERANCE);
+    let absolute = orientation + angle;
+    (
+        leader.position.x + reach * absolute.cos(),
+        leader.position.z - reach * absolute.sin(),
+    )
+}
+
+/// `Unit::UpdateSpeed` for a minion following its owner out of combat (Unit.cpp:8912-8924).
+fn catch_up_factor(gap: f32) -> f32 {
+    (0.75 + (gap - PET_FOLLOW_DIST) * 0.05).clamp(1.0, 1.3)
 }
 
 // -- Confused movement --

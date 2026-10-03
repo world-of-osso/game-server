@@ -230,6 +230,8 @@ mod tests {
             name: "Fixture innkeeper".into(),
             subname: String::new(),
             creature_type: 7,
+            family: 0,
+            type_flags: 0,
             min_level: 1,
             max_level: 1,
             faction: 0,

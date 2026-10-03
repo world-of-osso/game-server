@@ -452,6 +452,8 @@ fn world_data_with_one_spawn(npcflag: u32) -> WorldData {
                 name: "Fixture creature".into(),
                 subname: String::new(),
                 creature_type: 7,
+                family: 0,
+                type_flags: 0,
                 min_level: 1,
                 max_level: 1,
                 faction: 0,

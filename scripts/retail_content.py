@@ -266,6 +266,16 @@ def insert_tdb_templates(conn, entries):
           AND t.entry NOT IN (SELECT entry FROM content_creature_template)""")
 
 
+def take_retail_taming_columns(conn):
+    """Taming reads Retail's creature type, family and difficulty TypeFlags (CreatureTemplate::IsTameable,
+    CreatureData.h): an AzerothCore template TrinityCore also has takes them (Old Blanchy 582 is a tameable
+    Beast in Retail, a Critter in AzerothCore). Needs temp.tdb_difficulty."""
+    conn.execute("""UPDATE content_creature_template SET type = t.type, family = t.family, type_flags = d.TypeFlags
+        FROM tdb_creature_template t JOIN temp.tdb_difficulty d ON d.Entry = t.entry
+        WHERE t.entry = content_creature_template.entry
+          AND content_creature_template.entry IN (SELECT entry FROM creature_template)""")
+
+
 def build_templates(conn, report):
     """content_creature_template: AzerothCore's, plus TrinityCore's for spawned entries AzerothCore lacks and for
     entries a spell transforms into (TRANSFORM_ENTRIES)."""
@@ -284,6 +294,7 @@ def build_templates(conn, report):
         FROM tdb_creature_template t
         WHERE t.entry = content_creature_template.entry
           AND content_creature_template.entry IN (SELECT entry FROM creature_template)""")
+    take_retail_taming_columns(conn)
     # AzerothCore templates TrinityCore also tunes take its ContentTuning range, and the
     # difficulty-0 scaling expansion, level delta and modifiers ExpectedStat is scaled by.
     conn.execute("""UPDATE content_creature_template SET ContentTuningID = d.ContentTuningID,

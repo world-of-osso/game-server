@@ -45,6 +45,7 @@ mod ground;
 mod group;
 mod guild;
 mod guild_bank;
+mod hunter_pet;
 mod ignore_list;
 mod inspect;
 mod interest;
@@ -90,6 +91,7 @@ mod stand_state;
 mod stats;
 #[cfg(feature = "system-timings")]
 mod system_timings;
+mod tame;
 mod taxi;
 mod teleport;
 mod terrain_height;
@@ -192,6 +194,7 @@ fn add_progression_plugins(app: &mut App) {
         .add_plugins(reputation::ReputationPlugin)
         .add_plugins(rest::RestPlugin)
         .add_plugins(stand_state::StandStatePlugin)
+        .add_plugins(hunter_pet::HunterPetPlugin)
         .add_plugins(class_progression::ClassProgressionPlugin);
 }
 

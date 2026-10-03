@@ -1039,6 +1039,33 @@ fn insert_npc_death(mut entity: EntityWorldMut) {
     });
 }
 
+/// `Creature::DespawnOrUnsummon` now: a summon leaves the world (`TempSummon::UnSummon`); a
+/// spawn dies without a corpse (`ForcedDespawn`: `setDeathState(JUST_DIED)`, then
+/// `RemoveCorpse` skipping the corpse decay) and respawns after its spawn's respawn delay.
+pub(crate) fn despawn_creature(world: &mut World, creature: Entity) {
+    if world.get::<crate::zones::TempSummon>(creature).is_some() {
+        crate::zones::unsummon(world, creature);
+        return;
+    }
+    let respawn_timer = {
+        let entity = world.entity(creature);
+        let delay = entity.get::<RespawnDelay>().map_or(0.0, |delay| delay.0);
+        let corpse = entity.get::<CorpseDelay>().map_or(0.0, |delay| delay.0);
+        delay - corpse
+    };
+    if let Some(mut health) = world.get_mut::<Health>(creature) {
+        health.current = 0.0;
+    }
+    let mut entity = world.entity_mut(creature);
+    entity.insert(DeathState { respawn_timer });
+    if let Some(mut motion) = entity.get_mut::<shared::components::CreatureMotion>() {
+        motion.set_if_neq(shared::components::CreatureMotion::Still);
+    }
+    crate::creature_aggro::forget_combat(&mut entity);
+    combat_stop(world, creature);
+    crate::interest::set_hidden(world, creature, true);
+}
+
 /// `Unit::DealDamage(attacker, victim, damage)` without a spell (`DIRECT_DAMAGE`,
 /// school Normal; the `.damage` command): the victim loses `damage` over its health
 /// multiplier for the attacker, both enter combat, the victim's threat and
