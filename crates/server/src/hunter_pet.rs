@@ -15,7 +15,8 @@ use bevy::prelude::*;
 use lightyear::prelude::*;
 use shared::components::{
     CreatureClassification, CreatureMotion, Health, Level, ModelDisplay, MovementSpeed, Npc,
-    Player, Position, Rotation, UnitFactionTemplate, UnitFlags, UnitLevel, UnitPowers, Zone,
+    Player, Position, PowerType, Rotation, UnitFactionTemplate, UnitFlags, UnitLevel, UnitPowers,
+    UnitSummonedBy, Zone,
 };
 use shared::level_scaling::LevelScaling;
 use shared::protocol::NpcFlags;
@@ -26,11 +27,12 @@ use crate::class_progression::KnownSpells;
 use crate::creature_ai::FollowOwner;
 use crate::interest::NetworkVisibility;
 use crate::maps::InMap;
-use crate::networking::PlayerLink;
+use crate::networking::{CombatTarget, PlayerLink};
 use crate::persistence::GameDatabase;
 use crate::persistence::pet_store::{StoredPet, StoredPetStable, load_pet_stable, save_pet_stable};
 use crate::spell_cast::CastFailure;
 use crate::spell_cast::effects::EffectCtx;
+use crate::spell_cast::powers::{PowerPools, PowerTypeTable};
 use crate::spell_info::{SpellEffect, SpellInfo};
 use crate::tame::{
     MAX_ACTIVE_PETS, PetStableSlots, TameFailReason, TameHunter, TameTarget, can_tame,
@@ -46,8 +48,6 @@ pub const EFFECT_SUMMON_PET: u32 = 56;
 pub const EFFECT_DISMISS_PET: u32 = 102;
 /// `SPELL_AURA_ALLOW_TAME_PET_TYPE`: `Player::CanTameExoticPets`.
 const AURA_ALLOW_TAME_PET_TYPE: u32 = 146;
-/// `UNIT_FLAG_PLAYER_CONTROLLED` (`InitTamedPet`).
-const UNIT_FLAG_PLAYER_CONTROLLED: u32 = 0x0000_0008;
 /// `DEFAULT_PLAYER_COMBAT_REACH`: `GetClosePoint(..., owner->GetCombatReach())`.
 const OWNER_COMBAT_REACH: f32 = 1.5;
 
@@ -385,11 +385,12 @@ pub(crate) fn effect_dismiss_pet(
         stable.summoned = None;
     }
     save_stable(world, owner);
+    crate::pet_control::clear_pet_spells(world, owner);
 }
 
 /// Summon the pet of `slot` at `at` as the owner's current pet and save the stable.
 fn put_pet_out(world: &mut World, owner: Entity, slot: u8, at: Position, facing: f32) {
-    let Some(pet) = spawn_pet(world, owner, slot, at, facing) else {
+    let Some((pet, family, level)) = spawn_pet(world, owner, slot, at, facing) else {
         return;
     };
     if let Some(mut stable) = world.get_mut::<PetStable>(owner) {
@@ -397,18 +398,22 @@ fn put_pet_out(world: &mut World, owner: Entity, slot: u8, at: Position, facing:
         stable.summoned = Some(pet);
     }
     save_stable(world, owner);
+    crate::pet_control::init_pet_control(world, owner, pet, family, level);
 }
 
 /// The pet of the owner's `slot` as a creature: its template's entry and classification,
-/// the stored model, name and level, full health, the owner's faction and map, player
-/// controlled, following its owner (`PET_FOLLOW_DIST`, `PET_FOLLOW_ANGLE`).
+/// the stored model, name and level, full health, full Focus (`Pet::CreateBaseAtTamed`
+/// gives a Beast `POWER_FOCUS`; `power_type` MaxBasePower and DefaultPower), the owner's
+/// faction and map, player controlled, summoned by its owner (`SetOwnerGUID` →
+/// `SummonedBy`), following it (`PET_FOLLOW_DIST`, `PET_FOLLOW_ANGLE`). Returns it with
+/// its family and level.
 fn spawn_pet(
     world: &mut World,
     owner: Entity,
     slot: u8,
     at: Position,
     facing: f32,
-) -> Option<Entity> {
+) -> Option<(Entity, u32, u8)> {
     let stored = world
         .get::<PetStable>(owner)?
         .stored
@@ -434,6 +439,11 @@ fn spawn_pet(
     let zone = world.get::<Zone>(owner).copied().unwrap_or(Zone { id: 0 });
     let faction = *world.get::<UnitFactionTemplate>(owner)?;
     let replicate = world.get::<Replicate>(owner).is_some();
+    let focus = world
+        .get_resource::<PowerTypeTable>()
+        .map_or_else(PowerPools::default, |table| {
+            PowerPools::from_table(table, vec![PowerType::Focus])
+        });
     let mut pet = world.spawn((
         (
             at,
@@ -461,12 +471,15 @@ fn spawn_pet(
             classification,
             UnitPowers::default(),
             faction,
-            UnitFlags(UNIT_FLAG_PLAYER_CONTROLLED),
+            UnitFlags(crate::faction::UNIT_FLAG_PLAYER_CONTROLLED),
             NpcFlags(0),
             CreatureMotion::Still,
             MovementSpeed(0.0),
             HunterPet { owner, slot },
             FollowOwner::new(owner),
+            UnitSummonedBy(owner.to_bits()),
+            focus,
+            CombatTarget::default(),
         ),
     ));
     if replicate {
@@ -475,7 +488,7 @@ fn spawn_pet(
             NetworkVisibility::default(),
         ));
     }
-    Some(pet.id())
+    Some((pet.id(), stored.family, stored.level))
 }
 
 /// `Guardian::InitStatsForLevel` without `pet_levelstats` (not imported): ExpectedStat

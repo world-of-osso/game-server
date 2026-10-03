@@ -54,6 +54,7 @@ impl Plugin for CreatureAiPlugin {
                 (chase_system, leash_check_system, return_to_spawn_system).chain(),
                 confused_movement_system,
                 follow_owner_system,
+                pet_motion_system,
             ),
         );
     }
@@ -847,6 +848,102 @@ fn follow_point(leader: &Leader, follower: Position, reach: f32) -> (f32, f32) {
 /// `Unit::UpdateSpeed` for a minion following its owner out of combat (Unit.cpp:8912-8924).
 fn catch_up_factor(gap: f32) -> f32 {
     (0.75 + (gap - PET_FOLLOW_DIST) * 0.05).clamp(1.0, 1.3)
+}
+
+// -- Pet motion --
+
+/// A pet's movement while it does not follow its owner (`PetAI`; a following pet has
+/// `FollowOwner` instead, never both): chasing its victim (`MoveChase`), running to a
+/// point (`MovePoint`: Move To's ground point, or back to where Stay held it), or holding
+/// still there (`MoveIdle`).
+#[derive(Component, Debug, Clone, Copy, PartialEq)]
+pub enum PetMotion {
+    Chase(Entity),
+    Point(Position),
+    Idle,
+}
+
+type PetMover = (
+    Entity,
+    &'static mut Position,
+    &'static mut PetMotion,
+    &'static Health,
+    Option<&'static CastState>,
+    Option<&'static AuraStatMods>,
+    Option<&'static InMap>,
+    Bearing,
+);
+
+/// `PetAI` movement at the base run speed × the aura speed multiplier, on the floor: a
+/// chasing pet runs to `CHASE_REACH` of its victim and, in reach, faces it; a pet sent to
+/// a point runs there, then holds still (`PetAI::MovementInform` → `MoveIdle`). It holds
+/// still while dead, unable to move, or casting a spell movement would interrupt. Paths are
+/// straight, and the chase does not seek `PetAI::DoAttack`'s angle behind the victim.
+fn pet_motion_system(
+    time: Res<Time>,
+    queues: MoveQueues,
+    mut ground: Option<ResMut<GroundMap>>,
+    mut units: ParamSet<(Query<PetMover, ActiveUncontrolled>, Query<&Position>)>,
+) {
+    let dt = time.delta_secs();
+    let victims: Vec<Entity> = units
+        .p0()
+        .iter()
+        .filter_map(|(_, _, motion, ..)| match *motion {
+            PetMotion::Chase(victim) => Some(victim),
+            _ => None,
+        })
+        .collect();
+    let victim_positions: EntityHashMap<Position> = {
+        let positions = units.p1();
+        victims
+            .into_iter()
+            .filter_map(|victim| positions.get(victim).ok().map(|at| (victim, *at)))
+            .collect()
+    };
+    for (entity, mut pos, mut motion, health, cast, mods, map, bearing) in &mut units.p0() {
+        let speed = mods.map_or(1.0, |mods| mods.movement_speed);
+        let held = health.current <= 0.0
+            || speed <= 0.0
+            || cast.is_some_and(|cast| !cast.cast_while_moving);
+        let run_speed = BASE_RUN_SPEED * speed;
+        let here = *pos;
+        let (next_position, face) = match *motion {
+            _ if held => (here, None),
+            PetMotion::Idle => (here, None),
+            PetMotion::Chase(victim) => {
+                let Some(target) = victim_positions.get(&victim) else {
+                    continue;
+                };
+                let next = chase_step(here, target, run_speed * dt);
+                let face = (next == here)
+                    .then(|| facing_along(target.x - here.x, target.z - here.z))
+                    .flatten();
+                (next, face)
+            }
+            PetMotion::Point(point) => {
+                let (reached, x, z) = move_toward(here.x, here.z, point.x, point.z, run_speed * dt);
+                if reached {
+                    *motion = PetMotion::Idle;
+                }
+                (Position { x, y: here.y, z }, None)
+            }
+        };
+        let mut next = next_position;
+        if next != here {
+            let feet = Vec3::new(next.x, here.y, next.z);
+            next.y = run_ground(probe_ground(ground.as_deref_mut(), map, feet), here.y);
+        }
+        let mut stride = if next == here {
+            Stride::still(here)
+        } else {
+            Stride::moving(here, next, CreatureMotion::Run, run_speed)
+        };
+        if face.is_some() {
+            stride.facing = face;
+        }
+        queues.apply(entity, &mut pos, bearing, stride);
+    }
 }
 
 // -- Confused movement --

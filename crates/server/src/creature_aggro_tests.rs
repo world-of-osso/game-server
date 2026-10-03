@@ -346,6 +346,45 @@ fn neutral_boar_ignores_player_until_hit_then_fights_back() {
     assert!(health(&app, player) < 100.0, "boar hits back");
 }
 
+/// A hunter's pet: a creature of its owner's faction that a player controls
+/// (`UNIT_FLAG_PLAYER_CONTROLLED`), going after `target`.
+fn spawn_pet_attacking(app: &mut App, position: Position, target: Entity) -> Entity {
+    app.world_mut()
+        .spawn((
+            position,
+            crate::maps::InMap::continent(0),
+            Npc {
+                template_id: 299,
+                name: "Diseased Young Wolf".into(),
+            },
+            Health {
+                current: 100.0,
+                max: 100.0,
+            },
+            UnitLevel(5),
+            UnitFactionTemplate(HUMAN),
+            shared::components::UnitFlags(crate::faction::UNIT_FLAG_PLAYER_CONTROLLED),
+            CombatTarget(Some(target)),
+        ))
+        .id()
+}
+
+/// `GetAffectingPlayer`: a player's pet attacks a neutral creature as its owner may, and
+/// the creature keeps the pet as its victim and hits back.
+#[test]
+fn neutral_boar_attacked_by_a_players_pet_fights_the_pet() {
+    let mut app = aggro_app();
+    let boar = spawn_creature(&mut app, &STONETUSK_BOAR, at(0.0, 0.0));
+    never_misses(&mut app, boar);
+    let pet = spawn_pet_attacking(&mut app, at(3.0, 0.0), boar);
+    run(&mut app, 3);
+    assert!(health(&app, boar) < 100.0, "pet swing lands");
+    assert_eq!(state(&app, boar), pursuing(pet));
+    run(&mut app, 20);
+    assert_eq!(state(&app, boar), pursuing(pet));
+    assert!(health(&app, pet) < 100.0, "boar hits the pet back");
+}
+
 #[test]
 fn training_dummy_never_aggroes_or_fights_back() {
     let mut app = aggro_app();

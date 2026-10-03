@@ -1,6 +1,6 @@
 # Hunter taming
 
-Which creature a hunter can tame with Tame Beast (1515), the pet it becomes, its stable, Call Pet 1-5, Dismiss Pet and the pet following its owner. Pet attack, stances, commands, the pet action bar and frame are separate work.
+Which creature a hunter can tame with Tame Beast (1515), the pet it becomes, its stable, Call Pet 1-5, Dismiss Pet and the pet following its owner. Pet attack, stances, commands and the pet action bar: [pet control](pet-control.md).
 
 References: TrinityCore a352b1fa `spell_hun_tame_beast::CheckCast` (spell_hunter.cpp:1266-1321), `Spell::EffectTameCreature`/`EffectSummonPet`/`EffectDismissPet` (SpellEffects.cpp:2606-2728, 3586-3598), `Spell::CheckCast` SUMMON_PET/DISMISS_PET (Spell.cpp:6454-6538), `Unit::InitTamedPet` (Unit.cpp:11180-11215), `Pet::CreateBaseAtCreature` (Pet.cpp:768-799), `FollowMovementGenerator` (FollowMovementGenerator.cpp:76-188), `CreatureTemplate::IsTameable`/`IsExotic` (CreatureData.h:547-559), `Player::CanTameExoticPets` (Player.h:2498, `SPELL_AURA_ALLOW_TAME_PET_TYPE` 146), `CREATURE_TYPE_FLAG_TAMEABLE` 0x1 / `TAMEABLE_EXOTIC` 0x10000 (SharedDefines.h:5132,5148); error text from Retail GlobalStrings (`SPELL_FAILED_HIGHLEVEL`, `SPELL_FAILED_BAD_TARGETS`, `PETTAME_TOOMANY`, `PETTAME_CREATUREALREADYOWNED` …).
 

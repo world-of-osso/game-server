@@ -122,7 +122,10 @@ fn unit_faction(world: &World, entity: Entity) -> UnitFaction {
         template: world
             .get::<UnitFactionTemplate>(entity)
             .map_or(0, |template| template.0),
-        is_player: world.get::<Player>(entity).is_some(),
+        is_player: crate::faction::player_affected(
+            world.get::<Player>(entity).is_some(),
+            world.get::<shared::components::UnitFlags>(entity),
+        ),
     }
 }
 
