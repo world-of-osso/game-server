@@ -483,6 +483,51 @@ pub(crate) fn handle_learn_spell(
     }
 }
 
+/// Put the online character on Flight Style: Skyriding 404464 (knowing Skyriding Basics
+/// 376777, MountCapability 494's `ReqSpellKnownID`) or Steady 404468
+/// (`auras::mount::set_flight_style`); the next mount picks the matching capability.
+/// Login puts Steady back (`Player::_LoadAuras`).
+pub(crate) fn handle_flight_style(
+    db: &persistence::GameDatabase,
+    commands: &mut Commands,
+    players: &Query<(
+        Entity,
+        &mut Position,
+        &persistence::ClientId,
+        &mut shared::components::MovementControl,
+    )>,
+    name: &str,
+    skyriding: bool,
+) -> AdminResponse {
+    use crate::auras::mount::{FlightStyle, SKYRIDING_BASICS, set_flight_style};
+    let Some(char_id) = persistence::find_character_id_by_name(&db.db, name) else {
+        return AdminResponse::Error(format!("character '{name}' not found"));
+    };
+    let Some(player) = players
+        .iter()
+        .find_map(|(entity, _, cid, _)| (cid.0 == char_id).then_some(entity))
+    else {
+        return AdminResponse::Error(format!("character '{name}' is not online"));
+    };
+    commands.queue(move |world: &mut World| {
+        if !skyriding {
+            set_flight_style(world, player, FlightStyle::Steady);
+            return;
+        }
+        let learned = crate::profession::with_learner(world, player, |learner, profs| {
+            learner.learn_spell(profs, SKYRIDING_BASICS, 0)
+        });
+        if learned.is_none() {
+            error!("flight-style: character {char_id} has no professions");
+        }
+        set_flight_style(world, player, FlightStyle::Skyriding);
+    });
+    AdminResponse::FlightStyleSet {
+        character_name: name.to_owned(),
+        skyriding,
+    }
+}
+
 /// `.damage <amount>` (cs_misc `HandleDamageCommand`): the online character's target
 /// takes `amount` Normal-school damage from it through `Unit::DealDamage`.
 pub(crate) fn handle_damage(

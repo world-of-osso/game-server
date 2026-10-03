@@ -88,6 +88,7 @@ pub const MELEE_SLOW: u32 = 193;
 pub const FLY: u32 = 201;
 pub const MOD_INCREASE_MOUNTED_FLIGHT_SPEED: u32 = 207;
 pub const MOD_MOUNTED_FLIGHT_SPEED_ALWAYS: u32 = 208;
+pub const ADV_FLYING: u32 = 446;
 pub const MOD_RAGE_FROM_DAMAGE_DEALT: u32 = 213;
 pub const HASTE_SPELLS: u32 = 216;
 pub const ADD_PCT_MODIFIER_BY_SPELL_LABEL: u32 = 218;

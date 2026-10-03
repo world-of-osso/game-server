@@ -588,6 +588,10 @@ fn dispatch(
             character_name,
             spell,
         } => handle_learn_spell(db, commands, players, &character_name, spell),
+        AdminRequest::FlightStyle {
+            character_name,
+            skyriding,
+        } => handle_flight_style(db, commands, players, &character_name, skyriding),
         AdminRequest::Damage {
             character_name,
             amount,

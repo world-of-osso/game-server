@@ -146,6 +146,13 @@ fn print_character_response(response: &AdminResponse) -> bool {
         } => {
             println!("Spell learned: {character_name} -> {spell}");
         }
+        AdminResponse::FlightStyleSet {
+            character_name,
+            skyriding,
+        } => {
+            let style = if *skyriding { "Skyriding" } else { "Steady" };
+            println!("Flight style: {character_name} -> {style}");
+        }
         AdminResponse::PositionSet {
             character_name,
             x,

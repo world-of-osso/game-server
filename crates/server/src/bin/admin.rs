@@ -174,6 +174,12 @@ enum AdminRequest {
         character_name: String,
         spell: u32,
     },
+    /// Put the online character on Flight Style: Steady or Skyriding (skyriding also
+    /// teaches Skyriding Basics 376777); its next mount picks the matching capability.
+    FlightStyle {
+        character_name: String,
+        skyriding: bool,
+    },
     CombatLog {
         last_seconds: f64,
     },
@@ -381,6 +387,10 @@ enum AdminResponse {
         character_name: String,
         spell: u32,
     },
+    FlightStyleSet {
+        character_name: String,
+        skyriding: bool,
+    },
     Damaged {
         character_name: String,
         amount: f32,
@@ -492,6 +502,7 @@ fn print_usage() {
     eprintln!("  game-server-admin list-equipment <character>");
     eprintln!("  game-server-admin taxi-learn <character_name> <taxi_node_id>");
     eprintln!("  game-server-admin learn-spell <character_name> <spell_id>");
+    eprintln!("  game-server-admin flight-style <character_name> <steady|skyriding>");
     eprintln!("  game-server-admin clock-advance <seconds>");
     eprintln!("  game-server-admin instance-locks <character_name>");
     eprintln!("  game-server-admin instance-unbind <character_name> <map_id|all>");
@@ -612,6 +623,7 @@ fn parse_request(args: &[String]) -> AdminRequest {
         "clear-equipment-appearance" => parse_clear_equipment_appearance(args),
         "taxi-learn" => parse_taxi_learn(args),
         "learn-spell" => parse_learn_spell(args),
+        "flight-style" => parse_flight_style(args),
         other => {
             eprintln!("Unknown command: {other}");
             print_usage();
@@ -789,6 +801,22 @@ fn parse_learn_spell(args: &[String]) -> AdminRequest {
     AdminRequest::LearnSpell {
         character_name: args[2].clone(),
         spell: parse_number(&args[3], "spell id"),
+    }
+}
+
+fn parse_flight_style(args: &[String]) -> AdminRequest {
+    require_args(args, 4, "flight-style <character_name> <steady|skyriding>");
+    let skyriding = match args[3].as_str() {
+        "steady" => false,
+        "skyriding" => true,
+        other => {
+            eprintln!("Invalid flight style: {other} (steady or skyriding)");
+            std::process::exit(1);
+        }
+    };
+    AdminRequest::FlightStyle {
+        character_name: args[2].clone(),
+        skyriding,
     }
 }
 

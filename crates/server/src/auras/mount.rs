@@ -15,8 +15,14 @@
 //!   `HandleAuraModIncreaseFlightSpeed` :3402-3422 → `Unit::SetCanFly`): while either is
 //!   on, `PlayerMotion::CAN_FLY`; losing the last one drops `FLYING` too, so the player
 //!   falls (`MoveFall`).
+//! - ADV_FLYING 446 (`HandleModAdvFlying` :2986-2995 → `SetCanFly`, `SetCanAdvFly`): while
+//!   on, `PlayerMotion::CAN_FLY | CAN_ADV_FLY`, the Skyriding capability's aura 406095;
+//!   losing it drops `ADV_FLYING`.
 //! - Every player carries Flight Style: Steady 404468 (`Player::_LoadAuras`,
 //!   Player.cpp:19127 `AddAura(404468)`), which the steady flight capabilities require.
+//!   Skyriding capability 494 needs Skyriding Basics 376777 and PlayerCondition 96927
+//!   (NOT Flight Style: Steady); `set_flight_style` swaps 404468 for Flight Style:
+//!   Skyriding 404464 until Retail's toggle spell is modelled.
 //!
 //! Not modelled: `AreaTable.MountFlags` (the server has no area table, so ground and flying
 //! capabilities are allowed everywhere), `ReqAreaID` capabilities (never selected), the
@@ -32,7 +38,7 @@ use lightyear::prelude::ReplicationDirtyQueue;
 use rusqlite::Connection;
 use shared::components::{Mounted, Player, PlayerMotion};
 
-use super::handlers::{FLY, MOD_INCREASE_MOUNTED_FLIGHT_SPEED, MOUNTED};
+use super::handlers::{ADV_FLYING, FLY, MOD_INCREASE_MOUNTED_FLIGHT_SPEED, MOUNTED};
 use super::{ActiveAuras, AuraApplication, AuraInstance, AuraSource, RemoveReason};
 
 /// `SKILL_RIDING` (SharedDefines.h:5961).
@@ -490,26 +496,54 @@ pub(super) fn receive_cancel_mount_aura(world: &mut World) {
     }
 }
 
-/// `Unit::SetCanFly` from the unit's FLY and MOD_INCREASE_MOUNTED_FLIGHT_SPEED auras;
-/// losing the ability drops `FLYING` (`MOVEMENTFLAG_MASK_MOVING_FLY`).
-pub(super) fn reconcile_can_fly(world: &mut World, unit: Entity, auras_can_fly: bool) {
+/// `Unit::SetCanFly` / `Unit::SetCanAdvFly` (Unit.cpp:14027-14035) from the unit's flight
+/// auras; losing an ability drops its flight (`MOVEMENTFLAG_MASK_MOVING_FLY`, ADV_FLYING).
+pub(super) fn reconcile_can_fly(world: &mut World, unit: Entity, flight: Flight) {
     let Some(mut motion) = world.get_mut::<PlayerMotion>(unit) else {
         return;
     };
-    if motion.contains(PlayerMotion::CAN_FLY) == auras_can_fly {
+    let mut flags = motion.0;
+    for (able, ability, flight) in [
+        (
+            flight.can_fly,
+            PlayerMotion::CAN_FLY,
+            PlayerMotion::FLYING | PlayerMotion::ADV_FLYING,
+        ),
+        (
+            flight.can_adv_fly,
+            PlayerMotion::CAN_ADV_FLY,
+            PlayerMotion::ADV_FLYING,
+        ),
+    ] {
+        flags = if able {
+            flags | ability
+        } else {
+            flags & !(ability | flight)
+        };
+    }
+    if flags == motion.0 {
         return;
     }
-    motion.0 = if auras_can_fly {
-        motion.0 | PlayerMotion::CAN_FLY
-    } else {
-        motion.0 & !(PlayerMotion::CAN_FLY | PlayerMotion::FLYING)
-    };
+    motion.0 = flags;
     mark_dirty(world, unit);
 }
 
-/// Whether `auras` let the unit fly.
-pub(super) fn can_fly(auras: &ActiveAuras) -> bool {
-    auras.has_type(FLY) || auras.has_type(MOD_INCREASE_MOUNTED_FLIGHT_SPEED)
+/// What a unit's auras let it do in the air.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) struct Flight {
+    pub(super) can_fly: bool,
+    pub(super) can_adv_fly: bool,
+}
+
+/// `auras`' FLY, MOD_INCREASE_MOUNTED_FLIGHT_SPEED and ADV_FLYING abilities.
+pub(super) fn flight(auras: &ActiveAuras) -> Flight {
+    let can_adv_fly = auras.has_type(ADV_FLYING);
+    Flight {
+        can_fly: can_adv_fly
+            || auras.has_type(FLY)
+            || auras.has_type(MOD_INCREASE_MOUNTED_FLIGHT_SPEED),
+        can_adv_fly,
+    }
 }
 
 /// Players entering the world get Flight Style: Steady (`Player::_LoadAuras`).
@@ -537,4 +571,35 @@ pub(super) fn apply_flight_style(
             },
         );
     }
+}
+
+/// Flight Style: Skyriding.
+pub const FLIGHT_STYLE_SKYRIDING: u32 = 404464;
+/// Skyriding Basics, MountCapability 494's `ReqSpellKnownID`.
+pub const SKYRIDING_BASICS: u32 = 376777;
+
+/// The flight style auras: Steady 404468 and Skyriding 404464.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FlightStyle {
+    Steady,
+    Skyriding,
+}
+
+/// Put the player on `style`: its Flight Style aura replaces the other one. Part 1's
+/// stand-in for Retail's flight style toggle; the next mount picks its capability.
+pub fn set_flight_style(world: &mut World, unit: Entity, style: FlightStyle) {
+    let (on, off) = match style {
+        FlightStyle::Steady => (FLIGHT_STYLE_STEADY, FLIGHT_STYLE_SKYRIDING),
+        FlightStyle::Skyriding => (FLIGHT_STYLE_SKYRIDING, FLIGHT_STYLE_STEADY),
+    };
+    super::remove_auras(world, unit, RemoveReason::Cancelled, |aura| {
+        aura.spell_id == off
+    });
+    if world
+        .get::<ActiveAuras>(unit)
+        .is_some_and(|auras| auras.iter().any(|aura| aura.spell_id == on))
+    {
+        return;
+    }
+    cast_on_self(world, unit, on);
 }
