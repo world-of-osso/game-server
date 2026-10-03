@@ -22,7 +22,7 @@ Follow the workflow in `SCHEMA.md`: check existing pages first (update > create)
 - `--bin game-server-admin|game-cli --run -- <args>` selects a tool. `--release` selects release builds.
 - `python3 scripts/build-host.py --test -p server FILTER -- --nocapture` runs filtered tests; `--test` must be last. `python3 scripts/build-host.py --check -p server` checks without launching.
 - `./run-dev.sh --build-host desktop|local` watches crates/Cargo.toml and rebuilds/runs on that host.
-- `--save-build-host desktop|local` changes the shared default at `~/.config/game-engine/build-host`. Host failures never select another host.
+- `--save-build-host desktop|local` changes the shared default at `~/.config/game-engine/build-host`. Host failures never select another host. Native tool selection: desktop pinned Rust 1.98.1 via rustup; local installed Arch Cargo/rustc 1.98.1, no rustup.
 - Shared runner: `../game-engine/scripts/`; `BUILD_HOST_SCRIPTS` overrides its location. Desktop runtime assets and player storage are separate from local data; see [native workflow](docs/remote-builds.md).
 
 ## Data

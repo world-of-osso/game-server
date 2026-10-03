@@ -31,7 +31,9 @@ Tests are inventoried, not rerun by this documentation audit; requirements remai
 
 ## Known gaps (current cycle)
 
-- [ ] New native server runtime acceptance remains pending; successful compilation alone is insufficient.
+- [x] Bounded native desktop acceptance: actual build, isolated admin `pong`, disposable-account authenticated UDP login, and owned-process cleanup observed by main; see guide.
+- [ ] Actual local native acceptance after installed Cargo/rustc selection fix.
+- [ ] Lint fixes remain pending; 93 existing shared workflow fixtures passing does not complete workflow acceptance.
 
 ## Out of scope
 

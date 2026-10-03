@@ -24,7 +24,7 @@ Without `--bin`, build selects server, admin, and client binaries; `--run` defau
 
 `python3 scripts/build-host.py --save-build-host desktop` saves the shared default in `~/.config/game-engine/build-host`; use `local` to change it. The configured default is desktop. Explicit `--build-host` overrides it for one invocation. Host failure is an error, never a host fallback.
 
-Shared selection, snapshot, and native execution helpers live in canonical `../game-engine/scripts/`; `BUILD_HOST_SCRIPTS` overrides that dependency. Desktop snapshots include `shared-protocol`. Native Rust 1.98.1 runs in capped eight-job/16 GB scopes with same-ABI native runtime dependencies; no Docker runtime or ICU bundles are substituted. Existing CI/release Docker and deployment pipelines remain unchanged.
+Shared selection, snapshot, and native execution helpers live in canonical `../game-engine/scripts/`; `BUILD_HOST_SCRIPTS` overrides that dependency. Desktop snapshots include `shared-protocol`. Desktop uses pinned Rust 1.98.1 through rustup; the in-progress local native-tool fix uses installed Arch Cargo/rustc 1.98.1 without rustup, not fallback. Native builds run in capped eight-job/16 GB scopes with same-ABI native runtime dependencies; no Docker runtime or ICU bundles are substituted. Existing CI/release Docker and deployment pipelines remain unchanged.
 
 ## Source and process lifetime
 
@@ -38,7 +38,9 @@ Mutable player storage and admin socket default to `/home/osso-test/.local/share
 
 ## Evidence and pending runtime proof
 
-Reported main-session evidence on October 3, 2026: native server/tools build completed in 6m34s. New native server runtime proof remains pending. A reported sixteen focused tests/check exit 0 at a source ancestor is historical evidence, not a fresh current-tree gate. No broad-suite, warning-free, or full-parity claim follows from these reports.
+Main-observed evidence on October 3, 2026: actual native desktop server/tools build passed (6m34s). Isolated desktop admin `pong` and disposable-account authenticated UDP login probes passed; the owned server process was cleaned up. This is bounded runtime proof, not gameplay or full server parity acceptance.
+
+Existing 93 shared workflow fixtures passed; lint fixes and actual local native acceptance remain pending. A reported sixteen focused tests/check exit 0 at a source ancestor is historical evidence, not a fresh current-tree gate. No broad-suite, warning-free, or whole-workflow completion claim follows.
 
 ## Related
 
