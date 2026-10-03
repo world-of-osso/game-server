@@ -5,7 +5,10 @@
 //! `AddSpellToActionBar` (CharmInfo.cpp:49-62, 166-215), `Player::PetSpellInitialize`
 //! (Player.cpp:22440-22477), `PetAI::UpdateAI`, `SelectNextTarget`, `CanAttack`, `DoAttack`,
 //! `HandleReturnMovement`, `NeedToStop` (PetAI.cpp), `SpellMgr::LoadPetLevelupSpellMap`
-//! (SpellMgr.cpp:2152-2199) and `Pet::InitLevelupSpellsForLevel` (Pet.cpp:1494-1529).
+//! (SpellMgr.cpp:2152-2199), `Pet::InitLevelupSpellsForLevel` (Pet.cpp:1494-1529), the
+//! spell buttons of `HandlePetActionHelper` (PetHandler.cpp:287-391),
+//! `HandlePetSpellAutocastOpcode` (PetHandler.cpp:628-676) and `PetAI::UpdateAI`'s autocast
+//! (PetAI.cpp:105-212).
 //!
 //! Where this departs from TrinityCore:
 //! - The bar is Retail's: Attack, Follow, Move To, four pet spells, Assist, Defensive,
@@ -19,9 +22,13 @@
 //!   of `OwnerAttackedBy` / `AttackedBy` on damage.
 //! - A pet sent somewhere with Move To stays there, as after Stay: TrinityCore's
 //!   `HandleReturnMovement` only holds a `COMMAND_STAY` pet and makes it follow again.
-//! - Not modelled: pet spells being cast (autocast or ordered), Abandon, the stance kept
-//!   in the stable (`character_pet.ReactState`: each summon starts Passive, as a new pet's
-//!   `CharmInfo` sets it), spell ranks on the bar (`SupercedesSpell`).
+//! - The stance is saved to the stable when it changes, not at `SavePetToDB` time.
+//! - After an autocast toggle the owner gets the whole bar again (`PetSpells`).
+//! - Autocast casts the first ready autocast spell in bar order, not a random one, and
+//!   never positive spells (Dash).
+//! - Not modelled: Abandon, `SMSG_PET_CAST_FAILED` for a failed ordered cast, autocast
+//!   states kept in the stable (`character_pet.abilities`), spell ranks on the bar
+//!   (`SupercedesSpell`).
 
 use std::collections::HashMap;
 use std::path::Path;
@@ -33,8 +40,8 @@ use shared::components::{Health, Mounted, Player, Position, UnitFactionTemplate,
 use shared::protocol::{
     ACT_COMMAND, ACT_DISABLED, ACT_ENABLED, ACT_PASSIVE, ACT_REACTION, COMMAND_ATTACK,
     COMMAND_FOLLOW, COMMAND_MOVE_TO, COMMAND_STAY, PET_ACTION_BAR_SLOTS, PetAction, PetClearSpells,
-    PetSpells, REACT_AGGRESSIVE, REACT_ASSIST, REACT_DEFENSIVE, REACT_PASSIVE, pet_action_button,
-    pet_action_button_action, pet_action_button_type,
+    PetSpellAutocast, PetSpells, REACT_AGGRESSIVE, REACT_ASSIST, REACT_DEFENSIVE, REACT_PASSIVE,
+    pet_action_button, pet_action_button_action, pet_action_button_type,
 };
 
 use crate::combat::AutoAttack;
@@ -69,7 +76,11 @@ impl Plugin for PetControlPlugin {
         app.add_systems(Startup, load_pet_levelup_spells_startup)
             .add_systems(
                 FixedUpdate,
-                (process_pet_actions, pet_ai_system)
+                (
+                    process_pet_actions,
+                    process_pet_autocast_toggles,
+                    pet_ai_system,
+                )
                     .chain()
                     .after(crate::combat::auto_attack_system),
             );
@@ -95,11 +106,12 @@ pub struct PetCharm {
 }
 
 impl PetCharm {
-    /// `CharmInfo::CharmInfo` for a new pet: following, passive.
-    pub fn new(action_bar: [u32; PET_ACTION_BAR_SLOTS]) -> Self {
+    /// A pet out: following (`CharmInfo::CharmInfo`) in its stored stance
+    /// (`Pet::LoadPetFromDB` → `SetReactState(petInfo->ReactState)`).
+    pub fn new(action_bar: [u32; PET_ACTION_BAR_SLOTS], react: u32) -> Self {
         Self {
             command: COMMAND_FOLLOW,
-            react: REACT_PASSIVE,
+            react,
             command_attack: false,
             follow_ordered: false,
             stay_at: None,
@@ -110,6 +122,30 @@ impl PetCharm {
     fn holds_position(&self) -> bool {
         self.command == COMMAND_STAY || self.command == COMMAND_MOVE_TO
     }
+
+    /// The bar slot holding `spell` (`HasSpell`: the bar holds the pet's learned spells).
+    fn spell_slot(&self, spell: u32) -> Option<usize> {
+        PET_SPELL_SLOTS.clone().find(|&slot| {
+            let button = self.action_bar[slot];
+            button != 0
+                && is_spell_button(pet_action_button_type(button))
+                && pet_action_button_action(button) == spell
+        })
+    }
+
+    /// `GetPetAutoSpellOnPos`: the spells on the bar with autocast on, in bar order.
+    fn autocast_spells(&self) -> Vec<u32> {
+        PET_SPELL_SLOTS
+            .clone()
+            .map(|slot| self.action_bar[slot])
+            .filter(|&button| pet_action_button_type(button) == ACT_ENABLED)
+            .map(pet_action_button_action)
+            .collect()
+    }
+}
+
+fn is_spell_button(kind: u8) -> bool {
+    matches!(kind, ACT_ENABLED | ACT_DISABLED | ACT_PASSIVE)
 }
 
 /// One of a family's level-up spells: learned at `level`, on the bar as `kind`.
@@ -217,6 +253,7 @@ pub(crate) fn init_pet_control(
     pet: Entity,
     family: u32,
     level: u8,
+    react: u32,
 ) {
     let bar = world
         .get_resource::<PetLevelupSpells>()
@@ -225,7 +262,7 @@ pub(crate) fn init_pet_control(
             || pet_action_bar(&[], level),
             |spells| pet_action_bar(spells, level),
         );
-    world.entity_mut(pet).insert(PetCharm::new(bar));
+    world.entity_mut(pet).insert(PetCharm::new(bar, react));
     send_pet_spells(world, owner, pet);
 }
 
@@ -275,10 +312,107 @@ fn handle_pet_action(world: &mut World, owner: Entity, action: PetAction) {
     let order = pet_action_button_action(action.action);
     match pet_action_button_type(action.action) {
         ACT_COMMAND => command(world, owner, pet, order, &action),
-        ACT_REACTION => react(world, pet, order),
-        // Pet spells are not cast.
+        ACT_REACTION => react(world, owner, pet, order),
+        kind if is_spell_button(kind) => {
+            cast_ordered_spell(world, owner, pet, order, &action);
+            return;
+        }
         _ => return,
     }
+    send_pet_spells(world, owner, pet);
+}
+
+/// `TARGET_UNIT_SRC_AREA_ENEMY`, `TARGET_UNIT_DEST_AREA_ENEMY`, `TARGET_DEST_DYNOBJ_ENEMY`:
+/// spells the bar does not cast (`HandlePetActionHelper`).
+const AREA_ENEMY_TARGETS: [u32; 3] = [15, 16, 28];
+
+/// A spell button (`ACT_ENABLED`/`ACT_DISABLED`/`ACT_PASSIVE`, `HandlePetActionHelper`):
+/// a learned, non-passive spell without an enemy area target is cast by the pet through
+/// the spell pipeline at the given unit; as with an Attack order the pet goes after a unit
+/// its owner is not friendly to (`_AttackStart`). A failed cast clears the attack order.
+fn cast_ordered_spell(
+    world: &mut World,
+    owner: Entity,
+    pet: Entity,
+    spell_id: u32,
+    action: &PetAction,
+) {
+    let learned = world
+        .get::<PetCharm>(pet)
+        .is_some_and(|charm| charm.spell_slot(spell_id).is_some());
+    let Some(spell) = world
+        .get_resource::<crate::spell_info::SpellStore>()
+        .and_then(|store| store.get(spell_id))
+        .cloned()
+    else {
+        return;
+    };
+    let area_enemy = spell
+        .effects
+        .iter()
+        .any(|effect| AREA_ENEMY_TARGETS.contains(&effect.implicit_targets[0]));
+    if !learned || area_enemy || crate::auras::is_passive(&spell) {
+        return;
+    }
+    update_charm(world, pet, |charm| {
+        charm.command_attack = true;
+        charm.follow_ordered = false;
+    });
+    let target = action.target.and_then(Entity::try_from_bits);
+    match crate::spell_cast::creature_cast(world, pet, spell_id, target, false) {
+        Ok(()) => {
+            if let Some(target) = target
+                && valid_attack_target(world, owner, target)
+                && victim(world, pet) != Some(target)
+            {
+                attack_start(world, pet, target);
+            }
+        }
+        Err(failure) => {
+            debug!("Pet {pet} could not cast {spell_id}: {failure:?}");
+            update_charm(world, pet, |charm| charm.command_attack = false);
+        }
+    }
+}
+
+/// `CMSG_PET_SPELL_AUTOCAST` from each player.
+fn process_pet_autocast_toggles(world: &mut World) {
+    let mut toggles = Vec::new();
+    let mut receivers = world.query::<(&mut MessageReceiver<PetSpellAutocast>, &PlayerLink)>();
+    for (mut receiver, link) in receivers.iter_mut(world) {
+        toggles.extend(receiver.receive().map(|toggle| (link.0, toggle)));
+    }
+    for (player, toggle) in toggles {
+        toggle_autocast(world, player, toggle);
+    }
+}
+
+/// `HandlePetSpellAutocastOpcode` → `CharmInfo::SetSpellAutocast`: the owner's living pet
+/// sets a learned autocastable spell's button `ACT_ENABLED` or `ACT_DISABLED`. The owner
+/// then gets the bar again (TrinityCore leaves the client to update its own bar).
+fn toggle_autocast(world: &mut World, owner: Entity, toggle: PetSpellAutocast) {
+    let Some(pet) = summoned_pet(world, owner).filter(|pet| pet.to_bits() == toggle.pet) else {
+        return;
+    };
+    if is_dead(world, pet) {
+        return;
+    }
+    let Some(mut charm) = world.get_mut::<PetCharm>(pet) else {
+        return;
+    };
+    let Some(slot) = charm.spell_slot(toggle.spell) else {
+        return;
+    };
+    // `SpellInfo::IsAutocastable`: the bar holds a spell that is not as `ACT_PASSIVE`.
+    if pet_action_button_type(charm.action_bar[slot]) == ACT_PASSIVE {
+        return;
+    }
+    let kind = if toggle.enabled {
+        ACT_ENABLED
+    } else {
+        ACT_DISABLED
+    };
+    charm.action_bar[slot] = pet_action_button(toggle.spell, kind);
     send_pet_spells(world, owner, pet);
 }
 
@@ -347,8 +481,9 @@ fn command(world: &mut World, owner: Entity, pet: Entity, order: u32, action: &P
     }
 }
 
-/// `ACT_REACTION`: Passive stops the attack (`AttackStop`); every stance is set.
-fn react(world: &mut World, pet: Entity, react: u32) {
+/// `ACT_REACTION`: Passive stops the attack (`AttackStop`); every stance is set and kept
+/// with the pet in its stable slot (`Pet::SavePetToDB` saves `ReactState`).
+fn react(world: &mut World, owner: Entity, pet: Entity, react: u32) {
     if !matches!(
         react,
         REACT_PASSIVE | REACT_DEFENSIVE | REACT_AGGRESSIVE | REACT_ASSIST
@@ -359,6 +494,7 @@ fn react(world: &mut World, pet: Entity, react: u32) {
         stop_attacking(world, pet);
     }
     update_charm(world, pet, |charm| charm.react = react);
+    crate::hunter_pet::save_pet_react_state(world, owner, pet, react);
 }
 
 fn update_charm(world: &mut World, pet: Entity, change: impl FnOnce(&mut PetCharm)) {
@@ -399,7 +535,9 @@ fn update_pet(world: &mut World, owner: Entity, pet: Entity) {
                 stop_attacking(world, pet);
                 update_charm(world, pet, |charm| charm.command_attack = false);
                 return_movement(world, owner, pet);
+                return;
             }
+            autocast(world, pet, target);
             return;
         }
         stop_attacking(world, pet);
@@ -408,6 +546,35 @@ fn update_pet(world: &mut World, owner: Entity, pet: Entity) {
     match select_next_target(world, owner, pet) {
         Some(next) => attack_start(world, pet, next),
         None => return_movement(world, owner, pet),
+    }
+}
+
+/// `PetAI::UpdateAI`'s autocast for a pet not casting with a victim it may attack: the
+/// first autocast spell on the bar that its victim takes (`CanAutoCast` → `CheckPetCast`:
+/// cooldown, Focus, range, sight) is cast at it. TrinityCore picks at random among every
+/// spell that could be cast; positive spells (cast at attackers or allies) are not
+/// autocast here.
+fn autocast(world: &mut World, pet: Entity, victim: Entity) {
+    if world.get::<shared::casting::CastState>(pet).is_some() || !can_attack(world, pet, victim) {
+        return;
+    }
+    let Some(spells) = world.get::<PetCharm>(pet).map(PetCharm::autocast_spells) else {
+        return;
+    };
+    for spell_id in spells {
+        let negative = world
+            .get_resource::<crate::spell_info::SpellStore>()
+            .and_then(|store| {
+                let spell = store.get(spell_id)?;
+                Some(crate::spell_info::positivity::negative_effects(store, spell) != 0)
+            });
+        if negative != Some(true) {
+            continue;
+        }
+        let cast = crate::spell_cast::creature_cast(world, pet, spell_id, Some(victim), false);
+        if cast.is_ok() {
+            return;
+        }
     }
 }
 

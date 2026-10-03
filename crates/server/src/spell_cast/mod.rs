@@ -416,18 +416,26 @@ pub(crate) fn send_to_owner<M: lightyear::prelude::Message + Clone>(
     }
 }
 
-/// Send to the owners of the event's source and target (once each); damage also counts
-/// on the damage meters.
+/// Send to the owners of the event's source and target (once each), a hunter pet's
+/// being its owner's (`GetCharmerOrOwnerPlayerOrPlayerItself`); damage also counts on the
+/// damage meters.
 pub(crate) fn log_event(world: &mut World, event: CombatLogEvent) {
     crate::damage_meter::record_damage(world, &event);
-    let mut units: Vec<Entity> = [event.source, event.target]
+    let mut players: Vec<Entity> = Vec::new();
+    for unit in [event.source, event.target]
         .into_iter()
         .flatten()
         .filter_map(Entity::try_from_bits)
-        .collect();
-    units.dedup();
-    for unit in units {
-        send_to_owner(world, unit, event.clone());
+    {
+        let player = world
+            .get::<crate::hunter_pet::HunterPet>(unit)
+            .map_or(unit, |pet| pet.owner);
+        if !players.contains(&player) {
+            players.push(player);
+        }
+    }
+    for player in players {
+        send_to_owner(world, player, event.clone());
     }
 }
 
@@ -1054,8 +1062,11 @@ fn insert_cast_state(world: &mut World, caster: Entity, spell: &SpellInfo, cast:
 }
 
 fn start_gcd(world: &mut World, caster: Entity, spell: &SpellInfo) {
-    // Spell::CanHaveGlobalCooldown: only players and their controlled units.
-    if world.get::<Npc>(caster).is_some() {
+    // Spell::CanHaveGlobalCooldown: only players and their controlled units (a creature
+    // with a `CharmInfo`).
+    if world.get::<Npc>(caster).is_some()
+        && world.get::<crate::pet_control::PetCharm>(caster).is_none()
+    {
         return;
     }
     let base_gcd_ms = spell
