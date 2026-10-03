@@ -13,8 +13,9 @@ use shared::components::{Player, UnitLevel};
 use shared::protocol::{
     ConvertGroupToParty, ConvertGroupToRaid, GroupChannel, GroupCommandResponse,
     GroupInviteCancelled, GroupInviteIntent, GroupInvitePrompt, GroupRosterSnapshot,
-    GroupUninviteIntent, LeaveGroup, PromoteGroupLeader, ReadyCheckUpdate, RespondGroupInvite,
-    RespondReadyCheck, SetGroupLootMethod, SetGroupRole, SetRaidSubgroup, StartReadyCheck,
+    GroupUninviteIntent, LeaveGroup, PromoteGroupLeader, RaidTargetIcons, ReadyCheckUpdate,
+    RespondGroupInvite, RespondReadyCheck, SetGroupLootMethod, SetGroupRole, SetRaidSubgroup,
+    SetRaidTarget, StartReadyCheck,
 };
 
 use crate::auth::Authenticated;
@@ -58,6 +59,7 @@ struct GroupCommandReceivers<'w, 's> {
     loot: Receivers<'w, 's, SetGroupLootMethod>,
     ready_starts: Receivers<'w, 's, StartReadyCheck>,
     ready_answers: Receivers<'w, 's, RespondReadyCheck>,
+    raid_targets: Receivers<'w, 's, SetRaidTarget>,
 }
 
 #[derive(SystemParam)]
@@ -68,6 +70,7 @@ struct GroupSenders<'w, 's> {
     prompts: Query<'w, 's, &'static mut MessageSender<GroupInvitePrompt>>,
     cancelled_invites: Query<'w, 's, &'static mut MessageSender<GroupInviteCancelled>>,
     ready_checks: Query<'w, 's, &'static mut MessageSender<ReadyCheckUpdate>>,
+    raid_targets: Query<'w, 's, &'static mut MessageSender<RaidTargetIcons>>,
 }
 
 type OnlinePlayers<'w, 's> = Query<
@@ -189,6 +192,9 @@ fn apply_commands(
     for (from, msg) in drain(&mut rx.ready_answers, players) {
         effects.extend(registry.respond_ready_check(from, msg.ready));
     }
+    for (from, msg) in drain(&mut rx.raid_targets, players) {
+        effects.extend(registry.set_raid_target(from, msg.target, msg.icon));
+    }
     effects
 }
 
@@ -230,10 +236,28 @@ fn deliver_effects(
                 for member in registry.roster_members(*group_id) {
                     send_to(&mut senders.rosters, connections, member, roster.clone());
                 }
+                // HandleRequestPartyJoinUpdates → SendTargetIconList: a roster change
+                // (join, relog) brings the member the group's icons.
+                send_group_target_icons(registry, *group_id, connections, senders);
             }
             GroupEffect::ClearRoster(to) => {
-                send_to(&mut senders.rosters, connections, *to, empty_roster())
+                send_to(&mut senders.rosters, connections, *to, empty_roster());
+                send_to(
+                    &mut senders.raid_targets,
+                    connections,
+                    *to,
+                    RaidTargetIcons::default(),
+                );
             }
+            GroupEffect::TargetIcons(group_id) => {
+                send_group_target_icons(registry, *group_id, connections, senders)
+            }
+            GroupEffect::SoloTargetIcons(to) => send_to(
+                &mut senders.raid_targets,
+                connections,
+                *to,
+                registry.target_icons_of(*to),
+            ),
             GroupEffect::InvitePrompt { to, inviter_name } => send_to(
                 &mut senders.prompts,
                 connections,
@@ -267,6 +291,18 @@ fn deliver_effects(
                 }
             }
         }
+    }
+}
+
+fn send_group_target_icons(
+    registry: &GroupRegistry,
+    group_id: GroupId,
+    connections: &HashMap<CharacterId, Entity>,
+    senders: &mut GroupSenders,
+) {
+    for member in registry.roster_members(group_id) {
+        let icons = registry.target_icons_of(member);
+        send_to(&mut senders.raid_targets, connections, member, icons);
     }
 }
 

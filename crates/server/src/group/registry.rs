@@ -12,8 +12,8 @@ use shared::group::{
 use shared::loot::LootMode;
 use shared::protocol::{
     GROUP_INVITE_TIMEOUT_SECS, GroupMemberSnapshot, GroupMessageCode, GroupRoleSnapshot,
-    GroupRosterSnapshot, READY_CHECK_DURATION_SECS, ReadyCheckAnswer, ReadyCheckMemberSnapshot,
-    ReadyCheckUpdate,
+    GroupRosterSnapshot, RAID_TARGET_ICON_COUNT, READY_CHECK_DURATION_SECS, RaidTargetIcons,
+    ReadyCheckAnswer, ReadyCheckMemberSnapshot, ReadyCheckUpdate,
 };
 
 pub type CharacterId = u64;
@@ -58,6 +58,10 @@ pub enum GroupEffect {
     /// `Player::SetDungeonDifficultyID` + `SendDungeonDifficulty`: the member now enters
     /// dungeons at the group's difficulty.
     DungeonDifficulty { to: CharacterId, difficulty_id: u32 },
+    /// Send the group's raid target icons to every online member.
+    TargetIcons(GroupId),
+    /// Send a solo player their own raid target icons.
+    SoloTargetIcons(CharacterId),
 }
 
 #[derive(Clone, Debug)]
@@ -86,6 +90,8 @@ struct Group {
     reported_online: HashMap<CharacterId, Option<(u64, u8)>>,
     /// `Group::m_dungeonDifficulty`, the leader's when the group formed.
     dungeon_difficulty: u32,
+    /// `Group::m_targetIcons`.
+    target_icons: RaidTargetIcons,
 }
 
 impl Group {
@@ -97,6 +103,7 @@ impl Group {
             roles: RoleAssignments::default(),
             ready_check: None,
             reported_online: HashMap::new(),
+            target_icons: RaidTargetIcons::default(),
         }
     }
 
@@ -128,6 +135,8 @@ pub struct GroupRegistry {
     invites: Vec<PendingInvite>,
     profiles: HashMap<CharacterId, Profile>,
     next_group_id: GroupId,
+    /// Raid target icons of online players outside a group, for themselves only.
+    solo_target_icons: HashMap<CharacterId, RaidTargetIcons>,
 }
 
 type Effects = Vec<GroupEffect>;
@@ -271,6 +280,10 @@ impl GroupRegistry {
             return vec![notice(invitee, GroupMessageCode::GroupFull, "")];
         }
         self.membership.insert(invitee, group_id);
+        // Group::AddMember: a party's target icons reset when a member joins.
+        if !group.is_raid {
+            group.target_icons = RaidTargetIcons::default();
+        }
         let is_raid = group.is_raid;
         let others: Vec<_> = group
             .members()
@@ -279,6 +292,8 @@ impl GroupRegistry {
             .collect();
         // Invites the joiner sent while ungrouped would pull players into this group.
         let mut effects = self.cancel_invites_from(invitee);
+        self.solo_target_icons.remove(&invitee);
+        self.solo_target_icons.remove(&inviter);
         let joined_code = if is_raid {
             GroupMessageCode::RaidMemberAdded
         } else {
@@ -679,6 +694,8 @@ impl GroupRegistry {
                 },
             );
         }
+        self.solo_target_icons
+            .retain(|id, _| online.contains_key(id));
         let mut effects = Vec::new();
         let (kept, dropped): (Vec<_>, Vec<_>) = std::mem::take(&mut self.invites)
             .into_iter()
@@ -713,6 +730,44 @@ impl GroupRegistry {
             }
         }
         effects
+    }
+
+    /// `WorldSession::HandleUpdateRaidTargetOpcode` → `Group::SetTargetIcon`: `icon` 1–8
+    /// moves that icon onto `target`, 0 clears the target's icon. In a raid only the leader
+    /// marks (assistants are not modeled). Outside a group the icons are the player's own.
+    pub fn set_raid_target(&mut self, from: CharacterId, target: u64, icon: u8) -> Effects {
+        if usize::from(icon) > RAID_TARGET_ICON_COUNT {
+            return Vec::new();
+        }
+        let Some(&group_id) = self.membership.get(&from) else {
+            set_target_icon(
+                self.solo_target_icons.entry(from).or_default(),
+                target,
+                icon,
+            );
+            return vec![GroupEffect::SoloTargetIcons(from)];
+        };
+        let group = self
+            .groups
+            .get_mut(&group_id)
+            .expect("membership points at a group");
+        if group.is_raid && group.raid.leader != from {
+            return Vec::new();
+        }
+        set_target_icon(&mut group.target_icons, target, icon);
+        vec![GroupEffect::TargetIcons(group_id)]
+    }
+
+    /// The raid target icons `member` sees: its group's, or its own while solo.
+    pub fn target_icons_of(&self, member: CharacterId) -> RaidTargetIcons {
+        match self.group_of(member) {
+            Some((_, group)) => group.target_icons.clone(),
+            None => self
+                .solo_target_icons
+                .get(&member)
+                .cloned()
+                .unwrap_or_default(),
+        }
     }
 
     // --- Snapshots ---
@@ -920,6 +975,22 @@ impl GroupRegistry {
             .get(&member)
             .map(|p| p.name.clone())
             .unwrap_or_default()
+    }
+}
+
+/// `Group::SetTargetIcon`: the target loses its other icon, and `icon` (1–8) leaves its
+/// previous unit for `target`; 0 only clears.
+fn set_target_icon(icons: &mut RaidTargetIcons, target: u64, icon: u8) {
+    for slot in &mut icons.targets {
+        if *slot == Some(target) {
+            *slot = None;
+        }
+    }
+    if let Some(slot) = usize::from(icon)
+        .checked_sub(1)
+        .and_then(|index| icons.targets.get_mut(index))
+    {
+        *slot = Some(target);
     }
 }
 
