@@ -71,6 +71,7 @@ mod persistence_accounts;
 mod persistence_character;
 mod persistence_progression;
 mod persistence_types;
+mod pet_control;
 mod player_create_info;
 mod profession;
 mod pvp;
@@ -195,6 +196,7 @@ fn add_progression_plugins(app: &mut App) {
         .add_plugins(rest::RestPlugin)
         .add_plugins(stand_state::StandStatePlugin)
         .add_plugins(hunter_pet::HunterPetPlugin)
+        .add_plugins(pet_control::PetControlPlugin)
         .add_plugins(class_progression::ClassProgressionPlugin);
 }
 
