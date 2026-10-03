@@ -2,22 +2,9 @@
 
 Development workflow commands for the game-server project.
 
-## Running the Server
+## Native development
 
-```bash
-cargo run -p server --bin game-server
-```
-
-Binds to `0.0.0.0:5000`.
-
-## Tests
-
-```bash
-cargo test          # Run all tests across all crates
-./run-tests.sh      # cargo test + clippy (use this before committing)
-```
-
-The `run-tests.sh` script runs both the test suite and Clippy lints in one pass.
+[Native workflow](../../remote-builds.md) owns build/run/check/test commands, host selection, watched restarts, data separation, and runtime proof limits. [Build-host contract](../../specs/build-host.md) owns requirements and test mapping. Normal runs use the selected host; raw Cargo and the standalone `run-tests.sh` remain local.
 
 ## Admin CLI
 
@@ -85,10 +72,11 @@ Regenerates `data/world.db` (132MB SQLite) from AzerothCore SQL dumps and retail
 - [Cargo.toml](../../../Cargo.toml) and [Cargo.lock](../../../Cargo.lock) — Rust and locked dependency versions
 - [vendor/lightyear_replication/UPSTREAM.md](../../../vendor/lightyear_replication/UPSTREAM.md) — Lightyear 0.28.0 vendored provenance
 - [vendor/bevy_replicon/UPSTREAM.md](../../../vendor/bevy_replicon/UPSTREAM.md) — bevy_replicon 0.41.1 vendored provenance
-- [CLAUDE.md](../../../CLAUDE.md) — Dev section, dependency versions, world data section
+- [AGENTS.md](../../../AGENTS.md) — development commands and world data
+- [Native workflow](../../remote-builds.md) — selected-host development
 
 ## See Also
 
 - [[crate-structure]] — what each crate contains
 - [[reference-repos]] — where world data comes from
-- [[code-health]] — test coverage hotspots (run `run-tests.sh` before pushing)
+- [[code-health]] — test coverage hotspots

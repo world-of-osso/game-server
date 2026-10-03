@@ -515,3 +515,8 @@ Recorded supplied d4708c9/6aa2e27 SQL/rebuild receipts and approved Zaralda-only
 ## 2026-10-01 — Zaralda final observed-proof reconciliation (task evidence)
 
 Updated existing Zaralda SSOT and linked specs/reference/index: native-friendly exit0 / 529.10s now observes actual merchant pick/title/tooltip/backpack/close. Retained historical RED attempts, independent gate114 source/import proof and renderer/cache limits; gate116 artifact audit gives scoped PASS for the saved native flow and three current AH receipts. Server SSOT separates current three AH receipts from pinned old-binary performance. Prior uncommitted docs preserved; no tests, builds, commits, data/source/PLAN edits or service operations.
+
+
+## [2026-10-03] docs | Native desktop/local workflow
+
+[Workflow SSOT](../remote-builds.md) and [build-host contract](../specs/build-host.md) document selected-host normal runs, filtered checks/tests, native dependencies, lifetime and state boundaries. Reported build evidence remains separate from pending runtime acceptance; no new tests or runtime proof.
