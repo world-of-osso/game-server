@@ -19,7 +19,7 @@ const SPELL_ATTR0_ALLOW_WHILE_SITTING: u32 = 0x0800_0000;
 const SPELL_ATTR3_DO_NOT_TRIGGER_TARGET_STAND: u32 = 0x0040_0000;
 
 /// `MOVEMENTFLAG_MASK_MOVING` bits a `PlayerMotion` carries.
-const MOVING: u32 = PlayerMotion::FORWARD
+const MOVING: u64 = PlayerMotion::FORWARD
     | PlayerMotion::BACKWARD
     | PlayerMotion::STRAFE_LEFT
     | PlayerMotion::STRAFE_RIGHT

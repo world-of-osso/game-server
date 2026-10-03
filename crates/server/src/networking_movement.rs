@@ -2,6 +2,7 @@ use bevy::platform::collections::HashMap;
 use bevy::prelude::*;
 use shared::components::{MovementSpeed, Player, PlayerMotion, Position, Rotation};
 use shared::protocol::PlayerInput;
+use shared::skyriding::{LAUNCH_SPEED, SKYRIDING, max_climb, speed_after};
 
 use super::FallTracker;
 use crate::auras::AuraStatMods;
@@ -44,10 +45,13 @@ pub(super) const MOVEMENT_BANK_SECS: f32 = 0.5;
 /// An input whose report its grant did not reach stays `unreached`: the player keeps
 /// moving to it on later ticks as the bank refills, so a client sending fewer inputs than
 /// the bank needs (a slow frame rate, a lone stop input) ends where it stopped.
+///
+/// A skyrider's `skyriding` speed is the most its energy allows (`shared::skyriding`).
 #[derive(Default)]
 pub(crate) struct MovementClocks {
     banks: HashMap<Entity, f32>,
     unreached: HashMap<Entity, PlayerInput>,
+    skyriding: HashMap<Entity, f32>,
 }
 
 impl MovementClocks {
@@ -86,6 +90,7 @@ impl MovementClocks {
     /// Forget the players `exists` no longer finds.
     pub(super) fn retain_players(&mut self, exists: impl Fn(Entity) -> bool) {
         self.unreached.retain(|player, _| exists(*player));
+        self.skyriding.retain(|player, _| exists(*player));
     }
 }
 
@@ -133,6 +138,7 @@ pub(super) fn apply_movement_input(
     }
     // MovementHandler.cpp:128: `MOVEMENTFLAG_FLYING` from a mover that cannot fly is dropped.
     let flying = input.flying && motion.contains(PlayerMotion::CAN_FLY);
+    let skyriding = flying && motion.contains(PlayerMotion::CAN_ADV_FLY);
     let next_motion = input_motion(input, *motion);
     let mut changes = update_rotation_and_speed(input, flying, auras, &mut rotation, &mut speed)
         .merge(set_motion(&mut motion, next_motion));
@@ -150,10 +156,23 @@ pub(super) fn apply_movement_input(
     } else {
         Travel::Ground
     };
-    let (mut next, behind) = move_toward_reported(current, reported, speed.0, travel, |secs| {
+    let energy = skyriding.then(|| {
+        let launch =
+            (DEFAULT_RUN_SPEED * auras.map_or(1.0, |mods| mods.movement_speed)).hypot(LAUNCH_SPEED);
+        *clocks.skyriding.entry(player_entity).or_insert(launch)
+    });
+    let leg = match energy {
+        Some(energy) => skyriding_leg(current, reported, energy),
+        None => Leg {
+            target: reported,
+            speed: speed.0,
+            cut: false,
+        },
+    };
+    let (mut next, behind) = move_toward_reported(current, leg.target, leg.speed, travel, |secs| {
         clocks.grant(player_entity, secs)
     });
-    changes.behind = behind;
+    changes.behind = behind || leg.cut;
     next.y = match terrain {
         Some((ground, map_id)) if flying => flight_height(ground, map_id, current, next),
         Some((ground, map_id)) => {
@@ -168,6 +187,15 @@ pub(super) fn apply_movement_input(
         }
         None => current.y,
     };
+    match energy {
+        Some(energy) => {
+            let left = speed_after(&SKYRIDING, energy, current.y - next.y).unwrap_or(0.0);
+            clocks.skyriding.insert(player_entity, left);
+        }
+        None => {
+            clocks.skyriding.remove(&player_entity);
+        }
+    }
     if next != current {
         position.x = next.x;
         position.y = next.y;
@@ -242,6 +270,34 @@ fn move_toward_reported(
     }
     let fraction = (grant(requested) / requested).min(1.0);
     (current + (reported - current) * fraction, fraction < 1.0)
+}
+
+/// Where and how fast one input's skyriding moves.
+#[derive(Clone, Copy, Debug, PartialEq)]
+struct Leg {
+    target: Vec3,
+    speed: f32,
+    /// The report climbs higher than the energy reaches: `target` stops short of it.
+    cut: bool,
+}
+
+/// A skyrider with `energy` yards a second heading for `reported`: no higher than its
+/// speed climbs (`max_climb`), at the most it moves at along the way (energy is conserved
+/// at best, so a straight leg is fastest at one of its ends).
+fn skyriding_leg(current: Vec3, reported: Vec3, energy: f32) -> Leg {
+    let climb = reported.y - current.y;
+    let reach = max_climb(energy);
+    let (target, cut) = if climb > reach {
+        (current + (reported - current) * (reach / climb), true)
+    } else {
+        (reported, false)
+    };
+    let end = speed_after(&SKYRIDING, energy, current.y - target.y).unwrap_or(0.0);
+    Leg {
+        target,
+        speed: energy.max(end),
+        cut,
+    }
 }
 
 /// A flyer's height: anywhere on or over the ground under it (probed from the server's
@@ -340,11 +396,12 @@ fn highest_arc(impulse: f32, secs: f32) -> f32 {
 /// Retail `MovementFlags` of an input, as the client's `CMSG_MOVE_*` carries them: the
 /// wire direction (its animation direction, `movement_to_direction`) against the facing
 /// sets FORWARD/BACKWARD/STRAFE_LEFT/STRAFE_RIGHT, the run toggle WALKING, the swim
-/// SWIMMING, a jump in the air FALLING and flight FLYING. CAN_FLY is the server's
-/// (`Unit::SetCanFly`), kept from `current`; a flyer does not swim (`SetCanFly` drops
-/// SWIMMING).
+/// SWIMMING, a jump in the air FALLING and flight FLYING (and ADV_FLYING for a skyrider).
+/// CAN_FLY and CAN_ADV_FLY are the server's (`Unit::SetCanFly`, `Unit::SetCanAdvFly`), kept
+/// from `current`; a flyer does not swim (`SetCanFly` drops SWIMMING).
 fn input_motion(input: &PlayerInput, current: PlayerMotion) -> PlayerMotion {
     let can_fly = current.contains(PlayerMotion::CAN_FLY);
+    let can_adv_fly = current.contains(PlayerMotion::CAN_ADV_FLY);
     let flying = input.flying && can_fly;
     let length = direction_length(&input.direction);
     let mut flags = 0;
@@ -368,6 +425,8 @@ fn input_motion(input: &PlayerInput, current: PlayerMotion) -> PlayerMotion {
         (input.jumping && !flying, PlayerMotion::FALLING),
         (can_fly, PlayerMotion::CAN_FLY),
         (flying, PlayerMotion::FLYING),
+        (can_adv_fly, PlayerMotion::CAN_ADV_FLY),
+        (flying && can_adv_fly, PlayerMotion::ADV_FLYING),
     ] {
         if set {
             flags |= flag;
@@ -378,7 +437,7 @@ fn input_motion(input: &PlayerInput, current: PlayerMotion) -> PlayerMotion {
 
 /// The flags without movement: what a stop input leaves (walk and swim mode).
 fn stopped_motion(motion: PlayerMotion) -> PlayerMotion {
-    const MOVING: u32 = PlayerMotion::FORWARD
+    const MOVING: u64 = PlayerMotion::FORWARD
         | PlayerMotion::BACKWARD
         | PlayerMotion::STRAFE_LEFT
         | PlayerMotion::STRAFE_RIGHT

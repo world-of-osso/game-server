@@ -209,6 +209,12 @@ pub enum AdminRequest {
         character_name: String,
         spell: u32,
     },
+    /// Put the online character on Flight Style: Steady or Skyriding (skyriding also
+    /// teaches Skyriding Basics 376777); its next mount picks the matching capability.
+    FlightStyle {
+        character_name: String,
+        skyriding: bool,
+    },
     /// TrinityCore `.damage <amount>`: the online character's target (or the unit
     /// `target`, entity bits) takes `amount` damage from it (`Unit::DealDamage`, school
     /// Normal).
@@ -450,6 +456,10 @@ pub enum AdminResponse {
     SpellLearned {
         character_name: String,
         spell: u32,
+    },
+    FlightStyleSet {
+        character_name: String,
+        skyriding: bool,
     },
     Damaged {
         character_name: String,
