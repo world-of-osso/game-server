@@ -2,7 +2,7 @@ use bevy::platform::collections::HashMap;
 use bevy::prelude::*;
 use shared::components::{MovementSpeed, Player, PlayerMotion, Position, Rotation};
 use shared::protocol::PlayerInput;
-use shared::skyriding::{LAUNCH_SPEED, SKYRIDING, impulse_bound, max_climb, speed_after};
+use shared::skyriding::{SKYRIDING, impulse_bound, max_climb, speed_after};
 
 use super::FallTracker;
 use crate::auras::AuraStatMods;
@@ -46,12 +46,15 @@ pub(super) const MOVEMENT_BANK_SECS: f32 = 0.5;
 /// moving to it on later ticks as the bank refills, so a client sending fewer inputs than
 /// the bank needs (a slow frame rate, a lone stop input) ends where it stopped.
 ///
-/// A skyrider's `skyriding` speed is the most its energy allows (`shared::skyriding`).
+/// A skyrider's `skyriding` speed is the most its energy allows (`shared::skyriding`). It
+/// takes off with its mounted run speed and the `launches` its Skyriding abilities gave it
+/// on the ground (the takeoff is Skyward Ascent's flap).
 #[derive(Default)]
 pub(crate) struct MovementClocks {
     banks: HashMap<Entity, f32>,
     unreached: HashMap<Entity, PlayerInput>,
     skyriding: HashMap<Entity, f32>,
+    launches: HashMap<Entity, f32>,
 }
 
 impl MovementClocks {
@@ -88,10 +91,12 @@ impl MovementClocks {
     }
 
     /// A Skyriding ability flapped `player` (`crate::skyriding`): its energy may be
-    /// `impulse_bound` faster. A player on the ground has none yet; its takeoff starts it.
+    /// `impulse_bound` faster. A player on the ground has none yet: the flap launches its
+    /// takeoff.
     pub(super) fn add_impulse(&mut self, player: Entity, speed: f32) {
-        if let Some(energy) = self.skyriding.get_mut(&player) {
-            *energy = impulse_bound(&SKYRIDING, *energy, speed);
+        match self.skyriding.get_mut(&player) {
+            Some(energy) => *energy = impulse_bound(&SKYRIDING, *energy, speed),
+            None => *self.launches.entry(player).or_default() += speed,
         }
     }
 
@@ -99,6 +104,7 @@ impl MovementClocks {
     pub(super) fn retain_players(&mut self, exists: impl Fn(Entity) -> bool) {
         self.unreached.retain(|player, _| exists(*player));
         self.skyriding.retain(|player, _| exists(*player));
+        self.launches.retain(|player, _| exists(*player));
     }
 }
 
@@ -166,10 +172,12 @@ pub(super) fn apply_movement_input(
     } else {
         Travel::Ground
     };
-    let energy = skyriding.then(|| {
-        let launch =
-            (DEFAULT_RUN_SPEED * auras.map_or(1.0, |mods| mods.movement_speed)).hypot(LAUNCH_SPEED);
-        *clocks.skyriding.entry(player_entity).or_insert(launch)
+    let energy = skyriding.then(|| match clocks.skyriding.get(&player_entity) {
+        Some(&energy) => energy,
+        None => {
+            let launch = clocks.launches.remove(&player_entity).unwrap_or(0.0);
+            (DEFAULT_RUN_SPEED * auras.map_or(1.0, |mods| mods.movement_speed)).hypot(launch)
+        }
     });
     let leg = match energy {
         Some(energy) => skyriding_leg(current, reported, energy),

@@ -2,7 +2,7 @@
 
 ## [2026-10-03] systems | Flight Style toggle
 
-Updated [[mounts]]: Switch Flight Style 436854 / 460002 / 460003 as DUMMY spell scripts; the Flight Style aura is saved per character and restored on login.
+Updated [[mounts]]: Switch Flight Style 436854 / 460002 / 460003 as DUMMY spell scripts; the Flight Style aura is saved per character and restored on login. Skyriding takeoff = Skyward Ascent cast (FORCE_CAST 140 Lift Off 404191); the movement bound launches from that flap only.
 
 ## [2026-10-02] systems | Mounts and steady flight
 
