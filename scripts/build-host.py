@@ -10,7 +10,6 @@ import sys
 import tempfile
 from pathlib import Path
 
-
 SCRIPTS = Path(__file__).resolve().parent
 COMMON_SCRIPTS = Path("/syncthing/Sync/Projects/world-of-osso/game-engine/scripts")
 BINARIES = {

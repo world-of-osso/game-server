@@ -12,7 +12,6 @@ import time
 import unittest
 from pathlib import Path
 
-
 ADAPTER = Path(__file__).resolve().parents[1] / "build-host.py"
 COMMON = ADAPTER.parents[2] / "game-engine/scripts"
 FAKE_NATIVE = '''import json

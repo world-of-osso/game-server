@@ -6,7 +6,6 @@ import shlex
 import sys
 from pathlib import Path
 
-
 if __name__ == "__main__":
     loop = Path(__file__).resolve().parent / "scripts/dev-loop.py"
     command = shlex.join([sys.executable, str(loop), *sys.argv[1:]])
