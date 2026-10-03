@@ -73,7 +73,8 @@ The list is stored in the `KnownSpells` component. Cast validation should call `
   - Accepted requests are persisted and get no reply.
   - Rejected requests are answered with the unchanged `ActionBarSnapshot`.
 - **Create bar:** character creation stores the race/class `playercreateinfo_action` buttons ([[new-character-kit]]). A character without a progression record enters with an empty bar.
-  - A new Orc Warrior has Slam 1464 (0), Blood Fury 20572 (9), Recuperate 1231411 (10), Attack 88163 (72) and Blood Fury (81).
+  - A new Orc Warrior has Slam 1464 (0), Attack 88163 (1), Blood Fury 20572 (9) and Recuperate 1231411 (10).
+  - TDB's WotLK bonus-bar rows (buttons 72-119) move to the main bar for every class but Rogue and Druid, whose Stealth/Shadow Dance and Cat/Bear/Moonkin forms are the only Retail forms with a `SpellShapeshiftForm.BonusActionBar` (`scripts/retail_action_bars.py`).
   - Entering the world prunes buttons whose spells are not known; TrinityCore keeps them. [[new-character-kit]] lists the affected buttons.
 - **Overrides:** a button of a spell that an applied talent overrides now holds the talent spell. When the talent is removed and its spell is no longer known, the button goes back to the baseline spell. Both send `ActionBarSnapshot` and persist the bar. The rewrite also runs on enter world.
 - A spell button whose spell stops being known (spec change or lower level) is removed. The server then sends `ActionBarSnapshot` and persists the bar.
