@@ -32,8 +32,9 @@ Tests are inventoried, not rerun by this documentation audit; requirements remai
 ## Known gaps (current cycle)
 
 - [x] Bounded native desktop acceptance: actual build, isolated admin `pong`, disposable-account authenticated UDP login, and owned-process cleanup observed by main; see guide.
-- [ ] Actual local native acceptance after installed Cargo/rustc selection fix.
-- [ ] Lint fixes remain pending; 93 existing shared workflow fixtures passing does not complete workflow acceptance.
+- [ ] Actual local server proof deferred by user; local capability remains supported, no-local-compile guard preserved. No local server pass claimed; local runtime acceptance is not required now for the current gate.
+- [ ] Bounded corrected source gate pending agent 36 after seven I001 findings and two stale rustup fixtures were fixed; see guide for commits. Existing 93 fixture passes do not complete workflow acceptance.
+- [ ] Normal desktop simulator GUI remains unresolved; source-gate success is not whole-workflow completion.
 
 ## Out of scope
 

@@ -24,7 +24,7 @@ Without `--bin`, build selects server, admin, and client binaries; `--run` defau
 
 `python3 scripts/build-host.py --save-build-host desktop` saves the shared default in `~/.config/game-engine/build-host`; use `local` to change it. The configured default is desktop. Explicit `--build-host` overrides it for one invocation. Host failure is an error, never a host fallback.
 
-Shared selection, snapshot, and native execution helpers live in canonical `../game-engine/scripts/`; `BUILD_HOST_SCRIPTS` overrides that dependency. Desktop snapshots include `shared-protocol`. Desktop uses pinned Rust 1.98.1 through rustup; the in-progress local native-tool fix uses installed Arch Cargo/rustc 1.98.1 without rustup, not fallback. Native builds run in capped eight-job/16 GB scopes with same-ABI native runtime dependencies; no Docker runtime or ICU bundles are substituted. Existing CI/release Docker and deployment pipelines remain unchanged.
+Shared selection, snapshot, and native execution helpers live in canonical `../game-engine/scripts/`; `BUILD_HOST_SCRIPTS` overrides that dependency. Desktop snapshots include `shared-protocol`. Desktop uses pinned Rust 1.98.1 through rustup; local uses installed Arch Cargo/rustc 1.98.1 without rustup, not fallback. Native builds run in capped eight-job/16 GB scopes with same-ABI native runtime dependencies; no Docker runtime or ICU bundles are substituted. Existing CI/release Docker and deployment pipelines remain unchanged.
 
 ## Source and process lifetime
 
@@ -40,7 +40,7 @@ Mutable player storage and admin socket default to `/home/osso-test/.local/share
 
 Main-observed evidence on October 3, 2026: actual native desktop server/tools build passed (6m34s). Isolated desktop admin `pong` and disposable-account authenticated UDP login probes passed; the owned server process was cleaned up. This is bounded runtime proof, not gameplay or full server parity acceptance.
 
-Existing 93 shared workflow fixtures passed; lint fixes and actual local native acceptance remain pending. A reported sixteen focused tests/check exit 0 at a source ancestor is historical evidence, not a fresh current-tree gate. No broad-suite, warning-free, or whole-workflow completion claim follows.
+Existing 93 shared workflow fixtures passed. Seven I001 lint findings and two stale rustup fixtures were fixed in `97deca8d` (engine), `43e9141` (server), and `2705913` (simulator); the bounded corrected source gate remains pending agent 36. User rejected local server build attempts: actual local server proof is deferred, with the no-local-compile guard preserved. Local capability remains supported; actual local runtime acceptance is not required now for the current gate, and no local server pass is claimed. A reported sixteen focused tests/check exit 0 at a source ancestor is historical evidence, not a fresh current-tree gate. Normal desktop simulator GUI remains unresolved after an observed host compositor crash; see the [engine boundary evidence](../../game-engine/docs/remote-builds.md#native-serversimulator-acceptance-boundary). No broad-suite, warning-free, or whole-workflow completion claim follows.
 
 ## Related
 
