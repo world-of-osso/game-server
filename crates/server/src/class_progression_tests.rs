@@ -453,7 +453,8 @@ fn create_action_spells_below_level_10_survive_entering_the_world() {
         .into_iter()
         .filter(|&(race, class, _, _)| crate::race_class::start_level(race, class) < 10)
         .collect();
-    let mut expected = vec![(24, 1, 11, 77273), (24, 1, 83, 77273)];
+    // Button 83's copy (the WotLK battle stance page) is dropped by retail_action_bars.py.
+    let mut expected = vec![(24, 1, 11, 77273)];
     for race in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 22] {
         expected.push((race, 6, 4, 50842));
     }
