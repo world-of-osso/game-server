@@ -6,7 +6,7 @@ use super::client_height::{FLAT, FRAME_SECS, flat_app, flat_spot, server_y, tick
 use super::*;
 use shared::components::PlayerMotion;
 use shared::movement::FLIGHT_SPEED;
-use shared::skyriding::{Glider, LAUNCH_SPEED, SKYRIDING, max_climb};
+use shared::skyriding::{Glider, LAUNCH_SPEED, SKYRIDING, SURGE_FORWARD, SURGE_SPEED, max_climb};
 
 /// Skyriding 406095: MOD_INCREASE_MOUNTED_SPEED 100%, MOD_INCREASE_MOUNTED_FLIGHT_SPEED 310%.
 const SKYRIDING_GROUND: f32 = 2.0;
@@ -185,4 +185,50 @@ fn a_stalled_skyrider_landing_ahead_of_the_server_lands_without_falling() {
     assert_eq!(health.current, health.max);
     let motion = *app.world().get::<PlayerMotion>(player).unwrap();
     assert!(!motion.contains(PlayerMotion::FLYING));
+}
+
+/// Launch 300 yards up, dive and level out, flap Surge Forward (`granted`: the cast left its
+/// `SkyridingImpulse`), glide on; the farthest the server fell behind the client after the
+/// flap.
+fn surge_gap(granted: bool) -> f32 {
+    let (mut app, player, connection) = flat_app(FLAT + 300.0);
+    skyrider(&mut app, player);
+    let mut client = server_position(&app, player);
+    let mut glider = Glider::launch(Vec3::ZERO);
+    for (pitch, ticks) in [(0.0, 40), (-50.0_f32.to_radians(), 40), (0.0, 20)] {
+        for _ in 0..ticks {
+            glide(&mut app, connection, &mut glider, &mut client, pitch);
+        }
+    }
+    let before = glider.speed();
+    assert!(glider.cast(&SKYRIDING, SURGE_FORWARD, 0.0));
+    assert!(
+        glider.speed() > before + 25.0,
+        "{before} -> {}",
+        glider.speed()
+    );
+    if granted {
+        app.world_mut()
+            .entity_mut(player)
+            .insert(crate::skyriding::SkyridingImpulse(SURGE_SPEED));
+    }
+    let mut worst_gap = 0.0_f32;
+    for _ in 0..40 {
+        glide(&mut app, connection, &mut glider, &mut client, 0.0);
+        worst_gap = worst_gap.max(server_position(&app, player).distance(client));
+    }
+    worst_gap
+}
+
+#[test]
+fn the_server_keeps_up_with_a_granted_surge_forward() {
+    let gap = surge_gap(true);
+    assert!(gap < 0.05, "server fell {gap} yards behind");
+}
+
+/// The same flap without the cast: faster than the energy bound, cut short.
+#[test]
+fn a_surge_the_server_never_granted_falls_behind() {
+    let gap = surge_gap(false);
+    assert!(gap > 5.0, "server only {gap} yards behind");
 }

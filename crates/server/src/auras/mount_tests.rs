@@ -29,7 +29,7 @@ const LEGENDARY_FLYING: u32 = 86461;
 /// MountCapability 494's speed aura: Skyriding (ADV_FLYING 446, mounted speed 100%).
 const SKYRIDING: u32 = 406095;
 
-fn rider(riding: u16, flight_style: bool) -> Option<Harness> {
+pub(crate) fn rider(riding: u16, flight_style: bool, extra: &[u32]) -> Option<Harness> {
     let data = world_db()?;
     let mut spells = vec![
         GOLDEN_GRYPHON,
@@ -41,6 +41,7 @@ fn rider(riding: u16, flight_style: bool) -> Option<Harness> {
         SKYRIDING,
         FLIGHT_STYLE_SKYRIDING,
     ];
+    spells.extend_from_slice(extra);
     if flight_style {
         spells.push(FLIGHT_STYLE_STEADY);
     }
@@ -66,7 +67,7 @@ fn rider(riding: u16, flight_style: bool) -> Option<Harness> {
 }
 
 /// Cast the 1.5 s mount and let it finish.
-fn mount(h: &mut Harness) {
+pub(crate) fn mount(h: &mut Harness) {
     h.cast_and_deliver(GOLDEN_GRYPHON, None);
     h.advance(32);
 }
@@ -85,7 +86,7 @@ fn stat_mods(h: &Harness) -> AuraStatMods {
 
 #[test]
 fn players_entering_the_world_carry_flight_style_steady() {
-    let Some(h) = rider(225, true) else {
+    let Some(h) = rider(225, true, &[]) else {
         return;
     };
     assert!(has(&h, FLIGHT_STYLE_STEADY));
@@ -93,7 +94,7 @@ fn players_entering_the_world_carry_flight_style_steady() {
 
 #[test]
 fn expert_riding_mounts_the_golden_gryphon_with_standard_steady_flight() {
-    let Some(mut h) = rider(225, true) else {
+    let Some(mut h) = rider(225, true, &[]) else {
         return;
     };
     mount(&mut h);
@@ -126,7 +127,7 @@ fn riding_skill_picks_the_capability_speed_aura() {
         (300, EPIC_FLYING, true),
         (375, LEGENDARY_FLYING, true),
     ] {
-        let Some(mut h) = rider(riding, true) else {
+        let Some(mut h) = rider(riding, true, &[]) else {
             return;
         };
         mount(&mut h);
@@ -141,7 +142,7 @@ fn riding_skill_picks_the_capability_speed_aura() {
 
 #[test]
 fn without_flight_style_steady_the_mount_stays_on_the_ground() {
-    let Some(mut h) = rider(225, false) else {
+    let Some(mut h) = rider(225, false, &[]) else {
         return;
     };
     mount(&mut h);
@@ -153,7 +154,7 @@ fn without_flight_style_steady_the_mount_stays_on_the_ground() {
 
 #[test]
 fn mounting_in_combat_fails() {
-    let Some(mut h) = rider(225, true) else {
+    let Some(mut h) = rider(225, true, &[]) else {
         return;
     };
     h.app
@@ -168,7 +169,7 @@ fn mounting_in_combat_fails() {
 
 #[test]
 fn a_mounted_player_cannot_cast_and_dismounts_with_cancel_mount_aura() {
-    let Some(mut h) = rider(225, true) else {
+    let Some(mut h) = rider(225, true, &[]) else {
         return;
     };
     mount(&mut h);
@@ -205,7 +206,7 @@ fn cancel_mount(h: &mut Harness) {
 /// rider without Steady stays on the ground (see above).
 #[test]
 fn switching_the_flight_style_picks_skyriding_or_steady_flight() {
-    let Some(mut h) = rider(225, true) else {
+    let Some(mut h) = rider(225, true, &[]) else {
         return;
     };
     mount(&mut h);

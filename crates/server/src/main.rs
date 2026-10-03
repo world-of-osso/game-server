@@ -84,6 +84,7 @@ mod reputation;
 mod rest;
 mod scripted_ai;
 mod sheet_visibility;
+mod skyriding;
 mod spawn_pools;
 mod spell_cast;
 mod spell_info;

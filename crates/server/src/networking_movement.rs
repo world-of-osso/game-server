@@ -2,7 +2,7 @@ use bevy::platform::collections::HashMap;
 use bevy::prelude::*;
 use shared::components::{MovementSpeed, Player, PlayerMotion, Position, Rotation};
 use shared::protocol::PlayerInput;
-use shared::skyriding::{LAUNCH_SPEED, SKYRIDING, max_climb, speed_after};
+use shared::skyriding::{LAUNCH_SPEED, SKYRIDING, impulse_bound, max_climb, speed_after};
 
 use super::FallTracker;
 use crate::auras::AuraStatMods;
@@ -84,6 +84,14 @@ impl MovementClocks {
             self.unreached.insert(player, latest);
         } else {
             self.unreached.remove(&player);
+        }
+    }
+
+    /// A Skyriding ability flapped `player` (`crate::skyriding`): its energy may be
+    /// `impulse_bound` faster. A player on the ground has none yet; its takeoff starts it.
+    pub(super) fn add_impulse(&mut self, player: Entity, speed: f32) {
+        if let Some(energy) = self.skyriding.get_mut(&player) {
+            *energy = impulse_bound(&SKYRIDING, *energy, speed);
         }
     }
 

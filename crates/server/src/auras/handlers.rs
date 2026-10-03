@@ -85,6 +85,7 @@ pub const MOD_MELEE_HASTE: u32 = 138;
 pub const MOD_RANGED_HASTE: u32 = 140;
 pub const MOD_MELEE_RANGED_HASTE: u32 = 192;
 pub const MELEE_SLOW: u32 = 193;
+pub const LEARN_SPELL: u32 = 195;
 pub const FLY: u32 = 201;
 pub const MOD_INCREASE_MOUNTED_FLIGHT_SPEED: u32 = 207;
 pub const MOD_MOUNTED_FLIGHT_SPEED_ALWAYS: u32 = 208;
