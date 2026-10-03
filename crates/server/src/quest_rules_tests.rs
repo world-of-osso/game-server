@@ -384,3 +384,88 @@ fn kore_marks_warrior_training_trivial_above_level_six() {
         QuestGiverStatus::Trivial(QuestMarkerClass::Normal)
     );
 }
+
+/// Player.cpp:16227 with Player::GetQuestLevel (:14339-14353): a ContentTuning quest's
+/// level is the player's level clamped to the tuning range, so Beating Them Back!
+/// (ContentTuning 1476, levels 1-10) turns trivial above level 14.
+#[test]
+fn mcbride_marks_tuned_beating_them_back_trivial_above_level_fourteen() {
+    let Some(db) = test_quest_db() else { return };
+    let log = QuestLogData::default();
+    let status = |level| giver_status(db, &log, at_level(level), MARSHAL_MCBRIDE, no_items);
+
+    assert_eq!(db.quests[&BEATING_THEM_BACK].level, -1);
+    assert_eq!(
+        status(14),
+        QuestGiverStatus::Available(QuestMarkerClass::Normal)
+    );
+    assert_eq!(
+        status(15),
+        QuestGiverStatus::Trivial(QuestMarkerClass::Normal)
+    );
+}
+
+/// Stormwind's Aysa Cloudsinger offers A Choice of Allies (QuestInfo 282 "Important
+/// Quest", Modifiers 0x400) after The Call for Allies: Player.cpp:16228-16229 picks
+/// the Important kind (`Quest::IsImportant`, QuestDef.cpp:509-515).
+#[test]
+fn aysa_cloudsinger_marks_a_choice_of_allies_important() {
+    const AYSA_CLOUDSINGER: u32 = 126332;
+    const THE_CALL_FOR_ALLIES: u32 = 49929;
+    const A_CHOICE_OF_ALLIES: u32 = 50239;
+    let Some(db) = test_quest_db() else { return };
+    let human_40 = at_level(40);
+
+    assert_eq!(
+        db.quests[&A_CHOICE_OF_ALLIES].marker_class(),
+        QuestMarkerClass::Important
+    );
+    assert_eq!(
+        giver_status(
+            db,
+            &log_with(&[], &[THE_CALL_FOR_ALLIES]),
+            human_40,
+            AYSA_CLOUDSINGER,
+            no_items
+        ),
+        QuestGiverStatus::Available(QuestMarkerClass::Important)
+    );
+    assert_eq!(
+        giver_status(
+            db,
+            &log_with(&[A_CHOICE_OF_ALLIES], &[THE_CALL_FOR_ALLIES]),
+            human_40,
+            AYSA_CLOUDSINGER,
+            no_items
+        ),
+        QuestGiverStatus::Incomplete(QuestMarkerClass::Important)
+    );
+}
+
+/// Player.cpp:16228-16233 kind order over real QuestInfo rows (no Meta or Calling
+/// quest has a world.db giver): 284 "Meta Quest" (Modifiers 0x800), 271 "Calling
+/// Quest" (Type 15), and 282 "Important Quest" winning over a daily flag.
+#[test]
+fn quest_info_meta_calling_and_important_pick_their_marker_kinds() {
+    let with_info = |quest_info_type, quest_info_modifiers, flags| QuestTemplate {
+        quest_info_type,
+        quest_info_modifiers,
+        flags,
+        ..QuestTemplate::default()
+    };
+    const DAILY: u32 = 0x1000;
+
+    assert_eq!(with_info(0, 2048, 0).marker_class(), QuestMarkerClass::Meta);
+    assert_eq!(
+        with_info(15, 0, 0).marker_class(),
+        QuestMarkerClass::Calling
+    );
+    assert_eq!(
+        with_info(0, 1024, DAILY).marker_class(),
+        QuestMarkerClass::Important
+    );
+    assert_eq!(
+        with_info(0, 0, DAILY).marker_class(),
+        QuestMarkerClass::Repeatable
+    );
+}
