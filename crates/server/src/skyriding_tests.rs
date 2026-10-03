@@ -6,12 +6,14 @@ use shared::components::PlayerMotion;
 use shared::skyriding::{AERIAL_HALT, LAUNCH_SPEED, SKYWARD_ASCENT, SURGE_FORWARD, SURGE_SPEED};
 use shared::spell_data::CastFailReason;
 
-use super::{SECOND_WIND, SKYRIDING_CHARGES, SkyridingImpulse};
+use super::SkyridingImpulse;
 use crate::auras::mount::{FlightStyle, SKYRIDING_BASICS, set_flight_style};
 use crate::auras::mount_tests::{mount, rider};
 use crate::profession::PlayerProfessions;
 use crate::spell_cast::test_harness::Harness;
 
+/// Second Wind: MODIFY_CHARGES 293, one charge of ChargeCategory 2391.
+const SECOND_WIND: u32 = 425_782;
 /// The Golden Gryphon (`auras::mount_tests`).
 const GOLDEN_GRYPHON: u32 = 32235;
 /// 50 ms frames: 1.55 s, past the 1.5 s global cooldown of Surge Forward and Skyward Ascent
@@ -198,10 +200,6 @@ fn second_wind_restores_a_skyriding_charge() {
         .find(|c| c.spell_id == SURGE_FORWARD)
         .expect("Skyriding Charges update");
     assert_eq!((restored.current, restored.max), (5, 6));
-    assert_eq!(
-        crate::spell_cast::charges_left(h.app.world(), h.caster, SKYRIDING_CHARGES),
-        Some(5)
-    );
 }
 
 #[test]

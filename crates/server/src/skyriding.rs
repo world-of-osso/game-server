@@ -10,11 +10,6 @@
 //! (`networking_movement::MovementClocks`), so the server follows the faster glider.
 use bevy::prelude::*;
 
-/// Second Wind: MODIFY_CHARGES 293, one charge of `SKYRIDING_CHARGES`.
-pub const SECOND_WIND: u32 = 425_782;
-/// `SpellCategory` 2391, the Skyriding Charges.
-pub const SKYRIDING_CHARGES: u32 = 2391;
-
 /// Flap impulse, yards/s, a Skyriding ability gave the unit since its movement last ran.
 #[derive(Component, Debug, Clone, Copy, PartialEq)]
 pub struct SkyridingImpulse(pub f32);

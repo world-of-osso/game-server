@@ -285,16 +285,6 @@ impl SpellHistory {
     }
 }
 
-/// The charges `unit` has left in `charge_category` now, once it has used one.
-pub(crate) fn charges_left(world: &World, unit: Entity, charge_category: u32) -> Option<u8> {
-    let mut state = *world
-        .get::<SpellHistory>(unit)?
-        .charges
-        .get(&charge_category)?;
-    state.refresh(now(world));
-    Some(state.max - state.used)
-}
-
 fn charge_mods(world: &World, caster: Entity, spell: &SpellInfo) -> ChargeMods {
     let category = spell.categories.as_ref().map_or(0, |c| c.charge_category);
     crate::auras::charge_mods(world, caster, category)
