@@ -140,6 +140,12 @@ fn print_character_response(response: &AdminResponse) -> bool {
         } => {
             println!("Flight point learned: {character_name} -> {node} {node_name}");
         }
+        AdminResponse::SpellLearned {
+            character_name,
+            spell,
+        } => {
+            println!("Spell learned: {character_name} -> {spell}");
+        }
         AdminResponse::PositionSet {
             character_name,
             x,

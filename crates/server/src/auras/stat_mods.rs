@@ -42,10 +42,17 @@ pub struct AuraStatMods {
     /// SET_POWER_POINT_CHARGE 494 (NYI in TrinityCore): the 1-based combo point
     /// indexes in MiscValue are charged (retail `GetUnitChargedPowerPoints`), ascending.
     pub charged_power_points: Vec<u8>,
-    /// Run speed multiplier: strongest MOD_INCREASE_SPEED 31 × every
-    /// MOD_SPEED_ALWAYS 129 × strongest MOD_DECREASE_SPEED 33; 0 while
-    /// rooted or stunned (MOD_ROOT 26, MOD_ROOT_2 455, MOD_STUN 12).
+    /// Run speed multiplier (`Unit::UpdateSpeed(MOVE_RUN)`, Unit.cpp:8810-8825): strongest
+    /// MOD_INCREASE_SPEED 31 × every MOD_SPEED_ALWAYS 129, or under a MOUNTED 78 aura
+    /// strongest MOD_INCREASE_MOUNTED_SPEED 32 × every MOD_MOUNTED_SPEED_ALWAYS 130; then ×
+    /// strongest MOD_DECREASE_SPEED 33; 0 while rooted or stunned (MOD_ROOT 26, MOD_ROOT_2
+    /// 455, MOD_STUN 12).
     pub movement_speed: f32,
+    /// Flight speed multiplier (`UpdateSpeed(MOVE_FLIGHT)`, Unit.cpp:8846-8850): under a
+    /// MOUNTED 78 aura strongest MOD_INCREASE_MOUNTED_FLIGHT_SPEED 207 × every
+    /// MOD_MOUNTED_FLIGHT_SPEED_ALWAYS 208; then the slow and immobile rules of
+    /// `movement_speed`. Unmounted flight speed auras (206) are not modelled.
+    pub flight_speed: f32,
     /// MOD_HIT_CHANCE 54, summed percent (`GetTotalAuraModifier` in
     /// `Unit::MeleeSpellMissChance`).
     pub melee_hit_chance_pct: f32,
@@ -83,6 +90,7 @@ impl Default for AuraStatMods {
             max_power_flat: Vec::new(),
             charged_power_points: Vec::new(),
             movement_speed: 1.0,
+            flight_speed: 1.0,
             melee_hit_chance_pct: 0.0,
             attack_cast_time_mult: 1.0,
             water_breathing: false,
@@ -180,6 +188,11 @@ struct Accumulator {
     stats: StatModifiers,
     fastest: f32,
     always: f32,
+    mounted: bool,
+    fastest_mounted: f32,
+    always_mounted: f32,
+    fastest_flight: f32,
+    always_flight: f32,
     slowest: f32,
     immobile: bool,
     /// MOD_CASTING_SPEED_NOT_STACK: strongest only.
@@ -191,16 +204,30 @@ struct Accumulator {
 pub fn compute(auras: &ActiveAuras) -> (StatModifiers, AuraStatMods) {
     let mut acc = Accumulator {
         always: 1.0,
+        always_mounted: 1.0,
+        always_flight: 1.0,
         ..default()
     };
     for aura in auras.iter() {
         apply_aura(&mut acc, aura);
     }
-    acc.combat.movement_speed = if acc.immobile {
-        0.0
+    let (run, flight) = if acc.mounted {
+        (
+            pct(acc.fastest_mounted) * acc.always_mounted,
+            pct(acc.fastest_flight) * acc.always_flight,
+        )
     } else {
-        (pct(acc.fastest) * acc.always * pct(acc.slowest)).max(0.0)
+        (pct(acc.fastest) * acc.always, 1.0)
     };
+    let slowed = |speed: f32| {
+        if acc.immobile {
+            0.0
+        } else {
+            (speed * pct(acc.slowest)).max(0.0)
+        }
+    };
+    acc.combat.movement_speed = slowed(run);
+    acc.combat.flight_speed = slowed(flight);
     acc.stats.haste_pct += acc.haste_not_stack;
     (acc.stats, acc.combat)
 }
@@ -263,6 +290,13 @@ fn apply_aura(acc: &mut Accumulator, aura: &AuraInstance) {
             }
             MOD_INCREASE_SPEED => acc.fastest = acc.fastest.max(amount),
             MOD_SPEED_ALWAYS => acc.always *= pct(amount),
+            MOUNTED => acc.mounted = true,
+            MOD_INCREASE_MOUNTED_SPEED => acc.fastest_mounted = acc.fastest_mounted.max(amount),
+            MOD_MOUNTED_SPEED_ALWAYS => acc.always_mounted *= pct(amount),
+            MOD_INCREASE_MOUNTED_FLIGHT_SPEED => {
+                acc.fastest_flight = acc.fastest_flight.max(amount)
+            }
+            MOD_MOUNTED_FLIGHT_SPEED_ALWAYS => acc.always_flight *= pct(amount),
             MOD_DECREASE_SPEED => acc.slowest = acc.slowest.min(amount),
             MOD_ROOT | MOD_ROOT_2 | MOD_STUN => acc.immobile = true,
             MOD_HIT_CHANCE => combat.melee_hit_chance_pct += amount,

@@ -118,7 +118,13 @@ impl Learner<'_> {
                 continue;
             };
             let max = cap.max(profs.line(skill).map_or(0, |line| line.max_rank));
-            self.set_skill(profs, skill, step, profs.rank(skill).max(1), max);
+            // Player.cpp:3004-3005: an always-max skill (Riding) takes its new maximum.
+            let rank = if self.data.always_max(skill, self.race, self.class) {
+                max
+            } else {
+                profs.rank(skill).max(1)
+            };
+            self.set_skill(profs, skill, step, rank, max);
         }
     }
 

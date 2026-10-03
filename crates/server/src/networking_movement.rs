@@ -10,6 +10,7 @@ use crate::ground::{GroundMap, GroundProbe};
 pub(super) const DEFAULT_RUN_SPEED: f32 = 7.0;
 pub(super) const DEFAULT_WALK_SPEED: f32 = 2.5;
 pub(super) const DEFAULT_SWIM_SPEED: f32 = shared::movement::SWIM_SPEED;
+pub(super) const DEFAULT_FLIGHT_SPEED: f32 = shared::movement::FLIGHT_SPEED;
 
 pub(super) type PlayerMovement = (
     &'static mut Position,
@@ -94,20 +95,30 @@ pub(super) fn apply_movement_input(
         let stopped = stop_motion(&mut motion);
         return changes.merge(stopped);
     }
-    let mut changes = update_rotation_and_speed(input, auras, &mut rotation, &mut speed)
-        .merge(set_motion(&mut motion, input_motion(input)));
+    // MovementHandler.cpp:128: `MOVEMENTFLAG_FLYING` from a mover that cannot fly is dropped.
+    let flying = input.flying && motion.contains(PlayerMotion::CAN_FLY);
+    let next_motion = input_motion(input, *motion);
+    let mut changes = update_rotation_and_speed(input, flying, auras, &mut rotation, &mut speed)
+        .merge(set_motion(&mut motion, next_motion));
     let current = Vec3::new(position.x, position.y, position.z);
     let reported = Vec3::from(input.position);
-    let swimming = input.swimming
+    let swimming = !flying
+        && input.swimming
         && terrain.as_mut().is_some_and(|(ground, map_id)| {
             swim_bounds(ground, *map_id, reported.with_y(current.y)).is_some()
         });
-    let vertical_speed =
-        swimming.then(|| DEFAULT_SWIM_SPEED * auras.map_or(1.0, |mods| mods.movement_speed));
-    let mut next = move_toward_reported(current, reported, speed.0, vertical_speed, |secs| {
+    let travel = if flying {
+        Travel::Flight
+    } else if swimming {
+        Travel::Swim(DEFAULT_SWIM_SPEED * auras.map_or(1.0, |mods| mods.movement_speed))
+    } else {
+        Travel::Ground
+    };
+    let mut next = move_toward_reported(current, reported, speed.0, travel, |secs| {
         clocks.grant(player_entity, secs)
     });
     next.y = match terrain {
+        Some((ground, map_id)) if flying => flight_height(ground, map_id, current, next),
         Some((ground, map_id)) => {
             fall_tracker.report_height(input.jumping);
             let player = JudgedPlayer {
@@ -156,15 +167,26 @@ fn judged_height(ground: &mut GroundMap, map_id: u32, player: JudgedPlayer, next
     land_height(ground, map_id, player.current, next, envelope)
 }
 
+/// How an input's travel is timed.
+#[derive(Clone, Copy, Debug, PartialEq)]
+enum Travel {
+    /// Across the ground; the height follows the ground rules.
+    Ground,
+    /// Swimming: the height also moves at this vertical speed.
+    Swim(f32),
+    /// Flying: the whole 3D distance moves at the flight speed.
+    Flight,
+}
+
 /// Where the player gets on the way from `current` to the client's `reported` point: all
-/// the way when `speed` (across the ground) and `vertical_speed` (swimming) cover it in the
-/// time `grant` allows for it, else that far along the way. Without a vertical speed, the
-/// height moves by the same fraction and is judged by the ground rules after.
+/// the way when `speed` covers it (across the ground, plus the swim vertical speed, or in
+/// 3D when flying) in the time `grant` allows for it, else that far along the way. On the
+/// ground the height moves by the same fraction and is judged by the ground rules after.
 fn move_toward_reported(
     current: Vec3,
     reported: Vec3,
     speed: f32,
-    vertical_speed: Option<f32>,
+    travel: Travel,
     grant: impl FnOnce(f32) -> f32,
 ) -> Vec3 {
     if !reported.is_finite() || speed <= 0.0 {
@@ -172,14 +194,25 @@ fn move_toward_reported(
     }
     let horizontal = current.xz().distance(reported.xz());
     let vertical = (reported.y - current.y).abs();
-    let horizontal_secs = horizontal / speed;
-    let vertical_secs = vertical_speed.map_or(0.0, |vertical_speed| vertical / vertical_speed);
-    let requested = horizontal_secs.max(vertical_secs);
+    let requested = match travel {
+        Travel::Ground => horizontal / speed,
+        Travel::Swim(vertical_speed) => (horizontal / speed).max(vertical / vertical_speed),
+        Travel::Flight => current.distance(reported) / speed,
+    };
     if requested < 0.001 / speed {
         return current.with_y(reported.y);
     }
     let fraction = (grant(requested) / requested).min(1.0);
     current + (reported - current) * fraction
+}
+
+/// A flyer's height: anywhere on or over the ground under it (probed from the server's
+/// height, so no report passes through a floor); unloaded ground takes the report.
+fn flight_height(ground: &mut GroundMap, map_id: u32, current: Vec3, next: Vec3) -> f32 {
+    match ground.ground_at(map_id, next.with_y(current.y)) {
+        GroundProbe::Supported(floor) => next.y.max(floor),
+        GroundProbe::Unsupported | GroundProbe::Unloaded => next.y,
+    }
 }
 
 /// Heights a swimmer may take: on or over the ground, no higher than floating under the
@@ -269,8 +302,12 @@ fn highest_arc(impulse: f32, secs: f32) -> f32 {
 /// Retail `MovementFlags` of an input, as the client's `CMSG_MOVE_*` carries them: the
 /// wire direction (its animation direction, `movement_to_direction`) against the facing
 /// sets FORWARD/BACKWARD/STRAFE_LEFT/STRAFE_RIGHT, the run toggle WALKING, the swim
-/// SWIMMING and a jump in the air FALLING.
-fn input_motion(input: &PlayerInput) -> PlayerMotion {
+/// SWIMMING, a jump in the air FALLING and flight FLYING. CAN_FLY is the server's
+/// (`Unit::SetCanFly`), kept from `current`; a flyer does not swim (`SetCanFly` drops
+/// SWIMMING).
+fn input_motion(input: &PlayerInput, current: PlayerMotion) -> PlayerMotion {
+    let can_fly = current.contains(PlayerMotion::CAN_FLY);
+    let flying = input.flying && can_fly;
     let length = direction_length(&input.direction);
     let mut flags = 0;
     if length > 0.001 {
@@ -289,8 +326,10 @@ fn input_motion(input: &PlayerInput) -> PlayerMotion {
     }
     for (set, flag) in [
         (!input.running, PlayerMotion::WALKING),
-        (input.swimming, PlayerMotion::SWIMMING),
-        (input.jumping, PlayerMotion::FALLING),
+        (input.swimming && !flying, PlayerMotion::SWIMMING),
+        (input.jumping && !flying, PlayerMotion::FALLING),
+        (can_fly, PlayerMotion::CAN_FLY),
+        (flying, PlayerMotion::FLYING),
     ] {
         if set {
             flags |= flag;
@@ -343,6 +382,7 @@ fn stop_for_blocking_cast(
 
 fn update_rotation_and_speed(
     input: &PlayerInput,
+    flying: bool,
     auras: Option<&AuraStatMods>,
     rotation: &mut Mut<'_, Rotation>,
     speed: &mut Mut<'_, MovementSpeed>,
@@ -352,7 +392,7 @@ fn update_rotation_and_speed(
         rotation.y = input.facing_yaw;
     }
     let direction_length = direction_length(&input.direction);
-    let desired_speed = compute_movement_speed(input, auras, direction_length);
+    let desired_speed = compute_movement_speed(input, flying, auras, direction_length);
     let speed_changed = speed.0 != desired_speed;
     if speed_changed {
         speed.0 = desired_speed;
@@ -363,20 +403,30 @@ fn update_rotation_and_speed(
     }
 }
 
-/// Compute effective movement speed from input, auras, and direction.
+/// Compute effective movement speed from input, auras, and direction: flight speed × the
+/// flight auras while `flying`, else swim, run or walk speed × the run auras.
 pub(super) fn compute_movement_speed(
     input: &PlayerInput,
+    flying: bool,
     auras: Option<&AuraStatMods>,
     direction_length: f32,
 ) -> f32 {
-    let base = if input.swimming {
+    let base = if flying {
+        DEFAULT_FLIGHT_SPEED
+    } else if input.swimming {
         DEFAULT_SWIM_SPEED
     } else if input.running {
         DEFAULT_RUN_SPEED
     } else {
         DEFAULT_WALK_SPEED
     };
-    let aura_multiplier = auras.map_or(1.0, |mods| mods.movement_speed);
+    let aura_multiplier = auras.map_or(1.0, |mods| {
+        if flying {
+            mods.flight_speed
+        } else {
+            mods.movement_speed
+        }
+    });
     let direction_multiplier =
         movement_speed_multiplier(input.facing_yaw, &input.direction, direction_length);
     base * aura_multiplier * direction_multiplier

@@ -132,17 +132,18 @@ fn a_seated_sleeping_or_kneeling_player_regains_half_again_as_much_health() {
 
 /// Unit::_ApplyAura (Unit.cpp:3584-3586) sits a standing player down for an aura with
 /// the Standing interrupt flag; standing up (SetStandState, Unit.cpp:10806-10807)
-/// removes it. In combat the player regenerates nothing, so every gain is the food's
-/// 3% of 1000 health per second.
+/// removes it. Food is eaten out of combat (`SPELL_ATTR0_NOT_IN_COMBAT_ONLY_PEACEFUL`);
+/// entering combat after does not end it (no EnteringCombat interrupt), and in combat the
+/// player regenerates nothing, so every gain is the food's 3% of 1000 health per second.
 #[test]
 fn bread_sits_the_player_down_heals_while_seated_and_standing_up_ends_it() {
     let Some(mut h) = mage(&[BREAD_FOOD]) else {
         return;
     };
-    set_combat(&mut h, true);
     set_health(&mut h, 100.0, 1000.0);
     let caster = h.caster;
     crate::spell_cast::cast_granted(h.app.world_mut(), caster, BREAD_FOOD, None).unwrap();
+    set_combat(&mut h, true);
     assert_eq!(stand_state(&h), StandState::Sit);
     assert_eq!(auras(&h), vec![BREAD_FOOD]);
     h.advance(FRAMES_PER_TICK);

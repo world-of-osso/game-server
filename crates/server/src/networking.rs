@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use core::net::SocketAddr;
 use lightyear::prelude::server::*;
 use lightyear::prelude::*;
-use shared::components::{Health, Mounted, Npc, Player, Position, VerticalVelocity};
+use shared::components::{Health, Mounted, Npc, Player, PlayerMotion, Position, VerticalVelocity};
 use shared::death::DeathState;
 use shared::protocol::{ChatMessage, LoadTerrain, PlayerInput, TerrainChannel};
 use std::collections::VecDeque;
@@ -550,7 +550,12 @@ pub(crate) fn process_player_inputs(time: Res<Time>, mut params: PlayerInputPara
             params.replication_dirty.as_deref(),
         );
         if inputs.iter().any(|input| input.swimming) && params.mounted.contains(link.0) {
-            params.commands.entity(link.0).remove::<Mounted>();
+            let player = link.0;
+            params.commands.queue(move |world: &mut World| {
+                if !crate::auras::mount::cancel_mount_aura(world, player) {
+                    world.entity_mut(player).remove::<Mounted>();
+                }
+            });
         }
         let map_id = params.maps.get(link.0).map(|map| map.map_id).ok();
         let mut changes = MovementChanges::default();
@@ -606,6 +611,7 @@ type GravityPlayerData<'w, 's> = Query<
         &'static shared::components::MovementControl,
         &'static InMap,
         Has<OutOfBounds>,
+        Option<&'static PlayerMotion>,
     ),
     With<Player>,
 >;
@@ -639,9 +645,21 @@ pub(crate) fn apply_terrain_gravity(
         control,
         map,
         out_of_bounds,
+        motion,
     ) in players.iter_mut()
     {
         if control.controlled {
+            continue;
+        }
+        // A flyer has no gravity; a fall starts where its flight ends
+        // (`SetCanFly(false)` → `SetFallInformation(0, GetPositionZ())`).
+        if motion.is_some_and(|motion| motion.contains(PlayerMotion::FLYING)) {
+            let grounded = FallTracker {
+                epoch: control.epoch,
+                ..FallTracker::grounded(pos.y)
+            };
+            fall_tracker.set_if_neq(grounded);
+            vert_vel.set_if_neq(VerticalVelocity(0.0));
             continue;
         }
         let previous_health = *health;

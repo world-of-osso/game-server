@@ -218,6 +218,7 @@ fn an_early_swimming_input_dismounts_and_the_latest_running_controls_speed() {
     let swum = DEFAULT_SWIM_SPEED * TEST_STEP_SECS;
     let swim = PlayerInput {
         swimming: true,
+        flying: false,
         ..reporting([0.0, 0.0, swum], make_input(0.0, 0.0, 1.0))
     };
     let run = reporting([0.0, 0.0, swum + RUN_STEP], make_input(0.0, 0.0, 1.0));

@@ -67,6 +67,7 @@ fn make_input(dx: f32, dy: f32, dz: f32) -> PlayerInput {
         jumping: false,
         running: true,
         swimming: false,
+        flying: false,
         position: [ran.x, 0.0, ran.y],
         epoch: 0,
     }
@@ -95,6 +96,8 @@ mod bag_slots;
 mod client_height;
 #[path = "networking_tests/death.rs"]
 mod death;
+#[path = "networking_tests/flight.rs"]
+mod flight;
 #[path = "networking_tests/forced_disconnect.rs"]
 mod forced_disconnect;
 #[path = "networking_tests/misc.rs"]

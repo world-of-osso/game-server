@@ -48,10 +48,12 @@ pub const MOD_SILENCE: u32 = 27;
 pub const REFLECT_SPELLS: u32 = 28;
 pub const MOD_STAT: u32 = 29;
 pub const MOD_INCREASE_SPEED: u32 = 31;
+pub const MOD_INCREASE_MOUNTED_SPEED: u32 = 32;
 pub const MOD_INCREASE_ENERGY: u32 = 35;
 pub const MOD_SHAPESHIFT: u32 = 36;
 pub const MOD_DECREASE_SPEED: u32 = 33;
 pub const MOD_HIT_CHANCE: u32 = 54;
+pub const MOUNTED: u32 = 78;
 pub const TRANSFORM: u32 = 56;
 pub const SCHOOL_IMMUNITY: u32 = 39;
 pub const PROC_TRIGGER_SPELL: u32 = 42;
@@ -73,6 +75,7 @@ pub const MOD_POWER_REGEN_PERCENT: u32 = 110;
 pub const MOD_REGEN_DURING_COMBAT: u32 = 116;
 pub const MOD_HEALING_PCT: u32 = 118;
 pub const MOD_SPEED_ALWAYS: u32 = 129;
+pub const MOD_MOUNTED_SPEED_ALWAYS: u32 = 130;
 pub const MOD_INCREASE_HEALTH_PERCENT: u32 = 133;
 pub const MOD_HEALING_DONE_PERCENT: u32 = 136;
 pub const MOD_WATER_BREATHING: u32 = 155;
@@ -82,6 +85,9 @@ pub const MOD_MELEE_HASTE: u32 = 138;
 pub const MOD_RANGED_HASTE: u32 = 140;
 pub const MOD_MELEE_RANGED_HASTE: u32 = 192;
 pub const MELEE_SLOW: u32 = 193;
+pub const FLY: u32 = 201;
+pub const MOD_INCREASE_MOUNTED_FLIGHT_SPEED: u32 = 207;
+pub const MOD_MOUNTED_FLIGHT_SPEED_ALWAYS: u32 = 208;
 pub const MOD_RAGE_FROM_DAMAGE_DEALT: u32 = 213;
 pub const HASTE_SPELLS: u32 = 216;
 pub const ADD_PCT_MODIFIER_BY_SPELL_LABEL: u32 = 218;
@@ -151,8 +157,18 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | MOD_REGEN
         | MOD_HEALTH_REGEN_PERCENT
         | MOD_REGEN_DURING_COMBAT
-        | MOD_HEALTH_REGEN_IN_COMBAT => StatMod,
-        MOD_INVISIBILITY | MOD_UNATTACKABLE | MOD_CONFUSE | TRANSFORM | MOD_SHAPESHIFT => UnitState,
+        | MOD_HEALTH_REGEN_IN_COMBAT
+        | MOD_INCREASE_MOUNTED_SPEED
+        | MOD_MOUNTED_SPEED_ALWAYS
+        | MOD_MOUNTED_FLIGHT_SPEED_ALWAYS => StatMod,
+        MOD_INVISIBILITY
+        | MOD_UNATTACKABLE
+        | MOD_CONFUSE
+        | TRANSFORM
+        | MOD_SHAPESHIFT
+        | MOUNTED
+        | FLY
+        | MOD_INCREASE_MOUNTED_FLIGHT_SPEED => UnitState,
         ADD_FLAT_MODIFIER
         | ADD_PCT_MODIFIER
         | ADD_PCT_MODIFIER_BY_SPELL_LABEL

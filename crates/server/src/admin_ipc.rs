@@ -584,6 +584,10 @@ fn dispatch(
         AdminRequest::Kill { character_name } => {
             handle_kill(db, commands, players, &character_name)
         }
+        AdminRequest::LearnSpell {
+            character_name,
+            spell,
+        } => handle_learn_spell(db, commands, players, &character_name, spell),
         AdminRequest::Damage {
             character_name,
             amount,

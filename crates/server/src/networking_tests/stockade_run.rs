@@ -125,6 +125,7 @@ fn strafe_run_frame(client: &mut Position) -> PlayerInput {
         jumping: false,
         running: true,
         swimming: false,
+        flying: false,
         position: [client.x, client.y, client.z],
         epoch: 0,
     }

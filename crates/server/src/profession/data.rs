@@ -85,7 +85,12 @@ struct TierRow {
     class_mask: u32,
     race_masks: [u32; 2],
     tier: u32,
+    flags: u32,
 }
+
+/// `SKILL_FLAG_ALWAYS_MAX_VALUE` (DBCEnums.h:2394): the skill's value is its maximum
+/// (Riding).
+const SKILL_FLAG_ALWAYS_MAX_VALUE: u32 = 0x10;
 
 impl TierRow {
     fn fits(&self, race: u8, class: u8) -> bool {
@@ -143,6 +148,15 @@ impl ProfessionData {
             .iter()
             .find(|row| row.fits(race, class))?;
         self.tiers.get(&row.tier)?.get(index).copied()
+    }
+
+    /// Whether the race/class's `SkillRaceClassInfo` row of `skill` has
+    /// `SKILL_FLAG_ALWAYS_MAX_VALUE`.
+    pub fn always_max(&self, skill: u32, race: u8, class: u8) -> bool {
+        self.tier_rows
+            .get(&skill)
+            .and_then(|rows| rows.iter().find(|row| row.fits(race, class)))
+            .is_some_and(|row| row.flags & SKILL_FLAG_ALWAYS_MAX_VALUE != 0)
     }
 
     pub fn abilities_for_spell(&self, spell: u32) -> &[Ability] {
@@ -271,7 +285,8 @@ fn load_skill_lines(conn: &Connection) -> rusqlite::Result<HashMap<u32, SkillLin
 
 fn load_tier_rows(conn: &Connection) -> rusqlite::Result<HashMap<u32, Vec<TierRow>>> {
     let mut statement = conn.prepare(
-        "SELECT SkillID, ClassMask, RaceMasks_0, RaceMasks_1, SkillTierID FROM skill_race_class_info",
+        "SELECT SkillID, ClassMask, RaceMasks_0, RaceMasks_1, SkillTierID, Flags
+         FROM skill_race_class_info",
     )?;
     let mut rows: HashMap<u32, Vec<TierRow>> = HashMap::new();
     let mapped = statement.query_map(params![], |row| {
@@ -281,6 +296,7 @@ fn load_tier_rows(conn: &Connection) -> rusqlite::Result<HashMap<u32, Vec<TierRo
                 class_mask: uint(row, 1)?,
                 race_masks: [uint(row, 2)?, uint(row, 3)?],
                 tier: uint(row, 4)?,
+                flags: uint(row, 5)?,
             },
         ))
     })?;

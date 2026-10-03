@@ -19,12 +19,12 @@ const SWIM_SPOT: (f32, f32) = (-8558.0, -490.0);
 const SEABED: f32 = 140.04;
 const SURFACE: f32 = 143.99;
 /// The Godot client's frame step (60 fps).
-const FRAME_SECS: f32 = 1.0 / 60.0;
+pub(super) const FRAME_SECS: f32 = 1.0 / 60.0;
 const TICK: Duration = Duration::from_millis(50);
 /// Flat test ground: one chunk with corner (100, 100) at height 50.
-const FLAT: f32 = 50.0;
+pub(super) const FLAT: f32 = 50.0;
 
-fn movement_app(ground: GroundMap, spawn: Position) -> (App, Entity, Entity) {
+pub(super) fn movement_app(ground: GroundMap, spawn: Position) -> (App, Entity, Entity) {
     let mut app = App::new();
     app.add_plugins(MinimalPlugins);
     app.add_plugins(bevy::state::app::StatesPlugin);
@@ -67,7 +67,7 @@ fn swim_app(feet_y: f32) -> (App, Entity, Entity) {
     movement_app(ground, swim_spot(feet_y))
 }
 
-fn flat_app(feet_y: f32) -> (App, Entity, Entity) {
+pub(super) fn flat_app(feet_y: f32) -> (App, Entity, Entity) {
     let ground = crate::terrain_height::test_helpers::flat_ground(100.0, 100.0, FLAT);
     movement_app(ground, flat_spot(feet_y))
 }
@@ -78,12 +78,12 @@ fn swim_spot(feet_y: f32) -> Position {
 }
 
 /// Inside the flat chunk (WoW 90, 90).
-fn flat_spot(feet_y: f32) -> Position {
+pub(super) fn flat_spot(feet_y: f32) -> Position {
     let (x, y, z) = wow_to_bevy(90.0, 90.0, feet_y);
     Position { x, y, z }
 }
 
-fn tick(app: &mut App, connection: Entity, inputs: Vec<PlayerInput>) {
+pub(super) fn tick(app: &mut App, connection: Entity, inputs: Vec<PlayerInput>) {
     for input in inputs {
         app.world_mut()
             .get_mut::<MessageSender<PlayerInput>>(connection)
@@ -97,7 +97,7 @@ fn tick(app: &mut App, connection: Entity, inputs: Vec<PlayerInput>) {
     app.world_mut().run_schedule(FixedUpdate);
 }
 
-fn server_y(app: &App, player: Entity) -> f32 {
+pub(super) fn server_y(app: &App, player: Entity) -> f32 {
     app.world().get::<Position>(player).unwrap().y
 }
 
@@ -110,6 +110,7 @@ fn frame_input(client: &Position, swimming: bool, jumping: bool) -> PlayerInput 
         jumping,
         running: true,
         swimming,
+        flying: false,
         position: [client.x, client.y, client.z],
         epoch: 0,
     }

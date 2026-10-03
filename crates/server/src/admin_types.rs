@@ -205,6 +205,10 @@ pub enum AdminRequest {
         character_name: String,
         node: u32,
     },
+    LearnSpell {
+        character_name: String,
+        spell: u32,
+    },
     /// TrinityCore `.damage <amount>`: the online character's target (or the unit
     /// `target`, entity bits) takes `amount` damage from it (`Unit::DealDamage`, school
     /// Normal).
@@ -442,6 +446,10 @@ pub enum AdminResponse {
         character_name: String,
         node: u32,
         node_name: String,
+    },
+    SpellLearned {
+        character_name: String,
+        spell: u32,
     },
     Damaged {
         character_name: String,

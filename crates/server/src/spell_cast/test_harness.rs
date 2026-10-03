@@ -187,6 +187,8 @@ pub(crate) fn spawn_peer_connection(app: &mut App, player: Entity, peer: u64) ->
                 MessageReceiver::<StopSpellCast>::default(),
                 MessageSender::<CancelAura>::default(),
                 MessageReceiver::<CancelAura>::default(),
+                MessageSender::<shared::protocol::CancelMountAura>::default(),
+                MessageReceiver::<shared::protocol::CancelMountAura>::default(),
                 MessageSender::<shared::protocol::StandStateIntent>::default(),
                 MessageReceiver::<shared::protocol::StandStateIntent>::default(),
             ),

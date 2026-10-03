@@ -55,6 +55,10 @@ const SPELL_INTERRUPT_MOVEMENT: u32 = 0x1;
 const CHANNEL_INTERRUPT_MOVING: u32 = 0x8 | 0x10;
 /// SPELL_ATTR0_CANCELS_AUTO_ATTACK_COMBAT (Polymorph, Gouge, Blind, ...).
 const SPELL_ATTR0_CANCELS_AUTO_ATTACK_COMBAT: u32 = 0x0010_0000;
+/// SPELL_ATTR0_ALLOW_WHILE_MOUNTED (SharedDefines.h:460).
+const SPELL_ATTR0_ALLOW_WHILE_MOUNTED: u32 = 0x0100_0000;
+/// SPELL_ATTR0_NOT_IN_COMBAT_ONLY_PEACEFUL (SharedDefines.h:464): mounts, food, drink.
+const SPELL_ATTR0_NOT_IN_COMBAT_ONLY_PEACEFUL: u32 = 0x1000_0000;
 /// SPELL_ATTR1_IS_CHANNELLED / SPELL_ATTR1_IS_SELF_CHANNELLED.
 const SPELL_ATTR1_CHANNELED: u32 = 0x4 | 0x40;
 /// `SpellInfo::HasInitialAggro` (SpellInfo.cpp:1925-1928): none of these.
@@ -124,6 +128,10 @@ pub enum CastFailure {
     TooClose,
     /// `SPELL_FAILED_LINE_OF_SIGHT`.
     LineOfSight,
+    /// `SPELL_FAILED_AFFECTING_COMBAT`.
+    AffectingCombat,
+    /// `SPELL_FAILED_NOT_MOUNTED`.
+    NotMounted,
     NotEnoughPower(PowerType),
     NotEnoughHealth,
     /// Missing `SpellReagents` item (its name).
@@ -162,6 +170,8 @@ impl CastFailure {
             Self::OutOfRange => (R::OutOfRange, None),
             Self::TooClose => (R::TooClose, None),
             Self::LineOfSight => (R::LineOfSight, None),
+            Self::AffectingCombat => (R::AffectingCombat, None),
+            Self::NotMounted => (R::NotMounted, None),
             Self::NotEnoughPower(power) => (R::NotEnoughResource, Some(format!("{power:?}"))),
             Self::NotEnoughHealth => (R::NotEnoughResource, Some("Health".into())),
             // SPELL_FAILED_REAGENTS, SPELL_FAILED_TOTEM_CATEGORY, ERR_INV_FULL
@@ -714,6 +724,7 @@ fn validate_start(
     if let Some(block) = crate::auras::cast_blocker(world, caster, spell) {
         return Err(CastFailure::CrowdControlled(block));
     }
+    validate_caster_state(world, caster, spell)?;
     if world.get::<CastState>(caster).is_some() {
         return Err(CastFailure::InProgress);
     }
@@ -732,6 +743,31 @@ fn validate_start(
     spell_costs(world, caster, spell)?;
     crate::profession::check_cast_items(world, caster, spell)?;
     Ok(target)
+}
+
+/// `Spell::CheckCast`: a spell that cannot be used in combat fails in combat
+/// (`CanBeUsedInCombat`, Spell.cpp:5891-5892); a mounted player casts only passive spells and
+/// `SPELL_ATTR0_ALLOW_WHILE_MOUNTED` ones (Spell.cpp:6063-6072).
+fn validate_caster_state(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+) -> Result<(), CastFailure> {
+    let in_combat = world
+        .get::<shared::components::CombatStatus>(caster)
+        .is_some_and(|status| status.0);
+    if in_combat && attributes(spell, 0) & SPELL_ATTR0_NOT_IN_COMBAT_ONLY_PEACEFUL != 0 {
+        return Err(CastFailure::AffectingCombat);
+    }
+    let mounted_player = world.get::<Player>(caster).is_some()
+        && world.get::<shared::components::Mounted>(caster).is_some();
+    if mounted_player
+        && !crate::auras::is_passive(spell)
+        && attributes(spell, 0) & SPELL_ATTR0_ALLOW_WHILE_MOUNTED == 0
+    {
+        return Err(CastFailure::NotMounted);
+    }
+    Ok(())
 }
 
 fn validate_history(world: &World, caster: Entity, spell: &SpellInfo) -> Result<(), CastFailure> {

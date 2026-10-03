@@ -432,6 +432,7 @@ fn client_message_received_by_server() {
         jumping: false,
         running: false,
         swimming: false,
+        flying: false,
         position: [0.0, 0.0, 0.0],
         epoch: 0,
     };
@@ -537,6 +538,7 @@ fn input_direction(direction: [f32; 3]) -> PlayerInput {
         jumping: false,
         running: false,
         swimming: false,
+        flying: false,
         position: [0.0, 0.0, 0.0],
         epoch: 0,
     }

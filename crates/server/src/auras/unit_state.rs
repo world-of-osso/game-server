@@ -75,6 +75,7 @@ pub(super) fn reconcile(world: &mut World, unit: Entity) {
     let invisible = has_type(auras, MOD_INVISIBILITY);
     let unattackable = has_type(auras, MOD_UNATTACKABLE);
     let confused = has_type(auras, MOD_CONFUSE);
+    let can_fly = super::mount::can_fly(auras);
     if invisible != world.get::<Invisible>(unit).is_some() {
         if invisible {
             world.entity_mut(unit).insert(Invisible);
@@ -89,6 +90,7 @@ pub(super) fn reconcile(world: &mut World, unit: Entity) {
     if confused != world.get::<Confused>(unit).is_some() {
         reconcile_confused(world, unit, confused);
     }
+    super::mount::reconcile_can_fly(world, unit, can_fly);
     reconcile_display(world, unit);
     super::shapeshift::reconcile_display_power(world, unit);
 }

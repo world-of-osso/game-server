@@ -26,6 +26,7 @@ fn input(direction: [f32; 3]) -> PlayerInput {
         jumping: false,
         running: true,
         swimming: false,
+        flying: false,
         position: [0.0; 3],
         epoch: 0,
     }
@@ -58,6 +59,7 @@ fn inputs_set_forward_backward_strafe_walk_swim_and_jump_flags() {
         (
             PlayerInput {
                 swimming: true,
+                flying: false,
                 ..input(wire_direction(0.0, 1.0))
             },
             PlayerMotion::STRAFE_RIGHT | PlayerMotion::SWIMMING,
@@ -109,6 +111,7 @@ fn the_stop_input_clears_direction_and_falling() {
     let (mut app, player, connection) = receiver_app();
     let swim = PlayerInput {
         swimming: true,
+        flying: false,
         ..input(wire_direction(1.0, 0.0))
     };
     deliver_and_tick(&mut app, connection, vec![swim.clone()]);

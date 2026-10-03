@@ -445,6 +445,44 @@ pub(crate) fn handle_kill(
     }
 }
 
+/// `.learn <spell>` (cs_learn `HandleLearnCommand` -> `Player::LearnSpell`): the online
+/// character learns `spell` and the skills its SKILL effects name (Expert Riding 34090
+/// sets Riding 225); `PlayerProfessions` saves it.
+pub(crate) fn handle_learn_spell(
+    db: &persistence::GameDatabase,
+    commands: &mut Commands,
+    players: &Query<(
+        Entity,
+        &mut Position,
+        &persistence::ClientId,
+        &mut shared::components::MovementControl,
+    )>,
+    name: &str,
+    spell: u32,
+) -> AdminResponse {
+    let Some(char_id) = persistence::find_character_id_by_name(&db.db, name) else {
+        return AdminResponse::Error(format!("character '{name}' not found"));
+    };
+    let Some(player) = players
+        .iter()
+        .find_map(|(entity, _, cid, _)| (cid.0 == char_id).then_some(entity))
+    else {
+        return AdminResponse::Error(format!("character '{name}' is not online"));
+    };
+    commands.queue(move |world: &mut World| {
+        let learned = crate::profession::with_learner(world, player, |learner, profs| {
+            learner.learn_spell(profs, spell, 0)
+        });
+        if learned.is_none() {
+            error!("learn-spell {spell}: character {char_id} has no professions");
+        }
+    });
+    AdminResponse::SpellLearned {
+        character_name: name.to_owned(),
+        spell,
+    }
+}
+
 /// `.damage <amount>` (cs_misc `HandleDamageCommand`): the online character's target
 /// takes `amount` Normal-school damage from it through `Unit::DealDamage`.
 pub(crate) fn handle_damage(

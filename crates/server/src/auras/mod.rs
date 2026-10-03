@@ -15,6 +15,7 @@
 //! `SPELL_ATTR0_DO_NOT_DISPLAY_SPELLBOOK_AURA_ICON_COMBAT_LOG`.
 
 mod handlers;
+pub mod mount;
 mod periodic;
 pub mod procs;
 pub mod scripts;
@@ -69,11 +70,19 @@ impl Plugin for AuraPlugin {
             .init_resource::<UnhandledAuras>()
             .init_resource::<scripts::AuraScripts>()
             .init_resource::<PendingPassiveSync>()
-            .add_systems(Startup, shapeshift::load_shapeshift_forms_startup)
+            .add_systems(
+                Startup,
+                (
+                    shapeshift::load_shapeshift_forms_startup,
+                    mount::load_mount_store_startup,
+                ),
+            )
             .add_systems(
                 Update,
                 (
                     receive_cancel_aura.after(crate::spell_cast::receive_cast_requests),
+                    mount::receive_cancel_mount_aura
+                        .after(crate::spell_cast::receive_cast_requests),
                     queue_passive_sync,
                 ),
             )
@@ -81,6 +90,7 @@ impl Plugin for AuraPlugin {
                 FixedUpdate,
                 (
                     init_unit_auras,
+                    mount::apply_flight_style,
                     sync_passive_auras,
                     update_auras,
                     procs::process_aura_events,
@@ -668,6 +678,7 @@ pub fn apply_aura(world: &mut World, application: &AuraApplication) {
             shapeshift::remove_other_forms(world, target, id);
         }
         scripts::run_apply(world, target, &aura);
+        mount::on_applied(world, target, &aura);
         let stuns = aura
             .effects
             .iter()
@@ -741,6 +752,7 @@ pub enum RemoveReason {
 
 fn announce_removed(world: &mut World, unit: Entity, aura: &AuraInstance) {
     scripts::run_remove(world, unit, aura);
+    mount::on_removed(world, unit, aura);
     log_event(world, aura_event(aura, unit, CombatLogKind::AuraRemoved));
 }
 
@@ -1359,3 +1371,6 @@ mod polymorph_tests;
 
 #[cfg(test)]
 mod mage_tests;
+
+#[cfg(test)]
+mod mount_tests;

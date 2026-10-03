@@ -202,6 +202,7 @@ fn swim_speed_differs_from_ground_speed() {
     let player = spawn_player(app.world_mut(), 0.0, 0.0, 0.0);
     let input = PlayerInput {
         swimming: true,
+        flying: false,
         ..reporting(FAR_X, make_input(1.0, 0.0, 0.0))
     };
     let _ = app

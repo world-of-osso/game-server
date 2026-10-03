@@ -1,5 +1,9 @@
 # Wiki Log
 
+## [2026-10-02] systems | Mounts and steady flight
+
+Created [[mounts]]: Golden Gryphon 32235 mounts through MountCapability (riding + Flight Style: Steady), flight speed 207, CAN_FLY/FLYING movement without gravity, AffectingCombat/NotMounted cast checks, CancelMountAura, admin `learn-spell`. Not modelled list on the page.
+
 ## [2026-10-01] investigations/systems/spec | Combined Zaralda catalog and native blocker
 
 Updated [[midnight-economy-content]], [[economy-catalog]], [bot spec Known gaps](../specs/bot-economy.md#known-gaps-current-cycle) and index. Recorded closure 30/30 zero-warning proof, retained additive data proof, scoped gate103 catalog/CLI/restart PASS and later established combined status. Corrected raw TDB flag 0 versus source-observed derived content flag 128; no native vendor-flag inheritance claim. Former merchant data gap resolved locally; native 0/3 and overall goal remain open. Linked [engine fixture documentation](../../../game-engine/docs/wiki/reference/test-assets.md#zaralda-native-merchant-fixture-2026-10-01). No new test/build/service operations; historical unchanged-Classic/pending-gate entries below describe earlier checkpoints.
