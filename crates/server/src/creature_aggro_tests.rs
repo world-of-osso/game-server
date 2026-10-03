@@ -155,6 +155,20 @@ fn state(app: &App, creature: Entity) -> Option<CreatureState> {
     app.world().get::<CreatureState>(creature).cloned()
 }
 
+/// Whether `attacker` swung at `target`: a logged swing of any outcome. A creature
+/// victim dodges or parries 9% of swings (`melee::swing_chances`) and MOD_HIT_CHANCE
+/// does not remove that, so a landed swing is chance; the swing itself is not, and
+/// an avoided one still engages the victim (`record_swing_events` → `add_threat`).
+fn swung_at(app: &App, attacker: Entity, target: Entity) -> bool {
+    app.world()
+        .resource::<crate::combat::CombatLog>()
+        .range(0.0, f64::MAX)
+        .iter()
+        .any(|entry| {
+            entry.event.attacker == attacker.to_bits() && entry.event.target == target.to_bits()
+        })
+}
+
 fn pursuing(target: Entity) -> Option<CreatureState> {
     Some(CreatureState::Pursuing {
         target: target.to_bits(),
@@ -378,11 +392,11 @@ fn neutral_boar_attacked_by_a_players_pet_fights_the_pet() {
     never_misses(&mut app, boar);
     let pet = spawn_pet_attacking(&mut app, at(3.0, 0.0), boar);
     run(&mut app, 3);
-    assert!(health(&app, boar) < 100.0, "pet swing lands");
+    assert!(swung_at(&app, pet, boar), "the pet swings at the boar");
     assert_eq!(state(&app, boar), pursuing(pet));
     run(&mut app, 20);
     assert_eq!(state(&app, boar), pursuing(pet));
-    assert!(health(&app, pet) < 100.0, "boar hits the pet back");
+    assert!(swung_at(&app, boar, pet), "the boar swings back at the pet");
 }
 
 #[test]

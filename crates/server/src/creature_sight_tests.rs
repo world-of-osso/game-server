@@ -189,6 +189,20 @@ fn dead(app: &App, unit: Entity) -> bool {
     app.world().get::<DeathState>(unit).is_some()
 }
 
+/// Whether `attacker` swung at `target`: a logged swing of any outcome. A creature
+/// victim dodges or parries 9% of swings (`melee::swing_chances`) and MOD_HIT_CHANCE
+/// does not remove that, so a landed swing is chance; the swing itself is not, and
+/// an avoided one still engages the victim (`record_swing_events` → `add_threat`).
+fn swung_at(app: &App, attacker: Entity, target: Entity) -> bool {
+    app.world()
+        .resource::<crate::combat::CombatLog>()
+        .range(0.0, f64::MAX)
+        .iter()
+        .any(|entry| {
+            entry.event.attacker == attacker.to_bits() && entry.event.target == target.to_bits()
+        })
+}
+
 /// Move `unit` as a movement system does: new position, relocation marked.
 fn move_to(app: &mut App, unit: Entity, position: Position) {
     *app.world_mut().get_mut::<Position>(unit).unwrap() = position;
@@ -216,8 +230,14 @@ fn a_soldier_and_a_hostile_orc_in_range_fight_until_one_dies_and_the_other_goes_
     );
 
     run(&mut app, 60);
-    assert!(health(&app, soldier) < 60.0, "the orc's swings land");
-    assert!(health(&app, orc) < 60.0, "the soldier's swings land");
+    assert!(
+        swung_at(&app, orc, soldier),
+        "the orc swings at the soldier"
+    );
+    assert!(
+        swung_at(&app, soldier, orc),
+        "the soldier swings at the orc"
+    );
 
     let mut ticks = 0;
     while !dead(&app, soldier) && !dead(&app, orc) {
