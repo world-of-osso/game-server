@@ -32,10 +32,15 @@ pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
     match (spell_id, effect_index) {
         (CHAOS_STRIKE_INITIAL, 0) => Some(chaos_strike_initial),
         (LIVING_FLAME, 0) => Some(living_flame),
-        (shared::skyriding::SURGE_FORWARD, 0) => Some(crate::skyriding::surge_forward),
-        (shared::skyriding::SKYWARD_ASCENT, 0) => Some(crate::skyriding::skyward_ascent),
         _ => None,
     }
+}
+
+/// `SpellCastFn` on `AfterCast`: runs once on the caster after the spell resolved.
+pub type AfterCastHook = fn(&mut World, Entity, &SpellInfo);
+
+pub fn after_cast(spell_id: u32) -> Option<AfterCastHook> {
+    shared::skyriding::ability_impulse(spell_id).map(|_| crate::skyriding::flap as AfterCastHook)
 }
 
 /// `SpellObjectAreaTargetSelectFn`: narrows the units an effect selected.

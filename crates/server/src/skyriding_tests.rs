@@ -3,7 +3,10 @@
 //! movement bound takes, and Second Wind.
 
 use shared::components::PlayerMotion;
-use shared::skyriding::{AERIAL_HALT, LAUNCH_SPEED, SKYWARD_ASCENT, SURGE_FORWARD, SURGE_SPEED};
+use shared::skyriding::{
+    AERIAL_HALT, LAUNCH_SPEED, SKYWARD_ASCENT, SURGE_FORWARD, SURGE_SPEED, WHIRLING_SURGE,
+    WHIRLING_SURGE_SPEED,
+};
 use shared::spell_data::CastFailReason;
 
 use super::SkyridingImpulse;
@@ -34,6 +37,7 @@ fn skyrider() -> Option<Harness> {
             SURGE_FORWARD,
             SKYWARD_ASCENT,
             AERIAL_HALT,
+            WHIRLING_SURGE,
             SECOND_WIND,
         ],
     )?;
@@ -42,7 +46,7 @@ fn skyrider() -> Option<Harness> {
         .get_mut::<PlayerProfessions>(h.caster)
         .unwrap()
         .spells
-        .extend([SKYRIDING_BASICS, AERIAL_HALT, SECOND_WIND]);
+        .extend([SKYRIDING_BASICS, AERIAL_HALT, WHIRLING_SURGE, SECOND_WIND]);
     // Only what the rider learned counts as known: the Golden Gryphon, not the harness's
     // other fixture spells.
     h.app
@@ -215,5 +219,25 @@ fn surge_forward_needs_skyriding_basics() {
         .retain(|&spell| spell != SKYRIDING_BASICS);
     h.cast_and_deliver(SURGE_FORWARD, None);
     assert_eq!(failures(&h), [CastFailReason::NotSupported]);
+    assert_eq!(impulse(&h), None);
+}
+
+#[test]
+fn whirling_surge_costs_no_charge_surges_forward_and_cools_down_for_30_seconds() {
+    let Some(mut h) = skyrider() else {
+        return;
+    };
+    h.cast_and_deliver(WHIRLING_SURGE, None);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert!(h.inbox.charges.is_empty(), "{:?}", h.inbox.charges);
+    assert_eq!(take_impulse(&mut h), Some(WHIRLING_SURGE_SPEED));
+    let cooldown = h.inbox.cooldowns.last().expect("Whirling Surge cooldown");
+    assert_eq!(
+        (cooldown.spell_id, cooldown.duration_ms),
+        (WHIRLING_SURGE, 30_000)
+    );
+    h.advance(PAST_GCD);
+    h.cast_and_deliver(WHIRLING_SURGE, None);
+    assert_eq!(failures(&h), [CastFailReason::OnCooldown]);
     assert_eq!(impulse(&h), None);
 }

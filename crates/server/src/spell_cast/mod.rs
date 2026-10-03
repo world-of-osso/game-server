@@ -1142,6 +1142,9 @@ fn execute_cast(
         },
     );
     missiles::launch(world, caster, spell, plan, 0);
+    if let Some(hook) = scripts::after_cast(spell.id) {
+        hook(world, caster, spell);
+    }
     spell_mods::consume_charges(world, caster, spell);
     // Spell::finish (Spell.cpp:4448-4450): some spells stop the caster's auto-attack.
     if attributes(spell, 0) & SPELL_ATTR0_CANCELS_AUTO_ATTACK_COMBAT != 0 {
