@@ -8,6 +8,7 @@ from pathlib import Path
 import shutil
 import subprocess
 import sys
+import tempfile
 
 
 SCRIPTS = Path(__file__).resolve().parent
@@ -120,11 +121,12 @@ def runtime_environment(host, key, running):
 def build(args, tail, depot, native):
     root = args.root.resolve(strict=True)
     host = depot.select_build_host(args.build_host)
-    lock, cache, checkout_key = depot.locked_checkout(root)
+    cache, checkout_key = depot.prepare_checkout_cache(root)
     key = "server-" + checkout_key
     runtime_args = tail if args.run else None
     runtime_cwd = (root if host == "local" else ASSET_CWD) if args.run else None
-    with lock, depot.stable_context(cache, "server-native", checkout_key) as context:
+    with tempfile.TemporaryDirectory(prefix="server-native-", dir=cache) as work:
+        context = Path(work)
         # Local compilation must read the original paths, including its local data.
         if host == "desktop":
             snapshot(root, context, depot)
