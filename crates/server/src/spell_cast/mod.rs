@@ -189,6 +189,8 @@ impl CastFailure {
 /// Charge state of one charge category.
 #[derive(Debug, Clone, Copy, PartialEq)]
 struct ChargeState {
+    /// The spell that last used a charge: the charge updates name it.
+    spell_id: u32,
     max: u8,
     used: u8,
     recharge_secs: f64,
@@ -270,6 +272,7 @@ impl SpellHistory {
             .charges
             .entry(categories.charge_category)
             .or_insert(ChargeState {
+                spell_id: spell.id,
                 max,
                 used: 0,
                 recharge_secs: 0.0,
@@ -280,6 +283,16 @@ impl SpellHistory {
         state.refresh(now);
         Some(state)
     }
+}
+
+/// The charges `unit` has left in `charge_category` now, once it has used one.
+pub(crate) fn charges_left(world: &World, unit: Entity, charge_category: u32) -> Option<u8> {
+    let mut state = *world
+        .get::<SpellHistory>(unit)?
+        .charges
+        .get(&charge_category)?;
+    state.refresh(now(world));
+    Some(state.max - state.used)
 }
 
 fn charge_mods(world: &World, caster: Entity, spell: &SpellInfo) -> ChargeMods {
@@ -710,6 +723,31 @@ fn caster_knows_spell(world: &mut World, caster: Entity, spell_id: u32) -> bool 
         .get(world)
         .expect("plain component query always validates");
     crate::class_progression::knows_spell(&known, caster, spell_id)
+        || taught_by_known_spell(world, caster, spell_id)
+}
+
+/// `AuraEffect::HandleLearnSpell` (SpellAuraEffects.cpp:5248-5261): a known spell's
+/// LEARN_SPELL 195 aura teaches its MiscValue (Skyriding Basics 376777 teaches Surge Forward
+/// 372608 and Skyward Ascent 372610).
+fn taught_by_known_spell(world: &World, caster: Entity, spell_id: u32) -> bool {
+    let store = world.resource::<SpellStore>();
+    let learned = world
+        .get::<crate::profession::PlayerProfessions>(caster)
+        .into_iter()
+        .flat_map(|professions| professions.spells.iter().copied());
+    let known = world
+        .get::<KnownSpells>(caster)
+        .into_iter()
+        .flat_map(KnownSpells::iter);
+    learned
+        .chain(known)
+        .filter_map(|id| store.get(id))
+        .flat_map(|spell| &spell.effects)
+        .any(|effect| {
+            crate::auras::is_aura_effect(effect)
+                && effect.aura == crate::auras::handlers::LEARN_SPELL
+                && effect.misc_values[0] as u32 == spell_id
+        })
 }
 
 /// Validate everything checked before a cast starts; returns the explicit
@@ -1576,6 +1614,7 @@ fn start_cooldowns(world: &mut World, caster: Entity, spell: &SpellInfo) {
             charges.next_ready_at = now + charges.recharge_secs;
         }
         charges.used = (charges.used + 1).min(charges.max);
+        charges.spell_id = spell.id;
         *charges
     });
     let cooldown_ms = recovery_ms.max(if category != 0 { category_ms } else { 0 });
@@ -1593,19 +1632,42 @@ fn start_cooldowns(world: &mut World, caster: Entity, spell: &SpellInfo) {
         );
     }
     if let Some(charges) = charges {
-        let remaining = ((charges.next_ready_at - now).max(0.0) * 1000.0) as u32;
-        send_to_owner(
-            world,
-            caster,
-            SpellChargesUpdate {
-                spell_id: spell.id,
-                current: charges.max - charges.used,
-                max: charges.max,
-                recharge_ms: (charges.recharge_secs * 1000.0) as u32,
-                remaining_ms: remaining,
-            },
-        );
+        send_charges(world, caster, &charges, now);
     }
+}
+
+fn send_charges(world: &mut World, unit: Entity, charges: &ChargeState, now: f64) {
+    let remaining = ((charges.next_ready_at - now).max(0.0) * 1000.0) as u32;
+    send_to_owner(
+        world,
+        unit,
+        SpellChargesUpdate {
+            spell_id: charges.spell_id,
+            current: charges.max - charges.used,
+            max: charges.max,
+            recharge_ms: (charges.recharge_secs * 1000.0) as u32,
+            remaining_ms: remaining,
+        },
+    );
+}
+
+/// `SpellHistory::RestoreCharge` (SpellHistory.cpp:917-926) `count` times: give back the
+/// most recently used charges of `charge_category`; the oldest keeps recovering.
+pub(crate) fn restore_charges(world: &mut World, unit: Entity, charge_category: u32, count: u8) {
+    let now = now(world);
+    let Some(mut history) = world.get_mut::<SpellHistory>(unit) else {
+        return;
+    };
+    let Some(charges) = history.charges.get_mut(&charge_category) else {
+        return;
+    };
+    charges.refresh(now);
+    if charges.used == 0 || count == 0 {
+        return;
+    }
+    charges.used = charges.used.saturating_sub(count);
+    let charges = *charges;
+    send_charges(world, unit, &charges, now);
 }
 
 // --- Cast progress ---

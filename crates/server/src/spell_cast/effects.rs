@@ -55,6 +55,7 @@ pub const EFFECT_INTERRUPT_CAST: u32 = 68;
 pub const EFFECT_NORMALIZED_WEAPON_DMG: u32 = 121;
 pub const EFFECT_HEAL_PCT: u32 = 136;
 pub const EFFECT_TELEPORT_UNITS: u32 = 252;
+pub const EFFECT_MODIFY_CHARGES: u32 = 293;
 
 /// Triggered spells may trigger further spells up to this depth.
 pub const MAX_TRIGGER_DEPTH: u8 = 3;
@@ -89,6 +90,7 @@ pub fn handler(effect_id: u32) -> Option<EffectHandler> {
         EFFECT_INTERRUPT_CAST => interrupt_cast,
         EFFECT_HEAL_PCT => heal_pct,
         EFFECT_TELEPORT_UNITS => teleport_units,
+        EFFECT_MODIFY_CHARGES => modify_charges,
         crate::profession::EFFECT_CREATE_ITEM => crate::profession::effect_create_item,
         crate::profession::EFFECT_LEARN_SPELL => crate::profession::effect_learn_spell,
         crate::profession::EFFECT_SKILL_STEP => crate::profession::effect_skill_step,
@@ -799,4 +801,12 @@ fn teleport_units(world: &mut World, ctx: &EffectCtx, _effect: &SpellEffect, tar
         target,
     );
     mark_dirty(world, target);
+}
+
+/// `Spell::EffectModifySpellCharges` (SpellEffects.cpp:6188-6195): the target gets back
+/// base points charges of the MiscValue charge category (Second Wind 425782: one Skyriding
+/// Charge, category 2391); a negative value restores none.
+fn modify_charges(world: &mut World, _ctx: &EffectCtx, effect: &SpellEffect, target: Entity) {
+    let count = effect.base_points.round().clamp(0.0, f32::from(u8::MAX)) as u8;
+    super::restore_charges(world, target, effect.misc_values[0] as u32, count);
 }

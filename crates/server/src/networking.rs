@@ -502,6 +502,7 @@ pub(crate) struct PlayerInputParams<'w, 's> {
     dirty_queue: Option<Res<'w, InterestDirtyQueue>>,
     replication_dirty: Option<Res<'w, ReplicationDirtyQueue>>,
     clocks: Local<'s, MovementClocks>,
+    impulses: Query<'w, 's, (Entity, &'static crate::skyriding::SkyridingImpulse)>,
     ground: Option<ResMut<'w, GroundMap>>,
     maps: Query<'w, 's, &'static InMap>,
 }
@@ -515,6 +516,13 @@ pub(crate) fn process_player_inputs(time: Res<Time>, mut params: PlayerInputPara
     params
         .clocks
         .retain_players(|player| players.contains(player));
+    for (player, impulse) in &params.impulses {
+        params.clocks.add_impulse(player, impulse.0);
+        params
+            .commands
+            .entity(player)
+            .remove::<crate::skyriding::SkyridingImpulse>();
+    }
     for (mut receiver, link) in &mut params.receivers {
         let control = params
             .controls

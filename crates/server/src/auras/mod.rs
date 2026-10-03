@@ -14,7 +14,7 @@
 //! without a positive applied effect. Hidden: passive or
 //! `SPELL_ATTR0_DO_NOT_DISPLAY_SPELLBOOK_AURA_ICON_COMBAT_LOG`.
 
-mod handlers;
+pub(crate) mod handlers;
 pub mod mount;
 mod periodic;
 pub mod procs;
@@ -1397,4 +1397,4 @@ mod polymorph_tests;
 mod mage_tests;
 
 #[cfg(test)]
-mod mount_tests;
+pub(crate) mod mount_tests;

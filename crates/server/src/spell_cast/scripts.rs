@@ -32,6 +32,8 @@ pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
     match (spell_id, effect_index) {
         (CHAOS_STRIKE_INITIAL, 0) => Some(chaos_strike_initial),
         (LIVING_FLAME, 0) => Some(living_flame),
+        (shared::skyriding::SURGE_FORWARD, 0) => Some(crate::skyriding::surge_forward),
+        (shared::skyriding::SKYWARD_ASCENT, 0) => Some(crate::skyriding::skyward_ascent),
         _ => None,
     }
 }
