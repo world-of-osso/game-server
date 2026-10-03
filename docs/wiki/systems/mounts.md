@@ -31,6 +31,28 @@ Riding: Expert Riding 34090's SKILL effect sets Riding to 225; `SkillRaceClassIn
 - Skyriding aura 406095: ADV_FLYING 446 → `PlayerMotion::CAN_FLY | CAN_ADV_FLY` (TC `HandleModAdvFlying` → `SetCanFly`, `SetCanAdvFly`); MOD_INCREASE_MOUNTED_SPEED 100%. Losing it drops `ADV_FLYING`.
 - A `flying` input from a `CAN_ADV_FLY` player sets `FLYING | ADV_FLYING` and moves under the energy bound of shared-protocol `skyriding` instead of the flight speed: the server tracks each skyrider's most possible speed (`MovementClocks`, starting at the mounted run speed with the 31.5 yd/s launch on top), moves it toward the report at the faster end of the leg (`speed_after`: v² ≤ v0² + 2·g·drop, capped at FlightCapability 11 `MaxVel` 65), cuts a climb at `v²/2g`, and keeps the bank and unreached-report catch-up of every other travel. Drag is not part of the bound (upper bound only). The momentum model and its constants are documented in shared-protocol `src/skyriding.rs`.
 
+### Skyriding (part 2: vigor and abilities)
+
+Code: `skyriding.rs` (flaps), `spell_cast` (charges, `restore_charges`, LEARN_SPELL), `networking.rs` / `networking_movement.rs` (`MovementClocks::add_impulse`). Retail DB2 12.1.0.69933; TC a352b1fa.
+
+| What | Value | Source |
+|---|---|---|
+| Vigor | Skyriding Charges: `ChargeCategory` 2391 "Skryriding Charges - Core", MaxCharges 6, ChargeRecoveryTime 15000 (no power: SpellPower 372608 is PowerType 25 cost 0) | SpellCategories 138578/138579, SpellCategory 2391 |
+| Regen while skyriding | × 0.69 → 10.35 s a charge | 406095 effect 8 CHARGE_RECOVERY_MULTIPLIER 454 -31 misc 2391; TC `SpellHistory::GetChargeRecoveryTime` |
+| Surge Forward 372608 | 1 charge, GCD 1.5 s (cat 133), cooldown 1.5 s, cat 2316 1.5 s; effect 0 DUMMY | SpellCooldowns 77887, SpellEffect 997336 |
+| Skyward Ascent 372610 | 1 charge, cooldown 1.5 s; effect 0 DUMMY 450 | SpellCooldowns 77888, SpellEffect 997338 |
+| Aerial Halt 403092 | no charge, cooldown 10 s, GCD 1.5 s; MOD_ADV_FLYING_AIR_FRICTION 513 10000% for 0.5 s | SpellCooldowns 83556, SpellEffect 1049834, SpellDuration 327 |
+| Whirling Surge 361584 | no charge, cat 2193 cooldown 30 s; DUMMY aura 3 s | SpellCooldowns 77889, SpellCategories 138580 |
+| Second Wind 425782 | MODIFY_CHARGES 293 +1 on 2391; own charges 3 / 180 s (cat 2195) | SpellEffect 1103859, SpellCategory 2195 |
+| Impulse cap | AddImpulseMaxSpeed 100, OverMaxDeceleration 7 | FlightCapability 11 |
+
+- Learning: Skyriding Basics 376777's LEARN_SPELL 195 effects teach Surge Forward and Skyward Ascent (TC `AuraEffect::HandleLearnSpell`): a spell taught by a known (or profession-learned) spell's 195 effect counts as known. Aerial Halt, Whirling Surge and Second Wind come from the Skyriding trait tree in Retail; test characters `learn-spell` them.
+- All five have `SPELL_ATTR0_ALLOW_WHILE_MOUNTED` (0x01000000), so `NotMounted` lets them through.
+- The flap: Surge Forward / Skyward Ascent effect 0 (DUMMY, the caster) runs `skyriding::surge_forward` / `skyward_ascent` (`spell_cast::scripts`), which leaves a `SkyridingImpulse` of 31.5 yd/s (shared-protocol `ability_impulse`); the next `process_player_inputs` raises the skyrider's energy to `impulse_bound` (v + 31.5, capped at 100) and drops it. A grounded player has no energy yet; its takeoff starts one. The client flaps its `Glider` on the `SpellGo`.
+- Second Wind: `EffectModifySpellCharges` → `restore_charges` (TC `RestoreCharge`: the most recent used charge comes back, the oldest keeps recovering), and a `SpellChargesUpdate` named after the last spell that used the category.
+- Not modelled: the impulse sizes are assumptions (Retail runs these DUMMY effects in an unpublished server script; TC defines `SMSG_MOVE_ADD_IMPULSE` but never sends it); Thrill of the Skies 377234 (-42%) and Ground Skimming 404184 (-20%), trait-tree talents 383366/404183 whose triggers are server scripts; Dragon's Rest 372606; Whirling Surge movement; Aerial Halt's reduced gravity; the Space launch spending a charge (Retail's takeoff is Skyward Ascent / Lift Off).
+- Tests: `skyriding_tests.rs` (charge spent, shared charges, GCD, drain then NoChargesRemain, 10.35 s recovery, Aerial Halt cooldown, Second Wind, needs Skyriding Basics), `networking_tests/skyriding.rs` (a granted Surge Forward is followed within 0.05 yd; the same flap ungranted falls behind). Live: game-engine `godot/tests/skyriding_abilities_live.gd`.
+
 ### Casting rules
 
 `validate_start`: `SPELL_ATTR0_NOT_IN_COMBAT_ONLY_PEACEFUL` fails in combat (`AffectingCombat`, mounts, food); a mounted player casts only passive or `SPELL_ATTR0_ALLOW_WHILE_MOUNTED` spells (`NotMounted`). `CancelMountAura` (`CMSG_CANCEL_MOUNT_AURA`) removes the cancellable mount auras. A swimming input still dismounts (a pre-existing rule, now through the mount aura); Retail keeps the mount in water.
@@ -41,7 +63,7 @@ Retail path: vendors 20510/32216/35101 sell item 25470 (Golden Gryphon, `ItemEff
 
 ### Not modelled
 
-Skyriding's 85% speed outside the Dragon Isles (Warcraft Wiki), vigor and Skyriding abilities (part 2), `AreaTable.MountFlags` (no area table: ground and flying allowed everywhere), `ReqAreaID` capabilities, PlayerCondition ModifierTrees, capability recalculation on water/area/skill change (`UpdateMountCapability`), backward flight speed (`MOVE_FLIGHT_BACK` 4.5), unmounted flight auras (206), auto-dismount before other casts.
+Skyriding's 85% speed outside the Dragon Isles (Warcraft Wiki), `AreaTable.MountFlags` (no area table: ground and flying allowed everywhere), `ReqAreaID` capabilities, PlayerCondition ModifierTrees, capability recalculation on water/area/skill change (`UpdateMountCapability`), backward flight speed (`MOVE_FLIGHT_BACK` 4.5), unmounted flight auras (206), auto-dismount before other casts.
 
 ## See also
 
