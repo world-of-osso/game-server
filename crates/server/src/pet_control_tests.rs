@@ -8,7 +8,7 @@ use std::path::{Path, PathBuf};
 use lightyear::prelude::{MessageReceiver, MessageSender};
 use rusqlite::{Connection, OpenFlags};
 use shared::components::{PowerType, UnitPowers, UnitSummonedBy};
-use shared::protocol::CombatChannel;
+use shared::protocol::{CombatChannel, CombatLogKind};
 
 use super::*;
 use crate::hunter_pet::{HunterPetPlugin, PetStable};
@@ -48,10 +48,9 @@ fn db_path() -> PathBuf {
     path
 }
 
-/// A stable holding a Diseased Young Wolf (level 10) in slot 1, not out.
-fn seeded_stable(path: &Path) -> GameDatabase {
-    let db = redb::Database::create(path).expect("redb");
-    persistence::create_tables(&db);
+/// A stable holding a Diseased Young Wolf (level 10, Passive as tamed) in slot 1, not out.
+fn seed_stable(path: &Path) {
+    let db = open_db(path);
     let mut stored = StoredPetStable::default();
     stored.active[0] = Some(StoredPet {
         creature_entry: DISEASED_YOUNG_WOLF,
@@ -59,8 +58,14 @@ fn seeded_stable(path: &Path) -> GameDatabase {
         name: "Diseased Young Wolf".into(),
         level: 10,
         family: 1,
+        react_state: REACT_PASSIVE,
     });
-    save_pet_stable(&db, CHARACTER_ID, &stored);
+    save_pet_stable(&db.db, CHARACTER_ID, &stored);
+}
+
+fn open_db(path: &Path) -> GameDatabase {
+    let db = redb::Database::create(path).expect("redb");
+    persistence::create_tables(&db);
     GameDatabase { db }
 }
 
@@ -73,11 +78,20 @@ struct PetHarness {
 /// The level 10 hunter at the origin with its wolf called out and the Kobold Vermin
 /// (hostile, 5000 health) moved 15 yards away; `PetSpells` received are collected.
 fn hunter_with_wolf() -> Option<PetHarness> {
+    let path = db_path();
+    seed_stable(&path);
+    hunter_logged_in(&path)
+}
+
+/// The hunter entering the world with the stable stored at `path`, then casting Call Pet 1
+/// (which brings a pet already out back to it).
+fn hunter_logged_in(path: &Path) -> Option<PetHarness> {
     let conn = world_db()?;
     let templates = wolf_template(&conn);
     let spells = load_pet_levelup_spells(&conn).expect("creature_family imported");
-    let db = seeded_stable(&db_path());
-    let mut h = harness_with_plugins(Vec::new(), &[CALL_PET_1], CLASS_HUNTER, false, |app| {
+    let db = open_db(path);
+    let ids = [CALL_PET_1, BITE, GROWL, DASH];
+    let mut h = harness_with_plugins(Vec::new(), &ids, CLASS_HUNTER, false, |app| {
         app.insert_resource(WorldData {
             templates,
             ..Default::default()
@@ -87,7 +101,11 @@ fn hunter_with_wolf() -> Option<PetHarness> {
         app.add_plugins((HunterPetPlugin, crate::creature_ai::CreatureAiPlugin));
         app.add_systems(
             FixedUpdate,
-            (process_pet_actions, pet_ai_system)
+            (
+                process_pet_actions,
+                process_pet_autocast_toggles,
+                pet_ai_system,
+            )
                 .chain()
                 .after(crate::combat::auto_attack_system),
         );
@@ -99,6 +117,8 @@ fn hunter_with_wolf() -> Option<PetHarness> {
         MessageReceiver::<PetSpells>::default(),
         MessageSender::<PetClearSpells>::default(),
         MessageReceiver::<PetClearSpells>::default(),
+        MessageSender::<PetSpellAutocast>::default(),
+        MessageReceiver::<PetSpellAutocast>::default(),
     ));
     h.app.world_mut().entity_mut(h.npc).insert(Position {
         x: 15.0,
@@ -154,6 +174,47 @@ impl PetHarness {
                 position,
             });
         self.advance(3);
+    }
+
+    /// `CMSG_PET_SPELL_AUTOCAST`; delivered 3 frames later.
+    fn autocast(&mut self, spell: u32, enabled: bool) {
+        let pet = self.pet.to_bits();
+        self.h
+            .app
+            .world_mut()
+            .get_mut::<MessageSender<PetSpellAutocast>>(self.h.connection)
+            .unwrap()
+            .send::<CombatChannel>(PetSpellAutocast {
+                pet,
+                spell,
+                enabled,
+            });
+        self.advance(3);
+    }
+
+    /// Damage the pet's `spell` did to `target`, as logged.
+    fn spell_damage(&self, spell: u32, target: Entity) -> Vec<i32> {
+        self.h
+            .inbox
+            .log
+            .iter()
+            .filter(|event| {
+                event.kind == CombatLogKind::Damage
+                    && event.spell_id == Some(spell)
+                    && event.source == Some(self.pet.to_bits())
+                    && event.target == Some(target.to_bits())
+            })
+            .map(|event| event.amount)
+            .collect()
+    }
+
+    fn focus(&self) -> i32 {
+        self.h
+            .app
+            .world()
+            .get::<UnitPowers>(self.pet)
+            .and_then(|powers| powers.entries.first().map(|entry| entry.current))
+            .expect("the pet has Focus")
     }
 
     fn command(&mut self, command: u32) {
@@ -448,4 +509,91 @@ fn attack_sends_the_wolf_at_a_neutral_beast() {
         p.h.health(kobold) < 5_000.0,
         "the neutral beast took no bite"
     );
+}
+
+#[test]
+fn the_stance_is_kept_in_the_stable_across_a_relog() {
+    let path = db_path();
+    seed_stable(&path);
+    {
+        let Some(mut p) = hunter_logged_in(&path) else {
+            return;
+        };
+        p.react(REACT_DEFENSIVE);
+        assert_eq!(p.last_bar().react_state, REACT_DEFENSIVE);
+    }
+    // Logging back in brings the wolf that was out back (`Player::LoadPet`), Defensive.
+    let mut p = hunter_logged_in(&path).expect("world.db present");
+    p.command(COMMAND_FOLLOW);
+    assert_eq!(p.last_bar().react_state, REACT_DEFENSIVE);
+    assert_eq!(
+        p.h.app.world().get::<PetCharm>(p.pet).unwrap().react,
+        REACT_DEFENSIVE
+    );
+}
+
+#[test]
+fn bite_ordered_from_the_bar_is_cast_by_the_wolf_at_the_target() {
+    let Some(mut p) = hunter_with_wolf() else {
+        return;
+    };
+    let kobold = p.h.npc;
+    let beside = p.position(p.pet);
+    p.h.app.world_mut().entity_mut(kobold).insert(Position {
+        x: beside.x + 2.0,
+        ..beside
+    });
+    p.order(pet_action_button(BITE, ACT_ENABLED), Some(kobold), None);
+    p.advance(2);
+    let bites = p.spell_damage(BITE, kobold);
+    assert_eq!(bites.len(), 1, "{:?}", p.h.inbox.log);
+    // 0.75 × the wolf's attack power (22% of its owner's 100), less the kobold's armor.
+    assert!(bites[0] > 0, "Bite did {} damage", bites[0]);
+    // The bite landed (and the wolf's first swing may have too).
+    assert!(p.h.health(kobold) <= 5_000.0 - bites[0] as f32);
+    // Bite costs 25 Focus.
+    assert_eq!(p.focus(), 75);
+    // The wolf goes after the unit it bit (`_AttackStart`).
+    assert_eq!(p.pet_victim(), Some(kobold));
+}
+
+#[test]
+fn an_attacking_wolf_autocasts_bite() {
+    let Some(mut p) = hunter_with_wolf() else {
+        return;
+    };
+    let kobold = p.h.npc;
+    p.attack_kobold();
+    // 13 yards at 7 yards per second, then Bite every 3 s.
+    p.advance(100);
+    assert!(
+        !p.spell_damage(BITE, kobold).is_empty(),
+        "no Bite in {:?}",
+        p.h.inbox.log
+    );
+}
+
+#[test]
+fn bite_with_autocast_turned_off_is_not_autocast() {
+    let Some(mut p) = hunter_with_wolf() else {
+        return;
+    };
+    let kobold = p.h.npc;
+    p.autocast(BITE, false);
+    assert_eq!(
+        p.last_bar().action_buttons[4],
+        pet_action_button(BITE, ACT_DISABLED)
+    );
+    p.attack_kobold();
+    p.advance(100);
+    assert!(p.h.health(kobold) < 5_000.0, "the wolf never swung");
+    assert_eq!(p.spell_damage(BITE, kobold), Vec::<i32>::new());
+
+    p.autocast(BITE, true);
+    assert_eq!(
+        p.last_bar().action_buttons[4],
+        pet_action_button(BITE, ACT_ENABLED)
+    );
+    p.advance(80);
+    assert!(!p.spell_damage(BITE, kobold).is_empty());
 }

@@ -136,9 +136,23 @@ pub fn log_unhandled(world: &mut World, spell_id: u32, effect_id: u32) {
 
 /// `(spell power, attack power)` of `unit`.
 pub(crate) fn power_stats(world: &World, unit: Entity) -> (f32, f32) {
+    if let Some(pet) = world.get::<crate::hunter_pet::HunterPet>(unit) {
+        return (0.0, hunter_pet_attack_power(world, pet.owner));
+    }
     world
         .get::<CharacterStats>(unit)
         .map_or((0.0, 0.0), |stats| (stats.spell_power, stats.attack_power))
+}
+
+/// `Guardian::UpdateAttackPowerAndDamage` for a hunter pet (StatSystem.cpp:1336-1345): its
+/// owner's attack power × 0.22. The pet's own `2 × Strength - 20` needs `pet_levelstats`,
+/// which is not imported.
+const HUNTER_PET_OWNER_AP: f32 = 0.22;
+
+fn hunter_pet_attack_power(world: &World, owner: Entity) -> f32 {
+    world
+        .get::<CharacterStats>(owner)
+        .map_or(0.0, |stats| stats.attack_power * HUNTER_PET_OWNER_AP)
 }
 
 const SPELL_ATTR0_SCALES_WITH_CREATURE_LEVEL: u32 = 0x0008_0000;

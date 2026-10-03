@@ -107,6 +107,7 @@ fn stored_wolf() -> StoredPet {
         name: "Diseased Young Wolf".into(),
         level: 10,
         family: 1,
+        react_state: shared::protocol::REACT_PASSIVE,
     }
 }
 
@@ -300,4 +301,35 @@ fn a_summoned_pet_runs_after_its_owner() {
     let at = *h.app.world().get::<Position>(pet).unwrap();
     let gap = (20.0 - at.x).hypot(at.z);
     assert!(gap <= 4.5, "pet {gap} yards from its owner at {at:?}");
+}
+
+/// A stable saved before stances were kept loads its pets Passive, as `character_pet`'s
+/// `ReactState` column defaults to 0.
+#[test]
+fn a_stable_saved_without_stances_loads_passive_pets() {
+    use crate::persistence::pet_store::{LegacyStoredPet, LegacyStoredPetStable, PET_STABLES};
+    let db = open_db(&db_path());
+    let mut legacy = LegacyStoredPetStable {
+        current: Some(0),
+        active: Default::default(),
+    };
+    legacy.active[0] = Some(LegacyStoredPet {
+        creature_entry: DISEASED_YOUNG_WOLF,
+        display_id: WOLF_DISPLAY,
+        name: "Diseased Young Wolf".into(),
+        level: 10,
+        family: 1,
+    });
+    let txn = db.db.begin_write().unwrap();
+    txn.open_table(PET_STABLES)
+        .unwrap()
+        .insert(CHARACTER_ID, bitcode::encode(&legacy).as_slice())
+        .unwrap();
+    txn.commit().unwrap();
+    let mut expected = StoredPetStable {
+        current: Some(0),
+        ..Default::default()
+    };
+    expected.active[0] = Some(stored_wolf());
+    assert_eq!(load_pet_stable(&db.db, CHARACTER_ID), Some(expected));
 }

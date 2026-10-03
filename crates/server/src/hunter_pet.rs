@@ -19,7 +19,7 @@ use shared::components::{
     UnitSummonedBy, Zone,
 };
 use shared::level_scaling::LevelScaling;
-use shared::protocol::NpcFlags;
+use shared::protocol::{NpcFlags, REACT_PASSIVE};
 use shared::spell_data::CastFailReason;
 
 use crate::auth::InWorld;
@@ -292,6 +292,8 @@ fn tamed_pet(world: &World, hunter: Entity, creature: Entity, npc: &Npc) -> Opti
         name: npc.name.clone(),
         level: world.get::<Level>(hunter).map_or(1, |level| level.0),
         family: template.family,
+        // The new pet's `CharmInfo` sets it Passive (`CharmInfo::CharmInfo`).
+        react_state: REACT_PASSIVE,
     })
 }
 
@@ -390,7 +392,7 @@ pub(crate) fn effect_dismiss_pet(
 
 /// Summon the pet of `slot` at `at` as the owner's current pet and save the stable.
 fn put_pet_out(world: &mut World, owner: Entity, slot: u8, at: Position, facing: f32) {
-    let Some((pet, family, level)) = spawn_pet(world, owner, slot, at, facing) else {
+    let Some((pet, stored)) = spawn_pet(world, owner, slot, at, facing) else {
         return;
     };
     if let Some(mut stable) = world.get_mut::<PetStable>(owner) {
@@ -398,7 +400,32 @@ fn put_pet_out(world: &mut World, owner: Entity, slot: u8, at: Position, facing:
         stable.summoned = Some(pet);
     }
     save_stable(world, owner);
-    crate::pet_control::init_pet_control(world, owner, pet, family, level);
+    crate::pet_control::init_pet_control(
+        world,
+        owner,
+        pet,
+        stored.family,
+        stored.level,
+        stored.react_state,
+    );
+}
+
+/// The pet's new stance kept in its stable slot and saved.
+pub(crate) fn save_pet_react_state(world: &mut World, owner: Entity, pet: Entity, react: u32) {
+    let Some(slot) = world.get::<HunterPet>(pet).map(|pet| usize::from(pet.slot)) else {
+        return;
+    };
+    let Some(mut stable) = world.get_mut::<PetStable>(owner) else {
+        return;
+    };
+    let Some(stored) = stable.stored.active.get_mut(slot).and_then(Option::as_mut) else {
+        return;
+    };
+    if stored.react_state == react {
+        return;
+    }
+    stored.react_state = react;
+    save_stable(world, owner);
 }
 
 /// The pet of the owner's `slot` as a creature: its template's entry and classification,
@@ -406,14 +433,14 @@ fn put_pet_out(world: &mut World, owner: Entity, slot: u8, at: Position, facing:
 /// gives a Beast `POWER_FOCUS`; `power_type` MaxBasePower and DefaultPower), the owner's
 /// faction and map, player controlled, summoned by its owner (`SetOwnerGUID` →
 /// `SummonedBy`), following it (`PET_FOLLOW_DIST`, `PET_FOLLOW_ANGLE`). Returns it with
-/// its family and level.
+/// its stored record.
 fn spawn_pet(
     world: &mut World,
     owner: Entity,
     slot: u8,
     at: Position,
     facing: f32,
-) -> Option<(Entity, u32, u8)> {
+) -> Option<(Entity, StoredPet)> {
     let stored = world
         .get::<PetStable>(owner)?
         .stored
@@ -488,7 +515,7 @@ fn spawn_pet(
             NetworkVisibility::default(),
         ));
     }
-    Some((pet.id(), stored.family, stored.level))
+    Some((pet.id(), stored))
 }
 
 /// `Guardian::InitStatsForLevel` without `pet_levelstats` (not imported): ExpectedStat
