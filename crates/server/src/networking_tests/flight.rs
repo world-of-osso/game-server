@@ -128,3 +128,53 @@ fn losing_can_fly_in_the_air_falls_to_the_ground() {
     }
     assert_eq!(server_y(&app, player), FLAT);
 }
+
+/// A flyer hovering 40 yards up whose client stalls: one frame dives to 5 yards over the
+/// ground 12 yards ahead, the next lands 18 yards ahead (`flying: false`), both before
+/// the server has flown the dive. `input` builds the client's frame at a point, flying
+/// or not. Returns the landing point.
+pub(super) fn stall_then_land(
+    app: &mut App,
+    connection: Entity,
+    hover: Vec3,
+    input: impl Fn(Vec3, bool) -> PlayerInput,
+) -> Vec3 {
+    tick(app, connection, vec![input(hover, true)]);
+    let dived = Vec3::new(hover.x, FLAT + 5.0, hover.z + 12.0);
+    tick(app, connection, vec![input(dived, true)]);
+    let landed = Vec3::new(hover.x, FLAT, hover.z + 18.0);
+    tick(app, connection, vec![input(landed, false)]);
+    for _ in 0..80 {
+        tick(app, connection, Vec::new());
+    }
+    landed
+}
+
+/// The landing frame's `flying: false` is the state where it landed; the client flew
+/// there. TrinityCore keeps the fall height at every flying report
+/// (`Player::UpdateFallInformationIfNeed`), so landing from flight falls nothing
+/// (`Player::HandleFall`: z_diff = m_lastFallZ - landing z).
+#[test]
+fn a_stalled_flyer_landing_ahead_of_the_server_lands_without_falling() {
+    let (mut app, player, connection) = flat_app(FLAT + 40.0);
+    can_fly(&mut app, player);
+    let spawn = flat_spot(FLAT + 40.0);
+    let hover = Vec3::new(spawn.x, spawn.y, spawn.z);
+
+    let landed = stall_then_land(&mut app, connection, hover, |at, flying| {
+        flight_input(
+            &Position {
+                x: at.x,
+                y: at.y,
+                z: at.z,
+            },
+            flying,
+        )
+    });
+
+    let position = app.world().get::<Position>(player).unwrap();
+    assert_eq!(Vec3::new(position.x, position.y, position.z), landed);
+    let health = app.world().get::<Health>(player).unwrap();
+    assert_eq!(health.current, health.max);
+    assert!(!motion(&app, player).contains(PlayerMotion::FLYING));
+}

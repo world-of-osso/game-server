@@ -171,3 +171,18 @@ fn a_steady_flyer_gains_no_speed_diving() {
     let motion = *app.world().get::<PlayerMotion>(player).unwrap();
     assert!(!motion.contains(PlayerMotion::ADV_FLYING));
 }
+
+#[test]
+fn a_stalled_skyrider_landing_ahead_of_the_server_lands_without_falling() {
+    let (mut app, player, connection) = flat_app(FLAT + 40.0);
+    skyrider(&mut app, player);
+    let hover = server_position(&app, player);
+
+    let landed = super::flight::stall_then_land(&mut app, connection, hover, flight_input);
+
+    assert_eq!(server_position(&app, player), landed);
+    let health = app.world().get::<Health>(player).unwrap();
+    assert_eq!(health.current, health.max);
+    let motion = *app.world().get::<PlayerMotion>(player).unwrap();
+    assert!(!motion.contains(PlayerMotion::FLYING));
+}
