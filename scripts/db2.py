@@ -67,7 +67,8 @@ TABLES = [
     "Map", "MapDifficulty", "AreaTrigger", "AreaTriggerActionSet", "Difficulty", "DungeonEncounter",
     "MapDifficultyXCondition", "PlayerCondition",
     "CharacterLoadout", "CharacterLoadoutItem", "ItemEffect", "ItemXItemEffect",
-    "Vignette", "CreatureFamily",
+    "Vignette", "QuestInfo", "QuestLineXQuest", "Campaign", "CampaignXQuestLine",
+    "CreatureFamily",
 ]
 # Extracted from local CASC by FileDataID (community listfile), pinned to the build's
 # WoWDBDefs layout hash: {table: (FileDataID, layout hash)}.

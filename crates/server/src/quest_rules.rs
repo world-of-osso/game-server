@@ -57,9 +57,12 @@ pub(crate) fn quest_money(quests: &QuestDb, quest: &QuestTemplate, player: Quest
         .map_or(0, |&copper| (copper as f32 * scaling.multiplier) as i32)
 }
 
-/// A quest's level for this player (-1 scales to the player).
+/// A quest's level for this player: Player::GetQuestLevel's ContentTuning clamp for
+/// TrinityCore quests, else the AzerothCore level (-1 scales to the player).
 pub(crate) fn quest_level(quest: &QuestTemplate, player: QuestPlayer) -> i32 {
-    if quest.level < 0 {
+    if let Some(scaling) = &quest.money_scaling {
+        i32::from(tuned_quest_level(scaling, player))
+    } else if quest.level < 0 {
         i32::from(player.level)
     } else {
         quest.level
@@ -349,13 +352,18 @@ fn start_state(
     }
     let class = quest.marker_class();
     if level_ok(player, quest).is_err() {
-        // Future statuses have no daily/weekly kind.
+        // Only important, legendary and campaign quests have future kinds.
         return Some(QuestGiverStatus::Future(match class {
-            QuestMarkerClass::Repeatable => QuestMarkerClass::Normal,
-            class => class,
+            QuestMarkerClass::Important
+            | QuestMarkerClass::Legendary
+            | QuestMarkerClass::Campaign => class,
+            _ => QuestMarkerClass::Normal,
         }));
     }
-    if i32::from(player.level) > quest_level(quest, player) + LOW_LEVEL_HIDE_DIFF {
+    // Covenant calling quests have no trivial kind.
+    if class != QuestMarkerClass::Calling
+        && i32::from(player.level) > quest_level(quest, player) + LOW_LEVEL_HIDE_DIFF
+    {
         Some(QuestGiverStatus::Trivial(class))
     } else {
         Some(QuestGiverStatus::Available(class))
