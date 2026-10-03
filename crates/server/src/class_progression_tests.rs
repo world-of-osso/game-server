@@ -290,28 +290,27 @@ fn learned_spells_fill_first_empty_main_bar_slots() {
     let player = spawn_player(&mut app, character_id, HUMAN, WARRIOR, 1);
     advance(&mut app);
     drain(&mut app, player);
-    // Occupy slot 1 so Charge skips it.
+    // Occupy slot 2 so Charge skips it.
     send_request(
         &mut app,
         player,
         SetActionButton {
-            slot: 1,
+            slot: 2,
             action: Some(ActionRef::Item(6948)),
         },
     );
 
     set_live_level(app.world_mut(), character_id, 2);
     advance(&mut app);
-    // playercreateinfo_action (1, 1): Slam, Will to Survive, Recuperate, and Attack
-    // and Will to Survive on the stance bar.
+    // playercreateinfo_action (1, 1): Slam, Attack, Will to Survive, Recuperate, all on
+    // the main bar: Retail warrior stances page no bonus bar (retail_action_bars.py).
     let charge_bar = vec![
         (0, ActionRef::Spell(SLAM)),
-        (1, ActionRef::Item(6948)),
-        (2, ActionRef::Spell(CHARGE)),
+        (1, ActionRef::Spell(ATTACK)),
+        (2, ActionRef::Item(6948)),
+        (3, ActionRef::Spell(CHARGE)),
         (9, ActionRef::Spell(WILL_TO_SURVIVE)),
         (10, ActionRef::Spell(RECUPERATE)),
-        (72, ActionRef::Spell(ATTACK)),
-        (81, ActionRef::Spell(WILL_TO_SURVIVE)),
     ];
     assert_eq!(
         received::<ActionBarSnapshot>(&mut app, player),
@@ -324,8 +323,8 @@ fn learned_spells_fill_first_empty_main_bar_slots() {
     advance(&mut app);
     let mut bar = charge_bar;
     bar.extend([
-        (3, ActionRef::Spell(SHIELD_SLAM)),
-        (4, ActionRef::Spell(HAMSTRING)),
+        (4, ActionRef::Spell(SHIELD_SLAM)),
+        (5, ActionRef::Spell(HAMSTRING)),
     ]);
     bar.sort_by_key(|&(slot, _)| slot);
     assert_eq!(
@@ -377,15 +376,8 @@ fn new_orc_warrior_enters_world_with_default_skill_spells_and_create_actions() {
             spec_id: SPEC_WARRIOR_INITIAL,
         }]
     );
-    // playercreateinfo_action (2, 1): Slam, Blood Fury, Recuperate; Attack and Blood
-    // Fury on the stance bar.
-    let create_actions = [
-        (0, 1464),
-        (9, 20572),
-        (10, 1231411),
-        (72, 88163),
-        (81, 20572),
-    ];
+    // playercreateinfo_action (2, 1): Slam, Attack, Blood Fury, Recuperate.
+    let create_actions = [(0, 1464), (1, 88163), (9, 20572), (10, 1231411)];
     assert_eq!(
         received::<ActionBarSnapshot>(&mut app, player),
         vec![ActionBarSnapshot {

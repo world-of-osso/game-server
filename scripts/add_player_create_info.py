@@ -5,7 +5,8 @@
 
 The import now loads the CharacterLoadout, CharacterLoadoutItem, ItemEffect and
 ItemXItemEffect DB2s and TrinityCore's playercreateinfo_action / playercreateinfo_item,
-and keeps the kit items in content_item (retail_content.tdb_item_ids). This applies
+and keeps the kit items in content_item (retail_content.tdb_item_ids); the action rows
+get retail_action_bars.py's main bar relocation. This applies
 that to an already-imported database without re-running the import: it (re)creates
 those six tables exactly as the import would and inserts the missing content_item rows;
 no other row changes. Run it on a copy; the caller swaps the copy in.
@@ -21,6 +22,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
 import content_policy  # noqa: E402
 import db2  # noqa: E402
+import retail_action_bars  # noqa: E402
 import retail_content  # noqa: E402
 
 DB2_TABLES = ["CharacterLoadout", "CharacterLoadoutItem", "ItemEffect", "ItemXItemEffect"]
@@ -73,6 +75,7 @@ def main():
     load_tdb_tables(args.db, args.tdb_dir)
     with sqlite3.connect(args.db) as conn:
         added = add_player_create_info(conn, args.csv_root / db2.DEFAULT_BUILD)
+        retail_action_bars.relocate_unpaged_buttons(conn)
     print(f"added {len(added)} kit items to content_item")
 
 
