@@ -53,6 +53,14 @@ Code: `skyriding.rs` (flaps), `spell_cast` (charges, `restore_charges`, LEARN_SP
 - Not modelled: exact impulse sizes (assumed; Retail runs these DUMMY effects in an unpublished server script; TC defines `SMSG_MOVE_ADD_IMPULSE` but never sends it); Thrill of the Skies 377234 (-42%) and Ground Skimming 404184 (-20%), trait-tree talents 383366/404183 whose triggers are server scripts; Dragon's Rest 372606; Whirling Surge's spiral; Aerial Halt's reduced gravity; the Space launch spending a charge (Retail's takeoff is Skyward Ascent / Lift Off).
 - Tests: `skyriding_tests.rs` (charge spent, Whirling Surge, shared charges, GCD, drain then NoChargesRemain, 10.35 s recovery, Aerial Halt cooldown, Second Wind, needs Skyriding Basics), `networking_tests/skyriding.rs` (a granted Surge Forward is followed within 0.05 yd; the same flap ungranted falls behind). Live: game-engine `godot/tests/skyriding_abilities_live.gd`.
 
+### Skyriding (part 3: the Skyriding bar)
+
+- Gaining ADV_FLYING (`auras::mount::reconcile_can_fly`) runs `skyriding::fill_skyriding_bar`: each Skyriding ability the rider can cast (`spell_cast::caster_knows_spell`) goes on bonus bar 5 (slots 120..124: Surge Forward, Skyward Ascent, Aerial Halt, Whirling Surge, Second Wind) when its slot is empty and it is not on the bar yet, and the owner gets the `ActionBarSnapshot` (`class_progression::place_actions`). Bonus bar 5 is what the client's main bar shows while skyriding (game-engine mounts page).
+- Not persisted: the login prune keeps only class progression spells, so the slots are refilled on every mount. The bar order is assumed (no DB2 table or TC code lists it).
+- Action slots are 0..179 (TC Player.h `MAX_ACTION_BUTTONS` 180); `SetActionButton` rejects 180+.
+- `SpellChargesUpdate.category` is the `ChargeCategory` (TC `SMSG_SET_SPELL_CHARGES` Category), so the client tracks Skyriding Charges 2391 whichever ability spent them.
+- Test: `skyriding_tests::a_skyriding_mount_fills_bonus_bar_5_with_the_known_abilities`.
+
 ### Casting rules
 
 `validate_start`: `SPELL_ATTR0_NOT_IN_COMBAT_ONLY_PEACEFUL` fails in combat (`AffectingCombat`, mounts, food); a mounted player casts only passive or `SPELL_ATTR0_ALLOW_WHILE_MOUNTED` spells (`NotMounted`). `CancelMountAura` (`CMSG_CANCEL_MOUNT_AURA`) removes the cancellable mount auras. A swimming input still dismounts (a pre-existing rule, now through the mount aura); Retail keeps the mount in water.
