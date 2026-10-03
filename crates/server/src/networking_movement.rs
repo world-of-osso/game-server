@@ -146,18 +146,20 @@ pub(super) fn apply_movement_input(
     }
     // MovementHandler.cpp:128: `MOVEMENTFLAG_FLYING` from a mover that cannot fly is dropped.
     let flying = input.flying && motion.contains(PlayerMotion::CAN_FLY);
-    let skyriding = flying && motion.contains(PlayerMotion::CAN_ADV_FLY);
-    let next_motion = input_motion(input, *motion);
-    let mut changes = update_rotation_and_speed(input, flying, auras, &mut rotation, &mut speed)
-        .merge(set_motion(&mut motion, next_motion));
+    // An input's flags are its state at the position it reports (MovementHandler.cpp:567
+    // `UpdatePosition(movementInfo.pos)`): a flyer flies to its landing report and lands
+    // there, falling nothing (`Player::UpdateFallInformationIfNeed` keeps the fall height
+    // at every flying report).
+    let flown = flying || motion.contains(PlayerMotion::FLYING);
+    let skyriding = flown && motion.contains(PlayerMotion::CAN_ADV_FLY);
     let current = Vec3::new(position.x, position.y, position.z);
     let reported = Vec3::from(input.position);
-    let swimming = !flying
+    let swimming = !flown
         && input.swimming
         && terrain.as_mut().is_some_and(|(ground, map_id)| {
             swim_bounds(ground, *map_id, reported.with_y(current.y)).is_some()
         });
-    let travel = if flying {
+    let travel = if flown {
         Travel::Flight
     } else if swimming {
         Travel::Swim(DEFAULT_SWIM_SPEED * auras.map_or(1.0, |mods| mods.movement_speed))
@@ -173,16 +175,26 @@ pub(super) fn apply_movement_input(
         Some(energy) => skyriding_leg(current, reported, energy),
         None => Leg {
             target: reported,
-            speed: speed.0,
+            speed: compute_movement_speed(input, flown, auras, direction_length(&input.direction)),
             cut: false,
         },
     };
     let (mut next, behind) = move_toward_reported(current, leg.target, leg.speed, travel, |secs| {
         clocks.grant(player_entity, secs)
     });
-    changes.behind = behind || leg.cut;
+    let behind = behind || leg.cut;
+    // Short of a landing report the player still flies.
+    let state = PlayerInput {
+        flying: if behind { flown } else { flying },
+        ..input.clone()
+    };
+    let next_motion = input_motion(&state, *motion);
+    let mut changes =
+        update_rotation_and_speed(&state, state.flying, auras, &mut rotation, &mut speed)
+            .merge(set_motion(&mut motion, next_motion));
+    changes.behind = behind;
     next.y = match terrain {
-        Some((ground, map_id)) if flying => flight_height(ground, map_id, current, next),
+        Some((ground, map_id)) if flown => flight_height(ground, map_id, current, next),
         Some((ground, map_id)) => {
             fall_tracker.report_height(input.jumping);
             let player = JudgedPlayer {
