@@ -147,11 +147,7 @@ fn an_off_hand_weapon_swings_at_half_damage_200_ms_after_the_main_hand() {
 
 /// Worn Shortsword (25) from world.db, the Retail warrior starting weapon.
 fn worn_shortsword() -> Option<WeaponDamage> {
-    let path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/world.db");
-    if !path.exists() {
-        eprintln!("skipping: {} not found", path.display());
-        return None;
-    }
+    let path = crate::test_data::world_db_path();
     let templates = crate::item_templates::load_item_templates(&path).unwrap();
     let tables = crate::item_stats::load_item_scaling_tables(&path).unwrap();
     crate::item_stats::item_stats(templates.get(25).unwrap(), &tables).weapon

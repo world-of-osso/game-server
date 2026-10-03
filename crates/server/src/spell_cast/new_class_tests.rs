@@ -1,5 +1,5 @@
-//! Monk, Demon Hunter and Evoker core rotation spells on the real world.db
-//! (skipped when absent): each lands and generates or spends its resource.
+//! Monk, Demon Hunter and Evoker core rotation spells on the real world.db:
+//! each lands and generates or spends its resource.
 
 use shared::components::{Npc, Position, PowerType, UnitFactionTemplate};
 use shared::protocol::CombatLogKind;

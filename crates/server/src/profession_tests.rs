@@ -1,5 +1,5 @@
 //! Real-DB profession tests against data/world.db (TDB1210 trainers, Retail DB2
-//! recipes); each test skips when the DB is absent.
+//! recipes).
 //!
 //! Georgio Bolero (1346) is the Stormwind tailoring trainer (TDB trainer 163):
 //! Tailoring (264617) costs 10 copper at level 5 and learns 3908 Tailoring,
@@ -48,8 +48,7 @@ const MINING: u32 = 265838;
 const COOKING: u32 = 264633;
 
 fn world_db_path() -> Option<PathBuf> {
-    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/world.db");
-    path.exists().then_some(path)
+    Some(crate::test_data::world_db_path())
 }
 
 /// Spells the tests touch: the trainer spells of Tailoring, Blacksmithing,

@@ -1,4 +1,4 @@
-//! Rules against real world.db rows (Northshire); each test skips when the DB is absent.
+//! Rules against real world.db rows (Northshire).
 use shared::protocol::{
     QuestFailedReason, QuestGiverQuestState, QuestGiverStatus, QuestMarkerClass,
 };

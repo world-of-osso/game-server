@@ -1,8 +1,6 @@
-//! Map transfers and dungeon copies on real world.db data (skipped when world.db is
-//! absent): the Stormwind Stockade (map 34), its entrance area trigger 101 in
+//! Map transfers and dungeon copies on real world.db data: the Stormwind Stockade (map 34), its entrance area trigger 101 in
 //! Stormwind City and its exit trigger 503.
 
-use std::path::PathBuf;
 use std::sync::OnceLock;
 use std::time::Duration;
 
@@ -43,11 +41,7 @@ fn map_store() -> Option<&'static MapStore> {
     static STORE: OnceLock<Option<MapStore>> = OnceLock::new();
     STORE
         .get_or_init(|| {
-            let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/world.db");
-            if !path.exists() {
-                eprintln!("skipping: {} not found", path.display());
-                return None;
-            }
+            let path = crate::test_data::world_db_path();
             let conn = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY)
                 .expect("open world.db");
             Some(
@@ -291,7 +285,7 @@ fn harness_with_content() -> Option<Harness> {
 }
 
 fn harness_with_content_and(extra: impl FnOnce(&mut App)) -> Option<Harness> {
-    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/world.db");
+    let path = crate::test_data::world_db_path();
     let world_data = crate::world_data::load_world_data(&path);
     let conn = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY)
         .expect("open world.db");

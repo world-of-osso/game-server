@@ -1,7 +1,6 @@
-//! Real-DB tests against data/world.db; each test skips when the DB is absent.
+//! Real-DB tests against data/world.db.
 
 use std::collections::HashSet;
-use std::path::PathBuf;
 
 use rand::SeedableRng;
 use rand::rngs::StdRng;
@@ -20,11 +19,7 @@ const GREY_1_5: u32 = 20000;
 const DISEASED_WOLF_PELT: u32 = 50432;
 
 fn world_db() -> Option<(LootTables, ItemTemplates)> {
-    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/world.db");
-    if !path.exists() {
-        eprintln!("skipping: {} not found", path.display());
-        return None;
-    }
+    let path = crate::test_data::world_db_path();
     let conn = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
     Some((
         load_loot_tables(&conn).unwrap(),

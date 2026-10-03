@@ -1,7 +1,6 @@
 //! Real-DB tests on the Paladin trait tree 790 (data/world.db, DB2
-//! 12.1.0.69933); each test skips when the DB is absent.
+//! 12.1.0.69933).
 
-use std::path::PathBuf;
 use std::sync::OnceLock;
 
 use rusqlite::{Connection, OpenFlags};
@@ -39,11 +38,7 @@ fn classes() -> Option<&'static ClassSpells> {
     static CLASSES: OnceLock<Option<ClassSpells>> = OnceLock::new();
     CLASSES
         .get_or_init(|| {
-            let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/world.db");
-            if !path.exists() {
-                eprintln!("skipping: {} not found", path.display());
-                return None;
-            }
+            let path = crate::test_data::world_db_path();
             let conn =
                 Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
             Some(load_class_spells(&conn).expect("load class spells"))

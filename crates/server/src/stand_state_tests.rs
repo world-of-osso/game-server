@@ -1,4 +1,4 @@
-//! Player stand state on real 50 ms ticks against data/world.db (skipped when absent):
+//! Player stand state on real 50 ms ticks against data/world.db:
 //! requests, the stand-up rules and the auras that need the player seated.
 
 use bevy::prelude::*;

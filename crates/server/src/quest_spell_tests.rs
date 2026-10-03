@@ -22,7 +22,7 @@ const SPELLS: [u32; 4] = [80199, 80208, 80175, 80187];
 const FIRE_AT: [f32; 3] = [-9067.02, -328.793, 73.5351];
 
 fn world_db_path() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/world.db")
+    crate::test_data::world_db_path()
 }
 
 /// The quest app with combat, spells, auras and creature AI on the real spells,

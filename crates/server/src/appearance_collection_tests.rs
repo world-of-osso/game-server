@@ -1,6 +1,5 @@
-//! Real-DB tests: item templates from data/world.db; each test skips when the DB is absent.
+//! Real-DB tests: item templates from data/world.db.
 
-use std::path::PathBuf;
 use std::time::Duration;
 
 use lightyear::connection::host::HostClient;
@@ -28,11 +27,7 @@ const FIST_APPEARANCE: u32 = 2288;
 const ACCOUNT: u64 = 7;
 
 fn setup_app() -> Option<App> {
-    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/world.db");
-    if !path.exists() {
-        eprintln!("skipping: {} not found", path.display());
-        return None;
-    }
+    let path = crate::test_data::world_db_path();
     let mut app = App::new();
     app.add_plugins((MinimalPlugins, bevy::state::app::StatesPlugin));
     app.add_plugins(lightyear::prelude::server::ServerPlugins {

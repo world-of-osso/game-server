@@ -55,7 +55,7 @@ fn item_templates() -> ItemTemplates {
     static TEMPLATES: OnceLock<ItemTemplates> = OnceLock::new();
     TEMPLATES
         .get_or_init(|| {
-            let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/world.db");
+            let path = crate::test_data::world_db_path();
             load_item_templates(&path).expect("load item templates")
         })
         .clone()
@@ -822,7 +822,7 @@ fn beating_them_back_accepted() -> Option<(App, Client, Entity)> {
     let mut app = setup_app()?;
     // The worg's creature template, for kill XP.
     app.insert_resource(crate::world_data::load_world_data(
-        &std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/world.db"),
+        &crate::test_data::world_db_path(),
     ));
     let client = spawn_client(&mut app, 1);
     let mcbride = spawn_npc(&mut app, MARSHAL_MCBRIDE, 2.0);

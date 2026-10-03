@@ -1,4 +1,3 @@
-use std::path::PathBuf;
 use std::time::Duration;
 
 use bevy::ecs::system::RunSystemOnce;
@@ -151,11 +150,7 @@ fn stat_modifiers_fold_in_after_base_and_gear() {
 }
 
 fn world_spell_data() -> Option<(SpellStore, ClassSpells)> {
-    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/world.db");
-    if !path.exists() {
-        eprintln!("skipping: {} not found", path.display());
-        return None;
-    }
+    let path = crate::test_data::world_db_path();
     let conn = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
     Some(crate::spell_info::load_spell_data(&conn).unwrap())
 }
@@ -483,7 +478,7 @@ fn level_20_arcane_mage_in_caster_cloth_derives_sheet_stats() {
     let Some((spells, classes)) = world_spell_data() else {
         return;
     };
-    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/world.db");
+    let path = crate::test_data::world_db_path();
     let mut world = World::new();
     world.insert_resource(spells);
     world.insert_resource(classes);

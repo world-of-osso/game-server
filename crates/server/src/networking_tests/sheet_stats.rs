@@ -139,11 +139,7 @@ fn seen_derived(client: &mut App, name: &str) -> Option<Option<DerivedStats>> {
 
 #[test]
 fn each_player_receives_only_its_own_sheet_stats_and_equipping_updates_them() {
-    let world_db = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/world.db");
-    if !world_db.exists() {
-        eprintln!("skipping: {} not found", world_db.display());
-        return;
-    }
+    let world_db = crate::test_data::world_db_path();
     let socket = UdpSocket::bind("127.0.0.1:0").unwrap();
     let address = socket.local_addr().unwrap();
     drop(socket);

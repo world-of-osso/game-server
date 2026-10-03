@@ -79,17 +79,13 @@ fn stockade_templates() -> std::collections::HashMap<u32, crate::world_data::Cre
 }
 
 fn world_db_path() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/world.db")
+    crate::test_data::world_db_path()
 }
 
 fn data() -> Option<&'static Data> {
     static DATA: OnceLock<Option<Data>> = OnceLock::new();
     DATA.get_or_init(|| {
         let path = world_db_path();
-        if !path.exists() {
-            eprintln!("skipping: {} not found", path.display());
-            return None;
-        }
         let conn = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
         let base_mana = conn
             .prepare("SELECT level, class, basemana FROM creature_classlevelstats")

@@ -52,11 +52,7 @@ fn request(client: &mut App, connection: Entity, state: StandState) {
 
 #[test]
 fn another_client_sees_a_player_sit_kneel_and_stand() {
-    let world_db = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/world.db");
-    if !world_db.exists() {
-        eprintln!("skipping: {} not found", world_db.display());
-        return;
-    }
+    let world_db = crate::test_data::world_db_path();
     let socket = UdpSocket::bind("127.0.0.1:0").unwrap();
     let address = socket.local_addr().unwrap();
     drop(socket);

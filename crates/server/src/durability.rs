@@ -771,11 +771,7 @@ mod tests {
 
     #[test]
     fn world_db_costs_match_the_retail_db2_rows() {
-        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../data/world.db");
-        if !path.exists() {
-            eprintln!("skipping: {} not found", path.display());
-            return;
-        }
+        let path = crate::test_data::world_db_path();
         let conn =
             Connection::open_with_flags(&path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
         let rules = load_item_durability(&conn).unwrap();

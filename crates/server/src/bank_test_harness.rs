@@ -1,7 +1,5 @@
-//! Test harness for the bank, guild bank and mail plugins: a real world.db (skips when
-//! absent), a temp game database, one connection whose character can be switched,
+//! Test harness for the bank, guild bank and mail plugins: a real world.db, a temp game database, one connection whose character can be switched,
 //! and inboxes for the messages the server sends.
-use std::path::PathBuf;
 use std::time::Duration;
 
 use bevy::prelude::*;
@@ -74,11 +72,7 @@ pub(crate) fn harness_at(path: &std::path::Path, name: &str) -> Option<Harness> 
 }
 
 fn harness_with(db: redb::Database, name: &str) -> Option<Harness> {
-    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/world.db");
-    if !path.exists() {
-        eprintln!("skipping: {} not found", path.display());
-        return None;
-    }
+    let path = crate::test_data::world_db_path();
     let conn = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
     let mut app = App::new();
     app.add_plugins((MinimalPlugins, bevy::state::app::StatesPlugin));

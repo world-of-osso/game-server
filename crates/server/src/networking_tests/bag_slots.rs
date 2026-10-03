@@ -66,11 +66,7 @@ fn grant_pouch(db: &redb::Database, character_id: u64) -> u64 {
 
 #[test]
 fn equipping_a_pouch_sends_the_client_a_six_slot_bag_one() {
-    let world_db = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/world.db");
-    if !world_db.exists() {
-        eprintln!("skipping: {} not found", world_db.display());
-        return;
-    }
+    let world_db = crate::test_data::world_db_path();
     let socket = UdpSocket::bind("127.0.0.1:0").unwrap();
     let address = socket.local_addr().unwrap();
     drop(socket);

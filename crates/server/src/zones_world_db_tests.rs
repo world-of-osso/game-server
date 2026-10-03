@@ -30,7 +30,7 @@ const ROYAL_GUARD_ESCORTS: [u32; 3] = [
 ];
 
 fn world_db_path() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/world.db")
+    crate::test_data::world_db_path()
 }
 
 fn world_data() -> &'static WorldData {

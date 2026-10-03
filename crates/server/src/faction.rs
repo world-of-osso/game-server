@@ -128,17 +128,13 @@ pub fn load_faction_templates(conn: &Connection) -> rusqlite::Result<FactionTemp
     rows.collect::<rusqlite::Result<_>>().map(FactionTemplates)
 }
 
-/// Real templates from `data/world.db`; `None` (test skipped) when absent.
+/// Real templates from `data/world.db`.
 #[cfg(test)]
 pub(crate) fn world_db_faction_templates() -> Option<FactionTemplates> {
     static TEMPLATES: std::sync::OnceLock<Option<FactionTemplates>> = std::sync::OnceLock::new();
     TEMPLATES
         .get_or_init(|| {
-            let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../data/world.db");
-            if !path.exists() {
-                eprintln!("skipping: {} not found", path.display());
-                return None;
-            }
+            let path = crate::test_data::world_db_path();
             let conn =
                 Connection::open_with_flags(&path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
                     .unwrap();

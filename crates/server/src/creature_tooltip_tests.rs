@@ -1,6 +1,5 @@
-//! Real-DB tests against data/world.db; each test skips when the DB is absent.
+//! Real-DB tests against data/world.db.
 
-use std::path::PathBuf;
 use std::time::Duration;
 
 use lightyear::connection::host::HostClient;
@@ -31,11 +30,7 @@ struct Harness {
 }
 
 fn harness() -> Option<Harness> {
-    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/world.db");
-    if !path.exists() {
-        eprintln!("skipping: {} not found", path.display());
-        return None;
-    }
+    let path = crate::test_data::world_db_path();
     let conn = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
     let mut app = App::new();
     app.add_plugins((MinimalPlugins, bevy::state::app::StatesPlugin));

@@ -1,8 +1,7 @@
-//! Meeting stone summons with real world.db data (skipped when absent): the
+//! Meeting stone summons with real world.db data: the
 //! Deadmines-area stone (178834, no ContentTuning), spells 59782 / 7720 and the
 //! Meeting Stone Summoning Portal (179944, a two-caster ritual).
 
-use std::path::PathBuf;
 use std::time::Duration;
 
 use lightyear::connection::host::HostClient;
@@ -70,7 +69,7 @@ fn stone_spawn(conn: &Connection, entry: u32) -> GameObjectSpawn {
 
 fn harness(stone_entry: u32) -> Option<Harness> {
     let data = world_db()?;
-    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/world.db");
+    let path = crate::test_data::world_db_path();
     let conn = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
     let mut app = App::new();
     app.add_plugins((MinimalPlugins, bevy::state::app::StatesPlugin));

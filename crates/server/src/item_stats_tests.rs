@@ -1,8 +1,6 @@
-//! Real-DB tests against data/world.db (content_item + DB2 scaling tables);
-//! skip when the DB is absent. Retail tooltips: Wowhead tooltip API
+//! Real-DB tests against data/world.db (content_item + DB2 scaling tables).
+//! Retail tooltips: Wowhead tooltip API
 //! (`nether.wowhead.com/tooltip/item/<id>?dataEnv=1`), fetched 2026-09-24.
-
-use std::path::PathBuf;
 
 use super::*;
 use crate::item_templates::{ItemTemplates, load_item_templates};
@@ -13,11 +11,7 @@ const BLACK_DUSKWOOD_STAFF: u32 = 937;
 const FORLORN_BREASTPLATE_OF_WAR: u32 = 35588;
 
 fn world_data() -> Option<(ItemTemplates, ItemScalingTables)> {
-    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/world.db");
-    if !path.exists() {
-        eprintln!("skipping: {} not found", path.display());
-        return None;
-    }
+    let path = crate::test_data::world_db_path();
     Some((
         load_item_templates(&path).unwrap(),
         load_item_scaling_tables(&path).unwrap(),

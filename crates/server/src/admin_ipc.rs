@@ -940,11 +940,7 @@ mod tests {
 
     #[test]
     fn taxi_learn_adds_a_flight_point_to_the_characters_known_nodes() {
-        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../data/world.db");
-        if !path.exists() {
-            eprintln!("skipping: {} not found", path.display());
-            return;
-        }
+        let path = crate::test_data::world_db_path();
         let conn = rusqlite::Connection::open(&path).unwrap();
         let network = crate::taxi::load_taxi_network(&conn).unwrap();
         let game_db = persistence::GameDatabase {

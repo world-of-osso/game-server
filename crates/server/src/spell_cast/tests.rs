@@ -1,4 +1,4 @@
-//! Bevy App tests with real SpellInfo from data/world.db (skipped when absent).
+//! Bevy App tests with real SpellInfo from data/world.db.
 
 use bevy::prelude::*;
 use shared::casting::CastState;

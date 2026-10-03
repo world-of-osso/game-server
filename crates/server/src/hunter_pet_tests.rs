@@ -1,4 +1,4 @@
-//! Real-DB cast tests (data/world.db; skipped when absent): a level 10 Human hunter tames
+//! Real-DB cast tests (data/world.db): a level 10 Human hunter tames
 //! Diseased Young Wolf 299, fails on Hogger 448, and calls and dismisses the stored pet,
 //! with the stable in a redb file that a second app reloads.
 
@@ -32,10 +32,7 @@ const CHANNEL_FRAMES: usize = 6_000 / 50 + 4;
 
 /// Templates 299 and 448 of world.db.
 fn templates() -> Option<HashMap<u32, CreatureTemplate>> {
-    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/world.db");
-    if !path.exists() {
-        return None;
-    }
+    let path = crate::test_data::world_db_path();
     let conn = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
     let mut templates = load_templates(&conn, &load_expected_stats(&conn));
     templates.retain(|entry, _| [DISEASED_YOUNG_WOLF, HOGGER].contains(entry));

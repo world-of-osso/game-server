@@ -1,5 +1,5 @@
-//! Player health and power regeneration on real 50 ms fixed ticks against data/world.db
-//! (skipped when absent): `Player::RegenerateAll`, `Player::RegenerateHealth`,
+//! Player health and power regeneration on real 50 ms fixed ticks against data/world.db:
+//! `Player::RegenerateAll`, `Player::RegenerateHealth`,
 //! `Player::Regenerate`.
 
 use shared::components::{CombatStatus, Health, Level, Mana, PowerType, UnitPowers};

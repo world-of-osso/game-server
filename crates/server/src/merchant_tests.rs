@@ -1,4 +1,4 @@
-//! Real-DB tests against data/world.db; each test skips when the DB is absent.
+//! Real-DB tests against data/world.db.
 
 #[path = "merchant_economy_tests.rs"]
 mod economic;
@@ -48,11 +48,7 @@ const CHIPPED_CLAW: u32 = 7074;
 const BLUE_LINEN_VEST_PATTERN: u32 = 6270;
 
 fn world_db_path() -> Option<PathBuf> {
-    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/world.db");
-    if !path.exists() {
-        eprintln!("skipping: {} not found", path.display());
-        return None;
-    }
+    let path = crate::test_data::world_db_path();
     Some(path)
 }
 

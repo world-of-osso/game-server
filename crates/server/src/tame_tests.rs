@@ -1,8 +1,7 @@
-//! Real-DB tests against data/world.db; each test skips when the DB is absent.
+//! Real-DB tests against data/world.db.
 
 use std::collections::HashMap;
-use std::path::PathBuf;
-use std::sync::LazyLock;
+use std::sync::OnceLock;
 
 use rusqlite::{Connection, OpenFlags};
 
@@ -20,18 +19,13 @@ const HOGGER: u32 = 448;
 /// Old Blanchy: a tameable Beast (family 299) in Retail, a Critter in AzerothCore.
 const OLD_BLANCHY: u32 = 582;
 
-static TEMPLATES: LazyLock<Option<HashMap<u32, CreatureTemplate>>> = LazyLock::new(|| {
-    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/world.db");
-    if !path.exists() {
-        eprintln!("skipping: {} not found", path.display());
-        return None;
-    }
-    let conn = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
-    Some(load_templates(&conn, &load_expected_stats(&conn)))
-});
-
 fn templates() -> Option<&'static HashMap<u32, CreatureTemplate>> {
-    TEMPLATES.as_ref()
+    static TEMPLATES: OnceLock<HashMap<u32, CreatureTemplate>> = OnceLock::new();
+    Some(TEMPLATES.get_or_init(|| {
+        let path = crate::test_data::world_db_path();
+        let conn = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+        load_templates(&conn, &load_expected_stats(&conn))
+    }))
 }
 
 /// A level 20 hunter without a pet stable, charm, or Beast Mastery's exotic taming.

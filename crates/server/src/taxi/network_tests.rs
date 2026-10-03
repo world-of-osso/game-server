@@ -1,6 +1,4 @@
-//! Real-DB tests against data/world.db; each test skips when the DB is absent.
-
-use std::path::PathBuf;
+//! Real-DB tests against data/world.db.
 
 use rusqlite::{Connection, OpenFlags};
 
@@ -14,11 +12,7 @@ const MOONBROOK: u32 = 583;
 const DUNGAR: Vec3 = Vec3::new(-8835.76, 490.084, 109.699);
 
 fn network() -> Option<TaxiNetwork> {
-    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/world.db");
-    if !path.exists() {
-        eprintln!("skipping: {} not found", path.display());
-        return None;
-    }
+    let path = crate::test_data::world_db_path();
     let conn = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
     Some(load_taxi_network(&conn).unwrap())
 }

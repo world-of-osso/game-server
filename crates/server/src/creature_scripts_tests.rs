@@ -1,4 +1,4 @@
-//! `npc_training_dummy` against real spells from data/world.db (skipped when absent).
+//! `npc_training_dummy` against real spells from data/world.db.
 
 use shared::components::{CombatStatus, Health, Npc, PowerType, UnitFactionTemplate};
 use shared::protocol::CombatLogKind;

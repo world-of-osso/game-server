@@ -9,15 +9,11 @@ use super::*;
 use rusqlite::{Connection, OpenFlags};
 
 fn world_db_path() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/world.db")
+    crate::test_data::world_db_path()
 }
 
 fn open_world_db() -> Option<Connection> {
     let path = world_db_path();
-    if !path.exists() {
-        eprintln!("skipping: {} not found", path.display());
-        return None;
-    }
     Some(Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap())
 }
 

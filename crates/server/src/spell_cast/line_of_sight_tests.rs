@@ -1,6 +1,6 @@
 //! Player casts and their line of sight witness ray (docs/specs/line-of-sight.md, Player
 //! casts) against the real map 0 bake (`los-bake --map 0`, the ground directory's `los/`)
-//! and world.db spells; skipped when either is absent.
+//! and world.db spells.
 
 use bevy::prelude::*;
 use shared::casting::CastState;
@@ -19,9 +19,7 @@ const KOBOLD_DISPLAY: u32 = 10913;
 /// The mage at WoW `caster`, a kobold at WoW `target`, with the bake loaded.
 fn harness_at(caster: (f32, f32, f32), target: (f32, f32, f32)) -> Option<Harness> {
     let dir = crate::ground::ground_data_dir().join("los");
-    if !dir.join(los::eye::EYE_TABLE_FILE).is_file() {
-        return None;
-    }
+    crate::test_data::require(dir.join(los::eye::EYE_TABLE_FILE));
     let mut h = harness(Vec::new(), &[FIREBALL], 8)?;
     h.app.insert_resource(LineOfSight::load(&dir).unwrap());
     let place = |(x, y, z): (f32, f32, f32)| {

@@ -1,4 +1,4 @@
-//! Real-DB tests against data/world.db; each test skips when the DB is absent.
+//! Real-DB tests against data/world.db.
 use shared::protocol::*;
 
 use crate::bank_test_harness::{COPPER_ORE, Harness, LINEN, PEACEBLOOM, harness};

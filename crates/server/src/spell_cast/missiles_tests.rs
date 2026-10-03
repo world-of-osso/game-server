@@ -1,4 +1,4 @@
-//! Spell travel time on real world.db spells (skipped when data/world.db is absent).
+//! Spell travel time on real world.db spells.
 
 use shared::components::{Health, Position};
 use shared::protocol::CombatLogKind;

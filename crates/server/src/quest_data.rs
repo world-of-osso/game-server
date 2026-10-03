@@ -631,11 +631,7 @@ fn startup_load_quest_db(mut commands: Commands) {
 pub(crate) fn test_quest_db() -> Option<&'static QuestDb> {
     static DB: std::sync::OnceLock<Option<QuestDb>> = std::sync::OnceLock::new();
     DB.get_or_init(|| {
-        let path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/world.db");
-        if !path.exists() {
-            eprintln!("skipping: {} not found", path.display());
-            return None;
-        }
+        let path = crate::test_data::world_db_path();
         Some(load_quest_db(&path).expect("load quests"))
     })
     .as_ref()

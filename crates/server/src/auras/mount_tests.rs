@@ -1,5 +1,5 @@
 //! Golden Gryphon 32235 (Retail flying mount, `Mount` 129, MountType 424) against the real
-//! spell and mount DB2 tables in data/world.db (skipped when absent).
+//! spell and mount DB2 tables in data/world.db.
 
 use rusqlite::{Connection, OpenFlags};
 use shared::components::{CombatStatus, Mounted, PlayerMotion};
@@ -39,7 +39,7 @@ fn rider(riding: u16, flight_style: bool) -> Option<Harness> {
     }
     let mut h = harness(Vec::new(), &spells, 1)?;
     let conn =
-        Connection::open_with_flags(&data.powers_db, OpenFlags::SQLITE_OPEN_READ_ONLY).ok()?;
+        Connection::open_with_flags(&data.powers_db, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
     h.app.insert_resource(load_mount_store(&conn).unwrap());
     let step = riding / 75;
     h.app.world_mut().entity_mut(h.caster).insert((

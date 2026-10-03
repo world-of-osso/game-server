@@ -648,11 +648,7 @@ fn equipping_real_weapon_updates_character_stats_and_main_hand() {
     use shared::components::{CombatRatings, Health, Level, UnitStats, WeaponType};
 
     const NOTCHED_SHORTSWORD: u32 = 727;
-    let path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/world.db");
-    if !path.exists() {
-        eprintln!("skipping: {} not found", path.display());
-        return;
-    }
+    let path = crate::test_data::world_db_path();
     let mut app = setup_app_with(persistence::temp_database(), |app| {
         app.add_plugins(StatsPlugin);
     });

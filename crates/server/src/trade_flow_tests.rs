@@ -1,6 +1,5 @@
 //! Trade between two connected players through `TradePlugin`, with item templates
-//! from data/world.db (skips when absent).
-use std::path::PathBuf;
+//! from data/world.db.
 use std::time::Duration;
 
 use lightyear::connection::host::HostClient;
@@ -46,11 +45,7 @@ fn pair<M: lightyear::prelude::Message>() -> (MessageSender<M>, MessageReceiver<
 }
 
 fn trade_harness() -> Option<TradeHarness> {
-    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/world.db");
-    if !path.exists() {
-        eprintln!("skipping: {} not found", path.display());
-        return None;
-    }
+    let path = crate::test_data::world_db_path();
     let mut app = App::new();
     app.add_plugins((MinimalPlugins, bevy::state::app::StatesPlugin));
     app.add_plugins(lightyear::prelude::server::ServerPlugins {

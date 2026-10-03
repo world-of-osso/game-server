@@ -1,7 +1,6 @@
 //! Northshire creatures fighting each other, spawned from the imported world.db
 //! (`cargo test -p server npc_combat_tests -- --ignored`).
 
-use std::path::PathBuf;
 use std::sync::OnceLock;
 
 use bevy::time::TimeUpdateStrategy;
@@ -29,9 +28,7 @@ const NOTIFY_TICKS: usize = 20;
 
 fn world_data() -> &'static WorldData {
     static DATA: OnceLock<WorldData> = OnceLock::new();
-    DATA.get_or_init(|| {
-        load_world_data(&PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/world.db"))
-    })
+    DATA.get_or_init(|| load_world_data(&crate::test_data::world_db_path()))
 }
 
 fn spawn_of(guid: u32) -> &'static CreatureSpawn {
@@ -79,9 +76,7 @@ fn fight_app(spawns: Vec<CreatureSpawn>) -> Option<App> {
     app.insert_resource(Time::<Fixed>::from_duration(
         std::time::Duration::from_millis(50),
     ));
-    app.insert_resource(load_world_data(
-        &PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/world.db"),
-    ));
+    app.insert_resource(load_world_data(&crate::test_data::world_db_path()));
     app.insert_resource(templates);
     app.add_plugins((
         crate::creature_ai::CreatureAiPlugin,

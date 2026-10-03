@@ -96,6 +96,8 @@ mod tame;
 mod taxi;
 mod teleport;
 mod terrain_height;
+#[cfg(test)]
+mod test_data;
 mod trade;
 mod trait_config;
 mod unit_target;

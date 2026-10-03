@@ -1,5 +1,4 @@
 //! Real-DB tests against data/world.db: characters created with the Retail kit.
-//! Each test skips when the DB is absent.
 
 use shared::components::{CharacterAppearance, EquipmentVisualSlot as Slot};
 use shared::protocol::EquipmentSlot;

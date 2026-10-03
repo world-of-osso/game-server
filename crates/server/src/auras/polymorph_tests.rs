@@ -39,7 +39,7 @@ const MAGE: u8 = 8;
 
 /// Templates of the kobold, the sheep and the training dummy, with their models.
 fn world_data() -> WorldData {
-    let path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/world.db");
+    let path = crate::test_data::world_db_path();
     let conn = Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
     let expected = crate::world_data::load_expected_stats(&conn);
     let mut templates = crate::world_data::load_templates(&conn, &expected);

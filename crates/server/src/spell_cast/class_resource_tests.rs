@@ -1,4 +1,4 @@
-//! Class secondary resources against data/world.db (skipped when absent):
+//! Class secondary resources against data/world.db:
 //! power maxima, druid forms, runes, charged combo points, partial power.
 
 use shared::components::{PowerType, UnitPowers};

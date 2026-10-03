@@ -1,5 +1,5 @@
 //! Real-DB Bevy App harness for cast and aura tests: a player caster with an
-//! authenticated connection and an NPC target (skipped when data/world.db is absent).
+//! authenticated connection and an NPC target.
 
 use std::path::PathBuf;
 use std::sync::OnceLock;
@@ -40,11 +40,7 @@ pub(crate) fn varied(base: f32) -> std::ops::RangeInclusive<f32> {
 pub(crate) fn world_db() -> Option<&'static WorldData> {
     static DATA: OnceLock<Option<WorldData>> = OnceLock::new();
     DATA.get_or_init(|| {
-        let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/world.db");
-        if !path.exists() {
-            eprintln!("skipping: {} not found", path.display());
-            return None;
-        }
+        let path = crate::test_data::world_db_path();
         let conn = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
         let (store, classes) = load_spell_data(&conn).unwrap();
         Some(WorldData {

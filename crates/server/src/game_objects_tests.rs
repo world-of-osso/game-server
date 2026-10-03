@@ -1,5 +1,4 @@
-//! Real-DB tests against data/world.db; each test skips when the DB is absent.
-use std::path::PathBuf;
+//! Real-DB tests against data/world.db.
 
 use rusqlite::OpenFlags;
 
@@ -11,11 +10,7 @@ const STORMWIND_VAULT: u32 = 205107;
 const STORMWIND_VAULTS: std::ops::RangeInclusive<u32> = 205104..=205107;
 
 fn spawns() -> Option<GameObjectSpawns> {
-    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/world.db");
-    if !path.exists() {
-        eprintln!("skipping: {} not found", path.display());
-        return None;
-    }
+    let path = crate::test_data::world_db_path();
     let conn = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
     Some(load_game_object_spawns(&conn).unwrap())
 }

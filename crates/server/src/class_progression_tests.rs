@@ -1,6 +1,5 @@
-//! Real-DB tests against data/world.db; each test skips when the DB is absent.
+//! Real-DB tests against data/world.db.
 
-use std::path::PathBuf;
 use std::time::Duration;
 
 use lightyear::connection::host::HostClient;
@@ -29,11 +28,7 @@ const SPEC_PALADIN_INITIAL: u32 = 1451;
 const SPEC_WARRIOR_INITIAL: u32 = 1446;
 
 fn class_spells() -> Option<ClassSpells> {
-    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/world.db");
-    if !path.exists() {
-        eprintln!("skipping: {} not found", path.display());
-        return None;
-    }
+    let path = crate::test_data::world_db_path();
     let conn = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
     Some(load_class_spells(&conn).expect("load class spells"))
 }

@@ -1,4 +1,4 @@
-//! Real-DB tests (data/world.db with `creature_family`; skipped when absent): a level 10
+//! Real-DB tests (data/world.db with `creature_family`): a level 10
 //! Human hunter calls its Diseased Young Wolf 299 with Call Pet 1, gets the pet bar, and
 //! orders the wolf around the harness's hostile Kobold Vermin.
 
@@ -31,9 +31,8 @@ const GROWL: u32 = 2_649;
 const FURIOUS_BITE: u32 = 263_840;
 
 fn world_db() -> Option<Connection> {
-    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/world.db");
-    path.exists()
-        .then(|| Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap())
+    let path = crate::test_data::world_db_path();
+    Some(Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap())
 }
 
 fn wolf_template(conn: &Connection) -> HashMap<u32, CreatureTemplate> {

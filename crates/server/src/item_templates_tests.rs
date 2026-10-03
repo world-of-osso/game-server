@@ -1,16 +1,10 @@
-//! Real-DB test against data/world.db `content_item`; skips when the DB is absent.
-
-use std::path::PathBuf;
+//! Real-DB test against data/world.db `content_item`.
 
 use super::*;
 
 #[test]
 fn content_item_rows_load_inventory_attributes() {
-    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/world.db");
-    if !path.exists() {
-        eprintln!("skipping: {} not found", path.display());
-        return;
-    }
+    let path = crate::test_data::world_db_path();
     let templates = load_item_templates(&path).unwrap();
 
     assert!(templates.0.len() > 30_000);
@@ -75,11 +69,7 @@ fn content_item_rows_load_inventory_attributes() {
 /// 6 slots), Simply Stitched Reagent Bag (32) and Herb Pouch (12, herbs).
 #[test]
 fn containers_take_only_the_items_their_type_allows() {
-    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/world.db");
-    if !path.exists() {
-        eprintln!("skipping: {} not found", path.display());
-        return;
-    }
+    let path = crate::test_data::world_db_path();
     let templates = load_item_templates(&path).unwrap();
     let item = |id| *templates.get(id).unwrap();
     let (pouch, reagent_bag, herb_pouch) = (item(4496), item(194019), item(22250));

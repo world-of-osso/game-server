@@ -1,7 +1,5 @@
-//! Chairs from data/world.db (skipped when absent): seats, their occupants and the
+//! Chairs from data/world.db: seats, their occupants and the
 //! sitting state they give.
-
-use std::path::PathBuf;
 
 use rusqlite::{Connection, OpenFlags};
 use shared::components::MovementControl;
@@ -15,11 +13,7 @@ const NORTHSHIRE_BENCH: u32 = 151_953;
 const GOLDSHIRE_CHAIR: u32 = 177_499;
 
 fn spawn_of(entry: u32) -> Option<GameObjectSpawn> {
-    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/world.db");
-    if !path.exists() {
-        eprintln!("skipping: {} not found", path.display());
-        return None;
-    }
+    let path = crate::test_data::world_db_path();
     let conn = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
     let spawns = load_game_object_spawns(&conn).unwrap();
     Some(

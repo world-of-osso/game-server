@@ -1,4 +1,4 @@
-//! Aura runtime tests with real spells from data/world.db (skipped when absent).
+//! Aura runtime tests with real spells from data/world.db.
 
 use shared::casting::CastState;
 use shared::components::{

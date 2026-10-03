@@ -47,7 +47,7 @@ fn network_server(address: std::net::SocketAddr) -> App {
 }
 
 fn world_db() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/world.db")
+    crate::test_data::world_db_path()
 }
 
 /// Doomwalker's content_creature row, spawned as its game event would.

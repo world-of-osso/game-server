@@ -1,5 +1,5 @@
 //! Using real food and water from the bags (`process_use_requests`) on real 50 ms ticks
-//! against data/world.db (skipped when absent or without its `item_effect` tables).
+//! against data/world.db.
 
 use shared::components::{CombatStatus, Health, PlayerStandState, StandState};
 use shared::protocol::{
@@ -28,20 +28,14 @@ struct Eater {
 }
 
 fn world_db() -> std::path::PathBuf {
-    std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/world.db")
+    crate::test_data::world_db_path()
 }
 
 /// A level 10 mage out of combat at 100/1000 health with `count` of each of `items` in
 /// its backpack, in order from slot 0.
 fn eater(items: &[u32], count: u32) -> Option<Eater> {
     let mut h = harness(Vec::new(), &[BREAD_FOOD, WATER_DRINK], MAGE)?;
-    let templates = match crate::item_templates::load_item_templates(&world_db()) {
-        Ok(templates) => templates,
-        Err(error) => {
-            eprintln!("skipping: world.db has no item_effect data: {error}");
-            return None;
-        }
-    };
+    let templates = crate::item_templates::load_item_templates(&world_db()).unwrap();
     let db = persistence::temp_database();
     let (character_id, _) = persistence::create_character(&db, 1, "Eater", 1, MAGE).unwrap();
     let items = items

@@ -1,4 +1,4 @@
-//! Real-DB tests against data/world.db; each test skips when the DB is absent.
+//! Real-DB tests against data/world.db.
 
 use std::path::PathBuf;
 use std::time::Duration;
@@ -20,11 +20,7 @@ const MELTED_CANDLE: u32 = 755;
 const TARNISHED_CHAIN_VEST: u32 = 2379;
 
 fn world_db_path() -> Option<PathBuf> {
-    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/world.db");
-    if !path.exists() {
-        eprintln!("skipping: {} not found", path.display());
-        return None;
-    }
+    let path = crate::test_data::world_db_path();
     Some(path)
 }
 
