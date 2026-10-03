@@ -21,6 +21,11 @@ const QUEST_FLAGS_DAILY: u32 = 0x1000;
 const QUEST_FLAGS_WEEKLY: u32 = 0x8000;
 /// `FlagsEx` bit (TrinityCore `QUEST_FLAGS_EX_LEGENDARY`, QuestDef.h:260).
 const QUEST_FLAGS_EX_LEGENDARY: u32 = 0x100;
+/// `QuestInfo.Modifiers` bits (`Quest::IsImportant` / `Quest::IsMeta`, QuestDef.cpp:509-523).
+const QUEST_INFO_MODIFIER_IMPORTANT: u32 = 0x400;
+const QUEST_INFO_MODIFIER_META: u32 = 0x800;
+/// `QuestInfo.Type` `QuestTagType::CovenantCalling` (QuestDef.h:349).
+const QUEST_TAG_TYPE_COVENANT_CALLING: u8 = 15;
 /// `SpecialFlags` bit (AzerothCore `QUEST_SPECIAL_FLAGS_REPEATABLE`).
 const QUEST_SPECIAL_FLAGS_REPEATABLE: u32 = 0x1;
 
@@ -86,6 +91,10 @@ pub(crate) struct QuestTemplate {
     pub flags: u32,
     /// TrinityCore `FlagsEx` (tdb_quest_template); 0 for quests TrinityCore lacks.
     pub flags_ex: u32,
+    /// The `QuestInfo` DB2 row of `QuestInfoID`: `Type` (`QuestTagType`) and
+    /// `Modifiers`; 0 without one.
+    pub quest_info_type: u8,
+    pub quest_info_modifiers: u32,
     pub special_flags: u32,
     /// Race bits (`1 << (race - 1)` in the imported Wrath data); 0 = any.
     pub allowable_races: u32,
@@ -96,7 +105,8 @@ pub(crate) struct QuestTemplate {
     /// Copper; negative = the quest costs money to turn in. TrinityCore quests
     /// store `Quest::MaxMoneyValue` here and pay `money_scaling` per player.
     pub reward_money: i32,
-    /// TrinityCore quests (`ContentTuningID` != 0): `Quest::MoneyValue` inputs.
+    /// TrinityCore quests (`ContentTuningID` != 0): `Quest::MoneyValue` inputs and the
+    /// ContentTuning range `Player::GetQuestLevel` clamps to.
     pub money_scaling: Option<QuestMoneyScaling>,
     /// `RewardXPDifficulty`: column of the QuestXP DB2 row.
     pub reward_xp_difficulty: u8,
@@ -125,11 +135,17 @@ impl QuestTemplate {
     }
 
     /// The giver marker kind TrinityCore `Player::GetQuestDialogStatus` picks
-    /// (Player.cpp:16167-16241) among those world.db has the data for: legendary
-    /// before daily/weekly. Important, meta, calling and campaign need the QuestInfo
-    /// and Campaign DB2s, which world.db does not import.
+    /// (Player.cpp:16167-16241): important, meta, covenant calling, legendary, then
+    /// daily/weekly. Campaign (`QuestMgr::IsCampaignQuestStatusVisibleForPlayer`)
+    /// needs PlayerCondition evaluation, which the server lacks, so it is never picked.
     pub fn marker_class(&self) -> QuestMarkerClass {
-        if self.flags_ex & QUEST_FLAGS_EX_LEGENDARY != 0 {
+        if self.quest_info_modifiers & QUEST_INFO_MODIFIER_IMPORTANT != 0 {
+            QuestMarkerClass::Important
+        } else if self.quest_info_modifiers & QUEST_INFO_MODIFIER_META != 0 {
+            QuestMarkerClass::Meta
+        } else if self.quest_info_type == QUEST_TAG_TYPE_COVENANT_CALLING {
+            QuestMarkerClass::Calling
+        } else if self.flags_ex & QUEST_FLAGS_EX_LEGENDARY != 0 {
             QuestMarkerClass::Legendary
         } else if self.repeatability() != QuestRepeatability::Normal {
             QuestMarkerClass::Repeatable
@@ -201,8 +217,9 @@ const QUEST_QUERY: &str = "SELECT q.*, a.MaxLevel, a.AllowableClasses, a.PrevQue
      a.NextQuestID, a.ExclusiveGroup, a.ProvidedItemCount, a.SpecialFlags, \
      o.RewardText, r.CompletionText, t.MinLevelWithDelta AS TuningMinLevelWithDelta, \
      t.maxlevel AS TuningMaxLevel, t.ScalingFactionGroup AS TuningScalingFactionGroup, \
-     tq.FlagsEx \
+     tq.FlagsEx, qi.Type AS QuestInfoType, qi.Modifiers AS QuestInfoModifiers \
      FROM content_quest_template q \
+     LEFT JOIN quest_info qi ON qi.ID = q.QuestInfoID \
      LEFT JOIN tdb_quest_template tq ON tq.ID = q.ID \
      LEFT JOIN content_tuning_level t ON t.ID = q.ContentTuningID \
      LEFT JOIN content_quest_template_addon a ON a.ID = q.ID \
@@ -305,6 +322,8 @@ fn quest_from_row(
         suggested_group: int(row, "SuggestedGroupNum")?.clamp(0, 255) as u8,
         flags: int(row, "Flags")? as u32,
         flags_ex: int(row, "FlagsEx")? as u32,
+        quest_info_type: int(row, "QuestInfoType")?.clamp(0, 255) as u8,
+        quest_info_modifiers: int(row, "QuestInfoModifiers")? as u32,
         special_flags: int(row, "SpecialFlags")? as u32,
         allowable_races: int(row, "AllowableRaces")? as u32,
         allowable_classes: int(row, "AllowableClasses")? as u32,
