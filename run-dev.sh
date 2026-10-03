@@ -1,22 +1,15 @@
-#!/bin/bash
+#!/usr/bin/env python3
+"""Watch server sources and restart the native build/run loop on changes."""
 
-set -euo pipefail
+import os
+import shlex
+import sys
+from pathlib import Path
 
-cleanup() {
-    exit 0
-}
 
-trap cleanup SIGINT SIGTERM
-
-# Watch for changes using cargo-watch.
-# The shell command loops so the server is restarted after crashes/exits.
-# On source changes, cargo-watch kills the running loop and starts a fresh one.
-cargo watch -w crates -w Cargo.toml -s '
-while true; do
-    cargo run --bin game-server
-    code=$?
-    echo ""
-    echo "Server exited with code $code. Restarting in 20s..."
-    sleep 20
-done
-'
+if __name__ == "__main__":
+    loop = Path(__file__).resolve().parent / "scripts/dev-loop.py"
+    command = shlex.join([sys.executable, str(loop), *sys.argv[1:]])
+    os.execvp(
+        "cargo", ["cargo", "watch", "-w", "crates", "-w", "Cargo.toml", "-s", command]
+    )

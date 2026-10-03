@@ -9,6 +9,11 @@ pub(crate) const CHARACTER_PROGRESSION: TableDefinition<u64, &[u8]> =
 /// Experience table: character_id -> XP into the current level.
 pub(crate) const CHARACTER_XP: TableDefinition<u64, u32> = TableDefinition::new("character_xp");
 
+/// Flight style table: character_id -> its Flight Style aura spell (Steady 404468 or
+/// Skyriding 404464), the aura Retail keeps across logins.
+pub(crate) const CHARACTER_FLIGHT_STYLE: TableDefinition<u64, u32> =
+    TableDefinition::new("character_flight_style");
+
 /// Trait configs table: character_id -> serialized `TraitConfigsData`.
 pub(crate) const CHARACTER_TRAITS: TableDefinition<u64, &[u8]> =
     TableDefinition::new("character_traits");
@@ -74,6 +79,30 @@ pub fn save_xp(db: &Database, character_id: u64, xp: u32) {
             .expect("Failed to insert character xp");
     }
     txn.commit().expect("Failed to commit character xp save");
+}
+
+/// The saved Flight Style aura spell; `None` before the character first switched.
+pub fn load_flight_style(db: &Database, character_id: u64) -> Option<u32> {
+    let txn = db.begin_read().expect("Failed to begin read txn");
+    let table = txn.open_table(CHARACTER_FLIGHT_STYLE).ok()?;
+    table
+        .get(character_id)
+        .expect("Failed to read character flight style")
+        .map(|guard| guard.value())
+}
+
+pub fn save_flight_style(db: &Database, character_id: u64, aura_spell: u32) {
+    let txn = db.begin_write().expect("Failed to begin write txn");
+    {
+        let mut table = txn
+            .open_table(CHARACTER_FLIGHT_STYLE)
+            .expect("Failed to open character_flight_style table");
+        table
+            .insert(character_id, aura_spell)
+            .expect("Failed to insert character flight style");
+    }
+    txn.commit()
+        .expect("Failed to commit character flight style save");
 }
 
 /// Saved trait purchases per `ChrSpecialization` ID, ascending by spec.

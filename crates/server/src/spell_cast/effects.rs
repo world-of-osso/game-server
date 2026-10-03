@@ -54,6 +54,7 @@ pub const EFFECT_TRIGGER_SPELL: u32 = 64;
 pub const EFFECT_INTERRUPT_CAST: u32 = 68;
 pub const EFFECT_NORMALIZED_WEAPON_DMG: u32 = 121;
 pub const EFFECT_HEAL_PCT: u32 = 136;
+pub const EFFECT_FORCE_CAST: u32 = 140;
 pub const EFFECT_TELEPORT_UNITS: u32 = 252;
 pub const EFFECT_MODIFY_CHARGES: u32 = 293;
 
@@ -89,6 +90,7 @@ pub fn handler(effect_id: u32) -> Option<EffectHandler> {
         EFFECT_TRIGGER_SPELL | EFFECT_TRIGGER_MISSILE => trigger_spell,
         EFFECT_INTERRUPT_CAST => interrupt_cast,
         EFFECT_HEAL_PCT => heal_pct,
+        EFFECT_FORCE_CAST => force_cast,
         EFFECT_TELEPORT_UNITS => teleport_units,
         EFFECT_MODIFY_CHARGES => modify_charges,
         crate::profession::EFFECT_CREATE_ITEM => crate::profession::effect_create_item,
@@ -728,6 +730,19 @@ fn trigger_spell(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, targe
         ctx.caster,
         effect.trigger_spell,
         Some(target),
+        ctx.depth + 1,
+    );
+}
+
+/// 140 FORCE_CAST (`Spell::EffectForceCast`, SpellEffects.cpp:791-849): the target casts
+/// `EffectTriggerSpell` at the caster, triggered. TrinityCore keeps that cast's power and
+/// reagent costs; `cast_triggered` ignores costs.
+fn force_cast(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, target: Entity) {
+    super::cast_triggered(
+        world,
+        target,
+        effect.trigger_spell,
+        Some(ctx.caster),
         ctx.depth + 1,
     );
 }

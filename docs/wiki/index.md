@@ -1,5 +1,8 @@
 # Wiki Index
 
+[Native desktop/local development](../remote-builds.md) — normal build/run/check/test workflow, host-local runtime state, and pending runtime proof; [contract](../specs/build-host.md).
+
+
 Content catalog for the game-server wiki.
 
 ## design/
@@ -22,7 +25,7 @@ External resources, tooling, data sources, development workflow.
 | [[crafting-reference-import]] | Seven pinned Midnight crafting tables, exact schema/provenance, atomic staging import and modern-resolver handoff |
 | [[reference-repos]] | AzerothCore (architecture + data), Rustbolt Core (Rust patterns), SpacetimeDB (rejected), wow-engine (sibling renderer) |
 | [[auction-load-fixture]] | Executed owned 300k-offer/311-real-ID producer; reopen/counter/second-page proof, linked separate CLI latency ledger |
-| [[dev-commands]] | cargo run, cargo test, run-tests.sh, admin CLI via SSH, live GameObject lookup, dependency versions |
+| [[dev-commands]] | Native workflow reference, local standalone tests, admin CLI via SSH, live GameObject lookup, dependency versions |
 | [[crate-structure]] | Three crates (shared, server, client) with purpose and module breakdown |
 | [[code-health]] | 4,838 symbols, 88 untested production candidates, dead-code situation, top hotspots |
 

@@ -16,6 +16,15 @@ After completing work that produces knowledge worth preserving, update the wiki:
 
 Follow the workflow in `SCHEMA.md`: check existing pages first (update > create), maintain cross-references, update `index.md` and `log.md`. Skip wiki updates for routine bug fixes, config tweaks, and cosmetic changes.
 
+## Development build/run
+
+- `python3 scripts/build-host.py --build-host desktop --run` builds and runs the server in desktop WSL; `--build-host local` does both here. Bare Cargo remains local.
+- `--bin game-server-admin|game-cli --run -- <args>` selects a tool. `--release` selects release builds.
+- `python3 scripts/build-host.py --test -p server FILTER -- --nocapture` runs filtered tests; `--test` must be last. `python3 scripts/build-host.py --check -p server` checks without launching.
+- `./run-dev.sh --build-host desktop|local` watches crates/Cargo.toml and rebuilds/runs on that host.
+- `--save-build-host desktop|local` changes the shared default at `~/.config/game-engine/build-host`. Host failures never select another host. Native tool selection: desktop pinned Rust 1.98.1 via rustup; local installed Arch Cargo/rustc 1.98.1, no rustup.
+- Shared runner: `../game-engine/scripts/`; `BUILD_HOST_SCRIPTS` overrides its location. Desktop runtime assets and player storage are separate from local data; see [native workflow](docs/remote-builds.md).
+
 ## Data
 
 - `data/world.db` (SQLite) stores world/reference data loaded at runtime (creature templates, creature spawns, waypoint data).
