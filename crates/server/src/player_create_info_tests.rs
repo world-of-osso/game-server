@@ -149,14 +149,8 @@ fn orc_warrior_equips_sword_and_shield() {
             ],
             bags: vec![],
             backpack: vec![(0, HEARTHSTONE, 1)],
-            // Slam, Blood Fury, Recuperate; Attack and Blood Fury on the stance bar.
-            bar: spells(&[
-                (0, 1464),
-                (9, 20572),
-                (10, RECUPERATE),
-                (72, 88163),
-                (81, 20572)
-            ]),
+            // Slam, Attack, Blood Fury, Recuperate.
+            bar: spells(&[(0, 1464), (1, 88163), (9, 20572), (10, RECUPERATE)]),
         }
     );
 }

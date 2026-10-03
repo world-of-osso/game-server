@@ -139,6 +139,44 @@ fn a_player_behind_its_client_catches_up_from_the_bank() {
 }
 
 #[test]
+fn a_low_fps_client_run_ends_where_the_client_stopped() {
+    // The 1.5 fps headless hunter (tamebeast live run): each 2/3 s frame reports 4.67 yd
+    // more, the server ticks without input between frames, and the release sends one stop
+    // at the final position. The server moved 7 yd of the client's 14 and stayed there.
+    let (mut app, player, connection) = receiver_app();
+    let frame_secs = 2.0 / 3.0;
+    let mut reported = 0.0;
+    for _frame in 0..3 {
+        reported += DEFAULT_RUN_SPEED * frame_secs;
+        let run = reporting([0.0, 0.0, reported], make_input(0.0, 0.0, 1.0));
+        deliver_and_tick(&mut app, connection, vec![run]);
+        for _tick in 1..13 {
+            deliver_and_tick(&mut app, connection, Vec::new());
+        }
+    }
+    let stop = reporting([0.0, 0.0, reported], make_input(0.0, 0.0, 0.0));
+    deliver_and_tick(&mut app, connection, vec![stop]);
+    for _tick in 0..20 {
+        deliver_and_tick(&mut app, connection, Vec::new());
+    }
+    assert_position(&app, player, [0.0, 0.0, reported]);
+}
+
+#[test]
+fn a_player_behind_its_client_moves_no_faster_than_its_speed() {
+    // One report 21 yd away: the player walks toward it from the bank, at most a quarter
+    // second per tick, then one tick's refill per tick.
+    let (mut app, player, connection) = receiver_app();
+    let input = reporting([0.0, 0.0, 21.0], make_input(0.0, 0.0, 1.0));
+    deliver_and_tick(&mut app, connection, vec![input]);
+    for _tick in 0..4 {
+        deliver_and_tick(&mut app, connection, Vec::new());
+    }
+    // The half-second bank and four 50 ms refills.
+    assert_position(&app, player, [0.0, 0.0, DEFAULT_RUN_SPEED * 0.7]);
+}
+
+#[test]
 fn nan_or_infinite_reported_positions_do_not_move_the_player() {
     let (mut app, player, connection) = receiver_app();
     let nan = reporting([f32::NAN, 0.0, 1.0], make_input(0.0, 0.0, 1.0));

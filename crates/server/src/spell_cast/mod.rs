@@ -140,6 +140,8 @@ pub enum CastFailure {
     Totems(String),
     /// A created item does not fit in the bags.
     InventoryFull,
+    /// A Tame Beast, Call Pet or Dismiss Pet check (`crate::hunter_pet::check_cast`).
+    Pet(crate::hunter_pet::PetCastFailure),
     Unsupported(String),
 }
 
@@ -178,6 +180,7 @@ impl CastFailure {
             Self::Reagents(item) => (R::Reagents, Some(format!("Missing reagent: {item}"))),
             Self::Totems(tool) => (R::Totems, Some(format!("Requires {tool}"))),
             Self::InventoryFull => (R::InventoryFull, Some("Inventory is full.".into())),
+            Self::Pet(failure) => failure.to_contract(),
             Self::Unsupported(detail) => (R::NotSupported, Some(detail.clone())),
         }
     }
@@ -740,6 +743,7 @@ fn validate_start(
         )));
     }
     let target = validate_target(world, caster, spell, explicit, Sight::Start(witness))?;
+    crate::hunter_pet::check_cast(world, caster, spell, target)?;
     spell_costs(world, caster, spell)?;
     crate::profession::check_cast_items(world, caster, spell)?;
     Ok(target)
@@ -1075,6 +1079,7 @@ fn execute_cast(
         return Err(CastFailure::CasterDead);
     }
     let explicit = validate_target(world, caster, spell, explicit, Sight::Finish)?;
+    crate::hunter_pet::check_cast(world, caster, spell, explicit)?;
     let costs = spell_costs(world, caster, spell)?;
     crate::profession::check_cast_items(world, caster, spell)?;
     let plan = plan_targets(world, caster, spell, explicit, false)?;
@@ -1711,6 +1716,7 @@ pub(crate) fn advance_casts(world: &mut World) {
             // Channel periodic effects tick as auras (`crate::auras`).
             CastTickResult::InProgress | CastTickResult::ChannelTick => {}
             CastTickResult::ChannelComplete => {
+                crate::auras::channel_completed(world, caster, spell_id);
                 end_cast(world, caster);
             }
             CastTickResult::Completed => {

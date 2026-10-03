@@ -166,7 +166,7 @@ pub struct ChatHistoryEntry {
 /// Marks an entity for deferred despawn (next frame), allowing lightyear to process
 /// the removal of Replicate/NetworkVisibility before the entity disappears.
 #[derive(Component)]
-struct PendingDespawn;
+pub(crate) struct PendingDespawn;
 
 pub struct ServerNetworkPlugin;
 
@@ -507,9 +507,14 @@ pub(crate) struct PlayerInputParams<'w, 's> {
 }
 
 /// Read PlayerInput messages and move each player to the positions its client reports,
-/// within the player's movement bank.
+/// within the player's movement bank. A player without new input moves on to the report
+/// its bank has not reached yet.
 pub(crate) fn process_player_inputs(time: Res<Time>, mut params: PlayerInputParams) {
     params.clocks.advance(time.delta_secs());
+    let players = &params.players;
+    params
+        .clocks
+        .retain_players(|player| players.contains(player));
     for (mut receiver, link) in &mut params.receivers {
         let control = params
             .controls
@@ -519,11 +524,20 @@ pub(crate) fn process_player_inputs(time: Res<Time>, mut params: PlayerInputPara
             .unwrap_or_default();
         // Input sent before the client adopted a server teleport is stale
         // (`HandleMovementOpcode` ignores movement while `IsBeingTeleported`).
-        let inputs: Vec<PlayerInput> = receiver
+        let received: Vec<PlayerInput> = receiver
             .receive()
             .filter(|input| input.epoch == control.epoch)
             .collect();
-        let Some(latest) = inputs.last() else {
+        let resumed = received.is_empty();
+        let inputs = if resumed {
+            match params.clocks.unreached(link.0, control.epoch) {
+                Some(unreached) => vec![unreached],
+                None => continue,
+            }
+        } else {
+            received
+        };
+        let Some(latest) = inputs.last().cloned() else {
             continue;
         };
         // The server drives a controlled player (taxi flight); its input is dropped.
@@ -534,6 +548,7 @@ pub(crate) fn process_player_inputs(time: Res<Time>, mut params: PlayerInputPara
             .get(link.0)
             .is_ok_and(|death| death.state == DeathState::Dead);
         if controlled || corpse || !params.on_map.contains(link.0) {
+            params.clocks.track(link.0, latest, false);
             stop_held_player(
                 link.0,
                 &mut params.players,
@@ -542,13 +557,15 @@ pub(crate) fn process_player_inputs(time: Res<Time>, mut params: PlayerInputPara
             continue;
         }
         let moving = direction_length(&latest.direction) >= 0.001;
-        crate::friends::mark_player_activity(
-            link.0,
-            &mut params.presence,
-            &mut params.auto_afk,
-            time.elapsed(),
-            params.replication_dirty.as_deref(),
-        );
+        if !resumed {
+            crate::friends::mark_player_activity(
+                link.0,
+                &mut params.presence,
+                &mut params.auto_afk,
+                time.elapsed(),
+                params.replication_dirty.as_deref(),
+            );
+        }
         if inputs.iter().any(|input| input.swimming) && params.mounted.contains(link.0) {
             let player = link.0;
             params.commands.queue(move |world: &mut World| {
@@ -569,6 +586,7 @@ pub(crate) fn process_player_inputs(time: Res<Time>, mut params: PlayerInputPara
                 terrain,
             ));
         }
+        params.clocks.track(link.0, latest, changes.behind);
         params.commands.entity(link.0).insert(Moving(moving));
         if changes.position_changed {
             mark_interest_position_changed(params.dirty_queue.as_deref(), link.0);

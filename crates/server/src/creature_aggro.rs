@@ -12,7 +12,8 @@
 use bevy::prelude::*;
 use lightyear::prelude::ReplicationDirtyQueue;
 use shared::components::{
-    Health, Player, Position, ThreatTable, UnitFactionTemplate, UnitLevel, UnitThreatList,
+    Health, Player, Position, ThreatTable, UnitFactionTemplate, UnitFlags, UnitLevel,
+    UnitThreatList,
 };
 use shared::level_scaling::{LevelScaling, level_for_viewer};
 
@@ -156,6 +157,7 @@ type Victims<'w, 's> = Query<
         Has<TaxiFlight>,
         Has<DeathState>,
         Option<&'static InMap>,
+        Option<&'static UnitFlags>,
     ),
 >;
 
@@ -169,7 +171,8 @@ fn valid_victim(
     creature_map: &InMap,
     victim: Entity,
 ) -> bool {
-    let Ok((_, health, faction, _, death, is_player, flying, npc_dead, map)) = victims.get(victim)
+    let Ok((_, health, faction, _, death, is_player, flying, npc_dead, map, flags)) =
+        victims.get(victim)
     else {
         return false;
     };
@@ -186,7 +189,7 @@ fn valid_victim(
             },
             UnitFaction {
                 template: faction.map_or(0, |faction| faction.0),
-                is_player,
+                is_player: crate::faction::player_affected(is_player, flags),
             },
         )
 }

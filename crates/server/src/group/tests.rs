@@ -7,7 +7,8 @@ use shared::components::{
 };
 use shared::death::DeathState;
 use shared::protocol::{
-    GroupMemberState, GroupMemberStates, GroupMessageCode, GroupRoleSnapshot, ReadyCheckAnswer,
+    GroupMemberState, GroupMemberStates, GroupMessageCode, GroupRoleSnapshot, RAID_TARGET_SKULL,
+    RaidTargetIcons, ReadyCheckAnswer, SetRaidTarget,
 };
 
 use crate::death::PlayerDeathState;
@@ -34,6 +35,9 @@ fn setup_app() -> App {
     app.register_message::<ReadyCheckUpdate>();
     app.register_message::<GroupInviteCancelled>();
     app.register_message::<GroupMemberStates>();
+    app.register_message::<SetRaidTarget>();
+    app.register_message::<RaidTargetIcons>();
+    app.register_message::<ConvertGroupToRaid>();
     app.add_plugins(GroupPlugin);
     app.add_systems(Update, collect_inbox);
     app.finish();
@@ -111,6 +115,14 @@ fn connect(app: &mut App, character_id: u64, name: &str) -> Client {
                 MessageSender::<GroupMemberStates>::default(),
                 MessageReceiver::<GroupMemberStates>::default(),
             ),
+            (
+                MessageSender::<SetRaidTarget>::default(),
+                MessageReceiver::<SetRaidTarget>::default(),
+                MessageSender::<RaidTargetIcons>::default(),
+                MessageReceiver::<RaidTargetIcons>::default(),
+                MessageSender::<ConvertGroupToRaid>::default(),
+                MessageReceiver::<ConvertGroupToRaid>::default(),
+            ),
         ))
         .id();
     Client { player, conn }
@@ -134,6 +146,7 @@ struct Inbox {
     ready_checks: Vec<ReadyCheckUpdate>,
     cancelled_invites: Vec<GroupInviteCancelled>,
     member_states: Vec<GroupMemberStates>,
+    raid_targets: Vec<RaidTargetIcons>,
 }
 
 fn collect_inbox(
@@ -145,6 +158,7 @@ fn collect_inbox(
         &mut MessageReceiver<ReadyCheckUpdate>,
         &mut MessageReceiver<GroupInviteCancelled>,
         &mut MessageReceiver<GroupMemberStates>,
+        &mut MessageReceiver<RaidTargetIcons>,
     )>,
 ) {
     for (
@@ -155,6 +169,7 @@ fn collect_inbox(
         mut ready_checks,
         mut cancels,
         mut states,
+        mut raid_targets,
     ) in &mut connections
     {
         inbox.rosters.extend(rosters.receive());
@@ -163,6 +178,7 @@ fn collect_inbox(
         inbox.ready_checks.extend(ready_checks.receive());
         inbox.cancelled_invites.extend(cancels.receive());
         inbox.member_states.extend(states.receive());
+        inbox.raid_targets.extend(raid_targets.receive());
     }
 }
 
@@ -190,6 +206,10 @@ fn ready_checks(app: &mut App, client: &Client) -> Vec<ReadyCheckUpdate> {
 
 fn member_states(app: &mut App, client: &Client) -> Vec<GroupMemberStates> {
     std::mem::take(&mut inbox(app, client).member_states)
+}
+
+fn raid_targets(app: &mut App, client: &Client) -> Vec<RaidTargetIcons> {
+    std::mem::take(&mut inbox(app, client).raid_targets)
 }
 
 fn pump(app: &mut App) {
@@ -914,4 +934,155 @@ fn invitee_receives_invite_cancelled_when_the_invite_expires() {
         }]
     );
     assert!(codes(&mut app, &alice).contains(&GroupMessageCode::DeclineGroup));
+}
+
+// --- Raid target icons (TrinityCore Group::SetTargetIcon) ---
+
+/// Icons with `marks` as (icon 1–8, unit) pairs.
+fn icons(marks: &[(u8, u64)]) -> RaidTargetIcons {
+    let mut icons = RaidTargetIcons::default();
+    for &(icon, unit) in marks {
+        icons.targets[icon as usize - 1] = Some(unit);
+    }
+    icons
+}
+
+const HOGGER: u64 = 4_294_967_401;
+const MURLOC: u64 = 4_294_967_402;
+
+#[test]
+fn solo_player_marks_an_npc_for_themselves() {
+    let mut app = setup_app();
+    let alice = connect(&mut app, 1, "Alice");
+    let bob = connect(&mut app, 2, "Bob");
+
+    send(
+        &mut app,
+        &alice,
+        SetRaidTarget {
+            target: HOGGER,
+            icon: RAID_TARGET_SKULL,
+        },
+    );
+    pump(&mut app);
+
+    assert_eq!(
+        raid_targets(&mut app, &alice),
+        [icons(&[(RAID_TARGET_SKULL, HOGGER)])]
+    );
+    assert_eq!(raid_targets(&mut app, &bob), []);
+}
+
+#[test]
+fn group_mark_reaches_every_member_moves_and_clears() {
+    let mut app = setup_app();
+    let alice = connect(&mut app, 1, "Alice");
+    let bob = connect(&mut app, 2, "Bob");
+    invite_and_accept(&mut app, &alice, &bob, "bob");
+    raid_targets(&mut app, &alice);
+    raid_targets(&mut app, &bob);
+
+    let mark = |target, icon| SetRaidTarget { target, icon };
+    send(&mut app, &bob, mark(HOGGER, RAID_TARGET_SKULL));
+    pump(&mut app);
+    for client in [&alice, &bob] {
+        assert_eq!(
+            raid_targets(&mut app, client),
+            [icons(&[(RAID_TARGET_SKULL, HOGGER)])]
+        );
+    }
+
+    // One unit per icon: Skull moves to the murloc.
+    send(&mut app, &alice, mark(MURLOC, RAID_TARGET_SKULL));
+    pump(&mut app);
+    for client in [&alice, &bob] {
+        assert_eq!(
+            raid_targets(&mut app, client),
+            [icons(&[(RAID_TARGET_SKULL, MURLOC)])]
+        );
+    }
+
+    // One icon per unit: Cross on the murloc takes Skull off it.
+    send(&mut app, &alice, mark(MURLOC, 7));
+    pump(&mut app);
+    for client in [&alice, &bob] {
+        assert_eq!(raid_targets(&mut app, client), [icons(&[(7, MURLOC)])]);
+    }
+
+    // SetRaidTarget(unit, 0) clears the unit's icon.
+    send(&mut app, &bob, mark(MURLOC, 0));
+    pump(&mut app);
+    for client in [&alice, &bob] {
+        assert_eq!(raid_targets(&mut app, client), [RaidTargetIcons::default()]);
+    }
+}
+
+#[test]
+fn raid_members_other_than_the_leader_cannot_mark() {
+    let mut app = setup_app();
+    let alice = connect(&mut app, 1, "Alice");
+    let bob = connect(&mut app, 2, "Bob");
+    invite_and_accept(&mut app, &alice, &bob, "bob");
+    send(&mut app, &alice, ConvertGroupToRaid);
+    pump(&mut app);
+    raid_targets(&mut app, &alice);
+
+    send(
+        &mut app,
+        &bob,
+        SetRaidTarget {
+            target: HOGGER,
+            icon: RAID_TARGET_SKULL,
+        },
+    );
+    pump(&mut app);
+
+    assert_eq!(raid_targets(&mut app, &alice), []);
+}
+
+#[test]
+fn joining_a_party_clears_its_icons_and_leaving_clears_the_leavers() {
+    let mut app = setup_app();
+    let alice = connect(&mut app, 1, "Alice");
+    let bob = connect(&mut app, 2, "Bob");
+    let carol = connect(&mut app, 3, "Carol");
+    invite_and_accept(&mut app, &alice, &bob, "bob");
+    send(
+        &mut app,
+        &alice,
+        SetRaidTarget {
+            target: HOGGER,
+            icon: 1,
+        },
+    );
+    pump(&mut app);
+    raid_targets(&mut app, &bob);
+
+    // Group::AddMember resets the icons of a non-raid group.
+    invite_and_accept(&mut app, &alice, &carol, "carol");
+    assert_eq!(
+        raid_targets(&mut app, &bob).last(),
+        Some(&RaidTargetIcons::default())
+    );
+
+    send(
+        &mut app,
+        &alice,
+        SetRaidTarget {
+            target: HOGGER,
+            icon: 1,
+        },
+    );
+    pump(&mut app);
+    raid_targets(&mut app, &carol);
+    send(&mut app, &carol, LeaveGroup);
+    pump(&mut app);
+    assert_eq!(
+        raid_targets(&mut app, &carol).last(),
+        Some(&RaidTargetIcons::default())
+    );
+    assert_eq!(
+        raid_targets(&mut app, &bob).last(),
+        Some(&icons(&[(1, HOGGER)]))
+    );
 }

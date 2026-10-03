@@ -93,6 +93,7 @@ python3 "$SCRIPT_DIR/mysql_dump.py" --db "$DB_PATH" --schema "$SCHEMA_SQL" "${DU
 
 echo "  Importing TDB tables ..."
 python3 "$SCRIPT_DIR/mysql_dump.py" --db "$DB_PATH" --schema "$SCRIPT_DIR/tdb_schema.sql" --prefix tdb_ "${TDB_ARGS[@]}"
+python3 "$SCRIPT_DIR/retail_action_bars.py" --db "$DB_PATH"
 
 # --- Retail DB2 CSV import (build-pinned, see db2.py) ---
 

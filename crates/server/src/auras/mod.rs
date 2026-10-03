@@ -1034,6 +1034,30 @@ pub fn charge_mods(world: &World, unit: Entity, charge_category: u32) -> ChargeM
 }
 
 /// A channel ended: its caster's auras of that spell end with it.
+/// A channel that ran its full duration: the auras it keeps up reached their end with it,
+/// so their ticks due by their expiry land while the channel still stands (the last
+/// tick of a channel, Tame Beast's 13481 at its channel target) before `channel_ended`
+/// removes them.
+pub fn channel_completed(world: &mut World, caster: Entity, spell_id: u32) {
+    let mut units = world.query::<(Entity, &ActiveAuras)>();
+    let channel_auras: Vec<(Entity, u32, f64)> = units
+        .iter(world)
+        .flat_map(|(unit, auras)| {
+            auras
+                .iter()
+                .filter(|aura| {
+                    aura.spell_id == spell_id
+                        && aura.caster == caster
+                        && aura.source == AuraSource::Cast
+                })
+                .filter_map(move |aura| Some((unit, aura.instance_id, aura.expires_at?)))
+        })
+        .collect();
+    for (unit, instance_id, expiry) in channel_auras {
+        periodic::run_ticks_until(world, unit, instance_id, expiry);
+    }
+}
+
 pub fn channel_ended(world: &mut World, caster: Entity, spell_id: u32) {
     let mut units = world.query_filtered::<Entity, With<ActiveAuras>>();
     let units: Vec<Entity> = units.iter(world).collect();

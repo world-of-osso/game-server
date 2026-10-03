@@ -21,6 +21,8 @@ fn test_template(entry: u32, faction: u16, min_level: u8, max_level: u8) -> Crea
         name: "Fixture wolf".into(),
         subname: String::new(),
         creature_type: 1,
+        family: 0,
+        type_flags: 0,
         min_level,
         max_level,
         faction,

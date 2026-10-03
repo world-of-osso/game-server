@@ -29,12 +29,18 @@ struct Tick {
     trigger_spell: u32,
 }
 
-fn due_ticks(world: &mut World, unit: Entity, now: f64) -> Vec<Tick> {
+/// Ticks due by `now` of every aura on `unit`, or of aura instance `only`.
+fn due_ticks(world: &mut World, unit: Entity, now: f64, only: Option<u32>) -> Vec<Tick> {
     let Some(mut auras) = world.get_mut::<ActiveAuras>(unit) else {
         return Vec::new();
     };
     let mut ticks = Vec::new();
-    for aura in auras.bypass_change_detection().auras.iter_mut() {
+    for aura in auras
+        .bypass_change_detection()
+        .auras
+        .iter_mut()
+        .filter(|aura| only.is_none_or(|instance| aura.instance_id == instance))
+    {
         let expiry = aura.expires_at.unwrap_or(f64::INFINITY) + 1e-6;
         let stacks = aura.stack_multiplier();
         for effect in aura
@@ -63,7 +69,18 @@ fn due_ticks(world: &mut World, unit: Entity, now: f64) -> Vec<Tick> {
 
 /// Run every tick due on `unit` up to `now`.
 pub(super) fn run_due_ticks(world: &mut World, unit: Entity, now: f64) {
-    for tick in due_ticks(world, unit, now) {
+    let ticks = due_ticks(world, unit, now, None);
+    run_ticks(world, unit, ticks);
+}
+
+/// Run the ticks of aura `instance_id` on `unit` due by `until`.
+pub(super) fn run_ticks_until(world: &mut World, unit: Entity, instance_id: u32, until: f64) {
+    let ticks = due_ticks(world, unit, until, Some(instance_id));
+    run_ticks(world, unit, ticks);
+}
+
+fn run_ticks(world: &mut World, unit: Entity, ticks: Vec<Tick>) {
+    for tick in ticks {
         let alive = world
             .get::<ActiveAuras>(unit)
             .is_some_and(|auras| auras.get(tick.instance_id).is_some());

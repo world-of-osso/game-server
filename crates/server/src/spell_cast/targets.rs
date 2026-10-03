@@ -7,10 +7,12 @@
 //! An invisible unit is neither (`CanSeeOrDetect`), and a `NON_ATTACKABLE_2` one
 //! is no enemy (`WorldObject::IsValidAttackTarget`).
 //!
-//! Handled IDs: 0 none, 1 UNIT_CASTER, 6 UNIT_TARGET_ENEMY, 15
+//! Handled IDs: 0 none, 1 UNIT_CASTER, 5 UNIT_PET (the caster's summoned hunter pet), 6
+//! UNIT_TARGET_ENEMY, 15
 //! UNIT_SRC_AREA_ENEMY, 16 UNIT_DEST_AREA_ENEMY, 18 DEST_CASTER, 21
 //! UNIT_TARGET_ALLY, 22 SRC_CASTER, 25 UNIT_TARGET_ANY, 30 UNIT_SRC_AREA_ALLY,
-//! 31 UNIT_DEST_AREA_ALLY, 53 DEST_TARGET_ENEMY, 60 UNIT_CONE_ENTRY (units ahead of the
+//! 31 UNIT_DEST_AREA_ALLY, 32 DEST_CASTER_FRONT_LEFT (3 yards ahead-left of the caster
+//! without a radius; collision is not modelled), 53 DEST_TARGET_ENEMY, 60 UNIT_CONE_ENTRY (units ahead of the
 //! caster that meet the effect's `conditions`), 63 DEST_TARGET_ANY, 132
 //! DEST_TARGET_ALLY, 65 DEST_TARGET_BACK (the explicit target's position moved the
 //! effect radius behind it; collision is not modelled), 77 UNIT_CHANNEL_TARGET
@@ -38,7 +40,7 @@ pub enum Relation {
 }
 
 /// What one implicit target ID selects.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 enum Selector {
     None,
     Caster,
@@ -54,6 +56,11 @@ enum Selector {
     DestTargetBack,
     /// The caster's channel target.
     ChannelTarget,
+    /// The caster's summoned pet.
+    Pet,
+    /// Area center = the caster's position moved `angle` (radians from its facing) by
+    /// the effect radius, else `DEFAULT_TOTEM_DISTANCE`.
+    CasterOffset(f32),
     /// Units a persistent area aura affects: no unit at cast time.
     DynObj(Relation),
     /// Units in the cone ahead of the caster meeting the effect's conditions
@@ -66,6 +73,8 @@ fn selector(id: u32) -> Option<Selector> {
     Some(match id {
         0 => Selector::None,
         1 | 56 | 120 => Selector::Caster,
+        5 => Selector::Pet,
+        32 => Selector::CasterOffset(std::f32::consts::FRAC_PI_4),
         6 => Selector::Explicit(Enemy),
         21 | 57 | 118 => Selector::Explicit(Ally),
         25 => Selector::Explicit(Any),
@@ -113,7 +122,10 @@ fn unit_faction(world: &World, entity: Entity) -> UnitFaction {
         template: world
             .get::<UnitFactionTemplate>(entity)
             .map_or(0, |template| template.0),
-        is_player: world.get::<Player>(entity).is_some(),
+        is_player: crate::faction::player_affected(
+            world.get::<Player>(entity).is_some(),
+            world.get::<shared::components::UnitFlags>(entity),
+        ),
     }
 }
 
@@ -295,6 +307,13 @@ pub fn select_targets(
             Selector::ChannelTarget => {
                 selected_any = true;
                 units.extend(channel_target(world, caster));
+            }
+            Selector::Pet => {
+                selected_any = true;
+                units.extend(crate::hunter_pet::summoned_pet(world, caster));
+            }
+            Selector::CasterOffset(angle) => {
+                center = caster_offset(world, caster, angle, radius(effect, slot));
             }
             Selector::DynObj(_) => selected_any = true,
             Selector::AreaAroundSrc(relation) => {
@@ -494,6 +513,28 @@ fn behind(world: &World, target: Entity, dist: f32) -> Option<Vec3> {
     ))
 }
 
+/// `TARGET_DEST_CASTER_FRONT_LEFT` and its kin without a radius
+/// (`Spell::SelectImplicitCasterDestTargets`, Spell.cpp:1621-1629).
+const DEFAULT_TOTEM_DISTANCE: f32 = 3.0;
+
+/// The caster's position moved `dist` yards (`DEFAULT_TOTEM_DISTANCE` when 0) at `angle`
+/// from its facing.
+fn caster_offset(world: &World, caster: Entity, angle: f32, dist: f32) -> Option<Vec3> {
+    let pos = position(world, caster)?;
+    let dist = if dist > 0.0 {
+        dist
+    } else {
+        DEFAULT_TOTEM_DISTANCE
+    };
+    let angle = orientation(world, caster) + angle;
+    // WoW (x, y) offsets are Bevy (x, -z).
+    Some(Vec3::new(
+        pos.x + dist * angle.cos(),
+        pos.y,
+        pos.z - dist * angle.sin(),
+    ))
+}
+
 /// The unit the caster channels at (`Spell::m_targets` of its channel).
 fn channel_target(world: &World, caster: Entity) -> Option<Entity> {
     let cast = world.get::<CastState>(caster)?;
@@ -518,6 +559,9 @@ pub fn effect_dest(
             Selector::CenterExplicit(_) => explicit.and_then(|target| position(world, target)),
             Selector::DestTargetBack => {
                 explicit.and_then(|target| behind(world, target, radius(effect, slot)))
+            }
+            Selector::CasterOffset(angle) => {
+                caster_offset(world, caster, angle, radius(effect, slot))
             }
             _ => continue,
         };

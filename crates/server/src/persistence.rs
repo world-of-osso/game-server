@@ -16,6 +16,8 @@ pub(crate) mod inventory_store;
 pub(crate) mod mail_store;
 #[path = "persistence_runtime.rs"]
 mod persistence_runtime;
+#[path = "persistence_pets.rs"]
+pub(crate) mod pet_store;
 #[path = "persistence_quests.rs"]
 pub(crate) mod quest_store;
 #[path = "persistence_taxi.rs"]
@@ -277,6 +279,7 @@ pub(crate) fn create_tables(db: &Database) {
     let _ = txn.open_table(inventory_store::ITEM_INSTANCES);
     let _ = txn.open_table(quest_store::QUEST_LOGS);
     let _ = txn.open_table(taxi_store::KNOWN_TAXI_NODES);
+    let _ = txn.open_table(pet_store::PET_STABLES);
     let _ = txn.open_table(PROFESSIONS);
     txn.delete_table(LEGACY_PROFESSIONS)
         .expect("Failed to delete legacy professions table");

@@ -26,6 +26,8 @@ pub(super) type PlayerMovement = (
 pub(super) struct MovementChanges {
     pub(super) position_changed: bool,
     pub(super) replicated_state_changed: bool,
+    /// The latest input's report is still ahead of the player.
+    pub(super) behind: bool,
 }
 
 /// Longest movement one input may apply (a client frame of 4 fps).
@@ -38,12 +40,19 @@ pub(super) const MOVEMENT_BANK_SECS: f32 = 0.5;
 /// `MOVEMENT_BANK_SECS`, so however many inputs arrive and however far they report, a
 /// player moves no faster than its speed over real time. A player without an entry has
 /// a full bank.
+///
+/// An input whose report its grant did not reach stays `unreached`: the player keeps
+/// moving to it on later ticks as the bank refills, so a client sending fewer inputs than
+/// the bank needs (a slow frame rate, a lone stop input) ends where it stopped.
 #[derive(Default)]
-pub(crate) struct MovementClocks(HashMap<Entity, f32>);
+pub(crate) struct MovementClocks {
+    banks: HashMap<Entity, f32>,
+    unreached: HashMap<Entity, PlayerInput>,
+}
 
 impl MovementClocks {
     pub(super) fn advance(&mut self, delta_secs: f32) {
-        self.0.retain(|_, bank| {
+        self.banks.retain(|_, bank| {
             *bank += delta_secs;
             *bank < MOVEMENT_BANK_SECS
         });
@@ -51,10 +60,32 @@ impl MovementClocks {
 
     /// The movement time an input needing `requested_secs` may apply, taken from the bank.
     pub(super) fn grant(&mut self, player: Entity, requested_secs: f32) -> f32 {
-        let bank = self.0.entry(player).or_insert(MOVEMENT_BANK_SECS);
+        let bank = self.banks.entry(player).or_insert(MOVEMENT_BANK_SECS);
         let step = requested_secs.max(0.0).min(MAX_INPUT_STEP_SECS).min(*bank);
         *bank -= step;
         step
+    }
+
+    /// The input `player` has yet to reach, unless a teleport (new `epoch`) voided it.
+    pub(super) fn unreached(&self, player: Entity, epoch: u32) -> Option<PlayerInput> {
+        self.unreached
+            .get(&player)
+            .filter(|input| input.epoch == epoch)
+            .cloned()
+    }
+
+    /// Keep `latest` to move on to while `behind` its report, else forget it.
+    pub(super) fn track(&mut self, player: Entity, latest: PlayerInput, behind: bool) {
+        if behind {
+            self.unreached.insert(player, latest);
+        } else {
+            self.unreached.remove(&player);
+        }
+    }
+
+    /// Forget the players `exists` no longer finds.
+    pub(super) fn retain_players(&mut self, exists: impl Fn(Entity) -> bool) {
+        self.unreached.retain(|player, _| exists(*player));
     }
 }
 
@@ -64,6 +95,7 @@ impl MovementChanges {
             position_changed: self.position_changed || other.position_changed,
             replicated_state_changed: self.replicated_state_changed
                 || other.replicated_state_changed,
+            behind: other.behind,
         }
     }
 }
@@ -93,7 +125,11 @@ pub(super) fn apply_movement_input(
     };
     if let Some(changes) = stop_for_blocking_cast(cast_state, &mut speed) {
         let stopped = stop_motion(&mut motion);
-        return changes.merge(stopped);
+        // The report waits for the cast to end.
+        return MovementChanges {
+            behind: true,
+            ..changes.merge(stopped)
+        };
     }
     // MovementHandler.cpp:128: `MOVEMENTFLAG_FLYING` from a mover that cannot fly is dropped.
     let flying = input.flying && motion.contains(PlayerMotion::CAN_FLY);
@@ -114,9 +150,10 @@ pub(super) fn apply_movement_input(
     } else {
         Travel::Ground
     };
-    let mut next = move_toward_reported(current, reported, speed.0, travel, |secs| {
+    let (mut next, behind) = move_toward_reported(current, reported, speed.0, travel, |secs| {
         clocks.grant(player_entity, secs)
     });
+    changes.behind = behind;
     next.y = match terrain {
         Some((ground, map_id)) if flying => flight_height(ground, map_id, current, next),
         Some((ground, map_id)) => {
@@ -180,17 +217,18 @@ enum Travel {
 
 /// Where the player gets on the way from `current` to the client's `reported` point: all
 /// the way when `speed` covers it (across the ground, plus the swim vertical speed, or in
-/// 3D when flying) in the time `grant` allows for it, else that far along the way. On the
-/// ground the height moves by the same fraction and is judged by the ground rules after.
+/// 3D when flying) in the time `grant` allows for it, else that far along the way, still
+/// behind the report. On the ground the height moves by the same fraction and is judged by
+/// the ground rules after.
 fn move_toward_reported(
     current: Vec3,
     reported: Vec3,
     speed: f32,
     travel: Travel,
     grant: impl FnOnce(f32) -> f32,
-) -> Vec3 {
+) -> (Vec3, bool) {
     if !reported.is_finite() || speed <= 0.0 {
-        return current;
+        return (current, false);
     }
     let horizontal = current.xz().distance(reported.xz());
     let vertical = (reported.y - current.y).abs();
@@ -200,10 +238,10 @@ fn move_toward_reported(
         Travel::Flight => current.distance(reported) / speed,
     };
     if requested < 0.001 / speed {
-        return current.with_y(reported.y);
+        return (current.with_y(reported.y), false);
     }
     let fraction = (grant(requested) / requested).min(1.0);
-    current + (reported - current) * fraction
+    (current + (reported - current) * fraction, fraction < 1.0)
 }
 
 /// A flyer's height: anywhere on or over the ground under it (probed from the server's
@@ -353,6 +391,7 @@ fn set_motion(motion: &mut Mut<'_, PlayerMotion>, next: PlayerMotion) -> Movemen
     MovementChanges {
         position_changed: false,
         replicated_state_changed: motion.set_if_neq(next),
+        behind: false,
     }
 }
 
@@ -377,6 +416,7 @@ fn stop_for_blocking_cast(
     Some(MovementChanges {
         position_changed: false,
         replicated_state_changed: speed_changed,
+        behind: false,
     })
 }
 
@@ -400,6 +440,7 @@ fn update_rotation_and_speed(
     MovementChanges {
         position_changed: false,
         replicated_state_changed: rotation_changed || speed_changed,
+        behind: false,
     }
 }
 
