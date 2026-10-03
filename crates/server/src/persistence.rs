@@ -309,6 +309,7 @@ pub(crate) fn create_tables(db: &Database) {
     let _ = txn.open_table(crate::persistence_progression::CHARACTER_PROGRESSION);
     let _ = txn.open_table(crate::persistence_progression::CHARACTER_TRAITS);
     let _ = txn.open_table(crate::persistence_progression::CHARACTER_XP);
+    let _ = txn.open_table(crate::persistence_progression::CHARACTER_FLIGHT_STYLE);
     banks::create_bank_tables(&txn);
     appearance_store::create_appearance_tables(&txn);
     txn.commit().expect("Failed to commit initial tables");

@@ -4,6 +4,7 @@
 use bevy::prelude::*;
 
 use super::targets::{Relation, relation_matches};
+use crate::auras::mount::{FLIGHT_STYLE_STEADY, FlightStyle, set_flight_style};
 use crate::spell_info::SpellInfo;
 
 /// Frostbolt: its effects are TRIGGER_MISSILE 32 to 228597 (SCHOOL_DAMAGE) only.
@@ -21,6 +22,10 @@ const LIVING_FLAME: u32 = 361_469;
 const LIVING_FLAME_DAMAGE: u32 = 361_500;
 /// Living Flame heal.
 const LIVING_FLAME_HEAL: u32 = 361_509;
+/// Switch Flight Style: 436854 toggles, 460002 to Skyriding, 460003 to Steady.
+const SWITCH_FLIGHT_STYLE: u32 = 436_854;
+const SWITCH_TO_SKYRIDING: u32 = 460_002;
+const SWITCH_TO_STEADY: u32 = 460_003;
 /// Azure Strike (Blue): DUMMY 0 (the target count), SCHOOL_DAMAGE 1 in an area.
 const AZURE_STRIKE: u32 = 362_969;
 
@@ -32,6 +37,9 @@ pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
     match (spell_id, effect_index) {
         (CHAOS_STRIKE_INITIAL, 0) => Some(chaos_strike_initial),
         (LIVING_FLAME, 0) => Some(living_flame),
+        (SWITCH_FLIGHT_STYLE, 0) => Some(switch_flight_style),
+        (SWITCH_TO_SKYRIDING, 0) => Some(switch_to_skyriding),
+        (SWITCH_TO_STEADY, 0) => Some(switch_to_steady),
         _ => None,
     }
 }
@@ -58,6 +66,31 @@ pub fn area_target_filter(spell_id: u32, effect_index: u8) -> Option<AreaTargetF
 /// casts Chaos Strike 162794 at the hit unit, triggered.
 fn chaos_strike_initial(world: &mut World, caster: Entity, target: Entity, depth: u8) {
     super::cast_triggered(world, caster, CHAOS_STRIKE, Some(target), depth + 1);
+}
+
+/// Switch Flight Style 436854 (the Riding skill line's ability, spelldesc
+/// `$?A404468[Steady Flight][Skyriding]`): DUMMY 0 on the caster swaps Steady and
+/// Skyriding (`auras::mount::set_flight_style`). TrinityCore scripts a DUMMY effect with an
+/// `OnEffectHitTarget` `SpellEffectFn`; it has no script for this spell.
+fn switch_flight_style(world: &mut World, _caster: Entity, target: Entity, _depth: u8) {
+    let style = if crate::auras::has_aura(world, target, FLIGHT_STYLE_STEADY) {
+        FlightStyle::Skyriding
+    } else {
+        FlightStyle::Steady
+    };
+    set_flight_style(world, target, style);
+}
+
+/// Switch Flight Style 460002 (icon ability_dragonriding_dynamicflight01): DUMMY 0 on
+/// the caster puts it on Skyriding.
+fn switch_to_skyriding(world: &mut World, _caster: Entity, target: Entity, _depth: u8) {
+    set_flight_style(world, target, FlightStyle::Skyriding);
+}
+
+/// Switch Flight Style 460003 (icon ability_dragonriding_staticflight01): DUMMY 0 on
+/// the caster puts it on Steady.
+fn switch_to_steady(world: &mut World, _caster: Entity, target: Entity, _depth: u8) {
+    set_flight_style(world, target, FlightStyle::Steady);
 }
 
 /// Energizing Flame (Evoker passive): DUMMY 0, the percent of Living Flame's mana

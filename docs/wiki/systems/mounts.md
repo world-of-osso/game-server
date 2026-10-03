@@ -14,7 +14,9 @@ Player mounts cast as spells (Retail "Steady Flight" and Skyriding flight physic
 
 Golden Gryphon 32235: `Mount` 129, type 424, display 17697. Type 424 capabilities: 494 Skyriding (needs Skyriding Basics 376777 known and PlayerCondition 96927 = NOT Flight Style: Steady; aura 406095, FlightCapability 11), 457/456/455 steady flight at riding 375/300/225 (need Flight Style: Steady 404468) → 86461/86460/86459, then 227/226 ground at 150/75 → 86458/86457.
 
-Every player gets Flight Style: Steady 404468 when its `ActiveAuras` is added (TC `Player::_LoadAuras` `AddAura(404468)`).
+Every player enters the world with its saved Flight Style aura (redb `character_flight_style`: Steady 404468 or Skyriding 404464), Steady before it first switched. TC `Player::_LoadAuras` always adds 404468 ("TODO: finish dragonriding"); Retail keeps the style across logins.
+
+Switch Flight Style (part 3): its spells (5 s cast, SpellCastTimes 6) carry only DUMMY 0 on the caster, so spell scripts (`spell_cast/scripts.rs`, `OnEffectHitTarget` like a TC `SpellEffectFn`) switch: 436854 (the Riding skill line's ability, spelldesc `$?A404468[Steady Flight][Skyriding]`) swaps the two, 460002 (icon ability_dragonriding_dynamicflight01) puts the player on Skyriding, 460003 (ability_dragonriding_staticflight01) on Steady. The switch saves the style; the next mount picks its capability (both style auras are DUMMY auras, which TC `UpdateMountCapability` does not follow). No DB2 row teaches 436854 (`SkillLineAbility` AcquireMethod 0): `learn-spell <name> 436854`.
 
 Riding: Expert Riding 34090's SKILL effect sets Riding to 225; `SkillRaceClassInfo.Flags` `SKILL_FLAG_ALWAYS_MAX_VALUE` (0x10) makes the rank the tier maximum (Player.cpp:3004).
 
@@ -27,7 +29,7 @@ Riding: Expert Riding 34090's SKILL effect sets Riding to 225; `SkillRaceClassIn
 
 ### Skyriding (part 1: physics and server bound)
 
-- Switch a test character (online): `game-server-admin flight-style <name> skyriding` (removes Flight Style: Steady 404468, applies Flight Style: Skyriding 404464, teaches Skyriding Basics 376777); `flight-style <name> steady` switches back. Mount again after switching. Login puts Steady back (TC `Player::_LoadAuras` forces 404468), until the Retail toggle (part 3).
+- Switch a test character (online): `game-server-admin flight-style <name> skyriding` (removes Flight Style: Steady 404468, applies Flight Style: Skyriding 404464, teaches Skyriding Basics 376777); `flight-style <name> steady` switches back. Mount again after switching. The style is saved for the next login.
 - Skyriding aura 406095: ADV_FLYING 446 → `PlayerMotion::CAN_FLY | CAN_ADV_FLY` (TC `HandleModAdvFlying` → `SetCanFly`, `SetCanAdvFly`); MOD_INCREASE_MOUNTED_SPEED 100%. Losing it drops `ADV_FLYING`.
 - A `flying` input from a `CAN_ADV_FLY` player sets `FLYING | ADV_FLYING` and moves under the energy bound of shared-protocol `skyriding` instead of the flight speed: the server tracks each skyrider's most possible speed (`MovementClocks`, starting at the mounted run speed with the 31.5 yd/s launch on top), moves it toward the report at the faster end of the leg (`speed_after`: v² ≤ v0² + 2·g·drop, capped at FlightCapability 11 `MaxVel` 65), cuts a climb at `v²/2g`, and keeps the bank and unreached-report catch-up of every other travel. Drag is not part of the bound (upper bound only). The momentum model and its constants are documented in shared-protocol `src/skyriding.rs`.
 
