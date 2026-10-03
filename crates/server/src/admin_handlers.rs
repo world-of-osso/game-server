@@ -485,8 +485,8 @@ pub(crate) fn handle_learn_spell(
 
 /// Put the online character on Flight Style: Skyriding 404464 (knowing Skyriding Basics
 /// 376777, MountCapability 494's `ReqSpellKnownID`) or Steady 404468
-/// (`auras::mount::set_flight_style`); the next mount picks the matching capability.
-/// Login puts Steady back (`Player::_LoadAuras`).
+/// (`auras::mount::set_flight_style`, saved for the next login); the next mount picks the
+/// matching capability.
 pub(crate) fn handle_flight_style(
     db: &persistence::GameDatabase,
     commands: &mut Commands,

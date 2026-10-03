@@ -14,6 +14,8 @@ const SKYRIDING_FLYING: f32 = 4.1;
 /// Mount Speed Mod: Standard Flying Mount 86459: MOD_INCREASE_MOUNTED_FLIGHT_SPEED 220%.
 const STANDARD_FLYING: f32 = 3.2;
 
+/// A skyrider whose takeoff the server granted: its Skyward Ascent cast left its
+/// `SkyridingImpulse` (`crate::skyriding::flap`) on the ground.
 fn skyrider(app: &mut App, player: Entity) {
     app.world_mut()
         .entity_mut(player)
@@ -24,7 +26,8 @@ fn skyrider(app: &mut App, player: Entity) {
             movement_speed: SKYRIDING_GROUND,
             flight_speed: SKYRIDING_FLYING,
             ..Default::default()
-        });
+        })
+        .insert(crate::skyriding::SkyridingImpulse(LAUNCH_SPEED));
 }
 
 /// The server's bound at takeoff: the mounted run speed with the launch on top.
@@ -114,6 +117,28 @@ fn a_climb_past_the_launch_energy_is_cut_short() {
         "climbed {climbed}"
     );
     assert!(climbed > 25.0, "climbed {climbed}");
+}
+
+/// Without the Skyward Ascent cast the takeoff has only the mounted run speed (14 yd/s),
+/// which climbs at most v²/2g ≈ 5.1 yards: the client's 31.5 yd/s launch is cut short.
+#[test]
+fn a_takeoff_the_server_never_granted_is_cut_short() {
+    let (mut app, player, connection) = flat_app(FLAT);
+    skyrider(&mut app, player);
+    app.world_mut()
+        .entity_mut(player)
+        .remove::<crate::skyriding::SkyridingImpulse>();
+    let mut client = spot();
+    let mut glider = Glider::launch(Vec3::new(0.0, 0.0, 7.0 * SKYRIDING_GROUND));
+    for _ in 0..20 {
+        glide(&mut app, connection, &mut glider, &mut client, 0.0);
+    }
+    let climbed = server_position(&app, player).y - FLAT;
+    assert!(client.y - FLAT > 15.0, "client climbed {}", client.y - FLAT);
+    assert!(
+        climbed <= max_climb(7.0 * SKYRIDING_GROUND) + 0.01,
+        "server climbed {climbed}"
+    );
 }
 
 #[test]

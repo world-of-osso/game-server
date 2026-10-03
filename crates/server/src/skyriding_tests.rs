@@ -18,6 +18,9 @@ use crate::spell_cast::test_harness::Harness;
 
 /// Second Wind: MODIFY_CHARGES 293, one charge of ChargeCategory 2391.
 const SECOND_WIND: u32 = 425_782;
+/// Lift Off: APPLY_AURA DUMMY on the caster, 2 s (SpellDuration 39), which Skyward Ascent's
+/// effect 1 FORCE_CAST 140 casts.
+const LIFT_OFF: u32 = 404_191;
 /// The Golden Gryphon (`auras::mount_tests`).
 const GOLDEN_GRYPHON: u32 = 32235;
 /// 50 ms frames: 1.55 s, past the 1.5 s global cooldown of Surge Forward and Skyward Ascent
@@ -40,6 +43,7 @@ fn skyrider() -> Option<Harness> {
             AERIAL_HALT,
             WHIRLING_SURGE,
             SECOND_WIND,
+            LIFT_OFF,
         ],
     )?;
     h.app
@@ -114,6 +118,21 @@ fn skyward_ascent_shares_the_charges_and_flaps_upward() {
     let categories: Vec<u32> = h.inbox.charges.iter().map(|c| c.category).collect();
     assert_eq!(categories, [SKYRIDING_CHARGES, SKYRIDING_CHARGES]);
     assert_eq!(impulse(&h), Some(LAUNCH_SPEED));
+}
+
+/// The takeoff: Skyward Ascent cast on the ground spends a Skyriding Charge, flaps upward
+/// (the launch the server's movement bound takes off with) and its effect 1 FORCE_CAST
+/// makes the rider cast Lift Off 404191 on itself.
+#[test]
+fn a_ground_takeoff_casts_skyward_ascent_and_lift_off() {
+    let Some(mut h) = skyrider() else {
+        return;
+    };
+    h.cast_and_deliver(SKYWARD_ASCENT, None);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert_eq!(vigor(&h), Some((SKYWARD_ASCENT, 5, 6, RECHARGE_MS)));
+    assert_eq!(impulse(&h), Some(LAUNCH_SPEED));
+    assert!(crate::auras::has_aura(h.app.world(), h.caster, LIFT_OFF));
 }
 
 /// Gaining the Skyriding aura's ADV_FLYING puts the abilities the rider knows on bonus bar 5

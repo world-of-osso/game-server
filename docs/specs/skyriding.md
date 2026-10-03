@@ -21,6 +21,9 @@ Abilities
 - [x] The server raises the skyrider's energy by a cast flap and follows the faster glider; a flap it never granted is cut short.
 - [x] Aerial Halt 403092 (no charge, 10 s cooldown) multiplies air friction by 100 for 0.5 s, stopping the mount.
 - [x] The client flaps only on the server's SpellGo of its own cast.
+- [x] Switch Flight Style 436854 swaps Flight Style: Steady 404468 and Skyriding 404464; 460002 sets Skyriding, 460003 Steady. The next mount flies the style (Steady: steady flight capability; Skyriding: capability 494, glider, bonus bar 5, vigor).
+- [x] A skyrider's takeoff (Space, Space in the air) casts Skyward Ascent through the server: one charge spent, FORCE_CAST Lift Off 404191 on the rider; the client launches on its SpellGo and the server's bound takes off with that flap only (no charge, no launch).
+- [x] The style is saved per character and restored when it enters the world (Steady before its first switch).
 
 ## Assumed values
 
@@ -42,10 +45,11 @@ Unpublished (Retail runs these in server scripts); one block in shared-protocol 
 - shared-protocol `src/skyriding.rs`: `Glider` physics, `Glider::cast`, `impulse_bound`, `ability_impulse`, FlightCapability 11, assumed values.
 - `crates/server/src/skyriding.rs`: `SkyridingImpulse`, `flap` (AfterCast).
 - `crates/server/src/spell_cast/mod.rs`: charges, `restore_charges`, LEARN_SPELL known rule, AfterCast call.
-- `crates/server/src/spell_cast/effects.rs`: MODIFY_CHARGES 293.
+- `crates/server/src/spell_cast/effects.rs`: MODIFY_CHARGES 293, FORCE_CAST 140.
 - `crates/server/src/spell_cast/scripts.rs`: `after_cast` registry.
 - `crates/server/src/networking.rs`, `networking_movement.rs`: energy bound, `MovementClocks::add_impulse`.
-- `crates/server/src/auras/mount.rs`: Skyriding capability, flight style.
+- `crates/server/src/auras/mount.rs`: Skyriding capability, flight style (saved per character, `persistence_progression::CHARACTER_FLIGHT_STYLE`).
+- `crates/server/src/spell_cast/scripts.rs`: Switch Flight Style 436854 / 460002 / 460003.
 - game-engine `godot/rust/src/gameplay.rs`, `combat_visuals.rs`: client glider, SpellGo flap.
 
 ## Tests asserting this spec
@@ -54,12 +58,11 @@ Unpublished (Retail runs these in server scripts); one block in shared-protocol 
 - `crates/server/src/networking_tests/skyriding.rs`
 - `crates/server/src/auras/mount_tests.rs`
 - shared-protocol `src/skyriding_tests.rs`
-- game-engine `godot/rust/src/gameplay.rs` (`gameplay::tests`), live `godot/tests/skyriding_live.gd`, `godot/tests/skyriding_abilities_live.gd`
+- game-engine `godot/rust/src/gameplay.rs` (`gameplay::tests`), live `godot/tests/skyriding_live.gd`, `godot/tests/skyriding_abilities_live.gd`, `godot/tests/skyriding_style_live.gd`
 
 ## Known gaps (current cycle)
 
-- [ ] Vigor display, Skyriding override bar, Flight Style toggle (part 3).
-- [ ] The Space takeoff spends no charge (Retail's takeoff is Skyward Ascent / Lift Off).
+- [ ] Lift Off 374763 (standing launch, no charge) is not cast by anything; no DB2 row or UI code names its trigger.
 
 ## Out of scope
 

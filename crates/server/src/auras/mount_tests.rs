@@ -243,3 +243,113 @@ fn switching_the_flight_style_picks_skyriding_or_steady_flight() {
     mount(&mut h);
     assert!(has(&h, STANDARD_FLYING) && !has(&h, SKYRIDING));
 }
+
+/// Switch Flight Style 436854 (the Riding skill line's ability; DUMMY 0 on the caster,
+/// spelldesc `$?A404468[Steady Flight][Skyriding]`).
+const SWITCH_FLIGHT_STYLE: u32 = 436_854;
+/// Switch Flight Style 460002 (icon ability_dragonriding_dynamicflight01) and 460003
+/// (ability_dragonriding_staticflight01), DUMMY 0 on the caster.
+const SWITCH_TO_SKYRIDING: u32 = 460_002;
+const SWITCH_TO_STEADY: u32 = 460_003;
+/// The switch's 5 s cast (SpellCastTimes 6) in 50 ms frames, and one more.
+const SWITCH_CAST_FRAMES: usize = 101;
+const CHARACTER: u64 = 7;
+
+/// An expert rider on Flight Style: Steady who knows Skyriding Basics and the switches,
+/// saved as character 7.
+fn switcher() -> Option<Harness> {
+    let mut h = rider(
+        225,
+        true,
+        &[
+            SKYRIDING_BASICS,
+            SWITCH_FLIGHT_STYLE,
+            SWITCH_TO_SKYRIDING,
+            SWITCH_TO_STEADY,
+        ],
+    )?;
+    h.app.insert_resource(crate::persistence::GameDatabase {
+        db: crate::persistence::temp_database(),
+    });
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(crate::persistence::ClientId(CHARACTER));
+    Some(h)
+}
+
+fn saved_style(h: &Harness) -> Option<u32> {
+    let db = &h
+        .app
+        .world()
+        .resource::<crate::persistence::GameDatabase>()
+        .db;
+    crate::persistence_progression::load_flight_style(db, CHARACTER)
+}
+
+fn switch(h: &mut Harness, spell: u32) {
+    h.cast_and_deliver(spell, None);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    h.advance(SWITCH_CAST_FRAMES);
+}
+
+/// Casting Switch Flight Style swaps the Flight Style aura, saves it, and the next mount
+/// flies that style: Skyriding (406095, ADV_FLYING) or steady flight (86459).
+#[test]
+fn switch_flight_style_toggles_the_style_the_next_mount_flies_and_saves_it() {
+    let Some(mut h) = switcher() else {
+        return;
+    };
+    switch(&mut h, SWITCH_FLIGHT_STYLE);
+    assert!(has(&h, FLIGHT_STYLE_SKYRIDING) && !has(&h, FLIGHT_STYLE_STEADY));
+    assert_eq!(saved_style(&h), Some(FLIGHT_STYLE_SKYRIDING));
+    mount(&mut h);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert!(has(&h, SKYRIDING) && !has(&h, STANDARD_FLYING));
+    assert!(motion(&h).contains(PlayerMotion::CAN_ADV_FLY));
+    cancel_mount(&mut h);
+
+    switch(&mut h, SWITCH_FLIGHT_STYLE);
+    assert!(has(&h, FLIGHT_STYLE_STEADY) && !has(&h, FLIGHT_STYLE_SKYRIDING));
+    assert_eq!(saved_style(&h), Some(FLIGHT_STYLE_STEADY));
+    mount(&mut h);
+    assert!(has(&h, STANDARD_FLYING) && !has(&h, SKYRIDING));
+    assert!(!motion(&h).contains(PlayerMotion::CAN_ADV_FLY));
+}
+
+/// 460002 always puts the rider on Skyriding and 460003 on Steady.
+#[test]
+fn the_directed_switches_set_their_style() {
+    let Some(mut h) = switcher() else {
+        return;
+    };
+    switch(&mut h, SWITCH_TO_STEADY);
+    assert!(has(&h, FLIGHT_STYLE_STEADY) && !has(&h, FLIGHT_STYLE_SKYRIDING));
+    assert_eq!(saved_style(&h), Some(FLIGHT_STYLE_STEADY));
+    switch(&mut h, SWITCH_TO_SKYRIDING);
+    switch(&mut h, SWITCH_TO_SKYRIDING);
+    assert!(has(&h, FLIGHT_STYLE_SKYRIDING) && !has(&h, FLIGHT_STYLE_STEADY));
+    assert_eq!(saved_style(&h), Some(FLIGHT_STYLE_SKYRIDING));
+}
+
+/// A character saved on Skyriding enters the world on Flight Style: Skyriding instead of
+/// Steady.
+#[test]
+fn entering_the_world_restores_the_saved_flight_style() {
+    let Some(mut h) = rider(225, true, &[]) else {
+        return;
+    };
+    let db = crate::persistence::temp_database();
+    crate::persistence_progression::save_flight_style(&db, CHARACTER, FLIGHT_STYLE_SKYRIDING);
+    h.app
+        .insert_resource(crate::persistence::GameDatabase { db });
+    let player = crate::spell_cast::test_harness::spawn_player(&mut h.app, 1, 5.0);
+    h.app
+        .world_mut()
+        .entity_mut(player)
+        .insert(crate::persistence::ClientId(CHARACTER));
+    h.advance(2);
+    let world = h.app.world();
+    assert!(has_aura(world, player, FLIGHT_STYLE_SKYRIDING));
+    assert!(!has_aura(world, player, FLIGHT_STYLE_STEADY));
+}

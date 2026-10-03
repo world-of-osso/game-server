@@ -18,11 +18,16 @@
 //! - ADV_FLYING 446 (`HandleModAdvFlying` :2986-2995 → `SetCanFly`, `SetCanAdvFly`): while
 //!   on, `PlayerMotion::CAN_FLY | CAN_ADV_FLY`, the Skyriding capability's aura 406095;
 //!   losing it drops `ADV_FLYING`.
-//! - Every player carries Flight Style: Steady 404468 (`Player::_LoadAuras`,
-//!   Player.cpp:19127 `AddAura(404468)`), which the steady flight capabilities require.
-//!   Skyriding capability 494 needs Skyriding Basics 376777 and PlayerCondition 96927
-//!   (NOT Flight Style: Steady); `set_flight_style` swaps 404468 for Flight Style:
-//!   Skyriding 404464 until Retail's toggle spell is modelled.
+//! - Every player carries a Flight Style aura: Steady 404468, which the steady flight
+//!   capabilities require, or Skyriding 404464. Skyriding capability 494 needs Skyriding
+//!   Basics 376777 and PlayerCondition 96927 (NOT Flight Style: Steady). TrinityCore always
+//!   adds Steady on login (`Player::_LoadAuras`, Player.cpp:19126-19127, "TODO: finish
+//!   dragonriding"); Retail keeps the style across logins, so the server saves it per
+//!   character (redb `character_flight_style`) and enters the world on the saved one.
+//!   Switch Flight Style (436854 toggles, 460002 to Skyriding, 460003 to Steady) has only a
+//!   DUMMY effect, so a spell script switches (`spell_cast::scripts`); the next mount picks
+//!   its capability from the new aura (both auras are DUMMY auras, which TrinityCore's
+//!   `UpdateMountCapability` does not follow).
 //!
 //! Not modelled: `AreaTable.MountFlags` (the server has no area table, so ground and flying
 //! capabilities are allowed everywhere), `ReqAreaID` capabilities (never selected), the
@@ -412,7 +417,7 @@ fn cast_on_self(world: &mut World, unit: Entity, spell_id: u32) {
         .and_then(|store| store.get(spell_id))
         .map(super::aura_effect_mask)
     else {
-        warn!("Mount capability aura {spell_id} not found");
+        warn!("Self-cast aura spell {spell_id} not found");
         return;
     };
     super::apply_aura(
@@ -550,30 +555,25 @@ pub(super) fn flight(auras: &ActiveAuras) -> Flight {
     }
 }
 
-/// Players entering the world get Flight Style: Steady (`Player::_LoadAuras`).
+/// Players entering the world get their saved Flight Style, Steady before they first
+/// switched (`Player::_LoadAuras`).
 pub(super) fn apply_flight_style(
     world: &mut World,
-    entered: &mut QueryState<Entity, (With<Player>, Added<ActiveAuras>)>,
+    entered: &mut QueryState<
+        (Entity, Option<&crate::persistence::ClientId>),
+        (With<Player>, Added<ActiveAuras>),
+    >,
 ) {
-    let players: Vec<Entity> = entered.iter(world).collect();
-    let Some(mask) = world
-        .get_resource::<crate::spell_info::SpellStore>()
-        .and_then(|store| store.get(FLIGHT_STYLE_STEADY))
-        .map(super::aura_effect_mask)
-    else {
-        return;
-    };
-    for player in players {
-        super::apply_aura(
-            world,
-            &AuraApplication {
-                caster: player,
-                target: player,
-                spell_id: FLIGHT_STYLE_STEADY,
-                effect_mask: mask,
-                source: AuraSource::Cast,
-            },
-        );
+    let players: Vec<(Entity, Option<u64>)> = entered
+        .iter(world)
+        .map(|(player, character)| (player, character.map(|character| character.0)))
+        .collect();
+    for (player, character) in players {
+        let saved = character.and_then(|character| {
+            let db = &world.get_resource::<crate::persistence::GameDatabase>()?.db;
+            crate::persistence_progression::load_flight_style(db, character)
+        });
+        cast_on_self(world, player, saved.unwrap_or(FLIGHT_STYLE_STEADY));
     }
 }
 
@@ -589,8 +589,8 @@ pub enum FlightStyle {
     Skyriding,
 }
 
-/// Put the player on `style`: its Flight Style aura replaces the other one. Part 1's
-/// stand-in for Retail's flight style toggle; the next mount picks its capability.
+/// Put the player on `style`: its Flight Style aura replaces the other one and is saved
+/// for the character's next login. The next mount picks its capability.
 pub fn set_flight_style(world: &mut World, unit: Entity, style: FlightStyle) {
     let (on, off) = match style {
         FlightStyle::Steady => (FLIGHT_STYLE_STEADY, FLIGHT_STYLE_SKYRIDING),
@@ -599,11 +599,12 @@ pub fn set_flight_style(world: &mut World, unit: Entity, style: FlightStyle) {
     super::remove_auras(world, unit, RemoveReason::Cancelled, |aura| {
         aura.spell_id == off
     });
-    if world
-        .get::<ActiveAuras>(unit)
-        .is_some_and(|auras| auras.iter().any(|aura| aura.spell_id == on))
-    {
-        return;
+    if !super::has_aura(world, unit, on) {
+        cast_on_self(world, unit, on);
     }
-    cast_on_self(world, unit, on);
+    if let Some(character) = world.get::<crate::persistence::ClientId>(unit)
+        && let Some(db) = world.get_resource::<crate::persistence::GameDatabase>()
+    {
+        crate::persistence_progression::save_flight_style(&db.db, character.0, on);
+    }
 }
