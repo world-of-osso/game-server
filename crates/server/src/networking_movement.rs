@@ -144,7 +144,6 @@ pub(super) fn apply_movement_input(
     // at every flying report).
     let flown = flying || motion.contains(PlayerMotion::FLYING);
     let skyriding = flown && motion.contains(PlayerMotion::CAN_ADV_FLY);
-    let mut changes = update_rotation_and_speed(input, flown, auras, &mut rotation, &mut speed);
     let current = Vec3::new(position.x, position.y, position.z);
     let reported = Vec3::from(input.position);
     let swimming = !flown
@@ -168,24 +167,24 @@ pub(super) fn apply_movement_input(
         Some(energy) => skyriding_leg(current, reported, energy),
         None => Leg {
             target: reported,
-            speed: speed.0,
+            speed: compute_movement_speed(input, flown, auras, direction_length(&input.direction)),
             cut: false,
         },
     };
     let (mut next, behind) = move_toward_reported(current, leg.target, leg.speed, travel, |secs| {
         clocks.grant(player_entity, secs)
     });
-    changes.behind = behind || leg.cut;
-    let next_motion = if changes.behind {
-        let en_route = PlayerInput {
-            flying: flown,
-            ..input.clone()
-        };
-        input_motion(&en_route, *motion)
-    } else {
-        input_motion(input, *motion)
+    let behind = behind || leg.cut;
+    // Short of a landing report the player still flies.
+    let state = PlayerInput {
+        flying: if behind { flown } else { flying },
+        ..input.clone()
     };
-    changes = set_motion(&mut motion, next_motion).merge(changes);
+    let next_motion = input_motion(&state, *motion);
+    let mut changes =
+        update_rotation_and_speed(&state, state.flying, auras, &mut rotation, &mut speed)
+            .merge(set_motion(&mut motion, next_motion));
+    changes.behind = behind;
     next.y = match terrain {
         Some((ground, map_id)) if flown => flight_height(ground, map_id, current, next),
         Some((ground, map_id)) => {

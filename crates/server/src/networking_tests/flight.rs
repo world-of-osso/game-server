@@ -177,4 +177,5 @@ fn a_stalled_flyer_landing_ahead_of_the_server_lands_without_falling() {
     let health = app.world().get::<Health>(player).unwrap();
     assert_eq!(health.current, health.max);
     assert!(!motion(&app, player).contains(PlayerMotion::FLYING));
+    assert_eq!(app.world().get::<MovementSpeed>(player).unwrap().0, 7.0);
 }
