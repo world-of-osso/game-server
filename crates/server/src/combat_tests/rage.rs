@@ -16,15 +16,20 @@ fn warrior(known: &[u32]) -> Option<Harness> {
 }
 
 /// The caster attacks through `CMSG_ATTACK_SWING`, arriving 3 frames later; the
-/// NPC through its AI target, in the next frame.
+/// NPC through its AI target, in the next frame. The NPC gets MOD_HIT_CHANCE 100:
+/// a creature's swing otherwise misses 5% of the time (`UNIT_MISS_CHANCE_PCT`,
+/// Unit::MeleeSpellMissChance) and a miss does no damage, so gives no rage.
 fn attack(h: &mut Harness, attacker: Entity, target: Entity) {
     if attacker == h.caster {
         h.attack(target);
     } else {
-        h.app
-            .world_mut()
-            .entity_mut(attacker)
-            .insert(CombatTarget(Some(target)));
+        h.app.world_mut().entity_mut(attacker).insert((
+            CombatTarget(Some(target)),
+            crate::auras::AuraStatMods {
+                melee_hit_chance_pct: 100.0,
+                ..Default::default()
+            },
+        ));
     }
 }
 
