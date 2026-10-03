@@ -427,3 +427,26 @@ fn passive_stops_an_ordered_attack() {
     assert_eq!(p.pet_victim(), None);
     assert_eq!(p.last_bar().react_state, REACT_PASSIVE);
 }
+
+/// Diseased Young Wolf's FactionTemplate 32: neutral to the Human hunter.
+const NEUTRAL_BEAST: u32 = 32;
+
+#[test]
+fn attack_sends_the_wolf_at_a_neutral_beast() {
+    let Some(mut p) = hunter_with_wolf() else {
+        return;
+    };
+    let kobold = p.h.npc;
+    p.h.app
+        .world_mut()
+        .entity_mut(kobold)
+        .insert(UnitFactionTemplate(NEUTRAL_BEAST));
+    p.attack_kobold();
+    p.advance(100);
+    assert_eq!(p.pet_victim(), Some(kobold));
+    assert!(p.pet_in_combat());
+    assert!(
+        p.h.health(kobold) < 5_000.0,
+        "the neutral beast took no bite"
+    );
+}

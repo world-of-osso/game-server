@@ -9,6 +9,7 @@ use std::collections::HashMap;
 
 use bevy::prelude::*;
 use rusqlite::{Connection, params};
+use shared::components::UnitFlags;
 
 pub use crate::faction_reaction::Reaction;
 use crate::faction_reaction::{self, FactionTemplateEntry};
@@ -53,6 +54,16 @@ pub(crate) fn faction_template_for_race(race: u8) -> u32 {
         26 => 2402,            // Pandaren (Horde)
         _ => 0,
     }
+}
+
+/// `UNIT_FLAG_PLAYER_CONTROLLED`: a unit a player controls, such as its pet
+/// (`Unit::SetMinion`).
+pub(crate) const UNIT_FLAG_PLAYER_CONTROLLED: u32 = 0x0000_0008;
+
+/// `Unit::GetAffectingPlayer` is set: a player, or a unit a player controls. Such a unit
+/// takes the player side of `can_attack` (`_IsValidAttackTarget`'s PvC rules).
+pub(crate) fn player_affected(is_player: bool, flags: Option<&UnitFlags>) -> bool {
+    is_player || flags.is_some_and(|flags| flags.0 & UNIT_FLAG_PLAYER_CONTROLLED != 0)
 }
 
 /// Faction identity of one unit for attack/assist checks.

@@ -593,7 +593,10 @@ fn valid_attack_target(world: &World, attacker: Entity, target: Entity) -> bool 
         template: world
             .get::<UnitFactionTemplate>(unit)
             .map_or(0, |template| template.0),
-        is_player: world.get::<Player>(unit).is_some(),
+        is_player: crate::faction::player_affected(
+            world.get::<Player>(unit).is_some(),
+            world.get::<UnitFlags>(unit),
+        ),
     };
     templates.can_attack(faction(attacker), faction(target))
 }

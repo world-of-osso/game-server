@@ -10,6 +10,7 @@ References: TrinityCore a352b1fa `WorldSession::HandlePetAction`/`HandlePetActio
 - [x] The bar: Attack, Follow, Move To, four spell slots, Assist, Defensive, Passive. Spell slots take the family's level-up spells (CreatureFamily `SkillLine_0/1`, `AutomaticCharLevel`, spell level up to the pet's), highest level first; non-passive only; `ACT_ENABLED`/`ACT_DISABLED`/`ACT_PASSIVE` by `NO_AUTOCAST_AI`/`AUTOCAST_OFF_BY_DEFAULT`. A level 10 wolf: Dash, Bite, Growl.
 - [x] The owner gets `PetSpells` (bar, command and react state) when the pet comes out and after every order; `PetClearSpells` when it is dismissed.
 - [x] `PetAction` from a mounted owner, for another unit or a dead pet is ignored; spell buttons do nothing yet.
+- [x] A pet (`UNIT_FLAG_PLAYER_CONTROLLED`) takes the player side of the faction attack rules (`GetAffectingPlayer`): it attacks neutral creatures as its owner may, and they fight it back.
 - [x] Attack: a target the owner may attack; the pet chases and auto-attacks it (`UNIT_FLAG_PET_IN_COMBAT` while it goes after a target), even when passive.
 - [x] Follow: stop attacking, follow the owner; attack nothing until back with it.
 - [x] Stay: hold where it stands; attack only what is in melee reach unless ordered.

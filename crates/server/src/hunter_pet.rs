@@ -48,8 +48,6 @@ pub const EFFECT_SUMMON_PET: u32 = 56;
 pub const EFFECT_DISMISS_PET: u32 = 102;
 /// `SPELL_AURA_ALLOW_TAME_PET_TYPE`: `Player::CanTameExoticPets`.
 const AURA_ALLOW_TAME_PET_TYPE: u32 = 146;
-/// `UNIT_FLAG_PLAYER_CONTROLLED` (`InitTamedPet`).
-const UNIT_FLAG_PLAYER_CONTROLLED: u32 = 0x0000_0008;
 /// `DEFAULT_PLAYER_COMBAT_REACH`: `GetClosePoint(..., owner->GetCombatReach())`.
 const OWNER_COMBAT_REACH: f32 = 1.5;
 
@@ -473,7 +471,7 @@ fn spawn_pet(
             classification,
             UnitPowers::default(),
             faction,
-            UnitFlags(UNIT_FLAG_PLAYER_CONTROLLED),
+            UnitFlags(crate::faction::UNIT_FLAG_PLAYER_CONTROLLED),
             NpcFlags(0),
             CreatureMotion::Still,
             MovementSpeed(0.0),
