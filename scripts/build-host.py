@@ -4,11 +4,11 @@
 import argparse
 import importlib.util
 import os
-from pathlib import Path
 import shutil
 import subprocess
 import sys
 import tempfile
+from pathlib import Path
 
 
 SCRIPTS = Path(__file__).resolve().parent

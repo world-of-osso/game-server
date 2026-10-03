@@ -2,9 +2,9 @@
 """Watch server sources and restart the native build/run loop on changes."""
 
 import os
-from pathlib import Path
 import shlex
 import sys
+from pathlib import Path
 
 
 if __name__ == "__main__":

@@ -2,7 +2,6 @@
 
 import json
 import os
-from pathlib import Path
 import shlex
 import shutil
 import signal
@@ -11,6 +10,7 @@ import sys
 import tempfile
 import time
 import unittest
+from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -159,6 +159,7 @@ class DevLoopTests(unittest.TestCase):
             capture_output=True,
             text=True,
             timeout=4,
+            check=False,
         )
         self.assertEqual(result.returncode, 0, result.stderr)
         command = json.loads(self.events.read_text())

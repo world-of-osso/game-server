@@ -2,11 +2,11 @@
 """Retry the selected native server build/run after the existing 20-second delay."""
 
 import os
-from pathlib import Path
 import signal
 import subprocess
 import sys
 import threading
+from pathlib import Path
 
 
 SCRIPTS = Path(__file__).resolve().parent

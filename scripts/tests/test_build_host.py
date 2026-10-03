@@ -3,7 +3,6 @@
 import hashlib
 import json
 import os
-from pathlib import Path
 import shutil
 import signal
 import subprocess
@@ -11,6 +10,7 @@ import sys
 import tempfile
 import time
 import unittest
+from pathlib import Path
 
 
 ADAPTER = Path(__file__).resolve().parents[1] / "build-host.py"
@@ -141,7 +141,7 @@ class BuildHostTests(unittest.TestCase):
         self.home.mkdir()
         self.env = dict(os.environ)
         for name in list(self.env):
-            if name.startswith("GAME_SERVER_") or name.startswith("DEPOT_SIBLING_"):
+            if name.startswith(("GAME_SERVER_", "DEPOT_SIBLING_")):
                 del self.env[name]
         self.env.update(
             HOME=str(self.home),
@@ -167,7 +167,11 @@ class BuildHostTests(unittest.TestCase):
         if host is not None:
             command += ["--build-host", host]
         return subprocess.run(
-            command + list(args), env=self.env, capture_output=True, text=True
+            command + list(args),
+            env=self.env,
+            capture_output=True,
+            text=True,
+            check=False,
         )
 
     def observed(self, result):
@@ -204,6 +208,7 @@ class BuildHostTests(unittest.TestCase):
                     capture_output=True,
                     text=True,
                     timeout=3,
+                    check=False,
                 )
             except subprocess.TimeoutExpired:
                 self.fail("check blocked behind a running app's caller lock")
