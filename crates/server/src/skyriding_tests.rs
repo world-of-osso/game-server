@@ -3,6 +3,7 @@
 //! movement bound takes, and Second Wind.
 
 use shared::components::PlayerMotion;
+use shared::protocol::ActionRef;
 use shared::skyriding::{
     AERIAL_HALT, LAUNCH_SPEED, SKYWARD_ASCENT, SURGE_FORWARD, SURGE_SPEED, WHIRLING_SURGE,
     WHIRLING_SURGE_SPEED,
@@ -49,12 +50,10 @@ fn skyrider() -> Option<Harness> {
         .extend([SKYRIDING_BASICS, AERIAL_HALT, WHIRLING_SURGE, SECOND_WIND]);
     // Only what the rider learned counts as known: the Golden Gryphon, not the harness's
     // other fixture spells.
-    h.app
-        .world_mut()
-        .entity_mut(h.caster)
-        .insert(crate::class_progression::KnownSpells::fixture(vec![
-            GOLDEN_GRYPHON,
-        ]));
+    h.app.world_mut().entity_mut(h.caster).insert((
+        crate::class_progression::KnownSpells::fixture(vec![GOLDEN_GRYPHON]),
+        crate::class_progression::ActionBar::default(),
+    ));
     set_flight_style(h.app.world_mut(), h.caster, FlightStyle::Skyriding);
     mount(&mut h);
     let motion = *h.app.world().get::<PlayerMotion>(h.caster).unwrap();
@@ -83,6 +82,9 @@ fn vigor(h: &Harness) -> Option<(u32, u8, u8, u32)> {
         .map(|c| (c.spell_id, c.current, c.max, c.recharge_ms))
 }
 
+/// Skyriding Charges' `ChargeCategory`.
+const SKYRIDING_CHARGES: u32 = 2391;
+
 fn failures(h: &Harness) -> Vec<CastFailReason> {
     h.inbox.failed.iter().map(|f| f.reason).collect()
 }
@@ -109,7 +111,29 @@ fn skyward_ascent_shares_the_charges_and_flaps_upward() {
     h.cast_and_deliver(SKYWARD_ASCENT, None);
     assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
     assert_eq!(vigor(&h), Some((SKYWARD_ASCENT, 4, 6, RECHARGE_MS)));
+    let categories: Vec<u32> = h.inbox.charges.iter().map(|c| c.category).collect();
+    assert_eq!(categories, [SKYRIDING_CHARGES, SKYRIDING_CHARGES]);
     assert_eq!(impulse(&h), Some(LAUNCH_SPEED));
+}
+
+/// Gaining the Skyriding aura's ADV_FLYING puts the abilities the rider knows on bonus bar 5
+/// (slots 120..=131, the page the main bar shows while skyriding), in Retail order, and
+/// sends the bar.
+#[test]
+fn a_skyriding_mount_fills_bonus_bar_5_with_the_known_abilities() {
+    let Some(h) = skyrider() else {
+        return;
+    };
+    let expected = [
+        (120, SURGE_FORWARD),
+        (121, SKYWARD_ASCENT),
+        (122, AERIAL_HALT),
+        (123, WHIRLING_SURGE),
+        (124, SECOND_WIND),
+    ]
+    .map(|(slot, spell)| (slot, ActionRef::Spell(spell)));
+    let sent = h.inbox.bars.last().expect("ActionBarSnapshot");
+    assert_eq!(sent.slots, expected);
 }
 
 #[test]

@@ -33,8 +33,9 @@ use crate::trait_config::{
 pub const SPEC_UNLOCK_LEVEL: u8 = 10;
 /// `ChrSpecialization.OrderIndex` of the per-class "Initial" spec.
 const INITIAL_SPEC_ORDER_INDEX: u32 = 4;
-/// Action bar slots 0..=119.
-pub const ACTION_BAR_SLOTS: u8 = 120;
+/// Action bar slots 0..=179 (TrinityCore Player.h `MAX_ACTION_BUTTONS` 180): the six
+/// pages, the bonus bars 1..=5 (slots 72..=131) and the override pages after them.
+pub const ACTION_BAR_SLOTS: u8 = 180;
 /// Main action bar slots 0..=11, where learned spells are pushed.
 const MAIN_BAR_SLOTS: u8 = 12;
 /// SkillLineAbilityAcquireMethod AutomaticSkillRank, AutomaticCharLevel and
@@ -920,6 +921,33 @@ fn apply_action_button(
             bar.0.remove(&request.slot);
             Ok(())
         }
+    }
+}
+
+/// Put each action on its slot when the slot is empty and the action is not on the bar
+/// yet, and send the owner the bar when any was placed. Not persisted: the login prune
+/// keeps only class progression spells (`prune_unknown_spells`).
+pub(crate) fn place_actions(world: &mut World, unit: Entity, actions: &[(u8, ActionRef)]) {
+    let Some(mut bar) = world.get_mut::<ActionBar>(unit) else {
+        return;
+    };
+    let mut placed = false;
+    for &(slot, action) in actions {
+        if bar.0.contains_key(&slot) || bar.0.values().any(|existing| *existing == action) {
+            continue;
+        }
+        bar.0.insert(slot, action);
+        placed = true;
+    }
+    if !placed {
+        return;
+    }
+    let snapshot = bar_snapshot(&bar);
+    let Some(connection) = crate::spell_cast::owner_connection(world, unit) else {
+        return;
+    };
+    if let Some(mut sender) = world.get_mut::<MessageSender<ActionBarSnapshot>>(connection) {
+        sender.send::<TalentChannel>(snapshot);
     }
 }
 

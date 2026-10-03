@@ -524,8 +524,12 @@ pub(super) fn reconcile_can_fly(world: &mut World, unit: Entity, flight: Flight)
     if flags == motion.0 {
         return;
     }
+    let gained_adv_fly = !motion.contains(PlayerMotion::CAN_ADV_FLY) && flight.can_adv_fly;
     motion.0 = flags;
     mark_dirty(world, unit);
+    if gained_adv_fly {
+        crate::skyriding::fill_skyriding_bar(world, unit);
+    }
 }
 
 /// What a unit's auras let it do in the air.

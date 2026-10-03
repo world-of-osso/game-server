@@ -101,6 +101,7 @@ pub(crate) struct Inbox {
     pub(crate) failed: Vec<CastFailed>,
     pub(crate) cooldowns: Vec<SpellCooldownUpdate>,
     pub(crate) charges: Vec<SpellChargesUpdate>,
+    pub(crate) bars: Vec<shared::protocol::ActionBarSnapshot>,
     pub(crate) log: Vec<CombatLogEvent>,
     pub(crate) attack_starts: Vec<AttackStart>,
     pub(crate) attack_stops: Vec<AttackStopped>,
@@ -213,6 +214,10 @@ pub(crate) fn spawn_peer_connection(app: &mut App, player: Entity, peer: u64) ->
                 MessageReceiver::<AttackStopped>::default(),
                 MessageSender::<SetTarget>::default(),
                 MessageReceiver::<SetTarget>::default(),
+            ),
+            (
+                MessageSender::<shared::protocol::ActionBarSnapshot>::default(),
+                MessageReceiver::<shared::protocol::ActionBarSnapshot>::default(),
             ),
         ))
         .id()
@@ -403,6 +408,12 @@ impl Harness {
             inbox
                 .charges
                 .extend(drain::<SpellChargesUpdate>(&mut self.app, self.connection));
+            inbox
+                .bars
+                .extend(drain::<shared::protocol::ActionBarSnapshot>(
+                    &mut self.app,
+                    self.connection,
+                ));
             inbox
                 .log
                 .extend(drain::<CombatLogEvent>(&mut self.app, self.connection));

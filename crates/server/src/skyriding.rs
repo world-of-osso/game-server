@@ -10,8 +10,37 @@
 //! (`shared::skyriding::ability_impulse`) raises the movement bound of the skyrider
 //! (`networking_movement::MovementClocks`), so the server follows the faster glider.
 use bevy::prelude::*;
+use shared::protocol::ActionRef;
+use shared::skyriding::{AERIAL_HALT, SKYWARD_ASCENT, SURGE_FORWARD, WHIRLING_SURGE};
 
 use crate::spell_info::SpellInfo;
+
+/// Second Wind: MODIFY_CHARGES 293, one Skyriding Charge back.
+const SECOND_WIND: u32 = 425_782;
+/// The Skyriding abilities in their bar order (team-lead's Retail order; no DB2 table or
+/// TrinityCore code lists the Skyriding bar).
+const SKYRIDING_BAR: [u32; 5] = [
+    SURGE_FORWARD,
+    SKYWARD_ASCENT,
+    AERIAL_HALT,
+    WHIRLING_SURGE,
+    SECOND_WIND,
+];
+/// First slot of bonus bar 5, the page the main bar shows while skyriding:
+/// `(NUM_ACTIONBAR_PAGES + GetBonusBarOffset() - 1) * NUM_ACTIONBAR_BUTTONS`
+/// (Blizzard_Tutorials_RPE.lua:446, `NUM_ACTIONBAR_PAGES` 6, offset 5, 12 buttons).
+const SKYRIDING_BAR_FIRST_SLOT: u8 = (6 + 5 - 1) * 12;
+
+/// The unit can now skyride (an ADV_FLYING aura, `auras::mount::reconcile_can_fly`): put
+/// the Skyriding abilities it knows on the Skyriding bar.
+pub fn fill_skyriding_bar(world: &mut World, unit: Entity) {
+    let actions: Vec<(u8, ActionRef)> = (SKYRIDING_BAR_FIRST_SLOT..)
+        .zip(SKYRIDING_BAR)
+        .filter(|&(_, spell)| crate::spell_cast::caster_knows_spell(world, unit, spell))
+        .map(|(slot, spell)| (slot, ActionRef::Spell(spell)))
+        .collect();
+    crate::class_progression::place_actions(world, unit, &actions);
+}
 
 /// Flap impulse, yards/s, a Skyriding ability gave the unit since its movement last ran.
 #[derive(Component, Debug, Clone, Copy, PartialEq)]

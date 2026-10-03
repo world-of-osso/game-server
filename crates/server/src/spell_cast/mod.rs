@@ -191,6 +191,8 @@ impl CastFailure {
 struct ChargeState {
     /// The spell that last used a charge: the charge updates name it.
     spell_id: u32,
+    /// Its `ChargeCategory` (the `SpellHistory::charges` key).
+    category: u32,
     max: u8,
     used: u8,
     recharge_secs: f64,
@@ -273,6 +275,7 @@ impl SpellHistory {
             .entry(categories.charge_category)
             .or_insert(ChargeState {
                 spell_id: spell.id,
+                category: categories.charge_category,
                 max,
                 used: 0,
                 recharge_secs: 0.0,
@@ -396,7 +399,7 @@ fn max_targets(spell: &SpellInfo) -> u32 {
 
 // --- Messaging ---
 
-fn owner_connection(world: &mut World, player: Entity) -> Option<Entity> {
+pub(crate) fn owner_connection(world: &mut World, player: Entity) -> Option<Entity> {
     let mut connections = world.query_filtered::<(Entity, &PlayerLink), With<Authenticated>>();
     connections
         .iter(world)
@@ -708,7 +711,7 @@ fn request_cast(
 
 /// Player requests are limited to known class and profession spells; NPC
 /// casters are exempt.
-fn caster_knows_spell(world: &mut World, caster: Entity, spell_id: u32) -> bool {
+pub(crate) fn caster_knows_spell(world: &mut World, caster: Entity, spell_id: u32) -> bool {
     if world.get::<Npc>(caster).is_some()
         || world
             .get::<crate::profession::PlayerProfessions>(caster)
@@ -1647,6 +1650,7 @@ fn send_charges(world: &mut World, unit: Entity, charges: &ChargeState, now: f64
         unit,
         SpellChargesUpdate {
             spell_id: charges.spell_id,
+            category: charges.category,
             current: charges.max - charges.used,
             max: charges.max,
             recharge_ms: (charges.recharge_secs * 1000.0) as u32,

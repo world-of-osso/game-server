@@ -617,7 +617,7 @@ fn set_action_button_validates_slot_and_known_spell() {
         &mut app,
         player,
         SetActionButton {
-            slot: 120,
+            slot: 180,
             action: Some(ActionRef::Spell(1464)),
         },
     );
@@ -630,7 +630,7 @@ fn set_action_button_validates_slot_and_known_spell() {
         &mut app,
         player,
         SetActionButton {
-            slot: 119,
+            slot: 179,
             action: Some(ActionRef::Item(6948)),
         },
     );
@@ -655,7 +655,7 @@ fn set_action_button_validates_slot_and_known_spell() {
         stored(&app, 3).action_bar,
         vec![
             (7, ActionRefData::Spell(1464)),
-            (119, ActionRefData::Item(6948)),
+            (179, ActionRefData::Item(6948)),
         ]
     );
 }
