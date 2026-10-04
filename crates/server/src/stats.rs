@@ -56,6 +56,8 @@ pub struct StatModifiers {
     /// OVERRIDE_SPELL_POWER_BY_AP_PCT: when positive, spell and healing power are
     /// this percent of attack power.
     pub spell_power_from_ap_pct: f32,
+    /// MOD_BLOCK_PERCENT: added to block chance (`player_defense`).
+    pub block_pct: f32,
 }
 
 /// The spec's main stat: gear Str/Agi/Int count only when they match it.
@@ -379,14 +381,17 @@ pub struct DefenseInputs {
     pub has_weapon: bool,
     /// The equipped shield's armor, if any.
     pub shield_armor: Option<f32>,
+    /// Σ MOD_BLOCK_PERCENT (`StatModifiers::block_pct`).
+    pub block_pct: f32,
 }
 
 /// TrinityCore master's player avoidance: `Player::UpdateDodgePercentage`,
 /// `UpdateParryPercentage` and `UpdateBlockPercentage` (StatSystem.cpp:490-507,
-/// 657-715) without aura modifiers. Dodge is its rating after diminishing returns
+/// 657-715); of their aura modifiers only MOD_BLOCK_PERCENT. Dodge is its rating after diminishing returns
 /// (`GetDodgeFromAgility` gives nothing, Player.cpp:5031); parry 5% plus its rating after
 /// diminishing returns, for a class with a parry cap that can parry and holds a weapon;
-/// block 5% plus its rating, for one that can block and holds a shield.
+/// block 5% plus MOD_BLOCK_PERCENT plus its rating, for one that can block and holds a
+/// shield (StatSystem.cpp:496-501, Unit.cpp:2843-2846).
 pub fn player_defense(
     class: u8,
     level: u8,
@@ -425,7 +430,7 @@ pub fn player_defense(
         dodge: diminished(dodge_cap, 0.0, ratings.dodge / DODGE_RATING[level]),
         parry,
         block: shield_armor.map_or(0.0, |_| {
-            BASE_BLOCK_PCT + ratings.block / BLOCK_RATING[level]
+            BASE_BLOCK_PCT + inputs.block_pct + ratings.block / BLOCK_RATING[level]
         }),
         shield_block: inputs
             .shield_armor
@@ -637,6 +642,7 @@ pub(crate) fn update_character_stats(
                 can_block: knows_effect(known, spells.as_deref(), EFFECT_BLOCK),
                 has_weapon: gear.has_weapon,
                 shield_armor: gear.shield_armor,
+                block_pct: mods.map_or(0.0, |mods| mods.block_pct),
             },
         );
         if *unit_stats != stats.primary {

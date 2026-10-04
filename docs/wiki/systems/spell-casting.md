@@ -73,7 +73,7 @@ The caster's [[auras]] spell modifiers (107/108/218/219) adjust cast time (Chang
 | School lockouts | school bit | interrupts |
 
 - `SpellCooldownUpdate` carries `max(recovery, category recovery)`.
-- Haste does not scale the GCD.
+- Haste scales a 750-1500 ms GCD only through MOD_GLOBAL_COOLDOWN_BY_HASTE_REGEN 417 whose class mask affects the spell: GCD ÷ (1 + haste), kept within 750-1500 ms (Spell.cpp:9220-9224; paladin passive 137026 for Divine Toll and Hammer of Light). The category-133 spell-haste rule for non-melee spells (Spell.cpp:9209-9218) is not modelled.
 
 ## Messages
 

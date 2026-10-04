@@ -22,6 +22,8 @@ Server-side aura runtime in `crates/server/src/auras/`: aura instances on every 
 - [x] Track unhandled aura types (logged once per spell) so they still show in the UI.
 - [x] Fail casts under stun, silence and pacify with `CastFailReason::Stunned`/`Silenced`/`Pacified`, and under confuse with `NotSupported` ("Can't do that while confused": shared-protocol has no `Confused` reason).
 - [x] Apply talent passives (talent spells are in `KnownSpells`).
+- [x] MOD_BLOCK_PERCENT 51: add to a player's block chance when it can block and holds a shield (StatSystem.cpp:496-501); creatures' block ignores it.
+- [x] MOD_GLOBAL_COOLDOWN_BY_HASTE_REGEN 417: divide the GCD of a spell its class mask affects by 1 + haste, within 750-1500 ms (Spell.cpp:9220-9224).
 
 ## How it works
 

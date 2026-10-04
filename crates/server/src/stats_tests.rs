@@ -416,6 +416,7 @@ fn player_avoidance_follows_trinitycore_master() {
         can_block: true,
         has_weapon: true,
         shield_armor: Some(100.0),
+        block_pct: 0.0,
     };
     let none = player_defense(WARRIOR, 10, &CombatRatings::default(), inputs);
     assert_eq!(

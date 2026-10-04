@@ -86,17 +86,38 @@ fn is_pct(aura_type: u32) -> bool {
 /// Whether a spell-mod effect of `aura` applies to `spell`.
 fn affects(aura: &AuraInstance, effect: &AuraEffectState, spell: &SpellInfo) -> bool {
     match effect.aura_type {
-        ADD_FLAT_MODIFIER | ADD_PCT_MODIFIER => {
-            let Some(options) = spell.class_options.as_ref() else {
-                return false;
-            };
-            aura.class_set != 0
-                && options.spell_class_set == aura.class_set
-                && (0..4).any(|word| options.spell_class_mask[word] & effect.class_mask[word] != 0)
-        }
+        ADD_FLAT_MODIFIER | ADD_PCT_MODIFIER => class_mask_affects(aura, effect, spell),
         _ => u32::try_from(effect.misc_values[1])
             .is_ok_and(|label| spell.labels.binary_search(&label).is_ok()),
     }
+}
+
+/// `AuraEffect::IsAffectingSpell` (SpellAuraEffects.cpp:1286-1296): `spell` is of the
+/// aura's `SpellClassSet` and shares a bit of the effect's `SpellClassMask`.
+fn class_mask_affects(aura: &AuraInstance, effect: &AuraEffectState, spell: &SpellInfo) -> bool {
+    let Some(options) = spell.class_options.as_ref() else {
+        return false;
+    };
+    aura.class_set != 0
+        && options.spell_class_set == aura.class_set
+        && (0..4).any(|word| options.spell_class_mask[word] & effect.class_mask[word] != 0)
+}
+
+/// `Unit::HasAuraTypeWithAffectMask` (Unit.cpp:4852-4858): `unit` has an `aura_type`
+/// effect whose class mask affects `spell`.
+pub fn has_aura_type_affecting(
+    world: &World,
+    unit: Entity,
+    aura_type: u32,
+    spell: &SpellInfo,
+) -> bool {
+    world.get::<ActiveAuras>(unit).is_some_and(|auras| {
+        auras.iter().any(|aura| {
+            aura.effects.iter().any(|effect| {
+                effect.aura_type == aura_type && class_mask_affects(aura, effect, spell)
+            })
+        })
+    })
 }
 
 /// Spell-mod effects of `auras` for `op` that affect `spell`.

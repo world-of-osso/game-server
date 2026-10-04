@@ -1064,6 +1064,31 @@ fn insert_cast_state(world: &mut World, caster: Entity, spell: &SpellInfo, cast:
     mark_dirty(world, caster);
 }
 
+/// GCD bounds of `Spell::TriggerGlobalCooldown` (Spell.cpp:9192-9193).
+const MIN_GCD_MS: u32 = 750;
+const MAX_GCD_MS: u32 = 1500;
+
+/// MOD_GLOBAL_COOLDOWN_BY_HASTE_REGEN 417 (Spell.cpp:9220-9224): when an aura of that
+/// type affects `spell`, a GCD above 750 ms is multiplied by `ModHasteRegen`
+/// (1 / (1 + haste), Unit::ApplyCastTimePercentMod, Unit.cpp:11058-11071) and kept
+/// within 750-1500 ms.
+fn haste_regen_gcd_ms(world: &World, caster: Entity, spell: &SpellInfo, gcd_ms: u32) -> u32 {
+    if gcd_ms <= MIN_GCD_MS
+        || !spell_mods::has_aura_type_affecting(
+            world,
+            caster,
+            crate::auras::handlers::MOD_GLOBAL_COOLDOWN_BY_HASTE_REGEN,
+            spell,
+        )
+    {
+        return gcd_ms;
+    }
+    let haste = world
+        .get::<CharacterStats>(caster)
+        .map_or(1.0, |stats| 1.0 + stats.haste_pct / 100.0);
+    ((gcd_ms as f32 / haste.max(0.01)) as u32).clamp(MIN_GCD_MS, MAX_GCD_MS)
+}
+
 fn start_gcd(world: &mut World, caster: Entity, spell: &SpellInfo) {
     // Spell::CanHaveGlobalCooldown: only players and their controlled units (a creature
     // with a `CharmInfo`).
@@ -1085,6 +1110,12 @@ fn start_gcd(world: &mut World, caster: Entity, spell: &SpellInfo) {
     )
     .max(0.0)
     .round() as u32;
+    // Only a 750-1500 ms GCD is modified (Spell.cpp:9195-9198).
+    let gcd_ms = if (MIN_GCD_MS..=MAX_GCD_MS).contains(&base_gcd_ms) {
+        haste_regen_gcd_ms(world, caster, spell, gcd_ms)
+    } else {
+        gcd_ms
+    };
     let category = gcd_category(spell);
     if gcd_ms == 0 || category == 0 {
         return;

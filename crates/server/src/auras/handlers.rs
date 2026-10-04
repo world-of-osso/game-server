@@ -52,6 +52,8 @@ pub const MOD_INCREASE_MOUNTED_SPEED: u32 = 32;
 pub const MOD_INCREASE_ENERGY: u32 = 35;
 pub const MOD_SHAPESHIFT: u32 = 36;
 pub const MOD_DECREASE_SPEED: u32 = 33;
+/// SPELL_AURA_MOD_BLOCK_PERCENT (SpellAuraDefines.h:138, TrinityCore a352b1fa).
+pub const MOD_BLOCK_PERCENT: u32 = 51;
 pub const MOD_HIT_CHANCE: u32 = 54;
 pub const MOUNTED: u32 = 78;
 pub const TRANSFORM: u32 = 56;
@@ -110,6 +112,8 @@ pub const MOD_MAX_CHARGES: u32 = 411;
 pub const CHARGE_RECOVERY_MOD: u32 = 453;
 pub const CHARGE_RECOVERY_MULTIPLIER: u32 = 454;
 pub const MOD_ROOT_2: u32 = 455;
+/// SPELL_AURA_MOD_GLOBAL_COOLDOWN_BY_HASTE_REGEN (SpellAuraDefines.h:504, TrinityCore a352b1fa).
+pub const MOD_GLOBAL_COOLDOWN_BY_HASTE_REGEN: u32 = 417;
 pub const MOD_MAX_POWER: u32 = 418;
 pub const SET_POWER_POINT_CHARGE: u32 = 494;
 
@@ -165,6 +169,7 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | MOD_INCREASE_MOUNTED_SPEED
         | MOD_MOUNTED_SPEED_ALWAYS
         | MOD_MOUNTED_FLIGHT_SPEED_ALWAYS
+        | MOD_BLOCK_PERCENT
         | OVERRIDE_SPELL_POWER_BY_AP_PCT => StatMod,
         MOD_INVISIBILITY
         | MOD_UNATTACKABLE
@@ -177,7 +182,8 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         ADD_FLAT_MODIFIER
         | ADD_PCT_MODIFIER
         | ADD_PCT_MODIFIER_BY_SPELL_LABEL
-        | ADD_FLAT_MODIFIER_BY_SPELL_LABEL => SpellMod,
+        | ADD_FLAT_MODIFIER_BY_SPELL_LABEL
+        | MOD_GLOBAL_COOLDOWN_BY_HASTE_REGEN => SpellMod,
         PROC_TRIGGER_SPELL | PROC_TRIGGER_SPELL_WITH_VALUE => ProcTrigger,
         SCHOOL_ABSORB => Absorb,
         SCHOOL_IMMUNITY => SchoolImmunity,

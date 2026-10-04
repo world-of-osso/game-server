@@ -208,10 +208,7 @@ fn paladin_with_shield(spells: &[u32], shield: bool) -> Harness {
     world.insert_resource(crate::item_templates::load_item_templates(&path).unwrap());
     world.insert_resource(crate::item_stats::load_item_scaling_tables(&path).unwrap());
     let items = if shield {
-        vec![(
-            shared::protocol::EquipmentSlot::OffHand,
-            WORN_WOODEN_SHIELD,
-        )]
+        vec![(shared::protocol::EquipmentSlot::OffHand, WORN_WOODEN_SHIELD)]
     } else {
         Vec::new()
     };
