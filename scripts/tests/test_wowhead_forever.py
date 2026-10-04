@@ -70,6 +70,12 @@ class ForeverTests(unittest.TestCase):
         data = b"KNCM" + struct.pack("<I", len(payload)) + payload
         self.assertIsNone(wh.sample_adt(data, 100 - step / 2, 100 - step / 2))
 
+    def test_unrelated_comment_listview_is_not_database_data(self):
+        source = (FIXTURES / "quest-92471.html").read_text()
+        source += "new Listview({template:'comment',id:'comments',data:lv_comments0});"
+        page = wh.parse_page(source, "quest", 92471)
+        self.assertEqual(wh.normalize_quest(page)["id"], 92471)
+
     def test_challenge_is_not_a_cached_page(self):
         with self.assertRaises(ValueError):
             wh.parse_page("<title>Just a moment...</title>", "quest", 92471)
