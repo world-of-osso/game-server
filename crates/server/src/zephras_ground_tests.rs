@@ -37,6 +37,16 @@ fn zephras_ground_centers_and_height_report() {
             "obj0_fdid":files.obj0, "x":x, "y":y, "z":null, "status":"missing_root"});
         if cache.join(format!("terrain/{}.adt", files.root)).is_file() {
             let (terrain, _) = load_terrain(&cache, files.root).unwrap();
+            let center_feet = Vec3::new(x, 0.0, -y);
+            let minimum = ground
+                .min_height(ZEPHRAS_MAP, center_feet)
+                .expect("minimum height");
+            assert!(minimum.is_finite());
+            record["min_height"] = serde_json::json!(minimum);
+            if let Some(liquid) = ground.liquid_at(ZEPHRAS_MAP, center_feet) {
+                assert!(liquid.level.is_finite() && liquid.depth_level.is_finite());
+                record["liquid_level"] = serde_json::json!(liquid.level);
+            }
             let Some(height) = terrain.height_at(x, y) else {
                 record["status"] = serde_json::json!("terrain_hole");
                 records.push(record);
@@ -49,15 +59,7 @@ fn zephras_ground_centers_and_height_report() {
                 panic!("tile {row},{col}: no center support");
             };
             assert!(surface.is_finite());
-            let minimum = ground
-                .min_height(ZEPHRAS_MAP, feet)
-                .expect("minimum height");
-            assert!(minimum.is_finite(), "minimum {minimum}, height {height}");
             record["above_min_height"] = serde_json::json!(height >= minimum);
-            if let Some(liquid) = ground.liquid_at(ZEPHRAS_MAP, feet) {
-                assert!(liquid.level.is_finite() && liquid.depth_level.is_finite());
-                record["liquid_level"] = serde_json::json!(liquid.level);
-            }
             record["z"] = serde_json::json!(height);
             record["ground_z"] = serde_json::json!(surface);
             record["min_height"] = serde_json::json!(minimum);
@@ -73,11 +75,13 @@ fn zephras_ground_centers_and_height_report() {
     }
     assert_eq!(records.len(), ZEPHRAS_TILE_COUNT);
     assert!(supported > 0);
-    let sample = records
-        .iter()
-        .find(|record| record["root_fdid"] == 7_199_999)
-        .unwrap();
-    assert_eq!(sample["status"], "supported", "sample tile: {sample}");
+    for root in [7_199_994, 7_199_999, 7_200_004] {
+        let sample = records
+            .iter()
+            .find(|record| record["root_fdid"] == root)
+            .unwrap();
+        assert_eq!(sample["status"], "supported", "sample tile: {sample}");
+    }
     println!(
         "ZEPHRAS_HEIGHTS={}",
         serde_json::json!({"map_id":ZEPHRAS_MAP,
@@ -95,8 +99,17 @@ fn zephras_sample_placements_and_wmo_groups_parse() {
         ids,
         HashSet::from([333_477, 7_704_156, 7_704_158, 7_749_471])
     );
-    for root in [333_477, 7_704_156, 7_704_158] {
-        let groups = load_wmo_groups(&cache, root).unwrap();
+    for root in [333_477, 7_704_156, 7_704_158, 7_749_471] {
+        let groups = if root == 7_749_471 {
+            // Three groups are absent from local CASC; exercise its available first group.
+            let bytes = read_client_file(&cache, "models", root, "wmo").unwrap();
+            let ids = group_file_data_ids(&bytes).unwrap();
+            assert_eq!(ids.len(), 4);
+            let first = read_client_file(&cache, "models", ids[0], "wmo").unwrap();
+            vec![Arc::new(WmoGroupCollision::parse(&first).unwrap())]
+        } else {
+            load_wmo_groups(&cache, root).unwrap()
+        };
         assert!(!groups.is_empty(), "WMO {root}: no collision groups");
         let collision = WmoCollision::new(Affine3A::IDENTITY, groups);
         let mut hits = Vec::new();
