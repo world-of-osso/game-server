@@ -100,16 +100,7 @@ fn zephras_sample_placements_and_wmo_groups_parse() {
         HashSet::from([333_477, 7_704_156, 7_704_158, 7_749_471])
     );
     for root in [333_477, 7_704_156, 7_704_158, 7_749_471] {
-        let groups = if root == 7_749_471 {
-            // Three groups are absent from local CASC; exercise its available first group.
-            let bytes = read_client_file(&cache, "models", root, "wmo").unwrap();
-            let ids = group_file_data_ids(&bytes).unwrap();
-            assert_eq!(ids.len(), 4);
-            let first = read_client_file(&cache, "models", ids[0], "wmo").unwrap();
-            vec![Arc::new(WmoGroupCollision::parse(&first).unwrap())]
-        } else {
-            load_wmo_groups(&cache, root).unwrap()
-        };
+        let groups = load_wmo_groups(&cache, root).unwrap();
         assert!(!groups.is_empty(), "WMO {root}: no collision groups");
         let collision = WmoCollision::new(Affine3A::IDENTITY, groups);
         let mut hits = Vec::new();
