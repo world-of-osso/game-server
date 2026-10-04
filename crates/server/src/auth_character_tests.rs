@@ -186,6 +186,53 @@ fn select_character_in_world(
 }
 
 #[test]
+fn skyborne_real_kits_create_persist_and_select_all_authored_classes() {
+    let kit = crate::player_create_info::OwnedKit::from_world_db().expect("real world.db kit");
+    let pairs = [(95, &[1, 3, 4, 8, 11][..]), (96, &[1, 3, 4, 7, 11][..])];
+    for (race, classes) in pairs {
+        for &class in classes {
+            let directory = tempfile::tempdir().expect("tempdir");
+            let path = directory.path().join("skyborne.redb");
+            let db = redb::Database::create(&path).expect("create database");
+            persistence::create_tables(&db);
+            let (character_id, data) = persistence::create_character_with_appearance(
+                &db,
+                1,
+                "Skyborne",
+                race,
+                class,
+                CharacterAppearance::default(),
+                &kit.kit(),
+            )
+            .expect("authored Skyborne pair should create with real kit");
+            assert_eq!(data.level, 1);
+            // Keep the pre-existing Northshire placement until an authored start is supplied.
+            assert_eq!((data.x, data.y, data.z), (-8949.0, -132.0, 83.0));
+            drop(db);
+
+            let db = redb::Database::open(&path).expect("reopen character storage");
+            let saved = persistence::load_character(&db, character_id).expect("saved character");
+            assert_eq!((saved.race, saved.class, saved.level), (race, class, 1));
+            assert_eq!(
+                crate::maps::persistence::load_character_map(&db, character_id),
+                0
+            );
+            let (app, player) = select_character_in_world(GameDatabase { db }, 1, character_id);
+            let entity = app.world().entity(player);
+            assert_eq!(entity.get::<UnitLevel>(), Some(&UnitLevel(1)));
+            assert_eq!(entity.get::<Player>().unwrap().race, race);
+            assert_eq!(entity.get::<Player>().unwrap().class, class);
+            let template = if race == 95 { 3629 } else { 3628 };
+            assert_eq!(
+                entity.get::<shared::components::UnitFactionTemplate>(),
+                Some(&shared::components::UnitFactionTemplate(template))
+            );
+            assert_eq!(entity.get::<crate::maps::InMap>().unwrap().map_id, 0);
+        }
+    }
+}
+
+#[test]
 fn selected_player_replicates_its_persisted_level_as_unit_level() {
     let db = test_db();
     let account_id = 9;
