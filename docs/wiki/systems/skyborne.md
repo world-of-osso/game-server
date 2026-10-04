@@ -17,7 +17,7 @@ Verified 2026-10-04. WoW Forever `wow_classic_beta` build `1.60.1.70205` supplie
 
 `db2.py import` decodes the pinned Forever sources before opening its write transaction, then reapplies the three selected rows after Retail import in that same transaction. Full regeneration therefore retains the overlay. `db2_row_source` records row-level build, FDID, layout and SHA-256 without relabeling the whole Retail table. Standalone scratch publication: `python3 scripts/skyborne_data.py --db <scratch-world.db>`.
 
-FactionTemplate 3628 references Faction 2794, flags 72 and groups 5/4/10; 3629 references 2795, flags 72 and groups 3/2/12. Values come from the decoder, not authored constants. The reaction loader reads only `faction_template`, treating Faction IDs as identifiers; it does not load a Faction table. Referenced Faction rows are therefore unnecessary for creation/login and were not imported. Scratch-imported rows passed Rust friendly/hostile/assist/PvP-gate checks.
+FactionTemplate 3628 references Faction 2794, flags 72 and groups 5/4/10; 3629 references 2795, flags 72 and groups 3/2/12. Values come from the decoder, not authored constants. The reaction loader reads only `faction_template`, treating Faction IDs as identifiers; it does not load a Faction table. Referenced Faction rows are therefore unnecessary for creation/login and were not imported. Scratch-imported rows passed Rust friendly/hostile/assist/PvP-gate checks. The maintained Rust reaction test uses [generated SQL](../../../crates/server/src/skyborne_faction_fixture.rs) from those exact decoded rows in an in-memory SQLite database, so the original Retail world.db need not be regenerated to run it.
 
 ## Map 2991 start requirements
 
