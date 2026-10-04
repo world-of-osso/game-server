@@ -49,6 +49,7 @@ fn scaled_overkill_spells_and_periodic_ticks_use_logged_damage_units() {
                 caster: h.caster,
                 spell: &spell,
                 depth: 0,
+                dest: None,
                 chain_multiplier: 1.0,
             };
             super::effects::deal_damage(h.app.world_mut(), &ctx, h.npc, 10.0, false, periodic);
