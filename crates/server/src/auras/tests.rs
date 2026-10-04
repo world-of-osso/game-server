@@ -265,7 +265,6 @@ const DIVINE_TOLL: u32 = 375576;
 
 /// The GCD the paladin starts casting Divine Toll at the kobold with `haste_pct`.
 fn divine_toll_gcd_ms(spells: &[u32], haste_pct: f32) -> u32 {
-    use shared::components::PowerType;
     let mut h = harness(Vec::new(), spells, PALADIN).expect("world spell data");
     h.advance(3);
     h.app
@@ -273,7 +272,6 @@ fn divine_toll_gcd_ms(spells: &[u32], haste_pct: f32) -> u32 {
         .get_mut::<crate::stats::CharacterStats>(h.caster)
         .unwrap()
         .haste_pct = haste_pct;
-    h.set_power(PowerType::Mana, 10_000.0);
     h.cast_and_deliver(DIVINE_TOLL, Some(h.npc));
     assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
     let gcds: Vec<u32> = h
