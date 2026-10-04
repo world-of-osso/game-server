@@ -94,12 +94,13 @@ fn zephras_sample_placements_and_wmo_groups_parse() {
         let collision = WmoCollision::new(Affine3A::IDENTITY, groups);
         let mut hits = Vec::new();
         for group in collision.groups() {
-            for corner in group.local_corners() {
+            for triangle in group.collidable_triangles() {
+                let center = (triangle[0] + triangle[1] + triangle[2]) / 3.0;
                 collision.floor_heights(
-                    corner.x,
-                    corner.z,
-                    corner.y + 1.0,
-                    corner.y - 50.0,
+                    center.x,
+                    center.z,
+                    center.y + 1.0,
+                    center.y - 1.0,
                     &mut hits,
                 );
             }
