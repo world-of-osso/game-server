@@ -11,9 +11,11 @@ Handles the subset the local tables need: unencrypted or already decrypted secti
 IDs or a non-inline ID list (prepended as the first column), a relationship map (its
 foreign id appended as the last column), copy tables, and field
 compression none/bitpacked/common/pallet/pallet array/signed bitpacked. A pallet-array
-field expands to its array-count columns. String fields (TEXT columns) resolve through the virtual concatenation of all
-section string blocks; zero-filled encrypted sections are reported and skipped.
-Inline arrays and sparse (offset-map) layouts fail.
+field expands to its array-count columns. String fields (TEXT columns) resolve
+through global record offsets and the virtual concatenation of all section string
+blocks. Zero-filled encrypted sections are reported and skipped; explicit selected
+IDs must all resolve from readable records. Declared inline uint32 arrays are
+supported; sparse (offset-map) layouts fail.
 Tables with localized strings are read from their enUS copy (casc_locale.py).
 """
 
