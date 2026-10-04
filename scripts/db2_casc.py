@@ -86,18 +86,18 @@ def read_header(data):
         pallet_size,
         section_count,
     ) = struct.unpack_from("<7I", data, 176)
-    return dict(
-        record_count=record_count,
-        field_count=field_count,
-        record_size=record_size,
-        layout_hash=layout_hash,
-        flags=flags,
-        id_index=id_index,
-        info_size=info_size,
-        common_size=common_size,
-        pallet_size=pallet_size,
-        section_count=section_count,
-    )
+    return {
+        "record_count": record_count,
+        "field_count": field_count,
+        "record_size": record_size,
+        "layout_hash": layout_hash,
+        "flags": flags,
+        "id_index": id_index,
+        "info_size": info_size,
+        "common_size": common_size,
+        "pallet_size": pallet_size,
+        "section_count": section_count,
+    }
 
 
 def decode(data, text_columns=frozenset(), *, record_ids=None, inline_arrays=None):
@@ -258,7 +258,7 @@ def read_global_string(blocks, offset):
 
 
 def field_value(index, info, bits, pallets):
-    bit_offset, bit_size, _, compression, value1, value2, _ = info
+    bit_offset, bit_size, _, compression, _, value2, _ = info
     raw = (bits >> bit_offset) & ((1 << bit_size) - 1) if bit_size else 0
     if compression == COMPRESSION_PALLET:
         return struct.unpack_from("<I", pallets[index], raw * 4)[0]
