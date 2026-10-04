@@ -28,6 +28,10 @@ Quest, vendor, loot, gossip and item content comes from AzerothCore (Wrath 3.3.5
 
 **Taxi:** AzerothCore has no taxi data in SQL; `taxinodes_dbc`/`taxipath_dbc`/`taxipathnode_dbc` are empty override tables (the core reads the client's DBCs). Taxi statistics below use Wrath Classic DB2 as the stand-in.
 
+### Skyborne overlay
+
+[[skyborne]] documents the pinned local Forever faction/map overlay applied inside `db2.py import`, including regeneration behavior and row provenance.
+
 ### Loader
 
 `mysql_dump.py` tokenizes dump `INSERT`s and decodes MySQL string escapes before binding parameters. The previous awk/sed path rewrote only `\'`, so 168 creature names were stored with literal backslashes (`Remy \"Two Times\"`); they now load as `Remy "Two Times"`. `--schema` runs `world_schema.sql` inside the load transaction, so the dump tables can be reloaded into a populated `world.db` without touching DB2 tables, and a failed parse rolls back. The full script still deletes and rebuilds `world.db`.

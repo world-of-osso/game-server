@@ -3,6 +3,7 @@
 from pathlib import Path
 import csv
 import sqlite3
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -41,6 +42,40 @@ class SkyborneDecodeTest(unittest.TestCase):
 
 
 class SkyborneImportTest(unittest.TestCase):
+    def test_corrupt_source_fails_before_database_changes(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "source"
+            shutil.copytree(SOURCE, source)
+            path = source / "1349477.db2"
+            path.write_bytes(path.read_bytes() + b"corrupt")
+            db = root / "scratch.db"
+            with sqlite3.connect(db) as conn:
+                conn.executescript((SCRIPTS / "db2_schema.sql").read_text())
+                conn.execute("INSERT INTO faction_template (ID,Faction) VALUES (1,1)")
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(SCRIPTS / "skyborne_data.py"),
+                    "--db",
+                    str(db),
+                    "--source-dir",
+                    str(source),
+                ],
+                capture_output=True,
+                text=True,
+            )
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("SHA-256", result.stderr)
+            with sqlite3.connect(db) as conn:
+                self.assertEqual(
+                    conn.execute("SELECT ID,Faction FROM faction_template").fetchall(),
+                    [(1, 1)],
+                )
+                self.assertEqual(
+                    conn.execute("SELECT COUNT(*) FROM map").fetchone(), (0,)
+                )
+
     def test_retail_regeneration_reapplies_skyborne_overlay(self):
         import db2
 

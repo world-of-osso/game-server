@@ -5,7 +5,7 @@
 ## Race and class validation
 
 - world.db has no `chr_races` or `CharBaseInfo` table. `race_class.rs` therefore holds the race→class table, copied from the client character-creation data (`game-engine src/scenes/char_create/data.rs` RACES).
-- The table covers 31 races and classes 1–13. Monk 10 is available on all 29 non-Dracthyr races authored by local CharBaseInfo; DH 12 on Night Elf/Blood Elf/Void Elf (4/10/29); Evoker 13 only on Dracthyr (52/70). Gates were checked against locally extracted CharBaseInfo FDID 1343386 (WDC5 layout FEC46FB7).
+- The table covers 31 Retail races plus the two Forever [[skyborne]] races and classes 1–13. Monk 10 is available on all 29 non-Dracthyr races authored by local CharBaseInfo; DH 12 on Night Elf/Blood Elf/Void Elf (4/10/29); Evoker 13 only on Dracthyr (52/70). Gates were checked against locally extracted CharBaseInfo FDID 1343386 (WDC5 layout FEC46FB7).
 - Kul Tiran 32, Earthen 84/85 and Haranir 86/91 expose only Monk in this bounded new-class slice. Their other authored classes are not enabled here.
 - The same file holds each race's `ChrRaces.PlayableRaceBit` (`game-engine data/ChrRaces.csv`). DB2 `RaceMasks` use this bit.
 - Character creation and `SelectCharacter` both call `validate_race_class` and reject a failing character. The errors are:
