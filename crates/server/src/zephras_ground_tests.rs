@@ -91,6 +91,19 @@ fn zephras_ground_centers_and_height_report() {
 
 #[test]
 #[ignore = "requires extracted Forever build 1.60.1.70205 ground assets"]
+fn zephras_ground_liquid_matches_authored_surface() {
+    let cache = zephras_cache();
+    let mut ground = GroundMap::new(&cache, HashMap::from([(ZEPHRAS_MAP, ZEPHRAS_WDT)]));
+    // First MH2O layer of root 7199999, two yards inside MCNK (0,0).
+    let feet = Vec3::new(3198.0, 756.0, -1598.0);
+    let liquid = ground.liquid_at(ZEPHRAS_MAP, feet).expect("sample water");
+    assert!((liquid.level - 756.5897).abs() < 0.001);
+    assert!(liquid.depth_level.is_finite() && liquid.depth_level < liquid.level);
+    assert_eq!(liquid.liquid_type, 1251);
+}
+
+#[test]
+#[ignore = "requires extracted Forever build 1.60.1.70205 ground assets"]
 fn zephras_sample_placements_and_wmo_groups_parse() {
     let cache = zephras_cache();
     let placements = load_wmo_placements(&cache, 7_200_000).unwrap();

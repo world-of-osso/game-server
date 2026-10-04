@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""List the client files the server's ground loads for the maps creatures spawn on.
+"""List server ground files for spawned, explicit, or all registered maps.
 
 crates/server/src/ground.rs reads, from the client asset cache: each map's WDT
 (`terrain/<Map.WdtFileDataID>.wdt`); for a global-WMO map (MPHD flag 0x1) the WDT MODF
@@ -109,15 +109,6 @@ class GroundFiles:
                     modf = chunks(placements).get(b"MODF", b"")
                     for wmo in modf_wmos(modf, by_fdid=True):
                         self.add_wmo(wmo)
-
-
-def spawned_map_wdts(world_db):
-    """(map id, WdtFileDataID) of every map with a `content_creature` spawn."""
-    connection = sqlite3.connect(f"file:{world_db}?mode=ro", uri=True)
-    return connection.execute(
-        """SELECT DISTINCT creature.map, map.WdtFileDataID FROM content_creature creature
-           LEFT JOIN map ON map.ID = creature.map ORDER BY creature.map"""
-    ).fetchall()
 
 
 # Local CASC product of the pinned row overlay, keyed by provenance, not map ID.
