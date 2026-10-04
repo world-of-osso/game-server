@@ -12,6 +12,7 @@ tiles and WMOs have no ground on the server until they are extracted.
 """
 
 import argparse
+from contextlib import closing
 import sqlite3
 import struct
 import sys
@@ -119,6 +120,41 @@ def spawned_map_wdts(world_db):
     ).fetchall()
 
 
+# Local CASC product of the pinned row overlay, keyed by provenance, not map ID.
+BUILD_PRODUCTS = {"1.60.1.70205": "wow_classic_beta"}
+
+
+def selected_map_sources(world_db, map_ids=None, registered=False):
+    """Select explicit/registered maps or spawned maps, with their local CASC product."""
+    with closing(sqlite3.connect(f"file:{world_db}?mode=ro", uri=True)) as db:
+        rows = dict(db.execute("SELECT ID, WdtFileDataID FROM map"))
+        selected = sorted(set(map_ids)) if map_ids else sorted(rows) if registered else [
+            row[0] for row in db.execute("SELECT DISTINCT map FROM content_creature ORDER BY map")
+        ]
+        has_sources = db.execute(
+            "SELECT 1 FROM sqlite_master WHERE name = 'db2_row_source'"
+        ).fetchone()
+        builds = dict(db.execute(
+            "SELECT row_id, build FROM db2_row_source WHERE table_name = 'map'"
+        )) if has_sources else {}
+    result = []
+    for map_id in selected:
+        if map_ids and map_id not in rows:
+            raise ValueError(f"map {map_id} is not registered")
+        build = builds.get(map_id)
+        if build is not None and build not in BUILD_PRODUCTS:
+            raise ValueError(f"map {map_id}: no local CASC product for build {build}")
+        result.append((map_id, rows.get(map_id), BUILD_PRODUCTS[build] if build else "wow"))
+    return result
+
+
+def add_map_selection(parser):
+    selection = parser.add_mutually_exclusive_group()
+    selection.add_argument("--map", type=int, action="append", dest="map_ids",
+                           help="registered map ID; repeat for multiple maps, even without spawns")
+    selection.add_argument("--registered", action="store_true", help="all registered maps")
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--world-db", type=Path, required=True)
@@ -126,10 +162,11 @@ def main():
     parser.add_argument(
         "--missing", action="store_true", help="print `map id<TAB>path` of the uncached files instead"
     )
+    add_map_selection(parser)
     args = parser.parse_args()
     files = GroundFiles(args.cache)
-    maps = spawned_map_wdts(args.world_db)
-    for map_id, wdt in maps:
+    maps = selected_map_sources(args.world_db, args.map_ids, args.registered)
+    for map_id, wdt, _product in maps:
         files.start_map(map_id)
         if wdt:
             files.add_map(wdt)
@@ -142,7 +179,7 @@ def main():
         print("\n".join(files.present))
     missing_wdts = sum(1 for _, path in files.missing if path.endswith(".wdt") or path == NO_WDT)
     print(
-        f"{len(maps)} spawned maps: {len(files.present)} cached files, {size / 1e6:.1f} MB; "
+        f"{len(maps)} selected maps: {len(files.present)} cached files, {size / 1e6:.1f} MB; "
         f"not cached: {missing_wdts} WDTs, {len(files.missing) - missing_wdts} ADT/WMO files",
         file=sys.stderr,
     )
