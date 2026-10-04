@@ -53,6 +53,9 @@ pub struct StatModifiers {
     pub mastery_points: f32,
     pub versatility_pct: f32,
     pub max_health_pct: f32,
+    /// OVERRIDE_SPELL_POWER_BY_AP_PCT: when positive, spell and healing power are
+    /// this percent of attack power.
+    pub spell_power_from_ap_pct: f32,
 }
 
 /// The spec's main stat: gear Str/Agi/Int count only when they match it.
@@ -104,9 +107,13 @@ pub struct CharacterStats {
     /// gtBaseMP; 0 for classes without mana. Max mana equals it and
     /// `PowerCostPct` mana costs are a percentage of it.
     pub base_mana: f32,
-    /// Intellect when the main stat is Intellect, else 0
+    /// Damage spell power: Intellect when the main stat is Intellect, else 0
     /// (Unit::SpellBaseDamageBonusDone, Unit.cpp:7118-7119).
     pub spell_power: f32,
+    /// Healing and absorb spell power: Intellect for every class that uses mana
+    /// (Unit::SpellBaseHealingBonusDone, Unit.cpp:7622-7624), so a Strength
+    /// paladin heals with its Intellect.
+    pub healing_power: f32,
     pub attack_power: f32,
     pub crit_pct: f32,
     pub haste_pct: f32,
@@ -292,6 +299,25 @@ pub fn compute_character_stats(
     let primary = apply_primary_pct(primary, mods.primary_pct);
     let mut ratings = input.gear_ratings;
     ratings += mods.ratings_flat;
+    let base_mana = base_mana(input.class, input.level);
+    let attack_power = primary.strength * input.attack_power_per_strength
+        + primary.agility * input.attack_power_per_agility;
+    let (spell_power, healing_power) = if mods.spell_power_from_ap_pct > 0.0 {
+        // Unit::SpellBaseDamageBonusDone / SpellBaseHealingBonusDone return
+        // int32(AP × pct + 0.5) before anything else (Unit.cpp:7103-7108, 7602-7607).
+        let power = (attack_power * mods.spell_power_from_ap_pct / 100.0 + 0.5).floor();
+        (power, power)
+    } else {
+        let intellect = primary.intellect.max(0.0);
+        (
+            if input.primary_stat == Some(PrimaryStat::Intellect) {
+                intellect
+            } else {
+                0.0
+            },
+            if base_mana.is_some() { intellect } else { 0.0 },
+        )
+    };
     let mastery_points = BASE_MASTERY_POINTS
         + rating_value(ratings.mastery, MASTERY_RATING[level])
         + mods.mastery_points;
@@ -302,14 +328,10 @@ pub fn compute_character_stats(
             * HP_PER_STAMINA[level]
             * (1.0 + mods.max_health_pct / 100.0))
             .floor(),
-        base_mana: base_mana(input.class, input.level).unwrap_or(0.0),
-        spell_power: if input.primary_stat == Some(PrimaryStat::Intellect) {
-            primary.intellect.max(0.0)
-        } else {
-            0.0
-        },
-        attack_power: primary.strength * input.attack_power_per_strength
-            + primary.agility * input.attack_power_per_agility,
+        base_mana: base_mana.unwrap_or(0.0),
+        spell_power,
+        healing_power,
+        attack_power,
         crit_pct: BASE_CRIT_PCT + rating_value(ratings.crit, CRIT_RATING[level]) + mods.crit_pct,
         haste_pct: rating_value(ratings.haste, HASTE_RATING[level]) + mods.haste_pct,
         mastery_pct: mastery_points * input.mastery_coefficient,

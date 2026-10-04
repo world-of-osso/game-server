@@ -35,7 +35,7 @@ NPCs have no `CharacterStats`, so their spell power, attack power and crit are 0
 2. **Max health** = floor(Sta) × hppersta(level) × (1 + `max_health_pct`/100), floored.
 3. **Mana:** max mana = base mana = basemp(class, level). Intellect does not add mana.
    - Only classes with a non-zero basemp column get a `Mana` component: Paladin, Priest, Shaman, Mage, Warlock, Monk, Druid and Evoker.
-4. **Spell power** = Int when the main stat is Intellect, else 0 (TrinityCore Unit::SpellBaseDamageBonusDone). The main stat is the active spec's, else `chr_classes.PrimaryStatPriority`. **Attack power** = Str × AttackPowerPerStrength + Agi × AttackPowerPerAgility.
+4. **Spell power** = Int when the main stat is Intellect, else 0 (TrinityCore Unit::SpellBaseDamageBonusDone). **Healing power** (`CharacterStats.healing_power`, used by heals, periodic heals and absorbs) = Int for every mana class (Unit::SpellBaseHealingBonusDone). Aura 366 OVERRIDE_SPELL_POWER_BY_AP_PCT sets both to AP × pct (Retribution, Protection, Feral/Guardian, Enhancement, Windwalker/Brewmaster passives). The main stat is the active spec's, else `chr_classes.PrimaryStatPriority`. **Attack power** = Str × AttackPowerPerStrength + Agi × AttackPowerPerAgility.
 5. **Crit %** = 5 + DR(crit rating / rating-per-1%) + `crit_pct`.
 6. **Haste %** = DR(haste rating / rating-per-1%) + `haste_pct`.
 7. **Versatility %** = DR(versatility rating / rating-per-1%) + `versatility_pct`.

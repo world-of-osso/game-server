@@ -263,6 +263,9 @@ fn apply_aura(acc: &mut Accumulator, aura: &AuraInstance) {
             | HASTE_SPELLS => stats.haste_pct += amount,
             MOD_CASTING_SPEED_NOT_STACK => acc.haste_not_stack = acc.haste_not_stack.max(amount),
             MASTERY => stats.mastery_points += amount,
+            // Player::ApplyModOverrideSpellPowerByAPPercent adds each aura's amount
+            // (AuraEffect::HandleOverrideSpellPowerByAttackPower, SpellAuraEffects.cpp:3997-4008).
+            OVERRIDE_SPELL_POWER_BY_AP_PCT => stats.spell_power_from_ap_pct += amount,
             MOD_INCREASE_HEALTH_PERCENT => stats.max_health_pct += amount,
             MOD_DAMAGE_PERCENT_DONE => each_school(misc, |school| {
                 combat.damage_done_mult[school] *= pct(amount)

@@ -132,6 +132,7 @@ pub(crate) fn spawn_player(app: &mut App, class: u8, x: f32) -> Entity {
             CombatStatus(true),
             CharacterStats {
                 spell_power: 100.0,
+                healing_power: 100.0,
                 attack_power: 100.0,
                 base_mana: 10_000.0,
                 ..default()

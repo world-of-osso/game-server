@@ -138,14 +138,35 @@ pub fn log_unhandled(world: &mut World, spell_id: u32, effect_id: u32) {
     }
 }
 
-/// `(spell power, attack power)` of `unit`.
-pub(crate) fn power_stats(world: &World, unit: Entity) -> (f32, f32) {
+/// `(spell power, attack power)` of `unit`; `healing` selects its healing power.
+pub(crate) fn power_stats(world: &World, unit: Entity, healing: bool) -> (f32, f32) {
     if let Some(pet) = world.get::<crate::hunter_pet::HunterPet>(unit) {
         return (0.0, hunter_pet_attack_power(world, pet.owner));
     }
     world
         .get::<CharacterStats>(unit)
-        .map_or((0.0, 0.0), |stats| (stats.spell_power, stats.attack_power))
+        .map_or((0.0, 0.0), |stats| {
+            let power = if healing {
+                stats.healing_power
+            } else {
+                stats.spell_power
+            };
+            (power, stats.attack_power)
+        })
+}
+
+/// Heals and absorbs take healing power: Spell::EffectHeal (SpellEffects.cpp:1305),
+/// periodic heals (SpellAuraEffects.cpp:5891) and absorbs (SpellAuraEffects.cpp:807,
+/// `SpellAbsorbBonusDone` = `SpellBaseHealingBonusDone`, Unit.cpp:7641-7644).
+fn takes_healing_power(effect: &SpellEffect) -> bool {
+    match effect.effect {
+        EFFECT_HEAL => true,
+        _ if crate::auras::is_aura_effect(effect) => matches!(
+            effect.aura,
+            crate::auras::handlers::PERIODIC_HEAL | crate::auras::handlers::SCHOOL_ABSORB
+        ),
+        _ => false,
+    }
 }
 
 /// `Guardian::UpdateAttackPowerAndDamage` for a hunter pet (StatSystem.cpp:1336-1345): its
@@ -284,7 +305,7 @@ pub(crate) fn scaled_amount(
     spell: &SpellInfo,
     effect: &SpellEffect,
 ) -> f32 {
-    let (spell_power, attack_power) = power_stats(world, caster);
+    let (spell_power, attack_power) = power_stats(world, caster, takes_healing_power(effect));
     let modify = |op, value| spell_mods::modify(world, caster, spell, op, value);
     let base = modded_base_points(world, caster, spell, effect);
     let coefficient = modify(SpellModOp::BonusCoefficient, effect.bonus_coefficient);
@@ -301,7 +322,7 @@ fn weapon_hit(world: &World, caster: Entity, normalized: bool) -> f32 {
     if world.get::<CharacterStats>(caster).is_none() && world.get::<Npc>(caster).is_some() {
         return crate::combat::creature_weapon_damage(&UnitScaling::of(world, caster));
     }
-    let (_, attack_power) = power_stats(world, caster);
+    let (_, attack_power) = power_stats(world, caster, false);
     let weapon = world
         .get::<CharacterStats>(caster)
         .map_or(WeaponDamage::UNARMED, |stats| stats.main_hand);

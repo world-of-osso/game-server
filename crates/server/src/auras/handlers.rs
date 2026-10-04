@@ -103,6 +103,8 @@ pub const MOD_CRIT_PCT: u32 = 290;
 pub const MASTERY: u32 = 318;
 pub const MOD_MELEE_RANGED_HASTE_2: u32 = 342;
 pub const MOD_AUTOATTACK_DAMAGE: u32 = 344;
+/// SPELL_AURA_OVERRIDE_SPELL_POWER_BY_AP_PCT (SpellAuraDefines.h, TrinityCore a352b1fa).
+pub const OVERRIDE_SPELL_POWER_BY_AP_PCT: u32 = 366;
 pub const MOD_MANA_REGEN_PCT: u32 = 379;
 pub const MOD_MAX_CHARGES: u32 = 411;
 pub const CHARGE_RECOVERY_MOD: u32 = 453;
@@ -162,7 +164,8 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | MOD_HEALTH_REGEN_IN_COMBAT
         | MOD_INCREASE_MOUNTED_SPEED
         | MOD_MOUNTED_SPEED_ALWAYS
-        | MOD_MOUNTED_FLIGHT_SPEED_ALWAYS => StatMod,
+        | MOD_MOUNTED_FLIGHT_SPEED_ALWAYS
+        | OVERRIDE_SPELL_POWER_BY_AP_PCT => StatMod,
         MOD_INVISIBILITY
         | MOD_UNATTACKABLE
         | MOD_CONFUSE

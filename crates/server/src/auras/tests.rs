@@ -86,31 +86,38 @@ fn frames_for(ms: u32) -> usize {
     (ms / 50) as usize
 }
 
-/// Retribution 137028 effect 9: aura 366, 101% AP (world.db row 726748).
-const RETRIBUTION: u32 = 137028;
+/// Retribution Paladin 1258011 effect 0: OVERRIDE_SPELL_POWER_BY_AP_PCT 366, 96%
+/// (world.db spell_effect 1266223; specialization_spells 7293, spec 70).
+const RETRIBUTION_PASSIVE: u32 = 1258011;
+/// Flash of Light: HEAL, BasePoints 0, no SpellScaling, 3.156 × spell power, 5% variance
+/// (world.db spell_effect 10981).
 const FLASH_OF_LIGHT: u32 = 19750;
+const PALADIN: u8 = 2;
 
-#[test]
-fn spellpower_override_retribution_level_four_heals_and_tracks_attack_power() {
-    use crate::stats::CharacterStats;
-    use shared::components::{Level, UnitStats};
-
-    let mut h = crate::spell_cast::test_harness::harness_with(
-        Vec::new(),
-        &[137026, RETRIBUTION, FLASH_OF_LIGHT],
-        2,
-        true,
-    )
-    .expect("world spell data");
-    h.app.world_mut().entity_mut(h.caster).insert(Level(4));
-    h.advance(3);
-    let stats = *h.app.world().get::<CharacterStats>(h.caster).unwrap();
-    // Human paladin level 4: 22 Strength, 1 AP per Strength; 101% override.
-    assert_eq!(stats.attack_power, 22.0);
-    assert!((stats.spell_power - 22.22).abs() < 1e-5, "{stats:?}");
+/// A human paladin at `level` knowing `spells`, with computed stats and no crit.
+fn paladin(spells: &[u32], level: u8) -> Harness {
+    let mut h = crate::spell_cast::test_harness::harness_with(Vec::new(), spells, PALADIN, true)
+        .expect("world spell data");
     h.app
         .world_mut()
-        .get_mut::<CharacterStats>(h.caster)
+        .entity_mut(h.caster)
+        .insert(shared::components::Level(level));
+    h.advance(3);
+    h
+}
+
+fn character_stats(h: &Harness) -> crate::stats::CharacterStats {
+    *h.app
+        .world()
+        .get::<crate::stats::CharacterStats>(h.caster)
+        .unwrap()
+}
+
+/// Flash of Light on self from 1 health; the healed amount.
+fn self_flash_of_light(h: &mut Harness) -> i32 {
+    h.app
+        .world_mut()
+        .get_mut::<crate::stats::CharacterStats>(h.caster)
         .unwrap()
         .crit_pct = 0.0;
     h.app
@@ -118,29 +125,60 @@ fn spellpower_override_retribution_level_four_heals_and_tracks_attack_power() {
         .get_mut::<Health>(h.caster)
         .unwrap()
         .current = 1.0;
+    let before = log_of(h, CombatLogKind::Heal, FLASH_OF_LIGHT).len();
     h.cast_and_deliver(FLASH_OF_LIGHT, Some(h.caster));
     h.advance(40);
     assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
-    let heals = log_of(&h, CombatLogKind::Heal, FLASH_OF_LIGHT);
-    assert_eq!(heals.len(), 1);
-    // Base 0 + 3.156 × 22.22 = 70.12632, ±2.5%, rounded: 68..=72.
-    assert!((68..=72).contains(&heals[0].amount), "{:?}", heals[0]);
-    assert_eq!(h.health(h.caster), 1.0 + heals[0].amount as f32);
+    let heals = log_of(h, CombatLogKind::Heal, FLASH_OF_LIGHT);
+    assert_eq!(heals.len(), before + 1);
+    let amount = heals[before].amount;
+    assert_eq!(h.health(h.caster), 1.0 + amount as f32);
+    amount
+}
 
-    h.app
-        .world_mut()
-        .entity_mut(h.caster)
-        .insert(crate::stats::EquippedItems::default());
+/// The live defect: a level-4 Initial-spec (Strength) paladin's Flash of Light healed 0.
+/// Healing power is Intellect for every mana class (Unit::SpellBaseHealingBonusDone,
+/// Unit.cpp:7622-7624); damage spell power stays Intellect-primary only (Unit.cpp:7118).
+#[test]
+fn spellpower_strength_paladin_level_four_flash_of_light_heals_with_intellect() {
+    let mut h = paladin(&[FLASH_OF_LIGHT], 4);
+    let stats = character_stats(&h);
+    // gtClassStats paladin level 4: 22 Str, 26 Int (human +0).
+    assert_eq!(
+        (stats.primary.strength, stats.primary.intellect),
+        (22.0, 26.0)
+    );
+    assert_eq!(stats.spell_power, 0.0);
+    // 3.156 × 26 = 82.056, ±2.5%: 80.0..=84.1.
+    let amount = self_flash_of_light(&mut h);
+    assert!((80..=84).contains(&amount), "{amount}");
+}
+
+/// Retribution's passive makes spell and healing power int32(96% × AP + 0.5)
+/// (Unit.cpp:7103-7108, 7602-7607) and follows attack power; unlearning it restores
+/// the Intellect rule.
+#[test]
+fn spellpower_override_retribution_passive_uses_attack_power() {
+    use shared::components::UnitStats;
+
+    let mut h = paladin(&[RETRIBUTION_PASSIVE, FLASH_OF_LIGHT], 10);
+    let stats = character_stats(&h);
+    // Level 10: 33 Str, 1 AP per Str: 96% × 33 + 0.5 = 32.18 -> 32.
+    assert_eq!(stats.attack_power, 33.0);
+    assert_eq!(stats.spell_power, 32.0);
+
     let mut mods = *h.app.world().get::<StatModifiers>(h.caster).unwrap();
     mods.primary_flat = UnitStats {
-        strength: 78.0,
+        strength: 67.0,
         ..default()
     };
     h.app.world_mut().entity_mut(h.caster).insert(mods);
     h.advance(1);
-    let stats = h.app.world().get::<CharacterStats>(h.caster).unwrap();
-    assert_eq!(stats.attack_power, 100.0);
-    assert_eq!(stats.spell_power, 101.0);
+    let stats = character_stats(&h);
+    assert_eq!((stats.attack_power, stats.spell_power), (100.0, 96.0));
+    // 3.156 × 96 = 302.976, ±2.5%: 295.4..=310.6.
+    let amount = self_flash_of_light(&mut h);
+    assert!((295..=311).contains(&amount), "{amount}");
 
     h.app
         .world_mut()
@@ -149,14 +187,7 @@ fn spellpower_override_retribution_level_four_heals_and_tracks_attack_power() {
             FLASH_OF_LIGHT,
         ]));
     h.advance(3);
-    assert_eq!(
-        h.app
-            .world()
-            .get::<CharacterStats>(h.caster)
-            .unwrap()
-            .spell_power,
-        0.0
-    );
+    assert_eq!(character_stats(&h).spell_power, 0.0);
 }
 
 #[test]
@@ -164,11 +195,7 @@ fn spellpower_override_leaves_intellect_caster_unchanged() {
     let mut h = crate::spell_cast::test_harness::harness_with(Vec::new(), &[FLASH_HEAL], 5, true)
         .expect("world spell data");
     h.advance(3);
-    let stats = h
-        .app
-        .world()
-        .get::<crate::stats::CharacterStats>(h.caster)
-        .unwrap();
+    let stats = character_stats(&h);
     assert_eq!(stats.spell_power, stats.primary.intellect);
     assert!(stats.spell_power > 0.0);
 }

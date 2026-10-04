@@ -32,6 +32,8 @@ Armor
 
 Spells
 - [x] Spell power is Intellect when the main stat is Intellect, else 0 (Unit::SpellBaseDamageBonusDone, Unit.cpp:7113-7119). The main stat is the spec's, else the class's `chr_classes.PrimaryStatPriority` (Player::GetPrimaryStat, StatSystem.cpp:297-314).
+- [x] Healing power (heals, periodic heals, absorbs) is Intellect for every mana class, so a Strength paladin's Flash of Light heals 3.156 × Intellect (Unit::SpellBaseHealingBonusDone, Unit.cpp:7622-7624).
+- [x] OVERRIDE_SPELL_POWER_BY_AP_PCT (366, e.g. Retribution 1258011 96%, Protection 137028 101%) replaces both with int32(AP × summed pct + 0.5) (Unit.cpp:7103-7108, 7602-7607).
 - [x] School damage and heals are BasePoints + BonusCoefficient × SP + BonusCoefficientFromAP × AP, then × (1 + a uniform roll in ± Variance / 2) (Spell::EffectSchoolDMG, SpellEffects.cpp:565-567; SpellEffectInfo::CalcValue, SpellInfo.cpp:560-567).
 - [x] The caster's versatility raises spell damage and healing (Unit::SpellDamagePctDone, Unit.cpp:6944-6946).
 - [x] A spell crit doubles the damage (Unit::SpellCriticalDamageBonus, Unit.cpp:7297-7325), as a melee crit does.
