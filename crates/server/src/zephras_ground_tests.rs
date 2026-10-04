@@ -37,7 +37,11 @@ fn zephras_ground_centers_and_height_report() {
             "obj0_fdid":files.obj0, "x":x, "y":y, "z":null, "status":"missing_root"});
         if cache.join(format!("terrain/{}.adt", files.root)).is_file() {
             let (terrain, _) = load_terrain(&cache, files.root).unwrap();
-            let height = terrain.height_at(x, y).expect("center terrain height");
+            let Some(height) = terrain.height_at(x, y) else {
+                record["status"] = serde_json::json!("terrain_hole");
+                records.push(record);
+                continue;
+            };
             assert!(height.is_finite(), "tile {row},{col}: {height}");
             let feet = Vec3::new(x, height, -y);
             assert_eq!(bevy_to_tile(feet.x, feet.z), (row as u32, col as u32));
@@ -71,6 +75,11 @@ fn zephras_ground_centers_and_height_report() {
     }
     assert_eq!(records.len(), ZEPHRAS_TILE_COUNT);
     assert!(supported > 0);
+    let sample = records
+        .iter()
+        .find(|record| record["root_fdid"] == 7_199_999)
+        .unwrap();
+    assert_eq!(sample["status"], "supported", "sample tile: {sample}");
     println!(
         "ZEPHRAS_HEIGHTS={}",
         serde_json::json!({"map_id":ZEPHRAS_MAP,
