@@ -20,6 +20,7 @@ Server support for Forever races 95/96, grounded in local build 1.60.1.70205 Chr
 - `crates/server/src/race_class.rs`, `faction.rs` — allowed pairs, masks and faction identity.
 - `scripts/skyborne_data.py`, `db2_casc.py` — pinned local source decode and selected-row import.
 - `scripts/db2.py` — atomic Retail regeneration with overlay.
+- `crates/server/src/skyborne_faction_fixture.rs` — decoder-generated SQLite reaction fixture; no live overlay required.
 
 ## Tests asserting this spec
 
