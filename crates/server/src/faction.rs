@@ -16,8 +16,8 @@ use crate::faction_reaction::{self, FactionTemplateEntry};
 
 pub(crate) fn faction_for_race(race: u8) -> u8 {
     match race {
-        1 | 3 | 4 | 7 | 11 | 22 | 25 | 29 | 30 | 32 | 34 | 37 => 1,
-        2 | 5 | 6 | 8 | 9 | 10 | 26 | 27 | 28 | 31 | 35 | 36 => 2,
+        1 | 3 | 4 | 7 | 11 | 22 | 25 | 29 | 30 | 32 | 34 | 37 | 95 => 1,
+        2 | 5 | 6 | 8 | 9 | 10 | 26 | 27 | 28 | 31 | 35 | 36 | 96 => 2,
         _ => 0,
     }
 }
@@ -52,6 +52,8 @@ pub(crate) fn faction_template_for_race(race: u8) -> u32 {
         24 => 2395,            // Pandaren (neutral)
         25 => 2401,            // Pandaren (Alliance)
         26 => 2402,            // Pandaren (Horde)
+        95 => 3629,            // High Order Skyborne (Forever 1.60.1.70205)
+        96 => 3628,            // Windshaper Skyborne (Forever 1.60.1.70205)
         _ => 0,
     }
 }

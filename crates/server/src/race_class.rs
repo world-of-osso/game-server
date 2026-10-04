@@ -60,8 +60,8 @@ const PLAYABLE_RACES: &[PlayableRace] = &[
     race(85, 18, EARTHEN_CLASSES),                   // Earthen (Alliance)
     race(86, 20, HARANIR_CLASSES),                   // Haranir (Alliance)
     race(91, 19, HARANIR_CLASSES),                   // Haranir (Horde)
-    // Race bits are the retail placeholder rows' PlayableRaceBit until Forever's
-    // ChrRaces confirms them.
+    // Verified Forever 1.60.1.70205 ChrRaces.PlayableRaceBit (FDID 1305311);
+    // classes verified from that build's CharBaseInfo (FDID 1343386).
     race(95, 32, SKYBORNE_95_CLASSES), // Skyborne
     race(96, 33, SKYBORNE_96_CLASSES), // Skyborne
 ];

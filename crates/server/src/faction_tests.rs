@@ -35,6 +35,15 @@ fn maps_horde_race_to_horde_faction() {
 }
 
 #[test]
+fn skyborne_factions_follow_forever_chr_races() {
+    for (race, faction, group, template) in [(95, 1, 3, 3629), (96, 2, 5, 3628)] {
+        assert_eq!(faction_for_race(race), faction);
+        assert_eq!(faction_group_for_race(race), group);
+        assert_eq!(faction_template_for_race(race), template);
+    }
+}
+
+#[test]
 fn maps_unknown_race_to_neutral_faction() {
     assert_eq!(faction_for_race(0), 0);
 }
