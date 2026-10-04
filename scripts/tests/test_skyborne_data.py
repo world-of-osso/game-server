@@ -1,0 +1,152 @@
+"""Pinned Forever DB2 decoding and scratch-only Skyborne publication."""
+
+from pathlib import Path
+import csv
+import sqlite3
+import subprocess
+import sys
+import tempfile
+import unittest
+
+SCRIPTS = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(SCRIPTS))
+import db2_casc
+
+SOURCE = SCRIPTS / "reference/forever-1.60.1.70205"
+
+
+class SkyborneDecodeTest(unittest.TestCase):
+    def test_zephras_row_decodes_strings_arrays_and_selected_id(self):
+        data = (SOURCE / "1349477.db2").read_bytes()
+        header, rows = db2_casc.decode(
+            data,
+            text_columns=frozenset(range(1, 7)),
+            record_ids={2991},
+            inline_arrays={6: 2},
+        )
+        self.assertEqual(header["layout_hash"], 0xD43AFAC3)
+        self.assertEqual(set(rows), {2991})
+        self.assertEqual(len(rows[2991]), 30)
+        self.assertEqual(rows[2991][1:3], ["2991", "Zephras Isle"])
+        self.assertEqual(rows[2991][23], 7198644)
+
+    def test_missing_selected_row_fails_instead_of_importing_partial_data(self):
+        data = (SOURCE / "1349477.db2").read_bytes()
+        with self.assertRaisesRegex(ValueError, "missing.*999999"):
+            db2_casc.decode(data, record_ids={2991, 999999}, inline_arrays={6: 2})
+
+    def test_full_encrypted_table_still_fails(self):
+        with self.assertRaisesRegex(ValueError, "encrypted"):
+            db2_casc.decode((SOURCE / "1349477.db2").read_bytes())
+
+
+class SkyborneImportTest(unittest.TestCase):
+    def test_retail_regeneration_reapplies_skyborne_overlay(self):
+        import db2
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            csv_dir = root / db2.DEFAULT_BUILD
+            csv_dir.mkdir()
+            conn = sqlite3.connect(root / "scratch.db")
+            conn.executescript((SCRIPTS / "db2_schema.sql").read_text())
+            conn.execute("INSERT INTO map (ID, Directory) VALUES (0, 'Azeroth')")
+            conn.commit()
+            for table in db2.TABLES:
+                name = db2.table_name(table)
+                columns = [row[1] for row in conn.execute(f"PRAGMA table_info({name})")]
+                with (csv_dir / f"{table}.csv").open("w", newline="") as handle:
+                    writer = csv.writer(handle)
+                    writer.writerow(columns)
+                    writer.writerows(conn.execute(f"SELECT * FROM {name}"))
+            conn.close()
+            for _ in range(2):
+                result = subprocess.run(
+                    [
+                        sys.executable,
+                        str(SCRIPTS / "db2.py"),
+                        "import",
+                        "--csv-root",
+                        str(root),
+                        "--db",
+                        str(root / "scratch.db"),
+                    ],
+                    capture_output=True,
+                    text=True,
+                )
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                with sqlite3.connect(root / "scratch.db") as check:
+                    self.assertEqual(
+                        check.execute(
+                            "SELECT WdtFileDataID FROM map WHERE ID=2991"
+                        ).fetchone(),
+                        (7198644,),
+                    )
+                    self.assertEqual(
+                        check.execute(
+                            "SELECT COUNT(*) FROM faction_template"
+                        ).fetchone(),
+                        (2,),
+                    )
+                    self.assertEqual(
+                        check.execute(
+                            "SELECT Directory FROM map WHERE ID=0"
+                        ).fetchone(),
+                        ("Azeroth",),
+                    )
+
+    def test_import_preserves_retail_rows_and_records_exact_source(self):
+        with tempfile.TemporaryDirectory() as directory:
+            db = Path(directory) / "scratch.db"
+            conn = sqlite3.connect(db)
+            conn.executescript((SCRIPTS / "db2_schema.sql").read_text())
+            conn.execute("INSERT INTO faction_template (ID, Faction) VALUES (1, 1)")
+            conn.execute("INSERT INTO map (ID, Directory) VALUES (0, 'Azeroth')")
+            conn.commit()
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(SCRIPTS / "skyborne_data.py"),
+                    "--db",
+                    str(db),
+                    "--source-dir",
+                    str(SOURCE),
+                ],
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertEqual(
+                conn.execute(
+                    "SELECT ID,Faction,Flags,FactionGroup,FriendGroup,EnemyGroup "
+                    "FROM faction_template WHERE ID IN (3628,3629) ORDER BY ID"
+                ).fetchall(),
+                [(3628, 2794, 72, 5, 4, 10), (3629, 2795, 72, 3, 2, 12)],
+            )
+            self.assertEqual(
+                conn.execute(
+                    "SELECT Directory,MapName_lang,WdtFileDataID FROM map WHERE ID=2991"
+                ).fetchone(),
+                ("2991", "Zephras Isle", 7198644),
+            )
+            self.assertEqual(
+                conn.execute(
+                    "SELECT Faction FROM faction_template WHERE ID=1"
+                ).fetchone(),
+                (1,),
+            )
+            self.assertEqual(
+                conn.execute("SELECT Directory FROM map WHERE ID=0").fetchone(),
+                ("Azeroth",),
+            )
+            self.assertEqual(
+                conn.execute(
+                    "SELECT table_name,row_id,build FROM db2_row_source ORDER BY table_name,row_id"
+                ).fetchall(),
+                [
+                    ("faction_template", 3628, "1.60.1.70205"),
+                    ("faction_template", 3629, "1.60.1.70205"),
+                    ("map", 2991, "1.60.1.70205"),
+                ],
+            )
+            conn.close()
