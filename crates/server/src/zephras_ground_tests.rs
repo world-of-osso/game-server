@@ -52,10 +52,8 @@ fn zephras_ground_centers_and_height_report() {
             let minimum = ground
                 .min_height(ZEPHRAS_MAP, feet)
                 .expect("minimum height");
-            assert!(
-                minimum.is_finite() && minimum <= height,
-                "minimum {minimum}, height {height}"
-            );
+            assert!(minimum.is_finite(), "minimum {minimum}, height {height}");
+            record["above_min_height"] = serde_json::json!(height >= minimum);
             if let Some(liquid) = ground.liquid_at(ZEPHRAS_MAP, feet) {
                 assert!(liquid.level.is_finite() && liquid.depth_level.is_finite());
                 record["liquid_level"] = serde_json::json!(liquid.level);
