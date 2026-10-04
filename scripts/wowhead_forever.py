@@ -72,7 +72,11 @@ def parse_page(source, kind, entry):
             continue
         template = re.search(r'(?:\btemplate|"template")\s*:\s*[\"\']([^\"\']+)', raw)
         name = re.search(r'(?:\bid|"id")\s*:\s*[\"\']([^\"\']+)', raw)
-        if template and name:
+        if (
+            template
+            and template[1] in ("npc", "quest", "object", "item", "spell")
+            and name
+        ):
             views.append(
                 {
                     "template": template[1],
