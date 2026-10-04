@@ -86,6 +86,93 @@ fn frames_for(ms: u32) -> usize {
     (ms / 50) as usize
 }
 
+/// Retribution 137028 effect 9: aura 366, 101% AP (world.db row 726748).
+const RETRIBUTION: u32 = 137028;
+const FLASH_OF_LIGHT: u32 = 19750;
+
+#[test]
+fn spellpower_override_retribution_level_four_heals_and_tracks_attack_power() {
+    use crate::stats::CharacterStats;
+    use shared::components::{Level, UnitStats};
+
+    let mut h = crate::spell_cast::test_harness::harness_with(
+        Vec::new(),
+        &[137026, RETRIBUTION, FLASH_OF_LIGHT],
+        2,
+        true,
+    )
+    .expect("world spell data");
+    h.app.world_mut().entity_mut(h.caster).insert(Level(4));
+    h.advance(3);
+    let stats = *h.app.world().get::<CharacterStats>(h.caster).unwrap();
+    // Human paladin level 4: 22 Strength, 1 AP per Strength; 101% override.
+    assert_eq!(stats.attack_power, 22.0);
+    assert!((stats.spell_power - 22.22).abs() < 1e-5, "{stats:?}");
+    h.app
+        .world_mut()
+        .get_mut::<CharacterStats>(h.caster)
+        .unwrap()
+        .crit_pct = 0.0;
+    h.app
+        .world_mut()
+        .get_mut::<Health>(h.caster)
+        .unwrap()
+        .current = 1.0;
+    h.cast_and_deliver(FLASH_OF_LIGHT, Some(h.caster));
+    h.advance(40);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    let heals = log_of(&h, CombatLogKind::Heal, FLASH_OF_LIGHT);
+    assert_eq!(heals.len(), 1);
+    // Base 0 + 3.156 × 22.22 = 70.12632, ±2.5%, rounded: 68..=72.
+    assert!((68..=72).contains(&heals[0].amount), "{:?}", heals[0]);
+    assert_eq!(h.health(h.caster), 1.0 + heals[0].amount as f32);
+
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(crate::stats::EquippedItems::default());
+    let mut mods = *h.app.world().get::<StatModifiers>(h.caster).unwrap();
+    mods.primary_flat = UnitStats {
+        strength: 78.0,
+        ..default()
+    };
+    h.app.world_mut().entity_mut(h.caster).insert(mods);
+    h.advance(1);
+    let stats = h.app.world().get::<CharacterStats>(h.caster).unwrap();
+    assert_eq!(stats.attack_power, 100.0);
+    assert_eq!(stats.spell_power, 101.0);
+
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(crate::class_progression::KnownSpells::fixture(vec![
+            FLASH_OF_LIGHT,
+        ]));
+    h.advance(3);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<CharacterStats>(h.caster)
+            .unwrap()
+            .spell_power,
+        0.0
+    );
+}
+
+#[test]
+fn spellpower_override_leaves_intellect_caster_unchanged() {
+    let mut h = crate::spell_cast::test_harness::harness_with(Vec::new(), &[FLASH_HEAL], 5, true)
+        .expect("world spell data");
+    h.advance(3);
+    let stats = h
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(h.caster)
+        .unwrap();
+    assert_eq!(stats.spell_power, stats.primary.intellect);
+    assert!(stats.spell_power > 0.0);
+}
+
 #[test]
 fn shadow_word_pain_ticks_periodic_damage_then_expires() {
     let Some(mut h) = harness(Vec::new(), &[SHADOW_WORD_PAIN], 5) else {
