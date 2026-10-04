@@ -67,12 +67,13 @@ impl TerrainHeightMap {
 
     /// Find the chunk containing the given WoW (x, y) position.
     fn find_chunk(&self, x: f32, y: f32) -> Option<&ChunkHeight> {
-        self.chunks.iter().find(|c| {
-            // Terrain grows in negative X/Y from the corner position.
-            x <= c.corner_x
-                && x >= c.corner_x - CHUNK_SIZE
-                && y <= c.corner_y
-                && y >= c.corner_y - CHUNK_SIZE
+        // MCNK corners are independently rounded f32s. Compare their authored grid
+        // cells, not raw bounds: subtraction otherwise leaves sub-milliyard seams.
+        let grid_x = (x / CHUNK_SIZE).ceil();
+        let grid_y = (y / CHUNK_SIZE).ceil();
+        self.chunks.iter().find(|chunk| {
+            (chunk.corner_x / CHUNK_SIZE).round() == grid_x
+                && (chunk.corner_y / CHUNK_SIZE).round() == grid_y
         })
     }
 

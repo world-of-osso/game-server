@@ -112,6 +112,7 @@ fn zephras_sample_placements_and_wmo_groups_parse() {
                 );
             }
         }
+        assert!(!hits.is_empty(), "WMO {root}: no walkable floor hits");
         assert!(hits.iter().all(|height| height.is_finite()));
         println!(
             "Zephras WMO {root}: {} parsed groups, {} floor hits",
