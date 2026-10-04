@@ -12,7 +12,8 @@ instead of wago.tools; `fetch` skips them.
 CSVs live in <csv-root>/<build>/<Table>.csv. Import replaces every DB2 table
 listed in TABLES inside one transaction (non-DB2 tables are untouched), checks
 each CSV header against scripts/db2_schema.sql, and records the build per table
-in `db2_build`.
+in `db2_build`. The pinned local Forever Skyborne overlay is reapplied in that
+same transaction (skyborne_data.py); mixed-source rows use `db2_row_source`.
 """
 
 import argparse
@@ -28,6 +29,7 @@ import urllib.request
 from pathlib import Path
 
 import db2_casc
+import skyborne_data
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 PROJECT_DIR = SCRIPT_DIR.parent
@@ -40,43 +42,134 @@ MAX_ATTEMPTS = 6
 
 # wago.tools serves no SpellIcon table for Retail 12.x (icons are FileDataIDs in SpellMisc).
 TABLES = [
-    "SpellName", "Spell", "SpellMisc", "SpellEffect", "SpellPower",
-    "SpellCastTimes", "SpellRange", "SpellCooldowns", "SpellDuration",
-    "SpellAuraOptions", "SpellCategories", "SpellCategory", "SpellLevels",
-    "SpellClassOptions", "SpellProcsPerMinute", "SpellProcsPerMinuteMod",
-    "SpellShapeshift", "SpellShapeshiftForm", "SpellInterrupts",
-    "SpellTargetRestrictions", "SpellEquippedItems", "SpellRadius", "SpellLabel",
-    "SpellScaling", "SpellEmpower", "SpellEmpowerStage", "SpellXSpellVisual",
-    "SkillLine", "SkillLineAbility", "ChrClasses", "ChrSpecialization",
-    "SpecializationSpells", "PowerType", "ChrClassesXPowerTypes",
-    "TraitTree", "TraitNode", "TraitNodeEntry", "TraitDefinition", "TraitEdge",
-    "TraitCond", "TraitCost", "TraitCurrency", "TraitSubTree", "TraitNodeGroup",
-    "TraitNodeGroupXTraitNode", "TraitNodeXTraitCond", "TraitNodeXTraitNodeEntry",
-    "TraitTreeLoadout", "TraitTreeLoadoutEntry", "TraitTreeXTraitCurrency",
-    "SkillLineXTraitTree", "TraitNodeGroupXTraitCond", "TraitNodeGroupXTraitCost",
-    "TraitNodeXTraitCost", "TraitNodeEntryXTraitCost", "TraitNodeEntryXTraitCond",
-    "TraitCurrencySource", "SpecSetMember",
-    "Item", "ItemSparse", "ItemAppearance", "ItemModifiedAppearance", "QuestV2",
-    "TaxiNodes", "TaxiPath", "TaxiPathNode", "FactionTemplate", "AreaTable",
-    "RandPropPoints", "ItemArmorQuality", "ItemArmorShield", "ItemArmorTotal",
-    "ArmorLocation", "ItemDamageOneHand", "ItemDamageOneHandCaster",
-    "ItemDamageTwoHand", "ItemDamageTwoHandCaster", "ItemSquishEra", "CurvePoint",
-    "DurabilityCosts", "DurabilityQuality", "GameObjectDisplayInfo", "BankTab", "CreatureDisplayInfo", "CreatureModelData",
-    "SpellReagents", "SpellTotems", "TradeSkillCategory", "SkillRaceClassInfo", "TotemCategory",
-    "ContentTuning", "QuestMoneyReward", "ExpectedStat", "ExpectedStatMod", "ContentTuningXExpected",
-    "Map", "MapDifficulty", "AreaTrigger", "AreaTriggerActionSet", "Difficulty", "DungeonEncounter",
-    "MapDifficultyXCondition", "PlayerCondition",
-    "CharacterLoadout", "CharacterLoadoutItem", "ItemEffect", "ItemXItemEffect",
-    "Vignette", "Mount", "MountCapability", "MountTypeXCapability", "MountXDisplay",
-    "QuestInfo", "QuestLineXQuest", "Campaign", "CampaignXQuestLine", "CreatureFamily",
+    "SpellName",
+    "Spell",
+    "SpellMisc",
+    "SpellEffect",
+    "SpellPower",
+    "SpellCastTimes",
+    "SpellRange",
+    "SpellCooldowns",
+    "SpellDuration",
+    "SpellAuraOptions",
+    "SpellCategories",
+    "SpellCategory",
+    "SpellLevels",
+    "SpellClassOptions",
+    "SpellProcsPerMinute",
+    "SpellProcsPerMinuteMod",
+    "SpellShapeshift",
+    "SpellShapeshiftForm",
+    "SpellInterrupts",
+    "SpellTargetRestrictions",
+    "SpellEquippedItems",
+    "SpellRadius",
+    "SpellLabel",
+    "SpellScaling",
+    "SpellEmpower",
+    "SpellEmpowerStage",
+    "SpellXSpellVisual",
+    "SkillLine",
+    "SkillLineAbility",
+    "ChrClasses",
+    "ChrSpecialization",
+    "SpecializationSpells",
+    "PowerType",
+    "ChrClassesXPowerTypes",
+    "TraitTree",
+    "TraitNode",
+    "TraitNodeEntry",
+    "TraitDefinition",
+    "TraitEdge",
+    "TraitCond",
+    "TraitCost",
+    "TraitCurrency",
+    "TraitSubTree",
+    "TraitNodeGroup",
+    "TraitNodeGroupXTraitNode",
+    "TraitNodeXTraitCond",
+    "TraitNodeXTraitNodeEntry",
+    "TraitTreeLoadout",
+    "TraitTreeLoadoutEntry",
+    "TraitTreeXTraitCurrency",
+    "SkillLineXTraitTree",
+    "TraitNodeGroupXTraitCond",
+    "TraitNodeGroupXTraitCost",
+    "TraitNodeXTraitCost",
+    "TraitNodeEntryXTraitCost",
+    "TraitNodeEntryXTraitCond",
+    "TraitCurrencySource",
+    "SpecSetMember",
+    "Item",
+    "ItemSparse",
+    "ItemAppearance",
+    "ItemModifiedAppearance",
+    "QuestV2",
+    "TaxiNodes",
+    "TaxiPath",
+    "TaxiPathNode",
+    "FactionTemplate",
+    "AreaTable",
+    "RandPropPoints",
+    "ItemArmorQuality",
+    "ItemArmorShield",
+    "ItemArmorTotal",
+    "ArmorLocation",
+    "ItemDamageOneHand",
+    "ItemDamageOneHandCaster",
+    "ItemDamageTwoHand",
+    "ItemDamageTwoHandCaster",
+    "ItemSquishEra",
+    "CurvePoint",
+    "DurabilityCosts",
+    "DurabilityQuality",
+    "GameObjectDisplayInfo",
+    "BankTab",
+    "CreatureDisplayInfo",
+    "CreatureModelData",
+    "SpellReagents",
+    "SpellTotems",
+    "TradeSkillCategory",
+    "SkillRaceClassInfo",
+    "TotemCategory",
+    "ContentTuning",
+    "QuestMoneyReward",
+    "ExpectedStat",
+    "ExpectedStatMod",
+    "ContentTuningXExpected",
+    "Map",
+    "MapDifficulty",
+    "AreaTrigger",
+    "AreaTriggerActionSet",
+    "Difficulty",
+    "DungeonEncounter",
+    "MapDifficultyXCondition",
+    "PlayerCondition",
+    "CharacterLoadout",
+    "CharacterLoadoutItem",
+    "ItemEffect",
+    "ItemXItemEffect",
+    "Vignette",
+    "Mount",
+    "MountCapability",
+    "MountTypeXCapability",
+    "MountXDisplay",
+    "QuestInfo",
+    "QuestLineXQuest",
+    "Campaign",
+    "CampaignXQuestLine",
+    "CreatureFamily",
 ]
 # Extracted from local CASC by FileDataID (community listfile), pinned to the build's
 # WoWDBDefs layout hash: {table: (FileDataID, layout hash)}.
 LOCAL_TABLES = {
-    "ContentTuning": (1962930, 0xA3E13004), "QuestMoneyReward": (1139047, 0x01D6219A),
-    "ExpectedStat": (1937326, 0x0FD90F9C), "ExpectedStatMod": (1969773, 0x8C41CCCE),
+    "ContentTuning": (1962930, 0xA3E13004),
+    "QuestMoneyReward": (1139047, 0x01D6219A),
+    "ExpectedStat": (1937326, 0x0FD90F9C),
+    "ExpectedStatMod": (1969773, 0x8C41CCCE),
     "ContentTuningXExpected": (2976765, 0x897A4313),
-    "Difficulty": (1352127, 0xB810C351), "DungeonEncounter": (1347279, 0x35863DC4),
+    "Difficulty": (1352127, 0xB810C351),
+    "DungeonEncounter": (1347279, 0x35863DC4),
     "MapDifficultyXCondition": (1375435, 0xD514B4CA),
 }
 # LOCAL_TABLES with localized strings, read from their enUS copy (casc_locale.py).
@@ -85,17 +178,23 @@ LOCALIZED_TABLES = {"Difficulty", "DungeonEncounter", "MapDifficultyXCondition"}
 
 def table_name(db2_name):
     """SpellXSpellVisual -> spell_x_spell_visual, ChrClassesXPowerTypes -> chr_classes_x_power_types."""
-    return re.sub(r"(?<=[a-z0-9])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])", "_", db2_name).lower()
+    return re.sub(
+        r"(?<=[a-z0-9])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])", "_", db2_name
+    ).lower()
 
 
 def retry_delay(attempt, error):
-    retry_after = error.headers.get("Retry-After") if isinstance(error, urllib.error.HTTPError) else None
+    retry_after = (
+        error.headers.get("Retry-After")
+        if isinstance(error, urllib.error.HTTPError)
+        else None
+    )
     if retry_after:
         if retry_after.isdigit():
             return float(retry_after)
         when = email.utils.parsedate_to_datetime(retry_after)
         return max(0.0, when.timestamp() - time.time())
-    return min(60.0, 2 ** attempt) * random.uniform(0.5, 1.0)
+    return min(60.0, 2**attempt) * random.uniform(0.5, 1.0)
 
 
 def is_transient(error):
@@ -108,16 +207,23 @@ def download(url):
     for attempt in range(1, MAX_ATTEMPTS + 1):
         try:
             # wago.tools answers 403 to urllib's default User-Agent.
-            request = urllib.request.Request(url, headers={"User-Agent": "world-of-osso-db2/1"})
+            request = urllib.request.Request(
+                url, headers={"User-Agent": "world-of-osso-db2/1"}
+            )
             with urllib.request.urlopen(request, timeout=120) as response:
                 if not response.headers.get_content_type() == "text/csv":
-                    raise RuntimeError(f"{url}: expected text/csv, got {response.headers.get_content_type()}")
+                    raise RuntimeError(
+                        f"{url}: expected text/csv, got {response.headers.get_content_type()}"
+                    )
                 return response.read()
         except Exception as error:  # noqa: BLE001 - classified below
             if not is_transient(error) or attempt == MAX_ATTEMPTS:
                 raise
             delay = retry_delay(attempt, error)
-            print(f"  retry {attempt}/{MAX_ATTEMPTS - 1} in {delay:.1f}s: {error}", file=sys.stderr)
+            print(
+                f"  retry {attempt}/{MAX_ATTEMPTS - 1} in {delay:.1f}s: {error}",
+                file=sys.stderr,
+            )
             time.sleep(delay)
 
 
@@ -160,8 +266,13 @@ def extract(build, csv_root):
         if target.exists():
             print(f"  have {target.name}")
             continue
-        columns = [(row[1], row[2]) for row in schema.execute(f"PRAGMA table_info({table_name(db2)})")]
-        header, rows = db2_casc.extract_rows(fdid, layout_hash, columns, localized=db2 in LOCALIZED_TABLES)
+        columns = [
+            (row[1], row[2])
+            for row in schema.execute(f"PRAGMA table_info({table_name(db2)})")
+        ]
+        header, rows = db2_casc.extract_rows(
+            fdid, layout_hash, columns, localized=db2 in LOCALIZED_TABLES
+        )
         partial = target.with_suffix(".csv.part")
         with partial.open("w", newline="", encoding="utf-8") as handle:
             writer = csv.writer(handle)
@@ -199,6 +310,7 @@ def check_csvs(csv_dir):
 def import_tables(build, csv_root, db_path):
     csv_dir = csv_root / build
     check_csvs(csv_dir)
+    skyborne_rows = skyborne_data.load_rows(skyborne_data.DEFAULT_SOURCE)
     conn = sqlite3.connect(db_path, isolation_level=None)
     try:
         conn.executescript("BEGIN;\n" + SCHEMA_SQL.read_text())
@@ -208,8 +320,11 @@ def import_tables(build, csv_root, db_path):
             header, rows = read_csv(csv_dir / f"{db2}.csv")
             placeholders = ",".join("?" * len(header))
             conn.executemany(f"INSERT INTO {name} VALUES ({placeholders})", rows)
-            conn.execute("INSERT INTO db2_build (table_name, build) VALUES (?, ?)", (name, build))
+            conn.execute(
+                "INSERT INTO db2_build (table_name, build) VALUES (?, ?)", (name, build)
+            )
             counts[name] = len(rows)
+        skyborne_data.import_rows(conn, skyborne_rows)
         conn.execute("COMMIT")
     except BaseException:
         if conn.in_transaction:
@@ -222,7 +337,9 @@ def import_tables(build, csv_root, db_path):
 
 
 def main():
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     parser.add_argument("command", choices=["fetch", "extract", "check", "import"])
     parser.add_argument("--build", default=DEFAULT_BUILD)
     parser.add_argument("--csv-root", type=Path, default=DEFAULT_CSV_ROOT)
