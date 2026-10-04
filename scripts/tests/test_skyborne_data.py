@@ -1,14 +1,14 @@
 """Pinned Forever DB2 decoding and scratch-only Skyborne publication."""
 
-from pathlib import Path
-from contextlib import closing
 import csv
-import sqlite3
 import shutil
+import sqlite3
 import subprocess
 import sys
 import tempfile
 import unittest
+from contextlib import closing
+from pathlib import Path
 
 SCRIPTS = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(SCRIPTS))
@@ -65,6 +65,7 @@ class SkyborneImportTest(unittest.TestCase):
                 ],
                 capture_output=True,
                 text=True,
+                check=False,
             )
             self.assertNotEqual(result.returncode, 0)
             self.assertIn("SHA-256", result.stderr)
@@ -109,6 +110,7 @@ class SkyborneImportTest(unittest.TestCase):
                     ],
                     capture_output=True,
                     text=True,
+                    check=False,
                 )
                 self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
                 with closing(sqlite3.connect(root / "scratch.db")) as check:
@@ -150,6 +152,7 @@ class SkyborneImportTest(unittest.TestCase):
                 ],
                 capture_output=True,
                 text=True,
+                check=False,
             )
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             self.assertEqual(

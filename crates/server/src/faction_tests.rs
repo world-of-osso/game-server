@@ -1,5 +1,7 @@
 use super::*;
 
+include!("skyborne_faction_fixture.rs");
+
 /// FactionTemplate IDs (Retail DB2, AzerothCore `creature_template.faction`).
 const HUMAN: u32 = 1;
 const ORC: u32 = 2;
@@ -58,7 +60,16 @@ fn race_faction_templates_come_from_chr_races() {
 
 #[test]
 fn skyborne_imported_templates_have_authored_reactions() {
-    let templates = world_db_faction_templates().expect("world.db factions");
+    let mut templates = world_db_faction_templates().expect("world.db factions");
+    let scratch = Connection::open_in_memory().expect("scratch database");
+    scratch
+        .execute_batch(SKYBORNE_FACTION_SQL)
+        .expect("source-decoded faction fixture");
+    templates.0.extend(
+        load_faction_templates(&scratch)
+            .expect("imported templates")
+            .0,
+    );
     for (skyborne, ally, enemy) in [(3629, HUMAN, ORC), (3628, ORC, HUMAN)] {
         assert_eq!(templates.reaction(skyborne, ally), Reaction::Friendly);
         assert_eq!(templates.reaction(ally, skyborne), Reaction::Friendly);

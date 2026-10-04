@@ -216,7 +216,7 @@ def download(url):
                         f"{url}: expected text/csv, got {response.headers.get_content_type()}"
                     )
                 return response.read()
-        except Exception as error:  # noqa: BLE001 - classified below
+        except Exception as error:
             if not is_transient(error) or attempt == MAX_ATTEMPTS:
                 raise
             delay = retry_delay(attempt, error)
