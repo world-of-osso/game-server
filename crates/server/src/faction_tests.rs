@@ -57,6 +57,20 @@ fn race_faction_templates_come_from_chr_races() {
 }
 
 #[test]
+fn skyborne_imported_templates_have_authored_reactions() {
+    let templates = world_db_faction_templates().expect("world.db factions");
+    for (skyborne, ally, enemy) in [(3629, HUMAN, ORC), (3628, ORC, HUMAN)] {
+        assert_eq!(templates.reaction(skyborne, ally), Reaction::Friendly);
+        assert_eq!(templates.reaction(ally, skyborne), Reaction::Friendly);
+        assert_eq!(templates.reaction(skyborne, enemy), Reaction::Hostile);
+        assert_eq!(templates.reaction(enemy, skyborne), Reaction::Hostile);
+        assert!(templates.can_assist(player(skyborne), player(ally)));
+        assert!(!templates.can_assist(player(skyborne), player(enemy)));
+        assert!(!templates.can_attack(player(skyborne), player(enemy)));
+    }
+}
+
+#[test]
 fn stormwind_guard_is_friendly_with_human_player() {
     let Some(templates) = world_db_faction_templates() else {
         return;
