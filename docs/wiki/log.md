@@ -58,6 +58,10 @@ Added [[warlock-pets]] and its spec: effect-56 MiscValue creature entry, shared 
 
 Added [[general-spell-grants]]: read-only SQLite/CSV comparison of 41 captured entries; Attributes_13 bit 16 marks 31 content abilities plus Throw, while ordinary entries clear it. Other requested fields do not separate them. Unknown bit semantics and Throw eligibility block a verified rule; no server code/data change or behavioral proof.
 
+## [2026-10-04] systems/spec | Zephras ground and partial LOS
+
+Added [[ground-assets]] and its contract; reconciled [[skyborne]] prerequisites. Recorded explicit registered-map/build-selected local extraction, 203 cached dependencies with 42 unavailable, authored-grid seam correction, required shared MPY2 collision commit, three real desktop fixtures, 21 terrain regressions, all 72 center records, and 48-tile partial LOS/runtime hit proof. No invented start, live database update or full-map coverage claim.
+
 ## [2026-10-04] systems | Skyborne server support
 
 Added [[skyborne]] and server spec: verified Forever race bits/classes/factions, source-decoded faction/map overlay and regeneration, ten-pair real-kit storage-reopen/login proof, unchanged Northshire placement, and map-2991 ground/LOS prerequisites. No live world database writes.
