@@ -25,6 +25,54 @@ const SLAM: u32 = 1464;
 const BATTLE_SHOUT: u32 = 6673;
 
 #[test]
+fn scaled_overkill_spells_and_periodic_ticks_use_logged_damage_units() {
+    for periodic in [false, true] {
+        for (health_before, expected_health, expected_overkill) in
+            [(46.0, 0.0, 6), (230.0, 115.0, 0), (115.0, 0.0, 0)]
+        {
+            let mut h = harness(Vec::new(), &[], 8).unwrap();
+            h.app
+                .world_mut()
+                .entity_mut(h.caster)
+                .insert(shared::components::UnitLevel(10));
+            h.app.world_mut().entity_mut(h.npc).insert((
+                shared::components::UnitLevel(30),
+                crate::level_scaling::tests::HOGGER_SCALING,
+                crate::level_scaling::tests::hogger_stats(),
+            ));
+            h.app.world_mut().get_mut::<Health>(h.npc).unwrap().current = health_before;
+            let spell = SpellInfo {
+                id: FIREBALL,
+                ..default()
+            };
+            let ctx = super::effects::EffectCtx {
+                caster: h.caster,
+                spell: &spell,
+                depth: 0,
+                chain_multiplier: 1.0,
+            };
+            super::effects::deal_damage(h.app.world_mut(), &ctx, h.npc, 10.0, false, periodic);
+            h.advance(3);
+            let event = h
+                .inbox
+                .log
+                .iter()
+                .find(|event| event.kind == CombatLogKind::Damage)
+                .expect("spell damage delivered to owner");
+            // Logged 10 damage removes 115 native health: 46 / 115 needs 4 damage.
+            assert_eq!(event.amount, 10);
+            assert_eq!(
+                event.overflow, expected_overkill,
+                "periodic {periodic}, health before {health_before}"
+            );
+            assert!((0..=event.amount).contains(&event.overflow));
+            assert_eq!(event.periodic, periodic);
+            assert_eq!(h.health(h.npc), expected_health);
+        }
+    }
+}
+
+#[test]
 fn warrior_gets_rage_pool_replicated_as_unit_powers() {
     let Some(mut h) = harness(Vec::new(), &[], 1) else {
         return;

@@ -147,6 +147,38 @@ fn tuned_hogger(app: &mut App, entity: Entity) {
 }
 
 #[test]
+fn scaled_overkill_melee_uses_logged_damage_units() {
+    for (health_before, expected_health, expected_overkill) in
+        [(46.0, 0.0, 6), (230.0, 115.0, 0), (115.0, 0.0, 0)]
+    {
+        let mut h = crate::spell_cast::test_harness::harness(Vec::new(), &[], 1).unwrap();
+        h.app
+            .world_mut()
+            .entity_mut(h.caster)
+            .remove::<CharacterStats>();
+        h.app.world_mut().entity_mut(h.caster).insert(UnitLevel(10));
+        tuned_hogger(&mut h.app, h.npc);
+        h.app.world_mut().get_mut::<Health>(h.npc).unwrap().current = health_before;
+        h.attack(h.npc);
+        h.advance(6);
+        let event = h
+            .inbox
+            .log
+            .iter()
+            .find(|event| event.kind == CombatLogKind::Damage && event.spell_id.is_none())
+            .expect("melee damage delivered to owner");
+        // Logged 10 damage removes 115 native health: 46 / 115 needs 4 damage.
+        assert_eq!(event.amount, 10);
+        assert_eq!(
+            event.overflow, expected_overkill,
+            "health before {health_before}"
+        );
+        assert!((0..=event.amount).contains(&event.overflow));
+        assert_eq!(h.health(h.npc), expected_health);
+    }
+}
+
+#[test]
 fn level_10_player_hit_takes_the_level_10_share_of_a_tuned_creatures_health() {
     let mut app = setup_app();
     let hogger = spawn_target(&mut app, pos(1.0, 0.0, 0.0), 13_137.0);
