@@ -26,6 +26,7 @@ Health and damage
 - [x] Health is one pool per creature. Damage the creature takes is divided by (max health at the attacker's level ÷ its own max health) (Unit::DealDamage, Unit.cpp:829-830; GetHealthMultiplierForTarget, Creature.cpp:3181-3189).
   - This covers swings and spells.
   - A level 10 player's 10 damage removes 115 of Hogger's 13,137 health; a level 40 player's removes 10.
+- [x] Melee, spell and periodic damage log overkill in the same units as their unchanged damage amount, bounded by 0..=amount. With 46 native health remaining, a 10-damage hit removing 115 native health reports 6 overkill; nonlethal and exactly lethal hits report 0. Blizzard_CombatLogProcessor.lua:291-301,334-344 subtracts overkill from amount.
 - [x] A tuned creature's swing does `ExpectedStat.CreatureAutoAttackDps(own level) × DamageModifier × 2 s`, rolled uniformly between 1× and 1.5× (UpdateLevelDependantStats, Creature.cpp:1650-1656; CalculateMinMaxDamage, StatSystem.cpp:1138-1147).
 - [x] Any damage a tuned creature deals, swings and spells alike, is multiplied by (base DPS at the target's level ÷ base DPS at its own level) (Unit::DealDamageMods, Unit.cpp:814-815; GetDamageMultiplierForTarget, Creature.cpp:3198-3206).
 - [x] Untuned creatures keep `creature_classlevelstats` health and the flat 10-damage swing. Players swing their weapon ([player damage](player-damage.md)).
@@ -70,7 +71,9 @@ Client
   - `test_retail_spawns_replace_azerothcore_spawns_on_maps_0_and_1` (tuned template columns).
 - shared-protocol `level_scaling_tests.rs`: Hogger 10/30, range floor, delta, colours, grey level.
 - `crates/server/src/level_scaling_tests.rs`: ExpectedStat evaluation, mods, expansion fallback, damage and health multipliers.
+- `spell_cast/tests.rs`: `scaled_overkill_spells_and_periodic_ticks_use_logged_damage_units` (direct/periodic lethal, nonlethal and exact kills delivered to owner).
 - `combat_tests.rs`:
+  - `scaled_overkill_melee_uses_logged_damage_units` (lethal, nonlethal and exact kills delivered to owner);
   - `level_10_player_hit_takes_the_level_10_share_of_a_tuned_creatures_health`;
   - `level_40_player_hit_on_a_tuned_creature_is_unscaled`;
   - `tuned_creature_swings_expected_stat_damage_at_the_targets_level`.

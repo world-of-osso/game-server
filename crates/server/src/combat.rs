@@ -843,7 +843,7 @@ fn try_swing(
     );
     let damage = crate::level_scaling::damage_dealt(&attacker_scaling, &target, outcome_damage);
     let scaled_loss = crate::level_scaling::health_loss(&attacker_scaling, &target, damage);
-    let overkill = (scaled_loss - health.current).max(0.0);
+    let overkill = crate::level_scaling::damage_overkill(damage, scaled_loss, health.current);
     let (loss, duel_defeated) = crate::duel::duel_health_loss(
         duel,
         attacker.entity,

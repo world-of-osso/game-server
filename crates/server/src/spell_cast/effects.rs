@@ -517,7 +517,7 @@ pub fn deal_damage(
     if duel_defeated {
         world.entity_mut(target).insert(crate::duel::DuelDefeated);
     }
-    let overkill = (scaled_loss - before).max(0.0);
+    let overkill = crate::level_scaling::damage_overkill(amount, scaled_loss, before);
     mark_dirty(world, target);
     world
         .entity_mut(target)

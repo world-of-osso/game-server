@@ -338,6 +338,16 @@ pub(crate) fn health_loss(attacker: &UnitScaling, victim: &UnitScaling, damage: 
     (damage / victim.health_multiplier(attacker)).trunc()
 }
 
+/// Combat-log damage beyond remaining health, in the logged damage's units.
+/// Use the actual truncated health loss rather than recomputing its scaling.
+pub(crate) fn damage_overkill(amount: f32, scaled_loss: f32, health_before: f32) -> f32 {
+    if scaled_loss <= health_before {
+        return 0.0;
+    }
+    let excess_fraction = (scaled_loss - health_before) / scaled_loss;
+    amount * excess_fraction
+}
+
 #[cfg(test)]
 #[path = "level_scaling_tests.rs"]
 pub(crate) mod tests;
