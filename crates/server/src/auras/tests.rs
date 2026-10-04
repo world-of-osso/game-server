@@ -190,6 +190,117 @@ fn spellpower_override_retribution_passive_uses_attack_power() {
     assert_eq!(character_stats(&h).spell_power, 0.0);
 }
 
+/// Paladin passive 137026: effect 6 MOD_BLOCK_PERCENT 51 +7 (world.db spell_effect
+/// 260671); effect 7 MOD_GLOBAL_COOLDOWN_BY_HASTE_REGEN 417 with SpellClassMask
+/// [0x20000000, 0, 0x10000000, 0] (260672).
+const PALADIN_PASSIVE: u32 = 137026;
+/// Block 107: SPELL_EFFECT_BLOCK 23 (`Player::m_canBlock`).
+const BLOCK: u32 = 107;
+/// Worn Wooden Shield, INVTYPE_SHIELD.
+const WORN_WOODEN_SHIELD: u32 = 2362;
+
+/// A level 10 paladin knowing `spells` with item data loaded, the shield in its off
+/// hand when `shield`.
+fn paladin_with_shield(spells: &[u32], shield: bool) -> Harness {
+    let mut h = paladin(spells, 10);
+    let path = crate::test_data::world_db_path();
+    let world = h.app.world_mut();
+    world.insert_resource(crate::item_templates::load_item_templates(&path).unwrap());
+    world.insert_resource(crate::item_stats::load_item_scaling_tables(&path).unwrap());
+    let items = if shield {
+        vec![(
+            shared::protocol::EquipmentSlot::OffHand,
+            WORN_WOODEN_SHIELD,
+        )]
+    } else {
+        Vec::new()
+    };
+    world
+        .entity_mut(h.caster)
+        .insert(crate::stats::EquippedItems { items });
+    h.advance(3);
+    h
+}
+
+/// Swings out of 10 000 rolls a level-matched creature blocks against `defense`.
+fn blocked_rolls(defense: crate::melee::PlayerDefense) -> usize {
+    use crate::melee::{MeleeOutcome, Swinger, Victim, roll_melee_outcome, swing_chances};
+    let chances = swing_chances(
+        Swinger::Creature { miss_pct: 5.0 },
+        Victim::Player(defense),
+        true,
+    );
+    (0..10_000)
+        .filter(|&roll| roll_melee_outcome(&chances, roll) == MeleeOutcome::Block)
+        .count()
+}
+
+/// Player::UpdateBlockPercentage (StatSystem.cpp:490-507): with `CanBlock` and a
+/// shield, block is 5 + Σ MOD_BLOCK_PERCENT + rating; the passive's +7 makes 12%,
+/// which the hit table rolls as 1200 of 10 000 swings.
+#[test]
+fn block_percent_aura_adds_to_shield_block_chance() {
+    let h = paladin_with_shield(&[PALADIN_PASSIVE, BLOCK], true);
+    let defense = character_stats(&h).defense;
+    assert_eq!(defense.block, 12.0);
+    assert_eq!(blocked_rolls(defense), 1200);
+
+    let base = character_stats(&paladin_with_shield(&[BLOCK], true)).defense;
+    assert_eq!(base.block, 5.0);
+    assert_eq!(blocked_rolls(base), 500);
+}
+
+/// Without a shield (Unit.cpp:2843-2846) the aura gives no block.
+#[test]
+fn block_percent_aura_without_a_shield_cannot_block() {
+    let h = paladin_with_shield(&[PALADIN_PASSIVE, BLOCK], false);
+    let defense = character_stats(&h).defense;
+    assert_eq!(defense.block, 0.0);
+    assert_eq!(blocked_rolls(defense), 0);
+}
+
+/// Divine Toll 375576: StartRecoveryCategory 133, 1500 ms, SPELL_ATTR0_IS_ABILITY,
+/// paladin class mask word 2 0x10000000 (affected by the passive's 417).
+const DIVINE_TOLL: u32 = 375576;
+
+/// The GCD the paladin starts casting Divine Toll at the kobold with `haste_pct`.
+fn divine_toll_gcd_ms(spells: &[u32], haste_pct: f32) -> u32 {
+    use shared::components::PowerType;
+    let mut h = harness(Vec::new(), spells, PALADIN).expect("world spell data");
+    h.advance(3);
+    h.app
+        .world_mut()
+        .get_mut::<crate::stats::CharacterStats>(h.caster)
+        .unwrap()
+        .haste_pct = haste_pct;
+    h.set_power(PowerType::Mana, 10_000.0);
+    h.cast_and_deliver(DIVINE_TOLL, Some(h.npc));
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    let gcds: Vec<u32> = h
+        .inbox
+        .cooldowns
+        .iter()
+        .filter(|update| update.is_gcd && update.spell_id == DIVINE_TOLL)
+        .map(|update| update.duration_ms)
+        .collect();
+    assert_eq!(gcds.len(), 1, "{:?}", h.inbox.cooldowns);
+    gcds[0]
+}
+
+/// Spell::TriggerGlobalCooldown (Spell.cpp:9220-9224): a spell an affecting 417 aura
+/// matches has its GCD × ModHasteRegen (1 / (1 + haste)), clamped to 750-1500 ms.
+#[test]
+fn gcd_by_haste_regen_aura_scales_affected_gcd_with_haste() {
+    let with_aura = [PALADIN_PASSIVE, DIVINE_TOLL];
+    // 1500 / 1.25 = 1200.
+    assert_eq!(divine_toll_gcd_ms(&with_aura, 25.0), 1200);
+    // 1500 / 2.5 = 600 -> 750 floor.
+    assert_eq!(divine_toll_gcd_ms(&with_aura, 150.0), 750);
+    assert_eq!(divine_toll_gcd_ms(&with_aura, 0.0), 1500);
+    // Without the aura an IS_ABILITY spell's GCD ignores haste (Spell.cpp:9209-9218).
+    assert_eq!(divine_toll_gcd_ms(&[DIVINE_TOLL], 25.0), 1500);
+}
+
 #[test]
 fn spellpower_override_leaves_intellect_caster_unchanged() {
     let mut h = crate::spell_cast::test_harness::harness_with(Vec::new(), &[FLASH_HEAL], 5, true)
