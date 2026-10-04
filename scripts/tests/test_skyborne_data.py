@@ -1,6 +1,7 @@
 """Pinned Forever DB2 decoding and scratch-only Skyborne publication."""
 
 from pathlib import Path
+from contextlib import closing
 import csv
 import sqlite3
 import shutil
@@ -50,7 +51,7 @@ class SkyborneImportTest(unittest.TestCase):
             path = source / "1349477.db2"
             path.write_bytes(path.read_bytes() + b"corrupt")
             db = root / "scratch.db"
-            with sqlite3.connect(db) as conn:
+            with closing(sqlite3.connect(db)) as conn, conn:
                 conn.executescript((SCRIPTS / "db2_schema.sql").read_text())
                 conn.execute("INSERT INTO faction_template (ID,Faction) VALUES (1,1)")
             result = subprocess.run(
@@ -67,7 +68,7 @@ class SkyborneImportTest(unittest.TestCase):
             )
             self.assertNotEqual(result.returncode, 0)
             self.assertIn("SHA-256", result.stderr)
-            with sqlite3.connect(db) as conn:
+            with closing(sqlite3.connect(db)) as conn:
                 self.assertEqual(
                     conn.execute("SELECT ID,Faction FROM faction_template").fetchall(),
                     [(1, 1)],
@@ -110,7 +111,7 @@ class SkyborneImportTest(unittest.TestCase):
                     text=True,
                 )
                 self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-                with sqlite3.connect(root / "scratch.db") as check:
+                with closing(sqlite3.connect(root / "scratch.db")) as check:
                     self.assertEqual(
                         check.execute(
                             "SELECT WdtFileDataID FROM map WHERE ID=2991"

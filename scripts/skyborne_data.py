@@ -6,6 +6,7 @@ No network fetch, inferred faction values, or replacement of other Retail rows.
 """
 
 import argparse
+from contextlib import closing
 import hashlib
 import sqlite3
 from pathlib import Path
@@ -83,7 +84,7 @@ def decode_source(source_dir, table, columns):
 
 
 def load_rows(source_dir):
-    with sqlite3.connect(":memory:") as schema:
+    with closing(sqlite3.connect(":memory:")) as schema:
         schema.executescript((SCRIPTS / "db2_schema.sql").read_text())
         return {
             table: decode_source(source_dir, table, source_columns(schema, table))
@@ -118,8 +119,9 @@ def main():
     args = parser.parse_args()
     rows = load_rows(args.source_dir)
     # Do not silently create an empty database when the requested scratch file is absent.
-    with sqlite3.connect(f"file:{args.db}?mode=rw", uri=True) as connection:
-        import_rows(connection, rows)
+    with closing(sqlite3.connect(f"file:{args.db}?mode=rw", uri=True)) as connection:
+        with connection:
+            import_rows(connection, rows)
     print("Forever 1.60.1.70205: imported faction templates 3628/3629 and map 2991")
 
 

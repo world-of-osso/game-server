@@ -8,7 +8,7 @@ Server support for Forever races 95/96, grounded in local build 1.60.1.70205 Chr
 - [x] Create at level 1, persist across storage reopen, and select all ten pairs with real Retail kit data.
 - [x] Assign Alliance/template 3629 to race 95 and Horde/template 3628 to race 96; imported templates yield friendly allied and hostile opposing reactions.
 - [x] Decode only source-backed faction rows 3628/3629 and Map 2991; preserve other Retail rows, reapply the overlay during regeneration, and record row provenance.
-- [ ] Reject source corruption before changing the destination database (backing test added; pending current execution).
+- [x] Reject source corruption before changing the destination database.
 
 ## How it works
 
