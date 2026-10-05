@@ -210,6 +210,22 @@ def decode_source(source_dir, table, columns, record_ids=None, readable=False):
                 for (name, kind), value in zip(columns, values)
             }
         )
+    if table == "item_effect":
+        # Fixed-record palettes hold uint32; the DBD declares narrow destination values.
+        for row in result:
+            for name, width, signed in (
+                ("LegacySlotIndex", 8, False),
+                ("TriggerType", 8, False),
+                ("Charges", 16, True),
+                ("SpellCategoryID", 16, False),
+                ("ChrSpecializationID", 16, False),
+            ):
+                value = row[name] & ((1 << width) - 1)
+                row[name] = (
+                    value - (1 << width)
+                    if signed and value & (1 << (width - 1))
+                    else value
+                )
     if table == "character_loadout_item":
         result = [
             row for row in result if row["CharacterLoadoutID"] in range(2373, 2379)

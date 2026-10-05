@@ -184,6 +184,16 @@ class IsolatedItemPublicationTest(unittest.TestCase):
             ),
         )
 
+    def test_food_drink_effects_decode_declared_signed_and_unsigned_widths(self):
+        rows = {row["ID"]: row for row in self.rows["item_effect"]}
+        self.assertEqual(
+            (rows[98985]["SpellCategoryID"], rows[98985]["Charges"]), (11, -1)
+        )
+        self.assertEqual(
+            (rows[97218]["SpellCategoryID"], rows[97218]["Charges"]), (59, -1)
+        )
+        self.assertEqual(rows[98264]["SpellCategoryID"], 0)
+
     def test_missing_required_definition_rolls_back_loadouts_and_isolated_tables(self):
         rows = copy.deepcopy(self.rows)
         rows["item_sparse"] = [
