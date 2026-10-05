@@ -50,10 +50,19 @@ Ground/asset requirements remain:
 
 Both approved starts use available root 7199904 (tile row 28, column 24), with native `ground_at` support within 0.01 yd of selected Z. Real-kit creation/reopen/SelectCharacter proves all ten pairs persist map 2991, select there and send `LoadTerrain` directory `2991`, tile (28,24). Northshire/Kalimdor entry regressions are retained. Proof ledger: checkout `target/zephras-content-proof/ledger.md`.
 
-[[content-import#Forever Zephras overlay]] owns NPC/quest import counts and limits. Native quest messages prove a giver within 5 yd, Coming of Age acceptance and captured 40 XP at Rorian's turn-in; race 96 is rejected by its source race mask. Skysight rejects level 1, accepts level 2, and remains incomplete because its racial event is unimplemented. No scripted events, phasing or racial spell parity is claimed. Refreshed captured NPC pages resolve Ailee→136968 and Ventaari→139694; native fixtures now load those model rows and spawn named giver entities carrying ModelDisplay. Server spawn/message proof is still not rendered-client proof.
+[[content-import#Forever Zephras overlay]] owns NPC/quest import counts and limits. Native quest messages prove a giver within 5 yd, Coming of Age acceptance and captured 40 XP at Rorian's turn-in; race 96 is rejected by its source race mask. Skysight rejects level 1, accepts level 2, and remains incomplete because its racial event is unimplemented. No scripted events, phasing or racial spell parity is claimed. Refreshed captured NPC pages resolve Ailee→136968 and Ventaari→139694; native fixtures now load those model rows and spawn named giver entities carrying ModelDisplay. Historical fixture spawn/message proof is not production startup or rendered-client proof; the current startup blocker below supersedes any implied native acceptance.
+
+## Native entry and NPC startup source gap (2026-10-05)
+
+Main reported actual native world entry for both races on map 2991 at the approved starts using server `e405232`; this establishes entry only, not NPC/giver/quest acceptance. Startup had zero NPCs because `NPC_APPEARANCE_MAPS` excluded 2991, independently of `HOSTED_CONTINENTS`.
+
+The minimal gate change `2af05c1` retained a real imported-row regression expecting 1,662 spawns. Its attempted GREEN reached `zones.rs:625`: template 249363, level 5, class 0 had no class-level-stat row. Local captured sources do not establish authored class/health for 249363, Ailee 251362 or Ventaari 251487. Appearance mappings and quest text cannot supply those stats.
+
+User explicitly chose to keep acceptance blocked: no invented Warrior stats and no noncombat substitute contract. `34e23d5` restored the existing appearance allowlist `[0,1,34,670]`; the real startup regression remains explicitly `#[ignore]` with the source-gap reason. Ignored is not passing. Native NPC, giver and quest acceptance remain blocked, separate from entry, historical message tests and missing visual profiles. See [content contract](../../specs/zephras-content.md) and engine `docs/wiki/systems/forever-data.md` for the client fixture boundary.
 
 ## Sources
 
+- [Startup gate](../../../crates/server/src/maps/instances.rs), [real startup regression](../../../crates/server/src/zones_world_db_tests.rs), [spawn stats](../../../crates/server/src/zones.rs) — current source-gap boundary; entry/panic observations supplied by Main for this audit.
 - [race_class.rs](../../../crates/server/src/race_class.rs), [faction.rs](../../../crates/server/src/faction.rs), [persistence_character.rs](../../../crates/server/src/persistence_character.rs)
 - [player_create_info.rs](../../../crates/server/src/player_create_info.rs), [auth_character_tests.rs](../../../crates/server/src/auth_character_tests.rs)
 - [skyborne_data.py](../../../scripts/skyborne_data.py), [test_skyborne_data.py](../../../scripts/tests/test_skyborne_data.py)
