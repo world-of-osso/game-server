@@ -401,8 +401,8 @@ fn every_playable_pair_has_a_loadout_and_creates() {
         }
         for &(item_id, _) in &info.items {
             assert!(
-                kit.templates.get(item_id).is_some(),
-                "item {item_id} template"
+                kit.kit().item_template(race, item_id).is_some(),
+                "race {race} item {item_id} source-local template"
             );
         }
         let created = create(&kit, "Probe", race, class);
@@ -411,7 +411,7 @@ fn every_playable_pair_has_a_loadout_and_creates() {
             .items
             .iter()
             .map(|&(item_id, count)| {
-                if kit.templates.get(item_id).unwrap().max_stack > 1 {
+                if kit.kit().item_template(race, item_id).unwrap().max_stack > 1 {
                     1
                 } else {
                     count as usize

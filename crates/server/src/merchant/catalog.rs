@@ -71,10 +71,22 @@ pub fn load_vendor_catalog(conn: &Connection) -> rusqlite::Result<VendorCatalog>
 }
 
 fn load_goods(conn: &Connection) -> rusqlite::Result<HashMap<u32, VendorGoods>> {
-    let mut statement = conn.prepare(
-        "SELECT ID, Name, Quality, BuyPrice, SellPrice, VendorStackCount, MaxCount \
-         FROM content_item",
-    )?;
+    load_goods_from_table(conn, "content_item")
+}
+
+pub(crate) fn load_skyborne_goods(
+    conn: &Connection,
+) -> rusqlite::Result<HashMap<u32, VendorGoods>> {
+    load_goods_from_table(conn, "skyborne_content_item")
+}
+
+fn load_goods_from_table(
+    conn: &Connection,
+    table: &str,
+) -> rusqlite::Result<HashMap<u32, VendorGoods>> {
+    let mut statement = conn.prepare(&format!(
+        "SELECT ID, Name, Quality, BuyPrice, SellPrice, VendorStackCount, MaxCount FROM {table}"
+    ))?;
     let rows = statement.query_map([], |row| {
         let amount = |column| -> rusqlite::Result<u32> {
             Ok(row.get::<_, i64>(column)?.clamp(0, i64::from(u32::MAX)) as u32)
