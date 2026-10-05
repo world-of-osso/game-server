@@ -21,7 +21,9 @@ fn world_data() -> Option<(ItemTemplates, ItemScalingTables)> {
 /// `item_id` fixed at `item_level` with no squish (Wowhead shows some items
 /// at a scaled level; the formula is checked at that level).
 fn at_item_level(templates: &ItemTemplates, item_id: u32, item_level: u16) -> ItemTemplate {
-    let mut template = *templates.get(item_id).unwrap();
+    let mut template = *templates
+        .get(shared::item_data::ItemDefinitionSource::Retail, item_id)
+        .unwrap();
     template.scaling.item_level = item_level;
     template.scaling.squish_era = u8::MAX;
     template
@@ -44,7 +46,15 @@ fn black_duskwood_staff_squishes_to_12_with_tooltip_damage() {
     };
     // ItemSparse ItemLevel 21 → Midnight curve 92181 (10→10, 342→70) → 12.
     // Tooltip: Item Level 12, "6 - 9 Damage", Speed 3.60.
-    let stats = item_stats(templates.get(BLACK_DUSKWOOD_STAFF).unwrap(), &tables);
+    let stats = item_stats(
+        templates
+            .get(
+                shared::item_data::ItemDefinitionSource::Retail,
+                BLACK_DUSKWOOD_STAFF,
+            )
+            .unwrap(),
+        &tables,
+    );
     assert_eq!(stats.item_level, 12);
     assert_eq!(
         stats.weapon,
@@ -64,7 +74,15 @@ fn notched_shortsword_matches_tooltip() {
         return;
     };
     // Tooltip: Item Level 5, "1 - 2 Damage", Speed 2.60, +1 Agility, +1 Stamina.
-    let stats = item_stats(templates.get(NOTCHED_SHORTSWORD).unwrap(), &tables);
+    let stats = item_stats(
+        templates
+            .get(
+                shared::item_data::ItemDefinitionSource::Retail,
+                NOTCHED_SHORTSWORD,
+            )
+            .unwrap(),
+        &tables,
+    );
     assert_eq!(stats.item_level, 5);
     assert_eq!(stats.block.primary, primary(0.0, 1.0, 1.0, 0.0));
     assert_eq!(
@@ -142,7 +160,15 @@ fn forlorn_breastplate_of_war_stats_and_armor() {
     );
     // Unscaled: ItemLevel 35 squishes to 15 (budget SuperiorF_0 8.045):
     // Str/Int 5259 → 4, Sta 7889 → 6, crit 6777 × 1.5 → 8, plate armor 18.
-    let base = item_stats(templates.get(FORLORN_BREASTPLATE_OF_WAR).unwrap(), &tables);
+    let base = item_stats(
+        templates
+            .get(
+                shared::item_data::ItemDefinitionSource::Retail,
+                FORLORN_BREASTPLATE_OF_WAR,
+            )
+            .unwrap(),
+        &tables,
+    );
     assert_eq!(base.item_level, 15);
     assert_eq!(base.block.primary, primary(4.0, 0.0, 6.0, 4.0));
     assert_eq!(

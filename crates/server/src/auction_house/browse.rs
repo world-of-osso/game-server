@@ -31,6 +31,7 @@ impl UnitPrice {
 
 struct BrowseGroup<'a> {
     item: &'a AuctionData,
+    source: shared::item_data::ItemDefinitionSource,
     lowest_price: UnitPrice,
     lowest_bid: UnitPrice,
     total_quantity: u64,
@@ -38,13 +39,17 @@ struct BrowseGroup<'a> {
 }
 
 impl<'a> BrowseGroup<'a> {
-    fn from_auction(auction: &'a AuctionData) -> Self {
+    fn from_auction(
+        auction: &'a AuctionData,
+        source: shared::item_data::ItemDefinitionSource,
+    ) -> Self {
         let bid = UnitPrice {
             copper: min_next_bid(auction),
             quantity: auction.stack_count,
         };
         Self {
             item: auction,
+            source,
             lowest_price: UnitPrice {
                 copper: auction.buyout_price.unwrap_or(bid.copper),
                 quantity: auction.stack_count,
@@ -56,7 +61,7 @@ impl<'a> BrowseGroup<'a> {
     }
 
     fn include(&mut self, auction: &'a AuctionData) {
-        let offer = Self::from_auction(auction);
+        let offer = Self::from_auction(auction, self.source);
         if offer.lowest_price.compare(self.lowest_price).is_lt() {
             self.lowest_price = offer.lowest_price;
         }
@@ -77,6 +82,7 @@ impl<'a> BrowseGroup<'a> {
     fn into_item(self) -> AuctionBrowseItem {
         AuctionBrowseItem {
             item_id: self.item.item.item_id,
+            definition_source: self.source,
             name: self.item.item.name.clone(),
             quality: self.item.item.quality,
             required_level: self.item.item.required_level,
@@ -94,13 +100,18 @@ struct BrowseCandidate<'a> {
 }
 
 impl<'a> BrowseCandidate<'a> {
-    fn include_if_matching(&mut self, auction: &'a AuctionData, needle: &str) {
+    fn include_if_matching(
+        &mut self,
+        auction: &'a AuctionData,
+        needle: &str,
+        source: shared::item_data::ItemDefinitionSource,
+    ) {
         if !self.viewer_matches || !super::queries::name_matches(auction, needle) {
             return;
         }
         match &mut self.group {
             Some(group) => group.include(auction),
-            None => self.group = Some(BrowseGroup::from_auction(auction)),
+            None => self.group = Some(BrowseGroup::from_auction(auction, source)),
         }
     }
 }
@@ -110,9 +121,10 @@ pub(super) fn browse_for_viewer(
     query: &AuctionSearchQuery,
     templates: Option<&crate::item_templates::ItemTemplates>,
     viewer: Option<(u8, u8, u16)>,
+    sources: super::queries::DefinitionSources<'_>,
 ) -> AuctionBrowseResults {
     let now = unix_now();
-    let groups = group_matching_auctions(auctions, query, templates, viewer, now);
+    let groups = group_matching_auctions(auctions, query, templates, viewer, now, sources);
     let total_results = u32::try_from(groups.len()).expect("distinct u32 item IDs fit u32 count");
     AuctionBrowseResults {
         query: query.clone(),
@@ -127,9 +139,13 @@ fn group_matching_auctions<'a>(
     templates: Option<&crate::item_templates::ItemTemplates>,
     viewer: Option<(u8, u8, u16)>,
     now: u64,
+    sources: super::queries::DefinitionSources<'_>,
 ) -> Vec<BrowseGroup<'a>> {
     let needle = query.text.to_ascii_lowercase();
-    let mut candidates: BrowseMap<u32, BrowseCandidate<'_>> = BrowseMap::new();
+    let mut candidates: BrowseMap<
+        (shared::item_data::ItemDefinitionSource, u32),
+        BrowseCandidate<'_>,
+    > = BrowseMap::new();
     for auction in auctions.values() {
         if auction.expires_at_unix_secs <= now || auction.stack_count == 0 {
             continue;
@@ -138,15 +154,16 @@ fn group_matching_auctions<'a>(
         if !super::queries::matches_search_query(auction, query, "") {
             continue;
         }
+        let source = sources(auction.item.item_guid);
         let candidate = candidates
-            .entry(auction.item.item_id)
+            .entry((source, auction.item.item_id))
             .or_insert_with(|| BrowseCandidate {
                 viewer_matches: super::handlers::auction_matches_viewer(
-                    auction, query, templates, viewer,
+                    auction, query, templates, viewer, source,
                 ),
                 group: None,
             });
-        candidate.include_if_matching(auction, &needle);
+        candidate.include_if_matching(auction, &needle, source);
     }
     candidates
         .into_values()

@@ -78,9 +78,12 @@ fn first_page_all_sorts_keep_ascending_id_ties_and_count_every_match() {
                 query.sort_field = field;
                 query.sort_dir = dir;
                 query.page_size = requested_size;
-                let result = search_auctions_matching(&auctions, &query, |auction| {
-                    auction.auction_id % 5 != 0
-                });
+                let result = search_auctions_matching(
+                    &auctions,
+                    &query,
+                    &|_| shared::item_data::ItemDefinitionSource::Retail,
+                    |auction| auction.auction_id % 5 != 0,
+                );
                 let ids: Vec<_> = result.results.iter().map(|a| a.auction_id).collect();
                 let page_len = requested_size.clamp(1, 50) as usize;
                 assert_eq!(result.total_results, 96);
@@ -141,14 +144,22 @@ fn filtered_shallow_deep_and_overflow_pages_match_full_sort() {
                 let last_page = expected.len().div_ceil(page_size) as u32;
                 for page in [1, 3, 30, last_page - 1, last_page, u32::MAX] {
                     query.page = page;
-                    let result =
-                        search_auctions_matching(&auctions, &query, |a| a.auction_id % 5 != 0);
+                    let result = search_auctions_matching(
+                        &auctions,
+                        &query,
+                        &|_| shared::item_data::ItemDefinitionSource::Retail,
+                        |a| a.auction_id % 5 != 0,
+                    );
                     let start = (page as usize).saturating_mul(page_size);
                     let expected_page: Vec<_> = expected
                         .iter()
                         .skip(start)
                         .take(page_size)
-                        .map(|a| to_listing_summary_at(a, now))
+                        .map(|a| {
+                            to_listing_summary_at(a, now, &|_| {
+                                shared::item_data::ItemDefinitionSource::Retail
+                            })
+                        })
                         .collect();
                     assert_eq!(result.total_results as usize, expected.len());
                     assert_eq!(result.query, query);
@@ -170,7 +181,9 @@ fn first_page_returns_short_and_empty_filtered_results() {
         (3, test_auction(3, "Copper Ore", 1, 1)),
     ]);
     let query = text_query("IRON");
-    let result = search_auctions(&auctions, &query);
+    let result = search_auctions(&auctions, &query, &|_| {
+        shared::item_data::ItemDefinitionSource::Retail
+    });
     assert_eq!(result.total_results, 2);
     assert_eq!(
         result
@@ -180,7 +193,12 @@ fn first_page_returns_short_and_empty_filtered_results() {
             .collect::<Vec<_>>(),
         [1, 2]
     );
-    let result = search_auctions_matching(&auctions, &query, |_| false);
+    let result = search_auctions_matching(
+        &auctions,
+        &query,
+        &|_| shared::item_data::ItemDefinitionSource::Retail,
+        |_| false,
+    );
     assert_eq!(result.total_results, 0);
     assert!(result.results.is_empty());
 }

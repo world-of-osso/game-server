@@ -20,7 +20,7 @@ use crate::persistence::appearance_store::{load_account_appearances, save_accoun
 /// Item ids whose appearance the connection's account learns: the in-world
 /// character's equipped and soulbound items.
 #[derive(Component, Debug, Clone, PartialEq, Default)]
-pub(crate) struct AppearanceSourceItems(pub Vec<u32>);
+pub(crate) struct AppearanceSourceItems(pub Vec<(shared::item_data::ItemDefinitionSource, u32)>);
 
 /// The connection's account collection, loaded on first world entry.
 #[derive(Component, Debug, Clone, PartialEq, Default)]
@@ -54,13 +54,13 @@ type Connections<'w, 's> = Query<
 /// Learn `items`' appearances; the number newly learned.
 fn learn_items(
     collection: &mut AppearanceCollection,
-    items: &[u32],
+    items: &[(shared::item_data::ItemDefinitionSource, u32)],
     templates: &ItemTemplates,
 ) -> usize {
     collection.learn_many(
         items
             .iter()
-            .filter_map(|&item_id| templates.get(item_id)?.appearance_id),
+            .filter_map(|&(source, item_id)| templates.get(source, item_id)?.appearance_id),
     )
 }
 

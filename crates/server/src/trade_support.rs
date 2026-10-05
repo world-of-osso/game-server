@@ -132,7 +132,7 @@ pub(super) fn build_trade_party_snapshot(
         .iter()
         .map(|slot| {
             slot.as_ref()
-                .map(|item| snapshot_trade_item(&inventory, item))
+                .map(|item| snapshot_trade_item(db, &inventory, item))
         })
         .collect();
 
@@ -144,7 +144,11 @@ pub(super) fn build_trade_party_snapshot(
     }
 }
 
-fn snapshot_trade_item(inventory: &InventoryData, item: &TradeItem) -> TradeItemSnapshot {
+fn snapshot_trade_item(
+    db: &redb::Database,
+    inventory: &InventoryData,
+    item: &TradeItem,
+) -> TradeItemSnapshot {
     if let Some(entry) = inventory
         .items
         .iter()
@@ -153,6 +157,10 @@ fn snapshot_trade_item(inventory: &InventoryData, item: &TradeItem) -> TradeItem
         TradeItemSnapshot {
             item_guid: entry.item_guid,
             item_id: entry.item_id,
+            definition_source: persistence::inventory_store::load_item_definition_source(
+                db,
+                entry.item_guid,
+            ),
             name: entry.name.clone(),
             quality: entry.quality,
             stack_count: u32::from(item.count),
@@ -161,6 +169,10 @@ fn snapshot_trade_item(inventory: &InventoryData, item: &TradeItem) -> TradeItem
         TradeItemSnapshot {
             item_guid: item.item_guid,
             item_id: 0,
+            definition_source: persistence::inventory_store::load_item_definition_source(
+                db,
+                item.item_guid,
+            ),
             name: format!("Item {}", item.item_guid),
             quality: 1,
             stack_count: u32::from(item.count),
@@ -287,26 +299,28 @@ fn take_offered_items(
     model: &mut InventoryModel,
     offer: &TradeOffer,
     mint: &mut impl FnMut() -> u64,
-) -> Option<Vec<InventoryItemData>> {
+) -> Option<Vec<(InventoryItemData, shared::item_data::ItemDefinitionSource)>> {
     offer
         .traded_items()
         .map(|item| {
+            let source = model.definition_source(item.item_guid);
             model
                 .take_bag_item(item.item_guid, u32::from(item.count), mint)
                 .ok()
+                .map(|taken| (taken, source))
         })
         .collect()
 }
 
 fn store_received(
     model: &mut InventoryModel,
-    items: Vec<InventoryItemData>,
+    items: Vec<(InventoryItemData, shared::item_data::ItemDefinitionSource)>,
     templates: &ItemTemplates,
     mint: &mut impl FnMut() -> u64,
 ) -> Option<()> {
-    for item in items {
-        let template = templates.get(item.item_id).copied().unwrap_or_default();
-        model.store_item(item, template, mint).ok()?;
+    for (item, source) in items {
+        let template = *templates.get(source, item.item_id)?;
+        model.store_item(item, source, template, mint).ok()?;
     }
     Some(())
 }

@@ -379,7 +379,7 @@ impl Bags<'_> {
             .ok_or_else(|| format!("item {item_id} is not in content_item"))?;
         let template = self
             .templates
-            .get(item_id)
+            .get(shared::item_data::ItemDefinitionSource::Retail, item_id)
             .ok_or_else(|| format!("item {item_id} has no template"))?;
         Ok(InventoryItemData {
             item_guid: persistence::next_id(&self.db.db, "item_instance"),
@@ -396,12 +396,20 @@ impl Bags<'_> {
     fn store(&self, model: &mut InventoryModel, item: InventoryItemData) -> Result<(), String> {
         let template = *self
             .templates
-            .get(item.item_id)
+            .get(
+                shared::item_data::ItemDefinitionSource::Retail,
+                item.item_id,
+            )
             .ok_or_else(|| format!("item {} has no template", item.item_id))?;
         let db = &self.db.db;
         let mut mint = || persistence::next_id(db, "item_instance");
         model
-            .store_item(item, template, &mut mint)
+            .store_item(
+                item,
+                shared::item_data::ItemDefinitionSource::Retail,
+                template,
+                &mut mint,
+            )
             .map_err(|error| format!("{error:?}"))
     }
 }

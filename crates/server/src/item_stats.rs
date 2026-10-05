@@ -119,6 +119,10 @@ pub struct ItemScalingTables {
     pub squish: Option<(u8, Vec<(f64, f64)>)>,
 }
 
+/// Source-local Forever tables; never share the Retail table resource.
+#[derive(Resource, Debug, Default, Clone)]
+pub struct ForeverItemScalingTables(pub ItemScalingTables);
+
 impl ItemScalingTables {
     /// Item level after the squish of every later era (SimC `util::round`).
     pub fn item_level(&self, item: &ItemScaling) -> u16 {

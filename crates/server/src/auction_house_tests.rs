@@ -220,7 +220,9 @@ mod bounded_slice {
                     assert!(expected.len() > 14);
                     for page in 0..=(expected.len() / 7 + 1) {
                         query.page = page as u32;
-                        let result = search_auctions(&auctions, &query);
+                        let result = search_auctions(&auctions, &query, &|_| {
+                            shared::item_data::ItemDefinitionSource::Retail
+                        });
                         assert_eq!(result.total_results as usize, expected.len());
                         let ids: Vec<_> = result.results.iter().map(|a| a.auction_id).collect();
                         let expected_ids: Vec<_> = expected
@@ -252,10 +254,12 @@ mod bounded_slice {
         query.item_id = Some(42);
         query.page_size = 10;
         query.page = 1;
-        let result =
-            super::super::queries::search_auctions_matching(&auctions, &query, |auction| {
-                auction.auction_id % 3 == 0
-            });
+        let result = super::super::queries::search_auctions_matching(
+            &auctions,
+            &query,
+            &|_| shared::item_data::ItemDefinitionSource::Retail,
+            |auction| auction.auction_id % 3 == 0,
+        );
         assert_eq!(result.total_results, 26);
         let ids: Vec<_> = result.results.iter().map(|a| a.auction_id).collect();
         assert_eq!(ids, (11..=20).map(|index| index * 6).collect::<Vec<_>>());
@@ -288,7 +292,9 @@ mod bounded_slice {
             query.sort_field = field;
             query.page = page;
             let start = std::time::Instant::now();
-            let result = search_auctions(&auctions, &query);
+            let result = search_auctions(&auctions, &query, &|_| {
+                shared::item_data::ItemDefinitionSource::Retail
+            });
             let elapsed = start.elapsed();
             eprintln!("300k query text={text:?} field={field:?} page={page}: {elapsed:?}");
             assert_eq!(result.total_results, 300_000);

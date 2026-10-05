@@ -185,7 +185,9 @@ fn auction_snapshot_independent_of_inventory_changes() {
     assert_eq!(auction.item.name, snapshotted_name);
     assert_eq!(auction.item.quality, snapshotted_quality);
 
-    let results = search_auctions(&state.auctions, &text_query(&snapshotted_name));
+    let results = search_auctions(&state.auctions, &text_query(&snapshotted_name), &|_| {
+        shared::item_data::ItemDefinitionSource::Retail
+    });
     assert_eq!(results.total_results, 1);
     assert_eq!(results.results[0].item.name, snapshotted_name);
 }
@@ -194,20 +196,26 @@ fn auction_snapshot_independent_of_inventory_changes() {
 fn empty_auction_house_search_returns_gracefully() {
     let state = AuctionHouseState::default();
 
-    let r = search_auctions(&state.auctions, &text_query(""));
+    let r = search_auctions(&state.auctions, &text_query(""), &|_| {
+        shared::item_data::ItemDefinitionSource::Retail
+    });
     assert_eq!(r.total_results, 0);
     assert!(r.results.is_empty());
 
     let mut query = text_query("sword");
     query.quality = Some(3);
     query.min_level = Some(10);
-    let r = search_auctions(&state.auctions, &query);
+    let r = search_auctions(&state.auctions, &query, &|_| {
+        shared::item_data::ItemDefinitionSource::Retail
+    });
     assert_eq!(r.total_results, 0);
     assert!(r.results.is_empty());
 
     let mut query = text_query("");
     query.page = 5;
-    let r = search_auctions(&state.auctions, &query);
+    let r = search_auctions(&state.auctions, &query, &|_| {
+        shared::item_data::ItemDefinitionSource::Retail
+    });
     assert_eq!(r.total_results, 0);
     assert!(r.results.is_empty());
 }
