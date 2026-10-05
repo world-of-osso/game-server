@@ -62,11 +62,14 @@ fn known_ids(classes: &ClassSpells, race: u8, class_id: u8, level: u8, spec: u32
         .collect()
 }
 
+/// Summon Imp follows DB2: SkillLineAbility 24651 (Warlock skill 849, AcquireMethod 2)
+/// auto-learns 688 at SpellLevels.SpellLevel 3.
 #[test]
-fn warlock_knows_summon_imp_at_level_one() {
+fn warlock_learns_summon_imp_at_level_three() {
     let classes = class_spells().expect("world.db");
-    assert!(known_ids(&classes, HUMAN, 9, 1, 0).contains(&688));
-    assert!(!known_ids(&classes, HUMAN, WARRIOR, 1, 0).contains(&688));
+    assert!(!known_ids(&classes, HUMAN, 9, 2, 0).contains(&688));
+    assert!(known_ids(&classes, HUMAN, 9, 3, 0).contains(&688));
+    assert!(!known_ids(&classes, HUMAN, WARRIOR, 3, 0).contains(&688));
 }
 
 #[test]

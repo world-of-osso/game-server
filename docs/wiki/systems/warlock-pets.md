@@ -14,7 +14,7 @@ Dismiss and a dead demon both call `remove_pet`: stop combat, despawn, save curr
 
 ## Starting spell
 
-Imported SkillLineAbility 24651: SkillLine 849, Spell 688, class mask 256, AcquireMethod 2. Imported SpellLevels gives 688 level 3. The task explicitly requires a level-1 starting kit, so `class_progression::compute_known_spells` adds only 688 for warlocks before deduplication; DB2 remains unchanged. This is an explicit World of Osso requirement, not a claim that TC/retail grants it at level 1.
+Imported SkillLineAbility 24651: SkillLine 849, Spell 688, class mask 256, AcquireMethod 2. Imported SpellLevels gives 688 level 3. Warlocks learn 688 at level 3 through the normal DB2 auto-learn path; there is no level-1 override (an earlier override came from a lead brief, not a user requirement, and was removed 2026-10-05).
 
 ## Sources
 

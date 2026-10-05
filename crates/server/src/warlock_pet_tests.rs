@@ -22,7 +22,7 @@ const WARLOCK: u8 = 9;
 const IMP: u32 = 416;
 
 // The generic cast harness enters the world before returning. Defer that one
-// entry until this fixture installs level-1 state and pet message endpoints.
+// entry until this fixture installs level-3 state (Summon Imp's DB2 SpellLevel) and pet message endpoints.
 fn defer_initial_pet_login(
     mut commands: Commands,
     connections: Query<Entity, Added<InWorld>>,
@@ -79,7 +79,7 @@ impl ImpHarness {
             },
         )
         .expect("real spell data");
-        h.app.world_mut().entity_mut(h.caster).insert(Level(1));
+        h.app.world_mut().entity_mut(h.caster).insert(Level(3));
         h.app.world_mut().entity_mut(h.connection).insert((
             MessageSender::<PetAction>::default(),
             MessageReceiver::<PetAction>::default(),
@@ -183,7 +183,7 @@ fn warlock_summon_imp_spawns_owned_pet_and_firebolt_bar() {
     let at = world.get::<Position>(pet).unwrap();
     let owner_at = world.get::<Position>(h.h.caster).unwrap();
     assert!(planar_distance(at, owner_at) <= 3.0);
-    assert_eq!(world.get::<UnitLevel>(pet), Some(&UnitLevel(1)));
+    assert_eq!(world.get::<UnitLevel>(pet), Some(&UnitLevel(3)));
     assert!(
         world
             .get::<UnitPowers>(pet)
@@ -263,7 +263,7 @@ fn warlock_imp_current_pet_returns_after_reopening_database() {
     let h = ImpHarness::login(&path);
     let pet = h.pet().expect("permanent current imp restored at login");
     assert_eq!(h.h.app.world().get::<Npc>(pet).unwrap().template_id, IMP);
-    assert_eq!(h.h.app.world().get::<UnitLevel>(pet), Some(&UnitLevel(1)));
+    assert_eq!(h.h.app.world().get::<UnitLevel>(pet), Some(&UnitLevel(3)));
     assert!(
         h.bars
             .last()
