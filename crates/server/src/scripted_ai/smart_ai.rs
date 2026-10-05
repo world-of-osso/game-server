@@ -351,13 +351,9 @@ impl SmartAi {
 impl CreatureAi for SmartAi {
     /// `SmartScript::OnReset` (SmartScript.cpp:196-215).
     fn reset(&mut self, ctx: &mut Ctx) {
-        ctx.world
-            .entity_mut(ctx.me)
-            .remove::<CombatMovementDisabled>();
         for index in 0..self.events.len() {
             if self.events[index].flags & EVENT_FLAG_DONT_RESET == 0 {
                 self.init_timer(index);
-                self.states[index].run_once = false;
             }
         }
         self.process_events_for(ctx, EVENT_RESET, None, 0);
@@ -375,8 +371,10 @@ impl CreatureAi for SmartAi {
             let event = &self.events[index];
             if !matches!(event.event_type, EVENT_UPDATE_IC | EVENT_HAS_AURA)
                 || !self.in_phase(event.phase_mask)
-                || (event.event_type == EVENT_UPDATE_IC && !ctx.is_engaged())
             {
+                continue;
+            }
+            if event.event_type == EVENT_UPDATE_IC && !ctx.is_engaged() {
                 continue;
             }
             if self.states[index].timer_ms >= diff_ms {

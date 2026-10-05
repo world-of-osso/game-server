@@ -83,11 +83,20 @@ fn wait_for_fireball(h: &mut Harness, creature: Entity) -> CastState {
     panic!("engaged Geomancer must start Fireball within 5.1 seconds");
 }
 
+// Keep the exhaustion condition stable despite the real template's mana regen.
+fn advance_without_mana(h: &mut Harness, creature: Entity, seconds: f32) {
+    for _ in 0..(seconds / 0.05).round() as usize {
+        h.app.world_mut().get_mut::<Mana>(creature).unwrap().current = 0.0;
+        h.advance(0.05);
+    }
+}
+
 #[test]
 fn geomancer_casts_at_victim_and_holds_position_through_repeat_window() {
     let (mut h, creature) = geomancer();
     h.engage(creature);
     let cast = wait_for_fireball(&mut h, creature);
+    let first_start = h.app.world().resource::<Time>().elapsed_secs_f64();
     assert_eq!(cast.target, h.player().to_bits());
     let position = *h.app.world().get::<Position>(creature).unwrap();
     h.advance(0.2);
@@ -104,6 +113,11 @@ fn geomancer_casts_at_victim_and_holds_position_through_repeat_window() {
         "CMC holds even between casts"
     );
     let next = wait_for_fireball(&mut h, creature);
+    let repeat_seconds = h.app.world().resource::<Time>().elapsed_secs_f64() - first_start;
+    assert!(
+        (3.0..=5.1).contains(&repeat_seconds),
+        "repeat after {repeat_seconds}s"
+    );
     assert_eq!(next.target, h.player().to_bits());
     assert_eq!(*h.app.world().get::<Position>(creature).unwrap(), position);
 }
@@ -115,11 +129,15 @@ fn geomancer_out_of_mana_resumes_chase_and_melee() {
     let cast = wait_for_fireball(&mut h, creature);
     h.advance(cast.duration - cast.elapsed + 0.1);
     let position = *h.app.world().get::<Position>(creature).unwrap();
-    h.app.world_mut().get_mut::<Mana>(creature).unwrap().current = 0.0;
-    h.advance(5.2);
+    advance_without_mana(&mut h, creature, 5.2);
     assert!(h.app.world().get::<CastState>(creature).is_none());
     assert_ne!(*h.app.world().get::<Position>(creature).unwrap(), position);
-    h.advance(6.0);
+    advance_without_mana(&mut h, creature, 6.0);
+    assert_eq!(
+        h.casts(0, creature, FIREBALL),
+        1,
+        "no casts while exhausted"
+    );
     assert!(
         h.inbox(0)
             .log

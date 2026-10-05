@@ -229,10 +229,14 @@ fn initialize_ai(world: &mut World, creature: Entity) {
         world.entity_mut(creature).remove::<CreatureScriptName>();
         return;
     };
-    world.entity_mut(creature).insert(CreatureAiState {
-        ai: Some(ai),
-        pending: VecDeque::new(),
-    });
+    // A new SmartAI starts with `_canCombatMove = true`; ordinary Reset keeps it.
+    world
+        .entity_mut(creature)
+        .remove::<smart_ai::CombatMovementDisabled>()
+        .insert(CreatureAiState {
+            ai: Some(ai),
+            pending: VecDeque::new(),
+        });
     dispatch(world, creature, Hook::Reset);
 }
 

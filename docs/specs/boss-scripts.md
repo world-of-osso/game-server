@@ -28,7 +28,7 @@ Dungeons phase 3: creature scripts selected by `creature_template.ScriptName`, p
 ### SmartAI combat casts
 - [x] `SMART_EVENT_UPDATE_IC` advances initial and repeat min/max timers only while engaged; a due cast waits for any active cast to finish.
 - [x] `SMART_TARGET_VICTIM` resolves the current victim. `SMARTCAST_COMBAT_MOVE` disables chase after an accepted cast, including between casts; a rejected cast restores chase/melee and retries on the next update without rerolling event chance.
-- [x] Reset restores combat movement and initial timers. Real Kobold Geomancer 476 rows cast Fireball 20793, with a 0 ms initial delay and 3000–5000 ms repeat.
+- [x] New AI starts with combat movement enabled; Reset restores initial timers without changing movement permission. Real Kobold Geomancer 476 rows cast Fireball 20793, with a 0 ms initial delay and 3000–5000 ms repeat.
 
 ### The Stockade
 - [x] Hogger (46254, boss 2, encounter 1144): pull yell; Maddening Call 1-2 s then every 15-20 s; Vicious Slice 3-4 s then every 10-14 s; once below 30%: boss emote "Hogger enrages!" and Enrage (+30% melee haste, +10% physical damage); death yell, Warden Thelwater summoned, runs to (152.0, 106.2) and speaks at +1/+5/+8 s.
