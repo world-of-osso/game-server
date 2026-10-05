@@ -36,6 +36,7 @@ pub(crate) struct InventoryModel {
     overflow: Vec<InventoryItemData>,
     equipped: BTreeMap<EquipmentSlot, InventoryItemData>,
     instances: HashMap<u64, ItemInstanceData>,
+    definition_sources: HashMap<u64, shared::item_data::ItemDefinitionSource>,
     /// Templates of the item ids this character owns.
     templates: HashMap<u32, ItemTemplate>,
     character: CharacterData,
@@ -69,6 +70,7 @@ impl InventoryModel {
             overflow: Vec::new(),
             equipped: BTreeMap::new(),
             instances: record.instances,
+            definition_sources: record.definition_sources,
             templates: owned_templates,
             character: record.character,
             gold: record.inventory.gold,
@@ -122,8 +124,10 @@ impl InventoryModel {
         let mut unplaced = Vec::new();
         for mut item in items {
             if !seen.insert(item.item_guid) {
-                let meta = self.instances.get(&item.item_guid).copied();
+                let source_guid = item.item_guid;
+                let meta = self.instances.get(&source_guid).copied();
                 item.item_guid = mint();
+                self.copy_definition_source(source_guid, item.item_guid);
                 seen.insert(item.item_guid);
                 if let Some(meta) = meta {
                     self.instances.insert(item.item_guid, meta);
@@ -274,6 +278,13 @@ impl InventoryModel {
             equipped,
             bag_slots,
             instances: self.instances,
+            definition_sources: self.definition_sources,
+        }
+    }
+
+    fn copy_definition_source(&mut self, source_guid: u64, new_guid: u64) {
+        if let Some(source) = self.definition_sources.get(&source_guid).copied() {
+            self.definition_sources.insert(new_guid, source);
         }
     }
 
@@ -898,6 +909,7 @@ impl InventoryModel {
         let source_guid = split.item_guid;
         split.item_guid = new_guid;
         split.stack_count = count;
+        self.copy_definition_source(source_guid, new_guid);
         if let Some(meta) = self.instances.get(&source_guid).copied() {
             self.instances.insert(new_guid, meta);
         }
@@ -1107,6 +1119,7 @@ impl InventoryModel {
         let mut taken = item.clone();
         taken.item_guid = mint();
         taken.stack_count = count;
+        self.copy_definition_source(item_guid, taken.item_guid);
         if let Some(meta) = self.instances.get(&item_guid).copied() {
             self.instances.insert(taken.item_guid, meta);
         }
@@ -1148,6 +1161,7 @@ impl InventoryModel {
             let mut stack = item.clone();
             stack.item_guid = guid.take().unwrap_or_else(&mut *mint);
             stack.stack_count = count;
+            self.copy_definition_source(item.item_guid, stack.item_guid);
             self.bags[bag][slot] = Some(stack);
             left -= count;
         }
@@ -1171,6 +1185,7 @@ impl InventoryModel {
                 break;
             };
             let item_guid = guid.take().unwrap_or_else(&mut *mint);
+            self.copy_definition_source(item.item_guid, item_guid);
             let copy = InventoryItemData {
                 item_guid,
                 stack_count: 1,
@@ -1315,7 +1330,9 @@ impl InventoryModel {
             return Ok(());
         }
         if guid_taken {
+            let source_guid = item.item_guid;
             item.item_guid = mint();
+            self.copy_definition_source(source_guid, item.item_guid);
         }
         item.stack_count = rest;
         self.store_item(item, template, mint)

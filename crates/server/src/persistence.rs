@@ -277,6 +277,8 @@ pub(crate) fn create_tables(db: &Database) {
     let _ = txn.open_table(inventory_store::INVENTORY_LAYOUTS);
     let _ = txn.open_table(inventory_store::BAG_SLOTS);
     let _ = txn.open_table(inventory_store::ITEM_INSTANCES);
+    txn.open_table(inventory_store::ITEM_DEFINITION_SOURCES)
+        .expect("Failed to create item definition sources table");
     let _ = txn.open_table(quest_store::QUEST_LOGS);
     let _ = txn.open_table(taxi_store::KNOWN_TAXI_NODES);
     let _ = txn.open_table(pet_store::PET_STABLES);
