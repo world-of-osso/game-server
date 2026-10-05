@@ -58,6 +58,10 @@ Added [[warlock-pets]] and its spec: effect-56 MiscValue creature entry, shared 
 
 Added [[general-spell-grants]]: read-only SQLite/CSV comparison of 41 captured entries; Attributes_13 bit 16 marks 31 content abilities plus Throw, while ordinary entries clear it. Other requested fields do not separate them. Unknown bit semantics and Throw eligibility block a verified rule; no server code/data change or behavioral proof.
 
+## [2026-10-04] systems/spec | Forever Zephras reference capture
+
+Updated [[content-import]], [[skyborne]] and index; added capture contract. Recorded per-page Forever capture, explicit partial metadata, CloudFront/browser 403 block, retail-calibrated UiMap inversion, real 72-center terrain comparison and conditional start proposals. No server import, mask widening, phasing or scripted events; race-96 level-1 intro remains unsupported by captured pages.
+
 ## [2026-10-04] systems/spec | Zephras ground and partial LOS
 
 Added [[ground-assets]] and its contract; reconciled [[skyborne]] prerequisites. Recorded explicit registered-map/build-selected local extraction, 203 cached dependencies with 42 unavailable, authored-grid seam correction, required shared MPY2 collision commit, three real desktop fixtures, 21 terrain regressions, all 72 center records, and 48-tile partial LOS/runtime hit proof. No invented start, live database update or full-map coverage claim.

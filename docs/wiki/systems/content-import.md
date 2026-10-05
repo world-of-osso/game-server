@@ -32,6 +32,18 @@ Quest, vendor, loot, gossip and item content comes from AzerothCore (Wrath 3.3.5
 
 [[skyborne]] documents the pinned local Forever faction/map overlay applied inside `db2.py import`, including regeneration behavior and row provenance.
 
+### Forever Zephras reference capture
+
+Verified 2026-10-04; [contract](../../specs/wowhead-forever-reference.md). `scripts/wowhead_forever.py` captures individual `/forever/` pages under `data/reference/wowhead/forever-zephras-<YYYYMMDD>/{zone,quest,npc,object}/<id>.json`. URL, UTC timestamp, scrape name, raw HTML, Listviews, Gatherer/entity objects, mapper data and quest text remain inspectable. HTTPS is sequential with at least 1.5 seconds between requests; transient GET failures retry boundedly, but 403/429 stop. `--source` accepts inspected browser-rendered HTML; it does not bypass access controls.
+
+The `forever-zephras-20261004` snapshot contains 1 zone, 137 quest and 3 NPC pages. CloudFront blocked quest 97967; browser navigation also returned 403 for that quest and intro giver 251362. `zephras-content.json` exposes 146 zone-listed quests, 295 in-zone NPCs and 3 quest-referenced objects. Ten quest, 292 NPC and all 3 object pages remain uncaptured; list metadata is explicitly `page_captured: false`, not fabricated entity-page data. Seed 93739 was captured but omitted from normalized zone content because its mapper places it outside Zephras. Quest mappers supply coordinates for 148 NPCs; only 3 NPC displays were captured. Null fields remain unknown. NPC interaction labels are not converted into kill credit; unknown action labels remain unknown.
+
+Calibration uses local Forever UiMapAssignment FDID 1957219, hash-matched layout `C9CC8DFB`: assignment 69852 maps UiMap 2665 to map 2991. `bounds.json` and `assignments.json` retain decoded bounds and SHA-256. Wowhead's UiMap 2521 assignment differs only by 0.003052 yards at minimum world X. Percent inversion swaps screen axes and reverses them: world X derives from map V; world Y from U. `calibration-proof.json` records a retail Goldshire check against the engine's existing map fixture: absolute errors 0.091 X and 0.154 Y yards, below percent-rounding uncertainty.
+
+`Terrain.position` uses WDT 7198644 MAID and ports server `terrain_height.rs` MCVT fan/hole sampling. `terrain-proof.json` compares all 72 centers to the existing real server report: 14 supported heights agree within 0.01 yards; 24 missing roots stay unknown; 34 centers are holes. NPC observations yield 883 terrain-supported points, 260 missing-root points and 3 hole/outside points. These are mapper observations, not authored spawns; no WMO floors, liquid safety, facing or phases are inferred.
+
+`start-proposals.json` keeps the grounded first-giver proposal for race 95 and a conditional earliest generic Horde-giver candidate for race 96. No captured page establishes a race-96 level-1 intro: Coming of Age 92460 has race mask bit 32 only, while Horde quest 92598 requires level 2. Importing code must resolve that content gap explicitly; this slice neither widens race masks nor writes server starts. See [[skyborne]].
+
 ### Loader
 
 `mysql_dump.py` tokenizes dump `INSERT`s and decodes MySQL string escapes before binding parameters. The previous awk/sed path rewrote only `\'`, so 168 creature names were stored with literal backslashes (`Remy \"Two Times\"`); they now load as `Remy "Two Times"`. `--schema` runs `world_schema.sql` inside the load transaction, so the dump tables can be reloaded into a populated `world.db` without touching DB2 tables, and a failed parse rolls back. The full script still deletes and rebuilds `world.db`.

@@ -23,12 +23,12 @@ FactionTemplate 3628 references Faction 2794, flags 72 and groups 5/4/10; 3629 r
 
 The imported Map row registers Zephras Isle, directory `2991`, InstanceType 0, WdtFileDataID 7198644. `maps/store.rs` loads it as a continent; `ground.rs::open_ground_map` derives its WDT mapping directly from MapStore. No hardcoded map registry addition is needed.
 
-1. Supply an authored start position and route race 95/96 through `persistence_character.rs::start_location`; creation persists both coordinates and map. **Current behavior is unchanged:** both races use existing Northshire default (map 0, -8949/-132/83), including Horde race 96. No capital substitution or invented Zephras coordinates.
+1. Supply an authored or explicitly approved reconstructed start position and route race 95/96 through `persistence_character.rs::start_location`; creation persists both coordinates and map. **Current behavior is unchanged:** both races use existing Northshire default (map 0, -8949/-132/83), including Horde race 96. No capital substitution or invented Zephras coordinates.
 2. Cache WDT 7198644 as `terrain/7198644.wdt` and extract its MAID root/object tiles plus referenced WMO/GFID groups from the Forever CASC build. The existing probe `game-engine/data/forever-1.60.1.70205/skyborne-probe/7198644.dat` is a readable WDT (294,988 bytes, MPHD 970, 72 root tiles). Initial root/object FDIDs include 7199799/7199800. This proves WDT availability, not complete ADT/WMO availability.
 3. Provision the explicit registered map with `ground_files.py`/`extract_ground.py --map 2991`; Map-row build provenance selects Forever local CASC. No invented creature spawns are needed. [[ground-assets]] records the extracted closure, remaining local-asset gaps and parser corrections.
 4. Bake required LOS tiles with `los-bake --data <cache> --world-db <scratch-world.db> --out <cache>/los --map 2991 --all` (or a bounded authored-start area). The baker reads Map.WdtFileDataID. [[ground-assets]] records the partial available-tile bake and runtime loading/hit proof; full-map closure remains blocked.
 
-The registration/import and real sampled-ground paths are tested. Entering an authored Zephras start still requires the position, complete cached ground/LOS files and client terrain support. The 72-center report is evidence for coordinate selection, not a selected start.
+The registration/import and real sampled-ground paths are tested. Entering Zephras still requires selected positions, cached ground/LOS files and client terrain support. The user approved inferred starts and Wowhead Forever-only quest/NPC reconstruction, excluding scripted events and phasing. [[content-import#Forever Zephras reference capture]] records calibrated proposals, the access block and the unresolved race-96 level-1 intro; no start has been selected or written by the capture slice.
 
 ## Sources
 

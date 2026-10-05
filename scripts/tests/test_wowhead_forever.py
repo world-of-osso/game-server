@@ -45,8 +45,8 @@ class ForeverTests(unittest.TestCase):
         bounds = {
             "ui_min": [0, 0],
             "ui_max": [1, 1],
-            "region_min": [-10254.166, -1935.4166, -10000],
-            "region_max": [-7939.583, 1535.4166, 10000],
+            "region_min": [-10254.200195312, -1935.4200439453, -1000000],
+            "region_max": [-7939.580078125, 1535.4200439453, 1000000],
         }
         x, y = wh.percent_to_world([41.78, 64.56], bounds)
         self.assertAlmostEqual(x, -9433.99, delta=0.3)
@@ -131,6 +131,75 @@ class ForeverTests(unittest.TestCase):
         source += "new Listview({template:'comment',id:'comments',data:lv_comments0});"
         page = wh.parse_page(source, "quest", 92471)
         self.assertEqual(wh.normalize_quest(page)["id"], 92471)
+
+    def test_reward_markup_carries_spell_and_extra_item(self):
+        page = wh.parse_page(
+            (FIXTURES / "quest-97257.html").read_text(), "quest", 97257
+        )
+        rewards = wh.normalize_quest(page)["rewards"]
+        self.assertEqual(rewards["spells"], [3599])
+        self.assertIn([263412, 1], rewards["items"])
+        page = wh.parse_page(
+            (FIXTURES / "quest-92470.html").read_text(), "quest", 92470
+        )
+        rewards = wh.normalize_quest(page)["rewards"]
+        self.assertEqual(len(rewards["choice_items"]), 5)
+        self.assertNotIn([258882, 1], rewards["items"] or [])
+
+    def test_https_transient_retry_and_forbidden_stop(self):
+        from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+        from threading import Thread
+        import urllib.error
+
+        requests = []
+
+        class Handler(BaseHTTPRequestHandler):
+            def do_GET(self):
+                requests.append(self.path)
+                status = (
+                    403
+                    if self.path == "/blocked"
+                    else 503
+                    if len(requests) == 1
+                    else 200
+                )
+                self.send_response(status)
+                self.end_headers()
+                self.wfile.write(b"captured page")
+
+            def log_message(self, *args):
+                return
+
+        server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+        thread = Thread(target=server.serve_forever)
+        thread.start()
+        try:
+            url = f"http://127.0.0.1:{server.server_port}"
+            self.assertEqual(wh.fetch_source(url + "/retry"), "captured page")
+            with self.assertRaises(urllib.error.HTTPError):
+                wh.fetch_source(url + "/blocked")
+            self.assertEqual(requests, ["/retry", "/retry", "/blocked"])
+        finally:
+            server.shutdown()
+            thread.join()
+            server.server_close()
+
+    def test_cache_skips_fetch_and_preserves_timestamp(self):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            page = wh.parse_page(
+                (FIXTURES / "quest-92471.html").read_text(), "quest", 92471
+            )
+            original = wh.save_page(
+                root, page, "https://www.wowhead.com/forever/quest=92471"
+            )
+            capture = wh.Capture(root)
+            cached = capture.page("quest", 92471)
+            self.assertEqual(cached["fetched_at"], original["fetched_at"])
+            self.assertEqual(capture.fetched, [])
+            self.assertEqual(capture.cached, [["quest", 92471]])
 
     def test_challenge_is_not_a_cached_page(self):
         with self.assertRaises(ValueError):
