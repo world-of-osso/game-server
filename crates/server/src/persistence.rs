@@ -424,13 +424,13 @@ fn collect_legacy_character_migrations(db: &Database) -> Vec<(u64, Vec<u8>)> {
         .expect("Failed to iterate character records")
         .filter_map(|row| {
             let (id, bytes) = row.expect("Failed to read character migration row");
-            if bitcode::decode::<CharacterData>(bytes.value()).is_ok() {
+            if CharacterData::decode_stored(bytes.value()).is_ok() {
                 return None;
             }
             let data = CharacterData::decode_compatible(bytes.value()).unwrap_or_else(|error| {
                 panic!("Failed to migrate character {}: {error}", id.value())
             });
-            Some((id.value(), bitcode::encode(&data)))
+            Some((id.value(), data.encode_stored()))
         })
         .collect()
 }
@@ -977,3 +977,7 @@ mod startup_tests;
 #[cfg(test)]
 #[path = "persistence_customization_tests.rs"]
 mod customization_tests;
+
+#[cfg(test)]
+#[path = "persistence_character_abi_tests.rs"]
+mod character_abi_tests;

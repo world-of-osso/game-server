@@ -1,3 +1,4 @@
+use super::character_abi_tests::PreSourceEquipment;
 use super::*;
 use redb::ReadableTableMetadata;
 use shared::components::{
@@ -28,7 +29,7 @@ struct FrozenCharacterWithDurability {
     class: u8,
     level: u16,
     appearance: FrozenAppearance,
-    equipment_appearance: EquipmentAppearance,
+    equipment_appearance: PreSourceEquipment,
     durability: Vec<DurabilityEntryData>,
 }
 
@@ -44,7 +45,7 @@ struct FrozenCharacterWithoutDurability {
     class: u8,
     level: u16,
     appearance: FrozenAppearance,
-    equipment_appearance: EquipmentAppearance,
+    equipment_appearance: PreSourceEquipment,
 }
 
 fn frozen_character() -> FrozenCharacterWithDurability {
@@ -76,7 +77,8 @@ fn frozen_character() -> FrozenCharacterWithDurability {
                 inventory_type: 8,
                 hidden: false,
             }],
-        },
+        }
+        .into(),
         durability: vec![DurabilityEntryData {
             slot: EquipmentVisualSlot::Feet,
             current: 37,
@@ -108,7 +110,7 @@ fn expected_character() -> CharacterData {
             customization_choices: Vec::new(),
             visage: None,
         },
-        equipment_appearance: frozen.equipment_appearance,
+        equipment_appearance: frozen.equipment_appearance.into(),
         durability: frozen.durability,
     }
 }
@@ -187,7 +189,7 @@ fn customization_migration_rewrites_old_bytes_once_across_reopen() {
         let txn = db.begin_read().unwrap();
         let table = txn.open_table(CHARACTERS).unwrap();
         let bytes = table.get(41).unwrap().unwrap().value().to_vec();
-        let current: CharacterData = bitcode::decode(&bytes).expect("startup rewrites old schema");
+        let current = CharacterData::decode_stored(&bytes).expect("startup rewrites old schema");
         assert_eq!(current, expected_character());
         bytes
     };

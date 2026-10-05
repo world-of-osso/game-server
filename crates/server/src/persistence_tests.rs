@@ -1,3 +1,4 @@
+use super::character_abi_tests::PreSourceEquipment;
 use super::*;
 use shared::components::{
     CharacterAppearance, EquipmentAppearance, EquipmentVisualSlot, EquippedAppearanceEntry, Health,
@@ -85,7 +86,7 @@ struct LegacyCharacterDataV3AppearanceV1 {
     class: u8,
     level: u16,
     appearance: LegacyCharacterAppearanceV1,
-    equipment_appearance: EquipmentAppearance,
+    equipment_appearance: PreSourceEquipment,
 }
 
 #[derive(bitcode::Encode)]
@@ -190,7 +191,8 @@ fn legacy_appearance_v1_with_equipment_record() -> LegacyCharacterDataV3Appearan
                 inventory_type: 0,
                 hidden: false,
             }],
-        },
+        }
+        .into(),
     }
 }
 
@@ -349,7 +351,7 @@ fn customization_migration_reopens_all_earlier_schemas() {
             bitcode::encode(&equipped_six),
             "LegacyV3AppearanceV1",
             expected_six.clone(),
-            equipped_six.equipment_appearance.clone(),
+            equipped_six.equipment_appearance.clone().into(),
         ),
         (
             bitcode::encode(&seven),
@@ -383,8 +385,8 @@ fn customization_migration_reopens_all_earlier_schemas() {
                     .unwrap()
                     .value()
                     .to_vec();
-                let current: CharacterData =
-                    bitcode::decode(&bytes).expect("legacy row rewritten to current schema");
+                let current: CharacterData = CharacterData::decode_stored(&bytes)
+                    .expect("legacy row rewritten to current schema");
                 assert_eq!(
                     current,
                     CharacterData {

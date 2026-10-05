@@ -40,10 +40,13 @@ fn grant_transaction(
             .transpose()?
             .unwrap_or_default()
     };
+    let sources = txn.open_table(super::inventory_store::ITEM_DEFINITION_SOURCES)?;
+    crate::persistence_character::hydrate_equipment_sources(&mut character, &equipped, &sources);
+    drop(sources);
     let slots = validate_batch(&character, &equipped, items)?;
     append_granted_items(&txn, &mut character, &mut equipped, items, slots)?;
     let encoded_items = bitcode::encode(&equipped);
-    let encoded_character = bitcode::encode(&character);
+    let encoded_character = character.encode_stored();
     txn.open_table(EQUIPMENT)?
         .insert(id, encoded_items.as_slice())?;
     txn.open_table(CHARACTERS)?
