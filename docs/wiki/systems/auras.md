@@ -187,7 +187,7 @@ Not modeled: `SpellTypeMask` (damage/heal/no-damage filter), hit masks (there ar
 In-scope uses of the ops listed above, as (aura, op) pairs, number more than 30. The most common are (108, 0) with 624 effects, (108, 22) with 271, (219, 3) with 148, (218, 0) with 133 and (219, 12) with 91.
 
 Not applied:
-- 2 Hate: no threat system.
+- 2 Hate: spell-specific threat modifiers are not applied; [school aura modifiers](creature-aggro.md#threat-and-engage) are.
 - 6 Radius.
 - 9 ResistPushback: no pushback.
 - 17 ChainTargets: no chains.
@@ -242,6 +242,8 @@ Every aura change recomputes two components, each written only when its value ch
 | `water_breathing` / `water_breathing_mult` | WATER_BREATHING 82 / MOD_WATER_BREATHING 155 | breath timer ([[swimming-and-breath]]) |
 
 Aura amounts add SP/AP coefficients only for PERIODIC_DAMAGE 3, PERIODIC_HEAL 8 and SCHOOL_ABSORB 69; every other type uses its base points (Bloodlust 2825 is +30% haste regardless of spell power).
+
+`MOD_THREAT` 10 is read directly from active aura effects at threat-generation time, not stored in `AuraStatMods`. See [creature threat](creature-aggro.md#threat-and-engage) for school matching and healing assist threat. Pinned world.db Righteous Fury 25780 has +950% threat across school mask 127; no hardcoded historical +43% modifier.
 
 ## Replication
 
