@@ -321,8 +321,7 @@ def quest_fields(quest, item_ids, spell_ids, report):
         "QuestLevel": quest["level"],
         "MinLevel": quest["reqlevel"],
         "QuestSortID": quest["category"],
-        "AllowableRaces": quest["race_mask"]
-        or {1: 1 << 32, 2: 1 << 33}.get(quest["side"], 0),
+        "AllowableRaces": quest["race_mask"],
         "LogDescription": quest["text"].get("objectives"),
         "QuestDescription": quest["text"].get("description"),
     }
@@ -439,6 +438,7 @@ def apply_overlay(db, content, catalog, decoded):
         "No scripted events, phasing, loot, vendor inventories or gossip reconstructed",
         "Reputation rewards retained in provenance only; runtime grant unsupported",
         "Retained RewardSpell IDs have no native reward-spell grant handler",
+        "Quest faction-side restrictions retained in provenance; native quest rules have no side field. Source race masks are unchanged",
         "Unknown creature type/classification use schema zero, not a guessed classification",
         "Unresolved NPC displays cannot be rendered as their intended models",
     ]

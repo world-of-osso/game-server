@@ -113,6 +113,12 @@ class ContentOverlayTest(unittest.TestCase):
             ).fetchone(),
             (1,),
         )
+        self.assertEqual(
+            self.db.execute(
+                "SELECT AllowableRaces FROM content_quest_template WHERE ID=92598"
+            ).fetchone(),
+            (0,),
+        )
         self.assertEqual(report["display_coverage"]["db2_npcs"], 0)
         self.assertEqual(report["engine_display_ids"], [136966, 136971])
         self.assertEqual(report["rows"]["content_quest_template"], 4)
