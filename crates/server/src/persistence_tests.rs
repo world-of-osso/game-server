@@ -185,6 +185,7 @@ fn legacy_appearance_v1_with_equipment_record() -> LegacyCharacterDataV3Appearan
             entries: vec![EquippedAppearanceEntry {
                 slot: EquipmentVisualSlot::Feet,
                 item_id: None,
+                definition_source: None,
                 display_info_id: Some(154620),
                 inventory_type: 0,
                 hidden: false,
@@ -577,6 +578,7 @@ fn character_data_round_trip_preserves_equipment_appearance() {
         entries: vec![EquippedAppearanceEntry {
             slot: EquipmentVisualSlot::Chest,
             item_id: Some(6123),
+            definition_source: Some(shared::item_data::ItemDefinitionSource::Retail),
             display_info_id: Some(777),
             inventory_type: 5,
             hidden: false,
@@ -596,6 +598,7 @@ fn sync_live_components_preserves_existing_equipment_appearance() {
         entries: vec![EquippedAppearanceEntry {
             slot: EquipmentVisualSlot::Chest,
             item_id: None,
+            definition_source: None,
             display_info_id: Some(175942),
             inventory_type: 0,
             hidden: false,

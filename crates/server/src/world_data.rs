@@ -844,6 +844,7 @@ fn load_equipment(conn: &Connection) -> HashMap<u32, BTreeMap<u8, EquipmentAppea
         items.push(EquippedAppearanceEntry {
             slot: VIRTUAL_ITEM_SLOTS[slot],
             item_id: Some(item),
+            definition_source: Some(shared::item_data::ItemDefinitionSource::Retail),
             display_info_id: Some(display),
             inventory_type,
             hidden: false,
