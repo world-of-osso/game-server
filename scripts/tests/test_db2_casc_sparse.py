@@ -86,11 +86,13 @@ class SparseDecodeTest(unittest.TestCase):
 
     def test_requested_encrypted_or_missing_row_fails(self):
         for record_id in (900, 999):
-            with self.subTest(record_id=record_id):
-                with self.assertRaisesRegex(
+            with (
+                self.subTest(record_id=record_id),
+                self.assertRaisesRegex(
                     ValueError, f"missing readable DB2 rows:.*{record_id}"
-                ):
-                    decode_fixture(sparse_fixture(), {101, record_id})
+                ),
+            ):
+                decode_fixture(sparse_fixture(), {101, record_id})
 
     def test_full_table_does_not_skip_encryption(self):
         with self.assertRaisesRegex(ValueError, "encrypted"):
