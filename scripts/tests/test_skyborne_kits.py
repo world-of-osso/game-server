@@ -208,6 +208,33 @@ class IsolatedItemPublicationTest(unittest.TestCase):
             self.db.execute("SELECT COUNT(*) FROM character_loadout").fetchone(), (0,)
         )
 
+    def test_missing_required_table_is_explicit_not_retail_substitution(self):
+        rows = copy.deepcopy(self.rows)
+        del rows["item_sparse"]
+        with self.assertRaisesRegex(ValueError, "missing.*item_sparse"):
+            skyborne_data.import_rows(self.db, rows)
+        self.assertEqual(
+            self.db.execute("SELECT COUNT(*) FROM character_loadout").fetchone(), (0,)
+        )
+        skyborne_data.import_rows(self.db, self.rows)
+        self.db.execute("DROP TABLE skyborne_item")
+        with self.assertRaisesRegex(ValueError, "missing.*skyborne_item"):
+            skyborne_data.project_items(self.db)
+
+    def test_missing_appearance_or_effect_parent_rolls_back(self):
+        for table, required in [("item_appearance", 130040), ("item_effect", 98985)]:
+            rows = copy.deepcopy(self.rows)
+            rows[table] = [row for row in rows[table] if row["ID"] != required]
+            with (
+                self.subTest(table=table),
+                self.assertRaisesRegex(ValueError, f"missing.*{table}.*{required}"),
+            ):
+                skyborne_data.import_rows(self.db, rows)
+            self.assertEqual(
+                self.db.execute("SELECT COUNT(*) FROM character_loadout").fetchone(),
+                (0,),
+            )
+
     def test_conflicting_isolated_row_rolls_back_without_changing_retail(self):
         with self.db:
             skyborne_data.import_rows(self.db, self.rows)
