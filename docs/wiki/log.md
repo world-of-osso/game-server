@@ -651,3 +651,7 @@ Updated [[banks]] and added the [guild-ranks contract](../specs/guild-ranks.md):
 ## [2026-10-05] docs | Preserve Retail / isolate Forever audit
 
 Reconciled [[skyborne]], index and source/race contracts against tracked factory, GUID-marker, scaling and character-ABI code plus retained proof ledgers. Supersedes stale pre-isolation kit failure as current state with bounded `e405232` ten-pair creation/reopen proof; preserves historical broad-suite failure and the 26-pass/exit-101 ABI invocation boundary. Immutable provenance across ownership/reload and frozen disk ABI are distinct from explicit wire fields. Transfer integration, unowned content provenance, bare-ID auction search, Classic mechanics and paired native E2E remain open. Docs-only; no new tests, builds, operations or full acceptance.
+
+## 2026-10-05 — Bounded Skyborne source-gap audit
+
+[[skyborne#Native entry and NPC startup source gap (2026-10-05)]] records Main-reported two-race entry, zero NPC startup, the real 1,662-spawn class0 panic and restored allowlist/explicitly ignored regression. User retains authored health/class blocker; no invented Warrior/noncombat contract. [[inventory#Bounded owned-commerce and requirement proof (2026-10-05)]] records commerce4/4 and requirements11/11 with exact scope; buyback is live-session only, not whole parity.

@@ -25,6 +25,12 @@ Contract: [item definition source](../../specs/item-definition-source.md). The a
 
 `EquippedItems.items` stores `(slot, source, id)`. Stats choose Retail `ItemScalingTables` or `ForeverItemScalingTables` explicitly; missing selected definitions/tables panic with context. Scalar formulas remain unchanged. Wire stacks, appearances, trade, auction browse/listings and buyback retain source. Unowned content-source and Classic-parity limits are tracked only in the [source contract](../../specs/item-definition-source.md#known-gaps-current-cycle).
 
+## Bounded owned-commerce and requirement proof (2026-10-05)
+
+[Owned-commerce ledger](../../../target/owned-commerce-source-runtime/ledger.md) records four passing production-handler tests, zero failed/ignored, at server `2af05c1` / shared `48f3640`: mail send/return/take with four redb reopen boundaries and source-qualified wire/equip eligibility for 2947; guild-bank deposit/withdraw for both 2512 sources with app/connection/database recreation, permissions and ownership/log checks; partial auction listing GUID minting, persisted auction restore, buyout/mail claim and final reopen without cross-source merging; and sale/buyback of both 2101 sources with gold 10000→10002→10000. Buyback preserves the live connection across vendor/redb reopen: **live-session only**, not logout/server-restart persistence. Catalog values use captured importer fixtures, not invented sale prices. Storage reopen is not crash/network/process-death proof.
+
+[Requirement ledger](../../../target/source-requirements-proof/ledger.md) records behavioral RED 11 failures at `46d9702`, then GREEN 11 passed/zero failed or ignored at implementation `1a1b049` plus the retained unowned scope patch. Coverage: source-qualified bag/owned counts and removal, quest progress/turn-in/abandon, profession reagents/explicit/category tools, static/economic merchant unique limits and loot unique limits. Initial helper/dependency failures receive no behavioral credit. These bounded receipts do not establish whole commerce parity, native UI acceptance, broad-suite success or current whole-HEAD acceptance; Main owns integration verification.
+
 ## Model
 
 `InventoryModel::from_record` builds a grid (backpack 16 slots, bags 1-4 size 0). Items with a valid placement keep it; unplaced items (new loot, trade, mail) take the first free slot; a guid duplicated within one character (trade/auction partial stacks keep the source guid) gets a fresh guid; items with no free slot go to `overflow` so saving never drops them. Bind-on-pickup and quest items are marked soulbound on load; bind-on-equip items when equipped. Same-source, same-ID stacks merge up to the selected `Stackable`.
@@ -39,6 +45,7 @@ Operations mutate the model; `with_appearance_sync` then rewrites the appearance
 - [Inventory model](../../../crates/server/src/inventory_model.rs)
 - [Definition source tests](../../../crates/server/src/persistence_item_source_tests.rs)
 - [Owned runtime source tests](../../../crates/server/src/inventory_source_tests.rs)
+- [Owned-commerce ledger](../../../target/owned-commerce-source-runtime/ledger.md), [requirement ledger](../../../target/source-requirements-proof/ledger.md) — exact executed revisions, scope patches, commands and saved output.
 
 ## Networking
 

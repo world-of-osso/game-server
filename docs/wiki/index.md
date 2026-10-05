@@ -1,5 +1,7 @@
 # Wiki Index
 
+[Current bounded Skyborne/commerce audit](systems/skyborne.md#native-entry-and-npc-startup-source-gap-2026-10-05): native entry reported; NPC/giver/quest acceptance blocked on authored stats. [Owned commerce and requirement receipts](systems/inventory.md#bounded-owned-commerce-and-requirement-proof-2026-10-05) are scoped4/4 and11/11, not whole parity.
+
 [Native desktop/local development](../remote-builds.md) — normal build/run/check/test workflow, host-local runtime state, and pending runtime proof; [contract](../specs/build-host.md).
 
 
