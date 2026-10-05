@@ -372,3 +372,7 @@ fn startup_load_player_create_infos(mut commands: Commands) {
 #[cfg(test)]
 #[path = "player_create_info_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "skyborne_kit_tests.rs"]
+mod skyborne_tests;

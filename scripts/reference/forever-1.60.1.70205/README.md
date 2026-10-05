@@ -17,6 +17,12 @@ All 30 requested ItemSparse IDs are readable, including the 17 absent from Retai
 
 Shared IDs have concrete creation/count conflicts with Retail (2947 throwing weapon versus junk, 2512 ammunition versus junk, 2101 quiver versus bag, and binding changes). Existing Retail rows cannot be silently relabeled or replaced. Approved isolation stores source definitions in six `skyborne_item*` tables, preserving IDs; `skyborne_content_item` is the existing item projection over those tables. Collisions inside that namespace still fail. `retail-common-items.json` contains the 13 existing shared Item/ItemSparse/content rows copied read-only from the main-owned 6878f6a scratch DB (`target/skyborn-e2e/data/world.db`, Retail 12.1.0.69933); tests preserve them byte-for-value while importing conflicting Forever definitions.
 
+## Creation fixture
+
+`retail-kit-runtime-rows.json` contains read-only Retail rows for actual loadouts 1277 (Human Mage) and 1486 (the old race-95 Warrior kit), memberships and their item/appearance/effect dependencies from the same main-owned scratch DB. `scripts/skyborne_kit_fixture.py` imports those rows, applies the pinned Forever importer, regenerates content twice, checks original Retail values/masks, and emits SQL inside `crates/server/src/skyborne_kit_fixture.rs`. Desktop snapshots already admit Rust fixture modules. No database assembly or extraction is performed.
+
+Produce with `python3 scripts/skyborne_kit_fixture.py --output crates/server/src/skyborne_kit_fixture.rs`. Native `player_create_info::skyborne_tests` consumes this fixture through OwnedKit and actual redb creation/reopen, asserting all ten authored lists/counts and concrete gear. Runtime source-marker propagation remains a separate main-owned boundary.
+
 ## Creature display probe
 
 `zephras_creatures.py` pins two additional local-CASC files. Both have two encrypted sections (one row each) excluded and reported. No encrypted-row completeness claim follows.
