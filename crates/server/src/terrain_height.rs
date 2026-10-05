@@ -30,6 +30,8 @@ struct ChunkHeight {
     corner_x: f32,
     /// WoW Y of chunk corner (MCNK offset 0x6c).
     corner_y: f32,
+    /// MCNK area ID at header offset 0x34 (AreaTable.db2).
+    area_id: u32,
     /// Base Z height (= raw pos[2]), MCVT heights are relative to this.
     base_z: f32,
     /// 145 height floats from MCVT (9x9 outer + 8x8 inner grid).
@@ -56,6 +58,11 @@ impl TerrainHeightMap {
         let (row, col) = chunk_quad(chunk, x, y);
         let hole = chunk.holes >> (row * 8 + col) & 1 != 0;
         (!hole).then(|| interpolate_height(chunk, x, y))
+    }
+
+    /// AreaTable ID authored on the MCNK containing WoW `(x, y)`.
+    pub fn area_at(&self, x: f32, y: f32) -> Option<u32> {
+        self.find_chunk(x, y).map(|chunk| chunk.area_id)
     }
 
     /// Find the chunk containing the given WoW (x, y) position.
@@ -210,6 +217,7 @@ fn parse_mcnk_height(payload: &[u8]) -> Result<ChunkHeight, String> {
     Ok(ChunkHeight {
         corner_x: pos_x,
         corner_y: pos_y,
+        area_id: read_u32(payload, 0x34)?,
         base_z: pos_z,
         heights,
         holes,
@@ -298,6 +306,7 @@ pub mod test_helpers {
             chunks: vec![ChunkHeight {
                 corner_x,
                 corner_y,
+                area_id: 0,
                 base_z: height,
                 heights: [0.0; MCVT_COUNT],
                 holes: 0,

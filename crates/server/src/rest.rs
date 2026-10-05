@@ -4,12 +4,12 @@
 //! and the next login adds the offline time at the resting or wilderness rate
 //! (`Player::LoadFromDB`). Kills spend the pool (`RestMgr::GetRestBonusFor`,
 //! `experience::apply_xp_awards`). The pool reaches the client in `PlayerXpUpdate` and
-//! `RestStateUpdate`. City rest (`REST_FLAG_IN_CITY`, AreaTable `LinkedChat`) is not
-//! modelled: the server has no area flags.
+//! `RestStateUpdate`. Friendly capital zones also rest (`REST_FLAG_IN_CITY`): terrain
+//! MCNK area IDs resolve to AreaTable parent zones, flags and faction territory.
 
 use bevy::prelude::*;
 use lightyear::prelude::*;
-use shared::components::{Level, Position};
+use shared::components::{Level, Player, Position};
 use shared::protocol::{RestAreaKindSnapshot, RestChannel, RestSnapshot, RestStateUpdate};
 use shared::xp::RestedXp;
 
@@ -33,6 +33,7 @@ const WILDERNESS_BUBBLE: f32 = 0.031;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum RestAreaKind {
+    City,
     Inn,
 }
 
@@ -148,9 +149,17 @@ type RestPlayerQuery<'w, 's> = Query<
         &'static ClientId,
         &'static Position,
         &'static Level,
+        &'static Player,
+        &'static crate::maps::InMap,
         Option<&'static mut PlayerRestState>,
     ),
-    Or<(Changed<Position>, Changed<Level>, Without<PlayerRestState>)>,
+    Or<(
+        Changed<Position>,
+        Changed<Level>,
+        Changed<Player>,
+        Changed<crate::maps::InMap>,
+        Without<PlayerRestState>,
+    )>,
 >;
 
 /// What a login reads and marks: the saved rest row and the XP bar to resend.
@@ -160,33 +169,63 @@ struct RestLogin<'w> {
     xp_dirty: Option<ResMut<'w, XpDirty>>,
 }
 
+#[derive(bevy::ecs::system::SystemParam)]
+struct RestAreas<'w> {
+    registry: Res<'w, RestAreaRegistry>,
+    areas: Res<'w, crate::area_table::AreaTable>,
+    ground: ResMut<'w, crate::ground::GroundMap>,
+    factions: Res<'w, crate::faction::FactionTemplates>,
+}
+
+impl RestAreas<'_> {
+    fn detect(
+        &mut self,
+        position: &Position,
+        player: &Player,
+        map: &crate::maps::InMap,
+    ) -> Option<RestAreaKind> {
+        let feet = Vec3::new(position.x, position.y, position.z);
+        let in_city = self.ground.area_at(map.map_id, feet).is_some_and(|id| {
+            self.areas
+                .permits_city_rest(id, map.map_id, player.race, &self.factions)
+        });
+        if in_city {
+            Some(RestAreaKind::City)
+        } else {
+            detect_rest_area_kind(position, &self.registry)
+        }
+    }
+}
+
 fn update_player_rest_state(
     connections: Query<(Entity, &PlayerLink), With<Authenticated>>,
     mut players: RestPlayerQuery,
-    registry: Res<RestAreaRegistry>,
+    mut areas: RestAreas,
     time: Res<Time>,
     mut login: RestLogin,
     mut commands: Commands,
     mut senders: Query<&mut MessageSender<RestStateUpdate>>,
 ) {
-    if !registry.initialized {
+    if !areas.registry.initialized {
         return;
     }
     let now = time.elapsed_secs_f64();
 
     for (conn_entity, link) in &connections {
-        let Ok((client_id, position, level, rest_state)) = players.get_mut(link.0) else {
+        let Ok((client_id, position, level, player, map, rest_state)) = players.get_mut(link.0)
+        else {
             continue;
         };
+        let area_kind = areas.detect(position, player, map);
 
         let Some(snapshot) = (if let Some(rest_state) = rest_state {
-            update_existing_rest_state(position, level, rest_state, &registry, now)
+            update_existing_rest_state(area_kind, level, rest_state, now)
         } else {
             let saved = login
                 .db
                 .as_ref()
                 .and_then(|db| load_rest(&db.db, client_id.0));
-            let state = login_rest_state(position, level.0, &registry, saved, now, unix_secs());
+            let state = login_rest_state(area_kind, level.0, saved, now, unix_secs());
             let snapshot = build_rest_snapshot(&state);
             commands.entity(link.0).insert(state);
             if let Some(dirty) = login.xp_dirty.as_deref_mut() {
@@ -209,9 +248,8 @@ fn update_player_rest_state(
 /// `Player::LoadFromDB`: the saved pool plus the offline time since logout at
 /// `RESTING_BUBBLE` when logged out resting, else `WILDERNESS_BUBBLE`.
 fn login_rest_state(
-    position: &Position,
+    area_kind: Option<RestAreaKind>,
     level: u8,
-    registry: &RestAreaRegistry,
     saved: Option<RestData>,
     now: f64,
     now_unix_secs: u64,
@@ -228,7 +266,6 @@ fn login_rest_state(
         let offline_hours = now_unix_secs.saturating_sub(saved.logout_unix_secs) as f32 / 3600.0;
         rested_xp.accumulate(offline_hours * bubble / RESTING_BUBBLE, xp_to_level);
     }
-    let area_kind = detect_rest_area_kind(position, registry);
     rested_xp.in_rest_area = area_kind.is_some();
     let mut state = PlayerRestState {
         rested_xp,
@@ -244,14 +281,12 @@ fn login_rest_state(
 /// Entering or leaving a rest area, or a level-up, settles the pool rested so far and
 /// starts the next rest stretch (`RestMgr::SetRestFlag` / `RemoveRestFlag`).
 fn update_existing_rest_state(
-    position: &Position,
+    area_kind: Option<RestAreaKind>,
     level: &Level,
     mut state: Mut<PlayerRestState>,
-    registry: &RestAreaRegistry,
     now: f64,
 ) -> Option<RestSnapshot> {
     let xp_to_level = xp_to_next_level(level.0);
-    let area_kind = detect_rest_area_kind(position, registry);
     let max_before = state.rested_xp.max;
     let mut pool = state.rested_xp;
     pool.update_max(xp_to_level);
@@ -383,6 +418,7 @@ fn build_rest_snapshot(state: &PlayerRestState) -> RestSnapshot {
 
 fn map_rest_area_kind_snapshot(kind: RestAreaKind) -> RestAreaKindSnapshot {
     match kind {
+        RestAreaKind::City => RestAreaKindSnapshot::City,
         RestAreaKind::Inn => RestAreaKindSnapshot::Inn,
     }
 }
@@ -481,10 +517,29 @@ mod tests {
         }
     }
 
+    fn human_player() -> (Player, crate::maps::InMap) {
+        (
+            Player {
+                name: "Cityrest".into(),
+                race: 1,
+                class: 1,
+                appearance: Default::default(),
+            },
+            crate::maps::InMap::continent(0),
+        )
+    }
+
+    fn initialize_terrain_rest(app: &mut App) {
+        app.init_resource::<crate::area_table::AreaTable>();
+        app.init_resource::<crate::ground::GroundMap>();
+        app.init_resource::<crate::faction::FactionTemplates>();
+    }
+
     #[test]
     fn unchanged_rest_update_does_not_dirty_state_and_transition_updates_area() {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
+        initialize_terrain_rest(&mut app);
 
         let registry = RestAreaRegistry {
             innkeepers: vec![Vec3::ZERO],
@@ -502,6 +557,7 @@ mod tests {
                 },
                 ClientId(1),
                 Level(1),
+                human_player(),
                 PlayerRestState {
                     rested_xp: RestedXp::new(xp_to_next_level(1)),
                     area_kind: None,
@@ -554,6 +610,7 @@ mod tests {
     fn resting_app(db: Option<GameDatabase>) -> (App, Entity) {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
+        initialize_terrain_rest(&mut app);
         app.insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
             std::time::Duration::from_secs(80 * 3600),
         ));
@@ -573,6 +630,7 @@ mod tests {
             .world_mut()
             .spawn((
                 ClientId(7),
+                human_player(),
                 Position {
                     x: 5.0,
                     y: 0.0,
@@ -588,6 +646,166 @@ mod tests {
             (update_player_rest_state, accumulate_rested_xp).chain(),
         );
         (app, player)
+    }
+
+    /// Real WDT/ADT assets and map rows used by the running server. No innkeeper
+    /// nearby: these positions exercise city territory, not the inn radius.
+    fn city_rest_app(map_id: u32, wow_x: f32, wow_y: f32) -> (App, Entity) {
+        let (mut app, entity) = resting_app(None);
+        let conn = rusqlite::Connection::open_with_flags(
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../data/world.db"),
+            rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+        )
+        .unwrap();
+        let maps = crate::maps::store::load_map_store(&conn).unwrap();
+        let ground = crate::ground::GroundMap::new(
+            &std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../game-engine/data"),
+            maps.maps
+                .iter()
+                .map(|(&id, map)| (id, map.wdt_file_data_id))
+                .collect(),
+        );
+        app.insert_resource(maps);
+        app.insert_resource(ground);
+        app.insert_resource(crate::faction::load_faction_templates(&conn).unwrap());
+        // Exact required fields from game-engine/data/AreaTable.csv. Child masks
+        // are deliberately zero: hostility must use the top-level zone's mask.
+        let areas = rusqlite::Connection::open_in_memory().unwrap();
+        areas
+            .execute_batch(
+                "CREATE TABLE area_table (ID INTEGER PRIMARY KEY, ParentAreaID INTEGER,
+             ContinentID INTEGER, Flags_0 INTEGER, FactionGroupMask INTEGER);
+             INSERT INTO area_table VALUES
+             (12,0,0,16448,2), (1519,0,0,2113848,2), (1637,0,1,2113848,4),
+             (5148,1519,0,1075855672,0), (5170,1637,1,1075855672,0);",
+            )
+            .unwrap();
+        app.insert_resource(crate::area_table::load_area_table(&areas).unwrap());
+        app.world_mut()
+            .resource_mut::<RestAreaRegistry>()
+            .innkeepers
+            .clear();
+        let (x, y, z) = crate::terrain_height::wow_to_bevy(wow_x, wow_y, 60.0);
+        app.world_mut().entity_mut(entity).insert((
+            Position { x, y, z },
+            crate::maps::InMap::continent(map_id),
+            shared::components::Player {
+                name: "Cityrest".into(),
+                race: 1,
+                class: 1,
+                appearance: Default::default(),
+            },
+        ));
+        (app, entity)
+    }
+
+    #[test]
+    fn human_in_stormwind_trade_district_rests_and_accrues_xp() {
+        // MCNK area 5148, parent Stormwind City 1519; root ADT 777627.
+        let (mut app, player) = city_rest_app(0, -8850.0, 650.0);
+        assert_eq!(detected_area(&mut app, player), Some(5148));
+        app.update();
+        let snapshot = build_rest_snapshot(app.world().get::<PlayerRestState>(player).unwrap());
+        assert!(snapshot.in_rest_area);
+        assert_eq!(snapshot.rest_area_kind, Some(RestAreaKindSnapshot::City));
+        app.update();
+        assert_eq!(rested(&app, player), 5_295);
+    }
+
+    #[test]
+    fn human_in_orgrimmar_does_not_rest_or_accrue_xp() {
+        // Valley of Strength 5170, parent Orgrimmar 1637; root ADT 786640.
+        let (mut app, player) = city_rest_app(1, 1510.0, -4410.0);
+        assert_eq!(detected_area(&mut app, player), Some(5170));
+        app.update();
+        app.update();
+        let state = app.world().get::<PlayerRestState>(player).unwrap();
+        assert!(!build_rest_snapshot(state).in_rest_area);
+        assert_eq!(rested(&app, player), 0);
+    }
+
+    #[test]
+    fn human_in_elwynn_outside_inn_does_not_rest_or_accrue_xp() {
+        let (mut app, player) = city_rest_app(0, -9605.0, -105.0);
+        assert_eq!(detected_area(&mut app, player), Some(12));
+        app.update();
+        app.update();
+        let state = app.world().get::<PlayerRestState>(player).unwrap();
+        assert!(!build_rest_snapshot(state).in_rest_area);
+        assert_eq!(rested(&app, player), 0);
+    }
+
+    fn detected_area(app: &mut App, player: Entity) -> Option<u32> {
+        let position = *app.world().get::<Position>(player).unwrap();
+        let map = *app.world().get::<crate::maps::InMap>(player).unwrap();
+        app.world_mut()
+            .resource_mut::<crate::ground::GroundMap>()
+            .area_at(map.map_id, Vec3::new(position.x, position.y, position.z))
+    }
+
+    #[test]
+    fn orc_in_orgrimmar_rests_and_accrues_xp() {
+        let (mut app, player) = city_rest_app(1, 1510.0, -4410.0);
+        app.world_mut().get_mut::<Player>(player).unwrap().race = 2;
+        app.update();
+        assert!(
+            build_rest_snapshot(app.world().get::<PlayerRestState>(player).unwrap()).in_rest_area
+        );
+        app.update();
+        assert_eq!(rested(&app, player), 5_295);
+    }
+
+    #[test]
+    fn leaving_stormwind_for_elwynn_stops_city_rest_and_accrual() {
+        let (mut app, player) = city_rest_app(0, -8850.0, 650.0);
+        app.update();
+        app.update();
+        let (x, y, z) = crate::terrain_height::wow_to_bevy(-9605.0, -105.0, 60.0);
+        app.world_mut()
+            .entity_mut(player)
+            .insert(Position { x, y, z });
+        app.update();
+        let pool = rested(&app, player);
+        assert!(
+            !build_rest_snapshot(app.world().get::<PlayerRestState>(player).unwrap()).in_rest_area
+        );
+        app.update();
+        assert_eq!(rested(&app, player), pool);
+        assert_eq!(pool, 10_590);
+    }
+
+    #[test]
+    fn human_at_real_goldshire_innkeeper_still_rests_and_accrues_xp() {
+        let conn = rusqlite::Connection::open_with_flags(
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../data/world.db"),
+            rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+        )
+        .unwrap();
+        let (npc_flags, x, y, z): (u32, f32, f32, f32) = conn
+            .query_row(
+                "SELECT t.npcflag, c.position_x, c.position_y, c.position_z
+             FROM content_creature c JOIN content_creature_template t ON t.entry=c.id1
+             WHERE t.entry=295 AND c.map=0 ORDER BY c.guid LIMIT 1",
+                [],
+                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)),
+            )
+            .unwrap();
+        assert_ne!(npc_flags & NPC_FLAG_INNKEEPER, 0);
+        let (mut app, player) = city_rest_app(0, x, y);
+        let (x, y, z) = crate::terrain_height::wow_to_bevy(x, y, z);
+        app.world_mut()
+            .resource_mut::<RestAreaRegistry>()
+            .innkeepers
+            .push(Vec3::new(x, y, z));
+        app.world_mut()
+            .entity_mut(player)
+            .insert(Position { x, y, z });
+        app.update();
+        let snapshot = build_rest_snapshot(app.world().get::<PlayerRestState>(player).unwrap());
+        assert!(snapshot.in_rest_area);
+        assert_eq!(snapshot.rest_area_kind, Some(RestAreaKindSnapshot::Inn));
+        app.update();
+        assert_eq!(rested(&app, player), 5_295);
     }
 
     fn rested(app: &App, player: Entity) -> u32 {

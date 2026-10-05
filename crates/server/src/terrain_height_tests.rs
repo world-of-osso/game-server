@@ -24,6 +24,7 @@ fn asymmetric_plane_maps_rows_to_wow_x_and_columns_to_wow_y() {
         chunks: vec![ChunkHeight {
             corner_x: 100.0,
             corner_y: 200.0,
+            area_id: 0,
             base_z: 50.0,
             heights,
             holes: 0,
@@ -54,6 +55,7 @@ fn nonplanar_cell_uses_center_vertex_and_all_four_triangles() {
         chunks: vec![ChunkHeight {
             corner_x: 100.0,
             corner_y: 200.0,
+            area_id: 0,
             base_z: 50.0,
             heights,
             holes: 0,
@@ -115,6 +117,7 @@ fn height_interpolation() {
         chunks: vec![ChunkHeight {
             corner_x: 100.0,
             corner_y: 100.0,
+            area_id: 0,
             base_z: 50.0,
             heights,
             holes: 0,
@@ -248,6 +251,7 @@ fn multiple_chunks_loaded_and_routed_correctly() {
             ChunkHeight {
                 corner_x: 100.0,
                 corner_y: 100.0,
+                area_id: 0,
                 base_z: 50.0,
                 heights: [0.0; MCVT_COUNT],
                 holes: 0,
@@ -256,6 +260,7 @@ fn multiple_chunks_loaded_and_routed_correctly() {
             ChunkHeight {
                 corner_x: 100.0 - CHUNK_SIZE,
                 corner_y: 100.0,
+                area_id: 0,
                 base_z: 80.0,
                 heights: [0.0; MCVT_COUNT],
                 holes: 0,
@@ -288,6 +293,7 @@ fn height_at_exact_vertex_no_interpolation() {
         chunks: vec![ChunkHeight {
             corner_x: 100.0,
             corner_y: 100.0,
+            area_id: 0,
             base_z: 100.0,
             heights,
             holes: 0,
@@ -325,6 +331,7 @@ fn height_consistent_across_adjacent_chunk_boundary() {
             ChunkHeight {
                 corner_x: 100.0,
                 corner_y: 100.0,
+                area_id: 0,
                 base_z: 0.0,
                 heights: heights_a,
                 holes: 0,
@@ -333,6 +340,7 @@ fn height_consistent_across_adjacent_chunk_boundary() {
             ChunkHeight {
                 corner_x: boundary_x,
                 corner_y: 100.0,
+                area_id: 0,
                 base_z: 0.0,
                 heights: heights_b,
                 holes: 0,
@@ -365,6 +373,7 @@ fn negative_terrain_height_underwater() {
         chunks: vec![ChunkHeight {
             corner_x: 100.0,
             corner_y: 100.0,
+            area_id: 0,
             base_z: -10.0,
             heights,
             holes: 0,
@@ -395,6 +404,7 @@ fn water_surface_height_separate_from_terrain() {
         chunks: vec![ChunkHeight {
             corner_x: 100.0,
             corner_y: 100.0,
+            area_id: 0,
             base_z: -20.0,
             heights: [0.0; MCVT_COUNT],
             holes: 0,
@@ -457,6 +467,7 @@ fn adt_hole_returns_none_for_missing_chunk() {
             ChunkHeight {
                 corner_x: 100.0,
                 corner_y: 100.0,
+                area_id: 0,
                 base_z: 50.0,
                 heights: [0.0; MCVT_COUNT],
                 holes: 0,
@@ -465,6 +476,7 @@ fn adt_hole_returns_none_for_missing_chunk() {
             ChunkHeight {
                 corner_x: 100.0,
                 corner_y: 100.0 - CHUNK_SIZE,
+                area_id: 0,
                 base_z: 50.0,
                 heights: [0.0; MCVT_COUNT],
                 holes: 0,
@@ -473,6 +485,7 @@ fn adt_hole_returns_none_for_missing_chunk() {
             ChunkHeight {
                 corner_x: 100.0 - CHUNK_SIZE,
                 corner_y: 100.0 - CHUNK_SIZE,
+                area_id: 0,
                 base_z: 50.0,
                 heights: [0.0; MCVT_COUNT],
                 holes: 0,
@@ -510,6 +523,7 @@ fn height_query_1000_lookups_under_threshold() {
             chunks.push(ChunkHeight {
                 corner_x: 100.0 - col as f32 * CHUNK_SIZE,
                 corner_y: 100.0 - row as f32 * CHUNK_SIZE,
+                area_id: 0,
                 base_z: 50.0,
                 heights: [0.0; MCVT_COUNT],
                 holes: 0,
