@@ -78,7 +78,7 @@
 ## Sources
 
 - [experience.rs](../../../crates/server/src/experience.rs), [experience_tests.rs](../../../crates/server/src/experience_tests.rs)
-- TrinityCore a352b1fa `Player.cpp:7553–7562` (`UpdateZone`, “Is in a capital city”), `7613–7641` (`UpdateHostileAreaState`); `DBCEnums.h:113` (`LinkedChat = 0x00000100`). Local `game-engine/data/AreaTable.csv`: Stormwind 1519 and Orgrimmar 1637 flags 2113848, faction masks 2/4; Trade District 5148 and Valley of Strength 5170 have mask 0 and inherit their parent zone territory.
+- TrinityCore a352b1fa `Entities/Player/Player.cpp`, `Player::UpdateZone` (“Is in a capital city”) and `Player::UpdateHostileAreaState`; `DataStores/DBCEnums.h`, `AreaFlags::LinkedChat = 0x00000100`. Local `game-engine/data/AreaTable.csv`: Stormwind 1519 and Orgrimmar 1637 flags 2113848, faction masks 2/4; Trade District 5148 and Valley of Strength 5170 have mask 0 and inherit their parent zone territory.
 - [area_table.rs](../../../crates/server/src/area_table.rs), [import-area-table.py](../../../scripts/import-area-table.py), [city rest spec](../../specs/city-rest.md)
 - [rest.rs](../../../crates/server/src/rest.rs), [admin_handlers.rs](../../../crates/server/src/admin_handlers.rs) — pool lifecycle and `set-rested`
 - TrinityCore master `src/server/game/Miscellaneous/Formulas.h`, `Entities/Player/KillRewarder.cpp`, `Entities/Player/Player.cpp` (GiveXP, GiveLevel, RewardQuest), `Quests/QuestDef.cpp` (XPValue, RoundXPValue), `Entities/Creature/Creature.cpp` (IsElite, NO_XP)

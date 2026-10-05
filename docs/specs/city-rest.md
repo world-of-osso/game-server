@@ -4,11 +4,11 @@
 
 ## What it must do
 
-- [ ] A human in Stormwind's Trade District rests and gains rested XP at the existing resting rate.
-- [ ] A human in Orgrimmar does not rest or gain rested XP from city territory; an orc does.
-- [ ] A human in Elwynn Forest outside an inn does not rest or gain rested XP.
-- [ ] Leaving a friendly capital settles earned rest and stops further city accrual.
-- [ ] Rest near an innkeeper remains unchanged.
+- [x] A human in Stormwind's Trade District rests and gains rested XP at the existing resting rate.
+- [x] A human in Orgrimmar does not rest or gain rested XP from city territory; an orc does.
+- [x] A human in Elwynn Forest outside an inn does not rest or gain rested XP.
+- [x] Leaving a friendly capital settles earned rest and stops further city accrual.
+- [x] Rest near an innkeeper remains unchanged.
 
 ## How it works
 
@@ -25,11 +25,12 @@
 
 ## Tests asserting this spec
 
-- `crates/server/src/rest.rs::tests` — real WDT/ADT positions, AreaTable rows and innkeeper data.
+- `crates/server/src/rest.rs::tests` — real WDT/ADT positions, AreaTable rows and innkeeper data; 41 targeted tests pass at `39f31b2`.
+- `scripts/tests/test_area_table.py` — import preservation, rollback and header rejection; three tests pass at `39f31b2`.
 
 ## Known gaps (current cycle)
 
-- [ ] Targeted GREEN proof pending.
+None. Canonical data import remains a deployment prerequisite, not authorized worker activity.
 
 ## Out of scope
 

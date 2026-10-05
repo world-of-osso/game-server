@@ -2,7 +2,7 @@
 
 ## [2026-10-05] systems | Capital city rested XP
 
-Updated [[experience]] and added the city-rest spec: AreaTable import/loader, MCNK position-derived areas, parent-zone capital and faction checks, existing pool/snapshot lifecycle. TC a352b1fa UpdateZone/UpdateHostileAreaState and real Trade District/Orgrimmar/Elwynn assets ground the behavior. RED reproduced Stormwind not resting (37 passed, one failed); GREEN pending. Canonical world.db import and live runtime are explicitly excluded from delegated authority.
+Updated [[experience]] and added the city-rest spec: AreaTable import/loader, MCNK position-derived areas, parent-zone capital and faction checks, existing pool/snapshot lifecycle. TC a352b1fa UpdateZone/UpdateHostileAreaState and real Trade District/Orgrimmar/Elwynn assets ground the behavior. RED reproduced Stormwind not resting (37 passed, one failed); GREEN at `39f31b2`: 41 rest tests and three AreaTable import tests pass. Full local CSV import into a private database verified 9,848 rows without touching canonical data. Canonical world.db import and live runtime are explicitly excluded from delegated authority.
 
 ## [2026-10-05] investigations | Lift Off bar and restriction evidence
 
