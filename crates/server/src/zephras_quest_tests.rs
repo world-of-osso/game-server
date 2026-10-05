@@ -189,6 +189,10 @@ fn skyborne_zephras_high_order_intro_keeps_its_race_mask() {
 #[test]
 fn skyborne_zephras_skysight_enforces_level_two_and_blocks_unimplemented_event() {
     let mut app = setup_app().expect("scratch content database");
+    assert_eq!(
+        app.world().resource::<QuestDb>().quests[&92598].allowable_races,
+        0
+    );
     let client = spawn_skyborne_client(&mut app, 96, 1);
     let giver = spawn_imported_giver(&mut app, &client, 251487);
     accept(&mut app, &client, giver, 92598);
