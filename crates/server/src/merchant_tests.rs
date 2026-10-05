@@ -4,6 +4,8 @@
 mod economic;
 #[path = "merchant_guild_repair_tests.rs"]
 mod guild_repair;
+#[path = "owned_commerce_buyback_tests.rs"]
+mod owned_commerce_sources;
 
 use std::path::PathBuf;
 use std::time::Duration;

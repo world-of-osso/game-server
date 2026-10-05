@@ -1,3 +1,6 @@
+#[path = "owned_commerce_auction_tests.rs"]
+mod owned_commerce_sources;
+
 use super::*;
 use crate::gold::GoldUpdateQueue;
 use crate::persistence;
