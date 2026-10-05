@@ -367,8 +367,8 @@ impl NewCharacterKit<'_> {
         };
         let mut model = InventoryModel::from_record(empty, self.templates, mint);
         for &(item_id, count) in &info.items {
-            let (item, template) = self.new_item(race, item_id, count, mint())?;
-            if let Err(error) = model.store_new_item_in_best_slots(item, template, mint) {
+            let (item, template, source) = self.new_item(race, item_id, count, mint())?;
+            if let Err(error) = model.store_new_item_in_best_slots(item, source, template, mint) {
                 error!(
                     "race {race} class {class} cannot equip or store kit item {item_id}: {error:?}"
                 );
@@ -398,30 +398,39 @@ impl NewCharacterKit<'_> {
             .ok_or_else(|| format!("race {race} class {class} has no player create info"))
     }
 
-    fn item_template(&self, race: u8, item_id: u32) -> Option<&ItemTemplate> {
-        if is_skyborne_race(race) {
-            self.create_info.1.templates.get(&item_id)
-        } else {
-            self.templates.get(item_id)
-        }
-    }
-
     fn new_item(
         &self,
         race: u8,
         item_id: u32,
         count: u32,
         item_guid: u64,
-    ) -> Result<(InventoryItemData, crate::item_templates::ItemTemplate), String> {
-        let template = *self.item_template(race, item_id).ok_or_else(|| {
-            format!("race {race} kit item {item_id} has no source-local template")
-        })?;
-        let goods = if is_skyborne_race(race) {
-            self.create_info.1.goods.get(&item_id)
+    ) -> Result<
+        (
+            InventoryItemData,
+            ItemTemplate,
+            shared::item_data::ItemDefinitionSource,
+        ),
+        String,
+    > {
+        use shared::item_data::ItemDefinitionSource;
+        let (source, template, goods) = if is_skyborne_race(race) {
+            (
+                ItemDefinitionSource::Forever70205,
+                self.create_info.1.templates.get(&item_id),
+                self.create_info.1.goods.get(&item_id),
+            )
         } else {
-            self.catalog.goods.get(&item_id)
-        }
-        .ok_or_else(|| format!("race {race} kit item {item_id} has no source-local catalog row"))?;
+            (
+                ItemDefinitionSource::Retail,
+                self.templates.get(ItemDefinitionSource::Retail, item_id),
+                self.catalog.goods.get(&item_id),
+            )
+        };
+        let template = *template
+            .ok_or_else(|| format!("race {race} kit item {item_id} has no {source:?} template"))?;
+        let goods = goods.ok_or_else(|| {
+            format!("race {race} kit item {item_id} has no {source:?} catalog row")
+        })?;
         let item = InventoryItemData {
             item_guid,
             item_id,
@@ -432,7 +441,7 @@ impl NewCharacterKit<'_> {
             vendor_sell_price: goods.sell_price,
             unique_auction: false,
         };
-        Ok((item, template))
+        Ok((item, template, source))
     }
 }
 
