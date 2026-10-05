@@ -40,7 +40,7 @@ Server gameplay systems.
 | [[banks]] | Character, Warband and guild bank storage (redb), one-transaction moves, guild ranks, daily reset, logs |
 | [[game-objects]] | Guild Vault and Mailbox spawns from content_gameobject, GeoBox reach check, UseGameObject |
 | [[warlock-pets]] | Level-3 Imp lifecycle/AI; Retail command-dismiss investigation removes artificial 2641 fixture grant, RED blocked by build-helper API drift |
-| [[mounts]] | Mount spells (SPELL_AURA_MOUNTED 78): Mount DB2 capability, flight styles, movement, casting; effect-203 highlight removal and source-blocked Lift Off 374763 trigger/failure investigation |
+| [[mounts]] | Mount spells (SPELL_AURA_MOUNTED 78): Mount DB2 capability, flight styles, movement, casting; effect-203 highlight removal; pinned override/form/capability/restriction rows distinguish Skyward Ascent from source-blocked Lift Off 374763 |
 | [[stand-state]] | Player sit/sleep/kneel/chair state: requests, stand-up rules, seated food and drink, sitting regen and auto-crit, chairs, item use |
 | [[meeting-stones]] | Meeting stone summons: GameObject::Use checks, 59782 cast and channel, TRANS_DOOR ritual portal, SUMMON_PLAYER offer, accept teleport |
 | [[new-character-kit]] | TrinityCore Player::Create kit: CharacterLoadout items equipped/stored, playercreateinfo_action bar, server inventory gaps (bags, jewelry, dual wield) |

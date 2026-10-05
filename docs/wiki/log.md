@@ -1,5 +1,9 @@
 # Wiki Log
 
+## [2026-10-05] investigations | Lift Off bar and restriction evidence
+
+Updated [[mounts]] with full pinned 12.1.0.69933 Wago exports: OverrideSpellData 2106 and SpellShapeshiftForm 47 list Skyward Ascent 372610, not 374763; MountCapability 494 points to FlightCapability 11 with SpellID 372610; SpellActionBarPref 343 prefers 372610. No 374763 override/preset/preference or aura/casting-requirement row found. SpellMisc 633542 includes NOT_AN_ACTION and IGNORE_CASTER_AND_TARGET_RESTRICTIONS. Existing SpellCastIntent already carries the ID; native 374763 action/grant and exact unmounted/ground failure remain blocked. No production, wire, data, test or service change; no build required for this documentation-only milestone.
+
 ## [2026-10-05] investigations | Summoned-pet dismissal
 
 Updated [[warlock-pets]] with Retail popup command-vs-hunter-spell behavior, TC command-3 dismissal/deletion distinction, and DB2 rows 35949/334/980. Removed artificial warlock fixture grant and added hunter/warlock progression assertions. Required RED is blocked before compilation by canonical desktop-server Dockerfile's obsolete `refresh_sources` call; no production fix or GREEN claimed. Existing PetAction wire supports command 3; client PetFrame menu remains separate required work.

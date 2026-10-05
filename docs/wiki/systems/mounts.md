@@ -74,6 +74,27 @@ Verified 2026-10-05 against DB2 12.1.0.69933 and TC a352b1fa:
 
 Sources: [TC effect names](https://github.com/TrinityCore/TrinityCore/blob/a352b1fa/src/server/game/Miscellaneous/SharedDefines.h#L1549), [TC dispatch](https://github.com/TrinityCore/TrinityCore/blob/a352b1fa/src/server/game/Spells/SpellEffects.cpp#L295), [TC removal](https://github.com/TrinityCore/TrinityCore/blob/a352b1fa/src/server/game/Spells/SpellEffects.cpp#L5154); imported `world.db` rows above; local Retail UI and existing server/client source paths above. Trigger/failure absence is bounded to these inspected sources, not proof that Retail has no rule.
 
+#### Follow-up: bar and casting-restriction data
+
+Verified 2026-10-05 against full Wago CSV exports pinned to **12.1.0.69933**, not just the imported `world.db` subset:
+
+| Source | Exact row / observation | What it establishes |
+|---|---|---|
+| `OverrideSpellData` | ID **2106**: Spells 0/1/2/3/9 = **372608 / 372610 / 361584 / 374990 / 377042**, Flags 5; none of 3050 rows contains 374763 | This Skyriding override contains Skyward Ascent, not Lift Off 374763 |
+| `SpellEffect` | ID **1052661**, spell **404849**, aura **260** (`OVERRIDE_SPELLS`), MiscValue 2106, MiscValueB 7; spells 404751/421621/427422/427423 also reference 2106 | An actual aura-to-override-data link, not an assumed slot assignment |
+| `SpellShapeshiftForm` | ID **47**, Dragon Isles Drake: BonusActionBar **4**, presets **372608 / 372610 / 361584 / 403092**; no form preset contains 374763 | Another Skyriding bar source, again without 374763; not evidence for replacing the current generic bonus bar |
+| `MountCapability` → `FlightCapability` | Capability **494**: ModSpellAuraID **406095**, FlightCapabilityID **11**, ReqSpellKnownID **376777**, PlayerConditionID **96927**. FlightCapability **11**: SpellID **372610** | The movement capability names Skyward Ascent as its native spell; it does not name 374763 |
+| `SpellActionBarPref` | ID **343**, SpellID **372610**, PreferredActionBarMask **1024**; no 374763 row | Bar preference for 372610, not 374763 |
+| `SpellAuraRestrictions` / `SpellCastingRequirements` | No SpellID **374763** row in either full export (10632 / 28152 rows) | No mounted/grounded prerequisite or failure reason can be read from these tables for 374763 |
+
+`SpellMisc` **633542** for 374763 has Attributes_0 **0x2d800000**, including **ALLOW_WHILE_MOUNTED** (permission while mounted, not a requirement to be mounted). Attributes_2 **0x30484005** includes **NOT_AN_ACTION** (0x10000000); Attributes_3 **0x10130200** includes **IGNORE_CASTER_AND_TARGET_RESTRICTIONS** (0x10000000). Names are from TC **a352b1fa** `SharedDefines.h`. These flags do not establish a player action-bar button, a ground check, or an unmounted failure reason. They reinforce the need to identify the native/scripted activation before granting the spell or adding checks.
+
+Retail UI `AddOns/Blizzard_Tutorials/Blizzard_Tutorials_RPE.lua:391–395` binds takeoff instructions to **JUMP, JUMP**; `:439` binds Fly Higher to **JUMP**; `:446–452` resolves Surge Forward through the bonus-bar action button. `AddOns/Blizzard_ActionBarController/ActionBarController.lua:154–163` selects vehicle, override, temporary shapeshift or bonus pages through `C_ActionBar`; `AddOns/Blizzard_OverrideActionBar/OverrideActionBar.lua:151` uses `GetOverrideBarIndex`. No inspected Lua source names 374763. The UI source and FlightCapability agree on double-jump/Skyward Ascent; neither proves 374763's trigger.
+
+Existing client transport already carries arbitrary spell IDs: `godot/rust/src/account.rs:465` accepts `SpellCastIntent`; `godot/rust/src/ipc/world.rs:220` sends the requested spell ID; `godot/rust/src/spells.rs:418` casts an action slot's `ActionRef::Spell`. **No wire addition is needed.** The missing piece is not serialization: it is the verified action/grant and rejection semantics. No production code or behavior test was changed in this follow-up; adding a no-charge action-bar button or guessing `OnlyMounted` would not be established Retail parity.
+
+Pinned export sources: [OverrideSpellData](https://wago.tools/db2/OverrideSpellData/csv?build=12.1.0.69933), [FlightCapability](https://wago.tools/db2/FlightCapability/csv?build=12.1.0.69933), [SpellActionBarPref](https://wago.tools/db2/SpellActionBarPref/csv?build=12.1.0.69933), [SpellAuraRestrictions](https://wago.tools/db2/SpellAuraRestrictions/csv?build=12.1.0.69933), [SpellCastingRequirements](https://wago.tools/db2/SpellCastingRequirements/csv?build=12.1.0.69933); existing local `data/db2/12.1.0.69933/{MountCapability,SpellShapeshiftForm}.csv`, `world.db`, and Retail UI paths above; [TC attribute definitions](https://github.com/TrinityCore/TrinityCore/blob/a352b1fa/src/server/game/Miscellaneous/SharedDefines.h).
+
 ### Skyriding (part 3: the Skyriding bar)
 
 - Gaining ADV_FLYING (`auras::mount::reconcile_can_fly`) runs `skyriding::fill_skyriding_bar`: each Skyriding ability the rider can cast (`spell_cast::caster_knows_spell`) goes on bonus bar 5 (slots 120..124: Surge Forward, Skyward Ascent, Aerial Halt, Whirling Surge, Second Wind) when its slot is empty and it is not on the bar yet, and the owner gets the `ActionBarSnapshot` (`class_progression::place_actions`). Bonus bar 5 is what the client's main bar shows while skyriding (game-engine mounts page).
