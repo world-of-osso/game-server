@@ -72,6 +72,17 @@ fn warlock_learns_summon_imp_at_level_three() {
     assert!(!known_ids(&classes, HUMAN, WARRIOR, 3, 0).contains(&688));
 }
 
+/// Retail SkillLineAbility 35949 (Hunter 795, method 4) and SpellLevels 334 (level 5).
+#[test]
+fn pet_dismiss_is_a_hunter_level_five_spell_not_a_warlock_spell() {
+    let classes = class_spells().expect("world.db");
+    assert!(!known_ids(&classes, HUMAN, 3, 4, 0).contains(&2641));
+    assert!(known_ids(&classes, HUMAN, 3, 5, 0).contains(&2641));
+    assert!(known_ids(&classes, HUMAN, 3, 10, 0).contains(&2641));
+    assert!(!known_ids(&classes, HUMAN, 9, 3, 0).contains(&2641));
+    assert!(!known_ids(&classes, HUMAN, 9, 10, 0).contains(&2641));
+}
+
 #[test]
 fn paladin_known_spells_follow_required_level_and_race_mask() {
     let Some(classes) = class_spells() else {

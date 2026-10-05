@@ -55,12 +55,8 @@ impl ImpHarness {
         data.templates.retain(|entry, _| *entry == IMP);
         let db = redb::Database::create(path).unwrap();
         persistence::create_tables(&db);
-        let mut h = harness_with_plugins(
-            Vec::new(),
-            &[SUMMON_IMP, FIREBOLT, DISMISS_PET],
-            WARLOCK,
-            true,
-            |app| {
+        let mut h =
+            harness_with_plugins(Vec::new(), &[SUMMON_IMP, FIREBOLT], WARLOCK, true, |app| {
                 app.insert_resource(data);
                 app.insert_resource(spells);
                 app.insert_resource(GameDatabase { db });
@@ -76,9 +72,8 @@ impl ImpHarness {
                         .chain()
                         .after(crate::combat::auto_attack_system),
                 );
-            },
-        )
-        .expect("real spell data");
+            })
+            .expect("real spell data");
         h.app.world_mut().entity_mut(h.caster).insert(Level(3));
         // Keep the full live spell catalog, not the generic harness's three-spell fixture.
         let (store, _) = crate::spell_info::load_spell_data(&conn).unwrap();
@@ -161,8 +156,16 @@ impl ImpHarness {
     }
 
     fn dismiss(&mut self) {
-        self.h.cast(DISMISS_PET, self.pet());
-        self.advance(70);
+        assert!(
+            !self
+                .h
+                .app
+                .world()
+                .get::<crate::class_progression::KnownSpells>(self.h.caster)
+                .unwrap()
+                .contains(DISMISS_PET)
+        );
+        self.order(shared::protocol::COMMAND_ABANDON, None);
         assert!(self.h.inbox.failed.is_empty(), "{:?}", self.h.inbox.failed);
     }
 }
