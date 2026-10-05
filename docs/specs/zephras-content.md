@@ -5,6 +5,7 @@ User-approved Wowhead Forever-only reconstruction for Skyborne starts; [implemen
 ## Requirements
 
 - [x] Overlay map-2991 NPC templates, terrain-supported mapper observations, captured quest text, starter/ender links, supported objectives and rewards; tag every row with scrape, source URL and `reconstructed` provenance.
+- [x] Spawn imported Zephras creatures at hosted-continent startup; partial client appearance coverage must not suppress all map-2991 entities. Missing individual profiles remain explicit withheld visuals, including Ailee 136968.
 - [x] Decode hash-matched local Forever Creature/CreatureXDisplayInfo; report encrypted/missing rows and required client displays without substituting NPC models.
 - [x] Derive A/H reactions towards Forever factions 2795/2794 from captured react values. Unknown sides use neutral faction identity with explicit friendly relation; do not invent a nation or enemy.
 - [x] Skip unknown Z, invalid/unknown levels and uncaptured quest pages; preserve unsupported objectives in provenance, never convert interactions to kills.
@@ -21,4 +22,4 @@ No scripted events/phasing, inferred loot/vendor inventory/gossip, guessed displ
 
 ## Tests
 
-`scripts/tests/test_zephras_creatures.py`, `test_zephras_content.py`; `auth_character_tests.rs`, `zephras_ground_tests.rs`, `quest_tests.rs`.
+`scripts/tests/test_zephras_creatures.py`, `test_zephras_content.py`; `auth_character_tests.rs`, `zephras_ground_tests.rs`, `quest_tests.rs`; `zones_world_db_tests::zephras_startup_spawns_imported_givers_on_the_hosted_continent` exercises the actual imported rows through the startup map-spawn gate.
