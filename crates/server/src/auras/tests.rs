@@ -552,9 +552,14 @@ fn purify_dispels_a_magic_debuff() {
     assert_eq!(auras_of(&h, h.caster, SHADOW_WORD_PAIN)[0].dispel_type, 1);
     h.cast_and_deliver(PURIFY, None);
     assert!(auras_of(&h, h.caster, SHADOW_WORD_PAIN).is_empty());
-    let dispel = log_of(&h, CombatLogKind::Dispel, SHADOW_WORD_PAIN);
+    let dispel = log_of(&h, CombatLogKind::Dispel, PURIFY);
     assert_eq!(dispel.len(), 1);
     assert_eq!(dispel[0].source, Some(h.caster.to_bits()));
+    assert_eq!(
+        dispel[0].extra_spell_id,
+        Some(SHADOW_WORD_PAIN),
+        "names the removed aura"
+    );
 }
 
 #[test]

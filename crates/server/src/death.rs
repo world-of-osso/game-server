@@ -31,7 +31,9 @@ mod transitions;
 
 use self::support::{build_snapshot, current_seconds, send_error, send_update};
 use transitions::process_player_death_transitions;
-pub(crate) use transitions::{PlayerDeathTransition, apply_health_damage};
+pub(crate) use transitions::{
+    PlayerDeathTransition, apply_health_damage, deal_environmental_damage,
+};
 
 #[derive(Component, Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct PlayerDeathState {

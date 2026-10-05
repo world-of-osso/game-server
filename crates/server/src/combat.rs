@@ -964,6 +964,8 @@ fn swing_log_event(attacker: Entity, target: Entity, outcome: &SwingOutcome) -> 
         crit: outcome.kind == MeleeOutcome::Crit,
         glancing: outcome.kind == MeleeOutcome::Glancing,
         periodic: false,
+        extra_spell_id: None,
+        timestamp_unix_ms: 0,
         kind: swing_miss_kind(outcome.kind).map_or(CombatLogKind::Damage, CombatLogKind::Miss),
     }
 }
@@ -984,6 +986,8 @@ pub(crate) fn death_log_event(killer: Entity, target: Entity) -> CombatLogEvent 
         crit: false,
         glancing: false,
         periodic: false,
+        extra_spell_id: None,
+        timestamp_unix_ms: 0,
         kind: CombatLogKind::Death,
     }
 }
@@ -1110,6 +1114,8 @@ pub(crate) fn deal_direct_damage(world: &mut World, attacker: Entity, victim: En
             crit: false,
             glancing: false,
             periodic: false,
+            extra_spell_id: None,
+            timestamp_unix_ms: 0,
             kind: CombatLogKind::Damage,
         },
     );

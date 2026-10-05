@@ -420,9 +420,10 @@ pub(crate) fn send_to_owner<M: lightyear::prelude::Message + Clone>(
 }
 
 /// Send to the owners of the event's source and target (once each), a hunter pet's
-/// being its owner's (`GetCharmerOrOwnerPlayerOrPlayerItself`); damage also counts on the
-/// damage meters.
-pub(crate) fn log_event(world: &mut World, event: CombatLogEvent) {
+/// being its owner's (`GetCharmerOrOwnerPlayerOrPlayerItself`), stamped with the server's
+/// wall clock; damage also counts on the damage meters.
+pub(crate) fn log_event(world: &mut World, mut event: CombatLogEvent) {
+    event.timestamp_unix_ms = unix_millis();
     crate::damage_meter::record_damage(world, &event);
     let mut players: Vec<Entity> = Vec::new();
     for unit in [event.source, event.target]
@@ -440,6 +441,13 @@ pub(crate) fn log_event(world: &mut World, event: CombatLogEvent) {
     for player in players {
         send_to_owner(world, player, event.clone());
     }
+}
+
+fn unix_millis() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .expect("system time after 1970")
+        .as_millis() as u64
 }
 
 /// Send to every client that replicates `unit` (TrinityCore `SendMessageToSet`): the
@@ -502,6 +510,8 @@ fn cast_event(
         crit: false,
         glancing: false,
         periodic: false,
+        extra_spell_id: None,
+        timestamp_unix_ms: 0,
         kind,
     }
 }

@@ -118,6 +118,39 @@ pub(crate) fn apply_health_damage(health: &mut Health, damage: f32) -> bool {
     health.current == 0.0
 }
 
+/// Deal environmental `damage` (`Player::EnvironmentalDamage`); the combat log line of a
+/// dealt hit (`SMSG_ENVIRONMENTAL_DAMAGE_LOG`, Physical as for every type the server
+/// deals), overkill in `overflow`. None when the player was already dead.
+pub(crate) fn deal_environmental_damage(
+    player: Entity,
+    kind: shared::protocol::EnvironmentalKind,
+    health: &mut Health,
+    damage: f32,
+) -> Option<shared::protocol::CombatLogEvent> {
+    let before = health.current;
+    if damage <= 0.0 || before <= 0.0 {
+        return None;
+    }
+    apply_health_damage(health, damage);
+    Some(shared::protocol::CombatLogEvent {
+        source: None,
+        target: Some(player.to_bits()),
+        spell_id: None,
+        school_mask: 1,
+        amount: damage as i32,
+        overflow: (damage - before).max(0.0) as i32,
+        absorbed: 0,
+        resisted: 0,
+        blocked: 0,
+        crit: false,
+        glancing: false,
+        periodic: false,
+        extra_spell_id: None,
+        timestamp_unix_ms: 0,
+        kind: shared::protocol::CombatLogKind::Environmental(kind),
+    })
+}
+
 fn should_process_player_death(health: &Health, death_state: Option<&PlayerDeathState>) -> bool {
     health.current <= 0.0 && death_state.is_none_or(|state| state.state == DeathState::Alive)
 }

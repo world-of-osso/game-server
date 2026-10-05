@@ -5,7 +5,9 @@ use lightyear::prelude::server::*;
 use lightyear::prelude::*;
 use shared::components::{Health, Mounted, Npc, Player, PlayerMotion, Position, VerticalVelocity};
 use shared::death::DeathState;
-use shared::protocol::{ChatMessage, LoadTerrain, PlayerInput, TerrainChannel};
+use shared::protocol::{
+    ChatMessage, CombatLogEvent, EnvironmentalKind, LoadTerrain, PlayerInput, TerrainChannel,
+};
 use std::collections::VecDeque;
 
 use crate::auth::{
@@ -693,21 +695,24 @@ pub(crate) fn apply_terrain_gravity(
         let surface = ground
             .liquid_at(map.map_id, feet)
             .map(|liquid| liquid.level);
-        let (next_pos, next_vert_vel, next_fall_tracker, mut next_health) = calculate_gravity_state(
-            (ground.ground_at(map.map_id, feet), surface),
-            *pos,
-            *vert_vel,
-            fall_tracker.for_epoch(control.epoch, pos.y),
-            *health,
-            death_state,
-            dt,
-        );
+        let (next_pos, next_vert_vel, next_fall_tracker, mut next_health, fall) =
+            calculate_gravity_state(
+                entity,
+                (ground.ground_at(map.map_id, feet), surface),
+                *pos,
+                *vert_vel,
+                fall_tracker.for_epoch(control.epoch, pos.y),
+                *health,
+                death_state,
+                dt,
+            );
         let min_height =
             ground.min_height(map.map_id, Vec3::new(next_pos.x, next_pos.y, next_pos.z));
         let under_map = min_height.is_some_and(|min_height| next_pos.y < min_height);
         let alive = death_state.is_none_or(|state| state.state == DeathState::Alive);
+        let mut logs: Vec<_> = fall.into_iter().collect();
         if under_map && alive && next_health.current > 0.0 {
-            fall_to_void(&mut next_health);
+            logs.extend(fall_to_void(entity, &mut next_health));
             commands.entity(entity).insert(OutOfBounds);
         } else if !under_map && out_of_bounds {
             commands.entity(entity).remove::<OutOfBounds>();
@@ -730,14 +735,23 @@ pub(crate) fn apply_terrain_gravity(
             replication_dirty.as_deref(),
             &mut player_deaths,
         );
+        for log in logs {
+            commands.queue(move |world: &mut World| crate::spell_cast::log_event(world, log));
+        }
     }
 }
 
 /// Below the map (MovementHandler.cpp:594-612): `EnvironmentalDamage(DAMAGE_FALL_TO_VOID,
-/// GetMaxHealth())`, then `KillPlayer` if that left the player alive.
-fn fall_to_void(health: &mut Health) {
-    crate::death::apply_health_damage(health, health.max);
+/// GetMaxHealth())`, logged as Falling, then `KillPlayer` if that left the player alive.
+fn fall_to_void(player: Entity, health: &mut Health) -> Option<CombatLogEvent> {
+    let log = crate::death::deal_environmental_damage(
+        player,
+        EnvironmentalKind::Falling,
+        health,
+        health.max,
+    );
     health.current = 0.0;
+    log
 }
 
 fn apply_gravity_health_transition(
@@ -762,6 +776,7 @@ fn apply_gravity_health_transition(
 }
 
 fn calculate_gravity_state(
+    player: Entity,
     ground: (GroundProbe, Option<f32>),
     mut pos: Position,
     mut vert_vel: VerticalVelocity,
@@ -769,14 +784,22 @@ fn calculate_gravity_state(
     mut health: Health,
     death_state: Option<&crate::death::PlayerDeathState>,
     dt: f32,
-) -> (Position, VerticalVelocity, FallTracker, Health) {
+) -> (
+    Position,
+    VerticalVelocity,
+    FallTracker,
+    Health,
+    Option<CombatLogEvent>,
+) {
+    let mut fall = None;
     if death_state.is_some_and(|state| state.state != DeathState::Alive) {
         fall_tracker = FallTracker {
             epoch: fall_tracker.epoch,
             ..FallTracker::grounded(pos.y)
         };
     } else {
-        clamp_to_ground(
+        fall = clamp_to_ground(
+            player,
             ground,
             &mut pos,
             &mut vert_vel,
@@ -785,25 +808,27 @@ fn calculate_gravity_state(
             dt,
         );
     }
-    (pos, vert_vel, fall_tracker, health)
+    (pos, vert_vel, fall_tracker, health, fall)
 }
 
 /// Clamp a position (Bevy space) to its ground: apply vertical velocity and gravity unless
 /// an input reported the height this tick; a swimmer (water `SWIM_DEPTH` over the feet at
-/// `surface`) has no gravity, and water ends a fall without damage.
+/// `surface`) has no gravity, and water ends a fall without damage. Returns the combat log
+/// line of the landing's fall damage.
 fn clamp_to_ground(
+    player: Entity,
     (ground, surface): (GroundProbe, Option<f32>),
     pos: &mut Position,
     vert_vel: &mut VerticalVelocity,
     fall_tracker: &mut FallTracker,
     health: &mut Health,
     dt: f32,
-) {
+) -> Option<CombatLogEvent> {
     let ground_y = match ground {
         GroundProbe::Supported(ground_y) => ground_y,
         // Nothing within step reach: keep falling until a surface is under the feet.
         GroundProbe::Unsupported => f32::NEG_INFINITY,
-        GroundProbe::Unloaded => return,
+        GroundProbe::Unloaded => return None,
     };
     let reported = std::mem::take(&mut fall_tracker.height_reported);
     if shared::movement::is_swimming(pos.y, ground_y, surface) {
@@ -813,7 +838,7 @@ fn clamp_to_ground(
             epoch: fall_tracker.epoch,
             ..FallTracker::grounded(pos.y)
         };
-        return;
+        return None;
     }
 
     if !reported && vert_vel.0 != 0.0 {
@@ -831,17 +856,23 @@ fn clamp_to_ground(
         }
     }
 
-    apply_fall_damage_on_landing(fall_tracker, pos.y, ground_y, vert_vel.0, health, dt);
+    let fall_damage = apply_fall_damage_on_landing(fall_tracker, pos.y, ground_y, vert_vel.0, dt);
+    crate::death::deal_environmental_damage(
+        player,
+        EnvironmentalKind::Falling,
+        health,
+        health.max * fall_damage,
+    )
 }
 
+/// Track the fall; on landing, the fraction of maximum health it deals.
 fn apply_fall_damage_on_landing(
     fall_tracker: &mut FallTracker,
     current_y: f32,
     ground_y: f32,
     vertical_velocity: f32,
-    health: &mut Health,
     dt: f32,
-) {
+) -> f32 {
     let now_airborne = current_y > ground_y + GROUND_SNAP_THRESHOLD || vertical_velocity > 0.0;
     if !fall_tracker.airborne && now_airborne {
         fall_tracker.airborne = true;
@@ -856,12 +887,10 @@ fn apply_fall_damage_on_landing(
     // Landing is coming within snap reach: WMO floor heights carry float noise
     // from one probe to the next, so the feet can rest a hair above the floor.
     let landed = fall_tracker.airborne && !now_airborne;
+    let mut damage = 0.0;
     if landed {
         let fall_distance = (fall_tracker.peak_y - ground_y).max(0.0);
-        let damage = health.max * shared::movement::fall_damage_percent(fall_distance);
-        if damage > 0.0 {
-            crate::death::apply_health_damage(health, damage);
-        }
+        damage = shared::movement::fall_damage_percent(fall_distance);
         fall_tracker.airborne = false;
         fall_tracker.peak_y = ground_y;
         fall_tracker.air_secs = 0.0;
@@ -869,6 +898,7 @@ fn apply_fall_damage_on_landing(
     }
 
     fall_tracker.last_y = current_y;
+    damage
 }
 
 const TILE_SIZE: f32 = 533.33;

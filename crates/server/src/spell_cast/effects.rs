@@ -455,6 +455,8 @@ fn log_amount(ctx: &EffectCtx, target: Entity, kind: CombatLogKind) -> CombatLog
         crit: false,
         glancing: false,
         periodic: false,
+        extra_spell_id: None,
+        timestamp_unix_ms: 0,
         kind,
     }
 }
@@ -741,7 +743,8 @@ fn dispel(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, target: Enti
         return;
     };
     let count = (effect.base_points.max(1.0)) as usize;
-    crate::auras::dispel(world, ctx.caster, target, dispel_type, count);
+    let event = log_amount(ctx, target, CombatLogKind::Dispel);
+    crate::auras::dispel(world, &event, dispel_type, count);
 }
 
 /// 64 TRIGGER_SPELL: cast `EffectTriggerSpell` at this target.
@@ -803,6 +806,7 @@ fn interrupt_cast(world: &mut World, ctx: &EffectCtx, _effect: &SpellEffect, tar
         .lock_schools(school_mask, until);
     let mut event = log_amount(ctx, target, CombatLogKind::Interrupt);
     event.school_mask = school_mask;
+    event.extra_spell_id = Some(cast.spell_id);
     log_event(world, event);
 }
 

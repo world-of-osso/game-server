@@ -13,8 +13,8 @@ use rand::Rng;
 use shared::components::{Health, Player, Position};
 use shared::death::DeathState;
 use shared::protocol::{
-    MIRROR_TIMER_BREATH, MIRROR_TIMER_FATIGUE, MirrorTimerChannel, MirrorTimerStart,
-    MirrorTimerStop,
+    CombatLogEvent, EnvironmentalKind, MIRROR_TIMER_BREATH, MIRROR_TIMER_FATIGUE,
+    MirrorTimerChannel, MirrorTimerStart, MirrorTimerStop,
 };
 
 use crate::auras::AuraStatMods;
@@ -105,15 +105,6 @@ impl Breathing {
     }
 }
 
-/// `EnviromentalDamage` of the damage a timer deals.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum EnvironmentalDamage {
-    /// `DAMAGE_EXHAUSTED` 0.
-    Exhausted,
-    /// `DAMAGE_DROWNING` 1.
-    Drowning,
-}
-
 /// A message `handle_drowning` sends the owner.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum TimerMessage {
@@ -125,7 +116,7 @@ pub enum TimerMessage {
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct DrowningTick {
     pub messages: Vec<TimerMessage>,
-    pub damage: Vec<EnvironmentalDamage>,
+    pub damage: Vec<EnvironmentalKind>,
 }
 
 /// `Player::SendMirrorTimer`: a disabled maximum stops a running timer instead
@@ -185,12 +176,12 @@ pub fn handle_drowning(
         (
             MIRROR_TIMER_BREATH,
             UNDERWATER_INWATER,
-            EnvironmentalDamage::Drowning,
+            EnvironmentalKind::Drowning,
         ),
         (
             MIRROR_TIMER_FATIGUE,
             UNDERWATER_INDARKWATER,
-            EnvironmentalDamage::Exhausted,
+            EnvironmentalKind::Fatigue,
         ),
     ];
     for (timer, flag, damage) in timer_rules {
@@ -218,7 +209,7 @@ pub fn handle_drowning(
 fn update_timer(
     timers: &mut MirrorTimers,
     tick: &mut DrowningTick,
-    (timer, flag, damage): (u8, u8, EnvironmentalDamage),
+    (timer, flag, damage): (u8, u8, EnvironmentalKind),
     breathing: Breathing,
     time_diff_ms: i32,
 ) {
@@ -335,6 +326,7 @@ pub(crate) fn update_mirror_timers(
     mut senders: TimerSenders,
     replication_dirty: Option<Res<ReplicationDirtyQueue>>,
     mut player_deaths: MessageWriter<crate::death::PlayerDeathTransition>,
+    mut commands: Commands,
 ) {
     let Some(mut ground) = ground else {
         return;
@@ -364,7 +356,11 @@ pub(crate) fn update_mirror_timers(
         };
         let tick = handle_drowning(&mut timers, exposure, breathing, time_diff_ms);
         if !tick.damage.is_empty() {
-            let killed = deal_environmental_damage(&mut health, tick.damage.len());
+            let logs = deal_environmental_damage(entity, &mut health, &tick.damage);
+            let killed = health.current <= 0.0;
+            for log in logs {
+                commands.queue(move |world: &mut World| crate::spell_cast::log_event(world, log));
+            }
             report_damage(
                 entity,
                 killed,
@@ -394,15 +390,20 @@ fn report_damage(
     }
 }
 
-/// `EnvironmentalDamage` `count` times; true when it killed the player.
-fn deal_environmental_damage(health: &mut Health, count: usize) -> bool {
+/// `EnvironmentalDamage` once per `kinds` entry; the combat log lines of the dealt hits.
+fn deal_environmental_damage(
+    player: Entity,
+    health: &mut Health,
+    kinds: &[EnvironmentalKind],
+) -> Vec<CombatLogEvent> {
     let mut rng = rand::thread_rng();
-    let mut killed = false;
-    for _ in 0..count {
-        let damage = environmental_damage(health.max as u32, |max| rng.gen_range(0..=max));
-        killed |= crate::death::apply_health_damage(health, damage as f32);
-    }
-    killed
+    kinds
+        .iter()
+        .filter_map(|&kind| {
+            let damage = environmental_damage(health.max as u32, |max| rng.gen_range(0..=max));
+            crate::death::deal_environmental_damage(player, kind, health, damage as f32)
+        })
+        .collect()
 }
 
 fn send_timer_messages(senders: &mut TimerSenders, outgoing: Vec<(Entity, Vec<TimerMessage>)>) {

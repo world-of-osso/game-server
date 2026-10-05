@@ -229,7 +229,21 @@ fn kick_interrupts_target_cast_and_locks_its_school() {
         .find(|e| e.kind == CombatLogKind::Interrupt)
         .unwrap();
     assert_eq!(interrupt.spell_id, Some(KICK));
+    assert_eq!(
+        interrupt.extra_spell_id,
+        Some(FIREBALL),
+        "names the interrupted spell"
+    );
     assert_eq!(interrupt.school_mask, fire);
+    let since_epoch = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_millis() as u64;
+    assert!(
+        (since_epoch - 60_000..=since_epoch).contains(&interrupt.timestamp_unix_ms),
+        "server wall clock, got {}",
+        interrupt.timestamp_unix_ms
+    );
 }
 
 #[test]

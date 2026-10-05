@@ -113,6 +113,8 @@ pub(super) fn log_miss(
             crit: false,
             glancing: false,
             periodic: false,
+            extra_spell_id: None,
+            timestamp_unix_ms: 0,
             kind: CombatLogKind::Miss(kind),
         },
     );

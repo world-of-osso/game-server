@@ -575,6 +575,8 @@ fn aura_event(aura: &AuraInstance, target: Entity, kind: CombatLogKind) -> Comba
         crit: false,
         glancing: false,
         periodic: false,
+        extra_spell_id: None,
+        timestamp_unix_ms: 0,
         kind,
     }
 }
@@ -1070,14 +1072,15 @@ pub fn channel_ended(world: &mut World, caster: Entity, spell_id: u32) {
 
 /// SPELL_EFFECT_DISPEL: remove up to `count` non-passive auras of
 /// `dispel_type` — buffs from a hostile target, debuffs from a friendly one.
-/// Logs `Dispel` (source = dispeller, spell = removed aura) per aura.
-pub fn dispel(
-    world: &mut World,
-    dispeller: Entity,
-    target: Entity,
-    dispel_type: u32,
-    count: usize,
-) {
+/// Logs `dispel` (dispeller, target, dispelling spell) once per removed aura, naming the
+/// aura as its extra spell (`Spell::EffectDispel` → `SMSG_SPELL_DISPELL_LOG`).
+pub fn dispel(world: &mut World, dispel: &CombatLogEvent, dispel_type: u32, count: usize) {
+    let (Some(dispeller), Some(target)) = (
+        dispel.source.and_then(Entity::try_from_bits),
+        dispel.target.and_then(Entity::try_from_bits),
+    ) else {
+        return;
+    };
     let hostile = targets::is_hostile(world, dispeller, target);
     let Some(auras) = world.get::<ActiveAuras>(target) else {
         return;
@@ -1097,8 +1100,11 @@ pub fn dispel(
         chosen.contains(&aura.instance_id)
     });
     for aura in removed {
-        let mut event = aura_event(&aura, target, CombatLogKind::Dispel);
-        event.source = Some(dispeller.to_bits());
+        let event = CombatLogEvent {
+            amount: i32::from(aura.stacks),
+            extra_spell_id: Some(aura.spell_id),
+            ..dispel.clone()
+        };
         log_event(world, event);
     }
 }

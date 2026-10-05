@@ -11,7 +11,15 @@ fn probe_and_clamp(
     dt: f32,
 ) {
     let probe = map.ground_at(0, Vec3::new(pos.x, pos.y, pos.z));
-    clamp_to_ground((probe, None), pos, vel, fall_tracker, health, dt);
+    clamp_to_ground(
+        Entity::PLACEHOLDER,
+        (probe, None),
+        pos,
+        vel,
+        fall_tracker,
+        health,
+        dt,
+    );
 }
 
 #[test]
@@ -561,6 +569,7 @@ fn a_fall_that_comes_to_rest_a_hair_above_the_floor_lands() {
     let mut settle = |ground: f32, pos: &mut Position, health: &mut Health| {
         for _ in 0..40 {
             clamp_to_ground(
+                Entity::PLACEHOLDER,
                 (GroundProbe::Supported(ground), None),
                 pos,
                 &mut vel,

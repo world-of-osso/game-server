@@ -112,7 +112,7 @@ fn out_of_breath_drowns_every_second() {
 
     let drowned: Vec<usize> = sent
         .iter()
-        .filter(|(_, tick)| tick.damage == vec![EnvironmentalDamage::Drowning])
+        .filter(|(_, tick)| tick.damage == vec![EnvironmentalKind::Drowning])
         .map(|(index, _)| *index)
         .collect();
     // Breath runs out 180 s after the activation tick, then `+= 1 * IN_MILLISECONDS`.
@@ -191,7 +191,7 @@ fn deep_water_starts_fatigue_and_exhausts_after_a_minute() {
     );
     let exhausted: Vec<usize> = sent
         .iter()
-        .filter(|(_, tick)| tick.damage == vec![EnvironmentalDamage::Exhausted])
+        .filter(|(_, tick)| tick.damage == vec![EnvironmentalKind::Fatigue])
         .map(|(index, _)| *index)
         .collect();
     assert_eq!(exhausted, vec![1201, 1221]);
