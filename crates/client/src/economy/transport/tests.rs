@@ -501,6 +501,7 @@ fn browse_response(query: AuctionSearchQuery) -> AuctionBrowseResults {
         total_results: 4,
         items: vec![AuctionBrowseItem {
             item_id: 2589,
+            definition_source: shared::item_data::ItemDefinitionSource::Retail,
             name: "Linen".into(),
             quality: 1,
             required_level: 10,
@@ -807,6 +808,7 @@ fn item(count: u32) -> ItemStack {
     ItemStack {
         item_guid: 42,
         item_id: 2589,
+        definition_source: shared::item_data::ItemDefinitionSource::Retail,
         count,
         durability: None,
         soulbound: false,
