@@ -412,8 +412,10 @@ pub(crate) fn handle_teleport(
     }
 }
 
-/// `.die`: an online character's health drops to 0 and it dies like any lethal hit
-/// (`PlayerDeathTransition`).
+/// `.die` (cs_misc.cpp `HandleDieCommand` -> `Unit::Kill`): an online character dies
+/// through the normal kill path (`combat::kill_unit`: health 0, `PlayerDeathTransition`,
+/// the combat log's Death line). There is no GM unit here, so the character is its own
+/// killer, as `Unit::KillSelf`.
 pub(crate) fn handle_kill(
     db: &persistence::GameDatabase,
     commands: &mut Commands,
@@ -434,12 +436,7 @@ pub(crate) fn handle_kill(
     else {
         return AdminResponse::Error(format!("character '{name}' is not online"));
     };
-    commands.queue(move |world: &mut World| {
-        if let Some(mut health) = world.get_mut::<shared::components::Health>(player) {
-            health.current = 0.0;
-        }
-        world.write_message(crate::death::PlayerDeathTransition { player });
-    });
+    commands.queue(move |world: &mut World| crate::combat::kill_unit(world, player, player));
     AdminResponse::Killed {
         character_name: name.to_owned(),
     }
