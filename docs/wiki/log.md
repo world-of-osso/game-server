@@ -60,7 +60,7 @@ Added [[general-spell-grants]]: read-only SQLite/CSV comparison of 41 captured e
 
 ## [2026-10-05] systems/spec | Source-qualified bag requirements and unique limits
 
-Updated [[inventory]] and [source contract](../specs/item-definition-source.md): explicit model source arguments, Retail profession reagents/tools, quest progress/removal and producer-selected merchant/loot unique limits. Collision fixtures use unchanged 2947/2512/2101 IDs; native targeted RED reproduced eleven expected failures before production edits. Development ledger: `target/source-requirements-proof/`. No authored reward provenance inference, legacy-marker change, broad gate or operations.
+Updated [[inventory]] and [source contract](../specs/item-definition-source.md): explicit model source arguments, Retail profession reagents/tools, quest progress/removal and producer-selected merchant/loot unique limits. Collision fixtures use unchanged 2947/2512/2101 IDs; native targeted RED reproduced eleven expected failures before production edits. Desktop GREEN at source commit `1a1b049`: 11 passed, 0 failed/ignored, 1434 filtered; 11.44s test time, 80.104s helper wall. Main-owned zone test patch was present but not selected. Development ledger: `target/source-requirements-proof/`. No authored reward provenance inference, legacy-marker change, broad gate or operations.
 
 ## [2026-10-05] systems/spec | Frozen character equipment disk ABI
 
