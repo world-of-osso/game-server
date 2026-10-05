@@ -2,7 +2,7 @@
 
 ## [2026-10-05] systems | Creature threat telemetry
 
-Updated [[creature-aggro]] with effective healing assist threat, school-matching MOD_THREAT, and rate-limited engaged-player table/clear delivery. Existing damage table and 110%/130% victim selection retained. Targeted RED reproduced absent heal threat (200 instead of 250); GREEN pending. Native target frame has no threat indicator; client Threat type uses the selected target.
+Updated [[creature-aggro]] with effective healing assist threat, school-matching MOD_THREAT, and rate-limited engaged-player table/clear delivery. Existing damage table and 110%/130% victim selection retained. Targeted RED reproduced absent heal threat (200 instead of 250); 9 targeted threat tests passed, including real Flash Heal, loaded Righteous Fury, engaged-player loopback delivery and reset clear. Native target frame has no threat indicator; client Threat type uses the selected target.
 
 ## [2026-10-05] investigations | Lift Off bar and restriction evidence
 
