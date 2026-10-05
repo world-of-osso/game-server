@@ -36,7 +36,7 @@ Ground/asset requirements remain:
 
 Both approved starts use available root 7199904 (tile row 28, column 24), with native `ground_at` support within 0.01 yd of selected Z. Real-kit creation/reopen/SelectCharacter proves all ten pairs persist map 2991, select there and send `LoadTerrain` directory `2991`, tile (28,24). Northshire/Kalimdor entry regressions are retained. Proof ledger: checkout `target/zephras-content-proof/ledger.md`.
 
-[[content-import#Forever Zephras overlay]] owns NPC/quest import counts and limits. Native quest messages prove a giver within 5 yd, Coming of Age acceptance and captured 40 XP at Rorian's turn-in; race 96 is rejected by its source race mask. Skysight rejects level 1, accepts level 2, and remains incomplete because its racial event is unimplemented. No scripted events, phasing or racial spell parity is claimed. Both starting givers' displays remain unresolved; server spawn-query proof is not rendered-client proof.
+[[content-import#Forever Zephras overlay]] owns NPC/quest import counts and limits. Native quest messages prove a giver within 5 yd, Coming of Age acceptance and captured 40 XP at Rorian's turn-in; race 96 is rejected by its source race mask. Skysight rejects level 1, accepts level 2, and remains incomplete because its racial event is unimplemented. No scripted events, phasing or racial spell parity is claimed. Refreshed captured NPC pages resolve Ailee→136968 and Ventaari→139694; native fixtures now load those model rows and spawn named giver entities carrying ModelDisplay. Server spawn/message proof is still not rendered-client proof.
 
 ## Sources
 
