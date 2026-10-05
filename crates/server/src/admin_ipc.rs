@@ -725,8 +725,8 @@ mod tests {
         crate::item_templates::ItemTemplates,
         crate::merchant::VendorCatalog,
     ) {
-        let templates = crate::item_templates::ItemTemplates(
-            [(
+        let templates = crate::item_templates::ItemTemplates {
+            retail: [(
                 2589,
                 crate::item_templates::ItemTemplate {
                     max_stack: 1000,
@@ -737,7 +737,8 @@ mod tests {
             )]
             .into_iter()
             .collect(),
-        );
+            forever: Default::default(),
+        };
         let mut catalog = crate::merchant::VendorCatalog::default();
         catalog.goods.insert(
             2589,
