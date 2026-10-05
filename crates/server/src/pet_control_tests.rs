@@ -202,7 +202,6 @@ impl PetHarness {
         self.advance(3);
     }
 
-    /// Damage the pet's `spell` did to `target`, as logged.
     /// The pet's melee swings at `target` in the owner's combat log, hits and misses alike
     /// (melee lines carry no spell id).
     fn melee_swings(&self, target: Entity) -> usize {
@@ -219,6 +218,22 @@ impl PetHarness {
             .count()
     }
 
+    /// The pet's completed casts of `spell` at `target`, landed or missed.
+    fn spell_casts(&self, spell: u32, target: Entity) -> usize {
+        self.h
+            .inbox
+            .log
+            .iter()
+            .filter(|event| {
+                event.kind == CombatLogKind::CastSuccess
+                    && event.spell_id == Some(spell)
+                    && event.source == Some(self.pet.to_bits())
+                    && event.target == Some(target.to_bits())
+            })
+            .count()
+    }
+
+    /// Damage the pet's `spell` did to `target`, as logged.
     fn spell_damage(&self, spell: u32, target: Entity) -> Vec<i32> {
         self.h
             .inbox
@@ -612,8 +627,9 @@ fn an_attacking_wolf_autocasts_bite() {
     p.attack_kobold();
     // 13 yards at 7 yards per second, then Bite every 3 s.
     p.advance(100);
+    // Bite rolls to hit like melee, so count casts, not damage.
     assert!(
-        !p.spell_damage(BITE, kobold).is_empty(),
+        p.spell_casts(BITE, kobold) > 0,
         "no Bite in {:?}",
         p.h.inbox.log
     );
