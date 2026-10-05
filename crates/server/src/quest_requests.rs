@@ -449,7 +449,10 @@ impl<'a> QuestSession<'a, '_, '_> {
         let xp = if level >= MAX_LEVEL {
             0
         } else {
-            quest_xp(quest.level, level, quest.reward_xp_difficulty)
+            match quest.captured_reward_xp {
+                Some(xp) => xp,
+                None => quest_xp(quest.level, level, quest.reward_xp_difficulty),
+            }
         };
         if xp > 0 {
             let character_id = self.character();

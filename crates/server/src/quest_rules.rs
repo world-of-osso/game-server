@@ -77,6 +77,20 @@ fn mask_allows(mask: u32, id: u8) -> bool {
             .is_some_and(|bit| mask & bit != 0)
 }
 
+fn race_mask_allows(quest: &QuestTemplate, race: u8) -> bool {
+    if quest.allowable_races == 0 {
+        return true;
+    }
+    let shift = if quest.race_mask_playable {
+        crate::race_class::race_bit(race)
+    } else {
+        race.checked_sub(1)
+    };
+    shift
+        .and_then(|shift| 1_u64.checked_shl(u32::from(shift)))
+        .is_some_and(|bit| quest.allowable_races & bit != 0)
+}
+
 /// `SatisfyQuestExclusiveGroup`: no other quest of a positive group was taken.
 fn exclusive_group_ok(db: &QuestDb, log: &QuestLogData, quest: &QuestTemplate) -> bool {
     if quest.exclusive_group <= 0 {
@@ -146,7 +160,7 @@ fn requirements(
     if !mask_allows(quest.allowable_classes, player.class) {
         return Err(QuestFailedReason::WrongClass);
     }
-    if !mask_allows(quest.allowable_races, player.race) {
+    if !race_mask_allows(quest, player.race) {
         return Err(QuestFailedReason::WrongRace);
     }
     let linked = exclusive_group_ok(db, log, quest)
@@ -206,6 +220,9 @@ pub(crate) fn objective_counts(
 }
 
 pub(crate) fn objectives_done(quest: &QuestTemplate, counts: &[u32]) -> bool {
+    if quest.completion_blocked {
+        return false;
+    }
     quest
         .objectives
         .iter()
