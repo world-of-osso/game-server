@@ -315,3 +315,45 @@ fn dead_players_gain_no_xp() {
     assert_eq!(app.world().get::<Level>(player), Some(&Level(1)));
     assert_eq!(load_xp(&app.world().resource::<GameDatabase>().db, 7), 0);
 }
+
+/// `RestMgr::GetRestBonusFor`: a 100 XP kill draws 100 more from a 300 XP pool, so the
+/// player gains 200 and keeps 200 rested; a quest reward draws nothing.
+#[test]
+fn kill_xp_spends_rested_xp_for_a_matching_bonus_and_quest_xp_does_not() {
+    let mut app = award_app();
+    let victim = app.world_mut().spawn_empty().id();
+    let player = app
+        .world_mut()
+        .spawn((
+            Player {
+                name: "Rested".into(),
+                race: 1,
+                class: 1,
+                appearance: default(),
+            },
+            ClientId(9),
+            Level(10),
+            PlayerRestState::fixture(10, 300),
+        ))
+        .id();
+    app.world_mut().resource_mut::<XpAwards>().0.extend([
+        XpAward {
+            character_id: 9,
+            amount: 100,
+            victim: Some(victim),
+            group_bonus: 1.0,
+            reason: XpGainReason::Kill,
+        },
+        XpAward::quest(9, 50),
+    ]);
+    app.update();
+
+    assert_eq!(load_xp(&app.world().resource::<GameDatabase>().db, 9), 250);
+    assert_eq!(
+        app.world()
+            .get::<PlayerRestState>(player)
+            .unwrap()
+            .rested_xp(),
+        200
+    );
+}

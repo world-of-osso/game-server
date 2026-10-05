@@ -1,3 +1,12 @@
+//! Rest state and rested XP, as TrinityCore `RestMgr` keeps them. Near an innkeeper the
+//! player rests (`REST_FLAG_IN_TAVERN`) and its rested XP pool grows by 5% of a level per
+//! 8 h (`RestMgr::Update`); logging out stores the pool and whether the player was resting,
+//! and the next login adds the offline time at the resting or wilderness rate
+//! (`Player::LoadFromDB`). Kills spend the pool (`RestMgr::GetRestBonusFor`,
+//! `experience::apply_xp_awards`). The pool reaches the client in `PlayerXpUpdate` and
+//! `RestStateUpdate`. City rest (`REST_FLAG_IN_CITY`, AreaTable `LinkedChat`) is not
+//! modelled: the server has no area flags.
+
 use bevy::prelude::*;
 use lightyear::prelude::*;
 use shared::components::{Level, Position};
@@ -5,13 +14,22 @@ use shared::protocol::{RestAreaKindSnapshot, RestChannel, RestSnapshot, RestStat
 use shared::xp::RestedXp;
 
 use crate::auth::Authenticated;
-use crate::experience::xp_to_next_level;
+use crate::experience::{XpDirty, xp_to_next_level};
 use crate::networking::PlayerLink;
+use crate::persistence::{ClientId, GameDatabase};
+use crate::persistence_progression::{RestData, load_rest};
 use crate::world_data::WorldData;
 
 const NPC_FLAG_INNKEEPER: u32 = 0x0001_0000;
 const INNKEEPER_REST_RADIUS: f32 = 20.0;
 const INNKEEPER_REST_RADIUS_SQ: f32 = INNKEEPER_REST_RADIUS * INNKEEPER_REST_RADIUS;
+
+/// Rest "bubbles" (`RestMgr::CalcExtraPerSec`: NextLevelXP / 72000 × bubble per second).
+/// 0.125 resting, in game (`RestMgr::Update`) or logged out resting (Player.cpp:18843-18846);
+/// it is `RestedXp::accumulate`'s 5% of a level per 8 h.
+const RESTING_BUBBLE: f32 = 0.125;
+/// Logged out away from an inn or city (Player.cpp:18841).
+const WILDERNESS_BUBBLE: f32 = 0.031;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum RestAreaKind {
@@ -22,6 +40,9 @@ enum RestAreaKind {
 pub struct PlayerRestState {
     rested_xp: RestedXp,
     area_kind: Option<RestAreaKind>,
+    /// Game time and pool when the current rest began (`RestMgr::_restTime`); `None`
+    /// while not resting.
+    rest_start: Option<(f64, u32)>,
     last_sent: Option<RestSnapshot>,
 }
 
@@ -29,6 +50,60 @@ impl PlayerRestState {
     pub(crate) fn rested_xp(&self) -> u32 {
         self.rested_xp.amount
     }
+
+    /// `RestMgr::GetRestBonusFor`: kill XP gains its own amount again from the pool,
+    /// at most what the pool holds. Returns the total gain.
+    pub(crate) fn spend_on_kill(&mut self, xp: u32, now: f64) -> u32 {
+        let (total, _) = self.rested_xp.apply_bonus(xp);
+        self.restart_rest(now);
+        total
+    }
+
+    fn restart_rest(&mut self, now: f64) {
+        self.rest_start = self.area_kind.map(|_| (now, self.rested_xp.amount));
+    }
+
+    /// The pool after resting from `rest_start` to `now` at `xp_to_level`, capped.
+    fn rested_by(&self, now: f64, xp_to_level: u32) -> Option<u32> {
+        let (since, amount) = self.rest_start?;
+        let mut pool = RestedXp {
+            amount,
+            ..self.rested_xp
+        };
+        pool.accumulate(((now - since) / 3600.0) as f32, xp_to_level);
+        Some(pool.amount)
+    }
+
+    /// The row `Player::SaveToDB` writes at logout `logout_unix_secs`.
+    pub(crate) fn logout_data(&self, logout_unix_secs: u64) -> RestData {
+        RestData {
+            rested_xp: self.rested_xp.amount,
+            logout_unix_secs,
+            logout_resting: self.area_kind.is_some(),
+        }
+    }
+}
+
+#[cfg(test)]
+impl PlayerRestState {
+    /// A player out of any rest area holding `rested_xp` at level `level`.
+    pub(crate) fn fixture(level: u8, rested_xp: u32) -> Self {
+        let mut pool = RestedXp::new(xp_to_next_level(level));
+        pool.amount = rested_xp;
+        Self {
+            rested_xp: pool,
+            area_kind: None,
+            rest_start: None,
+            last_sent: None,
+        }
+    }
+}
+
+pub(crate) fn unix_secs() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .expect("system time after 1970")
+        .as_secs()
 }
 
 #[derive(Resource, Debug, Default, Clone, PartialEq)]
@@ -44,7 +119,12 @@ impl Plugin for RestPlugin {
         app.init_resource::<RestAreaRegistry>();
         app.add_systems(
             Update,
-            (initialize_rest_area_registry, update_player_rest_state).chain(),
+            (
+                initialize_rest_area_registry,
+                update_player_rest_state,
+                accumulate_rested_xp,
+            )
+                .chain(),
         );
     }
 }
@@ -65,6 +145,7 @@ type RestPlayerQuery<'w, 's> = Query<
     'w,
     's,
     (
+        &'static ClientId,
         &'static Position,
         &'static Level,
         Option<&'static mut PlayerRestState>,
@@ -72,31 +153,45 @@ type RestPlayerQuery<'w, 's> = Query<
     Or<(Changed<Position>, Changed<Level>, Without<PlayerRestState>)>,
 >;
 
+/// What a login reads and marks: the saved rest row and the XP bar to resend.
+#[derive(bevy::ecs::system::SystemParam)]
+struct RestLogin<'w> {
+    db: Option<Res<'w, GameDatabase>>,
+    xp_dirty: Option<ResMut<'w, XpDirty>>,
+}
+
 fn update_player_rest_state(
     connections: Query<(Entity, &PlayerLink), With<Authenticated>>,
     mut players: RestPlayerQuery,
     registry: Res<RestAreaRegistry>,
+    time: Res<Time>,
+    mut login: RestLogin,
     mut commands: Commands,
     mut senders: Query<&mut MessageSender<RestStateUpdate>>,
 ) {
     if !registry.initialized {
         return;
     }
+    let now = time.elapsed_secs_f64();
 
     for (conn_entity, link) in &connections {
-        let Ok((position, level, rest_state)) = players.get_mut(link.0) else {
+        let Ok((client_id, position, level, rest_state)) = players.get_mut(link.0) else {
             continue;
         };
 
         let Some(snapshot) = (if let Some(rest_state) = rest_state {
-            update_existing_rest_state(position, level, rest_state, &registry)
+            update_existing_rest_state(position, level, rest_state, &registry, now)
         } else {
-            let snapshot = build_initial_rest_snapshot(position, level.0, &registry);
-            commands.entity(link.0).insert(PlayerRestState {
-                rested_xp: RestedXp::new(xp_to_next_level(level.0)),
-                area_kind: map_rest_area_kind(snapshot.rest_area_kind.as_ref()),
-                last_sent: Some(snapshot.clone()),
-            });
+            let saved = login
+                .db
+                .as_ref()
+                .and_then(|db| load_rest(&db.db, client_id.0));
+            let state = login_rest_state(position, level.0, &registry, saved, now, unix_secs());
+            let snapshot = build_rest_snapshot(&state);
+            commands.entity(link.0).insert(state);
+            if let Some(dirty) = login.xp_dirty.as_deref_mut() {
+                dirty.0.insert(client_id.0);
+            }
             Some(snapshot)
         }) else {
             continue;
@@ -111,15 +206,64 @@ fn update_player_rest_state(
     }
 }
 
+/// `Player::LoadFromDB`: the saved pool plus the offline time since logout at
+/// `RESTING_BUBBLE` when logged out resting, else `WILDERNESS_BUBBLE`.
+fn login_rest_state(
+    position: &Position,
+    level: u8,
+    registry: &RestAreaRegistry,
+    saved: Option<RestData>,
+    now: f64,
+    now_unix_secs: u64,
+) -> PlayerRestState {
+    let xp_to_level = xp_to_next_level(level);
+    let mut rested_xp = RestedXp::new(xp_to_level);
+    if let Some(saved) = saved {
+        rested_xp.amount = saved.rested_xp.min(rested_xp.max);
+        let bubble = if saved.logout_resting {
+            RESTING_BUBBLE
+        } else {
+            WILDERNESS_BUBBLE
+        };
+        let offline_hours = now_unix_secs.saturating_sub(saved.logout_unix_secs) as f32 / 3600.0;
+        rested_xp.accumulate(offline_hours * bubble / RESTING_BUBBLE, xp_to_level);
+    }
+    let area_kind = detect_rest_area_kind(position, registry);
+    rested_xp.in_rest_area = area_kind.is_some();
+    let mut state = PlayerRestState {
+        rested_xp,
+        area_kind,
+        rest_start: None,
+        last_sent: None,
+    };
+    state.restart_rest(now);
+    state.last_sent = Some(build_rest_snapshot(&state));
+    state
+}
+
+/// Entering or leaving a rest area, or a level-up, settles the pool rested so far and
+/// starts the next rest stretch (`RestMgr::SetRestFlag` / `RemoveRestFlag`).
 fn update_existing_rest_state(
     position: &Position,
     level: &Level,
     mut state: Mut<PlayerRestState>,
     registry: &RestAreaRegistry,
+    now: f64,
 ) -> Option<RestSnapshot> {
-    state.rested_xp.update_max(xp_to_next_level(level.0));
-    state.area_kind = detect_rest_area_kind(position, registry);
-    state.rested_xp.in_rest_area = state.area_kind.is_some();
+    let xp_to_level = xp_to_next_level(level.0);
+    let area_kind = detect_rest_area_kind(position, registry);
+    let max_before = state.rested_xp.max;
+    let mut pool = state.rested_xp;
+    pool.update_max(xp_to_level);
+    if area_kind != state.area_kind || pool.max != max_before {
+        if let Some(amount) = state.rested_by(now, xp_to_level) {
+            state.rested_xp.amount = amount;
+        }
+        state.rested_xp.update_max(xp_to_level);
+        state.area_kind = area_kind;
+        state.rested_xp.in_rest_area = area_kind.is_some();
+        state.restart_rest(now);
+    }
 
     let snapshot = build_rest_snapshot(&state);
     if state.last_sent.as_ref() == Some(&snapshot) {
@@ -129,15 +273,34 @@ fn update_existing_rest_state(
     Some(snapshot)
 }
 
-fn build_initial_rest_snapshot(
-    position: &Position,
-    level: u8,
-    registry: &RestAreaRegistry,
-) -> RestSnapshot {
-    let mut rested_xp = RestedXp::new(xp_to_next_level(level));
-    let area_kind = detect_rest_area_kind(position, registry);
-    rested_xp.in_rest_area = area_kind.is_some();
-    build_rest_snapshot_from_parts(rested_xp, area_kind)
+/// `Player::Update` -> `RestMgr::Update` (Player.cpp:1015-1016): while resting the pool
+/// grows by `RESTING_BUBBLE`; each whole XP gained reaches the client.
+fn accumulate_rested_xp(
+    connections: Query<(Entity, &PlayerLink), With<Authenticated>>,
+    mut players: Query<(&ClientId, &Level, &mut PlayerRestState)>,
+    time: Res<Time>,
+    mut xp_dirty: Option<ResMut<XpDirty>>,
+    mut senders: Query<&mut MessageSender<RestStateUpdate>>,
+) {
+    let now = time.elapsed_secs_f64();
+    for (conn_entity, link) in &connections {
+        let Ok((client_id, level, mut state)) = players.get_mut(link.0) else {
+            continue;
+        };
+        let Some(amount) = state.rested_by(now, xp_to_next_level(level.0)) else {
+            continue;
+        };
+        if amount == state.rested_xp.amount {
+            continue;
+        }
+        state.rested_xp.amount = amount;
+        let snapshot = build_rest_snapshot(&state);
+        state.last_sent = Some(snapshot.clone());
+        send_rest_update(conn_entity, snapshot, &mut senders, "rested xp".into());
+        if let Some(dirty) = xp_dirty.as_deref_mut() {
+            dirty.0.insert(client_id.0);
+        }
+    }
 }
 
 fn detect_rest_area_kind(position: &Position, registry: &RestAreaRegistry) -> Option<RestAreaKind> {
@@ -173,31 +336,17 @@ fn collect_innkeeper_positions(world_data: &WorldData) -> Vec<Vec3> {
 }
 
 fn build_rest_snapshot(state: &PlayerRestState) -> RestSnapshot {
-    build_rest_snapshot_from_parts(state.rested_xp, state.area_kind)
-}
-
-fn build_rest_snapshot_from_parts(
-    rested_xp: RestedXp,
-    area_kind: Option<RestAreaKind>,
-) -> RestSnapshot {
     RestSnapshot {
-        in_rest_area: rested_xp.in_rest_area,
-        rest_area_kind: area_kind.map(map_rest_area_kind_snapshot),
-        rested_xp: rested_xp.amount,
-        rested_xp_max: rested_xp.max,
+        in_rest_area: state.rested_xp.in_rest_area,
+        rest_area_kind: state.area_kind.map(map_rest_area_kind_snapshot),
+        rested_xp: state.rested_xp.amount,
+        rested_xp_max: state.rested_xp.max,
     }
 }
 
 fn map_rest_area_kind_snapshot(kind: RestAreaKind) -> RestAreaKindSnapshot {
     match kind {
         RestAreaKind::Inn => RestAreaKindSnapshot::Inn,
-    }
-}
-
-fn map_rest_area_kind(kind: Option<&RestAreaKindSnapshot>) -> Option<RestAreaKind> {
-    match kind {
-        Some(RestAreaKindSnapshot::Inn) => Some(RestAreaKind::Inn),
-        Some(RestAreaKindSnapshot::City) | None => None,
     }
 }
 
@@ -220,6 +369,7 @@ fn send_rest_update(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::persistence_progression::save_rest;
     use crate::world_data::{CreatureModelInfo, CreatureSpawn, CreatureTemplate};
     use bevy::ecs::change_detection::DetectChanges;
     use std::collections::HashMap;
@@ -313,10 +463,12 @@ mod tests {
                     y: 0.0,
                     z: 0.0,
                 },
+                ClientId(1),
                 Level(1),
                 PlayerRestState {
                     rested_xp: RestedXp::new(xp_to_next_level(1)),
                     area_kind: None,
+                    rest_start: None,
                     last_sent: Some(RestSnapshot {
                         in_rest_area: false,
                         rest_area_kind: None,
@@ -360,6 +512,89 @@ mod tests {
         assert!(state.rested_xp.in_rest_area);
     }
 
+    /// A level 10 player (10 590 XP to level) at an innkeeper, on a clock that advances
+    /// 80 h per frame.
+    fn resting_app(db: Option<GameDatabase>) -> (App, Entity) {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        app.insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+            std::time::Duration::from_secs(80 * 3600),
+        ));
+        app.world_mut()
+            .resource_mut::<Time<Virtual>>()
+            .set_max_delta(std::time::Duration::from_secs(1000 * 3600));
+        // One fixed step per 80 h frame instead of 64 a second.
+        app.insert_resource(Time::<Fixed>::from_seconds(80.0 * 3600.0));
+        app.insert_resource(RestAreaRegistry {
+            innkeepers: vec![Vec3::ZERO],
+            initialized: true,
+        });
+        if let Some(db) = db {
+            app.insert_resource(db);
+        }
+        let player = app
+            .world_mut()
+            .spawn((
+                ClientId(7),
+                Position {
+                    x: 5.0,
+                    y: 0.0,
+                    z: 0.0,
+                },
+                Level(10),
+            ))
+            .id();
+        app.world_mut()
+            .spawn((Authenticated { account_id: 1 }, PlayerLink(player)));
+        app.add_systems(
+            Update,
+            (update_player_rest_state, accumulate_rested_xp).chain(),
+        );
+        (app, player)
+    }
+
+    fn rested(app: &App, player: Entity) -> u32 {
+        app.world()
+            .get::<PlayerRestState>(player)
+            .unwrap()
+            .rested_xp()
+    }
+
+    /// `RestMgr::Update`: 5% of a level per 8 h resting, so 80 h give half of level 10's
+    /// 10 590 XP; the pool stops at 1.5 levels (15 885).
+    #[test]
+    fn resting_at_an_inn_gains_rested_xp_over_time_up_to_one_and_a_half_levels() {
+        let (mut app, player) = resting_app(None);
+        app.update();
+        assert_eq!(rested(&app, player), 0);
+
+        app.update();
+        assert_eq!(rested(&app, player), 5_295);
+
+        app.update();
+        app.update();
+        assert_eq!(rested(&app, player), 15_885);
+    }
+
+    /// `Player::LoadFromDB`: logged out resting, the 80 h offline count at the resting
+    /// rate on the next login.
+    #[test]
+    fn logging_out_at_an_inn_and_back_in_80_hours_later_grants_the_rested_bonus() {
+        let db = crate::persistence::temp_database();
+        let state = PlayerRestState {
+            rested_xp: RestedXp::new(xp_to_next_level(10)),
+            area_kind: Some(RestAreaKind::Inn),
+            rest_start: None,
+            last_sent: None,
+        };
+        save_rest(&db, 7, &state.logout_data(unix_secs() - 80 * 3600));
+
+        let (mut app, player) = resting_app(Some(GameDatabase { db }));
+        app.update();
+
+        assert_eq!(rested(&app, player), 5_295);
+    }
+
     #[test]
     fn collect_innkeeper_positions_filters_by_npc_flag() {
         let world_data = world_data_with_npc_flags(NPC_FLAG_INNKEEPER, -9462.66, 16.19);
@@ -394,6 +629,7 @@ mod tests {
         let mut state = PlayerRestState {
             rested_xp: RestedXp::new(xp_to_next_level(1)),
             area_kind: None,
+            rest_start: None,
             last_sent: None,
         };
         state.area_kind = Some(RestAreaKind::Inn);

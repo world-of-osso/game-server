@@ -284,7 +284,7 @@ pub(crate) struct XpAwards(pub Vec<XpAward>);
 
 /// Characters whose XP changed this frame and need a `PlayerXpUpdate`.
 #[derive(Resource, Default)]
-struct XpDirty(HashSet<u64>);
+pub(crate) struct XpDirty(pub(crate) HashSet<u64>);
 
 /// Set on a level-up; health and mana refill once stats are recomputed.
 #[derive(Component, Debug)]
@@ -432,6 +432,7 @@ type XpPlayers<'w, 's> = Query<
         &'static mut Level,
         Option<&'static mut UnitLevel>,
         Option<&'static PlayerDeathState>,
+        Option<&'static mut PlayerRestState>,
     ),
     With<Player>,
 >;
@@ -445,9 +446,11 @@ fn connection_of(connections: &XpConnections, character_id: u64) -> Option<Entit
         .map(|(connection, ..)| connection)
 }
 
-/// `Player::GiveXP` for queued awards: dead players and the cap gain nothing.
-/// Rested XP is not consumed, so `original` equals `amount`.
+/// `Player::GiveXP` for queued awards: dead players and the cap gain nothing; kill XP
+/// adds the rested bonus it spends (Player.cpp:2173 `GetRestBonusFor`), `original`
+/// counting it and `amount` not (`LogXPGain`).
 fn apply_xp_awards(
+    time: Res<Time>,
     mut awards: ResMut<XpAwards>,
     mut dirty: ResMut<XpDirty>,
     db: Option<Res<GameDatabase>>,
@@ -466,7 +469,7 @@ fn apply_xp_awards(
             amount,
             ..
         } = award;
-        let Some((entity, _, mut level, unit_level, death)) =
+        let Some((entity, _, mut level, unit_level, death, rest)) =
             players.iter_mut().find(|(_, id, ..)| id.0 == character_id)
         else {
             continue;
@@ -474,7 +477,11 @@ fn apply_xp_awards(
         if !is_alive(death) || level.0 >= MAX_LEVEL {
             continue;
         }
-        let (new_level, xp) = give_xp(level.0, load_xp(&db.db, character_id), amount);
+        let original = match (award.victim, rest) {
+            (Some(_), Some(mut rest)) => rest.spend_on_kill(amount, time.elapsed_secs_f64()),
+            _ => amount,
+        };
+        let (new_level, xp) = give_xp(level.0, load_xp(&db.db, character_id), original);
         save_xp(&db.db, character_id, xp);
         dirty.0.insert(character_id);
         if let Some(mut sender) = connection_of(&connections, character_id)
@@ -482,7 +489,7 @@ fn apply_xp_awards(
         {
             sender.send::<ExperienceChannel>(LogXpGain {
                 victim: award.victim.map(Entity::to_bits),
-                original: amount,
+                original,
                 amount,
                 group_bonus: award.group_bonus,
                 reason: award.reason,

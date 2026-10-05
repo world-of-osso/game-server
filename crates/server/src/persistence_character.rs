@@ -624,6 +624,10 @@ pub(crate) fn remove_character(
         flight_style
             .remove(character_id)
             .expect("remove character flight style");
+        let mut rest = txn
+            .open_table(crate::persistence_progression::CHARACTER_REST)
+            .expect("open character rest");
+        rest.remove(character_id).expect("remove character rest");
         let mut corpses = txn
             .open_table(crate::persistence::CHARACTER_CORPSES)
             .expect("open character corpses");

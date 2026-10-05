@@ -14,6 +14,10 @@ pub(crate) const CHARACTER_XP: TableDefinition<u64, u32> = TableDefinition::new(
 pub(crate) const CHARACTER_FLIGHT_STYLE: TableDefinition<u64, u32> =
     TableDefinition::new("character_flight_style");
 
+/// Rested XP table: character_id -> serialized `RestData`.
+pub(crate) const CHARACTER_REST: TableDefinition<u64, &[u8]> =
+    TableDefinition::new("character_rest");
+
 /// Trait configs table: character_id -> serialized `TraitConfigsData`.
 pub(crate) const CHARACTER_TRAITS: TableDefinition<u64, &[u8]> =
     TableDefinition::new("character_traits");
@@ -103,6 +107,39 @@ pub fn save_flight_style(db: &Database, character_id: u64, aura_spell: u32) {
     }
     txn.commit()
         .expect("Failed to commit character flight style save");
+}
+
+/// TrinityCore `characters.rest_bonus`, `logout_time` and `is_logout_resting`
+/// (`Player::SaveToDB`): the rested XP pool, and when and whether resting the
+/// character logged out.
+#[derive(bitcode::Encode, bitcode::Decode, Debug, Clone, Copy, PartialEq, Eq)]
+pub struct RestData {
+    pub rested_xp: u32,
+    pub logout_unix_secs: u64,
+    pub logout_resting: bool,
+}
+
+pub fn load_rest(db: &Database, character_id: u64) -> Option<RestData> {
+    let txn = db.begin_read().expect("Failed to begin read txn");
+    let table = txn.open_table(CHARACTER_REST).ok()?;
+    let guard = table
+        .get(character_id)
+        .expect("Failed to read character rest")?;
+    Some(bitcode::decode(guard.value()).expect("Failed to decode character rest"))
+}
+
+pub fn save_rest(db: &Database, character_id: u64, data: &RestData) {
+    let bytes = bitcode::encode(data);
+    let txn = db.begin_write().expect("Failed to begin write txn");
+    {
+        let mut table = txn
+            .open_table(CHARACTER_REST)
+            .expect("Failed to open character_rest table");
+        table
+            .insert(character_id, bytes.as_slice())
+            .expect("Failed to insert character rest");
+    }
+    txn.commit().expect("Failed to commit character rest save");
 }
 
 /// Saved trait purchases per `ChrSpecialization` ID, ascending by spec.

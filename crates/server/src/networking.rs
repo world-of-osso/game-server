@@ -336,6 +336,7 @@ type DisconnectPlayer = (
     Option<&'static crate::death::PlayerDeathState>,
     Option<&'static InMap>,
     Option<&'static crate::maps::MapTransfer>,
+    Option<&'static crate::rest::PlayerRestState>,
 );
 
 /// When a client disconnects, save data and clean up.
@@ -374,10 +375,14 @@ fn save_and_despawn(
     commands: &mut Commands,
 ) {
     if let (Some(db), Some(_)) = (db.as_ref(), in_world)
-        && let Ok((pos, health, player, cid, death, map, transfer)) = player_query.get(entity)
+        && let Ok((pos, health, player, cid, death, map, transfer, rest)) = player_query.get(entity)
     {
         let map_id = crate::maps::saved_map_id(map, transfer);
         persistence::save_live_character(&db.db, cid.0, player, pos, health, death, map_id);
+        if let Some(rest) = rest {
+            let data = rest.logout_data(crate::rest::unix_secs());
+            crate::persistence_progression::save_rest(&db.db, cid.0, &data);
+        }
         info!("Saved character data for character_id {}", cid.0);
     }
     queue_player_despawn(commands, entity);
