@@ -58,6 +58,10 @@ Added [[warlock-pets]] and its spec: effect-56 MiscValue creature entry, shared 
 
 Added [[general-spell-grants]]: read-only SQLite/CSV comparison of 41 captured entries; Attributes_13 bit 16 marks 31 content abilities plus Throw, while ordinary entries clear it. Other requested fields do not separate them. Unknown bit semantics and Throw eligibility block a verified rule; no server code/data change or behavioral proof.
 
+## [2026-10-04] systems/spec | Approved reconstructed Zephras starts and content
+
+Updated [[skyborne]], [[content-import]], index and contracts: approved starts/facing, hosted-map gate, ten-pair real-kit reopen/login/terrain proof, supported start ground, native quest acceptance/XP and level-2/event boundary. Recorded 276 templates/878 grounded observations/136 quests, atomic regeneration/provenance, unchanged source masks, 0/295 DB2 display coverage and three captured displays. Missing pages, starting-giver models, native quest-side/reputation/reward-spell/event support and full terrain closure remain explicit gaps. Scratch-only publication; no engine checkout, live world DB or player storage writes.
+
 ## [2026-10-04] systems/spec | Forever Zephras reference capture
 
 Updated [[content-import]], [[skyborne]] and index; added capture contract. Recorded per-page Forever capture, explicit partial metadata, CloudFront/browser 403 block, retail-calibrated UiMap inversion, real 72-center terrain comparison and conditional start proposals. No server import, mask widening, phasing or scripted events; race-96 level-1 intro remains unsupported by captured pages.

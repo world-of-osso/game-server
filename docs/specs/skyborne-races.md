@@ -35,4 +35,4 @@ Server support for Forever races 95/96, grounded in local build 1.60.1.70205 Chr
 
 ## Out of scope
 
-Forever racial spells, language/skill/loadout parity, content spawns, asset extraction and LOS baking are not invented or imported in this bounded server slice.
+Forever racial spells and language/skill/loadout parity remain excluded. [Reconstructed content](zephras-content.md) is a separate contract; client assets and full LOS closure remain independent gaps.
