@@ -4,13 +4,14 @@ Summon Imp (688) uses the server's existing pet ownership, bar, movement and com
 
 ## What it must do
 
-- [ ] A new level-1 warlock knows Summon Imp; other classes do not receive it.
-- [ ] Casting 688 creates an imp from effect 56's MiscValue next to its owner, with the owner's faction, a creature model and Firebolt's imported power pool (Energy).
-- [ ] The owner receives the existing pet bar with family-derived Firebolt (3110) autocast enabled.
-- [ ] Attack produces Firebolt damage on the ordered target with TC's 15% owner spell-power contribution; Follow stops attacking and moves back to the owner.
-- [ ] Recasting the same summon recalls the existing imp instead of duplicating it.
-- [ ] Dismiss and death remove the imp and clear the owner's bar. Neither restores it at relog; another explicit summon remains possible.
-- [ ] A permanent current imp returns at login through persisted pet storage and restores its bar.
+- [x] A new level-1 warlock knows Summon Imp; other classes do not receive it.
+- [x] Casting 688 creates an imp from effect 56's MiscValue next to its owner, with the owner's faction, a creature model and Firebolt's imported power pool (Energy).
+- [x] The owner receives the existing pet bar with family-derived Firebolt (3110) autocast enabled.
+- [x] Attack produces Firebolt damage on the ordered target with TC's 15% owner spell-power contribution; Follow stops attacking and moves back to the owner.
+- [x] Recasting the same summon recalls the existing imp instead of duplicating it.
+- [x] Dismiss and death remove the imp and clear the owner's bar. Neither restores it at relog.
+- [x] Explicitly summoning a dismissed imp after relog restores the saved record.
+- [x] A permanent current imp returns at login through persisted pet storage and restores its bar.
 - [ ] Existing owner/pet replication carries the imp without wire changes (live proof belongs to team-lead).
 
 ## How it works
