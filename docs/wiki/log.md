@@ -58,6 +58,10 @@ Added [[warlock-pets]] and its spec: effect-56 MiscValue creature entry, shared 
 
 Added [[general-spell-grants]]: read-only SQLite/CSV comparison of 41 captured entries; Attributes_13 bit 16 marks 31 content abilities plus Throw, while ordinary entries clear it. Other requested fields do not separate them. Unknown bit semantics and Throw eligibility block a verified rule; no server code/data change or behavioral proof.
 
+## [2026-10-05] systems/spec | GUID-owned definition sources
+
+Updated [[inventory]] and [source contract](../specs/item-definition-source.md): additive immutable GUID markers preserve Retail/Forever identity independently of owner transfers without altering inventory or soulbound encodings. Targeted persistence tests cover reopen, two-owner transaction exchange, legacy Retail and invalid/changed markers; creation/runtime integration remains separate.
+
 ## [2026-10-05] systems/spec | Authored Skyborne kit source closure
 
 Updated [[skyborne]], index and contract: six pinned Forever loadouts, 45 memberships, 30 readable Item/ItemSparse definitions and selected appearance/effect parents. Strict collision/rollback tests preserve Retail loadouts. Recorded shared-ID count/type/binding conflicts and user-selected isolated Forever definitions; full ten-pair authoritative creation remains pending, not empty-kit success.

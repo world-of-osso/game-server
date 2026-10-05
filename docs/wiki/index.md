@@ -73,7 +73,7 @@ Server gameplay systems.
 | [[dungeon-achievements]] | Local CASC categories/criteria, bounded achievement pages/dates, ordered copy objective snapshots and Stockade grants; client hookup |
 | [[boss-scripts]] | ScriptName creature AI (CreatureAI hooks, EventMap, BossAI, InstanceScript per copy, creature_text Talk), Stockade boss ports, SmartAI combat timers/victim/CMC chase control, creature casts/ExpectedStat spell damage, dynamic objects |
 | [[creature-aggro]] | AggroMode, damage/heal school-modified threat, victim selection, evade and engaged-player threat update/clear delivery |
-| [[inventory]] | Owner-only bag/equipment snapshots and deltas, bag placements and item-instance tables, Retail swap/split/destroy/equip validation, data gaps |
+| [[inventory]] | Owner-only bag/equipment snapshots and deltas, GUID-owned immutable definition sources, placements and instance tables, Retail swap/split/destroy/equip validation, data gaps |
 | [[quests]] | Quest content load, AzerothCore accept/prerequisite/marker rules, per-player giver markers, kill and bag-item progress, turn-in rewards, quest log persistence and deltas |
 | [[bot-economy]] | Direct suppliers and bounded real merchant CLI/cost/cap proof; auction restart/mail/latency ledger in [[auction-house]], bounded native and final source audits PASS; content gaps in [[economy-catalog]] |
 | [[auction-house]] | Global ItemID browse and real AuctionID actions; exact saved CLI/restart/mail, twelve pinned loopback samples and bounded native and final source audits PASS |
