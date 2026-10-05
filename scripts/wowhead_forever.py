@@ -12,12 +12,14 @@ import argparse
 import html
 import json
 import math
+import random
 import re
 import struct
 import time
 import urllib.error
 import urllib.request
 from datetime import datetime, timezone
+from email.utils import parsedate_to_datetime
 from pathlib import Path
 
 ZONE = 16593
@@ -261,14 +263,7 @@ def normalize_quest(page):
         "ender_npc_ids": sorted(enders),
         "objectives": objectives,
         "text": page["text"],
-        "rewards": {
-            "xp": row.get("xp"),
-            "money": row.get("money"),
-            "items": row.get("itemrewards"),
-            "choice_items": row.get("itemchoices"),
-            "spells": row.get("rewardspells", row.get("rewardspell")),
-            "reputation": row.get("reprewards"),
-        },
+        "rewards": normalize_rewards(page, row),
         "series": {
             "rows": series,
             "ids": [v for ids in series for v in ids],
@@ -280,6 +275,41 @@ def normalize_quest(page):
         },
         "category": row.get("category"),
         "source": page.get("url"),
+    }
+
+
+def normalize_rewards(page, row):
+    """Reward markup carries spells/items omitted from the quest Listview row."""
+    section = re.search(r"<h2\b[^>]*>Rewards</h2>(.*?)(?=<h2\b|$)", page["html"], re.S)
+    markup = section[1] if section else ""
+    counts = {
+        int(m[1]): int(m[2])
+        for m in re.finditer(r'g_items\.createIcon\((\d+),\s*\d+,\s*"(\d+)"', markup)
+    }
+    items = dict(row.get("itemrewards", []))
+    choices = dict(row.get("itemchoices", []))
+    for table in re.finditer(r"<table\b([^>]*)>(.*?)</table>", markup, re.S):
+        target = choices if "choicerewards" in table[1] else items
+        for entry in re.findall(r"/forever/item=(\d+)", table[2]):
+            entry = int(entry)
+            target[entry] = counts.get(entry, target.get(entry))
+    spells = {int(v) for v in re.findall(r"/forever/spell=(\d+)", markup)}
+    scaling = {}
+    match = re.search(r"WH\.Wow\.Quest\.setupScalingRewards\(", page["html"])
+    if match:
+        scaling = read_json_at(page["html"], match.end())
+
+    def amount(kind):
+        return scaling.get(kind, {}).get("levels", {}).get(str(row.get("level")))
+
+    return {
+        "xp": row.get("xp", amount("xp")),
+        "money": row.get("money", amount("coin")),
+        "items": [[entry, count] for entry, count in items.items()] or None,
+        "choice_items": [[entry, count] for entry, count in choices.items()] or None,
+        "spells": sorted(spells) or None,
+        "reputation": row.get("reprewards"),
+        "scaling": scaling or None,
     }
 
 
@@ -311,7 +341,6 @@ def normalize_npc(page):
                 for v in page["listviews"]
                 if v["template"] == "quest" and v["id"] == view_id
                 for r in v["data"]
-                if r.get("category") == ZONE
             }
         )
 
@@ -456,6 +485,39 @@ def save_page(root, page, url):
     return page
 
 
+def fetch_source(url):
+    """Retry transient GET failures only; 403/429 always stop the capture."""
+    for attempt in range(3):
+        try:
+            request = urllib.request.Request(url, headers={"User-Agent": UA})
+            with urllib.request.urlopen(request, timeout=40) as response:
+                return response.read().decode("utf-8")
+        except (urllib.error.URLError, TimeoutError) as error:
+            retry_after = 0
+            if isinstance(error, urllib.error.HTTPError):
+                if error.code not in (500, 502, 503, 504):
+                    raise
+                value = error.headers.get("Retry-After")
+                if value:
+                    retry_after = (
+                        float(value)
+                        if value.isdigit()
+                        else max(
+                            0,
+                            (
+                                parsedate_to_datetime(value)
+                                - datetime.now(timezone.utc)
+                            ).total_seconds(),
+                        )
+                    )
+            if attempt == 2:
+                raise
+            delay = max(retry_after, 1.5, 2**attempt + random.random())
+            print(f"{url}: {error}; retrying in {delay:.2f}s", flush=True)
+            time.sleep(delay)
+    raise RuntimeError("unreachable request retry state")
+
+
 class Capture:
     def __init__(self, root):
         self.root = root
@@ -473,9 +535,11 @@ class Capture:
         time.sleep(max(0, 1.5 - (time.monotonic() - self.last)))
         self.last = time.monotonic()
         try:
-            request = urllib.request.Request(url, headers={"User-Agent": UA})
-            with urllib.request.urlopen(request, timeout=40) as response:
-                source = response.read().decode("utf-8")
+            source = fetch_source(url)
+            self.last = time.monotonic()
+            raw_path = self.root / kind / f"{entry}.html"
+            raw_path.parent.mkdir(parents=True, exist_ok=True)
+            raw_path.write_text(source)
             page = save_page(self.root, parse_page(source, kind, entry), url)
         except (urllib.error.HTTPError, urllib.error.URLError, ValueError) as error:
             self.failed.append(
@@ -514,7 +578,6 @@ class Capture:
             ):
                 continue
             quest = normalize_quest(page)
-            npc_ids.update(quest["starter_npc_ids"] + quest["ender_npc_ids"])
             for zone_id, point in mapper_points(page):
                 if zone_id == ZONE and point.get("type") == 1:
                     npc_ids.add(point["id"])
