@@ -311,6 +311,9 @@ def insert_sourced_row(connection, table, record, columns):
 def validate_item_rows(rows):
     if not ISOLATED_TABLES.intersection(rows):
         return
+    missing_tables = ISOLATED_TABLES - rows.keys()
+    if missing_tables:
+        raise ValueError(f"missing required source tables: {sorted(missing_tables)}")
     references = {row["ItemID"] for row in rows["character_loadout_item"]}
     required = {"item": references, "item_sparse": references}
     for table, parent, field in (
@@ -363,6 +366,17 @@ def project_items(connection):
         ).fetchone()
         is None
     ):
+        has_provenance = connection.execute(
+            "SELECT 1 FROM sqlite_master WHERE name='db2_row_source'"
+        ).fetchone()
+        if (
+            has_provenance
+            and connection.execute(
+                "SELECT 1 FROM db2_row_source WHERE table_name='character_loadout' AND build=? LIMIT 1",
+                (BUILD,),
+            ).fetchone()
+        ):
+            raise ValueError("missing required skyborne_item table")
         return
     from content_policy import ITEM_COLUMNS
 
