@@ -136,7 +136,7 @@ fn decode_item_definition_source(guid: u64, tag: u8) -> ItemDefinitionSource {
     }
 }
 
-fn read_item_definition_source(
+pub(crate) fn read_item_definition_source(
     table: &impl ReadableTable<u64, u8>,
     guid: u64,
 ) -> ItemDefinitionSource {
