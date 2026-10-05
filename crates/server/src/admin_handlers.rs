@@ -213,6 +213,41 @@ pub(crate) fn handle_set_credentials(
     }
 }
 
+pub(crate) fn handle_set_rested(
+    db: &persistence::GameDatabase,
+    commands: &mut Commands,
+    name: &str,
+    amount: u32,
+) -> AdminResponse {
+    use crate::persistence_progression::{RestData, load_rest, save_rest};
+
+    let Some(char_id) = persistence::find_character_id_by_name(&db.db, name) else {
+        return AdminResponse::Error(format!("character '{name}' not found"));
+    };
+    let Some(data) = persistence::load_character(&db.db, char_id) else {
+        return AdminResponse::Error(format!("character data for '{name}' not found"));
+    };
+    let cap = shared::xp::RestedXp::new(crate::experience::xp_to_next_level(data.level as u8)).max;
+    let amount = amount.min(cap);
+    let saved = load_rest(&db.db, char_id);
+    save_rest(
+        &db.db,
+        char_id,
+        &RestData {
+            rested_xp: amount,
+            logout_unix_secs: crate::rest::unix_secs(),
+            logout_resting: saved.is_some_and(|rest| rest.logout_resting),
+        },
+    );
+    commands.queue(move |world: &mut World| {
+        crate::rest::set_live_rested(world, char_id, amount);
+    });
+    AdminResponse::RestedSet {
+        character_name: name.to_owned(),
+        amount,
+    }
+}
+
 pub(crate) fn handle_set_level(
     db: &persistence::GameDatabase,
     commands: &mut Commands,

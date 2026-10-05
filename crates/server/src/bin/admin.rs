@@ -105,6 +105,10 @@ enum AdminRequest {
         character_name: String,
         level: u16,
     },
+    SetRested {
+        character_name: String,
+        amount: u32,
+    },
     SetCredentials {
         token: String,
         username: String,
@@ -325,6 +329,10 @@ enum AdminResponse {
         character_name: String,
         level: u16,
     },
+    RestedSet {
+        character_name: String,
+        amount: u32,
+    },
     CredentialsSet {
         account_id: u64,
         username: String,
@@ -484,6 +492,7 @@ fn print_usage() {
     );
     eprintln!("  game-server-admin set-guild-bank-rights <guild_id> <rank> repair <0|1>");
     eprintln!("  game-server-admin set-level <character_name> <level>");
+    eprintln!("  game-server-admin set-rested <character_name> <amount>");
     eprintln!("  game-server-admin set-credentials <token> <username> <password>");
     eprintln!("  game-server-admin set-position <character_name> <x> <y> <z>");
     eprintln!("  game-server-admin set-gold <character_name> <copper>");
@@ -540,6 +549,7 @@ fn parse_request(args: &[String]) -> AdminRequest {
         "set-guild-rank" => parse_set_guild_rank(args),
         "set-guild-bank-rights" => parse_set_guild_bank_rights(args),
         "set-level" => parse_set_level(args),
+        "set-rested" => parse_set_rested(args),
         "set-credentials" => parse_set_credentials(args),
         "set-position" => parse_set_position(args),
         "teleport" => parse_teleport(args),
@@ -817,6 +827,14 @@ fn parse_flight_style(args: &[String]) -> AdminRequest {
     AdminRequest::FlightStyle {
         character_name: args[2].clone(),
         skyriding,
+    }
+}
+
+fn parse_set_rested(args: &[String]) -> AdminRequest {
+    require_args(args, 4, "set-rested <character_name> <amount>");
+    AdminRequest::SetRested {
+        character_name: args[2].clone(),
+        amount: parse_number(&args[3], "rested XP amount"),
     }
 }
 

@@ -133,6 +133,12 @@ fn print_character_response(response: &AdminResponse) -> bool {
         } => {
             println!("Level set: {character_name} -> {level}");
         }
+        AdminResponse::RestedSet {
+            character_name,
+            amount,
+        } => {
+            println!("Rested XP set: {character_name} -> {amount}");
+        }
         AdminResponse::TaxiNodeLearned {
             character_name,
             node,

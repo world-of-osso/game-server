@@ -548,3 +548,7 @@ Updated existing Zaralda SSOT and linked specs/reference/index: native-friendly 
 ## [2026-10-03] docs | Native desktop/local workflow
 
 [Workflow SSOT](../remote-builds.md) and [build-host contract](../specs/build-host.md) document selected-host normal runs, filtered checks/tests, native dependencies, lifetime and state boundaries. Reported build evidence remains separate from pending runtime acceptance; no new tests or runtime proof.
+
+## 2026-10-05 — Rested XP administration
+
+Updated [[experience]] for persisted accumulation and kill bonus consumption; documented capped online/offline `set-rested` and owner updates. Corrected `LogXpGain.original` versus base `amount`.

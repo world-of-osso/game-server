@@ -335,6 +335,43 @@ fn collect_innkeeper_positions(world_data: &WorldData) -> Vec<Vec3> {
     innkeepers
 }
 
+/// Admin changes restart the accumulation baseline and publish both owner snapshots.
+/// Offline characters have no live state; the handler has already saved their pool.
+pub(crate) fn set_live_rested(world: &mut World, character_id: u64, amount: u32) {
+    let mut players = world.query_filtered::<(Entity, &ClientId), With<PlayerRestState>>();
+    let Some(player) = players
+        .iter(world)
+        .find_map(|(entity, id)| (id.0 == character_id).then_some(entity))
+    else {
+        return;
+    };
+    let now = world.resource::<Time>().elapsed_secs_f64();
+    let mut state = world
+        .get_mut::<PlayerRestState>(player)
+        .expect("queried rest state");
+    state.rested_xp.amount = amount.min(state.rested_xp.max);
+    state.restart_rest(now);
+    let snapshot = build_rest_snapshot(&state);
+    state.last_sent = Some(snapshot.clone());
+    let saved = state.logout_data(unix_secs());
+    let db = &world.resource::<GameDatabase>().db;
+    crate::persistence_progression::save_rest(db, character_id, &saved);
+    world.resource_mut::<XpDirty>().0.insert(character_id);
+    let mut connections = world.query_filtered::<(Entity, &PlayerLink), With<Authenticated>>();
+    let connection = connections
+        .iter(world)
+        .find_map(|(entity, link)| (link.0 == player).then_some(entity));
+    if let Some(mut sender) =
+        connection.and_then(|entity| world.get_mut::<MessageSender<RestStateUpdate>>(entity))
+    {
+        sender.send::<RestChannel>(RestStateUpdate {
+            snapshot: Some(snapshot),
+            message: Some("rested xp".into()),
+            error: None,
+        });
+    }
+}
+
 fn build_rest_snapshot(state: &PlayerRestState) -> RestSnapshot {
     RestSnapshot {
         in_rest_area: state.rested_xp.in_rest_area,

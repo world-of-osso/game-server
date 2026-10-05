@@ -92,6 +92,10 @@ pub enum AdminRequest {
         character_name: String,
         level: u16,
     },
+    SetRested {
+        character_name: String,
+        amount: u32,
+    },
     SetCredentials {
         token: String,
         username: String,
@@ -345,6 +349,10 @@ pub enum AdminResponse {
     LevelSet {
         character_name: String,
         level: u16,
+    },
+    RestedSet {
+        character_name: String,
+        amount: u32,
     },
     CredentialsSet {
         account_id: u64,

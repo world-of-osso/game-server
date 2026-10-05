@@ -556,6 +556,10 @@ fn dispatch(
             character_name,
             level,
         } => handle_set_level(db, commands, &character_name, level),
+        AdminRequest::SetRested {
+            character_name,
+            amount,
+        } => handle_set_rested(db, commands, &character_name, amount),
         AdminRequest::SetCredentials {
             token,
             username,

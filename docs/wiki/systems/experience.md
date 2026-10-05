@@ -60,19 +60,23 @@
 ## Messages (ExperienceChannel, owner only)
 
 - `PlayerXpUpdate { xp, next_level_xp, rested_xp }`: on enter world (`Added<InWorld>`), after each applied gain and on any `Changed<Level>` (admin set-level included). `next_level_xp` is 0 at the cap.
-- `LogXpGain { victim, original, amount, group_bonus, reason }` for each applied gain (Retail `LogXPGain`): Kill carries the NPC entity bits and the group rate; Quest has no victim and rate 1.0. Rested XP is not applied, so `original == amount`.
+- `LogXpGain { victim, original, amount, group_bonus, reason }` for each applied gain (Retail `LogXPGain`): Kill carries the NPC entity bits and the group rate; Quest has no victim and rate 1.0. For a kill, `amount` is the base award and `original` includes the rested bonus consumed from the pool (at most another `amount`); quest XP does not spend rested XP, so `original == amount`.
 - `QuestGiverQuestComplete.xp`: the turn-in XP, 0 at the cap.
 - `send_xp_updates` runs after `apply_xp_awards` in PostUpdate, before replication send.
 
-## Gaps
+## Rested XP
 
-- `rested_xp` in `PlayerXpUpdate` comes from `PlayerRestState`, but the pool never accumulates or is consumed.
-- Rested bonus (`RestMgr::GetRestBonusFor`) is not applied. Rested XP is not persisted.
+- `rest.rs` accumulates 5% of a level per 8 hours near an innkeeper, capped by shared `RestedXp` at 1.5 levels. Logout saves the pool, time and resting flag in `character_rest`; login adds elapsed offline rest at the inn or wilderness rate.
+- Kills consume up to their base XP from the pool and add it as bonus XP. Quest awards leave the pool unchanged.
+- `game-server-admin set-rested <character_name> <amount>` sets the pool directly, online or offline, clamped to the character's current cap. The saved rest row is updated; an online owner immediately receives `PlayerXpUpdate` and `RestStateUpdate`. This does not change the accumulation rate. Use `GAME_SERVER_ADMIN_SOCKET` for a private server.
+
+## Gaps
 - `SPELL_AURA_MOD_XP_PCT`, quest XP auras, pet XP, BG/raid rates and XP-to-money at the cap are not implemented.
 
 ## Sources
 
 - [experience.rs](../../../crates/server/src/experience.rs), [experience_tests.rs](../../../crates/server/src/experience_tests.rs)
+- [rest.rs](../../../crates/server/src/rest.rs), [admin_handlers.rs](../../../crates/server/src/admin_handlers.rs) — pool lifecycle and `set-rested`
 - TrinityCore master `src/server/game/Miscellaneous/Formulas.h`, `Entities/Player/KillRewarder.cpp`, `Entities/Player/Player.cpp` (GiveXP, GiveLevel, RewardQuest), `Quests/QuestDef.cpp` (XPValue, RoundXPValue), `Entities/Creature/Creature.cpp` (IsElite, NO_XP)
 
 ## See Also

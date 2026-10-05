@@ -911,6 +911,94 @@ fn admin_set_level_persists_and_updates_online_player() {
     );
 }
 
+#[test]
+fn admin_set_rested_offline_persists_and_clamps_pool() {
+    use crate::admin_handlers::handle_set_rested;
+    use crate::admin_types::AdminResponse;
+    use crate::persistence_progression::load_rest;
+    use bevy::ecs::system::RunSystemOnce;
+
+    let db = temp_database();
+    let (character_id, _) =
+        persistence::create_character(&db, 1, "Restprobe", HUMAN, PALADIN).unwrap();
+    let mut app = App::new();
+    app.insert_resource(GameDatabase { db });
+    for (requested, expected) in [(75, 75), (u32::MAX, 375), (0, 0)] {
+        let response = app
+            .world_mut()
+            .run_system_once(move |db: Res<GameDatabase>, mut commands: Commands| {
+                handle_set_rested(&db, &mut commands, "Restprobe", requested)
+            })
+            .unwrap();
+        assert!(matches!(response, AdminResponse::RestedSet { amount, .. } if amount == expected));
+        let db = &app.world().resource::<GameDatabase>().db;
+        assert_eq!(load_rest(db, character_id).unwrap().rested_xp, expected);
+    }
+}
+
+#[test]
+fn admin_set_rested_online_updates_pool_and_sends_owner_messages() {
+    use crate::admin_handlers::handle_set_rested;
+    use crate::persistence_progression::load_rest;
+    use crate::rest::PlayerRestState;
+    use bevy::ecs::system::RunSystemOnce;
+    use shared::protocol::{PlayerXpUpdate, RestStateUpdate};
+
+    let db = temp_database();
+    let (character_id, _) =
+        persistence::create_character(&db, 1, "Restprobe", HUMAN, PALADIN).unwrap();
+    let mut app = setup_app(db, class_spells().unwrap());
+    add_inbox::<RestStateUpdate>(&mut app);
+    let player = spawn_player(&mut app, character_id, HUMAN, PALADIN, 1);
+    app.world_mut()
+        .entity_mut(player)
+        .insert(PlayerRestState::fixture(1, 0));
+    let connection = connection_of(&mut app, player);
+    app.world_mut().entity_mut(connection).insert((
+        crate::auth::InWorld { character_id },
+        MessageSender::<PlayerXpUpdate>::default(),
+        MessageReceiver::<PlayerXpUpdate>::default(),
+        MessageSender::<RestStateUpdate>::default(),
+        MessageReceiver::<RestStateUpdate>::default(),
+    ));
+    advance(&mut app);
+    received::<PlayerXpUpdate>(&mut app, player);
+    for (requested, expected) in [(75, 75), (u32::MAX, 375), (0, 0)] {
+        app.world_mut()
+            .run_system_once(move |db: Res<GameDatabase>, mut commands: Commands| {
+                handle_set_rested(&db, &mut commands, "Restprobe", requested)
+            })
+            .unwrap();
+        advance(&mut app);
+        assert_eq!(
+            app.world()
+                .get::<PlayerRestState>(player)
+                .unwrap()
+                .rested_xp(),
+            expected
+        );
+        assert_eq!(
+            load_rest(&app.world().resource::<GameDatabase>().db, character_id)
+                .unwrap()
+                .rested_xp,
+            expected
+        );
+        assert_eq!(
+            received::<PlayerXpUpdate>(&mut app, player),
+            vec![PlayerXpUpdate {
+                xp: 0,
+                next_level_xp: 250,
+                rested_xp: expected,
+            }]
+        );
+        let messages = received::<RestStateUpdate>(&mut app, player);
+        assert_eq!(messages.len(), 1);
+        let snapshot = messages[0].snapshot.as_ref().unwrap();
+        assert_eq!(snapshot.rested_xp, expected);
+        assert_eq!(snapshot.rested_xp_max, 375);
+    }
+}
+
 /// Retribution nodes (node, entry): Blade of Justice 184575 is a root, Divine
 /// Storm 53385 and Expurgation 383344 need it, Avenging Wrath 31884 needs
 /// Expurgation. Holy: Holy Shock 20473 root, Infusion of Light 53576 below it.
