@@ -83,6 +83,8 @@ class ContentOverlayTest(unittest.TestCase):
                     ("name", "Retail sentinel"),
                     ("minlevel", 99),
                     ("maxlevel", 99),
+                    ("unit_class", 8),
+                    ("HealthModifier", 3.5),
                 ):
                     row[columns.index(column)] = value
                 row = tuple(row)
@@ -132,6 +134,70 @@ class ContentOverlayTest(unittest.TestCase):
                 before[table],
                 table,
             )
+
+    def test_missing_npc_stats_are_labelled_estimates_with_captured_source_intact(self):
+        self.db.execute(
+            "UPDATE content_creature_template SET unit_class=2,HealthModifier=2.5 WHERE entry=823"
+        )
+        self.apply()
+        for npc in self.content["npcs"]:
+            with self.subTest(npc=npc["id"]):
+                self.assertEqual(
+                    self.db.execute(
+                        "SELECT unit_class,HealthModifier,minlevel,maxlevel FROM content_creature_template WHERE entry=?",
+                        (npc["id"],),
+                    ).fetchone(),
+                    (1, 1.0, npc["level"]["min"], npc["level"]["max"]),
+                )
+                url, kind, encoded = self.db.execute(
+                    "SELECT source_url,kind,source_json FROM zephras_row_source WHERE table_name='content_creature_template' AND row_key=?",
+                    (json.dumps({"entry": npc["id"]}),),
+                ).fetchone()
+                source = json.loads(encoded)
+                estimate = source.pop("stat_estimate")
+                self.assertEqual(source, npc)
+                self.assertEqual((url, kind), (npc["source"], "reconstructed"))
+                self.assertEqual(
+                    estimate["fields"], {"unit_class": 1, "HealthModifier": 1.0}
+                )
+                self.assertEqual(estimate["reference_ids"], [713, 714, 23904])
+                self.assertEqual(
+                    estimate["basis"],
+                    "User-approved coarse estimate from normal-rank exp-0 quest-giver analogues; not authored NPC stats",
+                )
+                self.assertEqual(
+                    estimate["health_curve"],
+                    {
+                        "table": "creature_classlevelstats",
+                        "class": 1,
+                        "column": "basehp0",
+                        "level_column": "minlevel",
+                        "modifier": 1.0,
+                        "reference_base_hp": {"1": 42, "5": 102},
+                    },
+                )
+        self.assertEqual(
+            self.db.execute(
+                "SELECT unit_class,HealthModifier FROM content_creature_template WHERE entry=823"
+            ).fetchone(),
+            (2, 2.5),
+        )
+
+    def test_estimated_stats_preserve_existing_catalog_classification(self):
+        import zephras_content
+        import zephras_creatures
+
+        catalog, decoded = zephras_creatures.load_catalog()
+        record = catalog[2671]
+        self.assertNotEqual(record["type"], 0)
+        catalog[251362] = record
+        zephras_content.apply_overlay(self.db, self.content, catalog, decoded)
+        self.assertEqual(
+            self.db.execute(
+                "SELECT rank,type,family,unit_class,HealthModifier FROM content_creature_template WHERE entry=251362"
+            ).fetchone(),
+            (record["classification"], record["type"], record["family"], 1, 1.0),
+        )
 
     def test_creatures_and_quests_are_server_readable_with_row_provenance(self):
         report = self.apply()

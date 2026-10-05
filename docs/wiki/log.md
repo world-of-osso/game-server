@@ -58,6 +58,10 @@ Added [[warlock-pets]] and its spec: effect-56 MiscValue creature entry, shared 
 
 Added [[general-spell-grants]]: read-only SQLite/CSV comparison of 41 captured entries; Attributes_13 bit 16 marks 31 content abilities plus Throw, while ordinary entries clear it. Other requested fields do not separate them. Unknown bit semantics and Throw eligibility block a verified rule; no server code/data change or behavioral proof.
 
+## [2026-10-05] systems/spec | Reconstructed NPC coarse stat estimates
+
+Updated [[content-import]] and [contract](../specs/zephras-content.md): approved class-1/modifier-1 estimates only in reconstructed missing-stat templates, preserved captures and labelled analogue/curve provenance. Targeted Python tests cover imported fields, source retention, classification preservation, regeneration and transactional Retail-stat collisions; development proof in `target/zephras-stat-estimate-proof/`. No Rust, data publication, runtime acceptance, original scripts or Ailee texture/profile resolution.
+
 ## [2026-10-05] systems/spec | Source-qualified bag requirements and unique limits
 
 Updated [[inventory]] and [source contract](../specs/item-definition-source.md): explicit model source arguments, Retail profession reagents/tools, quest progress/removal and producer-selected merchant/loot unique limits. Collision fixtures use unchanged 2947/2512/2101 IDs; native targeted RED reproduced eleven expected failures before production edits. Desktop GREEN at source commit `1a1b049`: 11 passed, 0 failed/ignored, 1434 filtered; 11.44s test time, 80.104s helper wall. Main-owned zone test patch was present but not selected. Development ledger: `target/source-requirements-proof/`. No authored reward provenance inference, legacy-marker change, broad gate or operations.

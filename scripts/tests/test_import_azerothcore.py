@@ -275,9 +275,9 @@ class CreatureEventImportTests(unittest.TestCase):
                 )
                 self.assertEqual(
                     db.execute(
-                        "SELECT name FROM content_creature_template WHERE entry=251362"
+                        "SELECT name,unit_class,HealthModifier FROM content_creature_template WHERE entry=251362"
                     ).fetchone(),
-                    ("Ailee Farheart",),
+                    ("Ailee Farheart", 1, 1.0),
                 )
                 self.assertEqual(
                     db.execute(
@@ -326,7 +326,7 @@ class CreatureEventImportTests(unittest.TestCase):
         self.assertEqual(first.returncode, 0, first.stdout + first.stderr)
         with closing(sqlite3.connect(self.db)) as db, db:
             db.execute(
-                "INSERT INTO creature_template(entry,name,minlevel,maxlevel) VALUES(251362,'Retail sentinel',99,99)"
+                "INSERT INTO creature_template(entry,name,minlevel,maxlevel,unit_class,HealthModifier) VALUES(251362,'Retail sentinel',99,99,8,3.5)"
             )
             before = "\n".join(db.iterdump())
         args = [
@@ -350,9 +350,9 @@ class CreatureEventImportTests(unittest.TestCase):
         with closing(sqlite3.connect(self.db)) as db:
             self.assertEqual(
                 db.execute(
-                    "SELECT name,minlevel,maxlevel FROM content_creature_template WHERE entry=251362"
+                    "SELECT name,minlevel,maxlevel,unit_class,HealthModifier FROM content_creature_template WHERE entry=251362"
                 ).fetchone(),
-                ("Retail sentinel", 99, 99),
+                ("Retail sentinel", 99, 99, 8, 3.5),
             )
             self.assertEqual(
                 db.execute(
