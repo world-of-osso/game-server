@@ -75,10 +75,33 @@ pub(crate) fn load_area_table(conn: &Connection) -> rusqlite::Result<AreaTable> 
             AreaEntry {
                 parent: row.get(1)?,
                 map_id: row.get(2)?,
-                flags: row.get(3)?,
+                // DB2 bitfield stored signed (top bits set): keep the 32-bit pattern.
+                flags: row.get::<_, i64>(3)? as u32,
                 faction_group: row.get(4)?,
             },
         ))
     })?;
     Ok(AreaTable(rows.collect::<rusqlite::Result<_>>()?))
+}
+
+#[cfg(test)]
+mod tests {
+    use rusqlite::Connection;
+
+    use super::load_area_table;
+
+    /// AreaTable flags with the top bit set are stored signed (e.g. -1610530816 = 0xA0014000);
+    /// the loader keeps the bit pattern instead of failing at startup.
+    #[test]
+    fn signed_db2_flags_load_as_their_bit_pattern() {
+        let conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch(
+            "CREATE TABLE area_table (ID INTEGER, ParentAreaID INTEGER, ContinentID INTEGER,
+                                      Flags_0 INTEGER, FactionGroupMask INTEGER);
+             INSERT INTO area_table VALUES (1519, 0, 0, -1610530816, 2);",
+        )
+        .unwrap();
+        let table = load_area_table(&conn).unwrap();
+        assert_eq!(table.0[&1519].flags, (-1_610_530_816_i32) as u32);
+    }
 }
