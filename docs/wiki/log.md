@@ -58,6 +58,10 @@ Added [[warlock-pets]] and its spec: effect-56 MiscValue creature entry, shared 
 
 Added [[general-spell-grants]]: read-only SQLite/CSV comparison of 41 captured entries; Attributes_13 bit 16 marks 31 content abilities plus Throw, while ordinary entries clear it. Other requested fields do not separate them. Unknown bit semantics and Throw eligibility block a verified rule; no server code/data change or behavioral proof.
 
+## [2026-10-05] systems/spec | Authored Skyborne kit source closure
+
+Updated [[skyborne]], index and contract: six pinned Forever loadouts, 45 memberships, 30 readable Item/ItemSparse definitions and selected appearance/effect parents. Strict collision/rollback tests preserve Retail loadouts. Recorded shared-ID count/type/binding conflicts and user-selected isolated Forever definitions; full ten-pair authoritative creation remains pending, not empty-kit success.
+
 ## [2026-10-04 local] systems | Post-sync Forever ground and spawn recovery
 
 Updated [[ground-assets]], [[content-import]] and index after local CASC synchronization: 256 ground dependencies/zero missing; desktop ground fixtures4/4; 72 center records22supported/50holes, Python/native72/72 agree; full72-tile LOS exits0 with zero unreadable files, eye tables unchanged. Existing normalization/import recovers exactly463 eligible observations into a new scratch DB, preserving1199 previous rows and producing1662 spawns. Grounded displayIDs174→218. Quest/content gaps and reconstructed-observation semantics unchanged; no live deployment or native NPC acceptance. Revision-scoped logs/reports: `target/forever-resync/`, [ledger](../../target/zephras-content-proof/ledger.md).

@@ -134,6 +134,13 @@ class SkyborneImportTest(unittest.TestCase):
                     )
 
     def test_import_preserves_retail_rows_and_records_exact_source(self):
+        import skyborne_data
+
+        expected_sources = sorted(
+            (table, row["ID"], skyborne_data.BUILD)
+            for table, records in skyborne_data.load_rows(SOURCE).items()
+            for row in records
+        )
         with tempfile.TemporaryDirectory() as directory:
             db = Path(directory) / "scratch.db"
             conn = sqlite3.connect(db)
@@ -182,10 +189,6 @@ class SkyborneImportTest(unittest.TestCase):
                 conn.execute(
                     "SELECT table_name,row_id,build FROM db2_row_source ORDER BY table_name,row_id"
                 ).fetchall(),
-                [
-                    ("faction_template", 3628, "1.60.1.70205"),
-                    ("faction_template", 3629, "1.60.1.70205"),
-                    ("map", 2991, "1.60.1.70205"),
-                ],
+                expected_sources,
             )
             conn.close()

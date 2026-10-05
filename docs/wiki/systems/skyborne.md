@@ -11,7 +11,13 @@ Verified 2026-10-04. WoW Forever `wow_classic_beta` build `1.60.1.70205` supplie
 
 `race_class.rs` validation and bit lookup cover both races. `faction.rs` supplies faction identity, group and template to login and existing faction consumers. ChrRaces.Flags does not set IsAlliedRace, so neither race enters the allied level-10 path.
 
-`PlayerCreateInfos` initializes every supported pair before applying race-mask loadouts and authored action rows. No separate race seed is required: runtime has no `chr_races` loader. Real Retail kit data allowed all ten Forever pairs to create, persist across redb close/reopen, and enter through the existing SelectCharacter host-client message fixture. That fixture proves entry, not Forever racial spells, equipment or action-bar parity. Default skills/spells use Retail tables and race masks; no Forever racial/language/start-spell rows were imported or guessed.
+`PlayerCreateInfos` initializes every supported pair before applying race-mask loadouts and authored action rows. No separate race seed is required: runtime has no `chr_races` loader. Historical Retail-kit entry fixtures did not prove authored kit coverage. Full-workspace evidence at 6878f6a instead reports empty kits for nine Skyborne pairs and six leaked Retail items for race 95/class 1. Actual Forever-kit creation remains unproven until the source-isolation boundary lands. That fixture proves entry, not Forever racial spells, equipment or action-bar parity. Default skills/spells use Retail tables and race masks; no Forever racial/language/start-spell rows were imported or guessed.
+
+## Authored starting kits
+
+Verified 2026-10-05: pinned local sources decode six loadouts, 45 memberships and all 30 referenced Item/ItemSparse rows. [Source snapshots](../../../scripts/reference/forever-1.60.1.70205/README.md) own exact layouts, hashes and decoder differences. [Contract](../../specs/skyborne-races.md) requires no Retail kit leakage. Required appearance/effect parents resolve from selected clear rows; unrelated encrypted membership completeness remains unknown.
+
+Shared Item IDs materially differ between builds: 2947 changes junk to throwing weapon with buy/stack count 200→1, 2512 changes junk to ammunition, 2101 changes bag to quiver, and five weapon IDs change binding. Strict publication rejects collisions and rolls back, preserving Retail rows. User selected Retail preservation with isolated Forever definitions; implementation of that boundary is pending. No implicit replacement, Retail substitution or invented item IDs.
 
 ## Faction and map import
 
