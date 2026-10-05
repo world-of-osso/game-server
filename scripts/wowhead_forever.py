@@ -191,40 +191,52 @@ def mapper_points(page):
 
 
 def race_ids(mask):
-    if mask is None:
+    if not mask:
         return None
-    # ChrRaces RaceBit 32/33; not RaceID - 1 for Forever races.
-    return [95 + bit - 32 for bit in (32, 33) if int(mask) & (1 << bit)]
+    # Classic race bits 0..8, plus Forever ChrRaces RaceBit 32/33.
+    races = [bit + 1 for bit in range(9) if int(mask) & (1 << bit)]
+    return races + [95 + bit - 32 for bit in (32, 33) if int(mask) & (1 << bit)]
 
 
 def normalize_quest(page):
-    row = page["entity"]
+    row = {}
+    for group in page["gatherer"]:
+        if group["type"] == 5:
+            row.update(group["data"].get(str(page["id"]), {}))
+    row.update(page["entity"])
     starters, enders, objectives = set(), set(), []
     for zone, point in mapper_points(page):
         if point.get("point") in ("start", "end") and point.get("type") == 1:
             (starters if point["point"] == "start" else enders).add(point["id"])
-        elif point.get("id"):
-            objectives.append(
-                {
-                    "type": point.get("type"),
-                    "target_id": point["id"],
-                    "count": point.get("count"),
-                    "name": point.get("name"),
-                    "zone": zone,
-                    "source": "mapper observation; not necessarily objective credit",
-                }
-            )
+
     # Objective tables carry item/NPC IDs and counts when mapper does not.
-    objective_html = re.split(r"<h2\b[^>]*>Description", page["html"])[0]
+    heading = re.search(r"<h1\b[^>]*>.*?</h1>", page["html"], re.S)
+    objective_html = (
+        re.split(r"<h2\b", page["html"][heading.end() :])[0] if heading else ""
+    )
     for match in re.finditer(r"<tr\b[^>]*>(.*?)</tr>", objective_html, re.S):
         target = re.search(r"/forever/(npc|item|object)=(\d+)", match[1])
         count = re.search(r"\((\d+)\)|(?:x|×)\s*(\d+)", plain(match[1]))
         if target and count:
+            label = plain(match[1])
+            credit = (
+                "collect"
+                if target[1] == "item"
+                else "interact"
+                if target[1] == "object"
+                or re.search(
+                    r"Speak|Talk|Obtain Instructions|Deliver|Use|Free|Rescue|Meet|Find|Train|Tame",
+                    label,
+                    re.I,
+                )
+                else "kill"
+                if re.search(r"slain|kill|defeat", label, re.I)
+                else "unknown"
+            )
             objectives.append(
                 {
-                    "type": {"npc": "kill", "item": "collect", "object": "interact"}[
-                        target[1]
-                    ],
+                    "type": credit,
+                    "target_kind": target[1],
                     "target_id": int(target[2]),
                     "count": int(count[1] or count[2]),
                     "name": plain(match[1]),
@@ -241,7 +253,10 @@ def normalize_quest(page):
         "side": row.get("side"),
         "races": race_ids(row.get("reqrace", row.get("race"))),
         "race_mask": row.get("reqrace", row.get("race")),
-        "classes": row.get("reqclass"),
+        "classes": [i + 1 for i in range(13) if int(row["reqclass"]) & (1 << i)]
+        if row.get("reqclass")
+        else None,
+        "class_mask": row.get("reqclass"),
         "starter_npc_ids": sorted(starters),
         "ender_npc_ids": sorted(enders),
         "objectives": objectives,
@@ -402,7 +417,7 @@ class Terrain:
         self.cache = {}
 
     def position(self, x, y):
-        # WDT MAID tile index is tile_y*64 + tile_x; axes match server GroundMap.
+        # Server GroundMap: row from WoW Y, col from X, MAID index col*64+row.
         tx, ty = math.floor(32 - y / (1600 / 3)), math.floor(32 - x / (1600 / 3))
         fdid = self.tiles.get(ty * 64 + tx) if 0 <= tx < 64 and 0 <= ty < 64 else None
         path = self.root / f"{fdid}.adt"
@@ -522,57 +537,117 @@ class Capture:
         self.report()
 
 
-def normalize(root, bounds=None, terrain=None):
-    quests, npcs, objects = [], [], []
-    zone_page = json.loads((root / "zone" / f"{ZONE}.json").read_text())
-    allowed = set(zone_ids(zone_page, "quest"))
-    for path in sorted((root / "quest").glob("*.json")):
-        page = json.loads(path.read_text())
-        if page["id"] in allowed or any(z == ZONE for z, _ in mapper_points(page)):
-            quests.append(normalize_quest(page))
-    for path in sorted((root / "npc").glob("*.json")):
-        npc = normalize_npc(json.loads(path.read_text()))
-        # Starter pages can lack their own coords; preserve quest mapper observations.
-        known = {(c["zone"], tuple(c["percent"])) for c in npc["coords"]}
-        for qp in sorted((root / "quest").glob("*.json")):
-            for zone, point in mapper_points(json.loads(qp.read_text())):
-                if (
-                    zone == ZONE
-                    and point.get("type") == 1
-                    and point.get("id") == npc["id"]
-                ):
-                    for pair in point.get("coords", []):
-                        if (zone, tuple(pair[:2])) not in known:
-                            npc["coords"].append(
-                                {
-                                    "zone": zone,
-                                    "uiMap": None,
-                                    "percent": pair[:2],
-                                    "source": "quest mapper",
-                                }
-                            )
-                            known.add((zone, tuple(pair[:2])))
-        if bounds:
-            for point in npc["coords"]:
-                if point["zone"] == ZONE:
-                    x, y = percent_to_world(point["percent"], bounds)
-                    point["world"] = (
-                        terrain.position(x, y)
-                        if terrain
-                        else {"x": x, "y": y, "z": None, "z_status": "not-sampled"}
-                    )
-                    point["calibrated_uiMap"] = UI_MAP
-        npcs.append(npc)
-    for path in sorted((root / "object").glob("*.json")):
-        page = json.loads(path.read_text())
-        objects.append(
-            {
-                "id": page["id"],
-                "entity": page["entity"],
-                "mapper": page["mapper"],
-                "source": page.get("url"),
+def listed_pages(zone_page, kind):
+    """Zone Listview metadata has its own provenance, not a captured entity page."""
+    pages = {}
+    for view in zone_page["listviews"]:
+        if view["template"] != kind:
+            continue
+        for row in view["data"]:
+            if kind != "quest" and ZONE not in row.get("location", []):
+                continue
+            pages[row["id"]] = {
+                "id": row["id"],
+                "kind": kind,
+                "entity": row,
+                "url": zone_page.get("url"),
+                "listviews": [],
+                "gatherer": [],
+                "mapper": {},
+                "objective_mapper": {},
+                "displayIds": [],
+                "text": {},
+                "series_rows": [],
+                "html": "",
+                "page_captured": False,
             }
+    return pages
+
+
+def captured_pages(root, kind):
+    pages = {}
+    for path in sorted((root / kind).glob("*.json")):
+        page = json.loads(path.read_text())
+        page["page_captured"] = True
+        pages[page["id"]] = page
+    return pages
+
+
+def attach_coords(entity, points, bounds, terrain):
+    known = {(p["zone"], tuple(p["percent"])) for p in entity["coords"]}
+    for point, source in points:
+        for pair in point.get("coords", []):
+            if (ZONE, tuple(pair[:2])) not in known:
+                entity["coords"].append(
+                    {"zone": ZONE, "uiMap": None, "percent": pair[:2], "source": source}
+                )
+                known.add((ZONE, tuple(pair[:2])))
+    if bounds:
+        for point in entity["coords"]:
+            if point["zone"] == ZONE:
+                x, y = percent_to_world(point["percent"], bounds)
+                point["world"] = (
+                    terrain.position(x, y)
+                    if terrain
+                    else {"x": x, "y": y, "z": None, "z_status": "not-sampled"}
+                )
+                point["calibrated_uiMap"] = UI_MAP
+
+
+def normalize(root, bounds=None, terrain=None):
+    zone_page = json.loads((root / "zone" / f"{ZONE}.json").read_text())
+    quest_pages = listed_pages(zone_page, "quest")
+    for entry, page in captured_pages(root, "quest").items():
+        if entry in quest_pages or any(z == ZONE for z, _ in mapper_points(page)):
+            quest_pages[entry] = page
+    quests = []
+    points, relations = {}, {}
+    for entry, page in sorted(quest_pages.items()):
+        quest = normalize_quest(page)
+        quest["page_captured"] = page["page_captured"]
+        quests.append(quest)
+        for zone, point in mapper_points(page):
+            if zone == ZONE and point.get("type") in (1, 2):
+                key = (point["type"], point["id"])
+                points.setdefault(key, []).append((point, page.get("url")))
+                if point.get("point") in ("start", "end"):
+                    relations.setdefault(key, {}).setdefault(point["point"], set()).add(
+                        entry
+                    )
+    npc_pages = listed_pages(zone_page, "npc")
+    npc_pages.update(captured_pages(root, "npc"))
+    npcs = []
+    for entry, page in sorted(npc_pages.items()):
+        npc = normalize_npc(page)
+        npc["page_captured"] = page["page_captured"]
+        attach_coords(npc, points.get((1, entry), []), bounds, terrain)
+        rel = relations.get((1, entry), {})
+        npc["starts_quests"] = sorted(
+            set(npc["starts_quests"]) | rel.get("start", set())
         )
+        npc["ends_quests"] = sorted(set(npc["ends_quests"]) | rel.get("end", set()))
+        npcs.append(npc)
+    object_pages = listed_pages(zone_page, "object")
+    object_pages.update(captured_pages(root, "object"))
+    wanted_objects = {entry for kind, entry in points if kind == 2}
+    wanted_objects.update(
+        o["target_id"]
+        for q in quests
+        for o in q["objectives"]
+        if o.get("target_kind") == "object"
+    )
+    objects = []
+    for entry in sorted(wanted_objects):
+        page = object_pages.get(entry)
+        obj = {
+            "id": entry,
+            "entity": page["entity"] if page else None,
+            "source": page.get("url") if page else None,
+            "page_captured": page["page_captured"] if page else False,
+            "coords": [],
+        }
+        attach_coords(obj, points.get((2, entry), []), bounds, terrain)
+        objects.append(obj)
     content = {
         "provenance": root.name,
         "reconstructed": True,
@@ -583,6 +658,11 @@ def normalize(root, bounds=None, terrain=None):
         "quests": quests,
         "npcs": npcs,
         "objects": objects,
+        "missing_pages": {
+            "quest": [q["id"] for q in quests if not q["page_captured"]],
+            "npc": [n["id"] for n in npcs if not n["page_captured"]],
+            "object": [o["id"] for o in objects if not o["page_captured"]],
+        },
         "gaps": [
             "No scripted events, phasing or facing reconstructed.",
             "Unknown metadata stays null; mapper points do not prove objective credit.",

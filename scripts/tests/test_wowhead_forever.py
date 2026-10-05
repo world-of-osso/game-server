@@ -54,6 +54,52 @@ class ForeverTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             wh.percent_to_world([101, 0], bounds)
 
+    def test_npc_interaction_is_not_kill_credit(self):
+        source = (FIXTURES / "quest-93836.html").read_text()
+        quest = wh.normalize_quest(wh.parse_page(source, "quest", 93836))
+        self.assertEqual(quest["objectives"][0]["type"], "interact")
+        self.assertEqual(quest["objectives"][0]["count"], 1)
+
+    def test_kill_credit_and_class_restriction_from_saved_pages(self):
+        page = wh.parse_page(
+            (FIXTURES / "quest-92461.html").read_text(), "quest", 92461
+        )
+        objective = wh.normalize_quest(page)["objectives"][0]
+        self.assertEqual(
+            (objective["type"], objective["target_id"], objective["count"]),
+            ("kill", 250873, 8),
+        )
+        page = wh.parse_page(
+            (FIXTURES / "quest-92481.html").read_text(), "quest", 92481
+        )
+        self.assertEqual(wh.normalize_quest(page)["classes"], [8])
+
+    def test_partial_capture_exposes_zone_metadata_and_missing_pages(self):
+        import json
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for kind, entry in [("zone", 16593), ("quest", 92471)]:
+                page = wh.parse_page(
+                    (FIXTURES / f"{kind}-{entry}.html").read_text(), kind, entry
+                )
+                wh.save_page(
+                    root, page, f"https://www.wowhead.com/forever/{kind}={entry}"
+                )
+            content = wh.normalize(root)
+            npc = next(n for n in content["npcs"] if n["id"] == 251361)
+            self.assertEqual(npc["name"], "Rorian the Dayseeker")
+            self.assertEqual(npc["coords"][0]["percent"], [42, 23.4])
+            self.assertFalse(npc["page_captured"])
+            self.assertEqual(npc["displayIds"], [])
+            self.assertIn(251361, content["missing_pages"]["npc"])
+            self.assertIn(92461, content["missing_pages"]["quest"])
+            self.assertTrue((root / "zephras-content.json").exists())
+            self.assertEqual(
+                json.loads((root / "zephras-content.json").read_text())["map"], 2991
+            )
+
     def test_terrain_inner_vertex_and_holes(self):
         import struct
 
