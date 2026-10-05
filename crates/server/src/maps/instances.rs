@@ -34,9 +34,9 @@ pub const HOSTED_CONTINENTS: [u32; 3] = [0, 1, 2991];
 
 /// Maps whose NPCs the client has appearance data for (game-engine
 /// data/cache/npc_appearance.sqlite covers maps 0, 1, 34 The Stockade and 670 Grim
-/// Batol): the maps whose creatures spawn. A dungeon outside it opens empty.
-/// Zephras remains excluded: reconstructed templates lack authored health/class data.
-pub const NPC_APPEARANCE_MAPS: [u32; 4] = [0, 1, 34, 670];
+/// Batol, plus reconstructed Zephras 2991 with explicitly estimated NPC stats.
+/// A dungeon outside it opens empty; individual unavailable appearances stay withheld.
+pub const NPC_APPEARANCE_MAPS: [u32; 5] = [0, 1, 34, 670, 2991];
 
 /// Who a player enters instances with: its character, its group and the group's
 /// leader, and the dungeon difficulty it enters at (the group's in a group).
