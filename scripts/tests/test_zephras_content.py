@@ -66,6 +66,8 @@ class ContentOverlayTest(unittest.TestCase):
             "SELECT table_name,row_key FROM zephras_row_source ORDER BY table_name,row_key"
         ):
             keys = json.loads(encoded)
+            if table == "content_creature_template" and keys != {"entry": 251362}:
+                continue
             if any(record[0] == table for record in records):
                 continue
             where = " AND ".join(f'"{key}"=?' for key in keys)
@@ -86,7 +88,8 @@ class ContentOverlayTest(unittest.TestCase):
                 row = tuple(row)
             records.append((table, row))
         tag = self.db.execute(
-            "SELECT * FROM zephras_row_source WHERE table_name='content_creature_template' LIMIT 1"
+            "SELECT * FROM zephras_row_source WHERE table_name='content_creature_template' AND row_key=?",
+            (json.dumps({"entry": 251362}),),
         ).fetchone()
         records.append(("zephras_row_source", (*tag[:4], "retail", tag[5])))
         empty = copy.deepcopy(self.content)

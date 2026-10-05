@@ -360,6 +360,8 @@ def main():
     conn = sqlite3.connect(args.db, isolation_level=None)
     try:
         conn.execute("BEGIN")
+        # Retire old ownership before rebuilding tables with fresh Retail rows.
+        zephras_content.clear_overlay(conn)
         apply_policy(conn, wrath_spell_names, args.overrides, report, merchants)
         zephras_report = zephras_content.apply_overlay(conn, *zephras)
         conn.execute("COMMIT")

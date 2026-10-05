@@ -316,6 +316,52 @@ class CreatureEventImportTests(unittest.TestCase):
             )
         self.assertEqual(reports[0], reports[1])
 
+    def test_regenerated_retail_collision_is_not_deleted_by_stale_overlay_tags(self):
+        capture = (
+            self.root
+            / "data/reference/wowhead/forever-zephras-20261004/zephras-content.json"
+        )
+        shutil.copy2(SCRIPTS / "tests/fixtures/zephras-content.json", capture)
+        first = self.run_import()
+        self.assertEqual(first.returncode, 0, first.stdout + first.stderr)
+        with closing(sqlite3.connect(self.db)) as db, db:
+            db.execute(
+                "INSERT INTO creature_template(entry,name,minlevel,maxlevel) VALUES(251362,'Retail sentinel',99,99)"
+            )
+            before = "\n".join(db.iterdump())
+        args = [
+            sys.executable,
+            str(self.root / "scripts/content_policy.py"),
+            "--db",
+            str(self.db),
+            "--csv-root",
+            str(self.csv),
+        ]
+        failed = subprocess.run(args, capture_output=True, text=True, check=False)
+        self.assertNotEqual(failed.returncode, 0)
+        self.assertIn("collision in content_creature_template", failed.stderr)
+        with closing(sqlite3.connect(self.db)) as db:
+            self.assertEqual("\n".join(db.iterdump()), before)
+        content = json.loads(capture.read_text())
+        content["npcs"] = [npc for npc in content["npcs"] if npc["id"] != 251362]
+        capture.write_text(json.dumps(content))
+        removed = subprocess.run(args, capture_output=True, text=True, check=False)
+        self.assertEqual(removed.returncode, 0, removed.stdout + removed.stderr)
+        with closing(sqlite3.connect(self.db)) as db:
+            self.assertEqual(
+                db.execute(
+                    "SELECT name,minlevel,maxlevel FROM content_creature_template WHERE entry=251362"
+                ).fetchone(),
+                ("Retail sentinel", 99, 99),
+            )
+            self.assertEqual(
+                db.execute(
+                    "SELECT count(*) FROM zephras_row_source WHERE table_name='content_creature_template' AND row_key=?",
+                    (json.dumps({"entry": 251362}),),
+                ).fetchone(),
+                (0,),
+            )
+
     def test_derived_merchant_survives_two_full_rebuilds(self):
         merchant = {
             "entry": 243531,
