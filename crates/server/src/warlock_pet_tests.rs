@@ -322,7 +322,7 @@ fn warlock_imp_current_pet_returns_after_reopening_database() {
 }
 
 #[test]
-fn warlock_imp_dismiss_removes_pet_and_does_not_restore_on_relog() {
+fn warlock_pet_dismiss_removes_imp_and_does_not_restore_on_relog() {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("pets.redb");
     {
