@@ -5,7 +5,8 @@ User-approved Wowhead Forever-only reconstruction for Skyborne starts; [implemen
 ## Requirements
 
 - [x] Overlay map-2991 NPC templates, terrain-supported mapper observations, captured quest text, starter/ender links, supported objectives and rewards; tag every row with scrape, source URL and `reconstructed` provenance.
-- [ ] Native NPC/giver/quest acceptance remains explicitly blocked: captured reconstructed templates lack authored health/class data. Keep map-2991 creature spawning gated; do not infer Warrior stats or introduce a noncombat substitute. Missing individual profiles, including Ailee 136968, remain a separate visual gap.
+- [x] For reconstructed templates missing authored health/class stats, use the approved coarse estimate `unit_class=1`, `HealthModifier=1.0`; retain captured levels/rank/type/family and label estimates, analogue IDs and current class-level health curve in template source JSON. Existing authored inputs and all Retail/non-overlay stats must not be overwritten. Do not infer spellcaster classes or claim authored stats/full Classic combat.
+- [ ] Native NPC/giver/quest acceptance remains unproven; startup-gate/integration changes require separate native proof. Ailee 136968 texture/profile remains a separate unresolved visual gap.
 - [x] Decode hash-matched local Forever Creature/CreatureXDisplayInfo; report encrypted/missing rows and required client displays without substituting NPC models.
 - [x] Derive A/H reactions towards Forever factions 2795/2794 from captured react values. Unknown sides use neutral faction identity with explicit friendly relation; do not invent a nation or enemy.
 - [x] Skip unknown Z, invalid/unknown levels and uncaptured quest pages; preserve unsupported objectives in provenance, never convert interactions to kills.
@@ -22,4 +23,4 @@ No scripted events/phasing, inferred loot/vendor inventory/gossip, guessed displ
 
 ## Tests
 
-`scripts/tests/test_zephras_creatures.py`, `test_zephras_content.py`; `auth_character_tests.rs`, `zephras_ground_tests.rs`, `quest_tests.rs`; `zones_world_db_tests::zephras_startup_spawns_imported_givers_on_the_hosted_continent` retains the actual imported-row startup regression, explicitly ignored while authored NPC health/class data is absent. Enabling the gate reached a missing class-level-stat panic; native NPC acceptance has no passing credit.
+`scripts/tests/test_zephras_creatures.py`, `test_zephras_content.py`; `auth_character_tests.rs`, `zephras_ground_tests.rs`, `quest_tests.rs`; `zones_world_db_tests::zephras_startup_spawns_imported_givers_on_the_hosted_continent` retains the actual imported-row startup regression. Its startup gate and native integration are separate work; native NPC acceptance has no passing credit from importer tests. Python tests cover estimated fields/provenance, repeat regeneration and atomic collisions preserving Retail class/health.

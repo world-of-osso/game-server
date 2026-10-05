@@ -160,6 +160,9 @@ def npc_template(npc, catalog, faction):
         "rank": record.get("classification", 0),
         "type": record.get("type", 0),
         "family": record.get("family", 0),
+        # Neither normalized NPC pages nor the decoded Creature catalog carries these stats.
+        "unit_class": 1,
+        "HealthModifier": 1.0,
     }
 
 
@@ -206,7 +209,26 @@ def import_npcs(writer, content, catalog, report):
         if faction["ID"] not in factions:
             writer.insert("faction_template", faction, ["ID"], npc)
             factions.add(faction["ID"])
-        writer.insert("content_creature_template", template, ["entry"], npc)
+        source = {
+            **npc,
+            "stat_estimate": {
+                "fields": {
+                    "unit_class": template["unit_class"],
+                    "HealthModifier": template["HealthModifier"],
+                },
+                "basis": "User-approved coarse estimate from normal-rank exp-0 quest-giver analogues; not authored NPC stats",
+                "reference_ids": [713, 714, 23904],
+                "health_curve": {
+                    "table": "creature_classlevelstats",
+                    "class": template["unit_class"],
+                    "column": "basehp0",
+                    "level_column": "minlevel",
+                    "modifier": template["HealthModifier"],
+                    "reference_base_hp": {"1": 42, "5": 102},
+                },
+            },
+        }
+        writer.insert("content_creature_template", template, ["entry"], source)
         models = npc_models(npc)
         if not models:
             report["unresolved_display_npcs"].append(npc["id"])
