@@ -99,7 +99,7 @@ fn item_sources_unmarked_legacy_guid_is_retail() {
 
 #[test]
 fn item_sources_model_duplicate_split_and_partial_take_keep_provenance() {
-    use crate::inventory_model::InventoryModel;
+    use crate::inventory::inventory_model::InventoryModel;
     use crate::item_templates::ItemTemplates;
     use shared::protocol::ItemLocation;
 
