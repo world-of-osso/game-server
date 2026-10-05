@@ -355,10 +355,10 @@ def read_sparse_relations(data, at, size, count):
     entries = struct.unpack_from("<I", data, at)[0]
     if size != 12 + 8 * entries:
         raise ValueError("invalid sparse DB2 relationship map size")
-    related = dict(
-        (index, foreign)
+    related = {
+        index: foreign
         for foreign, index in struct.iter_unpack("<II", data[at + 12 : at + size])
-    )
+    }
     if any(index >= count for index in related):
         raise ValueError("invalid sparse DB2 relationship record index")
     return related
