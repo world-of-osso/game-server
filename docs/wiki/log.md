@@ -659,3 +659,7 @@ Reconciled [[skyborne]], index and source/race contracts against tracked factory
 ## 2026-10-05 — Bounded Skyborne source-gap audit
 
 [[skyborne#Native entry and NPC startup source gap (2026-10-05)]] records Main-reported two-race entry, zero NPC startup, the real 1,662-spawn class0 panic and restored allowlist/explicitly ignored regression. User retains authored health/class blocker; no invented Warrior/noncombat contract. [[inventory#Bounded owned-commerce and requirement proof (2026-10-05)]] records commerce4/4 and requirements11/11 with exact scope; buyback is live-session only, not whole parity.
+
+## [2026-10-05] systems | Record estimated-stat startup and bounded native evidence
+
+[Content import](systems/content-import.md#forever-zephras-overlay) owns approved health/unit-class estimates, actual startup and fresh whole-workspace proof at c5cf88a; [Skyborne](systems/skyborne.md#native-entry-and-npc-startup-source-gap-2026-10-05) links bounded native evidence. Historical missing-stat panic/ignored regression preserved; no authored/full Classic or complete gameplay claim. Native artifact gate pending.
