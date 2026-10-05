@@ -87,6 +87,8 @@ The caster's [[auras]] spell modifiers (107/108/218/219) adjust cast time (Chang
 - Other clients in range do not receive combat log events yet.
 - Melee auto-attack still broadcasts the old `CombatEvent` to every client. Retirement: remove it when the client renders `CombatLogEvent`.
 - Spell effects emit only `CombatLogEvent`.
+- `log_event` stamps every event with server wall-clock Unix milliseconds before recording damage or sending to owners, including queued melee events. Constructors leave the timestamp unset until that boundary.
+- `Interrupt.extra_spell_id` identifies the interrupted cast; `Dispel.extra_spell_id` identifies the removed aura. Other kinds leave it `None`; `spell_id` remains the interrupting or dispelling spell.
 
 Failures use the contract `CastFailReason` directly (`TooClose`, `SchoolLockedOut`, `SpellInProgress`, `NoChargesRemain`, ...). `NotSupported` carries the cause in `detail`: "unknown spell", "spell not known", "implicit target N not supported", "power type N". `NotInFront` is unused (no facing check).
 

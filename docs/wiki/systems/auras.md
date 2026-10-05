@@ -55,7 +55,7 @@ Every removal logs `CombatLogEvent{AuraRemoved}`.
 
 - Removes up to `BasePoints` auras (at least 1) whose dispel type is `EffectMiscValue_0`. Type 7 matches every dispel type.
 - On a hostile target it removes buffs; on a friendly target, debuffs. Passives are never dispelled.
-- Each removed aura logs `Dispel`, with source = the dispeller and spell = the removed aura's spell, plus `AuraRemoved`.
+- Each removed aura logs `Dispel`, with source = the dispeller, `spell_id` = the dispelling spell and `extra_spell_id` = the removed aura's spell, plus `AuraRemoved`.
 - Example: Purify 527 removes Shadow Word: Pain (DispelType 1).
 
 ### Interrupt flags
