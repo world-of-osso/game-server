@@ -12,10 +12,10 @@ tiles and WMOs have no ground on the server until they are extracted.
 """
 
 import argparse
-from contextlib import closing
 import sqlite3
 import struct
 import sys
+from contextlib import closing
 from pathlib import Path
 
 MPHD_FLAG_GLOBAL_WMO = 0x1
@@ -119,15 +119,30 @@ def selected_map_sources(world_db, map_ids=None, registered=False):
     """Select explicit/registered maps or spawned maps, with their local CASC product."""
     with closing(sqlite3.connect(f"file:{world_db}?mode=ro", uri=True)) as db:
         rows = dict(db.execute("SELECT ID, WdtFileDataID FROM map"))
-        selected = sorted(set(map_ids)) if map_ids else sorted(rows) if registered else [
-            row[0] for row in db.execute("SELECT DISTINCT map FROM content_creature ORDER BY map")
-        ]
+        selected = (
+            sorted(set(map_ids))
+            if map_ids
+            else sorted(rows)
+            if registered
+            else [
+                row[0]
+                for row in db.execute(
+                    "SELECT DISTINCT map FROM content_creature ORDER BY map"
+                )
+            ]
+        )
         has_sources = db.execute(
             "SELECT 1 FROM sqlite_master WHERE name = 'db2_row_source'"
         ).fetchone()
-        builds = dict(db.execute(
-            "SELECT row_id, build FROM db2_row_source WHERE table_name = 'map'"
-        )) if has_sources else {}
+        builds = (
+            dict(
+                db.execute(
+                    "SELECT row_id, build FROM db2_row_source WHERE table_name = 'map'"
+                )
+            )
+            if has_sources
+            else {}
+        )
     result = []
     for map_id in selected:
         if map_ids and map_id not in rows:
@@ -135,15 +150,24 @@ def selected_map_sources(world_db, map_ids=None, registered=False):
         build = builds.get(map_id)
         if build is not None and build not in BUILD_PRODUCTS:
             raise ValueError(f"map {map_id}: no local CASC product for build {build}")
-        result.append((map_id, rows.get(map_id), BUILD_PRODUCTS[build] if build else "wow"))
+        result.append(
+            (map_id, rows.get(map_id), BUILD_PRODUCTS[build] if build else "wow")
+        )
     return result
 
 
 def add_map_selection(parser):
     selection = parser.add_mutually_exclusive_group()
-    selection.add_argument("--map", type=int, action="append", dest="map_ids",
-                           help="registered map ID; repeat for multiple maps, even without spawns")
-    selection.add_argument("--registered", action="store_true", help="all registered maps")
+    selection.add_argument(
+        "--map",
+        type=int,
+        action="append",
+        dest="map_ids",
+        help="registered map ID; repeat for multiple maps, even without spawns",
+    )
+    selection.add_argument(
+        "--registered", action="store_true", help="all registered maps"
+    )
 
 
 def main():
