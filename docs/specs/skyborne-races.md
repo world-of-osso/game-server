@@ -11,7 +11,7 @@ Server support for Forever races 95/96, grounded in local build 1.60.1.70205 Chr
 - [x] Reject source corruption before changing the destination database.
 - [x] Decode the six pinned starting loadouts (2373–2378), their 45 memberships and all 30 referenced Item/ItemSparse rows, plus clear related appearance/effect rows with exact provenance. Accept only Purpose 9, ModID 75, extra field 0, masks (0,3).
 - [x] Reject undeclared row-ID collisions rather than replacing Retail loadout/item data; rollback publication atomically.
-- [x] Preserve Retail definitions; isolate all 30 Forever kit definitions in six `skyborne_item*` tables and project `skyborne_content_item` using the existing content policy. Regeneration retains isolated definitions and exact row provenance.
+- [x] Preserve Retail definitions; isolate all 30 Forever kit definitions in six `skyborne_item*` tables and project `skyborne_content_item` using the existing content policy. Full DB2/content regeneration and the additive kit refresh retain isolated definitions and exact row provenance. Standalone publication rolls back the entire overlay if content projection fails.
 
 ## How it works
 
