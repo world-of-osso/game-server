@@ -67,6 +67,8 @@ mod messaging;
 mod mirror_timers;
 mod networking;
 mod npc_interaction;
+#[cfg(test)]
+mod owned_commerce_source_tests;
 mod persistence;
 mod persistence_accounts;
 mod persistence_character;
