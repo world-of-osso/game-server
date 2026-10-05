@@ -5,7 +5,7 @@ Server support for Forever races 95/96, grounded in local build 1.60.1.70205 Chr
 ## What it must do
 
 - [x] Accept only authored Skyborne classes: 95→1/3/4/8/11, 96→1/3/4/7/11; use verified race bits 32/33.
-- [ ] Create all ten pairs at level 1 with actual Forever70205 starting items/counts, persist across storage reopen, and select them without Retail kit leakage.
+- [x] Create all ten pairs at level 1 with actual Forever70205 starting items/counts, persist across storage reopen, and select them without Retail kit leakage.
 - [x] Assign Alliance/template 3629 to race 95 and Horde/template 3628 to race 96; imported templates yield friendly allied and hostile opposing reactions.
 - [x] Decode only source-backed faction rows 3628/3629 and Map 2991; preserve other Retail rows, reapply the overlay during regeneration, and record row provenance.
 - [x] Reject source corruption before changing the destination database.
@@ -44,4 +44,4 @@ Server support for Forever races 95/96, grounded in local build 1.60.1.70205 Chr
 
 ## Out of scope
 
-Forever racial spells and language/skill parity remain excluded. Shared kit IDs keep separate Forever definitions under the approved source-isolation boundary. Runtime stats, validation, reload and client tooltips must resolve that same source before full kit support is claimed. [Reconstructed content](zephras-content.md) is a separate contract; client assets and full LOS closure remain independent gaps.
+Forever racial spells and language/skill parity remain excluded. Shared kit IDs keep separate Forever definitions under the approved source-isolation boundary. [Owned source contract](item-definition-source.md) covers implemented source-qualified runtime validation, scaling and reload plus remaining integration/transfer gates. The ten-pair creation/reopen test passes at `e405232`; no full Classic parity or native client E2E claim. [Reconstructed content](zephras-content.md) is a separate contract; client assets and full LOS closure remain independent gaps.

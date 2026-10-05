@@ -643,3 +643,7 @@ Added [[dungeon-achievements]]: local CASC provenance, partial encrypted-section
 Updated [[banks]] and added the [guild-ranks contract](../specs/guild-ranks.md): GM controls, strict hierarchy, per-rank social/bank rights, atomic member remapping and layout-2 migration. Targeted RED failed for missing rank APIs. GREEN at `26b1264`: 37 guild-related server tests and one admin test pass; protocol wire test passes at `fe5ea8d`. Additional REDs reproduced cross-guild chat with stale membership components and erased masked tab settings; both now pass. No deployment or native settings UI proof.
 
 - 2026-10-06: Investigated Algari zero-heal consumption; [[item-healing-scaling]] records item-level RandPropPoints root cause, cast/aura context fix, and consumable regressions.
+
+## [2026-10-05] docs | Preserve Retail / isolate Forever audit
+
+Reconciled [[skyborne]], index and source/race contracts against tracked factory, GUID-marker, scaling and character-ABI code plus retained proof ledgers. Supersedes stale pre-isolation kit failure as current state with bounded `e405232` ten-pair creation/reopen proof; preserves historical broad-suite failure and the 26-pass/exit-101 ABI invocation boundary. Immutable provenance across ownership/reload and frozen disk ABI are distinct from explicit wire fields. Transfer integration, unowned content provenance, bare-ID auction search, Classic mechanics and paired native E2E remain open. Docs-only; no new tests, builds, operations or full acceptance.
