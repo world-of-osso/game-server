@@ -28,8 +28,9 @@ Server support for Forever races 95/96, grounded in local build 1.60.1.70205 Chr
 ## Tests asserting this spec
 
 - `crates/server/src/race_class.rs`, `faction_tests.rs` — pair/mask/faction rules and imported reactions.
-- `crates/server/src/auth_character_tests.rs` — real-kit creation, storage reopen and message-boundary selection.
-- `scripts/tests/test_skyborne_data.py` — source decoding, regeneration, row preservation and corruption rejection.
+- `crates/server/src/auth_character_tests.rs` — creation, storage reopen and message-boundary selection; not sufficient alone for kit-content proof.
+- `crates/server/src/skyborne_kit_tests.rs` — importer-generated exact ten-pair counts, source-local equipment and redb reopen, Retail preservation and required-content failure.
+- `scripts/tests/test_skyborne_data.py`, `test_skyborne_kits.py` — source decoding, full DB2/content regeneration, conflicting shared definitions preserved separately, missing source/parent rollback, and corruption/collision rejection.
 
 ## Known gaps (current cycle)
 

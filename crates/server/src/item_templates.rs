@@ -210,9 +210,31 @@ fn template_from_row(row: &Row) -> rusqlite::Result<(u32, ItemTemplate)> {
 
 pub fn load_item_templates(path: &Path) -> rusqlite::Result<ItemTemplates> {
     let conn = Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
-    let mut statement = conn.prepare(ITEM_QUERY)?;
+    Ok(ItemTemplates(load_item_template_rows(&conn, ITEM_QUERY)?))
+}
+
+pub(crate) fn load_skyborne_item_templates(
+    conn: &Connection,
+) -> rusqlite::Result<HashMap<u32, ItemTemplate>> {
+    let query = ITEM_QUERY
+        .replace("content_item", "skyborne_content_item")
+        .replace("item_sparse", "skyborne_item_sparse")
+        .replace(
+            "item_modified_appearance",
+            "skyborne_item_modified_appearance",
+        )
+        .replace("item_x_item_effect", "skyborne_item_x_item_effect")
+        .replace("JOIN item_effect", "JOIN skyborne_item_effect");
+    load_item_template_rows(conn, &query)
+}
+
+fn load_item_template_rows(
+    conn: &Connection,
+    query: &str,
+) -> rusqlite::Result<HashMap<u32, ItemTemplate>> {
+    let mut statement = conn.prepare(query)?;
     let rows = statement.query_map([], template_from_row)?;
-    Ok(ItemTemplates(rows.collect::<rusqlite::Result<_>>()?))
+    rows.collect()
 }
 
 pub struct ItemTemplatesPlugin;
