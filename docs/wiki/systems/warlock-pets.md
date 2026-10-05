@@ -22,6 +22,18 @@ TC `PetAI::UpdateAI` (a352b1fa, lines 97-198) and AzerothCore's same routine bot
 
 Evidence: `game-engine/data/diagnostics/servercheck-2026-10-05/retry3/` (original captures/ledger); `game-engine/data/diagnostics/impfirebolt-2026-10-05/live-stats.log` (seven passing tests at `c8da7a4`). See the implementation and test links in Sources below.
 
+## Dismiss investigation (2026-10-05)
+
+Retail's `UnitPopupPetDismissButtonMixin:OnClick` casts 2641 only for an abandonable hunter pet; otherwise it calls `PetDismiss()`. Its `CanShow` requires known 2641 only in the hunter case. Local Blizzard UI reference: `~/.cache/wow-ui-sim/blizzard-ui/retail/AddOns/Blizzard_UnitPopupShared/UnitPopupSharedButtonMixins.lua:1037-1056`.
+
+Imported DB2 `SkillLineAbility` row 35949 assigns spell 2641 to Hunter SkillLine 795, ClassMask 0, AcquireMethod 4. `SpellLevels` row 334 sets SpellLevel 5; `SkillRaceClassInfo` row 980 restricts line 795 to class mask 4 (hunter). Thus the production progression path should grant 2641 to hunters at level 5, not warlocks. A new real-data regression asserts hunter levels 4/5/10 and warlock levels 3/10; no live hunter was inspected.
+
+TC a352b1fa `Player::PetSpellInitialize` only sends the pet bar/spells/cooldowns, not a player spell grant (`Player.cpp:20628-20662`). `WorldSession::HandlePetActionHelper`, `COMMAND_ABANDON`, dismisses summoned pets with `PET_SAVE_NOT_IN_SLOT` but deletes hunter pets (`PetHandler.cpp:217-238`). `HandlePetAbandon` is hunter deletion only (`:558-566`); it is not the summoned-demon dismiss path.
+
+Current server `pet_control::command` omits `COMMAND_ABANDON` (3), already defined in shared-protocol. The previous warlock fixture artificially taught 2641, hiding this missing command path. The fixture now omits it and sends `PetAction` with `pet_action_button(COMMAND_ABANDON, ACT_COMMAND)` through the owner connection; lifecycle assertions cover despawn, bar clear, reopened persistence and resummon. **Not proven RED/GREEN:** the mandatory desktop helper fails before compilation because its Dockerfile calls the changed two-argument `refresh_sources` with one argument. No production fix is committed pending a valid RED.
+
+Required server fix: dispatch command 3 for the owner's summoned demon through existing `remove_pet`; preserve hunter spell-based dismissal and do not reinterpret hunter abandon as temporary dismissal. Required client work (outside this slot): offer PetFrame Dismiss for a summoned demon and send existing `PetAction { pet, action: pet_action_button(3, ACT_COMMAND), target: None, position: None }`; hunters cast known 2641. No wire-schema addition is needed.
+
 ## Starting spell
 
 Imported SkillLineAbility 24651: SkillLine 849, Spell 688, class mask 256, AcquireMethod 2. Imported SpellLevels gives 688 level 3. Warlocks learn 688 at level 3 through the normal DB2 auto-learn path; there is no level-1 override (an earlier override came from a lead brief, not a user requirement, and was removed 2026-10-05).
@@ -29,6 +41,9 @@ Imported SkillLineAbility 24651: SkillLine 849, Spell 688, class mask 256, Acqui
 ## Sources
 
 All TC sources pinned to a352b1fa:
+- [Retail pet popup](https://github.com/Gethe/wow-ui-source/blob/live/Interface/AddOns/Blizzard_UnitPopupShared/UnitPopupSharedButtonMixins.lua): `UnitPopupPetDismissButtonMixin:CanShow/OnClick`; local snapshot lines 1037-1056.
+- [PetHandler.cpp](https://github.com/TrinityCore/TrinityCore/blob/a352b1fa/src/server/game/Handlers/PetHandler.cpp): `HandlePetActionHelper` command 3 and `HandlePetAbandon` have distinct summoned/hunter semantics.
+- Imported `data/world.db`: `skill_line_ability` ID 35949, `spell_levels` ID 334, `skill_race_class_info` ID 980; [progression regression](../../../crates/server/src/class_progression_tests.rs).
 - [SpellEffects.cpp](https://github.com/TrinityCore/TrinityCore/blob/a352b1fa/src/server/game/Spells/SpellEffects.cpp): `Spell::EffectSummonPet` (2656-2744): MiscValue entry, same-pet recall, current removal and `Player::SummonPet`.
 - [Player.cpp](https://github.com/TrinityCore/TrinityCore/blob/a352b1fa/src/server/game/Entities/Player/Player.cpp): `Player::SummonPet` (30458-30543): DB load or creation, owner's level/faction, full mana, `InitPetCreateSpells`, save current, bar initialization.
 - [Pet.cpp](https://github.com/TrinityCore/TrinityCore/blob/a352b1fa/src/server/game/Entities/Pet/Pet.cpp): `Pet::LoadPetFromDB` (205-394), especially current timed-summon exclusion (225-229), SUMMON_PET owner's level (287-292); `Pet::Update` (619-709), non-hunter corpse removal (629-635); `Guardian::InitStatsForLevel` (847-1099); `Pet::CreateBaseAtCreature` is the existing hunter conversion path, not demon creation.

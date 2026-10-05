@@ -39,7 +39,7 @@ Server gameplay systems.
 | [[level-scaling]] | Retail ContentTuning creature levels: per-viewer level, ExpectedStat health/damage, shared health pool through damage and health multipliers, target-frame level colour |
 | [[banks]] | Character, Warband and guild bank storage (redb), one-transaction moves, guild ranks, daily reset, logs |
 | [[game-objects]] | Guild Vault and Mailbox spawns from content_gameobject, GeoBox reach check, UseGameObject |
-| [[warlock-pets]] | Level-3 Summon Imp, shared ownership/bar/AI and relog/dismiss/death; live dummy/terrain/LOS fixture passes, Firebolt capture gap remains |
+| [[warlock-pets]] | Level-3 Imp lifecycle/AI; Retail command-dismiss investigation removes artificial 2641 fixture grant, RED blocked by build-helper API drift |
 | [[mounts]] | Mount spells (SPELL_AURA_MOUNTED 78): Mount DB2 capability, flight styles, movement, casting; effect-203 highlight removal and source-blocked Lift Off 374763 trigger/failure investigation |
 | [[stand-state]] | Player sit/sleep/kneel/chair state: requests, stand-up rules, seated food and drink, sitting regen and auto-crit, chairs, item use |
 | [[meeting-stones]] | Meeting stone summons: GameObject::Use checks, 59782 cast and channel, TRANS_DOOR ritual portal, SUMMON_PLAYER offer, accept teleport |

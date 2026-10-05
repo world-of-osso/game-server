@@ -1,5 +1,9 @@
 # Wiki Log
 
+## [2026-10-05] investigations | Summoned-pet dismissal
+
+Updated [[warlock-pets]] with Retail popup command-vs-hunter-spell behavior, TC command-3 dismissal/deletion distinction, and DB2 rows 35949/334/980. Removed artificial warlock fixture grant and added hunter/warlock progression assertions. Required RED is blocked before compilation by canonical desktop-server Dockerfile's obsolete `refresh_sources` call; no production fix or GREEN claimed. Existing PetAction wire supports command 3; client PetFrame menu remains separate required work.
+
 ## [2026-10-05] investigations | Imp Firebolt live capture gap
 
 Updated [[warlock-pets]]: original fixed-SP/kobold fixture replaced with computed level-3 stats/full spell catalog and neutral Northshire dummy plus real terrain/LOS. Seven targeted tests pass at `c8da7a4`, including Firebolt and Dismiss 2641. No RED or demonstrated AI defect; no production fix. Client IPC/admin melee history is separate from owner spell events, and the IPC formatter omits spell IDs. Live pet-state/cast-rejection/owner-spell trace remains required.
