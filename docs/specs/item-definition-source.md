@@ -14,6 +14,9 @@ Item definition identity belongs to the item GUID, not its owner or race. Server
 - [ ] Preserve source through actual trade, mail, bank, guild-bank, auction and buyback transfers and emitted item records.
 - [x] Isolate authored Forever creation: the factory-selected definition source is attached to every new kit GUID and survives all ten race/class creation/reopen pairs.
 - [ ] Keep every known Retail content minting boundary explicitly Retail.
+- [ ] Retail profession reagents, explicit tools and tool categories must count/consume only Retail GUIDs; Forever-only bags cannot satisfy those requirements.
+- [ ] Retail quest item progress, completion, turn-in and provided-item removal must ignore same-ID Forever GUIDs.
+- [ ] Merchant and loot unique limits must count the producer-selected source only, including owned equipment and overflow; numeric IDs remain unchanged.
 - [x] Preserve the pre-source character disk ABI with nonempty equipment; hydrate runtime appearance from owned-slot GUID markers after reload, never from recipient race.
 
 ## How it works
@@ -34,7 +37,9 @@ Item definition identity belongs to the item GUID, not its owner or race. Server
 ## Tests asserting this spec
 
 - `crates/server/src/persistence_item_source_tests.rs` — concrete redb reopen, exchange, legacy and invalid-marker cases.
-- `crates/server/src/inventory_source_tests.rs` — completed trade/reopen/equipment/stat/snapshot boundary; mixed-source merges, splits and missing catalog.
+- `crates/server/src/inventory_source_tests.rs` — completed trade/reopen/equipment/stat/snapshot boundary; mixed-source merges/splits; source-qualified counts/removal and persisted quest-removal collisions.
+- `crates/server/src/profession/source_requirement_tests.rs` — real cast checks/reagent removal, explicit and category tool requirements with same-ID Forever/Retail bags.
+- `crates/server/src/{quest_tests,merchant_tests,merchant_economy_tests,loot_tests}.rs` — message-path collision fixtures for quest progress/turn-in/abandon and unique limits; IDs 2947/2512/2101 remain unchanged.
 
 - `crates/server/src/persistence_character_abi_tests.rs` — independent historical nonempty V7/V6 bytes, exact V7 save/reopen bytes and GUID hydration across races.
 - `crates/server/src/skyborne_kit_tests.rs` — actual ten-pair kit creation/reopen and source assertions.

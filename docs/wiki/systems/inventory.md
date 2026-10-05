@@ -29,6 +29,8 @@ Contract: [item definition source](../../specs/item-definition-source.md). The a
 
 `InventoryModel::from_record` builds a grid (backpack 16 slots, bags 1-4 size 0). Items with a valid placement keep it; unplaced items (new loot, trade, mail) take the first free slot; a guid duplicated within one character (trade/auction partial stacks keep the source guid) gets a fresh guid; items with no free slot go to `overflow` so saving never drops them. Bind-on-pickup and quest items are marked soulbound on load; bind-on-equip items when equipped. Same-source, same-ID stacks merge up to the selected `Stackable`.
 
+`bag_count`, `bag_item_ids`, `destroy_bag_items` and `owned_count` require an explicit source. Removal prechecks only that source and preserves bag order; insufficient selected-source counts leave every stack unchanged. `owned_count` includes bags, equipment and overflow. Retail profession reagents/tools (including categories), static/economic merchant purchases and loot limits select Retail, matching their existing producer. Quest views and removal read each matching GUID's persisted source, counting/removing Retail only; snapshot, progress, giver markers, turn-in and abandon share these predicates. No numeric-ID remap or recipient-race lookup is involved. Unowned reward provenance remains a [contract gap](../../specs/item-definition-source.md#known-gaps-current-cycle).
+
 Operations mutate the model; `with_appearance_sync` then rewrites the appearance entry of each equipment slot whose item changed, keeping `hidden`. `into_record` writes placements in bag order.
 
 ## Sources

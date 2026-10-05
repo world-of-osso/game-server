@@ -211,7 +211,11 @@ fn validate_purchase_inventory(inventory: &InventoryModel, purchase: &Purchase) 
         return Err(MerchantError::NotEnoughMoney);
     }
     if purchase.goods.max_count > 0
-        && inventory.owned_count(purchase.item_id) + purchase.count > purchase.goods.max_count
+        && inventory.owned_count(
+            shared::item_data::ItemDefinitionSource::Retail,
+            purchase.item_id,
+        ) + purchase.count
+            > purchase.goods.max_count
     {
         return Err(MerchantError::CantCarryMore);
     }

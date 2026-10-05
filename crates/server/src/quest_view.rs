@@ -2,11 +2,13 @@
 use std::collections::BTreeMap;
 
 use redb::Database;
+use shared::item_data::ItemDefinitionSource::Retail;
 use shared::protocol::{
     QuestEntrySnapshot, QuestGiverQuestDetails, QuestLogSnapshot, QuestLogUpdate,
     QuestObjectiveSnapshot, QuestRewardItem, QuestRewards,
 };
 
+use crate::persistence::inventory_store::load_item_definition_source;
 use crate::persistence::quest_store::{ActiveQuestData, QuestLogData};
 use crate::persistence::{self, InventoryData, InventoryItemData};
 use crate::quest_data::{ObjectiveKind, QuestDb, QuestTemplate};
@@ -15,22 +17,28 @@ use crate::quest_rules::{QuestPlayer, objective_counts, objectives_done, quest_m
 /// Quest log entries by quest id, as last sent to a client.
 pub(crate) type QuestLogView = BTreeMap<u32, QuestEntrySnapshot>;
 
-pub(crate) fn bag_count(inventory: &InventoryData, item_id: u32) -> u32 {
+/// Retail quest requirements never count a same-ID Forever GUID.
+pub(crate) fn bag_count(db: &Database, inventory: &InventoryData, item_id: u32) -> u32 {
     inventory
         .items
         .iter()
-        .filter(|item| item.item_id == item_id)
+        .filter(|item| {
+            item.item_id == item_id && load_item_definition_source(db, item.item_guid) == Retail
+        })
         .map(|item| item.stack_count)
         .sum()
 }
 
-/// Remove up to `count` of an item from the bags, emptied stacks first-to-last.
-pub(crate) fn remove_items(inventory: &mut InventoryData, item_id: u32, mut count: u32) {
-    for item in inventory
-        .items
-        .iter_mut()
-        .filter(|item| item.item_id == item_id)
-    {
+/// Remove up to `count` of a Retail quest item, stacks first-to-last.
+pub(crate) fn remove_items(
+    db: &Database,
+    inventory: &mut InventoryData,
+    item_id: u32,
+    mut count: u32,
+) {
+    for item in inventory.items.iter_mut().filter(|item| {
+        item.item_id == item_id && load_item_definition_source(db, item.item_guid) == Retail
+    }) {
         let taken = item.stack_count.min(count);
         item.stack_count -= taken;
         count -= taken;
@@ -80,13 +88,14 @@ fn objective_snapshots(quest: &QuestTemplate, counts: &[u32]) -> Vec<QuestObject
 }
 
 fn quest_entry(
+    db: &Database,
     quests: &QuestDb,
     quest: &QuestTemplate,
     active: &ActiveQuestData,
     watched: bool,
     inventory: &InventoryData,
 ) -> QuestEntrySnapshot {
-    let counts = objective_counts(quest, active, |item_id| bag_count(inventory, item_id));
+    let counts = objective_counts(quest, active, |item_id| bag_count(db, inventory, item_id));
     QuestEntrySnapshot {
         quest_id: quest.id,
         title: quest.title.clone(),
@@ -105,6 +114,7 @@ fn quest_entry(
 
 /// Every quest in the log, in log order.
 pub(crate) fn log_entries(
+    db: &Database,
     quests: &QuestDb,
     log: &QuestLogData,
     inventory: &InventoryData,
@@ -114,18 +124,19 @@ pub(crate) fn log_entries(
         .filter_map(|active| {
             let quest = quests.quests.get(&active.quest_id)?;
             let watched = log.watched.contains(&active.quest_id);
-            Some(quest_entry(quests, quest, active, watched, inventory))
+            Some(quest_entry(db, quests, quest, active, watched, inventory))
         })
         .collect()
 }
 
 pub(crate) fn log_snapshot(
+    db: &Database,
     quests: &QuestDb,
     log: &QuestLogData,
     inventory: &InventoryData,
 ) -> QuestLogSnapshot {
     QuestLogSnapshot {
-        entries: log_entries(quests, log, inventory),
+        entries: log_entries(db, quests, log, inventory),
         watched_quest_ids: log.watched.clone(),
     }
 }

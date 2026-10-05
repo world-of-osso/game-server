@@ -464,7 +464,13 @@ fn buy(shop: &mut Shop, customer: &mut Customer, req: BuyItem) -> MerchantResult
     if model.gold() < price {
         return Err(MerchantError::NotEnoughMoney);
     }
-    if goods.max_count > 0 && model.owned_count(slot.item_id) + items > goods.max_count {
+    if goods.max_count > 0
+        && model.owned_count(
+            shared::item_data::ItemDefinitionSource::Retail,
+            slot.item_id,
+        ) + items
+            > goods.max_count
+    {
         return Err(MerchantError::CantCarryMore);
     }
     let mut mint = shop.mint();

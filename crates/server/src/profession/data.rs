@@ -2,6 +2,10 @@
 //! reagents and tools (build 12.1.0.69933), and TrinityCore TDB1210 trainers and
 //! skill tier caps (`tdb_*`, `scripts/tdb_schema.sql`).
 
+#[cfg(test)]
+#[path = "source_requirement_tests.rs"]
+mod source_requirement_tests;
+
 use std::collections::HashMap;
 
 use rusqlite::{Connection, Row, params};

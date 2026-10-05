@@ -517,3 +517,79 @@ fn a_poor_quality_drop_becomes_coins_at_its_sell_price() {
         "no grey item left: {slots:?}"
     );
 }
+
+#[test]
+fn source_requirements_loot_unique_limit_counts_retail_only() {
+    use crate::persistence::inventory_store::{load_inventory_record, save_inventory_record};
+    use shared::item_data::ItemDefinitionSource::Forever70205;
+    for id in [2947, 2512, 2101] {
+        let mut h = harness(false).expect("world loot fixture required");
+        let plain = crate::item_templates::ItemTemplate {
+            max_stack: 200,
+            allowable_class: -1,
+            allowable_race: u64::MAX,
+            ..Default::default()
+        };
+        {
+            let mut templates = h.app.world_mut().resource_mut::<ItemTemplates>();
+            templates.retail.insert(id, plain);
+            templates.forever.insert(id, plain);
+        }
+        h.app
+            .world_mut()
+            .resource_mut::<VendorCatalog>()
+            .goods
+            .insert(
+                id,
+                crate::merchant::VendorGoods {
+                    name: format!("Retail {id}"),
+                    quality: 1,
+                    max_count: 1,
+                    ..Default::default()
+                },
+            );
+        let db = &h.app.world().resource::<GameDatabase>().db;
+        let mut record = load_inventory_record(db, h.looter.character_id).unwrap();
+        record.inventory.items.clear();
+        record.inventory.items.push(InventoryItemData {
+            item_guid: 1101,
+            item_id: id,
+            name: format!("Forever {id}"),
+            quality: 1,
+            required_level: 0,
+            stack_count: 1,
+            vendor_sell_price: 1,
+            unique_auction: false,
+        });
+        record.definition_sources.insert(1101, Forever70205);
+        save_inventory_record(db, h.looter.character_id, &record);
+        let corpse = h.kill_kobold();
+        let slots = vec![
+            Some(LootContent::Item {
+                item_id: id,
+                name: format!("Retail {id}"),
+                quality: 1,
+                count: 1
+            });
+            2
+        ];
+        h.app.world_mut().entity_mut(corpse).insert(CorpseLoot {
+            looters: [(h.looter.character_id, slots)].into(),
+        });
+        h.open(corpse, false);
+        h.take_slot(corpse, 0);
+        assert!(
+            h.failures().is_empty(),
+            "Forever {id} must not block Retail loot"
+        );
+        assert_eq!(h.count_of(id), 2);
+        let before = h.inventory();
+        h.take_slot(corpse, 1);
+        assert_eq!(h.failures(), vec![LootError::CantCarryMore]);
+        assert_eq!(h.inventory(), before);
+        assert!(
+            h.app.world().get::<CorpseLoot>(corpse).unwrap().looters[&h.looter.character_id][1]
+                .is_some()
+        );
+    }
+}

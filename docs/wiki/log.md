@@ -58,6 +58,10 @@ Added [[warlock-pets]] and its spec: effect-56 MiscValue creature entry, shared 
 
 Added [[general-spell-grants]]: read-only SQLite/CSV comparison of 41 captured entries; Attributes_13 bit 16 marks 31 content abilities plus Throw, while ordinary entries clear it. Other requested fields do not separate them. Unknown bit semantics and Throw eligibility block a verified rule; no server code/data change or behavioral proof.
 
+## [2026-10-05] systems/spec | Source-qualified bag requirements and unique limits
+
+Updated [[inventory]] and [source contract](../specs/item-definition-source.md): explicit model source arguments, Retail profession reagents/tools, quest progress/removal and producer-selected merchant/loot unique limits. Collision fixtures use unchanged 2947/2512/2101 IDs; native targeted RED reproduced eleven expected failures before production edits. Development ledger: `target/source-requirements-proof/`. No authored reward provenance inference, legacy-marker change, broad gate or operations.
+
 ## [2026-10-05] systems/spec | Frozen character equipment disk ABI
 
 Updated [[persistence]], index and [storage contract](../specs/character-customization-storage.md): private V7 DTO, frozen V3–V6 equipment fields/slot order, explicit six-writer boundary, GUID-based cache hydration and rejected unowned Forever cache writes. Temporary redb tests cover independent nonempty V7/V6 fixtures, historical migrations, wire source serialization and actual ten-pair creation/reopen. No live database, new decoder, deployment or merge-readiness claim; main owns final integration proof.
