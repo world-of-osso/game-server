@@ -3,7 +3,9 @@ use std::path::Path;
 
 use lightyear::prelude::{MessageReceiver, MessageSender};
 use rusqlite::{Connection, OpenFlags};
-use shared::components::{Level, Mana, ModelDisplay, Npc, UnitSummonedBy};
+use shared::components::{
+    Level, ModelDisplay, Npc, PowerType, UnitLevel, UnitPowers, UnitSummonedBy,
+};
 use shared::protocol::{CombatChannel, CombatLogKind};
 
 use super::*;
@@ -45,7 +47,7 @@ impl ImpHarness {
                 app.insert_resource(data);
                 app.insert_resource(spells);
                 app.insert_resource(GameDatabase { db });
-                app.add_plugins((HunterPetPlugin, crate::creature_ai::CreatureAiPlugin));
+                app.add_plugins(crate::creature_ai::CreatureAiPlugin);
                 app.add_systems(
                     FixedUpdate,
                     (
@@ -68,6 +70,14 @@ impl ImpHarness {
             MessageSender::<PetClearSpells>::default(),
             MessageReceiver::<PetClearSpells>::default(),
         ));
+        // Install the real login boundary only after the level and pet-message
+        // endpoints exist. The generic harness has already performed one update.
+        h.app.add_plugins(HunterPetPlugin);
+        h.app
+            .world_mut()
+            .entity_mut(h.connection)
+            .remove::<crate::auth::InWorld>()
+            .insert(crate::auth::InWorld { character_id: 1 });
         h.app.world_mut().entity_mut(h.npc).insert(Position {
             x: 15.0,
             y: 0.0,
@@ -78,7 +88,7 @@ impl ImpHarness {
             bars: Vec::new(),
             clears: 0,
         };
-        result.advance(2);
+        result.advance(3);
         result
     }
 
@@ -157,7 +167,15 @@ fn warlock_summon_imp_spawns_owned_pet_and_firebolt_bar() {
     let at = world.get::<Position>(pet).unwrap();
     let owner_at = world.get::<Position>(h.h.caster).unwrap();
     assert!(planar_distance(at, owner_at) <= 3.0);
-    assert!(world.get::<Mana>(pet).unwrap().current >= 40.0);
+    assert_eq!(world.get::<UnitLevel>(pet), Some(&UnitLevel(1)));
+    assert!(
+        world
+            .get::<UnitPowers>(pet)
+            .unwrap()
+            .entries
+            .iter()
+            .any(|pool| pool.power == PowerType::Energy && pool.current >= 40)
+    );
     let bar = h.bars.last().expect("pet bar received by owner");
     assert_eq!(bar.pet, pet.to_bits());
     assert!(
@@ -179,7 +197,7 @@ fn warlock_imp_attack_autocasts_firebolt_and_follow_moves_to_owner() {
                 && event.target == Some(h.h.npc.to_bits())
                 && event.spell_id == Some(FIREBOLT)
                 && event.kind == CombatLogKind::Damage
-                && event.amount > 0
+                && event.amount == 6 // 0.4 Firebolt coefficient × (100 owner SP × 0.15)
         }),
         "imp dealt no Firebolt damage: {:?}",
         h.h.inbox.log
@@ -229,6 +247,7 @@ fn warlock_imp_current_pet_returns_after_reopening_database() {
     let h = ImpHarness::login(&path);
     let pet = h.pet().expect("permanent current imp restored at login");
     assert_eq!(h.h.app.world().get::<Npc>(pet).unwrap().template_id, IMP);
+    assert_eq!(h.h.app.world().get::<UnitLevel>(pet), Some(&UnitLevel(1)));
     assert!(
         h.bars
             .last()

@@ -1,5 +1,5 @@
-//! Hunter pets: taming with Tame Beast, the persisted pet stable, Call Pet 1-5 and Dismiss
-//! Pet, and the summoned pet following its owner. TrinityCore a352b1fa:
+//! Controlled pets: hunter tame/call, warlock Summon Imp, persisted current pet,
+//! shared spawn/follow/dismiss and demon death removal. TrinityCore a352b1fa:
 //! `spell_hun_tame_beast` (spell_hunter.cpp:1255-1321), `Spell::EffectTameCreature`,
 //! `EffectSummonPet`, `EffectDismissPet` (SpellEffects.cpp:2606-2728, 3586-3598), the
 //! SUMMON_PET / DISMISS_PET checks of `Spell::CheckCast` (Spell.cpp:6454-6538),
@@ -8,13 +8,13 @@
 //!
 //! Tame Beast 1515 channels 6 s: APPLY_AURA DUMMY on the beast and a PERIODIC_TRIGGER_SPELL
 //! (6 s) on the hunter that casts 13481, whose TAMECREATURE effect hits the channel target.
-//! Not modelled: pet stats beyond health, pet AI and commands, stable slots beyond the five
-//! active ones, pet death, and taking the pet along through a map transfer.
+//! Pet bar/AI: pet_control.rs. Not modelled: full pet base stats, stable slots beyond
+//! the five active ones, hunter pet death, and pets across map transfers.
 
 use bevy::prelude::*;
 use lightyear::prelude::*;
 use shared::components::{
-    CreatureClassification, CreatureMotion, Health, Level, Mana, ModelDisplay, MovementSpeed, Npc,
+    CreatureClassification, CreatureMotion, Health, Level, ModelDisplay, MovementSpeed, Npc,
     Player, Position, PowerType, Rotation, UnitFactionTemplate, UnitFlags, UnitLevel, UnitPowers,
     UnitSummonedBy, Zone,
 };
@@ -43,6 +43,7 @@ use crate::world_data::{CreatureTemplate, WorldData};
 const CLASS_HUNTER: u8 = 3;
 const CLASS_WARLOCK: u8 = 9;
 const SUMMON_IMP: u32 = 688;
+const IMP_FIREBOLT: u32 = 3110;
 /// Tame Beast, whose `spell_hun_tame_beast::CheckCast` is `can_tame`.
 const TAME_BEAST: u32 = 1515;
 pub const EFFECT_TAME_CREATURE: u32 = 55;
@@ -83,9 +84,9 @@ pub struct HunterPet {
     pub slot: u8,
 }
 
-/// Server-only SUMMON_PET kind: mana, not Focus; removed when dead.
+/// Server-only SUMMON_PET kind: demon stat contribution; removed when dead.
 #[derive(Component)]
-struct SummonedDemon;
+pub(crate) struct SummonedDemon;
 
 /// A Tame Beast, Call Pet or Dismiss Pet check failing (`crate::spell_cast::CastFailure::Pet`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -420,7 +421,7 @@ fn summon_imp(world: &mut World, owner: Entity, entry: u32, at: Position, facing
 }
 
 fn create_or_reuse_imp_record(world: &World, owner: Entity, entry: u32) -> StoredPet {
-    let level = world.get::<Level>(owner).map_or(1, |level| level.0);
+    let level = world.get::<Level>(owner).expect("summoning player level").0;
     let existing = world
         .get::<PetStable>(owner)
         .and_then(|stable| stable.stored.active[0].clone())
@@ -530,7 +531,7 @@ pub(crate) fn save_pet_react_state(world: &mut World, owner: Entity, pet: Entity
 
 /// The pet of the owner's `slot` as a creature: its template's entry and classification,
 /// the stored model/name, owner's level for demons, full health and Focus for a hunter
-/// pet (`Pet::CreateBaseAtTamed`), or full mana for a demon (`Player::SummonPet`), the owner's
+/// pet (`Pet::CreateBaseAtTamed`), or Firebolt's DB2 power pool for an imp, the owner's
 /// faction and map, player controlled, summoned by its owner (`SetOwnerGUID` →
 /// `SummonedBy`), following it (`PET_FOLLOW_DIST`, `PET_FOLLOW_ANGLE`). Returns it with
 /// its stored record.
@@ -552,9 +553,9 @@ fn spawn_pet(
         .is_some_and(|player| player.class == CLASS_WARLOCK);
     if demon {
         // Pet::LoadPetFromDB: SUMMON_PET always takes the owner's level.
-        stored.level = world.get::<Level>(owner).map_or(1, |level| level.0);
+        stored.level = world.get::<Level>(owner).expect("summoning player level").0;
     }
-    let (health, classification, mana) = {
+    let (health, classification) = {
         let data = world.get_resource::<WorldData>()?;
         let Some(template) = data.template_for(stored.creature_entry, 0) else {
             error!(
@@ -567,16 +568,6 @@ fn spawn_pet(
             pet_max_health(data, template, stored.level),
             CreatureClassification::from_rank(template.rank)
                 .expect("creature_template.rank is validated when loaded"),
-            if demon {
-                // Guardian::InitStatsForLevel uses CreatureBaseStats::BaseMana when
-                // pet_levelstats is absent; it does not apply template ManaModifier.
-                *data
-                    .class_level_base_mana
-                    .get(&(stored.level, template.unit_class))
-                    .expect("summoned pet creature_classlevelstats mana") as f32
-            } else {
-                0.0
-            },
         )
     };
     let map = *world.get::<InMap>(owner)?;
@@ -584,15 +575,11 @@ fn spawn_pet(
     let faction = *world.get::<UnitFactionTemplate>(owner)?;
     let replicate = world.get::<Replicate>(owner).is_some();
     let power = if demon {
-        PowerType::Mana
+        imp_spell_power(world)
     } else {
         PowerType::Focus
     };
-    let pools = world
-        .get_resource::<PowerTypeTable>()
-        .map_or_else(PowerPools::default, |table| {
-            PowerPools::from_table(table, vec![power])
-        });
+    let pools = PowerPools::from_table(world.resource::<PowerTypeTable>(), vec![power]);
     let mut pet = world.spawn((
         (
             at,
@@ -632,14 +619,7 @@ fn spawn_pet(
         ),
     ));
     if demon {
-        pet.insert((
-            SummonedDemon,
-            Mana {
-                current: mana,
-                max: mana,
-            },
-            crate::spell_cast::powers::CreatureRegenTimer::default(),
-        ));
+        pet.insert(SummonedDemon);
     }
     if replicate {
         pet.insert((
@@ -648,6 +628,20 @@ fn spawn_pet(
         ));
     }
     Some((pet.id(), stored))
+}
+
+/// Retail Firebolt 3110 consumes Energy (SpellPower.PowerType 3), not mana.
+/// Read its pool from DB2; PowerTypeTable supplies its full default/max and regen.
+fn imp_spell_power(world: &World) -> PowerType {
+    let firebolt = world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(IMP_FIREBOLT)
+        .expect("Imp Firebolt imported");
+    let cost = firebolt
+        .power_costs
+        .first()
+        .expect("Imp Firebolt power cost imported");
+    PowerType::from_db(cost.power_type).expect("Imp Firebolt supported power pool")
 }
 
 /// `Guardian::InitStatsForLevel` without `pet_levelstats` (not imported): ExpectedStat

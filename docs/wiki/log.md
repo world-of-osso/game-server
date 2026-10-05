@@ -2,7 +2,7 @@
 
 ## [2026-10-05] systems | Warlock Summon Imp
 
-Added [[warlock-pets]] and its spec: effect-56 MiscValue creature entry, shared pet bar/Firebolt AI, mana, permanent-current relog and dismiss/death removal. Documented TC function references and the explicit level-1 kit override (imported DB2 level is 3). No wire/client/schema change; exact pet stats/names and live proof remain out of scope. Targeted RED confirmed six missing-feature failures; GREEN pending.
+Added [[warlock-pets]] and its spec: effect-56 MiscValue creature entry, shared pet bar/Firebolt AI, data-derived power, permanent-current relog and dismiss/death removal. Documented TC function references and the explicit level-1 kit override (imported DB2 level is 3). First targeted run passed 24 shared-pet regressions and exposed two boundaries: retail Firebolt costs Energy (not assumed mana) and needs the TC owner SP contribution; relog fixture endpoints must exist before InWorld restoration. Corrected both. No wire/client/schema change; base pet stats/names and live proof remain out of scope. GREEN pending.
 
 ## [2026-10-05] investigations | Fresh-character General grants
 

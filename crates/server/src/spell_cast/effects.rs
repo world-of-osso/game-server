@@ -141,6 +141,12 @@ pub fn log_unhandled(world: &mut World, spell_id: u32, effect_id: u32) {
 /// `(spell power, attack power)` of `unit`; `healing` selects its healing power.
 pub(crate) fn power_stats(world: &World, unit: Entity, healing: bool) -> (f32, f32) {
     if let Some(pet) = world.get::<crate::hunter_pet::HunterPet>(unit) {
+        if world
+            .get::<crate::hunter_pet::SummonedDemon>(unit)
+            .is_some()
+        {
+            return demon_power_stats(world, pet.owner);
+        }
         return (0.0, hunter_pet_attack_power(world, pet.owner));
     }
     world
@@ -154,6 +160,22 @@ pub(crate) fn power_stats(world: &World, unit: Entity, healing: bool) -> (f32, f
             (power, stats.attack_power)
         })
 }
+
+/// Guardian::UpdateAttackPowerAndDamage (TC StatSystem.cpp:1358-1367): demons
+/// inherit 15% spell bonus and 57% AP from the owner's fire/shadow spell power.
+/// CharacterStats currently exposes one spell-power value, not school-specific values.
+fn demon_power_stats(world: &World, owner: Entity) -> (f32, f32) {
+    let power = world
+        .get::<CharacterStats>(owner)
+        .map_or(0.0, |stats| stats.spell_power.max(0.0));
+    (
+        power * DEMON_OWNER_SPELL_POWER,
+        power * DEMON_OWNER_ATTACK_POWER,
+    )
+}
+
+const DEMON_OWNER_SPELL_POWER: f32 = 0.15;
+const DEMON_OWNER_ATTACK_POWER: f32 = 0.57;
 
 /// Heals and absorbs take healing power: Spell::EffectHeal (SpellEffects.cpp:1305),
 /// periodic heals (SpellAuraEffects.cpp:5891) and absorbs (SpellAuraEffects.cpp:807,
