@@ -204,7 +204,35 @@ fn warlock_summon_imp_spawns_owned_pet_and_firebolt_bar() {
 fn warlock_imp_attack_autocasts_firebolt_and_follow_moves_to_owner() {
     let dir = tempfile::tempdir().unwrap();
     let mut h = ImpHarness::login(&dir.path().join("pets.redb"));
+    // The live target is Northshire's neutral Training Dummy (44548), not
+    // the harness's hostile kobold. Include its real display and LOS bake.
+    let data = load_world_data(&crate::test_data::world_db_path());
+    let dummy = data.template_for(44548, 0).unwrap();
+    h.h.app.world_mut().entity_mut(h.h.caster).insert(Position {
+        x: -8949.0,
+        y: 82.6,
+        z: 132.0,
+    });
+    h.h.app.world_mut().entity_mut(h.h.npc).insert((
+        Npc {
+            template_id: 44548,
+            name: dummy.name.clone(),
+        },
+        UnitFactionTemplate(u32::from(dummy.faction)),
+        UnitFlags(dummy.unit_flags),
+        ModelDisplay { display_id: 3019 },
+        Position {
+            x: -8965.57,
+            y: 81.5936,
+            z: 146.288,
+        },
+        crate::creature_scripts::TrainingDummy::default(),
+    ));
     let pet = h.summon();
+    let los_dir = crate::ground::ground_data_dir().join("los");
+    crate::test_data::require(los_dir.join(los::eye::EYE_TABLE_FILE));
+    h.h.app
+        .insert_resource(crate::line_of_sight::LineOfSight::load(&los_dir).unwrap());
     h.order(COMMAND_ATTACK, Some(h.h.npc));
     h.advance(100);
     assert!(
@@ -222,7 +250,7 @@ fn warlock_imp_attack_autocasts_firebolt_and_follow_moves_to_owner() {
         .world_mut()
         .get_mut::<Position>(h.h.caster)
         .unwrap()
-        .x = -30.0;
+        .x -= 30.0;
     h.order(COMMAND_FOLLOW, None);
     let before = h.h.app.world().get::<Position>(pet).unwrap().x;
     h.advance(20);
