@@ -126,7 +126,7 @@ fn send_threat_updates(world: &mut World) {
             }
         }
     }
-    let connections: Vec<(Entity, Entity)> = world
+    let connections: HashMap<Entity, Entity> = world
         .query_filtered::<(Entity, &PlayerLink), (With<Authenticated>, With<MessageSender<ThreatUpdate>>)>()
         .iter(world)
         .map(|(connection, link)| (connection, link.0))
@@ -137,7 +137,7 @@ fn send_threat_updates(world: &mut World) {
     delivery.next_send = now + 0.25;
     delivery
         .sent
-        .retain(|connection, _| connections.iter().any(|(id, _)| id == connection));
+        .retain(|connection, _| connections.contains_key(connection));
     for (connection, player) in connections {
         let current = by_player
             .get(&player.to_bits())
