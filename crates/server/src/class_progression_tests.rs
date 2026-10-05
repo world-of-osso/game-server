@@ -151,6 +151,7 @@ fn setup_app(db: redb::Database, classes: ClassSpells) -> App {
     add_inbox::<TraitCommitResult>(&mut app);
     add_inbox::<shared::protocol::LogXpGain>(&mut app);
     add_inbox::<shared::protocol::PlayerXpUpdate>(&mut app);
+    add_inbox::<shared::protocol::RestStateUpdate>(&mut app);
     app.register_message::<SetSpecialization>();
     app.register_message::<SetActionButton>();
     app.register_message::<CommitTraitConfig>();
@@ -948,7 +949,6 @@ fn admin_set_rested_online_updates_pool_and_sends_owner_messages() {
     let (character_id, _) =
         persistence::create_character(&db, 1, "Restprobe", HUMAN, PALADIN).unwrap();
     let mut app = setup_app(db, class_spells().unwrap());
-    add_inbox::<RestStateUpdate>(&mut app);
     let player = spawn_player(&mut app, character_id, HUMAN, PALADIN, 1);
     app.world_mut()
         .entity_mut(player)
