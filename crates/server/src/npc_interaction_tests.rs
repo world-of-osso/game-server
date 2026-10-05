@@ -71,6 +71,9 @@ fn harness(player_faction: u32) -> Option<Harness> {
     add_inbox::<AuctionSearchResults>(&mut app);
     add_inbox::<AuctionOperationResponse>(&mut app);
     app.insert_resource(templates);
+    app.insert_resource(crate::persistence::GameDatabase {
+        db: crate::persistence::temp_database(),
+    });
     app.init_resource::<GoldUpdateQueue>();
     app.add_plugins((
         NpcInteractionPlugin,
