@@ -24,6 +24,8 @@ Abilities
 - [x] Switch Flight Style 436854 swaps Flight Style: Steady 404468 and Skyriding 404464; 460002 sets Skyriding, 460003 Steady. The next mount flies the style (Steady: steady flight capability; Skyriding: capability 494, glider, bonus bar 5, vigor).
 - [x] A skyrider's takeoff (Space, Space in the air) casts Skyward Ascent through the server: one charge spent, FORCE_CAST Lift Off 404191 on the rider; the client launches on its SpellGo and the server's bound takes off with that flap only (no charge, no launch).
 - [x] The style is saved per character and restored when it enters the world (Steady before its first switch).
+- [x] REMOVE_AURA_2 203 removes the effect's TriggerSpell auras from its selected target without an unhandled-effect warning; other spells and units retain their auras.
+- [x] An explicitly learned Lift Off 374763 cast while skyriding applies its FORCE_CAST 404191 aura for two seconds.
 
 ## Assumed values
 
@@ -45,7 +47,7 @@ Unpublished (Retail runs these in server scripts); one block in shared-protocol 
 - shared-protocol `src/skyriding.rs`: `Glider` physics, `Glider::cast`, `impulse_bound`, `ability_impulse`, FlightCapability 11, assumed values.
 - `crates/server/src/skyriding.rs`: `SkyridingImpulse`, `flap` (AfterCast).
 - `crates/server/src/spell_cast/mod.rs`: charges, `restore_charges`, LEARN_SPELL known rule, AfterCast call.
-- `crates/server/src/spell_cast/effects.rs`: MODIFY_CHARGES 293, FORCE_CAST 140.
+- `crates/server/src/spell_cast/effects.rs`: MODIFY_CHARGES 293, FORCE_CAST 140, REMOVE_AURA_2 203.
 - `crates/server/src/spell_cast/scripts.rs`: `after_cast` registry.
 - `crates/server/src/networking.rs`, `networking_movement.rs`: energy bound, `MovementClocks::add_impulse`.
 - `crates/server/src/auras/mount.rs`: Skyriding capability, flight style (saved per character, `persistence_progression::CHARACTER_FLIGHT_STYLE`).
@@ -62,7 +64,7 @@ Unpublished (Retail runs these in server scripts); one block in shared-protocol 
 
 ## Known gaps (current cycle)
 
-- [ ] Lift Off 374763 (standing launch, no charge) is not cast by anything; no DB2 row or UI code names its trigger.
+- [ ] Lift Off 374763 (standing launch, no charge) is not cast by anything; no DB2 row or UI code inspected names its trigger. Its DUMMY 450 has no TC launch script; the data has no LEAP/JUMP effect. Native trigger, permission to cast without learning, and the exact not-skyriding failure reason need authoritative evidence before implementation. See [investigation](../wiki/systems/mounts.md#lift-off-374763-investigation).
 
 ## Out of scope
 

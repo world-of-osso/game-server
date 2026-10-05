@@ -21,6 +21,10 @@ const SECOND_WIND: u32 = 425_782;
 /// Lift Off: APPLY_AURA DUMMY on the caster, 2 s (SpellDuration 39), which Skyward Ascent's
 /// effect 1 FORCE_CAST 140 casts.
 const LIFT_OFF: u32 = 404_191;
+/// Standing Lift Off: DUMMY 450 and FORCE_CAST of the two-second Lift Off aura.
+const STANDING_LIFT_OFF: u32 = 374_763;
+/// Tutorial highlights removed by Surge Forward / Skyward Ascent and Whirling Surge.
+const TUTORIAL_HIGHLIGHTS: [u32; 3] = [1_259_214, 1_259_215, 1_259_208];
 /// The Golden Gryphon (`auras::mount_tests`).
 const GOLDEN_GRYPHON: u32 = 32235;
 /// 50 ms frames: 1.55 s, past the 1.5 s global cooldown of Surge Forward and Skyward Ascent
@@ -44,6 +48,10 @@ fn skyrider() -> Option<Harness> {
             WHIRLING_SURGE,
             SECOND_WIND,
             LIFT_OFF,
+            STANDING_LIFT_OFF,
+            TUTORIAL_HIGHLIGHTS[0],
+            TUTORIAL_HIGHLIGHTS[1],
+            TUTORIAL_HIGHLIGHTS[2],
         ],
     )?;
     h.app
@@ -91,6 +99,69 @@ const SKYRIDING_CHARGES: u32 = 2391;
 
 fn failures(h: &Harness) -> Vec<CastFailReason> {
     h.inbox.failed.iter().map(|f| f.reason).collect()
+}
+
+/// TC a352b1fa SpellEffects.cpp:295,5154-5163: REMOVE_AURA_2 removes every
+/// instance of TriggerSpell from the effect's target, not other spells or units.
+#[test]
+fn skyriding_remove_aura_2_removes_only_its_targeted_tutorial_highlights() {
+    for spell_id in [SURGE_FORWARD, SKYWARD_ASCENT, WHIRLING_SURGE] {
+        let mut h = skyrider().expect("real spell and mount data");
+        for unit in [h.caster, h.npc] {
+            for spell_id in TUTORIAL_HIGHLIGHTS.into_iter().chain([LIFT_OFF]) {
+                crate::auras::apply_aura(
+                    h.app.world_mut(),
+                    &crate::auras::AuraApplication {
+                        caster: h.caster,
+                        target: unit,
+                        spell_id,
+                        effect_mask: 1,
+                        source: crate::auras::AuraSource::Cast,
+                    },
+                );
+                assert!(crate::auras::has_aura(h.app.world(), unit, spell_id));
+            }
+        }
+        h.cast_and_deliver(spell_id, None);
+        assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+        for highlight in TUTORIAL_HIGHLIGHTS {
+            let removed = if spell_id == WHIRLING_SURGE {
+                highlight == TUTORIAL_HIGHLIGHTS[2]
+            } else {
+                highlight != TUTORIAL_HIGHLIGHTS[2]
+            };
+            assert_eq!(
+                crate::auras::has_aura(h.app.world(), h.caster, highlight),
+                !removed,
+                "spell {spell_id}, highlight {highlight}"
+            );
+            assert!(crate::auras::has_aura(h.app.world(), h.npc, highlight));
+        }
+        assert!(crate::auras::has_aura(h.app.world(), h.caster, LIFT_OFF));
+        let warnings = h
+            .app
+            .world()
+            .resource::<crate::spell_cast::effects::UnhandledEffects>();
+        assert!(!warnings.0.contains(&(spell_id, 203)));
+    }
+}
+
+/// The actual data has no LEAP/JUMP effect: FORCE_CAST applies the 404191 aura.
+#[test]
+fn skyriding_standing_lift_off_applies_its_force_cast_aura() {
+    let mut h = skyrider().expect("real spell and mount data");
+    h.app
+        .world_mut()
+        .get_mut::<PlayerProfessions>(h.caster)
+        .unwrap()
+        .spells
+        .push(STANDING_LIFT_OFF);
+    h.cast_and_deliver(STANDING_LIFT_OFF, None);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert!(crate::auras::has_aura(h.app.world(), h.caster, LIFT_OFF));
+    // 404191's SpellDuration 39 is two seconds; the aura expires normally.
+    h.advance(41);
+    assert!(!crate::auras::has_aura(h.app.world(), h.caster, LIFT_OFF));
 }
 
 #[test]

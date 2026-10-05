@@ -1,5 +1,9 @@
 # Wiki Log
 
+## [2026-10-05] systems | Skyriding effect 203 and Lift Off investigation
+
+Updated [[mounts]] and the Skyriding spec: TC a352b1fa effect 203 is REMOVE_AURA_2 / EffectRemoveAura, removing TriggerSpell auras through the normal lifecycle. Recorded the real Surge Forward, Skyward Ascent and Whirling Surge tutorial-highlight removals. RED reproduced retained highlight 1259214 after Surge Forward. Explicitly learned 374763 already applies FORCE_CAST 404191 for two seconds; data contains DUMMY 450, not LEAP/JUMP. Native 374763 trigger and exact not-skyriding failure remain source-blocked; no invented launch rule, client/wire change or default grant.
+
 ## [2026-10-05] systems | Warlock Summon Imp
 
 Added [[warlock-pets]] and its spec: effect-56 MiscValue creature entry, shared pet bar/Firebolt AI, data-derived power, permanent-current relog and dismiss/death removal. Documented TC function references and the explicit level-1 kit override (imported DB2 level is 3). First targeted run passed 24 shared-pet regressions and exposed two boundaries: retail Firebolt costs Energy (not assumed mana) and needs the TC owner SP contribution; relog fixture endpoints must exist before InWorld restoration. Corrected both. No wire/client/schema change; base pet stats/names and live proof remain out of scope. Targeted proof: six imp behavior tests pass at 226c8df; level-1 grant and 24 shared-pet regressions pass at production revision 9d8acac (unchanged by fixture-only 226c8df).
