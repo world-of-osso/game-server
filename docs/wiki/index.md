@@ -65,7 +65,7 @@ Server gameplay systems.
 | [[auras]] | Aura runtime: stacking/refresh, periodic ticks, Recuperate full-health completion, procs, interrupt flags, dispel, crowd control, spell modifiers (class mask + SpellLabel), `StatModifiers` fold-in, UnitAuras replication, handled aura IDs |
 | [[tick-model]] | Observed server loop: 50ms runner/fixed cadence, schedule ownership, explicit ordering, completed player-death and broad auto-AFK scan reductions, maintenance gates, and IPC boundary |
 | [[zone-architecture]] | Maps 0 and 1 plus dungeon copies in one World by `InMap`; map transfers (NewWorld/WorldPortAck), InstanceManager, area trigger teleports; per-zone sets still proposed |
-| [[skyborne]] | Forever 95/96 faction identity, pinned source overlay, approved inferred Zephras starts, real-kit create/reopen/login/ground proof and content limits |
+| [[skyborne]] | Forever 95/96 identity, pinned authored kit decode and shared-ID isolation requirement, Zephras starts, entry/ground proof and content limits |
 | [[ground-assets]] | Registered-map local CASC closure, Forever grid/MPY2 corrections, post-sync 72-tile ground/LOS proof and authored-hole/eye-table limits |
 | [[factions]] | `UnitFactionTemplate` sources (creature_template, ChrRaces), FactionTemplate reaction rules, attack/assist checks, Wrath vs Retail ID coverage |
 | [[combat]] | Auto-attack system, NPC/player lethal transitions, split death proofs, melee hit table (miss/dodge/parry/glancing/block/crit/hit), spell formulas, stat calculations, DR curves |

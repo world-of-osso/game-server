@@ -7,6 +7,16 @@ Product `wow_classic_beta`, build `1.60.1.70205`, build key `842b2e5d11f8d6fe257
 
 Map's inline Corpse[2] and global record/string offsets are decoded, OceanLiquidTypeID has no destination column and is discarded, NavigationMaxDistance is converted from its source int32 to SQLite REAL numerically. Remaining columns retain their source types and order. No coordinates are inferred from Corpse[2].
 
+## Starting kit sources
+
+The eight additional original DB2 snapshots come from engine `data/forever-1.60.1.70205/starter-kit-probe/` in the same local product/build. Their exact FDIDs, layout hashes and SHA-256 hashes are pinned in `skyborne_data.py::SOURCES`. `definitions/` preserves the matching official WoWDBDefs and `schema-provenance.json` records their supplied source URLs/hashes.
+
+`starter-kit-rows.json` is the concrete decoded fixture: CharacterLoadout 2373–2378 (classes 4/3/1/8/7/11), Purpose 9, ModID 75, source extra field 0, masks (0,3), and 45 CharacterLoadoutItem memberships referencing 30 distinct items. Inline loadout/appearance relationships must agree with the WDC relationship map. Source-only ItemPetFoodID and ItemSparse AmmunitionType have no destination columns; Item's existing unknown Field_12_0_0_63534_010 receives its source AmmunitionType byte. ItemSparse keeps signed values, arrays and floats from the sparse decoder unchanged.
+
+All 30 requested ItemSparse IDs are readable, including the 17 absent from Retail. Readable appearance/effect membership rows select required parent IDs explicitly; missing referenced parents fail. Unrelated encrypted sections are not decoded and no completeness claim covers hidden membership rows.
+
+Shared IDs have concrete creation/count conflicts with Retail (2947 throwing weapon versus junk, 2512 ammunition versus junk, 2101 quiver versus bag, and binding changes). Existing Retail rows cannot be silently relabeled or replaced. Publication rejects collisions until an explicit source replacement or representation policy is approved.
+
 ## Creature display probe
 
 `zephras_creatures.py` pins two additional local-CASC files. Both have two encrypted sections (one row each) excluded and reported. No encrypted-row completeness claim follows.
