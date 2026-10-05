@@ -4,6 +4,10 @@
 
 Updated [[creature-aggro]] with effective healing assist threat, school-matching MOD_THREAT, and rate-limited engaged-player table/clear delivery. Existing damage table and 110%/130% victim selection retained. Targeted RED reproduced absent heal threat (200 instead of 250); 9 targeted threat tests passed, including real Flash Heal, loaded Righteous Fury, engaged-player loopback delivery and reset clear. Native target frame has no threat indicator; client Threat type uses the selected target.
 
+## [2026-10-05] systems | Capital city rested XP
+
+Updated [[experience]] and added the city-rest spec: AreaTable import/loader, MCNK position-derived areas, parent-zone capital and faction checks, existing pool/snapshot lifecycle. TC a352b1fa UpdateZone/UpdateHostileAreaState and real Trade District/Orgrimmar/Elwynn assets ground the behavior. RED reproduced Stormwind not resting (37 passed, one failed); GREEN at `39f31b2`: 41 rest tests and three AreaTable import tests pass. Full local CSV import into a private database verified 9,848 rows without touching canonical data. Canonical world.db import and live runtime are explicitly excluded from delegated authority.
+
 ## [2026-10-05] investigations | Lift Off bar and restriction evidence
 
 Updated [[mounts]] with full pinned 12.1.0.69933 Wago exports: OverrideSpellData 2106 and SpellShapeshiftForm 47 list Skyward Ascent 372610, not 374763; MountCapability 494 points to FlightCapability 11 with SpellID 372610; SpellActionBarPref 343 prefers 372610. No 374763 override/preset/preference or aura/casting-requirement row found. SpellMisc 633542 includes NOT_AN_ACTION and IGNORE_CASTER_AND_TARGET_RESTRICTIONS. Existing SpellCastIntent already carries the ID; native 374763 action/grant and exact unmounted/ground failure remain blocked. No production, wire, data, test or service change; no build required for this documentation-only milestone.

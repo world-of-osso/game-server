@@ -3,6 +3,7 @@ mod admin_handlers;
 mod admin_ipc;
 mod admin_types;
 mod appearance_collection;
+mod area_table;
 mod auction_house;
 mod auras;
 mod auth;

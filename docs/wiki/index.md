@@ -73,7 +73,7 @@ Server gameplay systems.
 | [[economy-catalog]] | Read-only world.db/TSM importer, gathered/market inputs, supplier contracts and price bounds; combined Classic+Midnight default and blocked native acceptance linked separately |
 | [[merchant]] | Vendor lists from content_npc_vendor (references, limited stock restock), buy/sell/buyback (12 session slots), repair cost from AzerothCore MaxDurability + Retail DurabilityCosts/Quality |
 | [[npc-interaction]] | Replicated `NpcFlags` (AzerothCore→Retail bits), `InteractNpc` validation (TrinityCore GetNPCIfCanInteractWith, 8.5 yd), gossip menus from world.db, role routing, per-frame session close, auction house gated on an auctioneer session and its faction house |
-| [[experience]] | Retail kill XP (gtXp, grey/zero-difference, elite, expansion /10, group split), QuestXP DB2 with low-level reduction, GiveXP level-ups, `character_xp`, health/mana refill, persisted rested pool and `set-rested`, protocol gaps |
+| [[experience]] | Retail kill XP (gtXp, grey/zero-difference, elite, expansion /10, group split), QuestXP DB2 with low-level reduction, GiveXP level-ups, `character_xp`, health/mana refill, persisted rested pool, faction-aware capital rest and `set-rested`, protocol gaps |
 
 ## investigations/
 

@@ -66,7 +66,9 @@
 
 ## Rested XP
 
-- `rest.rs` accumulates 5% of a level per 8 hours near an innkeeper, capped by shared `RestedXp` at 1.5 levels. Logout saves the pool, time and resting flag in `character_rest`; login adds elapsed offline rest at the inn or wilderness rate.
+- `rest.rs` accumulates 5% of a level per 8 hours near an innkeeper or in friendly capital territory, capped by shared `RestedXp` at 1.5 levels. Logout saves the pool, time and resting flag in `character_rest`; login adds elapsed offline rest at the inn or wilderness rate.
+- City detection reads the map's WDT/ADT MCNK area ID at header offset `0x34`, follows `AreaTable.ParentAreaID` to the root zone, and checks `Flags_0 & 0x100` (`LinkedChat`, formerly `AREA_FLAG_CAPITAL`). FactionTemplate friend/enemy groups are compared with the root zone's `FactionGroupMask`; enemy capitals do not grant city rest. `NoPvP` sanctuaries permit both factions. The server does not model War Mode/quest-forced hostility or WMO group-specific area overrides.
+- `scripts/db2.py` imports AreaTable with other DB2 tables. For existing databases, run `python3 scripts/import-area-table.py --csv <AreaTable.csv> --db <world.db> --build <source-build-or-provenance>`; it replaces only AreaTable and its `db2_build` record. Startup requires this table. The available unpinned local CSV must not be labelled with an inferred build.
 - Kills consume up to their base XP from the pool and add it as bonus XP. Quest awards leave the pool unchanged.
 - `game-server-admin set-rested <character_name> <amount>` sets the pool directly, online or offline, clamped to the character's current cap. The saved rest row is updated; an online owner immediately receives `PlayerXpUpdate` and `RestStateUpdate`. This does not change the accumulation rate. Use `GAME_SERVER_ADMIN_SOCKET` for a private server.
 
@@ -76,6 +78,8 @@
 ## Sources
 
 - [experience.rs](../../../crates/server/src/experience.rs), [experience_tests.rs](../../../crates/server/src/experience_tests.rs)
+- TrinityCore a352b1fa `Entities/Player/Player.cpp`, `Player::UpdateZone` (“Is in a capital city”) and `Player::UpdateHostileAreaState`; `DataStores/DBCEnums.h`, `AreaFlags::LinkedChat = 0x00000100`. Local `game-engine/data/AreaTable.csv`: Stormwind 1519 and Orgrimmar 1637 flags 2113848, faction masks 2/4; Trade District 5148 and Valley of Strength 5170 have mask 0 and inherit their parent zone territory.
+- [area_table.rs](../../../crates/server/src/area_table.rs), [import-area-table.py](../../../scripts/import-area-table.py), [city rest spec](../../specs/city-rest.md)
 - [rest.rs](../../../crates/server/src/rest.rs), [admin_handlers.rs](../../../crates/server/src/admin_handlers.rs) — pool lifecycle and `set-rested`
 - TrinityCore master `src/server/game/Miscellaneous/Formulas.h`, `Entities/Player/KillRewarder.cpp`, `Entities/Player/Player.cpp` (GiveXP, GiveLevel, RewardQuest), `Quests/QuestDef.cpp` (XPValue, RoundXPValue), `Entities/Creature/Creature.cpp` (IsElite, NO_XP)
 

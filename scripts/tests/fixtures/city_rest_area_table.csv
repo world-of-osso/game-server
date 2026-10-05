@@ -1,0 +1,6 @@
+ID,ZoneName,AreaName_lang,ContinentID,ParentAreaID,AreaBit,SoundProviderPref,SoundProviderPrefUnderwater,AmbienceID,UwAmbience,ZoneMusic,UwZoneMusic,IntroSound,UwIntroSound,FactionGroupMask,Ambient_multiplier,MountFlags,PvpCombatWorldStateID,WildBattlePetLevelMin,WildBattlePetLevelMax,WindSettingsID,ContentTuningID,Flags_0,Flags_1,LiquidTypeID_0,LiquidTypeID_1,LiquidTypeID_2,LiquidTypeID_3
+12,ElwynnForest,Elwynn Forest,0,0,126,0,11,604,675,1,0,670,0,2,0.15000000596,15,-1,1,2,0,73,16448,0,0,0,0,0
+1519,StormwindCity,Stormwind City,0,0,688,0,0,43,675,13,0,61,0,2,0.15000000596,15,-1,1,1,0,864,2113848,12288,0,0,0,0
+1637,Orgrimmar,Orgrimmar,1,0,707,0,0,25,675,1340,0,62,0,4,0,15,-1,1,1,0,866,2113848,12288,0,0,0,0
+5148,TheTradeDistrict,Trade District,0,1519,3933,0,0,0,675,0,0,0,0,0,0.15000000596,15,-1,0,0,0,864,1075855672,4096,0,0,0,0
+5170,ValleyofStrength,Valley of Strength,1,1637,3981,0,0,25,675,0,0,0,0,0,0,15,-1,0,0,0,866,1075855672,0,0,0,0,0

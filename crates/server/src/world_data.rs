@@ -896,6 +896,9 @@ fn startup_load_world_data(mut commands: Commands) {
         .expect("Failed to load faction_template; run scripts/db2.py import");
     info!("Loaded {} faction templates", templates.0.len());
     commands.insert_resource(templates);
+    let areas = crate::area_table::load_area_table(&conn)
+        .expect("Failed to load area_table; run scripts/import-area-table.py --csv <AreaTable.csv> --db <world.db> --build <source>");
+    commands.insert_resource(areas);
     let gossip =
         crate::npc_interaction::load_gossip_catalog(&conn).expect("Failed to load gossip menus");
     commands.insert_resource(gossip);
