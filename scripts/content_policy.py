@@ -43,6 +43,7 @@ import sys
 from pathlib import Path
 
 import derived_merchants
+import zephras_content
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
@@ -335,6 +336,14 @@ def main():
     parser.add_argument(
         "--derived-merchants", type=Path, default=DEFAULT_DERIVED_MERCHANTS
     )
+    parser.add_argument(
+        "--zephras-content", type=Path, default=zephras_content.DEFAULT_CONTENT
+    )
+    parser.add_argument(
+        "--zephras-report",
+        type=Path,
+        default=PROJECT_DIR / "target/zephras-content-report.json",
+    )
     parser.add_argument("--report", type=Path, default=DEFAULT_REPORT)
     parser.add_argument("--check", action="store_true")
     args = parser.parse_args()
@@ -343,6 +352,7 @@ def main():
     if missing:
         raise SystemExit(f"Missing content policy inputs: {', '.join(missing)}")
     merchants = derived_merchants.load_manifest(args.derived_merchants)
+    zephras = zephras_content.load_input(args.zephras_content)
     if args.check:
         return
     wrath_spell_names = read_wrath_spell_names(wrath_path)
@@ -351,6 +361,7 @@ def main():
     try:
         conn.execute("BEGIN")
         apply_policy(conn, wrath_spell_names, args.overrides, report, merchants)
+        zephras_report = zephras_content.apply_overlay(conn, *zephras)
         conn.execute("COMMIT")
     except BaseException:
         if conn.in_transaction:
@@ -359,6 +370,7 @@ def main():
     finally:
         conn.close()
     report.write(args.report)
+    zephras_content.write_report(args.zephras_report, zephras_report)
     conn = sqlite3.connect(f"file:{args.db}?mode=ro", uri=True)
     for name in sorted(
         r[0]
