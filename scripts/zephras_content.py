@@ -56,7 +56,7 @@ def clear_overlay(db):
     for ddl in DDL:
         db.execute(ddl)
     for table, encoded in db.execute(
-        "SELECT table_name,row_key FROM zephras_row_source"
+        "SELECT table_name,row_key FROM zephras_row_source WHERE kind='reconstructed'"
     ).fetchall():
         keys = json.loads(encoded)
         if not re.fullmatch(
@@ -67,7 +67,7 @@ def clear_overlay(db):
             raise ValueError(f"invalid provenance key {keys!r}")
         where = " AND ".join(f'"{key}"=?' for key in keys)
         db.execute(f'DELETE FROM "{table}" WHERE {where}', list(keys.values()))
-    db.execute("DELETE FROM zephras_row_source")
+    db.execute("DELETE FROM zephras_row_source WHERE kind='reconstructed'")
 
 
 class OverlayWriter:
@@ -77,17 +77,30 @@ class OverlayWriter:
         self.counts = Counter()
 
     def insert(self, table, values, keys, source):
+        row_key = json.dumps({key: values[key] for key in keys}, sort_keys=True)
+        where = " AND ".join(f'"{key}"=?' for key in keys)
+        if self.db.execute(
+            f'SELECT 1 FROM "{table}" WHERE {where}', [values[key] for key in keys]
+        ).fetchone():
+            raise ValueError(f"non-overlay collision in {table}: {row_key}")
+        if self.db.execute(
+            "SELECT 1 FROM zephras_row_source WHERE table_name=? AND row_key=?",
+            (table, row_key),
+        ).fetchone():
+            raise ValueError(
+                f"non-overlay collision in zephras_row_source: {table} {row_key}"
+            )
         columns = ",".join(f'"{name}"' for name in values)
         placeholders = ",".join("?" for _ in values)
         self.db.execute(
-            f'INSERT OR REPLACE INTO "{table}" ({columns}) VALUES ({placeholders})',
+            f'INSERT INTO "{table}" ({columns}) VALUES ({placeholders})',
             list(values.values()),
         )
         self.db.execute(
             "INSERT INTO zephras_row_source VALUES (?,?,?,?,?,?)",
             (
                 table,
-                json.dumps({key: values[key] for key in keys}, sort_keys=True),
+                row_key,
                 self.scrape,
                 source["source"],
                 "reconstructed",

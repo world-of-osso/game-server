@@ -46,7 +46,7 @@ class ContentOverlayTest(unittest.TestCase):
     def setUp(self):
         self.content = json.loads(FIXTURE.read_text())
         self.db = scratch_db()
-        self.addCleanup(self.db.close)
+        self.addCleanup(lambda: self.db.close())
 
     def apply(self, content=None):
         import zephras_content
@@ -56,6 +56,79 @@ class ContentOverlayTest(unittest.TestCase):
         return zephras_content.apply_overlay(
             self.db, content or self.content, catalog, decoded
         )
+
+    def test_collisions_preserve_every_non_overlay_row_on_import_and_removal(self):
+        import zephras_content
+
+        self.apply()
+        records = []
+        for table, encoded in self.db.execute(
+            "SELECT table_name,row_key FROM zephras_row_source ORDER BY table_name,row_key"
+        ):
+            keys = json.loads(encoded)
+            if any(record[0] == table for record in records):
+                continue
+            where = " AND ".join(f'"{key}"=?' for key in keys)
+            row = self.db.execute(
+                f'SELECT * FROM "{table}" WHERE {where}', list(keys.values())
+            ).fetchone()
+            if table == "content_creature_template":
+                columns = [
+                    r[1] for r in self.db.execute(f'PRAGMA table_info("{table}")')
+                ]
+                row = list(row)
+                for column, value in (
+                    ("name", "Retail sentinel"),
+                    ("minlevel", 99),
+                    ("maxlevel", 99),
+                ):
+                    row[columns.index(column)] = value
+                row = tuple(row)
+            records.append((table, row))
+        tag = self.db.execute(
+            "SELECT * FROM zephras_row_source WHERE table_name='content_creature_template' LIMIT 1"
+        ).fetchone()
+        records.append(("zephras_row_source", (*tag[:4], "retail", tag[5])))
+        empty = copy.deepcopy(self.content)
+        empty.update(npcs=[], quests=[])
+        for table, row in records:
+            with self.subTest(table=table):
+                self.db.close()
+                self.db = scratch_db()
+                for ddl in zephras_content.DDL:
+                    self.db.execute(ddl)
+                placeholders = ",".join("?" for _ in row)
+                self.db.execute(f'INSERT INTO "{table}" VALUES ({placeholders})', row)
+                self.db.commit()
+                before = "\n".join(self.db.iterdump())
+                with self.assertRaisesRegex(ValueError, f"collision.*{table}"), self.db:
+                    self.apply()
+                self.assertEqual("\n".join(self.db.iterdump()), before)
+                self.apply(empty)
+                self.assertEqual("\n".join(self.db.iterdump()), before)
+
+    def test_regeneration_removes_and_recreates_every_owned_table(self):
+        first = self.apply()
+        owned_tables = set(first["rows"]) | {"zephras_row_source"}
+        before = {
+            table: self.db.execute(f'SELECT * FROM "{table}" ORDER BY 1,2').fetchall()
+            for table in owned_tables
+        }
+        empty = copy.deepcopy(self.content)
+        empty.update(npcs=[], quests=[])
+        self.apply(empty)
+        for table in owned_tables:
+            rows = self.db.execute(f'SELECT * FROM "{table}"').fetchall()
+            self.assertEqual(
+                len(rows), 1 if table == "content_creature_template" else 0, table
+            )
+        self.assertEqual(self.apply(), first)
+        for table in owned_tables:
+            self.assertEqual(
+                self.db.execute(f'SELECT * FROM "{table}" ORDER BY 1,2').fetchall(),
+                before[table],
+                table,
+            )
 
     def test_creatures_and_quests_are_server_readable_with_row_provenance(self):
         report = self.apply()
