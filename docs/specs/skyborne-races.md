@@ -13,6 +13,8 @@ Server support for Forever races 95/96, grounded in local build 1.60.1.70205 Chr
 - [x] Reject undeclared row-ID collisions rather than replacing Retail loadout/item data; rollback publication atomically.
 - [x] Preserve Retail definitions; isolate all 30 Forever kit definitions in six `skyborne_item*` tables and project `skyborne_content_item` using the existing content policy. Full DB2/content regeneration and the additive kit refresh retain isolated definitions and exact row provenance. Standalone publication rolls back the entire overlay if content projection fails.
 
+- [ ] Import exactly nine source-pinned Forever item-scaling CSVs atomically into isolated `skyborne_` tables in an existing owned scratch database; preserve Retail schemas/rows/provenance. Validate build, FDID/layout/raw/schema pins, CSV hashes/columns/row IDs and required levels before publication; missing/tampered source or SQL failure leaves no partial refresh. Publish only authored fields and exact per-row raw provenance, never Retail scaling substitutes.
+
 ## How it works
 
 - [Skyborne system](../wiki/systems/skyborne.md)
@@ -23,6 +25,7 @@ Server support for Forever races 95/96, grounded in local build 1.60.1.70205 Chr
 - `crates/server/src/race_class.rs`, `faction.rs` — allowed pairs, masks and faction identity.
 - `scripts/skyborne_data.py`, `db2_casc.py` — pinned local source decode and selected-row import.
 - `scripts/db2.py` — atomic Retail regeneration with overlay.
+- `scripts/skyborne_scaling_data.py`, `scripts/reference/forever-scaling-70205.json` — isolated source-pinned scaling publication.
 - `crates/server/src/skyborne_faction_fixture.rs` — decoder-generated SQLite reaction fixture; no live overlay required.
 
 ## Tests asserting this spec
@@ -31,6 +34,8 @@ Server support for Forever races 95/96, grounded in local build 1.60.1.70205 Chr
 - `crates/server/src/auth_character_tests.rs` — creation, storage reopen and message-boundary selection; not sufficient alone for kit-content proof.
 - `crates/server/src/skyborne_kit_tests.rs` — importer-generated exact ten-pair counts, source-local equipment and redb reopen, Retail preservation and required-content failure.
 - `scripts/tests/test_skyborne_data.py`, `test_skyborne_kits.py` — source decoding, full DB2/content regeneration, conflicting shared definitions preserved separately, missing source/parent rollback, and corruption/collision rejection.
+
+- `scripts/tests/test_skyborne_scaling_data.py` — actual catalog floats, deterministic publication, Retail SQL/blob preservation, exact provenance, missing/tampered source and process-level rollback.
 
 ## Known gaps (current cycle)
 
