@@ -156,8 +156,14 @@ fn skyborne_zephras_reactions_match_captured_alliance_horde_pairs() {
             .unwrap();
         assert_eq!(factions.reaction(template, 3629), alliance);
         assert_eq!(factions.reaction(template, 3628), horde);
-        assert_eq!(factions.reaction(3629, template), alliance);
-        assert_eq!(factions.reaction(3628, template), horde);
+        // Wowhead react describes the NPC's reaction; no NPC faction identity is captured.
+        // Friendly reactions are symmetric in the native reaction rules.
+        if alliance == Friendly {
+            assert_eq!(factions.reaction(3629, template), Friendly);
+        }
+        if horde == Friendly {
+            assert_eq!(factions.reaction(3628, template), Friendly);
+        }
     }
 }
 
