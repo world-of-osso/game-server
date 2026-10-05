@@ -21,7 +21,7 @@ fn load_kit(path: &Path) -> OwnedKit {
     let conn = Connection::open(path).unwrap();
     OwnedKit {
         create_info: load_player_create_infos(&conn).unwrap(),
-        templates: crate::item_templates::load_item_templates(path).unwrap(),
+        templates: crate::item_templates::load_runtime_item_templates(path).unwrap(),
         catalog: crate::merchant::load_vendor_catalog(&conn).unwrap(),
     }
 }
