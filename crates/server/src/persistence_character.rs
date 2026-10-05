@@ -466,8 +466,27 @@ pub(crate) fn start_location(race: u8) -> StartLocation {
         22 => start(0, -1451.0, 1403.0, 35.0),    // Worgen — Gilneas
         52 | 32 | 85 | 86 => STORMWIND, // Dracthyr, Kul Tiran, Earthen, Haranir (Alliance)
         70 | 84 | 91 => ORGRIMMAR,      // Dracthyr, Earthen, Haranir (Horde)
+        // User-approved Wowhead Forever reconstruction, 3 yd east of Ailee Farheart.
+        95 => start(2991, 4088.501, 1847.5, 976.169),
+        // Inferred near Ventaari Brightwish; no captured race-96 level-1 intro.
+        96 => start(2991, 4051.417, 1858.625, 977.620),
         _ => start(0, -8949.0, -132.0, 83.0), // Fallback to Human start
     }
+}
+
+/// WoW facing at the reconstructed starts: atan2(giver Y - start Y, giver X - start X).
+/// Existing persistence stores no facing; apply only while still at the selected start.
+pub(crate) fn reconstructed_start_facing(data: &CharacterData) -> Option<f32> {
+    let (giver_x, giver_y) = match data.race {
+        95 => (4088.501_f32, 1850.5_f32),
+        96 => (4051.417_f32, 1861.625_f32),
+        _ => return None,
+    };
+    let location = start_location(data.race);
+    if (data.x, data.y, data.z) != (location.x, location.y, location.z) {
+        return None;
+    }
+    Some((giver_y - location.y).atan2(giver_x - location.x))
 }
 
 fn default_character_data(
