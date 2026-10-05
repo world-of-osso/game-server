@@ -71,6 +71,7 @@ fn frozen_character() -> FrozenCharacterWithDurability {
             entries: vec![EquippedAppearanceEntry {
                 slot: EquipmentVisualSlot::Feet,
                 item_id: Some(6123),
+                definition_source: Some(shared::item_data::ItemDefinitionSource::Retail),
                 display_info_id: Some(154620),
                 inventory_type: 8,
                 hidden: false,

@@ -46,6 +46,7 @@ fn initialize(path: &std::path::Path) -> Database {
             entries: vec![EquippedAppearanceEntry {
                 slot: EquipmentVisualSlot::Head,
                 item_id: None,
+                definition_source: None,
                 display_info_id: None,
                 inventory_type: 0,
                 hidden: true,

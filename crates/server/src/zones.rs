@@ -768,6 +768,7 @@ mod tests {
             entries: vec![EquippedAppearanceEntry {
                 slot: EquipmentVisualSlot::MainHand,
                 item_id: Some(item_id),
+                definition_source: Some(shared::item_data::ItemDefinitionSource::Retail),
                 display_info_id: Some(display_info_id),
                 inventory_type: 13,
                 hidden: false,

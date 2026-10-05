@@ -309,6 +309,7 @@ fn selecting_zero_health_character_queues_one_death_transition() {
     data.equipment_appearance.entries = vec![EquippedAppearanceEntry {
         slot: EquipmentVisualSlot::Head,
         item_id: Some(100),
+        definition_source: Some(shared::item_data::ItemDefinitionSource::Retail),
         display_info_id: Some(200),
         inventory_type: 1,
         hidden: false,

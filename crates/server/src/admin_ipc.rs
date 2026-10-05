@@ -1644,6 +1644,7 @@ mod tests {
             entries: vec![shared::components::EquippedAppearanceEntry {
                 slot: shared::components::EquipmentVisualSlot::Chest,
                 item_id: Some(100),
+                definition_source: Some(shared::item_data::ItemDefinitionSource::Retail),
                 display_info_id: Some(777),
                 inventory_type: 5,
                 hidden: false,
@@ -1722,6 +1723,7 @@ mod tests {
             entries: vec![shared::components::EquippedAppearanceEntry {
                 slot: shared::components::EquipmentVisualSlot::Chest,
                 item_id: None,
+                definition_source: None,
                 display_info_id: None,
                 inventory_type: 0,
                 hidden: true,

@@ -1085,6 +1085,7 @@ fn stockade_guard_wields_its_virtual_items() {
     let entry = |slot, item_id, display_info_id, inventory_type| EquippedAppearanceEntry {
         slot,
         item_id: Some(item_id),
+        definition_source: Some(shared::item_data::ItemDefinitionSource::Retail),
         display_info_id: Some(display_info_id),
         inventory_type,
         hidden: false,
