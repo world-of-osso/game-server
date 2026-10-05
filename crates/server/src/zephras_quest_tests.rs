@@ -79,6 +79,22 @@ fn spawn_imported_giver(app: &mut App, client: &Client, entry: u32) -> u64 {
         .expect("imported giver within 5 yards of approved start on map 2991");
     let spawn = crate::world_data::load_spawn(&conn, guid).expect("runtime spawn loader");
     assert_eq!(spawn.template_entry, entry);
+    let (display_id, name): (u32, String) = conn
+        .query_row(
+            "SELECT m.CreatureDisplayID,t.name FROM content_creature_template_model m
+         JOIN content_creature_template t ON t.entry=m.CreatureID
+         WHERE m.CreatureID=?1 ORDER BY m.Idx LIMIT 1",
+            [entry],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        )
+        .expect("captured NPC-page appearance");
+    let expected_display = match entry {
+        251362 => 136968,
+        251487 => 139694,
+        251361 => 136966,
+        _ => panic!("unexpected fixture giver {entry}"),
+    };
+    assert_eq!(display_id, expected_display);
     let (x, y, z) =
         crate::terrain_height::wow_to_bevy(spawn.position_x, spawn.position_y, spawn.position_z);
     app.world_mut()
@@ -86,8 +102,9 @@ fn spawn_imported_giver(app: &mut App, client: &Client, entry: u32) -> u64 {
             crate::maps::InMap::continent(2991),
             Npc {
                 template_id: entry,
-                name: String::new(),
+                name,
             },
+            shared::components::ModelDisplay { display_id },
             Position { x, y, z },
         ))
         .id()
