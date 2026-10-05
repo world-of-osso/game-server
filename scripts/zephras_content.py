@@ -122,12 +122,8 @@ def faction_row(react):
     return values
 
 
-def npc_models(npc, catalog):
-    record = catalog.get(npc["id"], {})
-    models = record.get("models", [])
-    if models:
-        return models
-    # These are captured displays, not replacements for unresolved client rows.
+def npc_models(npc):
+    # Captured Forever NPC pages are the appearance source; no client-table substitution.
     return [
         {"display_id": display, "probability": 1.0, "scale": 1.0}
         for display in npc["displayIds"]
@@ -198,7 +194,7 @@ def import_npcs(writer, content, catalog, report):
             writer.insert("faction_template", faction, ["ID"], npc)
             factions.add(faction["ID"])
         writer.insert("content_creature_template", template, ["entry"], npc)
-        models = npc_models(npc, catalog)
+        models = npc_models(npc)
         if not models:
             report["unresolved_display_npcs"].append(npc["id"])
         for index, model in enumerate(models):
@@ -422,13 +418,16 @@ def apply_overlay(db, content, catalog, decoded):
         "db2_npcs": sum(npc["id"] in catalog for npc in content["npcs"]),
         "wowhead_npcs": sum(bool(npc["displayIds"]) for npc in content["npcs"]),
     }
+    # Full captured catalog, including NPCs omitted for unknown levels/terrain or referenced elsewhere.
     report["engine_display_ids"] = sorted(
+        {display for npc in content["npcs"] for display in npc["displayIds"]}
+    )
+    report["spawn_display_ids"] = sorted(
         {
             row[0]
             for row in db.execute(
                 "SELECT CreatureDisplayID FROM content_creature_template_model WHERE CreatureID IN "
-                "(SELECT entry FROM content_creature_template WHERE entry IN "
-                "(SELECT id1 FROM content_creature WHERE map=2991))"
+                "(SELECT id1 FROM content_creature WHERE map=2991)"
             )
         }
     )

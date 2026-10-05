@@ -120,7 +120,21 @@ class ContentOverlayTest(unittest.TestCase):
             (0,),
         )
         self.assertEqual(report["display_coverage"]["db2_npcs"], 0)
-        self.assertEqual(report["engine_display_ids"], [136966, 136971])
+        self.assertEqual(
+            report["engine_display_ids"], [136536, 136966, 136968, 136971, 139694]
+        )
+        self.assertEqual(
+            self.db.execute(
+                "SELECT CreatureDisplayID FROM content_creature_template_model WHERE CreatureID=251362"
+            ).fetchone(),
+            (136968,),
+        )
+        self.assertEqual(
+            self.db.execute(
+                "SELECT CreatureDisplayID FROM content_creature_template_model WHERE CreatureID=251487"
+            ).fetchone(),
+            (139694,),
+        )
         self.assertEqual(report["rows"]["content_quest_template"], 4)
         tags = self.db.execute(
             "SELECT scrape,source_url,kind FROM zephras_row_source"
@@ -135,6 +149,32 @@ class ContentOverlayTest(unittest.TestCase):
             )
         )
         self.assertEqual(len(tags), sum(report["rows"].values()))
+
+    def test_page_displays_are_primary_and_full_list_keeps_ungrounded_models(self):
+        import zephras_content
+        import zephras_creatures
+
+        content = copy.deepcopy(self.content)
+        npc = next(n for n in content["npcs"] if n["id"] == 251487)
+        npc["coords"][0]["world"]["z"] = None
+        npc["coords"][0]["world"]["z_status"] = "missing-root"
+        catalog, decoded = zephras_creatures.load_catalog()
+        # Actual decoded pet appearance must not replace a captured NPC-page appearance.
+        catalog[251362] = catalog[2671]
+        report = zephras_content.apply_overlay(self.db, content, catalog, decoded)
+        self.assertEqual(
+            self.db.execute(
+                "SELECT CreatureDisplayID FROM content_creature_template_model WHERE CreatureID=251362"
+            ).fetchone(),
+            (136968,),
+        )
+        self.assertIn(139694, report["engine_display_ids"])
+        self.assertEqual(
+            self.db.execute(
+                "SELECT count(*) FROM content_creature WHERE id1=251487"
+            ).fetchone(),
+            (0,),
+        )
 
     def test_unknown_z_and_unknown_levels_do_not_create_spawns(self):
         content = copy.deepcopy(self.content)

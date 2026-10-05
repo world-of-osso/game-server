@@ -432,16 +432,17 @@
         0,
         0
       ],
-      "displayIds": [],
+      "displayIds": [
+        136536
+      ],
       "coords": [
         {
           "zone": 16593,
-          "uiMap": null,
+          "uiMap": 2521,
           "percent": [
             42.4,
             27.8
           ],
-          "source": "https://www.wowhead.com/forever/quest=92461",
           "world": {
             "x": 3925.3342722167968,
             "y": 1872.75,
@@ -457,12 +458,11 @@
         },
         {
           "zone": 16593,
-          "uiMap": null,
+          "uiMap": 2521,
           "percent": [
             43.2,
             25.4
           ],
-          "source": "https://www.wowhead.com/forever/quest=92461",
           "world": {
             "x": 4014.334191162109,
             "y": 1828.2499999999995,
@@ -481,8 +481,8 @@
       "trainer": null,
       "starts_quests": [],
       "ends_quests": [],
-      "source": "https://www.wowhead.com/forever/zone=16593",
-      "page_captured": false
+      "source": "https://www.wowhead.com/forever/npc=250873",
+      "page_captured": true
     },
     {
       "id": 251361,
@@ -555,16 +555,17 @@
         1,
         1
       ],
-      "displayIds": [],
+      "displayIds": [
+        136968
+      ],
       "coords": [
         {
           "zone": 16593,
-          "uiMap": null,
+          "uiMap": 2521,
           "percent": [
             42.8,
             23.4
           ],
-          "source": "https://www.wowhead.com/forever/quest=92460",
           "world": {
             "x": 4088.500790283203,
             "y": 1850.5,
@@ -585,8 +586,8 @@
         92460
       ],
       "ends_quests": [],
-      "source": "https://www.wowhead.com/forever/zone=16593",
-      "page_captured": false
+      "source": "https://www.wowhead.com/forever/npc=251362",
+      "page_captured": true
     },
     {
       "id": 251487,
@@ -600,16 +601,17 @@
         -1,
         1
       ],
-      "displayIds": [],
+      "displayIds": [
+        139694
+      ],
       "coords": [
         {
           "zone": 16593,
-          "uiMap": null,
+          "uiMap": 2521,
           "percent": [
             42.6,
             24.4
           ],
-          "source": "https://www.wowhead.com/forever/quest=92598",
           "world": {
             "x": 4051.417490722656,
             "y": 1861.625,
@@ -632,8 +634,8 @@
       "ends_quests": [
         92598
       ],
-      "source": "https://www.wowhead.com/forever/zone=16593",
-      "page_captured": false
+      "source": "https://www.wowhead.com/forever/npc=251487",
+      "page_captured": true
     }
   ],
   "objects": []
