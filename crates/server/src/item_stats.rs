@@ -408,9 +408,9 @@ fn quality_table(
     load_map(conn, &sql, |row| Ok((row.get(0)?, floats(row, 1)?)))
 }
 
-const RAND_PROP_SQL: &str = "SELECT ID, EpicF_0, EpicF_1, EpicF_2, EpicF_3, EpicF_4, \
+const RAND_PROP_COLUMNS: &str = "ID, EpicF_0, EpicF_1, EpicF_2, EpicF_3, EpicF_4, \
      SuperiorF_0, SuperiorF_1, SuperiorF_2, SuperiorF_3, SuperiorF_4, \
-     GoodF_0, GoodF_1, GoodF_2, GoodF_3, GoodF_4 FROM rand_prop_points";
+     GoodF_0, GoodF_1, GoodF_2, GoodF_3, GoodF_4";
 
 fn load_squish(conn: &Connection) -> rusqlite::Result<Option<(u8, Vec<(f64, f64)>)>> {
     let era: Option<(u8, i64)> = conn
@@ -437,33 +437,61 @@ fn load_squish(conn: &Connection) -> rusqlite::Result<Option<(u8, Vec<(f64, f64)
 
 pub fn load_item_scaling_tables(path: &Path) -> rusqlite::Result<ItemScalingTables> {
     let conn = Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
-    let rand_prop_points = load_map(&conn, RAND_PROP_SQL, |row| {
+    load_scaling_namespace(&conn, "", load_squish(&conn)?)
+}
+
+pub fn load_forever_item_scaling_tables(path: &Path) -> rusqlite::Result<ItemScalingTables> {
+    let conn = Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
+    // The pinned Forever schema has no modern ItemSquishEra curve.
+    load_scaling_namespace(&conn, "skyborne_", None)
+}
+
+fn load_scaling_namespace(
+    conn: &Connection,
+    table_prefix: &str,
+    squish: Option<(u8, Vec<(f64, f64)>)>,
+) -> rusqlite::Result<ItemScalingTables> {
+    let table = |name: &str| format!("{table_prefix}{name}");
+    let rand_prop_sql = format!(
+        "SELECT {RAND_PROP_COLUMNS} FROM {}",
+        table("rand_prop_points")
+    );
+    let rand_prop_points = load_map(conn, &rand_prop_sql, |row| {
         Ok((
             row.get(0)?,
             [floats(row, 1)?, floats(row, 6)?, floats(row, 11)?],
         ))
     })?;
     let spell_budgets = load_map(
-        &conn,
-        "SELECT ID, DamageReplaceStatF, DamageSecondaryF, SuperiorF_0 FROM rand_prop_points",
+        conn,
+        &format!(
+            "SELECT ID, DamageReplaceStatF, DamageSecondaryF, SuperiorF_0 FROM {}",
+            table("rand_prop_points")
+        ),
         |row| Ok((row.get(0)?, [row.get(1)?, row.get(2)?, row.get(3)?])),
     )?;
     let armor_total = load_map(
-        &conn,
-        "SELECT ItemLevel, Cloth, Leather, Mail, Plate FROM item_armor_total",
+        conn,
+        &format!(
+            "SELECT ItemLevel, Cloth, Leather, Mail, Plate FROM {}",
+            table("item_armor_total")
+        ),
         |row| Ok((row.get(0)?, floats(row, 1)?)),
     )?;
     let armor_location = load_map(
-        &conn,
-        "SELECT ID, Clothmodifier, Leathermodifier, Chainmodifier, Platemodifier FROM armor_location",
+        conn,
+        &format!(
+            "SELECT ID, Clothmodifier, Leathermodifier, Chainmodifier, Platemodifier FROM {}",
+            table("armor_location")
+        ),
         |row| Ok((row.get(0)?, floats(row, 1)?)),
     )?;
-    let damage = |table| quality_table(&conn, table, "ItemLevel", "Quality");
+    let damage = |name| quality_table(conn, &table(name), "ItemLevel", "Quality");
     Ok(ItemScalingTables {
         rand_prop_points,
         spell_budgets,
-        armor_quality: quality_table(&conn, "item_armor_quality", "ID", "Qualitymod")?,
-        armor_shield: quality_table(&conn, "item_armor_shield", "ItemLevel", "Quality")?,
+        armor_quality: quality_table(conn, &table("item_armor_quality"), "ID", "Qualitymod")?,
+        armor_shield: quality_table(conn, &table("item_armor_shield"), "ItemLevel", "Quality")?,
         armor_total,
         armor_location,
         damage: [
@@ -472,7 +500,7 @@ pub fn load_item_scaling_tables(path: &Path) -> rusqlite::Result<ItemScalingTabl
             damage("item_damage_two_hand")?,
             damage("item_damage_two_hand_caster")?,
         ],
-        squish: load_squish(&conn)?,
+        squish,
     })
 }
 
@@ -494,6 +522,13 @@ fn startup_load_item_scaling_tables(mut commands: Commands) {
         tables.rand_prop_points.len()
     );
     commands.insert_resource(tables);
+    let forever = load_forever_item_scaling_tables(path).unwrap_or_else(|error| {
+        panic!(
+            "load isolated Forever scaling from {}: {error}; run scripts/skyborne_scaling_data.py",
+            path.display()
+        )
+    });
+    commands.insert_resource(ForeverItemScalingTables(forever));
 }
 
 #[cfg(test)]
