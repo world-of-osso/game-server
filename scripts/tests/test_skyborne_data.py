@@ -1,6 +1,7 @@
 """Pinned Forever DB2 decoding and scratch-only Skyborne publication."""
 
 import csv
+import json
 import shutil
 import sqlite3
 import subprocess
@@ -88,6 +89,17 @@ class SkyborneImportTest(unittest.TestCase):
             conn = sqlite3.connect(root / "scratch.db")
             conn.executescript((SCRIPTS / "db2_schema.sql").read_text())
             conn.execute("INSERT INTO map (ID, Directory) VALUES (0, 'Azeroth')")
+            retail = json.loads((SOURCE / "retail-kit-runtime-rows.json").read_text())
+            for table, records in retail.items():
+                for row in records:
+                    conn.execute(
+                        f"INSERT INTO {table} ({','.join(row)}) VALUES ({','.join('?' for _ in row)})",
+                        tuple(row.values()),
+                    )
+            expected_retail = {
+                table: conn.execute(f"SELECT * FROM {table} ORDER BY ID").fetchall()
+                for table in retail
+            }
             conn.commit()
             for table in db2.TABLES:
                 name = db2.table_name(table)
@@ -131,6 +143,33 @@ class SkyborneImportTest(unittest.TestCase):
                             "SELECT Directory FROM map WHERE ID=0"
                         ).fetchone(),
                         ("Azeroth",),
+                    )
+                    for table, records in retail.items():
+                        ids = [row["ID"] for row in records]
+                        self.assertEqual(
+                            check.execute(
+                                f"SELECT * FROM {table} WHERE ID IN ({','.join('?' for _ in ids)}) ORDER BY ID",
+                                ids,
+                            ).fetchall(),
+                            expected_retail[table],
+                        )
+                    self.assertEqual(
+                        check.execute(
+                            "SELECT COUNT(*) FROM skyborne_item_sparse"
+                        ).fetchone(),
+                        (30,),
+                    )
+                    self.assertEqual(
+                        check.execute(
+                            "SELECT ClassID,SubclassID FROM skyborne_item WHERE ID=2947"
+                        ).fetchone(),
+                        (2, 16),
+                    )
+                    self.assertEqual(
+                        check.execute(
+                            "SELECT ClassID,SubclassID FROM item WHERE ID=2947"
+                        ).fetchone(),
+                        (15, 0),
                     )
 
     def test_import_preserves_retail_rows_and_records_exact_source(self):
