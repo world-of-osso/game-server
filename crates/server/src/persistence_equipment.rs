@@ -215,10 +215,16 @@ fn append_granted_items(
             .push(EquippedAppearanceEntry {
                 slot,
                 item_id: Some(item.item_id),
+                definition_source: Some(shared::item_data::ItemDefinitionSource::Retail),
                 display_info_id: None,
                 inventory_type: item.inventory_type,
                 hidden: false,
             });
+        super::inventory_store::write_item_definition_source(
+            txn,
+            guid,
+            shared::item_data::ItemDefinitionSource::Retail,
+        );
     }
     counters.insert("item_instance", guid)?;
     Ok(())
