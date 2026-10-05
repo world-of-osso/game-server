@@ -1366,3 +1366,28 @@ fn level_10_mage_specs_replace_frostbolt_like_retail() {
     assert_eq!(bolts(10, 64), vec![116]);
     assert_eq!(bolts(9, 1449), vec![116]);
 }
+
+/// General (skill 183) content abilities carry SPELL_ATTR13_UNK16 and are not taught to a
+/// fresh character; ordinary General spells still are
+/// (docs/wiki/investigations/general-spell-grants.md).
+#[test]
+fn fresh_paladin_knows_general_basics_but_no_content_abilities() {
+    let Some(classes) = class_spells() else {
+        return;
+    };
+    let known = known_ids(&classes, HUMAN, PALADIN, 1, SPEC_RETRIBUTION);
+    // Auto Attack, Armor Skills, Weapon Skills, The Human Spirit.
+    for spell in [6603, 76271, 76294, 20598] {
+        assert!(known.contains(&spell), "missing General spell {spell}");
+    }
+    // Garrison Ability, Covenant Ability, Sanity Restoration Orb, Summon Pocopoc,
+    // Return to the Story, Exit Lorewalking, G-99 Breakneck, View Next Adventure, Throw.
+    for spell in [
+        161691, 313347, 314955, 360078, 466325, 467538, 1215279, 1236329, 385265,
+    ] {
+        assert!(
+            !known.contains(&spell),
+            "content ability {spell} was taught"
+        );
+    }
+}
