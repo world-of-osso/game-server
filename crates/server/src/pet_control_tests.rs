@@ -73,6 +73,7 @@ struct PetHarness {
     h: Harness,
     pet: Entity,
     bars: Vec<PetSpells>,
+    clears: usize,
 }
 
 /// The level 10 hunter at the origin with its wolf called out and the Kobold Vermin
@@ -129,6 +130,7 @@ fn hunter_logged_in(path: &Path) -> Option<PetHarness> {
         pet: Entity::PLACEHOLDER,
         h,
         bars: Vec::new(),
+        clears: 0,
     };
     harness.advance(2);
     harness.h.cast(CALL_PET_1, None);
@@ -156,6 +158,14 @@ impl PetHarness {
                     .unwrap()
                     .receive(),
             );
+            self.clears += self
+                .h
+                .app
+                .world_mut()
+                .get_mut::<MessageReceiver<PetClearSpells>>(connection)
+                .unwrap()
+                .receive()
+                .count();
         }
     }
 
@@ -309,15 +319,7 @@ fn hunter_pet_dismiss_command_abandons_the_saved_wolf() {
     assert_eq!(stable.summoned, None);
     assert_eq!(stable.stored.current, None);
     assert!(stable.stored.active[0].is_none());
-    assert_eq!(
-        p.h.app
-            .world_mut()
-            .get_mut::<MessageReceiver<PetClearSpells>>(p.h.connection)
-            .unwrap()
-            .receive()
-            .count(),
-        1
-    );
+    assert_eq!(p.clears, 1);
     drop(p);
     let db = open_db(&path);
     let saved = crate::persistence::pet_store::load_pet_stable(&db.db, CHARACTER_ID).unwrap();
