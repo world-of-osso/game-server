@@ -202,10 +202,9 @@ fn moving_cancels_cast_time_spell_without_effects() {
 }
 
 #[test]
-fn kick_interrupts_target_cast_and_locks_its_school() {
-    let Some(mut h) = harness(Vec::new(), &[KICK, FIREBALL], 4) else {
-        return;
-    };
+fn kick_interrupts_target_cast_and_locks_its_school_combat_log_metadata() {
+    let mut h = harness(Vec::new(), &[KICK, FIREBALL], 4).expect("spell fixture");
+    let before = std::time::SystemTime::now();
     // NPCs do not cast yet; give the NPC a Fireball cast bar directly.
     h.app
         .world_mut()
@@ -235,15 +234,9 @@ fn kick_interrupts_target_cast_and_locks_its_school() {
         "names the interrupted spell"
     );
     assert_eq!(interrupt.school_mask, fire);
-    let since_epoch = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .unwrap()
-        .as_millis() as u64;
-    assert!(
-        (since_epoch - 60_000..=since_epoch).contains(&interrupt.timestamp_unix_ms),
-        "server wall clock, got {}",
-        interrupt.timestamp_unix_ms
-    );
+    assert_eq!(interrupt.source, Some(h.caster.to_bits()));
+    assert_eq!(interrupt.target, Some(h.npc.to_bits()));
+    assert_combat_log_metadata(&log, before);
 }
 
 #[test]
