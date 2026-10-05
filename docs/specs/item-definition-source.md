@@ -4,13 +4,13 @@ Item definition identity belongs to the item GUID, not its owner or race. Server
 
 ## What it must do
 
-- [ ] Distinguish Retail and Forever70205 GUIDs sharing item ID 2947, including database close/reopen.
-- [ ] Preserve both identities when two owners exchange those GUIDs through the existing inventory-record write transaction.
+- [x] Distinguish Retail and Forever70205 GUIDs sharing item ID 2947, including database close/reopen.
+- [x] Preserve both identities when two owners exchange those GUIDs through the existing inventory-record write transaction.
 - [ ] Interpret absent legacy markers as Retail by representation, without querying another catalog.
 - [ ] Reject malformed markers and attempts to change an existing GUID's source explicitly.
 - [ ] Preserve source metadata through inventory-model record conversion and copy it when the model mints a duplicate or split GUID.
-- [ ] Resolve owned definitions and equipped scaling by `(source, authored item ID)`, independent of owner race; missing selected catalogs fail explicitly.
-- [ ] Never merge stacks with different sources, including splits into occupied slots and bank deposits.
+- [x] Resolve owned definitions and equipped scaling by `(source, authored item ID)`, independent of owner race; missing selected catalogs fail explicitly.
+- [x] Never merge stacks with different sources, including splits into occupied slots and bank deposits.
 - [ ] Preserve source through actual trade, mail, bank, guild-bank, auction and buyback transfers and emitted item records.
 - [ ] Keep known Retail content minting explicitly Retail; isolate authored Forever creation.
 
