@@ -163,27 +163,10 @@ class CreatureEventImportTests(unittest.TestCase):
         scripts = self.root / "scripts"
         scripts.mkdir()
         (self.root / "data").mkdir()
-        for name in (
-            "import-azerothcore.sh",
-            "world_schema.sql",
-            "db2.py",
-            "db2_casc.py",
-            "skyborne_data.py",
-            "zephras_creatures.py",
-            "zephras_content.py",
-            "db2_schema.sql",
-            "mysql_dump.py",
-            "content_common.py",
-            "retail_content.py",
-            "wowhead_loot.py",
-            "content_policy.py",
-            "derived_merchants.py",
-            "economy_crafting.py",
-            "tdb_schema.sql",
-            "crafting_data.py",
-            "crafting_schema.sql",
-        ):
-            shutil.copy2(SCRIPTS / name, scripts / name)
+        # Snapshot production scripts, not a hand-maintained transitive dependency list.
+        for pattern in ("*.py", "*.sql", "*.sh"):
+            for source in SCRIPTS.glob(pattern):
+                shutil.copy2(source, scripts / source.name)
         (scripts / "content_overrides.csv").write_text(
             "kind,source_id,retail_id,source_name,retail_name,reason\n"
         )
