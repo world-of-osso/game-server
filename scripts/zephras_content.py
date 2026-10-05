@@ -439,7 +439,7 @@ def apply_overlay(db, content, catalog, decoded):
         "Retained RewardSpell IDs have no native reward-spell grant handler",
         "Quest faction-side restrictions retained in provenance; native quest rules have no side field. Source race masks are unchanged",
         "Unknown creature type/classification use schema zero, not a guessed classification",
-        "Unresolved NPC displays cannot be rendered as their intended models",
+        "Client CDI rows and model assets are provisioned separately; no rendered-client proof",
     ]
     return report
 

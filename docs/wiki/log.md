@@ -58,6 +58,10 @@ Added [[warlock-pets]] and its spec: effect-56 MiscValue creature entry, shared 
 
 Added [[general-spell-grants]]: read-only SQLite/CSV comparison of 41 captured entries; Attributes_13 bit 16 marks 31 content abilities plus Throw, while ordinary entries clear it. Other requested fields do not separate them. Unknown bit semantics and Throw eligibility block a verified rule; no server code/data change or behavioral proof.
 
+## [2026-10-04] systems/spec | Refreshed Forever capture and NPC appearances
+
+Updated [[content-import]], [[skyborne]] and content contract after retry: all 146 normalized quests/298 NPCs/3 objects captured; historical 403/missing-display claims superseded. NPC-page appearances are primary, including Ailee 136968/Ventaari 139694; full 235-CDI list exports all captured appearances, not just 174 grounded-spawn IDs. Scratch overlay now has 278 templates/1,199 grounded observations/278 model rows/146 quests. Approved starts and race-96 inference unchanged; 20 level omissions, 27 giver links, 49 blocked completions, 109 absent rewards and native/client asset gaps remain explicit.
+
 ## [2026-10-04] systems/spec | Approved reconstructed Zephras starts and content
 
 Updated [[skyborne]], [[content-import]], index and contracts: approved starts/facing, hosted-map gate, ten-pair real-kit reopen/login/terrain proof, supported start ground, native quest acceptance/XP and level-2/event boundary. Recorded 276 templates/878 grounded observations/136 quests, atomic regeneration/provenance, unchanged source masks, 0/295 DB2 display coverage and three captured displays. Missing pages, starting-giver models, native quest-side/reputation/reward-spell/event support and full terrain closure remain explicit gaps. Scratch-only publication; no engine checkout, live world DB or player storage writes.
