@@ -9,6 +9,7 @@ use shared::components::{
 use shared::protocol::{CombatChannel, CombatLogKind};
 
 use super::*;
+use crate::auth::InWorld;
 use crate::hunter_pet::HunterPetPlugin;
 use crate::persistence::{self, GameDatabase};
 use crate::spell_cast::test_harness::{Harness, harness_with_plugins};
@@ -19,6 +20,22 @@ const FIREBOLT: u32 = 3110;
 const DISMISS_PET: u32 = 2641;
 const WARLOCK: u8 = 9;
 const IMP: u32 = 416;
+
+// The generic cast harness enters the world before returning. Defer that one
+// entry until this fixture installs level-1 state and pet message endpoints.
+fn defer_initial_pet_login(
+    mut commands: Commands,
+    connections: Query<Entity, Added<InWorld>>,
+    mut deferred: Local<bool>,
+) {
+    if *deferred {
+        return;
+    }
+    for connection in &connections {
+        commands.entity(connection).remove::<InWorld>();
+        *deferred = true;
+    }
+}
 
 struct ImpHarness {
     h: Harness,
@@ -47,7 +64,8 @@ impl ImpHarness {
                 app.insert_resource(data);
                 app.insert_resource(spells);
                 app.insert_resource(GameDatabase { db });
-                app.add_plugins(crate::creature_ai::CreatureAiPlugin);
+                app.add_plugins((HunterPetPlugin, crate::creature_ai::CreatureAiPlugin));
+                app.add_systems(PreUpdate, defer_initial_pet_login);
                 app.add_systems(
                     FixedUpdate,
                     (
@@ -72,12 +90,10 @@ impl ImpHarness {
         ));
         // Install the real login boundary only after the level and pet-message
         // endpoints exist. The generic harness has already performed one update.
-        h.app.add_plugins(HunterPetPlugin);
         h.app
             .world_mut()
             .entity_mut(h.connection)
-            .remove::<crate::auth::InWorld>()
-            .insert(crate::auth::InWorld { character_id: 1 });
+            .insert(InWorld { character_id: 1 });
         h.app.world_mut().entity_mut(h.npc).insert(Position {
             x: 15.0,
             y: 0.0,
