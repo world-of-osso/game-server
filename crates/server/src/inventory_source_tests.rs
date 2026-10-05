@@ -263,6 +263,31 @@ fn owned_sources_merge_split_and_partial_trade_keep_explicit_origin() {
 }
 
 #[test]
+fn owned_sources_missing_trade_guid_refuses_without_mutation() {
+    let db = persistence::temp_database();
+    let templates = catalog();
+    save_inventory_record(&db, 1, &record(95, 501, 2947, 1, Forever70205));
+    save_inventory_record(&db, 2, &record(1, 502, 2947, 1, Retail));
+    let before = persistence::load_inventory(&db, 1);
+    let result = super::trade_support::execute_completed_trade(
+        &db,
+        &templates,
+        &CompletedTrade {
+            initiator: 1,
+            target: 2,
+            initiator_offer: offer(999, 1),
+            target_offer: TradeOffer::default(),
+        },
+        &mut GoldUpdateQueue::default(),
+    );
+    assert_eq!(
+        result,
+        Err(super::trade_support::ExchangeRefusal::OfferGone(1))
+    );
+    assert_eq!(persistence::load_inventory(&db, 1), before);
+}
+
+#[test]
 fn owned_sources_missing_forever_catalog_is_error_not_retail_fallback() {
     let db = persistence::temp_database();
     save_inventory_record(&db, 1, &record(1, 401, 2947, 1, Forever70205));
