@@ -98,6 +98,49 @@ fn item_sources_unmarked_legacy_guid_is_retail() {
 }
 
 #[test]
+fn item_sources_model_duplicate_split_and_partial_take_keep_provenance() {
+    use crate::inventory_model::InventoryModel;
+    use crate::item_templates::ItemTemplates;
+    use shared::protocol::ItemLocation;
+
+    let db = super::super::temp_database();
+    let mut original = record("Forever", 601);
+    original.inventory.items[0].stack_count = 4;
+    original
+        .inventory
+        .items
+        .push(original.inventory.items[0].clone());
+    original.definition_sources.insert(601, Forever70205);
+    save_inventory_record(&db, 1, &original);
+    let loaded = load_inventory_record(&db, 1).unwrap();
+    let mut model = InventoryModel::from_record(loaded, &ItemTemplates::default(), &mut || 602);
+    model
+        .split(
+            ItemLocation::Bag { bag: 0, slot: 0 },
+            ItemLocation::Bag { bag: 0, slot: 2 },
+            1,
+            603,
+        )
+        .unwrap();
+    let taken = model.take_bag_item(602, 2, &mut || 604).unwrap();
+    assert_eq!((taken.item_guid, taken.stack_count), (604, 2));
+    let saved = model.into_record();
+    assert_eq!(
+        saved
+            .inventory
+            .items
+            .iter()
+            .map(|item| (item.item_guid, item.stack_count))
+            .collect::<Vec<_>>(),
+        vec![(601, 3), (602, 2), (603, 1)]
+    );
+    save_inventory_record(&db, 1, &saved);
+    for guid in [601, 602, 603, 604] {
+        assert_eq!(load_item_definition_source(&db, guid), Forever70205);
+    }
+}
+
+#[test]
 #[should_panic(expected = "invalid item definition source 255 for GUID 404")]
 fn item_sources_malformed_marker_fails_explicitly() {
     let db = super::super::temp_database();
