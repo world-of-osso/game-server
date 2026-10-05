@@ -30,7 +30,7 @@ pub const INSTANCE_UNLOAD_DELAY_SECS: f64 = 1800.0;
 const MIN_UNLOAD_DELAY_SECS: f64 = 1.0;
 
 /// The world maps the server hosts; other world maps are refused.
-pub const HOSTED_CONTINENTS: [u32; 2] = [0, 1];
+pub const HOSTED_CONTINENTS: [u32; 3] = [0, 1, 2991];
 
 /// Maps whose NPCs the client has appearance data for (game-engine
 /// data/cache/npc_appearance.sqlite covers maps 0, 1, 34 The Stockade and 670 Grim
