@@ -228,6 +228,20 @@ fn warlock_imp_attack_autocasts_firebolt_and_follow_moves_to_owner() {
         },
         crate::creature_scripts::TrainingDummy::default(),
     ));
+    let conn = Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let wdt: u32 = conn
+        .query_row("SELECT WdtFileDataID FROM map WHERE ID = 0", [], |row| {
+            row.get(0)
+        })
+        .unwrap();
+    h.h.app.insert_resource(crate::ground::GroundMap::new(
+        &crate::ground::ground_data_dir(),
+        std::collections::HashMap::from([(0, wdt)]),
+    ));
     let pet = h.summon();
     let los_dir = crate::ground::ground_data_dir().join("los");
     crate::test_data::require(los_dir.join(los::eye::EYE_TABLE_FILE));
