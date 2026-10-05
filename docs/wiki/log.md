@@ -58,6 +58,10 @@ Added [[warlock-pets]] and its spec: effect-56 MiscValue creature entry, shared 
 
 Added [[general-spell-grants]]: read-only SQLite/CSV comparison of 41 captured entries; Attributes_13 bit 16 marks 31 content abilities plus Throw, while ordinary entries clear it. Other requested fields do not separate them. Unknown bit semantics and Throw eligibility block a verified rule; no server code/data change or behavioral proof.
 
+## [2026-10-05] systems/spec | Owned source runtime boundary
+
+Updated [[inventory]] and [source contract](../specs/item-definition-source.md): source-qualified catalogs, stacking, explicit incoming origin, owner transfers, auction minted-GUID transaction markers, source-local equipped scaling and wire records. Targeted trade/reopen and mixed-source regressions added; compile/proof status remains revision-scoped, not a final acceptance claim. Unowned content-source and Classic-parity gaps remain explicit.
+
 ## [2026-10-05] systems/spec | GUID-owned definition sources
 
 Updated [[inventory]] and [source contract](../specs/item-definition-source.md): additive immutable GUID markers preserve Retail/Forever identity independently of owner transfers without altering inventory or soulbound encodings. Targeted persistence tests cover reopen, two-owner transaction exchange, legacy Retail and invalid/changed markers; creation/runtime integration remains separate.

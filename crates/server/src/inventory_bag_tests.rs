@@ -288,9 +288,16 @@ fn store_new(model: &mut InventoryModel, item_id: u32, count: u32) -> Result<(),
         vendor_sell_price: 0,
         unique_auction: false,
     };
-    let template = *test_templates().get(item_id).unwrap();
+    let template = *test_templates()
+        .get(shared::item_data::ItemDefinitionSource::Retail, item_id)
+        .unwrap();
     model
-        .store_item(item, template, &mut mint)
+        .store_item(
+            item,
+            shared::item_data::ItemDefinitionSource::Retail,
+            template,
+            &mut mint,
+        )
         .map_err(|error| error.reason)
 }
 

@@ -494,6 +494,7 @@ fn selling_linen_pays_its_sell_price_and_buyback_returns_it() {
         lists,
         vec![BuybackList {
             items: vec![BuybackItem {
+                definition_source: shared::item_data::ItemDefinitionSource::Retail,
                 slot: 0,
                 item_id: LINEN,
                 name: "Linen Cloth".into(),

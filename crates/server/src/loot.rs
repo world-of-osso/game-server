@@ -156,7 +156,7 @@ impl LootStore<'_> {
                 count,
             } => {
                 let template = templates
-                    .get(item_id)
+                    .get(shared::item_data::ItemDefinitionSource::Retail, item_id)
                     .copied()
                     .ok_or(LootError::NoPermission)?;
                 let goods = self.catalog.goods.get(&item_id);
@@ -176,7 +176,12 @@ impl LootStore<'_> {
                     unique_auction: false,
                 };
                 model
-                    .store_item(item, template, &mut mint)
+                    .store_item(
+                        item,
+                        shared::item_data::ItemDefinitionSource::Retail,
+                        template,
+                        &mut mint,
+                    )
                     .map_err(|_| LootError::InventoryFull)?;
             }
         }

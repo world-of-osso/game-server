@@ -130,7 +130,7 @@ fn eligible_item_ids(config: &Config, templates: &ItemTemplates) -> FixtureResul
             return Err(format!("invalid catalog metadata for {id}").into());
         }
         let template = templates
-            .get(id)
+            .get(shared::item_data::ItemDefinitionSource::Retail, id)
             .ok_or_else(|| format!("missing world template {id}"))?;
         if template.max_stack == 0 {
             return Err(format!("zero max_stack for {id}").into());
@@ -160,7 +160,9 @@ fn fixture_offer(
     expiry: u64,
 ) -> FixtureResult<AuctionData> {
     let item_id = item_ids[((id - 1) % item_ids.len() as u64) as usize];
-    let template = templates.get(item_id).expect("validated template");
+    let template = templates
+        .get(shared::item_data::ItemDefinitionSource::Retail, item_id)
+        .expect("validated template");
     let metadata = &config.items[&item_id];
     let market = &config.markets[&item_id];
     let draw = (id - 1) / item_ids.len() as u64;
@@ -267,8 +269,12 @@ fn assert_fixture_pages(auctions: &HashMap<u64, AuctionData>, distinct: usize) {
         page: 1,
         ..first_query.clone()
     };
-    let first = browse_for_viewer(auctions, &first_query, None, None);
-    let second = browse_for_viewer(auctions, &second_query, None, None);
+    let first = browse_for_viewer(auctions, &first_query, None, None, &|_| {
+        shared::item_data::ItemDefinitionSource::Retail
+    });
+    let second = browse_for_viewer(auctions, &second_query, None, None, &|_| {
+        shared::item_data::ItemDefinitionSource::Retail
+    });
     assert_eq!(first.total_results as usize, distinct);
     assert_eq!(second.total_results as usize, distinct);
     assert_eq!(first.items.len(), 50);
@@ -288,8 +294,12 @@ fn assert_fixture_pages(auctions: &HashMap<u64, AuctionData>, distinct: usize) {
         page: 1,
         ..item_query.clone()
     };
-    let offers = search_auctions(auctions, &item_query);
-    let offers_second = search_auctions(auctions, &item_second_query);
+    let offers = search_auctions(auctions, &item_query, &|_| {
+        shared::item_data::ItemDefinitionSource::Retail
+    });
+    let offers_second = search_auctions(auctions, &item_second_query, &|_| {
+        shared::item_data::ItemDefinitionSource::Retail
+    });
     assert!(offers.total_results > 50);
     assert_eq!(offers_second.total_results, offers.total_results);
     assert!(!offers_second.results.is_empty());

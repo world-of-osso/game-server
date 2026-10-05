@@ -5,7 +5,9 @@
 //! `Guild::_DoItemsMove` for the guild bank): stacks of the same item are topped up
 //! first, then empty slots are filled, tab by tab in the order given. Nothing
 //! changes when the whole stack doesn't fit.
+use shared::item_data::ItemDefinitionSource;
 use shared::protocol::{BANK_TAB_SLOTS, ItemStack};
+use std::collections::HashMap;
 
 use crate::persistence::InventoryItemData;
 
@@ -38,13 +40,18 @@ impl BankTabData {
 pub struct TabsFull;
 
 /// Wire view of a tab's slots; `soulbound` tells whether an item guid is bound.
-pub fn tab_slots(tab: &BankTabData, soulbound: impl Fn(u64) -> bool) -> Vec<Option<ItemStack>> {
+pub fn tab_slots(
+    tab: &BankTabData,
+    soulbound: impl Fn(u64) -> bool,
+    source: impl Fn(u64) -> shared::item_data::ItemDefinitionSource,
+) -> Vec<Option<ItemStack>> {
     tab.slots
         .iter()
         .map(|slot| {
             slot.as_ref().map(|item| ItemStack {
                 item_guid: item.item_guid,
                 item_id: item.item_id,
+                definition_source: source(item.item_guid),
                 count: item.stack_count,
                 durability: None,
                 soulbound: soulbound(item.item_guid),
@@ -60,8 +67,10 @@ pub fn deposit(
     order: &[usize],
     item: InventoryItemData,
     max_stack: u32,
+    sources: &mut HashMap<u64, ItemDefinitionSource>,
     mint: &mut impl FnMut() -> u64,
 ) -> Result<(), TabsFull> {
+    let source = sources[&item.item_guid];
     let max_stack = max_stack.max(1);
     let room: u32 = order
         .iter()
@@ -69,7 +78,7 @@ pub fn deposit(
         .flat_map(|tab| &tab.slots)
         .map(|slot| match slot {
             None => max_stack,
-            Some(other) if other.item_id == item.item_id => {
+            Some(other) if other.item_id == item.item_id && sources[&other.item_guid] == source => {
                 max_stack.saturating_sub(other.stack_count)
             }
             Some(_) => 0,
@@ -85,7 +94,11 @@ pub fn deposit(
             continue;
         };
         for other in tab.slots.iter_mut().flatten() {
-            if left > 0 && other.item_id == item.item_id && other.stack_count < max_stack {
+            if left > 0
+                && other.item_id == item.item_id
+                && sources[&other.item_guid] == source
+                && other.stack_count < max_stack
+            {
                 let moved = left.min(max_stack - other.stack_count);
                 other.stack_count += moved;
                 left -= moved;
@@ -99,11 +112,31 @@ pub fn deposit(
             let mut stack = item.clone();
             stack.item_guid = guid.take().unwrap_or_else(&mut *mint);
             stack.stack_count = count;
+            sources.insert(stack.item_guid, source);
             *slot = Some(stack);
             left -= count;
         }
     }
     Ok(())
+}
+
+/// Read GUID identity separately from the unchanged bank row encoding.
+pub(crate) fn load_tab_definition_sources(
+    db: &redb::Database,
+    tabs: &[BankTabData],
+) -> HashMap<u64, ItemDefinitionSource> {
+    tabs.iter()
+        .flat_map(|tab| tab.slots.iter().flatten())
+        .map(|item| {
+            (
+                item.item_guid,
+                crate::persistence::inventory_store::load_item_definition_source(
+                    db,
+                    item.item_guid,
+                ),
+            )
+        })
+        .collect()
 }
 
 /// Take the whole stack in `tab`/`slot`.

@@ -116,11 +116,21 @@ fn one_based_bit(id: u8) -> Option<u64> {
 }
 
 #[derive(Resource, Debug, Default, Clone)]
-pub struct ItemTemplates(pub HashMap<u32, ItemTemplate>);
+pub struct ItemTemplates {
+    pub retail: HashMap<u32, ItemTemplate>,
+    pub forever: HashMap<u32, ItemTemplate>,
+}
 
 impl ItemTemplates {
-    pub fn get(&self, item_id: u32) -> Option<&ItemTemplate> {
-        self.0.get(&item_id)
+    pub fn get(
+        &self,
+        source: shared::item_data::ItemDefinitionSource,
+        item_id: u32,
+    ) -> Option<&ItemTemplate> {
+        match source {
+            shared::item_data::ItemDefinitionSource::Retail => self.retail.get(&item_id),
+            shared::item_data::ItemDefinitionSource::Forever70205 => self.forever.get(&item_id),
+        }
     }
 }
 
@@ -210,7 +220,19 @@ fn template_from_row(row: &Row) -> rusqlite::Result<(u32, ItemTemplate)> {
 
 pub fn load_item_templates(path: &Path) -> rusqlite::Result<ItemTemplates> {
     let conn = Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
-    Ok(ItemTemplates(load_item_template_rows(&conn, ITEM_QUERY)?))
+    Ok(ItemTemplates {
+        retail: load_item_template_rows(&conn, ITEM_QUERY)?,
+        forever: HashMap::new(),
+    })
+}
+
+/// Production catalog: both namespaces, no substitution.
+pub fn load_runtime_item_templates(path: &Path) -> rusqlite::Result<ItemTemplates> {
+    let conn = Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
+    Ok(ItemTemplates {
+        retail: load_item_template_rows(&conn, ITEM_QUERY)?,
+        forever: load_skyborne_item_templates(&conn)?,
+    })
 }
 
 pub(crate) fn load_skyborne_item_templates(
@@ -247,9 +269,13 @@ impl Plugin for ItemTemplatesPlugin {
 
 fn startup_load_item_templates(mut commands: Commands) {
     let path = Path::new(crate::spell_info::WORLD_DB_PATH);
-    let templates = load_item_templates(path)
+    let templates = load_runtime_item_templates(path)
         .unwrap_or_else(|error| panic!("load content_item from {}: {error}", path.display()));
-    info!("Loaded {} item templates", templates.0.len());
+    info!(
+        "Loaded {} Retail and {} Forever70205 item templates",
+        templates.retail.len(),
+        templates.forever.len()
+    );
     commands.insert_resource(templates);
 }
 

@@ -1,6 +1,7 @@
 use super::*;
 use crate::gold::{GoldUpdateQueue, record_persisted_gold};
 use crate::npc_interaction::ActiveInteraction;
+use redb::ReadableDatabase;
 
 pub(super) fn initialize_auction_state(
     db: Option<Res<GameDatabase>>,
@@ -66,12 +67,19 @@ pub(super) fn search_for_viewer(
     query: &AuctionSearchQuery,
     templates: Option<&crate::item_templates::ItemTemplates>,
     viewer: Option<(u8, u8, u16)>,
+    sources: super::queries::DefinitionSources<'_>,
 ) -> AuctionSearchResults {
     if query.class_id.is_none() && !query.usable_only {
-        return search_auctions(auctions, query);
+        return search_auctions(auctions, query, sources);
     }
-    super::queries::search_auctions_matching(auctions, query, |auction| {
-        auction_matches_viewer(auction, query, templates, viewer)
+    super::queries::search_auctions_matching(auctions, query, sources, |auction| {
+        auction_matches_viewer(
+            auction,
+            query,
+            templates,
+            viewer,
+            sources(auction.item.item_guid),
+        )
     })
 }
 
@@ -80,11 +88,14 @@ pub(super) fn auction_matches_viewer(
     query: &AuctionSearchQuery,
     templates: Option<&crate::item_templates::ItemTemplates>,
     viewer: Option<(u8, u8, u16)>,
+    source: shared::item_data::ItemDefinitionSource,
 ) -> bool {
     if query.class_id.is_none() && !query.usable_only {
         return true;
     }
-    let Some(template) = templates.and_then(|templates| templates.get(auction.item.item_id)) else {
+    let Some(template) =
+        templates.and_then(|templates| templates.get(source, auction.item.item_id))
+    else {
         return false;
     };
     if query
@@ -100,6 +111,7 @@ pub(super) fn auction_matches_viewer(
 }
 
 pub(super) fn process_browse_requests(
+    db: Option<Res<GameDatabase>>,
     mut receivers: SessionReceiver<shared::protocol::QueryAuctionBrowse>,
     state: Res<AuctionHouseState>,
     templates: Option<Res<crate::item_templates::ItemTemplates>>,
@@ -111,6 +123,15 @@ pub(super) fn process_browse_requests(
     mut senders: Query<&mut MessageSender<shared::protocol::AuctionBrowseResults>>,
     mut rejections: Query<&mut MessageSender<AuctionOperationResponse>>,
 ) {
+    let Some(db) = db else {
+        return;
+    };
+    let txn = db.db.begin_read().expect("begin auction source read");
+    let source_table = txn
+        .open_table(persistence::inventory_store::ITEM_DEFINITION_SOURCES)
+        .expect("open auction sources");
+    let load_source =
+        |guid| persistence::inventory_store::read_item_definition_source(&source_table, guid);
     for_each_session_request(&mut receivers, |entity, _, house, mut req| {
         let Some(house) = house else {
             send_auction_message(&mut rejections, entity, err(NO_AUCTIONEER));
@@ -136,12 +157,14 @@ pub(super) fn process_browse_requests(
                 &req.query,
                 templates.as_deref(),
                 viewer,
+                &load_source,
             ),
         );
     });
 }
 
 pub(super) fn process_query_requests(
+    db: Option<Res<GameDatabase>>,
     mut receivers: SessionReceiver<QueryAuctions>,
     state: Res<AuctionHouseState>,
     templates: Option<Res<crate::item_templates::ItemTemplates>>,
@@ -153,6 +176,15 @@ pub(super) fn process_query_requests(
     mut senders: Query<&mut MessageSender<AuctionSearchResults>>,
     mut rejections: Query<&mut MessageSender<AuctionOperationResponse>>,
 ) {
+    let Some(db) = db else {
+        return;
+    };
+    let txn = db.db.begin_read().expect("begin auction source read");
+    let source_table = txn
+        .open_table(persistence::inventory_store::ITEM_DEFINITION_SOURCES)
+        .expect("open auction sources");
+    let load_source =
+        |guid| persistence::inventory_store::read_item_definition_source(&source_table, guid);
     for_each_session_request(&mut receivers, |entity, _, house, mut req| {
         let Some(house) = house else {
             send_auction_message(&mut rejections, entity, err(NO_AUCTIONEER));
@@ -173,7 +205,13 @@ pub(super) fn process_query_requests(
         send_auction_message(
             &mut senders,
             entity,
-            search_for_viewer(&state.auctions, &req.query, templates.as_deref(), viewer),
+            search_for_viewer(
+                &state.auctions,
+                &req.query,
+                templates.as_deref(),
+                viewer,
+                &load_source,
+            ),
         );
     });
 }
@@ -191,16 +229,32 @@ pub(super) fn process_inventory_requests(
             return;
         }
         let inventory = persistence::load_inventory(&db.db, character_id);
-        send_auction_message(&mut senders, entity, inventory_snapshot(&inventory));
+        send_auction_message(
+            &mut senders,
+            entity,
+            inventory_snapshot(&inventory, &|guid| {
+                persistence::inventory_store::load_item_definition_source(&db.db, guid)
+            }),
+        );
     });
 }
 
 pub(super) fn process_owned_requests(
+    db: Option<Res<GameDatabase>>,
     mut receivers: SessionReceiver<QueryOwnedAuctions>,
     state: Res<AuctionHouseState>,
     mut senders: Query<&mut MessageSender<OwnedAuctionListResponse>>,
     mut rejections: Query<&mut MessageSender<AuctionOperationResponse>>,
 ) {
+    let Some(db) = db else {
+        return;
+    };
+    let txn = db.db.begin_read().expect("begin auction source read");
+    let source_table = txn
+        .open_table(persistence::inventory_store::ITEM_DEFINITION_SOURCES)
+        .expect("open auction sources");
+    let load_source =
+        |guid| persistence::inventory_store::read_item_definition_source(&source_table, guid);
     for_each_session_request(&mut receivers, |entity, character_id, house, _| {
         if house.is_none() {
             send_auction_message(&mut rejections, entity, err(NO_AUCTIONEER));
@@ -210,18 +264,28 @@ pub(super) fn process_owned_requests(
             .auctions
             .values()
             .filter(|auction| auction.seller_character_id == character_id)
-            .map(to_listing_summary)
+            .map(|auction| to_listing_summary(auction, &load_source))
             .collect();
         send_auction_message(&mut senders, entity, OwnedAuctionListResponse { listings });
     });
 }
 
 pub(super) fn process_bid_list_requests(
+    db: Option<Res<GameDatabase>>,
     mut receivers: SessionReceiver<QueryBidAuctions>,
     state: Res<AuctionHouseState>,
     mut senders: Query<&mut MessageSender<BidAuctionListResponse>>,
     mut rejections: Query<&mut MessageSender<AuctionOperationResponse>>,
 ) {
+    let Some(db) = db else {
+        return;
+    };
+    let txn = db.db.begin_read().expect("begin auction source read");
+    let source_table = txn
+        .open_table(persistence::inventory_store::ITEM_DEFINITION_SOURCES)
+        .expect("open auction sources");
+    let load_source =
+        |guid| persistence::inventory_store::read_item_definition_source(&source_table, guid);
     for_each_session_request(&mut receivers, |entity, character_id, house, _| {
         if house.is_none() {
             send_auction_message(&mut rejections, entity, err(NO_AUCTIONEER));
@@ -231,7 +295,7 @@ pub(super) fn process_bid_list_requests(
             .auctions
             .values()
             .filter(|auction| auction.current_bidder_character_id == Some(character_id))
-            .map(to_listing_summary)
+            .map(|auction| to_listing_summary(auction, &load_source))
             .collect();
         send_auction_message(&mut senders, entity, BidAuctionListResponse { listings });
     });

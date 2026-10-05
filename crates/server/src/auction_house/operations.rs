@@ -142,6 +142,8 @@ pub(super) fn create_auction(
     } else {
         inventory.items[validated.item_index].stack_count -= req.stack_count;
     }
+    let source =
+        persistence::inventory_store::load_item_definition_source(db, validated.source.item_guid);
     let auction = AuctionData {
         auction_id: persistence::next_id(db, "auction"),
         seller_character_id: character_id,
@@ -162,6 +164,7 @@ pub(super) fn create_auction(
     };
     let changes = MarketChanges {
         auctions: vec![auction.clone()],
+        definition_sources: vec![(auction.item.item_guid, source)],
         expected_inventories: vec![(character_id, validated.inventory)],
         inventories: vec![(character_id, inventory)],
         ..Default::default()
