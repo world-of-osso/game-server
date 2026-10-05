@@ -86,6 +86,7 @@ SOURCES.update(
         ),
     }
 )
+ISOLATED_TABLES = frozenset(SOURCES) - set(BASE_TABLES)
 # ItemSparse.dbd 6FCC3191: stored-field indices (before array flattening).
 SPARSE_ARRAYS = {14: 10, 15: 10, 16: 10, 21: 2, 27: 5, 42: 2, 55: 3}
 SPARSE_TYPES = dict.fromkeys(
@@ -268,7 +269,8 @@ def validate_loadout_selector(record):
 
 def insert_sourced_row(connection, table, record, columns):
     """Only faction/map have the existing declared selected-row replacement policy."""
-    fdid, layout, _, digest = SOURCES[table]
+    source_table = table.removeprefix("skyborne_")
+    fdid, layout, _, digest = SOURCES[source_table]
     provenance = (table, record["ID"], BUILD, fdid, f"{layout:08X}", digest)
     values = tuple(record[column] for column in columns)
     current = connection.execute(
@@ -290,15 +292,93 @@ def insert_sourced_row(connection, table, record, columns):
     )
 
 
+def validate_item_rows(rows):
+    if not ISOLATED_TABLES.intersection(rows):
+        return
+    references = {row["ItemID"] for row in rows["character_loadout_item"]}
+    required = {"item": references, "item_sparse": references}
+    for table, parent, field in (
+        ("item_effect", "item_x_item_effect", "ItemEffectID"),
+        ("item_appearance", "item_modified_appearance", "ItemAppearanceID"),
+    ):
+        required[table] = {row[field] for row in rows[parent] if row[field]}
+    for table, ids in required.items():
+        missing = ids - {row["ID"] for row in rows[table]}
+        if missing:
+            raise ValueError(f"missing required {table} rows: {sorted(missing)}")
+
+
+def create_isolated_table(connection, table):
+    ddl = (SCRIPTS / "db2_schema.sql").read_text()
+    body = ddl.split(f"CREATE TABLE {table} (", 1)[1].split("\n);", 1)[0]
+    connection.execute(f"CREATE TABLE IF NOT EXISTS skyborne_{table} ({body}\n)")
+
+
 def import_rows(connection, rows):
-    """Caller owns the transaction; per-row provenance preserves the Retail table build."""
-    connection.execute(PROVENANCE_DDL)
-    for table, records in rows.items():
-        columns = [row[1] for row in connection.execute(f"PRAGMA table_info({table})")]
-        for record in records:
-            if table == "character_loadout":
-                validate_loadout_selector(record)
-            insert_sourced_row(connection, table, record, columns)
+    """Atomic overlay; never change a Retail item definition or commit caller changes."""
+    validate_item_rows(rows)
+    connection.execute("SAVEPOINT skyborne_overlay")
+    try:
+        connection.execute(PROVENANCE_DDL)
+        for source_table, records in rows.items():
+            table = source_table
+            if source_table in ISOLATED_TABLES:
+                create_isolated_table(connection, source_table)
+                table = f"skyborne_{source_table}"
+            columns = [
+                row[1] for row in connection.execute(f"PRAGMA table_info({table})")
+            ]
+            for record in records:
+                if table == "character_loadout":
+                    validate_loadout_selector(record)
+                insert_sourced_row(connection, table, record, columns)
+    except BaseException:
+        connection.execute("ROLLBACK TO skyborne_overlay")
+        connection.execute("RELEASE skyborne_overlay")
+        raise
+    connection.execute("RELEASE skyborne_overlay")
+
+
+def project_items(connection):
+    """Rebuild isolated content with the existing item projection, never Retail substitutes."""
+    if (
+        connection.execute(
+            "SELECT 1 FROM sqlite_master WHERE name='skyborne_item'"
+        ).fetchone()
+        is None
+    ):
+        return
+    from content_policy import ITEM_COLUMNS
+
+    references = {
+        row[0]
+        for row in connection.execute(
+            "SELECT li.ItemID FROM character_loadout_item li JOIN db2_row_source p "
+            "ON p.table_name='character_loadout_item' AND p.row_id=li.ID WHERE p.build=?",
+            (BUILD,),
+        )
+    }
+    for table in ("skyborne_item", "skyborne_item_sparse"):
+        present = {row[0] for row in connection.execute(f"SELECT ID FROM {table}")}
+        missing = references - present
+        if missing:
+            raise ValueError(f"missing required {table} rows: {sorted(missing)}")
+    projection = ITEM_COLUMNS.replace(
+        "item_modified_appearance", "skyborne_item_modified_appearance"
+    ).replace("JOIN item_appearance", "JOIN skyborne_item_appearance")
+    connection.execute("DROP TABLE IF EXISTS skyborne_content_item")
+    connection.execute(
+        f"CREATE TABLE skyborne_content_item AS SELECT {projection}, NULL AS SourceEntry FROM skyborne_item_sparse s JOIN skyborne_item i ON i.ID=s.ID"
+    )
+    connection.execute(
+        "CREATE UNIQUE INDEX skyborne_content_item_id ON skyborne_content_item(ID)"
+    )
+    connection.execute(
+        "DELETE FROM db2_row_source WHERE table_name='skyborne_content_item'"
+    )
+    connection.execute(
+        "INSERT INTO db2_row_source SELECT 'skyborne_content_item',row_id,build,file_data_id,layout_hash,sha256 FROM db2_row_source WHERE table_name='skyborne_item_sparse'"
+    )
 
 
 def main():
@@ -315,7 +395,10 @@ def main():
         connection,
     ):
         import_rows(connection, rows)
-    print("Forever 1.60.1.70205: imported faction templates 3628/3629 and map 2991")
+        project_items(connection)
+    print(
+        "Forever 1.60.1.70205: imported factions/map, six loadouts and 30 isolated kit items"
+    )
 
 
 if __name__ == "__main__":
