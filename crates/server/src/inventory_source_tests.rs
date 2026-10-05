@@ -299,3 +299,98 @@ fn owned_sources_missing_forever_catalog_is_error_not_retail_fallback() {
     assert_eq!(error.reason, InventoryErrorReason::ItemNotFound);
     assert!(error.detail.unwrap().contains("Forever70205"));
 }
+
+#[test]
+fn source_requirements_bag_and_owned_counts_ignore_forever_collisions() {
+    for id in [2947, 2512, 2101] {
+        let db = persistence::temp_database();
+        let mut templates = catalog();
+        let plain = templates.retail[&2512];
+        templates.retail.insert(id, plain);
+        templates.forever.insert(id, plain);
+        save_inventory_record(&db, 1, &record(1, 801, id, 7, Forever70205));
+        let model = load_model(&db, &templates, 1).unwrap();
+        assert_eq!(
+            model.bag_count(Retail, id),
+            0,
+            "Retail bag requirement for {id}"
+        );
+        assert_eq!(
+            model.owned_count(Retail, id),
+            0,
+            "Retail unique limit for {id}"
+        );
+        assert_eq!(model.bag_count(Forever70205, id), 7);
+        assert_eq!(model.owned_count(Forever70205, id), 7);
+    }
+}
+
+#[test]
+fn source_requirements_removal_refuses_forever_only_without_mutation() {
+    for id in [2947, 2512, 2101] {
+        let db = persistence::temp_database();
+        let mut templates = catalog();
+        let plain = templates.retail[&2512];
+        templates.retail.insert(id, plain);
+        templates.forever.insert(id, plain);
+        save_inventory_record(&db, 1, &record(95, 811, id, 7, Forever70205));
+        let mut model = load_model(&db, &templates, 1).unwrap();
+        let before = model.view();
+        assert!(
+            model.destroy_bag_items(Retail, id, 2).is_err(),
+            "Retail removal for {id}"
+        );
+        assert_eq!(model.view(), before);
+    }
+}
+
+#[test]
+fn source_requirements_removal_skips_forever_first_stack() {
+    for id in [2947, 2512, 2101] {
+        let db = persistence::temp_database();
+        let mut templates = catalog();
+        let plain = templates.retail[&2512];
+        templates.retail.insert(id, plain);
+        templates.forever.insert(id, plain);
+        let mut mixed = record(95, 821, id, 7, Forever70205);
+        mixed.inventory.items.push(InventoryItemData {
+            item_guid: 822,
+            stack_count: 3,
+            ..mixed.inventory.items[0].clone()
+        });
+        mixed.definition_sources.insert(822, Retail);
+        save_inventory_record(&db, 1, &mixed);
+        let mut model = load_model(&db, &templates, 1).unwrap();
+        model.destroy_bag_items(Retail, id, 2).unwrap();
+        let view = model.view();
+        assert_eq!(view[&bag(0)].count, 7, "Forever stack {id} remains");
+        assert_eq!(view[&bag(1)].count, 1);
+        model.destroy_bag_items(Forever70205, id, 7).unwrap();
+        assert_eq!(model.bag_count(Forever70205, id), 0);
+        assert_eq!(model.bag_count(Retail, id), 1);
+    }
+}
+
+#[test]
+fn source_requirements_quest_removal_skips_forever_first_stack() {
+    for id in [2947, 2512, 2101] {
+        let db = persistence::temp_database();
+        let mut mixed = record(1, 831, id, 7, Forever70205);
+        mixed.inventory.items.push(InventoryItemData {
+            item_guid: 832,
+            stack_count: 3,
+            ..mixed.inventory.items[0].clone()
+        });
+        mixed.definition_sources.insert(832, Retail);
+        save_inventory_record(&db, 1, &mixed);
+        let mut inventory = persistence::load_inventory(&db, 1);
+        crate::quest_view::remove_items(&db, &mut inventory, id, 2);
+        persistence::save_inventory(&db, 1, &inventory);
+        let inventory = persistence::load_inventory(&db, 1);
+        assert_eq!(
+            inventory.items[0].stack_count, 7,
+            "Forever quest item {id} remains"
+        );
+        assert_eq!(inventory.items[1].stack_count, 1);
+    }
+}

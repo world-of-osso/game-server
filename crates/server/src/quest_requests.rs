@@ -278,7 +278,14 @@ impl<'a> QuestSession<'a, '_, '_> {
             queried.0.extend(givers.iter().map(|&(entity, _)| entity));
         }
         let (log, inventory) = self.load();
-        let statuses = giver_statuses(self.quests, &log, &inventory, self.requester.player, givers);
+        let statuses = giver_statuses(
+            self.db,
+            self.quests,
+            &log,
+            &inventory,
+            self.requester.player,
+            givers,
+        );
         send(
             &mut self.io.senders.statuses,
             self.requester.connection,
@@ -290,7 +297,7 @@ impl<'a> QuestSession<'a, '_, '_> {
         let entry = self.giver(npc, 0)?;
         let (log, inventory) = self.load();
         let quests = giver_quest_list(self.quests, &log, self.requester.player, entry, |id| {
-            bag_count(&inventory, id)
+            bag_count(self.db, &inventory, id)
         });
         send(
             &mut self.io.senders.lists,
@@ -378,7 +385,9 @@ impl<'a> QuestSession<'a, '_, '_> {
         let (log, inventory) = self.load();
         self.turn_in_target(npc, quest_id, &log)?;
         let quest = self.quest(quest_id)?;
-        let done = is_complete_in_log(self.quests, &log, quest_id, |id| bag_count(&inventory, id));
+        let done = is_complete_in_log(self.quests, &log, quest_id, |id| {
+            bag_count(self.db, &inventory, id)
+        });
         let connection = self.requester.connection;
         if done {
             let offer = QuestGiverOfferReward {
@@ -423,7 +432,9 @@ impl<'a> QuestSession<'a, '_, '_> {
         let (mut log, mut inventory) = self.load();
         self.turn_in_target(npc, quest_id, &log)?;
         let quest = self.quest(quest_id)?;
-        if !is_complete_in_log(self.quests, &log, quest_id, |id| bag_count(&inventory, id)) {
+        if !is_complete_in_log(self.quests, &log, quest_id, |id| {
+            bag_count(self.db, &inventory, id)
+        }) {
             return Err(failed(quest_id, QuestFailedReason::ObjectivesIncomplete));
         }
         let items = self.granted_items(quest, choice_index)?;
@@ -435,7 +446,7 @@ impl<'a> QuestSession<'a, '_, '_> {
         if self.free_cells() < items.len() {
             return Err(failed(quest_id, QuestFailedReason::InventoryFull));
         }
-        take_quest_items(&mut inventory, quest);
+        take_quest_items(self.db, &mut inventory, quest);
         for &(item_id, count) in &items {
             grant_item(&mut inventory, self.db, self.quests, item_id, count);
         }
@@ -507,8 +518,8 @@ impl<'a> QuestSession<'a, '_, '_> {
         let provided = self.quests.quests.get(&quest_id).map_or((0, 0), |quest| {
             (quest.start_item, quest.provided_item_count.max(1))
         });
-        if provided.0 != 0 && bag_count(&inventory, provided.0) > 0 {
-            remove_items(&mut inventory, provided.0, provided.1);
+        if provided.0 != 0 && bag_count(self.db, &inventory, provided.0) > 0 {
+            remove_items(self.db, &mut inventory, provided.0, provided.1);
             self.save_inventory(&inventory, false);
         }
         Ok(())
@@ -533,14 +544,15 @@ impl<'a> QuestSession<'a, '_, '_> {
 }
 
 /// `RewardQuest` destroys the required items and the provided start item.
-fn take_quest_items(inventory: &mut InventoryData, quest: &QuestTemplate) {
+fn take_quest_items(db: &Database, inventory: &mut InventoryData, quest: &QuestTemplate) {
     for objective in &quest.objectives {
         if objective.kind == ObjectiveKind::Item {
-            remove_items(inventory, objective.object_id, objective.required);
+            remove_items(db, inventory, objective.object_id, objective.required);
         }
     }
     if quest.start_item != 0 {
         remove_items(
+            db,
             inventory,
             quest.start_item,
             quest.provided_item_count.max(1),

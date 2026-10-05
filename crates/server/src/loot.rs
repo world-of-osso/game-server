@@ -161,7 +161,11 @@ impl LootStore<'_> {
                     .ok_or(LootError::NoPermission)?;
                 let goods = self.catalog.goods.get(&item_id);
                 let max_count = goods.map_or(0, |goods| goods.max_count);
-                if max_count > 0 && model.owned_count(item_id) + count > max_count {
+                if max_count > 0
+                    && model.owned_count(shared::item_data::ItemDefinitionSource::Retail, item_id)
+                        + count
+                        > max_count
+                {
                     return Err(LootError::CantCarryMore);
                 }
                 let mut mint = || persistence::next_id(db, "item_instance");

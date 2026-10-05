@@ -112,3 +112,65 @@ fn economic_merchant_purchase_uses_finite_stock_and_atomic_player_payment() {
         MerchantError::SoldOut
     );
 }
+
+#[test]
+fn source_requirements_economic_merchant_unique_limit_counts_producer_retail_only() {
+    for id in [2947, 2512, 2101] {
+        let mut h = harness().expect("world vendor fixture required");
+        h.source_collision(id);
+        let mut state = EconomyState::default();
+        state.merchants.insert(
+            GODRIC_ROTHGAR,
+            MerchantState {
+                gold: 0,
+                stock: vec![StockBatch {
+                    id: 7,
+                    item_id: id,
+                    count: 2,
+                    ingredient_cost: 0,
+                    unit_price: 1,
+                    expires_at: crate::auction_house::unix_now() + 86400,
+                }],
+                ..Default::default()
+            },
+        );
+        let config = Config {
+            cycle_secs: 60,
+            gatherer_listing_limit: 0,
+            gatherer_stack_max: 1,
+            gatherer_capital: 0,
+            gatherables: Vec::new(),
+            vendor_supplies: Default::default(),
+            customer_budget: 0,
+            customer_quantity: 0,
+            items: Default::default(),
+            markets: Default::default(),
+            merchants: vec![MerchantConfig {
+                entry: GODRIC_ROTHGAR,
+                expansion: 0,
+                recipes: Vec::new(),
+                capital_limit: 1000,
+                capacity: 2,
+            }],
+        };
+        let db = &h.app.world().resource::<GameDatabase>().db;
+        store::init_state_table(db).unwrap();
+        store::commit_market(db, Some(&state), &store::MarketChanges::default()).unwrap();
+        h.app
+            .insert_resource(config)
+            .insert_resource(Economy::from_state(state));
+        let npc = h.open(GODRIC_ROTHGAR);
+        h.buy(npc, 7, id, 1);
+        assert!(
+            h.failures().is_empty(),
+            "Forever {id} must not block Retail stock"
+        );
+        assert_eq!(h.count_of(id), vec![1, 1]);
+        let before = h.inventory();
+        let stock_before = h.app.world().resource::<Economy>().state.clone();
+        h.buy(npc, 7, id, 1);
+        assert_eq!(h.failures(), vec![MerchantError::CantCarryMore]);
+        assert_eq!(h.inventory(), before);
+        assert_eq!(h.app.world().resource::<Economy>().state, stock_before);
+    }
+}

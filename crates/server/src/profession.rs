@@ -19,6 +19,7 @@ mod trainer;
 use bevy::prelude::*;
 use lightyear::prelude::*;
 use shared::components::Player;
+use shared::item_data::ItemDefinitionSource::Retail;
 use shared::profession::{MAX_PRIMARY_PROFESSIONS, ProfessionSkillLine, recipe_difficulty};
 use shared::protocol::{CraftRecipe, ProfessionChannel, ProfessionSnapshot};
 
@@ -477,7 +478,7 @@ pub(crate) fn check_cast_items(
             .load()
             .map_err(|detail| CastFailure::Unsupported(format!("bags unavailable: {detail}")))?;
         for &(item, count) in reagents {
-            if model.bag_count(item) < count {
+            if model.bag_count(Retail, item) < count {
                 return Err(CastFailure::Reagents(bags.item_name(item)));
             }
         }
@@ -504,13 +505,13 @@ fn check_tools(
     bags: &Bags,
 ) -> Result<(), CastFailure> {
     for &item in &tools.items {
-        if model.bag_count(item) == 0 {
+        if model.bag_count(Retail, item) == 0 {
             return Err(CastFailure::Totems(bags.item_name(item)));
         }
     }
     for &category in &tools.categories {
         if !model
-            .bag_item_ids()
+            .bag_item_ids(Retail)
             .any(|item| data.item_meets_totem_category(item, category))
         {
             let name = data
@@ -536,7 +537,7 @@ pub(crate) fn take_reagents(world: &mut World, caster: Entity, spell: &SpellInfo
     let taken = with_bags(world, caster, |bags| {
         let mut model = bags.load()?;
         for (item, count) in reagents {
-            model.destroy_bag_items(item, count)?;
+            model.destroy_bag_items(Retail, item, count)?;
         }
         save_inventory_record(&bags.db.db, bags.character_id, &model.into_record());
         Ok::<_, String>(bags.character_id)

@@ -1035,44 +1035,64 @@ impl InventoryModel {
         self.gold = gold;
     }
 
-    /// Items of `item_id` in bags and equipment.
-    pub(crate) fn owned_count(&self, item_id: u32) -> u32 {
+    /// Items of `(source, item_id)` in bags, equipment and overflow.
+    pub(crate) fn owned_count(&self, source: ItemDefinitionSource, item_id: u32) -> u32 {
         self.bags
             .iter()
             .flatten()
             .flatten()
             .chain(self.equipped.values())
             .chain(&self.overflow)
-            .filter(|item| item.item_id == item_id)
+            .filter(|item| {
+                item.item_id == item_id && self.definition_source(item.item_guid) == source
+            })
             .map(|item| item.stack_count)
             .sum()
     }
 
-    /// Items of `item_id` in bags (reagents and tools never come from equipment).
-    pub(crate) fn bag_count(&self, item_id: u32) -> u32 {
+    /// Items of `(source, item_id)` in bags (not equipment or overflow).
+    pub(crate) fn bag_count(&self, source: ItemDefinitionSource, item_id: u32) -> u32 {
         self.bag_items()
-            .filter(|item| item.item_id == item_id)
+            .filter(|item| {
+                item.item_id == item_id && self.definition_source(item.item_guid) == source
+            })
             .map(|item| item.stack_count)
             .sum()
     }
 
-    /// Item ids of every bag stack.
-    pub(crate) fn bag_item_ids(&self) -> impl Iterator<Item = u32> + '_ {
-        self.bag_items().map(|item| item.item_id)
+    /// Item ids of bag stacks belonging to the selected source.
+    pub(crate) fn bag_item_ids(
+        &self,
+        source: ItemDefinitionSource,
+    ) -> impl Iterator<Item = u32> + '_ {
+        self.bag_items()
+            .filter(move |item| self.definition_source(item.item_guid) == source)
+            .map(|item| item.item_id)
     }
 
-    /// AzerothCore `DestroyItemCount`: remove `count` of `item_id` from bag
-    /// stacks in bag order; nothing changes when the bags hold fewer.
-    pub(crate) fn destroy_bag_items(&mut self, item_id: u32, count: u32) -> Result<(), String> {
-        if self.bag_count(item_id) < count {
-            return Err(format!("bags hold fewer than {count} of item {item_id}"));
+    /// AzerothCore `DestroyItemCount`: remove `count` of `(source, item_id)`
+    /// in bag order; nothing changes when that source holds fewer.
+    pub(crate) fn destroy_bag_items(
+        &mut self,
+        source: ItemDefinitionSource,
+        item_id: u32,
+        count: u32,
+    ) -> Result<(), String> {
+        if self.bag_count(source, item_id) < count {
+            return Err(format!(
+                "bags hold fewer than {count} of {source:?} item {item_id}"
+            ));
         }
+        let sources = &self.definition_sources;
         let mut left = count;
         for cell in self.bags.iter_mut().flatten() {
             if left == 0 {
                 break;
             }
-            let Some(item) = cell.as_mut().filter(|item| item.item_id == item_id) else {
+            let Some(item) = cell
+                .as_mut()
+                .filter(|item| item.item_id == item_id && sources[&item.item_guid] == source)
+            else {
                 continue;
             };
             let taken = left.min(item.stack_count);
