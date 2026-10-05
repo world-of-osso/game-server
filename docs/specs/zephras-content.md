@@ -10,7 +10,8 @@ User-approved Wowhead Forever-only reconstruction for Skyborne starts; [implemen
 - [x] Skip unknown Z, invalid/unknown levels and uncaptured quest pages; preserve unsupported objectives in provenance, never convert interactions to kills.
 - [x] Reward item IDs require Retail/runtime item rows; spells require Retail spell rows. Preserve captured fixed XP, not a guessed Retail difficulty. Unsupported completion must stay blocked.
 - [x] Reapply overlay inside content-policy regeneration after Retail content, atomically; missing inputs fail preflight before destructive regeneration.
-- [ ] Prove real-kit creation/reopen/login on map 2991, supported start ground, nearby giver spawn query and Coming of Age acceptance; report Gift of Skysight's level-2 gate and unimplemented completion.
+- [x] Prove real-kit creation/reopen/login on map 2991, supported start ground, nearby giver spawn query and Coming of Age acceptance/40 XP; Skysight keeps source mask 0, rejects level 1, accepts level 2 and blocks unimplemented event completion.
+- [ ] Resolve starting-giver displays, uncaptured pages and native quest-side/reputation/reward-spell/event gaps; no rendered-client or complete-gameplay claim.
 
 ## Exclusions
 

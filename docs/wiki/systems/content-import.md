@@ -42,7 +42,28 @@ Calibration uses local Forever UiMapAssignment FDID 1957219, hash-matched layout
 
 `Terrain.position` uses WDT 7198644 MAID and ports server `terrain_height.rs` MCVT fan/hole sampling. `terrain-proof.json` compares all 72 centers to the existing real server report: 14 supported heights agree within 0.01 yards; 24 missing roots stay unknown; 34 centers are holes. NPC observations yield 883 terrain-supported points, 260 missing-root points and 3 hole/outside points. These are mapper observations, not authored spawns; no WMO floors, liquid safety, facing or phases are inferred.
 
-`start-proposals.json` keeps the grounded first-giver proposal for race 95 and a conditional earliest generic Horde-giver candidate for race 96. No captured page establishes a race-96 level-1 intro: Coming of Age 92460 has race mask bit 32 only, while Horde quest 92598 requires level 2. Importing code must resolve that content gap explicitly; this slice neither widens race masks nor writes server starts. See [[skyborne]].
+`start-proposals.json` retains capture-time proposals; [[skyborne]] owns the subsequently approved starts and the race-96 inference. Coming of Age 92460 keeps source race bit 32; Skysight 92598 keeps its source mask 0 and level-2 gate. Source masks are not widened or narrowed.
+
+### Forever Zephras overlay
+
+[Contract](../../specs/zephras-content.md). `scripts/zephras_content.py --db <scratch.db> --report <report.json>` reads the normalized snapshot above and pinned `zephras_creatures.py` sources. `content_policy.py` preflights the capture, then applies the overlay after Retail content in the same transaction. Normal `import-azerothcore.sh` regeneration therefore reapplies it. `--zephras-content` selects an inspected snapshot; missing input stops preflight, not a source fallback. The capture remains ignored data and must be retained/provisioned separately.
+
+| Reconstructed rows | Count |
+|---|---:|
+| NPC templates / grounded spawn observations / model rows | 276 / 878 / 3 |
+| Quest templates / addons / offer text / native metadata | 136 each |
+| NPC starter / ender links | 120 / 119 |
+| Explicit A/H reaction templates | 6 |
+
+`zephras_row_source` tags every row with scrape, URL, `reconstructed` and source JSON. Stable spawn GUIDs use NPC ID plus observation index; repeated exact points are deduplicated. Reapplication removes only previously tagged rows. Reports retain normalized SHA-256, unresolved links, missing displays, unsupported objectives, dropped rewards and counts. A failed standalone import rolls back schema and rows; two full scratch regeneration cycles are behavior-tested.
+
+NPC A/H react −1/0/1 becomes explicit enemy/neutral/friend towards Forever Faction IDs 2795/2794, using derived template IDs 90000000–90000008. Missing sides use the approved neutral-identity/friendly policy. Faction identity/groups remain zero rather than guessing a nation. NPC→player reactions match captured pairs; friendliness is symmetric, but reverse hostility is not invented. Levels come from Wowhead; 19 unknown/9999-level templates and their 5 observations are omitted. Another 260 missing-root and 3 hole/outside points are skipped.
+
+Only captured quest pages are imported: 10 absent pages remain omitted. Kill/item objectives use native columns; interactions, unknown action labels and counted prose-only objectives stay in provenance and block completion (`zephras_quest_meta`). 39 quests have that block. Coming of Age has no counted objective and turns in at its captured ender; Skysight's prose event cannot auto-complete. Fixed captured XP avoids a guessed Retail difficulty. Item rewards require Retail/runtime IDs, spells require Retail IDs: 99 absent rewards are dropped and reported. Reputation, faction-side restrictions, unsupported branches and reward-spell execution remain native gaps, not fabricated substitutes.
+
+Hash-matched local Forever Creature 841631 (`6E14C900`, 179 readable rows) and CreatureXDisplayInfo 1864302 (`2EA19FCF`, 185 readable rows) resolve **0/295** captured NPCs; two encrypted sections in each remain excluded. Three captured Wowhead NPC pages provide displays 136536,136966,136971. `engine-needed-display-ids.txt` beside each report lists required CDI rows/models for client provisioning; both starting givers remain unresolved. No engine checkout or live world/player storage was changed. Three referenced objects, loot, vendor inventories, gossip, scripted events and phasing are not reconstructed.
+
+Evidence: checkout `target/zephras-content-proof/` (scratch DB, reports, native/Python logs and ledger). Full base-policy scratch regeneration passed; local/desktop scratch overlay counts agree. This is server data/message proof, not complete zone gameplay or rendered-client acceptance.
 
 ### Loader
 

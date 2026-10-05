@@ -55,7 +55,7 @@ Server gameplay systems.
 | [[swimming-and-breath]] | MH2O terrain liquid (client-matched sampling), swim height bounds, no gravity for swimmers, TrinityCore breath/fatigue mirror timers and drowning damage |
 | [[networking]] | Lightyear UDP, pre-entry visibility, matching MCVT server terrain sampling, dirty-candidate replication, spell cast receivers and `Moving` input marker, 50 ms cadence, persistence, channels, and interest management |
 | [[persistence]] | Dual-layer storage: redb for mutable player data, physical equipment ownership, login-loaded gold, mutation-boundary GoldUpdateQueue replication, and SQLite for static world data |
-| [[content-import]] | AzerothCore quest/vendor/trainer/loot/gossip/item tables in world.db; measured Wrath→Retail ID mapping; Retail-first `content_*` tables from content_policy.py, override CSV, drop report; TrinityCore Retail spawns for maps 0/1; blocked Forever Zephras capture and calibrated reference proposals |
+| [[content-import]] | AzerothCore quest/vendor/trainer/loot/gossip/item tables in world.db; measured Wrath→Retail ID mapping; Retail-first `content_*` tables from content_policy.py, override CSV, drop report; TrinityCore Retail spawns for maps 0/1; labelled Forever Zephras overlay, source masks/XP, partial displays and completion gaps |
 | [[world-data]] | SQLite world.db, AzerothCore/Retail sources, signed creature-event membership and inactive-event selection, WorldDataPlugin |
 | [[class-progression]] | Race/class validation including Monk/DH/Evoker, new-character levels and temporary starts, Initial spec below 10, known spells, action bars and progression persistence |
 | [[talents]] | DB2 trait trees per class, TrinityCore-style config validation (visibility, gates, prerequisites, choice/hero nodes, level point budgets), `character_traits`, commit/snapshot messages, talent spells in KnownSpells |
@@ -65,7 +65,7 @@ Server gameplay systems.
 | [[auras]] | Aura runtime: stacking/refresh, periodic ticks, Recuperate full-health completion, procs, interrupt flags, dispel, crowd control, spell modifiers (class mask + SpellLabel), `StatModifiers` fold-in, UnitAuras replication, handled aura IDs |
 | [[tick-model]] | Observed server loop: 50ms runner/fixed cadence, schedule ownership, explicit ordering, completed player-death and broad auto-AFK scan reductions, maintenance gates, and IPC boundary |
 | [[zone-architecture]] | Maps 0 and 1 plus dungeon copies in one World by `InMap`; map transfers (NewWorld/WorldPortAck), InstanceManager, area trigger teleports; per-zone sets still proposed |
-| [[skyborne]] | Forever 95/96 faction identity, pinned source overlay, create/reopen/login proof, and Zephras start prerequisites |
+| [[skyborne]] | Forever 95/96 faction identity, pinned source overlay, approved inferred Zephras starts, real-kit create/reopen/login/ground proof and content limits |
 | [[ground-assets]] | Registered-map local CASC closure, Forever grid/MPY2 corrections, real ground proof, 72-center report and partial LOS limits |
 | [[factions]] | `UnitFactionTemplate` sources (creature_template, ChrRaces), FactionTemplate reaction rules, attack/assist checks, Wrath vs Retail ID coverage |
 | [[combat]] | Auto-attack system, NPC/player lethal transitions, split death proofs, melee hit table (miss/dodge/parry/glancing/block/crit/hit), spell formulas, stat calculations, DR curves |
