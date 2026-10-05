@@ -21,7 +21,7 @@ FactionTemplate 3628 references Faction 2794, flags 72 and groups 5/4/10; 3629 r
 
 ## Map 2991 reconstructed starts
 
-The imported Map row registers Zephras Isle, directory `2991`, InstanceType 0, WdtFileDataID 7198644. `maps/store.rs` loads it as a continent; `ground.rs::open_ground_map` derives its WDT mapping directly from MapStore. No hardcoded map registry addition is needed.
+The imported Map row registers Zephras Isle, directory `2991`, InstanceType 0, WdtFileDataID 7198644. `maps/store.rs` loads it as a continent; `ground.rs::open_ground_map` derives its WDT mapping directly from MapStore. Ground loading needs no hardcoded WDT registry; hosting still requires the shared continent list below.
 
 `start_location` now uses the user-approved reconstruction ([contract](../../specs/skyborne-races.md)). Race 95 starts at (4088.501,1847.5,976.169), 3 yd east of Coming of Age giver Ailee Farheart 251362. Race 96 starts at (4051.417,1858.625,977.620), **inferred** near Ventaari Brightwish 251487: no captured race-96 level-1 intro exists; her Gift of Skysight 92598 requires level 2.
 
