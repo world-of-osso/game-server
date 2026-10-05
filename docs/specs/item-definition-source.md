@@ -14,9 +14,9 @@ Item definition identity belongs to the item GUID, not its owner or race. Server
 - [ ] Preserve source through actual trade, mail, bank, guild-bank, auction and buyback transfers and emitted item records.
 - [x] Isolate authored Forever creation: the factory-selected definition source is attached to every new kit GUID and survives all ten race/class creation/reopen pairs.
 - [ ] Keep every known Retail content minting boundary explicitly Retail.
-- [ ] Retail profession reagents, explicit tools and tool categories must count/consume only Retail GUIDs; Forever-only bags cannot satisfy those requirements.
-- [ ] Retail quest item progress, completion, turn-in and provided-item removal must ignore same-ID Forever GUIDs.
-- [ ] Merchant and loot unique limits must count the producer-selected source only, including owned equipment and overflow; numeric IDs remain unchanged.
+- [x] Retail profession reagents, explicit tools and tool categories must count/consume only Retail GUIDs; Forever-only bags cannot satisfy those requirements.
+- [x] Retail quest item progress, completion, turn-in and provided-item removal must ignore same-ID Forever GUIDs.
+- [x] Merchant and loot unique limits must count the producer-selected source only; numeric IDs remain unchanged.
 - [x] Preserve the pre-source character disk ABI with nonempty equipment; hydrate runtime appearance from owned-slot GUID markers after reload, never from recipient race.
 
 ## How it works
@@ -43,6 +43,8 @@ Item definition identity belongs to the item GUID, not its owner or race. Server
 
 - `crates/server/src/persistence_character_abi_tests.rs` — independent historical nonempty V7/V6 bytes, exact V7 save/reopen bytes and GUID hydration across races.
 - `crates/server/src/skyborne_kit_tests.rs` — actual ten-pair kit creation/reopen and source assertions.
+
+Source-requirement development proof: `target/source-requirements-proof/ledger.md` and per-command JSON/logs retain eleven expected RED failures and 11/11 desktop GREEN at source commit `1a1b049` (main-owned zone test patch also present), with concrete same-ID 2947/2512/2101 cases. No broad or independent gate was run.
 
 Retained development proof: `target/owned-source-runtime/ledger.md` records 5/5 targeted GREEN at patch-equivalent `4fea2d0`; `target/character-abi-proof/ledger.json` records 26 passing cases at `a7fbb98` in an invocation that exited 101 on the then-stale kit fixture, followed by the corrected creation test passing at `e405232`. These are bounded development proofs, not a passing full suite or native E2E gate.
 
