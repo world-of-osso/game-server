@@ -1,5 +1,9 @@
 # Wiki Log
 
+## [2026-10-05] investigations | Imp Firebolt live capture gap
+
+Updated [[warlock-pets]]: original fixed-SP/kobold fixture replaced with computed level-3 stats/full spell catalog and neutral Northshire dummy plus real terrain/LOS. Seven targeted tests pass at `c8da7a4`, including Firebolt and Dismiss 2641. No RED or demonstrated AI defect; no production fix. Client IPC/admin melee history is separate from owner spell events, and the IPC formatter omits spell IDs. Live pet-state/cast-rejection/owner-spell trace remains required.
+
 ## [2026-10-05] systems | Skyriding effect 203 and Lift Off investigation
 
 Updated [[mounts]] and the Skyriding spec: TC a352b1fa effect 203 is REMOVE_AURA_2 / EffectRemoveAura, removing TriggerSpell auras through the normal lifecycle. Recorded the real Surge Forward, Skyward Ascent and Whirling Surge tutorial-highlight removals. RED reproduced retained highlight 1259214 after Surge Forward. Explicitly learned 374763 already applies FORCE_CAST 404191 for two seconds; data contains DUMMY 450, not LEAP/JUMP. Native 374763 trigger and exact not-skyriding failure remain source-blocked; no invented launch rule, client/wire change or default grant.
