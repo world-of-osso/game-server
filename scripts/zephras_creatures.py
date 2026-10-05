@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Decode pinned Forever Creature / CreatureXDisplayInfo readable sections.
 
 WoWDBDefs hash-matched layouts and source hashes: scripts/reference/forever-1.60.1.70205/README.md.

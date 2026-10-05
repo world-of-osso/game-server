@@ -5,8 +5,8 @@ import sqlite3
 import sys
 import tempfile
 import unittest
-from pathlib import Path
 from contextlib import closing
+from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import wowhead_loot

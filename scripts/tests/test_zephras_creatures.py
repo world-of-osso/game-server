@@ -25,8 +25,9 @@ class CreatureDecodeTest(unittest.TestCase):
         self.assertNotIn(251487, catalog)
 
     def test_corruption_fails_before_partial_catalog_is_returned(self):
-        import tempfile
         import shutil
+        import tempfile
+
         import zephras_creatures
 
         with tempfile.TemporaryDirectory() as directory:
