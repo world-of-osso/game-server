@@ -1,9 +1,12 @@
 """Forever kit source selection and atomic publication on owned SQLite fixtures."""
 
 import copy
+import csv
+import tempfile
 import json
 from pathlib import Path
 import sqlite3
+import subprocess
 import sys
 import unittest
 
@@ -252,6 +255,88 @@ class IsolatedItemPublicationTest(unittest.TestCase):
             ).fetchone(),
             (15,),
         )
+
+    def test_additive_kit_refresh_reapplies_forever_without_erasing_retail(self):
+        import add_player_create_info
+        import db2
+
+        self.db.executescript((SCRIPTS / "world_schema.sql").read_text())
+        self.db.executescript((SCRIPTS / "tdb_schema.sql").read_text())
+        self.db.execute("CREATE TABLE wowhead_creature_drop (item INTEGER)")
+        retail = json.loads((SOURCE / "retail-kit-runtime-rows.json").read_text())
+        with self.db:
+            skyborne_data.import_rows(self.db, self.rows)
+            skyborne_data.project_items(self.db)
+        expected_retail = self.snapshot_retail()
+        with tempfile.TemporaryDirectory() as directory:
+            csv_dir = Path(directory) / db2.DEFAULT_BUILD
+            csv_dir.mkdir()
+            for db2_name in add_player_create_info.DB2_TABLES:
+                table = db2.table_name(db2_name)
+                columns = [
+                    row[1] for row in self.db.execute(f"PRAGMA table_info({table})")
+                ]
+                with (csv_dir / f"{db2_name}.csv").open("w", newline="") as handle:
+                    writer = csv.writer(handle)
+                    writer.writerow(columns)
+                    writer.writerows(
+                        [row[column] for column in columns] for row in retail[table]
+                    )
+            with self.db:
+                add_player_create_info.add_player_create_info(self.db, csv_dir)
+        self.assertEqual(self.snapshot_retail(), expected_retail)
+        self.assertEqual(
+            self.db.execute(
+                "SELECT COUNT(*) FROM character_loadout_item WHERE CharacterLoadoutID BETWEEN 2373 AND 2378"
+            ).fetchone(),
+            (45,),
+        )
+        self.assertEqual(
+            self.db.execute(
+                "SELECT ModID,RaceMasks_0,RaceMasks_1 FROM character_loadout WHERE ID=1486"
+            ).fetchone(),
+            (75, 0, 1),
+        )
+        self.assertEqual(
+            self.db.execute("SELECT COUNT(*) FROM skyborne_content_item").fetchone(),
+            (30,),
+        )
+
+    def test_standalone_projection_collision_rolls_back_entire_publication(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "world.db"
+            db = sqlite3.connect(path)
+            db.executescript((SCRIPTS / "db2_schema.sql").read_text())
+            db.execute("INSERT INTO faction_template (ID,Faction) VALUES (1,1)")
+            db.execute("CREATE VIEW skyborne_content_item AS SELECT ID FROM item")
+            db.commit()
+            db.close()
+            result = subprocess.run(
+                [sys.executable, str(SCRIPTS / "skyborne_data.py"), "--db", str(path)],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("view", result.stderr.lower())
+            db = sqlite3.connect(path)
+            try:
+                self.assertEqual(
+                    db.execute("SELECT ID,Faction FROM faction_template").fetchall(),
+                    [(1, 1)],
+                )
+                self.assertEqual(
+                    db.execute("SELECT COUNT(*) FROM character_loadout").fetchone(),
+                    (0,),
+                )
+                self.assertEqual(
+                    db.execute(
+                        "SELECT name FROM sqlite_master WHERE name='skyborne_item'"
+                    ).fetchall(),
+                    [],
+                )
+            finally:
+                db.close()
 
     def test_content_regeneration_reprojects_isolated_definitions_and_preserves_retail(
         self,

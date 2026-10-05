@@ -424,6 +424,7 @@ def main():
         closing(sqlite3.connect(f"file:{args.db}?mode=rw", uri=True)) as connection,
         connection,
     ):
+        connection.execute("BEGIN IMMEDIATE")
         import_rows(connection, rows)
         project_items(connection)
     print(

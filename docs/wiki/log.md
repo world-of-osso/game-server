@@ -62,6 +62,10 @@ Added [[general-spell-grants]]: read-only SQLite/CSV comparison of 41 captured e
 
 Updated [[inventory]] and [source contract](../specs/item-definition-source.md): additive immutable GUID markers preserve Retail/Forever identity independently of owner transfers without altering inventory or soulbound encodings. Targeted persistence tests cover reopen, two-owner transaction exchange, legacy Retail and invalid/changed markers; creation/runtime integration remains separate.
 
+## [2026-10-05] systems/spec | Isolated kit creation and regeneration
+
+Updated [[skyborne]] and contract: isolated shared definitions, source-local creation/count readers, exact importer-generated ten-pair redb fixture, full DB2 regeneration preservation, additive kit refresh, and standalone process-level rollback. Fixed outer-transaction gap exposed by projection collision. Native fixture proof awaits concurrent runtime catalog/constructor closure; no complete stats/transfer/tooltips claim.
+
 ## [2026-10-05] systems/spec | Authored Skyborne kit source closure
 
 Updated [[skyborne]], index and contract: six pinned Forever loadouts, 45 memberships, 30 readable Item/ItemSparse definitions and selected appearance/effect parents. Strict collision/rollback tests preserve Retail loadouts. Recorded shared-ID count/type/binding conflicts and user-selected isolated Forever definitions; full ten-pair authoritative creation remains pending, not empty-kit success.
