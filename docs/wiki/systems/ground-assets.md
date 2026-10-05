@@ -18,14 +18,14 @@ python3 scripts/extract_ground.py --world-db <scratch-world.db> --cache <engine-
 
 ## Zephras acceptance and limits
 
-The local cache holds 203 discovered dependencies, 32,421,875 bytes. Forty-two discovered files remain unavailable from local CASC: 24 root ADTs, nine obj0 ADTs and nine WMO roots/groups. The failure TSV lives at canonical engine `data/zephras-ground-failed.tsv`. WMO 7749471 was recovered from the existing Forever local probe, then its primary group 7749486 extracted; its other GFID entries are LODs, not missing primary groups. No live world database was changed; the overlay is in engine `data/zephras-ground-world.db`.
+Post-sync map-2991 extraction at server `c5198367` finds **256 cached ground dependencies, zero missing**, including all 72 root/obj0 pairs. This supersedes the earlier 203-present/42-missing inventory. Current map-2991 failures were cleared from engine `data/zephras-ground-failed.tsv` after preserving its prior contents. WMO GFID LODs remain excluded from primary collision dependencies. Refreshed files were supplied to owned desktop `/home/osso-test/game-engine-trial/zephras-ground`; no live world/player database changed. [Revision-scoped refresh ledger](../../../target/zephras-content-proof/ledger.md).
 
 Real Forever fixtures exposed two parser issues:
 
 - Independently rounded MCNK corners left sub-milliyard gaps in raw chunk bounds, including root 7199999's exact tile center. `terrain_height::find_chunk` now identifies authored chunk-grid cells instead. Existing 21 terrain tests pass, including the real Northshire swimming regression.
 - Forever WMO groups use MPY2 (u16 flags/material) instead of MOPY (u8 flags/material). Shared collision now reads both, preserving the widened collision-only material sentinel. Real floor queries yield 788/2921/2279/7378 hits for sample roots 333477/7704156/7704158/7749471 respectively. Shared-protocol commit `98a3c9d` is required; server/helper proof uses that sibling source. The attempted `-p shared` test command cannot test a dependency outside the server workspace; no shared standalone-suite pass is claimed.
 
-Three opt-in desktop fixtures pass: center support/minimum bounds, source-authored liquid type 1251 at height 756.5897, and all four sample WMO roots' primary groups/floors. The Rust-generated `/tmp/zephras-ground-heights.json` enumerates all 72 nominal WoW centers: 14 supported, 34 authored terrain holes, 24 missing roots. Hole/missing heights remain null. Three supported centers lie below authored MFBO minimum 500; `above_min_height` flags these. No starting coordinate is selected.
+Four opt-in desktop fixtures pass at `c5198367`: center support/minimum bounds, source-authored liquid type 1251 at height 756.5897, four sample WMO roots' primary groups/floors and approved race starts. Refreshed Rust-generated `/tmp/zephras-ground-heights.json` enumerates all 72 nominal WoW centers: **22 supported, 50 authored terrain holes, zero missing roots**. Hole heights remain null; `above_min_height` retains below-MFBO flags. Existing Python `Terrain.position` agrees with all 72 native records (supported heights within 0.01 yards), `target/forever-resync/terrain-vs-native.json`. No new starting coordinate is selected.
 
 Run acceptance with `GAME_SERVER_GROUND_DIR` pointing at the cache:
 
@@ -38,7 +38,7 @@ python3 scripts/build-host.py --build-host desktop --test -p server --bin game-s
 
 ## LOS proof
 
-Full `--map 2991 --all --no-eyes` stops on missing root 7199844; full-map coverage is blocked by local assets, not a successful bake. An explicitly bounded 48-available-root bake completed on desktop, using existing cached model/skin inputs and listfile. It produced 1,350,977 triangles (901,340 terrain, 257,762 WMO, 191,875 doodad), 52,222,400 bytes. Remaining report entries include unavailable models/skins and missing obj0/WMO files: 115 recorded problems, 66 deduplicated lines. This is partial geometry, not complete LOS closure or eye-table acceptance.
+Post-sync desktop `--map 2991 --all --no-eyes` exits 0: **72 tiles, 2,171,579 triangles, 84,995,712 bytes, zero missing/unreadable files**. The unchanged one-yard thickness policy deliberately drops 142 thin doodad model types; these are not extraction failures. `target/forever-resync/los-all.log` and `los-report.json` preserve exit/report evidence. This supersedes the blocked full-map and 48-tile partial bake (1,350,977 triangles, 115 recorded/66 unique problems). Eye tables were intentionally not rebuilt; no eye-table acceptance follows.
 
 Owned output is `<engine-data>/los/2991/`; desktop scratch output is `/home/osso-test/game-engine-trial/zephras-ground/los/2991/`. Other maps and global eye tables were preserved. Runtime `LosMap` loads the bake and blocks the vertical interior probe `(2934.333,1334.333,900)`→`(2934.333,1334.333,500)` at Z 746.51. An exact-center vertical ray was clear before the ground lookup fix: baked mesh vertices retain independent f32 rounding; sub-milliyard mesh cracks remain unverified. The ground-query fix does not change baked vertices.
 

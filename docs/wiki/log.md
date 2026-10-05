@@ -58,6 +58,10 @@ Added [[warlock-pets]] and its spec: effect-56 MiscValue creature entry, shared 
 
 Added [[general-spell-grants]]: read-only SQLite/CSV comparison of 41 captured entries; Attributes_13 bit 16 marks 31 content abilities plus Throw, while ordinary entries clear it. Other requested fields do not separate them. Unknown bit semantics and Throw eligibility block a verified rule; no server code/data change or behavioral proof.
 
+## [2026-10-04 local] systems | Post-sync Forever ground and spawn recovery
+
+Updated [[ground-assets]], [[content-import]] and index after local CASC synchronization: 256 ground dependencies/zero missing; desktop ground fixtures4/4; 72 center records22supported/50holes, Python/native72/72 agree; full72-tile LOS exits0 with zero unreadable files, eye tables unchanged. Existing normalization/import recovers exactly463 eligible observations into a new scratch DB, preserving1199 previous rows and producing1662 spawns. Grounded displayIDs174→218. Quest/content gaps and reconstructed-observation semantics unchanged; no live deployment or native NPC acceptance. Revision-scoped logs/reports: `target/forever-resync/`, [ledger](../../target/zephras-content-proof/ledger.md).
+
 ## [2026-10-04] systems/spec | Refreshed Forever capture and NPC appearances
 
 Updated [[content-import]], [[skyborne]] and content contract after retry: all 146 normalized quests/298 NPCs/3 objects captured; historical 403/missing-display claims superseded. NPC-page appearances are primary, including Ailee 136968/Ventaari 139694; full 235-CDI list exports all captured appearances, not just 174 grounded-spawn IDs. Scratch overlay now has 278 templates/1,199 grounded observations/278 model rows/146 quests. Approved starts and race-96 inference unchanged; 20 level omissions, 27 giver links, 49 blocked completions, 109 absent rewards and native/client asset gaps remain explicit.
