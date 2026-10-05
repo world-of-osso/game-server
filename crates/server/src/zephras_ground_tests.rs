@@ -13,7 +13,7 @@ fn zephras_cache() -> PathBuf {
 
 #[test]
 #[ignore = "requires extracted Forever build 1.60.1.70205 ground assets"]
-fn zephras_approved_starts_have_supported_ground() {
+fn skyborne_zephras_approved_starts_have_supported_ground() {
     let mut ground = GroundMap::new(
         &zephras_cache(),
         HashMap::from([(ZEPHRAS_MAP, ZEPHRAS_WDT)]),

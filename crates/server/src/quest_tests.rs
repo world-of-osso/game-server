@@ -124,6 +124,9 @@ macro_rules! for_quest_messages {
     };
 }
 
+#[path = "zephras_quest_tests.rs"]
+mod zephras_tests;
+
 fn register<M: Message + serde::Serialize + serde::de::DeserializeOwned>(app: &mut App) {
     app.register_message::<M>();
 }
