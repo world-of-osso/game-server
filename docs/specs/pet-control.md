@@ -1,6 +1,6 @@
 # Pet control
 
-The hunter pet's action bar and the orders and stances it gives: Attack, Follow, Stay, Move To; Passive, Defensive, Assist; and the pet melee they lead to. Taming, the stable and Call/Dismiss Pet: [hunter taming](hunter-taming.md).
+The controlled pet's action bar and the orders and stances it gives: Attack, Follow, Stay, Move To; Passive, Defensive, Assist; and the pet melee they lead to. Warlock Summon Imp reuses these systems: [warlock pets](warlock-pets.md). Taming, the stable and Call/Dismiss Pet: [hunter taming](hunter-taming.md).
 
 References: TrinityCore a352b1fa `WorldSession::HandlePetAction`/`HandlePetActionHelper` (PetHandler.cpp:64-391), `HandlePetSpellAutocastOpcode` (PetHandler.cpp:628-676), `PetAI::UpdateAI` autocast (PetAI.cpp:105-212), `Pet::LoadPetFromDB`/`SavePetToDB`/`FillPetInfo` (`ReactState`, Pet.cpp:325, 521, 551), `CanHaveGlobalCooldown` (Spell.cpp:9162), `Guardian::UpdateAttackPowerAndDamage` (StatSystem.cpp:1324-1345), `CharmInfo::CharmInfo`/`InitPetActionBar`/`AddSpellToActionBar` (CharmInfo.cpp:26-62, 166-215), `CharmInfo::SaveStayPosition` (Unit.cpp:13306), `Player::PetSpellInitialize` (Player.cpp:22440-22477), `PetAI::UpdateAI`/`SelectNextTarget`/`CanAttack`/`DoAttack`/`HandleReturnMovement`/`NeedToStop` (PetAI.cpp), `SpellMgr::LoadPetLevelupSpellMap` (SpellMgr.cpp:2152-2199), `Pet::InitLevelupSpellsForLevel` (Pet.cpp:1494-1529), `Unit::SetOwnerGUID` (`SummonedBy`), `UNIT_FLAG_PET_IN_COMBAT` 0x800; Retail stance texts `PET_MODE_DEFENSIVE_TOOLTIP`, `PET_MODE_ASSIST_TOOLTIP`.
 
@@ -23,7 +23,7 @@ References: TrinityCore a352b1fa `WorldSession::HandlePetAction`/`HandlePetActio
 - [x] Passive: stop attacking; never attack unordered. Defensive: attack what auto-attacks the owner or the pet. Assist: also the owner's victim (TrinityCore ignores `REACT_ASSIST`; its Defensive also takes the owner's victim).
 - [x] A victim that dies or is out of reach (owner 90 yd away) ends the attack; the pet picks its next target or returns (to its owner, or to its held spot).
 - [ ] Retail's default stance for a newly tamed pet is unverified (no Blizzard source found); TrinityCore's Passive is kept.
-- [ ] Not modelled: autocast of positive spells (Dash) and TrinityCore's random pick among castable autocast spells, autocast states kept in the stable, `SMSG_PET_CAST_FAILED`, Abandon, attacks on damage events instead of polling attackers, the chase angle behind the victim, crowd-controlled targets, pet death.
+- [ ] Not modelled: autocast of positive spells (Dash) and TrinityCore's random pick among castable autocast spells, autocast states kept in the stable, `SMSG_PET_CAST_FAILED`, Abandon, attacks on damage events instead of polling attackers, the chase angle behind the victim, crowd-controlled targets, hunter pet death (Summon Imp death removal is covered by [warlock pets](warlock-pets.md)).
 
 ## Tests
 

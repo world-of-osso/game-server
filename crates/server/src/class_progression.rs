@@ -185,7 +185,14 @@ fn compute_known_spells(
             passive: spell.passive,
         });
     let defaults = default_skill_spells(class, race, level);
-    let learnable = learnable.chain(defaults);
+    // World of Osso's requested level-1 warlock kit. Retail SkillLineAbility 24651
+    // auto-learns 688 at SpellLevel 3; do not alter that imported DB2 row or grant
+    // other class spells early.
+    let starting_imp = (class.class_id == 9).then_some(KnownSpell {
+        spell_id: 688,
+        passive: false,
+    });
+    let learnable = learnable.chain(defaults).chain(starting_imp);
     let spec_spells = spec.into_iter().flat_map(|spec| {
         let spells = spec
             .spells

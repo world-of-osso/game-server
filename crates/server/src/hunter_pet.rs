@@ -14,7 +14,7 @@
 use bevy::prelude::*;
 use lightyear::prelude::*;
 use shared::components::{
-    CreatureClassification, CreatureMotion, Health, Level, ModelDisplay, MovementSpeed, Npc,
+    CreatureClassification, CreatureMotion, Health, Level, Mana, ModelDisplay, MovementSpeed, Npc,
     Player, Position, PowerType, Rotation, UnitFactionTemplate, UnitFlags, UnitLevel, UnitPowers,
     UnitSummonedBy, Zone,
 };
@@ -41,6 +41,8 @@ use crate::world_data::{CreatureTemplate, WorldData};
 
 /// `CLASS_HUNTER`.
 const CLASS_HUNTER: u8 = 3;
+const CLASS_WARLOCK: u8 = 9;
+const SUMMON_IMP: u32 = 688;
 /// Tame Beast, whose `spell_hun_tame_beast::CheckCast` is `can_tame`.
 const TAME_BEAST: u32 = 1515;
 pub const EFFECT_TAME_CREATURE: u32 = 55;
@@ -56,7 +58,11 @@ pub struct HunterPetPlugin;
 impl Plugin for HunterPetPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Update, load_pet_stables)
-            .add_systems(FixedUpdate, remove_ownerless_pets);
+            .add_systems(FixedUpdate, remove_ownerless_pets)
+            .add_systems(
+                FixedUpdate,
+                remove_dead_demons.after(crate::combat::auto_attack_system),
+            );
     }
 }
 
@@ -69,12 +75,17 @@ pub struct PetStable {
     pub summoned: Option<Entity>,
 }
 
-/// A summoned hunter pet: its owner and the active slot it is stored in.
+/// A controlled pet's owner and storage slot. Warlock imps reuse slot 0 internally;
+/// it is not a hunter Call Pet slot exposed to the warlock.
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
 pub struct HunterPet {
     pub owner: Entity,
     pub slot: u8,
 }
+
+/// Server-only SUMMON_PET kind: mana, not Focus; removed when dead.
+#[derive(Component)]
+struct SummonedDemon;
 
 /// A Tame Beast, Call Pet or Dismiss Pet check failing (`crate::spell_cast::CastFailure::Pet`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -140,7 +151,7 @@ pub(crate) fn check_cast(
     }
     for effect in &spell.effects {
         match effect.effect {
-            EFFECT_SUMMON_PET => check_summon_pet(world, caster, effect)?,
+            EFFECT_SUMMON_PET => check_summon_pet(world, caster, spell, effect)?,
             EFFECT_DISMISS_PET if summoned_pet(world, caster).is_none() => {
                 return Err(CastFailure::Pet(PetCastFailure::NoPet));
             }
@@ -215,14 +226,31 @@ fn has_aura_type(world: &World, unit: Entity, aura_type: u32) -> bool {
 fn check_summon_pet(
     world: &World,
     caster: Entity,
+    spell: &SpellInfo,
     effect: &SpellEffect,
 ) -> Result<(), CastFailure> {
+    if effect.misc_values[0] != 0 {
+        if spell.id != SUMMON_IMP
+            || world.get::<Player>(caster).map(|player| player.class) != Some(CLASS_WARLOCK)
+        {
+            return Err(CastFailure::Unsupported(
+                "Only Summon Imp is supported".into(),
+            ));
+        }
+        let entry = effect.misc_values[0] as u32;
+        let template = world
+            .get_resource::<WorldData>()
+            .and_then(|data| data.template_for(entry, 0));
+        if template.is_none_or(|template| template.models.is_empty()) {
+            return Err(CastFailure::Unsupported(format!(
+                "Missing summoned pet template/model {entry}"
+            )));
+        }
+        return Ok(());
+    }
     let Some(stable) = world.get::<PetStable>(caster) else {
         return Ok(());
     };
-    if effect.misc_values[0] != 0 {
-        return Ok(());
-    }
     let stored = stable
         .stored
         .active
@@ -297,16 +325,21 @@ fn tamed_pet(world: &World, hunter: Entity, creature: Entity, npc: &Npc) -> Opti
     })
 }
 
-/// `Player::GetOrInitPetStable`, then its first free active slot.
-fn first_free_slot(world: &mut World, hunter: Entity) -> Option<u8> {
-    if world.get::<PetStable>(hunter).is_none() {
-        let character_id = character_id(world, hunter)?;
-        world.entity_mut(hunter).insert(PetStable {
+/// `Player::GetOrInitPetStable`: attach this character's pet storage once.
+fn init_pet_stable(world: &mut World, owner: Entity) -> Option<()> {
+    if world.get::<PetStable>(owner).is_none() {
+        let character_id = character_id(world, owner)?;
+        world.entity_mut(owner).insert(PetStable {
             character_id,
             stored: StoredPetStable::default(),
             summoned: None,
         });
     }
+    Some(())
+}
+
+fn first_free_slot(world: &mut World, hunter: Entity) -> Option<u8> {
+    init_pet_stable(world, hunter)?;
     let stable = world.get::<PetStable>(hunter)?;
     let slot = stable.stored.active.iter().position(Option::is_none)?;
     u8::try_from(slot).ok()
@@ -320,18 +353,27 @@ fn character_id(world: &mut World, player: Entity) -> Option<u64> {
         .find_map(|(link, in_world)| (link.0 == player).then_some(in_world.character_id))
 }
 
-/// `Spell::EffectSummonPet` for a player (MiscValue 0): a pet already out comes to the
-/// owner (`NearTeleportTo` its close point); otherwise the pet in the effect's slot is
-/// summoned there.
+/// `Spell::EffectSummonPet` (TrinityCore a352b1fa, SpellEffects.cpp): MiscValue is
+/// the creature entry, or 0 for a hunter's slot. The same living pet is recalled;
+/// Summon Imp creates/loads the demon through the existing controlled-pet path.
 pub(crate) fn effect_summon_pet(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect) {
     let owner = ctx.caster;
-    if world.get::<Player>(owner).is_none() || effect.misc_values[0] != 0 {
+    if world.get::<Player>(owner).is_none() {
         return;
     }
     let Some((at, facing)) = close_point(world, owner) else {
         return;
     };
-    if let Some(pet) = summoned_pet(world, owner) {
+    let entry = effect.misc_values[0] as u32;
+    if let Some(pet) = summoned_pet(world, owner)
+        && (entry == 0
+            || world
+                .get::<Npc>(pet)
+                .is_some_and(|npc| npc.template_id == entry))
+    {
+        if world.get::<Health>(pet).expect("pet health").current <= 0.0 {
+            return;
+        }
         if let Some(mut position) = world.get_mut::<Position>(pet) {
             *position = at;
         }
@@ -341,6 +383,11 @@ pub(crate) fn effect_summon_pet(world: &mut World, ctx: &EffectCtx, effect: &Spe
                 .map(|queue| &*queue),
             pet,
         );
+        crate::pet_control::send_pet_spells(world, owner, pet);
+        return;
+    }
+    if entry != 0 {
+        summon_imp(world, owner, entry, at, facing);
         return;
     }
     let slot = effect_slot(effect);
@@ -349,6 +396,54 @@ pub(crate) fn effect_summon_pet(world: &mut World, ctx: &EffectCtx, effect: &Spe
         .and_then(|stable| stable.stored.active.get(slot).cloned().flatten());
     if stored.is_some() && slot < MAX_ACTIVE_PETS {
         put_pet_out(world, owner, slot as u8, at, facing);
+    }
+}
+
+/// `Player::SummonPet` loads an existing record or creates a SUMMON_PET from its
+/// creature template at the owner's level, then saves it as current. Only the imp
+/// is admitted by CheckCast; no timed summons or other demon lifecycle is implied.
+fn summon_imp(world: &mut World, owner: Entity, entry: u32, at: Position, facing: f32) {
+    let stored = create_or_reuse_imp_record(world, owner, entry);
+    if init_pet_stable(world, owner).is_none() {
+        error!("Summon Imp owner {owner} has no in-world character");
+        return;
+    }
+    if let Some(pet) = summoned_pet(world, owner) {
+        remove_pet(world, pet);
+    }
+    world
+        .get_mut::<PetStable>(owner)
+        .expect("stable initialized")
+        .stored
+        .active[0] = Some(stored);
+    put_pet_out(world, owner, 0, at, facing);
+}
+
+fn create_or_reuse_imp_record(world: &World, owner: Entity, entry: u32) -> StoredPet {
+    let level = world.get::<Level>(owner).map_or(1, |level| level.0);
+    let existing = world
+        .get::<PetStable>(owner)
+        .and_then(|stable| stable.stored.active[0].clone())
+        .filter(|stored| stored.creature_entry == entry);
+    match existing {
+        Some(mut stored) => {
+            stored.level = level;
+            stored
+        }
+        None => {
+            let data = world.resource::<WorldData>();
+            let template = data
+                .template_for(entry, 0)
+                .expect("summon template validated");
+            StoredPet {
+                creature_entry: entry,
+                display_id: crate::zones::template_display_id(template, &mut rand::thread_rng()),
+                name: template.name.clone(),
+                level,
+                family: template.family,
+                react_state: REACT_PASSIVE,
+            }
+        }
     }
 }
 
@@ -377,6 +472,10 @@ pub(crate) fn effect_dismiss_pet(
     _effect: &SpellEffect,
     pet: Entity,
 ) {
+    remove_pet(world, pet);
+}
+
+fn remove_pet(world: &mut World, pet: Entity) {
     let Some(owner) = world.get::<HunterPet>(pet).map(|pet| pet.owner) else {
         return;
     };
@@ -396,6 +495,7 @@ fn put_pet_out(world: &mut World, owner: Entity, slot: u8, at: Position, facing:
         return;
     };
     if let Some(mut stable) = world.get_mut::<PetStable>(owner) {
+        stable.stored.active[usize::from(slot)] = Some(stored.clone());
         stable.stored.current = Some(slot);
         stable.summoned = Some(pet);
     }
@@ -429,8 +529,8 @@ pub(crate) fn save_pet_react_state(world: &mut World, owner: Entity, pet: Entity
 }
 
 /// The pet of the owner's `slot` as a creature: its template's entry and classification,
-/// the stored model, name and level, full health, full Focus (`Pet::CreateBaseAtTamed`
-/// gives a Beast `POWER_FOCUS`; `power_type` MaxBasePower and DefaultPower), the owner's
+/// the stored model/name, owner's level for demons, full health and Focus for a hunter
+/// pet (`Pet::CreateBaseAtTamed`), or full mana for a demon (`Player::SummonPet`), the owner's
 /// faction and map, player controlled, summoned by its owner (`SetOwnerGUID` →
 /// `SummonedBy`), following it (`PET_FOLLOW_DIST`, `PET_FOLLOW_ANGLE`). Returns it with
 /// its stored record.
@@ -441,13 +541,20 @@ fn spawn_pet(
     at: Position,
     facing: f32,
 ) -> Option<(Entity, StoredPet)> {
-    let stored = world
+    let mut stored = world
         .get::<PetStable>(owner)?
         .stored
         .active
         .get(usize::from(slot))?
         .clone()?;
-    let (health, classification) = {
+    let demon = world
+        .get::<Player>(owner)
+        .is_some_and(|player| player.class == CLASS_WARLOCK);
+    if demon {
+        // Pet::LoadPetFromDB: SUMMON_PET always takes the owner's level.
+        stored.level = world.get::<Level>(owner).map_or(1, |level| level.0);
+    }
+    let (health, classification, mana) = {
         let data = world.get_resource::<WorldData>()?;
         let Some(template) = data.template_for(stored.creature_entry, 0) else {
             error!(
@@ -460,16 +567,31 @@ fn spawn_pet(
             pet_max_health(data, template, stored.level),
             CreatureClassification::from_rank(template.rank)
                 .expect("creature_template.rank is validated when loaded"),
+            if demon {
+                // Guardian::InitStatsForLevel uses CreatureBaseStats::BaseMana when
+                // pet_levelstats is absent; it does not apply template ManaModifier.
+                *data
+                    .class_level_base_mana
+                    .get(&(stored.level, template.unit_class))
+                    .expect("summoned pet creature_classlevelstats mana") as f32
+            } else {
+                0.0
+            },
         )
     };
     let map = *world.get::<InMap>(owner)?;
     let zone = world.get::<Zone>(owner).copied().unwrap_or(Zone { id: 0 });
     let faction = *world.get::<UnitFactionTemplate>(owner)?;
     let replicate = world.get::<Replicate>(owner).is_some();
-    let focus = world
+    let power = if demon {
+        PowerType::Mana
+    } else {
+        PowerType::Focus
+    };
+    let pools = world
         .get_resource::<PowerTypeTable>()
         .map_or_else(PowerPools::default, |table| {
-            PowerPools::from_table(table, vec![PowerType::Focus])
+            PowerPools::from_table(table, vec![power])
         });
     let mut pet = world.spawn((
         (
@@ -505,10 +627,20 @@ fn spawn_pet(
             HunterPet { owner, slot },
             FollowOwner::new(owner),
             UnitSummonedBy(owner.to_bits()),
-            focus,
+            pools,
             CombatTarget::default(),
         ),
     ));
+    if demon {
+        pet.insert((
+            SummonedDemon,
+            Mana {
+                current: mana,
+                max: mana,
+            },
+            crate::spell_cast::powers::CreatureRegenTimer::default(),
+        ));
+    }
     if replicate {
         pet.insert((
             Replicate::to_clients(NetworkTarget::All),
@@ -599,6 +731,20 @@ fn remove_ownerless_pets(
         if !still_out {
             commands.entity(pet).despawn();
         }
+    }
+}
+
+/// Pet::Update: a non-hunter corpse is removed with PET_SAVE_NOT_IN_SLOT.
+/// Keep the record for another explicit summon, but never restore it at login.
+fn remove_dead_demons(world: &mut World) {
+    let dead: Vec<Entity> = world
+        .query_filtered::<(Entity, &Health), With<SummonedDemon>>()
+        .iter(world)
+        .filter(|(_, health)| health.current <= 0.0)
+        .map(|(pet, _)| pet)
+        .collect();
+    for pet in dead {
+        remove_pet(world, pet);
     }
 }
 

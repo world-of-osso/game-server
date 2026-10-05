@@ -63,6 +63,13 @@ fn known_ids(classes: &ClassSpells, race: u8, class_id: u8, level: u8, spec: u32
 }
 
 #[test]
+fn warlock_knows_summon_imp_at_level_one() {
+    let classes = class_spells().expect("world.db");
+    assert!(known_ids(&classes, HUMAN, 9, 1, 0).contains(&688));
+    assert!(!known_ids(&classes, HUMAN, WARRIOR, 1, 0).contains(&688));
+}
+
+#[test]
 fn paladin_known_spells_follow_required_level_and_race_mask() {
     let Some(classes) = class_spells() else {
         return;

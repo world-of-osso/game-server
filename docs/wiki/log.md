@@ -1,5 +1,9 @@
 # Wiki Log
 
+## [2026-10-05] systems | Warlock Summon Imp
+
+Added [[warlock-pets]] and its spec: effect-56 MiscValue creature entry, shared pet bar/Firebolt AI, mana, permanent-current relog and dismiss/death removal. Documented TC function references and the explicit level-1 kit override (imported DB2 level is 3). No wire/client/schema change; exact pet stats/names and live proof remain out of scope. Targeted RED confirmed six missing-feature failures; GREEN pending.
+
 ## [2026-10-05] investigations | Fresh-character General grants
 
 Added [[general-spell-grants]]: read-only SQLite/CSV comparison of 41 captured entries; Attributes_13 bit 16 marks 31 content abilities plus Throw, while ordinary entries clear it. Other requested fields do not separate them. Unknown bit semantics and Throw eligibility block a verified rule; no server code/data change or behavioral proof.

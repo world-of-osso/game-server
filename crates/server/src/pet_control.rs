@@ -266,7 +266,7 @@ pub(crate) fn init_pet_control(
     send_pet_spells(world, owner, pet);
 }
 
-fn send_pet_spells(world: &mut World, owner: Entity, pet: Entity) {
+pub(crate) fn send_pet_spells(world: &mut World, owner: Entity, pet: Entity) {
     let Some(charm) = world.get::<PetCharm>(pet) else {
         return;
     };
@@ -782,3 +782,7 @@ fn planar_distance(a: &Position, b: &Position) -> f32 {
 #[cfg(test)]
 #[path = "pet_control_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "warlock_pet_tests.rs"]
+mod warlock_tests;
