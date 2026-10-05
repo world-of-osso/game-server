@@ -64,7 +64,7 @@ def balanced(source, start):
 
 
 def plain(markup):
-    markup = re.sub(r"<script\b[^>]*>.*?</script>", "", markup, flags=re.S)
+    markup = re.sub(r"<script\b[^>]*>.*?</script>", "", markup, flags=re.DOTALL)
     markup = re.sub(r"<br\s*/?>|</(?:p|li|tr)>", "\n", markup)
     return html.unescape(re.sub(r"<[^>]+>", "", markup)).strip()
 
@@ -114,20 +114,20 @@ def parse_page(source, kind, entry):
     if match:
         objective_mapper = read_json_at(source, match.end())
     text = {}
-    heading = re.search(r"<h1\b[^>]*>.*?</h1>", source, re.S)
+    heading = re.search(r"<h1\b[^>]*>.*?</h1>", source, re.DOTALL)
     if heading and kind == "quest":
         tail = source[heading.end() :]
         text["objectives"] = plain(re.split(r"<h2\b", tail)[0])
         for section in re.finditer(
-            r"<h2\b[^>]*>(.*?)</h2>(.*?)(?=<h2\b|$)", tail, re.S
+            r"<h2\b[^>]*>(.*?)</h2>(.*?)(?=<h2\b|$)", tail, re.DOTALL
         ):
             title = plain(section[1]).lower()
             if title in ("description", "progress", "completion"):
                 text[title] = plain(section[2])
     series = []
-    match = re.search(r'<table class="series">(.*?)</table>', source, re.S)
+    match = re.search(r'<table class="series">(.*?)</table>', source, re.DOTALL)
     if match:
-        for row in re.findall(r"<tr>(.*?)</tr>", match[1], re.S):
+        for row in re.findall(r"<tr>(.*?)</tr>", match[1], re.DOTALL):
             ids = [int(v) for v in re.findall(r"/forever/quest=(\d+)", row)]
             if "<b>" in row:
                 ids.append(entry)
@@ -143,7 +143,7 @@ def parse_page(source, kind, entry):
     )
     raw_scripts = [
         s
-        for s in re.findall(r"<script\b[^>]*>(.*?)</script>", source, re.S)
+        for s in re.findall(r"<script\b[^>]*>(.*?)</script>", source, re.DOTALL)
         if any(
             key in s
             for key in (
@@ -212,11 +212,11 @@ def normalize_quest(page):
             (starters if point["point"] == "start" else enders).add(point["id"])
 
     # Objective tables carry item/NPC IDs and counts when mapper does not.
-    heading = re.search(r"<h1\b[^>]*>.*?</h1>", page["html"], re.S)
+    heading = re.search(r"<h1\b[^>]*>.*?</h1>", page["html"], re.DOTALL)
     objective_html = (
         re.split(r"<h2\b", page["html"][heading.end() :])[0] if heading else ""
     )
-    for match in re.finditer(r"<tr\b[^>]*>(.*?)</tr>", objective_html, re.S):
+    for match in re.finditer(r"<tr\b[^>]*>(.*?)</tr>", objective_html, re.DOTALL):
         target = re.search(r"/forever/(npc|item|object)=(\d+)", match[1])
         count = re.search(r"\((\d+)\)|(?:x|×)\s*(\d+)", plain(match[1]))
         if target and count:
@@ -229,10 +229,10 @@ def normalize_quest(page):
                 or re.search(
                     r"Speak|Talk|Obtain Instructions|Deliver|Use|Free|Rescue|Meet|Find|Train|Tame",
                     label,
-                    re.I,
+                    re.IGNORECASE,
                 )
                 else "kill"
-                if re.search(r"slain|kill|defeat", label, re.I)
+                if re.search(r"slain|kill|defeat", label, re.IGNORECASE)
                 else "unknown"
             )
             objectives.append(
@@ -280,7 +280,9 @@ def normalize_quest(page):
 
 def normalize_rewards(page, row):
     """Reward markup carries spells/items omitted from the quest Listview row."""
-    section = re.search(r"<h2\b[^>]*>Rewards</h2>(.*?)(?=<h2\b|$)", page["html"], re.S)
+    section = re.search(
+        r"<h2\b[^>]*>Rewards</h2>(.*?)(?=<h2\b|$)", page["html"], re.DOTALL
+    )
     markup = section[1] if section else ""
     counts = {
         int(m[1]): int(m[2])
@@ -288,7 +290,7 @@ def normalize_rewards(page, row):
     }
     items = dict(row.get("itemrewards", []))
     choices = dict(row.get("itemchoices", []))
-    for table in re.finditer(r"<table\b([^>]*)>(.*?)</table>", markup, re.S):
+    for table in re.finditer(r"<table\b([^>]*)>(.*?)</table>", markup, re.DOTALL):
         target = choices if "choicerewards" in table[1] else items
         for entry in re.findall(r"/forever/item=(\d+)", table[2]):
             entry = int(entry)
@@ -495,6 +497,7 @@ def fetch_source(url):
         except (urllib.error.URLError, TimeoutError) as error:
             retry_after = 0
             if isinstance(error, urllib.error.HTTPError):
+                error.close()
                 if error.code not in (500, 502, 503, 504):
                     raise
                 value = error.headers.get("Retry-After")
