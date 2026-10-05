@@ -99,6 +99,7 @@ mod teleport;
 mod terrain_height;
 #[cfg(test)]
 mod test_data;
+mod threat_updates;
 mod trade;
 mod trait_config;
 mod unit_target;
@@ -221,6 +222,7 @@ fn add_world_plugins(app: &mut App) {
         .add_plugins(stats::StatsPlugin)
         .add_plugins(combat::CombatPlugin)
         .add_plugins(damage_meter::DamageMeterPlugin)
+        .add_plugins(threat_updates::ThreatUpdatesPlugin)
         .add_plugins(unit_target::UnitTargetPlugin)
         .add_plugins(npc_interaction::NpcInteractionPlugin)
         .add_plugins(merchant::MerchantPlugin)

@@ -32,6 +32,10 @@ World creatures attack players: hostile creatures aggro players that come near, 
 
 ### Threat and target selection (`Creature::SelectVictim`, `ThreatMgr`)
 
+- Effective healing generates 0.5 threat per point, split across the healed unit's engaged creatures, never across unrelated mobs; overheal adds none (TC a352b1fa `Spell.cpp:2893`, `ThreatManager.cpp:733-760`). Controlled creatures retain membership with zero assist threat.
+- Damage and healing apply active school-matching `SPELL_AURA_MOD_THREAT` (10), including Righteous Fury when applied (`ThreatManager.cpp:677-730`). Physical swings use the physical school.
+- `ThreatUpdate` sends the complete descending creature table only to its engaged players; unchanged tables are not re-sent, changes coalesce at most every 250 ms. New engaged connections receive current state. Removed membership, reset, death or despawn sends an empty table to previous recipients (`ThreatManager.cpp:829-875`, `ThreatClear` / `ThreatUpdate`). Entries include identity, raw threat, threat status and percentages relative to the current victim and 110%/130% aggro thresholds.
+
 - [x] The creature attacks the highest-threat valid unit; a challenger takes over only above 110% of the current target's threat inside 5 yards, 130% beyond.
 - [x] A target that dies is dropped from the threat list.
 - [ ] Ghosts, players on a flight path, despawned units and units the creature's faction cannot attack are dropped the same way (same check as aggro on sight; not asserted on an engaged creature).
@@ -63,6 +67,9 @@ World creatures attack players: hostile creatures aggro players that come near, 
 
 ## Tests asserting this spec
 
+- `crates/server/src/threat_updates_tests.rs`: production damage/heal threat ratios, heal splitting against the healed unit's enemies, real protocol loopback delivery to engaged players only, unchanged-table suppression and reset clears.
+- `spell_cast/tests.rs` `threat_heal_clamps_to_max_and_logs_overheal`: real Flash Heal adds 50 threat for 100 effective healing regardless of overheal.
+
 - `crates/server/src/creature_aggro_tests.rs` — aggro radius formula, `AggroMode` from flags, hostile spider aggroes/chases/hits, level-scaled radius, nearest player first, dead/ghost/flying ignored, neutral boar fights back only when hit (threat = damage), hostile civilian fights back only when hit, training dummy never fights, 110%/130% threat swap, target death evades home keeping its damage and heals at home, leash evade stops attackers and ignores damage while evading, killed creature forgets its fight, Fireball threat 388 on a neutral creature, Silence engages without damage; a rooted spider drops a victim 120 yd from its home 10 s after its last hit and evades, and keeps one 60 yd away.
 - `crates/server/src/zones_world_db_tests.rs` `world_spawns_aggro_by_template_hostile_attack_civilian_and_dummy_do_not` (`--ignored`, real world.db) — Riverpaw Outrunner 80474 and Forest Spider 79883 aggro and hit a level 5 Human 4 yd away; Kobold Vermin 79992 (civilian) and Heroic Training Dummy 48325 do not.
 - `crates/server/src/creature_ai_tests/` — chase reach and run speed, leash evade, return-to-spawn run speed.
@@ -74,7 +81,7 @@ World creatures attack players: hostile creatures aggro players that come near, 
 - [ ] AzerothCore's leash is 30 yards from the home position unless the creature took damage in the last 11–16 s (`Creature::CanCreatureAttack`, `GetLeashTimer`); the server evades at a flat 40 yards from spawn.
 - [ ] Patrollers return to their spawn point, not to where they left their path (`GetResetPosition`).
 - [ ] Periodic spell damage goes through the same `deal_damage` threat hook but has no test.
-- [ ] No 5 s post-respawn aggro grace (`m_respawnedTime`), no stunned check, no taunt, no threat modifiers (Righteous Fury etc.), no heal threat.
+- [ ] No 5 s post-respawn aggro grace (`m_respawnedTime`), no stunned check, no taunt. Spell-specific flat/AP threat and NO_THREAT/NO_HELPFUL_THREAT attributes are not modelled.
 - [ ] No GM mode exists, so GM players cannot be excluded yet.
 
 ## Out of scope
