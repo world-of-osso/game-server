@@ -2,7 +2,7 @@
 
 ## [2026-10-05] systems | SmartAI combat caster movement
 
-Updated [[boss-scripts]] and its spec: Geomancer 476's loaded UPDATE_IC/VICTIM row never ran because those event/target types were unsupported. Added combat-only initial/repeat timers, victim targeting, CMC chase hold and cast-failure retry/chase recovery, citing pinned TC SmartScript/SmartAI. Four real-data regressions reproduced absent Fireball in RED. Impact: 9,371 combat-update and 1,411 CMC cast rows in the loader's current creature set. Other unsupported script types remain gaps.
+Updated [[boss-scripts]] and its spec: Geomancer 476's loaded UPDATE_IC/VICTIM row never ran because those event/target types were unsupported. Added combat-only initial/repeat timers, victim targeting, CMC chase hold and cast-failure retry/chase recovery, citing pinned TC SmartScript/SmartAI. Four real-data regressions reproduced absent Fireball in RED; all 15 targeted scripted-AI tests passed at `798c4c6` (four new, eleven existing), including exact 3–5 s repeat and sustained exhaustion. Impact: 9,371 combat-update and 1,411 CMC cast rows in the loader's current creature set. Other unsupported script types remain gaps.
 
 ## [2026-10-05] systems | Recuperate full-health decision
 
