@@ -15,7 +15,8 @@ field expands to its array-count columns. String fields (TEXT columns) resolve
 through global record offsets and the virtual concatenation of all section string
 blocks. Zero-filled encrypted sections are reported and skipped; explicit selected
 IDs must all resolve from readable records. Declared inline uint32 arrays are
-supported; sparse (offset-map) layouts fail.
+supported. Sparse + Index (flags 0x5) supports inline strings and schema-declared
+numeric arrays/types; other sparse variants fail explicitly.
 Tables with localized strings are read from their enUS copy (casc_locale.py).
 """
 
@@ -100,19 +101,36 @@ def read_header(data):
     }
 
 
-def decode(data, text_columns=frozenset(), *, record_ids=None, inline_arrays=None):
+def decode(
+    data,
+    text_columns=frozenset(),
+    *,
+    record_ids=None,
+    inline_arrays=None,
+    field_types=None,
+):
     """(header, {id: [raw uint32 per column]}) for every record, copies included.
 
     With a non-inline ID list the ID is prepended as column 0; a pallet-array field
     contributes its array-count values. Columns in `text_columns` hold the string
     their field's offset points at: the offset counts from the field's own byte in
-    the record (fields before them must not be arrays)."""
+    the record (fields before them must not be arrays).
+
+    Sparse 0x5 reads strings inline; text_columns indexes stored fields plus the
+    non-inline ID, before array flattening. inline_arrays indexes stored fields
+    and declares element counts. Sparse field_types uses those same field indexes:
+    INTEGER sign-extends the metadata width, REAL reinterprets float32, and omitted
+    fields stay UNSIGNED. Types/arrays must come from the matching DBD schema."""
     # Selected-row imports must resolve every requested ID from readable records.
     # Retain master decoding of decrypted sections and warnings for zero-filled ones.
     inline_arrays = inline_arrays or {}
     header = read_header(data)
     if header["flags"] & 1:
-        raise ValueError("sparse (offset map) DB2 layout is not supported")
+        return header, decode_sparse(
+            data, header, text_columns, inline_arrays, field_types or {}, record_ids
+        )
+    if field_types:
+        raise ValueError("field_types is supported only for sparse DB2 layouts")
     offset = 204
     sections = []
     for _ in range(header["section_count"]):
@@ -241,12 +259,154 @@ def decode(data, text_columns=frozenset(), *, record_ids=None, inline_arrays=Non
             rows[new_id] = [
                 new_id if i == id_column else v for i, v in enumerate(rows[source_id])
             ]
-    if record_ids is not None:
-        missing = set(record_ids) - rows.keys()
-        if missing:
-            raise ValueError(f"missing readable DB2 rows: {sorted(missing)}")
-        rows = {record_id: rows[record_id] for record_id in sorted(record_ids)}
-    return header, rows
+    return header, select_rows(rows, record_ids)
+
+
+def select_rows(rows, record_ids):
+    if record_ids is None:
+        return rows
+    missing = set(record_ids) - rows.keys()
+    if missing:
+        raise ValueError(f"missing readable DB2 rows: {sorted(missing)}")
+    return {record_id: rows[record_id] for record_id in sorted(record_ids)}
+
+
+def decode_sparse(data, header, text_columns, arrays, field_types, record_ids):
+    """Observed WDC5 0x5: record bytes, IDs, copies, offsets, relations, sparse IDs."""
+    if header["flags"] != 5:
+        raise ValueError(f"sparse DB2 flags {header['flags']:#x} are not supported")
+    sections = [
+        struct.unpack_from("<Q8I", data, 204 + 40 * i)
+        for i in range(header["section_count"])
+    ]
+    if record_ids is None and any(section[0] for section in sections):
+        raise ValueError("encrypted DB2 section is not supported")
+    offset = 204 + 40 * header["section_count"]
+    metadata = [
+        struct.unpack_from("<hH", data, offset + 4 * i)
+        for i in range(header["field_count"])
+    ]
+    offset += 4 * header["field_count"]
+    if header["info_size"] != 24 * len(metadata):
+        raise ValueError("sparse DB2 field metadata count mismatch")
+    infos = [
+        struct.unpack_from("<HHIIIII", data, offset + 24 * i)
+        for i in range(len(metadata))
+    ]
+    for index, info in enumerate(infos):
+        if info[3] != COMPRESSION_NONE:
+            raise ValueError(
+                f"sparse field {index}: compression {info[3]} is not supported"
+            )
+    rows, copy_pairs = {}, []
+    for (
+        key,
+        start,
+        count,
+        strings,
+        end,
+        id_size,
+        relations,
+        map_count,
+        copies,
+    ) in sections:
+        if key:
+            continue
+        if strings or map_count != count or id_size not in (0, 4 * count):
+            raise ValueError("unsupported sparse DB2 section shape")
+        tail_end = (
+            end + id_size + 8 * copies + 6 * map_count + relations + 4 * map_count
+        )
+        if not (0 <= start <= end <= tail_end <= len(data)):
+            raise ValueError("truncated sparse DB2 section")
+        copy_at = end + id_size
+        copy_pairs.extend(
+            struct.iter_unpack("<II", data[copy_at : copy_at + 8 * copies])
+        )
+        map_at = copy_at + 8 * copies
+        entries = struct.iter_unpack("<IH", data[map_at : map_at + 6 * map_count])
+        relation_at = map_at + 6 * map_count
+        related = read_sparse_relations(data, relation_at, relations, count)
+        ids_at = relation_at + relations
+        ids = struct.unpack_from(f"<{map_count}I", data, ids_at)
+        for index, (record_id, (at, size)) in enumerate(zip(ids, entries)):
+            if not size or not start <= at < at + size <= end:
+                raise ValueError(f"sparse DB2 row {record_id}: invalid offset/size")
+            values = read_sparse_row(
+                data[at : at + size], metadata, infos, text_columns, arrays, field_types
+            )
+            rows[record_id] = [record_id, *values]
+            if relations:
+                rows[record_id].append(related.get(index, 0))
+    for new_id, source_id in copy_pairs:
+        if source_id not in rows:
+            raise ValueError(
+                f"sparse DB2 copy {new_id}: missing readable source {source_id}"
+            )
+        rows[new_id] = [new_id, *rows[source_id][1:]]
+    return select_rows(rows, record_ids)
+
+
+def read_sparse_relations(data, at, size, count):
+    if not size:
+        return {}
+    if size < 12:
+        raise ValueError("truncated sparse DB2 relationship map")
+    entries = struct.unpack_from("<I", data, at)[0]
+    if size != 12 + 8 * entries:
+        raise ValueError("invalid sparse DB2 relationship map size")
+    related = dict(
+        (index, foreign)
+        for foreign, index in struct.iter_unpack("<II", data[at + 12 : at + size])
+    )
+    if any(index >= count for index in related):
+        raise ValueError("invalid sparse DB2 relationship record index")
+    return related
+
+
+def read_sparse_row(data, metadata, infos, text_columns, arrays, field_types):
+    values, cursor = [], 0
+    for index, ((bits, _), info) in enumerate(zip(metadata, infos)):
+        if index + 1 in text_columns:
+            end = data.find(b"\0", cursor)
+            if end < 0:
+                raise ValueError(f"sparse field {index}: unterminated inline string")
+            values.append(data[cursor:end].decode("utf-8"))
+            cursor = end + 1
+            continue
+        width = 32 - bits
+        if width <= 0:
+            width = info[5]
+        count = arrays.get(index, 1)
+        if width not in (8, 16, 32) or count <= 0 or info[1] != width * count:
+            raise ValueError(
+                f"sparse field {index}: unsupported width/array declaration"
+            )
+        for _ in range(count):
+            end = cursor + width // 8
+            if end > len(data):
+                raise ValueError(f"sparse field {index}: truncated sparse row")
+            raw = int.from_bytes(data[cursor:end], "little")
+            values.append(sparse_typed(raw, width, field_types.get(index, "UNSIGNED")))
+            cursor = end
+    # Observed ItemSparse rows have up to three zero bytes of 4-byte alignment.
+    if cursor != len(data) and (
+        len(data) != (cursor + 3) // 4 * 4 or any(data[cursor:])
+    ):
+        raise ValueError(
+            f"sparse row has {len(data) - cursor} undeclared trailing bytes"
+        )
+    return values
+
+
+def sparse_typed(raw, width, field_type):
+    if field_type == "UNSIGNED":
+        return raw
+    if field_type == "INTEGER":
+        return raw - (1 << width) if raw & (1 << (width - 1)) else raw
+    if field_type == "REAL" and width == 32:
+        return typed(raw, "REAL")
+    raise ValueError(f"unsupported sparse field type {field_type!r} at width {width}")
 
 
 def read_global_string(blocks, offset):
