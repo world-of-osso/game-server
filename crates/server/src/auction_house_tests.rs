@@ -11,7 +11,9 @@ mod load_fixture;
 /// Take a mail's money and items at a mailbox (`TakeInboxMoney`, `TakeInboxItem`).
 fn take_mail(db: &redb::Database, character_id: u64, mail_id: u64, gold: &mut GoldUpdateQueue) {
     use shared::protocol::MailAction;
-    let templates = crate::item_templates::ItemTemplates::default();
+    let templates =
+        crate::item_templates::load_runtime_item_templates(&crate::test_data::world_db_path())
+            .expect("load runtime item catalogs for mailbox claims");
     let mail = mail_store::load_mailbox(db, character_id)
         .into_iter()
         .find(|mail| mail.mail_id == mail_id)

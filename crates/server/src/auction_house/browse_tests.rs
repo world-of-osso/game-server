@@ -508,6 +508,9 @@ mod session {
         });
         app.add_plugins(ProtocolPlugin);
         app.init_resource::<Inbox>();
+        app.insert_resource(GameDatabase {
+            db: persistence::temp_database(),
+        });
         app.insert_resource(FactionTemplates(HashMap::from([(
             1,
             FactionTemplateEntry {
