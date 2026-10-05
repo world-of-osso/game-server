@@ -70,6 +70,16 @@ class ForeverTests(unittest.TestCase):
         data = b"KNCM" + struct.pack("<I", len(payload)) + payload
         self.assertIsNone(wh.sample_adt(data, 100 - step / 2, 100 - step / 2))
 
+    def test_js_loot_keys_and_class_quest_categories(self):
+        source = "new Listview({template:'item',id:'skinning',data:[{\"id\":2318,count:157,stack:[1,1],name:\"count: not a key\"}]});"
+        page = wh.parse_page(source, "npc", 250868)
+        self.assertEqual(page["listviews"][0]["data"][0]["count"], 157)
+        self.assertEqual(page["listviews"][0]["data"][0]["name"], "count: not a key")
+        source = "new Listview({template:'quest',id:'quests',data:[{\"id\":92481,\"category\":-161}]});"
+        self.assertEqual(
+            wh.zone_ids(wh.parse_page(source, "zone", 16593), "quest"), [92481]
+        )
+
     def test_unrelated_comment_listview_is_not_database_data(self):
         source = (FIXTURES / "quest-92471.html").read_text()
         source += "new Listview({template:'comment',id:'comments',data:lv_comments0});"

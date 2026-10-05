@@ -29,7 +29,13 @@ UA = "Mozilla/5.0 (compatible; game-server reference capture)"
 
 
 def read_json_at(source, start):
-    return json.JSONDecoder().raw_decode(source[start:].lstrip())[0]
+    literal = source[start:].lstrip()
+    if literal.startswith(("{", "[")):
+        literal = balanced(literal, 0)
+        # Protect quoted strings while quoting the bare keys in Wowhead loot rows.
+        tokens = r'"(?:\\.|[^"\\])*"|\b([A-Za-z_$][\w$]*)(?=\s*:)'
+        literal = re.sub(tokens, lambda m: json.dumps(m[1]) if m[1] else m[0], literal)
+    return json.JSONDecoder().raw_decode(literal)[0]
 
 
 def balanced(source, start):
@@ -172,11 +178,7 @@ def zone_ids(page, kind):
             for view in page["listviews"]
             if view["template"] == kind
             for row in view["data"]
-            if (
-                row.get("category") == ZONE
-                if kind == "quest"
-                else ZONE in row.get("location", [])
-            )
+            if kind == "quest" or ZONE in row.get("location", [])
         }
     )
 
@@ -492,7 +494,9 @@ class Capture:
                 continue
             seen.add(entry)
             page = self.page("quest", entry)
-            if page["entity"].get("category") != ZONE:
+            if entry not in allowed and not any(
+                z == ZONE for z, _ in mapper_points(page)
+            ):
                 continue
             quest = normalize_quest(page)
             npc_ids.update(quest["starter_npc_ids"] + quest["ender_npc_ids"])
@@ -520,9 +524,11 @@ class Capture:
 
 def normalize(root, bounds=None, terrain=None):
     quests, npcs, objects = [], [], []
+    zone_page = json.loads((root / "zone" / f"{ZONE}.json").read_text())
+    allowed = set(zone_ids(zone_page, "quest"))
     for path in sorted((root / "quest").glob("*.json")):
         page = json.loads(path.read_text())
-        if page["entity"].get("category") == ZONE:
+        if page["id"] in allowed or any(z == ZONE for z, _ in mapper_points(page)):
             quests.append(normalize_quest(page))
     for path in sorted((root / "npc").glob("*.json")):
         npc = normalize_npc(json.loads(path.read_text()))
