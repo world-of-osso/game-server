@@ -24,8 +24,9 @@ pub struct GuildMemberRecord {
 
 /// Save a single character to the database.
 pub fn save_character(db: &Database, character_id: u64, data: &CharacterData) {
-    let bytes = bitcode::encode(data);
+    let bytes = data.encode_stored();
     let txn = db.begin_write().expect("Failed to begin write txn");
+    validate_forever_equipment_sources(&txn, character_id, data);
     {
         let mut table = txn
             .open_table(CHARACTERS)
@@ -43,12 +44,81 @@ pub fn load_character(db: &Database, character_id: u64) -> Option<CharacterData>
     let table = txn
         .open_table(CHARACTERS)
         .expect("Failed to open characters table");
-    table
-        .get(character_id)
-        .expect("Failed to read character")
-        .map(|guard| {
-            CharacterData::decode_compatible(guard.value()).expect("Failed to decode character")
-        })
+    let guard = table.get(character_id).expect("Failed to read character")?;
+    let mut data =
+        CharacterData::decode_compatible(guard.value()).expect("Failed to decode character");
+    let equipped: Vec<crate::persistence::equipment::EquippedItem> =
+        crate::persistence::inventory_store::read_row(
+            &txn.open_table(crate::persistence::equipment::EQUIPMENT)
+                .expect("open equipment for character source hydration"),
+            character_id,
+        );
+    let sources = txn
+        .open_table(crate::persistence::inventory_store::ITEM_DEFINITION_SOURCES)
+        .expect("open character item definition sources");
+    hydrate_equipment_sources(&mut data, &equipped, &sources);
+    Some(data)
+}
+
+pub(crate) fn hydrate_equipment_sources(
+    character: &mut CharacterData,
+    equipped: &[crate::persistence::equipment::EquippedItem],
+    sources: &impl ReadableTable<u64, u8>,
+) {
+    for entry in &mut character.equipment_appearance.entries {
+        entry.definition_source = entry.item_id.map(|item_id| {
+            let owned = equipped.iter().find(|owned| owned.slot == entry.slot);
+            match owned {
+                Some(owned) => {
+                    assert_eq!(
+                        owned.item.item_id, item_id,
+                        "cached equipment differs from owned slot"
+                    );
+                    crate::persistence::inventory_store::read_item_definition_source(
+                        sources,
+                        owned.item.item_guid,
+                    )
+                }
+                // Existing pre-ownership item caches have no GUID and are known Retail.
+                None => shared::item_data::ItemDefinitionSource::Retail,
+            }
+        });
+    }
+}
+
+/// A source-free cache may only be written after Forever ownership is durable
+/// in the same transaction (or an earlier creation transaction).
+pub(crate) fn validate_forever_equipment_sources(
+    txn: &redb::WriteTransaction,
+    character_id: u64,
+    data: &CharacterData,
+) {
+    use crate::persistence::{equipment, inventory_store};
+    use shared::item_data::ItemDefinitionSource::Forever70205;
+    let equipped: Vec<equipment::EquippedItem> = inventory_store::read_row(
+        &txn.open_table(equipment::EQUIPMENT)
+            .expect("open equipment for source validation"),
+        character_id,
+    );
+    let sources = txn
+        .open_table(inventory_store::ITEM_DEFINITION_SOURCES)
+        .expect("open item sources for character validation");
+    for entry in data
+        .equipment_appearance
+        .entries
+        .iter()
+        .filter(|entry| entry.definition_source == Some(Forever70205))
+    {
+        let owned = equipped
+            .iter()
+            .find(|owned| owned.slot == entry.slot && Some(owned.item.item_id) == entry.item_id)
+            .expect("Forever cached equipment has no owned GUID");
+        assert_eq!(
+            inventory_store::read_item_definition_source(&sources, owned.item.item_guid),
+            Forever70205,
+            "Forever cached equipment differs from GUID source"
+        );
+    }
 }
 
 pub fn load_character_guild(db: &Database, character_id: u64) -> Option<GuildMembership> {
@@ -405,9 +475,9 @@ pub fn create_character_with_appearance(
     let progression = kit.starting_progression(race, class)?;
     let mut mint = || next_id(db, "item_instance");
     let inventory = kit.starting_inventory(data, &mut mint)?;
+    save_inventory_record(db, character_id, &inventory);
     save_new_character(db, account_id, character_id, name, &inventory.character);
     crate::maps::persistence::save_character_map(db, character_id, start_location(race).map_id);
-    save_inventory_record(db, character_id, &inventory);
     crate::persistence_progression::save_progression(db, character_id, &progression);
     Ok((character_id, inventory.character))
 }
@@ -520,8 +590,9 @@ pub(crate) fn save_new_character(
     name: &str,
     data: &CharacterData,
 ) {
-    let bytes = bitcode::encode(data);
+    let bytes = data.encode_stored();
     let txn = db.begin_write().expect("Failed to begin write txn");
+    validate_forever_equipment_sources(&txn, character_id, data);
     {
         let mut chars = txn.open_table(CHARACTERS).expect("open characters");
         chars

@@ -58,6 +58,10 @@ Added [[warlock-pets]] and its spec: effect-56 MiscValue creature entry, shared 
 
 Added [[general-spell-grants]]: read-only SQLite/CSV comparison of 41 captured entries; Attributes_13 bit 16 marks 31 content abilities plus Throw, while ordinary entries clear it. Other requested fields do not separate them. Unknown bit semantics and Throw eligibility block a verified rule; no server code/data change or behavioral proof.
 
+## [2026-10-05] systems/spec | Frozen character equipment disk ABI
+
+Updated [[persistence]], index and [storage contract](../specs/character-customization-storage.md): private V7 DTO, frozen V3–V6 equipment fields/slot order, explicit six-writer boundary, GUID-based cache hydration and rejected unowned Forever cache writes. Temporary redb tests cover independent nonempty V7/V6 fixtures, historical migrations, wire source serialization and actual ten-pair creation/reopen. No live database, new decoder, deployment or merge-readiness claim; main owns final integration proof.
+
 ## [2026-10-05] systems/spec | Isolated Forever scaling CSV import
 
 Updated [[skyborne]] and contract with the nine-table source-local scaling CLI, actual catalog fixtures, exact provenance and atomic Retail-preserving refresh. At `678c9df`, capped `python3 -m unittest discover -s scripts/tests -p test_skyborne_scaling_data.py` passed 8 tests in 24.252s after RED; [proof ledger](../../target/skyborne-scaling-proof/ledger.json). No Rust edits, canonical/live publication or runtime acceptance claim.

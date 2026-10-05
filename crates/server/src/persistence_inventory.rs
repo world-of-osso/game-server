@@ -194,7 +194,7 @@ pub fn soulbound_guids(db: &Database, guids: impl Iterator<Item = u64>) -> HashS
         .collect()
 }
 
-fn read_row<T: bitcode::DecodeOwned + Default>(
+pub(crate) fn read_row<T: bitcode::DecodeOwned + Default>(
     table: &impl ReadableTable<u64, &'static [u8]>,
     key: u64,
 ) -> T {
@@ -223,7 +223,7 @@ pub(crate) fn write_inventory_record(
         (INVENTORY_LAYOUTS, bitcode::encode(&record.placements)),
         (EQUIPMENT, bitcode::encode(&record.equipped)),
         (BAG_SLOTS, bitcode::encode(&record.bag_slots)),
-        (CHARACTERS, bitcode::encode(&record.character)),
+        (CHARACTERS, record.character.encode_stored()),
     ];
     for (definition, bytes) in rows {
         txn.open_table(definition)
@@ -234,6 +234,11 @@ pub(crate) fn write_inventory_record(
     for (&guid, &source) in &record.definition_sources {
         write_item_definition_source(txn, guid, source);
     }
+    crate::persistence_character::validate_forever_equipment_sources(
+        txn,
+        character_id,
+        &record.character,
+    );
     let mut instances = txn.open_table(ITEM_INSTANCES).expect("open item instances");
     for (guid, data) in &record.instances {
         instances

@@ -139,6 +139,7 @@ fn forever_memberships_and_counts_cover_all_ten_pairs_without_retail_leakage() {
 
 #[test]
 fn forever_creation_equips_concrete_gear_and_persists_all_authored_items_on_reopen() {
+    use shared::item_data::ItemDefinitionSource::Forever70205;
     let (directory, path) = fixture_path();
     let kit = load_kit(&path);
     for (race, class) in authored_pairs() {
@@ -158,7 +159,22 @@ fn forever_creation_equips_concrete_gear_and_persists_all_authored_items_on_reop
         assert_eq!(created.level, 1);
         drop(db);
         let db = redb::Database::open(&player_path).unwrap();
+        crate::persistence::create_tables(&db);
         let record = load_inventory_record(&db, id).unwrap();
+        assert_eq!(record.character, created);
+        for entry in &record.character.equipment_appearance.entries {
+            assert_eq!(entry.definition_source, Some(Forever70205));
+            let owned = record
+                .equipped
+                .iter()
+                .find(|owned| owned.slot == entry.slot)
+                .unwrap();
+            assert_eq!(entry.item_id, Some(owned.item.item_id));
+            assert_eq!(
+                record.definition_sources[&owned.item.item_guid],
+                Forever70205
+            );
+        }
         assert_eq!(
             (record.character.race, record.character.class),
             (race, class)
@@ -183,10 +199,33 @@ fn forever_creation_equips_concrete_gear_and_persists_all_authored_items_on_reop
             if class == 1 { 5 } else { 4 },
             "concrete gear count for {race}/{class}"
         );
-        assert!(
-            record.bag_slots.is_empty(),
-            "Forever quiver is not a Retail generic bag"
-        );
+        if class == 3 {
+            assert_eq!(record.bag_slots.len(), 1);
+            let quiver = &record.bag_slots[0];
+            assert_eq!(
+                (quiver.bag, quiver.item.item_id, quiver.item.stack_count),
+                (1, 2101, 1)
+            );
+            assert_eq!(
+                record.definition_sources[&quiver.item.item_guid],
+                Forever70205
+            );
+            let template = kit
+                .templates
+                .get(Forever70205, quiver.item.item_id)
+                .unwrap();
+            assert_eq!(
+                (
+                    template.inventory_type,
+                    template.container_slots,
+                    template.scaling.class_id,
+                    template.bag_family
+                ),
+                (18, 6, 11, 1)
+            );
+        } else {
+            assert!(record.bag_slots.is_empty());
+        }
         assert_eq!(
             record.character.equipment_appearance.entries.len(),
             record.equipped.len()
@@ -207,6 +246,13 @@ fn forever_creation_equips_concrete_gear_and_persists_all_authored_items_on_reop
         for clothing in clothes {
             assert!(equipment_ids.contains(clothing));
         }
+        crate::persistence::save_character(&db, id, &record.character);
+        drop(db);
+        let db = redb::Database::open(&player_path).unwrap();
+        assert_eq!(
+            crate::persistence::load_character(&db, id).unwrap(),
+            created
+        );
     }
 }
 
