@@ -11,7 +11,13 @@ import os
 import subprocess
 from pathlib import Path
 
-from ground_files import GroundFiles, NO_WDT, add_map_selection, chunks, selected_map_sources
+from ground_files import (
+    NO_WDT,
+    GroundFiles,
+    add_map_selection,
+    chunks,
+    selected_map_sources,
+)
 
 BATCH = 2000
 
@@ -24,7 +30,10 @@ def missing_files(maps, cache):
             files.add_map(wdt)
         else:
             files.missing.append((map_id, NO_WDT))
-    print(f"{len(maps)} selected maps: {len(files.present)} cached, {len(files.missing)} missing", flush=True)
+    print(
+        f"{len(maps)} selected maps: {len(files.present)} cached, {len(files.missing)} missing",
+        flush=True,
+    )
     return files.missing
 
 
@@ -55,19 +64,27 @@ def extract(paths, cache, engine, product, executable):
         batch = paths[start : start + BATCH]
         result = subprocess.run(
             [str(executable), *(Path(path).stem for path in batch), "-o", str(out_dir)],
-            cwd=engine, env=environment, capture_output=True, text=True,
+            cwd=engine,
+            env=environment,
+            capture_output=True,
+            text=True,
         )
         print(result.stdout, end="", flush=True)
         print(result.stderr, end="", flush=True)
         present = sum(normalize_extracted_file(cache, path) for path in batch)
-        print(f"{product} {out_dir.name}: {present}/{len(batch)} cached; exit {result.returncode}", flush=True)
+        print(
+            f"{product} {out_dir.name}: {present}/{len(batch)} cached; exit {result.returncode}",
+            flush=True,
+        )
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--world-db", type=Path, required=True)
     parser.add_argument("--cache", type=Path, required=True)
-    parser.add_argument("--engine", type=Path, required=True, help="checkout with local data/casc")
+    parser.add_argument(
+        "--engine", type=Path, required=True, help="checkout with local data/casc"
+    )
     parser.add_argument("--casc-local", type=Path, default=Path("casc-local"))
     parser.add_argument("--failed", type=Path, required=True)
     add_map_selection(parser)
@@ -80,18 +97,31 @@ def main():
             map_id, path = line.split("\t")
             failed.add((int(map_id), path))
     while True:
-        todo = [(map_id, path) for map_id, path in missing_files(maps, args.cache)
-                if (map_id, path) not in failed]
+        todo = [
+            (map_id, path)
+            for map_id, path in missing_files(maps, args.cache)
+            if (map_id, path) not in failed
+        ]
         if not todo:
             break
         for product in sorted(set(products.values())):
             for directory in ("terrain", "models"):
-                paths = sorted({path for map_id, path in todo
-                                if products[map_id] == product and path.startswith(directory + "/")})
+                paths = sorted(
+                    {
+                        path
+                        for map_id, path in todo
+                        if products[map_id] == product
+                        and path.startswith(directory + "/")
+                    }
+                )
                 if paths:
                     extract(paths, args.cache, args.engine, product, args.casc_local)
-        failed.update((map_id, path) for map_id, path in todo if not (args.cache / path).is_file())
-        args.failed.write_text("".join(f"{map_id}\t{path}\n" for map_id, path in sorted(failed)))
+        failed.update(
+            (map_id, path) for map_id, path in todo if not (args.cache / path).is_file()
+        )
+        args.failed.write_text(
+            "".join(f"{map_id}\t{path}\n" for map_id, path in sorted(failed))
+        )
         print(f"{len(failed)} failed so far", flush=True)
     return int(any(map_id in products for map_id, _path in failed))
 
