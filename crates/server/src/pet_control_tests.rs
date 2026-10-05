@@ -203,6 +203,22 @@ impl PetHarness {
     }
 
     /// Damage the pet's `spell` did to `target`, as logged.
+    /// The pet's melee swings at `target` in the owner's combat log, hits and misses alike
+    /// (melee lines carry no spell id).
+    fn melee_swings(&self, target: Entity) -> usize {
+        self.h
+            .inbox
+            .log
+            .iter()
+            .filter(|event| {
+                matches!(event.kind, CombatLogKind::Damage | CombatLogKind::Miss(_))
+                    && event.spell_id.is_none()
+                    && event.source == Some(self.pet.to_bits())
+                    && event.target == Some(target.to_bits())
+            })
+            .count()
+    }
+
     fn spell_damage(&self, spell: u32, target: Entity) -> Vec<i32> {
         self.h
             .inbox
@@ -616,7 +632,8 @@ fn bite_with_autocast_turned_off_is_not_autocast() {
     );
     p.attack_kobold();
     p.advance(100);
-    assert!(p.h.health(kobold) < 5_000.0, "the wolf never swung");
+    // Swings, not damage: a run of misses, dodges or parries is a legitimate outcome.
+    assert!(p.melee_swings(kobold) > 0, "the wolf never swung");
     assert_eq!(p.spell_damage(BITE, kobold), Vec::<i32>::new());
 
     p.autocast(BITE, true);
