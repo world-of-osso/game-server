@@ -476,6 +476,23 @@ pub(crate) fn effect_dismiss_pet(
     remove_pet(world, pet);
 }
 
+/// TC a352b1fa PetHandler.cpp:217-238: command 3 deletes hunter pets, but
+/// keeps a summoned demon's record for its next explicit summon.
+pub(crate) fn abandon_or_dismiss_pet(world: &mut World, pet: Entity) {
+    if world.get::<SummonedDemon>(pet).is_none() {
+        let Some((owner, slot)) = world
+            .get::<HunterPet>(pet)
+            .map(|pet| (pet.owner, usize::from(pet.slot)))
+        else {
+            return;
+        };
+        if let Some(mut stable) = world.get_mut::<PetStable>(owner) {
+            stable.stored.active[slot] = None;
+        }
+    }
+    remove_pet(world, pet);
+}
+
 fn remove_pet(world: &mut World, pet: Entity) {
     let Some(owner) = world.get::<HunterPet>(pet).map(|pet| pet.owner) else {
         return;

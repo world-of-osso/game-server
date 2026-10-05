@@ -26,7 +26,7 @@
 //! - After an autocast toggle the owner gets the whole bar again (`PetSpells`).
 //! - Autocast casts the first ready autocast spell in bar order, not a random one, and
 //!   never positive spells (Dash).
-//! - Not modelled: Abandon, `SMSG_PET_CAST_FAILED` for a failed ordered cast, autocast
+//! - Not modelled: `SMSG_PET_CAST_FAILED` for a failed ordered cast, autocast
 //!   states kept in the stable (`character_pet.abilities`), spell ranks on the bar
 //!   (`SupercedesSpell`).
 
@@ -38,10 +38,10 @@ use lightyear::prelude::{MessageReceiver, ReplicationDirtyQueue};
 use rusqlite::{Connection, OpenFlags};
 use shared::components::{Health, Mounted, Player, Position, UnitFactionTemplate, UnitFlags};
 use shared::protocol::{
-    ACT_COMMAND, ACT_DISABLED, ACT_ENABLED, ACT_PASSIVE, ACT_REACTION, COMMAND_ATTACK,
-    COMMAND_FOLLOW, COMMAND_MOVE_TO, COMMAND_STAY, PET_ACTION_BAR_SLOTS, PetAction, PetClearSpells,
-    PetSpellAutocast, PetSpells, REACT_AGGRESSIVE, REACT_ASSIST, REACT_DEFENSIVE, REACT_PASSIVE,
-    pet_action_button, pet_action_button_action, pet_action_button_type,
+    ACT_COMMAND, ACT_DISABLED, ACT_ENABLED, ACT_PASSIVE, ACT_REACTION, COMMAND_ABANDON,
+    COMMAND_ATTACK, COMMAND_FOLLOW, COMMAND_MOVE_TO, COMMAND_STAY, PET_ACTION_BAR_SLOTS, PetAction,
+    PetClearSpells, PetSpellAutocast, PetSpells, REACT_AGGRESSIVE, REACT_ASSIST, REACT_DEFENSIVE,
+    REACT_PASSIVE, pet_action_button, pet_action_button_action, pet_action_button_type,
 };
 
 use crate::combat::AutoAttack;
@@ -419,6 +419,7 @@ fn toggle_autocast(world: &mut World, owner: Entity, toggle: PetSpellAutocast) {
 /// `ACT_COMMAND`.
 fn command(world: &mut World, owner: Entity, pet: Entity, order: u32, action: &PetAction) {
     match order {
+        COMMAND_ABANDON => crate::hunter_pet::abandon_or_dismiss_pet(world, pet),
         COMMAND_STAY => {
             set_motion(world, pet, PetMotion::Idle);
             let here = world.get::<Position>(pet).copied();

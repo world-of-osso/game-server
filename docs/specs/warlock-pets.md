@@ -9,7 +9,7 @@ Summon Imp (688) uses the server's existing pet ownership, bar, movement and com
 - [x] The owner receives the existing pet bar with family-derived Firebolt (3110) autocast enabled.
 - [x] Attack produces Firebolt damage on the ordered target with TC's 15% owner spell-power contribution; Follow stops attacking and moves back to the owner.
 - [x] Recasting the same summon recalls the existing imp instead of duplicating it.
-- [x] Dismiss and death remove the imp and clear the owner's bar. Neither restores it at relog.
+- [x] PetAction command 3 dismisses the imp without requiring hunter spell 2641; dismissal and death clear the owner's bar and do not restore it at relog. The saved demon remains explicitly summonable. The same command abandons/deletes a hunter pet's saved slot (TC `PetHandler.cpp:217-238`).
 - [x] Explicitly summoning a dismissed imp after relog restores the saved record.
 - [x] A permanent current imp returns at login through persisted pet storage and restores its bar.
 - [ ] Existing owner/pet replication carries the imp without wire changes (live proof belongs to team-lead).

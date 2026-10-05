@@ -297,6 +297,34 @@ fn level_up_spells_of_the_wolf_family_in_trinitycore_order() {
     assert!(spells.0[&1].iter().all(|spell| spell.kind == ACT_ENABLED));
 }
 
+/// TC a352b1fa PetHandler.cpp:217-238 deletes hunter pets for command 3.
+#[test]
+fn hunter_pet_dismiss_command_abandons_the_saved_wolf() {
+    let path = db_path();
+    seed_stable(&path);
+    let mut p = hunter_logged_in(&path).expect("real hunter data");
+    p.command(shared::protocol::COMMAND_ABANDON);
+    assert!(p.h.app.world().get_entity(p.pet).is_err());
+    let stable = p.h.app.world().get::<PetStable>(p.h.caster).unwrap();
+    assert_eq!(stable.summoned, None);
+    assert_eq!(stable.stored.current, None);
+    assert!(stable.stored.active[0].is_none());
+    assert_eq!(
+        p.h.app
+            .world_mut()
+            .get_mut::<MessageReceiver<PetClearSpells>>(p.h.connection)
+            .unwrap()
+            .receive()
+            .count(),
+        1
+    );
+    drop(p);
+    let db = open_db(&path);
+    let saved = crate::persistence::pet_store::load_pet_stable(&db.db, CHARACTER_ID).unwrap();
+    assert!(saved.active[0].is_none());
+    assert_eq!(saved.current, None);
+}
+
 #[test]
 fn a_called_wolf_sends_its_owner_the_retail_pet_bar() {
     let Some(p) = hunter_with_wolf() else {
