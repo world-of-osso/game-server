@@ -60,7 +60,7 @@ Added [[general-spell-grants]]: read-only SQLite/CSV comparison of 41 captured e
 
 ## [2026-10-05] systems/spec | Isolated Forever scaling CSV import
 
-Updated [[skyborne]] and contract with the nine-table source-local scaling CLI, actual catalog fixtures, exact provenance and atomic Retail-preserving refresh. No Rust edits, canonical/live publication or runtime acceptance claim.
+Updated [[skyborne]] and contract with the nine-table source-local scaling CLI, actual catalog fixtures, exact provenance and atomic Retail-preserving refresh. At `678c9df`, capped `python3 -m unittest discover -s scripts/tests -p test_skyborne_scaling_data.py` passed 8 tests in 24.252s after RED; [proof ledger](../../target/skyborne-scaling-proof/ledger.json). No Rust edits, canonical/live publication or runtime acceptance claim.
 
 ## [2026-10-05] systems/spec | Owned source runtime boundary
 

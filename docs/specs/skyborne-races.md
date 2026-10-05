@@ -13,7 +13,7 @@ Server support for Forever races 95/96, grounded in local build 1.60.1.70205 Chr
 - [x] Reject undeclared row-ID collisions rather than replacing Retail loadout/item data; rollback publication atomically.
 - [x] Preserve Retail definitions; isolate all 30 Forever kit definitions in six `skyborne_item*` tables and project `skyborne_content_item` using the existing content policy. Full DB2/content regeneration and the additive kit refresh retain isolated definitions and exact row provenance. Standalone publication rolls back the entire overlay if content projection fails.
 
-- [ ] Import exactly nine source-pinned Forever item-scaling CSVs atomically into isolated `skyborne_` tables in an existing owned scratch database; preserve Retail schemas/rows/provenance. Validate build, FDID/layout/raw/schema pins, CSV hashes/columns/row IDs and required levels before publication; missing/tampered source or SQL failure leaves no partial refresh. Publish only authored fields and exact per-row raw provenance, never Retail scaling substitutes.
+- [x] Import exactly nine source-pinned Forever item-scaling CSVs atomically into isolated `skyborne_` tables in an existing owned scratch database; preserve Retail schemas/rows/provenance. Validate build, FDID/layout/raw/schema pins, CSV hashes/columns/row IDs and required levels before publication; missing/tampered source or SQL failure leaves no partial refresh. Publish only authored fields and exact per-row raw provenance, never Retail scaling substitutes.
 
 ## How it works
 
