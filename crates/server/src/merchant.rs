@@ -47,7 +47,6 @@ mod stock;
 
 use catalog::VendorSlot;
 pub use catalog::{VendorCatalog, load_vendor_catalog};
-#[cfg(test)]
 pub(crate) use catalog::{VendorGoods, load_skyborne_goods};
 use stock::{BuybackEntry, BuybackSlots, VendorStock};
 
