@@ -10,6 +10,7 @@ References: TrinityCore a352b1fa `WorldSession::HandlePetAction`/`HandlePetActio
 - [x] The bar: Attack, Follow, Move To, four spell slots, Assist, Defensive, Passive. Spell slots take the family's level-up spells (CreatureFamily `SkillLine_0/1`, `AutomaticCharLevel`, spell level up to the pet's), highest level first; non-passive only; `ACT_ENABLED`/`ACT_DISABLED`/`ACT_PASSIVE` by `NO_AUTOCAST_AI`/`AUTOCAST_OFF_BY_DEFAULT`. A level 10 wolf: Dash, Bite, Growl.
 - [x] The owner gets `PetSpells` (bar, command and react state) when the pet comes out and after every order; `PetClearSpells` when it is dismissed.
 - [x] `PetAction` from a mounted owner, for another unit or a dead pet is ignored.
+- [x] Command 3 (`COMMAND_ABANDON`) removes the owner's pet and clears its bar/current state. Hunter pets lose their saved slot; summoned demons retain their record for an explicit summon, never relog restoration (TC `PetHandler.cpp:217-238`).
 - [x] Spell buttons (`ACT_ENABLED`/`ACT_DISABLED`/`ACT_PASSIVE`): a spell on the pet's bar, not passive and without an enemy area target, is cast by the pet through the spell pipeline (`creature_cast`: cost, cooldown, range, sight) at the given unit; the pet then goes after that unit if its owner may attack it (`_AttackStart`), even when passive (`IsCommandAttack`). A failed cast clears the attack order. A level 10 wolf's Bite (17253, 25 Focus, 0.75 × AP) hits the target.
 - [x] A hunter pet's attack power is its owner's × 0.22 (`Guardian::UpdateAttackPowerAndDamage`; the pet's own `2 × Strength - 20` needs `pet_levelstats`, not imported). Pets have the global cooldown (`CanHaveGlobalCooldown`: a creature with a `CharmInfo`). A pet's combat log events go to its owner.
 - [x] `PetSpellAutocast` (`CMSG_PET_SPELL_AUTOCAST`) sets a learned autocastable spell (not `ACT_PASSIVE`) `ACT_ENABLED` or `ACT_DISABLED` on the owner's living pet; the owner gets the bar again.
@@ -23,7 +24,7 @@ References: TrinityCore a352b1fa `WorldSession::HandlePetAction`/`HandlePetActio
 - [x] Passive: stop attacking; never attack unordered. Defensive: attack what auto-attacks the owner or the pet. Assist: also the owner's victim (TrinityCore ignores `REACT_ASSIST`; its Defensive also takes the owner's victim).
 - [x] A victim that dies or is out of reach (owner 90 yd away) ends the attack; the pet picks its next target or returns (to its owner, or to its held spot).
 - [ ] Retail's default stance for a newly tamed pet is unverified (no Blizzard source found); TrinityCore's Passive is kept.
-- [ ] Not modelled: autocast of positive spells (Dash) and TrinityCore's random pick among castable autocast spells, autocast states kept in the stable, `SMSG_PET_CAST_FAILED`, Abandon, attacks on damage events instead of polling attackers, the chase angle behind the victim, crowd-controlled targets, hunter pet death (Summon Imp death removal is covered by [warlock pets](warlock-pets.md)).
+- [ ] Not modelled: autocast of positive spells (Dash) and TrinityCore's random pick among castable autocast spells, autocast states kept in the stable, `SMSG_PET_CAST_FAILED`, attacks on damage events instead of polling attackers, the chase angle behind the victim, crowd-controlled targets, hunter pet death (Summon Imp death removal is covered by [warlock pets](warlock-pets.md)).
 
 ## Tests
 
