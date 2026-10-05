@@ -31,6 +31,11 @@ const ACQUIRE_NEVER_LEARNED: u32 = 3;
 pub(super) const ATTR0_PASSIVE: u32 = 0x40;
 /// SPELL_AURA_MOUNTED in `spell_effect.EffectAura`.
 const AURA_MOUNTED: u32 = 78;
+/// `spell_misc.Attributes_13` bit 16 (TrinityCore `SPELL_ATTR13_UNK16`): set on exactly the
+/// 34 General (skill 183) content abilities (Garrison, Covenant, Lorewalking, Pocopoc,
+/// Throw 385265...) and on no other auto-learned spell, so a fresh character is not taught
+/// them (docs/wiki/investigations/general-spell-grants.md).
+const ATTR13_CONTENT_ABILITY: u32 = 0x10000;
 
 #[derive(Resource, Debug, Default, Serialize)]
 pub struct ClassSpells {
@@ -266,7 +271,8 @@ fn load_class_stats(conn: &Connection, class_id: u8) -> rusqlite::Result<(f32, f
 }
 
 /// Rule: ClassMask is 0 or has the class bit; AcquireMethod != NeverLearned;
-/// SpellLevel <= MAX_LEVEL. RaceMasks is kept but not filtered.
+/// SpellLevel <= MAX_LEVEL; not an [`ATTR13_CONTENT_ABILITY`]. RaceMasks is kept but not
+/// filtered.
 fn load_learnable(
     conn: &Connection,
     class_id: u8,
@@ -282,10 +288,10 @@ fn load_learnable(
          JOIN spell_name n ON n.ID = a.Spell
          LEFT JOIN spell_levels l ON l.SpellID = a.Spell AND l.DifficultyID = 0
          LEFT JOIN spell_misc m ON m.SpellID = a.Spell AND m.DifficultyID = 0
-         WHERE a.SkillLine = ?1
+         WHERE a.SkillLine = ?1 AND (COALESCE(m.Attributes_13, 0) & ?3) = 0
          ORDER BY 4, a.Spell",
     )?;
-    let rows = stmt.query_map([skill_line, AURA_MOUNTED], |r| {
+    let rows = stmt.query_map([skill_line, AURA_MOUNTED, ATTR13_CONTENT_ABILITY], |r| {
         Ok(LearnableSpell {
             spell_id: uint(r, 0)?,
             class_mask: uint(r, 1)?,
