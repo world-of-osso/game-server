@@ -168,6 +168,9 @@ class CreatureEventImportTests(unittest.TestCase):
             "world_schema.sql",
             "db2.py",
             "db2_casc.py",
+            "skyborne_data.py",
+            "zephras_creatures.py",
+            "zephras_content.py",
             "db2_schema.sql",
             "mysql_dump.py",
             "content_common.py",
@@ -185,10 +188,34 @@ class CreatureEventImportTests(unittest.TestCase):
             "kind,source_id,retail_id,source_name,retail_name,reason\n"
         )
         (scripts / "derived-merchants.json").write_text("[]\n")
+        shutil.copytree(
+            SCRIPTS / "reference/forever-1.60.1.70205",
+            scripts / "reference/forever-1.60.1.70205",
+        )
+        capture = (
+            self.root
+            / "data/reference/wowhead/forever-zephras-20261004/zephras-content.json"
+        )
+        capture.parent.mkdir(parents=True)
+        capture.write_text(
+            json.dumps(
+                {
+                    "map": 2991,
+                    "zone": 16593,
+                    "reconstructed": True,
+                    "provenance": "forever-zephras-20261004",
+                    "npcs": [],
+                    "quests": [],
+                    "objects": [],
+                }
+            )
+        )
         self.crafting = self.root / "data/reference/crafting/12.1.0.69933"
         self.crafting.mkdir(parents=True)
         for table in crafting_data.TABLES:
-            shutil.copy2(CRAFTING_SOURCE / table.filename, self.crafting / table.filename)
+            shutil.copy2(
+                CRAFTING_SOURCE / table.filename, self.crafting / table.filename
+            )
         self.sql = self.root / "source"
         self.sql.mkdir()
         for name in dump_tables():
@@ -198,8 +225,7 @@ class CreatureEventImportTests(unittest.TestCase):
             "(96194,26012,84.2136),(79968,952,113.24),(76,1,30);\n"
         )
         (self.sql / "game_event_creature.sql").write_text(
-            "INSERT INTO `game_event_creature` VALUES\n"
-            "(31,96194),(-72,76),(31,76);\n"
+            "INSERT INTO `game_event_creature` VALUES\n(31,96194),(-72,76),(31,76);\n"
         )
         self.csv = self.root / "csv"
         write_header_only_csvs(self.csv / db2.DEFAULT_BUILD)
@@ -245,6 +271,67 @@ class CreatureEventImportTests(unittest.TestCase):
             self.fail(
                 f"Importer timed out: stdout={error.stdout!r}; stderr={error.stderr!r}"
             )
+
+    def test_zephras_overlay_survives_two_full_rebuilds(self):
+        capture = (
+            self.root
+            / "data/reference/wowhead/forever-zephras-20261004/zephras-content.json"
+        )
+        capture.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(SCRIPTS / "tests/fixtures/zephras-content.json", capture)
+        reports = []
+        for _ in range(2):
+            result = self.run_import()
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            with closing(sqlite3.connect(self.db)) as db:
+                self.assertEqual(
+                    db.execute(
+                        "SELECT WdtFileDataID FROM map WHERE ID=2991"
+                    ).fetchone(),
+                    (7198644,),
+                )
+                self.assertEqual(
+                    db.execute(
+                        "SELECT name FROM content_creature_template WHERE entry=251362"
+                    ).fetchone(),
+                    ("Ailee Farheart",),
+                )
+                self.assertEqual(
+                    db.execute(
+                        "SELECT map,position_x,position_y FROM content_creature WHERE id1=251362"
+                    ).fetchone(),
+                    (2991, 4088.500790283203, 1850.5),
+                )
+                self.assertEqual(
+                    db.execute(
+                        "SELECT AllowableRaces FROM content_quest_template WHERE ID=92460"
+                    ).fetchone(),
+                    (1 << 32,),
+                )
+                self.assertEqual(
+                    db.execute(
+                        "SELECT RequiredNpcOrGo1,RequiredNpcOrGoCount1 FROM content_quest_template WHERE ID=92461"
+                    ).fetchone(),
+                    (250873, 8),
+                )
+                self.assertEqual(
+                    db.execute(
+                        "SELECT completion_blocked FROM zephras_quest_meta WHERE quest_id=92598"
+                    ).fetchone(),
+                    (1,),
+                )
+                self.assertEqual(
+                    db.execute(
+                        "SELECT quest FROM content_creature_queststarter WHERE id=251362"
+                    ).fetchall(),
+                    [(92460,)],
+                )
+            reports.append(
+                json.loads(
+                    (self.root / "target/zephras-content-report.json").read_text()
+                )
+            )
+        self.assertEqual(reports[0], reports[1])
 
     def test_derived_merchant_survives_two_full_rebuilds(self):
         merchant = {

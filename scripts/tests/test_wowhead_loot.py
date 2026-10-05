@@ -6,6 +6,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from contextlib import closing
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import wowhead_loot
@@ -15,7 +16,7 @@ class WowheadLootTest(unittest.TestCase):
     def test_content_regeneration_reads_npc_loot_not_capture_reports(self):
         with (
             tempfile.TemporaryDirectory() as directory,
-            sqlite3.connect(":memory:") as db,
+            closing(sqlite3.connect(":memory:")) as db,
         ):
             root = Path(directory)
             legacy = root / "legacy-20261004"

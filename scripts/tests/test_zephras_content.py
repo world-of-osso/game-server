@@ -6,6 +6,7 @@ import sqlite3
 import sys
 import unittest
 from pathlib import Path
+from contextlib import closing
 
 SCRIPTS = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(SCRIPTS))
@@ -203,6 +204,68 @@ class ContentOverlayTest(unittest.TestCase):
             ).fetchone(),
             ("Deputy Willem",),
         )
+
+    def test_missing_giver_template_is_reported_not_silently_linked(self):
+        content = copy.deepcopy(self.content)
+        next(n for n in content["npcs"] if n["id"] == 251362)["level"] = None
+        report = self.apply(content)
+        self.assertIn(
+            {"quest": 92460, "npc": 251362, "role": "starter"},
+            report.get("unresolved_quest_links", []),
+        )
+        self.assertEqual(
+            self.db.execute(
+                "SELECT count(*) FROM content_creature_queststarter WHERE id=251362"
+            ).fetchone(),
+            (0,),
+        )
+
+    def test_failed_cli_import_rolls_back_schema_and_content_rows(self):
+        import subprocess
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            path = root / "scratch.db"
+            self.db.commit()
+            with closing(sqlite3.connect(path)) as saved:
+                self.db.backup(saved)
+            content = copy.deepcopy(self.content)
+            next(n for n in content["npcs"] if n["id"] == 251362)["coords"][0]["world"][
+                "x"
+            ] = float("nan")
+            source = root / "invalid-content.json"
+            source.write_text(json.dumps(content))
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(SCRIPTS / "zephras_content.py"),
+                    "--content",
+                    str(source),
+                    "--db",
+                    str(path),
+                    "--report",
+                    str(root / "report.json"),
+                ],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("non-finite", result.stderr)
+            with closing(sqlite3.connect(path)) as saved:
+                self.assertEqual(
+                    saved.execute(
+                        "SELECT entry FROM content_creature_template"
+                    ).fetchall(),
+                    [(823,)],
+                )
+                self.assertEqual(
+                    saved.execute(
+                        "SELECT count(*) FROM sqlite_master WHERE name LIKE 'zephras_%'"
+                    ).fetchone(),
+                    (0,),
+                )
 
     def test_unknown_interactions_are_not_imported_as_kill_objectives(self):
         self.apply()
