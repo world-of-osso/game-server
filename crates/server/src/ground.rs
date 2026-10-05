@@ -165,6 +165,18 @@ impl GroundMap {
         self.maps.get_mut(&map_id)?.as_mut()?.liquid_at(feet)
     }
 
+    /// Authored terrain area under `feet`, from the map's WDT/ADT MCNK header.
+    pub fn area_at(&mut self, map_id: u32, feet: Vec3) -> Option<u32> {
+        if !self.maps.contains_key(&map_id) {
+            let loaded = self.open_map(map_id);
+            self.maps.insert(map_id, loaded);
+        }
+        let map = self.maps.get_mut(&map_id)?.as_mut()?;
+        let tile = map.tile(bevy_to_tile(feet.x, feet.z))?;
+        let (x, y, _) = crate::terrain_height::bevy_to_wow(feet.x, feet.y, feet.z);
+        tile.terrain.area_at(x, y)
+    }
+
     fn open_map(&self, map_id: u32) -> Option<MapGround> {
         let Some(&wdt) = self.wdts.get(&map_id) else {
             warn!("Map {map_id} has no WDT; no ground");

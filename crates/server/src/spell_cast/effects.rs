@@ -579,7 +579,7 @@ pub fn deal_damage(
     if !periodic {
         crate::stand_state::stand_on_damage(world, target);
     }
-    crate::creature_aggro::add_threat(world, target, ctx.caster, amount);
+    crate::creature_aggro::add_school_threat(world, target, ctx.caster, amount, school);
     let mut event = log_amount(ctx, target, CombatLogKind::Damage);
     event.amount = amount as i32;
     event.overflow = overkill as i32;
@@ -702,6 +702,13 @@ pub fn apply_heal(
     }
     let effective = amount.min(health.max - health.current).max(0.0);
     health.current += effective;
+    crate::creature_aggro::add_healing_threat(
+        world,
+        ctx.caster,
+        target,
+        effective,
+        ctx.spell.school_mask(),
+    );
     mark_dirty(world, target);
     let mut event = log_amount(ctx, target, CombatLogKind::Heal);
     event.amount = amount as i32;

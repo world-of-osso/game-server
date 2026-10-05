@@ -293,7 +293,7 @@ fn spell_on_a_not_selectable_npc_fails_with_invalid_target() {
 }
 
 #[test]
-fn heal_clamps_to_max_and_logs_overheal() {
+fn threat_heal_clamps_to_max_and_logs_overheal() {
     let Some(mut h) = harness(Vec::new(), &[FLASH_HEAL], 5) else {
         return;
     };
@@ -302,6 +302,9 @@ fn heal_clamps_to_max_and_logs_overheal() {
         .get_mut::<Health>(h.caster)
         .unwrap()
         .current = 900.0;
+    let mut table = shared::components::ThreatTable::default();
+    table.add_damage_threat(h.caster.to_bits(), 200.0, 1.0);
+    h.app.world_mut().entity_mut(h.npc).insert(table);
     // No explicit ally target: auto self-cast.
     h.cast_and_deliver(FLASH_HEAL, None);
     h.advance(32);
@@ -317,6 +320,15 @@ fn heal_clamps_to_max_and_logs_overheal() {
         heal.amount
     );
     assert_eq!(heal.overflow, heal.amount - 100);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<shared::components::ThreatTable>(h.npc)
+            .unwrap()
+            .threat_for(h.caster.to_bits()),
+        250.0
+    );
+    // The 100 effective heal adds 50 threat, never the overheal.
 }
 
 #[test]

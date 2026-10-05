@@ -3,6 +3,7 @@ mod admin_handlers;
 mod admin_ipc;
 mod admin_types;
 mod appearance_collection;
+mod area_table;
 mod auction_house;
 mod auras;
 mod auth;
@@ -99,6 +100,7 @@ mod teleport;
 mod terrain_height;
 #[cfg(test)]
 mod test_data;
+mod threat_updates;
 mod trade;
 mod trait_config;
 mod unit_target;
@@ -221,6 +223,7 @@ fn add_world_plugins(app: &mut App) {
         .add_plugins(stats::StatsPlugin)
         .add_plugins(combat::CombatPlugin)
         .add_plugins(damage_meter::DamageMeterPlugin)
+        .add_plugins(threat_updates::ThreatUpdatesPlugin)
         .add_plugins(unit_target::UnitTargetPlugin)
         .add_plugins(npc_interaction::NpcInteractionPlugin)
         .add_plugins(merchant::MerchantPlugin)

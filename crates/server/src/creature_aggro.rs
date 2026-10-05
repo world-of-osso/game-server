@@ -449,6 +449,53 @@ fn distance(a: &Position, b: &Position) -> f32 {
     Vec3::new(a.x - b.x, a.y - b.y, a.z - b.z).length()
 }
 
+/// TC a352b1fa Spell.cpp:2893 and ThreatManager.cpp:733-760:
+/// effective healing generates half threat, split across the healed unit's enemies.
+/// No threat from overhealing or healing a unit that has no engaged creature.
+/// Controlled creatures retain membership but gain no assist threat.
+pub(crate) fn add_healing_threat(
+    world: &mut World,
+    healer: Entity,
+    healed: Entity,
+    effective: f32,
+    school: u32,
+) {
+    if effective <= 0.0 {
+        return;
+    }
+    let enemies: Vec<Entity> = world
+        .query::<(Entity, &ThreatTable)>()
+        .iter(world)
+        .filter(|(_, table)| {
+            table
+                .entries()
+                .iter()
+                .any(|entry| entry.entity == healed.to_bits())
+        })
+        .map(|(creature, _)| creature)
+        .collect();
+    let (controlled, available): (Vec<_>, Vec<_>) = enemies
+        .into_iter()
+        .filter(|creature| can_engage(world, *creature))
+        .partition(|creature| {
+            world
+                .get::<crate::auras::ActiveAuras>(*creature)
+                .is_some_and(|auras| {
+                    auras
+                        .iter()
+                        .flat_map(|aura| &aura.effects)
+                        .any(|effect| matches!(effect.aura_type, 5 | 7 | 12))
+                })
+        });
+    let amount = effective * 0.5 / available.len().max(1) as f32;
+    for creature in available {
+        add_school_threat(world, creature, healer, amount, school);
+    }
+    for creature in controlled {
+        add_school_threat(world, creature, healer, 0.0, school);
+    }
+}
+
 fn can_engage(world: &World, creature: Entity) -> bool {
     world.get::<ThreatTable>(creature).is_some()
         && world.get::<DeathState>(creature).is_none()
@@ -472,6 +519,36 @@ pub(crate) fn attack_start(world: &mut World, creature: Entity, target: Entity) 
 /// (`Unit::CombatStart` → `AttackStart`); an engaged one picks its target
 /// from threat next tick.
 pub(crate) fn add_threat(world: &mut World, creature: Entity, attacker: Entity, amount: f32) {
+    add_school_threat(world, creature, attacker, amount, 1);
+}
+
+/// TC a352b1fa ThreatManager.cpp:677-730, SPELL_AURA_MOD_THREAT (10),
+/// including school-specific Righteous Fury when its aura is active.
+fn threat_multiplier(world: &World, source: Entity, school: u32) -> f32 {
+    world
+        .get::<crate::auras::ActiveAuras>(source)
+        .map_or(1.0, |auras| {
+            auras
+                .iter()
+                .flat_map(|aura| aura.effects.iter().map(move |effect| (aura.stacks, effect)))
+                .filter(|(_, effect)| {
+                    effect.aura_type == crate::auras::handlers::MOD_THREAT
+                        && effect.misc_values[0] as u32 & school != 0
+                })
+                .fold(1.0, |mult, (stacks, effect)| {
+                    mult * (1.0 + effect.amount * f32::from(stacks.max(1)) / 100.0)
+                })
+        })
+}
+
+pub(crate) fn add_school_threat(
+    world: &mut World,
+    creature: Entity,
+    attacker: Entity,
+    amount: f32,
+    school: u32,
+) {
+    let amount = amount * threat_multiplier(world, attacker, school);
     if creature == attacker || !can_engage(world, creature) {
         return;
     }

@@ -26,13 +26,19 @@ Valid victim (`valid_victim`, used for on-sight and engaged targets): health abo
 
 ## Threat and engage
 
-`add_threat(world, creature, attacker, amount)` is the single entry point:
+`add_threat(world, creature, attacker, amount)` handles physical threat; `add_school_threat` handles spell-school threat:
 
 - melee: `combat::record_swing_events` queues it with the swing damage
 - spells: `spell_cast::effects::deal_damage` (direct and periodic) with the final damage; `spell_cast::push_hit_events` with 0 for every hit unit the caster can attack (`Relation::Enemy`), so a non-damaging debuff engages
 - on sight: `attack_start` = `add_threat(.., 0.0)`
 
 It does nothing for a creature without a threat list, dead, at 0 health, or `Returning` (AzerothCore `UNIT_STATE_EVADE` blocks `AddThreat`). Otherwise it adds the threat; an idle creature becomes `Pursuing { attacker }` with `CombatTarget(Some(attacker))`, which `start_attack_system` turns into an `AutoAttack`. Both units enter combat (`combat::enter_combat`).
+
+`add_healing_threat` uses effective (non-overheal) healing × 0.5, split across creatures that have the healed unit on their tables. Controlled creatures gain membership with no assist threat. `add_school_threat` applies active school-matching MOD_THREAT (10) aura multipliers; taunt is not implemented. References: TrinityCore a352b1fa `Spell.cpp:2893`, `ThreatManager.cpp:677-760`.
+
+## Threat updates
+
+`threat_updates::ThreatUpdatesPlugin` runs in PostUpdate. Every 250 ms it snapshots engaged tables, derives raw/scaled percent and status from `CombatTarget`, and compares each authenticated connection's tables with its last delivery. Only players on a creature's table receive it. Unchanged tables send nothing; lost membership, empty/dead/despawned creatures send an empty `ThreatUpdate` to prior recipients. New connections receive existing tables. `UnitThreatList` remains the independent nameplate-membership replication. The client meter selects one current target, not a damage session. Contract and tests: [creature-aggro spec](../../specs/creature-aggro.md). TC `ThreatManager.cpp:829-875` sends `ThreatClear` / `ThreatUpdate` / `HighestThreatUpdate`.
 
 ## Victim update
 

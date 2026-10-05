@@ -36,6 +36,8 @@ pub const DUMMY: u32 = 4;
 pub const MOD_CONFUSE: u32 = 5;
 pub const MOD_FEAR: u32 = 7;
 pub const PERIODIC_HEAL: u32 = 8;
+/// Read at threat-generation time by creature_aggro::threat_multiplier.
+pub const MOD_THREAT: u32 = 10;
 pub const MOD_STUN: u32 = 12;
 pub const MOD_INVISIBILITY: u32 = 18;
 pub const OBS_MOD_HEALTH: u32 = 20;
@@ -136,6 +138,7 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | MOD_DECREASE_SPEED
         | MOD_CASTING_SPEED_NOT_STACK
         | MOD_DAMAGE_PERCENT_DONE
+        | MOD_THREAT
         | MOD_DAMAGE_PERCENT_TAKEN
         | MOD_POWER_REGEN_PERCENT
         | MOD_HEALING_PCT

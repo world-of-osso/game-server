@@ -65,7 +65,7 @@ Server gameplay systems.
 | [[combat]] | Auto-attack system, NPC/player lethal transitions, split death proofs, melee hit table (miss/dodge/parry/glancing/block/crit/hit), spell formulas, stat calculations, DR curves |
 | [[creature-ai]] | Three movement types (idle/wander/waypoint by addon path_id), formations, addon mounts/auras, grid activation (GridDormant), SpawnPoint, chase system, 40-yard leash/evade, return-to-spawn |
 | [[boss-scripts]] | ScriptName creature AI (CreatureAI hooks, EventMap, BossAI, InstanceScript per copy, creature_text Talk), Stockade boss ports, creature casts/ExpectedStat spell damage, dynamic objects |
-| [[creature-aggro]] | AggroMode per template, level-scaled aggro radius, threat from damage/harmful spells, top-threat victim, evade (AzerothCore CreatureAI) |
+| [[creature-aggro]] | AggroMode, damage/heal school-modified threat, victim selection, evade and engaged-player threat update/clear delivery |
 | [[inventory]] | Owner-only bag/equipment snapshots and deltas, bag placements and item-instance tables, Retail swap/split/destroy/equip validation, data gaps |
 | [[quests]] | Quest content load, AzerothCore accept/prerequisite/marker rules, per-player giver markers, kill and bag-item progress, turn-in rewards, quest log persistence and deltas |
 | [[bot-economy]] | Direct suppliers and bounded real merchant CLI/cost/cap proof; auction restart/mail/latency ledger in [[auction-house]], bounded native and final source audits PASS; content gaps in [[economy-catalog]] |
@@ -73,7 +73,7 @@ Server gameplay systems.
 | [[economy-catalog]] | Read-only world.db/TSM importer, gathered/market inputs, supplier contracts and price bounds; combined Classic+Midnight default and blocked native acceptance linked separately |
 | [[merchant]] | Vendor lists from content_npc_vendor (references, limited stock restock), buy/sell/buyback (12 session slots), repair cost from AzerothCore MaxDurability + Retail DurabilityCosts/Quality |
 | [[npc-interaction]] | Replicated `NpcFlags` (AzerothCore→Retail bits), `InteractNpc` validation (TrinityCore GetNPCIfCanInteractWith, 8.5 yd), gossip menus from world.db, role routing, per-frame session close, auction house gated on an auctioneer session and its faction house |
-| [[experience]] | Retail kill XP (gtXp, grey/zero-difference, elite, expansion /10, group split), QuestXP DB2 with low-level reduction, GiveXP level-ups, `character_xp`, health/mana refill, persisted rested pool and `set-rested`, protocol gaps |
+| [[experience]] | Retail kill XP (gtXp, grey/zero-difference, elite, expansion /10, group split), QuestXP DB2 with low-level reduction, GiveXP level-ups, `character_xp`, health/mana refill, persisted rested pool, faction-aware capital rest and `set-rested`, protocol gaps |
 
 ## investigations/
 
