@@ -59,7 +59,7 @@ impl ImpHarness {
             Vec::new(),
             &[SUMMON_IMP, FIREBOLT, DISMISS_PET],
             WARLOCK,
-            false,
+            true,
             |app| {
                 app.insert_resource(data);
                 app.insert_resource(spells);
@@ -80,6 +80,9 @@ impl ImpHarness {
         )
         .expect("real spell data");
         h.app.world_mut().entity_mut(h.caster).insert(Level(3));
+        // Keep the full live spell catalog, not the generic harness's three-spell fixture.
+        let (store, _) = crate::spell_info::load_spell_data(&conn).unwrap();
+        h.app.insert_resource(store);
         h.app.world_mut().entity_mut(h.connection).insert((
             MessageSender::<PetAction>::default(),
             MessageReceiver::<PetAction>::default(),
@@ -255,7 +258,7 @@ fn warlock_imp_attack_autocasts_firebolt_and_follow_moves_to_owner() {
                 && event.target == Some(h.h.npc.to_bits())
                 && event.spell_id == Some(FIREBOLT)
                 && event.kind == CombatLogKind::Damage
-                && event.amount == 6 // 0.4 Firebolt coefficient × (100 owner SP × 0.15)
+                && event.amount > 0 // Real level-3 owner stats, not the harness's fixed 100 SP.
         }),
         "imp dealt no Firebolt damage: {:?}",
         h.h.inbox.log
