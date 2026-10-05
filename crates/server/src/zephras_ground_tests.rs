@@ -11,6 +11,25 @@ fn zephras_cache() -> PathBuf {
         .expect("set GAME_SERVER_GROUND_DIR to the extracted Forever cache")
 }
 
+#[test]
+#[ignore = "requires extracted Forever build 1.60.1.70205 ground assets"]
+fn zephras_approved_starts_have_supported_ground() {
+    let mut ground = GroundMap::new(
+        &zephras_cache(),
+        HashMap::from([(ZEPHRAS_MAP, ZEPHRAS_WDT)]),
+    );
+    for race in [95, 96] {
+        let start = crate::persistence_character::start_location(race);
+        assert_eq!(start.map_id, ZEPHRAS_MAP);
+        let (x, y, z) = crate::terrain_height::wow_to_bevy(start.x, start.y, start.z);
+        let GroundProbe::Supported(height) = ground.ground_at(start.map_id, Vec3::new(x, y, z))
+        else {
+            panic!("race {race}: approved start has no ground support");
+        };
+        assert!((height - start.z).abs() < 0.01);
+    }
+}
+
 fn tile_center(row: usize, col: usize) -> (f32, f32) {
     let x = (32.0 - col as f32 - 0.5) * TILE_SIZE;
     let y = (32.0 - row as f32 - 0.5) * TILE_SIZE;

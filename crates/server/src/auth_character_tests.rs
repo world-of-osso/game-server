@@ -129,6 +129,20 @@ fn select_character_in_world(
     account_id: u64,
     character_id: u64,
 ) -> (App, Entity) {
+    select_character_with_maps(
+        db,
+        account_id,
+        character_id,
+        crate::maps::MapStore::continents(),
+    )
+}
+
+fn select_character_with_maps(
+    db: GameDatabase,
+    account_id: u64,
+    character_id: u64,
+    maps: crate::maps::MapStore,
+) -> (App, Entity) {
     let mut app = App::new();
     app.add_plugins(MinimalPlugins);
     app.add_plugins(bevy::state::app::StatesPlugin);
@@ -142,9 +156,11 @@ fn select_character_in_world(
     app.insert_resource(db);
     app.insert_resource(helm_durability());
     app.add_plugins(DeathPlugin);
-    app.insert_resource(crate::maps::MapStore::continents());
+    app.insert_resource(maps);
     app.init_resource::<crate::maps::InstanceManager>();
     app.add_systems(Update, process_select_character);
+    app.init_resource::<TerrainReplies>();
+    app.add_systems(Last, collect_terrain_replies);
     app.finish();
     app.cleanup();
 
@@ -206,8 +222,12 @@ fn skyborne_real_kits_create_persist_and_select_all_authored_classes() {
             )
             .expect("authored Skyborne pair should create with real kit");
             assert_eq!(data.level, 1);
-            // Keep the pre-existing Northshire placement until an authored start is supplied.
-            assert_eq!((data.x, data.y, data.z), (-8949.0, -132.0, 83.0));
+            let expected = if race == 95 {
+                (4088.501, 1847.5, 976.169)
+            } else {
+                (4051.417, 1858.625, 977.620)
+            };
+            assert_eq!((data.x, data.y, data.z), expected);
             drop(db);
 
             let db = redb::Database::open(&path).expect("reopen character storage");
@@ -215,9 +235,12 @@ fn skyborne_real_kits_create_persist_and_select_all_authored_classes() {
             assert_eq!((saved.race, saved.class, saved.level), (race, class, 1));
             assert_eq!(
                 crate::maps::persistence::load_character_map(&db, character_id),
-                0
+                2991
             );
-            let (app, player) = select_character_in_world(GameDatabase { db }, 1, character_id);
+            let conn = rusqlite::Connection::open(crate::test_data::world_db_path()).unwrap();
+            let maps = crate::maps::store::load_map_store(&conn).expect("scratch map overlay");
+            let (app, player) =
+                select_character_with_maps(GameDatabase { db }, 1, character_id, maps);
             let entity = app.world().entity(player);
             assert_eq!(entity.get::<UnitLevel>(), Some(&UnitLevel(1)));
             assert_eq!(entity.get::<Player>().unwrap().race, race);
@@ -227,7 +250,12 @@ fn skyborne_real_kits_create_persist_and_select_all_authored_classes() {
                 entity.get::<shared::components::UnitFactionTemplate>(),
                 Some(&shared::components::UnitFactionTemplate(template))
             );
-            assert_eq!(entity.get::<crate::maps::InMap>().unwrap().map_id, 0);
+            assert_eq!(entity.get::<crate::maps::InMap>().unwrap().map_id, 2991);
+            let terrain = app.world().resource::<TerrainReplies>().0.first().unwrap();
+            assert_eq!(terrain.map_name, "2991");
+            assert_eq!((terrain.initial_tile_y, terrain.initial_tile_x), (28, 24));
+            let rotation = entity.get::<shared::components::Rotation>().unwrap();
+            assert!((rotation.y - std::f32::consts::PI).abs() < 0.001);
         }
     }
 }

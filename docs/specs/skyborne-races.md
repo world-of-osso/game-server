@@ -30,7 +30,8 @@ Server support for Forever races 95/96, grounded in local build 1.60.1.70205 Chr
 
 ## Known gaps (current cycle)
 
-- [ ] Authored map-2991 start belongs to the separate world-start investigation; current Northshire placement remains unchanged.
+- [x] New races 95/96 persist map 2991 and approved reconstructed starts: 95→(4088.501,1847.5,976.169), 96→(4051.417,1858.625,977.620). Race 96 is inferred, not an established level-1 intro. Initial facing is atan2(giver Y−start Y,giver X−start X), converted to replicated yaw; existing characters are not relocated.
+- [ ] Full terrain/LOS closure and Forever racial/loadout parity remain separate gaps.
 
 ## Out of scope
 
