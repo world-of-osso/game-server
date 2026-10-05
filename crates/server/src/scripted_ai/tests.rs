@@ -32,6 +32,8 @@ use crate::world_data::{CreatureSpawn, WorldData};
 
 /// `SSCreatureIds` of the bosses.
 const NPC_RANDOLPH_MOLOCH: u32 = 46383;
+
+mod smart_combat;
 const NPC_LORD_OVERHEAT: u32 = 46264;
 const NPC_HOGGER: u32 = 46254;
 

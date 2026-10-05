@@ -14,6 +14,20 @@ Creature scripts by `creature_template.ScriptName`, ported from TrinityCore mast
 
 `spell_cast::creature_cast`: victim default target, triggered casts, no GCD. Base points of damage effects follow ExpectedStat `CreatureSpellDamage` (`effects::calc_base_value`); weapon % damage uses `combat::creature_weapon_damage`. `area_aura` holds persistent area aura dynamic objects. `auras::unit_state` derives invisibility (interest `set_hidden`) and `NON_ATTACKABLE_2` from the aura set.
 
+## SmartAI combat casts
+
+`smart_ai.rs` previously supported only SPELLHIT, HAS_AURA, RESET and LINK, and only self/invoker targets. Kobold Geomancer 476's UPDATE_IC (0), CAST Fireball 20793 with CMC (64), VICTIM (2) row was loaded but never processed. Combat updates now initialize from event params 1/2, pause outside combat, and repeat from params 3/4. Due casts wait while another cast is running.
+
+CMC accepted casts insert `CombatMovementDisabled`; chase holds position through the repeat interval, without losing the victim or disabling melee in reach. A failed cast removes it and retries next update, preserving the chance result. Reset removes it. Existing `CastState` movement/swing gating still applies during casts. Real-template/spawn/spell/script tests exercise Fireball targeting and repeats, position/Motion, exhausted mana, school-lock rejection, melee recovery and prompt retry.
+
+Impact (world.db, verified 2026-10-05): 26,854 UPDATE_IC rows / 9,796 distinct entryorguid values, 1,730 CAST+CMC rows / 1,566 values. Positive source-0 SmartAI rows actually loaded by the server: 9,371 / 5,537 creature entries and 1,411 / 1,260 respectively. Other unsupported event/action/target types remain unsupported; these counts are mechanism exposure, not blanket script completeness.
+
+### Sources
+
+- [TC a352b1fa SmartScript.cpp](https://github.com/TrinityCore/TrinityCore/blob/a352b1fa/src/server/game/AI/SmartScripts/SmartScript.cpp#L565-L637): CAST result, CMC movement (612–615), retry; UPDATE_IC (3201–3204), InitTimer/UpdateTimer (3751–3806), VICTIM (2791–2794).
+- [TC a352b1fa SmartAI.cpp](https://github.com/TrinityCore/TrinityCore/blob/a352b1fa/src/server/game/AI/SmartScripts/SmartAI.cpp#L782-L815): SetCombatMove; UpdateAI (281–299) refreshes victim first; AttackStart (572–591) respects combat-movement permission.
+- `crates/server/src/scripted_ai/tests/smart_combat.rs` — real database behavioral regression.
+
 ## Pitfalls found
 
 - Removing `NetworkVisibility` to hide an entity made it visible to every client that connected later (`on_replication_client_added` only hides entities that have it): all invisibility-aura creatures of both continents replicated to new clients, and the client grew to 36 GB until earlyoom killed it. Hiding is an interest flag now. Decayed corpses still use the old removal.

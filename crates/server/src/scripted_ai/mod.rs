@@ -409,18 +409,25 @@ impl Ctx<'_> {
         creature_text::talk(self.world, self.me, group);
     }
 
-    /// `UnitAI::DoCast(victim, spellId, triggered)`.
-    pub fn do_cast_at(&mut self, target: Option<Entity>, spell_id: u32, triggered: bool) {
+    /// `UnitAI::DoCast(victim, spellId, triggered)`. True for an accepted cast or
+    /// `SPELL_FAILED_SPELL_IN_PROGRESS`, neither of which resumes SmartAI chase.
+    pub fn do_cast_at(&mut self, target: Option<Entity>, spell_id: u32, triggered: bool) -> bool {
         if !triggered && self.is_casting() {
-            return;
+            return true;
         }
         let name = self
             .world
             .get::<shared::components::Npc>(self.me)
             .map_or_else(String::new, |npc| npc.name.clone());
         match crate::spell_cast::creature_cast(self.world, self.me, spell_id, target, triggered) {
-            Ok(()) => info!("{name} ({}) casts {spell_id} at {target:?}", self.me),
-            Err(failure) => debug!("{name} ({}) cast {spell_id} failed: {failure:?}", self.me),
+            Ok(()) => {
+                info!("{name} ({}) casts {spell_id} at {target:?}", self.me);
+                true
+            }
+            Err(failure) => {
+                debug!("{name} ({}) cast {spell_id} failed: {failure:?}", self.me);
+                failure == crate::spell_cast::CastFailure::InProgress
+            }
         }
     }
 

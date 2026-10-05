@@ -1,5 +1,9 @@
 # Wiki Log
 
+## [2026-10-05] systems | SmartAI combat caster movement
+
+Updated [[boss-scripts]] and its spec: Geomancer 476's loaded UPDATE_IC/VICTIM row never ran because those event/target types were unsupported. Added combat-only initial/repeat timers, victim targeting, CMC chase hold and cast-failure retry/chase recovery, citing pinned TC SmartScript/SmartAI. Four real-data regressions reproduced absent Fireball in RED. Impact: 9,371 combat-update and 1,411 CMC cast rows in the loader's current creature set. Other unsupported script types remain gaps.
+
 ## [2026-10-05] systems | Recuperate full-health decision
 
 Updated [[auras]] and its spec: user-requested completion of aura 1231418 at full health, unlike TC's permanent-aura-only skip. Full-health casting remains allowed; TC's ALREADY_AT_FULL_HEALTH check applies to consumable direct heals, with no applicable Recuperate data/Retail rule established. Real-spell behavioral tests cover aura/channel completion, no later heal logs, and unchanged Renew. Targeted RED reproduced three retained-aura/channel failures while Renew passed.

@@ -24,6 +24,7 @@ use rusqlite::{Connection, OpenFlags};
 use super::{CreatureAi, Ctx};
 
 // `SMART_EVENT` (SmartScriptMgr.h).
+const EVENT_UPDATE_IC: u32 = 0;
 const EVENT_SPELLHIT: u32 = 8;
 const EVENT_HAS_AURA: u32 = 23;
 const EVENT_RESET: u32 = 25;
@@ -36,12 +37,18 @@ const ACTION_DIE: u32 = 37;
 // `SMART_TARGET`.
 const TARGET_NONE: u32 = 0;
 const TARGET_SELF: u32 = 1;
+const TARGET_VICTIM: u32 = 2;
 const TARGET_ACTION_INVOKER: u32 = 7;
 // `SMART_EVENT_FLAG_*`, `SMARTCAST_*`.
 const EVENT_FLAG_NOT_REPEATABLE: u32 = 0x001;
 const EVENT_FLAG_DONT_RESET: u32 = 0x100;
 const CAST_TRIGGERED: u32 = 0x02;
 const CAST_AURA_NOT_PRESENT: u32 = 0x20;
+const CAST_COMBAT_MOVE: u32 = 0x40;
+
+/// `SmartAI::_canCombatMove == false`: hold chase between successful CMC casts.
+#[derive(Component)]
+pub(crate) struct CombatMovementDisabled;
 
 /// One `smart_scripts` row.
 #[derive(Debug, Clone, PartialEq)]
@@ -110,7 +117,7 @@ pub(crate) fn load_smart_scripts(path: &Path) -> rusqlite::Result<SmartScripts> 
         .filter(|event| {
             !matches!(
                 event.event_type,
-                EVENT_SPELLHIT | EVENT_HAS_AURA | EVENT_RESET | EVENT_LINK
+                EVENT_UPDATE_IC | EVENT_SPELLHIT | EVENT_HAS_AURA | EVENT_RESET | EVENT_LINK
             ) || !matches!(
                 event.action_type,
                 ACTION_CAST | ACTION_SET_EVENT_PHASE | ACTION_CALL_KILLEDMONSTER | ACTION_DIE
@@ -156,6 +163,7 @@ struct EventState {
     timer_ms: u32,
     active: bool,
     run_once: bool,
+    ignore_chance_roll: bool,
 }
 
 pub(crate) struct SmartAi {
@@ -176,15 +184,49 @@ pub(crate) fn creature_ai(world: &World, entry: u32) -> Option<Box<dyn CreatureA
 }
 
 impl SmartAi {
+    /// `SmartScript::ProcessAction(SMART_ACTION_CAST)`, SmartScript.cpp:565-637.
+    /// Failed CMC casts restore combat movement; accepted casts stop it.
+    fn cast_targets(ctx: &mut Ctx, event: &SmartEvent, targets: Vec<Entity>) -> bool {
+        let [spell, cast_flags, ..] = event.action_params;
+        let mut failed = false;
+        let mut successful = false;
+        for target in targets {
+            if cast_flags & CAST_AURA_NOT_PRESENT != 0
+                && crate::auras::aura_count(ctx.world, target, spell) > 0
+            {
+                continue;
+            }
+            let accepted = ctx.do_cast_at(Some(target), spell, cast_flags & CAST_TRIGGERED != 0);
+            if cast_flags & CAST_COMBAT_MOVE != 0 {
+                if accepted {
+                    ctx.world.entity_mut(ctx.me).insert(CombatMovementDisabled);
+                } else {
+                    ctx.world
+                        .entity_mut(ctx.me)
+                        .remove::<CombatMovementDisabled>();
+                }
+            }
+            successful |= accepted;
+            failed |= !accepted;
+        }
+        !failed || successful
+    }
+
     /// `SmartScript::IsInPhase`.
     fn in_phase(&self, mask: u32) -> bool {
         mask == 0 || (self.phase != 0 && (1 << (self.phase - 1)) & mask != 0)
     }
 
-    /// `SmartScript::InitTimer`: none of the modelled events starts with a timer.
+    /// `SmartScript::InitTimer`: combat updates use their initial min/max.
     fn init_timer(&mut self, index: usize) {
-        self.states[index].timer_ms = 0;
-        self.states[index].active = true;
+        self.states[index] = EventState::default();
+        let event = &self.events[index];
+        let (min, max) = if event.event_type == EVENT_UPDATE_IC {
+            (event.event_params[0], event.event_params[1])
+        } else {
+            (0, 0)
+        };
+        self.recalc_timer(index, min, max);
     }
 
     /// `SmartScript::RecalcTimer`.
@@ -226,6 +268,12 @@ impl SmartAi {
         }
         match event.event_type {
             EVENT_LINK | EVENT_RESET => self.process_action(ctx, index, invoker),
+            EVENT_UPDATE_IC => {
+                if ctx.is_engaged() {
+                    self.recalc_timer(index, event.event_params[2], event.event_params[3]);
+                    self.process_action(ctx, index, invoker);
+                }
+            }
             EVENT_SPELLHIT => {
                 let [hit_spell, _school, cooldown_min, cooldown_max, _] = event.event_params;
                 if hit_spell == 0 || hit_spell == spell {
@@ -250,27 +298,28 @@ impl SmartAi {
         let event = self.events[index].clone();
         self.states[index].run_once = true;
         if event.event_type != EVENT_LINK
+            && !self.states[index].ignore_chance_roll
             && event.chance > 0
             && event.chance < 100
             && rand::thread_rng().gen_range(0..100) >= event.chance
         {
             return;
         }
+        self.states[index].ignore_chance_roll = false;
         let targets = match event.target_type {
             TARGET_SELF => vec![ctx.me],
+            TARGET_VICTIM => ctx.victim().into_iter().collect(),
             TARGET_ACTION_INVOKER => invoker.into_iter().collect(),
             _ => Vec::new(),
         };
         match event.action_type {
             ACTION_CAST => {
-                let [spell, cast_flags, ..] = event.action_params;
-                for target in targets {
-                    if cast_flags & CAST_AURA_NOT_PRESENT != 0
-                        && crate::auras::aura_count(ctx.world, target, spell) > 0
-                    {
-                        continue;
-                    }
-                    ctx.do_cast_at(Some(target), spell, cast_flags & CAST_TRIGGERED != 0);
+                if !Self::cast_targets(ctx, &event, targets) {
+                    // `SmartScript::RetryLater`: retry next tick, retaining the chance roll.
+                    self.recalc_timer(index, 1, 1);
+                    self.states[index].run_once = false;
+                    self.states[index].ignore_chance_roll = true;
+                    return;
                 }
             }
             ACTION_SET_EVENT_PHASE => self.phase = event.action_params[0],
@@ -302,6 +351,9 @@ impl SmartAi {
 impl CreatureAi for SmartAi {
     /// `SmartScript::OnReset` (SmartScript.cpp:196-215).
     fn reset(&mut self, ctx: &mut Ctx) {
+        ctx.world
+            .entity_mut(ctx.me)
+            .remove::<CombatMovementDisabled>();
         for index in 0..self.events.len() {
             if self.events[index].flags & EVENT_FLAG_DONT_RESET == 0 {
                 self.init_timer(index);
@@ -316,21 +368,29 @@ impl CreatureAi for SmartAi {
     }
 
     /// `SmartAI::UpdateAI` → `SmartScript::OnUpdate` → `UpdateTimer` for the timed
-    /// events (SmartScript.cpp:3777-3850), then the victim.
+    /// events (SmartScript.cpp:3777-3850), after refreshing the victim.
     fn update_ai(&mut self, ctx: &mut Ctx, diff_ms: u32) {
+        ctx.update_victim();
         for index in 0..self.events.len() {
             let event = &self.events[index];
-            if event.event_type != EVENT_HAS_AURA || !self.in_phase(event.phase_mask) {
+            if !matches!(event.event_type, EVENT_UPDATE_IC | EVENT_HAS_AURA)
+                || !self.in_phase(event.phase_mask)
+                || (event.event_type == EVENT_UPDATE_IC && !ctx.is_engaged())
+            {
                 continue;
             }
-            let state = &mut self.states[index];
-            if state.timer_ms < diff_ms {
-                state.active = true;
-                self.process_event(ctx, index, None, 0);
-            } else {
-                state.timer_ms -= diff_ms;
+            if self.states[index].timer_ms >= diff_ms {
+                self.states[index].timer_ms -= diff_ms;
+                continue;
             }
+            // `UpdateTimer` defers a due cast while another cast is running;
+            // it must not spend the repeat timer on an unattempted cast.
+            if event.action_type == ACTION_CAST && ctx.is_casting() {
+                self.recalc_timer(index, 1, 1);
+                continue;
+            }
+            self.states[index].active = true;
+            self.process_event(ctx, index, None, 0);
         }
-        ctx.update_victim();
     }
 }

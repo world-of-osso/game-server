@@ -637,12 +637,17 @@ pub(crate) fn chase_system(
 ) {
     let dt = time.delta_secs();
     let targets = victim_positions(&mut units);
-    for (entity, mut pos, spawn, state, cast, mods, map, bearing) in &mut units.p0() {
+    for (entity, mut pos, spawn, state, cast, mods, map, bearing, combat_move_disabled) in
+        &mut units.p0()
+    {
         let CreatureState::Pursuing { target } = *state else {
             continue;
         };
         let speed = mods.map_or(1.0, |mods| mods.movement_speed);
-        if speed <= 0.0 || cast.is_some_and(|cast| !cast.cast_while_moving) {
+        if speed <= 0.0
+            || combat_move_disabled.is_some()
+            || cast.is_some_and(|cast| !cast.cast_while_moving)
+        {
             let stride = Stride::still(*pos);
             queues.apply(entity, &mut pos, bearing, stride);
             continue;
@@ -674,6 +679,7 @@ type Chaser = (
     Option<&'static AuraStatMods>,
     Option<&'static InMap>,
     Bearing,
+    Option<&'static crate::scripted_ai::smart_ai::CombatMovementDisabled>,
 );
 
 /// Where each chased unit stands at the start of the chase step. A victim may be a
