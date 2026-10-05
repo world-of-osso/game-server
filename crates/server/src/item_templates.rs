@@ -228,11 +228,10 @@ pub fn load_item_templates(path: &Path) -> rusqlite::Result<ItemTemplates> {
 
 /// Production catalog: both namespaces, no substitution.
 pub fn load_runtime_item_templates(path: &Path) -> rusqlite::Result<ItemTemplates> {
+    let mut templates = load_item_templates(path)?;
     let conn = Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
-    Ok(ItemTemplates {
-        retail: load_item_template_rows(&conn, ITEM_QUERY)?,
-        forever: load_skyborne_item_templates(&conn)?,
-    })
+    templates.forever = load_skyborne_item_templates(&conn)?;
+    Ok(templates)
 }
 
 pub(crate) fn load_skyborne_item_templates(
