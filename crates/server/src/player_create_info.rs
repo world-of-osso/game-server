@@ -324,7 +324,8 @@ impl OwnedKit {
         let conn = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
         Some(Self {
             create_info: load_player_create_infos(&conn).expect("player create info"),
-            templates: crate::item_templates::load_item_templates(&path).expect("item templates"),
+            templates: crate::item_templates::load_runtime_item_templates(&path)
+                .expect("source-qualified item templates"),
             catalog: crate::merchant::load_vendor_catalog(&conn).expect("vendor catalog"),
         })
     }
