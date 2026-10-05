@@ -52,6 +52,8 @@ def sparse_fixture(records=None):
     )
     encrypted_start = len(data)
     data.extend(bytes(40))
+    # Encrypted record bytes stay zero; sparse ID metadata identifies row 900.
+    struct.pack_into("<I", data, encrypted_start + 17 + 4 + 6, 900)
     struct.pack_into(
         "<Q8I", data, 244, 123, encrypted_start, 1, 0, encrypted_start + 17, 4, 0, 1, 0
     )
@@ -202,7 +204,15 @@ class ItemSparseSourceTest(unittest.TestCase):
         "set ITEM_SPARSE_SOURCE for original full file",
     )
     def test_original_selected_rows_despite_unrelated_encrypted_sections(self):
-        self.assert_selected_items(Path(os.environ["ITEM_SPARSE_SOURCE"]).read_bytes())
+        data = Path(os.environ["ITEM_SPARSE_SOURCE"]).read_bytes()
+        self.assert_selected_items(data)
+        with self.assertRaisesRegex(ValueError, "encrypted"):
+            db2_casc.decode(
+                data,
+                text_columns=set(range(1, 6)),
+                inline_arrays=ITEM_ARRAYS,
+                field_types=ITEM_TYPES,
+            )
 
 
 if __name__ == "__main__":
