@@ -78,6 +78,8 @@ Server gameplay systems.
 
 Debug logs and root cause analyses.
 
+- [[general-spell-grants]] — General grant investigation: Attributes_13 bit 16 marks 31 content abilities but also Throw; no verified prerequisite rule, server unchanged.
+
 - [[midnight-economy-content]] — effect-288/Skillup2915 correction, additive Zaralda publication and preserved Classic+Midnight default; scoped catalog/CLI/restart artifact PASS; historical 0/3 superseded by native torso pick then faction-0 AutoAttack; approved Zaralda-only derived template 35 published, source/import gate114 scoped PASS; native-friendly exit0 observed, independent artifact gate116 scoped PASS.
 
 | Page | Summary |

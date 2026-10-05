@@ -120,6 +120,7 @@ The list is stored in the `KnownSpells` component. Cast validation should call `
 
 ## See Also
 
+- [[general-spell-grants]] — unresolved fresh-character content grants and candidate attribute evidence
 - [[spell-info]] — `ClassSpells` learnables, specs, passive flags
 - [[talents]] — trait trees, validation, `character_traits`
 - [[new-character-kit]] — creation items and action buttons

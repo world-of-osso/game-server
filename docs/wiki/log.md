@@ -1,5 +1,9 @@
 # Wiki Log
 
+## [2026-10-05] investigations | Fresh-character General grants
+
+Added [[general-spell-grants]]: read-only SQLite/CSV comparison of 41 captured entries; Attributes_13 bit 16 marks 31 content abilities plus Throw, while ordinary entries clear it. Other requested fields do not separate them. Unknown bit semantics and Throw eligibility block a verified rule; no server code/data change or behavioral proof.
+
 ## [2026-10-03] systems | Flight Style toggle
 
 Updated [[mounts]]: Switch Flight Style 436854 / 460002 / 460003 as DUMMY spell scripts; the Flight Style aura is saved per character and restored on login. Skyriding takeoff = Skyward Ascent cast (FORCE_CAST 140 Lift Off 404191); the movement bound launches from that flap only.
