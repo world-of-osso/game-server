@@ -8,6 +8,7 @@
 //! spell (no procs from it).
 
 use bevy::prelude::*;
+use shared::casting::{CastState, CastType};
 use shared::components::{Health, PowerType};
 
 use super::handlers::*;
@@ -17,6 +18,10 @@ use crate::spell_info::{SpellInfo, SpellStore};
 
 /// Triggered spells cast by ticks resolve at this depth (no proc events).
 const TICK_TRIGGER_DEPTH: u8 = 1;
+
+/// World of Osso user decision (2026-10-05): Recuperate ends at full health.
+/// Not TC behavior: SpellAuraEffects.cpp:5879-5881 skips only permanent auras.
+const END_AT_FULL_HEALTH: &[u32] = &[1_231_418];
 
 struct Tick {
     instance_id: u32,
@@ -87,6 +92,9 @@ fn run_ticks(world: &mut World, unit: Entity, ticks: Vec<Tick>) {
         if !alive || !crate::spell_cast::targets::is_alive(world, unit) {
             continue;
         }
+        if end_aura_at_full_health(world, unit, &tick) {
+            continue;
+        }
         let Some(spell) = world
             .get_resource::<SpellStore>()
             .and_then(|store| store.get(tick.spell_id))
@@ -95,7 +103,25 @@ fn run_ticks(world: &mut World, unit: Entity, ticks: Vec<Tick>) {
             continue;
         };
         run_tick(world, unit, &spell, &tick);
+        end_aura_at_full_health(world, unit, &tick);
     }
+}
+
+fn end_aura_at_full_health(world: &mut World, unit: Entity, tick: &Tick) -> bool {
+    let full_health = world
+        .get::<Health>(unit)
+        .is_some_and(|health| health.current >= health.max);
+    if !END_AT_FULL_HEALTH.contains(&tick.spell_id) || !full_health {
+        return false;
+    }
+    super::remove_instance(world, unit, tick.instance_id, super::RemoveReason::Consumed);
+    let channeling = world
+        .get::<CastState>(tick.caster)
+        .is_some_and(|cast| cast.cast_type == CastType::Channel && cast.spell_id == tick.spell_id);
+    if channeling {
+        crate::spell_cast::end_cast(world, tick.caster);
+    }
+    true
 }
 
 fn run_tick(world: &mut World, unit: Entity, spell: &SpellInfo, tick: &Tick) {

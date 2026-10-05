@@ -95,6 +95,14 @@ Every removal logs `CombatLogEvent{AuraRemoved}`.
 
 Examples: Shadow Word: Pain 589 ticks 12 (0.1246 × SP 100) eight times. Renew 139 heals 61 five times.
 
+### Recuperate full-health completion
+
+World of Osso user decision (2026-10-05): spell 1231411 triggers aura 1231418 (OBS_MOD_HEALTH, 5% max health every 1000 ms for 10 s). A per-spell completion rule in `periodic.rs` removes that aura on the healing tick reaching max health, or before a tick if already full. It also ends a matching channel; queued ticks observe the removal and cannot heal afterward. Other periodic heals remain unchanged.
+
+Casting at full health stays allowed and ends at the first healing tick without a Heal event. `world.db` SpellMisc 785968/785975 and SpellEffect 1223435/1223445 contain no applicable full-health rejection rule; no Recuperate-specific Retail rule is established. TrinityCore `a352b1fa` `SharedDefines.h:1714` defines `SPELL_FAILED_ALREADY_AT_FULL_HEALTH = 2`, but `Spell.cpp:7461-7476` uses it for consumable items with direct HEAL effects, not this triggered aura. Its `SpellAuraEffects.cpp:5879-5881` skips full-health ticks only for permanent auras, so early completion deliberately differs from TC.
+
+Heal log `amount` is raw healing and `overflow` is overheal; effective healing is `amount - overflow` (`spell_cast/effects.rs`). Behavioral tests cast the real data spells, verify immediate aura/channel removal, absence of later heal events, and unchanged Renew overheal ticks.
+
 ## Damage and healing
 
 `spell_cast::effects::deal_damage` applies these steps in order:

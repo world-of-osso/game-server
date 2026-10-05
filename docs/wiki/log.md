@@ -1,5 +1,9 @@
 # Wiki Log
 
+## [2026-10-05] systems | Recuperate full-health decision
+
+Updated [[auras]] and its spec: user-requested completion of aura 1231418 at full health, unlike TC's permanent-aura-only skip. Full-health casting remains allowed; TC's ALREADY_AT_FULL_HEALTH check applies to consumable direct heals, with no applicable Recuperate data/Retail rule established. Real-spell behavioral tests cover aura/channel completion, no later heal logs, and unchanged Renew. Targeted RED reproduced three retained-aura/channel failures while Renew passed.
+
 ## [2026-10-05] investigations | Lift Off bar and restriction evidence
 
 Updated [[mounts]] with full pinned 12.1.0.69933 Wago exports: OverrideSpellData 2106 and SpellShapeshiftForm 47 list Skyward Ascent 372610, not 374763; MountCapability 494 points to FlightCapability 11 with SpellID 372610; SpellActionBarPref 343 prefers 372610. No 374763 override/preset/preference or aura/casting-requirement row found. SpellMisc 633542 includes NOT_AN_ACTION and IGNORE_CASTER_AND_TARGET_RESTRICTIONS. Existing SpellCastIntent already carries the ID; native 374763 action/grant and exact unmounted/ground failure remain blocked. No production, wire, data, test or service change; no build required for this documentation-only milestone.

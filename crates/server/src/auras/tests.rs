@@ -445,6 +445,99 @@ fn renew_heals_every_tick() {
     assert_eq!(h.health(h.caster), 500.0 + 6.0 * 61.0);
 }
 
+const RECUPERATE: u32 = 1_231_411;
+const RECUPERATE_HEAL: u32 = 1_231_418;
+
+fn recuperate_harness(health: f32) -> Harness {
+    let mut h = harness(Vec::new(), &[RECUPERATE, RECUPERATE_HEAL], 5)
+        .expect("Recuperate world spell data");
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(CombatStatus(false));
+    h.app
+        .world_mut()
+        .get_mut::<Health>(h.caster)
+        .unwrap()
+        .current = health;
+    // Keep this proof about the spell, not the independent out-of-combat regen.
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .remove::<crate::spell_cast::powers::PlayerHealthRegen>();
+    h
+}
+
+#[test]
+fn recuperate_stops_on_the_tick_that_fills_health() {
+    let mut h = recuperate_harness(925.0);
+    h.cast_and_deliver(RECUPERATE, None);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert_eq!(auras_of(&h, h.caster, RECUPERATE_HEAL).len(), 1);
+    h.advance(frames_for(1_000));
+    assert_eq!(h.health(h.caster), 975.0);
+    assert_eq!(auras_of(&h, h.caster, RECUPERATE_HEAL).len(), 1);
+    h.advance(frames_for(1_000));
+    assert_eq!(h.health(h.caster), 1000.0);
+    assert!(auras_of(&h, h.caster, RECUPERATE_HEAL).is_empty());
+    h.advance(frames_for(10_000));
+    let heals = log_of(&h, CombatLogKind::Heal, RECUPERATE_HEAL);
+    assert_eq!(
+        heals
+            .iter()
+            .map(|event| event.amount - event.overflow)
+            .collect::<Vec<_>>(),
+        vec![50, 25]
+    );
+    assert_eq!(heals[1].overflow, 25);
+    assert_eq!(
+        log_of(&h, CombatLogKind::AuraRemoved, RECUPERATE_HEAL).len(),
+        1
+    );
+}
+
+#[test]
+fn recuperate_at_full_health_ends_without_heal_logs() {
+    let mut h = recuperate_harness(1000.0);
+    h.cast_and_deliver(RECUPERATE, None);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    h.advance(frames_for(1_000));
+    assert!(auras_of(&h, h.caster, RECUPERATE_HEAL).is_empty());
+    h.advance(frames_for(10_000));
+    assert!(log_of(&h, CombatLogKind::Heal, RECUPERATE_HEAL).is_empty());
+}
+
+#[test]
+fn recuperate_healing_aura_ends_its_channel_at_full_health() {
+    let mut h = recuperate_harness(975.0);
+    h.cast_and_deliver(RECUPERATE_HEAL, None);
+    assert!(h.app.world().get::<CastState>(h.caster).is_some());
+    h.advance(frames_for(1_000));
+    assert_eq!(h.health(h.caster), 1000.0);
+    assert!(h.app.world().get::<CastState>(h.caster).is_none());
+    assert!(auras_of(&h, h.caster, RECUPERATE_HEAL).is_empty());
+    h.advance(frames_for(10_000));
+    let heals = log_of(&h, CombatLogKind::Heal, RECUPERATE_HEAL);
+    assert_eq!(heals.len(), 1);
+    assert_eq!(heals[0].amount - heals[0].overflow, 25);
+}
+
+#[test]
+fn recuperate_rule_does_not_stop_renew_at_full_health() {
+    let mut h = harness(Vec::new(), &[RENEW], 5).expect("Renew world spell data");
+    h.cast_and_deliver(RENEW, None);
+    h.advance(frames_for(3_000));
+    assert_eq!(auras_of(&h, h.caster, RENEW).len(), 1);
+    h.advance(frames_for(12_000) + 4);
+    let heals = log_of(&h, CombatLogKind::Heal, RENEW);
+    assert_eq!(heals.len(), 6);
+    assert!(
+        heals
+            .iter()
+            .all(|event| event.periodic && event.amount == 61 && event.overflow == 61)
+    );
+}
+
 #[test]
 fn stacking_aura_increments_to_max_stacks() {
     let Some(mut h) = harness(Vec::new(), &[SELFLESS_HEALER], 2) else {
