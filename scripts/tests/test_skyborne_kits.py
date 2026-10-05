@@ -10,6 +10,8 @@ import unittest
 SCRIPTS = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(SCRIPTS))
 import skyborne_data
+import content_policy
+from content_common import Report
 
 SOURCE = SCRIPTS / "reference/forever-1.60.1.70205"
 DECODED = json.loads((SOURCE / "starter-kit-rows.json").read_text())
@@ -105,6 +107,138 @@ class LoadoutPublicationTest(unittest.TestCase):
             ):
                 with self.db:
                     skyborne_data.import_rows(self.db, rows)
+
+
+class IsolatedItemPublicationTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.rows = skyborne_data.load_rows(SOURCE)
+        cls.retail = json.loads((SOURCE / "retail-common-items.json").read_text())
+
+    def setUp(self):
+        self.db = sqlite3.connect(":memory:")
+        self.addCleanup(self.db.close)
+        self.db.executescript((SCRIPTS / "db2_schema.sql").read_text())
+        for table in ("item", "item_sparse"):
+            for row in self.retail[table]:
+                self.db.execute(
+                    f"INSERT INTO {table} ({','.join(row)}) VALUES ({','.join('?' for _ in row)})",
+                    tuple(row.values()),
+                )
+        content_policy.create_map_table(self.db, "item_map", {})
+        content_policy.build_items(
+            self.db, {}, {}, {r["ID"] for r in self.retail["item"]}, Report()
+        )
+        self.db.commit()
+
+    def snapshot_retail(self):
+        return {
+            table: self.db.execute(f"SELECT * FROM {table} ORDER BY ID").fetchall()
+            for table in ("item", "item_sparse", "content_item")
+        }
+
+    def test_shared_ids_have_actual_forever_definitions_without_retail_replacement(
+        self,
+    ):
+        before = self.snapshot_retail()
+        with self.db:
+            skyborne_data.import_rows(self.db, self.rows)
+            skyborne_data.project_items(self.db)
+        self.assertEqual(self.snapshot_retail(), before)
+        self.assertEqual(
+            self.db.execute(
+                "SELECT ClassID,SubclassID,InventoryType,Stackable,VendorStackCount FROM skyborne_content_item WHERE ID=2947"
+            ).fetchone(),
+            (2, 16, 25, 1, 1),
+        )
+        self.assertEqual(
+            self.db.execute(
+                "SELECT ClassID,SubclassID,Stackable FROM skyborne_content_item WHERE ID=2512"
+            ).fetchone(),
+            (6, 2, 200),
+        )
+        self.assertEqual(
+            self.db.execute(
+                "SELECT ClassID,SubclassID FROM skyborne_content_item WHERE ID=2101"
+            ).fetchone(),
+            (11, 2),
+        )
+        self.assertEqual(
+            self.db.execute("SELECT COUNT(*) FROM skyborne_content_item").fetchone(),
+            (30,),
+        )
+        self.assertEqual(
+            self.db.execute(
+                "SELECT Name,InventoryType,RequiredLevel,AllowableClass FROM skyborne_content_item WHERE ID=271655"
+            ).fetchone(),
+            ("Thendal Apprentice's Shirt", 4, 0, -1),
+        )
+        self.assertEqual(
+            self.db.execute(
+                "SELECT file_data_id,layout_hash,sha256 FROM db2_row_source WHERE table_name='skyborne_item_sparse' AND row_id=271655"
+            ).fetchone(),
+            (
+                1572924,
+                "6FCC3191",
+                "15fde0ce086da0e642011b1f99b49977b6dfa56e72cf4edc941401dddf139f6d",
+            ),
+        )
+
+    def test_missing_required_definition_rolls_back_loadouts_and_isolated_tables(self):
+        rows = copy.deepcopy(self.rows)
+        rows["item_sparse"] = [
+            row for row in rows["item_sparse"] if row["ID"] != 271655
+        ]
+        before = self.snapshot_retail()
+        with self.assertRaisesRegex(ValueError, "missing.*item_sparse.*271655"):
+            with self.db:
+                skyborne_data.import_rows(self.db, rows)
+        self.assertEqual(self.snapshot_retail(), before)
+        self.assertEqual(
+            self.db.execute("SELECT COUNT(*) FROM character_loadout").fetchone(), (0,)
+        )
+
+    def test_conflicting_isolated_row_rolls_back_without_changing_retail(self):
+        with self.db:
+            skyborne_data.import_rows(self.db, self.rows)
+            skyborne_data.project_items(self.db)
+        self.db.execute("UPDATE skyborne_item SET ClassID=15 WHERE ID=2947")
+        self.db.commit()
+        before = self.snapshot_retail()
+        with self.assertRaisesRegex(ValueError, "collision.*skyborne_item.*2947"):
+            with self.db:
+                skyborne_data.import_rows(self.db, self.rows)
+        self.assertEqual(self.snapshot_retail(), before)
+        self.assertEqual(
+            self.db.execute(
+                "SELECT ClassID FROM skyborne_item WHERE ID=2947"
+            ).fetchone(),
+            (15,),
+        )
+
+    def test_content_regeneration_reprojects_isolated_definitions_and_preserves_retail(
+        self,
+    ):
+        with self.db:
+            skyborne_data.import_rows(self.db, self.rows)
+            skyborne_data.project_items(self.db)
+        before = self.snapshot_retail()
+        expected = self.db.execute(
+            "SELECT * FROM skyborne_content_item ORDER BY ID"
+        ).fetchall()
+        self.db.execute("DELETE FROM skyborne_content_item")
+        for _ in range(2):
+            self.db.execute("DROP TABLE temp.item_source")
+            content_policy.build_items(
+                self.db, {}, {}, {r["ID"] for r in self.retail["item"]}, Report()
+            )
+            self.assertEqual(
+                self.db.execute(
+                    "SELECT * FROM skyborne_content_item ORDER BY ID"
+                ).fetchall(),
+                expected,
+            )
+            self.assertEqual(self.snapshot_retail(), before)
 
 
 if __name__ == "__main__":

@@ -11,6 +11,7 @@ Server support for Forever races 95/96, grounded in local build 1.60.1.70205 Chr
 - [x] Reject source corruption before changing the destination database.
 - [x] Decode the six pinned starting loadouts (2373–2378), their 45 memberships and all 30 referenced Item/ItemSparse rows, plus clear related appearance/effect rows with exact provenance. Accept only Purpose 9, ModID 75, extra field 0, masks (0,3).
 - [x] Reject undeclared row-ID collisions rather than replacing Retail loadout/item data; rollback publication atomically.
+- [x] Preserve Retail definitions; isolate all 30 Forever kit definitions in six `skyborne_item*` tables and project `skyborne_content_item` using the existing content policy. Regeneration retains isolated definitions and exact row provenance.
 
 ## How it works
 
@@ -37,4 +38,4 @@ Server support for Forever races 95/96, grounded in local build 1.60.1.70205 Chr
 
 ## Out of scope
 
-Forever racial spells and language/skill parity remain excluded. Shared kit item-ID conflicts block authoritative publication while preserving Retail definitions; no dual-build item model or replacement policy is approved. [Reconstructed content](zephras-content.md) is a separate contract; client assets and full LOS closure remain independent gaps.
+Forever racial spells and language/skill parity remain excluded. Shared kit IDs keep separate Forever definitions under the approved source-isolation boundary. Runtime stats, validation, reload and client tooltips must resolve that same source before full kit support is claimed. [Reconstructed content](zephras-content.md) is a separate contract; client assets and full LOS closure remain independent gaps.

@@ -137,9 +137,22 @@ class SkyborneImportTest(unittest.TestCase):
         import skyborne_data
 
         expected_sources = sorted(
-            (table, row["ID"], skyborne_data.BUILD)
+            (
+                f"skyborne_{table}"
+                if table in skyborne_data.ISOLATED_TABLES
+                else table,
+                row["ID"],
+                skyborne_data.BUILD,
+            )
             for table, records in skyborne_data.load_rows(SOURCE).items()
             for row in records
+        )
+        expected_sources = sorted(
+            expected_sources
+            + [
+                ("skyborne_content_item", row["ID"], skyborne_data.BUILD)
+                for row in skyborne_data.load_rows(SOURCE)["item_sparse"]
+            ]
         )
         with tempfile.TemporaryDirectory() as directory:
             db = Path(directory) / "scratch.db"

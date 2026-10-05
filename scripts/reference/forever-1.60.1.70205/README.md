@@ -15,7 +15,7 @@ The eight additional original DB2 snapshots come from engine `data/forever-1.60.
 
 All 30 requested ItemSparse IDs are readable, including the 17 absent from Retail. Readable appearance/effect membership rows select required parent IDs explicitly; missing referenced parents fail. Unrelated encrypted sections are not decoded and no completeness claim covers hidden membership rows.
 
-Shared IDs have concrete creation/count conflicts with Retail (2947 throwing weapon versus junk, 2512 ammunition versus junk, 2101 quiver versus bag, and binding changes). Existing Retail rows cannot be silently relabeled or replaced. Publication rejects collisions until an explicit source replacement or representation policy is approved.
+Shared IDs have concrete creation/count conflicts with Retail (2947 throwing weapon versus junk, 2512 ammunition versus junk, 2101 quiver versus bag, and binding changes). Existing Retail rows cannot be silently relabeled or replaced. Approved isolation stores source definitions in six `skyborne_item*` tables, preserving IDs; `skyborne_content_item` is the existing item projection over those tables. Collisions inside that namespace still fail. `retail-common-items.json` contains the 13 existing shared Item/ItemSparse/content rows copied read-only from the main-owned 6878f6a scratch DB (`target/skyborn-e2e/data/world.db`, Retail 12.1.0.69933); tests preserve them byte-for-value while importing conflicting Forever definitions.
 
 ## Creature display probe
 
