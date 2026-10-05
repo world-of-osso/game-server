@@ -147,9 +147,9 @@ class ForeverTests(unittest.TestCase):
         self.assertNotIn([258882, 1], rewards["items"] or [])
 
     def test_https_transient_retry_and_forbidden_stop(self):
+        import urllib.error
         from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
         from threading import Thread
-        import urllib.error
 
         requests = []
 
