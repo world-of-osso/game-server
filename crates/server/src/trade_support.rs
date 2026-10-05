@@ -303,7 +303,8 @@ fn take_offered_items(
     offer
         .traded_items()
         .map(|item| {
-            let source = model.definition_source(item.item_guid);
+            let owned = model.bag_item(item.item_guid)?;
+            let source = model.definition_source(owned.item_guid);
             model
                 .take_bag_item(item.item_guid, u32::from(item.count), mint)
                 .ok()

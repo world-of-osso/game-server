@@ -944,7 +944,7 @@ impl InventoryModel {
         }
         self.check_bag_type(to, source)?;
         if let Some(target) = self.get(to) {
-            let fits = target.item_id == source.item_id
+            let fits = self.same_definition(source, target)
                 && target.stack_count + count <= self.max_stack(target);
             if !fits {
                 return Err(error(
