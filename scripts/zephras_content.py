@@ -332,16 +332,20 @@ def quest_fields(quest, item_ids, spell_ids, report):
     return fields, blocked
 
 
-def import_quest_links(writer, quest, templates):
+def import_quest_links(writer, quest, templates, report):
     for kind in ("starter", "ender"):
         for npc in sorted(set(quest[f"{kind}_npc_ids"])):
-            if npc in templates:
-                writer.insert(
-                    f"content_creature_quest{kind}",
-                    {"id": npc, "quest": quest["id"]},
-                    ["id", "quest"],
-                    quest,
+            if npc not in templates:
+                report["unresolved_quest_links"].append(
+                    {"quest": quest["id"], "npc": npc, "role": kind}
                 )
+                continue
+            writer.insert(
+                f"content_creature_quest{kind}",
+                {"id": npc, "quest": quest["id"]},
+                ["id", "quest"],
+                quest,
+            )
 
 
 def import_quests(writer, content, report):
@@ -387,7 +391,7 @@ def import_quests(writer, content, report):
         )
         if blocked:
             report["completion_blocked_quests"].append(quest["id"])
-        import_quest_links(writer, quest, templates)
+        import_quest_links(writer, quest, templates, report)
 
 
 def apply_overlay(db, content, catalog, decoded):
@@ -403,6 +407,7 @@ def apply_overlay(db, content, catalog, decoded):
         "positions_without_template": 0,
         "skipped_npcs": [],
         "skipped_quests": [],
+        "unresolved_quest_links": [],
         "dropped_rewards": [],
         "unsupported_objectives": [],
         "completion_blocked_quests": [],
@@ -433,6 +438,7 @@ def apply_overlay(db, content, catalog, decoded):
         "NPC facing unknown (zero stored); mapper observations are not authored spawns",
         "No scripted events, phasing, loot, vendor inventories or gossip reconstructed",
         "Reputation rewards retained in provenance only; runtime grant unsupported",
+        "Retained RewardSpell IDs have no native reward-spell grant handler",
         "Unknown creature type/classification use schema zero, not a guessed classification",
         "Unresolved NPC displays cannot be rendered as their intended models",
     ]
@@ -462,6 +468,7 @@ def main():
     if args.db is None or args.report is None:
         parser.error("--db and --report are required for import")
     with closing(sqlite3.connect(f"file:{args.db}?mode=rw", uri=True)) as db, db:
+        db.execute("BEGIN")
         report = apply_overlay(db, content, catalog, decoded)
     display_path = write_report(args.report, report)
     print(
