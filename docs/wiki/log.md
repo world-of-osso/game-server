@@ -64,7 +64,7 @@ Updated [[skyborne]] and contract with the nine-table source-local scaling CLI, 
 
 ## [2026-10-05] systems/spec | Owned source runtime boundary
 
-Updated [[inventory]] and [source contract](../specs/item-definition-source.md): source-qualified catalogs, stacking, explicit incoming origin, owner transfers, auction minted-GUID transaction markers, source-local equipped scaling and wire records. Targeted trade/reopen and mixed-source regressions added; compile/proof status remains revision-scoped, not a final acceptance claim. Unowned content-source and Classic-parity gaps remain explicit.
+Updated [[inventory]] and [source contract](../specs/item-definition-source.md): source-qualified catalogs, stacking, explicit incoming origin, owner transfers, auction minted-GUID transaction markers, source-local equipped scaling and wire records. Targeted `owned_sources` RED at743482e:3/5 pass, cross-source occupied split and vanished-GUID failures. Fix4fea2d0:5/5 GREEN, no warnings; logs `/tmp/claude/owned-source-{red,green}.out`, ledger `target/owned-source-runtime/ledger.md`. No final acceptance claim. Unowned content-source and Classic-parity gaps remain explicit.
 
 ## [2026-10-05] systems/spec | GUID-owned definition sources
 
