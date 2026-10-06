@@ -199,9 +199,11 @@ impl DifficultyEntry {
 }
 
 /// `DungeonEncounter.db2` row.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DungeonEncounter {
     pub id: u32,
+    pub name: String,
+    pub flags: u32,
     pub map_id: u32,
     /// -1 or 0: every difficulty of the map.
     pub difficulty_id: i32,
@@ -631,7 +633,7 @@ fn load_difficulty_entries(conn: &Connection) -> rusqlite::Result<HashMap<u32, D
 
 fn load_dungeon_encounters(conn: &Connection) -> rusqlite::Result<HashMap<u32, DungeonEncounter>> {
     let mut statement =
-        conn.prepare("SELECT ID, MapID, DifficultyID, Bit, OrderIndex FROM dungeon_encounter WHERE Bit BETWEEN 0 AND 31")?;
+        conn.prepare("SELECT ID, MapID, DifficultyID, Bit, OrderIndex, Name_lang, Flags FROM dungeon_encounter WHERE Bit BETWEEN 0 AND 31")?;
     let rows = statement.query_map([], |row| {
         Ok(DungeonEncounter {
             id: row.get(0)?,
@@ -639,10 +641,42 @@ fn load_dungeon_encounters(conn: &Connection) -> rusqlite::Result<HashMap<u32, D
             difficulty_id: row.get(2)?,
             bit: row.get(3)?,
             order_index: row.get(4)?,
+            name: row.get(5)?,
+            flags: row.get(6)?,
         })
     })?;
-    rows.map(|row| row.map(|encounter| (encounter.id, encounter)))
-        .collect()
+    let encounters: HashMap<_, _> = rows
+        .map(|row| row.map(|encounter| (encounter.id, encounter)))
+        .collect::<rusqlite::Result<_>>()?;
+    validate_encounter_counts(&encounters)?;
+    Ok(encounters)
+}
+
+fn validate_encounter_counts(encounters: &HashMap<u32, DungeonEncounter>) -> rusqlite::Result<()> {
+    let mut counts = HashMap::<(u32, i32), usize>::new();
+    for encounter in encounters.values() {
+        *counts
+            .entry((encounter.map_id, encounter.difficulty_id.max(0)))
+            .or_default() += 1;
+    }
+    for (&(map, difficulty), &count) in &counts {
+        let shared_count = if difficulty == 0 {
+            0
+        } else {
+            counts.get(&(map, 0)).copied().unwrap_or(0)
+        };
+        if count + shared_count > shared::protocol::DUNGEON_ENCOUNTER_MAX_ROWS {
+            error!(
+                map,
+                difficulty,
+                count,
+                shared_count,
+                "DungeonEncounter objective list exceeds protocol bound"
+            );
+            return Err(rusqlite::Error::InvalidQuery);
+        }
+    }
+    Ok(())
 }
 
 /// `ObjectMgr::LoadWorldSafeLocs`: `Facing` is stored in degrees.

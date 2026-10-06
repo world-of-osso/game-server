@@ -172,6 +172,7 @@ fn stockade_app(data: &'static Data) -> App {
         crate::creature_ai::CreatureAiPlugin,
         crate::creature_aggro::CreatureAggroPlugin,
         ScriptedAiPlugin,
+        crate::achievement::AchievementPlugin,
     ));
     app.insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
         Duration::from_millis(50),

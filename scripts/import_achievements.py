@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Export pinned local CASC achievement DB2s, then import them into world.db.
 
-Extract the three FDIDs with casc-local first. Never downloads anything. Uses the
+Extract the four FDIDs with casc-local first. Never downloads anything. Uses the
 same WDC5 decoder as db2.py extract; .csv.import files are Godot translation
 metadata, not DB2 export recipes. Unknown-key zero-filled sections are reported
-by the decoder and excluded. The three tables are replaced in one transaction.
+by the decoder and excluded. The four tables are replaced in one transaction.
 """
 import argparse
 import csv
@@ -18,7 +18,10 @@ TABLES = {
     "Achievement": (1260179, 0x6FC5281B, {0, 1, 2}, [
         ("ID", 3), ("Title_lang", 1), ("Description_lang", 0),
         ("Instance_ID", 4), ("Faction", 5), ("Points", 9),
-        ("Flags", 10), ("CriteriaTree", 14),
+        ("Flags", 10), ("CriteriaTree", 14), ("Category", 7), ("IconFileID", 12),
+    ]),
+    "Achievement_Category": (1324299, 0x67B2B4BD, {0}, [
+        ("ID", 1), ("Name_lang", 0), ("Parent", 2), ("Ui_order", 3),
     ]),
     "Criteria": (1263817, 0x53D03513, set(), [
         ("ID", 0), ("Type", 1), ("Asset", 2), ("ModifierTreeId", 3),
@@ -31,7 +34,8 @@ TABLES = {
         ("Operator", 4), ("CriteriaID", 5), ("Flags", 6), ("OrderIndex", 7),
     ]),
 }
-SQL_NAMES = {"Achievement": "achievement", "Criteria": "criteria", "CriteriaTree": "criteria_tree"}
+SQL_NAMES = {"Achievement": "achievement", "Achievement_Category": "achievement_category",
+             "Criteria": "criteria", "CriteriaTree": "criteria_tree"}
 
 
 def export_tables(directory):

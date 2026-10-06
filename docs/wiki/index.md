@@ -66,7 +66,7 @@ Server gameplay systems.
 | [[factions]] | `UnitFactionTemplate` sources (creature_template, ChrRaces), FactionTemplate reaction rules, attack/assist checks, Wrath vs Retail ID coverage |
 | [[combat]] | Auto-attack system, NPC/player lethal transitions, split death proofs, melee hit table (miss/dodge/parry/glancing/block/crit/hit), spell formulas, stat calculations, DR curves |
 | [[creature-ai]] | Three movement types (idle/wander/waypoint by addon path_id), formations, addon mounts/auras, grid activation (GridDormant), SpawnPoint, chase system, 40-yard leash/evade, return-to-spawn |
-| [[dungeon-achievements]] | Local CASC criteria catalog, ordered copy boss masks, full Stockade grant boundary, persisted character counters and phase-2 needs |
+| [[dungeon-achievements]] | Local CASC categories/criteria, bounded achievement pages/dates, ordered copy objective snapshots and Stockade grants; client hookup |
 | [[boss-scripts]] | ScriptName creature AI (CreatureAI hooks, EventMap, BossAI, InstanceScript per copy, creature_text Talk), Stockade boss ports, SmartAI combat timers/victim/CMC chase control, creature casts/ExpectedStat spell damage, dynamic objects |
 | [[creature-aggro]] | AggroMode, damage/heal school-modified threat, victim selection, evade and engaged-player threat update/clear delivery |
 | [[inventory]] | Owner-only bag/equipment snapshots and deltas, bag placements and item-instance tables, Retail swap/split/destroy/equip validation, data gaps |

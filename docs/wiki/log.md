@@ -1,5 +1,8 @@
 # Wiki Log
 
+## [2026-10-06] systems | Dungeon objectives and achievement window data
+
+Updated [[dungeon-achievements]] and its spec with phase-2 local category import, bounded request-only catalog/criteria pages, persisted earned dates, and copy-scoped dungeon snapshots. [Client hookup](../dungeon-achievements-client.md) pins fields, bounds and Retail file:line references. Import fixture GREEN; all six new server cases and four wire tests pass across the final scoped proofs. Stockade reconnect uses a new connection/player loaded from saved state; both copy members receive updates. Real continent world-boss rows exposed a clearing bug, reproduced and fixed by actual-copy selection. Eight phase-1 regressions and 24 additional Stockade tests pass (three existing appearance tests ignored). Maximum category payload 56,397 bytes; final check/fmt pass without warnings. Exact commands/revisions in the system page ledger.
 ## [2026-10-06] systems | Group meter categories
 
 Updated [[combat]] with actor/victim group fan-out, shield-caster attribution and logged/transition death de-duplication. The [damage-meter spec](../specs/damage-meter.md) owns category semantics, export bounds, Retail references and the client migration field list. Targeted local proof: 19 server meter tests and four protocol-filtered tests pass. First-absorb roster RED reproduced before the seeding fix; final server build reports no warnings.
