@@ -60,7 +60,15 @@ fn dungeonach_stockade_real_boss_deaths_record_ordered_progress_and_send_final_t
             .insert(crate::combat::LastDamager(player));
         h.app.world_mut().get_mut::<Health>(boss).unwrap().current = 0.0;
         crate::combat::mark_npc_dead_world(h.app.world_mut(), boss);
-        h.advance(0.10);
+        // Host receivers are frame-local. Drain each update, as the existing
+        // encounter/chat inbox does, rather than losing the toast next frame.
+        h.advance(0.05);
+        let mut updates = drain::<AchievementStateUpdate>(h.app.world_mut(), connection);
+        h.advance(0.05);
+        updates.extend(drain::<AchievementStateUpdate>(
+            h.app.world_mut(),
+            connection,
+        ));
         mask |= 1 << bit;
         assert_eq!(h.boss_state(boss_id), Some(EncounterState::Done));
         assert_eq!(
@@ -83,7 +91,6 @@ fn dungeonach_stockade_real_boss_deaths_record_ordered_progress_and_send_final_t
                 .iter()
                 .any(|end| end.encounter_id == encounter && end.success)
         );
-        let updates = drain::<AchievementStateUpdate>(h.app.world_mut(), connection);
         let earned = h
             .app
             .world()
