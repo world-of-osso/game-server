@@ -584,6 +584,78 @@ fn groupmeter_three_players_receive_exact_categories_and_capped_recaps() {
 }
 
 #[test]
+fn groupmeter_first_absorb_exports_the_whole_roster() {
+    let (mut app, healer, tank, outsider) = group_app();
+    super::record_absorb(app.world_mut(), healer, 75.0);
+    for recipient in [healer, tank] {
+        let snapshot = app
+            .world()
+            .get::<DamageMeter>(recipient)
+            .unwrap()
+            .snapshot(0.0, recipient);
+        for session in [snapshot.current.as_ref().unwrap(), &snapshot.overall] {
+            assert_eq!(session.sources.len(), 2);
+            let source = session
+                .sources
+                .iter()
+                .find(|source| source.unit == healer.to_bits())
+                .unwrap();
+            assert_eq!(source.absorbs, 75);
+        }
+    }
+    assert!(
+        app.world()
+            .get::<DamageMeter>(outsider)
+            .unwrap()
+            .snapshot(0.0, outsider)
+            .current
+            .is_none()
+    );
+}
+
+#[test]
+fn groupmeter_raid_receives_healing_without_counting_creature_damage() {
+    let (mut app, healer, tank, outsider) = group_app();
+    app.world_mut()
+        .resource_mut::<GroupRegistry>()
+        .convert_to_raid(1);
+    let mob = app.world_mut().spawn_empty().id();
+    crate::spell_cast::log_event(
+        app.world_mut(),
+        CombatLogEvent {
+            kind: CombatLogKind::Heal,
+            overflow: 40,
+            ..damage_line(healer, tank, 140)
+        },
+    );
+    crate::spell_cast::log_event(app.world_mut(), damage_line(mob, tank, 200));
+    for recipient in [healer, tank] {
+        let snapshot = app
+            .world()
+            .get::<DamageMeter>(recipient)
+            .unwrap()
+            .snapshot(0.0, recipient);
+        assert_eq!(snapshot.overall.sources.len(), 2);
+        assert_eq!(snapshot.overall.total_amount, 0);
+        let source = snapshot
+            .overall
+            .sources
+            .iter()
+            .find(|source| source.unit == healer.to_bits())
+            .unwrap();
+        assert_eq!((source.healing_done, source.overhealing), (100, 40));
+    }
+    assert!(
+        app.world()
+            .get::<DamageMeter>(outsider)
+            .unwrap()
+            .snapshot(0.0, outsider)
+            .current
+            .is_none()
+    );
+}
+
+#[test]
 fn groupmeter_unlogged_death_transition_counts_once() {
     let (mut app, mage, warrior, _) = group_app();
     super::record_player_death_transition(app.world_mut(), warrior);
