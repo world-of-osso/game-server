@@ -88,7 +88,7 @@ Client
 
 ## Known gaps (current cycle)
 
-- [ ] The client shows the raw shared health pool. Hogger reads 13,137 to everyone, while Retail shows each viewer max health at their own level.
+- [ ] Resolve the reported Northshire native-stat display/combat block at the client/runtime boundary. Current Godot `targeting.rs` projects levels and health per viewer (client commit `ec4a6eff`); server real-spawn regressions pass, so native `npc-info` values alone do not reproduce the block.
 - [ ] Creature attack power is not modelled. Creature armor is ExpectedStat CreatureArmor ([player damage](player-damage.md)).
 - [ ] Creature attack speed is the server's flat 2 s, not `BaseAttackTime`.
 - [ ] Nameplates show no level. Retail's default nameplates show none either. Unit tooltips are the npctooltip branch's, which calls `level_for_viewer`.

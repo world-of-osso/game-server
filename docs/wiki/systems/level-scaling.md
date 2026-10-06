@@ -38,7 +38,7 @@ At server revision `c8cd38f`, Blackrock Spy (49874), Blackrock Worg (49871) and 
 
 The same distinction applies to Elwynn Stonetusk Boar (113), Mangy Wolf (525), and Durotar Elder Mottled Boar (3100), Vile Familiar (3101), Felstalker (3102), Razormane Quilboar (3111; ContentTuning 70, also 1–30). Current local data has 411 templates / 3,670 continent spawns using tuning 70 or 73; this is not a count of broken creatures. Flesh Eater (3, tuning 13, 10–30) must remain level 10 / 378 effective health for a level-1 player.
 
-The reported client display/combat block remains unproven at the runtime boundary. Client source already converts target levels and health in `godot/rust/src/targeting.rs` (introduced by client commit `ec4a6eff`). Changing server native stats to a fixed starter range would contradict the scaling contract and higher-level viewers. No shared server or client runtime was touched. Real-data `creaturelevel_*` tests in `zones_world_db_tests.rs` cover spawning, player-relative levels, formula health and lethal native-pool damage; they require `--ignored`.
+The reported client display/combat block remains unproven at the runtime boundary. Client source already converts target levels and health in `godot/rust/src/targeting.rs` (introduced by client commit `ec4a6eff`). Changing server native stats to a fixed starter range would contradict the scaling contract and higher-level viewers. No shared server or client runtime was touched. Real-data `creaturelevel_*` tests in `zones_world_db_tests.rs` cover spawning, player-relative levels, formula health and lethal native-pool damage; they require `--ignored`. All three passed at `2f35e0d` (7.11 s test execution, no warnings). This proves server spawn/scaling math, not live client display or the complete attack pipeline.
 
 ### Client
 
@@ -46,6 +46,8 @@ The reported client display/combat block remains unproven at the runtime boundar
 
 ## Sources
 
+- [Real-spawn regressions](../../../crates/server/src/zones_world_db_tests.rs), [spawn stats](../../../crates/server/src/zones.rs), [scaling math](../../../crates/server/src/level_scaling.rs), [native admin output](../../../crates/server/src/maps/difficulty.rs)
+- Original task evidence: `game-engine/data/diagnostics/playaudit-2026-10-05/admin-setup.log`, `kill-scene.log`, `kill-blocked.webp`; none alone proves player-relative combat math.
 - TrinityCore `Creature.cpp` (SelectLevel, UpdateLevelDependantStats, ApplyLevelScaling, GetLevelForTarget, Get*MultiplierForTarget), `Unit.cpp` (DealDamageMods, DealDamage), `DB2Stores.cpp` (EvaluateExpectedStat, GetContentTuningData), `StatSystem.cpp` (CalculateMinMaxDamage), `Formulas.h`, `KillRewarder.cpp`
 - FrameXML `Blizzard_UnitFrame/Mainline/TargetFrame.lua` CheckLevel, `Blizzard_UIParent/Mainline/UIParent.lua` GetRelativeDifficultyColor
 
