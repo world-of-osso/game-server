@@ -22,7 +22,7 @@ Retail source evidence already recorded in game-engine `docs/wiki/systems/portra
 
 ## Exact deferred client hookup
 
-1. Retain `GroupMemberSnapshot.portrait` in `godot/ui-model/src/group_state.rs::GroupState.members` when consuming `GroupRosterSnapshot`; do not drop it on offline live-state cleanup.
+1. `godot/ui-model/src/game/group_state.rs:64::GroupState::apply_roster` already retains whole `GroupMemberSnapshot` values in `GroupState.members` (line 23). The new `portrait` therefore survives automatically; offline cleanup removes only `GroupState.live`, not the roster appearance.
 2. In `godot/rust/src/unit_portraits.rs::GameClient::sync_party_portraits` (currently line 568), replace the `self.replica.units()` appearance-map construction with `self.account.group.members.iter()`. For each roster member build:
 
 ```rust

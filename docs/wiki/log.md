@@ -1,5 +1,9 @@
 # Wiki Log
 
+## [2026-10-06] systems | Group roster portrait transport
+
+Linked [roster portrait transport](../group-roster-portraits.md): canonical customization plus head-only equipment, change-triggered reliable rosters and offline cache. Added persisted inventory-request, post-transfer and latest-offline-head fixtures; test execution pending shared build lock. Corrected deferred client path to `godot/ui-model/src/game/group_state.rs`; existing `apply_roster` already retains whole snapshots. Client unchanged; native Retail helm pixel parity remains unproven.
+
 ## [2026-10-05] investigations | Northshire native versus effective stats
 
 Updated [[level-scaling]] with the `c8cd38f` audit: ContentTuning 73 gives native level 30 / 4,379 health, but level-1 effective stats are 1 / 78. `npc-info` reports the native pool without a viewer. Source difficulty rows agree; Elwynn and Durotar share the pattern. Added three real-spawn `creaturelevel_*` regressions, including tuning-13 Flesh Eater's higher floor and lethal scaled health loss. Client runtime failure is not established; server native-level semantics preserved.
