@@ -295,11 +295,20 @@ fn route_guild_chat(
     let Some(sender) = online.iter().find(|p| p.entity == chat.sender_entity) else {
         return Vec::new();
     };
+    let guild_id = db
+        .and_then(|db| {
+            sender
+                .character_id
+                .and_then(|id| persistence::load_character_guild(db, id))
+        })
+        .map(|guild| guild.guild_id);
     let allowed = |participant: &ChatParticipant, right| {
         db.is_some_and(|db| {
-            participant
-                .character_id
-                .is_some_and(|id| crate::guild::character_has_right(db, id, right))
+            participant.character_id.is_some_and(|id| {
+                guild_id.is_some_and(|guild_id| {
+                    crate::guild::character_has_right(db, id, guild_id, right)
+                })
+            })
         })
     };
     if !allowed(sender, speak) {
@@ -310,9 +319,7 @@ fn route_guild_chat(
     }
     let recipients: Vec<_> = online
         .iter()
-        .filter(|p| {
-            p.guild_id == sender.guild_id && allowed(p, listen) && accepts_from(p, &chat.msg.sender)
-        })
+        .filter(|p| allowed(p, listen) && accepts_from(p, &chat.msg.sender))
         .map(|p| p.entity)
         .collect();
     record_history(history, &chat.msg, &recipients, online);
@@ -617,7 +624,12 @@ fn handle_guild_invite(
     };
 
     if !char_ids.get(inviter_entity).is_ok_and(|id| {
-        crate::guild::character_has_right(&db.db, id.0, shared::protocol::GUILD_RIGHT_INVITE)
+        crate::guild::character_has_right(
+            &db.db,
+            id.0,
+            inviter_guild.guild_id,
+            shared::protocol::GUILD_RIGHT_INVITE,
+        )
     }) {
         return GuildInviteResponse {
             success: false,
@@ -953,6 +965,43 @@ mod tests {
             vec![online[0].entity]
         );
         assert!(history_for_player(&history, 100, "Bob", None).is_empty());
+    }
+
+    #[test]
+    fn guild_ranks_chat_does_not_cross_guilds_with_stale_components() {
+        use crate::persistence::banks::save_guild_member_rank;
+        let db = persistence::temp_database();
+        let mut world = World::new();
+        let origin = at(0.0);
+        let mut online = [
+            participant(&mut world, "Alice", &origin, &[]),
+            participant(&mut world, "Carl", &origin, &[]),
+        ];
+        for (participant, guild) in online.iter_mut().zip([7, 8]) {
+            let (id, _) = persistence::create_character(&db, 1, participant.name, 1, 1).unwrap();
+            persistence::set_character_guild_by_id(&db, id, guild, "Test Guild").unwrap();
+            save_guild_member_rank(&db, id, 0);
+            participant.character_id = Some(id);
+            // Membership components can lag persistent membership updates.
+            participant.guild_id = Some(7);
+        }
+        let outgoing = CollectedChat {
+            msg: chat("Alice", ChatType::Officer),
+            sender_entity: online[0].entity,
+        };
+        let mut history = ChatHistoryBuffer::default();
+        let deliveries = route_guild_chat(
+            &outgoing,
+            &online,
+            &GroupRegistry::default(),
+            &mut history,
+            Some(&db),
+        );
+        assert_eq!(
+            deliveries.iter().map(|d| d.0).collect::<Vec<_>>(),
+            vec![online[0].entity]
+        );
+        assert!(history_for_player(&history, 100, "Carl", None).is_empty());
     }
 
     #[test]

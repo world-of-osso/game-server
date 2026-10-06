@@ -247,7 +247,12 @@ fn process_profile_text_requests<Request, Apply>(
             continue;
         };
         for text in requests {
-            if !character_has_right(db, world.character_id, Request::required_right()) {
+            if !character_has_right(
+                db,
+                world.character_id,
+                guild.guild_id,
+                Request::required_right(),
+            ) {
                 send_guild_update(
                     conn_entity,
                     None,
@@ -301,6 +306,7 @@ fn process_set_officer_note_requests(
             if !character_has_right(
                 &db.db,
                 world.character_id,
+                guild.guild_id,
                 shared::protocol::GUILD_RIGHT_EDIT_OFFICER_NOTE,
             ) {
                 send_guild_update(
@@ -458,7 +464,12 @@ fn visible_guild_snapshot(
     viewer: u64,
 ) -> GuildSnapshot {
     let mut snapshot = build_guild_snapshot(db, guild, online);
-    if !character_has_right(db, viewer, shared::protocol::GUILD_RIGHT_VIEW_OFFICER_NOTE) {
+    if !character_has_right(
+        db,
+        viewer,
+        guild.guild_id,
+        shared::protocol::GUILD_RIGHT_VIEW_OFFICER_NOTE,
+    ) {
         for member in &mut snapshot.members {
             member.officer_note.clear();
         }

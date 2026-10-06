@@ -11,11 +11,19 @@ use bevy::prelude::*;
 use lightyear::prelude::{MessageReceiver, MessageSender};
 use shared::protocol::*;
 
-pub(crate) fn character_has_right(db: &redb::Database, character: u64, right: u32) -> bool {
+pub(crate) fn character_has_right(
+    db: &redb::Database,
+    character: u64,
+    guild_id: u32,
+    right: u32,
+) -> bool {
     let Some(membership) = persistence::load_character_guild(db, character) else {
         return false;
     };
-    let guild = load_guild(db, membership.guild_id);
+    if membership.guild_id != guild_id {
+        return false;
+    }
+    let guild = load_guild(db, guild_id);
     let rank = load_guild_member_rank(db, &guild, character);
     rank == 0
         || guild
