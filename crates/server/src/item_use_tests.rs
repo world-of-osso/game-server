@@ -265,7 +265,7 @@ fn assert_item_heal(item: u32, spell_id: u32, level: u8, expected: f32) {
     let mut eater = eater_with_spells(&[item], 2, &[spell_id], 1).expect("world DB");
     let caster = eater.h.caster;
     app_world(&mut eater.h).entity_mut(caster).insert((
-        shared::components::Level(u32::from(level)),
+        shared::components::Level(level),
         shared::components::UnitLevel(level),
         Health {
             current: 18_444.0,
