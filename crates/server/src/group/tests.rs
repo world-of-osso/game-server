@@ -1406,8 +1406,11 @@ fn roster_portrait_persisted_helm_equip_reaches_far_member() {
             character_id: bob_id,
         },
         MessageSender::<InventorySnapshot>::default(),
+        MessageReceiver::<InventorySnapshot>::default(),
         MessageSender::<EquipmentSnapshot>::default(),
+        MessageReceiver::<EquipmentSnapshot>::default(),
         MessageSender::<InventoryDelta>::default(),
+        MessageReceiver::<InventoryDelta>::default(),
         MessageSender::<InventoryError>::default(),
         MessageReceiver::<InventoryError>::default(),
         MessageSender::<SwapItem>::default(),
@@ -1423,8 +1426,9 @@ fn roster_portrait_persisted_helm_equip_reaches_far_member() {
             from: ItemLocation::Bag { bag: 0, slot: 0 },
             to: ItemLocation::Equipment(EquipmentSlot::Head),
         });
-    // Inventory deltas update equipment in PostUpdate; group observes it next Update.
+    // Request delivery, inventory PostUpdate, group Update, then roster receipt.
     pump(&mut app);
+    app.update();
     assert!(
         inbox(&mut app, &bob).inventory_errors.is_empty(),
         "equip request rejected: {:?}",
