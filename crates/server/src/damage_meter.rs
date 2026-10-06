@@ -469,7 +469,7 @@ fn record_for_group(
     for &recipient in &recipients {
         let mut entity = world.entity_mut(recipient);
         let mut entry = entity.entry::<DamageMeter>().or_default();
-        let meter = entry.get_mut();
+        let mut meter = entry.get_mut();
         meter.visible_units = recipients.clone();
         meter.record_event(now, source, event, actor);
         for member in &roster {
