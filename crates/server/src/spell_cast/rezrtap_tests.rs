@@ -205,6 +205,64 @@ fn rezrtap_decline_and_timeout_remain_dead() {
 }
 
 #[test]
+fn rezrtap_resurrect_with_aura_applies_trigger_after_acceptance() {
+    let (mut h, target, conn) = fixture();
+    let aura = world_db()
+        .expect("world fixture")
+        .store
+        .get(15007)
+        .expect("resurrection sickness fixture")
+        .clone();
+    let spell = SpellInfo {
+        id: 7328,
+        effects: vec![SpellEffect {
+            effect: 172,
+            base_points: 35.0,
+            trigger_spell: 15007,
+            ..default()
+        }],
+        misc: Some(SpellMisc {
+            range: Some(SpellRange {
+                max_friendly: 40.0,
+                ..default()
+            }),
+            ..default()
+        }),
+        ..default()
+    };
+    h.app
+        .insert_resource(crate::spell_info::SpellStore::fixture(vec![spell, aura]));
+    let offered = offer(&mut h, target, conn);
+    assert!(
+        !h.app
+            .world()
+            .get::<crate::auras::ActiveAuras>(target)
+            .unwrap()
+            .has_spell(15007)
+    );
+    respond(
+        &mut h,
+        conn,
+        ResurrectionResponse {
+            caster: offered.caster,
+            spell_id: 7328,
+            accept: true,
+        },
+    );
+    assert_eq!(
+        h.app.world().get::<PlayerDeathState>(target).unwrap().state,
+        DeathState::Alive
+    );
+    assert!(
+        h.app
+            .world()
+            .get::<crate::auras::ActiveAuras>(target)
+            .unwrap()
+            .has_spell(15007)
+    );
+}
+
+#[test]
 fn rezrtap_damage_tap_projection_and_clear() {
     let mut h = harness(Vec::new(), &[], 2).expect("world fixture required");
     h.app

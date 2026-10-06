@@ -1,5 +1,9 @@
 # Wiki Log
 
+## [2026-10-06] systems | Player resurrection and creature taps
+
+Added [offer/tap mechanics](systems/player-resurrection-and-taps.md) and [contract](../specs/player-resurrection-and-taps.md): Retail effects 18/172, implicit-zero target validation, owner consent/expiry replies, cast-position restoration, stable character tap IDs and roster comparison. Targeted proof ledger: `/tmp/claude/rezrtap-proof.md`. No production service, merge, push or deployment.
+
 ## [2026-10-06] systems | Dungeon objectives and achievement window data
 
 Updated [[dungeon-achievements]] and its spec with phase-2 local category import, bounded request-only catalog/criteria pages, persisted earned dates, and copy-scoped dungeon snapshots. [Client hookup](../dungeon-achievements-client.md) pins fields, bounds and Retail file:line references. Import fixture GREEN; all six new server cases and four wire tests pass across the final scoped proofs. Stockade reconnect uses a new connection/player loaded from saved state; both copy members receive updates. Real continent world-boss rows exposed a clearing bug, reproduced and fixed by actual-copy selection. Eight phase-1 regressions and 24 additional Stockade tests pass (three existing appearance tests ignored). Maximum category payload 56,397 bytes; final check/fmt pass without warnings. Exact commands/revisions in the system page ledger.

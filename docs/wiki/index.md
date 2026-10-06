@@ -35,6 +35,8 @@ External resources, tooling, data sources, development workflow.
 
 Server gameplay systems.
 
+- [Player resurrection and creature taps](systems/player-resurrection-and-taps.md) — spell-effect consent offers, exact restoration, stable tap IDs and bandwidth; [contract](../specs/player-resurrection-and-taps.md).
+
 | Page | Summary |
 |------|---------|
 | [[player-damage]] | Retail player damage: weapon swings (AP / 6 × speed), off hand, haste timers, TrinityCore hit table, ExpectedStat creature armor, spell power from an Intellect main stat, spell variance/versatility, TRIGGER_MISSILE |
