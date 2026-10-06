@@ -115,6 +115,7 @@ pub(crate) fn receive_responses(world: &mut World) {
         .collect();
     for (player, response) in responses {
         respond(world, player, response);
+        send_state(world, player);
     }
     expire_offers(world);
 }
@@ -149,7 +150,6 @@ pub(crate) fn respond(world: &mut World, player: Entity, response: ResurrectionR
         return;
     }
     apply_resurrection(world, player, &pending);
-    send_alive(world, player);
 }
 
 fn apply_resurrection(world: &mut World, player: Entity, pending: &PendingResurrection) {
@@ -171,13 +171,13 @@ fn apply_resurrection(world: &mut World, player: Entity, pending: &PendingResurr
     }
 }
 
-fn send_alive(world: &mut World, player: Entity) {
-    let position = *world
-        .get::<Position>(player)
-        .expect("resurrection position");
-    let state = world
-        .get::<PlayerDeathState>(player)
-        .expect("resurrection state");
+fn send_state(world: &mut World, player: Entity) {
+    let Some(position) = world.get::<Position>(player).copied() else {
+        return;
+    };
+    let Some(state) = world.get::<PlayerDeathState>(player) else {
+        return;
+    };
     let snapshot = super::support::build_snapshot(&position, state);
     let Some(connection) = connection(world, player) else {
         return;

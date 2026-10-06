@@ -894,7 +894,15 @@ fn validate_target(
     explicit: Option<Entity>,
     sight: Sight,
 ) -> Result<Option<Entity>, CastFailure> {
-    let Some(relation) = targets::explicit_requirement(handled_effects(spell)) else {
+    let resurrects = spell
+        .effects
+        .iter()
+        .any(crate::death::resurrection::is_resurrection);
+    // Retail resurrection rows have both implicit targets zero; their effect still
+    // requires an explicit dead ally and the normal range/LOS checks.
+    let requirement = targets::explicit_requirement(handled_effects(spell))
+        .or_else(|| resurrects.then_some(Relation::Ally));
+    let Some(relation) = requirement else {
         return Ok(explicit);
     };
     let target = match explicit {
@@ -905,10 +913,6 @@ fn validate_target(
     };
     // A unit of another map copy is not found (`ObjectAccessor::GetUnit` searches the
     // caster's map).
-    let resurrects = spell
-        .effects
-        .iter()
-        .any(crate::death::resurrection::is_resurrection);
     let target_alive = targets::is_alive(world, target);
     if target_alive == resurrects
         || !targets::same_map(world, caster, target)

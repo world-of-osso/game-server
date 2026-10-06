@@ -825,6 +825,7 @@ impl GroupRegistry {
     ) -> GroupMemberSnapshot {
         let profile = self.profiles.get(&member).cloned().unwrap_or_default();
         GroupMemberSnapshot {
+            character_id: member,
             name: profile.name,
             role: group
                 .roles

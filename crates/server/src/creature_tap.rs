@@ -110,13 +110,7 @@ fn replicate_tap(world: &mut World, creature: Entity) {
         .get::<CreatureTap>(creature)
         .map(|tap| tap.tappers.clone())
         .unwrap_or_default();
-    let mut players = world.query::<(Entity, &ClientId)>();
-    let mut units: Vec<_> = players
-        .iter(world)
-        .filter_map(|(entity, id)| tappers.contains(&id.0).then_some(entity.to_bits()))
-        .collect();
-    units.sort_unstable();
-    let tap = UnitTap(units);
+    let tap = UnitTap(tappers);
     if world.get::<UnitTap>(creature) == Some(&tap) {
         return;
     }

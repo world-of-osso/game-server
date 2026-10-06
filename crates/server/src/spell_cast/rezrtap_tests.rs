@@ -20,7 +20,7 @@ fn fixture() -> (Harness, Entity, Entity) {
         effects: vec![SpellEffect {
             effect: 18,
             base_points: 35.0,
-            implicit_targets: [21, 0],
+            implicit_targets: [0, 0],
             ..default()
         }],
         ..default()
@@ -46,13 +46,61 @@ fn fixture() -> (Harness, Entity, Entity) {
         },
     ));
     let conn = spawn_peer_connection(&mut h.app, target, 99);
+    h.app.world_mut().entity_mut(conn).insert((
+        lightyear::prelude::MessageSender::<shared::protocol::DeathStateUpdate>::default(),
+        lightyear::prelude::MessageReceiver::<shared::protocol::DeathStateUpdate>::default(),
+        lightyear::prelude::MessageSender::<ResurrectionOffer>::default(),
+        lightyear::prelude::MessageReceiver::<ResurrectionOffer>::default(),
+        lightyear::prelude::MessageSender::<ResurrectionResponse>::default(),
+        lightyear::prelude::MessageReceiver::<ResurrectionResponse>::default(),
+    ));
     (h, target, conn)
 }
 
 fn offer(h: &mut Harness, target: Entity, conn: Entity) -> ResurrectionOffer {
-    h.cast(7328, Some(target));
+    offer_for(h, target, conn, 7328)
+}
+
+fn respond(h: &mut Harness, conn: Entity, response: ResurrectionResponse) {
+    h.app
+        .world_mut()
+        .get_mut::<lightyear::prelude::MessageSender<ResurrectionResponse>>(conn)
+        .unwrap()
+        .send::<shared::protocol::DeathChannel>(response);
+    h.advance(3);
+}
+
+#[test]
+fn rezrtap_retail_resurrection_spells_offer_to_ghost() {
+    for spell_id in [7328, 2006, 50769] {
+        let (mut h, target, conn) = fixture();
+        let spell = world_db()
+            .expect("world fixture")
+            .store
+            .get(spell_id)
+            .expect("Retail resurrection")
+            .clone();
+        h.app
+            .insert_resource(crate::spell_info::SpellStore::fixture(vec![spell]));
+        h.app.world_mut().entity_mut(h.caster).insert((
+            crate::class_progression::KnownSpells::fixture(vec![spell_id]),
+            shared::components::CombatStatus(false),
+        ));
+        h.app
+            .world_mut()
+            .get_mut::<PlayerDeathState>(target)
+            .unwrap()
+            .state = DeathState::Ghost;
+        let offered = offer_for(&mut h, target, conn, spell_id);
+        assert_eq!(offered.spell_id, spell_id);
+        assert_eq!(h.health(target), 0.0);
+    }
+}
+
+fn offer_for(h: &mut Harness, target: Entity, conn: Entity, spell_id: u32) -> ResurrectionOffer {
+    h.cast(spell_id, Some(target));
     let mut offers = Vec::new();
-    for _ in 0..6 {
+    for _ in 0..250 {
         h.advance(1);
         offers.extend(drain::<ResurrectionOffer>(&mut h.app, conn));
     }
@@ -70,9 +118,9 @@ fn rezrtap_cast_offer_accept_percent_and_caster_position() {
     assert_eq!(offer.spell_id, 7328);
     assert_eq!(offer.time_left_ms, 60_000);
     assert_eq!(h.health(target), 0.0);
-    crate::death::resurrection::respond(
-        h.app.world_mut(),
-        target,
+    respond(
+        &mut h,
+        conn,
         ResurrectionResponse {
             caster: offer.caster,
             spell_id: 7328,
@@ -103,9 +151,9 @@ fn rezrtap_decline_and_timeout_remain_dead() {
                 .unwrap()
                 .expires_at = -1.0;
         }
-        crate::death::resurrection::respond(
-            h.app.world_mut(),
-            target,
+        respond(
+            &mut h,
+            conn,
             ResurrectionResponse {
                 caster: offer.caster,
                 spell_id: 7328,
@@ -131,8 +179,8 @@ fn rezrtap_damage_tap_projection_and_clear() {
     let npc = h.npc;
     crate::creature_tap::record_damage(h.app.world_mut(), npc, caster, 100.0, 10.0);
     let tap = h.app.world().get::<UnitTap>(npc).unwrap();
-    assert!(!tap.denied(caster.to_bits(), &[]));
-    assert!(!tap.denied(99, &[caster.to_bits()]));
+    assert!(!tap.denied(42, &[]));
+    assert!(!tap.denied(99, &[42]));
     assert!(tap.denied(99, &[100]));
     crate::creature_tap::clear(h.app.world_mut(), npc);
     assert!(!h.app.world().get::<UnitTap>(npc).unwrap().denied(99, &[]));
