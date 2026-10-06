@@ -20,7 +20,7 @@ use bevy::prelude::*;
 use shared::protocol::TransferAbortReason;
 
 use super::InMap;
-use super::locks::{InstanceLocks, LockData, next_reset_time};
+use super::locks::{InstanceLocks, LockData, NormalInstanceLock, next_reset_time};
 use super::store::{InstanceType, MapDifficulty, MapStore};
 use crate::group::GroupId;
 
@@ -57,6 +57,8 @@ struct InstanceCopy {
     owning_group: Option<GroupId>,
     /// `i_instanceLock`'s owner: set for a difficulty with a reset schedule.
     lock_owner: Option<u64>,
+    /// Run owner, including normal copies with no scheduled bind.
+    owner: u64,
     /// A boss died under the lock (`!i_instanceLock->IsNew()`): no reset but by expiry.
     lock_used: bool,
     /// The boss states the copy was created with (`CreateInstanceData` → `Load`).
@@ -77,6 +79,7 @@ pub struct InstanceManager {
     recent_by_group: HashMap<(GroupId, u32), (u64, u32)>,
     /// `sInstanceLockMgr`.
     pub locks: InstanceLocks,
+    pub normal_locks: HashMap<u32, NormalInstanceLock>,
     /// A lock changed since persistence last saved them.
     pub locks_dirty: bool,
 }
@@ -89,6 +92,7 @@ impl Default for InstanceManager {
             recent_by_character: HashMap::new(),
             recent_by_group: HashMap::new(),
             locks: InstanceLocks::default(),
+            normal_locks: HashMap::new(),
             locks_dirty: false,
         }
     }
@@ -127,6 +131,18 @@ impl InstanceManager {
             locks,
             ..Default::default()
         }
+    }
+
+    pub fn with_locks_and_normal(locks: InstanceLocks, normal: Vec<NormalInstanceLock>) -> Self {
+        let mut manager = Self::with_locks(locks);
+        for lock in normal {
+            manager.next_instance_id = manager.next_instance_id.max(lock.instance_id + 1);
+            manager
+                .recent_by_character
+                .insert((lock.owner, lock.map_id), lock.instance_id);
+            manager.normal_locks.insert(lock.instance_id, lock);
+        }
+        manager
     }
 
     /// The difficulty `entrant` enters `map_id` at, `None` when the map offers nothing
@@ -181,9 +197,20 @@ impl InstanceManager {
                 .unwrap_or(entries);
             return Some((Some(lock.instance_id), entries, owner));
         }
-        let recent = (!entries.has_reset_schedule())
-            .then(|| self.recent_instance(map_id, entrant))
-            .flatten();
+        let recent = if entries.has_reset_schedule() {
+            None
+        } else {
+            self.recent_instance(map_id, entrant).or_else(|| {
+                self.normal_locks
+                    .values()
+                    .find(|lock| {
+                        lock.owner == owner
+                            && lock.map_id == map_id
+                            && lock.difficulty_id == entries.difficulty_id
+                    })
+                    .map(|lock| lock.instance_id)
+            })
+        };
         Some((recent, entries, owner))
     }
 
@@ -322,7 +349,17 @@ impl InstanceManager {
         let expires_at = lock.map(|lock| lock.expiry);
         // A grouped encounter-lock dungeon starts fresh unless it restores dungeon
         // progress (`IsRestoringDungeonState`, none of the hosted ones).
-        let initial_data = if !entries.is_instance_id_bound() && entrant.group.is_some() {
+        let initial_data = if !entries.has_reset_schedule() {
+            self.normal_locks
+                .get(&map.instance_id)
+                .filter(|lock| {
+                    lock.owner == owner
+                        && lock.map_id == map.map_id
+                        && lock.difficulty_id == entries.difficulty_id
+                })
+                .map(|lock| lock.data.clone())
+                .unwrap_or_default()
+        } else if !entries.is_instance_id_bound() && entrant.group.is_some() {
             LockData::default()
         } else {
             self.locks
@@ -336,6 +373,7 @@ impl InstanceManager {
                 max_players,
                 owning_group: entrant.group,
                 lock_owner: entries.has_reset_schedule().then_some(owner),
+                owner,
                 lock_used,
                 initial_data,
                 expires_at,
@@ -476,6 +514,9 @@ impl InstanceManager {
             .collect();
         for map in &expired {
             self.copies.remove(map);
+            if self.normal_locks.remove(&map.instance_id).is_some() {
+                self.locks_dirty = true;
+            }
         }
         expired
     }
@@ -504,6 +545,10 @@ impl InstanceManager {
 
     /// `InstanceMap::Reset` for a manual reset or a difficulty change.
     fn reset(&mut self, map: InMap, now: Now) -> Option<InstanceResetResult> {
+        if !self.copies.contains_key(&map) && self.normal_locks.remove(&map.instance_id).is_some() {
+            self.locks_dirty = true;
+            return Some(InstanceResetResult::Success);
+        }
         let copy = self.copies.get_mut(&map)?;
         if copy.lock_owner.is_some() && copy.lock_used {
             return Some(InstanceResetResult::CannotReset);
@@ -512,6 +557,9 @@ impl InstanceManager {
             return Some(InstanceResetResult::NotEmpty);
         }
         copy.unload_at = Some(now.elapsed + MIN_UNLOAD_DELAY_SECS);
+        if self.normal_locks.remove(&map.instance_id).is_some() {
+            self.locks_dirty = true;
+        }
         Some(InstanceResetResult::Success)
     }
 
@@ -569,6 +617,12 @@ impl InstanceManager {
         results
     }
 
+    pub fn completed_encounters(&self, map: InMap) -> u32 {
+        self.copies
+            .get(&map)
+            .map_or(0, |copy| copy.initial_data.completed_encounters)
+    }
+
     /// `InstanceMap::UpdateInstanceLock` for a boss of copy `map` becoming `DONE`:
     /// the shared state (instance-id bound) and each player's lock record the kill.
     /// Returns the players saved for the first time (`InstanceSaveCreated`).
@@ -583,13 +637,26 @@ impl InstanceManager {
         let Some(copy) = self.copies.get_mut(&map) else {
             return Vec::new();
         };
-        if copy.lock_owner.is_none() {
-            return Vec::new();
-        }
-        copy.lock_used = true;
+        copy.initial_data.done_bosses = done_bosses;
         if let Some(bit) = encounter_bit {
             copy.initial_data.completed_encounters |= 1 << bit;
         }
+        // Normal dungeons have no scheduled lock, but still track their copy's progress.
+        if copy.lock_owner.is_none() {
+            self.normal_locks.insert(
+                map.instance_id,
+                NormalInstanceLock {
+                    map_id: map.map_id,
+                    difficulty_id: copy.difficulty.difficulty_id,
+                    instance_id: map.instance_id,
+                    owner: copy.owner,
+                    data: copy.initial_data.clone(),
+                },
+            );
+            self.locks_dirty = true;
+            return Vec::new();
+        }
+        copy.lock_used = true;
         let update = super::locks::LockUpdate {
             instance_id: map.instance_id,
             done_bosses,

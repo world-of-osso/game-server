@@ -46,8 +46,12 @@ pub fn instance_script(name: &str) -> Option<InstanceScript> {
                 encounter_id,
             })
             .collect(),
-        // instance_the_stockade loads no creatureData.
-        boss_creatures: &[],
+        // Defeat credit and saved-DONE spawn suppression use the scripts' boss ids.
+        boss_creatures: &[
+            (46383, DATA_RANDOLPH_MOLOCH),
+            (46264, DATA_LORD_OVERHEAT),
+            (46254, DATA_HOGGER),
+        ],
     })
 }
 

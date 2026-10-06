@@ -577,6 +577,9 @@ Updated existing Zaralda SSOT and linked specs/reference/index: native-friendly 
 
 Updated [[experience]] for persisted accumulation and kill bonus consumption; documented capped online/offline `set-rested` and owner updates. Corrected `LogXpGain.original` versus base `amount`.
 
+## 2026-10-06 — Dungeon achievements phase 1
+
+Added [[dungeon-achievements]]: local CASC provenance, partial encrypted-section coverage, supported DB2 criteria/tree semantics, Stockade full-run boundary, character/lock persistence, and client phase-2 contract. Targeted proof: nine server tests PASS (eight at 702cb80, Stockade frame-drain fixture at 96cad53), Python virtual-string/decrypted-section test PASS, focused native cargo check and cargo fmt check PASS. Normal checkpoints now persist alongside scheduled locks without imposing scheduled reset restrictions.
 ## [2026-10-05] systems | Player-managed guild ranks
 
 Updated [[banks]] and added the [guild-ranks contract](../specs/guild-ranks.md): GM controls, strict hierarchy, per-rank social/bank rights, atomic member remapping and layout-2 migration. Targeted RED failed for missing rank APIs. GREEN at `26b1264`: 37 guild-related server tests and one admin test pass; protocol wire test passes at `fe5ea8d`. Additional REDs reproduced cross-guild chat with stale membership components and erased masked tab settings; both now pass. No deployment or native settings UI proof.

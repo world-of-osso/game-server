@@ -1,79 +1,77 @@
 use super::*;
+use rusqlite::Connection;
+
+#[path = "achievement_normal_lock_tests.rs"]
+mod normal_locks;
 
 #[test]
-fn level_achievement_snapshot_reports_progress_and_completed_ids() {
+fn dungeonach_retail_level_ids_replace_placeholders() {
+    let db = Connection::open(crate::test_data::world_db_path()).unwrap();
+    let catalog = load_achievement_catalog(&db).unwrap();
     let mut state = PlayerAchievementState::default();
-    let completed = update_level_achievements(&mut state, 20);
-
-    assert_eq!(completed.len(), 2);
-
-    let snapshot = build_achievement_snapshot(20, &state);
-    assert_eq!(snapshot.earned_ids, vec![1, 2]);
+    let toasts = catalog.update(&mut state, CriteriaEvent::ReachLevel(20), None);
+    assert!(
+        state.earned_ids.contains(&6),
+        "Retail Level 10 is achievement 6"
+    );
+    assert!(
+        state.earned_ids.contains(&7),
+        "Retail Level 20 is achievement 7"
+    );
     assert_eq!(
-        snapshot.progress,
-        vec![
-            shared::protocol::AchievementProgressSnapshot {
-                achievement_id: 1,
-                current: 10,
-                required: 10,
-                completed: true,
-            },
-            shared::protocol::AchievementProgressSnapshot {
-                achievement_id: 2,
-                current: 20,
-                required: 20,
-                completed: true,
-            },
-            shared::protocol::AchievementProgressSnapshot {
-                achievement_id: 3,
-                current: 20,
-                required: 40,
-                completed: false,
-            },
-            shared::protocol::AchievementProgressSnapshot {
-                achievement_id: 4,
-                current: 20,
-                required: 60,
-                completed: false,
-            },
-            shared::protocol::AchievementProgressSnapshot {
-                achievement_id: 5,
-                current: 20,
-                required: 70,
-                completed: false,
-            },
-            shared::protocol::AchievementProgressSnapshot {
-                achievement_id: 6,
-                current: 20,
-                required: 80,
-                completed: false,
-            },
-        ]
+        toasts
+            .iter()
+            .find(|toast| toast.achievement_id == 6)
+            .unwrap()
+            .points,
+        10
     );
 }
 
 #[test]
-fn level_achievements_are_awarded_only_once() {
-    let mut state = PlayerAchievementState::default();
-    let first = update_level_achievements(&mut state, 10);
-    let second = update_level_achievements(&mut state, 10);
-
-    assert_eq!(first.len(), 1);
-    assert!(second.is_empty());
-    assert_eq!(state.earned_ids, std::collections::BTreeSet::from([1]));
-}
-
-#[test]
-fn achievement_state_round_trips_through_persistence() {
-    let file = tempfile::NamedTempFile::new().unwrap();
-    let db = redb::Database::create(file.path()).unwrap();
-    crate::persistence::create_tables(&db);
-
-    let state = PlayerAchievementState {
-        earned_ids: std::collections::BTreeSet::from([1, 3, 6]),
+fn dungeonach_scheduled_instance_lock_round_trip_restores_bosses_and_encounters() {
+    use crate::maps::instances::{InstanceEntrant, Now};
+    use crate::maps::locks::InstanceLocks;
+    let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
+    let maps = crate::maps::store::load_map_store(&conn).unwrap();
+    let difficulty = maps.map_difficulty(670, 2).unwrap();
+    assert!(difficulty.has_reset_schedule());
+    let entrant = InstanceEntrant {
+        character_id: 42,
+        group: None,
+        leader: 42,
+        difficulty_id: 2,
     };
-    crate::persistence::save_achievements(&db, 42, &state);
-
-    let loaded = crate::persistence::load_achievements(&db, 42);
-    assert_eq!(loaded, state);
+    let now = Now {
+        elapsed: 0.0,
+        unix: 1_790_000_000,
+    };
+    let mut instances = crate::maps::InstanceManager::default();
+    let copy = instances.create_map(&maps, 670, entrant, now).unwrap().map;
+    let bit = maps.encounters_for_map(670, 2)[0].bit;
+    instances.update_instance_lock(copy, &[(Entity::from_bits(1), 42)], 1, Some(bit), now.unix);
+    let file = tempfile::NamedTempFile::new().unwrap();
+    {
+        let db = redb::Database::create(file.path()).unwrap();
+        crate::persistence::create_tables(&db);
+        crate::maps::persistence::save_instance_locks(&db, &instances.locks.saved(), &[]);
+    }
+    let db = redb::Database::open(file.path()).unwrap();
+    let saved = crate::maps::persistence::load_instance_locks(&db);
+    let mut restored = crate::maps::InstanceManager::with_locks(InstanceLocks::from_saved(saved));
+    let resumed = restored
+        .create_map(
+            &maps,
+            670,
+            entrant,
+            Now {
+                elapsed: 1.0,
+                unix: now.unix + 1,
+            },
+        )
+        .unwrap()
+        .map;
+    assert_eq!(resumed, copy);
+    assert_eq!(restored.initial_done_bosses(resumed), 1);
+    assert_eq!(restored.completed_encounters(resumed), 1 << bit);
 }

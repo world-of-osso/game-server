@@ -50,8 +50,31 @@ pub(crate) fn load_instance_locks(db: &Database) -> super::locks::SavedLocks {
         })
 }
 
-pub(crate) fn save_instance_locks(db: &Database, locks: &super::locks::SavedLocks) {
+pub(crate) const NORMAL_INSTANCE_LOCKS: TableDefinition<u32, &[u8]> =
+    TableDefinition::new("normal_instance_locks");
+
+pub(crate) fn load_normal_instance_locks(db: &Database) -> Vec<super::locks::NormalInstanceLock> {
+    let txn = db
+        .begin_read()
+        .expect("Failed to begin normal instance read txn");
+    let table = txn
+        .open_table(NORMAL_INSTANCE_LOCKS)
+        .expect("Failed to open normal instance locks");
+    table
+        .get(INSTANCE_LOCKS_KEY)
+        .expect("Failed to read normal instance locks")
+        .map_or_else(Vec::new, |guard| {
+            bitcode::decode(guard.value()).expect("Failed to decode normal instance locks")
+        })
+}
+
+pub(crate) fn save_instance_locks(
+    db: &Database,
+    locks: &super::locks::SavedLocks,
+    normal: &[super::locks::NormalInstanceLock],
+) {
     let bytes = bitcode::encode(locks);
+    let normal_bytes = bitcode::encode(&normal.to_vec());
     let txn = db.begin_write().expect("Failed to begin write txn");
     {
         let mut table = txn
@@ -60,6 +83,12 @@ pub(crate) fn save_instance_locks(db: &Database, locks: &super::locks::SavedLock
         table
             .insert(INSTANCE_LOCKS_KEY, bytes.as_slice())
             .expect("Failed to save instance locks");
+        let mut normal_table = txn
+            .open_table(NORMAL_INSTANCE_LOCKS)
+            .expect("Failed to open normal instance locks");
+        normal_table
+            .insert(INSTANCE_LOCKS_KEY, normal_bytes.as_slice())
+            .expect("Failed to save normal instance locks");
     }
     txn.commit().expect("Failed to commit instance locks");
 }

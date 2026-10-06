@@ -45,6 +45,17 @@ pub struct LockData {
     pub completed_encounters: u32,
 }
 
+/// Progress checkpoint of a normal copy. No scheduled bind or client lock entry;
+/// it resumes the owner's run and is deleted on manual reset or copy unload.
+#[derive(Debug, Clone, PartialEq, Eq, bitcode::Encode, bitcode::Decode)]
+pub struct NormalInstanceLock {
+    pub map_id: u32,
+    pub difficulty_id: u32,
+    pub instance_id: u32,
+    pub owner: u64,
+    pub data: LockData,
+}
+
 /// `InstanceLock` of one character.
 #[derive(Debug, Clone, PartialEq, Eq, bitcode::Encode, bitcode::Decode)]
 pub struct InstanceLock {

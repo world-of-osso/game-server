@@ -306,6 +306,8 @@ pub(crate) fn create_tables(db: &Database) {
     let _ = txn.open_table(SERVER_SETTINGS);
     let _ = txn.open_table(CHARACTER_CORPSES);
     let _ = txn.open_table(crate::maps::persistence::CHARACTER_MAPS);
+    txn.open_table(crate::maps::persistence::NORMAL_INSTANCE_LOCKS)
+        .expect("Failed to create normal instance locks");
     let _ = txn.open_table(crate::persistence_progression::CHARACTER_PROGRESSION);
     let _ = txn.open_table(crate::persistence_progression::CHARACTER_TRAITS);
     let _ = txn.open_table(crate::persistence_progression::CHARACTER_XP);
@@ -645,8 +647,12 @@ pub fn load_achievements(
         .expect("Failed to read achievements")
     {
         Some(guard) => {
-            serde_json::from_slice::<crate::achievement::PlayerAchievementState>(guard.value())
-                .expect("decode achievements")
+            let (state, migrated) =
+                crate::achievement::decode_saved_achievement_state(guard.value());
+            if migrated {
+                save_achievements(db, character_id, &state);
+            }
+            state
         }
         None => {
             let state = crate::achievement::PlayerAchievementState::default();

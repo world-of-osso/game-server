@@ -1,0 +1,79 @@
+#!/usr/bin/env python3
+"""Export pinned local CASC achievement DB2s, then import them into world.db.
+
+Extract the three FDIDs with casc-local first. Never downloads anything. Uses the
+same WDC5 decoder as db2.py extract; .csv.import files are Godot translation
+metadata, not DB2 export recipes. Unknown-key zero-filled sections are reported
+by the decoder and excluded. The three tables are replaced in one transaction.
+"""
+import argparse
+import csv
+import sqlite3
+from pathlib import Path
+
+import db2_casc
+
+BUILD = "12.1.0.69933"
+TABLES = {
+    "Achievement": (1260179, 0x6FC5281B, {0, 1, 2}, [
+        ("ID", 3), ("Title_lang", 1), ("Description_lang", 0),
+        ("Instance_ID", 4), ("Faction", 5), ("Points", 9),
+        ("Flags", 10), ("CriteriaTree", 14),
+    ]),
+    "Criteria": (1263817, 0x53D03513, set(), [
+        ("ID", 0), ("Type", 1), ("Asset", 2), ("ModifierTreeId", 3),
+        ("StartEvent", 4), ("StartAsset", 5), ("StartTimer", 6),
+        ("FailEvent", 7), ("FailAsset", 8), ("Flags", 9),
+        ("EligibilityWorldStateID", 10), ("EligibilityWorldStateValue", 11),
+    ]),
+    "CriteriaTree": (1263818, 0xFF97AE12, {1}, [
+        ("ID", 0), ("Description_lang", 1), ("Parent", 2), ("Amount", 3),
+        ("Operator", 4), ("CriteriaID", 5), ("Flags", 6), ("OrderIndex", 7),
+    ]),
+}
+SQL_NAMES = {"Achievement": "achievement", "Criteria": "criteria", "CriteriaTree": "criteria_tree"}
+
+
+def export_tables(directory):
+    tables = {}
+    for name, (fdid, layout, text, columns) in TABLES.items():
+        header, records = db2_casc.decode((directory / f"{fdid}.db2").read_bytes(), text)
+        if header["layout_hash"] != layout:
+            raise ValueError(f"{name}: layout {header['layout_hash']:08X}, expected {layout:08X}")
+        rows = [[values[index] for _, index in columns] for _, values in sorted(records.items())]
+        if name == "Achievement":
+            for row in rows:
+                # Points is an 8-bit DB2 value; pallet entries are stored as uint32.
+                row[5] &= 0xFF
+                row[4] = db2_casc.typed(row[4], "INTEGER")
+        path = directory / f"{name}.csv"
+        with path.open("w", newline="", encoding="utf-8") as output:
+            writer = csv.writer(output)
+            writer.writerow([column for column, _ in columns])
+            writer.writerows(rows)
+        tables[name] = (columns, rows)
+        print(f"{name}: {len(rows)} rows, FDID {fdid}, layout {layout:08X}, {path}")
+    return tables
+
+
+def import_tables(database, tables):
+    with sqlite3.connect(database) as db:
+        db.execute("BEGIN IMMEDIATE")
+        for name, (columns, rows) in tables.items():
+            table = SQL_NAMES[name]
+            db.execute(f"DROP TABLE IF EXISTS {table}")
+            declarations = [f'"{column}" ' + ("TEXT" if column.endswith("_lang") else "INTEGER")
+                            + (" PRIMARY KEY" if column == "ID" else " NOT NULL") for column, _ in columns]
+            db.execute(f"CREATE TABLE {table} ({', '.join(declarations)})")
+            db.executemany(f"INSERT INTO {table} VALUES ({','.join('?' for _ in columns)})", rows)
+            db.execute("INSERT OR REPLACE INTO db2_build (table_name, build) VALUES (?, ?)", (table, BUILD))
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--db2-dir", type=Path, required=True)
+    parser.add_argument("--db", type=Path, required=True)
+    args = parser.parse_args()
+    if args.db2_dir.name != BUILD:
+        parser.error(f"requires build {BUILD}")
+    import_tables(args.db, export_tables(args.db2_dir))
