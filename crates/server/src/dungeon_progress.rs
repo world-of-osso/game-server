@@ -29,12 +29,14 @@ pub(super) fn send_entry_progress(world: &mut World) {
 fn dungeon_snapshot(world: &World, map: InMap) -> Option<DungeonProgress> {
     let store = world.get_resource::<crate::maps::MapStore>()?;
     let instances = world.get_resource::<crate::maps::InstanceManager>()?;
-    let difficulty_id = instances
-        .copy_difficulty(map)
-        .map_or(0, |entry| entry.difficulty_id);
+    let copy = instances.copy_difficulty(map);
+    let difficulty_id = copy.map_or(0, |entry| entry.difficulty_id);
+    let rows = match copy {
+        Some(entry) => store.encounters_for_map(map.map_id, entry.difficulty_id),
+        None => Vec::new(),
+    };
     let mask = instances.completed_encounters(map);
-    let encounters = store
-        .encounters_for_map(map.map_id, difficulty_id)
+    let encounters = rows
         .into_iter()
         .map(|row| {
             DungeonEncounterProgress {
