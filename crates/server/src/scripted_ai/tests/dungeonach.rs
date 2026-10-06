@@ -214,7 +214,7 @@ fn dungeon2_stockade_entry_kills_reconnect_and_earned_category() {
 #[test]
 fn dungeon2_leaving_instance_clears_objectives_despite_world_boss_rows() {
     let data = data().expect("Stockade and continent DB2 fixtures");
-    assert_eq!(data.maps.encounters_for_map(0, 0)[0].id, 2353);
+    assert_eq!(data.maps.encounters_for_map(0, 0)[0].id, 2416);
     let mut app = stockade_app(data);
     let (player, connection) = spawn_player(&mut app, COPY, [158.0, 116.0, -35.1, 0.0], 1001);
     attach_dungeon2_messages(app.world_mut(), connection);
