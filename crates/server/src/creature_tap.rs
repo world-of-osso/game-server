@@ -12,7 +12,7 @@
 //! (Creature.cpp:2278-2279, CreatureAI.cpp:313-316).
 
 use bevy::prelude::*;
-use shared::components::{Health, Npc, Position};
+use shared::components::{Health, Npc, Position, UnitTap};
 
 use crate::group::GroupRegistry;
 use crate::persistence::ClientId;
@@ -101,11 +101,35 @@ pub(crate) fn record_damage(
     let mut tap = entity.get_mut::<CreatureTap>().expect("inserted above");
     tap.tap(player, subgroup);
     tap.player_damage_req = (tap.player_damage_req - loss.min(health_before)).max(0.0);
+    replicate_tap(world, victim);
+}
+
+/// Send tap membership only when it changes, never the continuously changing damage budget.
+fn replicate_tap(world: &mut World, creature: Entity) {
+    let tappers = world
+        .get::<CreatureTap>(creature)
+        .map(|tap| tap.tappers.clone())
+        .unwrap_or_default();
+    let mut players = world.query::<(Entity, &ClientId)>();
+    let mut units: Vec<_> = players
+        .iter(world)
+        .filter_map(|(entity, id)| tappers.contains(&id.0).then_some(entity.to_bits()))
+        .collect();
+    units.sort_unstable();
+    let tap = UnitTap(units);
+    if world.get::<UnitTap>(creature) == Some(&tap) {
+        return;
+    }
+    world.entity_mut(creature).insert(tap);
+    if let Some(dirty) = world.get_resource::<lightyear::prelude::ReplicationDirtyQueue>() {
+        dirty.mark(creature);
+    }
 }
 
 /// `SetTappedBy(nullptr)` + `ResetPlayerDamageReq` (respawn, evade).
 pub(crate) fn clear(world: &mut World, creature: Entity) {
     world.entity_mut(creature).remove::<CreatureTap>();
+    replicate_tap(world, creature);
 }
 
 /// Player positions kill rewards read.

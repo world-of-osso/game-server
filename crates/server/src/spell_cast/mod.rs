@@ -905,7 +905,12 @@ fn validate_target(
     };
     // A unit of another map copy is not found (`ObjectAccessor::GetUnit` searches the
     // caster's map).
-    if !targets::is_alive(world, target)
+    let resurrects = spell
+        .effects
+        .iter()
+        .any(crate::death::resurrection::is_resurrection);
+    let target_alive = targets::is_alive(world, target);
+    if target_alive == resurrects
         || !targets::same_map(world, caster, target)
         || !targets::creature_type_allowed(world, spell, target)
     {
@@ -1901,5 +1906,7 @@ mod line_of_sight_tests;
 mod new_class_tests;
 #[cfg(test)]
 mod regen_tests;
+#[cfg(test)]
+mod rezrtap_tests;
 #[cfg(test)]
 mod tests;

@@ -83,6 +83,10 @@ pub fn handler(effect_id: u32) -> Option<EffectHandler> {
     Some(match effect_id {
         EFFECT_SCHOOL_DAMAGE => school_damage,
         EFFECT_HEAL => heal,
+        crate::death::resurrection::EFFECT_RESURRECT
+        | crate::death::resurrection::EFFECT_RESURRECT_WITH_AURA => {
+            crate::death::resurrection::send_offer
+        }
         EFFECT_ENERGIZE => energize,
         EFFECT_WEAPON_PERCENT_DAMAGE => weapon_percent_damage,
         EFFECT_DISPEL => dispel,

@@ -24,6 +24,8 @@ use crate::world_data::WorldData;
 const GHOST_RESURRECT_HEALTH_PCT: f32 = 0.5;
 const GHOST_RESURRECT_MANA_PCT: f32 = 0.5;
 
+#[path = "death/resurrection.rs"]
+pub(crate) mod resurrection;
 #[path = "death_support.rs"]
 mod support;
 #[path = "death/transitions.rs"]
@@ -78,6 +80,7 @@ impl Plugin for DeathPlugin {
             Update,
             (restore_persisted_ghosts, send_initial_death_snapshot).chain(),
         );
+        app.add_systems(Update, resurrection::receive_responses);
         app.add_systems(Update, process_death_queries);
         app.add_systems(Update, process_release_spirit_requests);
         app.add_systems(Update, process_resurrect_at_corpse_requests);
